@@ -35,6 +35,7 @@ from app.services.gemini_raw_copy_v101 import (
     parse_v102_unsure,
 )
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
+from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_extraction_record_svc import RecordError
@@ -529,10 +530,13 @@ def _condition_columns(canonical: str | None, masters: dict) -> tuple[str, int, 
     return _FLAG_SINGLE, int(fallback), False
 
 
+_RESOLVED_MATCH_STATUSES = (MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP)
+
+
 def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) -> dict:
     """v102 の1件 → analysis_results の列（設計 §4-4）。"""
     product_id = item.get("product_id")
-    matched = product_id is not None and item.get("match_status") in (MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT)
+    matched = product_id is not None and item.get("match_status") in _RESOLVED_MATCH_STATUSES
     unit = item.get("unit")
     unit_canonical = None if unit in (None, "none") else unit
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
@@ -694,6 +698,51 @@ def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple
     return [(int(r[0]), int(r[1])) for r in rows]
 
 
+FOLLOWUP_MAX_GAP_SECONDS = 3600  # 直前の投稿との時刻の差の上限（design §2-1）
+FOLLOWUP_MAX_NONEMPTY_LINES = 10  # 今の投稿の空でない行数の上限（design §2-2）
+
+_FOLLOWUP_CURRENT_SQL = """
+    SELECT sm.supplier_channel_id, sm.line_posted_at, sm.raw_text
+    FROM {schema}.extraction_jobs ej JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+    WHERE ej.id = :ej
+"""
+_FOLLOWUP_PREVIOUS_SQL = """
+    SELECT prev.id, prev.raw_text, prev.line_posted_at
+    FROM {schema}.source_messages prev
+    WHERE prev.supplier_channel_id = :channel AND prev.line_posted_at < :posted_at
+    ORDER BY prev.line_posted_at DESC, prev.id DESC
+    LIMIT 1
+"""
+
+
+def load_followup_reference(session: Session, extraction_job_id: str) -> tuple[str, str] | None:
+    """直前の投稿 (id, 原文)。同じ仕入元の、今の投稿より前で最も新しい1件（is_active は問わない）。
+
+    時刻の差が FOLLOWUP_MAX_GAP_SECONDS 以下で、今の投稿の空でない行が FOLLOWUP_MAX_NONEMPTY_LINES 以下のときだけ返す。
+    条件に合わないとき・直前の投稿が無いときは None。読み取りのみ。run_v102_analysis と prompt_ab_recompute が共通で呼ぶ。
+    """
+    schema = analyzer.TCG_SCHEMA
+    current = session.execute(text(_FOLLOWUP_CURRENT_SQL.format(schema=schema)), {"ej": extraction_job_id}).first()
+    if current is None or current.supplier_channel_id is None or current.line_posted_at is None:
+        return None
+    if sum(1 for line in (current.raw_text or "").split("\n") if line.strip()) > FOLLOWUP_MAX_NONEMPTY_LINES:
+        return None
+    previous = session.execute(
+        text(_FOLLOWUP_PREVIOUS_SQL.format(schema=schema)),
+        {"channel": current.supplier_channel_id, "posted_at": current.line_posted_at},
+    ).first()
+    if previous is None or previous.raw_text is None:
+        return None
+    if (current.line_posted_at - previous.line_posted_at).total_seconds() > FOLLOWUP_MAX_GAP_SECONDS:
+        return None
+    return str(previous.id), previous.raw_text
+
+
+def masters_with_followup(masters: dict, followup_ref: tuple[str, str] | None) -> dict:
+    """マスタに直前の投稿の参照を足した新しい辞書（run_v102_pipeline が extract_v101_items にそのまま渡す）。None なら元のまま。"""
+    return masters if followup_ref is None else {**masters, "followup_ref": followup_ref}
+
+
 def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
     """システム段。保存済みの件（extraction_items）から analysis_results を作る。Gemini を呼ばない。冪等。
 
@@ -730,7 +779,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         decisions = load_v102_decisions(session, [str(r.id) for r in rows])
         fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
         previous_pairs = _load_resolved_pairs(session, extraction_job_id)
-        pipeline = run_v102_pipeline(response_text, ctx, masters, fixed_products=fixed_products)
+        followup_masters = masters_with_followup(masters, load_followup_reference(session, extraction_job_id))
+        pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
         stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions)
         session.commit()
     except Exception:  # noqa: BLE001

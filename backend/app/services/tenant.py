@@ -490,10 +490,12 @@ CREATE TABLE IF NOT EXISTS {schema}.roles (
     priority INTEGER NOT NULL DEFAULT 0,
     is_system BOOLEAN DEFAULT FALSE,
     description VARCHAR(500),
+    system_key TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tenant_id, name)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON {schema}.roles (system_key) WHERE system_key IS NOT NULL;
 
 -- ロール×権限のリンク
 CREATE TABLE IF NOT EXISTS {schema}.role_permissions (

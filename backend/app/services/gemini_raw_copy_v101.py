@@ -26,6 +26,12 @@ from app.services.gemini_raw_copy_v102_context_work import (
     MATCH_STATUS_MATCHED_CONTEXT,
     decide_by_context,
 )
+from app.services.gemini_raw_copy_v102_followup import (
+    MATCH_STATUS_MATCHED_FOLLOWUP,
+    build_reference_lines,
+    decide_followup,
+    unit_words,
+)
 from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_UNKNOWN,
     REVIEW_PRODUCT_MULTIPLE,
@@ -1046,6 +1052,31 @@ def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None]
     return result
 
 
+def _apply_followup(
+    extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
+    masters: ProductFirstMasters, followup_ref: tuple[str, str], unit_alias_to_info: dict,
+    fixed_products: dict[int, int] | None = None,
+) -> list[dict]:
+    """試作版 v102 の3回目：商品が決まらない件を、直前の投稿で商品が決まった行から決める。決めた件は決めた商品で作り直す。"""
+    message_id, ref_text = followup_ref
+    result = list(extracted)
+    decisions = decide_followup(
+        extracted, lines, build_reference_lines(ref_text, masters),
+        units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words,
+    )
+    for i, decision in decisions.items():
+        if i in (fixed_products or {}):
+            continue  # 人が決めた商品がある件は、自動で決め直さない（人の判断が優先）
+        result[i] = {
+            **build(i, decision.product_id),
+            "match_status": MATCH_STATUS_MATCHED_FOLLOWUP,
+            "product_followup": {
+                "ref_message_id": message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
+            },
+        }
+    return result
+
+
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
 _REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
@@ -1128,6 +1159,7 @@ def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int])
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
     *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
+    followup_ref: tuple[str, str] | None = None,
 ) -> tuple[list[dict], dict]:
     """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
 
@@ -1164,6 +1196,10 @@ def _extract_v102(
     no_number = [it["price_line"] for it in items if _has_no_digit(it["quantity"])]
     if ctx.product_first is not None:
         extracted = _apply_context_work(extracted, build, ctx.product_first.product_entries)
+        if followup_ref is not None:
+            extracted = _apply_followup(
+                extracted, build, lines, ctx.product_first, followup_ref, ctx.unit_alias_to_info, fixed_products
+            )
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
@@ -1184,7 +1220,7 @@ def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
     v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
-    fixed_products: dict[int, int] | None = None,
+    fixed_products: dict[int, int] | None = None, followup_ref: tuple[str, str] | None = None,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -1195,6 +1231,8 @@ def extract_v101_items(
     product_first（試作版 v102）は v102_fixes が True のときだけ使う。渡すと、商品を先に決めて単位・状態を出す流れになり、
     件に product_id・product_category・match_status・match_candidates・unit_basis が付く。None なら v10.2 のまま。
     review_reasons（v102_fixes のときだけ）：件の review に印・単位なし・分類「不明」の理由を足し、flags に post_review を足す。
+    followup_ref（product_first のときだけ）：(直前の投稿の id, 直前の投稿の原文)。あれば、商品が決まらない件を直前の投稿の行で決める
+    （match_status=matched_followup）。None なら今と同じ。
     items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
     fixed_products（試作版 v102）：人が決めた商品。受理した件の位置（落とした件を除く、Gemini の順）→ 商品 id。
     None・空なら結果は変わらない。
@@ -1211,7 +1249,7 @@ def extract_v101_items(
     if v102_fixes:
         return _extract_v102(
             adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons,
-            fixed_products=fixed_products,
+            fixed_products=fixed_products, followup_ref=followup_ref,
         )
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}
