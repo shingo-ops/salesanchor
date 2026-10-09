@@ -2430,3 +2430,56 @@ AY-2a 受入:
 Architect 自己審査（AY-2a）: APPROVE（PO 提示案と証跡のある4種類、外観は実測で差分0を判定、配置・試験参照 class は保持、配線・データ不変）。AY-2b 以降は REVISE（各便の前後表と PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型（§AW・§AX の種類）の踏襲のため不要。
 
 維持の仕組み: 守り手は TextField.test.tsx、ay2a 外観一致・AST 照合スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard・ui-governance。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の 327 件（保留 22 を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+
+#### AY-2a 結果と AY-2b 追補（2026-10-09）
+
+AY-2a: PR #4067 merge fb036a2388c2ac5bd53c0fc217c7c943efc54ff0（2026-10-09T07:09:44Z、必須15/15成功）、Deploy 37897451382 success（headSha fb036a23、07:09:47Z〜07:12:18Z）。本番 CSS index-DQT7U6Pg.css に comp-input--karte 3・search 3・schedule 1・composer 2、`.search-input-field`・`.schedule-input`・`.db-weekly-composer-input` 0。app 200、/api/health 200。GO 原文は PO 本人の「GO #4067」。作業記録: 実装担当が自作の一時ファイル（sed の .bak）1個を rm -f で削除（カード違反、製品・証跡への影響なし、自己申告）。
+
+AY-2b 対象（origin/main fb036a238、証跡 evidence-20260910/ay2b-members.json、ay2b-rule-users.md、ay2b-visual.{cjs,json,md}、ay2b-unresolved-trace.md、ay2b-nontext-keep.{cjs,json}、ay2b-eslint.md、ay2b-test-refs.md）: `.form-group input`（components.css:19/30）と `.login-card .form-group input`（pages-layout.css:246/255）が実際に当たる text 系の生 input 143（G01 136、G28〜31 4、ログイン G11 3）。ファイルの静的解決で祖先が確定しなかった 28（text 系 18・非 text 10）は描画元を全件たどり、いずれも `.form-group`/`.login-card` の下に無いことを確認（うち 21 は試験からしか参照されない、または参照0のコード。ay2b-unresolved-trace.md）。本便の対象外。
+
+規則の扱い:
+- `.form-group input` と `:focus` は型の指定が無く、非 text の input（checkbox 4・radio 2・range 1・file 2）にも当たっている。外すと checkbox の操作域が行幅から 13px に縮む等の変化が出るため、Checkbox/Radio 等の金型（§AV の後続便）まで現状を保つよう、選択子を `[type="checkbox"]`・`[type="radio"]`・`[type="range"]`・`[type="file"]` に絞った同じ宣言の規則へ置き換える（同位置。実測 102 条件で差分0）。
+- ログインは見た目に意図がある欄として種類 login を登録する。根拠: pages-layout.css:245 のコメント「Meta 風ログインフォーム — 入力欄（.login-card スコープ限定）」、同:193「Login (ADR-030: アプリ本体デザインと整合)」、導入 021e6b261「fix: meta-style login form inputs」。ADR-030 のファイルは存在せず ADR-033 からの参照のみ（事実として記録）。旧規則 (0,2,1) は種類 (0,2,0) より強いため同じ便で撤去する。宣言は実測で差分0となる組（候補B、ay2b-visual.md）。
+- 保留の商品編集 14 は独立規則 `.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"])`（width・padding・radius・font-size・color・background・box-sizing）と `:focus`（outline none・box-shadow）で現状を保つ（実測で 14/14 差分0、幅1280・375）。
+
+移管規則（PO 方針「一般フォームは標準」）:
+- 140 件（G01・G28〜31）を TextFieldControl（standard・md）へ、ログイン 3 件を `variant="login"` へ。type・value・onChange・onKeyDown・onFocus・ref・placeholder・min/max/step・disabled・required・aria・data-testid・id・autoComplete は逐語保持。
+- className: CSS 定義の無い `input` 等は外す（試験・コード参照0を grep で確認）。
+- inline style: 配置（width・min-width・flex）は残し、外観（padding 等）は外す（G28 InventoryPicker.tsx の padding はこの規則で外れ、標準の余白になる。前後表に記載）。
+
+変わる見た目（実測、Chromium 147・light。全表は ay2b-visual.md）:
+
+| 対象 | 主な変化（変更前 → 変更後） |
+|---|---|
+| フォーム内の一行入力 140 | 角丸 4→6px、書体 Arial（または等幅）→アプリ書体、行の高さ normal→21.6px、高さ 34→39.6px（幅375では金型のタッチ領域規則で 44px） |
+| 入力できない状態のもの 4 | 背景 白→rgb(226,232,240)、不透明度 1→0.5、カーソル 禁止 |
+| 既存金型 TextField のうち `.form-group` 内 99 | 角丸 4→6px のみ（旧規則が金型の外観を上書きしていたため） |
+| 在庫選択欄（InventoryPicker）1 | 上記に加え inline の余白 6/8px → 標準の 8/12px |
+| ログイン 3 | 変化なし（種類 login） |
+| 保留 商品編集 14 | 変化なし |
+| checkbox・radio・range・file 9 | 変化なし（絞り込んだ規則で保持） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 143 件の非外観属性が不変 | AST 照合（タグ名・className・style の外観宣言・variant・import 以外の差分0） |
+| 実装後の見た目が事前提示どおり | 実装後のコードで ay2b-visual を再実測し、事前の after と一致（InventoryPicker は padding 変更を反映） |
+| 変化なしの対象が不変 | ログイン 3・商品編集 14・非 text 9 の前後差分0（幅1280・375、通常・focus・disabled） |
+| 既存 TextField の変化が角丸だけ | `.form-group` 内の既存 TextField 代表で、角丸以外の差分0 |
+| pre-commit を通る | 対象 .tsx の eslint 警告0（ay2b-eslint.md で確定対象のファイルは警告0） |
+| 新規トークン 0・直書き 0 | check:all、ui-governance、design-token-guard |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI |
+
+Architect 自己審査（AY-2b）: APPROVE（PO 方針どおり標準へ、意図の証跡があるログインは種類で保持、保留と非 text は実測で不変、配線・データ不変）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+維持の仕組み: 守り手は TextField.test.tsx、ay2b-visual・ay2b-ast-check（evidence）、CI の frontend-check・design-token-guard・ui-governance。守っていないもの: 残る生 text 系 input（`.form-row` 系、規則なし・inline 系、保留）と、非 text 用に残した絞り込み規則（Checkbox 等の金型便で撤去）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+#### AY-2b 実装結果（2026-10-09）
+
+- 置換: 143 件（G01 136・G28〜31 4・ログイン 3）が全件 TextFieldControl。AST 照合（ay2b-ast-check.cjs after）は 174 要素・対象 143・差分 0（外観 inline の除去は InventoryPicker.tsx:217 の `padding` 1 件のみで設計どおり）。再計測（ay0-input-inventory.cjs、TSX 277、構文エラー 0）でページ側の生 text 系 input は 327→184。
+- 外観再実測（ay2b-visual.cjs after-real、Chromium 147、幅 1280・375）: (1) text 系 140 は事前予測 after と差 0（280 測定）、(2) ログイン 3 は変更前と差 0（6 測定）、(3) 商品編集 14 は差 0（28 測定）、(5) `.form-group` 内の既存 TextField 代表 12 は角丸以外の差 0。
+- 非 text input の実装後実測（nontext-after、追補2026-10-09）: 絞り込み規則は詳細度が (0,1,1)→(0,2,1)（:focus は (0,2,1)→(0,3,1)）に上がるため、競合しうる規則を全 CSS から列挙した（ay2b-nontext-competing-rules.md、範囲内 23 規則）。JSX の字面と部品の再帰たどり（ay2b-nontext-ancestry.md、ay2b-nontext-reach.md）で、競合クラスと .form-group が同じ input の祖先に並ぶ実在の組み合わせは RolesPage.tsx の `.color-swatch`（radio 2 件）だけ、.form-group の内側に部品経由で到達する 20 ファイルに競合クラスと非 text input は 0 件。実測は origin/main 92db2c38b と PR HEAD の全 CSS 68 ファイルを、18 通りの読み込み順 × 幅 1280・375 × normal・focus で比較（8136 比較、594 項目）。実在の 9 件（A）は差 0。仮想の組み合わせ 104 要素（B）で差が出たのは `.form-group` と `.toggle-switch`／`.inbox-toggle`／`.topbar-search` が同じ input の祖先に並ぶ場合だけで（旧 (0,1,1) の `.toggle-switch input {opacity:0; width:0; height:0}` 等が新 (0,2,1) に負ける）、実在はしない。将来 `.form-group` の内側にこれらの部品を置くと見た目が変わる点を記録する。検出力は、after の規則を意図的に変えると差が出ることで確認。
+- 限界（事実）: (5) の既存 TextField 代表 12 は ay2b-visual.json の moldUsers 6 代表から入力を再構成（祖先は先頭 5 段まで、詳細は ay2b-after-check.md の注）。非 text の ay2b-visual (4) は未使用で、上の nontext-after が代替。
+- 品質（frontend）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0。単体試験は coverage 付き 1 回目で 1 件が 5000ms のタイムアウト（RoleKnowledgeButtonMigration.test.tsx、他の測定と同時実行の負荷下。単独実行は 19/19 成功）。負荷なしの全件再実行（coverage 付き、maxWorkers=1）は 74 ファイル・955 件すべて成功（終了コード 0）。

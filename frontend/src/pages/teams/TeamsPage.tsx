@@ -23,6 +23,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
 import "./TeamsPage.css";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Team {
   id: number;
@@ -239,7 +240,7 @@ export default function TeamsPage() {
             {hasPermission("teams.manage_members") && (
               <form onSubmit={addMember} className="teams-add-member-form">
                 <div className="form-group"><label>{t("teams.addUserIdLabel")}</label>
-                  <input type="number" min="1" required value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} />
+                  <TextFieldControl type="number" min="1" required value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} />
                 </div>
                 <Button variant="primary" size="md" type="submit">{t("common.add")}</Button>
               </form>

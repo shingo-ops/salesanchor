@@ -16,7 +16,10 @@
   margin-bottom: var(--space-1);
 }
 
-.form-group input {
+.form-group input[type="checkbox"],
+.form-group input[type="radio"],
+.form-group input[type="range"],
+.form-group input[type="file"] {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
@@ -27,7 +30,10 @@
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input[type="checkbox"]:focus,
+.form-group input[type="radio"]:focus,
+.form-group input[type="range"]:focus,
+.form-group input[type="file"]:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring-shadow);

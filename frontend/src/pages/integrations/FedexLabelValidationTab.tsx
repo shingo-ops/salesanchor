@@ -26,6 +26,7 @@ import { FedexEtdSetupGuide } from "./FedexEtdSetupGuide";
 import "./FedexLabelValidationTab.css";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextFieldControl } from "../../components/TextField";
 
 interface LVSampleLabel {
   service_abbr: string;
@@ -331,7 +332,7 @@ export function FedexLabelValidationTab({
         <div className="update-form">
           <div className="form-group">
             <label htmlFor="lv-contact-name">{t("carrierIntegration.lvContactName")}</label>
-            <input
+            <TextFieldControl
               id="lv-contact-name"
               type="text"
               value={contactName}
@@ -342,7 +343,7 @@ export function FedexLabelValidationTab({
           </div>
           <div className="form-group">
             <label htmlFor="lv-printer-model">{t("carrierIntegration.lvPrinterModel")}</label>
-            <input
+            <TextFieldControl
               id="lv-printer-model"
               type="text"
               value={printerModel}
@@ -353,7 +354,7 @@ export function FedexLabelValidationTab({
           </div>
           <div className="form-group">
             <label htmlFor="lv-printer-count">{t("carrierIntegration.lvPrinterCount")}</label>
-            <input
+            <TextFieldControl
               id="lv-printer-count"
               type="text"
               value={printerCount}
