@@ -311,3 +311,8 @@ def test_v102_analysis_failure_is_reported_as_analysis_failed(monkeypatch):
     result = task._run_recorded_extraction(session, "job", "raw", {}, MagicMock())
     assert result["analysis_stats"] == {"status": "error", "error_code": "ANALYSIS_FAILED"}
     session.rollback.assert_called()
+
+
+def test_matched_followup_counts_as_resolved_with_its_own_basis():
+    values = _values({"unit": "BOX", "product_id": 42, "match_status": "matched_followup"})
+    assert (values["product_id"], values["pid_resolved"], values["pid_basis"]) == (42, True, "V102:matched_followup")
