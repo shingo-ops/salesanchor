@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services import tcg_analyzer_svc as analyzer
 from app.services import v102_human_decisions_svc as decisions
 from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import ReasonTable, build_review_reason_details
@@ -78,6 +79,13 @@ _LIST_SQL = _LIST_BASE_SQL + """
     LIMIT :limit OFFSET :offset
 """
 _COUNT_SQL = _LIST_BASE_SQL + "SELECT COUNT(*) FROM posts"
+# 削除する件の解決済みの (product_id, condition_id)。DELETE の前に読み、削除後の is_current の付け直しに渡す
+_PAIRS_OF_ITEMS_SQL = """
+    SELECT DISTINCT ar.product_id, ar.condition_id
+    FROM {schema}.analysis_results ar
+    WHERE ar.extraction_item_id = ANY(CAST(:ids AS uuid[]))
+      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+"""
 _LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"
 _UPDATE_ITEM_SQL = """
     UPDATE {schema}.extraction_items
@@ -289,8 +297,14 @@ async def _record_item_changes(db: AsyncSession, job: PostJob, before: Any, item
     return bool(changes)
 
 
-async def _delete_missing(db: AsyncSession, job: PostJob, existing: dict[str, Any], kept_ids: set[str], corrected_by: str) -> bool:
+async def _delete_missing(
+    db: AsyncSession, job: PostJob, existing: dict[str, Any], kept_ids: set[str], corrected_by: str,
+) -> list[tuple[int, int]]:
+    """body に無い既存の件を削除する。削除した件の (product_id, condition_id) の組を返す（is_current の付け直し用）。"""
     removed = [row for item_id, row in existing.items() if item_id not in kept_ids]
+    if not removed:
+        return []
+    pair_rows = (await db.execute(text(_PAIRS_OF_ITEMS_SQL.format(schema=TCG_SCHEMA)), {"ids": [r.id for r in removed]})).fetchall()
     for row in removed:
         await _add_correction(
             db, item_id=row.id, source_message_id=job.source_message_id, field=decisions.FIELD_V102_ITEM_DELETED,
@@ -298,7 +312,7 @@ async def _delete_missing(db: AsyncSession, job: PostJob, existing: dict[str, An
             human_value="{}", corrected_by=corrected_by,
         )
         await db.execute(text(_DELETE_ITEM_SQL.format(schema=TCG_SCHEMA)), {"id": row.id, "job_id": job.job_id})
-    return bool(removed)
+    return [(int(r[0]), int(r[1])) for r in pair_rows]
 
 
 async def _insert_new(db: AsyncSession, job: PostJob, item: ItemInput, item_id: str, corrected_by: str) -> None:
@@ -333,7 +347,8 @@ async def apply_transcription_edit(db: AsyncSession, job: PostJob, items: list[I
     changed = False
     for item in (i for i in items if i.id is not None):
         changed = await _record_item_changes(db, job, existing[item.id], item, corrected_by) or changed
-    changed = await _delete_missing(db, job, existing, {i.id for i in items if i.id is not None}, corrected_by) or changed
+    removed_pairs = await _delete_missing(db, job, existing, {i.id for i in items if i.id is not None}, corrected_by)
+    changed = changed or len(existing) > len({i.id for i in items if i.id is not None})
     for item, item_id in ordered:
         if item.id is None:
             await _insert_new(db, job, item, item_id, corrected_by)
@@ -343,5 +358,7 @@ async def apply_transcription_edit(db: AsyncSession, job: PostJob, items: list[I
         return EditResult(False, [item_id for _item, item_id in ordered if item_id in existing])
     for index, (_item, item_id) in enumerate(ordered):
         await db.execute(text(_RENUMBER_SQL.format(schema=TCG_SCHEMA)), {"id": item_id, "gemini_index": index})
+    if removed_pairs:  # 削除した件が最新だった組は、同じ仕入元の次に新しい投稿の件を最新に戻す（G5）。同じトランザクション内
+        await db.run_sync(lambda sync: analyzer._merge_supplier_products(sync, job.job_id, TCG_SCHEMA, extra_pairs=removed_pairs))
     await db.commit()  # public スキーマのみでテナント文脈を使わないため reset_tenant_context は不要(item_corrections と同じ)
     return EditResult(True, [item_id for _item, item_id in ordered])

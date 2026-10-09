@@ -31,6 +31,7 @@ from tests.test_v102_human_decisions_pg import (
     REASON_NOT_IN_MASTER,
     RESPONSE_MULTI,
     correct,
+    fix_product,
     prepare,
     reasons_of,
     state,
@@ -347,3 +348,20 @@ def test_after_a_transcription_fix_the_old_product_decision_is_invalid(pg, tx):
     run_analysis(pg, job_id)
     now = state(pg, job_id)
     assert (now["product_id"], now["pid_basis"]) != (tx.pf.p_a, "MANUAL") and REASON_NOT_IN_MASTER in reasons_of(pg, job_id)
+
+
+# --- 削除した件が最新だった組は、次に新しい投稿の件が is_current に戻る（G5） ------------------------------------
+
+
+def test_deleting_the_current_item_restores_the_next_newest_post_for_the_same_product(pg, tx):
+    older = prepare(pg, 2)
+    newer = prepare(pg, 0)
+    fix_product(pg, newer, tx.pf.p_a, at=10)
+    fix_product(pg, older, tx.pf.p_a, at=10)
+    assert (state(pg, older[1])["is_current"], state(pg, newer[1])["is_current"]) == (False, True)
+    source_id, job_id, item_id = newer
+    replacement = {"id": None, "source_lines": [1], "raw_price": None, "raw_quantity": None}  # 件は 1 件以上必要
+    status, out = put(pg, job_id, source_id, [replacement])
+    assert status == 200 and out["changed"] is True and item_id not in out["item_ids"]
+    assert one(pg, f"SELECT COUNT(*) FROM {SCHEMA}.analysis_results WHERE extraction_item_id=%s", (item_id,))[0][0] == 0
+    assert state(pg, older[1])["is_current"] is True  # 古い投稿の件が最新に戻る
