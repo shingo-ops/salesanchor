@@ -35,5 +35,15 @@ PayPal 決済で実際の入金日時が記録されず、常に処理時刻（N
 ## 戻し方
 各ファイルで `COALESCE(:paid_at, NOW())` を `NOW()` に戻し、`paid_at` パラメータバインドを削除する。
 
-## 外部事例
-PayPal Invoicing API v2 レスポンス: `payments.transactions[0].payment_date` フィールドで入金日時を取得可能。
+## 外部・過去事例の参照と我々への応用
+
+PayPal Invoicing API v2 公式ドキュメント: `payments.transactions[0].payment_date` フィールドで入金日時が ISO8601 形式で取得可能。
+我々への応用: API 戻り値の `payment_date` をそのまま PostgreSQL の TIMESTAMPTZ 列 `paid_at` にバインドする。
+COALESCE で NULL フォールバックを入れることで、API が payment_date を返さない場合（未確定・エラー）でも現在時刻で安全に記録できる。
+
+## 維持の仕組み
+
+- `paid_at = COALESCE(:paid_at, NOW())` パターンは全 PayPal 関連エンドポイントで統一
+- 手動入金は `PayInvoiceRequest.paid_at: datetime | None` で型検証（Pydantic）
+- UI は ADR-144 の TextField コンポーネントを使用（生 input は使わない）
+- 将来 PayPal 以外の決済手段を追加する際も同パターンを踏襲すること
