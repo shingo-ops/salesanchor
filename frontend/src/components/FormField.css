@@ -327,6 +327,11 @@
   transition: initial;
 }
 
+/* textStyle=code（design.md §Z :817、§AX-2b）。等幅トークンは未定義のため総称フォント名 */
+.comp-field__textarea.comp-textarea--code {
+  font-family: monospace;
+}
+
 .comp-field--lg .comp-field__label {
   font-size: var(--font-base);
 }

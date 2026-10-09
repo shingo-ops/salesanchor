@@ -10,6 +10,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Props {
   showForm: boolean;
@@ -92,7 +93,7 @@ export function OrdersFormModal({
         </div>
         <div className="form-group">
           <label>{t("common.notes")}</label>
-          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
         <div className="form-actions">
           <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>

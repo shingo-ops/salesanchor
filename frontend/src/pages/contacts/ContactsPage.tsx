@@ -29,6 +29,7 @@ import ContactChannelLinks from "../../components/ContactChannelLinks";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { ContactFormFields, type ContactFormState, type ContactCompany } from "./ContactFormFields";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Contact {
   id: number;
@@ -346,7 +347,7 @@ export default function ContactsPage() {
               </SelectControl>
             </div>
             <div className="form-row"><label>{t("common.notes")}</label>
-              <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+              <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
             </div>
             <div className="form-actions">
               <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>

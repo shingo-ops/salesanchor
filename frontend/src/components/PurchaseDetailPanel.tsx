@@ -25,6 +25,7 @@ import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
 import { SelectControl } from "./Select";
 import { Button } from "./Button";
+import { TextareaControl } from "./Textarea";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -439,7 +440,7 @@ export default function PurchaseDetailPanel({
           {/* メモ */}
           <div className="form-group">
             <label>{t("purchase.purchaseNote")}</label>
-            <textarea
+            <TextareaControl
               value={form.purchase_note}
               onChange={(ev) => setField("purchase_note", ev.target.value)}
               data-testid="pur-input-purchase_note"

@@ -1514,13 +1514,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .outbound-translation-flag-item { font-size: var(--font-xs); color: var(--text); }
 .outbound-translation-flag-term { font-weight: 600; }
 .outbound-translation-flag-reason { color: var(--text-muted); }
-.outbound-translation-edit {
-  width: 100%; padding: var(--space-3); resize: vertical;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-input); color: var(--text); font-size: var(--font-sm);
-  line-height: 1.5; font-family: inherit;
-}
-.outbound-translation-edit:focus { outline: none; border-color: var(--accent); }
 .outbound-translation-meta {
   font-size: var(--font-xs); color: var(--text-muted);
 }

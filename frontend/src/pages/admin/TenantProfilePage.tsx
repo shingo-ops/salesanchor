@@ -20,6 +20,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 interface TenantProfile {
   id: number;
@@ -167,7 +168,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-address">{t("tenantProfile.address")}</label>
-            <textarea
+            <TextareaControl
               id="tp-address"
               data-testid="tp-address"
               value={form.address}

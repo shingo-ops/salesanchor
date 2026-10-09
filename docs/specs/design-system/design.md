@@ -2292,3 +2292,53 @@ Architect 自己審査（AX-2a）: APPROVE（PO 方針の提示案どおりの4�
 代替案: ページ CSS を残して class だけ金型にする案は外観の手編集元が2か所になり SSOT に反するため不採用。§Z :818 の appearance/resize を個別 prop にする案は、現行の見た目を写すには組合せが4種類で固定のため、§AW の select と同じ種類（variant）に揃える。外部事例: 既存金型の型の踏襲のため不要。
 
 維持の仕組み: 守り手は Textarea.test.tsx、ax2a 外観一致スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の生 textarea（AX-2b で移管、最後の CI で未移行0を強制）。切戻し: 各 PR の merge commit を revert（DB 影響なし）。
+
+
+#### AX-2a 結果と AX-2b 追補（2026-10-09）
+
+AX-2a: PR #4052 merge 9ab9177487f59c0723598a4d0973a1b32260dca0（2026-10-09T00:55:38Z、必須15/15成功）、Deploy 37867230468 success（headSha 9ab91774、00:55:42Z〜00:58:29Z）。本番 CSS index-BdhhxOiC.css に comp-textarea--karte 3・embedded 3・composer 2・schedule 1、`textarea.right-panel-field` 0、`schedule-textarea` 0、`.inbox-textarea{flex:1;min-width:0}` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4052」。マージは main の連続進行（12分に3件）で merge-safe が BEHIND 停止を4回繰り返したため、PO 端末で `gh pr update-branch`（GitHub 側の merge commit、force/rebase なし）→ 手元 fast-forward → checks 待ち → merge-safe を最大5周自動で繰り返す1行に改め、1周目で成立。merge-safe の検査（scripts/dev/check-pr-merge-ready.py:85-101/177-197、PR作者・HEAD一致・CLEAN・必須checks・GO記録）は GitHub 側の merge commit を拒否しないことを実物で確認済み。
+
+AX-2b 対象（origin/main 9ab917748。証跡 evidence-20260910/ax2b-visual.{cjs,json,md}、ax2b-inline-facts.md、ax2b-shared.md）: ページ側の生 textarea 41 から保留の商品編集1（ProductEditPage.tsx:309）を除く40。G1 `.form-group` 26、G2 `.form-row` 6、G3 送信下訳1（OutboundTranslationPreview.tsx:147）、G4 商品マスタドロワー2（ProductMasterDrawer.tsx:217/221）、G5 CSS 定義なし4（ManualRecordSection.tsx:159、DiscordAnnouncePage.tsx:98、ItemComparison.tsx:27/34）、G6 抽出プロンプト1（ExtractionPromptConfigTab.tsx:222）。
+
+移管規則（PO 方針「一般フォームは標準」）:
+- 全件 `TextareaControl`（standard・md）。value/onChange/onKeyDown/onBlur/rows/placeholder/maxLength/disabled/required/aria/data-testid/id は逐語保持。
+- className: 外観または CSS 定義の無い class（outbound-translation-edit、manual-record-textarea、`input w-full resize-y`、`field field-h-md`）は外す（試験参照0を grep で確認済み）。
+- inline style（ax2b-inline-facts.md の実測）: ConditionsPage.tsx:340/350 の `height:80px; resize; width` と ConditionsMasterPanel.tsx:367/380 の `width; resize` は外す（直前の ui-allow 2行も、理由「TextField が textarea 種類を持たない」が解消するため削除）。ExtractionPromptConfigTab.tsx:222 の inline は外し `textStyle="code"` を付ける。StaffReportsPage.tsx:90 の `minHeight: 'var(--textarea-min-h-lg)'` は配置（最小高 120px）として残す（ADR-067 Phase 5 と frontend/eslint.config.js:107 が案内する既存の書き方。寸法 class field-h-* に同値の段は無い）。
+- 金型: TextareaControl に `textStyle?: "normal" | "code"`（§Z :817 の契約。既定 normal）を追加し、code は class `comp-textarea--code`、FormField.css に `.comp-field__textarea.comp-textarea--code { font-family: monospace; }`。等幅のトークンは存在しない（tokens.css/index.css に --font-mono 定義0、現行も var(--font-mono, monospace) のフォールバック monospace で描画）ため、CSS の総称フォント名キーワード monospace を使い新規トークンは作らない。文字の大きさは標準（現行 inline の font-sm は外観のため外す）。
+
+CSS（ax2b-shared.md の15規則。選択子リストを共有する input 側は不変で、同じ祖先の input 70条件の前後差分0を実測済み）:
+- components.css: `.form-group textarea` と `.form-group textarea:focus` を選択子リストから外し、`.form-group textarea`（min-height/resize）単独規則を削除。
+- company-forms.css: `.form-grid > .form-row textarea`、`.modal-content(-wide) .form-row textarea` と各 `:focus` を選択子リストから外し、textarea 単独規則（:113、:169）を削除。商品編集規則（:254）から textarea を外し、保留1件の見た目を保つ独立規則 `.product-edit-form .form-group textarea`（旧 `.form-group textarea` の宣言を同値で写し border は `1px solid var(--border-strong)`、min-height/resize も写す）と `:focus`（outline none、border-color var(--border-strong)、box-shadow var(--focus-ring-shadow)。現行は :254 の border ショートハンドが focus の枠色を上書きしているため）を追加。
+- InboxPage.css: `.outbound-translation-edit` と `:focus` を削除。
+- supplier-detail-view.css: `.pmd-field input, .pmd-field textarea` から textarea を外し、`.pmd-field textarea` は `min-height: var(--pmd-textarea-min-h);`（配置）だけ残す。
+
+変わる見た目（実測、Chromium 147・幅1280・light。全表は ax2b-visual.md）:
+
+| グループ | 主な変化（変更前 → 変更後） |
+|---|---|
+| G1 フォーム内 26 | 角丸 4→6px、書体 等幅（ブラウザ既定）→アプリ書体、行の高さ normal→21.6px、rows=3 等4件の高さ 80→82.83px、StaffReports の1件は最小高 120px を保持 |
+| G2 会社・連絡先フォーム 6 | 枠色 rgb(203,213,224)→rgb(226,232,240)、行の高さ normal→21.6px |
+| G3 送信下訳 1 | 余白 12→8/12px、角丸 4→6px、文字 13.6→14.4px、背景 透明→白、最小高 auto→80px |
+| G4 商品マスタドロワー 2 | 余白 8→8/12px、文字 13.6→14.4px・太さ 500→400、文字色 黒→標準、focus は端末標準の青い輪→共通の focus 輪。最小高 72px は保持 |
+| G5 装飾なし 4 | ブラウザ既定の見た目（余白0・灰色枠・角丸0・13.3px 等幅・斜めリサイズ）→金型の見た目 |
+| G6 抽出プロンプト 1 | 余白・枠・角丸が金型に、文字 13.6→14.4px（等幅は保持）、16行の高さ 242→約364px |
+| 既存金型 Textarea 1（MergeCompanyModal.tsx:246） | 枠色 rgb(203,213,224)→rgb(226,232,240)（祖先の旧規則が外れるため）。他の12件は差分0 |
+| 保留 商品編集 1 | 差分0（通常・focus） |
+| disabled のもの | 背景 白→rgb(226,232,240)、不透明度 1→0.5、カーソル 禁止 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 40件の非外観属性が不変 | AST 照合（タグ名・className・style・textStyle・ui-allow・import 以外の差分0） |
+| 保留の商品編集と既存金型12件が不変 | 実装後のコードで ax2b-visual を再実測し、商品編集（通常・focus）と MergeCompanyModal 以外の既存 Textarea 12件の差分0 |
+| 変わる見た目が事前提示と一致 | 実装後の実測値が ax2b-visual.md の after と一致（差があれば停止） |
+| 共有規則の input が不変 | 同じ祖先の input 70条件の前後差分0 |
+| 新規トークン 0・直書き 0 | check:all、ui-governance、design-token-guard、目視（monospace は CSS キーワード） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI |
+
+Architect 自己審査（AX-2b）: APPROVE（PO 方針どおり標準へ統一、保留は実測で不変、配置は保持、配線・データ不変）。名前の無かった欄（G3〜G6）の扱いは設計者判断のため PR の前後表で PO に示し、GO 前に変更できる。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+維持の仕組み: 守り手は Textarea.test.tsx、ax2b-visual・ax2b-ast-check（evidence）、CI の frontend-check・Karte Visual Gate・design-token-guard。守っていないもの: 保留の商品編集1（生 textarea）と、ui-governance が textarea を検出しない点（最後の CI 便で強制）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+実装時の変更（2026-10-09、設計者判断）: commit 時の pre-commit（frontend/package.json:53-58 の lint-staged `eslint --max-warnings=0`、frontend/.husky/pre-commit:43）が ProductMasterDrawer.tsx の既存警告63件（`local/no-japanese-literal` 62・不要な eslint-disable 1。origin/main の同ファイルでも同数、他32ファイルは0）で停止した。62件は i18n の手作業（t() 化と ja/en キー追加）で本便の目的外のため、G4 商品マスタドロワー2件（ProductMasterDrawer.tsx:217/221）を本便から外して保留に加え、supplier-detail-view.css も変更しない（同2件は現行の見た目のまま）。本便の移管は38件、保留は商品編集1＋商品マスタドロワー2の計3件。商品マスタドロワーは同ファイルの i18n 化と同時に移管する（別便）。検査の素通り（--no-verify）・閾値の変更はしない。

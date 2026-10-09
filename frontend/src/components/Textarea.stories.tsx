@@ -113,3 +113,15 @@ export const ControlVariants: Story = {
     </div>
   ),
 }
+
+export const ControlCode: Story = {
+  name: 'TextareaControl 等幅 (textStyle=code)',
+  render: () => (
+    <TextareaControl
+      textStyle="code"
+      rows={4}
+      defaultValue={'{ "prompt": "Extract the product name and price." }'}
+      aria-label="Prompt"
+    />
+  ),
+}

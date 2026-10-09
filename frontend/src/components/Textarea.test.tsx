@@ -221,3 +221,20 @@ describe('TextareaControl variants', () => {
     expect(prevented).toBe(false);
   });
 });
+
+describe('TextareaControl textStyle', () => {
+  it('textStyle code adds comp-textarea--code after size/variant and before className', () => {
+    const { container } = render(<TextareaControl textStyle="code" className="x" />);
+    expect(container.querySelector('textarea')?.className).toBe('comp-field__textarea comp-textarea--code x');
+    const { container: c2 } = render(<TextareaControl size="sm" textStyle="code" />);
+    expect(c2.querySelector('textarea')?.className).toBe('comp-field__textarea comp-field__textarea--sm comp-textarea--code');
+  });
+
+  it('adds no class when textStyle is unspecified or normal', () => {
+    const { container } = render(<TextareaControl />);
+    expect(container.querySelector('textarea')?.className).toBe('comp-field__textarea');
+    const { container: c2 } = render(<TextareaControl textStyle="normal" />);
+    expect(c2.querySelector('textarea')?.className).toBe('comp-field__textarea');
+    expect(c2.querySelector('textarea')?.hasAttribute('textstyle')).toBe(false);
+  });
+});
