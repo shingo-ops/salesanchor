@@ -1,6 +1,6 @@
 # 設計：マージされた worktree の即時回収（reaper の配線修正）
 
-- 状態：設計案（草案）・自己審査済み・PO の承認待ち・実装未着手
+- 状態：R1 #4053・R3/R4 #4055・R2 #4059・R6 #4064 はマージ済み。R7 #4071（GH_TOKEN）は審査中。R5 は ADR-114 改訂 PR で対応（PO 承認待ち）
 - 置き場所（予定）：`docs/handoff/reaper-on-merge/design.md`。recon を兼ねる。
 - 対象の ADR：`docs/adr/ADR-114-worktree-auto-cleanup.md`（ADR-114-worktree-auto-cleanup）
 - PO の要望（2026-10-08〜09）：「main に入った時点で自動で削除される仕組みにしたい」「頻度を上げて、常に不要なものを消したい」。設計に進むことに「y」。
@@ -80,4 +80,4 @@
   - runner のラベルと online の状態（`gh api .../actions/runners` が 403）。runner のサービス `actions.runner.shingo-ops-salesanchor.Shingo-Mac-Temp` は launchd で稼働中。
   - フォークの PR の扱いのリポジトリ設定。
 
-worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTREE_LIMIT=101 を1回限り使用（ADR-114 §6 の例外。本 PR が回収の仕組みの修正のため）
+worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTREE_LIMIT=101 を1回限り使用（PO の個別許可による1回限りの例外。ADR-114 §6 は上限の引き上げ案内を廃止している。本 PR が回収の仕組みの修正のため）
