@@ -22027,6 +22027,219 @@
         "title": "PipelineSummaryResponse",
         "type": "object"
       },
+      "PostDetailResponse": {
+        "properties": {
+          "gemini_unsure": {
+            "title": "Gemini Unsure"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Job Review Reason Details",
+            "type": "array"
+          },
+          "line_posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Posted At"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/RawLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source_message_id": {
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_message_id",
+          "provider",
+          "line_posted_at",
+          "lines",
+          "job_review_reason_details",
+          "items"
+        ],
+        "title": "PostDetailResponse",
+        "type": "object"
+      },
+      "PostItem": {
+        "properties": {
+          "gemini_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gemini Index"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "raw_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Price"
+          },
+          "raw_quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quantity"
+          },
+          "review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Review Reason Details",
+            "type": "array"
+          },
+          "source_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "gemini_index",
+          "source_lines",
+          "raw_price",
+          "raw_quantity",
+          "review_reason_details"
+        ],
+        "title": "PostItem",
+        "type": "object"
+      },
+      "PostListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PostListResponse",
+        "type": "object"
+      },
+      "PostSummary": {
+        "properties": {
+          "extraction_item_count": {
+            "title": "Extraction Item Count",
+            "type": "integer"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Job Review Reason Details",
+            "type": "array"
+          },
+          "line_posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Posted At"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source_message_id": {
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_message_id",
+          "provider",
+          "line_posted_at",
+          "job_review_reason_details",
+          "item_count",
+          "extraction_item_count"
+        ],
+        "title": "PostSummary",
+        "type": "object"
+      },
       "PriorityProspectAxisBreakdown": {
         "properties": {
           "axis": {
@@ -26239,6 +26452,24 @@
         "title": "QuoteUpdate",
         "type": "object"
       },
+      "RawLine": {
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "text"
+        ],
+        "title": "RawLine",
+        "type": "object"
+      },
       "ReactionRequest": {
         "properties": {
           "emoji_id": {
@@ -26322,6 +26553,43 @@
           "needs_review"
         ],
         "title": "ReanalyzeStats",
+        "type": "object"
+      },
+      "ReasonDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fix_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Stage"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "fix_stage"
+        ],
+        "title": "ReasonDetail",
         "type": "object"
       },
       "ReasonItem": {
@@ -27782,6 +28050,56 @@
           "saved"
         ],
         "title": "SaveCorrectionsResponse",
+        "type": "object"
+      },
+      "SaveItemsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptionItem"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id",
+          "items"
+        ],
+        "title": "SaveItemsRequest",
+        "type": "object"
+      },
+      "SaveItemsResponse": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "enqueued": {
+            "title": "Enqueued",
+            "type": "boolean"
+          },
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Item Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changed",
+          "item_ids",
+          "enqueued"
+        ],
+        "title": "SaveItemsResponse",
         "type": "object"
       },
       "ScoreOverrideRequest": {
@@ -33438,6 +33756,60 @@
           "valid"
         ],
         "title": "TokenVerifyResponse",
+        "type": "object"
+      },
+      "TranscriptionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "raw_price": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Price"
+          },
+          "raw_quantity": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quantity"
+          },
+          "source_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Source Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_lines"
+        ],
+        "title": "TranscriptionItem",
         "type": "object"
       },
       "TrendDayItem": {
@@ -64327,6 +64699,171 @@
           }
         ],
         "summary": "仕入元の原文取得（PARITY-03 第2段階）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts": {
+      "get": {
+        "operationId": "list_v102_posts_api_v1_tcg_v102_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の要確認の投稿の一覧",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts/{job_id}": {
+      "get": {
+        "operationId": "get_v102_post_api_v1_tcg_v102_posts__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の投稿の原文の行と件",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts/{job_id}/items": {
+      "put": {
+        "operationId": "save_v102_post_items_api_v1_tcg_v102_posts__job_id__items_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveItemsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveItemsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の投稿の件（書き写し）を直して保存する",
         "tags": [
           "super-admin"
         ]
