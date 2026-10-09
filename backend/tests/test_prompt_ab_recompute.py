@@ -164,3 +164,106 @@ def test_output_file_is_overwritten_not_appended(fakes):
     _run(fakes, [_row()])
     _summary, out = _run(fakes, [_row()])
     assert len(_read(out)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Gemini の要確認（unsure → gemini_review）。設計: docs/handoff/v102-gemini-unsure/design.md
+# ---------------------------------------------------------------------------
+
+_RAW2 = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+_CTX2 = task.ExtractionContext(
+    raw_text=_RAW2, supplier_context={"extraction_order_pattern": '["price","quantity"]'},
+    knowledge_links=[], supplier_id=7,
+)
+_ITEMS2 = [{"lines": [1, 2], "price": "1,000円", "quantity": "3"}, {"lines": [4], "price": "2,000円", "quantity": "2"}]
+
+
+def _resp2(unsure=None) -> str:
+    body = {"items": _ITEMS2} if unsure is None else {"items": _ITEMS2, "unsure": unsure}
+    return json.dumps(body, ensure_ascii=False)
+
+
+def _strip_gemini_review(fields: dict) -> dict:
+    items = [{k: v for k, v in it.items() if k != "gemini_review"} for it in fields["v102_items"]]
+    flags = {k: v for k, v in fields["v102_flags"].items() if k != "gemini_review"}
+    return {**fields, "v102_items": items, "v102_flags": flags}
+
+
+def test_candidate_items_get_gemini_review_and_others_get_empty_list(fakes):
+    # Arrange
+    masters = fakes.masters(fakes.session)
+    # Act
+    fields = pab._v102_row_fields(_resp2([{"line": 3, "candidates": [2, 4]}]), _CTX2, masters)
+    # Assert
+    assert [it["gemini_review"] for it in fields["v102_items"]] == [
+        [{"kind": "gemini_unsure", "line": 3}], [{"kind": "gemini_unsure", "line": 3}],
+    ]
+    assert fields["v102_flags"]["gemini_review"] == [{"kind": "gemini_unsure", "line": 3, "candidates": [2, 4]}]
+
+
+def test_gemini_review_is_only_given_to_the_item_whose_price_line_is_a_candidate(fakes):
+    # Arrange: 候補が 2 と 4 以外（候補の件が1つだけになる形は不正なので、3件目を足して確かめる）
+    masters = fakes.masters(fakes.session)
+    raw = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円\n商品C\n1BOX@3,000円"
+    ctx = task.ExtractionContext(raw_text=raw, supplier_context=_CTX2.supplier_context, knowledge_links=[], supplier_id=7)
+    items = [*_ITEMS2, {"lines": [5, 6], "price": "3,000円", "quantity": "1"}]
+    response = json.dumps({"items": items, "unsure": [{"line": 3, "candidates": [2, 4]}]}, ensure_ascii=False)
+    # Act
+    fields = pab._v102_row_fields(response, ctx, masters)
+    # Assert
+    assert [bool(it["gemini_review"]) for it in fields["v102_items"]] == [True, True, False]
+    assert fields["v102_items"][2]["gemini_review"] == []
+
+
+def test_without_unsure_output_is_unchanged_except_empty_gemini_review(fakes):
+    # Arrange
+    masters = fakes.masters(fakes.session)
+    with_empty = pab._v102_row_fields(_resp2(), _CTX2, masters)
+    explicit_empty = pab._v102_row_fields(_resp2([]), _CTX2, masters)
+    # Assert
+    assert with_empty == explicit_empty
+    assert with_empty["v102_flags"]["gemini_review"] == []
+    assert all(it["gemini_review"] == [] for it in with_empty["v102_items"])
+    assert {"possible_missing_item", "quantity_no_number", "possible_footer_line", "post_review"} <= set(with_empty["v102_flags"])
+
+
+def test_unsure_does_not_change_existing_review_or_flags(fakes):
+    # Arrange
+    masters = fakes.masters(fakes.session)
+    plain = _strip_gemini_review(pab._v102_row_fields(_resp2(), _CTX2, masters))
+    with_unsure = _strip_gemini_review(
+        pab._v102_row_fields(_resp2([{"line": 3, "candidates": [2, 4]}]), _CTX2, masters))
+    # Assert
+    assert plain == with_unsure
+
+
+def test_invalid_unsure_is_kept_in_flags_and_marks_no_item(fakes):
+    masters = fakes.masters(fakes.session)
+    fields = pab._v102_row_fields(_resp2([{"line": 3, "candidates": [2, 3]}]), _CTX2, masters)
+    assert fields["v102_flags"]["gemini_review"][0]["kind"] == "gemini_unsure_invalid"
+    assert all(it["gemini_review"] == [] for it in fields["v102_items"])
+
+
+def test_unreadable_response_gives_empty_gemini_review_next_to_response_unreadable(fakes):
+    fields = pab._v102_row_fields("not json", _CTX2, fakes.masters(fakes.session))
+    assert fields["v102_flags"]["gemini_review"] == []
+    assert fields["v102_flags"]["post_review"][0]["kind"] == "response_unreadable"
+
+
+def test_extract_exception_keeps_gemini_review_key(fakes, monkeypatch):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    fields = pab._v102_row_fields(_resp2(), _CTX2, fakes.masters(fakes.session))
+    assert fields["v102_flags"]["gemini_review"] == []
+    assert fields["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
+
+
+def test_recompute_route_also_adds_gemini_review(fakes):
+    # Arrange
+    fakes.ctx.return_value = _CTX2
+    row = _row(response_text=_resp2([{"line": 3, "candidates": [2, 4]}]))
+    # Act
+    _summary, out = _run(fakes, [row])
+    # Assert
+    result = _read(out)[0]
+    assert result["v102_flags"]["gemini_review"] == [{"kind": "gemini_unsure", "line": 3, "candidates": [2, 4]}]
+    assert [it["gemini_review"] for it in result["v102_items"]] == [[{"kind": "gemini_unsure", "line": 3}]] * 2
