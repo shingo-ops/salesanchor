@@ -138,3 +138,27 @@ RETURNING id
 ### 次フェーズへの引き継ぎ
 - テナント側仕入元の line_name 重複防止は別件（現時点では問題なし）
 - supplier_code の欠番（SERIAL 特性）は運用上問題なし。連番リセットは不要
+
+---
+
+## 完了記録
+
+- **設計PR**: #3582（mainマージ済み 2026-09-20）
+- **実装PR**: #3585（mainマージ済み 2026-09-20、元PR #3584からCI修正のため再起票）
+- **GO**: Shingo 2026-09-20「GO #3584」→ #3585に引き継ぎ
+- **デプロイ**: 2026-09-20 成功（Deploy to VPS run 35476872661）
+- **本番クリーンアップ**: 実行済み（10グループ21件 → 重複0件、旧レコードはis_active=FALSEで保持）
+- **本番動作確認**:
+  - UNIQUEインデックス `idx_suppliers_line_name_active_unique` 存在確認済み
+  - UPSERT動作: 同じline_nameで2回INSERT → 同じID返却（id=25965）確認済み
+  - NULL line_name: 制約対象外（別ID生成）確認済み
+  - 非NULL line_name重複: 0件
+  - アクティブ仕入元: 184件（line_nameあり）、230件（全体）
+  - テストデータはクリーンアップ済み（is_active=FALSE）
+- **受入基準の充足**:
+  - #1 既存重複解消: ✅ 0グループ
+  - #2 FK再割当て: ✅ cleanup-dedup.sqlで実施済み
+  - #3 UPSERT動作: ✅ 同じIDが返る
+  - #4 並行リクエスト: ✅ UNIQUE制約でDB保証
+  - #5 NULL line_name対象外: ✅ 確認済み
+  - #6 テナント側対象外: ✅ WHERE tenant_id IS NULLで保護
