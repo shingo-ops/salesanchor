@@ -61,6 +61,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
   - 動作：該当ブランチの行を DONE に更新 → commit → develop に push
   - 権限：develop は保護下のため `PIPELINE_PAT`（既存・Issue #300 で rotation 管理）でコミット。Generator 着手前に `gh api .../actions/secrets` で存在を確認。
   - 制約：更新後も `active-work-lint.yml` の6列フォーマットを満たすこと。
+- **未改訂の注（2026-10-10）**：現行の `.github/workflows/active-work-auto-done.yml` は develop 前提のまま（`:6-9` `branches: [develop]`、`:25` `ref: develop`、`:130` develop へ直接 push）。main マージでは本節の自動DONEは動かない。本節の main 対応は別途設計する（本改訂の対象外）。フォルダの回収（§4）は台帳の DONE に依存せず、gh のマージ判定（`scripts/reaper-worktree.sh:233-234`）で動く。
 
 ### 4. フォルダを自動削除（各Mac側・掃除係＝reaper）
 フォルダはその Mac の中にしかないので、削除は Mac 側でしか行えない。掃除係は次の条件を**すべて満たす**部屋だけ消す。
