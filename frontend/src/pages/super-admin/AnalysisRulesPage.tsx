@@ -53,7 +53,7 @@ import { PipelineMapPanel } from "./components/PipelineMapPanel";
 import { LineWorkflowGuidePanel } from "./components/LineWorkflowGuidePanel";
 
 // ---------------------------------------------------------------------------
-// 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
+// 解析精度管理パネル（旧スタンドアロンページ（AY-2g で削除）の内容を移植）
 // ---------------------------------------------------------------------------
 
 function AccuracyManagementPanel() {
