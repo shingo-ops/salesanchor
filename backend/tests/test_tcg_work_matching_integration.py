@@ -27,6 +27,7 @@ from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.seed_data import tcg_product_categories_seed_sql, type_master_seed_sql
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 SCHEMA = "tenant_901"
@@ -242,6 +243,8 @@ def migrate(cursor):
     # ADR-156 Phase 3A: add product_kind_id FK column to public.products
     cursor.execute((MIGRATIONS / "20260921_120000_add_products_product_kind_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    cursor.execute(type_master_seed_sql())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
@@ -252,6 +255,8 @@ def migrate(cursor):
         FROM {SCHEMA}.tcg_product_categories
         ON CONFLICT (code) DO NOTHING
     """)
+    # PC_BOX・PC_SINGLE はテナント側 migration の seed に頼らず、試験側でも入れる（ADR-1007 段2）
+    cursor.execute(tcg_product_categories_seed_sql())
     # Phase 3 SSOT: seed public.conditions with the standard condition master so the analyzer
     # can resolve condition_id (INTEGER FK NOT NULL in analysis_results after Phase 3 migration).
     # Unit seeding is intentionally deferred to test-specific setup (tests like
