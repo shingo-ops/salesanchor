@@ -7,6 +7,7 @@ import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import type { Company } from "./company-detail.types";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Props {
   company: Company;
@@ -29,7 +30,7 @@ export function CompanyChannelsTab({
     <form onSubmit={handleChannelsSubmit} className="form-grid">
       <div className="form-row">
         <label>{t("companies.salesChannelsLabel")}</label>
-        <input disabled={!canEdit} value={channelsText}
+        <TextFieldControl disabled={!canEdit} value={channelsText}
           onChange={(e) => { setChannelsText(e.target.value); setChannelsDirty(true); }} />
         <small>{t("companies.currentValue")}: {company.sales_channels.join(", ") || `（${t("common.none")}）`}</small>
       </div>

@@ -30,6 +30,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { ContactFormFields, type ContactFormState, type ContactCompany } from "./ContactFormFields";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Contact {
   id: number;
@@ -303,7 +304,7 @@ export default function ContactsPage() {
           <form onSubmit={handleCreateSubmit} className="form-grid">
             <div className="form-row">
               <label>{t("contacts.contactCodeLabel")}</label>
-              <input value={createForm.contact_code} onChange={(e) => setCreateForm({ ...createForm, contact_code: e.target.value })} />
+              <TextFieldControl value={createForm.contact_code} onChange={(e) => setCreateForm({ ...createForm, contact_code: e.target.value })} />
             </div>
             <div className="form-row">
               <label>{t("contacts.companyLabel")}</label>
@@ -313,19 +314,19 @@ export default function ContactsPage() {
               </SelectControl>
             </div>
             <div className="form-row"><label>{t("contacts.surname")}</label>
-              <input value={createForm.surname} onChange={(e) => setCreateForm({ ...createForm, surname: e.target.value })} />
+              <TextFieldControl value={createForm.surname} onChange={(e) => setCreateForm({ ...createForm, surname: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("contacts.givenName")}</label>
-              <input value={createForm.given_name} onChange={(e) => setCreateForm({ ...createForm, given_name: e.target.value })} />
+              <TextFieldControl value={createForm.given_name} onChange={(e) => setCreateForm({ ...createForm, given_name: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("contacts.displayName")}</label>
-              <input value={createForm.display_name} onChange={(e) => setCreateForm({ ...createForm, display_name: e.target.value })} />
+              <TextFieldControl value={createForm.display_name} onChange={(e) => setCreateForm({ ...createForm, display_name: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("contacts.position")}</label>
-              <input value={createForm.job_title} onChange={(e) => setCreateForm({ ...createForm, job_title: e.target.value })} />
+              <TextFieldControl value={createForm.job_title} onChange={(e) => setCreateForm({ ...createForm, job_title: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("contacts.department")}</label>
-              <input value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} />
+              <TextFieldControl value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} />
             </div>
             <div className="form-row">
               <label>
@@ -334,10 +335,10 @@ export default function ContactsPage() {
               </label>
             </div>
             <div className="form-row"><label>{t("common.email")}</label>
-              <input type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
+              <TextFieldControl type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("common.phone")}</label>
-              <input value={createForm.primary_phone} onChange={(e) => setCreateForm({ ...createForm, primary_phone: e.target.value })} />
+              <TextFieldControl value={createForm.primary_phone} onChange={(e) => setCreateForm({ ...createForm, primary_phone: e.target.value })} />
             </div>
             <div className="form-row"><label>{t("common.status")}</label>
               <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
