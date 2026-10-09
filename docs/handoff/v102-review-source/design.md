@@ -28,7 +28,7 @@ recon.md §1〜§2。
 3. `post_review` の各要素：`source` が無ければ `"system"`。`gemini_unsure_invalid` は `post_review` の末尾に `{"kind": "gemini_unsure_invalid", "error": ..., (line・candidates があれば), "source": "system"}` として写す（応答の形が壊れていることを見つけたのはシステムなので system）。
 4. extract_exception の経路でも `post_review` の要素に `source: "system"` を付ける。
 - 原文の文字は載せない。`gemini_review` 欄は #4050 のまま残す。
-- 触らない：`gemini_raw_copy_v101.py`、`gemini_raw_copy_v102_product_first.py`、prompt_ab_recompute.py、スキーマ、指示書、migration、`.github/workflows/`、画面。
+- 触らない：`backend/app/services/gemini_raw_copy_v101.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、`backend/app/tools/prompt_ab_recompute.py`、スキーマ、指示書、migration、`.github/workflows/`、画面。
 
 ## 4. 試験と受入条件
 | 基準 | 検証方法 |
