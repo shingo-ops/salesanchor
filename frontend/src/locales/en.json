@@ -3811,11 +3811,6 @@
       "filtered": "Filtered",
       "unknown": "Not recorded"
     },
-    "reviewReason": {
-      "pid_unresolved": "Product could not be identified",
-      "multi_candidate": "Multiple product candidates",
-      "note_unmatched": "No conversion target found for the note"
-    },
     "viewMessages": "View imported messages",
     "viewItems": "View extracted items",
     "viewResults": "View all {{total}} analysis result(s)",
@@ -3847,17 +3842,44 @@
     "changed": "The content changed. Review the refreshed details before confirming again.",
     "reloadFailed": "The content changed, but refreshing failed. Reload before confirming again.",
     "saveFailed": "Could not confirm the condition. Please retry.",
-    "loadFailed": "Could not load the condition choices.",
-    "otherReason": "Another issue requires review.",
-    "separator": " / ",
-    "reasons": {
-      "empty_box": "Empty box requires confirmation.",
-      "empty_box_ambiguous": "The empty-box description is ambiguous. Select the actual condition.",
-      "empty_box_master_unavailable": "The empty-box definition is unavailable.",
-      "note_unmatched": "The note still requires review.",
-      "pid_unresolved": "The product is not identified.",
-      "multi_candidate": "More than one product matched."
-    }
+    "loadFailed": "Could not load the condition choices."
+  },
+  "reviewReason": {
+    "pid_unresolved": "Product not identified",
+    "multi_candidate": "Multiple product candidates",
+    "note_unmatched": "No match for the note",
+    "empty_box": "Empty box needs confirmation",
+    "empty_box_ambiguous": "Empty-box description is ambiguous",
+    "empty_box_master_unavailable": "Empty-box definition unavailable",
+    "unit_unresolved": "Unit not identified",
+    "price_unresolved": "Price not readable",
+    "excluded": "Excluded",
+    "item_shape_invalid": "Gemini output has an invalid shape",
+    "price_not_in_lines": "Price not found in the source lines",
+    "duplicate_price_line": "Duplicate price line",
+    "ship": "Check whether this is a shipping line",
+    "condition": "Check whether this is a condition line",
+    "quantity_no_number": "Quantity has no number",
+    "possible_footer_line": "May be a footer line",
+    "unit_unknown": "Unit unknown",
+    "category_unknown": "Category unknown",
+    "heading_ship_with_own_ship": "Shipping stated in both heading and item",
+    "no_items": "No items extracted",
+    "possible_missing_item": "An item may be missing",
+    "product_not_in_master": "Not in the product master",
+    "product_multiple": "Multiple product candidates (new method)",
+    "condition_multiple_candidates": "Multiple condition candidates",
+    "condition_unknown": "Condition unknown",
+    "gemini_unsure": "Gemini reported it is unsure",
+    "gemini_unsure_invalid": "Gemini's report has an invalid shape",
+    "response_unreadable": "Gemini response unreadable",
+    "extract_exception": "Error during analysis",
+    "unknown": "Unregistered reason ({{code}})",
+    "source": {
+      "gemini": "Gemini",
+      "system": "System"
+    },
+    "separator": ", "
   },
   "codeCollision": {
     "title": "The product code overlaps existing products",
@@ -5158,6 +5180,7 @@
     "title": "Needs Review",
     "productName": "Product Name",
     "supplier": "Supplier",
+    "source": "Source",
     "reviewReasons": "Review Reasons",
     "createdAt": "Date",
     "noItems": "No items need review",

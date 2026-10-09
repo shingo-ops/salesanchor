@@ -65,7 +65,7 @@
 
 | 表 | 追加 | 意味（SSOT） |
 |---|---|---|
-| public.review_reason_codes（新） | code PK, source CHECK('gemini','system'), fix_stage CHECK('extraction','analysis'), i18n_key, created_at | 理由コードの正本。出どころ・直す工程・画面の言葉の鍵（PO P3）。画面の言葉そのものは ja.json/en.json（ADR-027） |
+| public.review_reason_codes（新） | code PK, source CHECK('gemini','system'), fix_stage CHECK('extraction','analysis'), created_at | 理由コードの正本。出どころ・直す工程（PO P3）。画面の言葉は ja.json/en.json の `reviewReason.<code>`（ADR-027。鍵はコードから決まるので列に持たない＝§12-1） |
 | public.extraction_items | source_lines INTEGER[] NULL, gemini_index INTEGER NULL | Gemini が書き写した行（飛び番を保持）と Gemini の出力順。v6 の行は NULL。line_start/line_end は min/max を入れ、既存画面との互換に使う |
 | public.extraction_jobs | gemini_unsure JSONB NULL, review_reasons TEXT NULL | Gemini の unsure 申告（Gemini 段の出力）と投稿単位の理由コード（システム段の出力。カンマ区切り、analysis_results と同じ形） |
 
@@ -75,10 +75,12 @@
 
 ### 4-3. 理由コード表の初期行（出どころ・直す工程）
 
-- gemini: gemini_unsure, gemini_unsure_invalid（Gemini が自分で書いた申告。v101.py:229）。fix_stage=extraction。
+- gemini: gemini_unsure（Gemini が自分で書いた申告。v101.py:229）。fix_stage=extraction。
+- system・extraction: gemini_unsure_invalid（Gemini の申告の形が不正だとシステムが見つけた。line_analysis_v102_svc.py:196,203 で source=system。2026-10-09 recon で訂正）。
 - system・extraction（書き写しの直しで解ける）: item_shape_invalid, price_not_in_lines, duplicate_price_line, quantity_no_number, possible_footer_line, heading_ship_with_own_ship, no_items, possible_missing_item, response_unreadable, ship, condition（迷う行）。
 - system・analysis（マスタ・商品割当で解ける）: product_not_in_master, product_multiple, condition_unknown, condition_multiple_candidates, unit_unknown, category_unknown, extract_exception, および v6 の pid_unresolved, multi_candidate, note_unmatched, unit_unresolved, price_unresolved, excluded, empty_box, empty_box_ambiguous, empty_box_master_unavailable。
-- 抜け漏れ防止: backend のテストで「コードが出しうる理由コード（定数）」がすべて表の初期行（migration ファイル）にあることを検査する。新しいコードは表に1行足すまで CI が通らない。
+- 注: unit_unresolved・price_unresolved・excluded は analyzer が書かず、要確認 API の SQL が導出する（tcg_condition_review_svc.py:141-146）。
+- 抜け漏れ防止: §12-5 のテスト（初期行の SQL ファイル・コード側の定数・ja/en の訳を突き合わせる）。
 
 ### 4-4. analysis_results への書き方（v102）
 
@@ -105,7 +107,7 @@
 
 ### 4-6. 画面（デザインシステム遵守、ADR-144・ADR-027）
 
-- 本番タブ: 「出どころ」列を追加（Gemini／システム）。理由は API が返す i18n_key で t() 表示。未知コードは needsReview.reason.unknown（コード併記）。
+- 本番タブ: 「出どころ」列を追加（Gemini／システム）。理由は `reviewReason.<code>` で t() 表示。表に無いコードは reviewReason.unknown（コード併記）。詳細は §12。
 - 投稿タブ（新）: 投稿単位・Gemini 段の要確認。DataTable／Modal／TextField／Button／Tabs の金型のみ。原文の行の色分けは既存の ShadowSourcePane があれば再利用（実装カードで確認）。
 - 新規の生 input・色直値は禁止（ui-allow 例外も作らない）。
 
@@ -113,7 +115,7 @@
 
 | 便 | 内容 | 危険パス | 本番の挙動 |
 |---|---|---|---|
-| A | review_reason_codes 表＋初期行、要確認 API に source/i18n_key、本番タブの出どころ列・訳 | migrations/ | v6 の要確認の表示が日本語化・出どころ列（全部システム） |
+| A | review_reason_codes 表＋初期行、要確認 API に理由ごとの source・fix_stage、本番タブの出どころ列・訳（§12） | migrations/ | v6 の要確認の表示が日本語化・出どころ列（全部システム） |
 | B | 列追加（extraction_items・extraction_jobs）、v102 本番エンジン（既定 v6）、再解析の振り分け、費用台帳 | migrations/ | 変化なし（既定 v6） |
 | C | 投稿タブ・Gemini 書き写しの修正 → システム段の再実行 | なし | v102 の投稿が無い間は空 |
 | D | 確認済み記録・システム修正 → 配信起動 | なし | 要確認を直したとき配信が起動 |
@@ -181,3 +183,72 @@
 - SSOT: 件の理由・投稿の理由・出どころ・Gemini の行がそれぞれ1か所。
 - 未解決: Q1・Q2、空箱（B のカードで確認）。
 - 維持の仕組み: 理由コードの抜け漏れは CI テスト（§4-3）、v102 と試作版の一致は K8 のテスト。
+
+## 12. 便A の詳細（2026-10-09 PO「y」＝Q3 は推奨案：初期行は1回だけのデータ変更）
+
+recon: /tmp の調査結果を本節に転記（基準 origin/main 656817ddd）。理由コードの出どころは file:line で §12-2 の表に記す。
+
+### 12-1. SSOT（同じ事実は1か所）
+| 事実 | 置き場所（唯一） |
+|---|---|
+| 件の理由コード | analysis_results.review_reasons（カンマ区切り。既存） |
+| 理由ごとの出どころ・直す工程 | public.review_reason_codes（新） |
+| 画面の言葉 | ja.json / en.json の `reviewReason.<code>`（新しい名前空間に集約） |
+| 出どころの言葉 | `reviewReason.source.gemini` / `reviewReason.source.system` |
+
+- 訳の集約: 今は理由の訳が `pmgWorkflow.reviewReason.*`（3コード、ja.json:3814-3818）と `conditionReview.reasons.*`（6コード、ja.json:3853-3860）に分かれ、AnalysisDashboardPanel.tsx:1631-1642 は生のコードを出している。便A で `reviewReason.<code>` に集約し、この3画面（ImportWorkflowPanel.tsx:39-47・ConditionReviewPanel.tsx:74-75・AnalysisDashboardPanel.tsx:1639付近）と本番タブを同じ鍵に切り替え、古い2つの鍵の集合は削除する。
+- i18n の鍵は列に持たない（コードから一意に決まる。持つと二重管理）。
+- 要確認 API の既存の `condition_review.review_reasons`（文字列）は変えない（他の画面が使用）。新しく理由ごとの配列を足す。
+
+### 12-2. 初期行（29行）
+| code | source | fix_stage | ja | en | 出す場所 |
+|---|---|---|---|---|---|
+| pid_unresolved | system | analysis | 商品を特定できない | Product not identified | tcg_analyzer_svc.py:1104・tcg_condition_review_svc.py:142 |
+| multi_candidate | system | analysis | 商品候補が複数ある | Multiple product candidates | tcg_analyzer_svc.py:1106 |
+| note_unmatched | system | analysis | 備考の変換先が見つからない | No match for the note | tcg_analyzer_svc.py:1108 |
+| empty_box | system | analysis | 空箱かどうかの確認が必要 | Empty box needs confirmation | tcg_analyzer_svc.py:1578 |
+| empty_box_ambiguous | system | analysis | 空箱の説明があいまい | Empty-box description is ambiguous | tcg_analyzer_svc.py:1578 |
+| empty_box_master_unavailable | system | analysis | 空箱の状態定義が使えない | Empty-box definition unavailable | tcg_analyzer_svc.py:1576 |
+| unit_unresolved | system | analysis | 単位を特定できない | Unit not identified | tcg_condition_review_svc.py:143 |
+| price_unresolved | system | analysis | 価格を読み取れない | Price not readable | tcg_condition_review_svc.py:144 |
+| excluded | system | analysis | 除外の対象 | Excluded | tcg_condition_review_svc.py:145 |
+| item_shape_invalid | system | extraction | Gemini の出力の形が正しくない | Gemini output has an invalid shape | gemini_raw_copy_v101.py:169 |
+| price_not_in_lines | system | extraction | 価格が原文の行に無い | Price not found in the source lines | gemini_raw_copy_v101.py:169 |
+| duplicate_price_line | system | extraction | 同じ価格の行が重なっている | Duplicate price line | gemini_raw_copy_v101.py:169 |
+| ship | system | extraction | 発送の行かどうか確認が必要 | Check whether this is a shipping line | gemini_raw_copy_v101.py:53,561 |
+| condition | system | extraction | 状態の行かどうか確認が必要 | Check whether this is a condition line | gemini_raw_copy_v101.py:53,561 |
+| quantity_no_number | system | extraction | 数量に数字が無い | Quantity has no number | gemini_raw_copy_v101.py:1047 |
+| possible_footer_line | system | extraction | 末尾の定型文かもしれない | May be a footer line | gemini_raw_copy_v101.py:1047,1119 |
+| unit_unknown | system | analysis | 単位が分からない | Unit unknown | gemini_raw_copy_v101.py:1048 |
+| category_unknown | system | analysis | 商品の種類が分からない | Category unknown | gemini_raw_copy_v101.py:1048 |
+| heading_ship_with_own_ship | system | extraction | 見出しと件の両方に発送の記載がある | Shipping stated in both heading and item | gemini_raw_copy_v101.py:1049 |
+| no_items | system | extraction | 商品が1件も取れていない | No items extracted | gemini_raw_copy_v101.py:1050 |
+| possible_missing_item | system | extraction | 取りこぼしの可能性がある | An item may be missing | gemini_raw_copy_v101.py:1050 |
+| product_not_in_master | system | analysis | 商品マスタに無い | Not in the product master | gemini_raw_copy_v102_product_first.py:70 |
+| product_multiple | system | analysis | 商品候補が複数ある（新方式） | Multiple product candidates (new method) | gemini_raw_copy_v102_product_first.py:71 |
+| condition_multiple_candidates | system | analysis | 状態の候補が複数ある | Multiple condition candidates | gemini_raw_copy_v102_product_first.py:68 |
+| condition_unknown | system | analysis | 状態が分からない | Condition unknown | gemini_raw_copy_v102_product_first.py:67 |
+| gemini_unsure | gemini | extraction | Gemini が自信なしと申告 | Gemini reported it is unsure | gemini_raw_copy_v101.py:229 |
+| gemini_unsure_invalid | system | extraction | Gemini の申告の形が正しくない | Gemini's report has an invalid shape | gemini_raw_copy_v101.py:229・line_analysis_v102_svc.py:203 |
+| response_unreadable | system | extraction | Gemini の応答を読めない | Gemini response unreadable | line_analysis_v102_svc.py:66 |
+| extract_exception | system | analysis | 解析の途中でエラーが起きた | Error during analysis | line_analysis_v102_svc.py:67 |
+
+- 追加の鍵: `reviewReason.unknown`「登録されていない理由（{{code}}）」/ "Unregistered reason ({{code}})"、`reviewReason.source.gemini`「Gemini」/"Gemini"、`reviewReason.source.system`「システム」/"System"、`reviewReason.separator`「、」/", "、`needsReview.source`「出どころ」/"Source"。
+
+### 12-3. 変更前後
+- DB: migration で表を作る（構造のみ。CHECK でコードの形・source・fix_stage を制限）。初期行は docs/handoff/v102-prod-switch/data/review_reason_codes/ の SQL を、デプロイ後に precheck→dryrun→commit→verify（ADR-1007:33-36）。
+- API（GET /tcg/analysis-results）: 各件に `review_reason_details: [{code, source, fix_stage}]` を追加。元は今の `condition_review.review_reasons` を「,」で分けたもの（順番そのまま・重複なし）。表に無いコードは source・fix_stage を null。表の読み込みは1リクエスト1回、置き場所は新しい1ファイル（services/review_reason_codes_svc.py）。
+- 画面（本番タブ）: 「出どころ」列を追加（その件の理由の出どころを重複なしで gemini→system の順に並べる。出どころが1つも分からなければ「—」）。「確認理由」列は review_reason_details の各コードを t(`reviewReason.<code>`) で訳して separator で結ぶ。訳が無いコードは reviewReason.unknown。
+- 3画面の訳の切り替え（§12-1）。
+- 使う金型: 既存の DataTable の列定義だけ（新しい部品・色・生の要素を作らない）。
+
+### 12-4. 本番での順番と、間の状態
+1. PR マージ → デプロイ（表は空）。この間、本番タブの理由は訳が出る（訳は ja.json にある）が、出どころは「—」になる（表が空なので）。要確認の判定・配信は何も変わらない（API の足し算だけ）。
+2. 初期行を書く（precheck で表が空・アプリの DB 利用者が SELECT できることを確認 → dryrun で29行・ROLLBACK → commit → verify で29行が SQL ファイルと一致）。
+3. 本番 API を読み取りで確認（出どころが入る）。
+
+### 12-5. 維持の仕組み（抜け漏れ防止のテスト）
+- 初期行の SQL ファイルのコード集合 ＝ ja.json の `reviewReason` のコード鍵 ＝ en.json の同じ鍵（追加鍵 unknown・source・separator を除く）。
+- コード側で名前の付いた理由コードの定数（v101 の REJECTED_*・ROLE_SHIP/ROLE_CONDITION・:1047-1050 の定数・UNSURE_*、product_first の :67-71、line_analysis_v102_svc の :66-67、tcg_empty_box_rules の定数）がすべて初期行にある。
+- 初期行の各コードの文字列が backend/app のどこかに現れる（使われない行を残さない）。
+- 新しい理由コードを足すときは「コード＋ja/en＋この SQL の型で1行の追加データ変更」が揃わないと CI が通らない。
