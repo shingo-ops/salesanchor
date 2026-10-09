@@ -27,6 +27,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.routers.roles import _hidden_role_params, _visible_role_sql, _visible_text
 from app.schemas.staff import (
     StaffCreate,
     StaffEmailInput,
@@ -75,6 +76,21 @@ _UPDATABLE = {
     "surname_en", "given_name_en", "primary_email", "discord_user_id",
     "role_id", "status", "firebase_uid", "user_id", "is_employee",
 }
+
+
+async def _ensure_assignable_role(
+    db: AsyncSession, role_id: int, tenant_id: int, current_user: User
+) -> None:
+    """role_id が同一テナントに存在し、かつ（super admin 以外には）隠すロールでないことを確かめる。"""
+    check = await db.execute(
+        _visible_text(
+            "SELECT id FROM roles WHERE id = :rid AND tenant_id = :tid "
+            f"AND {_visible_role_sql()}"
+        ),
+        {"rid": role_id, "tid": tenant_id, **_hidden_role_params(current_user)},
+    )
+    if not check.first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定の role_id はこのテナントに存在しません")
 
 
 async def _fetch_emails(db: AsyncSession, staff_id: int) -> list[str]:
@@ -543,12 +559,7 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
     # role_id 存在検証（同一テナント内）
-    check = await db.execute(
-        text("SELECT id FROM roles WHERE id = :rid AND tenant_id = :tid"),
-        {"rid": data.role_id, "tid": tenant_id},
-    )
-    if not check.first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定の role_id はこのテナントに存在しません")
+    await _ensure_assignable_role(db, data.role_id, tenant_id, current_user)
 
     # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
     staff_code = _new_placeholder_code()
@@ -637,6 +648,9 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     for k, v in list(update_data.items()):
         if hasattr(v, "value"):
             update_data[k] = v.value
+
+    if update_data.get("role_id") is not None:
+        await _ensure_assignable_role(db, update_data["role_id"], tenant_id, current_user)
 
     if update_data:
         set_sql = ", ".join(f"{k} = :{k}" for k in update_data)

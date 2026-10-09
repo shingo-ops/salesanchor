@@ -29,7 +29,7 @@
 | 場所 | 変更前 | 変更後（super admin でない人） | super admin |
 |---|---|---|---|
 | GET /roles（roles.py:151） | 全ロール | system_key が隠す一覧にあるロールを除く | 全ロール |
-| GET/PATCH/DELETE と権限の GET/PUT（_get_role を使う5本） | id があれば返す | 隠すロールは「ロールが見つかりません」（404） | 今どおり |
+| GET/PATCH/DELETE と権限の GET/PUT（_get_role を使う4本） | id があれば返す | 隠すロールは「ロールが見つかりません」（404） | 今どおり |
 | GET /users/{id}/roles（roles.py:481） | 全部 | 隠すロールを除く | 全部 |
 | PUT /users/{id}/roles（roles.py:495） | priority だけで判定。全消し→入れ直し | 隠すロールの id は「存在しないロールID」（400）。全消しは隠すロール以外だけにする（既に持っている隠すロールを、普通の人の操作で外さない） | 今どおり |
 | スタッフ追加（staff.py:545） | 同じ会社にあれば可 | 隠すロールは「指定の role_id はこのテナントに存在しません」（400） | 今どおり |
@@ -41,7 +41,7 @@
 2. super admin の判定は `bool(getattr(current_user, "is_super_admin", False))`（roles.py:139 と同じ書き方）。
 3. `backend/app/routers/roles.py`
    - SQL の絞り込みは `(:show_hidden OR system_key IS NULL OR NOT (system_key = ANY(:hidden_keys)))` の形で、GET /roles・GET /users/{id}/roles・PUT /users/{id}/roles の存在確認と全消しに入れる。show_hidden は super admin のとき真。
-   - _get_role は system_key も読む。呼ぶ5本は、super admin でなく隠すロールなら、今の「見つからない」と同じ 404 を返す（見つからない場合と区別しない）。
+   - _get_role は system_key も読む。呼ぶ4本は、super admin でなく隠すロールなら、今の「見つからない」と同じ 404 を返す（見つからない場合と区別しない）。
    - RoleResponse に system_key を足さない（API の形を変えない。frontend/api-contract/openapi.json は変わらない）。
 4. `backend/app/routers/staff.py`
    - 追加（:545-551）の存在確認 SQL に同じ絞り込みを足す。
@@ -66,7 +66,7 @@
 |------|---------|
 | K1: super admin でない人の GET /roles に「システム管理者」が無い | CI pytest（新しい試験 backend/tests/test_roles_hidden_system_admin.py） |
 | K2: スタッフ追加・編集のロール選択に出ない | 同上（GET /roles）と Evaluator（Playwright で一般ユーザーのロール一覧・スタッフ追加の選択肢に無いこと） |
-| K3: super admin でない人が PUT /users/{id}/roles・スタッフ追加・スタッフ編集で付けようとすると 400、_get_role の5本は 404 | CI pytest（同上） |
+| K3: super admin でない人が PUT /users/{id}/roles・スタッフ追加・スタッフ編集で付けようとすると 400、_get_role の4本は 404 | CI pytest（同上） |
 | K3b: 普通の人が PUT /users/{id}/roles をしても、相手が既に持つ隠すロールは外れない | CI pytest（同上） |
 | K4: super admin は一覧に出て、付けられる | CI pytest（同上） |
 | K5: ほかのロールの見え方・付け方は変わらない | 既存の `backend/tests/test_roles.py` と CI 全体 |
