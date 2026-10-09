@@ -85,6 +85,7 @@ class AnalysisResultItem(BaseModel):
     review_issues: list[str]
     condition_review: ConditionReviewFields | None = None
     review_reason_details: list[ReviewReasonDetail] = []
+    is_v102: bool = False
 
 
 class AnalysisResultsResponse(BaseModel):
