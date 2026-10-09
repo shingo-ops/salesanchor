@@ -15,6 +15,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 type RateType = "rate" | "fixed";
@@ -217,7 +218,7 @@ export default function CommissionSettingsPage() {
                           </SelectControl>
                         </td>
                         <td>
-                          <input
+                          <TextFieldControl
                             type="number"
                             min={0}
                             step={cfg.type === "rate" ? 0.01 : 1}
@@ -227,6 +228,7 @@ export default function CommissionSettingsPage() {
                             }
                             aria-label={`${ROLE_LABELS[role]} ${t("commissions.colValue")}`}
                             data-testid={`settings-value-${role}`}
+                            style={{ width: "auto" }}
                           />
                         </td>
                         <td>
