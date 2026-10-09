@@ -3748,6 +3748,50 @@
     "saveFailed": "Could not confirm the condition. Please retry.",
     "loadFailed": "Could not load the condition choices."
   },
+  "v102Posts": {
+    "empty": "No posts to fix",
+    "columns": {
+      "supplier": "Supplier",
+      "postedAt": "Posted at",
+      "postReasons": "Post reasons",
+      "counts": "Items to fix / total",
+      "lines": "Line numbers",
+      "price": "Price",
+      "quantity": "Quantity",
+      "reasons": "Reasons",
+      "remove": "Delete"
+    },
+    "modalTitle": "Fix the transcription",
+    "jobReasons": "Post reasons: {{reasons}}",
+    "linesPlaceholder": "e.g. 3,5,7",
+    "noRows": "No items",
+    "addItem": "Add item",
+    "remove": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Saved. Re-running the analysis",
+    "unchanged": "No changes",
+    "saveFailed": "Could not save. Please try again",
+    "errors": {
+      "lines": {
+        "empty": "Enter line numbers",
+        "notInteger": "Enter whole numbers separated by commas",
+        "outOfRange": "Line numbers must be between 1 and {{max}}",
+        "duplicate": "The same line number appears twice"
+      },
+      "textTooLong": "Use {{max}} characters or fewer",
+      "noItems": "There are no items. Keep at least one"
+    }
+  },
+  "reviewItem": {
+    "drawerTitle": "Item to review",
+    "reasonsHeading": "Reasons for review",
+    "noReasons": "No reasons",
+    "sourceLine": "Source: {{source}}",
+    "ack": "Keep as is",
+    "acked": "Marked as checked. Re-running the analysis",
+    "ackFailed": "Could not mark as checked. Please try again"
+  },
   "reviewReason": {
     "pid_unresolved": "Product not identified",
     "multi_candidate": "Multiple product candidates",
@@ -5095,7 +5139,8 @@
     "tabs": {
       "production": "Production review",
       "shadow": "Shadow run review",
-      "bottlenecks": "Bottlenecks"
+      "bottlenecks": "Bottlenecks",
+      "posts": "Posts"
     }
   },
   "distributionSettings": {

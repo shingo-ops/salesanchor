@@ -3748,6 +3748,50 @@
     "saveFailed": "状態を保存できませんでした。もう一度お試しください。",
     "loadFailed": "状態の選択肢を取得できませんでした。"
   },
+  "v102Posts": {
+    "empty": "直す投稿はありません",
+    "columns": {
+      "supplier": "仕入元",
+      "postedAt": "投稿時刻",
+      "postReasons": "投稿の理由",
+      "counts": "直す件 / 件数",
+      "lines": "行番号",
+      "price": "価格",
+      "quantity": "数量",
+      "reasons": "理由",
+      "remove": "削除"
+    },
+    "modalTitle": "書き写しを直す",
+    "jobReasons": "投稿の理由：{{reasons}}",
+    "linesPlaceholder": "例 3,5,7",
+    "noRows": "件がありません",
+    "addItem": "件を追加",
+    "remove": "削除",
+    "cancel": "やめる",
+    "save": "保存",
+    "saved": "保存しました。解析をやり直しています",
+    "unchanged": "変更はありません",
+    "saveFailed": "保存できませんでした。もう一度お試しください",
+    "errors": {
+      "lines": {
+        "empty": "行番号を入れてください",
+        "notInteger": "行番号は整数をカンマで区切って入れてください",
+        "outOfRange": "行番号は1から{{max}}の間にしてください",
+        "duplicate": "同じ行番号が重なっています"
+      },
+      "textTooLong": "{{max}}字以内にしてください",
+      "noItems": "件が1つもありません。1件以上にしてください"
+    }
+  },
+  "reviewItem": {
+    "drawerTitle": "要確認の商品",
+    "reasonsHeading": "確認が必要な理由",
+    "noReasons": "理由はありません",
+    "sourceLine": "出どころ：{{source}}",
+    "ack": "このままで良い",
+    "acked": "確認済みにしました。解析をやり直しています",
+    "ackFailed": "確認済みにできませんでした。もう一度お試しください"
+  },
   "reviewReason": {
     "pid_unresolved": "商品を特定できない",
     "multi_candidate": "商品候補が複数ある",
@@ -5095,7 +5139,8 @@
     "tabs": {
       "production": "本番の確認待ち",
       "shadow": "試運転の確認待ち",
-      "bottlenecks": "詰まり"
+      "bottlenecks": "詰まり",
+      "posts": "投稿"
     }
   },
   "distributionSettings": {

@@ -20,10 +20,13 @@ import { Card } from "../../../components/Card";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { api, ApiError } from "../../../lib/api";
 import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from "../../../features/tcg-analysis-review/reviewReasonLabel";
+import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime";
+import { ReviewItemDrawer } from "../../../features/tcg-analysis-review/ReviewItemDrawer";
+import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab";
 
 const PAGE_SIZE = 20;
 
-type TabKey = "production" | "shadow" | "bottlenecks";
+type TabKey = "production" | "shadow" | "bottlenecks" | "posts";
 
 interface NeedsReviewItem {
   extraction_item_id: string;
@@ -34,6 +37,7 @@ interface NeedsReviewItem {
   system: Record<string, string>;
   review_reason_details?: ReviewReasonDetail[];
   review_issues: string[];
+  is_v102?: boolean;
   condition_review: {
     condition_id: string | null;
     review_version: string;
@@ -118,18 +122,6 @@ interface KeywordPreviewResponse {
   transitions: Record<string, number>;
 }
 
-function formatDate(isoString: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale.startsWith("ja") ? "ja-JP" : "en-GB", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(new Date(isoString));
-}
-
 function formatPriceQtyReason(reason: string, t: TFunction): string {
   return reason
     .split(",")
@@ -149,6 +141,8 @@ export default function NeedsReviewTabsPanel() {
   const [data, setData] = useState<NeedsReviewResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [drawerItem, setDrawerItem] = useState<NeedsReviewItem | null>(null);
 
   useEffect(() => {
     if (authLoading || !isSuperAdmin || activeTab !== "production") return;
@@ -182,7 +176,7 @@ export default function NeedsReviewTabsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isSuperAdmin, offset, activeTab]);
+  }, [authLoading, isSuperAdmin, offset, activeTab, reloadKey]);
 
   // --- 試運転の確認待ち ---
   const [shadowOffset, setShadowOffset] = useState(0);
@@ -448,6 +442,7 @@ export default function NeedsReviewTabsPanel() {
     { key: "production", label: t("needsReview.tabs.production") },
     { key: "shadow", label: t("needsReview.tabs.shadow") },
     { key: "bottlenecks", label: t("needsReview.tabs.bottlenecks") },
+    { key: "posts", label: t("needsReview.tabs.posts") },
   ];
 
   const productCandidates =
@@ -467,6 +462,7 @@ export default function NeedsReviewTabsPanel() {
               data={data.items}
               rowKey={(item) => item.extraction_item_id}
               emptyState={t("needsReview.noItems")}
+              onRowClick={setDrawerItem}
               page={Math.floor(offset / PAGE_SIZE) + 1}
               hasNextPage={offset + (data.items?.length ?? 0) < data.total}
               onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
@@ -534,6 +530,16 @@ export default function NeedsReviewTabsPanel() {
             </div>
           )}
         </>
+      )}
+
+      {activeTab === "posts" && !authLoading && isSuperAdmin && <V102PostsTab />}
+
+      {drawerItem && (
+        <ReviewItemDrawer
+          item={drawerItem}
+          onClose={() => setDrawerItem(null)}
+          onRefresh={async () => setReloadKey((k) => k + 1)}
+        />
       )}
 
       {selectedItem && (

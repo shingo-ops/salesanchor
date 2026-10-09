@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from sqlalchemy import text
@@ -264,6 +264,15 @@ def _plan_order(items: list[ItemInput], existing: dict[str, Any]) -> list[tuple[
     return [(item, item_id) for _key, item, item_id in keyed]
 
 
+def _blank_to_none(value: str | None) -> str | None:
+    """空文字（前後の空白だけを含む）は None にそろえる。None で保存済みの欄に "" が来ても変更にしない。"""
+    return None if value is None or not value.strip() else value
+
+
+def _normalize_inputs(items: list[ItemInput]) -> list[ItemInput]:
+    return [replace(i, raw_price=_blank_to_none(i.raw_price), raw_quantity=_blank_to_none(i.raw_quantity)) for i in items]
+
+
 async def _add_correction(
     db: AsyncSession, *, item_id: str, source_message_id: str, field: str, system_value: str, human_value: str, corrected_by: str,
 ) -> None:
@@ -338,6 +347,7 @@ async def apply_transcription_edit(db: AsyncSession, job: PostJob, items: list[I
     最初にシステム段と同じ advisory lock を取り、投稿の件を読み直してから検査・書き込みをする。
     何も変わらなければ書かずに終わる（changed=False）。変わったら commit する（enqueue は呼び出し側）。
     """
+    items = _normalize_inputs(items)
     await db.execute(text(_LOCK_SQL), {"key": v102_analysis_lock_key(job.job_id)})
     rows = (await db.execute(text(_ITEMS_SQL.format(schema=TCG_SCHEMA)), {"job_id": job.job_id})).fetchall()
     existing = {r.id: r for r in rows}
