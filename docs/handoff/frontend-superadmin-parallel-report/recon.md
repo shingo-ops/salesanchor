@@ -4,8 +4,8 @@
 既存 ADR の検索: `git grep -il "parallel-report\|TcgParallelReport" docs/adr/` で該当する設計判断を確認する。画面の存続を定める ADR は、設計の調査では見つかっていない。関連は ADR-027（i18n）と ADR-144（UI 金型）。
 
 ## 1. ページの事実（file:line）
-- frontend/src/pages/super-admin/TcgParallelReportPage.tsx:2 冒頭コメント「/super-admin/tcg-parallel-report — 並行運用比較レポート」、MIG-04 Phase 4。
-- frontend/src/pages/super-admin/TcgParallelReportPage.tsx:71-72 が `api.get<ParallelReportResponse>("/tcg/parallel-report")` を呼ぶ。読み取り専用。
+- frontend/src/pages/super-admin/TcgParallelReportPage.tsx（本便で削除。2行目）冒頭コメント「/super-admin/tcg-parallel-report — 並行運用比較レポート」、MIG-04 Phase 4。
+- frontend/src/pages/super-admin/TcgParallelReportPage.tsx（本便で削除。71-72行目）が `api.get<ParallelReportResponse>("/tcg/parallel-report")` を呼ぶ。読み取り専用。
 - frontend/src/App.tsx:91 import、:306-310 Route（`/super-admin/tcg-parallel-report`）。
 
 ## 2. このページだけが使うもの
