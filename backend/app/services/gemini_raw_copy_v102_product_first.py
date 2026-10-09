@@ -93,6 +93,8 @@ class ProductFirstMasters:
     ignore_phrases: tuple[str, ...]  # 単位にしない言い回し（有効なもの。空でもよい）
     # 形G2 の照合に使う索引（型番を外す前の商品と中分類の印）。None のときは product_entries から印なしで作る
     g2_index: G2Index | None = None
+    # 直前の投稿から商品を決めない言葉（複数を指す言葉）。knowledge_rules の category=followup_plural_word。空なら働かない
+    followup_plural_words: tuple[str, ...] = ()
 
 
 _CONDITION_UNIT_SQL = """
@@ -106,6 +108,11 @@ _IGNORE_PHRASES_SQL = """
 """
 
 
+_FOLLOWUP_PLURAL_WORDS_SQL = """
+    SELECT pattern FROM public.knowledge_rules
+    WHERE category = 'followup_plural_word' AND pattern_type = 'substring' AND is_active = TRUE
+    ORDER BY priority, id
+"""
 _NAME_ONLY_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = FALSE"
 
 
@@ -238,6 +245,12 @@ def match_product_g2(block: str, index: G2Index) -> MatchResult:
     )
 
 
+def match_text_g2(match_text: str, masters: ProductFirstMasters):
+    """照合文を形G2 で照合する（resolve_product_first と直前の投稿の参照行の作成が同じ部品を使う）。"""
+    g2_index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
+    return match_product_g2(match_text, g2_index)
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
     """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
 
@@ -252,7 +265,8 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     cond_unit = {str(r[0]): str(r[1]) for r in session.execute(text(_CONDITION_UNIT_SQL)).fetchall()}
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
     g2_index = build_g2_index(source_entries, name_only, code_only_off)
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index)
+    plural_words = tuple(str(r[0]) for r in session.execute(text(_FOLLOWUP_PLURAL_WORDS_SQL)).fetchall() if r[0])
+    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words)
     check_product_first_masters(masters)
     return masters
 
@@ -498,12 +512,13 @@ def resolve_product_first(
     商品が有効な商品の一覧に無ければ固定しない。None のときの結果は変わらない。
     """
     match_text, _source = product_match_text(block, "", name)
-    g2_index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
-    match = match_product_g2(match_text, g2_index)
+    match = match_text_g2(match_text, masters)
     fixed_match = _fixed_match(match, fixed_product_id, masters)
     if fixed_match is not None:
         match = fixed_match
-    elif match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
+    elif match.status in ("ambiguous", "unmatched") and chosen_product_id is not None and (
+        match.status == "unmatched" or chosen_product_id in match.candidates  # unmatched は直前の投稿で決めた商品（matched_followup）
+    ):
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
     score = decide_by_score(match, masters.product_entries)
