@@ -22,7 +22,7 @@
      - しかし `MAIN_REPO_ROOT` は、cwd の `git rev-parse --git-common-dir` から決まる（`scripts/reaper-worktree.sh:40-45`）。そのため `_work` 側を指す。
      - 削除は `git -C "${MAIN_REPO_ROOT}" worktree remove`（:352）と `branch -D`（:357）で行うので、本体の worktree を消せない。台帳の照合も `_work` 側を見る。
      - 直近の run 37698305644 は「削除対象なし」だった。
-  3. 即時の経路：`repository_dispatch: reaper-run`（`reaper-schedule.yml:13-14`）。
+  3. 即時の経路：`repository_dispatch: reaper-run`（`.github/workflows/reaper-schedule.yml:13-14`）。
      - 発火元は `.github/workflows/active-work-auto-done.yml:137-145` だけで、これは **develop** への PR のマージで動く（:6-9）。
      - main へのマージでは発火しない（main 用の `.github/workflows/ledger-auto-done-main.yml` は dispatch していない）。
 - 削除の条件（`scripts/reaper-worktree.sh:150-242`）
@@ -63,12 +63,12 @@
 - 30日以上更新の無い OPEN の PR（23件）と、未保存ありの worktree（約40件）の一覧は、`/tmp/CC報告ファイル/ops-memory/20261008-worktrees/inventory.tsv` に保存済み。続けるか閉じるかは、PO と作業の持ち主が決める。
 
 ## 外部・過去事例の参照と我々への応用
-- 社内の過去事例：`reaper-schedule.yml:26-29` のコメント（2026-07-20 の実測「対象0件」）と、それへの対処のコミット d2498937a。走査先だけを本体に向けたが、git の基点（MAIN_REPO_ROOT）は `_work` のまま残った。R1 は、その残りを直す。
+- 社内の過去事例：`.github/workflows/reaper-schedule.yml:26-29` のコメント（2026-07-20 の実測「対象0件」）と、それへの対処のコミット d2498937a。走査先だけを本体に向けたが、git の基点（MAIN_REPO_ROOT）は `_work` のまま残った。R1 は、その残りを直す。
 - 公式の仕様：GitHub Actions の pull_request の closed イベント（上記 §1）。
 - 外部の一般事例は使わない。
 
 ## 維持の仕組み
-- 守り手：ADR-114（R5 の改訂）、reaper-schedule の run のログ、launchd のログ（`~/Library/Logs/reaper-onlogin.log`）。
+- 守り手: ADR-114（R5 の改訂）、reaper-schedule の run のログ、launchd のログ（`~/Library/Logs/reaper-onlogin.log`）。
 
 ## 戻し方
 - 各便の PR を revert する。R1 と R2 は workflow のみ。R3 と R4 はスクリプトのみ。データ（worktree）の削除は、安全条件を変えていないので、増えるのは「マージ済みで、未保存が無いもの」の回収だけ。
