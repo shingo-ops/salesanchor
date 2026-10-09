@@ -132,5 +132,8 @@ Architect 自己審査（AY-2g）: APPROVE。同一AI（Opus）による自己�
 
 限界: 本番反映後の確認（Deploy・古い3つの URL が 200・/api/health 200）は merge 後。ProductMasterPanel 本体は、管理者判定を持たない（AnalysisRulesPage が持つ）。?section= に知らない値が入ると右側が空になる既存の挙動は未変更。切戻し: 本PRの merge commit を revert（DB 影響なし）。
 
+## 維持の仕組み
+守り手: tsc、追加した転送試験（legacyPageRedirects.test.tsx）、AnalysisRulesPage.test.tsx、ProductMasterPanel.test.tsx、frontend/scripts/check-i18n-missing-keys.js、frontend-check。守っていないもの: e2e（CI で停止中、.github/workflows/e2e.yml:105）。切戻しは本PRの merge commit を revert する（DB 影響なし）。
+
 ## 外部・過去事例の参照と我々への応用
 外部事例: 不要（既存の Panel への一本化。転送は App.tsx の既存前例 `<Route path="/leads" element={<Navigate to="/crm/leads" replace />} />` の型）。過去事例: AY-2f（PR #4098）の未使用部品の削除と同じ進め方。
