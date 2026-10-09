@@ -15,6 +15,7 @@ from tests.test_tcg_product_detail_pg import (  # noqa: F401  (fixtures)
     edit_pg,
     edit_values,
     pg,
+    product_db,
     pytestmark,
 )
 
