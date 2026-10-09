@@ -5,6 +5,7 @@ name: reaper-schedule — マージ済み worktree 定期回収（ADR-114）
 #
 # repository_dispatch で active-work-auto-done 完了後にも即時起動できる
 # Mac が offline なら即時実行は失敗して OK（毎日 03:00 JST の定期で追いつく）
+# main への PR マージ直後にも起動する（R2、docs/handoff/reaper-on-merge/design.md）。GITHUB_TOKEN によるマージでは起動しないため、毎日の定期実行は残す
 
 on:
   schedule:
@@ -12,9 +13,17 @@ on:
   workflow_dispatch:        # 手動実行（テスト・緊急時）
   repository_dispatch:
     types: [reaper-run]    # active-work-auto-done 完了後の即時回収
+  pull_request:
+    types: [closed]
+    branches: [main]   # main へのマージ直後に即時回収（R2）
+
+concurrency:
+  group: reaper
+  cancel-in-progress: false
 
 jobs:
   reaper:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: [self-hosted, macOS]
     timeout-minutes: 30
     steps:
