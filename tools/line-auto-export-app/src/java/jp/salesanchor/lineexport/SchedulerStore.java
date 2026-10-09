@@ -18,6 +18,7 @@ final class SchedulerStore {
     private static final String KEY_PENDING_NEXT_AT_MS = "pending_next_at_ms";
     private static final String KEY_LAST_IMPORT_AT = "last_import_at";
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
+    private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -123,6 +124,26 @@ final class SchedulerStore {
 
     static void setLastComplementAttemptAt(Context context, long whenMs) {
         prefs(context).edit().putLong(KEY_LAST_COMPLEMENT_ATTEMPT_AT, whenMs).apply();
+    }
+
+    /**
+     * 通知引き金アラームの発火予定時刻（絶対epoch ms）。design.md追補 2026-10-09
+     * 「通知起動が捨てられていた原因」: 「予約済みか」の判定に{@code PendingIntent}の有無
+     * （FLAG_NO_CREATE）を使っていたのが原因で、{@code AlarmManager#cancel}がPendingIntent
+     * 自体を消さないため以後の通知がすべて捨てられる不具合があった。代わりにこの予定時刻を
+     * 保存し、「未来の予定が残っているか」で判定する（{@link RunScheduler}参照）。
+     * 既定0（未予約）。
+     */
+    static long getNotificationReservedAt(Context context) {
+        return prefs(context).getLong(KEY_NOTIFICATION_RESERVED_AT, 0L);
+    }
+
+    static void setNotificationReservedAt(Context context, long atMs) {
+        prefs(context).edit().putLong(KEY_NOTIFICATION_RESERVED_AT, atMs).apply();
+    }
+
+    static void clearNotificationReservedAt(Context context) {
+        prefs(context).edit().remove(KEY_NOTIFICATION_RESERVED_AT).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

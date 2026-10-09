@@ -122,17 +122,30 @@ final class RunScheduler {
      * （呼び出し側=LineNotifyListenerService#handleで両条件を確認済みであること）。
      * OFF中は何もしない。既に通知引き金が予約済み（このバーストの最初の通知で既に予約した）
      * なら延ばさない。未予約なら30秒後に予約する。
+     *
+     * 「予約済みか」の判定は{@link SchedulerStore#getNotificationReservedAt}に保存した
+     * 発火予定時刻が未来かどうかで行う（design.md追補 2026-10-09「通知起動が捨てられていた
+     * 原因」。{@code PendingIntent}の有無では判定しない。理由は{@link #buildPendingIntent}
+     * 付近のコメント参照）。{@code reservedAt > now}が要点: 過去（＝予定時刻を過ぎたのに
+     * 何らかの理由で未発火の残骸）は「予約中」とみなさず、ここで次の通知が来れば張り直す
+     * （自己修復する）。
      */
     static void onQualifyingNotification(Context context) {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
-        if (isPending(context, REQUEST_CODE_NOTIFICATION, TRIGGER_NOTIFICATION)) {
+        long now = System.currentTimeMillis();
+        long reservedAt = SchedulerStore.getNotificationReservedAt(context);
+        if (reservedAt > now) {
             // バースト中の2件目以降。予約を延ばさない（長いバーストで遅延が無限に伸びるのを防ぐ）。
+            RunLogger.logSchedulerEvent(context, "skip_reserved", labelFor(TRIGGER_NOTIFICATION),
+                    null, Long.valueOf(reservedAt));
             return;
         }
-        scheduleAt(context, REQUEST_CODE_NOTIFICATION, System.currentTimeMillis() + NOTIFICATION_DEBOUNCE_MS,
-                TRIGGER_NOTIFICATION);
+        long at = now + NOTIFICATION_DEBOUNCE_MS;
+        scheduleAt(context, REQUEST_CODE_NOTIFICATION, at, TRIGGER_NOTIFICATION);
+        SchedulerStore.setNotificationReservedAt(context, at);
+        RunLogger.logSchedulerEvent(context, "reserve", labelFor(TRIGGER_NOTIFICATION), Long.valueOf(at), null);
     }
 
     // ---- 使用中で見送ったとき（UnlockAccessibilityServiceから呼ぶ） --------------------------
@@ -205,13 +218,22 @@ final class RunScheduler {
                 int requestCode = TRIGGER_NOTIFICATION.equals(triggerType)
                         ? REQUEST_CODE_NOTIFICATION : REQUEST_CODE_RETRY;
                 scheduleAt(context, requestCode, deferredAt, triggerType);
+                if (TRIGGER_NOTIFICATION.equals(triggerType)) {
+                    // 延ばした先に予約を更新する（延ばしたのに古い予定時刻が残ると、次の通知が
+                    // 「予約済みでない」と誤判定して割り込む恐れがある）。
+                    SchedulerStore.setNotificationReservedAt(context, deferredAt);
+                }
+                RunLogger.logSchedulerEvent(context, "defer_floor", labelFor(triggerType),
+                        Long.valueOf(deferredAt), null);
                 return;
             }
         }
 
         if (TRIGGER_NOTIFICATION.equals(triggerType)) {
             cancel(context, REQUEST_CODE_NOTIFICATION, TRIGGER_NOTIFICATION);
+            SchedulerStore.clearNotificationReservedAt(context);
         }
+        RunLogger.logSchedulerEvent(context, "fire", labelFor(triggerType), null, null);
 
         UnlockAccessibilityService.requestRunAll(context, labelFor(triggerType));
     }
@@ -332,15 +354,26 @@ final class RunScheduler {
         }
     }
 
-    /** 指定のrequestCode/種別の予約が現在残っているか（FLAG_NO_CREATEで既存PendingIntentの有無を見る）。 */
-    private static boolean isPending(Context context, int requestCode, String triggerType) {
-        Intent intent = new Intent(AlarmReceiver.ACTION_SCHEDULED_RUN);
-        intent.setClass(context, AlarmReceiver.class);
-        intent.putExtra(EXTRA_TRIGGER, triggerType);
-        PendingIntent existing = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_NO_CREATE);
-        return existing != null;
-    }
-
+    /**
+     * 「予約済みか」の判定に{@code PendingIntent.getBroadcast(..., FLAG_NO_CREATE)}の非nullを
+     * 状態として使ってはいけない（旧isPending()。design.md追補 2026-10-09「通知起動が
+     * 捨てられていた原因」で削除）。
+     *
+     * 理由: {@link AlarmManager#cancel}は**アラームを消すだけでPendingIntent自体は残す**。
+     * さらに{@link #buildPendingIntent}は{@code FLAG_UPDATE_CURRENT}のため、cancelの直前に
+     * PendingIntentを作り直す。このため一度でも通知引き金のアラームを張ると、FLAG_NO_CREATEは
+     * 以後ずっと非nullを返し続け、{@code isPending()}は常にtrueを返してしまう。
+     *
+     * 実機（2026-10-09）で確定した事実: 対象グループの該当通知71件に対し、通知引き金の実行は
+     * 9回のみだった。requestCode 2のPendingIntentの実体は15:48の{@code PI:aeb8457}から
+     * 18:46の{@code PI:90af5ff}へ変わっていた（その間に再インストールは無い。
+     * {@code lastUpdateTime=2026-10-09 13:40:34}）。この実体が変わったとき＝OSが残骸を
+     * 解放したときだけ、通知引き金の実行が復帰していた。{@code dumpsys alarm}のAddition
+     * historyにも、捨てられていた時間帯の通知に対応する予約行が無かった。
+     *
+     * 代わりに{@link SchedulerStore#getNotificationReservedAt}に保存した発火予定時刻
+     * （絶対epoch ms）で判定する（{@link #onQualifyingNotification}参照）。
+     */
     private static PendingIntent buildPendingIntent(Context context, int requestCode, String triggerType) {
         Intent intent = new Intent(AlarmReceiver.ACTION_SCHEDULED_RUN);
         intent.setClass(context, AlarmReceiver.class);
@@ -360,6 +393,9 @@ final class RunScheduler {
         cancel(context, REQUEST_CODE_COMPLEMENT, TRIGGER_COMPLEMENT);
         cancel(context, REQUEST_CODE_NOTIFICATION, TRIGGER_NOTIFICATION);
         cancel(context, REQUEST_CODE_RETRY, TRIGGER_RETRY);
+        // OFFにする・再起動時に再構成する際は、通知引き金の予約状態も一緒に消す
+        // （design.md追補 2026-10-09。disable()はここを経由する）。
+        SchedulerStore.clearNotificationReservedAt(context);
     }
 
     /**

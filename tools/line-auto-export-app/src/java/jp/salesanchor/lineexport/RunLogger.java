@@ -179,6 +179,39 @@ final class RunLogger {
         append(context, json);
     }
 
+    /**
+     * スケジューラの予約判断を記録する単発行（実行チェーン=runIdに紐づかない。design.md追補
+     * 2026-10-09「通知起動が捨てられていた原因」）。{@link RunScheduler}が通知引き金の
+     * 予約／見送り／床での繰り延べ／発火のそれぞれで呼ぶ。本文やメッセージ内容は含めない。
+     *
+     * @param phase "reserve" / "skip_reserved" / "defer_floor" / "fire"
+     * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル（"通知"/"補完"/"再試行"）
+     * @param scheduledAtMs reserve・defer_floorで、新たに予約した発火予定時刻（絶対epoch ms）。
+     *     対象外ならnull
+     * @param reservedUntilMs skip_reservedで、既に予約済みで解放予定の時刻（絶対epoch ms）。
+     *     対象外ならnull
+     */
+    static void logSchedulerEvent(Context context, String phase, String triggerLabel,
+            Long scheduledAtMs, Long reservedUntilMs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", phase);
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            if (scheduledAtMs != null) {
+                json.put("scheduledAt", formatIso8601(scheduledAtMs.longValue()));
+            }
+            if (reservedUntilMs != null) {
+                json.put("reservedUntil", formatIso8601(reservedUntilMs.longValue()));
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "run log scheduler event build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
     private static void append(Context context, JSONObject json) {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);

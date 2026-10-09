@@ -586,3 +586,35 @@ PO決定 2026-10-08: **A（LINEの「メッセージ内容を表示」をONに�
 
 ### 再測定の方法（再利用可）
 `/sdcard/Download/sa-line-notify/run-YYYYMMDD.jsonl` の `flow:"export", phase:"end"` 行から `elapsedMs`・各段階の `ms`/`upMs`・`settleMs`・`overlayShown` を読む。ADB接続時は `adb -s <endpoint> shell "grep ... run-*.jsonl"` で直接読める。
+
+## 追補 2026-10-09 通知起動が捨てられていた原因（dumpsys alarmで確定）
+
+### 事実（実測）
+
+対象グループの該当通知71件に対し、`trigger=通知` での実行はわずか**9回**だった。15:48:55に通知引き金の実行が走った後、15:50:00〜18:03:34の間に来た該当通知**14件が全部捨てられた**（2時間13分、空白）。
+
+`dumpsys alarm` のAddition historyに、この空白期間中の通知に対応する予約行が無く、待ち行列（pending alarms）にも通知引き金のアラームが無かった＝そもそも予約が作られていなかった（配送の遅延ではない）。
+
+requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の `PI:aeb8457` から18:46時点の `PI:90af5ff` へ変わっていた。この間にアプリの再インストールは無い（`lastUpdateTime=2026-10-09 13:40:34` のまま）。通知引き金の実行が復帰したのは、この実体が変わったタイミングと一致していた。
+
+### 原因
+
+`RunScheduler.onQualifyingNotification()` は「通知引き金が予約済みか」を `PendingIntent.getBroadcast(..., FLAG_NO_CREATE)` の非nullで判定していた（旧 `isPending()`）。
+
+しかし `AlarmManager#cancel(PendingIntent)` は**アラームを消すだけで、PendingIntent自体は消さない**。`buildPendingIntent()` が `FLAG_UPDATE_CURRENT` のため、cancelの直前にPendingIntentを作り直してはいるが、作り直した後のPendingIntentもcancelでは消えずに残る。このため、一度でも通知引き金のアラームを張ると、`FLAG_NO_CREATE` は以後ずっと非nullを返し続け、`isPending()` は常にtrueを返す＝「予約済み」と誤判定し続け、以後の対象グループ通知がすべて捨てられていた。
+
+この残骸のPendingIntentがいつ・なぜ解放されるか（OS側の内部的な仕組み）は未確認である。実機では18:46に実体が変わって初めて通知引き金の実行が復帰したが、**残骸がOS側で解放される時刻は制御外**という事実までは言えるものの、解放の仕組みの詳細（何がトリガーか等）は未確認のまま断定しない。
+
+### 対処
+
+「予約済みか」の判定を、PendingIntentの有無ではなく、`SchedulerStore` に保存した「通知引き金アラームの発火予定時刻（絶対epoch ms）」で行うように変更した（`SchedulerStore#getNotificationReservedAt`/`setNotificationReservedAt`/`clearNotificationReservedAt`）。
+
+判定は `reservedAt > now`（保存した予定時刻が**未来**のときだけ「予約中」とみなす）。過去の値が残っていても「予約中」とはみなさないため、予定時刻を過ぎたのに何らかの理由で未発火の残骸があっても、次に対象グループの通知が来た時点で新しい予約に張り直される（自己修復する）。`>=` や「0以外なら予約中」にはしていない（それだと発火直後の一瞬だけでなく、床で延ばした後の値がそのまま残るケースなどで誤判定しうるため）。
+
+合わせて、床（FLOOR）で予約を延ばす経路・実行に進む経路・`cancelAll()`（OFF・再構成時）のそれぞれで、保存した予定時刻を更新／消去するようにした。
+
+### 守ること
+
+- **`FLAG_NO_CREATE` の非null/nullを「予約済みか」の状態として使わない。** `AlarmManager#cancel` はPendingIntentを消さないため、一度でもアラームを張ると以後ずっと非nullになり、状態として機能しない。
+- 判定は必ず「自分で保存した予定時刻」で行い、「過去の値は予約中とみなさない」（`reservedAt > now`）を守る。
+- 実行ログに `flow:"scheduler"` の単発行（`phase: reserve/skip_reserved/defer_floor/fire`）を追加した。今後、通知が捨てられているかどうかはこのログで診断できる（`skip_reserved` が連続していないか、`reserve` の間隔が異常に短くないか等）。
