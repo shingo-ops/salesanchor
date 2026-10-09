@@ -101,3 +101,15 @@ export const ControlDisabled: Story = {
     />
   ),
 }
+
+export const ControlVariants: Story = {
+  name: 'TextareaControl 種類 (karte / embedded / composer / schedule)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <TextareaControl variant="karte" rows={3} placeholder="karte variant" aria-label="Karte" />
+      <TextareaControl variant="embedded" rows={2} placeholder="embedded variant" aria-label="Embedded" />
+      <TextareaControl variant="composer" rows={3} placeholder="composer variant" aria-label="Composer" />
+      <TextareaControl variant="schedule" rows={4} placeholder="schedule variant" aria-label="Schedule" />
+    </div>
+  ),
+}

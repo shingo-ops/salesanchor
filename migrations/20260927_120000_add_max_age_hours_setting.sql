@@ -1,4 +1,5 @@
 -- max_age_hours setting for distribution time filter
-INSERT INTO public.tcg_distribution_settings (key, value, note)
-VALUES ('max_age_hours', '48', '配信対象の最大経過時間（時間）。line_posted_atからの経過がこの値を超えた行は配信から除外する')
-ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- max_age_hours の seed を外した。アプリは未設定のとき既定値を使う（tcg_distribution_svc.py）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: max_age_hours seed removed'; END $$;

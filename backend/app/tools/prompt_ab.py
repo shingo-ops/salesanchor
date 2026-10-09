@@ -64,8 +64,10 @@ from app.services.gemini_raw_copy_v101 import (
     DEFAULT_V102_PROMPT_NAME,
     V101_PROMPT_NAME_RE,
     V101_RESPONSE_SCHEMA,
+    V102_RESPONSE_SCHEMA,
     extract_v101_items,
     parse_v101_response,
+    parse_v102_unsure,
 )
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
@@ -260,6 +262,26 @@ def _v101_row_fields(response_text: str, ctx, masters: dict) -> dict:
         }
 
 
+def _gemini_review(response_text: str, raw_text: str, extracted: list[dict]) -> list[dict]:
+    """Gemini が unsure に書いた行（要確認）。システムの要確認（review・post_review）とは別に残す。"""
+    price_lines = {it["price_line"] for it in extracted if isinstance(it.get("price_line"), int)}
+    return parse_v102_unsure(response_text, len(raw_text.split("\n")), price_lines)
+
+
+def _with_gemini_review(extracted: list[dict], unsure: list[dict]) -> list[dict]:
+    """各件に gemini_review を付ける（既定 []）。price_line が unsure の candidates に入る件に gemini_unsure を足す。元の件は書き換えない。"""
+    return [
+        {
+            **item,
+            "gemini_review": [
+                {"kind": u["kind"], "line": u["line"]}
+                for u in unsure if u["kind"] == "gemini_unsure" and item.get("price_line") in u["candidates"]
+            ],
+        }
+        for item in extracted
+    ]
+
+
 def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
     """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
 
@@ -275,12 +297,16 @@ def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
-        return {"v102_items": extracted, "v102_flags": flags}
+        unsure = _gemini_review(response_text, ctx.raw_text, extracted)
+        return {
+            "v102_items": _with_gemini_review(extracted, unsure),
+            "v102_flags": {**flags, "gemini_review": unsure},
+        }
     except Exception as exc:  # noqa: BLE001
         message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
         return {
             "v102_items": [], "v102_items_error": message,
-            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}]},
+            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}], "gemini_review": []},
         }
 
 
@@ -557,7 +583,7 @@ def run_ab(
                 else:
                     schemas = {
                         "v9": V9_RESPONSE_SCHEMA, "v10": V10_RESPONSE_SCHEMA,
-                        "v101": V101_RESPONSE_SCHEMA, "v102": V101_RESPONSE_SCHEMA,
+                        "v101": V101_RESPONSE_SCHEMA, "v102": V102_RESPONSE_SCHEMA,
                     }
                     extra = {"response_schema": schemas[config]} if config in schemas else {}
                     result = call_gemini_raw_copy_v8(

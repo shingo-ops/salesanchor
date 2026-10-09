@@ -1,0 +1,526 @@
+{
+  "before": [
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 484,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.cs_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 503,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.next_action ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 537,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.challenge ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 588,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.meeting_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 181,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.cs_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.csMemo\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 191,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.next_action ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.nextAction\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 210,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.challenge ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.challenge\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 265,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "rows": "{3}",
+        "value": "{cardForm.meeting_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.meetingMemo\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 736,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"inbox-textarea\"",
+      "attrs": {
+        "ref": "{textareaRef}",
+        "value": "{draft}",
+        "onChange": "{(e) => setDraft(e.target.value)}",
+        "onKeyDown": "{handleKeyDownGuarded}",
+        "placeholder": "{\n                  discordChannelMissing\n                    ? t(\"inbox.discordChannelMissing\")\n                    : canSend\n                      ? t(\"inbox.messagePlaceholder\")\n                      : t(\"inbox.sendDisabled7d\")\n                }",
+        "rows": "{2}",
+        "disabled": "{!canSend || sending}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 410,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"db-weekly-composer-input\"",
+      "attrs": {
+        "id": "{`priority-action-${item.lead_id}`}",
+        "rows": "{3}",
+        "value": "{composer.draftAction}",
+        "onChange": "{(e) => updateComposer(item.lead_id, { draftAction: e.target.value })}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 381,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"db-weekly-composer-input\"",
+      "attrs": {
+        "id": "{`weekly-action-${action.company_id}`}",
+        "rows": "{3}",
+        "value": "{composer.draftAction}",
+        "onChange": "{(e) => updateComposer(action.company_id, { draftAction: e.target.value })}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 378,
+      "tag": "textarea",
+      "selfClosing": true,
+      "className": "\"schedule-textarea\"",
+      "attrs": {
+        "rows": "{4}",
+        "value": "{draft.description}",
+        "onChange": "{(event) => onDraftChange({ ...draft, description: event.target.value })}",
+        "placeholder": "{t(\"schedule.descriptionPlaceholder\")}"
+      },
+      "spread": 0,
+      "children": ""
+    }
+  ],
+  "after": [
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 485,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.cs_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 504,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.next_action ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 538,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.challenge ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 589,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.meeting_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"inbox.emptyField\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 182,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.cs_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.csMemo\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 192,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.next_action ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.nextAction\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 211,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.challenge ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.challenge\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 266,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "rows": "{3}",
+        "value": "{cardForm.meeting_memo ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}",
+        "onBlur": "{handleCardFieldBlur}",
+        "placeholder": "{t(\"leads.meetingMemo\")}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 737,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": "\"inbox-textarea\"",
+      "attrs": {
+        "ref": "{textareaRef}",
+        "variant": "\"embedded\"",
+        "value": "{draft}",
+        "onChange": "{(e) => setDraft(e.target.value)}",
+        "onKeyDown": "{handleKeyDownGuarded}",
+        "placeholder": "{\n                  discordChannelMissing\n                    ? t(\"inbox.discordChannelMissing\")\n                    : canSend\n                      ? t(\"inbox.messagePlaceholder\")\n                      : t(\"inbox.sendDisabled7d\")\n                }",
+        "rows": "{2}",
+        "disabled": "{!canSend || sending}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 411,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "id": "{`priority-action-${item.lead_id}`}",
+        "variant": "\"composer\"",
+        "rows": "{3}",
+        "value": "{composer.draftAction}",
+        "onChange": "{(e) => updateComposer(item.lead_id, { draftAction: e.target.value })}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 382,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "id": "{`weekly-action-${action.company_id}`}",
+        "variant": "\"composer\"",
+        "rows": "{3}",
+        "value": "{composer.draftAction}",
+        "onChange": "{(e) => updateComposer(action.company_id, { draftAction: e.target.value })}"
+      },
+      "spread": 0,
+      "children": ""
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 379,
+      "tag": "TextareaControl",
+      "selfClosing": true,
+      "className": null,
+      "attrs": {
+        "variant": "\"schedule\"",
+        "rows": "{4}",
+        "value": "{draft.description}",
+        "onChange": "{(event) => onDraftChange({ ...draft, description: event.target.value })}",
+        "placeholder": "{t(\"schedule.descriptionPlaceholder\")}"
+      },
+      "spread": 0,
+      "children": ""
+    }
+  ],
+  "result": {
+    "elements": 12,
+    "totalDiffs": 0,
+    "rows": [
+      {
+        "index": 1,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 484,
+        "afterLine": 485,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 2,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 503,
+        "afterLine": 504,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 3,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 537,
+        "afterLine": 538,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 4,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 588,
+        "afterLine": 589,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 5,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 181,
+        "afterLine": 182,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 6,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 191,
+        "afterLine": 192,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 7,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 210,
+        "afterLine": 211,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 8,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 265,
+        "afterLine": 266,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "variant": "\"karte\"",
+        "diffs": []
+      },
+      {
+        "index": 9,
+        "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+        "beforeLine": 736,
+        "afterLine": 737,
+        "beforeClass": "\"inbox-textarea\"",
+        "afterClass": "\"inbox-textarea\"",
+        "variant": "\"embedded\"",
+        "diffs": []
+      },
+      {
+        "index": 10,
+        "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+        "beforeLine": 410,
+        "afterLine": 411,
+        "beforeClass": "\"db-weekly-composer-input\"",
+        "afterClass": null,
+        "variant": "\"composer\"",
+        "diffs": []
+      },
+      {
+        "index": 11,
+        "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+        "beforeLine": 381,
+        "afterLine": 382,
+        "beforeClass": "\"db-weekly-composer-input\"",
+        "afterClass": null,
+        "variant": "\"composer\"",
+        "diffs": []
+      },
+      {
+        "index": 12,
+        "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+        "beforeLine": 378,
+        "afterLine": 379,
+        "beforeClass": "\"schedule-textarea\"",
+        "afterClass": null,
+        "variant": "\"schedule\"",
+        "diffs": []
+      }
+    ]
+  }
+}
