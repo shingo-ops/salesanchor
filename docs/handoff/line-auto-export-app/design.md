@@ -649,3 +649,8 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 ### 未決（PO判断待ち）
 
 画面ONかつロック中のとき（PIN入力後もロック中になりやすい状況）に、そもそもPINを打たずに見送るかどうかは今回手を付けていない。PO判断待ち。
+
+
+## recon
+
+調査の記録は `docs/handoff/line-auto-export-app/recon.md`（確かめた事実と file:line 引用）。本設計はそこで確認した制約（UID分離によりTermux私有のPINを読めない／ユーザー補助は制限付き設定の解除が必要／API23のandroid.jarでは `canPerformGestures` が無い）を前提にしている。

@@ -36,3 +36,15 @@
 - ユーザー補助サービスが、ロック画面（PIN入力画面）上でボタン/数字をクリックできるか。Android公式ドキュメントに明記なし。→最小アプリで実測する。
 - このproot環境で APK を最後まで組み立て・署名でき、端末にインストールできるか。→最小アプリで実測する。
 - 画面消灯状態からのウェイクをアプリ側で行えるか（WAKE_LOCK / turnScreenOn）。
+
+## 参照（file:line）
+
+実装の所在。いずれもこのブランチの実ファイルで、行番号は 2026-10-09 時点のもの。
+
+- `tools/line-auto-export-app/AndroidManifest.xml:10` — 稼働版の `versionName`。実機に入れる版は毎回上げる運用（新旧の区別がつかず数時間を無駄にした 2026-10-08 の教訓）。
+- `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/PinStore.java:41` — PINはアプリ私有の `MODE_PRIVATE` に保存する（上記「UID分離の制約」への対処＝設計A）。
+- `tools/line-auto-export-app/build.sh:5` — ビルド経路 `javac(--release 8) → dalvik-exchange → aapt package → aapt add → zipalign → apksigner`。上記「ビルド道具」の実体。
+- `tools/line-auto-export-app/res/xml/accessibility_service_config.xml:3` — `android:canPerformGestures` はAPI24で追加された属性で、API23の android.jar をリンクする制約への対処を記載。
+- `tools/line-auto-export/auto-export.sh:12` — ADB方式（従来）とアプリ方式の切替点。既定は `app`。
+
+設計は [design.md](design.md)（このrecon.mdを参照している）。
