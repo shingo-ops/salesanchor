@@ -3867,7 +3867,14 @@
     "fields": { "product_code": "品番", "mark": "マーク" },
     "addToThis": "この商品の除外ワードに足すとよい語：{{words}}",
     "addToOther": "相手の商品の除外ワードに足すとよい語：{{words}}",
-    "registered": "除外ワードは登録済みです"
+    "registered": "除外ワードは登録済みです",
+    "addToThisButton": "この商品に追加",
+    "addToOtherButton": "相手に追加",
+    "confirmTitle": "除外ワードの追加",
+    "confirmMessage": "{{product}} の除外ワードに「{{word}}」を追加します",
+    "confirmAction": "追加する",
+    "result": { "added": "追加しました", "exists": "登録済み", "staged": "入力欄に追加しました（保存で登録されます）" },
+    "addError": "追加に失敗しました。もう一度お試しください"
   },
   "productDetail": {
     "title": "商品詳細・編集",
