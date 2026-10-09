@@ -33,8 +33,9 @@ scripts/run_all_migrations.sh の登録行、B・D・K・M、#4017/#4019/#4023 �
 | 検査がすべて通る | node scripts/check-migration-column-churn.js、scripts/check-migration-registration-exists.sh、scripts/check-migration-duplicate-registration.sh、bash -n scripts/run_all_migrations.sh、pytest |
 | 変更した migration が CI で 2 回流れて通る | CI の Migration SQL Test |
 
-## 6. 外部事例
+## 6. 外部・過去事例の参照と我々への応用
 該当なし：自社 migration の値書き除去で、出典と数値のそろった外部事例は確認していないため。
+過去事例: #4018（ADR-1007 段3a）の NEUTRALIZED 方式に揃えた
 
 ## 7. 関連 ADR
 ADR-155（migration で値を操作しない）、ADR-1005、ADR-1007（既存の値を書く migration は無効にする）。
