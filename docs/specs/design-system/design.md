@@ -2238,3 +2238,57 @@ APPROVE（実装可）。§Z 契約・実物 Textarea.tsx/FormField.css・Select
 #### 維持の仕組み
 
 守り手: Textarea.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check（check:all/coverage/storybook）、design-token-guard。守っていないもの: ページ側の生 textarea 53（AX-2で移管、最後のCIで未移行0を強制。現行 ui-governance は textarea を検出しない）。切戻し: 本PRの merge commit を revert（DB・データ影響なし）。
+
+
+#### AX-1 結果と AX-2 追補（2026-10-09）
+
+AX-1: PR #4049 merge dfcd31c050e42cb1f5f4d40683b44146d9b12fc1（2026-10-08T23:23:00Z、必須15/15成功）、Deploy 37859121945 success（headSha dfcd31c0、23:23:03Z〜23:25:30Z）。本番 CSS index-K8aAD44G.css（前回 index-BI9wWxUm.css から変化）に `.comp-field__textarea--sm` 1・`--lg` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4049」、本文反映とマージは PO 本人の端末操作。merge-safe は worktree の `.pr-number` 不在で6回停止し、担当が `.pr-number` を作成、BEHIND を最新化 push した後に成立（今後の便は PR 作成直後に `.pr-number` を作る）。
+
+AX-2 の方針（PO 回答 2026-10-09「y」。設計者が提示した案: 一般フォームは標準の金型の見た目に統一、受信箱の送信欄・カルテ右パネル・ダッシュボードの入力欄・予定の入力欄のように見た目に意図がある欄は現在の見た目を金型の種類として登録して保持、商品編集は保留）。
+
+現在地（origin/main dfcd31c05、証跡は本便で保存する evidence-20260910/ax2-inventory.json、ax2-applied-css.{json,md}、ax2-baseline.{cjs,json,md}、ax2-intent.md、ax2-test-refs.md、ax2-handlers.md、ax2-shared-rules.md）: ページ側の生 textarea 53（ax0 と行番号まで一致）。各 textarea に実際に当たる CSS 規則を postcss と JSX 祖先で静的に解決し、Chromium 147（幅1280・light）で現在の computed style と、標準の TextareaControl に替えた場合の差を全件実測した。
+
+分類（事実と規則）:
+
+| 区分 | 件数 | 場所 | 根拠 |
+|---|---|---|---|
+| 種類 karte | 8 | InboxKartePanel.tsx 484/503/537/588、InboxProfileModal.tsx 181/191/210/265 | PO 提示案「カルテ右パネル」。CSS コメント「見本 .fbox」、見本 docs/adr/karte_reference.html:48、専用トークン --karte-field-*（tokens.css:314/315/323/324）・--inbox-textarea-min-h（:309）、PR #1971。選択欄の karte 種類（§AW）と同じ見本 |
+| 種類 embedded | 1 | InboxMessageThread.tsx:736 | PO 提示案「受信箱の送信欄」。§Z :818/:895 CSSI-0209（embedded＝親が枠を所有）。親 .send-input-wrap の「Meta実測」コメント（InboxPage.css:621） |
+| 種類 composer | 2 | PriorityProspectsSection.tsx:410、WeeklyAdvisorSection.tsx:381 | PO 提示案「ダッシュボードの入力欄」 |
+| 種類 schedule | 1 | SchedulePageImpl.tsx:378 | PO 提示案「予定の入力欄」 |
+| 標準 | 40 | 下記 AX-2b | PO 方針「一般フォームは標準」 |
+| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる） |
+
+PO 提示案に名前の無かった欄の扱い（設計者判断。規則: 意図の記録が設計書・ADR・CSS コメント・専用トークンのいずれにも無いものは一般として標準）: 送信下訳の編集欄（OutboundTranslationPreview.tsx:147、記録0）、手動記録（ManualRecordSection.tsx:159、CSS 定義0でブラウザ既定）、Discord 告知（DiscordAnnouncePage.tsx:98、CSS 定義0でブラウザ既定）、解析レビュー（ItemComparison.tsx:27/34、規則0でブラウザ既定）は標準。商品マスタ修正ドロワー（ProductMasterDrawer.tsx:217/221）は専用トークン --pmd-textarea-min-h（supplier-detail-view.css:113、「--textarea-min-h:80px より小さい専用値」、parity03 design.md:35）があるが、意図の記録は最小高だけで標準との差は color・outline-color の2項目のため、標準にして最小高だけ配置規則として残す。抽出プロンプト（ExtractionPromptConfigTab.tsx:222）の等幅は §Z :817 の textStyle=code（登録済み契約）に当たるため、標準＋textStyle=code とし枠・余白は標準になる。これらは AX-2b の前後表で PO に示し、GO 前に変更できる。
+
+便の分割（原因切り分けのため2便。§AW と同じ型）:
+
+| 便 | 内容 | 見た目 |
+|---|---|---|
+| AX-2a | TextareaControl に種類 karte/embedded/composer/schedule を追加し、該当12件を移管。ページ CSS の外観宣言を金型へ写し、ページ側は配置宣言だけ残す | 変化0（変更前後の computed style 差分0で判定） |
+| AX-2b | 標準40件の移管、祖先の旧規則（components.css `.form-group textarea` 系、company-forms.css `.form-row textarea` 系）の撤去、textStyle=code の追加 | 変化あり（前後表を PR に載せ PO の GO 前に確認） |
+
+AX-2a 変更契約:
+1. Textarea.tsx: `TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule"`。TextareaControl に `variant?`（既定 standard）。standard 以外では size を受けない型（`{ variant?: "standard"; size?: TextareaSize } | { variant: Exclude<TextareaVariant, "standard">; size?: never }`）。class 順は `comp-field__textarea`、size 修飾、`comp-textarea--${variant}`（standard 以外）、className。id→class の属性順（§AX）は維持。ラベル付き Textarea は種類を受けず出力不変（既存の固定試験9件がそのまま通ること）。
+2. FormField.css: 種類ごとに `.comp-field__textarea.comp-textarea--<種類>`（0,2,0）と `:focus`/`:disabled`（0,3,0）の規則を追加する。宣言は現行ページ規則の値を写し、金型の基本規則（:47-68、:95-112）が与えて現行には無い宣言は、変更前の実測値に戻す打ち消し宣言を置く（既存トークンまたは CSS キーワードのみ。現行ページ CSS にある数値（例 inbox-textarea の line-height:1.4）は同値の既存トークンが無ければその値を写し、写した値を PR に列挙する）。karte の枠幅は §AW の karte と同じく金型の 1px（出典 0.5px。DPR1/DPR2 の描画同一を本便でも実測）。
+3. ページ: 12件を `<TextareaControl variant=...>` に置換（開始/終了タグ、className、import のみ。value/onChange/onBlur/onKeyDown/ref/rows/placeholder/disabled は逐語保持）。className: karte・composer・schedule は外す。embedded は `inbox-textarea` を残す（e2e 4ファイル27行が参照、配置 flex:1/min-width:0 の入口）。
+4. ページ CSS: InboxPage.css の `textarea.right-panel-field` 規則を削除（`.right-panel-field` 本体は input24/a1/button1 が使うため保持）、`.inbox-textarea` は `flex: 1; min-width: 0;` だけ残し `.inbox-textarea:disabled` を削除。schedule.css は `.schedule-input, .schedule-textarea` の選択子リストと focus リストから `.schedule-textarea` を外し、`.schedule-textarea` 単独規則を削除（`.schedule-input` は input が使うため不変）。WeeklyAdvisorSection.css の `.db-weekly-composer-input` は input2件が使うため不変。
+5. 変更しないもの: 標準40件と保留1件、components.css/company-forms.css、トークン定義、i18n、API/DB/backend、CI、依存。
+
+AX-2a 受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 12件の見た目が不変 | ax2-baseline と同じ方式で、12件の実 DOM 相当（祖先 class・属性込み）の computed style を変更前（旧 class）と変更後（金型の種類 class）で比較し、通常・focus・disabled（属性があるもの）で差分0。項目に transition と placeholder の色も含める |
+| karte の細枠 | DPR2 のスクリーンショットを変更前後で比較し差分0（§AW の aw1-equivalence と同じ方式） |
+| 非外観属性が不変 | AST 照合（タグ名・className・variant・import 以外の差分0） |
+| 既存 Textarea の出力不変 | Textarea.test.tsx の固定試験9件が期待値を変えずに成功 |
+| 種類の契約 | 試験: 各種類の class、standard 以外で size が型エラー（@ts-expect-error）、ref・onKeyDown（Enter 既定動作を妨げない）が embedded でも透過 |
+| 使われなくなった CSS だけを削除 | 削除前に `right-panel-field`・`inbox-textarea`・`schedule-textarea`・`db-weekly-composer-input` の全利用を grep で列挙し、残る利用が想定どおり |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AX-2a）: APPROVE（PO 方針の提示案どおりの4種類、外観は実測で差分0を判定、配置と試験の参照 class は保持、配線・データ不変）。AX-2b は REVISE（AX-2a 反映後の前後表と PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+代替案: ページ CSS を残して class だけ金型にする案は外観の手編集元が2か所になり SSOT に反するため不採用。§Z :818 の appearance/resize を個別 prop にする案は、現行の見た目を写すには組合せが4種類で固定のため、§AW の select と同じ種類（variant）に揃える。外部事例: 既存金型の型の踏襲のため不要。
+
+維持の仕組み: 守り手は Textarea.test.tsx、ax2a 外観一致スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の生 textarea（AX-2b で移管、最後の CI で未移行0を強制）。切戻し: 各 PR の merge commit を revert（DB 影響なし）。

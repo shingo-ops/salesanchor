@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 import { getInitials } from "./inbox.types";
 import type { LeadDetail, KarteTabKey } from "./inbox.types";
 
@@ -178,7 +179,7 @@ export function InboxProfileModal({
                   onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.cs_memo ?? ""}
                 onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
             </div>
@@ -188,7 +189,7 @@ export function InboxProfileModal({
           {profileModalTab === "deal" && (
             <div className="right-panel-section">
               <div className="right-panel-memo-label">{t("leads.nextAction")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.next_action ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.next_action ?? ""}
                 onChange={(e) => handleCardFieldChange("next_action", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.nextAction")} />
               <div className="right-panel-row">
@@ -207,7 +208,7 @@ export function InboxProfileModal({
                 </SelectControl>
               </div>
               <div className="right-panel-memo-label">{t("leads.challenge")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.challenge ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.challenge ?? ""}
                 onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.challenge")} />
               <hr className="right-panel-divider" />
@@ -262,7 +263,7 @@ export function InboxProfileModal({
               </div>
               <hr className="right-panel-divider" />
               <div className="right-panel-memo-label">{t("leads.meetingMemo")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.meeting_memo ?? ""}
                 onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.meetingMemo")} />
             </div>

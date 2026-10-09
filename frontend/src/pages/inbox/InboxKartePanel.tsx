@@ -9,6 +9,7 @@ import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.t
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 interface CardForm {
   nickname?: string | null;
@@ -481,7 +482,7 @@ function KarteTabContent({
         {/* 引き継ぎ */}
         <div className="right-panel-group-heading" data-testid="karte-section-handover-heading">{t("inbox.sectionHandover")}</div>
         <div className="right-panel-memo-label">{t("inbox.csRelationMemo")}</div>
-        <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
+        <TextareaControl variant="karte" rows={3} value={cardForm.cs_memo ?? ""}
           onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
           onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       </div>
@@ -500,7 +501,7 @@ function KarteTabContent({
       {/* 次のアクション */}
       <div className="right-panel-group-heading">{t("inbox.sectionNextAction")}</div>
       <div className="right-panel-memo-label">{t("leads.nextAction")}</div>
-      <textarea className="right-panel-field" rows={3} value={cardForm.next_action ?? ""}
+      <TextareaControl variant="karte" rows={3} value={cardForm.next_action ?? ""}
         onChange={(e) => handleCardFieldChange("next_action", e.target.value)}
         onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       <div className="right-panel-row">
@@ -534,7 +535,7 @@ function KarteTabContent({
         </SelectControl>
       </div>
       <div className="right-panel-memo-label">{t("leads.challenge")}</div>
-      <textarea className="right-panel-field" rows={3} value={cardForm.challenge ?? ""}
+      <TextareaControl variant="karte" rows={3} value={cardForm.challenge ?? ""}
         onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
         onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       <div className="right-panel-row">
@@ -585,7 +586,7 @@ function KarteTabContent({
       {/* メモ */}
       <div className="right-panel-group-heading">{t("inbox.sectionMemo")}</div>
       <div className="right-panel-memo-label">{t("leads.meetingMemo")}</div>
-      <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
+      <TextareaControl variant="karte" rows={3} value={cardForm.meeting_memo ?? ""}
         onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
         onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
     </div>

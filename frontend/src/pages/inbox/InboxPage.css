@@ -633,18 +633,7 @@
 .inbox-textarea {
   flex: 1;
   min-width: 0;
-  border: none;
-  padding: 0;
-  font-size: var(--font-base);
-  resize: none;
-  font-family: inherit;
-  outline: none;
-  background: transparent;
-  color: var(--text-primary);
-  box-sizing: border-box;
-  line-height: 1.4;
 }
-.inbox-textarea:disabled { cursor: not-allowed; opacity: var(--opacity-disabled); }
 /* 添付ボタン（ピル内右端・Meta と同配置） */
 .send-attach-btn {
   flex-shrink: 0;
@@ -1178,7 +1167,6 @@
 }
 .right-panel-field::placeholder { color: var(--text-muted); }
 .right-panel-field:focus { outline: none; border-color: var(--accent); }
-textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
   border: 1px solid transparent; background: transparent;
