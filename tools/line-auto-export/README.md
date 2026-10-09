@@ -82,10 +82,21 @@ termux-job-scheduler は時刻を指定できず、1回あたり約0.6分ずつ�
 - スマホ使用中（画面オン＋ロック解除）は見送る。前面の操作を奪わないための判断。
 - LINEやOSの更新でUIの配置が変わると `flow.sh` の調整が要る。
 - Termuxの「EDIT」ボタンだけは座標直打ち（`EDIT_X/EDIT_Y`）。この画面は uiautomator に出ないため。
-- Termux に「他のアプリの上に重ねて表示」権限が無いと、共有後のセッション起動が遅れる
+- Termux に「他のアプリの上に重ねて表示」(SYSTEM_ALERT_WINDOW) 権限が無いと、共有後のセッション起動が遅れる
   （2026-09-23 実測: 90秒を超えて失敗扱いになり、端末を触った時点で溜まっていた8件が一斉に処理された。
   ログ: `Termux:PermissionUtils: com.termux does not have Display over other apps (SYSTEM_ALERT_WINDOW) permission`）。
+  2026-10-06 にこの権限を付与済み（効果の確認は1回のみ、継続的な成功は長期観測が必要。
+  `docs/handoff/line-auto-export-runtime/evidence-20261006-adb-wifi.md` のE5参照）。
   送信結果の待ちを4分に延ばして誤判定を減らしているが、根本対策は端末設定での権限付与。
 
 ADBに依存しない代替（自作アプリ方式）は `tools/line-auto-export-app/` で検証中。2026-09-19 時点では
 ロック画面へのタップが届かず未達（`docs/handoff/line-auto-export-app/evidence-20260919-unlock.md`）。
+
+## 停止したときの切り分け
+
+ADB経路が止まったときは、`docs/handoff/line-auto-export-runtime/evidence-20261006-adb-wifi.md` のE3で
+3パターンに切り分けている。見分け方だけを挙げる（表の再掲はE3参照）:
+
+- 走査で候補が見つかり `device` になる → ポートが変わっただけ。`adb-discover.sh` が自動復旧する。
+- 走査で候補は見つかるが `device` にならない → ペア設定が失効している疑い。利用者がペア設定コードで再ペアリングする必要がある。
+- 走査で候補が1つも無い（`Connection refused`） → ワイヤレスデバッグ自体がOFF。利用者が端末でトグルをONにする必要がある（ポートは毎回変わる）。

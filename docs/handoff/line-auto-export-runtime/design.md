@@ -106,3 +106,30 @@ Termux に「他のアプリの上に重ねて表示」権限が無いと、共�
 ログ: `Termux:PermissionUtils: com.termux does not have Display over other apps (SYSTEM_ALERT_WINDOW) permission`。
 
 待ち時間の延長は誤判定を減らす保険で、根本対策は端末設定での権限付与（人手）。
+
+## 追補 2026-10-06: ADB経路の停止パターンの切り分けと失敗通知の契約
+
+### 既に登録済みのスクリプトを更新した
+
+`tools/line-auto-export/auto-export.sh`・`tools/line-auto-export/adb-discover.sh`（PR #3589 で登録済み）を、本日時点で稼働中の内容に更新した。配置先は [tools/line-auto-export/README.md](../../../tools/line-auto-export/README.md) を参照（配置構成に変更なし）。`flow.sh` と `termux/line-auto-export` は差分が無いため変更していない。実行周期は本便で変更したものではなく、PR #3589 で確定した**15分ごと**のまま。
+
+### `adb-discover.sh` の終了コードの契約
+
+- `0`: 接続成功
+- `1`: 走査自体の失敗
+- `2`: 走査範囲に待ち受けが1つも無い（ワイヤレスデバッグOFFかWi-Fi未接続）
+- `3`: 候補はあるが `device` にならない（ペア設定失効の疑い）。候補ポートを標準エラーに `candidates: <ports>` 形式で出す
+
+`auto-export.sh` はこの終了コードごとに失敗理由を書き分け、通知本文にそのまま載せる。
+
+### 失敗通知の仕様
+
+- 連続2回目以降は `--alert-once` を付けない通知関数に差し替え、タイトルに `（連続N回）` を付ける
+- 失敗のあと成功したら「復旧しました」を1回通知する
+- 見送り（`result='skipped'`）は連続回数と復旧判定の両方から除外する
+
+Android 8以降は鳴り方を通知チャンネルが決めるため、`--vibrate`・`--priority` は指定していない（根拠: [evidence-20261006-adb-wifi.md](evidence-20261006-adb-wifi.md) のE6）。
+
+### 根拠
+
+本節の実機事実は [evidence-20261006-adb-wifi.md](evidence-20261006-adb-wifi.md) を参照。
