@@ -77,7 +77,7 @@ def _raise(exc):
 
 
 def _run(fakes, monkeypatch, *, costs=None, run_ids=("r1", "r2", "r3"), config="v8", repeat=1,
-         max_cost="1.0", dry_run=False, null_rows=0, missing=False, v8_error=None, **over):
+         max_cost="1.0", dry_run=False, null_rows=0, missing=False, v8_error=None, session=None, **over):
     m_calls["n"] = 0
     orig = fakes.v8.side_effect if v8_error is None else _raise(v8_error)
     orig7 = fakes.v7.side_effect
@@ -101,7 +101,9 @@ def _run(fakes, monkeypatch, *, costs=None, run_ids=("r1", "r2", "r3"), config="
         include_thoughts=True, use_schema=True, temperature=None,
     )
     kw.update(over)
-    return pab.run_ab(MagicMock(), **kw)
+    if session is None:  # v102 の既定は DB の key raw_copy_v101_f_c を読むので、行がある偽 session を渡す
+        session = _db_session("DEFAULT_F_C_FROM_DB") if config == "v102" else MagicMock()
+    return pab.run_ab(session, **kw)
 
 
 def _lines(fakes):
@@ -475,6 +477,8 @@ def v10_fakes(monkeypatch, fakes):
     monkeypatch.setattr(pab, "load_condition_entries", masters.cond)
     monkeypatch.setattr(pab, "load_status_master", masters.status)
     monkeypatch.setattr(pab, "load_lookup_maps", masters.lookup)
+    # v102 の商品先行のマスタは None に差し替える（None なら v10.2 の流れのまま。商品先行の試験は別ファイル）
+    monkeypatch.setattr(pab, "load_product_first_masters", lambda session: None)
     monkeypatch.setattr(pab, "load_v10_prompt", lambda: "V10PROMPT")
     monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_V10_CTX))
     fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V10_RESPONSE}
@@ -671,20 +675,47 @@ def test_parse_args_v101_prompt_name(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_v102_config_calls_with_v101_schema_and_default_prompt_c(monkeypatch, v101_fakes):
-    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+def test_v102_config_calls_with_v101_schema_and_default_prompt_f_c_from_db(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V102_RESPONSE_SCHEMA
 
-    # Arrange / Act
-    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    # Arrange
+    session = _db_session("F_C_FROM_DB")
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), session=session)
     kwargs = v101_fakes.v8.call_args.kwargs
     # Assert
-    assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
-    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_c")
-    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_c"
+    assert kwargs["response_schema"] == V102_RESPONSE_SCHEMA
+    assert pab.V102_PROMPT == "raw_copy_v101_f_c"
+    assert session.execute.call_args.args[1] == {"key": "raw_copy_v101_f_c"}
+    assert kwargs["prompt_text"] == "F_C_FROM_DB"
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_name"], row["prompt_source"]) == ("raw_copy_v101_f_c", "db")
 
 
-def test_v102_prompt_name_b_can_be_chosen_and_c_differs_from_b():
-    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_c")
+def test_v102_default_stops_before_gemini_when_f_c_row_missing(monkeypatch, v101_fakes):
+    # Act
+    with pytest.raises(ValueError, match="raw_copy_v101_f_c"):
+        _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), session=_db_session(None))
+    # Assert
+    assert v101_fakes.v8.call_count == 0
+
+
+def test_v102_prompt_name_e_uses_file_not_db(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import load_v101_prompt
+
+    # Arrange
+    session = _db_session("SHOULD_NOT_BE_USED")
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), prompt_name="raw_copy_v101_e", session=session)
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_name"], row["prompt_source"]) == ("raw_copy_v101_e", "file")
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_e")
+    assert session.execute.call_count == 0
+
+
+def test_v102_prompt_name_b_can_be_chosen_and_default_e_differs_from_b():
+    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_e")
     assert pab._load_prompt_text("v102") != pab._load_prompt_text("v101", "raw_copy_v101_b")
     assert pab._load_prompt_text("v102", "raw_copy_v101_b") == pab._load_prompt_text("v101", "raw_copy_v101_b")
 
@@ -694,7 +725,9 @@ def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_
     row = _lines(v101_fakes)[0]
     assert row["config"] == "v102" and row["item_count"] == 1 and row["errors"] == []
     assert row["v102_items"][0]["name"] == "商品A" and row["v102_items"][0]["fixes"] == []
-    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
+    assert set(row["v102_flags"]) == {
+        "possible_missing_item", "quantity_no_number", "possible_footer_line", "post_review", "gemini_review",
+    }
     assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
 
 
@@ -711,7 +744,47 @@ def test_v102_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_
     summary = _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
     row = _lines(v101_fakes)[0]
     assert summary.stop_reason is None
-    assert row["v102_items"] == [] and row["v102_flags"] == {} and "ValueError" in row["v102_items_error"]
+    assert row["v102_items"] == [] and "ValueError" in row["v102_items_error"]
+    assert row["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
+    assert "ValueError" in row["v102_flags"]["post_review"][0]["error"]
+
+
+def test_v102_row_keeps_dropped_items_and_result_count_equals_gemini_count(monkeypatch, v101_fakes):
+    # Arrange
+    response = json.dumps({"items": [
+        {"lines": [1, 2], "price": "1,000円", "quantity": "3"},
+        {"lines": [1, 2], "price": "9,999円", "quantity": "3"},
+    ]}, ensure_ascii=False)
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": response}
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    # Assert
+    assert len(row["v102_items"]) == 2 and row["v102_items"][1]["rejected"] == "price_not_in_lines"
+    assert row["v102_items"][1]["review"][0]["kind"] == "price_not_in_lines"
+
+
+def test_v102_unreadable_response_is_recorded_in_post_review(monkeypatch, v101_fakes):
+    # Arrange
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": "not json"}
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    # Assert
+    assert row["v102_items"] == []
+    assert [r["kind"] for r in row["v102_flags"]["post_review"]] == ["response_unreadable"]
+    assert row["v102_flags"]["post_review"][0]["error"]
+
+
+def test_v102_zero_gemini_items_gives_no_items_in_post_review(monkeypatch, v101_fakes):
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": '{"items": []}'}
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    assert _lines(v101_fakes)[0]["v102_flags"]["post_review"] == [{"kind": "no_items", "source": "system"}]
+
+
+def test_v101_row_flags_do_not_get_post_review(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    assert "post_review" not in _lines(v101_fakes)[0]["v101_flags"]
 
 
 def test_v101_row_is_unchanged_and_has_no_v102_fields(monkeypatch, v101_fakes):
@@ -804,14 +877,66 @@ def test_without_omit_jsonl_has_no_omitted_field_key(monkeypatch, fakes):
 
 
 def test_parse_args_accepts_repeated_omit_supplier_field():
-    args = pab.parse_args([*_BASE_ARGS, "--config", "v102",
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v101",
                            "--omit-supplier-field", "extraction_ship_format",
                            "--omit-supplier-field", "extraction_price_format"])
     assert args.omit_supplier_field == ["extraction_ship_format", "extraction_price_format"]
 
 
-def test_parse_args_omit_default_is_none():
-    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field is None
+def test_parse_args_v102_omits_legacy_supplier_fields_by_default():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+
+
+def test_parse_args_v102_explicit_omit_is_unioned_with_legacy_fields():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", "extraction_layout_rules"])
+    assert args.omit_supplier_field == sorted({*pab.LEGACY_SUPPLIER_FIELDS, "extraction_layout_rules"})
+    assert len(args.omit_supplier_field) == 8
+
+
+def test_parse_args_v102_keep_legacy_supplier_fields_omits_nothing():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--keep-legacy-supplier-fields"])
+    assert args.omit_supplier_field is None
+
+
+def test_parse_args_v101_default_omits_nothing():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v101"]).omit_supplier_field is None
+
+
+def test_parse_args_rejects_keep_legacy_supplier_fields_for_v101():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--keep-legacy-supplier-fields"])
+
+
+_LEGACY_CTX = task.ExtractionContext(
+    raw_text="a\nb", supplier_context={name: f"V_{name}" for name in pab.LEGACY_SUPPLIER_FIELDS},
+    knowledge_links=[], supplier_id=7,
+    new_system_rules={"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"},
+)
+
+
+def test_v102_default_run_uses_prompt_f_c_and_records_seven_omitted_fields(monkeypatch, v101_fakes):
+    # Arrange
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field,
+         session=_db_session("F_C_FROM_DB"))
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert row["prompt_name"] == "raw_copy_v101_f_c"
+    assert row["omitted_supplier_fields"] == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+    assert len(row["omitted_supplier_fields"]) == 7
+
+
+def test_v102_default_omit_removes_legacy_fields_but_keeps_new_system_rules(monkeypatch, v101_fakes):
+    # Arrange
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_LEGACY_CTX))
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    # Assert
+    kwargs = v101_fakes.v8.call_args.kwargs
+    assert not set(pab.LEGACY_SUPPLIER_FIELDS) & set(kwargs["supplier_context"] or {})
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
 
 
 @pytest.mark.parametrize("bad", ["ship_format", "Extraction_x", "extraction_", "extraction_a-b", "extraction_x1", ""])
@@ -1058,3 +1183,96 @@ def test_omit_supplier_field_also_removes_new_system_rule(monkeypatch, fakes):
 def test_no_new_system_rules_passes_none_to_v8(monkeypatch, fakes):
     _run(fakes, monkeypatch, run_ids=("r1",))
     assert fakes.v8.call_args.kwargs["new_system_rules"] is None
+
+
+# ---------------------------------------------------------------------------
+# --prompt-key（指示書を DB から読む。設計: docs/handoff/prompt-ab-db-source/design.md §3）
+# ---------------------------------------------------------------------------
+
+_DB_KEY = "raw_copy_v101_zz"
+_DB_BODY = "PROMPT_FROM_DB"
+
+
+def _db_session(body):
+    """execute(...).first() が (本文,) を返す偽の session。body が None なら行なし（SQL が行を返さない）。"""
+    session = MagicMock()
+    session.execute.return_value.first.return_value = None if body is None else (body,)
+    return session
+
+
+def test_load_prompt_from_db_returns_the_row_text_as_is():
+    # Arrange
+    session = _db_session(_DB_BODY)
+    # Act
+    result = pab._load_prompt_text("v101", prompt_key=_DB_KEY, session=session)
+    # Assert
+    assert result == _DB_BODY
+    assert session.execute.call_args.args[1] == {"key": _DB_KEY}
+
+
+@pytest.mark.parametrize("body", [None, "", "  \n\t "], ids=["no_row_or_inactive", "empty", "blank"])
+def test_prompt_key_stops_before_gemini_when_row_missing_or_empty(monkeypatch, v101_fakes, body):
+    # Arrange
+    session = _db_session(body)
+    # Act
+    with pytest.raises(ValueError, match=_DB_KEY) as exc_info:
+        _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_key=_DB_KEY, session=session)
+    # Assert
+    assert v101_fakes.v8.call_count == 0
+    assert _DB_BODY not in str(exc_info.value)
+
+
+@pytest.mark.parametrize("bad", ["raw_copy_extraction", "base_extraction", "work_id_extraction", "../x", "raw_copy_v101_A"])
+def test_parse_args_rejects_prompt_key_with_bad_shape(bad):
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--prompt-key", bad])
+
+
+def test_parse_args_rejects_prompt_key_with_prompt_name():
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--prompt-key", _DB_KEY, "--prompt-name", "raw_copy_v101_a"])
+
+
+@pytest.mark.parametrize("config", ["v9", "v7"])
+def test_parse_args_rejects_prompt_key_for_other_configs(config):
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", config, "--prompt-key", _DB_KEY])
+
+
+def test_parse_args_accepts_prompt_key_for_v101_and_v102():
+    # Act
+    args = [pab.parse_args([*_BASE_ARGS, "--config", c, "--prompt-key", _DB_KEY]) for c in ("v101", "v102")]
+    # Assert
+    assert [a.prompt_key for a in args] == [_DB_KEY, _DB_KEY]
+
+
+def test_prompt_key_row_records_source_sha256_and_key(monkeypatch, v101_fakes):
+    # Arrange
+    expected_sha = hashlib.sha256(_DB_BODY.encode("utf-8")).hexdigest()
+    # Act
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_key=_DB_KEY, session=_db_session(_DB_BODY))
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_source"], row["prompt_sha256"], row["prompt_name"]) == ("db", expected_sha, _DB_KEY)
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == _DB_BODY
+
+
+def test_file_prompt_row_records_source_file_and_sha256(monkeypatch, v101_fakes):
+    # Act
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    # Assert
+    row = _lines(v101_fakes)[0]
+    prompt_text = v101_fakes.v8.call_args.kwargs["prompt_text"]
+    assert row["prompt_source"] == "file"
+    assert row["prompt_sha256"] == hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+
+
+def test_v7_row_has_no_prompt_source_or_sha256(monkeypatch, fakes):
+    # Act
+    _run(fakes, monkeypatch, config="v7", run_ids=("r1",))
+    # Assert
+    row = _lines(fakes)[0]
+    assert (row["prompt_source"], row["prompt_sha256"]) == (None, None)

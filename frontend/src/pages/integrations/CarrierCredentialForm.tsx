@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
 import "./CarrierIntegrationPage.css";
+import { TextFieldControl } from "../../components/TextField";
 
 export type Carrier = "fedex" | "dhl" | "ups";
 export type Env = "production" | "sandbox";
@@ -91,8 +92,7 @@ export default function CarrierCredentialForm({
       <div className="update-form">
         <div className="form-group">
           <label htmlFor={`cred-id-${env}`}>{t(labels.id)}</label>
-          {/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}
-          <input
+          <TextFieldControl
             id={`cred-id-${env}`}
             type="text"
             value={clientId}
@@ -103,7 +103,7 @@ export default function CarrierCredentialForm({
         </div>
         <div className="form-group">
           <label htmlFor={`cred-secret-${env}`}>{t(labels.secret)}</label>
-          <input
+          <TextFieldControl
             id={`cred-secret-${env}`}
             type="password"
             value={clientSecret}
@@ -117,8 +117,7 @@ export default function CarrierCredentialForm({
             <label htmlFor={`cred-account-${env}`}>
               {t("carrierIntegration.labelAccountNumber")}
             </label>
-            {/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}
-            <input
+            <TextFieldControl
               id={`cred-account-${env}`}
               type="text"
               value={accountNumber}

@@ -702,3 +702,31 @@ class SupplierKnowledgeLinkResponse(BaseModel):
 
 class SupplierKnowledgeLinkCreate(BaseModel):
     knowledge_rule_id: int
+
+
+# ============================================================================
+# line_unit_ignore_phrases（単位にしない言い回し）
+# ============================================================================
+
+
+class UnitIgnorePhraseCreate(BaseModel):
+    phrase: str = Field(min_length=1, max_length=200, description="単位にしない言い回し（例: ONE PIECE）。重複不可")
+    note: Optional[str] = Field(default=None, max_length=500, description="登録理由。省略可")
+    is_active: bool = Field(default=True, description="有効フラグ。false の言い回しは解析で使わない")
+
+
+class UnitIgnorePhraseUpdate(BaseModel):
+    phrase: Optional[str] = Field(default=None, min_length=1, max_length=200, description="単位にしない言い回し。指定時のみ更新")
+    note: Optional[str] = Field(default=None, max_length=500, description="登録理由。指定時のみ更新")
+    is_active: Optional[bool] = Field(default=None, description="有効フラグ。指定時のみ更新")
+
+
+class UnitIgnorePhraseResponse(BaseModel):
+    id: int = Field(description="主キー")
+    phrase: str = Field(description="単位にしない言い回し")
+    note: Optional[str] = Field(default=None, description="登録理由")
+    is_active: bool = Field(description="有効フラグ")
+    created_at: datetime = Field(description="作成日時")
+    updated_at: datetime = Field(description="最終更新日時")
+
+    model_config = ConfigDict(from_attributes=True)

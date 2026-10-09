@@ -13,6 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutboundPreviewResponse } from "../../lib/messages";
 import { confirmOutboundDraft, requestOutboundPreview } from "../../lib/messages";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Props {
   leadId: number | null;
@@ -144,8 +145,7 @@ export function OutboundTranslationPreview({
               )}
 
               {/* 編集可能テキストエリア */}
-              <textarea
-                className="outbound-translation-edit"
+              <TextareaControl
                 value={editedText}
                 onChange={(e) => setEditedText(e.target.value)}
                 rows={4}

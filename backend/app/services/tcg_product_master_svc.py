@@ -22,10 +22,17 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
 _PM_CODE_RE = re.compile(r"^PM(\d{4})$")
+
+
+def _split_csv_words(value: str) -> list[str]:
+    """カンマ区切りの語を割り、前後の空白と空を捨てる（INSERT と同じ扱い）。"""
+    return [k.strip() for k in (value or "").split(",") if k.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -463,7 +470,16 @@ async def create_product(
     if vr is None:
         raise ValueError("PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED")
 
-    return {"ok": True, "product_id": str(product_id_int)}
+    collisions = await find_code_collisions(
+        db,
+        product_code=pm_code,
+        mark=mark,
+        name=japanese_title.strip(),
+        search_keywords=_split_csv_words(search_keywords),
+        exclude_keywords=_split_csv_words(exclude_keywords),
+        exclude_product_id=product_id_int,
+    )
+    return {"ok": True, "product_id": str(product_id_int), "code_collisions": collisions}
 
 
 # ---------------------------------------------------------------------------

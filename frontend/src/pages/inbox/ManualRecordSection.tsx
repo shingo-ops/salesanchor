@@ -9,6 +9,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 interface ChannelMaster {
   platform: string;
@@ -123,9 +125,8 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
         <label className="manual-record-label" htmlFor="manual-channel-select">
           {t("inbox.manualRecord.channelLabel")}
         </label>
-        <select
+        <SelectControl
           id="manual-channel-select"
-          className="manual-record-select"
           value={channelType}
           onChange={(e) => setChannelType(e.target.value)}
           disabled={saving}
@@ -136,7 +137,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
               {ch.display_name}
             </option>
           ))}
-        </select>
+        </SelectControl>
       </div>
 
       {/* 日時 */}
@@ -156,8 +157,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
       </div>
 
       {/* 内容入力 */}
-      <textarea
-        className="manual-record-textarea"
+      <TextareaControl
         value={contentText}
         onChange={(e) => setContentText(e.target.value)}
         onKeyDown={handleKeyDown}

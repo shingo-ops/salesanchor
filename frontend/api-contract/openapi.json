@@ -593,6 +593,14 @@
             "title": "Review Issues",
             "type": "array"
           },
+          "review_reason_details": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ReviewReasonDetail"
+            },
+            "title": "Review Reason Details",
+            "type": "array"
+          },
           "source_message_id": {
             "title": "Source Message Id",
             "type": "string"
@@ -3802,6 +3810,81 @@
           }
         },
         "title": "CloseReasonUpdate",
+        "type": "object"
+      },
+      "CodeCollision": {
+        "description": "型番が重なった既存の有効商品1件。",
+        "properties": {
+          "already_excluded_by_other": {
+            "description": "相手の除外ワードのうち、この商品に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By Other",
+            "type": "array"
+          },
+          "already_excluded_by_this": {
+            "description": "この商品の除外ワードのうち、相手に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By This",
+            "type": "array"
+          },
+          "matched_field": {
+            "description": "重なった相手側の項目。product_code または mark",
+            "title": "Matched Field",
+            "type": "string"
+          },
+          "matched_value": {
+            "description": "重なった相手側の値（保存されている原文）",
+            "title": "Matched Value",
+            "type": "string"
+          },
+          "name": {
+            "description": "相手の商品名",
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "重なった相手の商品ID（public.products.id の文字列）",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "suggest_add_to_other": {
+            "description": "相手の除外ワードに足すことを勧める語（この商品の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To Other",
+            "type": "array"
+          },
+          "suggest_add_to_this": {
+            "description": "この商品の除外ワードに足すことを勧める語（相手の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To This",
+            "type": "array"
+          },
+          "work_name": {
+            "description": "相手の作品名（public.type_master.name_ja）。無ければ空文字",
+            "title": "Work Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "work_name",
+          "matched_value",
+          "matched_field",
+          "suggest_add_to_this",
+          "suggest_add_to_other",
+          "already_excluded_by_this",
+          "already_excluded_by_other"
+        ],
+        "title": "CodeCollision",
         "type": "object"
       },
       "CommissionRate-Input": {
@@ -21077,6 +21160,25 @@
         "title": "ParallelReportResponse",
         "type": "object"
       },
+      "PayInvoiceRequest": {
+        "description": "入金登録 POST ボディ（paid_date は省略可・日付のみ）。",
+        "properties": {
+          "paid_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Date"
+          }
+        },
+        "title": "PayInvoiceRequest",
+        "type": "object"
+      },
       "PaymentFeeSettingCreate": {
         "properties": {
           "currency": {
@@ -22891,6 +22993,105 @@
           "name_ja"
         ],
         "title": "ProductCreate",
+        "type": "object"
+      },
+      "ProductCreateResult": {
+        "description": "商品の新規登録の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "candidates": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "重複候補（ok が false のときだけ）",
+            "title": "Candidates"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "失敗理由のコード（DUPLICATE_CANDIDATE など）",
+            "title": "Code"
+          },
+          "code_collisions": {
+            "description": "型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "ok": {
+            "description": "登録できたか。重複候補で止めたときは false",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録した商品のID。失敗時は null",
+            "title": "Product Id"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ProductCreateResult",
+        "type": "object"
+      },
+      "ProductDetailSaveResult": {
+        "additionalProperties": true,
+        "description": "商品詳細の保存後の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "code_collisions": {
+            "description": "保存後の型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "lookups": {
+            "description": "分類の選択肢",
+            "title": "Lookups",
+            "type": "object"
+          },
+          "product": {
+            "description": "保存後の商品の内容",
+            "title": "Product",
+            "type": "object"
+          },
+          "revision": {
+            "description": "保存後の版を表す指紋",
+            "title": "Revision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "revision",
+          "lookups",
+          "code_collisions"
+        ],
+        "title": "ProductDetailSaveResult",
         "type": "object"
       },
       "ProductDetailUpdate": {
@@ -26880,6 +27081,51 @@
           "gross_margin"
         ],
         "title": "RevenueSummaryResponse",
+        "type": "object"
+      },
+      "ReviewReasonDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fix_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "extraction",
+                  "analysis"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Stage"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gemini",
+                  "system"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "fix_stage"
+        ],
+        "title": "ReviewReasonDetail",
         "type": "object"
       },
       "ReviewReasonItem": {
@@ -33321,6 +33567,138 @@
           "canonical"
         ],
         "title": "UnitCreate",
+        "type": "object"
+      },
+      "UnitIgnorePhraseCreate": {
+        "properties": {
+          "is_active": {
+            "default": true,
+            "description": "有効フラグ。false の言い回しは解析で使わない",
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由。省略可",
+            "title": "Note"
+          },
+          "phrase": {
+            "description": "単位にしない言い回し（例: ONE PIECE）。重複不可",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Phrase",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phrase"
+        ],
+        "title": "UnitIgnorePhraseCreate",
+        "type": "object"
+      },
+      "UnitIgnorePhraseResponse": {
+        "properties": {
+          "created_at": {
+            "description": "作成日時",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "description": "主キー",
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "description": "有効フラグ",
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由",
+            "title": "Note"
+          },
+          "phrase": {
+            "description": "単位にしない言い回し",
+            "title": "Phrase",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "最終更新日時",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "phrase",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UnitIgnorePhraseResponse",
+        "type": "object"
+      },
+      "UnitIgnorePhraseUpdate": {
+        "properties": {
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "有効フラグ。指定時のみ更新",
+            "title": "Is Active"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由。指定時のみ更新",
+            "title": "Note"
+          },
+          "phrase": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "単位にしない言い回し。指定時のみ更新",
+            "title": "Phrase"
+          }
+        },
+        "title": "UnitIgnorePhraseUpdate",
         "type": "object"
       },
       "UnitResponse": {
@@ -42330,7 +42708,7 @@
     },
     "/api/v1/invoices/{invoice_id}/pay": {
       "post": {
-        "description": "入金を登録する（issued/overdue → paid）",
+        "description": "入金を登録する（issued/overdue → paid）。body.paid_date（日付のみ）を渡すとその日の入金として登録できる。",
         "operationId": "pay_invoice_api_v1_invoices__invoice_id__pay_post",
         "parameters": [
           {
@@ -42343,6 +42721,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PayInvoiceRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -58840,6 +59235,176 @@
         ]
       }
     },
+    "/api/v1/super-admin/unit-ignore-phrases": {
+      "get": {
+        "operationId": "list_unit_ignore_phrases_api_v1_super_admin_unit_ignore_phrases_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                  },
+                  "title": "Response List Unit Ignore Phrases Api V1 Super Admin Unit Ignore Phrases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Unit Ignore Phrases",
+        "tags": [
+          "super-admin-units"
+        ]
+      },
+      "post": {
+        "operationId": "create_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIgnorePhraseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
+        ]
+      }
+    },
+    "/api/v1/super-admin/unit-ignore-phrases/{phrase_id}": {
+      "delete": {
+        "description": "物理削除。無効化は PATCH is_active=false を使う。",
+        "operationId": "delete_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases__phrase_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "title": "Phrase Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
+        ]
+      },
+      "patch": {
+        "operationId": "update_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases__phrase_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "title": "Phrase Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIgnorePhraseUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
+        ]
+      }
+    },
     "/api/v1/super-admin/units": {
       "get": {
         "operationId": "list_units_api_v1_super_admin_units_get",
@@ -62306,8 +62871,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Master Api V1 Tcg Products Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62399,8 +62963,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Standalone Api V1 Tcg Products Create Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62550,8 +63113,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Save Product Detail Api V1 Tcg Products Detail  Product Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductDetailSaveResult"
                 }
               }
             },

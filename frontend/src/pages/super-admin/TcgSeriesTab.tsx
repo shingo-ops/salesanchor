@@ -16,6 +16,7 @@ import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 interface TcgSeries {
   id: number;
@@ -187,13 +188,13 @@ export default function TcgSeriesTab() {
       >
         <label>
           {t("superAdmin.tcg.fields.tcgType")}:{" "}
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <SelectControl value={filter} onChange={(e) => setFilter(e.target.value)}>
             {types.map((tp) => (
               <option key={tp.code} value={tp.code}>
                 {tp.name_ja}
               </option>
             ))}
-          </select>
+          </SelectControl>
         </label>
         <Button
           type="button"
@@ -297,7 +298,7 @@ export default function TcgSeriesTab() {
           margin: "0.5rem 0",
         }}
       >
-        <select
+        <SelectControl
           value={form.tcg_type}
           onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}
         >
@@ -306,7 +307,7 @@ export default function TcgSeriesTab() {
               {tp.name_ja}
             </option>
           ))}
-        </select>
+        </SelectControl>
         <input
           placeholder={t("superAdmin.tcg.fields.seriesCode")}
           value={form.series_code}

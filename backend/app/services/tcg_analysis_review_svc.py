@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.review_reason_codes_svc import build_review_reason_details, load_review_reason_codes
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
 
@@ -242,6 +243,7 @@ async def fetch_analysis_results(
     item_params = dict(params, limit=limit, offset=offset)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
 
+    reason_table = await load_review_reason_codes(db)
     items = []
     for row in rows:
         span = (
@@ -284,6 +286,7 @@ async def fetch_analysis_results(
                     "needs_review": row.needs_review, "review_reasons": row.review_reasons or "",
                     "confirmed": row.condition_confirmed, "classification": row.empty_box_classification,
                 },
+                "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,
                     pid_basis=row.pid_basis,

@@ -71,6 +71,7 @@
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
 | Discordリアクション（discord-reaction。受信箱でDiscordと同じように絵文字を付ける・見る） | discord-reaction/README.md | あるべき姿・KGI確定 2026-09-04 |
+| LINE解析 Gemini 書き写しの調整記録（line-analysis-tuning。版をまたいだ精度の推移・PO の判断・事故の履歴台帳） | [line-analysis-tuning/README.md](line-analysis-tuning/README.md)・[試験の記録](line-analysis-tuning/track-record.md) | 公開（記録開始 2026-10-07） |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）
