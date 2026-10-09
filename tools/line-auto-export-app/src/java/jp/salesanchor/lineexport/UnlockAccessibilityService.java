@@ -342,10 +342,28 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // 「使用中は見送り」と同じ判定）。
         KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         if (km == null || !km.isKeyguardLocked()) {
-            running.set(false);
+            if (runAll) {
+                // PO決定（実機運用、design.md追補対象）: 使用中でも即実行する。中断は受け入れる。
+                // ロック解除（PIN入力）は飛ばし、既存のEXPORT専用経路へ直行する（すでに解除済み
+                // のためPIN入力は不要。誤入力リスクを増やさないため一切行わない）。
+                // この経路では「ロック解除: 見送り」通知とscheduleRetryAfterSkipは発生しない
+                // （RUN単体＝runAll=falseはロック解除機構自体の検証用のため、挙動を変える
+                // 必要が無く、下のelse相当の見送り処理をそのまま通る）。
+                // 床（SchedulerStore#getLastRunStartedAt）には、実際に画面を使う実行として
+                // 通常の経路と同じくここで登録する。
+                SchedulerStore.setLastRunStartedAt(this, flowStartedAt);
+                running.set(false);
+                logUnlockEnd("skipped_to_export", null, System.currentTimeMillis() - flowStartedAt, null);
+                // lockOnFinishはひとまずfalse（施錠するかどうかは別のPO決定として後続コミットで
+                // true化する。design.md追補「使用中でも即実行する」とは独立の論点）。
+                startExportFlow(false, currentTriggerLabel);
+                return;
+            }
             postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中） / 引き金:" + currentTriggerLabel);
             // 段階3: 使用中で見送ったときは5分後に再試行を予約する（design.md追補
             // 「段階3の方式変更」。RunScheduler側でON/OFFトグルを見るのでここでは無条件に呼ぶ）。
+            // runAll=trueの経路（通知/補完/再試行/RUN_ALL）は上のifで即実行に切り替わったため、
+            // ここを通るのはRUN単体（手動のロック解除機構検証）だけになった。
             RunScheduler.scheduleRetryAfterSkip(this);
             logUnlockEnd("skipped", "ロックされていない（使用中）",
                     System.currentTimeMillis() - flowStartedAt, null);

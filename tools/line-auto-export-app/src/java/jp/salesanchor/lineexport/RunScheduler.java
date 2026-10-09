@@ -137,7 +137,15 @@ final class RunScheduler {
 
     // ---- 使用中で見送ったとき（UnlockAccessibilityServiceから呼ぶ） --------------------------
 
-    /** 見送り（使用中スキップ）が起きたときに呼ぶ。OFF中は何もしない。 */
+    /**
+     * 見送り（使用中スキップ）が起きたときに呼ぶ。OFF中は何もしない。
+     *
+     * PO決定（実機運用）: 通知／補完／再試行／RUN_ALL（runAll=true）は使用中でも即実行する
+     * よう変更され、UnlockAccessibilityService#startUnlockFlowのキーガード判定で見送りに
+     * なることが無くなった。このメソッド自体は削除しない（将来使う可能性と、RUN単体
+     * （手動のロック解除機構検証、runAll=false）の受け皿のため）。現時点ではRUN単体の
+     * 見送り経路からしか呼ばれない。
+     */
     static void scheduleRetryAfterSkip(Context context) {
         if (!SchedulerStore.isEnabled(context)) {
             return;
