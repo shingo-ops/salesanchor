@@ -28,4 +28,4 @@
 
 ## 注（再実行時の入力欠落）
 
-(4) 非 text 19 件は未測定。祖先連鎖の調査入力 /tmp/CC報告ファイル/ay2b-recon/（415行版 ay2-applied-css.json・ay2b-mold-users.json）が失われ、evidence の ay2-applied-css.json（360行）に該当行が無いため、スクリプトは該当行を飛ばした。代替: 実装前に同じ絞り込み規則で 102 条件・差分0 を確認した ay2b-nontext-keep.json。実装の components.css は同じ4型の絞り込みで宣言不変（git diff で確認）。(5) の既存 TextField 代表 12 は、ay2b-visual.json の moldUsers 6代表から入力を再構成して測定（祖先は先頭5段まで）。
+(4) 非 text 19 件は未測定。祖先連鎖の調査入力 /tmp/CC報告ファイル/ay2b-recon/（415行版 ay2-applied-css.json・ay2b-mold-users.json）が失われ、evidence の ay2-applied-css.json（360行）に該当行が無いため、スクリプトは該当行を飛ばした。その後、競合規則の全列挙と全 CSS による実測（ay2b-nontext-after.md、実在の 9 件は差 0）で埋めた。当初の代替は実装前の ay2b-nontext-keep.json（102 条件・差分0）。実装の components.css は同じ4型の絞り込みで宣言不変（git diff で確認）。(5) の既存 TextField 代表 12 は、ay2b-visual.json の moldUsers 6代表から入力を再構成して測定（祖先は先頭5段まで）。
