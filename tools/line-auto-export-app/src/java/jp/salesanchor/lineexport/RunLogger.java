@@ -15,6 +15,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -77,14 +78,19 @@ final class RunLogger {
      *
      * @param result "success" / "failure" / "skipped"
      * @param stage 失敗した段階名。成功ならnull
-     * @param stepTimings 各段階の所要ms（{stage, ms}の配列）。無ければnull
+     * @param elapsedUpMs 全体のSystemClock.uptimeMillis()差（深いスリープ中は進まない）。
+     *     測っていない呼び出し元は-1を渡す（その場合はログに出さない。design.md追補
+     *     「遅い回の原因確定のための計測追加」: elapsedMs（実時間）と大きく異なるなら
+     *     端末が深いスリープに入ってHandler#postDelayedが引き延ばされたと分かる）
+     * @param stepTimings 各段階の所要ms・upMs等（{stage, ms, upMs, ...}の配列）。無ければnull
      * @param locked 施錠を実行したときだけその結果。施錠を実行していないならnull
      * @param nextTrigger このチェーンで新たに張ったアラームの種別。無ければnull
      * @param nextAtMs nextTriggerが発火するまでのms（相対値）。nextTriggerがnullなら無視される
+     * @param extraFields トップレベルに追加で混ぜ込むフィールド（ウェイクロック診断等）。無ければnull
      */
     static void logEnd(Context context, String runId, String flow, String trigger, String result,
-            String stage, long elapsedMs, JSONArray stepTimings, Boolean locked,
-            String nextTrigger, Long nextAtMs) {
+            String stage, long elapsedMs, long elapsedUpMs, JSONArray stepTimings, Boolean locked,
+            String nextTrigger, Long nextAtMs, JSONObject extraFields) {
         JSONObject json = new JSONObject();
         try {
             json.put("at", formatIso8601(System.currentTimeMillis()));
@@ -95,6 +101,9 @@ final class RunLogger {
             json.put("result", result);
             json.put("stage", stage == null ? JSONObject.NULL : stage);
             json.put("elapsedMs", elapsedMs);
+            if (elapsedUpMs >= 0) {
+                json.put("elapsedUpMs", elapsedUpMs);
+            }
             if (stepTimings != null) {
                 json.put("steps", stepTimings);
             }
@@ -105,6 +114,12 @@ final class RunLogger {
                 json.put("nextTrigger", nextTrigger);
                 if (nextAtMs != null) {
                     json.put("nextAtMs", nextAtMs.longValue());
+                }
+            }
+            if (extraFields != null) {
+                for (Iterator<String> it = extraFields.keys(); it.hasNext(); ) {
+                    String key = it.next();
+                    json.put(key, extraFields.get(key));
                 }
             }
         } catch (JSONException e) {

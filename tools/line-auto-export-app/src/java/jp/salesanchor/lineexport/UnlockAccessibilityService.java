@@ -599,8 +599,11 @@ public class UnlockAccessibilityService extends AccessibilityService {
         if (nextTrigger != null) {
             nextAtMs = Long.valueOf(SchedulerStore.getPendingNextAtMs(this) - System.currentTimeMillis());
         }
-        RunLogger.logEnd(this, currentRunId, "unlock", currentTriggerLabel, result, stage, elapsedMs,
-                stepTimings, null, nextTrigger, nextAtMs);
+        // ロック解除フローはuptimeMillis計測・段階ごとの構造化計測を持たない（2026-10-08
+        // 「遅い回の原因確定のための計測追加」の対象はLINE操作フローのみ。unlock側は
+        // elapsedUpMs=-1（未測定、ログには出さない）・extraFields=nullで渡す）。
+        RunLogger.logEnd(this, currentRunId, "unlock", currentTriggerLabel, result, stage, elapsedMs, -1L,
+                stepTimings, null, nextTrigger, nextAtMs, null);
     }
 
     // ---- Window diagnostics (experimental, read-only) -----------------------------------

@@ -7,6 +7,7 @@ import android.content.Context;
 import android.graphics.Point;
 import android.os.Handler;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -14,6 +15,8 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Iterator;
 
 /**
  * 段階2の実行主体。LINE操作（ホーム→ショートカット→Menu→設定→トーク履歴を送信→Termux→EDIT）を
@@ -161,12 +164,34 @@ final class LineExportFlow {
     private PowerManager.WakeLock wakeLock;
 
     private long flowStartedAt;
+    private long flowStartedAtUptime;
     private long stepStartedAt;
+    private long stepStartedAtUptime;
     private StringBuilder stepTimings;
     private JSONArray stepTimingsJson;
     private String expectedGroup;
     private AccessibilityNodeInfo termuxNode;
     private String runId;
+
+    // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
+    // 挙動には一切使わない。診断ログにのみ出す。
+
+    // ウェイクロックの実効性。取得直後にisHeld()を確認(wakeAcquired)し、取得時刻を覚えて
+    // おき、フロー終了時に経過(wakeHeldMs)と、その時点でまだ保持できているか
+    // (wakeHeldAtEnd、安全タイムアウト120秒で勝手に解放されていないか)を見る。
+    private boolean wakeAcquired;
+    private long wakeAcquiredAt = -1L;
+
+    // 手順11（EDIT）の内訳。すべて実時間（ms）。
+    private long editClassWaitStartedAt;
+    private int editClassPolls;
+    private boolean editClassDetected;
+    private long editClassWaitMs = -1L;
+    private long editSettleMs = -1L;
+    private long editTapMs = -1L;
+    // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測。手順11自体の内訳ではないが、
+    // 依頼文の分類に合わせてEDIT関連として記録する。
+    private long editLockDelayMs = -1L;
 
     /**
      * lockOnFinishはRUN_ALL（ロック解除→LINE操作）のときだけtrueにする。EXPORT単体
@@ -186,7 +211,9 @@ final class LineExportFlow {
 
     void start() {
         flowStartedAt = System.currentTimeMillis();
+        flowStartedAtUptime = SystemClock.uptimeMillis();
         stepStartedAt = flowStartedAt;
+        stepStartedAtUptime = flowStartedAtUptime;
         stepTimings = new StringBuilder();
         stepTimingsJson = new JSONArray();
         expectedGroup = firstTargetGroup(NotifyStore.getTargetGroups(service));
@@ -317,7 +344,7 @@ final class LineExportFlow {
             public void onFailure() {
                 finish(false, STAGE_SETTINGS_ITEM);
             }
-        });
+        }, new ScrollStats());
     }
 
     // ---- 手順8: 「トーク履歴を送信」をクリック（即時探索＋スクロール再探索、最大4回） -----------
@@ -333,7 +360,7 @@ final class LineExportFlow {
             public void onFailure() {
                 finish(false, STAGE_EXPORT_ITEM);
             }
-        });
+        }, new ScrollStats());
     }
 
     // ---- 手順9: 共有シート到達判定（見つかったノードは手順10でそのままクリックする） -----------
@@ -374,17 +401,24 @@ final class LineExportFlow {
     // 使わない＝検出できてもできなくても最終的にはタップする。
 
     private void step11WaitEditClassThenTap() {
-        pollEditClass(System.currentTimeMillis() + EDIT_CLASS_WAIT_TIMEOUT_MS);
+        editClassWaitStartedAt = System.currentTimeMillis();
+        editClassPolls = 0;
+        pollEditClass(editClassWaitStartedAt + EDIT_CLASS_WAIT_TIMEOUT_MS);
     }
 
     private void pollEditClass(final long deadlineAt) {
+        editClassPolls++;
         String className = service.getLastWindowClassName();
         boolean detected = className != null && className.contains(TERMUX_EDIT_CLASS_NAME);
         if (detected) {
+            editClassDetected = true;
+            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            final long settleStartedAt = System.currentTimeMillis();
             // auto-export.sh:156 の `sleep 1` と同値。検出してからタップまでの落ち着き待ち。
             handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
+                    editSettleMs = System.currentTimeMillis() - settleStartedAt;
                     tapEditButton(true);
                 }
             }, EDIT_TAP_SETTLE_DELAY_MS);
@@ -394,6 +428,9 @@ final class LineExportFlow {
             // 5秒で検出できなくてもタップは行う（ADB版auto-export.sh:155はここで失敗扱いだが、
             // このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めない
             // ことを失敗とみなさない。診断にeditクラス未検出を残すだけ）。
+            editClassDetected = false;
+            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            editSettleMs = 0L; // この経路では落ち着き待ちを取っていない。
             tapEditButton(false);
             return;
         }
@@ -407,9 +444,12 @@ final class LineExportFlow {
 
     private void tapEditButton(boolean classDetected) {
         Point size = getScreenSize();
+        long tapStartedAt = System.currentTimeMillis();
         GestureCompat.DispatchReport report = GestureCompat.tap(
                 service, size.x * EDIT_TAP_X_RATIO, size.y * EDIT_TAP_Y_RATIO, 80L, "edit");
-        recordStep(STAGE_EDIT_BUTTON, (classDetected ? "" : "editクラス未検出 ") + report.describe());
+        editTapMs = System.currentTimeMillis() - tapStartedAt;
+        recordStep(STAGE_EDIT_BUTTON, (classDetected ? "" : "editクラス未検出 ") + report.describe(),
+                buildEditStageExtraFields());
         if (!report.accepted) {
             finish(false, STAGE_EDIT_BUTTON);
             return;
@@ -510,12 +550,51 @@ final class LineExportFlow {
         void onFailure();
     }
 
+    /**
+     * scrollFindAndClickの1呼び出し（settings_item/export_itemそれぞれ1個ずつ、別々に
+     * 新規作成して渡す）の内訳。診断ログ専用で挙動には使わない
+     * （design.md追補「遅い回の原因確定のための計測追加」）。
+     */
+    private static final class ScrollStats {
+        int attempts;
+        int scrolls;
+        long searchMsMax;
+        long searchMsTotal;
+        /** 最後に行ったスクロールの方式。"node"=ACTION_SCROLL_FORWARDが成功、
+         * "gesture"=swipeへフォールバック、"none"=一度もスクロールしていない（即時発見）。 */
+        String scrollMode = "none";
+
+        JSONObject toJson() {
+            JSONObject o = new JSONObject();
+            try {
+                o.put("attempts", attempts);
+                o.put("scrolls", scrolls);
+                o.put("searchMsMax", searchMsMax);
+                o.put("searchMsTotal", searchMsTotal);
+                o.put("scrollMode", scrollMode);
+            } catch (JSONException e) {
+                Log.w(TAG, "scroll stats json build failed: " + e);
+            }
+            return o;
+        }
+    }
+
     private void scrollFindAndClick(final String label, final int attempt, final String stage,
-            final StepCallback callback) {
+            final StepCallback callback, final ScrollStats stats) {
+        stats.attempts++;
+        // ノード探索1回の所要ms（NodeOps.findNodeByLabel呼び出しの前後だけを挟んで測る。
+        // findScrollable()はスクロール発生時のみの別の探索なのでここには含めない）。
+        long searchStartedAt = System.currentTimeMillis();
         AccessibilityNodeInfo node = NodeOps.findNodeByLabel(service, label);
+        long searchMs = System.currentTimeMillis() - searchStartedAt;
+        stats.searchMsTotal += searchMs;
+        if (searchMs > stats.searchMsMax) {
+            stats.searchMsMax = searchMs;
+        }
+
         if (node != null) {
             NodeOps.ClickResult result = NodeOps.clickNode(service, node);
-            recordStep(stage);
+            recordStep(stage, null, stats.toJson());
             if (result.accepted) {
                 callback.onSuccess();
             } else {
@@ -524,21 +603,25 @@ final class LineExportFlow {
             return;
         }
         if (attempt >= SCROLL_MAX_RETRIES) {
-            recordStep(stage);
+            recordStep(stage, null, stats.toJson());
             callback.onFailure();
             return;
         }
-        scrollOnce();
+        stats.scrolls++;
+        stats.scrollMode = scrollOnce();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                scrollFindAndClick(label, attempt + 1, stage, callback);
+                scrollFindAndClick(label, attempt + 1, stage, callback, stats);
             }
         }, SCROLL_SETTLE_DELAY_MS);
     }
 
-    /** ACTION_SCROLL_FORWARDを先に試し、スクロール可能なノードが無ければswipeへフォールバックする。 */
-    private void scrollOnce() {
+    /**
+     * ACTION_SCROLL_FORWARDを先に試し、スクロール可能なノードが無ければswipeへフォールバック
+     * する。戻り値は診断用（"node"/"gesture"）。
+     */
+    private String scrollOnce() {
         AccessibilityNodeInfo scrollable = NodeOps.findScrollable(service);
         boolean scrolled = scrollable != null
                 && scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
@@ -546,19 +629,54 @@ final class LineExportFlow {
             Point size = getScreenSize();
             GestureCompat.swipe(service, size.x * 0.5f, size.y * SCROLL_SWIPE_FROM_Y_RATIO,
                     size.x * 0.5f, size.y * SCROLL_SWIPE_TO_Y_RATIO, SCROLL_SWIPE_DURATION_MS, "scroll");
+            return "gesture";
         }
+        return "node";
+    }
+
+    /**
+     * 手順11（EDIT）の内訳をedit_buttonのstepTimingsJsonエントリに混ぜ込む
+     * extraFieldsを組み立てる（design.md追補「遅い回の原因確定のための計測追加」）。
+     * lockDelayMsはここでは分からない（施錠前の待ちはfinish()の中、recordStepより後に
+     * 起きるため）ので、logExportEndの側で別途トップレベルに載せる。
+     */
+    private JSONObject buildEditStageExtraFields() {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("classDetected", editClassDetected);
+            o.put("classPolls", editClassPolls);
+            o.put("classWaitMs", editClassWaitMs);
+            o.put("settleMs", editSettleMs);
+            o.put("tapMs", editTapMs);
+        } catch (JSONException e) {
+            Log.w(TAG, "edit stage extra fields build failed: " + e);
+        }
+        return o;
     }
 
     // ---- 終了処理・通知 ------------------------------------------------------------------
 
     private void recordStep(String stepName) {
-        recordStep(stepName, null);
+        recordStep(stepName, null, null);
     }
 
     private void recordStep(String stepName, String extra) {
+        recordStep(stepName, extra, null);
+    }
+
+    /**
+     * extraFieldsは診断ログ(stepTimingsJson)のこの段階のエントリにだけ追加フィールドとして
+     * 混ぜ込む（例: scrollFindAndClickの内訳）。通知本文(stepTimings、平文)には一切出さない
+     * ＝挙動・既存の通知内容は変えない（design.md追補「遅い回の原因確定のための計測追加」。
+     * 計測を足すだけで挙動を変えないこと、という指示どおり）。
+     */
+    private void recordStep(String stepName, String extra, JSONObject extraFields) {
         long now = System.currentTimeMillis();
+        long nowUp = SystemClock.uptimeMillis();
         long ms = now - stepStartedAt;
+        long upMs = nowUp - stepStartedAtUptime;
         stepStartedAt = now;
+        stepStartedAtUptime = nowUp;
         stepTimings.append(stepName).append(':').append(ms).append("ms");
         if (extra != null && extra.length() > 0) {
             stepTimings.append('(').append(extra).append(')');
@@ -568,10 +686,20 @@ final class LineExportFlow {
         // 実行ログ用の構造化版（design.md追補「実機で動いたが挙動が診断できない」対策）。
         // 通知本文の平文stepTimingsと内容は同じ（stage名とms）。extraはここには入れない
         // （ノードのテキストやメッセージ本文は無いが、診断ログの対象を絞るため）。
+        // upMsはSystemClock.uptimeMillis()の差（端末が起きていた時間、深いスリープ中は
+        // 進まない）。ms（実時間）と大きく異なるなら、その段階の間にスリープに入って
+        // Handler#postDelayedが引き延ばされたと分かる（design.md追補参照）。
         try {
             JSONObject entry = new JSONObject();
             entry.put("stage", stepName);
             entry.put("ms", ms);
+            entry.put("upMs", upMs);
+            if (extraFields != null) {
+                for (Iterator<String> it = extraFields.keys(); it.hasNext(); ) {
+                    String key = it.next();
+                    entry.put(key, extraFields.get(key));
+                }
+            }
             stepTimingsJson.put(entry);
         } catch (JSONException e) {
             Log.w(TAG, "step timing json build failed: " + e);
@@ -584,6 +712,10 @@ final class LineExportFlow {
         String recentClasses = success ? "" : service.recentWindowClassNames();
         service.stopWindowRecording();
         long elapsed = System.currentTimeMillis() - flowStartedAt;
+        // 実時間(elapsed)とuptime(elapsedUptime、深いスリープ中は進まない)の両方を記録する
+        // （design.md追補「遅い回の原因確定のための計測追加」）。差が大きければスリープで
+        // 引き延ばされたと分かり、ほぼ同じなら本当にその時間処理していたと分かる。
+        long elapsedUptime = SystemClock.uptimeMillis() - flowStartedAtUptime;
         final String title = success ? "書き出し: 成功" : "書き出し: 失敗";
         String stagePart = success ? "" : ("段階: " + failedStage + " / ");
         String body = stagePart + elapsed + "ms / " + stepTimings.toString().trim();
@@ -600,10 +732,13 @@ final class LineExportFlow {
 
         if (!lockOnFinish) {
             // 施錠を行わない経路（EXPORT単体検証）。ここが画面保持の最終地点になるため
-            // ここで解放する。
+            // ここで解放する。解放前にウェイクロックの実効性（design.md追補参照:
+            // 安全タイムアウト120秒で勝手に解放されていないか）を記録する。
+            boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
+            long wakeHeldMs = wakeAcquiredAt > 0 ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
             releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
-            logExportEnd(success, failedStage, elapsed, null);
+            logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs);
             if (listener != null) {
                 listener.onFinished();
             }
@@ -624,16 +759,22 @@ final class LineExportFlow {
         // （最低2秒）待ってから施錠する。失敗で中止した経路（ジェスチャを出していない
         // 場合もある）と区別すると実装が複雑になるため、安全側に倒して一律この手順を通す。
         final String gestureSummary = GestureCompat.drainCallbackSummary();
+        final long lockDelayStartedAt = System.currentTimeMillis();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
+                // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測（design.md追補参照）。
+                editLockDelayMs = System.currentTimeMillis() - lockDelayStartedAt;
                 boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+                boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
+                long wakeHeldMs = wakeAcquiredAt > 0 ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
                 // 施錠まで終えてから解放する（施錠の直前で解放すると、画面が落ちてから
                 // GLOBAL_ACTION_LOCK_SCREENを呼ぶことになり、扱いが不安定になりうるため）。
                 releaseWakeLock();
                 String finalBody = bodyBeforeLock + " / " + gestureSummary + " / 施錠:" + locked;
                 postResultNotification(service, title, finalBody);
-                logExportEnd(success, failedStage, elapsed, Boolean.valueOf(locked));
+                logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
+                        wakeHeldAtEnd, wakeHeldMs);
                 if (listener != null) {
                     listener.onFinished();
                 }
@@ -645,16 +786,34 @@ final class LineExportFlow {
      * LINE操作フローの終了行を書く。nextTrigger/nextAtMsはこのチェーンでRunSchedulerが
      * 新たに張ったアラームをSchedulerStoreのpending-nextから読む（ロック解除フロー側の
      * logUnlockEndと同じ値を指す。チェーンの先頭で1回だけ決まる情報のため）。
+     * wakeHeldAtEnd/wakeHeldMs/editLockDelayMsはトップレベルの追加フィールドとして載せる
+     * （design.md追補「遅い回の原因確定のための計測追加」）。
      */
-    private void logExportEnd(boolean success, String failedStage, long elapsedMs, Boolean locked) {
+    private void logExportEnd(boolean success, String failedStage, long elapsedMs, long elapsedUpMs,
+            Boolean locked, boolean wakeHeldAtEnd, long wakeHeldMs) {
         String nextTrigger = SchedulerStore.getPendingNextTrigger(service);
         Long nextAtMs = null;
         if (nextTrigger != null) {
             nextAtMs = Long.valueOf(SchedulerStore.getPendingNextAtMs(service) - System.currentTimeMillis());
         }
         String result = success ? "success" : "failure";
-        RunLogger.logEnd(service, runId, "export", triggerLabel, result, failedStage, elapsedMs,
-                stepTimingsJson, locked, nextTrigger, nextAtMs);
+
+        JSONObject extraFields = new JSONObject();
+        try {
+            extraFields.put("wakeAcquired", wakeAcquired);
+            extraFields.put("wakeHeldAtEnd", wakeHeldAtEnd);
+            if (wakeHeldMs >= 0) {
+                extraFields.put("wakeHeldMs", wakeHeldMs);
+            }
+            if (editLockDelayMs >= 0) {
+                extraFields.put("editLockDelayMs", editLockDelayMs);
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "export end extra fields build failed: " + e);
+        }
+
+        RunLogger.logEnd(service, runId, "export", triggerLabel, result, failedStage, elapsedMs, elapsedUpMs,
+                stepTimingsJson, locked, nextTrigger, nextAtMs, extraFields);
     }
 
     /** 対象グループ名設定（カンマ区切り）の先頭要素。空ならNotifyStoreの既定値を使う。 */
@@ -706,7 +865,11 @@ final class LineExportFlow {
             // 安全タイムアウト2分（design.md追補参照: 設計値どおりなら全体15〜20秒、
             // 実機の最悪実測でも113秒だったため2分あれば足り、暴走時も必ず解放される）。
             wakeLock.acquire(WAKE_LOCK_SAFETY_TIMEOUT_MS);
+            wakeAcquiredAt = System.currentTimeMillis();
         }
+        // 取得直後に実際に保持できているかを記録する（診断用。design.md追補
+        // 「遅い回の原因確定のための計測追加」）。
+        wakeAcquired = wakeLock.isHeld();
     }
 
     private void releaseWakeLock() {
