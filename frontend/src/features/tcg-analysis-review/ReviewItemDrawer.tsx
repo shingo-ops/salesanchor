@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
 import { Drawer } from "../../components/Drawer";
+import { Stack } from "../../components/Stack";
 import { api, ApiError } from "../../lib/api";
 import { ConditionReviewPanel } from "./ConditionReviewPanel";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
@@ -58,7 +59,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
   return (
     <>
       <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+        <Stack gap="3">
           {notice && <Callout variant={notice.variant} title={notice.title} />}
           <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} />
           <ConditionReviewPanel item={item} onRefresh={onRefresh} />
@@ -92,7 +93,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
               ))}
             </ul>
           </section>
-        </div>
+        </Stack>
       </Drawer>
       {isProductDrawerOpen && (
         <ProductMasterDrawer

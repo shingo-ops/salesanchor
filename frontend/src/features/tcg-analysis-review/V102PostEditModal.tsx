@@ -9,7 +9,9 @@ import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { Modal } from "../../components/Modal";
+import { Stack } from "../../components/Stack";
 import { TextField } from "../../components/TextField";
+import { TwoColumn } from "../../components/TwoColumn";
 import { api, ApiError } from "../../lib/api";
 import { reviewReasonLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
@@ -195,7 +197,7 @@ export function V102PostEditModal({ jobId, onClose, onSaved }: Props) {
 
   return (
     <Modal open onClose={onClose} title={t("v102Posts.modalTitle")} size="xl" footer={footer}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <Stack gap="3">
         {loadFailed && <Callout variant="warning" title={t("common.fetchError")} />}
         {notice && <Callout variant={notice.variant} title={notice.title} />}
         {showErrors && validation.hasNoRows && <Callout variant="warning" title={t("v102Posts.errors.noItems")} />}
@@ -203,19 +205,19 @@ export function V102PostEditModal({ jobId, onClose, onSaved }: Props) {
           <p>{t("v102Posts.jobReasons", { reasons: joinReasons(detail.job_review_reason_details) })}</p>
         )}
         {detail && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "var(--space-3)", alignItems: "start" }}>
+          <TwoColumn ratio="1:2" gap="3" align="start">
             <ShadowSourcePane rawText={rawText} blockRange={blockRange} />
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+            <Stack gap="2">
               <DataTable columns={columns} data={rows} rowKey={(row) => row.key} emptyState={t("v102Posts.noRows")} density="compact" />
               <div>
                 <Button variant="secondary" size="sm" onClick={addRow}>
                   {t("v102Posts.addItem")}
                 </Button>
               </div>
-            </div>
-          </div>
+            </Stack>
+          </TwoColumn>
         )}
-      </div>
+      </Stack>
     </Modal>
   );
 }
