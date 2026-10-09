@@ -30,7 +30,7 @@ export type TextFieldProps = TextFieldOwnProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, keyof TextFieldOwnProps | "size">;
 
 /** 用途別の種類（design.md §AY-2a）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
-export type TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer";
+export type TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer" | "login";
 
 export type TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> &
   (
