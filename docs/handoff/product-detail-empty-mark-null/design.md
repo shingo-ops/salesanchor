@@ -1,5 +1,8 @@
 # design: 空の mark・english_title を NULL で保存する
 
+**recon**: docs/handoff/product-detail-empty-mark-null/recon.md
+**対象ADR**: ADR-155
+
 ## 方針
 - backend/app/services/tcg_product_detail_svc.py の update_product_detail で、UPDATE に渡す mark・english_title を strip 後に空なら None にする（新規作成・tcg_product_master_svc.py:418-419 と同じ表し方）
 - ProductDetailUpdate の型・frontend は変えない（frontend は '' を送ってよい）
@@ -21,7 +24,7 @@
 - 旧データの '' は保存時に1回 NULL になり、audit_log にその差が出る
 
 ## 維持の仕組み
-- 守り手: test_tcg_product_detail_pg.py
+- 守り手: backend/tests/test_tcg_product_detail_pg.py
 
 ## 戻し方
 - この PR を revert する
