@@ -162,3 +162,18 @@ id UUID PK / extraction_job_id UUID NOT NULL FK ON DELETE CASCADE / line_start, 
 
 ## 6. 生出力の保存先（手元・社外秘を含み得るためリポジトリに置かない）
 /tmp/CC報告ファイル/switch-recon-20261009/{A,B,C,D,E}/
+
+## 7. 便E 段1（origin/main 基準）
+- LINE_ANALYSIS_ENGINE の参照: docker-compose.yml:218（celery-worker、`:-v6`）／backend/app/services/line_analysis_v102_svc.py:47,93-100（get_engine、未設定は v6）／backend/app/tasks/tcg_extraction.py:471／backend/tests/test_line_analysis_v102_svc.py:42-55,264,275,295,306。compose の既定値を検査するテスト・CI は無い。
+- v102 の流れ: backend/app/tasks/tcg_extraction.py:471-472 → :439 _run_v102_extraction → :448-451 run_v102_analysis（TCG_AUTO_ANALYZE=1）→ backend/app/services/line_analysis_v102_svc.py:792 _merge_supplier_products（is_current）→ backend/app/tasks/tcg_extraction.py:456-458 _enqueue_auto_distribute（TCG_AUTO_DISTRIBUTE=1）。v6 は backend/app/tasks/tcg_extraction.py:593-609 で同じ条件。prompt_version は backend/app/services/line_analysis_v102_svc.py:384-387,130（`v102:<prompt_key>:<sha256先頭12>`）。GEMINI_API_KEY は backend/app/services/gemini_extraction_svc.py:262。
+
+### Opus 確認 2026-10-10（本番・読み取り専用、生出力）
+```
+dir=/home/ubuntu/salesanchor
+0            # .env の ^LINE_ANALYSIS_ENGINE の件数
+ENGINE=v6 AUTO_ANALYZE=1 AUTO_DIST=1   # celery-worker の現在値
+GEMINI_KEY=present
+     prompt_key      | is_active | len  |          updated_at
+ raw_copy_v101_f_c   | t         | 5321 | 2026-10-07 23:13:07.604272+00
+```
+
