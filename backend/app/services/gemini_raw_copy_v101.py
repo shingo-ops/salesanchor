@@ -1047,6 +1047,7 @@ def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None]
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
 _REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
+_REVIEW_QUANTITY_NOT_IN_TEXT = "quantity_not_in_text"
 _POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
 _NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
 
@@ -1078,6 +1079,8 @@ def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[di
     """通常の件に足す要確認の理由（印の行を持つ件・単位なし・分類「不明」）。"""
     owned = {*row["lines"], row["price_line"]}
     reasons = [{"line": n, "kind": _REVIEW_QUANTITY_NO_NUMBER} for n in no_number if n in owned]
+    if row.get("quantity_not_in_text") is True:
+        reasons.append({"kind": _REVIEW_QUANTITY_NOT_IN_TEXT, "field": "quantity", "copied": row["raw_quantity"]})
     reasons += [{"line": n, "kind": _REVIEW_FOOTER} for n in footer if n in owned]
     if row["unit"] == _NONE:
         reasons.append({"line": row["price_line"], "kind": _REVIEW_UNIT_UNKNOWN})
