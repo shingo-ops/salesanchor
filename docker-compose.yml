@@ -214,8 +214,8 @@ services:
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - EXTRACTION_SHADOW_ENABLED=${EXTRACTION_SHADOW_ENABLED:-0}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
-      # LINE解析の本番エンジン（v6 / v102）。既定 v6。切替・戻しは既定値を変える PR（docs/handoff/v102-prod-switch/design.md §4-1）
-      - LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v6}
+      # LINE解析の本番エンジン（v6 / v102）。既定 v102（便E で v6 から切替）。切替・戻しは既定値を変える PR（docs/handoff/v102-prod-switch/design.md §4-1）
+      - LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}

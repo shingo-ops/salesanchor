@@ -172,7 +172,7 @@
 | 本番経路と試作版で同じ結果（K8） | test_line_analysis_v102_pg.py（CI の PostgreSQL ジョブ） | CI |
 | 要確認の件は配信しない（K3） | 同上（fetch_output_rows の検査） | CI |
 | 理由コードの抜け漏れ | 便A で追加するテスト（§4-3） | CI |
-| 既定は v6（切替は PR でのみ） | docker-compose.yml の既定値 `${LINE_ANALYSIS_ENGINE:-v6}` と get_engine のテスト | CI・PR レビュー |
+| compose の既定値 v102／コードの既定値 v6（未設定時の安全側）。切替は PR でのみ | docker-compose.yml:218 の `${LINE_ANALYSIS_ENGINE:-v102}` と get_engine のテスト（test_line_analysis_v102_svc.py:42-50） | CI・PR レビュー |
 | migration は構造のみ | migration-guard.yml（チェック3〜8） | CI |
 | 費用 | llm_usage_events（purpose='line_extraction'）を切替後に日次で確認 | 設計担当 Opus（PO へ報告） |
 
@@ -334,3 +334,41 @@ recon（基準 origin/main f0d710185、file:line は本節に転記）。本番�
 
 ### 13-9. 外部・過去事例
 外部事例は使わない（社内の既存の仕組み ADR-158 の is_current と item_corrections の延長）。過去事例: v6 は「product_id の判断があれば再解析を飛ばす」方式（backend/app/services/tcg_analyzer_svc.py:1381-1394）で、判断が同値の確認でも再計算が止まる。本設計は飛ばさずに判断を反映して再計算する。
+
+## 14. 便E（既定を v102 に切替）
+
+### 14-1. 目的
+本番の LINE解析エンジンを v6 から v102 に切り替える。新しい LINE 投稿は v102（指示書 raw_copy_v101_f_c）で抽出・解析される。
+
+### 14-2. 変更前後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| docker-compose.yml:218 | `LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v6}` | `LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}` |
+| backend/app/services/line_analysis_v102_svc.py:100 get_engine | v6（未設定時） | 変えない（未設定・不明値は v6 の安全側） |
+
+本番の .env には LINE_ANALYSIS_ENGINE が無い（件数 0、recon.md「Opus 確認 2026-10-10」）ため、compose の既定値がそのまま効く。compose の変更だけで切り替わる。本番は自動配信 ON（AUTO_DIST=1）。
+
+### 14-3. PO 判断
+備考列 note_ja が空になる件を PO が了承（2026-10-10）: 「このまま切り替えて良い、切り替え後に備考欄の設定は構築する」
+
+### 14-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1 デプロイ後 celery-worker の LINE_ANALYSIS_ENGINE=v102 | `docker compose exec -T celery-worker printenv LINE_ANALYSIS_ENGINE` |
+| K2 切替後の新規抽出ジョブの prompt_version が `v102:` で始まる | extraction_jobs の最新行の prompt_version を読む（読み取り SQL、PO 実行） |
+| K3 その投稿の analysis_results が作られ is_current が付く | 同投稿の analysis_results の行と is_current を読む |
+| K4 自動配信が起動しシートが更新される | celery-worker ログの auto_distribute result と配信先シートの更新時刻 |
+| K5 v6 の件は変わらない | 切替前の v6 の投稿の prompt_version・analysis_results 件数が切替前後で同じ |
+
+### 14-5. 戻し方
+既定を v6 に戻す PR。緊急時は PO が本番 .env に `LINE_ANALYSIS_ENGINE=v6` を書き celery-worker を再作成する。
+
+### 14-6. 外部事例
+外部事例は使わない。環境変数による版切替は便B（§4）で設計済みの仕組みの既定値を変えるだけで、新しい仕組みを足さない。
+
+### 14-7. 維持の仕組み
+| 何を守るか | 仕組み | 担当 |
+|---|---|---|
+| 未設定時は v6（安全側） | get_engine のテスト（test_line_analysis_v102_svc.py:42-50） | CI |
+| compose の既定値 | PR レビュー。compose の既定値を検査するテスト・CI は無い（git grep で docker-compose.yml:218 以外に参照なし） | PR レビュー |
+| 費用 | llm_usage_events（purpose='line_extraction'）を切替後に日次確認 | 設計担当 Opus |
