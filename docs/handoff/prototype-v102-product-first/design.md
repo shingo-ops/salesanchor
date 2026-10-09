@@ -144,3 +144,29 @@ PO 決定（2026-10-09）：ポケモンは型番だけで投稿されないた�
 - 外部事例：該当なし（使わない）。理由：判断の根拠は自社の実測（保存済み応答の再計算：誤り1件解消・正判定の喪失0）と PO の業務知識（ポケモンは型番だけで投稿されない）で足り、出典と数値のそろった外部事例は確認していないため、設計の根拠に使わない。
 - 維持の仕組み：対象の追加・解除は type_master.match_by_code の値の変更だけ（コード変更なし）。変換は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_name_only.py。
 - 触るファイル: migrations/20261009_100000_type_master_match_by_code.sql, scripts/run_all_migrations.sh, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（商品照合を形G2 に変える・中分類の印を3つに分ける）
+PO 決定（2026-10-09）：基本は検索ワードで照合し、複数商品が残ったときに型番を二次候補に使う。型番だけで商品を決める作品は「ワンピース・ドラゴンボール・ガンダム・ユニオンアリーナ」。ポケモンは検索ワードと除外ワードだけ。
+
+- 規則（形G2）：名前の候補 N ＝ 名前系の検索ワード（正規化した語全体が、どれかの有効商品の品番・マークの正規化値と一致する語＝型番語、を除く）に当たり、除外ワードに当たらない商品（全作品）。N が2つ以上なら、N のうち型番（品番・マーク・型番語）が当たった商品に絞る（当たり0なら N のまま。名前だけの中分類は型番を持たない扱い）。N が1つならその商品。N が0なら、「型番だけでも決めてよい」中分類の商品で型番が当たり除外ワードに当たらないものが候補。候補の数で matched / ambiguous / unmatched。
+- 中分類の印を3つに分ける：名前だけ＝type_master.match_by_code = FALSE（既存・ポケモン）／型番だけでも決めてよい＝match_by_code = TRUE かつ code_only_match = TRUE／型番は絞り込みだけ＝match_by_code = TRUE かつ code_only_match = FALSE。
+- migrations/20261009_150000_type_master_code_only_match.sql：public.type_master に code_only_match BOOLEAN NOT NULL DEFAULT TRUE と COMMENT を足す（構造のみ。値の UPDATE は書かない）。既定 TRUE なので、反映直後は「名前だけ以外のすべてが型番だけでも決めてよい」状態。値（ワンピース・ドラゴンボール・ガンダム・ユニオンアリーナは TRUE のまま、ほかの作品を FALSE）は反映後に運用の手順（DRY-RUN→COMMIT）で付ける。
+- backend/app/services/gemini_raw_copy_v102_product_first.py：純粋関数 build_g2_index・match_product_g2 を足し、resolve_product_first の match_product 呼び出しを match_product_g2 に置き換える。load_product_first_masters が code_only_match = FALSE の中分類 id を読み、ProductFirstMasters.g2_index（新しい欄。既存の欄は変えない）に持たせる。当たり方（区切り・strict_codes）・名前の当たり方・除外ワードの当たり方は extraction_judgement_svc の既存関数（_code_candidate_basis・_keyword_matches・_excluded_keywords）を使い、新しい正規化は作らない。MatchResult の形は変えない（後段の文脈判定・提案・記録は今のまま）。
+- 触らない：extraction_judgement_svc.py の match_product ほか共有関数・load_product_entries・v6・v101 試運転・レビュー画面・配信・フロント・マスタのデータ。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|列がある|デプロイ後に information_schema.columns で public.type_master.code_only_match が存在（BOOLEAN・NOT NULL・既定 TRUE）|
+|試算と同じ結果|手元で保存済み応答の再計算（after21 入力 r1/r2）の候補が、試算の期待値と全件一致（印の付け方 2 通りで r1 3,697 件・r2 3,698 件が一致）|
+|試算の効果|1回あたり 決まる件 3,260→3,332、正判定の崩れ 0、別商品 0（件数のみ。社外秘のため原文は載せない）|
+|名前の候補が2つ以上のとき型番で絞る・当たり0なら残す|テスト：test_two_name_candidates_are_narrowed_by_code_hit・test_two_name_candidates_stay_when_no_code_hit|
+|N=0 は「型番だけでも」の作品だけ|テスト：test_code_only_text_matches_when_work_allows_code_only・test_code_only_text_has_no_candidate_for_narrow_only_work・test_code_only_text_has_no_candidate_for_name_only_work|
+|ポケモンは型番で残らない|テスト：test_name_only_work_candidate_is_dropped_when_other_candidate_has_code_hit|
+|除外ワードで外れる|テスト：test_excluded_name_candidate_is_removed・test_excluded_code_only_candidate_is_removed|
+|v6・試運転不変|共有関数を触っていない（git diff）＋既存テスト全通過|
+|マスタのデータは不変|migration に UPDATE・INSERT・DELETE が無い（目視と grep）|
+
+- 外部事例：該当なし（使わない）。理由：根拠は自社の実測（保存済み応答の再計算）と PO の業務知識（作品ごとに型番の使い方が違う）で足り、出典と数値のそろった外部事例は確認していないため。
+- 維持の仕組み：対象の付け替えは type_master.match_by_code・code_only_match の値の変更だけ（コード変更なし）。照合は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_match_g2.py。
+- 触るファイル: migrations/20261009_150000_type_master_code_only_match.sql, scripts/run_all_migrations.sh, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_match_g2.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

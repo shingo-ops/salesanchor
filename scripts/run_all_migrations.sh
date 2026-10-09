@@ -883,3 +883,6 @@ run_sql migrations/20261008_100000_create_line_unit_ignore_phrases.sql
 
 # 試作版 v102: 中分類マスタ type_master に match_by_code（型番で決めるかの印）を追加（構造のみ・値は運用で付ける・冪等）
 run_sql migrations/20261009_100000_type_master_match_by_code.sql
+
+# 試作版 v102: 中分類マスタ type_master に code_only_match（型番だけでも決めてよいかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_150000_type_master_code_only_match.sql

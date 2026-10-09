@@ -21,6 +21,10 @@ from sqlalchemy.orm import Session
 from app.services.extraction_judgement_svc import (
     MatchResult,
     ProductEntry,
+    _code_candidate_basis,
+    _excluded_keywords,
+    _keyword_matches,
+    fold_for_match,
     match_product,
     normalize_for_match,
     product_match_text,
@@ -84,6 +88,8 @@ class ProductFirstMasters:
     product_kubun: Mapping[str, str]  # 商品ID（文字列）→ 商品の分類（tcg_product_categories.kubun_type）
     condition_unit: Mapping[str, str]  # 状態の名前 → 対象の単位の名前（line_conditions.unit_id → line_units.canonical）
     ignore_phrases: tuple[str, ...]  # 単位にしない言い回し（有効なもの。空でもよい）
+    # 形G2 の照合に使う索引（型番を外す前の商品と中分類の印）。None のときは product_entries から印なしで作る
+    g2_index: G2Index | None = None
 
 
 _CONDITION_UNIT_SQL = """
@@ -121,17 +127,129 @@ def apply_name_only_works(entries: Sequence[ProductEntry], name_only_work_ids: f
     )
 
 
+_CODE_ONLY_OFF_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = TRUE AND code_only_match = FALSE"
+
+
+@dataclass(frozen=True)
+class G2Index:
+    """形G2 の照合に使う、商品と中分類の印（読み取り専用）。
+
+    entries：型番を外す前の商品。name_only_work_ids：名前だけ（match_by_code = FALSE）の中分類。
+    code_only_off_work_ids：型番は絞り込みだけ（match_by_code = TRUE かつ code_only_match = FALSE）の中分類。
+    name_entries：全作品の型番・型番語を外した商品（名前の候補を作るため）。base_entries：名前だけの中分類の型番を外した商品
+    （記録の欄を作るため。今の match_product の入力と同じ）。code_values：全商品の品番・マークの正規化値。
+    """
+
+    entries: tuple[ProductEntry, ...]
+    name_only_work_ids: frozenset[int]
+    code_only_off_work_ids: frozenset[int]
+    name_entries: tuple[ProductEntry, ...]
+    base_entries: tuple[ProductEntry, ...]
+    code_values: frozenset[str]
+
+
+def build_g2_index(
+    entries: Sequence[ProductEntry], name_only_work_ids: frozenset[int], code_only_off_work_ids: frozenset[int],
+) -> G2Index:
+    """G2Index を作る（純粋関数）。作品のない商品は、型番語を外す対象に含めない。"""
+    all_work_ids = frozenset(e.work_id for e in entries if e.work_id is not None)
+    code_values = {normalize_for_match(raw) for e in entries for raw in (e.product_code, e.mark) if raw}
+    code_values.discard("")
+    return G2Index(
+        entries=tuple(entries),
+        name_only_work_ids=name_only_work_ids,
+        code_only_off_work_ids=code_only_off_work_ids,
+        name_entries=apply_name_only_works(entries, all_work_ids),
+        base_entries=apply_name_only_works(entries, name_only_work_ids),
+        code_values=frozenset(code_values),
+    )
+
+
+@dataclass(frozen=True)
+class _G2Hit:
+    name_hit: bool  # 型番語を除いた検索ワードに当たった
+    code_hit: bool  # 品番・マーク、または型番語の検索ワードに当たった（名前だけの中分類は常に False）
+    any_hit: bool  # 品番・マーク・検索ワードのどれかに当たった
+    excluded: bool  # 除外ワードに当たった
+
+
+def _g2_hits(block: str, index: G2Index) -> dict[int, _G2Hit]:
+    """商品ごとの当たり方（当たり方・除外ワードの当たり方は match_product と同じ関数）。どれかに当たった商品だけ返す。"""
+    nb = normalize_for_match(block)
+    folded = fold_for_match(block)
+    hits: dict[int, _G2Hit] = {}
+    for entry, name_entry in zip(index.entries, index.name_entries, strict=True):
+        name_hit = bool(_keyword_matches(name_entry, nb, folded, True))
+        basis = _code_candidate_basis(entry, nb, folded, True) is not None
+        keywords = _keyword_matches(entry, nb, folded, True)
+        if not (basis or keywords or name_hit):
+            continue
+        code_keyword = any(normalize_for_match(k) in index.code_values for k in keywords)
+        hits[entry.id] = _G2Hit(
+            name_hit=name_hit,
+            code_hit=False if entry.work_id in index.name_only_work_ids else (basis or code_keyword),
+            any_hit=basis or bool(keywords),
+            excluded=bool(_excluded_keywords(entry, nb, folded, True)),
+        )
+    return hits
+
+
+def _g2_candidates(hits: Mapping[int, _G2Hit], index: G2Index) -> tuple[int, ...]:
+    """形G2 の候補。名前の候補があればそれ（2つ以上なら型番が当たったものに絞る）。無ければ、型番だけでも決めてよい作品の商品。"""
+    work_of = {e.id: e.work_id for e in index.entries}
+    names = sorted(pid for pid, h in hits.items() if h.name_hit and not h.excluded)
+    if names:
+        narrowed = [pid for pid in names if hits[pid].code_hit] if len(names) >= 2 else []
+        return tuple(narrowed or names)
+    no_code_only = index.name_only_work_ids | index.code_only_off_work_ids
+    return tuple(sorted(
+        pid for pid, h in hits.items() if h.any_hit and not h.excluded and work_of[pid] not in no_code_only
+    ))
+
+
+def match_product_g2(block: str, index: G2Index) -> MatchResult:
+    """試作版 v102 の商品照合（形G2）。候補の数で matched / ambiguous / unmatched。記録の欄は match_product と同じ形。
+
+    名前の候補 N：型番語を除いた検索ワードに当たり、除外ワードに当たらない商品（全作品）。
+    N が2つ以上：型番が当たった商品に絞る（当たり0なら N のまま。名前だけの中分類は型番を持たない扱い）。N が1つ：その商品。
+    N が0：型番だけでも決めてよい中分類の商品で、型番が当たり除外ワードに当たらないもの。
+    """
+    candidates = _g2_candidates(_g2_hits(block, index), index)
+    base = match_product(block, index.base_entries, strict_codes=True)
+    if not candidates:
+        return dataclass_replace(
+            base, status="unmatched", product_id=None, work_id=None, candidates=(), basis="",
+            reason="一致する検索ワード・品番がない",
+        )
+    if len(candidates) >= 2:
+        return dataclass_replace(
+            base, status="ambiguous", product_id=None, work_id=None, candidates=candidates, basis="",
+            reason=f"候補{len(candidates)}件：{'/'.join(str(c) for c in candidates)}",
+        )
+    product_id = candidates[0]
+    keywords = base.matched_keywords.get(product_id, ())
+    basis = "RAWCODE" if product_id in base.code_hit_values else f"SK:{keywords[0] if keywords else ''}"
+    work_id = next(e.work_id for e in index.entries if e.id == product_id)
+    return dataclass_replace(
+        base, status="matched", product_id=product_id, work_id=work_id, candidates=candidates, basis=basis, reason="",
+    )
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
     """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
 
     商品は、型番で決めない中分類（type_master.match_by_code = FALSE）の分だけ、品番・マーク・型番と同じ検索ワードを外す。
+    型番は絞り込みだけの中分類（match_by_code = TRUE かつ code_only_match = FALSE）の id も読み、形G2 の照合に渡す。
     """
     name_only = frozenset(int(r[0]) for r in session.execute(text(_NAME_ONLY_WORKS_SQL)).fetchall())
-    entries = apply_name_only_works(load_product_entries(session), name_only)
+    code_only_off = frozenset(int(r[0]) for r in session.execute(text(_CODE_ONLY_OFF_WORKS_SQL)).fetchall())
+    source_entries = tuple(load_product_entries(session))
+    entries = apply_name_only_works(source_entries, name_only)
     kubun_map = dict(load_product_kubun_type_map(session))
     cond_unit = {str(r[0]): str(r[1]) for r in session.execute(text(_CONDITION_UNIT_SQL)).fetchall()}
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases)
+    g2_index = build_g2_index(source_entries, name_only, code_only_off)
+    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index)
     check_product_first_masters(masters)
     return masters
 
@@ -360,7 +478,8 @@ def resolve_product_first(
     それ以外のときは無視する。
     """
     match_text, _source = product_match_text(block, "", name)
-    match = match_product(match_text, masters.product_entries, strict_codes=True)
+    g2_index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
+    match = match_product_g2(match_text, g2_index)
     if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))

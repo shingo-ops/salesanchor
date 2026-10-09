@@ -7,6 +7,7 @@ import { Select } from "../../components/Select";
 import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
+import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
 
 const classificationFields = ["product_kind_id", "work_id", "manufacturer_id", "product_category_id"] as const;
 type Classification = typeof classificationFields[number];
@@ -18,6 +19,7 @@ interface Detail {
     required_output_value: string | null; category_class: string; is_active: boolean; created_at: string;
   };
   lookups: Record<Classification, { id: string; name: string; is_active: boolean }[]>;
+  code_collisions?: CodeCollision[];
 }
 type Draft = Record<Classification, string> & {
   japanese_title: string; english_title: string; mark: string; release_date: string;
@@ -61,6 +63,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   const inFlight = useRef(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [collisions, setCollisions] = useState<CodeCollision[]>([]);
   const [blocked, setBlocked] = useState(false);
   const [confirmation, setConfirmation] = useState<"close" | "reload" | null>(null);
   const [reload, setReload] = useState(0);
@@ -73,7 +76,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   useEffect(() => {
     if (mode !== "edit") return;
     let cancelled = false;
-    setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false);
+    setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false); setCollisions([]);
     setBlocked(false); setConfirmation(null);
     if (productId === null) { setLoading(false); return; }
     setLoading(true);
@@ -91,7 +94,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   useEffect(() => {
     if (mode !== "create" || !isOpen) return;
     let cancelled = false;
-    setError(""); setSaved(false); setBlocked(false); setConfirmation(null);
+    setError(""); setSaved(false); setBlocked(false); setConfirmation(null); setCollisions([]);
     setDraft(emptyDraft); setInitial(emptyDraft);
     setLoading(true);
     void api.get<{ lookups: LookupsMap }>("/tcg/products/lookups").then(result => {
@@ -127,7 +130,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveEdit() {
     if (!draft || !detail || productId === null || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false);
+    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
       const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, {
         ...draft, revision: detail.revision, release_date: draft.release_date || null,
@@ -139,6 +142,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next); setSaved(true);
+      setCollisions(result.code_collisions ?? []);
       onSaved();
     } catch (err) {
       const invalid = err instanceof ApiError && err.status === 422;
@@ -150,9 +154,9 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveCreate() {
     if (!draft || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false);
+    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
-      await api.post("/tcg/products/create", {
+      const created = await api.post<{ code_collisions?: CodeCollision[] }>("/tcg/products/create", {
         japanese_title: draft.japanese_title,
         english_title: draft.english_title,
         mark: draft.mark,
@@ -166,7 +170,11 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       });
       setSaved(true);
       onSaved();
-      onClose();
+      const found = created?.code_collisions ?? [];
+      if (found.length === 0) { onClose(); return; }
+      // 保存は済み。重なりの警告を残し、利用者が閉じる（再送で二重登録しないよう未保存扱いを解く）
+      setCollisions(found);
+      setInitial(draft); setBlocked(true);
     } catch (err) {
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
@@ -220,6 +228,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}
       {saved && <p role="status">{t("productDetail.saved")}</p>}
+      <CodeCollisionNotice collisions={collisions} />
       {draft && (mode === "create" ? activeLookups : detail) && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
         {mode === "edit" && detail && <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />}
         <TextField label={t("productDetail.japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />

@@ -36,6 +36,8 @@ jobs:
         # 本体の worktree を削除できない（2026-10-09 確認。docs/handoff/reaper-on-merge/design.md §1）。
         # そのため、スクリプトは最新の checkout のものを使い、cwd は本体リポジトリにする。
         working-directory: /Users/tanizawashingo/salesanchor
+        env:
+          REAPER_LOCK_WAIT_SEC: "300"
         run: |
           if [ ! -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
             echo "reaper-worktree.sh が見つかりません"
