@@ -69,20 +69,6 @@
 .inbox-platform-select {
   margin-left: auto;
   flex-shrink: 0;
-  height: var(--height-tab-item);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-  font-family: inherit;
-  cursor: pointer;
-}
-.inbox-platform-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  color: var(--text-primary);
 }
 
 /* 3カラムコンテンツエリア */
@@ -409,17 +395,6 @@
 .inbox-page-filter-wrap {
   padding: var(--space-1) var(--space-3) var(--space-6px);
 }
-.inbox-page-filter-select {
-  width: 100%;
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--font-xs);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  box-sizing: border-box;
-}
 
 /* ---- 中央パネル ---- */
 .inbox-center {
@@ -658,18 +633,7 @@
 .inbox-textarea {
   flex: 1;
   min-width: 0;
-  border: none;
-  padding: 0;
-  font-size: var(--font-base);
-  resize: none;
-  font-family: inherit;
-  outline: none;
-  background: transparent;
-  color: var(--text-primary);
-  box-sizing: border-box;
-  line-height: 1.4;
 }
-.inbox-textarea:disabled { cursor: not-allowed; opacity: var(--opacity-disabled); }
 /* 添付ボタン（ピル内右端・Meta と同配置） */
 .send-attach-btn {
   flex-shrink: 0;
@@ -1202,10 +1166,7 @@
   transition: border-color var(--transition-micro);
 }
 .right-panel-field::placeholder { color: var(--text-muted); }
-/* 見本: select はネイティブ▼なしのプレーン箱 */
-select.right-panel-field { appearance: none; -webkit-appearance: none; }
 .right-panel-field:focus { outline: none; border-color: var(--accent); }
-textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
   border: 1px solid transparent; background: transparent;
@@ -1437,12 +1398,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   padding: var(--space-2) 0; border-bottom: 1px solid var(--border);
 }
 .inbox-settings-label { font-size: var(--font-sm); color: var(--text-primary); }
-.inbox-settings-select {
-  background: var(--bg-primary); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2);
-  font-size: var(--font-sm); color: var(--text-primary);
-  cursor: pointer;
-}
 .inbox-settings-close-btn {
   margin-top: var(--space-5); width: 100%;
   background: var(--accent); color: var(--on-accent);
@@ -1559,13 +1514,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .outbound-translation-flag-item { font-size: var(--font-xs); color: var(--text); }
 .outbound-translation-flag-term { font-weight: 600; }
 .outbound-translation-flag-reason { color: var(--text-muted); }
-.outbound-translation-edit {
-  width: 100%; padding: var(--space-3); resize: vertical;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-input); color: var(--text); font-size: var(--font-sm);
-  line-height: 1.5; font-family: inherit;
-}
-.outbound-translation-edit:focus { outline: none; border-color: var(--accent); }
 .outbound-translation-meta {
   font-size: var(--font-xs); color: var(--text-muted);
 }

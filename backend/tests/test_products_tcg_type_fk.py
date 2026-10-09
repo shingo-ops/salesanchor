@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.rls_bootstrap import public_bootstrap_lock
+from tests.rls_bootstrap import public_bootstrap_lock, seed_type_master
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -109,6 +109,9 @@ async def _bootstrap_public_products(admin_engine) -> None:
     async with public_bootstrap_lock(admin_engine):
         for filename in _PG_BOOTSTRAP_MIGRATIONS:
             await _apply_migration(admin_engine, filename)
+        # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）
+        async with admin_engine.begin() as conn:
+            await seed_type_master(conn)
 
         async with admin_engine.connect() as conn:
             fk_exists = await conn.scalar(

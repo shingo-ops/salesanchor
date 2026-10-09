@@ -13,6 +13,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { TextareaControl } from "../../components/Textarea";
 
 interface CompanyMini {
   id: number;
@@ -188,7 +189,7 @@ export default function ContactEditPage() {
             ]}
           />
           <div className="form-group"><label>{t("common.notes")}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
 
           {form.status === "pending_dedup_review" && (

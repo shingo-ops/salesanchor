@@ -132,6 +132,7 @@
 
 /* ── 6. サイズ: sm (0,2,0) ── */
 .comp-field--sm .comp-field__input,
+.comp-field__input--sm,
 .comp-field--sm .comp-field__select,
 .comp-select__control--sm {
   padding: var(--space-1) var(--space-2);
@@ -145,7 +146,8 @@
   padding-right: var(--space-5);
 }
 
-.comp-field--sm .comp-field__textarea {
+.comp-field--sm .comp-field__textarea,
+.comp-field__textarea--sm {
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-sm);
 }
@@ -156,9 +158,11 @@
 
 /* ── 6. サイズ: lg (0,2,0) ── */
 .comp-field--lg .comp-field__input,
+.comp-field__input--lg,
 .comp-field--lg .comp-field__select,
 .comp-select__control--lg,
-.comp-field--lg .comp-field__textarea {
+.comp-field--lg .comp-field__textarea,
+.comp-field__textarea--lg {
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-md);
   min-height: var(--comp-input-height-mobile);
@@ -188,6 +192,146 @@
 .comp-field--lg .comp-select--no-indicator,
 .comp-select__control--lg.comp-select--no-indicator {
   padding-right: var(--space-4);
+}
+
+/* 用途別の種類（design.md §AW）。現行ページの見た目を写す */
+/* karte: InboxPage.css right-panel-field（枠幅は金型の 1px。出典は 0.5px だが DPR1/DPR2 の Chromium 描画は同一（aw1-equivalence）） */
+.comp-select__control.comp-select--karte {
+  min-height: 0;
+  padding: var(--karte-field-py) var(--karte-field-px);
+  border-color: var(--karte-field-bd);
+  border-radius: var(--radius-md);
+  background-color: var(--karte-field-bg);
+  background-image: none;
+  background-position: initial;
+  background-repeat: initial;
+  font-size: var(--font-sm);
+  line-height: normal;
+  cursor: default;
+  transition: border-color var(--transition-micro);
+}
+
+.comp-select__control.comp-select--karte:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+/* header: components.css page-header-select */
+.comp-select__control.comp-select--header {
+  min-height: 0;
+  height: var(--size-icon-btn);
+  padding: var(--space-1) var(--space-5) var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-family: revert;
+  font-size: var(--font-sm);
+  line-height: normal;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.comp-select__control.comp-select--header:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+/* tabbar: InboxPage.css inbox-platform-select */
+.comp-select__control.comp-select--tabbar {
+  min-height: 0;
+  height: var(--height-tab-item);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background-image: none;
+  background-position: initial;
+  background-repeat: initial;
+  font-size: var(--font-xs);
+  line-height: normal;
+  appearance: auto;
+  -webkit-appearance: auto;
+  transition: initial;
+}
+
+.comp-select__control.comp-select--tabbar:focus {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+/* 用途別の種類 textarea（design.md §AX-2）。現行ページの見た目を写す。size は受けない */
+/* karte: InboxPage.css right-panel-field + textarea.right-panel-field（見本 .fbox。枠幅は金型の 1px。出典は 0.5px だが Chromium の描画は同一） */
+.comp-field__textarea.comp-textarea--karte {
+  min-height: var(--inbox-textarea-min-h);
+  padding: var(--karte-field-py) var(--karte-field-px);
+  border-color: var(--karte-field-bd);
+  border-radius: var(--radius-md);
+  background-color: var(--karte-field-bg);
+  font-size: var(--font-sm);
+  line-height: normal;
+  resize: none;
+  transition: border-color var(--transition-micro);
+}
+
+.comp-field__textarea.comp-textarea--karte:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+.comp-field__textarea.comp-textarea--karte::placeholder {
+  color: var(--text-muted);
+}
+
+/* embedded: InboxPage.css inbox-textarea（親 .send-input-wrap が枠と背景を持つ。flex:1 / min-width:0 は配置としてページに残す） */
+.comp-field__textarea.comp-textarea--embedded {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  transition: initial;
+}
+
+.comp-field__textarea.comp-textarea--embedded:focus {
+  border-color: initial;
+  box-shadow: none;
+}
+
+.comp-field__textarea.comp-textarea--embedded:disabled {
+  background: transparent;
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+/* composer: WeeklyAdvisorSection.css db-weekly-composer-input（旧規則の border は --border-subtle が未定義のため無効化され枠なしで描画されていた。その見た目を写す） */
+.comp-field__textarea.comp-textarea--composer {
+  min-height: auto;
+  border: none;
+  background-color: var(--bg-primary);
+  font: inherit;
+  transition: initial;
+}
+
+.comp-field__textarea.comp-textarea--composer:focus {
+  border-color: initial;
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* schedule: schedule.css schedule-input / schedule-textarea 共有規則 */
+.comp-field__textarea.comp-textarea--schedule {
+  min-height: auto;
+  font-family: revert;
+  font-size: var(--font-sm);
+  line-height: normal;
+  transition: initial;
+}
+
+/* textStyle=code（design.md §Z :817、§AX-2b）。等幅トークンは未定義のため総称フォント名 */
+.comp-field__textarea.comp-textarea--code {
+  font-family: monospace;
 }
 
 .comp-field--lg .comp-field__label {
