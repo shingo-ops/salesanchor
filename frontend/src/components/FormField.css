@@ -132,6 +132,7 @@
 
 /* ── 6. サイズ: sm (0,2,0) ── */
 .comp-field--sm .comp-field__input,
+.comp-field__input--sm,
 .comp-field--sm .comp-field__select,
 .comp-select__control--sm {
   padding: var(--space-1) var(--space-2);
@@ -157,6 +158,7 @@
 
 /* ── 6. サイズ: lg (0,2,0) ── */
 .comp-field--lg .comp-field__input,
+.comp-field__input--lg,
 .comp-field--lg .comp-field__select,
 .comp-select__control--lg,
 .comp-field--lg .comp-field__textarea,
