@@ -3,7 +3,7 @@
 - 作成: 2026-10-09 Claude Opus（設計担当・ccopusgo）。調査は Sonnet に委任し、結果を Opus が統合。
 - 状態: **recon（現在地の把握）のみ。設計・PO承認・実装は未着手。**
 - 基準: origin/main `fb036a2388c2ac5bd53c0fc217c7c943efc54ff0`（2026-10-09T16:09:44+09:00）。
-  - 調査 A〜C は `d88bc73b658fba309056f8b79e311c8aa574a900` で実施。以下に挙げた対象パス（backend の解析・配信・要確認・試作版・`docker-compose.yml`・`migrations/`・`docs/specs/line-analysis-tuning/README.md`・`NeedsReviewTabsPanel.tsx`）は d88bc73..fb036a2 で差が無いことを `git diff --stat` で確認済み。
+  - 調査 A〜C は `d88bc73b658fba309056f8b79e311c8aa574a900` で実施。以下に挙げた対象パス（backend の解析・配信・要確認・試作版・`docker-compose.yml`・`migrations/`・`docs/specs/line-analysis-tuning/README.md`・`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx`）は d88bc73..fb036a2 で差が無いことを `git diff --stat` で確認済み。
 - 社外秘: 指示書の本文・仕入元の原文は書かない（key 名・列名・件数のみ）。
 - PO の依頼（2026-10-09）: 「本番の解析を、試作版（Gemini が原文抽出、システムが解析）に切り替える設計」。Gemini 抽出部分は Gemini 抽出担当セッションが受け持つ。配線と DB の SSOT 遵守・データ分散禁止、フロントはデザイントークン／デザインシステム遵守。
 
@@ -75,7 +75,7 @@ id UUID PK / extraction_job_id UUID NOT NULL FK ON DELETE CASCADE / line_start, 
 
 ### 1-6. 要確認画面
 - frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx（親 AnalysisRulesPage、frontend/src/App.tsx:330）。本番タブ GET /tcg/analysis-results?status_tab=NEEDS_REVIEW（backend/app/routers/tcg_analysis_review.py:104-136、require_super_admin）。
-- 列: 商品名 / 仕入元 / 確認理由 / 日時（NeedsReviewTabsPanel.tsx:326-368）。**出どころ（Gemini/システム）の列は無い。**
+- 列: 商品名 / 仕入元 / 確認理由 / 日時（frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:326-368）。**出どころ（Gemini/システム）の列は無い。**
 - 確認理由の表示（:337-354）: condition_review.review_reasons が空でなければ**カンマ区切り文字列をそのまま表示（i18n なし）**。空のときだけ review_issues の3種を needsReview.* キーで訳す。未知コードは生の文字列が出る。
 - 金型: DataTable, Tabs, Modal, Select, TextField, Button, Card（:13-19）。i18n needsReview.* は ja.json / en.json のキー一致。
 - API の gemini 辞書は extraction_items の raw_* 列、system 辞書は analysis_results / products / type_master（tcg_analysis_review_svc.py:258-286）。
@@ -127,7 +127,7 @@ id UUID PK / extraction_job_id UUID NOT NULL FK ON DELETE CASCADE / line_start, 
 - 再抽出 API: POST /api/v1/tcg/diagnostics/retry-extraction（backend/app/routers/tcg_diagnostics.py:90-110 → backend/app/services/tcg_diagnostics_svc.py:146-252）。status='error' のみ、items DELETE → pending → Celery 再投入。
 - 配信の書き方: **シートは毎回全置換**（worksheet.clear → append_rows、backend/app/services/tcg_distribution_svc.py:515-518、上限 5000 行）。行単位の配信済み記録・配信ログは無い（tcg_distribution_targets の last_* のみ、:660-673）。fetch_output_rows は状態ベースで毎回全件を選ぶので、**要確認が解けた件は次の run_distribution で自動的に入る**。差分追記の部品は無い。未完了の抽出ジョブが1件でもあると配信全体が中止（:727-753）。
 - 投稿単位の要確認: extraction_jobs に確認状態の列は無い（migrations/20260921_110000_pipeline_tables_public.sql:80-90）。本番の要確認一覧は analysis_results 起点のため、件が無い投稿は載らない（tcg_analysis_review_svc.py:35, :77-80）。v102 の post_review は JSONL にのみ存在。
-- 要確認画面の本番タブは読み取り専用（NeedsReviewTabsPanel.tsx:326-368, :452-468、onRowClick なし）。訂正 UI は別画面 frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx（ConditionReviewPanel・ProductMasterDrawer）。ProductMasterDrawer は生の input/textarea/button（frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:201-221, :470, :479。ui-allow の有無は未確認）。
+- 要確認画面の本番タブは読み取り専用（frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:326-368, :452-468、onRowClick なし）。訂正 UI は別画面 frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx（ConditionReviewPanel・ProductMasterDrawer）。ProductMasterDrawer は生の input/textarea/button（frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:201-221, :470, :479。ui-allow の有無は未確認）。
 
 ## 3-2. 設計に必要な部品の事実（調査G、fb036a2）
 
