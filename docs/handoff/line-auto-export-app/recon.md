@@ -48,3 +48,10 @@
 - `tools/line-auto-export/auto-export.sh:12` — ADB方式（従来）とアプリ方式の切替点。既定は `app`。
 
 設計は [design.md](design.md)（このrecon.mdを参照している）。
+
+### 受信後の既存処理（この設計が前提にしている実装）
+
+- `tools/termux-line-import/client.py:196` — 同じ内容を再共有したときに `stage='send' result='duplicate'` を記録して「取り込み済み」を通知する。上記「同一内容の再共有時に送信結果通知が出ない不具合」の修正後の実装。
+- `tools/termux-line-import/client.py:23` — 1回に送るファイルの上限（`MAX_BYTES`）。書き出しファイルがこれを超えると送らない。
+- `tools/termux-line-import/android_parser.py:3-4` — 「本文のバイト完全復元は保証しない」旨の明記。アプリ側は原本テキストをそのまま渡す設計にする根拠。
+- `docs/handoff/line-android-import/design.md:1` — 受信後の送信・通知・履歴・原本1件保持（完成済み）の設計。本件はその手前の「書き出しを自動化する部分」。
