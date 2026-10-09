@@ -578,6 +578,11 @@
           "gemini": {
             "$ref": "#/components/schemas/GeminiFields"
           },
+          "is_v102": {
+            "default": false,
+            "title": "Is V102",
+            "type": "boolean"
+          },
           "provider": {
             "title": "Provider",
             "type": "string"
