@@ -4,7 +4,7 @@
 
 **マージの順番（必須）**：#4015（試験が自分で seed を用意する）の後。
 
-親：ADR-1007（PR #3985）。事実：docs/handoff/neutralize-value-migrations-3a/recon.md。
+親：ADR-1007（PR #3985、main にマージ済み dee9b0705）。事実：docs/handoff/neutralize-value-migrations-3a/recon.md。
 
 ## 1. 目的（PO に見える変化）
 - 画面の見た目は変わらない。本番の今の値も変わらない。
@@ -17,7 +17,7 @@
   - リンクのテンプレート
   - 知識の決まり
   - 商品の種類の空欄の補充 など
-- 実例：2026-10-05 02:38Z に、seed_product_marks が MEGAドリームex の mark を M3 に戻した（その1本は #3978 で扱う）。
+- 実例：2026-10-05 02:38Z に、seed_product_marks が MEGAドリームex の mark を M3 に戻した（その1本 seed_product_marks は、のちに #4051 で削除済み。2026-10-09 時点で migrations/20260604_010000_seed_product_marks.sql は存在しない）。
 
 ## 2. 現在地
 - recon.md の §1・§2 を参照。

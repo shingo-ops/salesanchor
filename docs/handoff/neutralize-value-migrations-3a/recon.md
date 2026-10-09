@@ -2,9 +2,10 @@
 
 この文書は何か（1行）: 毎デプロイで値を書き戻していた migration のうち、先に無効化できる 18 本について、外した文の場所と試験結果を、行番号つきの事実だけで記録したもの。
 
-親: ADR-1007（PR #3985。決定2「既存の値を書く migration は無効にする」）。設計: docs/handoff/neutralize-value-migrations-3a/design.md
+親: ADR-1007（PR #3985、main にマージ済み dee9b0705。決定2「既存の値を書く migration は無効にする」）。設計: docs/handoff/neutralize-value-migrations-3a/design.md
 実測時の origin/main: 57090e457（2026-10-07）。以下の行番号は、この SHA の migrations/ のもの。
 土台: 段2（PR #4015、release/tests-own-seed-data）を merge した上に積んでいる。#4015 より先にはマージしない。
+2026-10-09 追記（事実）: 段2（#4015）は origin/main dee9b0705 を取り込み済み。main では #4051 が seed_product_marks を削除、#4048 が migrations/20261009_100000_type_master_match_by_code.sql（type_master の CI 用スタブ CREATE TABLE IF NOT EXISTS と match_by_code 列追加）を追加。本 PR が外す 18 本にこの 2 件は含まれず、衝突なし。
 既存 ADR の検索: 機能キーワード（migration seed、ADR-155、neutralize）で docs/adr/ と docs/adr/FEATURE-INDEX.md を引いた結果、直接の ADR は ADR-155（migration で値を操作しない）。前例は PR #3544（2026-09-18。データだけの 13 本を無効化）。
 
 ## 1. 前例と形
