@@ -354,9 +354,12 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 SchedulerStore.setLastRunStartedAt(this, flowStartedAt);
                 running.set(false);
                 logUnlockEnd("skipped_to_export", null, System.currentTimeMillis() - flowStartedAt, null);
-                // lockOnFinishはひとまずfalse（施錠するかどうかは別のPO決定として後続コミットで
-                // true化する。design.md追補「使用中でも即実行する」とは独立の論点）。
-                startExportFlow(false, currentTriggerLabel);
+                // PO決定「終了後は必ず施錠する」: 開始時にロックされていなくても、終了時には
+                // 施錠する（lockOnFinish=true）。例外はEXPORT単体（手動検証用、
+                // requestExport経由でこのif自体を通らない）だけ。施錠前の待ち
+                // （LOCK_DELAY_AFTER_EDIT_MS・drainCallbackSummary）はLineExportFlow#finish
+                // 側の既存ロジックのままで、ここでは一切変えない。
+                startExportFlow(true, currentTriggerLabel);
                 return;
             }
             postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中） / 引き金:" + currentTriggerLabel);
