@@ -2425,34 +2425,6 @@
       "suppliers": "Suppliers",
       "llmBudget": "LLM Budget"
     },
-    "attrMasters": {
-      "title": "Various masters",
-      "desc": "Add, edit, and delete the product master dropdown options.",
-      "empty": "No entries yet",
-      "addBtn": "Add",
-      "searchPlaceholder": "Search by name",
-      "reorderHint": "Drag rows to reorder.",
-      "activeOn": "Active",
-      "activeOff": "Inactive",
-      "col": {
-        "labelJa": "Label",
-        "labelEn": "Label (EN)",
-        "code": "Code (optional)",
-        "sortOrder": "Order",
-        "active": "Status"
-      },
-      "attr": {
-        "productKind": "Product type",
-        "setType": "Set type",
-        "tcgSeries": "TCG series",
-        "rarity": "Rarity",
-        "language": "Language",
-        "unit": "Unit",
-        "hsCode": "HS code",
-        "item": "Item",
-        "material": "Material"
-      }
-    },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
       "rulesSection": "Normalization Rules",
@@ -2508,30 +2480,6 @@
       "csvErrors": "CSV Errors",
       "previewWouldInsert": "Rows would be inserted",
       "invalidCsv": "Invalid CSV format"
-    },
-    "tcg": {
-      "title": "TCG Series Master",
-      "newSeries": "New Series",
-      "fields": {
-        "tcgType": "TCG Type",
-        "seriesCode": "Series Code",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "releaseDate": "Release Date",
-        "category": "Category"
-      },
-      "types": {
-        "pokemon": "Pokemon TCG",
-        "one_piece": "One Piece TCG",
-        "dragon_ball": "Dragon Ball TCG",
-        "union_arena": "Union Arena",
-        "yugioh": "Yu-Gi-Oh!"
-      },
-      "typeManager": {
-        "title": "Manage Types",
-        "code": "Type Code",
-        "addBtn": "Add Type"
-      }
     },
     "supplierQuality": {
       "columns": {
@@ -2608,30 +2556,6 @@
       "retryConfirmErrors": "Re-enqueue the displayed error jobs? (up to 50)",
       "retrySuccess": "Enqueued: {{enqueued}} / Skipped: {{skipped}}",
       "retryError": "Retry failed (Celery may be unavailable)."
-    },
-    "dex": {
-      "title": "Pokemon / Trainer Dex",
-      "kinds": {
-        "pokemon": "Pokemon",
-        "trainer": "Trainer"
-      },
-      "newEntry": "New Dex Entry",
-      "fields": {
-        "dexNumber": "Dex Number",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "generation": "Generation",
-        "region": "Region",
-        "era": "Era"
-      },
-      "import": {
-        "previewBtn": "Import from PokeAPI",
-        "applyBtn": "Import {{count}} entries",
-        "upToDate": "Up to date (no new entries)",
-        "diffSummary": "{{count}} new (PokeAPI {{source}} / DB {{db}})",
-        "applied": "Imported {{count}} entries",
-        "truncated": "Many new entries — showing/importing the first {{max}} only"
-      }
     },
     "suppliersAdmin": {
       "title": "Supplier Master (Central Admin)",
@@ -2722,23 +2646,6 @@
       "refreshError": "Failed to fetch the rate. Please try again later.",
       "currency": "Currency",
       "rateJpy": "1 Foreign = N JPY"
-    },
-    "llmBudget": {
-      "title": "Monthly LLM Budget (Gemini 2.5 Flash)",
-      "subtitle": "Manage per-tenant LLM fallback usage and monthly cap.",
-      "noRows": "No budget rows have been registered yet.",
-      "savedNotice": "Saved.",
-      "editTitle": "Edit budget for tenant {{tenant_id}}",
-      "fields": {
-        "tenantId": "Tenant ID",
-        "tenantName": "Tenant Name",
-        "monthlyBudget": "Monthly Budget (USD)",
-        "currentMonth": "Used This Month",
-        "utilization": "Utilization",
-        "hardStop": "Hard stop on overrun",
-        "notifyAdmin": "Notify admin",
-        "lastResetAt": "Last reset"
-      }
     },
     "inbound": {
       "title": "Discord Inbound Messages",

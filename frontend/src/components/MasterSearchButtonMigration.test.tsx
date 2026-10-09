@@ -4,7 +4,6 @@ import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MasterListEditor, type MasterDataSource } from './master-list-editor/MasterListEditor';
 import UnitsPage from '../pages/units/UnitsPage';
 import ProductCategoriesPage from '../pages/product-categories/ProductCategoriesPage';
 import SuppliersPage from '../pages/suppliers/SuppliersPage';
@@ -57,65 +56,5 @@ describe('master search Button migration', () => {
     fireEvent.click(screen.getByRole('button', { name: tr('common.clear') }));
     await waitFor(() => expect(mock.get).toHaveBeenCalledWith(c.prefix + `page=1&per_page=${perPage}`));
     expect(field.value).toBe('');
-  });
-
-  it.each(['click', 'enter'] as const)('MasterList local search trims/clears without another source call via %s', async input => {
-    const source: MasterDataSource = {
-      list: vi.fn().mockResolvedValue([{ id: 1, name_ja: 'Alpha target', name_en: null }, { id: 2, name_ja: 'Beta', name_en: null }]),
-      create: vi.fn(), update: vi.fn(), remove: vi.fn(), reorder: vi.fn(),
-    };
-    render(<I18nextProvider i18n={instance}><MasterListEditor source={source} /></I18nextProvider>);
-    await screen.findByText('Alpha target');
-    const field = screen.getByPlaceholderText(tr('superAdmin.attrMasters.searchPlaceholder')) as HTMLInputElement;
-    fireEvent.change(field, { target: { value: '  alpha  ' } });
-    if (input === 'click') fireEvent.click(screen.getByRole('button', { name: tr('common.search') }));
-    else { const user = userEvent.setup(); await user.click(field); await user.keyboard('{Enter}'); }
-    expect(screen.queryByText('Beta')).toBeNull(); expect(screen.getByText('Alpha target')).toBeTruthy();
-    expect(source.list).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: tr('common.clear') }));
-    expect(screen.getByText('Beta')).toBeTruthy(); expect(field.value).toBe(''); expect(source.list).toHaveBeenCalledTimes(1);
-  });
-
-  it('MasterList add/edit/cancel preserves trimmed callbacks, required guard and grid placement', async () => {
-    const source: MasterDataSource = {
-      list: vi.fn().mockResolvedValue([{ id: 1, name_ja: 'Existing', name_en: 'Old' }]), create: vi.fn().mockResolvedValue(undefined),
-      update: vi.fn().mockResolvedValue(undefined), remove: vi.fn(), reorder: vi.fn(),
-    };
-    render(<I18nextProvider i18n={instance}><MasterListEditor source={source} /></I18nextProvider>); await screen.findByText('Existing');
-    const ja = screen.getByLabelText(tr('superAdmin.attrMasters.col.labelJa')) as HTMLInputElement;
-    const enField = screen.getByLabelText(tr('superAdmin.attrMasters.col.labelEn')) as HTMLInputElement;
-    const add = screen.getByRole('button', { name: tr('superAdmin.attrMasters.addBtn') }) as HTMLButtonElement;
-    expect(add.type).toBe('submit'); expect(add.closest('form')?.style.display).toBe('grid');
-    fireEvent.change(ja, { target: { value: '  New  ' } }); fireEvent.change(enField, { target: { value: '   ' } }); fireEvent.click(add);
-    await waitFor(() => expect(source.create).toHaveBeenCalledExactlyOnceWith('New', null));
-    fireEvent.click(screen.getByRole('button', { name: tr('common.edit') }));
-    fireEvent.change(ja, { target: { value: '  Edited  ' } }); fireEvent.click(screen.getByRole('button', { name: tr('common.update') }));
-    await waitFor(() => expect(source.update).toHaveBeenCalledExactlyOnceWith(1, 'Edited', 'Old'));
-    fireEvent.click(screen.getByRole('button', { name: tr('common.edit') })); fireEvent.click(screen.getByRole('button', { name: tr('common.cancel') }));
-    expect(ja.value).toBe(''); expect(source.update).toHaveBeenCalledTimes(1);
-    expect(ja.required).toBe(true); fireEvent.click(add); expect(source.create).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(['create', 'edit'] as const)('MasterList %s retains values on failure and retries', async mode => {
-    const send = vi.fn().mockRejectedValueOnce(new Error('Fixture master failure')).mockResolvedValueOnce(undefined);
-    const source: MasterDataSource = { list: vi.fn().mockResolvedValue([{ id: 1, name_ja: 'Existing', name_en: 'Old' }]), create: mode === 'create' ? send : vi.fn(), update: mode === 'edit' ? send : vi.fn(), remove: vi.fn(), reorder: vi.fn() };
-    render(<I18nextProvider i18n={instance}><MasterListEditor source={source} /></I18nextProvider>); await screen.findByText('Existing');
-    if (mode === 'edit') fireEvent.click(screen.getByRole('button', { name: tr('common.edit') }));
-    const ja = screen.getByLabelText(tr('superAdmin.attrMasters.col.labelJa')) as HTMLInputElement;
-    fireEvent.change(ja, { target: { value: ' Retry value ' } });
-    const save = screen.getByRole('button', { name: tr(mode === 'create' ? 'superAdmin.attrMasters.addBtn' : 'common.update') }) as HTMLButtonElement;
-    fireEvent.click(save); expect(await screen.findByText('Fixture master failure')).toBeTruthy(); expect(ja.value).toBe(' Retry value ');
-    fireEvent.click(save); await waitFor(() => expect(send).toHaveBeenCalledTimes(2)); await waitFor(() => expect(ja.value).toBe(''));
-  });
-
-  it.each(['create', 'edit'] as const)('MasterList %s preserves unlocked duplicate pending submissions', async mode => {
-    let resolve!: () => void; const pending = new Promise<void>(res => { resolve = res; }); const send = vi.fn().mockReturnValue(pending);
-    const source: MasterDataSource = { list: vi.fn().mockResolvedValue([{ id: 1, name_ja: 'Existing', name_en: 'Old' }]), create: mode === 'create' ? send : vi.fn(), update: mode === 'edit' ? send : vi.fn(), remove: vi.fn(), reorder: vi.fn() };
-    render(<I18nextProvider i18n={instance}><MasterListEditor source={source} /></I18nextProvider>); await screen.findByText('Existing');
-    if (mode === 'edit') fireEvent.click(screen.getByRole('button', { name: tr('common.edit') }));
-    const ja = screen.getByLabelText(tr('superAdmin.attrMasters.col.labelJa')) as HTMLInputElement; fireEvent.change(ja, { target: { value: ' Pending ' } });
-    const save = screen.getByRole('button', { name: tr(mode === 'create' ? 'superAdmin.attrMasters.addBtn' : 'common.update') }) as HTMLButtonElement;
-    fireEvent.click(save); fireEvent.click(save); expect(send).toHaveBeenCalledTimes(2); expect(save.disabled).toBe(false); expect(save.getAttribute('aria-busy')).toBeNull(); expect(ja.value).toBe(' Pending ');
-    resolve(); await waitFor(() => expect(ja.value).toBe(''));
   });
 });

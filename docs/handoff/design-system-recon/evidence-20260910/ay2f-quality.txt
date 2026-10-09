@@ -1,0 +1,220 @@
+### npm run generate:icon-sizes
+
+> salesanchor-frontend@1.0.0 generate:icon-sizes
+> node scripts/generate-icon-sizes.js
+
+### exit=0
+### npm run generate:api-types
+
+> salesanchor-frontend@1.0.0 generate:api-types
+> openapi-typescript api-contract/openapi.json -o src/api/generated/schema.d.ts
+
+✨ openapi-typescript 7.13.0
+🚀 api-contract/openapi.json → src/api/generated/schema.d.ts [1.3s]
+### exit=0
+### npx tsc --noEmit
+### exit=0
+### npm run lint
+   87:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx
+  174:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/dashboard/FollowUpsPage.tsx
+  112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+  25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+  130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/super-admin/TcgParallelReportPage.tsx
+  87:6  warning  React Hook useEffect has a missing dependency: 'fetchReport'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 139 problems (0 errors, 139 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+
+### exit=0
+### npm run check:all
+[1]   135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx
+[1]   174:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/dashboard/FollowUpsPage.tsx
+[1]   112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+[1]   25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+[1]   130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/src/pages/super-admin/TcgParallelReportPage.tsx
+[1]   87:6  warning  React Hook useEffect has a missing dependency: 'fetchReport'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] ✖ 139 problems (0 errors, 139 warnings)
+[1]   0 errors and 5 warnings potentially fixable with the `--fix` option.
+[1] 
+[1] npm run lint exited with code 0
+### exit=0
+### npm run test:coverage -- --maxWorkers=1
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 50-342            
+  ...eMapPanel.tsx |       0 |        0 |       0 |       0 | 59-396            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 38-299            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 57-330            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 39-242            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 57-329            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 28-132            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 43-260            
+  RuleDrawer.tsx   |       0 |        0 |       0 |       0 | 70-355            
+  ...mentPanel.tsx |       0 |        0 |       0 |       0 | 24-252            
+  ...TestPanel.tsx |       0 |        0 |       0 |       0 | 64-507            
+  ...racyPanel.tsx |   97.43 |       75 |     100 |     100 | 53,61-70          
+  ...racyPosts.tsx |   89.13 |    66.66 |   86.36 |    94.8 | 150,220-231,257   
+  ...cySummary.tsx |     100 |       75 |     100 |     100 | 24,47,87-131      
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 58-448            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 48-287            
+  ...asesPanel.tsx |   90.76 |    63.63 |   86.95 |   91.37 | 51,79,137-141,187 
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 47-427            
+  ...sterPanel.tsx |       0 |        0 |       0 |       0 | 43-272            
+ ...ages/suppliers |   45.83 |    44.23 |   52.17 |   51.11 |                   
+  ...rEditPage.tsx |    93.1 |    81.81 |      90 |   96.15 | 43                
+  ...ormFields.tsx |    37.5 |      100 |   28.57 |    37.5 | 43-72             
+  ...mportPage.tsx |       0 |        0 |       0 |       0 | 26-136            
+  ...liersPage.tsx |   68.37 |    73.91 |   65.78 |   69.56 | ...16,240,249-300 
+ src/pages/teams   |   63.63 |    55.95 |   60.78 |   65.62 |                   
+  TeamEditPage.tsx |      92 |    72.22 |   88.88 |   95.65 | 40                
+  TeamsPage.tsx    |   55.75 |    51.51 |      50 |      57 | ...63,282,287,310 
+ src/pages/units   |   21.62 |     9.16 |   10.34 |   26.34 |                   
+  ...mportPage.tsx |       0 |        0 |       0 |       0 | 26-136            
+  UnitsPage.tsx    |   35.29 |       20 |   13.63 |   38.93 | ...10-218,269-432 
+ src/utils         |     100 |       75 |     100 |     100 |                   
+  ...esentation.ts |     100 |       75 |     100 |     100 | 190               
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 32.41% ( 5847/18039 )
+Branches     : 28.84% ( 3750/12999 )
+Functions    : 28.7% ( 1621/5647 )
+Lines        : 33.65% ( 5202/15456 )
+================================================================================
+### exit=0
+### npm run build
+
+> salesanchor-frontend@1.0.0 prebuild
+> npm run generate:icon-sizes && npm run generate:api-types
+
+
+> salesanchor-frontend@1.0.0 generate:icon-sizes
+> node scripts/generate-icon-sizes.js
+
+
+> salesanchor-frontend@1.0.0 generate:api-types
+> openapi-typescript api-contract/openapi.json -o src/api/generated/schema.d.ts
+
+✨ openapi-typescript 7.13.0
+🚀 api-contract/openapi.json → src/api/generated/schema.d.ts [637.9ms]
+
+> salesanchor-frontend@1.0.0 build
+> tsc && vite build
+
+vite v8.0.16 building client environment for production...
+[2Ktransforming...✓ 1767 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     1.08 kB │ gzip:   0.49 kB
+dist/assets/index-BJW2PBHr.css    291.83 kB │ gzip:  43.94 kB
+dist/assets/index-DsuqF_fD.js   2,573.80 kB │ gzip: 653.31 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/firebase-auth.ts is dynamically imported by src/pages/erp/ERPPage.tsx but also statically imported by src/contexts/AuthContext.tsx, src/pages/account-settings/SecuritySection.tsx, dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.09s
+### exit=0
+### npm run build-storybook
+│  storybook-static/assets/react-dom-Dnfo7hhL.js
+│  132.73 kB │ gzip:  43.08 kB
+│  storybook-static/assets/DocsRenderer-LL677BLK-D7bQPjXR.js
+│  184.71 kB │ gzip:  58.73 kB
+│  storybook-static/assets/components-mrn6hwbd.js
+│  548.87 kB │ gzip: 174.56 kB
+│  storybook-static/assets/axe-mFnqjVvd.js
+│  571.05 kB │ gzip: 155.78 kB
+│  storybook-static/assets/iframe-D3aBspwj.js
+│  1,527.71 kB │ gzip: 448.40 kB
+
+│
+▲  Vite [33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins.
+│  Here is a breakdown:
+│  - storybook:project-annotations-plugin (23%)
+│  - storybook:react-docgen-plugin (22%)
+│  - plugin-csf (18%)
+│  - storybook:mock-loader (16%)
+│  - storybook:code-generator-plugin (8%)
+│  See https://rolldown.rs/options/checks#plugintimings for more details.
+
+│
+▲  Vite [plugin builtin:vite-reporter]
+│  (!) Some chunks are larger than 500 kB after minification. Consider:
+│  - Using dynamic import() to code-split the application
+│  - Use build.rolldownOptions.output.codeSplitting to improve chunking:
+│  https://rolldown.rs/reference/OutputOptions.codeSplitting
+│  - Adjust chunk size limit for this warning via
+│  build.chunkSizeWarningLimit.
+│  Vite ✓ built in 3.78s
+│
+●  Storybook collects completely anonymous usage telemetry. We use it to
+│  shape Storybook's roadmap and prioritize features. You can learn more,
+│  including how to opt out, at https://storybook.js.org/telemetry
+│
+◇  Output directory:
+│  /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dead-parts/frontend/storybook-static
+│
+└  Storybook build completed successfully
+
+### exit=0
