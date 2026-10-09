@@ -26,3 +26,14 @@
 | dryrun | |
 | commit | |
 | verify | |
+
+## 追加: quantity_not_in_text（PR #4077）
+初期29行の verify 成功の後にだけ、qty_precheck（ROWS|29・HAS_QTY|0）→ qty_dryrun（CHECK_OK 1・DRYRUN_OK）→ qty_commit（CHECK_OK 1・COMMIT_DONE）→ qty_verify（quantity_not_in_text|system|extraction・ROWS|30）。戻し方 qty_rollback.sql。
+
+| 項目 | 内容 |
+|---|---|
+| 実施日時 | |
+| precheck | |
+| dryrun | |
+| commit | |
+| verify | |
