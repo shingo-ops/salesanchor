@@ -8,7 +8,7 @@
 
 ## 金型の登録手順（文書で特定）
 
-- 作法: `Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx`（`docs/CC_UI_GOVERNANCE.md:15`）。
+- 作法: Xxx.tsx + Xxx.css（var() のみ）+ Xxx.stories.tsx（`docs/CC_UI_GOVERNANCE.md:15`）。
 - 一覧・index への登録先は無い。Storybook は stories から自動収集、stories 欠落は `frontend/scripts/check-stories-count.js:24-32` が検出。
 - 手本: `frontend/src/components/Callout.tsx`（クラス名 `comp-*`、variant をクラスに変換）。
 - 間隔トークン: `frontend/src/tokens.css:68-74`（--space-1〜--space-8）。
