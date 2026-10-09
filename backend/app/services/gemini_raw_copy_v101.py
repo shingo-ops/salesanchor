@@ -794,7 +794,7 @@ def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bo
 
 def _product_first_fields(
     item: dict, roles: dict[int, str], lines: list[str], block: str, name: str, ctx: V101Context,
-    chosen_product_id: int | None = None,
+    chosen_product_id: int | None = None, fixed_product_id: int | None = None,
 ) -> dict | None:
     """試作版 v102：商品を先に決める流れの結果。マスタが渡されていないとき（v10.2 までの呼び出し）は None。"""
     if ctx.product_first is None:
@@ -804,15 +804,17 @@ def _product_first_fields(
         unit_alias_to_info=ctx.unit_alias_to_info, cond_entries=ctx.cond_entries,
         cond_canonical_to_uuid=ctx.cond_canonical_to_uuid, masters=ctx.product_first,
         find_price_alias=lambda text: find_unit_alias(text, ctx.aliases), chosen_product_id=chosen_product_id,
+        fixed_product_id=fixed_product_id,
     )
 
 
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
-    name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None,
+    name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None, fixed_product_id: int | None = None,
 ) -> dict:
     """chosen_product_id（試作版 v102）：前後の商品の作品で決めた商品。ambiguous の候補にあるときだけ使う。
+    fixed_product_id（試作版 v102）：人が決めた商品。照合の結果に関わらずこの商品に決める。
     name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
     shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
@@ -823,7 +825,7 @@ def _extract_one(
         name = f"{name_prefix} {name}"
         calc_name = f"{name_prefix} {calc_name}"
     product_first = (
-        _product_first_fields(item, roles, lines, block, calc_name, ctx, chosen_product_id) if v102 else None
+        _product_first_fields(item, roles, lines, block, calc_name, ctx, chosen_product_id, fixed_product_id) if v102 else None
     )
     if product_first is not None:
         unit_canonical, kubun, condition, basis = (
@@ -1125,7 +1127,7 @@ def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int])
 
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
-    *, rejected: list[dict] | None = None, review_reasons: bool = False,
+    *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
 ) -> tuple[list[dict], dict]:
     """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
 
@@ -1150,6 +1152,7 @@ def _extract_v102(
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
             v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i], chosen_product_id=chosen_product_id,
+            fixed_product_id=(fixed_products or {}).get(i),
         )
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
@@ -1181,6 +1184,7 @@ def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
     v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
+    fixed_products: dict[int, int] | None = None,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -1192,6 +1196,8 @@ def extract_v101_items(
     件に product_id・product_category・match_status・match_candidates・unit_basis が付く。None なら v10.2 のまま。
     review_reasons（v102_fixes のときだけ）：件の review に印・単位なし・分類「不明」の理由を足し、flags に post_review を足す。
     items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
+    fixed_products（試作版 v102）：人が決めた商品。受理した件の位置（落とした件を除く、Gemini の順）→ 商品 id。
+    None・空なら結果は変わらない。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
@@ -1203,7 +1209,10 @@ def extract_v101_items(
     kept = [it for it in items if "rejected" not in it] if v102_fixes else items
     adjusted, reassigned, review = reassign_ambiguous(kept, lines, ctx) if reassign else (kept, {}, {})
     if v102_fixes:
-        return _extract_v102(adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons)
+        return _extract_v102(
+            adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons,
+            fixed_products=fixed_products,
+        )
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}
     shared = _shared_line_numbers(adjusted)
