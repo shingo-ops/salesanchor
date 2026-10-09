@@ -66,6 +66,8 @@ def fakes(monkeypatch, tmp_path):
     monkeypatch.setattr(pab, "load_extraction_context", m.ctx)
     monkeypatch.setattr(pab, "_load_v10_masters", m.masters)
     monkeypatch.setattr(pab, "fetch_job_ids", lambda s, ids: {i: f"job-{i}" for i in ids})
+    m.followup = MagicMock(return_value=None)  # 直前の投稿なし。本番と同じ関数を呼ぶことは test_recompute_passes_followup_reference で見る
+    monkeypatch.setattr(rec, "load_followup_reference", m.followup)
     return m
 
 
@@ -184,7 +186,14 @@ def _resp2(unsure=None) -> str:
 
 
 def _strip_gemini_review(fields: dict) -> dict:
-    items = [{k: v for k, v in it.items() if k != "gemini_review"} for it in fields["v102_items"]]
+    """gemini_review 欄と、出どころ gemini で足された review の要素を除く（review の既存の要素は残す）。"""
+    items = [
+        {
+            **{k: v for k, v in it.items() if k != "gemini_review"},
+            "review": [r for r in it["review"] if r.get("source") != "gemini"],
+        }
+        for it in fields["v102_items"]
+    ]
     flags = {k: v for k, v in fields["v102_flags"].items() if k != "gemini_review"}
     return {**fields, "v102_items": items, "v102_flags": flags}
 
@@ -267,3 +276,65 @@ def test_recompute_route_also_adds_gemini_review(fakes):
     result = _read(out)[0]
     assert result["v102_flags"]["gemini_review"] == [{"kind": "gemini_unsure", "line": 3, "candidates": [2, 4]}]
     assert [it["gemini_review"] for it in result["v102_items"]] == [[{"kind": "gemini_unsure", "line": 3}]] * 2
+
+
+# ---------------------------------------------------------------------------
+# 要確認の出どころ（source）。設計: docs/handoff/v102-review-source/design.md
+# ---------------------------------------------------------------------------
+
+def _all_have_source(fields: dict) -> bool:
+    reviews = [r for it in fields["v102_items"] for r in it.get("review", [])]
+    return all(r.get("source") in ("system", "gemini") for r in [*reviews, *fields["v102_flags"].get("post_review", [])])
+
+
+def test_every_review_and_post_review_element_has_source(fakes):
+    response = json.dumps({"items": [{"lines": [1, 2], "price": "9,999円", "quantity": "3"}]}, ensure_ascii=False)
+    fields = pab._v102_row_fields(response, _CTX2, fakes.masters(fakes.session))
+    assert fields["v102_items"][0]["review"] and _all_have_source(fields)
+    assert all(r["source"] == "system" for it in fields["v102_items"] for r in it["review"])
+
+
+def test_gemini_unsure_enters_review_of_candidate_items_with_source_gemini(fakes):
+    fields = pab._v102_row_fields(_resp2([{"line": 3, "candidates": [2, 4]}]), _CTX2, fakes.masters(fakes.session))
+    expected = {"line": 3, "kind": "gemini_unsure", "candidates": [2, 4], "source": "gemini"}
+    assert [it["review"][-1] for it in fields["v102_items"]] == [expected, expected]
+    assert [it["gemini_review"] for it in fields["v102_items"]] == [[{"kind": "gemini_unsure", "line": 3}]] * 2
+
+
+def test_invalid_unsure_enters_post_review_with_source_system(fakes):
+    fields = pab._v102_row_fields(_resp2([{"line": 3, "candidates": [2, 3]}]), _CTX2, fakes.masters(fakes.session))
+    last = fields["v102_flags"]["post_review"][-1]
+    assert last["kind"] == "gemini_unsure_invalid" and last["error"] and last["source"] == "system"
+    assert fields["v102_flags"]["gemini_review"][0]["kind"] == "gemini_unsure_invalid"
+
+
+def test_extract_exception_post_review_has_source_system(fakes, monkeypatch):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    fields = pab._v102_row_fields(_resp2(), _CTX2, fakes.masters(fakes.session))
+    assert fields["v102_flags"]["post_review"][0]["source"] == "system"
+
+
+def test_recompute_route_adds_source_to_review_and_post_review(fakes):
+    fakes.ctx.return_value = _CTX2
+    _summary, out = _run(fakes, [_row(response_text=_resp2([{"line": 3, "candidates": [2, 4]}]))])
+    result = _read(out)[0]
+    assert _all_have_source(result)
+    assert [it["review"][-1]["source"] for it in result["v102_items"]] == ["gemini", "gemini"]
+
+
+def test_recompute_passes_followup_reference_from_the_same_function_as_production(fakes):
+    fakes.followup.return_value = ("ref-1", "前の投稿")
+    seen = {}
+    real = pab._v102_row_fields
+
+    def spy(response_text, ctx, masters):
+        seen["ref"] = masters.get("followup_ref")
+        return real(response_text, ctx, masters)
+
+    pab._v102_row_fields, original = spy, pab._v102_row_fields
+    try:
+        _run(fakes, [_row()])
+    finally:
+        pab._v102_row_fields = original
+    assert seen["ref"] == ("ref-1", "前の投稿")
+    assert fakes.followup.call_args.args[1] == "job-r1"

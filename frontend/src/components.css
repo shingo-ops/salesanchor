@@ -16,7 +16,10 @@
   margin-bottom: var(--space-1);
 }
 
-.form-group input {
+.form-group input[type="checkbox"],
+.form-group input[type="radio"],
+.form-group input[type="range"],
+.form-group input[type="file"] {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
@@ -27,7 +30,10 @@
   box-sizing: border-box;
 }
 
-.form-group input:focus {
+.form-group input[type="checkbox"]:focus,
+.form-group input[type="radio"]:focus,
+.form-group input[type="range"]:focus,
+.form-group input[type="file"]:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring-shadow);
@@ -58,29 +64,6 @@
   color: var(--text-primary);
 }
 /* stylelint-enable no-descending-specificity */
-
-/* --- Search Input Field (Single Source of Truth) ---
- * 検索欄のデザイントークン。すべてのページでこのクラスを使う。
- * ページ固有のwidth/paddingのみ各ページのCSSで上書きすること。
- * --search-focus-glow / --accent は index.css で定義。
- */
-.search-input-field {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-subtle);
-  font-size: var(--font-base);
-  color: var(--text-primary);
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color var(--transition-micro), box-shadow var(--transition-micro);
-}
-.search-input-field::placeholder {
-  color: var(--text-secondary);
-}
-.search-input-field:focus {
-  border-color: var(--accent);
-  box-shadow: var(--search-focus-glow);
-}
 
 /* --- Table --- */
 .data-table {

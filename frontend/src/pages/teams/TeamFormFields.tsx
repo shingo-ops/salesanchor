@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface TeamFormState {
   name: string;
@@ -25,7 +26,7 @@ export function TeamFormFields({ form, onChange }: Props) {
     <>
       <div className="form-group">
         <label>{t("teams.teamName")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.name}
           onChange={(e) => onChange("name", e.target.value)}
@@ -33,7 +34,7 @@ export function TeamFormFields({ form, onChange }: Props) {
       </div>
       <div className="form-group">
         <label>{t("teams.leaderUserIdLabel")}</label>
-        <input
+        <TextFieldControl
           type="number"
           min="1"
           value={form.leader_id}

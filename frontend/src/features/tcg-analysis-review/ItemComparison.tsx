@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { SelectControl } from '../../components/Select';
 import { StatusBadge } from './components/StatusBadge';
 import { productMetadataIssueBadges, reviewIssueBadges, type ReviewIssuePresentation } from './reviewIssues';
+import type { ReviewReasonDetail } from './reviewReasonLabel';
 import './item-comparison-readonly.css';
 import { TextareaControl } from "../../components/Textarea";
 
@@ -14,7 +15,7 @@ export type ConditionReview = {
   confirmed: boolean;
   classification: string;
 };
-export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[]; condition_review?: ConditionReview | null };
+export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[]; condition_review?: ConditionReview | null; review_reason_details?: ReviewReasonDetail[] };
 export type CorrectionValues = { corrected_product_name: string; corrected_quantity: string; corrected_price: string; corrected_unit: string; corrected_condition: string; corrected_memo: string };
 export type CorrectionOptions = { units: string[]; conditions: string[] };
 

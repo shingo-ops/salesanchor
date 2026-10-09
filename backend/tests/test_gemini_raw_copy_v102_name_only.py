@@ -88,7 +88,9 @@ def test_loader_applies_name_only_works(monkeypatch):
 
     def execute(stmt):
         sql = str(stmt)
-        if "type_master" in sql:
+        if "code_only_match" in sql:
+            rows = []
+        elif "type_master" in sql:
             assert "match_by_code = FALSE" in sql
             rows = [(NAME_ONLY_WORK,)]
         elif "line_conditions" in sql:

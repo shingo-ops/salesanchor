@@ -16,6 +16,7 @@ import { SelectControl } from "../../components/Select";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
 import { Modal } from "../../components/Modal";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Supplier {
   id: number;
@@ -188,13 +189,13 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
                     </td>
                   )}
                   <td>
-                    <input value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} readOnly style={{ minWidth: "var(--min-width-input-sm)" }} />
+                    <TextFieldControl value={item.product_name} onChange={(e) => updateItem(i, "product_name", e.target.value)} readOnly style={{ minWidth: "var(--min-width-input-sm)" }} />
                   </td>
                   <td>
-                    <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} />
+                    <TextFieldControl type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} />
                   </td>
                   <td>
-                    <input type="number" min="0" step="0.01" value={item.unit_cost} onChange={(e) => updateItem(i, "unit_cost", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
+                    <TextFieldControl type="number" min="0" step="0.01" value={item.unit_cost} onChange={(e) => updateItem(i, "unit_cost", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
                   </td>
                   <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>
                     ¥{(item.quantity * item.unit_cost).toLocaleString()}

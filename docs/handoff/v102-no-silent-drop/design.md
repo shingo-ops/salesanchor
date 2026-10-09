@@ -27,7 +27,9 @@ recon.md §2〜§4。消える箇所 D1〜D5、保存されない印3種、理�
 | `possible_footer_line` | 既存の印 possible_footer_line の行を持つ件 | — |
 | `unit_unknown` | 件の `unit` が none | — |
 | `category_unknown` | `match_status` が matched で `product_category` が「不明」 | — |
+| `heading_ship_with_own_ship` | 見出しの直下の発送の行を、自分の発送の行を持つ2件目以降の件にも入れた（[../v102-heading-ship-review/design.md](../v102-heading-ship-review/design.md)） | `own_lines`（その件だけの発送の行） |
 - 文章は入れない（画面で i18n の `t()` から作るため。ADR-027）。原文も入れない（ADR-014）。
+- 出どころ（2026-10-09 追記）：`review` と `post_review` の全要素に `source`（`system` か `gemini`）が付く。Gemini の unsure（`gemini_unsure`）も候補の件の `review` に `source: gemini` で入る。設計：[../v102-review-source/design.md](../v102-review-source/design.md)。
 
 ### 3-2 投稿ごとの理由（`v102_flags["post_review"]`、要素は `{"kind": ..., ...}`）
 | kind | いつ | 足す欄 |

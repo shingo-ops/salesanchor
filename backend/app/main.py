@@ -125,6 +125,7 @@ from app.routers import (
     tcg_shadow_accuracy,  # 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API
     tcg_shadow_review,  # design.md PR-D: 試運転（Shadow run）の確認画面用 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
+    tcg_v102_posts,  # 便C1: v102 の書き写しを直す API
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
@@ -671,6 +672,11 @@ app.include_router(
 # PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
 app.include_router(
     item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# 便C1: v102 の書き写しを直す API（require_super_admin 限定）
+app.include_router(
+    tcg_v102_posts.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）

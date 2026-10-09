@@ -1,0 +1,31 @@
+== AdminMasterSaveButtonMigration before it: 9 after it: 2
+  KEPT identical it('PO exact payload blocks pending repeats and calls success callbacks in order', async () => {
+  KEPT identical it('PO guards at zero writes and retains values for failure retry', async () => {
+  REMOVED it('Dex saves exact pokemon fields, reloads, and retains values across failure retry', async () => {
+  REMOVED it('Dex keeps its unlocked repeated-submit behavior while pending and settles both writes', async ()
+  REMOVED it('Dex trainer edit sends the trainer schema and reloads its exact list', async () => {
+  REMOVED it('TCG type and series submits send exact normalized payloads and reload', async () => {
+  REMOVED it('TCG save failure retains inputs and pending remains unlocked for repeat writes', async () => {
+  REMOVED it('TCG required fields prevent writes and series create sends all normalized keys', async () => {
+  REMOVED it('TCG type failure retains values and its pending save remains unlocked', async () => {
+== PurchaseAdminEditorButtonMigration before it: 8 after it: 4
+  KEPT identical it('purchase-order form cancel calls onClose with zero writes', async () => {
+  KEPT identical it('purchase-order form cancel remains disabled and inert while save is pending, then recovers on fa
+  KEPT identical it('purchase-order new opener clears an inventory-prefilled order, loads suppliers and cancels witho
+  KEPT identical it('role permission cancel restores the server baseline and writes zero', async () => {
+  REMOVED it('Dex edit, filtered reload and cancel preserve state with zero writes', async () => {
+  REMOVED it('Dex filtered reload reports failure and retries the exact GET', async () => {
+  REMOVED it('LLM budget edit copies the selected record and writes zero until submit', async () => {
+  REMOVED it('TCG type manager toggles and item edit copies exact values with zero writes', async () => {
+== AllLegacyButtonDynamicMigration before it: 5 after it: 4
+  KEPT identical it.each([false, true])('Inventory uses enabled=%s independently from expanded state', async (enabled
+  KEPT identical it('Invoice source mode maps both real-page conditions', async () => {
+  KEPT identical it('Products reorder condition changes real-page state and variant', async () => {
+  KEPT identical it('Quotes all-status condition changes on the real filter', async () => {
+  REMOVED it('ProductMasters condition follows the selected real tab', async () => {
+== MasterSearchButtonMigration before it: 5 after it: 1
+  KEPT identical it.each(remoteCases)('$kind keeps exact trimmed encoded GET through $input and clear resets page one
+  REMOVED it.each(['click', 'enter'] as const)('MasterList local search trims/clears without another source ca
+  REMOVED it('MasterList add/edit/cancel preserves trimmed callbacks, required guard and grid placement', asyn
+  REMOVED it.each(['create', 'edit'] as const)('MasterList %s retains values on failure and retries', async mo
+  REMOVED it.each(['create', 'edit'] as const)('MasterList %s preserves unlocked duplicate pending submissions

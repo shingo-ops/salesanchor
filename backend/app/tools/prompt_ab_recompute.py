@@ -20,6 +20,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.services.gemini_extraction_svc import _safe_error_message
+from app.services.line_analysis_v102_svc import load_followup_reference, masters_with_followup
 from app.tasks.tcg_extraction import _get_sync_session
 from app.tools import prompt_ab as pab
 
@@ -75,7 +76,9 @@ def _context_for(session: Session, run_id: str, contexts: dict[str, object]):
 def _recompute_row(session: Session, row: dict, masters: dict, contexts: dict[str, object]) -> dict:
     ctx = _context_for(session, row["run_id"], contexts)
     copied = {k: row[k] for k in _COPIED_FIELDS if k in row}
-    return {**copied, **pab._v102_row_fields(row["response_text"], ctx, masters)}
+    job_id = pab.fetch_job_ids(session, [row["run_id"]])[row["run_id"]]
+    followup = load_followup_reference(session, job_id)  # 本番（run_v102_analysis）と同じ関数
+    return {**copied, **pab._v102_row_fields(row["response_text"], ctx, masters_with_followup(masters, followup))}
 
 
 def recompute(session: Session, *, from_jsonl: Path, out_dir: Path) -> RecomputeSummary:

@@ -1,0 +1,182 @@
+{
+ "GET /me/permissions": {
+  "permissions": [
+   "dashboard.view",
+   "leads.view",
+   "messages.send",
+   "messages.read",
+   "channels.view",
+   "channels.manage",
+   "tenant.profile.view",
+   "tenant.profile.edit",
+   "commission.edit",
+   "commission.view"
+  ],
+  "is_super_admin": true
+ },
+ "GET /staff/me": {
+  "id": 1,
+  "primary_email": "review@salesanchor.jp",
+  "ui_preferences": {
+   "dark_mode": false,
+   "show_chat_menu": true,
+   "show_sales_menu": true,
+   "show_settings_menu": true,
+   "show_admin_menu": true,
+   "show_sidebar": true
+  }
+ },
+ "GET /api/v1/channel-masters": [
+  {
+   "id": 1,
+   "platform": "whatsapp_personal",
+   "display_name": "WhatsApp（個人）",
+   "connection_type": "manual",
+   "is_active": true
+  },
+  {
+   "id": 2,
+   "platform": "line_official",
+   "display_name": "LINE公式",
+   "connection_type": "manual",
+   "is_active": true
+  },
+  {
+   "id": 3,
+   "platform": "messenger",
+   "display_name": "Messenger",
+   "connection_type": "auto",
+   "is_active": true
+  }
+ ],
+ "GET /conversations": {
+  "conversations": [
+   {
+    "lead_id": 5001,
+    "lead_code": "LEAD-2026-0501",
+    "customer_name": "Taro Sender",
+    "platform": "whatsapp_personal",
+    "last_message_text": "Hello, I'd like to ask about your products.",
+    "last_message_at": "2026-04-30T10:55:00+00:00",
+    "last_message_direction": "inbound",
+    "unread_count": 0,
+    "messaging_window_expires_at": "2026-05-01T10:55:00+00:00"
+   }
+  ],
+  "next_cursor": null
+ },
+ "GET /leads/5001/messages": {
+  "messages": [
+   {
+    "id": 9001,
+    "platform": "whatsapp_personal",
+    "sender_id": "PSID-sender-001",
+    "sender_name": "Taro Sender",
+    "message_text": "Hello, I'd like to ask about your products.",
+    "direction": "inbound",
+    "message_id": "mid.messenger.001",
+    "recipient_id": "PAGE-100",
+    "messaging_type": null,
+    "message_tag": null,
+    "sent_by_staff_id": null,
+    "error_code": null,
+    "error_message": null,
+    "seen_at": null,
+    "seen_by_staff_id": null,
+    "created_at": "2026-04-30T10:55:00+00:00"
+   }
+  ],
+  "lead": {
+   "id": 5001,
+   "lead_code": "LEAD-2026-0501",
+   "customer_name": "Taro Sender",
+   "platform": "whatsapp_personal",
+   "source": "whatsapp_personal"
+  },
+  "messaging_window": {
+   "last_inbound_at": "2026-04-30T10:55:00+00:00",
+   "expires_at": "2026-05-01T10:55:00+00:00",
+   "can_send_response": true,
+   "requires_human_agent_tag": false,
+   "can_send_at_all": true
+  }
+ },
+ "POST /leads/5001/messages/mark-read": {
+  "marked_count": 0
+ },
+ "GET /leads/5001": {
+  "id": 5001,
+  "customer_name": "Taro Sender",
+  "platform": "whatsapp_personal",
+  "discord_dm_channel_id": null,
+  "discord_user_id": null
+ },
+ "GET /tenant-commission-settings": {
+  "id": 1,
+  "tenant_id": 1,
+  "commission_rates": {
+   "sales": {
+    "type": "rate",
+    "value": 0.1
+   },
+   "order": {
+    "type": "rate",
+    "value": 0.1
+   },
+   "ship": {
+    "type": "fixed",
+    "value": 200
+   },
+   "purchase": {
+    "type": "fixed",
+    "value": 100
+   },
+   "trouble": {
+    "type": "fixed",
+    "value": 500
+   }
+  },
+  "created_at": "2026-10-01T00:00:00+00:00",
+  "updated_at": "2026-10-01T00:00:00+00:00"
+ },
+ "GET /commissions/monthly": {
+  "year": 2026,
+  "month": 10,
+  "by_staff": [
+   {
+    "staff_id": 1,
+    "staff_name": "Sample Staff",
+    "total": 12000
+   }
+  ],
+  "by_role": [
+   {
+    "role": "sales",
+    "total": 12000
+   }
+  ],
+  "total": 12000
+ },
+ "GET /own-inventory": [
+  {
+   "id": 1,
+   "product_id": "PM-00001",
+   "condition": "A",
+   "physical_qty": 10,
+   "reserved_qty": 2,
+   "available_qty": 8,
+   "unit_price": 1500,
+   "status": "available"
+  },
+  {
+   "id": 2,
+   "product_id": "PM-00002",
+   "condition": "B",
+   "physical_qty": 4,
+   "reserved_qty": 0,
+   "available_qty": 4,
+   "unit_price": 800,
+   "status": "available"
+  }
+ ]
+}

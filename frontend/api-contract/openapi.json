@@ -593,6 +593,14 @@
             "title": "Review Issues",
             "type": "array"
           },
+          "review_reason_details": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ReviewReasonDetail"
+            },
+            "title": "Review Reason Details",
+            "type": "array"
+          },
           "source_message_id": {
             "title": "Source Message Id",
             "type": "string"
@@ -3802,6 +3810,81 @@
           }
         },
         "title": "CloseReasonUpdate",
+        "type": "object"
+      },
+      "CodeCollision": {
+        "description": "型番が重なった既存の有効商品1件。",
+        "properties": {
+          "already_excluded_by_other": {
+            "description": "相手の除外ワードのうち、この商品に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By Other",
+            "type": "array"
+          },
+          "already_excluded_by_this": {
+            "description": "この商品の除外ワードのうち、相手に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By This",
+            "type": "array"
+          },
+          "matched_field": {
+            "description": "重なった相手側の項目。product_code または mark",
+            "title": "Matched Field",
+            "type": "string"
+          },
+          "matched_value": {
+            "description": "重なった相手側の値（保存されている原文）",
+            "title": "Matched Value",
+            "type": "string"
+          },
+          "name": {
+            "description": "相手の商品名",
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "重なった相手の商品ID（public.products.id の文字列）",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "suggest_add_to_other": {
+            "description": "相手の除外ワードに足すことを勧める語（この商品の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To Other",
+            "type": "array"
+          },
+          "suggest_add_to_this": {
+            "description": "この商品の除外ワードに足すことを勧める語（相手の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To This",
+            "type": "array"
+          },
+          "work_name": {
+            "description": "相手の作品名（public.type_master.name_ja）。無ければ空文字",
+            "title": "Work Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "work_name",
+          "matched_value",
+          "matched_field",
+          "suggest_add_to_this",
+          "suggest_add_to_other",
+          "already_excluded_by_this",
+          "already_excluded_by_other"
+        ],
+        "title": "CodeCollision",
         "type": "object"
       },
       "CommissionRate-Input": {
@@ -21077,6 +21160,25 @@
         "title": "ParallelReportResponse",
         "type": "object"
       },
+      "PayInvoiceRequest": {
+        "description": "入金登録 POST ボディ（paid_date は省略可・日付のみ）。",
+        "properties": {
+          "paid_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Date"
+          }
+        },
+        "title": "PayInvoiceRequest",
+        "type": "object"
+      },
       "PaymentFeeSettingCreate": {
         "properties": {
           "currency": {
@@ -21923,6 +22025,219 @@
           "recent_extraction_jobs"
         ],
         "title": "PipelineSummaryResponse",
+        "type": "object"
+      },
+      "PostDetailResponse": {
+        "properties": {
+          "gemini_unsure": {
+            "title": "Gemini Unsure"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Job Review Reason Details",
+            "type": "array"
+          },
+          "line_posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Posted At"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/RawLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source_message_id": {
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_message_id",
+          "provider",
+          "line_posted_at",
+          "lines",
+          "job_review_reason_details",
+          "items"
+        ],
+        "title": "PostDetailResponse",
+        "type": "object"
+      },
+      "PostItem": {
+        "properties": {
+          "gemini_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gemini Index"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "raw_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Price"
+          },
+          "raw_quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quantity"
+          },
+          "review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Review Reason Details",
+            "type": "array"
+          },
+          "source_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "gemini_index",
+          "source_lines",
+          "raw_price",
+          "raw_quantity",
+          "review_reason_details"
+        ],
+        "title": "PostItem",
+        "type": "object"
+      },
+      "PostListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "PostListResponse",
+        "type": "object"
+      },
+      "PostSummary": {
+        "properties": {
+          "extraction_item_count": {
+            "title": "Extraction Item Count",
+            "type": "integer"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "job_review_reason_details": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonDetail"
+            },
+            "title": "Job Review Reason Details",
+            "type": "array"
+          },
+          "line_posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Posted At"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "source_message_id": {
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "source_message_id",
+          "provider",
+          "line_posted_at",
+          "job_review_reason_details",
+          "item_count",
+          "extraction_item_count"
+        ],
+        "title": "PostSummary",
         "type": "object"
       },
       "PriorityProspectAxisBreakdown": {
@@ -22891,6 +23206,105 @@
           "name_ja"
         ],
         "title": "ProductCreate",
+        "type": "object"
+      },
+      "ProductCreateResult": {
+        "description": "商品の新規登録の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "candidates": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "重複候補（ok が false のときだけ）",
+            "title": "Candidates"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "失敗理由のコード（DUPLICATE_CANDIDATE など）",
+            "title": "Code"
+          },
+          "code_collisions": {
+            "description": "型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "ok": {
+            "description": "登録できたか。重複候補で止めたときは false",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録した商品のID。失敗時は null",
+            "title": "Product Id"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ProductCreateResult",
+        "type": "object"
+      },
+      "ProductDetailSaveResult": {
+        "additionalProperties": true,
+        "description": "商品詳細の保存後の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "code_collisions": {
+            "description": "保存後の型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "lookups": {
+            "description": "分類の選択肢",
+            "title": "Lookups",
+            "type": "object"
+          },
+          "product": {
+            "description": "保存後の商品の内容",
+            "title": "Product",
+            "type": "object"
+          },
+          "revision": {
+            "description": "保存後の版を表す指紋",
+            "title": "Revision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "revision",
+          "lookups",
+          "code_collisions"
+        ],
+        "title": "ProductDetailSaveResult",
         "type": "object"
       },
       "ProductDetailUpdate": {
@@ -26038,6 +26452,24 @@
         "title": "QuoteUpdate",
         "type": "object"
       },
+      "RawLine": {
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "text"
+        ],
+        "title": "RawLine",
+        "type": "object"
+      },
       "ReactionRequest": {
         "properties": {
           "emoji_id": {
@@ -26121,6 +26553,43 @@
           "needs_review"
         ],
         "title": "ReanalyzeStats",
+        "type": "object"
+      },
+      "ReasonDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fix_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Stage"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "fix_stage"
+        ],
+        "title": "ReasonDetail",
         "type": "object"
       },
       "ReasonItem": {
@@ -26882,6 +27351,92 @@
         "title": "RevenueSummaryResponse",
         "type": "object"
       },
+      "ReviewAckRequest": {
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Codes",
+            "type": "array"
+          },
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id",
+          "codes"
+        ],
+        "title": "ReviewAckRequest",
+        "type": "object"
+      },
+      "ReviewAckResponse": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "saved"
+        ],
+        "title": "ReviewAckResponse",
+        "type": "object"
+      },
+      "ReviewReasonDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fix_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "extraction",
+                  "analysis"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Stage"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gemini",
+                  "system"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "fix_stage"
+        ],
+        "title": "ReviewReasonDetail",
+        "type": "object"
+      },
       "ReviewReasonItem": {
         "properties": {
           "count": {
@@ -27495,6 +28050,56 @@
           "saved"
         ],
         "title": "SaveCorrectionsResponse",
+        "type": "object"
+      },
+      "SaveItemsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptionItem"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id",
+          "items"
+        ],
+        "title": "SaveItemsRequest",
+        "type": "object"
+      },
+      "SaveItemsResponse": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "enqueued": {
+            "title": "Enqueued",
+            "type": "boolean"
+          },
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Item Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changed",
+          "item_ids",
+          "enqueued"
+        ],
+        "title": "SaveItemsResponse",
         "type": "object"
       },
       "ScoreOverrideRequest": {
@@ -33151,6 +33756,60 @@
           "valid"
         ],
         "title": "TokenVerifyResponse",
+        "type": "object"
+      },
+      "TranscriptionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "raw_price": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Price"
+          },
+          "raw_quantity": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quantity"
+          },
+          "source_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Source Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source_lines"
+        ],
+        "title": "TranscriptionItem",
         "type": "object"
       },
       "TrendDayItem": {
@@ -42462,7 +43121,7 @@
     },
     "/api/v1/invoices/{invoice_id}/pay": {
       "post": {
-        "description": "入金を登録する（issued/overdue → paid）",
+        "description": "入金を登録する（issued/overdue → paid）。body.paid_date（日付のみ）を渡すとその日の入金として登録できる。",
         "operationId": "pay_invoice_api_v1_invoices__invoice_id__pay_post",
         "parameters": [
           {
@@ -42475,6 +43134,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PayInvoiceRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -61709,6 +62385,63 @@
         ]
       }
     },
+    "/api/v1/tcg/items/{extraction_item_id}/review-ack": {
+      "post": {
+        "operationId": "save_item_review_ack_api_v1_tcg_items__extraction_item_id__review_ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewAckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の要確認を「このままで良い」として記録する",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/tcg/line-devices": {
       "get": {
         "operationId": "list_devices_api_v1_tcg_line_devices_get",
@@ -62608,8 +63341,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Master Api V1 Tcg Products Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62701,8 +63433,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Standalone Api V1 Tcg Products Create Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62852,8 +63583,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Save Product Detail Api V1 Tcg Products Detail  Product Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductDetailSaveResult"
                 }
               }
             },
@@ -63969,6 +64699,171 @@
           }
         ],
         "summary": "仕入元の原文取得（PARITY-03 第2段階）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts": {
+      "get": {
+        "operationId": "list_v102_posts_api_v1_tcg_v102_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の要確認の投稿の一覧",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts/{job_id}": {
+      "get": {
+        "operationId": "get_v102_post_api_v1_tcg_v102_posts__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の投稿の原文の行と件",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/v102/posts/{job_id}/items": {
+      "put": {
+        "operationId": "save_v102_post_items_api_v1_tcg_v102_posts__job_id__items_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveItemsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveItemsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の投稿の件（書き写し）を直して保存する",
         "tags": [
           "super-admin"
         ]

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 
-export function importMessage(code: string, t: TFunction): string {
+/** names: 相手の商品ID -> 商品名（作品）。MARK_ALREADY_USED_BY_ の {{value}} を名前に置き換える（無ければ ID のまま） */
+export function importMessage(code: string, t: TFunction, names: Record<string, string> = {}): string {
   const exact: Record<string, string> = {
     CSV_EMPTY: "csvEmpty", CSV_HEADER_MISMATCH: "headerError",
     JAPANESE_TITLE_REQUIRED: "titleRequired", RELEASE_DATE_FORMAT: "dateError",
@@ -23,7 +24,7 @@ export function importMessage(code: string, t: TFunction): string {
     ["DUPLICATE_CANDIDATE_", "duplicateCandidate"],
   ];
   for (const [prefix, key] of prefixes) {
-    if (code.startsWith(prefix)) return t(`productCsv.messages.${key}`, { value: code.slice(prefix.length) });
+    if (code.startsWith(prefix)) return t(`productCsv.messages.${key}`, { value: names[code.slice(prefix.length)] ?? code.slice(prefix.length) });
   }
   for (const field of ["DIVISION_CODE", "WORK_CODE", "MANUFACTURER_CODE", "PRODUCT_CATEGORY_CODE"]) {
     if (code === `MISSING_${field}` || code.startsWith(`UNKNOWN_${field}_`)) {

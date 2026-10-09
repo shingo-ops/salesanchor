@@ -47,6 +47,7 @@ _DUMMY_ITEM = {
         "exclusion": "",
     },
     "review_issues": [],
+    "review_reason_details": [{"code": "pid_unresolved", "source": "system", "fix_stage": "analysis"}],
 }
 
 _DUMMY_FETCH_RESULT = {
@@ -126,6 +127,7 @@ async def test_list_analysis_results_response_shape(fake_super_admin_override):
     assert "gemini" in item
     assert "system" in item
     assert "review_issues" in item
+    assert item["review_reason_details"] == [{"code": "pid_unresolved", "source": "system", "fix_stage": "analysis"}]
 
     gemini = item["gemini"]
     for f in ("name", "quantity", "price", "unit", "state", "memo", "span"):

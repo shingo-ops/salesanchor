@@ -97,18 +97,7 @@
   color: var(--text-secondary);
 }
 
-.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"]) {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--font-base);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
+/* 一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c） */
 /* stylelint-disable no-descending-specificity -- intentional: focus state after general input style */
 .form-grid > .form-row input:focus {
   outline: none;
@@ -143,22 +132,7 @@
   color: var(--text-secondary);
 }
 
-/* stylelint-disable no-descending-specificity -- intentional: modal context overrides grid styles */
-.modal-content .form-row input:not([type="checkbox"]):not([type="radio"]),
-.modal-content-wide .form-row input:not([type="checkbox"]):not([type="radio"]) {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--font-base);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-/* stylelint-enable no-descending-specificity */
-
+/* 一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c） */
 /* stylelint-disable no-descending-specificity -- intentional: modal focus overrides grid focus style */
 .modal-content .form-row input:focus,
 .modal-content-wide .form-row input:focus {
@@ -239,6 +213,22 @@
   border: 1px solid var(--border-strong);
 }
 /* stylelint-enable no-descending-specificity */
+
+/* 商品編集の input は標準金型へ移管せず（AY-2b で保留）、旧 .form-group input の宣言を写して見た目を保つ */
+.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+}
+
+.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]):focus {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
 
 /* 商品編集の textarea は標準金型へ移管せず（AX-2b で保留）、従来の見た目を独立規則で保つ。
    旧 .form-group textarea の宣言を同値で写し、枠だけ --border-strong。focus の枠色も --border-strong

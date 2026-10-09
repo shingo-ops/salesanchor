@@ -779,7 +779,7 @@ def test_v102_unreadable_response_is_recorded_in_post_review(monkeypatch, v101_f
 def test_v102_zero_gemini_items_gives_no_items_in_post_review(monkeypatch, v101_fakes):
     v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": '{"items": []}'}
     _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
-    assert _lines(v101_fakes)[0]["v102_flags"]["post_review"] == [{"kind": "no_items"}]
+    assert _lines(v101_fakes)[0]["v102_flags"]["post_review"] == [{"kind": "no_items", "source": "system"}]
 
 
 def test_v101_row_flags_do_not_get_post_review(monkeypatch, v101_fakes):

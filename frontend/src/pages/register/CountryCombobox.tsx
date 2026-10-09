@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { type CountryEntry } from "../../constants/countries";
+import { TextFieldControl } from "../../components/TextField";
 
 /** Combobox with search filtering for country / dial code selection. */
 export function CountryCombobox({
@@ -43,10 +44,9 @@ export function CountryCombobox({
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <input
+      <TextFieldControl
         id={id}
         type="text"
-        className="input"
         value={open ? query : selectedDisplay}
         onChange={(e) => {
           setQuery(e.target.value);

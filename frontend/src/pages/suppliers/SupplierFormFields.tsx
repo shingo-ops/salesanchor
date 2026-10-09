@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface SupplierFormState {
   name: string;
@@ -29,7 +30,7 @@ export function SupplierFormFields({ form, onChange }: SupplierFormFieldsProps) 
     <>
       <div className="form-group">
         <label>{t("suppliers.supplierName")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.name}
           onChange={e => onChange("name", e.target.value)}
@@ -37,14 +38,14 @@ export function SupplierFormFields({ form, onChange }: SupplierFormFieldsProps) 
       </div>
       <div className="form-group">
         <label>{t("suppliers.contactName")}</label>
-        <input
+        <TextFieldControl
           value={form.contact_name}
           onChange={e => onChange("contact_name", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("common.email")}</label>
-        <input
+        <TextFieldControl
           type="email"
           value={form.email}
           onChange={e => onChange("email", e.target.value)}
@@ -52,7 +53,7 @@ export function SupplierFormFields({ form, onChange }: SupplierFormFieldsProps) 
       </div>
       <div className="form-group">
         <label>{t("common.phone")}</label>
-        <input
+        <TextFieldControl
           value={form.phone}
           onChange={e => onChange("phone", e.target.value)}
         />
