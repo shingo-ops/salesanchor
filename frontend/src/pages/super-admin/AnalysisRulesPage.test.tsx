@@ -28,3 +28,15 @@ it("shows only the super-admin-only message and loads nothing for a non-admin on
   expect(screen.queryByRole("button", { name: "Export update CSV" })).toBeNull();
   expect(api.get).not.toHaveBeenCalled();
 });
+
+it("shows the product master panel with its export button for a super admin on ?section=product-master", async () => {
+  vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
+  vi.mocked(api.get).mockResolvedValue({ total: 0, items: [], works: [] });
+  render(
+    <MemoryRouter initialEntries={["/super-admin/analysis-rules?section=product-master"]}>
+      <AnalysisRulesPage />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByRole("button", { name: "Export update CSV" })).toBeTruthy();
+  expect(screen.queryByText(i18n.t("superAdmin.supplierQuality.superAdminOnly"))).toBeNull();
+});

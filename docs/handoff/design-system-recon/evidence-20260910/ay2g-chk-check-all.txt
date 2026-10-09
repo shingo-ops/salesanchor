@@ -2,26 +2,26 @@
 > salesanchor-frontend@1.0.0 check:all
 > concurrently --kill-others-on-fail --max-processes 6 "npm run check:claude-size" "npm run lint" "npm run check:css-colors" "npm run check:dark-parity" "npm run check:jsx-emoji" "npm run check:css-var-fallbacks" "npm run check:css-values" "npm run check:nav-sync" "npm run check:page-layout" "npm run check:content-toolbar" "npm run check:page-folder" "npm run check:icon-sync" "npm run check:i18n-missing-keys" "npm run check:css-fixed-position" "npm run check:breakpoint-sync" "npm run check:mobile-responsive-structure2" "npm run check:page-size" "npm run check:stories" "npm run check:color-token-sync" "npm run check:onboarding-doc" "npm run check:concurrently" "npm run check:sidebar-outline" "npm run check:stylelint" "npm run check:css-class-naming" "npm run check:status-direct-writes"
 
-[5] 
-[5] > salesanchor-frontend@1.0.0 check:css-var-fallbacks
-[5] > node scripts/check-css-var-fallbacks.js
-[5] 
-[0] 
-[0] > salesanchor-frontend@1.0.0 check:claude-size
-[0] > node scripts/check-claude-size.js
-[0] 
 [1] 
 [1] > salesanchor-frontend@1.0.0 lint
 [1] > eslint src
 [1] 
-[4] 
-[4] > salesanchor-frontend@1.0.0 check:jsx-emoji
-[4] > node scripts/check-jsx-emoji.js
-[4] 
+[0] 
+[0] > salesanchor-frontend@1.0.0 check:claude-size
+[0] > node scripts/check-claude-size.js
+[0] 
 [2] 
 [2] > salesanchor-frontend@1.0.0 check:css-colors
 [2] > node scripts/check-css-hardcoded-colors.js
 [2] 
+[4] 
+[4] > salesanchor-frontend@1.0.0 check:jsx-emoji
+[4] > node scripts/check-jsx-emoji.js
+[4] 
+[5] 
+[5] > salesanchor-frontend@1.0.0 check:css-var-fallbacks
+[5] > node scripts/check-css-var-fallbacks.js
+[5] 
 [3] 
 [3] > salesanchor-frontend@1.0.0 check:dark-parity
 [3] > node scripts/check-dark-parity.js
@@ -31,108 +31,108 @@
 [2] ✅ CSS色チェック PASSED（hex・rgba 違反なし）
 [2] npm run check:css-colors exited with code 0
 [4] ✅ JSX絵文字チェック PASSED
-[4] npm run check:jsx-emoji exited with code 0
 [5] ✅ CSS var フォールバックチェック PASSED
 [5] npm run check:css-var-fallbacks exited with code 0
-[7] 
-[7] > salesanchor-frontend@1.0.0 check:nav-sync
-[7] > node scripts/check-nav-title-sync.js
-[7] 
+[4] npm run check:jsx-emoji exited with code 0
 [6] 
 [6] > salesanchor-frontend@1.0.0 check:css-values
 [6] > node scripts/check-css-hardcoded-values.js
 [6] 
-[9] 
-[9] > salesanchor-frontend@1.0.0 check:content-toolbar
-[9] > node scripts/check-content-toolbar.js
-[9] 
+[6] ✅ CSS数値ハードコードチェック PASSED
+[7] 
+[7] > salesanchor-frontend@1.0.0 check:nav-sync
+[7] > node scripts/check-nav-title-sync.js
+[7] 
+[6] npm run check:css-values exited with code 0
 [8] 
 [8] > salesanchor-frontend@1.0.0 check:page-layout
 [8] > node scripts/check-page-layout.js
 [8] 
+[9] 
+[9] > salesanchor-frontend@1.0.0 check:content-toolbar
+[9] > node scripts/check-content-toolbar.js
+[9] 
 [7] ✅ nav-title-sync チェック PASSED
 [7] npm run check:nav-sync exited with code 0
-[6] ✅ CSS数値ハードコードチェック PASSED
-[6] npm run check:css-values exited with code 0
-[9] ✅ 操作台チェック PASSED（page-content-actions の使用なし）
-[8] ✅ PageLayout チェック PASSED（raw <h2> なし・subtitleKey 付与済み）
-[9] npm run check:content-toolbar exited with code 0
-[8] npm run check:page-layout exited with code 0
 [10] 
 [10] > salesanchor-frontend@1.0.0 check:page-folder
 [10] > node scripts/check-page-folder.js
 [10] 
+[8] ✅ PageLayout チェック PASSED（raw <h2> なし・subtitleKey 付与済み）
+[8] npm run check:page-layout exited with code 0
+[9] ✅ 操作台チェック PASSED（page-content-actions の使用なし）
+[9] npm run check:content-toolbar exited with code 0
+[10] ✅ ページフォルダ構造チェック PASSED
+[10] npm run check:page-folder exited with code 0
 [11] 
 [11] > salesanchor-frontend@1.0.0 check:icon-sync
 [11] > node scripts/check-icon-sync.js
 [11] 
+[12] 
+[12] > salesanchor-frontend@1.0.0 check:i18n-missing-keys
+[12] > node scripts/check-i18n-missing-keys.js
+[12] 
 [11] [icon-sync] ✅ All 5 icon sizes in sync (tokens.css ↔ iconSizes.ts)
 [11] npm run check:icon-sync exited with code 0
 [13] 
 [13] > salesanchor-frontend@1.0.0 check:css-fixed-position
 [13] > node scripts/check-css-fixed-position.js
 [13] 
-[12] 
-[12] > salesanchor-frontend@1.0.0 check:i18n-missing-keys
-[12] > node scripts/check-i18n-missing-keys.js
-[12] 
-[10] ✅ ページフォルダ構造チェック PASSED
-[10] npm run check:page-folder exited with code 0
-[13] ✅ CSS position:fixed チェック PASSED
-[13] npm run check:css-fixed-position exited with code 0
-[12] ✅ i18n key check PASSED (all prefixes)
-[12] npm run check:i18n-missing-keys exited with code 0
 [14] 
 [14] > salesanchor-frontend@1.0.0 check:breakpoint-sync
 [14] > node scripts/check-breakpoint-sync.js
 [14] 
+[13] ✅ CSS position:fixed チェック PASSED
+[12] ✅ i18n key check PASSED (all prefixes)
+[12] npm run check:i18n-missing-keys exited with code 0
+[13] npm run check:css-fixed-position exited with code 0
+[14] [breakpoint-sync] ✅ All 5 breakpoints in sync (tokens.css ↔ breakpoints.ts)
+[14] npm run check:breakpoint-sync exited with code 0
 [15] 
 [15] > salesanchor-frontend@1.0.0 check:mobile-responsive-structure2
 [15] > node scripts/check-mobile-responsive-structure2.js
 [15] 
-[14] [breakpoint-sync] ✅ All 5 breakpoints in sync (tokens.css ↔ breakpoints.ts)
-[14] npm run check:breakpoint-sync exited with code 0
 [15] [structure2] PASSED: first-phase scope に 640px の直書きなし
-[16] 
-[16] > salesanchor-frontend@1.0.0 check:page-size
-[16] > node scripts/check-page-size.js
-[16] 
 [15] npm run check:mobile-responsive-structure2 exited with code 0
-[17] 
-[17] > salesanchor-frontend@1.0.0 check:stories
-[17] > node scripts/check-stories-count.js
-[17] 
-[16] ✅ ページサイズチェック PASSED
-[16] npm run check:page-size exited with code 0
-[17] ✅ check:stories — 全 46 コンポーネントに stories が存在します
-[17] npm run check:stories exited with code 0
 [18] 
 [18] > salesanchor-frontend@1.0.0 check:color-token-sync
 [18] > node scripts/check-color-token-sync.js
 [18] 
+[16] 
+[16] > salesanchor-frontend@1.0.0 check:page-size
+[16] > node scripts/check-page-size.js
+[16] 
+[17] 
+[17] > salesanchor-frontend@1.0.0 check:stories
+[17] > node scripts/check-stories-count.js
+[17] 
+[18] [color-token-sync] ✅ 全 37 カラートークンが同期済み（index.css ↔ DesignSystemPage COLOR_TOKENS）
+[18] npm run check:color-token-sync exited with code 0
 [19] 
 [19] > salesanchor-frontend@1.0.0 check:onboarding-doc
 [19] > node scripts/check-onboarding-doc.js
 [19] 
-[18] [color-token-sync] ✅ 全 37 カラートークンが同期済み（index.css ↔ DesignSystemPage COLOR_TOKENS）
-[18] npm run check:color-token-sync exited with code 0
+[17] ✅ check:stories — 全 46 コンポーネントに stories が存在します
+[17] npm run check:stories exited with code 0
+[16] ✅ ページサイズチェック PASSED
+[16] npm run check:page-size exited with code 0
 [19] [onboarding-doc] ✅ docs/onboarding/design-system.md が存在します
 [19] npm run check:onboarding-doc exited with code 0
 [20] 
 [20] > salesanchor-frontend@1.0.0 check:concurrently
 [20] > node scripts/check-concurrently-usage.js
 [20] 
-[21] 
-[21] > salesanchor-frontend@1.0.0 check:sidebar-outline
-[21] > node scripts/check-sidebar-outline.js
-[21] 
 [22] 
 [22] > salesanchor-frontend@1.0.0 check:stylelint
 [22] > stylelint "src/**/*.css"
 [22] 
+[21] 
+[21] > salesanchor-frontend@1.0.0 check:sidebar-outline
+[21] > node scripts/check-sidebar-outline.js
+[21] 
+[21] [sidebar-outline] ✅ NAV_ICONS 22項目 + LeadChatIcon — 全て outline バリアント
 [20] OK: check:all は concurrently を使用しています
 [20] npm run check:concurrently exited with code 0
-[21] [sidebar-outline] ✅ NAV_ICONS 22項目 + LeadChatIcon — 全て outline バリアント
 [21] npm run check:sidebar-outline exited with code 0
 [23] 
 [23] > salesanchor-frontend@1.0.0 check:css-class-naming

@@ -132,6 +132,11 @@ Architect 自己審査（AY-2g）: APPROVE。同一AI（Opus）による自己�
 
 限界: 本番反映後の確認（Deploy・古い3つの URL が 200・/api/health 200）は merge 後。ProductMasterPanel 本体は、管理者判定を持たない（AnalysisRulesPage が持つ）。?section= に知らない値が入ると右側が空になる既存の挙動は未変更。切戻し: 本PRの merge commit を revert（DB 影響なし）。
 
+変更契約の補足（設計者指示・レビュー対応）:
+- 転送の対応表を frontend/src/pages/super-admin/legacyPageRedirects.ts の `LEGACY_SUPER_ADMIN_REDIRECTS`（3組）に1か所へまとめた。App.tsx は、この配列を map した Route（`<Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />`）に置き換えた（3行の Navigate Route を1行の map にし、位置は tcg-product-master の位置）。legacyPageRedirects.test.tsx は同じ配列を import し、(a) 配列が期待する3組と完全一致すること（期待値は直書き）、(b) 各 from を MemoryRouter（配列の map と、残すルート tcg-product-master/import を含む）で開くと to の pathname と search に移ることを確かめる。tcg-product-master/import との一致は、React Router がパスの具体性で順位を決めるため並び順に依存せず、(b) と実画面（取り込み画面の表示）で確認した。取り込み画面2つの戻り先 URL は配列と共有していない（対象外）。
+- AnalysisRulesPage.test.tsx に肯定の対照を1本追加した。isSuperAdmin:true で ?section=product-master を描画すると「Export update CSV」ボタンが出て、superAdminOnly の文言は出ない（api.get のモック値は ProductMasterPanel.test.tsx と同じ形。実際に動かして通ることを確認してから expect にした）。
+- 再計測: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（77 files・953 tests 成功）、build 0。開発モード build と preview で、古い3つの URL の転送・戻る の先を再記録した（ay2g-realscreen.json。結果は前回と同じ）。
+
 ## 維持の仕組み
 守り手: tsc、追加した転送試験（legacyPageRedirects.test.tsx）、AnalysisRulesPage.test.tsx、ProductMasterPanel.test.tsx、frontend/scripts/check-i18n-missing-keys.js、frontend-check。守っていないもの: e2e（CI で停止中、.github/workflows/e2e.yml:105）。切戻しは本PRの merge commit を revert する（DB 影響なし）。
 

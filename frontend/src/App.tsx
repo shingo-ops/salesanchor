@@ -92,6 +92,7 @@ import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
 import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
+import { LEGACY_SUPER_ADMIN_REDIRECTS } from "./pages/super-admin/legacyPageRedirects";
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
 import SupplierExtractionRulesPage from "./pages/super-admin/SupplierExtractionRulesPage";
 import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
@@ -294,7 +295,8 @@ function App() {
                   />
 
                   <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
-                  <Route path="/super-admin/tcg-product-master" element={<Navigate to="/super-admin/analysis-rules?section=product-master" replace />} />
+                  {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
+                  {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
                   {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
                   <Route
@@ -306,8 +308,6 @@ function App() {
                     path="/super-admin/tcg-parallel-report"
                     element={<TcgParallelReportPage />}
                   />
-                  {/* AY-2g: 旧スタンドアロンページは LINE解析へ転送 */}
-                  <Route path="/super-admin/tcg-supplier-quality" element={<Navigate to="/super-admin/analysis-rules?section=accuracy-management" replace />} />
                   {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
                   <Route
                     path="/super-admin/tcg-distribution"
@@ -323,7 +323,6 @@ function App() {
                     path="/super-admin/analysis-rules"
                     element={<AnalysisRulesPage />}
                   />
-                  <Route path="/super-admin/supplier-master" element={<Navigate to="/super-admin/analysis-rules?section=supplier-master" replace />} />
                   <Route
                     path="/super-admin/supplier-extraction-rules"
                     element={<SupplierExtractionRulesPage />}

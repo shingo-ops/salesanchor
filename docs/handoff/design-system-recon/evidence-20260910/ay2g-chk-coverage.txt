@@ -12,17 +12,17 @@ Not implemented: navigation to another Document
 Not implemented: navigation to another Document
 
  Test Files  77 passed (77)
-      Tests  951 passed (951)
-   Start at  07:37:23
-   Duration  195.49s (transform 4.56s, setup 1.20s, import 35.84s, tests 63.69s, environment 66.25s)
+      Tests  953 passed (953)
+   Start at  07:50:44
+   Duration  266.04s (transform 7.25s, setup 1.51s, import 51.12s, tests 93.18s, environment 83.94s)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   33.19 |    29.16 |   29.23 |   34.47 |                   
+All files          |   33.28 |    29.42 |    29.3 |   34.56 |                   
  src               |       0 |        0 |       0 |       0 |                   
-  App.tsx          |       0 |        0 |       0 |       0 | 125-148           
+  App.tsx          |       0 |        0 |       0 |       0 | 126-299           
  src/api           |    4.87 |     3.12 |   11.11 |    6.06 |                   
   funnel.ts        |       0 |        0 |       0 |       0 | 23-218            
  src/components    |   61.18 |    54.32 |   58.42 |   62.93 |                   
@@ -322,8 +322,8 @@ All files          |   33.19 |    29.16 |   29.23 |   34.47 |
  .../status-master |   24.32 |     9.82 |   15.25 |   29.58 |                   
   ...mportPage.tsx |       0 |        0 |       0 |       0 | 26-136            
   ...asterPage.tsx |    39.7 |     23.4 |      20 |   43.47 | ...18-326,377-476 
- ...es/super-admin |   15.34 |    10.27 |   17.87 |   18.15 |                   
-  ...RulesPage.tsx |   42.85 |     7.81 |    12.5 |   42.85 | ...17,134-135,149 
+ ...es/super-admin |   15.48 |    13.33 |   17.87 |   18.33 |                   
+  ...RulesPage.tsx |   46.42 |    51.56 |    12.5 |   46.42 | ...13,117,135,149 
   ...mportPage.tsx |       0 |        0 |       0 |       0 | 26-132            
   ...ConfigTab.tsx |    3.77 |        0 |       0 |    4.65 | 34-243            
   FxRatePage.tsx   |       0 |        0 |       0 |       0 | 28-87             
@@ -339,13 +339,13 @@ All files          |   33.19 |    29.16 |   29.23 |   34.47 |
   ...mportPage.tsx |       0 |        0 |       0 |       0 | 9-14              
   ...ldOutPage.tsx |   92.06 |     87.5 |   88.88 |   95.55 | 82,94             
   ...mportPage.tsx |       0 |        0 |       0 |       0 | 26-132            
- ...min/components |   24.34 |    19.61 |   25.05 |    24.5 |                   
+ ...min/components |   24.86 |    20.01 |   25.47 |   25.04 |                   
   ...oardPanel.tsx |       0 |        0 |       0 |       0 | 272-1900          
-  ...esSidebar.tsx |       0 |        0 |       0 |       0 | 45-74             
+  ...esSidebar.tsx |      80 |       60 |   66.66 |      80 | 54                
   ...sterPanel.tsx |    2.85 |        0 |       0 |    3.12 | 52-245            
   ...sterPanel.tsx |    1.48 |        0 |       0 |    1.76 | 88-462            
   ...ewerPanel.tsx |    1.13 |        0 |       0 |    1.19 | 152-496           
-  ...ngsDrawer.tsx |       0 |        0 |       0 |       0 | 33-83             
+  ...ngsDrawer.tsx |   38.46 |     37.5 |   28.57 |   39.13 | 42-48,56-66,82-83 
   ...rLogPanel.tsx |   90.14 |    71.05 |   83.33 |   92.64 | ...57,189,367-388 
   ...geSection.tsx |   87.57 |    62.33 |   79.16 |   89.47 | ...34-939,977-982 
   ...TabsPanel.tsx |   63.48 |    41.61 |   65.07 |   64.33 | ...93-504,552-593 
@@ -384,8 +384,8 @@ All files          |   33.19 |    29.16 |   29.23 |   34.47 |
 -------------------|---------|----------|---------|---------|-------------------
 
 =============================== Coverage summary ===============================
-Statements   : 33.19% ( 5903/17781 )
-Branches     : 29.16% ( 3749/12855 )
-Functions    : 29.23% ( 1625/5558 )
-Lines        : 34.47% ( 5262/15264 )
+Statements   : 33.28% ( 5919/17783 )
+Branches     : 29.42% ( 3783/12855 )
+Functions    : 29.3% ( 1629/5559 )
+Lines        : 34.56% ( 5277/15266 )
 ================================================================================

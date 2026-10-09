@@ -1,15 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, expect, it } from "vitest";
+import { LEGACY_SUPER_ADMIN_REDIRECTS } from "./legacyPageRedirects";
 
-// AY-2g: the three Routes below mirror src/App.tsx:297, :310 and :326 (as of this change).
-// Keep them identical to App.tsx.
-const TARGETS = {
-  productMaster: "/super-admin/analysis-rules?section=product-master",
-  accuracy: "/super-admin/analysis-rules?section=accuracy-management",
-  supplierMaster: "/super-admin/analysis-rules?section=supplier-master",
-} as const;
-
+// AY-2g: App.tsx は LEGACY_SUPER_ADMIN_REDIRECTS を map して Route にしている。
+// ここでも同じ形で描画するので、対応表を変えれば (a) の期待値の直書きと食い違って落ちる。
 function Where() {
   const location = useLocation();
   return <output data-testid="where">{location.pathname + location.search}</output>;
@@ -17,17 +12,20 @@ function Where() {
 
 afterEach(() => cleanup());
 
-it.each([
-  ["/super-admin/tcg-product-master", TARGETS.productMaster],
-  ["/super-admin/tcg-supplier-quality", TARGETS.accuracy],
-  ["/super-admin/supplier-master", TARGETS.supplierMaster],
-])("redirects %s to %s", (from, to) => {
+it("(a) the redirect table is exactly the three expected pairs", () => {
+  expect(LEGACY_SUPER_ADMIN_REDIRECTS.map(r => ({ ...r }))).toEqual([
+    { from: "/super-admin/tcg-product-master", to: "/super-admin/analysis-rules?section=product-master" },
+    { from: "/super-admin/tcg-supplier-quality", to: "/super-admin/analysis-rules?section=accuracy-management" },
+    { from: "/super-admin/supplier-master", to: "/super-admin/analysis-rules?section=supplier-master" },
+  ]);
+});
+
+it.each(LEGACY_SUPER_ADMIN_REDIRECTS.map(r => [r.from, r.to] as const))("(b) %s moves to %s", (from, to) => {
   render(
     <MemoryRouter initialEntries={[from]}>
       <Routes>
-        <Route path="/super-admin/tcg-product-master" element={<Navigate to={TARGETS.productMaster} replace />} />
-        <Route path="/super-admin/tcg-supplier-quality" element={<Navigate to={TARGETS.accuracy} replace />} />
-        <Route path="/super-admin/supplier-master" element={<Navigate to={TARGETS.supplierMaster} replace />} />
+        {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
+        <Route path="/super-admin/tcg-product-master/import" element={<output data-testid="where">import</output>} />
         <Route path="/super-admin/analysis-rules" element={<Where />} />
       </Routes>
     </MemoryRouter>,
