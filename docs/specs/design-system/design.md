@@ -2880,7 +2880,14 @@ Architect 自己審査（AY-2g）: APPROVE。同一AI（Opus）による自己�
 
 #### AY-2f 本番反映
 
-（設計者記入待ち）
+AY-2f: PR #4098 は merge 99a9705455958e7f32de48b2ea977069cf19b1e8 で main に入った（2026-10-09T22:26:25Z）。必須チェックは15件すべて成功。Deploy 37999224968 も success だった（headSha 99a970545、22:26:28Z〜22:28:58Z）。
+
+本番の確認結果:
+- 本番 JS（index-Bb9fxssm.js）で `super-admin-dex-tab`・`super-admin-llm-budget-tab`・`superAdmin.llmBudget` はいずれも0件。
+- `attrMasters` は2件残っている。これは旧 `/super-admin/masters` ページのタブ見出し `superAdmin.tabs.attrMasters` の文言（ja.json:2423・en.json:2423）で、AY-2f で削除した `superAdmin.attrMasters.*` とは別のキー。`superAdmin.tabs.*`・`superAdmin.title`・`subtitle`・`accessDenied` を参照するコードは、git grep の範囲では見つからなかった。扱いは別途決める。
+- app 200、/api/health 200。
+
+GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 1）。
 
 #### AY-2g 実装結果
 
