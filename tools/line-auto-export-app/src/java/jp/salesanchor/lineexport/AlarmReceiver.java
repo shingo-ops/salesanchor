@@ -10,9 +10,9 @@ import android.content.Intent;
  * requestRunAllを直接呼ぶ。RunReceiver経由にしない」）。外部アプリからの起動は想定しないため
  * AndroidManifest.xmlでは exported="false"。
  *
- * - {@code ACTION_BOOT_COMPLETED}: 再起動後に保険タイマーを張り直す（ONのときだけ）。
+ * - {@code ACTION_BOOT_COMPLETED}: 再起動後に補完を張り直す（ONのときだけ）。
  * - {@code ACTION_SCHEDULED_RUN}: アラーム発火。{@code EXTRA_TRIGGER}extraで渡された引き金
- *   種別（通知／保険タイマー／再試行）とともにRunScheduler.onAlarmFiredへ渡す。
+ *   種別（通知／補完／再試行）とともにRunScheduler.onAlarmFiredへ渡す。
  */
 public class AlarmReceiver extends BroadcastReceiver {
 

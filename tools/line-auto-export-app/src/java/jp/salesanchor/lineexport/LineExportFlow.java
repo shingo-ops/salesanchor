@@ -743,6 +743,14 @@ final class LineExportFlow {
         // （design.md追補「遅い回の原因確定のための計測追加」）。差が大きければスリープで
         // 引き延ばされたと分かり、ほぼ同じなら本当にその時間処理していたと分かる。
         long elapsedUptime = SystemClock.uptimeMillis() - flowStartedAtUptime;
+
+        // design.md追補「取り込みの時間規則」（PO決定 2026-10-09）: 補完（旧:保険タイマー）の
+        // 起点は、書き出しフローが成功したときだけ更新する。失敗時は更新しない（起点が
+        // 変わらない＝早めに次の補完が来る、安全側）。トリガー種別を問わず、ここ1箇所で扱う。
+        if (success) {
+            RunScheduler.recordSuccessfulImport(service);
+        }
+
         final String title = success ? "書き出し: 成功" : "書き出し: 失敗";
         String stagePart = success ? "" : ("段階: " + failedStage + " / ");
         String body = stagePart + elapsed + "ms / " + stepTimings.toString().trim();
@@ -752,7 +760,7 @@ final class LineExportFlow {
             // 到達判定に戻せる。
             body += " / 最近のクラス名: " + recentClasses;
         }
-        // 診断用: 何が引き金だったか（通知／保険タイマー／再試行／手動等）。design.md追補
+        // 診断用: 何が引き金だったか（通知／補完／再試行／手動等）。design.md追補
         // 2026-10-08「段階3の方式変更」。
         body += " / 引き金:" + triggerLabel;
         final String bodyBeforeLock = body;

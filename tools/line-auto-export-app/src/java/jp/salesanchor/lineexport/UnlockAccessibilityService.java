@@ -158,7 +158,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
     /**
      * 外部（RunReceiver、Termuxの15分ジョブ等）からの、ロック解除→LINE操作（本番の形）の
-     * 実行トリガー。段階3のRunScheduler（通知／保険タイマー／再試行）はこちらではなく
+     * 実行トリガー。段階3のRunScheduler（通知／補完／再試行）はこちらではなく
      * {@link #requestRunAll(Context, String)}を使う（引き金のラベルを結果通知に残すため）。
      */
     static void requestRunAll(Context context) {
