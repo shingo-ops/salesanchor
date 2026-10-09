@@ -11,18 +11,18 @@
 
 ## 事実2: 「中身が1バイトも変わらなければ送らない」は既に実装済み
 
-- `client.py:189` で digest を主キーに `jobs` へ登録し、`:193-197` で既に `accepted`/`pending_review` なら **送信せず**「同じ内容を取り込み済みのため送信なし」と記録する。
+- `tools/termux-line-import/client.py:189` で digest を主キーに `jobs` へ登録し、`:193-197` で既に `accepted`/`pending_review` なら **送信せず**「同じ内容を取り込み済みのため送信なし」と記録する。
 - つまり「新規ゼロなら送らない」は**作る必要がない**。ただし**1件でも増えるとファイル全体を送り直す**のが現状。
 
 ## 事実3: 10MiB の上限は「原本の受領時」に掛かっている（送信量を絞っても消えない）
 
-- `client.py:23` `MAX_BYTES = 10 * 1024 * 1024`、`:144` で `MAX_BYTES + 1` 読み、`:151` で超過なら `ValueError('ファイルは10MiB以下にしてください')`。
+- `tools/termux-line-import/client.py:23` `MAX_BYTES = 10 * 1024 * 1024`、`:144` で `MAX_BYTES + 1` 読み、`:151` で超過なら `ValueError('ファイルは10MiB以下にしてください')`。
 - これは**書き出しファイル自体**に対する判定。送信ペイロードを絞っても**この壁は残る**。
 
 ## 事実4: パーサは行単位で、本文のバイト完全復元を保証していない
 
 - `tools/termux-line-import/android_parser.py:17-52` `parse_android_export()` は `timestamp`/`display_name`/`body`/`is_system_event` の辞書列を返す。開始行番号は保持していない（`enumerate` の `number` はエラーメッセージのみに使用）。
-- 冒頭 docstring（`android_parser.py:3-4`）に「改行はLFへ正規化する。**本文のバイト完全復元は主張しない**」と明記。
+- 冒頭 docstring（`tools/termux-line-import/android_parser.py:3-4`）に「改行はLFへ正規化する。**本文のバイト完全復元は主張しない**」と明記。
   → **辞書から再直列化して送るのは不可**。送信ペイロードは**原本テキストの行スライス**で作る必要がある。
 - 日付行は `DATE`（`:9`）、メッセージ開始行は `TIME`（`:10` = `H:MM<TAB>…`）。継続行は直前メッセージの本文に連結（`:46-47`）。
 
@@ -50,7 +50,7 @@
 - `backend/app/middleware/session_guard.py:39` `IMPOSSIBLE_TRAVEL_WINDOW_SEC = 300`、`:103-131` で同一トークンのIPプレフィックス（/8）が**300秒以内**に変われば `:165-171` で 401 `SESSION_COMPROMISED`。
 - `_SKIP_PATHS`（`:42`）に端末取込APIは含まれない。
 - 2026-10-08 実測: 11:45:35 Wi-Fiで送信 → 11:48:57 モバイルで送信（202秒後）＝401。5分経過後の 11:51:08 に再送して200。
-- データは失われない（`auth_required` も再送対象＝`client.py:297`）。**対処の採否はPO判断として保留中**。
+- データは失われない（`auth_required` も再送対象＝`tools/termux-line-import/client.py:297`）。**対処の採否はPO判断として保留中**。
 
 ## 事実7（2026-10-08 追記・重要）: 書き出しファイルには毎回変わる「保存日時」行がある
 
@@ -63,7 +63,7 @@
 2026/8/28(金)
 ```
 
-**したがって recon 事実2 の「同じ内容なら送らない」（`client.py:189-197` の digest 判定）は、実運用では一度も発動しない。**
+**したがって recon 事実2 の「同じ内容なら送らない」（`tools/termux-line-import/client.py:189-197` の digest 判定）は、実運用では一度も発動しない。**
 新規メッセージが0件でも `保存日時` が変わるため digest が毎回変わり、**毎回 5.2MB を送っている**。
 50回/日 × 5.2MB ≒ 260MB/日 の大半は「新規0件なのに全部送っている」ぶんである。
 
