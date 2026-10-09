@@ -97,18 +97,7 @@
   color: var(--text-secondary);
 }
 
-.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"]) {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--font-base);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
+/* 一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c） */
 /* stylelint-disable no-descending-specificity -- intentional: focus state after general input style */
 .form-grid > .form-row input:focus {
   outline: none;
@@ -143,22 +132,7 @@
   color: var(--text-secondary);
 }
 
-/* stylelint-disable no-descending-specificity -- intentional: modal context overrides grid styles */
-.modal-content .form-row input:not([type="checkbox"]):not([type="radio"]),
-.modal-content-wide .form-row input:not([type="checkbox"]):not([type="radio"]) {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--font-base);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-/* stylelint-enable no-descending-specificity */
-
+/* 一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c） */
 /* stylelint-disable no-descending-specificity -- intentional: modal focus overrides grid focus style */
 .modal-content .form-row input:focus,
 .modal-content-wide .form-row input:focus {

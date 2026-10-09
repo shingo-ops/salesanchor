@@ -2483,3 +2483,79 @@ Architect 自己審査（AY-2b）: APPROVE（PO 方針どおり標準へ、意�
 - 非 text input の実装後実測（nontext-after、追補2026-10-09）: 絞り込み規則は詳細度が (0,1,1)→(0,2,1)（:focus は (0,2,1)→(0,3,1)）に上がるため、競合しうる規則を全 CSS から列挙した（ay2b-nontext-competing-rules.md、範囲内 23 規則）。JSX の字面と部品の再帰たどり（ay2b-nontext-ancestry.md、ay2b-nontext-reach.md）で、競合クラスと .form-group が同じ input の祖先に並ぶ実在の組み合わせは RolesPage.tsx の `.color-swatch`（radio 2 件）だけ、.form-group の内側に部品経由で到達する 20 ファイルに競合クラスと非 text input は 0 件。実測は origin/main 92db2c38b と PR HEAD の全 CSS 68 ファイルを、18 通りの読み込み順 × 幅 1280・375 × normal・focus で比較（8136 比較、594 項目）。実在の 9 件（A）は差 0。仮想の組み合わせ 104 要素（B）で差が出たのは `.form-group` と `.toggle-switch`／`.inbox-toggle`／`.topbar-search` が同じ input の祖先に並ぶ場合だけで（旧 (0,1,1) の `.toggle-switch input {opacity:0; width:0; height:0}` 等が新 (0,2,1) に負ける）、実在はしない。将来 `.form-group` の内側にこれらの部品を置くと見た目が変わる点を記録する。検出力は、after の規則を意図的に変えると差が出ることで確認。
 - 限界（事実）: (5) の既存 TextField 代表 12 は ay2b-visual.json の moldUsers 6 代表から入力を再構成（祖先は先頭 5 段まで、詳細は ay2b-after-check.md の注）。非 text の ay2b-visual (4) は未使用で、上の nontext-after が代替。
 - 品質（frontend）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0。単体試験は coverage 付き 1 回目で 1 件が 5000ms のタイムアウト（RoleKnowledgeButtonMigration.test.tsx、他の測定と同時実行の負荷下。単独実行は 19/19 成功）。負荷なしの全件再実行（coverage 付き、maxWorkers=1）は 74 ファイル・955 件すべて成功（終了コード 0）。
+
+#### AY-2b 本番反映（2026-10-09 記録）
+
+AY-2b: PR #4078 merge 468d49eddad56800ce305e4d41ac7ea221b27be3（2026-10-09T11:23:27Z、必須15/15成功）、Deploy 37923425874 success（headSha 468d49edd、11:23:30Z〜11:25:58Z）。本番 CSS index-DCunA6lC.css に `comp-input--login` 2・`.form-group input[type=checkbox]` 2、`.login-card .form-group input` 0・`.form-group input{` 0・`.form-group input:focus` 0。app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003、PR本文の GO記録）。Reviewer APPROVE（LOW 3: CarrierCredentialForm.tsx:95/:121 の ui-allow 残置、商品編集保持規則の試験なし、非 text 絞り込み規則の詳細度上昇＝実在0件）。
+
+#### AY-2c `.form-row` の一行入力の標準化（2026-10-09）
+
+mode: handoff。§AY 追補の便分割「AY-2b 以降」の第2便。PO 方針回答（2026-10-09「y」: 一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」「確立したなら進める」「PRマージ、デプロイまで完走させてくれ」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main c6c4fdc5118425c9aee8e70f292b1dde013864ac、証跡は本便で evidence-20260910/ に保存する ay2c-*）:
+- ページ側の生 text 系 input 184（ay0-input-inventory.cjs、TSX 277、構文エラー0）。
+- 規則（frontend/src/company-forms.css）:
+  - :100 `.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"])` (0,4,1) と :147-148 `.modal-content(-wide) .form-row input:not(..):not(..)` (0,4,1)。宣言は同じ: padding var(--space-2) var(--space-3)、border 1px solid var(--border-strong)、radius var(--radius-md)、font-size var(--font-base)、background var(--bg-surface)、color var(--text-primary)、width 100%、box-sizing border-box、font-family inherit。
+  - :113 `.form-grid > .form-row input:focus` (0,3,1) と :163-164 `.modal-content(-wide) .form-row input:focus` (0,3,1)。宣言は outline none、border-color var(--accent)、box-shadow var(--focus-ring-shadow)。金型の focus（FormField.css:95、0,2,0）と同じ値。
+  - 現行の不具合（実測）: 基本規則 (0,4,1) が focus 規則 (0,3,1) より強いため、focus 時の枠色が accent に変わらずリングだけ出ている。
+- 金型標準（FormField.css:47-62）との差: 枠色 --border-strong(#cbd5e0)→--border(#e2e8f0)、line-height 未指定→1.5、transition、disabled 規則、幅767px以下の min-height 44px。padding・角丸・文字・色・幅・書体は同値。
+- 対象: 生 text 系 49 件（ay2c-targets.tsv。CompaniesPage.tsx 24、CompanyBasicTab.tsx 11、ContactsPage.tsx 8、CompanyDiscordTab.tsx 4、CompanyChannelsTab.tsx 1、MergeLeadModal.tsx 1）。type は省略44・email2・number2・text1。className・style・ui-allow・ref・onKeyDown は0。disabled（動的）16。祖先未確定0（部品経由の再帰たどり済み）。保留ファイル該当0。6 ファイルの eslint 警告0。
+- 同じ規則に当たる他の要素: checkbox 5 件（ContactChannelForm.tsx:227、CompanyAddressModal.tsx:147、CompanyContactsTab.tsx:206、CompanyDiscordTab.tsx:42、ContactsPage.tsx:332。基本規則は :not で除外、focus 規則だけ当たる）。既存金型 TextField 13 件（MergeCompanyModal.tsx:158、CompanyAddressModal.tsx:96〜142 の12件。基本規則 (0,4,1) に上書きされて枠色が --border-strong）。range・file・color・radio は0。
+- 試験: `.form-row`/`.form-grid` の class を参照する試験0。tests-e2e/ui-companies-edit-modal-i18n.spec.ts:97（`.modal-content-wide` 内の input first）と PageFormButtonMigration.test.tsx:28（label の親から input を探す）は DOM 構造依存で、移管後も構造は同じ。
+
+代替案と選択:
+- 案1 基本規則に `:not(.comp-field__input)` を足して残す: 移管後に当たる生 input が0になるため残す意味が無く、詳細度がさらに上がる。不採用。
+- 案2（採用）基本規則 :100 と :147-148 を削除し、focus 規則 :113 と :163-164 は残す: 生 text 系49件を金型へ移すと基本規則が当たる生 input は0（checkbox は :not で元から除外）。focus 規則は checkbox 5 件のフォーカス表示（リング）を保ち、金型に当たっても金型の focus と同じ値のため金型の見た目を変えない。
+
+AY-2c 変更契約:
+1. frontend/src/company-forms.css: :100 の規則（`.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"])` の宣言ブロック全体）と :147-148 の規則（`.modal-content .form-row input:not(..)…, .modal-content-wide .form-row input:not(..)…` の宣言ブロック全体）を削除。:113 と :163-164 の focus 規則は残し、直前にコメント「一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c）」を置く。それ以外の行は変更しない。
+2. ページ: ay2c-targets.tsv の49件の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換（自己終了の形を保つ）。type・value・onChange・disabled・required・placeholder・name・min・max・step・autoComplete 等の属性は逐語保持。import に `TextFieldControl` を追加。
+3. 整理（コメントのみ）: CarrierCredentialForm.tsx:95 と :121 の ui-allow コメント2行を削除（AY-2b で対象が金型になり、理由が実態と合わなくなったため。Reviewer LOW L1）。
+4. design.md: 本節（AY-2b 本番反映を含む）と実装結果を追記。
+5. 変更しないもの: FormField.css・tokens.css・TextField.tsx、既存 TextField 利用、checkbox 5 件、company-forms.css の他の規則、保留ファイル、i18n、API/DB/backend、CI、依存、e2e。
+
+前後表（実測。ay2c-visual.md。Chromium 147、幅1280・375、light）:
+
+| 対象 | 変わる項目（これ以外は差分0） |
+|---|---|
+| 移管 49 件 | 枠色 #cbd5e0→#e2e8f0（少し薄い灰）、フォーカス時の枠色 #cbd5e0→#1e3a8a（focus の色が本来どおり出る）、line-height normal→21.6px、高さ 35→39.6px（幅375では 44px）、transition、disabled 16件は背景 白→#e2e8f0・不透明度 1→0.5・カーソル禁止 |
+| 既存 TextField 13 件 | 枠色（通常・disabled #cbd5e0→#e2e8f0、focus→#1e3a8a）、disabled の背景 |
+| checkbox 5 件 | 変化0（focus 規則を残すため。案2での実測で判定） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 変化は前後表の項目だけ | 実装後のコードの実 CSS で ay2c-visual を再実測（before は origin/main c6c4fdc51）。移管・既存 TextField は表の項目以外差分0。checkbox 5 件（C1〜C3 の代表と5件全件）は normal・focus・disabled 全項目差分0 |
+| 非外観属性が不変 | AST 照合で49件のタグ名・import 以外の差分0 |
+| 置換漏れ0 | 再計測でページ側の生 text 系 184→135、`.form-row` 祖先の生 text 系 0 |
+| 削除は当たる生 input 0 の規則だけ | 削除前に :100・:147 が当たる要素を再列挙し、移管対象49件以外の生 input が0であること |
+| 既存 TextField の出力不変 | TextField.test.tsx 成功 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、本番 CSS に `.form-grid>.form-row input:not(` 0 件・`.form-row input:focus` 残存、app 200・/api/health 200 |
+
+Architect 自己審査（AY-2c）: APPROVE。根拠: 対象49件・副作用の既存金型13件・不変の checkbox 5件を file:line で確定、祖先未確定0、見た目の変化は PO 方針（一般フォームは標準）の範囲で前後表に限定し実測で判定、focus 規則を残して checkbox を不変に保つ、削除規則は移管後に当たる生 input 0、配線・データ・トークン不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型（AY-2a・AY-2b）の踏襲のため不要。dark テーマは未測定（トークンのライト/ダーク同値は tokens.css で確認できる範囲のみ）。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2c 実測・AST 照合スクリプト（evidence）。外観の正本は FormField.css。守っていないもの: 残る生 text 系 135（保留 22 を含む）、`.form-row input:focus` 規則（checkbox の金型便で撤去）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+次便: AY-2d 規則なし・inline の組（登録画面 41 件の CSS 定義の無い class `input` を含む、領域ごと）。
+
+#### AY-2c 実装結果
+
+実測判定（evidence-20260910/ay2c-visual-after.md、実装後の実 CSS、Chromium 147、幅1280・375、light）: PASS。移管 T1〜T7 と既存 TextField M1・M2 は前後表の項目以外の差分 0。checkbox C1〜C5（5 件全件の祖先連鎖）は normal・focus・disabled 全項目で差分 0。事前模擬との差は、模擬が focus 規則まで除去していたため（実装は focus 規則を残す）。
+
+件数:
+- 置換 49 件（CompaniesPage 24、CompanyBasicTab 11、ContactsPage 8、CompanyDiscordTab 4、CompanyChannelsTab 1、MergeLeadModal 1）。AST 照合（ay2c-ast-check.md）: タグ名・import 以外の差分 0。
+- 削除前の再列挙（ay2c-rule-users.md）: :100・:147-148 が当たる生 input は 49 件のみ（checkbox 5 件は :not で除外）。
+- 再計測（ay2c-inv-after.md）: ページ側の生 text 系 184→135、`.form-row` 祖先の生 text 系 0。
+- ui-allow コメント 2 行削除（CarrierCredentialForm.tsx）。
+
+コマンド結果（frontend、worktree。生成物は generate:icon-sizes・generate:api-types 後、git 管理外）:
+- `npx tsc --noEmit`: 終了 0
+- `npm run lint`: 終了 0（0 error、139 warning は既存、変更 8 ファイルの warning 0）
+- `npm run check:all`: 終了 0
+- `vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1`: 終了 0、963 件成功
+- `npm run build`: 終了 0
+- `npm run build-storybook`: 終了 0
+
+限界: dark テーマ未測定、fixture は祖先連鎖の近似。切戻し: 本PRの merge commit を revert。
