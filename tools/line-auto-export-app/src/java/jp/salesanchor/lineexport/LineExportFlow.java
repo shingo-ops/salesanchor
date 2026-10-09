@@ -835,6 +835,16 @@ final class LineExportFlow {
                 postResultNotification(service, title, finalBody);
                 logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
                         wakeHeldAtEnd, wakeHeldMs);
+                // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」: 5分後に
+                // 再試行を予約する。lockOnFinish==trueの経路（RUN_ALL）だけが対象
+                // （lockOnFinish==falseのEXPORT単体＝手動検証用はifの手前でreturnしており、
+                // finish()がこの経路を通るのはlockOnFinish==trueのときだけなので二重に
+                // 呼ばれることはない）。logExportEndの呼び出しより後にすること: logExportEndは
+                // SchedulerStoreのpending-nextを読んで終了行に書くため、先に再試行を張ると
+                // 終了行のnextTriggerが上書きされ、診断が読みにくくなる。
+                if (!success) {
+                    RunScheduler.scheduleRetryAfterFailure(service);
+                }
                 // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
                 if (stallWatchdog != null) {
                     stallWatchdog.stop();

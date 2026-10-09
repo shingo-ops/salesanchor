@@ -618,3 +618,34 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 - **`FLAG_NO_CREATE` の非null/nullを「予約済みか」の状態として使わない。** `AlarmManager#cancel` はPendingIntentを消さないため、一度でもアラームを張ると以後ずっと非nullになり、状態として機能しない。
 - 判定は必ず「自分で保存した予定時刻」で行い、「過去の値は予約中とみなさない」（`reservedAt > now`）を守る。
 - 実行ログに `flow:"scheduler"` の単発行（`phase: reserve/skip_reserved/defer_floor/fire`）を追加した。今後、通知が捨てられているかどうかはこのログで診断できる（`skip_reserved` が連続していないか、`reserve` の間隔が異常に短くないか等）。
+
+## 追補 2026-10-09 取り込み失敗後に30分空いていた問題（再試行を1回だけ張る）
+
+### 事実（実機2026-10-09）
+
+17:25:09に補完が発火して起動 → `unlock` が `result=failure, stage=PIN入力後もロック中` で終了（4.8秒）→ **その後何も再試行されず、次は17:55:09の補完**だった（丸30分空いた）。
+
+### 原因
+
+`RunScheduler.onAlarmFired()` は補完の発火時に、成功・失敗を問わず必ず `SchedulerStore.setLastComplementAttemptAt(context, now)` を記録する（1分ごとの暴走を防ぐための既存の仕組み。上の追補「取り込みの時間規則」参照）。このため `computeNextComplementAt()` の基準（`max(lastImportAt, lastComplementAttemptAt)`）が常に「今」になり、失敗しても次回の補完は丸々1間隔（コアタイム30分/コア外60分）後になる。
+
+`recordSuccessfulImport()` のjavadocにある「失敗時は呼ばない＝起点が変わらない＝早めに次の補完が来る、安全側」という意図は、上記の `setLastComplementAttemptAt` の記録によって実質的に打ち消されていた。
+
+### 対処
+
+取り込み（ロック解除またはLINE操作）が失敗したら、**5分後に再試行**を予約する（`RunScheduler.scheduleRetryAfterFailure`）。ただし**連続の再試行は1回までに制限**する（`SchedulerStore` の連続再試行回数カウンタが上限 `MAX_CONSECUTIVE_RETRIES`（=1）に達していれば予約せず、元から張られている補完に任せる）。取り込み成功（`recordSuccessfulImport`）で回数をリセットする。
+
+呼び出し元は2か所: `UnlockAccessibilityService#checkResult()` のロック解除失敗の分岐（RUN_ALLのときだけ）、`LineExportFlow#finish(false, ...)`（`lockOnFinish==true` のときだけ、つまりRUN_ALLのときだけ）。どちらも手動検証用の単体経路（RUN単体／EXPORT単体）では呼ばない。
+
+### 1回に絞った理由（PINロックアウト対策）
+
+失敗の型のひとつが `PIN入力後もロック中` であり、PIN入力の試行が増えるとAndroid側のロックアウト（誤入力の連続で待たされる状態）に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に抑えるため、意図的に1回に絞っている。上限を増やすのはPO判断。
+
+### 守ること
+
+- `computeNextComplementAt` と `setLastComplementAttemptAt` は触らない。これらは1分ごとの暴走を防いだ修正（上の追補「取り込みの時間規則」参照）であり、今回の対処はその上に積む形にした。
+- `scheduleRetryAfterSkip`（使用中見送り用、既存）とは統合しない。見送りは使用中が続く限り無制限に5分ごと再試行するのに対し、失敗後の再試行は連続1回までに制限する、という役割の違いがあるため。
+
+### 未決（PO判断待ち）
+
+画面ONかつロック中のとき（PIN入力後もロック中になりやすい状況）に、そもそもPINを打たずに見送るかどうかは今回手を付けていない。PO判断待ち。

@@ -53,8 +53,16 @@ final class RunScheduler {
     static final long FLOOR_INTERVAL_MS = 3L * 60L * 1000L;
     /** 対象グループの通知が来てから実行するまでの待ち（バーストをまとめる）。 */
     static final long NOTIFICATION_DEBOUNCE_MS = 30L * 1000L;
-    /** 使用中で見送ったときの再試行間隔。 */
+    /** 使用中で見送ったときの再試行間隔。取り込み失敗後の再試行にも同じ間隔を使う。 */
     static final long RETRY_INTERVAL_MS = 5L * 60L * 1000L;
+    /**
+     * 取り込み失敗後の再試行を連続で張る回数の上限。design.md追補 2026-10-09「取り込み失敗後に
+     * 30分空いていた問題」: 失敗の型のひとつが「PIN入力後もロック中」であり、再試行の回数を
+     * 増やすほどPIN入力の試行が増え、Android側のロックアウト（誤入力の連続で待たされる状態）
+     * に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に抑えるため、
+     * 意図的に1回に絞っている（上限を増やすのはPO判断）。
+     */
+    static final int MAX_CONSECUTIVE_RETRIES = 1;
 
     // 引き金の種別。AlarmReceiverが受けたIntentのextraで渡し、結果通知の「引き金」表示と
     // 床判定の対象選別（補完には床を適用しない。下記onAlarmFired参照）に使う。
@@ -172,6 +180,41 @@ final class RunScheduler {
         SchedulerStore.setPendingNextTrigger(context, TRIGGER_RETRY, nextAt);
     }
 
+    // ---- 取り込みが失敗したとき（UnlockAccessibilityService/LineExportFlowから呼ぶ） ---------
+
+    /**
+     * 取り込み（ロック解除またはLINE操作）が失敗したときに呼ぶ。design.md追補 2026-10-09
+     * 「取り込み失敗後に30分空いていた問題」: {@link #onAlarmFired}が補完の発火時に必ず
+     * {@link SchedulerStore#setLastComplementAttemptAt}を記録するため、{@link
+     * #recordSuccessfulImport}のjavadocが意図する「失敗時は起点を更新しない＝早めに次が来る」
+     * が実際には効かず、失敗しても次の補完までフルの間隔（30分/60分）が空いてしまっていた
+     * （実機2026-10-09 17:25:09で確認）。このメソッドは{@link #scheduleRetryAfterSkip}
+     * （使用中見送り用、RUN単体からしか呼ばれない既存メソッド）とは役割が違うため統合せず
+     * 別メソッドにした：見送りは「使用中が続く限り5分ごとに無制限に再試行する」のに対し、
+     * こちらは「失敗後の連続再試行を{@link #MAX_CONSECUTIVE_RETRIES}回までに制限する」
+     * （理由は同定数のjavadoc参照。PINロックアウト対策）。
+     *
+     * OFF中は何もしない。連続再試行回数が上限に達していれば予約せず（元から張られている
+     * 補完に任せる）、実行ログに"retry_capped"を残す。上限未満なら5分後に再試行を張り、
+     * 回数を1つ増やす。
+     */
+    static void scheduleRetryAfterFailure(Context context) {
+        if (!SchedulerStore.isEnabled(context)) {
+            return;
+        }
+        int count = SchedulerStore.getConsecutiveRetryCount(context);
+        if (count >= MAX_CONSECUTIVE_RETRIES) {
+            RunLogger.logSchedulerEvent(context, "retry_capped", labelFor(TRIGGER_RETRY), null, null);
+            return;
+        }
+        long nextAt = System.currentTimeMillis() + RETRY_INTERVAL_MS;
+        scheduleAt(context, REQUEST_CODE_RETRY, nextAt, TRIGGER_RETRY);
+        SchedulerStore.setConsecutiveRetryCount(context, count + 1);
+        // 既存のscheduleRetryAfterSkipと同じ扱い（実行ログ診断用のpending-next）。
+        SchedulerStore.setPendingNextTrigger(context, TRIGGER_RETRY, nextAt);
+        RunLogger.logSchedulerEvent(context, "retry_armed", labelFor(TRIGGER_RETRY), Long.valueOf(nextAt), null);
+    }
+
     // ---- アラーム発火の処理（AlarmReceiverから呼ぶ） ----------------------------------------
 
     /**
@@ -264,6 +307,10 @@ final class RunScheduler {
      * 補完アラームの張り直しはON中だけ行う。
      */
     static void recordSuccessfulImport(Context context) {
+        // 取り込み失敗後の連続再試行の回数をリセットする（design.md追補 2026-10-09
+        // 「取り込み失敗後に30分空いていた問題」。成功したので次に失敗したときまた1回だけ
+        // 再試行できるようにする）。
+        SchedulerStore.clearConsecutiveRetryCount(context);
         SchedulerStore.setLastImportAt(context, System.currentTimeMillis());
         if (!SchedulerStore.isEnabled(context)) {
             return;

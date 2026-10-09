@@ -605,6 +605,16 @@ public class UnlockAccessibilityService extends AccessibilityService {
                     : "PIN入力後もロック中";
             postFailureNotification(this, reason + " / " + detail);
             logUnlockEnd("failure", reason, elapsed, null);
+            // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」: 5分後に再試行を
+            // 予約する。RUN_ALL（runAllRequested=true。通知/補完/再試行/RUN_ALL経由）だけが
+            // 対象。RUN単体（機構検証用、runAll=false）では挙動を変えない。
+            // logUnlockEndの呼び出しより後にすること: logUnlockEndはSchedulerStoreの
+            // pending-next（diagnosticのnextTrigger/nextAtMs）を読んで終了行に書くため、先に
+            // 再試行を張るとここで新たに張った再試行の情報で終了行のnextTriggerが上書きされ、
+            // 診断が読みにくくなる。
+            if (runAllRequested) {
+                RunScheduler.scheduleRetryAfterFailure(this);
+            }
         }
         runAllRequested = false;
     }

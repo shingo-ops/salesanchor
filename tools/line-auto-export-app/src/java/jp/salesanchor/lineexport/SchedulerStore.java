@@ -19,6 +19,7 @@ final class SchedulerStore {
     private static final String KEY_LAST_IMPORT_AT = "last_import_at";
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
     private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
+    private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -144,6 +145,27 @@ final class SchedulerStore {
 
     static void clearNotificationReservedAt(Context context) {
         prefs(context).edit().remove(KEY_NOTIFICATION_RESERVED_AT).apply();
+    }
+
+    /**
+     * 取り込み失敗後の再試行（{@link RunScheduler#scheduleRetryAfterFailure}）が、連続して
+     * 何回張られたか。design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」:
+     * 失敗後の再試行は連続1回までに制限する。失敗の型のひとつが「PIN入力後もロック中」で
+     * あり、再試行を増やすほどPIN入力の試行が増え、Android側のロックアウト（誤入力の連続で
+     * 待たされる状態）に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に
+     * 抑えるため、意図的に1回に絞っている（上限を増やすのはPO判断）。
+     * 取り込み成功で{@link #clearConsecutiveRetryCount}によりリセットされる。既定0。
+     */
+    static int getConsecutiveRetryCount(Context context) {
+        return prefs(context).getInt(KEY_CONSECUTIVE_RETRY_COUNT, 0);
+    }
+
+    static void setConsecutiveRetryCount(Context context, int count) {
+        prefs(context).edit().putInt(KEY_CONSECUTIVE_RETRY_COUNT, count).apply();
+    }
+
+    static void clearConsecutiveRetryCount(Context context) {
+        prefs(context).edit().remove(KEY_CONSECUTIVE_RETRY_COUNT).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

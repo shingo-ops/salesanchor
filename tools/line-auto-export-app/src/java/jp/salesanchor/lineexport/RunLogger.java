@@ -183,8 +183,11 @@ final class RunLogger {
      * スケジューラの予約判断を記録する単発行（実行チェーン=runIdに紐づかない。design.md追補
      * 2026-10-09「通知起動が捨てられていた原因」）。{@link RunScheduler}が通知引き金の
      * 予約／見送り／床での繰り延べ／発火のそれぞれで呼ぶ。本文やメッセージ内容は含めない。
+     * "retry_armed"/"retry_capped"は取り込み失敗後の再試行の予約判断
+     * （design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」。
+     * {@link RunScheduler#scheduleRetryAfterFailure}参照）。
      *
-     * @param phase "reserve" / "skip_reserved" / "defer_floor" / "fire"
+     * @param phase "reserve" / "skip_reserved" / "defer_floor" / "fire" / "retry_armed" / "retry_capped"
      * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル（"通知"/"補完"/"再試行"）
      * @param scheduledAtMs reserve・defer_floorで、新たに予約した発火予定時刻（絶対epoch ms）。
      *     対象外ならnull
