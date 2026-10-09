@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { SelectControl } from "../../components/Select";
 
 interface ConvLogEntry {
   id: number;
@@ -70,9 +71,8 @@ export function CompanyConvLogsTab({ companyId, contacts }: Props) {
         <label htmlFor="conv-contact-filter" className="conv-logs-filter-label">
           {t("companies.convHistory.filterByContact")}
         </label>
-        <select
+        <SelectControl
           id="conv-contact-filter"
-          className="conv-logs-filter-select"
           value={selectedContactId}
           onChange={(e) => setSelectedContactId(e.target.value)}
           aria-label={t("companies.convHistory.filterByContact")}
@@ -86,7 +86,7 @@ export function CompanyConvLogsTab({ companyId, contacts }: Props) {
               </option>
             );
           })}
-        </select>
+        </SelectControl>
       </div>
 
       {loading && <p className="conv-logs-loading">{t("common.loading")}</p>}

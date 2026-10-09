@@ -7,8 +7,10 @@ import { useTranslation } from "react-i18next";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Props {
   showForm: boolean;
@@ -83,15 +85,15 @@ export function OrdersFormModal({
         </div>
         <div className="form-group">
           <label>{t("common.status")}</label>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+          <SelectControl fullWidth value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <div className="form-group">
           <label>{t("common.notes")}</label>
-          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
         <div className="form-actions">
           <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>

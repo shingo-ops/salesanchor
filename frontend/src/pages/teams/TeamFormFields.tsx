@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { TextareaControl } from "../../components/Textarea";
 
 export interface TeamFormState {
   name: string;
@@ -41,7 +42,7 @@ export function TeamFormFields({ form, onChange }: Props) {
       </div>
       <div className="form-group">
         <label>{t("common.description")}</label>
-        <textarea
+        <TextareaControl
           value={form.description}
           onChange={(e) => onChange("description", e.target.value)}
         />

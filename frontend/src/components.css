@@ -16,9 +16,7 @@
   margin-bottom: var(--space-1);
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.form-group input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
@@ -29,18 +27,10 @@
   box-sizing: border-box;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.form-group input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring-shadow);
-}
-
-/* stylelint-disable-next-line no-descending-specificity -- intentional: textarea size after focus state */
-.form-group textarea {
-  min-height: var(--textarea-min-h);
-  resize: vertical;
 }
 
 .form-actions {

@@ -3804,6 +3804,81 @@
         "title": "CloseReasonUpdate",
         "type": "object"
       },
+      "CodeCollision": {
+        "description": "型番が重なった既存の有効商品1件。",
+        "properties": {
+          "already_excluded_by_other": {
+            "description": "相手の除外ワードのうち、この商品に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By Other",
+            "type": "array"
+          },
+          "already_excluded_by_this": {
+            "description": "この商品の除外ワードのうち、相手に既に当たっている語",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already Excluded By This",
+            "type": "array"
+          },
+          "matched_field": {
+            "description": "重なった相手側の項目。product_code または mark",
+            "title": "Matched Field",
+            "type": "string"
+          },
+          "matched_value": {
+            "description": "重なった相手側の値（保存されている原文）",
+            "title": "Matched Value",
+            "type": "string"
+          },
+          "name": {
+            "description": "相手の商品名",
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "重なった相手の商品ID（public.products.id の文字列）",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "suggest_add_to_other": {
+            "description": "相手の除外ワードに足すことを勧める語（この商品の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To Other",
+            "type": "array"
+          },
+          "suggest_add_to_this": {
+            "description": "この商品の除外ワードに足すことを勧める語（相手の名前全体と型番でない検索ワード）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggest Add To This",
+            "type": "array"
+          },
+          "work_name": {
+            "description": "相手の作品名（public.type_master.name_ja）。無ければ空文字",
+            "title": "Work Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name",
+          "work_name",
+          "matched_value",
+          "matched_field",
+          "suggest_add_to_this",
+          "suggest_add_to_other",
+          "already_excluded_by_this",
+          "already_excluded_by_other"
+        ],
+        "title": "CodeCollision",
+        "type": "object"
+      },
       "CommissionRate-Input": {
         "description": "1 ロール分の rate 設定。\n\ntype=rate のとき value は売上に対する率（0.10 = 10%）。\ntype=fixed のとき value は円単位の固定額（200, 100, 500 など）。\nJSONB に保存する都合で Decimal を float としてシリアライズしやすい\n値域に収める前提（テナント側がカスタマイズしても合計値が overflow しないこと）。",
         "properties": {
@@ -22891,6 +22966,105 @@
           "name_ja"
         ],
         "title": "ProductCreate",
+        "type": "object"
+      },
+      "ProductCreateResult": {
+        "description": "商品の新規登録の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "candidates": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "重複候補（ok が false のときだけ）",
+            "title": "Candidates"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "失敗理由のコード（DUPLICATE_CANDIDATE など）",
+            "title": "Code"
+          },
+          "code_collisions": {
+            "description": "型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "ok": {
+            "description": "登録できたか。重複候補で止めたときは false",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録した商品のID。失敗時は null",
+            "title": "Product Id"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ProductCreateResult",
+        "type": "object"
+      },
+      "ProductDetailSaveResult": {
+        "additionalProperties": true,
+        "description": "商品詳細の保存後の応答。保存は型番の重なりでは止めない。",
+        "properties": {
+          "code_collisions": {
+            "description": "保存後の型番が重なった既存商品の一覧。重なりが無ければ空",
+            "items": {
+              "$ref": "#/components/schemas/CodeCollision"
+            },
+            "title": "Code Collisions",
+            "type": "array"
+          },
+          "lookups": {
+            "description": "分類の選択肢",
+            "title": "Lookups",
+            "type": "object"
+          },
+          "product": {
+            "description": "保存後の商品の内容",
+            "title": "Product",
+            "type": "object"
+          },
+          "revision": {
+            "description": "保存後の版を表す指紋",
+            "title": "Revision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "revision",
+          "lookups",
+          "code_collisions"
+        ],
+        "title": "ProductDetailSaveResult",
         "type": "object"
       },
       "ProductDetailUpdate": {
@@ -62608,8 +62782,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Master Api V1 Tcg Products Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62701,8 +62874,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Create Product Standalone Api V1 Tcg Products Create Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductCreateResult"
                 }
               }
             },
@@ -62852,8 +63024,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Save Product Detail Api V1 Tcg Products Detail  Product Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductDetailSaveResult"
                 }
               }
             },

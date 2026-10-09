@@ -7,9 +7,11 @@
  *
  * TypeScript の型で規格外 size をコンパイルエラーにする。
  * 実画面への展開は Task 2E で行う。
+ *
+ * TextFieldControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AY）。
  */
 
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import type { InputHTMLAttributes } from "react";
 import "./FormField.css";
 
@@ -25,6 +27,25 @@ interface TextFieldOwnProps {
 
 export type TextFieldProps = TextFieldOwnProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, keyof TextFieldOwnProps | "size">;
+
+export type TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
+  size?: TextFieldSize;
+};
+
+export const TextFieldControl = forwardRef<HTMLInputElement, TextFieldControlProps>(
+  function TextFieldControl({ size = "md", className, id, ...rest }, ref) {
+    const controlClass = [
+      "comp-field__input",
+      size !== "md" ? `comp-field__input--${size}` : "",
+      className ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return <input ref={ref} id={id} className={controlClass} {...rest} />;
+  },
+);
+TextFieldControl.displayName = "TextFieldControl";
 
 export function TextField({
   label,
@@ -61,7 +82,7 @@ export function TextField({
           )}
         </label>
       )}
-      <input id={fieldId} className="comp-field__input" {...rest} />
+      <TextFieldControl id={fieldId} {...rest} />
       {(error != null || helperText != null) && (
         <p
           className={`comp-field__hint${error != null ? " comp-field__hint--error" : ""}`}

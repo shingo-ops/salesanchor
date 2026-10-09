@@ -17,6 +17,7 @@ import { HEART_REACTION_EMOJI } from "./reactionEmojiPresets";
 import { Button } from "../../components/Button";
 import { IconToggleButton } from "../../components/IconToggleButton";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 import { usePermissions } from "../../hooks/usePermissions";
 import { DISCORD_CONFIG_PERMISSION, getDiscordSendErrorGuide } from "./discordSendError";
 import { toast } from "../../components/loading/Toast";
@@ -733,8 +734,9 @@ export function InboxMessageThread({
               Me
             </div>
             <div className="send-input-wrap">
-              <textarea
+              <TextareaControl
                 ref={textareaRef}
+                variant="embedded"
                 className="inbox-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
