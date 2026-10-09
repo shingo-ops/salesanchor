@@ -94,3 +94,9 @@ Architect 自己審査（AY-2f）: APPROVE。根拠は次のとおり。同一AI
 - 品質（ay2f-quality.txt・ay2f-test-counts.txt）: generate:icon-sizes・generate:api-types 後に tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（74 files・944 tests 成功。AY-2e 時点は963）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動。
 
 限界: 本番反映後の確認（Deploy・app 200・本番 JS の testid 0件）は merge 後。backend の4系統 API（dex・tcg/series・llm-budget・product-masters）は変更しておらず、扱いは別途判断。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+## 維持の仕組み
+守り手: tsc（参照が残れば落ちる）、check-i18n-missing-keys、frontend-check。守っていないもの: 未使用 i18n キーの検出と、画面から呼ばれない backend API 4系統。切戻しは本PRの merge commit を revert する（DB 影響なし）。
+
+## 外部・過去事例の参照と我々への応用
+外部事例: 使われていないコードの削除のため不要（PO 原文「どこからも使われていない部品→消す」）。過去事例: AY-2e（PR #4092）で到達不可13件として除外していた部品を、本PRで参照0件を git grep で確認したうえで削除する。recon は recon.md（参照元の file:line）、受入基準は上記「受入」表。
