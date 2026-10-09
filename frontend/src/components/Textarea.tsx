@@ -30,18 +30,24 @@ export type TextareaProps = TextareaOwnProps &
 /** 用途別の種類（design.md §AX-2）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
 export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule";
 
-export type TextareaControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> &
+/** 文字の用途（design.md §Z :817 / §AX-2b）。code は等幅フォント。 */
+export type TextareaTextStyle = "normal" | "code";
+
+export type TextareaControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> & {
+  textStyle?: TextareaTextStyle;
+} &
   (
     | { variant?: "standard"; size?: TextareaSize }
     | { variant: Exclude<TextareaVariant, "standard">; size?: never }
   );
 
 export const TextareaControl = forwardRef<HTMLTextAreaElement, TextareaControlProps>(
-  function TextareaControl({ size = "md", variant = "standard", className, id, ...rest }, ref) {
+  function TextareaControl({ size = "md", variant = "standard", textStyle = "normal", className, id, ...rest }, ref) {
     const controlClass = [
       "comp-field__textarea",
       size !== "md" ? `comp-field__textarea--${size}` : "",
       variant !== "standard" ? `comp-textarea--${variant}` : "",
+      textStyle === "code" ? "comp-textarea--code" : "",
       className ?? "",
     ]
       .filter(Boolean)

@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { TextareaControl } from "../../components/Textarea";
 
 export interface SupplierFormState {
   name: string;
@@ -58,14 +59,14 @@ export function SupplierFormFields({ form, onChange }: SupplierFormFieldsProps) 
       </div>
       <div className="form-group">
         <label>{t("suppliers.address")}</label>
-        <textarea
+        <TextareaControl
           value={form.address}
           onChange={e => onChange("address", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("common.notes")}</label>
-        <textarea
+        <TextareaControl
           value={form.notes}
           onChange={e => onChange("notes", e.target.value)}
         />

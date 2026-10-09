@@ -17,6 +17,7 @@ import { api } from "../../lib/api";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
 import { LostReasonFields, buildLostReasonUpdatePayload } from "./LeadFormFields";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Lead {
   id: number;
@@ -276,7 +277,7 @@ export default function LeadEditPage() {
             <input type="number" min="0" step="1" value={form.monthly_forecast} onChange={(e) => setForm({ ...form, monthly_forecast: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.country")}</label>
             <CountryCombobox

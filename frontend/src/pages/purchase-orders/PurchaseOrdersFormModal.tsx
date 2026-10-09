@@ -15,6 +15,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
 import { Modal } from "../../components/Modal";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Supplier {
   id: number;
@@ -214,7 +215,7 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
 
         <div className="form-group">
           <label>{t("common.notes")}</label>
-          <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <TextareaControl rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
       </form>
     </Modal>

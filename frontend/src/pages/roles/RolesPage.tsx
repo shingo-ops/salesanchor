@@ -23,6 +23,7 @@ import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Role {
   id: number;
@@ -535,7 +536,7 @@ export default function RolesPage() {
                 options={priorityOptions}
               />
               <div className="form-group"><label>{t("common.description")}</label>
-                <textarea value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
+                <TextareaControl value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
               </div>
               <div className="form-actions">
                 <Button type="button" variant="secondary" size="md" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</Button>

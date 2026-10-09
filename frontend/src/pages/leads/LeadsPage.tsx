@@ -34,6 +34,7 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from "./LeadFormFields";
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
+import { TextareaControl } from "../../components/Textarea";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -426,7 +427,7 @@ export default function LeadsPage() {
             <input type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
-            <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+            <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.country")}</label>
             <CountryCombobox

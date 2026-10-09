@@ -24,6 +24,7 @@ import { SelectControl } from "../../../components/Select";
 import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Check } from "../../../constants/icons";
+import { TextareaControl } from "../../../components/Textarea";
 
 interface ConditionDef {
   id: number;
@@ -364,11 +365,10 @@ export function ConditionsMasterPanel() {
               <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.searchKw`)}
               </label>
-              <textarea
+              <TextareaControl
                 value={form.search_kw}
                 onChange={e => setForm({ ...form, search_kw: e.target.value })}
                 rows={3}
-                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
 
@@ -377,11 +377,10 @@ export function ConditionsMasterPanel() {
               <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.excludeKw`)}
               </label>
-              <textarea
+              <TextareaControl
                 value={form.exclude_kw}
                 onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
                 rows={3}
-                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
 
