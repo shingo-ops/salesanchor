@@ -9,7 +9,7 @@
 ## 2. 規則（PO 承認済み、recon.md §1）
 1. 直前の投稿 = 同じ supplier_channel_id の source_messages のうち、今の投稿より line_posted_at が前で最も新しい1件（is_active は問わない＝取り込みで無効化された投稿も含む）。時刻の差が 3600 秒以下のときだけ使う。
 2. 今の投稿の空でない行（strip して空でない行）が10行以下のときだけ使う。
-3. 直前の投稿の「参照行」= 直前の投稿の raw_text を `split("\n")` した各行のうち、v102 と同じ商品照合（match_product_g2、照合文の作り方も resolve_product_first と同じ）で商品が1つに決まる行。
+3. 直前の投稿の「参照行」= 直前の投稿の raw_text を `split("\n")` した各行のうち、v102 と同じ商品照合の部品（match_text_g2＝形G2）に行そのものを照合文として渡して、商品が1つに決まる行（試算 sim2〜4 と同じ。件の照合で使う product_match_text は通さない）。
 4. 今の投稿で match_status が unmatched / ambiguous の件について、件の行（item の lines）から
    - 型番: fold_for_match した行に `[a-z0-9]+(?:[-_.'・][a-z0-9]+)*` を当て、_strict_code_pattern が None でない語
    - 名前: 元の行に `[ァ-ヴー]{4,}|[一-龥々]{4,}|[A-Za-zＡ-Ｚａ-ｚ]{4,}` を当て normalize_for_match した4文字以上の語
