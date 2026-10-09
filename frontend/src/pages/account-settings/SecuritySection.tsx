@@ -10,6 +10,7 @@ import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function SecuritySection() {
   const { t } = useTranslation();
@@ -64,7 +65,7 @@ export default function SecuritySection() {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="current_password">{t("accountSettings.currentPassword")}</label>
-          <input
+          <TextFieldControl
             id="current_password"
             type="password"
             value={form.current}
@@ -76,7 +77,7 @@ export default function SecuritySection() {
 
         <div className="form-group">
           <label htmlFor="new_password">{t("accountSettings.newPassword")}</label>
-          <input
+          <TextFieldControl
             id="new_password"
             type="password"
             value={form.next}
@@ -88,7 +89,7 @@ export default function SecuritySection() {
 
         <div className="form-group">
           <label htmlFor="confirm_password">{t("accountSettings.confirmPassword")}</label>
-          <input
+          <TextFieldControl
             id="confirm_password"
             type="password"
             value={form.confirm}

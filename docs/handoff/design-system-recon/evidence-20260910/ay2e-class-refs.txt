@@ -1,0 +1,6 @@
+== input w-full
+src/pages/admin/DiscordAnnouncePage.tsx:87:            className="input w-full"
+== qty-input
+src/pages/inventory/OwnInventoryPage.tsx:240:                  className="qty-input"
+== manual-record-datetime
+src/pages/inbox/ManualRecordSection.tsx:151:          className="manual-record-datetime"

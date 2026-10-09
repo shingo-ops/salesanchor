@@ -15,7 +15,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextFieldControl } from "../../components/TextField";
 
 interface PaypalStatus {
   configured: boolean;
@@ -140,7 +142,7 @@ export default function PaypalIntegrationPage() {
         </p>
         <div className="form-group">
           <label htmlFor="paypal-id">{t("paypalIntegration.labelClientId")}</label>
-          <input
+          <TextFieldControl
             id="paypal-id"
             type="text"
             value={clientId}
@@ -150,7 +152,7 @@ export default function PaypalIntegrationPage() {
         </div>
         <div className="form-group">
           <label htmlFor="paypal-secret">{t("paypalIntegration.labelClientSecret")}</label>
-          <input
+          <TextFieldControl
             id="paypal-secret"
             type="password"
             value={clientSecret}
@@ -161,14 +163,15 @@ export default function PaypalIntegrationPage() {
         </div>
         <div className="form-group">
           <label htmlFor="paypal-env">{t("paypalIntegration.envLabel")}</label>
-          <select
+          <SelectControl
+            fullWidth
             id="paypal-env"
             value={environment}
             onChange={(e) => setEnvironment(e.target.value)}
           >
             <option value="sandbox">{t("paypalIntegration.envSandbox")}</option>
             <option value="live">{t("paypalIntegration.envLive")}</option>
-          </select>
+          </SelectControl>
         </div>
         <div className="form-actions">
           {status?.configured && (

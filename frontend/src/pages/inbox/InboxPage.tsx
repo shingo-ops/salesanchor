@@ -14,6 +14,7 @@ import "./InboxPage.css";
 import { useNavigate } from "react-router-dom";
 import { PAGE_ICONS } from "../../constants/icons";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { ICON } from "../../constants/iconSizes";
 import { useInboxState } from "./useInboxState";
 import { STATUS_TABS } from "./inbox.types";
@@ -89,7 +90,8 @@ export default function InboxPage() {
                   {t(tab.labelKey)}
                 </button>
               ))}
-              <select
+              <SelectControl
+                variant="tabbar"
                 className="inbox-platform-select"
                 value={state.platformFilter}
                 onChange={(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}
@@ -99,7 +101,7 @@ export default function InboxPage() {
                 <option value="messenger">{t("inbox.platformMessenger")}</option>
                 <option value="instagram">{t("inbox.platformInstagram")}</option>
                 <option value="discord">{t("inbox.platformDiscord")}</option>
-              </select>
+              </SelectControl>
             </div>
 
             <div className="inbox-columns">

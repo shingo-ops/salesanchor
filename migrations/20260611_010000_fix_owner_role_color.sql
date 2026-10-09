@@ -24,39 +24,7 @@
 --   UPDATE tenant_NNN.roles SET color = '#ef4444', updated_at = NOW()
 --   WHERE is_system = TRUE AND color = '#6366f1' AND priority = 1000;
 
-DO $$
-DECLARE
-  r RECORD;
-  updated_count INTEGER;
-  total_updated INTEGER := 0;
-BEGIN
-  FOR r IN
-    SELECT nspname
-    FROM pg_namespace
-    WHERE nspname ~ '^tenant_[0-9]+$'
-    ORDER BY nspname
-  LOOP
-    -- roles テーブルが存在するスキーマのみ更新（CI テスト DB 等の空スキーマをスキップ）
-    IF EXISTS (
-      SELECT 1 FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = r.nspname AND c.relname = 'roles'
-    ) THEN
-      EXECUTE format(
-        'UPDATE %I.roles
-           SET color = ''#6366f1'', updated_at = NOW()
-         WHERE is_system = TRUE
-           AND color     = ''#ef4444''
-           AND priority  = 1000',
-        r.nspname
-      );
-      GET DIAGNOSTICS updated_count = ROW_COUNT;
-      IF updated_count > 0 THEN
-        RAISE NOTICE 'schema=%: owner role color updated (#ef4444 → #6366f1)', r.nspname;
-        total_updated := total_updated + updated_count;
-      END IF;
-    END IF;
-  END LOOP;
-
-  RAISE NOTICE '--- fix_owner_role_color 完了: % 行を更新 ---', total_updated;
-END $$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 所有者ロールの色の一括更新を外した（本番は 0 行）。色は画面で管理する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: owner role color update removed'; END $$;

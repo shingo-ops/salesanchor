@@ -110,6 +110,7 @@ from app.routers import (
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
+    super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
     super_admin_units,  # 単位マスタ中央 admin
     super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
@@ -124,6 +125,7 @@ from app.routers import (
     tcg_shadow_accuracy,  # 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API
     tcg_shadow_review,  # design.md PR-D: 試運転（Shadow run）の確認画面用 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
+    tcg_v102_posts,  # 便C1: v102 の書き写しを直す API
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
@@ -534,6 +536,9 @@ app.include_router(
 app.include_router(
     super_admin_units.router, prefix="/api/v1", tags=["super-admin-units"],
 )
+app.include_router(
+    super_admin_unit_ignore_phrases.router, prefix="/api/v1", tags=["super-admin-units"],
+)
 # ステータスマスタ中央 admin
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
@@ -667,6 +672,11 @@ app.include_router(
 # PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
 app.include_router(
     item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# 便C1: v102 の書き写しを直す API（require_super_admin 限定）
+app.include_router(
+    tcg_v102_posts.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）

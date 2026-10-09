@@ -16,6 +16,7 @@ import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 import { hasEnglishNames } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
+import { TextFieldControl } from "../../components/TextField";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -158,28 +159,28 @@ export default function StaffEditPage() {
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
-            <input required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />
+            <TextFieldControl required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
-            <input required value={form.given_name_jp} onChange={(e) => setForm({ ...form, given_name_jp: e.target.value })} />
+            <TextFieldControl required value={form.given_name_jp} onChange={(e) => setForm({ ...form, given_name_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameKana")}</label>
-            <input value={form.surname_kana} onChange={(e) => setForm({ ...form, surname_kana: e.target.value })} />
+            <TextFieldControl value={form.surname_kana} onChange={(e) => setForm({ ...form, surname_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameKana")}</label>
-            <input value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
+            <TextFieldControl value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameEn")} *</label>
-            <input required aria-required="true" value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
+            <TextFieldControl required aria-required="true" value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
-            <input required aria-required="true" value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
+            <TextFieldControl required aria-required="true" value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-            <input required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
+            <TextFieldControl required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
           </div>
           <div className="form-group"><label>Discord ID</label>
-            <input value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
+            <TextFieldControl value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
           </div>
           <Select
             label={t("staff.role")}
@@ -200,7 +201,7 @@ export default function StaffEditPage() {
             ]}
           />
           <div className="form-group"><label>Firebase UID</label>
-            <input value={form.firebase_uid} onChange={(e) => setForm({ ...form, firebase_uid: e.target.value })} />
+            <TextFieldControl value={form.firebase_uid} onChange={(e) => setForm({ ...form, firebase_uid: e.target.value })} />
           </div>
 
           <h4>{t("staff.uiPreferences")}</h4>

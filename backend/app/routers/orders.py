@@ -30,6 +30,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.cache import invalidate_dashboard_cache
@@ -611,6 +612,7 @@ async def set_order_paid(
         old_data=dict(old_row), new_data={"paid": data.paid},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
     await invalidate_dashboard_cache(tenant_id)
 
     return OrderResponse(**row)

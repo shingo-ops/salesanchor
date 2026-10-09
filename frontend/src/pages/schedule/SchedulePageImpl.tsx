@@ -12,6 +12,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
@@ -275,8 +278,8 @@ function SchedulePopover({
           <div className="schedule-popover__body schedule-popover__body--form">
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.eventTitle")}</span>
-              <input
-                className="schedule-input"
+              <TextFieldControl
+                variant="schedule"
                 value={draft.title}
                 onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
                 placeholder={t("schedule.eventTitle")}
@@ -285,8 +288,9 @@ function SchedulePopover({
 
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.category")}</span>
-              <select
-                className="schedule-input"
+              <SelectControl
+                size="sm"
+                fullWidth
                 value={draft.category}
                 onChange={(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}
               >
@@ -295,7 +299,7 @@ function SchedulePopover({
                     {t(calendar.labelKey)}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
             </label>
 
             <div className="schedule-field schedule-field--inline">
@@ -318,8 +322,8 @@ function SchedulePopover({
             <div className="schedule-field-group">
               <label className="schedule-field">
                 <span className="schedule-field__label">{t("schedule.eventStart")}</span>
-                <input
-                  className="schedule-input"
+                <TextFieldControl
+                  variant="schedule"
                   type="date"
                   value={draft.startDate}
                   onChange={(event) => onDraftChange({ ...draft, startDate: event.target.value })}
@@ -328,8 +332,8 @@ function SchedulePopover({
               {!draft.allDay && (
                 <label className="schedule-field">
                   <span className="schedule-field__label">{t("schedule.time")}</span>
-                  <input
-                    className="schedule-input"
+                  <TextFieldControl
+                    variant="schedule"
                     type="time"
                     value={draft.startTime}
                     onChange={(event) => onDraftChange({ ...draft, startTime: event.target.value })}
@@ -341,8 +345,8 @@ function SchedulePopover({
             <div className="schedule-field-group">
               <label className="schedule-field">
                 <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
-                <input
-                  className="schedule-input"
+                <TextFieldControl
+                  variant="schedule"
                   type="date"
                   value={draft.endDate}
                   onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
@@ -351,8 +355,8 @@ function SchedulePopover({
               {!draft.allDay && (
                 <label className="schedule-field">
                   <span className="schedule-field__label">{t("schedule.time")}</span>
-                  <input
-                    className="schedule-input"
+                  <TextFieldControl
+                    variant="schedule"
                     type="time"
                     value={draft.endTime}
                     onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
@@ -363,8 +367,8 @@ function SchedulePopover({
 
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
-              <input
-                className="schedule-input"
+              <TextFieldControl
+                variant="schedule"
                 value={draft.location}
                 onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
                 placeholder={t("schedule.locationPlaceholder")}
@@ -373,8 +377,8 @@ function SchedulePopover({
 
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-              <textarea
-                className="schedule-textarea"
+              <TextareaControl
+                variant="schedule"
                 rows={4}
                 value={draft.description}
                 onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}

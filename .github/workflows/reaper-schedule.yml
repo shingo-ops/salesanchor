@@ -5,6 +5,7 @@ name: reaper-schedule — マージ済み worktree 定期回収（ADR-114）
 #
 # repository_dispatch で active-work-auto-done 完了後にも即時起動できる
 # Mac が offline なら即時実行は失敗して OK（毎日 03:00 JST の定期で追いつく）
+# main への PR マージ直後にも起動する（R2、docs/handoff/reaper-on-merge/design.md）。GITHUB_TOKEN によるマージでは起動しないため、毎日の定期実行は残す
 
 on:
   schedule:
@@ -12,9 +13,17 @@ on:
   workflow_dispatch:        # 手動実行（テスト・緊急時）
   repository_dispatch:
     types: [reaper-run]    # active-work-auto-done 完了後の即時回収
+  pull_request:
+    types: [closed]
+    branches: [main]   # main へのマージ直後に即時回収（R2）
+
+concurrency:
+  group: reaper
+  cancel-in-progress: false
 
 jobs:
   reaper:
+    if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: [self-hosted, macOS]
     timeout-minutes: 30
     steps:
@@ -23,22 +32,23 @@ jobs:
           fetch-depth: 0
 
       - name: Run reaper（マージ済み worktree を自動削除）
-        # self-hosted runner の actions/checkout は _work 配下に別 checkout を作る。
-        # そのまま実行すると reaper は _work 側の .git を基点に見てしまい、
-        # 本店(/Users/tanizawashingo/worktrees/salesanchor) の実 worktree を走査できず
-        # 「対象0件」になる。2026-07-20 実測のズレを塞ぐため、本店の worktree 親を明示注入する。
+        # self-hosted runner の checkout（_work）を git の基点にすると、MAIN_REPO_ROOT が _work を指し、
+        # 本体の worktree を削除できない（2026-10-09 確認。docs/handoff/reaper-on-merge/design.md §1）。
+        # そのため、スクリプトは最新の checkout のものを使い、cwd は本体リポジトリにする。
+        working-directory: /Users/tanizawashingo/salesanchor
         env:
-          REAPER_WORKTREES_DIR: /Users/tanizawashingo/worktrees/salesanchor
+          REAPER_LOCK_WAIT_SEC: "300"
         run: |
-          if [ ! -f scripts/reaper-worktree.sh ]; then
-            echo "reaper-worktree.sh が見つかりません（PR-A 未マージ）"
+          if [ ! -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
+            echo "reaper-worktree.sh が見つかりません"
             exit 0
           fi
-          bash scripts/reaper-worktree.sh --execute
+          bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" --execute
 
       - name: 未保存あり保護件数をサマリ表示
         if: always()
+        working-directory: /Users/tanizawashingo/salesanchor
         run: |
-          if [ -f scripts/reaper-worktree.sh ]; then
-            bash scripts/reaper-worktree.sh 2>&1 | grep -E "^(⚠️|✅)" || true
+          if [ -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
+            bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" 2>&1 | grep -E "^(⚠️|✅)" || true
           fi

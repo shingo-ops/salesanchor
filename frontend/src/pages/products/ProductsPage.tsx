@@ -17,6 +17,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
+import { SelectControl } from "../../components/Select";
 import type { Product } from "./products.types";
 import { Button } from "../../components/Button";
 
@@ -217,8 +218,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
           <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
             <input className="field-h-md field-w-sm" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
             {tcgTypes.length > 0 && (
-              <select
-                className="field-h-md field-w-sm"
+              <SelectControl
+                className="field-w-sm"
                 value={tcgType}
                 onChange={(e) => { setTcgType(e.target.value); setPage(1); }}
                 aria-label={t("products.filterByTcgType")}
@@ -228,7 +229,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                 {tcgTypes.map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
                 ))}
-              </select>
+              </SelectControl>
             )}
             {/* 行ドラッグ並び替えモード切替（ON で手動順表示＋ドラッグ可） */}
             {hasPermission("products.update") && (

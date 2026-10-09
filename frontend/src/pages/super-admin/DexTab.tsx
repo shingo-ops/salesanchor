@@ -12,6 +12,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 type DexKind = "pokemon" | "trainer";
 
@@ -191,10 +192,10 @@ export default function DexTab() {
       {error && <div className="error-message">{error}</div>}
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "0.5rem 0" }}>
         <label>
-          <select value={kind} onChange={(e) => setKind(e.target.value as DexKind)}>
+          <SelectControl value={kind} onChange={(e) => setKind(e.target.value as DexKind)}>
             <option value="pokemon">{t("superAdmin.dex.kinds.pokemon")}</option>
             <option value="trainer">{t("superAdmin.dex.kinds.trainer")}</option>
-          </select>
+          </SelectControl>
         </label>
         <input
           placeholder={t("common.search")}

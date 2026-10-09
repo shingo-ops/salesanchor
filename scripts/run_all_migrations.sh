@@ -260,8 +260,7 @@ run_sql migrations/20260603_030000_seed_dragonball_products.sql
 # ADR-093: 商品マスタ セット種別(set_type)
 run_sql migrations/20260603_040000_add_products_set_type.sql
 
-# ADR-093: 商品マスタ 型番(mark) をシート B列で更新（日本語タイトル一致・125件）
-run_sql migrations/20260604_010000_seed_product_marks.sql
+# 廃止（PO 2026-10-09）: 20260604_010000_seed_product_marks.sql は毎デプロイで商品マスタの mark を上書きし、画面で直した値を戻したためファイルごと削除。値の正はマスタ（画面・CSV）。ADR-155
 
 # ADR-093: 全商品の発送ラベル既定値を一括設定（品目=Playing card / HSコード=9504400000 / 素材=Paper）
 run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
@@ -876,8 +875,23 @@ run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
 # ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
 run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
+# roles.system_key 追加（全テナント・additive・冪等。owner/admin の権限を役割名ではなく安定キーで判定するため）
+run_sql migrations/20261005_150000_add_roles_system_key.sql
+
 # 新しい仕組み専用の仕入元ルール2列（extraction_layout_rules / extraction_hard_cases）。本番v7は読まない
 run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql
 
-# roles.system_key 追加（全テナント・additive・冪等。owner/admin の権限を役割名ではなく安定キーで判定するため）
-run_sql migrations/20261005_150000_add_roles_system_key.sql
+# 試作版 v102: 単位にしない言い回しマスタ line_unit_ignore_phrases 新設（構造のみ・値は画面から登録・冪等）
+run_sql migrations/20261008_100000_create_line_unit_ignore_phrases.sql
+
+# 試作版 v102: 中分類マスタ type_master に match_by_code（型番で決めるかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_100000_type_master_match_by_code.sql
+
+# 試作版 v102: 中分類マスタ type_master に code_only_match（型番だけでも決めてよいかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_150000_type_master_code_only_match.sql
+
+# 便B: v102 本番エンジン用の列（extraction_items に source_lines・gemini_index、extraction_jobs に gemini_unsure・review_reasons）。構造のみ・冪等（ADR-1007）
+run_sql migrations/20261009_180000_v102_engine_columns.sql
+
+# 便A: 要確認の理由コード表 review_reason_codes 新設（構造のみ・初期行は data/review_reason_codes/ の1回だけのデータ変更・冪等・ADR-1007）
+run_sql migrations/20261009_200000_create_review_reason_codes.sql
