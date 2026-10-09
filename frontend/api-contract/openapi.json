@@ -21152,6 +21152,25 @@
         "title": "ParallelReportResponse",
         "type": "object"
       },
+      "PayInvoiceRequest": {
+        "description": "入金登録 POST ボディ（paid_date は省略可・日付のみ）。",
+        "properties": {
+          "paid_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Date"
+          }
+        },
+        "title": "PayInvoiceRequest",
+        "type": "object"
+      },
       "PaymentFeeSettingCreate": {
         "properties": {
           "currency": {
@@ -42636,7 +42655,7 @@
     },
     "/api/v1/invoices/{invoice_id}/pay": {
       "post": {
-        "description": "入金を登録する（issued/overdue → paid）",
+        "description": "入金を登録する（issued/overdue → paid）。body.paid_date（日付のみ）を渡すとその日の入金として登録できる。",
         "operationId": "pay_invoice_api_v1_invoices__invoice_id__pay_post",
         "parameters": [
           {
@@ -42649,6 +42668,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PayInvoiceRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
