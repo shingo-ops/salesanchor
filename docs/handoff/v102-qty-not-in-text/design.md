@@ -1,7 +1,7 @@
 # design: v102 の数量の写しが原文に無い件を要確認にする
 
 - 状態: 設計案（Opus 自己審査。独立した第二者レビューではない）。PO の条件（recon.md §1、2026-10-08）の実装。
-- 参照: recon.md §2-§4、docs/adr/ADR-154、docs/handoff/v102-prod-switch/design.md（便A の理由コード表に本コードを追加する）。
+- 参照: docs/handoff/v102-qty-not-in-text/recon.md §2-§4、docs/adr/ADR-154、docs/handoff/v102-prod-switch/design.md（便A の理由コード表に本コードを追加する）。
 
 ## 1. 目的
 Gemini が写した数量の数字が、その件の行の原文に無いとき、黙って配信に流さず要確認にして理由を添える。
