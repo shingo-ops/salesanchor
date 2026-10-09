@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 type RateType = "rate" | "fixed";
@@ -203,7 +204,7 @@ export default function CommissionSettingsPage() {
                       <tr key={role} data-testid={`settings-row-${role}`}>
                         <td>{ROLE_LABELS[role]}</td>
                         <td>
-                          <select
+                          <SelectControl
                             value={cfg.type}
                             onChange={(e) =>
                               updateRole(role, { type: e.target.value as RateType })
@@ -213,7 +214,7 @@ export default function CommissionSettingsPage() {
                           >
                             <option value="rate">{t("commissions.typeRate")}</option>
                             <option value="fixed">{t("commissions.typeFixed")}</option>
-                          </select>
+                          </SelectControl>
                         </td>
                         <td>
                           <input

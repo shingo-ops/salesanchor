@@ -18,6 +18,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 interface TenantPolicy {
   inventory_agg_filter: "none" | "cheapest" | "balanced";
@@ -164,7 +165,8 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-agg-filter">
               {t("tenantPolicy.inventoryAggFilter")}
             </label>
-            <select
+            <SelectControl
+              fullWidth
               id="tp-agg-filter"
               data-testid="tp-agg-filter"
               value={form.inventory_agg_filter}
@@ -180,7 +182,7 @@ export default function TenantPolicyPage() {
               <option value="balanced">
                 {t("tenantPolicy.inventoryAggFilterBalanced")}
               </option>
-            </select>
+            </SelectControl>
           </div>
 
           <div className="form-group">
@@ -263,7 +265,8 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-incoterms">
               {t("tenantPolicy.dutyIncoterms")}
             </label>
-            <select
+            <SelectControl
+              fullWidth
               id="tp-incoterms"
               data-testid="tp-incoterms"
               value={form.duty_incoterms}
@@ -273,14 +276,15 @@ export default function TenantPolicyPage() {
               <option value="DAP">DAP</option>
               <option value="DDU">DDU</option>
               <option value="DDP">DDP</option>
-            </select>
+            </SelectControl>
           </div>
 
           <div className="form-group">
             <label htmlFor="tp-issue-mode">
               {t("tenantPolicy.issueMode")}
             </label>
-            <select
+            <SelectControl
+              fullWidth
               id="tp-issue-mode"
               data-testid="tp-issue-mode"
               value={form.issue_mode}
@@ -297,7 +301,7 @@ export default function TenantPolicyPage() {
               <option value="wise_pdf">
                 {t("tenantPolicy.issueModeWisePdf")}
               </option>
-            </select>
+            </SelectControl>
           </div>
 
           {canEdit && (

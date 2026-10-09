@@ -5,6 +5,7 @@
 #   ① 未コミット・未push がゼロ（絶対保護・最優先）
 #   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
+#   ④ 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら削除しない
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
 #
@@ -16,6 +17,8 @@
 #                               未指定（本番）: git worktree list --porcelain で全登録 worktree を対象にする
 #   REAPER_ACTIVE_WORK_FILE   — active-work.md のパス（既定: <repo>/.claude-pipeline/active-work.md）
 #   REAPER_REPO_NAME          — gh コマンドに使うリポジトリ名（既定: shingo-ops/salesanchor）
+#   REAPER_LOCK_WAIT_SEC      — ロック取得できないときの待ち秒数（既定 0 = 待たずに skip）
+#   REAPER_LOCK_DIR           — ロックの場所（テスト用。既定 /tmp/reaper-worktree.lock.d）
 #
 # 使用方法:
 #   bash scripts/reaper-worktree.sh            # dry-run（削除予定の一覧のみ）
@@ -26,13 +29,23 @@ if [ "${1:-}" = "--execute" ]; then
   EXECUTE=1
 fi
 
-# ── 多重起動ガード（全経路共通: cron / LaunchAgent / 手動）─────────────────
+# ── 多重起動ガード（全経路共通: cron / LaunchAgent / 手動 / GitHub Actions）──────
 # mkdir はアトミック操作のため macOS/Linux 両対応の排他ロックとして機能する
-_REAPER_LOCK="/tmp/reaper-worktree.lock.d"
-if ! mkdir "${_REAPER_LOCK}" 2>/dev/null; then
-  echo "[reaper] another instance is running; skip."
-  exit 0
-fi
+# REAPER_LOCK_WAIT_SEC: 取得できないときに待つ秒数（既定 0 = 待たずに skip。
+#   new-worktree.sh からの呼び出しは待たせない。GitHub Actions は 300 を指定する）
+# REAPER_LOCK_DIR: テスト用にロックの場所を差し替える（既定は本番のロック）
+_REAPER_LOCK="${REAPER_LOCK_DIR:-/tmp/reaper-worktree.lock.d}"
+_LOCK_WAIT="${REAPER_LOCK_WAIT_SEC:-0}"
+_WAITED=0
+until mkdir "${_REAPER_LOCK}" 2>/dev/null; do
+  if [ "${_WAITED}" -ge "${_LOCK_WAIT}" ]; then
+    echo "[reaper] another instance is running; skip."
+    exit 0
+  fi
+  sleep 10
+  _WAITED=$(( _WAITED + 10 ))
+done
+[ "${_WAITED}" -gt 0 ] && echo "[reaper] waited ${_WAITED}s for lock"
 # shellcheck disable=SC2064
 trap "rmdir '${_REAPER_LOCK}' 2>/dev/null || true" EXIT INT TERM
 
@@ -52,6 +65,7 @@ WILL_DELETE=()
 SKIP_IN_PROGRESS=()
 SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
+SKIP_IN_USE=()
 
 # ── worktree リスト収集 ──────────────────────────────────────────────────────
 # REAPER_WORKTREES_DIR 指定あり（テスト用オーバーライド）: 単一ディレクトリ走査
@@ -128,6 +142,9 @@ fi
 echo "   対象 worktree 数: ${#WT_PATHS[@]} 件"
 echo ""
 
+# ── 使用中の検出用: 全プロセスの作業ディレクトリ（cwd）一覧を1回だけ取得 ──
+_CWD_LIST="$(lsof -a -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+
 # ── worktree 走査 ──────────────────────────────────────────────────────────
 for _IDX in "${!WT_PATHS[@]}"; do
   WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
@@ -139,6 +156,14 @@ for _IDX in "${!WT_PATHS[@]}"; do
   if [ -n "${ROW}" ]; then
     ACTIVE_STATUS="$(echo "${ROW}" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
     [ -z "${ACTIVE_STATUS}" ] && ACTIVE_STATUS="ERROR"
+  fi
+
+  # ── チェック 1.5: 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら保護 ──
+  # マージ直後の即時回収（R2）で、まだ作業中のセッションのフォルダを消さないため。
+  _WT_NORM="${WORKTREE_PATH%/}"
+  if printf '%s\n' "${_CWD_LIST}" | awk -v p="${_WT_NORM}" '$0==p || index($0, p"/")==1 {f=1} END {exit !f}'; then
+    SKIP_IN_USE+=("${BRANCH}")
+    continue
   fi
 
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
@@ -245,6 +270,12 @@ done
 # ── サマリ表示 ────────────────────────────────────────────────────────────
 echo "=== reaper 結果 ==="
 echo ""
+
+if [ "${#SKIP_IN_USE[@]}" -gt 0 ]; then
+  echo "🧑‍💻 使用中（削除しない）: ${#SKIP_IN_USE[@]} 件"
+  for B in "${SKIP_IN_USE[@]}"; do echo "   - ${B}"; done
+  echo ""
+fi
 
 if [ "${#SKIP_IN_PROGRESS[@]}" -gt 0 ]; then
   echo "🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: ${#SKIP_IN_PROGRESS[@]} 件"

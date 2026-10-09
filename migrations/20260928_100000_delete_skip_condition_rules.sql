@@ -10,5 +10,7 @@
 -- 参照整合性: supplier_knowledge_links.knowledge_rule_id は ON DELETE CASCADE
 --   （migrations/20260924_050000_create_supplier_knowledge_links.sql）のため、
 --   この DELETE で紐付けレコードも連動して削除される。
-DELETE FROM public.knowledge_rules
-WHERE category = 'skip_condition';
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- skip_condition の削除を外した（本番は 0 行）。knowledge_rules は画面／CSV で管理する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: skip_condition delete removed'; END $$;

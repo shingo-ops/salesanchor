@@ -810,8 +810,7 @@
   gap: var(--space-2);
 }
 
-.schedule-input,
-.schedule-textarea {
+.schedule-input {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -825,13 +824,7 @@
   padding: 0 var(--space-3);
 }
 
-.schedule-textarea {
-  padding: var(--space-2) var(--space-3);
-  resize: vertical;
-}
-
-.schedule-input:focus,
-.schedule-textarea:focus {
+.schedule-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: var(--focus-ring-shadow);

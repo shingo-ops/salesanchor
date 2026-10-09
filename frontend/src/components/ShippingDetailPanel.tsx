@@ -25,6 +25,8 @@ import { api, ApiError } from "../lib/api";
 import { auth } from "../lib/firebase";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { SelectControl } from "./Select";
+import { TextareaControl } from "./Textarea";
 
 export interface ShippingDetailDto {
   id: number;
@@ -508,7 +510,8 @@ export default function ShippingDetailPanel({
             >
               <div className="form-group">
                 <label>{t("shipping.carrier")}</label>
-                <select
+                <SelectControl
+                  fullWidth
                   value={form.carrier}
                   onChange={(ev) => setField("carrier", ev.target.value)}
                   data-testid="ship-input-carrier"
@@ -518,7 +521,7 @@ export default function ShippingDetailPanel({
                       {t(opt.labelKey)}
                     </option>
                   ))}
-                </select>
+                </SelectControl>
               </div>
               {TEXT_FIELDS.shippingExtras.map((f) => (
                 <div className="form-group" key={f.key}>
@@ -546,7 +549,7 @@ export default function ShippingDetailPanel({
           {/* メモ */}
           <div className="form-group">
             <label>{t("shipping.shipMemo")}</label>
-            <textarea
+            <TextareaControl
               value={form.ship_memo}
               onChange={(ev) => setField("ship_memo", ev.target.value)}
               data-testid="ship-input-ship_memo"

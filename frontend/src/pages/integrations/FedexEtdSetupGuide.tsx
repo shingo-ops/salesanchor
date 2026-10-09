@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { Badge } from "../../components/Badge";
 import { Check } from "../../constants/icons";
 import CarrierCredentialForm from "./CarrierCredentialForm";
@@ -490,14 +491,15 @@ export function FedexEtdSetupGuide({
           <div className="etd-upload">
             <div className="form-group">
               <label htmlFor="etd-environment">{t("carrierIntegration.fedexEtdGuideEnvironmentLabel")}</label>
-              <select
+              <SelectControl
+                fullWidth
                 id="etd-environment"
                 value={etdEnvironment}
                 onChange={(e) => setEtdEnvironment(e.target.value as Env)}
               >
                 <option value="sandbox">{t("carrierIntegration.fedexEtdGuideEnvironmentSandbox")}</option>
                 <option value="production">{t("carrierIntegration.fedexEtdGuideEnvironmentProduction")}</option>
-              </select>
+              </SelectControl>
             </div>
 
             <div className="etd-upload__grid">

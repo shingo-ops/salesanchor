@@ -267,7 +267,7 @@ def test_ambiguous_product_adds_product_multiple_review_with_candidate_ids():
     assert {"line": 2, "kind": pf.REVIEW_PRODUCT_MULTIPLE, "candidates": [1, 2]} in row["review"]
 
 
-def test_matched_with_boundary_dropped_adds_product_boundary_review():
+def test_matched_with_boundary_dropped_keeps_record_without_product_boundary_review():
     products = (
         ProductEntry(id=1, product_code=None, mark=None, work_id=1, search_keywords=("サンプル拡張",), exclude_keywords=()),
         ProductEntry(id=9, product_code=None, mark=None, work_id=1, search_keywords=("ab",), exclude_keywords=()),
@@ -277,13 +277,15 @@ def test_matched_with_boundary_dropped_adds_product_boundary_review():
     )
     row = _one("サンプル拡張 xabx\n3@1,500円", _it([1, 2], "1,500円", "3"), product_first=masters)
     assert row["match_status"] == "matched" and row["product_id"] == 1
-    assert {"line": 2, "kind": pf.REVIEW_PRODUCT_BOUNDARY, "candidates": [9]} in row["review"]
+    assert "product_boundary" not in _kinds(row)
+    assert row["match_boundary_dropped"] == [9]
 
 
 def test_matched_without_boundary_dropped_has_no_product_review():
     row = _one("サンプル拡張\n3@1,500円", _it([1, 2], "1,500円", "3"))
     assert row["match_status"] == "matched"
-    assert not {pf.REVIEW_PRODUCT_NOT_IN_MASTER, pf.REVIEW_PRODUCT_MULTIPLE, pf.REVIEW_PRODUCT_BOUNDARY} & set(_kinds(row))
+    assert not {pf.REVIEW_PRODUCT_NOT_IN_MASTER, pf.REVIEW_PRODUCT_MULTIPLE, "product_boundary"} & set(_kinds(row))
+    assert row["match_boundary_dropped"] == []
 
 
 # --- 完売・記録 -------------------------------------------------------------------------------
@@ -341,7 +343,7 @@ def test_loader_reads_condition_units_and_active_ignore_phrases(monkeypatch):
     def execute(stmt):
         sql = str(stmt)
         calls.append(sql)
-        rows = [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
+        rows = [] if "type_master" in sql else [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
         return SimpleNamespace(fetchall=lambda: rows)
 
     session = MagicMock()

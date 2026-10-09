@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { SelectControl } from "../../components/Select";
 import type { Conversation } from "../../lib/messages";
 import { getInitials, relativeTime } from "./inbox.types";
 
@@ -144,17 +145,18 @@ export function InboxConversationList({
       {/* Page フィルタ */}
       {(availablePageIds.length > 1 || !!pageIdFilter) && (
         <div className="inbox-page-filter-wrap">
-          <select
+          <SelectControl
+            size="sm"
+            fullWidth
             value={pageIdFilter}
             onChange={(e) => onPageFilterChange(e.target.value)}
             aria-label="Filter by Page"
-            className="inbox-page-filter-select"
           >
             <option value="">{t("inbox.allPages")}</option>
             {availablePageIds.map((pid) => (
               <option key={pid} value={pid}>Page: {pid}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
       )}
 
