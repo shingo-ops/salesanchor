@@ -2,4 +2,4 @@ branch: release/line-auto-export-app
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/line-auto-export-app | LINE自動書き出しアプリ（ユーザー補助・端末内・ADB非依存） | 2026-09-17 23:50 | IN_PROGRESS | | | 段階1(最小APK)ビルド済み・実機検証待ち |
+| release/line-auto-export-app | LINE自動書き出しアプリ（ユーザー補助・端末内・ADB非依存） | 2026-09-17 23:50 | DONE | 4004 | | 段階1(最小APK)ビルド済み・実機検証待ち |
