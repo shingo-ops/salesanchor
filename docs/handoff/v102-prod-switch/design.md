@@ -372,3 +372,49 @@ recon（基準 origin/main f0d710185、file:line は本節に転記）。本番�
 | 未設定時は v6（安全側） | get_engine のテスト（test_line_analysis_v102_svc.py:42-50） | CI |
 | compose の既定値 | PR レビュー。compose の既定値を検査するテスト・CI は無い（git grep で docker-compose.yml:218 以外に参照なし） | PR レビュー |
 | 費用 | llm_usage_events（purpose='line_extraction'）を切替後に日次確認 | 設計担当 Opus |
+
+---
+
+## 15. 便PQ（v102 の価格・数量を Gemini の写しの数字で補う／数字にできない時は要確認）
+設計: Opus（2026-10-10）。PO 承認: 「数字のみに整形することは出来る？」「→対策が必要」「PRマージ、デプロイまで完走させてくれ」。カード: card-PQ.md。根拠: recon.md §8。
+
+### 15-1. 目的
+本番の v102 で、Gemini の写しに数字があるのに price_normalized / quantity_normalized が NULL になる件（数量9件・価格4件、うち数量6件は要確認にならず配信）をなくす。補えない件は必ず要確認にして配信から外す。
+
+### 15-2. 変更前後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| backend/app/services/gemini_raw_copy_v101.py:854-874 `_extract_one` | price_normalized / quantity_normalized = resolve_price_quantity の結果そのまま | `if v102:`（:886 付近）で、結果が None のときだけ `_fill_from_copy`（:842）で Gemini の写しの数字を採用。pq が値を持つ時は変えない |
+| 同 :828 `_single_number`（新規） | なし | 写しに数字がちょうど1つの時だけ数にする。万・千・億・k を含む／0個／2個以上／小数は None |
+| 同 :1181 `_item_reasons` | 数量・価格が NULL でも理由なし | 写しに数字があるのに補いの後も NULL なら `quantity_unresolved` / `price_unresolved` を review に足す |
+| 理由コード quantity_unresolved | なし | 定数 :1153、frontend ja/en の reviewReason、整合テスト、表の1行（docs/handoff/v102-prod-switch/data/review_reason_codes/qu_*.sql、seed_20261010_quantity_unresolved.sql） |
+
+補いの採用条件は2つ両方: ①数が1つに決まる ②その数が、その件の行（own_text）に独立した数として現れる（既存の `_quantity_not_in_text(..., v102=True)` と同じ判定を再利用）。補った印の理由コードは足さない。
+理由が1つでも付けば line_analysis_v102_svc.py:559 で needs_review=True になり、配信から外れる（tcg_distribution_svc.py:262、既存の流れ）。読み取り時の price_unresolved の付与（tcg_condition_review_svc.py:144）は `SELECT DISTINCT reason` で重複を除くため、保存値に price_unresolved が入っていても二重にならない（:151 の除外条件は price_normalized が非 NULL の時だけ外すので、NULL のままなら残る＝正しい）。
+
+### 15-3. 対象外（理由: 共有経路への波及）
+v6・v10.1・shadow・`_price_of`（付け直し）・resolve_price_quantity 本体・_STOCK_START_RE と _mask_product_name の根本修正。いずれも v10.1 や他の経路と共有されており、v102 だけの補いで足りるため触らない。
+
+### 15-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1 保存値が非 NULL の価格・数量で、値が変わる件 = 0 | 置き換え試験（現行702件、旧・新コードを同じ入力で通し保存値と比較）: 0件 |
+| K2 数量 NULL→値 9件前後・価格 NULL→値 4件前後 | 同試験: 数量9件・価格4件（2件は数量と価格の両方） |
+| K3 数字があるのに NULL のまま残る件はすべて理由が付く | 同試験: 残る件 0（理由付与そのものは単体テストで確認） |
+| K4 価格・数量以外の違い = 0 | 同試験: 旧コード対新コードで product_id・unit・condition・match_status・status・name・ship・理由コードの差 0件 |
+| 補い／補えず理由／補わない（写しの数が原文に無い）／v10.1 回帰 | backend/tests/test_gemini_raw_copy_v101.py の test_pq_*・test_single_number |
+| 理由コードの SSOT 整合 | backend/tests/test_review_reason_codes_consistency.py |
+
+置き換え試験の限界: dump.json に状態マスタ・直前投稿・人の判断が無いため、それらは空・ダミーで実行した。K4 は旧コードと新コードの差であり、保存値の product_id・unit・condition との比較ではない。価格数量の order は投稿元ごとに旧コードが保存値を最もよく再現する順を選んだ。
+
+### 15-5. 戻し方
+この PR を戻す。表に入れた1行は qu_rollback.sql（その1コードだけ戻す）。戻した後は、補われた件の価格・数量が元の NULL に戻り、quantity_unresolved の理由は消える（再解析時）。
+
+### 15-6. 外部事例
+外部事例は使わない。新しい仕組みを足さず、既存の検算（_quantity_not_in_text）と既存の理由コードの流れに沿って、v102 の1か所に補いを足すだけのため。
+
+### 15-7. 維持の仕組み
+| 何を守るか | 仕組み | 担当 |
+|---|---|---|
+| 理由コードの表・コード・翻訳の一致 | tests/test_review_reason_codes_consistency.py（quantity_unresolved・price_unresolved を含む） | CI |
+| 補い・補えず理由・v10.1 不変 | tests/test_gemini_raw_copy_v101.py の test_pq_*・test_single_number | CI |

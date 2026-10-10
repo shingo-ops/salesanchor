@@ -1,0 +1,3 @@
+ .../components/SoldOutResultsPanel.test.tsx        | 40 ++++++++++++++++------
+ .../super-admin/components/SoldOutResultsPanel.tsx | 18 +++++-----
+ 2 files changed, 40 insertions(+), 18 deletions(-)

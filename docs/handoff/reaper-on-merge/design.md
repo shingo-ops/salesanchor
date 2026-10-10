@@ -81,3 +81,39 @@
   - フォークの PR の扱いのリポジトリ設定。
 
 worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTREE_LIMIT=101 を1回限り使用（PO の個別許可による1回限りの例外。ADR-114 §6 は上限の引き上げ案内を廃止している。本 PR が回収の仕組みの修正のため）
+
+## R8：取り戻せる部屋だけ消す（2026-10-10、PO 承認）
+
+### 目的
+- PO 方針の原文：「途中の作業を消してしまうのは避けて本当に必要ない場合に削除してほしい」。
+- 設計者提案「後から完全に取り戻せるときだけ消す」に、PO が y（2026-10-10）。
+
+### 変更前の穴
+- `scripts/reaper-worktree.sh` 旧 L210：`origin/<branch>` も upstream も無い部屋は、ローカルのみのコミットを未保存扱いしない（コメント「upstream 未設定だけを理由に未push 扱いしない」）。
+- 削除は L383 `git worktree remove --force` ＋ L388 `git branch -D`。ローカルだけにあるコミットは、削除後に取り戻せない。
+- 走査前に fetch が無く、origin の ref が古いまま判定していた。
+- 2026-10-10 時点の該当：1 件（`release/import-trend-graph-fix-gate`）。
+
+### 変更後の条件
+- 未コミット（台帳 `.claude-pipeline/` のみは除く）が無い。
+- かつ HEAD までの全コミットが、origin のどれかの ref（main・各ブランチ）から到達できる：`git rev-list --count HEAD --not --remotes=origin` が 0。upstream の設定有無・向き先は問わない。
+- コミットが1つも無い部屋（HEAD なし）は、失うコミットが無いので判定しない。
+- 判定は走査前の `git fetch --prune origin` の後に行う。
+
+### fetch 失敗時は削除しない
+- fetch に失敗したら、警告を出し、その回の削除候補を空にする（保護・分類の表示は通常どおり）。
+- テストは `REAPER_SKIP_FETCH=1` で fetch を省略し、`REAPER_FETCH_REMOTE` で remote 名を差し替えられる。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1：テストが全 PASS | `bash scripts/tests/test-reaper-safety.sh` が FAIL 0（R8-a〜d を含む） |
+| K2：到達不能コミットを持つ部屋が削除対象に出ない | 本体で dry-run を実行し、`reach.tsv` の unreachable_count>0 の行が「削除対象」に 0 件であること |
+| K3：マージ後の自 PR の部屋が消え、fetch 失敗の警告が出ない | マージ後の reaper-schedule の run ログで、自 PR のブランチが削除され、「git fetch に失敗しました」が無いこと |
+| K4：fetch 失敗時は削除しない | テスト R8-d（存在しない remote 名で呼ぶ）で、削除対象が出ず、警告が出ること |
+
+### 戻し方
+- 本 PR を revert する（スクリプト・テスト・文書のみ。データの変更なし）。
+
+### 変えないこと
+- 削除部（L383・L388）、gh によるマージ済み・closed 判定、使用中保護、排他ロック、IN_PROGRESS/REVIEW の保護、台帳のみの変更を未保存に数えない扱い。
