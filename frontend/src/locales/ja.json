@@ -3800,6 +3800,7 @@
     "empty_box_master_unavailable": "空箱の状態定義が使えない",
     "unit_unresolved": "単位を特定できない",
     "price_unresolved": "価格を読み取れない",
+    "quantity_unresolved": "数量を読み取れない",
     "excluded": "除外の対象",
     "item_shape_invalid": "Gemini の出力の形が正しくない",
     "price_not_in_lines": "価格が原文の行に無い",

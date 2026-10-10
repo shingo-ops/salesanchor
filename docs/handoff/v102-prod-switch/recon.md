@@ -177,3 +177,9 @@ GEMINI_KEY=present
  raw_copy_v101_f_c   | t         | 5321 | 2026-10-07 23:13:07.604272+00
 ```
 
+
+## 8. 便PQ の recon 要点（社外秘の原文なし・件数のみ。詳細: /tmp/CC報告ファイル/v102-pq-recon/recon.md、基準 origin/main 853be509c）
+- v102 は価格・数量を原文の目印から取り直す: backend/app/services/gemini_raw_copy_v101.py:854-874 → backend/app/services/extraction_judgement_svc.py:599 `resolve_price_quantity`。Gemini の写しは検算にだけ使う。
+- 本番 1,079件で数字があるのに NULL: 数量 9件（うち6件は要確認にならず配信）、価格 4件。原因は (a) 1行に「個」付きの数が2つ（backend/app/services/extraction_judgement_svc.py:636-638 multiple_values）、(b) 行頭「■」の在庫行が商品名に入り `_mask_product_name`（backend/app/services/extraction_judgement_svc.py:526-538）で消える。
+- resolve_price_quantity の reasons（price_reasons）を読む本番コードは 0件。数量 NULL を要確認にする理由が無い。
+- 要確認の流れ: backend/app/services/line_analysis_v102_svc.py:559（理由があれば needs_review=True）→ backend/app/services/tcg_distribution_svc.py:262（配信から除外）。読み取り時の price_unresolved: backend/app/services/tcg_condition_review_svc.py:144・:151。

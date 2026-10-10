@@ -37,3 +37,14 @@
 | dryrun | |
 | commit | |
 | verify | |
+
+## 追加: quantity_unresolved（便PQ）
+quantity_not_in_text の追加（qty_*）の verify 成功の後にだけ、qu_precheck（ROWS|30・HAS_QU|0）→ qu_dryrun（CHECK_OK 1・DRYRUN_OK）→ qu_commit（CHECK_OK 1・COMMIT_DONE）→ qu_verify（quantity_unresolved|system|analysis・ROWS|31）。戻し方 qu_rollback.sql（この1コードだけ戻す）。
+
+| 項目 | 内容 |
+|---|---|
+| 実施日時 | |
+| precheck | |
+| dryrun | |
+| commit | |
+| verify | |

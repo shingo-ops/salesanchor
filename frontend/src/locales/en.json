@@ -3800,6 +3800,7 @@
     "empty_box_master_unavailable": "Empty-box definition unavailable",
     "unit_unresolved": "Unit not identified",
     "price_unresolved": "Price not readable",
+    "quantity_unresolved": "Quantity not readable",
     "excluded": "Excluded",
     "item_shape_invalid": "Gemini output has an invalid shape",
     "price_not_in_lines": "Price not found in the source lines",
