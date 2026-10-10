@@ -36,19 +36,10 @@ ALTER TABLE public.tenant_llm_budgets
 COMMENT ON COLUMN public.tenant_llm_budgets.last_hard_stop_notified_at IS
     'Sprint 5 (F5) 同梱: notify_budget_exhausted の 1h de-bounce 用タイムスタンプ。NULL = 未通知、NOW() - 1h より前 = 再通知 OK。';
 
--- === 2. tenant_004 / tenant_006 seed (Sprint 4 申し送り対応) ===
--- Sprint 4 Reviewer 指摘: 行が無いため check_budget が NO_BUDGET_ROW を返し、
--- LLM フォールバックが完全に呼ばれない。実運用に必要な行を冪等投入する。
---
--- 注意: ON CONFLICT DO NOTHING のため、既存値（手動で別予算を設定済の場合等）
--- は上書きしない。新規テナントのみ初期値を投入する。
-INSERT INTO public.tenant_llm_budgets
-    (tenant_id, monthly_budget_usd, current_month_usd,
-     last_reset_at, hard_stop, notify_admin)
-VALUES
-    (4, 5.00, 0, NOW(), TRUE, TRUE),
-    (6, 1.00, 0, NOW(), TRUE, TRUE)
-ON CONFLICT (tenant_id) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- tenant_llm_budgets の tenant 4・6 の初期行の seed を外した（本番は 2/2 あり）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: tenant_llm_budgets seed removed (066)'; END $$;
 
 -- ============================================================================
 -- Rollback:
