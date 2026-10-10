@@ -746,3 +746,47 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 ### 通常実行への影響
 
 通常実行には影響しない（one-shotフラグ＋専用アクション`RUN_ALL_BLOCKING`経由のみ）。既存の帯（`RunStatusOverlay`の非遮断モード）はPO決定Bで「安易に外さない」と決まっているので、挙動を変えていない。
+
+## 追補 2026-10-11 EDITをノードクリックにし、配信をダイアログの消滅で確認する
+
+### 実測した事実（2026-10-11 `uiautomator dump`）
+
+Termuxの保存ダイアログは**アクセシビリティに公開されている**ことが実機で確認できた。
+
+```
+[TextView] text="Save file in ~/downloads/"   id=alertTitle
+[EditText] text="[LINE] …のトーク.txt"         clickable=true
+[Button]   text="EDIT"             clickable=true  id=button1  bounds=[777,1155][969,1317]
+[Button]   text="キャンセル"        clickable=true  id=button2
+[Button]   text="OPEN DIRECTORY"   clickable=true  id=button3
+```
+
+EDITは`clickable=true`。boundsの中心 (873,1236) は、既存の比率座標タップ（`EDIT_TAP_X_RATIO=0.8074`→1080幅で872px、`EDIT_TAP_Y_RATIO=0.5287`→2340高で1237px）の座標とほぼ一致していた。
+
+**過去の記録「Termuxの保存ダイアログのEDITボタンはuiautomatorに露出しない（2026-09-17、`/root/line-auto-export/auto-export.sh:13`のコメント・同日のスクリーンショットで確認、本書「追補 2026-10-08」2.参照）」は、今回（2026-10-11）の実測と一致しない。** 一致しない理由は不明（推測は書かない）。
+
+### 「成功と記録されたのに届いていない」事象の実測（2026-10-11 遮断モード検証）
+
+- **06:30**: 9段階すべて完走し、実行ログは`result:"success"`。しかしTermux側（`outbox.sqlite3`）に対応する`received`の記録が無い＝実際には送信が行われていない。
+- **06:32**: Termuxの保存ダイアログが開いたまま残っていた（EDITが押された形跡が無い）。
+
+`GestureCompat.tap`の`dispatchGesture`は戻り値が「OSがジェスチャを受理した」ことしか意味せず、実際に指の動きとして再生され、かつTermux側がそれを処理したかは別問題（本書「施錠前に待つ時間」の節と同じ非同期性の問題）。EDITタップでは、受理されたのに実際には押されず、ダイアログが残ったまま後続処理（成功記録・施錠）が進んでしまうケースがあることが実機で確認された。
+
+### 対処
+
+1. **EDITを「ノードのクリック」で優先的に押す**: `NodeOps.findNodeByTextInPackage(service, "EDIT", "com.termux")`でEDITボタンのノードを探す（text完全一致＋パッケージ名が`com.termux`であることを必須条件にした専用の探索メソッド。既存の`findNodeByLabel`/`matchesLabel`はtext/content-descのいずれかの完全一致でパッケージ名を見ないため、LINE側に偶然同じラベルのノードがあった場合の誤爆を避けるために新設した。既存メソッドの挙動は変えていない）。
+2. 見つかれば`NodeOps.clickNode`で押す（クリック可能な祖先が無ければノード領域中心への座標タップへフォールバック）。`NodeOps.ClickResult`に`viaAction`を追加し、`ACTION_CLICK`を委譲できたか（true）/bounds中心へのgestureタップにフォールバックしたか（false）を呼び出し側が区別できるようにした（既存の呼び出し元は`accepted`/`traceMessage`のみを見ており、この追加で挙動は変わらない）。
+3. 見つからなければ、従来の比率座標タップ（`EDIT_TAP_X_RATIO`/`EDIT_TAP_Y_RATIO`、値は変更していない）をそのまま行う（フォールバック）。
+4. どの経路を使ったかを`edit_button`のstepログのextraフィールド`editClickPath`に記録する: `"node-action"`（ACTION_CLICKで押せた）／`"node-bounds-tap"`（ノードは見つかったがbounds中心へ座標タップした）／`"ratio-tap"`（ノードが見つからず従来の比率座標タップをした）。
+5. **押した後、ダイアログが閉じたことを確認してから成功と判定する**: `EDIT_CLOSE_POLL_MS`（150ms）間隔・`EDIT_CLOSE_TIMEOUT_MS`（3000ms）を上限に、同じ探索でEDITのノードが消えたかを見る。消えたら成功（`finish(true, null)`）、実行ログに`editDialogClosed:true`・`editCloseWaitMs`を記録する。3,000ms経っても残っていたら、新しい段階名`edit_not_closed`で`finish(false, STAGE_EDIT_NOT_CLOSED)`とし、`editDialogClosed:false`を記録する（これにより`armRetryOnFailure`の経路で`scheduleRetryAfterFailure`が自動で張られ、次回で取り戻せる）。この確認は「EDITを押した後・施錠の待ちに入る前」に挟む。既存の施錠・`lockSkipped`・`drainCallbackSummary()`・`LOCK_DELAY_AFTER_EDIT_MS`の流れは変えていない。
+
+**ノードが見つからない＝消えた＝成功、とする（安全側）**。探索が例外で失敗した場合も成功扱いにする。失敗にするのは「EDITのノードがまだ存在する」という明確な未押下の証拠があるときだけにし、探索自体が不調なだけのケースを誤って失敗扱いにしない（既存の挙動を壊さないため）。
+
+### ノードクリックが使えると分かった意味（遮断モードへの展望）
+
+2026-10-11実機で、ノードクリック（`ACTION_CLICK`）は全画面の遮断モードの帯（`RunStatusOverlay`の`blocking`モード、`FLAG_NOT_TOUCHABLE`を外して全タッチを消費する窓）を素通りすることを確認した（06:30の遮断モード検証）。一方、座標タップ（`dispatchGesture`）は帯に吸われる。EDITをノードクリックで押せるようになったことで、遮断モード自体が実用上機能する可能性が出てきた。
+
+### 守ること
+
+- `EDIT_TAP_X_RATIO`/`EDIT_TAP_Y_RATIO`/`EDIT_TAP_SETTLE_DELAY_MS`の値は変更していない。
+- EDITノードの探索（`findNodeByTextInPackage`）で例外が起きた場合は成功扱いにする（上記）。

@@ -47,6 +47,16 @@ final class LineExportFlow {
     /** auto-export.sh:154 `focus | grep -q TermuxFileReceiverActivity`。 */
     private static final String TERMUX_EDIT_CLASS_NAME = "TermuxFileReceiverActivity";
     /**
+     * Termuxの保存ダイアログのEDITボタンのテキスト（design.md追補 2026-10-11、2026-10-11実機
+     * uiautomator dumpで確認。`[Button] text="EDIT" clickable=true`）。
+     */
+    private static final String EDIT_BUTTON_LABEL = "EDIT";
+    /**
+     * TermuxのパッケージID。EDITボタン探索（NodeOps.findNodeByTextInPackage）でLINE側の
+     * 別ノードに誤って一致しないようにするための必須条件（design.md追補 2026-10-11）。
+     */
+    private static final String TERMUX_PACKAGE_NAME = "com.termux";
+    /**
      * LINEのパッケージ名。LineNotifyListenerService.java:53 の `PACKAGE_LINE` と同じ値
      * （同サービスが対象にしているLINEの会話通知のパッケージ）。手順3の到達判定に使う。
      */
@@ -73,6 +83,11 @@ final class LineExportFlow {
     private static final String STAGE_SHARE_SHEET = "share_sheet";
     private static final String STAGE_TERMUX_TARGET = "termux_target";
     private static final String STAGE_EDIT_BUTTON = "edit_button";
+    /**
+     * design.md追補 2026-10-11: EDITを押した後、ダイアログ（EDITノード）がEDIT_CLOSE_TIMEOUT_MS
+     * 経っても消えなかった（＝押せていない明確な証拠がある）場合の失敗段階名。
+     */
+    private static final String STAGE_EDIT_NOT_CLOSED = "edit_not_closed";
 
     // ---- 待ち時間（ADB版と同値に揃える。design.md追補の「待ち時間」節） --------------------
 
@@ -99,6 +114,23 @@ final class LineExportFlow {
     /** auto-export.sh:157 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）を比率に換算した値。 */
     private static final float EDIT_TAP_X_RATIO = 0.8074f;
     private static final float EDIT_TAP_Y_RATIO = 0.5287f;
+
+    /**
+     * EDITを押した後、ダイアログが閉じた（＝配信された）ことを確認するためのポーリング間隔／
+     * 上限（design.md追補 2026-10-11）。dispatchGestureもACTION_CLICKも「押した」ことしか
+     * 保証しないため、ダイアログが消えたことで配信を確認する。
+     */
+    private static final long EDIT_CLOSE_POLL_MS = 150L;
+    private static final long EDIT_CLOSE_TIMEOUT_MS = 3000L;
+
+    // ---- edit_buttonのstepログに記録するeditClickPathの値（design.md追補 2026-10-11） -----
+
+    /** NodeOps.findNodeByTextInPackageでノードが見つかり、ACTION_CLICKで押せた。 */
+    private static final String EDIT_CLICK_PATH_NODE_ACTION = "node-action";
+    /** ノードは見つかったがACTION_CLICKが使えず、ノード領域の中心を座標タップした。 */
+    private static final String EDIT_CLICK_PATH_NODE_BOUNDS_TAP = "node-bounds-tap";
+    /** ノードが見つからず、従来の比率座標タップをした（フォールバック）。 */
+    private static final String EDIT_CLICK_PATH_RATIO_TAP = "ratio-tap";
 
     /**
      * AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN の値。API28で追加された定数で、
@@ -210,6 +242,11 @@ final class LineExportFlow {
     private long editClassWaitMs = -1L;
     private long editSettleMs = -1L;
     private long editTapMs = -1L;
+    // design.md追補 2026-10-11: どの経路でEDITを押したか（EDIT_CLICK_PATH_*のいずれか）と、
+    // 押した後にダイアログが消えたことを確認できたか・消えるまでのms。
+    private String editClickPath;
+    private boolean editDialogClosed;
+    private long editCloseWaitMs = -1L;
     // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測。手順11自体の内訳ではないが、
     // 依頼文の分類に合わせてEDIT関連として記録する。
     private long editLockDelayMs = -1L;
@@ -509,25 +546,93 @@ final class LineExportFlow {
         });
     }
 
+    /**
+     * design.md追補 2026-10-11「EDITをノードクリックにし、配信をダイアログの消滅で確認する」:
+     * まずNodeOps.findNodeByTextInPackageでEDITボタンのノード（text完全一致＋パッケージ名が
+     * com.termux）を探し、見つかればNodeOps.clickNodeで押す（クリック可能な祖先が無ければ
+     * ノード領域の中心への座標タップへフォールバック）。ノードが見つからなければ、従来の
+     * 比率座標タップ（EDIT_TAP_X_RATIO/EDIT_TAP_Y_RATIO、値は変更していない）をそのまま行う。
+     * どの経路を使ったかはeditClickPathに記録する。
+     */
     private void tapEditButton(boolean classDetected) {
-        Point size = getScreenSize();
         long tapStartedAt = System.currentTimeMillis();
-        GestureCompat.DispatchReport report = GestureCompat.tap(
-                service, size.x * EDIT_TAP_X_RATIO, size.y * EDIT_TAP_Y_RATIO, 80L, "edit");
+        AccessibilityNodeInfo editNode = NodeOps.findNodeByTextInPackage(
+                service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME);
+        boolean accepted;
+        String traceMessage;
+        if (editNode != null) {
+            NodeOps.ClickResult result = NodeOps.clickNode(service, editNode);
+            accepted = result.accepted;
+            traceMessage = result.traceMessage;
+            editClickPath = result.viaAction ? EDIT_CLICK_PATH_NODE_ACTION : EDIT_CLICK_PATH_NODE_BOUNDS_TAP;
+        } else {
+            Point size = getScreenSize();
+            GestureCompat.DispatchReport report = GestureCompat.tap(
+                    service, size.x * EDIT_TAP_X_RATIO, size.y * EDIT_TAP_Y_RATIO, 80L, "edit");
+            accepted = report.accepted;
+            traceMessage = report.describe();
+            editClickPath = EDIT_CLICK_PATH_RATIO_TAP;
+        }
         editTapMs = System.currentTimeMillis() - tapStartedAt;
-        recordStep(STAGE_EDIT_BUTTON, (classDetected ? "" : "editクラス未検出 ") + report.describe(),
-                buildEditStageExtraFields());
-        if (!report.accepted) {
+        String classNote = classDetected ? "" : "editクラス未検出 ";
+        String stepExtra = classNote + (traceMessage != null ? traceMessage : "");
+        if (!accepted) {
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
             finish(false, STAGE_EDIT_BUTTON);
             return;
         }
-        // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
-        // いない: auto-export.sh:143が`flow.sh 1 keep`と呼び、flow.sh:73の`keep`分岐が
-        // 後片付けの手前でexit 0する。本番はEDITタップ後、outbox.sqlite3の送信結果を最大240秒
-        // 待ってからHOME+SLEEPする（auto-export.sh:159-170）。EDITタップ直後にBACKを撃つと
-        // Termuxの保存ダイアログを取り消し、取り込みが行われない恐れがあるため、段階2では
-        // 画面をそのまま残して終了する。HOME・再ロックは段階3の範囲。
-        finish(true, null);
+        // 押せた（OSが受理した）だけでは配信されたとは言えないため、ダイアログが実際に
+        // 消えたことを確認してから成功と判定する（waitForEditDialogClosed参照）。
+        // recordStep(STAGE_EDIT_BUTTON, ...)はこの確認結果とあわせて1回だけ呼ぶ。
+        waitForEditDialogClosed(System.currentTimeMillis(), stepExtra);
+    }
+
+    /**
+     * design.md追補 2026-10-11: EDITを押した直後から、EDIT_CLOSE_POLL_MS間隔・
+     * EDIT_CLOSE_TIMEOUT_MSを上限に、EDITのノード（手順1と同じNodeOps.findNodeByTextInPackage）
+     * が消えたかを見る。dispatchGestureもACTION_CLICKも「押した」ことしか保証しないため、
+     * ダイアログが消えたことで配信を確認する。
+     *
+     * ノードが見つからなければ「消えた＝成功」とする（安全側）。探索が例外で失敗した場合も
+     * 「押せていない明確な証拠」ではないため成功扱いにする（既存の挙動を壊さないため。
+     * 失敗にするのは「EDITのノードがまだ存在する」という明確な未押下の証拠があるときだけ）。
+     * 3,000ms経ってもノードが残っていたときだけedit_not_closedとして失敗にする（これにより
+     * armRetryOnFailureの経路でscheduleRetryAfterFailureが自動で張られ、次回で取り戻せる）。
+     */
+    private void waitForEditDialogClosed(final long startedAt, final String stepExtra) {
+        boolean stillOpen;
+        try {
+            stillOpen = NodeOps.findNodeByTextInPackage(service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME) != null;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "edit dialog close check failed: " + e);
+            stillOpen = false;
+        }
+        if (!stillOpen) {
+            editDialogClosed = true;
+            editCloseWaitMs = System.currentTimeMillis() - startedAt;
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
+            // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
+            // いない: auto-export.sh:143が`flow.sh 1 keep`と呼び、flow.sh:73の`keep`分岐が
+            // 後片付けの手前でexit 0する。本番はEDITタップ後、outbox.sqlite3の送信結果を最大240秒
+            // 待ってからHOME+SLEEPする（auto-export.sh:159-170）。EDITタップ直後にBACKを撃つと
+            // Termuxの保存ダイアログを取り消し、取り込みが行われない恐れがあるため、段階2では
+            // 画面をそのまま残して終了する。HOME・再ロックは段階3の範囲。
+            finish(true, null);
+            return;
+        }
+        if (System.currentTimeMillis() - startedAt >= EDIT_CLOSE_TIMEOUT_MS) {
+            editDialogClosed = false;
+            editCloseWaitMs = System.currentTimeMillis() - startedAt;
+            recordStep(STAGE_EDIT_NOT_CLOSED, stepExtra, buildEditStageExtraFields());
+            finish(false, STAGE_EDIT_NOT_CLOSED);
+            return;
+        }
+        schedule("editCloseWait", EDIT_CLOSE_POLL_MS, new Runnable() {
+            @Override
+            public void run() {
+                waitForEditDialogClosed(startedAt, stepExtra);
+            }
+        });
     }
 
     // ---- 共通: 期待パッケージのウィンドウが現れるのを待つ（300ms間隔・期限10秒） -------------------
@@ -715,6 +820,15 @@ final class LineExportFlow {
             o.put("classWaitMs", editClassWaitMs);
             o.put("settleMs", editSettleMs);
             o.put("tapMs", editTapMs);
+            // design.md追補 2026-10-11: どの経路でEDITを押したか。常に設定済み（tapEditButton
+            // 内でaccepted判定の前に決まる）。
+            o.put("editClickPath", editClickPath);
+            // ダイアログの消滅確認はaccepted==trueのときだけ行うため、未確認（押下自体が
+            // 失敗した回）はeditCloseWaitMsが-1Lのままになり、その場合は出さない。
+            if (editCloseWaitMs >= 0) {
+                o.put("editDialogClosed", editDialogClosed);
+                o.put("editCloseWaitMs", editCloseWaitMs);
+            }
         } catch (JSONException e) {
             Log.w(TAG, "edit stage extra fields build failed: " + e);
         }
