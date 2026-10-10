@@ -2,6 +2,8 @@
 
 関連 recon: `docs/handoff/v102-prompt-fct/recon.md`
 
+関連 ADR: ADR-085（仕入先別 Gemini 解析プロンプトの管理。指示書を DB で管理する点の関連のみ。既定 key を定める ADR はない。PR本文と同じ参照）
+
 ## 目的
 〆だけの投稿（完売の知らせ）を、1件の「件」として取り出せるようにする。PO 承認 2026-10-11「切り替える」。
 
@@ -33,4 +35,4 @@
 外部事例なし（直接の根拠は社内正解表 G3 v2 による A/B 比較）。過去事例: 指示書の文言調整は BASE SHOP で7回不合格（f_d〜f_g, f_cb, f_cs, f_csb）→ 今回は1行追加に限り、2段階（9投稿×3回 → 125投稿×2回）で確認した。
 
 ## 維持の仕組み
-守り手: Gemini 抽出セッション（設計 Opus）・正解表 G3 v2 で指示書を変えるたびに A/B 採点。Gemini 抽出セッションが、指示書の追加・切替のたびに `docs/specs/line-analysis-tuning/README.md` を更新する。
+守り手: `docs/specs/line-analysis-tuning/README.md`（Gemini 抽出セッションが指示書を変えるたびに正解表 G3 v2 で A/B 採点し、ここに記録）
