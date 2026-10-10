@@ -28,6 +28,7 @@ from pathlib import Path
 import pytest
 
 from tests.rls_bootstrap import public_bootstrap_lock
+from tests.seed_inventory_data import inventory_visibility_permissions_seed_sql
 
 # 実 Postgres URL が指定されていない場合はモジュール全体を skip
 TEST_PG_URL = os.getenv("TEST_PG_URL")
@@ -274,20 +275,10 @@ async def test_ac1_8_inventory_visibility_permissions_seeded(engine):
             "本テストは production-shaped DB で実行すること。"
         )
 
-    # 063 のうち public.permissions INSERT 部分だけを抽出して実行 (DO ブロック内の
-    # tenant schema 操作は本テスト環境では tenant_NNN schema が無いため、INSERT 部
-    # だけテスト目的で実行)
-    sql_063 = (MIGRATIONS_DIR / "063_tenant_rbac_extensions.sql").read_text("utf-8")
-    # INSERT INTO public.permissions ... の単一文だけを取り出す
-    # (DO ブロックは tenant schema 走査だが、permissions INSERT は最上位文)
+    # 063 は権限キーを入れなくなった（ADR-1007 段3c。値を書く文を外した）。
+    # この試験が、同じ 4 キーを自分で入れる（段2 と同じく、試験が自分のデータを持つ）。
     async with engine.begin() as conn:
-        # 全文を分割して INSERT INTO public.permissions ... を実行
-        for stmt in _split_sql_preserving_do_blocks(sql_063):
-            s = stmt.strip()
-            if not s:
-                continue
-            if "INSERT INTO public.permissions" in s:
-                await conn.exec_driver_sql(s)
+        await conn.exec_driver_sql(inventory_visibility_permissions_seed_sql())
 
     async with engine.connect() as conn:
         result = await conn.execute(text(
