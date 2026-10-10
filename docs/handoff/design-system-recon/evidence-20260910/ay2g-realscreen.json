@@ -1,0 +1,85 @@
+[
+  {
+    "case": "redirect /super-admin/tcg-product-master",
+    "finalPath": "/super-admin/analysis-rules?section=product-master",
+    "selectedSidebar": [
+      "商品マスタ"
+    ],
+    "headings": [
+      "LINE解析",
+      "配信設定",
+      "商品詳細・編集",
+      "商品詳細・編集"
+    ]
+  },
+  {
+    "case": "redirect /super-admin/tcg-supplier-quality",
+    "finalPath": "/super-admin/analysis-rules?section=accuracy-management",
+    "selectedSidebar": [
+      "解析精度管理"
+    ],
+    "headings": [
+      "LINE解析",
+      "配信設定",
+      "DBデータ健全性チェック",
+      "仕入元チャンネル数"
+    ]
+  },
+  {
+    "case": "redirect /super-admin/supplier-master",
+    "finalPath": "/super-admin/analysis-rules?section=supplier-master",
+    "selectedSidebar": [
+      "仕入元マスタ"
+    ],
+    "headings": [
+      "LINE解析",
+      "配信設定",
+      "作成"
+    ]
+  },
+  {
+    "case": "product-import back(admin)",
+    "buttonsBefore": [
+      "空のサンプルCSVを保存",
+      "商品一覧へ戻る",
+      "内容を確認",
+      "R",
+      "",
+      "アカウント設定",
+      "ダークモード",
+      "英語",
+      "サインアウト"
+    ],
+    "finalPath": "/super-admin/analysis-rules?section=product-master",
+    "selectedSidebar": [
+      "商品マスタ"
+    ]
+  },
+  {
+    "case": "supplier-import back(admin)",
+    "buttonsBefore": [
+      "一覧に戻る",
+      "プレビュー",
+      "R",
+      "",
+      "アカウント設定",
+      "ダークモード",
+      "英語",
+      "サインアウト"
+    ],
+    "finalPath": "/super-admin/analysis-rules?section=supplier-master",
+    "selectedSidebar": [
+      "仕入元マスタ"
+    ]
+  },
+  {
+    "case": "product-import back(non-admin)",
+    "finalPath": "/super-admin/analysis-rules?section=product-master",
+    "text": "LINE解析\n\nこのページは super_admin 専用です。"
+  },
+  {
+    "case": "supplier-import back(non-admin)",
+    "finalPath": "/super-admin/analysis-rules?section=supplier-master",
+    "text": "LINE解析\n\nこのページは super_admin 専用です。"
+  }
+]

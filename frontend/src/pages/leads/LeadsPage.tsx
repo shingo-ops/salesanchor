@@ -35,6 +35,7 @@ import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from "./LeadFormFields";
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -327,16 +328,16 @@ export default function LeadsPage() {
       >
         <form onSubmit={handleCreateSubmit}>
           <div className="form-group"><label>{t("leads.customerName")} *</label>
-            <input required value={createForm.customer_name} onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })} />
+            <TextFieldControl required value={createForm.customer_name} onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.companyName")}</label>
-            <input value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} />
+            <TextFieldControl value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.email")}</label>
-            <input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+            <TextFieldControl type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.phone")}</label>
-            <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
+            <TextFieldControl value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.channelType")}</label>
             <ChannelTypeCombobox
@@ -424,7 +425,7 @@ export default function LeadsPage() {
             ]}
           />
           <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
-            <input type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
+            <TextFieldControl type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
             <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
@@ -462,10 +463,10 @@ export default function LeadsPage() {
             error={convertSelectorError}
           />
           <div className="form-group"><label>{t("leads.dealTitle")} *</label>
-            <input required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
+            <TextFieldControl required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.dealAmount")}</label>
-            <input type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
+            <TextFieldControl type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
           </div>
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={closeConvert}>{t("common.cancel")}</Button>

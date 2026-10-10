@@ -13,6 +13,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 type OwnInventoryRow = components["schemas"]["OwnInventoryResponse"];
 
@@ -229,7 +230,7 @@ export default function OwnInventoryPage() {
               </p>
               <label>
                 {t("ownInventory.qty")}
-                <input
+                <TextFieldControl
                   type="number"
                   min={1}
                   value={qtyInput}
@@ -237,8 +238,8 @@ export default function OwnInventoryPage() {
                     setQtyInput(e.target.value);
                     setActionError("");
                   }}
-                  className="qty-input"
                   aria-label={t("ownInventory.qty")}
+                  style={{ width: "auto" }}
                 />
               </label>
               {actionError && (

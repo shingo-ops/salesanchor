@@ -37,7 +37,7 @@ for (const locale of ["ja", "en"]) for (const width of [390, 1440]) {
       "POST /tcg/products/import/preview": { filename: "update.csv", digest: "c".repeat(64), mode: "update", file_errors: [], total: 1, ok: 1, blocked: 0, updated: 1, unchanged: 0, rows: [{ row_no: "1", product_code: "PM01", japanese_title: "New fixture", mark: "A", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old fixture", after: "New fixture" }, { field: "search_keywords", before: ["old,word"], after: ["new,word", "日本語"] }] }] },
       "POST /tcg/products/import/commit": async route => { commits++; await route.fulfill({ contentType: "application/json", body: JSON.stringify({ job_id: "update-receipt", mode: "update", total: 1, created: 0, skipped: 0, updated: 1, unchanged: 0 }) }); },
     });
-    await page.goto("/super-admin/tcg-product-master");
+    await page.goto("/super-admin/analysis-rules?section=product-master");
     await page.getByRole("tab", { name: locale === "ja" ? "ポケモン" : "Pokemon", exact: true }).click();
     await page.getByRole("searchbox").fill("Fixture");
     const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
@@ -74,7 +74,7 @@ test("list to confirmation and registration: no commit before explicit confirmat
     "POST /tcg/products/import/preview": { filename: "products.csv", digest: "a".repeat(64), file_errors: [], total: 1, ok: 1, blocked: 0, rows: [{ row_no: "2", japanese_title: "Fixture", mark: "A", blocking: [], warnings: ["NO_SEARCH_KEYWORD"] }] },
     "POST /tcg/products/import/commit": async route => { commits++; expect(route.request().postData()).toContain("a".repeat(64)); await route.fulfill({ contentType: "application/json", body: JSON.stringify({ job_id: "receipt", total: 1, created: 1, skipped: 0 }) }); },
   });
-  await page.goto("/super-admin/tcg-product-master");
+  await page.goto("/super-admin/analysis-rules?section=product-master");
   await expect(page.getByText("Fixture", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /CSV取り込み|Import CSV/ }).click();
   await expect(page).toHaveURL(/tcg-product-master\/import$/);
@@ -111,7 +111,7 @@ for (const locale of ["ja", "en"]) {
         }) });
       },
     });
-    await page.goto("/super-admin/tcg-product-master");
+    await page.goto("/super-admin/analysis-rules?section=product-master");
     const all = page.getByRole("tab", { name: locale === "ja" ? "すべて" : "All", exact: true });
     const pokemon = page.getByRole("tab", { name: locale === "ja" ? "ポケモン" : "Pokemon", exact: true });
     const onePiece = page.getByRole("tab", { name: locale === "ja" ? "ワンピース" : "One Piece", exact: true });
@@ -150,7 +150,8 @@ test("AC8 non-admin cannot request product list or see tabs", async ({ page }) =
   page.on("request", request => { if (request.url().includes("/api/v1/tcg/products")) productRequests++; });
   await mockApi(page, { "GET /me/permissions": { ...permissions, is_super_admin: false } });
   await page.goto("/super-admin/tcg-product-master");
-  await expect(page.getByRole("alert")).toContainText(/SaaS/);
+  await expect(page).toHaveURL(/\/super-admin\/analysis-rules\?section=product-master$/);
+  await expect(page.getByText(/super_admin/)).toBeVisible();
   await expect(page.getByRole("tablist")).toHaveCount(0);
   expect(productRequests).toBe(0);
 });
