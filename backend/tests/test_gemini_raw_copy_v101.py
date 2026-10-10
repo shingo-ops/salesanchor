@@ -760,3 +760,238 @@ def test_f5_changes_only_name_and_roles_not_quantity_unit_state_ship_status_or_p
     assert out102[0]["quantity_normalized"] == 10
     assert flags["possible_footer_line"] == [4]
     assert "販売数量" in out101[0]["name"] and "販売数量" not in out102[0]["name"]
+
+
+# ---------------------------------------------------------------------------
+# 黙って消える件と印を要確認に回す（設計: docs/handoff/v102-no-silent-drop/design.md §3・§4）
+# ---------------------------------------------------------------------------
+
+
+def _parse_keep(raw, *items):
+    return v101.parse_v101_response(_resp(*items), raw, status_entries=_STATUS, keep_rejected=True)
+
+
+def _extract_keep(raw, *items, product_first=None, unit_alias_to_info=None):
+    parsed, errors = _parse_keep(raw, *items)
+    masters = {**_MASTERS, "unit_alias_to_info": unit_alias_to_info or _UNITS}
+    out, flags = v101.extract_v101_items(
+        parsed, raw, order=None, reassign=True, v102_fixes=True, product_first=product_first,
+        review_reasons=True, **masters,
+    )
+    return out, flags, errors
+
+
+def _kinds(row):
+    return [r["kind"] for r in row["review"]]
+
+
+_DROP_RAW = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+
+
+def _drop_items():
+    return (
+        _it([1, 2], "1,000円", "3"),          # 通常
+        _it([3, 4], "9,999円", "2"),          # D2: 価格の文字が行に無い
+        _it([1, 2], "1,000円", "3"),          # D3: 価格の行が1件目と同じ
+        _it([], "1,000円", "3"),              # D1: lines が空
+    )
+
+
+def test_keep_rejected_keeps_d1_d2_d3_items_after_the_normal_ones_with_their_fields():
+    # Arrange / Act
+    items, errors = _parse_keep(_DROP_RAW, *_drop_items())
+    # Assert
+    assert [i.get("rejected") for i in items] == [None, "price_not_in_lines", "duplicate_price_line", "item_shape_invalid"]
+    assert len(items) == 4 and len(errors) == 3
+    d2, d3, d1 = items[1:]
+    assert d2 == {"rejected": "price_not_in_lines", "gemini_index": 1, "lines": [3, 4], "price": "9,999円",
+                  "quantity": "2", "price_line": None, "error": "価格の行が見つからない"}
+    assert d3["gemini_index"] == 2 and d3["price_line"] == 2 and d3["lines"] == [1, 2]
+    assert d1["gemini_index"] == 3 and d1["lines"] == [] and d1["price_line"] is None and "lines が空" in d1["error"]
+
+
+def test_keep_rejected_lines_hold_only_in_range_integers_ascending_without_duplicates():
+    items, _ = _parse_keep(_DROP_RAW, {"lines": [4, 2, 2, 99, "x"], "price": "1,000円", "quantity": "1"}, "not-a-dict")
+    assert items[0]["lines"] == [2, 4] and items[0]["rejected"] == "item_shape_invalid"
+    assert items[1] == {"rejected": "item_shape_invalid", "gemini_index": 1, "lines": [], "price": None,
+                        "quantity": None, "price_line": None, "error": "件がオブジェクトではない"}
+
+
+def test_keep_rejected_false_output_is_unchanged():
+    # Arrange / Act
+    default = _parse(_DROP_RAW, *_drop_items())
+    explicit = v101.parse_v101_response(_resp(*_drop_items()), _DROP_RAW, status_entries=_STATUS, keep_rejected=False)
+    # Assert
+    assert default == explicit
+    assert len(default[0]) == 1 and "rejected" not in default[0][0] and len(default[1]) == 3
+
+
+def test_result_count_equals_gemini_count_and_each_rejected_item_has_a_review_kind():
+    # Act
+    out, flags, errors = _extract_keep(_DROP_RAW, *_drop_items())
+    # Assert
+    assert len(out) == 4 and len(errors) == 3
+    normal, d2, d3, d1 = out
+    assert "rejected" not in normal
+    assert _kinds(d2) == ["price_not_in_lines"] and d2["review"][0]["field"] == "price" and d2["review"][0]["copied"] == "9,999円"
+    assert _kinds(d3) == ["duplicate_price_line"] and d3["review"][0]["line"] == 2
+    assert _kinds(d1) == ["item_shape_invalid"] and "lines が空" in d1["review"][0]["error"]
+    assert d1["review"][0]["line"] is None and d2["review"][0]["line"] == 3
+    assert (d2["rejected"], d2["gemini_index"], d2["raw_price"], d2["raw_quantity"], d2["lines"]) == (
+        "price_not_in_lines", 1, "9,999円", "2", [3, 4])
+
+
+def test_rejected_result_has_every_key_of_a_normal_item_and_does_not_join_the_normal_processing():
+    # Act
+    out, flags, _ = _extract_keep(_DROP_RAW, *_drop_items())
+    # Assert
+    assert all(set(out[0]) <= set(r) for r in out[1:])
+    assert out[1]["name"] == "none" and out[1]["unit"] == "none" and out[1]["price_normalized"] is None
+    assert out[1]["roles"] == {} and out[1]["review"] and out[1]["fixes"] == []
+    plain, _ = _extract102(_DROP_RAW, _it([1, 2], "1,000円", "3"))
+    assert {k: v for k, v in out[0].items() if k != "review"} == {k: v for k, v in plain[0].items() if k != "review"}
+
+
+def test_rejected_items_do_not_change_the_values_of_the_normal_items():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+    only_normal, _ = _extract102(raw, _it([1, 2], "1,000円", "3"), _it([3, 4], "2,000円", "2"))
+    # Act
+    mixed, _, _ = _extract_keep(raw, _it([1, 2], "1,000円", "3"), _it([3, 4], "9,999円", "2"), _it([3, 4], "2,000円", "2"))
+    # Assert
+    strip = lambda rows: [{k: v for k, v in r.items() if k != "review"} for r in rows]  # noqa: E731
+    assert strip([mixed[0], mixed[1]]) == strip(only_normal)
+
+
+def test_half_width_slash_joined_prices_find_the_price_line_for_v102_only():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円"
+    item = _it([1, 2], "1,000円/2,000円", "3")
+    # Act
+    kept, kept_errors = _parse_keep(raw, item)
+    old, old_errors = _parse(raw, item)
+    full_width, full_errors = _parse(raw, _it([1, 2], "1,000円／2,000円", "3"))
+    # Assert
+    assert kept[0]["price_line"] == 2 and "rejected" not in kept[0] and kept_errors == []
+    assert old == [] and len(old_errors) == 1  # v10.1 以前は今までどおり
+    assert full_width[0]["price_line"] == 2 and full_errors == []
+
+
+def test_unreadable_json_returns_the_whole_error_and_no_items_even_when_keeping():
+    items, errors = v101.parse_v101_response("not json", "商品A", status_entries=_STATUS, keep_rejected=True)
+    assert items == [] and len(errors) == 1
+
+
+def test_quantity_no_number_mark_adds_a_kind_to_the_item_that_holds_the_line():
+    # Arrange
+    raw = "ワンピース ブースター\nカートン @150,000円"
+    # Act
+    out, flags, _ = _extract_keep(raw, _it([1, 2], "150,000円", "カートン"))
+    # Assert
+    assert flags["quantity_no_number"] == [2]
+    assert {"line": 2, "kind": "quantity_no_number"} in out[0]["review"]
+
+
+def test_footer_mark_adds_a_kind_to_the_item_and_post_review_has_no_orphan_footer():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円\n・買取品"
+    # Act
+    out, flags, _ = _extract_keep(raw, _it([1, 2, 3], "1,000円", "3"))
+    # Assert
+    assert flags["possible_footer_line"] == [3]
+    assert {"line": 3, "kind": "possible_footer_line"} in out[0]["review"]
+    assert flags["post_review"] == []
+
+
+def test_orphan_footer_line_and_missing_item_lines_go_to_post_review():
+    # Act
+    reasons = v101._post_review_reasons(
+        item_count=2, flags={"possible_missing_item": [5], "quantity_no_number": [], "possible_footer_line": [7, 9]},
+        owned_lines={7},
+    )
+    # Assert
+    assert reasons == [
+        {"kind": "possible_missing_item", "line": 5},
+        {"kind": "possible_footer_line", "line": 9},
+    ]
+
+
+def test_possible_missing_item_line_goes_to_post_review():
+    raw = "商品A\n3BOX@1,000円\n@500円\n商品B\n2BOX@2,000円"
+    out, flags, _ = _extract_keep(raw, _it([1, 2], "1,000円", "3"), _it([4, 5], "2,000円", "2"))
+    assert flags["possible_missing_item"] == [3]
+    assert {"kind": "possible_missing_item", "line": 3} in flags["post_review"]
+
+
+def test_no_gemini_items_gives_no_items_in_post_review_and_keeps_the_three_marks():
+    out, flags, errors = _extract_keep("商品A")
+    assert out == [] and errors == []
+    assert flags["post_review"] == [{"kind": "no_items"}]
+    assert flags["possible_missing_item"] == [] and flags["quantity_no_number"] == [] and flags["possible_footer_line"] == []
+
+
+def test_all_items_rejected_is_not_no_items():
+    out, flags, _ = _extract_keep("商品A", _it([], "1,000円", "3"))
+    assert len(out) == 1 and out[0]["rejected"] == "item_shape_invalid"
+    assert flags["post_review"] == []
+
+
+def test_unit_none_item_gets_unit_unknown_and_unit_known_item_does_not():
+    # Act
+    out, _, _ = _extract_keep("商品A\n@1,000円\n商品B\n3BOX@2,000円", _it([1, 2], "1,000円", "3"), _it([3, 4], "2,000円", "3"))
+    # Assert
+    assert out[0]["unit"] == "none" and {"line": 2, "kind": "unit_unknown"} in out[0]["review"]
+    assert out[1]["unit"] != "none" and "unit_unknown" not in _kinds(out[1])
+
+
+def test_matched_product_without_category_gets_category_unknown():
+    from app.services.extraction_judgement_svc import ProductEntry
+    from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters
+
+    # Arrange
+    entry = ProductEntry(id=1, product_code=None, mark=None, work_id=1, search_keywords=("サンプル拡張",), exclude_keywords=())
+    no_kubun = ProductFirstMasters(product_entries=(entry,), product_kubun={}, condition_unit={}, ignore_phrases=())
+    with_kubun = ProductFirstMasters(product_entries=(entry,), product_kubun={"1": "箱系"}, condition_unit={}, ignore_phrases=())
+    # Act
+    unknown, _, _ = _extract_keep("サンプル拡張\n3@1,500円", _it([1, 2], "1,500円", "3"), product_first=no_kubun)
+    known, _, _ = _extract_keep("サンプル拡張\n3@1,500円", _it([1, 2], "1,500円", "3"), product_first=with_kubun)
+    # Assert
+    assert unknown[0]["match_status"] == "matched" and unknown[0]["product_category"] == "不明"
+    assert {"line": 2, "kind": "category_unknown"} in unknown[0]["review"]
+    assert "category_unknown" not in _kinds(known[0])
+
+
+def test_without_review_reasons_the_v102_output_has_no_new_keys():
+    raw = "商品A\n3BOX@1,000円\n・買取品"
+    out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
+    assert set(flags) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
+    assert out[0]["review"] == []
+
+
+def _qty_not_in_text_reasons(row):
+    return [r for r in row["review"] if r["kind"] == "quantity_not_in_text"]
+
+
+def test_quantity_not_in_text_adds_a_kind_with_field_and_copied():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円"
+    # Act
+    out, _flags, _ = _extract_keep(raw, _it([1, 2], "1,000円", "30"))
+    # Assert
+    assert out[0]["quantity_not_in_text"] is True
+    assert _qty_not_in_text_reasons(out[0]) == [{"kind": "quantity_not_in_text", "field": "quantity", "copied": "30"}]
+
+
+def test_quantity_found_in_the_item_lines_has_no_quantity_not_in_text_kind():
+    out, _flags, _ = _extract_keep("商品A\n3BOX@1,000円", _it([1, 2], "1,000円", "3"))
+    assert out[0]["quantity_not_in_text"] is False and _qty_not_in_text_reasons(out[0]) == []
+
+
+def test_quantity_none_has_no_quantity_not_in_text_kind():
+    out, _flags, _ = _extract_keep("商品A\n3BOX@1,000円", _it([1, 2], "1,000円", "none"))
+    assert _qty_not_in_text_reasons(out[0]) == []
+
+
+def test_quantity_without_digits_has_only_quantity_no_number():
+    out, _flags, _ = _extract_keep("ワンピース ブースター\nカートン @150,000円", _it([1, 2], "150,000円", "カートン"))
+    assert "quantity_no_number" in _kinds(out[0]) and _qty_not_in_text_reasons(out[0]) == []

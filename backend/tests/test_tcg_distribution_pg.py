@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
 URL = os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -74,6 +75,8 @@ async def create_schema(conn, schema, corrections=True):
         sql_path = migrations / sql_file
         if sql_path.exists():
             await _exec_multi_stmt(conn, sql_path.read_text())
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    await conn.exec_driver_sql(type_master_seed_sql())
     # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
     # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())

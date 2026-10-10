@@ -11,6 +11,8 @@ import { CountryCombobox } from "../../components/CountryCombobox";
 import { Select } from "../../components/Select";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import type { CloseReasonResponse } from "../../api/closeReasons";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface LeadFormState {
   customer_name: string;
@@ -81,7 +83,7 @@ export function LostReasonFields({
       />
       <div className="form-group">
         <label htmlFor={memoId}>{t("leads.lostReason")}</label>
-        <textarea
+        <TextareaControl
           id={memoId}
           value={closeReasonMemo}
           onChange={(e) => onCloseReasonMemoChange(e.target.value)}
@@ -106,7 +108,7 @@ export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
     <>
       <div className="form-group">
         <label>{t("leads.customerName")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.customer_name}
           onChange={(e) => onChange("customer_name", e.target.value)}
@@ -114,7 +116,7 @@ export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
       </div>
       <div className="form-group">
         <label>{t("leads.email")}</label>
-        <input
+        <TextFieldControl
           type="email"
           value={form.email}
           onChange={(e) => onChange("email", e.target.value)}
@@ -122,7 +124,7 @@ export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
       </div>
       <div className="form-group">
         <label>{t("leads.phone")}</label>
-        <input
+        <TextFieldControl
           value={form.phone}
           onChange={(e) => onChange("phone", e.target.value)}
         />
@@ -150,7 +152,7 @@ export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
       />
       <div className="form-group">
         <label>{t("leads.notes")}</label>
-        <textarea
+        <TextareaControl
           value={form.notes}
           onChange={(e) => onChange("notes", e.target.value)}
         />

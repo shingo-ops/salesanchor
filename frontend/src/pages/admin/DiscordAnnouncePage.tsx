@@ -12,6 +12,8 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function DiscordAnnouncePage() {
   const { t } = useTranslation();
@@ -77,13 +79,12 @@ export default function DiscordAnnouncePage() {
           <label className="block text-sm font-medium text-token-text-primary">
             {t("discordAnnounce.channelIdLabel")}
           </label>
-          <input
+          <TextFieldControl
             type="text"
             value={channelId}
             onChange={(e) => setChannelId(e.target.value)}
             disabled={!canEdit}
             placeholder={t("discordAnnounce.channelIdPlaceholder")}
-            className="input w-full"
           />
           <p className="text-xs text-token-text-secondary">
             {t("discordAnnounce.channelIdHint")}
@@ -95,14 +96,13 @@ export default function DiscordAnnouncePage() {
           <label className="block text-sm font-medium text-token-text-primary">
             {t("discordAnnounce.messageLabel")}
           </label>
-          <textarea
+          <TextareaControl
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={!canEdit}
             placeholder={t("discordAnnounce.messagePlaceholder")}
             maxLength={2000}
             rows={6}
-            className="input w-full resize-y"
           />
           <p className="text-xs text-token-text-secondary text-right">
             {message.length} / 2000

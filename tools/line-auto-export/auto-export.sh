@@ -1,16 +1,22 @@
 #!/bin/bash
-# Hourly LINE talk-history export (runs inside the Ubuntu proot, started by Termux job scheduler).
-# wake + PIN unlock -> LINE export -> Termux EDIT -> wait for client.py send result -> lock.
+# 15-minute LINE talk-history export job (runs inside the Ubuntu proot, started by Termux job scheduler).
+# MODE=app（既定）: スマホ上の自作アプリ（jp.salesanchor.lineexport）へブロードキャストで合図を送り、
+#   アプリ側の実行結果を outbox の events から読む。ADB不要（ADBのワイヤレスデバッグは鍵失効で
+#   再発停止するため、2026-10-08 にこちらへ切り替えた。詳細: docs/handoff/line-auto-export-runtime/
+#   design-app-trigger.md）。
+# MODE=adb（切り戻し用・LINE_AUTO_EXPORT_MODE=adb で起動）: 従来方式。
+#   wake + PIN unlock -> LINE export -> Termux EDIT -> wait for client.py send result -> lock。
 # Results go to the existing outbox events table (stage='auto'); the PIN is never printed.
 set -u
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MODE=${LINE_AUTO_EXPORT_MODE:-app}
 DIR=/root/line-auto-export
 TH=/data/data/com.termux/files/home
-PIN_FILE=$TH/line-import/state/unlock-pin
+PIN_FILE=$TH/line-import/state/unlock-pin   # MODE=adb のみ使用。appモードはPINをアプリ側が持つ。
 STATE=$TH/line-import/state
 DB=$STATE/outbox.sqlite3
 LOG=$DIR/auto-export.log
-EDIT_X=872; EDIT_Y=1237   # Termux "EDIT" button; dialog is not exposed to uiautomator (verified by screenshot 2026-09-17)
+EDIT_X=872; EDIT_Y=1237   # Termux "EDIT" button; dialog is not exposed to uiautomator (verified by screenshot 2026-09-17). MODE=adb only.
 
 exec 9>"$DIR/lock"
 flock -n 9 || exit 0
@@ -23,33 +29,160 @@ T0=$(date +%s)
 # Record in the shared outbox history and notify (notify only when $3 is set).
 record() {
   python3 - "$1" "$2" "${3:-}" "$(( $(date +%s) - T0 ))" <<'PY'
+import subprocess
 import sys
 sys.path.insert(0, '/data/data/com.termux/files/home/line-import/lib')
 import client
+
 result, reason, notify, elapsed = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+
+
+def loud_notify(nid, title, content):
+    # 連続2回目以降の失敗通知：--alert-once を付けないので、更新ごとに鳴り直す。
+    # 鳴り方そのものは Android 8 以降は通知チャンネルが決めるため、ここでは指定しない
+    # （実測 2026-10-06: チャンネル termux-notification は importance=3・音あり・
+    #  振動は FLAG_MUTE_HAPTIC で無効。--vibrate / --priority は効かない）。
+    try:
+        r = subprocess.run(
+            [client.TERMUX_NOTIFICATION, '--id', str(nid), '-t', title, '-c', content],
+            timeout=10, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, check=False)
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0
+
+
 box = client.Outbox('/data/data/com.termux/files/home/line-import/state')
+
+# 今回の記録より前の、直前の stage='auto' の結果（復旧通知の判定に使う）。
+# 見送り（skipped＝スマホ使用中）は成功でも失敗でもないので除外する。
+prev = box.db.execute(
+    "SELECT result FROM events WHERE stage='auto' AND result<>'skipped' ORDER BY id DESC LIMIT 1").fetchone()
+prev_result = prev[0] if prev else None
+
 box.record('auto', result, reason=reason or None, elapsed=elapsed, detected_by='schedule')
+
 if notify:
-    box._notify(4203, 'LINE自動書き出し：' + notify, reason)
+    # 今回を1回目として、stage='auto' の連続失敗回数を数える（見送りは除外）。
+    n = 0
+    for (r,) in box.db.execute("SELECT result FROM events WHERE stage='auto' AND result<>'skipped' ORDER BY id DESC"):
+        if r == 'failed':
+            n += 1
+        else:
+            break
+    title = 'LINE自動書き出し：' + notify if n <= 1 else 'LINE自動書き出し：{}（連続{}回）'.format(notify, n)
+    if n >= 2:
+        box.notifier = loud_notify
+    box._notify(4203, title, reason)
+elif result == 'ok' and prev_result == 'failed':
+    box._notify(4203, 'LINE自動書き出し：復旧しました', reason)
+
 box.db.close()
 PY
 }
 fail() {  # fail <step> <reason>
   say "FAIL $1: $2"
   record failed "$1: $2" "失敗"
-  adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
-  adb shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1
+  if [ "$MODE" = adb ]; then
+    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+    adb shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1
+  fi
   exit 1
 }
 # grep -q / grep -m1 は先に終了してパイプを閉じるため、tr が「Broken pipe」を
-# 標準エラーに出す（動作に影響はないがログが汚れる）。tr の標準エラーは捨てる。
+# 標準エラーに出す（動作に影響はないがログが汚れる）。tr の標準エラーは捨てる。MODE=adb only.
 q() { timeout 20 adb shell "$@" 2>/dev/null | tr -d '\r' 2>/dev/null; }
 locked() { q dumpsys window policy | grep -q 'showing=true'; }
 awake() { q dumpsys power | grep -q 'mWakefulness=Awake'; }
 focus() { q dumpsys window | grep -m1 mCurrentFocus | sed -E 's/.* ([^ ]+)\}.*/\1/'; }
 
+# アプリへ「全部やれ」の合図をブロードキャストで送る（MODE=app専用、ADB不要）。
+# --user 0 と -n（宛先名指し）は両方必須。2026-10-08 実測で、-n の無い暗黙ブロードキャストは
+# 一度も届かなかった（09:23・09:28の2回とも無反応）。--user 0 を省くと別ユーザー扱いになり届かない。
+# テスト時は LINE_AUTO_EXPORT_BROADCAST_CMD で差し替え可能（例: echo に置き換えて、実機を使わずに
+# ポーリング以降の処理だけを検証する。design-app-trigger.md には無い追加）。
+#
+# 標準出力（"Broadcasting: Intent ..." 等、成功時も毎回出る）は捨てて say() の行に混ざらないようにする
+# （2026-10-08 実機ログで確認: 成功時でもこの出力が auto-export.log に流れ込んで読みにくかった）。
+# 標準エラーは残す（撃てなかった原因を残すため）。終了コードが0以外、または標準エラーに出力があれば、
+# 合図そのものを撃てなかった（または例外が出た）とみなして fail する。
+broadcast_run_all() {
+  bc_err_file=$(mktemp)
+  if [ -n "${LINE_AUTO_EXPORT_BROADCAST_CMD:-}" ]; then
+    eval "$LINE_AUTO_EXPORT_BROADCAST_CMD" >/dev/null 2>"$bc_err_file"
+  else
+    CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk \
+    /system/bin/app_process -Xnoimage-dex2oat / com.termux.termuxam.Am \
+      broadcast --user 0 -n jp.salesanchor.lineexport/.RunReceiver \
+      -a jp.salesanchor.lineexport.RUN_ALL >/dev/null 2>"$bc_err_file"
+  fi
+  bc_rc=$?
+  bc_err=$(cat "$bc_err_file" 2>/dev/null)
+  rm -f "$bc_err_file"
+  if [ "$bc_rc" -ne 0 ] || [ -n "$bc_err" ]; then
+    fail app "アプリへの合図を送れない（rc=$bc_rc${bc_err:+: $bc_err}）"
+  fi
+}
+
 say "start"
-[ "$(stat -c %a "$PIN_FILE" 2>/dev/null)" = 600 ] || fail setup "暗証番号ファイルがない、または権限が600ではない"
+if [ "$MODE" = adb ]; then
+  [ "$(stat -c %a "$PIN_FILE" 2>/dev/null)" = 600 ] || fail setup "暗証番号ファイルがない、または権限が600ではない"
+fi
+
+if [ "$MODE" != adb ]; then
+  # MODE=app: アプリへ合図を送って、送信結果が events に記録されるのを待つだけ。
+  # 再ロックはスクリプトでは行わない（ADBが無いため不可。アプリ側がRUN_ALLの最後に施錠する。
+  # design-app-trigger.md 「アプリ側: 実行後の再ロック」参照）。
+  before=$(python3 -c "import sqlite3;print(sqlite3.connect('$DB').execute('select coalesce(max(id),0) from events').fetchone()[0])")
+
+  broadcast_run_all
+  say "signal sent"
+
+  send_result=""
+  send_reason=""
+  for i in $(seq 1 60); do  # 3秒 x 60回 = 最大180秒
+    out=$(python3 -c "
+import sqlite3
+r = sqlite3.connect('$DB').execute(
+    \"select result, coalesce(reason,'') from events where id>? and stage='send' and result<>'started' order by id desc limit 1\",
+    ($before,)).fetchone()
+print('' if r is None else r[0] + '\t' + r[1])")
+    if [ -n "$out" ]; then
+      IFS=$'\t' read -r send_result send_reason <<< "$out"
+      break
+    fi
+    sleep 3
+  done
+
+  if [ -z "$send_result" ]; then
+    # スマホ使用中の見送りと、アプリ側の失敗を、スクリプトからは区別できない
+    # （結果はアプリの通知にしか出ず、proot からは /sdcard が見えないため読めない）。
+    # failed にすると見送りでも失敗通知が鳴り続けるため、skipped として記録する
+    # （design-app-trigger.md 「なぜ結果が来なければ failed ではなく skipped なのか」参照）。
+    #
+    # 「3時間以上成功していません」の見張りは、以前はここ（appモードのskipped時）に実装していたが、
+    # PO決定2026-10-09でTermuxの15分ジョブ（job 4203、このスクリプト自体）を平常時は止めることになった
+    # ため、ここに置くと見張りも一緒に消えてしまう。データの正（outbox.sqlite3）がある
+    # tools/termux-line-import/client.py の定期点検（job 4201、_check_no_import）へ移した。
+    say "skip: no app response within 180s"
+    record skipped "アプリが実行しなかった（スマホ使用中か、アプリ側の失敗。アプリの通知を確認）"
+    exit 0
+  fi
+
+  case "$send_result" in
+    accepted|pending_review|duplicate|skipped)
+      # duplicate: 同じ内容を取り込み済みのため送信なし（tools/termux-line-import/client.py:196）。
+      # skipped（stage='send'側の値）: 新規が無いため送信なし（release/line-import-incremental-send
+      # で新設）。どちらも正常な無操作であり失敗ではない。failed にすると、送信量の絞り込みが入った
+      # 後は「新規なし」が最多の結果になり、失敗通知が鳴り続けて2026-10-06の連続失敗通知改修が逆効果
+      # になる（design-app-trigger.md 追補2026-10-08「修正1」）。ここを failed に戻さないこと。
+      say "done: $send_result"
+      record ok "送信結果: $send_result" ;;
+    *)
+      fail send "送信結果: $send_result（${send_reason:-理由不明}）" ;;
+  esac
+  exit 0
+fi
 
 # ADB connection (wireless debugging). Reconnect to the last known endpoint if needed.
 timeout 10 adb start-server >/dev/null 2>&1
@@ -61,9 +194,21 @@ if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
     # （2026-09-23: 40359 -> 44861 に変わり約6時間停止した）。保存済みの接続先で
     # 駄目なときはポートを探し直す（実測 約97秒）。
     say "接続先を探索"
-    found=$(bash "$DIR/adb-discover.sh")
+    err_file=$(mktemp)
+    found=$(bash "$DIR/adb-discover.sh" 2>"$err_file")
+    rc=$?
+    discover_err=$(cat "$err_file" 2>/dev/null)
+    rm -f "$err_file"
+    [ -n "$discover_err" ] && say "探索エラー出力: $discover_err"
     [ -n "$found" ] && say "接続先を更新: $found"
-    timeout 10 adb get-state 2>/dev/null | grep -q device || fail adb "ADBに接続できない（ワイヤレスデバッグ/Wi-Fiを確認）"
+    if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
+      case "$rc" in
+        2) fail adb "ワイヤレスデバッグがOFF、またはWi-Fi未接続（待ち受けが無い）。端末の 設定→開発者向けオプション→ワイヤレスデバッグ をONにしてください" ;;
+        3) candidates=$(echo "$discover_err" | sed -n 's/^candidates: //p')
+           fail adb "ペア設定が切れている疑い（候補はあるが接続できない）。ペア設定コードで再ペアリングが必要。候補ポート: ${candidates:-不明}" ;;
+        *) fail adb "ADBに接続できない（原因不明。auto-export.log を確認）" ;;
+      esac
+    fi
   fi
 fi
 timeout 10 adb devices | awk '/\tdevice$/{print $1; exit}' > "$DIR/endpoint"

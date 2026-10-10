@@ -25,6 +25,9 @@ import { api, ApiError } from "../lib/api";
 import { auth } from "../lib/firebase";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { SelectControl } from "./Select";
+import { TextareaControl } from "./Textarea";
+import { TextFieldControl } from "./TextField";
 
 export interface ShippingDetailDto {
   id: number;
@@ -396,7 +399,7 @@ export default function ShippingDetailPanel({
               {TEXT_FIELDS.recipient.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type={f.key === "email" ? "email" : "text"}
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -420,7 +423,7 @@ export default function ShippingDetailPanel({
               {TEXT_FIELDS.address.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -444,7 +447,7 @@ export default function ShippingDetailPanel({
               {NUMBER_FIELDS.dimensions.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="number"
                     min="0"
                     step={f.step}
@@ -471,7 +474,7 @@ export default function ShippingDetailPanel({
               {TEXT_FIELDS.packingItem.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -482,7 +485,7 @@ export default function ShippingDetailPanel({
               {NUMBER_FIELDS.itemPrice.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="number"
                     min="0"
                     step={f.step}
@@ -508,7 +511,8 @@ export default function ShippingDetailPanel({
             >
               <div className="form-group">
                 <label>{t("shipping.carrier")}</label>
-                <select
+                <SelectControl
+                  fullWidth
                   value={form.carrier}
                   onChange={(ev) => setField("carrier", ev.target.value)}
                   data-testid="ship-input-carrier"
@@ -518,12 +522,12 @@ export default function ShippingDetailPanel({
                       {t(opt.labelKey)}
                     </option>
                   ))}
-                </select>
+                </SelectControl>
               </div>
               {TEXT_FIELDS.shippingExtras.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -533,7 +537,7 @@ export default function ShippingDetailPanel({
               ))}
               <div className="form-group">
                 <label>{t("shipping.shipDate")}</label>
-                <input
+                <TextFieldControl
                   type="date"
                   value={form.ship_date}
                   onChange={(ev) => setField("ship_date", ev.target.value)}
@@ -546,7 +550,7 @@ export default function ShippingDetailPanel({
           {/* メモ */}
           <div className="form-group">
             <label>{t("shipping.shipMemo")}</label>
-            <textarea
+            <TextareaControl
               value={form.ship_memo}
               onChange={(ev) => setField("ship_memo", ev.target.value)}
               data-testid="ship-input-ship_memo"
