@@ -844,7 +844,8 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
 
 
 _STOCK_ITEMS_SQL = """
-    SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id
+    SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id,
+           COALESCE(ar.condition_canonical, '') AS condition_canonical
     FROM {schema}.extraction_jobs ej
     JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
     JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
@@ -876,7 +877,10 @@ def _load_stock_items(session: Session, message_ids: list[str]) -> dict[str, tup
     found: dict[str, list[StockItem]] = {}
     for r in rows:
         found.setdefault(str(r.source_message_id), []).append(
-            StockItem(_stock_lines(r.source_lines, r.line_start, r.line_end), int(r.product_id), int(r.condition_id))
+            StockItem(
+                _stock_lines(r.source_lines, r.line_start, r.line_end), int(r.product_id), int(r.condition_id),
+                str(r.condition_canonical or ""),
+            )
         )
     return {k: tuple(v) for k, v in found.items()}
 

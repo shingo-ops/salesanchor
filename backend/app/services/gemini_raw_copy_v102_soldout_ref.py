@@ -22,6 +22,23 @@ MATCH_STATUS_MATCHED_SOLDOUT_REF = "matched_soldout_ref"
 _UNDECIDED_STATUSES = ("unmatched", "ambiguous")
 _EXCLUDED = "excluded"
 
+# 規則11b：condition_basis（tcg_analyzer_svc.resolve_condition_v2 が返す）から「状態が文字の語で決まったか」を見る
+_FLAG_NOTE_RE = re.compile(r"^単品語あり・要確認\([^)]*\),")  # 先頭の flag_note
+_PRODUCT_KUBUN_DEFAULT_PREFIX = "R4c:商品分類既定>"  # 箱系の商品の既定。後ろは箱系として状態判定をやり直した basis
+_WORD_BASIS_PREFIXES = ("R3:MEMO:", "EMPTY_BOX:explicit")
+_WORD_RULE_RE = re.compile(r"^R\d+:")  # R2:語・R3:語・R4:語（R4a の語）
+_NON_WORD_BASIS_PREFIXES = ("R4:単位既定", "R5:パック既定")  # 単位・パックの既定（語ではない）
+
+
+def condition_decided_by_word(basis: str | None) -> bool:
+    """規則11b：状態が文字の語で決まったか（flag_note と R4c の接頭辞を除いた basis で見る）。"""
+    rest = _FLAG_NOTE_RE.sub("", basis or "")
+    if rest.startswith(_PRODUCT_KUBUN_DEFAULT_PREFIX):
+        rest = _FLAG_NOTE_RE.sub("", rest[len(_PRODUCT_KUBUN_DEFAULT_PREFIX):])
+    if rest.startswith(_WORD_BASIS_PREFIXES):
+        return True
+    return bool(_WORD_RULE_RE.match(rest)) and not rest.startswith(_NON_WORD_BASIS_PREFIXES)
+
 
 @dataclass(frozen=True)
 class StockItem:
@@ -30,6 +47,7 @@ class StockItem:
     lines: frozenset[int]
     product_id: int
     condition_id: int
+    condition_canonical: str = ""  # 状態の canonical（規則11b の絞り込みに使う。NULL は空文字）
 
 
 @dataclass(frozen=True)
@@ -40,6 +58,7 @@ class SoldoutTarget:
     condition_id: int
     ref_message_id: str
     ref_line: int
+    condition_canonical: str = ""
 
 
 @dataclass(frozen=True)
@@ -214,15 +233,38 @@ def _targets_of(stock: Sequence[RefRow], post: SoldoutRefPost | None) -> tuple[S
     found: dict[tuple[int, int], SoldoutTarget] = {}
     for row in sorted(stock, key=lambda r: r.order):
         pairs = [
-            (it.product_id, it.condition_id)
+            (it.product_id, it.condition_id, it.condition_canonical)
             for it in (post.stock_items if post is not None else ())
             if row.line_no in it.lines and it.product_id == row.product_id
         ]
         if not pairs:
             return None
-        for product_id, condition_id in pairs:
-            found.setdefault((product_id, condition_id), SoldoutTarget(product_id, condition_id, row.message_id, row.line_no))
+        for product_id, condition_id, canonical in pairs:
+            found.setdefault(
+                (product_id, condition_id), SoldoutTarget(product_id, condition_id, row.message_id, row.line_no, canonical)
+            )
     return tuple(found.values())
+
+
+def _narrow_by_condition(
+    targets: tuple[SoldoutTarget, ...], row: Mapping[str, Any], is_plural: bool,
+) -> tuple[SoldoutTarget, ...] | None:
+    """規則11b：〆の件の状態で相手を絞る。None は「決めない」、空は「商品だけ決める」。
+
+    状態が語で決まったとき：同じ canonical の相手だけ残す（残りが0なら、複数語なしは空、複数語ありは None）。
+    語で決まっていないとき：同じ商品の相手の状態が2つ以上なら、複数語なしは空、複数語ありは全部残す。
+    """
+    if not targets:
+        return targets
+    if condition_decided_by_word(row.get("condition_basis")):
+        kept = tuple(t for t in targets if t.condition_canonical == row.get("condition"))
+        return kept if kept or not is_plural else None
+    conditions_per_product: dict[int, set[int]] = {}
+    for t in targets:
+        conditions_per_product.setdefault(t.product_id, set()).add(t.condition_id)
+    if not is_plural and any(len(c) >= 2 for c in conditions_per_product.values()):
+        return ()
+    return targets
 
 
 def _decide_one(
@@ -252,7 +294,10 @@ def _decide_one(
     targets = _targets_of(stock, post)
     if targets is None and is_plural:
         return None  # 規則11：複数語で、相手が見つからない在庫の行がある
-    return _decision(stock, targets or (), (*codes, *names))
+    narrowed = _narrow_by_condition(targets or (), row, is_plural)
+    if narrowed is None:
+        return None  # 規則11b：複数語で、〆の件の状態と同じ相手が無い
+    return _decision(stock, narrowed, (*codes, *names))
 
 
 def _decision(stock: Sequence[RefRow], targets: tuple[SoldoutTarget, ...], tokens: tuple[str, ...]) -> SoldoutRefDecision:

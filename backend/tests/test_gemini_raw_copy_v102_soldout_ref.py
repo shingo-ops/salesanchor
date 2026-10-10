@@ -420,3 +420,77 @@ def test_other_channel_posts_are_not_returned(pg, channel):
 
 def test_unknown_job_returns_empty(pg):
     assert _load(pg, str(uuid4())) == ()
+
+
+# --- 規則11b：〆の件の状態で相手を絞る --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("basis, expected", [
+    ("R2:シュリ有り", True),
+    ("R3:シュリなし", True),
+    ("R3:MEMO:未サーチ", True),
+    ("EMPTY_BOX:explicit", True),
+    ("単品語あり・要確認(単品),R2:開封", True),
+    ("R4c:商品分類既定>R2:開封", True),
+    ("R4c:商品分類既定>単品語あり・要確認(単品),R2:開封", True),
+    ("R4:未開封", True),  # R4a の語
+    ("R4:単位既定", False),
+    ("R4:単位既定:単位不明", False),
+    ("単品語あり・要確認(単品),R4:単位既定", False),
+    ("R5:パック既定", False),
+    ("R4c:商品分類既定>R4:単位既定", False),
+    ("", False),
+    (None, False),
+])
+def test_condition_decided_by_word_follows_the_basis(basis, expected):
+    assert sr.condition_decided_by_word(basis) is expected
+
+
+_BOX, _NOS = "Sealed box", "No shrink box"
+_TWO_STATES = (_si([1], 62, _COND_A), _si([1], 62, _COND_B))
+
+
+def _two_states_post() -> sr.SoldoutRefPost:
+    items = (sr.StockItem(frozenset({1}), 62, _COND_A, _BOX), sr.StockItem(frozenset({1}), 62, _COND_B, _NOS))
+    return _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=items)
+
+
+def _decide_with_condition(condition, basis, *, plural: bool = False, post=None):
+    """〆の件（1行）に、本番の流れと同じ形の condition・condition_basis を持たせて判定する。"""
+    post = post or _two_states_post()
+    line = "ABC-123 両方 〆 3@1,500円" if plural else "ABC-123 〆 3@1,500円"
+    extracted = [{"lines": [1], "status_effect": "excluded", "match_status": "unmatched", "condition": condition, "condition_basis": basis}]
+    rows = sr.build_ref_rows((post,), _MASTER, _SOLD_WORDS)
+    decisions = sr.decide_soldout_ref(
+        extracted, [line], rows, plural_words=("両方",), sold_out_words=_SOLD_WORDS, posts=(post,),
+    )
+    return decisions.get(0)
+
+
+def _pairs(decision) -> list[tuple[int, int]]:
+    return [(t.product_id, t.condition_id) for t in decision.targets]
+
+
+def test_word_decided_condition_keeps_only_the_same_condition_targets():
+    for plural in (False, True):
+        decision = _decide_with_condition(_BOX, "R2:シュリ有り", plural=plural)
+        assert decision.product_id == 62 and _pairs(decision) == [(62, _COND_A)]  # シュリンク無しは相手にしない
+
+
+def test_word_decided_condition_without_a_same_condition_target():
+    single = _decide_with_condition("Case", "R2:ケース", plural=False)
+    assert single.product_id == 62 and single.targets == ()  # 複数語なし：商品だけ決める
+    assert _decide_with_condition("Case", "R2:ケース", plural=True) is None  # 複数語あり：決めない
+
+
+def test_condition_not_decided_by_word_with_several_states_of_one_product():
+    single = _decide_with_condition("FLAG_SINGLE", "R4:単位既定:単位不明", plural=False)
+    assert single.product_id == 62 and single.targets == ()  # 複数語なし：相手を空にして商品だけ
+    plural = _decide_with_condition("FLAG_SINGLE", "R4:単位既定:単位不明", plural=True)
+    assert _pairs(plural) == [(62, _COND_A), (62, _COND_B)]  # 複数語あり：全部残す
+
+
+def test_condition_not_decided_by_word_with_one_state_keeps_the_target():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(sr.StockItem(frozenset({1}), 62, _COND_A, _BOX),))
+    for plural in (False, True):
+        assert _pairs(_decide_with_condition("FLAG_SINGLE", "R4:単位既定:単位不明", plural=plural, post=post)) == [(62, _COND_A)]
