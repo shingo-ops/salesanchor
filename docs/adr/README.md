@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-09 / ADR 総数: 166 件
+最終更新: 2026-10-10 / ADR 総数: 166 件
 
 ## 維持ルール（整合性を保つ・必須）
 
