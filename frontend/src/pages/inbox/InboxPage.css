@@ -112,10 +112,9 @@
   pointer-events: none;
   flex-shrink: 0;
 }
-/* inbox固有: width と icon用 padding-left のみ上書き */
+/* inbox固有: width のみ（見た目・icon用 padding は金型 TextFieldControl の種類 search） */
 .inbox-search-input {
   width: 100%;
-  padding: calc(var(--space-2) + 1.5px) var(--space-3) calc(var(--space-2) + 1.5px) calc(var(--space-3) + 16px + var(--space-2));
 }
 
 /* 管理ボタン */
@@ -1165,7 +1164,6 @@
   font-family: inherit;
   transition: border-color var(--transition-micro);
 }
-.right-panel-field::placeholder { color: var(--text-muted); }
 .right-panel-field:focus { outline: none; border-color: var(--accent); }
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;

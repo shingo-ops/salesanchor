@@ -81,3 +81,30 @@
 | 4 | 部品の置き場所（カードは `components/feedback/`） | 既存は平置きが主で、check:stories は直下のみ走査（上表）。下位フォルダに置くと stories の検査が効かない | 解消済み（`frontend/src/components/Callout.tsx` に平置き） |
 
 **未解決ゼロ確認**: 全て解消済み
+
+## 除外ワードの追加（3）
+
+実測時の origin/main: fb036a238（d88bc73b6 の worktree 起点）
+
+### 事実
+
+| 引用先 | 確認内容 |
+|-------|---------|
+| backend/app/services/tcg_product_master_svc.py:560 | add_exclude_keyword は audit_log を書かない（INSERT と commit のみ）。変更の記録が語まで残らないため使わない（設計者判断 2026-10-09） |
+| backend/app/middleware/audit.py:200-222 | POST/PUT 等は data_access_events に method・path・user_email のみ記録。追加した語は残らない |
+| backend/app/routers/tcg_product_import.py:260-269 | GET /tcg/products/detail/{product_id}。応答は product・revision・lookups |
+| backend/app/routers/tcg_product_import.py:275-316 | PUT /tcg/products/detail/{product_id}。body は ProductDetailUpdate（revision・全欄・search_keywords・exclude_keywords） |
+| backend/app/services/tcg_product_detail_svc.py:122-123 | revision が合わなければ PRODUCT_DETAIL_CONFLICT（409） |
+| backend/app/services/tcg_product_detail_svc.py:196-203 | audit_log に変更前後（old_values・new_values）と actor を記録 |
+| backend/app/services/tcg_product_detail_svc.py:182-186 | 語の表は、送った語が現状と同じなら触らない（違うときだけ削除して入れ直す） |
+| backend/app/services/tcg_product_master_svc.py:482 | 新規作成の応答に product_id（文字列）と code_collisions |
+| frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx（変更前の135-141） | saveEdit が PUT する body の作り方。本便で productDetailModel.ts の buildUpdateBody に移し、ドロワーの保存と除外ワード追加で共用 |
+
+### 確認した範囲と注意
+
+- PUT は商品の他の欄を GET で得た今の値のまま送る。値を消す形ではない。ただし english_title・mark が NULL の商品は PUT で空文字になる（ドロワーの通常保存と同じ挙動。draftFrom が null を空文字にする既存仕様）
+- 外部事例: 該当なし（自社マスタの編集画面に既存の保存経路を使うだけで、新しい方式を導入しないため）
+
+## ADR 検索（3）
+
+- 既存 ADR: ADR-155・ADR-144・ADR-027・ADR-067（本ディレクトリ冒頭と同じ）。除外ワード追加の追加 ADR は無し

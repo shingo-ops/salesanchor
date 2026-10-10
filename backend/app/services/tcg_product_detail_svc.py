@@ -124,6 +124,9 @@ async def update_product_detail(
         product = before["product"]
         params = dict(values)
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
+        # 空の mark / english_title は NULL で保存する（新規作成 tcg_product_master_svc.py:418-419 と同じ表し方）
+        params["mark"] = (values["mark"] or "").strip() or None
+        params["english_title"] = (values["english_title"] or "").strip() or None
         params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
         # work_id → public.type_master (INTEGER, SSOT); validated separately from LOOKUPS

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
@@ -38,6 +39,8 @@ from app.services.tcg_analyzer_svc import (
     resolve_condition_v2,
     resolve_unit_v2,
 )
+
+logger = logging.getLogger(__name__)
 
 # --- 区分の値（マスタの値。比較に使うので、ここ1か所にまとめる） -------------------------------
 # public.tcg_product_categories.kubun_type（商品の分類）の値
@@ -90,6 +93,8 @@ class ProductFirstMasters:
     ignore_phrases: tuple[str, ...]  # 単位にしない言い回し（有効なもの。空でもよい）
     # 形G2 の照合に使う索引（型番を外す前の商品と中分類の印）。None のときは product_entries から印なしで作る
     g2_index: G2Index | None = None
+    # 直前の投稿から商品を決めない言葉（複数を指す言葉）。knowledge_rules の category=followup_plural_word。空なら働かない
+    followup_plural_words: tuple[str, ...] = ()
 
 
 _CONDITION_UNIT_SQL = """
@@ -103,6 +108,11 @@ _IGNORE_PHRASES_SQL = """
 """
 
 
+_FOLLOWUP_PLURAL_WORDS_SQL = """
+    SELECT pattern FROM public.knowledge_rules
+    WHERE category = 'followup_plural_word' AND pattern_type = 'substring' AND is_active = TRUE
+    ORDER BY priority, id
+"""
 _NAME_ONLY_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = FALSE"
 
 
@@ -235,6 +245,12 @@ def match_product_g2(block: str, index: G2Index) -> MatchResult:
     )
 
 
+def match_text_g2(match_text: str, masters: ProductFirstMasters):
+    """照合文を形G2 で照合する（resolve_product_first と直前の投稿の参照行の作成が同じ部品を使う）。"""
+    g2_index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
+    return match_product_g2(match_text, g2_index)
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
     """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
 
@@ -249,7 +265,8 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     cond_unit = {str(r[0]): str(r[1]) for r in session.execute(text(_CONDITION_UNIT_SQL)).fetchall()}
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
     g2_index = build_g2_index(source_entries, name_only, code_only_off)
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index)
+    plural_words = tuple(str(r[0]) for r in session.execute(text(_FOLLOWUP_PLURAL_WORDS_SQL)).fetchall() if r[0])
+    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words)
     check_product_first_masters(masters)
     return masters
 
@@ -467,20 +484,41 @@ def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[di
     ]
 
 
+def _fixed_match(match: MatchResult, fixed_product_id: int | None, masters: ProductFirstMasters) -> MatchResult | None:
+    """人が決めた商品で matched にした照合結果。指定なし・商品が有効な商品の一覧に無いときは None（固定しない）。"""
+    if fixed_product_id is None:
+        return None
+    work_of = {p.id: p.work_id for p in masters.product_entries}
+    if fixed_product_id not in work_of:
+        logger.warning("[product_first] 固定の商品 id=%s が有効な商品の一覧に無いため固定しません", fixed_product_id)
+        return None
+    return dataclass_replace(
+        match, status="matched", product_id=fixed_product_id, work_id=work_of[fixed_product_id],
+        candidates=(fixed_product_id,), boundary_dropped=(),
+    )
+
+
 def resolve_product_first(
     *, item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], block: str, name: str,
     aliases: Sequence[str], unit_alias_to_info: dict, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     masters: ProductFirstMasters, find_price_alias: Callable[[str], str | None], chosen_product_id: int | None = None,
+    fixed_product_id: int | None = None,
 ) -> dict:
     """1件の商品・単位・状態を、商品を先に決める流れで出す。
 
     chosen_product_id：商品が ambiguous で、その候補に含まれるときだけ、その商品に決めた扱いにする（前後の商品の作品で決めた結果）。
     それ以外のときは無視する。
+    fixed_product_id：人が決めた商品。指定時は照合の結果に関わらずその商品で matched にする（chosen_product_id より優先）。
+    商品が有効な商品の一覧に無ければ固定しない。None のときの結果は変わらない。
     """
     match_text, _source = product_match_text(block, "", name)
-    g2_index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
-    match = match_product_g2(match_text, g2_index)
-    if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
+    match = match_text_g2(match_text, masters)
+    fixed_match = _fixed_match(match, fixed_product_id, masters)
+    if fixed_match is not None:
+        match = fixed_match
+    elif match.status in ("ambiguous", "unmatched") and chosen_product_id is not None and (
+        match.status == "unmatched" or chosen_product_id in match.candidates  # unmatched は直前の投稿で決めた商品（matched_followup）
+    ):
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
     score = decide_by_score(match, masters.product_entries)

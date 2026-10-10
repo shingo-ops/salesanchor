@@ -4,6 +4,7 @@ import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api, ApiError } from "../../lib/api";
 import type { AnalysisReviewItem } from "./ItemComparison";
+import { reviewReasonsText } from "./reviewReasonLabel";
 
 type Option = { id: string; code: string; canonical: string };
 type SaveResponse = { ok: boolean; saved: number; condition_review: { needs_review: boolean; review_version: string } };
@@ -71,8 +72,7 @@ export function ConditionReviewPanel({ item, onRefresh }: { item: AnalysisReview
   return <section aria-label={t("conditionReview.title")}>
     <p>{t("conditionReview.current", { condition: label(item.system.condition || t("conditionReview.unknown")) })}</p>
     <p>{t("conditionReview.original", { name: item.gemini.name, state: item.gemini.state, memo: item.gemini.memo })}</p>
-    {review.review_reasons && <p>{review.review_reasons.split(",").map((reason) =>
-      t(`conditionReview.reasons.${reason}`, { defaultValue: t("conditionReview.otherReason") })).join(t("conditionReview.separator"))}</p>}
+    {review.review_reasons && <p>{reviewReasonsText(t, review.review_reasons)}</p>}
     {review.confirmed && <p>{t(review.needs_review ? "conditionReview.otherReasonsRemain" : "conditionReview.saved")}</p>}
     <Select aria-label={t("conditionReview.select")} value={selected} disabled={saving || options.length === 0}
       onChange={(event) => setSelected(event.target.value)} placeholder={t("conditionReview.select")}

@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { TextFieldControl } from "../../components/TextField";
 
 interface ChannelMaster {
   id: number;
@@ -112,21 +113,23 @@ export default function ChannelMastersPage() {
 
           <div className="channel-masters-add-form">
             <h3>{t("channelMasters.addTitle")}</h3>
-            <input
+            <TextFieldControl
               type="text"
               value={newPlatform}
               onChange={(e) => setNewPlatform(e.target.value)}
               placeholder={t("channelMasters.platformPlaceholder")}
               aria-label={t("channelMasters.platform")}
               disabled={saving}
+              style={{ width: "auto" }}
             />
-            <input
+            <TextFieldControl
               type="text"
               value={newDisplayName}
               onChange={(e) => setNewDisplayName(e.target.value)}
               placeholder={t("channelMasters.displayNamePlaceholder")}
               aria-label={t("channelMasters.displayName")}
               disabled={saving}
+              style={{ width: "auto" }}
             />
             <button
               type="button"

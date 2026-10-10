@@ -26,11 +26,24 @@ from app.services.gemini_raw_copy_v102_context_work import (
     MATCH_STATUS_MATCHED_CONTEXT,
     decide_by_context,
 )
+from app.services.gemini_raw_copy_v102_followup import (
+    MATCH_STATUS_MATCHED_FOLLOWUP,
+    build_reference_lines,
+    decide_followup,
+    unit_words,
+)
 from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_UNKNOWN,
     REVIEW_PRODUCT_MULTIPLE,
     ProductFirstMasters,
     resolve_product_first,
+)
+from app.services.gemini_raw_copy_v102_soldout_ref import (
+    MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    SoldoutRefPost,
+    build_ref_rows,
+    decide_soldout_ref,
+    soldout_targets,
 )
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
@@ -794,7 +807,7 @@ def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bo
 
 def _product_first_fields(
     item: dict, roles: dict[int, str], lines: list[str], block: str, name: str, ctx: V101Context,
-    chosen_product_id: int | None = None,
+    chosen_product_id: int | None = None, fixed_product_id: int | None = None,
 ) -> dict | None:
     """試作版 v102：商品を先に決める流れの結果。マスタが渡されていないとき（v10.2 までの呼び出し）は None。"""
     if ctx.product_first is None:
@@ -804,15 +817,17 @@ def _product_first_fields(
         unit_alias_to_info=ctx.unit_alias_to_info, cond_entries=ctx.cond_entries,
         cond_canonical_to_uuid=ctx.cond_canonical_to_uuid, masters=ctx.product_first,
         find_price_alias=lambda text: find_unit_alias(text, ctx.aliases), chosen_product_id=chosen_product_id,
+        fixed_product_id=fixed_product_id,
     )
 
 
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
-    name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None,
+    name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None, fixed_product_id: int | None = None,
 ) -> dict:
     """chosen_product_id（試作版 v102）：前後の商品の作品で決めた商品。ambiguous の候補にあるときだけ使う。
+    fixed_product_id（試作版 v102）：人が決めた商品。照合の結果に関わらずこの商品に決める。
     name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
     shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
@@ -823,7 +838,7 @@ def _extract_one(
         name = f"{name_prefix} {name}"
         calc_name = f"{name_prefix} {calc_name}"
     product_first = (
-        _product_first_fields(item, roles, lines, block, calc_name, ctx, chosen_product_id) if v102 else None
+        _product_first_fields(item, roles, lines, block, calc_name, ctx, chosen_product_id, fixed_product_id) if v102 else None
     )
     if product_first is not None:
         unit_canonical, kubun, condition, basis = (
@@ -1044,8 +1059,61 @@ def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None]
     return result
 
 
+def _apply_followup(
+    extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
+    masters: ProductFirstMasters, followup_ref: tuple[str, str], unit_alias_to_info: dict,
+    fixed_products: dict[int, int] | None = None,
+) -> list[dict]:
+    """試作版 v102 の3回目：商品が決まらない件を、直前の投稿で商品が決まった行から決める。決めた件は決めた商品で作り直す。"""
+    message_id, ref_text = followup_ref
+    result = list(extracted)
+    decisions = decide_followup(
+        extracted, lines, build_reference_lines(ref_text, masters),
+        units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words,
+    )
+    for i, decision in decisions.items():
+        if i in (fixed_products or {}):
+            continue  # 人が決めた商品がある件は、自動で決め直さない（人の判断が優先）
+        result[i] = {
+            **build(i, decision.product_id),
+            "match_status": MATCH_STATUS_MATCHED_FOLLOWUP,
+            "product_followup": {
+                "ref_message_id": message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
+            },
+        }
+    return result
+
+
+def _apply_soldout_ref(
+    extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
+    masters: ProductFirstMasters, soldout_posts: tuple[SoldoutRefPost, ...], unit_alias_to_info: dict,
+    sold_out_words: list[str], fixed_products: dict[int, int] | None = None,
+) -> list[dict]:
+    """試作版 v102 の4回目：〆で商品が決まらない件を、同じ仕入元の過去48時間の投稿の在庫の行から決める。決めた件は決めた商品で作り直す。"""
+    if not soldout_targets(extracted):
+        return extracted  # 対象の件が無ければ参照行を作らない（照合が重いため）
+    result = list(extracted)
+    decisions = decide_soldout_ref(
+        extracted, lines, build_ref_rows(soldout_posts, masters, sold_out_words),
+        units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words, sold_out_words=sold_out_words,
+    )
+    for i, decision in decisions.items():
+        if i in (fixed_products or {}):
+            continue  # 人が決めた商品がある件は、自動で決め直さない（人の判断が優先）
+        result[i] = {
+            **build(i, decision.product_id),
+            "match_status": MATCH_STATUS_MATCHED_SOLDOUT_REF,
+            "product_soldout_ref": {
+                "ref_message_id": decision.ref_message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
+            },
+        }
+    return result
+
+
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
+_REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
+_REVIEW_QUANTITY_NOT_IN_TEXT = "quantity_not_in_text"
 _POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
 _NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
 
@@ -1077,11 +1145,39 @@ def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[di
     """通常の件に足す要確認の理由（印の行を持つ件・単位なし・分類「不明」）。"""
     owned = {*row["lines"], row["price_line"]}
     reasons = [{"line": n, "kind": _REVIEW_QUANTITY_NO_NUMBER} for n in no_number if n in owned]
+    if row.get("quantity_not_in_text") is True:
+        reasons.append({"kind": _REVIEW_QUANTITY_NOT_IN_TEXT, "field": "quantity", "copied": row["raw_quantity"]})
     reasons += [{"line": n, "kind": _REVIEW_FOOTER} for n in footer if n in owned]
     if row["unit"] == _NONE:
         reasons.append({"line": row["price_line"], "kind": _REVIEW_UNIT_UNKNOWN})
     if row.get("match_status") == MATCH_STATUS_MATCHED and row.get("product_category") == PRODUCT_KUBUN_UNKNOWN:
         reasons.append({"line": row["price_line"], "kind": _REVIEW_CATEGORY_UNKNOWN})
+    return reasons
+
+
+def _heading_ship_reasons(rows: list[dict]) -> list[list[dict]]:
+    """見出しの直下の発送の行を、自分の発送の行を持つ2件目以降の件にも入れた件の要確認の理由（rows と同じ順の、件ごとのリスト）。
+
+    lines の最小の行番号が同じ件を同じ見出しとみなす。まとまりの中で price_line が最小の件 F 以外の各件 B で、
+    H（F の価格行より前の発送の行）と O（F と B の価格行の間にある B だけの発送の行）が両方あれば、H の行ごとに理由を足す。
+    rows は書き換えない。落とした件（rejected）は見ない。原文の文字は載せない。
+    """
+    reasons: list[list[dict]] = [[] for _ in rows]
+    groups: dict[int, list[int]] = {}
+    for i, row in enumerate(rows):
+        if not row.get("rejected") and row["lines"] and row["price_line"] is not None:
+            groups.setdefault(min(row["lines"]), []).append(i)
+    for h, members in ((h, m) for h, m in groups.items() if len(m) >= 2):
+        first = min(members, key=lambda i: rows[i]["price_line"])
+        first_price = rows[first]["price_line"]
+        for b in (m for m in members if m != first):
+            row = rows[b]
+            ships = [n for n in row["lines"] if row["roles"].get(n) == ROLE_SHIP]
+            others = {n for m in members if m != b for n in rows[m]["lines"]}
+            heading = sorted(n for n in ships if h < n < first_price)
+            own = sorted(n for n in ships if first_price < n < row["price_line"] and n not in others)
+            if heading and own:
+                reasons[b] = [{"line": n, "kind": _REVIEW_HEADING_SHIP, "own_lines": list(own)} for n in heading]
     return reasons
 
 
@@ -1095,7 +1191,8 @@ def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int])
 
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
-    *, rejected: list[dict] | None = None, review_reasons: bool = False,
+    *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
+    followup_ref: tuple[str, str] | None = None, soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
 ) -> tuple[list[dict], dict]:
     """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
 
@@ -1120,6 +1217,7 @@ def _extract_v102(
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
             v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i], chosen_product_id=chosen_product_id,
+            fixed_product_id=(fixed_products or {}).get(i),
         )
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
@@ -1131,12 +1229,25 @@ def _extract_v102(
     no_number = [it["price_line"] for it in items if _has_no_digit(it["quantity"])]
     if ctx.product_first is not None:
         extracted = _apply_context_work(extracted, build, ctx.product_first.product_entries)
+        if followup_ref is not None:
+            extracted = _apply_followup(
+                extracted, build, lines, ctx.product_first, followup_ref, ctx.unit_alias_to_info, fixed_products
+            )
+        if soldout_posts:
+            extracted = _apply_soldout_ref(
+                extracted, build, lines, ctx.product_first, soldout_posts, ctx.unit_alias_to_info, ctx.sold_out_words,
+                fixed_products,
+            )
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
     }
     if review_reasons:
-        extracted = [{**row, "review": [*row["review"], *_item_reasons(row, no_number, footer_lines)]} for row in extracted]
+        heading_ship = _heading_ship_reasons(extracted)
+        extracted = [
+            {**row, "review": [*row["review"], *_item_reasons(row, no_number, footer_lines), *heading_ship[i]]}
+            for i, row in enumerate(extracted)
+        ]
         owned = {n for row in [*extracted, *rejected_rows] for n in row["lines"]}
         flags = {**flags, "post_review": _post_review_reasons(
             item_count=len(extracted) + len(rejected_rows), flags=flags, owned_lines=owned)}
@@ -1147,6 +1258,8 @@ def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
     v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
+    fixed_products: dict[int, int] | None = None, followup_ref: tuple[str, str] | None = None,
+    soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -1157,7 +1270,13 @@ def extract_v101_items(
     product_first（試作版 v102）は v102_fixes が True のときだけ使う。渡すと、商品を先に決めて単位・状態を出す流れになり、
     件に product_id・product_category・match_status・match_candidates・unit_basis が付く。None なら v10.2 のまま。
     review_reasons（v102_fixes のときだけ）：件の review に印・単位なし・分類「不明」の理由を足し、flags に post_review を足す。
+    followup_ref（product_first のときだけ）：(直前の投稿の id, 直前の投稿の原文)。あれば、商品が決まらない件を直前の投稿の行で決める
+    （match_status=matched_followup）。None なら今と同じ。
+    soldout_posts（product_first のときだけ）：同じ仕入元の過去48時間の投稿（新しい順）。あれば、〆で商品が決まらない件を
+    その投稿の在庫の行で決める（match_status=matched_soldout_ref）。None・空なら今と同じ。
     items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
+    fixed_products（試作版 v102）：人が決めた商品。受理した件の位置（落とした件を除く、Gemini の順）→ 商品 id。
+    None・空なら結果は変わらない。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
@@ -1169,7 +1288,10 @@ def extract_v101_items(
     kept = [it for it in items if "rejected" not in it] if v102_fixes else items
     adjusted, reassigned, review = reassign_ambiguous(kept, lines, ctx) if reassign else (kept, {}, {})
     if v102_fixes:
-        return _extract_v102(adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons)
+        return _extract_v102(
+            adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons,
+            fixed_products=fixed_products, followup_ref=followup_ref, soldout_posts=soldout_posts,
+        )
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}
     shared = _shared_line_numbers(adjusted)

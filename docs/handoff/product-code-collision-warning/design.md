@@ -139,3 +139,49 @@
 ### 継続
 
 - 完了後の監視: 本番で型番が重なる商品を保存したとき警告の枠が出ること（PO 確認）
+
+## 除外ワードの追加（3）
+
+### 方針
+
+- 型番重なりの警告（CodeCollisionNotice）の推奨語ごとに [この商品に追加] [相手に追加] を出す。語の自動登録はしない（押したときだけ）
+- 相手に追加: 確認（ConfirmModal）→ GET /tcg/products/detail/{相手のid} で最新の値と revision を取る → 除外ワードに足して PUT /tcg/products/detail/{相手のid}（audit_log に変更前後が残る）。既存語なら PUT せず「登録済み」。409（revision 不一致）は既存の productDetail.conflict を出し、ボタンは残るので押し直すと読み直して足し直せる
+- この商品に追加: 編集中は入力欄に足すだけ（API なし・保存で一緒に登録）。新規作成直後は作成応答の product_id に対して上と同じ経路（確認つき）
+- API を呼ぶのは productDetailModel.ts の addExcludeWord 1か所。PUT の body は buildUpdateBody をドロワーの保存と共用（二重に書かない）
+- CSV preview: MARK_ALREADY_USED_BY_ の {{value}} を同じ行の code_collisions の「商品名（作品）」に置き換える（無ければ id のまま）。[相手に追加] のみ出す
+- backend・新しい部品は無し。add_exclude_keyword は使わない
+
+### 基準と検証方法
+
+|基準|検証方法|
+|---|---|
+| 相手に追加: 確認後に GET→PUT が相手のidで呼ばれ、revision と足した語を含む body が送られ「追加しました」が出てボタンが消える | TcgProductDetailDrawer.test.tsx |
+| 既存語は PUT せず「登録済み」 | 同上 |
+| 失敗は追加失敗の表示でボタンが残る・409 は conflict 文言 | 同上 |
+| 新規作成直後の [この商品に追加] が作成応答の product_id に PUT する | 同上 |
+| 編集中の [この商品に追加] は API を呼ばず除外ワード欄に足す | 同上 |
+| CSV の文言が相手の商品名（作品）になる・見つからなければ id | TcgProductImportPanel.test.tsx |
+| CSV 行に [相手に追加] だけが出る | 同上 |
+| ja.json・en.json 同一キー・日本語直書き無し | cd frontend && npm run check:all |
+| 型検査・build | cd frontend && npm run build |
+
+### 外部事例
+
+該当なし（理由: 既存の保存経路を再利用する画面の追加で、新しい仕組みを導入しないため）。
+
+### 弊害・トレードオフ
+
+- 追加のたびに GET と PUT の2回呼ぶ。同時に別の人が変えると 409 になり、押し直しが必要
+- english_title・mark が NULL の商品に追加すると、PUT でそれらが空文字になる（ドロワー保存と同じ既存挙動）
+
+### 維持の仕組み
+
+- 守り手: TcgProductDetailDrawer.test.tsx・TcgProductImportPanel.test.tsx
+
+### 戻し方
+
+- この PR を revert する（バックエンド変更なし）
+
+### 継続
+
+- 本番で [相手に追加] を1回実行し、相手商品の audit_log に変更前後が残ることを PO が確認

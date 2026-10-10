@@ -256,12 +256,9 @@
     "tenantPolicy": "テナントポリシー",
     "discordConfig": "Discord 連携設定",
     "discordAnnounce": "Discordアナウンス",
-    "superAdminTcgProductMaster": "商品マスタ",
     "superAdminFxRate": "為替レート管理",
-    "superAdminTcgParallelReport": "並行運用比較レポート",
     "superAdminTcgLineImport": "インポート",
     "superAdminTcgSoldOut": "完売ルール",
-    "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "superAdminAnalysisRules": "LINE解析",
     "account": "アカウント",
@@ -283,7 +280,6 @@
     "statusMaster": "ステータスマスタ",
     "conditionsMaster": "状態マスタ",
     "productCategories": "商品カテゴリ",
-    "superAdminSupplierMaster": "仕入元マスタ",
     "superAdminSupplierExtractionRules": "抽出ルール設定",
     "units": "単位マスタ",
     "noteMaster": "備考マスタ",
@@ -2425,34 +2421,6 @@
       "suppliers": "仕入元",
       "llmBudget": "LLM 予算"
     },
-    "attrMasters": {
-      "title": "各種マスタ",
-      "desc": "商品マスタの選択肢（プルダウン候補）を追加・編集・削除します。",
-      "empty": "登録されていません",
-      "addBtn": "追加",
-      "searchPlaceholder": "名称で検索",
-      "reorderHint": "行をドラッグして並び替えできます。",
-      "activeOn": "有効",
-      "activeOff": "無効",
-      "col": {
-        "labelJa": "表示名",
-        "labelEn": "英語表示",
-        "code": "コード（任意）",
-        "sortOrder": "並び順",
-        "active": "状態"
-      },
-      "attr": {
-        "productKind": "商品種類",
-        "setType": "セット種別",
-        "tcgSeries": "TCGシリーズ",
-        "rarity": "レアリティ",
-        "language": "言語",
-        "unit": "単位",
-        "hsCode": "HSコード",
-        "item": "品目",
-        "material": "素材"
-      }
-    },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
       "rulesSection": "正規化ルール",
@@ -2508,30 +2476,6 @@
       "csvErrors": "CSV エラー",
       "previewWouldInsert": "挿入予定件数",
       "invalidCsv": "CSV フォーマットが不正です"
-    },
-    "tcg": {
-      "title": "TCG シリーズマスタ",
-      "newSeries": "シリーズ新規作成",
-      "fields": {
-        "tcgType": "TCG 種別",
-        "seriesCode": "シリーズコード",
-        "nameJa": "名称（日本語）",
-        "nameEn": "名称（英語）",
-        "releaseDate": "発売日",
-        "category": "カテゴリ"
-      },
-      "types": {
-        "pokemon": "ポケモンカード",
-        "one_piece": "ワンピース",
-        "dragon_ball": "ドラゴンボール",
-        "union_arena": "ユニオンアリーナ",
-        "yugioh": "遊戯王"
-      },
-      "typeManager": {
-        "title": "種別の管理",
-        "code": "種別コード",
-        "addBtn": "種別を追加"
-      }
     },
     "supplierQuality": {
       "columns": {
@@ -2608,30 +2552,6 @@
       "retryConfirmErrors": "表示中のエラージョブを再実行しますか？（最大50件）",
       "retrySuccess": "再実行キュー追加: {{enqueued}}件 / スキップ: {{skipped}}件",
       "retryError": "再実行に失敗しました（Celery 未接続の可能性があります）"
-    },
-    "dex": {
-      "title": "ポケモン / トレーナー図鑑",
-      "kinds": {
-        "pokemon": "ポケモン",
-        "trainer": "トレーナー"
-      },
-      "newEntry": "図鑑エントリ新規作成",
-      "fields": {
-        "dexNumber": "図鑑番号",
-        "nameJa": "名称（日本語）",
-        "nameEn": "名称（英語）",
-        "generation": "世代",
-        "region": "地方",
-        "era": "時代"
-      },
-      "import": {
-        "previewBtn": "PokeAPIから取込",
-        "applyBtn": "{{count}} 件を一括取込",
-        "upToDate": "最新です（新規なし）",
-        "diffSummary": "新規 {{count}} 件（PokeAPI {{source}} 件 / DB {{db}} 件）",
-        "applied": "{{count}} 件を取り込みました",
-        "truncated": "新規が多いため先頭 {{max}} 件のみ表示・取込します"
-      }
     },
     "suppliersAdmin": {
       "title": "仕入元マスタ（中央 admin）",
@@ -2722,23 +2642,6 @@
       "refreshError": "レートの取得に失敗しました。しばらく待ってから再試行してください。",
       "currency": "通貨",
       "rateJpy": "1 外貨 = N 円"
-    },
-    "llmBudget": {
-      "title": "LLM 月次予算（Gemini 2.5 Flash）",
-      "subtitle": "テナント別の LLM フォールバック使用量と上限を管理します。",
-      "noRows": "予算行がまだ登録されていません。",
-      "savedNotice": "保存しました。",
-      "editTitle": "テナント {{tenant_id}} の予算を編集",
-      "fields": {
-        "tenantId": "テナント ID",
-        "tenantName": "テナント名",
-        "monthlyBudget": "月次予算 (USD)",
-        "currentMonth": "今月の使用量",
-        "utilization": "消化率",
-        "hardStop": "上限到達時に停止",
-        "notifyAdmin": "Admin に通知",
-        "lastResetAt": "前回リセット"
-      }
     },
     "inbound": {
       "title": "Discord 受信メッセージ",
@@ -3811,11 +3714,6 @@
       "filtered": "フィルタ除外",
       "unknown": "未記録"
     },
-    "reviewReason": {
-      "pid_unresolved": "商品を特定できない",
-      "multi_candidate": "商品候補が複数",
-      "note_unmatched": "メモの変換先が見つからない"
-    },
     "viewMessages": "取り込んだ投稿を確認",
     "viewItems": "抽出結果をすべて見る",
     "viewResults": "解析結果{{total}}明細をすべて見る",
@@ -3847,17 +3745,89 @@
     "changed": "内容が変わりました。再取得した内容を確認してから、もう一度確認してください。",
     "reloadFailed": "内容が変わり、再取得にも失敗しました。再読込してから確認してください。",
     "saveFailed": "状態を保存できませんでした。もう一度お試しください。",
-    "loadFailed": "状態の選択肢を取得できませんでした。",
-    "otherReason": "他にも確認が必要な項目があります。",
-    "separator": "／",
-    "reasons": {
-      "empty_box": "空箱であることの確認が必要です。",
-      "empty_box_ambiguous": "空箱の説明が曖昧です。実際の状態を選択してください。",
-      "empty_box_master_unavailable": "空箱の状態定義を利用できません。",
-      "note_unmatched": "備考の確認が残っています。",
-      "pid_unresolved": "商品を特定できていません。",
-      "multi_candidate": "商品候補が複数あります。"
+    "loadFailed": "状態の選択肢を取得できませんでした。"
+  },
+  "v102Posts": {
+    "empty": "直す投稿はありません",
+    "columns": {
+      "supplier": "仕入元",
+      "postedAt": "投稿時刻",
+      "postReasons": "投稿の理由",
+      "counts": "直す件 / 件数",
+      "lines": "行番号",
+      "price": "価格",
+      "quantity": "数量",
+      "reasons": "理由",
+      "remove": "削除"
+    },
+    "modalTitle": "書き写しを直す",
+    "jobReasons": "投稿の理由：{{reasons}}",
+    "linesPlaceholder": "例 3,5,7",
+    "noRows": "件がありません",
+    "addItem": "件を追加",
+    "remove": "削除",
+    "cancel": "やめる",
+    "save": "保存",
+    "saved": "保存しました。解析をやり直しています",
+    "unchanged": "変更はありません",
+    "saveFailed": "保存できませんでした。もう一度お試しください",
+    "errors": {
+      "lines": {
+        "empty": "行番号を入れてください",
+        "notInteger": "行番号は整数をカンマで区切って入れてください",
+        "outOfRange": "行番号は1から{{max}}の間にしてください",
+        "duplicate": "同じ行番号が重なっています"
+      },
+      "textTooLong": "{{max}}字以内にしてください",
+      "noItems": "件が1つもありません。1件以上にしてください"
     }
+  },
+  "reviewItem": {
+    "drawerTitle": "要確認の商品",
+    "reasonsHeading": "確認が必要な理由",
+    "noReasons": "理由はありません",
+    "sourceLine": "出どころ：{{source}}",
+    "ack": "このままで良い",
+    "acked": "確認済みにしました。解析をやり直しています",
+    "ackFailed": "確認済みにできませんでした。もう一度お試しください"
+  },
+  "reviewReason": {
+    "pid_unresolved": "商品を特定できない",
+    "multi_candidate": "商品候補が複数ある",
+    "note_unmatched": "備考の変換先が見つからない",
+    "empty_box": "空箱かどうかの確認が必要",
+    "empty_box_ambiguous": "空箱の説明があいまい",
+    "empty_box_master_unavailable": "空箱の状態定義が使えない",
+    "unit_unresolved": "単位を特定できない",
+    "price_unresolved": "価格を読み取れない",
+    "excluded": "除外の対象",
+    "item_shape_invalid": "Gemini の出力の形が正しくない",
+    "price_not_in_lines": "価格が原文の行に無い",
+    "duplicate_price_line": "同じ価格の行が重なっている",
+    "ship": "発送の行かどうか確認が必要",
+    "condition": "状態の行かどうか確認が必要",
+    "quantity_no_number": "数量に数字が無い",
+    "quantity_not_in_text": "数量の写しが原文に無い",
+    "possible_footer_line": "末尾の定型文かもしれない",
+    "unit_unknown": "単位が分からない",
+    "category_unknown": "商品の種類が分からない",
+    "heading_ship_with_own_ship": "見出しと件の両方に発送の記載がある",
+    "no_items": "商品が1件も取れていない",
+    "possible_missing_item": "取りこぼしの可能性がある",
+    "product_not_in_master": "商品マスタに無い",
+    "product_multiple": "商品候補が複数ある（新方式）",
+    "condition_multiple_candidates": "状態の候補が複数ある",
+    "condition_unknown": "状態が分からない",
+    "gemini_unsure": "Gemini が自信なしと申告",
+    "gemini_unsure_invalid": "Gemini の申告の形が正しくない",
+    "response_unreadable": "Gemini の応答を読めない",
+    "extract_exception": "解析の途中でエラーが起きた",
+    "unknown": "登録されていない理由（{{code}}）",
+    "source": {
+      "gemini": "Gemini",
+      "system": "システム"
+    },
+    "separator": "、"
   },
   "codeCollision": {
     "title": "型番が既存の商品と重なっています",
@@ -3867,7 +3837,14 @@
     "fields": { "product_code": "品番", "mark": "マーク" },
     "addToThis": "この商品の除外ワードに足すとよい語：{{words}}",
     "addToOther": "相手の商品の除外ワードに足すとよい語：{{words}}",
-    "registered": "除外ワードは登録済みです"
+    "registered": "除外ワードは登録済みです",
+    "addToThisButton": "この商品に追加",
+    "addToOtherButton": "相手に追加",
+    "confirmTitle": "除外ワードの追加",
+    "confirmMessage": "{{product}} の除外ワードに「{{word}}」を追加します",
+    "confirmAction": "追加する",
+    "result": { "added": "追加しました", "exists": "登録済み", "staged": "入力欄に追加しました（保存で登録されます）" },
+    "addError": "追加に失敗しました。もう一度お試しください"
   },
   "productDetail": {
     "title": "商品詳細・編集",
@@ -5052,26 +5029,6 @@
     "supplierUnregistered": "仕入元未登録",
     "confirmed": "確認済み"
   },
-  "tcgParallelReport": {
-    "title": "並列レポート",
-    "overallSummary": "全体サマリー",
-    "metric": "指標",
-    "difference": "差分",
-    "totalItems": "総アイテム数",
-    "pidResolved": "PID解決数",
-    "supplierComparison": "仕入元別比較",
-    "count": "件数",
-    "refreshReport": "レポートを更新",
-    "calculating": "計算中…",
-    "superAdminOnly": "このページは super_admin 専用です。",
-    "fetchError": "レポート取得失敗",
-    "diffExplanation": "差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。",
-    "calculatingDetail": "計算中（DB 読み取り + インメモリ照合）…",
-    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。",
-    "compatV1Description": "GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）",
-    "namefirstV1Description": "サーバー新エンジン（インメモリ計算・キーワード最長一致）",
-    "pidResolutionRate": "PID解決率"
-  },
   "supplierExtractionRules": {
     "title": "仕入元別 抽出ルール設定",
     "supplierName": "仕入元名",
@@ -5151,6 +5108,7 @@
     "title": "要確認一覧",
     "productName": "商品名",
     "supplier": "仕入元",
+    "source": "出どころ",
     "reviewReasons": "確認理由",
     "createdAt": "日時",
     "noItems": "要確認の商品はありません",
@@ -5160,7 +5118,8 @@
     "tabs": {
       "production": "本番の確認待ち",
       "shadow": "試運転の確認待ち",
-      "bottlenecks": "詰まり"
+      "bottlenecks": "詰まり",
+      "posts": "投稿"
     }
   },
   "distributionSettings": {

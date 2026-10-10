@@ -69,6 +69,12 @@ class ConditionReviewFields(BaseModel):
     classification: str
 
 
+class ReviewReasonDetail(BaseModel):
+    code: str
+    source: Literal["gemini", "system"] | None
+    fix_stage: Literal["extraction", "analysis"] | None
+
+
 class AnalysisResultItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
@@ -78,6 +84,8 @@ class AnalysisResultItem(BaseModel):
     system: SystemFields
     review_issues: list[str]
     condition_review: ConditionReviewFields | None = None
+    review_reason_details: list[ReviewReasonDetail] = []
+    is_v102: bool = False
 
 
 class AnalysisResultsResponse(BaseModel):

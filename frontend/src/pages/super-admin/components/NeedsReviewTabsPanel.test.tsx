@@ -108,3 +108,45 @@ it("switching to the bottlenecks tab fetches bottlenecks and renders the breakdo
   );
   await screen.findByText("60%");
 });
+
+const productionItem = (id: string, details: { code: string; source: "gemini" | "system" | null; fix_stage: "extraction" | "analysis" | null }[]) => ({
+  extraction_item_id: id,
+  source_message_id: `msg-${id}`,
+  provider: `Supplier ${id}`,
+  raw_text: "",
+  gemini: { name: `Product ${id}`, span: "" },
+  system: {},
+  review_issues: [],
+  condition_review: null,
+  review_reason_details: details,
+});
+
+it("shows the source column and translated reasons on the production tab", async () => {
+  vi.mocked(api.get).mockImplementation(() => Promise.resolve({
+    ...productionResponse,
+    items: [
+      productionItem("g", [{ code: "gemini_unsure", source: "gemini", fix_stage: "extraction" }]),
+      productionItem("s", [{ code: "pid_unresolved", source: "system", fix_stage: "analysis" }]),
+      productionItem("b", [
+        { code: "pid_unresolved", source: "system", fix_stage: "analysis" },
+        { code: "gemini_unsure", source: "gemini", fix_stage: "extraction" },
+        { code: "no_such_code", source: null, fix_stage: null },
+      ]),
+      productionItem("n", [{ code: "no_such_code", source: null, fix_stage: null }]),
+    ],
+    total: 4,
+    item_total: 4,
+  }));
+  view();
+  await screen.findByText("Supplier g");
+  expect(screen.getByText("Source")).toBeTruthy();
+  const rowOf = (name: string) => screen.getByText(name).closest("tr") as HTMLElement;
+  const cells = (name: string) => Array.from(rowOf(name).querySelectorAll("td")).map((td) => td.textContent);
+  expect(cells("Supplier g")).toEqual(expect.arrayContaining(["Gemini", "Gemini reported it is unsure"]));
+  expect(cells("Supplier s")).toEqual(expect.arrayContaining(["System", "Product not identified"]));
+  expect(cells("Supplier b")).toEqual(expect.arrayContaining([
+    "Gemini, System",
+    "Product not identified, Gemini reported it is unsure, Unregistered reason (no_such_code)",
+  ]));
+  expect(cells("Supplier n")).toEqual(expect.arrayContaining(["—", "Unregistered reason (no_such_code)"]));
+});

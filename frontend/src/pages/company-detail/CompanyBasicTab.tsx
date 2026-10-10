@@ -9,6 +9,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import type { BasicFormState, Company } from "./company-detail.types";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Props {
   basicForm: BasicFormState;
@@ -35,47 +36,47 @@ export function CompanyBasicTab({
   return (
     <form onSubmit={handleBasicSubmit} className="form-grid">
       <div className="form-row"><label>{t("common.name")} *</label>
-        <input required disabled={!canEdit} value={basicForm.name}
+        <TextFieldControl required disabled={!canEdit} value={basicForm.name}
           onChange={(e) => { setBasicForm({ ...basicForm, name: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.nameEn")}</label>
-        <input disabled={!canEdit} value={basicForm.name_en}
+        <TextFieldControl disabled={!canEdit} value={basicForm.name_en}
           onChange={(e) => { setBasicForm({ ...basicForm, name_en: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.industry")}</label>
-        <input disabled={!canEdit} value={basicForm.industry}
+        <TextFieldControl disabled={!canEdit} value={basicForm.industry}
           onChange={(e) => { setBasicForm({ ...basicForm, industry: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.website")}</label>
-        <input disabled={!canEdit} value={basicForm.website}
+        <TextFieldControl disabled={!canEdit} value={basicForm.website}
           onChange={(e) => { setBasicForm({ ...basicForm, website: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.priorityFocus")}</label>
-        <input disabled={!canEdit} value={basicForm.priority_focus}
+        <TextFieldControl disabled={!canEdit} value={basicForm.priority_focus}
           onChange={(e) => { setBasicForm({ ...basicForm, priority_focus: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.perOrderAmount")}</label>
-        <input disabled={!canEdit} value={basicForm.per_order_amount}
+        <TextFieldControl disabled={!canEdit} value={basicForm.per_order_amount}
           onChange={(e) => { setBasicForm({ ...basicForm, per_order_amount: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.monthlyFrequency")}</label>
-        <input type="number" min="0" disabled={!canEdit} value={basicForm.monthly_frequency}
+        <TextFieldControl type="number" min="0" disabled={!canEdit} value={basicForm.monthly_frequency}
           onChange={(e) => { setBasicForm({ ...basicForm, monthly_frequency: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.monthlyForecast")}</label>
-        <input disabled={!canEdit} value={basicForm.monthly_forecast}
+        <TextFieldControl disabled={!canEdit} value={basicForm.monthly_forecast}
           onChange={(e) => { setBasicForm({ ...basicForm, monthly_forecast: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.billingDisplayName")}</label>
-        <input disabled={!canEdit} value={basicForm.billing_display_name}
+        <TextFieldControl disabled={!canEdit} value={basicForm.billing_display_name}
           onChange={(e) => { setBasicForm({ ...basicForm, billing_display_name: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.paymentRecipientName")}</label>
-        <input disabled={!canEdit} value={basicForm.payment_recipient_name}
+        <TextFieldControl disabled={!canEdit} value={basicForm.payment_recipient_name}
           onChange={(e) => { setBasicForm({ ...basicForm, payment_recipient_name: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.fedexAccount")}</label>
-        <input disabled={!canEdit} value={basicForm.fedex_account}
+        <TextFieldControl disabled={!canEdit} value={basicForm.fedex_account}
           onChange={(e) => { setBasicForm({ ...basicForm, fedex_account: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.shippingNote")}</label>

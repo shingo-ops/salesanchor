@@ -966,3 +966,32 @@ def test_without_review_reasons_the_v102_output_has_no_new_keys():
     out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
     assert set(flags) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
     assert out[0]["review"] == []
+
+
+def _qty_not_in_text_reasons(row):
+    return [r for r in row["review"] if r["kind"] == "quantity_not_in_text"]
+
+
+def test_quantity_not_in_text_adds_a_kind_with_field_and_copied():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円"
+    # Act
+    out, _flags, _ = _extract_keep(raw, _it([1, 2], "1,000円", "30"))
+    # Assert
+    assert out[0]["quantity_not_in_text"] is True
+    assert _qty_not_in_text_reasons(out[0]) == [{"kind": "quantity_not_in_text", "field": "quantity", "copied": "30"}]
+
+
+def test_quantity_found_in_the_item_lines_has_no_quantity_not_in_text_kind():
+    out, _flags, _ = _extract_keep("商品A\n3BOX@1,000円", _it([1, 2], "1,000円", "3"))
+    assert out[0]["quantity_not_in_text"] is False and _qty_not_in_text_reasons(out[0]) == []
+
+
+def test_quantity_none_has_no_quantity_not_in_text_kind():
+    out, _flags, _ = _extract_keep("商品A\n3BOX@1,000円", _it([1, 2], "1,000円", "none"))
+    assert _qty_not_in_text_reasons(out[0]) == []
+
+
+def test_quantity_without_digits_has_only_quantity_no_number():
+    out, _flags, _ = _extract_keep("ワンピース ブースター\nカートン @150,000円", _it([1, 2], "150,000円", "カートン"))
+    assert "quantity_no_number" in _kinds(out[0]) and _qty_not_in_text_reasons(out[0]) == []
