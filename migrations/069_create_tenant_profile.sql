@@ -51,17 +51,7 @@ DECLARE
     role_rec RECORD;
     inserted_perms INTEGER;
 BEGIN
-    -- 1a. 権限 master に tenant.profile.* キーを追加 (一度だけ)
-    INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-        ('tenant.profile.view',
-            'tenant_profile', 'view',
-            '自社の発行者情報 (会社名・印鑑・連絡先) を閲覧',
-            'テナント設定'),
-        ('tenant.profile.edit',
-            'tenant_profile', 'edit',
-            '自社の発行者情報 (PO PDF / メール差出人欄) を編集',
-            'テナント設定')
-    ON CONFLICT (key) DO NOTHING;
+    -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): tenant.profile.view／edit の 2 キーの seed を外した（本番は 2/2 あり）。
 
     -- 1b. 全テナント schema にテーブル作成 + 既定行 INSERT + 権限割当
     FOR schema_rec IN
@@ -95,31 +85,12 @@ BEGIN
             )
         $create$, schema_rec.nspname);
 
-        -- 既定行 (空) を 1 行用意。admin が UI で後から埋める。
-        EXECUTE format($seed$
-            INSERT INTO %I.tenant_profile (default_language)
-            SELECT 'ja' WHERE NOT EXISTS (SELECT 1 FROM %I.tenant_profile)
-        $seed$, schema_rec.nspname, schema_rec.nspname);
+        -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): tenant_profile の既定行の INSERT を外した。新しいテナントは tenant.py が入れる。
 
         created_count := created_count + 1;
 
-        -- 1c. オーナー / システム管理者ロールに tenant.profile.* 権限を割当
-        FOR role_rec IN
-            EXECUTE format(
-                'SELECT id, name FROM %I.roles WHERE name IN (''オーナー'', ''システム管理者'')',
-                schema_rec.nspname
-            )
-        LOOP
-            EXECUTE format(
-                'INSERT INTO %I.role_permissions (role_id, permission_id) '
-                'SELECT %s, p.id FROM public.permissions p '
-                'WHERE p.key IN (''tenant.profile.view'', ''tenant.profile.edit'') '
-                'ON CONFLICT (role_id, permission_id) DO NOTHING',
-                schema_rec.nspname, role_rec.id
-            );
-            GET DIAGNOSTICS inserted_perms = ROW_COUNT;
-            seeded_count := seeded_count + inserted_perms;
-        END LOOP;
+        -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): オーナー／システム管理者への tenant.profile.* の付与を外した（本番は欠け 0）。
+        RAISE NOTICE 'ADR-1007 neutralized: tenant.profile grants removed (069)';
 
         RAISE NOTICE 'migration 069: %: tenant_profile 作成 + 既定行 + 権限割当 OK', schema_rec.nspname;
     END LOOP;

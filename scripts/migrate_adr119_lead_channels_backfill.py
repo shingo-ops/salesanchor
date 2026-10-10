@@ -148,58 +148,10 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
 
 
 async def main() -> None:
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        logger.error("DATABASE_URL not set")
-        sys.exit(1)
-    if url.startswith("postgresql://"):
-        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-    engine = create_async_engine(url, echo=False)
-
-    try:
-        logger.info("=== ADR-119 lead_channels backfill 開始 ===")
-
-        async with engine.connect() as conn:
-            r = await conn.execute(
-                text(
-                    "SELECT id, tenant_code FROM public.tenants "
-                    "WHERE is_active = true ORDER BY id"
-                )
-            )
-            tenants = [(row.id, row.tenant_code) for row in r]
-        logger.info("対象テナント: %d", len(tenants))
-
-        total_all: dict[str, int] = {}
-        for tid, tc in tenants:
-            schema = f"tenant_{tid:03d}"
-            # スキーマ名を allowlist で検証（f-string 補間前の安全確認）
-            if not re.fullmatch(r"tenant_\d{3}", schema):
-                logger.error("Unexpected schema name: %s — skipping", schema)
-                continue
-            try:
-                async with engine.begin() as conn:
-                    counts = await backfill_schema(conn, schema)
-
-                total = sum(counts.values())
-                non_zero = {k: v for k, v in counts.items() if v > 0}
-                logger.info(
-                    "tenant %s (code=%s): %d rows inserted — %s",
-                    schema, tc, total,
-                    ", ".join(f"{k}={v}" for k, v in non_zero.items()) or "none",
-                )
-                for k, v in counts.items():
-                    total_all[k] = total_all.get(k, 0) + v
-            except Exception as exc:
-                logger.error("tenant %s: FAILED — %s", schema, exc)
-                raise
-
-        logger.info(
-            "=== 全テナント合計: %s ===",
-            ", ".join(f"{k}={v}" for k, v in total_all.items()),
-        )
-        logger.info("=== ADR-119 lead_channels backfill 完了 ===")
-    finally:
-        await engine.dispose()
+    # NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+    # 値の書き込みを外した。run_py が呼ぶ入口を、何もしない形にした。
+    # 元の内容は git history で参照可能。backfill_schema は試験が import するため、関数として残す。
+    print("ADR-1007 neutralized: migrate_adr119_lead_channels_backfill.py no longer writes values")
 
 
 if __name__ == "__main__":

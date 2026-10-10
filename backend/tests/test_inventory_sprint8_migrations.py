@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.seed_inventory_data import tenant_profile_default_row_sql, tenant_profile_permissions_seed_sql
+
 TEST_PG_URL = os.getenv("TEST_PG_URL")
 # NOTE: RLS_TEST_DATABASE_URL は CI で migration / seed なしの jarvis_test_db
 # を指すため、Sprint 1 のパターン (test_inventory_sprint1_migrations.py) と
@@ -119,11 +121,9 @@ async def test_migration_069_creates_tenant_profile_table(engine):
 
 
 async def test_migration_069_seeds_default_row(engine):
-    """各テナントに既定行 1 行が seed される (冪等)。"""
+    """既定行 1 行は試験が自分で入れる（069 は値を書かなくなった。ADR-1007 段3c）。069 を再適用しても 1 行のまま。"""
     from sqlalchemy import text
 
-    await _apply_migration(engine, "069_create_tenant_profile.sql")
-    # 冪等性: 2 回目適用も 1 行のまま
     await _apply_migration(engine, "069_create_tenant_profile.sql")
 
     async with engine.connect() as conn:
@@ -136,6 +136,12 @@ async def test_migration_069_seeds_default_row(engine):
             pytest.skip("tenant_xxx schema が存在しない")
         schema = row[0]
 
+    async with engine.begin() as conn:
+        await conn.exec_driver_sql(tenant_profile_default_row_sql(schema))
+    # 冪等性: 069 を再適用しても 1 行のまま（069 は行を足さない）
+    await _apply_migration(engine, "069_create_tenant_profile.sql")
+
+    async with engine.connect() as conn:
         count = (await conn.execute(text(
             f"SELECT COUNT(*) FROM {schema}.tenant_profile"
         ))).scalar()
@@ -143,10 +149,12 @@ async def test_migration_069_seeds_default_row(engine):
 
 
 async def test_migration_069_seeds_permissions(engine):
-    """public.permissions に tenant.profile.* が追加される。"""
+    """public.permissions の tenant.profile.* は試験が自分で入れる（069 は値を書かなくなった。ADR-1007 段3c）。"""
     from sqlalchemy import text
 
     await _apply_migration(engine, "069_create_tenant_profile.sql")
+    async with engine.begin() as conn:
+        await conn.exec_driver_sql(tenant_profile_permissions_seed_sql())
 
     async with engine.connect() as conn:
         result = await conn.execute(text(
