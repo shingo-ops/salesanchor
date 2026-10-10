@@ -1,0 +1,42 @@
+# migration の値の書き込み（保護対象の表への INSERT / UPDATE / DELETE）の許可一覧。唯一の正本。
+# scripts/check-migration-value-writes.py repo が、登録された全ファイルを走査して、この一覧と突き合わせる。
+# 列（タブ区切り）: file / tables（見つかった表。カンマ区切り・名前順）/ reason / decision_ref
+# 規則: (1) 値の書き込みを持つのに一覧に無いファイルは失敗。(2) 一覧にあるのに登録されていない・無いファイルは失敗。
+#       (3) 一覧にあるのに、もう値の書き込みを持たないファイルは失敗（古い行。無効化した PR が同じ PR で行を消す）。
+#       (4) tables が実際と違えば失敗。
+# 理由を読んで確かめられなかったものは「未確認（段3 以降で精査）」と書く（推測で書かない）。
+# 初期の行数は 33（2026-10-07 時点の登録 ファイルの走査結果）。段3 の各 PR が自分の行を消し、
+# 段3 のあとは、範囲外の判断待ち（tenant_004 の鎖など）だけが残る。
+migrations/018_extend_permissions_with_menu_grain.sql	permissions	値を書く部分を無効化する PR が出ている（#4012 のデプロイと system_key の値の設定の後にマージ）	ADR-1007 段3 PR-3b（#4017）
+migrations/024_add_staff_bots_permissions.sql	permissions	値を書く部分を無効化する PR が出ている（#4012 のデプロイと system_key の値の設定の後にマージ）	ADR-1007 段3 PR-3b（#4017）
+migrations/075_create_goals.sql	permissions	値を書く部分を無効化する PR が出ている（#4012 のデプロイと system_key の値の設定の後にマージ）	ADR-1007 段3 PR-3b（#4017）
+migrations/080_phase_b_migration.sql	tenant_settings	値を書く部分を無効化する PR が出ている（#4012 のデプロイと system_key の値の設定の後にマージ）	ADR-1007 段3 PR-3b（#4017）
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql	products	未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260602_020000_add_products_tcg_type.sql	products	値を書く部分を無効化する予定（段3 カードの行 12）	ADR-1007 段3 PR-3a
+migrations/20260603_000000_add_products_product_kind.sql	products	値を書く部分を無効化する予定（段3 カードの行 13）	ADR-1007 段3 PR-3a
+migrations/20260604_010000_seed_product_marks.sql	products	名前が一致する商品の mark を毎デプロイで上書きする（mark の修正を戻した）。無効化の PR が出ている	#3978
+migrations/20260604_020000_backfill_products_shipping_defaults.sql	products	値を書く部分を無効化する予定（段3 カードの行 14）	ADR-1007 段3 PR-3a
+migrations/20260604_090000_create_link_templates.sql	link_templates	値を書く部分を無効化する予定（段3 カードの行 17）	ADR-1007 段3 PR-3a
+migrations/20260604_170000_create_product_attribute_masters.sql	product_attribute_masters	未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260604_180000_analytics_agent_a_tables.sql	permissions	値を書く部分を無効化する PR が出ている（#4012 のデプロイと system_key の値の設定の後にマージ）	ADR-1007 段3 PR-3b（#4017）
+migrations/20260605_000000_add_products_display_order.sql	products	値を書く部分を無効化する予定（段3 カードの行 15）	ADR-1007 段3 PR-3a
+migrations/20260616_000000_fix_tcg_type_dedup.sql	products	値を書く部分を無効化する予定（段3 カードの行 7）	ADR-1007 段3 PR-3a
+migrations/20260620_010000_create_inventory_aggregation_rules.sql	inventory_aggregation_rules	値を書く部分を無効化する予定（段3 カードの行 1）	ADR-1007 段3 PR-3a
+migrations/20260621_010000_create_countries_master.sql	countries	値を書く部分を無効化する予定（段3 カードの行 2）	ADR-1007 段3 PR-3a
+migrations/20260901_090000_add_condition_resolution_columns.sql	conditions	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260902_110000_tcg_classification_masters.sql	tcg_product_categories	tenant_004 向けの鎖の判断待ち（段3 カードの行 26 は範囲外）。schema 定数 'tenant_004' をファイルで確認。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260902_110100_tcg_products_classification_ids.sql	tcg_products	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260903_130000_tcg_note_master_t004.sql	tcg_note_master	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260903_150000_tcg_status_master_t004.sql	tcg_status_master	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260903_180000_tcg_products_mark_en_t004.sql	tcg_products	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260905_020000_tcg_fix_product_names_t004.sql	tcg_products	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260906_120000_create_tcg_tables_t001.sql	tcg_product_categories	未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260907_100000_tcg_note_master_expand_t004.sql	tcg_note_master	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260909_000000_public_products_phase2b_columns.sql	products	ファイル内に tcg_uuid の判定がある（確認済み）。本番で書き込みに到達するか・無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260909_130000_tcg_note_b2_t004.sql	tcg_note_master	tenant_004 向けの鎖（schema 定数 'tenant_004' をファイルで確認）。無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 §5
+migrations/20260910_200000_tcg_condition_note_delivery_t004.sql	tcg_note_master	未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260913_150000_tcg_empty_box_condition.sql	conditions	未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260913_200000_tcg_cardset_exclusion.sql	product_exclude_keywords	ファイル内に tcg_uuid の判定がある（確認済み）。本番で書き込みに到達するか・無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260914_140000_unify_tcg_products_to_public.sql	products	ファイル内に tcg_uuid の判定がある（確認済み）。本番で書き込みに到達するか・無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql	product_exclude_keywords,product_search_keywords	ファイル内に tcg_uuid の判定がある（確認済み）。本番で書き込みに到達するか・無効化の可否: 未確認（段3 以降で精査）	ADR-1007 段3 以降
+migrations/20260916_130000_work_id_not_null.sql	products	値を書く部分を無効化する予定（段3 カードの行 16）	ADR-1007 段3 PR-3a

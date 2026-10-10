@@ -43,6 +43,8 @@ jobs:
               - 'scripts/migrate_*.py'
               - 'scripts/check-migration-registration-exists.sh'
               - 'scripts/run_all_migrations.sh'
+              - 'scripts/migration-guard/**'
+              - 'scripts/migration-dryrun-report.py'
               - '.github/workflows/migration-test.yml'
 
   # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
@@ -1646,6 +1648,12 @@ jobs:
 
           echo "✅ ADR-119 バックフィルスクリプト source 廃止済み状態で正常完了"
 
+      - name: 報告用 DB を作る（ここまでの状態のコピー。全件ドライラン（報告のみ）が使う）
+        # 1周目を始める直前の状態（ベーススキーマ + 前提）を、別の DB にコピーしておく。
+        # 下の「報告のみ」の step がこの DB を使うので、既存の 1周目・2周目（強制）の DB には触れない。
+        run: |
+          psql -h localhost -U jarvis -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE jarvis_report TEMPLATE jarvis_db"
+
       - name: 1周目：全 run_sql migration を順次実行（新規適用）
         # 対象: run_all_migrations.sh の run_sql 行すべて（numbered 0XX + タイムスタンプ形式）
         # 初期タイムスタンプ（20260601-20260603）は Python migration 依存のため引き続き除外。
@@ -1714,6 +1722,15 @@ jobs:
 
           echo ""
           echo "✅ 2周目（冪等性チェック）完了 — 再デプロイ安全性 OK"
+
+      - name: 全件ドライラン（報告のみ・強制しない）：登録された全ファイル − 除外一覧
+        # ADR-1007 決定5。上の 1周目・2周目は、従来の日付の範囲（^migrations/0 など）のままで強制する。
+        # この step は、登録された全ファイルから scripts/migration-guard/dryrun-exclusions.tsv にあるものを除いて
+        # 報告用 DB（jarvis_report）に流し、落ちたファイルを一覧にする。落ちても job は失敗させない
+        # （強制への切り替えは、この報告を見てから別の PR で行う）。
+        continue-on-error: true
+        run: |
+          python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql -h localhost -U jarvis
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
