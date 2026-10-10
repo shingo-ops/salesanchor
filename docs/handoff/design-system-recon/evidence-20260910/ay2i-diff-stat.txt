@@ -1,0 +1,12 @@
+ frontend/src/App.tsx                               |  2 --
+ frontend/src/config/routeTitles.ts                 |  1 -
+ frontend/src/locales/en.json                       |  2 +-
+ frontend/src/locales/ja.json                       |  2 +-
+ .../pages/super-admin/AnalysisRulesPage.test.tsx   | 14 ++++++++
+ .../src/pages/super-admin/AnalysisRulesPage.tsx    |  2 ++
+ .../components/AnalysisRulesSidebar.tsx            |  2 ++
+ .../SoldOutResultsPanel.test.tsx}                  | 39 ++++++++++------------
+ .../SoldOutResultsPanel.tsx}                       | 33 ++++++++++--------
+ .../pages/super-admin/legacyPageRedirects.test.tsx |  3 +-
+ .../src/pages/super-admin/legacyPageRedirects.ts   |  3 +-
+ 11 files changed, 60 insertions(+), 43 deletions(-)

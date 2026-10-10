@@ -1,14 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import i18n from "../../i18n";
-import { ROUTE_TITLE_KEYS } from "../../config/routeTitles";
-import type { SoldOutItem } from "../../features/tcg-sold-out/soldOutApi";
-import TcgSoldOutPage from "./TcgSoldOutPage";
-vi.mock("../../lib/api", () => ({ api: { get: vi.fn() }, ApiError: class extends Error {} }));
-vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
+import { api } from "../../../lib/api";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import i18n from "../../../i18n";
+import type { SoldOutItem } from "../../../features/tcg-sold-out/soldOutApi";
+import { SoldOutResultsPanel } from "./SoldOutResultsPanel";
+vi.mock("../../../lib/api", () => ({ api: { get: vi.fn() }, ApiError: class extends Error {} }));
+vi.mock("../../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 const item: SoldOutItem = {
   analysis_result_id: "a1", extraction_item_id: "i1", source_message_id: "s1", supplier_id: null, product_id: null,
   provider: "Supplier", product_title: "", raw_product_name: "Shared", raw_quantity: "", raw_unit: "BOX", raw_price: "1200",
@@ -16,7 +15,7 @@ const item: SoldOutItem = {
   status: "Sold out", source_is_active: false, line_posted_at: null, line_start: 2, line_end: 2,
 };
 const response = { total: 51, offset: 0, limit: 50, as_of: "2026-09-14T00:00:00Z", items: [item] };
-const view = () => render(<MemoryRouter><TcgSoldOutPage /></MemoryRouter>);
+const view = () => render(<MemoryRouter><SoldOutResultsPanel /></MemoryRouter>);
 const params = () => new URL(String(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]), "http://test").searchParams;
 beforeEach(async () => {
   vi.resetAllMocks(); await i18n.changeLanguage("en");
@@ -85,14 +84,10 @@ it("preserves separate same-name rows, displays null source and invalid span wit
   expect(document.querySelector("mark")).toBeNull();
   expect(screen.getAllByText(/Invalid source position/)).toHaveLength(2);
 });
-it("keeps Japanese and English navigation and title aligned and formats date in JST", async () => {
-  expect(ROUTE_TITLE_KEYS["/super-admin/tcg-sold-out"]).toBe("nav.superAdminTcgSoldOut");
+it("formats date in JST", async () => {
   vi.mocked(api.get).mockResolvedValue({ ...response, items: [{ ...item, line_posted_at: "2026-09-13T15:30:00Z" }] });
   view(); await screen.findByText("Analysis results: 51");
-  expect(screen.getByRole("heading", { name: "Sold-out rules" })).toBeTruthy();
   expect(screen.getByText(/14\/09\/2026, 00:30/)).toBeTruthy();
-  await act(async () => { await i18n.changeLanguage("ja"); });
-  expect(screen.getByRole("heading", { name: i18n.t("nav.superAdminTcgSoldOut") })).toBeTruthy();
 });
 it("shows zero only after a successful response and allows returning from an empty out-of-range page", async () => {
   vi.mocked(api.get).mockResolvedValueOnce(response).mockResolvedValue({ ...response, total: 3, offset: 50, items: [] });
@@ -104,15 +99,15 @@ it("shows zero only after a successful response and allows returning from an emp
   await waitFor(() => expect(params().get("offset")).toBe("0"));
 });
 
-vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { email: "fixture@example.test" }, signOut: vi.fn() }) }));
-vi.mock("../../contexts/LocaleContext", () => ({ useLocale: () => ({ locale: "en", changeLanguage: vi.fn() }) }));
-vi.mock("../../contexts/ThemeContext", () => ({ useTheme: () => ({ theme: "light", changeTheme: vi.fn() }) }));
-vi.mock("../../contexts/UiPrefsContext", () => ({ useUiPrefs: () => ({ prefs: { show_chat_menu: false, show_sales_menu: false }, loading: false, staffName: "Fixture" }) }));
-vi.mock("../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => false, hasAny: () => false, loading: false }) }));
-vi.mock("../../hooks/useSSE", () => ({ useSSE: () => undefined }));
-vi.mock("../../lib/messages", () => ({ listConversations: async () => ({ conversations: [] }) }));
+vi.mock("../../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { email: "fixture@example.test" }, signOut: vi.fn() }) }));
+vi.mock("../../../contexts/LocaleContext", () => ({ useLocale: () => ({ locale: "en", changeLanguage: vi.fn() }) }));
+vi.mock("../../../contexts/ThemeContext", () => ({ useTheme: () => ({ theme: "light", changeTheme: vi.fn() }) }));
+vi.mock("../../../contexts/UiPrefsContext", () => ({ useUiPrefs: () => ({ prefs: { show_chat_menu: false, show_sales_menu: false }, loading: false, staffName: "Fixture" }) }));
+vi.mock("../../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => false, hasAny: () => false, loading: false }) }));
+vi.mock("../../../hooks/useSSE", () => ({ useSSE: () => undefined }));
+vi.mock("../../../lib/messages", () => ({ listConversations: async () => ({ conversations: [] }) }));
 it("shows analysis management menu item only for SaaS administrators", async () => {
-  const { default: DesktopShell } = await import("../../components/DesktopShell");
+  const { default: DesktopShell } = await import("../../../components/DesktopShell");
   const shell = () => render(<MemoryRouter><DesktopShell /></MemoryRouter>);
   shell();
   const analysisLink = screen.getByRole("link", { name: i18n.t("nav.superAdminAnalysisRules") });

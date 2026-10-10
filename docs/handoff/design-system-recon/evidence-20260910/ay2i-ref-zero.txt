@@ -1,0 +1,11 @@
+== git grep TcgSoldOutPage (frontend/src tests-e2e)
+exit=1
+== git grep nav.superAdminTcgSoldOut (frontend/src tests-e2e)
+exit=1
+== git grep superAdminTcgSoldOut (frontend/src tests-e2e)
+exit=1
+== tcg-sold-out
+frontend/src/pages/super-admin/components/SoldOutResultsPanel.test.tsx:7:import type { SoldOutItem } from "../../../features/tcg-sold-out/soldOutApi";
+frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:15:import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../../features/tcg-sold-out/soldOutApi";
+frontend/src/pages/super-admin/legacyPageRedirects.test.tsx:21:    { from: "/super-admin/tcg-sold-out", to: "/super-admin/analysis-rules?section=sold-out-results" },
+frontend/src/pages/super-admin/legacyPageRedirects.ts:8:  { from: "/super-admin/tcg-sold-out", to: "/super-admin/analysis-rules?section=sold-out-results" },
