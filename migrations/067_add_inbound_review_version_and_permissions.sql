@@ -39,17 +39,10 @@ ALTER TABLE public.discord_inbound_messages
 COMMENT ON COLUMN public.discord_inbound_messages.version IS
     'spec F6 AC6.5: approve/reject 時の楽観ロック用カウンタ（後勝ち禁止）';
 
--- === 2. central.parse_review.* 権限 seed ===
-INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-    ('central.parse_review.approve',
-        'central_parse_review', 'approve',
-        'Discord 受信メッセージ解析結果の承認（inventory_movements へ反映、Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.parse_review.reject',
-        'central_parse_review', 'reject',
-        'Discord 受信メッセージ解析結果の差戻し（exclude_reason 必須、Jarvis 運用 admin 専用）',
-        '中央マスタ')
-ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- central.parse_review.* の 2 キーの seed を外した（本番は 2/2 あり）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: parse_review permissions seed removed (067)'; END $$;
 
 -- ============================================================================
 -- Rollback:
