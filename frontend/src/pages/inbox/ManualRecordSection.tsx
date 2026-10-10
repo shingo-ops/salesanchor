@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface ChannelMaster {
   platform: string;
@@ -145,10 +146,9 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
         <label className="manual-record-label" htmlFor="manual-occurred-at">
           {t("inbox.manualRecord.occurredAtLabel")}
         </label>
-        <input
+        <TextFieldControl
           id="manual-occurred-at"
           type="datetime-local"
-          className="manual-record-datetime"
           value={occurredAt}
           onChange={(e) => setOccurredAt(e.target.value)}
           disabled={saving}

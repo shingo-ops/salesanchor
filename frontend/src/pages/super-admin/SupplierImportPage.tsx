@@ -128,8 +128,8 @@ export default function SupplierImportPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   return (
     <PageLayout titleText={t("supplierCsv.importTitle")}>
-      {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <SupplierImportPanel onDone={() => navigate("/super-admin/supplier-master")} />}
-      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/supplier-master")}>{t("supplierCsv.backToList")}</HeaderButton>}
+      {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <SupplierImportPanel onDone={() => navigate("/super-admin/analysis-rules?section=supplier-master")} />}
+      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules?section=supplier-master")}>{t("supplierCsv.backToList")}</HeaderButton>}
     </PageLayout>
   );
 }

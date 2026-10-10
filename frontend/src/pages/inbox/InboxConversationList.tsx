@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 import type { Conversation } from "../../lib/messages";
 import { getInitials, relativeTime } from "./inbox.types";
 
@@ -59,9 +60,10 @@ export function InboxConversationList({
       <div className="inbox-search-row">
         <div className="inbox-search-wrap">
           <NAV_ICONS.search size={14} weight="fill" className="inbox-search-icon" aria-hidden="true" />
-          <input
+          <TextFieldControl
+            variant="search"
             type="text"
-            className="search-input-field inbox-search-input"
+            className="inbox-search-input"
             placeholder={t("common.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

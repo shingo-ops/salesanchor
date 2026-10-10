@@ -8,6 +8,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface BotFormState {
   display_name: string;
@@ -51,7 +52,7 @@ export function BotFormFields({ form, onChange, staff }: Props) {
     <>
       <div className="form-group">
         <label>{t("bots.displayName")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.display_name}
           onChange={(e) => onChange("display_name", e.target.value)}
@@ -80,14 +81,14 @@ export function BotFormFields({ form, onChange, staff }: Props) {
       />
       <div className="form-group">
         <label>Discord Bot ID</label>
-        <input
+        <TextFieldControl
           value={form.discord_user_id}
           onChange={(e) => onChange("discord_user_id", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("bots.senderEmail")}</label>
-        <input
+        <TextFieldControl
           type="email"
           value={form.sender_email}
           onChange={(e) => onChange("sender_email", e.target.value)}

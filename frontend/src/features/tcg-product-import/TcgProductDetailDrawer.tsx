@@ -8,40 +8,13 @@ import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
 import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
+import {
+  addExcludeWord, buildUpdateBody, classificationFields, draftFrom, words,
+  type AddWordResult, type Classification, type Detail, type Draft,
+} from "./productDetailModel";
 
-const classificationFields = ["product_kind_id", "work_id", "manufacturer_id", "product_category_id"] as const;
-type Classification = typeof classificationFields[number];
-interface Detail {
-  revision: string;
-  product: Record<Classification, string | null> & {
-    id: string; code: string; japanese_title: string; english_title: string | null;
-    mark: string | null; release_date: string | null; search_keywords: string[]; exclude_keywords: string[];
-    required_output_value: string | null; category_class: string; is_active: boolean; created_at: string;
-  };
-  lookups: Record<Classification, { id: string; name: string; is_active: boolean }[]>;
-  code_collisions?: CodeCollision[];
-}
-type Draft = Record<Classification, string> & {
-  japanese_title: string; english_title: string; mark: string; release_date: string;
-  search_keywords: string; exclude_keywords: string;
-};
 type LookupOption = { id: string; name: string };
 type LookupsMap = Record<Classification, LookupOption[]>;
-function draftFrom(result: Detail): Draft {
-  const p = result.product;
-  if (!/^[0-9a-f]{64}$/.test(result.revision) ||
-      typeof p.japanese_title !== "string" || !Array.isArray(p.search_keywords) ||
-      !Array.isArray(p.exclude_keywords) ||
-      ![...p.search_keywords, ...p.exclude_keywords].every(word => typeof word === "string") ||
-      !classificationFields.every(field => Array.isArray(result.lookups?.[field]))) {
-    throw new Error("Invalid product detail");
-  }
-  return { japanese_title: p.japanese_title, english_title: p.english_title ?? "", mark: p.mark ?? "",
-    release_date: p.release_date ?? "", product_kind_id: p.product_kind_id ?? "", work_id: p.work_id ?? "",
-    manufacturer_id: p.manufacturer_id ?? "", product_category_id: p.product_category_id ?? "",
-    search_keywords: p.search_keywords.join("\n"), exclude_keywords: p.exclude_keywords.join("\n") };
-}
-const words = (value: string) => value.split("\n").map(word => word.trim()).filter(Boolean);
 const emptyDraft: Draft = {
   japanese_title: "", english_title: "", mark: "", release_date: "",
   product_kind_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
@@ -64,6 +37,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [collisions, setCollisions] = useState<CodeCollision[]>([]);
+  const [createdId, setCreatedId] = useState<number | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [confirmation, setConfirmation] = useState<"close" | "reload" | null>(null);
   const [reload, setReload] = useState(0);
@@ -94,7 +68,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   useEffect(() => {
     if (mode !== "create" || !isOpen) return;
     let cancelled = false;
-    setError(""); setSaved(false); setBlocked(false); setConfirmation(null); setCollisions([]);
+    setError(""); setSaved(false); setBlocked(false); setConfirmation(null); setCollisions([]); setCreatedId(null);
     setDraft(emptyDraft); setInitial(emptyDraft);
     setLoading(true);
     void api.get<{ lookups: LookupsMap }>("/tcg/products/lookups").then(result => {
@@ -120,6 +94,17 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     setDraft(previous => previous ? { ...previous, [field]: value } : previous);
     setSaved(false);
   }
+  /** この商品の除外ワードに足す。編集中は入力欄に足す（保存で登録）。作成済みなら保存済みの商品へ足す。 */
+  async function addToThis(word: string): Promise<AddWordResult> {
+    if (mode === "create") {
+      if (createdId === null) throw new Error("Product not created");
+      return addExcludeWord(createdId, word);
+    }
+    if (!draft) throw new Error("No draft");
+    if (words(draft.exclude_keywords).includes(word)) return "exists";
+    change("exclude_keywords", [...words(draft.exclude_keywords), word].join("\n"));
+    return "staged";
+  }
   async function save() {
     if (mode === "create") {
       await saveCreate();
@@ -132,13 +117,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
     inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
-      const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, {
-        ...draft, revision: detail.revision, release_date: draft.release_date || null,
-        product_kind_id: draft.product_kind_id ? Number(draft.product_kind_id) : null, work_id: draft.work_id ? Number(draft.work_id) : null,
-        manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id ? Number(draft.product_category_id) : null,
-        search_keywords: draft.search_keywords === initial?.search_keywords ? detail.product.search_keywords : words(draft.search_keywords),
-        exclude_keywords: draft.exclude_keywords === initial?.exclude_keywords ? detail.product.exclude_keywords : words(draft.exclude_keywords),
-      });
+      const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, buildUpdateBody(draft, initial, detail));
       if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next); setSaved(true);
@@ -156,7 +135,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
     inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
-      const created = await api.post<{ code_collisions?: CodeCollision[] }>("/tcg/products/create", {
+      const created = await api.post<{ product_id?: string | null; code_collisions?: CodeCollision[] }>("/tcg/products/create", {
         japanese_title: draft.japanese_title,
         english_title: draft.english_title,
         mark: draft.mark,
@@ -173,7 +152,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       const found = created?.code_collisions ?? [];
       if (found.length === 0) { onClose(); return; }
       // 保存は済み。重なりの警告を残し、利用者が閉じる（再送で二重登録しないよう未保存扱いを解く）
-      setCollisions(found);
+      setCollisions(found); setCreatedId(created?.product_id ? Number(created.product_id) : null);
       setInitial(draft); setBlocked(true);
     } catch (err) {
       const invalid = err instanceof ApiError && err.status === 422;
@@ -228,7 +207,9 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}
       {saved && <p role="status">{t("productDetail.saved")}</p>}
-      <CodeCollisionNotice collisions={collisions} />
+      <CodeCollisionNotice collisions={collisions} onAddToOther={addExcludeWord}
+        onAddToThis={mode === "edit" || createdId !== null ? addToThis : undefined}
+        confirmAddToThis={mode === "create"} thisName={draft?.japanese_title ?? ""} />
       {draft && (mode === "create" ? activeLookups : detail) && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
         {mode === "edit" && detail && <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />}
         <TextField label={t("productDetail.japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />
