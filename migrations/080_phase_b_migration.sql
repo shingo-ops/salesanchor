@@ -33,8 +33,4 @@
 ALTER TABLE public.tenant_settings
   ALTER COLUMN spreadsheet_phase SET DEFAULT 'B';
 
--- 2. 既存 'A' レコードを 'B' に migrate
-UPDATE public.tenant_settings
-  SET spreadsheet_phase = 'B',
-      updated_at = NOW()
-WHERE spreadsheet_phase = 'A';
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 既存 'A' の一括更新（UPDATE）を外した（本番は 0 行が 'A'）。phase は画面（super-admin の切替）で変える。上の DEFAULT 'B' は構造なので残す。

@@ -14,13 +14,11 @@
 -- 変更履歴:
 --   2026-04-23: 初版作成
 
-INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-    ('staff.view',    'staff', 'view',   'スタッフ一覧の閲覧',   'スタッフ'),
-    ('staff.create',  'staff', 'create', 'スタッフの登録',       'スタッフ'),
-    ('staff.update',  'staff', 'update', 'スタッフ情報の編集',   'スタッフ'),
-    ('staff.delete',  'staff', 'delete', 'スタッフの削除',       'スタッフ'),
-    ('bots.view',     'bots',  'view',   'Bot一覧の閲覧',        'Bot'),
-    ('bots.create',   'bots',  'create', 'Botの登録',            'Bot'),
-    ('bots.update',   'bots',  'update', 'Bot情報の編集',        'Bot'),
-    ('bots.delete',   'bots',  'delete', 'Botの削除',            'Bot')
-ON CONFLICT (key) DO NOTHING;
+--
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 商品マスタ・権限などの値はアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- staff.* / bots.* 8 キーの INSERT を外した（本番には既にある）。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'migration 024 neutralized (ADR-1007 / ADR-155): permission keys already exist; not added by migration'; END $$;

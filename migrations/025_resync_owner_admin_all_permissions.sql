@@ -21,59 +21,11 @@
 -- 変更履歴:
 --   2026-04-23: 初版作成（Phase 1 再設計 follow-up）
 
-DO $$
-DECLARE
-    schema_rec RECORD;
-    role_rec RECORD;
-    total_inserted INTEGER := 0;
-    schema_inserted INTEGER;
-    permission_filter TEXT;
-BEGIN
-    FOR schema_rec IN
-        SELECT nspname FROM pg_namespace
-        WHERE nspname ~ '^tenant_\d+$'
-        ORDER BY nspname
-    LOOP
-        -- roles / role_permissions が両方存在するスキーマのみ対象
-        IF NOT EXISTS (
-            SELECT 1 FROM pg_tables WHERE schemaname = schema_rec.nspname AND tablename = 'roles'
-        ) OR NOT EXISTS (
-            SELECT 1 FROM pg_tables WHERE schemaname = schema_rec.nspname AND tablename = 'role_permissions'
-        ) THEN
-            CONTINUE;
-        END IF;
+--
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 商品マスタ・権限などの値はアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- オーナー/システム管理者への権限の再付与を外した。権限は load_user_permissions が権限マスタから計算する（system_key）。
+-- 元の内容は git history で参照可能。
+--
 
-        schema_inserted := 0;
-
-        -- オーナー / システム管理者 の role_id を取得して権限を割当
-        -- backend/app/services/tenant.py の契約に合わせる:
-        --   オーナー: ALL（system.manage 含む）
-        --   システム管理者: ALL_EXCEPT_SYSTEM_MANAGE（system.manage 除外）
-        FOR role_rec IN
-            EXECUTE format(
-                'SELECT id, name FROM %I.roles WHERE name IN (''オーナー'', ''システム管理者'')',
-                schema_rec.nspname
-            )
-        LOOP
-            IF role_rec.name = 'システム管理者' THEN
-                permission_filter := 'WHERE p.key != ''system.manage''';
-            ELSE
-                permission_filter := '';
-            END IF;
-
-            EXECUTE format(
-                'INSERT INTO %I.role_permissions (role_id, permission_id) '
-                'SELECT %s, p.id FROM public.permissions p %s '
-                'ON CONFLICT (role_id, permission_id) DO NOTHING',
-                schema_rec.nspname, role_rec.id, permission_filter
-            );
-            GET DIAGNOSTICS schema_inserted = ROW_COUNT;
-            IF schema_inserted > 0 THEN
-                RAISE NOTICE 'migration 025: %: % (id=%) に % 件の権限を追加',
-                    schema_rec.nspname, role_rec.name, role_rec.id, schema_inserted;
-            END IF;
-            total_inserted := total_inserted + schema_inserted;
-        END LOOP;
-    END LOOP;
-    RAISE NOTICE 'migration 025: 全テナント合計 % 件の権限割当を追加', total_inserted;
-END $$;
+DO $$ BEGIN RAISE NOTICE 'migration 025 neutralized (ADR-1007 / ADR-155): owner/admin permissions are computed at check time'; END $$;
