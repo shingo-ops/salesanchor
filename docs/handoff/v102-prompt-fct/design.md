@@ -1,6 +1,6 @@
 # design: v102 の既定の指示書を raw_copy_v101_f_ct に切り替え
 
-関連 recon: `/Users/tanizawashingo/salesanchor/docs/handoff/v102-prompt-fct/recon.md`
+関連 recon: `docs/handoff/v102-prompt-fct/recon.md`
 
 ## 目的
 〆だけの投稿（完売の知らせ）を、1件の「件」として取り出せるようにする。PO 承認 2026-10-11「切り替える」。
@@ -11,7 +11,7 @@
 | 既定の指示書 key（`V102_PROMPT_KEY`） | raw_copy_v101_f_c | raw_copy_v101_f_ct |
 | engine_version（`V102_ENGINE_VERSION`） | v102-f_c | v102-f_ct |
 
-触らない: `gemini_raw_copy_v101.py`（`DEFAULT_V102_PROMPT_NAME`）、DB 上の f_c の行（残す）。
+触らない: `backend/app/services/gemini_raw_copy_v101.py`（`DEFAULT_V102_PROMPT_NAME`）、DB 上の f_c の行（残す）。
 
 ## 根拠（G3 v2、125投稿×2回の A/B）
 - 行の一致: f_ct 4500 / f_c 4493
@@ -29,8 +29,8 @@
 ## ロールバック
 この PR を revert する。DB の f_c の行は残してあるので、revert だけで元に戻る。
 
-## 外部事例
-該当なし（社内の正解表による A/B 比較が直接の根拠）
+## 外部・過去事例の参照と我々への応用
+外部事例なし（直接の根拠は社内正解表 G3 v2 による A/B 比較）。過去事例: 指示書の文言調整は BASE SHOP で7回不合格（f_d〜f_g, f_cb, f_cs, f_csb）→ 今回は1行追加に限り、2段階（9投稿×3回 → 125投稿×2回）で確認した。
 
 ## 維持の仕組み
-Gemini 抽出セッションが、指示書の追加・切替のたびに `docs/specs/line-analysis-tuning/README.md` を更新する。
+守り手: Gemini 抽出セッション（設計 Opus）・正解表 G3 v2 で指示書を変えるたびに A/B 採点。Gemini 抽出セッションが、指示書の追加・切替のたびに `docs/specs/line-analysis-tuning/README.md` を更新する。
