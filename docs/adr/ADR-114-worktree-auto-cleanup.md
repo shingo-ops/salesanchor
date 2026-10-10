@@ -61,7 +61,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
   - 動作：該当ブランチの行を DONE に更新 → commit → develop に push
   - 権限：develop は保護下のため `PIPELINE_PAT`（既存・Issue #300 で rotation 管理）でコミット。Generator 着手前に `gh api .../actions/secrets` で存在を確認。
   - 制約：更新後も `active-work-lint.yml` の6列フォーマットを満たすこと。
-- **main マージ時の行 DONE 化（2026-10-10 改訂）**：`.github/workflows/ledger-auto-done-main.yml`（`:16-18` pull_request closed・base=main）が担う。単票 `.claude-pipeline/active-work.d/<branch>.md` を `scripts/ledger-update.sh` で DONE にし（`:71`）、`release/ledger-done-<PR>` の PR を作って auto-merge する（`:138`・`:152`）。`.github/workflows/active-work-auto-done.yml` は develop 前提のまま（`:6-9`）で main では動かない。フォルダの回収（§4）は台帳の DONE に依存せず、gh のマージ判定でも動く。
+- **main マージ時の行 DONE 化（2026-10-10 改訂）**：`.github/workflows/ledger-auto-done-main.yml`（`:16-18` pull_request closed・base=main）が担う。単票 `.claude-pipeline/active-work.d/<branch>.md` を `scripts/ledger-update.sh` で DONE にし（`:71`）、`release/ledger-done-<PR>` の PR を作って auto-merge する（`:138`・`:151`）。`.github/workflows/active-work-auto-done.yml` は develop 前提のまま（`:6-9`）で main では動かない。フォルダの回収（§4）は台帳の DONE に依存せず、gh のマージ判定でも動く。
 
 ### 4. フォルダを自動削除（各Mac側・掃除係＝reaper）
 フォルダはその Mac の中にしかないので、削除は Mac 側でしか行えない。掃除係は次の条件を**すべて満たす**部屋だけ消す。
