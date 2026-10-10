@@ -1807,13 +1807,16 @@ def _merge_supplier_products(
                 UNION
                 SELECT x.product_id, x.condition_id
                 FROM unnest(CAST(:extra_pids AS integer[]), CAST(:extra_cids AS integer[])) AS x(product_id, condition_id)
+                UNION
+                SELECT et.product_id, et.condition_id
+                FROM {schema}.analysis_soldout_extra_targets et
+                JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                WHERE ei.extraction_job_id = :job_id
             ),
-            ranked AS (
-                SELECT ar.id,
-                       (ROW_NUMBER() OVER (
-                           PARTITION BY ar.product_id, ar.condition_id
-                           ORDER BY sm.received_at DESC, ar.computed_at DESC
-                       ) = 1) AS should_be_current
+            candidates AS (
+                -- 本物の行
+                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at
                 FROM {schema}.analysis_results ar
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
                 JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -1826,6 +1829,28 @@ def _merge_supplier_products(
                       WHERE tt.product_id = ar.product_id
                         AND tt.condition_id = ar.condition_id
                   )
+                UNION ALL
+                -- 仮の行（〆の2つ目以降の完売の相手。順位の鍵は親の行と同じ。id は NULL で UPDATE の対象にしない）
+                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at
+                FROM {schema}.analysis_soldout_extra_targets et
+                JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+                JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+                WHERE sm.supplier_channel_id = :channel_id
+                  AND EXISTS (
+                      SELECT 1 FROM touched_triples tt
+                      WHERE tt.product_id = et.product_id
+                        AND tt.condition_id = et.condition_id
+                  )
+            ),
+            ranked AS (
+                SELECT c.id,
+                       (ROW_NUMBER() OVER (
+                           PARTITION BY c.product_id, c.condition_id
+                           ORDER BY c.received_at DESC, c.computed_at DESC, (c.id IS NULL)
+                       ) = 1) AS should_be_current
+                FROM candidates c
             )
             UPDATE {schema}.analysis_results ar_target
             SET is_current = ranked.should_be_current,

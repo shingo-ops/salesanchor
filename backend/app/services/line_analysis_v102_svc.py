@@ -37,7 +37,7 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
-from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost
+from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost, StockItem
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
@@ -76,6 +76,9 @@ CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
 # 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
 PID_BASIS_MANUAL = "MANUAL"
 CONDITION_BASIS_MANUAL = "MANUAL_CONDITION_REVIEW"
+# 〆の件が、参照した在庫の行の状態を引き継いだ印（analysis_results の condition_basis）
+CONDITION_BASIS_SOLDOUT_REF = "SOLDOUT_REF"
+STATUS_SOLD_OUT = "Sold out"  # 〆の件の status（analysis_results.status）。完売の相手にしない
 
 # analysis_results の列の幅・精度（migrations/20260921_110000_pipeline_tables_public.sql）
 _PID_BASIS_MAX = 100
@@ -580,6 +583,7 @@ _UPSERT_SQL = """
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
         work_id = EXCLUDED.work_id
+    RETURNING id
 """
 
 
@@ -638,6 +642,66 @@ def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canon
     return out
 
 
+def _has_human_judgement(decision: Decisions | None) -> bool:
+    """商品または状態の人の判断があるか（確認済みの印だけの判断は含まない）。"""
+    return decision is not None and (decision.product_id is not None or decision.condition_id is not None)
+
+
+def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
+    """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。
+
+    相手が無い件・人の判断（商品または状態）がある件・状態の名前が引けない件は上書きしない（何も外さない）。
+    上書きしたときは、人の状態判断（_apply_decisions）と同じ理由 CONDITION_REVIEW_REASONS を外し、空になれば要確認を外す。
+    """
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return values
+    condition_id = targets[0]["condition_id"]
+    canonical = canonicals.get(condition_id)
+    if canonical is None:
+        return values
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
+    return {
+        **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": CONDITION_BASIS_SOLDOUT_REF,
+        "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining),
+    }
+
+
+def _extra_targets(values: dict, item: dict, decision: Decisions | None) -> list[dict]:
+    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。相手が無い件・人の判断がある件は空。"""
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return []
+    written = (values["product_id"], values["condition_id"])
+    return [t for t in targets if (t["product_id"], t["condition_id"]) != written]
+
+
+_DELETE_EXTRA_TARGETS_SQL = """
+    DELETE FROM {schema}.analysis_soldout_extra_targets WHERE analysis_result_id IN (
+        SELECT ar.id FROM {schema}.analysis_results ar
+        JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+        WHERE ei.extraction_job_id = :ej
+    )
+"""
+_INSERT_EXTRA_TARGET_SQL = """
+    INSERT INTO {schema}.analysis_soldout_extra_targets (analysis_result_id, product_id, condition_id, ref_message_id, ref_line)
+    VALUES (:analysis_result_id, :product_id, :condition_id, :ref_message_id, :ref_line)
+"""
+
+
+def _soldout_condition_ids(pairs: list[tuple[dict, object]]) -> list[int]:
+    return [it["soldout_targets"][0]["condition_id"] for it, _ in pairs if it.get("soldout_targets")]
+
+
+def _write_extra_targets(session: Session, result_id: str, extras: list[dict]) -> None:
+    for target in extras:
+        session.execute(
+            text(_INSERT_EXTRA_TARGET_SQL.format(schema=analyzer.TCG_SCHEMA)),
+            {"analysis_result_id": result_id, "product_id": target["product_id"], "condition_id": target["condition_id"],
+             "ref_message_id": target["ref_message_id"], "ref_line": target["ref_line"]},
+        )
+
+
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
     decisions: dict[str, Decisions] | None = None,
@@ -649,18 +713,22 @@ def _write_results(
     pairs = _map_to_rows(v102_items, rows)
     matched_ids = [it["product_id"] for it, _ in pairs if it.get("product_id") is not None]
     work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
-    canonicals = _load_condition_canonicals(session, [d.condition_id for d in decisions.values() if d.condition_id is not None])
+    condition_ids = [d.condition_id for d in decisions.values() if d.condition_id is not None]
+    canonicals = _load_condition_canonicals(session, [*condition_ids, *_soldout_condition_ids(pairs)])
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
+    session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     for item, row in pairs:
-        values = _apply_decisions(
-            _analysis_values(item, masters, unit_ids, work_ids), item, decisions.get(str(row.id)), canonicals
+        decision = decisions.get(str(row.id))
+        values = _apply_soldout_targets(
+            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals
         )
-        session.execute(
+        result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
              "computed_at": now, "updated_at": now},
-        )
+        ).scalar_one()
+        _write_extra_targets(session, result_id, _extra_targets(values, item, decision))
         stats["pid_resolved"] += int(values["pid_resolved"])
         stats["unit_resolved"] += int(values["unit_resolved"])
         stats["needs_review"] += int(values["needs_review"])
@@ -688,13 +756,19 @@ def _fixed_products(response_text: str, ctx, masters: dict, rows: list, decision
 
 
 def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple[int, int]]:
-    """この投稿の今の (product_id, condition_id) の組。書き直す前に読み、is_current の付け直しに渡す。"""
+    """この投稿の今の (product_id, condition_id) の組（〆の完売の相手の組を含む）。書き直す前に読み、is_current の付け直しに渡す。"""
     rows = session.execute(
         text(f"""
-            SELECT DISTINCT ar.product_id, ar.condition_id
+            SELECT ar.product_id, ar.condition_id
             FROM {analyzer.TCG_SCHEMA}.analysis_results ar
             JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
             WHERE ei.extraction_job_id = :ej AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL
+            UNION
+            SELECT et.product_id, et.condition_id
+            FROM {analyzer.TCG_SCHEMA}.analysis_soldout_extra_targets et
+            JOIN {analyzer.TCG_SCHEMA}.analysis_results ar ON ar.id = et.analysis_result_id
+            JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej
         """),
         {"ej": extraction_job_id},
     ).fetchall()
@@ -765,7 +839,46 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
         text(_SOLDOUT_REF_POSTS_SQL.format(schema=schema)),
         {"channel": current.supplier_channel_id, "posted_at": current.line_posted_at, "gap": SOLDOUT_REF_MAX_GAP_SECONDS},
     ).fetchall()
-    return tuple(SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "") for r in rows)
+    stock = _load_stock_items(session, [str(r.id) for r in rows])
+    return tuple(SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "", stock.get(str(r.id), ())) for r in rows)
+
+
+_STOCK_ITEMS_SQL = """
+    SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id
+    FROM {schema}.extraction_jobs ej
+    JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
+    JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
+    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+      AND ar.status IS DISTINCT FROM :sold_out
+    ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
+"""
+
+
+def _stock_lines(source_lines: list[int] | None, line_start: int | None, line_end: int | None) -> frozenset[int]:
+    """件の行番号：source_lines があればその集合、無ければ line_start〜line_end（どちらかが NULL なら空）。"""
+    if source_lines:
+        return frozenset(int(n) for n in source_lines)
+    if line_start is None or line_end is None:
+        return frozenset()
+    return frozenset(range(int(line_start), int(line_end) + 1))
+
+
+def _load_stock_items(session: Session, message_ids: list[str]) -> dict[str, tuple[StockItem, ...]]:
+    """規則11：参照する投稿ごとの、その投稿の最新の job の保存済みの解析結果（商品が決まり、'Sold out' でない件）。読み取りのみ。"""
+    if not message_ids:
+        return {}
+    rows = session.execute(
+        text(_STOCK_ITEMS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ids": message_ids, "sold_out": STATUS_SOLD_OUT}
+    ).fetchall()
+    found: dict[str, list[StockItem]] = {}
+    for r in rows:
+        found.setdefault(str(r.source_message_id), []).append(
+            StockItem(_stock_lines(r.source_lines, r.line_start, r.line_end), int(r.product_id), int(r.condition_id))
+        )
+    return {k: tuple(v) for k, v in found.items()}
 
 
 def masters_with_followup(

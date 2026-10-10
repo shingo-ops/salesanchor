@@ -18,7 +18,7 @@ import app.services.line_analysis_v102_svc as svc
 from app.services import gemini_raw_copy_v101 as v101
 from app.services import gemini_raw_copy_v102_soldout_ref as sr
 from app.services.extraction_judgement_svc import ProductEntry
-from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters
+from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, WorkName
 from tests.test_gemini_raw_copy_v102_context_work import _MASTERS, _STATUS
 from tests.test_tcg_work_matching_integration import SCHEMA
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
@@ -42,12 +42,30 @@ _KUBUN = {"62": "箱系", "63": "箱系", "71": "箱系", "72": "箱系"}
 _MASTER = ProductFirstMasters(product_entries=_PRODUCTS, product_kubun=_KUBUN, condition_unit={"Sealed box": "Box"}, ignore_phrases=())
 T0 = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
 
+# 作品名の〆の材料: 81・82 は中分類 2、91 は中分類 3。中分類の名前はカタカナ（名前の語は4文字以上のカタカナ・漢字・英字だけ）
+_MASTER_W = dataclasses.replace(
+    _MASTER,
+    product_entries=(*_PRODUCTS, _p(81, 2, "どらごん甲"), _p(82, 2, "どらごん乙"), _p(91, 3, "ぽけもん丙")),
+    product_kubun={**_KUBUN, "81": "箱系", "82": "箱系", "91": "箱系"},
+    work_names=(WorkName(2, ("ドラゴンアイル",)), WorkName(3, ("ポケモンアイル",))),
+)
+_PLURAL = ("全て", "両方")
+_COND_A, _COND_B = 11, 12
 
-def _post(message_id: str, raw: str, hours_before: float = 1.0) -> sr.SoldoutRefPost:
-    return sr.SoldoutRefPost(message_id, T0 - timedelta(hours=hours_before), raw)
+
+def _post(message_id: str, raw: str, hours_before: float = 1.0, stock_items: tuple = ()) -> sr.SoldoutRefPost:
+    return sr.SoldoutRefPost(message_id, T0 - timedelta(hours=hours_before), raw, stock_items)
 
 
-def _extract(raw: str, posts, plural_words: tuple[str, ...] = (), fixed_products: dict[int, int] | None = None):
+def _si(lines, product_id: int, condition_id: int = _COND_A) -> sr.StockItem:
+    return sr.StockItem(frozenset(lines), product_id, condition_id)
+
+
+def _targets(row: dict) -> list[tuple[int, int, str, int]]:
+    return [(t["product_id"], t["condition_id"], t["ref_message_id"], t["ref_line"]) for t in row.get("soldout_targets", [])]
+
+
+def _extract(raw: str, posts, plural_words: tuple[str, ...] = (), fixed_products: dict[int, int] | None = None, master=_MASTER):
     """posts は新しい順。今の投稿の行に価格が無ければ「 3@1,500円」を足す。"""
     raw = "\n".join(ln if "1,500円" in ln or not ln.strip() else f"{ln} 3@1,500円" for ln in raw.split("\n"))
     lines = raw.split("\n")
@@ -56,7 +74,7 @@ def _extract(raw: str, posts, plural_words: tuple[str, ...] = (), fixed_products
     assert errors == []
     rows, _flags = v101.extract_v101_items(
         parsed, raw, order=None, reassign=True, v102_fixes=True,
-        product_first=dataclasses.replace(_MASTER, followup_plural_words=plural_words),
+        product_first=dataclasses.replace(master, followup_plural_words=plural_words),
         soldout_posts=posts, fixed_products=fixed_products, **_MASTERS_SOLD,
     )
     return rows
@@ -150,9 +168,138 @@ def test_no_token_does_not_decide():
         assert row["match_status"] == "unmatched" and row["product_id"] is None
 
 
-def test_plural_word_does_not_decide():
+def test_plural_word_does_not_decide_when_a_stock_row_has_no_counterpart():
+    # 書き換えた理由: 便1では「複数語があれば常に決めない」だったが、規則8で複数語の〆も対象になった。
+    # 今は「複数語で、相手（stock_items）が無い在庫の行があれば決めない」（規則11）。STOCK の投稿には stock_items が無い。
     row = _extract("ABC-123 両方 〆", (_post("p1", STOCK),), plural_words=("両方",))[0]
+    assert row["match_status"] == "unmatched" and row["product_id"] is None and "soldout_targets" not in row
+
+
+def test_plural_word_decides_when_every_stock_row_has_a_counterpart():
+    post = _post("p1", STOCK, stock_items=(_si([1], 62),))
+    row = _extract("ABC-123 両方 〆", (post,), plural_words=("両方",))[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 62)
+    assert _targets(row) == [(62, _COND_A, "p1", 1)]
+    assert row["product_soldout_ref"]["tokens"] == ["abc-123"]  # 複数語は手がかりの語から外れている
+
+
+def test_plural_word_decides_several_products_of_the_same_token():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円\nぴよぴよ ABC-123 3@1,500円", stock_items=(_si([1], 62), _si([2], 63, _COND_B)))
+    row = _extract("ABC-123 両方 〆", (post,), plural_words=_PLURAL)[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 62)  # product_id は targets[0]
+    assert _targets(row) == [(62, _COND_A, "p1", 1), (63, _COND_B, "p1", 2)]
+
+
+def test_one_product_with_two_conditions_gives_two_targets():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_si([1], 62, _COND_A), _si([1], 62, _COND_B)))
+    row = _extract("ABC-123 全て〆", (post,), plural_words=_PLURAL)[0]
+    assert _targets(row) == [(62, _COND_A, "p1", 1), (62, _COND_B, "p1", 1)]
+
+
+def test_duplicate_counterparts_are_kept_once():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円\nふぁいぶ ABC-123 5@1,500円", stock_items=(_si([1], 62), _si([2], 62)))
+    row = _extract("ABC-123 全て〆", (post,), plural_words=_PLURAL)[0]
+    assert _targets(row) == [(62, _COND_A, "p1", 1)]
+
+
+def test_plural_word_does_not_decide_when_a_clue_line_has_no_product():
+    # 2行目は語が当たるのに商品が決まらない（「30th 両方〆」で片方だけ完売にしない）
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円\nなぞ ABC-123 3@1,500円", stock_items=(_si([1], 62),))
+    row = _extract("ABC-123 両方 〆", (post,), plural_words=_PLURAL)[0]
     assert row["match_status"] == "unmatched" and row["product_id"] is None
+
+
+def test_clue_line_without_product_is_ignored_when_it_contains_a_sold_word():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円\nなぞ ABC-123 〆", stock_items=(_si([1], 62),))
+    assert _extract("ABC-123 両方 〆", (post,), plural_words=_PLURAL)[0]["product_id"] == 62
+
+
+def test_single_product_without_plural_word_keeps_the_stock_condition_when_it_is_known():
+    row = _extract("ABC-123 〆", (_post("p1", STOCK, stock_items=(_si([1], 62, _COND_B),)),))[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 62)
+    assert _targets(row) == [(62, _COND_B, "p1", 1)]
+
+
+def test_single_product_without_plural_word_decides_the_product_only_when_no_counterpart():
+    row = _extract("ABC-123 〆", (_post("p1", STOCK),))[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 62) and "soldout_targets" not in row
+
+
+def test_single_product_without_plural_word_has_no_target_when_one_stock_row_lacks_a_counterpart():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円\nふぁいぶ ABC-123 5@1,500円", stock_items=(_si([1], 62),))
+    row = _extract("ABC-123 〆", (post,))[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 62) and "soldout_targets" not in row
+
+
+def test_plural_ambiguous_with_a_product_outside_the_candidates_does_not_decide():
+    post = _post("p1", "ひよこ甲 ZZZ-777 3@1,500円\nぴよぴよ ZZZ-777 3@1,500円", stock_items=(_si([1], 71), _si([2], 63)))
+    row = _extract("共通ひよこ ZZZ-777 両方 〆", (post,), plural_words=_PLURAL)[0]  # 候補は 71・72。63 は候補外
+    assert row["match_status"] == "ambiguous" and row["product_id"] is None
+
+
+def test_plural_word_does_not_make_an_already_sold_stock_row_a_target():
+    later = _post("later", "ふぁいぶ 〆", 1)
+    earlier = _post("earlier", "ふぁいぶ ABC-123 3@1,500円\nぴよぴよ ABC-123 3@1,500円", 5, (_si([1], 62), _si([2], 63)))
+    row = _extract("ABC-123 全て〆", (later, earlier), plural_words=_PLURAL)[0]
+    assert (row["product_id"], _targets(row)) == (63, [(63, _COND_A, "earlier", 2)])
+
+
+def test_plural_word_stops_at_the_newest_post_that_hits():
+    newer = _post("new", "ぴよぴよ ABC-123 3@1,500円", 1, (_si([1], 63),))
+    older = _post("old", "ふぁいぶ ABC-123 3@1,500円", 5, (_si([1], 62),))
+    row = _extract("ABC-123 全て〆", (newer, older), plural_words=_PLURAL)[0]
+    assert _targets(row) == [(63, _COND_A, "new", 1)]
+
+
+# --- 作品名の〆（規則9）-------------------------------------------------------------------------
+
+_WORK_POST_RAW = "どらごん甲 3@1,500円\nどらごん乙 3@1,500円\nぽけもん丙 3@1,500円"
+_WORK_STOCK = (_si([1], 81), _si([2], 82, _COND_B), _si([3], 91))
+
+
+def test_work_name_soldout_decides_every_product_of_that_work():
+    row = _extract("ドラゴンアイル 全て〆", (_post("p1", _WORK_POST_RAW, stock_items=_WORK_STOCK),), _PLURAL, master=_MASTER_W)[0]
+    assert (row["match_status"], row["product_id"]) == ("matched_soldout_ref", 81)
+    assert _targets(row) == [(81, _COND_A, "p1", 1), (82, _COND_B, "p1", 2)]  # 中分類 3 の 91 は入らない
+    assert row["product_soldout_ref"]["tokens"] == []  # 作品名の語は手がかりから外れる
+
+
+def test_work_name_is_not_used_without_a_plural_word():
+    row = _extract("ドラゴンアイル 〆", (_post("p1", _WORK_POST_RAW, stock_items=_WORK_STOCK),), _PLURAL, master=_MASTER_W)[0]
+    assert row["match_status"] == "unmatched" and row["product_id"] is None
+
+
+def test_work_name_soldout_with_two_work_names_does_not_decide():
+    row = _extract("ドラゴンアイル ポケモンアイル 全て〆", (_post("p1", _WORK_POST_RAW, stock_items=_WORK_STOCK),), _PLURAL, master=_MASTER_W)[0]
+    assert row["match_status"] == "unmatched" and row["product_id"] is None
+
+
+def test_work_name_soldout_requires_the_remaining_tokens_to_hit_too():
+    raw = "どらごん甲 ZZZ-111 3@1,500円\nどらごん乙 3@1,500円"
+    row = _extract("ドラゴンアイル ZZZ-111 全て〆", (_post("p1", raw, stock_items=(_si([1], 81), _si([2], 82))),), _PLURAL, master=_MASTER_W)[0]
+    assert _targets(row) == [(81, _COND_A, "p1", 1)]
+
+
+def test_work_name_soldout_ignores_a_clue_line_without_product():
+    raw = "どらごん甲 3@1,500円\nなぞの行 3@1,500円"
+    row = _extract("ドラゴンアイル 全て〆", (_post("p1", raw, stock_items=(_si([1], 81),)),), _PLURAL, master=_MASTER_W)[0]
+    assert (row["product_id"], _targets(row)) == (81, [(81, _COND_A, "p1", 1)])
+
+
+def test_work_name_soldout_with_a_stock_row_without_counterpart_does_not_decide():
+    row = _extract("ドラゴンアイル 全て〆", (_post("p1", _WORK_POST_RAW, stock_items=(_si([1], 81),)),), _PLURAL, master=_MASTER_W)[0]
+    assert row["match_status"] == "unmatched" and row["product_id"] is None
+
+
+def test_work_name_soldout_with_no_stock_row_of_that_work_does_not_decide():
+    row = _extract("ポケモンアイル 全て〆", (_post("p1", "どらごん甲 3@1,500円", stock_items=(_si([1], 81),)),), _PLURAL, master=_MASTER_W)[0]
+    assert row["match_status"] == "unmatched" and row["product_id"] is None
+
+
+def test_human_decided_row_gets_no_targets():
+    post = _post("p1", STOCK, stock_items=(_si([1], 62),))
+    row = _extract("ABC-123 〆", (post,), fixed_products={0: 63})[0]
+    assert (row["match_status"], row["product_id"]) == ("matched", 63) and "soldout_targets" not in row
 
 
 def test_sold_out_words_are_removed_before_taking_tokens():

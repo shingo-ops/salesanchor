@@ -29,7 +29,12 @@ from app.services.tcg_empty_box_rules import classification_sql, classify_empty_
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.seed_data import type_master_seed_sql
-from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
+from tests.test_tcg_work_matching_integration import (
+    _PUBLIC_PRODUCTS_DDL,
+    _rewire_keyword_fks,
+    create_soldout_extra_targets,
+    provision,
+)
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATION = MIGRATIONS / "20260913_150000_tcg_empty_box_condition.sql"
@@ -82,6 +87,7 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20261009_200000_create_review_reason_codes.sql").read_text())
             # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+            create_soldout_extra_targets(cursor, SCHEMA)  # 便2-1: ADR-158 のマージが読む表
             # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
             cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
             cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")

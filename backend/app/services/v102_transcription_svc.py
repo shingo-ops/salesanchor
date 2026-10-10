@@ -85,6 +85,11 @@ _PAIRS_OF_ITEMS_SQL = """
     FROM {schema}.analysis_results ar
     WHERE ar.extraction_item_id = ANY(CAST(:ids AS uuid[]))
       AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+    UNION
+    SELECT et.product_id, et.condition_id
+    FROM {schema}.analysis_soldout_extra_targets et
+    JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
+    WHERE ar.extraction_item_id = ANY(CAST(:ids AS uuid[]))
 """
 # FK(ON DELETE CASCADE)の有無に依存しないよう、件の DELETE の前に解析結果を明示的に消す
 _DELETE_RESULTS_SQL = "DELETE FROM {schema}.analysis_results WHERE extraction_item_id = ANY(CAST(:ids AS uuid[]))"

@@ -90,6 +90,8 @@ def test_loader_applies_name_only_works(monkeypatch):
         sql = str(stmt)
         if "code_only_match" in sql:
             rows = []
+        elif "name_ja" in sql:  # 便2-2: 〆の作品名の判定に使う中分類の名前の読み込み
+            rows = []
         elif "type_master" in sql:
             assert "match_by_code = FALSE" in sql
             rows = [(NAME_ONLY_WORK,)]

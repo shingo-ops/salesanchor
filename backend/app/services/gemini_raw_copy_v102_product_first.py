@@ -84,6 +84,14 @@ _LINE_ORDER_ROLES = ("stock", "name")  # 価格の行のあと、この順に見
 
 
 @dataclass(frozen=True)
+class WorkName:
+    """有効な中分類（type_master）の名前（name_ja・name_en。空は除く）。〆の件の作品名の判定に使う（soldout_ref が import する側）。"""
+
+    work_id: int
+    names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ProductFirstMasters:
     """商品を先に決める流れに要るマスタ（読み取り専用）。"""
 
@@ -95,6 +103,8 @@ class ProductFirstMasters:
     g2_index: G2Index | None = None
     # 直前の投稿から商品を決めない言葉（複数を指す言葉）。knowledge_rules の category=followup_plural_word。空なら働かない
     followup_plural_words: tuple[str, ...] = ()
+    # 〆の件の作品名の判定に使う有効な中分類の名前（type_master is_active = TRUE）。空なら作品名の〆は働かない
+    work_names: tuple[WorkName, ...] = ()
 
 
 _CONDITION_UNIT_SQL = """
@@ -112,6 +122,9 @@ _FOLLOWUP_PLURAL_WORDS_SQL = """
     SELECT pattern FROM public.knowledge_rules
     WHERE category = 'followup_plural_word' AND pattern_type = 'substring' AND is_active = TRUE
     ORDER BY priority, id
+"""
+_WORK_NAMES_SQL = """
+    SELECT id, name_ja, name_en FROM public.type_master WHERE is_active = TRUE ORDER BY id
 """
 _NAME_ONLY_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = FALSE"
 
@@ -251,6 +264,16 @@ def match_text_g2(match_text: str, masters: ProductFirstMasters):
     return match_product_g2(match_text, g2_index)
 
 
+def _load_work_names(session: Session) -> tuple[WorkName, ...]:
+    """有効な中分類の名前。name_ja・name_en が NULL・空なら除き、名前が1つも無い中分類は入れない。"""
+    found = []
+    for work_id, name_ja, name_en in session.execute(text(_WORK_NAMES_SQL)).fetchall():
+        names = tuple(str(n) for n in (name_ja, name_en) if n and str(n).strip())
+        if names:
+            found.append(WorkName(int(work_id), names))
+    return tuple(found)
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
     """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
 
@@ -266,7 +289,8 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
     g2_index = build_g2_index(source_entries, name_only, code_only_off)
     plural_words = tuple(str(r[0]) for r in session.execute(text(_FOLLOWUP_PLURAL_WORDS_SQL)).fetchall() if r[0])
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words)
+    work_names = _load_work_names(session)
+    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names)
     check_product_first_masters(masters)
     return masters
 
