@@ -17,3 +17,15 @@
 
 ## 3. 画面幅
 PO の表示幅は CSS 換算で約1450px と推定（推定、実測ではない）。検証は幅1280と1440で行う。
+
+## 4. 変更後の実装位置（worktree で確認）
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:18 SourceDetail（details と summary を外した）
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:50 sourceItem の state
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:56 再取得時に setSourceItem(null)
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:69 product_title 列の width "250px"
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:96 DataTable の onRowClick
+- frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:104 Drawer
+- frontend/src/components/Drawer.tsx:73 Escape で onClose
+- frontend/src/components/DataTable.tsx:35 列の width、frontend/src/components/DataTable.tsx:72 onRowClick
+- frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:465 onRowClick の前例
+- frontend/src/pages/super-admin/components/NoteMasterPanel.tsx:230 Drawer の前例
