@@ -157,6 +157,7 @@ final class LineExportFlow {
 
     private final UnlockAccessibilityService service;
     private final boolean lockOnFinish;
+    private final boolean armRetryOnFailure;
     private final String triggerLabel;
     private final Listener listener;
     private final Handler handler = new Handler();
@@ -205,17 +206,30 @@ final class LineExportFlow {
     private long editLockDelayMs = -1L;
 
     /**
-     * lockOnFinishはRUN_ALL（ロック解除→LINE操作）のときだけtrueにする。EXPORT単体
-     * （すでに解除して使っている状態での検証用）では施錠しない。成功・失敗どちらの
-     * 終了でも、trueなら最後に画面を施錠する（旧ADB方式のKEYCODE_HOME→KEYCODE_SLEEPに
-     * 相当。解除したまま放置するのを避けるため、失敗で中止したときも施錠する）。
+     * lockOnFinishとarmRetryOnFailureは別の意味を持つ（design.md追補 2026-10-10
+     * 「使用中に起動した回は施錠しない」で分離。UnlockAccessibilityService#startExportFlow
+     * のjavadoc参照）。
+     *
+     * lockOnFinish: 終了時に画面を施錠するか。trueなら最後に画面を施錠する（旧ADB方式の
+     * KEYCODE_HOME→KEYCODE_SLEEPに相当。解除したまま放置するのを避けるため、失敗で中止
+     * したときも施錠する）。falseになるのは2つの場合がある: ①EXPORT単体（手動検証用、
+     * すでに解除して使っている状態での検証）②開始時に既に解除済みだった（＝利用者が使用中に
+     * 起動した）本番実行（使用中に画面が消えて操作を妨げるのを避けるため施錠しない）。
+     *
+     * armRetryOnFailure: 失敗時にRunScheduler.scheduleRetryAfterFailureを張るか
+     * （本番実行＝RUN_ALL経由かどうかの印。①のEXPORT単体ではfalse、②の「使用中に起動」と
+     * checkResult()の解除成功後の続行ではtrue）。lockOnFinishだけで本番実行かどうかを
+     * 判定していると、①②の両方がlockOnFinish=falseになったときに再試行が退行するため、
+     * 分けてある。
+     *
      * triggerLabelは結果通知の本文に「引き金:」として残す診断用（design.md追補
      * 2026-10-08「段階3の方式変更」）。
      */
-    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, String triggerLabel,
-            Listener listener) {
+    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, boolean armRetryOnFailure,
+            String triggerLabel, Listener listener) {
         this.service = service;
         this.lockOnFinish = lockOnFinish;
+        this.armRetryOnFailure = armRetryOnFailure;
         this.triggerLabel = triggerLabel == null ? "" : triggerLabel;
         this.listener = listener;
     }
@@ -787,14 +801,58 @@ final class LineExportFlow {
         final String bodyBeforeLock = body;
 
         if (!lockOnFinish) {
-            // 施錠を行わない経路（EXPORT単体検証）。ここが画面保持の最終地点になるため
-            // ここで解放する。解放前にウェイクロックの実効性（design.md追補参照:
-            // 安全タイムアウト120秒で勝手に解放されていないか）を記録する。
+            if (armRetryOnFailure) {
+                // 施錠を行わないが本番実行の経路（design.md追補 2026-10-10「使用中に起動した
+                // 回は施錠しない」: 開始時に既に解除済みだった回）。施錠（performGlobalAction
+                // (GLOBAL_ACTION_LOCK_SCREEN)）だけを行わないが、EDITタップ直後に画面状態を
+                // 変えるとジェスチャが取り消される2026-10-08の不具合と同じリスクを避けるため、
+                // 施錠する経路（lockOnFinish==true、下記）と同じく
+                // GestureCompat.drainCallbackSummary()とLOCK_DELAY_AFTER_EDIT_MSの待ちだけは
+                // 素通しする。
+                final long lockDelayStartedAt = System.currentTimeMillis();
+                GestureCompat.drainCallbackSummary();
+                schedule("lockDelay", LOCK_DELAY_AFTER_EDIT_MS, new Runnable() {
+                    @Override
+                    public void run() {
+                        editLockDelayMs = System.currentTimeMillis() - lockDelayStartedAt;
+                        boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
+                        long wakeHeldMs = wakeAcquiredAt > 0
+                                ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
+                        releaseWakeLock();
+                        postResultNotification(service, title, bodyBeforeLock);
+                        logExportEnd(success, failedStage, elapsed, elapsedUptime, null,
+                                wakeHeldAtEnd, wakeHeldMs);
+                        // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」と同じ
+                        // 再試行。armRetryOnFailure==true（本番実行）のときだけ張る。
+                        if (!success && armRetryOnFailure) {
+                            RunScheduler.scheduleRetryAfterFailure(service);
+                        }
+                        // フローが終わったので見張りスレッドを止める（design.md追補参照。
+                        // リーク防止）。
+                        if (stallWatchdog != null) {
+                            stallWatchdog.stop();
+                        }
+                        if (listener != null) {
+                            listener.onFinished();
+                        }
+                    }
+                });
+                return;
+            }
+
+            // 施錠を行わず、本番実行でもない経路（EXPORT単体検証）。ここが画面保持の最終
+            // 地点になるためここで解放する。解放前にウェイクロックの実効性
+            // （design.md追補参照: 安全タイムアウト120秒で勝手に解放されていないか）を記録する。
             boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
             long wakeHeldMs = wakeAcquiredAt > 0 ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
             releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
             logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs);
+            // armRetryOnFailure==falseのため実際には呼ばれないが、lockOnFinish==trueの経路
+            // （下記）と対称に条件を書いておく（design.md追補 2026-10-10の指示どおり）。
+            if (!success && armRetryOnFailure) {
+                RunScheduler.scheduleRetryAfterFailure(service);
+            }
             // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
             if (stallWatchdog != null) {
                 stallWatchdog.stop();
@@ -836,13 +894,17 @@ final class LineExportFlow {
                 logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
                         wakeHeldAtEnd, wakeHeldMs);
                 // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」: 5分後に
-                // 再試行を予約する。lockOnFinish==trueの経路（RUN_ALL）だけが対象
-                // （lockOnFinish==falseのEXPORT単体＝手動検証用はifの手前でreturnしており、
-                // finish()がこの経路を通るのはlockOnFinish==trueのときだけなので二重に
-                // 呼ばれることはない）。logExportEndの呼び出しより後にすること: logExportEndは
-                // SchedulerStoreのpending-nextを読んで終了行に書くため、先に再試行を張ると
-                // 終了行のnextTriggerが上書きされ、診断が読みにくくなる。
-                if (!success) {
+                // 再試行を予約する。armRetryOnFailure==true（本番実行）のときだけ対象
+                // （design.md追補2026-10-10でlockOnFinishと分離。checkResult()からの
+                // 解除成功後の続行はlockOnFinish=true, armRetryOnFailure=trueで渡しており、
+                // この経路に来るのは常にarmRetryOnFailure=trueだが、
+                // !lockOnFinish側（finish()上部）と条件の書き方を揃えてある）。
+                // finish()は!lockOnFinishの分岐で必ずreturnするため、1回のfinish()呼び出しで
+                // scheduleRetryAfterFailureが二重に呼ばれることはない。
+                // logExportEndの呼び出しより後にすること: logExportEndはSchedulerStoreの
+                // pending-nextを読んで終了行に書くため、先に再試行を張ると終了行のnextTriggerが
+                // 上書きされ、診断が読みにくくなる。
+                if (!success && armRetryOnFailure) {
                     RunScheduler.scheduleRetryAfterFailure(service);
                 }
                 // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
@@ -883,6 +945,12 @@ final class LineExportFlow {
             }
             if (editLockDelayMs >= 0) {
                 extraFields.put("editLockDelayMs", editLockDelayMs);
+            }
+            // design.md追補 2026-10-10「使用中に起動した回は施錠しない」: 施錠しなかった回
+            // （lockOnFinish==false）だけtrueを出す（行った回は出さない）。lockedフィールドは
+            // 施錠を試みていないのでnull（既存どおりlogExportEnd呼び出し側でnullを渡す）。
+            if (!lockOnFinish) {
+                extraFields.put("lockSkipped", true);
             }
         } catch (JSONException e) {
             Log.w(TAG, "export end extra fields build failed: " + e);

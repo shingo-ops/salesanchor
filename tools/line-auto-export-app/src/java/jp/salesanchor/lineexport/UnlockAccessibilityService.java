@@ -16,6 +16,8 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -128,6 +130,13 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private int keypadConfirmedAttempt;
     private long keypadConfirmedElapsedMs = -1L;
 
+    // 実行ログ計測用（design.md追補 2026-10-10「解除の計測を実行ログへ」）: 開始時の画面状態。
+    // phase:"start"行にも同じ値が出るが、end行だけを集計するときの突き合わせを不要にするため
+    // end行にも持たせる。startUnlockFlow()の最初に一度だけ取得し、この実行チェーンの間
+    // 固定値として使う。
+    private boolean startScreenOn;
+    private boolean startKeyguardLocked;
+
     /** 外部（RunReceiver）からの実行トリガー。サービス未接続なら失敗通知を出す。 */
     static void requestRun(Context context) {
         UnlockAccessibilityService instance = sInstance;
@@ -153,7 +162,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             return;
         }
         SchedulerStore.clearPendingNextTrigger(context);
-        instance.startExportFlow(false, "EXPORT(手動)");
+        instance.startExportFlow(false, false, "EXPORT(手動)");
     }
 
     /**
@@ -299,16 +308,27 @@ public class UnlockAccessibilityService extends AccessibilityService {
     }
 
     /**
-     * LINE操作を実行する。多重起動は無視する。lockOnFinishはRUN_ALLのときだけtrueにする
-     * （requestExportからはfalse固定、checkResult()のRUN_ALL続行からはtrue固定で渡す）。
+     * LINE操作を実行する。多重起動は無視する。
+     *
+     * design.md追補 2026-10-10「使用中に起動した回は施錠しない」: 施錠するかどうか
+     * （lockOnFinish）と、本番実行として失敗後の再試行を張るかどうか（armRetryOnFailure）は
+     * 別のフラグに分けてある。分けていないと「開始時に既に解除済みだった回」で施錠を止めた
+     * ときに再試行も一緒に止まってしまう（lockOnFinish==falseの経路には元々再試行を張る
+     * 処理が無かったため）。呼び出し元の組み合わせ:
+     *   - requestExport（EXPORT単体、手動検証用）: lockOnFinish=false, armRetryOnFailure=false
+     *   - startUnlockFlowの「既に解除済み」分岐（本番実行だが施錠しない）:
+     *     lockOnFinish=false, armRetryOnFailure=true
+     *   - checkResult()の解除成功後の続行（本番実行、施錠する）:
+     *     lockOnFinish=true, armRetryOnFailure=true
      * triggerLabelはLineExportFlowの結果通知に「引き金:」として残す。
      */
-    private void startExportFlow(final boolean lockOnFinish, String triggerLabel) {
+    private void startExportFlow(final boolean lockOnFinish, final boolean armRetryOnFailure,
+            String triggerLabel) {
         if (!exportRunning.compareAndSet(false, true)) {
             Log.i(TAG, "export flow already running, ignoring duplicate trigger");
             return;
         }
-        new LineExportFlow(this, lockOnFinish, triggerLabel, new LineExportFlow.Listener() {
+        new LineExportFlow(this, lockOnFinish, armRetryOnFailure, triggerLabel, new LineExportFlow.Listener() {
             @Override
             public void onFinished() {
                 exportRunning.set(false);
@@ -334,6 +354,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
         trace = new StringBuilder();
         flowStartedAt = System.currentTimeMillis();
 
+        // 解除の計測（design.md追補 2026-10-10「解除の計測を実行ログへ」）。この実行チェーンの
+        // 間は固定値として使うため、どの分岐に進む前にここで一度だけリセット/取得する
+        // （見送り・skipped_to_export・PIN未設定の各分岐でも、前回の実行の値が
+        // 残ったままlogUnlockEndに出てしまわないようにするため）。
+        swipeAttempt = 0;
+        keypadConfirmedAttempt = 0;
+        keypadConfirmedElapsedMs = -1L;
+
         // 実行ログの開始行。終了まで到達しなかった実行（プロセスが落ちた等）もこの行だけは
         // 残るよう、他のチェックより前に書く（design.md追補参照）。
         RunLogger.logStart(this, currentRunId, "unlock", currentTriggerLabel);
@@ -341,6 +369,11 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // ロックされていないときに数字を打つと、前面のアプリを誤タップする（ADB版の
         // 「使用中は見送り」と同じ判定）。
         KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        // 計測用（design.md追補 2026-10-10）: 開始時の画面状態をunlockの終了行にも持たせる。
+        // 既存のkm.isKeyguardLocked()判定そのものは変えない。
+        startKeyguardLocked = km != null && km.isKeyguardLocked();
+        PowerManager startPm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        startScreenOn = startPm != null && startPm.isInteractive();
         if (km == null || !km.isKeyguardLocked()) {
             if (runAll) {
                 // PO決定（実機運用、design.md追補対象）: 使用中でも即実行する。中断は受け入れる。
@@ -354,12 +387,18 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 SchedulerStore.setLastRunStartedAt(this, flowStartedAt);
                 running.set(false);
                 logUnlockEnd("skipped_to_export", null, System.currentTimeMillis() - flowStartedAt, null);
-                // PO決定「終了後は必ず施錠する」: 開始時にロックされていなくても、終了時には
-                // 施錠する（lockOnFinish=true）。例外はEXPORT単体（手動検証用、
-                // requestExport経由でこのif自体を通らない）だけ。施錠前の待ち
+                // PO決定の変更（design.md追補 2026-10-10「使用中に起動した回は施錠しない」）:
+                // 旧PO決定「終了後は必ず施錠する」(lockOnFinish=true)をやめ、開始時に既に
+                // 解除済みだった（＝利用者が使用中に起動した）回は終了後に施錠しない
+                // （lockOnFinish=false）。使用中に画面が消えると操作を妨げるため。
+                // 画面消灯・ロック状態から起動した回（checkResult()の解除成功後の続行）は
+                // 今のまま施錠する。施錠するかどうかと本番実行として再試行を張るかどうかは
+                // 別のフラグ（startExportFlowのjavadoc参照）に分けており、ここは
+                // armRetryOnFailure=trueで本番実行としての再試行は維持する。施錠前の待ち
                 // （LOCK_DELAY_AFTER_EDIT_MS・drainCallbackSummary）はLineExportFlow#finish
-                // 側の既存ロジックのままで、ここでは一切変えない。
-                startExportFlow(true, currentTriggerLabel);
+                // 側でarmRetryOnFailure==trueのときだけ素通しする（2026-10-08のジェスチャ
+                // 取り消し対策を維持するため）。
+                startExportFlow(false, true, currentTriggerLabel);
                 return;
             }
             postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中） / 引き金:" + currentTriggerLabel);
@@ -386,9 +425,8 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // 対象外（画面を起こさないため床の対象にする必要が無い。design.md追補参照）。
         SchedulerStore.setLastRunStartedAt(this, flowStartedAt);
 
-        swipeAttempt = 0;
-        keypadConfirmedAttempt = 0;
-        keypadConfirmedElapsedMs = -1L;
+        // swipeAttempt/keypadConfirmedAttempt/keypadConfirmedElapsedMsのリセットは
+        // startUnlockFlowの先頭（この分岐より前）に移した（design.md追補 2026-10-10参照）。
 
         acquireWakeLock();
         wakeStartedAt = System.currentTimeMillis();
@@ -597,7 +635,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             // KEYCODE_HOME→KEYCODE_SLEEPに相当）。triggerLabelはLineExportFlowの結果通知へ
             // そのまま引き継ぐ。
             if (runAllRequested) {
-                startExportFlow(true, currentTriggerLabel);
+                startExportFlow(true, true, currentTriggerLabel);
             }
         } else {
             String reason = failureReasons.length() > 0
@@ -630,11 +668,32 @@ public class UnlockAccessibilityService extends AccessibilityService {
         if (nextTrigger != null) {
             nextAtMs = Long.valueOf(SchedulerStore.getPendingNextAtMs(this) - System.currentTimeMillis());
         }
+
+        // 解除の計測（design.md追補 2026-10-10「解除の計測を実行ログへ」）。本文・PINは
+        // 一切含まない。成功・失敗どちらでも出す: 何回目のスワイプでキーパッドを確認できたか
+        // （keypadAttempt。確認できなかった回は0のまま）、起床から確認までのms
+        // （keypadMs。未確認ならフィールド自体を出さない）、実際に試したスワイプ回数
+        // （swipeAttempts）、開始時の画面状態（screenOnAtStart/keyguardAtStart。phase:"start"
+        // 行にも同じ値があるが、end行だけを集計するときの突き合わせを不要にするためここにも
+        // 持たせる）。
+        JSONObject extraFields = new JSONObject();
+        try {
+            extraFields.put("keypadAttempt", keypadConfirmedAttempt);
+            if (keypadConfirmedElapsedMs >= 0) {
+                extraFields.put("keypadMs", keypadConfirmedElapsedMs);
+            }
+            extraFields.put("swipeAttempts", swipeAttempt);
+            extraFields.put("screenOnAtStart", startScreenOn);
+            extraFields.put("keyguardAtStart", startKeyguardLocked);
+        } catch (JSONException e) {
+            Log.w(TAG, "unlock end extra fields build failed: " + e);
+        }
+
         // ロック解除フローはuptimeMillis計測・段階ごとの構造化計測を持たない（2026-10-08
         // 「遅い回の原因確定のための計測追加」の対象はLINE操作フローのみ。unlock側は
-        // elapsedUpMs=-1（未測定、ログには出さない）・extraFields=nullで渡す）。
+        // elapsedUpMs=-1（未測定、ログには出さない）で渡す）。
         RunLogger.logEnd(this, currentRunId, "unlock", currentTriggerLabel, result, stage, elapsedMs, -1L,
-                stepTimings, null, nextTrigger, nextAtMs, null);
+                stepTimings, null, nextTrigger, nextAtMs, extraFields);
     }
 
     // ---- Window diagnostics (experimental, read-only) -----------------------------------
