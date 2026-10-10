@@ -54,8 +54,8 @@ price_source_mismatch / quantity_source_mismatch / value_out_of_range / item_map
 
 | 項目 | 内容 |
 |---|---|
-| 実施日時 | |
-| precheck | |
-| dryrun | |
-| commit | |
-| verify | |
+| 実施日時 | 2026-10-10T23:05Z（本 PR マージ前・Opus 実行、許可チケット psql write） |
+| precheck | TABLE review_reason_codes・ROWS 31・HAS_NEW 0・PRECHECK_DONE |
+| dryrun | INSERTED 4・CHECK_OK 4・ROWS_OK 35・ROLLBACK・DRYRUN_OK |
+| commit | INSERTED 4・CHECK_OK 4・ROWS_OK 35・COMMIT・COMMIT_DONE |
+| verify | 4行（item_mapping_mismatch・price_source_mismatch・quantity_source_mismatch・value_out_of_range、いずれも system・analysis）・ROWS 35・VERIFY_DONE |
