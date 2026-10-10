@@ -183,3 +183,24 @@ GEMINI_KEY=present
 - 本番 1,079件で数字があるのに NULL: 数量 9件（うち6件は要確認にならず配信）、価格 4件。原因は (a) 1行に「個」付きの数が2つ（backend/app/services/extraction_judgement_svc.py:636-638 multiple_values）、(b) 行頭「■」の在庫行が商品名に入り `_mask_product_name`（backend/app/services/extraction_judgement_svc.py:526-538）で消える。
 - resolve_price_quantity の reasons（price_reasons）を読む本番コードは 0件。数量 NULL を要確認にする理由が無い。
 - 要確認の流れ: backend/app/services/line_analysis_v102_svc.py:559（理由があれば needs_review=True）→ backend/app/services/tcg_distribution_svc.py:262（配信から除外）。読み取り時の price_unresolved: backend/app/services/tcg_condition_review_svc.py:144・:151。
+
+## 9. 便G の recon 要点（社外秘の原文なし・件数のみ。基準 origin/main 994543744 / 34da7b297）
+詳細（手元・社外秘）: /tmp/CC報告ファイル/v102-system-decisions/list.md、/tmp/CC報告ファイル/v102-swap-rca/、/tmp/CC報告ファイル/v102-kw-kenpin/、/tmp/CC報告ファイル/v102-gemini-trust/replay.md。
+
+### 9-1. 状態の入れ替わり（2026-10-10T21:31Z〜の再解析）
+- 再解析 reanalyze_v102_job（backend/app/tasks/tcg_extraction.py:723-740）は Gemini を呼ばず run_v102_analysis（backend/app/services/line_analysis_v102_svc.py:902）をやり直す。extraction_items（Gemini の件）は不変。
+- 状態の表は毎回 DB から読む（line_analysis_v102_svc.py:159 load_v102_masters → backend/app/services/tcg_analyzer_svc.py:647 load_condition_entries）。語の追加は次の再解析から効く。
+- 迷う行の付け直し: backend/app/services/gemini_raw_copy_v101.py:487 _ambiguous_lines（価格の行にはさまれた ship/condition の行）、:502 _evidence（投稿内の同じ種類の迷わない行の並び。1行でも「価格の下」があれば below）、:543 _decide_target（並び方→値段 :520 の順）、:555 reassign_ambiguous（Gemini の付け方を上書き）。呼び出し :1347、v102 は line_analysis_v102_svc.py:260 で reassign=True。
+- 前後 diff: 6ジョブ166行のうち、狙いの FLAG_SINGLE→Opened box 6行、入れ替わり16行（a1a120c6・a100097a 各8）、is_current の付け替え6行（同じ投稿の同じ商品×状態の行の中で）。他ジョブの行の変化0（2チャネル3,574行の is_current 比較）。
+- 再現（本番マスタで、語の有無だけ変える）: 語なしで付け直し0件、語ありで16件が観測どおり。コード #4114 前後で再現結果同一。
+
+### 9-2. システムが Gemini の出力を変える場面（v102、list.md の A1〜A17）
+- A4 価格の行: gemini_raw_copy_v101.py:161-180（Gemini は price_line を返さない。価格の文字を含む最初の行）。A1〜A3（:120-135, :229-237）の落とす判定の土台。
+- A6 付け直し: 上記。A7 F1: gemini_raw_copy_v101.py:958-980（呼び出し :1265）。
+- A11 価格・数量の読み直し: gemini_raw_copy_v101.py:883-887 → backend/app/services/extraction_judgement_svc.py:599-680（食い違いは price_reasons に gemini_disagrees :673-676、保存されない）。A12 補い: gemini_raw_copy_v101.py:843-850, :888-890。
+- A15 桁あふれ: line_analysis_v102_svc.py:514-521（理由なしで NULL）。A16 対応: line_analysis_v102_svc.py:492-511 _map_to_rows（位置で zip、ずれると _MappingError→:944-949 で投稿全体 extract_exception）。A17: backend/app/services/gemini_raw_copy_v8.py:304-312 _load_items（読めないと response_unreadable）。
+
+### 9-3. 既存の決定
+- PO 2026-10-06: Gemini は行番号と価格・数量の文字、解析はシステム（project 記録）。今回 PO は「原則 Gemini の抽出を信頼」し、システムの上書き（A6・A7・A11・A12）を廃止、A11 は確認役。
+- ADR-1007（値は migration に書かない）・review_reason_codes は data/review_reason_codes/ の SQL で投入（便A・便PQ と同じ）。
+- ADR 検索: docs/adr で reassign・付け直し・price_line・gemini_disagrees は 0件（2026-10-11、git grep -i）。
