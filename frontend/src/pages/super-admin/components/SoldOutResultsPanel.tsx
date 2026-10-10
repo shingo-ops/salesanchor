@@ -1,14 +1,18 @@
+/**
+ * SoldOutResultsPanel — 完売の結果パネル（AnalysisRulesPage の内容領域で使用）
+ *
+ * 旧スタンドアロンページ（AY-2i で削除）の内容を PageLayout なしで移設。
+ */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PageLayout } from "../../components/PageLayout";
-import { Button } from "../../components/Button";
-import { Select } from "../../components/Select";
-import { TextField } from "../../components/TextField";
-import { ContentToolbar } from "../../components/ContentToolbar";
-import { DataTable, type DataTableColumn } from "../../components/DataTable";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import { ApiError } from "../../lib/api";
-import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../features/tcg-sold-out/soldOutApi";
+import { Button } from "../../../components/Button";
+import { Select } from "../../../components/Select";
+import { TextField } from "../../../components/TextField";
+import { ContentToolbar } from "../../../components/ContentToolbar";
+import { DataTable, type DataTableColumn } from "../../../components/DataTable";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import { ApiError } from "../../../lib/api";
+import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../../features/tcg-sold-out/soldOutApi";
 
 function SourceDetail({ item }: { item: SoldOutItem }) {
   const { t } = useTranslation();
@@ -34,7 +38,7 @@ function SourceDetail({ item }: { item: SoldOutItem }) {
   </details>;
 }
 
-export default function TcgSoldOutPage() {
+export function SoldOutResultsPanel() {
   const { t, i18n } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
   const [q, setQ] = useState("");
@@ -73,9 +77,10 @@ export default function TcgSoldOutPage() {
       ? "soldOut.active" : item.source_is_active === false ? "soldOut.history" : "soldOut.unknown") },
     { key: "source", header: t("soldOut.source"), renderCell: item => <SourceDetail key={item.analysis_result_id} item={item} /> },
   ];
-  if (authLoading) return <PageLayout navKey="nav.superAdminTcgSoldOut">{t("common.loading")}</PageLayout>;
-  if (!isSuperAdmin) return <PageLayout navKey="nav.superAdminTcgSoldOut"><p role="alert">{t("soldOut.denied")}</p></PageLayout>;
-  return <PageLayout navKey="nav.superAdminTcgSoldOut" subtitleKey="soldOut.subtitle">
+  if (authLoading) return <p role="status">{t("common.loading")}</p>;
+  if (!isSuperAdmin) return <p role="alert">{t("soldOut.denied")}</p>;
+  return <>
+    <p>{t("soldOut.subtitle")}</p>
     <ContentToolbar left={<>
       <TextField label={t("soldOut.search")} type="search" value={draft} maxLength={100}
         onChange={event => setDraft(event.target.value)}
@@ -97,5 +102,5 @@ export default function TcgSoldOutPage() {
         {offset > 0 && <Button variant="secondary" onClick={() => setOffset(0)}>{t("soldOut.first")}</Button>}
       </div>
     </>}
-  </PageLayout>;
+  </>;
 }

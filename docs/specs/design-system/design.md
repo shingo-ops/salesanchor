@@ -3010,3 +3010,133 @@ Architect 自己審査（AY-2h）: APPROVE。同一AI（Opus）による自己�
 - 品質（ay2h-chk-*.txt）: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（80 files・987 tests 成功）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動した。
 
 限界: 本番反映後の確認（Deploy・旧 URL・app・/api/health が 200）は merge 後。backend の GET /tcg/parallel-report は画面から呼ばれなくなる（消すかは別途判断）。
+
+#### AY-2h 本番反映（2026-10-10 記録）
+
+AY-2h の PR #4107 は、merge f913ace80（2026-10-09T23:27:25Z、HEAD 4fde752df）で main に入った。
+- Deploy 38004511182 は success（23:27:28Z〜23:29:58Z）。
+- 本番 JS の確認: tcgParallelReport 0件、superAdminTcgParallelReport 0件、"tcg-parallel-report" 1件（転送表の1行）。
+- 本番の応答: 旧 URL、app、/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（指摘0件）。
+
+#### AY-2i 完売の結果（tcg-sold-out）を LINE解析の左メニューへ移す（2026-10-10）
+
+mode: handoff。PO 決定（2026-10-10、本セッション）:
+- 設計者の問い: 「『完売の結果を見る画面』（tcg-sold-out）を、LINE解析の左メニューに『完売の結果』として載せてよいですか。y：LINE解析の中のメニューに載せ、URL を打たなくても開けるようにします」
+- PO の回答: 「y」
+
+GO は ADR-1003 の委任に基づき Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（origin/main 8fab3d397。調査全文は /tmp/CC報告ファイル/super-admin-menu/sold-out-recon.md）:
+- ページ本体 frontend/src/pages/super-admin/TcgSoldOutPage.tsx（101行）。PageLayout は :76-78 で使う。見出しは nav.superAdminTcgSoldOut、説明文は soldOut.subtitle（「保存された解析結果の売り切れ判定を確認できます。現在の在庫数・反映状況を示す一覧ではありません。」）。
+- 部品はすべて既存の金型（Button / Select / TextField / ContentToolbar / DataTable）を使う。専用の CSS は無い。ただし :28 にインライン style が1つある（既存のもの）。
+- API は features/tcg-sold-out/soldOutApi.ts の fetchSoldOut で、GET /tcg/sold-out-results を呼ぶ（backend tcg_analysis_review.py:195、require_super_admin、読み取り専用）。
+- 参照:
+  - App.tsx:92（import）、App.tsx:296（Route）
+  - config/routeTitles.ts:14
+  - TcgSoldOutPage.test.tsx（it 8本。:89 は routeTitles を、:95 は PageLayout の見出しを検査する）
+  - メニュー（Desktop / Mobile）からの参照は0件。e2e も0件。
+- LINE解析:
+  - AnalysisRulesSidebar.tsx の Key の union は :10-36。グループ「解析状況」は :80-90 で、最後の項目は error-log。ラベルのキーは analysisRules.sidebar.*。
+  - AnalysisRulesPage.tsx:
+    - :101-104 で ?section= を初回表示のときに読む。
+    - :124-132 が非管理者の表示。
+    - :162-193 の analysis-panel-content の中で、`activeSection === "x" && <Panel/>` と並ぶ。
+  - 前例: ProductMasterPanel.tsx（AY-2g。PageLayout を外して名前付き export にした）。
+- 本番の利用（直近30日）:
+  - ページを直接開いた回数: 9/16 に4、9/25 に2（nginx と frontend の二重記録なので、約3回）。
+  - API の呼び出し: 9/16、9/19、9/21、9/25。
+
+AY-2i 変更契約:
+1. 新規 frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx（名前付き export `SoldOutResultsPanel`）。中身は TcgSoldOutPage.tsx からの移設で、変えるのは次の点だけ。
+   - PageLayout の import と包みを外す。
+   - :76 は `<p role="status">{t("common.loading")}</p>` にする。
+   - :77 は `<p role="alert">{t("soldOut.denied")}</p>` にする。
+   - 本体の先頭に `<p>{t("soldOut.subtitle")}</p>` を置いて、説明文を残す（要注意の文言なので消さない）。兄弟のパネルに説明文用の既存クラスがあれば、それを使う。無ければ素の p にする。
+   - 冒頭のコメント: 「旧スタンドアロンページ（AY-2i で削除）の内容を PageLayout なしで移設」。
+   - そのほか（SourceDetail・列・ページ送り・:28 のインライン style）は1文字も変えない。
+2. AnalysisRulesSidebar.tsx:
+   - Key の union に "sold-out-results" を追加する。
+   - グループ「解析状況」の error-log の次に `navItem("sold-out-results", t("analysisRules.sidebar.soldOutResults"))` を追加する。ほかの項目と同じ書き方に合わせる。
+3. AnalysisRulesPage.tsx: analysis-panel-content の中に `{activeSection === "sold-out-results" && <SoldOutResultsPanel />}` を追加する。
+4. 古い URL: legacyPageRedirects.ts に `{ from: "/super-admin/tcg-sold-out", to: "/super-admin/analysis-rules?section=sold-out-results" }` を追加する（5件目）。
+   - App.tsx からは import :92 と Route :296 を削除する。
+   - legacyPageRedirects.test.tsx の直書きの期待値に、この1件を追加する。
+5. 削除するもの:
+   - TcgSoldOutPage.tsx
+   - routeTitles.ts:14 の1行
+   - i18n の nav.superAdminTcgSoldOut（ja と en。削除後に参照0件であることを確かめる）
+   - soldOut.* は全部残す（パネルが使う）。
+6. i18n の追加: analysisRules.sidebar.soldOutResults（ja「完売の結果」、en "Sold-out results"）。ja と en に、同じ位置で追加する。
+7. 試験:
+   - git mv で TcgSoldOutPage.test.tsx を components/SoldOutResultsPanel.test.tsx に移す。描画対象を SoldOutResultsPanel に替える。
+   - 外すのは2つだけ。外した it と理由は記録する。
+     - :89 の routeTitles を検査する部分（キーを削除するため）
+     - :95 の PageLayout 見出しを検査する部分（Panel には見出しが無いため）
+   - 残す it の expect は変えない。:114 の DesktopShell の it も、そのまま残す。
+   - AnalysisRulesPage.test.tsx に it を1本追加する。管理者が ?section=sold-out-results で開くと、analysis-subnav-sold-out-results が active になり、パネルが描画されることを確かめる。
+8. 変更しないもの: backend、soldOutApi.ts、ほかのパネル・メニュー、MobileShell、CSS、トークン、CI、依存。
+9. design.md に、AY-2h の本番反映の記録、本節、実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| LINE解析の左メニュー「解析状況」 | エラーログで終わる | エラーログの下に「完売の結果」がある |
+| 「完売の結果」を押す | — | 右側に、検索・絞り込み・一覧・ページ送りが出る（中身は旧ページと同じ） |
+| /super-admin/tcg-sold-out を開く | 単独ページ | LINE解析の「完売の結果」へ自動で移る |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 転送 | legacyPageRedirects.test.tsx で、5件の配列が期待値と完全に一致する |
+| メニュー | AnalysisRulesPage.test.tsx の追加 it が成功する |
+| 中身が同じ | 旧ページと新パネルの差分を `git diff -M` で示す。違いは契約1の点だけ |
+| 試験の移設 | 移した it の expect が元と同じであることを差分で示す。外した2つと理由を一覧にする |
+| 参照0 | TcgSoldOutPage と nav.superAdminTcgSoldOut の参照が0件（frontend/src、tests-e2e） |
+| 実画面 | 開発モードの build と preview で、偽ログインと API モックを使って古い URL を開く。移った先で「完売の結果」が選ばれ、一覧が出ていることをスクリーンショットで記録する（設計者が目視で確かめる） |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功する |
+| 本番 | Deploy が成功する。本番 JS に analysisRules.sidebar.soldOutResults のラベルがあり、nav.superAdminTcgSoldOut が0件。旧 URL、app、/api/health が 200 |
+
+Architect 自己審査（AY-2i）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（AY-2g と同じ型）。
+- 根拠:
+  - PO の明示の決定がある。
+  - 部品はすべて既存の金型で、新しい見た目は作らない。
+  - API・DB・backend は変えない。
+  - 古い URL は転送するので、ブックマークが壊れない。
+- 残るリスク（LOW）: :28 の既存インライン style をそのまま持ち込む。check:all が新しいファイルとして止めた場合は、担当が止まって報告し、設計者が対処を決める。
+
+維持の仕組み:
+- 守り手: tsc（Key の union）、legacyPageRedirects.test.tsx、SoldOutResultsPanel.test.tsx、AnalysisRulesPage.test.tsx、check-i18n-missing-keys、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2i 実装結果
+
+実装: 変更契約1〜9のとおり。旧ページ本体は git で SoldOutResultsPanel.tsx に移設し（git diff -M で rename 検出、similarity 85%）、契約1の差分だけを入れた。旧ページの試験は components/SoldOutResultsPanel.test.tsx へ git mv（similarity 77%）。
+
+検証（生出力は docs/handoff/design-system-recon/evidence-20260910/ay2i-*）:
+- generate（icon-sizes と api-types）: exit 0（ay2i-chk-generate.txt）。generate 後も git の差分に生成物は出ない。
+- tsc --noEmit: exit 0（ay2i-chk-tsc.txt）。
+- lint: exit 0（0 errors, 138 warnings。ay2h と同数。ay2i-chk-lint.txt）。
+- check:all: exit 0（ay2i-chk-check-all.txt）。SoldOutResultsPanel 内のインライン style（pre）は止められなかった。
+- test:coverage --maxWorkers=1: exit 0（80 files・989 tests 成功。ay2h の 987 から +2 = AnalysisRulesPage の追加 it と、legacyPageRedirects の it.each が5件目で1本増。ay2i-chk-coverage.txt）。frontend/coverage は worktree 外へ移動した。
+- build: exit 0（ay2i-chk-build.txt）。build-storybook: exit 0（ay2i-chk-storybook.txt）。
+- 参照0（ay2i-ref-zero.txt）: frontend/src と tests-e2e で、旧ページ名・nav.superAdminTcgSoldOut は0件。tcg-sold-out の文字列は、転送の対応表とその期待値（legacyPageRedirects.ts:8、legacyPageRedirects.test.tsx:21）と、features/tcg-sold-out の import パスのみ。
+- 実画面（ay2i-realscreen.json、ay2i-sold-out-panel-1280.png。開発モード build と vite preview、偽ログイン、API モック、Chromium、幅1280）: /super-admin/tcg-sold-out を開くと /super-admin/analysis-rules?section=sold-out-results に移り、サイドバー「完売の結果」が選択され、GET /tcg/sold-out-results が1回呼ばれ、一覧に2行（ダミー）が出た。
+
+外した試験: it ではなく、1つの it（旧 "keeps Japanese and English navigation and title aligned and formats date in JST"）の中の expect を3か所外し、it の題名を "formats date in JST" に変えた。外した各 expect と理由（3つ目は設計者承認済み）:
+1. routeTitles を検査する expect（旧 :89）。理由: routeTitles.ts の当該行と nav.superAdminTcgSoldOut を削除するため。
+2. PageLayout の見出し（en）を検査する expect（旧 :95）。理由: パネルには見出しが無いため。
+3. ja に切替えて nav.superAdminTcgSoldOut の見出しを検査する2行（旧 :98-99。changeLanguage と heading の expect）。理由: 検査対象が削除したキーの見出しのため。
+- 残した日付 JST の expect は元と同じ。ほかの it の expect は変えていない。DesktopShell の it も同じ。
+- 追加: AnalysisRulesPage.test.tsx に it を1本（?section=sold-out-results で analysis-subnav-sold-out-results が active、パネルが描画される）。legacyPageRedirects.test.tsx の期待値は5件に更新。
+
+git diff -M の旧→新（本体 SoldOutResultsPanel.tsx。全文は ay2i-move-diff.txt）:
+- 冒頭にコメント追加。
+- import の相対パスを ../../ から ../../../ に変更。PageLayout の import を削除。
+- export を `export default function TcgSoldOutPage()` から `export function SoldOutResultsPanel()` に変更。
+- 読み込み中: PageLayout 包みを `<p role="status">` に。非管理者: PageLayout 包みを外して `<p role="alert">` のみ。
+- 本体: PageLayout を Fragment に替え、先頭に `<p>{t("soldOut.subtitle")}</p>` を追加。
+- SourceDetail・列・ページ送り・インライン style は変更なし。
