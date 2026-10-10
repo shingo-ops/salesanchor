@@ -824,7 +824,8 @@ def _product_first_fields(
     )
 
 
-_SCALE_WORDS_RE = re.compile(r"[万千億kK]")
+# 万・千・億はそのまま。k/K は数字の直後（間の空白は可）で、後ろに英字が続かないときだけ単位語（Pack・kg の k は単位語にしない）
+_SCALE_WORDS_RE = re.compile(rf"[万千億]|(?<=[{_DIGITS}])\s*[kK](?![A-Za-z])")
 _NUMBER_RUN_RE = re.compile(rf"[{_DIGITS}][{_DIGITS},]*")
 
 

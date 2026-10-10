@@ -1220,3 +1220,12 @@ def test_a16_gemini_index_survives_the_extraction_for_accepted_and_rejected_item
     )
     assert sorted(row["gemini_index"] for row in out) == [0, 1, 2]
     assert [row["gemini_index"] for row in out if not row.get("rejected")] == [0, 2]
+
+
+@pytest.mark.parametrize("copied,expected", [
+    ("100Pack", 100.0), ("500Packs", 500.0), ("2k", None), ("2K円", None), ("2 k", None),
+    ("1.5万", None), ("Pack", None), ("3kg", 3.0),
+])
+def test_single_number_treats_k_as_a_scale_word_only_right_after_a_digit_without_a_letter_after(copied, expected):
+    # 便G：Pack の k を千・k とみなして None にしていた不具合の修正
+    assert v101._single_number(copied) == expected
