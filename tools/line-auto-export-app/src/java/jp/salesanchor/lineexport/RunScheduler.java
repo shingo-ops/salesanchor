@@ -57,12 +57,27 @@ final class RunScheduler {
     static final long RETRY_INTERVAL_MS = 5L * 60L * 1000L;
     /**
      * 取り込み失敗後の再試行を連続で張る回数の上限。design.md追補 2026-10-09「取り込み失敗後に
-     * 30分空いていた問題」: 失敗の型のひとつが「PIN入力後もロック中」であり、再試行の回数を
-     * 増やすほどPIN入力の試行が増え、Android側のロックアウト（誤入力の連続で待たされる状態）
-     * に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に抑えるため、
-     * 意図的に1回に絞っている（上限を増やすのはPO判断）。
+     * 30分空いていた問題」で導入した当初は、失敗の型のひとつ「PIN入力後もロック中」による
+     * Android側のロックアウト（誤入力の連続で待たされる状態）を避けるため1回に絞っていた。
+     *
+     * design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする」（PO決定）で
+     * 1→2に変更した。端末の管理ポリシーが{@code maximumFailedPasswordsForWipe=0}（誤入力に
+     * よる初期化は設定されていない。実機確認済み）であるため、PIN入力を伴う失敗を3回試しても
+     * 初期化のリスクは無い。Android標準の一時的な待ち時間（誤入力が連続した場合の猶予）が
+     * 増える可能性はあるが、初期化のリスクが無い前提でPOが許容した。
+     *
+     * 失敗の型で分けない（PO決定）: どのパターンも一律この上限まで再試行する。
+     *
+     * 数え方（カウンタは「張った再試行の回数」。{@link #scheduleRetryAfterFailure}が
+     * {@link SchedulerStore#getConsecutiveRetryCount}をインクリメントする値）:
+     * 初回の実行 → 失敗 → 再試行1回目を張る（count=1） → 失敗 → 再試行2回目を張る
+     * （count=2、上限） → 失敗 → count&gt;=MAX_CONSECUTIVE_RETRIESのため再試行を張らず
+     * "retry_capped" → 元から張られている補完に任せる。
+     * ＝上限2のとき、初回を含めて合計3回試す。成功すれば{@link #recordSuccessfulImport}の
+     * {@link SchedulerStore#clearConsecutiveRetryCount}によりカウンタがリセットされる
+     * （既存のまま）。
      */
-    static final int MAX_CONSECUTIVE_RETRIES = 1;
+    static final int MAX_CONSECUTIVE_RETRIES = 2;
 
     // 引き金の種別。AlarmReceiverが受けたIntentのextraで渡し、結果通知の「引き金」表示と
     // 床判定の対象選別（補完には床を適用しない。下記onAlarmFired参照）に使う。

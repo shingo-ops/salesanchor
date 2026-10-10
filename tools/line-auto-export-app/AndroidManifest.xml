@@ -6,8 +6,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="jp.salesanchor.lineexport"
-    android:versionCode="20"
-    android:versionName="0.17.0-stage3">
+    android:versionCode="21"
+    android:versionName="0.18.0-stage3">
 
     <uses-sdk
         android:minSdkVersion="23"
@@ -60,7 +60,9 @@
 
         <!-- 起動口: Termuxから `am broadcast -a jp.salesanchor.lineexport.RUN` で実行合図。PINはextraに載せない。
              DIAG_WINDOWSは実験用の診断専用の起動口（読み取り専用、ロック解除やPIN入力は一切行わない）。
-             EXPORTは段階2（LINE操作）単体検証用（解除済み前提）。RUN_ALLは本番の形（ロック解除→LINE操作）。 -->
+             EXPORTは段階2（LINE操作）単体検証用（解除済み前提）。RUN_ALLは本番の形（ロック解除→LINE操作、
+             常時遮断モードの帯で実行する。design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回
+             にする」参照）。検証用だったRUN_ALL_BLOCKINGは常時有効化により不要になったため削除した。 -->
         <receiver
             android:name=".RunReceiver"
             android:exported="true">
@@ -69,7 +71,6 @@
                 <action android:name="jp.salesanchor.lineexport.DIAG_WINDOWS" />
                 <action android:name="jp.salesanchor.lineexport.EXPORT" />
                 <action android:name="jp.salesanchor.lineexport.RUN_ALL" />
-                <action android:name="jp.salesanchor.lineexport.RUN_ALL_BLOCKING" />
             </intent-filter>
         </receiver>
 

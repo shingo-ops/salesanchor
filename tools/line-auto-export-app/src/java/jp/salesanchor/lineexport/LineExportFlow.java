@@ -218,13 +218,37 @@ final class LineExportFlow {
     private boolean overlayRemoved;
 
     /**
-     * 検証用の遮断モード（design.md追補 2026-10-11「遮断モードの帯（検証用）」参照）。
-     * SchedulerStoreのone-shotフラグをconsumeした値をshow()に渡す。通常実行では必ず
-     * falseになる（one-shotのため）。overlayEscapeTappedは遮断モードで、かつ利用者が
-     * 「停止」ボタン（非常口）を押したときだけtrueになる。
+     * 遮断モードの帯を出すかどうか。design.md追補 2026-10-11「遮断モードの帯（検証用）」で
+     * 検証用のone-shotフラグ経由として導入し、同日の追補「遮断モードを常時有効にし、再試行を
+     * 3回にする（PO決定）」で本番常時有効化した: {@code armRetryOnFailure}の値をそのまま
+     * {@code blocking}として渡す。armRetryOnFailure==true（本番実行、RUN_ALL経由）なら
+     * 遮断モード、armRetryOnFailure==false（EXPORT単体・手動検証）なら従来の非遮断の細い帯
+     * になる（診断のため非遮断の経路を残す）。
+     *
+     * armRetryOnFailureを再利用する理由: 「本番実行かどうか」を示す既存のフラグが
+     * armRetryOnFailureであり（lockOnFinishは「使用中に起動したら施錠しない」という別の
+     * 意味を持つため使えない。コンストラクタのjavadoc参照）、新しいフラグを増やさずに
+     * 済ませられる。
      */
     private boolean overlayBlocking;
-    private boolean overlayEscapeTapped;
+
+    /**
+     * design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする（PO決定）」の
+     * 検知項目: 遮断モードが有効（{@code overlayBlocking==true}）な間に、座標ベースの
+     * ジェスチャ（{@link GestureCompat#tap}/{@link GestureCompat#swipe}）を呼んだら
+     * trueにする。少なくとも次の3か所で立てる: EDITの比率座標タップ
+     * （{@code editClickPath==}{@link #EDIT_CLICK_PATH_RATIO_TAP}の経路）、
+     * {@link NodeOps#clickNode}がノード領域の中心を座標タップした経路
+     * （{@code editClickPath==}{@link #EDIT_CLICK_PATH_NODE_BOUNDS_TAP}）、
+     * スクロールの座標スワイプ（{@code scrollMode=="gesture"}になる経路）。
+     *
+     * 座標スワイプが遮断中に通るかは未確定（2026-10-11の遮断4回は{@code scrollMode:"gesture"}
+     * で成功したが、スクロールが実際に必要だったか（＝通ったから成功したのか、たまたま
+     * ノード探索が試行内で目標を見つけただけなのか）を区別できていない）。先に記録を取り、
+     * {@code blockedCoordinateGesture:true}の回に段階失敗が集まるかを見てから判断する
+     * （PO決定・この依頼の範囲では座標ジェスチャを止めたり失敗にしたりしない。記録専用）。
+     */
+    private boolean blockedCoordinateGesture;
 
     // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
     // 挙動には一切使わない。診断ログにのみ出す。
@@ -305,10 +329,20 @@ final class LineExportFlow {
         acquireWakeLock();
 
         // 自動取り込み中バナーを表示する（design.md追補「実行中の表示」参照）。表示に失敗しても
-        // フローは継続する（補助表示のみ）。遮断モードのone-shotフラグは必ずここでconsumeする
-        // （プロセスが死んでもフラグが残り続けないようにするため。design.md追補 2026-10-11参照）。
-        // 通常実行では必ずfalseになる。
-        overlayBlocking = SchedulerStore.consumeBlockingOverlayOnce(service);
+        // フローは継続する（補助表示のみ）。design.md追補 2026-10-11「遮断モードを常時有効に
+        // し、再試行を3回にする（PO決定）」: armRetryOnFailureの値をそのまま遮断モードの
+        // on/offとして使う。本番実行（RUN_ALL経由、armRetryOnFailure==true）は遮断モード、
+        // EXPORT単体（手動検証、armRetryOnFailure==false）は従来の非遮断の細い帯になる
+        // （診断のため非遮断の経路を残す）。
+        //
+        // この帯はLineExportFlow（書き出しフェーズ）だけで出す。UnlockAccessibilityService
+        // （ロック解除フェーズ、PIN入力）側には広げない: PIN入力は座標タップ（dispatchGesture）
+        // で行っており、座標タップは遮断モードの帯に吸われる（design.md追補 2026-10-11
+        // 「EDITをノードクリックにし…」の「ノードクリックが使えると分かった意味」節。
+        // ノードクリックは帯を素通りするが座標タップは吸われることを実機で確認済み）。
+        // PIN入力の画面にはクリック可能なノードが無く座標タップしか手段が無いため、帯を
+        // 広げるとPIN入力そのものが吸われて解除できなくなる。
+        overlayBlocking = armRetryOnFailure;
         overlayShown = overlay.show(service, overlayBlocking);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
@@ -565,6 +599,13 @@ final class LineExportFlow {
             accepted = result.accepted;
             traceMessage = result.traceMessage;
             editClickPath = result.viaAction ? EDIT_CLICK_PATH_NODE_ACTION : EDIT_CLICK_PATH_NODE_BOUNDS_TAP;
+            if (!result.viaAction && overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // NodeOps.clickNodeがノード領域の中心を座標タップ（GestureCompat.tap）に
+                // フォールバックした経路。記録のみ、挙動は変えない（blockedCoordinateGesture
+                // のjavadoc参照）。
+                blockedCoordinateGesture = true;
+            }
         } else {
             Point size = getScreenSize();
             GestureCompat.DispatchReport report = GestureCompat.tap(
@@ -572,6 +613,11 @@ final class LineExportFlow {
             accepted = report.accepted;
             traceMessage = report.describe();
             editClickPath = EDIT_CLICK_PATH_RATIO_TAP;
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // EDITの比率座標タップ（フォールバック経路）。記録のみ、挙動は変えない。
+                blockedCoordinateGesture = true;
+            }
         }
         editTapMs = System.currentTimeMillis() - tapStartedAt;
         String classNote = classDetected ? "" : "editクラス未検出 ";
@@ -801,6 +847,13 @@ final class LineExportFlow {
             Point size = getScreenSize();
             GestureCompat.swipe(service, size.x * 0.5f, size.y * SCROLL_SWIPE_FROM_Y_RATIO,
                     size.x * 0.5f, size.y * SCROLL_SWIPE_TO_Y_RATIO, SCROLL_SWIPE_DURATION_MS, "scroll");
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // スクロールの座標スワイプ（GestureCompat.swipe）。記録のみ、挙動は変えない
+                // （座標スワイプが遮断中に通るかは未確定。blockedCoordinateGestureのjavadoc
+                // 参照）。
+                blockedCoordinateGesture = true;
+            }
             return "gesture";
         }
         return "node";
@@ -894,7 +947,6 @@ final class LineExportFlow {
         // （lockOnFinish==trueの場合は数秒後）より先に消えることがある（design.md追補
         // 「実行中の表示」参照）。
         overlayRemoved = overlay.remove(service);
-        overlayEscapeTapped = overlay.wasEscapeTapped();
 
         // stopWindowRecording()は履歴をクリアするため、読むのはその前に行う（診断用。
         // クラス名のみでパッケージ名・ノードのテキスト・メッセージ本文は含まない）。
@@ -1066,14 +1118,18 @@ final class LineExportFlow {
             extraFields.put("wakeAcquired", wakeAcquired);
             extraFields.put("overlayShown", overlayShown);
             extraFields.put("overlayRemoved", overlayRemoved);
-            // design.md追補 2026-10-11「遮断モードの帯（検証用）」: 遮断モードで出したときだけ
-            // overlayBlockingをtrueで出す（通常は出さない）。overlayEscapeTappedは遮断モードで
-            // かつ利用者が「停止」(非常口)を押したときだけtrueで出す（押されなければ出さない）。
+            // design.md追補 2026-10-11「遮断モードの帯（検証用）」、同日追補「遮断モードを
+            // 常時有効にし、再試行を3回にする」: 遮断モードで出したときだけoverlayBlockingを
+            // trueで出す（通常=EXPORT単体のときは出さない）。「停止」ボタンは削除済み
+            // （overlayEscapeTappedのログ項目も削除）。
             if (overlayBlocking) {
                 extraFields.put("overlayBlocking", true);
-                if (overlayEscapeTapped) {
-                    extraFields.put("overlayEscapeTapped", true);
-                }
+            }
+            // design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする」:
+            // 遮断モード中に座標ベースのジェスチャ（タップ/スワイプ）を使った回だけtrueで出す
+            // （検知のための記録。挙動は変えない。blockedCoordinateGestureの定数コメント参照）。
+            if (blockedCoordinateGesture) {
+                extraFields.put("blockedCoordinateGesture", true);
             }
             extraFields.put("wakeHeldAtEnd", wakeHeldAtEnd);
             if (wakeHeldMs >= 0) {

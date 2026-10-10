@@ -20,7 +20,6 @@ final class SchedulerStore {
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
     private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
     private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
-    private static final String KEY_BLOCKING_OVERLAY_ONCE = "blocking_overlay_once";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -150,11 +149,9 @@ final class SchedulerStore {
 
     /**
      * 取り込み失敗後の再試行（{@link RunScheduler#scheduleRetryAfterFailure}）が、連続して
-     * 何回張られたか。design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」:
-     * 失敗後の再試行は連続1回までに制限する。失敗の型のひとつが「PIN入力後もロック中」で
-     * あり、再試行を増やすほどPIN入力の試行が増え、Android側のロックアウト（誤入力の連続で
-     * 待たされる状態）に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に
-     * 抑えるため、意図的に1回に絞っている（上限を増やすのはPO判断）。
+     * 何回張られたか。design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」で
+     * 連続再試行の回数に上限（{@link RunScheduler#MAX_CONSECUTIVE_RETRIES}）を設けた。
+     * 上限の値・根拠（2026-10-11更新: 1→2、初回を含めて合計3回試す）は同定数のjavadoc参照。
      * 取り込み成功で{@link #clearConsecutiveRetryCount}によりリセットされる。既定0。
      */
     static int getConsecutiveRetryCount(Context context) {
@@ -167,27 +164,6 @@ final class SchedulerStore {
 
     static void clearConsecutiveRetryCount(Context context) {
         prefs(context).edit().remove(KEY_CONSECUTIVE_RETRY_COUNT).apply();
-    }
-
-    /**
-     * 検証用の遮断モード帯のone-shotフラグ（design.md追補 2026-10-11「遮断モードの帯
-     * （検証用）」参照）。RunReceiverのACTION_RUN_ALL_BLOCKINGが「次の1回だけ帯を遮断
-     * モードにする」ために立てる。プロセスが死んでもフラグが残り続けないよう、
-     * {@link #consumeBlockingOverlayOnce}で読んだら必ずfalseに戻す（LineExportFlowが
-     * 帯を出すときに必ずconsumeする）。既定false。
-     */
-    static void setBlockingOverlayOnce(Context context, boolean value) {
-        prefs(context).edit().putBoolean(KEY_BLOCKING_OVERLAY_ONCE, value).apply();
-    }
-
-    /** @return フラグの現在値。読んだら必ずfalseに戻す（one-shot）。 */
-    static boolean consumeBlockingOverlayOnce(Context context) {
-        SharedPreferences p = prefs(context);
-        boolean value = p.getBoolean(KEY_BLOCKING_OVERLAY_ONCE, false);
-        if (value) {
-            p.edit().putBoolean(KEY_BLOCKING_OVERLAY_ONCE, false).apply();
-        }
-        return value;
     }
 
     private static SharedPreferences prefs(Context context) {

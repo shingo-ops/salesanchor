@@ -26,16 +26,14 @@ public class RunReceiver extends BroadcastReceiver {
      */
     public static final String ACTION_EXPORT = "jp.salesanchor.lineexport.EXPORT";
 
-    /** 本番の形の起動口。ロック解除→成功したらLINE操作へ続ける。 */
-    public static final String ACTION_RUN_ALL = "jp.salesanchor.lineexport.RUN_ALL";
-
     /**
-     * 検証用の起動口。design.md追補 2026-10-11「遮断モードの帯（検証用）」参照。
-     * RUN_ALLとまったく同じ経路（ロック解除→LINE操作）で実行するが、その回だけ帯を
-     * 遮断モード（全画面でタッチを消費）で出す。one-shotフラグ（SchedulerStore）を
-     * 立ててから起動するだけで、通常実行（RUN_ALL）には一切影響しない。
+     * 本番の形の起動口。ロック解除→成功したらLINE操作へ続ける。design.md追補 2026-10-11
+     * 「遮断モードを常時有効にし、再試行を3回にする（PO決定）」: この経路（armRetryOnFailure
+     * ==true）は常に遮断モードの帯で実行される（LineExportFlow#start参照）。検証用の起動口
+     * ACTION_RUN_ALL_BLOCKINGは常時有効化により不要になったため削除した（2つのやり方を
+     * 残さない）。
      */
-    public static final String ACTION_RUN_ALL_BLOCKING = "jp.salesanchor.lineexport.RUN_ALL_BLOCKING";
+    public static final String ACTION_RUN_ALL = "jp.salesanchor.lineexport.RUN_ALL";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -51,10 +49,6 @@ public class RunReceiver extends BroadcastReceiver {
             UnlockAccessibilityService.requestExport(context.getApplicationContext());
         } else if (ACTION_RUN_ALL.equals(action)) {
             UnlockAccessibilityService.requestRunAll(context.getApplicationContext());
-        } else if (ACTION_RUN_ALL_BLOCKING.equals(action)) {
-            Context appContext = context.getApplicationContext();
-            SchedulerStore.setBlockingOverlayOnce(appContext, true);
-            UnlockAccessibilityService.requestRunAll(appContext, "RUN_ALL(遮断テスト)");
         }
     }
 }

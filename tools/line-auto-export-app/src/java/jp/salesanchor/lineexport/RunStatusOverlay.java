@@ -32,30 +32,37 @@ import android.widget.TextView;
  * - このウィンドウ自体はgetWindows()に新しいウィンドウとして現れるため、NodeOps側の
  *   全探索メソッドで自分自身のパッケージのウィンドウを除外する対応を別途行っている
  *   （NodeOps#isOwnWindow）。
- * - 遮断モード（blocking==true、検証用）: design.md追補 2026-10-11「遮断モードの帯
- *   （検証用）」参照。全画面でタッチを消費する帯を出し、dispatchGestureのタップが帯に
- *   吸われるかどうかを確かめるための実験用モード。通常実行では使わない
- *   （SchedulerStoreのone-shotフラグ経由のみ）。
+ * - 遮断モード（blocking==true）: design.md追補 2026-10-11「遮断モードの帯（検証用）」、
+ *   および追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする（PO決定）」参照。
+ *   全画面でタッチを消費する帯を出す。本番実行（armRetryOnFailure==true、RUN_ALL経由）では
+ *   常時この遮断モードで出し、EXPORT単体（手動検証）だけ従来の非遮断の細い帯を使う
+ *   （LineExportFlow#start参照）。
+ * - 「停止」ボタン（非常口）は削除した（design.md追補 2026-10-11「遮断モードを常時有効に
+ *   し、再試行を3回にする」PO決定）。操作不能から抜ける保証はBLOCKING_AUTO_REMOVE_MS
+ *   （60秒の強制撤去タイマー）だけになった。最悪の場合、利用者は最大60秒間タッチできない
+ *   （フローの実測は約11秒）。PO了承済み（2026-10-11）。
  */
 final class RunStatusOverlay {
 
     private static final String TAG = "SALineExport";
     private static final String MESSAGE = "自動取り込み中";
     private static final String BLOCKING_MESSAGE = "自動取り込み中（操作できません）";
-    private static final String ESCAPE_BUTTON_LABEL = "停止";
 
     /**
      * 遮断モードの強制撤去タイマー。フローが途中で死んでも操作不能が続かないようにするため
      * の保険で、show()の呼び出しチェーンとは独立に60秒後へ無条件でremove()する
      * （design.md追補 2026-10-11参照）。remove()が先に呼ばれたらこのコールバックは
      * removeCallbacksで取り消す。
+     *
+     * 「停止」ボタンを削除したため、操作不能から抜ける保証はこのタイマーだけになった。
+     * 最悪の場合、利用者は最大60秒間タッチできない（フローの実測は約11秒）。PO了承済み
+     * （2026-10-11）。
      */
     private static final long BLOCKING_AUTO_REMOVE_MS = 60_000L;
 
     private View view;
     private Handler blockingAutoRemoveHandler;
     private Runnable blockingAutoRemoveRunnable;
-    private boolean escapeTapped;
 
     /** @return 表示できたか（失敗してもフローは継続する。呼び出し側がログに残す）。 */
     boolean show(Context context, boolean blocking) {
@@ -91,7 +98,6 @@ final class RunStatusOverlay {
 
             wm.addView(root, params);
             view = root;
-            escapeTapped = false;
 
             if (blocking) {
                 // フローとは独立の強制撤去タイマー（保険）。フローが途中で死んでも
@@ -129,7 +135,9 @@ final class RunStatusOverlay {
     /**
      * 遮断モードのルート。全画面FrameLayoutで、常にtrueを返すOnTouchListenerにより
      * すべてのタッチを消費する（下のアプリへ渡さない）。半透明背景で下のLINE画面が
-     * 目視できるようにし、上端に案内文、右下に非常口（停止ボタン）を置く。
+     * 目視できるようにし、上端に案内文を置く。「停止」ボタン（非常口）は削除した
+     * （design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする」PO決定。
+     * 操作不能から抜ける保証はBLOCKING_AUTO_REMOVE_MSの強制撤去タイマーのみになる）。
      */
     private View buildBlockingView(final Context context) {
         FrameLayout root = new FrameLayout(context);
@@ -153,29 +161,6 @@ final class RunStatusOverlay {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
         labelParams.gravity = Gravity.TOP;
         root.addView(label, labelParams);
-
-        // 非常口: 利用者が操作不能から必ず抜け出せる「停止」ボタン。右下の隅、
-        // 誤って押しにくい位置に、十分な大きさ（最低48dp）で置く。
-        android.widget.Button escapeButton = new android.widget.Button(context);
-        escapeButton.setText(ESCAPE_BUTTON_LABEL);
-        int minSizePx = (int) TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 48f, context.getResources().getDisplayMetrics());
-        escapeButton.setMinWidth(minSizePx);
-        escapeButton.setMinHeight(minSizePx);
-        escapeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                escapeTapped = true;
-                remove(context);
-            }
-        });
-        FrameLayout.LayoutParams escapeParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        escapeParams.gravity = Gravity.BOTTOM | Gravity.END;
-        int marginPx = (int) TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 16f, context.getResources().getDisplayMetrics());
-        escapeParams.setMargins(marginPx, marginPx, marginPx, marginPx);
-        root.addView(escapeButton, escapeParams);
 
         return root;
     }
@@ -202,10 +187,5 @@ final class RunStatusOverlay {
             view = null;
             return false;
         }
-    }
-
-    /** @return 遮断モードで「停止」(非常口)が押されたか。押されなければfalse。 */
-    boolean wasEscapeTapped() {
-        return escapeTapped;
     }
 }

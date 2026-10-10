@@ -790,3 +790,52 @@ EDITは`clickable=true`。boundsの中心 (873,1236) は、既存の比率座標
 
 - `EDIT_TAP_X_RATIO`/`EDIT_TAP_Y_RATIO`/`EDIT_TAP_SETTLE_DELAY_MS`の値は変更していない。
 - EDITノードの探索（`findNodeByTextInPackage`）で例外が起きた場合は成功扱いにする（上記）。
+
+## 追補 2026-10-11 遮断モードを常時有効にし、再試行を3回にする（PO決定）
+
+### 実機で確定した事実（根拠）
+
+- **EDITはノードクリックで押せる**（2026-10-11 08:25 実測: `editClickPath: "node-action"`, `editDialogClosed: true`, `editCloseWaitMs: 19`）。
+- **遮断モードの帯（全画面でタッチを止める）でもフローが完走し、ファイルが届き送信まで成功した**（08:27:00の回: `overlayBlocking: true`, `result: success`, 取り込み`received ok`→送信`accepted 7,234バイト`）。
+- **座標タップは遮断中に吸われる**（06:30・06:32の2回: EDITの比率座標タップが効かず、Termuxの保存ダイアログが開いたまま残り、`received`が無かった）。上の「追補2026-10-11 EDITをノードクリックにし…」の「ノードクリックが使えると分かった意味」節で確認済みの事実（ノードクリックは帯を素通りするが座標タップは吸われる）と整合する。
+- **座標スワイプについては断定できない**: 遮断中の4回はいずれも`scrollMode:"gesture"`で成功しているが、「スワイプが通った」のか「そのスクロールが実際には不要でノード探索が3回の試行内で目標を見つけた」のかを区別できていない。10-10の内訳は`node`65回・`gesture`12回で、座標スワイプに落ちる回は実在する。
+- 端末の管理ポリシーは`maximumFailedPasswordsForWipe=0`（ドコモの管理アプリ含め全て0）＝**誤入力による初期化は設定されていない**（実機確認済み）。
+- **帯は`LineExportFlow`（書き出しフェーズ）だけで出している**（`UnlockAccessibilityService`内の`RunStatusOverlay`参照は0件）。PIN入力は座標タップなので、帯を解除フェーズへ広げてはいけない。
+
+### PO決定1: 遮断モードを本番で常時有効にする
+
+`LineExportFlow.start()`が帯を出すとき、`blocking`に`armRetryOnFailure`の値を渡すようにした（`overlayBlocking = armRetryOnFailure;`）。本番実行（RUN_ALL経由、`armRetryOnFailure==true`）は遮断モードで出し、EXPORT単体（手動検証、`armRetryOnFailure==false`）は従来の非遮断の細い帯のまま（診断のため非遮断の経路を残す）。
+
+検証用だった`SchedulerStore.consumeBlockingOverlayOnce`/`setBlockingOverlayOnce`、`RunReceiver`の`ACTION_RUN_ALL_BLOCKING`、`AndroidManifest.xml`の該当`<action>`は削除した（常時有効になり検証用の入口が不要になったため。2つのやり方を残さない）。
+
+**帯は解除フェーズ（`UnlockAccessibilityService`）へは広げていない。** PIN入力は座標タップ（`dispatchGesture`）で行っており、座標タップは遮断モードの帯に吸われることが実機で確認済み（上記「背景」参照）。PIN入力の画面にはクリック可能なノードが無く座標タップしか手段が無いため、帯を広げるとPIN入力そのものが吸われて解除できなくなる。
+
+### PO決定2: 「停止」ボタンを削除する
+
+`RunStatusOverlay.buildBlockingView`から「停止」ボタンと`escapeTapped`/`wasEscapeTapped()`を削除した。`LineExportFlow`側の`overlayEscapeTapped`フィールドとログ項目も削除した。
+
+60秒の強制撤去タイマー（`BLOCKING_AUTO_REMOVE_MS`）は残した。値も60秒のまま変えていない。**「停止」ボタンを削除したため、操作不能から抜ける保証はこのタイマーだけになった。最悪の場合、利用者は最大60秒間タッチできない（フローの実測は約11秒）。PO了承済み（2026-10-11）。**
+
+### PO決定3: 再試行を「初回を含めて3回」にする
+
+`RunScheduler.MAX_CONSECUTIVE_RETRIES`を1→2にした。
+
+数え方: カウンタは「張った再試行の回数」なので、上限2なら「初回の実行→失敗→再試行1回目を張る（count=1）→失敗→再試行2回目を張る（count=2）→失敗→`retry_capped`」＝**初回を含めて合計3回試す**。成功で`clearConsecutiveRetryCount`によりリセットされる（既存のまま）。
+
+失敗の型で分けない（PO決定）: どのパターンも一律3回試す。`maximumFailedPasswordsForWipe=0`を実機で確認済みのため、PIN入力を伴う失敗を3回試しても初期化のリスクは無い。Android標準の一時的な待ち時間（誤入力が連続した場合の猶予）が増える可能性はある。
+
+`RETRY_INTERVAL_MS`（5分）の値は変えていない。
+
+### 未確定事項と検知方法（`blockedCoordinateGesture`）
+
+座標スワイプが遮断中に通るかは未確定（上記「背景」参照）。推測で判断せず、まず実行ログに記録を残す。
+
+`LineExportFlow`に`blockedCoordinateGesture`フラグを追加した。遮断モードが有効（`overlayBlocking==true`）かつ座標ベースのジェスチャ（`GestureCompat.tap`/`GestureCompat.swipe`）を呼んだときにtrueになる。次の3か所で立てる:
+
+1. EDITの比率座標タップ（`editClickPath == "ratio-tap"`の経路、`tapEditButton`）
+2. `NodeOps.clickNode`がノード領域の中心を座標タップした経路（`editClickPath == "node-bounds-tap"`、`tapEditButton`内）
+3. スクロールの座標スワイプ（`scrollMode == "gesture"`になる経路、`scrollOnce`内の`GestureCompat.swipe`）
+
+`export`の`phase:"end"`行に`blockedCoordinateGesture: true`を（trueのときだけ）追加した。既存の`scrollMode`/`editClickPath`はそのまま残しており、併せて読めばどの座標操作だったか特定できる。
+
+座標ジェスチャを止めたり失敗にしたりはしていない（記録のみ）。先に記録を取り、`blockedCoordinateGesture: true`の回に段階失敗が集まるかを見てから、座標スワイプの扱いを判断する。
