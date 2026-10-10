@@ -20,3 +20,99 @@ leads +1 / companies +1 / contacts +1 / invoices +1（status=issued）/ invoice_
 - B. create_contact（contacts.py:439-475）は display_name を surname/given_name から組み立てず、入力値をそのまま INSERT する。-> SQL でも surname='QA担当者'、display_name='QA担当者' を明示指定。
 - C. create_lead（leads.py:425-466）は lead_code を INSERT で指定せず列既定（lead_code_seq）に任せ、直後に leads.py:463-466 で LD-{id:05d} に UPDATE する。-> SQL も同じ。companies（companies.py:385-438, UPDATE は :436）・contacts（contacts.py:469-473）も仮コード（PEND）から CO-/CT-{id:05d} へ UPDATE する。
 - invoices は invoices.py:373-407、invoice_items は :411-424、発行 UPDATE は :501 に準拠。
+
+## 実行記録
+
+### 書き込み前確認（2026-10-10 Opus 実行・読み取りのみ）
+```
+       t       | count 
+---------------+-------
+ leads         |     1
+ companies     |     0
+ contacts      |     0
+ invoices      |     0
+ invoice_items |     0
+(5 rows)
+
+ qa_leads 
+----------
+        0
+(1 row)
+
+       conrelid       |                 conname                 |                                                                                  pg_get_constraintdef                                                                                  
+----------------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ tenant_001.companies | companies_trust_level_check             | CHECK (((trust_level IS NULL) OR ((trust_level >= 1) AND (trust_level <= 5))))
+ tenant_001.companies | companies_monthly_forecast_source_check | CHECK (((monthly_forecast_source IS NULL) OR ((monthly_forecast_source)::text = ANY ((ARRAY['manual'::character varying, 'ai_analysis'::character varying])::text[]))))
+ tenant_001.companies | companies_status_check                  | CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'pending_dedup_review'::character varying])::text[])))
+ tenant_001.contacts  | contacts_status_check                   | CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying, 'archived'::character varying, 'pending_dedup_review'::character varying])::text[])))
+ tenant_001.leads     | leads_initiative_check                  | CHECK (((initiative IS NULL) OR ((initiative)::text = ANY ((ARRAY['outbound'::character varying, 'inbound'::character varying])::text[]))))
+(5 rows)
+
+ rolname | rolsuper | rolbypassrls 
+---------+----------+--------------
+ jarvis  | t        | t
+(1 row)
+
+    relname    | relrowsecurity | relforcerowsecurity 
+---------------+----------------+---------------------
+ leads         | t              | f
+ contacts      | t              | f
+ invoice_items | t              | f
+ invoices      | t              | f
+ companies     | t              | f
+(5 rows)
+
+```
+
+### DRY-RUN（2026-10-10 Opus 実行・ROLLBACK で終了）
+
+DRY-RUN で採番が進んだため、本実行の id は DRY-RUN より 1 つずつずれている。
+```
+SET
+BEGIN
+DO
+DO
+ lead_id | lead_code | company_id | company_code | contact_id | contact_code | invoice_id | invoice_number | status | total_amount |           issued_at           | paid_at 
+---------+-----------+------------+--------------+------------+--------------+------------+----------------+--------+--------------+-------------------------------+---------
+       5 | LD-00005  |          6 | CO-00006     |          2 | CT-00002     |          1 | IN-0001-01     | issued |      1000.00 | 2026-10-09 23:08:51.771428+00 | 
+(1 row)
+
+ROLLBACK
+```
+
+### 本実行（PO が `!` で実行、2026-10-10 12:24 UTC、PO 発行の permit-danger チケット使用。Opus の実行は分類器に拒否されたため）
+```
+SET
+BEGIN
+DO
+DO
+ lead_id | lead_code | company_id | company_code | contact_id | contact_code | invoice_id | invoice_number | status | total_amount |          issued_at           | paid_at 
+---------+-----------+------------+--------------+------------+--------------+------------+----------------+--------+--------------+------------------------------+---------
+       6 | LD-00006  |          7 | CO-00007     |          3 | CT-00003     |          2 | IN-0001-01     | issued |      1000.00 | 2026-10-10 12:24:24.43006+00 | 
+(1 row)
+
+COMMIT
+```
+
+### 書き込み後確認（各表 +1 件で想定どおり）
+```
+       t       | count 
+---------------+-------
+ leads         |     2
+ companies     |     1
+ contacts      |     1
+ invoices      |     1
+ invoice_items |     1
+(5 rows)
+
+ id | invoice_number | status | total_amount | currency |          issued_at           | paid_at | company_code |          name          | contact_code | no_email 
+----+----------------+--------+--------------+----------+------------------------------+---------+--------------+------------------------+--------------+----------
+  2 | IN-0001-01     | issued |      1000.00 | JPY      | 2026-10-10 12:24:24.43006+00 |         | CO-00007     | QA入金日テスト株式会社 | CT-00003     | t
+(1 row)
+
+```
+
+### 次の手順
+- PO が tenant_001 の請求書 IN-0001-01 で日付を選び「入金登録」を行う。
+- Opus が paid_at を読み取り確認する。
+- rollback.sql は PO の新たな判断なしに実行しない。
