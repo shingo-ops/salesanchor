@@ -654,3 +654,62 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 ## recon
 
 調査の記録は `docs/handoff/line-auto-export-app/recon.md`（確かめた事実と file:line 引用）。本設計はそこで確認した制約（UID分離によりTermux私有のPINを読めない／ユーザー補助は制限付き設定の解除が必要／API23のandroid.jarでは `canPerformGestures` が無い）を前提にしている。
+
+## 追補 2026-10-10 使用中に起動した回は施錠しない／解除の計測を実行ログへ
+
+### PO決定の変更（重要）
+
+旧PO決定（`UnlockAccessibilityService.startUnlockFlow`のコード内コメントにあった表現）: 「終了後は必ず施錠する」＝開始時にロックされていなくても、終了時には施錠する（`lockOnFinish=true`）。
+
+**新PO決定（2026-10-10）**: 利用者がスマホを使っている最中（＝開始時に既に解除済み）に起動した回は、**終了後に施錠しない**。画面消灯・ロック状態から起動した回は今のまま施錠する。
+
+理由: 使用中に勝手に画面が消えると利用者の操作を妨げるため。「使用中でも即実行する」自体（2026-10-08 PO決定）は変えていない。施錠だけをやめた。
+
+### `lockOnFinish` と `armRetryOnFailure` を分離した理由
+
+`LineExportFlow.finish()` は、`lockOnFinish` を「施錠するかどうか」だけでなく「本番のRUN_ALL実行かどうか」の代用にも使っていた。`lockOnFinish==false` の経路（EXPORT単体の手動検証用）には、失敗後の再試行（`RunScheduler.scheduleRetryAfterFailure`）を張る処理が元から入っていない。
+
+今回「開始時に既に解除済みだった回」も `lockOnFinish=false` にする必要があったため、単純に `false` を渡すと、この回（本番実行）でも再試行が張られなくなる退行が起きる。これを避けるため、施錠の有無（`lockOnFinish`）と「本番実行として失敗後の再試行を張るか」（`armRetryOnFailure`）を別のフラグに分けた。
+
+呼び出し元の組み合わせ（`UnlockAccessibilityService#startExportFlow`）:
+
+| 呼び出し元 | lockOnFinish | armRetryOnFailure |
+|---|---|---|
+| `requestExport`（EXPORT単体・手動検証） | false | false |
+| `startUnlockFlow`の「既に解除済み」分岐（今回の変更） | false | true |
+| `checkResult()`の解除成功後の続行 | true | true |
+
+`LineExportFlow.finish()` 内の `RunScheduler.scheduleRetryAfterFailure` 呼び出しは、`!lockOnFinish` の経路（`armRetryOnFailure==true`のサブ分岐）と `lockOnFinish==true` の経路の両方に、`if (!success && armRetryOnFailure)` の条件で入れた。
+
+**1回の`finish()`呼び出しで2回呼ばれないことの確認**: `finish()` は `if (!lockOnFinish) { ...; return; }` のブロックの中で、さらに `armRetryOnFailure` の真偽で分岐するが、どちらのサブ分岐も最後に `return` する。このブロック自体の末尾にも `return` があるため、`lockOnFinish==true` 用のコード（`scheduleRetryAfterFailure`呼び出しを含む）は `!lockOnFinish` のときには実行されない。したがって3つの分岐（`!lockOnFinish && armRetryOnFailure` / `!lockOnFinish && !armRetryOnFailure` / `lockOnFinish`）は常に排他であり、`scheduleRetryAfterFailure` は1回の`finish()`呼び出しにつき最大1回しか呼ばれない。
+
+### `!lockOnFinish` でも待ち合わせ（`drainCallbackSummary`・`LOCK_DELAY_AFTER_EDIT_MS`）を残した理由
+
+2026-10-08 実機（0.3.0-stage2）で、EDITタップ直後に施錠すると、`dispatchGesture` の再生が終わる前に画面がロックされてジェスチャが取り消され、Termuxの保存ダイアログのEDITが押されずに送信が止まる不具合があった。この教訓から、`lockOnFinish==true` の経路は `GestureCompat.drainCallbackSummary()` と `LOCK_DELAY_AFTER_EDIT_MS`（2秒）の待ちを通してから施錠するようになっている。
+
+「開始時に既に解除済みだった回」（`armRetryOnFailure==true`、本番実行）は施錠自体をやめるが、EDITタップ直後に画面状態（ウェイクロック解放でスリープに入る等）が変わることによる同種のリスクは残るため、**施錠（`performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)`）だけを行わず、`drainCallbackSummary()`と`LOCK_DELAY_AFTER_EDIT_MS`の待ちはそのまま通す**ようにした。EXPORT単体の手動検証（`armRetryOnFailure==false`）は元から即解放でよく、変えていない。
+
+### 実行ログ `export` の `phase:"end"` への追加（`lockSkipped`）
+
+`locked` フィールドは、施錠を試みていない回は（既存のまま）`null`（出さない）。`false` だと「施錠を試みて失敗した」と区別がつかないため。代わりに、**施錠を行わなかった回だけ** `lockSkipped: true` を出す（行った回は出さない）。これで「使用中に起動して施錠しなかった回」が後から数えられる。
+
+### 解除の計測を実行ログへ追加した理由
+
+`UnlockAccessibilityService` は `keypadConfirmedAttempt`（何回目のスワイプでキーパッドが出たか）と `keypadConfirmedElapsedMs`（起床からキーパッド確認までのms）を計算していたが、失敗通知の本文（`keypadDiag`）にしか出しておらず、実行ログからは「あと少しで間に合わなかったのか、全く別の原因か」が判別できなかった。
+
+`logUnlockEnd`が書く`unlock`の`phase:"end"`行に、成功・失敗の両方で次を追加した:
+- `keypadAttempt`: キーパッドを確認できたスワイプ回数（確認できなかった回は0のまま出す）
+- `keypadMs`: 起床から確認までのms（未確認なら出さない＝フィールド自体を省略。`-1`は出さない）
+- `swipeAttempts`: 実際に試したスワイプ回数
+- `screenOnAtStart`・`keyguardAtStart`: 開始時の画面状態。既に`phase:"start"`行に`screenOn`/`keyguardLocked`として出ているが、end行だけを集計するときにrunIdでの突き合わせが要らないよう、end行にも持たせた
+
+これに合わせ、`swipeAttempt`/`keypadConfirmedAttempt`/`keypadConfirmedElapsedMs`のリセットを、従来の「PIN読み込み成功後（wake直前）」から`startUnlockFlow`の先頭（分岐より前）に移した。見送り（`skipped`）や`skipped_to_export`、PIN未設定の失敗など、PIN入力に進まない分岐でも前回実行の値が残ったままログに出てしまうのを避けるため。
+
+**定数は意図的に変えていない**: `POST_WAKE_DELAY_MS`・`KEYPAD_CHECK_TIMEOUT_MS`・`KEYPAD_MAX_SWIPE_ATTEMPTS`・`KEYPAD_CHECK_INTERVAL_MS`の値は今回変更していない。目的はまずデータを取ることで、粘りを増やすかどうかは実測データを見てから判断する（推測で変えない）。
+
+### 実測の根拠（2026-10-10）
+
+- `キーパッド未出現` の失敗の所要は約6.2〜6.4秒で、定数の合計（`POST_WAKE_DELAY_MS`=1500 ＋ `KEYPAD_CHECK_TIMEOUT_MS`=1500 × `KEYPAD_MAX_SWIPE_ATTEMPTS`=3 ＝ 6000ms）と一致する。成功回の`elapsedMs`は約5.9秒だが、これはPIN入力と検証を含む全体時間であり、キーパッド確認の余裕そのものは読み取れない。
+- 開始時の画面状態ごとの成否（実機ログ集計）:
+  - 10-09: 消灯ロックで成功43・失敗1 ／ 点灯ロックで成功10・失敗1
+  - 10-10: 消灯ロックで成功24・失敗20 ／ 点灯ロックで成功0・失敗3

@@ -3140,3 +3140,144 @@ git diff -M の旧→新（本体 SoldOutResultsPanel.tsx。全文は ay2i-move-
 - 読み込み中: PageLayout 包みを `<p role="status">` に。非管理者: PageLayout 包みを外して `<p role="alert">` のみ。
 - 本体: PageLayout を Fragment に替え、先頭に `<p>{t("soldOut.subtitle")}</p>` を追加。
 - SourceDetail・列・ページ送り・インライン style は変更なし。
+
+#### AY-2i 本番反映（2026-10-10 記録）
+
+AY-2i の PR #4112 は、merge 7477019c3（2026-10-10T12:39:27Z、HEAD 4a083e895）で main に入った。
+- 必須チェック: 15件すべて pass。
+- Deploy 38052758953: success（12:39:31Z〜12:42:23Z）。
+- 本番 JS の検索結果:
+  - soldOutResults: 3件
+  - superAdminTcgSoldOut: 0件
+  - 「完売の結果」: 1件
+  - tcg-sold-out: 1件（転送表の1行）
+- 本番の応答: 旧 URL・app・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+
+#### AY-2j 完売の結果：原文を Drawer で開く・列の整理（2026-10-10）
+
+mode: handoff。PO の決定（2026-10-10、本セッション）は次の2件。
+- 設計者の問い1: 「一覧の『原文表示』を、押すと右から画面がスライドして出る方式に変えます。中身は今と同じ（商品名・状態・メモの原文、投稿の全文、該当行に色）。閉じ方は ×・Esc・外側クリック」。PO の回答: 「y」
+- 設計者の問い2: 「1.『原文表示』列をなくし、行のどこを押しても原文がスライドで出る。2.『判定』列をなくす（全行が『売り切れ』の固定表示）。3. 商品名の列に幅の上限を付ける（表の部品の既存の幅機能を使う）」。PO の回答: 「y」
+- 背景: PO のスクリーンショット（2026-10-10 22:03）では、仕入元・判定・原文の状態・原文表示の各列が2行に折り返していた。
+
+GO は ADR-1003 の委任に基づき Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（origin/main 7477019c3。調査全文は /tmp/CC報告ファイル/super-admin-menu/sold-out-drawer-recon.md）:
+- SoldOutResultsPanel.tsx の各部分:
+  - :17-39 SourceDetail。`<details>` と summary の中に、dl（rawName・rawState・rawMemo）、invalidSpan の p、`<pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>`（該当行は `<mark>`）がある。
+  - 列は8本。:78 が source 列、status 列の renderCell は `() => t("soldOut.soldOut")` で、常に固定の文言を返す。
+  - :96-97 の DataTable には onRowClick が無い。
+- Drawer 金型（components/Drawer.tsx）:
+  - props（:22-30）: open・onClose・title・children・onOpenFullPage?・footer?
+  - Esc で閉じる（:69-80）。外側クリックで閉じる（:117-122）。× ボタンは aria-label が common.close（:150-159）。
+  - 本文は .comp-drawer-body（:164）。パネルは常にマウントされており、開くと comp-drawer-panel--open が付く（:128）。
+  - 前例: NoteMasterPanel.tsx:230 `<Drawer open={showForm} …>`、NeedsReviewTabsPanel.tsx:145・:465 `onRowClick={setDrawerItem}`。
+- DataTable 金型:
+  - 列の width?（:34-35）は th の style.width に入る（:190）。前例は AnalysisDashboardPanel.tsx:708 他の `width: "80px"` など。
+  - onRowClick は行を tabIndex=0 にし、Enter と Space にも反応する（:248-258）。セルの中のボタンでは発火しない（:93-98）。
+  - 見出し（th）は white-space: nowrap（DataTable.css:37）。データのセルには nowrap が無い。日本語はどの文字の間でも折り返せるので、列が細くなると折り返す。
+- PO の画面幅の推定（推定。実測ではない）: スクリーンショットの横幅は1999px。左のアイコン列と LINE解析のサイドバーが占める割合は約17.5%。開発での実画面（幅1280）では、同じ部分が約20%（254px）だった。この比から、PO の表示幅は CSS 換算で約1450px と推定した。このため、検証は幅1280と幅1440の2つで行う。
+- 試験 SoldOutResultsPanel.test.tsx:
+  - :36-39 は列の位置で検査している。cells[3]="BOX"、cells[6]="Past sources"。
+  - :40-45 は details の summary を押して、mark・script・memo を検査している。
+  - :84-85 は、全行の SourceDetail が常に DOM にある前提で、"Invalid source position" が2件あることを検査している。
+- インライン style: eslint（eslint.config.js:40-115）が検査するのは、色・opacity・zIndex・寸法の数値リテラルだけ。whiteSpace と overflowWrap は対象外で、既存の書き方のまま CI を通っている。
+
+AY-2j 変更契約（SoldOutResultsPanel.tsx と、その試験だけを変更する）:
+1. 列（columns）:
+   - status 列と source 列を削除し、6本にする。並びは product_title・provider・raw_quantity・raw_price・line_posted_at・source_is_active。
+   - product_title 列に `width` を指定する。値は前例と同じ px 文字列とし、受入の「1行判定」を満たす最大の値を、実測で決める（候補の初期値は "240px"）。決めた値と、その実測の根拠を design.md に記録する。
+   - ほかの列の定義は変えない。
+2. Drawer:
+   - `const [sourceItem, setSourceItem] = useState<SoldOutItem | null>(null);` を置く。
+   - DataTable に `onRowClick={setSourceItem}` を付ける。
+   - パネルの末尾に `<Drawer open={sourceItem !== null} onClose={() => setSourceItem(null)} title={t("soldOut.source")}>{sourceItem && <SourceDetail item={sourceItem} />}</Drawer>` を置く。
+   - 一覧を再取得するとき（q・scope・offset・reload が変わったとき）は、sourceItem を null に戻す。既存の useEffect の中で、setData(null) と同じ場所で行う。
+3. SourceDetail:
+   - `<details>` と `<summary>` を外す。中身（dl、invalidSpan の p、pre と mark）は、1文字も変えずにそのまま返す（fragment で包む）。
+   - 新しい CSS・クラス・トークン・i18n キーは追加しない。title は既存の soldOut.source を使う。
+4. 試験（SoldOutResultsPanel.test.tsx）:
+   - :36-39 の列の位置は、列の削除に合わせて番号だけを直す（BOX→2、Past sources→5）。期待する値は変えない。
+   - :40-45: 行を押すまでは mark が無いことを検査する。行（"Shared" を含む行）を押したあとは、role=dialog の中に次の3点があることを検査する。
+     - mark の textContent が "<script>private</script>" であること（元と同じ値）
+     - script 要素が無いこと
+     - "Possibly more tomorrow" があること
+   - :84-85: 1行目を押したあと、"Invalid source position" が1件、mark が null であることを検査する。2行目に切り替えたときも同じであることを検査する。
+   - 追加の it:
+     - 見出しに "Status" と "View source" が無いこと
+     - Escape と × ボタン（data-testid="drawer-close"）で閉じること（comp-drawer-panel--open が外れる）
+     - Enter キーで開くこと
+   - 変えた expect と、その理由を一覧にする。
+5. 変更しないもの: Drawer・DataTable の金型、CSS、トークン、i18n、soldOutApi.ts、backend、ほかの画面、CI、依存。
+6. design.md に、AY-2i の本番反映の記録、本節、実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| 一覧の列 | 8本（判定・原文表示を含む） | 6本 |
+| 原文を見る | 行の中で開き、行が縦に伸びる | 行を押す（Enter でも可）と、右から原文が出る。×・Esc・外側クリックで閉じる |
+| 原文の中身 | 原文の商品名・状態語・備考と全文、該当行に色 | 同じ |
+| 短い列 | 2行に折り返す | 幅1280と幅1440で1行 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 1行判定 | 開発モードの build と preview に、偽ログインと API モックを使う（実データに近いダミー5行: 長い商品名「ワンピースカードゲーム ブースターパック 蒼海の七傑【OP-14】BOX」等、仕入元「倉田 和博」、価格「¥174,000」、数量「none」、状態は有効と過去の両方）。幅1280と幅1440それぞれで、各行の provider・raw_quantity・raw_price・line_posted_at・source_is_active のセルについて、Range.getClientRects() の行数（同じ top の矩形をまとめた数）が1であることを JSON に記録する。商品名の列だけは折り返してよい |
+| Drawer | 同じ環境で行を押すと、dialog（comp-drawer-panel--open）に原文が出て mark で強調され、Esc で閉じることを JSON に記録する。幅1440で、開いた状態のスクリーンショットと一覧のスクリーンショットを撮る（設計者が目視） |
+| 試験 | 契約4の差分。変えた expect と理由の一覧 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS に comp-drawer があり、SoldOutResultsPanel の変更が入っている（"soldOut.status" の参照が1件減ったことを、可能な範囲で確かめる）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2j）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（社内の金型 Drawer と、その onRowClick の前例をそのまま使うため）。
+- 根拠:
+  - PO の明示の決定が2件ある。
+  - 部品は既存の金型だけを使い、新しい CSS・トークン・キーは0。
+  - 列の幅は金型の既存の機能を使い、前例と同じ書き方にする。
+  - データ・API は変えない。
+- 残るリスク（MEDIUM）: 幅の上限だけでは、画面幅によって短い列が1行に収まらないことがある。幅1280か幅1440で1行判定を満たせない場合、担当は止まって実測を報告する。次の手（例: 金型 DataTable に列単位の nowrap を追加する）は、設計者が決める。
+- 残るリスク（LOW）: 「原文表示」の列が無くなるので、行を押せることが見た目では分かりにくくなる。行にマウスを乗せたときの表示は、金型の既存の挙動に従う。
+
+維持の仕組み:
+- 守り手: SoldOutResultsPanel.test.tsx（列の数、Drawer の開閉、Enter、Esc）、Drawer と DataTable 金型の既存の試験、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2j 実装結果
+
+実装: 変更契約1〜4のとおり。変更したファイルは SoldOutResultsPanel.tsx とその試験だけ。
+
+決めた width: product_title 列は "250px"。実測（開発モード build と vite preview、偽ログイン、API モック、Chromium、DPR1。ダミー5行。5行目は設計の受入表に追加した、より長い仕入元「株式会社トレジャーアイランド販売部」）。仕入元・数量・価格・投稿日・原文の状態のセルの最大行数（ay2j-oneline.json は250px の最終結果）:
+
+| width | 幅1280 | 幅1440 |
+|---|---|---|
+| 240px | 1 | 1 |
+| 250px | 1 | 1 |
+| 260px | 2 | 1 |
+| 270px | 2 | 1 |
+| 280px | 2 | 1 |
+| 320px | 2 | 1 |
+| 360px | 2 | 1 |
+| 400px | 3 | 1 |
+| 480px | 9 | 2 |
+
+10px 刻みで測り、幅1280・1440 の両方で最大行数が1になる最大値は 250px。250px のとき、幅1280 の th 幅は 250・248・121・104・145・108（商品名・仕入元・数量・価格・投稿日・状態）、scrollWidth と clientWidth は 1280 と 1280。幅1440 は 250・302・148・126・177・132、1440 と 1440。商品名セルの行数は 2・2・4・2・2（折り返し可）。
+
+検証（生出力は docs/handoff/design-system-recon/evidence-20260910/ay2j-*）:
+- generate: exit 0（ay2j-chk-generate.txt）
+- tsc --noEmit: exit 0（ay2j-chk-tsc.txt）
+- lint: exit 0（ay2j-chk-lint.txt）
+- check:all: exit 0（ay2j-chk-check-all.txt）
+- test:coverage --maxWorkers=1: exit 0、80 files・990 tests 成功（ay2i の 989 から +1 = 追加した it 1本。ay2j-chk-coverage.txt）。frontend/coverage は worktree 外へ移動した。
+- build: exit 0（ay2j-chk-build.txt）。build-storybook: exit 0（ay2j-chk-storybook.txt）。
+- 実画面（ay2j-oneline.json、ay2j-drawer.json、ay2j-list-1440.png、ay2j-list-1280.png、ay2j-drawer-1440.png）: 行を押す前は dialog が閉じていて mark が0件。行を押すと comp-drawer-panel--open が付き、role=dialog、タイトル「原文表示」、mark に該当行（背景 rgb(255, 255, 0)）が出た。Esc で閉じた（幅1280・1440 とも）。GET /tcg/sold-out-results は各幅で1回。
+
+変えた expect と理由（差分は ay2j-test-diff.txt）:
+1. cells[3] の "BOX" を cells[2] に（期待値は同じ）。理由: 判定列の削除で列の位置が1つ前にずれた。
+2. cells[6] の "Past sources" を cells[5] に（期待値は同じ）。理由: 判定列と原文表示列の削除で位置が1つ前にずれた。
+3. details の open が false、summary を押す、detail 内の script が無い、の3つを、「押す前は mark が無い」「"Shared" を含む行を押す」「dialog の中の mark の textContent が "<script>private</script>"」「dialog の中に script が無い」に置き換えた。理由: details と summary を外し Drawer に移したため。mark・script・memo の期待値は元と同じ。memo は dialog の中で検査する。
+4. "Invalid source position" が2件ある、の検査を、1行目と2行目を順に押して、dialog の中に1件で mark が無い、に変えた。理由: Drawer は押した行の原文だけを出す（設計の契約4）。
+- 追加した it（1本）: 見出しに "Status" と "View source" が無いこと、Enter で開くこと、Escape と × ボタンで閉じること。
+- ほかの it の expect は変えていない。

@@ -822,6 +822,34 @@ def _product_first_fields(
     )
 
 
+_SCALE_WORDS_RE = re.compile(r"[万千億kK]")
+_NUMBER_RUN_RE = re.compile(rf"[{_DIGITS}][{_DIGITS},]*")
+
+
+def _single_number(copied: object) -> float | None:
+    """Gemini の写し（価格・数量）に数字がちょうど1つあるときだけ、その数。万・千・億・k を含む・0個・2個以上・小数は None。"""
+    if not isinstance(copied, str):
+        return None
+    norm = _nfkc(copied)
+    if _SCALE_WORDS_RE.search(norm):
+        return None
+    runs = _NUMBER_RUN_RE.findall(norm)
+    if len(runs) != 1:
+        return None
+    digits = runs[0].replace(",", "")
+    return float(digits) if digits else None
+
+
+def _fill_from_copy(resolved: float | None, copied: object, own_text: str) -> float | None:
+    """v102：原文から取り直した値が無いとき、Gemini の写しの数字で補う。補うのは、数が1つに決まり、その数が原文の件の行に独立した数としてあるときだけ。"""
+    if resolved is not None:
+        return resolved
+    number = _single_number(copied)
+    if number is None or _quantity_not_in_text(str(copied), own_text, v102=True):
+        return None
+    return number
+
+
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
@@ -856,6 +884,10 @@ def _extract_one(
         own_text, gemini_price=item["price"], gemini_quantity=item["quantity"],
         unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
+    price_normalized, quantity_normalized = pq.price, pq.quantity
+    if v102:
+        price_normalized = _fill_from_copy(pq.price, item["price"], own_text)
+        quantity_normalized = _fill_from_copy(pq.quantity, item["quantity"], own_text)
     extra = (
         {
             k: product_first[k]
@@ -872,8 +904,8 @@ def _extract_one(
         "name": name, "unit": unit_canonical or _NONE, "unit_kubun": kubun,
         "condition": condition or _NONE, "condition_basis": basis,
         "status": status, "status_effect": effect, "ship": _ship_for(item, roles, shared, lines, ctx),
-        "price_normalized": pq.price, "quantity_normalized": pq.quantity, "price_reasons": list(pq.reasons),
-        "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block, v102=v102),
+        "price_normalized": price_normalized, "quantity_normalized": quantity_normalized,
+        "price_reasons": list(pq.reasons), "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block, v102=v102),
         "reassigned": reassigned, "review": review,
     }
 
@@ -1031,6 +1063,10 @@ def _f2_prefixes(
     return found
 
 
+def _has_digit(copied: object) -> bool:
+    return isinstance(copied, str) and bool(re.search(rf"[{_DIGITS}]", _nfkc(copied)))
+
+
 def _has_no_digit(quantity: str) -> bool:
     return quantity.strip().lower() != _NONE and not re.search(rf"[{_DIGITS}]", _nfkc(quantity))
 
@@ -1131,6 +1167,7 @@ _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_foo
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
 _REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
 _REVIEW_QUANTITY_NOT_IN_TEXT = "quantity_not_in_text"
+_REVIEW_QUANTITY_UNRESOLVED, _REVIEW_PRICE_UNRESOLVED = "quantity_unresolved", "price_unresolved"
 _POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
 _NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
 
@@ -1164,6 +1201,10 @@ def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[di
     reasons = [{"line": n, "kind": _REVIEW_QUANTITY_NO_NUMBER} for n in no_number if n in owned]
     if row.get("quantity_not_in_text") is True:
         reasons.append({"kind": _REVIEW_QUANTITY_NOT_IN_TEXT, "field": "quantity", "copied": row["raw_quantity"]})
+    if row.get("quantity_normalized") is None and _has_digit(row["raw_quantity"]):
+        reasons.append({"kind": _REVIEW_QUANTITY_UNRESOLVED, "field": "quantity"})
+    if row.get("price_normalized") is None and _has_digit(row["raw_price"]):
+        reasons.append({"kind": _REVIEW_PRICE_UNRESOLVED, "field": "price"})
     reasons += [{"line": n, "kind": _REVIEW_FOOTER} for n in footer if n in owned]
     if row["unit"] == _NONE:
         reasons.append({"line": row["price_line"], "kind": _REVIEW_UNIT_UNKNOWN})

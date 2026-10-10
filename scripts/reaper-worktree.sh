@@ -2,7 +2,7 @@
 # reaper-worktree.sh — マージ済み worktree の自動回収（ADR-114）
 #
 # 安全条件（非交渉・すべて満たした部屋だけ削除）:
-#   ① 未コミット・未push がゼロ（絶対保護・最優先）
+#   ① 未コミットがゼロ、かつ HEAD までの全コミットが origin のどれかの ref から到達できる（GitHub から取り戻せる。R8）
 #   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
 #   ④ 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら削除しない
@@ -19,6 +19,8 @@
 #   REAPER_REPO_NAME          — gh コマンドに使うリポジトリ名（既定: shingo-ops/salesanchor）
 #   REAPER_LOCK_WAIT_SEC      — ロック取得できないときの待ち秒数（既定 0 = 待たずに skip）
 #   REAPER_LOCK_DIR           — ロックの場所（テスト用。既定 /tmp/reaper-worktree.lock.d）
+#   REAPER_SKIP_FETCH         — 1 で走査前の git fetch --prune を省略（テスト用）
+#   REAPER_FETCH_REMOTE       — 走査前 fetch の remote 名（既定 origin。テスト用）
 #
 # 使用方法:
 #   bash scripts/reaper-worktree.sh            # dry-run（削除予定の一覧のみ）
@@ -59,6 +61,18 @@ fi
 
 ACTIVE_WORK_FILE="${REAPER_ACTIVE_WORK_FILE:-${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md}"
 REPO_NAME="${REAPER_REPO_NAME:-shingo-ops/salesanchor}"
+
+# ── 事前: GitHub 側の最新状態を取り込む（R8）──────────────────────────────
+# 「取り戻せるか」を origin の ref で判定するため、古い ref を残さない（--prune）。
+# 失敗したら今回は1件も削除しない（安全側）。テストは REAPER_SKIP_FETCH=1 で省略する。
+_FETCH_REMOTE="${REAPER_FETCH_REMOTE:-origin}"
+FETCH_OK=1
+if [ "${REAPER_SKIP_FETCH:-0}" != "1" ]; then
+  if ! GIT_TERMINAL_PROMPT=0 git -C "${MAIN_REPO_ROOT}" fetch --prune --quiet "${_FETCH_REMOTE}" 2>/dev/null; then
+    FETCH_OK=0
+    echo "⚠️  git fetch に失敗しました（${_FETCH_REMOTE}）。今回は削除しません。"
+  fi
+fi
 
 # ── 分類バケット ────────────────────────────────────────────────────────────
 WILL_DELETE=()
@@ -169,9 +183,7 @@ for _IDX in "${!WT_PATHS[@]}"; do
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
   # 判定順:
   #   a. 未コミット・未ステージ確認
-  #   b. upstream 設定済み → @{u}..HEAD で未push 確認
-  #   c. upstream 未設定 → origin/<branch> が存在すれば比較する
-  #      upstream 未設定だけを理由に未push 扱いしない（設定漏れで削除保護が過剰になるのを防ぐ）
+  #   b. HEAD までの全コミットが origin のどれかの ref から到達できるか（R8）
   UNSAVED=0
   # git status は HEAD なしの fresh init でも動く（untracked files を検出可能）
   if git -C "${WORKTREE_PATH}" status >/dev/null 2>&1; then
@@ -184,30 +196,15 @@ for _IDX in "${!WT_PATHS[@]}"; do
     fi
 
     if [ "${UNSAVED}" -eq 0 ]; then
-      # b. upstream 設定済みなら @{u}..HEAD で比較
-      #    ただし専用棚 origin/<branch> と HEAD が一致していれば push 済みとみなす
-      #    （@{u} が共用側（main 等）を指す設定漏れによる誤検出を防ぐ）
-      if git -C "${WORKTREE_PATH}" rev-parse "@{u}" >/dev/null 2>&1; then
-        OWN_REMOTE=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
-        HEAD_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
-        if [ -n "${OWN_REMOTE}" ] && [ "${HEAD_SHA}" = "${OWN_REMOTE}" ]; then
-          :  # 専用棚と一致 → push 済み。UNSAVED=0 のまま（保護しない）
-        elif [ -n "$(git -C "${WORKTREE_PATH}" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+      # b. 取り戻せるか（R8、2026-10-10 PO 方針「後から完全に取り戻せる部屋だけ消す」）
+      #    HEAD までのコミットが、origin のどれかの ref（main・各ブランチ）から到達できること。
+      #    1つでも GitHub に無いコミットがあれば保護する。upstream の設定有無・向き先は問わない。
+      #    コミットが1つも無い（HEAD なし）部屋は、失うコミットが無いので判定しない。
+      if git -C "${WORKTREE_PATH}" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+        _UNREACH=$(git -C "${WORKTREE_PATH}" rev-list --count HEAD --not --remotes=origin 2>/dev/null) || _UNREACH="ERR"
+        if [ "${_UNREACH}" != "0" ]; then
           UNSAVED=1
         fi
-      else
-        # c. upstream 未設定: origin/<branch> が存在すれば直接比較
-        REMOTE_SHA=$(git -C "${WORKTREE_PATH}" rev-parse "origin/${BRANCH}" 2>/dev/null || true)
-        if [ -n "${REMOTE_SHA}" ]; then
-          LOCAL_SHA=$(git -C "${WORKTREE_PATH}" rev-parse HEAD 2>/dev/null || true)
-          if [ -n "${LOCAL_SHA}" ] && [ "${LOCAL_SHA}" != "${REMOTE_SHA}" ]; then
-            UNPUSHED=$(git -C "${WORKTREE_PATH}" log --oneline "${REMOTE_SHA}..HEAD" 2>/dev/null || true)
-            if [ -n "${UNPUSHED}" ]; then
-              UNSAVED=1
-            fi
-          fi
-        fi
-        # origin/<branch> も存在しない場合: upstream 未設定だけを理由に未push 扱いしない
       fi
     fi
   fi
@@ -266,6 +263,11 @@ for _IDX in "${!WT_PATHS[@]}"; do
   # その他（NOT_FOUND・ERROR 等）かつ未マージ → 保護
   SKIP_NOT_MERGED+=("${BRANCH}")
 done
+
+if [ "${FETCH_OK}" -eq 0 ] && [ "${#WILL_DELETE[@]}" -gt 0 ]; then
+  echo "⚠️  fetch 失敗のため、削除候補 ${#WILL_DELETE[@]} 件は今回は削除しません。"
+  WILL_DELETE=()
+fi
 
 # ── サマリ表示 ────────────────────────────────────────────────────────────
 echo "=== reaper 結果 ==="
