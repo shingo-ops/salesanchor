@@ -995,3 +995,101 @@ def test_quantity_none_has_no_quantity_not_in_text_kind():
 def test_quantity_without_digits_has_only_quantity_no_number():
     out, _flags, _ = _extract_keep("ワンピース ブースター\nカートン @150,000円", _it([1, 2], "150,000円", "カートン"))
     assert "quantity_no_number" in _kinds(out[0]) and _qty_not_in_text_reasons(out[0]) == []
+
+
+# ---------------------------------------------------------------------------
+# 便PQ：v102 の価格・数量を Gemini の写しの数字で補う／補えないときは要確認
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("copied", "expected"),
+    [
+        ("42個", 42.0), ("在庫数：17", 17.0), ("￥8,500", 8500.0), ("１２BOX", 12.0), ("5/セット", 5.0),
+        ("2万", None), ("3千円", None), ("1.5", None), ("10～20/セット", None), ("none", None), (None, None),
+        ("カートン", None), ("1k", None),
+    ],
+)
+def test_single_number(copied, expected):
+    assert v101._single_number(copied) == expected
+
+
+def _pq_row(raw, price, quantity, *, v102=True):
+    items = (_it(list(range(1, len(raw.split("\n")) + 1)), price, quantity),)
+    if v102:
+        out, _flags, _ = _extract_keep(raw, *items)
+        return out[0]
+    parsed, errors = _parse(raw, *items)
+    assert errors == []
+    return v101.extract_v101_items(parsed, raw, order=None, reassign=True, **_MASTERS)[0][0]
+
+
+def test_pq_bullet_stock_line_is_filled_from_the_copy():
+    # Arrange
+    raw = "■商品名：サンプルA\n■単価（税込）：￥8,500\n■在庫数：17"
+    # Act
+    row = _pq_row(raw, "￥8,500", "17")
+    # Assert
+    assert row["quantity_normalized"] == 17 and row["price_normalized"] == 8500
+    assert "quantity_unresolved" not in _kinds(row) and "price_unresolved" not in _kinds(row)
+
+
+def test_pq_two_counted_numbers_on_one_line_is_filled_from_the_copy():
+    raw = "サンプルB\n数量：42個（注文6個単位）\n単価：6,000"
+    row = _pq_row(raw, "6,000", "42個")
+    assert row["quantity_normalized"] == 42 and row["price_normalized"] == 6000
+    assert "quantity_unresolved" not in _kinds(row)
+
+
+def test_pq_copy_number_not_in_the_text_is_not_adopted():
+    raw = "サンプルC\n3BOX@1,000円"
+    row = _pq_row(raw, "1,000円", "30")
+    assert row["quantity_normalized"] == 3 and row["quantity_not_in_text"] is True
+    assert "quantity_not_in_text" in _kinds(row) and "quantity_unresolved" not in _kinds(row)
+
+
+def test_pq_unfillable_quantity_gets_quantity_unresolved():
+    raw = "サンプルD\n数量：10枚 20枚\n単価：6,000"
+    row = _pq_row(raw, "6,000", "10～20")
+    assert row["quantity_normalized"] is None
+    assert {"kind": "quantity_unresolved", "field": "quantity"} in row["review"]
+
+
+def test_pq_unfillable_price_gets_price_unresolved():
+    raw = "サンプルE\n2BOX\n価格：1000円 2000円"
+    row = _pq_row(raw, "1000円／2000円", "2")
+    assert row["price_normalized"] is None
+    assert {"kind": "price_unresolved", "field": "price"} in row["review"]
+
+
+def test_pq_fillable_price_is_filled_from_the_copy():
+    raw = "■商品名：サンプルF\n■単価：￥8,500\n■在庫数：3個"
+    row = _pq_row(raw, "￥8,500", "3個")
+    assert row["price_normalized"] == 8500 and "price_unresolved" not in _kinds(row)
+
+
+def test_pq_quantity_none_or_no_digit_gets_no_unresolved_kind():
+    row = _pq_row("サンプルG\nカートン @150,000円", "150,000円", "カートン")
+    assert "quantity_unresolved" not in _kinds(row)
+    row = _pq_row("サンプルG\nカートン @150,000円", "150,000円", "none")
+    assert "quantity_unresolved" not in _kinds(row)
+
+
+@pytest.mark.parametrize(
+    ("raw", "price", "quantity"),
+    [
+        ("■商品名：サンプルA\n■単価（税込）：￥8,500\n■在庫数：17", "￥8,500", "17"),
+        ("サンプルB\n数量：42個（注文6個単位）\n単価：6,000", "6,000", "42個"),
+        ("サンプルD\n数量：10枚 20枚\n単価：6,000", "6,000", "10～20"),
+    ],
+)
+def test_pq_v101_path_is_unchanged(raw, price, quantity):
+    # v102=False の結果は、補い・安全網の影響を受けない（price_normalized・quantity_normalized は原文からの取り出しだけ）
+    from app.services.extraction_judgement_svc import resolve_price_quantity
+
+    row = _pq_row(raw, price, quantity, v102=False)
+    pq = resolve_price_quantity(
+        raw, gemini_price=price, gemini_quantity=quantity, unit_aliases=set(_UNITS), order=None, gemini_product_name=row["name"],
+    )
+    assert (row["price_normalized"], row["quantity_normalized"]) == (pq.price, pq.quantity)
+    assert "quantity_unresolved" not in str(row["review"])

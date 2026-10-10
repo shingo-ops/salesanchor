@@ -895,3 +895,6 @@ run_sql migrations/20261009_180000_v102_engine_columns.sql
 
 # 便A: 要確認の理由コード表 review_reason_codes 新設（構造のみ・初期行は data/review_reason_codes/ の1回だけのデータ変更・冪等・ADR-1007）
 run_sql migrations/20261009_200000_create_review_reason_codes.sql
+
+# 便2-1: v102 の〆が完売にする2つ目以降の (商品, 状態) の表 analysis_soldout_extra_targets 新設（構造のみ・冪等・ADR-1007）
+run_sql migrations/20261010_120000_create_analysis_soldout_extra_targets.sql
