@@ -103,58 +103,96 @@ def _row(index: int | None, source_lines: list[int] | None = None):
     return SimpleNamespace(id=f"id{index}", gemini_index=index, source_lines=source_lines)
 
 
-def test_map_to_rows_pairs_accepted_in_order_and_rejected_by_gemini_index():
-    items = [{"name": "a"}, {"name": "c"}, {"rejected": "price_not_in_lines", "gemini_index": 1}]
+def _is_mismatch(item: dict) -> bool:
+    return [r["kind"] for r in item.get("review", [])] == [svc.REASON_ITEM_MAPPING_MISMATCH]
+
+
+def test_map_to_rows_pairs_each_row_with_the_item_of_the_same_gemini_index():
+    # 便G：受理した件も落とした件も gemini_index（応答の位置）で行 rows[i] に当てる。順番は問わない
+    items = [{"name": "c", "gemini_index": 2}, {"name": "a", "gemini_index": 0}, {"rejected": "price_not_in_lines", "gemini_index": 1}]
     rows = [_row(0), _row(1), _row(2)]
-    pairs = {item.get("name") or "rej": row.gemini_index for item, row in svc._map_to_rows(items, rows)}
-    assert pairs == {"a": 0, "c": 2, "rej": 1}
+    pairs = {row.gemini_index: item.get("name") or "rej" for item, row in svc._map_to_rows(items, rows)}
+    assert pairs == {0: "a", 1: "rej", 2: "c"}
 
 
 @pytest.mark.parametrize("items", [
-    [{"name": "a"}],  # 件数が足りない
-    [{"name": "a"}, {"name": "b"}, {"name": "c"}],  # 件数が多い
-    [{"name": "a"}, {"rejected": "x", "gemini_index": 7}],  # 無い gemini_index
-    [{"name": "a"}, {"rejected": "x", "gemini_index": 1}, {"rejected": "x", "gemini_index": 1}],  # 重複
+    [{"name": "a", "gemini_index": 0}],  # 件が足りない：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"name": "b"}],  # gemini_index が無い件：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"rejected": "x", "gemini_index": 7}],  # 範囲外の gemini_index：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"rejected": "x", "gemini_index": 1}, {"rejected": "x", "gemini_index": 1}],  # 重複：行1だけ
 ])
-def test_map_to_rows_raises_when_counts_do_not_match(items):
-    with pytest.raises(svc._MappingError):
-        svc._map_to_rows(items, [_row(0), _row(1)])
+def test_map_to_rows_marks_only_the_unmatched_row(items):
+    pairs = svc._map_to_rows(items, [_row(0), _row(1)])
+    assert len(pairs) == 2 and pairs[0][0]["name"] == "a" and _is_mismatch(pairs[1][0])
 
 
-def test_map_to_rows_raises_when_items_are_swapped():
-    items = [{"name": "a", "price_line": 2, "lines": [1, 2]}, {"name": "b", "price_line": 4, "lines": [3, 4]}]
-    rows = [_row(0, [3, 4]), _row(1, [1, 2])]
-    with pytest.raises(svc._MappingError, match="gemini_index=0"):
-        svc._map_to_rows(items, rows)
+def test_map_to_rows_does_not_raise_when_there_are_more_items_than_rows():
+    items = [{"name": "a", "gemini_index": 0}, {"name": "b", "gemini_index": 1}, {"name": "c", "gemini_index": 2}]
+    assert [item["name"] for item, _ in svc._map_to_rows(items, [_row(0), _row(1)])] == ["a", "b"]
+
+
+def test_map_to_rows_marks_both_rows_when_items_are_swapped_and_leaves_the_rest():
+    items = [{"name": "a", "price_line": 2, "lines": [1, 2], "gemini_index": 0},
+             {"name": "b", "price_line": 4, "lines": [3, 4], "gemini_index": 1},
+             {"name": "c", "price_line": 6, "lines": [5, 6], "gemini_index": 2}]
+    rows = [_row(0, [3, 4]), _row(1, [1, 2]), _row(2, [5, 6])]
+    pairs = svc._map_to_rows(items, rows)
+    assert [_is_mismatch(item) for item, _ in pairs] == [True, True, False] and pairs[2][0]["name"] == "c"
 
 
 def test_map_to_rows_passes_when_f1_removed_a_heading_line_from_lines():
-    items = [{"name": "a", "price_line": 3, "lines": [2, 3]}, {"name": "b", "price_line": 5, "lines": [4, 5]}]
+    items = [{"name": "a", "price_line": 3, "lines": [2, 3], "gemini_index": 0},
+             {"name": "b", "price_line": 5, "lines": [4, 5], "gemini_index": 1}]
     rows = [_row(0, [1, 2, 3]), _row(1, [1, 4, 5])]
-    assert [row.gemini_index for _, row in svc._map_to_rows(items, rows)] == [0, 1]
-
-
-def test_map_to_rows_passes_when_reassign_moved_an_ambiguous_line_to_another_item():
-    items = [{"name": "a", "price_line": 2, "lines": [1, 2, 3]}, {"name": "b", "price_line": 5, "lines": [4, 5]}]
-    rows = [_row(0, [1, 2]), _row(1, [3, 4, 5])]
-    assert [row.gemini_index for _, row in svc._map_to_rows(items, rows)] == [0, 1]
+    assert [item["name"] for item, _ in svc._map_to_rows(items, rows)] == ["a", "b"]
 
 
 def test_map_to_rows_without_price_line_needs_an_overlap():
     rows = [_row(0, [1, 2])]
-    assert svc._map_to_rows([{"name": "a", "lines": [2, 3]}], rows)[0][1].gemini_index == 0
-    with pytest.raises(svc._MappingError, match="gemini_index=0"):
-        svc._map_to_rows([{"name": "a", "lines": [5, 6]}], rows)
+    assert svc._map_to_rows([{"name": "a", "lines": [2, 3], "gemini_index": 0}], rows)[0][0]["name"] == "a"
+    assert _is_mismatch(svc._map_to_rows([{"name": "a", "lines": [5, 6], "gemini_index": 0}], rows)[0][0])
 
 
 def test_map_to_rows_checks_rejected_pairs_and_skips_empty_lines():
     rows = [_row(0, [1, 2]), _row(1, [3])]
-    ok = [{"name": "a", "price_line": 3, "lines": [3]}, {"rejected": "x", "gemini_index": 0, "lines": [1]}]
-    assert len(svc._map_to_rows(ok, rows)) == 2
-    bad = [{"name": "a", "price_line": 3, "lines": [3]}, {"rejected": "x", "gemini_index": 0, "lines": [9]}]
-    with pytest.raises(svc._MappingError, match="gemini_index=0"):
-        svc._map_to_rows(bad, rows)
-    assert len(svc._map_to_rows([{"name": "a", "lines": []}, {"name": "b", "price_line": 3}], [_row(0, []), _row(1, [3])])) == 2
+    ok = [{"name": "a", "price_line": 3, "lines": [3], "gemini_index": 1}, {"rejected": "x", "gemini_index": 0, "lines": [1]}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(ok, rows)] == [False, False]
+    bad = [{"name": "a", "price_line": 3, "lines": [3], "gemini_index": 1}, {"rejected": "x", "gemini_index": 0, "lines": [9]}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(bad, rows)] == [True, False]
+    empty = [{"name": "a", "lines": [], "gemini_index": 0}, {"name": "b", "price_line": 3, "gemini_index": 1}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(empty, [_row(0, []), _row(1, [3])])] == [False, False]
+
+
+def test_mismatch_row_is_written_empty_with_the_reason_and_the_other_rows_normally():
+    # 便G A16：対応が付かない行だけ、値は空（未解決の状態）＋ item_mapping_mismatch ＋ 要確認。他の行は通常どおり
+    session = _write([{"unit": "BOX", "product_id": 42, "match_status": "matched", "price_normalized": 1000.0}, {"unit": "BOX"}], drop_index=1)
+    first, second = _statements(session, "INSERT INTO public.analysis_results")
+    assert (first["product_id"], first["price_normalized"], first["needs_review"]) == (42, 1000.0, False)
+    assert (second["product_id"], second["unit_canonical"], second["price_normalized"], second["quantity_normalized"]) == (None, None, None, None)
+    assert (second["condition_canonical"], second["review_reasons"], second["needs_review"], second["pid_resolved"]) == (
+        "FLAG_SINGLE", "item_mapping_mismatch", True, False)
+
+
+def test_value_out_of_range_adds_the_reason_and_needs_review():
+    # 便G A15：10**12 以上は None にして理由を付ける。入力が None・範囲内なら付けない
+    item = {"unit": "BOX", "price_normalized": 10.0**12, "quantity_normalized": 3.0}
+    values = svc._analysis_values(item, _MASTERS, {"BOX": 5}, {})
+    assert (values["price_normalized"], values["quantity_normalized"]) == (None, 3.0)
+    assert (values["review_reasons"], values["needs_review"]) == ("value_out_of_range", True)
+    ok = svc._analysis_values({"unit": "BOX", "price_normalized": 999999999999.0, "quantity_normalized": None}, _MASTERS, {"BOX": 5}, {})
+    assert (ok["price_normalized"], ok["review_reasons"], ok["needs_review"]) == (999999999999.0, None, False)
+    both = svc._analysis_values({"unit": "BOX", "price_normalized": 10**13, "quantity_normalized": 10**13, "review": [{"kind": "unit_unknown"}]},
+                                _MASTERS, {"BOX": 5}, {})
+    assert both["review_reasons"] == "unit_unknown,value_out_of_range"  # 理由は重複なしで連結
+
+
+def test_pipeline_error_is_still_extract_exception_for_the_whole_post():
+    # 便G A17：プログラムの例外は、従来どおり投稿全体を extract_exception にする
+    def boom(*_args, **_kwargs):
+        raise ValueError("boom")
+
+    out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, _MASTERS, extract_items=boom)
+    assert out["v102_items"] == [] and out["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
 
 
 # ---------------------------------------------------------------------------
@@ -409,9 +447,10 @@ class _FakeSession:
         return SimpleNamespace(fetchall=lambda: found, scalar_one=lambda: f"result-{sum('INSERT INTO' in c[0] and 'analysis_results' in c[0] for c in self.calls)}")
 
 
-def _write(items: list[dict], decisions=None) -> _FakeSession:
+def _write(items: list[dict], decisions=None, drop_index: int | None = None) -> _FakeSession:
     rows = [SimpleNamespace(id=f"row{i}", gemini_index=i, source_lines=[i + 1]) for i in range(len(items))]
-    pipeline = {"v102_items": [{"lines": [i + 1], **it} for i, it in enumerate(items)], "v102_flags": {}}
+    numbered = [{"lines": [i + 1], "gemini_index": i, **it} for i, it in enumerate(items) if i != drop_index]  # 便G：gemini_index で行に当てる
+    pipeline = {"v102_items": numbered, "v102_flags": {}}
     session = _FakeSession()
     svc._write_results(session, "job1", pipeline, rows, _MASTERS, {"BOX": 5}, decisions)
     return session

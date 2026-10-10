@@ -9,6 +9,7 @@ import json
 import pytest
 
 from app.services import gemini_raw_copy_v101 as v101
+from app.services.extraction_judgement_svc import PriceQtyResult
 
 _UNITS = {
     "BOX": ("BOX", "箱系"), "box": ("BOX", "箱系"), "ボックス": ("BOX", "箱系"),
@@ -771,12 +772,12 @@ def _parse_keep(raw, *items):
     return v101.parse_v101_response(_resp(*items), raw, status_entries=_STATUS, keep_rejected=True)
 
 
-def _extract_keep(raw, *items, product_first=None, unit_alias_to_info=None):
+def _extract_keep(raw, *items, product_first=None, unit_alias_to_info=None, reassign=True, gemini_trust=False):
     parsed, errors = _parse_keep(raw, *items)
     masters = {**_MASTERS, "unit_alias_to_info": unit_alias_to_info or _UNITS}
     out, flags = v101.extract_v101_items(
-        parsed, raw, order=None, reassign=True, v102_fixes=True, product_first=product_first,
-        review_reasons=True, **masters,
+        parsed, raw, order=None, reassign=reassign, v102_fixes=True, product_first=product_first,
+        review_reasons=True, gemini_trust=gemini_trust, **masters,
     )
     return out, flags, errors
 
@@ -849,7 +850,9 @@ def test_rejected_result_has_every_key_of_a_normal_item_and_does_not_join_the_no
     assert out[1]["name"] == "none" and out[1]["unit"] == "none" and out[1]["price_normalized"] is None
     assert out[1]["roles"] == {} and out[1]["review"] and out[1]["fixes"] == []
     plain, _ = _extract102(_DROP_RAW, _it([1, 2], "1,000円", "3"))
-    assert {k: v for k, v in out[0].items() if k != "review"} == {k: v for k, v in plain[0].items() if k != "review"}
+    # 便G：keep_rejected の経路は受理した件にも gemini_index を持たせる（件の対応付け用）。それ以外の欄は同じ
+    assert {k: v for k, v in out[0].items() if k not in ("review", "gemini_index")} == {
+        k: v for k, v in plain[0].items() if k != "review"}
 
 
 def test_rejected_items_do_not_change_the_values_of_the_normal_items():
@@ -859,7 +862,7 @@ def test_rejected_items_do_not_change_the_values_of_the_normal_items():
     # Act
     mixed, _, _ = _extract_keep(raw, _it([1, 2], "1,000円", "3"), _it([3, 4], "9,999円", "2"), _it([3, 4], "2,000円", "2"))
     # Assert
-    strip = lambda rows: [{k: v for k, v in r.items() if k != "review"} for r in rows]  # noqa: E731
+    strip = lambda rows: [{k: v for k, v in r.items() if k not in ("review", "gemini_index")} for r in rows]  # noqa: E731  便G：gemini_index は対応付け用
     assert strip([mixed[0], mixed[1]]) == strip(only_normal)
 
 
@@ -1093,3 +1096,127 @@ def test_pq_v101_path_is_unchanged(raw, price, quantity):
     )
     assert (row["price_normalized"], row["quantity_normalized"]) == (pq.price, pq.quantity)
     assert "quantity_unresolved" not in str(row["review"])
+
+
+# ---------------------------------------------------------------------------
+# 便G：Gemini の抽出を採用し、システムは確認役（設計 docs/handoff/v102-prod-switch/design.md §16）
+# 文はすべて合成。
+# ---------------------------------------------------------------------------
+
+_MIXED_EVIDENCE_RAW = "\n".join([
+    "■A", "10/3発送", "300BOX@1,500", "", "■B", "200BOX@1,400", "10/9発送", "",
+    "■C", "100BOX@900", "ダメージ有り", "50BOX@800",
+])
+_MIXED_EVIDENCE_ITEMS = (_it([9, 10, 11], "900"), _it([9, 12], "800"), _it([1, 2, 3], "1,500"), _it([5, 6, 7], "1,400"))
+
+
+def _kinds_of(row):
+    return [r["kind"] for r in row["review"]]
+
+
+def test_a6_v102_keeps_the_gemini_assignment_of_an_ambiguous_line_but_v101_style_reassign_moves_it():
+    # Arrange・Act：Gemini は状態の行 11 を 900 の件に付けた。付け直しの決まり（安い件へ）は 800 の件に動かす
+    kept, _, _ = _extract_keep(_MIXED_EVIDENCE_RAW, *_MIXED_EVIDENCE_ITEMS, reassign=False, gemini_trust=True)
+    moved, _, _ = _extract_keep(_MIXED_EVIDENCE_RAW, *_MIXED_EVIDENCE_ITEMS, reassign=True)
+    # Assert
+    assert kept[0]["condition"] == "Damaged sealed box" and kept[1]["condition"] != "Damaged sealed box"
+    assert moved[1]["condition"] == "Damaged sealed box" and moved[0]["condition"] != "Damaged sealed box"
+    assert 11 in kept[0]["lines"] and kept[0]["reassigned"] == [] and "ship" not in [r.get("kind") for r in kept[0]["review"]]
+
+
+def test_a6_v101_without_v102_fixes_still_reassigns():
+    out, _ = _extract(_MIXED_EVIDENCE_RAW, *_MIXED_EVIDENCE_ITEMS)  # v10.1 の経路（回帰）
+    assert out[1]["condition"] == "Damaged sealed box" and out[0]["condition"] != "Damaged sealed box"
+
+
+def test_a6_both_items_get_the_condition_when_gemini_put_the_line_in_both():
+    items = (_it([9, 10, 11], "900"), _it([9, 11, 12], "800"), _it([1, 2, 3], "1,500"), _it([5, 6, 7], "1,400"))
+    out, _, _ = _extract_keep(_MIXED_EVIDENCE_RAW, *items, reassign=False, gemini_trust=True)
+    assert out[0]["condition"] == out[1]["condition"] == "Damaged sealed box"
+
+
+def test_a7_v102_keeps_the_shared_ship_heading_in_lines_but_f1_still_removes_it_without_trust():
+    raw, items = _parent_children_post()
+    trusted, _, _ = _extract_keep(raw, *items, reassign=False, gemini_trust=True)
+    removed, _, _ = _extract_keep(raw, *items)
+    assert all(1 in one["lines"] for one in trusted) and all(one["fixes"] == [] for one in trusted)
+    assert all(1 not in one["lines"] for one in removed) and [f["rule"] for f in removed[0]["fixes"]] == ["F1"]
+
+
+def _stub_reread(monkeypatch, price, quantity):
+    monkeypatch.setattr(
+        v101, "resolve_price_quantity", lambda *a, **k: PriceQtyResult(price, quantity, "marker", (), 2, 2)
+    )
+
+
+def _trust_one(raw, price, quantity):
+    out, _, _ = _extract_keep(raw, _it([1, 2], price, quantity), reassign=False, gemini_trust=True)
+    return out[0]
+
+
+def test_a11_gemini_numbers_are_adopted_and_no_reason_when_the_source_agrees():
+    row = _trust_one("商品A\n3BOX@17,800円", "17,800円", "3")
+    assert (row["price_normalized"], row["quantity_normalized"]) == (17800.0, 3.0)
+    assert not {"price_source_mismatch", "quantity_source_mismatch"} & set(_kinds_of(row))
+
+
+def test_a11_source_reread_that_differs_only_adds_reasons_and_never_changes_the_value(monkeypatch):
+    _stub_reread(monkeypatch, 16000.0, 5.0)
+    row = _trust_one("商品A\n3BOX@17,800円", "17,800円", "3")
+    assert (row["price_normalized"], row["quantity_normalized"]) == (17800.0, 3.0)
+    assert {"price_source_mismatch", "quantity_source_mismatch"} <= set(_kinds_of(row))
+
+
+def test_a11_price_only_mismatch_and_quantity_only_mismatch_are_separate(monkeypatch):
+    _stub_reread(monkeypatch, 16000.0, 3.0)
+    kinds = _kinds_of(_trust_one("商品A\n3BOX@17,800円", "17,800円", "3"))
+    assert "price_source_mismatch" in kinds and "quantity_source_mismatch" not in kinds
+    _stub_reread(monkeypatch, 17800.0, 5.0)
+    kinds = _kinds_of(_trust_one("商品A\n3BOX@17,800円", "17,800円", "3"))
+    assert "quantity_source_mismatch" in kinds and "price_source_mismatch" not in kinds
+
+
+def test_a11_no_reason_when_the_source_reread_is_none(monkeypatch):
+    _stub_reread(monkeypatch, None, None)
+    row = _trust_one("商品A\n3BOX@17,800円", "17,800円", "3")
+    assert (row["price_normalized"], row["quantity_normalized"]) == (17800.0, 3.0)
+    assert not {"price_source_mismatch", "quantity_source_mismatch"} & set(_kinds_of(row))
+
+
+def test_a11_scale_word_in_the_copy_is_none_with_the_unresolved_reason():
+    row = _trust_one("商品A\n1BOX@2万円", "2万円", "1")
+    assert row["price_normalized"] is None and "price_unresolved" in _kinds_of(row)
+    row = _trust_one("商品A\n2万BOX@1,000円", "1,000円", "2万")
+    assert row["quantity_normalized"] is None and "quantity_unresolved" in _kinds_of(row)
+
+
+def test_a11_two_numbers_in_the_copy_is_none_and_quantity_not_in_text_is_kept():
+    row = _trust_one("商品A\n3BOX@1,000円", "1,000円", "3個+2個")
+    assert row["quantity_normalized"] is None and "quantity_unresolved" in _kinds_of(row)
+    row = _trust_one("商品A\n3BOX@1,000円", "1,000円", "7")
+    assert row["quantity_normalized"] == 7.0 and "quantity_not_in_text" in _kinds_of(row)
+
+
+def test_a11_without_trust_the_values_still_come_from_the_source_reread(monkeypatch):
+    _stub_reread(monkeypatch, 16000.0, 5.0)
+    out, _, _ = _extract_keep("商品A\n3BOX@17,800円", _it([1, 2], "17,800円", "3"))
+    assert (out[0]["price_normalized"], out[0]["quantity_normalized"]) == (16000.0, 5.0)
+    assert "price_source_mismatch" not in _kinds_of(out[0]) and "price_source_mismatch" not in out[0]
+
+
+def test_a16_parse_gives_every_accepted_item_its_response_position_only_when_keep_rejected():
+    raw = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+    items = [_it([1, 2], "1,000円", "3"), _it([9], "9円", "1"), _it([3, 4], "2,000円", "2")]
+    kept, _ = v101.parse_v101_response(_resp(*items), raw, status_entries=_STATUS, keep_rejected=True)
+    plain, _ = v101.parse_v101_response(_resp(*items), raw, status_entries=_STATUS)
+    assert [(it.get("rejected"), it["gemini_index"]) for it in kept] == [(None, 0), (None, 2), ("item_shape_invalid", 1)]
+    assert all("gemini_index" not in it for it in plain)
+
+
+def test_a16_gemini_index_survives_the_extraction_for_accepted_and_rejected_items():
+    raw = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+    out, _, _ = _extract_keep(
+        raw, _it([1, 2], "1,000円", "3"), _it([9], "9円", "1"), _it([3, 4], "2,000円", "2"), reassign=False, gemini_trust=True
+    )
+    assert sorted(row["gemini_index"] for row in out) == [0, 1, 2]
+    assert [row["gemini_index"] for row in out if not row.get("rejected")] == [0, 2]
