@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SA LINE Export - 最小アプリ（段階1）
+  正本: docs/handoff/line-auto-export-app/design.md
+  この段階では PIN 保存・ロック解除実測・起動口のみ。LINE操作は未実装。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="jp.salesanchor.lineexport"
+    android:versionCode="17"
+    android:versionName="0.14.0-stage3">
+
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="24" />
+
+    <!-- 画面ウェイク（PowerManager.WakeLock）に必要。dangerous permission ではないためインストール時に自動付与される。 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- LINE通知の記録を外部ストレージ(Download/sa-line-notify)に書き出すために必要。 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!-- 段階3: 再起動後にアプリ内タイマー（AlarmManager）を張り直すために必要。 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      android.permission.INTERNET は意図的に付与しない。
+      この段階では「LINE通知から本文を取り出して端末内に記録する」だけを行い、
+      送信機能は実装しない（本番配線は別作業）。INTERNET権限を持たせないことで、
+      実装ミスや将来の変更があっても本アプリから外部への送信が構造的に起こり
+      得ないようにする。
+    -->
+
+    <application
+        android:label="@string/app_name"
+        android:allowBackup="false">
+
+        <!-- 設定Activity: PINを一度だけ入力して保存する。保存済みかどうかだけを表示。 -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="@string/settings_title">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- AccessibilityService: ロック解除操作の実行主体。 -->
+        <service
+            android:name=".UnlockAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- 起動口: Termuxから `am broadcast -a jp.salesanchor.lineexport.RUN` で実行合図。PINはextraに載せない。
+             DIAG_WINDOWSは実験用の診断専用の起動口（読み取り専用、ロック解除やPIN入力は一切行わない）。
+             EXPORTは段階2（LINE操作）単体検証用（解除済み前提）。RUN_ALLは本番の形（ロック解除→LINE操作）。 -->
+        <receiver
+            android:name=".RunReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="jp.salesanchor.lineexport.RUN" />
+                <action android:name="jp.salesanchor.lineexport.DIAG_WINDOWS" />
+                <action android:name="jp.salesanchor.lineexport.EXPORT" />
+                <action android:name="jp.salesanchor.lineexport.RUN_ALL" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 段階3: アプリ内タイマー（RunScheduler）専用の受信口。Termuxからの起動口(RunReceiver)とは
+             別にする。外部アプリからの起動は想定しないためexported=false（BOOT_COMPLETEDはシステムからの
+             配送で届く。システム送信者はexported=falseでも届く）。 -->
+        <receiver
+            android:name=".AlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="jp.salesanchor.lineexport.SCHEDULED_RUN" />
+            </intent-filter>
+        </receiver>
+
+        <!-- NotificationListenerService: LINEの通知から本文を取り出して端末内に記録するだけ（送信はしない）。 -->
+        <service
+            android:name=".LineNotifyListenerService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

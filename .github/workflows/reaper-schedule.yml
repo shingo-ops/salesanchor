@@ -6,6 +6,7 @@ name: reaper-schedule — マージ済み worktree 定期回収（ADR-114）
 # repository_dispatch で active-work-auto-done 完了後にも即時起動できる
 # Mac が offline なら即時実行は失敗して OK（毎日 03:00 JST の定期で追いつく）
 # main への PR マージ直後にも起動する（R2、docs/handoff/reaper-on-merge/design.md）。GITHUB_TOKEN によるマージでは起動しないため、毎日の定期実行は残す
+# gh（PR のマージ判定）には GH_TOKEN が必要。未設定だと判定が常に 0 件になり、回収できなかった（R7、2026-10-09）
 
 on:
   schedule:
@@ -25,11 +26,19 @@ jobs:
   reaper:
     if: github.event_name != 'pull_request' || (github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: [self-hosted, macOS]
+    permissions:
+      contents: read
+      pull-requests: read
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: gh 認証の確認（R7）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh auth status 2>&1 || true
 
       - name: Run reaper（マージ済み worktree を自動削除）
         # self-hosted runner の checkout（_work）を git の基点にすると、MAIN_REPO_ROOT が _work を指し、
@@ -37,6 +46,7 @@ jobs:
         # そのため、スクリプトは最新の checkout のものを使い、cwd は本体リポジトリにする。
         working-directory: /Users/tanizawashingo/salesanchor
         env:
+          GH_TOKEN: ${{ github.token }}
           REAPER_LOCK_WAIT_SEC: "300"
         run: |
           if [ ! -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
@@ -48,6 +58,8 @@ jobs:
       - name: 未保存あり保護件数をサマリ表示
         if: always()
         working-directory: /Users/tanizawashingo/salesanchor
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
             bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" 2>&1 | grep -E "^(⚠️|✅)" || true

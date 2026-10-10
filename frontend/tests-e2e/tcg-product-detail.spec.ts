@@ -40,7 +40,7 @@ async function setup(page: Page, locale = "ja", failure = 0, loadFailure = false
       await route.fulfill({ contentType: "application/json", body: JSON.stringify(response()) });
     },
   });
-  await page.goto("/super-admin/tcg-product-master");
+  await page.goto("/super-admin/analysis-rules?section=product-master");
   await expect(page.getByRole("cell", { name: "MODEL-01", exact: true })).toBeVisible();
   return { saves: () => saves, reads: () => reads };
 }

@@ -38,6 +38,13 @@ from app.services.gemini_raw_copy_v102_product_first import (
     ProductFirstMasters,
     resolve_product_first,
 )
+from app.services.gemini_raw_copy_v102_soldout_ref import (
+    MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    SoldoutRefPost,
+    build_ref_rows,
+    decide_soldout_ref,
+    soldout_targets,
+)
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
 
@@ -1077,6 +1084,32 @@ def _apply_followup(
     return result
 
 
+def _apply_soldout_ref(
+    extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
+    masters: ProductFirstMasters, soldout_posts: tuple[SoldoutRefPost, ...], unit_alias_to_info: dict,
+    sold_out_words: list[str], fixed_products: dict[int, int] | None = None,
+) -> list[dict]:
+    """試作版 v102 の4回目：〆で商品が決まらない件を、同じ仕入元の過去48時間の投稿の在庫の行から決める。決めた件は決めた商品で作り直す。"""
+    if not soldout_targets(extracted):
+        return extracted  # 対象の件が無ければ参照行を作らない（照合が重いため）
+    result = list(extracted)
+    decisions = decide_soldout_ref(
+        extracted, lines, build_ref_rows(soldout_posts, masters, sold_out_words),
+        units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words, sold_out_words=sold_out_words,
+    )
+    for i, decision in decisions.items():
+        if i in (fixed_products or {}):
+            continue  # 人が決めた商品がある件は、自動で決め直さない（人の判断が優先）
+        result[i] = {
+            **build(i, decision.product_id),
+            "match_status": MATCH_STATUS_MATCHED_SOLDOUT_REF,
+            "product_soldout_ref": {
+                "ref_message_id": decision.ref_message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
+            },
+        }
+    return result
+
+
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
 _REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
@@ -1159,7 +1192,7 @@ def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int])
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
     *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
-    followup_ref: tuple[str, str] | None = None,
+    followup_ref: tuple[str, str] | None = None, soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
 ) -> tuple[list[dict], dict]:
     """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
 
@@ -1200,6 +1233,11 @@ def _extract_v102(
             extracted = _apply_followup(
                 extracted, build, lines, ctx.product_first, followup_ref, ctx.unit_alias_to_info, fixed_products
             )
+        if soldout_posts:
+            extracted = _apply_soldout_ref(
+                extracted, build, lines, ctx.product_first, soldout_posts, ctx.unit_alias_to_info, ctx.sold_out_words,
+                fixed_products,
+            )
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
@@ -1221,6 +1259,7 @@ def extract_v101_items(
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
     v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
     fixed_products: dict[int, int] | None = None, followup_ref: tuple[str, str] | None = None,
+    soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -1233,6 +1272,8 @@ def extract_v101_items(
     review_reasons（v102_fixes のときだけ）：件の review に印・単位なし・分類「不明」の理由を足し、flags に post_review を足す。
     followup_ref（product_first のときだけ）：(直前の投稿の id, 直前の投稿の原文)。あれば、商品が決まらない件を直前の投稿の行で決める
     （match_status=matched_followup）。None なら今と同じ。
+    soldout_posts（product_first のときだけ）：同じ仕入元の過去48時間の投稿（新しい順）。あれば、〆で商品が決まらない件を
+    その投稿の在庫の行で決める（match_status=matched_soldout_ref）。None・空なら今と同じ。
     items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
     fixed_products（試作版 v102）：人が決めた商品。受理した件の位置（落とした件を除く、Gemini の順）→ 商品 id。
     None・空なら結果は変わらない。
@@ -1249,7 +1290,7 @@ def extract_v101_items(
     if v102_fixes:
         return _extract_v102(
             adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons,
-            fixed_products=fixed_products, followup_ref=followup_ref,
+            fixed_products=fixed_products, followup_ref=followup_ref, soldout_posts=soldout_posts,
         )
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}

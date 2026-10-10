@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX
 from app.services.review_reason_codes_svc import build_review_reason_details, load_review_reason_codes
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
@@ -226,6 +227,7 @@ async def fetch_analysis_results(
             ar.status,
             ar.exclusion,
             (ps.id IS NOT NULL)                  AS supplier_registered,
+            COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
             COALESCE(
                 (SELECT ic.system_value = ic.human_value
                  FROM {TCG_SCHEMA}.item_corrections ic
@@ -240,7 +242,7 @@ async def fetch_analysis_results(
         {where}
         ORDER BY {result_order_sql()}
     """
-    item_params = dict(params, limit=limit, offset=offset)
+    item_params = dict(params, limit=limit, offset=offset, v102_prefix=V102_PROMPT_VERSION_PREFIX)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
 
     reason_table = await load_review_reason_codes(db)
@@ -287,6 +289,7 @@ async def fetch_analysis_results(
                     "confirmed": row.condition_confirmed, "classification": row.empty_box_classification,
                 },
                 "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
+                "is_v102": bool(row.is_v102),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,
                     pid_basis=row.pid_basis,
