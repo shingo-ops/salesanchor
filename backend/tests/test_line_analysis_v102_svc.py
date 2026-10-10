@@ -453,3 +453,12 @@ def test_inheriting_the_stock_condition_drops_the_condition_review_reasons_only_
     cleared = svc._apply_soldout_targets(_values(only_condition), only_condition, None, _CANONICALS)
     assert (cleared["review_reasons"], cleared["needs_review"]) == (None, False)  # 空になれば要確認も外れる
     assert svc._apply_soldout_targets(values, item, None, {}) is values  # 上書きできなければ何も外さない
+
+
+def test_inheriting_an_undecided_flag_condition_keeps_the_review_reasons():
+    item = _soldout_item(review=[{"kind": "condition_unknown"}, {"kind": "unit_unknown"}])
+    values = _values(item)
+    targets = [{**_TARGETS[0], "condition_id": 18}, *_TARGETS[1:]]  # 先頭の相手が FLAG_SINGLE
+    out = svc._apply_soldout_targets(values, {**item, "soldout_targets": targets}, None, _CANONICALS)
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (18, "FLAG_SINGLE", "SOLDOUT_REF")  # 状態はそろえる
+    assert (out["review_reasons"], out["needs_review"]) == (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown", True)

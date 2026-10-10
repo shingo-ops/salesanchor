@@ -86,6 +86,7 @@ _CONDITION_BASIS_MAX = 100
 _NUMERIC_LIMIT = Decimal(10) ** 12  # NUMERIC(14,2)
 _INT4_MAX = 2**31 - 1
 _FLAG_SINGLE = "FLAG_SINGLE"
+CONDITION_UNDECIDED_PREFIX = "FLAG_"  # 状態が決まっていない印の canonical の接頭辞（配信 SQL の NOT LIKE 'FLAG_%' と同じ）
 _FLAG_SINGLE_CODE = "CN0008"
 
 _PROMPT_KEY_SQL = """
@@ -660,11 +661,13 @@ def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None,
     canonical = canonicals.get(condition_id)
     if canonical is None:
         return values
-    remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
-    return {
+    overwritten = {
         **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": CONDITION_BASIS_SOLDOUT_REF,
-        "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining),
     }
+    if canonical.startswith(CONDITION_UNDECIDED_PREFIX):
+        return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
+    return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
 
 
 def _extra_targets(values: dict, item: dict, decision: Decisions | None) -> list[dict]:
