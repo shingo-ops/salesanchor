@@ -185,6 +185,15 @@ final class LineExportFlow {
     private boolean overlayShown;
     private boolean overlayRemoved;
 
+    /**
+     * 検証用の遮断モード（design.md追補 2026-10-11「遮断モードの帯（検証用）」参照）。
+     * SchedulerStoreのone-shotフラグをconsumeした値をshow()に渡す。通常実行では必ず
+     * falseになる（one-shotのため）。overlayEscapeTappedは遮断モードで、かつ利用者が
+     * 「停止」ボタン（非常口）を押したときだけtrueになる。
+     */
+    private boolean overlayBlocking;
+    private boolean overlayEscapeTapped;
+
     // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
     // 挙動には一切使わない。診断ログにのみ出す。
 
@@ -259,8 +268,11 @@ final class LineExportFlow {
         acquireWakeLock();
 
         // 自動取り込み中バナーを表示する（design.md追補「実行中の表示」参照）。表示に失敗しても
-        // フローは継続する（補助表示のみ）。
-        overlayShown = overlay.show(service);
+        // フローは継続する（補助表示のみ）。遮断モードのone-shotフラグは必ずここでconsumeする
+        // （プロセスが死んでもフラグが残り続けないようにするため。design.md追補 2026-10-11参照）。
+        // 通常実行では必ずfalseになる。
+        overlayBlocking = SchedulerStore.consumeBlockingOverlayOnce(service);
+        overlayShown = overlay.show(service, overlayBlocking);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
         service.startWindowRecording();
@@ -768,6 +780,7 @@ final class LineExportFlow {
         // （lockOnFinish==trueの場合は数秒後）より先に消えることがある（design.md追補
         // 「実行中の表示」参照）。
         overlayRemoved = overlay.remove(service);
+        overlayEscapeTapped = overlay.wasEscapeTapped();
 
         // stopWindowRecording()は履歴をクリアするため、読むのはその前に行う（診断用。
         // クラス名のみでパッケージ名・ノードのテキスト・メッセージ本文は含まない）。
@@ -939,6 +952,15 @@ final class LineExportFlow {
             extraFields.put("wakeAcquired", wakeAcquired);
             extraFields.put("overlayShown", overlayShown);
             extraFields.put("overlayRemoved", overlayRemoved);
+            // design.md追補 2026-10-11「遮断モードの帯（検証用）」: 遮断モードで出したときだけ
+            // overlayBlockingをtrueで出す（通常は出さない）。overlayEscapeTappedは遮断モードで
+            // かつ利用者が「停止」(非常口)を押したときだけtrueで出す（押されなければ出さない）。
+            if (overlayBlocking) {
+                extraFields.put("overlayBlocking", true);
+                if (overlayEscapeTapped) {
+                    extraFields.put("overlayEscapeTapped", true);
+                }
+            }
             extraFields.put("wakeHeldAtEnd", wakeHeldAtEnd);
             if (wakeHeldMs >= 0) {
                 extraFields.put("wakeHeldMs", wakeHeldMs);

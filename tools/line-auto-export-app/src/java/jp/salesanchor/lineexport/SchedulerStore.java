@@ -20,6 +20,7 @@ final class SchedulerStore {
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
     private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
     private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
+    private static final String KEY_BLOCKING_OVERLAY_ONCE = "blocking_overlay_once";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -166,6 +167,27 @@ final class SchedulerStore {
 
     static void clearConsecutiveRetryCount(Context context) {
         prefs(context).edit().remove(KEY_CONSECUTIVE_RETRY_COUNT).apply();
+    }
+
+    /**
+     * 検証用の遮断モード帯のone-shotフラグ（design.md追補 2026-10-11「遮断モードの帯
+     * （検証用）」参照）。RunReceiverのACTION_RUN_ALL_BLOCKINGが「次の1回だけ帯を遮断
+     * モードにする」ために立てる。プロセスが死んでもフラグが残り続けないよう、
+     * {@link #consumeBlockingOverlayOnce}で読んだら必ずfalseに戻す（LineExportFlowが
+     * 帯を出すときに必ずconsumeする）。既定false。
+     */
+    static void setBlockingOverlayOnce(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_BLOCKING_OVERLAY_ONCE, value).apply();
+    }
+
+    /** @return フラグの現在値。読んだら必ずfalseに戻す（one-shot）。 */
+    static boolean consumeBlockingOverlayOnce(Context context) {
+        SharedPreferences p = prefs(context);
+        boolean value = p.getBoolean(KEY_BLOCKING_OVERLAY_ONCE, false);
+        if (value) {
+            p.edit().putBoolean(KEY_BLOCKING_OVERLAY_ONCE, false).apply();
+        }
+        return value;
     }
 
     private static SharedPreferences prefs(Context context) {

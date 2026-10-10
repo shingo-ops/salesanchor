@@ -713,3 +713,36 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 - 開始時の画面状態ごとの成否（実機ログ集計）:
   - 10-09: 消灯ロックで成功43・失敗1 ／ 点灯ロックで成功10・失敗1
   - 10-10: 消灯ロックで成功24・失敗20 ／ 点灯ロックで成功0・失敗3
+
+## 追補 2026-10-11 遮断モードの帯（検証用）
+
+### 目的
+
+使用中の衝突（3日間で33回、うち失敗5回＝失敗率15%。消灯からの1.5%の約10倍）を、見送りではなく「実行中は操作させない」で解決できるかを確かめる。PO方針は「取り込み優先」。
+
+### 確かめる事実
+
+全画面でタッチを消費する`TYPE_ACCESSIBILITY_OVERLAY`を出したとき、`dispatchGesture`のタップが帯に吸われるか。吸われるならこの方式は不可。
+
+### 実装
+
+`RunStatusOverlay.show(Context, boolean blocking)`に遮断モードを追加した。`blocking==false`（既定）は従来どおり上端の細い帯・`FLAG_NOT_TOUCHABLE`で、挙動を一切変えていない（PO決定B「安易に外さない」を維持）。`blocking==true`のときだけ、ルートを全画面`FrameLayout`にし、`FLAG_NOT_TOUCHABLE`を外し（`FLAG_NOT_FOCUSABLE`のみ）、`OnTouchListener`で常に`true`を返してすべてのタッチを消費する。背景は半透明（`0x66000000`）にして下のLINE画面を目視できるようにした。
+
+検証用の起動口は`RunReceiver`の新しいアクション`jp.salesanchor.lineexport.RUN_ALL_BLOCKING`で、「次の1回だけ帯を遮断モードにする」one-shotフラグ（`SchedulerStore.setBlockingOverlayOnce`/`consumeBlockingOverlayOnce`）を立てたあと、既存の`RUN_ALL`と**まったく同じ経路**（`UnlockAccessibilityService.requestRunAll(context, "RUN_ALL(遮断テスト)")`）で実行する。フラグは`LineExportFlow`が帯を出す直前に必ずconsumeする（読んだらfalseに戻る）ため、プロセスが死んでもフラグが残り続けない。通常実行（`RUN_ALL`等）はこのフラグを一切立てないため、`overlayBlocking`は必ずfalseになる。
+
+### 安全策
+
+右下の「停止」ボタン（非常口）＋フロー独立の60秒強制撤去タイマー。全画面でタッチを止める窓は、フローが死ぬと操作不能になり得るため、この2つは必須。
+
+- 「停止」ボタン: 遮断モードの帯の右下の隅に置く。押されると即座に帯を撤去し（`remove()`）、押されたことを`escapeTapped`フラグに記録する（`wasEscapeTapped()`で読める）。
+- 強制撤去タイマー: `show()`の中で`Handler#postDelayed`により`BLOCKING_AUTO_REMOVE_MS`（60秒）後に無条件で`remove()`する。`remove()`が先に呼ばれたら`removeCallbacks`で取り消す。フローが途中で死んでも操作不能が続かないようにするための保険。
+
+### 実行ログへの記録
+
+`export`の`phase:"end"`行に次を追加した（既存の`overlayShown`/`overlayRemoved`はそのまま残す）:
+- `overlayBlocking`: 遮断モードで出したときだけ`true`（通常は出さない）
+- `overlayEscapeTapped`: 遮断モードで、かつ利用者が「停止」を押したときだけ`true`（押されなければ出さない）
+
+### 通常実行への影響
+
+通常実行には影響しない（one-shotフラグ＋専用アクション`RUN_ALL_BLOCKING`経由のみ）。既存の帯（`RunStatusOverlay`の非遮断モード）はPO決定Bで「安易に外さない」と決まっているので、挙動を変えていない。
