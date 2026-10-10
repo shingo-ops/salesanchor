@@ -731,12 +731,14 @@ def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_
     assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
 
 
-def test_v102_extracts_once_with_v102_fixes_and_reassign_on(monkeypatch, v101_fakes):
+def test_v102_extracts_once_with_v102_fixes_gemini_trust_and_reassign_off(monkeypatch, v101_fakes):
     spy = MagicMock(return_value=([], {}))
     monkeypatch.setattr(pab, "extract_v101_items", spy)
     _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
     assert spy.call_count == 1
-    assert spy.call_args.kwargs["reassign"] is True and spy.call_args.kwargs["v102_fixes"] is True
+    # 便G：v102 は迷う行の付け直し（A6）を廃止し、Gemini の抽出を採用する（gemini_trust）。v10.1 側の呼び出しは変えない
+    assert spy.call_args.kwargs["reassign"] is False and spy.call_args.kwargs["v102_fixes"] is True
+    assert spy.call_args.kwargs["gemini_trust"] is True
 
 
 def test_v102_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_fakes):

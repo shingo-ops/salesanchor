@@ -15,6 +15,7 @@ import re
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -207,7 +208,7 @@ def parse_v101_response(
     status_entries は価格が none の件の price_line（売り切れの言葉の行）を決めるのに使う（無ければ使わない）。
     keep_rejected（試作版 v102）が True のときだけ、落とす件（形の違反・価格の行なし・価格の行が重複）を捨てずに、
     rejected・gemini_index などを付けて items の後ろに足し、半角「/」でつないだ価格も最初の価格で探す。
-    False のときの出力は変えない。
+    このとき受理した件にも gemini_index（応答の中の位置）を付ける（件の対応付け用。便G）。False のときの出力は変えない。
     """
     lines = raw_text.split("\n")
     objs, whole_errors = v8._load_items(response_text)
@@ -236,7 +237,8 @@ def parse_v101_response(
             rejected.append(_rejected_entry(REJECTED_DUPLICATE, index, obj, message, len(lines), price_line))
             continue
         seen_price_lines.add(price_line)
-        items.append({"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line})
+        accepted = {"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line}
+        items.append({**accepted, "gemini_index": index} if keep_rejected else accepted)
     return ([*items, *rejected] if keep_rejected else items), errors
 
 
@@ -822,7 +824,8 @@ def _product_first_fields(
     )
 
 
-_SCALE_WORDS_RE = re.compile(r"[万千億kK]")
+# 万・千・億はそのまま。k/K は数字の直後（間の空白は可）で、後ろに英字が続かないときだけ単位語（Pack・kg の k は単位語にしない）
+_SCALE_WORDS_RE = re.compile(rf"[万千億]|(?<=[{_DIGITS}])\s*[kK](?![A-Za-z])")
 _NUMBER_RUN_RE = re.compile(rf"[{_DIGITS}][{_DIGITS},]*")
 
 
@@ -850,13 +853,21 @@ def _fill_from_copy(resolved: float | None, copied: object, own_text: str) -> fl
     return number
 
 
+def _numbers_differ(copied: float | None, reread: float | None) -> bool:
+    """Gemini の数と原文の読み直しの数が、両方とも数で違うときだけ True（どちらかが None なら比べない）。"""
+    return copied is not None and reread is not None and Decimal(str(copied)) != Decimal(str(reread))
+
+
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
     name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None, fixed_product_id: int | None = None,
+    gemini_trust: bool = False,
 ) -> dict:
     """chosen_product_id（試作版 v102）：前後の商品の作品で決めた商品。ambiguous の候補にあるときだけ使う。
     fixed_product_id（試作版 v102）：人が決めた商品。照合の結果に関わらずこの商品に決める。
+    gemini_trust（便G・v102 のときだけ）：価格・数量は Gemini の写しの数字をそのまま採る。原文からの読み直し（resolve_price_quantity）は
+    値に使わず、両方とも数で違うときだけ price_source_mismatch / quantity_source_mismatch を付ける（確認役）。
     name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
     shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
@@ -885,7 +896,14 @@ def _extract_one(
         unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
     price_normalized, quantity_normalized = pq.price, pq.quantity
-    if v102:
+    trust_extra: dict = {}
+    if v102 and gemini_trust:
+        price_normalized, quantity_normalized = _single_number(item["price"]), _single_number(item["quantity"])
+        trust_extra = {
+            "price_source_mismatch": _numbers_differ(price_normalized, pq.price),
+            "quantity_source_mismatch": _numbers_differ(quantity_normalized, pq.quantity),
+        }
+    elif v102:
         price_normalized = _fill_from_copy(pq.price, item["price"], own_text)
         quantity_normalized = _fill_from_copy(pq.quantity, item["quantity"], own_text)
     extra = (
@@ -906,7 +924,7 @@ def _extract_one(
         "status": status, "status_effect": effect, "ship": _ship_for(item, roles, shared, lines, ctx),
         "price_normalized": price_normalized, "quantity_normalized": quantity_normalized,
         "price_reasons": list(pq.reasons), "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block, v102=v102),
-        "reassigned": reassigned, "review": review,
+        "reassigned": reassigned, "review": review, **trust_extra,
     }
 
 
@@ -1168,6 +1186,7 @@ _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unkno
 _REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
 _REVIEW_QUANTITY_NOT_IN_TEXT = "quantity_not_in_text"
 _REVIEW_QUANTITY_UNRESOLVED, _REVIEW_PRICE_UNRESOLVED = "quantity_unresolved", "price_unresolved"
+_REVIEW_PRICE_SOURCE_MISMATCH, _REVIEW_QUANTITY_SOURCE_MISMATCH = "price_source_mismatch", "quantity_source_mismatch"
 _POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
 _NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
 
@@ -1201,6 +1220,10 @@ def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[di
     reasons = [{"line": n, "kind": _REVIEW_QUANTITY_NO_NUMBER} for n in no_number if n in owned]
     if row.get("quantity_not_in_text") is True:
         reasons.append({"kind": _REVIEW_QUANTITY_NOT_IN_TEXT, "field": "quantity", "copied": row["raw_quantity"]})
+    if row.get("quantity_source_mismatch") is True:
+        reasons.append({"kind": _REVIEW_QUANTITY_SOURCE_MISMATCH, "field": "quantity", "copied": row["raw_quantity"]})
+    if row.get("price_source_mismatch") is True:
+        reasons.append({"kind": _REVIEW_PRICE_SOURCE_MISMATCH, "field": "price", "copied": row["raw_price"]})
     if row.get("quantity_normalized") is None and _has_digit(row["raw_quantity"]):
         reasons.append({"kind": _REVIEW_QUANTITY_UNRESOLVED, "field": "quantity"})
     if row.get("price_normalized") is None and _has_digit(row["raw_price"]):
@@ -1251,10 +1274,12 @@ def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
     *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
     followup_ref: tuple[str, str] | None = None, soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
+    gemini_trust: bool = False,
 ) -> tuple[list[dict], dict]:
     """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
 
     rejected（落とした件）は通常の処理に入れず、結果の最後に足す。review_reasons のときだけ、要確認の理由を足す。
+    gemini_trust（便G）：F1 を当てず、価格・数量は Gemini の写しを採る（_extract_one）。件に gemini_index があれば結果の行に引き継ぐ。
     """
     rejected_rows = [_rejected_row(r, ctx) for r in rejected or []]
     if not items:
@@ -1262,7 +1287,7 @@ def _extract_v102(
         if review_reasons:
             empty["post_review"] = _post_review_reasons(item_count=len(rejected_rows), flags=empty, owned_lines=set())
         return rejected_rows, empty
-    items, f1_fixes = _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx)
+    items, f1_fixes = ((items, {}) if gemini_trust else _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx))
     roles = assign_roles(items, lines, ctx)
     roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
     name_roles, f5_fixes, footer_lines = _apply_f5(items, roles)
@@ -1275,8 +1300,10 @@ def _extract_v102(
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
             v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i], chosen_product_id=chosen_product_id,
-            fixed_product_id=(fixed_products or {}).get(i),
+            fixed_product_id=(fixed_products or {}).get(i), gemini_trust=gemini_trust,
         )
+        if "gemini_index" in item:
+            one = {**one, "gemini_index": item["gemini_index"]}
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
             one = {**one, "quantity_normalized": None}
@@ -1317,7 +1344,7 @@ def extract_v101_items(
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
     v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
     fixed_products: dict[int, int] | None = None, followup_ref: tuple[str, str] | None = None,
-    soldout_posts: tuple[SoldoutRefPost, ...] | None = None,
+    soldout_posts: tuple[SoldoutRefPost, ...] | None = None, gemini_trust: bool = False,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -1335,6 +1362,8 @@ def extract_v101_items(
     items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
     fixed_products（試作版 v102）：人が決めた商品。受理した件の位置（落とした件を除く、Gemini の順）→ 商品 id。
     None・空なら結果は変わらない。
+    gemini_trust（便G・v102_fixes のときだけ）：Gemini の抽出を採用する。F1（親の見出しを外す）を当てず、価格・数量は Gemini の写しの数字を採り、
+    原文の読み直しとの食い違いは理由で知らせる。迷う行の付け直しをしないかは reassign で呼び出し側が決める。False なら今と同じ。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
@@ -1349,6 +1378,7 @@ def extract_v101_items(
         return _extract_v102(
             adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons,
             fixed_products=fixed_products, followup_ref=followup_ref, soldout_posts=soldout_posts,
+            gemini_trust=gemini_trust,
         )
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}

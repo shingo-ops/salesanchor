@@ -48,3 +48,14 @@ quantity_not_in_text の追加（qty_*）の verify 成功の後にだけ、qu_p
 | dryrun | INSERT 0 1・CHECK_OK 1・ROLLBACK・DRYRUN_OK |
 | commit | INSERT 0 1・CHECK_OK 1・COMMIT・COMMIT_DONE |
 | verify | quantity_unresolved|system|analysis・ROWS|31・VERIFY_DONE |
+
+## 追加: 理由コード4つ（便G）
+price_source_mismatch / quantity_source_mismatch / value_out_of_range / item_mapping_mismatch（すべて system・analysis）。quantity_unresolved の追加（qu_*）の verify 成功（ROWS|31）の後にだけ、gt_precheck（ROWS|31・HAS_NEW|0・PRECHECK_DONE）→ gt_dryrun（INSERTED|4・CHECK_OK 4・ROWS_OK 35・DRYRUN_OK）→ gt_commit（INSERTED|4・CHECK_OK 4・ROWS_OK 35・COMMIT_DONE）→ gt_verify（4行・ROWS|35・VERIFY_DONE）。戻し方 gt_rollback.sql（この4コードだけ戻す）。値は seed_20261011_gemini_trust.sql が正本。DO ブロックは使わず、件数が違えばゼロ除算で失敗する型（kw_commit.sql と同じ）。
+
+| 項目 | 内容 |
+|---|---|
+| 実施日時 | 2026-10-10T23:05Z（本 PR マージ前・Opus 実行、許可チケット psql write） |
+| precheck | TABLE review_reason_codes・ROWS 31・HAS_NEW 0・PRECHECK_DONE |
+| dryrun | INSERTED 4・CHECK_OK 4・ROWS_OK 35・ROLLBACK・DRYRUN_OK |
+| commit | INSERTED 4・CHECK_OK 4・ROWS_OK 35・COMMIT・COMMIT_DONE |
+| verify | 4行（item_mapping_mismatch・price_source_mismatch・quantity_source_mismatch・value_out_of_range、いずれも system・analysis）・ROWS 35・VERIFY_DONE |

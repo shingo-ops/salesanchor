@@ -68,6 +68,9 @@ _PROMPT_HASH_LENGTH = 12
 # 理由コード（このファイルが付けるもの）
 REASON_RESPONSE_UNREADABLE = "response_unreadable"
 REASON_EXTRACT_EXCEPTION = "extract_exception"
+REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
+REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
+MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
 # 人の判断で外す理由（condition_review で状態を決めたとき）
 REASON_CONDITION_UNKNOWN = "condition_unknown"
@@ -244,7 +247,7 @@ def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
     fixed_products: dict[int, int] | None = None,
 ) -> dict:
-    """v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+    """v102 の行に足す v102_items（F2〜F6 あり・F1 と迷う行の付け直しは廃止・価格数量は Gemini の写しを採る。便G）・v102_flags。v101 の欄は書かない。失敗しても止めない。
 
     落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
     ctx は raw_text と supplier_context を持つもの。extract_items は試験の道具（prompt_ab）からの差し替え用（既定は本番と同じ extract_v101_items）。
@@ -257,7 +260,8 @@ def run_v102_pipeline(
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         fixed = {"fixed_products": fixed_products} if fixed_products else {}
         extracted, flags = extract_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters, **fixed
+            items, ctx.raw_text, order=order, reassign=False, v102_fixes=True, review_reasons=True, gemini_trust=True,
+            **masters, **fixed
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
@@ -489,25 +493,36 @@ def _lines_agree(item: dict, row: object) -> bool:
     return bool(set(lines) & set(source))
 
 
-def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
-    """v102 の件を extraction_items の行に対応付ける（gemini_index 順の rows を受ける）。
+def _mapping_mismatch_item() -> dict:
+    """対応が付かない行に書く値（値は空・未解決の状態・理由 item_mapping_mismatch）。"""
+    return {"match_status": MAPPING_MISMATCH_MATCH_STATUS, "review": [{"kind": REASON_ITEM_MAPPING_MISMATCH, "source": SOURCE_SYSTEM}]}
 
-    落とした件（rejected）は自分の gemini_index を持つ。残りの件は Gemini の順を保つので、
-    落とした件を除いた行を gemini_index の昇順に並べたものと、先頭から1対1で対応する。件数が合わなければ _MappingError。
+
+def _items_by_position(v102_items: list[dict]) -> dict[int, dict]:
+    """v102 の件を gemini_index（応答の中の位置）で引く表。位置が整数でない・重複する件は入れない（その行は対応なしになる）。"""
+    seen: dict[int, dict] = {}
+    duplicated: set[int] = set()
+    for item in v102_items:
+        index = item.get("gemini_index")
+        if not _is_plain_int(index):
+            continue
+        if index in seen:
+            duplicated.add(index)
+        seen[index] = item
+    return {i: it for i, it in seen.items() if i not in duplicated}
+
+
+def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
+    """v102 の件を extraction_items の行に gemini_index で対応付ける（rows は gemini_index 昇順）。
+
+    応答は rows の順に作る（_response_from_rows）ので、応答の位置 i の件は rows[i] に当たる。
+    対応する件が無い行・行番号が合わない組は、その行だけ「値は空＋ item_mapping_mismatch」の件にする（他の行は通常どおり）。
     """
-    by_index = {r.gemini_index: r for r in rows}
-    rejected = [it for it in v102_items if it.get("rejected")]
-    accepted = [it for it in v102_items if not it.get("rejected")]
-    rejected_indexes = [it.get("gemini_index") for it in rejected]
-    if len(v102_items) != len(rows) or any(i not in by_index for i in rejected_indexes) or len(set(rejected_indexes)) != len(rejected):
-        raise _MappingError(f"件数が合いません: v102={len(v102_items)} extraction_items={len(rows)}")
-    rest = [r for r in rows if r.gemini_index not in set(rejected_indexes)]
-    if len(rest) != len(accepted):
-        raise _MappingError(f"受理した件の数が合いません: v102={len(accepted)} extraction_items={len(rest)}")
-    pairs = [*zip(rejected, (by_index[i] for i in rejected_indexes), strict=True), *zip(accepted, rest, strict=True)]
-    for item, row in pairs:
-        if not _lines_agree(item, row):
-            raise _MappingError(f"行番号が合いません: gemini_index={row.gemini_index}")
+    by_position = _items_by_position(v102_items)
+    pairs: list[tuple[dict, object]] = []
+    for position, row in enumerate(rows):
+        item = by_position.get(position)
+        pairs.append((item if item is not None and _lines_agree(item, row) else _mapping_mismatch_item(), row))
     return pairs
 
 
@@ -549,7 +564,14 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
     condition = item.get("condition")
     condition_canonical, condition_id, _resolved = _condition_columns(None if condition in (None, "none") else condition, masters)
-    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or [])])
+    quantity = _bounded_number(item.get("quantity_normalized"))
+    price = _bounded_number(item.get("price_normalized"))
+    out_of_range = [
+        REASON_VALUE_OUT_OF_RANGE
+        for raw, bounded in ((item.get("quantity_normalized"), quantity), (item.get("price_normalized"), price))
+        if raw is not None and bounded is None
+    ]
+    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or []), *out_of_range])
     return {
         "product_id": product_id if matched else None, "pid_resolved": bool(matched),
         "pid_basis": f"V102:{item.get('match_status')}"[:_PID_BASIS_MAX],
@@ -557,8 +579,8 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "unit_resolved": unit_id is not None,
         "condition_id": condition_id, "condition_canonical": condition_canonical,
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
-        "quantity_normalized": _bounded_number(item.get("quantity_normalized")),
-        "price_normalized": _bounded_number(item.get("price_normalized")),
+        "quantity_normalized": quantity,
+        "price_normalized": price,
         "note_ja": None, "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
