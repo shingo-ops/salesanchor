@@ -12,11 +12,12 @@ function Where() {
 
 afterEach(() => cleanup());
 
-it("(a) the redirect table is exactly the three expected pairs", () => {
+it("(a) the redirect table is exactly the four expected pairs", () => {
   expect(LEGACY_SUPER_ADMIN_REDIRECTS.map(r => ({ ...r }))).toEqual([
     { from: "/super-admin/tcg-product-master", to: "/super-admin/analysis-rules?section=product-master" },
     { from: "/super-admin/tcg-supplier-quality", to: "/super-admin/analysis-rules?section=accuracy-management" },
     { from: "/super-admin/supplier-master", to: "/super-admin/analysis-rules?section=supplier-master" },
+    { from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" },
   ]);
 });
 

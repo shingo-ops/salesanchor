@@ -37,6 +37,7 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
+from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
@@ -530,7 +531,9 @@ def _condition_columns(canonical: str | None, masters: dict) -> tuple[str, int, 
     return _FLAG_SINGLE, int(fallback), False
 
 
-_RESOLVED_MATCH_STATUSES = (MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP)
+_RESOLVED_MATCH_STATUSES = (
+    MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP, MATCH_STATUS_MATCHED_SOLDOUT_REF,
+)
 
 
 def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) -> dict:
@@ -738,9 +741,42 @@ def load_followup_reference(session: Session, extraction_job_id: str) -> tuple[s
     return str(previous.id), previous.raw_text
 
 
-def masters_with_followup(masters: dict, followup_ref: tuple[str, str] | None) -> dict:
-    """マスタに直前の投稿の参照を足した新しい辞書（run_v102_pipeline が extract_v101_items にそのまま渡す）。None なら元のまま。"""
-    return masters if followup_ref is None else {**masters, "followup_ref": followup_ref}
+SOLDOUT_REF_MAX_GAP_SECONDS = 172800  # 〆の件が参照する過去の投稿との時刻の差の上限＝48時間（design v102-shime-inventory-ref §2-2）
+
+_SOLDOUT_REF_POSTS_SQL = """
+    SELECT id, line_posted_at, raw_text
+    FROM {schema}.source_messages
+    WHERE supplier_channel_id = :channel AND line_posted_at < :posted_at
+      AND line_posted_at >= :posted_at - make_interval(secs => :gap)
+    ORDER BY line_posted_at DESC, id DESC
+"""
+
+
+def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[SoldoutRefPost, ...]:
+    """〆の件が参照する過去の投稿（新しい順）。同じ仕入元の、今の投稿より前で SOLDOUT_REF_MAX_GAP_SECONDS 以内（is_active は問わない）。
+
+    今の投稿の仕入元・時刻が無いとき・該当が無いときは空。読み取りのみ。run_v102_analysis と prompt_ab_recompute が共通で呼ぶ。
+    """
+    schema = analyzer.TCG_SCHEMA
+    current = session.execute(text(_FOLLOWUP_CURRENT_SQL.format(schema=schema)), {"ej": extraction_job_id}).first()
+    if current is None or current.supplier_channel_id is None or current.line_posted_at is None:
+        return ()
+    rows = session.execute(
+        text(_SOLDOUT_REF_POSTS_SQL.format(schema=schema)),
+        {"channel": current.supplier_channel_id, "posted_at": current.line_posted_at, "gap": SOLDOUT_REF_MAX_GAP_SECONDS},
+    ).fetchall()
+    return tuple(SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "") for r in rows)
+
+
+def masters_with_followup(
+    masters: dict, followup_ref: tuple[str, str] | None, soldout_posts: tuple[SoldoutRefPost, ...] = (),
+) -> dict:
+    """マスタに直前の投稿の参照・〆の件が参照する過去の投稿を足した新しい辞書（run_v102_pipeline が extract_v101_items にそのまま渡す）。無ければ元のまま。"""
+    extra = {
+        **({"followup_ref": followup_ref} if followup_ref is not None else {}),
+        **({"soldout_posts": soldout_posts} if soldout_posts else {}),
+    }
+    return {**masters, **extra} if extra else masters
 
 
 def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
@@ -779,7 +815,9 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         decisions = load_v102_decisions(session, [str(r.id) for r in rows])
         fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
         previous_pairs = _load_resolved_pairs(session, extraction_job_id)
-        followup_masters = masters_with_followup(masters, load_followup_reference(session, extraction_job_id))
+        followup_masters = masters_with_followup(
+            masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id)
+        )
         pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
         stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions)
         session.commit()
