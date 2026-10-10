@@ -1,14 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import i18n from "../../i18n";
-import { ROUTE_TITLE_KEYS } from "../../config/routeTitles";
-import type { SoldOutItem } from "../../features/tcg-sold-out/soldOutApi";
-import TcgSoldOutPage from "./TcgSoldOutPage";
-vi.mock("../../lib/api", () => ({ api: { get: vi.fn() }, ApiError: class extends Error {} }));
-vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
+import { api } from "../../../lib/api";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import i18n from "../../../i18n";
+import type { SoldOutItem } from "../../../features/tcg-sold-out/soldOutApi";
+import { SoldOutResultsPanel } from "./SoldOutResultsPanel";
+vi.mock("../../../lib/api", () => ({ api: { get: vi.fn() }, ApiError: class extends Error {} }));
+vi.mock("../../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 const item: SoldOutItem = {
   analysis_result_id: "a1", extraction_item_id: "i1", source_message_id: "s1", supplier_id: null, product_id: null,
   provider: "Supplier", product_title: "", raw_product_name: "Shared", raw_quantity: "", raw_unit: "BOX", raw_price: "1200",
@@ -16,7 +15,7 @@ const item: SoldOutItem = {
   status: "Sold out", source_is_active: false, line_posted_at: null, line_start: 2, line_end: 2,
 };
 const response = { total: 51, offset: 0, limit: 50, as_of: "2026-09-14T00:00:00Z", items: [item] };
-const view = () => render(<MemoryRouter><TcgSoldOutPage /></MemoryRouter>);
+const view = () => render(<MemoryRouter><SoldOutResultsPanel /></MemoryRouter>);
 const params = () => new URL(String(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]), "http://test").searchParams;
 beforeEach(async () => {
   vi.resetAllMocks(); await i18n.changeLanguage("en");
@@ -35,15 +34,15 @@ it("shows saved decisions, blank raw quantity, historical source, absent date an
   expect(screen.getByText(/does not show current stock/)).toBeTruthy();
   expect(screen.getByText("Posting date not recorded")).toBeTruthy();
   const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
-  expect(cells[3].textContent).toBe("BOX");
+  expect(cells[2].textContent).toBe("BOX");
   expect(cells[0].textContent).toContain("(original name)");
-  expect(cells[6].textContent).toBe("Past sources");
-  const detail = document.querySelector("details")!;
-  expect(detail.open).toBe(false);
-  fireEvent.click(screen.getByText("View source", { selector: "summary" }));
-  expect(document.querySelector("mark")?.textContent).toBe("<script>private</script>");
-  expect(detail.querySelector("script")).toBeNull();
-  expect(screen.getByText("Possibly more tomorrow")).toBeTruthy();
+  expect(cells[5].textContent).toBe("Past sources");
+  expect(document.querySelector("mark")).toBeNull();
+  fireEvent.click(screen.getByText("Shared", { selector: "td" }).closest("tr")!);
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByText("<script>private</script>", { selector: "mark" }).textContent).toBe("<script>private</script>");
+  expect(dialog.querySelector("script")).toBeNull();
+  expect(within(dialog).getByText("Possibly more tomorrow")).toBeTruthy();
 });
 it("confirms search once, treats wildcards literally, resets paging and filters history", async () => {
   view(); await screen.findByText("Analysis results: 51");
@@ -82,17 +81,33 @@ it("preserves separate same-name rows, displays null source and invalid span wit
   view(); await screen.findByText("Analysis results: 2");
   expect(screen.getAllByRole("row")).toHaveLength(3);
   expect(screen.getByText("Unknown source state")).toBeTruthy();
-  expect(document.querySelector("mark")).toBeNull();
-  expect(screen.getAllByText(/Invalid source position/)).toHaveLength(2);
+  const rows = screen.getAllByRole("row");
+  for (const row of [rows[1], rows[2]]) {
+    fireEvent.click(row);
+    expect(within(screen.getByRole("dialog")).getAllByText(/Invalid source position/)).toHaveLength(1);
+    expect(document.querySelector("mark")).toBeNull();
+  }
 });
-it("keeps Japanese and English navigation and title aligned and formats date in JST", async () => {
-  expect(ROUTE_TITLE_KEYS["/super-admin/tcg-sold-out"]).toBe("nav.superAdminTcgSoldOut");
+it("has no status or source columns, and opens/closes the source drawer by Enter, Escape and the close button", async () => {
+  view(); await screen.findByText("Analysis results: 51");
+  const headers = screen.getAllByRole("columnheader").map(h => h.textContent);
+  expect(headers).not.toContain("Status");
+  expect(headers).not.toContain("View source");
+  const row = screen.getAllByRole("row")[1];
+  const panel = () => document.querySelector(".comp-drawer-panel")!;
+  fireEvent.keyDown(row, { key: "Enter" });
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(true);
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(false);
+  fireEvent.click(row);
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(true);
+  fireEvent.click(screen.getByTestId("drawer-close"));
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(false);
+});
+it("formats date in JST", async () => {
   vi.mocked(api.get).mockResolvedValue({ ...response, items: [{ ...item, line_posted_at: "2026-09-13T15:30:00Z" }] });
   view(); await screen.findByText("Analysis results: 51");
-  expect(screen.getByRole("heading", { name: "Sold-out rules" })).toBeTruthy();
   expect(screen.getByText(/14\/09\/2026, 00:30/)).toBeTruthy();
-  await act(async () => { await i18n.changeLanguage("ja"); });
-  expect(screen.getByRole("heading", { name: i18n.t("nav.superAdminTcgSoldOut") })).toBeTruthy();
 });
 it("shows zero only after a successful response and allows returning from an empty out-of-range page", async () => {
   vi.mocked(api.get).mockResolvedValueOnce(response).mockResolvedValue({ ...response, total: 3, offset: 50, items: [] });
@@ -104,15 +119,15 @@ it("shows zero only after a successful response and allows returning from an emp
   await waitFor(() => expect(params().get("offset")).toBe("0"));
 });
 
-vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { email: "fixture@example.test" }, signOut: vi.fn() }) }));
-vi.mock("../../contexts/LocaleContext", () => ({ useLocale: () => ({ locale: "en", changeLanguage: vi.fn() }) }));
-vi.mock("../../contexts/ThemeContext", () => ({ useTheme: () => ({ theme: "light", changeTheme: vi.fn() }) }));
-vi.mock("../../contexts/UiPrefsContext", () => ({ useUiPrefs: () => ({ prefs: { show_chat_menu: false, show_sales_menu: false }, loading: false, staffName: "Fixture" }) }));
-vi.mock("../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => false, hasAny: () => false, loading: false }) }));
-vi.mock("../../hooks/useSSE", () => ({ useSSE: () => undefined }));
-vi.mock("../../lib/messages", () => ({ listConversations: async () => ({ conversations: [] }) }));
+vi.mock("../../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { email: "fixture@example.test" }, signOut: vi.fn() }) }));
+vi.mock("../../../contexts/LocaleContext", () => ({ useLocale: () => ({ locale: "en", changeLanguage: vi.fn() }) }));
+vi.mock("../../../contexts/ThemeContext", () => ({ useTheme: () => ({ theme: "light", changeTheme: vi.fn() }) }));
+vi.mock("../../../contexts/UiPrefsContext", () => ({ useUiPrefs: () => ({ prefs: { show_chat_menu: false, show_sales_menu: false }, loading: false, staffName: "Fixture" }) }));
+vi.mock("../../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => false, hasAny: () => false, loading: false }) }));
+vi.mock("../../../hooks/useSSE", () => ({ useSSE: () => undefined }));
+vi.mock("../../../lib/messages", () => ({ listConversations: async () => ({ conversations: [] }) }));
 it("shows analysis management menu item only for SaaS administrators", async () => {
-  const { default: DesktopShell } = await import("../../components/DesktopShell");
+  const { default: DesktopShell } = await import("../../../components/DesktopShell");
   const shell = () => render(<MemoryRouter><DesktopShell /></MemoryRouter>);
   shell();
   const analysisLink = screen.getByRole("link", { name: i18n.t("nav.superAdminAnalysisRules") });

@@ -1,14 +1,19 @@
+/**
+ * SoldOutResultsPanel — 完売の結果パネル（AnalysisRulesPage の内容領域で使用）
+ *
+ * 旧スタンドアロンページ（AY-2i で削除）の内容を PageLayout なしで移設。
+ */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PageLayout } from "../../components/PageLayout";
-import { Button } from "../../components/Button";
-import { Select } from "../../components/Select";
-import { TextField } from "../../components/TextField";
-import { ContentToolbar } from "../../components/ContentToolbar";
-import { DataTable, type DataTableColumn } from "../../components/DataTable";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import { ApiError } from "../../lib/api";
-import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../features/tcg-sold-out/soldOutApi";
+import { Button } from "../../../components/Button";
+import { Select } from "../../../components/Select";
+import { TextField } from "../../../components/TextField";
+import { ContentToolbar } from "../../../components/ContentToolbar";
+import { DataTable, type DataTableColumn } from "../../../components/DataTable";
+import { Drawer } from "../../../components/Drawer";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import { ApiError } from "../../../lib/api";
+import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../../features/tcg-sold-out/soldOutApi";
 
 function SourceDetail({ item }: { item: SoldOutItem }) {
   const { t } = useTranslation();
@@ -17,8 +22,7 @@ function SourceDetail({ item }: { item: SoldOutItem }) {
   const end = item.line_end;
   const valid = start !== null && end !== null && Number.isInteger(start) && Number.isInteger(end)
     && start >= 1 && start <= end && end <= lines.length;
-  return <details>
-    <summary>{t("soldOut.source")}</summary>
+  return <>
     <dl>
       <dt>{t("soldOut.rawName")}</dt><dd>{item.raw_product_name}</dd>
       <dt>{t("soldOut.rawState")}</dt><dd>{item.raw_state}</dd>
@@ -31,10 +35,10 @@ function SourceDetail({ item }: { item: SoldOutItem }) {
         {index < lines.length - 1 ? "\n" : ""}
       </span>) : item.raw_text}
     </pre>
-  </details>;
+  </>;
 }
 
-export default function TcgSoldOutPage() {
+export function SoldOutResultsPanel() {
   const { t, i18n } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
   const [q, setQ] = useState("");
@@ -43,12 +47,13 @@ export default function TcgSoldOutPage() {
   const [offset, setOffset] = useState(0);
   const [reload, setReload] = useState(0);
   const [data, setData] = useState<SoldOutResponse | null>(null);
+  const [sourceItem, setSourceItem] = useState<SoldOutItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState("");
   useEffect(() => {
     if (authLoading || !isSuperAdmin) return;
     let cancelled = false;
-    setLoading(true); setData(null); setErrorKey("");
+    setLoading(true); setData(null); setSourceItem(null); setErrorKey("");
     fetchSoldOut(q, scope, offset).then(result => {
       if (!cancelled) setData(result);
     }).catch((error: unknown) => {
@@ -61,21 +66,20 @@ export default function TcgSoldOutPage() {
     timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
   }).format(new Date(value));
   const columns: DataTableColumn<SoldOutItem>[] = [
-    { key: "product_title", header: t("soldOut.product"), renderCell: item => item.product_title || <>
+    { key: "product_title", header: t("soldOut.product"), width: "250px", renderCell: item => item.product_title || <>
       {item.raw_product_name}<small> {t("soldOut.rawFallback")}</small>
     </> },
     { key: "provider", header: t("soldOut.provider") },
-    { key: "status", header: t("soldOut.status"), renderCell: () => t("soldOut.soldOut") },
     { key: "raw_quantity", header: t("soldOut.quantity"), renderCell: item => `${item.raw_quantity} ${item.raw_unit}`.trim() },
     { key: "raw_price", header: t("soldOut.price") },
     { key: "line_posted_at", header: t("soldOut.posted"), renderCell: item => item.line_posted_at ? date(item.line_posted_at) : t("soldOut.noDate") },
     { key: "source_is_active", header: t("soldOut.sourceState"), renderCell: item => t(item.source_is_active === true
       ? "soldOut.active" : item.source_is_active === false ? "soldOut.history" : "soldOut.unknown") },
-    { key: "source", header: t("soldOut.source"), renderCell: item => <SourceDetail key={item.analysis_result_id} item={item} /> },
   ];
-  if (authLoading) return <PageLayout navKey="nav.superAdminTcgSoldOut">{t("common.loading")}</PageLayout>;
-  if (!isSuperAdmin) return <PageLayout navKey="nav.superAdminTcgSoldOut"><p role="alert">{t("soldOut.denied")}</p></PageLayout>;
-  return <PageLayout navKey="nav.superAdminTcgSoldOut" subtitleKey="soldOut.subtitle">
+  if (authLoading) return <p role="status">{t("common.loading")}</p>;
+  if (!isSuperAdmin) return <p role="alert">{t("soldOut.denied")}</p>;
+  return <>
+    <p>{t("soldOut.subtitle")}</p>
     <ContentToolbar left={<>
       <TextField label={t("soldOut.search")} type="search" value={draft} maxLength={100}
         onChange={event => setDraft(event.target.value)}
@@ -89,7 +93,7 @@ export default function TcgSoldOutPage() {
     {data && <>
       <p><span>{t("soldOut.total", { count: data.total })}</span> · <span>{t("soldOut.asOf", { date: date(data.as_of) })}</span></p>
       <DataTable columns={columns} data={data.items} rowKey={item => item.analysis_result_id}
-        emptyState={t("soldOut.empty")} />
+        emptyState={t("soldOut.empty")} onRowClick={setSourceItem} />
       <div>
         <Button variant="secondary" disabled={offset === 0} onClick={() => setOffset(value => Math.max(0, value - 50))}>{t("soldOut.previous")}</Button>
         <span> {t("soldOut.page", { page: Math.floor(offset / 50) + 1 })} </span>
@@ -97,5 +101,8 @@ export default function TcgSoldOutPage() {
         {offset > 0 && <Button variant="secondary" onClick={() => setOffset(0)}>{t("soldOut.first")}</Button>}
       </div>
     </>}
-  </PageLayout>;
+    <Drawer open={sourceItem !== null} onClose={() => setSourceItem(null)} title={t("soldOut.source")}>
+      {sourceItem && <SourceDetail item={sourceItem} />}
+    </Drawer>
+  </>;
 }

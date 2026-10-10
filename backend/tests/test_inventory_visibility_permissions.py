@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.seed_inventory_data import inventory_visibility_permissions_seed_sql
+
 TEST_PG_URL = os.getenv("TEST_PG_URL")
 
 pytestmark = [
@@ -93,13 +95,9 @@ async def test_inventory_visibility_keys_unique_and_descriptive(engine):
             "public.permissions が未作成。migration 002 を先に適用すること。"
         )
 
-    # 063 の INSERT を実行
-    sql_063 = (MIGRATIONS_DIR / "063_tenant_rbac_extensions.sql").read_text("utf-8")
+    # 063 は権限キーを入れなくなった（ADR-1007 段3c）。試験が自分で入れる
     async with engine.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql_063):
-            s = stmt.strip()
-            if s and "INSERT INTO public.permissions" in s:
-                await conn.exec_driver_sql(s)
+        await conn.exec_driver_sql(inventory_visibility_permissions_seed_sql())
 
     # 4 件の inventory.visibility.* キーを assert
     async with engine.connect() as conn:
@@ -134,14 +132,9 @@ async def test_idempotent_reapply_permissions(engine):
     if not exists:
         pytest.skip("public.permissions が未作成")
 
-    sql_063 = (MIGRATIONS_DIR / "063_tenant_rbac_extensions.sql").read_text("utf-8")
-
-    # 1 回目
+    # 1 回目（063 は権限キーを入れなくなった。試験が自分で入れる。ADR-1007 段3c）
     async with engine.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql_063):
-            s = stmt.strip()
-            if s and "INSERT INTO public.permissions" in s:
-                await conn.exec_driver_sql(s)
+        await conn.exec_driver_sql(inventory_visibility_permissions_seed_sql())
 
     async with engine.connect() as conn:
         count_first = (await conn.execute(text(
@@ -152,10 +145,7 @@ async def test_idempotent_reapply_permissions(engine):
 
     # 2 回目
     async with engine.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql_063):
-            s = stmt.strip()
-            if s and "INSERT INTO public.permissions" in s:
-                await conn.exec_driver_sql(s)
+        await conn.exec_driver_sql(inventory_visibility_permissions_seed_sql())
 
     async with engine.connect() as conn:
         count_second = (await conn.execute(text(

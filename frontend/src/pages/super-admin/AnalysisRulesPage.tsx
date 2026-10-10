@@ -39,6 +39,7 @@ import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel"
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { ExtractionErrorLogPanel } from "./components/ExtractionErrorLogPanel";
+import { SoldOutResultsPanel } from "./components/SoldOutResultsPanel";
 import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import ExtractionPromptConfigTab from "./ExtractionPromptConfigTab";
 import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
@@ -164,6 +165,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "accuracy-management-v7" && <ShadowAccuracyPanel />}
               {activeSection === "needs-review" && <NeedsReviewTabsPanel />}
               {activeSection === "error-log" && <ExtractionErrorLogPanel />}
+              {activeSection === "sold-out-results" && <SoldOutResultsPanel />}
               {activeSection === "product-master" && <ProductMasterPanel />}
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
               {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
