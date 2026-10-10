@@ -89,7 +89,6 @@ import ManagementCenterPage from "./pages/management-center/ManagementCenterPage
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
-import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
 import { LEGACY_SUPER_ADMIN_REDIRECTS } from "./pages/super-admin/legacyPageRedirects";
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
@@ -293,7 +292,6 @@ function App() {
                     }
                   />
 
-                  <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
                   {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
                   {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
