@@ -20,7 +20,7 @@ from app.services import gemini_raw_copy_v102_soldout_ref as sr
 from app.services.extraction_judgement_svc import ProductEntry
 from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, WorkName
 from tests.test_gemini_raw_copy_v102_context_work import _MASTERS, _STATUS
-from tests.test_tcg_work_matching_integration import SCHEMA
+from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
 _SOLD_STATUS = [
@@ -374,6 +374,9 @@ def _job(connection, message_id: str) -> str:
 @pytest.fixture
 def channel(pg):  # noqa: F811
     with pg[0].cursor() as cur:
+        # 在庫の件（source_lines など）を読むので、v102 の列を足す（test_line_analysis_v102_pg.py の v102 fixture と同じ置換）
+        sql = (MIGRATIONS / "20261009_180000_v102_engine_columns.sql").read_text(encoding="utf-8")
+        cur.execute(sql.replace("public.extraction_", f"{SCHEMA}.extraction_"))
         cur.execute(f"SELECT id FROM {SCHEMA}.supplier_channels LIMIT 1")
         return cur.fetchone()[0]
 
