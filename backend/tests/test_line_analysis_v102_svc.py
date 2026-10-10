@@ -329,3 +329,136 @@ def test_masters_with_followup_adds_soldout_posts_only_when_given():
     assert svc.masters_with_followup(masters, None, ()) is masters
     assert svc.masters_with_followup(masters, ("m", "t"), ("p",)) == {"a": 1, "followup_ref": ("m", "t"), "soldout_posts": ("p",)}
     assert svc.masters_with_followup(masters, None, ("p",)) == {"a": 1, "soldout_posts": ("p",)}
+
+
+# ---------------------------------------------------------------------------
+# 〆の完売の相手（便2-2）：状態の引き継ぎと analysis_soldout_extra_targets への書き込み
+# ---------------------------------------------------------------------------
+
+_T = svc.CONDITION_BASIS_SOLDOUT_REF
+_TARGETS = [
+    {"product_id": 42, "condition_id": 11, "ref_message_id": "m1", "ref_line": 1},
+    {"product_id": 42, "condition_id": 18, "ref_message_id": "m1", "ref_line": 2},
+    {"product_id": 43, "condition_id": 11, "ref_message_id": "m1", "ref_line": 3},
+]
+_CANONICALS = {11: "Sealed box", 18: "FLAG_SINGLE"}
+
+
+def _soldout_item(**extra) -> dict:
+    return {"unit": "BOX", "condition": "none", "product_id": 42, "match_status": "matched_soldout_ref", "soldout_targets": _TARGETS, **extra}
+
+
+def test_soldout_targets_overwrite_the_condition_with_the_first_target():
+    item = _soldout_item()
+    values = _values(item)
+    assert values["condition_canonical"] == "FLAG_SINGLE"  # 〆の行の文字からは決まらない
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (11, "Sealed box", "SOLDOUT_REF")
+    assert out is not values and values["condition_id"] == 18 and values["condition_basis"] == ""  # 元は変えない
+
+
+def test_soldout_targets_do_nothing_without_targets_or_when_a_human_decided():
+    values = _values(_soldout_item())
+    plain = {k: v for k, v in _soldout_item().items() if k != "soldout_targets"}
+    assert svc._apply_soldout_targets(values, plain, None, _CANONICALS) is values
+    assert svc._apply_soldout_targets(values, {**plain, "soldout_targets": []}, None, _CANONICALS) is values
+    for decision in (svc.Decisions(product_id=42), svc.Decisions(condition_id=18)):
+        assert svc._apply_soldout_targets(values, _soldout_item(), decision, _CANONICALS) is values
+    ack_only = svc.Decisions(ack_codes=frozenset({"x"}))  # 確認済みだけの判断は商品・状態の判断ではない
+    assert svc._apply_soldout_targets(values, _soldout_item(), ack_only, _CANONICALS)["condition_basis"] == "SOLDOUT_REF"
+
+
+def test_soldout_targets_keep_the_condition_when_the_canonical_is_unknown():
+    values = _values(_soldout_item())
+    assert svc._apply_soldout_targets(values, _soldout_item(), None, {}) is values
+
+
+def test_extra_targets_are_the_targets_that_differ_from_the_written_row():
+    item = _soldout_item()
+    values = svc._apply_soldout_targets(_values(item), item, None, _CANONICALS)
+    assert [(t["product_id"], t["condition_id"]) for t in svc._extra_targets(values, item, None)] == [(42, 18), (43, 11)]
+    unresolved = _values(item)  # 状態を上書きできなかったとき（書いた行は 42・18）、先頭の相手 (42, 11) も表に入る
+    assert [(t["product_id"], t["condition_id"]) for t in svc._extra_targets(unresolved, item, None)] == [(42, 11), (43, 11)]
+
+
+def test_no_extra_targets_when_a_human_decided_or_there_is_no_target():
+    item = _soldout_item()
+    values = _values(item)
+    assert svc._extra_targets(values, item, svc.Decisions(condition_id=11)) == []
+    assert svc._extra_targets(values, {"product_id": 42}, None) == []
+
+
+def test_stock_lines_come_from_source_lines_or_the_line_range():
+    assert svc._stock_lines([3, 5], 1, 9) == frozenset({3, 5})
+    assert svc._stock_lines(None, 2, 4) == frozenset({2, 3, 4})
+    assert svc._stock_lines([], 2, 3) == frozenset({2, 3})
+    assert svc._stock_lines(None, None, 4) == frozenset() and svc._stock_lines(None, 2, None) == frozenset()
+
+
+class _FakeSession:
+    """_write_results が発行する SQL を控える。読み取りは固定の行を返す。"""
+
+    def __init__(self):
+        self.calls: list[tuple[str, dict]] = []
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.calls.append((sql, params or {}))
+        rows = {"FROM public.products": [(42, 3), (43, 3)], "FROM public.conditions": [(11, "Sealed box"), (18, "FLAG_SINGLE")]}
+        found = next((v for k, v in rows.items() if k in sql), [])
+        return SimpleNamespace(fetchall=lambda: found, scalar_one=lambda: f"result-{sum('INSERT INTO' in c[0] and 'analysis_results' in c[0] for c in self.calls)}")
+
+
+def _write(items: list[dict], decisions=None) -> _FakeSession:
+    rows = [SimpleNamespace(id=f"row{i}", gemini_index=i, source_lines=[i + 1]) for i in range(len(items))]
+    pipeline = {"v102_items": [{"lines": [i + 1], **it} for i, it in enumerate(items)], "v102_flags": {}}
+    session = _FakeSession()
+    svc._write_results(session, "job1", pipeline, rows, _MASTERS, {"BOX": 5}, decisions)
+    return session
+
+
+def _statements(session: _FakeSession, needle: str) -> list[dict]:
+    return [params for sql, params in session.calls if needle in sql]
+
+
+def test_write_results_deletes_old_extras_first_and_writes_one_row_per_extra_target():
+    session = _write([_soldout_item()])
+    order = [next(n for n in ("DELETE FROM", "INSERT INTO public.analysis_results", "INSERT INTO public.analysis_soldout_extra_targets") if n in sql)
+             for sql, _ in session.calls if any(n in sql for n in ("DELETE FROM", "INSERT INTO"))]
+    assert order[0] == "DELETE FROM" and order.count("INSERT INTO public.analysis_soldout_extra_targets") == 2
+    upsert = _statements(session, "INSERT INTO public.analysis_results")[0]
+    assert (upsert["condition_id"], upsert["condition_basis"], upsert["product_id"]) == (11, "SOLDOUT_REF", 42)
+    extras = _statements(session, "analysis_soldout_extra_targets (")
+    assert [(e["analysis_result_id"], e["product_id"], e["condition_id"], e["ref_message_id"], e["ref_line"]) for e in extras] == [
+        ("result-1", 42, 18, "m1", 2), ("result-1", 43, 11, "m1", 3)]
+    assert _statements(session, "DELETE FROM")[0] == {"ej": "job1"}
+
+
+def test_write_results_writes_no_extra_rows_when_a_human_decided_or_no_target():
+    decided = _write([_soldout_item()], {"row0": svc.Decisions(condition_id=18)})
+    assert _statements(decided, "analysis_soldout_extra_targets (") == []
+    assert _statements(decided, "INSERT INTO public.analysis_results")[0]["condition_basis"] == svc.CONDITION_BASIS_MANUAL
+    plain = _write([{"unit": "BOX", "product_id": 42, "match_status": "matched"}])
+    assert _statements(plain, "analysis_soldout_extra_targets (") == []
+    assert len(_statements(plain, "DELETE FROM")) == 1  # 古い相手は、相手が無い件でも消す
+
+
+def test_inheriting_the_stock_condition_drops_the_condition_review_reasons_only_when_overwritten():
+    item = _soldout_item(review=[{"kind": "condition_unknown"}, {"kind": "unit_unknown"}, {"kind": "condition_multiple_candidates"}])
+    values = _values(item)
+    assert (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown,condition_multiple_candidates", True)
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["review_reasons"], out["needs_review"]) == ("unit_unknown", True)  # 状態の理由だけ外れる
+    only_condition = _soldout_item(review=[{"kind": "condition_unknown"}])
+    cleared = svc._apply_soldout_targets(_values(only_condition), only_condition, None, _CANONICALS)
+    assert (cleared["review_reasons"], cleared["needs_review"]) == (None, False)  # 空になれば要確認も外れる
+    assert svc._apply_soldout_targets(values, item, None, {}) is values  # 上書きできなければ何も外さない
+
+
+def test_inheriting_an_undecided_flag_condition_keeps_the_review_reasons():
+    item = _soldout_item(review=[{"kind": "condition_unknown"}, {"kind": "unit_unknown"}])
+    values = _values(item)
+    targets = [{**_TARGETS[0], "condition_id": 18}, *_TARGETS[1:]]  # 先頭の相手が FLAG_SINGLE
+    out = svc._apply_soldout_targets(values, {**item, "soldout_targets": targets}, None, _CANONICALS)
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (18, "FLAG_SINGLE", "SOLDOUT_REF")  # 状態はそろえる
+    assert (out["review_reasons"], out["needs_review"]) == (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown", True)

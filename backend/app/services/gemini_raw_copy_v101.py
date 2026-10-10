@@ -40,6 +40,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import (
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    SoldoutRefDecision,
     SoldoutRefPost,
     build_ref_rows,
     decide_soldout_ref,
@@ -1125,25 +1126,41 @@ def _apply_soldout_ref(
     masters: ProductFirstMasters, soldout_posts: tuple[SoldoutRefPost, ...], unit_alias_to_info: dict,
     sold_out_words: list[str], fixed_products: dict[int, int] | None = None,
 ) -> list[dict]:
-    """試作版 v102 の4回目：〆で商品が決まらない件を、同じ仕入元の過去48時間の投稿の在庫の行から決める。決めた件は決めた商品で作り直す。"""
+    """試作版 v102 の4回目：〆で商品が決まらない件を、同じ仕入元の過去48時間の投稿の在庫の行から決める。決めた件は決めた商品で作り直す。
+
+    複数の商品・状態を完売にするとき（便2）は、先頭の相手の商品で作り直し、全ての相手を soldout_targets に残す。
+    """
     if not soldout_targets(extracted):
         return extracted  # 対象の件が無ければ参照行を作らない（照合が重いため）
     result = list(extracted)
     decisions = decide_soldout_ref(
         extracted, lines, build_ref_rows(soldout_posts, masters, sold_out_words),
         units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words, sold_out_words=sold_out_words,
+        posts=soldout_posts, works=masters.work_names,
+        product_works={e.id: e.work_id for e in masters.product_entries if e.work_id is not None},
     )
     for i, decision in decisions.items():
         if i in (fixed_products or {}):
             continue  # 人が決めた商品がある件は、自動で決め直さない（人の判断が優先）
-        result[i] = {
-            **build(i, decision.product_id),
-            "match_status": MATCH_STATUS_MATCHED_SOLDOUT_REF,
-            "product_soldout_ref": {
-                "ref_message_id": decision.ref_message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
-            },
-        }
+        result[i] = _soldout_ref_row(build(i, decision.product_id), decision)
     return result
+
+
+def _soldout_ref_row(built: dict, decision: SoldoutRefDecision) -> dict:
+    """決めた商品で作り直した件に、根拠（product_soldout_ref）と、あれば完売の相手の全て（soldout_targets）を足す。"""
+    row = {
+        **built,
+        "match_status": MATCH_STATUS_MATCHED_SOLDOUT_REF,
+        "product_soldout_ref": {
+            "ref_message_id": decision.ref_message_id, "ref_line": decision.ref_line, "tokens": list(decision.tokens),
+        },
+    }
+    if decision.targets:
+        row["soldout_targets"] = [
+            {"product_id": t.product_id, "condition_id": t.condition_id, "ref_message_id": t.ref_message_id, "ref_line": t.ref_line}
+            for t in decision.targets
+        ]
+    return row
 
 
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
