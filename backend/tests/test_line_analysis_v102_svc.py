@@ -68,9 +68,9 @@ def test_get_engine_warns_for_unknown_value(monkeypatch, caplog):
 
 
 def test_prompt_version_has_v102_prefix_key_and_12_hex_of_sha256():
-    version = svc.build_prompt_version("raw_copy_v101_f_c", "本文")
+    version = svc.build_prompt_version("raw_copy_v101_f_ct", "本文")
     prefix, key, digest = version.split(":")
-    assert (prefix + ":", key) == (svc.V102_PROMPT_VERSION_PREFIX, "raw_copy_v101_f_c") and len(digest) == 12
+    assert (prefix + ":", key) == (svc.V102_PROMPT_VERSION_PREFIX, "raw_copy_v101_f_ct") and len(digest) == 12
     assert len(version) <= 50  # extraction_jobs.prompt_version は VARCHAR(50)
     assert svc.is_v102_prompt_version(version) and not svc.is_v102_prompt_version("raw-extraction-v6-rawcode-p1")
     assert not svc.is_v102_prompt_version(MagicMock()) and not svc.is_v102_prompt_version(None)
@@ -83,7 +83,7 @@ def test_legacy_supplier_fields_are_removed_without_changing_the_original():
 
 
 def test_prompt_ab_keeps_the_moved_names():
-    assert pab.V102_PROMPT == svc.V102_PROMPT_KEY == "raw_copy_v101_f_c"
+    assert pab.V102_PROMPT == svc.V102_PROMPT_KEY == "raw_copy_v101_f_ct"
     assert pab.load_prompt_from_db is svc.load_prompt_from_db and pab.LEGACY_SUPPLIER_FIELDS is svc.LEGACY_SUPPLIER_FIELDS
 
 
@@ -278,7 +278,7 @@ def test_unreadable_responses_have_no_items():
 
 def test_analyze_extraction_job_hands_v102_jobs_to_v102_analysis(monkeypatch):
     session = MagicMock()
-    session.execute.return_value.scalar.return_value = "v102:raw_copy_v101_f_c:abcdef123456"
+    session.execute.return_value.scalar.return_value = "v102:raw_copy_v101_f_ct:abcdef123456"
     called = MagicMock(return_value={"total": 1})
     monkeypatch.setattr(svc, "run_v102_analysis", called)
     assert analyzer.analyze_extraction_job(session, "job-1") == {"total": 1}

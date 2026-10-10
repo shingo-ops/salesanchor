@@ -48,9 +48,9 @@ logger = logging.getLogger(__name__)
 ENGINE_ENV = "LINE_ANALYSIS_ENGINE"
 ENGINE_V6 = "v6"
 ENGINE_V102 = "v102"
-V102_ENGINE_VERSION = "v102-f_c"  # analysis_results.engine_version
+V102_ENGINE_VERSION = "v102-f_ct"  # analysis_results.engine_version
 V102_THINKING_LEVEL = "high"  # PO 採用 2026-10-08（試作版の試験と同じ）
-V102_PROMPT_KEY = "raw_copy_v101_f_c"  # public.extraction_prompt_config の prompt_key（既定の指示書）
+V102_PROMPT_KEY = "raw_copy_v101_f_ct"  # public.extraction_prompt_config の prompt_key（既定の指示書）
 V102_PROMPT_VERSION_PREFIX = "v102:"  # extraction_jobs.prompt_version の先頭。再解析はこれで v6 / v102 を見分ける
 V102_PROMPT = V102_PROMPT_KEY  # 試作版 prompt_ab が使ってきた名前
 
