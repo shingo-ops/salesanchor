@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { TextFieldControl } from "./TextField";
 
 export interface CountryOption {
   code: string;
@@ -87,9 +88,8 @@ export function CountryCombobox({
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <div style={{ position: "relative" }}>
-        <input
+        <TextFieldControl
           id={id}
-          className="input"
           type="text"
           disabled={disabled}
           required={required}

@@ -87,15 +87,11 @@ import AdminHubPage from "./pages/admin/AdminHubPage";
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
-import TcgProductMasterPage from "./pages/super-admin/TcgProductMasterPage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
-import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
-import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
-import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
+import { LEGACY_SUPER_ADMIN_REDIRECTS } from "./pages/super-admin/legacyPageRedirects";
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
-import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
 import SupplierExtractionRulesPage from "./pages/super-admin/SupplierExtractionRulesPage";
 import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
 import UnitImportPage from "./pages/super-admin/UnitImportPage";
@@ -296,23 +292,13 @@ function App() {
                     }
                   />
 
-                  <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
-                  <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
+                  {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
+                  {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
                   {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
                   <Route
                     path="/super-admin/fx-rate"
                     element={<FxRatePage />}
-                  />
-                  {/* MIG-04 Phase 4: 並行運用比較レポート (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/tcg-parallel-report"
-                    element={<TcgParallelReportPage />}
-                  />
-                  {/* PARITY-03 第2段階: 仕入元品質サマリー (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/tcg-supplier-quality"
-                    element={<TcgSupplierQualityPage />}
                   />
                   {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
                   <Route
@@ -328,10 +314,6 @@ function App() {
                   <Route
                     path="/super-admin/analysis-rules"
                     element={<AnalysisRulesPage />}
-                  />
-                  <Route
-                    path="/super-admin/supplier-master"
-                    element={<SupplierMasterPage />}
                   />
                   <Route
                     path="/super-admin/supplier-extraction-rules"

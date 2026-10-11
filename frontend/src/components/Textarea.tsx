@@ -6,9 +6,11 @@
  *
  * TypeScript の型で規格外 size をコンパイルエラーにする。
  * 実画面への展開は Task 2E で行う。
+ *
+ * TextareaControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AX）。
  */
 
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import type { TextareaHTMLAttributes } from "react";
 import "./FormField.css";
 
@@ -24,6 +26,37 @@ interface TextareaOwnProps {
 
 export type TextareaProps = TextareaOwnProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, keyof TextareaOwnProps>;
+
+/** 用途別の種類（design.md §AX-2）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
+export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule";
+
+/** 文字の用途（design.md §Z :817 / §AX-2b）。code は等幅フォント。 */
+export type TextareaTextStyle = "normal" | "code";
+
+export type TextareaControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> & {
+  textStyle?: TextareaTextStyle;
+} &
+  (
+    | { variant?: "standard"; size?: TextareaSize }
+    | { variant: Exclude<TextareaVariant, "standard">; size?: never }
+  );
+
+export const TextareaControl = forwardRef<HTMLTextAreaElement, TextareaControlProps>(
+  function TextareaControl({ size = "md", variant = "standard", textStyle = "normal", className, id, ...rest }, ref) {
+    const controlClass = [
+      "comp-field__textarea",
+      size !== "md" ? `comp-field__textarea--${size}` : "",
+      variant !== "standard" ? `comp-textarea--${variant}` : "",
+      textStyle === "code" ? "comp-textarea--code" : "",
+      className ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return <textarea ref={ref} id={id} className={controlClass} {...rest} />;
+  },
+);
+TextareaControl.displayName = "TextareaControl";
 
 export function Textarea({
   label,
@@ -60,7 +93,7 @@ export function Textarea({
           )}
         </label>
       )}
-      <textarea id={fieldId} className="comp-field__textarea" {...rest} />
+      <TextareaControl id={fieldId} {...rest} />
       {(error != null || helperText != null) && (
         <p
           className={`comp-field__hint${error != null ? " comp-field__hint--error" : ""}`}

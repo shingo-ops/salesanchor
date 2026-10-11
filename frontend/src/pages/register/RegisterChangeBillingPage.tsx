@@ -14,6 +14,7 @@ import i18n from "../../i18n";
 import { COUNTRIES } from "../../constants/countries";
 import { CountryCombobox } from "./CountryCombobox";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface TokenInfo {
   valid: boolean;
@@ -250,9 +251,8 @@ export default function RegisterChangeBillingPage() {
               <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
                 {t("registration.billingNameHint")}
               </p>
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingDisplayName}
                 onChange={(e) => setBillingDisplayName(e.target.value)}
                 required
@@ -281,9 +281,8 @@ export default function RegisterChangeBillingPage() {
                   id="billing-dial"
                 />
               </div>
-              <input
+              <TextFieldControl
                 type="tel"
-                className="input"
                 style={{ flex: 1 }}
                 value={address.telephone_number}
                 onChange={(e) => updateAddress("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
@@ -295,9 +294,8 @@ export default function RegisterChangeBillingPage() {
             {/* 3. Email Address */}
             <label>
               {t("registration.emailAddress")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="email"
-                className="input"
                 value={address.email}
                 onChange={(e) => updateAddress("email", e.target.value)}
                 required
@@ -310,9 +308,8 @@ export default function RegisterChangeBillingPage() {
               <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
                 {t("registration.paymentRecipientNameHint")}
               </p>
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={paymentRecipientName}
                 onChange={(e) => setPaymentRecipientName(e.target.value)}
               />
@@ -321,9 +318,8 @@ export default function RegisterChangeBillingPage() {
             {/* 5. Tax ID (optional) */}
             <label>
               {t("registration.taxIdFull")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.tax_id}
                 onChange={(e) => updateAddress("tax_id", e.target.value)}
               />
@@ -332,9 +328,8 @@ export default function RegisterChangeBillingPage() {
             {/* 6. Address Line 1 */}
             <label>
               {t("registration.addressLine1")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.address_line_1}
                 onChange={(e) => updateAddress("address_line_1", e.target.value)}
                 required
@@ -344,9 +339,8 @@ export default function RegisterChangeBillingPage() {
             {/* 7. Address Line 2 */}
             <label>
               {t("registration.addressLine2Hint")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.address_line_2}
                 onChange={(e) => updateAddress("address_line_2", e.target.value)}
               />
@@ -355,9 +349,8 @@ export default function RegisterChangeBillingPage() {
             {/* 8. City */}
             <label>
               {t("registration.city")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.city}
                 onChange={(e) => updateAddress("city", e.target.value)}
               />
@@ -366,9 +359,8 @@ export default function RegisterChangeBillingPage() {
             {/* 9. State */}
             <label>
               {t("registration.state")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.state}
                 onChange={(e) => updateAddress("state", e.target.value)}
               />
@@ -377,9 +369,8 @@ export default function RegisterChangeBillingPage() {
             {/* 10. ZIP */}
             <label>
               {t("registration.zip")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.zip}
                 onChange={(e) => updateAddress("zip", e.target.value)}
               />

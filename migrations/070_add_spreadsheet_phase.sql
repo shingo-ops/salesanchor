@@ -71,10 +71,11 @@ BEGIN
     -- 既存 CHECK の名前は実装依存なので、無ければ追加のみ実施
 END $tenant_settings_cols$;
 
--- === 2. 既存テナント全件に対して seed (デフォルト Phase A) ===
-INSERT INTO public.tenant_settings (tenant_id, spreadsheet_phase)
-SELECT id, 'A' FROM public.tenants
-ON CONFLICT (tenant_id) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- tenant_settings への、既存テナントの phase 'A' の行の seed を外した（本番は行の無いテナント 0、phase は B）。
+-- 新しいテナントの作成は、tenant_settings の行を入れる（backend/app/services/tenant.py）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: tenant_settings seed removed (070)'; END $$;
 
 -- === 3. updated_at 自動更新 trigger（PostgreSQL 標準パターン） ===
 CREATE OR REPLACE FUNCTION public.tenant_settings_touch_updated_at()
@@ -90,15 +91,9 @@ CREATE TRIGGER trg_tenant_settings_touch_updated_at
     BEFORE UPDATE ON public.tenant_settings
     FOR EACH ROW EXECUTE FUNCTION public.tenant_settings_touch_updated_at();
 
--- === 4. 監査ログ用の権限 seed (phase.switch) ===
--- 中央 admin (require_super_admin) のみが切替可能。
--- role_permissions では割当てない（is_super_admin フラグで二重ガード）。
-INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-    ('phase.switch',
-        'tenant_settings', 'switch_phase',
-        'スプレッドシート並走 Phase の切替 (A / B / C)。中央 admin 専用 (is_super_admin)',
-        '在庫運用')
-ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- phase.switch 権限の seed を外した（本番に入っている）。
+-- 元の内容は git history で参照可能。
 
 -- === 5. 完了ログ ===
 DO $log$

@@ -54,3 +54,7 @@
 - `scripts/migrate_6roles_stage_a.py`: 新規作成
 - `migrations/`: 変更なし（スクリプト方式）
 - `deploy.yml`: 変更なし
+
+## 追補（2026-10-10）
+
+システム管理者ロールは運営者用。super admin（public.users.is_super_admin）以外には一覧に見せず、付けさせない。見分けは roles.system_key='admin'（backend/app/auth/system_roles.py の TENANT_HIDDEN_SYSTEM_KEYS）。ロール自体は削除しない。PO 決定 2026-10-10。

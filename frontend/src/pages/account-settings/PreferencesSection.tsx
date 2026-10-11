@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLocale } from "../../contexts/LocaleContext";
+import { SelectControl } from "../../components/Select";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -35,7 +36,8 @@ export default function PreferencesSection() {
         <label htmlFor="language-select" className="account-settings-pref-label">
           {t("accountSettings.languageLabel")}
         </label>
-        <select
+        <SelectControl
+          size="sm"
           id="language-select"
           value={locale}
           onChange={(e) => changeLanguage(e.target.value)}
@@ -43,7 +45,7 @@ export default function PreferencesSection() {
         >
           <option value="ja">{t("language.ja")}</option>
           <option value="en">{t("language.en")}</option>
-        </select>
+        </SelectControl>
       </div>
     </section>
   );

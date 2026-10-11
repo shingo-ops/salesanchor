@@ -23,7 +23,10 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
+import { SelectControl } from "./Select";
 import { Button } from "./Button";
+import { TextareaControl } from "./Textarea";
+import { TextFieldControl } from "./TextField";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -323,7 +326,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.staffTx.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -333,7 +336,7 @@ export default function PurchaseDetailPanel({
               ))}
               <div className="form-group">
                 <label>{t("purchase.purchaseDate")}</label>
-                <input
+                <TextFieldControl
                   type="date"
                   value={form.purchase_date}
                   onChange={(ev) => setField("purchase_date", ev.target.value)}
@@ -356,7 +359,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.supplier.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type={f.key === "supplier_url" ? "url" : "text"}
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -380,7 +383,7 @@ export default function PurchaseDetailPanel({
               {NUMBER_FIELDS.amounts.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="number"
                     min="0"
                     step={f.step}
@@ -407,7 +410,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.shipping.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -421,7 +424,8 @@ export default function PurchaseDetailPanel({
           {/* セクション: ステータス */}
           <div className="form-group">
             <label>{t("common.status")}</label>
-            <select
+            <SelectControl
+              fullWidth
               value={form.purchase_status}
               onChange={(ev) => setField("purchase_status", ev.target.value)}
               data-testid="pur-input-purchase_status"
@@ -431,13 +435,13 @@ export default function PurchaseDetailPanel({
                   {t(opt.labelKey)}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </div>
 
           {/* メモ */}
           <div className="form-group">
             <label>{t("purchase.purchaseNote")}</label>
-            <textarea
+            <TextareaControl
               value={form.purchase_note}
               onChange={(ev) => setField("purchase_note", ev.target.value)}
               data-testid="pur-input-purchase_note"

@@ -364,7 +364,7 @@ test.describe("Scene 1: Dashboard Overview", () => {
     });
 
     // 期間プルダウンが描画される
-    const periodSelect = page.locator(".page-header-select");
+    const periodSelect = page.locator(".comp-select--header");
     await expect(periodSelect).toBeVisible();
 
     // 固定エリア: 目標 / フォローアップ（Sprint 4: 着地予測は統合カードに移動）

@@ -19,6 +19,7 @@ import { HeaderButton } from "../../components/HeaderButton";
 import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { TextareaControl } from "../../components/Textarea";
 
 interface ConditionAlias {
   id: number;
@@ -336,20 +337,14 @@ export default function ConditionsPage() {
       </div>
       <div className="form-group" style={{ gridColumn: "1 / -1" }}>
         <label className="field-label">{t(`${f}.fields.searchKw`)}</label>
-        {/* ui-allow: multi-line keyword input; TextField does not support textarea variant (#3594) */}
-        <textarea
-          className="field field-h-md"
-          style={{ height: "80px", resize: "vertical", width: "100%" }}
+        <TextareaControl
           value={form.search_kw}
           onChange={e => setForm({ ...form, search_kw: e.target.value })}
         />
       </div>
       <div className="form-group" style={{ gridColumn: "1 / -1" }}>
         <label className="field-label">{t(`${f}.fields.excludeKw`)}</label>
-        {/* ui-allow: multi-line keyword input; TextField does not support textarea variant (#3594) */}
-        <textarea
-          className="field field-h-md"
-          style={{ height: "80px", resize: "vertical", width: "100%" }}
+        <TextareaControl
           value={form.exclude_kw}
           onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
         />

@@ -41,22 +41,13 @@ COMMENT ON COLUMN public.users.is_super_admin IS
     'true のユーザーのみ /super-admin/masters 配下の中央マスタ編集にアクセス可能。'
     'テナント admin (users.role=''admin'') とは独立、本フラグは小数（運用者のみ）。';
 
--- ============================================================================
--- 初期 super_admin の付与
---
--- 運用上、初期 super_admin は以下 2 名想定（spec の登場人物より）:
---   - shingo@treasureislandjp.com (しんごさん、リポ/Claudeアカウント owner)
---   - その他 Jarvis 運用 admin (ひとしさん相当、メールは VPS 側で確定後設定)
---
--- 安全側でハードコードはせず、特定の email にだけ flag を立てる
--- （存在しないユーザーは no-op）。
--- ============================================================================
-UPDATE public.users
-    SET is_super_admin = TRUE
-    WHERE email IN (
-        'shingo@treasureislandjp.com'
-        -- 注: ひとしさん相当の email は別途手動 SQL で追加（spec.md Notes 参照）
-    );
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 初期 super_admin の付与（users.is_super_admin を TRUE に戻す UPDATE）を外した。
+-- super_admin は、運用者（PO と担当エンジニア）だけの権限。デプロイで書き戻さない（人が外しても戻る状態をやめる）。
+-- 新しい環境での付与は、PO の合意のもとで、手動の SQL（記録を残す）で行う。
+-- 手順: docs/handoff/neutralize-value-migrations-3c/super-admin-bootstrap.md
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: initial super_admin grant removed (064)'; END $$;
 
 -- ============================================================================
 -- Rollback（緊急時のみ手動実行）:

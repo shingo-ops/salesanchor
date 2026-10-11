@@ -100,73 +100,10 @@ async def backfill_schema(conn, schema: str) -> dict[str, int | dict[str, int]]:
 
 
 async def main() -> None:
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        logger.error("DATABASE_URL not set")
-        sys.exit(1)
-    if url.startswith("postgresql://"):
-        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-    engine = create_async_engine(url, echo=False)
-
-    report = {
-        "started_at": datetime.now(timezone.utc).isoformat(),
-        "tenants": [],
-        "summary": {
-            "scanned": 0,
-            "normalized": 0,
-            "nulled": 0,
-            "unchanged": 0,
-        },
-        "report_path": str(REPORT_PATH),
-    }
-
-    try:
-        logger.info("=== lead.country backfill 開始 ===")
-        async with engine.connect() as conn:
-            rows = await conn.execute(
-                text(
-                    "SELECT id, tenant_code FROM public.tenants "
-                    "WHERE is_active = true ORDER BY id"
-                )
-            )
-            tenants = [(row.id, row.tenant_code) for row in rows]
-        logger.info("対象テナント: %d", len(tenants))
-
-        for tid, tenant_code in tenants:
-            schema = f"tenant_{tid:03d}"
-            counts = {"scanned": 0, "normalized": 0, "nulled": 0, "unchanged": 0, "unresolved": {}}
-            try:
-                async with engine.begin() as conn:
-                    counts = await backfill_schema(conn, schema)
-                report["tenants"].append({
-                    "tenant_id": tid,
-                    "tenant_code": tenant_code,
-                    "schema": schema,
-                    **counts,
-                })
-                for key in ("scanned", "normalized", "nulled", "unchanged"):
-                    report["summary"][key] += int(counts[key])  # type: ignore[index]
-                unresolved = counts.get("unresolved", {})
-                unresolved_text = ", ".join(f"{k}={v}" for k, v in unresolved.items()) if unresolved else "none"
-                logger.info(
-                    "%s (tenant_code=%s): scanned=%s normalized=%s nulled=%s unchanged=%s unresolved=%s",
-                    schema,
-                    tenant_code,
-                    counts["scanned"],
-                    counts["normalized"],
-                    counts["nulled"],
-                    counts["unchanged"],
-                    unresolved_text,
-                )
-            except Exception as exc:
-                logger.error("%s: FAILED — %s", schema, exc)
-                raise
-
-        REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-        logger.info("backfill report written to %s", REPORT_PATH)
-        logger.info("=== lead.country backfill 完了 ===")
-    finally:
-        await engine.dispose()
+    # NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+    # 値の書き込みを外した。run_py が呼ぶ入口を、何もしない形にした。
+    # 元の内容は git history で参照可能。backfill_schema は試験が import するため、関数として残す。
+    print("ADR-1007 neutralized: migrate_20260621_020000_backfill_lead_country.py no longer writes values")
 
 
 if __name__ == "__main__":

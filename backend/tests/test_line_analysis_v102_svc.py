@@ -1,0 +1,525 @@
+"""LINE解析の本番エンジン v102（services/line_analysis_v102_svc.py）の単体試験。Gemini は呼ばない。DB は使わない。
+
+応答・原文はすべて架空。PostgreSQL が要る試験は test_line_analysis_v102_pg.py。
+"""
+from __future__ import annotations
+
+import json
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+
+import app.services.line_analysis_v102_svc as svc
+import app.tools.prompt_ab as pab
+from app.services import tcg_analyzer_svc as analyzer
+from app.tasks import tcg_extraction as task
+
+_RAW = "商品A\n3BOX@1,000円\n商品B\n2BOX@2,000円"
+_CTX = SimpleNamespace(raw_text=_RAW, supplier_context=None, knowledge_links=None, new_system_rules=None)
+_MASTERS = {
+    "cond_entries": [
+        {"cond_id": "11", "code": "CN0003", "canonical": "Sealed box", "priority": 4, "app_kubun": "箱系",
+         "search_kw": "未開封", "exclude_kw": "", "match_type": "KEYWORD", "effect": "OUTPUT"},
+        {"cond_id": "18", "code": "CN0008", "canonical": "FLAG_SINGLE", "priority": 1, "app_kubun": "枚系,単位不明",
+         "search_kw": "単品", "exclude_kw": "", "match_type": "KEYWORD", "effect": "OUTPUT"},
+    ],
+    "cond_canonical_to_uuid": {"Sealed box": "11", "FLAG_SINGLE": "18"},
+    "status_entries": [],
+    "unit_alias_to_info": {"BOX": ("BOX", "箱系")},
+}
+
+
+def _response(items: list[dict]) -> str:
+    return json.dumps({"items": items}, ensure_ascii=False)
+
+
+# ---------------------------------------------------------------------------
+# get_engine
+# ---------------------------------------------------------------------------
+
+
+def test_get_engine_is_v6_when_unset(monkeypatch):
+    monkeypatch.delenv(svc.ENGINE_ENV, raising=False)
+    assert svc.get_engine() == svc.ENGINE_V6
+
+
+@pytest.mark.parametrize("value", ["", "v6", "V102", "x", " "])
+def test_get_engine_is_v6_for_empty_v6_and_unknown_values(monkeypatch, value):
+    monkeypatch.setenv(svc.ENGINE_ENV, value)
+    assert svc.get_engine() == svc.ENGINE_V6
+
+
+def test_get_engine_is_v102_only_for_exact_v102(monkeypatch):
+    monkeypatch.setenv(svc.ENGINE_ENV, "v102")
+    assert svc.get_engine() == svc.ENGINE_V102
+
+
+def test_get_engine_warns_for_unknown_value(monkeypatch, caplog):
+    monkeypatch.setenv(svc.ENGINE_ENV, "x")
+    with caplog.at_level("WARNING"):
+        svc.get_engine()
+    assert any("x" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# 小さな部品
+# ---------------------------------------------------------------------------
+
+
+def test_prompt_version_has_v102_prefix_key_and_12_hex_of_sha256():
+    version = svc.build_prompt_version("raw_copy_v101_f_ct", "本文")
+    prefix, key, digest = version.split(":")
+    assert (prefix + ":", key) == (svc.V102_PROMPT_VERSION_PREFIX, "raw_copy_v101_f_ct") and len(digest) == 12
+    assert len(version) <= 50  # extraction_jobs.prompt_version は VARCHAR(50)
+    assert svc.is_v102_prompt_version(version) and not svc.is_v102_prompt_version("raw-extraction-v6-rawcode-p1")
+    assert not svc.is_v102_prompt_version(MagicMock()) and not svc.is_v102_prompt_version(None)
+
+
+def test_legacy_supplier_fields_are_removed_without_changing_the_original():
+    original = {**dict.fromkeys(svc.LEGACY_SUPPLIER_FIELDS, "v"), "extraction_default_unit": "BOX"}
+    assert svc.without_legacy_supplier_fields(original) == {"extraction_default_unit": "BOX"}
+    assert set(svc.LEGACY_SUPPLIER_FIELDS) <= set(original) and svc.without_legacy_supplier_fields(None) is None
+
+
+def test_prompt_ab_keeps_the_moved_names():
+    assert pab.V102_PROMPT == svc.V102_PROMPT_KEY == "raw_copy_v101_f_ct"
+    assert pab.load_prompt_from_db is svc.load_prompt_from_db and pab.LEGACY_SUPPLIER_FIELDS is svc.LEGACY_SUPPLIER_FIELDS
+
+
+def test_pipeline_gives_the_same_result_as_prompt_ab_row_fields():
+    response = _response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"},
+                          {"lines": [3], "price": "9,999円", "quantity": "1"},
+                          {"lines": [3, 4], "price": "2,000円", "quantity": "2"}])
+    assert svc.run_v102_pipeline(response, _CTX, _MASTERS) == pab._v102_row_fields(response, _CTX, _MASTERS)
+
+
+# ---------------------------------------------------------------------------
+# 件の対応付け
+# ---------------------------------------------------------------------------
+
+
+def _row(index: int | None, source_lines: list[int] | None = None):
+    return SimpleNamespace(id=f"id{index}", gemini_index=index, source_lines=source_lines)
+
+
+def _is_mismatch(item: dict) -> bool:
+    return [r["kind"] for r in item.get("review", [])] == [svc.REASON_ITEM_MAPPING_MISMATCH]
+
+
+def test_map_to_rows_pairs_each_row_with_the_item_of_the_same_gemini_index():
+    # 便G：受理した件も落とした件も gemini_index（応答の位置）で行 rows[i] に当てる。順番は問わない
+    items = [{"name": "c", "gemini_index": 2}, {"name": "a", "gemini_index": 0}, {"rejected": "price_not_in_lines", "gemini_index": 1}]
+    rows = [_row(0), _row(1), _row(2)]
+    pairs = {row.gemini_index: item.get("name") or "rej" for item, row in svc._map_to_rows(items, rows)}
+    assert pairs == {0: "a", 1: "rej", 2: "c"}
+
+
+@pytest.mark.parametrize("items", [
+    [{"name": "a", "gemini_index": 0}],  # 件が足りない：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"name": "b"}],  # gemini_index が無い件：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"rejected": "x", "gemini_index": 7}],  # 範囲外の gemini_index：行1だけ対応なし
+    [{"name": "a", "gemini_index": 0}, {"rejected": "x", "gemini_index": 1}, {"rejected": "x", "gemini_index": 1}],  # 重複：行1だけ
+])
+def test_map_to_rows_marks_only_the_unmatched_row(items):
+    pairs = svc._map_to_rows(items, [_row(0), _row(1)])
+    assert len(pairs) == 2 and pairs[0][0]["name"] == "a" and _is_mismatch(pairs[1][0])
+
+
+def test_map_to_rows_does_not_raise_when_there_are_more_items_than_rows():
+    items = [{"name": "a", "gemini_index": 0}, {"name": "b", "gemini_index": 1}, {"name": "c", "gemini_index": 2}]
+    assert [item["name"] for item, _ in svc._map_to_rows(items, [_row(0), _row(1)])] == ["a", "b"]
+
+
+def test_map_to_rows_marks_both_rows_when_items_are_swapped_and_leaves_the_rest():
+    items = [{"name": "a", "price_line": 2, "lines": [1, 2], "gemini_index": 0},
+             {"name": "b", "price_line": 4, "lines": [3, 4], "gemini_index": 1},
+             {"name": "c", "price_line": 6, "lines": [5, 6], "gemini_index": 2}]
+    rows = [_row(0, [3, 4]), _row(1, [1, 2]), _row(2, [5, 6])]
+    pairs = svc._map_to_rows(items, rows)
+    assert [_is_mismatch(item) for item, _ in pairs] == [True, True, False] and pairs[2][0]["name"] == "c"
+
+
+def test_map_to_rows_passes_when_f1_removed_a_heading_line_from_lines():
+    items = [{"name": "a", "price_line": 3, "lines": [2, 3], "gemini_index": 0},
+             {"name": "b", "price_line": 5, "lines": [4, 5], "gemini_index": 1}]
+    rows = [_row(0, [1, 2, 3]), _row(1, [1, 4, 5])]
+    assert [item["name"] for item, _ in svc._map_to_rows(items, rows)] == ["a", "b"]
+
+
+def test_map_to_rows_without_price_line_needs_an_overlap():
+    rows = [_row(0, [1, 2])]
+    assert svc._map_to_rows([{"name": "a", "lines": [2, 3], "gemini_index": 0}], rows)[0][0]["name"] == "a"
+    assert _is_mismatch(svc._map_to_rows([{"name": "a", "lines": [5, 6], "gemini_index": 0}], rows)[0][0])
+
+
+def test_map_to_rows_checks_rejected_pairs_and_skips_empty_lines():
+    rows = [_row(0, [1, 2]), _row(1, [3])]
+    ok = [{"name": "a", "price_line": 3, "lines": [3], "gemini_index": 1}, {"rejected": "x", "gemini_index": 0, "lines": [1]}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(ok, rows)] == [False, False]
+    bad = [{"name": "a", "price_line": 3, "lines": [3], "gemini_index": 1}, {"rejected": "x", "gemini_index": 0, "lines": [9]}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(bad, rows)] == [True, False]
+    empty = [{"name": "a", "lines": [], "gemini_index": 0}, {"name": "b", "price_line": 3, "gemini_index": 1}]
+    assert [_is_mismatch(item) for item, _ in svc._map_to_rows(empty, [_row(0, []), _row(1, [3])])] == [False, False]
+
+
+def test_mismatch_row_is_written_empty_with_the_reason_and_the_other_rows_normally():
+    # 便G A16：対応が付かない行だけ、値は空（未解決の状態）＋ item_mapping_mismatch ＋ 要確認。他の行は通常どおり
+    session = _write([{"unit": "BOX", "product_id": 42, "match_status": "matched", "price_normalized": 1000.0}, {"unit": "BOX"}], drop_index=1)
+    first, second = _statements(session, "INSERT INTO public.analysis_results")
+    assert (first["product_id"], first["price_normalized"], first["needs_review"]) == (42, 1000.0, False)
+    assert (second["product_id"], second["unit_canonical"], second["price_normalized"], second["quantity_normalized"]) == (None, None, None, None)
+    assert (second["condition_canonical"], second["review_reasons"], second["needs_review"], second["pid_resolved"]) == (
+        "FLAG_SINGLE", "item_mapping_mismatch", True, False)
+
+
+def test_value_out_of_range_adds_the_reason_and_needs_review():
+    # 便G A15：10**12 以上は None にして理由を付ける。入力が None・範囲内なら付けない
+    item = {"unit": "BOX", "price_normalized": 10.0**12, "quantity_normalized": 3.0}
+    values = svc._analysis_values(item, _MASTERS, {"BOX": 5}, {})
+    assert (values["price_normalized"], values["quantity_normalized"]) == (None, 3.0)
+    assert (values["review_reasons"], values["needs_review"]) == ("value_out_of_range", True)
+    ok = svc._analysis_values({"unit": "BOX", "price_normalized": 999999999999.0, "quantity_normalized": None}, _MASTERS, {"BOX": 5}, {})
+    assert (ok["price_normalized"], ok["review_reasons"], ok["needs_review"]) == (999999999999.0, None, False)
+    both = svc._analysis_values({"unit": "BOX", "price_normalized": 10**13, "quantity_normalized": 10**13, "review": [{"kind": "unit_unknown"}]},
+                                _MASTERS, {"BOX": 5}, {})
+    assert both["review_reasons"] == "unit_unknown,value_out_of_range"  # 理由は重複なしで連結
+
+
+def test_pipeline_error_is_still_extract_exception_for_the_whole_post():
+    # 便G A17：プログラムの例外は、従来どおり投稿全体を extract_exception にする
+    def boom(*_args, **_kwargs):
+        raise ValueError("boom")
+
+    out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, _MASTERS, extract_items=boom)
+    assert out["v102_items"] == [] and out["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
+
+
+# ---------------------------------------------------------------------------
+# analysis_results の列
+# ---------------------------------------------------------------------------
+
+
+def _values(item: dict) -> dict:
+    return svc._analysis_values(item, _MASTERS, {"BOX": 5}, {42: 3})
+
+
+def test_unresolved_condition_falls_back_to_flag_single_cn0008():
+    for condition in ("none", "不明", "Unknown canonical"):
+        values = _values({"unit": "BOX", "condition": condition, "match_status": "unmatched"})
+        assert (values["condition_canonical"], values["condition_id"]) == ("FLAG_SINGLE", 18)
+
+
+def test_error_condition_is_written_with_its_own_id_when_the_master_has_it():
+    error_entry = {"cond_id": "26", "code": "CN0012", "canonical": "Error", "priority": 99, "app_kubun": "",
+                   "search_kw": "", "exclude_kw": "", "match_type": "KEYWORD", "effect": "EXCLUDE"}
+    masters = {**_MASTERS, "cond_entries": [*_MASTERS["cond_entries"], error_entry]}
+    values = svc._analysis_values(
+        {"unit": "BOX", "condition": "Error", "match_status": "unmatched", "review": [{"kind": "condition_unknown"}]},
+        masters, {"BOX": 5}, {},
+    )
+    assert (values["condition_canonical"], values["condition_id"]) == ("Error", 26)
+    assert values["needs_review"] is True and "condition_unknown" in values["review_reasons"]
+
+
+def test_resolved_condition_unit_and_matched_product():
+    values = _values({"unit": "BOX", "condition": "Sealed box", "product_id": 42, "match_status": "matched",
+                      "price_normalized": 1000, "quantity_normalized": 3, "status": "Normal", "status_effect": None,
+                      "review": [], "gemini_review": []})
+    assert (values["condition_id"], values["unit_id"], values["unit_resolved"]) == (11, 5, True)
+    assert (values["product_id"], values["pid_resolved"], values["work_id"], values["pid_basis"]) == (42, True, 3, "V102:matched")
+    assert (values["needs_review"], values["review_reasons"], values["note_ja"]) == (False, None, None)
+
+
+def test_matched_context_counts_as_resolved_and_unmatched_does_not():
+    assert _values({"unit": "BOX", "product_id": 42, "match_status": "matched_context"})["pid_resolved"] is True
+    ambiguous = _values({"unit": "BOX", "product_id": None, "match_status": "ambiguous"})
+    assert (ambiguous["product_id"], ambiguous["pid_resolved"]) == (None, False)
+
+
+def test_unit_none_gives_null_unit_and_unresolved():
+    values = _values({"unit": "none", "condition": "none"})
+    assert (values["unit_id"], values["unit_canonical"], values["unit_resolved"]) == (None, None, False)
+
+
+def test_review_reasons_join_item_and_gemini_kinds_without_duplicates():
+    values = _values({"unit": "BOX", "review": [{"kind": "unit_unknown"}, {"kind": "condition_unknown"}, {"kind": "unit_unknown"}],
+                      "gemini_review": [{"kind": "gemini_unsure", "line": 2}]})
+    assert values["review_reasons"] == "unit_unknown,condition_unknown,gemini_unsure" and values["needs_review"] is True
+
+
+def test_quantity_not_in_text_kind_goes_to_review_reasons_and_needs_review():
+    values = _values({"unit": "BOX", "review": [{"line": 2, "kind": "quantity_not_in_text", "field": "quantity", "copied": "30"}]})
+    assert values["review_reasons"] == "quantity_not_in_text" and values["needs_review"] is True
+
+
+def test_oversized_numbers_become_null():
+    values = _values({"unit": "BOX", "price_normalized": 10**13, "quantity_normalized": 2})
+    assert (values["price_normalized"], values["quantity_normalized"]) == (None, 2)
+
+
+def test_job_review_reasons_join_post_review_then_gemini_review():
+    flags = {"post_review": [{"kind": "no_items"}, {"kind": "possible_missing_item", "line": 3}, {"kind": "no_items"}],
+             "gemini_review": [{"kind": "gemini_unsure_invalid"}]}
+    assert svc._job_review_reasons(flags) == "no_items,possible_missing_item,gemini_unsure_invalid"
+    assert svc._job_review_reasons({"post_review": [], "gemini_review": []}) is None
+
+
+def test_extraction_rows_keep_skipped_lines_and_gemini_order():
+    rows = svc._item_rows([
+        {"lines": [1, 3], "price": "1,000円", "quantity": "2"},
+        "not an object",
+        {"lines": "bad", "price": 5, "quantity": None},
+    ])
+    assert [r["gemini_index"] for r in rows] == [0, 1, 2]
+    assert (rows[0]["source_lines"], rows[0]["line_start"], rows[0]["line_end"]) == ([1, 3], 1, 3)
+    assert (rows[1]["source_lines"], rows[1]["raw_price"]) == (None, None)
+    assert (rows[2]["source_lines"], rows[2]["raw_price"], rows[2]["raw_quantity"]) == (None, "5", None)
+
+
+def test_unreadable_responses_have_no_items():
+    for text_ in ("not json", "[]", json.dumps({"items": "x"}), json.dumps({"other": []})):
+        assert svc._parse_items(text_) == (None, None)
+    assert svc._parse_items(json.dumps({"items": [], "unsure": [1]})) == ([], [1])
+
+
+# ---------------------------------------------------------------------------
+# 振り分け
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_extraction_job_hands_v102_jobs_to_v102_analysis(monkeypatch):
+    session = MagicMock()
+    session.execute.return_value.scalar.return_value = "v102:raw_copy_v101_f_ct:abcdef123456"
+    called = MagicMock(return_value={"total": 1})
+    monkeypatch.setattr(svc, "run_v102_analysis", called)
+    assert analyzer.analyze_extraction_job(session, "job-1") == {"total": 1}
+    called.assert_called_once_with(session, "job-1")
+
+
+def test_analyze_extraction_job_does_not_hand_v6_jobs_to_v102(monkeypatch):
+    session = MagicMock()
+    session.execute.return_value.scalar.return_value = "raw-extraction-v6-rawcode-p1"
+    called = MagicMock()
+    monkeypatch.setattr(svc, "run_v102_analysis", called)
+    analyzer.analyze_extraction_job(session, "job-1")  # 偽の session でも v6 の処理は最後まで進む。v102 が呼ばれないことだけ見る
+    called.assert_not_called()
+
+
+def _boom(*_a, **_k):
+    raise AssertionError("v6 の経路に入った")
+
+
+def test_default_engine_takes_the_v6_path(monkeypatch):
+    monkeypatch.delenv(svc.ENGINE_ENV, raising=False)
+    v102 = MagicMock()
+    monkeypatch.setattr(task, "run_v102_extraction", v102)
+    monkeypatch.setattr(task, "extract_message", MagicMock(side_effect=RuntimeError("v6 path")))
+    with pytest.raises(RuntimeError, match="v6 path"):
+        task._run_recorded_extraction(MagicMock(), "job", "raw", {}, MagicMock())
+    v102.assert_not_called()
+
+
+@pytest.mark.parametrize("status,expect_analysis", [("done", True), ("empty", True)])
+def test_v102_engine_skips_v6_and_analyzes_done_and_empty_jobs(monkeypatch, status, expect_analysis):
+    monkeypatch.setenv(svc.ENGINE_ENV, "v102")
+    monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")
+    monkeypatch.setenv("TCG_AUTO_DISTRIBUTE", "0")
+    monkeypatch.setattr(task, "extract_message", _boom)
+    monkeypatch.setattr(task, "analyze_extraction_job", _boom)
+    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
+    monkeypatch.setattr(task, "run_shadow_for_job", _boom)
+    extraction = MagicMock(return_value={"status": status, "items_count": 2 if status == "done" else 0})
+    analysis = MagicMock(return_value={"total": 2})
+    monkeypatch.setattr(task, "run_v102_extraction", extraction)
+    monkeypatch.setattr(task, "run_v102_analysis", analysis)
+    recorder = MagicMock()
+    result = task._run_recorded_extraction(MagicMock(), "job", "raw", {}, recorder)
+    extraction.assert_called_once()
+    assert extraction.call_args.kwargs["recorder"] is recorder
+    assert analysis.called is expect_analysis
+    assert result["status"] == status and result["analysis_stats"] == {"total": 2}
+
+
+def test_v102_engine_does_not_analyze_without_the_auto_analyze_flag(monkeypatch):
+    monkeypatch.setenv(svc.ENGINE_ENV, "v102")
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+    monkeypatch.setattr(task, "run_v102_extraction", MagicMock(return_value={"status": "done", "items_count": 1}))
+    analysis = MagicMock()
+    monkeypatch.setattr(task, "run_v102_analysis", analysis)
+    result = task._run_recorded_extraction(MagicMock(), "job", "raw", {}, MagicMock())
+    analysis.assert_not_called()
+    assert result["analysis_stats"] is None
+
+
+def test_v102_analysis_failure_is_reported_as_analysis_failed(monkeypatch):
+    monkeypatch.setenv(svc.ENGINE_ENV, "v102")
+    monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")
+    monkeypatch.setattr(task, "run_v102_extraction", MagicMock(return_value={"status": "done", "items_count": 1}))
+    monkeypatch.setattr(task, "run_v102_analysis", MagicMock(side_effect=ValueError("masters empty")))
+    session = MagicMock()
+    result = task._run_recorded_extraction(session, "job", "raw", {}, MagicMock())
+    assert result["analysis_stats"] == {"status": "error", "error_code": "ANALYSIS_FAILED"}
+    session.rollback.assert_called()
+
+
+def test_matched_followup_counts_as_resolved_with_its_own_basis():
+    values = _values({"unit": "BOX", "product_id": 42, "match_status": "matched_followup"})
+    assert (values["product_id"], values["pid_resolved"], values["pid_basis"]) == (42, True, "V102:matched_followup")
+
+
+def test_matched_soldout_ref_counts_as_resolved_with_its_own_basis():
+    values = _values({"unit": "BOX", "product_id": 42, "match_status": "matched_soldout_ref"})
+    assert (values["product_id"], values["pid_resolved"], values["pid_basis"]) == (42, True, "V102:matched_soldout_ref")
+
+
+def test_masters_with_followup_adds_soldout_posts_only_when_given():
+    masters = {"a": 1}
+    assert svc.masters_with_followup(masters, None) is masters
+    assert svc.masters_with_followup(masters, None, ()) is masters
+    assert svc.masters_with_followup(masters, ("m", "t"), ("p",)) == {"a": 1, "followup_ref": ("m", "t"), "soldout_posts": ("p",)}
+    assert svc.masters_with_followup(masters, None, ("p",)) == {"a": 1, "soldout_posts": ("p",)}
+
+
+# ---------------------------------------------------------------------------
+# 〆の完売の相手（便2-2）：状態の引き継ぎと analysis_soldout_extra_targets への書き込み
+# ---------------------------------------------------------------------------
+
+_T = svc.CONDITION_BASIS_SOLDOUT_REF
+_TARGETS = [
+    {"product_id": 42, "condition_id": 11, "ref_message_id": "m1", "ref_line": 1},
+    {"product_id": 42, "condition_id": 18, "ref_message_id": "m1", "ref_line": 2},
+    {"product_id": 43, "condition_id": 11, "ref_message_id": "m1", "ref_line": 3},
+]
+_CANONICALS = {11: "Sealed box", 18: "FLAG_SINGLE"}
+
+
+def _soldout_item(**extra) -> dict:
+    return {"unit": "BOX", "condition": "none", "product_id": 42, "match_status": "matched_soldout_ref", "soldout_targets": _TARGETS, **extra}
+
+
+def test_soldout_targets_overwrite_the_condition_with_the_first_target():
+    item = _soldout_item()
+    values = _values(item)
+    assert values["condition_canonical"] == "FLAG_SINGLE"  # 〆の行の文字からは決まらない
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (11, "Sealed box", "SOLDOUT_REF")
+    assert out is not values and values["condition_id"] == 18 and values["condition_basis"] == ""  # 元は変えない
+
+
+def test_soldout_target_that_is_an_excluded_condition_keeps_reasons_and_needs_review():
+    item = _soldout_item(soldout_targets=[{"product_id": 42, "condition_id": 99, "ref_message_id": "m1", "ref_line": 1}])
+    values = {**_values(item), "review_reasons": "condition_unknown", "needs_review": True}
+    out = svc._apply_soldout_targets(values, item, None, {**_CANONICALS, 99: "Error"}, frozenset({99}))
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (99, "Error", "SOLDOUT_REF")
+    assert (out["review_reasons"], out["needs_review"]) == ("condition_unknown", True)  # 決まっていない状態を引き継いだだけ
+    without = svc._apply_soldout_targets(values, item, None, {**_CANONICALS, 99: "Error"})
+    assert without["needs_review"] is False  # EXCLUDE の印が無ければ「決まった状態」扱い（効くのは excluded_ids）
+
+
+def test_soldout_targets_do_nothing_without_targets_or_when_a_human_decided():
+    values = _values(_soldout_item())
+    plain = {k: v for k, v in _soldout_item().items() if k != "soldout_targets"}
+    assert svc._apply_soldout_targets(values, plain, None, _CANONICALS) is values
+    assert svc._apply_soldout_targets(values, {**plain, "soldout_targets": []}, None, _CANONICALS) is values
+    for decision in (svc.Decisions(product_id=42), svc.Decisions(condition_id=18)):
+        assert svc._apply_soldout_targets(values, _soldout_item(), decision, _CANONICALS) is values
+    ack_only = svc.Decisions(ack_codes=frozenset({"x"}))  # 確認済みだけの判断は商品・状態の判断ではない
+    assert svc._apply_soldout_targets(values, _soldout_item(), ack_only, _CANONICALS)["condition_basis"] == "SOLDOUT_REF"
+
+
+def test_soldout_targets_keep_the_condition_when_the_canonical_is_unknown():
+    values = _values(_soldout_item())
+    assert svc._apply_soldout_targets(values, _soldout_item(), None, {}) is values
+
+
+def test_extra_targets_are_the_targets_that_differ_from_the_written_row():
+    item = _soldout_item()
+    values = svc._apply_soldout_targets(_values(item), item, None, _CANONICALS)
+    assert [(t["product_id"], t["condition_id"]) for t in svc._extra_targets(values, item, None)] == [(42, 18), (43, 11)]
+    unresolved = _values(item)  # 状態を上書きできなかったとき（書いた行は 42・18）、先頭の相手 (42, 11) も表に入る
+    assert [(t["product_id"], t["condition_id"]) for t in svc._extra_targets(unresolved, item, None)] == [(42, 11), (43, 11)]
+
+
+def test_no_extra_targets_when_a_human_decided_or_there_is_no_target():
+    item = _soldout_item()
+    values = _values(item)
+    assert svc._extra_targets(values, item, svc.Decisions(condition_id=11)) == []
+    assert svc._extra_targets(values, {"product_id": 42}, None) == []
+
+
+def test_stock_lines_come_from_source_lines_or_the_line_range():
+    assert svc._stock_lines([3, 5], 1, 9) == frozenset({3, 5})
+    assert svc._stock_lines(None, 2, 4) == frozenset({2, 3, 4})
+    assert svc._stock_lines([], 2, 3) == frozenset({2, 3})
+    assert svc._stock_lines(None, None, 4) == frozenset() and svc._stock_lines(None, 2, None) == frozenset()
+
+
+class _FakeSession:
+    """_write_results が発行する SQL を控える。読み取りは固定の行を返す。"""
+
+    def __init__(self):
+        self.calls: list[tuple[str, dict]] = []
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.calls.append((sql, params or {}))
+        rows = {"FROM public.products": [(42, 3), (43, 3)], "= :effect": [], "FROM public.conditions": [(11, "Sealed box"), (18, "FLAG_SINGLE")]}
+        found = next((v for k, v in rows.items() if k in sql), [])
+        return SimpleNamespace(fetchall=lambda: found, scalar_one=lambda: f"result-{sum('INSERT INTO' in c[0] and 'analysis_results' in c[0] for c in self.calls)}")
+
+
+def _write(items: list[dict], decisions=None, drop_index: int | None = None) -> _FakeSession:
+    rows = [SimpleNamespace(id=f"row{i}", gemini_index=i, source_lines=[i + 1]) for i in range(len(items))]
+    numbered = [{"lines": [i + 1], "gemini_index": i, **it} for i, it in enumerate(items) if i != drop_index]  # 便G：gemini_index で行に当てる
+    pipeline = {"v102_items": numbered, "v102_flags": {}}
+    session = _FakeSession()
+    svc._write_results(session, "job1", pipeline, rows, _MASTERS, {"BOX": 5}, decisions)
+    return session
+
+
+def _statements(session: _FakeSession, needle: str) -> list[dict]:
+    return [params for sql, params in session.calls if needle in sql]
+
+
+def test_write_results_deletes_old_extras_first_and_writes_one_row_per_extra_target():
+    session = _write([_soldout_item()])
+    order = [next(n for n in ("DELETE FROM", "INSERT INTO public.analysis_results", "INSERT INTO public.analysis_soldout_extra_targets") if n in sql)
+             for sql, _ in session.calls if any(n in sql for n in ("DELETE FROM", "INSERT INTO"))]
+    assert order[0] == "DELETE FROM" and order.count("INSERT INTO public.analysis_soldout_extra_targets") == 2
+    upsert = _statements(session, "INSERT INTO public.analysis_results")[0]
+    assert (upsert["condition_id"], upsert["condition_basis"], upsert["product_id"]) == (11, "SOLDOUT_REF", 42)
+    extras = _statements(session, "analysis_soldout_extra_targets (")
+    assert [(e["analysis_result_id"], e["product_id"], e["condition_id"], e["ref_message_id"], e["ref_line"]) for e in extras] == [
+        ("result-1", 42, 18, "m1", 2), ("result-1", 43, 11, "m1", 3)]
+    assert _statements(session, "DELETE FROM")[0] == {"ej": "job1"}
+
+
+def test_write_results_writes_no_extra_rows_when_a_human_decided_or_no_target():
+    decided = _write([_soldout_item()], {"row0": svc.Decisions(condition_id=18)})
+    assert _statements(decided, "analysis_soldout_extra_targets (") == []
+    assert _statements(decided, "INSERT INTO public.analysis_results")[0]["condition_basis"] == svc.CONDITION_BASIS_MANUAL
+    plain = _write([{"unit": "BOX", "product_id": 42, "match_status": "matched"}])
+    assert _statements(plain, "analysis_soldout_extra_targets (") == []
+    assert len(_statements(plain, "DELETE FROM")) == 1  # 古い相手は、相手が無い件でも消す
+
+
+def test_inheriting_the_stock_condition_drops_the_condition_review_reasons_only_when_overwritten():
+    item = _soldout_item(review=[{"kind": "condition_unknown"}, {"kind": "unit_unknown"}, {"kind": "condition_multiple_candidates"}])
+    values = _values(item)
+    assert (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown,condition_multiple_candidates", True)
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["review_reasons"], out["needs_review"]) == ("unit_unknown", True)  # 状態の理由だけ外れる
+    only_condition = _soldout_item(review=[{"kind": "condition_unknown"}])
+    cleared = svc._apply_soldout_targets(_values(only_condition), only_condition, None, _CANONICALS)
+    assert (cleared["review_reasons"], cleared["needs_review"]) == (None, False)  # 空になれば要確認も外れる
+    assert svc._apply_soldout_targets(values, item, None, {}) is values  # 上書きできなければ何も外さない
+
+
+def test_inheriting_an_undecided_flag_condition_keeps_the_review_reasons():
+    item = _soldout_item(review=[{"kind": "condition_unknown"}, {"kind": "unit_unknown"}])
+    values = _values(item)
+    targets = [{**_TARGETS[0], "condition_id": 18}, *_TARGETS[1:]]  # 先頭の相手が FLAG_SINGLE
+    out = svc._apply_soldout_targets(values, {**item, "soldout_targets": targets}, None, _CANONICALS)
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (18, "FLAG_SINGLE", "SOLDOUT_REF")  # 状態はそろえる
+    assert (out["review_reasons"], out["needs_review"]) == (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown", True)

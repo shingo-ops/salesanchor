@@ -21,6 +21,7 @@ import {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { TextFieldControl } from "./TextField";
 
 /** GET /products の 1 行 (必要フィールドのみ)。 */
 interface PickerProduct {
@@ -214,7 +215,7 @@ export default function InventoryPicker({
       style={{ position: "relative", width: "100%" }}
       data-testid={`${testIdPrefix}-root`}
     >
-      <input
+      <TextFieldControl
         ref={inputRef}
         type="text"
         value={query}
@@ -230,7 +231,6 @@ export default function InventoryPicker({
         style={{
           width: "100%",
           minWidth: "var(--min-width-input-sm)",
-          padding: "var(--space-6px) var(--space-2)",
         }}
         aria-label={placeholderText}
       />

@@ -27,6 +27,7 @@ import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StaffFormFields, type StaffFormState, type StaffRole } from "./StaffFormFields";
+import { TextFieldControl } from "../../components/TextField";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -235,28 +236,28 @@ export default function StaffPage() {
       >
         <form onSubmit={handleCreateSubmit}>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
-            <input required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
+            <TextFieldControl required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
-            <input required value={createForm.given_name_jp} onChange={(e) => setCreateForm({ ...createForm, given_name_jp: e.target.value })} />
+            <TextFieldControl required value={createForm.given_name_jp} onChange={(e) => setCreateForm({ ...createForm, given_name_jp: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameKana")}</label>
-            <input value={createForm.surname_kana} onChange={(e) => setCreateForm({ ...createForm, surname_kana: e.target.value })} />
+            <TextFieldControl value={createForm.surname_kana} onChange={(e) => setCreateForm({ ...createForm, surname_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameKana")}</label>
-            <input value={createForm.given_name_kana} onChange={(e) => setCreateForm({ ...createForm, given_name_kana: e.target.value })} />
+            <TextFieldControl value={createForm.given_name_kana} onChange={(e) => setCreateForm({ ...createForm, given_name_kana: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.surnameEn")} *</label>
-            <input required aria-required="true" value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
+            <TextFieldControl required aria-required="true" value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
-            <input required aria-required="true" value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
+            <TextFieldControl required aria-required="true" value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-            <input required type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
+            <TextFieldControl required type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
           </div>
           <div className="form-group"><label>Discord ID</label>
-            <input value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
+            <TextFieldControl value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
           </div>
           <Select
             label={t("staff.role")}

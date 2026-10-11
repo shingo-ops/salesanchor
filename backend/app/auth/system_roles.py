@@ -9,6 +9,10 @@ ROLE_KEY_OWNER = "owner"
 ROLE_KEY_ADMIN = "admin"
 SYSTEM_MANAGE_KEY = "system.manage"  # admin だけが持たない権限キー（唯一の定義場所）
 
+# 運営者用のロール。super admin（public.users.is_super_admin）以外には一覧に見せず、付けさせない。
+# 見分けは roles.system_key で行い、名前では分岐しない（唯一の定義場所。ADR-147 追補 2026-10-10）
+TENANT_HIDDEN_SYSTEM_KEYS = frozenset({ROLE_KEY_ADMIN})
+
 
 def compute_permission_keys(
     stored_keys: set[str],

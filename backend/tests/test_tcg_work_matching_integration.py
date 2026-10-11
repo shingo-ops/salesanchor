@@ -27,10 +27,12 @@ from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.seed_data import tcg_product_categories_seed_sql, type_master_seed_sql
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 SCHEMA = "tenant_901"
 STRUCTURE = "20260910_160000_tcg_work_evidence.sql"
+SOLDOUT_EXTRA_TARGETS = "20261010_120000_create_analysis_soldout_extra_targets.sql"
 HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 NORMAL = "MEGA スタートデッキ100 バトルコレクション"
 # Phase 2 SSOT: tcg_series.code → public.type_master.code mapping
@@ -224,6 +226,14 @@ $rw$;
 """
 
 
+def create_soldout_extra_targets(cursor, schema):
+    """便2-1 の表をテスト用スキーマに作る。migration は本番の public 固定なので、analysis_ の付く表名だけスキーマに置き換える。
+
+    ADR-158 のマージ（_merge_supplier_products）がこの表を読むので、analysis_results を持つスキーマには必ず作る。
+    """
+    cursor.execute((MIGRATIONS / SOLDOUT_EXTRA_TARGETS).read_text(encoding="utf-8").replace("public.analysis_", f"{schema}.analysis_"))
+
+
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
@@ -242,6 +252,8 @@ def migrate(cursor):
     # ADR-156 Phase 3A: add product_kind_id FK column to public.products
     cursor.execute((MIGRATIONS / "20260921_120000_add_products_product_kind_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    cursor.execute(type_master_seed_sql())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
@@ -252,6 +264,8 @@ def migrate(cursor):
         FROM {SCHEMA}.tcg_product_categories
         ON CONFLICT (code) DO NOTHING
     """)
+    # PC_BOX・PC_SINGLE はテナント側 migration の seed に頼らず、試験側でも入れる（ADR-1007 段2）
+    cursor.execute(tcg_product_categories_seed_sql())
     # Phase 3 SSOT: seed public.conditions with the standard condition master so the analyzer
     # can resolve condition_id (INTEGER FK NOT NULL in analysis_results after Phase 3 migration).
     # Unit seeding is intentionally deferred to test-specific setup (tests like
@@ -301,6 +315,8 @@ def migrate(cursor):
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
     # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+    # 便2-1: 〆の2つ目以降の完売の相手の表。ADR-158 のマージが読む。
+    create_soldout_extra_targets(cursor, SCHEMA)
     # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
     # The migration targets public.extraction_items; test tenant schema needs it too.
     cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
@@ -697,6 +713,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
         # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+        create_soldout_extra_targets(cursor, "tenant_004")  # 便2-1: ADR-158 のマージが読む表
         # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
         # migrate() applies this to tenant_901; tenant_004 is provisioned separately so it needs
         # the same column added explicitly here.

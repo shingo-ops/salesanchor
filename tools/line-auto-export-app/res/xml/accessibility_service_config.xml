@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  android:canPerformGestures はAPI24で追加された属性。API23のandroid.jarをリンクする
+  aaptでは名前解決できず宣言が落ち、端末側の capabilities が 1（画面取得のみ）のままに
+  なる＝タップが一切効かない（2026-09-18 実機の dumpsys accessibility で確認）。
+  build.sh は aapt のリソース解決に API34 の android.jar を使う。
+
+  2026-10-08実機（0.8.0-stage3の計測版）で判明: accessibilityEventTypesを
+  typeAllMaskにしていたため、LINEの画面が動く間（typeWindowContentChanged・
+  typeViewScrolledを含む）に秒間何十件ものAccessibilityEventがメインスレッドの
+  メッセージキューへ流れ込み、その配信処理がHandler#postDelayedの順番待ちを
+  押しのけていた。実測: edit_button手順のsettleMs（1000ms指定）が54,822msに
+  引き延ばされていた（遅い回・全体106,564ms。速い回は1,002msで正常）。
+  深いスリープ（実時間=起動時間で確認済み）でもノード探索の重さ
+  （探索1回最大30ms・合計54ms）でもなく、この一本だけで説明がつく。
+
+  アプリが実際に使っているイベントは TYPE_WINDOW_STATE_CHANGED のクラス名記録
+  （UnlockAccessibilityService#onAccessibilityEvent）だけなので、
+  typeWindowStateChangedだけに絞る。typeWindowStateChangedはAPI4からある
+  古い値（canPerformGesturesのようなAPI23jar不在の問題は無い）。
+  canRetrieveWindowContent/flagRetrieveInteractiveWindows/canPerformGestures
+  はイベント種別の絞り込みとは無関係（ノード取得・ジェスチャの機能はこれらの
+  capabilityビットで決まり、accessibilityEventTypesは配信するイベントの種類
+  だけを絞る）ため変更しない。LineNotifyListenerServiceは別のサービス
+  （NotificationListenerService）でこの設定の対象外、ロック解除フロー
+  （PIN入力）はイベントを一切使わないため、どちらも影響を受けない。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:notificationTimeout="100"
+    android:description="@string/accessibility_service_description"
+    android:settingsActivity="jp.salesanchor.lineexport.SettingsActivity" />

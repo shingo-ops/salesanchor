@@ -20,9 +20,11 @@ import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
+import { SelectControl } from "../../../components/Select";
 import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Check } from "../../../constants/icons";
+import { TextareaControl } from "../../../components/Textarea";
 
 interface ConditionDef {
   id: number;
@@ -318,9 +320,8 @@ export function ConditionsMasterPanel() {
             {/* 1. どの状態ですか？ — condition_def_id */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.conditionDefId`)}</label>
-              {/* ui-allow: reference pulldown for condition_def_id; no SelectControl variant with dynamic option list (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.condition_def_id}
                 onChange={e => setForm({ ...form, condition_def_id: e.target.value })}
               >
@@ -328,15 +329,14 @@ export function ConditionsMasterPanel() {
                 {conditionDefs.map(d => (
                   <option key={d.id} value={String(d.id)}>{d.name}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {/* 2. どの単位が対象ですか？ — unit_id */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.unitId`)}</label>
-              {/* ui-allow: reference pulldown for unit_id; no SelectControl variant with dynamic option list (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.unit_id}
                 onChange={e => setForm({ ...form, unit_id: e.target.value })}
               >
@@ -344,7 +344,7 @@ export function ConditionsMasterPanel() {
                 {units.map(u => (
                   <option key={u.id} value={String(u.id)}>{u.canonical}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {/* 3. 出力プレビュー */}
@@ -365,11 +365,10 @@ export function ConditionsMasterPanel() {
               <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.searchKw`)}
               </label>
-              <textarea
+              <TextareaControl
                 value={form.search_kw}
                 onChange={e => setForm({ ...form, search_kw: e.target.value })}
                 rows={3}
-                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
 
@@ -378,20 +377,18 @@ export function ConditionsMasterPanel() {
               <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.excludeKw`)}
               </label>
-              <textarea
+              <TextareaControl
                 value={form.exclude_kw}
                 onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
                 rows={3}
-                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
 
             {/* 6. 言葉の探し方は？ — match_type */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.matchType`)} *</label>
-              {/* ui-allow: enum select for condition match_type; no SelectControl variant with option map (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.match_type}
                 onChange={e => setForm({ ...form, match_type: e.target.value })}
                 required
@@ -399,15 +396,14 @@ export function ConditionsMasterPanel() {
                 {MATCH_TYPE_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {/* 7. 見つけたらどうしますか？ — effect */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.effect`)} *</label>
-              {/* ui-allow: enum select for condition effect; no SelectControl variant with option map (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.effect}
                 onChange={e => setForm({ ...form, effect: e.target.value })}
                 required
@@ -415,7 +411,7 @@ export function ConditionsMasterPanel() {
                 {EFFECT_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {/* 8. どの商品タイプに適用しますか？ */}

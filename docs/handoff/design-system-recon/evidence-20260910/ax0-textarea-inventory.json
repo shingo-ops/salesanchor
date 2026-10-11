@@ -1,0 +1,2405 @@
+{
+ "tsVersion": "5.9.3",
+ "tsxFilesScanned": 275,
+ "syntaxErrorFiles": [],
+ "rawTextareaTotal": 54,
+ "rawInsideMold": 1,
+ "rawWithUiAllow": 2,
+ "pageSideRaw": 53,
+ "moldUsages": 13,
+ "rows": [
+  {
+   "file": "frontend/src/components/MergeLeadModal.tsx",
+   "line": 234,
+   "attrs": [
+    {
+     "name": "rows",
+     "raw": "{2}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"mergeLead.reasonPlaceholder\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{reason}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setReason(e.target.value)}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{500}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 232,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "div",
+     "line": 134,
+     "className": "\"modal-content-wide\""
+    },
+    {
+     "tag": "Modal",
+     "line": 133,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/components/OrderFinancialPanel.tsx",
+   "line": 239,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setNotes(e.target.value)}"
+    },
+    {
+     "name": "aria-label",
+     "raw": "{t(\"financial.notesAriaLabel\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 237,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 210,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 206,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/components/PriorityScoreOverride.tsx",
+   "line": 91,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{note}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setNote(e.target.value)}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{500}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"priority.overrideNotePlaceholder\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 89,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 74,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 71,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 442,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.purchase_note}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(ev) => setField(\"purchase_note\", ev.target.value)}"
+    },
+    {
+     "name": "data-testid",
+     "raw": "\"pur-input-purchase_note\""
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 440,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 311,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 301,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 551,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.ship_memo}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(ev) => setField(\"ship_memo\", ev.target.value)}"
+    },
+    {
+     "name": "data-testid",
+     "raw": "\"ship-input-ship_memo\""
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 549,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 384,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 374,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/components/Textarea.tsx",
+   "line": 63,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "{fieldId}"
+    },
+    {
+     "name": "className",
+     "raw": "\"comp-field__textarea\""
+    },
+    {
+     "name": "...spread",
+     "raw": "{...rest}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 52,
+     "className": "{containerClass}"
+    }
+   ],
+   "insideMold": true
+  },
+  {
+   "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+   "line": 27,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{values[key]}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{2000}"
+    },
+    {
+     "name": "aria-label",
+     "raw": "{t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(event) => onChange(key, event.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+   "line": 34,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "{`note-${item.extraction_item_id}`}"
+    },
+    {
+     "name": "value",
+     "raw": "{note}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{2000}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(event) => onNoteChange(event.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 34,
+     "className": "\"manual-actions\""
+    },
+    {
+     "tag": "div",
+     "line": 34,
+     "className": "\"item-extra-grid\""
+    },
+    {
+     "tag": "article",
+     "line": 34,
+     "className": "{readOnly ? 'item-comparison item-comparison--readonly' : 'item-comparison'}"
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+   "line": 217,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{values.search_keywords}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setValue('search_keywords', e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "label",
+     "line": 215,
+     "className": "\"pmd-field\""
+    },
+    {
+     "tag": "div",
+     "line": 194,
+     "className": "\"pmd-fields\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+   "line": 221,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{values.exclude_keywords}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setValue('exclude_keywords', e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "label",
+     "line": 219,
+     "className": "\"pmd-field\""
+    },
+    {
+     "tag": "div",
+     "line": 194,
+     "className": "\"pmd-fields\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+   "line": 98,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{message}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setMessage(e.target.value)}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{!canEdit}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"discordAnnounce.messagePlaceholder\")}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{2000}"
+    },
+    {
+     "name": "rows",
+     "raw": "{6}"
+    },
+    {
+     "name": "className",
+     "raw": "\"input w-full resize-y\""
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 94,
+     "className": "\"space-y-2\""
+    },
+    {
+     "tag": "div",
+     "line": 70,
+     "className": "\"max-w-lg space-y-6\""
+    },
+    {
+     "tag": "PageLayout",
+     "line": 69,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 170,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "\"tp-address\""
+    },
+    {
+     "name": "data-testid",
+     "raw": "\"tp-address\""
+    },
+    {
+     "name": "value",
+     "raw": "{form.address}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{handleChange(\"address\")}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{!canEdit}"
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 168,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 138,
+     "className": "\"form\""
+    },
+    {
+     "tag": "PageLayout",
+     "line": 134,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/badges/BadgesPage.tsx",
+   "line": 62,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.description}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, description: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 62,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 58,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 52,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+   "line": 66,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 66,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 63,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 57,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+   "line": 499,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{createForm.shipping_note}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 497,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "form",
+     "line": 446,
+     "className": "\"form-grid\""
+    },
+    {
+     "tag": "div",
+     "line": 439,
+     "className": "\"modal-content-wide\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+   "line": 516,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{createForm.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 514,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "form",
+     "line": 446,
+     "className": "\"form-grid\""
+    },
+    {
+     "tag": "div",
+     "line": 439,
+     "className": "\"modal-content-wide\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+   "line": 64,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => onChange(\"notes\", e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 62,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+   "line": 81,
+   "attrs": [
+    {
+     "name": "disabled",
+     "raw": "{!canEdit}"
+    },
+    {
+     "name": "value",
+     "raw": "{basicForm.shipping_note}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => { setBasicForm({ ...basicForm, shipping_note: e.target.value }); setBasicDirty(true); }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 80,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "form",
+     "line": 35,
+     "className": "\"form-grid\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+   "line": 94,
+   "attrs": [
+    {
+     "name": "disabled",
+     "raw": "{!canEdit}"
+    },
+    {
+     "name": "value",
+     "raw": "{basicForm.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => { setBasicForm({ ...basicForm, notes: e.target.value }); setBasicDirty(true); }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 93,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "form",
+     "line": 35,
+     "className": "\"form-grid\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+   "line": 340,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"field field-h-md\""
+    },
+    {
+     "name": "style",
+     "raw": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.search_kw}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, search_kw: e.target.value })}"
+    }
+   ],
+   "uiAllow": [
+    {
+     "line": 339,
+     "text": "{/* ui-allow: multi-line keyword input; TextField does not support textarea variant (#3594) */}"
+    }
+   ],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 337,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "div",
+     "line": 304,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+   "line": 350,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"field field-h-md\""
+    },
+    {
+     "name": "style",
+     "raw": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.exclude_kw}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, exclude_kw: e.target.value })}"
+    }
+   ],
+   "uiAllow": [
+    {
+     "line": 349,
+     "text": "{/* ui-allow: multi-line keyword input; TextField does not support textarea variant (#3594) */}"
+    }
+   ],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 347,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "div",
+     "line": 304,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 191,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setForm({ ...form, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 190,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 140,
+     "className": null
+    },
+    {
+     "tag": "PageLayout",
+     "line": 135,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+   "line": 349,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{createForm.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 348,
+     "className": "\"form-row\""
+    },
+    {
+     "tag": "form",
+     "line": 302,
+     "className": "\"form-grid\""
+    },
+    {
+     "tag": "div",
+     "line": 301,
+     "className": "\"modal-content-wide\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+   "line": 410,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "{`priority-action-${item.lead_id}`}"
+    },
+    {
+     "name": "className",
+     "raw": "\"db-weekly-composer-input\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{composer.draftAction}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => updateComposer(item.lead_id, { draftAction: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 406,
+     "className": "\"db-weekly-composer-field\""
+    },
+    {
+     "tag": "div",
+     "line": 391,
+     "className": "\"db-weekly-composer\""
+    },
+    {
+     "tag": "li",
+     "line": 342,
+     "className": "{`db-priority-item${hasAxisLowSample ? \" db-priority-item--no-sample\" : \"\"}`}"
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+   "line": 381,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "{`weekly-action-${action.company_id}`}"
+    },
+    {
+     "name": "className",
+     "raw": "\"db-weekly-composer-input\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{composer.draftAction}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => updateComposer(action.company_id, { draftAction: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 377,
+     "className": "\"db-weekly-composer-field\""
+    },
+    {
+     "tag": "div",
+     "line": 362,
+     "className": "\"db-weekly-composer\""
+    },
+    {
+     "tag": "li",
+     "line": 302,
+     "className": "{`db-weekly-item db-weekly-item--${action.type}`}"
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+   "line": 484,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.cs_memo ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"inbox.emptyField\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 431,
+     "className": "\"right-panel-section\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+   "line": 503,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.next_action ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"inbox.emptyField\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 499,
+     "className": "\"right-panel-section\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+   "line": 537,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.challenge ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"inbox.emptyField\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 499,
+     "className": "\"right-panel-section\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+   "line": 588,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.meeting_memo ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"inbox.emptyField\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 499,
+     "className": "\"right-panel-section\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+   "line": 736,
+   "attrs": [
+    {
+     "name": "ref",
+     "raw": "{textareaRef}"
+    },
+    {
+     "name": "className",
+     "raw": "\"inbox-textarea\""
+    },
+    {
+     "name": "value",
+     "raw": "{draft}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setDraft(e.target.value)}"
+    },
+    {
+     "name": "onKeyDown",
+     "raw": "{handleKeyDownGuarded}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{\n                  discordChannelMissing\n                    ? t(\"inbox.discordChannelMissing\")\n                    : canSend\n                      ? t(\"inbox.messagePlaceholder\")\n                      : t(\"inbox.sendDisabled7d\")\n                }"
+    },
+    {
+     "name": "rows",
+     "raw": "{2}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{!canSend || sending}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 735,
+     "className": "\"send-input-wrap\""
+    },
+    {
+     "tag": "div",
+     "line": 731,
+     "className": "\"send-top-row\""
+    },
+    {
+     "tag": "div",
+     "line": 715,
+     "className": "\"send-card\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+   "line": 181,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.cs_memo ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"cs_memo\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"leads.csMemo\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 144,
+     "className": "\"right-panel-section\""
+    },
+    {
+     "tag": "div",
+     "line": 110,
+     "className": "\"right-panel-tab-content\""
+    },
+    {
+     "tag": "div",
+     "line": 65,
+     "className": "\"inbox-profile-modal\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+   "line": 191,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.next_action ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"next_action\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"leads.nextAction\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 189,
+     "className": "\"right-panel-section\""
+    },
+    {
+     "tag": "div",
+     "line": 110,
+     "className": "\"right-panel-tab-content\""
+    },
+    {
+     "tag": "div",
+     "line": 65,
+     "className": "\"inbox-profile-modal\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+   "line": 210,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.challenge ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"challenge\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"leads.challenge\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 189,
+     "className": "\"right-panel-section\""
+    },
+    {
+     "tag": "div",
+     "line": 110,
+     "className": "\"right-panel-tab-content\""
+    },
+    {
+     "tag": "div",
+     "line": 65,
+     "className": "\"inbox-profile-modal\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+   "line": 265,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"right-panel-field\""
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{cardForm.meeting_memo ?? \"\"}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => handleCardFieldChange(\"meeting_memo\", e.target.value)}"
+    },
+    {
+     "name": "onBlur",
+     "raw": "{handleCardFieldBlur}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"leads.meetingMemo\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 189,
+     "className": "\"right-panel-section\""
+    },
+    {
+     "tag": "div",
+     "line": 110,
+     "className": "\"right-panel-tab-content\""
+    },
+    {
+     "tag": "div",
+     "line": 65,
+     "className": "\"inbox-profile-modal\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+   "line": 159,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"manual-record-textarea\""
+    },
+    {
+     "name": "value",
+     "raw": "{contentText}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setContentText(e.target.value)}"
+    },
+    {
+     "name": "onKeyDown",
+     "raw": "{handleKeyDown}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"inbox.manualRecord.contentPlaceholder\")}"
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{saving}"
+    },
+    {
+     "name": "aria-label",
+     "raw": "{t(\"inbox.manualRecord.contentPlaceholder\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 110,
+     "className": "\"manual-record-section\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+   "line": 147,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"outbound-translation-edit\""
+    },
+    {
+     "name": "value",
+     "raw": "{editedText}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setEditedText(e.target.value)}"
+    },
+    {
+     "name": "rows",
+     "raw": "{4}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{confirming}"
+    },
+    {
+     "name": "aria-label",
+     "raw": "{t(\"translation.outbound.editAriaLabel\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 119,
+     "className": "\"outbound-translation-section\""
+    },
+    {
+     "tag": "div",
+     "line": 83,
+     "className": "\"outbound-translation-modal\""
+    },
+    {
+     "tag": "div",
+     "line": 82,
+     "className": "\"outbound-translation-overlay\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 279,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setForm({ ...form, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 278,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 169,
+     "className": null
+    },
+    {
+     "tag": "PageLayout",
+     "line": 164,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+   "line": 84,
+   "attrs": [
+    {
+     "name": "id",
+     "raw": "{memoId}"
+    },
+    {
+     "name": "value",
+     "raw": "{closeReasonMemo}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => onCloseReasonMemoChange(e.target.value)}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"leads.lostReasonPlaceholder\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 82,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+   "line": 153,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => onChange(\"notes\", e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 151,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 429,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{createForm.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 428,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 327,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 321,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+   "line": 95,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setForm({ ...form, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 93,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 52,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 46,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 309,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setForm({ ...form, notes: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 307,
+     "className": "\"form-group form-group-full\""
+    },
+    {
+     "tag": "form",
+     "line": 207,
+     "className": "\"product-edit-form\""
+    },
+    {
+     "tag": "div",
+     "line": 206,
+     "className": "\"page page--full\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+   "line": 217,
+   "attrs": [
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "value",
+     "raw": "{notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setNotes(e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 215,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 154,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 146,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 538,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{roleForm.description}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setRoleForm({ ...roleForm, description: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 537,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 491,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 485,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+   "line": 378,
+   "attrs": [
+    {
+     "name": "className",
+     "raw": "\"schedule-textarea\""
+    },
+    {
+     "name": "rows",
+     "raw": "{4}"
+    },
+    {
+     "name": "value",
+     "raw": "{draft.description}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(event) => onDraftChange({ ...draft, description: event.target.value })}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"schedule.descriptionPlaceholder\")}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "label",
+     "line": 376,
+     "className": "\"schedule-field\""
+    },
+    {
+     "tag": "div",
+     "line": 276,
+     "className": "\"schedule-popover__body schedule-popover__body--form\""
+    },
+    {
+     "tag": "div",
+     "line": 204,
+     "className": "\"schedule-popover\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+   "line": 90,
+   "attrs": [
+    {
+     "name": "required",
+     "raw": "(true)"
+    },
+    {
+     "name": "value",
+     "raw": "{form.review}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, review: e.target.value })}"
+    },
+    {
+     "name": "style",
+     "raw": "{{ minHeight: 'var(--textarea-min-h-lg)' }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 90,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 79,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 73,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+   "line": 91,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.goals}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, goals: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 91,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 79,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 73,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+   "line": 92,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.challenges}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, challenges: e.target.value })}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 92,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "form",
+     "line": 79,
+     "className": null
+    },
+    {
+     "tag": "Modal",
+     "line": 73,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+   "line": 222,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{configs[key].prompt_text}"
+    },
+    {
+     "name": "data-testid",
+     "raw": "{`prompt-textarea-${key}`}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n              setConfigs((prev) => ({\n                ...prev,\n                [key]: { ...prev[key], prompt_text: e.target.value },\n              }))\n            }"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(`${p}.placeholder`)}"
+    },
+    {
+     "name": "rows",
+     "raw": "{16}"
+    },
+    {
+     "name": "style",
+     "raw": "{{\n              width: \"100%\",\n              fontFamily: \"var(--font-mono, monospace)\",\n              fontSize: \"var(--font-sm)\",\n              boxSizing: \"border-box\",\n            }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "section",
+     "line": 137,
+     "className": null
+    },
+    {
+     "tag": "div",
+     "line": 118,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+   "line": 367,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.search_kw}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, search_kw: e.target.value })}"
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "style",
+     "raw": "{{ width: \"100%\", resize: \"vertical\" }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 363,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "div",
+     "line": 317,
+     "className": null
+    },
+    {
+     "tag": "form",
+     "line": 316,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+   "line": 380,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.exclude_kw}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => setForm({ ...form, exclude_kw: e.target.value })}"
+    },
+    {
+     "name": "rows",
+     "raw": "{3}"
+    },
+    {
+     "name": "style",
+     "raw": "{{ width: \"100%\", resize: \"vertical\" }}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 376,
+     "className": "\"form-group\""
+    },
+    {
+     "tag": "div",
+     "line": 317,
+     "className": null
+    },
+    {
+     "tag": "form",
+     "line": 316,
+     "className": null
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 61,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.address}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => onChange(\"address\", e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 59,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 68,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => onChange(\"notes\", e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 66,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  },
+  {
+   "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+   "line": 44,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{form.description}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => onChange(\"description\", e.target.value)}"
+    }
+   ],
+   "uiAllow": [],
+   "ancestors": [
+    {
+     "tag": "div",
+     "line": 42,
+     "className": "\"form-group\""
+    }
+   ],
+   "insideMold": false
+  }
+ ],
+ "molds": [
+  {
+   "file": "frontend/src/components/MergeCompanyModal.tsx",
+   "line": 246,
+   "attrs": [
+    {
+     "name": "rows",
+     "raw": "{2}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"mergeCompany.reasonPlaceholder\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{reason}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setReason(e.target.value)}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{500}"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/components/MergeContactModal.tsx",
+   "line": 244,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"mergeContact.reasonLabel\")}"
+    },
+    {
+     "name": "rows",
+     "raw": "{2}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"mergeContact.reasonPlaceholder\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{reason}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setReason(e.target.value)}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{500}"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx",
+   "line": 238,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"productDetail.search_keywords\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"productDetail.wordsHint\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{draft.search_keywords}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => change(\"search_keywords\", e.target.value)}"
+    },
+    {
+     "name": "rows",
+     "raw": "{5}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{saving}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx",
+   "line": 240,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"productDetail.exclude_keywords\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"productDetail.wordsHint\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{draft.exclude_keywords}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{e => change(\"exclude_keywords\", e.target.value)}"
+    },
+    {
+     "name": "rows",
+     "raw": "{4}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{saving}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+   "line": 419,
+   "attrs": [
+    {
+     "name": "value",
+     "raw": "{welcomeTemplate}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) => setWelcomeTemplate(e.target.value)}"
+    },
+    {
+     "name": "disabled",
+     "raw": "{!canEdit}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"discordTicketConfig.welcomePlaceholder\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"discordTicketConfig.welcomeHint\", {\n              count: welcomeTemplate.length,\n              max: WELCOME_MAX_LENGTH,\n            })}"
+    },
+    {
+     "name": "maxLength",
+     "raw": "{WELCOME_MAX_LENGTH}"
+    },
+    {
+     "name": "rows",
+     "raw": "{4}"
+    },
+    {
+     "name": "aria-label",
+     "raw": "{t(\"discordTicketConfig.welcomeTitle\")}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+   "line": 71,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "\"メモ\""
+    },
+    {
+     "name": "placeholder",
+     "raw": "\"メモを入力してください...\""
+    },
+    {
+     "name": "helperText",
+     "raw": "\"チーム全員に表示されます。\""
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+   "line": 75,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "\"メッセージ\""
+    },
+    {
+     "name": "placeholder",
+     "raw": "\"メッセージを入力...\""
+    },
+    {
+     "name": "error",
+     "raw": "\"メッセージを入力してください。\""
+    },
+    {
+     "name": "required",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+   "line": 79,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "\"テンプレート本文\""
+    },
+    {
+     "name": "defaultValue",
+     "raw": "\"このテンプレートはロックされています。\""
+    },
+    {
+     "name": "disabled",
+     "raw": "(true)"
+    },
+    {
+     "name": "helperText",
+     "raw": "\"変更できません。\""
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+   "line": 784,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"supplierExtractionRules.extractionInstruction\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.extraction_notes}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n                setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))\n              }"
+    },
+    {
+     "name": "rows",
+     "raw": "{10}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"supplierExtractionRules.extractionInstructionPlaceholder\")}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+   "line": 795,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"supplierExtractionRules.exampleText\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.extraction_example_text}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n                setForm((prev) => ({ ...prev, extraction_example_text: e.target.value }))\n              }"
+    },
+    {
+     "name": "rows",
+     "raw": "{8}"
+    },
+    {
+     "name": "placeholder",
+     "raw": "{t(\"supplierExtractionRules.exampleTextPlaceholder\")}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+   "line": 806,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"supplierExtractionRules.shipFormat\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"supplierExtractionRules.shipFormatHelper\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.extraction_ship_format}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n                setForm((prev) => ({ ...prev, extraction_ship_format: e.target.value }))\n              }"
+    },
+    {
+     "name": "rows",
+     "raw": "{4}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+   "line": 817,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"supplierExtractionRules.layoutRules\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"supplierExtractionRules.layoutRulesHelper\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.extraction_layout_rules}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n                setForm((prev) => ({ ...prev, extraction_layout_rules: e.target.value }))\n              }"
+    },
+    {
+     "name": "rows",
+     "raw": "{8}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  },
+  {
+   "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+   "line": 828,
+   "attrs": [
+    {
+     "name": "label",
+     "raw": "{t(\"supplierExtractionRules.hardCases\")}"
+    },
+    {
+     "name": "helperText",
+     "raw": "{t(\"supplierExtractionRules.hardCasesHelper\")}"
+    },
+    {
+     "name": "value",
+     "raw": "{form.extraction_hard_cases}"
+    },
+    {
+     "name": "onChange",
+     "raw": "{(e) =>\n                setForm((prev) => ({ ...prev, extraction_hard_cases: e.target.value }))\n              }"
+    },
+    {
+     "name": "rows",
+     "raw": "{8}"
+    },
+    {
+     "name": "fullWidth",
+     "raw": "(true)"
+    }
+   ]
+  }
+ ]
+}
