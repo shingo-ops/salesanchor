@@ -28,7 +28,7 @@ _ENGINE_LIKE = "v102%"
 class CheckSettings:
     ratio: Decimal  # 相場とのずれの倍率の上限（これを超えたら疑う）
     min_posts: int  # 相場に使う、別々の投稿の数の最小
-    single_ratio: Decimal | None = None  # 規則B: 比べる別単位の相場が無いとき、この倍率以上ずれたら疑う。None なら規則Bは働かない
+    single_ratio: Decimal | None = None  # 規則B: 比べる別単位の相場が無いとき、価格が相場のこの倍率以上（高い側だけ）なら疑う。None なら規則Bは働かない
 
 
 @dataclass(frozen=True)
@@ -135,7 +135,8 @@ def is_unit_price_mismatch(candidate: Candidate, market: Market, settings: Check
         return False
     others = [entry for unit, entry in usable.items() if unit != candidate.unit]
     if not others:  # 規則B: 比べる別単位の相場が無い
-        return settings.single_ratio is not None and own_ratio >= settings.single_ratio
+        # 高い側だけ（価格が相場の single_ratio 倍以上）。安い側はセール・状態差があり得るので付けない
+        return settings.single_ratio is not None and candidate.price >= own.median * settings.single_ratio
     return any(_ratio(candidate.price, entry.median) < own_ratio for entry in others)
 
 

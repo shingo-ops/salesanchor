@@ -201,16 +201,16 @@ def test_reason_code_is_ackable(code):
 SINGLE5 = CheckSettings(ratio=Decimal(3), min_posts=3, single_ratio=Decimal(5))
 
 
-def test_rule_b_flags_expensive_side_when_no_other_unit_market():
+def test_rule_b_flags_the_expensive_side_when_no_other_unit_market():
     market = _market(Box=(10000, 3))
     assert check.is_unit_price_mismatch(_cand("Box", 50000), market, SINGLE5) is True  # ちょうど5倍は含む
     assert check.is_unit_price_mismatch(_cand("Box", 49999), market, SINGLE5) is False
 
 
-def test_rule_b_flags_cheap_side_too():
+def test_rule_b_does_not_flag_the_cheap_side():
     market = _market(Box=(10000, 3))
-    assert check.is_unit_price_mismatch(_cand("Box", 2000), market, SINGLE5) is True  # 相場の1/5
-    assert check.is_unit_price_mismatch(_cand("Box", 2001), market, SINGLE5) is False
+    assert check.is_unit_price_mismatch(_cand("Box", 2000), market, SINGLE5) is False  # 相場の1/5でも付けない
+    assert check.is_unit_price_mismatch(_cand("Box", 100), market, SINGLE5) is False
 
 
 def test_rule_b_does_nothing_without_the_single_ratio_setting():
