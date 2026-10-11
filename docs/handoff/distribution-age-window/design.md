@@ -1,6 +1,6 @@
 # design: 配信の「48時間以内」を1か所の定義にし、設定が無い時は配信を止める（便AGE）
 
-参照: recon.md（同じフォルダ）、ADR-158、card-AGE.md。
+参照: docs/handoff/distribution-age-window/recon.md、ADR-158、docs/handoff/distribution-age-window/card-AGE.md。
 
 ## 1. 目的（PO の言葉、2026-10-11）
 - 「システム解析後に最終的に集計したリストに残るのはLINEでの投稿日時が48時間以内の商品、それ以外は集計リストから外してログにする」
@@ -41,3 +41,4 @@
 
 ## 維持の仕組み
 - 単体テスト・PG テスト（3か所が同じ条件・設定なしで配信しない）が CI で毎回走る。
+- 守り手: CI（backend/tests/test_tcg_distribution.py、backend/tests/test_tcg_condition_review.py）
