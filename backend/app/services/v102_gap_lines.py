@@ -191,10 +191,11 @@ def gap_name_candidates(
     results: list[dict] = []
     for position, start in enumerate(starts):
         end = starts[position + 1] if position + 1 < len(starts) else len(sorted_items)
-        support = [n for n in groups[start] if _is_support_line(lines[n - 1], product_first)]
-        for item in sorted_items[start:end]:
-            if not _is_target(item):
-                continue
+        targets = [item for item in sorted_items[start:end] if _is_target(item)]
+        if not targets:
+            continue  # 対象の件が無いまとまりでは、支えの行を照合しない
+        support = [n for n in groups[start] if _is_support_line(lines[n - 1], product_first)]  # まとまりごとに1回
+        for item in targets:
             block = [lines[n - 1] for n in item["lines"]]
             per_line = {
                 n: _candidates(match_text_g2(product_match_text("\n".join([lines[n - 1], *block]), "", item.get("name"))[0], product_first))

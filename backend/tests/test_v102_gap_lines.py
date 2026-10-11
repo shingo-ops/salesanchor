@@ -267,3 +267,30 @@ def test_classify_grows_with_the_number_of_lines_not_its_square():
     classify_lines(accepted_items(items), lines)
 
     assert time.perf_counter() - started < 1.0  # 二乗の実装では数秒かかる大きさ
+
+
+def test_t2_does_not_match_support_lines_for_a_group_without_target_items(monkeypatch):
+    import app.services.v102_gap_lines as module
+
+    calls = []
+    original = module.match_text_g2
+    monkeypatch.setattr(module, "match_text_g2", lambda *args: calls.append(1) or original(*args))
+    lines = ["BASESHOP", "matA", "3,000円 ×2"]
+    items = [item(0, [2, 3], 3, status="matched")]  # 範囲の中に対象（unmatched）の件が無い
+
+    assert gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA"))) == []
+    assert calls == []
+
+
+def test_t2_matches_the_support_lines_of_a_group_only_once_for_several_target_items(monkeypatch):
+    import app.services.v102_gap_lines as module
+
+    singles = []
+    original = module.match_text_g2
+    monkeypatch.setattr(module, "match_text_g2", lambda text, m: singles.append(text) or original(text, m))
+    lines = ["BASESHOP", "matA", "3,000円 ×2", "matA", "4,000円 ×1"]
+    items = [item(0, [2, 3], 3), item(1, [4, 5], 5)]
+
+    module.gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA")))
+
+    assert singles.count("BASESHOP") == 1  # 支えの行の単独照合は、まとまりごとに1回
