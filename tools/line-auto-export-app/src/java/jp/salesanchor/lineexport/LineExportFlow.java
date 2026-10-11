@@ -88,6 +88,14 @@ final class LineExportFlow {
      * 経っても消えなかった（＝押せていない明確な証拠がある）場合の失敗段階名。
      */
     private static final String STAGE_EDIT_NOT_CLOSED = "edit_not_closed";
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 遮断モード（{@code overlayBlocking==true}）で、EDIT_CLASS_WAIT_TIMEOUT_MS経っても
+     * EDITノードが見つからなかった場合の失敗段階名。遮断中は座標タップが吸われ配信されない
+     * ことが実機で確定しているため（06:30・06:32・09:13）、比率座標タップへは落とさず
+     * この段階で失敗にする。
+     */
+    private static final String STAGE_EDIT_NODE_NOT_FOUND = "edit_node_not_found";
 
     // ---- 待ち時間（ADB版と同値に揃える。design.md追補の「待ち時間」節） --------------------
 
@@ -266,11 +274,33 @@ final class LineExportFlow {
     private long editClassWaitMs = -1L;
     private long editSettleMs = -1L;
     private long editTapMs = -1L;
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 準備完了の判定本体。classDetected/classPolls/classWaitMs（TYPE_WINDOW_STATE_CHANGED
+     * 由来）は診断用としてそのまま残すが、判定には使わない。2026-10-11 09:13に
+     * classDetected=falseで盲目タップ（比率座標タップ）に落ち配信できなかったため、
+     * 判定はNodeOps.findNodeByTextInPackageによるEDITノード探索に移した。
+     */
+    private int editNodePolls;
+    /** EDITノードが見つかるまでのms。見つからなければ-1Lのまま（ログには出さない）。 */
+    private long editNodeWaitMs = -1L;
+    /**
+     * EDIT_CLASS_WAIT_TIMEOUT_MSの期限までにEDITノードが見つかったか（＝押す前にノードが
+     * 実在したか）。waitForEditDialogClosedで配信確認の前提として使う（この値がfalseの回は
+     * 比率座標タップへフォールバックした非遮断の経路のみ）。
+     */
+    private boolean editNodeWasFound;
     // design.md追補 2026-10-11: どの経路でEDITを押したか（EDIT_CLICK_PATH_*のいずれか）と、
     // 押した後にダイアログが消えたことを確認できたか・消えるまでのms。
     private String editClickPath;
     private boolean editDialogClosed;
     private long editCloseWaitMs = -1L;
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 配信を確認できたか（null=未確認）。editNodeWasFound==falseの経路では配信を確認した
+     * と主張しない（editDialogClosedは出さずfalseを記録する）。
+     */
+    private Boolean editVerified;
     // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測。手順11自体の内訳ではないが、
     // 依頼文の分類に合わせてEDIT関連として記録する。
     private long editLockDelayMs = -1L;
@@ -531,45 +561,71 @@ final class LineExportFlow {
         step11WaitEditClassThenTap();
     }
 
-    // ---- 手順11: EDITを座標タップ -----------------------------------------------------------
+    // ---- 手順11: EDITを押す（準備完了の判定はEDITノードの探索） -----------------------------
     //
-    // Termuxの保存ダイアログはノードに露出しないため座標タップにする（ADB版auto-export.sh:
-    // 157のEDIT_X/EDIT_Yと同じ脆さ）。TermuxFileReceiverActivityのクラス名検出は
-    // onAccessibilityEventの記録（診断用）を使うだけで、判定の本筋（タップするか否か）には
-    // 使わない＝検出できてもできなくても最終的にはタップする。
+    // design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+    // 準備完了の判定本体はNodeOps.findNodeByTextInPackageによるEDITノード探索にする
+    // （NODE_WAIT_POLL_MS間隔・EDIT_CLASS_WAIT_TIMEOUT_MS期限、値は変更していない）。
+    // TYPE_WINDOW_STATE_CHANGED由来のクラス名検出（classDetected/classPolls/classWaitMs）は
+    // 診断用としてそのまま残すが、判定には使わない。2026-10-11 09:13にclassDetected=falseで
+    // 盲目的な比率座標タップに落ち、遮断モードで座標タップが吸われて配信できなかったため。
 
     private void step11WaitEditClassThenTap() {
         editClassWaitStartedAt = System.currentTimeMillis();
         editClassPolls = 0;
+        editNodePolls = 0;
         pollEditClass(editClassWaitStartedAt + EDIT_CLASS_WAIT_TIMEOUT_MS);
     }
 
     private void pollEditClass(final long deadlineAt) {
         editClassPolls++;
-        String className = service.getLastWindowClassName();
-        boolean detected = className != null && className.contains(TERMUX_EDIT_CLASS_NAME);
-        if (detected) {
-            editClassDetected = true;
-            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+        editNodePolls++;
+
+        // 診断専用（判定には使わない。上記コメント参照）。
+        if (!editClassDetected) {
+            String className = service.getLastWindowClassName();
+            if (className != null && className.contains(TERMUX_EDIT_CLASS_NAME)) {
+                editClassDetected = true;
+                editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            }
+        }
+
+        // 判定本体: EDITノードが見つかるか。
+        AccessibilityNodeInfo editNode = NodeOps.findNodeByTextInPackage(
+                service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME);
+        if (editNode != null) {
+            editNodeWasFound = true;
+            editNodeWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
             final long settleStartedAt = System.currentTimeMillis();
-            // auto-export.sh:156 の `sleep 1` と同値。検出してからタップまでの落ち着き待ち。
+            // auto-export.sh:156 の `sleep 1` と同値。見つかってからタップまでの落ち着き待ち。
             schedule("editSettle", EDIT_TAP_SETTLE_DELAY_MS, new Runnable() {
                 @Override
                 public void run() {
                     editSettleMs = System.currentTimeMillis() - settleStartedAt;
-                    tapEditButton(true);
+                    tapEditButton();
                 }
             });
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
-            // 5秒で検出できなくてもタップは行う（ADB版auto-export.sh:155はここで失敗扱いだが、
-            // このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めない
-            // ことを失敗とみなさない。診断にeditクラス未検出を残すだけ）。
-            editClassDetected = false;
-            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            editNodeWasFound = false;
+            if (!editClassDetected) {
+                // 最後までクラス名を検出できなかった回の診断値（既存と同じ記録方法）。
+                editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            }
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11: 遮断モードでは座標タップが吸われ配信されないことが
+                // 実機で確定している（06:30・06:32・09:13）。見つからないまま比率座標タップへ
+                // 落とすと09:13の再発になるため、ここで失敗にする。scheduleRetryAfterFailureが
+                // 自動で張られ、合計3回まで試される。
+                recordStep(STAGE_EDIT_NODE_NOT_FOUND, null, buildEditStageExtraFields());
+                finish(false, STAGE_EDIT_NODE_NOT_FOUND);
+                return;
+            }
+            // 非遮断（EXPORT単体の手動検証）は従来どおり比率座標タップへフォールバックする
+            // （tapEditButton内でEDITノードが見つからなければEDIT_CLICK_PATH_RATIO_TAPになる）。
             editSettleMs = 0L; // この経路では落ち着き待ちを取っていない。
-            tapEditButton(false);
+            tapEditButton();
             return;
         }
         schedule("classPoll", NODE_WAIT_POLL_MS, new Runnable() {
@@ -588,7 +644,7 @@ final class LineExportFlow {
      * 比率座標タップ（EDIT_TAP_X_RATIO/EDIT_TAP_Y_RATIO、値は変更していない）をそのまま行う。
      * どの経路を使ったかはeditClickPathに記録する。
      */
-    private void tapEditButton(boolean classDetected) {
+    private void tapEditButton() {
         long tapStartedAt = System.currentTimeMillis();
         AccessibilityNodeInfo editNode = NodeOps.findNodeByTextInPackage(
                 service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME);
@@ -620,7 +676,7 @@ final class LineExportFlow {
             }
         }
         editTapMs = System.currentTimeMillis() - tapStartedAt;
-        String classNote = classDetected ? "" : "editクラス未検出 ";
+        String classNote = editClassDetected ? "" : "editクラス未検出 ";
         String stepExtra = classNote + (traceMessage != null ? traceMessage : "");
         if (!accepted) {
             recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
@@ -634,18 +690,38 @@ final class LineExportFlow {
     }
 
     /**
-     * design.md追補 2026-10-11: EDITを押した直後から、EDIT_CLOSE_POLL_MS間隔・
-     * EDIT_CLOSE_TIMEOUT_MSを上限に、EDITのノード（手順1と同じNodeOps.findNodeByTextInPackage）
-     * が消えたかを見る。dispatchGestureもACTION_CLICKも「押した」ことしか保証しないため、
-     * ダイアログが消えたことで配信を確認する。
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * EDITを押した直後から、EDIT_CLOSE_POLL_MS間隔・EDIT_CLOSE_TIMEOUT_MSを上限に、EDITの
+     * ノード（手順1と同じNodeOps.findNodeByTextInPackage）が消えたかを見る。dispatchGestureも
+     * ACTION_CLICKも「押した」ことしか保証しないため、ダイアログが消えたことで配信を確認する。
      *
-     * ノードが見つからなければ「消えた＝成功」とする（安全側）。探索が例外で失敗した場合も
-     * 「押せていない明確な証拠」ではないため成功扱いにする（既存の挙動を壊さないため。
-     * 失敗にするのは「EDITのノードがまだ存在する」という明確な未押下の証拠があるときだけ）。
-     * 3,000ms経ってもノードが残っていたときだけedit_not_closedとして失敗にする（これにより
-     * armRetryOnFailureの経路でscheduleRetryAfterFailureが自動で張られ、次回で取り戻せる）。
+     * ただし、この判定は押す前に一度もノードが見つかっていない（editNodeWasFound==false、
+     * 比率座標タップへフォールバックした非遮断の経路のみ）場合は意味を持たない。2026-10-11
+     * 09:13の実機で、ノードが一度も見つかっていないのに「消えた＝配信された」と誤判定し、
+     * successとして記録された（実際はファイルが届いていなかった）。そのため editNodeWasFound
+     * で前提を分ける: ノードが実在した回だけ消滅確認を信じ、そうでない回は配信を確認したと
+     * 主張しない（editVerified:falseを記録する。詳細は下の分岐参照）。
+     *
+     * editNodeWasFound==trueの経路: ノードが見つからなければ「消えた＝成功」とする（安全側）。
+     * 探索が例外で失敗した場合も「押せていない明確な証拠」ではないため成功扱いにする
+     * （既存の挙動を壊さないため。失敗にするのは「EDITのノードがまだ存在する」という明確な
+     * 未押下の証拠があるときだけ）。3,000ms経ってもノードが残っていたときだけedit_not_closed
+     * として失敗にする（これによりarmRetryOnFailureの経路でscheduleRetryAfterFailureが自動で
+     * 張られ、次回で取り戻せる）。
      */
     private void waitForEditDialogClosed(final long startedAt, final String stepExtra) {
+        if (!editNodeWasFound) {
+            // design.md追補 2026-10-11: 押す前にEDITノードが一度も見つかっていない
+            // （＝比率座標タップへフォールバックした非遮断の経路）ため、ノードの消滅で配信を
+            // 確認したとは主張しない。editDialogClosedは出さずeditVerified:falseを記録する。
+            // 挙動は従来どおり成功として終える: この経路は手動検証（EXPORT単体、
+            // overlayBlocking==false）専用で、座標タップが歴史的に効いていたため、今まで
+            // 通っていた回を失敗に変えない（依頼文の判断どおり）。
+            editVerified = Boolean.FALSE;
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
+            finish(true, null);
+            return;
+        }
         boolean stillOpen;
         try {
             stillOpen = NodeOps.findNodeByTextInPackage(service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME) != null;
@@ -655,6 +731,7 @@ final class LineExportFlow {
         }
         if (!stillOpen) {
             editDialogClosed = true;
+            editVerified = Boolean.TRUE;
             editCloseWaitMs = System.currentTimeMillis() - startedAt;
             recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
             // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
@@ -668,6 +745,7 @@ final class LineExportFlow {
         }
         if (System.currentTimeMillis() - startedAt >= EDIT_CLOSE_TIMEOUT_MS) {
             editDialogClosed = false;
+            editVerified = Boolean.FALSE;
             editCloseWaitMs = System.currentTimeMillis() - startedAt;
             recordStep(STAGE_EDIT_NOT_CLOSED, stepExtra, buildEditStageExtraFields());
             finish(false, STAGE_EDIT_NOT_CLOSED);
@@ -868,19 +946,32 @@ final class LineExportFlow {
     private JSONObject buildEditStageExtraFields() {
         JSONObject o = new JSONObject();
         try {
+            // 診断用。判定には使わない（classDetectedのjavadoc参照）。
             o.put("classDetected", editClassDetected);
             o.put("classPolls", editClassPolls);
             o.put("classWaitMs", editClassWaitMs);
+            // design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し…」: 判定本体。
+            o.put("editNodePolls", editNodePolls);
+            // 見つからなければフィールド自体を出さない（editNodeWaitMsは未設定のまま-1L）。
+            if (editNodeWaitMs >= 0) {
+                o.put("editNodeWaitMs", editNodeWaitMs);
+            }
             o.put("settleMs", editSettleMs);
             o.put("tapMs", editTapMs);
-            // design.md追補 2026-10-11: どの経路でEDITを押したか。常に設定済み（tapEditButton
-            // 内でaccepted判定の前に決まる）。
+            // design.md追補 2026-10-11: どの経路でEDITを押したか。edit_node_not_foundの段階
+            // （タップ自体を行っていない）ではnullのまま出さない。
             o.put("editClickPath", editClickPath);
             // ダイアログの消滅確認はaccepted==trueのときだけ行うため、未確認（押下自体が
-            // 失敗した回）はeditCloseWaitMsが-1Lのままになり、その場合は出さない。
+            // 失敗した回・edit_node_not_foundの回）はeditCloseWaitMsが-1Lのままになり、その
+            // 場合は出さない。editNodeWasFound==falseの経路（比率座標タップへフォールバック
+            // した非遮断の経路）は配信を確認したと主張しないため、editDialogClosedはここでも
+            // 出さず（editCloseWaitMsが-1Lのまま）editVerified:falseだけを出す。
             if (editCloseWaitMs >= 0) {
                 o.put("editDialogClosed", editDialogClosed);
                 o.put("editCloseWaitMs", editCloseWaitMs);
+            }
+            if (editVerified != null) {
+                o.put("editVerified", editVerified.booleanValue());
             }
         } catch (JSONException e) {
             Log.w(TAG, "edit stage extra fields build failed: " + e);

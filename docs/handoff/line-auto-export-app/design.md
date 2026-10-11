@@ -839,3 +839,65 @@ EDITは`clickable=true`。boundsの中心 (873,1236) は、既存の比率座標
 `export`の`phase:"end"`行に`blockedCoordinateGesture: true`を（trueのときだけ）追加した。既存の`scrollMode`/`editClickPath`はそのまま残しており、併せて読めばどの座標操作だったか特定できる。
 
 座標ジェスチャを止めたり失敗にしたりはしていない（記録のみ）。先に記録を取り、`blockedCoordinateGesture: true`の回に段階失敗が集まるかを見てから、座標スワイプの扱いを判断する。
+
+## 追補 2026-10-11 EDITの準備完了判定をノード探索に移し、配信確認の条件を正す
+
+### 実機ログ（2026-10-11 09:13、0.18.0-stage3・遮断モード常時有効）
+
+```
+edit_button  classDetected=False  classPolls=18  classWaitMs=5107
+             editClickPath=ratio-tap
+             editDialogClosed=True      ← 誤判定
+結果: success                            ← 誤報告
+取り込み: 無し（ファイルがTermuxに届かなかった）
+再試行: 張られなかった（successだったため）
+```
+
+### 原因1: 準備完了の判定がTYPE_WINDOW_STATE_CHANGED依存で、来ない回がある
+
+準備完了（Termuxの保存ダイアログが出た）の判定が、`service.getLastWindowClassName()`に`TermuxFileReceiverActivity`が含まれるか（`TYPE_WINDOW_STATE_CHANGED`イベント由来）に依存していた。このイベントが来ない回があり、`classDetected=false`のときは比率座標タップ（`EDIT_CLICK_PATH_RATIO_TAP`）に落ちていた。
+
+実測の頻度（`classDetected=false`になった回／全export実行回、実行ログから集計）:
+
+- 2026-10-09: 1/46回
+- 2026-10-10: 0/38回
+- 2026-10-11: 1/19回
+
+合計で約2%。頻度は低いが、**遮断モード（`overlayBlocking==true`）では座標タップが吸われることが06:30・06:32・09:13の実機で確定しているため、この約2%の回は必ずファイルが届かない。**
+
+### 原因2: 配信確認が「押す前の実在確認」を前提にしていなかった
+
+`waitForEditDialogClosed`は「EDITノードが見つからない＝ダイアログが消えた＝配信された」と判定していたが、これは**押す前に一度もノードが見つかっていない場合は意味を持たない**（存在した証拠が無いまま「消えた」と言っているだけ）。09:13の回はまさにこの経路（`editClickPath=ratio-tap`＝ノード未検出でタップ時にも見つからなかった）で、`editDialogClosed=true`（成功）と誤判定された。
+
+### データは失われない
+
+watermark（取り込みの起点）は送信が受理されたときだけ進む（`RunScheduler.recordSuccessfulImport`は`success`のときだけ呼ばれる）。09:13の回はこの意味で「成功」と誤記録されたため本来は前進してはいけなかったが、実際に失われたデータは無い: 09:16の回で正常化（受理・送信成功）を確認済みであり、09:13分も含めて09:16の回がまとめて送った。
+
+### 対処1: 準備完了の判定を「EDITノードが見つかるか」に変える
+
+`LineExportFlow.pollEditClass`を、`NodeOps.findNodeByTextInPackage(service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME)`が非nullになることを判定本体にするよう変更した。間隔・期限は既存の定数（`NODE_WAIT_POLL_MS`=300ms、`EDIT_CLASS_WAIT_TIMEOUT_MS`=5,000ms）のまま変えていない。見つかったら`EDIT_TAP_SETTLE_DELAY_MS`（1,000ms、値は変えていない）待ってから`tapEditButton`へ進み、見つかった事実を`editNodeWasFound=true`として保持する。
+
+期限までに見つからなかった場合:
+
+- **遮断モードが有効（`overlayBlocking==true`）**: 座標タップは効かないことが実機で確定しているため、比率座標タップへは落とさず失敗にする。新しい段階名`edit_node_not_found`を定義し、`finish(false, STAGE_EDIT_NODE_NOT_FOUND)`とした。既存の`scheduleRetryAfterFailure`が自動で張られ、合計3回まで試される。
+- **遮断モードが無効（`overlayBlocking==false`、EXPORT単体の手動検証）**: 従来どおり比率座標タップにフォールバックする（`editClickPath=ratio-tap`）。手動検証の既存挙動は変えていない。
+
+`TYPE_WINDOW_STATE_CHANGED`由来の記録（`classDetected`/`classPolls`/`classWaitMs`）は診断用としてそのまま残した（過去データとの比較のため）。判定には使っていない。
+
+`edit_button`のstepログに新しい項目を追加した: `editNodePolls`（探索した回数）、`editNodeWaitMs`（見つかるまでのms。見つからなければフィールド自体を出さない）。
+
+### 対処2: 配信確認を「押す前にノードが見つかっていた場合だけ」信じる
+
+`waitForEditDialogClosed`とログを次のように変更した。
+
+- `editNodeWasFound==true`（押す前にノードが実在した）: 既存のロジックのまま。消えたら`editDialogClosed:true`＋`editCloseWaitMs`を記録して成功、3,000ms（`EDIT_CLOSE_TIMEOUT_MS`、値は変えていない）経っても残っていたら`edit_not_closed`で失敗。消えたことが確認できた回には`editVerified:true`を記録する。
+- `editNodeWasFound==false`（比率座標タップにフォールバックした非遮断の経路のみ）: 配信を確認したと主張しない。`editDialogClosed`フィールドは出さず（null扱い）、代わりに`editVerified:false`を記録する。挙動は従来どおり成功として終える（`finish(true, null)`）: この経路は手動検証のみで、座標タップが歴史的に効いていたため、今まで通っていた回を失敗に変えないという判断（依頼文の指示どおり）。
+
+探索が例外を投げた場合の扱いは現状のまま（消えた＝成功扱い）にした。理由: 探索自体が不調なだけのケースを「押せていない明確な証拠」と区別できず、誤って失敗扱いにしないため（既存のコメントのとおり）。
+
+### 変更していないもの
+
+- 定数の値はすべて変更していない（`NODE_WAIT_POLL_MS`・`EDIT_CLASS_WAIT_TIMEOUT_MS`・`EDIT_TAP_SETTLE_DELAY_MS`・`EDIT_CLOSE_TIMEOUT_MS`・`EDIT_CLOSE_POLL_MS`・`EDIT_TAP_X_RATIO`/`Y_RATIO`・`LOCK_DELAY_AFTER_EDIT_MS`・`BLOCKING_AUTO_REMOVE_MS`・`MAX_CONSECUTIVE_RETRIES`・`RETRY_INTERVAL_MS`）。
+- `RunStatusOverlay`の遮断の作り（「停止」ボタンは削除済みのまま、復活させていない）、`overlayBlocking = armRetryOnFailure`の判定、`lockOnFinish`/`armRetryOnFailure`の分岐、`accessibility_service_config.xml`の`accessibilityEventTypes`、`NodeOps`の既存メソッドの挙動、`RunScheduler`の予約・補完・再試行の仕組み・キーガード判定は、いずれも変更していない。
+
+座標スワイプが遮断中に通るかなど、この追補の範囲外の未確定事項については推測を書かない（上の「未確定事項と検知方法」節のまま、別途判断する）。
