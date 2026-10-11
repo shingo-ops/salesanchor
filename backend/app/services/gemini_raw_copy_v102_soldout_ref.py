@@ -361,10 +361,15 @@ def _is_inherit_candidate(item: Mapping[str, Any], index: int, fixed_products: M
     )
 
 
-def _stranded_stock(product_id: int, posts: Sequence[SoldoutRefPost]) -> dict[str, tuple[SoldoutRefPost, StockItem]]:
-    """規則12e：商品の状態ごとに、その状態の行（在庫・完売）がある最も新しい投稿を見て、そこに在庫の行がある状態（取り残し）。"""
+def _stranded_stock(
+    product_id: int, posts: Sequence[SoldoutRefPost], newer_states: frozenset[str] = frozenset(),
+) -> dict[str, tuple[SoldoutRefPost, StockItem]]:
+    """規則12e：商品の状態ごとに、その状態の行（在庫・完売）がある最も新しい投稿を見て、そこに在庫の行がある状態（取り残し）。
+
+    newer_states は〆と同じ投稿の他の件（同じ商品）の状態＝過去の投稿より新しい行があるので取り残しにしない。
+    """
     stranded: dict[str, tuple[SoldoutRefPost, StockItem]] = {}
-    seen: set[str] = set()
+    seen: set[str] = set(newer_states)
     for post in posts:  # 新しい順
         stock = [it for it in post.stock_items if it.product_id == product_id]
         states = {it.condition_canonical for it in stock} | {it.condition_canonical for it in post.sold_items if it.product_id == product_id}
@@ -391,7 +396,10 @@ def decide_soldout_inherit(
         shime = _shime_condition(item)
         if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
             continue  # 12d
-        stranded = _stranded_stock(product_id, posts)
+        same_post = frozenset(
+            _shime_condition(other) for j, other in enumerate(extracted) if j != i and other.get("product_id") == product_id
+        )
+        stranded = _stranded_stock(product_id, posts, same_post)
         if len(stranded) != 1:
             continue  # 12e
         (canonical, (post, stock)), = stranded.items()

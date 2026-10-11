@@ -637,3 +637,11 @@ def test_extract_does_not_inherit_for_a_human_decided_product():
     post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_inherit_si([1], 62, 21, "Case"),))
     row = _extract("ふぁいぶ ABC-123 〆", (post,), fixed_products={0: 62})[0]
     assert "soldout_targets" not in row
+
+
+def test_inherit_does_not_strand_a_condition_written_by_another_row_of_the_same_post():
+    pack = _inherit_si([2], 62, 23, "Pack")
+    post = _post("p1", "x", stock_items=(pack,))
+    same_post_pack = {"status_effect": None, "status": "In Stock", "match_status": "matched", "product_id": 62, "condition": "Pack"}
+    assert _inherit([_shime(), same_post_pack], (post,)) == {}
+    assert list(_inherit([_shime()], (post,))) == [0]  # 同じ投稿に他の件が無ければ引き継ぐ

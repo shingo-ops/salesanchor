@@ -22,7 +22,7 @@ mode: handoff
 - 12b 商品が直接決まった: `match_status in (matched, matched_context, matched_followup)` かつ `product_id` あり。すでに `soldout_targets` がある件（便1/便2）は触らない。人が商品を決めた件（fixed_products）は触らない。
 - 12c 〆の状態が語で決まっていない: `condition_decided_by_word(condition_basis)` が False（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:33-40`、便2と同じ関数）。
 - 12d 〆と同じ状態の在庫が前に無い: 同じ仕入元・前48時間（既存の読み込み窓）の投稿の在庫行（Sold out 以外）に、同じ商品で、〆の件の状態と同じ状態の行が無い。〆の件の状態は `condition`（未解決・空は `FLAG_SINGLE`）で比べる。
-- 12e 取り残しの状態がちょうど1種類: 同じ商品について、状態ごとに「その状態の行（在庫・完売を問わない）がある最も新しい投稿」を見て、そこに在庫行がある状態を「取り残し」とする。取り残しの状態が1種類のときだけ、その状態を引き継ぐ。参照はその投稿のその状態の在庫行（行番号が最小のもの）。
+- 12e 取り残しの状態がちょうど1種類: 同じ商品について、状態ごとに「その状態の行（在庫・完売を問わない）がある最も新しい投稿」を見て、そこに在庫行がある状態を「取り残し」とする。取り残しの状態が1種類のときだけ、その状態を引き継ぐ。参照はその投稿のその状態の在庫行（行番号が最小のもの）。〆と同じ投稿の他の件（同じ商品）は、その状態を「より新しい行」として扱う（取り残しにはしない）。
 満たせば、件に `soldout_targets=[{product_id, condition_id, ref_message_id, ref_line}]` と `soldout_target_basis="SOLDOUT_INHERIT"` を載せる。書き込み段は便2の `_apply_soldout_targets` がそのまま状態を上書きする（人の判断がある件は上書きしない）。
 
 ## 3. 変えない範囲
