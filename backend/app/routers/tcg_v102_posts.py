@@ -38,6 +38,7 @@ class ReasonDetail(BaseModel):
     code: str
     source: str | None
     fix_stage: str | None
+    ackable: bool = True
 
 
 class PostSummary(BaseModel):

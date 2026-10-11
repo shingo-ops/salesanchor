@@ -39,6 +39,13 @@ from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLL
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost, StockItem
 from app.services.llm_budget import record_usage_event_sync
+from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は他モジュールが line_analysis_v102_svc から読む
+    CONDITION_EFFECT_EXCLUDE,
+    CONDITION_REVIEW_REASONS,
+    REASON_CONDITION_MULTIPLE,
+    REASON_CONDITION_UNKNOWN,
+    condition_effect_sql,
+)
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 
@@ -48,9 +55,9 @@ logger = logging.getLogger(__name__)
 ENGINE_ENV = "LINE_ANALYSIS_ENGINE"
 ENGINE_V6 = "v6"
 ENGINE_V102 = "v102"
-V102_ENGINE_VERSION = "v102-f_c"  # analysis_results.engine_version
+V102_ENGINE_VERSION = "v102-f_ct"  # analysis_results.engine_version
 V102_THINKING_LEVEL = "high"  # PO 採用 2026-10-08（試作版の試験と同じ）
-V102_PROMPT_KEY = "raw_copy_v101_f_c"  # public.extraction_prompt_config の prompt_key（既定の指示書）
+V102_PROMPT_KEY = "raw_copy_v101_f_ct"  # public.extraction_prompt_config の prompt_key（既定の指示書）
 V102_PROMPT_VERSION_PREFIX = "v102:"  # extraction_jobs.prompt_version の先頭。再解析はこれで v6 / v102 を見分ける
 V102_PROMPT = V102_PROMPT_KEY  # 試作版 prompt_ab が使ってきた名前
 
@@ -68,11 +75,12 @@ _PROMPT_HASH_LENGTH = 12
 # 理由コード（このファイルが付けるもの）
 REASON_RESPONSE_UNREADABLE = "response_unreadable"
 REASON_EXTRACT_EXCEPTION = "extract_exception"
+REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
+REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
+MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
 # 人の判断で外す理由（condition_review で状態を決めたとき）
-REASON_CONDITION_UNKNOWN = "condition_unknown"
-REASON_CONDITION_MULTIPLE = "condition_multiple_candidates"
-CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
+# 値は tcg_condition_review_svc の1か所（保存時の除去と同じ集合）。ここは import して使う
 # 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
 PID_BASIS_MANUAL = "MANUAL"
 CONDITION_BASIS_MANUAL = "MANUAL_CONDITION_REVIEW"
@@ -86,7 +94,8 @@ _CONDITION_BASIS_MAX = 100
 _NUMERIC_LIMIT = Decimal(10) ** 12  # NUMERIC(14,2)
 _INT4_MAX = 2**31 - 1
 _FLAG_SINGLE = "FLAG_SINGLE"
-CONDITION_UNDECIDED_PREFIX = "FLAG_"  # 状態が決まっていない印の canonical の接頭辞（配信 SQL の NOT LIKE 'FLAG_%' と同じ）
+# 状態が決まっていない印: canonical がこの接頭辞（FLAG_SINGLE 等）、または conditions.effect が EXCLUDE（Error。配信しない状態）
+CONDITION_UNDECIDED_PREFIX = "FLAG_"
 _FLAG_SINGLE_CODE = "CN0008"
 
 _PROMPT_KEY_SQL = """
@@ -244,7 +253,7 @@ def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
     fixed_products: dict[int, int] | None = None,
 ) -> dict:
-    """v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+    """v102 の行に足す v102_items（F2〜F6 あり・F1 と迷う行の付け直しは廃止・価格数量は Gemini の写しを採る。便G）・v102_flags。v101 の欄は書かない。失敗しても止めない。
 
     落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
     ctx は raw_text と supplier_context を持つもの。extract_items は試験の道具（prompt_ab）からの差し替え用（既定は本番と同じ extract_v101_items）。
@@ -257,7 +266,8 @@ def run_v102_pipeline(
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         fixed = {"fixed_products": fixed_products} if fixed_products else {}
         extracted, flags = extract_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters, **fixed
+            items, ctx.raw_text, order=order, reassign=False, v102_fixes=True, review_reasons=True, gemini_trust=True,
+            **masters, **fixed
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
@@ -489,25 +499,36 @@ def _lines_agree(item: dict, row: object) -> bool:
     return bool(set(lines) & set(source))
 
 
-def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
-    """v102 の件を extraction_items の行に対応付ける（gemini_index 順の rows を受ける）。
+def _mapping_mismatch_item() -> dict:
+    """対応が付かない行に書く値（値は空・未解決の状態・理由 item_mapping_mismatch）。"""
+    return {"match_status": MAPPING_MISMATCH_MATCH_STATUS, "review": [{"kind": REASON_ITEM_MAPPING_MISMATCH, "source": SOURCE_SYSTEM}]}
 
-    落とした件（rejected）は自分の gemini_index を持つ。残りの件は Gemini の順を保つので、
-    落とした件を除いた行を gemini_index の昇順に並べたものと、先頭から1対1で対応する。件数が合わなければ _MappingError。
+
+def _items_by_position(v102_items: list[dict]) -> dict[int, dict]:
+    """v102 の件を gemini_index（応答の中の位置）で引く表。位置が整数でない・重複する件は入れない（その行は対応なしになる）。"""
+    seen: dict[int, dict] = {}
+    duplicated: set[int] = set()
+    for item in v102_items:
+        index = item.get("gemini_index")
+        if not _is_plain_int(index):
+            continue
+        if index in seen:
+            duplicated.add(index)
+        seen[index] = item
+    return {i: it for i, it in seen.items() if i not in duplicated}
+
+
+def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
+    """v102 の件を extraction_items の行に gemini_index で対応付ける（rows は gemini_index 昇順）。
+
+    応答は rows の順に作る（_response_from_rows）ので、応答の位置 i の件は rows[i] に当たる。
+    対応する件が無い行・行番号が合わない組は、その行だけ「値は空＋ item_mapping_mismatch」の件にする（他の行は通常どおり）。
     """
-    by_index = {r.gemini_index: r for r in rows}
-    rejected = [it for it in v102_items if it.get("rejected")]
-    accepted = [it for it in v102_items if not it.get("rejected")]
-    rejected_indexes = [it.get("gemini_index") for it in rejected]
-    if len(v102_items) != len(rows) or any(i not in by_index for i in rejected_indexes) or len(set(rejected_indexes)) != len(rejected):
-        raise _MappingError(f"件数が合いません: v102={len(v102_items)} extraction_items={len(rows)}")
-    rest = [r for r in rows if r.gemini_index not in set(rejected_indexes)]
-    if len(rest) != len(accepted):
-        raise _MappingError(f"受理した件の数が合いません: v102={len(accepted)} extraction_items={len(rest)}")
-    pairs = [*zip(rejected, (by_index[i] for i in rejected_indexes), strict=True), *zip(accepted, rest, strict=True)]
-    for item, row in pairs:
-        if not _lines_agree(item, row):
-            raise _MappingError(f"行番号が合いません: gemini_index={row.gemini_index}")
+    by_position = _items_by_position(v102_items)
+    pairs: list[tuple[dict, object]] = []
+    for position, row in enumerate(rows):
+        item = by_position.get(position)
+        pairs.append((item if item is not None and _lines_agree(item, row) else _mapping_mismatch_item(), row))
     return pairs
 
 
@@ -549,7 +570,14 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
     condition = item.get("condition")
     condition_canonical, condition_id, _resolved = _condition_columns(None if condition in (None, "none") else condition, masters)
-    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or [])])
+    quantity = _bounded_number(item.get("quantity_normalized"))
+    price = _bounded_number(item.get("price_normalized"))
+    out_of_range = [
+        REASON_VALUE_OUT_OF_RANGE
+        for raw, bounded in ((item.get("quantity_normalized"), quantity), (item.get("price_normalized"), price))
+        if raw is not None and bounded is None
+    ]
+    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or []), *out_of_range])
     return {
         "product_id": product_id if matched else None, "pid_resolved": bool(matched),
         "pid_basis": f"V102:{item.get('match_status')}"[:_PID_BASIS_MAX],
@@ -557,8 +585,8 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "unit_resolved": unit_id is not None,
         "condition_id": condition_id, "condition_canonical": condition_canonical,
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
-        "quantity_normalized": _bounded_number(item.get("quantity_normalized")),
-        "price_normalized": _bounded_number(item.get("price_normalized")),
+        "quantity_normalized": quantity,
+        "price_normalized": price,
         "note_ja": None, "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
@@ -621,6 +649,17 @@ def _load_condition_canonicals(session: Session, condition_ids: list[int]) -> di
     return {int(r[0]): str(r[1]) for r in rows}
 
 
+def _load_excluded_condition_ids(session: Session, condition_ids: list[int]) -> frozenset[int]:
+    """effect='EXCLUDE'（配信しない状態。Error）の状態 id。"""
+    if not condition_ids:
+        return frozenset()
+    rows = session.execute(
+        text(f"SELECT id FROM public.conditions WHERE id = ANY(:ids) AND {condition_effect_sql('conditions')} = :effect"),
+        {"ids": sorted(set(condition_ids)), "effect": CONDITION_EFFECT_EXCLUDE},
+    ).fetchall()
+    return frozenset(int(r[0]) for r in rows)
+
+
 def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
     """人の判断を analysis_results の列に反映する（元の values は変えない）。
 
@@ -648,7 +687,10 @@ def _has_human_judgement(decision: Decisions | None) -> bool:
     return decision is not None and (decision.product_id is not None or decision.condition_id is not None)
 
 
-def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
+def _apply_soldout_targets(
+    values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str],
+    excluded_ids: frozenset[int] = frozenset(),
+) -> dict:
     """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。
 
     相手が無い件・人の判断（商品または状態）がある件・状態の名前が引けない件は上書きしない（何も外さない）。
@@ -664,7 +706,7 @@ def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None,
     overwritten = {
         **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": CONDITION_BASIS_SOLDOUT_REF,
     }
-    if canonical.startswith(CONDITION_UNDECIDED_PREFIX):
+    if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
         return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
     remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
     return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
@@ -717,14 +759,16 @@ def _write_results(
     matched_ids = [it["product_id"] for it, _ in pairs if it.get("product_id") is not None]
     work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
     condition_ids = [d.condition_id for d in decisions.values() if d.condition_id is not None]
-    canonicals = _load_condition_canonicals(session, [*condition_ids, *_soldout_condition_ids(pairs)])
+    target_ids = [*condition_ids, *_soldout_condition_ids(pairs)]
+    canonicals = _load_condition_canonicals(session, target_ids)
+    excluded_ids = _load_excluded_condition_ids(session, target_ids)
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     for item, row in pairs:
         decision = decisions.get(str(row.id))
         values = _apply_soldout_targets(
-            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals
+            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals, excluded_ids
         )
         result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),

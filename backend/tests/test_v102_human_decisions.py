@@ -261,6 +261,14 @@ def test_review_ack_unregistered_code_is_422_and_writes_nothing(ack_env):
     assert ack_env.saved == [] and ack_env.enqueued == []
 
 
+def test_review_ack_with_condition_unknown_is_422_and_writes_nothing(ack_env):
+    for codes in (["condition_unknown"], ["price_not_in_lines", "condition_unknown"]):
+        with pytest.raises(HTTPException) as caught:
+            _call_ack(codes)
+        assert caught.value.status_code == 422 and "condition_unknown" in str(caught.value.detail)
+    assert ack_env.saved == [] and ack_env.enqueued == []
+
+
 def test_review_ack_v6_item_is_409(ack_env):
     ack_env.job = JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE)
     with pytest.raises(HTTPException) as caught:

@@ -3281,3 +3281,102 @@ Architect 自己審査（AY-2j）: APPROVE。同一AI（Opus）による自己�
 4. "Invalid source position" が2件ある、の検査を、1行目と2行目を順に押して、dialog の中に1件で mark が無い、に変えた。理由: Drawer は押した行の原文だけを出す（設計の契約4）。
 - 追加した it（1本）: 見出しに "Status" と "View source" が無いこと、Enter で開くこと、Escape と × ボタンで閉じること。
 - ほかの it の expect は変えていない。
+
+#### AY-2j 本番反映（2026-10-10 記録）
+
+AY-2j の PR #4119 は、merge c035c440b（2026-10-10T13:32:39Z、HEAD e5f0d3ae5）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38056123526: success（13:32:42Z〜13:35:12Z）。
+- 本番 JS: 商品名の列の width `250px` あり、Drawer の title は soldOut.source、soldOut.status の参照0件。
+- 本番の応答: app・/super-admin/analysis-rules・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- PO の本番確認（2026-10-11）: 「成功」。
+- 既知: 数量・価格の列に出る「none」は、解析（指示書）が「原文に記載なし」を表す文字として保存した値で、画面・API は変換していない（調査 /tmp/CC報告ファイル/super-admin-menu/sold-out-none-recon.md）。扱いは PO の指示により別セッションで対応する。
+
+#### AY-2k 請求書作成・見積作成の明細入力欄の標準化（2026-10-11）
+
+mode: handoff。§AY の一行入力を金型 TextFieldControl へ移す便の続き。PO 方針（一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-11、本セッション）「金型整備に戻る」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+現在地（origin/main 994543744。調査全文は /tmp/CC報告ファイル/ssot-ay2k/recon.md）:
+- 対象は14件。請求書作成 frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:343,350,368,372,385,388,391 の7件と、見積作成 frontend/src/pages/quote-create/QuoteCreatePage.tsx:192,199,217,221,234,237,240 の7件。2画面は共有部品ではなく複製で、明細の7件は同じ形（data-testid の接頭辞だけが invoice-／quote- で異なる）。
+- 14件とも明細の表（table.data-table）のセルの中にある。className なし。CSS 規則0（bare input・`.data-table input` の規則も0）で、今はブラウザ既定の見た目（くぼんだ枠・余白ほぼ0）。
+- インライン style はすべてトークン（px 直書き0）。
+  | 欄 | 配置 | 外観 |
+  |---|---|---|
+  | name_en（英語名・主） | width 100%、minWidth var(--input-width-product-name) | fontWeight var(--font-weight-semi) |
+  | product_name（日本語名・参考） | width 100%、minWidth 同、marginTop var(--space-1) | fontSize var(--font-sm)、color var(--text-secondary) |
+  | condition・unit | width var(--input-width-weight) | なし |
+  | quantity（number, min=1） | width var(--input-width-qty) | なし |
+  | unit_price（number, min=0, step=0.01） | width var(--input-width-year) | なし |
+  | weight（number, min=0, step=0.001） | width var(--input-width-weight) | なし |
+- 金型 frontend/src/components/TextField.tsx: TextFieldControl は forwardRef（:41）。variant（:33）、size sm|md|lg（standard のみ、:35-39）、style は素通し（:52）。外観は frontend/src/components/FormField.css:47-62（width 100%・padding var(--space-2) var(--space-3)・枠 1px var(--border)・角 var(--comp-input-radius)・文字 var(--font-base)）、sm は :133-140（padding var(--space-1) var(--space-2)・文字 var(--font-sm)・min-height var(--comp-input-height-sm)）。inline の width は金型の width 100% に勝つ。
+- 試験依存: CommerceSubmitButtonMigration.test.tsx:67-68,:100-101,:111,:113,:120,:126（testid と、spinbutton の並び順 [0]=数量・[1]=単価）、tests-e2e/quote-create-inventory-search.spec.ts:137,:143（quote-item-row-1-name の値）。class 名の参照0。
+- 別枠（本便の対象外）: 共有の InventorySearchBar.tsx:272（1件、両画面に出る。inline の padding を持つ）、見積のみ FedExRateModal.tsx:176,193,210,239（4件、px 直書きの外観あり）。外観の直書きの整理が要るため、それぞれ別の便にする。
+- ページ側の生 text 系の総数: 70（groups.cjs で origin/main を再計測）。
+
+設計判断（設計者、2026-10-11）:
+- 大きさは size="sm" にする。理由: 1行に入力が7つ並ぶ明細の表で、幅は 70〜90px（数量・単価・重量・状態・形態）。標準 md は左右の余白が var(--space-3) ずつで、数量の欄では数字の見える幅が狭くなり、行の高さも大きく増える。sm は金型に登録済みの大きさで、文字の大きさも今の既定に近い。前例の表のセル（AY-2e #5、1行に1欄）とは並ぶ数が違うため、この判断を変える根拠にはしない。スマホでの 44px の触れる高さは金型の既存規則に従う（PO 決定によりスマホ幅は本便の判定対象外）。
+- inline style はすべて残す。配置（width・minWidth・marginTop）は並びを保つため。外観の3つ（name_en の太字、product_name の小さい文字と薄い色）は「英語名が主・日本語名が参考」という意図した区別で、値はすべてトークンのため金型の規則外の直書きには当たらない。product_name の fontSize は sm と同じトークンで、結果は変わらない。
+
+AY-2k 変更契約（2ファイルとその試験以外は変えない）:
+1. 14件の `<input` を `<TextFieldControl size="sm"` に置換し、閉じタグの形はそのまま（自己終了）。type・value・onChange・placeholder・min・step・style・data-testid・onChange の中身は逐語で保持。属性の順も変えない（size は最初に置く）。
+2. 両ファイルに `import { TextFieldControl } from "../../components/TextField";` を追加（既存の import の並びに合わせる。実際の相対パスは置換前に確認）。
+3. CSS・トークン・金型本体・i18n・API・backend・試験・e2e・ほかの画面・InventorySearchBar・FedExRateModal は変更しない。既存の試験が落ちた場合は、試験を直さずに止まって報告する。
+4. design.md に、AY-2j の本番反映の記録、本節、実装結果を追記する。
+
+前後表（予定。実画面で確定）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 14件 | ブラウザ既定の入力欄 → 金型の標準 sm（薄い灰の枠 1px・余白 var(--space-1) var(--space-2)・角 var(--comp-input-radius)・アプリ書体・文字 var(--font-sm)・背景 var(--bg-surface)・フォーカス時の枠色） |
+| 各欄の幅・並び | 変化なし（inline の width・minWidth・marginTop を保持） |
+| 英語名の太字、日本語名の小さい文字と薄い色 | 変化なし |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 並びが保たれる | 開発モードの build と preview に、偽ログインと API モック（明細2行が入る状態）を使い、/invoices/new と /quotes/new を幅1280・1440で、変更前と変更後の全画面スクリーンショットを撮る（DPR2、設計者が目視）。各明細行の14件について getBoundingClientRect の width が前後で ±2px 以内、明細の表の幅が前後で ±2px 以内、表の横はみ出し0（scrollWidth ≤ clientWidth、または変更前と同じ）を JSON に記録する |
+| 外観が前後表どおり | 14件の computed style（border・padding・font-size・font-family・border-radius・background・height）を前後で採取し、前後表の項目以外に差が無い。name_en の font-weight と product_name の color・font-size は前後で同じ |
+| 非外観属性が不変 | 差分の照合で、14件のタグ名の置換・size="sm" の追加・import の追加以外の差分が0 |
+| 置換漏れ0 | groups.cjs の再計測で、ページ側の生 text 系が 70→56 |
+| 試験 | 既存の単体試験が全件成功（CommerceSubmitButtonMigration.test.tsx の testid と spinbutton の順を含む）。e2e の testid（quote-create-inventory-search.spec.ts:137,:143）が保持されていることを grep で確認 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS の請求書作成・見積作成のチャンクに comp-field__input--sm（または金型の sm のクラス）が入っている。app と /api/health が 200 |
+
+幅375 は PO 決定によりスマホ版で扱うため、判定の対象外（撮影は記録として残してよい）。
+
+Architect 自己審査（AY-2k）: APPROVE（条件: 実画面で並びと幅の保持を実装後に確認）。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（既存の金型を前例どおり使うため）。
+- 根拠: 対象14件を file:line・置き場所・style つきで確定。CSS 規則0・class 依存0。inline はすべてトークン。試験の依存（testid・number の順）は属性の逐語保持で守れる。データ・配線・トークンは変えない。
+- 残るリスク（MEDIUM）: 金型の枠と余白が付くため、狭い欄（数量 var(--input-width-qty)）で数字の見える幅が今より狭くなる。幅1280・1440のスクリーンショットで、4桁の数量と「12345.67」の単価が欄の中で切れずに見えるかを確かめ、切れる場合は担当は止まって実測を報告する（次の手は設計者が決める）。
+- 残るリスク（LOW）: 行の高さが少し増える（min-height var(--comp-input-height-sm)）。
+
+維持の仕組み:
+- 守り手: frontend/src/components/TextField.test.tsx、CommerceSubmitButtonMigration.test.tsx、ui-governance、design-token-guard、frontend-check、ay2k のスクリーンショットと計測 JSON（evidence）。
+- 守っていないもの: 残るページ側の生 text 系 56（InventorySearchBar 1・FedExRateModal 4・保留22を含む）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+#### AY-2k 契約改訂（2026-10-11、実装中の実測を受けた設計者判断）
+
+- 設計判断（追記）: 実画面の計測で単価欄（90px）の値 12345.67 が金型 sm の余白と枠で 2px 切れた（scrollWidth 90 / clientWidth 88）。--input-width-year は他の4か所が使うため値を変えず、単価用のトークン --input-width-price（120px）を登録して単価欄2件だけに使う。単価列が 30px 広がり、商品名の列が同じだけ縮む。
+- 契約1b: frontend/src/tokens.css の --input-width-year の次の行に `--input-width-price: 120px;` を追加。請求書・見積の unit_price（type=number step=0.01）2件の style だけを `{ width: "var(--input-width-price)" }` に変える。他の12件・他の属性は逐語保持。
+- 契約2（実物との食い違いの記録）: TextFieldControl の import は両ファイルに既存（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:27、frontend/src/pages/quote-create/QuoteCreatePage.tsx:32）。追加0行。
+- 契約3の改訂: トークン登録先 docs/adr/ADR-067-design-token-enforcement.md のトークン表に1行追記（ADR を変更したため node scripts/generate-adr-index.js を実行、docs/adr/README.md に差分なし）。対象ADRに ADR-067 を含める。
+- 前後表（追加）: 単価欄の幅 90px → 120px。商品名の列（name_en・product_name）の幅 -30px。ほかの欄の幅・表の幅は変化0。
+- 受入（追加・変更）: 単価欄の幅は 90→120px。表の幅は前後 ±2px、横はみ出しは前と同じかそれ以下。単価以外の欄の幅は前後 ±2px（商品名の列は縮み分を除く）。12345.67 でフォーカス無し・有りの両方で scrollWidth <= clientWidth（参考値 123456.78 も記録、合否に含めない）。
+- 触るファイル（追加）: frontend/src/tokens.css、docs/adr/ADR-067-design-token-enforcement.md。
+
+#### AY-2k 実装結果（2026-10-11、基準 origin/main 34da7b297）
+
+計測（開発モード build + preview、偽ログイン + API モック、DPR2、明細2行、1行目 数量1234・単価12345.67・長い英語名。前 evidence-20260910/ay2k-measure-before.json、後 ay2k-measure-after.json）:
+- 各欄の幅（前→後）: 状態 80→80、形態 80→80、数量 70→70、単価 90→120、重量 80→80。商品名の列 1280幅 325.4→295.4、1440幅 485.4→455.4（-30、単価列の広がり分）。
+- 表の幅: 1280幅 1130→1130、1440幅 1290→1290（差0）。document scrollWidth/clientWidth: 1280/1280→1280/1280、1440/1440→1440/1440（横はみ出し 0、前後同じ）。
+- 行の高さ: 全欄 19px→30.39px。外観: 枠 2px inset→1px solid rgb(226,232,240)、padding 0→4px 8px、角 0→6px、font 13.33px Arial→13.6px アプリ書体。name_en の font-weight 600→600、product_name の color rgb(74,85,104)・font-size 13.6px→同じ。
+- 単価の切れ判定（4画面とも）: 12345.67 フォーカス無し 118/118、有り 118/118（OK）。参考 123456.78 も 118/118。数量 68/68、重量 78/78。初回実装（単価90px）では単価 90/88 で不合格だったため契約1bで改訂した。
+- 商品名欄（長い英語名・日本語名のテスト値）は前後とも幅を超える場合は切れる（前 626/321 → 後 652/293、1280幅）。
+- 変更前は元々 name_en が切れる状態。
+
+品質（すべて exit 0。evidence-20260910/ay2k-chk-*.txt）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0、unit 試験（npx vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1）80 files・990 tests 全件成功 exit 0。素の `npx vitest run --coverage` は storybook ブラウザ project が playwright の chromium_headless_shell 未導入で起動失敗（環境要因、ay2k-chk-vitest-all-projects-env-fail.txt）。
+置換数: groups.cjs targets 70→56（nested css rules 0、css files 70）。変更した expect 0件。e2e の testid（frontend/tests-e2e/quote-create-inventory-search.spec.ts:137,:143）は保持。
+差分: git diff origin/main -- frontend/src は 3 files（14 `<input`→`<TextFieldControl size="sm"` 置換 14行、単価2件の style のトークン変更を同じ行に含む、tokens.css +1）。import 追加 0行。

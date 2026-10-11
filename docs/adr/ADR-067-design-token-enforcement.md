@@ -56,6 +56,7 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--input-width-qty`   | `70px` | 数量入力 |
 | `--input-width-weight`| `80px` | 重量・小数点入力 |
 | `--input-width-year`  | `90px` | 年・金額入力 |
+| `--input-width-price` | `120px` | 単価入力（請求書・見積の明細、金型 sm） |
 | `--size-thread-avatar`| `36px` | 受信箱スレッド送信者アバター |
 | `--size-icon-btn`     | `36px` | ヘッダーアクション・アイコンボタン共通サイズ（SSoT） |
 | `--table-min-width-base` | `720px` | テーブル最小幅（見積等） |

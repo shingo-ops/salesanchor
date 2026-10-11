@@ -73,6 +73,7 @@ class ReviewReasonDetail(BaseModel):
     code: str
     source: Literal["gemini", "system"] | None
     fix_stage: Literal["extraction", "analysis"] | None
+    ackable: bool = True
 
 
 class AnalysisResultItem(BaseModel):

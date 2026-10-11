@@ -340,14 +340,14 @@ export default function InvoiceCreatePage() {
                   <tr key={i} data-testid={`invoice-item-row-${i}`}>
                     <td style={{ minWidth: "var(--table-col-product-name-min-w)" }}>
                       {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。 */}
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.name_en ?? ""}
                         onChange={(e) => updateItem(i, "name_en", e.target.value || null)}
                         placeholder={t("quotes.titleColumn")}
                         style={{ width: "100%", minWidth: "var(--input-width-product-name)", fontWeight: "var(--font-weight-semi)" }}
                         data-testid={`invoice-item-row-${i}-name-en`}
                       />
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.product_name}
                         onChange={(e) => updateItem(i, "product_name", e.target.value)}
                         placeholder={t("quotes.productNamePlaceholder")}
@@ -365,11 +365,11 @@ export default function InvoiceCreatePage() {
                       )}
                     </td>
                     <td>
-                      <input value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-condition`} />
+                      <TextFieldControl size="sm" value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-condition`} />
                     </td>
                     <td>
                       {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.unit ?? ""}
                         onChange={(e) => {
                           const nextUnit = e.target.value || null;
@@ -382,13 +382,13 @@ export default function InvoiceCreatePage() {
                       />
                     </td>
                     <td>
-                      <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
+                      <TextFieldControl size="sm" type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
+                      <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-price)" }} />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
+                      <TextFieldControl size="sm" type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
                     </td>
                     <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                     <td>

@@ -58,8 +58,6 @@ UNIT_KUBUN_QUANTITY_ONLY = "数量専用"
 BOX_RECHECK_UNIT_KUBUNS = frozenset({
     UNIT_KUBUN_EMPTY, UNIT_KUBUN_UNKNOWN, UNIT_KUBUN_CONDITIONAL, UNIT_KUBUN_COMPOUND, UNIT_KUBUN_QUANTITY_ONLY,
 })
-# 商品が不明のとき、単位の区分がこれなら「単位既定の落ち先」を要確認にする
-UNKNOWN_PRODUCT_UNIT_KUBUNS = frozenset({UNIT_KUBUN_EMPTY, UNIT_KUBUN_UNKNOWN})
 # 箱系の商品で、単位がこの区分なら単位を状態から決め直す（単位の候補が1つに決まらない区分）
 UNIT_KUBUN_REPLACEABLE_FOR_BOX = UNIT_KUBUN_CONDITIONAL
 
@@ -67,6 +65,8 @@ UNIT_KUBUN_REPLACEABLE_FOR_BOX = UNIT_KUBUN_CONDITIONAL
 NONE_VALUE = "none"
 FLAG_SINGLE_CANONICAL = "FLAG_SINGLE"  # resolve_condition_v2 が返す単品の印（tcg_analyzer_svc.py の R4b）
 CONDITION_UNKNOWN = "不明"
+# 状態を決められなかった件に付ける状態「Error」の code（名前は masters から code で引く。effect='EXCLUDE' = 配信しない）
+CONDITION_ERROR_CODE = "CN0012"
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（試運転 extraction_shadow_svc.py の要確認と同じ判定・同じ意味）
@@ -477,6 +477,21 @@ def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> 
     return []
 
 
+def _error_condition(cond_entries: list[dict]) -> str | None:
+    """状態「Error」の名前（masters の code で引く）。行が無ければ None。"""
+    return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_ERROR_CODE), None)
+
+
+def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict]) -> tuple[str | None, list[dict]]:
+    """最終フォールバック（FLAG_SINGLE かつ basis が単位不明）なら状態を Error にして理由 condition_unknown を付ける。
+
+    語で決まった FLAG_SINGLE（basis R1:…）は対象外。Error の行が masters に無いときは「不明」（安全側）。
+    """
+    if cond != FLAG_SINGLE_CANONICAL or BASIS_UNIT_UNKNOWN not in basis:
+        return cond, []
+    return (_error_condition(cond_entries) or CONDITION_UNKNOWN), [{"kind": REVIEW_CONDITION_UNKNOWN}]
+
+
 def _resolve_condition(
     block: str, product_kubun: str, unit_kubun: str, cond_entries: list[dict], cond_canonical_to_uuid: dict,
 ) -> tuple[str | None, str, list[dict]]:
@@ -485,12 +500,11 @@ def _resolve_condition(
         cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block)
         codes = _other_kubun_hits(block, UNIT_KUBUN_BOX, cond_entries)
         reviews = [{"kind": REVIEW_MULTIPLE_CANDIDATES, "codes": codes}] if codes else []
-        return cond, basis, reviews
+        cond, undecided = _undecided_condition(cond, basis, cond_entries)
+        return cond, basis, [*reviews, *undecided]
     cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block)
-    if product_kubun == PRODUCT_KUBUN_UNKNOWN and unit_kubun in UNKNOWN_PRODUCT_UNIT_KUBUNS \
-            and cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis:
-        return CONDITION_UNKNOWN, basis, [{"kind": REVIEW_CONDITION_UNKNOWN}]
-    return cond, basis, []
+    cond, undecided = _undecided_condition(cond, basis, cond_entries)
+    return cond, basis, undecided
 
 
 def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[dict]) -> list[str]:

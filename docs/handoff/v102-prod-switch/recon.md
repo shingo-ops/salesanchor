@@ -183,3 +183,34 @@ GEMINI_KEY=present
 - 本番 1,079件で数字があるのに NULL: 数量 9件（うち6件は要確認にならず配信）、価格 4件。原因は (a) 1行に「個」付きの数が2つ（backend/app/services/extraction_judgement_svc.py:636-638 multiple_values）、(b) 行頭「■」の在庫行が商品名に入り `_mask_product_name`（backend/app/services/extraction_judgement_svc.py:526-538）で消える。
 - resolve_price_quantity の reasons（price_reasons）を読む本番コードは 0件。数量 NULL を要確認にする理由が無い。
 - 要確認の流れ: backend/app/services/line_analysis_v102_svc.py:559（理由があれば needs_review=True）→ backend/app/services/tcg_distribution_svc.py:262（配信から除外）。読み取り時の price_unresolved: backend/app/services/tcg_condition_review_svc.py:144・:151。
+
+## 9. 便G の recon 要点（社外秘の原文なし・件数のみ。基準 origin/main 994543744 / 34da7b297）
+詳細（手元・社外秘）: /tmp/CC報告ファイル/v102-system-decisions/list.md、/tmp/CC報告ファイル/v102-swap-rca/、/tmp/CC報告ファイル/v102-kw-kenpin/、/tmp/CC報告ファイル/v102-gemini-trust/replay.md。
+
+### 9-1. 状態の入れ替わり（2026-10-10T21:31Z〜の再解析）
+- 再解析 reanalyze_v102_job（backend/app/tasks/tcg_extraction.py:723-740）は Gemini を呼ばず run_v102_analysis（backend/app/services/line_analysis_v102_svc.py:902）をやり直す。extraction_items（Gemini の件）は不変。
+- 状態の表は毎回 DB から読む（line_analysis_v102_svc.py:159 load_v102_masters → backend/app/services/tcg_analyzer_svc.py:647 load_condition_entries）。語の追加は次の再解析から効く。
+- 迷う行の付け直し: backend/app/services/gemini_raw_copy_v101.py:487 _ambiguous_lines（価格の行にはさまれた ship/condition の行）、:502 _evidence（投稿内の同じ種類の迷わない行の並び。1行でも「価格の下」があれば below）、:543 _decide_target（並び方→値段 :520 の順）、:555 reassign_ambiguous（Gemini の付け方を上書き）。呼び出し :1347、v102 は line_analysis_v102_svc.py:260 で reassign=True。
+- 前後 diff: 6ジョブ166行のうち、狙いの FLAG_SINGLE→Opened box 6行、入れ替わり16行（a1a120c6・a100097a 各8）、is_current の付け替え6行（同じ投稿の同じ商品×状態の行の中で）。他ジョブの行の変化0（2チャネル3,574行の is_current 比較）。
+- 再現（本番マスタで、語の有無だけ変える）: 語なしで付け直し0件、語ありで16件が観測どおり。コード #4114 前後で再現結果同一。
+
+### 9-2. システムが Gemini の出力を変える場面（v102、list.md の A1〜A17）
+- A4 価格の行: gemini_raw_copy_v101.py:161-180（Gemini は price_line を返さない。価格の文字を含む最初の行）。A1〜A3（:120-135, :229-237）の落とす判定の土台。
+- A6 付け直し: 上記。A7 F1: gemini_raw_copy_v101.py:958-980（呼び出し :1265）。
+- A11 価格・数量の読み直し: gemini_raw_copy_v101.py:883-887 → backend/app/services/extraction_judgement_svc.py:599-680（食い違いは price_reasons に gemini_disagrees :673-676、保存されない）。A12 補い: gemini_raw_copy_v101.py:843-850, :888-890。
+- A15 桁あふれ: line_analysis_v102_svc.py:514-521（理由なしで NULL）。A16 対応: line_analysis_v102_svc.py:492-511 _map_to_rows（位置で zip、ずれると _MappingError→:944-949 で投稿全体 extract_exception）。A17: backend/app/services/gemini_raw_copy_v8.py:304-312 _load_items（読めないと response_unreadable）。
+
+### 9-3. 既存の決定
+- PO 2026-10-06: Gemini は行番号と価格・数量の文字、解析はシステム（project 記録）。今回 PO は「原則 Gemini の抽出を信頼」し、システムの上書き（A6・A7・A11・A12）を廃止、A11 は確認役。
+- ADR-1007（値は migration に書かない）・review_reason_codes は data/review_reason_codes/ の SQL で投入（便A・便PQ と同じ）。
+- ADR 検索: docs/adr で reassign・付け直し・price_line・gemini_disagrees は 0件（2026-10-11、git grep -i）。
+
+## 10. 便ER の recon 要点（社外秘の原文なし・件数のみ。詳細: /tmp/CC報告ファイル/v102-cond-error-recon/、part2/、part3/）
+- 最終フォールバック: backend/app/services/tcg_analyzer_svc.py:903-904（FLAG_SINGLE・basis "R4:単位既定:単位不明"、区分に関係なく）。語で決まる FLAG_SINGLE は主ループ :854-863（basis "R1:<語>"、CN0008 の app_kubun「枚系,単位不明」の時だけ）。R4c :886-901 は内側が箱系で必ず返る（本番に "R4c:" の basis 0件）。
+- v102 の状態: backend/app/services/gemini_raw_copy_v102_product_first.py:480-493 _resolve_condition（:490-492 の条件の時だけ "不明"＋condition_unknown）。保存 backend/app/services/line_analysis_v102_svc.py:539-550 _condition_columns（引けない canonical は FLAG_SINGLE に落とす。cond_canonical_to_uuid は別名がある行だけ tcg_analyzer_svc.py:127-141、cond_entries は priority>0 だけ :668-669）。
+- 本番 v102 is_current の状態×basis（780件中）: FLAG_SINGLE|R4:単位既定:単位不明 137、FLAG_SINGLE|R1:プロモ 5 ほか。単位不明 137件: 要確認 129・要確認でない 8、condition_unknown あり 52・なし 85。
+- 状態の表: public.conditions は VIEW、実表 public.line_conditions（id は identity、seq last_value 25）。13行、全行 match_type KEYWORD・effect OUTPUT。effect は tcg_analyzer_svc.py:663-665,707 で読み込むだけで、判定・配信に使う所は無い（backend/app に 'EXCLUDE' の文字 0件）。状態の行を足す data ファイルの前例は無く、id23・25 は画面 backend/app/routers/super_admin_conditions.py:197-220 から。
+- 配信: backend/app/services/tcg_distribution_svc.py:206-213・:307-313 cond_filter（canonical 'FLAG_%'）、WHERE :260-267・:332-339、除外内訳 :346-366。cr は backend/app/services/tcg_condition_review_svc.py:84-179 review_joins（列 :162-177、effect なし）。
+- 人の判断: 「このままで良い」backend/app/routers/item_corrections.py:177-203（登録済みコードなら何でも ack 可 :188-190、本番の condition_unknown の ack 0件）。状態を選ぶ画面 frontend/src/features/tcg-analysis-review/ConditionReviewPanel.tsx:22-23（空箱の件だけ）。選択肢 tcg_condition_review_svc.py:205-208（is_active のみ）、有効判定 backend/app/services/v102_human_decisions_svc.py:53。
+- 〆: line_analysis_v102_svc.py:689（FLAG_ 接頭辞だけ未決定扱い）。
+- ADR 検索（2026-10-11、git grep -i docs/adr）: FLAG_SINGLE・condition_unknown・line_conditions・effect の判定に関する ADR は 0件。関係: ADR-1007（値は migration に書かない）、ADR-155（マスタ更新は画面/CSV）、ADR-156（condition_definitions）。

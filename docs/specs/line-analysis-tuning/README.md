@@ -16,7 +16,7 @@
 | 項目 | 内容 |
 |---|---|
 | 本番の解析 | v6（変更しない。PO：「今本番で動かしているものは触らない」） |
-| 試作版で採用確定の指示書 | `public.extraction_prompt_config` の key `raw_copy_v101_f_c`（本文の sha256 d2a6447faf0842dad134337a302ed9c9bb7b8ac9c8731bc25860a56b9d037d21。2026-10-08 合格。条件つき：§4）。前の版 `backend/app/prompts/raw_copy_v101_e.txt`（PR #3999）は残す。試作版の既定（`--prompt-name`・`--prompt-key` なし）は f_c（この PR、PO 2026-10-08「f-cを採用」） |
+| 試作版で採用確定の指示書 | `public.extraction_prompt_config` の key `raw_copy_v101_f_c`（本文の sha256 d2a6447faf0842dad134337a302ed9c9bb7b8ac9c8731bc25860a56b9d037d21。2026-10-08 合格。条件つき：§4）。前の版 `backend/app/prompts/raw_copy_v101_e.txt`（PR #3999）は残す。試作版の既定（`--prompt-name`・`--prompt-key` なし）は f_c（この PR、PO 2026-10-08「f-cを採用」）。**2026-10-11 以降の既定は f_ct**（下の行）。f_c の行は DB に残す |
 | 試作版の仕入元ルール | `public.suppliers` の新しい2欄（`extraction_layout_rules`・`extraction_hard_cases`、PR #4013）だけを読む。元からある `extraction_*` の7欄は読まない |
 | 新しい2欄の中身 | 17社ぶんを本番 DB に書き込み済み（2026-10-07 13:28、照合で17社すべて一致。元の欄は変化なし）。残りの96社のルール案は手元に保留 |
 | 切り替えの順番 | 試作版のシステムの解析側を整備 → 本番を切り替える（PO 2026-10-07） |
@@ -36,6 +36,7 @@
 | 試作版：黙って消える件を要確認に | #4039 | 落とした件を結果に残し、印・単位なし・分類「不明」を要確認の理由にする。半角「/」の価格の不具合を直す | [v102-no-silent-drop](../../handoff/v102-no-silent-drop/) |
 | 道具：指示書を DB から読む | #4030 | --prompt-key。新しい指示書は public.extraction_prompt_config にだけ置く | [prompt-ab-db-source](../../handoff/prompt-ab-db-source/) |
 | 道具：試作版の既定の指示書を f_c に | （この PR） | --config v102 で名前・key なしのとき DB の key raw_copy_v101_f_c を読む | [prototype-default-prompt-fc](../../handoff/prototype-default-prompt-fc/) |
+| 本番・試作版の既定の指示書を f_ct に | （この PR） | DB の key `raw_copy_v101_f_ct`（本文の sha256 fe50593fa362da213e33663f85110381a6f3f97465553443e87ae0f0df8515fd）。engine_version は v102-f_ct。〆だけの投稿を件にする（PO 2026-10-11「切り替える」） | [v102-prompt-fct](../../handoff/v102-prompt-fct/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 

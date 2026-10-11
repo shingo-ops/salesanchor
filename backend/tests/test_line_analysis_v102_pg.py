@@ -105,7 +105,7 @@ def test_extraction_saves_skipped_lines_gemini_order_prompt_version_and_one_ledg
     assert items == [(0, [1, 2], 1, 2, "1,000円", "3", None), (1, [3], 3, 3, "7,777円", "1", None), (2, [3, 4], 3, 4, "2,000円", "2", None)]
     status, version, unsure, reasons = one(pg, f"SELECT status, prompt_version, gemini_unsure, review_reasons FROM {SCHEMA}.extraction_jobs WHERE id=%s", (job,))[0]
     assert (status, result["status"], v102.calls) == ("done", "done", 1)
-    assert version.startswith("v102:raw_copy_v101_f_c:") and unsure == [{"line": 2, "candidates": [2, 4]}] and reasons is None
+    assert version.startswith("v102:raw_copy_v101_f_ct:") and unsure == [{"line": 2, "candidates": [2, 4]}] and reasons is None
     ledger = one(pg, "SELECT purpose, prompt_tokens FROM public.llm_usage_events WHERE source_ref=%s", (f"extraction_job:{job}",))
     assert ledger == [("line_extraction", 100)]  # K7
 
