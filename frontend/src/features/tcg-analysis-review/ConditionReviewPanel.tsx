@@ -9,6 +9,9 @@ import { reviewReasonsText } from "./reviewReasonLabel";
 type Option = { id: string; code: string; canonical: string };
 type SaveResponse = { ok: boolean; saved: number; condition_review: { needs_review: boolean; review_version: string } };
 
+// 状態を決められなかった件の理由コード（backend: REASON_CONDITION_UNKNOWN）。人が状態を選ぶ画面を出す
+const CONDITION_UNKNOWN_REASON = "condition_unknown";
+
 export function ConditionReviewPanel({ item, onRefresh }: { item: AnalysisReviewItem; onRefresh: () => Promise<void> }) {
   const { t } = useTranslation();
   const review = item.condition_review;
@@ -20,7 +23,8 @@ export function ConditionReviewPanel({ item, onRefresh }: { item: AnalysisReview
   const savingRef = useRef(false);
   const pending = useRef<{ key: string; requestId: string }>();
   const relevant = Boolean(review && (review.classification !== "none" || review.confirmed ||
-    review.review_reasons.split(",").some((reason) => reason.startsWith("empty_box")) || item.system.condition === "Empty box"));
+    review.review_reasons.split(",").some((reason) => reason.startsWith("empty_box") || reason === CONDITION_UNKNOWN_REASON) ||
+    item.system.condition === "Empty box"));
 
   useEffect(() => {
     setSelected(review?.condition_id || "");

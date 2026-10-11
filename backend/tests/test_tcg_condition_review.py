@@ -503,7 +503,70 @@ def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
             expected = table.get(d["code"], (None, None))
             assert (d["source"], d["fix_stage"]) == expected
     by_code = {d["code"]: d for d in items[known["eid"]]["review_reason_details"]}
-    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction"}
+    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction", "ackable": True}
     assert [d["code"] for d in items[known["eid"]]["review_reason_details"]].count("gemini_unsure") == 1
-    assert {"code": "not_registered_code", "source": None, "fix_stage": None} in items[unknown["eid"]]["review_reason_details"]
+    assert {"code": "not_registered_code", "source": None, "fix_stage": None, "ackable": True} in items[unknown["eid"]]["review_reason_details"]
     assert items[empty["eid"]]["review_reason_details"] == []
+
+
+# --- effect='EXCLUDE' の状態（Error）は配信しない・選べない（便ER） ------------------------------------
+
+
+def add_error_condition(pg):
+    """旧い試験 DB には effect 列が無いので足す（本番にはある）。Error = effect EXCLUDE の1行。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS effect TEXT NOT NULL DEFAULT 'OUTPUT'")
+        cursor.execute("INSERT INTO public.conditions(code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active,effect) "
+                       "VALUES ('CN0012','Error',99,'','','',true,'EXCLUDE') RETURNING id")
+        return str(cursor.fetchone()[0])
+
+
+def seed_deliverable(pg, name, condition_id, canonical):
+    return seed(pg, name=name, reasons="", needs_review=False, condition_id=condition_id, condition_canonical=canonical)
+
+
+@pytest.mark.parametrize("include_flag_single", [False, True])
+def test_excluded_effect_condition_is_not_delivered_even_when_review_is_clear(pg, include_flag_single):
+    error_id = add_error_condition(pg)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    seed_deliverable(pg, "Test Booster", error_id, "Error")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return (await distribution.fetch_output_rows(db, include_flag_single=include_flag_single),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+
+    rows, preview = asyncio.run(run())
+    assert [row[4] for row in rows] == ["Sealed box"]
+    assert preview["output_count"] == 1 and preview["exclusion"]["flag_series"] == 1
+
+
+def test_review_context_exposes_effect_of_the_effective_condition(pg):
+    error_id = add_error_condition(pg)
+    error = seed_deliverable(pg, "Test Booster", error_id, "Error")
+    normal = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    assert context(pg, error)["effect"] == "EXCLUDE"
+    assert context(pg, normal)["effect"] == "OUTPUT"
+
+
+def test_condition_options_hide_excluded_effect_and_saving_it_is_422(pg):
+    error_id = add_error_condition(pg)
+    item = seed(pg, name="Test Booster", reasons="condition_unknown")
+
+    async def options():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await condition.condition_options(db)
+        finally:
+            await engine.dispose()
+
+    codes = [o["code"] for o in asyncio.run(options())]
+    assert "CN0012" not in codes and "CN0003" in codes
+    with pytest.raises(HTTPException) as caught:
+        save(pg, item, request(pg, item, decision="correct", target=error_id))
+    assert caught.value.status_code == 422

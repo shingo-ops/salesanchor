@@ -52,3 +52,41 @@ ADR-1007（migration に値を書かない。値は記録した SQL を1回だ�
 | verify | ROW18\|18\|CN0006\|（8語、末尾が 検品のため開封済み）・EXACT_NEW\|true・ROWS\|13・VERIFY_DONE |
 | 再解析 | 実施済み。再解析で状態の入れ替わりが起きた（別の件の状態が付いた）。原因は A6（reassign_ambiguous による迷う行の付け直し）。便G（release/v102-gemini-trust）で v102 では付け直しを廃止する |
 | 前後比較 | 原文を含むため repo 外（手元 /tmp/CC報告ファイル/v102-kw-kenpin/diff6.txt）。原因の証拠は /tmp/CC報告ファイル/v102-swap-rca/ |
+
+---
+
+# conditions: 状態「Error」(CN0012) の1行追加（便ER・1回だけのデータ変更）
+
+ADR-1007（migration に値を書かない）。表 `public.conditions`（実体は `line_conditions` の単純 view）の構造は変えない。
+
+## 目的
+v102 が状態を決められなかった件（`resolve_condition_v2` の最終フォールバック。basis `R4:単位既定:単位不明`）を、状態「Error」にして理由 `condition_unknown` を付け、必ず要確認に回す。
+
+## PO 決定（2026-10-11）
+> 状態が判断できなかった場合は状態はErrorにして理由を添えて要確認に回すようにしたい
+
+語で単品と分かった件（PSA・鑑定・プロモ・単品・枚など。basis `R1:…`）は今の FLAG_SINGLE のまま。
+
+## 変更内容
+- 1行追加: code=CN0012, canonical=Error, app_kubun='', is_active=true, priority=99, search_kw='', exclude_kw='', match_type=KEYWORD, effect=EXCLUDE。
+- id は **26** を明示する（実物確認: `conditions` は `line_conditions` の view で、id は NOT NULL・default なし・sequence なし。現在の最大 id=25、13行）。
+- priority 99・search_kw 空なので照合には当たらない（`match_keyword` は search_kw が空なら当たらない）。`load_condition_entries`（priority>0）には入るので、コードが code で引ける。
+- **effect='EXCLUDE' の意味 = 「配信しない状態」**（今まで全13行 OUTPUT で、どこからも読まれていなかった列）。配信 SQL（`cr.effect`）・状態の選択肢・〆の引き継ぎがこれを読む。
+
+## 手順（上から順に。失敗したらそこで止まる）
+1. `er_precheck.sql`: `TABLE|conditions`、`ROWS|13`、`CN0012_ROWS|0`、`ERROR_CANONICAL_ROWS|0`、`ID26_ROWS|0`、`EXCLUDE_ROWS|0`、`PRECHECK_DONE`。
+2. `er_dryrun.sql`: 追加して検査し、必ず ROLLBACK。`INSERTED|1`、`CHECK_OK 14`、`CHECK_OK 1`、`DRYRUN_OK`。
+3. `er_commit.sql`: dryrun 成功の後だけ。`INSERTED|1`、`CHECK_OK 14`、`CHECK_OK 1`、`COMMIT_DONE`。
+4. `er_verify.sql`: `ROWS|14`、`CN0012|26|…`、`EXCLUDE_ROWS|1`、`VERIFY_DONE`。
+5. コードのデプロイ（この行が先、コードが後。行が無いうちは従来どおり FLAG_SINGLE＋condition_unknown に倒れる）→ 再解析と前後比較。
+
+## 戻し方
+`er_rollback.sql`（id=26 の1行だけ削除）。**戻す前に**コードを戻して再解析し、`analysis_results.condition_id` が 26 を指す行を無くすこと（参照が残っていると失敗する）。
+
+## 記録欄（設計者が実施後に記入）
+| 項目 | 内容 |
+|---|---|
+| precheck |  |
+| dryrun |  |
+| commit |  |
+| verify |  |

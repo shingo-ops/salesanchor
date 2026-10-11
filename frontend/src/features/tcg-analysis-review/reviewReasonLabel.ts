@@ -7,6 +7,8 @@ export type ReviewReasonDetail = {
   code: string;
   source: ReviewReasonSource | null;
   fix_stage: "extraction" | "analysis" | null;
+  /** false = 「このままで良い」で外せない理由（backend: NON_ACKABLE_REASON_CODES）。省略時は外せる */
+  ackable?: boolean;
 };
 
 // reviewReason 名前空間のうち、理由コードではない鍵

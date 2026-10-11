@@ -25,6 +25,19 @@ from app.services.tcg_empty_box_rules import (
     literal,
 )
 
+# conditions.effect が EXCLUDE の状態 = 配信しない状態（Error。PO 2026-10-11）。唯一の置き場所。
+# effect 列が無い古い試験 DB でも落ちないよう、列は to_jsonb(行) 経由で読む（無ければ NULL = 除外しない）。
+CONDITION_EFFECT_EXCLUDE = "EXCLUDE"
+
+
+def condition_effect_sql(alias: str) -> str:
+    return f"to_jsonb({alias})->>'effect'"
+
+
+def not_excluded_condition_sql(alias: str) -> str:
+    return f"{condition_effect_sql(alias)} IS DISTINCT FROM '{CONDITION_EFFECT_EXCLUDE}'"
+
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み。
 # テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
 TCG_SCHEMA = "public"
@@ -175,6 +188,9 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         CASE WHEN cr_valid.valid_ack THEN 'MANUAL_CONDITION_REVIEW'
              WHEN cr_input.classification = 'positive' AND cr_input.master_valid THEN 'EMPTY_BOX:explicit'
              ELSE cr_data.ar->>'condition_basis' END AS basis
+    ) cr_base
+    CROSS JOIN LATERAL (SELECT cr_base.*,
+        (SELECT {condition_effect_sql('c')} FROM public.conditions c WHERE c.id::text = cr_base.condition_id) AS effect
     ) cr
     """
 
@@ -204,7 +220,8 @@ def reanalysis_condition(session: Session, item_id: str, candidate: dict | None 
 
 async def condition_options(db: AsyncSession) -> list[dict]:
     rows = await db.execute(text("SELECT id::text, code, canonical FROM public.conditions "
-                                 "WHERE is_active IS TRUE ORDER BY priority NULLS LAST, code"))
+                                 f"WHERE is_active IS TRUE AND {not_excluded_condition_sql('conditions')} "
+                                 "ORDER BY priority NULLS LAST, code"))
     return [dict(row) for row in rows.mappings()]
 
 
@@ -263,7 +280,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
         target = (await db.execute(text("SELECT id FROM public.conditions "
-            "WHERE id = :condition_id_int AND is_active IS TRUE"), params)).scalar_one_or_none()
+            f"WHERE id = :condition_id_int AND is_active IS TRUE AND {not_excluded_condition_sql('conditions')}"), params)).scalar_one_or_none()
         if target is None:
             raise HTTPException(422, "Condition is not active")
         if row["mentions"] and not row["master_valid"]:

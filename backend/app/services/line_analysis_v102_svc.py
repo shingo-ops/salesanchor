@@ -39,6 +39,7 @@ from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLL
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost, StockItem
 from app.services.llm_budget import record_usage_event_sync
+from app.services.tcg_condition_review_svc import CONDITION_EFFECT_EXCLUDE, condition_effect_sql
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 
@@ -89,7 +90,8 @@ _CONDITION_BASIS_MAX = 100
 _NUMERIC_LIMIT = Decimal(10) ** 12  # NUMERIC(14,2)
 _INT4_MAX = 2**31 - 1
 _FLAG_SINGLE = "FLAG_SINGLE"
-CONDITION_UNDECIDED_PREFIX = "FLAG_"  # 状態が決まっていない印の canonical の接頭辞（配信 SQL の NOT LIKE 'FLAG_%' と同じ）
+# 状態が決まっていない印: canonical がこの接頭辞（FLAG_SINGLE 等）、または conditions.effect が EXCLUDE（Error。配信しない状態）
+CONDITION_UNDECIDED_PREFIX = "FLAG_"
 _FLAG_SINGLE_CODE = "CN0008"
 
 _PROMPT_KEY_SQL = """
@@ -643,6 +645,17 @@ def _load_condition_canonicals(session: Session, condition_ids: list[int]) -> di
     return {int(r[0]): str(r[1]) for r in rows}
 
 
+def _load_excluded_condition_ids(session: Session, condition_ids: list[int]) -> frozenset[int]:
+    """effect='EXCLUDE'（配信しない状態。Error）の状態 id。"""
+    if not condition_ids:
+        return frozenset()
+    rows = session.execute(
+        text(f"SELECT id FROM public.conditions WHERE id = ANY(:ids) AND {condition_effect_sql('conditions')} = :effect"),
+        {"ids": sorted(set(condition_ids)), "effect": CONDITION_EFFECT_EXCLUDE},
+    ).fetchall()
+    return frozenset(int(r[0]) for r in rows)
+
+
 def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
     """人の判断を analysis_results の列に反映する（元の values は変えない）。
 
@@ -670,7 +683,10 @@ def _has_human_judgement(decision: Decisions | None) -> bool:
     return decision is not None and (decision.product_id is not None or decision.condition_id is not None)
 
 
-def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
+def _apply_soldout_targets(
+    values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str],
+    excluded_ids: frozenset[int] = frozenset(),
+) -> dict:
     """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。
 
     相手が無い件・人の判断（商品または状態）がある件・状態の名前が引けない件は上書きしない（何も外さない）。
@@ -686,7 +702,7 @@ def _apply_soldout_targets(values: dict, item: dict, decision: Decisions | None,
     overwritten = {
         **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": CONDITION_BASIS_SOLDOUT_REF,
     }
-    if canonical.startswith(CONDITION_UNDECIDED_PREFIX):
+    if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
         return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
     remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
     return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
@@ -739,14 +755,16 @@ def _write_results(
     matched_ids = [it["product_id"] for it, _ in pairs if it.get("product_id") is not None]
     work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
     condition_ids = [d.condition_id for d in decisions.values() if d.condition_id is not None]
-    canonicals = _load_condition_canonicals(session, [*condition_ids, *_soldout_condition_ids(pairs)])
+    target_ids = [*condition_ids, *_soldout_condition_ids(pairs)]
+    canonicals = _load_condition_canonicals(session, target_ids)
+    excluded_ids = _load_excluded_condition_ids(session, target_ids)
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     for item, row in pairs:
         decision = decisions.get(str(row.id))
         values = _apply_soldout_targets(
-            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals
+            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals, excluded_ids
         )
         result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
