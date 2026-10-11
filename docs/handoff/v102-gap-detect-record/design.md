@@ -38,7 +38,7 @@
 - 置き場の理由（SSOT）：投稿ごとの明細の置き場を、同じ表の同じ型（`gemini_unsure` JSONB、`migrations/20261009_180000_v102_engine_columns.sql`）にそろえる。新しい表は作らない。
 
 ### PR②（コードだけ。PR① の本番反映を確認してからマージ）
-1. 新しいファイル `backend/app/services/v102_gap_lines.py`（純粋な関数だけ。DB を読まない）
+1. 新しいファイル backend/app/services/v102_gap_lines.py（新規作成。純粋な関数だけ。DB を読まない）
    - `classify_lines(items, line_count)`
      - 受理された件（rejected を除く）を、最初の行の順に並べる。
      - どの件の lines と price_line にも入らない空でない行を、次の4つに分ける。
@@ -46,12 +46,12 @@
        - pre：最初の件より前
        - span：件の範囲内の未使用行
        - trail：最後の件の後
-     - 移植元は測定 `measure_gap_range.py:117-132`。結果が行単位で一致すること（§5-2）。
+     - 移植元はリポジトリ外の測定スクリプト measure_gap_range.py の 117-132 行。結果が行単位で一致すること（§5-2）。
    - `gap_price_qty_lines(...)`（T1）
      - gap の行（pre は含めない。recon §3：pre は誤報だけだったため）のうち、次の2つを満たす行番号。
        - どの件の price_line でもない
        - 式 F2_price_and_qty に当たる。式は `(_is_price_shaped(行) or has_money(行)) and has_q(行)`。
-     - `has_money`・`has_q` の正規表現は、測定 `measure_gap_detect_v2.py:55-87` から1文字も変えずに写す。`_is_price_shaped` は `backend/app/services/gemini_raw_copy_v101.py:962-966` の本物を import する（写さない）。
+     - `has_money`・`has_q` の正規表現は、リポジトリ外の測定スクリプト measure_gap_detect_v2.py の 55-87 行から1文字も変えずに写す。`_is_price_shaped` は `backend/app/services/gemini_raw_copy_v101.py:962-966` の本物を import する（写さない）。
    - `gap_name_candidates(items, lines, product_first)`（T2＝規則 H2）
      - gap と pre の行を、連続するまとまりにする。各まとまりの効く範囲は、直後の件から、次のまとまりの直前の件まで。
      - 範囲の件のうち、次の3つをすべて満たす件だけを対象にする。
@@ -64,7 +64,7 @@
      - 候補
        - 支えの行ごとに、`product_match_text("\n".join([支えの行] + 件の各行の原文), "", 件の商品名)` → `match_text_g2` を通す。
        - matched なら product_id を、ambiguous なら candidates を取り、その和集合を候補とする。
-       - 移植元は測定 `measure_gap_range.py:140-155`（method a）と `scope-h2/measure_h2.py:59`。
+       - 移植元はリポジトリ外の測定スクリプト measure_gap_range.py の 140-155 行（method a）と measure_h2.py の 59 行。
 2. `backend/app/services/line_analysis_v102_svc.py`
    - `run_v102_pipeline`（:262-300）の成功時の戻り値に `"v102_gap_detail"` を1つ足す。中身は次のとおり。
      - `post_review` のうち `line` を持つ要素の写し
@@ -87,14 +87,14 @@
      - 原文は入れない（`docs/handoff/v102-no-silent-drop/design.md:31` の決まり）。
 3. 触らない範囲
    - `backend/app/services/gemini_raw_copy_v101.py`（変えない。import するだけ）
-   - `gemini_raw_copy_v102_product_first.py`
-   - `tcg_condition_review_svc.py`
-   - `tcg_distribution_svc.py`
+   - `backend/app/services/gemini_raw_copy_v102_product_first.py`
+   - `backend/app/services/tcg_condition_review_svc.py`
+   - `backend/app/services/tcg_distribution_svc.py`
    - frontend
    - review_reason_codes
    - 指示書
 4. 試験（追加）
-   - `backend/tests/test_v102_gap_lines.py`：分類・T1・T2 を、合成の投稿で確かめる。対象は次の3つ。
+   - backend/tests/test_v102_gap_lines.py（新規作成）：分類・T1・T2 を、合成の投稿で確かめる。対象は次の3つ。
      - BASE SHOP 型
      - 見出しだけで当たる型（支えに使わない）
      - 価格の無い在庫一覧（動かない）
@@ -130,11 +130,11 @@
 - 照合の計算が重くなる。→ 動くのは unmatched で価格・数量のある件だけ。測定では 1投稿あたり最大で数件。§5-2 の手元計算で、1投稿あたりの時間を測って記録する。
 - 戻し方：PR② を revert する（列は NULL のまま残る）。PR① の列は残置する（DROP しない）。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 該当事例なし。今回は、自社の解析結果の明細を残す変更で、外部の手法を採り入れていない。根拠は自社の測定（recon §3）だけ。
 
-## 9. 維持する担当・仕組み
-- 試験 `test_v102_gap_lines.py` が、分類・T1・T2 の規則を固定する。
+## 9. 維持の仕組み
+- 試験 backend/tests/test_v102_gap_lines.py（新規作成）が、分類・T1・T2 の規則を固定する。
 - `docs/specs/line-analysis-tuning/README.md` に1行足す。
 - 段2a 以降は、この列だけを読む（新しい置き場を作らない）。
 
