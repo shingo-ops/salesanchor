@@ -21,12 +21,15 @@
 | [whatsapp-business-contact-info.md](whatsapp-business-contact-info.md) | WhatsApp 連絡先情報（ビジネスアカウント） | 79 | 10 | 2 |
 | [whatsapp-group-info.md](whatsapp-group-info.md) | WhatsApp 連絡先情報（グループ） | 90 | 18 | 5 |
 | [meta-business-suite-inbox.md](meta-business-suite-inbox.md) | Meta Business Suite 受信箱 | 92 | 25 | 7 |
+| [whatsapp-reproduction-spec.md](whatsapp-reproduction-spec.md) | **再現用の構造仕様**（入れ子と余白） | — | — | — |
+| [whatsapp-ux-behavior.md](whatsapp-ux-behavior.md) | **操作感**（動き・速さ・画面のつながり） | — | — | — |
 
-## 測り方（3つを組み合わせる）
+## 測り方（4つを組み合わせる）
 
-1. **部品の構造データ**（`adb shell uiautomator dump`）: 部品の位置・大きさ・押せるか・アプリ内部の名札。
+1. **部品の構造データ**（`adb shell uiautomator dump`）: 部品の位置・大きさ・押せるか・アプリ内部の名札。**親子の座標の差から余白を計算**できるので、再現用の寸法はここから出す（[whatsapp-reproduction-spec.md](whatsapp-reproduction-spec.md)）。
 2. **写真の画素の測定**（`adb exec-out screencap -p` → 自作の集計）: 色、文字の実際の高さ、区切り線の有無。構造データに色は入っていないため必須。
 3. **許可された操作での画面移動**: 一覧の項目を開く／戻る／タブ切替／メニューを開いて閉じる の4つだけ（手順書 §0-4）。
+4. **描画フレームの記録**（`adb shell dumpsys gfxinfo <アプリ> framestats`）: 操作ごとのフレーム数と所要時間。**録画なしで動きの速さが測れる**（[whatsapp-ux-behavior.md](whatsapp-ux-behavior.md)）。
 
 **撮影の前に必ず前面のアプリを証拠で確認する**（`dumpsys window` の `mCurrentFocus`。メニューが開いていると `PopupWindow` になるため、その場合は `mFocusedApp` で判定）。目的のアプリが前面だと確認できなければ撮らずに中止する。この関所を入れる前に1度、ターミナルの画面を測定対象と誤認した事故があったため、手順に組み込んだ。
 
@@ -59,7 +62,11 @@
 
 **要点4 — メニューの出し方**: 操作は「その場にポップアップを浮かせる」より「**上部バーを置き換える**」「**右上から1枚のパネルを出す**」の2通りに限られ、入れ子のサブメニューは無い。
 
-**要点5 — ビジネスプロフィール**: 営業時間は「曜日ごとの行＋折りたたみの矢印」で**1枚のカードに収めている**。項目ごとに別画面へ飛ばさない（[whatsapp-business-contact-info.md](whatsapp-business-contact-info.md)）。
+**要点5 — 操作感**: 120Hz の画面で、**戻るは85ms（ほぼ即時）、会話を開くのは586ms、タブ切替は両方向とも628msで完全一致**。戻る操作には動きを付けず、進む操作にだけ動きを付けている。1フレームの処理は中央値3.3ms（予算8.33msの4割）。
+
+**要点6 — 当たり判定の入れ子**: 一覧の行（押せる）の中に顔写真（押せる）が入っている。行＝会話を開く、顔写真＝プロフィール写真。「行はまるごと押せる」を守りつつ例外を1つだけ作っている。
+
+**要点7 — ビジネスプロフィール**: 営業時間は「曜日ごとの行＋折りたたみの矢印」で**1枚のカードに収めている**。項目ごとに別画面へ飛ばさない（[whatsapp-business-contact-info.md](whatsapp-business-contact-info.md)）。
 
 ## 我々（salesanchor）との差（事実のみ。対処は design.md で設計する）
 
