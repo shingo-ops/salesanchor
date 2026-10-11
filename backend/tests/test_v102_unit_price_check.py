@@ -194,3 +194,45 @@ def test_reason_code_is_ackable(code):
 
     assert code not in NON_ACKABLE_REASON_CODES
     assert svc.REASON_UNIT_PRICE_MISMATCH == code
+
+
+# --- 規則B: 比べる別単位の相場が無いときは、単独の倍率（unit_price_check_single_ratio）以上で疑う ----------------
+
+SINGLE5 = CheckSettings(ratio=Decimal(3), min_posts=3, single_ratio=Decimal(5))
+
+
+def test_rule_b_flags_expensive_side_when_no_other_unit_market():
+    market = _market(Box=(10000, 3))
+    assert check.is_unit_price_mismatch(_cand("Box", 50000), market, SINGLE5) is True  # ちょうど5倍は含む
+    assert check.is_unit_price_mismatch(_cand("Box", 49999), market, SINGLE5) is False
+
+
+def test_rule_b_flags_cheap_side_too():
+    market = _market(Box=(10000, 3))
+    assert check.is_unit_price_mismatch(_cand("Box", 2000), market, SINGLE5) is True  # 相場の1/5
+    assert check.is_unit_price_mismatch(_cand("Box", 2001), market, SINGLE5) is False
+
+
+def test_rule_b_does_nothing_without_the_single_ratio_setting():
+    market = _market(Box=(10000, 3))
+    assert check.is_unit_price_mismatch(_cand("Box", 138000), market, SETTINGS) is False  # key なし = 規則Bは働かない
+
+
+def test_rule_b_needs_a_usable_own_market():
+    assert check.is_unit_price_mismatch(_cand("Box", 138000), _market(Box=(10000, 2)), SINGLE5) is False
+    assert check.is_unit_price_mismatch(_cand("Pack", 138000), _market(Box=(10000, 3)), SINGLE5) is False
+
+
+def test_rule_b_ignores_other_units_with_too_few_posts_but_rule_a_wins_when_a_usable_other_exists():
+    assert check.is_unit_price_mismatch(_cand("Box", 138000), _market(Box=(10000, 3), Case=(100000, 2)), SINGLE5) is True  # 比べる相場が無い扱い
+    # 別単位の相場があるなら規則Aだけ（別単位の方が遠ければ付けない）
+    assert check.is_unit_price_mismatch(_cand("Box", 138000), _market(Box=(10000, 3), Case=(5000000, 3)), SINGLE5) is False
+
+
+def test_single_ratio_setting_parsing():
+    base = {"unit_price_check_ratio": "3", "unit_price_check_min_posts": "3"}
+    assert check.parse_settings({**base, "unit_price_check_single_ratio": "8"}).single_ratio == Decimal(8)
+    assert check.parse_settings(base).single_ratio is None
+    for bad in ("abc", "1", "0.5", "NaN"):
+        parsed = check.parse_settings({**base, "unit_price_check_single_ratio": bad})
+        assert parsed is not None and parsed.single_ratio is None  # 規則Bだけ止まり、規則Aは働く

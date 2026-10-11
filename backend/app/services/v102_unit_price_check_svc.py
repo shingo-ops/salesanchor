@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 REASON_UNIT_PRICE_MISMATCH = "unit_price_mismatch"
 SETTING_RATIO = "unit_price_check_ratio"
 SETTING_MIN_POSTS = "unit_price_check_min_posts"
+SETTING_SINGLE_RATIO = "unit_price_check_single_ratio"  # 規則B（任意）。key が無ければ規則Bは働かない
 _ENGINE_LIKE = "v102%"
 
 
@@ -27,6 +28,7 @@ _ENGINE_LIKE = "v102%"
 class CheckSettings:
     ratio: Decimal  # 相場とのずれの倍率の上限（これを超えたら疑う）
     min_posts: int  # 相場に使う、別々の投稿の数の最小
+    single_ratio: Decimal | None = None  # 規則B: 比べる別単位の相場が無いとき、この倍率以上ずれたら疑う。None なら規則Bは働かない
 
 
 @dataclass(frozen=True)
@@ -73,12 +75,24 @@ def parse_settings(raw: Mapping[str, str]) -> CheckSettings | None:
         return None
     if not ratio.is_finite() or ratio <= 1 or min_posts < 1:
         return None
-    return CheckSettings(ratio=ratio, min_posts=min_posts)
+    return CheckSettings(ratio=ratio, min_posts=min_posts, single_ratio=_parse_single_ratio(raw))
+
+
+def _parse_single_ratio(raw: Mapping[str, str]) -> Decimal | None:
+    """規則Bの倍率。key が無い・数でない・1 以下なら None（規則Bは働かない。規則Aは働く）。"""
+    if SETTING_SINGLE_RATIO not in raw:
+        return None
+    try:
+        value = Decimal(str(raw[SETTING_SINGLE_RATIO]).strip())
+    except InvalidOperation:
+        logger.warning("[unit_price_check] %s が数でないので、規則Bは働きません", SETTING_SINGLE_RATIO)
+        return None
+    return value if value.is_finite() and value > 1 else None
 
 
 def load_settings(session: Session, schema: str) -> CheckSettings | None:
     rows = session.execute(
-        text(_SETTINGS_SQL.format(schema=schema)), {"keys": [SETTING_RATIO, SETTING_MIN_POSTS]}
+        text(_SETTINGS_SQL.format(schema=schema)), {"keys": [SETTING_RATIO, SETTING_MIN_POSTS, SETTING_SINGLE_RATIO]}
     ).fetchall()
     settings = parse_settings({str(r[0]): str(r[1]) for r in rows})
     if settings is None:
@@ -119,9 +133,10 @@ def is_unit_price_mismatch(candidate: Candidate, market: Market, settings: Check
     own_ratio = _ratio(candidate.price, own.median)
     if own_ratio <= settings.ratio:
         return False
-    return any(
-        _ratio(candidate.price, entry.median) < own_ratio for unit, entry in usable.items() if unit != candidate.unit
-    )
+    others = [entry for unit, entry in usable.items() if unit != candidate.unit]
+    if not others:  # 規則B: 比べる別単位の相場が無い
+        return settings.single_ratio is not None and own_ratio >= settings.single_ratio
+    return any(_ratio(candidate.price, entry.median) < own_ratio for entry in others)
 
 
 def find_mismatches(session: Session, schema: str, candidates: Sequence[Candidate], source_message_id: str) -> frozenset[int]:
