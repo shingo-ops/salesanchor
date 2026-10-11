@@ -126,7 +126,29 @@ def test_find_mismatches_without_candidates_reads_nothing():
 
 # --- _write_results への接続（理由が付く・ack で外れる・他の値は変わらない） -------------------------------
 
+class _Savepoint:
+    def __init__(self, session):
+        self.session = session
+
+    def __enter__(self):
+        self.session.savepoints.append("begin")
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.session.savepoints.append("rollback" if exc_type else "release")
+        return False
+
+
 class _WriteSession(_Session):
+    savepoints: list
+
+    def __init__(self, settings_rows, market_rows):
+        super().__init__(settings_rows, market_rows)
+        self.savepoints = []
+
+    def begin_nested(self):
+        return _Savepoint(self)
+
     def execute(self, statement, params=None):
         sql = str(statement)
         if "source_message_id::text" in sql:
@@ -237,3 +259,20 @@ def test_single_ratio_setting_parsing():
     for bad in ("abc", "1", "0.5", "NaN"):
         parsed = check.parse_settings({**base, "unit_price_check_single_ratio": bad})
         assert parsed is not None and parsed.single_ratio is None  # 規則Bだけ止まり、規則Aは働く
+
+
+def test_failing_market_query_does_not_break_the_save_and_adds_no_reason(caplog):
+    class _Failing(_WriteSession):
+        def execute(self, statement, params=None):
+            if "percentile_cont" in str(statement):
+                raise RuntimeError("market boom")
+            return super().execute(statement, params)
+
+    session = _Failing(_GOOD_SETTINGS, _MARKET_ROWS)
+    with caplog.at_level("WARNING"):
+        rows = _write(session, [_item()])
+    assert len(rows) == 1  # 保存は最後まで進む
+    assert (rows[0]["review_reasons"], rows[0]["needs_review"]) == (None, False)
+    assert (rows[0]["unit_canonical"], rows[0]["price_normalized"]) == ("Case", 26000)
+    assert session.savepoints == ["begin", "rollback"]  # SAVEPOINT の中で失敗した
+    assert any("job=job1" in r.message and "market boom" in r.message for r in caplog.records)

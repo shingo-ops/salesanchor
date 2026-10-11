@@ -762,10 +762,15 @@ def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values
     ]
     if not candidates:
         return frozenset()
-    source_message_id = session.execute(
-        text(f"SELECT source_message_id::text FROM {analyzer.TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
-    ).scalar_one()
-    return find_mismatches(session, analyzer.TCG_SCHEMA, candidates, source_message_id)
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            source_message_id = session.execute(
+                text(f"SELECT source_message_id::text FROM {analyzer.TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+            ).scalar_one()
+            return find_mismatches(session, analyzer.TCG_SCHEMA, candidates, source_message_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[unit_price_check] 単位と価格の確認に失敗したので、この投稿では確認をしません: job=%s error=%r", extraction_job_id, exc)
+        return frozenset()
 
 
 def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
