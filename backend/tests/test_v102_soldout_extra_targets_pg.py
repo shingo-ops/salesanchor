@@ -215,3 +215,30 @@ def test_run_analysis_demotes_the_older_stock_row_and_a_rerun_restores_it(pg, id
     _inject(monkeypatch, [_target(ids.p1, ids.case, 1)])  # やり直しで相手が減る → 前の相手の組を付け直す
     run_analysis(pg, job)
     assert _current(pg, older.results[0]) is True
+
+
+# --- 商品名を書いた〆の引き継ぎ（便3・規則12）----------------------------------------------------------
+
+
+def test_inherit_shime_demotes_the_older_stock_row_of_another_condition(pg, ids, monkeypatch):
+    older = _add_post(pg, 5, [(ids.p1, ids.case)])  # 前の在庫：ケース
+    target = _target(ids.p1, ids.case, 1)
+
+    def wrapped(*args, **kwargs):
+        out = _ORIGINAL_PIPELINE(*args, **kwargs)
+        items = list(out["v102_items"])
+        index = next(i for i, it in enumerate(items) if not it.get("rejected"))
+        items[index] = {
+            **items[index], "product_id": ids.p1, "match_status": "matched", "soldout_targets": [target],
+            "soldout_target_basis": "SOLDOUT_INHERIT",
+        }
+        return {**out, "v102_items": items}
+
+    monkeypatch.setattr(svc, "run_v102_pipeline", wrapped)
+    _s, job = make_job(pg)
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    _id, product_id, condition_id, basis, _pid_basis = _parent(pg, job)
+    assert (product_id, condition_id, basis) == (ids.p1, ids.case, "SOLDOUT_INHERIT")
+    assert _extras(pg, job) == []  # 書いた行と同じ相手なので別表には書かない
+    assert _current(pg, older.results[0]) is False

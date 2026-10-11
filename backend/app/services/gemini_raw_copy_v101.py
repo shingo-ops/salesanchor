@@ -40,10 +40,12 @@ from app.services.gemini_raw_copy_v102_product_first import (
     resolve_product_first,
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import (
+    CONDITION_BASIS_SOLDOUT_INHERIT,
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
     SoldoutRefDecision,
     SoldoutRefPost,
     build_ref_rows,
+    decide_soldout_inherit,
     decide_soldout_ref,
     soldout_targets,
 )
@@ -1182,6 +1184,23 @@ def _apply_soldout_ref(
     return result
 
 
+def _apply_soldout_inherit(
+    extracted: list[dict], soldout_posts: tuple[SoldoutRefPost, ...], fixed_products: dict[int, int] | None = None,
+) -> list[dict]:
+    """試作版 v102 の規則12：商品名を書いた〆の件に、前の在庫の取り残された状態を完売の相手として載せる（元の件は変えない）。"""
+    decisions = decide_soldout_inherit(extracted, soldout_posts, fixed_products)
+    return [
+        {
+            **row,
+            "soldout_targets": [{
+                "product_id": d.product_id, "condition_id": d.condition_id, "ref_message_id": d.ref_message_id, "ref_line": d.ref_line,
+            }],
+            "soldout_target_basis": CONDITION_BASIS_SOLDOUT_INHERIT,
+        } if (d := decisions.get(i)) is not None else row
+        for i, row in enumerate(extracted)
+    ]
+
+
 def _soldout_ref_row(built: dict, decision: SoldoutRefDecision) -> dict:
     """決めた商品で作り直した件に、根拠（product_soldout_ref）と、あれば完売の相手の全て（soldout_targets）を足す。"""
     row = {
@@ -1341,6 +1360,7 @@ def _extract_v102(
                 extracted, build, lines, ctx.product_first, soldout_posts, ctx.unit_alias_to_info, ctx.sold_out_words,
                 fixed_products,
             )
+            extracted = _apply_soldout_inherit(extracted, soldout_posts, fixed_products)
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
