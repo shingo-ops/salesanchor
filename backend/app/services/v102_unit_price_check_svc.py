@@ -1,7 +1,8 @@
 """v102 の件の「単位と価格が相場と合わない」を要確認にする（便UP）。単位・価格は書き換えない。
 
 設計: docs/handoff/v102-unit-price-check/card-UP.md
-相場 = 同じ商品の v102 の現行行（要確認でない・価格あり・単位あり・今の投稿とは別の投稿）の、単位ごとの価格の中央値。
+相場 = 同じ商品の v102 の現行行（価格あり・単位あり・今の投稿とは別の投稿。要確認の行も入れる）の、単位ごとの価格の中央値。
+要確認の行を除かないのは、この確認自体が要確認にした行が相場から外れ、再解析のたびに結果が揺れるのを防ぐため（中央値と投稿数の最小で外れ値には強い）。
 件の単位 U・価格 p について、相場 m(U) とずれが倍率を超え、かつ別の単位 V の相場の方が p に近いときだけ unit_price_mismatch を付ける。
 倍率と最小の投稿数は public.tcg_distribution_settings の key（値はコードに書かない。key が無い・不正なら何もしない）。
 """
@@ -59,7 +60,7 @@ _MARKET_SQL = """
     JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
     JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
     WHERE ar.product_id = ANY(:pids) AND ar.engine_version LIKE :engine AND ar.is_current IS TRUE
-      AND ar.needs_review IS FALSE AND ar.price_normalized IS NOT NULL AND ar.unit_canonical IS NOT NULL
+      AND ar.price_normalized IS NOT NULL AND ar.unit_canonical IS NOT NULL
       AND ej.source_message_id != CAST(:smid AS uuid)
       AND md5(sm.raw_text) != COALESCE((SELECT md5(raw_text) FROM {schema}.source_messages WHERE id = CAST(:smid AS uuid)), '')
     GROUP BY ar.product_id, ar.unit_canonical

@@ -102,10 +102,11 @@ def test_find_mismatches_returns_flagged_keys_with_one_market_query():
 
 def test_market_sql_keeps_the_agreed_conditions():
     sql = check._MARKET_SQL
-    for needle in ("ar.engine_version LIKE", "ar.is_current IS TRUE", "ar.needs_review IS FALSE", "ar.price_normalized IS NOT NULL",
+    for needle in ("ar.engine_version LIKE", "ar.is_current IS TRUE", "ar.price_normalized IS NOT NULL",
                    "ar.unit_canonical IS NOT NULL", "ej.source_message_id != ", "md5(sm.raw_text) != ", "count(DISTINCT md5(sm.raw_text))",
                    "percentile_cont(0.5)"):
         assert needle in sql
+    assert "needs_review" not in sql  # 要確認の行も相場に入れる（付く→外れる→付く の揺れを防ぐ）
     assert check._ENGINE_LIKE == "v102%"
 
 
