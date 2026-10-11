@@ -4,7 +4,7 @@ mode: handoff
 # design: 規則12で、〆の件に単位語があればその状態を優先する（便3b）
 
 - 状態: 設計案・Opus 自己審査済み（§9。独立した第二者レビューではない）。PO 2026-10-11「状態がある場合は状態を優先　y」（recon.md §1）。
-- 参照: docs/handoff/v102-shime-inherit-unit-priority/recon.md、docs/handoff/v102-shime-direct-inherit/design.md（規則12）。
+- 参照: docs/handoff/v102-shime-inherit-unit-priority/recon.md、docs/handoff/v102-shime-direct-inherit/design.md（規則12）、docs/adr/ADR-158-product-level-supersession.md（在庫の最新は analysis_results.is_current の1か所）。
 
 ## 1. 目的と成功の判定
 「〇〇 ボックス 完売」のように〆の件の行に単位語（ボックス・BOX・カートン・パック等）があるとき、前の在庫の別の状態を引き継がず、〆の件そのものの状態（単位語から決まる状態）を使う。前の2日間にボックスの在庫が無くパックの在庫だけがある場合に、パックの在庫を誤って完売にすることを防ぐ。
@@ -60,3 +60,7 @@ mode: handoff
 
 ## 9. 設計審査（Opus 自己審査）
 - 判定: APPROVE。根拠は recon.md の file:line と測定。未解決なし（G3 は確認してからマージ）。
+
+## 10. G3 等価確認の結果（2026-10-11、ブランチ 257c6e30c、手元・DB 書き込みなし）
+- #4136 の等価確認と同じ入力に、本番イメージで測った各完売の件の `unit_basis`（recon.md §3-1）を足して `decide_soldout_inherit` を当てた。
+- 結果: 前回 56 件 → 今回 42 件。共通 42（相手の状態は全件一致）、前回だけ 14、今回だけ 0。前回だけの 14 件は全て単位語 BOX・from_condition なし（＝12f 成立の件と一致）。反例2件は引き続き決まらない。
