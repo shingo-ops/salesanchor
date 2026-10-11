@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.gemini_raw_copy_v102_product_first import PRODUCT_KUBUN_SET
 from app.services.gemini_raw_copy_v102_soldout_ref import condition_decided_by_word
 
 logger = logging.getLogger(__name__)
@@ -131,10 +132,14 @@ def has_no_unit_and_condition_word(item: Mapping[str, Any]) -> bool:
 
 
 def is_candidate(item: Mapping[str, Any], values: Mapping[str, Any]) -> bool:
-    """対象の件：商品が特定済み・価格あり・配信しない件でない・単位も状態も語が無い。"""
+    """対象の件：商品が特定済み・価格あり・配信しない件でない・単位も状態も語が無い・分類がセット系でない。
+
+    セット系は買取の箱の値段で Sealed box / Case に決めない（単位は Set、状態は既定の Sealed box）。
+    """
     return (
         bool(values["pid_resolved"]) and values["product_id"] is not None and values["price_normalized"] is not None
-        and item.get("status_effect") != _EXCLUDED_EFFECT and has_no_unit_and_condition_word(item)
+        and item.get("status_effect") != _EXCLUDED_EFFECT and item.get("product_category") != PRODUCT_KUBUN_SET
+        and has_no_unit_and_condition_word(item)
     )
 
 
