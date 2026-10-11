@@ -141,6 +141,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         WHERE extraction_item_id = ei.id AND field_name = 'condition_review' ORDER BY id DESC LIMIT 1
     ) cr_event ON TRUE
     LEFT JOIN public.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
+    LEFT JOIN public.conditions cr_arc ON cr_arc.id::text = cr_data.ar->>'condition_id'
     CROSS JOIN LATERAL (SELECT {classification} AS classification, ({mentions}) AS mentions,
         {valid_master} AS master_valid) cr_input
     CROSS JOIN LATERAL (SELECT {binding} AS binding_hash, {ack_binding} AS ack_binding_hash) cr_hash
@@ -193,10 +194,10 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
              ELSE cr_data.ar->>'condition_canonical' END AS canonical,
         CASE WHEN cr_valid.valid_ack THEN 'MANUAL_CONDITION_REVIEW'
              WHEN cr_input.classification = 'positive' AND cr_input.master_valid THEN 'EMPTY_BOX:explicit'
-             ELSE cr_data.ar->>'condition_basis' END AS basis
-    ) cr_base
-    CROSS JOIN LATERAL (SELECT cr_base.*,
-        (SELECT {condition_effect_sql('c')} FROM public.conditions c WHERE c.id::text = cr_base.condition_id) AS effect
+             ELSE cr_data.ar->>'condition_basis' END AS basis,
+        CASE WHEN cr_valid.valid_ack THEN {condition_effect_sql('cr_ack_condition')}
+             WHEN cr_input.classification = 'positive' AND cr_input.master_valid THEN {condition_effect_sql('cr_empty')}
+             ELSE {condition_effect_sql('cr_arc')} END AS effect
     ) cr
     """
 
