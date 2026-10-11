@@ -340,10 +340,13 @@ def test_loader_reads_condition_units_and_active_ignore_phrases(monkeypatch):
     monkeypatch.setattr(pf, "load_product_kubun_type_map", lambda s: dict(_PRODUCT_KUBUN))
     calls = []
 
-    def execute(stmt):
+    def execute(stmt, params=None):
         sql = str(stmt)
         calls.append(sql)
-        rows = [] if "type_master" in sql else [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
+        rows = (
+            [] if "type_master" in sql else [("Set",)] if "line_units" in sql and "line_conditions" not in sql
+            else [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
+        )
         return SimpleNamespace(fetchall=lambda: rows)
 
     session = MagicMock()
