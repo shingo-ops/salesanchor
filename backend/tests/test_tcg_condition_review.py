@@ -166,6 +166,23 @@ def save(pg, item, payload=None):
     return asyncio.run(save_async(pg,item,payload or request(pg,item)))
 
 
+def set_max_age_hours(pg, value):
+    """tcg_distribution_settings の max_age_hours を入れる（None なら行を消す）。"""
+    with pg["connection"].cursor() as cursor:
+        if value is None:
+            cursor.execute("DELETE FROM public.tcg_distribution_settings WHERE key='max_age_hours'")
+        else:
+            cursor.execute("INSERT INTO public.tcg_distribution_settings(key,value) VALUES ('max_age_hours',%s) "
+                           "ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (str(value),))
+
+
+def age_message(pg, item, hours):
+    """seed 済みの投稿日時を hours 時間前にずらす。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.source_messages SET line_posted_at=now()-make_interval(hours=>%s) WHERE id=%s",
+                       (hours, item["smid"]))
+
+
 def output(pg):
     async def run():
         engine=create_async_engine(pg["url"])
@@ -299,6 +316,7 @@ def test_ambiguous_requires_correction_and_preserves_selected_on_reanalysis(pg):
 
 def test_review_tabs_count_paging_and_preview(pg):
     a,b=seed(pg),seed(pg)
+    set_max_age_hours(pg,48)
     save(pg,a)
     async def run():
         engine=create_async_engine(pg['url'])
@@ -528,6 +546,7 @@ def seed_deliverable(pg, name, condition_id, canonical):
 @pytest.mark.parametrize("include_flag_single", [False, True])
 def test_excluded_effect_condition_is_not_delivered_even_when_review_is_clear(pg, include_flag_single):
     error_id = add_error_condition(pg)
+    set_max_age_hours(pg, 48)
     seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
     seed_deliverable(pg, "Test Booster", error_id, "Error")
 
@@ -587,3 +606,61 @@ def test_saving_a_condition_removes_condition_reasons_at_save_time(pg, reasons, 
     assert needs_review is expected_needs_review
     assert stored == expected_reasons
     assert "condition_unknown" not in context(pg, item)["review_reasons"]
+
+
+def _age_window_run(pg):
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                settings = await distribution.load_distribution_settings(db)
+                hours = distribution._max_age_hours(settings)
+                return (await distribution.fetch_output_rows(db, max_age_hours=hours),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+    return asyncio.run(run())
+
+
+def test_age_window_same_condition_for_delivery_count_and_exclusion_breakdown(pg):
+    """48時間(設定値)より前の行は 配信・件数・除外内訳 のどれにも入らない。"""
+    set_max_age_hours(pg, 48)
+    fresh_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    fresh_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, fresh_ok, 47)
+    age_message(pg, old_ok, 49)
+    age_message(pg, fresh_unresolved, 1)
+    age_message(pg, old_unresolved, 100)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1  # 48時間より前の1件は数えない
+
+
+def test_age_window_zero_is_unbounded_everywhere(pg):
+    set_max_age_hours(pg, 0)
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, old_ok, 1000)
+    age_message(pg, old_unresolved, 1000)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1
+
+
+@pytest.mark.parametrize("value", [None, "", "abc", "-1"])
+def test_preview_raises_when_max_age_hours_missing_or_invalid(pg, value):
+    set_max_age_hours(pg, value)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await distribution.fetch_preview_data(db)
+        finally:
+            await engine.dispose()
+
+    with pytest.raises(distribution.MaxAgeHoursUnsetError):
+        asyncio.run(run())
