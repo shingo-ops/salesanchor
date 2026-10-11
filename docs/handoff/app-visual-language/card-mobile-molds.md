@@ -165,3 +165,32 @@ PO 指示「確立したなら進める／推測は禁止／PCに影響を出さ
 | `tokens.css` / `index.css` | 新しいトークンを追加しない |
 | `MobileShell`（下部タブ） | ADR-140 の所有範囲。今回は触らない |
 | 既存の128個の金型 | `PageLayout` 以外は変更しない |
+
+## 7. 相互参照
+
+- **recon**: [../../handoff/app-visual-language/recon.md](../../handoff/app-visual-language/recon.md)（`docs/handoff/app-visual-language/recon.md`）— 段階1の現状実測。R4（ブレークポイント使用）・R5（行間・字間・太さの直書き）・R15（作業場所に node_modules が無い）を本カードの前提として参照している。本カードで `npm ci` が36秒で完了することを確認したため R15 は解消済み。
+- **ADR-144**（UI共通部品の遵守ガバナンス）: §4「金型がない場合の手順」に従い、PO 許可を得てから `components/` に `Xxx.tsx` + `Xxx.css`（`var()` のみ）+ `Xxx.stories.tsx` の作法で新設した。§5「移行は別トラック・別PRで1ページ1部品ずつ」に従い、既存 `.conv-item` の置き換えは本便で行わない。
+- **ADR-067**（デザイントークン強制システム）: 本カードの全ての寸法・色は既存トークンの `var()` 参照のみで構成する。既存の段に無い値（スマホの行の高さ76px）は直書きせず**トークンを1個追加**して参照する。`check:css-values` / `check:css-colors` / `check:new-tokens` / `scripts/check-design-token-ratchet.sh` がこれを機械的に強制する。
+- **ADR-140**（モバイルナビ刷新）: 下部タブバーと `MobileShell` は ADR-140 の所有範囲。本カードでは触らない。
+- **ADR-108**（受信箱カルテパネル再設計）: カルテの中身は ADR-108 の所有範囲。本カードでは「出し方」のみを扱い、中身に触らない。
+- **ADR-064**（Inbox Meta 完全再現レイアウト）: PC（Meta web・3カラム）の担当。本カードはスマホ（Android アプリの実測）の担当であり対象が異なる。ADR-064 の記述と現在の実装の乖離は PR #4140 で記録済み。
+- **KGI**: [../../specs/design-system/visual-language/kgi.md](../../specs/design-system/visual-language/kgi.md) の K5（カードの内側の余白）・K8（押す場所44px以上）に向けた基盤。
+
+## 8. 外部・過去事例の参照と我々への応用
+
+| 事例 | 何を参照したか | 我々への応用 |
+|---|---|---|
+| **WhatsApp（Android）の実測** | 一覧の行76dp・行全体が押せる・区切り線なし・本文開始72dp・顔写真48dpの円。下部ナビは1タブ90x80dpでアイコンは32dp | 行の高さをスマホ幅だけ76pxにする。**押す場所はアイコンを大きくするのではなく枠を広げる**という考え方を `ListRow`（行全体が当たり判定）に写した |
+| **Meta Business Suite（Android）の実測** | 受信箱の行78dp・行全体が押せる・区切り線なし | 76〜78dpという密度が業務用のメッセージ一覧で成立している根拠として採用した |
+| **ADR-064（社内の先行事例）** | Meta Business Suite の **PC web** を実測して受信箱を再現した前例。アバター48pxは現在も有効 | 同じ「実測して値を合わせる」手法を**スマホに拡張**した。ただし ADR-064 の値は PC 用で、スマホには適用しない（担当範囲を分けた） |
+| **WCAG 2.5.5（Target Size）** | 押す場所の最小44px | `--size-icon-btn-lg: 44px` が既にこの基準で定義されている。ただしお手本は**アイコンを44pxにせず枠を広げて**達成していたため、我々も同じ方法を採る（K8 の達成方法として design.md §10-3 に明記） |
+| **WCAG 1.4.3（Contrast Minimum）** | 通常の文字は明度差4.5:1 | `--font-xs`（12px）に `--text-muted`（ライト4.0:1）を使うと基準を割ることを計算で確認し、`--text-secondary`（7.5:1）に変更した |
+
+**採用しなかったもの**: お手本の色（WhatsApp の緑）は採用しない。PO 方針により salesanchor はネイビー＋白のままで、**配色の「組み立て方」（面は2段・強調色は面積1.5〜2%）だけを参照**する。会話の背景の模様入り壁紙も採用しない（PO 決定: 白と黒でライト/ダーク切替）。
+
+## 9. 維持の仕組み
+
+- **守り手**: `frontend/package.json` の `check:all`（25項目）と、CI の `guard-hex-increase`（`scripts/check-design-token-ratchet.sh`）・`Process Artifacts Gate`・`UI Governance Gate`。
+- **対象**: 金型外の直書き（`check:css-values` / `check:css-colors`）、見本の欠落（`check:stories`）、新トークンの無断追加（`check:new-tokens` がPR本文のチェックリストを要求）、色コードの増加（ラチェットは**コメント内の色コードも数える**）、ライト/ダークの片方欠落（`check:dark-parity`）。
+- **関所が無い部分**: **3幅（390/768/1280）の画面崩れは機械で検査していない。** 段階1のPO決定（2026-10-02）でCIの画面検査を止めてあり、さらに作業端末（ubuntu26.04-arm64）では Playwright が chromium を提供しないため実行できない。**当面は Playwright が動く環境（Mac 側）での人手の実行で守る。** これを機械化するには、CIの画面検査を再開するか、arm64 で動く別のブラウザを用意する必要がある（未解決・design.md §9 の継続課題に追加すべき事項）。
+- **金型の用途が分からなくなることへの対策**: `ListRow.stories.tsx` に6状態を並べ、props に日本語の説明を付け、「この部品が決めるもの／渡す側が決めるもの」を冒頭コメントに明記した。`check:stories` が見本の存在を機械的に要求する。
