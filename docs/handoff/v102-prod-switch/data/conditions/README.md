@@ -69,19 +69,19 @@ v102 が状態を決められなかった件（`resolve_condition_v2` の最終�
 
 ## 変更内容
 - 1行追加: code=CN0012, canonical=Error, app_kubun='', is_active=true, priority=99, search_kw='', exclude_kw='', match_type=KEYWORD, effect=EXCLUDE。
-- id は **26** を明示する（実物確認: `conditions` は `line_conditions` の view で、id は NOT NULL・default なし・sequence なし。現在の最大 id=25、13行）。
+- id は identity（`public.conditions_id_seq`、last_value 25）が振る。INSERT に id を書かない（明示すると sequence が進まず、次に画面から足す行が主キー重複で失敗する）。本番の予想は 26。コードは code='CN0012' で引き、id に依存しない。
 - priority 99・search_kw 空なので照合には当たらない（`match_keyword` は search_kw が空なら当たらない）。`load_condition_entries`（priority>0）には入るので、コードが code で引ける。
 - **effect='EXCLUDE' の意味 = 「配信しない状態」**（今まで全13行 OUTPUT で、どこからも読まれていなかった列）。配信 SQL（`cr.effect`）・状態の選択肢・〆の引き継ぎがこれを読む。
 
 ## 手順（上から順に。失敗したらそこで止まる）
-1. `er_precheck.sql`: `TABLE|conditions`、`ROWS|13`、`CN0012_ROWS|0`、`ERROR_CANONICAL_ROWS|0`、`ID26_ROWS|0`、`EXCLUDE_ROWS|0`、`PRECHECK_DONE`。
+1. `er_precheck.sql`: `TABLE|conditions`、`ROWS|13`、`CN0012_ROWS|0`、`ERROR_CANONICAL_ROWS|0`、`EXCLUDE_ROWS|0`、`PRECHECK_DONE`。
 2. `er_dryrun.sql`: 追加して検査し、必ず ROLLBACK。`INSERTED|1`、`CHECK_OK 14`、`CHECK_OK 1`、`DRYRUN_OK`。
 3. `er_commit.sql`: dryrun 成功の後だけ。`INSERTED|1`、`CHECK_OK 14`、`CHECK_OK 1`、`COMMIT_DONE`。
-4. `er_verify.sql`: `ROWS|14`、`CN0012|26|…`、`EXCLUDE_ROWS|1`、`VERIFY_DONE`。
+4. `er_verify.sql`: `ROWS|14`、`CN0012|（identity の id・予想 26）|…`、`EXCLUDE_ROWS|1`、`VERIFY_DONE`。
 5. コードのデプロイ（この行が先、コードが後。行が無いうちは従来どおり FLAG_SINGLE＋condition_unknown に倒れる）→ 再解析と前後比較。
 
 ## 戻し方
-`er_rollback.sql`（id=26 の1行だけ削除）。**戻す前に**コードを戻して再解析し、`analysis_results.condition_id` が 26 を指す行を無くすこと（参照が残っていると失敗する）。
+`er_rollback.sql`（code='CN0012' の1行だけ削除）。**戻す前に**コードを戻して再解析し、`analysis_results.condition_id` が CN0012 の id を指す行を無くすこと（参照が残っていると失敗する）。
 
 ## 記録欄（設計者が実施後に記入）
 | 項目 | 内容 |
