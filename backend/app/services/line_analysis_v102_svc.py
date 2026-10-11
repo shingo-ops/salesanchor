@@ -100,6 +100,7 @@ STATUS_SOLD_OUT = "Sold out"  # 〆の件の status（analysis_results.status）
 # analysis_results の列の幅・精度（migrations/20260921_110000_pipeline_tables_public.sql）
 _PID_BASIS_MAX = 100
 _CONDITION_BASIS_MAX = 100
+_PRICE_BASIS_MAX = 100
 _NUMERIC_LIMIT = Decimal(10) ** 12  # NUMERIC(14,2)
 _INT4_MAX = 2**31 - 1
 _FLAG_SINGLE = "FLAG_SINGLE"
@@ -599,6 +600,7 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "note_ja": None, "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
+        "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
     }
 
 
@@ -606,11 +608,13 @@ _UPSERT_SQL = """
     INSERT INTO {schema}.analysis_results (
         id, extraction_item_id, product_id, pid_resolved, pid_basis, unit_id, unit_canonical, unit_resolved,
         condition_id, condition_canonical, condition_basis, quantity_normalized, price_normalized, note_ja,
-        status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id
+        status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
+        price_basis
     ) VALUES (
         :id, :extraction_item_id, :product_id, :pid_resolved, :pid_basis, :unit_id, :unit_canonical, :unit_resolved,
         :condition_id, :condition_canonical, :condition_basis, :quantity_normalized, :price_normalized, :note_ja,
-        :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id
+        :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
+        :price_basis
     )
     ON CONFLICT (extraction_item_id) DO UPDATE SET
         product_id = EXCLUDED.product_id, pid_resolved = EXCLUDED.pid_resolved, pid_basis = EXCLUDED.pid_basis,
@@ -620,7 +624,7 @@ _UPSERT_SQL = """
         price_normalized = EXCLUDED.price_normalized, note_ja = EXCLUDED.note_ja, status = EXCLUDED.status,
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
-        work_id = EXCLUDED.work_id
+        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis
     RETURNING id
 """
 
