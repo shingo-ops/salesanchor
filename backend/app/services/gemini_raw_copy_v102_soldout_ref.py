@@ -14,10 +14,20 @@ from datetime import datetime
 from typing import Any
 
 from app.services.extraction_judgement_svc import _strict_code_pattern, fold_for_match, normalize_for_match
-from app.services.gemini_raw_copy_v102_followup import _is_clue, extract_tokens
-from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, WorkName, match_text_g2
+from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
+from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP, _is_clue, extract_tokens
+from app.services.gemini_raw_copy_v102_product_first import (
+    FLAG_SINGLE_CANONICAL,
+    NONE_VALUE,
+    ProductFirstMasters,
+    WorkName,
+    match_text_g2,
+)
 
 MATCH_STATUS_MATCHED_SOLDOUT_REF = "matched_soldout_ref"
+SOLD_OUT_STATUS = "Sold out"  # 〆の件の status（analysis_results.status）
+CONDITION_BASIS_SOLDOUT_INHERIT = "SOLDOUT_INHERIT"  # 規則12：商品名を書いた〆が前の在庫の状態を引き継いだ印
+_DIRECT_MATCH_STATUSES = (MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP)
 
 _UNDECIDED_STATUSES = ("unmatched", "ambiguous")
 _EXCLUDED = "excluded"
@@ -51,6 +61,14 @@ class StockItem:
 
 
 @dataclass(frozen=True)
+class SoldItem:
+    """参照する投稿の保存済みの解析結果のうち 'Sold out' の件：決まった商品と状態の canonical（規則12d・12e）。"""
+
+    product_id: int
+    condition_canonical: str = ""
+
+
+@dataclass(frozen=True)
 class SoldoutTarget:
     """完売の相手（商品×状態）と、その根拠（参照した在庫の投稿と行番号）。"""
 
@@ -69,6 +87,7 @@ class SoldoutRefPost:
     posted_at: datetime
     raw_text: str
     stock_items: tuple[StockItem, ...] = ()
+    sold_items: tuple[SoldItem, ...] = ()  # その投稿の 'Sold out' の件（規則12。商品と状態が決まっている件だけ）
 
 
 @dataclass(frozen=True)
@@ -324,3 +343,65 @@ def decide_soldout_ref(
     rules = _Rules(units, plural_words, sold_out_words, posts, works, product_works or {})
     decisions = {i: _decide_one(extracted[i], lines, rows, sold, rules) for i in targets}
     return {i: d for i, d in decisions.items() if d is not None}
+
+
+def _shime_condition(item: Mapping[str, Any]) -> str:
+    """規則12d：〆の件の状態（condition）。空・None・none は未解決の印 FLAG_SINGLE。"""
+    cond = str(item.get("condition") or "").strip()
+    return FLAG_SINGLE_CANONICAL if not cond or cond.lower() == NONE_VALUE else cond
+
+
+def _is_inherit_candidate(item: Mapping[str, Any], index: int, fixed_products: Mapping[int, int] | None) -> bool:
+    """規則12a・12b・12c：完売で、商品が直接決まり、まだ相手が無く、人の判断でなく、状態が語で決まっていない件。"""
+    return (
+        item.get("status_effect") == _EXCLUDED and item.get("status") == SOLD_OUT_STATUS
+        and item.get("match_status") in _DIRECT_MATCH_STATUSES and item.get("product_id") is not None
+        and not item.get("soldout_targets") and index not in (fixed_products or {})
+        and not condition_decided_by_word(item.get("condition_basis"))
+    )
+
+
+def _stranded_stock(
+    product_id: int, posts: Sequence[SoldoutRefPost], newer_states: frozenset[str] = frozenset(),
+) -> dict[str, tuple[SoldoutRefPost, StockItem]]:
+    """規則12e：商品の状態ごとに、その状態の行（在庫・完売）がある最も新しい投稿を見て、そこに在庫の行がある状態（取り残し）。
+
+    newer_states は〆と同じ投稿の他の件（同じ商品）の状態＝過去の投稿より新しい行があるので取り残しにしない。
+    """
+    stranded: dict[str, tuple[SoldoutRefPost, StockItem]] = {}
+    seen: set[str] = set(newer_states)
+    for post in posts:  # 新しい順
+        stock = [it for it in post.stock_items if it.product_id == product_id]
+        states = {it.condition_canonical for it in stock} | {it.condition_canonical for it in post.sold_items if it.product_id == product_id}
+        for state in states - seen:
+            hit = [it for it in stock if it.condition_canonical == state]
+            if hit:
+                stranded[state] = (post, min(hit, key=lambda it: min(it.lines, default=0)))
+        seen |= states
+    return stranded
+
+
+def decide_soldout_inherit(
+    extracted: Sequence[Mapping[str, Any]], posts: Sequence[SoldoutRefPost], fixed_products: Mapping[int, int] | None = None,
+) -> dict[int, SoldoutTarget]:
+    """規則12：商品名を書いた〆（商品が直接決まった完売の件）が、前の在庫の取り残された状態を引き継ぐ件（添字 → 相手）。
+
+    posts は新しい順。〆と同じ状態の在庫が前にあれば決めない（12d）。取り残しの状態がちょうど1種類のときだけ決める（12e）。
+    """
+    decided: dict[int, SoldoutTarget] = {}
+    for i, item in enumerate(extracted):
+        if not _is_inherit_candidate(item, i, fixed_products):
+            continue
+        product_id = int(item["product_id"])
+        shime = _shime_condition(item)
+        if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
+            continue  # 12d
+        same_post = frozenset(
+            _shime_condition(other) for j, other in enumerate(extracted) if j != i and other.get("product_id") == product_id
+        )
+        stranded = _stranded_stock(product_id, posts, same_post)
+        if len(stranded) != 1:
+            continue  # 12e
+        (canonical, (post, stock)), = stranded.items()
+        decided[i] = SoldoutTarget(product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical)
+    return decided

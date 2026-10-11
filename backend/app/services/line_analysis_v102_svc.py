@@ -37,7 +37,12 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
-from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost, StockItem
+from app.services.gemini_raw_copy_v102_soldout_ref import (
+    MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    SoldItem,
+    SoldoutRefPost,
+    StockItem,
+)
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は他モジュールが line_analysis_v102_svc から読む
     CONDITION_EFFECT_EXCLUDE,
@@ -703,9 +708,8 @@ def _apply_soldout_targets(
     canonical = canonicals.get(condition_id)
     if canonical is None:
         return values
-    overwritten = {
-        **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": CONDITION_BASIS_SOLDOUT_REF,
-    }
+    basis = item.get("soldout_target_basis") or CONDITION_BASIS_SOLDOUT_REF
+    overwritten = {**values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": basis}
     if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
         return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
     remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
@@ -886,8 +890,11 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
         text(_SOLDOUT_REF_POSTS_SQL.format(schema=schema)),
         {"channel": current.supplier_channel_id, "posted_at": current.line_posted_at, "gap": SOLDOUT_REF_MAX_GAP_SECONDS},
     ).fetchall()
-    stock = _load_stock_items(session, [str(r.id) for r in rows])
-    return tuple(SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "", stock.get(str(r.id), ())) for r in rows)
+    ids = [str(r.id) for r in rows]
+    stock, sold = _load_stock_items(session, ids), _load_sold_items(session, ids)
+    return tuple(
+        SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "", stock.get(str(r.id), ()), sold.get(str(r.id), ())) for r in rows
+    )
 
 
 _STOCK_ITEMS_SQL = """
@@ -901,6 +908,20 @@ _STOCK_ITEMS_SQL = """
                    ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
       AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
       AND ar.status IS DISTINCT FROM :sold_out
+    ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
+"""
+
+
+_SOLD_ITEMS_SQL = """
+    SELECT ej.source_message_id, ar.product_id, COALESCE(ar.condition_canonical, '') AS condition_canonical
+    FROM {schema}.extraction_jobs ej
+    JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
+    JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
+    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+      AND ar.status = :sold_out
     ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
 """
 
@@ -929,6 +950,19 @@ def _load_stock_items(session: Session, message_ids: list[str]) -> dict[str, tup
                 str(r.condition_canonical or ""),
             )
         )
+    return {k: tuple(v) for k, v in found.items()}
+
+
+def _load_sold_items(session: Session, message_ids: list[str]) -> dict[str, tuple[SoldItem, ...]]:
+    """規則12：参照する投稿ごとの、その投稿の最新の job の保存済みの解析結果のうち 'Sold out' で商品と状態が決まった件。読み取りのみ。"""
+    if not message_ids:
+        return {}
+    rows = session.execute(
+        text(_SOLD_ITEMS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ids": message_ids, "sold_out": STATUS_SOLD_OUT}
+    ).fetchall()
+    found: dict[str, list[SoldItem]] = {}
+    for r in rows:
+        found.setdefault(str(r.source_message_id), []).append(SoldItem(int(r.product_id), str(r.condition_canonical or "")))
     return {k: tuple(v) for k, v in found.items()}
 
 
