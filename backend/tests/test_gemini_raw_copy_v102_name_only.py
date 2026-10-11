@@ -86,7 +86,7 @@ def test_loader_applies_name_only_works(monkeypatch):
     monkeypatch.setattr(pf, "load_product_entries", lambda s: list(_entries()))
     monkeypatch.setattr(pf, "load_product_kubun_type_map", lambda s: {"1": "箱系"})
 
-    def execute(stmt):
+    def execute(stmt, params=None):
         sql = str(stmt)
         if "code_only_match" in sql:
             rows = []
