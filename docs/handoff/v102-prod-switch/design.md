@@ -488,3 +488,65 @@ v6・v10.1・shadow・`_price_of`（付け直し）・resolve_price_quantity 本
   - R5 配信対象555件のうち要確認になる件2件（0.36%、うち1件は変更前から）→ G4 を満たす。1件（5cf9ace3）は付け直しをやめた結果、Gemini の分け方で名前の行が変わり商品未特定→要確認（配信されない側に倒れる）。
   - R6 迷う行を Gemini が両方の件に入れた例 0。
   - 未解決事項: 比べられない部分（followup・〆の参照・人の判断）は前後同条件で除外。A10 と状態 Error 化は別便。
+
+## 17. 便ER（状態を決められない物は「Error」にし、理由を付けて必ず要確認へ）
+
+### 17-1. 目的（PO の言葉、2026-10-11）
+- 「状態が判断できなかった場合は状態はErrorにして理由を添えて要確認に回すようにしたい」
+- Error にするのは「決められなかった」場合だけ。PSA・鑑定・プロモ・単品・枚などの語で単品と分かった物は FLAG_SINGLE のまま（PO「y」）。
+- 対象外: v6・v10.1・shadow（resolve_condition_v2 本体は変えない）、FLAG_SINGLE の配信ゲート（include_flag_single）。
+
+### 17-2. 現状（観測事実。詳細は recon §10）
+- 最終フォールバック（backend/app/services/tcg_analyzer_svc.py:903-904）は区分に関係なく FLAG_SINGLE・basis "R4:単位既定:単位不明"。v102 が condition_unknown を付けるのは「商品不明かつ単位不明」の時だけ（gemini_raw_copy_v102_product_first.py:490-492）。
+- 本番 v102 is_current で basis に単位不明を含む 137件のうち、condition_unknown 無し 85件、要確認でもない 8件（配信にも要確認にも出ない）。
+- condition_unknown は「このままで良い」で外せる（item_corrections.py:188-190 は登録済みかだけを見る）。状態を選ぶ画面（ConditionReviewPanel.tsx:22-23）は空箱の件にしか出ない。
+- 配信は canonical の 'FLAG_%' で除外（tcg_distribution_svc.py:213）。"Error" はこれに当たらない。line_conditions.effect（OUTPUT/EXCLUDE）はどこからも読まれていない。
+
+### 17-3. 変更
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| 状態の表（line_conditions） | 13行 | CN0012 'Error'（priority 99・search_kw 空・effect EXCLUDE）を追加。照合には当たらない |
+| v102 の状態（_resolve_condition） | 商品不明＋単位不明の時だけ "不明"＋condition_unknown、他は FLAG_SINGLE・理由なし | 最終フォールバックは全部 Error＋condition_unknown。basis は変えない。語で決まった FLAG_SINGLE は不変 |
+| 配信 | canonical 'FLAG_%' を除外 | 加えて effect='EXCLUDE' の状態を除外（review_joins の cr.effect） |
+| 状態を選ぶ画面 | 空箱の件だけ | condition_unknown の件にも出す。選択肢から EXCLUDE の状態を外す |
+| 「このままで良い」 | どの理由でも外せる | condition_unknown は外せない（バックエンドの1か所の定数・details.ackable） |
+| 〆の引き継ぎ | FLAG_ 始まりだけ未決定扱い | effect EXCLUDE も未決定扱い |
+
+### 17-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| ER1 最終フォールバックの件は状態 Error・理由 condition_unknown・要確認 | テスト E1・置き換え試験 R2・本番再解析後の読み取り |
+| ER2 語で決まった FLAG_SINGLE は不変 | テスト E2・R2 |
+| ER3 Error は人が状態を選ぶまで配信されない（「このままで良い」でも外れない） | テスト E4・E5、本番の配信件数の前後 |
+| ER4 condition_unknown の件で人が状態を選べる・Error は選べない | テスト E6・E9 |
+| ER5 状態以外（商品・単位・価格・数量）の変化 0、今配信している件が配信されなくなる数 0 | 置き換え試験 R3・R5 |
+| ER6 v6・v10.1・shadow 不変 | テスト E8 |
+
+### 17-5. 代替案
+- 配信の除外を canonical の文字で足す（'Error' を SQL に直書き）: 表の外に状態の意味が散るので不採用。effect 列（既にある・未使用）で決める。
+- ack 可否を review_reason_codes の新しい列にする: migration（表の構造変更）が要るので、本便はバックエンドの1か所の定数とし、details.ackable で画面に渡す。
+- Error を "FLAG_ERROR" のように FLAG_ 始まりにして既存の除外に乗せる: PO の名前「Error」と違い、意味を名前の接頭辞に頼る形が増えるので不採用。
+
+### 17-6. リスクと対処
+- Error 行が無い（データ投入前のデプロイ等）→ 従来どおり FLAG_SINGLE＋condition_unknown に倒す（E3）。データはマージ前に投入。
+- 要確認が増える（今 condition_unknown が無い 85件が対象）→ 置き換え試験 R4・R6 で数を出す。PO 方針どおり。
+- 戻すとき、analysis_results が CN0012 を参照していると行を消せない → コードを戻して再解析してから er_rollback.sql。
+
+### 17-7. 戻し方
+- コード: PR を revert。データ: er_rollback.sql（上の順で）。
+
+### 17-8. 外部・過去事例
+- 外部事例は使わない（社内の状態マスタと要確認の流れの話で、比べられる公開の実測が無い）。過去事例: 便G（#4127）で「要確認にも配信にも出ない件」を A15 で塞いだのと同じ型の問題（FLAG_SINGLE の理由なし8件）。
+
+### 維持の仕組み（便ER）
+- 回帰テスト（E1〜E9）と理由コード整合テストが CI で毎回走る。Error の意味（配信しない）は状態の表の effect 列にあり、スーパー管理の状態マスタ画面で見える。
+
+### 17-9. 設計審査（Opus 自己審査。独立レビューではない）
+- 判定: APPROVE（2026-10-11）。根拠は置き換え試験（v102 の52ジョブ・1,314件、本番読み取り、手元 /tmp/CC報告ファイル/v102-cond-error-replay/replay.md）:
+  - R2 状態の変化158件＝全件「FLAG_SINGLE かつ basis 単位不明 → Error（basis 不変）」。語で決まった FLAG_SINGLE 9件は不変。期待以外0。
+  - R3 状態以外（商品・単位・価格・数量・status・pid_basis・work_id）の変化0。
+  - R4 理由の増減は condition_unknown +104 のみ。要確認 false→true 23件、true→false 0件。
+  - R5 配信されなくなる件: 変更前の再計算基準で0。保存値基準の1件（5cf9ace3）は変更前後の再計算で同一＝本便と無関係（保存値が便G 以前の計算）。
+  - 実装時の訂正: line_conditions.id は identity（conditions_id_seq）。id を明示すると sequence が進まず次の画面追加が主キー重複になるため、id は identity に任せる（er_*.sql）。
+  - 手入力の補正欄（ItemComparison.tsx の corrected_condition）は本番の呼び出し元が readOnly で選択肢を渡さず、バックエンドに読み書きが無い＝Error を選べる経路は ConditionReviewPanel だけ（除外済み）。
+  - 未解決事項: 本番で既にある単位不明の137件（32ジョブ）は再解析で Error にする（デプロイ後）。

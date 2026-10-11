@@ -3488,7 +3488,7 @@
     },
     "preview": {
       "candidateUnit": " delivery candidates",
-      "excFlag": "FLAG excluded",
+      "excFlag": "FLAG / Error excluded",
       "excPid": "PID unresolved",
       "excUnit": "Unit unresolved",
       "excBoth": "Both unresolved",

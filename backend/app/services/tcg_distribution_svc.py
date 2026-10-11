@@ -211,6 +211,8 @@ async def fetch_output_rows(
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
     age_condition = ""
@@ -311,6 +313,8 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
     count_age_condition = ""
@@ -343,27 +347,27 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     # 除外内訳
     excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
-            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
+            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%' OR cr.effect = 'EXCLUDE')
                 AS exc_flag,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = TRUE)
                 AS exc_pid_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = TRUE
                   AND ar.unit_resolved = FALSE)
                 AS exc_unit_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = FALSE)
                 AS exc_both,
             COUNT(*) FILTER (
                 WHERE ar.pid_resolved = TRUE
                   AND ar.unit_resolved = TRUE
-                  AND cr.canonical NOT LIKE 'FLAG_%'
+                  AND cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.price_normalized IS NULL)
                 AS exc_price
         FROM {TCG_SCHEMA}.analysis_results ar

@@ -78,7 +78,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
               {details.map((detail) => (
                 <li key={detail.code}>
                   <span>{reviewReasonLabel(t, detail.code)}</span>{" "}
-                  {item.is_v102 === true && !ackedCodes.includes(detail.code) && (
+                  {item.is_v102 === true && detail.ackable !== false && !ackedCodes.includes(detail.code) && (
                     <Button
                       variant="secondary"
                       size="sm"

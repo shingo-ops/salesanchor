@@ -19,6 +19,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from app.services.tcg_condition_review_svc import not_excluded_condition_sql
+
 logger = logging.getLogger(__name__)
 
 # テスト互換性のため属性を維持する（monkeypatch.setattr 対象。本番は public）
@@ -50,7 +52,9 @@ _CORRECTIONS_SQL = """
     WHERE extraction_item_id::text = ANY(:ids) AND field_name = ANY(:fields)
     ORDER BY corrected_at DESC, id DESC
 """
-_ACTIVE_CONDITIONS_SQL = "SELECT id FROM public.conditions WHERE id = ANY(:ids) AND is_active IS TRUE"
+_ACTIVE_CONDITIONS_SQL = (
+    f"SELECT id FROM public.conditions WHERE id = ANY(:ids) AND is_active IS TRUE AND {not_excluded_condition_sql('conditions')}"
+)
 _JOB_OF_ITEM_SQL = """
     SELECT ej.id::text AS job_id, ej.prompt_version, ej.source_message_id::text AS source_message_id
     FROM {schema}.extraction_items ei

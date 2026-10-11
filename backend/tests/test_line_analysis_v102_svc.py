@@ -210,6 +210,18 @@ def test_unresolved_condition_falls_back_to_flag_single_cn0008():
         assert (values["condition_canonical"], values["condition_id"]) == ("FLAG_SINGLE", 18)
 
 
+def test_error_condition_is_written_with_its_own_id_when_the_master_has_it():
+    error_entry = {"cond_id": "26", "code": "CN0012", "canonical": "Error", "priority": 99, "app_kubun": "",
+                   "search_kw": "", "exclude_kw": "", "match_type": "KEYWORD", "effect": "EXCLUDE"}
+    masters = {**_MASTERS, "cond_entries": [*_MASTERS["cond_entries"], error_entry]}
+    values = svc._analysis_values(
+        {"unit": "BOX", "condition": "Error", "match_status": "unmatched", "review": [{"kind": "condition_unknown"}]},
+        masters, {"BOX": 5}, {},
+    )
+    assert (values["condition_canonical"], values["condition_id"]) == ("Error", 26)
+    assert values["needs_review"] is True and "condition_unknown" in values["review_reasons"]
+
+
 def test_resolved_condition_unit_and_matched_product():
     values = _values({"unit": "BOX", "condition": "Sealed box", "product_id": 42, "match_status": "matched",
                       "price_normalized": 1000, "quantity_normalized": 3, "status": "Normal", "status_effect": None,
@@ -395,6 +407,16 @@ def test_soldout_targets_overwrite_the_condition_with_the_first_target():
     assert out is not values and values["condition_id"] == 18 and values["condition_basis"] == ""  # 元は変えない
 
 
+def test_soldout_target_that_is_an_excluded_condition_keeps_reasons_and_needs_review():
+    item = _soldout_item(soldout_targets=[{"product_id": 42, "condition_id": 99, "ref_message_id": "m1", "ref_line": 1}])
+    values = {**_values(item), "review_reasons": "condition_unknown", "needs_review": True}
+    out = svc._apply_soldout_targets(values, item, None, {**_CANONICALS, 99: "Error"}, frozenset({99}))
+    assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (99, "Error", "SOLDOUT_REF")
+    assert (out["review_reasons"], out["needs_review"]) == ("condition_unknown", True)  # 決まっていない状態を引き継いだだけ
+    without = svc._apply_soldout_targets(values, item, None, {**_CANONICALS, 99: "Error"})
+    assert without["needs_review"] is False  # EXCLUDE の印が無ければ「決まった状態」扱い（効くのは excluded_ids）
+
+
 def test_soldout_targets_do_nothing_without_targets_or_when_a_human_decided():
     values = _values(_soldout_item())
     plain = {k: v for k, v in _soldout_item().items() if k != "soldout_targets"}
@@ -442,7 +464,7 @@ class _FakeSession:
     def execute(self, statement, params=None):
         sql = str(statement)
         self.calls.append((sql, params or {}))
-        rows = {"FROM public.products": [(42, 3), (43, 3)], "FROM public.conditions": [(11, "Sealed box"), (18, "FLAG_SINGLE")]}
+        rows = {"FROM public.products": [(42, 3), (43, 3)], "= :effect": [], "FROM public.conditions": [(11, "Sealed box"), (18, "FLAG_SINGLE")]}
         found = next((v for k, v in rows.items() if k in sql), [])
         return SimpleNamespace(fetchall=lambda: found, scalar_one=lambda: f"result-{sum('INSERT INTO' in c[0] and 'analysis_results' in c[0] for c in self.calls)}")
 

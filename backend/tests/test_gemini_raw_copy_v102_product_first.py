@@ -370,3 +370,54 @@ def test_prompt_ab_loads_product_first_only_when_asked(monkeypatch):
     monkeypatch.setattr(pab, "load_product_first_masters", lambda s: sentinel)
     assert "product_first" not in pab._load_v10_masters(MagicMock())
     assert pab._load_v10_masters(MagicMock(), product_first=True)["product_first"] is sentinel
+
+
+# --- 状態を決められなかった件は Error（便ER） ---------------------------------------------------
+
+_ERROR_ROW = _cond("CN0012", "Error", 99, "", "")
+_ERROR_ROW["effect"] = "EXCLUDE"
+
+
+@pytest.fixture
+def with_error_row(monkeypatch):
+    monkeypatch.setitem(_MASTERS, "cond_entries", [*_COND, _ERROR_ROW])
+
+
+def test_final_fallback_becomes_error_with_condition_unknown_review(with_error_row):
+    row = _one("ほにゃらら 100@1400", _it([1], "1400", "100"))
+    assert row["condition"] == "Error"
+    assert row["condition_basis"] == "R4:単位既定:単位不明"  # basis は変えない（集計と〆の引き継ぎが読む）
+    assert {"line": 1, "kind": "condition_unknown"} in row["review"]
+
+
+def test_final_fallback_becomes_error_even_when_product_and_unit_are_known(with_error_row):
+    row = _one("サンプルカード 3 piece @1,500円", _it([1], "1,500円", "3"))
+    assert row["product_id"] == 3 and row["unit"] == "Piece"
+    assert row["condition"] == "Error" and row["condition_basis"].endswith("単位不明")
+    assert {"line": 1, "kind": "condition_unknown"} in row["review"]
+
+
+def test_single_decided_by_word_stays_flag_single(with_error_row):
+    row = _one("サンプルカード PSA 3@1,500円", _it([1], "1,500円", "3"))
+    assert row["condition"] == pf.FLAG_SINGLE_CANONICAL and row["condition_basis"].startswith("R1:")
+    assert all(r["kind"] != "condition_unknown" for r in row["review"])
+
+
+def test_error_row_is_not_matched_by_any_text(with_error_row):
+    row = _one("サンプル拡張 Error\n3@1,500円", _it([1, 2], "1,500円", "3"))
+    assert row["condition"] == "Sealed box"
+
+
+def test_without_error_row_it_falls_back_to_unknown_condition():
+    row = _one("サンプルカード 3 piece @1,500円", _it([1], "1,500円", "3"))
+    assert row["condition"] == pf.CONDITION_UNKNOWN
+    assert {"line": 1, "kind": "condition_unknown"} in row["review"]
+
+
+def test_shared_resolve_condition_v2_is_unchanged_by_the_error_row():
+    """v6・v10.1・shadow が使う resolve_condition_v2 は Error を返さない（最終フォールバックは従来どおり FLAG_SINGLE）。"""
+    from app.services.tcg_analyzer_svc import resolve_condition_v2
+    entries = [*_COND, _ERROR_ROW]
+    canonical, _cid, basis = resolve_condition_v2("ほにゃらら", "", "", entries, {})
+    assert canonical == "FLAG_SINGLE" and basis.endswith("単位不明")
+    assert resolve_condition_v2("ほにゃらら", "", "", _COND, {}) == (canonical, _cid, basis)  # Error の行の有無で結果が変わらない
