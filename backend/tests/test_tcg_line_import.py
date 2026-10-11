@@ -33,6 +33,7 @@ from app.services.tcg_line_import_svc import (
     _compute_window,
     build_provider_entries,
     import_line_export,
+    normalize_message_body,
     parse_line_export,
     resolve_suppliers,
     sha256_text,
@@ -1377,3 +1378,72 @@ async def test_resolve_already_resolved_is_idempotent():
     assert result.remaining_unresolved == ["仕入元B"]
     # DB commit は呼ばれない（変更なし）
     db.commit.assert_not_called()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# normalize_message_body / _write_source_messages の末尾空行除去（便TB）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("a\n", "a"),
+        ("a\n\n", "a"),
+        ("a\n 　\n", "a"),
+        ("a\n\t\r\n", "a"),
+        ("a ", "a "),
+        ("a\nb", "a\nb"),
+        ("", ""),
+        ("\na", "\na"),
+    ],
+)
+def test_normalize_message_body(raw, expected):
+    assert normalize_message_body(raw) == expected
+
+
+async def test_write_source_messages_stores_normalized_body():
+    from unittest.mock import MagicMock
+
+    from app.services.tcg_line_import_svc import _write_source_messages
+
+    executed: list[tuple[str, dict]] = []
+
+    async def fake_execute(stmt, params=None):
+        sql = str(stmt)
+        executed.append((sql, params or {}))
+        result = MagicMock()
+        if "FROM public.supplier_channels" in sql or "supplier_channels sc" in sql:
+            result.fetchone.return_value = ("chan-1",)
+        else:
+            result.fetchone.return_value = None
+        result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = fake_execute
+    entry = {
+        "sp_code": "SP0001", "canonical_name": "仕入元A", "raw_text": "商品A 100円\n\n",
+        "received_at": "2026-08-01 10:00:00", "line_posted_at": "2026-08-01 10:00:00",
+        "sha256": sha256_text("商品A 100円\n\n"), "skipped_message_count": 0,
+    }
+    await _write_source_messages(db, [entry], None)
+
+    inserts = [p for s, p in executed if "INSERT INTO public.source_messages" in s]
+    assert len(inserts) == 1
+    assert inserts[0]["raw_text"] == "商品A 100円"
+    assert inserts[0]["sha256"] == sha256_text("商品A 100円")
+    lookups = [p for s, p in executed if "regexp_replace(raw_text" in s]
+    assert lookups and lookups[0]["body"] == "商品A 100円"
+    assert entry["raw_text"] == "商品A 100円\n\n"  # 入力 entry は書き換えない
+
+
+def test_reuse_sql_blank_set_matches_python_set():
+    """再利用判定 SQL の文字集合が _TRAILING_BLANK_CHARS と同じ（直書きのため照合）。"""
+    import inspect
+
+    from app.services import tcg_line_import_svc as svc
+
+    src = inspect.getsource(svc._write_source_messages)
+    assert r"E'\n[ \t\r\n\u3000]*$'" in src
+    assert svc._TRAILING_BLANK_CHARS == " \t\r\n　"
