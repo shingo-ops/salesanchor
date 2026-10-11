@@ -27,10 +27,22 @@ Gemini が価格の写しに「円」「¥」を付け足したために、原�
     if found is None and yen_free:
         stripped = _YEN_MARKS_RE.sub("", price).strip()
         if stripped and stripped != price:
-            found = _first_line_containing(numbers, lines, stripped)
+            found = _first_line_with_number(numbers, lines, stripped)
     return found
 ```
-docstring に「yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す」を1行足す。
+docstring に「yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す（前後が数字・桁区切りでないときだけ）」を1行足す。
+
+探し直し専用の関数を `_first_line_containing` の直後に足す（2026-10-11 Reviewer MEDIUM 指摘で追加。除いた後の短い数字が、同じ件の別の行の数字の一部（例「5」が「15」、「500」が「1500」）に当たるのを防ぐ）:
+```python
+def _first_line_with_number(numbers: list[int], lines: list[str], needle: str) -> int | None:
+    """needle を、前後が数字・桁区切りでない形で含む最初の行（円・¥ を除いた探し直し用）。"""
+    squashed = _squash(needle)
+    if not squashed:
+        return None
+    pattern = re.compile(rf"(?<![\d,]){re.escape(squashed)}(?!\d|,\d)")
+    return next((n for n in numbers if pattern.search(_squash(lines[n - 1]))), None)
+```
+今までの探し方（`_first_line_containing`）は変えない。
 
 触らない: `backend/app/services/line_analysis_v102_svc.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、価格・数量の値の採り方（便G：Gemini の写しから採る。`backend/app/services/gemini_raw_copy_v101.py:900` 付近）、migration、deploy.yml、画面、DB、指示書。v10.1 以前の経路の試験期待値。
 
@@ -48,6 +60,10 @@ docstring に「yen_free（試作版 v102 の keep_rejected のとき）は、�
 | v102：原文にそのままある写しは、円を除いた形が別の行にあっても、そのままの行を採る | 単体試験（新規） |
 | v102：円を除いても無い写し（例「9,999円」）は今までどおり price_not_in_lines | 既存 `backend/tests/test_gemini_raw_copy_v101.py:801`・`:830` |
 | v102：写しが「円」だけ（除くと空）のときは探し直さない | 単体試験（新規） |
+| v102：写し「5円」で、行「商品15BOX」「@5 ×3」なら 2 行目（「15」の一部には当たらない） | 単体試験（新規） |
+| v102：写し「¥500」で、行「1500個入り」「500 × 2」なら 2 行目 | 単体試験（新規） |
+| v102：写し「5円」で、どの行にも前後が数字でない「5」が無ければ今までどおり price_not_in_lines | 単体試験（新規） |
+| 前後の数字の条件を足しても、保存済み応答 1,021 回の結果が条件なしの版と同一（救われる件が減らない） | 手元の前後比較（出力の sha256 一致） |
 | v10.1 以前（keep_rejected=False）は今までどおり落ちる | 単体試験（新規。`:869` と同じ型） |
 | 既存の試験が全部緑（DB 試験を含む） | CI 必須チェック |
 | 本番：反映後のコンテナの `backend/app/services/gemini_raw_copy_v101.py` の sha256 が main と一致 | 本番で sha256sum |

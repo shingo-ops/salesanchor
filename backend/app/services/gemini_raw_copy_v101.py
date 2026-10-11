@@ -148,13 +148,22 @@ def _first_line_containing(numbers: list[int], lines: list[str], needle: str) ->
     return next((n for n in numbers if squashed in _squash(lines[n - 1])), None)
 
 
+def _first_line_with_number(numbers: list[int], lines: list[str], needle: str) -> int | None:
+    """needle を、前後が数字・桁区切りでない形で含む最初の行（円・¥ を除いた探し直し用）。"""
+    squashed = _squash(needle)
+    if not squashed:
+        return None
+    pattern = re.compile(rf"(?<![\d,]){re.escape(squashed)}(?!\d|,\d)")
+    return next((n for n in numbers if pattern.search(_squash(lines[n - 1]))), None)
+
+
 def _priced_line(
     numbers: list[int], lines: list[str], price: str, *, half_width_slash: bool = False, yen_free: bool = False,
 ) -> int | None:
     """price の文字を含む最初の行。「／」でつないだときは、つないだ形が無ければ最初の価格で探す。
 
     half_width_slash（試作版 v102 の keep_rejected のとき）は、半角「/」でつないだときも同じに探す。
-    yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す。
+    yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す（前後が数字・桁区切りでないときだけ）。
     """
     found = _first_line_containing(numbers, lines, price)
     separators = "／/" if half_width_slash else "／"
@@ -163,7 +172,7 @@ def _priced_line(
     if found is None and yen_free:
         stripped = _YEN_MARKS_RE.sub("", price).strip()
         if stripped and stripped != price:
-            found = _first_line_containing(numbers, lines, stripped)
+            found = _first_line_with_number(numbers, lines, stripped)
     return found
 
 

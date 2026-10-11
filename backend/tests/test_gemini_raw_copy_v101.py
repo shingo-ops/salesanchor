@@ -921,6 +921,33 @@ def test_price_copy_that_is_only_a_yen_mark_is_not_retried_and_is_rejected():
     assert kept[0]["rejected"] == "price_not_in_lines"
 
 
+def test_yen_free_retry_does_not_match_inside_a_longer_number_of_another_line():
+    # Arrange
+    raw = "商品15BOX\n@5 ×3"
+    # Act
+    kept, kept_errors = _parse_keep(raw, _it([1, 2], "5円", "3"))
+    # Assert
+    assert kept[0]["price_line"] == 2 and "rejected" not in kept[0] and kept_errors == []
+
+
+def test_yen_free_retry_does_not_match_inside_a_longer_number_without_separator():
+    # Arrange
+    raw = "1500個入り\n500 × 2"
+    # Act
+    kept, kept_errors = _parse_keep(raw, _it([1, 2], "¥500", "2"))
+    # Assert
+    assert kept[0]["price_line"] == 2 and "rejected" not in kept[0] and kept_errors == []
+
+
+def test_yen_free_retry_is_rejected_when_no_line_has_the_number_standing_alone():
+    # Arrange
+    raw = "商品15BOX\n@25"
+    # Act
+    kept, _ = _parse_keep(raw, _it([1, 2], "5円", "1"))
+    # Assert
+    assert kept[0]["rejected"] == "price_not_in_lines"
+
+
 def test_unreadable_json_returns_the_whole_error_and_no_items_even_when_keeping():
     items, errors = v101.parse_v101_response("not json", "商品A", status_entries=_STATUS, keep_rejected=True)
     assert items == [] and len(errors) == 1
