@@ -4,7 +4,6 @@
 - PO の方針（2026-10-11 原文）:「段階的にgeminiが再抽出してシステムが解析して集計リストに自動で入るまでを実装したい」「トロこぼしを減らせる仕組みなので実現したい」「確立したなら進める」
 - 全体の段階（Fable 案を Opus が審査・修正）：段1 記録 → 段2a 見出しで補う（要確認のまま）→ 段2b 補った件の自動配信 → 段3 再抽出の事前試験 → 段4 再抽出の本番導入（要確認のまま）→ 段5 再抽出の件の自動配信。この文書は段1だけを扱う。
 - 現在地: [recon.md](recon.md)（docs/handoff/v102-gap-detect-record/recon.md）
-- 関連 ADR: ADR-1007（構造のみの migration）、ADR-135・ADR-136（危険 PR の GO 手順）（docs/handoff/v102-gap-detect-record/recon.md）
 - 対象ADR: ADR-154（配信は needs_review=false のみ）、ADR-1007（migration は構造だけ）、ADR-135・ADR-136（migrations を含む PR は PO の「GO #番号」）
 
 ## 1. 目的
@@ -139,7 +138,6 @@
 該当事例なし。今回は、自社の解析結果の明細を残す変更で、外部の手法を採り入れていない。根拠は自社の測定（recon §3）だけ。
 
 ## 9. 維持の仕組み
-- 守り手: backend/tests/test_v102_gap_lines.py
 - 試験 backend/tests/test_v102_gap_lines.py（新規作成）が、分類・T1・T2 の規則を固定する。
 - `docs/specs/line-analysis-tuning/README.md` に1行足す。
 - 段2a 以降は、この列だけを読む（新しい置き場を作らない）。
