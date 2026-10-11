@@ -77,7 +77,7 @@ export default function InboxPage() {
 
   return (
     <>
-      <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll headerAction={headerActions}>
+      <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
         <div className="inbox-wrapper">
           {/* 左+中央エリア */}
           <div className="inbox-main-area">
