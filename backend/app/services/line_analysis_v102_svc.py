@@ -54,6 +54,7 @@ from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は�
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
+from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
@@ -259,6 +260,18 @@ def _with_review_sources(fields: dict, unsure: list[dict]) -> dict:
     return {**fields, "v102_items": [_item_with_sources(it, unsure) for it in fields["v102_items"]], "v102_flags": new_flags}
 
 
+def _gap_detail(fields: dict, ctx, masters: dict) -> dict | None:
+    """間の行の検知の記録（段1）。件・要確認・照合の結果は読むだけで変えない。失敗しても解析は止めず None にする。"""
+    try:
+        return build_gap_detail(
+            fields["v102_items"], ctx.raw_text.split("\n"), masters.get("product_first"),
+            fields["v102_flags"].get("post_review") or [],
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("[line_analysis] 間の行の検知の記録を作れませんでした（解析の結果には影響しません）")
+        return None
+
+
 def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
     fixed_products: dict[int, int] | None = None,
@@ -282,13 +295,14 @@ def run_v102_pipeline(
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         unsure = _gemini_review(response_text, ctx.raw_text, extracted)
-        return _with_review_sources(
+        fields = _with_review_sources(
             {
                 "v102_items": _with_gemini_review(extracted, unsure),
                 "v102_flags": {**flags, "gemini_review": unsure},
             },
             unsure,
         )
+        return {**fields, "v102_gap_detail": _gap_detail(fields, ctx, masters)}
     except Exception as exc:  # noqa: BLE001
         message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
         return {
@@ -297,6 +311,7 @@ def run_v102_pipeline(
                 "post_review": [{"kind": "extract_exception", "error": message, "source": SOURCE_SYSTEM}],
                 "gemini_review": [],
             },
+            "v102_gap_detail": None,
         }
 
 
@@ -645,6 +660,32 @@ def _set_job_review_reasons(session: Session, extraction_job_id: str, review_rea
     )
 
 
+def _set_job_review_detail(session: Session, extraction_job_id: str, detail: dict | None) -> None:
+    """extraction_jobs.system_review_detail を上書きする（解析のたびに。detail が None なら NULL）。"""
+    session.execute(
+        text(f"UPDATE {analyzer.TCG_SCHEMA}.extraction_jobs SET system_review_detail = CAST(:d AS jsonb) WHERE id = :ej"),
+        {"d": json.dumps(detail, ensure_ascii=False) if detail is not None else None, "ej": extraction_job_id},
+    )
+
+
+def _clear_job_review_detail(session: Session, extraction_job_id: str) -> None:
+    """例外の経路で古い明細を NULL にする。SAVEPOINT の中で行い、失敗しても警告だけ残して review_reasons の更新を巻き込まない。"""
+    try:
+        with session.begin_nested():
+            _set_job_review_detail(session, extraction_job_id, None)
+    except Exception:  # noqa: BLE001
+        logger.warning("[line_analysis] system_review_detail を NULL にできませんでした: job=%s", extraction_job_id, exc_info=True)
+
+
+def _stored_review_detail(pipeline: dict, pairs: list[tuple[dict, object]]) -> dict | None:
+    """書く値（版 1）。件は _map_to_rows が付けた対応（gemini_index → 行の id）で extraction_item_id に置き換える。"""
+    detail = pipeline.get("v102_gap_detail")
+    if detail is None:
+        return None
+    item_ids = {item["gemini_index"]: row.id for item, row in pairs if _is_plain_int(item.get("gemini_index"))}
+    return to_stored_detail(detail, item_ids)
+
+
 def _job_review_reasons(flags: dict) -> str | None:
     return _join_unique([*_kinds(flags.get("post_review") or []), *_kinds(flags.get("gemini_review") or [])])
 
@@ -841,6 +882,7 @@ def _write_results(
         stats["unit_resolved"] += int(values["unit_resolved"])
         stats["needs_review"] += int(values["needs_review"])
     _set_job_review_reasons(session, extraction_job_id, _job_review_reasons(pipeline["v102_flags"]))
+    _set_job_review_detail(session, extraction_job_id, _stored_review_detail(pipeline, pairs))
     return stats
 
 
@@ -1080,6 +1122,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         session.rollback()
         logger.exception("[line_analysis] v102 のシステム段が失敗しました: job=%s", extraction_job_id)
         _set_job_review_reasons(session, extraction_job_id, REASON_EXTRACT_EXCEPTION)
+        _clear_job_review_detail(session, extraction_job_id)
         session.commit()
         return empty_stats
     analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）

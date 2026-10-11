@@ -3,7 +3,8 @@
 - 状態: 設計案（Opus 作成・自己審査済み。独立した第二者レビューではない）
 - PO の方針（2026-10-11 原文）:「段階的にgeminiが再抽出してシステムが解析して集計リストに自動で入るまでを実装したい」「トロこぼしを減らせる仕組みなので実現したい」「確立したなら進める」
 - 全体の段階（Fable 案を Opus が審査・修正）：段1 記録 → 段2a 見出しで補う（要確認のまま）→ 段2b 補った件の自動配信 → 段3 再抽出の事前試験 → 段4 再抽出の本番導入（要確認のまま）→ 段5 再抽出の件の自動配信。この文書は段1だけを扱う。
-- 現在地: [recon.md](recon.md)
+- 現在地: [recon.md](recon.md)（docs/handoff/v102-gap-detect-record/recon.md）
+- 対象ADR: ADR-154（配信は needs_review=false のみ）、ADR-1007（migration は構造だけ）、ADR-135・ADR-136（migrations を含む PR は PO の「GO #番号」）
 
 ## 1. 目的
 今は DB に残らない「取りこぼしの疑いの行番号」と「間の行から出る商品の候補」を、投稿ごとに1か所に残す。
@@ -80,10 +81,13 @@
      {"v": 1,
       "post_review": [{"kind": "possible_missing_item", "line": 12}],
       "gap_price_qty": [{"line": 85}],
-      "gap_name": [{"extraction_item_id": "…", "support_lines": [31], "candidates": [440415]}],
+      "gap_name": [{"extraction_item_id": "…", "gap_lines": [31, 32], "support_lines": [31], "candidates": [440415]}],
       "unmapped": 0}
      ```
      - `candidates` が空のときは「候補なし（要確認＋行番号）」を表す。
+     - `gap_lines` はその件に効くまとまりの間の行すべて（支えに使わなかった行も含む）。候補なしでも行番号が残る（PO 2026-10-11「間の行番号を見える状態で」）。
+     - 解析が例外で失敗した経路（`run_v102_analysis` の except）では、`system_review_detail` を NULL にする（古い明細を残さない）。
+     - `masters` に `product_first` が無いときは `gap_name` を空にし、T1 と `post_review` だけを書く。
      - 原文は入れない（`docs/handoff/v102-no-silent-drop/design.md:31` の決まり）。
 3. 触らない範囲
    - `backend/app/services/gemini_raw_copy_v101.py`（変えない。import するだけ）
@@ -128,6 +132,8 @@
 - 列の追加と書き込みを1つの PR にすると、書き込みが失敗する。→ PR を①と②に分ける。
 - JSON が大きくなる。→ 行番号と商品IDだけを入れる。
 - 照合の計算が重くなる。→ 動くのは unmatched で価格・数量のある件だけ。測定では 1投稿あたり最大で数件。§5-2 の手元計算で、1投稿あたりの時間を測って記録する。
+- 明細の書き込みの失敗の扱い（Reviewer MEDIUM-1 への設計判断）：通常の経路では、明細の書き込みは解析結果の書き込みと同じトランザクションに置く（明細と結果が食い違わないため）。列は PR① で本番に追加済み（2026-10-11 確認）。例外の経路で明細を NULL にする書き込みは、SAVEPOINT（session.begin_nested）の中で行い、失敗しても警告のログだけ残し、`review_reasons` の更新を巻き込まない。
+- 計算量（Reviewer MEDIUM-3）：行の分類は、前の件の最終行の累積最大を使って行数に比例する形にし、1投稿で1回だけ計算する。照合の回数は「unmatched で価格・数量のある件 × 支えの行」。本番マスタでの1投稿あたりの時間は §5-2 の一致確認で測って記録する。
 - 戻し方：PR② を revert する（列は NULL のまま残る）。PR① の列は残置する（DROP しない）。
 
 ## 8. 外部・過去事例の参照と我々への応用
@@ -137,6 +143,7 @@
 - 試験 backend/tests/test_v102_gap_lines.py（新規作成）が、分類・T1・T2 の規則を固定する。
 - `docs/specs/line-analysis-tuning/README.md` に1行足す。
 - 段2a 以降は、この列だけを読む（新しい置き場を作らない）。
+- 守り手: backend/tests/test_v102_gap_lines.py（新規作成。CI の pytest-run-internal で毎回走る）
 
 ## 10. 未解決
 なし。段2以降の未確認は Fable 案 §7（リポジトリ外）にあり、各段の設計で扱う。

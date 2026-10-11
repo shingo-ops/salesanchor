@@ -39,6 +39,7 @@
 | 本番・試作版の既定の指示書を f_ct に | #4128 | DB の key `raw_copy_v101_f_ct`（本文の sha256 fe50593fa362da213e33663f85110381a6f3f97465553443e87ae0f0df8515fd）。engine_version は v102-f_ct。〆だけの投稿を件にする（PO 2026-10-11「切り替える」） | [v102-prompt-fct](../../handoff/v102-prompt-fct/) |
 | v102：価格の行の探し直しに円・¥・￥を除いた形 | （この PR） | 価格の写しに「円」が付き原文に無いとき、除いた形でも探す（v102 のみ・見つからないときだけ）。保存済み応答 1,021 回で落ちる件 48→4、期待外の違い 0 | [v102-price-line-yen-retry](../../handoff/v102-price-line-yen-retry/) |
 | v102：価格の行の決め方の印 price_basis | （この PR） | 円・¥を除いた探し直しで見つけた件に analysis_results.price_basis = V102:yen_free。配信・要確認は不変 | [v102-price-basis](../../handoff/v102-price-basis/) |
+| 段1 間の行の検知の記録（system_review_detail） | （この PR） | 投稿ごとの取りこぼしの疑いの行番号・間の行から出る商品の候補を extraction_jobs.system_review_detail に残す。要確認の判定・配信・画面は不変 | [v102-gap-detect-record](../../handoff/v102-gap-detect-record/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 

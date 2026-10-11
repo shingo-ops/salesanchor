@@ -43,6 +43,8 @@ def v102(pg, monkeypatch):  # noqa: F811
         cur.execute(sql.replace("public.extraction_", f"{SCHEMA}.extraction_"))
         price_basis_sql = (MIGRATIONS / "20261011_150000_add_analysis_results_price_basis.sql").read_text(encoding="utf-8")
         cur.execute(price_basis_sql.replace("public.analysis_results", f"{SCHEMA}.analysis_results"))
+        detail_sql = (MIGRATIONS / "20261012_100000_add_extraction_jobs_system_review_detail.sql").read_text(encoding="utf-8")
+        cur.execute(detail_sql.replace("public.extraction_jobs", f"{SCHEMA}.extraction_jobs"))
         cur.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN9001','BOX','箱系',true) RETURNING id")
         unit_id = cur.fetchone()[0]
         cur.execute("SELECT id, code, canonical, priority, app_kubun, search_kw, exclude_kw FROM public.conditions")
@@ -175,6 +177,62 @@ def test_price_basis_is_written_only_for_the_item_found_by_the_yen_free_retry(pg
         JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
         WHERE ei.extraction_job_id=%s ORDER BY ei.gemini_index""", (job,))
     assert rows == [(0, "V102:yen_free"), (1, None)]
+
+
+GAP_RAW = "商品A\n3BOX@1,000円\n5,000円 ×3\n商品B\n未開封 2BOX@2,000円"  # 3 行目は件の間にある価格と数量の形の行
+GAP_ITEMS = [{"lines": [1, 2], "price": "1,000円", "quantity": "3"}, {"lines": [4, 5], "price": "2,000円", "quantity": "2"}]
+
+
+def test_system_review_detail_is_written_by_the_analysis_and_overwritten_on_rerun(pg, v102):
+    v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
+    _s, job = make_job(pg, GAP_RAW)
+    run_extraction(pg, job)
+    query = f"SELECT system_review_detail FROM {SCHEMA}.extraction_jobs WHERE id=%s"
+    assert one(pg, query, (job,)) == [(None,)]  # 抽出段は書かない
+    run_analysis(pg, job)
+    expected = {
+        "v": 1, "post_review": [{"kind": "possible_missing_item", "line": 3}], "gap_price_qty": [{"line": 3}],
+        "gap_name": [], "unmapped": 0,
+    }
+    assert one(pg, query, (job,)) == [(expected,)]
+    one(pg, f"UPDATE {SCHEMA}.extraction_jobs SET system_review_detail = '{{\"v\": 0}}'::jsonb WHERE id=%s RETURNING 1", (job,))
+    run_analysis(pg, job)  # 解析のたびに上書きする
+    assert one(pg, query, (job,)) == [(expected,)]
+
+
+def test_system_review_detail_maps_gemini_index_to_the_extraction_item_id(pg, v102, monkeypatch):
+    # 商品のマスタは fixture に無いので、パイプラインの結果に gap_name の候補を差し込んで、書く・読む・置き換えを実 DB で確かめる
+    original = svc.run_v102_pipeline
+    gap_name = [
+        {"gemini_index": 1, "gap_lines": [3], "support_lines": [3], "candidates": [440415]},
+        {"gemini_index": 7, "gap_lines": [3], "support_lines": [], "candidates": []},  # 対応する行が無い件
+    ]
+
+    def wrapped(*args, **kwargs):
+        out = original(*args, **kwargs)
+        return {**out, "v102_gap_detail": {**out["v102_gap_detail"], "gap_name": gap_name}}
+
+    monkeypatch.setattr(svc, "run_v102_pipeline", wrapped)
+    v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
+    _s, job = make_job(pg, GAP_RAW)
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    item_id = one(pg, f"SELECT id::text FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s AND gemini_index=1", (job,))[0][0]
+    detail = one(pg, f"SELECT system_review_detail FROM {SCHEMA}.extraction_jobs WHERE id=%s", (job,))[0][0]
+    assert detail["gap_name"] == [{"extraction_item_id": item_id, "gap_lines": [3], "support_lines": [3], "candidates": [440415]}]
+    assert detail["unmapped"] == 1
+
+
+def test_system_review_detail_is_cleared_when_the_analysis_fails(pg, v102, monkeypatch):
+    v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
+    _s, job = make_job(pg, GAP_RAW)
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    query = f"SELECT system_review_detail, review_reasons FROM {SCHEMA}.extraction_jobs WHERE id=%s"
+    assert one(pg, query, (job,))[0][0] is not None
+    monkeypatch.setattr(svc, "parse_v101_response", MagicMock(side_effect=ValueError("boom")))
+    run_analysis(pg, job)
+    assert one(pg, query, (job,)) == [(None, "extract_exception")]
 
 
 def test_analysis_is_idempotent_and_keeps_extraction_items(pg, v102):
