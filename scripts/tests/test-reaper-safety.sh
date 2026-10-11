@@ -13,6 +13,13 @@
 #   [R8-b] DONE + upstream未設定 + 全コミットが origin の別ブランチ(main)にある → 削除対象に出る
 #   [R8-c] DONE + git init のみ（コミット無し・未コミット無し）→ 削除対象に出る
 #   [R8-d] fetch 失敗時は削除しない（存在しない remote 名で呼ぶ。ネットワーク・本体 ref には触れない）
+#   [R9-a] マージ済み + 未追跡の pr-body.md（全行が PR 本文にある）→ 削除候補
+#   [R9-b] 下書きに PR 本文に無い行が1行ある → 保護
+#   [R9-c] マージ済み + 未追跡の notes.md（下書きでない）→ 保護
+#   [R9-d] 下書きはあるがマージ済み PR が無い → 保護
+#   [R9-e] gh の本文取得に失敗 → 保護
+#   [R9-f] .scratch/pr-body.md（サブフォルダ・全行が本文にある）→ 削除候補
+#   [R9-g] --execute で下書きが .git/reaper-drafts/ に控えられ、部屋が消える
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -41,6 +48,16 @@ mkdir -p "${MOCK_BIN}"
 cat > "${MOCK_BIN}/gh" << 'GHEOF'
 #!/bin/bash
 # モック gh: --state merged クエリに応答
+# 本文取得クエリ（--json baseRefName,body）: MOCK_GH_BODY_DIR/<ブランチの/を-に>.txt を返す。
+#   ファイルが無ければ空（マージ済み PR なし相当）。MOCK_GH_BODY_FAIL=1 なら非0で終了。
+if [[ "$*" == *"--state merged"* && "$*" == *"body"* ]]; then
+  [ "${MOCK_GH_BODY_FAIL:-0}" = "1" ] && exit 1
+  for arg in "$@"; do
+    _f="${MOCK_GH_BODY_DIR:-/nonexistent}/${arg//\//-}.txt"
+    if [ -f "${_f}" ]; then cat "${_f}"; exit 0; fi
+  done
+  exit 0
+fi
 if [[ "$*" == *"--state merged"* ]]; then
   if [ -n "${MOCK_GH_MERGED_BRANCH:-}" ]; then
     IFS=',' read -ra _MERGED <<< "${MOCK_GH_MERGED_BRANCH}"
@@ -489,6 +506,119 @@ echo "=== テスト 13-14 結果 ==="
 
 assert_in_delete     ".worktree-idなし+merged削除候補"   "${BRANCH_LEGACY_MERGED}"   "${OUTPUT_LEGACY}"
 assert_not_in_delete ".worktree-idなし+未マージ保護"      "${BRANCH_LEGACY_NO_MERGE}" "${OUTPUT_LEGACY}"
+
+# ── テスト R9: PR 本文の下書き（*pr-body*.md）だけが残ったマージ済みの部屋 ──────
+# 下書きの全行がマージ済み PR（main）の本文にあるときだけ、未保存扱いしない。
+MOCK_GH_BODY_DIR="${TMPDIR_TEST}/pr-bodies"
+export MOCK_GH_BODY_DIR
+mkdir -p "${MOCK_GH_BODY_DIR}"
+BODY_TEXT=$'## 概要\n\n- 変更点その1\n- 変更点その2\n\n### 標準ワークフロー確認'
+
+# 空コミットの git 部屋を作る（HEAD なし。.worktree-id は exclude して未追跡に数えない）
+make_r9_room() {
+  local name="$1" branch="$2"
+  local dir
+  dir=$(make_worktree_dir "${name}" "${branch}")
+  git init "${dir}" -q 2>/dev/null
+  echo ".worktree-id" > "${dir}/.git/info/exclude"
+  echo "${dir}"
+}
+set_pr_body() {  # <branch> <本文>
+  printf '%s\n' "$2" > "${MOCK_GH_BODY_DIR}/${1//\//-}.txt"
+}
+
+BRANCH_R9A="feature/test/r9a-draft-ok"
+R9A_DIR=$(make_r9_room "wt-r9a" "${BRANCH_R9A}")
+set_pr_body "${BRANCH_R9A}" "${BODY_TEXT}"
+printf '## 概要\n\n- 変更点その1\n- 変更点その2\n' > "${R9A_DIR}/pr-body.md"
+
+BRANCH_R9B="feature/test/r9b-draft-extra-line"
+R9B_DIR=$(make_r9_room "wt-r9b" "${BRANCH_R9B}")
+set_pr_body "${BRANCH_R9B}" "${BODY_TEXT}"
+printf '## 概要\n- 本文に無い行\n' > "${R9B_DIR}/pr-body.md"
+
+BRANCH_R9C="feature/test/r9c-notes-md"
+R9C_DIR=$(make_r9_room "wt-r9c" "${BRANCH_R9C}")
+set_pr_body "${BRANCH_R9C}" "${BODY_TEXT}"
+printf '## 概要\n' > "${R9C_DIR}/notes.md"
+
+BRANCH_R9D="feature/test/r9d-draft-no-merged-pr"
+R9D_DIR=$(make_r9_room "wt-r9d" "${BRANCH_R9D}")
+printf '## 概要\n' > "${R9D_DIR}/pr-body.md"   # 本文ファイルなし = マージ済み PR なし
+
+BRANCH_R9E="feature/test/r9e-body-fetch-fail"
+R9E_DIR=$(make_r9_room "wt-r9e" "${BRANCH_R9E}")
+set_pr_body "${BRANCH_R9E}" "${BODY_TEXT}"
+printf '## 概要\n' > "${R9E_DIR}/pr-body.md"
+
+BRANCH_R9F="feature/test/r9f-subfolder-draft"
+R9F_DIR=$(make_r9_room "wt-r9f" "${BRANCH_R9F}")
+set_pr_body "${BRANCH_R9F}" "${BODY_TEXT}"
+mkdir -p "${R9F_DIR}/.scratch"
+printf '## 概要\r\n\r\n- 変更点その1\r\n' > "${R9F_DIR}/.scratch/pr-body.md"   # CRLF でも一致扱い
+
+R9_MERGED="${BRANCH_R9A},${BRANCH_R9B},${BRANCH_R9C},${BRANCH_R9E},${BRANCH_R9F}"
+OUTPUT_R9=$(run_reaper_dry_with_merged "${R9_MERGED}")
+echo ""
+echo "=== テスト R9 dry-run 出力 ==="
+echo "${OUTPUT_R9}"
+echo ""
+echo "=== テスト R9 結果 ==="
+assert_in_delete     "R9-a マージ済み+pr-body.md全行が本文にある→削除候補"   "${BRANCH_R9A}" "${OUTPUT_R9}"
+assert_not_in_delete "R9-b 下書きに本文に無い行→保護"                      "${BRANCH_R9B}" "${OUTPUT_R9}"
+assert_not_in_delete "R9-c notes.md(下書きでない)→保護"                    "${BRANCH_R9C}" "${OUTPUT_R9}"
+assert_not_in_delete "R9-d 下書きあり+マージ済みPRなし→保護"               "${BRANCH_R9D}" "${OUTPUT_R9}"
+assert_in_delete     "R9-f .scratch/pr-body.md(サブフォルダ・CRLF)→削除候補" "${BRANCH_R9F}" "${OUTPUT_R9}"
+
+OUTPUT_R9E=$(MOCK_GH_BODY_FAIL=1 run_reaper_dry_with_merged "${R9_MERGED}")
+assert_not_in_delete "R9-e 本文取得失敗→保護"                              "${BRANCH_R9E}" "${OUTPUT_R9E}"
+assert_not_in_delete "R9-e 本文取得失敗→R9-aも保護"                        "${BRANCH_R9A}" "${OUTPUT_R9E}"
+
+# ── テスト R9-g: --execute で控えができ、部屋が消える ──────────────────────────
+# 実際の worktree 登録が要るので、一時の本体リポジトリ（+bare の origin）を作り、cwd をそこにして実行する。
+# 本物の .git には一切触れない。
+R9G_MAIN="${TMPDIR_TEST}/r9g-main"
+R9G_REMOTE="${TMPDIR_TEST}/r9g-remote.git"
+R9G_ROOMS="${TMPDIR_TEST}/r9g-rooms"
+BRANCH_R9G="release/r9g-exec"
+git init --bare "${R9G_REMOTE}" -q 2>/dev/null
+git init "${R9G_MAIN}" -q -b main 2>/dev/null
+git -C "${R9G_MAIN}" config user.email "test@test.com"
+git -C "${R9G_MAIN}" config user.name "test"
+git -C "${R9G_MAIN}" remote add origin "${R9G_REMOTE}"
+touch "${R9G_MAIN}/base.txt"
+git -C "${R9G_MAIN}" add .
+git -C "${R9G_MAIN}" commit -m "base" -q 2>/dev/null
+git -C "${R9G_MAIN}" push origin HEAD:refs/heads/main -q 2>/dev/null
+git -C "${R9G_MAIN}" fetch origin -q 2>/dev/null
+mkdir -p "${R9G_ROOMS}"
+git -C "${R9G_MAIN}" worktree add -q -b "${BRANCH_R9G}" "${R9G_ROOMS}/room" HEAD 2>/dev/null
+printf '## 概要\n\n- 変更点その1\n' > "${R9G_ROOMS}/room/pr-body.md"
+mkdir -p "${R9G_ROOMS}/room/.scratch"
+printf '%s\n' '- 変更点その1' > "${R9G_ROOMS}/room/.scratch/pr-body-2.md"
+set_pr_body "${BRANCH_R9G}" "${BODY_TEXT}"
+OUTPUT_R9G=$(cd "${R9G_MAIN}" && \
+  REAPER_WORKTREES_DIR="${R9G_ROOMS}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" \
+  REAPER_LOCK_DIR="${TMPDIR_TEST}/r9g.lock.d" \
+  MOCK_GH_MERGED_BRANCH="${BRANCH_R9G}" \
+  REAPER_SKIP_FETCH=1 \
+  bash "${REAPER}" --execute 2>&1)
+echo ""
+echo "=== テスト R9-g --execute 出力 ==="
+echo "${OUTPUT_R9G}"
+R9G_BK="${R9G_MAIN}/.git/reaper-drafts/release-r9g-exec"
+if [ ! -d "${R9G_ROOMS}/room" ] \
+   && [ "$(cat "${R9G_BK}/pr-body.md" 2>/dev/null)" = $'## 概要\n\n- 変更点その1' ] \
+   && [ -f "${R9G_BK}/.scratch/pr-body-2.md" ] \
+   && echo "${OUTPUT_R9G}" | grep -q "📝 下書きを控えました"; then
+  echo "✅ PASS [R9-g --execute]: 控え2件ができ、部屋が消えました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [R9-g --execute]: 控え不足または部屋が残っています"
+  FAIL=$(( FAIL + 1 ))
+fi
 
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""

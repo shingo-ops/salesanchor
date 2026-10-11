@@ -6,6 +6,8 @@
 #   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
 #   ④ 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら削除しない
+#   ⑤ R9: 未追跡の *pr-body*.md（PR 本文の下書き）だけが残る部屋は、main へのマージ済み PR の本文に
+#      下書きの全行があるときだけ未保存扱いしない。実削除前に .git/reaper-drafts/ へ控える（失敗したら消さない）
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
 #
@@ -80,6 +82,8 @@ SKIP_IN_PROGRESS=()
 SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
 SKIP_IN_USE=()
+# R9: 下書きを許容した部屋の「部屋のパス::相対パス」（実削除前に控える）
+DRAFT_BACKUPS=()
 
 # ── worktree リスト収集 ──────────────────────────────────────────────────────
 # REAPER_WORKTREES_DIR 指定あり（テスト用オーバーライド）: 単一ディレクトリ走査
@@ -191,9 +195,20 @@ for _IDX in "${!WT_PATHS[@]}"; do
     # 2026-07-25 対策A: 台帳(.claude-pipeline/)のみの変更は未保存保護から除外する。
     # 理由: 完了記録が worktree 側の台帳に未コミットで残り、マージ済みの机が永続保護されていた。
     # 実測(origin/main=1bbd338): 未保存37件中28件が .claude-pipeline/ のみ・手書き混入0件。台帳以外があれば従来どおり保護。
-    if [ -n "$(git -C "${WORKTREE_PATH}" status --porcelain 2>/dev/null | grep -v '\.claude-pipeline/')" ]; then
+    # R9(2026-10-11): 未追跡の *pr-body*.md（PR 本文の下書き）は候補として別に集め、下の検証を通ったときだけ許容する。
+    #   --untracked-files=all で未追跡ディレクトリの中のファイル名まで見る。それ以外の行が1行でもあれば従来どおり保護。
+    DRAFT_CANDIDATES=()
+    while IFS= read -r _SLINE; do
+      [ -z "${_SLINE}" ] && continue
+      case "${_SLINE}" in *.claude-pipeline/*) continue ;; esac
+      if [[ "${_SLINE}" == "?? "* ]]; then
+        _SPATH="${_SLINE#\?\? }"
+        case "${_SPATH##*/}" in
+          *pr-body*.md) DRAFT_CANDIDATES+=("${_SPATH}"); continue ;;
+        esac
+      fi
       UNSAVED=1
-    fi
+    done < <(git -C "${WORKTREE_PATH}" status --porcelain --untracked-files=all 2>/dev/null)
 
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. 取り戻せるか（R8、2026-10-10 PO 方針「後から完全に取り戻せる部屋だけ消す」）
@@ -204,6 +219,42 @@ for _IDX in "${!WT_PATHS[@]}"; do
         _UNREACH=$(git -C "${WORKTREE_PATH}" rev-list --count HEAD --not --remotes=origin 2>/dev/null) || _UNREACH="ERR"
         if [ "${_UNREACH}" != "0" ]; then
           UNSAVED=1
+        fi
+      fi
+    fi
+
+    # R9: 下書き候補があり、他に未保存が無いときだけ、マージ済み PR の本文と照合する。
+    #   ① main へのマージ済み PR の本文を取れる（失敗・空は保護）  ② 下書きが空でない
+    #   ③ 下書きの全行が本文にある（末尾の空白・\r を除いて比較。本文に無い行が0）
+    if [ "${UNSAVED}" -eq 0 ] && [ "${#DRAFT_CANDIDATES[@]}" -gt 0 ]; then
+      _PR_BODY=$(gh pr list \
+        --repo "${REPO_NAME}" \
+        --state merged \
+        --head "${BRANCH}" \
+        --json baseRefName,body \
+        --jq '[.[]|select(.baseRefName=="main")]|.[0].body // empty' \
+        2>/dev/null) || _PR_BODY=""
+      if [ -z "${_PR_BODY}" ]; then
+        UNSAVED=1
+      else
+        _ROOM_DRAFTS=()
+        for _DREL in "${DRAFT_CANDIDATES[@]}"; do
+          _DFILE="${WORKTREE_PATH%/}/${_DREL}"
+          if [ ! -s "${_DFILE}" ]; then
+            UNSAVED=1
+            break
+          fi
+          _MISSING=$(diff \
+            <(sed 's/[[:space:]]*$//' "${_DFILE}") \
+            <(printf '%s\n' "${_PR_BODY}" | sed 's/[[:space:]]*$//') 2>/dev/null | grep -c '^<') || true
+          if [ "${_MISSING:-1}" != "0" ]; then
+            UNSAVED=1
+            break
+          fi
+          _ROOM_DRAFTS+=("${WORKTREE_PATH}::${_DREL}")
+        done
+        if [ "${UNSAVED}" -eq 0 ]; then
+          DRAFT_BACKUPS+=("${_ROOM_DRAFTS[@]}")
         fi
       fi
     fi
@@ -360,7 +411,16 @@ fi
 echo "🗑️  削除対象（安全条件クリア）: ${#WILL_DELETE[@]} 件"
 for ENTRY in "${WILL_DELETE[@]}"; do
   BRANCH="${ENTRY%%::*}"
-  echo "   - ${BRANCH}"
+  WPATH="${ENTRY#*::}"
+  _NDRAFT=0
+  for _DB in "${DRAFT_BACKUPS[@]}"; do
+    [ "${_DB%%::*}" = "${WPATH}" ] && _NDRAFT=$(( _NDRAFT + 1 ))
+  done
+  if [ "${_NDRAFT}" -gt 0 ]; then
+    echo "   - ${BRANCH}（PR本文の下書き ${_NDRAFT} 件は GitHub の本文と一致）"
+  else
+    echo "   - ${BRANCH}"
+  fi
 done
 echo ""
 
@@ -380,6 +440,25 @@ for ENTRY in "${WILL_DELETE[@]}"; do
 
   echo ""
   echo "  ▶ ${BRANCH}"
+
+  # R9: 許容した PR 本文の下書きを、消す前に .git 内（git 管理外）へ控える。1件でも失敗したらこの部屋は消さない。
+  _DRAFT_DIR="$(git -C "${MAIN_REPO_ROOT}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)/reaper-drafts/${BRANCH//\//-}"
+  _BACKUP_OK=1
+  for _DB in "${DRAFT_BACKUPS[@]}"; do
+    [ "${_DB%%::*}" = "${WPATH}" ] || continue
+    _DREL="${_DB#*::}"
+    _DEST="${_DRAFT_DIR}/${_DREL}"
+    if mkdir -p "$(dirname "${_DEST}")" && cp -p "${WPATH%/}/${_DREL}" "${_DEST}"; then
+      echo "    📝 下書きを控えました: ${_DEST}"
+    else
+      echo "    ⚠️  下書きの控えに失敗: ${_DREL}。この部屋は削除しません。"
+      _BACKUP_OK=0
+      break
+    fi
+  done
+  if [ "${_BACKUP_OK}" -eq 0 ]; then
+    continue
+  fi
 
   # worktree フォルダ削除
   git -C "${MAIN_REPO_ROOT}" worktree remove --force "${WPATH}" 2>/dev/null && \
