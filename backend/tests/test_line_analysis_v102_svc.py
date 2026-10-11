@@ -602,3 +602,45 @@ def test_analysis_failure_clears_system_review_detail_next_to_extract_exception(
     svc.run_v102_analysis(session, "job1")
 
     assert calls == [("reasons", "job1", svc.REASON_EXTRACT_EXCEPTION), ("detail", "job1", None)]
+
+
+def _failing_analysis_setup(monkeypatch):
+    """run_v102_analysis をシステム段の例外の経路に入れる（test_analysis_failure_clears... と同じ組み立て）。"""
+    session = MagicMock()
+    session.execute.return_value.one.return_value = SimpleNamespace(gemini_unsure=None, review_reasons=None)
+    session.execute.return_value.fetchall.return_value = [
+        SimpleNamespace(id="item-0", gemini_index=0, source_lines=[1], raw_price="1,000円", raw_quantity="3")
+    ]
+    monkeypatch.setattr(task, "load_extraction_context", lambda _s, _j: _CTX)
+    monkeypatch.setattr(svc, "load_v102_masters", lambda _s: (_MASTERS, {}))
+    monkeypatch.setattr(svc, "load_v102_decisions", lambda _s, _ids: {})
+    monkeypatch.setattr(svc, "_fixed_products", lambda *_a: {})
+    monkeypatch.setattr(svc, "_load_resolved_pairs", lambda _s, _j: [])
+    monkeypatch.setattr(svc, "load_followup_reference", lambda _s, _j: None)
+    monkeypatch.setattr(svc, "load_soldout_ref_posts", lambda _s, _j: None)
+    monkeypatch.setattr(svc, "masters_with_followup", lambda masters, *_a: masters)
+    monkeypatch.setattr(svc, "run_v102_pipeline", MagicMock(side_effect=ValueError("boom")))
+    return session
+
+
+def test_clearing_the_detail_on_failure_runs_inside_a_savepoint(monkeypatch):
+    session = _failing_analysis_setup(monkeypatch)
+    monkeypatch.setattr(svc, "_set_job_review_reasons", lambda *_a: None)
+    monkeypatch.setattr(svc, "_set_job_review_detail", lambda *_a: None)
+
+    svc.run_v102_analysis(session, "job1")
+
+    session.begin_nested.assert_called_once()
+
+
+def test_a_failed_detail_clear_only_logs_and_keeps_the_extract_exception_reason(monkeypatch, caplog):
+    session = _failing_analysis_setup(monkeypatch)
+    reasons: list[str] = []
+    monkeypatch.setattr(svc, "_set_job_review_reasons", lambda _s, _j, value: reasons.append(value))
+    monkeypatch.setattr(svc, "_set_job_review_detail", MagicMock(side_effect=RuntimeError("column missing")))
+
+    with caplog.at_level("WARNING"):
+        stats = svc.run_v102_analysis(session, "job1")
+
+    assert reasons == [svc.REASON_EXTRACT_EXCEPTION] and stats["pid_resolved"] == 0
+    assert session.commit.called and "system_review_detail" in caplog.text

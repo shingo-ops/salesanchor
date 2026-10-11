@@ -230,3 +230,40 @@ def test_build_gap_detail_without_product_masters_still_gives_t1_and_leaves_gap_
     detail = build_gap_detail(items, lines, None, [])
 
     assert detail["gap_price_qty"] == [{"line": 3}] and detail["gap_name"] == []
+
+
+def test_classify_uses_the_running_maximum_of_earlier_items_for_span_and_gap():
+    # 件0 が 1〜10 を使い、その内側に件1（3-4）がある。5 行目は件0 の範囲内なので span、11 行目は gap
+    lines = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"]
+    items = [item(0, [1, 10], 10), item(1, [3, 4], 4), item(2, [12, 13], 13)]
+
+    classes = classify_lines(accepted_items(items), lines)
+
+    assert classes[5] == (CLASS_SPAN, 2) and classes[11] == (CLASS_GAP, 2)
+
+
+def test_build_gap_detail_classifies_the_post_only_once(monkeypatch):
+    import app.services.v102_gap_lines as module
+
+    calls = []
+    original = module.classify_lines
+    monkeypatch.setattr(module, "classify_lines", lambda *args: calls.append(1) or original(*args))
+    lines = ["BASESHOP", "matA", "3,000円 ×2", "1,500円 ×2", "品B", "200円 ×1"]
+    items = [item(0, [2, 3], 3), item(1, [5, 6], 6)]
+
+    module.build_gap_detail(items, lines, masters(entry(1001, "BASESHOP matA")), [])
+
+    assert len(calls) == 1
+
+
+def test_classify_grows_with_the_number_of_lines_not_its_square():
+    import time
+
+    count = 4000
+    lines = [f"行{n}" for n in range(1, count + 1)]
+    items = [item(n, [n * 2 - 1], n * 2) for n in range(1, count // 2 + 1)]
+
+    started = time.perf_counter()
+    classify_lines(accepted_items(items), lines)
+
+    assert time.perf_counter() - started < 1.0  # 二乗の実装では数秒かかる大きさ

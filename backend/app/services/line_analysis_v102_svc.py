@@ -668,6 +668,15 @@ def _set_job_review_detail(session: Session, extraction_job_id: str, detail: dic
     )
 
 
+def _clear_job_review_detail(session: Session, extraction_job_id: str) -> None:
+    """例外の経路で古い明細を NULL にする。SAVEPOINT の中で行い、失敗しても警告だけ残して review_reasons の更新を巻き込まない。"""
+    try:
+        with session.begin_nested():
+            _set_job_review_detail(session, extraction_job_id, None)
+    except Exception:  # noqa: BLE001
+        logger.warning("[line_analysis] system_review_detail を NULL にできませんでした: job=%s", extraction_job_id, exc_info=True)
+
+
 def _stored_review_detail(pipeline: dict, pairs: list[tuple[dict, object]]) -> dict | None:
     """書く値（版 1）。件は _map_to_rows が付けた対応（gemini_index → 行の id）で extraction_item_id に置き換える。"""
     detail = pipeline.get("v102_gap_detail")
@@ -1113,7 +1122,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         session.rollback()
         logger.exception("[line_analysis] v102 のシステム段が失敗しました: job=%s", extraction_job_id)
         _set_job_review_reasons(session, extraction_job_id, REASON_EXTRACT_EXCEPTION)
-        _set_job_review_detail(session, extraction_job_id, None)  # 古い明細を残さない
+        _clear_job_review_detail(session, extraction_job_id)
         session.commit()
         return empty_stats
     analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）

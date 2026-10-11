@@ -200,6 +200,29 @@ def test_system_review_detail_is_written_by_the_analysis_and_overwritten_on_reru
     assert one(pg, query, (job,)) == [(expected,)]
 
 
+def test_system_review_detail_maps_gemini_index_to_the_extraction_item_id(pg, v102, monkeypatch):
+    # 商品のマスタは fixture に無いので、パイプラインの結果に gap_name の候補を差し込んで、書く・読む・置き換えを実 DB で確かめる
+    original = svc.run_v102_pipeline
+    gap_name = [
+        {"gemini_index": 1, "gap_lines": [3], "support_lines": [3], "candidates": [440415]},
+        {"gemini_index": 7, "gap_lines": [3], "support_lines": [], "candidates": []},  # 対応する行が無い件
+    ]
+
+    def wrapped(*args, **kwargs):
+        out = original(*args, **kwargs)
+        return {**out, "v102_gap_detail": {**out["v102_gap_detail"], "gap_name": gap_name}}
+
+    monkeypatch.setattr(svc, "run_v102_pipeline", wrapped)
+    v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
+    _s, job = make_job(pg, GAP_RAW)
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    item_id = one(pg, f"SELECT id::text FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s AND gemini_index=1", (job,))[0][0]
+    detail = one(pg, f"SELECT system_review_detail FROM {SCHEMA}.extraction_jobs WHERE id=%s", (job,))[0][0]
+    assert detail["gap_name"] == [{"extraction_item_id": item_id, "gap_lines": [3], "support_lines": [3], "candidates": [440415]}]
+    assert detail["unmapped"] == 1
+
+
 def test_system_review_detail_is_cleared_when_the_analysis_fails(pg, v102, monkeypatch):
     v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
     _s, job = make_job(pg, GAP_RAW)

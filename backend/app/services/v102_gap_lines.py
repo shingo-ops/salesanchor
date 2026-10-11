@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from bisect import bisect_right
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 
@@ -89,12 +90,17 @@ def classify_lines(sorted_items: Sequence[Mapping], lines: Sequence[str]) -> dic
     """空でない行（1 始まりの行番号）→ (分類, 直後の件の位置)。sorted_items は accepted_items の結果。
 
     直後の件の位置は、sorted_items の中でその行より後に最初の行がある最初の件（trail と used は None）。
-    gap は「それより前の件が使った最後の行」より後の行。
+    gap は「それより前の件が使った最後の行」より後の行。前の件の最終行は累積最大を先に作って引く（行数に比例）。
     """
     used: set[int] = set()
+    reach_before: list[int] = []  # reach_before[k] = 件 0..k-1 が使った最後の行（k=0 は 0）
+    running_max = 0
     for it in sorted_items:
-        used |= _item_rows(it)
-    firsts = [_first_line(it) for it in sorted_items]
+        reach_before.append(running_max)
+        rows = _item_rows(it)
+        used |= rows
+        running_max = max(running_max, max(rows))
+    firsts = [_first_line(it) for it in sorted_items]  # 昇順（accepted_items の並び）
     classes: dict[int, tuple[str, int | None]] = {}
     for number, text in enumerate(lines, start=1):
         if not text.strip():
@@ -102,24 +108,28 @@ def classify_lines(sorted_items: Sequence[Mapping], lines: Sequence[str]) -> dic
         if number in used:
             classes[number] = (CLASS_USED, None)
             continue
-        k = next((j for j, first in enumerate(firsts) if first > number), None)
-        if k is None:
+        k = bisect_right(firsts, number)  # 最初の行が number より後の最初の件
+        if k == len(firsts):
             classes[number] = (CLASS_TRAIL, None)
         elif k == 0:
             classes[number] = (CLASS_PRE, 0)
         else:
-            reach = max(max(_item_rows(sorted_items[j])) for j in range(k))
-            classes[number] = (CLASS_GAP, k) if number > reach else (CLASS_SPAN, k)
+            classes[number] = (CLASS_GAP, k) if number > reach_before[k] else (CLASS_SPAN, k)
     return classes
 
 
 # --- T1 ---------------------------------------------------------------------------------------------
 
 
-def gap_price_qty_lines(sorted_items: Sequence[Mapping], lines: Sequence[str]) -> list[int]:
-    """T1：gap の行（pre は含めない）のうち、どの件の price_line でもなく、式 F2_price_and_qty に当たる行番号。"""
+def gap_price_qty_lines(
+    sorted_items: Sequence[Mapping], lines: Sequence[str], classes: Mapping[int, tuple[str, int | None]] | None = None,
+) -> list[int]:
+    """T1：gap の行（pre は含めない）のうち、どの件の price_line でもなく、式 F2_price_and_qty に当たる行番号。
+
+    classes は classify_lines の結果（渡せば再計算しない。T1 と T2 で1投稿1回だけ計算するため）。
+    """
     price_lines = {it["price_line"] for it in sorted_items if isinstance(it.get("price_line"), int)}
-    classes = classify_lines(sorted_items, lines)
+    classes = classes if classes is not None else classify_lines(sorted_items, lines)
     return [
         number for number, (kind, _k) in sorted(classes.items())
         if kind == CLASS_GAP and number not in price_lines and _price_and_qty_shaped(lines[number - 1])
@@ -167,6 +177,7 @@ def _is_support_line(text: str, product_first: ProductFirstMasters) -> bool:
 
 def gap_name_candidates(
     sorted_items: Sequence[Mapping], lines: Sequence[str], product_first: ProductFirstMasters,
+    classes: Mapping[int, tuple[str, int | None]] | None = None,
 ) -> list[dict]:
     """T2（規則 H2）：件ごとに {gemini_index, gap_lines, support_lines, candidates}。件は gemini_index で示す。
 
@@ -175,7 +186,7 @@ def gap_name_candidates(
     候補の和集合を candidates にする（空なら候補なし）。support_lines は候補を出した支えの行。
     gap_lines はその件に効くまとまりの間の行すべて（支えに使わなかった行も含む。候補なしでも行番号が残る）。
     """
-    groups = _group_lines(classify_lines(sorted_items, lines))
+    groups = _group_lines(classes if classes is not None else classify_lines(sorted_items, lines))
     starts = sorted(groups)
     results: list[dict] = []
     for position, start in enumerate(starts):
@@ -219,10 +230,11 @@ def build_gap_detail(
     product_first が None（商品のマスタが無い）のときは商品を照合できないので、gap_name は空にする。
     """
     ordered = accepted_items(items)
+    classes = classify_lines(ordered, lines)  # 1投稿で1回だけ。T1 と T2 で使い回す
     return {
         "post_review": _post_review_lines(post_review),
-        "gap_price_qty": [{"line": n} for n in gap_price_qty_lines(ordered, lines)],
-        "gap_name": gap_name_candidates(ordered, lines, product_first) if product_first is not None else [],
+        "gap_price_qty": [{"line": n} for n in gap_price_qty_lines(ordered, lines, classes)],
+        "gap_name": gap_name_candidates(ordered, lines, product_first, classes) if product_first is not None else [],
     }
 
 
