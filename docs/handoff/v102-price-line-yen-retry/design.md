@@ -32,7 +32,7 @@ Gemini が価格の写しに「円」「¥」を付け足したために、原�
 ```
 docstring に「yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す」を1行足す。
 
-触らない: `backend/app/services/line_analysis_v102_svc.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、価格・数量の値の採り方（便G：Gemini の写しから採る。`gemini_raw_copy_v101.py:900` 付近）、migration、deploy.yml、画面、DB、指示書。v10.1 以前の経路の試験期待値。
+触らない: `backend/app/services/line_analysis_v102_svc.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、価格・数量の値の採り方（便G：Gemini の写しから採る。`backend/app/services/gemini_raw_copy_v101.py:900` 付近）、migration、deploy.yml、画面、DB、指示書。v10.1 以前の経路の試験期待値。
 
 ## 根拠（本物のコードでの A/B。手元 `~/CC報告ファイル-keep/stage0-regression-20261011/`・`stage0-full-20261011/`）
 - 単体試験（DB 不要分、18 ファイル）：前 542 合格・後 542 合格、新しい失敗 0（DB が要る 51 件は手元で動かず前後同じ。CI で確認）。
@@ -50,7 +50,7 @@ docstring に「yen_free（試作版 v102 の keep_rejected のとき）は、�
 | v102：写しが「円」だけ（除くと空）のときは探し直さない | 単体試験（新規） |
 | v10.1 以前（keep_rejected=False）は今までどおり落ちる | 単体試験（新規。`:869` と同じ型） |
 | 既存の試験が全部緑（DB 試験を含む） | CI 必須チェック |
-| 本番：反映後のコンテナの `gemini_raw_copy_v101.py` の sha256 が main と一致 | 本番で sha256sum |
+| 本番：反映後のコンテナの `backend/app/services/gemini_raw_copy_v101.py` の sha256 が main と一致 | 本番で sha256sum |
 | 本番：反映後の新しい解析で、`review_reasons` に price_not_in_lines を含む行の件数と内容を確認（円を除けば原文にある写しで落ちた件 0） | 本番 SQL（読み取り） |
 
 ## ロールバック
