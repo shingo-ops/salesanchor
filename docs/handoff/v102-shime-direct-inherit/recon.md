@@ -26,7 +26,7 @@
 - `backend/app/services/tcg_distribution_svc.py:291-298`: `is_current` かつ `exclusion<>'excluded'` かつ価格あり等。〆の件は出ず、同じ (商品,状態) の古い在庫行は is_current でなくなって出ない。状態が違うと古い在庫行が残って出続ける。
 ### 2-4. 書かずに確かめる道具
 - `backend/app/tools/prompt_ab_recompute.py`: DB を読むだけで抽出段（v102_items）まで再計算。書き込み段（`_apply_soldout_targets`）は通らない。
-- `tasks/tcg_extraction.py:824-832` `tcg.v102_reanalyze_after_correction` → `run_v102_analysis`: Gemini を呼ばず再計算するが DB に書き、配信予約まで行う。
+- `backend/app/tasks/tcg_extraction.py:824-832` `tcg.v102_reanalyze_after_correction` → `run_v102_analysis`: Gemini を呼ばず再計算するが DB に書き、配信予約まで行う。
 
 ## 3. 事実の測定（本番 SELECT のみ、2026-10-11 04:25Z）
 ### 3-1. 本番で起きている誤作動（v102、10/11）
