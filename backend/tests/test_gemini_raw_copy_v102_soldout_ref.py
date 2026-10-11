@@ -20,7 +20,7 @@ from app.services import gemini_raw_copy_v102_soldout_ref as sr
 from app.services.extraction_judgement_svc import ProductEntry
 from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, WorkName
 from tests.test_gemini_raw_copy_v102_context_work import _MASTERS, _STATUS
-from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA
+from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, seed_products
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
 _SOLD_STATUS = [
@@ -436,6 +436,7 @@ def _add_result(connection, job_id: str, index: int, product_id: int, condition_
 
 
 def test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_resolved_products(pg, channel):
+    seed_products(pg[0])
     with pg[0].cursor() as cur:
         cur.execute("SELECT id FROM public.products ORDER BY id LIMIT 2")
         p1, p2 = (r[0] for r in cur.fetchall())
@@ -443,15 +444,13 @@ def test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_reso
         cond = {r[1]: r[0] for r in cur.fetchall()}
     box, case = cond["Sealed box"], cond["Case"]
     post = _insert(pg[0], channel, "前", T0 - timedelta(hours=2))
+    old_job_id, latest_job_id = str(uuid4()), str(uuid4())
     with pg[0].cursor() as cur:
-        cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now() - interval '1 hour')", (str(uuid4()), post))
-    old_job_id = None
-    with pg[0].cursor() as cur:
-        cur.execute(f"SELECT id FROM {SCHEMA}.extraction_jobs WHERE source_message_id=%s", (post,))
-        old_job_id = cur.fetchone()[0]
-        cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now())", (str(uuid4()), post))
-        cur.execute(f"SELECT id FROM {SCHEMA}.extraction_jobs WHERE source_message_id=%s ORDER BY created_at DESC LIMIT 1", (post,))
-        latest_job_id = cur.fetchone()[0]
+        for job_id, age in ((old_job_id, "1 hour"), (latest_job_id, "0 seconds")):
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now() - %s::interval)",
+                (job_id, post, age),
+            )
     _add_result(pg[0], old_job_id, 0, p2, case, "Case", "Sold out")  # 古い job の件は読まない
     _add_result(pg[0], latest_job_id, 0, p1, case, "Case", "Sold out")
     _add_result(pg[0], latest_job_id, 1, p1, box, "Sealed box", "In Stock")
