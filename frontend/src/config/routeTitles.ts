@@ -24,7 +24,6 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/invoices":                   "nav.quotesInvoices",
   "/reports":                    "nav.reports",
   "/suppliers":                  "nav.suppliers",
-  "/purchase-orders":            "nav.purchaseOrders",
   "/staff":                      "nav.staff",
   "/bots":                       "nav.bots",
   "/teams":                      "nav.teams",

@@ -103,7 +103,6 @@ vi.mock("../constants/icons", () => {
       dashboard: Icon,
       schedule: Icon,
       inventory: Icon,
-      purchaseOrders: Icon,
       fileText: Icon,
       leads: Icon,
       orders: Icon,

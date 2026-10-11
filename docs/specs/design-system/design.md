@@ -3380,3 +3380,86 @@ Architect 自己審査（AY-2k）: APPROVE（条件: 実画面で並びと幅の
 品質（すべて exit 0。evidence-20260910/ay2k-chk-*.txt）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0、unit 試験（npx vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1）80 files・990 tests 全件成功 exit 0。素の `npx vitest run --coverage` は storybook ブラウザ project が playwright の chromium_headless_shell 未導入で起動失敗（環境要因、ay2k-chk-vitest-all-projects-env-fail.txt）。
 置換数: groups.cjs targets 70→56（nested css rules 0、css files 70）。変更した expect 0件。e2e の testid（frontend/tests-e2e/quote-create-inventory-search.spec.ts:137,:143）は保持。
 差分: git diff origin/main -- frontend/src は 3 files（14 `<input`→`<TextFieldControl size="sm"` 置換 14行、単価2件の style のトークン変更を同じ行に含む、tokens.css +1）。import 追加 0行。
+
+#### AY-2k 本番反映（2026-10-11 記録）
+
+AY-2k の PR #4125 は、merge 113def4b5（2026-10-10T22:50:36Z、HEAD 7d3f9e4b5。実装 HEAD 5898033009 に、CI に更新後の PR 本文を読ませるための空コミットを足したもの）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38092915511: success（22:50:39Z〜22:53:17Z）。
+- 本番: CSS に `--input-width-price:120px`、JS に invoice-item-row・quote-item-row と var(--input-width-price)。app・/invoices/new・/quotes/new・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- 学び: 新しいトークンを足すと check-new-tokens.js が PR 本文の「### デザイントークン変更時」を求める。frontend-check は PR 本文をイベント時点で読むため、本文を直したあとの再実行では読み直さない。
+
+
+#### AY-2l 発注管理（/purchase-orders）ページの削除（2026-10-11）
+
+mode: handoff。PO 原文（2026-10-11、本セッション）「https://app.salesanchor.jp/purchase-ordersだが使っていないページなので削除してくれ」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+範囲の判断（設計者）: PO の指示は「ページ」の削除。画面（frontend）だけを消し、backend の API・DB の表（tenant_xxx.purchase_orders / purchase_order_items）・権限シード・openapi・ダッシュボードの po_pending_count は変えない。データを消す操作は含まない（不可逆のため、別の判断事項として扱う）。
+
+現在地（origin/main 1af58612e。調査全文は /tmp/CC報告ファイル/po-remove/recon.md）:
+- Route: frontend/src/App.tsx:53（import）、:264-265 `/purchase-orders`、:393 `/management-center/purchase-orders`（同じページ）。詳細・新規作成のルートは無い（新規作成はモーダル）。
+- 入口: frontend/src/components/DesktopShell.tsx:277-286（サイドバー「発注管理」、purchase_orders.view で表示）、:183-188（管理センターのリンク表示条件の OR に purchase_orders.view）、frontend/src/pages/management-center/ManagementCenterPage.tsx:57（左メニュー）、frontend/src/config/routeTitles.ts:27、frontend/src/constants/icons.tsx:268（NAV_ICONS.purchaseOrders。参照は DesktopShell.tsx:283 と試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 だけ）。モバイルの項目なし。他画面からのリンク 0。
+- 専用ファイル: pages/purchase-orders/PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx（it 2本とも発注）。components/PurchaseAdminEditorButtonMigration.test.tsx は発注の it 3本と import 2行だけが発注（:59 の役割の試験は残す）。
+- 削除で孤立する部品: components/InventoryPicker.tsx と InventoryPicker.stories.tsx（import 元は発注モーダルだけ）。
+- 残すもの: 共有の金型（Select・Textarea・TextField・ConfirmModal・DataTable・ContentToolbar・Modal）、utils/statusPresentation.ts:108-115 の purchaseOrder 定義（statusPresentation.test.ts:98 と design-preview/StatusSection.tsx:18 が参照）、トークン（すべて他でも使用）、tests-e2e/utils/common-mocks.ts。
+- i18n: purchaseOrders は ja・en とも 36 キー。動的キー 0。status_draft/ordered/received/cancelled/error の5キーは statusPresentation が参照するので残す。
+- 旧 URL: App.tsx に `path="*"` の受け皿は無い。削除後の /purchase-orders は、ほかの存在しない URL と同じ表示になる（実画面で確認して記録する）。
+
+AY-2l 変更契約:
+1. 削除: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx。
+2. 編集:
+   - App.tsx: import 1行と Route 2本（:264-265 の要素一式、:393）を削除。
+   - DesktopShell.tsx: サイドバーの発注管理ブロック（直前のコメント行を含む）を削除。showManagementCenter の hasAny から "purchase_orders.view" だけを除く（他の権限・順は保持）。
+   - ManagementCenterPage.tsx:57 の発注の項目を削除。
+   - routeTitles.ts:27 を削除。
+   - icons.tsx:268 の purchaseOrders を削除し、試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 の purchaseOrders 行も削除。ReceiptOutline の import が他で使われていなければ import からも外す。
+   - PurchaseAdminEditorButtonMigration.test.tsx: 発注の it 3本と、それだけが使う import を削除。
+   - NavDropdown.stories.tsx:32 は、発注の画面・キー・アイコンを参照していれば同じく直し、ただのサンプル文字列なら触らない（どちらかを記録）。
+   - ja.json・en.json: 削除後に参照 0 になる purchaseOrders.* キー、nav.purchaseOrders、products.unitPrice、quotes.selectProduct を両方から同じだけ削除。statusPresentation が参照する5キーは残す。削除前後でキー数が ja=en であること。
+3. 変更しない: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts・他の画面。
+4. design.md に、AY-2k の本番反映の記録、本節、実装結果を追記。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 入口が消える | 開発モードの build と preview（偽ログイン・API モック、purchase_orders.view を含む権限）で幅1280。サイドバーに「発注管理」が無い、管理センターの左メニューに発注が無いことを、変更前後のスクリーンショットと DOM の文字列検索（t("nav.purchaseOrders") の訳語の件数 前1以上→後0）で記録 |
+| 管理センターの表示条件 | purchase_orders.view だけを持つ権限で、変更前は管理センターのリンクが出て、変更後は出ないこと。ほかの権限（例 staff.view）では前後とも出ること |
+| 旧 URL | /purchase-orders と /management-center/purchase-orders を開いた結果を前後で記録し、変更後は /no-such-page と同じ表示であること（例外・白画面のエラーが出ないこと、console error を記録） |
+| 参照漏れ0 | `git grep -n "PurchaseOrders\|purchase-orders\|InventoryPicker\|purchaseOrders\." -- frontend/src frontend/tests-e2e` の残りが、statusPresentation の5キー関連・backend 向けでない記述だけであることを列挙 |
+| i18n | ja・en のキー数が一致、削除したキーの一覧と、各キーの参照 0 を grep で示す |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須がすべて成功 |
+| 本番 | Deploy 成功。本番 JS に PurchaseOrders のチャンク・"purchase-orders" の Route 文字列が無い（/api/v1/purchase-orders の API 文字列も 0 になる見込み）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2l）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（前例 #4098・#4107 と同じ削除の型）。
+- 根拠: 専用ファイルと入口を git grep で全件確定。共有部品・データ・API・DB は変えない。旧 URL は他の未知 URL と同じ扱いで、実画面で確認する。
+- 残るリスク（LOW）: 発注の権限だけを持つ利用者は、管理センターへのリンクが出なくなる（中身が無くなるため意図どおり）。
+- 未処理として残すもの（別の判断事項）: backend の発注 API 10本・DB の表2つ・権限シード・ダッシュボードの po_pending_count。
+
+維持の仕組み:
+- 守り手: DesktopShell.test.tsx・MobileShell.test.tsx・ManagementCenter の既存試験、i18n のキー一致検査、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（データへの影響なし）。
+
+#### AY-2l 実装結果
+
+基準 origin/main 1af58612e。実画面の計測は開発モード build と preview（偽ログイン・API モック）、幅1280、同じスクリプトを前後で実行（ay2l-measure-before.json、ay2l-measure-after.json）。権限モック (a) purchase_orders.view を含む20権限、(b) purchase_orders.view だけ、(c) staff.view だけ。
+
+| 項目 | 前 | 後 |
+|---|---|---|
+| (a) サイドバーの「発注管理」件数 | 1 | 0 |
+| (a) 管理センター左メニューの「発注管理」件数 | 1 | 0 |
+| (b) 管理センターのリンク | 有り | 無し |
+| (c) 管理センターのリンク | 有り | 有り |
+| /purchase-orders の本文先頭 | 発注ページ（「発注書の作成から受取まで管理します。」） | 空（/no-such-page と同じ） |
+| /management-center/purchase-orders の本文先頭 | 管理センター | 空（/no-such-page と同じ） |
+| console error（3 URL） | 0 | 0 |
+
+- スクリーンショット: docs/handoff/design-system-recon/evidence-20260910/ay2l-sidebar-before.png、ay2l-sidebar-after.png、ay2l-mc-before.png、ay2l-mc-after.png、ay2l-old-url-after.png。
+- 品質（ay2l-chk-*）: tsc・lint・check:all・build・build-storybook・単体試験（79 files・988 tests、coverage、maxWorkers=1）すべて exit 0。
+- 削除したファイル 6 本: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、po-pdf-mail.spec.ts、AdminMasterSaveButtonMigration.test.tsx。
+- 編集: App.tsx、DesktopShell.tsx、ManagementCenterPage.tsx、routeTitles.ts、icons.tsx（purchaseOrders と、これだけが使っていた ReceiptOutline とその import）、DesktopShell.test.tsx、MobileShell.test.tsx、PurchaseAdminEditorButtonMigration.test.tsx（発注の it 3 本・import 2 行に加え、これだけが使う within の import と deferred ヘルパーも除去）、ja.json、en.json。
+- i18n: 削除 34 キー（purchaseOrders.* 31、nav.purchaseOrders、products.unitPrice、quotes.selectProduct）。ja・en とも 4693→4659。purchaseOrders ブロックは 36→5（status_draft・ordered・received・cancelled・error。statusPresentation が参照）。各削除キーの参照 0 は ay2l-i18n.txt。
+- 参照漏れ grep の残り（ay2l-grep-after.txt）: statusPresentation.ts の 5 キー、locales の purchaseOrders ブロック（その 5 キー）、PurchaseAdminEditorButtonMigration.test.tsx:22 の api モック応答（ロールの試験が使う無害な分岐。契約外のため残した）、NavDropdown.stories.tsx:32 のサンプル文字列。
+- NavDropdown.stories の扱い: activePaths のただのサンプル文字列で、発注の画面・キー・アイコンを参照していないため触らない。
+- 変更していないもの: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts。

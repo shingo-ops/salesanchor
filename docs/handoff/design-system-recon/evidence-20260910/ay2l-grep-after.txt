@@ -1,0 +1,9 @@
+frontend/src/components/NavDropdown.stories.tsx:32:    activePaths: ['/orders', '/purchase-orders'],
+frontend/src/components/PurchaseAdminEditorButtonMigration.test.tsx:22:    if (url.startsWith('/purchase-orders')) return [];
+frontend/src/locales/en.json:1883:  "purchaseOrders": {
+frontend/src/locales/ja.json:1883:  "purchaseOrders": {
+frontend/src/utils/statusPresentation.ts:109:    draft:     { bucket: "neutral", badgeVariant: "neutral",     labelKey: "purchaseOrders.status_draft" },
+frontend/src/utils/statusPresentation.ts:110:    ordered:   { bucket: "info",    badgeVariant: "negotiating", labelKey: "purchaseOrders.status_ordered" },
+frontend/src/utils/statusPresentation.ts:111:    received:  { bucket: "success", badgeVariant: "won",         labelKey: "purchaseOrders.status_received" },
+frontend/src/utils/statusPresentation.ts:112:    cancelled: { bucket: "danger",  badgeVariant: "lost",        labelKey: "purchaseOrders.status_cancelled" },
+frontend/src/utils/statusPresentation.ts:115:    error:     { bucket: "danger",  badgeVariant: "lost",        labelKey: "purchaseOrders.status_error" },

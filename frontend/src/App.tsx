@@ -50,7 +50,6 @@ import UnitImportTenantPage from "./pages/units/UnitImportPage";
 import ConditionImportTenantPage from "./pages/conditions/ConditionImportPage";
 import StatusMasterImportTenantPage from "./pages/status-master/StatusMasterImportPage";
 import NoteMasterImportTenantPage from "./pages/note-master/NoteMasterImportPage";
-import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
 import ArchivesPage from "./pages/archives/ArchivesPage";
@@ -260,10 +259,6 @@ function App() {
                   <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
                   <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
-                  <Route
-                    path="/purchase-orders"
-                    element={<PurchaseOrdersPage />}
-                  />
                   <Route path="/shifts" element={<ShiftsPage />} />
                   <Route path="/schedule" element={<SchedulePage />} />
                   <Route path="/schedule/settings" element={<ScheduleSettingsPage />} />
@@ -390,7 +385,6 @@ function App() {
                     <Route path="product-categories" element={<ProductCategoriesPage />} />
                     <Route path="units"              element={<UnitsPage />} />
                     <Route path="note-master"        element={<NoteMasterPage />} />
-                    <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
                     {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}
                     <Route path="integrations/google-drive" element={<GoogleDriveIntegrationPage />} />
