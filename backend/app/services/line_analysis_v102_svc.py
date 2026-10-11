@@ -39,7 +39,13 @@ from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLL
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost, StockItem
 from app.services.llm_budget import record_usage_event_sync
-from app.services.tcg_condition_review_svc import CONDITION_EFFECT_EXCLUDE, condition_effect_sql
+from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は他モジュールが line_analysis_v102_svc から読む
+    CONDITION_EFFECT_EXCLUDE,
+    CONDITION_REVIEW_REASONS,
+    REASON_CONDITION_MULTIPLE,
+    REASON_CONDITION_UNKNOWN,
+    condition_effect_sql,
+)
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 
@@ -74,9 +80,7 @@ REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応す�
 MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
 # 人の判断で外す理由（condition_review で状態を決めたとき）
-REASON_CONDITION_UNKNOWN = "condition_unknown"
-REASON_CONDITION_MULTIPLE = "condition_multiple_candidates"
-CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
+# 値は tcg_condition_review_svc の1か所（保存時の除去と同じ集合）。ここは import して使う
 # 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
 PID_BASIS_MANUAL = "MANUAL"
 CONDITION_BASIS_MANUAL = "MANUAL_CONDITION_REVIEW"

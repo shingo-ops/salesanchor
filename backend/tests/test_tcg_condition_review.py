@@ -570,3 +570,20 @@ def test_condition_options_hide_excluded_effect_and_saving_it_is_422(pg):
     with pytest.raises(HTTPException) as caught:
         save(pg, item, request(pg, item, decision="correct", target=error_id))
     assert caught.value.status_code == 422
+
+
+@pytest.mark.parametrize(("reasons", "expected_reasons", "expected_needs_review"), [
+    ("condition_unknown", "", False),
+    ("condition_unknown,condition_multiple_candidates", "", False),
+    ("condition_unknown,gemini_unsure", "gemini_unsure", True),
+])
+def test_saving_a_condition_removes_condition_reasons_at_save_time(pg, reasons, expected_reasons, expected_needs_review):
+    """人が状態を選んで保存した直後に condition_unknown 等が外れる（再解析が積めなくても詰まらない）。他の理由は残る。"""
+    item = seed(pg, name="Test Booster", reasons=reasons, condition_id=pg["normal"], condition_canonical="Sealed box")
+    save(pg, item, request(pg, item, decision="correct", target=pg["normal"]))
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT needs_review, COALESCE(review_reasons,'') FROM public.analysis_results WHERE extraction_item_id=%s", (item["eid"],))
+        needs_review, stored = cursor.fetchone()
+    assert needs_review is expected_needs_review
+    assert stored == expected_reasons
+    assert "condition_unknown" not in context(pg, item)["review_reasons"]
