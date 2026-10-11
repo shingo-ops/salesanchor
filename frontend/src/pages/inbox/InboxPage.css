@@ -1133,6 +1133,14 @@
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
 
+  /* 一覧の密度をお手本に合わせる（design.md §10-3 / benchmark 実測）。
+     行の高さ: お手本は76dp。右の余白: お手本は16dp（左は 余白+アバター+gap で72dp）。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
+  .conv-item {
+    min-height: var(--min-height-conv-item-mobile);
+    padding-right: var(--space-4);
+  }
+
   /* カルテをボトムシートに変換（下から 80vh でスライドアップ） */
   .inbox-right-panel {
     top: auto !important;
