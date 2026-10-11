@@ -52,6 +52,8 @@ from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は�
     condition_effect_sql,
 )
 from app.services.tcg_extraction_record_svc import RecordError
+from app.services.v102_buyback_unit_svc import apply_buyback_units
+from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
@@ -753,6 +755,23 @@ def _write_extra_targets(session: Session, result_id: str, extras: list[dict]) -
         )
 
 
+def _buyback_units(
+    session: Session, pairs: list, base_values: list[dict], unit_ids: dict, extraction_job_id: str, decisions: dict[str, Decisions],
+) -> list[dict]:
+    """単位も状態も語が無い件を、買取価格との比で Sealed box / Case に決める（便BB）。失敗したらこの投稿では決めない。"""
+    if not any(is_buyback_candidate(item, values) for (item, _row), values in zip(pairs, base_values)):
+        return base_values  # 対象が無ければ DB も SAVEPOINT も使わない
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            human_condition = frozenset(
+                i for i, (_item, row) in enumerate(pairs) if (d := decisions.get(str(row.id))) is not None and d.condition_id is not None
+            )
+            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, human_condition)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[buyback_unit] 買取価格による単位・状態の判定に失敗したので、この投稿では判定をしません: job=%s error=%r", extraction_job_id, exc)
+        return base_values
+
+
 def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values: list[dict]) -> frozenset[int]:
     """単位と価格が相場と合わない件の位置（便UP）。商品・単位・価格が揃った件だけを相場と比べる。"""
     candidates = [
@@ -800,6 +819,7 @@ def _write_results(
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+    base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
         decision = decisions.get(str(row.id))
