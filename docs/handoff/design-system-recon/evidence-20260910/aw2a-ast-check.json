@@ -1,0 +1,535 @@
+{
+  "before": [
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 447,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.customer_type ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">—</option>\n            <option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option>\n            <option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 514,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.response_speed ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option>\n          <option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option>\n          <option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 527,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.temperature ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"Hot\">{t(\"leads.temperature_hot\")}</option>\n          <option value=\"Warm\">{t(\"leads.temperature_warm\")}</option>\n          <option value=\"Cold\">{t(\"leads.temperature_cold\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 541,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{competitorValue}",
+        "onChange": "{(e) => {\n            const v = e.target.value;\n            handleCardFieldChange(\"competitor_check\", v === \"\" ? null : v === \"true\");\n            setTimeout(handleCardFieldBlur, 0);\n          }}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"false\">{t(\"leads.competitorUnconfirmed\")}</option>\n          <option value=\"true\">{t(\"leads.competitorFound\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 557,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.estimated_scale ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"Small\">{t(\"leads.estimatedScale_small\")}</option>\n          <option value=\"Medium\">{t(\"leads.estimatedScale_medium\")}</option>\n          <option value=\"Large\">{t(\"leads.estimatedScale_large\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 161,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.customer_type ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option>\n                  <option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 200,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.response_speed ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option>\n                  <option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option>\n                  <option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 215,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.temperature ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"Hot\">Hot</option>\n                  <option value=\"Warm\">Warm</option>\n                  <option value=\"Cold\">Cold</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 226,
+      "tag": "select",
+      "className": "\"right-panel-field\"",
+      "attrs": {
+        "value": "{cardForm.estimated_scale ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"Small\">Small</option>\n                  <option value=\"Medium\">Medium</option>\n                  <option value=\"Large\">Large</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 412,
+      "tag": "select",
+      "className": "\"page-header-select\"",
+      "attrs": {
+        "value": "{funnelMonth}",
+        "onChange": "{(e) => setFunnelMonth(e.target.value)}",
+        "aria-label": "{t(\"funnel.monthLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n                {monthOptions.map((o) => (\n                  <option key={o.value} value={o.value}>{o.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 441,
+      "tag": "select",
+      "className": "\"page-header-select\"",
+      "attrs": {
+        "value": "{period}",
+        "onChange": "{(e) => setPeriod(e.target.value as Period)}",
+        "aria-label": "{t(\"dashboard.periodLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"1w\">{t(\"dashboard.period1w\")}</option>\n            <option value=\"1m\">{t(\"dashboard.period1m\")}</option>\n            <option value=\"3m\">{t(\"dashboard.period3m\")}</option>\n            <option value=\"6m\">{t(\"dashboard.period6m\")}</option>\n            <option value=\"12m\">{t(\"dashboard.period12m\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 92,
+      "tag": "select",
+      "className": "\"inbox-platform-select\"",
+      "attrs": {
+        "value": "{state.platformFilter}",
+        "onChange": "{(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}",
+        "aria-label": "{t(\"inbox.platformFilter\")}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"all\">{t(\"inbox.platformAll\")}</option>\n                <option value=\"messenger\">{t(\"inbox.platformMessenger\")}</option>\n                <option value=\"instagram\">{t(\"inbox.platformInstagram\")}</option>\n                <option value=\"discord\">{t(\"inbox.platformDiscord\")}</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 409,
+      "tag": "select",
+      "className": "\"inbox-platform-select\"",
+      "attrs": {
+        "value": "{recipientLanguageSetting}",
+        "onChange": "{(e) => setRecipientLanguage(e.target.value as \"auto\" | \"ja\" | \"en\")}",
+        "aria-label": "{t(\"translation.sendGuard.langToggleLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"auto\">{t(\"translation.sendGuard.langAuto\")}</option>\n          <option value=\"ja\">{t(\"translation.sendGuard.langJa\")}</option>\n          <option value=\"en\">{t(\"translation.sendGuard.langEn\")}</option>\n        "
+    }
+  ],
+  "after": [
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 448,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.customer_type ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">—</option>\n            <option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option>\n            <option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 515,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.response_speed ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option>\n          <option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option>\n          <option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 528,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.temperature ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"Hot\">{t(\"leads.temperature_hot\")}</option>\n          <option value=\"Warm\">{t(\"leads.temperature_warm\")}</option>\n          <option value=\"Cold\">{t(\"leads.temperature_cold\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 542,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{competitorValue}",
+        "onChange": "{(e) => {\n            const v = e.target.value;\n            handleCardFieldChange(\"competitor_check\", v === \"\" ? null : v === \"true\");\n            setTimeout(handleCardFieldBlur, 0);\n          }}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"false\">{t(\"leads.competitorUnconfirmed\")}</option>\n          <option value=\"true\">{t(\"leads.competitorFound\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 558,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.estimated_scale ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">—</option>\n          <option value=\"Small\">{t(\"leads.estimatedScale_small\")}</option>\n          <option value=\"Medium\">{t(\"leads.estimatedScale_medium\")}</option>\n          <option value=\"Large\">{t(\"leads.estimatedScale_large\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 162,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.customer_type ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option>\n                  <option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 201,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.response_speed ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option>\n                  <option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option>\n                  <option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 216,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.temperature ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"Hot\">Hot</option>\n                  <option value=\"Warm\">Warm</option>\n                  <option value=\"Cold\">Cold</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 227,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"karte\"",
+        "fullWidth": "true",
+        "value": "{cardForm.estimated_scale ?? \"\"}",
+        "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+        "onBlur": "{handleCardFieldBlur}"
+      },
+      "spread": 0,
+      "children": "\n                  <option value=\"\">—</option>\n                  <option value=\"Small\">Small</option>\n                  <option value=\"Medium\">Medium</option>\n                  <option value=\"Large\">Large</option>\n                "
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 413,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"header\"",
+        "value": "{funnelMonth}",
+        "onChange": "{(e) => setFunnelMonth(e.target.value)}",
+        "aria-label": "{t(\"funnel.monthLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n                {monthOptions.map((o) => (\n                  <option key={o.value} value={o.value}>{o.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 442,
+      "tag": "SelectControl",
+      "className": null,
+      "attrs": {
+        "variant": "\"header\"",
+        "value": "{period}",
+        "onChange": "{(e) => setPeriod(e.target.value as Period)}",
+        "aria-label": "{t(\"dashboard.periodLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"1w\">{t(\"dashboard.period1w\")}</option>\n            <option value=\"1m\">{t(\"dashboard.period1m\")}</option>\n            <option value=\"3m\">{t(\"dashboard.period3m\")}</option>\n            <option value=\"6m\">{t(\"dashboard.period6m\")}</option>\n            <option value=\"12m\">{t(\"dashboard.period12m\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 93,
+      "tag": "SelectControl",
+      "className": "\"inbox-platform-select\"",
+      "attrs": {
+        "variant": "\"tabbar\"",
+        "value": "{state.platformFilter}",
+        "onChange": "{(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}",
+        "aria-label": "{t(\"inbox.platformFilter\")}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"all\">{t(\"inbox.platformAll\")}</option>\n                <option value=\"messenger\">{t(\"inbox.platformMessenger\")}</option>\n                <option value=\"instagram\">{t(\"inbox.platformInstagram\")}</option>\n                <option value=\"discord\">{t(\"inbox.platformDiscord\")}</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 409,
+      "tag": "SelectControl",
+      "className": "\"inbox-platform-select\"",
+      "attrs": {
+        "variant": "\"tabbar\"",
+        "value": "{recipientLanguageSetting}",
+        "onChange": "{(e) => setRecipientLanguage(e.target.value as \"auto\" | \"ja\" | \"en\")}",
+        "aria-label": "{t(\"translation.sendGuard.langToggleLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"auto\">{t(\"translation.sendGuard.langAuto\")}</option>\n          <option value=\"ja\">{t(\"translation.sendGuard.langJa\")}</option>\n          <option value=\"en\">{t(\"translation.sendGuard.langEn\")}</option>\n        "
+    }
+  ],
+  "result": {
+    "elements": 13,
+    "totalDiffs": 0,
+    "rows": [
+      {
+        "index": 1,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 447,
+        "afterLine": 448,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 2,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 514,
+        "afterLine": 515,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 3,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 527,
+        "afterLine": 528,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 4,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 541,
+        "afterLine": 542,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 5,
+        "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+        "beforeLine": 557,
+        "afterLine": 558,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 6,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 161,
+        "afterLine": 162,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 7,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 200,
+        "afterLine": 201,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 8,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 215,
+        "afterLine": 216,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 9,
+        "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+        "beforeLine": 226,
+        "afterLine": 227,
+        "beforeClass": "\"right-panel-field\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "variant=\"karte\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 10,
+        "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+        "beforeLine": 412,
+        "afterLine": 413,
+        "beforeClass": "\"page-header-select\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "variant=\"header\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 11,
+        "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+        "beforeLine": 441,
+        "afterLine": 442,
+        "beforeClass": "\"page-header-select\"",
+        "afterClass": null,
+        "addedAttrs": [
+          "variant=\"header\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 12,
+        "file": "frontend/src/pages/inbox/InboxPage.tsx",
+        "beforeLine": 92,
+        "afterLine": 93,
+        "beforeClass": "\"inbox-platform-select\"",
+        "afterClass": "\"inbox-platform-select\"",
+        "addedAttrs": [
+          "variant=\"tabbar\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 13,
+        "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+        "beforeLine": 409,
+        "afterLine": 409,
+        "beforeClass": "\"inbox-platform-select\"",
+        "afterClass": "\"inbox-platform-select\"",
+        "addedAttrs": [
+          "variant=\"tabbar\""
+        ],
+        "diffs": []
+      }
+    ]
+  }
+}

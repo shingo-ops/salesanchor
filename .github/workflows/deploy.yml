@@ -386,12 +386,16 @@ jobs:
             # 強制削除（docker rm -f）の前に `docker compose stop -t 60` で
             # warm shutdown（SIGTERM→最大60秒待って実行中タスクを終える）してから止める。
             echo "Step 3c: Updating non-backend services (frontend/celery/discord)..."
+            # 段階1（観測のみ。動きは変えない）：docs/handoff/deploy-selective-recreate/design.md
+            bash scripts/deploy/app-services-plan.sh --observe frontend celery-worker celery-beat discord-gateway gemini-egress || true
+            docker compose up -d --no-deps --dry-run frontend celery-worker celery-beat discord-gateway gemini-egress 2>&1 | sed 's/^/DRYRUN /' || true
             docker compose stop -t 60 celery-worker 2>/dev/null || true
             for _svc in frontend celery-beat discord-gateway; do
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
             docker ps -a --filter "name=astro-webapp-celery-worker" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
+            bash scripts/deploy/app-services-plan.sh --verify || true
             echo "Step 3d: Ensuring monitoring collectors are up..."
             docker compose up -d --no-deps node-exporter promtail
 

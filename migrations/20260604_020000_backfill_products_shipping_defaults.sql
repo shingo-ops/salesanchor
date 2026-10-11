@@ -14,24 +14,7 @@
 --
 -- 列が存在しない baseline でも失敗しないよう information_schema でガードする
 -- （cf. project_seed_migration_column_guard）。
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'item')
-     AND EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'hs_code')
-     AND EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'material')
-     AND EXISTS (SELECT 1 FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_kind')
-  THEN
-    UPDATE public.products
-       SET item     = COALESCE(NULLIF(item, ''),     'Playing card'),
-           hs_code  = COALESCE(NULLIF(hs_code, ''),  '9504400000'),
-           material = COALESCE(NULLIF(material, ''), 'Paper')
-     WHERE product_kind = 'TCG'
-       AND (NULLIF(item, '')     IS NULL
-            OR NULLIF(hs_code, '')  IS NULL
-            OR NULLIF(material, '') IS NULL);
-  END IF;
-END $$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- products の item / hs_code / material の既定値の補充を外した（本番は 0 行）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: products shipping defaults backfill removed'; END $$;

@@ -54,7 +54,6 @@ export default function ManagementCenterPage() {
         { to: "product-categories", labelKey: "nav.productCategories",  visible: hasPermission("product_categories.view") },
         { to: "units",              labelKey: "nav.units",               visible: hasPermission("suppliers.view") },
         { to: "note-master",    labelKey: "nav.noteMaster",     visible: hasPermission("suppliers.view") },
-        { to: "purchase-orders", labelKey: "nav.purchaseOrders", visible: hasPermission("purchase_orders.view") },
         { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },
       ],
     },

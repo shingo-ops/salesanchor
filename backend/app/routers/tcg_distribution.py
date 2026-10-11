@@ -157,7 +157,10 @@ async def delete_distribution_target(
 )
 async def distribution_preview(db: AsyncSession = Depends(get_db)):
     """配信候補件数・除外内訳・精度ゲート状態を返す（書き込みなし）。"""
-    return await svc.fetch_preview_data(db)
+    try:
+        return await svc.fetch_preview_data(db)
+    except svc.MaxAgeHoursUnsetError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post(

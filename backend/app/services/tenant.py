@@ -30,6 +30,7 @@ import re
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ DEFAULT_ROLES = [
         "color": "#6366f1",  # インディゴ（最高権限レベル）
         "priority": 1000,
         "is_system": True,
+        "system_key": ROLE_KEY_OWNER,
         "permissions": "ALL",
         "description": "テナントの全権限を持つシステムロール",
     },
@@ -59,7 +61,8 @@ DEFAULT_ROLES = [
         "name": "システム管理者",
         "color": "#a855f7",  # 紫
         "priority": 900,
-        "is_system": False,
+        "is_system": True,
+        "system_key": ROLE_KEY_ADMIN,
         "permissions": "ALL_EXCEPT_SYSTEM_MANAGE",
         "description": "システム設定以外の全機能を管理する管理者",
     },
@@ -88,6 +91,8 @@ DEFAULT_ROLES = [
             "notifications.view",
             "staff_reports.view_own", "staff_reports.view_team", "staff_reports.create", "staff_reports.review",
             "archive.view",
+            # 目標管理（migration 075 と同じ状態）
+            "goals.view", "goals.edit",
         ],
         "description": "チーム単位でリードや案件を統括するマネージャー",
     },
@@ -112,6 +117,7 @@ DEFAULT_ROLES = [
             "purchase_orders.view", "purchase_orders.create",
             # Phase 4
             "staff_reports.view_own", "staff_reports.create",
+            "goals.view",
         ],
         "description": "顧客獲得から受注までを担当する営業担当者",
     },
@@ -134,6 +140,7 @@ DEFAULT_ROLES = [
             "shipping.view",
             # Phase 4
             "staff_reports.view_own", "staff_reports.create",
+            "goals.view",
         ],
         "description": "顧客からの問い合わせ対応を担当するカスタマーサポート",
     },
@@ -152,6 +159,7 @@ DEFAULT_ROLES = [
             "purchase_orders.update", "purchase_orders.receive",
             # Phase 4
             "staff_reports.view_own", "staff_reports.create",
+            "goals.view",
         ],
         "description": "仕入先管理と発注業務を担当する仕入れ担当者",
     },
@@ -170,6 +178,7 @@ DEFAULT_ROLES = [
             "shipping.view", "shipping.calculate", "shipping.manage",
             # Phase 4
             "staff_reports.view_own", "staff_reports.create",
+            "goals.view",
         ],
         "description": "受注後の梱包・出荷・配送を担当する発送担当者",
     },
@@ -490,10 +499,12 @@ CREATE TABLE IF NOT EXISTS {schema}.roles (
     priority INTEGER NOT NULL DEFAULT 0,
     is_system BOOLEAN DEFAULT FALSE,
     description VARCHAR(500),
+    system_key TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tenant_id, name)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON {schema}.roles (system_key) WHERE system_key IS NOT NULL;
 
 -- ロール×権限のリンク
 CREATE TABLE IF NOT EXISTS {schema}.role_permissions (
@@ -1525,9 +1536,9 @@ async def _assign_permissions_to_role(
         await db.execute(
             text(f"""
                 INSERT INTO {schema_name}.role_permissions (role_id, permission_id)
-                SELECT :rid, id FROM public.permissions WHERE key != 'system.manage'
+                SELECT :rid, id FROM public.permissions WHERE key != :system_manage_key
             """),
-            {"rid": role_id},
+            {"rid": role_id, "system_manage_key": SYSTEM_MANAGE_KEY},
         )
     elif isinstance(permissions_spec, list):
         for key in permissions_spec:
@@ -1591,12 +1602,13 @@ async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) 
         # ユーザーのカスタマイズは保持される。
         result = await db.execute(
             text(f"""
-                INSERT INTO {schema_name}.roles (tenant_id, name, color, priority, is_system, description)
-                VALUES (:tid, :name, :color, :priority, :is_system, :description)
+                INSERT INTO {schema_name}.roles (tenant_id, name, color, priority, is_system, description, system_key)
+                VALUES (:tid, :name, :color, :priority, :is_system, :description, :system_key)
                 ON CONFLICT (tenant_id, name) DO UPDATE
                 SET color = EXCLUDED.color,
                     priority = EXCLUDED.priority,
-                    description = EXCLUDED.description
+                    description = EXCLUDED.description,
+                    system_key = COALESCE({schema_name}.roles.system_key, EXCLUDED.system_key)
                 RETURNING id
             """),
             {
@@ -1606,6 +1618,7 @@ async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) 
                 "priority": role_def["priority"],
                 "is_system": role_def["is_system"],
                 "description": role_def["description"],
+                "system_key": role_def.get("system_key"),
             },
         )
         role_id = result.scalar_one()
@@ -1732,7 +1745,7 @@ async def create_tenant_schema(
         # 4b. F3: 標準 channel_masters をシード（DML → db）
         await seed_default_channel_masters(db, safe_id, schema_name)
 
-        # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='A' で初期行を seed（DML → db）。
+        # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='B' で初期行を seed（DML → db）。
         #    migration 070 未適用環境では tenant_settings テーブルが存在しないので
         #    best-effort で実行する。phase_gate.get_phase は 'A' fallback してくれる。
         #
@@ -1750,7 +1763,7 @@ async def create_tenant_schema(
                         " inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, "
                         " quote_validity_days, default_currency, document_language, "
                         " duty_incoterms, issue_mode) "
-                        "VALUES (:tid, 'A', "
+                        "VALUES (:tid, 'B', "
                         " 'none', 0, 0, "
                         " 1, 'JPY', 'en', "
                         " 'DAP', 'pdf') "

@@ -7,8 +7,12 @@
 #   [3] 未保存の作業がある部屋（DONE+未コミット）は dry-run で削除対象に出ない
 #   [4] DONE かつ未保存なし の部屋は dry-run で削除対象に出る
 #   [5] active-work.md に行がない(NOT_FOUND)かつ gh が 0 件を返す部屋は削除対象に出ない
-#   [6] DONE + upstream未設定 + origin/<branch>なし → 削除対象に出る（upstream未設定だけで保護しない）
+#   [6] DONE + upstream未設定 + origin/<branch>なし + コミットはローカルのみ → 削除対象に出ない（GitHub から取り戻せないため保護。R8）
 #   [7] DONE + upstream未設定 + origin/<branch>あり + 未pushコミットあり → 削除対象に出ない
+#   [R8-a] DONE + upstream=origin/main + origin/<branch>なし + mainに無いローカルのみコミット → 保護
+#   [R8-b] DONE + upstream未設定 + 全コミットが origin の別ブランチ(main)にある → 削除対象に出る
+#   [R8-c] DONE + git init のみ（コミット無し・未コミット無し）→ 削除対象に出る
+#   [R8-d] fetch 失敗時は削除しない（存在しない remote 名で呼ぶ。ネットワーク・本体 ref には触れない）
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -86,6 +90,7 @@ run_reaper_dry() {
   REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
   REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
   REAPER_REPO_NAME="test/test" \
+  REAPER_SKIP_FETCH=1 \
   bash "${REAPER}" 2>&1
 }
 
@@ -95,6 +100,7 @@ run_reaper_dry_with_merged() {
   REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
   REAPER_REPO_NAME="test/test" \
   MOCK_GH_MERGED_BRANCH="${merged_branches}" \
+  REAPER_SKIP_FETCH=1 \
   bash "${REAPER}" 2>&1
 }
 
@@ -184,8 +190,8 @@ touch "${DONE_UNSAVED_DIR}/unsaved.txt"
 OUTPUT3=$(run_reaper_dry)
 assert_not_in_delete "DONE+未保存あり保護" "${BRANCH_DONE_UNSAVED}" "${OUTPUT3}"
 
-# ── テスト 6: DONE + upstream未設定 + origin/<branch>なし → 削除対象に出る ──
-# upstream未設定だけを理由に未push扱いしないことを確認する
+# ── テスト 6: DONE + upstream未設定 + origin/<branch>なし + ローカルのみコミット → 保護（R8） ──
+# 旧: 削除候補（穴）。R8: GitHub に無いコミットは取り戻せないので保護する
 BRANCH_DONE_NO_UPSTREAM="feature/test/done-no-upstream"
 DONE_NO_UPSTREAM_DIR=$(make_worktree_dir "wt-done-no-upstream" "${BRANCH_DONE_NO_UPSTREAM}")
 echo "| ${BRANCH_DONE_NO_UPSTREAM} | テスト | 2026-06-06 | DONE | #997 | | |" >> "${FAKE_ACTIVE_WORK}"
@@ -196,10 +202,10 @@ git -C "${DONE_NO_UPSTREAM_DIR}" config user.name "test"
 touch "${DONE_NO_UPSTREAM_DIR}/committed.txt"
 git -C "${DONE_NO_UPSTREAM_DIR}" add .
 git -C "${DONE_NO_UPSTREAM_DIR}" commit -m "init" -q 2>/dev/null
-# upstream未設定・origin/<branch>なし → UNSAVED=0 → 削除候補になるべき
+# upstream未設定・origin/<branch>なし・コミットは origin のどの ref からも到達できない → 保護
 
 OUTPUT6=$(run_reaper_dry)
-assert_in_delete "DONE+upstream未設定+originなし→削除候補" "${BRANCH_DONE_NO_UPSTREAM}" "${OUTPUT6}"
+assert_not_in_delete "DONE+upstream未設定+originなし+ローカルのみ→保護(R8)" "${BRANCH_DONE_NO_UPSTREAM}" "${OUTPUT6}"
 
 # ── テスト 7: DONE + upstream未設定 + origin/<branch>あり + 未push → 保護 ───
 BRANCH_DONE_UNPUSHED="feature/test/done-unpushed"
@@ -263,6 +269,76 @@ git -C "${DONE_SHARED_DIR}" branch --set-upstream-to=origin/main -q 2>/dev/null
 
 OUTPUT15=$(run_reaper_dry)
 assert_in_delete "DONE+共用upstream+専用棚一致+きれい→削除候補(本バグ)" "${BRANCH_DONE_SHARED}" "${OUTPUT15}"
+
+# ── テスト R8-a: DONE + upstream=origin/main + origin/<branch>なし + ローカルのみコミット → 保護 ──
+BRANCH_R8A="feature/test/r8a-local-only"
+R8A_DIR=$(make_worktree_dir "wt-r8a" "${BRANCH_R8A}")
+echo "| ${BRANCH_R8A} | テスト | 2026-06-06 | DONE | #990 | | |" >> "${FAKE_ACTIVE_WORK}"
+FAKE_REMOTE_R8A="${TMPDIR_TEST}/fake-remote-r8a.git"
+git init --bare "${FAKE_REMOTE_R8A}" -q 2>/dev/null
+git init "${R8A_DIR}" -q 2>/dev/null
+git -C "${R8A_DIR}" config user.email "test@test.com"
+git -C "${R8A_DIR}" config user.name "test"
+git -C "${R8A_DIR}" remote add origin "${FAKE_REMOTE_R8A}"
+touch "${R8A_DIR}/base.txt"
+git -C "${R8A_DIR}" add .
+git -C "${R8A_DIR}" commit -m "base" -q 2>/dev/null
+git -C "${R8A_DIR}" push origin HEAD:"refs/heads/main" -q 2>/dev/null
+git -C "${R8A_DIR}" fetch origin -q 2>/dev/null
+git -C "${R8A_DIR}" branch --set-upstream-to=origin/main -q 2>/dev/null
+touch "${R8A_DIR}/local-only.txt"
+git -C "${R8A_DIR}" add .
+git -C "${R8A_DIR}" commit -m "local only" -q 2>/dev/null
+OUTPUT_R8A=$(run_reaper_dry)
+assert_not_in_delete "R8-a DONE+upstream=main+origin専用棚なし+ローカルのみ→保護" "${BRANCH_R8A}" "${OUTPUT_R8A}"
+
+# ── テスト R8-b: DONE + upstream未設定 + 全コミットが origin の別ブランチ(main)にある → 削除候補 ──
+BRANCH_R8B="feature/test/r8b-all-on-origin"
+R8B_DIR=$(make_worktree_dir "wt-r8b" "${BRANCH_R8B}")
+echo "| ${BRANCH_R8B} | テスト | 2026-06-06 | DONE | #991 | | |" >> "${FAKE_ACTIVE_WORK}"
+FAKE_REMOTE_R8B="${TMPDIR_TEST}/fake-remote-r8b.git"
+git init --bare "${FAKE_REMOTE_R8B}" -q 2>/dev/null
+git init "${R8B_DIR}" -q 2>/dev/null
+git -C "${R8B_DIR}" config user.email "test@test.com"
+git -C "${R8B_DIR}" config user.name "test"
+git -C "${R8B_DIR}" remote add origin "${FAKE_REMOTE_R8B}"
+touch "${R8B_DIR}/base.txt"
+git -C "${R8B_DIR}" add .
+git -C "${R8B_DIR}" commit -m "base" -q 2>/dev/null
+git -C "${R8B_DIR}" push origin HEAD:"refs/heads/main" -q 2>/dev/null
+git -C "${R8B_DIR}" fetch origin -q 2>/dev/null
+OUTPUT_R8B=$(run_reaper_dry)
+assert_in_delete "R8-b DONE+upstream未設定+全コミットがoriginにある→削除候補" "${BRANCH_R8B}" "${OUTPUT_R8B}"
+
+# ── テスト R8-c: DONE + git init のみ（コミット無し・未コミット無し）→ 削除候補 ──
+# 既存 [4] の wt-done は git init すらしない部屋。R8-c は git 管理下でコミット0件の部屋（HEAD なし）。
+BRANCH_R8C="feature/test/r8c-no-commits"
+R8C_DIR=$(make_worktree_dir "wt-r8c" "${BRANCH_R8C}")
+echo "| ${BRANCH_R8C} | テスト | 2026-06-06 | DONE | #992 | | |" >> "${FAKE_ACTIVE_WORK}"
+git init "${R8C_DIR}" -q 2>/dev/null
+echo ".worktree-id" > "${R8C_DIR}/.git/info/exclude"
+OUTPUT_R8C=$(run_reaper_dry)
+assert_in_delete "R8-c DONE+コミット無し→削除候補" "${BRANCH_R8C}" "${OUTPUT_R8C}"
+
+# ── テスト R8-d: fetch 失敗時は削除しない ──────────────────────────────────
+# REAPER_SKIP_FETCH を付けず、存在しない remote 名で fetch を失敗させる（ネットワークにも本体の ref にも触れない）
+# 上の R8-b / R8-c は fetch 成功時なら削除候補になる部屋。ここでは1件も出てはいけない。
+OUTPUT_R8D=$(
+  REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" \
+  REAPER_FETCH_REMOTE="__reaper_test_no_such_remote__" \
+  bash "${REAPER}" 2>&1
+)
+assert_not_in_delete "R8-d fetch失敗時はDONEきれい(R8-c)も削除しない" "${BRANCH_R8C}" "${OUTPUT_R8D}"
+assert_not_in_delete "R8-d fetch失敗時はDONEきれい(R8-b)も削除しない" "${BRANCH_R8B}" "${OUTPUT_R8D}"
+if echo "${OUTPUT_R8D}" | grep -q "git fetch に失敗しました" && echo "${OUTPUT_R8D}" | grep -q "fetch 失敗のため"; then
+  echo "✅ PASS [R8-d fetch失敗の警告]: 警告2種が出力されています"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [R8-d fetch失敗の警告]: 警告が出力されていません"
+  FAIL=$(( FAIL + 1 ))
+fi
 
 # ── テスト 8: active-work.md に行なし → 新規行が --- より上に挿入される ────
 # auto-review / auto-done ワークフローの not-found 挿入ロジックをテストする

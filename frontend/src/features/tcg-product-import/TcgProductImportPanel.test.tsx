@@ -196,3 +196,24 @@ describe("blank CSV template", () => {
     });
   }
 });
+it("shows the overlap message and the colliding product callout under a CSV row", async () => {
+  const collisionRow = { row_no: "2", japanese_title: "Fixture", mark: "ST01", blocking: [], warnings: ["MARK_ALREADY_USED_BY_42"], code_collisions: [
+    { product_id: "42", name: "Other Box", work_name: "Some Work", matched_value: "ST01", matched_field: "mark",
+      suggest_add_to_this: ["other box"], suggest_add_to_other: ["fixture"], already_excluded_by_this: [], already_excluded_by_other: [] },
+  ] };
+  vi.mocked(api.postForm).mockResolvedValue({ ...preview, total: 1, ok: 1, blocked: 0, rows: [collisionRow] });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect(screen.getByText("The product code overlaps Other Box (Some Work). Adding exclude keywords is recommended.")).toBeTruthy();
+  const callout = screen.getByRole("alert");
+  expect(callout.textContent).toContain("Other Box (Some Work)");
+  expect(callout.textContent).toContain("other box");
+  expect(callout.textContent).toContain("fixture");
+  expect(screen.getByRole("button", { name: "Add to that product" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Add to this product" })).toBeNull();
+});
+it("falls back to the product id in the overlap message when the collision is not found", async () => {
+  const row = { row_no: "2", japanese_title: "Fixture", mark: "ST01", blocking: [], warnings: ["MARK_ALREADY_USED_BY_42"], code_collisions: [] };
+  vi.mocked(api.postForm).mockResolvedValue({ ...preview, total: 1, ok: 1, blocked: 0, rows: [row] });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect(screen.getByText("The product code overlaps 42. Adding exclude keywords is recommended.")).toBeTruthy();
+});

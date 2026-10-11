@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -25,6 +26,7 @@ import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { BotFormFields, type BotFormState, type BotStaff } from "./BotFormFields";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Bot {
   id: number;
@@ -224,37 +226,37 @@ export default function BotsPage() {
         <form onSubmit={handleCreateSubmit}>
           <div className="form-group">
             <label>{t("bots.botCodeLabel")}</label>
-            <input value={createForm.bot_code} placeholder={t("bots.botCodePlaceholder")} onChange={(e) => setCreateForm({ ...createForm, bot_code: e.target.value })} />
+            <TextFieldControl value={createForm.bot_code} placeholder={t("bots.botCodePlaceholder")} onChange={(e) => setCreateForm({ ...createForm, bot_code: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("bots.displayName")} *</label>
-            <input required value={createForm.display_name} onChange={(e) => setCreateForm({ ...createForm, display_name: e.target.value })} />
+            <TextFieldControl required value={createForm.display_name} onChange={(e) => setCreateForm({ ...createForm, display_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("bots.purposeLabel")} *</label>
-            <select required value={createForm.purpose} onChange={(e) => setCreateForm({ ...createForm, purpose: e.target.value })}>
+            <SelectControl fullWidth required value={createForm.purpose} onChange={(e) => setCreateForm({ ...createForm, purpose: e.target.value })}>
               <option value="invoice">{t("bots.purposeInvoice")}</option>
               <option value="shipment">{t("bots.purposeShipment")}</option>
               <option value="notification">{t("bots.purposeNotification")}</option>
               <option value="custom">{t("bots.purposeCustom")}</option>
-            </select>
+            </SelectControl>
           </div>
           <div className="form-group"><label>{t("common.status")}</label>
-            <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
+            <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
               <option value="active">{t("bots.statusActive")}</option>
               <option value="inactive">{t("bots.statusInactive")}</option>
               <option value="maintenance">{t("bots.statusMaintenance")}</option>
-            </select>
+            </SelectControl>
           </div>
           <div className="form-group"><label>{t("bots.ownerStaff")} *</label>
-            <select required value={createForm.owner_staff_id} onChange={(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}>
+            <SelectControl fullWidth required value={createForm.owner_staff_id} onChange={(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}>
               <option value="">{t("common.pleaseSelect")}</option>
               {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}
-            </select>
+            </SelectControl>
           </div>
           <div className="form-group"><label>Discord Bot ID</label>
-            <input value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
+            <TextFieldControl value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("bots.senderEmail")}</label>
-            <input type="email" value={createForm.sender_email} onChange={(e) => setCreateForm({ ...createForm, sender_email: e.target.value })} />
+            <TextFieldControl type="email" value={createForm.sender_email} onChange={(e) => setCreateForm({ ...createForm, sender_email: e.target.value })} />
           </div>
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>

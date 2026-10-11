@@ -7,6 +7,7 @@ import { type Coverage, type ImportItemFilter } from "./importWorkflowApi";
 import { useImportWorkflow } from "./useImportWorkflow";
 import { useImportStageDetails } from "./useImportStageDetails";
 import { ExtractionAttemptHistory } from "./ExtractionAttemptHistory";
+import { reviewReasonsText } from "../tcg-analysis-review/reviewReasonLabel";
 import "./import-workflow.css";
 
 const LIMIT = 25;
@@ -36,14 +37,7 @@ export function ImportWorkflowPanel({ importJobId }: { importJobId: string | nul
     const knownStatuses = ["done", "empty", "error", "pending", "running", "unknown"];
     return t(`pmgWorkflow.extractionStatus.${knownStatuses.includes(status) ? status : "unknown"}`);
   };
-  const reviewReasonsLabel = (reasons: string | null) => reasons
-    ? reasons.split(",").map((reason) => {
-      const key = reason.trim();
-      return ["pid_unresolved", "multi_candidate", "note_unmatched"].includes(key)
-        ? t(`pmgWorkflow.reviewReason.${key}`)
-        : key;
-    }).join(", ")
-    : "-";
+  const reviewReasonsLabel = (reasons: string | null) => reviewReasonsText(t, reasons) ?? "-";
   const formatNumber = (value: number | null | undefined) => value === null || value === undefined ? "-" : value.toLocaleString(i18n.language);
   const formatValue = (value: number | string | null | undefined) => value === null || value === undefined || value === "" ? "-" : String(value);
   const setFilterAndReset = (next: ImportItemFilter) => { setDetail(null); setFilter(next); setOffset(0); focusDetails(); };

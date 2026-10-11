@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { TextareaControl } from "../../components/Textarea";
 
 const PROMPT_KEYS = ["base_extraction", "work_id_extraction"] as const;
 type PromptKey = (typeof PROMPT_KEYS)[number];
@@ -219,7 +220,7 @@ export default function ExtractionPromptConfigTab() {
             {configs[key].is_active ? t(`${p}.active`) : t(`${p}.inactive`)}
           </label>
 
-          <textarea
+          <TextareaControl
             value={configs[key].prompt_text}
             data-testid={`prompt-textarea-${key}`}
             onChange={(e) =>
@@ -230,12 +231,7 @@ export default function ExtractionPromptConfigTab() {
             }
             placeholder={t(`${p}.placeholder`)}
             rows={16}
-            style={{
-              width: "100%",
-              fontFamily: "var(--font-mono, monospace)",
-              fontSize: "var(--font-sm)",
-              boxSizing: "border-box",
-            }}
+            textStyle="code"
           />
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-3)" }}>

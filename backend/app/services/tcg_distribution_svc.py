@@ -186,6 +186,41 @@ async def load_distribution_settings(db: AsyncSession) -> dict[str, str]:
 # E. 出力データ取得クエリ（10列・確定フィルター）
 # ---------------------------------------------------------------------------
 
+MAX_AGE_UNSET_MESSAGE = "max_age_hours 未設定のため配信しない"
+
+
+class MaxAgeHoursUnsetError(Exception):
+    """tcg_distribution_settings の max_age_hours が無い・不正な時に送出する。"""
+
+
+def _max_age_hours(settings: dict[str, str]) -> int | None:
+    """設定表から max_age_hours を読む（唯一の読み口）。
+
+    値が無い・整数でない・負の時は None（= 配信しない）。0 は「無制限」（設定画面の説明どおり）。
+    """
+    raw = settings.get("max_age_hours")
+    if raw is None:
+        return None
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
+def _age_window(max_age_hours: int | None) -> tuple[str, dict]:
+    """「LINE 投稿が max_age_hours 時間以内」の SQL 断片と bind を返す（唯一の定義）。
+
+    0 / None は絞らない（空文字・空 dict）。配信可否の判断は呼び出し側で _max_age_hours を使う。
+    """
+    if not max_age_hours:
+        return "", {}
+    return (
+        "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)",
+        {"max_age_hours": max_age_hours},
+    )
+
+
 async def fetch_output_rows(
     db: AsyncSession,
     *,
@@ -211,15 +246,11 @@ async def fetch_output_rows(
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
-    age_condition = ""
-    bind_params: dict = {}
-    if max_age_hours:
-        age_condition = (
-            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
-        )
-        bind_params["max_age_hours"] = max_age_hours
+    age_condition, bind_params = _age_window(max_age_hours)
 
     sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
@@ -301,7 +332,10 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     """
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    max_age_hours = int(settings.get("max_age_hours", "0"))
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
+        raise MaxAgeHoursUnsetError(MAX_AGE_UNSET_MESSAGE)
 
     # 配信候補件数
     if include_flag_single:
@@ -311,15 +345,11 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
-    count_age_condition = ""
-    count_bind_params: dict = {}
-    if max_age_hours:
-        count_age_condition = (
-            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
-        )
-        count_bind_params["max_age_hours"] = max_age_hours
+    age_condition, age_bind_params = _age_window(max_age_hours)
 
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT COUNT(*) AS cnt
@@ -336,34 +366,34 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND sm.line_posted_at IS NOT NULL
-          AND {cond_filter}{count_age_condition}
-    """), count_bind_params)
+          AND {cond_filter}{age_condition}
+    """), age_bind_params)
     output_count = count_result.scalar()
 
     # 除外内訳
     excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
-            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
+            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%' OR cr.effect = 'EXCLUDE')
                 AS exc_flag,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = TRUE)
                 AS exc_pid_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = TRUE
                   AND ar.unit_resolved = FALSE)
                 AS exc_unit_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = FALSE)
                 AS exc_both,
             COUNT(*) FILTER (
                 WHERE ar.pid_resolved = TRUE
                   AND ar.unit_resolved = TRUE
-                  AND cr.canonical NOT LIKE 'FLAG_%'
+                  AND cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.price_normalized IS NULL)
                 AS exc_price
         FROM {TCG_SCHEMA}.analysis_results ar
@@ -372,8 +402,8 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
         {review_joins(schema=TCG_SCHEMA)}
-        WHERE ar.is_current = TRUE
-    """))
+        WHERE ar.is_current = TRUE{age_condition}
+    """), age_bind_params)
     excl = excl_result.mappings().one()
 
     # 精度ゲート: item_corrections との JOIN（テーブル存在チェック付き）
@@ -755,7 +785,16 @@ async def run_distribution(
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    max_age_hours = int(settings.get("max_age_hours", "0"))
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": MAX_AGE_UNSET_MESSAGE}],
+        }
 
     # 2. 出力データ取得
     try:

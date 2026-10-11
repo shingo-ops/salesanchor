@@ -2,7 +2,6 @@
  * RuleManagementPanel — ルール管理パネル
  *
  * tcg_status_master のルール運用ビュー。
- * StatusMasterPanel（マスタ管理）とは別で、ルールのメンテナンスに特化。
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。

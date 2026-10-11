@@ -423,6 +423,7 @@
   --table-col-product-name-min-w: 320px; /* 明細テーブル商品名カラム最小幅 */
   --input-width-weight:    80px;   /* 重量入力フィールド */
   --input-width-year:      90px;   /* 年・単価入力フィールド */
+  --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
   --input-width-month:     60px;   /* 月入力フィールド */
 
   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */
