@@ -65,6 +65,21 @@ describe("production tab row drawer", () => {
     await waitFor(() => expect(vi.mocked(api.get).mock.calls.filter(([p]) => String(p).startsWith("/tcg/analysis-results")).length).toBe(2));
   });
 
+  it("hides the keep-as-is button for a reason that is not ackable, and keeps it for the others", async () => {
+    const item = {
+      ...makeItem("v102-item", "Card V102", true),
+      review_reason_details: [
+        { code: "condition_unknown", source: "system", fix_stage: "analysis", ackable: false },
+        { code: "product_not_in_master", source: "system", fix_stage: "analysis", ackable: true },
+      ],
+    };
+    vi.mocked(api.get).mockResolvedValue(response([item]));
+    view();
+    fireEvent.click(await screen.findByText("Card V102"));
+    await screen.findByRole("dialog");
+    expect(screen.getAllByRole("button", { name: "Keep as is" })).toHaveLength(1);
+  });
+
   it("does not show the keep-as-is button for a v6 item", async () => {
     view();
     fireEvent.click(await screen.findByText("Card V6"));

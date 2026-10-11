@@ -25,6 +25,25 @@ from app.services.tcg_empty_box_rules import (
     literal,
 )
 
+# conditions.effect が EXCLUDE の状態 = 配信しない状態（Error。PO 2026-10-11）。唯一の置き場所。
+# effect 列が無い古い試験 DB でも落ちないよう、列は to_jsonb(行) 経由で読む（無ければ NULL = 除外しない）。
+CONDITION_EFFECT_EXCLUDE = "EXCLUDE"
+
+
+# 人が状態を選んだ時に外す理由（v102 の _apply_decisions / 〆の引き継ぎと同じ集合。唯一の置き場所。line_analysis_v102_svc はここから import する）
+REASON_CONDITION_UNKNOWN = "condition_unknown"
+REASON_CONDITION_MULTIPLE = "condition_multiple_candidates"
+CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
+
+
+def condition_effect_sql(alias: str) -> str:
+    return f"to_jsonb({alias})->>'effect'"
+
+
+def not_excluded_condition_sql(alias: str) -> str:
+    return f"{condition_effect_sql(alias)} IS DISTINCT FROM '{CONDITION_EFFECT_EXCLUDE}'"
+
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み。
 # テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
 TCG_SCHEMA = "public"
@@ -122,6 +141,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         WHERE extraction_item_id = ei.id AND field_name = 'condition_review' ORDER BY id DESC LIMIT 1
     ) cr_event ON TRUE
     LEFT JOIN public.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
+    LEFT JOIN public.conditions cr_arc ON cr_arc.id::text = cr_data.ar->>'condition_id'
     CROSS JOIN LATERAL (SELECT {classification} AS classification, ({mentions}) AS mentions,
         {valid_master} AS master_valid) cr_input
     CROSS JOIN LATERAL (SELECT {binding} AS binding_hash, {ack_binding} AS ack_binding_hash) cr_hash
@@ -174,7 +194,10 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
              ELSE cr_data.ar->>'condition_canonical' END AS canonical,
         CASE WHEN cr_valid.valid_ack THEN 'MANUAL_CONDITION_REVIEW'
              WHEN cr_input.classification = 'positive' AND cr_input.master_valid THEN 'EMPTY_BOX:explicit'
-             ELSE cr_data.ar->>'condition_basis' END AS basis
+             ELSE cr_data.ar->>'condition_basis' END AS basis,
+        CASE WHEN cr_valid.valid_ack THEN {condition_effect_sql('cr_ack_condition')}
+             WHEN cr_input.classification = 'positive' AND cr_input.master_valid THEN {condition_effect_sql('cr_empty')}
+             ELSE {condition_effect_sql('cr_arc')} END AS effect
     ) cr
     """
 
@@ -204,7 +227,8 @@ def reanalysis_condition(session: Session, item_id: str, candidate: dict | None 
 
 async def condition_options(db: AsyncSession) -> list[dict]:
     rows = await db.execute(text("SELECT id::text, code, canonical FROM public.conditions "
-                                 "WHERE is_active IS TRUE ORDER BY priority NULLS LAST, code"))
+                                 f"WHERE is_active IS TRUE AND {not_excluded_condition_sql('conditions')} "
+                                 "ORDER BY priority NULLS LAST, code"))
     return [dict(row) for row in rows.mappings()]
 
 
@@ -263,7 +287,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
         target = (await db.execute(text("SELECT id FROM public.conditions "
-            "WHERE id = :condition_id_int AND is_active IS TRUE"), params)).scalar_one_or_none()
+            f"WHERE id = :condition_id_int AND is_active IS TRUE AND {not_excluded_condition_sql('conditions')}"), params)).scalar_one_or_none()
         if target is None:
             raise HTTPException(422, "Condition is not active")
         if row["mentions"] and not row["master_valid"]:
@@ -280,11 +304,19 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             (extraction_item_id, source_message_id, field_name, system_value, human_value, corrected_by)
             VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), 'condition_review', :old, :new, :actor)"""),
             dict(params, old=json.dumps(dict(row), default=str), new=json.dumps(history), actor=corrected_by))
-        await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+        # 選んだ状態で決まる理由（condition_unknown 等）は保存の時点で外す。再解析が積めなくても詰まらないように。
+        await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results ar SET
             condition_id = :condition_id_int,
             condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id_int),
-            condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
-            WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
+            condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp(),
+            review_reasons = s.kept,
+            needs_review = CASE WHEN s.removed AND s.kept IS NULL THEN FALSE ELSE ar.needs_review END
+            FROM (SELECT NULLIF(array_to_string(ARRAY(SELECT r FROM unnest(string_to_array(COALESCE(x.review_reasons,''),',')) r
+                      WHERE r <> '' AND r <> ALL(CAST(:drop AS text[]))),','),'') AS kept,
+                  EXISTS (SELECT 1 FROM unnest(string_to_array(COALESCE(x.review_reasons,''),',')) r
+                      WHERE r = ANY(CAST(:drop AS text[]))) AS removed
+                  FROM {TCG_SCHEMA}.analysis_results x WHERE x.extraction_item_id=CAST(:eid AS uuid)) s
+            WHERE ar.extraction_item_id=CAST(:eid AS uuid)"""), dict(params, drop=list(CONDITION_REVIEW_REASONS)))
         effective = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results
             SET needs_review=:needs_review, review_reasons=:review_reasons

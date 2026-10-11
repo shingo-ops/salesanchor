@@ -204,3 +204,13 @@ GEMINI_KEY=present
 - PO 2026-10-06: Gemini は行番号と価格・数量の文字、解析はシステム（project 記録）。今回 PO は「原則 Gemini の抽出を信頼」し、システムの上書き（A6・A7・A11・A12）を廃止、A11 は確認役。
 - ADR-1007（値は migration に書かない）・review_reason_codes は data/review_reason_codes/ の SQL で投入（便A・便PQ と同じ）。
 - ADR 検索: docs/adr で reassign・付け直し・price_line・gemini_disagrees は 0件（2026-10-11、git grep -i）。
+
+## 10. 便ER の recon 要点（社外秘の原文なし・件数のみ。詳細: /tmp/CC報告ファイル/v102-cond-error-recon/、part2/、part3/）
+- 最終フォールバック: backend/app/services/tcg_analyzer_svc.py:903-904（FLAG_SINGLE・basis "R4:単位既定:単位不明"、区分に関係なく）。語で決まる FLAG_SINGLE は主ループ :854-863（basis "R1:<語>"、CN0008 の app_kubun「枚系,単位不明」の時だけ）。R4c :886-901 は内側が箱系で必ず返る（本番に "R4c:" の basis 0件）。
+- v102 の状態: backend/app/services/gemini_raw_copy_v102_product_first.py:480-493 _resolve_condition（:490-492 の条件の時だけ "不明"＋condition_unknown）。保存 backend/app/services/line_analysis_v102_svc.py:539-550 _condition_columns（引けない canonical は FLAG_SINGLE に落とす。cond_canonical_to_uuid は別名がある行だけ tcg_analyzer_svc.py:127-141、cond_entries は priority>0 だけ :668-669）。
+- 本番 v102 is_current の状態×basis（780件中）: FLAG_SINGLE|R4:単位既定:単位不明 137、FLAG_SINGLE|R1:プロモ 5 ほか。単位不明 137件: 要確認 129・要確認でない 8、condition_unknown あり 52・なし 85。
+- 状態の表: public.conditions は VIEW、実表 public.line_conditions（id は identity、seq last_value 25）。13行、全行 match_type KEYWORD・effect OUTPUT。effect は tcg_analyzer_svc.py:663-665,707 で読み込むだけで、判定・配信に使う所は無い（backend/app に 'EXCLUDE' の文字 0件）。状態の行を足す data ファイルの前例は無く、id23・25 は画面 backend/app/routers/super_admin_conditions.py:197-220 から。
+- 配信: backend/app/services/tcg_distribution_svc.py:206-213・:307-313 cond_filter（canonical 'FLAG_%'）、WHERE :260-267・:332-339、除外内訳 :346-366。cr は backend/app/services/tcg_condition_review_svc.py:84-179 review_joins（列 :162-177、effect なし）。
+- 人の判断: 「このままで良い」backend/app/routers/item_corrections.py:177-203（登録済みコードなら何でも ack 可 :188-190、本番の condition_unknown の ack 0件）。状態を選ぶ画面 frontend/src/features/tcg-analysis-review/ConditionReviewPanel.tsx:22-23（空箱の件だけ）。選択肢 tcg_condition_review_svc.py:205-208（is_active のみ）、有効判定 backend/app/services/v102_human_decisions_svc.py:53。
+- 〆: line_analysis_v102_svc.py:689（FLAG_ 接頭辞だけ未決定扱い）。
+- ADR 検索（2026-10-11、git grep -i docs/adr）: FLAG_SINGLE・condition_unknown・line_conditions・effect の判定に関する ADR は 0件。関係: ADR-1007（値は migration に書かない）、ADR-155（マスタ更新は画面/CSV）、ADR-156（condition_definitions）。
