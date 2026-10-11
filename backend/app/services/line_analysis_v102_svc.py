@@ -53,6 +53,7 @@ from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は�
 )
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
+from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(1
 REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
 MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
+# REASON_UNIT_PRICE_MISMATCH（単位と価格が相場と合わない・便UP）は v102_unit_price_check_svc が定義し、_write_results が付ける
 # 人の判断で外す理由（condition_review で状態を決めたとき）
 # 値は tcg_condition_review_svc の1か所（保存時の除去と同じ集合）。ここは import して使う
 # 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
@@ -751,6 +753,34 @@ def _write_extra_targets(session: Session, result_id: str, extras: list[dict]) -
         )
 
 
+def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values: list[dict]) -> frozenset[int]:
+    """単位と価格が相場と合わない件の位置（便UP）。商品・単位・価格が揃った件だけを相場と比べる。"""
+    candidates = [
+        Candidate(key=index, product_id=int(v["product_id"]), unit=str(v["unit_canonical"]), price=Decimal(str(v["price_normalized"])))
+        for index, v in enumerate(base_values)
+        if v["pid_resolved"] and v["product_id"] is not None and v["unit_canonical"] and v["price_normalized"] is not None
+    ]
+    if not candidates:
+        return frozenset()
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            source_message_id = session.execute(
+                text(f"SELECT source_message_id::text FROM {analyzer.TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+            ).scalar_one()
+            return find_mismatches(session, analyzer.TCG_SCHEMA, candidates, source_message_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[unit_price_check] 単位と価格の確認に失敗したので、この投稿では確認をしません: job=%s error=%r", extraction_job_id, exc)
+        return frozenset()
+
+
+def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
+    """理由 unit_price_mismatch を末尾に足す（元の values は変えない）。人の「このままで良い」は _apply_decisions が外す。"""
+    if not is_mismatch:
+        return values
+    reasons = _split_reasons(values["review_reasons"])
+    return {**values, "review_reasons": REASON_SEPARATOR.join([*reasons, REASON_UNIT_PRICE_MISMATCH]), "needs_review": True}
+
+
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
     decisions: dict[str, Decisions] | None = None,
@@ -769,10 +799,13 @@ def _write_results(
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
-    for item, row in pairs:
+    base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+    mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
+    for index, (item, row) in enumerate(pairs):
         decision = decisions.get(str(row.id))
         values = _apply_soldout_targets(
-            _apply_decisions(_analysis_values(item, masters, unit_ids, work_ids), item, decision, canonicals), item, decision, canonicals, excluded_ids
+            _apply_decisions(_with_unit_price_reason(base_values[index], index in mismatches), item, decision, canonicals),
+            item, decision, canonicals, excluded_ids,
         )
         result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
