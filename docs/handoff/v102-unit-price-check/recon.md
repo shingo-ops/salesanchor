@@ -17,7 +17,10 @@
 - 置き換え試験（v102-unit-price-check/）: 規則A（相場の3倍超かつ別単位が近い）で2件、規則B（別単位の相場が無い時、相場の5倍以上の高い側）で4件。原文で全て当たり。規則Bを安い側にも使うと、汚れた相場で空振り3件 → 高い側だけ。
 
 ## 人の判断
-- v102 の人の判断（backend/app/services/v102_human_decisions_svc.py:29-45）に単位の直しは無い。review_ack（このままで良い）で理由を外せる。
+- v102 の人の判断（backend/app/services/v102_human_decisions_svc.py:29-45）に単位の直しは無い。review_ack（このままで良い）で理由を外せる。外せない理由は backend/app/services/review_reason_codes_svc.py:17 の NON_ACKABLE_REASON_CODES（condition_unknown だけ）。
+
+## 保存の流れ（origin/main 9762c9f3f）
+- 値と理由: backend/app/services/line_analysis_v102_svc.py:564-593 _analysis_values（needs_review と review_reasons は :580・:591）。書き込み: backend/app/services/line_analysis_v102_svc.py:750-783 _write_results。1ジョブ分の相場はこのループの前で1回の SQL。
 
 ## 設定の置き場所
-- 解析用の key/value 設定表は無い。public.tcg_distribution_settings（key, value, note）に key を足す（配信設定の画面にも並ぶ）。
+- 解析用の key/value 設定表は無い。public.tcg_distribution_settings（key, value, note）に key を足す。読む口 backend/app/services/tcg_distribution_svc.py:178、配信設定の画面の一覧 backend/app/services/tcg_distribution_svc.py:661 にも並ぶ。

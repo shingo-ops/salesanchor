@@ -1,6 +1,6 @@
 # design: 単位と価格が相場と合わない件を要確認にする（便UP）
 
-参照: docs/handoff/v102-unit-price-check/recon.md、docs/handoff/v102-unit-price-check/card-UP.md、ADR-1007。
+参照: docs/handoff/v102-unit-price-check/recon.md、docs/handoff/v102-unit-price-check/card-UP.md、ADR-1007、ADR-027（画面の文字は ja/en の reviewReason）。
 
 ## 1. 目的（PO の言葉、2026-10-11）
 - 「ケースとシュリンク付きの価格は少なく見積もっても5倍以上開きが出る、パックに関しても同様にシュリンク付きより5割は安くなる」
