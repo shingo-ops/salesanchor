@@ -708,9 +708,8 @@ def _apply_soldout_targets(
     canonical = canonicals.get(condition_id)
     if canonical is None:
         return values
-    overwritten = {
-        **values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": item.get("soldout_target_basis") or CONDITION_BASIS_SOLDOUT_REF,
-    }
+    basis = item.get("soldout_target_basis") or CONDITION_BASIS_SOLDOUT_REF
+    overwritten = {**values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": basis}
     if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
         return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
     remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]

@@ -418,6 +418,50 @@ def test_other_channel_posts_are_not_returned(pg, channel):
     assert _load(pg, job) == ()
 
 
+def _add_result(connection, job_id: str, index: int, product_id: int, condition_id: int, canonical: str, status: str, *, resolved: bool = True):
+    """job に件と解析結果を1つ直接入れる（status・condition_canonical・pid_resolved を指定）。"""
+    item_id = str(uuid4())
+    with connection.cursor() as cur:
+        cur.execute(
+            f"""INSERT INTO {SCHEMA}.extraction_items (id,extraction_job_id,line_start,line_end,source_lines,gemini_index,created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,now())""",
+            (item_id, job_id, index + 1, index + 1, [index + 1], index),
+        )
+        cur.execute(
+            f"""INSERT INTO {SCHEMA}.analysis_results
+                (id,extraction_item_id,product_id,pid_resolved,unit_resolved,condition_id,condition_canonical,status,needs_review,engine_version,computed_at)
+                VALUES (%s,%s,%s,%s,false,%s,%s,%s,false,'test',now())""",
+            (str(uuid4()), item_id, product_id, resolved, condition_id, canonical, status),
+        )
+
+
+def test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_resolved_products(pg, channel):
+    with pg[0].cursor() as cur:
+        cur.execute("SELECT id FROM public.products ORDER BY id LIMIT 2")
+        p1, p2 = (r[0] for r in cur.fetchall())
+        cur.execute("SELECT id, canonical FROM public.conditions WHERE canonical IN ('Sealed box','Case')")
+        cond = {r[1]: r[0] for r in cur.fetchall()}
+    box, case = cond["Sealed box"], cond["Case"]
+    post = _insert(pg[0], channel, "前", T0 - timedelta(hours=2))
+    with pg[0].cursor() as cur:
+        cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now() - interval '1 hour')", (str(uuid4()), post))
+    old_job_id = None
+    with pg[0].cursor() as cur:
+        cur.execute(f"SELECT id FROM {SCHEMA}.extraction_jobs WHERE source_message_id=%s", (post,))
+        old_job_id = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now())", (str(uuid4()), post))
+        cur.execute(f"SELECT id FROM {SCHEMA}.extraction_jobs WHERE source_message_id=%s ORDER BY created_at DESC LIMIT 1", (post,))
+        latest_job_id = cur.fetchone()[0]
+    _add_result(pg[0], old_job_id, 0, p2, case, "Case", "Sold out")  # 古い job の件は読まない
+    _add_result(pg[0], latest_job_id, 0, p1, case, "Case", "Sold out")
+    _add_result(pg[0], latest_job_id, 1, p1, box, "Sealed box", "In Stock")
+    _add_result(pg[0], latest_job_id, 2, p2, box, "Sealed box", "Sold out", resolved=False)  # 商品が決まっていない件は読まない
+    job = _job(pg[0], _insert(pg[0], channel, "今", T0))
+    (loaded,) = _load(pg, job)
+    assert loaded.sold_items == (sr.SoldItem(p1, "Case"),)
+    assert [(it.product_id, it.condition_canonical) for it in loaded.stock_items] == [(p1, "Sealed box")]
+
+
 def test_unknown_job_returns_empty(pg):
     assert _load(pg, str(uuid4())) == ()
 
