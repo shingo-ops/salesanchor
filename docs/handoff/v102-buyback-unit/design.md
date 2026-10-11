@@ -12,7 +12,7 @@
 | v102 の保存（line_analysis_v102_svc._write_results） | 単位・状態の語が無い件は既定（箱系なら Sealed box/Box） | 単位・状態の語が無く商品が特定済みで価格がある件は、価格÷同じ商品の買取 BOX 中央値 r で、0.5≤r<2 → Sealed box/Box、r≥6 → Case/Case。今と違う時だけ書き換え、basis "BUYBACK:<状態> r=<比>"、unit_unknown・condition_unknown を外す |
 | 買取の物差し | なし | 結び付き済み・BOX/BOX_SHRINK・last_seen_at が設定日数以内・店ごとの最新 price_s の中央値。1ジョブ1回の SQL、失敗は SAVEPOINT で飛ばす |
 | 設定 | なし | tcg_distribution_settings に unit_buyback_box_min=0.5・box_max=2・case_min=6・max_age_days=7。無い・不正なら何もしない |
-| 対象外 | | 単位や状態の語がある件、人が状態を決めた件、〆（excluded）の件、パック |
+| 対象外 | （変更なし） | 単位や状態の語がある件、人が状態を決めた件、〆（excluded）の件、パック |
 
 ## 3. 受入条件
 | 基準 | 検証方法 |
