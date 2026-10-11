@@ -211,7 +211,10 @@ def apply_buyback_units(
         if decided is None:
             continue
         code, ratio = decided
-        replaced = with_decision(base_values[i], targets[code], ratio, unit_ids)
+        target = targets[code]
+        if (base_values[i]["condition_canonical"], base_values[i]["unit_canonical"]) == (target.condition, target.unit):
+            continue  # 今の状態・単位と同じなら何も書かない（condition_basis は他の処理が読むので、値が変わらない件では変えない）
+        replaced = with_decision(base_values[i], target, ratio, unit_ids)
         if replaced is not None:
             out[i] = replaced
     return out

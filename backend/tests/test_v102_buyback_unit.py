@@ -110,6 +110,19 @@ def test_unit_word_or_condition_word_means_no_change():
     assert _apply([{"condition_basis": UNKNOWN_BASIS}], [values])[0] == values  # unit_basis が無い
 
 
+def test_same_condition_and_unit_writes_nothing():
+    same_box = _values(10000, condition_canonical="Sealed box", unit_canonical="Box", condition_basis=WORDLESS_BASIS, review_reasons="quantity_unresolved")
+    assert _apply([_item(basis=WORDLESS_BASIS)], [same_box])[0] == same_box  # basis も理由も変えない
+    same_case = _values(120000, condition_canonical="Case", unit_canonical="Case", condition_basis="R4:単位既定", review_reasons=None, needs_review=False)
+    assert _apply([_item(basis="R4:単位既定")], [same_case])[0] == same_case
+
+
+def test_buyback_basis_is_not_a_word_decision_for_soldout_inherit():
+    from app.services.gemini_raw_copy_v102_soldout_ref import condition_decided_by_word  # noqa: PLC0415
+
+    assert condition_decided_by_word("BUYBACK:Case r=12.49") is False
+
+
 def test_box_product_default_basis_is_also_wordless():
     out = _apply([_item(basis=WORDLESS_BASIS)], [_values(120000)])[0]
     assert out["condition_canonical"] == "Case"
