@@ -1,6 +1,7 @@
 """試作版 v102：〆（完売）の件の商品を、同じ仕入元の過去48時間の投稿の在庫の行から決める（純粋関数。DB を持たない）。
 
-規則は docs/handoff/v102-shime-inventory-ref/design.md §2（規則1〜7）と docs/handoff/v102-shime-multi-targets/design.md §2（規則8〜11）。
+規則は docs/handoff/v102-shime-inventory-ref/design.md §2（規則1〜7）と docs/handoff/v102-shime-multi-targets/design.md §2（規則8〜11）、
+docs/handoff/v102-shime-direct-inherit/design.md §2（規則12a〜12e）と docs/handoff/v102-shime-inherit-unit-priority/design.md §2（規則12f）。
 過去の投稿を読む処理（同じ仕入元・48時間以内）は line_analysis_v102_svc.load_soldout_ref_posts が持つ。
 語の取り出しと当て方は gemini_raw_copy_v102_followup（#4090）と同じ部品を使う。
 """
@@ -351,13 +352,20 @@ def _shime_condition(item: Mapping[str, Any]) -> str:
     return FLAG_SINGLE_CANONICAL if not cond or cond.lower() == NONE_VALUE else cond
 
 
+def _has_unit_word(item: Mapping[str, Any]) -> bool:
+    """規則12f：件の行に単位語がある（unit_basis の alias が None でなく、状態から決め直した from_condition が無い）。"""
+    basis = item.get("unit_basis")
+    return isinstance(basis, Mapping) and basis.get("alias") is not None and "from_condition" not in basis
+
+
 def _is_inherit_candidate(item: Mapping[str, Any], index: int, fixed_products: Mapping[int, int] | None) -> bool:
-    """規則12a・12b・12c：完売で、商品が直接決まり、まだ相手が無く、人の判断でなく、状態が語で決まっていない件。"""
+    """規則12a・12b・12c・12f：完売で、商品が直接決まり、まだ相手が無く、人の判断でなく、状態が語・単位語で決まっていない件。"""
     return (
         item.get("status_effect") == _EXCLUDED and item.get("status") == SOLD_OUT_STATUS
         and item.get("match_status") in _DIRECT_MATCH_STATUSES and item.get("product_id") is not None
         and not item.get("soldout_targets") and index not in (fixed_products or {})
         and not condition_decided_by_word(item.get("condition_basis"))
+        and not _has_unit_word(item)  # 12f：単位語があれば、その単位から決まった〆の件の状態を優先する
     )
 
 
