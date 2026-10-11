@@ -73,6 +73,7 @@ _SHIP_RE = re.compile(r"発送|出荷|入荷|発売|着")
 _STOCK_START_RE = re.compile(r"^(?:残り|在庫|数量|単価)")
 _SYMBOL_ONLY_RE = re.compile(r"[\W_]+")
 _PRICE_SHAPE_RE = re.compile(r"[¥@]\s*¥?\d|\d[\d,]*\s*円")
+_YEN_MARKS_RE = re.compile(r"[円¥￥]")
 _BARE_NUMBER_RE = re.compile(r"\d[\d,]{3,}")
 _YEAR_RE = re.compile(r"(?:19|20)\d\d")
 _DIGITS = "0-9"
@@ -149,15 +150,31 @@ def _first_line_containing(numbers: list[int], lines: list[str], needle: str) ->
     return next((n for n in numbers if squashed in _squash(lines[n - 1])), None)
 
 
-def _priced_line(numbers: list[int], lines: list[str], price: str, *, half_width_slash: bool = False) -> int | None:
+def _first_line_with_number(numbers: list[int], lines: list[str], needle: str) -> int | None:
+    """needle を、前後が数字・桁区切りでない形で含む最初の行（円・¥ を除いた探し直し用）。"""
+    squashed = _squash(needle)
+    if not squashed:
+        return None
+    pattern = re.compile(rf"(?<![\d,]){re.escape(squashed)}(?!\d|,\d)")
+    return next((n for n in numbers if pattern.search(_squash(lines[n - 1]))), None)
+
+
+def _priced_line(
+    numbers: list[int], lines: list[str], price: str, *, half_width_slash: bool = False, yen_free: bool = False,
+) -> int | None:
     """price の文字を含む最初の行。「／」でつないだときは、つないだ形が無ければ最初の価格で探す。
 
     half_width_slash（試作版 v102 の keep_rejected のとき）は、半角「/」でつないだときも同じに探す。
+    yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す（前後が数字・桁区切りでないときだけ）。
     """
     found = _first_line_containing(numbers, lines, price)
     separators = "／/" if half_width_slash else "／"
     if found is None and any(sep in price for sep in separators):
         found = _first_line_containing(numbers, lines, re.split(f"[{separators}]", price)[0])
+    if found is None and yen_free:
+        stripped = _YEN_MARKS_RE.sub("", price).strip()
+        if stripped and stripped != price:
+            found = _first_line_with_number(numbers, lines, stripped)
     return found
 
 
@@ -177,9 +194,10 @@ def _is_sold_out(text: str, status_entries: list[dict] | None) -> bool:
 
 def _price_line(
     obj: dict, numbers: list[int], lines: list[str], status_entries: list[dict] | None, *, half_width_slash: bool = False,
+    yen_free: bool = False,
 ) -> int | None:
     if obj["price"].strip().lower() != _NONE:
-        return _priced_line(numbers, lines, obj["price"], half_width_slash=half_width_slash)
+        return _priced_line(numbers, lines, obj["price"], half_width_slash=half_width_slash, yen_free=yen_free)
     return _unpriced_line(numbers, lines, obj["quantity"].strip(), status_entries)
 
 
@@ -228,7 +246,7 @@ def parse_v101_response(
             rejected.append(_rejected_entry(REJECTED_SHAPE, index, obj, reason, len(lines)))
             continue
         numbers = sorted(set(obj["lines"]))
-        price_line = _price_line(obj, numbers, lines, status_entries, half_width_slash=keep_rejected)
+        price_line = _price_line(obj, numbers, lines, status_entries, half_width_slash=keep_rejected, yen_free=keep_rejected)
         if price_line is None:
             errors.append({"index": index, "error": "価格の行が見つからない", "item": obj})
             rejected.append(_rejected_entry(REJECTED_PRICE, index, obj, "価格の行が見つからない", len(lines)))

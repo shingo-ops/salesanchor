@@ -36,7 +36,8 @@
 | 試作版：黙って消える件を要確認に | #4039 | 落とした件を結果に残し、印・単位なし・分類「不明」を要確認の理由にする。半角「/」の価格の不具合を直す | [v102-no-silent-drop](../../handoff/v102-no-silent-drop/) |
 | 道具：指示書を DB から読む | #4030 | --prompt-key。新しい指示書は public.extraction_prompt_config にだけ置く | [prompt-ab-db-source](../../handoff/prompt-ab-db-source/) |
 | 道具：試作版の既定の指示書を f_c に | （この PR） | --config v102 で名前・key なしのとき DB の key raw_copy_v101_f_c を読む | [prototype-default-prompt-fc](../../handoff/prototype-default-prompt-fc/) |
-| 本番・試作版の既定の指示書を f_ct に | （この PR） | DB の key `raw_copy_v101_f_ct`（本文の sha256 fe50593fa362da213e33663f85110381a6f3f97465553443e87ae0f0df8515fd）。engine_version は v102-f_ct。〆だけの投稿を件にする（PO 2026-10-11「切り替える」） | [v102-prompt-fct](../../handoff/v102-prompt-fct/) |
+| 本番・試作版の既定の指示書を f_ct に | #4128 | DB の key `raw_copy_v101_f_ct`（本文の sha256 fe50593fa362da213e33663f85110381a6f3f97465553443e87ae0f0df8515fd）。engine_version は v102-f_ct。〆だけの投稿を件にする（PO 2026-10-11「切り替える」） | [v102-prompt-fct](../../handoff/v102-prompt-fct/) |
+| v102：価格の行の探し直しに円・¥・￥を除いた形 | （この PR） | 価格の写しに「円」が付き原文に無いとき、除いた形でも探す（v102 のみ・見つからないときだけ）。保存済み応答 1,021 回で落ちる件 48→4、期待外の違い 0 | [v102-price-line-yen-retry](../../handoff/v102-price-line-yen-retry/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 
