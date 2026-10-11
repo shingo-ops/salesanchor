@@ -230,7 +230,7 @@ async def test_run_distribution_proceeds_when_no_pending_runs():
 
     with patch(
         "app.services.tcg_distribution_svc.load_distribution_settings",
-        new=AsyncMock(return_value={"include_flag_single": "false"}),
+        new=AsyncMock(return_value={"include_flag_single": "false", "max_age_hours": "48"}),
     ), patch(
         "app.services.tcg_distribution_svc.fetch_output_rows",
         new=AsyncMock(return_value=[]),
@@ -243,6 +243,86 @@ async def test_run_distribution_proceeds_when_no_pending_runs():
     # アクティブな配信先なし → errors に「配信先なし」エラーが入るが、#8 ではない
     assert result["output_count"] == 0
     assert all("再解析未完了" not in e["error"] for e in result["errors"])
+
+
+# ---------------------------------------------------------------------------
+# A-9. max_age_hours（便AGE）: 設定が無い時は配信しない・読み口は1か所
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("settings", "expected"),
+    [
+        ({}, None),
+        ({"max_age_hours": ""}, None),
+        ({"max_age_hours": "abc"}, None),
+        ({"max_age_hours": "1.5"}, None),
+        ({"max_age_hours": "-1"}, None),
+        ({"max_age_hours": "0"}, 0),
+        ({"max_age_hours": " 12 "}, 12),
+        ({"max_age_hours": "72"}, 72),
+    ],
+)
+def test_max_age_hours_reader(settings, expected):
+    from app.services.tcg_distribution_svc import _max_age_hours
+
+    assert _max_age_hours(settings) == expected
+
+
+def test_age_window_zero_or_none_is_unbounded_and_positive_binds():
+    from app.services.tcg_distribution_svc import _age_window
+
+    assert _age_window(None) == ("", {})
+    assert _age_window(0) == ("", {})
+    fragment, bind = _age_window(24)
+    assert "sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)" in fragment
+    assert bind == {"max_age_hours": 24}
+
+
+@pytest.mark.parametrize("settings", [{}, {"max_age_hours": "x"}, {"max_age_hours": "-3"}])
+async def test_run_distribution_does_not_distribute_without_max_age_hours(settings):
+    from app.services.tcg_distribution_svc import MAX_AGE_UNSET_MESSAGE, run_distribution
+
+    mock_result_empty = MagicMock()
+    mock_result_empty.mappings.return_value.all.return_value = []
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=mock_result_empty)
+    fetch = AsyncMock(return_value=[["row"]])
+
+    with patch(
+        "app.services.tcg_distribution_svc.load_distribution_settings",
+        new=AsyncMock(return_value=settings),
+    ), patch("app.services.tcg_distribution_svc.fetch_output_rows", new=fetch):
+        result = await run_distribution(db)
+
+    fetch.assert_not_called()
+    assert result["output_count"] == 0 and result["results"] == []
+    assert result["errors"] == [{"target_id": None, "error": MAX_AGE_UNSET_MESSAGE}]
+
+
+async def test_fetch_preview_data_raises_without_max_age_hours():
+    from app.services.tcg_distribution_svc import MaxAgeHoursUnsetError, fetch_preview_data
+
+    db = AsyncMock()
+    with patch(
+        "app.services.tcg_distribution_svc.load_distribution_settings",
+        new=AsyncMock(return_value={"include_flag_single": "false"}),
+    ), pytest.raises(MaxAgeHoursUnsetError):
+        await fetch_preview_data(db)
+    db.execute.assert_not_called()
+
+
+async def test_preview_returns_409_without_max_age_hours(super_admin_override):
+    from app.services.tcg_distribution_svc import MAX_AGE_UNSET_MESSAGE, MaxAgeHoursUnsetError
+
+    with patch(
+        "app.routers.tcg_distribution.svc.fetch_preview_data",
+        new=AsyncMock(side_effect=MaxAgeHoursUnsetError(MAX_AGE_UNSET_MESSAGE)),
+    ):
+        async with await _client() as c:
+            r = await c.get("/api/v1/tcg/distribution/preview")
+    assert r.status_code == 409
+    assert r.json()["detail"] == MAX_AGE_UNSET_MESSAGE
 
 
 # ---------------------------------------------------------------------------
