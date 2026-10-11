@@ -494,3 +494,146 @@ def test_condition_not_decided_by_word_with_one_state_keeps_the_target():
     post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(sr.StockItem(frozenset({1}), 62, _COND_A, _BOX),))
     for plural in (False, True):
         assert _pairs(_decide_with_condition("FLAG_SINGLE", "R4:単位既定:単位不明", plural=plural, post=post)) == [(62, _COND_A)]
+
+
+# --- 規則12：商品名を書いた〆が、前の在庫の取り残された状態を引き継ぐ（便3）----------------------------------
+
+
+def _inherit_si(lines, product_id: int, condition_id: int, canonical: str) -> sr.StockItem:
+    return sr.StockItem(frozenset(lines), product_id, condition_id, canonical)
+
+
+def _shime(**extra) -> dict:
+    """商品名を書いた〆の件（62 に決まり、状態は単位の既定）。"""
+    return {
+        "status_effect": "excluded", "status": "Sold out", "match_status": "matched", "product_id": 62,
+        "condition": "Sealed box", "condition_basis": "R4:単位既定", **extra,
+    }
+
+
+_CASE_STOCK = _inherit_si([1], 62, 21, "Case")
+_BOX_STOCK = _inherit_si([2], 62, 22, "Sealed box")
+
+
+def _inherit(items, posts, fixed=None):
+    return sr.decide_soldout_inherit(items, posts, fixed)
+
+
+def test_inherit_takes_the_only_stranded_condition_of_the_product():
+    post = _post("p1", "x", stock_items=(_inherit_si([3, 4], 62, 21, "Case"),))
+    got = _inherit([_shime()], (post,))
+    assert got == {0: sr.SoldoutTarget(62, 21, "p1", 3, "Case")}
+
+
+@pytest.mark.parametrize("effect,status", [("excluded", "In Stock"), (None, "Sold out"), ("", "Sold out")])
+def test_inherit_requires_a_soldout_row_12a(effect, status):
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    assert _inherit([_shime(status_effect=effect, status=status)], (post,)) == {}
+
+
+@pytest.mark.parametrize("extra", [
+    {"match_status": "unmatched"}, {"match_status": "ambiguous"}, {"product_id": None},
+    {"soldout_targets": [{"product_id": 62, "condition_id": 21, "ref_message_id": "p1", "ref_line": 1}]},
+])
+def test_inherit_requires_a_directly_decided_product_12b(extra):
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    assert _inherit([_shime(**extra)], (post,)) == {}
+
+
+def test_inherit_accepts_matched_context_and_matched_followup():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    for status in ("matched_context", "matched_followup"):
+        assert list(_inherit([_shime(match_status=status)], (post,))) == [0]
+
+
+def test_inherit_skips_a_human_decided_product_12b():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    assert _inherit([_shime()], (post,), {0: 62}) == {}
+
+
+def test_inherit_skips_when_the_condition_was_decided_by_a_word_12c():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    assert _inherit([_shime(condition_basis="R2:ボックス")], (post,)) == {}
+
+
+def test_inherit_does_not_touch_the_soldout_ref_rows_of_the_earlier_stage():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    item = _shime(match_status="matched_soldout_ref")
+    assert _inherit([item], (post,)) == {}
+
+
+def test_inherit_skips_when_a_stock_of_the_same_condition_exists_before_12d_box_shime_with_pack_stock():
+    post = _post("p1", "x", stock_items=(_BOX_STOCK, _CASE_STOCK))
+    assert _inherit([_shime()], (post,)) == {}
+
+
+def test_inherit_12d_shrink_variant_shime_with_other_shrink_stock():
+    # 〆「シュリあり」の在庫が前にある → シュリなしの在庫は引き継がない
+    stock = (_inherit_si([1], 62, 31, "Sealed box"), _inherit_si([2], 62, 32, "No shrink box"))
+    assert _inherit([_shime(condition="Sealed box")], (_post("p1", "x", stock_items=stock),)) == {}
+
+
+@pytest.mark.parametrize("cond", ["none", "", None])
+def test_inherit_treats_an_unresolved_condition_as_flag_single(cond):
+    flag = _inherit_si([1], 62, 41, "FLAG_SINGLE")
+    case = _inherit_si([2], 62, 21, "Case")
+    post = _post("p1", "x", stock_items=(flag, case))
+    assert _inherit([_shime(condition=cond)], (post,)) == {}  # FLAG_SINGLE の在庫が前にある
+    only_case = _post("p1", "x", stock_items=(case,))
+    assert list(_inherit([_shime(condition=cond)], (only_case,))) == [0]
+
+
+def test_inherit_does_not_decide_when_two_conditions_are_stranded_12e():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK, _inherit_si([2], 62, 23, "Pack")))
+    assert _inherit([_shime()], (post,)) == {}
+
+
+def test_inherit_ignores_stock_of_other_products():
+    post = _post("p1", "x", stock_items=(_inherit_si([1], 63, 21, "Case"),))
+    assert _inherit([_shime()], (post,)) == {}
+
+
+def test_condition_with_a_newer_soldout_row_is_not_stranded():
+    older = _post("old", "x", 5, stock_items=(_CASE_STOCK,))
+    newer = _post("new", "x", 1, stock_items=(), )
+    newer = dataclasses.replace(newer, sold_items=(sr.SoldItem(62, "Case"),))
+    assert _inherit([_shime()], (newer, older)) == {}
+
+
+def test_condition_with_a_newer_stock_row_uses_the_newer_post_as_reference():
+    older = _post("old", "x", 5, stock_items=(_inherit_si([1], 62, 21, "Case"),))
+    newer = _post("new", "x", 1, stock_items=(_inherit_si([5, 6], 62, 21, "Case"),))
+    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 5, "Case")}
+
+
+def test_a_condition_sold_in_the_newer_post_while_another_is_still_stranded():
+    older = _post("old", "x", 5, stock_items=(_CASE_STOCK, _inherit_si([2], 62, 23, "Pack")))
+    newer = dataclasses.replace(_post("new", "x", 1), sold_items=(sr.SoldItem(62, "Pack"),))
+    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "old", 1, "Case")}
+
+
+def test_inherit_does_not_mutate_the_input():
+    item = _shime()
+    snapshot = dict(item)
+    _inherit([item], (_post("p1", "x", stock_items=(_CASE_STOCK,)),))
+    assert item == snapshot
+
+
+def test_extract_puts_the_inherit_target_and_basis_on_the_soldout_row():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_inherit_si([1], 62, 21, "Case"),))
+    row = _extract("ふぁいぶ ABC-123 〆", (post,))[0]
+    assert (row["match_status"], row["product_id"]) == ("matched", 62)
+    assert row["soldout_targets"] == [{"product_id": 62, "condition_id": 21, "ref_message_id": "p1", "ref_line": 1}]
+    assert row["soldout_target_basis"] == "SOLDOUT_INHERIT"
+
+
+def test_extract_leaves_a_soldout_ref_row_unchanged_by_the_inherit_stage():
+    post = _post("p1", STOCK, stock_items=(_si([1], 62),))
+    row = _extract("ABC-123 〆", (post,))[0]
+    assert row["match_status"] == "matched_soldout_ref" and "soldout_target_basis" not in row
+
+
+def test_extract_does_not_inherit_for_a_human_decided_product():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_inherit_si([1], 62, 21, "Case"),))
+    row = _extract("ふぁいぶ ABC-123 〆", (post,), fixed_products={0: 62})[0]
+    assert "soldout_targets" not in row

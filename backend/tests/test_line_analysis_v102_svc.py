@@ -523,3 +523,20 @@ def test_inheriting_an_undecided_flag_condition_keeps_the_review_reasons():
     out = svc._apply_soldout_targets(values, {**item, "soldout_targets": targets}, None, _CANONICALS)
     assert (out["condition_id"], out["condition_canonical"], out["condition_basis"]) == (18, "FLAG_SINGLE", "SOLDOUT_REF")  # 状態はそろえる
     assert (out["review_reasons"], out["needs_review"]) == (values["review_reasons"], values["needs_review"]) == ("condition_unknown,unit_unknown", True)
+
+
+def test_soldout_inherit_basis_is_written_when_the_item_carries_it():
+    item = _soldout_item(soldout_target_basis="SOLDOUT_INHERIT")
+    out = svc._apply_soldout_targets(_values(item), item, None, _CANONICALS)
+    assert out["condition_basis"] == "SOLDOUT_INHERIT"
+
+
+def test_soldout_ref_basis_stays_when_the_item_has_no_target_basis():
+    item = _soldout_item()
+    assert svc._apply_soldout_targets(_values(item), item, None, _CANONICALS)["condition_basis"] == "SOLDOUT_REF"
+
+
+def test_soldout_inherit_does_not_override_a_human_decision():
+    item = _soldout_item(soldout_target_basis="SOLDOUT_INHERIT")
+    values = _values(item)
+    assert svc._apply_soldout_targets(values, item, svc.Decisions(condition_id=18), _CANONICALS) is values
