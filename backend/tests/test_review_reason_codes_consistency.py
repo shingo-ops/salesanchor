@@ -51,7 +51,7 @@ def _code_side_constants() -> set[str]:
         product_first.REVIEW_PRODUCT_NOT_IN_MASTER, product_first.REVIEW_PRODUCT_MULTIPLE,
         # line_analysis_v102_svc.py
         v102.REASON_RESPONSE_UNREADABLE, v102.REASON_EXTRACT_EXCEPTION,
-        v102.REASON_VALUE_OUT_OF_RANGE, v102.REASON_ITEM_MAPPING_MISMATCH,
+        v102.REASON_VALUE_OUT_OF_RANGE, v102.REASON_ITEM_MAPPING_MISMATCH, v102.REASON_UNIT_PRICE_MISMATCH,
         # tcg_empty_box_rules.py
         *EMPTY_REASONS,
     }
