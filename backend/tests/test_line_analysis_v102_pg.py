@@ -41,6 +41,8 @@ def v102(pg, monkeypatch):  # noqa: F811
     sql = (MIGRATIONS / "20261009_180000_v102_engine_columns.sql").read_text(encoding="utf-8")
     with connection.cursor() as cur:
         cur.execute(sql.replace("public.extraction_", f"{SCHEMA}.extraction_"))
+        price_basis_sql = (MIGRATIONS / "20261011_150000_add_analysis_results_price_basis.sql").read_text(encoding="utf-8")
+        cur.execute(price_basis_sql.replace("public.analysis_results", f"{SCHEMA}.analysis_results"))
         cur.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN9001','BOX','箱系',true) RETURNING id")
         unit_id = cur.fetchone()[0]
         cur.execute("SELECT id, code, canonical, priority, app_kubun, search_kw, exclude_kw FROM public.conditions")
@@ -161,6 +163,18 @@ def test_k8_analysis_results_equal_the_prototype_for_the_same_response(pg, v102)
         assert (as_float(price), as_float(quantity)) == (as_float(item["price_normalized"]), as_float(item["quantity_normalized"]))
         assert (reasons, needs_review, engine) == (",".join(kinds) or None, bool(kinds), svc.V102_ENGINE_VERSION)
     assert rows[1][7] and "price_not_in_lines" in rows[1][7]  # 落とされた件も要確認として残る
+
+
+def test_price_basis_is_written_only_for_the_item_found_by_the_yen_free_retry(pg, v102):
+    # 1件目の価格は原文に円が無く、円を除いた探し直しで見つかる。2件目はそのまま見つかる
+    v102.response = json.dumps({"items": [ITEMS[0], ITEMS[2]]}, ensure_ascii=False)
+    _s, job = make_job(pg, "商品A\n3BOX@1,000\n商品B\n未開封 2BOX@2,000円")
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    rows = one(pg, f"""SELECT ei.gemini_index, ar.price_basis FROM {SCHEMA}.analysis_results ar
+        JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+        WHERE ei.extraction_job_id=%s ORDER BY ei.gemini_index""", (job,))
+    assert rows == [(0, "V102:yen_free"), (1, None)]
 
 
 def test_analysis_is_idempotent_and_keeps_extraction_items(pg, v102):

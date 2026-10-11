@@ -74,6 +74,7 @@ _STOCK_START_RE = re.compile(r"^(?:残り|在庫|数量|単価)")
 _SYMBOL_ONLY_RE = re.compile(r"[\W_]+")
 _PRICE_SHAPE_RE = re.compile(r"[¥@]\s*¥?\d|\d[\d,]*\s*円")
 _YEN_MARKS_RE = re.compile(r"[円¥￥]")
+PRICE_BASIS_YEN_FREE = "yen_free"  # 円・¥ を除いた探し直しで価格の行を見つけた件の印（v102。analysis_results.price_basis）
 _BARE_NUMBER_RE = re.compile(r"\d[\d,]{3,}")
 _YEAR_RE = re.compile(r"(?:19|20)\d\d")
 _DIGITS = "0-9"
@@ -161,11 +162,12 @@ def _first_line_with_number(numbers: list[int], lines: list[str], needle: str) -
 
 def _priced_line(
     numbers: list[int], lines: list[str], price: str, *, half_width_slash: bool = False, yen_free: bool = False,
-) -> int | None:
+) -> tuple[int | None, bool]:
     """price の文字を含む最初の行。「／」でつないだときは、つないだ形が無ければ最初の価格で探す。
 
     half_width_slash（試作版 v102 の keep_rejected のとき）は、半角「/」でつないだときも同じに探す。
     yen_free（試作版 v102 の keep_rejected のとき）は、見つからなければ円・¥・￥を除いた形でも探す（前後が数字・桁区切りでないときだけ）。
+    戻り値は (行番号, 円を除いた探し直しで見つけたか)。
     """
     found = _first_line_containing(numbers, lines, price)
     separators = "／/" if half_width_slash else "／"
@@ -175,7 +177,8 @@ def _priced_line(
         stripped = _YEN_MARKS_RE.sub("", price).strip()
         if stripped and stripped != price:
             found = _first_line_with_number(numbers, lines, stripped)
-    return found
+            return found, found is not None
+    return found, False
 
 
 def _unpriced_line(numbers: list[int], lines: list[str], quantity: str, status_entries: list[dict] | None) -> int:
@@ -195,10 +198,11 @@ def _is_sold_out(text: str, status_entries: list[dict] | None) -> bool:
 def _price_line(
     obj: dict, numbers: list[int], lines: list[str], status_entries: list[dict] | None, *, half_width_slash: bool = False,
     yen_free: bool = False,
-) -> int | None:
+) -> tuple[int | None, bool]:
+    """(価格の行, 円を除いた探し直しで見つけたか)。"""
     if obj["price"].strip().lower() != _NONE:
         return _priced_line(numbers, lines, obj["price"], half_width_slash=half_width_slash, yen_free=yen_free)
-    return _unpriced_line(numbers, lines, obj["quantity"].strip(), status_entries)
+    return _unpriced_line(numbers, lines, obj["quantity"].strip(), status_entries), False
 
 
 REJECTED_SHAPE, REJECTED_PRICE, REJECTED_DUPLICATE = "item_shape_invalid", "price_not_in_lines", "duplicate_price_line"
@@ -228,7 +232,8 @@ def parse_v101_response(
     status_entries は価格が none の件の price_line（売り切れの言葉の行）を決めるのに使う（無ければ使わない）。
     keep_rejected（試作版 v102）が True のときだけ、落とす件（形の違反・価格の行なし・価格の行が重複）を捨てずに、
     rejected・gemini_index などを付けて items の後ろに足し、半角「/」でつないだ価格も最初の価格で探す。
-    このとき受理した件にも gemini_index（応答の中の位置）を付ける（件の対応付け用。便G）。False のときの出力は変えない。
+    このとき受理した件にも gemini_index（応答の中の位置）を付ける（件の対応付け用。便G）。
+    円・¥ を除いた探し直しで価格の行を見つけた件だけ price_basis も付ける。False のときの出力は変えない。
     """
     lines = raw_text.split("\n")
     objs, whole_errors = v8._load_items(response_text)
@@ -246,7 +251,9 @@ def parse_v101_response(
             rejected.append(_rejected_entry(REJECTED_SHAPE, index, obj, reason, len(lines)))
             continue
         numbers = sorted(set(obj["lines"]))
-        price_line = _price_line(obj, numbers, lines, status_entries, half_width_slash=keep_rejected, yen_free=keep_rejected)
+        price_line, via_yen_free = _price_line(
+            obj, numbers, lines, status_entries, half_width_slash=keep_rejected, yen_free=keep_rejected,
+        )
         if price_line is None:
             errors.append({"index": index, "error": "価格の行が見つからない", "item": obj})
             rejected.append(_rejected_entry(REJECTED_PRICE, index, obj, "価格の行が見つからない", len(lines)))
@@ -258,7 +265,11 @@ def parse_v101_response(
             continue
         seen_price_lines.add(price_line)
         accepted = {"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line}
-        items.append({**accepted, "gemini_index": index} if keep_rejected else accepted)
+        if keep_rejected:
+            accepted = {**accepted, "gemini_index": index}
+            if via_yen_free:
+                accepted = {**accepted, "price_basis": PRICE_BASIS_YEN_FREE}
+        items.append(accepted)
     return ([*items, *rejected] if keep_rejected else items), errors
 
 
@@ -1341,6 +1352,8 @@ def _extract_v102(
         )
         if "gemini_index" in item:
             one = {**one, "gemini_index": item["gemini_index"]}
+        if "price_basis" in item:
+            one = {**one, "price_basis": item["price_basis"]}
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
             one = {**one, "quantity_normalized": None}

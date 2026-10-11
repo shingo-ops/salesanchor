@@ -948,6 +948,50 @@ def test_yen_free_retry_is_rejected_when_no_line_has_the_number_standing_alone()
     assert kept[0]["rejected"] == "price_not_in_lines"
 
 
+def test_yen_free_retry_marks_the_accepted_item_with_price_basis_yen_free():
+    # Arrange
+    raw = "商品A\n3BOX@1,000"
+    # Act
+    kept, _ = _parse_keep(raw, _it([1, 2], "1,000円", "3"))
+    # Assert
+    assert kept[0]["price_basis"] == "yen_free" == v101.PRICE_BASIS_YEN_FREE
+
+
+def test_price_found_as_written_and_the_old_parse_have_no_price_basis_key():
+    # Arrange
+    raw = "商品A\n3BOX@1,000円"
+    item = _it([1, 2], "1,000円", "3")
+    # Act
+    kept, _ = _parse_keep(raw, item)
+    old, _ = _parse(raw, item)
+    old_retry, _ = _parse("商品A\n3BOX@1,000", _it([1, 2], "1,000円", "3"))
+    # Assert
+    assert "price_basis" not in kept[0]
+    assert "price_basis" not in old[0]
+    assert old_retry == []  # v10.1 以前は探し直さないので、印の付く件も出ない
+
+
+def test_price_basis_survives_the_extraction_with_gemini_trust():
+    # Arrange
+    raw = "商品A\n3BOX@1,000\n商品B\n2BOX@2,000円"
+    # Act
+    out, _, _ = _extract_keep(
+        raw, _it([1, 2], "1,000円", "3"), _it([3, 4], "2,000円", "2"), reassign=False, gemini_trust=True
+    )
+    # Assert
+    assert out[0]["price_basis"] == "yen_free"
+    assert "price_basis" not in out[1]
+
+
+def test_item_dropped_after_the_yen_free_retry_fails_has_no_price_basis():
+    # Arrange
+    raw = "商品15BOX\n@25"
+    # Act
+    kept, _ = _parse_keep(raw, _it([1, 2], "5円", "1"))
+    # Assert
+    assert kept[0]["rejected"] == "price_not_in_lines" and "price_basis" not in kept[0]
+
+
 def test_unreadable_json_returns_the_whole_error_and_no_items_even_when_keeping():
     items, errors = v101.parse_v101_response("not json", "商品A", status_entries=_STATUS, keep_rejected=True)
     assert items == [] and len(errors) == 1

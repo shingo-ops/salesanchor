@@ -540,3 +540,25 @@ def test_soldout_inherit_does_not_override_a_human_decision():
     item = _soldout_item(soldout_target_basis="SOLDOUT_INHERIT")
     values = _values(item)
     assert svc._apply_soldout_targets(values, item, svc.Decisions(condition_id=18), _CANONICALS) is values
+
+
+def test_price_basis_is_v102_yen_free_with_the_mark_and_none_without_and_review_is_unchanged():
+    # 同じ件の2通り（印あり・なし）を比べる。印は needs_review・review_reasons に影響しない
+    base = {"unit": "BOX", "product_id": 42, "match_status": "matched", "review": [{"kind": "unit_unknown"}]}
+    marked = _values({**base, "price_basis": "yen_free"})
+    plain = _values(base)
+    assert marked["price_basis"] == "V102:yen_free" and plain["price_basis"] is None
+    assert (marked["needs_review"], marked["review_reasons"]) == (plain["needs_review"], plain["review_reasons"])
+    assert _values({**base, "price_basis": ""})["price_basis"] is None
+
+
+def test_price_basis_is_cut_to_the_column_width():
+    assert len(_values({"price_basis": "x" * 500})["price_basis"]) == svc._PRICE_BASIS_MAX
+
+
+def test_write_results_binds_price_basis_into_the_insert():
+    session = _write([{"unit": "BOX", "product_id": 42, "match_status": "matched", "price_basis": "yen_free"},
+                      {"unit": "BOX", "product_id": 42, "match_status": "matched"}])
+    first, second = _statements(session, "INSERT INTO public.analysis_results")
+    assert (first["price_basis"], second["price_basis"]) == ("V102:yen_free", None)
+    assert "price_basis = EXCLUDED.price_basis" in svc._UPSERT_SQL
