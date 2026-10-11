@@ -901,3 +901,6 @@ run_sql migrations/20261010_120000_create_analysis_soldout_extra_targets.sql
 
 # v102 価格の行の決め方の印 price_basis 列（構造のみ・冪等・ADR-1007）
 run_sql migrations/20261011_150000_add_analysis_results_price_basis.sql
+
+# extraction_jobs に v102 システム要確認の明細の列を足す（段1）
+run_sql migrations/20261012_100000_add_extraction_jobs_system_review_detail.sql
