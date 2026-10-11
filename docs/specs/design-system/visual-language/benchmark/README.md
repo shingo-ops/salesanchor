@@ -25,6 +25,29 @@
 | [whatsapp-ux-behavior.md](whatsapp-ux-behavior.md) | **操作感**（動き・速さ・画面のつながり） | — | — | — |
 | [whatsapp-color-structure.md](whatsapp-color-structure.md) | **配色の構造**（役割と面積比・明度差・SAへの写し方） | — | — | — |
 
+## PO 決定（2026-10-11）
+
+この観察メモを salesanchor に写すときの扱いについて、PO から次の4点の判断を受領した。実装は段階3以降で行う。
+
+| # | 決定 | 影響 |
+|---|---|---|
+| 1 | **Android の dp 値をそのまま CSS px として採用する**（76dp → 76px） | 既存の段に無い値（行の高さ76px・本文開始72px・行内上下余白15px）は**トークン追加の提案**として design.md に起案する（`design.md` §5 の手順） |
+| 2 | **吹き出しは PC と スマホ で分ける** | PC は既存の `--radius-bubble-out/in`（20.8px・Messenger由来）を維持。スマホは本メモの実測（角丸約10dp＋左上に7dp張り出す尾）を使う。画面幅による値の切替は親テーマ §C で重複違反に当たらない |
+| 3 | **一覧の区切り線は PC もスマホも「線なし」に統一する** | **ADR-064（Accepted）が `--inbox-separator #e4e6eb` で線を引いているため、ADR-064 の改訂起案が必要**。本PRでは決定の記録のみとし、改訂は別PRで起案する |
+| 4 | 残りの操作感（スクロール・キーボード）を先に取得する | 取得済み。[whatsapp-ux-behavior.md](whatsapp-ux-behavior.md) §2-3・§2-4 |
+
+## 先行ADRとの関係（重要）
+
+**[ADR-064「Inbox Meta Business Suite 完全再現レイアウト」（Accepted）**が既に存在し、受信箱は Meta の実測値で再現済み。担当範囲が違うため競合ではないが、照合すると差が出る。
+
+| 観点 | ADR-064 | 本メモ |
+|---|---|---|
+| 対象 | **Meta Business Suite の PC（web・3カラム）** | **WhatsApp / Meta Business Suite の スマホ（Android アプリ）** |
+| 単位 | CSS px | dp（PO決定1により px として採用） |
+| アバター | 48px | 直径48dp → **一致** |
+| 会話名 / 日付 | 15px / 13px | 文字枠 21.7dp / 16.3dp。一般的な行間から逆算して矛盾しないが、**フォントサイズ自体は測れていないため「一致」とは言えない** |
+| 区切り線 | `--inbox-separator #e4e6eb` で引く | **引いていない**（WhatsApp は隙間ゼロで連続、Meta は白のまま）→ PO決定3 |
+
 ## 測り方（4つを組み合わせる）
 
 1. **部品の構造データ**（`adb shell uiautomator dump`）: 部品の位置・大きさ・押せるか・アプリ内部の名札。**親子の座標の差から余白を計算**できるので、再現用の寸法はここから出す（[whatsapp-reproduction-spec.md](whatsapp-reproduction-spec.md)）。
