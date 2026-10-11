@@ -127,7 +127,7 @@ worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTR
 - 2026-10-11 の実測：マージ済み5部屋が「?? pr-body-*.md / ?? .pr-body-*.md」の1ファイルだけで保護されていた。手で照合し、手で削除済み。証拠：/tmp/CC報告ファイル/worktree-r9/inventory.tsv・delete.log。
 
 ### 新しい決まり
-- 変更A（チェック2a）：`git status --porcelain --untracked-files=all` を行ごとに見る。`.claude-pipeline/` を含む行は除外。「?? 」で始まり basename が `*pr-body*.md` の行は下書き候補。それ以外の行が1行でもあれば従来どおり UNSAVED=1。
+- 変更A（チェック2a）：`git status --porcelain --untracked-files=all` を行ごとに見る。`.claude-pipeline/` を含む行は除外。「?? 」で始まり basename が「*pr-body*.md」の形の行は下書き候補。それ以外の行が1行でもあれば従来どおり UNSAVED=1。
 - 下書き候補があり他に未保存が無いときだけ、次の全部を満たす場合に許容する（1つでも外れたら UNSAVED=1）。
   - ① main へのマージ済み PR の本文を取れる（`gh pr list --state merged --head <branch> --json baseRefName,body`。部屋ごとに1回。失敗・空は保護）
   - ② 下書きが空でない
