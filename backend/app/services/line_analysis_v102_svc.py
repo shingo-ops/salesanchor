@@ -1113,6 +1113,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         session.rollback()
         logger.exception("[line_analysis] v102 のシステム段が失敗しました: job=%s", extraction_job_id)
         _set_job_review_reasons(session, extraction_job_id, REASON_EXTRACT_EXCEPTION)
+        _set_job_review_detail(session, extraction_job_id, None)  # 古い明細を残さない
         session.commit()
         return empty_stats
     analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）

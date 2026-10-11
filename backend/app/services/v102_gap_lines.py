@@ -168,11 +168,12 @@ def _is_support_line(text: str, product_first: ProductFirstMasters) -> bool:
 def gap_name_candidates(
     sorted_items: Sequence[Mapping], lines: Sequence[str], product_first: ProductFirstMasters,
 ) -> list[dict]:
-    """T2（規則 H2）：件ごとに {gemini_index, support_lines, candidates}。件は gemini_index で示す。
+    """T2（規則 H2）：件ごとに {gemini_index, gap_lines, support_lines, candidates}。件は gemini_index で示す。
 
     gap・pre の行のまとまりの効く範囲は、直後の件から次のまとまりの直前の件まで。範囲の件のうち、
     価格と数量の写しがあり unmatched の件だけが対象。支えの行ごとに「支えの行＋件の各行」を照合し、
     候補の和集合を candidates にする（空なら候補なし）。support_lines は候補を出した支えの行。
+    gap_lines はその件に効くまとまりの間の行すべて（支えに使わなかった行も含む。候補なしでも行番号が残る）。
     """
     groups = _group_lines(classify_lines(sorted_items, lines))
     starts = sorted(groups)
@@ -191,6 +192,7 @@ def gap_name_candidates(
             union = frozenset().union(*per_line.values()) if per_line else frozenset()
             results.append({
                 "gemini_index": item.get("gemini_index"),
+                "gap_lines": list(groups[start]),
                 "support_lines": [n for n, found in per_line.items() if found],
                 "candidates": sorted(union),
             })
@@ -234,7 +236,8 @@ def to_stored_detail(detail: Mapping, item_id_by_index: Mapping[int, str]) -> di
             unmapped += 1
             continue
         mapped.append({
-            "extraction_item_id": str(item_id), "support_lines": list(entry["support_lines"]),
+            "extraction_item_id": str(item_id), "gap_lines": list(entry["gap_lines"]),
+            "support_lines": list(entry["support_lines"]),
             "candidates": list(entry["candidates"]),
         })
     return {

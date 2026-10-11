@@ -562,3 +562,43 @@ def test_write_results_binds_price_basis_into_the_insert():
     first, second = _statements(session, "INSERT INTO public.analysis_results")
     assert (first["price_basis"], second["price_basis"]) == ("V102:yen_free", None)
     assert "price_basis = EXCLUDED.price_basis" in svc._UPSERT_SQL
+
+
+# ---------------------------------------------------------------------------
+# system_review_detail（段1：間の行の検知の記録）
+# ---------------------------------------------------------------------------
+
+
+def test_set_job_review_detail_binds_json_text_or_null():
+    session = MagicMock()
+
+    svc._set_job_review_detail(session, "job1", {"v": 1, "unmapped": 0})
+    svc._set_job_review_detail(session, "job1", None)
+
+    first, second = (call.args[1] for call in session.execute.call_args_list)
+    assert json.loads(first["d"]) == {"v": 1, "unmapped": 0} and second["d"] is None
+    assert "system_review_detail = CAST(:d AS jsonb)" in str(session.execute.call_args_list[0].args[0])
+
+
+def test_analysis_failure_clears_system_review_detail_next_to_extract_exception(monkeypatch):
+    session = MagicMock()
+    session.execute.return_value.one.return_value = SimpleNamespace(gemini_unsure=None, review_reasons=None)
+    session.execute.return_value.fetchall.return_value = [
+        SimpleNamespace(id="item-0", gemini_index=0, source_lines=[1], raw_price="1,000円", raw_quantity="3")
+    ]
+    monkeypatch.setattr(task, "load_extraction_context", lambda _s, _j: _CTX)
+    monkeypatch.setattr(svc, "load_v102_masters", lambda _s: (_MASTERS, {}))
+    monkeypatch.setattr(svc, "load_v102_decisions", lambda _s, _ids: {})
+    monkeypatch.setattr(svc, "_fixed_products", lambda *_a: {})
+    monkeypatch.setattr(svc, "_load_resolved_pairs", lambda _s, _j: [])
+    monkeypatch.setattr(svc, "load_followup_reference", lambda _s, _j: None)
+    monkeypatch.setattr(svc, "load_soldout_ref_posts", lambda _s, _j: None)
+    monkeypatch.setattr(svc, "masters_with_followup", lambda masters, *_a: masters)
+    monkeypatch.setattr(svc, "run_v102_pipeline", MagicMock(side_effect=ValueError("boom")))
+    calls: list[tuple] = []
+    monkeypatch.setattr(svc, "_set_job_review_reasons", lambda _s, job, reasons: calls.append(("reasons", job, reasons)))
+    monkeypatch.setattr(svc, "_set_job_review_detail", lambda _s, job, detail: calls.append(("detail", job, detail)))
+
+    svc.run_v102_analysis(session, "job1")
+
+    assert calls == [("reasons", "job1", svc.REASON_EXTRACT_EXCEPTION), ("detail", "job1", None)]

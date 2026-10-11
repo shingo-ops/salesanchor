@@ -111,7 +111,7 @@ def test_t2_base_shop_type_matches_with_gap_line_and_item_lines_together():
 
     result = gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA")))
 
-    assert result == [{"gemini_index": 0, "support_lines": [1], "candidates": [1001]}]
+    assert result == [{"gemini_index": 0, "gap_lines": [1], "support_lines": [1], "candidates": [1001]}]
 
 
 def test_t2_effect_range_runs_to_the_item_before_the_next_group():
@@ -120,7 +120,7 @@ def test_t2_effect_range_runs_to_the_item_before_the_next_group():
 
     result = gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA")))
 
-    assert [(r["gemini_index"], r["candidates"]) for r in result] == [(0, [1001]), (1, [1001]), (2, [])]
+    assert [(r["gemini_index"], r["gap_lines"], r["candidates"]) for r in result] == [(0, [1], [1001]), (1, [1], [1001]), (2, [6], [])]
 
 
 def test_t2_a_line_that_matches_a_product_by_itself_is_not_used_as_support():
@@ -131,7 +131,7 @@ def test_t2_a_line_that_matches_a_product_by_itself_is_not_used_as_support():
 
     result = gap_name_candidates(accepted_items(items), lines, product_masters)
 
-    assert result == [{"gemini_index": 0, "support_lines": [], "candidates": []}]
+    assert result == [{"gemini_index": 0, "gap_lines": [1], "support_lines": [], "candidates": []}]
 
 
 def test_t2_does_not_run_for_a_matched_item_so_an_unpriced_stock_list_stays_quiet():
@@ -157,7 +157,7 @@ def test_t2_with_no_candidate_keeps_an_empty_candidate_list():
 
     result = gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA")))
 
-    assert result == [{"gemini_index": 0, "support_lines": [], "candidates": []}]
+    assert result == [{"gemini_index": 0, "gap_lines": [1], "support_lines": [], "candidates": []}]
 
 
 def test_t2_ambiguous_union_is_returned_sorted():
@@ -167,7 +167,7 @@ def test_t2_ambiguous_union_is_returned_sorted():
 
     result = gap_name_candidates(accepted_items(items), lines, product_masters)
 
-    assert result == [{"gemini_index": 0, "support_lines": [1], "candidates": [2001, 2002]}]
+    assert result == [{"gemini_index": 0, "gap_lines": [1], "support_lines": [1], "candidates": [2001, 2002]}]
 
 
 # --- 書く値 -----------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ def test_build_gap_detail_collects_post_review_t1_and_t2_without_any_text():
     assert detail == {
         "post_review": [{"kind": "possible_missing_item", "line": 4}, {"kind": "gemini_unsure_invalid", "line": 7}],
         "gap_price_qty": [],
-        "gap_name": [{"gemini_index": 0, "support_lines": [1], "candidates": [1001]}],
+        "gap_name": [{"gemini_index": 0, "gap_lines": [1], "support_lines": [1], "candidates": [1001]}],
     }
 
 
@@ -205,8 +205,8 @@ def test_to_stored_detail_replaces_gemini_index_with_item_id_and_counts_unmapped
         "post_review": [{"kind": "possible_missing_item", "line": 12}],
         "gap_price_qty": [{"line": 85}],
         "gap_name": [
-            {"gemini_index": 0, "support_lines": [31], "candidates": [440415]},
-            {"gemini_index": 5, "support_lines": [], "candidates": []},
+            {"gemini_index": 0, "gap_lines": [31, 32], "support_lines": [31], "candidates": [440415]},
+            {"gemini_index": 5, "gap_lines": [40], "support_lines": [], "candidates": []},
         ],
     }
 
@@ -216,7 +216,9 @@ def test_to_stored_detail_replaces_gemini_index_with_item_id_and_counts_unmapped
         "v": 1,
         "post_review": [{"kind": "possible_missing_item", "line": 12}],
         "gap_price_qty": [{"line": 85}],
-        "gap_name": [{"extraction_item_id": "item-uuid-0", "support_lines": [31], "candidates": [440415]}],
+        "gap_name": [
+            {"extraction_item_id": "item-uuid-0", "gap_lines": [31, 32], "support_lines": [31], "candidates": [440415]},
+        ],
         "unmapped": 1,
     }
 

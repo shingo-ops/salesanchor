@@ -200,6 +200,18 @@ def test_system_review_detail_is_written_by_the_analysis_and_overwritten_on_reru
     assert one(pg, query, (job,)) == [(expected,)]
 
 
+def test_system_review_detail_is_cleared_when_the_analysis_fails(pg, v102, monkeypatch):
+    v102.response = json.dumps({"items": GAP_ITEMS}, ensure_ascii=False)
+    _s, job = make_job(pg, GAP_RAW)
+    run_extraction(pg, job)
+    run_analysis(pg, job)
+    query = f"SELECT system_review_detail, review_reasons FROM {SCHEMA}.extraction_jobs WHERE id=%s"
+    assert one(pg, query, (job,))[0][0] is not None
+    monkeypatch.setattr(svc, "parse_v101_response", MagicMock(side_effect=ValueError("boom")))
+    run_analysis(pg, job)
+    assert one(pg, query, (job,)) == [(None, "extract_exception")]
+
+
 def test_analysis_is_idempotent_and_keeps_extraction_items(pg, v102):
     _s, job = make_job(pg)
     run_extraction(pg, job)
