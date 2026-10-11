@@ -26,7 +26,13 @@ public class RunReceiver extends BroadcastReceiver {
      */
     public static final String ACTION_EXPORT = "jp.salesanchor.lineexport.EXPORT";
 
-    /** 本番の形の起動口。ロック解除→成功したらLINE操作へ続ける。 */
+    /**
+     * 本番の形の起動口。ロック解除→成功したらLINE操作へ続ける。design.md追補 2026-10-11
+     * 「遮断モードを常時有効にし、再試行を3回にする（PO決定）」: この経路（armRetryOnFailure
+     * ==true）は常に遮断モードの帯で実行される（LineExportFlow#start参照）。検証用の起動口
+     * ACTION_RUN_ALL_BLOCKINGは常時有効化により不要になったため削除した（2つのやり方を
+     * 残さない）。
+     */
     public static final String ACTION_RUN_ALL = "jp.salesanchor.lineexport.RUN_ALL";
 
     @Override

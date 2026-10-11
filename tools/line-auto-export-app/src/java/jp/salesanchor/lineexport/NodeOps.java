@@ -50,14 +50,19 @@ final class NodeOps {
 
     /** clickNodeの結果。traceMessageはbounds中心へのgestureタップにフォールバックした場合のみ
      * 非null（元のUnlockAccessibilityService#clickNodeがtraceAppendしていた内容と同じ）。
-     * 呼び出し側でtraceAppend等に渡して既存の記録内容を保つ。 */
+     * 呼び出し側でtraceAppend等に渡して既存の記録内容を保つ。
+     * viaAction（design.md追補 2026-10-11で追加）: trueはクリック可能な祖先へACTION_CLICKを
+     * 委譲できた経路、falseはbounds中心へのgestureタップにフォールバックした経路。既存の
+     * 呼び出し元はこのフィールドを見ないため挙動は変わらない。 */
     static final class ClickResult {
         final boolean accepted;
         final String traceMessage;
+        final boolean viaAction;
 
-        ClickResult(boolean accepted, String traceMessage) {
+        ClickResult(boolean accepted, String traceMessage, boolean viaAction) {
             this.accepted = accepted;
             this.traceMessage = traceMessage;
+            this.viaAction = viaAction;
         }
     }
 
@@ -189,6 +194,67 @@ final class NodeOps {
         CharSequence desc = node.getContentDescription();
         return (text != null && label.contentEquals(text))
                 || (desc != null && label.contentEquals(desc));
+    }
+
+    /**
+     * ノードの text が引数 text に完全一致し、かつそのノードが属するウィンドウのルートの
+     * パッケージ名が packageName と一致するノードを探す（design.md追補 2026-10-11
+     * 「EDITをノードクリックにし、配信をダイアログの消滅で確認する」）。
+     *
+     * findNodeByLabel/matchesLabel（text または content-desc の完全一致、パッケージ名は
+     * 見ない・全ウィンドウ横断）は、LINE側に偶然同じラベルのノードがあった場合に誤って
+     * 一致しうる。Termuxの保存ダイアログのEDITボタンを探す用途ではその誤爆（LINE側の別
+     * ノードへの誤クリック）を避けるため、パッケージ名の確認を必須にした専用の探索メソッド
+     * を別途用意する（既存のfindNodeByLabel/matchesLabelの挙動は変えない）。content-descは
+     * 見ない（実機のEDITボタンはtextのみを持つ。design.md追補参照）。
+     */
+    static AccessibilityNodeInfo findNodeByTextInPackage(AccessibilityService service, String text,
+            String packageName) {
+        try {
+            List<AccessibilityWindowInfo> windows = service.getWindows();
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
+                    AccessibilityNodeInfo root = window.getRoot();
+                    CharSequence pkg = root != null ? root.getPackageName() : null;
+                    if (pkg == null || !packageName.contentEquals(pkg)) {
+                        continue;
+                    }
+                    AccessibilityNodeInfo match = searchNodeByTextExact(root, text);
+                    if (match != null) {
+                        return match;
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "getWindows() failed: " + e);
+        }
+        AccessibilityNodeInfo activeRoot = activeWindowRootExcludingSelf(service);
+        CharSequence activePkg = activeRoot != null ? activeRoot.getPackageName() : null;
+        if (activePkg != null && packageName.contentEquals(activePkg)) {
+            return searchNodeByTextExact(activeRoot, text);
+        }
+        return null;
+    }
+
+    private static AccessibilityNodeInfo searchNodeByTextExact(AccessibilityNodeInfo node, String text) {
+        if (node == null) {
+            return null;
+        }
+        CharSequence nodeText = node.getText();
+        if (nodeText != null && text.contentEquals(nodeText)) {
+            return node;
+        }
+        int count = node.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo match = searchNodeByTextExact(node.getChild(i), text);
+            if (match != null) {
+                return match;
+            }
+        }
+        return null;
     }
 
     /**
@@ -416,7 +482,7 @@ final class NodeOps {
             target = target.getParent();
         }
         if (target != null) {
-            return new ClickResult(target.performAction(AccessibilityNodeInfo.ACTION_CLICK), null);
+            return new ClickResult(target.performAction(AccessibilityNodeInfo.ACTION_CLICK), null, true);
         }
         // クリック可能な祖先が無い場合は、そのノード自身の座標へgestureタップ。
         Rect bounds = new Rect();
@@ -424,8 +490,8 @@ final class NodeOps {
         if (!bounds.isEmpty()) {
             GestureCompat.DispatchReport report = GestureCompat.tap(
                     service, bounds.exactCenterX(), bounds.exactCenterY(), 80L, "node-tap");
-            return new ClickResult(report.accepted, report.describe());
+            return new ClickResult(report.accepted, report.describe(), false);
         }
-        return new ClickResult(false, null);
+        return new ClickResult(false, null, false);
     }
 }

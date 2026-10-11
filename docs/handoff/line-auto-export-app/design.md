@@ -713,3 +713,191 @@ requestCode 2（通知引き金）のPendingIntentの実体は、15:48時点の 
 - 開始時の画面状態ごとの成否（実機ログ集計）:
   - 10-09: 消灯ロックで成功43・失敗1 ／ 点灯ロックで成功10・失敗1
   - 10-10: 消灯ロックで成功24・失敗20 ／ 点灯ロックで成功0・失敗3
+
+## 追補 2026-10-11 遮断モードの帯（検証用）
+
+### 目的
+
+使用中の衝突（3日間で33回、うち失敗5回＝失敗率15%。消灯からの1.5%の約10倍）を、見送りではなく「実行中は操作させない」で解決できるかを確かめる。PO方針は「取り込み優先」。
+
+### 確かめる事実
+
+全画面でタッチを消費する`TYPE_ACCESSIBILITY_OVERLAY`を出したとき、`dispatchGesture`のタップが帯に吸われるか。吸われるならこの方式は不可。
+
+### 実装
+
+`RunStatusOverlay.show(Context, boolean blocking)`に遮断モードを追加した。`blocking==false`（既定）は従来どおり上端の細い帯・`FLAG_NOT_TOUCHABLE`で、挙動を一切変えていない（PO決定B「安易に外さない」を維持）。`blocking==true`のときだけ、ルートを全画面`FrameLayout`にし、`FLAG_NOT_TOUCHABLE`を外し（`FLAG_NOT_FOCUSABLE`のみ）、`OnTouchListener`で常に`true`を返してすべてのタッチを消費する。背景は半透明（`0x66000000`）にして下のLINE画面を目視できるようにした。
+
+検証用の起動口は`RunReceiver`の新しいアクション`jp.salesanchor.lineexport.RUN_ALL_BLOCKING`で、「次の1回だけ帯を遮断モードにする」one-shotフラグ（`SchedulerStore.setBlockingOverlayOnce`/`consumeBlockingOverlayOnce`）を立てたあと、既存の`RUN_ALL`と**まったく同じ経路**（`UnlockAccessibilityService.requestRunAll(context, "RUN_ALL(遮断テスト)")`）で実行する。フラグは`LineExportFlow`が帯を出す直前に必ずconsumeする（読んだらfalseに戻る）ため、プロセスが死んでもフラグが残り続けない。通常実行（`RUN_ALL`等）はこのフラグを一切立てないため、`overlayBlocking`は必ずfalseになる。
+
+### 安全策
+
+右下の「停止」ボタン（非常口）＋フロー独立の60秒強制撤去タイマー。全画面でタッチを止める窓は、フローが死ぬと操作不能になり得るため、この2つは必須。
+
+- 「停止」ボタン: 遮断モードの帯の右下の隅に置く。押されると即座に帯を撤去し（`remove()`）、押されたことを`escapeTapped`フラグに記録する（`wasEscapeTapped()`で読める）。
+- 強制撤去タイマー: `show()`の中で`Handler#postDelayed`により`BLOCKING_AUTO_REMOVE_MS`（60秒）後に無条件で`remove()`する。`remove()`が先に呼ばれたら`removeCallbacks`で取り消す。フローが途中で死んでも操作不能が続かないようにするための保険。
+
+### 実行ログへの記録
+
+`export`の`phase:"end"`行に次を追加した（既存の`overlayShown`/`overlayRemoved`はそのまま残す）:
+- `overlayBlocking`: 遮断モードで出したときだけ`true`（通常は出さない）
+- `overlayEscapeTapped`: 遮断モードで、かつ利用者が「停止」を押したときだけ`true`（押されなければ出さない）
+
+### 通常実行への影響
+
+通常実行には影響しない（one-shotフラグ＋専用アクション`RUN_ALL_BLOCKING`経由のみ）。既存の帯（`RunStatusOverlay`の非遮断モード）はPO決定Bで「安易に外さない」と決まっているので、挙動を変えていない。
+
+## 追補 2026-10-11 EDITをノードクリックにし、配信をダイアログの消滅で確認する
+
+### 実測した事実（2026-10-11 `uiautomator dump`）
+
+Termuxの保存ダイアログは**アクセシビリティに公開されている**ことが実機で確認できた。
+
+```
+[TextView] text="Save file in ~/downloads/"   id=alertTitle
+[EditText] text="[LINE] …のトーク.txt"         clickable=true
+[Button]   text="EDIT"             clickable=true  id=button1  bounds=[777,1155][969,1317]
+[Button]   text="キャンセル"        clickable=true  id=button2
+[Button]   text="OPEN DIRECTORY"   clickable=true  id=button3
+```
+
+EDITは`clickable=true`。boundsの中心 (873,1236) は、既存の比率座標タップ（`EDIT_TAP_X_RATIO=0.8074`→1080幅で872px、`EDIT_TAP_Y_RATIO=0.5287`→2340高で1237px）の座標とほぼ一致していた。
+
+**過去の記録「Termuxの保存ダイアログのEDITボタンはuiautomatorに露出しない（2026-09-17、`/root/line-auto-export/auto-export.sh:13`のコメント・同日のスクリーンショットで確認、本書「追補 2026-10-08」2.参照）」は、今回（2026-10-11）の実測と一致しない。** 一致しない理由は不明（推測は書かない）。
+
+### 「成功と記録されたのに届いていない」事象の実測（2026-10-11 遮断モード検証）
+
+- **06:30**: 9段階すべて完走し、実行ログは`result:"success"`。しかしTermux側（`outbox.sqlite3`）に対応する`received`の記録が無い＝実際には送信が行われていない。
+- **06:32**: Termuxの保存ダイアログが開いたまま残っていた（EDITが押された形跡が無い）。
+
+`GestureCompat.tap`の`dispatchGesture`は戻り値が「OSがジェスチャを受理した」ことしか意味せず、実際に指の動きとして再生され、かつTermux側がそれを処理したかは別問題（本書「施錠前に待つ時間」の節と同じ非同期性の問題）。EDITタップでは、受理されたのに実際には押されず、ダイアログが残ったまま後続処理（成功記録・施錠）が進んでしまうケースがあることが実機で確認された。
+
+### 対処
+
+1. **EDITを「ノードのクリック」で優先的に押す**: `NodeOps.findNodeByTextInPackage(service, "EDIT", "com.termux")`でEDITボタンのノードを探す（text完全一致＋パッケージ名が`com.termux`であることを必須条件にした専用の探索メソッド。既存の`findNodeByLabel`/`matchesLabel`はtext/content-descのいずれかの完全一致でパッケージ名を見ないため、LINE側に偶然同じラベルのノードがあった場合の誤爆を避けるために新設した。既存メソッドの挙動は変えていない）。
+2. 見つかれば`NodeOps.clickNode`で押す（クリック可能な祖先が無ければノード領域中心への座標タップへフォールバック）。`NodeOps.ClickResult`に`viaAction`を追加し、`ACTION_CLICK`を委譲できたか（true）/bounds中心へのgestureタップにフォールバックしたか（false）を呼び出し側が区別できるようにした（既存の呼び出し元は`accepted`/`traceMessage`のみを見ており、この追加で挙動は変わらない）。
+3. 見つからなければ、従来の比率座標タップ（`EDIT_TAP_X_RATIO`/`EDIT_TAP_Y_RATIO`、値は変更していない）をそのまま行う（フォールバック）。
+4. どの経路を使ったかを`edit_button`のstepログのextraフィールド`editClickPath`に記録する: `"node-action"`（ACTION_CLICKで押せた）／`"node-bounds-tap"`（ノードは見つかったがbounds中心へ座標タップした）／`"ratio-tap"`（ノードが見つからず従来の比率座標タップをした）。
+5. **押した後、ダイアログが閉じたことを確認してから成功と判定する**: `EDIT_CLOSE_POLL_MS`（150ms）間隔・`EDIT_CLOSE_TIMEOUT_MS`（3000ms）を上限に、同じ探索でEDITのノードが消えたかを見る。消えたら成功（`finish(true, null)`）、実行ログに`editDialogClosed:true`・`editCloseWaitMs`を記録する。3,000ms経っても残っていたら、新しい段階名`edit_not_closed`で`finish(false, STAGE_EDIT_NOT_CLOSED)`とし、`editDialogClosed:false`を記録する（これにより`armRetryOnFailure`の経路で`scheduleRetryAfterFailure`が自動で張られ、次回で取り戻せる）。この確認は「EDITを押した後・施錠の待ちに入る前」に挟む。既存の施錠・`lockSkipped`・`drainCallbackSummary()`・`LOCK_DELAY_AFTER_EDIT_MS`の流れは変えていない。
+
+**ノードが見つからない＝消えた＝成功、とする（安全側）**。探索が例外で失敗した場合も成功扱いにする。失敗にするのは「EDITのノードがまだ存在する」という明確な未押下の証拠があるときだけにし、探索自体が不調なだけのケースを誤って失敗扱いにしない（既存の挙動を壊さないため）。
+
+### ノードクリックが使えると分かった意味（遮断モードへの展望）
+
+2026-10-11実機で、ノードクリック（`ACTION_CLICK`）は全画面の遮断モードの帯（`RunStatusOverlay`の`blocking`モード、`FLAG_NOT_TOUCHABLE`を外して全タッチを消費する窓）を素通りすることを確認した（06:30の遮断モード検証）。一方、座標タップ（`dispatchGesture`）は帯に吸われる。EDITをノードクリックで押せるようになったことで、遮断モード自体が実用上機能する可能性が出てきた。
+
+### 守ること
+
+- `EDIT_TAP_X_RATIO`/`EDIT_TAP_Y_RATIO`/`EDIT_TAP_SETTLE_DELAY_MS`の値は変更していない。
+- EDITノードの探索（`findNodeByTextInPackage`）で例外が起きた場合は成功扱いにする（上記）。
+
+## 追補 2026-10-11 遮断モードを常時有効にし、再試行を3回にする（PO決定）
+
+### 実機で確定した事実（根拠）
+
+- **EDITはノードクリックで押せる**（2026-10-11 08:25 実測: `editClickPath: "node-action"`, `editDialogClosed: true`, `editCloseWaitMs: 19`）。
+- **遮断モードの帯（全画面でタッチを止める）でもフローが完走し、ファイルが届き送信まで成功した**（08:27:00の回: `overlayBlocking: true`, `result: success`, 取り込み`received ok`→送信`accepted 7,234バイト`）。
+- **座標タップは遮断中に吸われる**（06:30・06:32の2回: EDITの比率座標タップが効かず、Termuxの保存ダイアログが開いたまま残り、`received`が無かった）。上の「追補2026-10-11 EDITをノードクリックにし…」の「ノードクリックが使えると分かった意味」節で確認済みの事実（ノードクリックは帯を素通りするが座標タップは吸われる）と整合する。
+- **座標スワイプについては断定できない**: 遮断中の4回はいずれも`scrollMode:"gesture"`で成功しているが、「スワイプが通った」のか「そのスクロールが実際には不要でノード探索が3回の試行内で目標を見つけた」のかを区別できていない。10-10の内訳は`node`65回・`gesture`12回で、座標スワイプに落ちる回は実在する。
+- 端末の管理ポリシーは`maximumFailedPasswordsForWipe=0`（ドコモの管理アプリ含め全て0）＝**誤入力による初期化は設定されていない**（実機確認済み）。
+- **帯は`LineExportFlow`（書き出しフェーズ）だけで出している**（`UnlockAccessibilityService`内の`RunStatusOverlay`参照は0件）。PIN入力は座標タップなので、帯を解除フェーズへ広げてはいけない。
+
+### PO決定1: 遮断モードを本番で常時有効にする
+
+`LineExportFlow.start()`が帯を出すとき、`blocking`に`armRetryOnFailure`の値を渡すようにした（`overlayBlocking = armRetryOnFailure;`）。本番実行（RUN_ALL経由、`armRetryOnFailure==true`）は遮断モードで出し、EXPORT単体（手動検証、`armRetryOnFailure==false`）は従来の非遮断の細い帯のまま（診断のため非遮断の経路を残す）。
+
+検証用だった`SchedulerStore.consumeBlockingOverlayOnce`/`setBlockingOverlayOnce`、`RunReceiver`の`ACTION_RUN_ALL_BLOCKING`、`AndroidManifest.xml`の該当`<action>`は削除した（常時有効になり検証用の入口が不要になったため。2つのやり方を残さない）。
+
+**帯は解除フェーズ（`UnlockAccessibilityService`）へは広げていない。** PIN入力は座標タップ（`dispatchGesture`）で行っており、座標タップは遮断モードの帯に吸われることが実機で確認済み（上記「背景」参照）。PIN入力の画面にはクリック可能なノードが無く座標タップしか手段が無いため、帯を広げるとPIN入力そのものが吸われて解除できなくなる。
+
+### PO決定2: 「停止」ボタンを削除する
+
+`RunStatusOverlay.buildBlockingView`から「停止」ボタンと`escapeTapped`/`wasEscapeTapped()`を削除した。`LineExportFlow`側の`overlayEscapeTapped`フィールドとログ項目も削除した。
+
+60秒の強制撤去タイマー（`BLOCKING_AUTO_REMOVE_MS`）は残した。値も60秒のまま変えていない。**「停止」ボタンを削除したため、操作不能から抜ける保証はこのタイマーだけになった。最悪の場合、利用者は最大60秒間タッチできない（フローの実測は約11秒）。PO了承済み（2026-10-11）。**
+
+### PO決定3: 再試行を「初回を含めて3回」にする
+
+`RunScheduler.MAX_CONSECUTIVE_RETRIES`を1→2にした。
+
+数え方: カウンタは「張った再試行の回数」なので、上限2なら「初回の実行→失敗→再試行1回目を張る（count=1）→失敗→再試行2回目を張る（count=2）→失敗→`retry_capped`」＝**初回を含めて合計3回試す**。成功で`clearConsecutiveRetryCount`によりリセットされる（既存のまま）。
+
+失敗の型で分けない（PO決定）: どのパターンも一律3回試す。`maximumFailedPasswordsForWipe=0`を実機で確認済みのため、PIN入力を伴う失敗を3回試しても初期化のリスクは無い。Android標準の一時的な待ち時間（誤入力が連続した場合の猶予）が増える可能性はある。
+
+`RETRY_INTERVAL_MS`（5分）の値は変えていない。
+
+### 未確定事項と検知方法（`blockedCoordinateGesture`）
+
+座標スワイプが遮断中に通るかは未確定（上記「背景」参照）。推測で判断せず、まず実行ログに記録を残す。
+
+`LineExportFlow`に`blockedCoordinateGesture`フラグを追加した。遮断モードが有効（`overlayBlocking==true`）かつ座標ベースのジェスチャ（`GestureCompat.tap`/`GestureCompat.swipe`）を呼んだときにtrueになる。次の3か所で立てる:
+
+1. EDITの比率座標タップ（`editClickPath == "ratio-tap"`の経路、`tapEditButton`）
+2. `NodeOps.clickNode`がノード領域の中心を座標タップした経路（`editClickPath == "node-bounds-tap"`、`tapEditButton`内）
+3. スクロールの座標スワイプ（`scrollMode == "gesture"`になる経路、`scrollOnce`内の`GestureCompat.swipe`）
+
+`export`の`phase:"end"`行に`blockedCoordinateGesture: true`を（trueのときだけ）追加した。既存の`scrollMode`/`editClickPath`はそのまま残しており、併せて読めばどの座標操作だったか特定できる。
+
+座標ジェスチャを止めたり失敗にしたりはしていない（記録のみ）。先に記録を取り、`blockedCoordinateGesture: true`の回に段階失敗が集まるかを見てから、座標スワイプの扱いを判断する。
+
+## 追補 2026-10-11 EDITの準備完了判定をノード探索に移し、配信確認の条件を正す
+
+### 実機ログ（2026-10-11 09:13、0.18.0-stage3・遮断モード常時有効）
+
+```
+edit_button  classDetected=False  classPolls=18  classWaitMs=5107
+             editClickPath=ratio-tap
+             editDialogClosed=True      ← 誤判定
+結果: success                            ← 誤報告
+取り込み: 無し（ファイルがTermuxに届かなかった）
+再試行: 張られなかった（successだったため）
+```
+
+### 原因1: 準備完了の判定がTYPE_WINDOW_STATE_CHANGED依存で、来ない回がある
+
+準備完了（Termuxの保存ダイアログが出た）の判定が、`service.getLastWindowClassName()`に`TermuxFileReceiverActivity`が含まれるか（`TYPE_WINDOW_STATE_CHANGED`イベント由来）に依存していた。このイベントが来ない回があり、`classDetected=false`のときは比率座標タップ（`EDIT_CLICK_PATH_RATIO_TAP`）に落ちていた。
+
+実測の頻度（`classDetected=false`になった回／全export実行回、実行ログから集計）:
+
+- 2026-10-09: 1/46回
+- 2026-10-10: 0/38回
+- 2026-10-11: 1/19回
+
+合計で約2%。頻度は低いが、**遮断モード（`overlayBlocking==true`）では座標タップが吸われることが06:30・06:32・09:13の実機で確定しているため、この約2%の回は必ずファイルが届かない。**
+
+### 原因2: 配信確認が「押す前の実在確認」を前提にしていなかった
+
+`waitForEditDialogClosed`は「EDITノードが見つからない＝ダイアログが消えた＝配信された」と判定していたが、これは**押す前に一度もノードが見つかっていない場合は意味を持たない**（存在した証拠が無いまま「消えた」と言っているだけ）。09:13の回はまさにこの経路（`editClickPath=ratio-tap`＝ノード未検出でタップ時にも見つからなかった）で、`editDialogClosed=true`（成功）と誤判定された。
+
+### データは失われない
+
+watermark（取り込みの起点）は送信が受理されたときだけ進む（`RunScheduler.recordSuccessfulImport`は`success`のときだけ呼ばれる）。09:13の回はこの意味で「成功」と誤記録されたため本来は前進してはいけなかったが、実際に失われたデータは無い: 09:16の回で正常化（受理・送信成功）を確認済みであり、09:13分も含めて09:16の回がまとめて送った。
+
+### 対処1: 準備完了の判定を「EDITノードが見つかるか」に変える
+
+`LineExportFlow.pollEditClass`を、`NodeOps.findNodeByTextInPackage(service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME)`が非nullになることを判定本体にするよう変更した。間隔・期限は既存の定数（`NODE_WAIT_POLL_MS`=300ms、`EDIT_CLASS_WAIT_TIMEOUT_MS`=5,000ms）のまま変えていない。見つかったら`EDIT_TAP_SETTLE_DELAY_MS`（1,000ms、値は変えていない）待ってから`tapEditButton`へ進み、見つかった事実を`editNodeWasFound=true`として保持する。
+
+期限までに見つからなかった場合:
+
+- **遮断モードが有効（`overlayBlocking==true`）**: 座標タップは効かないことが実機で確定しているため、比率座標タップへは落とさず失敗にする。新しい段階名`edit_node_not_found`を定義し、`finish(false, STAGE_EDIT_NODE_NOT_FOUND)`とした。既存の`scheduleRetryAfterFailure`が自動で張られ、合計3回まで試される。
+- **遮断モードが無効（`overlayBlocking==false`、EXPORT単体の手動検証）**: 従来どおり比率座標タップにフォールバックする（`editClickPath=ratio-tap`）。手動検証の既存挙動は変えていない。
+
+`TYPE_WINDOW_STATE_CHANGED`由来の記録（`classDetected`/`classPolls`/`classWaitMs`）は診断用としてそのまま残した（過去データとの比較のため）。判定には使っていない。
+
+`edit_button`のstepログに新しい項目を追加した: `editNodePolls`（探索した回数）、`editNodeWaitMs`（見つかるまでのms。見つからなければフィールド自体を出さない）。
+
+### 対処2: 配信確認を「押す前にノードが見つかっていた場合だけ」信じる
+
+`waitForEditDialogClosed`とログを次のように変更した。
+
+- `editNodeWasFound==true`（押す前にノードが実在した）: 既存のロジックのまま。消えたら`editDialogClosed:true`＋`editCloseWaitMs`を記録して成功、3,000ms（`EDIT_CLOSE_TIMEOUT_MS`、値は変えていない）経っても残っていたら`edit_not_closed`で失敗。消えたことが確認できた回には`editVerified:true`を記録する。
+- `editNodeWasFound==false`（比率座標タップにフォールバックした非遮断の経路のみ）: 配信を確認したと主張しない。`editDialogClosed`フィールドは出さず（null扱い）、代わりに`editVerified:false`を記録する。挙動は従来どおり成功として終える（`finish(true, null)`）: この経路は手動検証のみで、座標タップが歴史的に効いていたため、今まで通っていた回を失敗に変えないという判断（依頼文の指示どおり）。
+
+探索が例外を投げた場合の扱いは現状のまま（消えた＝成功扱い）にした。理由: 探索自体が不調なだけのケースを「押せていない明確な証拠」と区別できず、誤って失敗扱いにしないため（既存のコメントのとおり）。
+
+### 変更していないもの
+
+- 定数の値はすべて変更していない（`NODE_WAIT_POLL_MS`・`EDIT_CLASS_WAIT_TIMEOUT_MS`・`EDIT_TAP_SETTLE_DELAY_MS`・`EDIT_CLOSE_TIMEOUT_MS`・`EDIT_CLOSE_POLL_MS`・`EDIT_TAP_X_RATIO`/`Y_RATIO`・`LOCK_DELAY_AFTER_EDIT_MS`・`BLOCKING_AUTO_REMOVE_MS`・`MAX_CONSECUTIVE_RETRIES`・`RETRY_INTERVAL_MS`）。
+- `RunStatusOverlay`の遮断の作り（「停止」ボタンは削除済みのまま、復活させていない）、`overlayBlocking = armRetryOnFailure`の判定、`lockOnFinish`/`armRetryOnFailure`の分岐、`accessibility_service_config.xml`の`accessibilityEventTypes`、`NodeOps`の既存メソッドの挙動、`RunScheduler`の予約・補完・再試行の仕組み・キーガード判定は、いずれも変更していない。
+
+座標スワイプが遮断中に通るかなど、この追補の範囲外の未確定事項については推測を書かない（上の「未確定事項と検知方法」節のまま、別途判断する）。

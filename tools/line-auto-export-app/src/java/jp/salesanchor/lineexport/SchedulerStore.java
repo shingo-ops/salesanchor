@@ -149,11 +149,9 @@ final class SchedulerStore {
 
     /**
      * 取り込み失敗後の再試行（{@link RunScheduler#scheduleRetryAfterFailure}）が、連続して
-     * 何回張られたか。design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」:
-     * 失敗後の再試行は連続1回までに制限する。失敗の型のひとつが「PIN入力後もロック中」で
-     * あり、再試行を増やすほどPIN入力の試行が増え、Android側のロックアウト（誤入力の連続で
-     * 待たされる状態）に近づく。30分あたりのPIN入力試行を最大2回（補完1回＋再試行1回）に
-     * 抑えるため、意図的に1回に絞っている（上限を増やすのはPO判断）。
+     * 何回張られたか。design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」で
+     * 連続再試行の回数に上限（{@link RunScheduler#MAX_CONSECUTIVE_RETRIES}）を設けた。
+     * 上限の値・根拠（2026-10-11更新: 1→2、初回を含めて合計3回試す）は同定数のjavadoc参照。
      * 取り込み成功で{@link #clearConsecutiveRetryCount}によりリセットされる。既定0。
      */
     static int getConsecutiveRetryCount(Context context) {
