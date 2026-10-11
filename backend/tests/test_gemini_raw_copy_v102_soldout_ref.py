@@ -688,3 +688,20 @@ def test_inherit_does_not_strand_a_condition_written_by_another_row_of_the_same_
     same_post_pack = {"status_effect": None, "status": "In Stock", "match_status": "matched", "product_id": 62, "condition": "Pack"}
     assert _inherit([_shime(), same_post_pack], (post,)) == {}
     assert list(_inherit([_shime()], (post,))) == [0]  # 同じ投稿に他の件が無ければ引き継ぐ
+
+
+# --- 規則12f：〆の件に単位語があれば引き継がない（便3b）----------------------------------------------
+
+
+def test_inherit_12f_skips_a_shime_with_a_unit_word_even_if_only_pack_stock_exists():
+    post = _post("p1", "x", stock_items=(_inherit_si([1], 62, 23, "Pack"),))
+    assert _inherit([_shime(unit_basis={"alias": "ボックス", "unit": "BOX"})], (post,)) == {}
+
+
+@pytest.mark.parametrize("basis", [
+    {"alias": "個", "from_condition": "Sealed box"}, None, {"alias": None}, {}, "x",
+])
+def test_inherit_12f_keeps_inheriting_without_a_real_unit_word(basis):
+    post = _post("p1", "x", stock_items=(_CASE_STOCK,))
+    item = _shime() if basis is None else _shime(unit_basis=basis)
+    assert list(_inherit([item], (post,))) == [0]
