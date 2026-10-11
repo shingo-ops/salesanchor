@@ -880,6 +880,47 @@ def test_half_width_slash_joined_prices_find_the_price_line_for_v102_only():
     assert full_width[0]["price_line"] == 2 and full_errors == []
 
 
+def test_yen_marked_price_copy_finds_the_price_line_for_v102_only():
+    # Arrange
+    raw = "商品A\n3BOX@1,000"
+    item = _it([1, 2], "1,000円", "3")
+    # Act
+    kept, kept_errors = _parse_keep(raw, item)
+    old, old_errors = _parse(raw, item)
+    # Assert
+    assert kept[0]["price_line"] == 2 and "rejected" not in kept[0] and kept_errors == []
+    assert old == [] and len(old_errors) == 1  # v10.1 以前は今までどおり
+
+
+def test_yen_sign_price_copy_finds_the_price_line_for_half_and_full_width_marks():
+    # Arrange
+    raw = "商品A\n1,000 × 3"
+    # Act
+    half, half_errors = _parse_keep(raw, _it([1, 2], "¥1,000", "3"))
+    full, full_errors = _parse_keep(raw, _it([1, 2], "￥1,000", "3"))
+    # Assert
+    assert half[0]["price_line"] == 2 and "rejected" not in half[0] and half_errors == []
+    assert full[0]["price_line"] == 2 and "rejected" not in full[0] and full_errors == []
+
+
+def test_price_copy_found_as_written_is_preferred_over_the_yen_free_retry():
+    # Arrange
+    raw = "1,000\n2BOX 1,000円"
+    # Act
+    kept, kept_errors = _parse_keep(raw, _it([1, 2], "1,000円", "2"))
+    # Assert
+    assert kept[0]["price_line"] == 2 and kept_errors == []
+
+
+def test_price_copy_that_is_only_a_yen_mark_is_not_retried_and_is_rejected():
+    # Arrange
+    raw = "商品A\n3BOX@1,000"
+    # Act
+    kept, _ = _parse_keep(raw, _it([1, 2], "円", "3"))
+    # Assert
+    assert kept[0]["rejected"] == "price_not_in_lines"
+
+
 def test_unreadable_json_returns_the_whole_error_and_no_items_even_when_keeping():
     items, errors = v101.parse_v101_response("not json", "商品A", status_entries=_STATUS, keep_rejected=True)
     assert items == [] and len(errors) == 1
