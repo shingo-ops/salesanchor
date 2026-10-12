@@ -49,7 +49,7 @@
 - 戻し方：PR② の revert（列は NULL のまま残す。DROP しない）。
 
 ## 7. 維持の仕組み
-- 守り手: `backend/tests/test_tcg_extraction_record.py` 等の on_response の試験（PR② で追加）。
+- 守り手: PR② で追加する on_response の試験（backend/tests/test_tcg_extraction_record_thought_summaries.py）と、CI の migration 検査。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 社内の前例：試験の道具（`backend/app/tools/prompt_ab.py:552`）は、思考を JSONL に保存している。2026-10-12 の原因調査（見出しの行が外される理由）は、この保存済みの思考で初めて事実として確かめられた。本番でも同じ材料を残す。
