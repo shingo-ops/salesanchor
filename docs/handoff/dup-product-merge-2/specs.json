@@ -1,0 +1,244 @@
+[
+ {
+  "retired": 440573,
+  "retired_code": "PM0225",
+  "survivor": 398,
+  "survivor_code": "UA-PC02BT",
+  "ar": 10,
+  "flips": 0,
+  "flips_to_true": 0,
+  "ei": 0,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 2,
+  "r_ekw": 3,
+  "s_skw": 2,
+  "s_ekw": 0,
+  "s_ar": 4,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "UNION ARENA 勝利の女神NIKKE【PC02BT】"
+   },
+   {
+    "kind": "exclude",
+    "keyword": "WS"
+   },
+   {
+    "kind": "exclude",
+    "keyword": "ヴァイス"
+   },
+   {
+    "kind": "exclude",
+    "keyword": "ヴァイスシュヴァルツ"
+   }
+  ]
+ },
+ {
+  "retired": 1386,
+  "retired_code": "LOR-the-first-chapter",
+  "survivor": 440434,
+  "survivor_code": "PM0232",
+  "ar": 11,
+  "flips": 1,
+  "flips_to_true": 0,
+  "ei": 14,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 14,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "THE FIRST CHAPTER 物語のはじまり"
+   }
+  ]
+ },
+ {
+  "retired": 1385,
+  "retired_code": "LOR-rise-of-the-floodborn",
+  "survivor": 440435,
+  "survivor_code": "PM0233",
+  "ar": 7,
+  "flips": 1,
+  "flips_to_true": 0,
+  "ei": 4,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 7,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "RISE OF THE FLOODBORN フラッドボーンの渾沌"
+   }
+  ]
+ },
+ {
+  "retired": 1384,
+  "retired_code": "LOR-into-the-inklands",
+  "survivor": 440578,
+  "survivor_code": "PM0234",
+  "ar": 8,
+  "flips": 2,
+  "flips_to_true": 0,
+  "ei": 8,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 9,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "INTO THE INKLANDS インクランド探訪"
+   }
+  ]
+ },
+ {
+  "retired": 1383,
+  "retired_code": "LOR-ursulas-return",
+  "survivor": 440579,
+  "survivor_code": "PM0235",
+  "ar": 4,
+  "flips": 1,
+  "flips_to_true": 0,
+  "ei": 4,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 4,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "URSULA'S RETURN 逆襲のアースラ"
+   }
+  ]
+ },
+ {
+  "retired": 1382,
+  "retired_code": "LOR-shimmering-skies",
+  "survivor": 440580,
+  "survivor_code": "PM0236",
+  "ar": 18,
+  "flips": 2,
+  "flips_to_true": 0,
+  "ei": 22,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 15,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "SHIMMERING SKIES 星々の輝き"
+   }
+  ]
+ },
+ {
+  "retired": 1381,
+  "retired_code": "LOR-azurite-sea",
+  "survivor": 440581,
+  "survivor_code": "PM0237",
+  "ar": 12,
+  "flips": 1,
+  "flips_to_true": 0,
+  "ei": 16,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 11,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "AZURITE SEA 大いなるアズライト"
+   }
+  ]
+ },
+ {
+  "retired": 1380,
+  "retired_code": "LOR-archazias-island",
+  "survivor": 440582,
+  "survivor_code": "PM0238",
+  "ar": 4,
+  "flips": 1,
+  "flips_to_true": 0,
+  "ei": 4,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 4,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "ARCHAZIAS ISLAND アーケイジアと魔法の島"
+   }
+  ]
+ },
+ {
+  "retired": 1379,
+  "retired_code": "LOR-reign-of-jafar",
+  "survivor": 440583,
+  "survivor_code": "PM0239",
+  "ar": 1,
+  "flips": 0,
+  "flips_to_true": 0,
+  "ei": 1,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 0,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "REIGN OF JAFAR ジャファーの王権"
+   }
+  ]
+ },
+ {
+  "retired": 1376,
+  "retired_code": "LOR-wilds-unknown",
+  "survivor": 440587,
+  "survivor_code": "PM0243",
+  "ar": 0,
+  "flips": 0,
+  "flips_to_true": 0,
+  "ei": 0,
+  "bb": 0,
+  "sh": 0,
+  "r_skw": 1,
+  "r_ekw": 0,
+  "s_skw": 1,
+  "s_ekw": 0,
+  "s_ar": 3,
+  "kw": [
+   {
+    "kind": "search",
+    "keyword": "WILDS UNKNOWN 未知なる彼方へ!"
+   }
+  ]
+ }
+]
