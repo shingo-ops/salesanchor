@@ -17,7 +17,7 @@ found=0
 for pid in $(pgrep -f "bun.*server.ts" || true); do
   cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1 || true)"
   case "$cwd" in
-    */discord-ops)
+    */discord-ops|*/discord-ops/[0-9]*)
       kill "$pid"
       echo "残っていた discord-ops の bun server.ts (pid $pid) を終了しました。"
       found=1

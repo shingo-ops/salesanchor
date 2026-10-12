@@ -30,7 +30,7 @@ server_ok=0
 for pid in $(pgrep -f "bun.*server.ts" || true); do
   cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1 || true)"
   case "$cwd" in
-    */discord-ops) server_ok=1 ;;
+    */discord-ops|*/discord-ops/[0-9]*) server_ok=1 ;;
   esac
 done
 if [ "$server_ok" -eq 0 ]; then

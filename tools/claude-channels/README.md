@@ -24,6 +24,7 @@ Discord の監視通知を Claude Code の受付役が受け取り、不具合�
    - 上の 3 ファイルはクローン側の未追跡ファイル（`CLAUDE.local.md`・`.claude/settings.local.json` は git が無視する）。`intake/` の中身を更新したら複写し直す
 4. `~/.claude/channels/discord-ops/` に `.env`（ボットのトークン）と `access.json`（`intake/access.json.example` を元に、`<OPS_CHANNEL_ID>` を承認チャンネルの ID に置換）を置く（値は画面・ログに出さない）
 5. マーケットとプラグインを登録する
+   - 試作で登録済みの sa-local を外す: `claude plugin marketplace remove sa-local`（未登録ならエラーになるが無視してよい）
    - `claude plugin marketplace add ~/sa-ops-intake/tools/claude-channels`
    - `cd ~/sa-ops-intake && claude plugin install discord-ops@sa-local -s local -y`
 6. 番人用 webhook の URL を `~/.config/sa-ops-intake/watchdog-webhook`（権限 600）に置き、plist を `~/Library/LaunchAgents/` へ置いて `launchctl load` する（PATH は plist の `EnvironmentVariables` と各スクリプト冒頭で明示済み）

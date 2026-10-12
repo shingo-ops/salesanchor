@@ -37,6 +37,9 @@ describe('webhookVerdict', () => {
     expect(webhookVerdict(access, { webhookId: WH, channelId: 'thread1', parentId: MON, isThread: true })).toBe('deliver')
     expect(webhookVerdict(access, { webhookId: WH, channelId: MON, parentId: '222', isThread: true })).toBe('drop')
   })
+  test('drops a post with an empty webhook id (bot that is not a webhook)', () => {
+    expect(webhookVerdict(access, { webhookId: '', channelId: MON, isThread: false })).toBe('drop')
+  })
   test('drops everything when monitorChannels is undefined', () => {
     expect(webhookVerdict({}, { webhookId: WH, channelId: MON, isThread: false })).toBe('drop')
   })
