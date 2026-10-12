@@ -2065,7 +2065,7 @@ def _discord_send_http_error(http_status: int, code: str, message: str) -> HTTPE
 
 
 async def _resolve_staff_identity(
-    db: AsyncSession, tenant_id: int, email: Optional[str],
+    db: AsyncSession, tenant_id: int, user_id: Optional[int],
 ) -> _StaffIdentity:
     """送信前に担当者（英語名の「名」・アイコン）を解決する。使えなければ送らず 422。"""
     from app.services.discord_webhook_sender import StaffNameInvalidError, validate_username
@@ -2073,13 +2073,13 @@ async def _resolve_staff_identity(
 
     staff_t = tenant_table_ref(db, tenant_id, "staff")
     row = None
-    if email:
+    if user_id is not None:
         result = await db.execute(
             text(
                 f"SELECT id, given_name_en, avatar_token FROM {staff_t} "
-                "WHERE primary_email = :email ORDER BY id ASC LIMIT 1"
+                "WHERE user_id = :uid LIMIT 1"
             ),
-            {"email": email},
+            {"uid": user_id},
         )
         row = result.first()
     if row is None or not (row[1] or "").strip():
@@ -2189,7 +2189,7 @@ async def _send_discord_message(
     dm_channel_id = str(ch_row[1])
 
     # 担当者名義で送信する（ADR-159）。staff は送信前に解決し、未登録・不正なら送らない。
-    identity = await _resolve_staff_identity(db, tenant_id, current_user.email)
+    identity = await _resolve_staff_identity(db, tenant_id, current_user.id)
     discord_msg_id = await _send_discord_as_staff(
         db, tenant_id=tenant_id, lead_id=lead_id, channel_id=dm_channel_id,
         identity=identity, content=text_body,
@@ -2360,7 +2360,7 @@ async def send_lead_image_message(
         dc_filename = image.filename or f"image.{content_type.split('/')[-1]}"
 
         # 担当者名義で送信する（ADR-159）。staff は送信前に解決し、未登録・不正なら送らない。
-        identity = await _resolve_staff_identity(db, tenant_id, current_user.email)
+        identity = await _resolve_staff_identity(db, tenant_id, current_user.id)
         dc_msg_id = await _send_discord_as_staff(
             db, tenant_id=tenant_id, lead_id=lead_id, channel_id=channel_id,
             identity=identity,

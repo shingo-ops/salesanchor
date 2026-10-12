@@ -124,6 +124,7 @@ _STAFF_DDL = """
     CREATE TABLE staff (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER NOT NULL DEFAULT 999,
+        user_id INTEGER NOT NULL,
         primary_email VARCHAR(255) NOT NULL,
         given_name_en VARCHAR(100),
         avatar_token TEXT
@@ -403,8 +404,8 @@ async def test_send_discord_returns_409_when_no_dm_channel(app_client, db_sessio
 async def _insert_staff_with_en_name(db_session, given_name_en: str = "Shingo") -> None:
     await db_session.execute(
         text(
-            "INSERT INTO staff (tenant_id, primary_email, given_name_en) "
-            "VALUES (999, 'tester@example.com', :n)"
+            "INSERT INTO staff (tenant_id, user_id, primary_email, given_name_en) "
+            "VALUES (999, 1, 'tester@example.com', :n)"
         ),
         {"n": given_name_en},
     )

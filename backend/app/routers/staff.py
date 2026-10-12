@@ -25,6 +25,7 @@ from app.auth.dependencies import (
     require_permission,
     reset_tenant_context,
 )
+from app.cache import invalidate_user_permissions
 from app.database import get_db
 from app.models import User
 from app.routers.roles import _hidden_role_params, _visible_role_sql, _visible_text
@@ -60,6 +61,48 @@ def _new_placeholder_code() -> str:
     return _PLACEHOLDER_PREFIX + uuid.uuid4().hex[: STAFF_CODE_MAX_LENGTH - len(_PLACEHOLDER_PREFIX)]
 
 
+async def _resolve_user_for_new_staff(
+    db: AsyncSession, tenant_id: int, data: StaffCreate,
+) -> int:
+    """POST /staff 用: 名簿に紐付ける users.id を決める（既存を再利用 or 新規作成。ADR-1008 決定5）。
+
+    同じ email の users が、同テナントで名簿なし → それを使う / 同テナントで名簿あり → 409 /
+    別テナント → 409 / 無し → 作る。呼び出し側のトランザクション内で実行する（commit しない）。
+    """
+    found = await db.execute(
+        text("SELECT id, tenant_id FROM public.users WHERE lower(email) = lower(:email) LIMIT 1"),
+        {"email": data.primary_email},
+    )
+    existing = found.mappings().first()
+    if existing is not None:
+        if existing["tenant_id"] != tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="このメールアドレスは他の会社で使われています",
+            )
+        linked = await db.execute(
+            text("SELECT 1 FROM staff WHERE user_id = :uid LIMIT 1"),
+            {"uid": existing["id"]},
+        )
+        if linked.first() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="このメールアドレスのスタッフはすでに登録されています",
+            )
+        return int(existing["id"])
+
+    display_name = f"{data.surname_jp} {data.given_name_jp}"
+    created = await db.execute(
+        text("""
+            INSERT INTO public.users (tenant_id, username, email, full_name, role, is_active)
+            VALUES (:tid, :name, :email, :name, 'user', true)
+            RETURNING id
+        """),
+        {"tid": tenant_id, "name": display_name, "email": data.primary_email},
+    )
+    return int(created.scalar_one())
+
+
 router = APIRouter()
 
 _STAFF_COLS = """
@@ -74,7 +117,7 @@ _STAFF_COLS = """
 _UPDATABLE = {
     "surname_jp", "given_name_jp", "surname_kana", "given_name_kana",
     "surname_en", "given_name_en", "primary_email", "discord_user_id",
-    "role_id", "status", "firebase_uid", "user_id", "is_employee",
+    "role_id", "status", "firebase_uid", "is_employee",
 }
 
 
@@ -114,21 +157,21 @@ async def _fetch_ui_prefs(db: AsyncSession, staff_id: int) -> StaffUIPreferences
     return StaffUIPreferences(**row) if row else None
 
 
-async def _fetch_locale(db: AsyncSession, primary_email: str) -> str:
-    """public.users の locale カラムを取得（ADR-027）。"""
+async def _fetch_locale(db: AsyncSession, user_id: int | None) -> str:
+    """public.users の locale カラムを取得（ADR-027）。users.id で引く（ADR-1008）。"""
     result = await db.execute(
-        text("SELECT locale FROM public.users WHERE email = :email LIMIT 1"),
-        {"email": primary_email},
+        text("SELECT locale FROM public.users WHERE id = :uid LIMIT 1"),
+        {"uid": user_id},
     )
     row = result.mappings().first()
     return row["locale"] if row and row["locale"] else "ja"
 
 
-async def _fetch_theme(db: AsyncSession, primary_email: str) -> str:
-    """public.users の theme カラムを取得（ADR-033）。"""
+async def _fetch_theme(db: AsyncSession, user_id: int | None) -> str:
+    """public.users の theme カラムを取得（ADR-033）。users.id で引く（ADR-1008）。"""
     result = await db.execute(
-        text("SELECT theme FROM public.users WHERE email = :email LIMIT 1"),
-        {"email": primary_email},
+        text("SELECT theme FROM public.users WHERE id = :uid LIMIT 1"),
+        {"uid": user_id},
     )
     row = result.mappings().first()
     return row["theme"] if row and row["theme"] else "light"
@@ -142,8 +185,8 @@ async def _compose(db: AsyncSession, main_row: dict) -> StaffResponse:
         avatar_url=build_avatar_url(main_row.get("avatar_token")),
         emails=await _fetch_emails(db, sid),
         ui_preferences=await _fetch_ui_prefs(db, sid),
-        locale=await _fetch_locale(db, main_row["primary_email"]),
-        theme=await _fetch_theme(db, main_row["primary_email"]),
+        locale=await _fetch_locale(db, main_row["user_id"]),
+        theme=await _fetch_theme(db, main_row["user_id"]),
     )
 
 
@@ -209,9 +252,7 @@ async def get_my_staff(
     現在ログイン中ユーザの staff レコードを返す。
 
     ロジック:
-      users.email と staff.primary_email の一致で staff を引く。
-      共有メール運用（migration 019: primary_email に UNIQUE 制約なし）に対応するため
-      `ORDER BY s.id ASC` で決定性を担保し、最も古い staff レコードを返す。
+      current_user.id（users.id）と staff.user_id の一致で staff を引く（ADR-1008）。
       見つからなければ 404 を返す。
 
     実装メモ:
@@ -229,25 +270,17 @@ async def get_my_staff(
       get_current_user / get_current_tenant のみで十分。
       （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）
     """
-    user_email = getattr(current_user, "email", None)
-
-    row = None
-    if user_email:
-        # primary_email の一致で staff を引く。
-        # primary_email は UNIQUE 制約なし（共有アドレス運用許容）のため、
-        # ORDER BY s.id ASC で決定性を担保する（最も古い staff を返す）。
-        result = await db.execute(
-            text(f"""
-                SELECT {_STAFF_COLS}
-                FROM staff s
-                LEFT JOIN roles r ON r.id = s.role_id
-                WHERE s.primary_email = :email
-                ORDER BY s.id ASC
-                LIMIT 1
-            """),
-            {"email": user_email},
-        )
-        row = result.mappings().first()
+    result = await db.execute(
+        text(f"""
+            SELECT {_STAFF_COLS}
+            FROM staff s
+            LEFT JOIN roles r ON r.id = s.role_id
+            WHERE s.user_id = :uid
+            LIMIT 1
+        """),
+        {"uid": current_user.id},
+    )
+    row = result.mappings().first()
 
     if row is None:
         raise HTTPException(
@@ -270,12 +303,9 @@ async def update_my_locale(
     locale = payload.get("locale", "ja")
     if locale not in ("ja", "en"):
         raise HTTPException(status_code=400, detail="locale は 'ja' または 'en' のみ有効です")
-    user_email = getattr(current_user, "email", None)
-    if not user_email:
-        raise HTTPException(status_code=401, detail="認証されていません")
     await db.execute(
-        text("UPDATE public.users SET locale = :locale WHERE email = :email"),
-        {"locale": locale, "email": user_email},
+        text("UPDATE public.users SET locale = :locale WHERE id = :uid"),
+        {"locale": locale, "uid": current_user.id},
     )
     await db.commit()
     return {"locale": locale}
@@ -294,12 +324,9 @@ async def update_my_theme(
     theme = payload.get("theme", "light")
     if theme not in ("light", "dark"):
         raise HTTPException(status_code=400, detail="theme は 'light' または 'dark' のみ有効です")
-    user_email = getattr(current_user, "email", None)
-    if not user_email:
-        raise HTTPException(status_code=401, detail="認証されていません")
     await db.execute(
-        text("UPDATE public.users SET theme = :theme WHERE email = :email"),
-        {"theme": theme, "email": user_email},
+        text("UPDATE public.users SET theme = :theme WHERE id = :uid"),
+        {"theme": theme, "uid": current_user.id},
     )
     await db.commit()
     return {"theme": theme}
@@ -323,22 +350,17 @@ async def update_my_profile(
     現在ログイン中ユーザ自身の氏名を更新する。
 
     管理者権限不要。メールアドレス・ロール・ステータス等は変更不可。
-    本人確認: get_current_user が返す current_user.email で staff を特定。
+    本人確認: get_current_user が返す current_user.id（staff.user_id）で staff を特定。
     """
-    user_email = getattr(current_user, "email", None)
-    if not user_email:
-        raise HTTPException(status_code=401, detail="認証されていません")
-
     result = await db.execute(
         text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
             LEFT JOIN roles r ON r.id = s.role_id
-            WHERE s.primary_email = :email
-            ORDER BY s.id ASC
+            WHERE s.user_id = :uid
             LIMIT 1
         """),
-        {"email": user_email},
+        {"uid": current_user.id},
     )
     row = result.mappings().first()
     if not row:
@@ -395,13 +417,11 @@ def _avatar_http_error(code: str, http_status: int) -> HTTPException:
     )
 
 
-async def _my_staff_id_and_token(db: AsyncSession, user_email: str | None) -> tuple[int, str | None]:
+async def _my_staff_id_and_token(db: AsyncSession, user_id: int) -> tuple[int, str | None]:
     """ログイン中ユーザ本人の staff.id と現在の avatar_token を返す（/staff/me と同じ特定方法）。"""
-    if not user_email:
-        raise HTTPException(status_code=401, detail="認証されていません")
     result = await db.execute(
-        text("SELECT id, avatar_token FROM staff WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
-        {"email": user_email},
+        text("SELECT id, avatar_token FROM staff WHERE user_id = :uid LIMIT 1"),
+        {"uid": user_id},
     )
     row = result.mappings().first()
     if row is None:
@@ -433,7 +453,7 @@ async def upload_my_avatar(
     jpg/png/webp・2MB 以下。Pillow で EXIF 除去・中央正方形切り抜き・256px WebP 化し、
     新 token で保存して旧ファイルを削除する。本人以外は操作できない（権限は本人限定）。
     """
-    staff_id, old_token = await _my_staff_id_and_token(db, getattr(current_user, "email", None))
+    staff_id, old_token = await _my_staff_id_and_token(db, current_user.id)
 
     # 上限+1 バイトだけ読む（巨大ファイルをメモリに載せない）
     data = await image.read(AVATAR_MAX_BYTES + 1)
@@ -480,7 +500,7 @@ async def delete_my_avatar(
     current_user: User = Depends(get_current_user),
 ):
     """本人の担当者アイコンを削除する（未登録なら何もしない＝冪等）。"""
-    staff_id, old_token = await _my_staff_id_and_token(db, getattr(current_user, "email", None))
+    staff_id, old_token = await _my_staff_id_and_token(db, current_user.id)
     if old_token:
         await db.execute(
             text("UPDATE staff SET avatar_token = NULL, updated_at = NOW() WHERE id = :id"),
@@ -558,12 +578,18 @@ async def get_staff(staff_id: int, db: AsyncSession = Depends(get_db),
 async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
+    if data.user_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="user_id は指定できません",
+        )
     # role_id 存在検証（同一テナント内）
     await _ensure_assignable_role(db, data.role_id, tenant_id, current_user)
 
     # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
     staff_code = _new_placeholder_code()
     try:
+        user_id = await _resolve_user_for_new_staff(db, tenant_id, data)
         result = await db.execute(
             text("""
                 INSERT INTO staff (
@@ -580,7 +606,7 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                 RETURNING id
             """),
             {
-                "tid": tenant_id, "uid": data.user_id, "code": staff_code,
+                "tid": tenant_id, "uid": user_id, "code": staff_code,
                 "sjp": data.surname_jp, "gjp": data.given_name_jp,
                 "sk": data.surname_kana, "gk": data.given_name_kana,
                 "sen": data.surname_en, "gen": data.given_name_en,
@@ -595,6 +621,14 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             text("UPDATE staff SET staff_code = :code WHERE id = :id"),
             {"code": f"EMP-{new_id:05d}", "id": new_id},
         )
+        await db.execute(
+            text("""
+                INSERT INTO user_roles (user_id, role_id, assigned_by)
+                VALUES (:uid, :rid, :by)
+                ON CONFLICT (user_id, role_id) DO NOTHING
+            """),
+            {"uid": user_id, "rid": data.role_id, "by": current_user.id},
+        )
         await _upsert_ui_prefs(db, new_id, data.ui_preferences)
         await _replace_additional_emails(db, new_id, data.additional_emails)
         await record_audit_log(
@@ -604,12 +638,16 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
         )
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
+        await invalidate_user_permissions(tenant_id, user_id)
+    except HTTPException:
+        await db.rollback()
+        raise
     except IntegrityError as e:
         await db.rollback()
         logger.warning("create_staff IntegrityError: tenant=%d err=%s", tenant_id, e.orig)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="スタッフの登録に失敗しました（staff_code / discord_user_id / firebase_uid 重複の可能性）",
+            detail="スタッフの登録に失敗しました（同じ値がすでに登録されています: スタッフコード・Discord ID・メールアドレスのいずれか）",
         )
     fetched = await db.execute(
         text(f"""
@@ -638,6 +676,9 @@ async def update_staff(staff_id: int, data: StaffUpdate,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="スタッフが見つかりません")
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
+    if "user_id" in update_data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="user_id は変更できません")
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="更新するフィールドを少なくとも1つ指定してください")

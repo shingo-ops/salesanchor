@@ -1,8 +1,8 @@
 """
 B-1: GET /api/v1/staff/me および PATCH /api/v1/staff/me/profile のスモークテスト。
 
-users.email == staff.primary_email でフォールバック検索する経路と、
-staff レコード未紐づけの場合の 404、電話番号更新を検証する。
+staff.user_id == current_user.id で本人の名簿行を引く経路（ADR-1008）と、
+user_id が一致する行が無い場合の 404、電話番号更新を検証する。メールの一致では引かない。
 """
 
 import pytest
@@ -10,24 +10,24 @@ from sqlalchemy import text
 
 
 @pytest.mark.asyncio
-async def test_get_my_staff_via_email_fallback(client, db_session):
+async def test_get_my_staff_by_user_id_even_if_email_differs(client, db_session):
     """
-    conftest の mock_user は email='test@example.com'。
-    User モデルに firebase_uid が無いため /staff/me は email フォールバック経路を通る。
+    conftest の mock_user は id=999・email='test@example.com'。
+    名簿の primary_email は別のメールにしても、user_id=999 で引けることを確認する。
     """
     # 役割を1件作成
     await db_session.execute(text("""
         INSERT INTO roles (id, tenant_id, name, color, priority, is_system)
         VALUES (1, 999, 'staff', '#888888', 0, FALSE)
     """))
-    # mock_user.email と一致する primary_email でスタッフを作る
+    # mock_user.id（999）に紐付く名簿行。primary_email は mock_user と別
     await db_session.execute(text("""
         INSERT INTO staff (
-            id, tenant_id, staff_code, surname_jp, given_name_jp,
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
             primary_email, role_id, status
         ) VALUES (
-            500, 999, 'EMP-TEST01', '山田', '太郎',
-            'test@example.com', 1, 'active'
+            500, 999, 999, 'EMP-TEST01', '山田', '太郎',
+            'other@example.com', 1, 'active'
         )
     """))
     # ui_preferences 行を作る（dark_mode のみ true）
@@ -43,7 +43,7 @@ async def test_get_my_staff_via_email_fallback(client, db_session):
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["id"] == 500
-    assert data["primary_email"] == "test@example.com"
+    assert data["primary_email"] == "other@example.com"
     assert data["role_name"] == "staff"
     assert data["ui_preferences"] is not None
     assert data["ui_preferences"]["dark_mode"] is True
@@ -53,8 +53,22 @@ async def test_get_my_staff_via_email_fallback(client, db_session):
 
 @pytest.mark.asyncio
 async def test_get_my_staff_404_when_no_link(client, db_session):
-    """staff レコードが無いユーザは 404 を返す"""
-    # 何も投入しない（mock_user.email='test@example.com' に対応する staff は存在しない）
+    """user_id が一致する名簿行が無いユーザは、メールが同じ行があっても 404 を返す"""
+    await db_session.execute(text("""
+        INSERT INTO roles (id, tenant_id, name, color, priority, is_system)
+        VALUES (6, 999, 'noone', '#777777', 0, FALSE)
+    """))
+    # 別の user_id（12345）の名簿行。primary_email は mock_user と同じ
+    await db_session.execute(text("""
+        INSERT INTO staff (
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
+            primary_email, role_id, status
+        ) VALUES (
+            450, 999, 12345, 'EMP-NOONE', '別', '人',
+            'test@example.com', 6, 'active'
+        )
+    """))
+    await db_session.commit()
     res = await client.get("/api/v1/staff/me")
     assert res.status_code == 404
     body = res.json()
@@ -62,33 +76,29 @@ async def test_get_my_staff_404_when_no_link(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_get_my_staff_deterministic_when_shared_email(client, db_session):
+async def test_get_my_staff_picks_own_row_when_shared_email(client, db_session):
     """
-    PR #166 round 1 fix (F1):
-    primary_email は UNIQUE 制約なし（migration 019: 共有アドレス運用許容）。
-    同じ email を持つ staff が複数存在する場合、`ORDER BY s.id ASC` により
-    最も小さい id を持つ staff が決定的に返ることを保証する。
+    primary_email が同じ名簿行が複数あっても、user_id が自分の行（id の大きい方）だけが返る。
     """
     await db_session.execute(text("""
         INSERT INTO roles (id, tenant_id, name, color, priority, is_system)
         VALUES (3, 999, 'shared', '#555555', 0, FALSE)
     """))
-    # 同じ primary_email を持つ staff を 2 件投入（id=700, 701）
+    # 同じ primary_email の名簿行を 2 件。id の小さい方（700）は別人（user_id=1001）、自分は 701
     await db_session.execute(text("""
         INSERT INTO staff (
-            id, tenant_id, staff_code, surname_jp, given_name_jp,
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
             primary_email, role_id, status
         ) VALUES
-            (701, 999, 'EMP-SHARE2', '佐藤', '次郎', 'test@example.com', 3, 'active'),
-            (700, 999, 'EMP-SHARE1', '佐藤', '一郎', 'test@example.com', 3, 'active')
+            (701, 999, 999, 'EMP-SHARE2', '佐藤', '次郎', 'test@example.com', 3, 'active'),
+            (700, 999, 1001, 'EMP-SHARE1', '佐藤', '一郎', 'test@example.com', 3, 'active')
     """))
     await db_session.commit()
 
-    # 複数回叩いても常に id=700（最小）が返ることを確認
     for _ in range(3):
         res = await client.get("/api/v1/staff/me")
         assert res.status_code == 200, res.text
-        assert res.json()["id"] == 700
+        assert res.json()["id"] == 701
 
 
 @pytest.mark.asyncio
@@ -100,10 +110,10 @@ async def test_get_my_staff_no_ui_preferences_returns_null(client, db_session):
     """))
     await db_session.execute(text("""
         INSERT INTO staff (
-            id, tenant_id, staff_code, surname_jp, given_name_jp,
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
             primary_email, role_id, status
         ) VALUES (
-            600, 999, 'EMP-TEST02', '鈴木', '花子',
+            600, 999, 999, 'EMP-TEST02', '鈴木', '花子',
             'test@example.com', 2, 'active'
         )
     """))
@@ -126,10 +136,10 @@ async def test_patch_my_profile_phone(client, db_session):
     """))
     await db_session.execute(text("""
         INSERT INTO staff (
-            id, tenant_id, staff_code, surname_jp, given_name_jp,
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
             primary_email, role_id, status
         ) VALUES (
-            800, 999, 'EMP-PHONE01', '田中', '三郎',
+            800, 999, 999, 'EMP-PHONE01', '田中', '三郎',
             'test@example.com', 4, 'active'
         )
     """))
@@ -161,10 +171,10 @@ async def test_patch_my_profile_phone_invalid(client, db_session):
     """))
     await db_session.execute(text("""
         INSERT INTO staff (
-            id, tenant_id, staff_code, surname_jp, given_name_jp,
+            id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
             primary_email, role_id, status
         ) VALUES (
-            900, 999, 'EMP-PHONE02', '高橋', '四郎',
+            900, 999, 999, 'EMP-PHONE02', '高橋', '四郎',
             'test@example.com', 5, 'active'
         )
     """))
