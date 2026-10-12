@@ -96,6 +96,7 @@
 - 過去事例: #4158（予約の判定）では、本番の読み取りで全件の前後を比べてから出しました。この便も同じ方法で、本番の読み取りで前後を比べます（T4）。
 
 ## 維持の仕組み
+- 守り手: CI（backend/tests/test_same_post_rows_pg.py, backend/tests/test_v102_soldout_extra_targets_pg.py）
 - 決め方の正本は2つです: `_merge_supplier_products`（is_current）と、配信の SQL の定義1か所（まとめ方）。
 - テスト T1・T2 は CI（backend の pytest）で毎回回ります。
 - ランクを表す語は、condition_basis を出す状態の規則マスタに登録された語だけです。新しいランクの語をマスタに足せば、コードを変えずにまとまる、という前提で設計しています。この前提（condition_basis の R2:<語> がマスタから来ること）は、実装カードの 0 で file:line を付けて確かめます。

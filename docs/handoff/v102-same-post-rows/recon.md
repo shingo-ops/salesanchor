@@ -36,8 +36,8 @@
 - 配信候補の件数: backend/app/services/tcg_distribution_svc.py:354-371（`fetch_preview_data`。条件は配信と同じ）
 - 除外の内訳: :374-405
 - 在庫一覧 GAS（~/tcg-client-viewer）
-  - src/Code.js:60-91 は11列をヘッダー名で取り出す。行をまとめる処理・重複を除く処理は無い。
-  - src/index.html:480-491 は、配信の1行を表の1行として出す。
+  - /Users/tanizawashingo/tcg-client-viewer/src/Code.js:60-91 は11列をヘッダー名で取り出す。行をまとめる処理・重複を除く処理は無い。
+  - /Users/tanizawashingo/tcg-client-viewer/src/index.html:480-491 は、配信の1行を表の1行として出す。
 
 ## 4. ランクと括弧の置き場（実物）
 - ランク
