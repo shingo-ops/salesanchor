@@ -221,7 +221,7 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     shipping_note TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active','inactive','archived','pending_dedup_review')),
-    sales_rep_id INTEGER,                              -- FK は staff 作成後に付与
+    sales_rep_id INTEGER,                              -- FK は public.users(id) へ付与（ADR-1008）
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -647,18 +647,18 @@ CREATE TABLE IF NOT EXISTS {schema}.staff_ui_preferences (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Phase 1-B-2: companies.sales_rep_id → staff(id)（staff 作成後に付与）
+-- Phase 1-B-2 / ADR-1008: companies.sales_rep_id → public.users(id)
 DO $$
 BEGIN
     -- ADR-089 Sprint 5: fk_customers_sales_rep 削除済（customers テーブル不要）
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
-        WHERE conname = 'fk_companies_sales_rep'
+        WHERE conname = 'fk_companies_sales_rep_user'
           AND connamespace = (SELECT oid FROM pg_namespace WHERE nspname = '{schema_raw}')
     ) THEN
         ALTER TABLE {schema}.companies
-            ADD CONSTRAINT fk_companies_sales_rep
-            FOREIGN KEY (sales_rep_id) REFERENCES {schema}.staff(id);
+            ADD CONSTRAINT fk_companies_sales_rep_user
+            FOREIGN KEY (sales_rep_id) REFERENCES public.users(id) ON DELETE SET NULL;
     END IF;
 END $$;
 
