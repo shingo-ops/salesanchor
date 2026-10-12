@@ -142,3 +142,32 @@ LaunchAgent
 - ADR-136（docs/adr/ADR-136-cc-bot-github-identity.md）: PR 作成は shingo-cc 名義。危険 PR の GO 手順（CLAUDE.md の ADR-136 項）に従う。
 - ADR-1003（docs/adr/ADR-1003-go-delegation-to-opus.md）: GO 発行の委譲。ただし「毎日無人で消す」許可は PO の y/n（2026-10-13「y」）を GO 記録に転記する。
 - CLAUDE.md:36 の「不可逆操作は必ず PO 確認」: 本件の rm -rf は PO の y（範囲: 根5か所の中で R1〜R4 の条件に当たる物だけ）で許可済み。
+
+## 改訂 3（2026-10-13、PR #4183 マージ後に見つかった事実への対応）
+事実:
+- PR #4183 は main に入った（merge e6061e59f）。plist は WorkingDirectory=/Users/tanizawashingo/salesanchor で `bash scripts/disk-janitor.sh --execute` を動かすが、本体は main の 650005f29（2026-09-25）のままで origin/main より古く、未コミットの変更が多い。scripts/disk-janitor.sh は本体に存在しないため、このままでは毎日の実行が「ファイルが無い」で失敗する。本体は更新（pull）せず触らない。
+- 既存の reaper の LaunchAgent（jp.salesanchor.reaper-onlogin）にも同じ問題があるが、本件の範囲外として PO に報告する。
+
+対処（D3）: 道具専用の作業用コピー `/Users/tanizawashingo/.salesanchor-tools` を `git -C /Users/tanizawashingo/salesanchor worktree add --detach /Users/tanizawashingo/.salesanchor-tools origin/main` で作る（設計者が設置手順で手で1回行う。detached なので reaper は走査せず、根5か所の外なので R1・R2 の対象にもならない）。plist の WorkingDirectory をこのコピーにし、実行内容を origin/main に更新してから janitor を動かす1行にする。
+
+## 改訂 3a（Fable 審査 rev3 REVISE への対応。改訂3より優先）
+- HIGH-1: 「未コミットがあれば checkout が失敗する」は git の仕様では成り立たない。コピーが完全にきれい（`status --porcelain --untracked-files=all` が空）なときだけ更新して動かし、checkout 後に HEAD が origin/main と同じことも確かめる。
+- MED-1: R4 は DJ_REPOS の各リポジトリへ cd して reaper を呼ぶので、reaper の MAIN_REPO_ROOT はそのリポジトリになる。salesanchor の worktree は R4 の対象外で、reaper の LaunchAgent と reaper-schedule.yml が受け持つ。
+- MED-2: 毎朝 origin/main のスクリプトが動くリスクは既存の統制（Branch Protection・関所・ADR-135・ADR-136・ADR-1003）に頼る。
+- MED-3: コピーの作成は設計者が手で1回行う。runner-commands.md に「この場所で作業しない・作り直す手順」を書く。
+- LOW-1: fetch は origin が https の公開リポジトリで、資格情報なしで成功する（rev3 審査の実測）。
+- LOW-2: 受入に、kickstart 後のコピーの HEAD が `git ls-remote origin refs/heads/main` と同じ・`.err` が空、を足す。
+
+plist の1行（改訂3b の末尾を含む最終形）:
+`T=/Users/tanizawashingo/.salesanchor-tools; git -C "$T" fetch -q origin main && test -z "$(git -C "$T" status --porcelain --untracked-files=all)" && git -C "$T" checkout -q --detach origin/main && test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)" && cd "$T" && bash scripts/disk-janitor.sh --execute || { echo "disk-janitor: 道具のコピーの更新・確認に失敗したため実行しない" >&2; exit 1; }`
+
+## 改訂 3b（Fable 審査 rev3a REVISE への対応。改訂3a より優先）
+- MED-A: 失敗時は `|| { echo "…" >&2; exit 1; }` で終了コードを 1 にする。受入: 正常の kickstart は last exit code 0、未追跡ファイルを置いた試験は 1 で `.err` に上の文が出る。plist の XML は `&&` を `&amp;&amp;`、`>&2` を `&gt;&amp;2` と書き、`plutil -lint` OK と `plutil -extract ProgramArguments.2 raw` が上の1行と一致することを確かめる。
+- MED-B（案 a）: 関所の DANGEROUS_PATTERNS に `/^ops\/launchd\//` を1行追加し、ops/launchd を変える PR にも GO 記録を要る（消す範囲を広げる変更が GO なしで main に入って翌朝から動くのを防ぐ）。scripts/tests/test-process-artifacts.js に区分の試験を1件追加。試験は CI で走らないので手で実行して記録する。指標側の scripts/sop-health-collector.js の DANGEROUS_PATTERNS は別物で、本 PR では変えない。
+- LOW-A: 任意のため対応しない（status の失敗は直後の checkout も失敗して止まる）。
+
+## 審査結果（改訂 3 系）
+- rev3: REVISE（HIGH 1・MEDIUM 3・LOW 3）→ 改訂 3a
+- rev3a: REVISE（MEDIUM 2）→ 改訂 3b
+- rev3b: APPROVE（Fable 5.1、2026-10-13。architect-review-v1-rev3b.yaml）。残る LOW: LOW-B（sop-health-collector の乖離は本 PR で触らない）、LOW-C（追加試験は CI で走らないため手で実行して記録）。
+- PO: 毎日の自動削除を 2026-10-13 に「y」で承認。離席時に「PRマージ、デプロイまで完走」と一任。

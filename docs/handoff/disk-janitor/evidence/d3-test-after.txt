@@ -1,0 +1,166 @@
+
+=== process-artifacts gate テスト（design.md §7）===
+
+【パス区分テスト】
+  ✅ docs/以下は docs 区分
+  ✅ .md ファイルは docs 区分
+  ✅ migrations/ は dangerous 区分
+  ✅ deploy.yml は dangerous 区分
+  ✅ scripts/ は dangerous 区分
+  ✅ ops/launchd/ は dangerous 区分
+  ✅ frontend/src/ は real-code 区分
+  ✅ backend/app/ は real-code 区分
+  ✅ 未知のパスは unknown（安全側）
+  ✅ 書類のみのリストは hasDocsOnly=true
+  ✅ コードを含む場合は hasDocsOnly=false
+  ✅ frontend/src/ は user-impacting 区分
+  ✅ backend/app/routers/ は user-impacting 区分
+  ✅ backend/app/services/ は user-impacting 区分
+  ✅ backend/app/auth/ は user-impacting 区分
+  ✅ backend/app/tasks/ は user-impacting 区分
+  ✅ backend/app/discord_gateway/ は user-impacting 区分
+  ✅ PR-C の外部API検出レポートを読み込める
+  ✅ backend/app/schemas/ は user-impacting ではない
+
+【PR本文パーステスト】
+  ✅ 標準ワークフロー確認セクションをパース
+  ✅ 標準ワークフロー確認セクションで複数ADRをパース
+  ✅ 免除チェック済みを検出
+  ✅ 緊急モードを検出
+  ✅ セクションがない場合は null
+
+【注記かっこ除去テスト】
+  ✅ 削除するファイル: 半角かっこの注記を外す (a)
+  ✅ 削除するファイル: 全角かっこの注記を外す（従来どおり） (b)
+  ✅ 削除するファイル: 注記なしはそのまま (c)
+  ✅ 触るファイル: 半角かっこの注記を外す (d)
+
+【GO記録パーステスト】
+  ✅ 全フィールド揃いのGO記録をパース
+  ✅ GO記録セクションなし → null
+  ✅ GO発行者なし → issuer: null
+  ✅ GO原文なし → goText: null
+  ✅ バックアップ確認なし → backup: null
+
+【GO記録検証テスト】
+  ✅ 正常GO記録（PR番号一致）→ エラーなし
+  ✅ GO記録なし（null）→ セクション未記入エラー
+  ✅ GO発行者が権限外 → 権限外エラー
+  ✅ GO原文の書式不正（番号なし）→ 書式不正エラー
+  ✅ GO原文のPR番号不一致 → 番号不一致エラー
+  ✅ バックアップ確認未記入 → バックアップエラー
+  ✅ バックアップ確認「該当なし」→ エラーなし（DB非接触の危険変更向け）
+  ✅ PR番号未指定時は番号一致チェックをスキップ
+
+【ADR-1003 GO委任テスト】
+  ✅ ADR-1003: 委譲の名義（例外対象でない）はエラーなしで通る
+  ✅ ADR-1003: 例外対象で委譲の名義を使うとfailする
+  ✅ ADR-1003: PO名義は例外対象でも従来どおり通る
+  ✅ ADR-1003: hasPoOnlyExceptionPath は workflow-lint.yml を例外対象と判定する
+  ✅ ADR-1003: migrationsContainDropStatement はMOCK変数で判定できる
+  ✅ ADR-1003: requiresPoOnlyGo はmigrationファイルが無ければfalse（DROP検出をスキップ）
+  ✅ ADR-1003: migration有り＋BASE_SHA/HEAD_SHA無し → fail-closed（true）
+  ✅ ADR-1003: migrationファイルが無ければBASE_SHA/HEAD_SHA無しでもfalse
+
+【file:line引用テスト】
+  ✅ 有効なfile:line引用は引用ありと判定
+  ✅ 引用のないreconは hasFileCitations=false
+  ✅ 存在するファイル・有効な行番号は validateFileCitations がエラーなし
+  ✅ 拡張子なしのコードスパンは file citation として無視される
+
+【§7 受け入れ基準テスト】
+  ✅ AC1: 偽のfile:line（存在しないファイル）を含むreconはfail
+
+【書式バリエーションテスト（パス正規化）】
+  ✅ normalizeCitationPath: ./path を path に正規化
+  ✅ バッククォートあり・行番号なしでも hasFileCitations=true
+  ✅ バッククォートなし・スラッシュ入りパス・行番号ありでも hasFileCitations=true
+  ✅ バッククォートなし・相対パス（./）でも hasFileCitations=true
+  ✅ テーブルセル内の行番号範囲（N-M）でも hasFileCitations=true
+  ✅ 行番号なし・スラッシュなし（単純な識別子）は hasFileCitations=false
+  ✅ バッククォート付き・行番号超過でもエラーなし（行番号チェック廃止）
+  ✅ バッククォート付き・行番号範囲（N-M）超過でもエラーなし（行番号チェック廃止）
+  ✅ バッククォートなし・行番号あり・実在ファイル → エラーなし
+  ✅ 相対パス（./）の実在ファイル → エラーなし（正規化後に実在チェック）
+  ✅ バッククォートなし・存在しないファイル → エラー検出
+  ✅ URL は引用として扱わない
+  ✅ extractFileCitations: 重複パスはまとめられる
+  ✅ AC2: 「外部・過去事例と応用」欄が空欄の設計はfail
+  ✅ AC2: 複数ADRを含む設計は全件相互参照が必要
+  ✅ AC2: 設計docのADR参照も境界付きで評価される
+  ✅ AC2: 「外部・過去事例と応用」欄セクション自体が無い場合もfail
+  ✅ AC3: 検証方法が空の受け入れ基準はfail
+  ✅ AC4: 危ない変更＋GO記録なし → GO記録必須メッセージで即fail
+  ✅ AC4-edge: 危ない変更＋GO記録なし＋成果物完備でも fail
+  ✅ AC4-bad-format: GO原文の書式不正（番号なし）→ fail
+  ✅ AC4-number-mismatch: GO原文のPR番号不一致 → fail
+  ✅ AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須）
+
+【ADR-1003 GO委任 統合テスト】
+  ✅ ADR-1003統合: 危ない変更（例外対象でない）＋委譲名義のGO → pass
+  ✅ ADR-1003統合: workflow-lint.yml変更＋委譲名義のGO → fail（PO本人のGOが必要）
+  ✅ ADR-1003統合: workflow-lint.yml変更＋PO名義のGO → pass
+  ✅ AC5: 危ない変更＋正常GO記録（PR番号一致）→ pass
+  ✅ AC5: 危ない変更＋正常GO記録（緊急モード）→ pass＋宿題起票試行
+  ✅ AC6: 書類のみのPRは自動スキップ（pass）
+  ✅ 柱2-欠落版: 正本(.md)を触る書類PRで宣言なし → fail想定
+  ✅ 柱2-充足版: 正本(.md)を含む書類PRはスキップせず照合ステージへ進む
+  ✅ 柱2-中立版: 正本を含まない純書類PR → 従来どおり自動スキップ(pass)
+
+【二重定義検出テスト】
+  ✅ 新規作成したファイルが latest main に既にある場合は fail
+  ✅ 本当の新規パスは latest main 照合を通過する
+  ✅ 既存ファイルの変更だけなら二重定義として誤検出しない
+
+【統合テスト】
+  ✅ 内部のみのPR: 実在するrecon＋設計doc → GOなしでpass
+  ✅ ユーザー影響変更: GOなしはfail
+  ✅ ユーザー影響変更: GOありはpass
+  ✅ 外部API変更: GOなしはfail
+  ✅ 外部API変更: GOありはpass
+  ✅ 正常系: 実在するADR命名バリエーション4件は全てpass
+  ✅ 境界: ADR-10 参照は ADR-1000-*.md だけでは pass しない
+  ✅ 複数ADR: 1件でも欠ければ fail
+  ✅ AC2: 複数ADRを含む設計は全件相互参照が必要
+  ✅ AC2: 設計docのADR参照も境界付きで評価される
+  ✅ AC2: 「外部・過去事例と応用」欄セクション自体が無い場合もfail
+  ✅ AC3: 検証方法が空の受け入れ基準はfail
+  ✅ AC4: 危ない変更＋GO記録なし → GO記録必須メッセージで即fail
+  ✅ AC4-edge: 危ない変更＋GO記録なし＋成果物完備でも fail
+  ✅ AC4-bad-format: GO原文の書式不正（番号なし）→ fail
+  ✅ AC4-number-mismatch: GO原文のPR番号不一致 → fail
+  ✅ AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須）
+  ✅ AC5: 危ない変更＋正常GO記録（PR番号一致）→ pass
+  ✅ AC5: 危ない変更＋正常GO記録（緊急モード）→ pass＋宿題起票試行
+  ✅ develop→main リリースPR は自動スキップ（pass）
+  ✅ hotfix→main は通常検査（スキップしない）
+
+【git diff 3点形式テスト（gate-diff-3dot）】
+  ✅ 3点差分: 古い土台のブランチで本線側の scripts/ 変更を巻き込まない
+  ✅ 3点差分: feature が本当に scripts/ を変更した場合は正しく検出する（検知漏れなし）
+
+【維持の仕組み欄テスト（単体）】
+  ✅ 維持欄: セクション自体が無い → エラー
+  ✅ 維持欄: 守り手が空欄 → エラー
+  ✅ 維持欄: 架空パスの名指し → 実在エラー
+  ✅ 維持欄: 実在パスの名指し → エラーなし
+  ✅ 維持欄: 「人手で守る」宣言 → エラーなし
+
+【維持の仕組み欄テスト（統合・猶予と段階投入）】
+  ✅ 維持欄統合: failモード＋欄なし＋PR2700 → fail
+  ✅ 維持欄統合: warnモード（未設定）＋欄なし＋PR2700 → pass＋警告表示
+  ✅ 維持欄統合: failモード＋欄あり実在守り手＋PR2700 → pass（誤検知ゼロ）
+  ✅ 維持欄統合: failモード＋欄なし＋PR2599 → pass（猶予・巻き込みゼロ）
+
+【validation-only副作用テスト】
+  ✅ validation-only: 緊急判定は維持しissue createは0回
+  ✅ 対象外REPOはfull checker開始前にfail
+
+【LOCAL_PRECHECK テスト】
+  ✅ LOCAL_PRECHECK: 危険変更＋GO記録なしでもGO記録で落ちず先の検査に進む
+  ✅ LOCAL_PRECHECK: GITHUB_ACTIONS=true と併用するとfail（CIでは使用不可）
+  ✅ LOCAL_PRECHECK: PR_NUMBERなしでも触る/削除するファイルの宣言照合が行われる
+
+==================================================
+テスト結果: ✅ 126 PASS / ❌ 0 FAIL
+ALL PASSED

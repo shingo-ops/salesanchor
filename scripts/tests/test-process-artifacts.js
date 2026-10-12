@@ -146,6 +146,10 @@ test('scripts/ は dangerous 区分', () => {
   assert.strictEqual(classifyFile('scripts/check-process-artifacts.js'), 'dangerous');
 });
 
+test('ops/launchd/ は dangerous 区分', () => {
+  assert.strictEqual(classifyFile('ops/launchd/jp.salesanchor.disk-janitor.plist'), 'dangerous');
+});
+
 test('frontend/src/ は real-code 区分', () => {
   assert.strictEqual(classifyFile('frontend/src/App.tsx'), 'real-code');
 });

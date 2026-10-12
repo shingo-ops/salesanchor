@@ -115,6 +115,7 @@ function hasCanonicalDoc(files) {
 const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
+  /^ops\/launchd\//,                     // 毎朝この Mac でファイルを消す LaunchAgent（disk-janitor）の入口
   /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
   /^frontend\/src\/pages-layout\.css$/,  // 全ページ共通レイアウト（共有＝変更にGO必須）
   /^docs\/STANDARD-WORKFLOW\.md$/,                      // 正本（自己保護）
