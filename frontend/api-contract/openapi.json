@@ -593,6 +593,18 @@
             "title": "Is V102",
             "type": "boolean"
           },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
           "provider": {
             "title": "Provider",
             "type": "string"
