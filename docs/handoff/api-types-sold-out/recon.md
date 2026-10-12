@@ -1,7 +1,7 @@
 # recon: 生成型の初採用（便C-2、TcgSoldOutPage）
 
 - 基準: origin/main `1690f48f3`（BASE_OK）
-- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠: ADR-1005。前提の便C-1（PR #3971）は本番反映済み。
+- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠: ADR-1010（旧 ADR-1005）。前提の便C-1（PR #3971）は本番反映済み。
 - 調査: Sonnet（読み取りとローカル実行）。判断: Opus
 
 ## 事実
