@@ -29,19 +29,23 @@ BEGIN
   IF n <> 0 THEN RAISE EXCEPTION 'pre t4 meta_messages unexpected values %', n; END IF;
   SELECT count(*) INTO n FROM tenant_004.tenant_meta_config WHERE connected_by_staff_id IS NOT NULL AND connected_by_staff_id NOT IN (1, 3, 4, 5, 6);
   IF n <> 0 THEN RAISE EXCEPTION 'pre t4 meta_config unexpected values %', n; END IF;
-  SELECT count(*) INTO n FROM tenant_006.tenant_meta_config WHERE connected_by_staff_id IS NOT NULL AND connected_by_staff_id NOT IN (1, 10);
+  SELECT count(*) INTO n FROM tenant_006.tenant_meta_config WHERE connected_by_staff_id IS NOT NULL AND connected_by_staff_id NOT IN (1, 10, 80, 81, 82);
   IF n <> 0 THEN RAISE EXCEPTION 'pre t6 meta_config unexpected values %', n; END IF;
 
-  -- 付け替え（件数は 2026-10-13 読み取り時点が下限。旧コードの書き込みで増えている場合がある）
+  -- 付け替え（meta_messages の件数は 2026-10-13 読み取り時点が下限＝旧コードの書き込みで増えうる。
+  --          tenant_meta_config の件数は上限＝P2 反映後の再接続で新しい番号に上書きされて減りうる。
+  --          どちらも最後の「値 1 が残っていない」確認で取りこぼしを検出する）
   UPDATE tenant_004.meta_messages SET seen_by_staff_id = 3 WHERE seen_by_staff_id = 1;
   GET DIAGNOSTICS n = ROW_COUNT; IF n < 25 THEN RAISE EXCEPTION 't4 seen_by expected >= 25 got %', n; END IF;
   RAISE NOTICE 't4 meta_messages.seen_by 1->3: %', n;
   UPDATE tenant_004.meta_messages SET sent_by_staff_id = 3 WHERE sent_by_staff_id = 1;
   GET DIAGNOSTICS n = ROW_COUNT; RAISE NOTICE 't4 meta_messages.sent_by 1->3: %', n;
   UPDATE tenant_004.tenant_meta_config SET connected_by_staff_id = 3 WHERE connected_by_staff_id = 1;
-  GET DIAGNOSTICS n = ROW_COUNT; IF n <> 11 THEN RAISE EXCEPTION 't4 connected_by expected 11 got %', n; END IF;
+  GET DIAGNOSTICS n = ROW_COUNT; IF n > 11 THEN RAISE EXCEPTION 't4 connected_by expected <= 11 got %', n; END IF;
+  RAISE NOTICE 't4 tenant_meta_config.connected_by 1->3: %', n;
   UPDATE tenant_006.tenant_meta_config SET connected_by_staff_id = 10 WHERE connected_by_staff_id = 1;
-  GET DIAGNOSTICS n = ROW_COUNT; IF n <> 1 THEN RAISE EXCEPTION 't6 connected_by expected 1 got %', n; END IF;
+  GET DIAGNOSTICS n = ROW_COUNT; IF n > 1 THEN RAISE EXCEPTION 't6 connected_by expected <= 1 got %', n; END IF;
+  RAISE NOTICE 't6 tenant_meta_config.connected_by 1->10: %', n;
 
   -- 事後確認: t4・t6 に値 1 が残っていない
   SELECT (SELECT count(*) FROM tenant_004.meta_messages WHERE seen_by_staff_id = 1 OR sent_by_staff_id = 1)
