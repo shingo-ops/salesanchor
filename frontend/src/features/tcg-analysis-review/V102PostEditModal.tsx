@@ -13,6 +13,7 @@ import { Stack } from "../../components/Stack";
 import { TextField } from "../../components/TextField";
 import { TwoColumn } from "../../components/TwoColumn";
 import { api, ApiError } from "../../lib/api";
+import { GapSuspectNote, gapSuspectOf } from "./GapSuspectNote";
 import { reviewReasonLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
 import type { V102PostDetail, V102SaveResponse } from "./v102PostTypes";
@@ -75,6 +76,13 @@ export function V102PostEditModal({ jobId, onClose, onSaved }: Props) {
     void load();
   }, [load]);
 
+  const gapSuspects = useMemo(
+    () => new Map((detail?.items ?? []).flatMap((item) => {
+      const suspect = gapSuspectOf(item);
+      return suspect ? [[item.id, suspect] as const] : [];
+    })),
+    [detail],
+  );
   const lineCount = detail?.lines.length ?? 0;
   const validation = useMemo(() => validateRows(rows, lineCount), [rows, lineCount]);
   const rawText = useMemo(() => (detail?.lines ?? []).map((line) => line.text).join("\n"), [detail]);
@@ -172,7 +180,19 @@ export function V102PostEditModal({ jobId, onClose, onSaved }: Props) {
         />
       ),
     },
-    { key: "reasons", header: t("v102Posts.columns.reasons"), renderCell: (row) => row.reasonsText || "—" },
+    {
+      key: "reasons",
+      header: t("v102Posts.columns.reasons"),
+      renderCell: (row) => {
+        const suspect = row.id ? gapSuspects.get(row.id) : undefined;
+        return (
+          <Stack gap="1">
+            <span>{row.reasonsText || "—"}</span>
+            {suspect && <GapSuspectNote gapLines={suspect.gap_lines} candidates={suspect.candidates} />}
+          </Stack>
+        );
+      },
+    },
     {
       key: "remove",
       header: t("v102Posts.columns.remove"),

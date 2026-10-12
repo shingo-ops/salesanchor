@@ -85,6 +85,28 @@ describe("V102PostsTab list", () => {
   });
 });
 
+describe("V102PostEditModal gap suspect", () => {
+  it("shows gap lines and candidates only for the item with the gemini_gap_suspect reason", async () => {
+    const suspect = { gap_lines: [2], candidates: [{ product_id: "1001", name: "Product A" }] };
+    const [first, second] = detailResponse.items;
+    const withSuspect = {
+      ...detailResponse,
+      items: [
+        { ...first, review_reason_details: [{ code: "gemini_gap_suspect", source: "system", fix_stage: "extraction" }], gap_suspect: suspect },
+        { ...second, gap_suspect: suspect },
+      ],
+    };
+    vi.mocked(api.get).mockImplementation((path: string) =>
+      Promise.resolve(path.startsWith(`/tcg/v102/posts/${JOB}`) ? withSuspect : listResponse),
+    );
+
+    await openModal();
+
+    expect(await screen.findByText("Gap lines: L2")).toBeTruthy();
+    expect(screen.getAllByText("Candidates: Product A")).toHaveLength(1);
+  });
+});
+
 describe("V102PostEditModal save", () => {
   it.each([
     ["zero", "0"],

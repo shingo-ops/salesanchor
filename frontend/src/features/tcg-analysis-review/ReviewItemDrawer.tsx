@@ -11,11 +11,12 @@ import { Drawer } from "../../components/Drawer";
 import { Stack } from "../../components/Stack";
 import { api, ApiError } from "../../lib/api";
 import { ConditionReviewPanel } from "./ConditionReviewPanel";
+import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 
-export type ReviewDrawerItem = AnalysisReviewItem & { is_v102?: boolean };
+export type ReviewDrawerItem = AnalysisReviewItem & { is_v102?: boolean; gap_suspect?: GapSuspectData | null };
 
 interface Props {
   item: ReviewDrawerItem;
@@ -36,6 +37,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const details = item.review_reason_details ?? [];
+  const gapSuspect = gapSuspectOf(item);
 
   const acknowledge = async (code: string) => {
     setPendingCode(code);
@@ -88,6 +90,9 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
                     >
                       {t("reviewItem.ack")}
                     </Button>
+                  )}
+                  {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
+                    <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
                   )}
                 </li>
               ))}

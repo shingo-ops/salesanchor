@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from bisect import bisect_right
@@ -260,3 +261,34 @@ def to_stored_detail(detail: Mapping, item_id_by_index: Mapping[int, str]) -> di
         "gap_name": mapped,
         "unmapped": unmapped,
     }
+
+
+def gap_suspects_by_item(stored: object) -> dict[str, dict]:
+    """extraction_jobs.system_review_detail（版 1）→ {extraction_item_id: {"gap_lines": [int], "candidates": [int]}}。
+
+    記録の形を読むのはこの関数だけ（SSOT）。None・版違い・形違い・JSON でない文字列は空の辞書。
+    JSONB が文字列で返る場合（asyncpg + text()）はここで JSON として読む。
+    """
+    if isinstance(stored, str):
+        try:
+            stored = json.loads(stored)
+        except json.JSONDecodeError:
+            return {}
+    if not isinstance(stored, Mapping) or stored.get("v") != DETAIL_VERSION:
+        return {}
+    entries = stored.get("gap_name")
+    if not isinstance(entries, list):
+        return {}
+    result: dict[str, dict] = {}
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            continue
+        item_id, gap_lines, candidates = entry.get("extraction_item_id"), entry.get("gap_lines"), entry.get("candidates")
+        if not isinstance(item_id, str) or not _is_int_list(gap_lines) or not _is_int_list(candidates):
+            continue
+        result[item_id] = {"gap_lines": list(gap_lines), "candidates": list(candidates)}
+    return result
+
+
+def _is_int_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(n, int) and not isinstance(n, bool) for n in value)
