@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
+import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
@@ -62,11 +62,6 @@ interface Props {
   sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   /** Discord リアクション取り消し */
   deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
-  /**
-   * スマホで一覧へ戻る。1列切り替え（スマホでは一覧と会話を同時に出さない）のため、
-   * 会話の上部バーの左端に戻るボタンを置く。PC・タブレットでは一覧が常に見えているので出さない。
-   */
-  onBackToList: () => void;
 }
 
 /** Per-message translation state. */
@@ -77,7 +72,6 @@ interface TranslationState {
 }
 
 export function InboxMessageThread({
-  onBackToList,
   selectedLeadId, selectedConversation, leadDetail, messagesData, msgLoading, msgError,
   avatarErrors, handleAvatarError,
   handleMarkUnread, handleExclude, handleDeleteLead,
@@ -386,14 +380,6 @@ export function InboxMessageThread({
       )}
       {/* ヘッダ */}
       <header className="inbox-center-header">
-        <button
-          type="button"
-          className="inbox-back-to-list"
-          onClick={onBackToList}
-          aria-label={t("inbox.backToList")}
-        >
-          {(() => { const BackIcon = SCHEDULE_SETTINGS_ICONS.back; return <BackIcon size={ICON.md} aria-hidden="true" />; })()}
-        </button>
         <div className="conv-avatar" style={{ flexShrink: 0 }}>
           {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
             <img

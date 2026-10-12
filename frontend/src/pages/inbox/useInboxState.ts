@@ -74,8 +74,6 @@ export interface UseInboxStateReturn {
 
   // 選択中会話
   selectedLeadId: number | null;
-  /** スマホで一覧へ戻るときに null を渡して選択を解除する（1列切り替え用） */
-  setSelectedLeadId: (id: number | null) => void;
   selectedConversation: Conversation | null;
   selectedPlatform: ReturnType<typeof inferPlatform>;
   messagesData: MessagesResponse | null;
@@ -893,7 +891,6 @@ export function useInboxState(): UseInboxStateReturn {
 
     // 選択中会話
     selectedLeadId,
-    setSelectedLeadId,
     selectedConversation,
     selectedPlatform,
     messagesData,
