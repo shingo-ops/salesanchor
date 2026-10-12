@@ -109,3 +109,17 @@ def test_calling_merge_twice_gives_the_same_result(pg, ids):
     first = [_current(pg, r) for r in rows]
     _merge(pg, new_job)
     assert [_current(pg, r) for r in rows] == first == [False, True, True]
+
+
+def test_rows_of_the_same_post_stay_current_even_if_computed_at_or_engine_differ(pg, ids):
+    # 1つの item には analysis_results が1行しかない（UNIQUE extraction_item_id）ので、解析し直しの前後の行は同じ投稿に並ばない。
+    # 一部の行だけ計算時刻や engine_version が違っても、投稿が同じなら全部 TRUE のまま。
+    job = _add_job(pg)
+    rows = [_add_row(pg, job, ids.p1, ids.box, note="a"), _add_row(pg, job, ids.p1, ids.box, note="b")]
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"UPDATE {SCHEMA}.analysis_results SET computed_at = computed_at - interval '3 days', engine_version = 'older' WHERE id = %s",
+            (rows[0],),
+        )
+    _merge(pg, job)
+    assert [_current(pg, r) for r in rows] == [True, True]
