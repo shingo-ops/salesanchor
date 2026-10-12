@@ -136,3 +136,10 @@
   - 置き場は既存の2か所（理由＝analysis_results、行と候補＝system_review_detail）で、新しい置き場を作らない。
   - 理由コードの追加は既存の型と整合テストで守られる。
 - 未解決：画面の実機での見え方は PO の確認が要る（受入8）。段2b（商品を自動で当てる・配信）は PO の判断。
+
+## 10. PR-B の実装で決めた点（設計者が確認済み）
+- 候補の商品名を引く処理と API の応答の型（GapSuspect・GapCandidate）は、新しいファイル `backend/app/services/v102_gap_suspect_view.py` に置く。`backend/app/services/v102_gap_lines.py` は純粋な関数だけに保つため。記録の形を読むのは `gap_suspects_by_item` だけ（SSOT）。
+- 商品名の列は、要確認 API の system の商品名（`p.name AS product_title`）と同じ `public.products.name`。一覧の1回の要求につき1回だけ引く。
+- `gap_suspects_by_item` は JSONB が文字列で返る場合も読む（asyncpg と text() の組み合わせ）。
+- 投稿の詳細（`backend/app/services/v102_transcription_svc.py` の get_post）は、記録を別に1回読む（PostJob の形を変えないため）。
+- PR-A の本番の確認：2026-10-12T03:34Z 反映（deploy 38200008685 success）・本番の理由コード表 ROWS 37。
