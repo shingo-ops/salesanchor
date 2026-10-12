@@ -1,0 +1,16 @@
+{
+  "dmPolicy": "allowlist",
+  "allowFrom": ["1255555836776939692"],
+  "groups": {
+    "<OPS_CHANNEL_ID>": {
+      "requireMention": false,
+      "allowFrom": ["1255555836776939692"]
+    }
+  },
+  "pending": {},
+  "monitorChannels": {
+    "1527986848490717245": { "allowWebhooks": ["1528064418448146552"] },
+    "1544914659595915325": { "allowWebhooks": ["1544914720987807804"] }
+  },
+  "opsChannel": "<OPS_CHANNEL_ID>"
+}

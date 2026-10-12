@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# 受付役の tmux セッションを終了し、discord-ops の bun server.ts が残っていれば終了させる。
+set -euo pipefail
+
+SESSION="sa-ops-intake"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  tmux kill-session -t "$SESSION"
+  echo "tmux セッション $SESSION を終了しました。"
+else
+  echo "tmux セッション $SESSION はありません。"
+fi
+
+# 作業ディレクトリが discord-ops の bun server.ts だけを対象にする（他の bun は触らない）。
+found=0
+for pid in $(pgrep -f "bun.*server.ts" || true); do
+  cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1 || true)"
+  case "$cwd" in
+    */discord-ops)
+      kill "$pid"
+      echo "残っていた discord-ops の bun server.ts (pid $pid) を終了しました。"
+      found=1
+      ;;
+  esac
+done
+if [ "$found" -eq 0 ]; then
+  echo "残っている discord-ops の bun server.ts はありません。"
+fi

@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# 番人: 受付が止まっていたら、監視通知とは別の webhook で PO に知らせる（launchd から 5 分ごと）。
+# 判定: ① tmux セッション ② cwd が discord-ops の bun server.ts ③ heartbeat が 600 秒以内
+set -euo pipefail
+
+SESSION="sa-ops-intake"
+HEARTBEAT="$HOME/.claude/channels/discord-ops/heartbeat"
+MAX_AGE_SEC=600
+CONF_DIR="$HOME/.config/sa-ops-intake"
+WEBHOOK_FILE="$CONF_DIR/watchdog-webhook"
+LAST_ALERT="$CONF_DIR/last-alert"
+ALERT_INTERVAL_SEC=3600
+
+if [ ! -f "$WEBHOOK_FILE" ]; then
+  echo "通知先ファイルがありません: $WEBHOOK_FILE（権限 600 の URL ファイルを置いてください）" >&2
+  exit 2
+fi
+
+now="$(date +%s)"
+reasons=""
+
+# ① tmux セッション
+if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+  reasons="${reasons}tmux セッション ${SESSION} がありません。"
+fi
+
+# ② cwd が discord-ops の bun server.ts
+server_ok=0
+for pid in $(pgrep -f "bun.*server.ts" || true); do
+  cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1 || true)"
+  case "$cwd" in
+    */discord-ops) server_ok=1 ;;
+  esac
+done
+if [ "$server_ok" -eq 0 ]; then
+  reasons="${reasons}discord-ops の bun server.ts が動いていません。"
+fi
+
+# ③ heartbeat の更新時刻
+if [ ! -f "$HEARTBEAT" ]; then
+  reasons="${reasons}heartbeat ファイルがありません。"
+else
+  mtime="$(stat -f %m "$HEARTBEAT")"
+  age=$((now - mtime))
+  if [ "$age" -gt "$MAX_AGE_SEC" ]; then
+    reasons="${reasons}heartbeat が ${age} 秒更新されていません。"
+  fi
+fi
+
+# 全部 OK: 最後の通知時刻を空にして終了（ファイルは削除せず上書き）
+if [ -z "$reasons" ]; then
+  : > "$LAST_ALERT"
+  exit 0
+fi
+
+# 1 時間に 1 回まで
+last=""
+if [ -f "$LAST_ALERT" ]; then
+  last="$(tr -d '[:space:]' < "$LAST_ALERT")"
+fi
+if [ -n "$last" ] && [ $((now - last)) -lt "$ALERT_INTERVAL_SEC" ]; then
+  exit 0
+fi
+
+iso="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+payload="$(printf '{"content":"⚠️ 受付停止: %s（%s）"}' "$reasons" "$iso")"
+url="$(tr -d '[:space:]' < "$WEBHOOK_FILE")"
+
+# URL をコマンドラインや出力に出さない（curl 設定を標準入力から渡す）
+if printf 'url = "%s"\n' "$url" | curl -sS -o /dev/null --fail -X POST \
+     -H 'Content-Type: application/json' -d "$payload" --config - ; then
+  mkdir -p "$CONF_DIR"
+  printf '%s\n' "$now" > "$LAST_ALERT"
+  echo "受付停止を通知しました: $reasons"
+else
+  echo "通知の送信に失敗しました（理由: $reasons）" >&2
+  exit 3
+fi
