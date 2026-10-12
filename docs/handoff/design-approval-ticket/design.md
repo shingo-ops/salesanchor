@@ -41,7 +41,7 @@ status: draft（PO 承認待ち・実装未着手）
   - 作業場所のフック（100件。うち75件は誤判定）
   - `sleep` の拒否（78件）
 - PO は本番 DB に1回書き込むたびに `scripts/permit-danger.sh` を実行している（7日で44回）。
-- 危険操作のフックは、コマンド全体の文字列に危険語が含まれるだけで止める（`/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:301-411`）。
+- 危険操作のフックは、コマンド全体の文字列に危険語が含まれるだけで止める（/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:301-411）。
 - 公式仕様では、`allow` に文章の規則を足すか、ユーザーが操作そのものを具体的に書いた発言があれば、自動判定は通す。
 
 ## 5. design
@@ -52,7 +52,7 @@ status: draft（PO 承認待ち・実装未着手）
 
 - 新規ファイル ~/.claude/scripts/permission-denied-log.sh
   - 公式の `PermissionDenied` フックとして登録する。
-  - 受け取った JSON をそのまま `~/.claude/logs/permission-denied.jsonl` に1行ずつ追記する。項目は絞らない。
+  - 受け取った JSON をそのまま ~/.claude/logs/permission-denied.jsonl に1行ずつ追記する。項目は絞らない。
   - `tool_input` の中の秘密値の形（`*_TOKEN=`、`Bearer `、`password=`）は伏せ字にしてから保存する。
 - 既存の4つのフック（worktree-only-guard、agent-danger-hook、pr-body-guard、gh-scope-guard）
   - 止める箇所の直前に、`agent-events.jsonl` に `{type:"hook_blocked", hook, reason, cmd_head(120字)}` を1行書く処理を足す。
@@ -61,19 +61,19 @@ status: draft（PO 承認待ち・実装未着手）
 
 ### 段2：関係のない停止をなくす
 
-1. 作業場所の誤判定（`/Users/tanizawashingo/.claude/scripts/worktree-only-guard.sh:46-57`）
+1. 作業場所の誤判定（/Users/tanizawashingo/.claude/scripts/worktree-only-guard.sh:46-57）
    - 変更前: 先頭が `cd` のコマンドで引数を解析できないと、その場で拒否する。
    - 変更後: 解析できないときは「場所不明」として扱う。止めるのは、コマンドに `git commit` / `git push` が含まれる場合だけにする（:65-76 の保護ブランチの検査が意味を持つのはこの2つだけのため）。それ以外は通して、段1の記録に `cwd_unresolved` として残す。
    - 触らない範囲: :9-30（permits への書き込みの禁止）、:65-76 の判定内容。
-2. 危険語の照合（`/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:301-411`）
+2. 危険語の照合（/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:301-411）
    - 照合の前に、次の部分を照合の対象から外す。
      - ヒアドキュメントの本文（`<<'X'` から `X` まで）。ただし、その行の先頭のコマンドが `cat` / `tee` で、行き先が `>` のファイルの場合に限る。
      - `git commit -m` / `gh pr … --body` / `--title` の引数。
    - `rm -rf` は、すべての対象パスが次の場所の下にあれば通す。
-     - `~/worktrees/` の下で、自分のセッションの作業場所であるもの（worktree-access-guard の所有判定を使う）
+     - ~/worktrees/ の下で、自分のセッションの作業場所であるもの（worktree-access-guard の所有判定を使う）
      - セッションの作業領域（`/private/tmp/claude-*`）
    - 触らない範囲: `bash -c` / `sh -c` / `eval` の引数（実行される文字列なので外さない）、:41-106 psql-write-guard、:108-141 permits-guard。
-3. PR 本文フック（`/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh:23-30`）
+3. PR 本文フック（/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh:23-30）
    - 変更前: 文字列のどこかに `gh pr create` と `--body` があれば動く。
    - 変更後: ヒアドキュメントの本文を取り除いた残りの文字列で判定する（その他の判定は現行どおり文字列全体を見る）。
      - 先頭の判定に切り替えないのは、次のような書き方で PR 本文フックが動かなくなるのを防ぐため（Reviewer 指摘 MEDIUM-5）: `GH_TOKEN=… gh pr create`、`env X=1 gh pr create`、`( gh pr create`、`time gh pr create`。
@@ -89,7 +89,7 @@ status: draft（PO 承認待ち・実装未着手）
 1. 操作一覧ファイル docs/handoff/<topic>/ops.yaml
    - 設計者（Opus）が設計書と一緒に作り、PR に載せる。
    - 書くこと: 設計 ID、作業場所のパス、期限（既定は72時間、上限は7日）、操作の一覧。
-   - 作業場所は `~/worktrees/` の下にあり、発行したセッションが所有する worktree に限る（worktree-access-guard の所有判定を使う）。本店や `~` は書けない（Reviewer 再審査 MEDIUM-E）。
+   - 作業場所は ~/worktrees/ の下にあり、発行したセッションが所有する worktree に限る（worktree-access-guard の所有判定を使う）。本店や ~ は書けない（Reviewer 再審査 MEDIUM-E）。
    - 操作は次の1種類だけを書ける。
 
 | kind | 必須項目 | 束縛 |
@@ -121,7 +121,7 @@ status: draft（PO 承認待ち・実装未着手）
      - DELETE を含む本番データの変更は、チケットでは通さない。ADR-1003 の「大量 DELETE」との境目を機械では決められないため。今ある手順で行う: PO の決定に基づく既存の autoMode.allow 規則（DRY-RUN と件数ガードが前提）、または PO の `!`（Reviewer 指摘 HIGH-2、再審査 LOW-F）。
 3. AI による発行を防ぐ（agent-danger-hook.sh の permits-guard の並びに追加する）
    - AI のコマンド文字列に `approve-design` が出たら、例外なく exit 2 で止める。
-   - 既存の permits-guard が、`~/.claude/permits` への AI の読み書きを止める仕組みはそのまま使う。
+   - 既存の permits-guard が、~/.claude/permits への AI の読み書きを止める仕組みはそのまま使う。
 4. チケットの消費（agent-danger-hook.sh に新しい関数 `consume_design_ticket` を追加する）
    - psql-write-guard（:41-106）で止める直前に、有効なチケットを探す。
    - 次の条件をすべて満たせば通し、使用回数を1つ減らす。
@@ -164,7 +164,7 @@ status: draft（PO 承認待ち・実装未着手）
 | チケットの有効期間中は、一覧にある操作を PO が見ないまま実行できる | 期限を短くする（既定72時間・上限7日）。束縛を厳しくする（sha256・PR 番号・パス）。回数に上限を付ける。段1の記録で事後に全件確認できるようにする |
 | 照合から外す範囲を広げると、本当に危ない操作を見逃すおそれがある | `bash -c` / `eval` / `sh -c` は外さない。受入試験 T2-6 で、実行される危険操作が今までどおり止まることを確認する |
 | 自動判定は文章の規則で判断するので、段4の規則が効くかは保証されない | 受入試験 T4-1 で実測する。効かなかった場合は、その時点で PO に報告し、別案（その都度 PO が `!` で承認する範囲を広げる）に戻す |
-| フックがリポジトリの外（`~/.claude/scripts`）にあり、変更の履歴が残らない | 変更前に `~/.claude/scripts/.backup/<日時>/` に写しを置く。変更後の差分を PR 本文に貼る |
+| フックがリポジトリの外（~/.claude/scripts）にあり、変更の履歴が残らない | 変更前に ~/.claude/scripts/.backup/<日時>/ に写しを置く。変更後の差分を PR 本文に貼る |
 | AI が ops.yaml を書くので、承認前に一覧へ余計な操作を入れられる | PO は `!` を実行した時点で表示される一覧を見る。発行スクリプトは例外の操作を機械的に拒否する |
 | 【受容するリスク】チケットのファイルは本人の署名を持たない。AI がパスの文字列を分けたり組み立てたりして permits-guard（agent-danger-hook.sh:120-125 の正規表現4種）を逃れれば、チケットを偽造できる。発行スクリプト名の照合（段3-3）も文字列の照合なので、glob や変数展開で逃れられる。既存の permit も同じ弱さを持つうえ、PO の決定に基づく既存の autoMode.allow 規則のもとでは、AI がすでに単発の permit を発行できる（Reviewer 指摘 MEDIUM-3、再審査 LOW-F） | 被害の範囲を絞る: kind は psql-write の1種、コマンドは完全一致、作業場所は自分の worktree、SQL には DELETE・DROP・メタコマンドを含めない。チケットの発行と使用を段1の記録に残し、毎週の点検で発行スクリプトの記録とチケットの使用を突き合わせる。署名（PO の端末だけが持つ鍵）は、偽造が1件でも見つかった時点で導入する |
 
@@ -194,7 +194,7 @@ status: draft（PO 承認待ち・実装未着手）
 | T3-1 | PO の `!` 実行で発行スクリプトがチケットを作れる | PO が実行し、表示を見る。`!` にも PreToolUse フックがかかって止まった場合は、PO が別のターミナルで実行する手順に切り替え、その手順を段3のカードに書く |
 | T3-2 | AI が発行スクリプトを実行すると止まる | AI 側から実行して exit 2 になる |
 | T3-3 | チケットの `cmd` と完全に一致するコマンドが通る。止まるのは次の場合: SQL ファイルを1文字変えた。`cmd` の後ろに `&& …` を付けた。前に `X=1 ` を付けた | 試験用 JSON（本番に送らない形）で、フックの exit と出力を確認する |
-| T3-4 | 次の ops.yaml は、どれも発行を拒否する。<br>- SQL に DROP / TRUNCATE / ALTER / DELETE（WHERE つきを含む）/ GRANT / REVOKE / `_token_encrypted` / COPY / PROGRAM / DO / EXECUTE / `\i` / `\!` を含む<br>- kind が psql-write 以外<br>- `cmd` に `&&`・`;`・`|`・`$(`・バッククォート・`-f`・ヒアドキュメントを含む<br>- 作業場所が `~/worktrees/` の外、または本店 | 発行スクリプトに試験用の ops.yaml を1件ずつ渡し、すべて拒否されることを確認する |
+| T3-4 | 次の ops.yaml は、どれも発行を拒否する。<br>- SQL に DROP / TRUNCATE / ALTER / DELETE（WHERE つきを含む）/ GRANT / REVOKE / `_token_encrypted` / COPY / PROGRAM / DO / EXECUTE / `\i` / `\!` を含む<br>- kind が psql-write 以外<br>- `cmd` に `&&`・`;`・`|`・`$(`・バッククォート・`-f`・ヒアドキュメントを含む<br>- 作業場所が ~/worktrees/ の外、または本店 | 発行スクリプトに試験用の ops.yaml を1件ずつ渡し、すべて拒否されることを確認する |
 | T3-4b | secrets の変更、force push、ブランチ保護の変更は、ops.yaml に書く手段がない | T3-4 の「kind がその他」の拒否で確認する。外部 GUI の操作は CLI のチケットでは表せないので、試験の対象外（理由: そもそもチケットの kind に該当がない） |
 | T3-5 | 期限切れ、または `max_uses` を超えたら止まる | 試験用チケットで確認する |
 | T4-0 | 第一案: チケットに一致した操作でフックが `permissionDecision: "allow"` を返すと、auto mode でも自動判定に止められずに通る（Sonnet の操作を含む） | 試験用の設計の psql-write（本番に送らない試験用ホスト）で1件実行し、`permission-denied.jsonl` が増えないことを確認する |
@@ -218,7 +218,7 @@ status: draft（PO 承認待ち・実装未着手）
 |---|---|
 | ①人（PO） | 設計を承認するときに `!` で1回実行する。単発の `scripts/permit-danger.sh` は設計外の作業でだけ使う |
 | ②エージェント | Opus は ops.yaml を作り、委任文に原文を書き写す。Sonnet は委任文の定型（§5 段2-4）に従う。並行セッションのフックも同じものなので、段2の誤検知の修正は全セッションに効く |
-| ③機械 | `~/.claude/scripts` の4つのフック、settings.json の hooks と autoMode、新しく `PermissionDenied` を登録する。CI は変えない |
+| ③機械 | ~/.claude/scripts の4つのフック、settings.json の hooks と autoMode、新しく `PermissionDenied` を登録する。CI は変えない |
 | ④データ | 本番 DB の中身は変えない。psql 書き込みの許可の経路だけが変わる（tenant_004 を含め、承認した SQL ファイルに限る） |
 | ⑤本番 | deploy.yml と VPS の設定は変えない |
 | ⑥外部 | 外部 API と利用者への影響はない。理由: 変わるのはローカルの Claude Code の設定とフックだけだから |
@@ -279,7 +279,7 @@ status: draft（PO 承認待ち・実装未着手）
 | MEDIUM-B SQL ファイルの渡し方が決まっていない | 受理する形を「ローカルの SQL ファイルを標準入力で渡す」1つに決めた。`-f`・パイプ・ヒアドキュメントは拒否する |
 | MEDIUM-C メタコマンドや動的 SQL が通る | 拒否する語に COPY / PROGRAM / DO / EXECUTE / メタコマンドを加えた。発行時に SQL の本文を全文表示するようにした |
 | MEDIUM-D GAS への送り出しの送り先が束縛されていない | GAS への送り出しを kind から外した（ローカルからの送り出しは禁止という方針に合わせた） |
-| MEDIUM-E 作業場所の制約がない | 作業場所を、自分のセッションが持つ `~/worktrees/` の下の worktree に限った |
+| MEDIUM-E 作業場所の制約がない | 作業場所を、自分のセッションが持つ ~/worktrees/ の下の worktree に限った |
 | LOW-F 発行スクリプト名の照合を逃れられる。AI はすでに単発の permit を発行できる | §6 の受容するリスクに加えた。recon §3-3 の記述を事実に合わせて直した。DELETE は既存の手順に残すと書き直した |
 | LOW-G 第二案とサブエージェント | 第二案はメインの会話に限ると明記した |
 - 本便での実例（2回目）: 2026-10-13、この表をヒアドキュメントで追記しようとしたら、本文に GAS への送り出しのコマンド名があっただけで、危険操作フックに止められた。段2-2 で直す誤検知そのもの。
