@@ -1,0 +1,52 @@
+bash -n disk-janitor.sh: OK
+bash -n reaper-worktree.sh: OK
+bash -n test-disk-janitor.sh: OK
+bash -n test-reaper-safety.sh: OK
+ops/launchd/jp.salesanchor.disk-janitor.plist: OK
+--- shellcheck 本体2つ ---
+shellcheck(本体2つ) exit=0
+--- shellcheck 試験2つ（info/warning。test-reaper-safety の SC2034 3件は既存） ---
+In scripts/tests/test-disk-janitor.sh line 24:
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+In scripts/tests/test-disk-janitor.sh line 25:
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+In scripts/tests/test-disk-janitor.sh line 26:
+^-----------------------^ SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+In scripts/tests/test-disk-janitor.sh line 31:
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+In scripts/tests/test-disk-janitor.sh line 186:
+                                             ^----------------------^ SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 219:
+                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 221:
+                                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 225:
+       ^----------^ SC1091 (info): Not following: ../disk-janitor.sh was not specified as input (see shellcheck -x).
+In scripts/tests/test-disk-janitor.sh line 228:
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+In scripts/tests/test-disk-janitor.sh line 230:
+                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 231:
+                           ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 232:
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 233:
+                              ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 234:
+                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 235:
+                                 ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 236:
+                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 237:
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 238:
+                                      ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-disk-janitor.sh line 239:
+                                ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+In scripts/tests/test-reaper-safety.sh line 180:
+^------^ SC2034 (warning): DONE_DIR appears unused. Verify use (or export if used externally).
+In scripts/tests/test-reaper-safety.sh line 498:
+^---------------^ SC2034 (warning): LEGACY_MERGED_DIR appears unused. Verify use (or export if used externally).
+In scripts/tests/test-reaper-safety.sh line 502:
+^-----------------^ SC2034 (warning): LEGACY_NO_MERGE_DIR appears unused. Verify use (or export if used externally).
