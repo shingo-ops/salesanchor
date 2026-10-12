@@ -24,7 +24,7 @@ status: draft（PO 承認待ち・実装未着手）
 | K1 | 承認チケットを出したあと、デプロイの確認が終わるまでの間に、権限が理由で PO に戻した回数 | 段3以降の最初の3設計で、Opus の PO への報告のうち、理由が権限不足のものを数える（`permission-denied.jsonl` と突き合わせる） | 0件 / 3設計 |
 | K2 | 作業場所の誤判定（「working directory could not be resolved safely」）で止まった件数 | `agent-events.jsonl` と `permission-denied.jsonl` の該当文言を7日分数える（基準値: 75件/7日） | 0件 / 7日 |
 | K3 | 実行しない文字列（ヒアドキュメントの本文、`echo` / `-m` / `--body` の引数）だけで危険操作フックや PR 本文フックが止めた件数 | 受入試験 T2-2 から T2-5 の結果 | 全て通過 |
-| K4 | PO 本人に残す操作（DROP / TRUNCATE / secrets / ブランチ保護 / force push / 外部 GUI）が、チケットがあっても止まる | 受入試験 T3-4 の結果 | 全て停止 |
+| K4 | PO 本人に残す操作（DROP / TRUNCATE / ALTER / DELETE〔大量 DELETE を含む〕/ secrets / ブランチ保護 / force push / 外部 GUI）が、チケットがあっても止まる | 受入試験 T3-4・T3-4b の結果 | 全て停止 |
 | K5 | 自動判定とフックで止まった操作が、理由つきで全件記録される | 段1のあと、止まった操作の件数と記録の件数を突き合わせる | 記録漏れ 0件 |
 
 ## 3. KPI
@@ -75,7 +75,8 @@ status: draft（PO 承認待ち・実装未着手）
    - 触らない範囲: `bash -c` / `sh -c` / `eval` の引数（実行される文字列なので外さない）、:41-106 psql-write-guard、:108-141 permits-guard。
 3. PR 本文フック（`/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh:23-30`）
    - 変更前: 文字列のどこかに `gh pr create` と `--body` があれば動く。
-   - 変更後: `&&` `;` `|` で分けた各部分の先頭が `gh pr create|edit` のときだけ動く。ヒアドキュメントの本文は判定に使わない。
+   - 変更後: ヒアドキュメントの本文を取り除いた残りの文字列で判定する（その他の判定は現行どおり文字列全体を見る）。
+     - 先頭の判定に切り替えないのは、次のような書き方で PR 本文フックが動かなくなるのを防ぐため（Reviewer 指摘 MEDIUM-5）: `GH_TOKEN=… gh pr create`、`env X=1 gh pr create`、`( gh pr create`、`time gh pr create`。
    - 触らない範囲: 検証の本体 `scripts/dev/validate-pr-body.sh`。
 4. 委任文の定型（`docs/ai-agents/design-partner.md` §5.5 に13番として追記する）
    - 担当に `sleep` で待たせない。待つのは Opus が行う。
@@ -95,20 +96,23 @@ status: draft（PO 承認待ち・実装未着手）
 | psql-write | `sql_file`、`host`（prod1 等） | SQL ファイルの sha256、ホスト名 |
 | clasp-push | `project_dir` | ディレクトリの realpath |
 | rm-rf | `paths` | realpath が作業場所の下 |
-| merge | `pr` | PR 番号 |
-| deploy-check | `pr` | PR 番号 |
-| command | `cmd`（完全一致） | 文字列 |
 
+   - 書ける種類は上の3つだけ。それ以外の kind は、発行スクリプトが拒否する。
+     - 自由な文字列のコマンド（`command`）は設けない。secrets、force push、ブランチ保護の変更、Docker volume の削除、`git reset --hard` は、チケットでは書けない操作にする（Reviewer 指摘 HIGH-2）。
+     - マージとデプロイの確認は、チケットの対象にしない。今までどおり ADR-1003 の条件（必須 CI が緑、Reviewer が APPROVE、PO への3行報告）で行う。`Bash(gh pr merge *)` の soft_deny も変えない（Reviewer 指摘 HIGH-1）。
    - 各操作に `max_uses`（既定は1）を書く。
 2. 発行スクリプト（新規）`scripts/approve-design.sh <ops.yaml>`
    - PO が `!` を付けて1回実行する。
    - 操作の一覧を画面に表示し、~/.claude/permits/design-approval-<id>.json を作る。
    - ファイルの中身: ops.yaml の内容、SQL ファイルの sha256、`approved_at`、`expires_at`、`created_by: "po-bang"`。
-   - 次のどれかが一覧にあれば、拒否して終了する。
-     - SQL の中の `DROP` / `TRUNCATE` / `ALTER TABLE … DROP`、行の条件がない `DELETE`
-     - secrets
-     - `gh api` によるブランチ保護の変更
-     - force push
+   - 次のどれかに当たれば、拒否して終了する。
+     - kind が上の3つ以外
+     - psql-write の SQL ファイルに、次のどれかが含まれる（大文字・小文字を区別しない語の照合）
+       - `DROP`、`TRUNCATE`、`ALTER`、`DELETE`（条件の有無を問わない）
+       - `GRANT`、`REVOKE`
+       - `_token_encrypted`
+     - DELETE を含む本番データの変更は、ADR-1003 の「大量 DELETE」と境目を機械では決められない。なので、すべて PO 本人の操作（`scripts/permit-danger.sh` か `!`）に残す（Reviewer 指摘 HIGH-2）。
+     - clasp-push の `project_dir` と rm-rf の `paths` が、ops.yaml に書いた作業場所の外にある
 3. AI による発行を防ぐ（agent-danger-hook.sh の permits-guard の並びに追加する）
    - AI のコマンド文字列に `approve-design` が出たら、例外なく exit 2 で止める。
    - 既存の permits-guard が、`~/.claude/permits` への AI の読み書きを止める仕組みはそのまま使う。
@@ -126,10 +130,14 @@ status: draft（PO 承認待ち・実装未着手）
 
 ### 段4：自動判定（classifier）にチケットを伝える
 
-- ~/.claude/settings.json の `autoMode.allow` に、次の文章の規則を1件足す。
-  > Operations listed in a PO-issued design approval: when the user ran scripts/approve-design.sh via a `!` command in this session and its output lists the operations, executing exactly those listed operations (same SQL file, host, PR number, path or command) before the printed expiry is explicitly authorized by the user, including when performed by a subagent whose prompt quotes the design ID and the listed operation verbatim.
-- 書き込みは Self-Modification に当たるので、PO が `!` を付けて追記スクリプトを1回実行する。スクリプトは Opus が作る。
-- Sonnet への委任文には、設計 ID と ops.yaml の該当操作を原文のまま書き写す。
+- 自動判定に PO の承認を伝える根拠は、機械で確かめたチケットだけにする。AI が書いた委任文に設計 ID が書いてあることは、根拠にしない（Reviewer 指摘 HIGH-1）。
+- 第一案: フックの許可を返す
+  - 段3の `consume_design_ticket` がチケットとの一致を確かめたら、フックが PreToolUse の `permissionDecision: "allow"` を返す。
+  - 受入試験 T4-0 で、auto mode のときにこれで自動判定を経ずに通るかを実測する。
+- 第二案（T4-0 で通らなかった場合）: `autoMode.allow` に次の規則を1件足す。サブエージェントの委任文を根拠にする節は入れない。
+  > Operations listed in a PO-issued design approval: when the user ran scripts/approve-design.sh via a `!` command in this conversation and its output lists the operations, executing exactly those listed operations (same kind, SQL file and host, project directory, or paths) before the printed expiry is explicitly authorized by the user.
+  - 書き込みは Self-Modification に当たるので、PO が `!` を付けて追記スクリプトを1回実行する。スクリプトは Sonnet が作る。
+- 第一案も第二案も効かない場合: その時点で PO に報告する。チケットの効き目はフックの層だけになり、自動判定の層では今までどおり PO の具体的な言葉が要る。
 
 ### 触らない範囲（全段共通）
 
@@ -148,6 +156,7 @@ status: draft（PO 承認待ち・実装未着手）
 | 自動判定は文章の規則で判断するので、段4の規則が効くかは保証されない | 受入試験 T4-1 で実測する。効かなかった場合は、その時点で PO に報告し、別案（その都度 PO が `!` で承認する範囲を広げる）に戻す |
 | フックがリポジトリの外（`~/.claude/scripts`）にあり、変更の履歴が残らない | 変更前に `~/.claude/scripts/.backup/<日時>/` に写しを置く。変更後の差分を PR 本文に貼る |
 | AI が ops.yaml を書くので、承認前に一覧へ余計な操作を入れられる | PO は `!` を実行した時点で表示される一覧を見る。発行スクリプトは例外の操作を機械的に拒否する |
+| 【受容するリスク】チケットのファイルは本人の署名を持たない。AI がパスの文字列を分けたり組み立てたりして permits-guard（agent-danger-hook.sh:120-125 の正規表現4種）を逃れれば、チケットを偽造できる（既存の permit も同じ弱さを持つ。Reviewer 指摘 MEDIUM-3） | 被害の範囲を、書ける kind が3つ・作業場所の中・DELETE や DROP なしの SQL に限る。チケットの発行と使用を段1の記録に残し、毎週の点検で発行スクリプトの記録とチケットの使用を突き合わせる。署名（PO の端末だけが持つ鍵）は、偽造が1件でも見つかった時点で導入する |
 
 ## 7. 外部・過去事例
 
@@ -169,19 +178,23 @@ status: draft（PO 承認待ち・実装未着手）
 | T2-2 | `cat > f <<'E'` の本文に `rm -rf` と書いても通る | 同上 |
 | T2-3 | `git commit -m "… DELETE FROM …"` が通る | 同上 |
 | T2-4 | 本文に `gh pr create --body` を含むファイル書き込みで PR 本文フックが動かない | 同上 |
+| T2-4b | `GH_TOKEN=x gh pr create --body …`、`env X=1 gh pr create --body …`、`( gh pr create --body … )` では、PR 本文フックが今までどおり動く | 同上で、検証が呼ばれることを確認する |
 | T2-5 | 自分の作業場所の下への `rm -rf` が通る | 同上 |
 | T2-6 | `bash -c "rm -rf …"`、作業場所の外への `rm -rf`、main 上の `git commit` は今までどおり止まる | 同上で exit 2 になる |
 | T3-1 | PO の `!` 実行で発行スクリプトがチケットを作れる | PO が実行し、表示を見る。`!` にも PreToolUse フックがかかって止まった場合は、PO が別のターミナルで実行する手順に切り替え、その手順を段3のカードに書く |
 | T3-2 | AI が発行スクリプトを実行すると止まる | AI 側から実行して exit 2 になる |
 | T3-3 | チケットにある SQL ファイルの psql 書き込みが通る。ファイルを1文字変えると止まる | 試験用 JSON（本番に送らない形）で確認する |
-| T3-4 | DROP / TRUNCATE / 条件のない DELETE を含む ops.yaml は発行を拒否する | 発行スクリプトに試験用の ops.yaml を渡す |
+| T3-4 | 次の ops.yaml は、どれも発行を拒否する: SQL に DROP / TRUNCATE / ALTER / DELETE（WHERE つきを含む）/ GRANT / `_token_encrypted` を含む。kind が `command` / `merge` / その他。paths が作業場所の外 | 発行スクリプトに試験用の ops.yaml を1件ずつ渡し、すべて拒否されることを確認する |
+| T3-4b | secrets の変更、force push、ブランチ保護の変更は、ops.yaml に書く手段がない | T3-4 の「kind がその他」の拒否で確認する。外部 GUI の操作は CLI のチケットでは表せないので、試験の対象外（理由: そもそもチケットの kind に該当がない） |
 | T3-5 | 期限切れ、または `max_uses` を超えたら止まる | 試験用チケットで確認する |
-| T4-1 | 段4の規則のあと、チケットにある操作を Sonnet が実行して自動判定を通る | 試験用の設計で1件実行して確認する |
+| T4-0 | 第一案: チケットに一致した操作でフックが `permissionDecision: "allow"` を返すと、auto mode でも自動判定に止められずに通る（Sonnet の操作を含む） | 試験用の設計の psql-write（本番に送らない試験用ホスト）で1件実行し、`permission-denied.jsonl` が増えないことを確認する |
+| T4-1 | 第二案を入れた場合: チケットにある操作を、メインの会話から実行して自動判定を通る | 同上 |
 
 - 試験用の入力は scripts/dev/test-agent-hooks.sh（新規）にまとめる。フックに JSON を渡して exit 値を比べる。
 
 ## 9. 維持の仕組み
 
+- 対象（何が壊れると困るか）: ADR-1003 の例外の操作が PO 本人の操作のまま残っていること。チケットで通る操作が、kind 3種・作業場所の中に収まっていること。
 - 守り手: Opus（設計担当）。
   - 毎週月曜に `permission-denied.jsonl` と `hook_blocked` を数える。新しく増えた定型の停止は、規則を足す案として PO に1件ずつ出す。
 - 関所: scripts/dev/test-agent-hooks.sh。
@@ -228,3 +241,19 @@ status: draft（PO 承認待ち・実装未着手）
   - 2026-10-12 に、この設計書の追記と `git add` を1つのコマンドで実行しようとしたところ、自動判定が [Self-Modification] で拒否した。
   - PO の y を受けて再実行した。
   - 文書だけの作業でも、「権限に関する設計」は自動判定に止められうる。段4の規則の対象に含めるかどうかは、段1の記録を見て決める。
+
+## Reviewer 審査（Fable・2026-10-12）と対応
+
+- 判定: REQUEST_CHANGES
+  - recon の file:line の照合、テンプレート、○× 判定は合格。
+  - 安全上の穴として HIGH 2件、MEDIUM 3件、LOW 1件の指摘があった。
+- 対応:
+
+| 指摘 | 対応 |
+|---|---|
+| HIGH-1 段4の規則が、AI が書いた委任文を承認の根拠にしている | 委任文の節を削除した。第一案を、フックで機械照合する形（T4-0）にした。merge と deploy-check をチケットの対象から外した |
+| HIGH-2 `command` kind が自由な文字列で、大量 DELETE と workflow-lint を見落とす | `command` を廃止し、kind を3つに限った。DELETE はすべて PO 本人の操作に残した |
+| MEDIUM-3 チケットの偽造 | §6 に受容するリスクとして明記した。対処（範囲の限定、突き合わせ、偽造を検出したら署名を導入）も書いた |
+| MEDIUM-4 K4 と T3-4 の対応が不完全 | T3-4 を広げ、T3-4b を追加した。外部 GUI は試験の対象外とし、理由を書いた |
+| MEDIUM-5 PR 本文フックの先頭判定に抜けがある | 先頭判定をやめ、ヒアドキュメントの本文を取り除く方式にした。T2-4b を追加した |
+| LOW §9 に「対象」の行がない | 追加した |
