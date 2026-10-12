@@ -644,7 +644,9 @@ export function useInboxState(): UseInboxStateReturn {
   //   1. 受信箱を開いた瞬間に会話が全画面になり、一覧が一度も見えない
   //      （PC は一覧が常に見えているため自動選択が親切に働く）
   //   2. 「一覧へ戻る」で selectedLeadId を null に戻しても、この効果が即座に
-  //      先頭を選び直すため一覧に戻れない。PR #4165 で本番に出た機能退行の原因。
+  //      先頭を選び直すため一覧に戻れない。PR 4165 で本番に出た機能退行の原因
+  //      （PR番号に # を付けないのは、check-design-token-ratchet.sh が色コードと
+  //      見分けられず hex 増加として弾くため）。
   //      3幅の画面検査（tests-e2e/visual-language/inbox-single-column.spec.ts）が
   //      これを検出した。
   // 判定は ADR-137 の useIsMobile（matchMedia + BREAKPOINTS.MOBILE_MAX）を使い、
