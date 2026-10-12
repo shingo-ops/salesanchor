@@ -43,3 +43,20 @@
 
 シェルスクリプトのため `bash -n` で文法確認済み。ユニットテストは持たない（端末のGUI状態に依存し、
 CIから検証できない）。取り込み側の回帰は既存の `tools/termux-line-import/test_android_import.py`。
+
+## 参照（file:line）
+
+実装の所在。いずれもこのブランチの実ファイルで、行番号は 2026-10-09 時点のもの。
+
+- `tools/line-auto-export/auto-export.sh:12` — `MODE=${LINE_AUTO_EXPORT_MODE:-app}`。既定はアプリへの合図。`MODE=adb` で従来のADB方式へ切り戻せる。
+- `tools/line-auto-export/auto-export.sh:22` — `flock -n` による多重起動防止。周期実行が重なっても二重に走らない。
+- `tools/line-auto-export/README.md:50` — 切替と切り戻しの手順（ADBへ戻す場合は再ペアリングが必要なことを含む）。
+
+設計は [design-app-trigger.md](design-app-trigger.md)（このrecon.mdを参照している）。
+
+### 受信後の既存処理（この設計が前提にしている実装）
+
+- `tools/termux-line-import/client.py:196` — 同じ内容を再共有したときに `stage='send' result='duplicate'` を記録する。書き出しが同じ内容を繰り返しても二重取り込みにならない根拠。
+- `tools/termux-line-import/client.py:23` — 1回に送るファイルの上限（`MAX_BYTES`）。
+- `tools/termux-line-import/android_parser.py:3-4` — 「本文のバイト完全復元は保証しない」旨の明記。書き出した原本をそのまま渡す根拠。
+- `docs/handoff/line-android-import/design.md:1` — 受信後の送信・通知・履歴の設計。本件はその手前の「書き出しの起動方法」だけを変える。

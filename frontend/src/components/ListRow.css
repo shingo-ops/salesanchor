@@ -1,0 +1,139 @@
+/**
+ * ListRow — 一覧の1行金型スタイル（ADR-144 §4 / card-mobile-molds.md §1）
+ *
+ * 用途: スマホの一覧（受信箱の会話一覧など）で使う、行全体が押せる1行。
+ * 左に丸い画像、1行目に主役＋補助、2行目に説明＋印を置く2行構成。
+ * 区切り線は引かず、押下・選択中は薄いオーバーレイで示す。
+ *
+ * 参考: InboxPage.css の .conv-item 系（ページ専用CSS）が同じ見た目を
+ * 実現していたものを、この金型として整理した。
+ *
+ * 名前空間: .comp-list-row-*
+ * ADR-067: 全カラーは CSS 変数参照のみ
+ * 補助の文字に --text-muted を使わない:
+ *   --font-xs は 0.75rem（12px）＝通常の文字で、明度差 4.5:1 が必要。
+ *   --text-muted はライトの面に対し 4.0:1 で基準を満たさない
+ *   （ダークの面に対しては 5.7:1 で満たすが、ライトが不足）。--text-secondary は
+ *   ライト 7.5:1 / ダーク 9.9:1 で両方満たす。
+ *   決まりの出典: docs/specs/design-system/visual-language/design.md §10-1
+ *
+ * 使用トークン: --min-height-conv-item / --space-3 / --space-6px / --space-2px /
+ *   --size-avatar-lg / --color-hover-overlay / --selection-strip-w / --indicator /
+ *   --font-xs / --font-weight-bold / --font-weight-normal / --text-primary / --text-secondary /
+ *   --transition-micro
+ */
+
+.comp-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  width: 100%;
+  min-height: var(--min-height-conv-item);
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* onClick 指定時のみ <button> になり、押せる見た目にする */
+button.comp-list-row {
+  cursor: pointer;
+  transition: background var(--transition-micro);
+}
+
+button.comp-list-row:hover {
+  background: var(--color-hover-overlay);
+}
+
+/* 選択中（PCの3列表示で使う） */
+.comp-list-row--selected {
+  background: var(--color-hover-overlay);
+}
+
+/* 選択中インジケータ = 右端ストリップ */
+.comp-list-row--selected::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--selection-strip-w);
+  background: var(--indicator);
+}
+
+/* ----------------------------------------------------------------
+   画像（丸い円）
+   ---------------------------------------------------------------- */
+
+.comp-list-row__avatar {
+  flex-shrink: 0;
+  width: var(--size-avatar-lg);
+  height: var(--size-avatar-lg);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* ----------------------------------------------------------------
+   本文（1行目・2行目）
+   ---------------------------------------------------------------- */
+
+.comp-list-row__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.comp-list-row__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-6px);
+}
+
+.comp-list-row__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.comp-list-row__title-aside {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.comp-list-row__subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6px);
+  margin-top: var(--space-2px);
+}
+
+.comp-list-row__subtitle-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.comp-list-row__subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--text-secondary);
+}
+
+.comp-list-row__subtitle-aside {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}

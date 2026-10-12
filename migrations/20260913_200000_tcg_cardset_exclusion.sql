@@ -25,6 +25,20 @@ BEGIN
         _pid_col := 'id';
     ELSE
         _pid_col := 'tcg_uuid';
+
+        -- incident 2026-10-04 (deploy run 37135632445): public.products.tcg_uuid は
+        -- migrations/20260916_120000_phase_c_drop_tcg_uuid.sql で永久 DROP される列。
+        -- tenant_004 のキーワードテーブル（product_search_keywords 等）自体も Phase 2c で
+        -- 後から DROP されるため、tcg_uuid が既に無い状態で到達した場合はもう何もすることが
+        -- 無い（対象の tenant_004 キーワードテーブルは別migrationで既に削除される運命）。
+        -- ガード無しで実行すると「column p.tcg_uuid does not exist」でデプロイが失敗する。
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+        ) THEN
+            RAISE NOTICE 'cardset exclusion: public.products.tcg_uuid が存在しません（Phase C 完了済み）。tenant_004 keyword テーブルは Phase 2c で別途 DROP される対象のため、ここでは何もしない — skip';
+            RETURN;
+        END IF;
     END IF;
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['tcg_series', 'tcg_product_categories',

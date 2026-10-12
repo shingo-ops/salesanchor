@@ -1,0 +1,14 @@
+[
+  {
+    "table": "tenant.deals",
+    "column": "lost_reason_code",
+    "reason": "ADD (migrations/20260604_060000_add_lost_reason_code.sql) runs inside a per-tenant loop guarded by 'deals テーブルが存在しないスキーマはスキップ' (IF NOT EXISTS ... information_schema.tables ... table_name = 'deals' THEN ... CONTINUE). deals table itself was permanently dropped for all tenants by migrations/20260729_043520_drop_deals.sql, and no later migration recreates a deals table. On every full migration re-run after the first rollout, run_all_migrations.sh reaches this ADD step before it reaches the later DROP table step, but the deals-existence guard already short-circuits it (deals no longer exists from the previous run). The ADD->DROP churn happened once at the 2026-07-29 production rollout and cannot recur.",
+    "reference": "commit a0b849fb3 (#1605, deals-existence guard) / migrations/20260729_043520_drop_deals.sql"
+  },
+  {
+    "table": "public.products",
+    "column": "tcg_uuid",
+    "reason": "ADD (migrations/20260909_000000_public_products_phase2b_columns.sql and migrations/20260914_140000_unify_tcg_products_to_public.sql) is wrapped in DO $guard_tcg_uuid$ ... IF EXISTS(tcg_uuid) OR NOT EXISTS(work_id AS integer) THEN ADD ... ELSE RAISE NOTICE (skip) END IF. migrations/20260919_010000_master_ssot_work_id_recast.sql permanently converts work_id to INTEGER, so once that has run, the guard's ELSE branch always skips the ADD on every subsequent full migration re-run, even though migrations/20260916_120000_phase_c_drop_tcg_uuid.sql (DROP COLUMN) runs later in registration order every time.",
+    "reference": "commit 17582fbd5 (ADR-1002 Phase C) / docs/handoff/products-column-churn-2/design.md"
+  }
+]

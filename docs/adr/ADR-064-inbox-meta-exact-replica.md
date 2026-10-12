@@ -86,3 +86,37 @@ Inbox 専用のカラートークンを追加し、Meta の実測値を変数化
 - ADR-061: Inbox Meta スタイルレイアウト
 - ADR-063: Inbox ページレベルタブヘッダー
 - ADR-027: i18n ルール（CSS 変数化の方針に準拠）
+
+---
+
+## 改訂記録（2026-10-11）: 本文の記述と現在の実装の乖離
+
+### 経緯
+
+アプリ視覚デザイン言語（段階2）でスマホ版 WhatsApp / Meta Business Suite を実測し（観察メモ: `docs/specs/design-system/visual-language/benchmark/`）、PO が「一覧の区切り線は PC もスマホも引かない」と決定した（2026-10-11）。この決定が本ADRの「border-bottom に `--inbox-separator` を使用」と衝突するように見えたため実装を照合したところ、**本ADRが記述する実装は既に別のものへ変わっており、その変更はどのADRにも記録されていなかった**ことが判明した。本節はその事実を記録する。**設計の変更は行わない。**
+
+### 照合結果（根拠はすべて現在のコードの行番号）
+
+| 本ADRの記述 | 現在の実装 | 根拠 |
+|---|---|---|
+| 会話アイテムの `border-bottom` に `--inbox-separator` を使用 | **`border: none`**（コメント「Meta実測: padding=12px, h=92px, borderなし」） | `frontend/src/pages/inbox/InboxPage.css:259`, `:267` |
+| ホバー背景に `--inbox-hover` を使用 | `--color-hover-overlay` の重ね（選択中も同じ） | `InboxPage.css:277-278` |
+| 左パネル幅 280px | `--width-inbox-panel` = **443px** | `InboxPage.css:83` / `tokens.css:272` |
+| 右パネル幅 360px | `--karte-panel-width`（見本 396px） | `InboxPage.css:741` |
+| 会話アイテム padding `12px 8px` | `var(--space-3)` 均等 | `InboxPage.css:264` |
+| アバターサイズ 48px | `--size-avatar-lg`（48px）・`border-radius: 50%` | `InboxPage.css:296-299` → **一致** |
+
+### 使われなくなったトークン（事実のみ。削除の是非は本ADRでは決めない）
+
+- `--inbox-separator`（`index.css:128` / `:321`）: 会話アイテムには使われていない。現在の用途は右パネルの `border-left`（`InboxPage.css:745`）と、デザインシステム見本帳への掲載（`DesignSystemPage.tsx:58`）のみ。
+- `--inbox-hover`（`index.css:129` / `:322`）: **実際のスタイルには使われていない。** 参照は見本帳の掲載（`DesignSystemPage.tsx:59`）のみ。
+
+### 結論
+
+1. **PO決定「区切り線を引かない」は、会話アイテムについては既に実装済み**（`border: none`）。本ADRの記述が古いだけであり、**設計の変更は不要**だった。
+2. 本ADRのうち **アバター48px は現在も有効**。**区切り線・ホバー・パネル幅・padding の記述は現在の実装と異なる**ため、本ADRを根拠に実装を判断してはならない。実装の正は現在のコードと、アプリ視覚デザイン言語 `design.md` §10（組み合わせ方の決まり）である。
+3. 使われなくなった2トークンの扱い（見本帳からの削除を含む）は、親テーマ design-system の「使われていないトークン」の整理として別途諮る。本ADRでは決めない。
+
+### ステータスについて
+
+Status は **Accepted のまま**とする。理由: 本ADRが定めた方向（Meta を参照し、色を変数化する）は現在も維持されており、個々の値のみが後続の実装で更新されたため。値の乖離は本節で記録した。

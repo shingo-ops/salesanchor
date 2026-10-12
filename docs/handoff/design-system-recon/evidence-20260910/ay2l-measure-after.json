@@ -1,0 +1,84 @@
+{
+ "label": "after",
+ "perms": {
+  "a_many": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱",
+    "見積・請求管理",
+    "顧客管理",
+    "受注管理",
+    "売上管理",
+    "報酬管理",
+    "管理センター"
+   ],
+   "po_label_count": 0,
+   "management_center_link": "有り"
+  },
+  "b_po_only": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱"
+   ],
+   "po_label_count": 0,
+   "management_center_link": "無し"
+  },
+  "c_staff_only": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱",
+    "管理センター"
+   ],
+   "po_label_count": 0,
+   "management_center_link": "有り"
+  }
+ },
+ "mc_leftmenu_a": {
+  "items": [
+   "スタッフ",
+   "ロール",
+   "チーム",
+   "シフト",
+   "報酬設定",
+   "レポート",
+   "テナントポリシー",
+   "仕入先",
+   "ステータスマスタ",
+   "状態マスタ",
+   "商品カテゴリ",
+   "単位マスタ",
+   "備考マスタ",
+   "データ管理",
+   "Googleドライブ",
+   "FedEx",
+   "DHL",
+   "UPS",
+   "PayPal",
+   "Discord 連携設定",
+   "Discordアナウンス",
+   "発行者情報",
+   "チャンネル",
+   "チャネル管理",
+   "ボット",
+   "通知設定"
+  ],
+  "po_label_count": 0
+ },
+ "urls": {
+  "/purchase-orders": {
+   "final_url": "/purchase-orders",
+   "body_head200": "",
+   "console_errors": []
+  },
+  "/management-center/purchase-orders": {
+   "final_url": "/management-center/purchase-orders",
+   "body_head200": "",
+   "console_errors": []
+  },
+  "/no-such-page": {
+   "final_url": "/no-such-page",
+   "body_head200": "",
+   "console_errors": []
+  }
+ }
+}

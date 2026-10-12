@@ -99,6 +99,108 @@ jobs:
             exit 1
           fi
 
+  # ─── 画面検査（3幅のみ・恒久） ──────────────────────────────────────────────
+  # PR #4165 でスマホの「一覧へ戻る」が効かない状態を本番に出し #4168 で撤回した。
+  # arm64 端末では Playwright の chromium が動かず、開く→戻るをマージ前に確認できない。
+  # 全 E2E の再開は 2026-06-01 に止めた CI ボトルネックが戻るため、
+  # visual-language の 3 幅（vl-mobile-390 / vl-tablet-768 / vl-desktop-1280）だけを走らせる。
+  # 対象 spec: frontend/tests-e2e/visual-language/*.spec.ts（現状 2 本・テスト 8 件）
+  visual-language-run:
+    name: 画面検査（内部）
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Playwright version
+        id: pw
+        run: |
+          PW_VERSION=$(node -p "require('@playwright/test/package.json').version")
+          echo "version=$PW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system deps (chromium)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run visual-language screen check (3 widths)
+        env:
+          CI: 'true'
+          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
+          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
+          VITE_GCP_PROJECT_ID: e2e-fixture
+        run: npm run test:e2e:vl
+
+      - name: Upload screen check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-language-report
+          path: frontend/playwright-report
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload failures (trace / video / screenshot)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-language-test-results
+          path: frontend/test-results
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # lint と同じ集約の型（detect-changes → *-run → aggregator）。
+  # フロント未変更の PR では visual-language-run が skipped になるため、
+  # そのまま必須チェックにすると「報告が来ない」デッドロック（Issue #523 / PR #534）
+  # が再発する。if: always() の集約が skipped を成功として報告することで防ぐ。
+  # 必須チェックに入れる場合はこのジョブ名を指定する（手順は
+  # docs/handoff/app-visual-language/card-stage4b-inbox-mobile.md §13）。
+  visual-language:
+    name: 画面検査（受信箱 3幅 Playwright）
+    needs: [detect-changes, visual-language-run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report results
+        run: |
+          r="${{ needs.visual-language-run.result }}"
+          echo "visual-language-run: $r"
+          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
+            echo "OK: 画面検査が通過、またはフロントエンド変更なし"
+            exit 0
+          else
+            echo "FAIL: visual-language-run=$r"
+            exit 1
+          fi
+
   # ─── E2E テスト ────────────────────────────────────────────────────────────
   playwright:
     name: Playwright E2E (chromium)

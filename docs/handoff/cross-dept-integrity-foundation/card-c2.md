@@ -3,7 +3,7 @@ mode: handoff
 ---
 # 実装カード 便C-2: 生成型の初採用（TcgSoldOutPage）と生成の配線
 
-- 根拠: ADR-1005（Accepted）、design.md 便C、便C-1（PR #3971、本番反映済み）
+- 根拠: ADR-1009（Accepted）、design.md 便C、便C-1（PR #3971、本番反映済み）
 - 現状調査: 2026-10-06 Sonnet 調査（origin/main `a77cfb1c0`）。詳細は scratchpad の rep.txt。要点は下のとおり
 - この便の目的:
   - 画面のコードで、生成型を初めて使う。

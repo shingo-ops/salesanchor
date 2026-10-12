@@ -6,20 +6,9 @@
 
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_type VARCHAR(50);
 
--- 確定マッピング（ひとしさん承認 2026-06-02、全190件が明確対応）
-UPDATE public.products SET tcg_type = 'pokemon_booster_box'
-    WHERE tcg_type IS NULL AND category IN ('Pokemon', 'Pokemon TCG');
-UPDATE public.products SET tcg_type = 'one_piece'
-    WHERE tcg_type IS NULL AND category IN ('One Piece', 'One Piece TCG');
-UPDATE public.products SET tcg_type = 'dragon_ball'
-    WHERE tcg_type IS NULL AND category IN ('Dragon Ball', 'Dragon Ball TCG');
-UPDATE public.products SET tcg_type = 'weiss_schwarz'
-    WHERE tcg_type IS NULL AND category = 'Weiss Shwarz Rose';
-UPDATE public.products SET tcg_type = 'gundam'
-    WHERE tcg_type IS NULL AND category = 'GUNDUM';
-UPDATE public.products SET tcg_type = 'union_arena'
-    WHERE tcg_type IS NULL AND category = 'Union Arena';
-UPDATE public.products SET tcg_type = 'yugioh'
-    WHERE tcg_type IS NULL AND category = 'Yu-Gi-Oh OCG';
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- category から tcg_type を埋める UPDATE 7 本を外した（本番は 0 行）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: tcg_type backfill removed'; END $$;
 
 CREATE INDEX IF NOT EXISTS idx_public_products_tcg_type ON public.products (tcg_type);

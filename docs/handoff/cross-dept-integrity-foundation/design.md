@@ -3,7 +3,7 @@
 - 状態: 設計案（Opus作成・自己審査済み、判定は末尾）。
   - 2026-10-02、POは「便A → C → D → E の方向で進める」に「y」と回答した（この会話で）。
   - 新規ADRの採否（§6）と、既存テーマ（db-ssot・design-system）との範囲調整は未決。
-  - 実装は未着手。
+  - 実装は未着手。（事実 2026-10-13：その後 #3971 が main にマージ済み。マージ commit c436cd70c697303992be14fdb1db389d265c205e、2026-10-05T23:38:01Z。#4009 も main にマージ済み。768c69d7179bc901320dad0e2718bd8c30a890a1、2026-10-07T01:10:06Z）
 - 正本の参照:
   - KGI: `docs/handoff/cross-dept-integrity-foundation/kgi.md`（PO承認 2026-10-02）
   - 現状: `docs/handoff/cross-dept-integrity-foundation/recon.md`（origin/main `2ac19f708aae252098631da5274bd1b28162f9e0` 基準）
@@ -59,8 +59,8 @@ Playwright E2E は休眠のままにし、K1 からも外す。
 - 戻し方: workflow を削除し、devDependency を外す。
 - リスク: backend の Pydantic 定義が緩いと、生成型も緩くなる（例: `dict`）。これは置き換えの便の中で、1APIずつ詰める。
 - 【確認済み 2026-10-04】本番の API パス /openapi.json と /docs は、外部からのアクセスにどちらも 404 を返す（curl で確認）。スキーマは外部に公開されていない。
-- 【確認済み 2026-10-04】型の付いたエンドポイントは、612件中457件（74.7%）が上限。内訳は `response_model` 377件と戻り値注釈80件。型が無いものは155件ある。便Cで保護できる範囲はこの数で決まるため、型の無い分は、置き換えの便で `response_model` を付けて減らす（ADR-1005）。
-- 新規ADR: `docs/adr/ADR-1005-api-contract-and-wiring-ledger.md`（Proposed、PO承認待ち）
+- 【確認済み 2026-10-04】型の付いたエンドポイントは、612件中457件（74.7%）が上限。内訳は `response_model` 377件と戻り値注釈80件。型が無いものは155件ある。便Cで保護できる範囲はこの数で決まるため、型の無い分は、置き換えの便で `response_model` を付けて減らす（ADR-1009）。
+- 新規ADR: `docs/adr/ADR-1009-api-contract-and-wiring-ledger.md`（Proposed、PO承認待ち。事実 2026-10-13：その後 PO が承認し、番号は ADR-1005 から ADR-1009 に付け直した。PO 判断 2026-10-07）
 
 ### 便D：K2　配線台帳を自動生成し、ずれたら赤にする
 - 変更前: 画面 → API → テーブルの台帳は無い（recon R2-5）。ルートは125個（ページは114）、backend の include_router は113件。

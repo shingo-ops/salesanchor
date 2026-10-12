@@ -127,6 +127,34 @@ mv ~/.ssh/salesanchor-claude-new.pub ~/.ssh/salesanchor-claude.pub
 # 4. ~/.claude-access.env の GRAFANA_TOKEN を更新
 ```
 
+### Grafana トークンの失効予定日（記録）
+
+| 項目 | 値 |
+|---|---|
+| 最終再発行日 | 2026-10-10 |
+| service account | `claude-code-reader`（id=2、login `sa-1-claude-code-reader`、Viewer） |
+| token 名 / token_id | `claude-code-reader-202610100727` / 2 |
+| 有効期間 | 7776000 秒（90 日） |
+| 失効予定日 | 2027-01-08 |
+
+次回の再発行は失効日の前（目安 2026-12-25）に行い、再発行したらこの表を更新する。トークン値・パスワード値は書かない。
+
+確認方法（200 が返れば有効。期限切れは 401 で `api-key.expired`）:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GRAFANA_TOKEN" https://app.salesanchor.jp/grafana/api/datasources
+```
+
+### API による再発行の手順（2026-10-10 実施）
+
+1. `GET /api/serviceaccounts/search` で `claude-code-reader` の id を取得する。
+2. `POST /api/serviceaccounts/:id/tokens` で新トークンを発行する（`secondsToLive` を 7776000 にする）。
+3. admin の資格情報は prod2 のコンテナ（salesanchor-monitoring-grafana-1）の env から読む。値は画面に出さない。
+4. 新トークンを `~/.claude-access.env` の `GRAFANA_TOKEN` に入れ、上の確認方法で 200 を確かめる。
+5. admin パスワードが env とずれているときは、コンテナ内で `grafana cli admin reset-admin-password "$GF_SECURITY_ADMIN_PASSWORD"` を実行して env の値に合わせる（2026-10-10 は実行後 `after_reset_auth=200`）。
+
+PO が `!` で実行する場合の注意: 書き込みを含む処理は、スクリプトにして短い 1 行で渡す。長い行は貼り付け時に改行が入り、リダイレクトだけが走ってファイルが 0 バイトになった（2026-10-10 の事故）。
+
 ---
 
 ## 即時無効化（インシデント発生時）

@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
     get_current_tenant,
-    get_current_user,
+    require_tenant_admin,
     reset_tenant_context,
 )
 from app.database import get_db
@@ -57,14 +57,6 @@ def _frontend_base_url() -> str:
     origins = os.getenv("ALLOWED_ORIGINS", "")
     first = next((o.strip() for o in origins.split(",") if o.strip()), "")
     return (first or "https://app.salesanchor.jp").rstrip("/")
-
-
-def _require_admin(user: User) -> None:
-    if getattr(user, "role", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作は管理者のみ実行できます",
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -168,11 +160,10 @@ async def connect_callback(
 )
 async def connect_start(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Google OAuth 同意画面の URL を返す（admin 専用）。"""
-    _require_admin(user)
 
     try:
         auth_url = await cal_svc.get_auth_url(tenant_id, user.id)
@@ -197,11 +188,10 @@ async def connect_start(
 )
 async def disconnect(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Google Calendar 接続を解除する（admin 専用）。"""
-    _require_admin(user)
 
     await db.execute(
         text("DELETE FROM tenant_google_calendar_config WHERE tenant_id = :tid"),

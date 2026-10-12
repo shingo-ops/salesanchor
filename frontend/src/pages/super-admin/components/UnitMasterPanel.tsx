@@ -358,7 +358,6 @@ export function UnitMasterPanel() {
         title={aliasesFor ? `${t(`${f}.aliases`)} — ${aliasesFor.code}` : ""}
         size="md"
       >
-        {/* ui-allow: alias table is a small inline form, not a data listing */}
         <form
           ref={aliasFormRef}
           onSubmit={e => { void addAlias(e); }}

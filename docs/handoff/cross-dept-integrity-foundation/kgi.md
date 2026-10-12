@@ -1,6 +1,6 @@
 # KGI: 全体の地図と関所（部署制の前提整備） / cross-dept-integrity-foundation
 
-- 状態: KGIはPO承認済み（2026-10-02、ccopusgo セッション内のチャットで「y」と回答）／design は未作成／実装は未着手
+- 状態: KGIはPO承認済み（2026-10-02、ccopusgo セッション内のチャットで「y」と回答）／design は未作成／実装は未着手（事実 2026-10-13：その後 #3971 api-contract-foundation が main にマージ済み。マージ commit c436cd70c697303992be14fdb1db389d265c205e、2026-10-05T23:38:01Z。#4009 も main にマージ済み。768c69d7179bc901320dad0e2718bd8c30a890a1、2026-10-07T01:10:06Z）
 - 起点: YouTube 動画「6万人SNSのClaude Code運用」の比較検討。経緯は次の計画ファイルに記録した。
   `~/.claude/plans/https-www-youtube-com-watch-v-ef4kmstpu0-cheerful-parasol.md` の §6〜§10
 

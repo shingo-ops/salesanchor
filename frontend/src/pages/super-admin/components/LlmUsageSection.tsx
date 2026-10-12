@@ -41,6 +41,7 @@ interface LlmUsageTotal {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
   computed_total_tokens: number | null;
   total_mismatch_calls: number;
 }
@@ -55,6 +56,7 @@ interface LlmUsageByPurposeItem {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
   computed_total_tokens: number | null;
   total_mismatch_calls: number;
 }
@@ -63,12 +65,14 @@ interface LlmUsageByModelItem {
   model: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
 }
 
 interface LlmUsageDailyItem {
   date: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
   prompt_tokens: number | null;
   candidates_tokens: number | null;
   thoughts_tokens: number | null;
@@ -78,6 +82,7 @@ interface LlmUsageDailyByPurposeItem {
   date: string;
   purpose: string;
   cost_usd: number | null;
+  cost_jpy: number | null;
   calls: number;
 }
 
@@ -86,6 +91,7 @@ interface LlmUsageMonthlyByPurposeItem {
   purpose: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
 }
 
 interface LlmUsageDailyRequestsItem {
@@ -109,6 +115,19 @@ interface LlmUsageDailyByModelItem {
   prompt_tokens: number | null;
   output_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
+}
+
+/**
+ * ADR-148 2026-10-03 追記（PR-B）: cost_jpy 換算の出典情報。
+ * public.app_fx_rate_history に USD 行が1件も無い場合は null（cost_jpy も全行 null）。
+ */
+interface LlmUsageFx {
+  currency: string;
+  latest_rate_jpy: number;
+  latest_fetched_at: string;
+  history_start: string;
+  fallback_calls: number;
 }
 
 interface LlmUsageResponse {
@@ -121,19 +140,7 @@ interface LlmUsageResponse {
   daily_requests: LlmUsageDailyRequestsItem[];
   daily_errors: LlmUsageDailyErrorItem[];
   daily_by_model: LlmUsageDailyByModelItem[];
-}
-
-/**
- * 為替レート SSOT（ADR-148: public.app_fx_rates）の読み取りレスポンス。
- * GET /fx-rates/{currency}（backend/app/routers/fx_rate_admin.py）。
- * frontend/src/pages/super-admin/FxRatePage.tsx と同形。共有クライアントは存在しないため
- * 既存パターン（各ページで api.get を直接呼ぶ）を踏襲する。
- */
-interface FxRate {
-  currency: string;
-  rate_jpy: number;
-  fetched_at: string;
-  updated_at: string;
+  fx: LlmUsageFx | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -307,11 +314,6 @@ function makeCompactCurrencyFormatter(language: string, currency: "JPY" | "USD")
   return (value) => formatter.format(value);
 }
 
-/** USD → JPY 換算（ADR-148 SSOT: public.app_fx_rates.rate_jpy を使用）。変換ロジックはここ一箇所に集約する。 */
-function toJpy(usd: number, rateJpy: number): number {
-  return usd * rateJpy;
-}
-
 /** fetched_at（UTC ISO文字列）を JST 表示に整形する（他ページと同じ Asia/Tokyo 固定の既存パターンを踏襲）。 */
 function formatFetchedAtJst(isoString: string, language: string): string {
   return new Date(isoString).toLocaleString(language, {
@@ -382,20 +384,17 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   const [data, setData] = useState<LlmUsageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fxRate, setFxRate] = useState<FxRate | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    Promise.all([
-      api.get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`),
-      // 為替レートは失敗しても本体データの表示は止めない（ADR-148: 読み取りは全ユーザー可）。
-      // 失敗・未取得時は呼び出し側で USD 表示へフォールバックする。
-      api.get<FxRate>("/fx-rates/USD").catch(() => null),
-    ])
-      .then(([res, fx]) => {
+    // ADR-148 2026-10-03 追記（PR-B）: cost_jpy はバックエンドが各イベント発生時点の
+    // app_fx_rate_history レートで換算済み（fx ブロックに出典情報を含む）。フロント側の
+    // 別個の /fx-rates/USD 取得・USD→JPY 変換（旧 toJpy）は廃止した。
+    api
+      .get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`)
+      .then((res) => {
         setData(res);
-        setFxRate(fx != null && typeof fx.rate_jpy === "number" ? fx : null);
       })
       .catch(() => {
         setError(t("analysisRules.dashboard.fetchError"));
@@ -419,18 +418,22 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   const formatCurrency = makeCurrencyFormatter(i18n.language);
   const compactTick = (value: number) => formatCompactNumber(value, i18n.language);
 
-  // ADR-148: USD→JPY 換算（1箇所に集約）。レート未取得時は null のまま USD 表示にフォールバックする。
-  const costRate = fxRate != null ? fxRate.rate_jpy : null;
+  // ADR-148 2026-10-03 追記（PR-B）: fx が non-null のときは cost_jpy（バックエンドが
+  // 各使用時点のレートで換算済み）を表示する。fx が null（履歴テーブルに USD 行が無い）
+  // 場合のみ USD（cost_usd）にフォールバックする。
+  const hasFx = data.fx != null;
   const formatJpy = makeJpyFormatter(i18n.language);
-  /** 生の USD 値（API レスポンス）を表示用文字列にする唯一のヘルパー。全コスト表示箇所から呼ぶ。 */
-  const formatCost = (usd: number | null): string =>
-    costRate == null ? formatCurrency(usd, t) : formatJpy(usd == null ? null : toJpy(usd, costRate), t);
-  /** 既に換算済みの値（チャート用に事前変換したデータ）を表示用文字列にする。 */
+  /** 行（cost_usd/cost_jpy を持つ）を表示用文字列にする唯一のヘルパー。全コスト表示箇所から呼ぶ。 */
+  const formatCost = (row: { cost_usd: number | null; cost_jpy: number | null }): string =>
+    hasFx ? formatJpy(row.cost_jpy, t) : formatCurrency(row.cost_usd, t);
+  /** 既に抽出済みの値（チャート用に事前抽出したデータ）を表示用文字列にする。 */
   const formatConvertedCost = (value: number): string =>
-    costRate == null ? formatCurrency(value, t) : formatJpy(value, t);
-  const costTick = makeCompactCurrencyFormatter(i18n.language, costRate == null ? "USD" : "JPY");
-  const convertCost = (usd: number | null): number | null =>
-    costRate == null || usd == null ? usd : toJpy(usd, costRate);
+    hasFx ? formatJpy(value, t) : formatCurrency(value, t);
+  const costTick = makeCompactCurrencyFormatter(i18n.language, hasFx ? "JPY" : "USD");
+  /** チャートに渡す前の値抽出。fx 有無に応じて cost_jpy / cost_usd のどちらかを選ぶだけ
+   * （バックエンドが既に換算済みのため、フロントでの乗算は行わない）。 */
+  const chartCostValue = (row: { cost_usd: number | null; cost_jpy: number | null }): number | null =>
+    hasFx ? row.cost_jpy : row.cost_usd;
 
   const byPurposeColumns: DataTableColumn<LlmUsageByPurposeItem>[] = [
     {
@@ -484,7 +487,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCost(row.cost_usd),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
@@ -522,7 +525,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCost(row.cost_usd),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
@@ -541,14 +544,14 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCost(row.cost_usd),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
   const purposeOrder = data.by_purpose.map((row) => row.purpose);
   // チャートに渡す前に USD→JPY 換算を済ませる（pivotByPurpose は通貨を意識しない汎用関数のまま維持）。
-  const dailyByPurposeConverted = data.daily_by_purpose.map((row) => ({ ...row, cost_usd: convertCost(row.cost_usd) }));
-  const monthlyByPurposeConverted = data.monthly_by_purpose.map((row) => ({ ...row, cost_usd: convertCost(row.cost_usd) }));
+  const dailyByPurposeConverted = data.daily_by_purpose.map((row) => ({ ...row, cost_usd: chartCostValue(row) }));
+  const monthlyByPurposeConverted = data.monthly_by_purpose.map((row) => ({ ...row, cost_usd: chartCostValue(row) }));
   const dailyByPurposeData = pivotByPurpose(dailyByPurposeConverted, (row) => row.date);
   const monthlyByPurposeData = pivotByPurpose(monthlyByPurposeConverted, (row) => row.month);
   const formatChartCurrency = (value: number) => formatConvertedCost(value);
@@ -582,7 +585,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
             {t("analysisRules.dashboard.usage.summary.costLabel")}
           </span>
           <span className="llm-usage-summary__hero-value">
-            {formatCost(data.total.cost_usd)}
+            {formatCost(data.total)}
           </span>
         </div>
         <div className="llm-usage-summary__stats">
@@ -629,17 +632,28 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         </div>
       </Card>
 
-      {/* ADR-148: 円換算レートの出典を明示（過去日も現在レートで一律換算している旨の注記を含む） */}
-      {costRate != null && fxRate != null ? (
-        <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-note">
-          {t("analysisRules.dashboard.usage.fx.note", {
-            rate: fxRate.rate_jpy.toLocaleString(i18n.language, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 4,
-            }),
-            fetchedAt: formatFetchedAtJst(fxRate.fetched_at, i18n.language),
-          })}
-        </p>
+      {/* ADR-148 2026-10-03 追記（PR-B）: 円換算の出典を明示。cost_jpy は各使用時点の
+          app_fx_rate_history レートで換算済み（現在レートの一律適用ではない）。 */}
+      {data.fx != null ? (
+        <>
+          <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-note">
+            {t("analysisRules.dashboard.usage.fx.note", {
+              rate: data.fx.latest_rate_jpy.toLocaleString(i18n.language, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 4,
+              }),
+              fetchedAt: formatFetchedAtJst(data.fx.latest_fetched_at, i18n.language),
+            })}
+          </p>
+          {data.fx.fallback_calls > 0 && (
+            <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-fallback-count-note">
+              {t("analysisRules.dashboard.usage.fx.fallbackCountNote", {
+                historyStart: formatFetchedAtJst(data.fx.history_start, i18n.language),
+                count: data.fx.fallback_calls,
+              })}
+            </p>
+          )}
+        </>
       ) : (
         <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-fallback-note">
           {t("analysisRules.dashboard.usage.fx.fallbackNote")}

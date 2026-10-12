@@ -40,7 +40,7 @@ OLD_JAPANESE_DEFAULT = "ご連絡ありがとうございます。こちらの�
 def test_bot_texts_match_po_specified_english():
     assert bot_texts.TICKET_BUTTON_MESSAGE == "Need help? Click the button below to open a private support ticket."
     assert bot_texts.TICKET_BUTTON_LABEL == "Open a ticket"
-    assert bot_texts.TICKET_READY_TEMPLATE.format(mention="#c") == "Your private channel is ready → #c"
+    assert not hasattr(bot_texts, "TICKET_READY_TEMPLATE")
     assert bot_texts.GUILD_ONLY == "This can only be used inside a server."
     assert bot_texts.GUILD_NOT_REGISTERED == "This server is not registered. Please contact the administrator."
     assert bot_texts.TICKET_NOT_CONFIGURED == "The ticket feature is not set up. Please contact the administrator."
@@ -129,21 +129,29 @@ async def test_missing_config_reply_is_english():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("channel", [None, SimpleNamespace(mention="<#42>", id=42)])
-async def test_create_failed_and_ready_replies_are_english(channel):
+async def test_create_failed_reply_is_english():
     client = _client()
     client._resolve_tenant_id = AsyncMock(return_value=1)
     client._db_factory = MagicMock(return_value=_session_factory())
     interaction = _interaction(guild=SimpleNamespace(id=1), user=_member())
     with patch.object(ticket_channel_creator, "get_ticket_config", new=AsyncMock(return_value={"x": 1})), \
+         patch.object(ticket_channel_creator, "get_or_create_ticket_channel", new=AsyncMock(return_value=None)):
+        await client.on_interaction(interaction)
+    interaction.followup.send.assert_awaited_once_with(bot_texts.TICKET_CREATE_FAILED, ephemeral=True)
+
+
+@pytest.mark.asyncio
+async def test_success_acks_silently_and_sends_no_message():
+    client = _client()
+    client._resolve_tenant_id = AsyncMock(return_value=1)
+    client._db_factory = MagicMock(return_value=_session_factory())
+    interaction = _interaction(guild=SimpleNamespace(id=1), user=_member())
+    channel = SimpleNamespace(mention="<#42>", id=42)
+    with patch.object(ticket_channel_creator, "get_ticket_config", new=AsyncMock(return_value={"x": 1})), \
          patch.object(ticket_channel_creator, "get_or_create_ticket_channel", new=AsyncMock(return_value=channel)):
         await client.on_interaction(interaction)
-    expected = (
-        bot_texts.TICKET_CREATE_FAILED
-        if channel is None
-        else bot_texts.TICKET_READY_TEMPLATE.format(mention="<#42>")
-    )
-    interaction.followup.send.assert_awaited_once_with(expected, ephemeral=True)
+    interaction.response.defer.assert_awaited_once_with()
+    interaction.followup.send.assert_not_awaited()
 
 
 def test_channel_invite_message_is_english_and_keeps_channel_mention():

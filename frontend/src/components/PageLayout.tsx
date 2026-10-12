@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import "./PageLayout.css";
 
 interface PageLayoutBaseProps {
   subtitleKey?: string;
@@ -6,6 +7,13 @@ interface PageLayoutBaseProps {
   headerLeft?: React.ReactNode;
   headerAction?: React.ReactNode;
   noScroll?: boolean;
+  /**
+   * スマホ幅（767px以下）で、ヘッダーのタイトルと説明文を画面から外す。
+   * 上部バーに同じタイトルが出ているページで、限られた高さを本文に回すために使う。
+   * 操作ボタン（headerAction）は残る。タイトルは読み上げには残る。
+   * PC・タブレットの見た目は変わらない。
+   */
+  slimHeaderOnMobile?: boolean;
   children: React.ReactNode;
 }
 
@@ -26,11 +34,12 @@ export function PageLayout({
   headerLeft,
   headerAction,
   noScroll,
+  slimHeaderOnMobile,
   children,
 }: PageLayoutProps) {
   const { t } = useTranslation();
   return (
-    <div className="page-layout">
+    <div className={slimHeaderOnMobile ? "page-layout page-layout--slim-header" : "page-layout"}>
       <header className="page-layout-header">
         <div className={`page-layout-title-row${subtitleKey ? " page-layout-title-row--has-subtitle" : ""}`}>
           <h2 className="text-page-title">{navKey ? t(navKey) : titleText}</h2>

@@ -38,15 +38,7 @@
 --   2026-05-13: 初版（ADR-021 J1 fix）
 -- ============================================================================
 
-DO $$
-DECLARE
-    affected_rows INTEGER;
-BEGIN
-    UPDATE {schema}.orders
-       SET status = 'pending',
-           updated_at = NOW()
-     WHERE status = 'confirmed';
-    GET DIAGNOSTICS affected_rows = ROW_COUNT;
-    RAISE NOTICE 'migration 051: {schema}.orders confirmed -> pending: % rows', affected_rows;
-END
-$$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- orders の status を 'confirmed' から 'pending' へ書き換える UPDATE を外した（本番は 0 行）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: orders confirmed->pending update removed (051)'; END $$;

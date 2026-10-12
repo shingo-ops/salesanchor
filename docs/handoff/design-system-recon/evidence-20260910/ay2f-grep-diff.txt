@@ -1,0 +1,8 @@
+## 4b git grep
+exit=1 (1=0 hits)
+## 4c git diff origin/main --stat (4 files)
+frontend/src/App.tsx
+frontend/src/components/DesktopShell.tsx
+frontend/src/components/MobileShell.tsx
+frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx
+(empty stat = diff 0)

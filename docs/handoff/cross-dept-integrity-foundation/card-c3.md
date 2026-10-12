@@ -3,7 +3,7 @@ mode: handoff
 ---
 # 実装カード 便C-3／C-4: 生成型の横展開（TcgParallelReportPage／OwnInventoryPage）
 
-- 根拠: ADR-1005（Accepted）。手順は便C-2（PR #4009、本番反映済み 2026-10-07）と同じ型を使う。生成の配線（prebuild と frontend-check の生成 step）は #4009 で入っているので、この便では触らない。
+- 根拠: ADR-1009（Accepted）。手順は便C-2（PR #4009、本番反映済み 2026-10-07）と同じ型を使う。生成の配線（prebuild と frontend-check の生成 step）は #4009 で入っているので、この便では触らない。
 - 対象を選んだ根拠: 2026-10-06 の Sonnet 調査（origin/main `a77cfb1c0`）で、候補の2位と3位だったもの。
 - PR の分け方: 1画面につき1つの PR にする。
   - 便C-3 = TcgParallelReportPage

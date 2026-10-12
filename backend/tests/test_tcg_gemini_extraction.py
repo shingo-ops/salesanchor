@@ -945,3 +945,74 @@ LIVE_WORK_SAMPLES = [
      ["ポケモン", "ワンピース", "ガンダム"]),
     ("EB01 1BOX 1000円", [""]),
 ]
+
+
+class TestNewSystemRulesDoNotReachProductionV7:
+    """新しい2列（extraction_layout_rules / extraction_hard_cases）は本番 v7 の指示書・supplier_context に入らない。"""
+
+    _NEW = {"extraction_layout_rules": "手順3の当てはめ", "extraction_hard_cases": "原文例と出力例"}
+
+    def test_shared_note_builder_ignores_new_columns(self):
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+
+        base = {"extraction_price_format": "100円", "extraction_notes": "補足"}
+        assert _build_supplier_context_note({**base, **self._NEW}) == _build_supplier_context_note(base)
+        assert _build_supplier_context_note(dict(self._NEW)) == ""
+
+    @staticmethod
+    def _row(layout=None, hard=None, price=None):
+        # SELECT の並び: ej.id, raw_text, 8列, supplier_id(row[10]), layout(row[11]), hard(row[12])
+        return ("ej", "原文", price, None, None, None, None, None, None, None, None, layout, hard)
+
+    def test_new_columns_are_read_from_row_11_and_12_and_supplier_id_stays_row_10(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        session = MagicMock()
+        row = self._row(layout="L", hard="H", price="p")
+        row = row[:10] + (None,) + row[11:]  # supplier_id=None（knowledge リンクの SELECT を避ける）
+        ctx = task._build_extraction_context(session, row)
+        assert ctx.new_system_rules == {"extraction_layout_rules": "L", "extraction_hard_cases": "H"}
+        assert ctx.supplier_id is None
+        # supplier_id は row[10]
+        session.execute.return_value.fetchall.return_value = []
+        row2 = row[:10] + (42,) + row[11:]
+        assert task._build_extraction_context(session, row2).supplier_id == 42
+
+    def test_supplier_context_has_no_new_keys_even_when_new_columns_have_values(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        ctx = task._build_extraction_context(MagicMock(), self._row(layout="L", hard="H", price="p"))
+        assert ctx.supplier_context is not None
+        assert "extraction_layout_rules" not in ctx.supplier_context
+        assert "extraction_hard_cases" not in ctx.supplier_context
+        assert set(ctx.supplier_context) == {
+            "extraction_price_format", "extraction_qty_format", "extraction_order_pattern",
+            "extraction_default_unit", "extraction_notes", "extraction_state_format",
+            "extraction_example_text", "extraction_ship_format",
+        }
+
+    def test_new_columns_only_supplier_keeps_supplier_context_none(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        ctx = task._build_extraction_context(MagicMock(), self._row(layout="L", hard="H"))
+        assert ctx.supplier_context is None
+        assert ctx.new_system_rules == {"extraction_layout_rules": "L", "extraction_hard_cases": "H"}
+
+    def test_no_new_values_gives_none_new_system_rules(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        assert task._build_extraction_context(MagicMock(), self._row(price="p")).new_system_rules is None
+
+    def test_select_sql_appends_new_columns_after_supplier_id(self):
+        from app.tasks import tcg_extraction as task
+
+        sql = task._context_select_sql()
+        assert sql.index("sc.supplier_id") < sql.index("s.extraction_layout_rules") < sql.index("s.extraction_hard_cases")

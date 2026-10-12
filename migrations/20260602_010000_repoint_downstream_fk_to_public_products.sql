@@ -78,15 +78,19 @@ BEGIN
         RETURN;
     END IF;
 
+    -- incident 2026-10-03 (deploy run 37130920016): condition は public.products から
+    -- 削除済み（20260602_000000 参照）。ここで condition 列を INSERT 対象に含めると
+    -- 「column condition does not exist」で失敗するため、この列リストから除外する。
+    -- 詳細: docs/handoff/products-column-churn/design.md
     IF to_regclass('tenant_006.products') IS NOT NULL THEN
         INSERT INTO public.products (
-            name, name_en, category, mark, status, condition,
+            name, name_en, category, mark, status,
             unit_price, stock_quantity, weight, notes, release_date,
             jan_code, card_number, expansion_code, rarity, language,
             unit_price_usd, unit_price_eur, image_url
         )
         SELECT
-            tp.name_ja, tp.name_en, tp.category, tp.mark, tp.status, tp.condition,
+            tp.name_ja, tp.name_en, tp.category, tp.mark, tp.status,
             tp.unit_price, tp.quantity, tp.weight, tp.notes, tp.release_date,
             tp.jan_code, tp.card_number, tp.expansion_code, tp.rarity, tp.language,
             tp.unit_price_usd, tp.unit_price_eur, tp.image_url

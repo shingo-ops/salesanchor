@@ -1,0 +1,2263 @@
+{
+  "before": [
+    {
+      "file": "frontend/src/components/CompanyContactSelector.tsx",
+      "line": 190,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "{required}",
+        "disabled": "{disabled}",
+        "value": "{value.companyId !== null ? String(value.companyId) : \"\"}",
+        "onChange": "{(e) => handleCompanyChange(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{t(\"companyContactSelector.selectCompany\")}</option>\n          {companies.map((c) => (\n            <option key={c.id} value={c.id}>\n              {c.name}（{c.company_code}）\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/components/CompanyContactSelector.tsx",
+      "line": 214,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "{required}",
+        "disabled": "{\n            disabled ||\n            value.companyId === null ||\n            companyIdMissing ||\n            loadingContacts\n          }",
+        "value": "{value.contactId !== null ? String(value.contactId) : \"\"}",
+        "onChange": "{(e) => handleContactChange(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{contactsPlaceholder}</option>\n          {contacts.map((c) => (\n            <option key={c.id} value={c.id}>\n              {contactDisplayName(c)}\n              {c.is_primary_contact ? t(\"companyContactSelector.primarySuffix\") : \"\"}\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "line": 424,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{form.purchase_status}",
+        "onChange": "{(ev) => setField(\"purchase_status\", ev.target.value)}",
+        "data-testid": "\"pur-input-purchase_status\""
+      },
+      "spread": 0,
+      "children": "\n              {STATUS_OPTION_KEYS.map((opt) => (\n                <option key={opt.value} value={opt.value}>\n                  {t(opt.labelKey)}\n                </option>\n              ))}\n            "
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "line": 511,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{form.carrier}",
+        "onChange": "{(ev) => setField(\"carrier\", ev.target.value)}",
+        "data-testid": "\"ship-input-carrier\""
+      },
+      "spread": 0,
+      "children": "\n                  {CARRIER_OPTIONS.map((opt) => (\n                    <option key={opt.value} value={opt.value}>\n                      {t(opt.labelKey)}\n                    </option>\n                  ))}\n                "
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+      "line": 26,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{values[key]}",
+        "disabled": "{!options}",
+        "aria-label": "{t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })}",
+        "onChange": "{(event) => onChange(key, event.target.value)}"
+      },
+      "spread": 0,
+      "children": "<option value=\"\">{t('tcgAnalysisReview.noCorrection')}</option>{choices?.map((value) => <option key={value} value={value}>{value}</option>)}"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+      "line": 38,
+      "tag": "select",
+      "className": "\"account-settings-lang-select\"",
+      "style": null,
+      "attrs": {
+        "id": "\"language-select\"",
+        "value": "{locale}",
+        "onChange": "{(e) => changeLanguage(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"ja\">{t(\"language.ja\")}</option>\n          <option value=\"en\">{t(\"language.en\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 167,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"tp-agg-filter\"",
+        "data-testid": "\"tp-agg-filter\"",
+        "value": "{form.inventory_agg_filter}",
+        "onChange": "{handleChange(\"inventory_agg_filter\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"none\">\n                {t(\"tenantPolicy.inventoryAggFilterNone\")}\n              </option>\n              <option value=\"cheapest\">\n                {t(\"tenantPolicy.inventoryAggFilterCheapest\")}\n              </option>\n              <option value=\"balanced\">\n                {t(\"tenantPolicy.inventoryAggFilterBalanced\")}\n              </option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 266,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"tp-incoterms\"",
+        "data-testid": "\"tp-incoterms\"",
+        "value": "{form.duty_incoterms}",
+        "onChange": "{handleChange(\"duty_incoterms\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"DAP\">DAP</option>\n              <option value=\"DDU\">DDU</option>\n              <option value=\"DDP\">DDP</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 283,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"tp-issue-mode\"",
+        "data-testid": "\"tp-issue-mode\"",
+        "value": "{form.issue_mode}",
+        "onChange": "{handleChange(\"issue_mode\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"paypal_auto\">\n                {t(\"tenantPolicy.issueModePaypalAuto\")}\n              </option>\n              <option value=\"paypal_manual\">\n                {t(\"tenantPolicy.issueModePaypalManual\")}\n              </option>\n              <option value=\"pdf\">{t(\"tenantPolicy.issueModePdf\")}</option>\n              <option value=\"wise_pdf\">\n                {t(\"tenantPolicy.issueModeWisePdf\")}\n              </option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "line": 234,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"tp-default-language\"",
+        "data-testid": "\"tp-default-language\"",
+        "value": "{form.default_language}",
+        "onChange": "{handleChange(\"default_language\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"ja\">{t(\"language.ja\")} (ja)</option>\n              <option value=\"en\">English (en)</option>\n              <option value=\"ko\">한국어 (ko)</option>\n              <option value=\"zh\">{t(\"language.zh\")} (zh)</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 233,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{createForm.purpose}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, purpose: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"invoice\">{t(\"bots.purposeInvoice\")}</option>\n              <option value=\"shipment\">{t(\"bots.purposeShipment\")}</option>\n              <option value=\"notification\">{t(\"bots.purposeNotification\")}</option>\n              <option value=\"custom\">{t(\"bots.purposeCustom\")}</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 241,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"active\">{t(\"bots.statusActive\")}</option>\n              <option value=\"inactive\">{t(\"bots.statusInactive\")}</option>\n              <option value=\"maintenance\">{t(\"bots.statusMaintenance\")}</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 248,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{createForm.owner_staff_id}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n              {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}\n            "
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "line": 206,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{cfg.type}",
+        "onChange": "{(e) =>\n                              updateRole(role, { type: e.target.value as RateType })\n                            }",
+        "aria-label": "{`${ROLE_LABELS[role]} ${t(\"commissions.colCalcType\")}`}",
+        "data-testid": "{`settings-type-${role}`}"
+      },
+      "spread": 0,
+      "children": "\n                            <option value=\"rate\">{t(\"commissions.typeRate\")}</option>\n                            <option value=\"fixed\">{t(\"commissions.typeFixed\")}</option>\n                          "
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 506,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                      <option value=\"active\">active</option>\n                      <option value=\"inactive\">inactive</option>\n                      <option value=\"archived\">archived</option>\n                      <option value=\"pending_dedup_review\">pending_dedup_review</option>\n                    "
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 84,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "disabled": "{!canEdit}",
+        "value": "{basicForm.status}",
+        "onChange": "{(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"active\">active</option>\n          <option value=\"inactive\">inactive</option>\n          <option value=\"archived\">archived</option>\n          <option value=\"pending_dedup_review\">pending_dedup_review</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyConvLogsTab.tsx",
+      "line": 73,
+      "tag": "select",
+      "className": "\"conv-logs-filter-select\"",
+      "style": null,
+      "attrs": {
+        "id": "\"conv-contact-filter\"",
+        "value": "{selectedContactId}",
+        "onChange": "{(e) => setSelectedContactId(e.target.value)}",
+        "aria-label": "{t(\"companies.convHistory.filterByContact\")}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{t(\"companies.convHistory.allContacts\")}</option>\n          {contacts.map((c) => {\n            const name = c.display_name || `${c.surname ?? \"\"} ${c.given_name ?? \"\"}`.trim() || `#${c.id}`;\n            return (\n              <option key={c.id} value={String(c.id)}>\n                {name}\n              </option>\n            );\n          })}\n        "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 273,
+      "tag": "select",
+      "className": "\"search-input field-h-md field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{companyFilter}",
+        "onChange": "{(e) => setCompanyFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"contacts.allCompanies\")}</option>\n              {companies.map((c) => (\n                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>\n              ))}\n            "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 308,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{createForm.company_id}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, company_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}\n              "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 341,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"active\">active</option>\n                <option value=\"inactive\">inactive</option>\n                <option value=\"archived\">archived</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 711,
+      "tag": "select",
+      "className": "\"gs-select\"",
+      "style": null,
+      "attrs": {
+        "value": "{selectedTeamId ?? \"\"}",
+        "onChange": "{(e) => setSelectedTeamId(Number(e.target.value))}"
+      },
+      "spread": 0,
+      "children": "\n                {teams.map((tm) => (\n                  <option key={tm.id} value={tm.id}>\n                    {tm.name}\n                  </option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 147,
+      "tag": "select",
+      "className": "\"inbox-page-filter-select\"",
+      "style": null,
+      "attrs": {
+        "value": "{pageIdFilter}",
+        "onChange": "{(e) => onPageFilterChange(e.target.value)}",
+        "aria-label": "\"Filter by Page\""
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"inbox.allPages\")}</option>\n            {availablePageIds.map((pid) => (\n              <option key={pid} value={pid}>Page: {pid}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxSettingsModal.tsx",
+      "line": 37,
+      "tag": "select",
+      "className": "\"inbox-settings-select\"",
+      "style": null,
+      "attrs": {
+        "value": "{inboxSettings.defaultTab}",
+        "onChange": "{(e) => updateInboxSetting(\"defaultTab\", e.target.value as StatusTabKey)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"all\">{t(\"inbox.settings.defaultTabAll\")}</option>\n            <option value=\"lead\">{t(\"inbox.settings.defaultTabLead\")}</option>\n            <option value=\"deal\">{t(\"inbox.settings.defaultTabDeal\")}</option>\n            <option value=\"existing\">{t(\"inbox.settings.defaultTabExisting\")}</option>\n            <option value=\"followup\">{t(\"inbox.settings.defaultTabFollowUp\")}</option>\n            <option value=\"archive\">{t(\"inbox.settings.defaultTabArchive\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+      "line": 126,
+      "tag": "select",
+      "className": "\"manual-record-select\"",
+      "style": null,
+      "attrs": {
+        "id": "\"manual-channel-select\"",
+        "value": "{channelType}",
+        "onChange": "{(e) => setChannelType(e.target.value)}",
+        "disabled": "{saving}",
+        "aria-label": "{t(\"inbox.manualRecord.channelLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n          {manualChannels.map((ch) => (\n            <option key={ch.platform} value={ch.platform}>\n              {ch.display_name}\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 493,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"etd-environment\"",
+        "value": "{etdEnvironment}",
+        "onChange": "{(e) => setEtdEnvironment(e.target.value as Env)}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"sandbox\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentSandbox\")}</option>\n                <option value=\"production\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentProduction\")}</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 164,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"paypal-env\"",
+        "value": "{environment}",
+        "onChange": "{(e) => setEnvironment(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"sandbox\">{t(\"paypalIntegration.envSandbox\")}</option>\n            <option value=\"live\">{t(\"paypalIntegration.envLive\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 477,
+      "tag": "select",
+      "className": null,
+      "style": "{{ fontSize: \"var(--font-xs)\", padding: \"var(--space-1) var(--space-10px)\", border: \"1px solid var(--border)\", borderRadius: \"var(--radius-sm)\", background: \"var(--bg-surface)\" }}",
+      "attrs": {
+        "value": "{[\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\", \"all\"].includes(activeTab) ? \"\" : activeTab}",
+        "onChange": "{(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}",
+        "aria-label": "{t(\"inventory.filter.otherTypes\")}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"inventory.filter.otherTypes\")}</option>\n              {tcgTypes\n                .filter((tt) => ![\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\"].includes(tt.code))\n                .map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}\n            "
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 308,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{currency}",
+        "onChange": "{(e) => setCurrency(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"JPY\">JPY</option>\n                <option value=\"USD\">USD</option>\n                <option value=\"EUR\">EUR</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+      "line": 40,
+      "tag": "select",
+      "className": "\"field-h-md field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{sortBy}",
+        "onChange": "{(e) => setSortBy(e.target.value)}",
+        "aria-label": "{t(\"common.filter\")}",
+        "data-testid": "\"orders-sort-by\""
+      },
+      "spread": 0,
+      "children": "\n        {SORT_OPTIONS.map((opt) => (\n          <option key={opt.value} value={opt.value}>{opt.label}</option>\n        ))}\n      "
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "line": 86,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{form.status}",
+        "onChange": "{(e) => setForm({ ...form, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n            {STATUSES.map((s) => (\n              <option key={s} value={s}>{STATUS_LABELS[s]}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 220,
+      "tag": "select",
+      "className": "\"field-h-md field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{tcgType}",
+        "onChange": "{(e) => { setTcgType(e.target.value); setPage(1); }}",
+        "aria-label": "{t(\"products.filterByTcgType\")}",
+        "data-testid": "\"products-tcg-type-filter\""
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(\"products.allTcgTypes\")}</option>\n                {tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 156,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{supplierId}",
+        "onChange": "{(e) => setSupplierId(e.target.value ? Number(e.target.value) : \"\")}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n            {suppliers.map((s) => (\n              <option key={s.id} value={s.id}>{s.name}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 193,
+      "tag": "select",
+      "className": "\"field-h-md field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{statusFilter}",
+        "onChange": "{e => setStatusFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"purchaseOrders.allStatuses\")}</option>\n            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}\n          "
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 157,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{currency}",
+        "onChange": "{(e) => setCurrency(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"JPY\">JPY</option>\n              <option value=\"USD\">USD</option>\n              <option value=\"EUR\">EUR</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 288,
+      "tag": "select",
+      "className": "\"schedule-input\"",
+      "style": null,
+      "attrs": {
+        "value": "{draft.category}",
+        "onChange": "{(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}"
+      },
+      "spread": 0,
+      "children": "\n                {CALENDARS.map((calendar) => (\n                  <option key={calendar.id} value={calendar.id}>\n                    {t(calendar.labelKey)}\n                  </option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 170,
+      "tag": "select",
+      "className": "\"schedule-input\"",
+      "style": null,
+      "attrs": {
+        "value": "{selfOwner.shareMode}",
+        "onChange": "{(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}"
+      },
+      "spread": 0,
+      "children": "\n                          <option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option>\n                          <option value=\"view\">{t(\"schedule.settingsShareView\")}</option>\n                          <option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>\n                        "
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 225,
+      "tag": "select",
+      "className": "\"schedule-input\"",
+      "style": null,
+      "attrs": {
+        "value": "{owner.shareMode}",
+        "onChange": "{(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}"
+      },
+      "spread": 0,
+      "children": "\n                            <option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option>\n                            <option value=\"view\">{t(\"schedule.settingsShareView\")}</option>\n                            <option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>\n                          "
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 260,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n          {MATCH_TYPE_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 274,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n          {EFFECT_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 322,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.condition_def_id}",
+        "onChange": "{e => setForm({ ...form, condition_def_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(`${f}.unset`)}</option>\n                {conditionDefs.map(d => (\n                  <option key={d.id} value={String(d.id)}>{d.name}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 338,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.unit_id}",
+        "onChange": "{e => setForm({ ...form, unit_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(`${f}.noUnit`)}</option>\n                {units.map(u => (\n                  <option key={u.id} value={String(u.id)}>{u.canonical}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 393,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 409,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+      "line": 311,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+      "line": 325,
+      "tag": "select",
+      "className": "\"field field-h-md\"",
+      "style": null,
+      "attrs": {
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 194,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{kind}",
+        "onChange": "{(e) => setKind(e.target.value as DexKind)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"pokemon\">{t(\"superAdmin.dex.kinds.pokemon\")}</option>\n            <option value=\"trainer\">{t(\"superAdmin.dex.kinds.trainer\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 447,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{ruleForm.category}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, category: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {RULE_CATEGORIES.map((cat) => (\n                      <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 455,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{ruleForm.pattern_type}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {PATTERN_TYPES.map((pt) => (\n                      <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 472,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{ruleForm.language}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, language: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {LANGS.map((l) => (\n                      <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 501,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "required": "true",
+        "value": "{aliasForm.supplier_id || \"\"}",
+        "data-testid": "\"alias-supplier-select\"",
+        "onChange": "{(e) => setAliasForm({ ...aliasForm, supplier_id: Number(e.target.value) })}"
+      },
+      "spread": 0,
+      "children": "\n                    <option value=\"\">—</option>\n                    {suppliers.map((s) => (\n                      <option key={s.id} value={s.id}>{s.name}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 523,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{aliasForm.product_id ?? \"\"}",
+        "data-testid": "\"alias-product-select\"",
+        "onChange": "{(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}"
+      },
+      "spread": 0,
+      "children": "\n                    <option value=\"\">—</option>\n                    {products.map((p) => (\n                      <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : \"\"}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 190,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{filter}",
+        "onChange": "{(e) => setFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            {types.map((tp) => (\n              <option key={tp.code} value={tp.code}>\n                {tp.name_ja}\n              </option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 300,
+      "tag": "select",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{form.tcg_type}",
+        "onChange": "{(e) => setForm({ ...form, tcg_type: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n          {types.map((tp) => (\n            <option key={tp.code} value={tp.code}>\n              {tp.name_ja}\n            </option>\n          ))}\n        "
+    }
+  ],
+  "after": [
+    {
+      "file": "frontend/src/components/CompanyContactSelector.tsx",
+      "line": 191,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "{required}",
+        "disabled": "{disabled}",
+        "value": "{value.companyId !== null ? String(value.companyId) : \"\"}",
+        "onChange": "{(e) => handleCompanyChange(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{t(\"companyContactSelector.selectCompany\")}</option>\n          {companies.map((c) => (\n            <option key={c.id} value={c.id}>\n              {c.name}（{c.company_code}）\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/components/CompanyContactSelector.tsx",
+      "line": 216,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "{required}",
+        "disabled": "{\n            disabled ||\n            value.companyId === null ||\n            companyIdMissing ||\n            loadingContacts\n          }",
+        "value": "{value.contactId !== null ? String(value.contactId) : \"\"}",
+        "onChange": "{(e) => handleContactChange(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{contactsPlaceholder}</option>\n          {contacts.map((c) => (\n            <option key={c.id} value={c.id}>\n              {contactDisplayName(c)}\n              {c.is_primary_contact ? t(\"companyContactSelector.primarySuffix\") : \"\"}\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "line": 425,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.purchase_status}",
+        "onChange": "{(ev) => setField(\"purchase_status\", ev.target.value)}",
+        "data-testid": "\"pur-input-purchase_status\""
+      },
+      "spread": 0,
+      "children": "\n              {STATUS_OPTION_KEYS.map((opt) => (\n                <option key={opt.value} value={opt.value}>\n                  {t(opt.labelKey)}\n                </option>\n              ))}\n            "
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "line": 512,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.carrier}",
+        "onChange": "{(ev) => setField(\"carrier\", ev.target.value)}",
+        "data-testid": "\"ship-input-carrier\""
+      },
+      "spread": 0,
+      "children": "\n                  {CARRIER_OPTIONS.map((opt) => (\n                    <option key={opt.value} value={opt.value}>\n                      {t(opt.labelKey)}\n                    </option>\n                  ))}\n                "
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+      "line": 27,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{values[key]}",
+        "disabled": "{!options}",
+        "aria-label": "{t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })}",
+        "onChange": "{(event) => onChange(key, event.target.value)}"
+      },
+      "spread": 0,
+      "children": "<option value=\"\">{t('tcgAnalysisReview.noCorrection')}</option>{choices?.map((value) => <option key={value} value={value}>{value}</option>)}"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+      "line": 39,
+      "tag": "SelectControl",
+      "className": "\"account-settings-lang-select\"",
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "id": "\"language-select\"",
+        "value": "{locale}",
+        "onChange": "{(e) => changeLanguage(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"ja\">{t(\"language.ja\")}</option>\n          <option value=\"en\">{t(\"language.en\")}</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 168,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"tp-agg-filter\"",
+        "data-testid": "\"tp-agg-filter\"",
+        "value": "{form.inventory_agg_filter}",
+        "onChange": "{handleChange(\"inventory_agg_filter\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"none\">\n                {t(\"tenantPolicy.inventoryAggFilterNone\")}\n              </option>\n              <option value=\"cheapest\">\n                {t(\"tenantPolicy.inventoryAggFilterCheapest\")}\n              </option>\n              <option value=\"balanced\">\n                {t(\"tenantPolicy.inventoryAggFilterBalanced\")}\n              </option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 268,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"tp-incoterms\"",
+        "data-testid": "\"tp-incoterms\"",
+        "value": "{form.duty_incoterms}",
+        "onChange": "{handleChange(\"duty_incoterms\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"DAP\">DAP</option>\n              <option value=\"DDU\">DDU</option>\n              <option value=\"DDP\">DDP</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 286,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"tp-issue-mode\"",
+        "data-testid": "\"tp-issue-mode\"",
+        "value": "{form.issue_mode}",
+        "onChange": "{handleChange(\"issue_mode\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"paypal_auto\">\n                {t(\"tenantPolicy.issueModePaypalAuto\")}\n              </option>\n              <option value=\"paypal_manual\">\n                {t(\"tenantPolicy.issueModePaypalManual\")}\n              </option>\n              <option value=\"pdf\">{t(\"tenantPolicy.issueModePdf\")}</option>\n              <option value=\"wise_pdf\">\n                {t(\"tenantPolicy.issueModeWisePdf\")}\n              </option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "line": 235,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"tp-default-language\"",
+        "data-testid": "\"tp-default-language\"",
+        "value": "{form.default_language}",
+        "onChange": "{handleChange(\"default_language\")}",
+        "disabled": "{!canEdit}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"ja\">{t(\"language.ja\")} (ja)</option>\n              <option value=\"en\">English (en)</option>\n              <option value=\"ko\">한국어 (ko)</option>\n              <option value=\"zh\">{t(\"language.zh\")} (zh)</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 234,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{createForm.purpose}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, purpose: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"invoice\">{t(\"bots.purposeInvoice\")}</option>\n              <option value=\"shipment\">{t(\"bots.purposeShipment\")}</option>\n              <option value=\"notification\">{t(\"bots.purposeNotification\")}</option>\n              <option value=\"custom\">{t(\"bots.purposeCustom\")}</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 242,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"active\">{t(\"bots.statusActive\")}</option>\n              <option value=\"inactive\">{t(\"bots.statusInactive\")}</option>\n              <option value=\"maintenance\">{t(\"bots.statusMaintenance\")}</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 249,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{createForm.owner_staff_id}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n              {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}\n            "
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "line": 207,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{cfg.type}",
+        "onChange": "{(e) =>\n                              updateRole(role, { type: e.target.value as RateType })\n                            }",
+        "aria-label": "{`${ROLE_LABELS[role]} ${t(\"commissions.colCalcType\")}`}",
+        "data-testid": "{`settings-type-${role}`}"
+      },
+      "spread": 0,
+      "children": "\n                            <option value=\"rate\">{t(\"commissions.typeRate\")}</option>\n                            <option value=\"fixed\">{t(\"commissions.typeFixed\")}</option>\n                          "
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 507,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                      <option value=\"active\">active</option>\n                      <option value=\"inactive\">inactive</option>\n                      <option value=\"archived\">archived</option>\n                      <option value=\"pending_dedup_review\">pending_dedup_review</option>\n                    "
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 85,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "disabled": "{!canEdit}",
+        "value": "{basicForm.status}",
+        "onChange": "{(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"active\">active</option>\n          <option value=\"inactive\">inactive</option>\n          <option value=\"archived\">archived</option>\n          <option value=\"pending_dedup_review\">pending_dedup_review</option>\n        "
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyConvLogsTab.tsx",
+      "line": 74,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"conv-contact-filter\"",
+        "value": "{selectedContactId}",
+        "onChange": "{(e) => setSelectedContactId(e.target.value)}",
+        "aria-label": "{t(\"companies.convHistory.filterByContact\")}"
+      },
+      "spread": 0,
+      "children": "\n          <option value=\"\">{t(\"companies.convHistory.allContacts\")}</option>\n          {contacts.map((c) => {\n            const name = c.display_name || `${c.surname ?? \"\"} ${c.given_name ?? \"\"}`.trim() || `#${c.id}`;\n            return (\n              <option key={c.id} value={String(c.id)}>\n                {name}\n              </option>\n            );\n          })}\n        "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 274,
+      "tag": "SelectControl",
+      "className": "\"field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{companyFilter}",
+        "onChange": "{(e) => setCompanyFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"contacts.allCompanies\")}</option>\n              {companies.map((c) => (\n                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>\n              ))}\n            "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 309,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{createForm.company_id}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, company_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}\n              "
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 342,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{createForm.status}",
+        "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"active\">active</option>\n                <option value=\"inactive\">inactive</option>\n                <option value=\"archived\">archived</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 712,
+      "tag": "SelectControl",
+      "className": "\"gs-select\"",
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "value": "{selectedTeamId ?? \"\"}",
+        "onChange": "{(e) => setSelectedTeamId(Number(e.target.value))}"
+      },
+      "spread": 0,
+      "children": "\n                {teams.map((tm) => (\n                  <option key={tm.id} value={tm.id}>\n                    {tm.name}\n                  </option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 148,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "fullWidth": "true",
+        "value": "{pageIdFilter}",
+        "onChange": "{(e) => onPageFilterChange(e.target.value)}",
+        "aria-label": "\"Filter by Page\""
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"inbox.allPages\")}</option>\n            {availablePageIds.map((pid) => (\n              <option key={pid} value={pid}>Page: {pid}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxSettingsModal.tsx",
+      "line": 38,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "value": "{inboxSettings.defaultTab}",
+        "onChange": "{(e) => updateInboxSetting(\"defaultTab\", e.target.value as StatusTabKey)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"all\">{t(\"inbox.settings.defaultTabAll\")}</option>\n            <option value=\"lead\">{t(\"inbox.settings.defaultTabLead\")}</option>\n            <option value=\"deal\">{t(\"inbox.settings.defaultTabDeal\")}</option>\n            <option value=\"existing\">{t(\"inbox.settings.defaultTabExisting\")}</option>\n            <option value=\"followup\">{t(\"inbox.settings.defaultTabFollowUp\")}</option>\n            <option value=\"archive\">{t(\"inbox.settings.defaultTabArchive\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+      "line": 127,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "id": "\"manual-channel-select\"",
+        "value": "{channelType}",
+        "onChange": "{(e) => setChannelType(e.target.value)}",
+        "disabled": "{saving}",
+        "aria-label": "{t(\"inbox.manualRecord.channelLabel\")}"
+      },
+      "spread": 0,
+      "children": "\n          {manualChannels.map((ch) => (\n            <option key={ch.platform} value={ch.platform}>\n              {ch.display_name}\n            </option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 494,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"etd-environment\"",
+        "value": "{etdEnvironment}",
+        "onChange": "{(e) => setEtdEnvironment(e.target.value as Env)}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"sandbox\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentSandbox\")}</option>\n                <option value=\"production\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentProduction\")}</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 165,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "id": "\"paypal-env\"",
+        "value": "{environment}",
+        "onChange": "{(e) => setEnvironment(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"sandbox\">{t(\"paypalIntegration.envSandbox\")}</option>\n            <option value=\"live\">{t(\"paypalIntegration.envLive\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 477,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "value": "{[\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\", \"all\"].includes(activeTab) ? \"\" : activeTab}",
+        "onChange": "{(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}",
+        "aria-label": "{t(\"inventory.filter.otherTypes\")}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"\">{t(\"inventory.filter.otherTypes\")}</option>\n              {tcgTypes\n                .filter((tt) => ![\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\"].includes(tt.code))\n                .map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}\n            "
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 309,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{currency}",
+        "onChange": "{(e) => setCurrency(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"JPY\">JPY</option>\n                <option value=\"USD\">USD</option>\n                <option value=\"EUR\">EUR</option>\n              "
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+      "line": 41,
+      "tag": "SelectControl",
+      "className": "\"field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{sortBy}",
+        "onChange": "{(e) => setSortBy(e.target.value)}",
+        "aria-label": "{t(\"common.filter\")}",
+        "data-testid": "\"orders-sort-by\""
+      },
+      "spread": 0,
+      "children": "\n        {SORT_OPTIONS.map((opt) => (\n          <option key={opt.value} value={opt.value}>{opt.label}</option>\n        ))}\n      "
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "line": 87,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.status}",
+        "onChange": "{(e) => setForm({ ...form, status: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n            {STATUSES.map((s) => (\n              <option key={s} value={s}>{STATUS_LABELS[s]}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 221,
+      "tag": "SelectControl",
+      "className": "\"field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{tcgType}",
+        "onChange": "{(e) => { setTcgType(e.target.value); setPage(1); }}",
+        "aria-label": "{t(\"products.filterByTcgType\")}",
+        "data-testid": "\"products-tcg-type-filter\""
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(\"products.allTcgTypes\")}</option>\n                {tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 157,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{supplierId}",
+        "onChange": "{(e) => setSupplierId(e.target.value ? Number(e.target.value) : \"\")}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"common.pleaseSelect\")}</option>\n            {suppliers.map((s) => (\n              <option key={s.id} value={s.id}>{s.name}</option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 194,
+      "tag": "SelectControl",
+      "className": "\"field-w-sm\"",
+      "style": null,
+      "attrs": {
+        "value": "{statusFilter}",
+        "onChange": "{e => setStatusFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"\">{t(\"purchaseOrders.allStatuses\")}</option>\n            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}\n          "
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 158,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{currency}",
+        "onChange": "{(e) => setCurrency(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n              <option value=\"JPY\">JPY</option>\n              <option value=\"USD\">USD</option>\n              <option value=\"EUR\">EUR</option>\n            "
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 289,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "fullWidth": "true",
+        "value": "{draft.category}",
+        "onChange": "{(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}"
+      },
+      "spread": 0,
+      "children": "\n                {CALENDARS.map((calendar) => (\n                  <option key={calendar.id} value={calendar.id}>\n                    {t(calendar.labelKey)}\n                  </option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 171,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "fullWidth": "true",
+        "value": "{selfOwner.shareMode}",
+        "onChange": "{(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}"
+      },
+      "spread": 0,
+      "children": "\n                          <option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option>\n                          <option value=\"view\">{t(\"schedule.settingsShareView\")}</option>\n                          <option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>\n                        "
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 227,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "size": "\"sm\"",
+        "fullWidth": "true",
+        "value": "{owner.shareMode}",
+        "onChange": "{(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}"
+      },
+      "spread": 0,
+      "children": "\n                            <option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option>\n                            <option value=\"view\">{t(\"schedule.settingsShareView\")}</option>\n                            <option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>\n                          "
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 260,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n          {MATCH_TYPE_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 273,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n          {EFFECT_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}\n        "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 322,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.condition_def_id}",
+        "onChange": "{e => setForm({ ...form, condition_def_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(`${f}.unset`)}</option>\n                {conditionDefs.map(d => (\n                  <option key={d.id} value={String(d.id)}>{d.name}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 337,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.unit_id}",
+        "onChange": "{e => setForm({ ...form, unit_id: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                <option value=\"\">{t(`${f}.noUnit`)}</option>\n                {units.map(u => (\n                  <option key={u.id} value={String(u.id)}>{u.canonical}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 391,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+      "line": 406,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+      "line": 311,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.match_type}",
+        "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+      "line": 324,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{form.effect}",
+        "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+        "required": "true"
+      },
+      "spread": 0,
+      "children": "\n                {EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}\n              "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 195,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{kind}",
+        "onChange": "{(e) => setKind(e.target.value as DexKind)}"
+      },
+      "spread": 0,
+      "children": "\n            <option value=\"pokemon\">{t(\"superAdmin.dex.kinds.pokemon\")}</option>\n            <option value=\"trainer\">{t(\"superAdmin.dex.kinds.trainer\")}</option>\n          "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 448,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{ruleForm.category}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, category: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {RULE_CATEGORIES.map((cat) => (\n                      <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 456,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{ruleForm.pattern_type}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {PATTERN_TYPES.map((pt) => (\n                      <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 473,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{ruleForm.language}",
+        "onChange": "{(e) => setRuleForm({ ...ruleForm, language: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n                    {LANGS.map((l) => (\n                      <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 502,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "required": "true",
+        "value": "{aliasForm.supplier_id || \"\"}",
+        "data-testid": "\"alias-supplier-select\"",
+        "onChange": "{(e) => setAliasForm({ ...aliasForm, supplier_id: Number(e.target.value) })}"
+      },
+      "spread": 0,
+      "children": "\n                    <option value=\"\">—</option>\n                    {suppliers.map((s) => (\n                      <option key={s.id} value={s.id}>{s.name}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 525,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "fullWidth": "true",
+        "value": "{aliasForm.product_id ?? \"\"}",
+        "data-testid": "\"alias-product-select\"",
+        "onChange": "{(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}"
+      },
+      "spread": 0,
+      "children": "\n                    <option value=\"\">—</option>\n                    {products.map((p) => (\n                      <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : \"\"}</option>\n                    ))}\n                  "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 191,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{filter}",
+        "onChange": "{(e) => setFilter(e.target.value)}"
+      },
+      "spread": 0,
+      "children": "\n            {types.map((tp) => (\n              <option key={tp.code} value={tp.code}>\n                {tp.name_ja}\n              </option>\n            ))}\n          "
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 301,
+      "tag": "SelectControl",
+      "className": null,
+      "style": null,
+      "attrs": {
+        "value": "{form.tcg_type}",
+        "onChange": "{(e) => setForm({ ...form, tcg_type: e.target.value })}"
+      },
+      "spread": 0,
+      "children": "\n          {types.map((tp) => (\n            <option key={tp.code} value={tp.code}>\n              {tp.name_ja}\n            </option>\n          ))}\n        "
+    }
+  ],
+  "result": {
+    "elements": 53,
+    "rawSelectRemaining": 0,
+    "totalDiffs": 0,
+    "rows": [
+      {
+        "index": 1,
+        "file": "frontend/src/components/CompanyContactSelector.tsx",
+        "raw": true,
+        "beforeLine": 190,
+        "afterLine": 191,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 2,
+        "file": "frontend/src/components/CompanyContactSelector.tsx",
+        "raw": true,
+        "beforeLine": 214,
+        "afterLine": 216,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 3,
+        "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+        "raw": true,
+        "beforeLine": 424,
+        "afterLine": 425,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 4,
+        "file": "frontend/src/components/ShippingDetailPanel.tsx",
+        "raw": true,
+        "beforeLine": 511,
+        "afterLine": 512,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 5,
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "raw": true,
+        "beforeLine": 26,
+        "afterLine": 27,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 6,
+        "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+        "raw": true,
+        "beforeLine": 38,
+        "afterLine": 39,
+        "beforeClass": "\"account-settings-lang-select\"",
+        "afterClass": "\"account-settings-lang-select\"",
+        "beforeStyle": null,
+        "addedAttrs": [
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 7,
+        "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+        "raw": true,
+        "beforeLine": 167,
+        "afterLine": 168,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 8,
+        "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+        "raw": true,
+        "beforeLine": 266,
+        "afterLine": 268,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 9,
+        "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+        "raw": true,
+        "beforeLine": 283,
+        "afterLine": 286,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 10,
+        "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+        "raw": true,
+        "beforeLine": 234,
+        "afterLine": 235,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 11,
+        "file": "frontend/src/pages/bots/BotsPage.tsx",
+        "raw": true,
+        "beforeLine": 233,
+        "afterLine": 234,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 12,
+        "file": "frontend/src/pages/bots/BotsPage.tsx",
+        "raw": true,
+        "beforeLine": 241,
+        "afterLine": 242,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 13,
+        "file": "frontend/src/pages/bots/BotsPage.tsx",
+        "raw": true,
+        "beforeLine": 248,
+        "afterLine": 249,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 14,
+        "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+        "raw": true,
+        "beforeLine": 206,
+        "afterLine": 207,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 15,
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "raw": true,
+        "beforeLine": 506,
+        "afterLine": 507,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 16,
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "raw": true,
+        "beforeLine": 84,
+        "afterLine": 85,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 17,
+        "file": "frontend/src/pages/company-detail/CompanyConvLogsTab.tsx",
+        "raw": true,
+        "beforeLine": 73,
+        "afterLine": 74,
+        "beforeClass": "\"conv-logs-filter-select\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 18,
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "raw": true,
+        "beforeLine": 273,
+        "afterLine": 274,
+        "beforeClass": "\"search-input field-h-md field-w-sm\"",
+        "afterClass": "\"field-w-sm\"",
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 19,
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "raw": true,
+        "beforeLine": 308,
+        "afterLine": 309,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 20,
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "raw": true,
+        "beforeLine": 341,
+        "afterLine": 342,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 21,
+        "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+        "raw": true,
+        "beforeLine": 711,
+        "afterLine": 712,
+        "beforeClass": "\"gs-select\"",
+        "afterClass": "\"gs-select\"",
+        "beforeStyle": null,
+        "addedAttrs": [
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 22,
+        "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+        "raw": true,
+        "beforeLine": 147,
+        "afterLine": 148,
+        "beforeClass": "\"inbox-page-filter-select\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 23,
+        "file": "frontend/src/pages/inbox/InboxSettingsModal.tsx",
+        "raw": true,
+        "beforeLine": 37,
+        "afterLine": 38,
+        "beforeClass": "\"inbox-settings-select\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 24,
+        "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+        "raw": true,
+        "beforeLine": 126,
+        "afterLine": 127,
+        "beforeClass": "\"manual-record-select\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 25,
+        "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+        "raw": true,
+        "beforeLine": 493,
+        "afterLine": 494,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 26,
+        "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+        "raw": true,
+        "beforeLine": 164,
+        "afterLine": 165,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 27,
+        "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+        "raw": true,
+        "beforeLine": 477,
+        "afterLine": 477,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": "{{ fontSize: \"var(--font-xs)\", padding: \"var(--space-1) var(--space-10px)\", border: \"1px solid var(--border)\", borderRadius: \"var(--radius-sm)\", background: \"var(--bg-surface)\" }}",
+        "addedAttrs": [
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 28,
+        "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+        "raw": true,
+        "beforeLine": 308,
+        "afterLine": 309,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 29,
+        "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+        "raw": true,
+        "beforeLine": 40,
+        "afterLine": 41,
+        "beforeClass": "\"field-h-md field-w-sm\"",
+        "afterClass": "\"field-w-sm\"",
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 30,
+        "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+        "raw": true,
+        "beforeLine": 86,
+        "afterLine": 87,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 31,
+        "file": "frontend/src/pages/products/ProductsPage.tsx",
+        "raw": true,
+        "beforeLine": 220,
+        "afterLine": 221,
+        "beforeClass": "\"field-h-md field-w-sm\"",
+        "afterClass": "\"field-w-sm\"",
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 32,
+        "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+        "raw": true,
+        "beforeLine": 156,
+        "afterLine": 157,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 33,
+        "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+        "raw": true,
+        "beforeLine": 193,
+        "afterLine": 194,
+        "beforeClass": "\"field-h-md field-w-sm\"",
+        "afterClass": "\"field-w-sm\"",
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 34,
+        "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+        "raw": true,
+        "beforeLine": 157,
+        "afterLine": 158,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 35,
+        "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+        "raw": true,
+        "beforeLine": 288,
+        "afterLine": 289,
+        "beforeClass": "\"schedule-input\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 36,
+        "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+        "raw": true,
+        "beforeLine": 170,
+        "afterLine": 171,
+        "beforeClass": "\"schedule-input\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 37,
+        "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+        "raw": true,
+        "beforeLine": 225,
+        "afterLine": 227,
+        "beforeClass": "\"schedule-input\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true",
+          "size=\"sm\""
+        ],
+        "diffs": []
+      },
+      {
+        "index": 38,
+        "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+        "raw": true,
+        "beforeLine": 260,
+        "afterLine": 260,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 39,
+        "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+        "raw": true,
+        "beforeLine": 274,
+        "afterLine": 273,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 40,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 322,
+        "afterLine": 322,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 41,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 338,
+        "afterLine": 337,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 42,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 393,
+        "afterLine": 391,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 43,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 409,
+        "afterLine": 406,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 44,
+        "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 311,
+        "afterLine": 311,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 45,
+        "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+        "raw": true,
+        "beforeLine": 325,
+        "afterLine": 324,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 46,
+        "file": "frontend/src/pages/super-admin/DexTab.tsx",
+        "raw": true,
+        "beforeLine": 194,
+        "afterLine": 195,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 47,
+        "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+        "raw": true,
+        "beforeLine": 447,
+        "afterLine": 448,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 48,
+        "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+        "raw": true,
+        "beforeLine": 455,
+        "afterLine": 456,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 49,
+        "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+        "raw": true,
+        "beforeLine": 472,
+        "afterLine": 473,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 50,
+        "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+        "raw": true,
+        "beforeLine": 501,
+        "afterLine": 502,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 51,
+        "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+        "raw": true,
+        "beforeLine": 523,
+        "afterLine": 525,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [
+          "fullWidth=true"
+        ],
+        "diffs": []
+      },
+      {
+        "index": 52,
+        "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+        "raw": true,
+        "beforeLine": 190,
+        "afterLine": 191,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      },
+      {
+        "index": 53,
+        "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+        "raw": true,
+        "beforeLine": 300,
+        "afterLine": 301,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "addedAttrs": [],
+        "diffs": []
+      }
+    ]
+  }
+}

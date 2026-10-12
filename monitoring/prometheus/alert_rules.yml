@@ -34,6 +34,16 @@ groups:
           summary: "ディスク使用率が80%を超えています"
           description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%"
 
+      # ディスク使用率が90%を超えた場合（即時対応レベル）
+      - alert: CriticalDiskUsage
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ディスク使用率が90%を超えています（{{ $labels.instance }}）"
+          description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%（instance={{ $labels.instance }}）。即時対応が必要です。"
+
   - name: application_alerts
     rules:
       # PostgreSQL接続数が上限の80%を超えた場合

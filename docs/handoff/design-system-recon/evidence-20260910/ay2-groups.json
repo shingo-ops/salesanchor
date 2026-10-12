@@ -1,0 +1,6080 @@
+{
+ "baseHead": "08f59418c772fab0bed6137e818d5e87de5c91f2",
+ "totalInputs": 360,
+ "groupCount": 47,
+ "areaCounts": {
+  "pages/register": 45,
+  "pages/companies": 28,
+  "pages/inbox": 26,
+  "components": 22,
+  "pages/staff": 21,
+  "pages/super-admin": 21,
+  "pages/contacts": 20,
+  "pages/company-detail": 16,
+  "pages/leads": 15,
+  "pages/products": 15,
+  "pages/admin": 14,
+  "pages/account-settings": 10,
+  "pages/invoice-create": 10,
+  "pages/quote-create": 10,
+  "features/tcg-analysis-review": 9,
+  "pages/integrations": 9,
+  "pages/bots": 7,
+  "pages/inventory": 6,
+  "pages/schedule": 6,
+  "pages/badges": 4,
+  "pages/shifts": 4,
+  "pages/suppliers": 4,
+  "components/master-list-editor": 3,
+  "features/tcg-distribution": 3,
+  "pages/commission-settings": 3,
+  "pages/goal-setting": 3,
+  "pages/login": 3,
+  "pages/orders": 3,
+  "pages/purchase-orders": 3,
+  "pages/teams": 3,
+  "pages/buddy": 2,
+  "pages/commissions": 2,
+  "pages/dashboard": 2,
+  "pages/invoice-detail": 2,
+  "pages/notifications": 2,
+  "pages/roles": 2,
+  "features/tcg-import-review": 1,
+  "pages/staff-reports": 1
+ },
+ "areaGroups": {
+  "pages/staff": [
+   "G01(21)"
+  ],
+  "components": [
+   "G01(15)",
+   "G17(2)",
+   "G27(1)",
+   "G28(1)",
+   "G43(1)",
+   "G44(1)",
+   "G47(1)"
+  ],
+  "pages/leads": [
+   "G01(15)"
+  ],
+  "pages/admin": [
+   "G01(11)",
+   "G02(3)"
+  ],
+  "pages/contacts": [
+   "G01(11)",
+   "G03(8)",
+   "G33(1)"
+  ],
+  "pages/account-settings": [
+   "G01(10)"
+  ],
+  "pages/integrations": [
+   "G01(9)"
+  ],
+  "pages/bots": [
+   "G01(7)"
+  ],
+  "pages/badges": [
+   "G01(4)"
+  ],
+  "pages/shifts": [
+   "G01(4)"
+  ],
+  "pages/super-admin": [
+   "G01(4)",
+   "G02(11)",
+   "G16(2)",
+   "G22(2)",
+   "G40(1)",
+   "G42(1)"
+  ],
+  "pages/suppliers": [
+   "G01(4)"
+  ],
+  "pages/companies": [
+   "G01(3)",
+   "G03(24)",
+   "G12(1)"
+  ],
+  "pages/invoice-create": [
+   "G01(3)",
+   "G09(3)",
+   "G18(1)",
+   "G19(1)",
+   "G25(1)",
+   "G26(1)"
+  ],
+  "pages/quote-create": [
+   "G01(3)",
+   "G09(3)",
+   "G18(1)",
+   "G19(1)",
+   "G25(1)",
+   "G26(1)"
+  ],
+  "pages/teams": [
+   "G01(3)"
+  ],
+  "pages/buddy": [
+   "G01(2)"
+  ],
+  "pages/notifications": [
+   "G01(2)"
+  ],
+  "pages/orders": [
+   "G01(2)",
+   "G12(1)"
+  ],
+  "pages/roles": [
+   "G01(2)"
+  ],
+  "pages/staff-reports": [
+   "G01(1)"
+  ],
+  "pages/register": [
+   "G02(41)",
+   "G10(4)"
+  ],
+  "components/master-list-editor": [
+   "G02(2)",
+   "G14(1)"
+  ],
+  "features/tcg-analysis-review": [
+   "G02(1)",
+   "G07(7)",
+   "G34(1)"
+  ],
+  "pages/commission-settings": [
+   "G02(1)",
+   "G20(1)",
+   "G21(1)"
+  ],
+  "pages/inbox": [
+   "G02(1)",
+   "G04(22)",
+   "G32(1)",
+   "G38(1)",
+   "G39(1)"
+  ],
+  "pages/inventory": [
+   "G02(1)",
+   "G12(1)",
+   "G23(2)",
+   "G24(2)"
+  ],
+  "pages/company-detail": [
+   "G05(16)"
+  ],
+  "pages/products": [
+   "G06(14)",
+   "G14(1)"
+  ],
+  "pages/schedule": [
+   "G08(6)"
+  ],
+  "pages/login": [
+   "G11(3)"
+  ],
+  "features/tcg-distribution": [
+   "G13(3)"
+  ],
+  "pages/dashboard": [
+   "G15(2)"
+  ],
+  "pages/commissions": [
+   "G20(1)",
+   "G21(1)"
+  ],
+  "pages/purchase-orders": [
+   "G29(1)",
+   "G30(1)",
+   "G31(1)"
+  ],
+  "pages/goal-setting": [
+   "G35(1)",
+   "G36(1)",
+   "G37(1)"
+  ],
+  "features/tcg-import-review": [
+   "G41(1)"
+  ],
+  "pages/invoice-detail": [
+   "G45(1)",
+   "G46(1)"
+  ]
+ },
+ "groups": [
+  {
+   "id": "G01",
+   "count": 136,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [
+    "input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "omitted": 67,
+    "number": 23,
+    "text": 20,
+    "email": 12,
+    "password": 5,
+    "date": 3,
+    "dynamic": 2,
+    "time": 2,
+    "tel": 1,
+    "url": 1
+   },
+   "byArea": {
+    "pages/staff": 21,
+    "components": 15,
+    "pages/leads": 15,
+    "pages/admin": 11,
+    "pages/contacts": 11,
+    "pages/account-settings": 10,
+    "pages/integrations": 9,
+    "pages/bots": 7,
+    "pages/badges": 4,
+    "pages/shifts": 4,
+    "pages/super-admin": 4,
+    "pages/suppliers": 4,
+    "pages/companies": 3,
+    "pages/invoice-create": 3,
+    "pages/quote-create": 3,
+    "pages/teams": 3,
+    "pages/buddy": 2,
+    "pages/notifications": 2,
+    "pages/orders": 2,
+    "pages/roles": 2,
+    "pages/staff-reports": 1
+   },
+   "byFile": {
+    "pages/staff/StaffEditPage.tsx": 9,
+    "pages/staff/StaffPage.tsx": 8,
+    "components/ShippingDetailPanel.tsx": 7,
+    "pages/account-settings/ProfileSection.tsx": 7,
+    "pages/contacts/ContactEditPage.tsx": 7,
+    "pages/leads/LeadsPage.tsx": 7,
+    "pages/admin/TenantProfilePage.tsx": 6,
+    "components/PurchaseDetailPanel.tsx": 5,
+    "pages/admin/TenantPolicyPage.tsx": 5,
+    "pages/leads/LeadEditPage.tsx": 5,
+    "pages/badges/BadgesPage.tsx": 4,
+    "pages/bots/BotsPage.tsx": 4,
+    "pages/contacts/ContactFormFields.tsx": 4,
+    "pages/shifts/ShiftsPage.tsx": 4,
+    "pages/staff/StaffFormFields.tsx": 4,
+    "pages/super-admin/KnowledgeAliasesTab.tsx": 4,
+    "pages/suppliers/SupplierFormFields.tsx": 4,
+    "pages/account-settings/SecuritySection.tsx": 3,
+    "pages/bots/BotFormFields.tsx": 3,
+    "pages/companies/CompanyFormFields.tsx": 3,
+    "pages/integrations/CarrierCredentialForm.tsx": 3,
+    "pages/integrations/FedexLabelValidationTab.tsx": 3,
+    "pages/invoice-create/InvoiceCreatePage.tsx": 3,
+    "pages/leads/LeadFormFields.tsx": 3,
+    "pages/quote-create/QuoteCreatePage.tsx": 3,
+    "pages/buddy/BuddyPage.tsx": 2,
+    "pages/integrations/PaypalIntegrationPage.tsx": 2,
+    "pages/notifications/NotificationsPage.tsx": 2,
+    "pages/orders/OrdersFormModal.tsx": 2,
+    "pages/roles/RolesPage.tsx": 2,
+    "pages/teams/TeamFormFields.tsx": 2,
+    "components/ChannelTypeCombobox.tsx": 1,
+    "components/CountryCombobox.tsx": 1,
+    "components/OrderFinancialPanel.tsx": 1,
+    "pages/integrations/GoogleDriveIntegrationPage.tsx": 1,
+    "pages/staff-reports/StaffReportsPage.tsx": 1,
+    "pages/teams/TeamsPage.tsx": 1
+   },
+   "withUnconfirmed": 14,
+   "hasDisabledAttr": 13,
+   "members": [
+    {
+     "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+     "line": 91,
+     "type": "text",
+     "area": "components",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/CountryCombobox.tsx",
+     "line": 90,
+     "type": "text",
+     "area": "components",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/OrderFinancialPanel.tsx",
+     "line": 223,
+     "type": "number",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 328,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 338,
+     "type": "date",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 361,
+     "type": "dynamic",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 385,
+     "type": "number",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 412,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 401,
+     "type": "dynamic",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 425,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 449,
+     "type": "number",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 476,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 487,
+     "type": "number",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 529,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 539,
+     "type": "date",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 163,
+     "type": "tel",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 169,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 173,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 180,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 184,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 191,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 195,
+     "type": "omitted",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 67,
+     "type": "password",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 79,
+     "type": "password",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 91,
+     "type": "password",
+     "area": "pages/account-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 192,
+     "type": "number",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 207,
+     "type": "number",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 222,
+     "type": "number",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 238,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 253,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 145,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 158,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 183,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 196,
+     "type": "email",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 209,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 222,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 61,
+     "type": "omitted",
+     "area": "pages/badges",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 62,
+     "type": "omitted",
+     "area": "pages/badges",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 64,
+     "type": "omitted",
+     "area": "pages/badges",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 66,
+     "type": "number",
+     "area": "pages/badges",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 54,
+     "type": "omitted",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 83,
+     "type": "omitted",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 90,
+     "type": "email",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 228,
+     "type": "omitted",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 231,
+     "type": "omitted",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 255,
+     "type": "omitted",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 258,
+     "type": "email",
+     "area": "pages/bots",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+     "line": 65,
+     "type": "number",
+     "area": "pages/buddy",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+     "line": 66,
+     "type": "number",
+     "area": "pages/buddy",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 37,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 51,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 58,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 154,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 157,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 160,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 163,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 166,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 175,
+     "type": "email",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 178,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 56,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 63,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 70,
+     "type": "email",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 78,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 95,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 16,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 106,
+     "type": "password",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 16,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 121,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 16,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 334,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 345,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 356,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 11,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+     "line": 162,
+     "type": "url",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+     "line": 144,
+     "type": "text",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+     "line": 154,
+     "type": "password",
+     "area": "pages/integrations",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 317,
+     "type": "omitted",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 419,
+     "type": "number",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 423,
+     "type": "number",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 172,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 175,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 178,
+     "type": "email",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 181,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 277,
+     "type": "number",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 110,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 118,
+     "type": "email",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 126,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 330,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 333,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 336,
+     "type": "email",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 339,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 427,
+     "type": "number",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 465,
+     "type": "omitted",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 468,
+     "type": "number",
+     "area": "pages/leads",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+     "line": 63,
+     "type": "omitted",
+     "area": "pages/notifications",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+     "line": 64,
+     "type": "omitted",
+     "area": "pages/notifications",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+     "line": 72,
+     "type": "omitted",
+     "area": "pages/orders",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+     "line": 80,
+     "type": "number",
+     "area": "pages/orders",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 165,
+     "type": "omitted",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 268,
+     "type": "number",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 273,
+     "type": "number",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/roles/RolesPage.tsx",
+     "line": 494,
+     "type": "omitted",
+     "area": "pages/roles",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/roles/RolesPage.tsx",
+     "line": 556,
+     "type": "number",
+     "area": "pages/roles",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 63,
+     "type": "number",
+     "area": "pages/shifts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 64,
+     "type": "date",
+     "area": "pages/shifts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 65,
+     "type": "time",
+     "area": "pages/shifts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 66,
+     "type": "time",
+     "area": "pages/shifts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+     "line": 90,
+     "type": "omitted",
+     "area": "pages/staff-reports",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 161,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 164,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 167,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 170,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 173,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 176,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 179,
+     "type": "email",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 182,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 203,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 43,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 51,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 59,
+     "type": "email",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 82,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 238,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 241,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 244,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 247,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 250,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 253,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 256,
+     "type": "email",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 259,
+     "type": "omitted",
+     "area": "pages/staff",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 464,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 467,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 470,
+     "type": "number",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 516,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 32,
+     "type": "omitted",
+     "area": "pages/suppliers",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 40,
+     "type": "omitted",
+     "area": "pages/suppliers",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 47,
+     "type": "email",
+     "area": "pages/suppliers",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 55,
+     "type": "omitted",
+     "area": "pages/suppliers",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+     "line": 28,
+     "type": "omitted",
+     "area": "pages/teams",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+     "line": 36,
+     "type": "number",
+     "area": "pages/teams",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamsPage.tsx",
+     "line": 242,
+     "type": "number",
+     "area": "pages/teams",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G02",
+   "count": 61,
+   "signature": "",
+   "signatureParts": [],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [
+    "input",
+    "w-full",
+    "manual-record-datetime",
+    "qty-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 38,
+    "omitted": 12,
+    "email": 5,
+    "number": 3,
+    "datetime-local": 1,
+    "dynamic": 1,
+    "tel": 1
+   },
+   "byArea": {
+    "pages/register": 41,
+    "pages/super-admin": 11,
+    "pages/admin": 3,
+    "components/master-list-editor": 2,
+    "features/tcg-analysis-review": 1,
+    "pages/commission-settings": 1,
+    "pages/inbox": 1,
+    "pages/inventory": 1
+   },
+   "byFile": {
+    "pages/register/RegisterPage.tsx": 21,
+    "pages/register/RegisterAddressPage.tsx": 10,
+    "pages/register/RegisterChangeBillingPage.tsx": 9,
+    "pages/super-admin/DexTab.tsx": 5,
+    "pages/super-admin/TcgSeriesTab.tsx": 5,
+    "components/master-list-editor/MasterListEditor.tsx": 2,
+    "pages/admin/ChannelMastersPage.tsx": 2,
+    "features/tcg-analysis-review/ItemComparison.tsx": 1,
+    "pages/admin/DiscordAnnouncePage.tsx": 1,
+    "pages/commission-settings/CommissionSettingsPage.tsx": 1,
+    "pages/inbox/ManualRecordSection.tsx": 1,
+    "pages/inventory/OwnInventoryPage.tsx": 1,
+    "pages/register/CountryCombobox.tsx": 1,
+    "pages/super-admin/LLMBudgetTab.tsx": 1
+   },
+   "withUnconfirmed": 15,
+   "hasDisabledAttr": 4,
+   "members": [
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 157,
+     "type": "omitted",
+     "area": "components/master-list-editor",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 164,
+     "type": "omitted",
+     "area": "components/master-list-editor",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+     "line": 28,
+     "type": "dynamic",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+     "line": 115,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+     "line": 123,
+     "type": "text",
+     "area": "pages/admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+     "line": 81,
+     "type": "text",
+     "area": "pages/admin",
+     "className": "\"input w-full\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+     "line": 220,
+     "type": "number",
+     "area": "pages/commission-settings",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+     "line": 148,
+     "type": "datetime-local",
+     "area": "pages/inbox",
+     "className": "\"manual-record-datetime\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+     "line": 232,
+     "type": "number",
+     "area": "pages/inventory",
+     "className": "\"qty-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/CountryCombobox.tsx",
+     "line": 46,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 115,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 316,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 357,
+     "type": "email",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 368,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 379,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 390,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 401,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 412,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 423,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 434,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 253,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 298,
+     "type": "email",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 313,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 324,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 335,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 347,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 358,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 369,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 380,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 306,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 351,
+     "type": "email",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 366,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 377,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 388,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 400,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 411,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 422,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 433,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 511,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 520,
+     "type": "email",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 529,
+     "type": "tel",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 567,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 609,
+     "type": "email",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 620,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 631,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 643,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 654,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 665,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 676,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 687,
+     "type": "text",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 200,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": true
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 298,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 303,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 309,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 315,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+     "line": 187,
+     "type": "number",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 230,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 238,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 311,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 317,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 323,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G03",
+   "count": 32,
+   "signature": "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/company-forms.css:113 .form-grid > .form-row input:focus | frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus",
+   "signatureParts": [
+    "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:113 .form-grid > .form-row input:focus",
+    "frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "company-forms.css:113 .form-grid > .form-row input:focus",
+    "company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "omitted": 29,
+    "email": 2,
+    "number": 1
+   },
+   "byArea": {
+    "pages/companies": 24,
+    "pages/contacts": 8
+   },
+   "byFile": {
+    "pages/companies/CompaniesPage.tsx": 24,
+    "pages/contacts/ContactsPage.tsx": 8
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 452,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 456,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 460,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 464,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 468,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 472,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 476,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 480,
+     "type": "number",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 484,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 488,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 492,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 496,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 504,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 533,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 535,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 536,
+     "type": "email",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 539,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 542,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 543,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 544,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 545,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 546,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 547,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 548,
+     "type": "omitted",
+     "area": "pages/companies",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 306,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 316,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 319,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 322,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 325,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 328,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 337,
+     "type": "email",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 340,
+     "type": "omitted",
+     "area": "pages/contacts",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G04",
+   "count": 22,
+   "signature": "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field | frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder | frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus",
+   "signatureParts": [
+    "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "pages/inbox/InboxPage.css:1169 .right-panel-field:focus"
+   ],
+   "ownClassTokens": [
+    "right-panel-field"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 11,
+    "number": 6,
+    "email": 2,
+    "tel": 2,
+    "date": 1
+   },
+   "byArea": {
+    "pages/inbox": 22
+   },
+   "byFile": {
+    "pages/inbox/InboxProfileModal.tsx": 12,
+    "pages/inbox/InboxKartePanel.tsx": 10
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 372,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 379,
+     "type": "email",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 386,
+     "type": "tel",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 404,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 437,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 443,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 461,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 569,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 575,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 581,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 117,
+     "type": "email",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 122,
+     "type": "tel",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 129,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 148,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 153,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 158,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 172,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 178,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 197,
+     "type": "date",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 238,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 243,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+     "line": 248,
+     "type": "number",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G05",
+   "count": 16,
+   "signature": "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/company-forms.css:113 .form-grid > .form-row input:focus",
+   "signatureParts": [
+    "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:113 .form-grid > .form-row input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "company-forms.css:113 .form-grid > .form-row input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "omitted": 15,
+    "number": 1
+   },
+   "byArea": {
+    "pages/company-detail": 16
+   },
+   "byFile": {
+    "pages/company-detail/CompanyBasicTab.tsx": 11,
+    "pages/company-detail/CompanyDiscordTab.tsx": 4,
+    "pages/company-detail/CompanyChannelsTab.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 16,
+   "members": [
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 38,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 42,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 46,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 50,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 54,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 58,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 62,
+     "type": "number",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 66,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 70,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 74,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+     "line": 78,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyChannelsTab.tsx",
+     "line": 32,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+     "line": 53,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+     "line": 62,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+     "line": 71,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+     "line": 80,
+     "type": "omitted",
+     "area": "pages/company-detail",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G06",
+   "count": 14,
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus",
+   "signatureParts": [
+    "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "number": 7,
+    "omitted": 5,
+    "date": 1,
+    "url": 1
+   },
+   "byArea": {
+    "pages/products": 14
+   },
+   "byFile": {
+    "pages/products/ProductEditPage.tsx": 14
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 215,
+     "type": "omitted",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 224,
+     "type": "omitted",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 251,
+     "type": "omitted",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 262,
+     "type": "date",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 270,
+     "type": "omitted",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 274,
+     "type": "omitted",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 294,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 298,
+     "type": "url",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 317,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 321,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 325,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 329,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 333,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductEditPage.tsx",
+     "line": 337,
+     "type": "number",
+     "area": "pages/products",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G07",
+   "count": 7,
+   "signature": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input",
+   "signatureParts": [
+    "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "omitted": 6,
+    "date": 1
+   },
+   "byArea": {
+    "features/tcg-analysis-review": 7
+   },
+   "byFile": {
+    "features/tcg-analysis-review/ProductMasterDrawer.tsx": 7
+   },
+   "withUnconfirmed": 1,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 68,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 9,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 201,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 205,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 209,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 213,
+     "type": "date",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 338,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 470,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": true
+    }
+   ]
+  },
+  {
+   "id": "G08",
+   "count": 6,
+   "signature": "frontend/src/pages/schedule.css:813 .schedule-input | frontend/src/pages/schedule.css:822 .schedule-input | frontend/src/pages/schedule.css:827 .schedule-input:focus",
+   "signatureParts": [
+    "frontend/src/pages/schedule.css:813 .schedule-input",
+    "frontend/src/pages/schedule.css:822 .schedule-input",
+    "frontend/src/pages/schedule.css:827 .schedule-input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/schedule.css:813 .schedule-input",
+    "pages/schedule.css:822 .schedule-input",
+    "pages/schedule.css:827 .schedule-input:focus"
+   ],
+   "ownClassTokens": [
+    "schedule-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "date": 2,
+    "omitted": 2,
+    "time": 2
+   },
+   "byArea": {
+    "pages/schedule": 6
+   },
+   "byFile": {
+    "pages/schedule/SchedulePageImpl.tsx": 6
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 280,
+     "type": "omitted",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 324,
+     "type": "date",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 334,
+     "type": "time",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 347,
+     "type": "date",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 357,
+     "type": "time",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+     "line": 369,
+     "type": "omitted",
+     "area": "pages/schedule",
+     "className": "\"schedule-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G09",
+   "count": 6,
+   "signature": "style{width:var(--input-width-weight)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{width:var(--input-width-weight)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 6,
+   "byType": {
+    "omitted": 4,
+    "number": 2
+   },
+   "byArea": {
+    "pages/invoice-create": 3,
+    "pages/quote-create": 3
+   },
+   "byFile": {
+    "pages/invoice-create/InvoiceCreatePage.tsx": 3,
+    "pages/quote-create/QuoteCreatePage.tsx": 3
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 367,
+     "type": "omitted",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 371,
+     "type": "omitted",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 390,
+     "type": "number",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 216,
+     "type": "omitted",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 220,
+     "type": "omitted",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 239,
+     "type": "number",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-weight)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G10",
+   "count": 4,
+   "signature": "style{flex:1}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{flex:1}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [
+    "input"
+   ],
+   "hasInlineStyleCount": 4,
+   "byType": {
+    "tel": 4
+   },
+   "byArea": {
+    "pages/register": 4
+   },
+   "byFile": {
+    "pages/register/RegisterPage.tsx": 2,
+    "pages/register/RegisterAddressPage.tsx": 1,
+    "pages/register/RegisterChangeBillingPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+     "line": 344,
+     "type": "tel",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "style{flex:1}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+     "line": 284,
+     "type": "tel",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "style{flex:1}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 337,
+     "type": "tel",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "style{flex:1}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/register/RegisterPage.tsx",
+     "line": 596,
+     "type": "tel",
+     "area": "pages/register",
+     "className": "\"input\"",
+     "inlineSig": "style{flex:1}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G11",
+   "count": 3,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:246 .login-card .form-group input | frontend/src/pages-layout.css:255 .login-card .form-group input:focus",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus",
+    "frontend/src/pages-layout.css:246 .login-card .form-group input",
+    "frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus",
+    "pages-layout.css:246 .login-card .form-group input",
+    "pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "email": 2,
+    "password": 1
+   },
+   "byArea": {
+    "pages/login": 3
+   },
+   "byFile": {
+    "pages/login/LoginPage.tsx": 3
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 93,
+     "type": "email",
+     "area": "pages/login",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 104,
+     "type": "password",
+     "area": "pages/login",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 136,
+     "type": "email",
+     "area": "pages/login",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G12",
+   "count": 3,
+   "signature": "frontend/src/components/field-size.css:15 .field-w-md | frontend/src/components/field-size.css:22 .content-toolbar .field-w-md | frontend/src/components/field-size.css:8 .field-h-md",
+   "signatureParts": [
+    "frontend/src/components/field-size.css:15 .field-w-md",
+    "frontend/src/components/field-size.css:22 .content-toolbar .field-w-md",
+    "frontend/src/components/field-size.css:8 .field-h-md"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components/field-size.css:15 .field-w-md",
+    "components/field-size.css:22 .content-toolbar .field-w-md",
+    "components/field-size.css:8 .field-h-md"
+   ],
+   "ownClassTokens": [
+    "search-input",
+    "field-h-md",
+    "field-w-md"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "search": 2,
+    "text": 1
+   },
+   "byArea": {
+    "pages/companies": 1,
+    "pages/inventory": 1,
+    "pages/orders": 1
+   },
+   "byFile": {
+    "pages/companies/CompaniesPage.tsx": 1,
+    "pages/inventory/InventoryPage.tsx": 1,
+    "pages/orders/OrdersFilterBar.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+     "line": 386,
+     "type": "text",
+     "area": "pages/companies",
+     "className": "\"search-input field-h-md field-w-md\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+     "line": 384,
+     "type": "search",
+     "area": "pages/inventory",
+     "className": "\"field-h-md field-w-md\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": true
+    },
+    {
+     "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+     "line": 32,
+     "type": "search",
+     "area": "pages/orders",
+     "className": "\"field-h-md field-w-md\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G13",
+   "count": 3,
+   "signature": "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input | frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus | frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class",
+   "signatureParts": [
+    "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input",
+    "frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus",
+    "frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "features/tcg-distribution/distribution.css:322 .dist-input",
+    "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+    "features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class"
+   ],
+   "ownClassTokens": [
+    "dist-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 3
+   },
+   "byArea": {
+    "features/tcg-distribution": 3
+   },
+   "byFile": {
+    "features/tcg-distribution/DistributionTargetForm.tsx": 3
+   },
+   "withUnconfirmed": 3,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 182,
+     "type": "text",
+     "area": "features/tcg-distribution",
+     "className": "{`dist-input${errors.name ? \" dist-input--error\" : \"\"}`}",
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 199,
+     "type": "text",
+     "area": "features/tcg-distribution",
+     "className": "{`dist-input${errors.spreadsheet_id ? \" dist-input--error\" : \"\"}`}",
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 223,
+     "type": "text",
+     "area": "features/tcg-distribution",
+     "className": "{`dist-input${errors.sheet_name ? \" dist-input--error\" : \"\"}`}",
+     "inlineSig": "",
+     "unconfirmed": 10,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G14",
+   "count": 2,
+   "signature": "frontend/src/components.css:50 .search-bar input | frontend/src/components/field-size.css:13 .field-w-sm | frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm | frontend/src/components/field-size.css:8 .field-h-md",
+   "signatureParts": [
+    "frontend/src/components.css:50 .search-bar input",
+    "frontend/src/components/field-size.css:13 .field-w-sm",
+    "frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm",
+    "frontend/src/components/field-size.css:8 .field-h-md"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components.css:50 .search-bar input",
+    "components/field-size.css:13 .field-w-sm",
+    "components/field-size.css:22 .content-toolbar .field-w-sm",
+    "components/field-size.css:8 .field-h-md"
+   ],
+   "ownClassTokens": [
+    "field-h-md",
+    "field-w-sm"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 2
+   },
+   "byArea": {
+    "components/master-list-editor": 1,
+    "pages/products": 1
+   },
+   "byFile": {
+    "components/master-list-editor/MasterListEditor.tsx": 1,
+    "pages/products/ProductsPage.tsx": 1
+   },
+   "withUnconfirmed": 1,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 135,
+     "type": "text",
+     "area": "components/master-list-editor",
+     "className": "\"field-h-md field-w-sm\"",
+     "inlineSig": "",
+     "unconfirmed": 9,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/products/ProductsPage.tsx",
+     "line": 219,
+     "type": "text",
+     "area": "pages/products",
+     "className": "\"field-h-md field-w-sm\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G15",
+   "count": 2,
+   "signature": "frontend/src/pages/dashboard/WeeklyAdvisorSection.css:205 .db-weekly-composer-input | frontend/src/pages/dashboard/WeeklyAdvisorSection.css:216 .db-weekly-composer-input:focus",
+   "signatureParts": [
+    "frontend/src/pages/dashboard/WeeklyAdvisorSection.css:205 .db-weekly-composer-input",
+    "frontend/src/pages/dashboard/WeeklyAdvisorSection.css:216 .db-weekly-composer-input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/dashboard/WeeklyAdvisorSection.css:205 .db-weekly-composer-input",
+    "pages/dashboard/WeeklyAdvisorSection.css:216 .db-weekly-composer-input:focus"
+   ],
+   "ownClassTokens": [
+    "db-weekly-composer-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "date": 2
+   },
+   "byArea": {
+    "pages/dashboard": 2
+   },
+   "byFile": {
+    "pages/dashboard/PriorityProspectsSection.tsx": 1,
+    "pages/dashboard/WeeklyAdvisorSection.tsx": 1
+   },
+   "withUnconfirmed": 2,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+     "line": 424,
+     "type": "date",
+     "area": "pages/dashboard",
+     "className": "\"db-weekly-composer-input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+     "line": 395,
+     "type": "date",
+     "area": "pages/dashboard",
+     "className": "\"db-weekly-composer-input\"",
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G16",
+   "count": 2,
+   "signature": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;min-width:200px;padding:0.4rem 0.6rem}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;min-width:200px;padding:0.4rem 0.6rem}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "text": 2
+   },
+   "byArea": {
+    "pages/super-admin": 2
+   },
+   "byFile": {
+    "pages/super-admin/TcgLineImportPage.tsx": 2
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+     "line": 374,
+     "type": "text",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;min-width:200px;padding:0.4rem 0.6rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+     "line": 395,
+     "type": "text",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;min-width:200px;padding:0.4rem 0.6rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G17",
+   "count": 2,
+   "signature": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:80px}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:80px}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "text": 2
+   },
+   "byArea": {
+    "components": 2
+   },
+   "byFile": {
+    "components/FedExRateModal.tsx": 2
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/components/FedExRateModal.tsx",
+     "line": 176,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:80px}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/components/FedExRateModal.tsx",
+     "line": 193,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:80px}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G18",
+   "count": 2,
+   "signature": "style{color:var(--text-secondary);font-size:var(--font-sm);margin-top:var(--space-1);min-width:var(--input-width-product-name);width:100%}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{color:var(--text-secondary);font-size:var(--font-sm);margin-top:var(--space-1);min-width:var(--input-width-product-name);width:100%}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "omitted": 2
+   },
+   "byArea": {
+    "pages/invoice-create": 1,
+    "pages/quote-create": 1
+   },
+   "byFile": {
+    "pages/invoice-create/InvoiceCreatePage.tsx": 1,
+    "pages/quote-create/QuoteCreatePage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 349,
+     "type": "omitted",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{color:var(--text-secondary);font-size:var(--font-sm);margin-top:var(--space-1);min-width:var(--input-width-product-name);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 198,
+     "type": "omitted",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{color:var(--text-secondary);font-size:var(--font-sm);margin-top:var(--space-1);min-width:var(--input-width-product-name);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G19",
+   "count": 2,
+   "signature": "style{font-weight:var(--font-weight-semi);min-width:var(--input-width-product-name);width:100%}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{font-weight:var(--font-weight-semi);min-width:var(--input-width-product-name);width:100%}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "omitted": 2
+   },
+   "byArea": {
+    "pages/invoice-create": 1,
+    "pages/quote-create": 1
+   },
+   "byFile": {
+    "pages/invoice-create/InvoiceCreatePage.tsx": 1,
+    "pages/quote-create/QuoteCreatePage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 342,
+     "type": "omitted",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{font-weight:var(--font-weight-semi);min-width:var(--input-width-product-name);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 191,
+     "type": "omitted",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{font-weight:var(--font-weight-semi);min-width:var(--input-width-product-name);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G20",
+   "count": 2,
+   "signature": "style{margin-left:var(--space-2);width:var(--input-width-month)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{margin-left:var(--space-2);width:var(--input-width-month)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/commission-settings": 1,
+    "pages/commissions": 1
+   },
+   "byFile": {
+    "pages/commission-settings/CommissionSettingsPage.tsx": 1,
+    "pages/commissions/CommissionsPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+     "line": 287,
+     "type": "number",
+     "area": "pages/commission-settings",
+     "className": null,
+     "inlineSig": "style{margin-left:var(--space-2);width:var(--input-width-month)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+     "line": 153,
+     "type": "number",
+     "area": "pages/commissions",
+     "className": null,
+     "inlineSig": "style{margin-left:var(--space-2);width:var(--input-width-month)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G21",
+   "count": 2,
+   "signature": "style{margin-left:var(--space-2);width:var(--input-width-year)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{margin-left:var(--space-2);width:var(--input-width-year)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/commission-settings": 1,
+    "pages/commissions": 1
+   },
+   "byFile": {
+    "pages/commission-settings/CommissionSettingsPage.tsx": 1,
+    "pages/commissions/CommissionsPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+     "line": 275,
+     "type": "number",
+     "area": "pages/commission-settings",
+     "className": null,
+     "inlineSig": "style{margin-left:var(--space-2);width:var(--input-width-year)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+     "line": 141,
+     "type": "number",
+     "area": "pages/commissions",
+     "className": null,
+     "inlineSig": "style{margin-left:var(--space-2);width:var(--input-width-year)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G22",
+   "count": 2,
+   "signature": "style{max-width:100%;width:SEARCH_WIDTH}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{max-width:100%;width:SEARCH_WIDTH}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "omitted": 2
+   },
+   "byArea": {
+    "pages/super-admin": 2
+   },
+   "byFile": {
+    "pages/super-admin/KnowledgeAliasesTab.tsx": 2
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 295,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "style{max-width:100%;width:SEARCH_WIDTH}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": true
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 374,
+     "type": "omitted",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "style{max-width:100%;width:SEARCH_WIDTH}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": true
+    }
+   ]
+  },
+  {
+   "id": "G23",
+   "count": 2,
+   "signature": "style{width:6rem}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{width:6rem}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/inventory": 2
+   },
+   "byFile": {
+    "pages/inventory/InventoryFilterPanel.tsx": 2
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+     "line": 287,
+     "type": "number",
+     "area": "pages/inventory",
+     "className": null,
+     "inlineSig": "style{width:6rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+     "line": 290,
+     "type": "number",
+     "area": "pages/inventory",
+     "className": null,
+     "inlineSig": "style{width:6rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G24",
+   "count": 2,
+   "signature": "style{width:7rem}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{width:7rem}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/inventory": 2
+   },
+   "byFile": {
+    "pages/inventory/InventoryFilterPanel.tsx": 2
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+     "line": 295,
+     "type": "number",
+     "area": "pages/inventory",
+     "className": null,
+     "inlineSig": "style{width:7rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+     "line": 298,
+     "type": "number",
+     "area": "pages/inventory",
+     "className": null,
+     "inlineSig": "style{width:7rem}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G25",
+   "count": 2,
+   "signature": "style{width:var(--input-width-qty)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{width:var(--input-width-qty)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/invoice-create": 1,
+    "pages/quote-create": 1
+   },
+   "byFile": {
+    "pages/invoice-create/InvoiceCreatePage.tsx": 1,
+    "pages/quote-create/QuoteCreatePage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 384,
+     "type": "number",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-qty)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 233,
+     "type": "number",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-qty)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G26",
+   "count": 2,
+   "signature": "style{width:var(--input-width-year)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{width:var(--input-width-year)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 2,
+   "byType": {
+    "number": 2
+   },
+   "byArea": {
+    "pages/invoice-create": 1,
+    "pages/quote-create": 1
+   },
+   "byFile": {
+    "pages/invoice-create/InvoiceCreatePage.tsx": 1,
+    "pages/quote-create/QuoteCreatePage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 387,
+     "type": "number",
+     "area": "pages/invoice-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-year)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 236,
+     "type": "number",
+     "area": "pages/quote-create",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-year)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G27",
+   "count": 1,
+   "signature": "frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus",
+   "signatureParts": [
+    "frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "components": 1
+   },
+   "byFile": {
+    "components/MergeLeadModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/components/MergeLeadModal.tsx",
+     "line": 146,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G28",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    "style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}"
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "components": 1
+   },
+   "byFile": {
+    "components/InventoryPicker.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 1,
+   "members": [
+    {
+     "file": "frontend/src/components/InventoryPicker.tsx",
+     "line": 217,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": true,
+     "hasOnKeyDown": true
+    }
+   ]
+  },
+  {
+   "id": "G29",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm)}",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    "style{min-width:var(--min-width-input-sm)}"
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "omitted": 1
+   },
+   "byArea": {
+    "pages/purchase-orders": 1
+   },
+   "byFile": {
+    "pages/purchase-orders/PurchaseOrdersFormModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 191,
+     "type": "omitted",
+     "area": "pages/purchase-orders",
+     "className": null,
+     "inlineSig": "style{min-width:var(--min-width-input-sm)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G30",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-qty)}",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    "style{width:var(--input-width-qty)}"
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/purchase-orders": 1
+   },
+   "byFile": {
+    "pages/purchase-orders/PurchaseOrdersFormModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 194,
+     "type": "number",
+     "area": "pages/purchase-orders",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-qty)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G31",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-year)}",
+   "signatureParts": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus"
+   ],
+   "inlineSig": [
+    "style{width:var(--input-width-year)}"
+   ],
+   "mainSelectors": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/purchase-orders": 1
+   },
+   "byFile": {
+    "pages/purchase-orders/PurchaseOrdersFormModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 197,
+     "type": "number",
+     "area": "pages/purchase-orders",
+     "className": null,
+     "inlineSig": "style{width:var(--input-width-year)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G32",
+   "count": 1,
+   "signature": "frontend/src/components.css:67 .search-input-field | frontend/src/components.css:77 .search-input-field::placeholder | frontend/src/components.css:80 .search-input-field:focus | frontend/src/pages/inbox/InboxPage.css:116 .inbox-search-input",
+   "signatureParts": [
+    "frontend/src/components.css:67 .search-input-field",
+    "frontend/src/components.css:77 .search-input-field::placeholder",
+    "frontend/src/components.css:80 .search-input-field:focus",
+    "frontend/src/pages/inbox/InboxPage.css:116 .inbox-search-input"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components.css:67 .search-input-field",
+    "components.css:77 .search-input-field::placeholder",
+    "components.css:80 .search-input-field:focus",
+    "pages/inbox/InboxPage.css:116 .inbox-search-input"
+   ],
+   "ownClassTokens": [
+    "search-input-field",
+    "inbox-search-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "pages/inbox": 1
+   },
+   "byFile": {
+    "pages/inbox/InboxConversationList.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+     "line": 62,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"search-input-field inbox-search-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G33",
+   "count": 1,
+   "signature": "frontend/src/components/field-size.css:13 .field-w-sm | frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm | frontend/src/components/field-size.css:8 .field-h-md",
+   "signatureParts": [
+    "frontend/src/components/field-size.css:13 .field-w-sm",
+    "frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm",
+    "frontend/src/components/field-size.css:8 .field-h-md"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "components/field-size.css:13 .field-w-sm",
+    "components/field-size.css:22 .content-toolbar .field-w-sm",
+    "components/field-size.css:8 .field-h-md"
+   ],
+   "ownClassTokens": [
+    "search-input",
+    "field-h-md",
+    "field-w-sm"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "pages/contacts": 1
+   },
+   "byFile": {
+    "pages/contacts/ContactsPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+     "line": 281,
+     "type": "text",
+     "area": "pages/contacts",
+     "className": "\"search-input field-h-md field-w-sm\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G34",
+   "count": 1,
+   "signature": "frontend/src/features/tcg-analysis-review/source-raw-pane.css:48 .source-search input",
+   "signatureParts": [
+    "frontend/src/features/tcg-analysis-review/source-raw-pane.css:48 .source-search input"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "features/tcg-analysis-review/source-raw-pane.css:48 .source-search input"
+   ],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "omitted": 1
+   },
+   "byArea": {
+    "features/tcg-analysis-review": 1
+   },
+   "byFile": {
+    "features/tcg-analysis-review/SourceRawPane.tsx": 1
+   },
+   "withUnconfirmed": 1,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-analysis-review/SourceRawPane.tsx",
+     "line": 30,
+     "type": "omitted",
+     "area": "features/tcg-analysis-review",
+     "className": null,
+     "inlineSig": "",
+     "unconfirmed": 1,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G35",
+   "count": 1,
+   "signature": "frontend/src/pages/goal-setting/GoalSettingPage.css:119 .gs-advisor__monthly-input | frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input | frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus",
+   "signatureParts": [
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:119 .gs-advisor__monthly-input",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/goal-setting/GoalSettingPage.css:119 .gs-advisor__monthly-input",
+    "pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus"
+   ],
+   "ownClassTokens": [
+    "gs-input",
+    "gs-advisor__monthly-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/goal-setting": 1
+   },
+   "byFile": {
+    "pages/goal-setting/GoalSettingPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+     "line": 334,
+     "type": "number",
+     "area": "pages/goal-setting",
+     "className": "\"gs-input gs-advisor__monthly-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G36",
+   "count": 1,
+   "signature": "frontend/src/pages/goal-setting/GoalSettingPage.css:277 .gs-advisor__metric-input | frontend/src/pages/goal-setting/GoalSettingPage.css:281 .gs-advisor__metric-input:focus-visible | frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input | frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus",
+   "signatureParts": [
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:277 .gs-advisor__metric-input",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:281 .gs-advisor__metric-input:focus-visible",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/goal-setting/GoalSettingPage.css:277 .gs-advisor__metric-input",
+    "pages/goal-setting/GoalSettingPage.css:281 .gs-advisor__metric-input:focus-visible",
+    "pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus"
+   ],
+   "ownClassTokens": [
+    "gs-input",
+    "gs-advisor__metric-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/goal-setting": 1
+   },
+   "byFile": {
+    "pages/goal-setting/GoalSettingPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+     "line": 230,
+     "type": "number",
+     "area": "pages/goal-setting",
+     "className": "\"gs-input gs-advisor__metric-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G37",
+   "count": 1,
+   "signature": "frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input | frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus | frontend/src/pages/goal-setting/GoalSettingPage.css:527 .gs-input.gs-input-saved ?conditional-class",
+   "signatureParts": [
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus",
+    "frontend/src/pages/goal-setting/GoalSettingPage.css:527 .gs-input.gs-input-saved ?conditional-class"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/goal-setting/GoalSettingPage.css:510 .gs-input",
+    "pages/goal-setting/GoalSettingPage.css:522 .gs-input:focus",
+    "pages/goal-setting/GoalSettingPage.css:527 .gs-input.gs-input-saved ?conditional-class"
+   ],
+   "ownClassTokens": [
+    "gs-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/goal-setting": 1
+   },
+   "byFile": {
+    "pages/goal-setting/GoalSettingPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+     "line": 157,
+     "type": "number",
+     "area": "pages/goal-setting",
+     "className": "{`gs-input${saved ? \" gs-input-saved\" : \"\"}`}",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G38",
+   "count": 1,
+   "signature": "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field | frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder | frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus | frontend/src/pages/inbox/InboxPage.css:1339 input[type=\"date\"].karte-field-empty:not(:focus)::-webkit-datetime-edit ?conditional-class",
+   "signatureParts": [
+    "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus",
+    "frontend/src/pages/inbox/InboxPage.css:1339 input[type=\"date\"].karte-field-empty:not(:focus)::-webkit-datetime-edit ?conditional-class"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "pages/inbox/InboxPage.css:1169 .right-panel-field:focus",
+    "pages/inbox/InboxPage.css:1339 input[type=\"date\"].karte-field-empty:not(:focus)::-webkit-datetime-edit ?conditional-class"
+   ],
+   "ownClassTokens": [
+    "right-panel-field"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "date": 1
+   },
+   "byArea": {
+    "pages/inbox": 1
+   },
+   "byFile": {
+    "pages/inbox/InboxKartePanel.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+     "line": 509,
+     "type": "date",
+     "area": "pages/inbox",
+     "className": "{`right-panel-field${!cardForm.next_action_date ? \" karte-field-empty\" : \"\"}`}",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G39",
+   "count": 1,
+   "signature": "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field | frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder | frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus | frontend/src/pages/inbox/InboxPage.css:1630 .sales-form-other-input",
+   "signatureParts": [
+    "frontend/src/pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "frontend/src/pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "frontend/src/pages/inbox/InboxPage.css:1169 .right-panel-field:focus",
+    "frontend/src/pages/inbox/InboxPage.css:1630 .sales-form-other-input"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/inbox/InboxPage.css:1160 .right-panel-field",
+    "pages/inbox/InboxPage.css:1168 .right-panel-field::placeholder",
+    "pages/inbox/InboxPage.css:1169 .right-panel-field:focus",
+    "pages/inbox/InboxPage.css:1630 .sales-form-other-input"
+   ],
+   "ownClassTokens": [
+    "right-panel-field",
+    "sales-form-other-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "pages/inbox": 1
+   },
+   "byFile": {
+    "pages/inbox/SalesFormMultiSelect.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/inbox/SalesFormMultiSelect.tsx",
+     "line": 148,
+     "type": "text",
+     "area": "pages/inbox",
+     "className": "\"right-panel-field sales-form-other-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G40",
+   "count": 1,
+   "signature": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:75 .analysis-dashboard-window-input",
+   "signatureParts": [
+    "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:75 .analysis-dashboard-window-input"
+   ],
+   "inlineSig": [
+    ""
+   ],
+   "mainSelectors": [
+    "pages/super-admin/components/AnalysisDashboardPanel.css:75 .analysis-dashboard-window-input"
+   ],
+   "ownClassTokens": [
+    "analysis-dashboard-window-input"
+   ],
+   "hasInlineStyleCount": 0,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/super-admin": 1
+   },
+   "byFile": {
+    "pages/super-admin/components/AnalysisDashboardPanel.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+     "line": 803,
+     "type": "number",
+     "area": "pages/super-admin",
+     "className": "\"analysis-dashboard-window-input\"",
+     "inlineSig": "",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G41",
+   "count": 1,
+   "signature": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);box-sizing:border-box;color:var(--text-primary);font-size:0.85rem;margin-bottom:0.5rem;padding:0.4rem 0.6rem;width:100%}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);box-sizing:border-box;color:var(--text-primary);font-size:0.85rem;margin-bottom:0.5rem;padding:0.4rem 0.6rem;width:100%}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "features/tcg-import-review": 1
+   },
+   "byFile": {
+    "features/tcg-import-review/ReviewSection.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+     "line": 289,
+     "type": "text",
+     "area": "features/tcg-import-review",
+     "className": null,
+     "inlineSig": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);box-sizing:border-box;color:var(--text-primary);font-size:0.85rem;margin-bottom:0.5rem;padding:0.4rem 0.6rem;width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G42",
+   "count": 1,
+   "signature": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;padding:0.4rem 0.6rem;width:80px}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;padding:0.4rem 0.6rem;width:80px}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "pages/super-admin": 1
+   },
+   "byFile": {
+    "pages/super-admin/TcgLineImportPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+     "line": 353,
+     "type": "number",
+     "area": "pages/super-admin",
+     "className": null,
+     "inlineSig": "style{background:var(--bg-primary);border-radius:4px;border:1px solid var(--border-color);color:var(--text-primary);font-size:0.85rem;padding:0.4rem 0.6rem;width:80px}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G43",
+   "count": 1,
+   "signature": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:100px}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:100px}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "number": 1
+   },
+   "byArea": {
+    "components": 1
+   },
+   "byFile": {
+    "components/FedExRateModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/components/FedExRateModal.tsx",
+     "line": 210,
+     "type": "number",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:100px}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G44",
+   "count": 1,
+   "signature": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:160px}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:160px}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "components": 1
+   },
+   "byFile": {
+    "components/FedExRateModal.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/components/FedExRateModal.tsx",
+     "line": 239,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{border-radius:4px;border:1px solid var(--border);font-size:13px;padding:6px 8px;width:160px}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G45",
+   "count": 1,
+   "signature": "style{border-radius:var(--radius-sm);border:1px solid var(--border);flex:1;font-size:var(--font-sm);padding:var(--space-2)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{border-radius:var(--radius-sm);border:1px solid var(--border);flex:1;font-size:var(--font-sm);padding:var(--space-2)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "omitted": 1
+   },
+   "byArea": {
+    "pages/invoice-detail": 1
+   },
+   "byFile": {
+    "pages/invoice-detail/InvoiceDetailPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+     "line": 222,
+     "type": "omitted",
+     "area": "pages/invoice-detail",
+     "className": null,
+     "inlineSig": "style{border-radius:var(--radius-sm);border:1px solid var(--border);flex:1;font-size:var(--font-sm);padding:var(--space-2)}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G46",
+   "count": 1,
+   "signature": "style{border-radius:var(--radius-sm);border:1px solid var(--border);padding:var(--space-2);width:100%}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{border-radius:var(--radius-sm);border:1px solid var(--border);padding:var(--space-2);width:100%}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "omitted": 1
+   },
+   "byArea": {
+    "pages/invoice-detail": 1
+   },
+   "byFile": {
+    "pages/invoice-detail/InvoiceDetailPage.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 0,
+   "members": [
+    {
+     "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+     "line": 271,
+     "type": "omitted",
+     "area": "pages/invoice-detail",
+     "className": null,
+     "inlineSig": "style{border-radius:var(--radius-sm);border:1px solid var(--border);padding:var(--space-2);width:100%}",
+     "unconfirmed": 0,
+     "hasDisabled": false,
+     "hasRef": false,
+     "hasOnKeyDown": false
+    }
+   ]
+  },
+  {
+   "id": "G47",
+   "count": 1,
+   "signature": "style{flex:1;min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2)}",
+   "signatureParts": [],
+   "inlineSig": [
+    "style{flex:1;min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2)}"
+   ],
+   "mainSelectors": [],
+   "ownClassTokens": [],
+   "hasInlineStyleCount": 1,
+   "byType": {
+    "text": 1
+   },
+   "byArea": {
+    "components": 1
+   },
+   "byFile": {
+    "components/InventorySearchBar.tsx": 1
+   },
+   "withUnconfirmed": 0,
+   "hasDisabledAttr": 1,
+   "members": [
+    {
+     "file": "frontend/src/components/InventorySearchBar.tsx",
+     "line": 272,
+     "type": "text",
+     "area": "components",
+     "className": null,
+     "inlineSig": "style{flex:1;min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2)}",
+     "unconfirmed": 0,
+     "hasDisabled": true,
+     "hasRef": true,
+     "hasOnKeyDown": true
+    }
+   ]
+  }
+ ]
+}

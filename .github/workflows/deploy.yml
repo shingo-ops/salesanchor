@@ -44,6 +44,19 @@ jobs:
             nginx:
               - 'nginx/**'
               - 'docker-compose.yml'
+            # PO承認（2026-10-03）: Pre-deploy DB backup 専用フィルタ。
+            # 上の `migrations` は backend/** 等も含み広すぎる（2026-10-02 JST の
+            # merge では 25件中16件が該当、うち実際に migrations/ を含むのは3件のみ
+            # — docs/handoff/predeploy-backup-db-filter/recon.md）。
+            # backup は「実際に DB スキーマ/データを変更しうる」パスのみで判定する:
+            #   - migrations/**            : run_sql で直接実行される .sql
+            #   - scripts/run_all_migrations.sh : マイグレーションの唯一の実行経路（SSoT）
+            #   - scripts/migrate_*.py     : run_all_migrations.sh から run_py で呼ばれる
+            #                                個別マイグレーションスクリプト本体
+            db_migrations:
+              - 'migrations/**'
+              - 'scripts/run_all_migrations.sh'
+              - 'scripts/migrate_*.py'
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -120,11 +133,49 @@ jobs:
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/design-site/progress.json
 
       # ============================================
+      # 空き容量チェック（ADR-135/136）
+      # 2026-10-02 prod1 ディスクフル事故の再発防止。
+      # DBマイグレーションの有無に関わらず、デプロイのたびに毎回実行する
+      # （Pre-deploy DB backup が migrations なしでスキップされても抜けないようにする）。
+      # ============================================
+      - name: Check free disk space
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "============================================"
+            echo "Check free disk space..."
+            echo "============================================"
+            cd /home/ubuntu/salesanchor
+
+            # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:
+            # バックアップ書き込み前に空き容量を確認し、閾値未満ならここで止める。
+            MIN_FREE_GB=5
+            FREE_GB=$(df --output=avail -B1G / | tail -1 | tr -d '[:space:]')
+            echo "Free space on /: ${FREE_GB}GB (threshold: ${MIN_FREE_GB}GB)"
+            if [ "${FREE_GB}" -lt "${MIN_FREE_GB}" ]; then
+              echo "❌ 空き容量不足のためデプロイを中止します: ${FREE_GB}GB < ${MIN_FREE_GB}GB"
+              echo "--- backups/postgres 使用量 ---"
+              du -sh /home/ubuntu/backups/postgres 2>/dev/null || true
+              echo "--- docker system df ---"
+              docker system df || true
+              exit 1
+            fi
+
+      # ============================================
       # デプロイ前 DB バックアップ
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
       # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
+      # PO承認（2026-10-03）: DBマイグレーションを含むデプロイのみ実行する
+      # （steps.changes.outputs.db_migrations が 'true' の場合のみ。
+      #   `migrations` フィルタは backend/** 等も含み広すぎるため、
+      #   実際に DB を変更しうるパスだけの `db_migrations` フィルタを使う）。
       # ============================================
       - name: Pre-deploy DB backup
+        if: steps.changes.outputs.db_migrations == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -136,6 +187,7 @@ jobs:
             echo "Pre-deploy DB backup..."
             echo "============================================"
             cd /home/ubuntu/salesanchor
+
             bash scripts/backup.sh
             LATEST=$(ls -t /home/ubuntu/backups/postgres/salesanchor_db_*.sql.gz 2>/dev/null | head -1)
             if [ -z "${LATEST}" ]; then
@@ -334,12 +386,16 @@ jobs:
             # 強制削除（docker rm -f）の前に `docker compose stop -t 60` で
             # warm shutdown（SIGTERM→最大60秒待って実行中タスクを終える）してから止める。
             echo "Step 3c: Updating non-backend services (frontend/celery/discord)..."
+            # 段階1（観測のみ。動きは変えない）：docs/handoff/deploy-selective-recreate/design.md
+            bash scripts/deploy/app-services-plan.sh --observe frontend celery-worker celery-beat discord-gateway gemini-egress || true
+            docker compose up -d --no-deps --dry-run frontend celery-worker celery-beat discord-gateway gemini-egress 2>&1 | sed 's/^/DRYRUN /' || true
             docker compose stop -t 60 celery-worker 2>/dev/null || true
             for _svc in frontend celery-beat discord-gateway; do
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
             docker ps -a --filter "name=astro-webapp-celery-worker" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
+            bash scripts/deploy/app-services-plan.sh --verify || true
             echo "Step 3d: Ensuring monitoring collectors are up..."
             docker compose up -d --no-deps node-exporter promtail
 
@@ -666,6 +722,12 @@ jobs:
 
             echo "Step 8: Cleaning up old Docker images..."
             docker image prune -f
+
+            echo "Step 8b: Cleaning up Docker build cache (keep 3GB)..."
+            # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:
+            # build cache が無制限に溜まるのを防ぐ。
+            # 本番 docker 29.4.0 で --help に記載のある --max-used-space を使用、2026-10-02 確認。
+            docker builder prune -f --max-used-space 3GB || true
 
             echo "============================================"
             echo "Deployment completed successfully!"

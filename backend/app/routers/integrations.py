@@ -34,8 +34,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
     get_current_tenant,
-    get_current_user,
     require_permission,
+    require_tenant_admin,
     reset_tenant_context,
     set_tenant_context,
 )
@@ -45,6 +45,7 @@ from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services import paypal_payments
 from app.services.audit import record_audit_log
+from app.services.payment_dates import PAID_AT_SQL, paypal_paid_at
 from app.services.test_pdf import render_test_pdf
 
 logger = logging.getLogger(__name__)
@@ -71,14 +72,6 @@ def _frontend_base_url() -> str:
 
 def _drive_page_url() -> str:
     return f"{_frontend_base_url()}/management-center/integrations/google-drive"
-
-
-def _require_admin(user: User) -> None:
-    if getattr(user, "role", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作は管理者のみ実行できます",
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -177,10 +170,9 @@ async def connect_callback(
 @router.get("/integrations/google-drive/connect/start", tags=["integrations"])
 async def connect_start(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
 ):
     """Google OAuth 同意画面の URL を返す（admin 専用）。"""
-    _require_admin(user)
     try:
         auth_url = await drive_svc.get_auth_url(tenant_id, user.id)
     except RuntimeError:
@@ -200,11 +192,10 @@ async def connect_start(
 )
 async def disconnect(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Google ドライブ接続を解除する（admin 専用）。"""
-    _require_admin(user)
     old_result = await db.execute(
         text("""
             SELECT id, tenant_id, account_email, folder_id,
@@ -381,12 +372,11 @@ async def save_carrier_credentials(
     carrier: str,
     payload: CarrierCredentialsRequest,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """キャリア認証情報を保存（暗号化）。admin 専用。"""
     _validate_carrier(carrier)
-    _require_admin(user)
     if not payload.client_id or not payload.client_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -441,13 +431,12 @@ async def delete_carrier_credentials(
     carrier: str,
     environment: str = Query("production"),
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """キャリア認証情報を削除。admin 専用。ADR-129: environment クエリパラメータで本番/Sandbox を指定。"""
     _validate_carrier(carrier)
     _validate_environment(environment)
-    _require_admin(user)
     # 削除前の非機密情報を取得（機密値は記録しない）
     old_status = await carriers.get_status(db, tenant_id, carrier, environment=environment)
     old_audit = {
@@ -549,11 +538,10 @@ async def paypal_status(
 async def save_paypal_credentials(
     payload: PaypalCredentialsRequest,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """PayPal 認証情報を保存（暗号化）。admin 専用。"""
-    _require_admin(user)
     if not payload.client_id or not payload.client_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -584,11 +572,10 @@ async def save_paypal_credentials(
 )
 async def delete_paypal_credentials(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """PayPal 認証情報を削除。admin 専用。"""
-    _require_admin(user)
     await paypal_payments.delete_credentials(db, tenant_id)
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
@@ -633,7 +620,7 @@ class PaypalTestInvoiceResponse(BaseModel):
 )
 async def paypal_test_invoice(
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> PaypalTestInvoiceResponse:
     """決済テスト用: sandbox 限定でテスト請求書を作成し PayPal 請求書を送付する。admin 専用。
@@ -641,7 +628,6 @@ async def paypal_test_invoice(
     専用「PayPalテスト」会社/担当者を find-or-create し、¥100 のテスト請求書(issued)を作成→
     PayPal Invoicing で請求書を送付する（ADR-101 改訂 2026-06-12）。webhook自動/手動 の確認用。
     """
-    _require_admin(user)
     creds = await paypal_payments.get_credentials(db, tenant_id)
     if not creds:
         raise HTTPException(
@@ -806,17 +792,18 @@ async def paypal_return(
         if not result.get("captured"):
             return _paypal_html("お支払いを確認できませんでした", "Payment could not be confirmed", status_code=409)
 
+        paid_at_value = paypal_paid_at(result.get("payment_date"))
         await db.execute(
-            text("UPDATE invoices SET status='paid', paid_at=NOW(), payment_fee=:fee, "
+            text(f"UPDATE invoices SET status='paid', paid_at={PAID_AT_SQL}, payment_fee=:fee, "
                  "payment_method='paypal', updated_at=NOW() "
                  "WHERE id=:id AND status IN ('issued','overdue')"),
-            {"id": invoice_id, "fee": result.get("fee")},
+            {"id": invoice_id, "fee": result.get("fee"), "paid_at": paid_at_value},
         )
         # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移（awaiting_payment のみ）
         await db.execute(
-            text("UPDATE orders SET status='sourcing', paid_at=NOW(), updated_at=NOW() "
+            text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
                  "WHERE invoice_id=:iid AND status='awaiting_payment'"),
-            {"iid": invoice_id},
+            {"iid": invoice_id, "paid_at": paid_at_value},
         )
         await db.commit()
     except Exception as e:  # noqa: BLE001
@@ -954,17 +941,18 @@ async def _handle_invoice_paid(request: Request, db: AsyncSession, event: dict) 
             creds["environment"], creds["client_id"], creds["client_secret"], pp_invoice_id,
         )
         if result.get("paid"):
+            paid_at_value = paypal_paid_at(result.get("payment_date"))
             await db.execute(
-                text("UPDATE invoices SET status='paid', paid_at=NOW(), payment_fee=:fee, "
+                text(f"UPDATE invoices SET status='paid', paid_at={PAID_AT_SQL}, payment_fee=:fee, "
                      "payment_method='paypal', updated_at=NOW() "
                      "WHERE id=:id AND status IN ('issued','overdue')"),
-                {"id": invoice_id, "fee": result.get("fee")},
+                {"id": invoice_id, "fee": result.get("fee"), "paid_at": paid_at_value},
             )
             # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移
             await db.execute(
-                text("UPDATE orders SET status='sourcing', paid_at=NOW(), updated_at=NOW() "
+                text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
                      "WHERE invoice_id=:iid AND status='awaiting_payment'"),
-                {"iid": invoice_id},
+                {"iid": invoice_id, "paid_at": paid_at_value},
             )
             await db.commit()
     except Exception as e:  # noqa: BLE001

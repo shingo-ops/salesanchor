@@ -212,6 +212,218 @@ async def _hide_ticket_start(
         )
 
 
+_RESTORE_REASON = "SalesAnchor: ticket channel deleted, restoring ticket-start"
+_RECONCILE_MAX_FETCH_PER_GUILD = 200
+
+
+def _is_not_found(exc: Exception) -> bool:
+    return getattr(exc, "status", None) == 404
+
+
+async def _remove_ticket_start_overwrite(
+    guild: discord.Guild,
+    ticket_start_ch: discord.TextChannel,
+    discord_user_id: str,
+    http: Any,
+    tenant_id: int,
+) -> bool:
+    """ticket-start から本人の個別上書き（非表示）を外す。外せた/元から無い場合 True。
+
+    在籍中ならメンバー経由、退会済みなら REST で user_id 直指定で削除する
+    （set_permissions は Member/Role しか受け付けないため）。再参加時に
+    ticket-start が見えないままになるのを防ぐ。
+    """
+    try:
+        member = guild.get_member(int(discord_user_id))
+        if member is not None:
+            await ticket_start_ch.set_permissions(
+                member, overwrite=None, reason=_RESTORE_REASON
+            )
+        elif http is not None:
+            await http.delete_channel_permissions(
+                ticket_start_ch.id, int(discord_user_id), reason=_RESTORE_REASON
+            )
+        else:
+            logger.warning(
+                "[ticket] member left and no http client; overwrite not removed "
+                "user=%s tenant=%d",
+                discord_user_id,
+                tenant_id,
+            )
+            return False
+    except discord.HTTPException as exc:
+        if _is_not_found(exc):
+            return True
+        logger.warning(
+            "[ticket] ticket-start restore failed user=%s tenant=%d: %s",
+            discord_user_id,
+            tenant_id,
+            exc,
+        )
+        return False
+    return True
+
+
+async def _clear_lead_channel_id(
+    db_factory: Any,
+    tenant_id: int,
+    channel_id: str,
+) -> None:
+    """leads.discord_guild_channel_id を NULL に戻す（lead_channels / メッセージは触らない）。"""
+    schema = f"tenant_{tenant_id:03d}"
+    async with db_factory() as session:
+        await set_tenant_context(session, tenant_id)
+        await session.execute(
+            text(f"""
+                UPDATE {schema}.leads
+                SET discord_guild_channel_id = NULL,
+                    updated_at = NOW()
+                WHERE discord_guild_channel_id = :ch_id
+            """),  # noqa: S608
+            {"ch_id": channel_id},
+        )
+        await session.commit()
+
+
+async def restore_after_ticket_deleted(
+    guild: discord.Guild,
+    tenant_id: int,
+    deleted_channel_id: int | str,
+    db_factory: Any,
+    http: Any = None,
+) -> int:
+    """チケットチャンネル削除後の自動復旧 (PO決定 2026-10-02).
+
+    削除されたチャンネルを持つ lead について、ticket-start の非表示を解除し
+    leads.discord_guild_channel_id を NULL に戻す。顧客はボタンで新しい部屋を作れる。
+    該当 lead が無ければ何もしない（無関係チャンネルの削除は no-op）。冪等。
+    Discord 側の解除に失敗した lead は ID を残し、起動時点検で再試行させる。
+
+    Returns:
+        復旧（ID を NULL に戻した）lead 数。
+    """
+    channel_id = str(deleted_channel_id)
+    schema = f"tenant_{tenant_id:03d}"
+    async with db_factory() as session:
+        await set_tenant_context(session, tenant_id)
+        rows = (
+            await session.execute(
+                text(f"""
+                    SELECT discord_user_id
+                    FROM {schema}.leads
+                    WHERE discord_guild_channel_id = :ch_id
+                """),  # noqa: S608
+                {"ch_id": channel_id},
+            )
+        ).all()
+        if not rows:
+            return 0
+        config = await get_ticket_config(session, tenant_id)
+
+    ticket_start_ch = None
+    ticket_start_id = (config or {}).get("ticket_button_channel_id")
+    if ticket_start_id:
+        candidate = guild.get_channel(int(ticket_start_id))
+        if isinstance(candidate, discord.TextChannel):
+            ticket_start_ch = candidate
+        else:
+            logger.warning(
+                "[ticket] restore: ticket_start channel not found id=%s tenant=%d",
+                ticket_start_id,
+                tenant_id,
+            )
+
+    for row in rows:
+        user_id = row[0]
+        if not user_id or ticket_start_ch is None:
+            continue
+        if not await _remove_ticket_start_overwrite(
+            guild, ticket_start_ch, str(user_id), http, tenant_id
+        ):
+            # 解除できなかった lead は ID を残す（再試行可能にする）
+            logger.warning(
+                "[ticket] restore deferred user=%s channel=%s tenant=%d",
+                user_id,
+                channel_id,
+                tenant_id,
+            )
+            return 0
+
+    await _clear_lead_channel_id(db_factory, tenant_id, channel_id)
+    logger.info(
+        "[ticket] restored after channel delete channel=%s leads=%d tenant=%d",
+        channel_id,
+        len(rows),
+        tenant_id,
+    )
+    return len(rows)
+
+
+async def reconcile_deleted_ticket_channels(
+    guild: discord.Guild,
+    tenant_id: int,
+    db_factory: Any,
+    http: Any = None,
+) -> int:
+    """起動時点検: 保存済みチャンネルが guild から消えている lead を復旧する。
+
+    Gateway 停止中に削除された分を拾う。キャッシュに無いだけの可能性があるため、
+    REST で NotFound が確認できたものだけを復旧対象にする。上限付き・失敗は警告のみ。
+
+    Returns:
+        復旧した lead 数。
+    """
+    schema = f"tenant_{tenant_id:03d}"
+    async with db_factory() as session:
+        await set_tenant_context(session, tenant_id)
+        rows = (
+            await session.execute(
+                text(f"""
+                    SELECT DISTINCT discord_guild_channel_id
+                    FROM {schema}.leads
+                    WHERE discord_guild_channel_id IS NOT NULL
+                """),  # noqa: S608
+            )
+        ).all()
+    stale: list[str] = []
+    for row in rows:
+        stored_id = str(row[0])
+        if not stored_id.isdigit() or guild.get_channel(int(stored_id)) is not None:
+            continue
+        if len(stale) >= _RECONCILE_MAX_FETCH_PER_GUILD:
+            logger.warning(
+                "[ticket] reconcile cap reached tenant=%d cap=%d",
+                tenant_id,
+                _RECONCILE_MAX_FETCH_PER_GUILD,
+            )
+            break
+        try:
+            await guild.fetch_channel(int(stored_id))
+        except discord.HTTPException as exc:
+            if _is_not_found(exc):
+                stale.append(stored_id)
+            else:
+                logger.warning(
+                    "[ticket] reconcile fetch failed channel=%s tenant=%d: %s",
+                    stored_id,
+                    tenant_id,
+                    exc,
+                )
+    restored = 0
+    for stored_id in stale:
+        restored += await restore_after_ticket_deleted(
+            guild, tenant_id, stored_id, db_factory, http=http
+        )
+    logger.info(
+        "[ticket] reconcile done tenant=%d checked=%d stale=%d restored=%d",
+        tenant_id,
+        len(rows),
+        len(stale),
+        restored,
+    )
+    return restored
+
+
 async def _send_welcome(
     channel: discord.TextChannel,
     guild: discord.Guild,

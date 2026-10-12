@@ -36,6 +36,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.schemas.tcg_product_code_collision import (
+    ProductCreateResult,
+    ProductDetailSaveResult,
+)
 from app.services import tcg_product_roundtrip_svc as roundtrip
 from app.services.tcg_product_detail_svc import (
     ProductDetailError,
@@ -291,7 +295,12 @@ class ProductDetailUpdate(BaseModel):
         return value
 
 
-@router.put("/tcg/products/detail/{product_id}", summary="商品マスタ詳細保存（DETAIL-01）")
+@router.put(
+    "/tcg/products/detail/{product_id}",
+    summary="商品マスタ詳細保存（DETAIL-01）",
+    response_model=ProductDetailSaveResult,
+    response_model_exclude_unset=True,
+)
 async def save_product_detail(
     product_id: int,
     payload: ProductDetailUpdate,
@@ -370,7 +379,12 @@ class CreateProductBody(BaseModel):
     exclude_keywords: str = ""
 
 
-@router.post("/tcg/products/create", summary="商品マスタ新規追加（CREATE-01）")
+@router.post(
+    "/tcg/products/create",
+    summary="商品マスタ新規追加（CREATE-01）",
+    response_model=ProductCreateResult,
+    response_model_exclude_unset=True,
+)
 async def create_product_standalone(
     body: CreateProductBody,
     db: AsyncSession = Depends(get_db),
@@ -409,7 +423,9 @@ async def delete_product_detail(
     FK制約:
     - product_search_keywords, product_exclude_keywords: ON DELETE CASCADE（自動削除）
     - analysis_results: product_id を NULL に設定してから削除
-    - inventory, parse_logs, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
+    - inventory, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
+      （parse_logs は 2026-10-02 の migrations/20261002_170000_drop_discord_inventory_tables.sql
+       で DROP 済み。この docstring から削除）
     """
     # 商品の存在確認
     row = await db.execute(

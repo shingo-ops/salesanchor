@@ -285,3 +285,55 @@ def test_prompt_file_exists_and_has_placeholders_free_text():
     text = v8.load_v8_prompt()
     assert "書き写し担当" in text
     assert "source_line_start" in text
+
+
+# --- 新しい仕組み専用の2欄（new_system_rules）----------------------------------
+
+_NEW_RULES = {"extraction_layout_rules": "手順3: 行頭の数字は数量", "extraction_hard_cases": "原文: A\n出力: B"}
+
+
+def _prompt(**kw):
+    return v8.build_prompt_v8("行1", prompt_text="PROMPT", supplier_context=_CTX, knowledge_links=_LINKS, **kw)
+
+
+def test_build_prompt_v8_inserts_new_rules_between_note_and_raw_text():
+    prompt = _prompt(new_system_rules=_NEW_RULES)
+    note = v8.build_supplier_note_v8(_CTX, _LINKS)
+    section = (
+        "# この仕入元の書き方（指示書の手順への当てはめ）\n手順3: 行頭の数字は数量\n\n"
+        "# この仕入元で間違えやすい形\n原文: A\n出力: B"
+    )
+    assert f"{note}\n\n{section}\n\n原文:\n" in prompt
+    assert prompt.index(note) < prompt.index("# この仕入元の書き方") < prompt.index("\n原文:\n")
+
+
+def test_build_prompt_v8_without_new_rules_is_identical_to_before():
+    assert _prompt() == _prompt(new_system_rules=None)
+    assert _prompt(new_system_rules={}) == _prompt()
+    assert _prompt(new_system_rules={"extraction_layout_rules": None, "extraction_hard_cases": ""}) == _prompt()
+    assert "# この仕入元" not in _prompt()
+
+
+def test_build_prompt_v8_only_layout_rules_shows_only_that_heading():
+    prompt = _prompt(new_system_rules={"extraction_layout_rules": "L"})
+    assert "# この仕入元の書き方（指示書の手順への当てはめ）\nL" in prompt
+    assert "間違えやすい形" not in prompt
+
+
+def test_build_prompt_v8_only_hard_cases_shows_only_that_heading():
+    prompt = _prompt(new_system_rules={"extraction_hard_cases": "H"})
+    assert "# この仕入元で間違えやすい形\nH" in prompt
+    assert "書き方（指示書の手順への当てはめ）" not in prompt
+
+
+def test_build_prompt_v8_new_rules_without_supplier_note():
+    prompt = v8.build_prompt_v8(
+        "行1", prompt_text="PROMPT", supplier_context=None, knowledge_links=None,
+        new_system_rules={"extraction_hard_cases": "H"},
+    )
+    assert prompt.startswith("PROMPT\n# この仕入元で間違えやすい形\nH\n\n原文:\n")
+
+
+def test_build_supplier_note_v8_ignores_new_rule_keys_in_supplier_context():
+    ctx = {**_CTX, **_NEW_RULES}
+    assert v8.build_supplier_note_v8(ctx, _LINKS) == v8.build_supplier_note_v8(_CTX, _LINKS)

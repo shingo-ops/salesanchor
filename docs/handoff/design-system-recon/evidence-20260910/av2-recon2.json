@@ -1,0 +1,3003 @@
+{
+ "baseSha": "3210edeea250e269102bedd3546ebc48ddb89b77",
+ "R1": {
+  "usageCounts": {
+   "total": 86,
+   "Select": 66,
+   "SelectControl": 20
+  },
+  "moldDeclared": {
+   "comp-field__select": [
+    {
+     "line": 47,
+     "selector": ".comp-field__select",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "width",
+      "padding",
+      "border",
+      "border-radius",
+      "font-size",
+      "color",
+      "background",
+      "box-sizing",
+      "font-family",
+      "line-height",
+      "transition"
+     ]
+    },
+    {
+     "line": 74,
+     "selector": ".comp-field__select",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "cursor",
+      "appearance",
+      "-webkit-appearance",
+      "padding-right",
+      "background-image",
+      "background-repeat",
+      "background-position"
+     ]
+    },
+    {
+     "line": 85,
+     "selector": ".comp-field__select",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "width"
+     ]
+    },
+    {
+     "line": 115,
+     "selector": ".comp-field--error .comp-field__select",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "border-color"
+     ]
+    },
+    {
+     "line": 134,
+     "selector": ".comp-field--sm .comp-field__select",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding",
+      "font-size",
+      "min-height"
+     ]
+    },
+    {
+     "line": 143,
+     "selector": ".comp-field--sm .comp-field__select",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    },
+    {
+     "line": 158,
+     "selector": ".comp-field--lg .comp-field__select",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding",
+      "font-size",
+      "min-height"
+     ]
+    },
+    {
+     "line": 168,
+     "selector": ".comp-field--lg .comp-field__select",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    },
+    {
+     "line": 208,
+     "selector": ".comp-field__select",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "min-height"
+     ]
+    }
+   ],
+   "comp-select__control": [
+    {
+     "line": 47,
+     "selector": ".comp-select__control",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "width",
+      "padding",
+      "border",
+      "border-radius",
+      "font-size",
+      "color",
+      "background",
+      "box-sizing",
+      "font-family",
+      "line-height",
+      "transition"
+     ]
+    },
+    {
+     "line": 74,
+     "selector": ".comp-select__control",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "cursor",
+      "appearance",
+      "-webkit-appearance",
+      "padding-right",
+      "background-image",
+      "background-repeat",
+      "background-position"
+     ]
+    },
+    {
+     "line": 89,
+     "selector": ".comp-select__control",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "width",
+      "max-width"
+     ]
+    },
+    {
+     "line": 208,
+     "selector": ".comp-select__control",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "min-height"
+     ]
+    }
+   ],
+   "comp-field__select:focus": [
+    {
+     "line": 95,
+     "selector": ".comp-field__select:focus",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "outline",
+      "border-color",
+      "box-shadow"
+     ]
+    },
+    {
+     "line": 199,
+     "selector": ".comp-field--error .comp-field__select:focus",
+     "spec": [
+      0,
+      3,
+      0
+     ],
+     "props": [
+      "border-color",
+      "box-shadow"
+     ]
+    }
+   ],
+   "comp-select__control:focus": [
+    {
+     "line": 95,
+     "selector": ".comp-select__control:focus",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "outline",
+      "border-color",
+      "box-shadow"
+     ]
+    }
+   ],
+   "comp-field__select:disabled": [
+    {
+     "line": 105,
+     "selector": ".comp-field__select:disabled",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "opacity",
+      "cursor",
+      "background"
+     ]
+    }
+   ],
+   "comp-select__control:disabled": [
+    {
+     "line": 105,
+     "selector": ".comp-select__control:disabled",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "opacity",
+      "cursor",
+      "background"
+     ]
+    }
+   ],
+   "comp-select__control--sm": [
+    {
+     "line": 134,
+     "selector": ".comp-select__control--sm",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "padding",
+      "font-size",
+      "min-height"
+     ]
+    },
+    {
+     "line": 143,
+     "selector": ".comp-select__control--sm",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    },
+    {
+     "line": 183,
+     "selector": ".comp-select__control--sm.comp-select--no-indicator",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    }
+   ],
+   "comp-select__control--lg": [
+    {
+     "line": 158,
+     "selector": ".comp-select__control--lg",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "padding",
+      "font-size",
+      "min-height"
+     ]
+    },
+    {
+     "line": 168,
+     "selector": ".comp-select__control--lg",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    },
+    {
+     "line": 188,
+     "selector": ".comp-select__control--lg.comp-select--no-indicator",
+     "spec": [
+      0,
+      2,
+      0
+     ],
+     "props": [
+      "padding-right"
+     ]
+    }
+   ],
+   "comp-select__control--full": [
+    {
+     "line": 173,
+     "selector": ".comp-select__control--full",
+     "spec": [
+      0,
+      1,
+      0
+     ],
+     "props": [
+      "width"
+     ]
+    }
+   ]
+  },
+  "bareRuleInventory": [
+   {
+    "id": "frontend/src/company-forms.css:100 .form-grid > .form-row select",
+    "file": "frontend/src/company-forms.css",
+    "line": 100,
+    "selector": ".form-grid > .form-row select",
+    "spec": [
+     0,
+     2,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L103)",
+     "border: 1px solid var(--border-strong) (L104)",
+     "border-radius: var(--radius-md) (L105)",
+     "font-size: var(--font-base) (L106)",
+     "background: var(--bg-surface) (L107)",
+     "color: var(--text-primary) (L108)",
+     "width: 100% (L109)",
+     "box-sizing: border-box (L110)",
+     "font-family: inherit (L111)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:120 .form-grid > .form-row select:focus",
+    "file": "frontend/src/company-forms.css",
+    "line": 120,
+    "selector": ".form-grid > .form-row select:focus",
+    "spec": [
+     0,
+     3,
+     1
+    ],
+    "media": null,
+    "lastPseudo": ":focus",
+    "decls": [
+     "outline: none (L123)",
+     "border-color: var(--accent) (L124)",
+     "box-shadow: var(--focus-ring-shadow) (L125)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:156 .modal-content .form-row select",
+    "file": "frontend/src/company-forms.css",
+    "line": 156,
+    "selector": ".modal-content .form-row select",
+    "spec": [
+     0,
+     2,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L162)",
+     "border: 1px solid var(--border-strong) (L163)",
+     "border-radius: var(--radius-md) (L164)",
+     "font-size: var(--font-base) (L165)",
+     "background: var(--bg-surface) (L166)",
+     "color: var(--text-primary) (L167)",
+     "width: 100% (L168)",
+     "box-sizing: border-box (L169)",
+     "font-family: inherit (L170)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:156 .modal-content-wide .form-row select",
+    "file": "frontend/src/company-forms.css",
+    "line": 156,
+    "selector": ".modal-content-wide .form-row select",
+    "spec": [
+     0,
+     2,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L162)",
+     "border: 1px solid var(--border-strong) (L163)",
+     "border-radius: var(--radius-md) (L164)",
+     "font-size: var(--font-base) (L165)",
+     "background: var(--bg-surface) (L166)",
+     "color: var(--text-primary) (L167)",
+     "width: 100% (L168)",
+     "box-sizing: border-box (L169)",
+     "font-family: inherit (L170)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:181 .modal-content .form-row select:focus",
+    "file": "frontend/src/company-forms.css",
+    "line": 181,
+    "selector": ".modal-content .form-row select:focus",
+    "spec": [
+     0,
+     3,
+     1
+    ],
+    "media": null,
+    "lastPseudo": ":focus",
+    "decls": [
+     "outline: none (L187)",
+     "border-color: var(--accent) (L188)",
+     "box-shadow: var(--focus-ring-shadow) (L189)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:181 .modal-content-wide .form-row select:focus",
+    "file": "frontend/src/company-forms.css",
+    "line": 181,
+    "selector": ".modal-content-wide .form-row select:focus",
+    "spec": [
+     0,
+     3,
+     1
+    ],
+    "media": null,
+    "lastPseudo": ":focus",
+    "decls": [
+     "outline: none (L187)",
+     "border-color: var(--accent) (L188)",
+     "box-shadow: var(--focus-ring-shadow) (L189)"
+    ]
+   },
+   {
+    "id": "frontend/src/company-forms.css:260 .product-edit-form .form-group select",
+    "file": "frontend/src/company-forms.css",
+    "line": 260,
+    "selector": ".product-edit-form .form-group select",
+    "spec": [
+     0,
+     2,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "border: 1px solid var(--border-strong) (L263)"
+    ]
+   },
+   {
+    "id": "frontend/src/components.css:19 .form-group select",
+    "file": "frontend/src/components.css",
+    "line": 19,
+    "selector": ".form-group select",
+    "spec": [
+     0,
+     1,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "width: 100% (L22)",
+     "padding: var(--space-2) var(--space-3) (L23)",
+     "border: 1px solid var(--border) (L24)",
+     "border-radius: var(--radius-sm) (L25)",
+     "font-size: var(--font-base) (L26)",
+     "color: var(--text-primary) (L27)",
+     "background: var(--bg-surface) (L28)",
+     "box-sizing: border-box (L29)"
+    ]
+   },
+   {
+    "id": "frontend/src/components.css:32 .form-group select:focus",
+    "file": "frontend/src/components.css",
+    "line": 32,
+    "selector": ".form-group select:focus",
+    "spec": [
+     0,
+     2,
+     1
+    ],
+    "media": null,
+    "lastPseudo": ":focus",
+    "decls": [
+     "outline: none (L35)",
+     "border-color: var(--accent) (L36)",
+     "box-shadow: var(--focus-ring-shadow) (L37)"
+    ]
+   },
+   {
+    "id": "frontend/src/components.css:60 .filter-bar select",
+    "file": "frontend/src/components.css",
+    "line": 60,
+    "selector": ".filter-bar select",
+    "spec": [
+     0,
+     1,
+     1
+    ],
+    "media": null,
+    "lastPseudo": null,
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L62)",
+     "border: 1px solid var(--border) (L63)",
+     "border-radius: var(--radius-sm) (L64)",
+     "font-size: var(--font-base) (L65)",
+     "min-width: var(--input-select-min-w) (L66)",
+     "background: var(--bg-surface) (L67)",
+     "color: var(--text-primary) (L68)"
+    ]
+   }
+  ],
+  "perRule": [
+   {
+    "rule": "frontend/src/company-forms.css:100 .form-grid > .form-row select",
+    "spec": "(0,2,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L103)",
+     "border: 1px solid var(--border-strong) (L104)",
+     "border-radius: var(--radius-md) (L105)",
+     "font-size: var(--font-base) (L106)",
+     "background: var(--bg-surface) (L107)",
+     "color: var(--text-primary) (L108)",
+     "width: 100% (L109)",
+     "box-sizing: border-box (L110)",
+     "font-family: inherit (L111)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 1,
+     "any": 1,
+     "list": [
+      {
+       "at": "frontend/src/pages/company-detail/CompanyAddressModal.tsx:84",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 4,
+     "list": [
+      {
+       "at": "frontend/src/pages/companies/CompaniesPage.tsx:506",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/company-detail/CompanyBasicTab.tsx:84",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:341",
+       "status": "definite",
+       "cls": "iv"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:120 .form-grid > .form-row select:focus",
+    "spec": "(0,3,1)",
+    "media": null,
+    "lastPseudo": ":focus",
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "outline: none (L123)",
+     "border-color: var(--accent) (L124)",
+     "box-shadow: var(--focus-ring-shadow) (L125)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 1,
+     "any": 1,
+     "list": [
+      {
+       "at": "frontend/src/pages/company-detail/CompanyAddressModal.tsx:84",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 4,
+     "list": [
+      {
+       "at": "frontend/src/pages/companies/CompaniesPage.tsx:506",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/company-detail/CompanyBasicTab.tsx:84",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:341",
+       "status": "definite",
+       "cls": "iv"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:156 .modal-content .form-row select",
+    "spec": "(0,2,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L162)",
+     "border: 1px solid var(--border-strong) (L163)",
+     "border-radius: var(--radius-md) (L164)",
+     "font-size: var(--font-base) (L165)",
+     "background: var(--bg-surface) (L166)",
+     "color: var(--text-primary) (L167)",
+     "width: 100% (L168)",
+     "box-sizing: border-box (L169)",
+     "font-family: inherit (L170)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 0,
+     "any": 0,
+     "list": []
+    },
+    "rawSelectsMatching": {
+     "count": 0,
+     "list": []
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:156 .modal-content-wide .form-row select",
+    "spec": "(0,2,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L162)",
+     "border: 1px solid var(--border-strong) (L163)",
+     "border-radius: var(--radius-md) (L164)",
+     "font-size: var(--font-base) (L165)",
+     "background: var(--bg-surface) (L166)",
+     "color: var(--text-primary) (L167)",
+     "width: 100% (L168)",
+     "box-sizing: border-box (L169)",
+     "font-family: inherit (L170)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 1,
+     "any": 1,
+     "list": [
+      {
+       "at": "frontend/src/pages/company-detail/CompanyAddressModal.tsx:84",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 3,
+     "list": [
+      {
+       "at": "frontend/src/pages/companies/CompaniesPage.tsx:506",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:341",
+       "status": "definite",
+       "cls": "iv"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:181 .modal-content .form-row select:focus",
+    "spec": "(0,3,1)",
+    "media": null,
+    "lastPseudo": ":focus",
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "outline: none (L187)",
+     "border-color: var(--accent) (L188)",
+     "box-shadow: var(--focus-ring-shadow) (L189)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 0,
+     "any": 0,
+     "list": []
+    },
+    "rawSelectsMatching": {
+     "count": 0,
+     "list": []
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:181 .modal-content-wide .form-row select:focus",
+    "spec": "(0,3,1)",
+    "media": null,
+    "lastPseudo": ":focus",
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "outline: none (L187)",
+     "border-color: var(--accent) (L188)",
+     "box-shadow: var(--focus-ring-shadow) (L189)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 1,
+     "any": 1,
+     "list": [
+      {
+       "at": "frontend/src/pages/company-detail/CompanyAddressModal.tsx:84",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 3,
+     "list": [
+      {
+       "at": "frontend/src/pages/companies/CompaniesPage.tsx:506",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/contacts/ContactsPage.tsx:341",
+       "status": "definite",
+       "cls": "iv"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/company-forms.css:260 .product-edit-form .form-group select",
+    "spec": "(0,2,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "border: 1px solid var(--border-strong) (L263)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 0,
+     "any": 0,
+     "list": []
+    },
+    "rawSelectsMatching": {
+     "count": 12,
+     "list": [
+      {
+       "at": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:493",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:231",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:238",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:255",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:278",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:285",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:302",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:346",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:353",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:360",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:311",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:325",
+       "status": "unconfirmed",
+       "cls": "v"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/components.css:19 .form-group select",
+    "spec": "(0,1,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "width: 100% (L22)",
+     "padding: var(--space-2) var(--space-3) (L23)",
+     "border: 1px solid var(--border) (L24)",
+     "border-radius: var(--radius-sm) (L25)",
+     "font-size: var(--font-base) (L26)",
+     "color: var(--text-primary) (L27)",
+     "background: var(--bg-surface) (L28)",
+     "box-sizing: border-box (L29)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 7,
+     "any": 16,
+     "list": [
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:53",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:57",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:61",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:65",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:105",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:109",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:113",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/note-master/NoteMasterPage.tsx:290",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/NoteMasterPanel.tsx:278",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:279",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:293",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:278",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:292",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:197",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:209",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:253",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 42,
+     "list": [
+      {
+       "at": "frontend/src/components/CompanyContactSelector.tsx:190",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/CompanyContactSelector.tsx:214",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/PurchaseDetailPanel.tsx:424",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/ShippingDetailPanel.tsx:511",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:167",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:266",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:283",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantProfilePage.tsx:234",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:233",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:241",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:248",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:493",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx:164",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/orders/OrdersFormModal.tsx:86",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:231",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:238",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:255",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:278",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:285",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:302",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:346",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:353",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:360",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:156",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:157",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/status-master/StatusMasterPage.tsx:260",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/status-master/StatusMasterPage.tsx:274",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:322",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:338",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:393",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:409",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:311",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:325",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/DexTab.tsx:194",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:447",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:455",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:472",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:501",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:523",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:190",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:300",
+       "status": "unconfirmed",
+       "cls": "v"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/components.css:32 .form-group select:focus",
+    "spec": "(0,2,1)",
+    "media": null,
+    "lastPseudo": ":focus",
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "outline: none (L35)",
+     "border-color: var(--accent) (L36)",
+     "box-shadow: var(--focus-ring-shadow) (L37)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 7,
+     "any": 16,
+     "list": [
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:53",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:57",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:61",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:65",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:105",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:109",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:113",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/note-master/NoteMasterPage.tsx:290",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/NoteMasterPanel.tsx:278",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:279",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:293",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:278",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:292",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:197",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:209",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:253",
+       "tag": "SelectControl",
+       "class": "comp-select__control",
+       "status": "definite",
+       "whys": []
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 42,
+     "list": [
+      {
+       "at": "frontend/src/components/CompanyContactSelector.tsx:190",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/CompanyContactSelector.tsx:214",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/PurchaseDetailPanel.tsx:424",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/components/ShippingDetailPanel.tsx:511",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:167",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:266",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantPolicyPage.tsx:283",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/admin/TenantProfilePage.tsx:234",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:233",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:241",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/bots/BotsPage.tsx:248",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:493",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx:164",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:308",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/orders/OrdersFormModal.tsx:86",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:231",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:238",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:255",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:278",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:285",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:302",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:346",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:353",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/products/ProductEditPage.tsx:360",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:156",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:157",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/status-master/StatusMasterPage.tsx:260",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/status-master/StatusMasterPage.tsx:274",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:322",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:338",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:393",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:409",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:311",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:325",
+       "status": "definite",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/DexTab.tsx:194",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:447",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:455",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:472",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:501",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:523",
+       "status": "definite",
+       "cls": "iv"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:190",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:300",
+       "status": "unconfirmed",
+       "cls": "v"
+      }
+     ]
+    }
+   },
+   {
+    "rule": "frontend/src/components.css:60 .filter-bar select",
+    "spec": "(0,1,1)",
+    "media": null,
+    "lastPseudo": null,
+    "vsMoldControl_0_1_0": "rule wins (higher specificity)",
+    "decls": [
+     "padding: var(--space-2) var(--space-3) (L62)",
+     "border: 1px solid var(--border) (L63)",
+     "border-radius: var(--radius-sm) (L64)",
+     "font-size: var(--font-base) (L65)",
+     "min-width: var(--input-select-min-w) (L66)",
+     "background: var(--bg-surface) (L67)",
+     "color: var(--text-primary) (L68)"
+    ],
+    "moldUsagesMatching": {
+     "definite": 0,
+     "any": 9,
+     "list": [
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:53",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:57",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:61",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:65",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:105",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:109",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/design-preview/sections/FormSection.tsx:113",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+        "FormSection referenced outside JSX tag 1 time(s)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:197",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx:209",
+       "tag": "Select",
+       "class": "comp-field__select",
+       "status": "unconfirmed",
+       "whys": [
+        "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+       ]
+      }
+     ]
+    },
+    "rawSelectsMatching": {
+     "count": 6,
+     "list": [
+      {
+       "at": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:493",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:311",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx:325",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/DexTab.tsx:194",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:190",
+       "status": "unconfirmed",
+       "cls": "v"
+      },
+      {
+       "at": "frontend/src/pages/super-admin/TcgSeriesTab.tsx:300",
+       "status": "unconfirmed",
+       "cls": "v"
+      }
+     ]
+    }
+   }
+  ],
+  "usageRows": [
+   {
+    "file": "frontend/src/components/ContactChannelForm.tsx",
+    "line": 193,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/features/tcg-analysis-review/ConditionReviewPanel.tsx",
+    "line": 77,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+    "line": 117,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx",
+    "line": 234,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 8,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/bots/BotFormFields.tsx",
+    "line": 60,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 8,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/bots/BotFormFields.tsx",
+    "line": 67,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 8,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/bots/BotFormFields.tsx",
+    "line": 73,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 8,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackAlertModal.tsx",
+    "line": 93,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackAlertModal.tsx",
+    "line": 120,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackAlertModal.tsx",
+    "line": 134,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackAlertModal.tsx",
+    "line": 146,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackByProductPage.tsx",
+    "line": 205,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackByProductPage.tsx",
+    "line": 217,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackPricesPage.tsx",
+    "line": 349,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackPricesPage.tsx",
+    "line": 356,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackPricesPage.tsx",
+    "line": 362,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackPricesPage.tsx",
+    "line": 374,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx",
+    "line": 234,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+    "line": 42,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/company-detail/CompanyAddressModal.tsx",
+    "line": 84,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": [
+     {
+      "id": "frontend/src/company-forms.css:100 .form-grid > .form-row select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/company-forms.css:120 .form-grid > .form-row select:focus",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/company-forms.css:156 .modal-content-wide .form-row select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/company-forms.css:181 .modal-content-wide .form-row select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+    "line": 193,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+    "line": 141,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+    "line": 179,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+    "line": 46,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+    "line": 83,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 53,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 57,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 61,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 65,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 105,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 109,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/design-preview/sections/FormSection.tsx",
+    "line": 113,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for FormSection (frontend/src/pages/design-preview/sections/FormSection.tsx)",
+       "FormSection referenced outside JSX tag 1 time(s)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+    "line": 132,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 190,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 200,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 210,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 227,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 238,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 249,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+    "line": 261,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+    "line": 72,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+    "line": 130,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+    "line": 144,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 302,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": "\"field-h-md field-w-sm\"",
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 348,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 358,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 368,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 377,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 388,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 399,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/leads/LeadsPage.tsx",
+    "line": 411,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/note-master/NoteMasterPage.tsx",
+    "line": 290,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 8,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/roles/RolesPage.tsx",
+    "line": 531,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+    "line": 67,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "line": 57,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": "\"field-h-md field-w-sm\"",
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "line": 80,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+    "line": 184,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+    "line": 192,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+    "line": 66,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+    "line": 74,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffPage.tsx",
+    "line": 261,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/staff/StaffPage.tsx",
+    "line": 269,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 6,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+    "line": 508,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx",
+    "line": 493,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx",
+    "line": 557,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/NoteMasterPanel.tsx",
+    "line": 278,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx",
+    "line": 279,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx",
+    "line": 293,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx",
+    "line": 278,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx",
+    "line": 292,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx",
+    "line": 197,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 1,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx",
+    "line": 209,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 1,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     },
+     {
+      "id": "frontend/src/components.css:60 .filter-bar select",
+      "status": "unconfirmed",
+      "whys": [
+       "no JSX usage found for RuleCreateDrawer (frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx)"
+      ]
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/RuleDrawer.tsx",
+    "line": 287,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/RuleDrawer.tsx",
+    "line": 299,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/RuleTestPanel.tsx",
+    "line": 457,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ShadowAccuracyPanel.tsx",
+    "line": 90,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ShadowAccuracyPanel.tsx",
+    "line": 99,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ShadowAccuracyPosts.tsx",
+    "line": 216,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/ShadowAccuracyPosts.tsx",
+    "line": 228,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/components/TypeMasterPanel.tsx",
+    "line": 253,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": [
+     {
+      "id": "frontend/src/components.css:19 .form-group select",
+      "status": "definite",
+      "whys": []
+     },
+     {
+      "id": "frontend/src/components.css:32 .form-group select:focus",
+      "status": "definite",
+      "whys": []
+     }
+    ]
+   },
+   {
+    "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+    "line": 587,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+    "line": 703,
+    "tag": "SelectControl",
+    "appearance": "bare(default)",
+    "selectClass": "comp-select__control",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx",
+    "line": 838,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 4,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "line": 284,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "line": 482,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   },
+   {
+    "file": "frontend/src/pages/super-admin/TcgSoldOutPage.tsx",
+    "line": 83,
+    "tag": "Select",
+    "appearance": null,
+    "selectClass": "comp-field__select",
+    "wrapperClassName": null,
+    "chainCount": 2,
+    "matched": []
+   }
+  ]
+ },
+ "R2": {
+  "playwrightVersion": "1.60.0",
+  "defaultLaunch": "FAIL: expects chromium_headless_shell-1223, cache has 1217",
+  "launchWithExecutablePath": "OK chromium 147.0.7727.15 headless shell; fontSize 14px",
+  "probe": "/tmp/CC報告ファイル/pw-probe.cjs, pw-probe-exe.cjs, pw-ua-select.cjs",
+  "uaSelectDefault": {
+   "fontSize": "13.3333px",
+   "fontFamily": "Arial",
+   "lineHeight": "normal",
+   "color": "rgb(0, 0, 0)"
+  }
+ },
+ "R3": {
+  "mdSection": "see av2-recon2.md"
+ }
+}

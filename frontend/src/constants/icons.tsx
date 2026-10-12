@@ -64,7 +64,6 @@ import {
   UsersIcon as UsersOutlineIcon,
   CubeIcon as CubeOutlineIcon,
   DocumentTextIcon as DocumentTextOutlineIcon,
-  ReceiptPercentIcon as ReceiptPercentOutlineIcon,
   ChartBarIcon as ChartBarOutlineIcon,
   CalendarIcon,
   QuestionMarkCircleIcon,
@@ -165,7 +164,6 @@ const HeartOutline      = hi(HeartOutlineIcon);
 const UsersOutline      = hi(UsersOutlineIcon);
 const PackageOutline    = hi(CubeOutlineIcon);
 const FileTextOutline   = hi(DocumentTextOutlineIcon);
-const ReceiptOutline    = hi(ReceiptPercentOutlineIcon);
 const TruckOutline      = hi(TruckOutlineIcon);
 const ChartBarOutline   = hi(ChartBarOutlineIcon);
 const CalendarBlank     = hi(CalendarIcon);
@@ -265,7 +263,6 @@ export const NAV_ICONS = {
   search:      MagnifyingGlass,    // outline
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
-  purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
   menu:        Bars3Outline,       // outline — mobile menu button（ハンバーガー）
   add:         PlusOutline,        // outline — 作成ボタン
 } satisfies Record<string, Icon>;

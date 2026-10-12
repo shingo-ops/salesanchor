@@ -1152,7 +1152,6 @@ async def mark_lead_messages_read(
     out of scope（spec §5-6 注記）。
     """
     leads_t = tenant_table_ref(db, tenant_id, "leads")
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     lead_q = await db.execute(
         text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
@@ -1164,20 +1163,8 @@ async def mark_lead_messages_read(
             detail="リードが見つかりません",
         )
 
-    # 現 staff の解決（user.email → staff.id）
-    staff_id: Optional[int] = None
-    if current_user.email:
-        try:
-            sr = await db.execute(
-                text(f"SELECT id FROM {staff_t} WHERE primary_email = :email "
-                     "ORDER BY id ASC LIMIT 1"),
-                {"email": current_user.email},
-            )
-            row = sr.first()
-            if row:
-                staff_id = int(row[0])
-        except Exception:
-            staff_id = None
+    # 既読者はログイン中の users.id（ADR-1008: seen_by_staff_id には users.id を入れる）
+    staff_id: int = current_user.id
 
     upd = await db.execute(
         text(f"""
@@ -1658,7 +1645,6 @@ async def send_lead_message(
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
     outbound_translation_drafts_t = tenant_table_ref(db, tenant_id, "outbound_translation_drafts")
     lead_q = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} "
@@ -1928,20 +1914,8 @@ async def send_lead_message(
             detail="Meta Send API への接続に失敗しました",
         )
 
-    # ----- (7) sent_by_staff_id 解決（mark-read と同パターン） -----
-    sent_by_staff_id: Optional[int] = None
-    if current_user.email:
-        try:
-            sr = await db.execute(
-                text(f"SELECT id FROM {staff_t} WHERE primary_email = :email "
-                     "ORDER BY id ASC LIMIT 1"),
-                {"email": current_user.email},
-            )
-            row = sr.first()
-            if row:
-                sent_by_staff_id = int(row[0])
-        except Exception:
-            sent_by_staff_id = None
+    # ----- (7) sent_by_staff_id（ADR-1008: ログイン中の users.id） -----
+    sent_by_staff_id: int = current_user.id
 
     # ----- (8) meta_messages に outbound 行 INSERT -----
     sender_id = page_id_for_send if platform == "messenger" else (ig_business_id or page_id_for_send)
@@ -2220,7 +2194,7 @@ async def _send_discord_message(
         db, tenant_id=tenant_id, lead_id=lead_id, channel_id=dm_channel_id,
         identity=identity, content=text_body,
     )
-    sent_by_staff_id = identity.staff_id
+    sent_by_staff_id = current_user.id  # ADR-1008: users.id（identity.staff_id は使わない）
 
     # meta_messages に outbound 行 INSERT
     insert_result = await db.execute(
@@ -2322,7 +2296,6 @@ async def send_lead_image_message(
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
 
     lead_q = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} "
@@ -2393,7 +2366,7 @@ async def send_lead_image_message(
             identity=identity,
             file=OutboundFile(filename=dc_filename, data=file_bytes, content_type=content_type),
         )
-        dc_sent_by_staff_id: Optional[int] = identity.staff_id
+        dc_sent_by_staff_id: int = current_user.id  # ADR-1008: users.id
 
         dc_insert_params = {
             "tenant_id": tenant_id,
@@ -2702,19 +2675,8 @@ async def send_lead_image_message(
         logger.warning("Meta Send transport error (image) for lead %s: %s", lead_id, e)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Meta Send API への接続に失敗しました")
 
-    # ----- (9) sent_by_staff_id 解決 -----
-    sent_by_staff_id: Optional[int] = None
-    if current_user.email:
-        try:
-            sr = await db.execute(
-                text(f"SELECT id FROM {staff_t} WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
-                {"email": current_user.email},
-            )
-            row = sr.first()
-            if row:
-                sent_by_staff_id = int(row[0])
-        except Exception:
-            sent_by_staff_id = None
+    # ----- (9) sent_by_staff_id（ADR-1008: ログイン中の users.id） -----
+    sent_by_staff_id: int = current_user.id
 
     # ----- (10) meta_messages に outbound 行 INSERT -----
     sender_id = page_id_for_send if platform == "messenger" else (ig_business_id or page_id_for_send)

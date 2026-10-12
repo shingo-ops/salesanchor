@@ -7,6 +7,7 @@ import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { DiscordFormState } from "./company-detail.types";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Props {
   discordForm: DiscordFormState;
@@ -50,7 +51,7 @@ export function CompanyDiscordTab({
           </div>
           <div className="form-row">
             <label>{t("discord.channelId")}</label>
-            <input
+            <TextFieldControl
               value={discordForm.channel_id}
               onChange={(e) => update({ channel_id: e.target.value })}
               disabled={!canEdit}
@@ -59,7 +60,7 @@ export function CompanyDiscordTab({
           </div>
           <div className="form-row">
             <label>{t("discord.userId")}</label>
-            <input
+            <TextFieldControl
               value={discordForm.user_id}
               onChange={(e) => update({ user_id: e.target.value })}
               disabled={!canEdit}
@@ -68,7 +69,7 @@ export function CompanyDiscordTab({
           </div>
           <div className="form-row">
             <label>{t("discord.invoiceWebhook")}</label>
-            <input
+            <TextFieldControl
               value={discordForm.invoice_webhook}
               onChange={(e) => update({ invoice_webhook: e.target.value })}
               disabled={!canEdit}
@@ -77,7 +78,7 @@ export function CompanyDiscordTab({
           </div>
           <div className="form-row">
             <label>{t("discord.shipmentWebhook")}</label>
-            <input
+            <TextFieldControl
               value={discordForm.shipment_webhook}
               onChange={(e) => update({ shipment_webhook: e.target.value })}
               disabled={!canEdit}

@@ -1,0 +1,89 @@
+{
+ "label": "before",
+ "po_label": "発注管理",
+ "perms": {
+  "a_many": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱",
+    "発注管理",
+    "見積・請求管理",
+    "顧客管理",
+    "受注管理",
+    "売上管理",
+    "報酬管理",
+    "管理センター"
+   ],
+   "po_label_count": 1,
+   "management_center_link": "有り"
+  },
+  "b_po_only": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱",
+    "発注管理",
+    "管理センター"
+   ],
+   "po_label_count": 1,
+   "management_center_link": "有り"
+  },
+  "c_staff_only": {
+   "sidebar_items": [
+    "スケジュール",
+    "受信箱",
+    "管理センター"
+   ],
+   "po_label_count": 0,
+   "management_center_link": "有り"
+  }
+ },
+ "mc_leftmenu_a": {
+  "items": [
+   "スタッフ",
+   "ロール",
+   "チーム",
+   "シフト",
+   "報酬設定",
+   "レポート",
+   "テナントポリシー",
+   "仕入先",
+   "ステータスマスタ",
+   "状態マスタ",
+   "商品カテゴリ",
+   "単位マスタ",
+   "備考マスタ",
+   "発注管理",
+   "データ管理",
+   "Googleドライブ",
+   "FedEx",
+   "DHL",
+   "UPS",
+   "PayPal",
+   "Discord 連携設定",
+   "Discordアナウンス",
+   "発行者情報",
+   "チャンネル",
+   "チャネル管理",
+   "ボット",
+   "通知設定"
+  ],
+  "po_label_count": 1
+ },
+ "urls": {
+  "/purchase-orders": {
+   "final_url": "/purchase-orders",
+   "body_head200": "スケジュール 受信箱 発注管理 見積・請求管理 顧客管理 受注管理 売上管理 報酬管理 管理センター 発注管理 発注書の作成から受取まで管理します。 全ステータス 下書き 発注済 受領済 キャンセル 送信エラー 発注番号 金額 ステータス 発注日 入荷日 操作 発注が登録されていません R アカウント review@salesanchor.jp undefined undefined アカウント設",
+   "console_errors": []
+  },
+  "/management-center/purchase-orders": {
+   "final_url": "/management-center/purchase-orders",
+   "body_head200": "スケジュール 受信箱 発注管理 見積・請求管理 顧客管理 受注管理 売上管理 報酬管理 管理センター 管理センター 組織・データ・業務設定を一か所で管理します。 チーム・人事 スタッフ ロール チーム シフト 報酬設定 レポート テナントポリシー データ管理 仕入先 ステータスマスタ 状態マスタ 商品カテゴリ 単位マスタ 備考マスタ 発注管理 データ管理 API連携 Googleドライブ FedE",
+   "console_errors": []
+  },
+  "/no-such-page": {
+   "final_url": "/no-such-page",
+   "body_head200": "",
+   "console_errors": []
+  }
+ }
+}
