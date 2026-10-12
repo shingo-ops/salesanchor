@@ -23,7 +23,7 @@
 
 ## 1. 停止の件数（フックの記録）
 
-出典: `~/.claude/logs/agent-events.jsonl`（86,578行）。SessionStart の集計は `/Users/tanizawashingo/salesanchor/.claude/hooks/stop-log-digest.sh:26-32`。
+出典: ~/.claude/logs/agent-events.jsonl（86,578行）。SessionStart の集計は /Users/tanizawashingo/salesanchor/.claude/hooks/stop-log-digest.sh:26-32。
 
 | type | 7日件数 | 中身 |
 |---|---|---|
@@ -78,7 +78,7 @@
 
 ## 3. 止める仕組みの実物
 
-### 3-1. worktree-only-guard（`/Users/tanizawashingo/.claude/scripts/worktree-only-guard.sh`）
+### 3-1. worktree-only-guard（/Users/tanizawashingo/.claude/scripts/worktree-only-guard.sh）
 
 - :40 — 作業ディレクトリが絶対パスでない、または存在しないときは拒否する。
 - :46-49 — 先頭が `cd` のコマンドは、引数が次の正規表現に合わないと拒否する。
@@ -91,7 +91,7 @@
   - develop/main への force push
 - 【事実】`git -C X` やサブシェルの `( cd X && … )` は解析の対象外。拒否されないが、cd の先は検査されない。
 
-### 3-2. agent-danger-hook（`/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh`、413行）
+### 3-2. agent-danger-hook（/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh、413行）
 
 - :41-106 psql-write-guard
   - 本番 DB への書き込みを検出する。検出する形は `ssh+psql < file`、`-f file`、`| psql`、`docker exec psql`、`psql -c` の書き込み SQL。
@@ -110,8 +110,8 @@
   - ~/.claude/permits/danger-permit-<op>-<UTC時刻>.json を作る。
   - 中身は `{op, created_at, expires_at: 30分後, created_by: "manual"}`。
   - 本人を確認する仕組みはない。permits-guard は permits のパスの文字列だけを照合するので、`bash scripts/permit-danger.sh "psql write"` という形の実行は止めない。
-  - `~/.claude/settings.json` の autoMode.allow には、PO の決定に基づいて AI がこれを1回実行してよいとする規則がある（Reviewer 再審査 LOW-F で確認）。
-- psql 用の消費: `/Users/tanizawashingo/.codex/salesanchor/permit_bridge.py`（105行）
+  - ~/.claude/settings.json の autoMode.allow には、PO の決定に基づいて AI がこれを1回実行してよいとする規則がある（Reviewer 再審査 LOW-F で確認）。
+- psql 用の消費: /Users/tanizawashingo/.codex/salesanchor/permit_bridge.py（105行）
   - :1-4 で "No ticket issuance" と宣言している（発行はしない）。
   - :55-56 の受理条件: op == "psql write"、created_by == "manual"、有効期間が1800秒以下、uid が一致する、symlink でない。
   - :59 で受理と同時にチケットを削除する。
@@ -119,7 +119,7 @@
   - 【事実】repo 内の参照（`git grep permit_bridge`）は0件。repo の外だけにある仕組み。
 - 【事実】PO は、本番 DB に1回書き込むたびに `scripts/permit-danger.sh` を1回実行している（7日で44回）。
 
-### 3-4. pr-body-guard（`/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh`、115行）
+### 3-4. pr-body-guard（/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh、115行）
 
 - :23-30 — Bash のコマンド文字列に `gh pr create|edit` と `--body` / `--body-file` の両方が含まれると動く。
   - 【事実】今回の調査中、調査結果をヒアドキュメントでファイルに書こうとしたところ、本文にこの文字列が含まれていたため止められた。
