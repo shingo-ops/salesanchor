@@ -8,6 +8,7 @@
 
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
+| Discord 監視通知 → AI 保守運用（discord-ops-intake。監視 webhook を Claude Code が受けて調査・委任範囲で対応） | [discord-ops-intake/README.md](discord-ops-intake/README.md) | あるべき姿・KGI提示（KGI-3 PO修正反映）・recon・design草案 2026-10-13・実装未着手 |
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
 | reaper 自動掃除（worktree の自動回収） | [reaper-auto-cleanup/README.md](reaper-auto-cleanup/README.md) | あるべき姿・KGI・recon・design済 2026-07-22 |
 | 文書の親子構造 標準ルール化 | doc-parent-child/README.md (doc-parent-child/README.md) | 公開 |

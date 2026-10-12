@@ -1,0 +1,1 @@
+dryrun.log and apply.log are the raw outputs of dryrun.sql and apply.sql run on prod on 2026-10-05 (03:22:03Z and 03:23:17Z). The post-apply checks were read-only single -c queries whose results are summarized in README.md under 実行記録 (no log file).

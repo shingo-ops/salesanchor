@@ -1,0 +1,15 @@
+-- query (read-only, run after apply on 2026-10-04 ~23:12Z via: docker compose exec -T postgres psql -X -c '<SQL>')
+BEGIN READ ONLY; SELECT p.id, p.product_code, p.mark, p.name, p.is_active, (SELECT string_agg(k.position::text || chr(58) || k.keyword, chr(32) || chr(124) || chr(32) ORDER BY k.position, k.id) FROM public.product_search_keywords k WHERE k.product_id = p.id) AS search_keywords, (SELECT string_agg(k.position::text || chr(58) || k.keyword, chr(32) || chr(124) || chr(32) ORDER BY k.position, k.id) FROM public.product_exclude_keywords k WHERE k.product_id = p.id) AS exclude_keywords, p.updated_at FROM public.products p WHERE p.id IN (58, 60, 74, 75, 103, 105) ORDER BY p.id; ROLLBACK;
+-- output (verbatim)
+BEGIN
+ id  | product_code | mark |                name                | is_active |                            search_keywords                             | exclude_keywords |          updated_at
+-----+--------------+------+------------------------------------+-----------+------------------------------------------------------------------------+------------------+-------------------------------
+  58 | SV9          | SV9  | バトルパートナーズ                 | t         | 0:バトルパートナーズ                                                   | 1:デッキビルド   | 2026-10-04 23:11:34.417695+00
+  60 | SVN          | SVN  | バトルパートナーズ デッキビルドBOX | t         | 1:バトルパートナーズ デッキビルド | 2:SV9 デッキビルド                 |                  | 2026-10-04 23:11:34.417695+00
+  74 | SV7          | SV7  | ステラミラクル                     | t         | 0:ステラミラクル                                                       | 1:デッキビルド   | 2026-10-04 23:11:34.417695+00
+  75 | SVK          | SVK  | ステラミラクル デッキビルドBOX     | t         | 1:ステラミラクル デッキビルド | 2:SV7 デッキビルド                     |                  | 2026-10-04 23:11:34.417695+00
+ 103 | SV3          | SV3  | 黒炎の支配者                       | t         | 0:黒炎 | 1:黒炎の支配者                                                | 1:デッキビルド   | 2026-10-04 23:11:34.417695+00
+ 105 | SVF          | SVF  | 黒炎の支配者 デッキビルドBOX       | t         | 1:黒炎の支配者 デッキビルド | 2:黒炎 デッキビルド | 3:SV3 デッキビルド |                  | 2026-10-04 23:11:34.417695+00
+(6 rows)
+
+ROLLBACK
