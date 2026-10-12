@@ -128,6 +128,73 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(filterInSearchRow).toBeHidden();
   });
 
+  test("スマホ: 地が1色・左右対称・12px文字のコントラストが基準以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13: 実機の画素を数えて分かった3点を、ここで数値として固定する。
+    //   ① 行の左右の余白が対称（以前は左12px・右0px の非対称だった）
+    //   ② 12px の副文字が 4.5:1 以上（以前は --text-muted で 3.74:1）
+    //   ③ 一覧の面が画面の下まで伸びる（以前は下の空き領域にページの地が出て
+    //      地が2色に割れていた。実測 45.9% + 44.0%）
+    const row = page.locator("button.conversation-item").first();
+    const panel = page.locator(".inbox-left-panel");
+
+    // ① 行の左端と右端の余白が同じ（左右対称）
+    const geo = await page.evaluate(() => {
+      const el = document.querySelector("button.conversation-item") as HTMLElement | null;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { left: Math.round(r.left), right: Math.round(window.innerWidth - r.right) };
+    });
+    expect(geo, "会話の行が見つからない").not.toBeNull();
+    expect(geo!.left, "行の左の余白").toBe(geo!.right);
+
+    // ② 12px の文字（時刻・プレビュー）の明暗差が 4.5:1 以上
+    const contrast = await page.evaluate(() => {
+      const lum = (c: string) => {
+        const m = c.match(/\d+/g);
+        if (!m) return null;
+        const [r, g, b] = m.slice(0, 3).map((v) => {
+          const x = Number(v) / 255;
+          return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const el = document.querySelector(".conv-preview-text") as HTMLElement | null;
+      if (!el) return null;
+      const fg = lum(getComputedStyle(el).color);
+      // 背景は祖先をたどって透明でない最初の色を使う
+      let node: HTMLElement | null = el;
+      let bg: number | null = null;
+      while (node) {
+        const c = getComputedStyle(node).backgroundColor;
+        if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") { bg = lum(c); break; }
+        node = node.parentElement;
+      }
+      if (fg === null || bg === null) return null;
+      const hi = Math.max(fg, bg), lo = Math.min(fg, bg);
+      return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+    });
+    expect(contrast, "プレビュー文の明暗差が測れない").not.toBeNull();
+    expect(contrast!, "12px の副文字の明暗差").toBeGreaterThanOrEqual(4.5);
+
+    // ③ 一覧の面が画面の下端近くまで伸びている（下に地が広く残らない）
+    const fill = await page.evaluate(() => {
+      const el = document.querySelector(".inbox-left-panel") as HTMLElement | null;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { bottom: Math.round(r.bottom), viewport: window.innerHeight };
+    });
+    expect(fill, "一覧の面が見つからない").not.toBeNull();
+    // 下部タブバー（約56px）より下に食い込む必要はないが、画面の7割より下まで伸びること
+    expect(fill!.bottom).toBeGreaterThan(fill!.viewport * 0.7);
+
+    await expect(row).toBeVisible();
+    await expect(panel).toBeVisible();
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
