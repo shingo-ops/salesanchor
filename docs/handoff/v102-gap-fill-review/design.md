@@ -54,16 +54,16 @@
 2. 理由コードの3点セット（`backend/tests/test_review_reason_codes_consistency.py` :60・:66・:71 がそろいを検査）
    - 新規 `docs/handoff/v102-prod-switch/data/review_reason_codes/seed_20261012_gemini_gap_suspect.sql`：`('gemini_gap_suspect', 'system', 'extraction')`
      - fix_stage を extraction にする理由：原因は書き写しの抜け。`v102_transcription_svc.py:47` により、書き写しを直す投稿の一覧に出る。
-   - `frontend/src/locales/ja.json`・`en.json` の `reviewReason.gemini_gap_suspect`
+   - `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `reviewReason.gemini_gap_suspect`
      - ja: 「Gemini取りこぼし疑い（間の行に商品名がある可能性）」
      - en: 「Possible Gemini omission (gap lines may hold the product name)」
-   - `test_review_reason_codes_consistency.py` の `_code_side_constants()` に `REASON_GEMINI_GAP_SUSPECT` を足す。
+   - `backend/tests/test_review_reason_codes_consistency.py` の `_code_side_constants()` に `REASON_GEMINI_GAP_SUSPECT` を足す。
 3. 1回だけのデータ変更 SQL（同じディレクトリ。前例 up_*.sql の型を写す）
-   - `gs_precheck.sql`（ROWS|36・HAS_NEW|0）
-   - `gs_dryrun.sql`（INSERTED|1・CHECK_OK 1・ROWS_OK 37・ROLLBACK）
-   - `gs_commit.sql`
-   - `gs_verify.sql`（gemini_gap_suspect|system|extraction・ROWS|37）
-   - `gs_rollback.sql`
+   - `docs/handoff/v102-prod-switch/data/review_reason_codes/gs_precheck.sql`（ROWS|36・HAS_NEW|0）
+   - `docs/handoff/v102-prod-switch/data/review_reason_codes/gs_dryrun.sql`（INSERTED|1・CHECK_OK 1・ROWS_OK 37・ROLLBACK）
+   - `docs/handoff/v102-prod-switch/data/review_reason_codes/gs_commit.sql`
+   - `docs/handoff/v102-prod-switch/data/review_reason_codes/gs_verify.sql`（gemini_gap_suspect|system|extraction・ROWS|37）
+   - `docs/handoff/v102-prod-switch/data/review_reason_codes/gs_rollback.sql`
    - README に記録欄
 4. 試験（`backend/tests/test_line_analysis_v102_svc.py`）
    - 対象の件に要素が1つ足され、lines と candidates が段1の記録と同じ。
@@ -89,11 +89,11 @@
    - `backend/app/services/v102_transcription_svc.py`（:32 の SELECT と :233）と `backend/app/routers/tcg_v102_posts.py` の PostItem に、同じ `gap_suspect`。
    - API の型の生成（CI「API contract is up to date」）を更新する。
 2. frontend
-   - 新規 `frontend/src/features/tcg-analysis-review/GapSuspectNote.tsx`（props: gapLines・candidates）。
+   - 新規 frontend/src/features/tcg-analysis-review/GapSuspectNote.tsx（props: gapLines・candidates）。
      - 表示は `t("reviewItem.gapLines", { lines })` と `t("reviewItem.gapCandidates", { names })`。
      - lines は `t("reviewItem.gapLineNumber", { n })` を `t("reviewReason.separator")` でつなぐ。
      - 部品は既存の金型（Stack 等）と既存のトークンだけを使う。色の直値・生の要素の新しいスタイルは使わない。
-   - `ReviewItemDrawer.tsx` の理由の表示（:71-95）と `V102PostEditModal.tsx` の件の理由（:204-205 付近）で、code が gemini_gap_suspect で gap_suspect があるときに GapSuspectNote を出す。
+   - `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx` の理由の表示（:71-95）と `frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx` の件の理由（:204-205 付近）で、code が gemini_gap_suspect で gap_suspect があるときに GapSuspectNote を出す。
    - i18n：`reviewItem.gapLines`「間の行: {{lines}}」、`reviewItem.gapLineNumber`「L{{n}}」、`reviewItem.gapCandidates`「候補: {{names}}」（en も同じ鍵）。
      - `reviewReason.*` に置かない理由：整合テスト :60 が `reviewReason` の鍵を seed のコードと一致させるため。
    - 試験：GapSuspectNote と Drawer の表示（vitest）。
@@ -123,7 +123,7 @@
   - `backend/tests/test_review_reason_codes_consistency.py`（コード・seed・ja/en のそろい）
   - `backend/tests/test_line_analysis_v102_svc.py`（理由の付き方と配信に入らないこと）
   - `backend/tests/test_v102_gap_lines.py`（記録の形の読み取り）
-- 記録の形の持ち主は `v102_gap_lines.py` だけ。画面の行番号の唯一の読み元は `extraction_jobs.system_review_detail`。
+- 記録の形の持ち主は `backend/app/services/v102_gap_lines.py` だけ。画面の行番号の唯一の読み元は `extraction_jobs.system_review_detail`。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 過去事例（社内）：便G（PR #4127）で理由コード4つを、同じ「seed＋i18n＋定数＋本番1回の SQL（マージ前に実行）」の型で入れ、本番で問題なし（README の gt_* の記録：INSERTED 4・ROWS_OK 35・VERIFY_DONE）。今回も同じ型を使う。

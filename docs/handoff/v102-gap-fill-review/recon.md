@@ -45,18 +45,18 @@
   - :60 seed のコード集合＝ja.json の `reviewReason` の鍵＝en.json の同じ鍵（unknown・source・separator を除く）
   - :66 コード側の定数（:38-57 `_code_side_constants()` に列挙）がすべて seed にある
   - :71 seed の各コードが backend/app の .py に `"code"` のリテラルで出る
-- seed：`docs/handoff/v102-prod-switch/data/review_reason_codes/seed_*.sql`（`seed_*.sql` の名前でないと拾われない）。前例は `seed_20261011b_unit_price_mismatch.sql` と up_precheck / up_dryrun / up_commit / up_verify / up_rollback.sql、README の記録欄。
+- seed：docs/handoff/v102-prod-switch/data/review_reason_codes/seed_*.sql（seed_*.sql の名前でないと拾われない）。前例は `docs/handoff/v102-prod-switch/data/review_reason_codes/seed_20261011b_unit_price_mismatch.sql` と up_precheck / up_dryrun / up_commit / up_verify / up_rollback.sql、README の記録欄。
 - 本番の表（読み取り、2026-10-12）：36行（最後は unit_price_mismatch、2026-10-11 06:50 UTC）。
 - fix_stage の効き目：`backend/app/services/v102_transcription_svc.py:47` 投稿の一覧（書き写しを直す画面）の対象は「件の理由に fix_stage='extraction' のコードがある」投稿。
 - 「このままで良い」で外せない理由の置き場所：`backend/app/services/review_reason_codes_svc.py:16`（condition_unknown だけ）。
 
 ## 6. 画面（段2a の PR-B で使う）
-- 要確認の一覧 `frontend/src/features/tcg-analysis-review/NeedsReviewTabsPanel.tsx:339-355` → `ReviewItemDrawer.tsx:71-95` の理由の表示は `reviewReasonLabel(t, code)` だけで、行番号は持たない。
+- 要確認の一覧 `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:339-355` → `ReviewItemDrawer.tsx:71-95` の理由の表示は `reviewReasonLabel(t, code)` だけで、行番号は持たない。
 - API `backend/app/routers/tcg_analysis_review.py:72-76`（理由は {code, source, fix_stage, ackable}）、:85-96 `AnalysisResultItem`。SQL `backend/app/services/tcg_analysis_review_svc.py:38-44` は extraction_jobs を JOIN 済み。SELECT は :147-327。
 - 投稿の画面 `backend/app/routers/tcg_v102_posts.py:68-82`（lines[{number,text}]・items[...review_reason_details]）、値は `backend/app/services/v102_transcription_svc.py:32, :233`。
 - `system_review_detail` を返す API は無い（grep は書き込み4行と migration 2行だけ）。
 - 差し込み付きの i18n の前例：`reviewItem.sourceLine`（ja.json:3754 `{{source}}`、ReviewItemDrawer.tsx:75）。理由の区切りは `reviewReason.separator`（ja.json :3759-3802 の範囲）。
-- 金型：`frontend/src/components/Badge.tsx`、`Callout.tsx`、`Stack.tsx`。ReviewItemDrawer は Button・Callout・Drawer・Stack を使う。
+- 金型：`frontend/src/components/Badge.tsx`、`frontend/src/components/Callout.tsx`、`frontend/src/components/Stack.tsx`。ReviewItemDrawer は Button・Callout・Drawer・Stack を使う。
 
 ## 7. 未確認
 - 1,021回の保存応答で、対象の件（unmatched・価格数量あり・間の行あり）のうち、今は要確認でない件の数 → 実装後の前後比較で数える（design.md §5 受入1）。
