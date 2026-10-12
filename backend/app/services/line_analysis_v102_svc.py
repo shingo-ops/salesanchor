@@ -464,7 +464,8 @@ def run_v102_extraction(session: Session, extraction_job_id: str, *, recorder=No
     pending: Exception | None = None
     if recorder is not None:
         try:
-            recorder.on_response(response_text)  # 費用は下の _record_usage だけが書く（二重に書かない）
+            # 費用は下の _record_usage だけが書く（二重に書かない）。思考要約は応答と同じ行に保存
+            recorder.on_response(response_text, thought_summaries=result.get("thought_summaries"))
         except Exception as exc:  # noqa: BLE001
             pending = exc
     _record_usage(session, result, extraction_job_id, recorder.id if recorder is not None else None)

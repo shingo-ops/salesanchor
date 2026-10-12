@@ -326,6 +326,10 @@ def migrate(cursor):
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS input_tokens integer")
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS output_tokens integer")
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
+    # 思考要約: AttemptRecorder.on_response が thought_summaries を書く。本番の migration を public に当て、
+    # TCG_SCHEMA を差し替えた tenant 側の attempts にも同じ列を足す。
+    cursor.execute((MIGRATIONS / "20261012_200000_add_extraction_attempts_thought_summaries.sql").read_text())
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
 
 
 @pytest.fixture

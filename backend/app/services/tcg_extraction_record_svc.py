@@ -129,9 +129,20 @@ class AttemptRecorder:
             raise RecordError("ATTEMPT_CONFLICT")
         return owned
 
+    @staticmethod
+    def _thoughts_json(thought_summaries: list[str] | None) -> str | None:
+        """思考要約を JSON 文字列にする。None・MAX_BYTES 超は None（列は NULL）。"""
+        if thought_summaries is None:
+            return None
+        body = json.dumps(thought_summaries, ensure_ascii=False)
+        if len(body.encode("utf-8")) > MAX_BYTES:
+            return None
+        return body
+
     def on_response(
         self, response: str, *, input_tokens: int = 0, output_tokens: int = 0,
         usage_counts: UsageCounts | None = None,
+        thought_summaries: list[str] | None = None,
     ) -> None:
         self._input_tokens = input_tokens
         self._output_tokens = output_tokens
@@ -139,14 +150,17 @@ class AttemptRecorder:
         s = self.session
         size = len(response.encode("utf-8"))
         oversized = size > MAX_BYTES
+        thoughts = self._thoughts_json(thought_summaries)
         try:
             self._owned()
             s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='received',
                 response_text=:body,response_bytes=:size,response_sha256=:sha,
+                thought_summaries=CAST(:thoughts AS jsonb),
                 response_received_at=clock_timestamp() WHERE id=:id AND phase='started'
                 RETURNING id
             """), {"id": self.id, "body": None if oversized else response,
-                     "size": size, "sha": digest(response)}).scalar_one()
+                     "size": size, "sha": digest(response),
+                     "thoughts": thoughts}).scalar_one()
             s.commit()
         except (RecordError, SoftTimeLimitExceeded):
             s.rollback()
