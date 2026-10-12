@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Use this agent when a Planner package must be validated for implementation readiness before Generator receives it.
-model: opus
+model: fable
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
