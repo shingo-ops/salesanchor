@@ -33,10 +33,7 @@ DECLARE
     seeded_count   INTEGER := 0;
 BEGIN
     -- 1. 権限マスタに goals.* キーを追加 (一度だけ)
-    INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-        ('goals.view', 'goals', 'view', '目標を閲覧する', '目標管理'),
-        ('goals.edit', 'goals', 'edit', '目標を作成・編集する', '目標管理')
-    ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 権限マスタへの goals.view / goals.edit の INSERT を外した（本番には既にある。新しい権限キーは migration では足さない）。
 
     -- 2. 全テナント schema に goals テーブルを作成 + 権限割当
     FOR schema_rec IN
@@ -118,34 +115,9 @@ BEGIN
         created_count := created_count + 1;
 
         -- 2d. 全ロールに goals.view を付与、リーダー以上に goals.edit を付与
-        FOR role_rec IN
-            EXECUTE format(
-                'SELECT id, name FROM %I.roles',
-                schema_rec.nspname
-            )
-        LOOP
-            -- goals.view は全ロール
-            EXECUTE format(
-                'INSERT INTO %I.role_permissions (role_id, permission_id) '
-                'SELECT %s, p.id FROM public.permissions p '
-                'WHERE p.key = ''goals.view'' '
-                'ON CONFLICT (role_id, permission_id) DO NOTHING',
-                schema_rec.nspname, role_rec.id
-            );
-            -- goals.edit はオーナー / システム管理者 / チームリーダー
-            IF role_rec.name IN ('オーナー', 'システム管理者', 'チームリーダー', 'マネージャー') THEN
-                EXECUTE format(
-                    'INSERT INTO %I.role_permissions (role_id, permission_id) '
-                    'SELECT %s, p.id FROM public.permissions p '
-                    'WHERE p.key = ''goals.edit'' '
-                    'ON CONFLICT (role_id, permission_id) DO NOTHING',
-                    schema_rec.nspname, role_rec.id
-                );
-                GET DIAGNOSTICS seeded_count = ROW_COUNT;
-            END IF;
-        END LOOP;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 役割ごとの goals.* の付与を外した。新テナントは作成コードの役割一覧が付与する。
 
-        RAISE NOTICE 'migration 075: %: goals テーブル作成 + 権限割当 OK', schema_rec.nspname;
+        RAISE NOTICE 'migration 075: %: goals テーブル作成 OK', schema_rec.nspname;
     END LOOP;
 
     RAISE NOTICE 'migration 075: 全 % テナントに goals を導入', created_count;

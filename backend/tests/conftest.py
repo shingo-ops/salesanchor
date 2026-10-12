@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
     extraction_state_format  TEXT,
     extraction_example_text  TEXT,
     extraction_ship_format   TEXT,
+    extraction_layout_rules  TEXT,
+    extraction_hard_cases    TEXT,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -115,32 +117,8 @@ def _supplier_ssot_premigration(cursor, schema: str):
     """)
 
 
-def _load_country_seed_rows() -> list[tuple[str, str, str]]:
-    """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
-    import re
-    from pathlib import Path
-
-    src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "constants" / "countries.ts").read_text("utf-8")
-    pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
-    return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
-
-
-def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """type_master の seed rows を canonical code に合わせる。"""
-    return [
-        ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
-        ("one_piece", "ワンピース", "One Piece TCG"),
-        ("dragon_ball", "ドラゴンボール", "Dragon Ball TCG"),
-        ("union_arena", "ユニオンアリーナ", "Union Arena"),
-        ("yugioh", "遊戯王", "Yu-Gi-Oh!"),
-        ("other", "その他", "Other"),
-        ("gundam", "ガンダムカードゲーム", "Gundam Card Game"),
-        ("weiss_schwarz", "ヴァイスシュヴァルツ", "Weiß Schwarz"),
-        ("digimon", "デジモンカードゲーム", "Digimon Card Game"),
-        ("hololive", "ホロライブ", "hololive Official Card Game"),
-        ("lorcana", "ディズニー ロルカナ", "Disney Lorcana"),
-        ("xross_stars", "クロススタァ", "Xross Stars"),
-    ]
+# 国・type_master の seed 供給元は tests/seed_data.py に集約（PG の試験と共用。ADR-1007 段2）
+from tests.seed_data import _load_country_seed_rows, _load_tcg_type_seed_rows  # noqa: E402
 
 # pytest-asyncio 0.25+ で event_loop fixture の上書きは deprecated。
 # asyncio_default_fixture_loop_scope = "function" の場合、session-scoped fixture は
@@ -158,6 +136,11 @@ async def test_engine():
         import sqlite3
         from decimal import Decimal
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-07 00:00:00+00:00")
+        # PostgreSQL の LEAST（NULL 以外の最小値）。paid_at の未来日クランプ用
+        dbapi_conn.create_function(
+            "LEAST", -1,
+            lambda *a: min((x for x in a if x is not None), default=None),
+        )
         dbapi_conn.create_function("LPAD", 3, lambda s, n, pad: str(s).rjust(int(n), pad))
         sqlite3.register_adapter(Decimal, lambda d: float(d))
         # SQLite は FK 制約がデフォルト OFF。ON DELETE CASCADE と 409 テストのために ON にする
@@ -411,7 +394,7 @@ async def setup_test_db(test_engine):
                 api_key_hash VARCHAR(128) NOT NULL,
                 discord_user_id VARCHAR(50),
                 sender_email VARCHAR(255),
-                owner_staff_id INTEGER NOT NULL REFERENCES staff(id),
+                owner_staff_id INTEGER NOT NULL REFERENCES users(id),
                 last_executed_at TIMESTAMP,
                 execution_count INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -627,7 +610,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 role TEXT NOT NULL
                     CHECK (role IN ('sales','order','ship','purchase','trouble')),
-                staff_id INTEGER REFERENCES staff(id) ON DELETE SET NULL,
+                staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 calculated_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
                 calculated_at TIMESTAMP,
                 notes TEXT,
@@ -744,6 +727,7 @@ async def setup_test_db(test_engine):
                 priority INTEGER NOT NULL DEFAULT 0,
                 is_system BOOLEAN DEFAULT FALSE,
                 description VARCHAR(500),
+                system_key TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tenant_id, name)
@@ -1612,6 +1596,7 @@ async def client(db_session):
     from app.auth.dependencies import (
         get_current_tenant,
         get_current_user,
+        require_tenant_admin,
     )
     from app.database import get_db
     from app.main import app
@@ -1629,6 +1614,9 @@ async def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
+    # tenant admin 判定は user_roles（SQLite では系統が違う）を引くため、client 経由の試験ではモックユーザーを通す。
+    # 判定そのものは test_tenant_admin_ssot.py で検証する
+    app.dependency_overrides[require_tenant_admin] = override_get_current_user
     app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
     transport = ASGITransport(app=app)

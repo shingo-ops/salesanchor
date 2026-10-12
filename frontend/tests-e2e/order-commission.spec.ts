@@ -76,6 +76,7 @@ const groupCountsAll = {
 const staffList = [
   {
     id: 100,
+    user_id: 1100,
     surname_jp: "山田",
     given_name_jp: "太郎",
     primary_email: "yamada@example.com",
@@ -83,6 +84,7 @@ const staffList = [
   },
   {
     id: 200,
+    user_id: 1200,
     surname_jp: "佐藤",
     given_name_jp: "花子",
     primary_email: "sato@example.com",
@@ -101,7 +103,7 @@ function emptyCommissions(): Record<string, CommissionRow | null> {
 }
 
 function buildCommissionRow(role: string, staff_id: number | null): CommissionRow {
-  const staff = staffList.find((s) => s.id === staff_id) ?? null;
+  const staff = staffList.find((s) => s.user_id === staff_id) ?? null;
   return {
     id: 10000 + Math.floor(Math.random() * 1000),
     order_id: 1,
@@ -332,10 +334,10 @@ test.describe("ADR-021 Sprint 5: 担当者報酬計算 MVP — 一覧 + パネ�
     // 営業 = 山田、発送 = 佐藤
     await page
       .getByTestId("commission-staff-sales")
-      .selectOption(String(staffList[0].id));
+      .selectOption(String(staffList[0].user_id));
     await page
       .getByTestId("commission-staff-ship")
-      .selectOption(String(staffList[1].id));
+      .selectOption(String(staffList[1].user_id));
 
     // 再計算
     await page.getByTestId("commission-recalc").click();

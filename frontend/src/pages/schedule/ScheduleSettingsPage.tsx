@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -84,11 +85,13 @@ export default function ScheduleSettingsPage() {
   };
 
   const saveOwner = async (owner: CalendarOwner) => {
+    // PATCH のパスは users.id（ADR-1008）。user_id が無い名簿行は保存できない
+    if (owner.userId == null) return;
     setSavingStaffId(owner.staffId);
     setSavedStaffId(null);
     setError(null);
     try {
-      await api.patch(`/calendar/owners/${owner.staffId}`, {
+      await api.patch(`/calendar/owners/${owner.userId}`, {
         color: owner.color,
         is_visible: owner.visible,
         share_mode: owner.shareMode,
@@ -167,18 +170,20 @@ export default function ScheduleSettingsPage() {
                           />
                           <span className="toggle-switch-slider" />
                         </label>
-                        <select
-                          className="schedule-input"
+                        <SelectControl
+                          size="sm"
+                          fullWidth
                           value={selfOwner.shareMode}
                           onChange={(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner["shareMode"] })}
                         >
                           <option value="self">{t("schedule.settingsShareSelf")}</option>
                           <option value="view">{t("schedule.settingsShareView")}</option>
                           <option value="edit">{t("schedule.settingsShareEdit")}</option>
-                        </select>
+                        </SelectControl>
                         <Button
                           variant="secondary"
                           onClick={() => saveOwner(selfOwner)}
+                          disabled={selfOwner.userId == null}
                           loading={savingStaffId === selfOwner.staffId}
                           loadingText={t("common.saving")}
                         >
@@ -222,18 +227,20 @@ export default function ScheduleSettingsPage() {
                             />
                             <span className="toggle-switch-slider" />
                           </label>
-                          <select
-                            className="schedule-input"
+                          <SelectControl
+                            size="sm"
+                            fullWidth
                             value={owner.shareMode}
                             onChange={(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner["shareMode"] })}
                           >
                             <option value="self">{t("schedule.settingsShareSelf")}</option>
                             <option value="view">{t("schedule.settingsShareView")}</option>
                             <option value="edit">{t("schedule.settingsShareEdit")}</option>
-                          </select>
+                          </SelectControl>
                           <Button
                             variant="secondary"
                             onClick={() => saveOwner(owner)}
+                            disabled={owner.userId == null}
                             loading={savingStaffId === owner.staffId}
                             loadingText={t("common.saving")}
                           >

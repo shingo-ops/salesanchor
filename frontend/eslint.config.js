@@ -10,7 +10,7 @@ import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
 const noJapaneseLiteral = _require('./scripts/eslint-rules/no-japanese-literal.cjs');
 
-export default [{
+export default [{ ignores: ["src/api/generated/**"] }, {
   files: ['src/**/*.{ts,tsx}'],
   languageOptions: {
     parser: tsParser,

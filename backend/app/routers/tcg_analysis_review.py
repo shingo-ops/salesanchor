@@ -26,6 +26,7 @@ from app.services.tcg_sold_out_results_svc import (
     SourceScope,
     fetch_sold_out_results,
 )
+from app.services.v102_gap_suspect_view import GapSuspect
 
 router = APIRouter()
 
@@ -69,15 +70,26 @@ class ConditionReviewFields(BaseModel):
     classification: str
 
 
+class ReviewReasonDetail(BaseModel):
+    code: str
+    source: Literal["gemini", "system"] | None
+    fix_stage: Literal["extraction", "analysis"] | None
+    ackable: bool = True
+
+
 class AnalysisResultItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
     provider: str
+    posted_at: AwareDatetime | None = None
     raw_text: str
     gemini: GeminiFields
     system: SystemFields
     review_issues: list[str]
     condition_review: ConditionReviewFields | None = None
+    review_reason_details: list[ReviewReasonDetail] = []
+    is_v102: bool = False
+    gap_suspect: GapSuspect | None = None
 
 
 class AnalysisResultsResponse(BaseModel):

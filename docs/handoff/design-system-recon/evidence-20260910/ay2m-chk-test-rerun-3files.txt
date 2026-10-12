@@ -1,0 +1,28 @@
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-fedex-modal-inputs/frontend
+
+ ❯ |unit| src/components/RoleKnowledgeButtonMigration.test.tsx (19 tests | 1 failed) 12031ms
+     × covers create/edit exact payloads, required, refresh and cancel retention 5067ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers create/edit exact payloads, required, refresh and cancel retention
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/RoleKnowledgeButtonMigration.test.tsx:64:3
+     62|
+     63| describe('role Button migration contracts', () => {
+     64|   it('covers create/edit exact payloads, required, refresh and cancel …
+       |   ^
+     65|     mock.post.mockResolvedValue({}); mock.patch.mockResolvedValue({});…
+     66|     let { dialog } = openRole(); expect(dialog.querySelectorAll('[requ…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 27 passed (28)
+   Start at  01:11:54
+   Duration  32.38s (transform 2.45s, setup 447ms, import 11.35s, tests 17.37s, environment 32.08s)
+
+exit=1

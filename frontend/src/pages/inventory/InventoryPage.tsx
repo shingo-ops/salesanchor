@@ -15,6 +15,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 interface InventoryRow {
   id: number;
@@ -473,12 +474,11 @@ export default function InventoryPage() {
             );
           })}
           {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
-            // ui-allow: TCG "other types" dropdown from main back-merge, ADR-143 D-1 (#2624)
-            <select
+            <SelectControl
+              size="sm"
               value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
               onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
               aria-label={t("inventory.filter.otherTypes")}
-              style={{ fontSize: "var(--font-xs)", padding: "var(--space-1) var(--space-10px)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)" }}
             >
               <option value="">{t("inventory.filter.otherTypes")}</option>
               {tcgTypes
@@ -486,7 +486,7 @@ export default function InventoryPage() {
                 .map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
                 ))}
-            </select>
+            </SelectControl>
           )}
         </div>
         <p

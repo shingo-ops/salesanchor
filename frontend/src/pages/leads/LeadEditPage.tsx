@@ -17,6 +17,8 @@ import { api } from "../../lib/api";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
 import { LostReasonFields, buildLostReasonUpdatePayload } from "./LeadFormFields";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Lead {
   id: number;
@@ -168,16 +170,16 @@ export default function LeadEditPage() {
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <div className="form-group"><label>{t("leads.customerName")} *</label>
-            <input required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
+            <TextFieldControl required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.companyName")}</label>
-            <input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+            <TextFieldControl value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.email")}</label>
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <TextFieldControl type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.phone")}</label>
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <TextFieldControl value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.channelType")}</label>
             <ChannelTypeCombobox
@@ -273,10 +275,10 @@ export default function LeadEditPage() {
             ]}
           />
           <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
-            <input type="number" min="0" step="1" value={form.monthly_forecast} onChange={(e) => setForm({ ...form, monthly_forecast: e.target.value })} />
+            <TextFieldControl type="number" min="0" step="1" value={form.monthly_forecast} onChange={(e) => setForm({ ...form, monthly_forecast: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.country")}</label>
             <CountryCombobox

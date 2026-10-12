@@ -1,0 +1,7 @@
+target	style_auto	class_to_remove
+frontend/src/pages/admin/DiscordAnnouncePage.tsx:81	0	input w-full
+frontend/src/pages/inbox/ManualRecordSection.tsx:148	0	manual-record-datetime
+frontend/src/pages/admin/ChannelMastersPage.tsx:115	1	
+frontend/src/pages/admin/ChannelMastersPage.tsx:123	1	
+frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:220	1	
+frontend/src/pages/inventory/OwnInventoryPage.tsx:232	1	qty-input

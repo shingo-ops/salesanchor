@@ -55,7 +55,7 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
   const [hasNext, setHasNext] = useState(false);
-  // 検索（MasterListEditor パターンと統一）
+  // 検索
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
@@ -151,7 +151,7 @@ export default function SuppliersPage() {
     >
       {error && <div className="error-message">{error}</div>}
 
-      {/* 検索バー + 新規作成ボタン（MasterListEditor パターンと統一） */}
+      {/* 検索バー + 新規作成ボタン */}
       <ContentToolbar
         left={
           <form

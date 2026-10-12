@@ -10,6 +10,8 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
@@ -122,6 +124,9 @@ async def update_product_detail(
         product = before["product"]
         params = dict(values)
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
+        # 空の mark / english_title は NULL で保存する（新規作成 tcg_product_master_svc.py:418-419 と同じ表し方）
+        params["mark"] = (values["mark"] or "").strip() or None
+        params["english_title"] = (values["english_title"] or "").strip() or None
         params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
         # work_id → public.type_master (INTEGER, SSOT); validated separately from LOOKUPS
@@ -198,6 +203,16 @@ async def update_product_detail(
             "VALUES ('products',CAST(:pid AS uuid),'UPDATE',:actor,:old,:new)"
         ), {"pid": str(_audit_pid), "actor": actor[:100], "old": _json(before), "new": _json(after)})
         response = await _response(db, after)
+        saved = response["product"]
+        response["code_collisions"] = await find_code_collisions(
+            db,
+            product_code=saved.get("code"),
+            mark=saved.get("mark"),
+            name=saved.get("japanese_title") or "",
+            search_keywords=saved.get("search_keywords") or [],
+            exclude_keywords=saved.get("exclude_keywords") or [],
+            exclude_product_id=saved["id"],
+        )
         await db.commit()
         return response
     except BaseException:

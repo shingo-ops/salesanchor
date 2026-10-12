@@ -43,7 +43,7 @@ TCG_SCHEMA = "public"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・12列）
+# 出力ヘッダー（確定・13列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
@@ -57,6 +57,7 @@ DIST_HEADERS = [
     "Release Date",
     "Series",
     "提供者",
+    "Search Keywords",
 ]
 
 _SCOPES = [
@@ -185,6 +186,41 @@ async def load_distribution_settings(db: AsyncSession) -> dict[str, str]:
 # E. 出力データ取得クエリ（10列・確定フィルター）
 # ---------------------------------------------------------------------------
 
+MAX_AGE_UNSET_MESSAGE = "max_age_hours 未設定のため配信しない"
+
+
+class MaxAgeHoursUnsetError(Exception):
+    """tcg_distribution_settings の max_age_hours が無い・不正な時に送出する。"""
+
+
+def _max_age_hours(settings: dict[str, str]) -> int | None:
+    """設定表から max_age_hours を読む（唯一の読み口）。
+
+    値が無い・整数でない・負の時は None（= 配信しない）。0 は「無制限」（設定画面の説明どおり）。
+    """
+    raw = settings.get("max_age_hours")
+    if raw is None:
+        return None
+    try:
+        value = int(str(raw).strip())
+    except ValueError:
+        return None
+    return value if value >= 0 else None
+
+
+def _age_window(max_age_hours: int | None) -> tuple[str, dict]:
+    """「LINE 投稿が max_age_hours 時間以内」の SQL 断片と bind を返す（唯一の定義）。
+
+    0 / None は絞らない（空文字・空 dict）。配信可否の判断は呼び出し側で _max_age_hours を使う。
+    """
+    if not max_age_hours:
+        return "", {}
+    return (
+        "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)",
+        {"max_age_hours": max_age_hours},
+    )
+
+
 async def fetch_output_rows(
     db: AsyncSession,
     *,
@@ -192,7 +228,7 @@ async def fetch_output_rows(
     max_age_hours: int | None = None,
 ) -> list[list[str]]:
     """
-    配信対象行を12列で取得する。
+    配信対象行を13列で取得する。
     フィルター:
       pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
       AND price_normalized IS NOT NULL  ← 価格未解決行を除外
@@ -210,15 +246,11 @@ async def fetch_output_rows(
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
-    age_condition = ""
-    bind_params: dict = {}
-    if max_age_hours:
-        age_condition = (
-            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
-        )
-        bind_params["max_age_hours"] = max_age_hours
+    age_condition, bind_params = _age_window(max_age_hours)
 
     sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
@@ -234,7 +266,12 @@ async def fetch_output_rows(
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
             COALESCE(ser.name_ja, '')                               AS series,
-            COALESCE(ps.name, '')                                   AS provider
+            COALESCE(ps.name, '')                                   AS provider,
+            COALESCE((
+                SELECT string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)
+                FROM public.product_search_keywords psk
+                WHERE psk.product_id = p.id
+            ), '')                                                  AS search_keywords
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -278,6 +315,7 @@ async def fetch_output_rows(
             row["release_date"],
             row["series"],
             row["provider"],
+            row["search_keywords"],
         ]
         for row in rows
     ]
@@ -294,7 +332,10 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     """
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    max_age_hours = int(settings.get("max_age_hours", "0"))
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
+        raise MaxAgeHoursUnsetError(MAX_AGE_UNSET_MESSAGE)
 
     # 配信候補件数
     if include_flag_single:
@@ -304,15 +345,11 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
+    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
-    count_age_condition = ""
-    count_bind_params: dict = {}
-    if max_age_hours:
-        count_age_condition = (
-            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
-        )
-        count_bind_params["max_age_hours"] = max_age_hours
+    age_condition, age_bind_params = _age_window(max_age_hours)
 
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT COUNT(*) AS cnt
@@ -329,34 +366,34 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND sm.line_posted_at IS NOT NULL
-          AND {cond_filter}{count_age_condition}
-    """), count_bind_params)
+          AND {cond_filter}{age_condition}
+    """), age_bind_params)
     output_count = count_result.scalar()
 
     # 除外内訳
     excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
-            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
+            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%' OR cr.effect = 'EXCLUDE')
                 AS exc_flag,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = TRUE)
                 AS exc_pid_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = TRUE
                   AND ar.unit_resolved = FALSE)
                 AS exc_unit_only,
             COUNT(*) FILTER (
-                WHERE cr.canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = FALSE)
                 AS exc_both,
             COUNT(*) FILTER (
                 WHERE ar.pid_resolved = TRUE
                   AND ar.unit_resolved = TRUE
-                  AND cr.canonical NOT LIKE 'FLAG_%'
+                  AND cr.canonical NOT LIKE 'FLAG_%' AND cr.effect IS DISTINCT FROM 'EXCLUDE'
                   AND ar.price_normalized IS NULL)
                 AS exc_price
         FROM {TCG_SCHEMA}.analysis_results ar
@@ -365,8 +402,8 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
         {review_joins(schema=TCG_SCHEMA)}
-        WHERE ar.is_current = TRUE
-    """))
+        WHERE ar.is_current = TRUE{age_condition}
+    """), age_bind_params)
     excl = excl_result.mappings().one()
 
     # 精度ゲート: item_corrections との JOIN（テーブル存在チェック付き）
@@ -453,15 +490,17 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
 # F. 配信処理コア（安全装置 #1〜#5・同期実行・thread executor 経由で呼ぶ）
 # ---------------------------------------------------------------------------
 
-def _write_to_target_sync(
+def _write_tab_sync(
     gc: Any,
     creds: Any,
     target: dict,
+    tab_name: str,
+    headers: list[str],
     rows: list[list[str]],
 ) -> dict:
     """
-    単一配信先への書き込みを実行する（同期関数）。
-    安全装置 #1〜#5 を実装する。
+    指定タブへ「見出し + データ」を全置換で書く共通の関数（同期）。
+    安全装置 #1〜#5 はここだけに置く（配信タブと要確認タブで共有）。
     asyncio.get_event_loop().run_in_executor() 経由で呼ぶこと。
 
     Returns:
@@ -471,7 +510,7 @@ def _write_to_target_sync(
     import gspread
 
     spreadsheet_id = target["spreadsheet_id"]
-    sheet_name = target["sheet_name"]
+    sheet_name = tab_name
 
     try:
         # 安全装置 #1/#2: spreadsheetId 検証（存在しなければ RuntimeError）
@@ -507,17 +546,31 @@ def _write_to_target_sync(
 
         # 全置換: clear → ヘッダー + データ書き込み
         worksheet.clear()
-        all_rows = [DIST_HEADERS] + rows
+        all_rows = [headers] + rows
         worksheet.append_rows(all_rows, value_input_option="RAW")
 
         rows_written = len(rows)
-        logger.info("[dist] 書き込み完了: target=%s rows=%d", target["name"], rows_written)
+        logger.info(
+            "[dist] 書き込み完了: target=%s tab=%s rows=%d", target["name"], sheet_name, rows_written
+        )
         return {"status": "ok", "rows_written": rows_written}
 
     except Exception as exc:
         error_msg = str(exc)
-        logger.error("[dist] 書き込みエラー: target=%s error=%s", target["name"], error_msg)
+        logger.error(
+            "[dist] 書き込みエラー: target=%s tab=%s error=%s", target["name"], sheet_name, error_msg
+        )
         return {"status": "error", "error": error_msg}
+
+
+def _write_to_target_sync(
+    gc: Any,
+    creds: Any,
+    target: dict,
+    rows: list[list[str]],
+) -> dict:
+    """単一配信先の在庫集計タブ（target["sheet_name"]）への書き込み。動きは共通の _write_tab_sync と同じ。"""
+    return _write_tab_sync(gc, creds, target, target["sheet_name"], DIST_HEADERS, rows)
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +579,7 @@ def _write_to_target_sync(
 
 async def list_targets(db: AsyncSession) -> list[dict]:
     result = await db.execute(text(f"""
-        SELECT id, name, spreadsheet_id, sheet_name, is_active,
+        SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
                sa_key_secret_name, last_distributed_at, last_distributed_count,
                last_result, created_at, updated_at
         FROM {TCG_SCHEMA}.tcg_distribution_targets
@@ -538,7 +591,7 @@ async def list_targets(db: AsyncSession) -> list[dict]:
 async def get_target(db: AsyncSession, target_id: str) -> dict | None:
     result = await db.execute(
         text(f"""
-            SELECT id, name, spreadsheet_id, sheet_name, is_active,
+            SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
                    sa_key_secret_name, last_distributed_at, last_distributed_count,
                    last_result, created_at, updated_at
             FROM {TCG_SCHEMA}.tcg_distribution_targets
@@ -670,6 +723,39 @@ async def _record_distribution_result(
 # H. メイン配信ランナー
 # ---------------------------------------------------------------------------
 
+async def _export_review_tab(
+    db: AsyncSession,
+    gc: Any,
+    creds: Any,
+    target: dict,
+    review_cache: dict,
+) -> dict | None:
+    """review_sheet_name がある配信先の要確認タブを書く。失敗は握りつぶさず、エラーの辞書を返す（配信の結果は変えない）。
+
+    要確認の一覧は1回の配信で1回だけ取る（review_cache に残す）。成功なら None。
+    """
+    # 循環 import を避けるため、使う時に読む（tcg_review_sheet_svc は本モジュールの _write_tab_sync を使う）
+    from app.services.tcg_review_sheet_svc import collect_review_rows, write_review_sheet_sync
+
+    name = target["name"]
+    try:
+        if "rows" not in review_cache:
+            review_cache["rows"] = await collect_review_rows(db)
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, write_review_sheet_sync, gc, creds, target, review_cache["rows"]
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[dist] 要確認タブの書き込み失敗（配信の結果は変えない）: target=%s error=%s", name, exc)
+        await db.rollback()  # 取得で DB が失敗していても、次の配信先の履歴の記録を巻き込まない
+        return {"target_id": str(target["id"]), "target_name": f"{name}（要確認タブ）", "error": str(exc)}
+    if result["status"] != "ok":
+        logger.error(
+            "[dist] 要確認タブの書き込み失敗（配信の結果は変えない）: target=%s error=%s", name, result["error"]
+        )
+        return {"target_id": str(target["id"]), "target_name": f"{name}（要確認タブ）", "error": result["error"]}
+    return None
+
+
 async def run_distribution(
     db: AsyncSession,
     target_id: str | None = None,
@@ -748,7 +834,16 @@ async def run_distribution(
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    max_age_hours = int(settings.get("max_age_hours", "0"))
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": MAX_AGE_UNSET_MESSAGE}],
+        }
 
     # 2. 出力データ取得
     try:
@@ -811,6 +906,8 @@ async def run_distribution(
     loop = asyncio.get_event_loop()
     results = []
     errors = []
+    review_errors: list[dict] = []  # 要確認タブの失敗（通知にだけ載せる。返り値の results / errors は変えない）
+    review_cache: dict = {}
 
     for target in targets:
         write_result: dict | None = None
@@ -849,6 +946,10 @@ async def run_distribution(
                 "status": "ok",
                 "rows_written": write_result["rows_written"],
             })
+            if target.get("review_sheet_name"):
+                review_error = await _export_review_tab(db, gc, creds, target, review_cache)
+                if review_error:
+                    review_errors.append(review_error)
         else:
             await _record_distribution_result(
                 db, target["id"], last_error, None
@@ -860,8 +961,8 @@ async def run_distribution(
             })
 
     # 6. 失敗時 Discord 通知（安全装置 #6）
-    if errors:
-        await _notify_distribution_failure(db, errors, output_count)
+    if errors or review_errors:
+        await _notify_distribution_failure(db, errors + review_errors, output_count)
 
     return {
         "started_at": started_at.isoformat(),

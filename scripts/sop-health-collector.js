@@ -132,11 +132,14 @@ async function countExemptPRs(prs) {
 
 /**
  * 指標2: 危険パス変更 PR 件数（週次）
- * 並列フェッチで高速化（sequential → Promise.all）
+ * 1件ずつ順番に取得する（GitHub の secondary rate limit 対策。全件同時取得は 2026-06 以降 403 で失敗していた）
  */
 async function countDangerousApprovedPRs(prs) {
-  const results = await Promise.all(prs.map((pr) => prTouchesDangerousPath(pr.number)));
-  return results.filter(Boolean).length;
+  let count = 0;
+  for (const pr of prs) {
+    if (await prTouchesDangerousPath(pr.number)) count += 1;
+  }
+  return count;
 }
 
 /**
