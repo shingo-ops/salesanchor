@@ -1,7 +1,7 @@
 # recon: API型契約の土台（便C-1）
 
 - 基準: origin/main（worktree 作成時の HEAD は `225c0c0ad`、BASE_OK）
-- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠の ADR は ADR-1005（Accepted 2026-10-04）
+- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠の ADR は ADR-1010（旧 ADR-1005）（Accepted 2026-10-04）
 - 調査: Sonnet（読み取りと、ローカルでの試行）。判断: Opus
 
 ## 事実
