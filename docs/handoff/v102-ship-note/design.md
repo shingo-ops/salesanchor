@@ -1,6 +1,6 @@
 # design: 試作版 v102 の発送日の文字を「備考」（note_ja）に入れる（便PO3）
 
-参照: docs/handoff/v102-ship-note/recon.md、docs/handoff/v102-ship-note/card-PO3.md、docs/handoff/v102-preorder-context/design.md §7。
+参照: docs/handoff/v102-ship-note/recon.md、ADR-154（docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:26、マスタ不在時は従来動作）、docs/handoff/v102-ship-note/card-PO3.md、docs/handoff/v102-preorder-context/design.md §7。
 
 ## 1. 目的（PO の言葉、2026-10-12）
 - 「y,発送日の情報は発送日情報に記載する条件で」→ 保存先を問うと「備考に入れる」。

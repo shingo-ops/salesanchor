@@ -12,7 +12,7 @@
 
 ## 保存と表示
 - backend/app/services/line_analysis_v102_svc.py:617-648 `_analysis_values` は note_ja を常に None（:645）。upsert は backend/app/services/line_analysis_v102_svc.py:669 `note_ja = EXCLUDED.note_ja`。本番の呼び出し元は backend/app/services/line_analysis_v102_svc.py:896（_write_results）の1か所。
-- note_ja を読むところ（全走査 note_ja_grep.txt 81 行）：配信 backend/app/services/tcg_distribution_svc.py:265（COALESCE で素通し）・:55 列名 Note_JA・:313 出力。在庫一覧 GAS（repo 外 tcg-client-viewer、Code.js:18・index.html:487「備考」）は表示のみ。backend/app/services/tcg_analysis_review_svc.py:226,:283 と backend/app/routers/tcg_import_progress.py:32,:133 は表示のみ。backend/app/services/tcg_condition_review_svc.py:124 はレビュー版のハッシュ材料（computed_at も入っており失効は増えない）。backend/app/services/inventory_aggregation.py は public.inventory を読み analysis_results を読まない。is_current・配信の絞り込み・needs_review は note_ja を使わない。
+- note_ja を読むところ（全走査 note_ja_grep.txt 81 行）：配信 backend/app/services/tcg_distribution_svc.py:265（COALESCE で素通し）・:55 列名 Note_JA・:313 出力。在庫一覧 GAS（repo 外 tcg-client-viewer、Code.js:18・index.html:487「備考」）は表示のみ。backend/app/services/tcg_analysis_review_svc.py:226,:283 と backend/app/services/tcg_import_progress.py:32,:133 は表示のみ。backend/app/services/tcg_condition_review_svc.py:124 はレビュー版のハッシュ材料（computed_at も入っており失効は増えない）。backend/app/services/inventory_aggregation.py は public.inventory を読み analysis_results を読まない。is_current・配信の絞り込み・needs_review は note_ja を使わない。
 - 列は TEXT（migrations/20260921_110000_pipeline_tables_public.sql:302）。
 
 ## 観測（置き換え試験、2,693 件）
