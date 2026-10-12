@@ -11,6 +11,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:vl": "playwright test --project=vl-mobile-390 --project=vl-tablet-768 --project=vl-desktop-1280",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "check:css-colors": "node scripts/check-css-hardcoded-colors.js",

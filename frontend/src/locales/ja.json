@@ -1269,6 +1269,7 @@
     "filterUnread": "未読",
     "filterFollowUp": "未返信",
     "mobileFilters": "絞り込み",
+    "backToList": "一覧へ戻る",
     "subtitle": "メッセージの管理と返信ができます。",
     "fetchError": "データの取得に失敗しました",
     "unreadBadge": "未読 {{count}} 件",

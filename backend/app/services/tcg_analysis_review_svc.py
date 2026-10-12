@@ -205,6 +205,7 @@ async def fetch_analysis_results(
             ej.system_review_detail,
             COALESCE(ps.name, '不明')            AS provider,
             sm.raw_text,
+            sm.line_posted_at                    AS posted_at,
             ei.raw_product_name,
             ei.raw_quantity,
             ei.raw_price,
@@ -266,6 +267,7 @@ async def fetch_analysis_results(
                 "extraction_item_id": row.extraction_item_id,
                 "source_message_id": row.source_message_id,
                 "provider": row.provider,
+                "posted_at": row.posted_at,
                 "raw_text": row.raw_text or "",
                 "gemini": {
                     "name": row.raw_product_name or "",

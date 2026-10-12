@@ -490,15 +490,17 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
 # F. 配信処理コア（安全装置 #1〜#5・同期実行・thread executor 経由で呼ぶ）
 # ---------------------------------------------------------------------------
 
-def _write_to_target_sync(
+def _write_tab_sync(
     gc: Any,
     creds: Any,
     target: dict,
+    tab_name: str,
+    headers: list[str],
     rows: list[list[str]],
 ) -> dict:
     """
-    単一配信先への書き込みを実行する（同期関数）。
-    安全装置 #1〜#5 を実装する。
+    指定タブへ「見出し + データ」を全置換で書く共通の関数（同期）。
+    安全装置 #1〜#5 はここだけに置く（配信タブと要確認タブで共有）。
     asyncio.get_event_loop().run_in_executor() 経由で呼ぶこと。
 
     Returns:
@@ -508,7 +510,7 @@ def _write_to_target_sync(
     import gspread
 
     spreadsheet_id = target["spreadsheet_id"]
-    sheet_name = target["sheet_name"]
+    sheet_name = tab_name
 
     try:
         # 安全装置 #1/#2: spreadsheetId 検証（存在しなければ RuntimeError）
@@ -544,17 +546,31 @@ def _write_to_target_sync(
 
         # 全置換: clear → ヘッダー + データ書き込み
         worksheet.clear()
-        all_rows = [DIST_HEADERS] + rows
+        all_rows = [headers] + rows
         worksheet.append_rows(all_rows, value_input_option="RAW")
 
         rows_written = len(rows)
-        logger.info("[dist] 書き込み完了: target=%s rows=%d", target["name"], rows_written)
+        logger.info(
+            "[dist] 書き込み完了: target=%s tab=%s rows=%d", target["name"], sheet_name, rows_written
+        )
         return {"status": "ok", "rows_written": rows_written}
 
     except Exception as exc:
         error_msg = str(exc)
-        logger.error("[dist] 書き込みエラー: target=%s error=%s", target["name"], error_msg)
+        logger.error(
+            "[dist] 書き込みエラー: target=%s tab=%s error=%s", target["name"], sheet_name, error_msg
+        )
         return {"status": "error", "error": error_msg}
+
+
+def _write_to_target_sync(
+    gc: Any,
+    creds: Any,
+    target: dict,
+    rows: list[list[str]],
+) -> dict:
+    """単一配信先の在庫集計タブ（target["sheet_name"]）への書き込み。動きは共通の _write_tab_sync と同じ。"""
+    return _write_tab_sync(gc, creds, target, target["sheet_name"], DIST_HEADERS, rows)
 
 
 # ---------------------------------------------------------------------------
@@ -563,7 +579,7 @@ def _write_to_target_sync(
 
 async def list_targets(db: AsyncSession) -> list[dict]:
     result = await db.execute(text(f"""
-        SELECT id, name, spreadsheet_id, sheet_name, is_active,
+        SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
                sa_key_secret_name, last_distributed_at, last_distributed_count,
                last_result, created_at, updated_at
         FROM {TCG_SCHEMA}.tcg_distribution_targets
@@ -575,7 +591,7 @@ async def list_targets(db: AsyncSession) -> list[dict]:
 async def get_target(db: AsyncSession, target_id: str) -> dict | None:
     result = await db.execute(
         text(f"""
-            SELECT id, name, spreadsheet_id, sheet_name, is_active,
+            SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
                    sa_key_secret_name, last_distributed_at, last_distributed_count,
                    last_result, created_at, updated_at
             FROM {TCG_SCHEMA}.tcg_distribution_targets
@@ -706,6 +722,39 @@ async def _record_distribution_result(
 # ---------------------------------------------------------------------------
 # H. メイン配信ランナー
 # ---------------------------------------------------------------------------
+
+async def _export_review_tab(
+    db: AsyncSession,
+    gc: Any,
+    creds: Any,
+    target: dict,
+    review_cache: dict,
+) -> dict | None:
+    """review_sheet_name がある配信先の要確認タブを書く。失敗は握りつぶさず、エラーの辞書を返す（配信の結果は変えない）。
+
+    要確認の一覧は1回の配信で1回だけ取る（review_cache に残す）。成功なら None。
+    """
+    # 循環 import を避けるため、使う時に読む（tcg_review_sheet_svc は本モジュールの _write_tab_sync を使う）
+    from app.services.tcg_review_sheet_svc import collect_review_rows, write_review_sheet_sync
+
+    name = target["name"]
+    try:
+        if "rows" not in review_cache:
+            review_cache["rows"] = await collect_review_rows(db)
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, write_review_sheet_sync, gc, creds, target, review_cache["rows"]
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[dist] 要確認タブの書き込み失敗（配信の結果は変えない）: target=%s error=%s", name, exc)
+        await db.rollback()  # 取得で DB が失敗していても、次の配信先の履歴の記録を巻き込まない
+        return {"target_id": str(target["id"]), "target_name": f"{name}（要確認タブ）", "error": str(exc)}
+    if result["status"] != "ok":
+        logger.error(
+            "[dist] 要確認タブの書き込み失敗（配信の結果は変えない）: target=%s error=%s", name, result["error"]
+        )
+        return {"target_id": str(target["id"]), "target_name": f"{name}（要確認タブ）", "error": result["error"]}
+    return None
+
 
 async def run_distribution(
     db: AsyncSession,
@@ -857,6 +906,8 @@ async def run_distribution(
     loop = asyncio.get_event_loop()
     results = []
     errors = []
+    review_errors: list[dict] = []  # 要確認タブの失敗（通知にだけ載せる。返り値の results / errors は変えない）
+    review_cache: dict = {}
 
     for target in targets:
         write_result: dict | None = None
@@ -895,6 +946,10 @@ async def run_distribution(
                 "status": "ok",
                 "rows_written": write_result["rows_written"],
             })
+            if target.get("review_sheet_name"):
+                review_error = await _export_review_tab(db, gc, creds, target, review_cache)
+                if review_error:
+                    review_errors.append(review_error)
         else:
             await _record_distribution_result(
                 db, target["id"], last_error, None
@@ -906,8 +961,8 @@ async def run_distribution(
             })
 
     # 6. 失敗時 Discord 通知（安全装置 #6）
-    if errors:
-        await _notify_distribution_failure(db, errors, output_count)
+    if errors or review_errors:
+        await _notify_distribution_failure(db, errors + review_errors, output_count)
 
     return {
         "started_at": started_at.isoformat(),

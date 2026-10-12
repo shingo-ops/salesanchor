@@ -1269,6 +1269,7 @@
     "filterUnread": "Unread",
     "filterFollowUp": "Unreplied",
     "mobileFilters": "Filters",
+    "backToList": "Back to list",
     "subtitle": "Manage and respond to messages.",
     "fetchError": "Failed to load data",
     "unreadBadge": "{{count}} unread",
