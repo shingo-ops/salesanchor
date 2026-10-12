@@ -261,3 +261,51 @@ async def save_review_ack(
 def unknown_codes(codes: Iterable[str], registered: Mapping[str, object]) -> list[str]:
     """review_reason_codes に無いコード（順番を保つ）。"""
     return [c for c in dict.fromkeys(codes) if c not in registered]
+
+
+# ---------------------------------------------------------------------------
+# 判断を保存する前の検査（API と CSV の両方がここを呼ぶ。検査の判定の唯一の置き場所）
+# 読み込み（DB）は呼ぶ側が行い、ここは受け取った値だけで判定する（応答の文言・ステータスはここだけで決まる）。
+# ---------------------------------------------------------------------------
+
+
+class DecisionRejected(Exception):
+    """保存前の検査で断った。status は HTTP のステータスコード、message は応答の文言。"""
+
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+def product_rejection(invalid_values: list[str]) -> DecisionRejected | None:
+    """invalid_product_values の結果（無効な商品の値）から、断る理由。無効が無ければ None。v102 の件にだけ使う。"""
+    if not invalid_values:
+        return None
+    return DecisionRejected(422, f"Product is not an active product: {', '.join(invalid_values)}")
+
+
+def review_ack_rejection(
+    codes: list[str], registered: Mapping[str, object], found: JobOfItem | None, source_message_id: str,
+) -> DecisionRejected | None:
+    """「このままで良い」を保存してよいか。よければ None。
+
+    断る順番: 外せない理由(422)→未登録コード(422)→件なし(404)→v102 でない(409)→source_message_id 不一致(422)。
+    registered は load_review_reason_codes の結果、found は find_job_of_item の結果。
+    """
+    from app.services.line_analysis_v102_svc import is_v102_prompt_version  # noqa: PLC0415  循環 import を避ける
+    from app.services.review_reason_codes_svc import non_ackable_codes  # noqa: PLC0415
+
+    refused = non_ackable_codes(codes)
+    if refused:
+        return DecisionRejected(422, f"Review reason codes that cannot be acknowledged: {', '.join(refused)}")
+    unknown = unknown_codes(codes, registered)
+    if unknown:
+        return DecisionRejected(422, f"Unregistered review reason codes: {', '.join(unknown)}")
+    if found is None:
+        return DecisionRejected(404, "Item not found")
+    if not is_v102_prompt_version(found.prompt_version):
+        return DecisionRejected(409, "review-ack is only for v102 items")
+    if source_message_id != found.source_message_id:
+        return DecisionRejected(422, "source_message_id does not match the item's post")
+    return None
