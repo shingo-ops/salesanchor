@@ -52007,7 +52007,7 @@
     },
     "/api/v1/staff/me": {
       "get": {
-        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  users.email と staff.primary_email の一致で staff を引く。\n  共有メール運用（migration 019: primary_email に UNIQUE 制約なし）に対応するため\n  `ORDER BY s.id ASC` で決定性を担保し、最も古い staff レコードを返す。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  当初は firebase_uid 経路を主、email を fallback として設計したが、\n  `User` モデル（app/models.py）に `firebase_uid` カラムが無いため\n  `getattr(current_user, \"firebase_uid\", None)` は常に None を返し、\n  firebase_uid 経路は dead code になっていた（PR #166 review F1）。\n  `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、\n  経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。\n  将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに\n  経路を再導入する（その際は `ORDER BY` も維持）。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
+        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  current_user.id（users.id）と staff.user_id の一致で staff を引く（ADR-1008）。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  当初は firebase_uid 経路を主、email を fallback として設計したが、\n  `User` モデル（app/models.py）に `firebase_uid` カラムが無いため\n  `getattr(current_user, \"firebase_uid\", None)` は常に None を返し、\n  firebase_uid 経路は dead code になっていた（PR #166 review F1）。\n  `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、\n  経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。\n  将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに\n  経路を再導入する（その際は `ORDER BY` も維持）。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
         "operationId": "get_my_staff_api_v1_staff_me_get",
         "responses": {
           "200": {
@@ -52152,7 +52152,7 @@
     },
     "/api/v1/staff/me/profile": {
       "patch": {
-        "description": "現在ログイン中ユーザ自身の氏名を更新する。\n\n管理者権限不要。メールアドレス・ロール・ステータス等は変更不可。\n本人確認: get_current_user が返す current_user.email で staff を特定。",
+        "description": "現在ログイン中ユーザ自身の氏名を更新する。\n\n管理者権限不要。メールアドレス・ロール・ステータス等は変更不可。\n本人確認: get_current_user が返す current_user.id（staff.user_id）で staff を特定。",
         "operationId": "update_my_profile_api_v1_staff_me_profile_patch",
         "requestBody": {
           "content": {

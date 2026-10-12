@@ -340,7 +340,7 @@ async def setup_test_db(test_engine):
             CREATE TABLE IF NOT EXISTS staff (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
-                user_id INTEGER,
+                user_id INTEGER NOT NULL,
                 staff_code VARCHAR(20) NOT NULL,
                 surname_jp VARCHAR(50) NOT NULL,
                 given_name_jp VARCHAR(50) NOT NULL,
@@ -1174,6 +1174,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 username VARCHAR(255),
                 email VARCHAR(255),
+                full_name VARCHAR(255),
                 role VARCHAR(50) DEFAULT 'user',
                 is_active BOOLEAN DEFAULT TRUE,
                 locale VARCHAR(10) NOT NULL DEFAULT 'ja',

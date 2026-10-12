@@ -54,16 +54,14 @@ def _owner_display_name(row: dict) -> str:
 
 
 async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | None:
-    user_email = getattr(current_user, "email", None)
     result = await db.execute(
         text("""
             SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
             FROM staff
-            WHERE user_id = :uid OR primary_email = :email
-            ORDER BY CASE WHEN user_id = :uid THEN 0 ELSE 1 END, id ASC
+            WHERE user_id = :uid
             LIMIT 1
         """),
-        {"uid": current_user.id, "email": user_email},
+        {"uid": current_user.id},
     )
     row = result.mappings().first()
     return dict(row) if row else None
