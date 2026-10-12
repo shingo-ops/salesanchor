@@ -272,10 +272,10 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
     label: t(`${f}.matchType.${m}`),
   }));
 
-  const canonicalOptions = canonicals.map((c) => ({
-    value: c.canonical,
-    label: c.canonical,
-  }));
+  // canonical は effect 違いで複数行返るため、値で重複除去（最初の出現を残し順序を保つ）
+  const canonicalOptions = Array.from(new Set(canonicals.map((c) => c.canonical))).map(
+    (canonical) => ({ value: canonical, label: canonical }),
+  );
 
   const isSubmitBusy = submitting || disabling;
 

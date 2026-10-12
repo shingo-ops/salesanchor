@@ -76,3 +76,14 @@ it("does not require a pattern test for a release-date rule", async () => {
     match_type: "RELEASE", effect: "RELEASE_AHEAD",
   })));
 });
+
+it("shows one canonical option even when the same canonical comes back with different effects", async () => {
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  render(<RuleDrawer open onClose={vi.fn()} onSaved={vi.fn()} editRule={heading} />);
+  const select = (await screen.findByTestId("rule-drawer-canonical")) as HTMLSelectElement;
+  await waitFor(() => expect(
+    Array.from(select.options).filter((o) => o.value === "Pre-order").length,
+  ).toBe(1));
+  expect(errorSpy.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
+  errorSpy.mockRestore();
+});
