@@ -251,3 +251,54 @@ def test_blank_price_and_quantity_are_treated_as_none_so_a_stored_none_is_unchan
     result = asyncio.run(svc.apply_transcription_edit(db, _job(), [blank_input], "admin@example.com"))
     assert result == svc.EditResult(False, [item_id])
     assert db.commits == 0 and len(db.calls) == 2  # 鍵と読み出しだけ。item_corrections への書き込みなし
+
+
+# --- get_post: 記録の gap_suspect を件ごとに結線する（段2a PR-B・DB 不要） ------------------------------
+
+
+class _Result:
+    def __init__(self, rows=None, scalar=None):
+        self._rows, self._scalar = rows or [], scalar
+
+    def fetchall(self):
+        return self._rows
+
+    def scalar_one_or_none(self):
+        return self._scalar
+
+
+class _GetPostDb:
+    """get_post が実行する SQL を順に返す。実行された SQL 文を calls に残す。"""
+
+    def __init__(self, item_rows, stored, name_rows=()):
+        self.item_rows, self.stored, self.name_rows, self.calls = item_rows, stored, list(name_rows), []
+
+    async def execute(self, statement, params=None):
+        sql = str(statement)
+        self.calls.append(sql)
+        if "system_review_detail" in sql:
+            return _Result(scalar=self.stored)
+        if "public.products" in sql:
+            return _Result(rows=self.name_rows)
+        return _Result(rows=self.item_rows)
+
+
+def _row(item_id: str, index: int) -> SimpleNamespace:
+    return SimpleNamespace(id=item_id, gemini_index=index, source_lines=[1], raw_price="1", raw_quantity="2", review_reasons=None)
+
+
+def test_get_post_returns_gap_suspect_from_the_record_and_none_for_items_not_in_it():
+    in_record, not_in_record = str(uuid4()), str(uuid4())
+    stored = {"v": 1, "gap_name": [{"extraction_item_id": in_record, "gap_lines": [3], "candidates": [7]}]}
+    db = _GetPostDb([_row(in_record, 0), _row(not_in_record, 1)], stored, [SimpleNamespace(id=7, name="商品A")])
+    result = asyncio.run(svc.get_post(db, _job(), {}))
+    by_id = {i["id"]: i["gap_suspect"] for i in result["items"]}
+    assert by_id[in_record] == {"gap_lines": [3], "candidates": [{"product_id": "7", "name": "商品A"}]}
+    assert by_id[not_in_record] is None
+
+
+def test_get_post_without_a_record_gives_none_to_every_item_and_skips_the_names_sql():
+    db = _GetPostDb([_row(str(uuid4()), 0), _row(str(uuid4()), 1)], None)
+    result = asyncio.run(svc.get_post(db, _job(), {}))
+    assert [i["gap_suspect"] for i in result["items"]] == [None, None]
+    assert not any("public.products" in sql for sql in db.calls)
