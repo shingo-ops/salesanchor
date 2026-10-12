@@ -25,6 +25,8 @@ from app.services.tcg_status_values import (
 JST = timezone(timedelta(hours=9))
 EARLY_PART_END_DAY = 10  # 上旬の終わり
 MIDDLE_PART_END_DAY = 20  # 中旬の終わり
+CURRENT_YEAR_BACK_MONTHS = 1  # PO決定 2026-10-12: 投稿月の1つ前の月までは今年（過ぎた月）、それより前の月は来年
+NEXT_DAY_GRACE_DAYS = 1  # PO決定 2026-10-12: 投稿の翌日までの発送は在庫のまま
 # 旬の語 → 終わりの日（None は月末）。日付の書き方（正規表現）は表の行にあり、ここは名前付きグループ part の語だけを日に直す
 _PART_END_DAY: Mapping[str, int | None] = {"上旬": EARLY_PART_END_DAY, "中旬": MIDDLE_PART_END_DAY, "下旬": None, "末": None, "頃": None}
 _DEFAULT_SENTINEL = "\0v102-status-context-default"
@@ -67,10 +69,14 @@ def decided_by_default(block: str, status_entries: list[dict]) -> bool:
 
 
 def _period_end(posted: date, month: int, day: int | None, part: str | None) -> date | None:
-    """日付の終わり。年は投稿日の年、その月が投稿日の月より前なら翌年。日付として成り立たなければ None。"""
+    """日付の終わり。年は、同じ月なら投稿年、投稿月の1つ前の月は過ぎた月、それより前の月は翌年。成り立たなければ None。"""
     if not 1 <= month <= 12:
         return None
-    year = posted.year + (1 if month < posted.month else 0)
+    back = (posted.month - month) % 12
+    if back <= CURRENT_YEAR_BACK_MONTHS:
+        year = posted.year - (1 if month > posted.month else 0)
+    else:
+        year = posted.year + (1 if month < posted.month else 0)
     last_day = calendar.monthrange(year, month)[1]
     if day is not None:
         return date(year, month, day) if 1 <= day <= last_day else None
@@ -83,7 +89,7 @@ def _group(m: re.Match, name: str) -> str | None:
 
 
 def _date_ahead(block: str, posted: date, entry: dict) -> str | None:
-    """この行の search_pattern が当たった中で、終わりが投稿日より後の最初の当たり（その文字列）。"""
+    """この行の search_pattern が当たった中で、終わりが投稿日の翌日（NEXT_DAY_GRACE_DAYS）より後の最初の当たり（その文字列）。"""
     if not _hits(block, entry):
         return None
     try:
@@ -95,7 +101,7 @@ def _date_ahead(block: str, posted: date, entry: dict) -> str | None:
         if month is None:
             continue
         end = _period_end(posted, int(month), int(day) if day else None, _group(m, "part"))
-        if end is not None and end > posted:
+        if end is not None and end > posted + timedelta(days=NEXT_DAY_GRACE_DAYS):
             return m.group(0)
     return None
 
