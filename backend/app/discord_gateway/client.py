@@ -4,26 +4,31 @@ A方式（テナント別bot）から B方式（共通bot + guild_id → tenant_
 
 受信フロー:
   on_message(guild) → _resolve_tenant_id(guild_id) → ticket_channel_writer(tenant_id)
+  on_raw_reaction_add/remove → _resolve_tenant_id(guild_id) → reaction_writer(tenant_id)
 
 DM は B方式の対象外（guild_id を持たないため逆引き不能 — ADR-146 F7/PO決定）。
 
-在庫受信コード（_process_message / _resume_missed_messages / _process_dm_message）は
-ADR-146 案ア により削除せず休眠のまま残す。在庫移行プロジェクトで後日再設計する。
+2026-10-02: 在庫受信の休眠スタブ（_process_message / _resume_missed_messages /
+_process_dm_message）は Discord 在庫取り込み機能の削除に伴い撤去した。
+経緯: docs/handoff/remove-discord-inventory-parse/design.md
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Any, Callable
 
 import discord
 from sqlalchemy import text
 
 from app.discord_gateway import (
+    bot_texts,
     ticket_channel_creator,
     ticket_channel_writer,
 )
 from app.discord_gateway.config import SingleBotConfig
+from app.discord_gateway.reaction_writer import ReactionWriter
 
 logger = logging.getLogger(__name__)
 
@@ -36,30 +41,47 @@ logger = logging.getLogger(__name__)
 class JarvisDiscordClient(discord.Client):
     """ADR-146 B方式: 共通bot1台で全テナントのguildを受信し guild_id でテナントを振り分ける。
 
-    - on_message(guild):  _resolve_tenant_id(guild_id) → ticket_channel_writer
-    - on_message(DM):     スキップ（B方式対象外 — F7/PO決定）
-    - on_resumed:         no-op（在庫補完は案ア休眠中 — ADR-146）
-    - on_interaction:     guild_id → tenant_id 逆引き → ticket_channel_creator
+    - on_message(guild):           _resolve_tenant_id(guild_id) → ticket_channel_writer
+    - on_message(DM):              スキップ（B方式対象外 — F7/PO決定）
+    - on_resumed:                  no-op（ログのみ）
+    - on_interaction:              guild_id → tenant_id 逆引き → ticket_channel_creator
+    - on_raw_reaction_add/remove:  guild_id → tenant_id 逆引き → reaction_writer
+    - on_guild_channel_delete:     チケット部屋削除 → ticket-start 再表示 + lead の部屋ID消去
     """
 
     def __init__(
         self,
         *,
         db_factory: Callable[[], Any] | None = None,
+        database_url: str | None = None,
     ) -> None:
         """Args:
             db_factory: AsyncSession factory（テスト時に差し込み可能）。
                 None なら `app.database.AsyncSessionLocal` を遅延 import。
+            database_url: asyncpg 用 DB 接続 URL。
+                None なら DATABASE_URL 環境変数を使用。
+                postgresql+asyncpg:// スキームは asyncpg 形式に正規化する。
         """
         intents = discord.Intents.none()
         intents.guilds = True
         intents.guild_messages = True
         intents.message_content = True
         intents.members = True
+        intents.reactions = True
         # DM は B方式対象外のため dm_messages intent は不要
         super().__init__(intents=intents)
         self._db_factory_override = db_factory
         self._resumed_completed: set[str] = set()
+        self._reconcile_task: asyncio.Task[None] | None = None
+
+        # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
+        raw_url = database_url or os.environ.get(
+            "DATABASE_URL", "postgresql://myapp_user:password@postgres:5432/myapp_db"
+        )
+        self._asyncpg_database_url = raw_url.replace(
+            "postgresql+asyncpg://", "postgresql://", 1
+        )
+        self.reaction_writer: ReactionWriter = ReactionWriter(self._asyncpg_database_url)
 
     # --- helpers ---------------------------------------------------------
 
@@ -98,6 +120,19 @@ class JarvisDiscordClient(discord.Client):
             )
             return None
 
+    # --- lifecycle hooks -------------------------------------------------
+
+    async def setup_hook(self) -> None:
+        """discord.py が接続前に呼ぶライフサイクルフック。asyncpg pool を初期化する。"""
+        await self.reaction_writer.initialize()
+
+    async def close(self) -> None:
+        """クライアント終了時に asyncpg pool をクローズする。"""
+        if self._reconcile_task is not None and not self._reconcile_task.done():
+            self._reconcile_task.cancel()
+        await self.reaction_writer.close()
+        await super().close()
+
     # --- event handlers --------------------------------------------------
 
     async def on_ready(self) -> None:
@@ -109,12 +144,65 @@ class JarvisDiscordClient(discord.Client):
             user.id if user else "?",
             len(self.guilds),
         )
+        # READY 処理を塞がないよう、起動時点検は別タスクで1回だけ走らせる
+        if self._reconcile_task is None:
+            self._reconcile_task = asyncio.create_task(self._reconcile_ticket_channels())
+
+    async def _reconcile_ticket_channels(self) -> None:
+        """Gateway 停止中に削除されたチケットチャンネルを復旧する（失敗は警告のみ）。"""
+        for guild in list(self.guilds):
+            try:
+                tenant_id = await self._resolve_tenant_id(str(guild.id))
+                if tenant_id is None:
+                    continue
+                await ticket_channel_creator.reconcile_deleted_ticket_channels(
+                    guild, tenant_id, self._db_factory(), http=self.http
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[discord-gateway] ticket reconcile failed guild_id=%s: %s",
+                    guild.id,
+                    exc,
+                    exc_info=True,
+                )
+
+    async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel) -> None:
+        """チケットチャンネル削除時: ticket-start を再表示し lead の部屋番号を消す。"""
+        if not isinstance(channel, discord.TextChannel):
+            return
+        guild = channel.guild
+        tenant_id = await self._resolve_tenant_id(str(guild.id))
+        if tenant_id is None:
+            return
+        try:
+            restored = await ticket_channel_creator.restore_after_ticket_deleted(
+                guild, tenant_id, channel.id, self._db_factory(), http=self.http
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] ticket delete restore failed tenant_id=%d channel=%s: %s",
+                tenant_id,
+                channel.id,
+                exc,
+                exc_info=True,
+            )
+            return
+        if restored:
+            logger.info(
+                "[discord-gateway] ticket channel deleted → restored tenant_id=%d "
+                "channel=%s leads=%d",
+                tenant_id,
+                channel.id,
+                restored,
+            )
 
     async def on_resumed(self) -> None:
-        """在庫補完は ADR-146 案ア により休眠中。no-op."""
-        logger.info(
-            "[discord-gateway] RESUMED — 在庫 missed-message 補完は休眠中 (ADR-146 案ア)"
-        )
+        """no-op（ログのみ）."""
+        logger.info("[discord-gateway] RESUMED")
 
     async def on_disconnect(self) -> None:
         logger.warning("[discord-gateway] DISCONNECT")
@@ -128,12 +216,14 @@ class JarvisDiscordClient(discord.Client):
         if interaction.type != discord.InteractionType.component:
             return
         custom_id: str = (interaction.data or {}).get("custom_id", "")  # type: ignore[arg-type]
-        if not custom_id.startswith("ticket_open"):
+        if not custom_id.startswith(bot_texts.TICKET_BUTTON_CUSTOM_ID):
             return
 
-        # 3 秒以内に応答しないと Discord がタイムアウトするため先に defer
+        # 3 秒以内に応答しないと Discord がタイムアウトするため先に defer。
+        # コンポーネント操作の defer() は DEFERRED_UPDATE_MESSAGE(6)＝ローディング表示なしの無言 ACK。
+        # 成功時は何も送らない（新チャンネルが現れること自体が結果）。エラー時のみ followup で ephemeral 通知。
         try:
-            await interaction.response.defer(ephemeral=True)
+            await interaction.response.defer()
         except discord.HTTPException:
             return
 
@@ -141,7 +231,7 @@ class JarvisDiscordClient(discord.Client):
         member = interaction.user
         if guild is None or not isinstance(member, discord.Member):
             await interaction.followup.send(
-                "サーバー内でのみ利用できます。", ephemeral=True
+                bot_texts.GUILD_ONLY, ephemeral=True
             )
             return
 
@@ -153,7 +243,7 @@ class JarvisDiscordClient(discord.Client):
                 guild.id,
             )
             await interaction.followup.send(
-                "このサーバーは未登録です。管理者にお問い合わせください。",
+                bot_texts.GUILD_NOT_REGISTERED,
                 ephemeral=True,
             )
             return
@@ -169,7 +259,7 @@ class JarvisDiscordClient(discord.Client):
                 "[ticket] config not set tenant_id=%d guild_id=%s", tenant_id, guild.id
             )
             await interaction.followup.send(
-                "チケット機能が設定されていません。管理者にお問い合わせください。",
+                bot_texts.TICKET_NOT_CONFIGURED,
                 ephemeral=True,
             )
             return
@@ -184,15 +274,11 @@ class JarvisDiscordClient(discord.Client):
 
         if channel is None:
             await interaction.followup.send(
-                "チャンネルの作成に失敗しました。管理者にお問い合わせください。",
+                bot_texts.TICKET_CREATE_FAILED,
                 ephemeral=True,
             )
             return
 
-        await interaction.followup.send(
-            f"専用チャンネルを用意しました → {channel.mention}",
-            ephemeral=True,
-        )
         logger.info(
             "[ticket] interaction handled tenant_id=%d guild_id=%s user=%s channel=%s",
             tenant_id,
@@ -200,6 +286,55 @@ class JarvisDiscordClient(discord.Client):
             member.id,
             channel.id,
         )
+
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """Process reaction add events from guild channels."""
+        if not payload.guild_id:
+            return  # DM は対象外
+        await self._process_reaction(payload, action="add")
+
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
+        """Process reaction remove events from guild channels."""
+        if not payload.guild_id:
+            return
+        await self._process_reaction(payload, action="remove")
+
+    async def _process_reaction(self, payload: discord.RawReactionActionEvent, action: str) -> None:
+        """guild_id → tenant_id 逆引き → reaction_writer に委譲する。"""
+        guild_id = str(payload.guild_id)
+        tenant_id = await self._resolve_tenant_id(guild_id)
+        if tenant_id is None:
+            logger.debug(
+                "[discord-gateway] reaction: unknown guild_id=%s — 未登録 guild のため無視",
+                guild_id,
+            )
+            return
+
+        # Bot 自身のリアクション（受信箱から REST 経由で付与）も Gateway が唯一の書き手として記録する
+        is_bot_reaction = bool(self.user and payload.user_id == self.user.id)
+
+        try:
+            await self.reaction_writer.process_reaction(
+                tenant_id=tenant_id,
+                channel_id=str(payload.channel_id),
+                message_id=str(payload.message_id),
+                user_id=str(payload.user_id),
+                emoji=payload.emoji,
+                member=payload.member,
+                action=action,
+                is_bot_reaction=is_bot_reaction,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] reaction routing failed tenant_id=%d msg=%s action=%s: %s",
+                tenant_id,
+                payload.message_id,
+                action,
+                exc,
+                exc_info=True,
+            )
 
     async def on_message(self, message: discord.Message) -> None:  # type: ignore[override]
         """MESSAGE_CREATE: guild メッセージのみ処理する (ADR-146 B方式).
@@ -242,20 +377,6 @@ class JarvisDiscordClient(discord.Client):
                 exc,
                 exc_info=True,
             )
-
-    # --- 案ア 休眠スタブ（在庫移行プロジェクトで再設計予定 ADR-146）----------
-
-    async def _process_dm_message(self, message: discord.Message) -> None:  # noqa: ARG002
-        """DM 受信箱記録 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _process_dm_message: 休眠中 (ADR-146 案ア)")
-
-    async def _process_message(self, message: discord.Message) -> None:  # noqa: ARG002
-        """在庫受信 inbound_writer 経路 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _process_message: 休眠中 (ADR-146 案ア)")
-
-    async def _resume_missed_messages(self) -> None:
-        """missed messages 補完 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _resume_missed_messages: 休眠中 (ADR-146 案ア)")
 
 
 _MAX_RECONNECT_ATTEMPTS = 10

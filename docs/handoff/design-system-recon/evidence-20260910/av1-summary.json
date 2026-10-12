@@ -1,0 +1,121 @@
+{
+  "total": 80,
+  "notFound": 0,
+  "className": [
+    [
+      "(none)",
+      46
+    ],
+    [
+      "\"right-panel-field\"",
+      9
+    ],
+    [
+      "\"field field-h-md\"",
+      8
+    ],
+    [
+      "\"field-h-md field-w-sm\"",
+      3
+    ],
+    [
+      "\"schedule-input\"",
+      3
+    ],
+    [
+      "\"page-header-select\"",
+      2
+    ],
+    [
+      "\"inbox-platform-select\"",
+      2
+    ],
+    [
+      "\"account-settings-lang-select\"",
+      1
+    ],
+    [
+      "\"conv-logs-filter-select\"",
+      1
+    ],
+    [
+      "\"search-input field-h-md field-w-sm\"",
+      1
+    ],
+    [
+      "\"gs-select\"",
+      1
+    ],
+    [
+      "\"inbox-page-filter-select\"",
+      1
+    ],
+    [
+      "\"inbox-settings-select\"",
+      1
+    ],
+    [
+      "\"manual-record-select\"",
+      1
+    ]
+  ],
+  "reads": [
+    [
+      "target.value",
+      76
+    ],
+    [
+      "other/unresolved",
+      4
+    ]
+  ],
+  "numeric": [
+    [
+      "false",
+      75
+    ],
+    [
+      "true",
+      5
+    ]
+  ],
+  "childPattern": [
+    [
+      "map",
+      41
+    ],
+    [
+      "static-option",
+      32
+    ],
+    [
+      "mixed",
+      7
+    ]
+  ],
+  "childKinds": [
+    [
+      "option",
+      32
+    ],
+    [
+      "map+option",
+      22
+    ],
+    [
+      "map",
+      19
+    ],
+    [
+      "expression+option",
+      7
+    ]
+  ],
+  "hardcodedLabels": 23,
+  "labelsT": 56,
+  "disabledOpt": 0,
+  "withId": 9,
+  "htmlFor": 9,
+  "wrapped": 3,
+  "labelled": 12
+}

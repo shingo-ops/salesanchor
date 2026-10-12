@@ -11,9 +11,11 @@
  */
 
 import "./InboxPage.css";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PAGE_ICONS } from "../../constants/icons";
+import { PAGE_ICONS, NAV_ICONS } from "../../constants/icons";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { ICON } from "../../constants/iconSizes";
 import { useInboxState } from "./useInboxState";
 import { STATUS_TABS } from "./inbox.types";
@@ -23,6 +25,7 @@ import { InboxMessageThread } from "./InboxMessageThread";
 import { InboxKartePanel } from "./InboxKartePanel";
 import { InboxSettingsModal } from "./InboxSettingsModal";
 import { InboxProfileModal } from "./InboxProfileModal";
+import { Button } from "../../components/Button";
 
 export default function InboxPage() {
   const state = useInboxState();
@@ -41,25 +44,48 @@ export default function InboxPage() {
 
   const navigate = useNavigate();
 
+  /**
+   * スマホ幅での絞り込みの開閉。
+   * スマホでは画面の高さが限られるため、ステータスタブと絞り込みピルを普段は出さず、
+   * 上部の「絞り込み」ボタンで開く（お手本の WhatsApp も引き下げたときだけ出す作り）。
+   * 既定の絞り込みは受信箱の設定（defaultTab / defaultUnreadOnly）で適用済みのため、
+   * 毎回開く必要はない。PC・タブレットでは常に表示されるのでこの状態は使われない。
+   */
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  /** 既定（すべて・絞り込みなし）から外れているか。外れていればボタンに印を付ける */
+  const hasActiveFilter =
+    state.statusTab !== "all" || state.unreadOnly || state.followUpOnly;
+
   const headerActions = (
     <div className="page-header-actions">
-      <button
+      <Button variant="ghost" size="md"
         type="button"
-        className="btn-ghost"
+
         onClick={() => navigate("/templates")}
         aria-label={t("nav.templates")}
         data-tooltip={t("nav.templates")}
       >
         {t("nav.templates")}
-      </button>
-      <button
+      </Button>
+      <Button variant="ghost" size="md"
         type="button"
-        className="btn-ghost"
+
         onClick={() => navigate("/faq")}
         aria-label={t("faq.title")}
         data-tooltip={t("faq.title")}
       >
         FAQ
+      </Button>
+      <button
+        type="button"
+        className={`icon-btn inbox-mobile-filter-toggle${hasActiveFilter ? " has-active" : ""}`}
+        aria-expanded={mobileFiltersOpen}
+        onClick={() => setMobileFiltersOpen((v) => !v)}
+        aria-label={t("inbox.mobileFilters")}
+        data-tooltip={t("inbox.mobileFilters")}
+      >
+        <NAV_ICONS.filter size={ICON.md} aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -75,8 +101,8 @@ export default function InboxPage() {
 
   return (
     <>
-      <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll headerAction={headerActions}>
-        <div className="inbox-wrapper">
+      <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
+        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}${selectedLeadId != null ? " thread-open" : ""}`}>
           {/* 左+中央エリア */}
           <div className="inbox-main-area">
             {/* ステータスタブ + プラットフォームフィルタ */}
@@ -88,7 +114,8 @@ export default function InboxPage() {
                   {t(tab.labelKey)}
                 </button>
               ))}
-              <select
+              <SelectControl
+                variant="tabbar"
                 className="inbox-platform-select"
                 value={state.platformFilter}
                 onChange={(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}
@@ -98,7 +125,7 @@ export default function InboxPage() {
                 <option value="messenger">{t("inbox.platformMessenger")}</option>
                 <option value="instagram">{t("inbox.platformInstagram")}</option>
                 <option value="discord">{t("inbox.platformDiscord")}</option>
-              </select>
+              </SelectControl>
             </div>
 
             <div className="inbox-columns">
@@ -136,6 +163,7 @@ export default function InboxPage() {
               />
 
               <InboxMessageThread
+                onBackToList={state.backToList}
                 selectedLeadId={selectedLeadId}
                 selectedConversation={selectedConversation}
                 leadDetail={leadDetail}
@@ -163,12 +191,15 @@ export default function InboxPage() {
                 discordChannelMissing={state.discordChannelMissing}
                 trimmedDraft={state.trimmedDraft}
                 submitSend={state.submitSend}
+                retrySend={state.retrySend}
                 handleKeyDown={state.handleKeyDown}
                 attachedFile={state.attachedFile}
                 setAttachedFile={state.setAttachedFile}
                 clearAttachment={state.clearAttachment}
                 recipientLanguageSetting={state.recipientLanguageSetting}
                 setRecipientLanguage={state.setRecipientLanguage}
+                sendReaction={state.sendReaction}
+                deleteReaction={state.deleteReaction}
               />
             </div>
           </div>

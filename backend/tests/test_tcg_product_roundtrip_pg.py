@@ -38,7 +38,7 @@ def seed(connection, count=2):
         for index in range(count):
             cursor.execute(
                 "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id) "
-                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.tcg_type_master WHERE code='one_piece')) RETURNING id",
+                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.type_master WHERE code='one_piece')) RETURNING id",
                 (
                     "RTSENT" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
@@ -53,7 +53,7 @@ def seed(connection, count=2):
                         f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
                         (pid, word, position),
                     )
-        cursor.execute("UPDATE public.tcg_type_master SET is_active=false WHERE code='one_piece'")
+        cursor.execute("UPDATE public.type_master SET is_active=false WHERE code='one_piece'")
 
 
 def edit(raw, changes, *, single=False):
@@ -87,7 +87,7 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
                 empty = await svc.export_csv(db, "not found")
                 assert len(svc.read_records(empty)) == 1
                 with connection.cursor() as cur:
-                    cur.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
+                    cur.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
                     work = str(cur.fetchone()[0])
                 selected = await svc.export_csv(db, "商品0", work)
                 assert len(svc.read_records(selected)) == 2
@@ -122,7 +122,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     "english_title": " new title ",
                     "mark": "=001",
                     "release_date": "2028-02-29",
-                    "division_code": "DIV01",
+                    "division_code": "TCG",
                     "work_code": "pokemon_booster_box",
                     "manufacturer_code": "MK001",
                     "product_category_code": "PC_BOX",
@@ -136,15 +136,15 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                 actual = {
                     row[0]: dict(zip(exported[0], map(svc.unescape_cell, row), strict=True)) for row in exported[1:]
                 }
-                code = svc.read_records(original)[1][0]
+                product_id_str = svc.read_records(original)[1][0]
                 for field, value in changes.items():
-                    assert actual[code][field] == value
+                    assert actual[product_id_str][field] == value
                 after = observe(connection, False)
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT category_class FROM public.products WHERE product_code=%s", (code,))
+                    cursor.execute("SELECT category_class FROM public.products WHERE id=%s", (int(product_id_str),))
                     assert cursor.fetchone()[0] == "ポケモンカード"
                     cursor.execute(
-                        f"SELECT messages FROM {SCHEMA}.tcg_product_import_rows WHERE product_code=%s", (code,)
+                        f"SELECT messages FROM {SCHEMA}.tcg_product_import_rows WHERE product_code=%s", (product_id_str,)
                     )
                     messages = {item["field"]: item for item in json.loads(cursor.fetchone()[0])}
                     original_row = dict(
@@ -159,11 +159,11 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                 old = {row[0]["id"]: row[0] for row in before["products"]}
                 for row in after["products"]:
                     product = row[0]
-                    if product["product_code"] != code:
+                    if str(product["id"]) != product_id_str:
                         assert product == old[product["id"]]
                     for field in ["product_code", "id", "created_at"]:
                         assert product[field] == old[product["id"]][field]
-                untouched = {pid for pid, p in old.items() if p["product_code"] != code}
+                untouched = {pid for pid, p in old.items() if str(pid) != product_id_str}
                 for table in svc.WORDS.values():
                     assert [r for r in before[table] if r[0]["product_id"] in untouched] == [
                         r for r in after[table] if r[0]["product_id"] in untouched
@@ -232,8 +232,8 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
                     raw = edit(
                         raw,
                         {
-                            "code": {"product_code": "RT000"},
-                            "unknown": {"product_code": "absent"},
+                            "code": {"product_id": "99999"},
+                            "unknown": {"product_id": "absent"},
                             "date": {"release_date": "2026-02-30"},
                             "reference": {"work_code": "absent"},
                         }[mode],

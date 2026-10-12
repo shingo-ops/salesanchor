@@ -1,7 +1,7 @@
 /**
  * HeaderButton — ページヘッダーアクション用ボタン SSoT (ADR-069)
  *
- * CSSクラスへのマッピングのみを担う薄いラッパー。スタイル定義は components.css に集約済み。
+ * テキスト操作は標準 Button、アイコン操作は既存 icon-btn を使用する薄いラッパー。
  * variant="icon" の場合は aria-label が必須（TypeScript で強制）。
  *
  * 使用例:
@@ -11,14 +11,7 @@
  *   </HeaderButton>
  */
 import type { ReactNode } from "react";
-
-// variant → CSSクラス の1対1マッピング（components.css に定義済み）
-const VARIANT_CLASS = {
-  primary: "btn-primary",
-  secondary: "btn-secondary",
-  ghost: "btn-ghost",
-  icon: "icon-btn",
-} as const;
+import { Button } from "./Button";
 
 type BaseProps = {
   onClick?: () => void;
@@ -44,15 +37,36 @@ export type HeaderButtonProps = TextButtonProps | IconButtonProps;
 
 export function HeaderButton(props: HeaderButtonProps) {
   const { variant, onClick, disabled, children } = props;
+  const ariaLabel = "aria-label" in props ? props["aria-label"] : undefined;
+  const tooltip = "data-tooltip" in props ? props["data-tooltip"] : undefined;
+  const testId = "data-testid" in props ? props["data-testid"] : undefined;
+
+  if (variant !== "icon") {
+    return (
+      <Button
+        type="button"
+        variant={variant}
+        size="md"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        data-tooltip={tooltip}
+        data-testid={testId}
+      >
+        {children}
+      </Button>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={VARIANT_CLASS[variant]}
+      className="icon-btn"
       onClick={onClick}
       disabled={disabled}
-      aria-label={"aria-label" in props ? props["aria-label"] : undefined}
-      data-tooltip={"data-tooltip" in props ? props["data-tooltip"] : undefined}
-      data-testid={"data-testid" in props ? props["data-testid"] : undefined}
+      aria-label={ariaLabel}
+      data-tooltip={tooltip}
+      data-testid={testId}
     >
       {children}
     </button>

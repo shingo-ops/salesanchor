@@ -37,10 +37,16 @@ from app.schemas.central_masters import (
     CentralSupplierCreate,
     CentralSupplierResponse,
     CentralSupplierUpdate,
+    KnowledgeRuleSimpleCreate,
+    KnowledgeRuleSimpleResponse,
     SupplierDiscordRoutingCreate,
     SupplierDiscordRoutingResponse,
-    SupplierPromptResponse,
-    SupplierPromptUpdate,
+    SupplierExtractionOverviewItem,
+    SupplierExtractionRulesResponse,
+    SupplierExtractionRulesUpdate,
+    SupplierKnowledgeLinkCreate,
+    SupplierKnowledgeLinkResponse,
+    SupplierSourceMessagesResponse,
 )
 
 router = APIRouter()
@@ -589,145 +595,489 @@ async def delete_routing(routing_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # ============================================================================
-# ADR-085: 仕入先別 Gemini プロンプト (public.supplier_prompts)
-#   GET  /super-admin/suppliers/{id}/prompt  未登録なら空プロンプトを返す
-#   PUT  /super-admin/suppliers/{id}/prompt  upsert (UNIQUE(supplier_id))
+# 仕入元抽出ルール (public.suppliers.extraction_* 列)
+#   GET  /super-admin/suppliers/extraction-overview  — 全仕入元 + unit_ng数 + ルール有無
+#   GET  /super-admin/suppliers/{id}/extraction-rules — ルール取得 + 最新原文
+#   PATCH /super-admin/suppliers/{id}/extraction-rules — ルール更新
 # ============================================================================
-@router.get(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
+
+_EXTRACTION_RULE_COLS = (
+    "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
+    "extraction_default_unit, extraction_notes, extraction_state_format, "
+    "extraction_example_text, extraction_ship_format, "
+    "extraction_layout_rules, extraction_hard_cases"
 )
-async def get_supplier_prompt(
-    supplier_id: int, db: AsyncSession = Depends(get_db)
-):
-    row = (
-        await db.execute(
-            text(
-                "SELECT supplier_id, prompt, is_active "
-                "FROM public.supplier_prompts WHERE supplier_id = :sid"
-            ),
-            {"sid": supplier_id},
-        )
-    ).mappings().first()
-    if not row:
-        # 未登録の仕入先は空プロンプトを返す（編集開始用）
-        return SupplierPromptResponse(
-            supplier_id=supplier_id, prompt="", is_active=True
-        )
-    return SupplierPromptResponse(**dict(row))
 
-
-@router.put(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
-)
-async def upsert_supplier_prompt(
-    supplier_id: int,
-    data: SupplierPromptUpdate,
-    user: User = Depends(require_super_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        row = (
-            await db.execute(
-                text(
-                    "INSERT INTO public.supplier_prompts "
-                    "(supplier_id, prompt, is_active, updated_by) "
-                    "VALUES (:sid, :prompt, :active, :uid) "
-                    "ON CONFLICT (supplier_id) DO UPDATE SET "
-                    "prompt = EXCLUDED.prompt, is_active = EXCLUDED.is_active, "
-                    "updated_by = EXCLUDED.updated_by, updated_at = NOW() "
-                    "RETURNING supplier_id, prompt, is_active"
-                ),
-                {
-                    "sid": supplier_id,
-                    "prompt": data.prompt,
-                    "active": data.is_active,
-                    "uid": user.id,
-                },
-            )
-        ).mappings().first()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"仕入先が存在しません: {exc.orig}",
-        )
-    await db.commit()
-    return SupplierPromptResponse(**dict(row))
-
-
-# ============================================================================
-# ADR SA-06: 解析精度サマリー (v_supplier_parse_stats)
-#   GET /super-admin/suppliers/{id}/parse-stats
-# ============================================================================
-
-
-class SupplierParseStatRow(BaseModel):
-    """v_supplier_parse_stats の 1 行（フロントエンド表示用）。"""
-
-    supplier_id: int
-    supplier_name: str | None
-    day: str  # ISO date string (YYYY-MM-DD)
-    total_lines: int
-    parsed_count: int
-    excluded_count: int
-    unparsed_count: int
-    exclude_rate_pct: float | None
-    avg_confidence: float | None
+_EXTRACTION_RULE_UPDATABLE = {
+    "extraction_price_format",
+    "extraction_qty_format",
+    "extraction_order_pattern",
+    "extraction_default_unit",
+    "extraction_notes",
+    "extraction_state_format",
+    "extraction_example_text",
+    "extraction_ship_format",
+    "extraction_layout_rules",
+    "extraction_hard_cases",
+}
 
 
 @router.get(
-    "/super-admin/suppliers/{supplier_id}/parse-stats",
-    response_model=list[SupplierParseStatRow],
+    "/super-admin/suppliers/extraction-overview",
+    response_model=list[SupplierExtractionOverviewItem],
     dependencies=[Depends(require_super_admin)],
+    summary="全仕入元の抽出ルール有無 + unit_ng件数一覧",
 )
-async def get_supplier_parse_stats(
-    supplier_id: int,
-    days: int = Query(default=30, ge=1, le=365),
+async def list_supplier_extraction_overview(
     db: AsyncSession = Depends(get_db),
-):
-    """仕入元の解析精度サマリーを v_supplier_parse_stats から取得する。
-
-    Args:
-        supplier_id: 対象の仕入元 ID
-        days: 過去 N 日分を返す（最大 365）
-    """
+) -> list[SupplierExtractionOverviewItem]:
+    """全仕入元（tenant_id IS NULL）の抽出ルール設定有無と unit_ng 件数を返す。"""
     result = await db.execute(
         text(
             """
             SELECT
-                supplier_id,
-                supplier_name,
-                day::date AS day,
-                total_lines,
-                parsed_count,
-                excluded_count,
-                unparsed_count,
-                exclude_rate_pct,
-                avg_confidence
-            FROM public.v_supplier_parse_stats
-            WHERE supplier_id = :supplier_id
-              AND day >= NOW() - INTERVAL '1 day' * :days
-            ORDER BY day DESC
+                s.id AS supplier_id,
+                s.supplier_code,
+                s.name,
+                (
+                    s.extraction_price_format IS NOT NULL
+                    OR s.extraction_qty_format IS NOT NULL
+                    OR s.extraction_order_pattern IS NOT NULL
+                    OR s.extraction_default_unit IS NOT NULL
+                    OR s.extraction_notes IS NOT NULL
+                    OR s.extraction_state_format IS NOT NULL
+                ) AS has_extraction_rules,
+                COALESCE(ng.unit_ng_count, 0) AS unit_ng_count
+            FROM public.suppliers s
+            LEFT JOIN LATERAL (
+                SELECT COUNT(ar.id) AS unit_ng_count
+                FROM public.supplier_channels sc
+                JOIN public.source_messages sm ON sm.supplier_channel_id = sc.id AND sm.is_active = TRUE
+                JOIN public.extraction_jobs ej ON ej.source_message_id = sm.id
+                JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
+                JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+                WHERE sc.supplier_id = s.id
+                  AND ar.unit_resolved = FALSE
+            ) ng ON TRUE
+            WHERE s.tenant_id IS NULL AND s.is_active = TRUE
+            ORDER BY ng.unit_ng_count DESC, s.name ASC
+            """
+        )
+    )
+    return [
+        SupplierExtractionOverviewItem(
+            supplier_id=row["supplier_id"],
+            supplier_code=row["supplier_code"],
+            name=row["name"],
+            has_extraction_rules=bool(row["has_extraction_rules"]),
+            unit_ng_count=int(row["unit_ng_count"] or 0),
+        )
+        for row in result.mappings().all()
+    ]
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/extraction-rules",
+    response_model=SupplierExtractionRulesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の抽出ルール取得（最新原文付き）",
+)
+async def get_supplier_extraction_rules(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierExtractionRulesResponse:
+    """仕入元の抽出ルール列 + 最新 source_messages.raw_text を返す。"""
+    row = (
+        await db.execute(
+            text(
+                f"SELECT id, {_EXTRACTION_RULE_COLS} "
+                "FROM public.suppliers WHERE id = :id AND tenant_id IS NULL"
+            ),
+            {"id": supplier_id},
+        )
+    ).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+
+    # 最新原文を取得
+    raw_row = (
+        await db.execute(
+            text(
+                """
+                SELECT sm.raw_text
+                FROM public.source_messages sm
+                JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+                WHERE sc.supplier_id = :sid AND sm.is_active = TRUE
+                ORDER BY sm.received_at DESC NULLS LAST
+                LIMIT 1
+                """
+            ),
+            {"sid": supplier_id},
+        )
+    ).mappings().first()
+
+    return SupplierExtractionRulesResponse(
+        supplier_id=supplier_id,
+        extraction_price_format=row["extraction_price_format"],
+        extraction_qty_format=row["extraction_qty_format"],
+        extraction_order_pattern=row["extraction_order_pattern"],
+        extraction_default_unit=row["extraction_default_unit"],
+        extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
+        extraction_example_text=row["extraction_example_text"],
+        extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
+        latest_raw_text=raw_row["raw_text"] if raw_row else None,
+    )
+
+
+@router.patch(
+    "/super-admin/suppliers/{supplier_id}/extraction-rules",
+    response_model=SupplierExtractionRulesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の抽出ルール更新",
+)
+async def update_supplier_extraction_rules(
+    supplier_id: int,
+    data: SupplierExtractionRulesUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierExtractionRulesResponse:
+    """仕入元の extraction_* 列を更新する。未指定フィールドは変更しない。"""
+    update_data = data.model_dump(exclude_unset=True)
+    update_data = {k: v for k, v in update_data.items() if k in _EXTRACTION_RULE_UPDATABLE}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+
+    set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
+    update_data["id"] = supplier_id
+    try:
+        result = await db.execute(
+            text(
+                f"UPDATE public.suppliers SET {set_clauses}, updated_at = NOW() "
+                f"WHERE id = :id AND tenant_id IS NULL "
+                f"RETURNING id, {_EXTRACTION_RULE_COLS}"
+            ),
+            update_data,
+        )
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新エラー: {exc}") from exc
+
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+    await db.commit()
+
+    return SupplierExtractionRulesResponse(
+        supplier_id=row["id"],
+        extraction_price_format=row["extraction_price_format"],
+        extraction_qty_format=row["extraction_qty_format"],
+        extraction_order_pattern=row["extraction_order_pattern"],
+        extraction_default_unit=row["extraction_default_unit"],
+        extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
+        extraction_example_text=row["extraction_example_text"],
+        extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
+        latest_raw_text=None,  # PATCH 応答では原文は含まない
+    )
+
+
+# ============================================================================
+# 仕入元チャンネル原文メッセージ一覧
+#   GET /super-admin/suppliers/{id}/source-messages
+# ============================================================================
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/source-messages",
+    response_model=SupplierSourceMessagesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の原文メッセージ一覧取得",
+)
+async def list_supplier_source_messages(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierSourceMessagesResponse:
+    """仕入元チャンネルに紐付く source_messages を新着順で返す。"""
+    result = await db.execute(
+        text(
+            """
+            SELECT sm.id, sm.raw_text, sm.created_at
+            FROM public.source_messages sm
+            JOIN public.supplier_channels sc ON sm.supplier_channel_id = sc.id
+            WHERE sc.supplier_id = :supplier_id AND sm.is_active = true
+            ORDER BY sm.created_at DESC
             """
         ),
-        {"supplier_id": supplier_id, "days": days},
+        {"supplier_id": supplier_id},
     )
     rows = result.mappings().all()
-    return [
-        SupplierParseStatRow(
-            supplier_id=row["supplier_id"],
-            supplier_name=row["supplier_name"],
-            day=str(row["day"]),
-            total_lines=int(row["total_lines"] or 0),
-            parsed_count=int(row["parsed_count"] or 0),
-            excluded_count=int(row["excluded_count"] or 0),
-            unparsed_count=int(row["unparsed_count"] or 0),
-            exclude_rate_pct=float(row["exclude_rate_pct"]) if row["exclude_rate_pct"] is not None else None,
-            avg_confidence=float(row["avg_confidence"]) if row["avg_confidence"] is not None else None,
-        )
+    messages = [
+        {"id": row["id"], "raw_text": row["raw_text"], "created_at": str(row["created_at"])}
         for row in rows
     ]
+    return SupplierSourceMessagesResponse(messages=messages, total=len(messages))
+
+
+# ============================================================================
+# 共用 Knowledge ルール (public.knowledge_rules 抽出カテゴリ)
+#   GET  /super-admin/knowledge-rules?category=...
+#   POST /super-admin/knowledge-rules
+# ============================================================================
+
+_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "status_keyword")
+
+
+@router.get(
+    "/super-admin/knowledge-rules",
+    response_model=list[KnowledgeRuleSimpleResponse],
+    dependencies=[Depends(require_super_admin)],
+    summary="共用Knowledgeルール一覧（カテゴリ別）",
+)
+async def list_knowledge_rules(
+    category: str = Query(..., description="block_delimiter / status_keyword"),
+    db: AsyncSession = Depends(get_db),
+) -> list[KnowledgeRuleSimpleResponse]:
+    if category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+    result = await db.execute(
+        text(
+            "SELECT id, category, pattern_type, pattern, normalized_to, description, is_active"
+            " FROM public.knowledge_rules"
+            " WHERE category = :category AND is_active = TRUE"
+            " ORDER BY priority DESC, pattern"
+        ),
+        {"category": category},
+    )
+    return [KnowledgeRuleSimpleResponse(**row) for row in result.mappings().all()]
+
+
+@router.post(
+    "/super-admin/knowledge-rules",
+    response_model=KnowledgeRuleSimpleResponse,
+    dependencies=[Depends(require_super_admin)],
+    status_code=201,
+    summary="共用Knowledgeルール追加",
+)
+async def create_knowledge_rule(
+    data: KnowledgeRuleSimpleCreate,
+    db: AsyncSession = Depends(get_db),
+) -> KnowledgeRuleSimpleResponse:
+    if data.category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {data.category}")
+    result = await db.execute(
+        text(
+            "INSERT INTO public.knowledge_rules"
+            " (category, pattern_type, pattern, normalized_to, description, priority, language, is_active)"
+            " VALUES (:category, :pattern_type, :pattern, :normalized_to, :description, 100, 'ja', TRUE)"
+            " RETURNING id, category, pattern_type, pattern, normalized_to, description, is_active"
+        ),
+        data.model_dump(),
+    )
+    await db.commit()
+    return KnowledgeRuleSimpleResponse(**result.mappings().first())
+
+
+# ============================================================================
+# 仕入元 Knowledge リンク (supplier_knowledge_links)
+#   GET    /super-admin/suppliers/{supplier_id}/knowledge-links
+#   POST   /super-admin/suppliers/{supplier_id}/knowledge-links
+#   DELETE /super-admin/suppliers/{supplier_id}/knowledge-links/{link_id}
+# ============================================================================
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links",
+    response_model=list[SupplierKnowledgeLinkResponse],
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元のKnowledgeリンク一覧",
+)
+async def list_supplier_knowledge_links(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[SupplierKnowledgeLinkResponse]:
+    result = await db.execute(
+        text(
+            """
+            SELECT skl.id, skl.supplier_id, skl.knowledge_rule_id,
+                   kr.category, kr.pattern, kr.normalized_to, kr.description, skl.is_active
+            FROM public.supplier_knowledge_links skl
+            JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+            WHERE skl.supplier_id = :supplier_id AND skl.is_active = TRUE
+            ORDER BY kr.category, kr.pattern
+            """
+        ),
+        {"supplier_id": supplier_id},
+    )
+    return [SupplierKnowledgeLinkResponse(**row) for row in result.mappings().all()]
+
+
+@router.post(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links",
+    response_model=SupplierKnowledgeLinkResponse,
+    dependencies=[Depends(require_super_admin)],
+    status_code=201,
+    summary="仕入元にKnowledgeルールをリンク",
+)
+async def create_supplier_knowledge_link(
+    supplier_id: int,
+    data: SupplierKnowledgeLinkCreate,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierKnowledgeLinkResponse:
+    # 仕入元存在確認（tenant_id IS NULL = 共用マスタ）
+    sup = (
+        await db.execute(
+            text("SELECT id FROM public.suppliers WHERE id = :id AND tenant_id IS NULL"),
+            {"id": supplier_id},
+        )
+    ).first()
+    if not sup:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+    try:
+        result = await db.execute(
+            text(
+                """
+                INSERT INTO public.supplier_knowledge_links (supplier_id, knowledge_rule_id, is_active)
+                VALUES (:supplier_id, :knowledge_rule_id, TRUE)
+                RETURNING id, supplier_id, knowledge_rule_id, is_active
+                """
+            ),
+            {"supplier_id": supplier_id, "knowledge_rule_id": data.knowledge_rule_id},
+        )
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="このルールは既にリンク済みです") from exc
+    link_row = result.mappings().first()
+    # JOINで完全な情報を取得
+    full = (
+        await db.execute(
+            text(
+                """
+                SELECT skl.id, skl.supplier_id, skl.knowledge_rule_id,
+                       kr.category, kr.pattern, kr.normalized_to, kr.description, skl.is_active
+                FROM public.supplier_knowledge_links skl
+                JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+                WHERE skl.id = :id
+                """
+            ),
+            {"id": link_row["id"]},
+        )
+    ).mappings().first()
+    return SupplierKnowledgeLinkResponse(**full)
+
+
+@router.delete(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links/{link_id}",
+    dependencies=[Depends(require_super_admin)],
+    status_code=204,
+    summary="仕入元からKnowledgeルールを解除",
+)
+async def delete_supplier_knowledge_link(
+    supplier_id: int,
+    link_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    result = await db.execute(
+        text(
+            "DELETE FROM public.supplier_knowledge_links"
+            " WHERE id = :id AND supplier_id = :supplier_id"
+        ),
+        {"id": link_id, "supplier_id": supplier_id},
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="リンクが見つかりません")
+    await db.commit()
+
+
+# ============================================================================
+# 抽出プロンプト設定 (public.extraction_prompt_config)
+#   GET  /super-admin/extraction-prompts             全件取得
+#   GET  /super-admin/extraction-prompts/{key}       単一取得（未登録なら空を返す）
+#   PUT  /super-admin/extraction-prompts/{key}       upsert（UNIQUE(prompt_key)）
+# ============================================================================
+
+class ExtractionPromptConfigResponse(BaseModel):
+    prompt_key: str
+    prompt_text: str
+    is_active: bool
+    version: int
+
+
+class ExtractionPromptConfigUpdate(BaseModel):
+    prompt_text: str
+    is_active: bool = True
+
+
+@router.get(
+    "/super-admin/extraction-prompts",
+    response_model=list[ExtractionPromptConfigResponse],
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_extraction_prompts(db: AsyncSession = Depends(get_db)):
+    rows = (
+        await db.execute(
+            text(
+                "SELECT prompt_key, prompt_text, is_active, version "
+                "FROM public.extraction_prompt_config ORDER BY prompt_key"
+            )
+        )
+    ).mappings().all()
+    return [ExtractionPromptConfigResponse(**dict(r)) for r in rows]
+
+
+@router.get(
+    "/super-admin/extraction-prompts/{prompt_key}",
+    response_model=ExtractionPromptConfigResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def get_extraction_prompt(prompt_key: str, db: AsyncSession = Depends(get_db)):
+    row = (
+        await db.execute(
+            text(
+                "SELECT prompt_key, prompt_text, is_active, version "
+                "FROM public.extraction_prompt_config WHERE prompt_key = :key"
+            ),
+            {"key": prompt_key},
+        )
+    ).mappings().first()
+    if not row:
+        # 未登録の場合は空プロンプトを返す（編集開始用）
+        return ExtractionPromptConfigResponse(
+            prompt_key=prompt_key, prompt_text="", is_active=True, version=0
+        )
+    return ExtractionPromptConfigResponse(**dict(row))
+
+
+@router.put(
+    "/super-admin/extraction-prompts/{prompt_key}",
+    response_model=ExtractionPromptConfigResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def upsert_extraction_prompt(
+    prompt_key: str,
+    data: ExtractionPromptConfigUpdate,
+    user: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    row = (
+        await db.execute(
+            text(
+                "INSERT INTO public.extraction_prompt_config "
+                "(prompt_key, prompt_text, is_active, updated_by) "
+                "VALUES (:key, :text, :active, :uid) "
+                "ON CONFLICT (prompt_key) DO UPDATE SET "
+                "prompt_text = EXCLUDED.prompt_text, is_active = EXCLUDED.is_active, "
+                "updated_by = EXCLUDED.updated_by, "
+                "version = public.extraction_prompt_config.version + 1, "
+                "updated_at = NOW() "
+                "RETURNING prompt_key, prompt_text, is_active, version"
+            ),
+            {"key": prompt_key, "text": data.prompt_text, "active": data.is_active, "uid": user.id},
+        )
+    ).mappings().first()
+    await db.commit()
+    return ExtractionPromptConfigResponse(**dict(row))

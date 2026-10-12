@@ -7,6 +7,7 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { CompanyAddress } from "./company-detail.types";
 import { addressDisplay, typeLabel } from "./company-detail.types";
+import { Button } from "../../components/Button";
 
 interface Props {
   billingAddresses: CompanyAddress[];
@@ -49,8 +50,8 @@ function AddressTable({
             <td>{addressDisplay(a)}</td>
             <td>{a.is_default ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : ""}</td>
             <td>
-              {canEdit && <button className="btn-sm" onClick={() => openAddressEdit(a)}>{t("common.edit")}</button>}
-              {canEdit && <button className="btn-sm btn-danger" onClick={() => setAddrDeleteTarget(a)}>{t("common.delete")}</button>}
+              {canEdit && <Button variant="secondary" size="sm" onClick={() => openAddressEdit(a)}>{t("common.edit")}</Button>}
+              {canEdit && <Button variant="danger" size="sm" onClick={() => setAddrDeleteTarget(a)}>{t("common.delete")}</Button>}
             </td>
           </tr>
         ))}
@@ -70,9 +71,9 @@ export function CompanyAddressesTab({
       <h2>
         {typeLabel(t, "billing")}{t("companies.address")} ({billingAddresses.length})
         {canEdit && (
-          <button className="btn-sm" style={{ marginLeft: "var(--space-3)" }} onClick={() => openAddressNew("billing")}>
+          <Button variant="secondary" size="sm" layoutClassName="comp-btn-layout--ml-3" onClick={() => openAddressNew("billing")}>
             + {t("common.add")}
-          </button>
+          </Button>
         )}
       </h2>
       {billingAddresses.length === 0
@@ -84,9 +85,9 @@ export function CompanyAddressesTab({
       <h2 style={{ marginTop: "var(--space-6)" }}>
         {typeLabel(t, "delivery")}{t("companies.address")} ({deliveryAddresses.length})
         {canEdit && (
-          <button className="btn-sm" style={{ marginLeft: "var(--space-3)" }} onClick={() => openAddressNew("delivery")}>
+          <Button variant="secondary" size="sm" layoutClassName="comp-btn-layout--ml-3" onClick={() => openAddressNew("delivery")}>
             + {t("common.add")}
-          </button>
+          </Button>
         )}
       </h2>
       {deliveryAddresses.length === 0

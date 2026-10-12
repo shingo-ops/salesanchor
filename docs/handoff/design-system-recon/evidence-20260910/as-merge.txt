@@ -1,0 +1,18 @@
+✅ PR所有権確認: PR #3834 (ブランチ: release/frontend-action-button-batch)
+   マージ前GO・HEAD・必須checksを検査します（自動追従・再送なし）
+
+required checks: total=13 pass=13 skipping=0
+required checks: total=13 pass=13 skipping=0
+{"status": "MERGED", "number": 3834, "headRefOid": "17fa78527ba0ab81eb69cadef9d6dc2d4e9a6a03", "mergeCommit": "b3cf1fdf32bb57394239f973364273ed6f560fad", "mergedAt": "2026-09-28T11:32:45Z"}
+
+🗑️  worktreeをクリーンアップしています...
+   ブランチ: release/frontend-action-button-batch
+   パス    : /Users/tanizawashingo/worktrees/salesanchor/release-frontend-action-button-batch
+
+🔓 UUID解放: 73b8375d-0485-4c2e-a58c-a8280d30d114
+ℹ️  active-work.md 更新不要（既に DONE または行なし）: release/frontend-action-button-batch
+✅ worktree削除完了: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-action-button-batch
+Deleted branch release/frontend-action-button-batch (was 17fa78527).
+✅ ブランチ削除完了: release/frontend-action-button-batch
+
+✅ クリーンアップ完了

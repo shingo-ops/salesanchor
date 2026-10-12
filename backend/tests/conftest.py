@@ -41,21 +41,30 @@ from sqlalchemy.orm import sessionmaker
 import app.auth.dependencies  # noqa: F401
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
-
 # PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
 # SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
 # check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
 _PUBLIC_SUPPLIERS_DDL = """
 CREATE TABLE IF NOT EXISTS public.suppliers (
-    id            SERIAL PRIMARY KEY,
-    supplier_code VARCHAR(20) UNIQUE,
-    name          VARCHAR(255) NOT NULL,
-    line_name     VARCHAR(255),
-    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
-    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
-    tenant_id     INTEGER,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                       SERIAL PRIMARY KEY,
+    supplier_code            VARCHAR(20) UNIQUE,
+    name                     VARCHAR(255) NOT NULL,
+    line_name                VARCHAR(255),
+    supplier_type            VARCHAR(20) NOT NULL DEFAULT 'corporate',
+    is_active                BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id                INTEGER,
+    extraction_price_format  TEXT,
+    extraction_qty_format    TEXT,
+    extraction_order_pattern TEXT,
+    extraction_default_unit  TEXT,
+    extraction_notes         TEXT,
+    extraction_state_format  TEXT,
+    extraction_example_text  TEXT,
+    extraction_ship_format   TEXT,
+    extraction_layout_rules  TEXT,
+    extraction_hard_cases    TEXT,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
     ON public.suppliers (line_name)
@@ -108,32 +117,8 @@ def _supplier_ssot_premigration(cursor, schema: str):
     """)
 
 
-def _load_country_seed_rows() -> list[tuple[str, str, str]]:
-    """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
-    import re
-    from pathlib import Path
-
-    src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "constants" / "countries.ts").read_text("utf-8")
-    pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
-    return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
-
-
-def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """tcg_type_master の seed rows を canonical code に合わせる。"""
-    return [
-        ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
-        ("one_piece", "ワンピース", "One Piece TCG"),
-        ("dragon_ball", "ドラゴンボール", "Dragon Ball TCG"),
-        ("union_arena", "ユニオンアリーナ", "Union Arena"),
-        ("yugioh", "遊戯王", "Yu-Gi-Oh!"),
-        ("other", "その他", "Other"),
-        ("gundam", "ガンダムカードゲーム", "Gundam Card Game"),
-        ("weiss_schwarz", "ヴァイスシュヴァルツ", "Weiß Schwarz"),
-        ("digimon", "デジモンカードゲーム", "Digimon Card Game"),
-        ("hololive", "ホロライブ", "hololive Official Card Game"),
-        ("lorcana", "ディズニー ロルカナ", "Disney Lorcana"),
-        ("xross_stars", "クロススタァ", "Xross Stars"),
-    ]
+# 国・type_master の seed 供給元は tests/seed_data.py に集約（PG の試験と共用。ADR-1007 段2）
+from tests.seed_data import _load_country_seed_rows, _load_tcg_type_seed_rows  # noqa: E402
 
 # pytest-asyncio 0.25+ で event_loop fixture の上書きは deprecated。
 # asyncio_default_fixture_loop_scope = "function" の場合、session-scoped fixture は
@@ -151,6 +136,11 @@ async def test_engine():
         import sqlite3
         from decimal import Decimal
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-07 00:00:00+00:00")
+        # PostgreSQL の LEAST（NULL 以外の最小値）。paid_at の未来日クランプ用
+        dbapi_conn.create_function(
+            "LEAST", -1,
+            lambda *a: min((x for x in a if x is not None), default=None),
+        )
         dbapi_conn.create_function("LPAD", 3, lambda s, n, pad: str(s).rjust(int(n), pad))
         sqlite3.register_adapter(Decimal, lambda d: float(d))
         # SQLite は FK 制約がデフォルト OFF。ON DELETE CASCADE と 409 テストのために ON にする
@@ -173,8 +163,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
-        if "public.tcg_type_master" in statement:
-            statement = statement.replace("public.tcg_type_master", "tcg_type_master")
+        if "public.type_master" in statement:
+            statement = statement.replace("public.type_master", "type_master")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -365,6 +355,7 @@ async def setup_test_db(test_engine):
                 firebase_uid VARCHAR(128) UNIQUE,
                 is_employee BOOLEAN NOT NULL DEFAULT 0,
                 phone VARCHAR(20),
+                avatar_token TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (tenant_id, staff_code)
@@ -684,7 +675,7 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS tcg_type_master (
+            CREATE TABLE IF NOT EXISTS type_master (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code VARCHAR(50) NOT NULL UNIQUE,
                 name_ja VARCHAR(100) NOT NULL,
@@ -723,7 +714,7 @@ async def setup_test_db(test_engine):
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
-                INSERT OR IGNORE INTO tcg_type_master (code, name_ja, name_en, sort_order, is_active)
+                INSERT OR IGNORE INTO type_master (code, name_ja, name_en, sort_order, is_active)
                 VALUES (:code, :name_ja, :name_en, 100, 1)
             """), {"code": code, "name_ja": name_ja, "name_en": name_en})
         # ロール
@@ -736,6 +727,7 @@ async def setup_test_db(test_engine):
                 priority INTEGER NOT NULL DEFAULT 0,
                 is_system BOOLEAN DEFAULT FALSE,
                 description VARCHAR(500),
+                system_key TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tenant_id, name)
@@ -813,7 +805,7 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES tcg_type_master(code),
+                tcg_type VARCHAR(50) REFERENCES type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),
@@ -833,6 +825,7 @@ async def setup_test_db(test_engine):
                 display_order INTEGER,
                 tcg_uuid UUID,
                 division_id UUID,
+                product_kind_id INTEGER,
                 work_id INTEGER,
                 manufacturer_id UUID,
                 product_category_id UUID,
@@ -1390,6 +1383,17 @@ async def setup_test_db(test_engine):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # ADR-159 便B: Discord チャンネル別 webhook（token は暗号化済み・SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_channel_webhooks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                channel_id TEXT NOT NULL UNIQUE,
+                webhook_id TEXT NOT NULL,
+                webhook_token_encrypted TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield
 
 
@@ -1403,6 +1407,7 @@ async def db_session(test_engine, setup_test_db):
 
     # テスト後にデータを全削除（FK制約順）
     async with test_engine.begin() as conn:
+        await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))
@@ -1591,6 +1596,7 @@ async def client(db_session):
     from app.auth.dependencies import (
         get_current_tenant,
         get_current_user,
+        require_tenant_admin,
     )
     from app.database import get_db
     from app.main import app
@@ -1608,6 +1614,9 @@ async def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
+    # tenant admin 判定は user_roles（SQLite では系統が違う）を引くため、client 経由の試験ではモックユーザーを通す。
+    # 判定そのものは test_tenant_admin_ssot.py で検証する
+    app.dependency_overrides[require_tenant_admin] = override_get_current_user
     app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
     transport = ASGITransport(app=app)

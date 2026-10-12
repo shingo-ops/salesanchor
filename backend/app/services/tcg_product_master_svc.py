@@ -22,9 +22,17 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.tcg_config import TCG_SCHEMA
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 _PM_CODE_RE = re.compile(r"^PM(\d{4})$")
+
+
+def _split_csv_words(value: str) -> list[str]:
+    """カンマ区切りの語を割り、前後の空白と空を捨てる（INSERT と同じ扱い）。"""
+    return [k.strip() for k in (value or "").split(",") if k.strip()]
 
 
 # ---------------------------------------------------------------------------
@@ -80,23 +88,32 @@ async def fetch_registration_form(
     # ── 分類マスタ一覧（有効行のみ） ──────────────────────────────────────
     lookups: dict[str, list[dict]] = {}
 
-    # work_id → public.tcg_type_master (SSOT)
+    # work_id → public.type_master (SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+    # product_kind_id → public.product_kinds (SSOT, INTEGER PK)
+    pk_rows = await db.execute(text(
+        "SELECT id::text AS id, name AS name "
+        "FROM public.product_kinds "
+        "WHERE is_active = TRUE ORDER BY name"
+    ))
+    lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
+    # ADR-156 Phase 3B: tcg_product_categories is now SSOT in public schema (INTEGER PK).
+    _PUBLIC_TABLES = {"product_kinds", "tcg_product_categories"}
     for key, table, name_col in [
-        ("division_id", "tcg_major_categories", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
+        schema = "public" if table in _PUBLIC_TABLES else TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"""
                 SELECT id::text AS id, {name_col} AS name
-                FROM {TCG_SCHEMA}.{table}
+                FROM {schema}.{table}
                 WHERE is_active = TRUE
                 ORDER BY {name_col}
                 """
@@ -130,8 +147,8 @@ async def search_products_by_name(
         text(
             """
             SELECT
-                p.product_code  AS product_id,
-                p.id::text AS product_uuid,
+                p.id::text      AS product_id,
+                p.id::text      AS product_uuid,
                 p.name          AS japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
@@ -142,7 +159,7 @@ async def search_products_by_name(
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND p.name ILIKE :query
-            GROUP BY p.id, p.product_code, p.name
+            GROUP BY p.id, p.name
             ORDER BY p.name
             LIMIT 10
             """
@@ -224,7 +241,7 @@ async def check_duplicates(
         text(
             """
             SELECT
-                p.product_code::text      AS product_id,
+                p.id::text                AS product_id,
                 p.name                    AS japanese_title,
                 p.work_id::text           AS work_id,
                 p.manufacturer_id::text   AS manufacturer_id,
@@ -247,7 +264,7 @@ async def check_duplicates(
                 )
               )
             GROUP BY
-                p.id, p.product_code, p.name,
+                p.id, p.name,
                 p.work_id, p.manufacturer_id, p.product_category_id, p.mark
             ORDER BY p.name
             LIMIT 20
@@ -316,7 +333,7 @@ async def create_product(
     *,
     extraction_item_id: str,
     source_message_id: str,
-    division_id: str,
+    product_kind_id: str | int,
     work_id: str | int,
     manufacturer_id: str,
     product_category_id: str | int,
@@ -361,15 +378,17 @@ async def create_product(
     pm_code = await _next_pm_code(db)
 
     work_id_int = int(work_id)
-    # category_class: work_id（tcg_type_master.name_ja）から導出
+    # category_class: work_id（type_master.name_ja）から導出
     series_row = await db.execute(
-        text("SELECT name_ja FROM public.tcg_type_master WHERE id = :id"),
+        text("SELECT name_ja FROM public.type_master WHERE id = :id"),
         {"id": work_id_int},
     )
     sr = series_row.fetchone()
     category_class = sr.name_ja if sr else ""
 
     rd = release_date if release_date else None
+
+    product_kind_id_int = int(product_kind_id) if product_kind_id else None
 
     # public.products INSERT
     await db.execute(text("SET LOCAL app.is_operator = 'true'"))
@@ -378,11 +397,11 @@ async def create_product(
             """
             INSERT INTO public.products
                 (product_code, name, release_date, category_class,
-                 division_id, work_id, manufacturer_id, product_category_id,
+                 product_kind_id, work_id, manufacturer_id, product_category_id,
                  mark, name_en, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
-                 :division_id, :work_id, :manufacturer_id, :product_category_id,
+                 :product_kind_id, :work_id, :manufacturer_id, :product_category_id,
                  :mark, :english_title, TRUE)
             RETURNING id::text AS id, id AS int_id
             """
@@ -392,7 +411,7 @@ async def create_product(
             "japanese_title": japanese_title.strip(),
             "release_date": rd,
             "category_class": category_class,
-            "division_id": division_id,
+            "product_kind_id": product_kind_id_int,
             "work_id": work_id_int,
             "manufacturer_id": manufacturer_id,
             "product_category_id": product_category_id,
@@ -440,18 +459,27 @@ async def create_product(
     if commit:
         await db.commit()
 
-    # post-write gate: code が実際に存在するか確認
+    # post-write gate: 挿入した id が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE id = :id"
+            "SELECT id FROM public.products WHERE id = :id"
         ),
         {"id": product_id_int},
     )
     vr = verify.fetchone()
-    if vr is None or vr.product_code != pm_code:
+    if vr is None:
         raise ValueError("PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED")
 
-    return {"ok": True, "product_id": pm_code}
+    collisions = await find_code_collisions(
+        db,
+        product_code=pm_code,
+        mark=mark,
+        name=japanese_title.strip(),
+        search_keywords=_split_csv_words(search_keywords),
+        exclude_keywords=_split_csv_words(exclude_keywords),
+        exclude_product_id=product_id_int,
+    )
+    return {"ok": True, "product_id": str(product_id_int), "code_collisions": collisions}
 
 
 # ---------------------------------------------------------------------------
@@ -462,7 +490,7 @@ async def create_product(
 async def add_search_keyword(
     db: AsyncSession,
     *,
-    product_code: str,
+    product_id: int,
     new_keyword: str,
 ) -> dict[str, Any]:
     """
@@ -474,17 +502,17 @@ async def add_search_keyword(
     if not kw:
         raise ValueError("SEARCH_KEYWORD_EMPTY")
 
-    # product_id 取得
+    # product の存在確認
     pid_row = await db.execute(
         text(
             """
             SELECT id
             FROM public.products
-            WHERE product_code = :code AND is_active = TRUE
+            WHERE id = :pid AND is_active = TRUE
             FOR UPDATE
             """
         ),
-        {"code": product_code},
+        {"pid": product_id},
     )
     pr = pid_row.fetchone()
     if pr is None:
@@ -513,6 +541,76 @@ async def add_search_keyword(
         text(
             """
             INSERT INTO public.product_search_keywords
+                (product_id, keyword, position)
+            VALUES (:pid, :kw, :pos)
+            """
+        ),
+        {"pid": product_uuid, "kw": kw, "pos": next_pos},
+    )
+    await db.commit()
+
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# PR-D: 除外ワード追加（WRITE）
+# ---------------------------------------------------------------------------
+
+
+async def add_exclude_keyword(
+    db: AsyncSession,
+    *,
+    product_id: int,
+    new_keyword: str,
+) -> dict[str, Any]:
+    """
+    add_search_keyword を写した作り（design.md PR-D）。
+
+    既存キーワードは削除しない。重複は KEYWORD_ALREADY_EXISTS で返す。
+    """
+    kw = new_keyword.strip()
+    if not kw:
+        raise ValueError("EXCLUDE_KEYWORD_EMPTY")
+
+    # product の存在確認
+    pid_row = await db.execute(
+        text(
+            """
+            SELECT id
+            FROM public.products
+            WHERE id = :pid AND is_active = TRUE
+            FOR UPDATE
+            """
+        ),
+        {"pid": product_id},
+    )
+    pr = pid_row.fetchone()
+    if pr is None:
+        raise ValueError("EXCLUDE_KEYWORD_PRODUCT_NOT_FOUND")
+    product_uuid = pr.id
+
+    # 既存キーワード確認
+    existing = await db.execute(
+        text(
+            """
+            SELECT keyword
+            FROM public.product_exclude_keywords
+            WHERE product_id = :pid
+            ORDER BY position
+            """
+        ),
+        {"pid": product_uuid},
+    )
+    existing_kws = [r.keyword for r in existing.fetchall()]
+    if kw in existing_kws:
+        return {"ok": False, "code": "KEYWORD_ALREADY_EXISTS"}
+
+    # 追記（position = MAX + 1）
+    next_pos = len(existing_kws) + 1
+    await db.execute(
+        text(
+            """
+            INSERT INTO public.product_exclude_keywords
                 (product_id, keyword, position)
             VALUES (:pid, :kw, :pos)
             """

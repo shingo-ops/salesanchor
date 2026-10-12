@@ -4,7 +4,7 @@ MIG-04 Phase 2: LINE エクスポートファイル取り込みサービス。
 GAS の Latest24LineImport.js (parseLatest24LineExport / resolveSuppliers /
 buildProviderEntries / importLineExport) と同等のロジックを Python に移植。
 
-TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
+Step 4/5: TCG テーブルは public スキーマに移行済み。全 SQL は public. で修飾する。
 
 【確認工程】
 未解決の仕入元が 1 件以上のとき source_messages を書かず、
@@ -17,7 +17,9 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
+import logging
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -27,11 +29,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_line_android_parser import parse_android_export
+from app.services.tcg_line_system_events import match_system_event
 
 # ---------------------------------------------------------------------------
 # 定数
 # ---------------------------------------------------------------------------
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 JST = timezone(timedelta(hours=9))
 
@@ -39,13 +44,15 @@ JST = timezone(timedelta(hours=9))
 _DATE_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\s+.+$")
 # 時刻行: "14:30 山田太郎 こんにちは" など（時が 1 桁でも対応）
 _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})\s+(.+)$")
-# システムイベント（除外対象）
-_SYSTEM_EVENT_RE = re.compile(
-    r"(?:がグループに参加しました。?|をグループに招待しました。?"
-    r"|招待をキャンセルしました。?|がメッセージの送信を取り消しました。?)$"
-)
+# システムイベント判定は app.services.tcg_line_system_events.match_system_event に集約
+# （旧 _SYSTEM_EVENT_RE は削除。docs/handoff/line-parser-unify/design.md §3 C1）
 # メッセージ結合セパレーター（SQR-05）
 _MSG_SEPARATOR = "\n\n"
+# 本文末尾の「改行＋空白だけの行」を除く対象文字（半角空白・\t・\r・\n・U+3000）。
+# 再利用判定の SQL（_write_source_messages）にも同じ集合を直書きしている
+# （SQL への変数展開は tests/test_tcg_schema_qualification.py が禁止）。変更時は両方そろえる。
+_TRAILING_BLANK_CHARS = " \t\r\n\u3000"
+_TRAILING_BLANK_RE = re.compile(rf"\n[{_TRAILING_BLANK_CHARS}]*\Z")
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +63,16 @@ _MSG_SEPARATOR = "\n\n"
 def sha256_text(text_content: str) -> str:
     """UTF-8 SHA-256 hex を返す。"""
     return hashlib.sha256(text_content.encode("utf-8")).hexdigest()
+
+
+def normalize_message_body(text_content: str) -> str:
+    """本文末尾の「改行と、その後ろの空白だけの行」をすべて取り除く。
+
+    最後の内容行の行末空白・先頭・途中は変えない。
+    Android エクスポートでは、投稿の直後に空行が続くと本文末尾に改行が付き、
+    ファイル末尾の同じ投稿（空行なし）と別物になるため、比べる前に揃える。
+    """
+    return _TRAILING_BLANK_RE.sub("", text_content)
 
 
 def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
@@ -179,8 +196,7 @@ def parse_line_export(
             timestamp = f"{current_date} {hour:02d}:{minute:02d}:00"
             # GAS と同等: displayName + firstBody の連結に対してシステムイベント判定
             # (Latest24LineImport.js:73)
-            check_str = display_name + (" " + body if body else "")
-            is_system = bool(_SYSTEM_EVENT_RE.search(check_str))
+            is_system = match_system_event(display_name, body) is not None
 
             current_msg = {
                 "timestamp": timestamp,
@@ -194,9 +210,8 @@ def parse_line_export(
         if current_msg is not None:
             current_msg["body"] = current_msg["body"] + _MSG_SEPARATOR + line
             # システムイベント再判定（継続行込みで再チェック）
-            check_str = current_msg["display_name"] + " " + current_msg["body"]
-            current_msg["is_system_event"] = bool(
-                _SYSTEM_EVENT_RE.search(check_str)
+            current_msg["is_system_event"] = (
+                match_system_event(current_msg["display_name"], current_msg["body"]) is not None
             )
 
     # 最後のメッセージを確定
@@ -281,7 +296,7 @@ def build_provider_entries(
             "sp_code": str,
             "canonical_name": str,
             "raw_text": str,               # 最新メッセージ本文のみ（SQR-05）
-            "received_at": str,            # 最初の timestamp "YYYY-MM-DD HH:MM:00"
+            "received_at": str,            # 採用した最新メッセージの timestamp（line_posted_at と同値）
             "sha256": str,
             "skipped_message_count": int,  # 棄却したメッセージ数（最新以外）
         }]
@@ -300,7 +315,7 @@ def build_provider_entries(
         sorted_msgs = sorted(msgs, key=lambda m: m["timestamp"])
         latest_msg = sorted_msgs[-1]
         raw_text = latest_msg["body"]
-        received_at = sorted_msgs[0]["timestamp"]
+        received_at = latest_msg["timestamp"]
         canonical_name = sorted_msgs[0]["canonical_name"]
         skipped_message_count = len(sorted_msgs) - 1
 
@@ -337,7 +352,14 @@ async def _write_source_messages(
     enqueued_ids: list[str] = []
 
     # Stable lock order prevents deadlocks between overlapping import files.
-    for entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+    for raw_entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+        # 本文末尾の空行を除いた値で保存・再利用判定する（sha256 も計算し直す）
+        normalized_body = normalize_message_body(raw_entry["raw_text"])
+        entry = {
+            **raw_entry,
+            "raw_text": normalized_body,
+            "sha256": sha256_text(normalized_body),
+        }
         sp_code = entry["sp_code"]
 
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
@@ -360,19 +382,44 @@ async def _write_source_messages(
         channel_rec = channel_row.fetchone()
 
         if channel_rec is None:
-            raise ValueError("Resolved supplier has no active LINE channel")
-
-        supplier_channel_id = channel_rec[0]
+            # 仕入元は存在するのに LINE チャネルが無い状態が本番で発生した
+            # （2026-09-21 の public 移行で supplier_channels の行が引き継がれず、
+            #  既存仕入元からのメッセージが全て 500 になった）。
+            # 未登録仕入元の自動登録と同じ扱いで、その場でチャネルを作って続行する。
+            supplier_rec = (await db.execute(
+                text("SELECT id FROM public.suppliers WHERE supplier_code = :code"),
+                {"code": sp_code},
+            )).fetchone()
+            if supplier_rec is None:
+                raise ValueError("Resolved supplier is missing from public.suppliers")
+            supplier_channel_id = uuid.uuid4()
+            await db.execute(
+                text(
+                    f"""
+                    INSERT INTO {TCG_SCHEMA}.supplier_channels
+                      (id, supplier_id, channel, is_active)
+                    VALUES
+                      (:id, :supplier_id, 'line', TRUE)
+                    """
+                ),
+                {"id": str(supplier_channel_id), "supplier_id": supplier_rec[0]},
+            )
+            logging.getLogger(__name__).warning(
+                "supplier_channel was missing and has been created: supplier_code=%s", sp_code
+            )
+        else:
+            supplier_channel_id = channel_rec[0]
         # Legacy rows have no proven posting timestamp and must not be inferred.
         posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
         reused = await db.execute(
-            text(f"""
+            text(rf"""
                 SELECT id FROM {TCG_SCHEMA}.source_messages
                 WHERE supplier_channel_id = :scid AND line_posted_at = :posted_at
-                  AND raw_sha256 = :sha256 AND raw_text = :body
+                  AND (raw_text = :body
+                       OR regexp_replace(raw_text, E'\n[ \t\r\n\u3000]*$', '') = :body)
             """),
             {"scid": str(supplier_channel_id), "posted_at": posted_at,
-             "sha256": entry["sha256"], "body": entry["raw_text"]},
+             "body": entry["raw_text"]},
         )
         reused_row = reused.fetchone()
         if reused_row:
@@ -471,6 +518,19 @@ async def _link_message(db: AsyncSession, job_id: str, message_id: str, kind: st
     )
 
 
+def _mark_system_events(all_messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            **m,
+            "is_system_event": (
+                m["is_system_event"]
+                or match_system_event(m["display_name"], m["body"]) is not None
+            ),
+        }
+        for m in all_messages
+    ]
+
+
 async def import_line_export(
     db: AsyncSession,
     filename: str,
@@ -513,7 +573,7 @@ async def import_line_export(
     """
     if source_format not in ("pc", "android"):
         raise ValueError("Unsupported LINE export format")
-    android_messages = parse_android_export(export_text) if source_format == "android" else None
+    android_messages = (await asyncio.to_thread(parse_android_export, export_text)) if source_format == "android" else None
     # Keep the legacy PC digest unchanged. Android has a separate identity so that
     # an Android file previously misread as PC (zero messages) can be retried.
     file_sha256 = sha256_text(
@@ -550,7 +610,10 @@ async def import_line_export(
     supplier_names = sorted((s["line_name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
-    all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
+    all_messages = android_messages if android_messages is not None else await asyncio.to_thread(parse_line_export, export_text, supplier_names)
+    # PC・スマホ双方の全メッセージへ同じ文言表を当てる（二重の網）。
+    # 元の dict は書き換えず、新しい list/dict を作る。
+    all_messages = await asyncio.to_thread(_mark_system_events, all_messages)
     messages = [m for m in all_messages if not m["is_system_event"]]
 
     # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）

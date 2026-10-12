@@ -19,10 +19,16 @@ from tests.test_tcg_work_matching_integration import (
 )
 
 
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
+
+
 @pytest.fixture(autouse=True)
 def deny_live(monkeypatch):
     monkeypatch.setattr(comparison.gemini, "_get_genai_client", lambda: pytest.fail("Live Gemini forbidden"))
     monkeypatch.setattr(comparison, "TCG_SCHEMA", SCHEMA)
+    # DB プロンプト読み取りをスタブ化（テスト用DBにextraction_prompt_configが存在しない）
+    monkeypatch.setattr(comparison.gemini, "_load_db_prompts", lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT))
 
 
 def link_import(connection, source_ids):
@@ -54,6 +60,8 @@ def fixture_data(pg, monkeypatch):
     with connection.cursor() as cursor:
         migration = Path(__file__).resolve().parents[2] / "migrations/20260903_160000_tcg_normalization_rules_t004.sql"
         cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
+        # tcg_normalization_rules moved to public schema in Step 4/5 migration; tests need it in public too.
+        cursor.execute(migration.read_text().replace("tenant_004", "public"))
         cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'共通商品',99 FROM public.products WHERE product_code='PM0123'")
         cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'共通商品',99 FROM public.products WHERE product_code='PM0200'")
     with connection.cursor() as cursor:

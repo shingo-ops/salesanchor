@@ -17,6 +17,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product, FormState, AttrOption } from "./products.types";
 import { emptyForm, normalizeMaterial } from "./products.types";
+import { Button } from "../../components/Button";
 
 export default function ProductEditPage() {
   const { t } = useTranslation();
@@ -172,23 +173,23 @@ export default function ProductEditPage() {
 
   const pageActions = (
     <>
-      <button
+      <Button
         type="button"
-        className="btn-secondary field-h-md"
+        variant="secondary" size="md"
         onClick={() => navigate(-1)}
         disabled={saving}
       >
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         form="product-edit-page-form"
         type="submit"
-        className="btn-primary field-h-md"
+        variant="primary" size="md"
         disabled={saving || loading}
         data-testid="product-edit-save"
       >
         {saving ? t("common.saving") : isNew ? t("common.register") : t("common.update")}
-      </button>
+      </Button>
     </>
   );
 

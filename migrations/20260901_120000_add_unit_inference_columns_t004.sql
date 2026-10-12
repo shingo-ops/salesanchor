@@ -35,6 +35,18 @@ BEGIN
     END IF;
 
     -- ----------------------------------------------------------------
+    -- ガード: analysis_results が存在しない場合はスキップ
+    -- （20260921_050000_drop_tenant004_pipeline_tables.sql で削除済みの場合）
+    -- ----------------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = _schema AND table_name = 'analysis_results'
+    ) THEN
+        RAISE NOTICE 'migration 20260901_120000: table %.analysis_results does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
+    -- ----------------------------------------------------------------
     -- Step 1: analysis_results に列追加 (additive-only)
     -- ----------------------------------------------------------------
     IF NOT EXISTS (

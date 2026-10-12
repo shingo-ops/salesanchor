@@ -9,7 +9,8 @@ from types import SimpleNamespace
 from fastapi import HTTPException
 from sqlalchemy import text
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 SCOPE = 'line:import:android'
 ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'

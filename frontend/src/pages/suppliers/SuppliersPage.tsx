@@ -55,7 +55,7 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
   const [hasNext, setHasNext] = useState(false);
-  // 検索（MasterListEditor パターンと統一）
+  // 検索
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
@@ -151,7 +151,7 @@ export default function SuppliersPage() {
     >
       {error && <div className="error-message">{error}</div>}
 
-      {/* 検索バー + 新規作成ボタン（MasterListEditor パターンと統一） */}
+      {/* 検索バー + 新規作成ボタン */}
       <ContentToolbar
         left={
           <form
@@ -172,17 +172,17 @@ export default function SuppliersPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="suppliers-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="suppliers-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="suppliers-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
-              <button
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="btn-sm"
+
                 onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
               >
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -236,8 +236,8 @@ export default function SuppliersPage() {
           { key: "phone", header: t("common.phone"), renderCell: (s) => s.phone || "-" },
           { key: "actions", header: t("common.actions"), renderCell: (s) => (
             <span className="actions">
-              {hasPermission("suppliers.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</button>}
-              {hasPermission("suppliers.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("suppliers.deleteSupplier")}</button>}
+              {hasPermission("suppliers.update") && <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</Button>}
+              {hasPermission("suppliers.delete") && <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("suppliers.deleteSupplier")}</Button>}
             </span>
           )},
         ];
@@ -272,27 +272,27 @@ export default function SuppliersPage() {
           data-testid="suppliers-pagination"
         >
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               data-testid="suppliers-page-prev"
             >
               {t("common.prevPage")}
-            </button>
+            </Button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="suppliers-page-info">
             {t("suppliers.pageLabel", { page, count: suppliers.length })}
           </span>
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasNext}
               data-testid="suppliers-page-next"
             >
               {t("common.nextPage")}
-            </button>
+            </Button>
           )}
         </div>
       )}

@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { TextareaControl } from "./Textarea";
+import { TextFieldControl } from "./TextField";
 
 export interface OrderFinancialDto {
   id: number;
@@ -219,7 +221,7 @@ export default function OrderFinancialPanel({
               {INPUT_FIELDS.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="number"
                     min="0"
                     step="1"
@@ -236,7 +238,7 @@ export default function OrderFinancialPanel({
             </div>
             <div className="form-group">
               <label>{t("common.notes")}</label>
-              <textarea
+              <TextareaControl
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 aria-label={t("financial.notesAriaLabel")}

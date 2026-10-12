@@ -15,10 +15,11 @@
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Spinner } from "./loading";
+import { buttonAppearance } from "./buttonAppearance";
+import type { ButtonSize, ButtonVariant } from "./buttonAppearance";
 import "./Button.css";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "tab";
-export type ButtonSize = "sm" | "md" | "lg";
+export type { ButtonSize, ButtonVariant } from "./buttonAppearance";
 
 interface ButtonOwnProps {
   variant?: ButtonVariant;
@@ -37,15 +38,6 @@ interface ButtonOwnProps {
 
 export type ButtonProps = ButtonOwnProps & Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof ButtonOwnProps | "className" | "style">;
 
-const VARIANT_CLASS: Record<ButtonVariant, string> = {
-  primary:   "comp-btn--primary",
-  secondary: "comp-btn--secondary",
-  ghost:     "comp-btn--ghost",
-  danger:    "comp-btn--danger",
-  outline:   "comp-btn--outline",
-  tab:       "comp-btn--tab",
-};
-
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = "primary",
   size = "md",
@@ -61,16 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ...rest
 }, ref) {
   const isTab = variant === "tab";
-  const classes = [
-    "comp-btn",
-    VARIANT_CLASS[variant],
-    isTab ? "" : (size === "sm" ? "comp-btn--sm" : size === "lg" ? "comp-btn--lg" : ""),
-    isTab && active ? "comp-btn--active" : "",
-    fullWidth  ? "comp-btn--full"      : "",
-    loading    ? "comp-btn--loading"   : "",
-    iconOnly   ? "comp-btn--icon-only" : "",
-    layoutClassName ?? "",
-  ].filter(Boolean).join(" ");
+  const classes = buttonAppearance({ variant, size, fullWidth, loading, active, iconOnly, layoutClassName });
 
   return (
     <button

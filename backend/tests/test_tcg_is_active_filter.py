@@ -64,8 +64,16 @@ def _sql_references_source_messages(sql: str) -> bool:
 
 
 def _sql_has_is_active_true(sql: str) -> bool:
-    """SQL に is_active = TRUE が含まれているか（大文字小文字無視）。"""
-    return bool(re.search(r"is_active\s*=\s*TRUE", sql, re.IGNORECASE))
+    """SQL に is_active = TRUE または is_current = TRUE が含まれているか（大文字小文字無視）。
+
+    ADR-158 / PR #3747: tcg_distribution_svc は source_messages を include_inactive=True で
+    参照し、代わりに analysis_results.is_current = TRUE でフィルタする。
+    このパターンは IMP-35 ガードの意図（非アクティブメッセージの二重計上防止）を満たす。
+    """
+    return bool(
+        re.search(r"is_active\s*=\s*TRUE", sql, re.IGNORECASE)
+        or re.search(r"is_current\s*=\s*TRUE", sql, re.IGNORECASE)
+    )
 
 
 # ---------------------------------------------------------------------------

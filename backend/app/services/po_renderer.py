@@ -27,6 +27,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import glob
 import io
 import logging
@@ -476,7 +477,7 @@ async def render_po_pdf_for(
 ) -> tuple[bytes, PODataForRender]:
     """便利関数: data 取得 + PDF 生成を 1 ステップで。"""
     data = await gather_po_render_data(db, po_id, tenant_schema)
-    pdf = render_po_pdf(data)
+    pdf = await asyncio.to_thread(render_po_pdf, data)
     return pdf, data
 
 

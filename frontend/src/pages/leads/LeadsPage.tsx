@@ -34,6 +34,8 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from "./LeadFormFields";
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -311,7 +313,7 @@ export default function LeadsPage() {
           />
         }
         right={hasPermission("leads.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
+          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</Button>
         ) : undefined}
       />
 
@@ -326,16 +328,16 @@ export default function LeadsPage() {
       >
         <form onSubmit={handleCreateSubmit}>
           <div className="form-group"><label>{t("leads.customerName")} *</label>
-            <input required value={createForm.customer_name} onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })} />
+            <TextFieldControl required value={createForm.customer_name} onChange={(e) => setCreateForm({ ...createForm, customer_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.companyName")}</label>
-            <input value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} />
+            <TextFieldControl value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.email")}</label>
-            <input type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
+            <TextFieldControl type="email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.phone")}</label>
-            <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
+            <TextFieldControl value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.channelType")}</label>
             <ChannelTypeCombobox
@@ -423,10 +425,10 @@ export default function LeadsPage() {
             ]}
           />
           <div className="form-group"><label>{t("leads.monthlyForecast")}</label>
-            <input type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
+            <TextFieldControl type="number" min="0" step="1" value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.notes")}</label>
-            <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+            <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.country")}</label>
             <CountryCombobox
@@ -461,14 +463,14 @@ export default function LeadsPage() {
             error={convertSelectorError}
           />
           <div className="form-group"><label>{t("leads.dealTitle")} *</label>
-            <input required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
+            <TextFieldControl required value={convertForm.title} onChange={(e) => setConvertForm({ ...convertForm, title: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("leads.dealAmount")}</label>
-            <input type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
+            <TextFieldControl type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeConvert}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("leads.convert")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={closeConvert}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("leads.convert")}</Button>
           </div>
         </form>
       </Modal>
@@ -498,12 +500,12 @@ export default function LeadsPage() {
           { key: "actions", header: t("leads.actions"), renderCell: (l) => (
             <span className="actions" onClick={(e) => e.stopPropagation()}>
               {hasPermission("leads.convert") && l.status === "lead" && (
-                <button className="btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</button>
+                <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</Button>
               )}
               {hasPermission("leads.delete") && l.status === "lead" && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</Button>
               )}
-              {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</button>}
+              {hasPermission("leads.delete") && <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</Button>}
             </span>
           )},
         ];

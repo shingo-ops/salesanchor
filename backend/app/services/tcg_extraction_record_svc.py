@@ -10,9 +10,14 @@ from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
 from sqlalchemy import text
 
-from app.tcg_config import TCG_SCHEMA
+from app.services.llm_budget import UsageCounts, record_usage_event_sync
 
 logger = logging.getLogger(__name__)
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 MAX_BYTES = 8_388_608
 
 
@@ -55,9 +60,15 @@ class AttemptRecorder:
         self.prompt_version = prompt_version
         self.response_saved = False
         self._oversized_parsed_bytes: int | None = None
+        self._error_detail: dict = {}
+        self._input_tokens: int = 0
+        self._output_tokens: int = 0
+        self._requested_model: str = ""
+        self._usage_counts: UsageCounts | None = None
 
     def before_send(self, payload: dict) -> None:
         """The payload is exactly the model/contents/config passed to the SDK."""
+        self._requested_model = payload.get("model", "")
         body = encoded({**payload, "reference": self.reference})
         byte_count = len(body.encode("utf-8"))
         oversized = byte_count > MAX_BYTES
@@ -93,6 +104,14 @@ class AttemptRecorder:
         if oversized:
             raise RecordError("INPUT_TOO_LARGE")
 
+    def record_error_detail(self, detail: dict) -> None:
+        """Store error detail to be written to validation_result on fail().
+
+        Does not overwrite if already set (first writer wins).
+        """
+        if not self._error_detail:
+            self._error_detail = detail
+
     def _owned(self, *, required: bool = True) -> bool:
         """Lock the job first, matching claim ordering. A newer child fences this attempt."""
         s = self.session
@@ -110,18 +129,50 @@ class AttemptRecorder:
             raise RecordError("ATTEMPT_CONFLICT")
         return owned
 
-    def on_response(self, response: str) -> None:
+    @staticmethod
+    def _thoughts_json(thought_summaries: list[str] | None) -> str | None:
+        """思考要約を JSON 文字列にする。None・MAX_BYTES 超・変換失敗は None（列は NULL）。
+
+        例外は出さない（応答の保存を止めないため）。str 以外は捨て、NUL を除き、
+        孤立サロゲートは置換する。元のリストは変えない。
+        """
+        if thought_summaries is None:
+            return None
+        try:
+            cleaned = [
+                item.replace("\x00", "").encode("utf-8", "replace").decode("utf-8")
+                for item in thought_summaries if isinstance(item, str)
+            ]
+            body = json.dumps(cleaned, ensure_ascii=False)
+            if len(body.encode("utf-8")) > MAX_BYTES:
+                return None
+            return body
+        except Exception:
+            logger.warning("thought_summaries の JSON 化に失敗したため NULL で保存する", exc_info=True)
+            return None
+
+    def on_response(
+        self, response: str, *, input_tokens: int = 0, output_tokens: int = 0,
+        usage_counts: UsageCounts | None = None,
+        thought_summaries: list[str] | None = None,
+    ) -> None:
+        self._input_tokens = input_tokens
+        self._output_tokens = output_tokens
+        self._usage_counts = usage_counts
         s = self.session
         size = len(response.encode("utf-8"))
         oversized = size > MAX_BYTES
+        thoughts = self._thoughts_json(thought_summaries)
         try:
             self._owned()
             s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='received',
                 response_text=:body,response_bytes=:size,response_sha256=:sha,
+                thought_summaries=CAST(:thoughts AS jsonb),
                 response_received_at=clock_timestamp() WHERE id=:id AND phase='started'
                 RETURNING id
             """), {"id": self.id, "body": None if oversized else response,
-                     "size": size, "sha": digest(response)}).scalar_one()
+                     "size": size, "sha": digest(response),
+                     "thoughts": thoughts}).scalar_one()
             s.commit()
         except (RecordError, SoftTimeLimitExceeded):
             s.rollback()
@@ -159,6 +210,16 @@ class AttemptRecorder:
             WHERE id=:id AND phase='received' AND response_text IS NOT NULL
             RETURNING id
         """), {"id": self.id, "items": body, "size": size, "count": len(items)}).scalar_one()
+        # ADR-1004: llm_usage_events 台帳が SSOT。応答を受け取れた（usage_counts あり）ときのみ1行書く。
+        if self._usage_counts is not None and self._requested_model:
+            record_usage_event_sync(
+                self.session,
+                purpose="line_extraction",
+                model=self._requested_model,
+                sdk="google-genai",
+                counts=self._usage_counts,
+                extraction_attempt_id=self.id,
+            )
 
     def fail(self, code: str) -> None:
         """One bounded, best-effort failure write. Terminal/foreign attempts stay unchanged."""
@@ -166,13 +227,38 @@ class AttemptRecorder:
         try:
             s.rollback()
             if self._owned(required=False):
-                s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
-                    finished_at=clock_timestamp(),error_code=:code,
-                    parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                    validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
-                    WHERE id=:id
-                """), {"id": self.id, "code": code,
-                         "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
+                if self._error_detail:
+                    validation_result = json.dumps(
+                        {"status": "failed", "code": code, **self._error_detail},
+                        ensure_ascii=False,
+                    )
+                    s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
+                        finished_at=clock_timestamp(),error_code=:code,
+                        parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
+                        validation_result=CAST(:vr AS JSONB)
+                        WHERE id=:id
+                    """), {"id": self.id, "code": code,
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
+                             "vr": validation_result})
+                else:
+                    s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
+                        finished_at=clock_timestamp(),error_code=:code,
+                        parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
+                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
+                        WHERE id=:id
+                    """), {"id": self.id, "code": code,
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
+                # ADR-1004: 応答を受け取れていた（usage_counts あり）失敗のみ台帳に1行書く。
+                # 応答が無い失敗（呼び出し自体の例外）は usage 不明のため書かない。
+                if self._usage_counts is not None and self._requested_model:
+                    record_usage_event_sync(
+                        self.session,
+                        purpose="line_extraction",
+                        model=self._requested_model,
+                        sdk="google-genai",
+                        counts=self._usage_counts,
+                        extraction_attempt_id=self.id,
+                    )
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})
@@ -206,4 +292,4 @@ async def read_attempts(db, job_id: str, *, attempt_id: str | None = None,
     result = [dict(row) for row in rows]
     for row in result:
         row["completion"] = "unconfirmed" if row["phase"] in ("started", "received") else row["phase"]
-    return {"extraction_job_id": job_id, "attempts": result}
+    return {"job_id": job_id, "attempts": result}

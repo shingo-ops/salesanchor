@@ -21,6 +21,7 @@
 | ├ ページタイトル金型（page-title。題名・説明文を共通部品PageLayoutに集約・1ヵ所直せば全ページ変わる） | [design-system/component-ssot/page-title/README.md](design-system/component-ssot/page-title/README.md) | 公開（全ページ移行完了 2026-07-19） |
 | └ ページヘッダー金型v2（page-header-v2。ヘッダー枠の中身と並びの統一＋階層パンくず＋位置ズレ番人） | [design-system/component-ssot/page-header-v2/README.md](design-system/component-ssot/page-header-v2/README.md) | あるべき姿改訂5済・便1〜3a本番反映済・操作台実装前 2026-07-20 |
 | └ 入力部品 寸法金型（field-size。プルダウン・入力欄の高さ3段×幅3段を独立選択で統一） | [design-system/component-ssot/field-size/README.md](design-system/component-ssot/field-size/README.md) | あるべき姿確定・KGI/design骨子済・実装前 2026-07-21 |
+| └ アプリ視覚デザイン言語（visual-language。金型の美しさ・PC/スマホの使いやすさ・ベンチマーク観察。値の正本はトークン/金型のまま） | [design-system/visual-language/README.md](design-system/visual-language/README.md) | KGI承認済 2026-10-02・設計草案・実装前 |
 | デザイントークンSSOT化（色・文字・アイコン・コンポーネント・文字サイズ・値・アニメーション・グラフ・ページ構成の索引化・重複排除） | [design-tokens-ssot/README.md](design-tokens-ssot/README.md) | あるべき姿・KGI承認済 2026-07-09 |
 | └ カレンダー色CSS変数化（schedule の 7 カレンダー色） | [design-tokens-ssot/color/calendar/README.md](design-tokens-ssot/color/calendar/README.md) | 公開 |
 | └ アイコン色の用途別トークン集約（10箇所の色決定ポイントをカテゴリ別に束ねる） | [design-tokens-ssot/color/icon/README.md](design-tokens-ssot/color/icon/README.md) | 公開 |
@@ -60,7 +61,7 @@
 | 定型文(message-templates。人が書く文章ひな型の設定画面と受信箱からの呼び出し。AI翻訳は translation-glossary が正本・独立) | [inbox/message-templates/README.md](inbox/message-templates/README.md) | 仕様書あり(KGI承認済み・To-Be design済・recon未) |
 | Discord連携 | （仕様書未作成・関連: ADR-009, 014, 100, 091） | 未 |
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
-| 認証・権限・ロール | （仕様書未作成・関連: ADR-023, 032, 138） | 未 |
+| 認証・権限・ロール（auth-roles。各社のロールと運営者 super admin の境界） | [auth-roles/README.md](auth-roles/README.md)（関連: ADR-023, 032, 138, 147, 1007） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-10） |
 | テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
 | 権限・秘密SSOT化（secrets-permission-ssot。鍵・権限を1冊の台帳で管理し置き間違いを警報） | [secrets-permission-ssot/README.md](secrets-permission-ssot/README.md) | あるべき姿確定・KGI確定 2026-07-20 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
@@ -70,6 +71,7 @@
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
 | Discordリアクション（discord-reaction。受信箱でDiscordと同じように絵文字を付ける・見る） | discord-reaction/README.md | あるべき姿・KGI確定 2026-09-04 |
+| LINE解析 Gemini 書き写しの調整記録（line-analysis-tuning。版をまたいだ精度の推移・PO の判断・事故の履歴台帳） | [line-analysis-tuning/README.md](line-analysis-tuning/README.md)・[試験の記録](line-analysis-tuning/track-record.md) | 公開（記録開始 2026-10-07） |
 
 
 ## specs外に散在する仕様書（存在の記録のみ・中身の判定は棚卸し便で）

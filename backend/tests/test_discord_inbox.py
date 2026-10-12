@@ -36,8 +36,8 @@ from sqlalchemy.orm import sessionmaker
 from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.routers import leads as leads_router
+from app.services import discord_webhook_sender
 from app.services.discord_sender import DiscordSendError, send_discord_dm
-
 
 # ---------------------------------------------------------------------------
 # DDL (SQLite in-memory)
@@ -124,7 +124,9 @@ _STAFF_DDL = """
     CREATE TABLE staff (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER NOT NULL DEFAULT 999,
-        primary_email VARCHAR(255) NOT NULL
+        primary_email VARCHAR(255) NOT NULL,
+        given_name_en VARCHAR(100),
+        avatar_token TEXT
     )
 """
 
@@ -398,34 +400,49 @@ async def test_send_discord_returns_409_when_no_dm_channel(app_client, db_sessio
     assert "チャンネル" in resp.json()["detail"]
 
 
+async def _insert_staff_with_en_name(db_session, given_name_en: str = "Shingo") -> None:
+    await db_session.execute(
+        text(
+            "INSERT INTO staff (tenant_id, primary_email, given_name_en) "
+            "VALUES (999, 'tester@example.com', :n)"
+        ),
+        {"n": given_name_en},
+    )
+    await db_session.commit()
+
+
 @pytest.mark.asyncio
 async def test_send_discord_returns_502_on_discord_send_error(app_client, db_session):
-    """Discord API 送信失敗 → 502。meta_messages には書き込まない。
+    """担当者名義の webhook 送信失敗 → 502 DISCORD_SEND_FAILED。meta_messages には書き込まない。
 
-    _send_discord_message 内の local import を介してパッチ:
-    `app.services.discord_sender.send_discord_dm` を差し替える。
+    Bot 名義（send_discord_dm）へはフォールバックしない（ADR-159）。
     """
     await _insert_discord_lead(db_session, lead_id=1)
+    await _insert_staff_with_en_name(db_session)
 
+    bot_send = AsyncMock(return_value="BOT")
     with patch(
-        "app.services.discord_sender.send_discord_dm",
-        new=AsyncMock(side_effect=DiscordSendError("Discord API 403")),
-    ):
+        "app.services.discord_webhook_sender.send_as_staff",
+        new=AsyncMock(side_effect=discord_webhook_sender.WebhookSendError("x")),
+    ), patch("app.services.discord_sender.send_discord_dm", new=bot_send):
         resp = await app_client.post(
             "/api/v1/leads/1/messages", json={"text": "Hello"}
         )
 
     assert resp.status_code == 502
+    assert resp.json()["detail"]["reason"] == "DISCORD_SEND_FAILED"
+    bot_send.assert_not_awaited()
     assert await _count_outbound(db_session, lead_id=1) == 0
 
 
 @pytest.mark.asyncio
 async def test_send_discord_success_inserts_outbound_meta_message(app_client, db_session):
-    """Discord 送信成功 → outbound meta_message が 1 件 INSERT される。"""
+    """担当者名義の Discord 送信成功 → outbound meta_message が 1 件 INSERT される。"""
     await _insert_discord_lead(db_session, lead_id=1)
+    await _insert_staff_with_en_name(db_session)
 
     with patch(
-        "app.services.discord_sender.send_discord_dm",
+        "app.services.discord_webhook_sender.send_as_staff",
         new=AsyncMock(return_value="discord-msg-success"),
     ):
         resp = await app_client.post(
@@ -443,17 +460,18 @@ async def test_send_discord_success_inserts_outbound_meta_message(app_client, db
     assert await _count_outbound(db_session, lead_id=1) == 1
 
     res = await db_session.execute(text("""
-        SELECT platform, message_text, recipient_id, message_id, direction
+        SELECT platform, message_text, recipient_id, message_id, direction, sent_by_staff_id
         FROM meta_messages WHERE lead_id = 1 AND direction = 'outbound'
     """))
     row = res.first()
     assert row is not None
-    platform, message_text, recipient_id, message_id, direction = row
+    platform, message_text, recipient_id, message_id, direction, sent_by_staff_id = row
     assert platform == "discord"
     assert message_text == "こんにちは"
     assert recipient_id == "USER123"
     assert message_id == "discord-msg-success"
     assert direction == "outbound"
+    assert sent_by_staff_id is not None
 
 
 # ---------------------------------------------------------------------------

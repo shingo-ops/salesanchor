@@ -9,6 +9,8 @@ import { auth } from "../../lib/firebase";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function SecuritySection() {
   const { t } = useTranslation();
@@ -63,7 +65,7 @@ export default function SecuritySection() {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="current_password">{t("accountSettings.currentPassword")}</label>
-          <input
+          <TextFieldControl
             id="current_password"
             type="password"
             value={form.current}
@@ -75,7 +77,7 @@ export default function SecuritySection() {
 
         <div className="form-group">
           <label htmlFor="new_password">{t("accountSettings.newPassword")}</label>
-          <input
+          <TextFieldControl
             id="new_password"
             type="password"
             value={form.next}
@@ -87,7 +89,7 @@ export default function SecuritySection() {
 
         <div className="form-group">
           <label htmlFor="confirm_password">{t("accountSettings.confirmPassword")}</label>
-          <input
+          <TextFieldControl
             id="confirm_password"
             type="password"
             value={form.confirm}
@@ -101,9 +103,9 @@ export default function SecuritySection() {
         {success && <div className="account-settings-success">{t("accountSettings.passwordChanged")}</div>}
 
         <div className="account-settings-actions">
-          <button type="submit" className="btn-primary" disabled={changing}>
+          <Button variant="primary" size="md" type="submit" disabled={changing}>
             {changing ? t("accountSettings.changing") : t("accountSettings.changePassword")}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

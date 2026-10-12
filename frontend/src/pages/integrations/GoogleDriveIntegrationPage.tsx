@@ -14,6 +14,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface DriveStatus {
   oauth_configured: boolean;
@@ -127,11 +129,11 @@ export default function GoogleDriveIntegrationPage() {
           <h3>{t("googleDriveIntegration.connectTitle")}</h3>
           <p>{t("googleDriveIntegration.connectDescription")}</p>
           <div className="form-actions">
-            <button className="btn-primary" disabled={busy} onClick={handleConnect}>
+            <Button variant="primary" size="md" disabled={busy} onClick={handleConnect}>
               {busy
                 ? t("googleDriveIntegration.connecting")
                 : t("googleDriveIntegration.connectButton")}
-            </button>
+            </Button>
           </div>
         </section>
       )}
@@ -146,9 +148,9 @@ export default function GoogleDriveIntegrationPage() {
               <code>{status.account_email}</code>
             </p>
             <div className="form-actions">
-              <button className="btn-secondary" disabled={busy} onClick={handleDisconnect}>
+              <Button variant="secondary" size="md" disabled={busy} onClick={handleDisconnect}>
                 {t("googleDriveIntegration.disconnect")}
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -158,7 +160,7 @@ export default function GoogleDriveIntegrationPage() {
               <label htmlFor="gdrive-url">
                 {t("googleDriveIntegration.driveUrlLabel")}
               </label>
-              <input
+              <TextFieldControl
                 id="gdrive-url"
                 type="url"
                 value={driveUrl}
@@ -170,11 +172,11 @@ export default function GoogleDriveIntegrationPage() {
               </small>
             </div>
             <div className="form-actions">
-              <button className="btn-primary" disabled={busy} onClick={handleTest}>
+              <Button variant="primary" size="md" disabled={busy} onClick={handleTest}>
                 {busy
                   ? t("googleDriveIntegration.testing")
                   : t("googleDriveIntegration.testButton")}
-              </button>
+              </Button>
             </div>
 
             {result && (

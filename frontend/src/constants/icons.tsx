@@ -55,6 +55,7 @@ import {
   PaperClipIcon,
   ArrowTopRightOnSquareIcon,
   PlusIcon,
+  HeartIcon,
 } from "@heroicons/react/24/solid";
 
 // ── outline: サイドバーナビゲーション専用 ────────────────────────────────
@@ -63,7 +64,6 @@ import {
   UsersIcon as UsersOutlineIcon,
   CubeIcon as CubeOutlineIcon,
   DocumentTextIcon as DocumentTextOutlineIcon,
-  ReceiptPercentIcon as ReceiptPercentOutlineIcon,
   ChartBarIcon as ChartBarOutlineIcon,
   CalendarIcon,
   QuestionMarkCircleIcon,
@@ -86,6 +86,7 @@ import {
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
   PlusIcon as PlusOutlineIcon,
+  HeartIcon as HeartOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -158,10 +159,11 @@ const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
+const Heart             = hi(HeartIcon);
+const HeartOutline      = hi(HeartOutlineIcon);
 const UsersOutline      = hi(UsersOutlineIcon);
 const PackageOutline    = hi(CubeOutlineIcon);
 const FileTextOutline   = hi(DocumentTextOutlineIcon);
-const ReceiptOutline    = hi(ReceiptPercentOutlineIcon);
 const TruckOutline      = hi(TruckOutlineIcon);
 const ChartBarOutline   = hi(ChartBarOutlineIcon);
 const CalendarBlank     = hi(CalendarIcon);
@@ -261,7 +263,6 @@ export const NAV_ICONS = {
   search:      MagnifyingGlass,    // outline
   close:       XOutline,           // outline
   saasAdmin:   CommandLine,        // outline — SaaS管理者専用ナビ
-  purchaseOrders: ReceiptOutline,  // outline — 発注管理（伝票アイコン・在庫表と見積請求の間）
   menu:        Bars3Outline,       // outline — mobile menu button（ハンバーガー）
   add:         PlusOutline,        // outline — 作成ボタン
 } satisfies Record<string, Icon>;
@@ -374,6 +375,8 @@ export const INBOX_ACTION_ICONS = {
   translate:  Languages,       // LanguageIcon      — AI翻訳（ADR-088）
   send:       PaperAirplane,   // PaperAirplaneIcon — 送信ボタン（solid）
   attach:     Paperclip,       // PaperClipIcon     — 画像添付ボタン
+  heart:       HeartOutline,   // HeartIcon outline — リアクション（未押下・ホバー時の型枠）
+  heartFilled: Heart,          // HeartIcon solid   — リアクション（押下済み）
 } satisfies Record<string, Icon>;
 
 // スケジュールポップオーバー用（outline バリアント — Google Calendar 準拠）

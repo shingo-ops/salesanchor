@@ -7,47 +7,22 @@ import { Select } from "../../components/Select";
 import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
+import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
+import {
+  addExcludeWord, buildUpdateBody, classificationFields, draftFrom, words,
+  type AddWordResult, type Classification, type Detail, type Draft,
+} from "./productDetailModel";
 
-const classificationFields = ["division_id", "work_id", "manufacturer_id", "product_category_id"] as const;
-type Classification = typeof classificationFields[number];
-interface Detail {
-  revision: string;
-  product: Record<Classification, string | null> & {
-    id: string; code: string; japanese_title: string; english_title: string | null;
-    mark: string | null; release_date: string | null; search_keywords: string[]; exclude_keywords: string[];
-    required_output_value: string | null; category_class: string; is_active: boolean; created_at: string;
-  };
-  lookups: Record<Classification, { id: string; name: string; is_active: boolean }[]>;
-}
-type Draft = Record<Classification, string> & {
-  japanese_title: string; english_title: string; mark: string; release_date: string;
-  search_keywords: string; exclude_keywords: string;
-};
 type LookupOption = { id: string; name: string };
 type LookupsMap = Record<Classification, LookupOption[]>;
-function draftFrom(result: Detail): Draft {
-  const p = result.product;
-  if (!/^[0-9a-f]{64}$/.test(result.revision) || typeof p?.code !== "string" ||
-      typeof p.japanese_title !== "string" || !Array.isArray(p.search_keywords) ||
-      !Array.isArray(p.exclude_keywords) ||
-      ![...p.search_keywords, ...p.exclude_keywords].every(word => typeof word === "string") ||
-      !classificationFields.every(field => Array.isArray(result.lookups?.[field]))) {
-    throw new Error("Invalid product detail");
-  }
-  return { japanese_title: p.japanese_title, english_title: p.english_title ?? "", mark: p.mark ?? "",
-    release_date: p.release_date ?? "", division_id: p.division_id ?? "", work_id: p.work_id ?? "",
-    manufacturer_id: p.manufacturer_id ?? "", product_category_id: p.product_category_id ?? "",
-    search_keywords: p.search_keywords.join("\n"), exclude_keywords: p.exclude_keywords.join("\n") };
-}
-const words = (value: string) => value.split("\n").map(word => word.trim()).filter(Boolean);
 const emptyDraft: Draft = {
   japanese_title: "", english_title: "", mark: "", release_date: "",
-  division_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
+  product_kind_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
   search_keywords: "", exclude_keywords: "",
 };
 
-export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: openProp, mode = "edit" }: {
-  productCode: string | null; onClose: () => void; onSaved: () => void;
+export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: openProp, mode = "edit" }: {
+  productId: number | null; onClose: () => void; onSaved: () => void;
   open?: boolean; mode?: "edit" | "create";
 }) {
   const { t } = useTranslation();
@@ -61,37 +36,39 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
   const inFlight = useRef(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [collisions, setCollisions] = useState<CodeCollision[]>([]);
+  const [createdId, setCreatedId] = useState<number | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [confirmation, setConfirmation] = useState<"close" | "reload" | null>(null);
   const [reload, setReload] = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(initial);
-  const isOpen = openProp !== undefined ? openProp : productCode !== null;
+  const isOpen = openProp !== undefined ? openProp : productId !== null;
 
   // 編集モード: 詳細ロード
   useEffect(() => {
     if (mode !== "edit") return;
     let cancelled = false;
-    setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false);
+    setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false); setCollisions([]);
     setBlocked(false); setConfirmation(null);
-    if (!productCode) { setLoading(false); return; }
+    if (productId === null) { setLoading(false); return; }
     setLoading(true);
-    void api.get<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`).then(result => {
+    void api.get<Detail>(`/tcg/products/detail/${productId}`).then(result => {
       if (cancelled) return;
-      if (result.product?.code !== productCode) throw new Error("Product mismatch");
+      if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next);
     }).catch(() => { if (!cancelled) setError("productDetail.loadError"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [productCode, reload, mode]);
+  }, [productId, reload, mode]);
 
   // 作成モード: 分類マスタ取得 + 空フォーム初期化
   useEffect(() => {
     if (mode !== "create" || !isOpen) return;
     let cancelled = false;
-    setError(""); setSaved(false); setBlocked(false); setConfirmation(null);
+    setError(""); setSaved(false); setBlocked(false); setConfirmation(null); setCollisions([]); setCreatedId(null);
     setDraft(emptyDraft); setInitial(emptyDraft);
     setLoading(true);
     void api.get<{ lookups: LookupsMap }>("/tcg/products/lookups").then(result => {
@@ -117,6 +94,17 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     setDraft(previous => previous ? { ...previous, [field]: value } : previous);
     setSaved(false);
   }
+  /** この商品の除外ワードに足す。編集中は入力欄に足す（保存で登録）。作成済みなら保存済みの商品へ足す。 */
+  async function addToThis(word: string): Promise<AddWordResult> {
+    if (mode === "create") {
+      if (createdId === null) throw new Error("Product not created");
+      return addExcludeWord(createdId, word);
+    }
+    if (!draft) throw new Error("No draft");
+    if (words(draft.exclude_keywords).includes(word)) return "exists";
+    change("exclude_keywords", [...words(draft.exclude_keywords), word].join("\n"));
+    return "staged";
+  }
   async function save() {
     if (mode === "create") {
       await saveCreate();
@@ -125,20 +113,15 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     }
   }
   async function saveEdit() {
-    if (!draft || !detail || !productCode || !dirty || blocked || inFlight.current) return;
+    if (!draft || !detail || productId === null || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false);
+    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
-      const result = await api.put<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`, {
-        ...draft, revision: detail.revision, release_date: draft.release_date || null,
-        division_id: draft.division_id || null, work_id: draft.work_id || null,
-        manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id || null,
-        search_keywords: draft.search_keywords === initial?.search_keywords ? detail.product.search_keywords : words(draft.search_keywords),
-        exclude_keywords: draft.exclude_keywords === initial?.exclude_keywords ? detail.product.exclude_keywords : words(draft.exclude_keywords),
-      });
-      if (result.product?.code !== productCode) throw new Error("Product mismatch");
+      const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, buildUpdateBody(draft, initial, detail));
+      if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next); setSaved(true);
+      setCollisions(result.code_collisions ?? []);
       onSaved();
     } catch (err) {
       const invalid = err instanceof ApiError && err.status === 422;
@@ -150,14 +133,14 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
   async function saveCreate() {
     if (!draft || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false);
+    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
     try {
-      await api.post("/tcg/products/create", {
+      const created = await api.post<{ product_id?: string | null; code_collisions?: CodeCollision[] }>("/tcg/products/create", {
         japanese_title: draft.japanese_title,
         english_title: draft.english_title,
         mark: draft.mark,
         release_date: draft.release_date || null,
-        division_id: draft.division_id,
+        product_kind_id: draft.product_kind_id,
         work_id: draft.work_id,
         manufacturer_id: draft.manufacturer_id,
         product_category_id: draft.product_category_id,
@@ -166,7 +149,11 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
       });
       setSaved(true);
       onSaved();
-      onClose();
+      const found = created?.code_collisions ?? [];
+      if (found.length === 0) { onClose(); return; }
+      // 保存は済み。重なりの警告を残し、利用者が閉じる（再送で二重登録しないよう未保存扱いを解く）
+      setCollisions(found); setCreatedId(created?.product_id ? Number(created.product_id) : null);
+      setInitial(draft); setBlocked(true);
     } catch (err) {
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
@@ -179,10 +166,10 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     else onClose();
   };
   async function handleDelete() {
-    if (!productCode || deleting) return;
+    if (productId === null || deleting) return;
     setDeleting(true);
     try {
-      await api.delete(`/tcg/products/detail/${encodeURIComponent(productCode)}`);
+      await api.delete(`/tcg/products/detail/${productId}`);
       onSaved();
       onClose();
     } catch (e: unknown) {
@@ -220,6 +207,9 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}
       {saved && <p role="status">{t("productDetail.saved")}</p>}
+      <CodeCollisionNotice collisions={collisions} onAddToOther={addExcludeWord}
+        onAddToThis={mode === "edit" || createdId !== null ? addToThis : undefined}
+        confirmAddToThis={mode === "create"} thisName={draft?.japanese_title ?? ""} />
       {draft && (mode === "create" ? activeLookups : detail) && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
         {mode === "edit" && detail && <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />}
         <TextField label={t("productDetail.japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />

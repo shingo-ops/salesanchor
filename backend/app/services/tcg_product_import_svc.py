@@ -31,7 +31,10 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # 定数
@@ -60,15 +63,29 @@ REQUIRED_COLUMNS: list[str] = [
 ]
 
 # コード列 → 参照マスタのテーブル名
+# NOTE: division_code と product_category_code は public の SSOT（product_kinds /
+# tcg_product_categories、ADR-156 Phase 3A/3B）へ移行済み。public.tcg_major_categories は
+# どの migration でも作成されておらず、tenant_004.tcg_major_categories も
+# migrations/20260921_130000_drop_tenant004_master_copies.sql:36 で削除済みのため
+# （確認日 2026-09-23）、TCG_SCHEMA（= public）で tcg_major_categories を素直に引くと
+# 「初回クエリが無駄になる」のではなく relation "public.tcg_major_categories" does not
+# exist の例外になる。そのため load_lookup_maps は _OVERRIDDEN_BY_PUBLIC_SSOT に載る列を
+# ループ内で引かず、直後の public SSOT 問い合わせだけで値を組み立てる。
+# LOOKUP_TABLES 自体の中身・構造は静的解析ガード（test_tcg_schema_qualification.py の
+# _assert_dynamic_lookup_contract）が直接検証するため変更しない。
 LOOKUP_TABLES: dict[str, str] = {
-    "division_code": "tcg_major_categories",
+    "division_code": "tcg_major_categories",       # ループでは引かず public.product_kinds を使う
     "manufacturer_code": "tcg_manufacturers",
-    "product_category_code": "tcg_product_categories",
+    "product_category_code": "tcg_product_categories",  # ループでは引かず public.tcg_product_categories を使う
 }
+
+# load_lookup_maps のループでは引かず、直後の public SSOT 問い合わせの結果で
+# 値を組み立てる列（上の NOTE 参照）。
+_OVERRIDDEN_BY_PUBLIC_SSOT: frozenset[str] = frozenset({"division_code", "product_category_code"})
 
 # コード列 → create_product に渡す引数名
 LOOKUP_ARGS: dict[str, str] = {
-    "division_code": "division_id",
+    "division_code": "product_kind_id",
     "work_code": "work_id",
     "manufacturer_code": "manufacturer_id",
     "product_category_code": "product_category_id",
@@ -165,39 +182,39 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     work_code と同様に public スキーマから引く。
     """
     maps: dict[str, dict[str, str]] = {}
-    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    # work_code → public.type_master (SSOT, INTEGER PK)
     work_result = await db.execute(
-        text("SELECT code, id FROM public.tcg_type_master WHERE is_active = TRUE")
+        text("SELECT code, id FROM public.type_master WHERE is_active = TRUE")
     )
     maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():
+        if column in _OVERRIDDEN_BY_PUBLIC_SSOT:
+            continue
         result = await db.execute(
             text(f"SELECT code, id FROM {TCG_SCHEMA}.{table} WHERE is_active = TRUE")
         )
         maps[column] = {str(r[0]): str(r[1]) for r in result.fetchall()}
     # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
-    # Override the tenant-schema result with the canonical public-schema integer IDs.
+    # product_category_code is skipped in the loop above (_OVERRIDDEN_BY_PUBLIC_SSOT);
+    # this is the only query that fills it, from the canonical public-schema integer IDs.
     pc_result = await db.execute(
         text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
     )
     maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
-    return maps
-
-
-async def load_existing_marks(db: AsyncSession) -> dict[str, str]:
-    """
-    既に登録されている型番と商品コードの対応を引く。件数の上限を設けない。
-
-    design 5-4 の7番（同じ型番が既に在る行を警告する）で使う。既存の
-    重複チェックは候補取得を打ち切るため、その穴をここで埋める。
-    """
-    result = await db.execute(
-        text(
-            "SELECT mark, product_code FROM public.products "
-            "WHERE mark IS NOT NULL AND mark <> '' AND is_active = TRUE"
-        )
+    # Phase 3A SSOT: tcg_major_categories moved to public.product_kinds (INTEGER PK).
+    # division_code is skipped in the loop above (_OVERRIDDEN_BY_PUBLIC_SSOT);
+    # this is the only query that fills it, from the canonical public-schema integer IDs.
+    pk_result = await db.execute(
+        text("SELECT code, id FROM public.product_kinds WHERE is_active = TRUE")
     )
-    return {str(r[0]).strip(): str(r[1]) for r in result.fetchall()}
+    pk_map: dict[str, int] = {str(r[0]): int(r[1]) for r in pk_result.fetchall()}
+    # Backward-compatible aliases for legacy CSV division codes
+    _DIVISION_ALIASES = {"DIV01": "TCG", "DIV02": "FIGURE", "DIV03": "GOODS"}
+    for old_code, new_code in _DIVISION_ALIASES.items():
+        if new_code in pk_map:
+            pk_map[old_code] = pk_map[new_code]
+    maps["division_code"] = pk_map  # type: ignore[assignment]
+    return maps
 
 
 # ---------------------------------------------------------------------------
@@ -224,12 +241,11 @@ def check_codes(row: dict[str, str], lookups: dict[str, dict[str, str]]) -> list
 def validate_row_static(
     row: dict[str, str],
     lookups: dict[str, dict[str, str]],
-    existing_marks: dict[str, str],
     seen: dict[tuple[str, str], str],
 ) -> dict[str, Any]:
     """
-    DB を引かずに判る検査。design 5-4 の 1 2 3 5 7 8 9 11 を見る。
-    6番と10番は DB を引くため別の関数で行う。
+    DB を引かずに判る検査。design 5-4 の 1 2 3 5 8 9 11 を見る。
+    6番と10番、および型番の重なり（7番）は DB を引くため別の関数で行う。
 
     seen は同一ファイル内の重複を見るための持ち回り。呼ぶ側が空の辞書を
     用意し、行の順に渡す。
@@ -255,8 +271,6 @@ def validate_row_static(
 
     if not mark:
         warnings.append("MARK_EMPTY")
-    elif mark in existing_marks:
-        warnings.append("MARK_ALREADY_USED_BY_" + existing_marks[mark])
 
     keywords = split_keywords(row.get("search_keywords", ""))
     if not keywords:
@@ -302,7 +316,7 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     """検索キーワードと、それを持つ商品コードの対応を引く。"""
     result = await db.execute(
         text(
-            "SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
+            "SELECT k.keyword, p.id::text FROM public.product_search_keywords k "
             "JOIN public.products p ON p.id = k.product_id "
             "WHERE p.is_active = TRUE"
         )
@@ -363,13 +377,24 @@ async def preview(db: AsyncSession, raw: bytes, filename: str) -> dict[str, Any]
         }
 
     lookups = await load_lookup_maps(db)
-    existing_marks = await load_existing_marks(db)
     keyword_owners = await load_keyword_owners(db)
     seen: dict[tuple[str, str], str] = {}
     results: list[dict[str, Any]] = []
 
     for row in rows:
-        checked = validate_row_static(row, lookups, existing_marks, seen)
+        checked = validate_row_static(row, lookups, seen)
+        collisions = await find_code_collisions(
+            db,
+            product_code="",
+            mark=row.get("mark", ""),
+            name=row.get("japanese_title", ""),
+            search_keywords=split_keywords(row.get("search_keywords", "")),
+            exclude_keywords=split_keywords(row.get("exclude_keywords", "")),
+        )
+        checked["code_collisions"] = collisions
+        checked["warnings"].extend(
+            "MARK_ALREADY_USED_BY_" + c["product_id"] for c in collisions
+        )
         if not checked["blocking"]:
             payload = build_payload(row, lookups)
             checked["warnings"].extend(
@@ -401,8 +426,8 @@ async def start_job(
     result = await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"(filename, raw_sha256, total_rows, executed_by, status) "
-            f"VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
+            "(filename, raw_sha256, total_rows, executed_by, status) "
+            "VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
         ),
         {"filename": filename, "digest": digest, "total": total, "who": executed_by},
     )
@@ -419,8 +444,8 @@ async def record_row(
     await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_rows "
-            f"(job_id, row_no, japanese_title, mark, result, product_code, messages) "
-            f"VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
+            "(job_id, row_no, japanese_title, mark, result, product_code, messages) "
+            "VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
         ),
         {
             "job": job_id,
@@ -443,8 +468,8 @@ async def finish_job(
     await db.execute(
         text(
             f"UPDATE {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"SET created_rows = :created, skipped_rows = :skipped, "
-            f"status = :status, completed_at = NOW() WHERE id = :job"
+            "SET created_rows = :created, skipped_rows = :skipped, "
+            "status = :status, completed_at = NOW() WHERE id = :job"
         ),
         {"created": created, "skipped": skipped, "status": status, "job": job_id},
     )

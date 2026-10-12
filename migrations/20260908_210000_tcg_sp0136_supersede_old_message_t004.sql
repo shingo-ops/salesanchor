@@ -42,6 +42,15 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Table guard: source_messages was dropped by migration 20260921_050000
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = _schema AND table_name = 'source_messages'
+    ) THEN
+        RAISE NOTICE 'LMI-SP0136-CLEANUP: %.source_messages does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     EXECUTE format($q$
         UPDATE %I.source_messages
         SET superseded_by = $2,

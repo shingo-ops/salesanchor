@@ -14,10 +14,10 @@ BEGIN
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['source_messages', 'extraction_jobs', 'extraction_items']) AS t(name)
     WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
-    IF table_count = 0 THEN
+    IF table_count < 3 THEN
+        -- Tables were partially or fully dropped (DROP migration 20260921_050000).
+        -- Nothing to recover; skip gracefully.
         RETURN;
-    ELSIF table_count <> 3 THEN
-        RAISE EXCEPTION 'LINE recovery: incomplete TCG structure';
     END IF;
     LOCK TABLE tenant_004.source_messages, tenant_004.extraction_jobs,
         tenant_004.extraction_items IN SHARE ROW EXCLUSIVE MODE;

@@ -15,6 +15,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { SelectControl } from "../../components/Select";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { Button } from "../../components/Button";
 
 interface Invoice {
   id: number;
@@ -110,9 +111,9 @@ export default function InvoicesPage() {
       key: "actions",
       header: t("common.actions"),
       renderCell: (inv) => (
-        <button className="btn-sm" onClick={() => navigate(`/invoices/${inv.id}`)}>
+        <Button variant="secondary" size="sm" onClick={() => navigate(`/invoices/${inv.id}`)}>
           {t("common.detail")}
-        </button>
+        </Button>
       ),
     },
   ];
@@ -137,9 +138,9 @@ export default function InvoicesPage() {
           />
         }
         right={
-          <button className="btn-primary field-h-md" onClick={() => navigate("/invoices/new")}>
+          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => navigate("/invoices/new")}>
             {t("invoices.createTitle")}
-          </button>
+          </Button>
         }
       />
 

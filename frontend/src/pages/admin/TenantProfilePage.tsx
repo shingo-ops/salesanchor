@@ -18,6 +18,10 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface TenantProfile {
   id: number;
@@ -139,7 +143,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-company-name">{t("tenantProfile.companyName")}</label>
-            <input
+            <TextFieldControl
               id="tp-company-name"
               data-testid="tp-company-name"
               type="text"
@@ -152,7 +156,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-company-name-en">{t("tenantProfile.companyNameEn")}</label>
-            <input
+            <TextFieldControl
               id="tp-company-name-en"
               data-testid="tp-company-name-en"
               type="text"
@@ -165,7 +169,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-address">{t("tenantProfile.address")}</label>
-            <textarea
+            <TextareaControl
               id="tp-address"
               data-testid="tp-address"
               value={form.address}
@@ -177,7 +181,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-phone">{t("tenantProfile.phone")}</label>
-            <input
+            <TextFieldControl
               id="tp-phone"
               data-testid="tp-phone"
               type="text"
@@ -190,7 +194,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-email">{t("tenantProfile.email")}</label>
-            <input
+            <TextFieldControl
               id="tp-email"
               data-testid="tp-email"
               type="email"
@@ -203,7 +207,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-website">{t("tenantProfile.website")}</label>
-            <input
+            <TextFieldControl
               id="tp-website"
               data-testid="tp-website"
               type="text"
@@ -216,7 +220,7 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-seal-url">{t("tenantProfile.sealImageUrl")}</label>
-            <input
+            <TextFieldControl
               id="tp-seal-url"
               data-testid="tp-seal-image-url"
               type="text"
@@ -230,7 +234,8 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-default-language">{t("tenantProfile.defaultLanguage")}</label>
-            <select
+            <SelectControl
+              fullWidth
               id="tp-default-language"
               data-testid="tp-default-language"
               value={form.default_language}
@@ -241,19 +246,19 @@ export default function TenantProfilePage() {
               <option value="en">English (en)</option>
               <option value="ko">한국어 (ko)</option>
               <option value="zh">{t("language.zh")} (zh)</option>
-            </select>
+            </SelectControl>
           </div>
 
           {canEdit && (
             <div className="form-actions">
-              <button
+              <Button variant="primary" size="md"
                 type="submit"
-                className="btn-primary"
+
                 disabled={saving}
                 data-testid="tenant-profile-save"
               >
                 {saving ? t("common.saving") : t("common.save")}
-              </button>
+              </Button>
             </div>
           )}
         </form>

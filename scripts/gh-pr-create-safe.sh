@@ -15,97 +15,125 @@
 # 参考: scripts/gh-pr-merge-safe.sh（同パターン）
 #       docs/adr/ADR-074-worktree-agent-enforcement.md
 
-set -e
+set -euo pipefail
 
-# CI環境はスキップ（GitHub Actions は自分でベースを管理する）
-if [ -n "${GITHUB_ACTIONS}" ]; then
-  gh pr create "$@"
-  exit $?
-fi
+fail() {
+  echo "🚫 gh-pr-create-safe: $*" >&2
+  exit 1
+}
 
-# ── ローカル process-artifacts チェック（CI往復を削減） ────────────────────
-# PR本文の書式（触るファイル・削除するファイル・GO記録）をCIと同じチェッカーで事前検証する。
-# check-process-artifacts.js がローカルで実行できない場合（node未インストール等）はスキップして
-# CI側で捕捉する（安全側に倒す）。
-if command -v node >/dev/null 2>&1 && [ -f "scripts/check-process-artifacts.js" ]; then
-  echo "🔍 process-artifacts ローカルチェックを実行中..."
-  if ! node scripts/check-process-artifacts.js; then
-    echo ""
-    echo "🚫 process-artifacts チェックに失敗しました"
-    echo "   PR本文の「触るファイル」「削除するファイル」「GO記録」を確認してください"
-    echo "   参照: docs/ai-agents/executor-checklist.md §0"
-    echo ""
-    exit 1
-  fi
-  echo "✅ process-artifacts ローカルチェック通過"
-  echo ""
-fi
-
-# ── 引数パース: --base と --head の値を抽出 ────────────────────────────────
 BASE_VALUE=""
 HEAD_VALUE=""
-i=1
-while [ $i -le $# ]; do
-  arg="${!i}"
+BODY_VALUE=""
+BODY_FILE=""
+BODY_COUNT=0
+TITLE_VALUE=""
+TITLE_COUNT=0
+BASE_COUNT=0
+HEAD_COUNT=0
+ARGS=("$@")
+
+for ((i = 0; i < ${#ARGS[@]}; i++)); do
+  arg="${ARGS[$i]}"
   case "$arg" in
+    --title)
+      ((i + 1 < ${#ARGS[@]})) || fail "${arg} の値がありません"
+      TITLE_VALUE="${ARGS[$((i + 1))]}"; TITLE_COUNT=$((TITLE_COUNT + 1)); i=$((i + 1)) ;;
+    --title=*) TITLE_VALUE="${arg#--title=}"; TITLE_COUNT=$((TITLE_COUNT + 1)) ;;
     --base)
-      i=$((i + 1))
-      BASE_VALUE="${!i}"
-      ;;
-    --base=*)
-      BASE_VALUE="${arg#--base=}"
-      ;;
+      ((i + 1 < ${#ARGS[@]})) || fail "${arg} の値がありません"
+      BASE_VALUE="${ARGS[$((i + 1))]}"; BASE_COUNT=$((BASE_COUNT + 1)); i=$((i + 1)) ;;
+    --base=*) BASE_VALUE="${arg#--base=}"; BASE_COUNT=$((BASE_COUNT + 1)) ;;
     --head)
-      i=$((i + 1))
-      HEAD_VALUE="${!i}"
-      ;;
-    --head=*)
-      HEAD_VALUE="${arg#--head=}"
-      ;;
+      ((i + 1 < ${#ARGS[@]})) || fail "${arg} の値がありません"
+      HEAD_VALUE="${ARGS[$((i + 1))]}"; HEAD_COUNT=$((HEAD_COUNT + 1)); i=$((i + 1)) ;;
+    --head=*) HEAD_VALUE="${arg#--head=}"; HEAD_COUNT=$((HEAD_COUNT + 1)) ;;
+    --body)
+      ((i + 1 < ${#ARGS[@]})) || fail "${arg} の値がありません"
+      BODY_VALUE="${ARGS[$((i + 1))]}"; BODY_COUNT=$((BODY_COUNT + 1)); i=$((i + 1)) ;;
+    --body=*) BODY_VALUE="${arg#--body=}"; BODY_COUNT=$((BODY_COUNT + 1)) ;;
+    --body-file)
+      ((i + 1 < ${#ARGS[@]})) || fail "${arg} の値がありません"
+      BODY_FILE="${ARGS[$((i + 1))]}"; BODY_COUNT=$((BODY_COUNT + 1)); i=$((i + 1)) ;;
+    --body-file=*) BODY_FILE="${arg#--body-file=}"; BODY_COUNT=$((BODY_COUNT + 1)) ;;
+    *) fail "許可されていない引数です: ${arg}" ;;
   esac
-  i=$((i + 1))
 done
 
-# ── --base 未指定 → main を自動付与 ───────────────────────────────────
-if [ -z "$BASE_VALUE" ]; then
-  echo "ℹ️  --base 未指定のため main を自動設定します"
-  echo "   gh pr create --base main $*"
-  echo ""
-  gh pr create --base main "$@"
-  bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
-  exit $?
-fi
+[[ "$TITLE_COUNT" -eq 1 ]] || fail "--title を1つだけ指定してください"
+[[ -n "$TITLE_VALUE" ]] || fail "PRタイトルが空です"
+[[ "$BODY_COUNT" -eq 1 ]] || fail "--body または --body-file を1つだけ指定してください"
+[[ "$BASE_COUNT" -le 1 ]] || fail "--base は重複指定できません"
+[[ "$HEAD_COUNT" -le 1 ]] || fail "--head は重複指定できません"
+[[ "$BASE_COUNT" -eq 0 || -n "$BASE_VALUE" ]] || fail "--base の明示空値は許可されていません"
+[[ "$HEAD_COUNT" -eq 0 || -n "$HEAD_VALUE" ]] || fail "--head の明示空値は許可されていません"
+if [[ -n "$BODY_FILE" ]]; then
+  [[ "$BODY_FILE" != "-" ]] || fail "--body-file - は許可されていません"
+  if ! PR_BODY_WITH_SENTINEL="$(python3 - "$BODY_FILE" <<'PYEOF'
+import os
+import stat
+import sys
 
-# ── --base main のガード ──────────────────────────────────────────────────
-if [ "$BASE_VALUE" = "main" ]; then
-  # head ブランチを特定（--head 引数 → 現在ブランチ の順）
-  ACTUAL_HEAD="${HEAD_VALUE:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null)}"
-
-  # release/* または hotfix/* → リリース/ホットフィックスPRとして許可
-  if echo "$ACTUAL_HEAD" | grep -qE '^release/' || echo "$ACTUAL_HEAD" | grep -qE '^hotfix/'; then
-    echo "✅ ${ACTUAL_HEAD} → main のリリース/ホットフィックスPR: 許可"
-    echo ""
-    gh pr create "$@"
-    bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
-    exit $?
+path = sys.argv[1]
+try:
+    mode = os.stat(path).st_mode
+    if not stat.S_ISREG(mode):
+        raise ValueError("not a regular file")
+    data = open(path, "rb").read()
+    if not data:
+        raise ValueError("empty body")
+    if b"\x00" in data:
+        raise ValueError("NUL byte")
+    data.decode("utf-8")
+except (OSError, UnicodeDecodeError, ValueError) as exc:
+    print(f"invalid body file: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+sys.stdout.buffer.write(data + b"\x1e")
+PYEOF
+)"; then
+    fail "body fileをUTF-8本文として読めません: ${BODY_FILE}"
   fi
-
-  # それ以外はハードブロック
-  echo ""
-  echo "🚫 gh-pr-create-safe: --base main へのPR作成を中断しました"
-  echo ""
-  echo "   head : ${ACTUAL_HEAD}"
-  echo "   base : main"
-  echo ""
-  echo "   main を向く PR は release/* または hotfix/* からのみ許可されています。"
-  echo "   通常の開発は --base 省略（main が自動設定）を使用してください。"
-  echo ""
-  echo "   修正方法: bash scripts/gh-pr-create-safe.sh --title \"...\" ..."
-  echo "             （--base 省略で main が自動設定されます）"
-  echo ""
-  exit 1
+  PR_BODY="${PR_BODY_WITH_SENTINEL%$'\x1e'}"
+else
+  PR_BODY="$BODY_VALUE"
 fi
+[[ -n "$PR_BODY" ]] || fail "PR本文が空です"
 
-# ── その他のベース → そのまま通過 ───────────────────────────────
-gh pr create "$@"
-bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "git worktreeを確認できません"
+cd "$REPO_ROOT"
+CURRENT_BRANCH="$(git branch --show-current)"
+ACTUAL_HEAD="${HEAD_VALUE:-$CURRENT_BRANCH}"
+BASE_VALUE="${BASE_VALUE:-main}"
+
+[[ "$BASE_VALUE" == "main" ]] || fail "baseはmainだけが許可されています: ${BASE_VALUE}"
+[[ "$ACTUAL_HEAD" == "$CURRENT_BRANCH" ]] || fail "headは現在branchだけが許可されています: ${ACTUAL_HEAD}"
+[[ "$ACTUAL_HEAD" =~ ^(release|hotfix)/ ]] || fail "main向けheadはrelease/*またはhotfix/*だけです: ${ACTUAL_HEAD}"
+
+ORIGIN_URL="$(git config --get remote.origin.url 2>/dev/null)" || fail "originを確認できません"
+case "$ORIGIN_URL" in
+  https://github.com/shingo-ops/salesanchor|https://github.com/shingo-ops/salesanchor.git|git@github.com:shingo-ops/salesanchor.git|ssh://git@github.com/shingo-ops/salesanchor.git) ;;
+  *) fail "originはshingo-ops/salesanchorではありません" ;;
+esac
+
+AUTH_LOGIN="$(env GH_HOST=github.com GH_REPO=github.com/shingo-ops/salesanchor \
+  gh api user --hostname github.com --jq .login 2>/dev/null)" || fail "GitHub認証作者を取得できません"
+case "$AUTH_LOGIN" in shingo-cc|Hikky-dev) ;; *) fail "PR作者 ${AUTH_LOGIN} は許可されていません" ;; esac
+
+git fetch origin main "$ACTUAL_HEAD" --quiet || fail "origin/mainまたはorigin/${ACTUAL_HEAD}を取得できません"
+LOCAL_SHA="$(git rev-parse HEAD)"
+REMOTE_SHA="$(git rev-parse "refs/remotes/origin/${ACTUAL_HEAD}" 2>/dev/null)" || fail "push済みheadを確認できません"
+BASE_SHA="$(git rev-parse refs/remotes/origin/main 2>/dev/null)" || fail "origin/mainが存在しません"
+SHA_PATTERN='^[0-9a-fA-F]{40}$'
+[[ "$LOCAL_SHA" =~ $SHA_PATTERN ]] || fail "local HEADが40桁SHAではありません"
+[[ "$REMOTE_SHA" =~ $SHA_PATTERN ]] || fail "origin headが40桁SHAではありません"
+[[ "$BASE_SHA" =~ $SHA_PATTERN ]] || fail "origin/mainが40桁SHAではありません"
+[[ "$LOCAL_SHA" == "$REMOTE_SHA" ]] || fail "local HEADとorigin headが一致しません"
+
+printf '%s' "$PR_BODY" | env -u PR_BODY_VALIDATE_SKIP bash scripts/dev/validate-pr-body.sh
+
+echo "✅ PR作成前検査通過: ${ACTUAL_HEAD} → main (${LOCAL_SHA})"
+env GH_HOST=github.com GH_REPO=github.com/shingo-ops/salesanchor \
+  gh pr create --repo github.com/shingo-ops/salesanchor \
+  --title "$TITLE_VALUE" --body "$PR_BODY" --base "$BASE_VALUE" --head "$ACTUAL_HEAD"
+env -u GITHUB_ACTIONS GH_HOST=github.com GH_REPO=github.com/shingo-ops/salesanchor \
+  bash "$(dirname "$0")/register-pr.sh" || echo "⚠️  .pr-number の登録に失敗しました（PR作成は成功しています）"

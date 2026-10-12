@@ -4,7 +4,7 @@
 # 検証項目:
 #   [欠落版] .pr-number が無い worktree では中断する（exit≠0）
 #   [空版]   .pr-number が空の場合も中断する（exit≠0）
-#   [充足版] .pr-number が在る場合はガードを通過し後続処理へ進む
+#   [helper拒否版] helper非0ではcleanupを呼ばない
 #
 # 実行方法: bash scripts/tests/test-merge-safe-guard.sh
 # 終了コード: 0=全PASS / 1=FAILあり
@@ -27,21 +27,8 @@ echo "x" > "${SANDBOX}/a.txt"
 git -C "${SANDBOX}" add a.txt
 git -C "${SANDBOX}" commit -q -m "init"
 
-MOCK_BIN="${TMP}/mock-bin"
-mkdir -p "${MOCK_BIN}"
-cat > "${MOCK_BIN}/gh" << 'GHEOF'
-#!/bin/bash
-if [[ "$*" == *"pr merge"* ]]; then
-  echo "MOCK_GH_MERGE_CALLED"
-  exit 0
-fi
-echo ""
-exit 0
-GHEOF
-chmod +x "${MOCK_BIN}/gh"
-
 run_wrapper() {
-  ( cd "${SANDBOX}" && PATH="${MOCK_BIN}:${PATH}" bash "${WRAPPER}" --merge 2>&1 )
+  ( cd "${SANDBOX}" && bash "${WRAPPER}" --merge 2>&1 )
 }
 
 rm -f "${SANDBOX}/.pr-number"
@@ -50,6 +37,13 @@ if [ "${RC_MISSING}" -ne 0 ] && echo "${OUT_MISSING}" | grep -q "見つかりま
   ok "欠落版: .pr-number 無しで中断する"
 else
   ng "欠落版: 中断しなかった rc=${RC_MISSING}"
+fi
+
+OUT_CI="$(cd "${SANDBOX}" && GITHUB_ACTIONS=true bash "${WRAPPER}" --merge 2>&1)"; RC_CI=$?
+if [ "${RC_CI}" -ne 0 ] && echo "${OUT_CI}" | grep -q "見つかりません"; then
+  ok "CI環境名あり: 成功skipせず鍵欠落で中断する"
+else
+  ng "CI環境名あり: 鍵検査をskipした rc=${RC_CI}"
 fi
 
 : > "${SANDBOX}/.pr-number"
@@ -61,41 +55,22 @@ else
 fi
 
 echo "9999" > "${SANDBOX}/.pr-number"
-OUT_OK="$(run_wrapper)"
-if echo "${OUT_OK}" | grep -q "PR所有権確認"; then
-  ok "充足版: ガードを通過して後続へ進む"
+mkdir -p "${SANDBOX}/scripts"
+cat > "${SANDBOX}/scripts/cleanup-worktree.sh" <<EOF
+#!/bin/sh
+echo cleanup >> "${TMP}/cleanup.log"
+EOF
+chmod +x "${SANDBOX}/scripts/cleanup-worktree.sh"
+OUT_HELPER="$(run_wrapper)"; RC_HELPER=$?
+if [ "${RC_HELPER}" -ne 0 ] && echo "${OUT_HELPER}" | grep -q "PR所有権確認"; then
+  ok "helper拒否版: 所有権確認後に非0で停止する"
 else
-  ng "充足版: 通過しなかった"
+  ng "helper拒否版: 期待した停止にならない rc=${RC_HELPER}"
 fi
-
-# ── BEHIND検出テスト: RULE_WAITに入っても待機せず追従へ戻る ──────────────
-BEHIND_MOCK="${TMP}/mock-behind"
-mkdir -p "${BEHIND_MOCK}"
-cat > "${BEHIND_MOCK}/gh" << 'GHEOF'
-#!/bin/bash
-if [[ "$*" == *"pr merge"* ]]; then
-  echo "X Pull request is not mergeable: rule violations found"
-  exit 1
-fi
-if [[ "$*" == *"mergeStateStatus"* ]]; then
-  echo "BEHIND"
-  exit 0
-fi
-echo ""
-exit 0
-GHEOF
-chmod +x "${BEHIND_MOCK}/gh"
-echo "9999" > "${SANDBOX}/.pr-number"
-OUT_BEHIND="$( cd "${SANDBOX}" && PATH="${BEHIND_MOCK}:${PATH}" bash "${WRAPPER}" --merge 2>&1 )"
-if echo "${OUT_BEHIND}" | grep -q "BEHIND を検出"; then
-  ok "BEHIND検出: 待機せず追従フローへ戻る"
+if [ ! -e "${TMP}/cleanup.log" ]; then
+  ok "helper拒否版: cleanup呼出0"
 else
-  ng "BEHIND検出: 専用メッセージ無し"
-fi
-if echo "${OUT_BEHIND}" | grep -q "追従を実行します"; then
-  ok "BEHIND検出後: 外側ループの追従フローが開始される"
-else
-  ng "BEHIND検出後: 追従フローが開始されなかった"
+  ng "helper拒否版: cleanupが呼ばれた"
 fi
 
 echo ""

@@ -41,6 +41,20 @@ export interface ConversationsResponse {
   next_cursor: string | null;
 }
 
+export interface MessageReactor {
+  user_id: string;
+  display_name: string | null;
+}
+
+export interface MessageReaction {
+  emoji_name: string;
+  emoji_id: string | null;
+  emoji_animated: boolean;
+  count: number;
+  is_mine: boolean;
+  reactors: MessageReactor[];
+}
+
 export interface Message {
   id: number;
   platform: string;
@@ -60,6 +74,8 @@ export interface Message {
   created_at: string | null;
   attachment_url: string | null;
   attachment_type: string | null;
+  /** Discord リアクション一覧（Discord メッセージのみ存在） */
+  reactions?: MessageReaction[];
 }
 
 export interface MessagingWindow {

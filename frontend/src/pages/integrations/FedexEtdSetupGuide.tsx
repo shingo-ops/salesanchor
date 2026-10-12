@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { Badge } from "../../components/Badge";
 import { Check } from "../../constants/icons";
 import CarrierCredentialForm from "./CarrierCredentialForm";
@@ -143,9 +145,9 @@ function SubstepPane({
         {active.children}
         {isLast && canAdvanceFromLast && onAdvance && (
           <div className="form-actions etd-guide__substep-advance">
-            <button type="button" className="btn-primary" onClick={onAdvance}>
+            <Button variant="primary" size="md" type="button" onClick={onAdvance}>
               {advanceLabel}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -471,9 +473,9 @@ export function FedexEtdSetupGuide({
         {currentStep.key === "credentials" && (
           <>
             <div className="form-actions">
-              <button className="btn-primary" type="button" onClick={onOpenCredentialsTab}>
+              <Button variant="primary" size="md" type="button" onClick={onOpenCredentialsTab}>
                 {t("carrierIntegration.fedexEtdGuideOpenCredentials")}
-              </button>
+              </Button>
             </div>
             {isConnected ? (
               <Badge variant="success" size="sm" dot>
@@ -489,14 +491,15 @@ export function FedexEtdSetupGuide({
           <div className="etd-upload">
             <div className="form-group">
               <label htmlFor="etd-environment">{t("carrierIntegration.fedexEtdGuideEnvironmentLabel")}</label>
-              <select
+              <SelectControl
+                fullWidth
                 id="etd-environment"
                 value={etdEnvironment}
                 onChange={(e) => setEtdEnvironment(e.target.value as Env)}
               >
                 <option value="sandbox">{t("carrierIntegration.fedexEtdGuideEnvironmentSandbox")}</option>
                 <option value="production">{t("carrierIntegration.fedexEtdGuideEnvironmentProduction")}</option>
-              </select>
+              </SelectControl>
             </div>
 
             <div className="etd-upload__grid">
@@ -510,16 +513,16 @@ export function FedexEtdSetupGuide({
                   ref={letterheadInputRef}
                 />
                 <div className="form-actions">
-                  <button
+                  <Button variant="secondary" size="md"
                     type="button"
-                    className="btn-secondary"
+
                     disabled={uploadBusy.letterhead}
                     onClick={() => void handleUpload("LETTERHEAD")}
                   >
                     {uploadBusy.letterhead
                       ? t("carrierIntegration.fedexEtdGuideUploading")
                       : t("carrierIntegration.fedexEtdGuideUploadButton")}
-                  </button>
+                  </Button>
                 </div>
                 {uploadError.letterhead && <p className="error-message">{uploadError.letterhead}</p>}
                 {uploadSuccess.letterhead && (
@@ -539,16 +542,16 @@ export function FedexEtdSetupGuide({
                   ref={signatureInputRef}
                 />
                 <div className="form-actions">
-                  <button
+                  <Button variant="secondary" size="md"
                     type="button"
-                    className="btn-secondary"
+
                     disabled={uploadBusy.signature}
                     onClick={() => void handleUpload("SIGNATURE")}
                   >
                     {uploadBusy.signature
                       ? t("carrierIntegration.fedexEtdGuideUploading")
                       : t("carrierIntegration.fedexEtdGuideUploadButton")}
-                  </button>
+                  </Button>
                 </div>
                 {uploadError.signature && <p className="error-message">{uploadError.signature}</p>}
                 {uploadSuccess.signature && (
@@ -587,15 +590,15 @@ export function FedexEtdSetupGuide({
 
         {currentStep.key !== "portal" && (
           <div className="form-actions etd-guide__nav">
-            <button
+            <Button variant="primary" size="md"
               type="button"
-              className="btn-primary"
+
               onClick={advance}
             >
               {activeStepIndex === stepDefinitions.length - 1
                 ? t("carrierIntegration.fedexEtdGuideFinishedButton")
                 : t("common.next")}
-            </button>
+            </Button>
           </div>
         )}
       </StepCard>

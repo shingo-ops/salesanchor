@@ -14,12 +14,7 @@
 # 参考: docs/PARALLEL_TERMINAL_GUIDE.md
 #       docs/adr/ADR-074-worktree-agent-enforcement.md
 
-set -e
-
-# CI環境はスキップ（GitHub Actions は自分専用のPRを自分で管理する）
-if [ -n "${GITHUB_ACTIONS}" ]; then
-  exit 0
-fi
+set -euo pipefail
 
 # ── 中央設定ファイルを読み込む（validate-pr-ownership.sh と同パターン）─────────
 GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
@@ -83,85 +78,24 @@ if [ -f "${ACTIVE_WORK_FILE}" ]; then
 fi
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 所有権確認済み → マージ実行
+# 所有権確認済み → マージ前full gateと1回送信
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+if ! [[ "${OWNED_PR}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "🚫 マージを中断しました: .pr-number が正の整数ではありません。" >&2
+  exit 1
+fi
+
+if [ "$#" -ne 1 ] || [ "$1" != "--merge" ]; then
+  echo "🚫 マージを中断しました: 許可引数は --merge だけです。" >&2
+  echo "   --admin/--auto/--squash/--rebase/--repo/別PR指定は使用できません。" >&2
+  exit 1
+fi
+
 echo "✅ PR所有権確認: PR #${OWNED_PR} (ブランチ: ${CURRENT_BRANCH})"
-echo "   gh pr merge ${OWNED_PR} $*"
+echo "   マージ前GO・HEAD・必須checksを検査します（自動追従・再送なし）"
 echo ""
 
-# --- MERGE_RETRY: not up to date 自動追従（最大2回・正規手順の機械化） ---
-merge_with_retry() {
-  local attempt out
-  for attempt in 0 1 2; do
-    if [ "${attempt}" -gt 0 ]; then
-      echo "[MERGE_RETRY] 追従を実行します（試行 ${attempt}/2）"
-      git fetch --prune --quiet
-      if ! git merge origin/main --no-edit; then
-        echo "[MERGE_RETRY] STOP: コンフリクト。自動解決はしません。git status を確認してください。"
-        git status --porcelain
-        return 1
-      fi
-      git push || return 1
-      echo "[MERGE_RETRY] 最新HEADのchecks全緑を待ちます"
-      gh pr checks "${OWNED_PR}" --watch --required || {
-        echo "[MERGE_RETRY] STOP: checksにfailあり。--log-failed を確認してください。"
-        return 1
-      }
-    fi
-    out="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)" && { echo "${out}"; return 0; }
-    echo "${out}"
-    # 拒否種別を判定
-    if echo "${out}" | grep -q "not up to date"; then
-      : # 従来どおり: 次ループ冒頭で追従する
-    elif echo "${out}" | grep -qE "cannot be cleanly created|merge conflict"; then
-      echo "[MERGE_RETRY] STOP: コンフリクト。自動解決はしません。手動確認してください。"
-      return 1
-    elif echo "${out}" | grep -qE "rule violations|required status check|is not mergeable"; then
-      # RULE_WAIT: 判定待ち（GitHubの再判定が追いついていない）。追従はせず、判定確定を待って同一HEADで再マージ
-      echo "[MERGE_RETRY][RULE_WAIT] 判定待ちの可能性。確定を待って再マージします（最大3回・各30秒）"
-      rw_ok=0
-      for rw in 1 2 3; do
-        sleep 30
-        MSTATE="$(gh pr view "${OWNED_PR}" --json mergeStateStatus -q .mergeStateStatus 2>/dev/null)"
-        echo "[MERGE_RETRY][RULE_WAIT] 試行 ${rw}/3 mergeStateStatus=${MSTATE}"
-        if [ "${MSTATE}" = "BEHIND" ]; then
-          echo "[MERGE_RETRY][RULE_WAIT] BEHIND を検出。待機せず追従フローへ戻ります"
-          # BEHIND は break で 131行に到達しないため rwout が未設定になる。
-          # 147行の判定を通して外側の追従フローへ戻すために明示的にセットする。
-          rwout="not up to date"
-          break
-        fi
-        rwout="$(gh pr merge "${OWNED_PR}" "$@" 2>&1)"
-        if [ $? -eq 0 ]; then echo "${rwout}"; rw_ok=1; break; fi
-        echo "${rwout}"
-        # 待っても種別が変わった（not up to date化＝main前進）なら外ループの追従へ委ねる
-        if echo "${rwout}" | grep -q "not up to date"; then
-          echo "[MERGE_RETRY][RULE_WAIT] main前進を検知。追従フローへ戻ります"
-          break
-        fi
-        # コンフリクト化したら即停止
-        if echo "${rwout}" | grep -qE "cannot be cleanly created|merge conflict"; then
-          echo "[MERGE_RETRY] STOP: 判定待ち中にコンフリクト化。手動確認してください。"
-          return 1
-        fi
-      done
-      [ "${rw_ok}" -eq 1 ] && return 0
-      # 3回待っても通らず、not up to dateでもない → 恒久的な必須チェック不足等。停止して人へ
-      if ! echo "${rwout}" | grep -q "not up to date"; then
-        echo "[MERGE_RETRY] STOP: 判定待ちリトライ後も拒否。必須チェック不足等の可能性。手動確認してください。"
-        return 1
-      fi
-    else
-      echo "[MERGE_RETRY] STOP: 未知の拒否。安全のため停止します。"
-      echo "${out}"
-      return 1
-    fi
-  done
-  echo "[MERGE_RETRY] STOP: 2回の追従でも拒否。mainの前進が速すぎます。手動確認してください。"
-  return 1
-}
-
-merge_with_retry "$@"
+python3 "$(dirname "$0")/dev/check-pr-merge-ready.py" "${OWNED_PR}" "${CURRENT_BRANCH}"
 
 # ── マージ成功後: worktreeを自動クリーンアップ ───────────────────────────────
 CLEANUP_SCRIPT="${MAIN_REPO_ROOT}/scripts/cleanup-worktree.sh"

@@ -1691,3 +1691,1775 @@ AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非los
 
 
 AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### AQ. スタッフ日報フォーム2ボタン移管（2026-09-28）
+
+mode: handoff。既存の「1か所直せば全ページが変わる」目的の延長。POは根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの進行を明示し、画面確認は省略と指示。目視合格とみなさない。代理GO有効化や番号原文の創作ではない。
+
+#### Planner: 目的・実物根拠・範囲
+
+基準4bad43a4dca6368ffa7370792a3c912e90bba521、公式専用worktree release/frontend-next-button-batch、preflight成功。Solが旧候補5ページのhash5/5・ボタン原文10/10を再照合、ページ直接回帰試験は検索0。親AstraがStaffReportsPageとButton実物を読み、構文監査を実行。根拠aq-staff-report-audit.json/cjs。StaffReportsPage.tsx:93/94の取消/追加だけを対象とする。起動:68と日報一覧/絞込/入力を対象外とする。
+
+全体は同一構文定義で共通Button201・旧btn296（TSX、stories/test/spec/design-preview除外）。本便期待203/294。AP時点137/281との差は他便の変化であり、本便の改善へ加算しない。KGI: 対象2/2、逆変換でページ全byte一致、対象外1原文一致、共有14hash不変、送信契約の回帰違反0。最大の利用頻度/売上効果は未測定。
+
+候補比較: Badges2は2取得と数値変換、Buddy2は終了操作、Shifts2は日時/非reset/削除、Notifications2はWebhook情報を扱う。StaffReportsは単一GET・5項目POST・削除なしなので、事業価値の順位ではなく検証接触面が最小という理由で先行する。全10件の一括は失敗原因の切分け範囲を広げるため採らない。表/報酬3/カレンダー色は別設計、新CIは全画面移管後。
+
+変更: named import Buttonを追加し、2つの開始/終了タグだけをButtonへ。取消variant secondary、追加primary、いずれもsize md。旧classNameを外し、type/onClick/childrenを逐語保持。Button.tsx:38/49-87のnative属性転送を利用。新しいCSS/トークン/文言/金型登録は0。loading/disabled/aria-busy/fullWidth/style/layoutClassName/stateを追加しない。
+
+変更禁止: API/DB/認証/権限/入力/翻訳/依存/共有部品/CI、TYPE_LABELSの既存Daily/Weekly/Monthly、エラー表示、対象外の起動ボタン、テーブル。外観の正本はButton.tsx/Button.css、配置は既存form-actions。データは既存/staff-reportsへだけ送り、新たな保存先/複製は作らない。実DB/本番への書込は検証で0。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械的移管だけ | named importと2タグ/propsを逆変換して基準ページ全byte一致。対象外1/共有14hash維持、製品差分はページ1件と新規試験1件の合計2ファイルだけ |
+| 送信全5キー保持 | 実ページ/実Modal/実Select/実Button/実usePermissionsと合成認証/APIを使用。POST /staff-reportsでreport_type/period/review原値、goals/challenges空null、非空/空白保持。daily/weekly/monthlyを操作 |
+| 取消・終了 | 取消で書込0・close。取消後再開では既存入力保持。X/Escは既存Modalの閉鎖・focus復帰を検証。新規初期化を加えない |
+| 成功と失敗 | 成功close、5項目既定へreset、GET追加1。失敗は入力保持・既存エラー、再送成功。filter GETクエリ維持 |
+| 入力 | period/review必須不成立は送信0、textarea Enterは改行。新しい必須/数値/形式制約を追加しない |
+| pending | 取消/追加は有効・文言不変・aria-busyなし。独立2回送信は2回を維持。pending取消可、連投防止を無断追加しない |
+| 権限 | staff_reports.create許可で起動、拒否で起動なし。許可契約はusePermissions実物と合成/me/permissionsで検証 |
+| 品質 | 対象strict ESLint、新規ページ回帰/既存Button試験、全体coverage/check:all/build/build-storybook、PR必須CI。ネットワークは合成API以外拒否 |
+
+PO指示により本番実認証操作/目視・ブラウザー画面検査は省略し、寸法/切れ/画面品質を検証済みとは主張しない。自動DOM/操作回帰・構文/共有hash・既存品質チェックは省略しない。画面検査省略で幾何的な保証が弱まる制約を明記し、共有CSSは不変で影響を2ボタンに限定する。
+
+#### Why・影響・維持
+
+既存Buttonのnative属性契約をそのまま使い、業務本文の逆変換差分0と実ページの5キーpayloadを独立検証するため、見た目の正本集約と業務維持を切り分けられる。新ライブラリ/外部導入事例は不要（既存金型への限定移管で、外部事例で成功を保証しない）。関連ADR-113/067/027/073/122、親README/recon/migrationを継承。新ADR不要。
+
+Astraが設計・自己審査・差分検収、Solが製品2ファイルと自動試験を担当。他者変更は戻さない。守り手は追加StaffReportFormButtonMigration.test.tsxと既存Button.test.tsx/vitest.unit.config.ts、frontend品質CI。新CI追加0。リスクは既存pending連投・取消入力保持を意図せず変えることと画面検査省略。前者は回帰で固定し後者は未検証を明記。違反時はREVISEへ戻し、CSSや文言変更で通さない。製品差分のrevertで戻せ、DB復元は不要。
+
+#### Architect自己審査
+
+APPROVE（設計合格）。Planner作成後に基準実物・既存Button契約・共有14/対象2/対象外1・CIと照合。上記受入は自動回帰と逆変換で判定可能。同じAstraによる自己審査であり独立審査とは称さない。実装/試験は未実施、画面品質は省略・未検証。POの条件付き続行/担当委任指示に基づき、正式カード検査成功後にSolへ実装を委任する。設計合格を新PRの番号付きGO原文に転用しない。
+
+
+AQ設計根拠のSol追加照合: 主要業務契約の矛盾0。ファイル数の表現を明確化。pending取消後のPOST成功はreset/GET、失敗は入力保持/エラーという実物契約も自動回帰で確認する（機能追加ではない）。Astraは設計合格を維持。
+
+
+### AR — nativeフォーム・検索28ボタン一括移管（2026-09-28）
+
+mode: handoff。対象ADR: ADR-113/067/027/073/122。recon: docs/handoff/design-system-recon/recon.md。
+
+PO原文「次を進める、もっと幅広く一気に実装は出来る？」とAstra設計/Sol調査実装・根拠確立後の続行を受領。成功条件は14製品ファイルの指定28件を既存Buttonへ寄せ、旧294→266・共通203→231にすること（AQ2件と同じPRならmain基準で計30件）。営業成果や体感速度の改善量は測定しておらず主張しない。
+
+#### 範囲・採用理由
+
+固定基点99899eb824234c7158c14855301c9412f440db2d。詳細監査はar-button-audit.json、操作契約はar-contracts.md。Notifications/Badges/Shifts/Buddy/OrdersFormModal/LeadsPage/RolesPage/KnowledgeAliasesTab/MasterListEditorの10 nativeフォーム20件＋権限割当の非form Modal操作2件と、MasterListEditor/Units/ProductCategories/Suppliers/Conditions/StatusMasterの検索submit6件。計14ファイル28件。取消/保存/検索のnative buttonで、既存type/handler/childrenを保持できる同型群をまとめる。少数ずつのPRより確認・配備回数を減らせるが、実際の工数削減率は未測定。
+
+代替は全旧294件の一括変換と2件ずつの継続。前者はLink/a、bare btn-smのvariant未確定、独自CSS、loading/外部効果、削除actionが混在するため不採用。後者は同一契約の検査を共通化できる28件の実物が揃ったため採らない。対象外の旧266件、表、報酬3件、カレンダー色、CI追加は別便。
+
+#### 実装契約
+
+raw btn-secondary→Button variant=secondary size=md、raw btn-primary→Button variant=primary size=md。検索のfield-h-mdもsize=mdへ吸収する。field-size.css:8とButton.cssのmin-height/box-sizingが同じトークンを参照することを確認。既存金型の外観を採用するのでpixel完全同一とは呼ばない。
+
+各ファイルのnamed import追加と指定JSXタグ/className→variant/size置換だけ。type/form/disabled/data-testid/onClick/childrenは原文保持、元の暗黙typeは明示値を勝手に追加しない。loading/aria-busyを新設しない。API URL/method/payload、権限、business handler、state/reset、通信回数、配線/DBのSSOTは変更しない。共有15hash（AQ共有14＋field-size.css）不変、対象外button原文維持。逆変換で各ページ/部品全文が基点とbyte一致することを必須とする。新CSS・トークン・ハードコード・金型・依存は追加しない。
+
+#### 受入と検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械変換28件・対象外保持 | 固定監査JSONのraw JSX/各hashと前後照合、14ファイル逆変換byte一致、AST共通231/旧266、共有15hash一致 |
+| 10フォームと1操作群の動作維持 | 実ページ/共通部品をrenderし成功・取消・失敗/再試行・pendingを各契約別に検証。X/Escape/焦点は9つのModal formのみ。inline MasterListはadd/edit/cancel/required/grid、Roles割当はtype=button/onClick/disabled/PUTと閉鎖reset。APIはmock、実通信拒否 |
+| 送信・権限分岐 | 契約表のcreate/edit method/URL/全payload/required/数値変換/null/空白保持/権限/disabled/reset/再GETを期待値として照合。対象外の削除/終了を起こさない |
+| 検索6系統 | MasterListのlocalfilter1件はclick/Enter/trim/clear・追加通信0。GET検索5件はclick/Enterのquery/encoding/page1/clearを照合しwrite0。type=submit/data-testid維持 |
+| 全体品質 | 変更ファイルstrict ESLint、対象unit/既存Button、全体coverage/check:all/build/Storybook、diff/task-stateチェック |
+| 描画確認の限界 | PO指示で画面/実ログイン/本番フォーム/PO目視は省略・未検証と明記。DOM動作成功を表示合格や実DB成功に読み替えない |
+
+#### リスクと維持
+
+広域変更のリスクは画面ごとの副作用・検証fixtureの取り違え。固定原文の逆変換とhandler契約別試験、独立Sol差分レビューで検査する。fixture補正は実物根拠を残し初回ログを保存、試験skip/既存期待値変更で合格にしない。共有部品変更は行わず、製品差分のrevertで戻せる（DB復元不要）。守り手は追加/既存unitと既存品質CI、API/DB SSOTに別データを作らない。新CI追加は最後の方針を保持。
+
+外部・過去事例は該当なし。自社既存部品への限定移管であり、原文と自動回帰が直接の根拠となる。ライブラリ/API新仕様の採用はない。
+
+#### 設計審査の状態
+
+Planner案作成済み。詳細28件監査・契約表の照合とSol read-only第二照合後にArchitect判定を確定する。現時点は実装カード未発行。Astra自身の設計審査と独立Sol照合を区別する。PR起票手順は別担当release/pr-lifecycle-gatesが同領域変更中で、担当確認待ち。本ARからガードや外部設定を変更しない。番号付きGO原文の創作、代理制度の有効化はしない。
+
+AR設計レビュー修正: Solの実物照合で11フォーム分類を10フォーム＋1非form操作群へ訂正。検索もlocal1/GET5に分離、inlineに存在しないX/Escapeの試験期待を削除した（製品挙動変更ではなく実装前の契約訂正）。初期調査報告を正とせず実ソースを正とする。
+
+AR Architect確定: APPROVE（限定設計合格、2026-09-28）。Astraが正式監査の14hash/28原文/対象外53/共有15を直接照合して一致。Planner作成後に実物・既存金型・受入/所有18ファイルを整合審査した同一AI自己審査である。別Solのread-only照合も修正後APPROVE。初回の分類違いとカード検索文の曖昧さを正式資料で訂正し、正式card-lint最終exit0（長行警告2）。POの広域移管/担当委任/続行指示に基づきCARD-AR-NATIVE-BUTTONS-01を発行する。実装/試験/PR/配備の完了ではない。
+
+
+### AS. 静的primary/secondary 34ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。目的は既存合意「1か所直せば全ページが変わる」の継続。POは根拠確立後の続行・Astra設計/Sol調査実装・サブエージェント分担を明示。本設計はその範囲内の限定移管であり、PO本人の設計文言や番号付きGOを代筆しない。画面確認の省略指示を維持し、画面品質を検収済みとはしない。
+
+#### Planner: 事実・選定・対象外
+
+基準1675bfa0275a1ac76210ae489abbcb818287da02、公式worktree release/frontend-action-button-batch。preflight成功、作成時未保存0。本店の他者未保存18件は変更しない。調査固定49970e337から基準までfrontend差分0。AS AST直接再測定: 共通231/旧266、対象34/25ファイル、対象外232、共有15hash。原文と逆変換仕様は[as-button-audit.json](../../handoff/design-system-recon/evidence-20260910/as-button-audit.json)。callback/親/Modal追跡はas-static-contracts.md/json、既存実操作テスト照合はas-test-plan.md。外部事例は不要（新技術導入ではなく既存社内部品への限定移管）。利用頻度・事業価値順位・売上効果は未測定であり、最大効果とは断定しない。
+
+Sol暫定候補85を審査し、bare btn-sm42は色の対応未確定、動的4は個別仕様が必要と判明。静的39からghost3/danger1/btn-smとfield-h-md併用1を除き、色・寸法の対応が定義できる34件を採用する。85調査と非reload34案は履歴資料で、最終対象はas-button-audit.jsonのみ。競合中InvoicesPageは対象外。旧全266を一括変更すると未確定の色/動的条件/書込系が混ざるため採らない。34件はクリック起因GET7・状態/親callback/内部遷移27、直接write/外部送信0。GETは在庫ページ送り2、見積読込1、発注Modal catalog取得1、Dex検索1、Knowledge検索2。
+
+#### 変更仕様と所有
+
+各監査原文の開始/終了buttonだけをButtonへ、classNameだけをvariant primary/secondaryとsize mdへ置換。btn-smを含むものはsize sm、単独field-h-mdはmdへ吸収。Button未importのファイルだけ既存部品へのnamed import1行追加。type（省略を含む）/disabled/onClick/children/その他属性・業務本文は逐語維持。loading/追加disabled/aria-busy/style/layoutClassNameを導入しない。
+
+製品所有と全34原文はas-button-audit.json。Sol1: 16製品/21件＋CommerceNavigationButtonMigration.test.tsx。Sol2: 9製品/13件＋IntegrationLaunchButtonMigration.test.tsx/PurchaseAdminEditorButtonMigration.test.tsx。rootは正式文書/監査/台帳/検収。既存試験はread-only、対象外担当ファイルを相互編集しない。製品/新規試験計28ファイル以外の製品変更は禁止。DB/API/配線/権限/翻訳/ルート/依存/共有部品/トークン/CSS/CI変更0。データ正本は既存API/DBのまま、新保存先/複製0。
+
+既存金型採用のため外観完全同一は約束しない。smは旧padding4/10・radius3・最低高なしに対し既存Buttonがpadding4/12・radius6・最低高28、モバイル最低高44。mdのfield-h-mdは既存最低高に吸収。新金型/ハードコード追加は不要。配置wrapperと文言は維持する。根拠as-button-contract-research.mdの実物行番号。
+
+#### 受入条件・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象と本文保持 | 対象34/34、25ファイルをimport/タグ/属性だけ逆変換し基準全byte一致。対象外232rawの出現数・原文一致、共有15hash不変。共通265/旧232。他便差分が入った場合は別計数し根拠を更新 |
+| 既存10件 | 既存6suite（as-test-plan.md）を再実行。表示/クラスだけを被覆と数えず操作と状態/API/遷移結果を確認 |
+| 未被覆24件 | 3新規suite、実ページ/Router/Modal/Button/usePermissions使用。認証/API境界のみ合成。対応するcallbackの状態変化、正確な遷移先、GETクエリ/回数、disabled、取消時書込0。具体的24件契約はas-test-plan.md |
+| GET/失敗/pending | 在庫page境界とGET、Invoice見積読込のID/状態/失敗再試行/disabled、DexとKnowledge検索条件、発注catalog取得。deferredは全settleし既存のロックだけを維持。外部実通信0 |
+| 品質 | 全変更TSX strict ESLint、新規3＋関連既存6＋Button、全体coverage/check:all/build/Storybook、doc/task-state/card-lint/diff、最新PR必須CI成功。初回失敗も保存し、合格のためskip/ガード解除/仕様変更は禁止 |
+| 画面確認の境界 | PO指示で本番認証操作/目視/ブラウザー画面検査は省略・未検証。DOM合格を画面の欠け/寸法/本番送信の合格へ読み替えない |
+
+#### Why・影響と維持
+
+選択根拠は対象34の静的variant/size対応、実callback34とGET7の追跡、既存10被覆と不足24の特定、対象原文34と全byte逆変換で変更境界を証明できること。将来ADRのWhyにはこの実測と候補比較を使用する。ADR-113 handoff、ADR-067/027/073/122と既存金型を継承、新ADR/ライブラリ仕様調査不要。
+
+接触面: 利用者は34ボタン外観、実装者は分離所有、CIは既存経路、API/DBは追加変更0、運用は番号付きGO/公式merge/deploy経路、外部送信は試験で0。リスクは既存sm寸法差、非同期fixtureの誤判定、同時作業の衝突。画面保証の制約を記録し、合成APIの開始回数/全settle/権限待機、逆変換と最新main差分で監査する。未知の仕様・範囲外・競合・検証失敗は該当操作停止、必要調査を補い設計へ戻す。画面や製品仕様の独断補正禁止。
+
+維持担当は共通Buttonが外観、各既存ページが業務配線、既存CI＋3新規/6既存suiteが操作回帰、rootが原文/hash/状態台帳を管理。戻す場合は本便製品差分revert、DB復元不要。表/報酬3/カレンダー色、未確定bare/dynamic、残旧232は次便へ、新CIは全画面移管後。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身による審査であり独立した第二者設計レビューではない。別Sol2名のread-only調査で対象原文/処理契約/既存被覆を照合し、AstraがAST34/25・全legacy266・対象外232・共有15hashと固定frontend差分0を直接確認した。85暫定案の不足を34静的対応へ修正。受入方法・所有分離・既存ADR/金型/CI整合を確認し、未解決の対象仕様なし。正式カードlint成功後に発行する。製品実装・試験・番号付きGO・マージ・配備完了とは区別する。
+
+
+AS設計訂正（実装中の既存回帰照合）: rootが関連7suite/130試験を直接実行し129成功/1失敗。StaffReportFormButtonMigration.test.tsx:269-270にAQ便の対象外起動ボタンを旧classのまま維持する期待が残っていた。今回その起動はAS対象なので古いスコープ期待と矛盾する。契約を緩和せず、この既存試験1件の題名と旧class断定2行のみ共通金型のprimary断定へ変更を許可する。filter GET/回数/権限などその他期待は逐語維持。所有はSol1、これ以外の既存試験はread-only。製品25＋新規3＋限定既存1の計29ファイルに修正する。新規重複試験は追加しない。Astra自己再審査APPROVE、初回失敗原ログ03-existing-regressions.logを保存。これは動作の不良を隠す期待値変更ではなく、旧便の対象外判定を今回明示対象に合わせる設計訂正。
+
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。
+
+### AT. 既存フォーム11ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。ADR-113/067/027/073/122を継承。recon: docs/handoff/design-system-recon/recon.md。POの根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの指示に基づく。番号付き本人GOの代筆、代理GO有効化はしない。本番画面・ログイン操作・PO目視は既存の省略指示を維持し未検証として扱う。
+
+#### Planner: 目的・事実・選定
+
+目的は既存合意「1か所直せば全ページが変わる」の継続。利用者の保存・行追加操作を維持し、既存Buttonの外観へ統一する。固定基準a1cd9ea379cc7d85b797cca6b1cc092192296bc3のAST実測は共通265、旧232（native224/link8）。明示色158、bare btn-sm60、動的6。11件/9製品を対象に共通276/旧221へ移管する。使用頻度・売上効果・工数短縮は未測定で最大効果とは断定しない。
+
+根拠はat-button-inventory.md/json、at-button-audit.json、at-form-contract-research.md、at-commerce-test-plan.md、at-admin-test-plan.md（docs/handoff/design-system-recon/evidence-20260910/）。対象全11原文、9file hash、対象外221原文、共有18hashを固定。候補数36/13などは調査途中の案で最終scopeはauditのみ。bare btn-smの色を推測する案は却下、Invoice submitは非JPY時の外部FX参照、Roles saveは認可変更として除外。InvoicesPage/SuppliersPageは他便所有のため除外。QuoteCreateはPR #3084の実変更/正式設計対象外、同ブランチworktreeなしを確認し競合なし。古いIN_PROGRESSを現在の作業事実と扱わない。
+
+対象: Profile submit1、Company Basic/Channels submit2、Invoice add1、Quote add/submit2、Product submit1、PO submit1、Dex edit submit1、TCG type/series submit2。全11が明示primary/secondary、md対応、inline style/追加独自classなし。全232件一括は未確定variant・リンク・外部副作用・権限操作が混在するため採らない。小分けより同型契約を一つの検証便にまとめられる11件を選ぶ。
+
+#### 変更仕様・所有・データの正本
+
+auditに示す原文のbutton開始/終了タグをButton、classNameをvariant/sizeへ置換。named importがない場合だけ独立1行追加。type/form/disabled/onClick/children/全その他属性、handler本文を逐語保持。loading/aria-busy/追加disabled/レイアウト/CSS/トークン/i18n/依存/CI/route変更0。既存Buttonのtype既定値は未設定であり、勝手にtypeを補わない。field-h-mdはmdへ吸収。既存金型採用なのでpixel完全同一とは呼ばない。
+
+Sol1所有: InvoiceCreatePage、QuoteCreatePage、ProductEditPageの3製品4件とCommerceSubmitButtonMigration.test.tsx。
+Sol2所有: ProfileSection、CompanyBasicTab、CompanyChannelsTab、PurchaseOrdersFormModal、DexTab、TcgSeriesTabの6製品7件とAccountCompanySaveButtonMigration.test.tsx/AdminMasterSaveButtonMigration.test.tsx。
+Astra所有: 正式設計/監査/台帳/審査/検収。既存試験はread-only、他者変更を戻さない。製品9+新規試験3以外の製品変更は禁止。API/DB/配線の変更・新保存先・データ複製追加0。
+
+サーバー追跡でProfileは認証本人の7項目、Companyはcustomers.updateとtenant会社/販路、POはpurchase_orders.createと既存public supplier参照・必要時tenant supplier複製を伴う既存処理を確認。後者は既存動作で、本便で複製を追加/変更しない。Dex/TCGはrequire_super_admin下のpublic共通マスタ更新で全tenantに関係する。Quote/Productは既存tenant商品/見積のDB・監査・cache処理。これらの実保存を本番試験で発火させない。変更境界はフロント原文逆変換とbackend差分0、動作は合成APIで全payload/URLを確認する。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象11と範囲保持 | 9fileをimport/タグ/variant/size逆変換し固定基準と全byte一致。対象外221原文・共有18hash不変、共通276/旧221。並行main追加は別計数して記録 |
+| APIと保存状態 | 3新規suiteの実ページ/handlerで全キー完全一致、method/URL、成功後遷移またはGET増分、失敗時入力保持/再試行/成功処理0を確認。試験APIはmockで実通信0 |
+| Profile/Company | 本物UiPrefsProvider/patchMyProfile/useCompanyDetail使用。Profile7項目と成功refresh GET+1、Company基本14項目と販路区切り正規化、成功company/contacts各GET+1。権限待機・dirty/native required・pendingクリック重複0 |
+| Commerce | Invoice/Quote行追加で行数増分+1かつwrite0。Quote contact/item guard、全payload/null/数値変換、/quotesへ遷移。Product POST/PATCH全34キー、外置form参照、required/loading/pending/失敗保持とnavigate(-1) |
+| PO/Dex/TCG | PO全payload/2items/required/pending/成功onCreated→onClose。Dex pokemon/trainer両schemaの全payloadと正確な再GET。TCG type/series作成更新の全payload・trim/null/required/再GET/reset。Dex/TCGに現存しないpendingロックを要求せず繰返し送信可を保持 |
+| 品質 | strict ESLint、関連既存unit、全体coverage/check:all/build/Storybook、diff/task-state/card checks、Sol相互read-onlyレビュー、最新PR CI。失敗ログも保存、skip/ガード迂回禁止 |
+| 検証限界 | DOM成功は本番DB保存や画面品質の検収ではない。認証付き本番フォーム/ブラウザー/目視は省略・未検証。サーバー権限をfrontend mockだけで合格としない |
+
+#### Why・リスク・維持の仕組み
+
+11の静的対応と実callback/API追跡、固定原文の全byte逆変換、従来試験の保存処理未被覆を補う契約試験が採用根拠。ADRのWhyにはこの実測を使用し、架空の外部効果数値を使わない。外部・過去事例は不要（既存社内部品への限定移管で新ライブラリ仕様採用なし）。
+
+リスクは保存先/値の取り違え、実UiPrefsをmockしてrefreshを見逃すこと、合成fixture誤り、他便競合。実handler・全キー・GET初期回数分離・deferred全settle・最新main差分で検査する。fixture補正は実物根拠と初回失敗を残す。既存の多重送信可能なDex/TCGに機能追加せず維持する。未知の業務判断はPOへ戻し、独断仕様変更は禁止。
+
+守り手は既存Buttonとトークン、既存品質CI、追加3suite。rootはaudit/根拠/進捗、Solは限定実装と相互レビュー。回帰時は本便製品差分revertで戻しDB復元不要。新CI、残旧221、表/報酬3/カレンダー色は別便。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身の自己審査であり独立した第二者レビューではない。直接ASTで共通265/旧232/対象11/構文エラー0、商品payload34キーを再確認。対象9と全原文/18共有hash、実サーバー副作用、所有分離、受入/既存CI/ADR整合を確認。Solのrawとcallback追跡の誤記（Buttonのtype既定値、商品33キー報告）を実物に基づき訂正。API/DB変更なしで検証可能、対象仕様の未解決なし。正式card-lint成功後に委任する。設計合格は実装/検証/番号付きGO/マージ/本番反映完了を意味しない。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+### AU. 残る旧ボタン221件の全数移管（2026-09-29）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-113/067/073/122/144を継承。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文「個別に作られたボタンを全て共通部品に置き換える」、続いて旧方式221個を対象として明示。最新のAstra設計/Sol調査実装・PRマージ/デプロイまでの依頼を受領。これは実施範囲の承認であり、PO本人の番号付きGOやOpus委任を創作しない。画面/本番フォーム/PO目視は既存省略指示を維持する。
+
+公式作業台release/frontend-all-buttons、基準303c3cfe756b1d82c042cba342c3a3150fc5ab8c。preflight成功、本店の他者未保存変更は不変。AST実測221件/71ファイル＝native213、Router Link1、anchor7、動的class6、構文エラー0。別のnative180は今回の221母数に含まれず、タブ等を一律Buttonへ変えない。初回226はbtnをsuffixとして含む5件の誤検出、境界修正で221を確定。全原文・属性・行はau-inventory.json、部品/CSS契約はau-button-contracts.md。使用頻度・売上改善は未測定。
+
+根拠: Button.tsx:38/49/75（native属性/type/ref透過）、Button.test.tsx:23/52（form/submitter/propagation）、components.css:54/68/81/95/107/127（既存各色）、pages-layout.css:262/546（login幅/btn-block）、本設計§Z（ButtonLinkの既存承認設計）。Context7は提供ツール0件、PO許可代替のReact Router公式 https://reactrouter.com/7.18.4/api/components/Link を2026-09-29直接確認。導入版7.18.0の実コード/型も実装時照合し、version差の新機能を持ち込まない。外部事例は新技術採用ではなく既存金型への移管のため不要。
+
+#### 変更契約・設計判断（PO発言の代筆ではない）
+
+- native213はButton、Link/a8は新登録ButtonLink。既存Button.cssのみを外観正本とする。native/Router/anchorの意味を変えない。全type（省略含む）/form/disabled/name/value/ARIA/data/ref/handler/子内容/親DOMを逐語保持。API・payload・認可・DB・翻訳・依存・CI変更0、新保存先0。loadingや新たな送信抑止を追加しない。
+- 明示primary/secondary/ghost/danger/outlineは同名variant、btn-smはsize sm、他はmd。bare btn-smは既存の補助操作金型secondary smを採用する設計判断。旧中性色のpixel再現ではなく共通部品へ統一する目的を優先。primaryへ推測変換しない。定義のないbtn-danger-link2件は既存削除操作にdanger smを採用、新しいlink色金型は作らない。
+- 動的6件は元の条件式を保持してvariant primary/secondaryへ写像し、tab/aria-pressedを新設しない。共通サイズは元のbtn-smの有無、field-h-md併用はsize sm + layoutClassName field-h-mdとし、既存の最小高さを維持する。
+- btn-block/width100%はfullWidth。login2件はprimary lg fullWidth、Channelsの明示font-md+space3/6はlg。ProductMastersTabのspace1/3はsm。text-xsのCSS定義は実物確認し、存在しないなら独立の意味を付加せず除去し元variantの既定サイズへ。
+- 登録3ページの言語切替はghost md（font-size-sm定義なしのinline上書きは除去）、登録submitはprimary md fullWidth。これらは新しい動作や色の選択を追加しない。
+- inline外側余白は共通Button.css内の登録配置classへ移す: comp-btn-layout--mt-2=margin-top var(--space-2)、--ml-2=margin-left var(--space-2)、--ml-3=margin-left var(--space-3)、--ml-auto=margin-left auto。色/枠/字体/paddingは配置classで上書き禁止。Inboxのvar(--spacing-1)は定義がないため効果を創作せず当該無効margin宣言だけ除去する。gs-save-btnはalign-selfのみ、gs-advisor__run-btnはmin-height/nowrapのみなので同じDOMのlayoutClassNameで維持可。carrier-env-card__delete-btnはdanger md + --ml-autoへ（元の削除色と配置）、独自外観classは渡さない。
+- ButtonLinkをcomponents/ButtonLink.tsxへ登録。to必須のRouter branch/href必須のanchor branchの排他的型、forwardRef<HTMLAnchorElement>、元のLink/aそのまま。variantはtab以外、size/fullWidth/layoutClassNameを共有。disabled/loading/className/styleを受け付けない。Buttonのクラス組立をbuttonAppearance.tsへ抽出しButtonとButtonLinkで1定義のみ利用、既存Button出力/属性順/disabled式は完全維持。link専用CSSはButton.cssの下線除去のみ、色や寸法の重複定義0。
+- 全利用移管後にcomponents.cssの旧btn-primary/secondary/ghost/sm/danger/outline定義、旧header修飾、旧mobile定義とpages-layout.cssのlogin旧ボタン/btn-block定義を除去する。icon-btn等の対象外は保持。旧classに依存する試験の外観assertのみ新classへ更新し、操作期待を弱めない。
+
+登録: componentId=button-link、module=frontend/src/components/ButtonLink.tsx、exportName=ButtonLink、native=a/Router Link、story=ButtonLink.stories.tsx、test=ButtonLink.test.tsx、外観owner=Button.css + buttonAppearance.ts、承認設計=本節。配置class4件も同ownerへ登録。新規の機械台帳体系は作らずcomponent-standard.mdと既存移行台帳へ追記する。
+
+#### 受入・検証と限界
+
+| 条件 | 検証 |
+|---|---|
+| 全数 | 基準221原文全てを変換、残旧0。Button213追加・ButtonLink8追加、native対象外180と業務本文不変。固定全71fileを変換記録から逆変換し全byte一致（import変更含む）。CSS/共有部品は別監査 |
+| 配線/データ | handler・条件・非外観属性・子内容のAST/原文一致、backend/API/DB差分0。共有Buttonのイベント/form/ref/disabled試験、全体既存操作回帰。実サービスへ送信せずAPI/Auth境界を合成 |
+| リンク | href/to/target/rel/download、mailto、Router通常/修飾クリック、preventDefault/stopPropagation、ref、型禁止を試験。Button+navigate代用0 |
+| 実操作 | 実LoginでsignIn/reset引数・pending・成功/失敗、動的variantの条件切替、削除確認の取消/実行で呼出回数と対象ID、invoice外部操作の境界を合成して検証。不足は報告し補完 |
+| 品質 | Button既存試験、ButtonLink新規試験、移管の実操作試験、全体coverage maxWorkers1、check:all/build/Storybook、strict変更箇所、doc/task-state/card/diff、Sol相互レビュー、最新CI |
+| 本番 | 正式PR/merge経路、バックアップ確認、通常Deploy、配備HEAD/公開asset hash/HTTP200/DBRedisCelery接続を確認。画面・本番実書込・人の目視は省略・未検証 |
+
+代替: 小口移管は残件を残すため今回不採用。一律タグ置換はリンクや外側配置を壊すため不採用。外観の完全互換は金型が二重化するため採用せず、既存共通外観を採用。サイズ/背景/枠/角丸は変化する（bare smは背景と枠も変わる）。利用者の意味・操作維持と外観同一を混同しない。表の狭幅表示や報酬欄は過去に幅課題があり、画面未検証という限界を隠さない。
+
+担当: root Astraは設計/審査/公式文書/検収/保存。Sol sharedは共有部品/CSS/専用試験/Storybook、Sol pagesは71利用ファイル/操作試験。所有はカードで列挙。他者未保存や先行PRとの衝突は差分確認後に調整し、無断上書き禁止。新仕様不明・検証失敗は該当操作停止。失敗ログ保持、skip/ガード解除なし。
+
+#### Architect自己審査
+
+REVISE（実装前）。全221原文と既存部品/CSSを照合済み。上記mappingは統一の具体策であって旧外観と同一とはしない。残る調査: OPEN PR/実作業との衝突、全221変換予定と不明0の確認。これを補った後にAPPROVE/カード発行する。同一Astraによる自己審査であり独立第二者レビューとは称しない。
+
+#### 維持の仕組み
+
+守り手: frontend/src/components/Button.test.tsx、ButtonLink.test.tsx（本便作成）、既存frontend品質CI、保存するau監査。外観はButton.css、業務処理は元ページ/API。再発防止は既存移行計画どおり最後のCI補強へ、今回はCI設定を変更しない。切戻しは本PRの製品差分revertでDB復元不要。
+
+
+AU共有部品先行審査: APPROVE（共有部分のみ、Astra自己審査）。既存Button契約試験のform/ref/event/disabled/ARIA、§ZのButtonLink、導入Router7.18.0実在、外側余白4個のtoken定義を照合。共有部品と専用試験は利用ページの並行PRから独立するため先行可。全数移管の審査は利用側の競合確認までREVISEのまま。CARD-AU-SHARED-01正式card-lint exit0。
+
+
+AU全数設計最終審査: APPROVE（Astra自身の自己審査）。全221変換計画resolved221/blocked0、非外観属性と子内容を保持、71fileの逆変換計画を照合。Carrier削除variantの計画ghost誤記をdangerへ訂正して再生成した。OPEN PR6件を実diff照合: #2685 FX/null guard、#2668 Select、#2667 callback prop、#2401/#2362 header/Tabsは対象ボタン変更0。#2656は4openingの整形とCard wrapperがあるがhandler/disabled/class/children不変。将来text競合はあり得るため当該PRを無断統合/変更/終了しない。対象ファイルは本店/公式作業台/実在する4関連作業台で未保存0、2PRには該当作業台なし。古い日時のみを非活動の根拠にしない。今回独立作業台の最新main本文だけを外観変換し、他作業を上書きしない。証跡au-overlap-evidence.json。CARD-AU-PAGES-01は初回停止経路不足L15を補い再lint成功（長行警告のみ）。
+
+
+AU間接依存の追加発見と設計追補（実装中・削除前停止）: HeaderButton.tsx:17-19はclassName={VARIANT_CLASS[variant]}経由で旧btn3variantを参照し、221のliteral監査では捕捉しない。SolがCSS撤去前に発見、当該削除を停止した。これを「全旧CSS利用0」と誤認しない。HeaderButtonは公開API/固定type=buttonを維持しtext3variantだけButton(size md)へ委譲、icon branchは従来native icon-btnのまま残す。ここで追加される共有Button利用1件は213利用側移管と別計数。対象外native180のうちHeaderButton1定義のみ、この共有実装の意図した変更として別監査する。HeaderButton試験を新設して4variantのtype/event/disabled/aria/dataとicon外観classを確認。原文監査はこの共有定義を対象外nativeの不変検査から明示的に区別し、他179定義は不変とする。
+
+旧CSS削除の前提として3カタログstory（AccountSettings2/ContentToolbar2/PageLayout2）の旧raw6件もButtonへ移す。既存文言/他のstory機能は維持。原則の221実運用対象の完了数には算入しない。共通外観/依存の整理に必要な限定追加として同じユーザー依頼内で実施。API/DB/配線変更0。Astraの追補自己審査APPROVE、HeaderButton全文とCSS参照と3storyを直接確認、CARD-AU-SHARED-02正式lint成功。
+
+
+AU品質ゲート補正: 変更対象GoalSettingPage.tsx:225の既存「おすすめ」直書き1件でstrict ESLintが失敗。放置/ルール緩和をせず、同ファイルAdvisorMetricRowで既存useTranslationを利用、goals.advisorRecommendedをja/enへ各1key追加する（ja=おすすめ {{value}}、en=Recommended {{value}}）。既存数値整形/null分岐/処理は不変、日本文言を保持し英語を翻訳する。これは全byte逆変換の例外2コード差分として機械的に許可しlocale差分を各1keyで監査する。Astra設計追補自己審査APPROVE。CARD-AU-PAGES-02正式lint成功。DB/API/配線変更0、i18n以外の警告を独断で直さない。
+
+
+### AV. 入力本体の再棚卸しと SelectControl 本体拡張（2026-10-02）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-113/067/073/122/144を継承。§Y順序3「Toggle・入力本体」の着手便。§Zの入力契約（:798-826, :895-910, :921, :936）の実装第1段。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-01）「フロントエンドのSSOTをcodex二依頼していたのでキャッチアップして続きを再開してくれ」「フロントエンドのパーツもデザイントークンとデザインシステムを遵守して、金型登録のないハードコードを禁止する」「配線とDBのSSOTは遵守してデータを分散させることは禁止」。PO回答（2026-10-02、本セッション）: Checkbox/Toggle/Radio の新規金型登録を「許可する」（§Z :807/:826/:921/:936 の仕様どおり）。番号付きGO・Opus委任の有効化は創作しない（docs/handoff/go-record-transcription/opus-delegation.md 不在＝委任は有効化待ち）。
+
+引継ぎ時点の事実: 最終完了便はAU（PR #3855 merge 85af04d5、Deploy 36522989354 success、旧ボタン221→0）。§AU後の設計節・進行中便は無し。tasks/todo.md:19 の残件は「表/報酬3/カレンダー色保留、新CI最後」。§AA以降に入力の実装節は無く、§Y順序3のToggle/入力本体は未着手。
+
+公式作業台release/frontend-input-av1-design、基準55d99a97e441b4c0604f2b8f42418d2a7bc8ffab。preflight成功。作業台確保のため2026-10-02にPO本人がreaper --execute（マージ済み2件）と release/frontend-next-form-design の worktree remove を実行（後者の未push記録26be82bafは `git cherry` で main 同等、PR #3514で反映済みと照合）。
+
+再棚卸し（AV-0）: 初回は origin/main 946e6dbcdffa7e314b119cb9cd67b400182a679a の snapshot、基準55d99a97eで再実行し全599行・select80詳細・集計が一致（両SHA間の frontend/src 差分0）。TypeScript 5.9.3 AST、対象TSX 275（stories/test 103除外）、構文エラー0。native入力599＝input461/select81/textarea57（金型内部各1を含む）。ページ側: select80、textarea56、input460（omitted150/text97/checkbox72/number65/email23/date11/tel8/radio7/file6/password6/time4/dynamic3/url2/search2/color2/range1/datetime-local1）。ui-allow付き21/無し578。9/10監査（3bdf33d55、577）との照合: 1対1対応556、旧のみ21、新のみ43（場所一覧は av0-input-audit.md。差の原因は推定しない）。全行・属性は av0-input-audit.json。
+
+select80の詳細（av1-select-detail.json、属性有無は av0-input-audit.json の has/hasStyle/attrNames）: ref0、style5（InventoryPage.tsx:477、ParseReviewPage.tsx:575/596/617/638。AV-2で配置/外観へ仕分け）、multiple/size0、spread0、option disabled0。children＝配列map41（map単独19、map＋固定option22）、固定optionのみ32、option＋式7（ProductEditPage.tsx:231/255/278/285/346/353/360 の renderAttrOptions）。onChangeは e.target.value 読取76、カリー化4（TenantPolicyPage 167/266/283、TenantProfilePage 234）、selectedOptions0、Number変換5。option表示がt()経由56、生文字を含む23（記号片を含む）。ラベル紐付け12。
+
+既存金型の実物（frontend/src/components/Select.tsx）: SelectControl(:34) は options 配列モードのみ（:59-63）、children モード無し、forwardRef無し、矢印は FormField.css:74-83 の背景SVG固定。TextField.tsx:29/Textarea.tsx:28 はラベル付きdiv包みのみで、裸Control・forwardRef無し。金型の単体テストは0件（stories のみ）。既存 SelectControl/Select 利用33ファイル、TextField 48、Textarea 5（origin/main の import 文を git grep で数えた実測）。ui-allow 8件（StatusMasterPage.tsx:259/273、ConditionsMasterPanel.tsx:321/337/392/408、StatusMasterPanel.tsx:310/324）の理由は「option map を持つ SelectControl variant が無い」であり、childrenモードで解消対象になる。
+
+競合確認: 同領域のOPEN PRは #2668（release/morimoto/select-control-bare-select、draft、最終更新2026-06-28）のみ。Select.tsx/FormField.css/Select.stories.tsx は origin/main と差分0、`git cherry` で patch 同等＝既反映。本便と金型ファイルの競合なし。#2668 を無断で変更・closeしない。
+
+#### 便の分割（1便1目的、原因切り分け優先）
+
+| 便 | 内容 | 画面の見た目 |
+|---|---|---|
+| AV-1 本体 | SelectControl に children モード・forwardRef・indicator を追加、Select.test.tsx 新設、stories 追加。利用ページ変更0 | 変化なし |
+| AV-2 利用 | ページの生select80 → SelectControl。ページCSSの装飾宣言は FormField.css へ集約（§Z :811/:824、CSSI表）、配置宣言のみ layoutClassName として残す | 変化あり（前後表を事前提示しPO確認） |
+| AV-3以降 | TextFieldControl/TextareaControl 本体 → 利用、Checkbox/Toggle/Radio 新規金型 → 利用、その他type | 便ごとに提示 |
+
+本節で実装可とするのは AV-1 本体のみ。AV-2以降は各便の設計追補・前後表・カード後に判断する。
+
+#### 変更契約（AV-1、PO発言の代筆ではない）
+
+対象ファイル（これ以外は変更しない）:
+- frontend/src/components/Select.tsx
+- frontend/src/components/FormField.css
+- frontend/src/components/Select.stories.tsx
+- frontend/src/components/Select.test.tsx（新規）
+
+1. 型: SelectControlProps を排他 union にする。
+   - optionsモード: `options: SelectOption[]`、`placeholder?: string`、`children?: never`（既存と同じ）。
+   - childrenモード: `children: ReactNode`、`options?: never`、`placeholder?: never`。
+   - 共通: size/fullWidth/appearance/indicator と `Omit<SelectHTMLAttributes, own keys>`。
+2. 出力: optionsモードは現行 :52-64 と DOM・属性順・placeholder option 生成を完全維持。childrenモードは `<select>` 1個に children をそのまま入れ、option・空値・key・順番・条件式を再生成しない。placeholder option を新設しない。
+3. ref: `forwardRef<HTMLSelectElement, SelectControlProps>` で native select を返す。オブジェクトref・関数refとも同要素へ。ImperativeHandle を使わない。displayName="SelectControl"。
+4. indicator?: "default" | "none"（既定 "default"）。none は両 appearance で矢印背景を消す独立軸（§Z :906、CSSI-0231）。class は `comp-select--no-indicator`。
+5. CSS（FormField.css、var()のみ・新規トークン0）:
+   - `.comp-select--no-indicator { background-image: none; padding-right: var(--space-3); }`（md の左余白 :52 と同値）
+   - sm 時 `padding-right: var(--space-2)`（:137 と同値）、lg 時 `var(--space-4)`（:162 と同値）。既存 :142-146/:167-171 の select 再指定より後に置き、詳細度は既存規則（ファイル冒頭 :5-13）に従う。
+   - 既存宣言・既存の %23888 矢印は本便で変更しない（後述の残件）。
+6. Select（ラベル付き）: 公開APIは変更しない（optionsモードのみ）。内部の SelectControl 呼出しは型変更後も同出力であることをテストで固定。
+7. 変更しないもの: 利用ページ全件、TextField/Textarea、i18n、API/DB/backend、CI設定、依存、トークン定義。
+
+#### 受入・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| optionsモードの出力が不変 | Select.test.tsx: 既存 props 組合せ（placeholder有無・required・size sm/md/lg・appearance field/bare・fullWidth・disabled option）の DOM を変更前実装で取得した期待値と一致 |
+| childrenモードが children を再生成しない | 固定option／map／option＋式／空値option の4型で、出力 option の value・text・順番・disabled が入力と一致 |
+| 型の排他 | `// @ts-expect-error` で options+children 同時指定、children+placeholder を拒否。frontend の型検査成功（実在する script 名はカード作成時に frontend/package.json で照合） |
+| ref が native select に届く | オブジェクトref・関数ref の双方で HTMLSelectElement、value 読取・focus() 可 |
+| イベント・値の透過 | value/defaultValue/onChange/onBlur/name/id/disabled/required/aria-* が同要素に付き、onChange で e.target.value を受ける |
+| indicator=none | class 付与と、appearance field/bare 双方で付くこと。CSS は var() のみ（check:all の CSS 検査成功） |
+| 既存利用33ファイルの無影響 | 利用ページ差分0（git diff --stat）、型検査・全体テスト・build 成功 |
+| 品質 | `npm run check:all`、build、build-storybook、全体 vitest、ESLint、ui-governance 差分検査、design-token ratchet |
+
+#### 代替と不採用理由
+
+- 本体とページ移行を同一PRにする案: 不具合時に原因（部品か画面か）を分離できないため不採用（PO原文「原因が分かるように分離」§Y :760）。
+- Select（ラベル付き）にも children を同時追加する案: 現時点の利用予定が未確定のため本便では行わない。AV-2 の前後表で必要が確定した場合に追補する。
+- 矢印SVGの %23888 をトークン化する案: 見た目変化を伴い得るため本便に混載しない（残件）。
+
+#### Architect自己審査
+
+APPROVE（AV-1本体のみ）。§Zの契約（:802-806, :906）と実物 Select.tsx/FormField.css を照合し、追加は3点（childrenモード・forwardRef・indicator）に限定。値の保存先・API・配線を変えず、新規トークン0、既存出力をテストで固定する。競合PR #2668 は既反映で衝突なし。同一AI（Opus）による自己審査であり独立第二者レビューではない。AV-2 は見た目の変化を伴うため本審査の対象外（REVISE: 前後表とPO確認待ち）。
+
+#### 維持の仕組み
+
+守り手: frontend/src/components/Select.test.tsx（本便新設）、既存 frontend-check（check:all/coverage/storybook）、ui-governance-gate（差分検査）、design-token-guard。対象: SelectControl の公開契約と出力。守っていないもの: ページ側の生select 80件（AV-2で移管、最後のCIで未移行0を強制）。切戻し: 本PRの merge commit を revert（DB・データ影響なし）。
+
+#### 残件（本便では扱わない・事実のみ）
+
+- FormField.css:80 と components.css の page-header-select 矢印に `%23888`（URLエンコードの固定色）。ADR-067 の検査（check-css-hardcoded-colors）は %23 を検出しない旨が FormField.css:73 に記載。色トークン化は別便で設計。
+- 作業台上限: 他作業で worktree が上限100付近に常駐（本便確保時 100→101）。次便の作業台確保時に再び不足し得る。
+- 証跡: evidence-20260910/ の av0-input-audit.{cjs,json,md}、av0-compare.cjs、av1-select-detail.{cjs,json,md}、av1-select-detail-md.cjs、av1-summary.json、av1-css.cjs、av1-css-rules.md、av1-css-mapping.md（後者は snapshot 946e6dbc 生成の写し、frontend/src 同一）。
+
+
+### AW. ページの生 select の移管方針と SelectControl の用途別種類（2026-10-05）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV（AV-1 本体拡張、PR #3931 本番反映済）の続き。
+
+#### AV-1 の結果（記録）
+
+PR #3931 は 2026-10-05T02:09:48Z に merge 4a54206dd125d1add4d526814b63d53edd39accc（必須13/13成功）、Deploy 37254291709 success（headSha 4a54206dd、02:12:17Z）。本番の公開 asset は index-DwU5mfH_.js→index-BVLZdWZ6.js、index-Dvi2zDph.css→index-DQ5Tuc_9.css に変化し、両方に comp-select--no-indicator が1件ずつ含まれる。app 200、api /api/health 200。GO記録は PR #3931 本文（GO原文「GO #3931」、PO本人がpermit-dangerチケットを発行し、本文反映と merge-safe を本人が実行）。実装記録は evidence-20260910/av1-implementation.md。画面目視は未実施。
+
+#### Planner: 目的・根拠・範囲
+
+PO回答（2026-10-05、本セッション）: 当初の「全件を標準に統一」案に対し「統一しないほうが良いか？特別な見た目に意図があるのであれば金型を追加したほうが良いとお考えるがどうか？」。設計担当が意図の有無を資料で照合し、次の方針案を提示、PO は「この方針で進める」を選択: ①カルテ・ヘッダー・タブバーの3種類を金型に登録して今の見た目を保つ ②一般フォームは標準に統一 ③商品編集9か所は「枠が薄い」問題があるため保留して別に確認。番号付きGOは各PRで別途受領する。
+
+基準 origin/main 3210edeea250e269102bedd3546ebc48ddb89b77（公式作業台 release/frontend-select-av2-design の HEAD 3f4dbbdf95d406b97062ea2da74d25c4eadecdf6 と frontend/src 差分0）。証跡スクリプトは scratchpad の絶対パス定数を含む生成時のままで、再実行時は ROOT/NM の調整が要る。AST再計測でページ側の生 select は76（§AVの80から ParseReviewPage.tsx の4件がファイル削除 d010d6700 で消滅、追加0）。全76の適用CSSを静的解析（postcss、祖先はJSX木で解決）。証跡 evidence-20260910/av2-select-mapping.{json,md}、av2-recon2.{json,md}。
+
+意図の照合（判断の根拠）:
+
+| まとまり | 件数 | 意図の資料 | 判断 |
+|---|---:|---|---|
+| 受信箱カルテ `.right-panel-field`（InboxKartePanel 5、InboxProfileModal 4） | 9 | ADR-108:7・ADR-110:7 が karte_reference.html を見た目の正本と規定。tokens.css:311「見本 karte_reference.html 準拠・4pxグリッド非準拠例外」。InboxPage.css:1205「見本: select はネイティブ▼なしのプレーン箱」 | 種類 karte を登録 |
+| ダッシュボード上部 `.page-header-select`（DashboardPage 2） | 2 | components.css:584「ヘッダーアクションエリア内のドロップダウン共通スタイル (SSoT: ここのみ定義)」、:589「btn-ghost / icon-btn と高さを統一 (36px)」、tokens.css:95 radius-pill「入力欄の角丸（意味的例外トークン）」 | 種類 header を登録 |
+| 受信箱タブ横 `.inbox-platform-select`（InboxPage 1、InboxMessageThread 1） | 2 | InboxPage.css:68「タブバー右端」、height は tokens.css:271 --height-tab-item「受信箱タブボタン高さ」。文字の小ささ・色の意図資料はなし | 種類 tabbar を登録（高さ整合の意図に基づく） |
+| 一般フォーム・その他（.form-group / .form-row / .filter-bar / .schedule-input / .gs-select / .account-settings-lang-select / .inbox-page-filter-select / .inbox-settings-select / InventoryPage inline / 装飾なし） | 55 | docs/adr・docs/specs・docs/handoff に見た目の意図記載なし（av2-recon2.md R4）。角丸 sm/md・枠 border/border-strong が不統一 | 標準に統一 |
+| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） |
+| 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便） |
+
+#### 便の分割
+
+| 便 | 内容 | 画面 |
+|---|---|---|
+| AW-1 部品 | SelectControl に `variant?: "standard" \| "karte" \| "header" \| "tabbar"` を追加し、各種類の外観を FormField.css に定義。ページ変更0 | 変化なし |
+| AW-2 利用 | 66件（76−商品編集9−報酬1）を SelectControl へ移管。ページの外観宣言は削除し、配置宣言（layoutClassName 許可 property のみ）を同じ要素の配置classに残す。裸 select のページ規則10件のうち9件を削除し、商品編集の外観は `.product-edit-form .form-group select` 1規則へ集約（値は現行のまま） | カルテ/ヘッダー/タブバーは不変、一般は標準化 |
+
+#### AW-1 変更契約（PO発言の代筆ではない）
+
+対象: frontend/src/components/Select.tsx、FormField.css、Select.stories.tsx、Select.test.tsx、新規の外観同等性検証スクリプト（evidence-20260910 配下、製品外）。
+
+1. variant は options/children 両モード共通の任意 prop。既定 standard は現行出力と完全一致（class 追加なし）。karte/header/tabbar は select に `comp-select--{variant}` を付ける。appearance="field"（ラベル付き Select）での利用は本便では対象外（型で bare 時のみ許可）。
+2. 各種類の外観は FormField.css のみに置き、値は既存トークンのみ（新規トークン0、色・px直書き0）。宣言は現行ページCSSの値を写す:
+   - karte: InboxPage.css:1196-1207 の select 適用分（背景 --karte-field-bg、枠 0.5px solid --karte-field-bd、角丸 --radius-md、余白 --karte-field-py/px、文字 --font-sm、矢印なし、focus は枠 --accent のみ）。
+   - header: components.css:585-607（高さ --size-icon-btn、余白 space-1/5/1/3、角丸 --radius-pill、矢印あり、hover 背景 --bg-hover・枠 --border-strong、focus は現行どおり）。
+   - tabbar: InboxPage.css:69-86 の外観分（高さ --height-tab-item、余白 0 space-2、角丸 --radius-sm、文字 --font-xs・色 --text-secondary、ネイティブ矢印、focus 枠 --accent・文字 --text-primary）。margin-left/flex-shrink は配置なので利用側に残す。
+   - 金型の既定宣言（line-height、min-height のモバイル規則、focus の影、disabled）と現行値が異なる項目は、各種類の規則で現行値に合わせる。どの項目が異なるかは実測で決め、推測で書かない。
+3. 外観同等性の検証（受入の中心）: Playwright（chromium、手元キャッシュの実行ファイルを executablePath 指定。新規ダウンロード・依存追加なし）で、現行のページclassを付けた select と新 variant の select を同じページに置き、getComputedStyle を比較する。条件: 通常/focus/hover/disabled × 幅1280/390 × light/force-dark。比較項目: padding 4辺、border 各辺の幅・色・style、border-radius 4角、font-size/family/weight、line-height、color、background-color/image/position/repeat、height/min-height、box-shadow、outline、appearance、cursor、transition。差分0を合格とし、差分が出た項目は値の対で報告して設計者が判定する。
+   - 変更前の実測基準（evidence-20260910/aw1-baseline.{cjs,json,md}、Chromium 147.0.7727.15、80条件で hover/focus の状態一致を確認）: light/1280/通常で karte=padding 7/9・角丸6px・13.6px・高さ32・矢印なし、header=padding 4/20/4/12・角丸20px・13.6px・高さ36・矢印あり、tabbar=padding 0/8・角丸4px・12px・高さ36・ネイティブ矢印。金型 md=高さ40、sm=高さ30。390px では金型だけ min-height 44px。hover で変化するのは header のみ、disabled で変化するのは金型のみ。
+   - 実測で判明した既存の癖（現行どおり再現するか PO 確認事項）: header の font-family が Arial（select が body の書体を継承していないため）、karte は暗い表示でも背景・枠が明るい色のまま。
+4. 試験: variant ごとの class 付与、standard で class 非付与、options/children 両モードで同じ、ref・属性透過の既存試験を維持。
+5. Story: 3種類の見本を追加（新しい寸法直書きなし）。
+
+#### AW-2 変更契約（概要、詳細はAW-1後に追補）
+
+- 移管先: カルテ9→variant="karte" fullWidth、ヘッダー2→variant="header"、タブバー2→variant="tabbar"＋配置class（margin-left:auto/flex-shrink:0）、一般55→standard（文字 --font-base の群は md、--font-sm/--font-xs の群は sm）。
+- children モードで options/条件分岐/key/value/onChange を再生成しない（§AV契約）。Number 変換・カリー化 handler は元の式のまま。
+- ui-allow（10件）は、移管で不要になるものだけ除去。
+- 一般フォームの見た目の変化（角丸、矢印が端末標準→共通、右余白、枠の濃さ）と、ページ規則削除で標準に戻る既存金型利用（確定7・未確認9: CompanyAddressModal、NoteMaster、ProductFormats/Lines、TypeMaster、FormSection、RuleCreateDrawer 等、av2-recon2.md R1）を前後表で PR に明記する。
+- 生 option 文字（23件）の翻訳化は本便の対象外（別便）。
+
+#### 受入・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 3種類が現行と同じ見た目 | AW-1 の computed style 比較で全条件差分0（差分は値の対で報告し設計者判定） |
+| standard は既存出力不変 | 既存 Select.test.tsx 92 試験＋innerHTML 一致試験が成功 |
+| 新規トークン・直書き 0 | check:all、check:new-tokens、design-token ratchet、ui-governance、diff の目視 |
+| 移管で操作・値が変わらない | AW-2 で各 select の onChange/value/options を原文一致で照合、全体試験（maxWorkers=1） |
+| 保留10件が不変 | 商品編集9・報酬1の DOM/CSS 差分0 |
+
+#### 代替と不採用理由
+
+- 全件を標準に統一: ADR-108/110 の見本正本に反し、ヘッダー整列の SSoT 記載にも反するため不採用（PO も意図尊重を指示）。
+- 特殊な見た目をページCSSに残したまま class だけ部品にする: 外観の手編集元が2か所になり SSOT に反するため不採用。
+- 商品編集を標準へ統一: 「枠が薄くて見えない」問題の再発リスクがあるため保留。
+
+#### Architect自己審査
+
+AW-1: APPROVE（実装可）。根拠はADR/トークン注記/CSS注記の実物照合。外観の同等性は推測でなく computed style 比較で判定する設計で、ページ変更0。AW-2: REVISE（AW-1 の実測結果と、移管ごとの前後表の確定後に再審査）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+#### 維持の仕組み
+
+守り手: Select.test.tsx、外観同等性検証スクリプト（evidence に保存、AW-2・最後のCIで再利用）、既存 frontend-check・ui-governance・design-token-guard。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の生 select（AW-2で移管、最後のCIで未移行0を強制）。切戻し: 各PRの merge commit を revert（DB影響なし）。
+
+#### 残件（事実のみ）
+
+- Playwright 1.60.0 は chromium rev1223 を要求し手元は rev1217 のみ（既定起動不可、executablePath 指定で起動可を確認）。
+- 既存金型利用数は R1 実測で 86（Select 66・SelectControl 20）。§AV 時点の「91」と差5、原因未確認。
+- 商品編集9の枠の濃さ、報酬1の表 overflow、生 option 文字23の翻訳化は別便。
+
+
+#### AW-1 結果と AW-2a 追補（2026-10-07）
+
+AW-1: PR #3996 merge 57090e4576e8cdcd7c66cdcb17958c188ac28e86（2026-10-06T23:18:24Z、必須15/15成功）、Deploy 37545822874 success（headSha 57090e45、23:20:55Z）。本番 CSS index-DTCDnOLp.css に comp-select--karte/header/tabbar が各2行。app 200、/api/health 200。外観同等性は evidence-20260910/aw1-equivalence.md（computed 42項目×36条件 差分0、DPR2 ピクセル比較18件 差分0、disabled は対象13件で未使用のため判定外）。GO #3996 は PO 本人の発言、本文反映とマージは PO 本人の端末操作。運用上の事実: merge-safe は BEHIND で停止し自動追従しないため、main が数時間で20件超進む日は、担当が最新化と push、PO が checks 待ち＋merge-safe を1行で実行する分担でマージした（停止3回）。
+
+AW-2 は原因切り分けのため2便に分ける。AW-2a＝見た目を変えない13件、AW-2b＝標準へ統一する一般フォーム（見た目が変わる、前後表を別途 PO 提示）。
+
+AW-2a 対象（origin/main 57090e45、evidence: 本便で保存する aw2a-recon.md）:
+
+| 種類 | 場所 | 移管後 |
+|---|---|---|
+| karte | pages/inbox/InboxKartePanel.tsx 447/514/527/541/557、InboxProfileModal.tsx 161/200/215/226 | `SelectControl variant="karte" fullWidth`、children モードで既存 option をそのまま |
+| header | pages/dashboard/DashboardPage.tsx 412/441 | `SelectControl variant="header"`（412 の monthOptions.map もそのまま） |
+| tabbar | pages/inbox/InboxPage.tsx 92、InboxMessageThread.tsx 409 | `SelectControl variant="tabbar" className="inbox-platform-select"`（配置 margin-left:auto / flex-shrink:0 のみ残す） |
+
+変更契約:
+- 置換は開始/終了タグ名と className の変更、import 追加だけ。value/onChange/onBlur/aria-label/children は逐語保持。13件の祖先経由規則は0件（av2-select-mapping）。
+- CSS: components.css の `.page-header-select` 3規則は利用0になるため削除。InboxPage.css の `.inbox-platform-select` は配置2宣言だけ残し外観宣言と `:focus` 規則を削除。`select.right-panel-field` 1規則と直前の見本コメントを削除（`.right-panel-field` 本体は input/textarea 等約30箇所が使うため保持）。
+- tests-e2e/scene1-dashboard.spec.ts:367 の locator `.page-header-select` を `.comp-select--header` に変更（e2e は e2e.yml:104 で停止中だが意図を保つ）。frontend/scripts/check-page-header-actions.js は CSS の他ファイル再定義のみ検査し未配線のため影響なし。
+- 本便で新規トークン・色/px 直書き0、Select 本体と FormField.css は変更しない。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 13件の非外観属性・children が不変 | 変更前後の JSX を AST で比較し、タグ名・className・import 以外の差分0を機械照合（スクリプトを evidence に保存） |
+| 見た目が不変 | AW-1 の同等性（差分0）＋祖先規則0件。CI の Karte Visual Gate（.inbox-right-panel のスクリーンショット比較）が合格 |
+| 使われなくなった CSS だけを削除 | 削除前に3クラスの全利用箇所を grep で列挙し、残る利用が想定どおり（page-header-select 0、inbox-platform-select は2 select のみ、right-panel-field の select 0） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook |
+
+Architect 自己審査（AW-2a）: APPROVE。外観は AW-1 の実測で同等、配置は残し、未使用規則のみ削除。同一AI の自己審査であり独立第二者レビューではない。AW-2b は REVISE のまま。
+
+
+#### AW-2a 結果と AW-2b 追補（2026-10-08）
+
+AW-2a: PR #4016 merge 5bc79ef9710133af21bef437423ab0d02ecfda60（2026-10-07T13:16:48Z、必須15/15成功、Karte Visual Gate 合格）、Deploy 37627254081 success。本番 CSS index-C71hvLDM.css で page-header-select 0・select.right-panel-field 0・comp-select--karte 2、残る `.inbox-platform-select{flex-shrink:0;margin-left:auto}`。app/api 200。GO 原文は PO 本人の「GO #4016GO #4016」。マージは main の strict 必須チェック（strict_required_status_checks_policy=true、必須15）と merge-safe の CLEAN 要件により、main が短時間に連続で進む時間帯（2026-10-07 05:26〜05:37Z に6件、各マージ後に台帳自動DONE化PRが1件続く）は BEHIND で繰り返し停止した。運用の改善（待ち行列等）は別テーマとして PO 判断待ち。
+
+AW-2b 対象: origin/main c0936057e の生 select 63 から保留10（ProductEditPage 9、CommissionPanel 1）を除く53。証跡 evidence-20260910/aw2b-plan.{json,md}、aw2b-css-verbatim.md。サイズは文字の大きさの既存トークンで md 45・sm 8、幅いっぱい（fullWidth）38。
+
+移管規則（PO 方針「一般フォームは標準に統一」による。見た目は標準の金型になる）:
+- 全件 `SelectControl`（children モード、option・式・value・onChange・aria・disabled・required は逐語保持）。size は aw2b-plan の値、width:100% が効いていたものは fullWidth。
+- className は配置だけの class（field-w-sm、gs-select、account-settings-lang-select）を残し、外観・寸法の class（field、field-h-md、search-input、schedule-input、inbox-page-filter-select、inbox-settings-select、conv-logs-filter-select、manual-record-select）は外す。ただし e2e/単体試験が参照している class は残す（実装時に grep で確認）。
+- InventoryPage の inline style（装飾のみ）は削除。移管した select に付く ui-allow 9行は削除。
+
+CSS:
+- components.css の `.form-group select` と `.form-group select:focus` を選択子リストから外す（input/textarea の規則は不変）。
+- company-forms.css の `.form-grid > .form-row select`、`.modal-content(-wide) .form-row select` と各 `:focus` を選択子リストから外す。
+- 保留中の商品編集9件の見た目を保つため、company-forms.css の商品編集専用規則から select を独立させ、これまで `.form-group select` から受けていた宣言を同じ値で写す。focus 時も現行の計算値（後段の商品編集規則が枠色を上書きしている）と一致させる。一致は Chromium 実測で確認する。
+- `.gs-select` は `flex: 1` のみ、`.account-settings-lang-select` は `min-width` のみ残し、`:focus` は削除。`.inbox-page-filter-select` と `.inbox-settings-select` は削除。`.schedule-input`（input 6件が使用）、`.field-*`、`.filter-bar select`（生 select の利用0、既存金型の未確認利用あり）は本便で変更しない。
+
+変わる見た目（PR に前後表を載せる）: 一般フォームの選択欄は、右余白が広がり（矢印の場所）、角丸が金型の値になり、矢印が共通の形になる。商品マスタ等の既存金型8件も、これまで上書きで消えていた矢印が表示されるようになる。小さい文字（font-xs）だった受信箱のページ絞り込みと在庫の「その他」は font-sm になる。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 53件の非外観属性・children が不変 | AST 照合（タグ名・className・size/fullWidth・style・ui-allow 以外の差分0） |
+| 保留10件の見た目が不変 | Chromium 実測で商品編集 select（通常・focus）と CommissionPanel の computed style を変更前後で比較し差分0 |
+| 変わる見た目を事前に提示 | 代表グループごとに変更前後の computed style（px）を実測し PR に表で記載 |
+| 新規トークン・直書き 0 | check:all、check:new-tokens、design-token ratchet、ui-governance、目視 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AW-2b）: APPROVE（PO 方針どおり標準へ統一、保留10件は実測で不変を確認する設計、配線・データ不変）。同一AI の自己審査であり独立第二者レビューではない。
+
+
+#### AW-2b 結果（2026-10-09）
+
+PR #4033 merge de8ca6275a5906ae0cdb7c46521f23b747ea6d50（2026-10-08T22:31:24Z、必須15/15成功）、Deploy 37854006957 success（headSha de8ca627、22:31:26Z〜22:34:04Z）。本番 CSS index-BI9wWxUm.css（HTML が参照する唯一の CSS）で `comp-select__control.field-w-sm/md/lg` 各1、`form-group select` 2（いずれも `.product-edit-form .form-group select` と同 `:focus`、汎用規則0）、`inbox-page-filter-select` 0、`inbox-settings-select` 0、`comp-select--header` 2。app 200、`https://api.salesanchor.jp/api/health` 200（`/health` と `/` は 404 で、監視の固定URLは backend/app/main.py:220-221 の `/api/health`）。GO 原文は PO 本人の「GO #4033」、本文反映とマージは PO 本人の端末操作。マージ待ちで merge-safe が BEHIND/UNKNOWN により計12回停止し、担当の最新化 push 2回の後に成立した。同 Deploy の「Post-deploy smoke tests (SA-19)」は skipped で、理由は未調査（本便の変更との関係も未確認）。残る保留: 商品編集9・報酬1・カレンダー色・生 option 文字23の翻訳化・`.filter-bar select`。
+
+
+### AX. TextareaControl 本体（2026-10-09）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV の便分割（:1973「AV-3以降 TextFieldControl/TextareaControl 本体 → 利用」）のうち textarea の本体便。§Z 入力契約（:802-806, :818, :821, :895, :897）の textarea 部分の第1段。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-09、本セッション）「次を進める」「フロントエンドのパーツもデザイントークンとデザインシステムを遵守して、金型登録のないハードコードを禁止する」「確立したなら進める」。番号付きGO・Opus委任の有効化は創作しない（docs/handoff/go-record-transcription/opus-delegation.md 不在＝委任は有効化待ち）。
+
+現在地（origin/main 0f5d7e53774ec0ccffc68a5372288afe0c265a9a、TypeScript 5.9.3 AST、対象TSX 275、構文エラー0。証跡は本便で保存する evidence-20260910/ax0-textarea-inventory.{cjs,json,md}、ax0-textarea-css.md。inventory.cjs は生成時のまま typescript を手元の絶対パスで require しており、再実行時はその1行の調整が要る）:
+- 生 `<textarea>` 54＝金型内部1（Textarea.tsx:63）＋ページ側53（ui-allow 2: ConditionsPage.tsx:340/350）。既存 `<Textarea>` 利用13。
+- §AV の textarea56/57 との差3はすべて照合済み: ParseReviewPage.tsx の2件はファイル削除（d010d6700）、DiscordConfigPage.tsx の1件は `<Textarea>` へ移管済（e95f856b2）。他は行ずれのみ。
+- 属性: value/onChange 53、rows 21、placeholder 16、className 18、onBlur 8、disabled 7、id 6、style 6、maxLength 5、aria-label 4、data-testid 4、onKeyDown 2、ref 1（InboxMessageThread.tsx:736）、required 1。
+- 外観の出所: textarea を含む選択子または自 class の規則34（components.css:19/31/39 の `.form-group textarea` 系が約27件、company-forms.css の `.form-row textarea` 系、InboxPage.css の `.inbox-textarea`/`.right-panel-field`/`.outbound-translation-edit`、schedule.css、WeeklyAdvisorSection.css、supplier-detail-view.css）。CSS 定義の無い class（DiscordAnnouncePage の `input w-full resize-y`、ManualRecordSection の `manual-record-textarea`）と規則の当たらない3件がある（いずれも祖先照合は近似）。
+- 既存金型 Textarea（Textarea.tsx:28-74）はラベル付き div 包みだけで、裸の部品と ref 転送が無い。単体テスト0（stories のみ）。このため ref を使う送信欄や、div を増やせない右パネル等へ移管できない。
+- ガード: scripts/check-ui-governance.js は textarea を検出しない（select/input/tab のみ）。frontend/eslint.config.js:107/209 は minHeight 数値の禁止のみ。
+- 競合: active-work.d に textarea/AV-2 の進行中0。
+
+本便の範囲（見た目の変化0・利用ページ変更0）:
+1. Textarea.tsx に `TextareaControl` を追加: `forwardRef<HTMLTextAreaElement, TextareaControlProps>`、`TextareaControlProps = { size?: TextareaSize } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size">`。`<textarea>` を1つだけ返し div/label を増やさない。class は `comp-field__textarea`、size が md 以外なら `comp-field__textarea--${size}`、最後に className（移行中の互換口。§Z :910 の layoutClassName 統一は全移管後）。ref・native 属性・イベント・value/defaultValue は同じ要素へそのまま渡し、未指定を補わない。id は個別に受けて className より前に出力する（既存 Textarea の出力属性順 `id`→`class` を保つため。実装時に固定試験が属性順の差で失敗したことによる設計者判断、2026-10-09）。
+2. 既存 `Textarea` の `<textarea id={fieldId} className="comp-field__textarea" {...rest} />`（:63）を `<TextareaControl id={fieldId} {...rest} />` に置換（size は渡さない＝出力 class は `comp-field__textarea` のまま）。既存13利用の DOM は不変。
+3. FormField.css: :148 の選択子リストに `.comp-field__textarea--sm` を、:158-161 の lg リストに `.comp-field__textarea--lg` を追加（宣言・値は既存のまま。新規トークン0）。どちらも基本規則（:47-68）より後ろにあり、同じ specificity (0,1,0) で後勝ち。
+4. Textarea.test.tsx を新設し、Textarea.stories.tsx に TextareaControl の見本（通常・sm/md/lg・disabled）を追加。
+
+変更しないもの: 利用ページ全件、ページ CSS、トークン定義、i18n、API/DB/backend、CI 設定、依存、Select/TextField。appearance（embedded）・resize・invalid は次便（AX-2）で前後表とともに設計する（送信欄 CSSI-0209、右パネル CSSI-0233）。
+
+#### 受入
+
+| 基準 | 検証方法 |
+|---|---|
+| 既存 Textarea の出力が不変 | 実装前の現行コードで Textarea（label・required・helperText・error・size sm/lg・fullWidth・className・id）の outerHTML を固定する試験を先に書いて通し、置換後も同じ試験が通る |
+| 裸の部品が1要素だけ返す | TextareaControl の container 直下が textarea 1つ、class が `comp-field__textarea`（md）/`--sm`/`--lg`、className が末尾 |
+| ref 転送 | オブジェクト ref と関数 ref の両方が HTMLTextAreaElement 本体を受け取る |
+| 属性・イベントの透過と未補完 | value/onChange/onKeyDown/onBlur/rows/maxLength/disabled/placeholder/aria-label/data-testid/id/required が同要素に届く。未指定の rows/value/placeholder は属性として現れない。Enter の keydown は既定動作を妨げない |
+| 寸法が既存金型と一致 | Chromium 実測で TextareaControl sm/md/lg と ラベル付き Textarea sm/md/lg の textarea の computed style（padding・font-size・min-height・border・radius・resize・line-height）が一致（スクリプトと結果を evidence に保存） |
+| 新規トークン・直書き 0 | check:all、ui-governance、design-token-guard、差分の目視 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook（端末の空きが不足する場合は CI の Storybook build check で確認と明記） |
+
+#### 代替案
+
+- ラベル付き Textarea に ref と裸モードを足す: 1つの部品に div 有無の2出力が混ざり、§Z :802 の「裸の部品を公開し、既存ラベル付き部品はその本体を使用」と食い違うため不採用。
+- 本体と利用ページを同じPRで変える: 見た目の変化と部品の不具合を切り分けられないため不採用（§Z :796、§AV の便分割）。
+- appearance/resize を今入れる: 利用側の実測前に値を決めることになるため次便へ。
+
+外部事例: 新技術の採用ではなく既存金型（SelectControl の forwardRef、Select.tsx:63）と同じ型の追加のため不要。React 18.3.1（frontend/package.json:83）の forwardRef は導入済みの SelectControl で実利用中。
+
+#### Architect 自己審査（AX-1）
+
+APPROVE（実装可）。§Z 契約・実物 Textarea.tsx/FormField.css・SelectControl の先例と照合し、追加は裸の本体・ref・寸法 class の3点に限定。既存13利用の DOM 不変を試験で固定し、値の保存先・配線・API は不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。AX-2（利用ページ53件）は見た目が変わるため本審査の対象外（REVISE: 前後表と PO 確認待ち）。
+
+#### 維持の仕組み
+
+守り手: Textarea.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check（check:all/coverage/storybook）、design-token-guard。守っていないもの: ページ側の生 textarea 53（AX-2で移管、最後のCIで未移行0を強制。現行 ui-governance は textarea を検出しない）。切戻し: 本PRの merge commit を revert（DB・データ影響なし）。
+
+
+#### AX-1 結果と AX-2 追補（2026-10-09）
+
+AX-1: PR #4049 merge dfcd31c050e42cb1f5f4d40683b44146d9b12fc1（2026-10-08T23:23:00Z、必須15/15成功）、Deploy 37859121945 success（headSha dfcd31c0、23:23:03Z〜23:25:30Z）。本番 CSS index-K8aAD44G.css（前回 index-BI9wWxUm.css から変化）に `.comp-field__textarea--sm` 1・`--lg` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4049」、本文反映とマージは PO 本人の端末操作。merge-safe は worktree の `.pr-number` 不在で6回停止し、担当が `.pr-number` を作成、BEHIND を最新化 push した後に成立（今後の便は PR 作成直後に `.pr-number` を作る）。
+
+AX-2 の方針（PO 回答 2026-10-09「y」。設計者が提示した案: 一般フォームは標準の金型の見た目に統一、受信箱の送信欄・カルテ右パネル・ダッシュボードの入力欄・予定の入力欄のように見た目に意図がある欄は現在の見た目を金型の種類として登録して保持、商品編集は保留）。
+
+現在地（origin/main dfcd31c05、証跡は本便で保存する evidence-20260910/ax2-inventory.json、ax2-applied-css.{json,md}、ax2-baseline.{cjs,json,md}、ax2-intent.md、ax2-test-refs.md、ax2-handlers.md、ax2-shared-rules.md）: ページ側の生 textarea 53（ax0 と行番号まで一致）。各 textarea に実際に当たる CSS 規則を postcss と JSX 祖先で静的に解決し、Chromium 147（幅1280・light）で現在の computed style と、標準の TextareaControl に替えた場合の差を全件実測した。
+
+分類（事実と規則）:
+
+| 区分 | 件数 | 場所 | 根拠 |
+|---|---|---|---|
+| 種類 karte | 8 | InboxKartePanel.tsx 484/503/537/588、InboxProfileModal.tsx 181/191/210/265 | PO 提示案「カルテ右パネル」。CSS コメント「見本 .fbox」、見本 docs/adr/karte_reference.html:48、専用トークン --karte-field-*（tokens.css:314/315/323/324）・--inbox-textarea-min-h（:309）、PR #1971。選択欄の karte 種類（§AW）と同じ見本 |
+| 種類 embedded | 1 | InboxMessageThread.tsx:736 | PO 提示案「受信箱の送信欄」。§Z :818/:895 CSSI-0209（embedded＝親が枠を所有）。親 .send-input-wrap の「Meta実測」コメント（InboxPage.css:621） |
+| 種類 composer | 2 | PriorityProspectsSection.tsx:410、WeeklyAdvisorSection.tsx:381 | PO 提示案「ダッシュボードの入力欄」 |
+| 種類 schedule | 1 | SchedulePageImpl.tsx:378 | PO 提示案「予定の入力欄」 |
+| 標準 | 40 | 下記 AX-2b | PO 方針「一般フォームは標準」 |
+| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる） |
+
+PO 提示案に名前の無かった欄の扱い（設計者判断。規則: 意図の記録が設計書・ADR・CSS コメント・専用トークンのいずれにも無いものは一般として標準）: 送信下訳の編集欄（OutboundTranslationPreview.tsx:147、記録0）、手動記録（ManualRecordSection.tsx:159、CSS 定義0でブラウザ既定）、Discord 告知（DiscordAnnouncePage.tsx:98、CSS 定義0でブラウザ既定）、解析レビュー（ItemComparison.tsx:27/34、規則0でブラウザ既定）は標準。商品マスタ修正ドロワー（ProductMasterDrawer.tsx:217/221）は専用トークン --pmd-textarea-min-h（supplier-detail-view.css:113、「--textarea-min-h:80px より小さい専用値」、parity03 design.md:35）があるが、意図の記録は最小高だけで標準との差は color・outline-color の2項目のため、標準にして最小高だけ配置規則として残す。抽出プロンプト（ExtractionPromptConfigTab.tsx:222）の等幅は §Z :817 の textStyle=code（登録済み契約）に当たるため、標準＋textStyle=code とし枠・余白は標準になる。これらは AX-2b の前後表で PO に示し、GO 前に変更できる。
+
+便の分割（原因切り分けのため2便。§AW と同じ型）:
+
+| 便 | 内容 | 見た目 |
+|---|---|---|
+| AX-2a | TextareaControl に種類 karte/embedded/composer/schedule を追加し、該当12件を移管。ページ CSS の外観宣言を金型へ写し、ページ側は配置宣言だけ残す | 変化0（変更前後の computed style 差分0で判定） |
+| AX-2b | 標準40件の移管、祖先の旧規則（components.css `.form-group textarea` 系、company-forms.css `.form-row textarea` 系）の撤去、textStyle=code の追加 | 変化あり（前後表を PR に載せ PO の GO 前に確認） |
+
+AX-2a 変更契約:
+1. Textarea.tsx: `TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule"`。TextareaControl に `variant?`（既定 standard）。standard 以外では size を受けない型（`{ variant?: "standard"; size?: TextareaSize } | { variant: Exclude<TextareaVariant, "standard">; size?: never }`）。class 順は `comp-field__textarea`、size 修飾、`comp-textarea--${variant}`（standard 以外）、className。id→class の属性順（§AX）は維持。ラベル付き Textarea は種類を受けず出力不変（既存の固定試験9件がそのまま通ること）。
+2. FormField.css: 種類ごとに `.comp-field__textarea.comp-textarea--<種類>`（0,2,0）と `:focus`/`:disabled`（0,3,0）の規則を追加する。宣言は現行ページ規則の値を写し、金型の基本規則（:47-68、:95-112）が与えて現行には無い宣言は、変更前の実測値に戻す打ち消し宣言を置く（既存トークンまたは CSS キーワードのみ。現行ページ CSS にある数値（例 inbox-textarea の line-height:1.4）は同値の既存トークンが無ければその値を写し、写した値を PR に列挙する）。karte の枠幅は §AW の karte と同じく金型の 1px（出典 0.5px。DPR1/DPR2 の描画同一を本便でも実測）。
+3. ページ: 12件を `<TextareaControl variant=...>` に置換（開始/終了タグ、className、import のみ。value/onChange/onBlur/onKeyDown/ref/rows/placeholder/disabled は逐語保持）。className: karte・composer・schedule は外す。embedded は `inbox-textarea` を残す（e2e 4ファイル27行が参照、配置 flex:1/min-width:0 の入口）。
+4. ページ CSS: InboxPage.css の `textarea.right-panel-field` 規則を削除（`.right-panel-field` 本体は input24/a1/button1 が使うため保持）、`.inbox-textarea` は `flex: 1; min-width: 0;` だけ残し `.inbox-textarea:disabled` を削除。schedule.css は `.schedule-input, .schedule-textarea` の選択子リストと focus リストから `.schedule-textarea` を外し、`.schedule-textarea` 単独規則を削除（`.schedule-input` は input が使うため不変）。WeeklyAdvisorSection.css の `.db-weekly-composer-input` は input2件が使うため不変。
+5. 変更しないもの: 標準40件と保留1件、components.css/company-forms.css、トークン定義、i18n、API/DB/backend、CI、依存。
+
+AX-2a 受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 12件の見た目が不変 | ax2-baseline と同じ方式で、12件の実 DOM 相当（祖先 class・属性込み）の computed style を変更前（旧 class）と変更後（金型の種類 class）で比較し、通常・focus・disabled（属性があるもの）で差分0。項目に transition と placeholder の色も含める |
+| karte の細枠 | DPR2 のスクリーンショットを変更前後で比較し差分0（§AW の aw1-equivalence と同じ方式） |
+| 非外観属性が不変 | AST 照合（タグ名・className・variant・import 以外の差分0） |
+| 既存 Textarea の出力不変 | Textarea.test.tsx の固定試験9件が期待値を変えずに成功 |
+| 種類の契約 | 試験: 各種類の class、standard 以外で size が型エラー（@ts-expect-error）、ref・onKeyDown（Enter 既定動作を妨げない）が embedded でも透過 |
+| 使われなくなった CSS だけを削除 | 削除前に `right-panel-field`・`inbox-textarea`・`schedule-textarea`・`db-weekly-composer-input` の全利用を grep で列挙し、残る利用が想定どおり |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AX-2a）: APPROVE（PO 方針の提示案どおりの4種類、外観は実測で差分0を判定、配置と試験の参照 class は保持、配線・データ不変）。AX-2b は REVISE（AX-2a 反映後の前後表と PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+代替案: ページ CSS を残して class だけ金型にする案は外観の手編集元が2か所になり SSOT に反するため不採用。§Z :818 の appearance/resize を個別 prop にする案は、現行の見た目を写すには組合せが4種類で固定のため、§AW の select と同じ種類（variant）に揃える。外部事例: 既存金型の型の踏襲のため不要。
+
+維持の仕組み: 守り手は Textarea.test.tsx、ax2a 外観一致スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の生 textarea（AX-2b で移管、最後の CI で未移行0を強制）。切戻し: 各 PR の merge commit を revert（DB 影響なし）。
+
+
+#### AX-2a 結果と AX-2b 追補（2026-10-09）
+
+AX-2a: PR #4052 merge 9ab9177487f59c0723598a4d0973a1b32260dca0（2026-10-09T00:55:38Z、必須15/15成功）、Deploy 37867230468 success（headSha 9ab91774、00:55:42Z〜00:58:29Z）。本番 CSS index-BdhhxOiC.css に comp-textarea--karte 3・embedded 3・composer 2・schedule 1、`textarea.right-panel-field` 0、`schedule-textarea` 0、`.inbox-textarea{flex:1;min-width:0}` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4052」。マージは main の連続進行（12分に3件）で merge-safe が BEHIND 停止を4回繰り返したため、PO 端末で `gh pr update-branch`（GitHub 側の merge commit、force/rebase なし）→ 手元 fast-forward → checks 待ち → merge-safe を最大5周自動で繰り返す1行に改め、1周目で成立。merge-safe の検査（scripts/dev/check-pr-merge-ready.py:85-101/177-197、PR作者・HEAD一致・CLEAN・必須checks・GO記録）は GitHub 側の merge commit を拒否しないことを実物で確認済み。
+
+AX-2b 対象（origin/main 9ab917748。証跡 evidence-20260910/ax2b-visual.{cjs,json,md}、ax2b-inline-facts.md、ax2b-shared.md）: ページ側の生 textarea 41 から保留の商品編集1（ProductEditPage.tsx:309）を除く40。G1 `.form-group` 26、G2 `.form-row` 6、G3 送信下訳1（OutboundTranslationPreview.tsx:147）、G4 商品マスタドロワー2（ProductMasterDrawer.tsx:217/221）、G5 CSS 定義なし4（ManualRecordSection.tsx:159、DiscordAnnouncePage.tsx:98、ItemComparison.tsx:27/34）、G6 抽出プロンプト1（ExtractionPromptConfigTab.tsx:222）。
+
+移管規則（PO 方針「一般フォームは標準」）:
+- 全件 `TextareaControl`（standard・md）。value/onChange/onKeyDown/onBlur/rows/placeholder/maxLength/disabled/required/aria/data-testid/id は逐語保持。
+- className: 外観または CSS 定義の無い class（outbound-translation-edit、manual-record-textarea、`input w-full resize-y`、`field field-h-md`）は外す（試験参照0を grep で確認済み）。
+- inline style（ax2b-inline-facts.md の実測）: ConditionsPage.tsx:340/350 の `height:80px; resize; width` と ConditionsMasterPanel.tsx:367/380 の `width; resize` は外す（直前の ui-allow 2行も、理由「TextField が textarea 種類を持たない」が解消するため削除）。ExtractionPromptConfigTab.tsx:222 の inline は外し `textStyle="code"` を付ける。StaffReportsPage.tsx:90 の `minHeight: 'var(--textarea-min-h-lg)'` は配置（最小高 120px）として残す（ADR-067 Phase 5 と frontend/eslint.config.js:107 が案内する既存の書き方。寸法 class field-h-* に同値の段は無い）。
+- 金型: TextareaControl に `textStyle?: "normal" | "code"`（§Z :817 の契約。既定 normal）を追加し、code は class `comp-textarea--code`、FormField.css に `.comp-field__textarea.comp-textarea--code { font-family: monospace; }`。等幅のトークンは存在しない（tokens.css/index.css に --font-mono 定義0、現行も var(--font-mono, monospace) のフォールバック monospace で描画）ため、CSS の総称フォント名キーワード monospace を使い新規トークンは作らない。文字の大きさは標準（現行 inline の font-sm は外観のため外す）。
+
+CSS（ax2b-shared.md の15規則。選択子リストを共有する input 側は不変で、同じ祖先の input 70条件の前後差分0を実測済み）:
+- components.css: `.form-group textarea` と `.form-group textarea:focus` を選択子リストから外し、`.form-group textarea`（min-height/resize）単独規則を削除。
+- company-forms.css: `.form-grid > .form-row textarea`、`.modal-content(-wide) .form-row textarea` と各 `:focus` を選択子リストから外し、textarea 単独規則（:113、:169）を削除。商品編集規則（:254）から textarea を外し、保留1件の見た目を保つ独立規則 `.product-edit-form .form-group textarea`（旧 `.form-group textarea` の宣言を同値で写し border は `1px solid var(--border-strong)`、min-height/resize も写す）と `:focus`（outline none、border-color var(--border-strong)、box-shadow var(--focus-ring-shadow)。現行は :254 の border ショートハンドが focus の枠色を上書きしているため）を追加。
+- InboxPage.css: `.outbound-translation-edit` と `:focus` を削除。
+- supplier-detail-view.css: `.pmd-field input, .pmd-field textarea` から textarea を外し、`.pmd-field textarea` は `min-height: var(--pmd-textarea-min-h);`（配置）だけ残す。
+
+変わる見た目（実測、Chromium 147・幅1280・light。全表は ax2b-visual.md）:
+
+| グループ | 主な変化（変更前 → 変更後） |
+|---|---|
+| G1 フォーム内 26 | 角丸 4→6px、書体 等幅（ブラウザ既定）→アプリ書体、行の高さ normal→21.6px、rows=3 等4件の高さ 80→82.83px、StaffReports の1件は最小高 120px を保持 |
+| G2 会社・連絡先フォーム 6 | 枠色 rgb(203,213,224)→rgb(226,232,240)、行の高さ normal→21.6px |
+| G3 送信下訳 1 | 余白 12→8/12px、角丸 4→6px、文字 13.6→14.4px、背景 透明→白、最小高 auto→80px |
+| G4 商品マスタドロワー 2 | 余白 8→8/12px、文字 13.6→14.4px・太さ 500→400、文字色 黒→標準、focus は端末標準の青い輪→共通の focus 輪。最小高 72px は保持 |
+| G5 装飾なし 4 | ブラウザ既定の見た目（余白0・灰色枠・角丸0・13.3px 等幅・斜めリサイズ）→金型の見た目 |
+| G6 抽出プロンプト 1 | 余白・枠・角丸が金型に、文字 13.6→14.4px（等幅は保持）、16行の高さ 242→約364px |
+| 既存金型 Textarea 1（MergeCompanyModal.tsx:246） | 枠色 rgb(203,213,224)→rgb(226,232,240)（祖先の旧規則が外れるため）。他の12件は差分0 |
+| 保留 商品編集 1 | 差分0（通常・focus） |
+| disabled のもの | 背景 白→rgb(226,232,240)、不透明度 1→0.5、カーソル 禁止 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 40件の非外観属性が不変 | AST 照合（タグ名・className・style・textStyle・ui-allow・import 以外の差分0） |
+| 保留の商品編集と既存金型12件が不変 | 実装後のコードで ax2b-visual を再実測し、商品編集（通常・focus）と MergeCompanyModal 以外の既存 Textarea 12件の差分0 |
+| 変わる見た目が事前提示と一致 | 実装後の実測値が ax2b-visual.md の after と一致（差があれば停止） |
+| 共有規則の input が不変 | 同じ祖先の input 70条件の前後差分0 |
+| 新規トークン 0・直書き 0 | check:all、ui-governance、design-token-guard、目視（monospace は CSS キーワード） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI |
+
+Architect 自己審査（AX-2b）: APPROVE（PO 方針どおり標準へ統一、保留は実測で不変、配置は保持、配線・データ不変）。名前の無かった欄（G3〜G6）の扱いは設計者判断のため PR の前後表で PO に示し、GO 前に変更できる。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+維持の仕組み: 守り手は Textarea.test.tsx、ax2b-visual・ax2b-ast-check（evidence）、CI の frontend-check・Karte Visual Gate・design-token-guard。守っていないもの: 保留の商品編集1（生 textarea）と、ui-governance が textarea を検出しない点（最後の CI 便で強制）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+実装時の変更（2026-10-09、設計者判断）: commit 時の pre-commit（frontend/package.json:53-58 の lint-staged `eslint --max-warnings=0`、frontend/.husky/pre-commit:43）が ProductMasterDrawer.tsx の既存警告63件（`local/no-japanese-literal` 62・不要な eslint-disable 1。origin/main の同ファイルでも同数、他32ファイルは0）で停止した。62件は i18n の手作業（t() 化と ja/en キー追加）で本便の目的外のため、G4 商品マスタドロワー2件（ProductMasterDrawer.tsx:217/221）を本便から外して保留に加え、supplier-detail-view.css も変更しない（同2件は現行の見た目のまま）。本便の移管は38件、保留は商品編集1＋商品マスタドロワー2の計3件。商品マスタドロワーは同ファイルの i18n 化と同時に移管する（別便）。検査の素通り（--no-verify）・閾値の変更はしない。
+
+AX-2b 結果: PR #4058 merge 4330a64f73521e2734af5b685dbb6b337317f53d（2026-10-09T01:49:08Z、必須15/15成功）、Deploy 37871601811 success（headSha 4330a64f、01:49:11Z〜01:51:34Z）。本番 CSS index-Cm1Iv8nm.css で `comp-textarea--code` 1、`form-group textarea` 2（`.product-edit-form` の本体と `:focus` のみ）、`form-row textarea` 0、`outbound-translation-edit` 0、`pmd-field textarea` 2（保留のため残存）。app 200、/api/health 200。GO 原文は PO 本人の「GO #4058」（前後表の提示後）。マージは PO 端末の1行（`gh pr update-branch` → 手元 fast-forward → checks 待ち → merge-safe、最大5周）の1周目で成立。画面の目視は未実施。未決: ダッシュボード入力欄（composer）は旧規則の `--border-subtle` が未定義のため枠なしのまま写している（枠を付けるかは別判断）。
+
+
+### AY. TextFieldControl 本体（2026-10-09）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV の便分割（:1973「AV-3以降 TextFieldControl/TextareaControl 本体 → 利用」）のうち一行入力の本体便。§AX（TextareaControl）と同じ型。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-09、本セッション）「次を進める」（一行入力の部品化の提示に対して）。番号付きGO・Opus委任の有効化は創作しない（opus-delegation.md 不在）。
+
+現在地（origin/main f0f7ef8c7d89c97d42950e0ab111644b316dd99d、TypeScript 5.9.3 AST、TSX 275、構文エラー0。証跡は本便で保存する evidence-20260910/ay0-input-inventory.{cjs,json,md}、ay0-input-refs.md、ay0-input-css-top.md、ay0-diff-av0.md）:
+- 生 `<input>` 449＝金型内部1（TextField.tsx:64）＋ページ側448。type 別: 省略150・text87・search2・email23・number63・tel8・url2・password6・date11・time4・datetime-local1（以上の text 系360）、checkbox72・radio7・file6・color2・range1・dynamic3。§AV（55d99a97e）の input460 との差 −12 は ay0-diff-av0.md で全件照合済み: 旧のみ13（DiscordConfigPage.tsx の text 8 が e95f856b2 で TextField へ移管、ParseReviewPage.tsx の checkbox1・number2・text2 がファイル削除 d010d6700）、新のみ1（UnitIgnorePhrasesPanel.tsx:169 の checkbox、49c628361 で追加・ui-allow #4032）。
+- text 系360の属性: ref 2（InventoryPicker.tsx:218、InventorySearchBar.tsx:273。getBoundingClientRect と contains に使用）、onKeyDown 7、autoFocus 0、spread 0、style 43、className 96。
+- 既存金型 TextField（TextField.tsx:29-75）はラベル付き div 包みだけで、裸の部品と ref 転送が無い。利用220件、ref を渡す利用0。単体テスト0（stories のみ）。
+- ガード: scripts/check-ui-governance.js は pages 配下の生 input のうち type 省略/text/search の増加だけを検出（:183/:213-218/:332-342）。
+
+本便の範囲（見た目の変化0・利用ページ変更0。§AX AX-1 と同じ型）:
+1. TextField.tsx に `TextFieldControl` を追加: `forwardRef<HTMLInputElement, TextFieldControlProps>`、`TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & { size?: TextFieldSize }`。`<input>` を1つだけ返す。class は `comp-field__input`、size が md 以外なら `comp-field__input--${size}`、最後に className。id は個別に受けて className より前に出力（既存 TextField の属性順 id→class を保つ。§AX と同じ）。ref・type・native 属性・イベント・value/defaultValue は同じ要素へそのまま渡し、未指定を補わない（type の既定値も付けない）。native の数値 size は受けない（§Z :806 の nativeSize は利用0のため本便では追加しない）。
+2. 既存 `TextField` の `<input id={fieldId} className="comp-field__input" {...rest} />`（:64）を `<TextFieldControl id={fieldId} {...rest} />` に置換（size は渡さない＝出力不変）。既存220利用の DOM は不変。
+3. FormField.css: sm の選択子リスト（:134-140）に `.comp-field__input--sm` を、lg のリスト（:158-165）に `.comp-field__input--lg` を追加（宣言・値は既存のまま。新規トークン0）。基本規則（:47-62）より後ろで同じ specificity (0,1,0) のため後勝ち。
+4. TextField.test.tsx を新設（既存出力の固定試験＋本体契約）、TextField.stories.tsx に本体の見本を追加。
+
+変更しないもの: 利用ページ全件、ページ CSS、トークン定義、i18n、API/DB/backend、CI、依存、Select/Textarea。種類（variant）・textStyle・invalid・leadingInset・emptyDatePlaceholder は利用側の実測後の便（AY-2 以降、type・用途ごとに分割）で設計する。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 既存 TextField の出力が不変 | 実装前の現行コードで TextField（label・required・helperText・error・size sm/lg・fullWidth・className・type 各種・value/onChange 等）の innerHTML を固定する試験を先に書いて通し、置換後も期待値を変えずに通る |
+| 裸の部品が1要素だけ返す | container 直下が input 1つ、class が md/sm/lg で期待どおり、className が末尾 |
+| ref 転送 | オブジェクト ref と関数 ref が HTMLInputElement 本体を受け取り、getBoundingClientRect が呼べる |
+| 属性・イベントの透過と未補完 | type/value/onChange/onKeyDown/onBlur/placeholder/maxLength/min/max/step/disabled/readOnly/required/aria-label/data-testid/id/autoComplete が同要素に届く。未指定の type/placeholder/id は属性として現れない |
+| 寸法が既存金型と一致 | Chromium 実測で TextFieldControl sm/md/lg と ラベル付き TextField sm/md/lg の input の computed style が通常・focus・disabled で一致（幅1280・375）。例外は実測で原因を確認した2点のみ: ①幅375の sm は、モバイルのタッチ領域規則（FormField.css の @media (max-width: 767px) `.comp-field__input` min-height: var(--comp-input-height-mobile)、WCAG 2.5.5）が (0,1,0) の `.comp-field__input--sm` より後ろにあるため裸の本体は 44px になる。本番の SelectControl も同じ構造（`.comp-select__control--sm` (0,1,0) と同 @media の `.comp-select__control`）で裸の sm は 44px のため、裸の部品どうしの挙動をそろえ、詳細度は上げない（設計者判断 2026-10-09）。ラベル付き TextField の sm は `.comp-field--sm .comp-field__input` (0,2,0) がモバイル規則に勝つ既存挙動のまま。②幅1280の md の min-height の計算値 auto/0px は、ラベル付きの input が flex 子であることによる表示上の差で height は一致 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook |
+
+Architect 自己審査（AY-1）: APPROVE（§AX AX-1 と同型、既存220利用の DOM 不変を試験で固定、配線・データ不変、新規トークン0）。AY-2 以降は見た目が変わるため対象外（REVISE: 実測と前後表、PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check・design-token-guard・ui-governance。守っていないもの: ページ側の生 input 448（AY-2 以降で移管）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+
+#### AY-1 結果と AY-2 追補（2026-10-09）
+
+AY-1: PR #4063 merge 08f59418c772fab0bed6137e818d5e87de5c91f2（2026-10-09T03:41:02Z、必須15/15成功）、Deploy 37880393776 success（headSha 08f59418、03:41:05Z〜03:43:34Z）。本番 CSS index-D3AhIMnh.css に `.comp-field__input--sm` 1・`--lg` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4063」。
+
+AY-2 の方針（PO 回答 2026-10-09「y」。設計者の提示案: 一般フォームは標準の見た目、見た目に意図がある欄（カルテ・検索バー・送信欄など）は現在の見た目を金型の種類として登録して保持、商品編集は保留）。
+
+現在地（origin/main 08f59418c、証跡は本便で保存する evidence-20260910/ay2-inventory.json、ay2-applied-css.json、ay2-groups.{md,json}、ay2-baseline.{cjs,json,md}、ay2-intent.{md,json}、ay2-test-refs.md、ay2-handlers.md、ay2-eslint.md、ay2-hold.txt）: ページ側の生 text 系 input 360。実際に当たる CSS 規則の集合（静的解決、祖先未確定の規則は別掲）で 47 グループ。主なもの: G01 `.form-group input` 136、G02 規則なし（ブラウザ既定）61（登録画面 41 は CSS 定義の無い class `input`）、G03/G05 `.form-row input` 48、G04/G38/G39 カルテ `.right-panel-field` 24、G06 商品編集 14、G07 商品マスタドロワー 7、G08 `.schedule-input` 6、G11 ログイン `.login-card .form-group input` 3、G15 `.db-weekly-composer-input` 2、G32 受信箱検索 `.search-input-field` 1、他は inline style 主体の 1〜6 件の組。
+
+分け方（原因切り分けのため複数便。各便で前後表または差分0の実測と PO の GO）:
+
+| 便 | 内容 | 見た目 |
+|---|---|---|
+| AY-2a | 種類 karte・search・schedule・composer を TextFieldControl に登録し、該当 33 件（G04 22・G38 1・G39 1・G32 1・G08 6・G15 2）を移管 | 変化0（実測で差分0を判定） |
+| AY-2b 以降 | 一般（G01・G03・G05 のフォーム、G02 等のブラウザ既定、inline style の組）を領域ごとに標準へ。ログイン（G11）は `.form-group input` の撤去と同じ便で種類として登録（祖先規則 `.login-card .form-group input` (0,2,1) が種類 (0,2,0) より強く、撤去前は移管の効果が無いため） | 変化あり（前後表） |
+| 保留 | 商品編集 ProductEditPage.tsx 14（G06）。pre-commit の eslint 既存警告で止まる ProductMasterDrawer.tsx 7（警告63）と SourceRawPane.tsx 1（警告11）は同ファイルの i18n・警告解消と同時 | 不変 |
+
+報酬（CommissionPanel.tsx）の保留は select 1件（§AW、表の overflow）だけで、同ファイルに生 input は無い（ay2-hold.txt）。一行入力では報酬関連の保留を設けない。
+
+AY-2a の根拠（ay2-intent.md）:
+- karte: 専用トークン --karte-field-*（tokens.css:314-324）、CSS コメント「見本 .fbox」、見本 docs/adr/karte_reference.html。select・textarea の karte 種類（§AW・§AX）と同じ見本。G38 は日付の空表示を隠す `karte-field-empty`（InboxPage.css の `input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit`）を条件付きで持つ。G39 は `sales-form-other-input` を併せ持つ。
+- search: components.css:62 のコメント「Search Input Field (Single Source of Truth) … すべてのページでこのクラスを使う」、専用トークン --search-focus-glow、PR #661。
+- schedule・composer: PO 提示案の「予定の入力欄」「ダッシュボードの入力欄」（§AX の textarea 種類と同じ画面）。
+
+AY-2a 変更契約:
+1. TextField.tsx: `TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer"`。TextFieldControl に `variant?`（既定 standard）。standard 以外は size を受けない型（§AX と同形）。class 順は `comp-field__input`、size 修飾、`comp-input--${variant}`、className。ラベル付き TextField は種類を受けず出力不変。
+2. FormField.css: 種類ごとに `.comp-field__input.comp-input--<種類>`（0,2,0）と `:focus`/`::placeholder`/`:disabled`（必要なもの）を追加。宣言は旧ページ規則を写し、金型の基本規則が与える宣言は変更前の実測値に戻す打ち消しを置く（既存トークンと CSS キーワードのみ）。モバイル幅のタッチ領域規則（@media (max-width: 767px) の `.comp-field__input` min-height）は (0,1,0) のため種類 (0,2,0) が min-height を持てば種類が勝つ。旧ページの入力はこの規則の対象外だったため、種類は変更前の実測の min-height を明示する（幅375でも差分0を実測で判定）。
+3. ページ: 33 件を `<TextFieldControl variant=...>` に置換（開始タグと自己終了、className、import のみ。type/value/onChange/onBlur/onKeyDown/ref/placeholder/disabled/min/max/step 等は逐語保持）。className: 種類の外観 class（right-panel-field、search-input-field、schedule-input、db-weekly-composer-input）は外す。配置・状態・試験参照の class（inbox-search-input の配置宣言、karte-field-empty、sales-form-other-input 等）は、規則の宣言が配置/状態か外観かを実物で分類し、外観宣言は種類へ移し、配置/状態の宣言だけ残す（分類表を evidence に保存）。試験・コードが参照する class は残す（grep で確認）。
+4. ページ CSS: 移管後に利用0となる規則だけ削除。`.right-panel-field` は a1・button1 が使うため本体を保持（input 専用の宣言が無いことを確認）。`.search-input-field` は他の利用（TextField の className・他要素）を grep し、利用0なら削除、残る利用があれば保持。`.schedule-input` と `.db-weekly-composer-input` は利用0になれば削除。
+5. 変更しないもの: 残る 327 件（保留 22 を含む）、components.css の `.form-group input` 系、company-forms.css、トークン定義、i18n、API/DB/backend、CI、依存。
+
+AY-2a 受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 33 件の見た目が不変 | ay2-baseline と同じ方式で、33 件の実 DOM 相当（祖先 class・type・属性込み）の computed style を変更前と変更後で比較し、幅1280・375 × 通常・focus・disabled（属性があるもの）で差分0。項目に transition・placeholder 色・cursor・opacity・height・min-height を含める。G38 は空値の日付表示（::-webkit-datetime-edit の color/visibility 等）も比較 |
+| 細枠・見本の描画 | karte 1 件と search 1 件の DPR2 スクリーンショットを変更前後で比較し差分0 |
+| 非外観属性が不変 | AST 照合（タグ名・className・variant・import 以外の差分0） |
+| 既存 TextField の出力不変 | TextField.test.tsx の固定試験 11 件が期待値を変えずに成功 |
+| 種類の契約 | 試験: 各種類の class、standard 以外で size が型エラー、ref・onKeyDown が種類でも透過 |
+| 削除は利用0の規則だけ | 削除前に各 class の全利用を grep で列挙 |
+| pre-commit を通る | 変更する .tsx の eslint 警告0を事前に確認（ay2-eslint.md で対象ファイルは警告0） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AY-2a）: APPROVE（PO 提示案と証跡のある4種類、外観は実測で差分0を判定、配置・試験参照 class は保持、配線・データ不変）。AY-2b 以降は REVISE（各便の前後表と PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型（§AW・§AX の種類）の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx、ay2a 外観一致・AST 照合スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard・ui-governance。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の 327 件（保留 22 を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+
+#### AY-2a 結果と AY-2b 追補（2026-10-09）
+
+AY-2a: PR #4067 merge fb036a2388c2ac5bd53c0fc217c7c943efc54ff0（2026-10-09T07:09:44Z、必須15/15成功）、Deploy 37897451382 success（headSha fb036a23、07:09:47Z〜07:12:18Z）。本番 CSS index-DQT7U6Pg.css に comp-input--karte 3・search 3・schedule 1・composer 2、`.search-input-field`・`.schedule-input`・`.db-weekly-composer-input` 0。app 200、/api/health 200。GO 原文は PO 本人の「GO #4067」。作業記録: 実装担当が自作の一時ファイル（sed の .bak）1個を rm -f で削除（カード違反、製品・証跡への影響なし、自己申告）。
+
+AY-2b 対象（origin/main fb036a238、証跡 evidence-20260910/ay2b-members.json、ay2b-rule-users.md、ay2b-visual.{cjs,json,md}、ay2b-unresolved-trace.md、ay2b-nontext-keep.{cjs,json}、ay2b-eslint.md、ay2b-test-refs.md）: `.form-group input`（components.css:19/30）と `.login-card .form-group input`（pages-layout.css:246/255）が実際に当たる text 系の生 input 143（G01 136、G28〜31 4、ログイン G11 3）。ファイルの静的解決で祖先が確定しなかった 28（text 系 18・非 text 10）は描画元を全件たどり、いずれも `.form-group`/`.login-card` の下に無いことを確認（うち 21 は試験からしか参照されない、または参照0のコード。ay2b-unresolved-trace.md）。本便の対象外。
+
+規則の扱い:
+- `.form-group input` と `:focus` は型の指定が無く、非 text の input（checkbox 4・radio 2・range 1・file 2）にも当たっている。外すと checkbox の操作域が行幅から 13px に縮む等の変化が出るため、Checkbox/Radio 等の金型（§AV の後続便）まで現状を保つよう、選択子を `[type="checkbox"]`・`[type="radio"]`・`[type="range"]`・`[type="file"]` に絞った同じ宣言の規則へ置き換える（同位置。実測 102 条件で差分0）。
+- ログインは見た目に意図がある欄として種類 login を登録する。根拠: pages-layout.css:245 のコメント「Meta 風ログインフォーム — 入力欄（.login-card スコープ限定）」、同:193「Login (ADR-030: アプリ本体デザインと整合)」、導入 021e6b261「fix: meta-style login form inputs」。ADR-030 のファイルは存在せず ADR-033 からの参照のみ（事実として記録）。旧規則 (0,2,1) は種類 (0,2,0) より強いため同じ便で撤去する。宣言は実測で差分0となる組（候補B、ay2b-visual.md）。
+- 保留の商品編集 14 は独立規則 `.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"])`（width・padding・radius・font-size・color・background・box-sizing）と `:focus`（outline none・box-shadow）で現状を保つ（実測で 14/14 差分0、幅1280・375）。
+
+移管規則（PO 方針「一般フォームは標準」）:
+- 140 件（G01・G28〜31）を TextFieldControl（standard・md）へ、ログイン 3 件を `variant="login"` へ。type・value・onChange・onKeyDown・onFocus・ref・placeholder・min/max/step・disabled・required・aria・data-testid・id・autoComplete は逐語保持。
+- className: CSS 定義の無い `input` 等は外す（試験・コード参照0を grep で確認）。
+- inline style: 配置（width・min-width・flex）は残し、外観（padding 等）は外す（G28 InventoryPicker.tsx の padding はこの規則で外れ、標準の余白になる。前後表に記載）。
+
+変わる見た目（実測、Chromium 147・light。全表は ay2b-visual.md）:
+
+| 対象 | 主な変化（変更前 → 変更後） |
+|---|---|
+| フォーム内の一行入力 140 | 角丸 4→6px、書体 Arial（または等幅）→アプリ書体、行の高さ normal→21.6px、高さ 34→39.6px（幅375では金型のタッチ領域規則で 44px） |
+| 入力できない状態のもの 4 | 背景 白→rgb(226,232,240)、不透明度 1→0.5、カーソル 禁止 |
+| 既存金型 TextField のうち `.form-group` 内 99 | 角丸 4→6px のみ（旧規則が金型の外観を上書きしていたため） |
+| 在庫選択欄（InventoryPicker）1 | 上記に加え inline の余白 6/8px → 標準の 8/12px |
+| ログイン 3 | 変化なし（種類 login） |
+| 保留 商品編集 14 | 変化なし |
+| checkbox・radio・range・file 9 | 変化なし（絞り込んだ規則で保持） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 143 件の非外観属性が不変 | AST 照合（タグ名・className・style の外観宣言・variant・import 以外の差分0） |
+| 実装後の見た目が事前提示どおり | 実装後のコードで ay2b-visual を再実測し、事前の after と一致（InventoryPicker は padding 変更を反映） |
+| 変化なしの対象が不変 | ログイン 3・商品編集 14・非 text 9 の前後差分0（幅1280・375、通常・focus・disabled） |
+| 既存 TextField の変化が角丸だけ | `.form-group` 内の既存 TextField 代表で、角丸以外の差分0 |
+| pre-commit を通る | 対象 .tsx の eslint 警告0（ay2b-eslint.md で確定対象のファイルは警告0） |
+| 新規トークン 0・直書き 0 | check:all、ui-governance、design-token-guard |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI |
+
+Architect 自己審査（AY-2b）: APPROVE（PO 方針どおり標準へ、意図の証跡があるログインは種類で保持、保留と非 text は実測で不変、配線・データ不変）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+維持の仕組み: 守り手は TextField.test.tsx、ay2b-visual・ay2b-ast-check（evidence）、CI の frontend-check・design-token-guard・ui-governance。守っていないもの: 残る生 text 系 input（`.form-row` 系、規則なし・inline 系、保留）と、非 text 用に残した絞り込み規則（Checkbox 等の金型便で撤去）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+#### AY-2b 実装結果（2026-10-09）
+
+- 置換: 143 件（G01 136・G28〜31 4・ログイン 3）が全件 TextFieldControl。AST 照合（ay2b-ast-check.cjs after）は 174 要素・対象 143・差分 0（外観 inline の除去は InventoryPicker.tsx:217 の `padding` 1 件のみで設計どおり）。再計測（ay0-input-inventory.cjs、TSX 277、構文エラー 0）でページ側の生 text 系 input は 327→184。
+- 外観再実測（ay2b-visual.cjs after-real、Chromium 147、幅 1280・375）: (1) text 系 140 は事前予測 after と差 0（280 測定）、(2) ログイン 3 は変更前と差 0（6 測定）、(3) 商品編集 14 は差 0（28 測定）、(5) `.form-group` 内の既存 TextField 代表 12 は角丸以外の差 0。
+- 非 text input の実装後実測（nontext-after、追補2026-10-09）: 絞り込み規則は詳細度が (0,1,1)→(0,2,1)（:focus は (0,2,1)→(0,3,1)）に上がるため、競合しうる規則を全 CSS から列挙した（ay2b-nontext-competing-rules.md、範囲内 23 規則）。JSX の字面と部品の再帰たどり（ay2b-nontext-ancestry.md、ay2b-nontext-reach.md）で、競合クラスと .form-group が同じ input の祖先に並ぶ実在の組み合わせは RolesPage.tsx の `.color-swatch`（radio 2 件）だけ、.form-group の内側に部品経由で到達する 20 ファイルに競合クラスと非 text input は 0 件。実測は origin/main 92db2c38b と PR HEAD の全 CSS 68 ファイルを、18 通りの読み込み順 × 幅 1280・375 × normal・focus で比較（8136 比較、594 項目）。実在の 9 件（A）は差 0。仮想の組み合わせ 104 要素（B）で差が出たのは `.form-group` と `.toggle-switch`／`.inbox-toggle`／`.topbar-search` が同じ input の祖先に並ぶ場合だけで（旧 (0,1,1) の `.toggle-switch input {opacity:0; width:0; height:0}` 等が新 (0,2,1) に負ける）、実在はしない。将来 `.form-group` の内側にこれらの部品を置くと見た目が変わる点を記録する。検出力は、after の規則を意図的に変えると差が出ることで確認。
+- 限界（事実）: (5) の既存 TextField 代表 12 は ay2b-visual.json の moldUsers 6 代表から入力を再構成（祖先は先頭 5 段まで、詳細は ay2b-after-check.md の注）。非 text の ay2b-visual (4) は未使用で、上の nontext-after が代替。
+- 品質（frontend）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0。単体試験は coverage 付き 1 回目で 1 件が 5000ms のタイムアウト（RoleKnowledgeButtonMigration.test.tsx、他の測定と同時実行の負荷下。単独実行は 19/19 成功）。負荷なしの全件再実行（coverage 付き、maxWorkers=1）は 74 ファイル・955 件すべて成功（終了コード 0）。
+
+#### AY-2b 本番反映（2026-10-09 記録）
+
+AY-2b: PR #4078 merge 468d49eddad56800ce305e4d41ac7ea221b27be3（2026-10-09T11:23:27Z、必須15/15成功）、Deploy 37923425874 success（headSha 468d49edd、11:23:30Z〜11:25:58Z）。本番 CSS index-DCunA6lC.css に `comp-input--login` 2・`.form-group input[type=checkbox]` 2、`.login-card .form-group input` 0・`.form-group input{` 0・`.form-group input:focus` 0。app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003、PR本文の GO記録）。Reviewer APPROVE（LOW 3: CarrierCredentialForm.tsx:95/:121 の ui-allow 残置、商品編集保持規則の試験なし、非 text 絞り込み規則の詳細度上昇＝実在0件）。
+
+#### AY-2c `.form-row` の一行入力の標準化（2026-10-09）
+
+mode: handoff。§AY 追補の便分割「AY-2b 以降」の第2便。PO 方針回答（2026-10-09「y」: 一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」「確立したなら進める」「PRマージ、デプロイまで完走させてくれ」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main c6c4fdc5118425c9aee8e70f292b1dde013864ac、証跡は本便で evidence-20260910/ に保存する ay2c-*）:
+- ページ側の生 text 系 input 184（ay0-input-inventory.cjs、TSX 277、構文エラー0）。
+- 規則（frontend/src/company-forms.css）:
+  - :100 `.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"])` (0,4,1) と :147-148 `.modal-content(-wide) .form-row input:not(..):not(..)` (0,4,1)。宣言は同じ: padding var(--space-2) var(--space-3)、border 1px solid var(--border-strong)、radius var(--radius-md)、font-size var(--font-base)、background var(--bg-surface)、color var(--text-primary)、width 100%、box-sizing border-box、font-family inherit。
+  - :113 `.form-grid > .form-row input:focus` (0,3,1) と :163-164 `.modal-content(-wide) .form-row input:focus` (0,3,1)。宣言は outline none、border-color var(--accent)、box-shadow var(--focus-ring-shadow)。金型の focus（FormField.css:95、0,2,0）と同じ値。
+  - 現行の不具合（実測）: 基本規則 (0,4,1) が focus 規則 (0,3,1) より強いため、focus 時の枠色が accent に変わらずリングだけ出ている。
+- 金型標準（FormField.css:47-62）との差: 枠色 --border-strong(#cbd5e0)→--border(#e2e8f0)、line-height 未指定→1.5、transition、disabled 規則、幅767px以下の min-height 44px。padding・角丸・文字・色・幅・書体は同値。
+- 対象: 生 text 系 49 件（ay2c-targets.tsv。CompaniesPage.tsx 24、CompanyBasicTab.tsx 11、ContactsPage.tsx 8、CompanyDiscordTab.tsx 4、CompanyChannelsTab.tsx 1、MergeLeadModal.tsx 1）。type は省略44・email2・number2・text1。className・style・ui-allow・ref・onKeyDown は0。disabled（動的）16。祖先未確定0（部品経由の再帰たどり済み）。保留ファイル該当0。6 ファイルの eslint 警告0。
+- 同じ規則に当たる他の要素: checkbox 5 件（ContactChannelForm.tsx:227、CompanyAddressModal.tsx:147、CompanyContactsTab.tsx:206、CompanyDiscordTab.tsx:42、ContactsPage.tsx:332。基本規則は :not で除外、focus 規則だけ当たる）。既存金型 TextField 13 件（MergeCompanyModal.tsx:158、CompanyAddressModal.tsx:96〜142 の12件。基本規則 (0,4,1) に上書きされて枠色が --border-strong）。range・file・color・radio は0。
+- 試験: `.form-row`/`.form-grid` の class を参照する試験0。tests-e2e/ui-companies-edit-modal-i18n.spec.ts:97（`.modal-content-wide` 内の input first）と PageFormButtonMigration.test.tsx:28（label の親から input を探す）は DOM 構造依存で、移管後も構造は同じ。
+
+代替案と選択:
+- 案1 基本規則に `:not(.comp-field__input)` を足して残す: 移管後に当たる生 input が0になるため残す意味が無く、詳細度がさらに上がる。不採用。
+- 案2（採用）基本規則 :100 と :147-148 を削除し、focus 規則 :113 と :163-164 は残す: 生 text 系49件を金型へ移すと基本規則が当たる生 input は0（checkbox は :not で元から除外）。focus 規則は checkbox 5 件のフォーカス表示（リング）を保ち、金型に当たっても金型の focus と同じ値のため金型の見た目を変えない。
+
+AY-2c 変更契約:
+1. frontend/src/company-forms.css: :100 の規則（`.form-grid > .form-row input:not([type="checkbox"]):not([type="radio"])` の宣言ブロック全体）と :147-148 の規則（`.modal-content .form-row input:not(..)…, .modal-content-wide .form-row input:not(..)…` の宣言ブロック全体）を削除。:113 と :163-164 の focus 規則は残し、直前にコメント「一行入力は金型（FormField.css）が正本。この focus 規則は .form-row 内の checkbox のフォーカス表示を保つために残す（§AY AY-2c）」を置く。それ以外の行は変更しない。
+2. ページ: ay2c-targets.tsv の49件の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換（自己終了の形を保つ）。type・value・onChange・disabled・required・placeholder・name・min・max・step・autoComplete 等の属性は逐語保持。import に `TextFieldControl` を追加。
+3. 整理（コメントのみ）: CarrierCredentialForm.tsx:95 と :121 の ui-allow コメント2行を削除（AY-2b で対象が金型になり、理由が実態と合わなくなったため。Reviewer LOW L1）。
+4. design.md: 本節（AY-2b 本番反映を含む）と実装結果を追記。
+5. 変更しないもの: FormField.css・tokens.css・TextField.tsx、既存 TextField 利用、checkbox 5 件、company-forms.css の他の規則、保留ファイル、i18n、API/DB/backend、CI、依存、e2e。
+
+前後表（実測。ay2c-visual.md。Chromium 147、幅1280・375、light）:
+
+| 対象 | 変わる項目（これ以外は差分0） |
+|---|---|
+| 移管 49 件 | 枠色 #cbd5e0→#e2e8f0（少し薄い灰）、フォーカス時の枠色 #cbd5e0→#1e3a8a（focus の色が本来どおり出る）、line-height normal→21.6px、高さ 35→39.6px（幅375では 44px）、transition、disabled 16件は背景 白→#e2e8f0・不透明度 1→0.5・カーソル禁止 |
+| 既存 TextField 13 件 | 枠色（通常・disabled #cbd5e0→#e2e8f0、focus→#1e3a8a）、disabled の背景 |
+| checkbox 5 件 | 変化0（focus 規則を残すため。案2での実測で判定） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 変化は前後表の項目だけ | 実装後のコードの実 CSS で ay2c-visual を再実測（before は origin/main c6c4fdc51）。移管・既存 TextField は表の項目以外差分0。checkbox 5 件（C1〜C3 の代表と5件全件）は normal・focus・disabled 全項目差分0 |
+| 非外観属性が不変 | AST 照合で49件のタグ名・import 以外の差分0 |
+| 置換漏れ0 | 再計測でページ側の生 text 系 184→135、`.form-row` 祖先の生 text 系 0 |
+| 削除は当たる生 input 0 の規則だけ | 削除前に :100・:147 が当たる要素を再列挙し、移管対象49件以外の生 input が0であること |
+| 既存 TextField の出力不変 | TextField.test.tsx 成功 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、本番 CSS に `.form-grid>.form-row input:not(` 0 件・`.form-row input:focus` 残存、app 200・/api/health 200 |
+
+Architect 自己審査（AY-2c）: APPROVE。根拠: 対象49件・副作用の既存金型13件・不変の checkbox 5件を file:line で確定、祖先未確定0、見た目の変化は PO 方針（一般フォームは標準）の範囲で前後表に限定し実測で判定、focus 規則を残して checkbox を不変に保つ、削除規則は移管後に当たる生 input 0、配線・データ・トークン不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型（AY-2a・AY-2b）の踏襲のため不要。dark テーマは未測定（トークンのライト/ダーク同値は tokens.css で確認できる範囲のみ）。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2c 実測・AST 照合スクリプト（evidence）。外観の正本は FormField.css。守っていないもの: 残る生 text 系 135（保留 22 を含む）、`.form-row input:focus` 規則（checkbox の金型便で撤去）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+次便: AY-2d 規則なし・inline の組（登録画面 41 件の CSS 定義の無い class `input` を含む、領域ごと）。
+
+#### AY-2c 実装結果
+
+実測判定（evidence-20260910/ay2c-visual-after.md、実装後の実 CSS、Chromium 147、幅1280・375、light）: PASS。移管 T1〜T7 と既存 TextField M1・M2 は前後表の項目以外の差分 0。checkbox C1〜C5（5 件全件の祖先連鎖）は normal・focus・disabled 全項目で差分 0。事前模擬との差は、模擬が focus 規則まで除去していたため（実装は focus 規則を残す）。
+
+件数:
+- 置換 49 件（CompaniesPage 24、CompanyBasicTab 11、ContactsPage 8、CompanyDiscordTab 4、CompanyChannelsTab 1、MergeLeadModal 1）。AST 照合（ay2c-ast-check.md）: タグ名・import 以外の差分 0。
+- 削除前の再列挙（ay2c-rule-users.md）: :100・:147-148 が当たる生 input は 49 件のみ（checkbox 5 件は :not で除外）。
+- 再計測（ay2c-inv-after.md）: ページ側の生 text 系 184→135、`.form-row` 祖先の生 text 系 0。
+- ui-allow コメント 2 行削除（CarrierCredentialForm.tsx）。
+
+コマンド結果（frontend、worktree。生成物は generate:icon-sizes・generate:api-types 後、git 管理外）:
+- `npx tsc --noEmit`: 終了 0
+- `npm run lint`: 終了 0（0 error、139 warning は既存、変更 8 ファイルの warning 0）
+- `npm run check:all`: 終了 0
+- `vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1`: 終了 0、963 件成功
+- `npm run build`: 終了 0
+- `npm run build-storybook`: 終了 0
+
+限界: dark テーマ未測定、fixture は祖先連鎖の近似。切戻し: 本PRの merge commit を revert。
+
+#### AY-2c 本番反映（2026-10-09 記録）
+
+AY-2c: PR #4081 merge afa02b990cb9b371a5cadc1ab4ba881c88e6bf3a（2026-10-09T11:51:01Z、必須15/15成功）、Deploy 37926270574 success（headSha afa02b990、11:51:04Z〜11:53:39Z）。本番 CSS index-BJW2PBHr.css に `form-row input:not(` 0 件、`.form-row input:focus` 3（残置した focus 規則）。app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003、PR本文の GO記録）。Reviewer APPROVE（LOW 2: 残置 focus 規則が error 状態の金型の focus 枠色を accent にする＝該当利用0件、コメント文言）。
+
+#### AY-2d 登録画面の一行入力の標準化（2026-10-09）
+
+mode: handoff。§AY 追補の便分割「AY-2b 以降」のうち「G02 等のブラウザ既定 → 標準」の第1便（領域: 登録画面）。PO 方針回答（2026-10-09「y」: 一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main 70f607abf、frontend は f0d710185 と差分0。証跡は本便で evidence-20260910/ に保存する ay2d-*）:
+- ページ側の生 text 系 input 135（ay0-input-inventory.cjs）。当たる規則の集合で32グループ（ay2d-groups.md、全件 ay2d-rows.tsv）。保留22（ProductEditPage 14・ProductMasterDrawer 7・SourceRawPane 1）を除く113のうち、規則なし104・規則あり9。領域別は登録画面45、super-admin 17、請求書作成7、見積作成7、在庫6、他（ay2d-areas.md）。
+- 登録画面 45 件（frontend/src/pages/register/ の RegisterPage.tsx・RegisterAddressPage.tsx・RegisterChangeBillingPage.tsx・CountryCombobox.tsx）: 全件 className="input"。`.input` を含む CSS 規則は全 CSS で0件、pages/register に CSS ファイル・CSS import は0（ay2d-register-css-grep.txt）。見た目の出所は `*` リセット（index.css:419: margin 0・padding 0・box-sizing border-box）とブラウザ既定だけ。tel 4件だけ inline style `{ flex: 1 }`（配置。電話の国番号と並ぶ行）。disabled・ref・onKeyDown・ui-allow は0。eslint 警告0。
+- 実測（ay2d-visual.md、fixture）: 現状はブラウザ既定の素の入力（padding 0、枠 2px inset、角 0、Arial 13.33px、高さ約19px、幅は内容なり約149px、focus はブラウザの outline）。標準にすると padding 8px 12px、枠 1px solid var(--border)、角 6px、アプリ書体 14.4px、高さ約40px（幅375で44px）、幅は親の100%、focus は accent 枠＋リング。
+- 試験: class `input` を参照する試験0。tests-e2e/register-form-ux.spec.ts は label 内の input と `input[type=email|tel]` で探す（class・style 非依存）。
+
+選択: 領域ごとに分ける方針（§AY 追補）に従い、件数が最大で、規則・直書き inline が無く、見た目が明らかに未整備（ブラウザ既定）の登録画面を本便とする。super-admin・請求書・見積・在庫などの inline style 混在の組（直書き px を含む G08・G19〜G24・G29〜G32 等）は、配置と外観の仕分けが要るため次便以降。
+
+AY-2d 変更契約:
+1. ページ: 登録画面の45件（ay2d-register-targets.tsv）の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換（自己終了の形を保つ）。`className="input"` は外す（CSS 定義0・参照0）。tel 4件の `style={{ flex: 1 }}` は配置のため残す。type・id・name・value・onChange・required・placeholder・autoComplete・pattern・maxLength 等は逐語保持。import に `TextFieldControl` を追加（pages/register/CountryCombobox.tsx は相対パスに注意）。
+2. CSS・トークン・金型本体の変更なし。
+3. design.md: 本節（AY-2c 本番反映を含む）と実装結果を追記。
+4. 変更しないもの: 登録画面の select・textarea・checkbox など input 以外と非 text の input、他領域の生 input（90件、保留22を含む）、FormField.css・tokens.css・TextField.tsx、i18n、API/DB/backend、CI、依存、e2e。
+
+前後表（実測。ay2d-visual.md と実画面スクリーンショット）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 登録画面 45 件 | 素の入力欄（枠 2px のくぼみ・余白なし・角なし・小さい文字・高さ約19px・内容幅）→ 標準の入力欄（枠 1px の薄い灰・余白 8px/12px・角 6px・アプリ書体 14.4px・高さ約40px（幅375で44px）・横幅いっぱい・focus は濃い青の枠とリング） |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 実画面で崩れが無い | 変更前後のアプリ（vite build→preview、ログイン不要の登録画面3種）を Chromium で幅1280・375 の全画面スクリーンショット（DPR2）。入力欄が横にはみ出さない（document.scrollWidth ≦ clientWidth）、要素の重なり0（入力欄の bounding box どうし・ラベルとの重なりを計測）、tel 行は国番号と電話欄が1行に並ぶ。画像は PR に添付し、設計者が目視確認 |
+| 外観が前後表どおり | 実画面で45件の computed style を変更前後で採取し、前後表の項目以外（色 text-primary・背景 bg-surface 等）に想定外の差が無い |
+| 非外観属性が不変 | AST 照合で45件のタグ名・className 削除・import 以外の差分0 |
+| 置換漏れ0 | 再計測で pages/register の生 text 系 0、ページ側の生 text 系 135→90 |
+| 試験 | register-form-ux.spec.ts のセレクタが移管後 DOM に一致（構造確認）。frontend 単体試験全件成功 |
+| 品質 | generate:icon-sizes・generate:api-types の後 tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、本番の登録画面（/register）が 200、app 200・/api/health 200 |
+
+Architect 自己審査（AY-2d）: APPROVE（条件: 実画面の崩れ0を実装後に確認）。根拠: 対象45件を file:line で確定、CSS 規則0・試験の class 依存0、変化は PO 方針（一般フォームは標準）の範囲、配置の inline（flex:1）は保持、配線・データ・トークン不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の踏襲のため不要。dark テーマは未測定。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2d 実測・AST 照合・スクリーンショット（evidence）。外観の正本は FormField.css。守っていないもの: 残る生 text 系 90（保留22を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+次便: AY-2e super-admin 等の規則なし・inline の組（配置と外観の仕分け、直書き px の除去）。
+
+#### AY-2d 実装結果
+
+実装: 登録画面の生 text 系 input 45 件（RegisterPage 23・RegisterAddressPage 11・RegisterChangeBillingPage 10・CountryCombobox 1）を `<TextFieldControl`（standard）へ置換し `className="input"` を削除。tel 4 件の `style={{ flex: 1 }}` は保持。import 4 行追加。CSS・トークン・金型本体・i18n の変更なし。置換は AST スクリプト（evidence-20260910/ay2d-apply.cjs）。
+
+実画面（evidence-20260910/ay2d-after-check.md、ay2d-screens/）: 登録画面3種 × 幅1280/375（DPR2、Chromium headless shell 1217、vite build→preview）。API は page.route で `/api/v1/public/register` を同一 JSON でモック、Firebase 初期化は VITE_FIREBASE_* ダミー値でビルド（before/after 同一）。/register は「別の配送先を登録」選択で全入力を表示。結果: document.scrollWidth = clientWidth（全6件）、入力欄どうしの重なり before 1〜2 → after 0（before の重なりは国番号欄 149px が親 140px を超えて tel 欄に 9px かかっていたもの）、ラベル文字との重なり 0、横はみ出し 0、tel 行は国番号欄と同一行。computed style の差は border（2px inset 灰 → 1px solid var(--border)）・角 6px・padding 8/12・font-size 13.33→14.4px・アプリ書体・line-height・color（黒 → text-primary）・height（約19 → 39.6、幅375で44）・width（内容幅149 → 100%、tel は flex:1 のまま・国番号欄は 140px）のみ。
+
+AST 照合（ay2d-ast-check.md）: 45/45 PASS（タグ名・className="input" 削除・import 追加以外の差分0）。再計測（ay2d-inv-after.json）: ページ側の生 text 系 135 → 90、pages/register は 0。
+
+品質: tsc 0、lint 0（警告139・errors 0・pages/register の警告0）、check:all 0、test:coverage --maxWorkers=1 0（74 files・963 tests 成功）、build 0、build-storybook 0。e2e register-form-ux.spec.ts は label/fieldset/`input[type=email]` で探し class・style 非依存。
+
+限界: dark テーマ未測定。登録画面は 375 幅でページ余白が 0（既存。before も同じ x=0）で、入力欄が左右いっぱいに広がる。モック応答での採取であり実トークンでの送信は未確認。切戻し: 本PRの merge commit を revert。
+
+#### AY-2d 本番反映（2026-10-09 記録）
+
+AY-2d: PR #4087 merge 1245dbac66d581a9344f648fa081e999aee66c9b（2026-10-09T12:48:32Z、必須15/15成功）、Deploy 37932481186 success（headSha 1245dbac6、12:48:35Z〜12:51:09Z）。本番の JS（index と遅延読み込みの全チャンク）で `className:"input"` 0 件。/register 200、app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer APPROVE（LOW 2）。PO 決定（2026-10-09）: スマホ幅の見た目（登録画面の幅375で左右余白0 等）は、別途スマホ版（レスポンシブ）を作るときに対応する。金型移管の便では扱わず既知として記録するだけにする。
+
+#### AY-2e 規則なしの一行入力（画面に出るもの）の標準化（2026-10-09）
+
+mode: handoff。§AY 追補「G02 等のブラウザ既定 → 標準」の第2便。PO 方針（一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」。GO は ADR-1003 の委任に基づく Claude Opus 発行。
+
+現在地（origin/main 12fd0a35d、証跡は evidence-20260910/ay2e-*。調査 /tmp/CC報告ファイル/ssot-ay2e/）:
+- ページ側の生 text 系 90（保留22）。規則なし・inline style なしの組（G01）の残り20件。
+- うち13件は製品の画面から開けない（事実）: DexTab.tsx・TcgSeriesTab.tsx・LLMBudgetTab.tsx・ProductMastersTab.tsx（→ MasterListEditor.tsx）は試験以外から import されておらず、`/super-admin/masters` の Route も App.tsx に無い（App.tsx:341-361 は `/super-admin/masters/*/import` のみ）。ItemComparison.tsx:29 は `!readOnly` のときだけ描画され、唯一の呼び出し SupplierDetailView.tsx:116 は readOnly={true}。これらは本便の対象外（扱いは PO 判断事項として別に記録）。
+- 画面に出る6件（5ファイル）。全件 CSS 規則0（className の `input`・`w-full`・`qty-input`・`manual-record-datetime`・`channel-masters-add-form` 等はどれも CSS 定義0）。現状はブラウザ既定（約149×19px・余白0・枠 2px のくぼみ）。eslint 警告0。
+  | # | file:line | type | 置き場所（事実） |
+  |---|---|---|---|
+  | 1 | pages/admin/DiscordAnnouncePage.tsx:81 | text | 単独の行。className="input w-full"（CSS 0） |
+  | 2 | pages/inbox/ManualRecordSection.tsx:148 | datetime-local | label と並ぶ行。同じ欄の他の行は金型（TextareaControl 等）でラベルの下に入力 |
+  | 3, 4 | pages/admin/ChannelMastersPage.tsx:115, :123 | text | 見出し h3 の下で、入力2つと「追加」ボタンが内容幅で横に並ぶ |
+  | 5 | pages/commission-settings/CommissionSettingsPage.tsx:220 | number | 表のセル内の常時入力欄（data-testid=settings-value-${role}、E2E 依存） |
+  | 6 | pages/inventory/OwnInventoryPage.tsx:232 | number | 確認モーダル内で「数量」の文字と同じ行。className=qty-input（CSS 0） |
+
+設計判断（設計者、2026-10-09）: 金型移管は「入力欄の見た目」をそろえる作業で、画面の並び（横並び・表のセル）は変えない。標準の金型は横幅100%のため、現在内容幅で横に並んでいる欄（#3〜#6）には配置の指定 `style={{ width: "auto" }}`（CSS キーワード。外観ではなく配置）を付けて並びを保つ。単独の行（#1）とラベルの下に入れる形がそろっている欄（#2）は標準の横幅100%にする。
+
+AY-2e 変更契約:
+1. 6件の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換。#3〜#6 に `style={{ width: "auto" }}` を付ける（既存の style があれば無い。事実: 6件とも style 0）。className は CSS 定義0のもの（`input w-full`、`manual-record-datetime`、`qty-input`）を外す（試験・コードの参照0を grep で確認してから。参照があれば残す）。type・id・value・onChange・placeholder・aria-label・disabled・min・step・data-testid は逐語保持。import 追加。
+2. CSS・トークン・金型本体の変更なし。
+3. 変更しないもの: 到達不可の13件（DexTab・TcgSeriesTab・LLMBudgetTab・MasterListEditor・ItemComparison）、他の生 input、保留、i18n、API/DB/backend、CI、依存、e2e。
+4. design.md: 本節と実装結果を追記。
+
+前後表（予定。実画面で確定）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| #1 #2 | 素の入力欄 → 標準（薄い灰の枠・余白 8/12px・角 6px・アプリ書体・高さ約40px・横幅いっぱい）。#2 は入力欄がラベルの下の行になる（同じ欄の他の行と同じ形） |
+| #3〜#6 | 素の入力欄 → 標準の見た目（枠・余白・角・書体・高さ約40px）。横の並び・表の列は保つ（幅は内容幅のまま） |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 実画面で並びが保たれる | 開発モードの build（`vite build --mode development`。偽ログインは DEV のみ有効: firebase-auth.ts:25・firebase.ts:23）→ preview、tests-e2e/utils/auth.ts の偽ログインと page.route の API モックで5画面を開き、幅1280 で変更前後の全画面スクリーンショット（DPR2）。#3/#4 は入力2つとボタンが1行、#5 は表の列幅が大きく変わらず行の崩れ0、#6 はモーダルを開いて「数量」と入力が1行。はみ出し0・要素の重なり0を計測。画像は設計者が目視。表示できない画面はその事実と止まった出力を記録し、同じ祖先構造の再現 fixture（実 CSS）で代替した旨を明記 |
+| 外観が前後表どおり | 6件の computed style を前後で採取し、表の項目以外に想定外の差が無い |
+| 非外観属性が不変 | AST 照合で6件のタグ名・className 削除・style 追加・import 以外の差分0 |
+| 置換漏れ0 | 再計測でページ側の生 text 系 90→84 |
+| 試験 | 既存単体試験全件成功。order-commission.spec.ts:396,402 の data-testid が保持されていること |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、app 200・/api/health 200、本番 JS で className "input w-full"・"qty-input"・"manual-record-datetime" 0 |
+
+幅375 は PO 決定によりスマホ版で扱うため判定対象外（撮影は記録として残してよい）。
+
+Architect 自己審査（AY-2e）: APPROVE（条件: 実画面の並び保持を実装後に確認）。根拠: 対象6件を file:line・置き場所つきで確定、CSS 規則0・試験の class 依存0、到達不可13件を事実で除外、並びを保つ配置指定は CSS キーワードのみ、配線・データ・トークン不変。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2e のスクリーンショット・AST 照合（evidence）。守っていないもの: 残る生 text 系 84（保留22・到達不可13を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+#### AY-2e 実装結果
+
+実装: 画面に出る規則なし一行入力6件（DiscordAnnouncePage 1・ManualRecordSection 1・ChannelMastersPage 2・CommissionSettingsPage 1・OwnInventoryPage 1）を `<TextFieldControl`（standard・size 指定なし）へ置換。#3〜#6（ChannelMasters 2・Commission 1・OwnInventory 1）に `style={{ width: "auto" }}` を付与。className は `input w-full`・`manual-record-datetime`・`qty-input` を削除（frontend/src・tests-e2e の参照は各自の定義行のみ、試験・CSS 参照0を grep で確認: evidence-20260910/ay2e-class-refs.txt）。CSS・トークン・金型本体の変更なし。
+
+実画面（evidence-20260910/ay2e-after-check.md、ay2e-screens/）: 開発モード build（偽ログインは DEV のみ）→ vite preview、Chromium headless shell 1217、幅1280（判定）・375（記録のみ）、DPR2。API は page.route で ay2e-mocks.json を before/after 同一応答で返却。判定（幅1280）: #3/#4 入力2つの top が同じ（213.13）でボタンと中心差 0.69px の1行、#5 は td の幅・表の列幅の変化0（194.8/292.19/292.19/194.83）、#6 は「数量」文字と入力が1行（y 中心 469.98/470.79）、#1 は入力幅 1178＝親 1178、#2 は入力幅 361＝親 361 でラベルの下の行。全5画面で scrollWidth＝clientWidth（1280）、操作要素の重なり0、入力と文字の重なり0。computed style の差は padding・border・角・font-size・font-family・line-height・color・height・width の14項目のみ（前後表の範囲内）。
+
+AST 照合（ay2e-ast-check.md）: 6/6 PASS（タグ名・className 削除・style 追加・import 以外の差分0）。再計測（ay2e-inv-after.json）: ページ側の生 text 系 90 → 84。
+
+品質: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（74 files・963 tests 成功）、build 0、build-storybook 0。
+
+限界: 画面再現はモック応答での採取（受信箱の手動記録欄は channel-masters モックで manual チャネルとして表示）。dark テーマ未測定。幅375 は PO 決定により判定対象外（記録のみ）。1280 の全画面スクリーンショットのうち 500KB 超の6枚（discord-announce・channel-masters・commission の before/after）は repo に入れず /tmp のみ。到達不可13件（DexTab・TcgSeriesTab・LLMBudgetTab・MasterListEditor・ItemComparison）は対象外。切戻し: 本PRの merge commit を revert。
+
+#### AY-2e 本番反映（2026-10-09 記録）
+
+AY-2e: PR #4092 merge 0caa64700137385bd45341e460b63cf772cd2a3b（2026-10-09T13:41:55Z、必須15/15成功）、Deploy 37938703727 success（headSha 0caa64700、13:41:58Z〜13:44:32Z）。本番の JS で `input w-full`・`qty-input`・`manual-record-datetime` 0 件。app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer APPROVE。
+
+#### AY-2f スーパー管理の使われていない部品の削除（2026-10-10）
+
+mode: handoff。PO 原文（2026-10-10、本セッション）: 「5. どこからも使われていない部品→消す」。対象は直前の棚卸し（/tmp/CC報告ファイル/super-admin-menu/report.md）で「どこからも使われていない」と示した6部品。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main c59e0fe02。調査 /tmp/CC報告ファイル/super-admin-menu/）:
+- 試験からしか参照されない4部品（App.tsx に `/super-admin/masters` の Route は無い。:341-361 は `/super-admin/masters/*/import` のみ）:
+  - frontend/src/pages/super-admin/DexTab.tsx（354行）
+  - TcgSeriesTab.tsx（376行）
+  - LLMBudgetTab.tsx（248行）
+  - ProductMastersTab.tsx（135行）
+- 参照0件の2部品:
+  - components/RuleCreateDrawer.tsx（305行）。呼び出し箇所は 7a3f62c1b（2026-09-25、ルール編集 Drawer）で無くなった。
+  - components/StatusMasterPanel.tsx（374行）。中身は 155a01e45（2026-09-26）で RuleManagementPanel に統合済み。RuleManagementPanel.tsx:5 のコメントに名前が出るだけ。
+- 連鎖して不要になるもの: frontend/src/components/master-list-editor/（MasterListEditor.tsx 226行・index.ts 2行）。本番コードからの参照元は ProductMastersTab.tsx:18 だけ。ほかに試験 MasterSearchButtonMigration.test.tsx:7 が直接 import している。
+- 6部品専用の CSS・hook・api 関数・型は無い。className の CSS 定義も0件。共用部品はすべて他から使われている。
+- 試験（部分編集。ファイルは残す）:
+  - AdminMasterSaveButtonMigration.test.tsx: it :39〜:66 の7本（Dex・TCG）
+  - PurchaseAdminEditorButtonMigration.test.tsx: it :76〜:94 の4本（Dex・LLM予算・TCG種別）
+  - AllLegacyButtonDynamicMigration.test.tsx: it :58 の1本（ProductMasters）。describe 名 "six" は "five" に直す。
+  - MasterSearchButtonMigration.test.tsx: MasterList 系（:62 以降の3グループ）と :7 の import
+- e2e: tests-e2e/super-admin-masters.spec.ts（3 test）と super-admin-llm-budget.spec.ts（3 test）。どちらも存在しない `/super-admin/masters` を開き、src に無い testid `super-admin-tab-*` を前提にしている。今の画面では成り立たない。CI では実行していない（e2e.yml:103-105 の playwright job は `if: false`）。
+- i18n: 6部品と MasterListEditor を消すと、次の名前空間は使われなくなる。名前空間ごと消してよいかは、実装時に動的キー（テンプレート文字列の接頭辞）も含めて参照0件を確認してから決める。
+  - `superAdmin.dex.*` 16
+  - `superAdmin.tcg.*` 16
+  - `superAdmin.llmBudget.*` 13
+  - `superAdmin.attrMasters.*` 22
+  - 未使用キーを検出する CI は無い。消し漏れがあっても落ちない。逆に、使っているキーを消すと check-i18n-missing-keys で落ちる。
+- backend: 変更しない。画面から呼ばれなくなる API は dex・tcg/series・llm-budget・product-masters の4系統で、扱いは別途判断する。tcg/types と status-master は他の画面が使っている。
+
+AY-2f 変更契約:
+1. 次のファイルを削除する:
+   - pages/super-admin の DexTab.tsx・TcgSeriesTab.tsx・LLMBudgetTab.tsx・ProductMastersTab.tsx
+   - components/RuleCreateDrawer.tsx・components/StatusMasterPanel.tsx
+   - frontend/src/components/master-list-editor/ の2ファイル
+   - frontend/tests-e2e/super-admin-masters.spec.ts・super-admin-llm-budget.spec.ts
+2. 試験4ファイルから、削除する部品の it・import・固定値・モック分岐だけを取り除く。残る it の中身は1文字も変えない（AllLegacy の describe 名だけは "five" に直す）。
+3. RuleManagementPanel.tsx:5 の、消える StatusMasterPanel に触れたコメント行を削除する。コードは変えない。
+4. ja.json・en.json: 上の4名前空間のうち、src 全体（試験を含む）で参照0件と確認できたキーだけを削除する。ja と en は同じキー集合を保つ。
+5. 変更しないもの:
+   - 5ページ（tcg-sold-out・tcg-product-master・tcg-parallel-report・tcg-supplier-quality・supplier-master）。PO の判断待ち。
+   - ItemComparison、backend、CSS、トークン、金型、CI、依存
+   - docs/ の過去の記述（migration.md TB-27/31/33/39 など）。本節で削除を記録する。
+6. design.md: 本節と実装結果を追記する。
+
+前後表:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 画面 | 変化0（削除するのはどの画面からも開けない部品だけ） |
+| コード | 8ファイル（約2,020行）と e2e 2 spec を削除。試験は it が12本と MasterList 系が減る |
+| 生 input 件数 | ページ側の生 text 系 84 から、実測した分だけ減る（実装後に ay0-input-inventory で確定する。§AY-2e で「到達不可13」とした数は再計測で確定し、違えばここに訂正を書く） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 消した部品が参照されていない | 削除後に `git grep` で8部品名と `master-list-editor` の参照0件 |
+| 画面の変化0 | `vite build` の成果物で、ルートの一覧（App.tsx の Route）とメニュー定義ファイル（DesktopShell/MobileShell/AnalysisRulesSidebar）の差分0 |
+| 残る試験の中身が不変 | 試験4ファイルで、残した it の本文が変更前と1文字も違わないことを差分で示す |
+| i18n | check-i18n-missing-keys 成功、ja/en のキー集合が一致、削除したキーの src 参照0件（テンプレート接頭辞を含む） |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、app 200・/api/health 200、本番 JS で `super-admin-dex-tab`・`super-admin-llm-budget-tab` 0 件（本番でも元から0の可能性がある。そのときは0のままであることだけを記録する） |
+
+Architect 自己審査（AY-2f）: APPROVE。根拠は次のとおり。同一AI（Opus）の自己審査で、独立した第二者のレビューではない。外部事例は不要（使われていないコードの削除のため）。
+- 削除対象と連鎖を file:line で確定した。
+- 本番コードからの参照は0件。
+- CI のベースライン（ui-governance・token ratchet）は差分比較で、削除では落ちない。
+- 画面・配線・データ・backend は不変。
+- PO の明示指示の範囲内。
+
+維持の仕組み: 守り手は tsc（参照が残れば落ちる）、check-i18n-missing-keys、frontend-check。守っていないものは次の2つ。切戻しは本PRの merge commit を revert する（DB 影響なし）。
+- 未使用 i18n キーの検出
+- 画面から呼ばれない backend API 4系統
+
+#### AY-2f 実装結果
+
+実装: 変更契約1〜4のとおり。削除は src 8ファイル（DexTab・TcgSeriesTab・LLMBudgetTab・ProductMastersTab・RuleCreateDrawer・StatusMasterPanel・MasterListEditor・master-list-editor/index.ts）と e2e 2 spec。試験4ファイルは削除した部品の it・import・固定値・モック分岐だけを取り除いた。RuleManagementPanel.tsx の StatusMasterPanel に触れたコメント行（:5）を削除。ja.json・en.json から superAdmin.dex 16・tcg 16・llmBudget 13・attrMasters 22 の計67キーを、ja・en とも同じ集合で削除した。
+
+変更契約の補足（設計者指示）: SuppliersPage.tsx :58 と :154 のコメントにあった「（MasterListEditor パターンと統一）」の語句だけを削除した（消える部品名に触れていたため）。コードは変更なし。
+
+事実（設計の想定との差）: MasterSearchButtonMigration.test.tsx の MasterList 系は、設計では「:62 以降の3グループ」としていたが、実際は 4 ブロック（:62 it.each・:79 it・:99 it.each・:111 it.each）だった。4 ブロックすべてが MasterListEditor 専用のため全て削除した。残った it は :44 の it.each(remoteCases) の 1 本。削除した it は AdminMasterSave 7・PurchaseAdminEditor 4・AllLegacy 1・MasterSearch 4 ブロック。
+
+計測（evidence-20260910/ay2f-*）:
+- 生 input（ay0-input-inventory）: ページ側の生 text 系 84 → 70（差14: MasterListEditor 3・DexTab 5・TcgSeriesTab 5・LLMBudgetTab 1）。ページ側の生 input 全体 172 → 155。AY-2e で「到達不可13」とした数は再計測で14だったため、ここに訂正する（ay2f-inv-before.json / ay2f-inv-after.json）。
+- 参照0件: 8部品名・master-list-editor・MasterListEditor・super-admin-dex-tab・super-admin-llm-budget-tab の git grep（frontend・.github・docs/ai-agents）は0件（ay2f-grep-diff.txt）。
+- 画面不変: App.tsx・DesktopShell.tsx・MobileShell.tsx・AnalysisRulesSidebar.tsx の git diff origin/main は差分0（ay2f-grep-diff.txt）。
+- 残した it の本文: 試験4ファイルで、残した 11 本（2+4+4+1）すべてが変更前と同一（ay2f-it-compare.txt、変更前の原本は ay2f-orig-tests/）。
+- i18n: 削除キーの src 参照0件（テンプレート接頭辞を含む）を確認。残したキーは0。削除キー一覧は ay2f-removed-keys/。
+- 品質（ay2f-quality.txt・ay2f-test-counts.txt）: generate:icon-sizes・generate:api-types 後に tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（74 files・944 tests 成功。AY-2e 時点は963）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動。
+
+限界: 本番反映後の確認（Deploy・app 200・本番 JS の testid 0件）は merge 後。backend の4系統 API（dex・tcg/series・llm-budget・product-masters）は変更しておらず、扱いは別途判断。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+#### AY-2g LINE解析と重複するスーパー管理3ページの削除（2026-10-10）
+
+mode: handoff。PO 決定（2026-10-10、本セッション）: 「同じものが別にある3ページを削除して、取り込み後の戻り先を LINE解析の『商品マスタ』『仕入元マスタ』に変えてよいですか」への回答「y」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main c59e0fe02。調査 /tmp/CC報告ファイル/super-admin-menu/。本番アクセスは prod-access-30d.md）:
+- 対象3ページと、LINE解析の中で同じ働きをする画面（AnalysisRulesPage の ?section=）の対応:
+  - TcgSupplierQualityPage.tsx（59行） → section=accuracy-management（AccuracyManagementPanel）
+    - 3コンポーネントをそのまま共有している。AnalysisRulesPage.tsx:56 に「TcgSupplierQualityPage の内容を移植」とある。
+  - TcgProductMasterPage.tsx（95行） → section=product-master（ProductMasterPanel）
+    - 同じ API と Drawer を使う。ProductMasterPanel.tsx:4 に「ページの内容を PageLayout なしで抽出」とある。
+  - SupplierMasterPage.tsx（462行） → section=supplier-master（SupplierMasterPanel）
+    - 同じ API を使う。違いは行ごとの編集ボタンだけで、Panel でも行をクリックすれば編集できる。
+- 3ページだけが使う子ファイル・CSS・api 関数・型は0件。どれも Panel 側が使っている。
+- ?section= の読み取り:
+  - AnalysisRulesPage.tsx:101-104 が、初回表示のときに1回だけ読む。
+  - 3つの key は AnalysisRulesSidebar.tsx の :13、:20、:24 で有効。
+  - 既存の実例がある: tests-e2e/analysis-rules-line-guide.spec.ts:142 と LineWorkflowGuidePanel.test.tsx:14。
+- 本番の直接アクセス（直近30日・重複を除いた概数）:
+  - product-master 約37回（最後は 9/25頃）
+  - supplier-quality 約3回（最後は 10/1頃）
+  - supplier-master 約2回（最後は 9/18頃）
+  - ブックマークがある可能性があるため、古い URL は移し先へ転送する。
+- 古い URL の参照:
+  - App.tsx: :300、:314-316、:333-335。import は :90、:93、:98。
+  - 取り込み画面: TcgProductImportPage.tsx:13-14、SupplierImportPage.tsx:131-132。
+  - e2e: tcg-product-detail.spec.ts:43、tcg-product-import.spec.ts:40、:77、:114、:152。
+  - routeTitles・メニュー・backend・通知での参照は0件。
+- Navigate の書式: react-router の `Navigate` の `to` は string | Path を受け取る（Context7 /remix-run/react-router の docs/api/components/Navigate.md）。navigate("/some/route?search=param") の例が公式にある。App.tsx の前例は `<Route path="/leads" element={<Navigate to="/crm/leads" replace />} />`。
+- 試験:
+  - TcgProductMasterPage.test.tsx（174行、it 9本）はページを直接描画している。ProductMasterPanel の単体試験は0件。
+  - e2e は CI で実行されていない（e2e.yml:105 `if: false`）。
+
+AY-2g 変更契約:
+1. App.tsx:
+   - 3つの import を削除する。
+   - 3つの Route の element を Navigate に置き換える。path はそのまま残す。
+     - `/super-admin/tcg-supplier-quality` → `<Navigate to="/super-admin/analysis-rules?section=accuracy-management" replace />`
+     - `/super-admin/tcg-product-master` → `<Navigate to="/super-admin/analysis-rules?section=product-master" replace />`
+     - `/super-admin/supplier-master` → `<Navigate to="/super-admin/analysis-rules?section=supplier-master" replace />`
+   - 前例の1行形に揃える。残すルート（:301 の tcg-product-master/import、:341 の masters/suppliers/import）は変えない。
+2. 取り込み画面の戻り先（完了時と「戻る」の2か所ずつ）を変える:
+   - TcgProductImportPage.tsx:13-14 → `/super-admin/analysis-rules?section=product-master`
+   - SupplierImportPage.tsx:131-132 → `/super-admin/analysis-rules?section=supplier-master`
+   - ほかの取り込み画面は変えない（PO 決定の範囲外）。
+3. 削除するファイル: TcgSupplierQualityPage.tsx、TcgProductMasterPage.tsx、SupplierMasterPage.tsx。
+4. 試験:
+   - TcgProductMasterPage.test.tsx を ProductMasterPanel.test.tsx に移す。
+     - 描画する対象を ProductMasterPanel に替えるのに必要な最小限だけを直す。PageLayout の見出しに関する検査は、Panel に該当するものが無いので外す。
+     - :48 の非管理者の it は外す。管理者かどうかの判定は AnalysisRulesPage 側にあるため。
+     - 外した it と、その理由を記録する。
+     - 残す it の検査内容（expect）は変えない。
+   - e2e: tcg-product-detail.spec.ts と tcg-product-import.spec.ts の一覧への goto を、新しい URL に変える。
+     - :147-155 の非管理者の test は、古い URL を開くと analysis-rules?section=product-master に移り、AnalysisRulesPage の非管理者表示（superAdmin.supplierQuality.superAdminOnly の文言）が出ることを確かめる形に直す。
+   - 古い URL から移り先へ転送されることを確かめる単体試験を1つ追加する（App のルートか MemoryRouter で、3つの URL それぞれ）。
+5. i18n: nav.superAdminTcgProductMaster、nav.superAdminTcgSupplierQuality、nav.superAdminSupplierMaster を ja と en から削除する。実装時に、試験を含めて参照0件を再確認する。
+6. 変更しないもの:
+   - AnalysisRulesPage と Panel 本体、メニュー、ほかの取り込み画面
+   - tcg-sold-out と tcg-parallel-report（PO の判断待ち）
+   - backend、CSS、トークン、CI、依存
+7. design.md: 本節と実装結果を追記する。docs/handoff/analysis-rules-master-panels/design.md:33-34 の旧基準「スタンドアロンが引き続き動作する」は、本節で上書きされたことを記録する（旧文書は書き換えない）。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| 古い3つの URL を開く | 単独ページ | LINE解析の該当画面へ自動で移る |
+| 商品の取り込みの完了・戻る | 単独の商品マスタページ | LINE解析の「商品マスタ」 |
+| 仕入元の取り込みの完了・戻る | 単独の仕入元マスタページ | LINE解析の「仕入元マスタ」 |
+| メニュー・LINE解析の中 | — | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 転送 | 追加した単体試験で、3つの URL がそれぞれ移り先の URL（パスと ?section=）になる |
+| 戻り先 | 2つの取り込み画面の試験（既存があれば）、または実画面で、完了・戻るの遷移先が新しい URL になる |
+| 実画面 | 開発モードの build と preview に偽ログインと API モックを使い、古い3つの URL を開く。移り先の画面で、該当のサイドバー項目が選ばれ、中身が表示されることをスクリーンショットで確かめる（設計者が目視） |
+| 試験の移設 | 移した it の expect が元と同じであることを差分で示す。外した it と理由を一覧にする |
+| 参照0 | 3ページの部品名と、3つの nav キーの参照が0件 |
+| e2e | 書き換えた2 spec を、ローカルでその spec だけ実行して結果を記録する。実行できなければ、止まった出力をそのまま記録する |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の必須チェックがすべて成功する |
+| 本番 | Deploy 成功。本番で古い3つの URL を開くと、アプリが 200 を返す（SPA）。app 200、/api/health 200 |
+
+Architect 自己審査（AY-2g）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（既存の Panel への一本化で、転送は既存の前例の型を使う）。
+- 根拠:
+  - 重複していることと、3ページだけが使う部品が0件であることを file:line で確かめた。
+  - 古い URL は転送するので、ブックマークが壊れない。
+  - 戻り先は PO 決定どおり。
+  - 単体試験は Panel へ移すので、0件にならない。
+  - 配線・データ・backend は変えない。
+- 残るリスク（LOW）: ?section= に知らない値が入ると、右側の画面が空になる。既存の挙動で、本便では触らない。
+
+維持の仕組み:
+- 守り手: tsc、追加する転送試験、ProductMasterPanel.test.tsx、check-i18n-missing-keys、frontend-check。
+- 守っていないもの: e2e（CI で停止中）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+#### AY-2f 本番反映
+
+AY-2f: PR #4098 は merge 99a9705455958e7f32de48b2ea977069cf19b1e8 で main に入った（2026-10-09T22:26:25Z）。必須チェックは15件すべて成功。Deploy 37999224968 も success だった（headSha 99a970545、22:26:28Z〜22:28:58Z）。
+
+本番の確認結果:
+- 本番 JS（index-Bb9fxssm.js）で `super-admin-dex-tab`・`super-admin-llm-budget-tab`・`superAdmin.llmBudget` はいずれも0件。
+- `attrMasters` は2件残っている。これは旧 `/super-admin/masters` ページのタブ見出し `superAdmin.tabs.attrMasters` の文言（ja.json:2423・en.json:2423）で、AY-2f で削除した `superAdmin.attrMasters.*` とは別のキー。`superAdmin.tabs.*`・`superAdmin.title`・`subtitle`・`accessDenied` を参照するコードは、git grep の範囲では見つからなかった。扱いは別途決める。
+- app 200、/api/health 200。
+
+GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 1）。
+
+#### AY-2g 実装結果
+
+実装: 変更契約1〜6のとおり。App.tsx の3 Route は Navigate に置き換え（App.tsx:297・:310・:326）、3つの import を削除した。取り込み画面2つ（TcgProductImportPage.tsx・SupplierImportPage.tsx）の戻り先（完了と「戻る」の各2か所）を `/super-admin/analysis-rules?section=product-master` と `?section=supplier-master` に変えた。TcgSupplierQualityPage.tsx・TcgProductMasterPage.tsx・SupplierMasterPage.tsx を git rm した。nav.superAdminTcgProductMaster・nav.superAdminTcgSupplierQuality・nav.superAdminSupplierMaster を ja.json と en.json から削除した（各3行）。
+
+変更契約の補足（設計者指示）:
+- ProductMasterPanel.test.tsx の it「R10 export failure permits retry and denied users cannot export」から、denied 部分（元の :44-46、cleanup から getBlob の回数を確かめる expect まで）だけを外した。前半の expect は変えていない。外した理由は、管理者判定が AnalysisRulesPage.tsx:124 側にあるため。it の題名は内容に合わせて「R10 export failure permits retry」に直した。
+- AnalysisRulesPage.tsx:56、ProductMasterPanel.tsx:4、SupplierMasterPanel.tsx:4 のコメントだけを「旧スタンドアロンページ（AY-2g で削除）の内容を移植／抽出」の趣旨に書き換えた。コードは変えていない（消える部品名に触れていたため）。
+- 管理者でない人の拒否を守る既存の単体試験は git grep で見つからなかった（AnalysisRulesPage の試験は0件）。AnalysisRulesPage.test.tsx を1本追加した。isSuperAdmin:false で ?section=product-master を描画したとき、superAdminOnly の文言が出ること、「Export update CSV」ボタンが無いこと、api.get が呼ばれていないことを確かめる。api.get が呼ばれない点は、先に実物で通ることを確かめてから expect にした。
+
+試験の移設:
+- TcgProductMasterPage.test.tsx を git mv で components/ProductMasterPanel.test.tsx に移した。変えたのは import 行・vi.mock のパス・描画する対象（`<ProductMasterPanel />`）と、上の外し方だけ。残した it の expect は変えていない（差分は ay2g-test-move-diff.txt）。
+- 外した it と理由:
+  - 「does not request or expose import for non-admin」（元の :48-52）。理由: 管理者判定は AnalysisRulesPage.tsx:124 側にあり、ProductMasterPanel は useSuperAdmin を使わない。
+  - 「R10 export failure permits retry and denied users cannot export」の後半（元の :44-46）。理由は同じ。
+  - PageLayout の見出しに関する検査: 元の試験に該当する it は無かったので外したものは0本。
+- 追加した試験: legacyPageRedirects.test.tsx（3つの古い URL がそれぞれ移り先のパスと ?section= になる。App.tsx と同じ3つの Route を MemoryRouter で描画し、App.tsx の行番号を冒頭コメントに書いた。App 全体は描画していない）、AnalysisRulesPage.test.tsx（上記）。移り先の URL 文字列は legacyPageRedirects.test.tsx の定数に1回だけ書いた。新しい共有モジュールは作っていない。
+- e2e: tcg-product-detail.spec.ts の goto 1か所と tcg-product-import.spec.ts の goto 3か所を新しい URL に変えた。非管理者の test は、古い URL を開くと analysis-rules?section=product-master に移り、「super_admin」を含む文言が出て tablist が無いことを確かめる形に直した。
+
+計測（evidence-20260910/ay2g-*）:
+- 参照0件（ay2g-ref-zero.txt）: 3ページの部品名と3つの nav キーは frontend/src と backend で git grep 0件。docs/ 配下の過去文書には名前が残る（書き換えない）。
+- 試験の差分（ay2g-test-move-diff.txt）: 上記のとおり。
+- 実画面（ay2g-realscreen.json、ay2g-*.png。開発モード build と vite preview、偽ログインと API モック、Chromium、幅1280）:
+  - /super-admin/tcg-product-master → /super-admin/analysis-rules?section=product-master、サイドバー「商品マスタ」が選択、右に商品マスタのパネル。
+  - /super-admin/tcg-supplier-quality → /super-admin/analysis-rules?section=accuracy-management、サイドバー「解析精度管理」が選択。
+  - /super-admin/supplier-master → /super-admin/analysis-rules?section=supplier-master、サイドバー「仕入元マスタ」が選択、右に仕入元マスタの表。
+  - 取り込み画面2つで「戻る」（管理者）を押した先は /super-admin/analysis-rules?section=product-master と ?section=supplier-master。非管理者の「戻る」も同じ URL。
+  - 取り込み完了後の onDone は実画面で通していない（コミット操作のモックが重いため）。「戻る」と同じ onDone 関数に同じ URL を渡している。
+- e2e（ay2g-e2e-run.txt）: 書き換えた2 spec をローカルで実行して 22 本中 7 本成功、15 本失敗。変更前の origin/main（99a970545）で同じ2 spec を実行すると同じ 15 本が失敗し、同じ 7 本が成功した（ay2g-e2e-baseline-main-99a970545.txt、失敗した題名の集合は完全に一致）。失敗は行の Enter で詳細 Drawer が開かない・R10 の download が取れない、など。今回の変更が原因ではない（e2e は CI で停止中、e2e.yml:105 `if: false`）。非管理者の2 test は成功。
+- 品質（ay2g-chk-*.txt）: tsc 0、lint 0（警告139・エラー0）、check:all 0、test:coverage --maxWorkers=1 0（77 files・951 tests 成功。AY-2f 時点は74 files・944）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動した。
+
+限界: 本番反映後の確認（Deploy・古い3つの URL が 200・/api/health 200）は merge 後。ProductMasterPanel 本体は、管理者判定を持たない（AnalysisRulesPage が持つ）。?section= に知らない値が入ると右側が空になる既存の挙動は未変更。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+変更契約の補足（設計者指示・レビュー対応）:
+- 転送の対応表を frontend/src/pages/super-admin/legacyPageRedirects.ts の `LEGACY_SUPER_ADMIN_REDIRECTS`（3組）に1か所へまとめた。App.tsx は、この配列を map した Route（`<Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />`）に置き換えた（3行の Navigate Route を1行の map にし、位置は tcg-product-master の位置）。legacyPageRedirects.test.tsx は同じ配列を import し、(a) 配列が期待する3組と完全一致すること（期待値は直書き）、(b) 各 from を MemoryRouter（配列の map と、残すルート tcg-product-master/import を含む）で開くと to の pathname と search に移ることを確かめる。tcg-product-master/import との一致は、React Router がパスの具体性で順位を決めるため並び順に依存せず、(b) と実画面（取り込み画面の表示）で確認した。取り込み画面2つの戻り先 URL は配列と共有していない（対象外）。
+- AnalysisRulesPage.test.tsx に肯定の対照を1本追加した。isSuperAdmin:true で ?section=product-master を描画すると「Export update CSV」ボタンが出て、superAdminOnly の文言は出ない（api.get のモック値は ProductMasterPanel.test.tsx と同じ形。実際に動かして通ることを確認してから expect にした）。
+- 再計測: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（77 files・953 tests 成功）、build 0。開発モード build と preview で、古い3つの URL の転送・戻る の先を再記録した（ay2g-realscreen.json。結果は前回と同じ）。
+
+
+#### AY-2g 本番反映（2026-10-10 記録）
+
+AY-2g の PR #4101 は、merge 58dd91233660e172e299416c0f3cfa478cb5a8e4（2026-10-09T23:05:10Z）で main に入った。
+- マージ前の状態: HEAD 9d49b10b6（main を取り込んだ後）で、全46件中 pass 38・skipping 8・fail 0。
+- Deploy 38002629531 は success（headSha 58dd91233、23:05:13Z〜23:07:42Z）。
+- 本番 JS の確認: nav キー3つ（superAdminTcgProductMaster・superAdminSupplierMaster・superAdminTcgSupplierQuality）は0件。`section=accuracy-management` は1件、`section=product-master` は3件。
+- 本番の応答: 旧 URL 3つ、app、/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（MEDIUM 1・LOW 1 は対応済み）。
+
+#### AY-2h 比較レポート画面（tcg-parallel-report）の削除（2026-10-10）
+
+mode: handoff。PO の決定（2026-10-10、本セッション）は次のとおり。
+- 設計者の問い: 「直近30日で一度も開かれていない『比較レポート』（tcg-parallel-report）を削除してよいですか。y：ページを削除し、古い URL は LINE解析のダッシュボードへ移します」
+- PO の回答: 「y」
+
+GO は ADR-1003 の委任に基づき、Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（実装時に実物で確定させる。調査は /tmp/CC報告ファイル/super-admin-menu/ にある）:
+- ページ: frontend/src/pages/super-admin/TcgParallelReportPage.tsx
+  - Route は App.tsx の `/super-admin/tcg-parallel-report`。
+  - 画面の役割: 冒頭のコメントは「並行運用比較レポート MIG-04 Phase 4」。比較対象は compat-v1 と name-first-v1。読み取り専用で、書き込みは無い。
+  - 呼び出す API は GET /tcg/parallel-report（backend: tcg_parallel_report.py:66）。
+- 本番の利用状況（直近30日、Loki）: ページを直接開いた回数は0、API の呼び出しも0。画面の中にこのページへのリンクは無い。
+- 転送の対応表 frontend/src/pages/super-admin/legacyPageRedirects.ts（AY-2g）は、App.tsx と試験が共有している。
+
+AY-2h 変更契約:
+1. TcgParallelReportPage.tsx を削除する。あわせて、このページだけが使っていたものを削除する（連鎖をたどって、ページ以外からの参照が0件のもの）。
+   - 対象: 子部品、CSS、api 関数、型、試験。
+   - 判定: git grep で、試験以外の参照が0件であることを確かめてから消す。参照が残るものは消さない。
+2. App.tsx から import と Route を削除する。古い URL は、legacyPageRedirects.ts の配列に `{ from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" }` を1件追加して転送する。
+   - section を付けない理由: ダッシュボードは初期表示の画面だから（AnalysisRulesPage.tsx の `|| "dashboard"`）。
+   - legacyPageRedirects.test.tsx の期待値（直書き）に、上の1件を追加する。
+3. i18n: このページだけが使うキーを ja と en から削除する。
+   - 判定: 完全キーとテンプレート接頭辞の両方で、参照0件を確かめたキーだけを消す。
+   - 制約: ja と en は同じキー集合を保つ。
+4. 変更しないもの:
+   - backend。GET /tcg/parallel-report は画面から呼ばれなくなる。消すかどうかは別途判断する。
+   - tcg-sold-out（PO の判断待ち）
+   - そのほかの画面・メニュー・CSS・トークン・CI・依存
+5. design.md に、本節と実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| /super-admin/tcg-parallel-report を開く | 比較レポート | LINE解析のダッシュボードへ自動で移る |
+| メニュー・LINE解析の中 | — | 変化0（もともと、このページへの導線は無い） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 転送 | legacyPageRedirects.test.tsx で、4件の配列が期待値と完全に一致する。開いたとき、移った先が /super-admin/analysis-rules になる |
+| 参照0 | git grep で、ページ名・消した部品名・消したキーの参照が0件（frontend/src、tests-e2e） |
+| 実画面 | 開発モードで build し、偽ログインと API モックを使って古い URL を開く。移った先の URL と、ダッシュボードが選ばれていることを記録する（JSON） |
+| 品質 | generate を実行したあと、tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook がすべて成功。CI の必須チェックもすべて成功 |
+| 本番 | Deploy が成功。旧 URL・app・/api/health が 200 |
+
+Architect 自己審査（AY-2h）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（AY-2g と同じ型）。
+- 根拠: PO の明示決定であること。直近30日の利用0（ページ・API とも）。転送は既存の対応表を1か所だけ増やす。配線・データ・backend は不変。
+
+維持の仕組み:
+- 守り手: tsc、legacyPageRedirects.test.tsx、check-i18n-missing-keys、frontend-check。
+- 守っていないもの: backend の GET /tcg/parallel-report（画面から呼ばれなくなる）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2h 実装結果
+
+実装: 変更契約1〜5のとおり。TcgParallelReportPage.tsx を git rm した。App.tsx から import と Route を削除した。legacyPageRedirects.ts の配列に `{ from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" }` を1件追加し（App.tsx はこの配列を map して Route にしているため、App.tsx の転送コードは変更なし）、legacyPageRedirects.test.tsx の期待値（直書き）に同じ1件を足した（題名は「four expected pairs」に変更）。i18n は ja.json・en.json から nav.superAdminTcgParallelReport（各1行）と tcgParallelReport ブロック（各20行）を削除した。
+
+連鎖の調査（実物）:
+- TcgParallelReportPage.tsx の import は、icons（TABLE_ICONS）・useSuperAdmin・PageLayout・api の4つ。いずれも他の画面が使う共用部品で、ページ専用の子部品・CSS・api 関数・型・試験は0件。型（EngineStats・CompatEngineStats・SupplierRow・ReportSummary・ParallelReportResponse）はページ内に定義されており、ページと一緒に消えた。
+- 参照元: frontend/src では App.tsx、ja.json・en.json（nav キーと tcgParallelReport ブロック）、ページ自身のみ。tests-e2e・試験・docs/ai-agents・.github・scripts からの参照は0件。backend の参照は backend/app/main.py:122・:724、backend/app/routers/tcg_parallel_report.py、backend/app/services/tcg_parallel_report_svc.py（変更しない）。
+- docs 配下の過去文書（docs/specs/design-system/design.md・migration.md、docs/handoff/ 配下）には名前が残る（書き換えない）。
+
+計測（evidence-20260910/ay2h-*）:
+- 参照0（ay2h-ref-zero.txt）: frontend/src・tests-e2e で、ページ名・nav キー・i18n ブロック名の参照は、転送の対応表と、その期待値（legacyPageRedirects.ts:7・legacyPageRedirects.test.tsx:20）の URL 文字列のみ。
+- 転送の試験（ay2h-test-legacy.txt）: legacyPageRedirects.test.tsx 5本成功。
+- 実画面（ay2h-realscreen.json、ay2h-redirect-parallel-report-1280.png。NODE_ENV=development の build と vite preview、偽ログインと API モック、Chromium、幅1280）: /super-admin/tcg-parallel-report を開くと /super-admin/analysis-rules に移り、サイドバー「ダッシュボード」が選択された。GET /tcg/parallel-report は呼ばれなかった。ダッシュボードの API（/tcg/analysis-dashboard/*）はモックで 500 を返したので、パネルには「データの取得に失敗しました」と出ている（転送先と選択項目の確認が目的）。
+- 品質（ay2h-chk-*.txt）: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（80 files・987 tests 成功）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動した。
+
+限界: 本番反映後の確認（Deploy・旧 URL・app・/api/health が 200）は merge 後。backend の GET /tcg/parallel-report は画面から呼ばれなくなる（消すかは別途判断）。
+
+#### AY-2h 本番反映（2026-10-10 記録）
+
+AY-2h の PR #4107 は、merge f913ace80（2026-10-09T23:27:25Z、HEAD 4fde752df）で main に入った。
+- Deploy 38004511182 は success（23:27:28Z〜23:29:58Z）。
+- 本番 JS の確認: tcgParallelReport 0件、superAdminTcgParallelReport 0件、"tcg-parallel-report" 1件（転送表の1行）。
+- 本番の応答: 旧 URL、app、/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（指摘0件）。
+
+#### AY-2i 完売の結果（tcg-sold-out）を LINE解析の左メニューへ移す（2026-10-10）
+
+mode: handoff。PO 決定（2026-10-10、本セッション）:
+- 設計者の問い: 「『完売の結果を見る画面』（tcg-sold-out）を、LINE解析の左メニューに『完売の結果』として載せてよいですか。y：LINE解析の中のメニューに載せ、URL を打たなくても開けるようにします」
+- PO の回答: 「y」
+
+GO は ADR-1003 の委任に基づき Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（origin/main 8fab3d397。調査全文は /tmp/CC報告ファイル/super-admin-menu/sold-out-recon.md）:
+- ページ本体 frontend/src/pages/super-admin/TcgSoldOutPage.tsx（101行）。PageLayout は :76-78 で使う。見出しは nav.superAdminTcgSoldOut、説明文は soldOut.subtitle（「保存された解析結果の売り切れ判定を確認できます。現在の在庫数・反映状況を示す一覧ではありません。」）。
+- 部品はすべて既存の金型（Button / Select / TextField / ContentToolbar / DataTable）を使う。専用の CSS は無い。ただし :28 にインライン style が1つある（既存のもの）。
+- API は features/tcg-sold-out/soldOutApi.ts の fetchSoldOut で、GET /tcg/sold-out-results を呼ぶ（backend tcg_analysis_review.py:195、require_super_admin、読み取り専用）。
+- 参照:
+  - App.tsx:92（import）、App.tsx:296（Route）
+  - config/routeTitles.ts:14
+  - TcgSoldOutPage.test.tsx（it 8本。:89 は routeTitles を、:95 は PageLayout の見出しを検査する）
+  - メニュー（Desktop / Mobile）からの参照は0件。e2e も0件。
+- LINE解析:
+  - AnalysisRulesSidebar.tsx の Key の union は :10-36。グループ「解析状況」は :80-90 で、最後の項目は error-log。ラベルのキーは analysisRules.sidebar.*。
+  - AnalysisRulesPage.tsx:
+    - :101-104 で ?section= を初回表示のときに読む。
+    - :124-132 が非管理者の表示。
+    - :162-193 の analysis-panel-content の中で、`activeSection === "x" && <Panel/>` と並ぶ。
+  - 前例: ProductMasterPanel.tsx（AY-2g。PageLayout を外して名前付き export にした）。
+- 本番の利用（直近30日）:
+  - ページを直接開いた回数: 9/16 に4、9/25 に2（nginx と frontend の二重記録なので、約3回）。
+  - API の呼び出し: 9/16、9/19、9/21、9/25。
+
+AY-2i 変更契約:
+1. 新規 frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx（名前付き export `SoldOutResultsPanel`）。中身は TcgSoldOutPage.tsx からの移設で、変えるのは次の点だけ。
+   - PageLayout の import と包みを外す。
+   - :76 は `<p role="status">{t("common.loading")}</p>` にする。
+   - :77 は `<p role="alert">{t("soldOut.denied")}</p>` にする。
+   - 本体の先頭に `<p>{t("soldOut.subtitle")}</p>` を置いて、説明文を残す（要注意の文言なので消さない）。兄弟のパネルに説明文用の既存クラスがあれば、それを使う。無ければ素の p にする。
+   - 冒頭のコメント: 「旧スタンドアロンページ（AY-2i で削除）の内容を PageLayout なしで移設」。
+   - そのほか（SourceDetail・列・ページ送り・:28 のインライン style）は1文字も変えない。
+2. AnalysisRulesSidebar.tsx:
+   - Key の union に "sold-out-results" を追加する。
+   - グループ「解析状況」の error-log の次に `navItem("sold-out-results", t("analysisRules.sidebar.soldOutResults"))` を追加する。ほかの項目と同じ書き方に合わせる。
+3. AnalysisRulesPage.tsx: analysis-panel-content の中に `{activeSection === "sold-out-results" && <SoldOutResultsPanel />}` を追加する。
+4. 古い URL: legacyPageRedirects.ts に `{ from: "/super-admin/tcg-sold-out", to: "/super-admin/analysis-rules?section=sold-out-results" }` を追加する（5件目）。
+   - App.tsx からは import :92 と Route :296 を削除する。
+   - legacyPageRedirects.test.tsx の直書きの期待値に、この1件を追加する。
+5. 削除するもの:
+   - TcgSoldOutPage.tsx
+   - routeTitles.ts:14 の1行
+   - i18n の nav.superAdminTcgSoldOut（ja と en。削除後に参照0件であることを確かめる）
+   - soldOut.* は全部残す（パネルが使う）。
+6. i18n の追加: analysisRules.sidebar.soldOutResults（ja「完売の結果」、en "Sold-out results"）。ja と en に、同じ位置で追加する。
+7. 試験:
+   - git mv で TcgSoldOutPage.test.tsx を components/SoldOutResultsPanel.test.tsx に移す。描画対象を SoldOutResultsPanel に替える。
+   - 外すのは2つだけ。外した it と理由は記録する。
+     - :89 の routeTitles を検査する部分（キーを削除するため）
+     - :95 の PageLayout 見出しを検査する部分（Panel には見出しが無いため）
+   - 残す it の expect は変えない。:114 の DesktopShell の it も、そのまま残す。
+   - AnalysisRulesPage.test.tsx に it を1本追加する。管理者が ?section=sold-out-results で開くと、analysis-subnav-sold-out-results が active になり、パネルが描画されることを確かめる。
+8. 変更しないもの: backend、soldOutApi.ts、ほかのパネル・メニュー、MobileShell、CSS、トークン、CI、依存。
+9. design.md に、AY-2h の本番反映の記録、本節、実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| LINE解析の左メニュー「解析状況」 | エラーログで終わる | エラーログの下に「完売の結果」がある |
+| 「完売の結果」を押す | — | 右側に、検索・絞り込み・一覧・ページ送りが出る（中身は旧ページと同じ） |
+| /super-admin/tcg-sold-out を開く | 単独ページ | LINE解析の「完売の結果」へ自動で移る |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 転送 | legacyPageRedirects.test.tsx で、5件の配列が期待値と完全に一致する |
+| メニュー | AnalysisRulesPage.test.tsx の追加 it が成功する |
+| 中身が同じ | 旧ページと新パネルの差分を `git diff -M` で示す。違いは契約1の点だけ |
+| 試験の移設 | 移した it の expect が元と同じであることを差分で示す。外した2つと理由を一覧にする |
+| 参照0 | TcgSoldOutPage と nav.superAdminTcgSoldOut の参照が0件（frontend/src、tests-e2e） |
+| 実画面 | 開発モードの build と preview で、偽ログインと API モックを使って古い URL を開く。移った先で「完売の結果」が選ばれ、一覧が出ていることをスクリーンショットで記録する（設計者が目視で確かめる） |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功する |
+| 本番 | Deploy が成功する。本番 JS に analysisRules.sidebar.soldOutResults のラベルがあり、nav.superAdminTcgSoldOut が0件。旧 URL、app、/api/health が 200 |
+
+Architect 自己審査（AY-2i）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（AY-2g と同じ型）。
+- 根拠:
+  - PO の明示の決定がある。
+  - 部品はすべて既存の金型で、新しい見た目は作らない。
+  - API・DB・backend は変えない。
+  - 古い URL は転送するので、ブックマークが壊れない。
+- 残るリスク（LOW）: :28 の既存インライン style をそのまま持ち込む。check:all が新しいファイルとして止めた場合は、担当が止まって報告し、設計者が対処を決める。
+
+維持の仕組み:
+- 守り手: tsc（Key の union）、legacyPageRedirects.test.tsx、SoldOutResultsPanel.test.tsx、AnalysisRulesPage.test.tsx、check-i18n-missing-keys、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2i 実装結果
+
+実装: 変更契約1〜9のとおり。旧ページ本体は git で SoldOutResultsPanel.tsx に移設し（git diff -M で rename 検出、similarity 85%）、契約1の差分だけを入れた。旧ページの試験は components/SoldOutResultsPanel.test.tsx へ git mv（similarity 77%）。
+
+検証（生出力は docs/handoff/design-system-recon/evidence-20260910/ay2i-*）:
+- generate（icon-sizes と api-types）: exit 0（ay2i-chk-generate.txt）。generate 後も git の差分に生成物は出ない。
+- tsc --noEmit: exit 0（ay2i-chk-tsc.txt）。
+- lint: exit 0（0 errors, 138 warnings。ay2h と同数。ay2i-chk-lint.txt）。
+- check:all: exit 0（ay2i-chk-check-all.txt）。SoldOutResultsPanel 内のインライン style（pre）は止められなかった。
+- test:coverage --maxWorkers=1: exit 0（80 files・989 tests 成功。ay2h の 987 から +2 = AnalysisRulesPage の追加 it と、legacyPageRedirects の it.each が5件目で1本増。ay2i-chk-coverage.txt）。frontend/coverage は worktree 外へ移動した。
+- build: exit 0（ay2i-chk-build.txt）。build-storybook: exit 0（ay2i-chk-storybook.txt）。
+- 参照0（ay2i-ref-zero.txt）: frontend/src と tests-e2e で、旧ページ名・nav.superAdminTcgSoldOut は0件。tcg-sold-out の文字列は、転送の対応表とその期待値（legacyPageRedirects.ts:8、legacyPageRedirects.test.tsx:21）と、features/tcg-sold-out の import パスのみ。
+- 実画面（ay2i-realscreen.json、ay2i-sold-out-panel-1280.png。開発モード build と vite preview、偽ログイン、API モック、Chromium、幅1280）: /super-admin/tcg-sold-out を開くと /super-admin/analysis-rules?section=sold-out-results に移り、サイドバー「完売の結果」が選択され、GET /tcg/sold-out-results が1回呼ばれ、一覧に2行（ダミー）が出た。
+
+外した試験: it ではなく、1つの it（旧 "keeps Japanese and English navigation and title aligned and formats date in JST"）の中の expect を3か所外し、it の題名を "formats date in JST" に変えた。外した各 expect と理由（3つ目は設計者承認済み）:
+1. routeTitles を検査する expect（旧 :89）。理由: routeTitles.ts の当該行と nav.superAdminTcgSoldOut を削除するため。
+2. PageLayout の見出し（en）を検査する expect（旧 :95）。理由: パネルには見出しが無いため。
+3. ja に切替えて nav.superAdminTcgSoldOut の見出しを検査する2行（旧 :98-99。changeLanguage と heading の expect）。理由: 検査対象が削除したキーの見出しのため。
+- 残した日付 JST の expect は元と同じ。ほかの it の expect は変えていない。DesktopShell の it も同じ。
+- 追加: AnalysisRulesPage.test.tsx に it を1本（?section=sold-out-results で analysis-subnav-sold-out-results が active、パネルが描画される）。legacyPageRedirects.test.tsx の期待値は5件に更新。
+
+git diff -M の旧→新（本体 SoldOutResultsPanel.tsx。全文は ay2i-move-diff.txt）:
+- 冒頭にコメント追加。
+- import の相対パスを ../../ から ../../../ に変更。PageLayout の import を削除。
+- export を `export default function TcgSoldOutPage()` から `export function SoldOutResultsPanel()` に変更。
+- 読み込み中: PageLayout 包みを `<p role="status">` に。非管理者: PageLayout 包みを外して `<p role="alert">` のみ。
+- 本体: PageLayout を Fragment に替え、先頭に `<p>{t("soldOut.subtitle")}</p>` を追加。
+- SourceDetail・列・ページ送り・インライン style は変更なし。
+
+#### AY-2i 本番反映（2026-10-10 記録）
+
+AY-2i の PR #4112 は、merge 7477019c3（2026-10-10T12:39:27Z、HEAD 4a083e895）で main に入った。
+- 必須チェック: 15件すべて pass。
+- Deploy 38052758953: success（12:39:31Z〜12:42:23Z）。
+- 本番 JS の検索結果:
+  - soldOutResults: 3件
+  - superAdminTcgSoldOut: 0件
+  - 「完売の結果」: 1件
+  - tcg-sold-out: 1件（転送表の1行）
+- 本番の応答: 旧 URL・app・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+
+#### AY-2j 完売の結果：原文を Drawer で開く・列の整理（2026-10-10）
+
+mode: handoff。PO の決定（2026-10-10、本セッション）は次の2件。
+- 設計者の問い1: 「一覧の『原文表示』を、押すと右から画面がスライドして出る方式に変えます。中身は今と同じ（商品名・状態・メモの原文、投稿の全文、該当行に色）。閉じ方は ×・Esc・外側クリック」。PO の回答: 「y」
+- 設計者の問い2: 「1.『原文表示』列をなくし、行のどこを押しても原文がスライドで出る。2.『判定』列をなくす（全行が『売り切れ』の固定表示）。3. 商品名の列に幅の上限を付ける（表の部品の既存の幅機能を使う）」。PO の回答: 「y」
+- 背景: PO のスクリーンショット（2026-10-10 22:03）では、仕入元・判定・原文の状態・原文表示の各列が2行に折り返していた。
+
+GO は ADR-1003 の委任に基づき Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（origin/main 7477019c3。調査全文は /tmp/CC報告ファイル/super-admin-menu/sold-out-drawer-recon.md）:
+- SoldOutResultsPanel.tsx の各部分:
+  - :17-39 SourceDetail。`<details>` と summary の中に、dl（rawName・rawState・rawMemo）、invalidSpan の p、`<pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>`（該当行は `<mark>`）がある。
+  - 列は8本。:78 が source 列、status 列の renderCell は `() => t("soldOut.soldOut")` で、常に固定の文言を返す。
+  - :96-97 の DataTable には onRowClick が無い。
+- Drawer 金型（components/Drawer.tsx）:
+  - props（:22-30）: open・onClose・title・children・onOpenFullPage?・footer?
+  - Esc で閉じる（:69-80）。外側クリックで閉じる（:117-122）。× ボタンは aria-label が common.close（:150-159）。
+  - 本文は .comp-drawer-body（:164）。パネルは常にマウントされており、開くと comp-drawer-panel--open が付く（:128）。
+  - 前例: NoteMasterPanel.tsx:230 `<Drawer open={showForm} …>`、NeedsReviewTabsPanel.tsx:145・:465 `onRowClick={setDrawerItem}`。
+- DataTable 金型:
+  - 列の width?（:34-35）は th の style.width に入る（:190）。前例は AnalysisDashboardPanel.tsx:708 他の `width: "80px"` など。
+  - onRowClick は行を tabIndex=0 にし、Enter と Space にも反応する（:248-258）。セルの中のボタンでは発火しない（:93-98）。
+  - 見出し（th）は white-space: nowrap（DataTable.css:37）。データのセルには nowrap が無い。日本語はどの文字の間でも折り返せるので、列が細くなると折り返す。
+- PO の画面幅の推定（推定。実測ではない）: スクリーンショットの横幅は1999px。左のアイコン列と LINE解析のサイドバーが占める割合は約17.5%。開発での実画面（幅1280）では、同じ部分が約20%（254px）だった。この比から、PO の表示幅は CSS 換算で約1450px と推定した。このため、検証は幅1280と幅1440の2つで行う。
+- 試験 SoldOutResultsPanel.test.tsx:
+  - :36-39 は列の位置で検査している。cells[3]="BOX"、cells[6]="Past sources"。
+  - :40-45 は details の summary を押して、mark・script・memo を検査している。
+  - :84-85 は、全行の SourceDetail が常に DOM にある前提で、"Invalid source position" が2件あることを検査している。
+- インライン style: eslint（eslint.config.js:40-115）が検査するのは、色・opacity・zIndex・寸法の数値リテラルだけ。whiteSpace と overflowWrap は対象外で、既存の書き方のまま CI を通っている。
+
+AY-2j 変更契約（SoldOutResultsPanel.tsx と、その試験だけを変更する）:
+1. 列（columns）:
+   - status 列と source 列を削除し、6本にする。並びは product_title・provider・raw_quantity・raw_price・line_posted_at・source_is_active。
+   - product_title 列に `width` を指定する。値は前例と同じ px 文字列とし、受入の「1行判定」を満たす最大の値を、実測で決める（候補の初期値は "240px"）。決めた値と、その実測の根拠を design.md に記録する。
+   - ほかの列の定義は変えない。
+2. Drawer:
+   - `const [sourceItem, setSourceItem] = useState<SoldOutItem | null>(null);` を置く。
+   - DataTable に `onRowClick={setSourceItem}` を付ける。
+   - パネルの末尾に `<Drawer open={sourceItem !== null} onClose={() => setSourceItem(null)} title={t("soldOut.source")}>{sourceItem && <SourceDetail item={sourceItem} />}</Drawer>` を置く。
+   - 一覧を再取得するとき（q・scope・offset・reload が変わったとき）は、sourceItem を null に戻す。既存の useEffect の中で、setData(null) と同じ場所で行う。
+3. SourceDetail:
+   - `<details>` と `<summary>` を外す。中身（dl、invalidSpan の p、pre と mark）は、1文字も変えずにそのまま返す（fragment で包む）。
+   - 新しい CSS・クラス・トークン・i18n キーは追加しない。title は既存の soldOut.source を使う。
+4. 試験（SoldOutResultsPanel.test.tsx）:
+   - :36-39 の列の位置は、列の削除に合わせて番号だけを直す（BOX→2、Past sources→5）。期待する値は変えない。
+   - :40-45: 行を押すまでは mark が無いことを検査する。行（"Shared" を含む行）を押したあとは、role=dialog の中に次の3点があることを検査する。
+     - mark の textContent が "<script>private</script>" であること（元と同じ値）
+     - script 要素が無いこと
+     - "Possibly more tomorrow" があること
+   - :84-85: 1行目を押したあと、"Invalid source position" が1件、mark が null であることを検査する。2行目に切り替えたときも同じであることを検査する。
+   - 追加の it:
+     - 見出しに "Status" と "View source" が無いこと
+     - Escape と × ボタン（data-testid="drawer-close"）で閉じること（comp-drawer-panel--open が外れる）
+     - Enter キーで開くこと
+   - 変えた expect と、その理由を一覧にする。
+5. 変更しないもの: Drawer・DataTable の金型、CSS、トークン、i18n、soldOutApi.ts、backend、ほかの画面、CI、依存。
+6. design.md に、AY-2i の本番反映の記録、本節、実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| 一覧の列 | 8本（判定・原文表示を含む） | 6本 |
+| 原文を見る | 行の中で開き、行が縦に伸びる | 行を押す（Enter でも可）と、右から原文が出る。×・Esc・外側クリックで閉じる |
+| 原文の中身 | 原文の商品名・状態語・備考と全文、該当行に色 | 同じ |
+| 短い列 | 2行に折り返す | 幅1280と幅1440で1行 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 1行判定 | 開発モードの build と preview に、偽ログインと API モックを使う（実データに近いダミー5行: 長い商品名「ワンピースカードゲーム ブースターパック 蒼海の七傑【OP-14】BOX」等、仕入元「倉田 和博」、価格「¥174,000」、数量「none」、状態は有効と過去の両方）。幅1280と幅1440それぞれで、各行の provider・raw_quantity・raw_price・line_posted_at・source_is_active のセルについて、Range.getClientRects() の行数（同じ top の矩形をまとめた数）が1であることを JSON に記録する。商品名の列だけは折り返してよい |
+| Drawer | 同じ環境で行を押すと、dialog（comp-drawer-panel--open）に原文が出て mark で強調され、Esc で閉じることを JSON に記録する。幅1440で、開いた状態のスクリーンショットと一覧のスクリーンショットを撮る（設計者が目視） |
+| 試験 | 契約4の差分。変えた expect と理由の一覧 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS に comp-drawer があり、SoldOutResultsPanel の変更が入っている（"soldOut.status" の参照が1件減ったことを、可能な範囲で確かめる）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2j）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（社内の金型 Drawer と、その onRowClick の前例をそのまま使うため）。
+- 根拠:
+  - PO の明示の決定が2件ある。
+  - 部品は既存の金型だけを使い、新しい CSS・トークン・キーは0。
+  - 列の幅は金型の既存の機能を使い、前例と同じ書き方にする。
+  - データ・API は変えない。
+- 残るリスク（MEDIUM）: 幅の上限だけでは、画面幅によって短い列が1行に収まらないことがある。幅1280か幅1440で1行判定を満たせない場合、担当は止まって実測を報告する。次の手（例: 金型 DataTable に列単位の nowrap を追加する）は、設計者が決める。
+- 残るリスク（LOW）: 「原文表示」の列が無くなるので、行を押せることが見た目では分かりにくくなる。行にマウスを乗せたときの表示は、金型の既存の挙動に従う。
+
+維持の仕組み:
+- 守り手: SoldOutResultsPanel.test.tsx（列の数、Drawer の開閉、Enter、Esc）、Drawer と DataTable 金型の既存の試験、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2j 実装結果
+
+実装: 変更契約1〜4のとおり。変更したファイルは SoldOutResultsPanel.tsx とその試験だけ。
+
+決めた width: product_title 列は "250px"。実測（開発モード build と vite preview、偽ログイン、API モック、Chromium、DPR1。ダミー5行。5行目は設計の受入表に追加した、より長い仕入元「株式会社トレジャーアイランド販売部」）。仕入元・数量・価格・投稿日・原文の状態のセルの最大行数（ay2j-oneline.json は250px の最終結果）:
+
+| width | 幅1280 | 幅1440 |
+|---|---|---|
+| 240px | 1 | 1 |
+| 250px | 1 | 1 |
+| 260px | 2 | 1 |
+| 270px | 2 | 1 |
+| 280px | 2 | 1 |
+| 320px | 2 | 1 |
+| 360px | 2 | 1 |
+| 400px | 3 | 1 |
+| 480px | 9 | 2 |
+
+10px 刻みで測り、幅1280・1440 の両方で最大行数が1になる最大値は 250px。250px のとき、幅1280 の th 幅は 250・248・121・104・145・108（商品名・仕入元・数量・価格・投稿日・状態）、scrollWidth と clientWidth は 1280 と 1280。幅1440 は 250・302・148・126・177・132、1440 と 1440。商品名セルの行数は 2・2・4・2・2（折り返し可）。
+
+検証（生出力は docs/handoff/design-system-recon/evidence-20260910/ay2j-*）:
+- generate: exit 0（ay2j-chk-generate.txt）
+- tsc --noEmit: exit 0（ay2j-chk-tsc.txt）
+- lint: exit 0（ay2j-chk-lint.txt）
+- check:all: exit 0（ay2j-chk-check-all.txt）
+- test:coverage --maxWorkers=1: exit 0、80 files・990 tests 成功（ay2i の 989 から +1 = 追加した it 1本。ay2j-chk-coverage.txt）。frontend/coverage は worktree 外へ移動した。
+- build: exit 0（ay2j-chk-build.txt）。build-storybook: exit 0（ay2j-chk-storybook.txt）。
+- 実画面（ay2j-oneline.json、ay2j-drawer.json、ay2j-list-1440.png、ay2j-list-1280.png、ay2j-drawer-1440.png）: 行を押す前は dialog が閉じていて mark が0件。行を押すと comp-drawer-panel--open が付き、role=dialog、タイトル「原文表示」、mark に該当行（背景 rgb(255, 255, 0)）が出た。Esc で閉じた（幅1280・1440 とも）。GET /tcg/sold-out-results は各幅で1回。
+
+変えた expect と理由（差分は ay2j-test-diff.txt）:
+1. cells[3] の "BOX" を cells[2] に（期待値は同じ）。理由: 判定列の削除で列の位置が1つ前にずれた。
+2. cells[6] の "Past sources" を cells[5] に（期待値は同じ）。理由: 判定列と原文表示列の削除で位置が1つ前にずれた。
+3. details の open が false、summary を押す、detail 内の script が無い、の3つを、「押す前は mark が無い」「"Shared" を含む行を押す」「dialog の中の mark の textContent が "<script>private</script>"」「dialog の中に script が無い」に置き換えた。理由: details と summary を外し Drawer に移したため。mark・script・memo の期待値は元と同じ。memo は dialog の中で検査する。
+4. "Invalid source position" が2件ある、の検査を、1行目と2行目を順に押して、dialog の中に1件で mark が無い、に変えた。理由: Drawer は押した行の原文だけを出す（設計の契約4）。
+- 追加した it（1本）: 見出しに "Status" と "View source" が無いこと、Enter で開くこと、Escape と × ボタンで閉じること。
+- ほかの it の expect は変えていない。
+
+#### AY-2j 本番反映（2026-10-10 記録）
+
+AY-2j の PR #4119 は、merge c035c440b（2026-10-10T13:32:39Z、HEAD e5f0d3ae5）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38056123526: success（13:32:42Z〜13:35:12Z）。
+- 本番 JS: 商品名の列の width `250px` あり、Drawer の title は soldOut.source、soldOut.status の参照0件。
+- 本番の応答: app・/super-admin/analysis-rules・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- PO の本番確認（2026-10-11）: 「成功」。
+- 既知: 数量・価格の列に出る「none」は、解析（指示書）が「原文に記載なし」を表す文字として保存した値で、画面・API は変換していない（調査 /tmp/CC報告ファイル/super-admin-menu/sold-out-none-recon.md）。扱いは PO の指示により別セッションで対応する。
+
+#### AY-2k 請求書作成・見積作成の明細入力欄の標準化（2026-10-11）
+
+mode: handoff。§AY の一行入力を金型 TextFieldControl へ移す便の続き。PO 方針（一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-11、本セッション）「金型整備に戻る」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+現在地（origin/main 994543744。調査全文は /tmp/CC報告ファイル/ssot-ay2k/recon.md）:
+- 対象は14件。請求書作成 frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:343,350,368,372,385,388,391 の7件と、見積作成 frontend/src/pages/quote-create/QuoteCreatePage.tsx:192,199,217,221,234,237,240 の7件。2画面は共有部品ではなく複製で、明細の7件は同じ形（data-testid の接頭辞だけが invoice-／quote- で異なる）。
+- 14件とも明細の表（table.data-table）のセルの中にある。className なし。CSS 規則0（bare input・`.data-table input` の規則も0）で、今はブラウザ既定の見た目（くぼんだ枠・余白ほぼ0）。
+- インライン style はすべてトークン（px 直書き0）。
+  | 欄 | 配置 | 外観 |
+  |---|---|---|
+  | name_en（英語名・主） | width 100%、minWidth var(--input-width-product-name) | fontWeight var(--font-weight-semi) |
+  | product_name（日本語名・参考） | width 100%、minWidth 同、marginTop var(--space-1) | fontSize var(--font-sm)、color var(--text-secondary) |
+  | condition・unit | width var(--input-width-weight) | なし |
+  | quantity（number, min=1） | width var(--input-width-qty) | なし |
+  | unit_price（number, min=0, step=0.01） | width var(--input-width-year) | なし |
+  | weight（number, min=0, step=0.001） | width var(--input-width-weight) | なし |
+- 金型 frontend/src/components/TextField.tsx: TextFieldControl は forwardRef（:41）。variant（:33）、size sm|md|lg（standard のみ、:35-39）、style は素通し（:52）。外観は frontend/src/components/FormField.css:47-62（width 100%・padding var(--space-2) var(--space-3)・枠 1px var(--border)・角 var(--comp-input-radius)・文字 var(--font-base)）、sm は :133-140（padding var(--space-1) var(--space-2)・文字 var(--font-sm)・min-height var(--comp-input-height-sm)）。inline の width は金型の width 100% に勝つ。
+- 試験依存: CommerceSubmitButtonMigration.test.tsx:67-68,:100-101,:111,:113,:120,:126（testid と、spinbutton の並び順 [0]=数量・[1]=単価）、tests-e2e/quote-create-inventory-search.spec.ts:137,:143（quote-item-row-1-name の値）。class 名の参照0。
+- 別枠（本便の対象外）: 共有の InventorySearchBar.tsx:272（1件、両画面に出る。inline の padding を持つ）、見積のみ FedExRateModal.tsx:176,193,210,239（4件、px 直書きの外観あり）。外観の直書きの整理が要るため、それぞれ別の便にする。
+- ページ側の生 text 系の総数: 70（groups.cjs で origin/main を再計測）。
+
+設計判断（設計者、2026-10-11）:
+- 大きさは size="sm" にする。理由: 1行に入力が7つ並ぶ明細の表で、幅は 70〜90px（数量・単価・重量・状態・形態）。標準 md は左右の余白が var(--space-3) ずつで、数量の欄では数字の見える幅が狭くなり、行の高さも大きく増える。sm は金型に登録済みの大きさで、文字の大きさも今の既定に近い。前例の表のセル（AY-2e #5、1行に1欄）とは並ぶ数が違うため、この判断を変える根拠にはしない。スマホでの 44px の触れる高さは金型の既存規則に従う（PO 決定によりスマホ幅は本便の判定対象外）。
+- inline style はすべて残す。配置（width・minWidth・marginTop）は並びを保つため。外観の3つ（name_en の太字、product_name の小さい文字と薄い色）は「英語名が主・日本語名が参考」という意図した区別で、値はすべてトークンのため金型の規則外の直書きには当たらない。product_name の fontSize は sm と同じトークンで、結果は変わらない。
+
+AY-2k 変更契約（2ファイルとその試験以外は変えない）:
+1. 14件の `<input` を `<TextFieldControl size="sm"` に置換し、閉じタグの形はそのまま（自己終了）。type・value・onChange・placeholder・min・step・style・data-testid・onChange の中身は逐語で保持。属性の順も変えない（size は最初に置く）。
+2. 両ファイルに `import { TextFieldControl } from "../../components/TextField";` を追加（既存の import の並びに合わせる。実際の相対パスは置換前に確認）。
+3. CSS・トークン・金型本体・i18n・API・backend・試験・e2e・ほかの画面・InventorySearchBar・FedExRateModal は変更しない。既存の試験が落ちた場合は、試験を直さずに止まって報告する。
+4. design.md に、AY-2j の本番反映の記録、本節、実装結果を追記する。
+
+前後表（予定。実画面で確定）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 14件 | ブラウザ既定の入力欄 → 金型の標準 sm（薄い灰の枠 1px・余白 var(--space-1) var(--space-2)・角 var(--comp-input-radius)・アプリ書体・文字 var(--font-sm)・背景 var(--bg-surface)・フォーカス時の枠色） |
+| 各欄の幅・並び | 変化なし（inline の width・minWidth・marginTop を保持） |
+| 英語名の太字、日本語名の小さい文字と薄い色 | 変化なし |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 並びが保たれる | 開発モードの build と preview に、偽ログインと API モック（明細2行が入る状態）を使い、/invoices/new と /quotes/new を幅1280・1440で、変更前と変更後の全画面スクリーンショットを撮る（DPR2、設計者が目視）。各明細行の14件について getBoundingClientRect の width が前後で ±2px 以内、明細の表の幅が前後で ±2px 以内、表の横はみ出し0（scrollWidth ≤ clientWidth、または変更前と同じ）を JSON に記録する |
+| 外観が前後表どおり | 14件の computed style（border・padding・font-size・font-family・border-radius・background・height）を前後で採取し、前後表の項目以外に差が無い。name_en の font-weight と product_name の color・font-size は前後で同じ |
+| 非外観属性が不変 | 差分の照合で、14件のタグ名の置換・size="sm" の追加・import の追加以外の差分が0 |
+| 置換漏れ0 | groups.cjs の再計測で、ページ側の生 text 系が 70→56 |
+| 試験 | 既存の単体試験が全件成功（CommerceSubmitButtonMigration.test.tsx の testid と spinbutton の順を含む）。e2e の testid（quote-create-inventory-search.spec.ts:137,:143）が保持されていることを grep で確認 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS の請求書作成・見積作成のチャンクに comp-field__input--sm（または金型の sm のクラス）が入っている。app と /api/health が 200 |
+
+幅375 は PO 決定によりスマホ版で扱うため、判定の対象外（撮影は記録として残してよい）。
+
+Architect 自己審査（AY-2k）: APPROVE（条件: 実画面で並びと幅の保持を実装後に確認）。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（既存の金型を前例どおり使うため）。
+- 根拠: 対象14件を file:line・置き場所・style つきで確定。CSS 規則0・class 依存0。inline はすべてトークン。試験の依存（testid・number の順）は属性の逐語保持で守れる。データ・配線・トークンは変えない。
+- 残るリスク（MEDIUM）: 金型の枠と余白が付くため、狭い欄（数量 var(--input-width-qty)）で数字の見える幅が今より狭くなる。幅1280・1440のスクリーンショットで、4桁の数量と「12345.67」の単価が欄の中で切れずに見えるかを確かめ、切れる場合は担当は止まって実測を報告する（次の手は設計者が決める）。
+- 残るリスク（LOW）: 行の高さが少し増える（min-height var(--comp-input-height-sm)）。
+
+維持の仕組み:
+- 守り手: frontend/src/components/TextField.test.tsx、CommerceSubmitButtonMigration.test.tsx、ui-governance、design-token-guard、frontend-check、ay2k のスクリーンショットと計測 JSON（evidence）。
+- 守っていないもの: 残るページ側の生 text 系 56（InventorySearchBar 1・FedExRateModal 4・保留22を含む）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+#### AY-2k 契約改訂（2026-10-11、実装中の実測を受けた設計者判断）
+
+- 設計判断（追記）: 実画面の計測で単価欄（90px）の値 12345.67 が金型 sm の余白と枠で 2px 切れた（scrollWidth 90 / clientWidth 88）。--input-width-year は他の4か所が使うため値を変えず、単価用のトークン --input-width-price（120px）を登録して単価欄2件だけに使う。単価列が 30px 広がり、商品名の列が同じだけ縮む。
+- 契約1b: frontend/src/tokens.css の --input-width-year の次の行に `--input-width-price: 120px;` を追加。請求書・見積の unit_price（type=number step=0.01）2件の style だけを `{ width: "var(--input-width-price)" }` に変える。他の12件・他の属性は逐語保持。
+- 契約2（実物との食い違いの記録）: TextFieldControl の import は両ファイルに既存（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:27、frontend/src/pages/quote-create/QuoteCreatePage.tsx:32）。追加0行。
+- 契約3の改訂: トークン登録先 docs/adr/ADR-067-design-token-enforcement.md のトークン表に1行追記（ADR を変更したため node scripts/generate-adr-index.js を実行、docs/adr/README.md に差分なし）。対象ADRに ADR-067 を含める。
+- 前後表（追加）: 単価欄の幅 90px → 120px。商品名の列（name_en・product_name）の幅 -30px。ほかの欄の幅・表の幅は変化0。
+- 受入（追加・変更）: 単価欄の幅は 90→120px。表の幅は前後 ±2px、横はみ出しは前と同じかそれ以下。単価以外の欄の幅は前後 ±2px（商品名の列は縮み分を除く）。12345.67 でフォーカス無し・有りの両方で scrollWidth <= clientWidth（参考値 123456.78 も記録、合否に含めない）。
+- 触るファイル（追加）: frontend/src/tokens.css、docs/adr/ADR-067-design-token-enforcement.md。
+
+#### AY-2k 実装結果（2026-10-11、基準 origin/main 34da7b297）
+
+計測（開発モード build + preview、偽ログイン + API モック、DPR2、明細2行、1行目 数量1234・単価12345.67・長い英語名。前 evidence-20260910/ay2k-measure-before.json、後 ay2k-measure-after.json）:
+- 各欄の幅（前→後）: 状態 80→80、形態 80→80、数量 70→70、単価 90→120、重量 80→80。商品名の列 1280幅 325.4→295.4、1440幅 485.4→455.4（-30、単価列の広がり分）。
+- 表の幅: 1280幅 1130→1130、1440幅 1290→1290（差0）。document scrollWidth/clientWidth: 1280/1280→1280/1280、1440/1440→1440/1440（横はみ出し 0、前後同じ）。
+- 行の高さ: 全欄 19px→30.39px。外観: 枠 2px inset→1px solid rgb(226,232,240)、padding 0→4px 8px、角 0→6px、font 13.33px Arial→13.6px アプリ書体。name_en の font-weight 600→600、product_name の color rgb(74,85,104)・font-size 13.6px→同じ。
+- 単価の切れ判定（4画面とも）: 12345.67 フォーカス無し 118/118、有り 118/118（OK）。参考 123456.78 も 118/118。数量 68/68、重量 78/78。初回実装（単価90px）では単価 90/88 で不合格だったため契約1bで改訂した。
+- 商品名欄（長い英語名・日本語名のテスト値）は前後とも幅を超える場合は切れる（前 626/321 → 後 652/293、1280幅）。
+- 変更前は元々 name_en が切れる状態。
+
+品質（すべて exit 0。evidence-20260910/ay2k-chk-*.txt）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0、unit 試験（npx vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1）80 files・990 tests 全件成功 exit 0。素の `npx vitest run --coverage` は storybook ブラウザ project が playwright の chromium_headless_shell 未導入で起動失敗（環境要因、ay2k-chk-vitest-all-projects-env-fail.txt）。
+置換数: groups.cjs targets 70→56（nested css rules 0、css files 70）。変更した expect 0件。e2e の testid（frontend/tests-e2e/quote-create-inventory-search.spec.ts:137,:143）は保持。
+差分: git diff origin/main -- frontend/src は 3 files（14 `<input`→`<TextFieldControl size="sm"` 置換 14行、単価2件の style のトークン変更を同じ行に含む、tokens.css +1）。import 追加 0行。
+
+#### AY-2k 本番反映（2026-10-11 記録）
+
+AY-2k の PR #4125 は、merge 113def4b5（2026-10-10T22:50:36Z、HEAD 7d3f9e4b5。実装 HEAD 5898033009 に、CI に更新後の PR 本文を読ませるための空コミットを足したもの）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38092915511: success（22:50:39Z〜22:53:17Z）。
+- 本番: CSS に `--input-width-price:120px`、JS に invoice-item-row・quote-item-row と var(--input-width-price)。app・/invoices/new・/quotes/new・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- 学び: 新しいトークンを足すと check-new-tokens.js が PR 本文の「### デザイントークン変更時」を求める。frontend-check は PR 本文をイベント時点で読むため、本文を直したあとの再実行では読み直さない。
+
+
+#### AY-2l 発注管理（/purchase-orders）ページの削除（2026-10-11）
+
+mode: handoff。PO 原文（2026-10-11、本セッション）「https://app.salesanchor.jp/purchase-ordersだが使っていないページなので削除してくれ」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+範囲の判断（設計者）: PO の指示は「ページ」の削除。画面（frontend）だけを消し、backend の API・DB の表（tenant_xxx.purchase_orders / purchase_order_items）・権限シード・openapi・ダッシュボードの po_pending_count は変えない。データを消す操作は含まない（不可逆のため、別の判断事項として扱う）。
+
+現在地（origin/main 1af58612e。調査全文は /tmp/CC報告ファイル/po-remove/recon.md）:
+- Route: frontend/src/App.tsx:53（import）、:264-265 `/purchase-orders`、:393 `/management-center/purchase-orders`（同じページ）。詳細・新規作成のルートは無い（新規作成はモーダル）。
+- 入口: frontend/src/components/DesktopShell.tsx:277-286（サイドバー「発注管理」、purchase_orders.view で表示）、:183-188（管理センターのリンク表示条件の OR に purchase_orders.view）、frontend/src/pages/management-center/ManagementCenterPage.tsx:57（左メニュー）、frontend/src/config/routeTitles.ts:27、frontend/src/constants/icons.tsx:268（NAV_ICONS.purchaseOrders。参照は DesktopShell.tsx:283 と試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 だけ）。モバイルの項目なし。他画面からのリンク 0。
+- 専用ファイル: pages/purchase-orders/PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx（it 2本とも発注）。components/PurchaseAdminEditorButtonMigration.test.tsx は発注の it 3本と import 2行だけが発注（:59 の役割の試験は残す）。
+- 削除で孤立する部品: components/InventoryPicker.tsx と InventoryPicker.stories.tsx（import 元は発注モーダルだけ）。
+- 残すもの: 共有の金型（Select・Textarea・TextField・ConfirmModal・DataTable・ContentToolbar・Modal）、utils/statusPresentation.ts:108-115 の purchaseOrder 定義（statusPresentation.test.ts:98 と design-preview/StatusSection.tsx:18 が参照）、トークン（すべて他でも使用）、tests-e2e/utils/common-mocks.ts。
+- i18n: purchaseOrders は ja・en とも 36 キー。動的キー 0。status_draft/ordered/received/cancelled/error の5キーは statusPresentation が参照するので残す。
+- 旧 URL: App.tsx に `path="*"` の受け皿は無い。削除後の /purchase-orders は、ほかの存在しない URL と同じ表示になる（実画面で確認して記録する）。
+
+AY-2l 変更契約:
+1. 削除: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx。
+2. 編集:
+   - App.tsx: import 1行と Route 2本（:264-265 の要素一式、:393）を削除。
+   - DesktopShell.tsx: サイドバーの発注管理ブロック（直前のコメント行を含む）を削除。showManagementCenter の hasAny から "purchase_orders.view" だけを除く（他の権限・順は保持）。
+   - ManagementCenterPage.tsx:57 の発注の項目を削除。
+   - routeTitles.ts:27 を削除。
+   - icons.tsx:268 の purchaseOrders を削除し、試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 の purchaseOrders 行も削除。ReceiptOutline の import が他で使われていなければ import からも外す。
+   - PurchaseAdminEditorButtonMigration.test.tsx: 発注の it 3本と、それだけが使う import を削除。
+   - NavDropdown.stories.tsx:32 は、発注の画面・キー・アイコンを参照していれば同じく直し、ただのサンプル文字列なら触らない（どちらかを記録）。
+   - ja.json・en.json: 削除後に参照 0 になる purchaseOrders.* キー、nav.purchaseOrders、products.unitPrice、quotes.selectProduct を両方から同じだけ削除。statusPresentation が参照する5キーは残す。削除前後でキー数が ja=en であること。
+3. 変更しない: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts・他の画面。
+4. design.md に、AY-2k の本番反映の記録、本節、実装結果を追記。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 入口が消える | 開発モードの build と preview（偽ログイン・API モック、purchase_orders.view を含む権限）で幅1280。サイドバーに「発注管理」が無い、管理センターの左メニューに発注が無いことを、変更前後のスクリーンショットと DOM の文字列検索（t("nav.purchaseOrders") の訳語の件数 前1以上→後0）で記録 |
+| 管理センターの表示条件 | purchase_orders.view だけを持つ権限で、変更前は管理センターのリンクが出て、変更後は出ないこと。ほかの権限（例 staff.view）では前後とも出ること |
+| 旧 URL | /purchase-orders と /management-center/purchase-orders を開いた結果を前後で記録し、変更後は /no-such-page と同じ表示であること（例外・白画面のエラーが出ないこと、console error を記録） |
+| 参照漏れ0 | `git grep -n "PurchaseOrders\|purchase-orders\|InventoryPicker\|purchaseOrders\." -- frontend/src frontend/tests-e2e` の残りが、statusPresentation の5キー関連・backend 向けでない記述だけであることを列挙 |
+| i18n | ja・en のキー数が一致、削除したキーの一覧と、各キーの参照 0 を grep で示す |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須がすべて成功 |
+| 本番 | Deploy 成功。本番 JS に PurchaseOrders のチャンク・"purchase-orders" の Route 文字列が無い（/api/v1/purchase-orders の API 文字列も 0 になる見込み）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2l）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（前例 #4098・#4107 と同じ削除の型）。
+- 根拠: 専用ファイルと入口を git grep で全件確定。共有部品・データ・API・DB は変えない。旧 URL は他の未知 URL と同じ扱いで、実画面で確認する。
+- 残るリスク（LOW）: 発注の権限だけを持つ利用者は、管理センターへのリンクが出なくなる（中身が無くなるため意図どおり）。
+- 未処理として残すもの（別の判断事項）: backend の発注 API 10本・DB の表2つ・権限シード・ダッシュボードの po_pending_count。
+
+維持の仕組み:
+- 守り手: DesktopShell.test.tsx・MobileShell.test.tsx・ManagementCenter の既存試験、i18n のキー一致検査、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（データへの影響なし）。
+
+#### AY-2l 実装結果
+
+基準 origin/main 1af58612e。実画面の計測は開発モード build と preview（偽ログイン・API モック）、幅1280、同じスクリプトを前後で実行（ay2l-measure-before.json、ay2l-measure-after.json）。権限モック (a) purchase_orders.view を含む20権限、(b) purchase_orders.view だけ、(c) staff.view だけ。
+
+| 項目 | 前 | 後 |
+|---|---|---|
+| (a) サイドバーの「発注管理」件数 | 1 | 0 |
+| (a) 管理センター左メニューの「発注管理」件数 | 1 | 0 |
+| (b) 管理センターのリンク | 有り | 無し |
+| (c) 管理センターのリンク | 有り | 有り |
+| /purchase-orders の本文先頭 | 発注ページ（「発注書の作成から受取まで管理します。」） | 空（/no-such-page と同じ） |
+| /management-center/purchase-orders の本文先頭 | 管理センター | 空（/no-such-page と同じ） |
+| console error（3 URL） | 0 | 0 |
+
+- スクリーンショット: docs/handoff/design-system-recon/evidence-20260910/ay2l-sidebar-before.png、ay2l-sidebar-after.png、ay2l-mc-before.png、ay2l-mc-after.png、ay2l-old-url-after.png。
+- 品質（ay2l-chk-*）: tsc・lint・check:all・build・build-storybook・単体試験（79 files・988 tests、coverage、maxWorkers=1）すべて exit 0。
+- 削除したファイル 6 本: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、po-pdf-mail.spec.ts、AdminMasterSaveButtonMigration.test.tsx。
+- 編集: App.tsx、DesktopShell.tsx、ManagementCenterPage.tsx、routeTitles.ts、icons.tsx（purchaseOrders と、これだけが使っていた ReceiptOutline とその import）、DesktopShell.test.tsx、MobileShell.test.tsx、PurchaseAdminEditorButtonMigration.test.tsx（発注の it 3 本・import 2 行に加え、これだけが使う within の import と deferred ヘルパーも除去）、ja.json、en.json。
+- i18n: 削除 34 キー（purchaseOrders.* 31、nav.purchaseOrders、products.unitPrice、quotes.selectProduct）。ja・en とも 4693→4659。purchaseOrders ブロックは 36→5（status_draft・ordered・received・cancelled・error。statusPresentation が参照）。各削除キーの参照 0 は ay2l-i18n.txt。
+- 参照漏れ grep の残り（ay2l-grep-after.txt）: statusPresentation.ts の 5 キー、locales の purchaseOrders ブロック（その 5 キー）、PurchaseAdminEditorButtonMigration.test.tsx:22 の api モック応答（ロールの試験が使う無害な分岐。契約外のため残した）、NavDropdown.stories.tsx:32 のサンプル文字列。
+- NavDropdown.stories の扱い: activePaths のただのサンプル文字列で、発注の画面・キー・アイコンを参照していないため触らない。
+- 変更していないもの: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts。

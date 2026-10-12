@@ -10,6 +10,7 @@
  */
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 
 interface SupplierFacet {
   id: number;
@@ -301,9 +302,9 @@ export default function InventoryFilterPanel({
       </div>
 
       <div>
-        <button type="button" className="btn-sm" onClick={onClose}>
+        <Button variant="secondary" size="sm" type="button" onClick={onClose}>
           {t("common.close")}
-        </button>
+        </Button>
       </div>
     </section>
   );

@@ -1,0 +1,15 @@
+{
+  "headRefOid": "523ca39d9bdea43c666007c7724e9902c9d31ebd",
+  "mergeCommit": {
+    "oid": "85af04d5e51ab0cfc75ce11bb8792bb8542abae5"
+  },
+  "mergedAt": "2026-09-29T04:44:47Z",
+  "number": 3855,
+  "state": "MERGED",
+  "issuer": "Shingo（shingo-ops）",
+  "verbatim": "GO #3855",
+  "source": "本セッションPO発言",
+  "backupCheckedAt": "2026-09-29T04:43:01.854302+00:00",
+  "backupBytes": 233183652,
+  "gzipTestExit": 0
+}

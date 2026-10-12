@@ -42,7 +42,6 @@ from app.database import get_db
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
-    TCG_SCHEMA,
     _enqueue_extraction,
     _write_source_messages,
     build_provider_entries,
@@ -51,6 +50,10 @@ from app.services.tcg_line_import_svc import (
 )
 
 router = APIRouter()
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 
 # ---------------------------------------------------------------------------
@@ -73,12 +76,10 @@ class ImportJobResponse(BaseModel):
     id: str
     filename: str
     raw_sha256: str
-    message_count: int
-    provider_count: int
+    new_message_count: int
+    resolved_count: int
     unresolved_count: int
     uploaded_by: Optional[str]
-    status: str
-    review_status: str
     created_at: str
 
 
@@ -261,11 +262,15 @@ async def list_import_history(
     rows = await db.execute(
         text(
             f"""
-            SELECT id, filename, raw_sha256, message_count, provider_count,
-                   unresolved_count, uploaded_by, status, review_status,
-                   created_at
-            FROM {TCG_SCHEMA}.import_jobs
-            ORDER BY created_at DESC
+            SELECT ij.id, ij.filename, ij.raw_sha256, ij.uploaded_by, ij.created_at,
+              COUNT(DISTINCT ijm.source_message_id) FILTER (WHERE ijm.relation_kind = 'created') AS new_message_count,
+              COUNT(DISTINCT ej.id) FILTER (WHERE ej.status IN ('done', 'empty')) AS resolved_count,
+              COUNT(DISTINCT ej.id) FILTER (WHERE ej.status IN ('pending', 'running', 'error')) AS unresolved_count
+            FROM {TCG_SCHEMA}.import_jobs ij
+            LEFT JOIN {TCG_SCHEMA}.import_job_messages ijm ON ijm.import_job_id = ij.id
+            LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = ijm.source_message_id
+            GROUP BY ij.id
+            ORDER BY ij.created_at DESC
             LIMIT 200
             """
         )
@@ -277,13 +282,11 @@ async def list_import_history(
                 id=str(r[0]),
                 filename=r[1],
                 raw_sha256=r[2],
-                message_count=r[3],
-                provider_count=r[4],
-                unresolved_count=r[5],
-                uploaded_by=r[6],
-                status=r[7],
-                review_status=r[8] if r[8] is not None else "ok",
-                created_at=r[9].isoformat() if hasattr(r[9], "isoformat") else str(r[9]),
+                uploaded_by=r[3],
+                created_at=r[4].isoformat() if hasattr(r[4], "isoformat") else str(r[4]),
+                new_message_count=int(r[5]) if r[5] is not None else 0,
+                resolved_count=int(r[6]) if r[6] is not None else 0,
+                unresolved_count=int(r[7]) if r[7] is not None else 0,
             )
         )
     return result
@@ -681,7 +684,15 @@ async def get_import_extraction_jobs(import_job_id: uuid.UUID, limit: int = Quer
 )
 async def upload_android_line_export(
     file: UploadFile = File(...),
-    window_hours: int = Form(default=0, ge=0),
+    window_start: Optional[str] = Form(
+        default=None,
+        description="取り込み開始 timestamp (YYYY-MM-DD HH:MM:00 以上)。省略時は window_hours で自動計算",
+    ),
+    window_end: Optional[str] = Form(
+        default=None,
+        description="取り込み終了 timestamp (YYYY-MM-DD HH:MM:00 未満)",
+    ),
+    window_hours: int = Form(default=6, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_super_admin),
 ):
@@ -693,15 +704,20 @@ async def upload_android_line_export(
         raise HTTPException(status_code=413, detail="ファイルは10MiB以下にしてください")
     try:
         export_text = raw.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise HTTPException(status_code=400, detail="UTF-8のファイルが必要です") from error
+    except UnicodeDecodeError:
+        try:
+            export_text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as error:
+            raise HTTPException(status_code=400, detail="UTF-8のファイルが必要です") from error
     uploaded_by = getattr(current_user, "email", None) or getattr(current_user, "id", None)
     try:
         return await import_line_export(
             db=db,
-            filename=file.filename,
+            filename=file.filename or "unknown.txt",
             export_text=export_text,
             uploaded_by=str(uploaded_by) if uploaded_by is not None else None,
+            window_start=window_start,
+            window_end=window_end,
             window_hours=window_hours,
             source_format="android",
         )

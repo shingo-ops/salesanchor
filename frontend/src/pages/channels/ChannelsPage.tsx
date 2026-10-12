@@ -27,6 +27,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 interface Channel {
   page_id: string;
@@ -383,13 +384,13 @@ export default function ChannelsPage() {
             {t("channels.reauthRequired")}
           </span>
           {canManage && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={handleConnect}
               disabled={connecting}
             >
               {connecting ? t("channels.connecting") : t("channels.reauthAction")}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -401,14 +402,14 @@ export default function ChannelsPage() {
       {loadError && (
         <div className="error" style={{ marginBottom: "var(--space-4)" }}>
           {t("channels.loadError")} {loadError}
-          <button
+          <Button variant="secondary" size="sm" layoutClassName="comp-btn-layout--ml-2"
             type="button"
-            className="btn-sm"
-            style={{ marginLeft: "var(--space-2)" }}
+
+
             onClick={loadChannels}
           >
             {t("channels.reload")}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -432,14 +433,14 @@ export default function ChannelsPage() {
             {t("channels.noChannelsDesc")}
           </p>
           {canManage ? (
-            <button
-              className="btn-primary"
+            <Button variant="primary" size="lg"
+
               onClick={handleConnect}
               disabled={connecting}
-              style={{ fontSize: "var(--font-md)", padding: "var(--space-3) var(--space-6)" }}
+
             >
               {connecting ? t("channels.connecting") : t("channels.connect")}
-            </button>
+            </Button>
           ) : (
             <p style={{ color: "var(--text-muted)" }}>
               {t("channels.noChannelsDesc")}
@@ -518,13 +519,13 @@ export default function ChannelsPage() {
                 </div>
                 <div style={{ flexShrink: 0 }}>
                   {canManage && ch.is_active && (
-                    <button
-                      className="btn-sm btn-danger"
+                    <Button variant="danger" size="sm"
+
                       onClick={() => setDisconnectTarget(ch)}
                       disabled={disconnecting}
                     >
                       {t("channels.disconnect")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -554,14 +555,14 @@ export default function ChannelsPage() {
                 {t("channels.discordNoServerDesc")}
               </p>
               {canManage && (
-                <button
-                  className="btn-primary"
+                <Button variant="primary" size="lg"
+
                   onClick={handleDiscordConnect}
                   disabled={discordConnecting}
-                  style={{ fontSize: "var(--font-md)", padding: "var(--space-3) var(--space-6)" }}
+
                 >
                   {discordConnecting ? t("channels.discordConnecting") : t("channels.discordAddBot")}
-                </button>
+                </Button>
               )}
             </div>
           ) : (
@@ -597,20 +598,20 @@ export default function ChannelsPage() {
                 </div>
               </div>
               <div style={{ flexShrink: 0, display: "flex", gap: "var(--space-2)" }}>
-                <button
-                  className="btn-sm btn-ghost"
+                <Button variant="ghost" size="sm"
+
                   onClick={() => navigate("/admin/discord-config")}
                 >
                   {t("channels.discordOpenSettings")}
-                </button>
+                </Button>
                 {canManage && (
-                  <button
-                    className="btn-sm btn-danger"
+                  <Button variant="danger" size="sm"
+
                     onClick={() => setDiscordDisconnectOpen(true)}
                     disabled={discordDisconnecting}
                   >
                     {t("channels.discordDisconnect")}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>

@@ -17,36 +17,7 @@
 -- 冪等: WHERE 句が一致しない場合は何も変わらない。
 -- ============================================================================
 
-DO $$
-BEGIN
-    -- ガード: tcg_type_master が存在しない CI ベースラインはスキップ
-    IF to_regclass('public.tcg_type_master') IS NULL THEN
-        RAISE NOTICE 'tcg_type_master not present -- skipping';
-        RETURN;
-    END IF;
-
-    -- =========================================================================
-    -- Step 1: products.tcg_type を正規 code へ統一
-    -- =========================================================================
-    IF to_regclass('public.products') IS NOT NULL
-       AND EXISTS (
-           SELECT 1 FROM information_schema.columns
-           WHERE table_schema = 'public' AND table_name = 'products'
-             AND column_name = 'tcg_type'
-       )
-    THEN
-        UPDATE public.products
-           SET tcg_type = 'pokemon_booster_box', updated_at = NOW()
-         WHERE tcg_type = 'pokemon';
-
-        UPDATE public.products
-           SET tcg_type = 'weiss_schwarz', updated_at = NOW()
-         WHERE tcg_type = 'weiss';
-    END IF;
-
-    -- =========================================================================
-    -- Step 2: 重複 tcg_type_master 行を削除
-    -- =========================================================================
-    DELETE FROM public.tcg_type_master WHERE code IN ('pokemon', 'weiss');
-
-END $$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- products.tcg_type の付け替えと type_master の旧コード削除を外した（本番は 0 行）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: tcg_type dedup update/delete removed'; END $$;

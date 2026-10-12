@@ -260,8 +260,7 @@ run_sql migrations/20260603_030000_seed_dragonball_products.sql
 # ADR-093: 商品マスタ セット種別(set_type)
 run_sql migrations/20260603_040000_add_products_set_type.sql
 
-# ADR-093: 商品マスタ 型番(mark) をシート B列で更新（日本語タイトル一致・125件）
-run_sql migrations/20260604_010000_seed_product_marks.sql
+# 廃止（PO 2026-10-09）: 20260604_010000_seed_product_marks.sql は毎デプロイで商品マスタの mark を上書きし、画面で直した値を戻したためファイルごと削除。値の正はマスタ（画面・CSV）。ADR-155
 
 # ADR-093: 全商品の発送ラベル既定値を一括設定（品目=Playing card / HSコード=9504400000 / 素材=Paper）
 run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
@@ -520,19 +519,17 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
-# ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
-# 前回失敗デプロイで再作成された空の tcg_products を除去する。
-# 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
-run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+
+# Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
+run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
 # TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 
 # TCG MIG-04: conditions に R1〜R4 解決列追加 + seed（additive-only・冪等）
 run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
-
-# MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
-run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 
 # TCG MIG-04 E3a/E5: analysis_results に unit_inferred/unit_basis/unit_confidence/unit_infer_reason 追加（additive-only・冪等）
 run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
@@ -608,6 +605,9 @@ run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
 # IMPORT-01 QA: 同上（tenant_001 専用・冪等）
 run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
 
+# ADR-158: neutralized exclude-keyword inserts (data applied via app/CSV per ADR-155)
+run_sql migrations/20260925_120000_add_product_exclude_keywords.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
@@ -656,6 +656,10 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
+# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
+# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
+run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
+
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
 
@@ -683,6 +687,9 @@ run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
 # Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
 run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
 
+# VIEW → TABLE 修正: 手動作成VIEWをDROPし実体テーブルをRENAME（本番デプロイ252番失敗の修正）
+run_sql migrations/20260919_015000_fix_view_to_table_rename.sql
+
 # Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
 run_sql migrations/20260919_020000_master_ssot_public_tables.sql
 
@@ -697,3 +704,212 @@ run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
 
 # Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
 run_sql migrations/20260920_020000_supplier_line_name_unique.sql
+
+# Conditions master SSOT Phase 1: public.conditions に tenant_id 追加 + deal_statuses/work_items FK 張り替え
+run_sql migrations/20260920_040000_conditions_ssot_phase1.sql
+
+# 単位マスタ public.units に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_030000_units_add_tenant_id.sql
+
+# ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
+
+# 備考マスタ public.tcg_note_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_060000_note_master_tenant_id.sql
+
+# product_categories tenant_id
+run_sql migrations/20260920_070000_product_categories_tenant_id.sql
+
+# analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
+run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
+
+# 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
+run_sql migrations/20260920_130000_create_product_classification.sql
+
+# analysis_rule 13テーブルを全スキーマから削除（SSOT を tcg_status_master に統合・PR #3621）
+run_sql migrations/20260921_010000_drop_analysis_rule_tables.sql
+
+# ADR-156: 商品分類ツリー Phase 1 — 大分類・type_master rename・小分類FK・コンディション定義・解析マスタFK
+run_sql migrations/20260921_060000_create_product_kinds.sql
+run_sql migrations/20260921_070000_rename_tcg_type_master_to_type_master.sql
+run_sql migrations/20260921_080000_product_lines_add_type_id.sql
+run_sql migrations/20260921_090000_create_condition_definitions.sql
+run_sql migrations/20260921_100000_add_analysis_master_fk.sql
+
+# Step 1/5: パイプライン 17テーブル を public スキーマに作成（DDL-only・冪等）
+run_sql migrations/20260921_110000_pipeline_tables_public.sql
+
+# Step 5/5: tenant_004 スキーマのパイプライン 17テーブル + バックアップ 2テーブルを DROP（ADR-1002）
+run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
+
+# ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
+run_sql migrations/20260921_120000_add_products_product_kind_id.sql
+
+# 共用Knowledge抽出語彙シード: block_delimiter / skip_condition / status_keyword
+run_sql migrations/20260924_040000_seed_knowledge_extraction_vocab.sql
+
+# 仕入元 Knowledge リンクテーブル新設（supplier_knowledge_links）
+run_sql migrations/20260924_050000_create_supplier_knowledge_links.sql
+
+# ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
+run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
+
+# ADR-156 Phase 6: 小分類→大分類FK / 入数マスタ / 重量マスタ / products FK追加
+run_sql migrations/20260921_140000_product_classification_masters.sql
+
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260922_000000_create_buyback_tables.sql
+
+# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+
+# ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
+run_sql migrations/20260922_030000_product_format_game_links.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql
+
+# 販売単位・状態マスタ連鎖プルダウン基盤
+run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql
+
+# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+
+# 残存 TCG マスタ 3 テーブルを public schema にプロモート
+run_sql migrations/20260923_030000_promote_remaining_tcg_tables.sql
+
+# line_import_devices.tcg_schema を tenant_004 → public に更新
+run_sql migrations/20260923_040000_update_device_tcg_schema.sql
+
+# public.analysis_results に欠落インデックスを追加（ON CONFLICT 修正）
+run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
+
+# public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
+run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql
+
+# ADR-157: 買取価格変動アラートルール
+run_sql migrations/20260924_000000_create_buyback_alert_rules.sql
+
+# public.suppliers に仕入元ごとの抽出ルール列を追加
+run_sql migrations/20260924_010000_add_supplier_extraction_rules.sql
+
+# public.suppliers に例文テキスト列を追加（Gemini プロンプト注入用）
+run_sql migrations/20260924_030000_add_extraction_example_text.sql
+
+# ADR-157 Phase 3: 買取商品と自社マスタの自動紐付け（product_id型変更・match列追加）
+run_sql migrations/20260924_100000_buyback_product_matching.sql
+
+# analysis_run_snapshots.unit_id / condition_id: UUID → INTEGER 型修正
+# analysis_results が INTEGER 型のためスナップショット保存時の型不一致を解消
+run_sql migrations/20260924_110000_fix_analysis_run_snapshots_unit_condition_type.sql
+
+# Supplier name dedup: 同一name重複21組を統合（旧SUP-xxx → 新SP-xxxxx）
+run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
+
+# ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
+run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
+
+# conditions テーブルに match_type / effect カラムを追加（tcg_status_master パターン統一）
+run_sql migrations/20260925_010000_conditions_add_match_type.sql
+
+# line_conditions に condition_def_id / unit_id / note 追加（ConditionsMasterPanel v2）
+run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql
+
+# ADR-158 Phase 2: extraction_items に raw_product_code カラム追加（Gemini v6 型番抽出）
+run_sql migrations/20260926_010000_add_raw_product_code.sql
+
+# Gemini 抽出プロンプト設定テーブル新設（管理画面から編集可能）
+run_sql migrations/20260926_080000_create_extraction_prompt_config.sql
+
+# product_id=61 の product_code='-' を 'S-PS' に修正（30th BOX バグ根本原因）
+run_sql migrations/20260926_080100_fix_product_code_dash.sql
+
+# tcg_distribution_settings に max_age_hours=48 設定を追加（配信時の最大経過時間フィルタ）
+run_sql migrations/20260927_120000_add_max_age_hours_setting.sql
+
+# extraction_attempts に Gemini APIトークン数・コストカラムを追加（透明化）
+run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql
+
+# ADR-009 M7: Discord リアクション保存テーブル新設（RLS有効・冪等）
+run_sql migrations/20260927_100000_create_meta_message_reactions.sql
+
+# skip_condition カテゴリ全件（13件）を削除（Gemini が既に判断するため重複ルール撤去、PO決定 2026-09-28）
+run_sql migrations/20260928_100000_delete_skip_condition_rules.sql
+
+# PR-B1: 試運転用の表（extraction_shadow_runs/results）と仕入元の発送日の書き方欄を追加（A/B専用・既存クエリ非改変）
+run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
+
+# ADR-158: source_messages.received_at を採用本文の投稿時刻にそろえる（冪等）
+run_sql migrations/20260929_120000_fix_source_messages_received_at.sql
+
+# PR-CLEAN: 旧仕入元別Geminiプロンプトテーブルを廃止（ADR-085機能撤去、PO決定 2026-09-28）
+run_sql migrations/20260930_120000_drop_supplier_prompts.sql
+
+# Discord チケットのウェルカム文の DB 既定値を英語へ（顧客向け文言の英語化・PO決定 2026-09-30・冪等）
+run_sql migrations/20260930_130000_set_discord_welcome_template_english.sql
+
+# ADR-1004 A1: LLM 使用量台帳（llm_usage_events）新設（表のみ。バックフィルは A2 で別PR）
+run_sql migrations/20260930_150000_create_llm_usage_events.sql
+
+# ADR-1004 A2: LLM 使用量台帳（llm_usage_events）過去分バックフィル（SSOT化、A1マージ後に適用）
+run_sql migrations/20260930_160000_backfill_llm_usage_events.sql
+
+# ADR-159 便A: staff.avatar_token 追加（担当者アイコンの公開 URL token・additive・冪等）
+run_sql migrations/20261001_120000_add_staff_avatar_token.sql
+
+# ADR-159 便B: discord_channel_webhooks 作成（担当者名義 webhook 送信・token 暗号化・冪等）
+run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
+
+# §D01: 決済手数料設定マスタ（public.payment_fee_settings）新設（NULLパターン・PayPal初期データ込み・冪等）
+run_sql migrations/20261002_160000_create_payment_fee_settings.sql
+
+# §D01補完: payment_fee_settings カラムコメント付与
+run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
+
+# Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
+run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
+
+# ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
+run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
+
+# roles.system_key 追加（全テナント・additive・冪等。owner/admin の権限を役割名ではなく安定キーで判定するため）
+run_sql migrations/20261005_150000_add_roles_system_key.sql
+
+# 新しい仕組み専用の仕入元ルール2列（extraction_layout_rules / extraction_hard_cases）。本番v7は読まない
+run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql
+
+# 試作版 v102: 単位にしない言い回しマスタ line_unit_ignore_phrases 新設（構造のみ・値は画面から登録・冪等）
+run_sql migrations/20261008_100000_create_line_unit_ignore_phrases.sql
+
+# 試作版 v102: 中分類マスタ type_master に match_by_code（型番で決めるかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_100000_type_master_match_by_code.sql
+
+# 試作版 v102: 中分類マスタ type_master に code_only_match（型番だけでも決めてよいかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_150000_type_master_code_only_match.sql
+
+# 便B: v102 本番エンジン用の列（extraction_items に source_lines・gemini_index、extraction_jobs に gemini_unsure・review_reasons）。構造のみ・冪等（ADR-1007）
+run_sql migrations/20261009_180000_v102_engine_columns.sql
+
+# 便A: 要確認の理由コード表 review_reason_codes 新設（構造のみ・初期行は data/review_reason_codes/ の1回だけのデータ変更・冪等・ADR-1007）
+run_sql migrations/20261009_200000_create_review_reason_codes.sql
+
+# 便2-1: v102 の〆が完売にする2つ目以降の (商品, 状態) の表 analysis_soldout_extra_targets 新設（構造のみ・冪等・ADR-1007）
+run_sql migrations/20261010_120000_create_analysis_soldout_extra_targets.sql
+
+# v102 価格の行の決め方の印 price_basis 列（構造のみ・冪等・ADR-1007）
+run_sql migrations/20261011_150000_add_analysis_results_price_basis.sql
+
+# extraction_jobs に v102 システム要確認の明細の列を足す（段1）
+run_sql migrations/20261012_100000_add_extraction_jobs_system_review_detail.sql
+
+# extraction_attempts に Gemini の思考要約の列を足す（構造のみ）
+run_sql migrations/20261012_200000_add_extraction_attempts_thought_summaries.sql
+
+# tcg_distribution_targets に要確認タブ名の列を足す（構造のみ・冪等。値は docs/handoff/review-sheet-export/data/ の1回だけのデータ変更）
+run_sql migrations/20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql
+
+# companies.sales_rep_id の参照先を public.users(id) に付け替える（ADR-1008 P1・構造のみ・冪等）
+run_sql migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql

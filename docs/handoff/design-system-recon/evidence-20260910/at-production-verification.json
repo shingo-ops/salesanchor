@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-28T21:55:11.392639+00:00",
+  "expectedCommit": "a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401",
+  "deployedCommit": "a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401",
+  "appHTTP": "200",
+  "asset": "/assets/index-BKp8C-j4.js",
+  "assetHTTP": "200",
+  "apiHTTP": "200",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "publicIndexSHA256": "f5cabcc78aeba09eee8d51c2b29e6e8056fdb205e44f75760c1fc6b12219dfbd",
+  "containerIndexSHA256": "f5cabcc78aeba09eee8d51c2b29e6e8056fdb205e44f75760c1fc6b12219dfbd",
+  "publicAssetSHA256": "390326100e07d93d552b3cb189aa124fe9d4f9ef48edb52c4828f6ce74482023",
+  "containerAssetSHA256": "390326100e07d93d552b3cb189aa124fe9d4f9ef48edb52c4828f6ce74482023",
+  "authenticatedUI": "skipped at PO request; unverified",
+  "pass": true
+}

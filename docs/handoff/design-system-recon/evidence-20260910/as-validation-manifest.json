@@ -1,0 +1,262 @@
+[
+  {
+    "file": "as-root-validation/00-npm-ci.log",
+    "bytes": 646,
+    "sha256": "d06ed037cd793d31b90dfcead00bff1022e39f2f13804b8869ae106f9f739f60"
+  },
+  {
+    "file": "as-root-validation/01-static-audit.json",
+    "bytes": 10035,
+    "sha256": "7d7f2c2feb643a931f642d971b6484b63ba17421cc05fcc681f290cf6f4d3fbe"
+  },
+  {
+    "file": "as-root-validation/02-product-review.diff",
+    "bytes": 32144,
+    "sha256": "ec750fdb55f6f0ac80e762a55f1757e05d9e936d4e6e0e0e5ee5e2d15ead043f"
+  },
+  {
+    "file": "as-root-validation/03-existing-regressions.log",
+    "bytes": 1918,
+    "sha256": "e71b8cc400b6fdb6d5cb3bb50e614763ac633cb9475777227496ebdc488ed90d"
+  },
+  {
+    "file": "as-root-validation/04-static-audit.json",
+    "bytes": 10057,
+    "sha256": "ff0e452c258d4f88e890bd5753806b41743c4419a35876912adb3036e7c5d010"
+  },
+  {
+    "file": "as-root-validation/05-design-check.json",
+    "bytes": 40,
+    "sha256": "c7e48d24a16edf265f296466b1724debe004433ef679204b4ff5906fa9852990"
+  },
+  {
+    "file": "as-root-validation/06-card-sol1.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-root-validation/07-card-sol2.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-root-validation/08-task-state.log",
+    "bytes": 611,
+    "sha256": "dc68d6b38857f0c818909e72085fb3368b4c55254642f3f4a390fc2006a77dc6"
+  },
+  {
+    "file": "as-root-validation/09-existing-regressions-final.log",
+    "bytes": 732,
+    "sha256": "808e9622f2e299f3ecbf62561173966a592e075fd692d0ea2ea5969b1ee9dce7"
+  },
+  {
+    "file": "as-root-validation/10-static-final.json",
+    "bytes": 10057,
+    "sha256": "ff0e452c258d4f88e890bd5753806b41743c4419a35876912adb3036e7c5d010"
+  },
+  {
+    "file": "as-root-validation/11-build.log",
+    "bytes": 1223,
+    "sha256": "25a489a836b4c7182100c00c2dfad19928384dea6485cf46ed9edf8cda399835"
+  },
+  {
+    "file": "as-root-validation/12-sol1-cross-review-initial.md",
+    "bytes": 3455,
+    "sha256": "b14e8979db49c7e3398ab22496e223854307f1a51c2bb8b2ff97790994c52e5b"
+  },
+  {
+    "file": "as-root-validation/13-sol2-cross-review-initial.md",
+    "bytes": 3047,
+    "sha256": "c6b0608f8b9c0c794d3c551837a10f56ccef9ba2b5c29a5b61b5a41a47d37df0"
+  },
+  {
+    "file": "as-root-validation/14-storybook.log",
+    "bytes": 10690,
+    "sha256": "131e5b0516769459046f40b54313a0448764a53f1e5103d33ffe599ffebec16e"
+  },
+  {
+    "file": "as-root-validation/15-check-exits.json",
+    "bytes": 821,
+    "sha256": "5f95cab7f42ed3e772b68f11e93c3def1736e5533f81bb68a8c5312764e35c0e"
+  },
+  {
+    "file": "as-root-validation/16-check-all.log",
+    "bytes": 31378,
+    "sha256": "7c0075c5f8ae92ca9d6768604a99221c2d6b0696dd01c91e476432eb2ae0d4b5"
+  },
+  {
+    "file": "as-root-validation/17-full-coverage.log",
+    "bytes": 30998,
+    "sha256": "623b105fa0204f0fa627b4cc73bd40041a1c3739a760c6e7c2db065a1b287831"
+  },
+  {
+    "file": "as-root-validation/18-tested-file-hashes.json",
+    "bytes": 3634,
+    "sha256": "34fb45c40539892d52e747ba6449132c3ab7111e304279c2b768890f81f8a597"
+  },
+  {
+    "file": "as-root-validation/19-strict-eslint.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-root-validation/20-final-typecheck.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-root-validation/previous-docs-production.json",
+    "bytes": 848,
+    "sha256": "412329fc1616dbe9e8b35a7e3ae8651acd4d70db8d12729a3e2349064589ce3d"
+  },
+  {
+    "file": "as-root-validation/verify-previous-docs.py",
+    "bytes": 2381,
+    "sha256": "e203cf3fcacf100c4588c42400422b8fbb3b36f7e8035db69b03c20e60b5ccf9"
+  },
+  {
+    "file": "as-sol1-validation/00-precheck.log",
+    "bytes": 2510,
+    "sha256": "b65d40b55c1ea7fbc986cb84b769adf7c73908ada5513574756a2c76454fe45d"
+  },
+  {
+    "file": "as-sol1-validation/01-product-audit.log",
+    "bytes": 1956,
+    "sha256": "35b63043b214a4dad0db59e56f729daeb308eec779f1d5f79ba487eb6ce2b672"
+  },
+  {
+    "file": "as-sol1-validation/02-unit-initial.log",
+    "bytes": 62465,
+    "sha256": "1f880532f9b519645b6de789d85c760c5028bebe3bdb59d88df776e753c968ec"
+  },
+  {
+    "file": "as-sol1-validation/03-unit-rerun.log",
+    "bytes": 436,
+    "sha256": "51685696088d38c68a6187c0552841b6f2b1eb9460b3d19b625fe40dea1dceb5"
+  },
+  {
+    "file": "as-sol1-validation/04-unit-final-attempt.log",
+    "bytes": 33808,
+    "sha256": "29975118e30c3feb1588d15bee64aa4f9fdc9e881dc6fab60f561201787f3588"
+  },
+  {
+    "file": "as-sol1-validation/05-unit-final.log",
+    "bytes": 436,
+    "sha256": "93d70262a264e279fafe697e925e64ae389c14cd3605a7c48d375daf5edb5903"
+  },
+  {
+    "file": "as-sol1-validation/06-eslint.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/07-cross-review.md",
+    "bytes": 3455,
+    "sha256": "b14e8979db49c7e3398ab22496e223854307f1a51c2bb8b2ff97790994c52e5b"
+  },
+  {
+    "file": "as-sol1-validation/07-existing-suites.log",
+    "bytes": 687,
+    "sha256": "e8ecb73edeecc5d871eded7be9191732f2ab362dc6b93e07b5c006c651a88a58"
+  },
+  {
+    "file": "as-sol1-validation/08-final-product-audit.log",
+    "bytes": 948,
+    "sha256": "fd49b71d6b1afeede338d128bd28e9e62eb506eb3fe064b895167b6083032b4a"
+  },
+  {
+    "file": "as-sol1-validation/09-diff-check.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/10-eslint-final-tests.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/11-diff-check-final.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/12-unit-cross-fix.log",
+    "bytes": 436,
+    "sha256": "42c6fc1cedbc3123d86b4a43799b7c399257d62d9f3f3624ece31b974134d4c5"
+  },
+  {
+    "file": "as-sol1-validation/13-eslint-cross-fix.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/14-diff-check-cross-fix.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol1-validation/15-cross-review-final.md",
+    "bytes": 1468,
+    "sha256": "28a216f60ab0b6a33dd2688b62d7eccbe7ceda24c442f90f8d758fd4a00cc31a"
+  },
+  {
+    "file": "as-sol2-validation/01-unit-initial.log",
+    "bytes": 33168,
+    "sha256": "b3dc8f7aa27915cc716ef6afdbb70906b9541d541920d5e67c917673292af3b7"
+  },
+  {
+    "file": "as-sol2-validation/02-unit-rerun.log",
+    "bytes": 500,
+    "sha256": "0f44e8d907e55b7ecb013dfca2b2387be6368c99b6a8775535316bab3c270226"
+  },
+  {
+    "file": "as-sol2-validation/03-unit-contract-complete.log",
+    "bytes": 500,
+    "sha256": "102c6a5d4cceec4b1f24c3b54144ff362654ab81f203309e59c2b8b1cb4c6c7d"
+  },
+  {
+    "file": "as-sol2-validation/04-eslint.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol2-validation/05-inverse-audit.log",
+    "bytes": 2038,
+    "sha256": "913edff6107690a9f4925f9bd72f77624f4c9c750cdad4d029d9c3ca7ec3e56d"
+  },
+  {
+    "file": "as-sol2-validation/06-diff-check.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol2-validation/07-cross-review.md",
+    "bytes": 4043,
+    "sha256": "c93703c5f28ee10827f0401766e588eb81722192b97df08e9983382728a4b443"
+  },
+  {
+    "file": "as-sol2-validation/08-unit-cross-fixes.log",
+    "bytes": 2482,
+    "sha256": "990314e0d33170f54520168a40c7755597f64a48a7398d68e0a3f34653208250"
+  },
+  {
+    "file": "as-sol2-validation/09-unit-cross-fixes-rerun.log",
+    "bytes": 9840,
+    "sha256": "4fc45faf5ccbb18875120d6c5810b1bb01df17fb25c738b106c08d1b9151e26b"
+  },
+  {
+    "file": "as-sol2-validation/10-unit-cross-fixes-final.log",
+    "bytes": 494,
+    "sha256": "5afe0935d75c15c89ce4d99ada43f76a6cb865467f5706b5737ba83944e76f68"
+  },
+  {
+    "file": "as-sol2-validation/11-eslint-cross-fixes-final.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "as-sol2-validation/12-diff-check-cross-fixes-final.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

@@ -56,6 +56,13 @@ def test_codecs_keep_exact_words_and_spreadsheet_prefixes():
     assert svc.decode_words(svc.encode_words([""])) == [""]
 
 
+def test_escape_cell_handles_none():
+    assert svc.escape_cell(None) == ""
+    assert svc.escape_cell("") == ""
+    assert svc.escape_cell("normal") == "normal"
+    assert svc.escape_cell("=cmd") == "'=cmd"
+
+
 def test_large_cell_limit_and_failure_restore():
     limit = csv.field_size_limit()
     assert svc.read_records(b"a" * svc.MAX_BYTES) == [["a" * svc.MAX_BYTES]]
@@ -110,7 +117,7 @@ async def test_export_and_unchanged_preview_large_cells(monkeypatch):
     db = AsyncMock()
     db.execute.return_value.fetchall = lambda: []
     raw = await svc.export_csv(db)
-    assert raw.startswith(b'\xef\xbb\xbf"product_code"') and raw.endswith(b"\r\n")
+    assert raw.startswith(b'\xef\xbb\xbf"product_id"') and raw.endswith(b"\r\n")
     checked, plans = await svc.inspect_update(db, raw, "export.csv")
     assert checked["unchanged"] == 1 and checked["blocked"] == 0
     assert plans[0]["sets"] == plans[0]["words"] == {}
@@ -124,7 +131,7 @@ async def test_export_and_unchanged_preview_large_cells(monkeypatch):
 @pytest.mark.parametrize(
     "change,error",
     [
-        ({"product_code": ""}, "ROUNDTRIP_UNKNOWN_CODE"),
+        ({"product_id": ""}, "ROUNDTRIP_UNKNOWN_CODE"),
         ({"revision": "old"}, "ROUNDTRIP_STALE"),
         ({"japanese_title": "  "}, "JAPANESE_TITLE_REQUIRED"),
         ({"release_date": "2026-02-30"}, "RELEASE_DATE_FORMAT"),

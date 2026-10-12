@@ -8,56 +8,9 @@ from pathlib import Path
 
 import pytest
 
-TEST_PG_URL = os.getenv("TEST_PG_URL")
+# CI は TEST_PG_URL を設定しない（test.yml）ため、test_inventory_aggregated.py:25 と同じく RLS_ADMIN_DATABASE_URL に fallback する。
+_PG_URL = os.getenv("TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "inventory_aggregation"
-MIGRATION_FILE = "20260620_010000_create_inventory_aggregation_rules.sql"
-
-
-def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
-    statements: list[str] = []
-    buf: list[str] = []
-    i = 0
-    in_dollar = False
-    dollar_tag = ""
-    while i < len(sql):
-        if sql[i] == "$":
-            j = i + 1
-            while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
-                j += 1
-            if j < len(sql) and sql[j] == "$":
-                tag = sql[i : j + 1]
-                if not in_dollar:
-                    in_dollar = True
-                    dollar_tag = tag
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-                if tag == dollar_tag:
-                    in_dollar = False
-                    dollar_tag = ""
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-        if sql[i] == ";" and not in_dollar:
-            statements.append("".join(buf))
-            buf = []
-        else:
-            buf.append(sql[i])
-        i += 1
-    if buf:
-        statements.append("".join(buf))
-    return statements
-
-
-async def _apply_migration(eng, filename: str) -> None:
-    from sqlalchemy import text
-
-    sql = (Path(__file__).resolve().parents[2] / "migrations" / filename).read_text("utf-8")
-    async with eng.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.execute(text(stmt))
 
 
 def _load_csv(path: Path) -> list[dict[str, str]]:
@@ -152,15 +105,25 @@ def test_aggregate_inventory_offers_note_group_and_condition_normalization():
     assert results[0].reason == "最安値のため採用"
 
 
-@pytest.mark.skipif(not TEST_PG_URL, reason="実 PostgreSQL 環境が必要 (TEST_PG_URL 未設定)。")
+@pytest.mark.skipif(
+    not _PG_URL,
+    reason="実 PostgreSQL 環境が必要 (TEST_PG_URL / RLS_ADMIN_DATABASE_URL 未設定)。",
+)
 @pytest.mark.asyncio
-async def test_inventory_aggregation_rules_migration_seeds_defaults():
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
+async def test_inventory_aggregation_rules_table_holds_spec_defaults():
+    """表の構造は migration、4 行はアプリの既定（DEFAULT_AGGREGATION_RULES）から入れて確かめる。
 
-    engine = create_async_engine(TEST_PG_URL, echo=False)
+    期待値の 4 行（ver4.1）は文字列で固定し、seed 元の定数と同じものを比べるだけの試験にしない。
+    """
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+    from app.services.inventory_aggregation import DEFAULT_AGGREGATION_RULES, load_aggregation_rules
+    from tests.rls_bootstrap import bootstrap_inventory_aggregation_rules
+
+    engine = create_async_engine(_PG_URL, echo=False)
     try:
-        await _apply_migration(engine, MIGRATION_FILE)
+        await bootstrap_inventory_aggregation_rules(engine)
         async with engine.connect() as conn:
             result = await conn.execute(
                 text(
@@ -181,5 +144,9 @@ async def test_inventory_aggregation_rules_migration_seeds_defaults():
             },
             {"condition": "No shrink box", "price_tolerance": 100, "stock_tolerance": 5},
         ]
+
+        # アプリが DB から読む値が、コードの既定と同じであること
+        async with AsyncSession(engine) as session:
+            assert await load_aggregation_rules(session) == list(DEFAULT_AGGREGATION_RULES)
     finally:
         await engine.dispose()

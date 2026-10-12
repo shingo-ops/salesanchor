@@ -1,0 +1,9 @@
+services:
+  tinyproxy:
+    build: ./tinyproxy
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./tinyproxy/tinyproxy.conf:/etc/tinyproxy/tinyproxy.conf:ro
+      - ./tinyproxy/filter:/etc/tinyproxy/filter:ro
+    command: tinyproxy -d -c /etc/tinyproxy/tinyproxy.conf

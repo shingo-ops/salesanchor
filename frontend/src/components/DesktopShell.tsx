@@ -182,15 +182,17 @@ export default function DesktopShell() {
   const showManagementCenter = hasAny(
     "staff.view", "teams.view", "roles.view", "bots.view",
     "shifts.view", "channels.view", "erp.view", "orders.view",
-    "customers.view", "suppliers.view", "purchase_orders.view",
+    "customers.view", "suppliers.view",
     "tenant.profile.view",
   );
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
+  // 「抽出ルール設定」は解析管理ページ内サブナビに統合済み（ADR-144 hub-shell構造）
+  // 順序: LINE解析 → 買取相場 → 為替レート管理
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
-    { to: "/super-admin/tcg-line-import",      labelKey: "nav.superAdminTcgLineImport" },
-    { to: "/super-admin/analysis-rules",       labelKey: "nav.superAdminAnalysisRules" },
-    { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
+    { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
+    { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
+    { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
   ] : [];
 
   const moreItems: NavItem[] = [];
@@ -268,18 +270,6 @@ export default function DesktopShell() {
                 >
                   <span className="sidebar-icon"><NAV_ICONS.inventory size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.inventory")}</span>
-                </NavLink>
-              )}
-
-              {/* 発注管理（在庫表 ↔ 見積・請求管理 の間）。在庫表を経由せず発注書を確認・管理できる単独導線。 */}
-              {hasPermission("purchase_orders.view") && (
-                <NavLink
-                  to="/purchase-orders"
-                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarNavClick}
-                >
-                  <span className="sidebar-icon"><NAV_ICONS.purchaseOrders size={ICON.base} /></span>
-                  <span className="sidebar-label">{t("nav.purchaseOrders")}</span>
                 </NavLink>
               )}
 
@@ -371,16 +361,17 @@ export default function DesktopShell() {
               {isSuperAdmin && (
                 <>
                   <div className="sidebar-divider" aria-hidden="true" />
-                  <SidebarAccordion
-                    label={t("nav.saasAdmin")}
-                    icon={<NAV_ICONS.saasAdmin size={ICON.base} />}
-                    items={saasAdminItems}
-                    activePaths={["/super-admin"]}
-                    isExpanded={sidebarExpanded}
-                    isOpen={openAccordion === "saasAdmin"}
-                    onToggle={() => toggleAccordion("saasAdmin")}
-                    onNavClick={handleSidebarNavClick}
-                  />
+                  {saasAdminItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                      onClick={handleSidebarNavClick}
+                    >
+                      <span className="sidebar-icon"><NAV_ICONS.saasAdmin size={ICON.base} /></span>
+                      <span className="sidebar-label">{t(item.labelKey)}</span>
+                    </NavLink>
+                  ))}
                 </>
               )}
 

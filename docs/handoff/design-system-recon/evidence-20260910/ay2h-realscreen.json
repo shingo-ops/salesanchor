@@ -1,0 +1,18 @@
+[
+  {
+    "case": "redirect /super-admin/tcg-parallel-report",
+    "finalPath": "/super-admin/analysis-rules",
+    "selectedSidebar": [
+      "ダッシュボード"
+    ],
+    "selectedTabsOrCurrent": [
+      "LINE解析",
+      "インポート"
+    ],
+    "headings": [
+      "LINE解析",
+      "配信設定"
+    ],
+    "parallelReportApiCalled": false
+  }
+]

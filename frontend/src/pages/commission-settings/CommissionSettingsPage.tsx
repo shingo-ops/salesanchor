@@ -13,6 +13,9 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 type RateType = "rate" | "fixed";
@@ -202,7 +205,7 @@ export default function CommissionSettingsPage() {
                       <tr key={role} data-testid={`settings-row-${role}`}>
                         <td>{ROLE_LABELS[role]}</td>
                         <td>
-                          <select
+                          <SelectControl
                             value={cfg.type}
                             onChange={(e) =>
                               updateRole(role, { type: e.target.value as RateType })
@@ -212,10 +215,10 @@ export default function CommissionSettingsPage() {
                           >
                             <option value="rate">{t("commissions.typeRate")}</option>
                             <option value="fixed">{t("commissions.typeFixed")}</option>
-                          </select>
+                          </SelectControl>
                         </td>
                         <td>
-                          <input
+                          <TextFieldControl
                             type="number"
                             min={0}
                             step={cfg.type === "rate" ? 0.01 : 1}
@@ -225,6 +228,7 @@ export default function CommissionSettingsPage() {
                             }
                             aria-label={`${ROLE_LABELS[role]} ${t("commissions.colValue")}`}
                             data-testid={`settings-value-${role}`}
+                            style={{ width: "auto" }}
                           />
                         </td>
                         <td>
@@ -248,14 +252,14 @@ export default function CommissionSettingsPage() {
                 gap: "var(--space-2)",
               }}
             >
-              <button
+              <Button variant="primary" size="md"
                 type="submit"
-                className="btn-primary"
+
                 disabled={saving}
                 data-testid="settings-save"
               >
                 {saving ? t("common.saving") : t("common.save")}
-              </button>
+              </Button>
             </div>
             {settings && (
               <p className="text-muted" style={{ fontSize: "var(--font-sm)" }}>

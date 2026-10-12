@@ -1,4 +1,4 @@
-/* Shared Button appearance. Legacy raw btn-* styles remain in components.css. */
+/* Shared Button and ButtonLink appearance SSoT. */
 .comp-btn {
   display: inline-flex;
   align-items: center;
@@ -15,6 +15,26 @@
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
   cursor: pointer;
+}
+
+a.comp-btn {
+  text-decoration: none;
+}
+
+.comp-btn-layout--mt-2 {
+  margin-top: var(--space-2);
+}
+
+.comp-btn-layout--ml-2 {
+  margin-left: var(--space-2);
+}
+
+.comp-btn-layout--ml-3 {
+  margin-left: var(--space-3);
+}
+
+.comp-btn-layout--ml-auto {
+  margin-left: auto;
 }
 
 .comp-btn--sm {

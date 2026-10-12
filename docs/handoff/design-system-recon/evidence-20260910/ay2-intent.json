@@ -1,0 +1,1816 @@
+{
+ "classes": {
+  "analysis-dashboard-window-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G40"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 1,
+   "intro": {
+    "commit": "02ced67a2|2026-09-25|shingo-cc|feat: integrate file upload into dashboard import tab",
+    "merge": "da2d91cda|2026-09-25|Merge pull request #3774 from shingo-ops/release/dashboard-upload"
+   }
+  },
+  "content-toolbar": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/components/field-size.css:22 .content-toolbar .field-w-md",
+    "frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm"
+   ],
+   "cssRuleCount": 2,
+   "docHits": 1,
+   "intro": {
+    "commit": "56697e6fe|2026-07-21|shingo-cc|feat(page-header-v2): 操作台ContentToolbar部品を新設（§2.5・便3a''-①・載せ替えは次便）",
+    "merge": "ecf78b89a|2026-07-21|Merge remote-tracking branch 'origin/main' into release/toolbar-part"
+   }
+  },
+  "db-weekly-composer-input": {
+   "inputUse": {
+    "n": 2,
+    "groups": [
+     "G15"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 2,
+   "docHits": 1,
+   "intro": {
+    "commit": "283218f2a|2026-06-21|shingo-ops|weekly advisor follow-up add",
+    "merge": "fce5fa2f3|2026-06-21|Merge pull request #2404 from shingo-ops/codex/weekly-advisor-w1c-follow-add-clean"
+   }
+  },
+  "dist-input": {
+   "inputUse": {
+    "n": 3,
+    "groups": [
+     "G13"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 2,
+   "docHits": 0,
+   "intro": {
+    "commit": "bd46384af|2026-09-04|shingo-cc|feat: TCG 配信先管理画面 (CC_TASK_DISTUI-01)",
+    "merge": "bcf70efd1|2026-09-04|Merge remote-tracking branch 'origin/main' into release/distui-01-distribution-targets"
+   }
+  },
+  "dist-input--error": {
+   "inputUse": {
+    "n": 3,
+    "groups": [
+     "G13"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "bd46384af|2026-09-04|shingo-cc|feat: TCG 配信先管理画面 (CC_TASK_DISTUI-01)",
+    "merge": "bcf70efd1|2026-09-04|Merge remote-tracking branch 'origin/main' into release/distui-01-distribution-targets"
+   }
+  },
+  "field-h-md": {
+   "inputUse": {
+    "n": 6,
+    "groups": [
+     "G12",
+     "G14",
+     "G33"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 1,
+   "intro": {
+    "commit": "818da9baa|2026-07-21|shingo-cc|feat(field-size): 寸法金型トークン新設（高さ3段×幅3段・便A・画面ゼロ変更）",
+    "merge": "423917a06|2026-07-21|Merge pull request #3015 from shingo-ops/release/field-size-tokens"
+   }
+  },
+  "field-w-md": {
+   "inputUse": {
+    "n": 3,
+    "groups": [
+     "G12"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 2,
+   "docHits": 0,
+   "intro": {
+    "commit": "818da9baa|2026-07-21|shingo-cc|feat(field-size): 寸法金型トークン新設（高さ3段×幅3段・便A・画面ゼロ変更）",
+    "merge": "423917a06|2026-07-21|Merge pull request #3015 from shingo-ops/release/field-size-tokens"
+   }
+  },
+  "field-w-sm": {
+   "inputUse": {
+    "n": 3,
+    "groups": [
+     "G14",
+     "G33"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 2,
+   "docHits": 2,
+   "intro": {
+    "commit": "818da9baa|2026-07-21|shingo-cc|feat(field-size): 寸法金型トークン新設（高さ3段×幅3段・便A・画面ゼロ変更）",
+    "merge": "423917a06|2026-07-21|Merge pull request #3015 from shingo-ops/release/field-size-tokens"
+   }
+  },
+  "form-grid": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:113 .form-grid > .form-row input:focus"
+   ],
+   "cssRuleCount": 7,
+   "docHits": 4,
+   "intro": {
+    "commit": "1e1ecfb32|2026-05-23|shingo-ops|refactor: App.css 1999行を6ファイルに分割（デッドコード削除・modal z-index バグ修正）",
+    "merge": "06add31c0|2026-05-23|Merge remote-tracking branch 'origin/main' into feature/app-css-split"
+   }
+  },
+  "form-group": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/components.css:19 .form-group input",
+    "frontend/src/components.css:30 .form-group input:focus",
+    "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/pages-layout.css:246 .login-card .form-group input",
+    "frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "cssRuleCount": 12,
+   "docHits": 21,
+   "intro": {
+    "commit": "513678c43|2026-06-03|Hikky-dev|feat(products): 商品マスタ編集フォームの視認性・入力性改善 (ADR-093) (#1488)",
+    "merge": "cf05c3880|2026-06-03|Merge pull request #1490 from shingo-ops/develop"
+   }
+  },
+  "form-row": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/company-forms.css:100 .form-grid > .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:113 .form-grid > .form-row input:focus",
+    "frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "cssRuleCount": 8,
+   "docHits": 7,
+   "intro": {
+    "commit": "1e1ecfb32|2026-05-23|shingo-ops|refactor: App.css 1999行を6ファイルに分割（デッドコード削除・modal z-index バグ修正）",
+    "merge": "06add31c0|2026-05-23|Merge remote-tracking branch 'origin/main' into feature/app-css-split"
+   }
+  },
+  "gs-advisor__metric-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G36"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 2,
+   "docHits": 0,
+   "intro": {
+    "commit": "44e80a3ab|2026-06-20|shingo-ops|advisor-phase1-pr5-goal-advisor-ui",
+    "merge": "3a7dbe135|2026-06-20|Merge pull request #2390 from shingo-ops/feature/morimoto/advisor-phase1-pr5-goal-advisor-ui"
+   }
+  },
+  "gs-advisor__monthly-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G35"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "44e80a3ab|2026-06-20|shingo-ops|advisor-phase1-pr5-goal-advisor-ui",
+    "merge": "3a7dbe135|2026-06-20|Merge pull request #2390 from shingo-ops/feature/morimoto/advisor-phase1-pr5-goal-advisor-ui"
+   }
+  },
+  "gs-input": {
+   "inputUse": {
+    "n": 3,
+    "groups": [
+     "G35",
+     "G36",
+     "G37"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 3,
+   "docHits": 0,
+   "intro": {
+    "commit": "7e855e0bb|2026-05-25|shingo-ops|refactor: 全36ページを pages/<lowercase-kebab-case>/ サブフォルダに移行 (#722)",
+    "merge": "611cee4a3|2026-05-25|Merge remote-tracking branch 'origin/main' into fix/sync-develop-main"
+   }
+  },
+  "gs-input-saved": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G37"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "7e855e0bb|2026-05-25|shingo-ops|refactor: 全36ページを pages/<lowercase-kebab-case>/ サブフォルダに移行 (#722)",
+    "merge": "611cee4a3|2026-05-25|Merge remote-tracking branch 'origin/main' into fix/sync-develop-main"
+   }
+  },
+  "inbox-search-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G32"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "e31f60aa1|2026-05-25|shingo-ops|refactor: INBOX_STYLES CSS-in-JS を InboxPage.css に外出し（ADR-067準拠）",
+    "merge": "683bb7b7e|2026-05-25|refactor: INBOX_STYLES CSS-in-JS を InboxPage.css に外出し（ADR-067準拠）"
+   }
+  },
+  "input": {
+   "inputUse": {
+    "n": 48,
+    "groups": [
+     "G01",
+     "G02",
+     "G10"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 0,
+   "docHits": 8,
+   "intro": null
+  },
+  "karte-field-empty": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G38"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "e6c0c9f83|2026-06-12|shingo-ops|fix(karte): Phase 5a/5b — カルテ見本一致 + 視覚ゲート稼働（--accent ネイビー統一）",
+    "merge": "e480b14d5|2026-06-12|Merge pull request #1991 from shingo-ops/develop"
+   }
+  },
+  "login-card": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/pages-layout.css:246 .login-card .form-group input",
+    "frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "cssRuleCount": 5,
+   "docHits": 3,
+   "intro": {
+    "commit": "1e1ecfb32|2026-05-23|shingo-ops|refactor: App.css 1999行を6ファイルに分割（デッドコード削除・modal z-index バグ修正）",
+    "merge": "06add31c0|2026-05-23|Merge remote-tracking branch 'origin/main' into feature/app-css-split"
+   }
+  },
+  "manual-record-datetime": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G02"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 0,
+   "docHits": 0,
+   "intro": null
+  },
+  "modal-content-wide": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/company-forms.css:147 .modal-content-wide .form-row input:not([type=\"checkbox\"]):not([type=\"radio\"])",
+    "frontend/src/company-forms.css:163 .modal-content-wide .form-row input:focus"
+   ],
+   "cssRuleCount": 4,
+   "docHits": 1,
+   "intro": {
+    "commit": "1e1ecfb32|2026-05-23|shingo-ops|refactor: App.css 1999行を6ファイルに分割（デッドコード削除・modal z-index バグ修正）",
+    "merge": "06add31c0|2026-05-23|Merge remote-tracking branch 'origin/main' into feature/app-css-split"
+   }
+  },
+  "pmd-field": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+   ],
+   "cssRuleCount": 3,
+   "docHits": 1,
+   "intro": {
+    "commit": "4cefe8a60|2026-09-03|shingo-cc|feat(parity03-fe): ProductMasterDrawer Phase 3 実装",
+    "merge": "9936f69e9|2026-09-03|Merge remote-tracking branch 'origin/main' into release/parity03-product-master-drawer-fe"
+   }
+  },
+  "product-edit-form": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "cssRuleCount": 10,
+   "docHits": 5,
+   "intro": {
+    "commit": "513678c43|2026-06-03|Hikky-dev|feat(products): 商品マスタ編集フォームの視認性・入力性改善 (ADR-093) (#1488)",
+    "merge": "cf05c3880|2026-06-03|Merge pull request #1490 from shingo-ops/develop"
+   }
+  },
+  "qty-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G02"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 0,
+   "docHits": 0,
+   "intro": null
+  },
+  "right-panel-field": {
+   "inputUse": {
+    "n": 24,
+    "groups": [
+     "G04",
+     "G38",
+     "G39"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 3,
+   "docHits": 6,
+   "intro": {
+    "commit": "e31f60aa1|2026-05-25|shingo-ops|refactor: INBOX_STYLES CSS-in-JS を InboxPage.css に外出し（ADR-067準拠）",
+    "merge": "683bb7b7e|2026-05-25|refactor: INBOX_STYLES CSS-in-JS を InboxPage.css に外出し（ADR-067準拠）"
+   }
+  },
+  "sales-form-other-input": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G39"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 1,
+   "docHits": 0,
+   "intro": {
+    "commit": "c6fefe49c|2026-06-14|shingo-ops|feat: ADR-108 Phase B-1 — カルテ販売形態 複数選択 + その他自由記述",
+    "merge": "19999745c|2026-06-14|feat: ADR-108 Phase B-1 カルテ販売形態 複数選択 + その他自由記述 + テナント別カスタム"
+   }
+  },
+  "schedule-input": {
+   "inputUse": {
+    "n": 6,
+    "groups": [
+     "G08"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 3,
+   "docHits": 3,
+   "intro": {
+    "commit": "1e4c4e7fb|2026-06-21|shingo-cc|fix schedule parity",
+    "merge": "8f20df5b8|2026-06-21|Merge pull request #2399 from shingo-ops/feature/morimoto/schedule-parity-v2"
+   }
+  },
+  "search-bar": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/components.css:50 .search-bar input"
+   ],
+   "cssRuleCount": 2,
+   "docHits": 1,
+   "intro": {
+    "commit": "1e1ecfb32|2026-05-23|shingo-ops|refactor: App.css 1999行を6ファイルに分割（デッドコード削除・modal z-index バグ修正）",
+    "merge": "06add31c0|2026-05-23|Merge remote-tracking branch 'origin/main' into feature/app-css-split"
+   }
+  },
+  "search-input": {
+   "inputUse": {
+    "n": 2,
+    "groups": [
+     "G12",
+     "G33"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 0,
+   "docHits": 0,
+   "intro": null
+  },
+  "search-input-field": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G32"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 3,
+   "docHits": 0,
+   "intro": {
+    "commit": "1deac6d34|2026-05-24|shingo-ops|feat: 検索欄をデザイントークン化（SSoT）＋フォーカスネオングロー追加 (#661)",
+    "merge": "9e5e612dd|2026-05-24|Merge remote-tracking branch 'origin/main' into develop"
+   }
+  },
+  "source-search": {
+   "inputUse": null,
+   "qualifierRules": [
+    "frontend/src/features/tcg-analysis-review/source-raw-pane.css:48 .source-search input"
+   ],
+   "cssRuleCount": 4,
+   "docHits": 0,
+   "intro": {
+    "commit": "4b5d526c9|2026-09-02|shingo-cc|feat(parity03): 解析レビュー FE 第1段階（PARITY-03）",
+    "merge": "a930e70dc|2026-09-02|Merge branch 'main' into release/parity03-analysis-review-fe"
+   }
+  },
+  "w-full": {
+   "inputUse": {
+    "n": 1,
+    "groups": [
+     "G02"
+    ]
+   },
+   "qualifierRules": [],
+   "cssRuleCount": 0,
+   "docHits": 0,
+   "intro": null
+  }
+ },
+ "inline": [
+  {
+   "at": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:220",
+   "group": "G02",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "8bdf7399f|2026-05-11|Hikky-dev|feat(adr-021-sprint5): 報酬計算 MVP — 5 ロール × カスタム rate × is_employee 除外 (#325)",
+    "merge": "7863b69fe|2026-05-11|fix: コンフリクト解消（Layout.tsxはdevelop採用、favicon新ロゴ維持）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/CountryCombobox.tsx:46",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:115",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:316",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "313: {/* Recipient Name */}",
+    "324: {/* Telephone (dial code + number) */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:357",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "354: {/* Email */}",
+    "365: {/* Tax ID */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:368",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "365: {/* Tax ID */}",
+    "376: {/* Address Line 1 */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:379",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "376: {/* Address Line 1 */}",
+    "387: {/* Address Line 2 */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:390",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "387: {/* Address Line 2 */}",
+    "398: {/* Address Line 3 */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:401",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "398: {/* Address Line 3 */}",
+    "409: {/* City */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:412",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "409: {/* City */}",
+    "420: {/* State */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:423",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "420: {/* State */}",
+    "431: {/* ZIP */}"
+   ],
+   "blame": {
+    "commit": "9dfc3886d|2026-06-08|shingo-ops|fix(register): 公開登録フォーム UX是正（担当者必須化・ラベル明確化・city/state縦並び）",
+    "merge": "b4e840579|2026-06-08|Merge pull request #1784 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:434",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "431: {/* ZIP */}",
+    "442: {/* Country */}"
+   ],
+   "blame": {
+    "commit": "9dfc3886d|2026-06-08|shingo-ops|fix(register): 公開登録フォーム UX是正（担当者必須化・ラベル明確化・city/state縦並び）",
+    "merge": "b4e840579|2026-06-08|Merge pull request #1784 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:253",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "262: {/* 2. Telephone Number (dial code combo + number) */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:298",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "295: {/* 3. Email Address */}",
+    "307: {/* 4. Payment Account Name (optional) */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:313",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "321: {/* 5. Tax ID (optional) */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:324",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "321: {/* 5. Tax ID (optional) */}",
+    "332: {/* 6. Address Line 1 */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:335",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "332: {/* 6. Address Line 1 */}",
+    "344: {/* 7. Address Line 2 */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:347",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "344: {/* 7. Address Line 2 */}",
+    "355: {/* 8. City */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:358",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "355: {/* 8. City */}",
+    "366: {/* 9. State */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:369",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "366: {/* 9. State */}",
+    "377: {/* 10. ZIP */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:380",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "377: {/* 10. ZIP */}",
+    "388: {/* 11. Country */}"
+   ],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:306",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "315: {/* 2. Telephone Number (dial code combo + number) */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:351",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "348: {/* 3. Email Address */}",
+    "360: {/* 4. Payment Account Name (optional) */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:366",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "374: {/* 5. Tax ID (optional) */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:377",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "374: {/* 5. Tax ID (optional) */}",
+    "385: {/* 6. Address Line 1 */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:388",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "385: {/* 6. Address Line 1 */}",
+    "397: {/* 7. Address Line 2 */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:400",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "397: {/* 7. Address Line 2 */}",
+    "408: {/* 8. City */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:411",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "408: {/* 8. City */}",
+    "419: {/* 9. State */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:422",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "419: {/* 9. State */}",
+    "430: {/* 10. ZIP */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:433",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "430: {/* 10. ZIP */}",
+    "441: {/* 11. Country */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:511",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:520",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:529",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:567",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "564: {/* 1. Recipient Name */}",
+    "576: {/* 2. Telephone Number (optional for shipping) */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:609",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "606: {/* 3. Email Address (optional for shipping) */}",
+    "617: {/* 4. Tax ID (optional) */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:620",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "617: {/* 4. Tax ID (optional) */}",
+    "628: {/* 5. Address Line 1 */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:631",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "628: {/* 5. Address Line 1 */}",
+    "640: {/* 6. Address Line 2 */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:643",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "640: {/* 6. Address Line 2 */}",
+    "651: {/* 7. Address Line 3 (shipping only, ADR-126) */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:654",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "651: {/* 7. Address Line 3 (shipping only, ADR-126) */}",
+    "662: {/* 8. City */}"
+   ],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:665",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "662: {/* 8. City */}",
+    "673: {/* 9. State */}"
+   ],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:676",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "673: {/* 9. State */}",
+    "684: {/* 10. ZIP */}"
+   ],
+   "blame": {
+    "commit": "9dfc3886d|2026-06-08|shingo-ops|fix(register): 公開登録フォーム UX是正（担当者必須化・ラベル明確化・city/state縦並び）",
+    "merge": "b4e840579|2026-06-08|Merge pull request #1784 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:687",
+   "group": "G02",
+   "inTableCell": false,
+   "comments": [
+    "684: {/* 10. ZIP */}",
+    "695: {/* 11. Country */}"
+   ],
+   "blame": {
+    "commit": "9dfc3886d|2026-06-08|shingo-ops|fix(register): 公開登録フォーム UX是正（担当者必須化・ラベル明確化・city/state縦並び）",
+    "merge": "b4e840579|2026-06-08|Merge pull request #1784 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:367",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [
+    "370: {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:371",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [
+    "370: {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:390",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:216",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [
+    "219: {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:220",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [
+    "219: {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:239",
+   "group": "G09",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterAddressPage.tsx:344",
+   "group": "G10",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterChangeBillingPage.tsx:284",
+   "group": "G10",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "b76f61bae|2026-06-12|shingo-ops|release: develop → main (#1981)",
+    "merge": "a0066b19a|2026-06-12|Merge main into develop: back-merge（release #1981 後の active-work.md 台帳同期）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:337",
+   "group": "G10",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "6e3764913|2026-06-10|shingo-ops|feat(adr-126): 顧客登録フォーム入力契約v2 実装 (#1881)",
+    "merge": "edf6c8a23|2026-06-10|Merge remote-tracking branch 'origin/main' into hotfix/release-0610"
+   }
+  },
+  {
+   "at": "frontend/src/pages/register/RegisterPage.tsx:596",
+   "group": "G10",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "9955c420d|2026-06-04|shingo-ops|feat(registration): 顧客登録トークン基盤（ADR-SA-03） (#1610)",
+    "merge": "423ffd939|2026-06-04|chore: develop ← main バックマージ（conflict 解消）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/login/LoginPage.tsx:93",
+   "group": "G11",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "ed660b9b8|2026-06-14|shingo-ops|feat(login): パスワード再設定・ログイン後リダイレクト・ログイン済みチェック（KGI 1-3）",
+    "merge": "7ef41654b|2026-06-14|Merge pull request #2147 from shingo-ops/feature/morimoto/login-ux-phase1"
+   }
+  },
+  {
+   "at": "frontend/src/pages/login/LoginPage.tsx:104",
+   "group": "G11",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "ed660b9b8|2026-06-14|shingo-ops|feat(login): パスワード再設定・ログイン後リダイレクト・ログイン済みチェック（KGI 1-3）",
+    "merge": "7ef41654b|2026-06-14|Merge pull request #2147 from shingo-ops/feature/morimoto/login-ux-phase1"
+   }
+  },
+  {
+   "at": "frontend/src/pages/login/LoginPage.tsx:136",
+   "group": "G11",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "ed660b9b8|2026-06-14|shingo-ops|feat(login): パスワード再設定・ログイン後リダイレクト・ログイン済みチェック（KGI 1-3）",
+    "merge": "7ef41654b|2026-06-14|Merge pull request #2147 from shingo-ops/feature/morimoto/login-ux-phase1"
+   }
+  },
+  {
+   "at": "frontend/src/pages/super-admin/TcgLineImportPage.tsx:374",
+   "group": "G16",
+   "inTableCell": false,
+   "comments": [
+    "373: {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}"
+   ],
+   "blame": {
+    "commit": "58b6d4418|2026-09-05|shingo-cc|feat: MIG-04 Stage 1 LINE エクスポート取り込みパイプライン",
+    "merge": "9d3d515ec|2026-09-05|Merge remote-tracking branch 'origin/main' into release/tcg-line-import-stage1"
+   }
+  },
+  {
+   "at": "frontend/src/pages/super-admin/TcgLineImportPage.tsx:395",
+   "group": "G16",
+   "inTableCell": false,
+   "comments": [
+    "394: {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}"
+   ],
+   "blame": {
+    "commit": "58b6d4418|2026-09-05|shingo-cc|feat: MIG-04 Stage 1 LINE エクスポート取り込みパイプライン",
+    "merge": "9d3d515ec|2026-09-05|Merge remote-tracking branch 'origin/main' into release/tcg-line-import-stage1"
+   }
+  },
+  {
+   "at": "frontend/src/components/FedExRateModal.tsx:176",
+   "group": "G17",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "eeb1db890|2026-06-10|shingo-ops|feat(adr-125): FedExRateModal を見積書作成ページに接続（送料見積もり導線）",
+    "merge": "f651bfb58|2026-06-10|Merge pull request #1882 from shingo-ops/feature/morimoto/fedex-modal-connection"
+   }
+  },
+  {
+   "at": "frontend/src/components/FedExRateModal.tsx:193",
+   "group": "G17",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "eeb1db890|2026-06-10|shingo-ops|feat(adr-125): FedExRateModal を見積書作成ページに接続（送料見積もり導線）",
+    "merge": "f651bfb58|2026-06-10|Merge pull request #1882 from shingo-ops/feature/morimoto/fedex-modal-connection"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:349",
+   "group": "G18",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:198",
+   "group": "G18",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:342",
+   "group": "G19",
+   "inTableCell": true,
+   "comments": [
+    "341: {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。 */}"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:191",
+   "group": "G19",
+   "inTableCell": true,
+   "comments": [
+    "189: {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。"
+   ],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:287",
+   "group": "G20",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "8bdf7399f|2026-05-11|Hikky-dev|feat(adr-021-sprint5): 報酬計算 MVP — 5 ロール × カスタム rate × is_employee 除外 (#325)",
+    "merge": "7863b69fe|2026-05-11|fix: コンフリクト解消（Layout.tsxはdevelop採用、favicon新ロゴ維持）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/commissions/CommissionsPage.tsx:153",
+   "group": "G20",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "b56f232eb|2026-06-04|Hikky-dev|feat(orders): 売上管理/報酬管理メニュー分離 + 受注一覧改修 + ステータスフロー + 顧客名リンク（ADR-021改修） (#1598)",
+    "merge": "48f4c1fc0|2026-06-04|Merge pull request #1602 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:275",
+   "group": "G21",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "8bdf7399f|2026-05-11|Hikky-dev|feat(adr-021-sprint5): 報酬計算 MVP — 5 ロール × カスタム rate × is_employee 除外 (#325)",
+    "merge": "7863b69fe|2026-05-11|fix: コンフリクト解消（Layout.tsxはdevelop採用、favicon新ロゴ維持）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/commissions/CommissionsPage.tsx:141",
+   "group": "G21",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "b56f232eb|2026-06-04|Hikky-dev|feat(orders): 売上管理/報酬管理メニュー分離 + 受注一覧改修 + ステータスフロー + 顧客名リンク（ADR-021改修） (#1598)",
+    "merge": "48f4c1fc0|2026-06-04|Merge pull request #1602 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:295",
+   "group": "G22",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "c94b3ff94|2026-05-21|Hikky-dev|feat(inventory): Sprint 2 — master edit UI (F2, super-admin + tenant-admin two-tier) (#510)",
+    "merge": "8b847576e|2026-05-21|feat: Meta Business Suite Inbox 完全再現（解析率100%達成）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:374",
+   "group": "G22",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "c94b3ff94|2026-05-21|Hikky-dev|feat(inventory): Sprint 2 — master edit UI (F2, super-admin + tenant-admin two-tier) (#510)",
+    "merge": "8b847576e|2026-05-21|feat: Meta Business Suite Inbox 完全再現（解析率100%達成）"
+   }
+  },
+  {
+   "at": "frontend/src/pages/inventory/InventoryFilterPanel.tsx:287",
+   "group": "G23",
+   "inTableCell": false,
+   "comments": [
+    "283: {/* 数量・単価の範囲 */}"
+   ],
+   "blame": {
+    "commit": "3ca4bdf5c|2026-06-03|Hikky-dev|feat(inventory): 在庫表の詳細フィルタに「表示条件」を追加（状態/形態/区分の複数選択 + 数量/単価の範囲） (#1558)",
+    "merge": "ca154c506|2026-06-03|Merge pull request #1556 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/inventory/InventoryFilterPanel.tsx:290",
+   "group": "G23",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "3ca4bdf5c|2026-06-03|Hikky-dev|feat(inventory): 在庫表の詳細フィルタに「表示条件」を追加（状態/形態/区分の複数選択 + 数量/単価の範囲） (#1558)",
+    "merge": "ca154c506|2026-06-03|Merge pull request #1556 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/inventory/InventoryFilterPanel.tsx:295",
+   "group": "G24",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "3ca4bdf5c|2026-06-03|Hikky-dev|feat(inventory): 在庫表の詳細フィルタに「表示条件」を追加（状態/形態/区分の複数選択 + 数量/単価の範囲） (#1558)",
+    "merge": "ca154c506|2026-06-03|Merge pull request #1556 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/inventory/InventoryFilterPanel.tsx:298",
+   "group": "G24",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "3ca4bdf5c|2026-06-03|Hikky-dev|feat(inventory): 在庫表の詳細フィルタに「表示条件」を追加（状態/形態/区分の複数選択 + 数量/単価の範囲） (#1558)",
+    "merge": "ca154c506|2026-06-03|Merge pull request #1556 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:384",
+   "group": "G25",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:233",
+   "group": "G25",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "1315ce7bb|2026-06-04|Hikky-dev|feat: 見積書・請求書の明細を海外顧客向けに改修（状態/形態/英語タイトル/形態別重量/総重量・ADR-093） (#1596)",
+    "merge": "5fd5b8f28|2026-06-04|Merge pull request #1594 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:387",
+   "group": "G26",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "afc6ddbda|2026-05-31|Hikky-dev|feat(quote/invoice): 在庫表からチェックして見積/請求を作成 (QA #33) (#1216)",
+    "merge": "d86dc8ef7|2026-05-31|Merge pull request #1215 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/quote-create/QuoteCreatePage.tsx:236",
+   "group": "G26",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "432334a51|2026-05-26|shingo-ops|feat(design-tokens): ADR-067 Phase 5B — width/height/maxWidth/minHeight/maxHeight 数値直書き禁止 (#869)",
+    "merge": "f6979833d|2026-05-26|Merge branch 'main' into develop"
+   }
+  },
+  {
+   "at": "frontend/src/components/InventoryPicker.tsx:217",
+   "group": "G28",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "8b4dc4913|2026-05-29|Hikky-dev|feat(ui): 商品選択を在庫一覧から選ぶ InventoryPicker に（A案2） (#1169)",
+    "merge": "65be6b55e|2026-05-29|Merge pull request #1163 from shingo-ops/develop"
+   }
+  },
+  {
+   "at": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:191",
+   "group": "G29",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "cf8741ac8|2026-06-09|shingo-ops|feat(modal): Modal に xl サイズ追加・発送/仕入/発注フォームを標準 Modal(xl) へ置換",
+    "merge": "2584e820c|2026-06-10|Merge pull request #1827 from shingo-ops/feature/morimoto/modal-xl-replacements"
+   }
+  },
+  {
+   "at": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:194",
+   "group": "G30",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "cf8741ac8|2026-06-09|shingo-ops|feat(modal): Modal に xl サイズ追加・発送/仕入/発注フォームを標準 Modal(xl) へ置換",
+    "merge": "2584e820c|2026-06-10|Merge pull request #1827 from shingo-ops/feature/morimoto/modal-xl-replacements"
+   }
+  },
+  {
+   "at": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx:197",
+   "group": "G31",
+   "inTableCell": true,
+   "comments": [],
+   "blame": {
+    "commit": "cf8741ac8|2026-06-09|shingo-ops|feat(modal): Modal に xl サイズ追加・発送/仕入/発注フォームを標準 Modal(xl) へ置換",
+    "merge": "2584e820c|2026-06-10|Merge pull request #1827 from shingo-ops/feature/morimoto/modal-xl-replacements"
+   }
+  },
+  {
+   "at": "frontend/src/features/tcg-import-review/ReviewSection.tsx:289",
+   "group": "G41",
+   "inTableCell": false,
+   "comments": [
+    "288: {/* ui-allow: super-admin専用確認ページ、汎用コンポーネント対象外 (#3306) */}"
+   ],
+   "blame": {
+    "commit": "155e6258d|2026-09-05|shingo-cc|feat: LINE import 確認工程 UI を追加（#3306 フロントエンド）",
+    "merge": "6dd292c75|2026-09-05|Merge pull request #3309 from shingo-ops/release/tcg-import-review-ui"
+   }
+  },
+  {
+   "at": "frontend/src/pages/super-admin/TcgLineImportPage.tsx:353",
+   "group": "G42",
+   "inTableCell": false,
+   "comments": [
+    "352: {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}"
+   ],
+   "blame": {
+    "commit": "58b6d4418|2026-09-05|shingo-cc|feat: MIG-04 Stage 1 LINE エクスポート取り込みパイプライン",
+    "merge": "9d3d515ec|2026-09-05|Merge remote-tracking branch 'origin/main' into release/tcg-line-import-stage1"
+   }
+  },
+  {
+   "at": "frontend/src/components/FedExRateModal.tsx:210",
+   "group": "G43",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "218650360|2026-06-10|shingo-ops|feat(adr-125): FedExRateModal に重量入力欄を追加（手動補正対応）",
+    "merge": "f651bfb58|2026-06-10|Merge pull request #1882 from shingo-ops/feature/morimoto/fedex-modal-connection"
+   }
+  },
+  {
+   "at": "frontend/src/components/FedExRateModal.tsx:239",
+   "group": "G44",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "e6237948f|2026-06-10|shingo-ops|feat(adr-124): FedEx見積もりモーダルに郵便番号入力と概算バッジを追加（仕様追補 2026-06-10）",
+    "merge": "c247bc1e0|2026-06-10|Merge pull request #1835 from shingo-ops/feature/morimoto/fedex-rates-pr-c"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:222",
+   "group": "G45",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "d98ca75bc|2026-06-11|Hikky-dev|feat(invoices): PayPal 決済リンク発行＋入金確認（ADR-101 mode1 / Increment 1） (#1940)",
+    "merge": "645092948|2026-06-11|Merge pull request #1942 from shingo-ops/feature/morimoto/adr127-phase2b-registered-label"
+   }
+  },
+  {
+   "at": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:271",
+   "group": "G46",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "204f7039a|2026-05-22|shingo-ops|feat: TSXインラインスタイルのデザイントークン化（31ファイル・131箇所）",
+    "merge": "1216a03bd|2026-05-22|Merge pull request #548 from shingo-ops/feature/design-tokens-tsx-inline"
+   }
+  },
+  {
+   "at": "frontend/src/components/InventorySearchBar.tsx:272",
+   "group": "G47",
+   "inTableCell": false,
+   "comments": [],
+   "blame": {
+    "commit": "49b3262f7|2026-05-22|Hikky-dev|feat(inventory): Sprint 7 — InventorySearchBar (7-way search + AND/OR) + QuoteCreatePage integration (F7) (#521)",
+    "merge": "9b0a327ae|2026-05-22|merge: mainとのコンフリクト解消（deploy.yml Sprint8マイグレーション保持）"
+   }
+  }
+ ],
+ "tokens": {
+  "--accent": {
+   "defs": [
+    "frontend/src/index.css:33:  --accent: #1e3a8a;             /* プライマリボタン・フォーカス */",
+    "frontend/src/index.css:241:  --accent: #5b8dd9;"
+   ],
+   "refFiles": 55
+  },
+  "--bg-primary": {
+   "defs": [
+    "frontend/src/index.css:16:  --bg-primary: #f5f7fa;        /* メイン背景（ページ全体） */",
+    "frontend/src/index.css:227:  --bg-primary: var(--palette-ink-deep);"
+   ],
+   "refFiles": 20
+  },
+  "--bg-subtle": {
+   "defs": [
+    "frontend/src/index.css:18:  --bg-subtle: #f7fafc;          /* テーブルヘッダ・カテゴリヘッダ等 */",
+    "frontend/src/index.css:229:  --bg-subtle: #243046;"
+   ],
+   "refFiles": 36
+  },
+  "--bg-surface": {
+   "defs": [
+    "frontend/src/index.css:17:  --bg-surface: #ffffff;         /* カード・モーダル等のサーフェス */",
+    "frontend/src/index.css:228:  --bg-surface: #1e293b;"
+   ],
+   "refFiles": 63
+  },
+  "--border": {
+   "defs": [
+    "frontend/src/index.css:28:  --border: #e2e8f0;",
+    "frontend/src/index.css:237:  --border: #334155;"
+   ],
+   "refFiles": 88
+  },
+  "--border-color": {
+   "defs": [
+    "frontend/src/index.css:151:  --border-color: #cccccc;",
+    "frontend/src/index.css:355:  --border-color: #475569;"
+   ],
+   "refFiles": 15
+  },
+  "--border-strong": {
+   "defs": [
+    "frontend/src/index.css:29:  --border-strong: #cbd5e0;",
+    "frontend/src/index.css:238:  --border-strong: #475569;"
+   ],
+   "refFiles": 8
+  },
+  "--border-subtle": {
+   "defs": [],
+   "refFiles": 6
+  },
+  "--card-login-max-w": {
+   "defs": [
+    "frontend/src/tokens.css:341:  --card-login-max-w:        400px;  /* ログインカード最大幅 */"
+   ],
+   "refFiles": 1
+  },
+  "--color-error": {
+   "defs": [
+    "frontend/src/tokens.css:554:  --color-error:          #b91c1c;",
+    "frontend/src/tokens.css:599:  --color-error:          #f87171;"
+   ],
+   "refFiles": 26
+  },
+  "--comp-input-height-sm": {
+   "defs": [
+    "frontend/src/tokens.css:482:  --comp-input-height-sm:      28px;                   /* small バリアント最小高 */"
+   ],
+   "refFiles": 2
+  },
+  "--field-h-md": {
+   "defs": [
+    "frontend/src/tokens.css:163:  --field-h-md:         36px;   /* 入力部品 高さ金型 md */"
+   ],
+   "refFiles": 3
+  },
+  "--field-w-md": {
+   "defs": [
+    "frontend/src/tokens.css:166:  --field-w-md:        280px;   /* 入力部品 幅金型 md */"
+   ],
+   "refFiles": 1
+  },
+  "--field-w-sm": {
+   "defs": [
+    "frontend/src/tokens.css:165:  --field-w-sm:        160px;   /* 入力部品 幅金型 sm */"
+   ],
+   "refFiles": 1
+  },
+  "--focus-ring-shadow": {
+   "defs": [
+    "frontend/src/index.css:93:  --focus-ring-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15); /* light: --accent #1e3a8a */",
+    "frontend/src/index.css:287:  --focus-ring-shadow: 0 0 0 3px rgba(91, 141, 217, 0.3);"
+   ],
+   "refFiles": 9
+  },
+  "--font-base": {
+   "defs": [
+    "frontend/src/tokens.css:16:  --font-base:          0.9rem;     /* 14.4px — 本文・入力（0.9〜0.95rem を吸収） */"
+   ],
+   "refFiles": 24
+  },
+  "--font-md": {
+   "defs": [
+    "frontend/src/tokens.css:17:  --font-md:            1rem;       /* 16px   — 標準テキスト */"
+   ],
+   "refFiles": 20
+  },
+  "--font-sm": {
+   "defs": [
+    "frontend/src/tokens.css:15:  --font-sm:            0.85rem;    /* 13.6px — サブテキスト（0.82〜0.88rem を吸収） */"
+   ],
+   "refFiles": 96
+  },
+  "--font-weight-medium": {
+   "defs": [
+    "frontend/src/tokens.css:29:  --font-weight-medium: 500;"
+   ],
+   "refFiles": 24
+  },
+  "--font-weight-semi": {
+   "defs": [
+    "frontend/src/tokens.css:30:  --font-weight-semi:   600;"
+   ],
+   "refFiles": 58
+  },
+  "--font-xs": {
+   "defs": [
+    "frontend/src/tokens.css:14:  --font-xs:            0.75rem;    /* 12px   — バッジ・フッタ */"
+   ],
+   "refFiles": 66
+  },
+  "--input-select-min-w": {
+   "defs": [
+    "frontend/src/tokens.css:351:  --input-select-min-w:      280px;  /* セレクト最小幅 */"
+   ],
+   "refFiles": 1
+  },
+  "--input-width-month": {
+   "defs": [
+    "frontend/src/tokens.css:426:  --input-width-month:     60px;   /* 月入力フィールド */"
+   ],
+   "refFiles": 2
+  },
+  "--input-width-product-name": {
+   "defs": [
+    "frontend/src/tokens.css:422:  --input-width-product-name: 280px; /* 商品名入力フィールド (見積/明細) */"
+   ],
+   "refFiles": 2
+  },
+  "--input-width-qty": {
+   "defs": [
+    "frontend/src/tokens.css:421:  --input-width-qty:       70px;   /* 数量入力フィールド */"
+   ],
+   "refFiles": 3
+  },
+  "--input-width-weight": {
+   "defs": [
+    "frontend/src/tokens.css:424:  --input-width-weight:    80px;   /* 重量入力フィールド */"
+   ],
+   "refFiles": 2
+  },
+  "--input-width-year": {
+   "defs": [
+    "frontend/src/tokens.css:425:  --input-width-year:      90px;   /* 年・単価入力フィールド */"
+   ],
+   "refFiles": 5
+  },
+  "--karte-field-bd": {
+   "defs": [
+    "frontend/src/tokens.css:324:  --karte-field-bd: #dde0e4;  /* カルテフィールド枠線色（見本 --bd2） */"
+   ],
+   "refFiles": 2
+  },
+  "--karte-field-bg": {
+   "defs": [
+    "frontend/src/tokens.css:323:  --karte-field-bg: #fafbfc;  /* カルテフィールド背景（見本 .fbox） */"
+   ],
+   "refFiles": 2
+  },
+  "--karte-field-px": {
+   "defs": [
+    "frontend/src/tokens.css:315:  --karte-field-px:      9px;  /* カルテフィールド横padding（見本 .fbox） */"
+   ],
+   "refFiles": 2
+  },
+  "--karte-field-py": {
+   "defs": [
+    "frontend/src/tokens.css:314:  --karte-field-py:      7px;  /* カルテフィールド縦padding（見本 .fbox） */"
+   ],
+   "refFiles": 2
+  },
+  "--min-width-input-sm": {
+   "defs": [
+    "frontend/src/tokens.css:417:  --min-width-input-sm:   120px;  /* 小型入力フィールド最小幅 */"
+   ],
+   "refFiles": 4
+  },
+  "--pmd-textarea-min-h": {
+   "defs": [
+    "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:113:  --pmd-textarea-min-h: 72px; /* テキストエリア最小高（--textarea-min-h:80px より小さい専用値）*/"
+   ],
+   "refFiles": 1
+  },
+  "--radius-lg": {
+   "defs": [
+    "frontend/src/tokens.css:92:  --radius-lg:   8px;"
+   ],
+   "refFiles": 30
+  },
+  "--radius-md": {
+   "defs": [
+    "frontend/src/tokens.css:91:  --radius-md:   6px;"
+   ],
+   "refFiles": 43
+  },
+  "--radius-sm": {
+   "defs": [
+    "frontend/src/tokens.css:90:  --radius-sm:   4px;"
+   ],
+   "refFiles": 42
+  },
+  "--search-focus-glow": {
+   "defs": [
+    "frontend/src/index.css:95:  --search-focus-glow: 0 0 0 3px rgba(30, 58, 138, 0.15), 0 0 10px 1px rgba(30, 58, 138, 0.18);",
+    "frontend/src/index.css:289:  --search-focus-glow: 0 0 0 3px rgba(91, 141, 217, 0.25), 0 0 12px 2px rgba(91, 141, 217, 0.3);"
+   ],
+   "refFiles": 1
+  },
+  "--shadow-md": {
+   "defs": [
+    "frontend/src/index.css:70:  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.08);",
+    "frontend/src/index.css:266:  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.4);"
+   ],
+   "refFiles": 13
+  },
+  "--shadow-sm": {
+   "defs": [
+    "frontend/src/index.css:69:  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.08);",
+    "frontend/src/index.css:265:  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.4);"
+   ],
+   "refFiles": 16
+  },
+  "--size-icon-btn-lg": {
+   "defs": [
+    "frontend/src/tokens.css:161:  --size-icon-btn-lg:   44px;   /* lg アイコンボタン（モバイルタッチターゲット基準 WCAG 2.5.5） */"
+   ],
+   "refFiles": 3
+  },
+  "--space-1": {
+   "defs": [
+    "frontend/src/tokens.css:68:  --space-1:  4px;"
+   ],
+   "refFiles": 81
+  },
+  "--space-10": {
+   "defs": [
+    "frontend/src/tokens.css:76:  --space-10: 40px;"
+   ],
+   "refFiles": 18
+  },
+  "--space-2": {
+   "defs": [
+    "frontend/src/tokens.css:69:  --space-2:  8px;"
+   ],
+   "refFiles": 138
+  },
+  "--space-3": {
+   "defs": [
+    "frontend/src/tokens.css:70:  --space-3:  12px;"
+   ],
+   "refFiles": 122
+  },
+  "--space-4": {
+   "defs": [
+    "frontend/src/tokens.css:71:  --space-4:  16px;"
+   ],
+   "refFiles": 120
+  },
+  "--space-6": {
+   "defs": [
+    "frontend/src/tokens.css:73:  --space-6:  24px;"
+   ],
+   "refFiles": 46
+  },
+  "--space-6px": {
+   "defs": [
+    "frontend/src/tokens.css:83:  --space-6px:  6px;   /* コンパクトギャップ・小ボタン余白 */"
+   ],
+   "refFiles": 11
+  },
+  "--success": {
+   "defs": [
+    "frontend/src/index.css:143:  --success: #2e7d32;",
+    "frontend/src/index.css:346:  --success: #4ade80;"
+   ],
+   "refFiles": 30
+  },
+  "--success-bg-subtle": {
+   "defs": [
+    "frontend/src/index.css:85:  --success-bg-subtle: rgba(72, 187, 120, 0.05);   /* 保存完了入力背景 */",
+    "frontend/src/index.css:280:  --success-bg-subtle: rgba(74, 222, 128, 0.10);   /* ダーク success 準拠 */"
+   ],
+   "refFiles": 4
+  },
+  "--tcg-ar-match-min-h": {
+   "defs": [
+    "frontend/src/features/tcg-analysis-review/source-raw-pane.css:43:  --tcg-ar-match-min-h: 18px;"
+   ],
+   "refFiles": 1
+  },
+  "--text-muted": {
+   "defs": [
+    "frontend/src/index.css:25:  --text-muted: #718096;         /* 非強調・プレースホルダー */",
+    "frontend/src/index.css:235:  --text-muted: #94a3b8;"
+   ],
+   "refFiles": 77
+  },
+  "--text-primary": {
+   "defs": [
+    "frontend/src/index.css:23:  --text-primary: #1a202c;       /* 見出し・本文 */",
+    "frontend/src/index.css:233:  --text-primary: #f1f5f9;"
+   ],
+   "refFiles": 57
+  },
+  "--text-secondary": {
+   "defs": [
+    "frontend/src/index.css:24:  --text-secondary: #4a5568;     /* ラベル・補足 */",
+    "frontend/src/index.css:234:  --text-secondary: #cbd5e1;"
+   ],
+   "refFiles": 93
+  },
+  "--textarea-min-h": {
+   "defs": [
+    "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:113:  --pmd-textarea-min-h: 72px; /* テキストエリア最小高（--textarea-min-h:80px より小さい専用値）*/",
+    "frontend/src/tokens.css:170:  --textarea-min-h:     80px;   /* テキストエリア最小高 */"
+   ],
+   "refFiles": 3
+  },
+  "--transition-micro": {
+   "defs": [
+    "frontend/src/tokens.css:142:  --transition-micro:   100ms ease;                          /* ボタン押下・スウォッチ */"
+   ],
+   "refFiles": 6
+  }
+ }
+}

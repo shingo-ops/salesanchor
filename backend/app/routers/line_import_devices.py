@@ -69,6 +69,14 @@ async def device_user(cred: HTTPAuthorizationCredentials = Depends(bearer), db: 
 async def upload(response: Response, file: UploadFile = File(...), window_hours: int = Form(default=0, ge=0),
                  user=Depends(device_user), db: AsyncSession = Depends(get_db)):
     no_store(response)
-    result = await upload_android_line_export(file=file, window_hours=window_hours, db=db, current_user=user)
+    # FastAPI のエンドポイント関数を Python の関数として直接呼ぶため、渡さなかった引数には
+    # 既定値として Form(...) オブジェクトがそのまま入る（None にはならない）。window_start は
+    # 取り込み処理で時刻比較に使われるため、渡し忘れると TypeError で 500 になる
+    # （2026-09-24 実測: PR #3719 で window_start / window_end が追加された直後から本番停止）。
+    # 新しい引数が増えたときは、ここにも必ず明示的に渡すこと。
+    result = await upload_android_line_export(
+        file=file, window_start=None, window_end=None, window_hours=window_hours,
+        db=db, current_user=user,
+    )
     await service.used(db, user.device_id)
     return result

@@ -18,6 +18,7 @@ import OrderFinancialPanel from "../../components/OrderFinancialPanel";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
+import { Button } from "../../components/Button";
 
 interface SalesOrderItem {
   order_id: number;
@@ -164,14 +165,14 @@ export default function SalesPage() {
               key: "actions",
               header: t("common.actions"),
               renderCell: (o) => (
-                <button
+                <Button variant="secondary" size="sm"
                   type="button"
-                  className="btn-sm"
+
                   data-testid={`sales-edit-${o.order_id}`}
                   onClick={() => setEditing(o)}
                 >
                   {t("sales.editFinancial")}
-                </button>
+                </Button>
               ),
             };
             const columns = [...baseColumns, ...(canEdit ? [actionsCol] : [])];

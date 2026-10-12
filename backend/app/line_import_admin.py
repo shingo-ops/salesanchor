@@ -20,7 +20,10 @@ from app.services import line_import_devices as devices
 from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 SOURCE_REPORT_LIMIT = 10000
 

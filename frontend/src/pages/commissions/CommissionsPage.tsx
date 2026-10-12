@@ -19,6 +19,7 @@ import CommissionPanel from "../../components/CommissionPanel";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
+import { Button } from "../../components/Button";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -223,14 +224,14 @@ export default function CommissionsPage() {
               { key: "order_number", header: t("commissions.colOrder") },
               { key: "name", header: t("common.name"), renderCell: (o) => o.contact_display_name ?? o.company_name ?? "-" },
               { key: "actions", header: t("common.actions"), renderCell: (o) => (
-                <button
+                <Button variant="secondary" size="sm"
                   type="button"
-                  className="btn-sm"
+
                   data-testid={`commissions-assign-${o.order_id}`}
                   onClick={() => setAssigning(o)}
                 >
                   {t("commissions.assignStaff")}
-                </button>
+                </Button>
               )},
             ];
             return (

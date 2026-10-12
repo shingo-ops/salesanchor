@@ -140,7 +140,7 @@ async def test_actual_timestamp_is_latest_and_legacy_not_inferred(pg):
     with conn.cursor() as c:
         c.execute(f"SELECT received_at, line_posted_at FROM {SCHEMA}.source_messages")
         received,posted=c.fetchone()
-        assert (posted-received).total_seconds()==5*3600
+        assert (posted-received).total_seconds()==0
         c.execute(f"UPDATE {SCHEMA}.source_messages SET line_posted_at=NULL")
     await upload(engine,export(body="latest",hour="15:00"))
     assert count(conn,"source_messages")==2
@@ -363,20 +363,32 @@ async def test_link_retry_preserves_created_and_enqueue_sees_commit(pg,monkeypat
         assert r["messages"]["created"]==1 and r["messages"]["reused"]==0
 
 
-async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(pg):
+async def test_different_supplier_does_not_reuse_and_missing_channel_is_created(pg):
+    """仕入元は居るのにチャネルが無い場合、チャネルを作って取り込みを続ける。
+
+    以前は ValueError でロールバックする契約だったが、2026-09-21 の public 移行で
+    既存仕入元のチャネル行が引き継がれず、本番の取り込みが全て HTTP 500 になった
+    （docs/handoff/line-import-missing-channel/recon.md）。未登録送信者に対しては
+    もともと仕入元とチャネルを自動作成する経路があり、身元が確定している既知の
+    仕入元にだけ失敗させる理由がないため、契約を揃えた。
+    """
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
         c.execute(f"INSERT INTO {SCHEMA}.tenant_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
         c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) VALUES ('SP-00002','Bob','Bob','corporate',true) RETURNING id")
         bob_pub_id = c.fetchone()[0]
-    with pytest.raises(ValueError,match="no active LINE channel"):
-        await upload(engine,export(sender="Bob"))
-    assert count(conn,"import_jobs")==1
-    with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_pub_id,))
+    # チャネルが無い状態でも成功し、チャネルが1件作られる
     await upload(engine,export(sender="Bob"))
+    with conn.cursor() as c:
+        c.execute(f"SELECT count(*) FROM {SCHEMA}.supplier_channels WHERE supplier_id=%s AND channel='line' AND is_active", (bob_pub_id,))
+        assert c.fetchone()[0]==1
     assert count(conn,"source_messages")==2
+    # 2回目は作成済みのチャネルを再利用し、重複して作らない
+    await upload(engine,export(sender="Bob",hour="11:00"))
+    with conn.cursor() as c:
+        c.execute(f"SELECT count(*) FROM {SCHEMA}.supplier_channels WHERE supplier_id=%s AND channel='line' AND is_active", (bob_pub_id,))
+        assert c.fetchone()[0]==1
 
 
 async def test_later_tcg_schema_provisioning(pg):
@@ -482,3 +494,57 @@ async def test_new_details_coverage_foreign_tenant_and_api_validation(pg):
             for query in ("limit=0", "limit=101", "offset=-1"):
                 assert (await client.get(path + "/" + endpoint + "?" + query)).status_code == 422
         assert (await client.get(path + "/extraction-jobs?filter=invalid")).status_code == 422
+
+
+async def _write_entries(engine, sp_code, bodies):
+    entries = [{
+        "sp_code": sp_code, "canonical_name": "Alice", "raw_text": body,
+        "received_at": "2026-09-10 10:00:00", "line_posted_at": "2026-09-10 10:00:00",
+        "sha256": svc.sha256_text(body), "skipped_message_count": 0,
+    } for body in bodies]
+    async with AsyncSession(engine) as db:
+        for entry in entries:
+            await svc._write_source_messages(db, [entry], None)
+        await db.commit()
+
+
+def _bodies(conn):
+    with conn.cursor() as c:
+        c.execute(f"SELECT raw_text, raw_sha256, is_active FROM {SCHEMA}.source_messages ORDER BY created_at")
+        return c.fetchall()
+
+
+def _sp_code(conn):
+    with conn.cursor() as c:
+        c.execute("SELECT supplier_code FROM public.suppliers ORDER BY id LIMIT 1")
+        return c.fetchone()[0]
+
+
+async def test_trailing_blank_is_stripped_and_reused(pg):
+    engine, conn, enqueue = pg
+    await upload(engine, export(body="本文"))
+    sp = _sp_code(conn)
+    # 既存 "本文" に末尾 "\n" の同じ投稿 → 再利用（新規 INSERT なし）
+    await _write_entries(engine, sp, ["本文\n", "本文\n 　\n", "本文"])
+    rows = _bodies(conn)
+    assert [r[0] for r in rows] == ["本文"] and rows[0][2] is True
+    # 移行期: 既に "\n" 付きで保存された行に対して、末尾なし／ありの新 entry → 再利用
+    with conn.cursor() as c:
+        c.execute(f"UPDATE {SCHEMA}.source_messages SET raw_text = E'本文\\n'")
+    await _write_entries(engine, sp, ["本文", "本文\n"])
+    rows = _bodies(conn)
+    assert [r[0] for r in rows] == ["本文\n"] and rows[0][2] is True
+    assert enqueue.call_count == 1
+
+
+async def test_trailing_blank_stored_normalized_and_different_body_inserted(pg):
+    engine, conn, enqueue = pg
+    await upload(engine, export(body="seed"))
+    sp = _sp_code(conn)
+    await _write_entries(engine, sp, ["別の本文\n\n"])
+    rows = _bodies(conn)
+    assert [r[0] for r in rows] == ["seed", "別の本文"]
+    assert rows[1][1] == svc.sha256_text("別の本文")
+    assert [r[2] for r in rows] == [False, True]
+    await _write_entries(engine, sp, ["別の本文X"])
+    assert len(_bodies(conn)) == 3

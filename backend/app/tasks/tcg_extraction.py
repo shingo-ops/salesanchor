@@ -20,13 +20,23 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
+from typing import NamedTuple
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
+from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
+from app.services.line_analysis_v102_svc import (
+    ENGINE_V102,
+    get_engine,
+    is_v102_prompt_version,
+    run_v102_analysis,
+    run_v102_extraction,
+)
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
 from app.services.tcg_work_reference import (
@@ -38,11 +48,33 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
+
 # ---------------------------------------------------------------------------
-# スキーマ定数（tenant_004 専用）
+# エラー分類
 # ---------------------------------------------------------------------------
 
-from app.tcg_config import TCG_SCHEMA
+_SYSTEM_ERROR_CATEGORIES = {
+    "RECORD_WRITE_FAILED": "system_db_error",
+    "INPUT_TOO_LARGE": "system_input_error",
+    "RESPONSE_TOO_LARGE": "system_input_error",
+    "PARSED_TOO_LARGE": "system_input_error",
+    "CLAIM_CONFLICT": "system_db_error",
+    "ATTEMPT_CONFLICT": "system_db_error",
+    "INVALID_RESPONSE": "logic_parse_error",
+    "WORK_ID_CONFLICT": "logic_conflict",
+    "REFERENCE_CHANGED": "logic_conflict",
+}
+
+
+def _classify_system_error(code: str) -> str:
+    return _SYSTEM_ERROR_CATEGORIES.get(code, "system_unknown")
+
+# ---------------------------------------------------------------------------
+# スキーマ定数
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+# ---------------------------------------------------------------------------
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # 同期 DB エンジン
@@ -114,17 +146,199 @@ def work_schema_ready(session: Session) -> bool:
     return count == 4
 
 
+def _match_rule(pattern: str, pattern_type: str, text: str) -> bool:
+    """
+    knowledge_rules の pattern_type に従って text にパターンがマッチするか判定する。
+
+    - exact: 完全一致（strip比較）
+    - substring: 部分一致
+    - prefix: 前方一致
+    - regex: 正規表現
+    """
+    if pattern_type == "exact":
+        return text.strip() == pattern.strip()
+    if pattern_type == "substring":
+        return pattern in text
+    if pattern_type == "prefix":
+        return text.startswith(pattern)
+    if pattern_type == "regex":
+        try:
+            return re.search(pattern, text) is not None
+        except re.error:
+            logger.warning("[pre_filter] invalid regex pattern: %r", pattern)
+            return False
+    return False
+
+
+def _apply_pre_extraction_filter(session: Session, raw_text: str) -> str | None:
+    """
+    Gemini 呼び出し前事前フィルタ。
+
+    knowledge_rules テーブルから message_exclude / message_exclude_no_digit カテゴリの
+    アクティブなルールを取得し、2層でフィルタリングする。
+
+    層1 (message_exclude):
+      パターンにマッチ → 無条件で 'filtered'。
+
+    層2 (message_exclude_no_digit):
+      パターンにマッチ かつ raw_text に数字が含まれない → 'filtered'。
+      数字が含まれる場合はフィルタしない（在庫情報の可能性）。
+
+    Returns:
+      フィルタ判定理由文字列（マッチしたカテゴリ+パターン）、または None（フィルタしない）。
+    """
+    try:
+        filter_rows = session.execute(
+            text(
+                """
+                SELECT category, pattern_type, pattern
+                FROM public.knowledge_rules
+                WHERE category IN ('message_exclude', 'message_exclude_no_digit')
+                  AND is_active = TRUE
+                ORDER BY category, pattern
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        # knowledge_rules テーブルが存在しない環境（テスト等）ではスキップ
+        logger.debug("[pre_filter] knowledge_rules table not available — skipping filter: %s", exc)
+        session.rollback()
+        return None
+
+    if not filter_rows:
+        return None
+
+    has_digit = re.search(r"\d", raw_text) is not None
+
+    for row in filter_rows:
+        category = row[0]
+        pattern_type = row[1]
+        pattern = row[2]
+
+        if not _match_rule(pattern, pattern_type, raw_text):
+            continue
+
+        if category == "message_exclude":
+            return f"message_exclude:{pattern!r}"
+
+        if category == "message_exclude_no_digit":
+            if not has_digit:
+                return f"message_exclude_no_digit:{pattern!r}"
+            # 数字ありなら在庫情報の可能性があるのでフィルタしない
+
+    return None
+
+
+def _context_select_sql() -> str:
+    """原文・仕入元ルールを読む SELECT（WHERE 句は呼び出し側が足す）。
+
+    TCG_SCHEMA は呼び出し時に埋め込む（試験が実行時に差し替えるため、import 時に固定しない）。
+    """
+    return f"""
+            SELECT ej.id, sm.raw_text,
+                   s.extraction_price_format,
+                   s.extraction_qty_format,
+                   s.extraction_order_pattern,
+                   s.extraction_default_unit,
+                   s.extraction_notes,
+                   s.extraction_state_format,
+                   s.extraction_example_text,
+                   s.extraction_ship_format,
+                   sc.supplier_id,
+                   s.extraction_layout_rules,
+                   s.extraction_hard_cases
+            FROM {TCG_SCHEMA}.extraction_jobs ej
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+            LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
+"""
+
+
+class ExtractionContext(NamedTuple):
+    """ジョブの原文・仕入元ルール・knowledge リンク・仕入元 ID。"""
+
+    raw_text: str
+    supplier_context: dict | None
+    knowledge_links: list[dict] | None
+    supplier_id: int | None
+    # 新しい仕組み（v8 系）だけが読む仕入元ルール。本番 v7 の supplier_context には入れない。
+    new_system_rules: dict | None = None
+
+
+def _build_extraction_context(session: Session, row) -> ExtractionContext:
+    """_context_select_sql() の1行から、原文・仕入元ルール・knowledge リンクを組み立てる。"""
+    raw_text = row[1] or ""
+
+    # 仕入元抽出ルールを取得して supplier_context を構築
+    supplier_context: dict | None = None
+    extraction_rules = {
+        "extraction_price_format": row[2],
+        "extraction_qty_format": row[3],
+        "extraction_order_pattern": row[4],
+        "extraction_default_unit": row[5],
+        "extraction_notes": row[6],
+        "extraction_state_format": row[7],
+        "extraction_example_text": row[8],
+        "extraction_ship_format": row[9],
+    }
+    if any(v for v in extraction_rules.values()):
+        supplier_context = extraction_rules
+
+    # 新しい仕組み専用の2列。supplier_context を作る判定には含めない（本番 v7 に渡る dict を変えない）。
+    new_system_rules: dict | None = None
+    new_rules = {
+        "extraction_layout_rules": row[11],
+        "extraction_hard_cases": row[12],
+    }
+    if any(v for v in new_rules.values()):
+        new_system_rules = new_rules
+
+    # Knowledge リンクを取得（supplier_id がある場合のみ）
+    knowledge_links: list[dict] | None = None
+    supplier_id = row[10]
+    if supplier_id is not None:
+        kl_rows = session.execute(
+            text(
+                """
+                SELECT kr.category, kr.pattern, kr.normalized_to
+                FROM public.supplier_knowledge_links skl
+                JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+                WHERE skl.supplier_id = :sid AND skl.is_active = TRUE AND kr.is_active = TRUE
+                """
+            ),
+            {"sid": supplier_id},
+        ).fetchall()
+        if kl_rows:
+            knowledge_links = [
+                {"category": r[0], "pattern": r[1], "normalized_to": r[2]}
+                for r in kl_rows
+            ]
+    return ExtractionContext(raw_text, supplier_context, knowledge_links, supplier_id, new_system_rules)
+
+
+def load_extraction_context(session: Session, extraction_job_id: str) -> ExtractionContext | None:
+    """extraction_job_id のジョブの原文・仕入元ルール・knowledge リンク・仕入元 ID を読む。
+
+    _run_extraction（本番）と shadow_backfill（過去ジョブへの一括実行）が共有する。
+    ジョブが無ければ None。
+    """
+    row = session.execute(
+        text(_context_select_sql() + "            WHERE ej.id = :ejid\n"),
+        {"ejid": extraction_job_id},
+    ).fetchone()
+    if row is None:
+        return None
+    return _build_extraction_context(session, row)
+
+
 def _run_extraction(session: Session, source_message_id: str) -> dict:
     """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
 
-    # --- 1. pending job を取得 ---
+    # --- 1. pending job を取得（仕入元抽出ルールも同時取得）---
     row = session.execute(
         text(
-            f"""
-            SELECT ej.id, sm.raw_text
-            FROM {TCG_SCHEMA}.extraction_jobs ej
-            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
-            WHERE ej.source_message_id = :smid
+            _context_select_sql()
+            + """            WHERE ej.source_message_id = :smid
               AND ej.status = 'pending'
             ORDER BY ej.created_at DESC
             LIMIT 1
@@ -148,9 +362,11 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if not work_schema_ready(session) or not schema_ready(session):
         return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
                 "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
-    reference = load_work_reference(session, TCG_SCHEMA)
+    reference = load_work_reference(session, "public")
     extraction_job_id = str(row[0])
-    raw_text = row[1] or ""
+    ctx = _build_extraction_context(session, row)
+    raw_text, supplier_context = ctx.raw_text, ctx.supplier_context
+    knowledge_links, supplier_id = ctx.knowledge_links, ctx.supplier_id
 
     # C94: 空テキストチェック — strip後0文字なら Gemini スキップ
     # 設計根拠: sold-out-rules-design.md §14.1.2
@@ -172,31 +388,96 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "error_message": None,
         }
 
+    # C95: 事前フィルタ — knowledge_rules の message_exclude / message_exclude_no_digit カテゴリで判定
+    # 設計根拠: pre-extraction-filter design
+    filtered_reason = _apply_pre_extraction_filter(session, raw_text)
+    if filtered_reason is not None:
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
+                "SET status = 'filtered', extracted_at = NOW(), error_message = NULL "
+                "WHERE id = :ej_id"
+            ),
+            {"ej_id": extraction_job_id},
+        )
+        session.commit()
+        logger.info(
+            "[tcg_extraction] pre-filter matched: ej=%s reason=%s",
+            extraction_job_id,
+            filtered_reason,
+        )
+        return {
+            "extraction_job_id": extraction_job_id,
+            "status": "filtered",
+            "items_count": 0,
+            "analysis_stats": None,
+            "error_message": None,
+        }
+
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
-        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder)
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links, supplier_id=supplier_id)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
+        if recorder is not None:
+            recorder.record_error_detail({"category": "system_timeout", "raw": "Celery soft time limit exceeded"})
     except RecordError as exc:
         code = str(exc)
+        if recorder is not None:
+            recorder.record_error_detail({"category": _classify_system_error(code), "raw": code})
     except Exception:
         logger.exception("[tcg_extraction] record write failed for ej=%s", extraction_job_id)
         code = "RECORD_WRITE_FAILED"
+        if recorder is not None:
+            recorder.record_error_detail({"category": "system_db_error", "raw": code})
     recorder.fail(code)
     message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
     return {"extraction_job_id": extraction_job_id, "status": "error", "items_count": 0,
             "analysis_stats": None, "error_message": message}
 
 
-def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder):
-    result = extract_message(raw_text, work_reference=reference, recorder=recorder)
+def _run_v102_extraction(session, extraction_job_id, recorder) -> dict:
+    """LINE_ANALYSIS_ENGINE=v102 の抽出。Gemini 段（run_v102_extraction）→ TCG_AUTO_ANALYZE=1 ならシステム段 → 自動配信。
+
+    status（done/empty）・試行の記録・自動配信・停滞回収は v6 と同じ流れに乗せる。Gemini の失敗は例外のまま送出し、
+    呼び出し元（_run_extraction）が recorder.fail で status='error' にする。v7 試運転（EXTRACTION_SHADOW_ENABLED）は v6 のときだけ動かす。
+    """
+    extracted = run_v102_extraction(session, extraction_job_id, recorder=recorder)
+    analysis_stats = None
+    if extracted["status"] in ("done", "empty"):  # 件 0 でも走らせ、投稿の理由 no_items を残す（黙って消える件は最悪）
+        if os.environ.get("TCG_AUTO_ANALYZE", "").strip() == "1":
+            logger.info("[tcg_extraction] starting v102 analysis for ej=%s", extraction_job_id)
+            try:
+                analysis_stats = run_v102_analysis(session, extraction_job_id)
+            except Exception:
+                session.rollback()
+                logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
+                analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
+            auto_distribute = os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() == "1"
+            if auto_distribute and analysis_stats.get("status") != "error":
+                _enqueue_auto_distribute()
+        else:
+            logger.info("[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id)
+    return {
+        "extraction_job_id": extraction_job_id,
+        "status": extracted["status"],
+        "items_count": extracted["items_count"],
+        "analysis_stats": analysis_stats,
+        "error_message": None,
+    }
+
+
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None, supplier_id=None):
+    if get_engine() == ENGINE_V102:
+        return _run_v102_extraction(session, extraction_job_id, recorder)
+    result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
     digest = reference_digest(reference)
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
         try:
-            current = load_work_reference(session, TCG_SCHEMA)
+            current = load_work_reference(session, "public")
             if reference_digest(current) != digest:
                 raise RecordError("REFERENCE_CHANGED")
             if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:
@@ -206,7 +487,11 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         None, None, reference["works"],
                     )
                     if explicit and item.get("resolved_work_id") not in (None, int(explicit)):
-                        raise RecordError("WORK_ID_CONFLICT")
+                        logger.warning(
+                            "[tcg_extraction] WORK_ID_CONFLICT for ej=%s: gemini=%s evidence=%s, setting to None",
+                            extraction_job_id, item.get("resolved_work_id"), explicit,
+                        )
+                        item["resolved_work_id"] = None
         except SoftTimeLimitExceeded:
             raise
         except Exception as exc:
@@ -222,6 +507,15 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     error_message = result["error_message"]
 
     # --- 4. items を extraction_items に INSERT ---
+    # リトライ時に前回の stale items を削除（冪等化）
+    # FK CASCADE (analysis_results → extraction_items) により紐づく analysis_results も自動削除される
+    session.execute(
+        text(
+            f"DELETE FROM {TCG_SCHEMA}.extraction_items"
+            " WHERE extraction_job_id = :ej_id"
+        ),
+        {"ej_id": extraction_job_id},
+    )
     items_inserted = 0
     if items:
         for item in items:
@@ -235,7 +529,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
                         raw_work_name, raw_work_source_line_span, resolved_work_id,
-                        resolved_product_code,
+                        resolved_product_code, raw_product_code,
                         created_at
                     )
                     VALUES (
@@ -244,7 +538,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
                         :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
-                        :resolved_product_code,
+                        :resolved_product_code, :raw_product_code,
                         now()
                     )
                     """
@@ -264,6 +558,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                     "raw_work_name": item.get("raw_work_name"),
                     "raw_work_source_line_span": item.get("raw_work_source_line_span"),
                     "resolved_product_code": item.get("resolved_product_code"),
+                    "raw_product_code": item.get("raw_product_code"),
                 },
             )
             items_inserted += 1
@@ -317,6 +612,32 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id
             )
 
+        # --- 6b. 試運転（Shadow run, PR-C）。EXTRACTION_SHADOW_ENABLED=1 のときのみ ---
+        # design.md PR-C: 本番の解析が終わった後、同じ raw_text/supplier_context/
+        # knowledge_links（本番用に上で既に読み込んだ値）で v7 を呼び、結果は
+        # extraction_shadow_results にのみ書く。例外は本番へ一切伝播させない。
+        if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":
+            if not has_required_supplier_rule(supplier_context):
+                logger.info(
+                    "[tcg_extraction] shadow skipped: no supplier rule supplier_id=%s ej=%s",
+                    supplier_id,
+                    extraction_job_id,
+                )
+            else:
+                try:
+                    run_shadow_for_job(
+                        session,
+                        extraction_job_id,
+                        raw_text=raw_text,
+                        supplier_context=supplier_context,
+                        knowledge_links=knowledge_links,
+                    )
+                except Exception:
+                    logger.exception(
+                        "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+                        extraction_job_id,
+                    )
+
     return {
         "extraction_job_id": extraction_job_id,
         "status": final_status,
@@ -342,6 +663,125 @@ def _enqueue_auto_distribute() -> None:
             auto_distribute_after_analysis_task.delay()
     except Exception as exc:  # noqa: BLE001
         logger.warning("[tcg_extraction] auto_distribute enqueue skipped: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# 人が直した後のやり直し → 配信の予約（v102 の投稿だけ。設計 docs/handoff/v102-prod-switch/design.md §13-4）
+# ---------------------------------------------------------------------------
+
+DISTRIBUTION_SCHEDULE_KEY = "tcg:distribution:scheduled"  # この間に直した分は、予約済みの1回の配信にまとめる
+# 配信が止まってキーが消えなかったときの保険。通常は配信の開始時に消す
+DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS = 600
+DISTRIBUTION_DELAY_SECONDS = 60
+REDIS_TIMEOUT_SECONDS = 2
+_DEFAULT_REDIS_URL = "redis://redis:6379/0"
+
+
+def _get_redis_client():
+    import redis  # noqa: PLC0415
+
+    return redis.from_url(
+        os.environ.get("REDIS_URL", _DEFAULT_REDIS_URL), decode_responses=True,
+        socket_timeout=REDIS_TIMEOUT_SECONDS, socket_connect_timeout=REDIS_TIMEOUT_SECONDS,
+    )
+
+
+def _release_distribution_schedule(client=None) -> None:
+    """予約のキーを消す。Redis が使えなくても止めない（TTL で消える）。"""
+    try:
+        (client or _get_redis_client()).delete(DISTRIBUTION_SCHEDULE_KEY)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] distribution schedule key release failed: %s", exc)
+
+
+def schedule_distribution() -> bool:
+    """TCG_AUTO_DISTRIBUTE=1 のとき、60秒後に自動配信を1回だけ積む。予約済み（Redis のキーが取れない）なら積まない。
+
+    Redis が使えないときは警告だけ出して積まない（_enqueue_auto_distribute と同じ扱い）。積んだら True。
+    """
+    if os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() != "1":
+        return False
+    try:
+        client = _get_redis_client()
+        if not client.set(DISTRIBUTION_SCHEDULE_KEY, "1", nx=True, ex=DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS):
+            logger.info("[tcg_extraction] 配信は予約済みのため積みません")
+            return False
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] distribution schedule skipped: %s", exc)
+        return False
+    try:
+        if scheduled_distribution_task is None:
+            raise RuntimeError("配信タスクが未登録です")
+        scheduled_distribution_task.apply_async(countdown=DISTRIBUTION_DELAY_SECONDS)
+    except Exception as exc:  # noqa: BLE001
+        _release_distribution_schedule(client)  # 積めなかったのにキーだけ残ると、次の直しも積まれなくなる
+        logger.warning("[tcg_extraction] distribution schedule enqueue failed: %s", exc)
+        return False
+    return True
+
+
+def reanalyze_v102_job(extraction_job_id: str) -> dict:
+    """v102 の投稿のシステム段をやり直し（Gemini は呼ばない）、配信を予約する。v6 の投稿・投稿なしは何もしない。"""
+    session = _get_sync_session()
+    try:
+        row = session.execute(
+            text(f"SELECT prompt_version FROM {TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+        ).first()
+        if row is None or not is_v102_prompt_version(row[0]):
+            logger.info("[tcg_extraction] v102 以外の投稿のためやり直しません: ej=%s", extraction_job_id)
+            return {"extraction_job_id": extraction_job_id, "status": "skipped", "analysis_stats": None, "scheduled": False}
+        stats = run_v102_analysis(session, extraction_job_id)
+        session.commit()
+    finally:
+        session.close()
+    return {
+        "extraction_job_id": extraction_job_id, "status": "reanalyzed", "analysis_stats": stats,
+        "scheduled": schedule_distribution(),
+    }
+
+
+def enqueue_v102_reanalyze(extraction_job_id: str) -> None:
+    """人の判断を保存した後に呼ぶ。やり直しのタスクを積む。Redis が使えなくても保存は成功させる（警告のみ）。"""
+    try:
+        if v102_reanalyze_after_correction_task is not None:
+            v102_reanalyze_after_correction_task.delay(extraction_job_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] v102 reanalyze enqueue skipped: %s", exc)
+
+
+def _run_auto_distribution() -> dict:
+    """run_distribution を1回、ワンショットのエンジンで実行する（自動配信と予約配信で共通）。"""
+    import asyncio  # noqa: PLC0415
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
+
+    from app.database import DATABASE_URL  # noqa: PLC0415
+    from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
+
+    async def _run() -> dict:
+        # asyncio.run() は新規イベントループを作成するため、
+        # モジュールレベルの AsyncSessionLocal（エンジンが旧ループに紐付き）を
+        # そのまま使うと RuntimeError: attached to a different loop が発生する。
+        # 回避策: ワンショット用エンジン＋セッションをここで生成し、finally で確実に破棄する。
+        _connect_args: dict = {
+            "prepared_statement_cache_size": 0,
+            "server_settings": {"application_name": "salesanchor_celery_distribute"},
+        }
+        _engine = create_async_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_size=2,
+            max_overflow=0,
+            connect_args=_connect_args,
+        )
+        _Session = async_sessionmaker(_engine, expire_on_commit=False)
+        try:
+            async with _Session() as db:
+                return await run_distribution(db)
+        finally:
+            await _engine.dispose()
+
+    return asyncio.run(_run())
 
 
 # ---------------------------------------------------------------------------
@@ -374,6 +814,24 @@ try:
             raise self.retry(exc=exc) from exc
 
     @celery_app.task(
+        name="tcg.v102_reanalyze_after_correction",
+        bind=True,
+        max_retries=2,
+        default_retry_delay=30,
+        time_limit=330,
+        soft_time_limit=300,
+    )
+    def v102_reanalyze_after_correction_task(self, extraction_job_id: str) -> dict:
+        """
+        Celery タスク: 人が直した v102 の投稿のシステム段をやり直し、is_current を付け直し、配信を予約する。
+        """
+        try:
+            return reanalyze_v102_job(extraction_job_id)
+        except Exception as exc:
+            logger.exception("[tcg_extraction] v102 reanalyze failed for ej=%s: %s", extraction_job_id, exc)
+            raise self.retry(exc=exc) from exc
+
+    @celery_app.task(
         name="tcg.auto_distribute_after_analysis",
         bind=True,
         max_retries=1,
@@ -389,21 +847,35 @@ try:
         スキップ扱いとなり、次の extraction 完了時に再トリガーされる。
         Redis 起動時のみ .delay() で非同期実行可能。
         """
-        import asyncio  # noqa: PLC0415
-
-        from app.database import AsyncSessionLocal  # noqa: PLC0415
-        from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
-
-        async def _run() -> dict:
-            async with AsyncSessionLocal() as db:
-                return await run_distribution(db)
-
         try:
-            result = asyncio.run(_run())
+            result = _run_auto_distribution()
             logger.info("[tcg_extraction] auto_distribute result: %s", result)
             return result
         except Exception as exc:
             logger.exception("[tcg_extraction] auto_distribute failed: %s", exc)
+            raise self.retry(exc=exc) from exc
+
+    @celery_app.task(
+        name="tcg.scheduled_distribution",
+        bind=True,
+        max_retries=1,
+        default_retry_delay=60,
+        time_limit=600,
+        soft_time_limit=540,
+    )
+    def scheduled_distribution_task(self) -> dict:
+        """
+        Celery タスク: 人が直した後に予約された配信（schedule_distribution が積む）。
+
+        開始の直前に予約のキーを消す。これ以降の直しは新しい予約になり、この配信が読み始めた後の直しも取りこぼさない。
+        """
+        _release_distribution_schedule()
+        try:
+            result = _run_auto_distribution()
+            logger.info("[tcg_extraction] scheduled_distribution result: %s", result)
+            return result
+        except Exception as exc:
+            logger.exception("[tcg_extraction] scheduled_distribution failed: %s", exc)
             raise self.retry(exc=exc) from exc
 
 except Exception as _celery_init_err:  # noqa: BLE001
@@ -413,10 +885,16 @@ except Exception as _celery_init_err:  # noqa: BLE001
     )
     extract_source_message_task = None  # type: ignore[assignment]
     auto_distribute_after_analysis_task = None  # type: ignore[assignment]
+    v102_reanalyze_after_correction_task = None  # type: ignore[assignment]
+    scheduled_distribution_task = None  # type: ignore[assignment]
 
 
 __all__ = [
     "extract_and_analyze_source_message",
     "extract_source_message_task",
     "auto_distribute_after_analysis_task",
+    "v102_reanalyze_after_correction_task",
+    "scheduled_distribution_task",
+    "enqueue_v102_reanalyze",
+    "schedule_distribution",
 ]

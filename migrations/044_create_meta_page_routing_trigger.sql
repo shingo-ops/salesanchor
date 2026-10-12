@@ -78,18 +78,8 @@ CREATE TRIGGER trg_sync_meta_page_routing
     AFTER INSERT OR UPDATE OR DELETE ON {schema}.tenant_meta_config
     FOR EACH ROW EXECUTE FUNCTION {schema}.sync_meta_page_routing();
 
--- === 既存行の backfill（再適用時は ON CONFLICT で no-op） ===
-INSERT INTO public.meta_page_routing (
-    tenant_id, config_id, schema_name,
-    page_id, instagram_business_account_id, is_active, updated_at
-)
-SELECT
-    tenant_id, id, '{schema_raw}',
-    page_id, instagram_business_account_id, is_active, NOW()
-FROM {schema}.tenant_meta_config
-ON CONFLICT (tenant_id, config_id) DO UPDATE SET
-    schema_name                     = EXCLUDED.schema_name,
-    page_id                         = EXCLUDED.page_id,
-    instagram_business_account_id   = EXCLUDED.instagram_business_account_id,
-    is_active                       = EXCLUDED.is_active,
-    updated_at                      = NOW();
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- public.meta_page_routing への既存行の backfill（DO UPDATE の上書き）を外した。同期のトリガーと関数は残す。
+-- 新しい行は、トリガー（trg_sync_meta_page_routing）が同期する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: meta_page_routing backfill removed (044)'; END $$;

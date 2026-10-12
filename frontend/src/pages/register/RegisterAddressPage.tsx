@@ -11,6 +11,8 @@ import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { COUNTRIES, type CountryEntry } from "../../constants/countries";
+import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface TokenInfo {
   valid: boolean;
@@ -111,10 +113,9 @@ function CountryCombobox({
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <input
+      <TextFieldControl
         id={id}
         type="text"
-        className="input"
         value={open ? query : selectedDisplay}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -291,9 +292,9 @@ export default function RegisterAddressPage() {
     <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
       {/* Language toggle */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--spacing-3)" }}>
-        <button type="button" className="btn btn-ghost" onClick={toggleLang} style={{ fontSize: "var(--font-size-sm)" }}>
+        <Button variant="ghost" size="md" type="button" onClick={toggleLang}>
           {currentLang === "en" ? t("registration.switchToJapanese") : t("registration.switchToEnglish")}
-        </button>
+        </Button>
       </div>
 
       <h1>{t("registration.addAddressTitle")}</h1>
@@ -312,9 +313,8 @@ export default function RegisterAddressPage() {
             {/* Recipient Name */}
             <label>
               {t("registration.recipientName")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.name}
                 onChange={(e) => updateField("name", e.target.value)}
               />
@@ -340,9 +340,8 @@ export default function RegisterAddressPage() {
                   id="address-dial"
                 />
               </div>
-              <input
+              <TextFieldControl
                 type="tel"
-                className="input"
                 style={{ flex: 1 }}
                 value={address.telephone_number}
                 onChange={(e) => updateField("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
@@ -353,9 +352,8 @@ export default function RegisterAddressPage() {
             {/* Email */}
             <label>
               {t("registration.shippingEmail")}
-              <input
+              <TextFieldControl
                 type="email"
-                className="input"
                 value={address.email}
                 onChange={(e) => updateField("email", e.target.value)}
               />
@@ -364,9 +362,8 @@ export default function RegisterAddressPage() {
             {/* Tax ID */}
             <label>
               {t("registration.taxIdFull")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.tax_id}
                 onChange={(e) => updateField("tax_id", e.target.value)}
               />
@@ -375,9 +372,8 @@ export default function RegisterAddressPage() {
             {/* Address Line 1 */}
             <label>
               {t("registration.addressLine1")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.address_line_1}
                 onChange={(e) => updateField("address_line_1", e.target.value)}
               />
@@ -386,9 +382,8 @@ export default function RegisterAddressPage() {
             {/* Address Line 2 */}
             <label>
               {t("registration.addressLine2")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.address_line_2}
                 onChange={(e) => updateField("address_line_2", e.target.value)}
               />
@@ -397,9 +392,8 @@ export default function RegisterAddressPage() {
             {/* Address Line 3 */}
             <label>
               {t("registration.addressLine3")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.address_line_3}
                 onChange={(e) => updateField("address_line_3", e.target.value)}
               />
@@ -408,9 +402,8 @@ export default function RegisterAddressPage() {
             {/* City */}
             <label>
               {t("registration.city")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.city}
                 onChange={(e) => updateField("city", e.target.value)}
               />
@@ -419,9 +412,8 @@ export default function RegisterAddressPage() {
             {/* State */}
             <label>
               {t("registration.state")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.state}
                 onChange={(e) => updateField("state", e.target.value)}
               />
@@ -430,9 +422,8 @@ export default function RegisterAddressPage() {
             {/* ZIP */}
             <label>
               {t("registration.zip")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={address.zip}
                 onChange={(e) => updateField("zip", e.target.value)}
               />
@@ -458,14 +449,14 @@ export default function RegisterAddressPage() {
           </div>
         </fieldset>
 
-        <button
+        <Button variant="primary" size="md" fullWidth
           type="submit"
-          className="btn btn-primary"
+
           disabled={submitting}
-          style={{ width: "100%" }}
+
         >
           {submitting ? t("common.saving") : t("registration.addAddress")}
-        </button>
+        </Button>
       </form>
     </div>
   );

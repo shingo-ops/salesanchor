@@ -316,6 +316,7 @@ BEGIN
             engine_version        VARCHAR(50)   NOT NULL,
             computed_at           TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
             updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+            work_id               INTEGER,
             UNIQUE (extraction_item_id)
         )
     $q$, _schema, _schema, _schema, _schema, _schema);

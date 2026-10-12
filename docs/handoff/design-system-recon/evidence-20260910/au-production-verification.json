@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-29T04:48:08.291083+00:00",
+  "expectedCommit": "85af04d5e51ab0cfc75ce11bb8792bb8542abae5",
+  "deployedCommit": "85af04d5e51ab0cfc75ce11bb8792bb8542abae5",
+  "appHTTP": "200",
+  "asset": "/assets/index-CydjcbHh.js",
+  "assetHTTP": "200",
+  "apiHTTP": "200",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "publicIndexSHA256": "520ba2c3eb647c364c6863281ef44764476b30598c0060a95cee5d0007e99529",
+  "containerIndexSHA256": "520ba2c3eb647c364c6863281ef44764476b30598c0060a95cee5d0007e99529",
+  "publicAssetSHA256": "f04ca7fa02c472be5156c66cd3fba9c3728dc38a8b9ac93ec60aa8ca14d27328",
+  "containerAssetSHA256": "f04ca7fa02c472be5156c66cd3fba9c3728dc38a8b9ac93ec60aa8ca14d27328",
+  "authenticatedUI": "skipped at PO request; unverified",
+  "pass": true
+}

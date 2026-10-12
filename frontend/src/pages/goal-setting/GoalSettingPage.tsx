@@ -15,8 +15,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import "./GoalSettingPage.css";
+import { Button } from "../../components/Button";
 
 const CheckIcon = STATUS_ICONS.check;
 
@@ -50,7 +52,12 @@ interface Team {
 
 interface CurrentUser {
   id: number;
-  role: string;
+  isTenantAdmin: boolean;
+}
+
+interface MyPermissionsResponse {
+  user_id: number;
+  is_tenant_admin: boolean;
 }
 
 interface GoalAdviceInputs {
@@ -198,9 +205,9 @@ function GoalBlock({
           />
         ))}
       </div>
-      <button className="btn-primary gs-save-btn" onClick={onSave} disabled={saving}>
+      <Button variant="primary" size="md" layoutClassName="gs-save-btn" onClick={onSave} disabled={saving}>
         {saving ? t("common.saving") : t("goals.save")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -214,6 +221,7 @@ interface AdvisorMetricRowProps {
 }
 
 function AdvisorMetricRow({ label, value, onChange, recommended, testId }: AdvisorMetricRowProps) {
+  const { t } = useTranslation();
   return (
     <div className="gs-advisor__metric" data-testid={testId}>
       <div className="gs-advisor__metric-head">
@@ -221,7 +229,7 @@ function AdvisorMetricRow({ label, value, onChange, recommended, testId }: Advis
         <span className="gs-advisor__metric-rec">
           {recommended === null || recommended === undefined
             ? "—"
-            : `おすすめ ${formatAdviceNumber(recommended)}`}
+            : t("goals.advisorRecommended", { value: formatAdviceNumber(recommended) })}
         </span>
       </div>
       <input
@@ -357,15 +365,15 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
                   {t("goals.advisorTypeWins")}
                 </button>
               </div>
-              <button
+              <Button variant="primary" size="md" layoutClassName="gs-advisor__run-btn"
                 type="button"
-                className="btn-primary gs-advisor__run-btn"
+
                 data-testid="goal-advisor-generate"
                 onClick={fetchAdvice}
                 disabled={loadingAdvice}
               >
                 {loadingAdvice ? t("common.loading") : t("goals.advisorGenerate")}
-              </button>
+              </Button>
             </div>
             <p className="gs-advisor__scope-note">{t("goals.advisorScopeMine")}</p>
           </div>
@@ -531,17 +539,17 @@ export default function GoalSettingPage() {
   const { year: weekYear, week: curWeek } = currentYearWeek();
 
   const isLeader = (user: CurrentUser | null, team: Team | null) =>
-    user?.role === "admin" ||
+    user?.isTenantAdmin === true ||
     (team !== null && team.leader_id === user?.id);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.get<{ id: number; role: string }>("/auth/me"),
+      api.get<MyPermissionsResponse>("/me/permissions"),
       api.get<Team[]>("/teams"),
     ])
       .then(([me, teamList]) => {
-        setCurrentUser(me);
+        setCurrentUser({ id: me.user_id, isTenantAdmin: me.is_tenant_admin });
         setTeams(teamList);
         if (teamList.length > 0) setSelectedTeamId(teamList[0].id);
       })
@@ -706,7 +714,8 @@ export default function GoalSettingPage() {
             {/* チーム選択 */}
             <div className="gs-team-select-wrap">
               <label className="gs-label">{t("goals.selectTeam")}</label>
-              <select
+              <SelectControl
+                size="sm"
                 className="gs-select"
                 value={selectedTeamId ?? ""}
                 onChange={(e) => setSelectedTeamId(Number(e.target.value))}
@@ -716,7 +725,7 @@ export default function GoalSettingPage() {
                     {tm.name}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {canEditTeam ? (

@@ -105,6 +105,8 @@ async def post_retry_extraction(
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RetryExtractionResponse(**result)
 
 

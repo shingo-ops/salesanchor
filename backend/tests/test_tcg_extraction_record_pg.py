@@ -22,15 +22,21 @@ from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, provisi
 from tests.test_tcg_work_matching_integration import pg as pg
 
 MIGRATION = MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql"
-HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE"
-VALID = HEADER + "\n◆原文商品｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜｜"
+HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE｜RAW_PRODUCT_CODE"
+VALID = HEADER + "\n◆原文商品｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜｜｜"
 RAW = "◆原文商品 2BOX 1,000円 未開封 翌日発送"
+
+
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
 
 
 @pytest.fixture(autouse=True)
 def never_live(monkeypatch):
     monkeypatch.setattr(gemini, "_get_genai_client", lambda: pytest.fail("Live Gemini forbidden"))
     monkeypatch.setenv("TCG_AUTO_ANALYZE", "0")
+    # DB プロンプト読み取りをスタブ化（テスト用DBにextraction_prompt_configが存在しない）
+    monkeypatch.setattr(gemini, "_load_db_prompts", lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT))
 
 
 def source(pg):
@@ -259,7 +265,7 @@ def test_actual_8mib_pg_boundaries(pg, monkeypatch, stage, extra):
         measured[0]["raw_memo"] = item["raw_memo"]
         assert len(records.encoded(measured).encode()) == target
 
-    def synthetic_extract(raw_text, *, work_reference, recorder):
+    def synthetic_extract(raw_text, *, work_reference, recorder, supplier_context=None, knowledge_links=None):
         payload = {"model": "synthetic", "contents": "あ", "config": {"temperature": 0}}
         if stage == "input":
             size = len(records.encoded({**payload, "reference": work_reference}).encode())
@@ -319,7 +325,7 @@ def test_migration_idempotent_and_parent_lifecycle(pg, monkeypatch):
         cur.execute(MIGRATION.read_text())
         cur.execute(MIGRATION.read_text())
         cur.execute("SELECT schemaname FROM pg_tables WHERE tablename='extraction_attempts' ORDER BY schemaname")
-        assert cur.fetchall() == [(SCHEMA,)]
+        assert cur.fetchall() == [('public',), (SCHEMA,)]
         cur.execute(f"SELECT tableowner FROM pg_tables WHERE schemaname='{SCHEMA}' AND tablename='extraction_attempts'")
         assert cur.fetchone()[0] == 'jarvis'
         cur.execute(f"SELECT has_table_privilege('salesanchor_app','{SCHEMA}.extraction_attempts','SELECT,INSERT,UPDATE')")
@@ -392,7 +398,7 @@ def test_fixed_scale_44_attempts_storage_budget(pg, monkeypatch, capsys):
         sid, jid = source(pg)
         raw = "\n".join(f"◆匿名商品{i} 2BOX 1,000円 未開封 翌日発送" for i in range(count))
         response = HEADER + "\n" + "\n".join(
-            f"◆匿名商品{i}｜2｜1,000円｜BOX｜未開封｜翌日発送｜L{i+1:04d}｜｜｜｜" for i in range(count)
+            f"◆匿名商品{i}｜2｜1,000円｜BOX｜未開封｜翌日発送｜L{i+1:04d}｜｜｜｜｜" for i in range(count)
         )
         with pg[0].cursor() as cur:
             cur.execute(f"UPDATE {SCHEMA}.source_messages SET raw_text=%s WHERE id=%s", (raw, sid))
@@ -461,8 +467,9 @@ def test_simulated_process_exit_keeps_last_committed_stage(pg, monkeypatch, rece
     if received:
         original = records.AttemptRecorder.on_response
 
-        def stop(self, response):
-            original(self, response)
+        def stop(self, response, *, input_tokens=0, output_tokens=0, usage_counts=None):
+            original(self, response, input_tokens=input_tokens, output_tokens=output_tokens,
+                     usage_counts=usage_counts)
             raise SystemExit("simulated process exit")
 
         monkeypatch.setattr(records.AttemptRecorder, "on_response", stop)

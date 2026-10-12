@@ -6,9 +6,9 @@ API:
   PATCH  /api/v1/super-admin/inventory-offers/{id}      update (quantity/unit_price/status/notes/expires_at)
   DELETE /api/v1/super-admin/inventory-offers/{id}      hard delete
 
-AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は F6 承認時 (`apply_inbound_items`) 経路で
-別途処理する設計のため、本ルーターでは INSERT は UNIQUE 衝突時 409 を返し、
-admin は明示的に PATCH を選ぶ。
+AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理する設計のため
+（2026-10-02 削除済み: 旧 F6 承認フロー `apply_inbound_items`）、
+本ルーターでは INSERT は UNIQUE 衝突時 409 を返し、admin は明示的に PATCH を選ぶ。
 """
 
 from __future__ import annotations
@@ -226,7 +226,7 @@ async def list_inventory_view(
     if q:
         conditions.append(
             "(s.name ILIKE :q OR p.name ILIKE :q OR p.name_en ILIKE :q "
-            "OR p.product_code ILIKE :q OR p.category ILIKE :q OR p.mark ILIKE :q)"
+            "OR p.id::text ILIKE :q OR p.category ILIKE :q OR p.mark ILIKE :q)"
         )
         params["q"] = f"%{q}%"
     # ADR-093 Phase 4: ユーザー別フィルタ「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）
@@ -403,7 +403,7 @@ async def list_offers(
         params["status_filter"] = status_filter
     if q:
         conditions.append(
-            "(s.name ILIKE :q OR p.name ILIKE :q OR p.product_code ILIKE :q)"
+            "(s.name ILIKE :q OR p.name ILIKE :q OR p.id::text ILIKE :q)"
         )
         params["q"] = f"%{q}%"
 

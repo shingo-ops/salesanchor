@@ -6,8 +6,12 @@ import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Props {
   showForm: boolean;
@@ -66,7 +70,7 @@ export function OrdersFormModal({
         )}
         <div className="form-group">
           <label>{t("orders.orderNumber")} *</label>
-          <input
+          <TextFieldControl
             required
             value={form.order_number}
             onChange={(e) => setForm({ ...form, order_number: e.target.value })}
@@ -74,7 +78,7 @@ export function OrdersFormModal({
         </div>
         <div className="form-group">
           <label>{t("common.amount")}</label>
-          <input
+          <TextFieldControl
             type="number" min="0" step="1"
             value={form.total_amount}
             onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
@@ -82,23 +86,23 @@ export function OrdersFormModal({
         </div>
         <div className="form-group">
           <label>{t("common.status")}</label>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+          <SelectControl fullWidth value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <div className="form-group">
           <label>{t("common.notes")}</label>
-          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+          <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>
             {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn-primary">
+          </Button>
+          <Button type="submit" variant="primary" size="md">
             {editId ? t("common.update") : t("common.register")}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

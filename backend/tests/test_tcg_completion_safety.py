@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
+from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_unit_recovery_svc as recovery
@@ -14,6 +15,15 @@ from tests import test_tcg_work_matching_integration as work_fixture
 
 SCHEMA = work_fixture.SCHEMA
 pg = work_fixture.pg
+
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
+
+
+@pytest.fixture(autouse=True)
+def stub_db_prompts(monkeypatch):
+    # DB プロンプト読み取りをスタブ化（テスト用DBにextraction_prompt_configが存在しない）
+    monkeypatch.setattr(gemini, "_load_db_prompts", lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT))
 
 
 @pytest.mark.parametrize('keyword,name,expected', [
@@ -87,14 +97,14 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
             FROM {SCHEMA}.tcg_status_master
             ON CONFLICT (status_id) DO NOTHING""")
         cur.execute('''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
-            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.tcg_type_master w,
+            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.type_master w,
             public.tcg_product_categories c WHERE w.code='one_piece' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
         cur.execute('INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,0)',(pid,'架空検証商品'))
         smid, jobid = str(uuid4()), str(uuid4())
         original='ワンピース\n架空検証商品 カートン\n架空検証商品 BOX\n架空検証商品 カートン(10BOX入り)\n架空検証商品'
-        cur.execute(f'''INSERT INTO {SCHEMA}.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1''',(smid,original,hashlib.sha256(original.encode()).hexdigest()))
+        cur.execute(f'''INSERT INTO {SCHEMA}.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+            SELECT %s,id,%s,%s,true,now(),now() FROM {SCHEMA}.supplier_channels LIMIT 1''',(smid,original,hashlib.sha256(original.encode()).hexdigest()))
         cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')",(jobid,smid))
         items=[]
         for line,name,memo in [(2,'ONE PIECE 架空検証商品 カートン',''),(3,'架空検証商品 BOX','完売'),(4,'架空検証商品 カートン(10BOX入り)',''),(5,'架空検証商品','')]:
@@ -130,7 +140,9 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
         finally:
             await ae.dispose()
     output=asyncio.run(fetch())
-    assert len(output)==2
+    # ADR-158: items 1 and 3 both resolve to SYN001 with condition=Case (same product_id, condition_id);
+    # global-latest logic keeps only one is_current=TRUE per pair → 1 output row.
+    assert len(output)==1
     assert all(row[8]!='Sold out' for row in output)
 
 
@@ -144,11 +156,11 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             async with AsyncSession(ae) as session:
                 from sqlalchemy import text
                 refs = {}
-                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.tcg_type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
+                for key, table, code in [('product_kind_id','public.product_kinds','TCG'),('work_id','public.type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
                     raw_id = (await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one()
-                    # product_category_id is INTEGER after Phase 3B; asyncpg requires int, not str.
-                    # division_id / manufacturer_id remain UUID (str). work_id is converted inside create_product.
-                    refs[key] = int(raw_id) if key == 'product_category_id' else str(raw_id)
+                    # product_category_id / product_kind_id are INTEGER after Phase 3A/3B.
+                    # manufacturer_id remains UUID (str). work_id is converted inside create_product.
+                    refs[key] = int(raw_id) if key in ('product_category_id', 'product_kind_id') else str(raw_id)
                 args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date=None,search_keywords='架空の登録検証デッキ',exclude_keywords='',**refs)
                 first = await master.create_product(session, **args)
                 second = await master.create_product(session, **args)
@@ -156,9 +168,10 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
                 return first['product_id']
         finally:
             await ae.dispose()
-    code = asyncio.run(register())
+    product_int_id = asyncio.run(register())
     with connection.cursor() as cur:
-        cur.execute(f'SELECT category_class FROM public.products WHERE product_code=%s',(code,))
+        # create_product now returns str(integer id); query by id, not product_code
+        cur.execute(f'SELECT category_class FROM public.products WHERE id=%s',(int(product_int_id),))
         assert cur.fetchone()[0]=='ワンピース'  # Existing registration contract; not the Box/Single column.
     _, jobid, result = work_fixture.run_message(connection, engine, monkeypatch,
         'ワンピース\n架空の登録検証デッキ PSA10',

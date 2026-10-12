@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useInboxSSE } from "../../hooks/useInboxSSE";
 import { api, ApiError } from "../../lib/api";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import {
   Conversation,
   MessagesResponse,
@@ -35,6 +36,7 @@ import {
   readInboxSettings,
 } from "./inbox.types";
 import type { InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
+import { buildReactionCreatePath, buildReactionDeletePath } from "./reactionPaths";
 
 // ---------------------------------------------------------------------------
 // 返却型
@@ -73,6 +75,14 @@ export interface UseInboxStateReturn {
 
   // 選択中会話
   selectedLeadId: number | null;
+  /**
+   * 一覧へ戻る（スマホの1画面1ページ用）。
+   * 既存の onPageFilterChange と同じ型で解除する:
+   * 選択の解除・カルテ詳細のクリア・URL の lead_id 削除をまとめて行う。
+   * 状態だけ消して URL を残すと、初期値が URL から作られる経路（:171-174, :201）で
+   * 戻ってしまうため、URL も必ず消すこと。
+   */
+  backToList: () => void;
   selectedConversation: Conversation | null;
   selectedPlatform: ReturnType<typeof inferPlatform>;
   messagesData: MessagesResponse | null;
@@ -115,6 +125,8 @@ export interface UseInboxStateReturn {
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
   submitSend: (opts?: { draftId?: number }) => Promise<void>;
+  /** 失敗した送信を同じ下書き（draft_id）のまま再送する（ADR-159 の「もう一度送る」） */
+  retrySend: () => Promise<void>;
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 
   // ADR-142: 送信ガード Phase A — スレッド言語設定
@@ -125,6 +137,10 @@ export interface UseInboxStateReturn {
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
   clearAttachment: () => void;
+
+  // Discord リアクション
+  sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
+  deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
 
   // 管理ドロップダウン
   manageOpen: boolean;
@@ -381,6 +397,27 @@ export function useInboxState(): UseInboxStateReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Discord リアクション送信 / 取り消し
+  // ---------------------------------------------------------------------------
+
+  // messageId は meta_messages.id（内部ID）。Discord snowflake ではない。
+  const sendReaction = useCallback(async (messageId: number, emojiName: string, emojiId?: string) => {
+    if (!selectedLeadId) return;
+    await api.post<void>(
+      buildReactionCreatePath(selectedLeadId, messageId),
+      { emoji_name: emojiName, emoji_id: emojiId ?? null },
+    );
+    // 楽観的更新は行わず再取得で同期する（DB 記録は Gateway、反映は SSE 経由でも届く）
+    await loadMessages(selectedLeadId);
+  }, [selectedLeadId, loadMessages]);
+
+  const deleteReaction = useCallback(async (messageId: number, emojiName: string, emojiId?: string) => {
+    if (!selectedLeadId) return;
+    await api.delete(buildReactionDeletePath(selectedLeadId, messageId, emojiName, emojiId));
+    await loadMessages(selectedLeadId);
+  }, [selectedLeadId, loadMessages]);
+
+  // ---------------------------------------------------------------------------
   // カルテ編集ハンドラー（常時編集 + blur保存 + Notionキャッシュ）
   // ---------------------------------------------------------------------------
 
@@ -511,6 +548,14 @@ export function useInboxState(): UseInboxStateReturn {
     setSearchParams(params, { replace: true });
   }, [closeKartePanel, clearAttachment, searchParams, setSearchParams, conversations]);
 
+  const backToList = useCallback(() => {
+    setSelectedLeadId(null);
+    setLeadDetail(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete("lead_id");
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const onPageFilterChange = useCallback((value: string) => {
     setPageIdFilter(value);
     setSelectedLeadId(null);
@@ -594,11 +639,24 @@ export function useInboxState(): UseInboxStateReturn {
       });
   }, [conversations, statusTab, unreadOnly, followUpOnly, searchQuery]);
 
-  // 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択
+  // 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択。
+  // スマホ（1画面1ページ）では自動選択しない。理由は2つある。
+  //   1. 受信箱を開いた瞬間に会話が全画面になり、一覧が一度も見えない
+  //      （PC は一覧が常に見えているため自動選択が親切に働く）
+  //   2. 「一覧へ戻る」で selectedLeadId を null に戻しても、この効果が即座に
+  //      先頭を選び直すため一覧に戻れない。PR 4165 で本番に出た機能退行の原因
+  //      （PR番号に # を付けないのは、check-design-token-ratchet.sh が色コードと
+  //      見分けられず hex 増加として弾くため）。
+  //      3幅の画面検査（tests-e2e/visual-language/inbox-single-column.spec.ts）が
+  //      これを検出した。
+  // 判定は ADR-137 の useIsMobile（matchMedia + BREAKPOINTS.MOBILE_MAX）を使い、
+  // CSS 側の @media (max-width: 767px) と同じ切替点に揃える。
+  const isMobile = useIsMobile();
   useEffect(() => {
+    if (isMobile) return;
     if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
     selectLead(filteredConversations[0].lead_id);
-  }, [filteredConversations, selectedLeadId, convLoading, selectLead]);
+  }, [filteredConversations, selectedLeadId, convLoading, selectLead, isMobile]);
 
   // ---------------------------------------------------------------------------
   // 送信
@@ -612,6 +670,13 @@ export function useInboxState(): UseInboxStateReturn {
   const canSend = !!messagingWindow?.can_send_at_all && !discordChannelMissing;
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
+
+  // 直近の送信が下書き経由だった場合の draft_id。失敗時だけ保持し、再送で同じ紐付けを使う
+  const failedDraftIdRef = useRef<number | undefined>(undefined);
+  // 失敗後に入力文を編集したら、下書き（翻訳プレビュー）との対応が崩れるため draft_id を使い回さない
+  useEffect(() => {
+    failedDraftIdRef.current = undefined;
+  }, [draft]);
 
   const submitSend = useCallback(async (opts?: { draftId?: number }) => {
     if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
@@ -634,10 +699,12 @@ export function useInboxState(): UseInboxStateReturn {
         await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");
       }
+      failedDraftIdRef.current = undefined;
       skipNextPollRef.current = true;
       await loadMessages(selectedLeadId);
       loadConversations();
     } catch (e) {
+      failedDraftIdRef.current = opts?.draftId;
       if (e instanceof ApiError) {
         const detail = e.responseDetail as { reason?: string; error_code?: number } | null;
         setSendErrorReason(detail?.reason ?? "generic");
@@ -656,6 +723,11 @@ export function useInboxState(): UseInboxStateReturn {
       setSending(false);
     }
   }, [sending, canSend, selectedLeadId, trimmedDraft, attachedFile, clearAttachment, loadMessages, loadConversations]);
+
+  const retrySend = useCallback(
+    () => submitSend({ draftId: failedDraftIdRef.current }),
+    [submitSend],
+  );
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -849,6 +921,7 @@ export function useInboxState(): UseInboxStateReturn {
 
     // 選択中会話
     selectedLeadId,
+    backToList,
     selectedConversation,
     selectedPlatform,
     messagesData,
@@ -891,6 +964,7 @@ export function useInboxState(): UseInboxStateReturn {
     trimmedDraft,
     messagingWindow,
     submitSend,
+    retrySend,
     handleKeyDown,
 
     // ADR-142: 送信ガード Phase A
@@ -901,6 +975,10 @@ export function useInboxState(): UseInboxStateReturn {
     attachedFile,
     setAttachedFile,
     clearAttachment,
+
+    // Discord リアクション
+    sendReaction,
+    deleteReaction,
 
     // 管理ドロップダウン
     manageOpen,

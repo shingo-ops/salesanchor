@@ -18,13 +18,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.gemini_extraction_svc import (
-    PROMPT_TEXT,
     annotate_lines,
     extract_message,
     format_prompt_input,
     parse_extraction_response,
+    parse_raw_copy_response,
+    strip_emoji,
 )
 from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
+
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
 
 
 @pytest.fixture(autouse=True)
@@ -33,6 +37,11 @@ def isolated_reference(monkeypatch):
     monkeypatch.setattr("app.tasks.tcg_extraction.work_schema_ready", lambda _: True)
     monkeypatch.setattr("app.tasks.tcg_extraction.schema_ready", lambda _: True)
     monkeypatch.setattr("app.tasks.tcg_extraction.load_work_reference", lambda *_: {"works": [], "products": []})
+    # DB プロンプト読み取りをスタブ化（テスト環境にはextraction_prompt_configが存在しない）
+    monkeypatch.setattr(
+        "app.services.gemini_extraction_svc._load_db_prompts",
+        lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT),
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -95,7 +104,9 @@ def test_prompt_input_embedded_in_genshi_separator():
     """format_prompt_input の出力が '原文:\\n' の直後に続く形で組み合わせられる。"""
     raw_text = "テスト行"
     prompt_input = format_prompt_input(raw_text)
-    full = f"{PROMPT_TEXT}\n\n原文:\n{prompt_input}"
+    # プロンプトはDBから取得するため、ここでは連結パターンの検証のみ行う
+    dummy_prompt = "テスト用プロンプト"
+    full = f"{dummy_prompt}\n\n原文:\n{prompt_input}"
     assert "原文:\n[L0001] テスト行" in full
 
 
@@ -113,8 +124,9 @@ _VALID_RESPONSE = (
 def test_parse_extraction_response_basic():
     """正常な 2 行を正しく解析する。"""
     raw_text = "行A\n行B\n行C"
-    items = parse_extraction_response(_VALID_RESPONSE, raw_text)
+    items, parse_errors = parse_extraction_response(_VALID_RESPONSE, raw_text)
     assert len(items) == 2
+    assert parse_errors == []
 
     assert items[0]["raw_product_name"] == "ポケモンカード"
     assert items[0]["raw_quantity"] == "3"
@@ -136,7 +148,7 @@ def test_parse_extraction_response_single_line_span():
         "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
         "商品A｜1｜100円｜個｜｜｜L0001\n"
     )
-    items = parse_extraction_response(response, "行A")
+    items, _ = parse_extraction_response(response, "行A")
     assert items[0]["line_start"] == 1
     assert items[0]["line_end"] == 1
 
@@ -148,7 +160,7 @@ def test_parse_extraction_response_clamp_max():
         "商品A｜1｜100円｜個｜｜｜L0001-L0099\n"
     )
     raw_text = "行A\n行B"  # 2行
-    items = parse_extraction_response(response, raw_text)
+    items, _ = parse_extraction_response(response, raw_text)
     assert items[0]["line_end"] == 2  # クランプ
 
 
@@ -159,22 +171,24 @@ def test_parse_extraction_response_wrong_cols_skipped():
         "A｜B｜C\n"  # 3列のみ
         "ポケモン｜3｜1500円｜枚｜｜｜L0001\n"
     )
-    items = parse_extraction_response(response, "行A")
+    items, _ = parse_extraction_response(response, "行A")
     assert len(items) == 1
     assert items[0]["raw_product_name"] == "ポケモン"
 
 
 def test_parse_extraction_response_empty_response():
     """空レスポンスは空リスト。"""
-    items = parse_extraction_response("", "行A")
+    items, parse_errors = parse_extraction_response("", "行A")
     assert items == []
+    assert parse_errors == []
 
 
 def test_parse_extraction_response_header_only():
     """ヘッダー行のみは空リスト。"""
     response = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
-    items = parse_extraction_response(response, "行A")
+    items, parse_errors = parse_extraction_response(response, "行A")
     assert items == []
+    assert parse_errors == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -327,6 +341,103 @@ def test_auto_analyze_on_calls_analyze(monkeypatch):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# EXTRACTION_SHADOW_ENABLED フラグ制御（試運転, PR-C）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _mock_extract_done():
+    def mock_extract(raw_text, **kwargs):
+        return {
+            "status": "done",
+            "prompt_version": "v1",
+            "items": [
+                {
+                    "raw_product_name": "商品A",
+                    "raw_quantity": "1",
+                    "raw_price": "100円",
+                    "raw_unit": "個",
+                    "raw_state": "",
+                    "raw_memo": "",
+                    "line_start": 1,
+                    "line_end": 1,
+                }
+            ],
+            "raw_response": "",
+            "error_message": None,
+        }
+    return mock_extract
+
+
+def test_shadow_disabled_by_default_skips_run_shadow(monkeypatch):
+    """EXTRACTION_SHADOW_ENABLED 未設定のとき run_shadow_for_job を呼ばない。"""
+    monkeypatch.delenv("EXTRACTION_SHADOW_ENABLED", raising=False)
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+    shadow_calls = []
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", lambda *a, **kw: shadow_calls.append((a, kw))):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")
+
+    assert result["status"] == "done"
+    assert shadow_calls == [], "EXTRACTION_SHADOW_ENABLED 未設定のとき run_shadow_for_job を呼ぶべきでない"
+
+
+def test_shadow_enabled_calls_run_shadow_with_production_values(monkeypatch):
+    """EXTRACTION_SHADOW_ENABLED=1 のとき、本番で読み込んだ raw_text 等をそのまま渡して呼ぶ。"""
+    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session(raw_text="商品A\n商品B")
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+    shadow_calls = []
+
+    def fake_run_shadow(session, extraction_job_id, *, raw_text, supplier_context, knowledge_links):
+        shadow_calls.append(
+            {"extraction_job_id": extraction_job_id, "raw_text": raw_text}
+        )
+        return {"status": "completed"}
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", fake_run_shadow):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")
+
+    assert result["status"] == "done"
+    assert len(shadow_calls) == 1
+    assert shadow_calls[0]["raw_text"] == "商品A\n商品B"
+
+
+def test_shadow_exception_does_not_propagate_to_production(monkeypatch):
+    """run_shadow_for_job が例外を送出しても _run_extraction の結果には影響しない。"""
+    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+
+    def raise_shadow(*a, **kw):
+        raise RuntimeError("shadow run が失敗しても本番には伝わらないことを確認する")
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", raise_shadow):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")  # raises せず完走すること自体が検証
+
+    assert result["status"] == "done"
+    assert result["items_count"] == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SQL スキーマ守護テスト（IMP-05 の穴を塞ぐ）
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -401,6 +512,35 @@ def test_tcg_line_import_svc_sql_has_schema_prefix():
         )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# strip_emoji
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestStripEmoji:
+    def test_removes_common_emoji(self):
+        assert strip_emoji("在庫リスト🔥✨") == "在庫リスト"
+
+    def test_preserves_cjk_symbols(self):
+        assert strip_emoji("◆ポケモン■遊戯王") == "◆ポケモン■遊戯王"
+
+    def test_preserves_newlines(self):
+        text = "行1🔥\n行2✨\n行3"
+        result = strip_emoji(text)
+        assert result.count("\n") == 2
+        assert result == "行1\n行2\n行3"
+
+    def test_empty_string(self):
+        assert strip_emoji("") == ""
+
+    def test_no_emoji(self):
+        original = "ポケモン BOX 5000円"
+        assert strip_emoji(original) == original
+
+    def test_preserves_fullwidth_pipe(self):
+        """全角パイプはGemini出力の区切り文字なので保持される"""
+        assert strip_emoji("商品名｜数量｜価格") == "商品名｜数量｜価格"
+
 _V3_HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 
 
@@ -412,9 +552,9 @@ def _v3_response(old_response):
 @pytest.mark.parametrize("response", [
     "", "   ", "商品A｜1｜100｜BOX｜｜｜L0001｜｜", _VALID_RESPONSE,
     _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001",
-    _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001｜｜\n壊れた｜行",
 ])
 def test_v3_format_failure_saves_no_partial_items(monkeypatch, response):
+    """ヘッダー欠落 / 列数不一致行のみの場合は status='error' かつ items=[]。"""
     monkeypatch.setattr("app.services.gemini_extraction_svc.call_gemini_extraction",
                         lambda *args, **kwargs: response)
     result = extract_message("商品A")
@@ -422,19 +562,37 @@ def test_v3_format_failure_saves_no_partial_items(monkeypatch, response):
     assert result["items"] == []
 
 
+def test_v3_partial_save_when_valid_and_invalid_lines_mixed(monkeypatch):
+    """正常行と壊れた行が混在した場合は正常行を部分保存して status='done'。"""
+    mixed = _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001｜｜\n壊れた｜行"
+    monkeypatch.setattr("app.services.gemini_extraction_svc.call_gemini_extraction",
+                        lambda *args, **kwargs: mixed)
+    result = extract_message("商品A")
+    assert result["status"] == "done"
+    assert len(result["items"]) == 1
+    assert result["items"][0]["raw_product_name"] == "商品A"
+    assert result["parse_errors"] != []
+
+
 @pytest.mark.parametrize("span", ["L0000", "L0099", "L0002-L0001", "bad"])
-def test_v3_product_span_never_clamped(span):
-    with pytest.raises(ValueError):
-        parse_extraction_response(_V3_HEADER + f"\nガンダム EB01｜1｜100｜BOX｜｜｜{span}｜ガンダム｜L0001",
-                                  "ガンダム EB01", version=3)
+def test_v3_product_span_collected_in_parse_errors(span):
+    """v3 で不正なスパンを持つ行は parse_errors に収集され、items は空になる。"""
+    items, parse_errors = parse_extraction_response(
+        _V3_HEADER + f"\nガンダム EB01｜1｜100｜BOX｜｜｜{span}｜ガンダム｜L0001",
+        "ガンダム EB01", version=3,
+    )
+    assert items == []
+    assert len(parse_errors) == 1
 
 
 def test_v3_work_evidence_roundtrip_without_repair():
     row = "ガンダム EB01｜1｜100｜BOX｜｜｜L0001｜ガンダム｜L0099"
-    item = parse_extraction_response(_V3_HEADER + "\n" + row, "ガンダム EB01", version=3)[0]
+    items, _ = parse_extraction_response(_V3_HEADER + "\n" + row, "ガンダム EB01", version=3)
+    item = items[0]
     assert item["raw_work_name"] == "ガンダム"
     assert item["raw_work_source_line_span"] == "L0099"  # analyzer rejects, never clamps
-    assert parse_extraction_response(_VALID_RESPONSE, "a\nb\nc")[0]["raw_work_name"] is None
+    v2_items, _ = parse_extraction_response(_VALID_RESPONSE, "a\nb\nc")
+    assert v2_items[0]["raw_work_name"] is None
 
 
 def test_work_master_reaches_prompt_without_database_ids(monkeypatch):
@@ -451,6 +609,331 @@ def test_work_master_reaches_prompt_without_database_ids(monkeypatch):
     assert "secret-database-id" not in prompt and "inactive-work" not in prompt
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 試運転（Shadow run, PR-C）: parse_raw_copy_response / call_gemini_raw_copy
+# ─────────────────────────────────────────────────────────────────────────────
+
+_RAW_COPY_HEADER_LINE = (
+    "RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜RAW_MULTI｜"
+    "RAW_SOURCE_LINE_SPAN｜RAW_HEADING_LINE_SPAN"
+)
+
+_VALID_RAW_COPY_RESPONSE = (
+    _RAW_COPY_HEADER_LINE + "\n"
+    "ポケモンカード｜1500円｜枚｜3｜none｜none｜none｜L0001｜none\n"
+    "遊戯王カード｜5000円｜枚｜10｜PSA10｜発売日発送｜none｜L0002-L0003｜L0001\n"
+)
+
+
+class TestParseRawCopyResponse:
+    def test_parses_valid_two_line_response(self):
+        # Arrange
+        raw_text = "見出し\nポケモンカード\n遊戯王カード\n続き"
+        # Act
+        items, parse_errors = parse_raw_copy_response(_VALID_RAW_COPY_RESPONSE, raw_text)
+        # Assert
+        assert parse_errors == []
+        assert len(items) == 2
+        assert items[0]["raw_product_name"] == "ポケモンカード"
+        assert items[0]["raw_state"] == "none"
+        assert items[0]["raw_ship"] == "none"
+        assert items[0]["line_start"] == 1 and items[0]["line_end"] == 1
+        assert items[0]["heading_line_start"] is None
+        assert items[0]["heading_line_end"] is None
+        assert items[1]["line_start"] == 2 and items[1]["line_end"] == 3
+        assert items[1]["heading_line_start"] == 1 and items[1]["heading_line_end"] == 1
+
+    def test_header_mismatch_raises_value_error(self):
+        # Arrange
+        bad_response = "RAW_PRODUCT_NAME｜RAW_PRICE｜間違ったヘッダー\n商品｜100｜個\n"
+        # Act / Assert
+        with pytest.raises(ValueError):
+            parse_raw_copy_response(bad_response, "行A")
+
+    def test_empty_response_raises_no_header_error(self):
+        # Act / Assert
+        with pytest.raises(ValueError):
+            parse_raw_copy_response("", "行A")
+
+    def test_empty_raw_state_goes_to_parse_errors_not_items(self):
+        # Arrange: RAW_STATE が空欄（Gemini指示違反）
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜｜none｜none｜L0001｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+        assert "RAW_STATE" in parse_errors[0]["error"] or "RAW_SHIP" in parse_errors[0]["error"]
+
+    def test_empty_raw_ship_goes_to_parse_errors_not_items(self):
+        # Arrange
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜none｜｜none｜L0001｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+    def test_invalid_source_span_goes_to_parse_errors(self):
+        # Arrange
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜none｜none｜none｜不正な範囲｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+    def test_wrong_column_count_goes_to_parse_errors(self):
+        # Arrange
+        response = _RAW_COPY_HEADER_LINE + "\n商品A｜100円｜個\n"
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+
+class TestCallGeminiRawCopy:
+    def test_uses_db_raw_copy_prompt_and_filters_knowledge_links(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        knowledge_links = [
+            {"category": "block_delimiter", "pattern": "◆", "normalized_to": None},
+            {"category": "skip_condition", "pattern": "完売", "normalized_to": "skip"},
+            {"category": "status_keyword", "pattern": "サーチ済", "normalized_to": "searched"},
+        ]
+        # Act
+        result = svc.call_gemini_raw_copy("行A", knowledge_links=knowledge_links)
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "raw copy prompt (stub)" in prompt
+        assert "◆" in prompt  # block_delimiter は渡す
+        assert "完売" not in prompt  # skip_condition は渡さない
+        assert "サーチ済" not in prompt  # status_keyword は渡さない
+        assert result["response_text"] == _RAW_COPY_HEADER_LINE
+
+    def test_missing_prompt_raises_runtime_error(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+
+        def _raise():
+            raise RuntimeError("raw_copy_extraction プロンプトがDBに登録されていない")
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", _raise)
+        # Act / Assert
+        with pytest.raises(RuntimeError):
+            svc.call_gemini_raw_copy("行A")
+
+    def test_ship_format_included_in_v7_prompt_when_provided(self, monkeypatch):
+        """extraction_ship_format は v7 専用注入。supplier_context にあればプロンプトに入る。"""
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        svc.call_gemini_raw_copy(
+            "行A", supplier_context={"extraction_ship_format": "発売N日前発送 の形式"},
+        )
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "発送日フォーマット: 発売N日前発送 の形式" in prompt
+
+    def test_ship_format_absent_when_not_provided(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        svc.call_gemini_raw_copy("行A", supplier_context={"extraction_price_format": "100円"})
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "発送日フォーマット" not in prompt
+
+
+class TestUsageMetadataTokenReading:
+    """出力トークンは usage_metadata.candidates_token_count から読む
+    （response_token_count という属性は google-genai SDK に存在しない）。
+    recon.md §A 参照。
+    """
+
+    def _fake_usage(self, *, prompt_token_count, candidates_token_count):
+        usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
+        usage.prompt_token_count = prompt_token_count
+        usage.candidates_token_count = candidates_token_count
+        return usage
+
+    def test_call_gemini_extraction_reads_candidates_token_count(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _STUB_BASE_PROMPT
+        client.models.generate_content.return_value.usage_metadata = self._fake_usage(
+            prompt_token_count=111, candidates_token_count=222,
+        )
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        recorder = MagicMock()
+        # Act
+        svc.call_gemini_extraction("行A", recorder=recorder)
+        # Assert: recorder.on_response に正しい input/output tokens が渡る
+        recorder.on_response.assert_called_once()
+        _args, kwargs = recorder.on_response.call_args
+        assert kwargs["input_tokens"] == 111
+        assert kwargs["output_tokens"] == 222
+
+    def test_call_gemini_raw_copy_reads_candidates_token_count(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = self._fake_usage(
+            prompt_token_count=50, candidates_token_count=77,
+        )
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        result = svc.call_gemini_raw_copy("行A")
+        # Assert
+        assert result["input_tokens"] == 50
+        assert result["output_tokens"] == 77
+
+
+class TestBuildSupplierContextNoteV6Unaffected:
+    """label_map から extraction_ship_format を外した変更が v6（本番）出力を変えないことを守る。"""
+
+    def test_extraction_ship_format_is_ignored_by_shared_note_builder(self):
+        # Arrange
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+        supplier_context = {
+            "extraction_price_format": "100円",
+            "extraction_ship_format": "発売N日前発送 の形式",
+        }
+        # Act
+        note = _build_supplier_context_note(supplier_context)
+        # Assert: v6 が読む共有ビルダーは ship_format を出力に含めない（PR-D で列追加後に注入）
+        assert "価格フォーマット: 100円" in note
+        assert "発送日フォーマット" not in note
+        assert "extraction_ship_format" not in note
+
+    def test_ship_format_only_produces_same_empty_note_as_no_context(self):
+        """仕入元が extraction_ship_format だけを設定している場合（他の6列は空）の
+        本番PR懸念（tcg_extraction.py の supplier_context が None から非None辞書へ変わる）を
+        固定する。_build_supplier_context_note 単体では None/{}/ship_format-only の
+        いずれも同じ空文字列を返す（PR-D #3844）。"""
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+
+        ship_only = {
+            "extraction_price_format": None,
+            "extraction_qty_format": None,
+            "extraction_order_pattern": None,
+            "extraction_default_unit": None,
+            "extraction_notes": None,
+            "extraction_state_format": None,
+            "extraction_example_text": None,
+            "extraction_ship_format": "発売N日前発送",
+        }
+        assert _build_supplier_context_note(ship_only) == ""
+        assert _build_supplier_context_note({}) == ""
+        assert _build_supplier_context_note(ship_only) == _build_supplier_context_note({})
+
+    def test_ship_format_only_supplier_context_produces_identical_v6_prompt(self, monkeypatch):
+        """call_gemini_extraction レベルでも、supplier_context が
+        {ship_format のみ設定} のときと None のときでプロンプト全文が一致することを確認する
+        （tcg_extraction.py の `if any(v for v in extraction_rules.values())` により
+        ship_format単独設定でも supplier_context が非None辞書になるが、v6出力は変わらない）。"""
+        from app.services import gemini_extraction_svc as svc
+
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _V3_HEADER
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+
+        svc.call_gemini_extraction("行A", supplier_context=None)
+        prompt_without_context = client.models.generate_content.call_args.kwargs["contents"]
+
+        ship_only = {
+            "extraction_price_format": None,
+            "extraction_qty_format": None,
+            "extraction_order_pattern": None,
+            "extraction_default_unit": None,
+            "extraction_notes": None,
+            "extraction_state_format": None,
+            "extraction_example_text": None,
+            "extraction_ship_format": "発売N日前発送",
+        }
+        svc.call_gemini_extraction("行A", supplier_context=ship_only)
+        prompt_with_ship_only = client.models.generate_content.call_args.kwargs["contents"]
+
+        assert prompt_without_context == prompt_with_ship_only
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _get_genai_client: GEMINI_PROXY_URL (gemini-egress-via-prod2)
+# design: docs/handoff/gemini-egress-via-prod2/design.md §5-2
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestGetGenaiClientProxy:
+    def test_no_proxy_url_uses_direct_client(self, monkeypatch):
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.delenv("GEMINI_PROXY_URL", raising=False)
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        mock_client_cls.assert_called_once_with(api_key="dummy-key")
+
+    def test_proxy_url_set_passes_http_options(self, monkeypatch):
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.setenv("GEMINI_PROXY_URL", "http://host-gateway:18888")
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        assert mock_client_cls.call_count == 1
+        _, kwargs = mock_client_cls.call_args
+        assert kwargs["api_key"] == "dummy-key"
+        http_options = kwargs["http_options"]
+        assert http_options.client_args == {"proxy": "http://host-gateway:18888"}
+        assert http_options.async_client_args == {"proxy": "http://host-gateway:18888"}
+
+    def test_empty_proxy_url_uses_direct_client(self, monkeypatch):
+        """GEMINI_PROXY_URL が空文字（.env で無効化）なら直接接続に戻る。"""
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.setenv("GEMINI_PROXY_URL", "")
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        mock_client_cls.assert_called_once_with(api_key="dummy-key")
+
+
 # Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
 # A live run must report format errors / correct / unknown / wrong independently.
 LIVE_WORK_SAMPLES = [
@@ -462,3 +945,74 @@ LIVE_WORK_SAMPLES = [
      ["ポケモン", "ワンピース", "ガンダム"]),
     ("EB01 1BOX 1000円", [""]),
 ]
+
+
+class TestNewSystemRulesDoNotReachProductionV7:
+    """新しい2列（extraction_layout_rules / extraction_hard_cases）は本番 v7 の指示書・supplier_context に入らない。"""
+
+    _NEW = {"extraction_layout_rules": "手順3の当てはめ", "extraction_hard_cases": "原文例と出力例"}
+
+    def test_shared_note_builder_ignores_new_columns(self):
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+
+        base = {"extraction_price_format": "100円", "extraction_notes": "補足"}
+        assert _build_supplier_context_note({**base, **self._NEW}) == _build_supplier_context_note(base)
+        assert _build_supplier_context_note(dict(self._NEW)) == ""
+
+    @staticmethod
+    def _row(layout=None, hard=None, price=None):
+        # SELECT の並び: ej.id, raw_text, 8列, supplier_id(row[10]), layout(row[11]), hard(row[12])
+        return ("ej", "原文", price, None, None, None, None, None, None, None, None, layout, hard)
+
+    def test_new_columns_are_read_from_row_11_and_12_and_supplier_id_stays_row_10(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        session = MagicMock()
+        row = self._row(layout="L", hard="H", price="p")
+        row = row[:10] + (None,) + row[11:]  # supplier_id=None（knowledge リンクの SELECT を避ける）
+        ctx = task._build_extraction_context(session, row)
+        assert ctx.new_system_rules == {"extraction_layout_rules": "L", "extraction_hard_cases": "H"}
+        assert ctx.supplier_id is None
+        # supplier_id は row[10]
+        session.execute.return_value.fetchall.return_value = []
+        row2 = row[:10] + (42,) + row[11:]
+        assert task._build_extraction_context(session, row2).supplier_id == 42
+
+    def test_supplier_context_has_no_new_keys_even_when_new_columns_have_values(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        ctx = task._build_extraction_context(MagicMock(), self._row(layout="L", hard="H", price="p"))
+        assert ctx.supplier_context is not None
+        assert "extraction_layout_rules" not in ctx.supplier_context
+        assert "extraction_hard_cases" not in ctx.supplier_context
+        assert set(ctx.supplier_context) == {
+            "extraction_price_format", "extraction_qty_format", "extraction_order_pattern",
+            "extraction_default_unit", "extraction_notes", "extraction_state_format",
+            "extraction_example_text", "extraction_ship_format",
+        }
+
+    def test_new_columns_only_supplier_keeps_supplier_context_none(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        ctx = task._build_extraction_context(MagicMock(), self._row(layout="L", hard="H"))
+        assert ctx.supplier_context is None
+        assert ctx.new_system_rules == {"extraction_layout_rules": "L", "extraction_hard_cases": "H"}
+
+    def test_no_new_values_gives_none_new_system_rules(self):
+        from unittest.mock import MagicMock
+
+        from app.tasks import tcg_extraction as task
+
+        assert task._build_extraction_context(MagicMock(), self._row(price="p")).new_system_rules is None
+
+    def test_select_sql_appends_new_columns_after_supplier_id(self):
+        from app.tasks import tcg_extraction as task
+
+        sql = task._context_select_sql()
+        assert sql.index("sc.supplier_id") < sql.index("s.extraction_layout_rules") < sql.index("s.extraction_hard_cases")

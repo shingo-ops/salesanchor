@@ -27,6 +27,15 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Table guard: import_jobs was dropped by migration 20260921_050000
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = _schema AND table_name = 'import_jobs'
+    ) THEN
+        RAISE NOTICE 'migration 20260905_140000: %.import_jobs does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     RAISE NOTICE 'migration 20260905_140000: adding review stage columns to import_jobs in schema %', _schema;
 
     -- ----------------------------------------------------------------

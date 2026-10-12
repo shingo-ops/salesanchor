@@ -1,13 +1,44 @@
-import hashlib
+from datetime import date, timedelta
+import fcntl
 import json
 from pathlib import Path
+import sqlite3
+import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from android_parser import AndroidExportError, parse_android_export
-from client import ENDPOINT, Outbox
+import client as client_module
+from client import ENDPOINT, NO_IMPORT_SECONDS, NOTIFY_NO_IMPORT, NOTIFY_PROGRESS, NOTIFY_STALL, Outbox
 
 SAMPLE = '[LINE] test\r\n保存日時: test\r\n\r\n2026/9/12(土)\r\n12:00\t姓 名\t商品A\r\n\r\n商品B\t注記\r\n12:01\t別の人\t末尾\r\n'
+
+
+class FakeClock:
+    def __init__(self, start=1_700_000_000.0):
+        self.now = start
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, seconds):
+        self.now += seconds
+
+
+class FakeNotifier:
+    """Stand-in for termux_notify. ok=True/False controls the return value;
+    set ok to an Exception instance to simulate the notifier raising."""
+
+    def __init__(self, ok=True):
+        self.ok = ok
+        self.calls = []
+
+    def __call__(self, nid, title, content):
+        self.calls.append((nid, title, content))
+        if isinstance(self.ok, Exception):
+            raise self.ok
+        return self.ok
 
 
 class ParserTests(unittest.TestCase):
@@ -20,7 +51,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(result[0]['timestamp'], '2026-09-12 12:00:00')
 
     def test_bom(self):
-        self.assertEqual(parse_android_export('\ufeff' + SAMPLE), parse_android_export(SAMPLE))
+        self.assertEqual(parse_android_export('﻿' + SAMPLE), parse_android_export(SAMPLE))
 
     def test_system_record_is_not_supplier(self):
         result = parse_android_export(SAMPLE + '12:02\t参加しました\n')
@@ -50,9 +81,11 @@ class OutboxTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.source = self.root / 'source.txt'
         self.source.write_bytes(SAMPLE.encode())
-        self.outbox = Outbox(self.root / 'state')
+        self.clock = FakeClock()
+        self.notifier = FakeNotifier()
+        self.outbox = Outbox(self.root / 'state', clock=self.clock, notifier=self.notifier)
         self.outbox.enqueue(self.source)
-        (self.outbox.base / 'config.json').write_text(json.dumps({'enabled':True,'endpoint':ENDPOINT}))
+        (self.outbox.base / 'config.json').write_text(json.dumps({'enabled': True, 'endpoint': ENDPOINT}))
         from device_session import private_write
         private_write(self.outbox.base / 'device.json', {'token': 'sali1_' + 'a' * 43})
 
@@ -61,55 +94,558 @@ class OutboxTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def result(self, **extra):
-        return 200, json.dumps(dict(status='imported',review_status='ok',import_job_id='test-job', **extra))
+        return 200, json.dumps(dict(status='imported', review_status='ok', import_job_id='test-job', **extra))
+
+    def counts(self, status):
+        """Strip the newly-added 'latest'/'stall_seconds' keys so older
+        assertions about plain state counts still read cleanly."""
+        return {k: v for k, v in status.items() if k not in ('latest', 'stall_seconds')}
+
+    # -- pre-existing behaviour (kept, adapted to the enlarged status() dict) --
 
     def test_original_and_duplicate(self):
         self.outbox.enqueue(self.source)
-        self.assertEqual(self.outbox.status(), {'queued':1})
-        copy = next((self.outbox.base/'originals').glob('*.txt'))
+        self.assertEqual(self.counts(self.outbox.status()), {'queued': 1})
+        copy = next((self.outbox.base / 'originals').glob('*.txt'))
         self.assertEqual(copy.read_bytes(), self.source.read_bytes())
 
+    def test_duplicate_of_imported_file_is_notified(self):
+        self.outbox.send(transport=lambda raw, token: self.result())
+        self.notifier.calls.clear()
+        self.outbox.enqueue(self.source)
+        self.assertEqual(self.notifier.calls[-1][:2], (NOTIFY_PROGRESS, 'LINE取込：取り込み済み'))
+        row = self.outbox.db.execute(
+            "SELECT result FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(row[0], 'duplicate')
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1})
+
     def test_pending_review_is_not_accepted(self):
-        result = self.outbox.send(lambda raw, token:(200,json.dumps({'status':'imported','review_status':'pending_review','import_job_id':'test-job'})))
-        self.assertEqual(result, {'pending_review':1})
+        result = self.outbox.send(lambda raw, token: (200, json.dumps(
+            {'status': 'imported', 'review_status': 'pending_review', 'import_job_id': 'test-job'})))
+        self.assertEqual(self.counts(result), {'pending_review': 1})
 
     def test_accepted_not_resent(self):
-        calls=[]
+        calls = []
+
         def transport(raw, token):
             calls.append(raw)
             return self.result()
+
         self.outbox.send(transport)
         self.outbox.send(transport, force=True)
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0], self.source.read_bytes())
 
     def test_network_retry(self):
-        self.assertEqual(self.outbox.send(lambda *_:(0,'')), {'retry':1})
-        self.assertEqual(self.outbox.send(lambda *_:self.result(),force=True), {'accepted':1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (0, ''))), {'retry': 1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: self.result(), force=True)), {'accepted': 1})
+
+    def test_server_error_detail_is_recorded(self):
+        """サーバーの理由が端末に残ること。2026-09-21 の500障害では本文を捨てており、
+        「通信結果を確認できません」しか記録されず原因調査ができなかった。"""
+        body = json.dumps({'detail': 'データベースエラーが発生しました。'})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (500, body))), {'retry': 1})
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertIn('データベースエラーが発生しました。', reason)
+
+    def test_server_error_html_body_is_not_recorded(self):
+        """任意のHTML本文は保存しない方針を維持する（JSONのdetailのみ記録する）。"""
+        self.outbox.send(lambda *_: (502, '<html><body>Bad Gateway</body></html>'))
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertNotIn('html', reason.lower())
+        self.assertEqual(reason, '通信結果を確認できません')
+
+    def test_server_error_detail_is_truncated(self):
+        """長い detail は120文字までに切る。"""
+        body = json.dumps({'detail': 'あ' * 500})
+        self.outbox.send(lambda *_: (500, body))
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertEqual(reason.count('あ'), 120)
 
     def test_auth_error_retains_original(self):
-        self.assertEqual(self.outbox.send(lambda *_:(401,'')), {'auth_required':1})
-        self.assertEqual(len(list((self.outbox.base/'originals').glob('*.txt'))),1)
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (401, ''))), {'auth_required': 1})
+        self.assertEqual(len(list((self.outbox.base / 'originals').glob('*.txt'))), 1)
 
     def test_bad_success_is_not_accepted(self):
-        self.assertEqual(self.outbox.send(lambda *_:(200,'{"success":true}')), {'retry':1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (200, '{"success":true}'))), {'retry': 1})
 
     def test_missing_api_not_pc_fallback(self):
-        self.assertEqual(self.outbox.send(lambda *_:(404,'')), {'retry':1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (404, ''))), {'retry': 1})
 
     def test_rejected_not_resent(self):
-        self.assertEqual(self.outbox.send(lambda *_:(422,'')), {'rejected':1})
-        self.assertEqual(self.outbox.send(lambda *_:self.result(),force=True), {'rejected':1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (422, ''))), {'rejected': 1})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: self.result(), force=True)), {'rejected': 1})
 
     def test_tampered_original_blocks_upload(self):
-        next((self.outbox.base/'originals').glob('*.txt')).write_text('changed')
+        next((self.outbox.base / 'originals').glob('*.txt')).write_text('changed')
         with self.assertRaises(ValueError):
-            self.outbox.send(lambda *_:self.result())
+            self.outbox.send(lambda *_: self.result())
 
     def test_wrong_destination_blocks_upload(self):
-        (self.outbox.base/'config.json').write_text(json.dumps({'enabled':True,'endpoint':'https://example.org'}))
+        (self.outbox.base / 'config.json').write_text(json.dumps({'enabled': True, 'endpoint': 'https://example.org'}))
         with self.assertRaises(ValueError):
-            self.outbox.send(lambda *_:self.result())
+            self.outbox.send(lambda *_: self.result())
+
+    # -- incremental send (KGI1/3/4/5) -----------------------------------------------
+
+    def test_kgi1_resend_without_new_messages_is_skipped(self):
+        """KGI1: 新規メッセージが無ければ一切送信しない。
+        実機では『保存日時』ヘッダがエクスポートごとに変わるため、新規メッセージが
+        0件でもdigestは毎回変わる（recon事実1がこの機能自体の理由）。それを再現する
+        ため、本文は変えずヘッダだけ変えた2つ目のファイルをenqueueする。"""
+        self.outbox.send(lambda *_: self.result())
+        second_source = self.root / 'second.txt'
+        second_source.write_bytes(SAMPLE.replace('保存日時: test', '保存日時: test2').encode())
+        self.outbox.enqueue(second_source)
+
+        def fail_if_called(raw, token):
+            self.fail('新規メッセージが無いのに送信された')
+
+        result = self.outbox.send(fail_if_called)
+        self.assertEqual(self.counts(result), {'accepted': 1, 'skipped': 1})
+        started = self.outbox.db.execute(
+            "SELECT COUNT(*) FROM events WHERE stage='send' AND result='started'").fetchone()[0]
+        self.assertEqual(started, 1)
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' AND result='skipped'").fetchone()[0]
+        self.assertIn('2026-09-12 12:01:00', reason)
+
+    def test_isolated_same_minute_message_is_not_skipped(self):
+        """design.md追補 2026-10-08: 基準と同一分に新規が1件増え、その後により新しい
+        時刻のメッセージが続かない場合でも、送信を見送ってはいけない（鮮度のため、翌朝
+        まで遅れるのは不可）。sent_watermark_tail_countで同一分の件数増加を検知する。"""
+        self.outbox.send(lambda *_: self.result())  # baseline: watermark=12:01、tail_count=1
+        appended = self.source.read_bytes() + '12:01\tさらに別の人\t孤立新規\n'.encode()
+        second = self.root / 'second.txt'
+        second.write_bytes(appended)
+        self.outbox.enqueue(second)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2})
+        self.assertIn('payload', captured, '同一分の孤立した新規なのに送信がskipされた')
+        bodies = [message['body'] for message in parse_android_export(captured['payload'].decode('utf-8'))]
+        self.assertIn('孤立新規', bodies)
+
+    def test_watermark_newer_than_any_message_does_not_crash(self):
+        """コードレビューで判明: 基準がファイル内のどのメッセージよりも新しい場合
+        （共有は任意のトークを受け付けるため、利用者が別のトーク・古い書き出しを手で
+        共有すると実在する経路）、基準-60分以降のメッセージが1件も無くStopIterationで
+        落ちていた。原本をそのまま送る安全側の挙動に倒し、例外にならず送信されることを
+        確認する。"""
+        self.outbox.send(lambda *_: self.result())  # baseline watermark=2026-09-12 12:01:00
+
+        other_source = self.root / 'other.txt'
+        other_source.write_bytes('2026/1/1(木)\n10:00\t別の人\t別トークの内容\n'.encode())
+        self.outbox.enqueue(other_source)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)  # 以前はここでStopIterationが発生していた
+        self.assertEqual(self.counts(result), {'accepted': 2})
+        parsed = parse_android_export(captured['payload'].decode('utf-8'))
+        self.assertEqual([message['body'] for message in parsed], ['別トークの内容'])
+
+    def test_kgi3_overlap_resends_same_minute_messages_once_new_arrives(self):
+        """KGI3: 基準時刻と同一分(12:01)に複数メッセージがある状態で基準を確定させ、
+        別の分(12:05)に新規が来たときだけ送信する。切り出しは基準時刻-60分からなので、
+        同一分の『後続』（基準そのものになった2件目だけでなく1件目も）が取りこぼされず
+        ペイロードに含まれることを確認する（60分の重なりを入れた理由そのもの）。"""
+        based = (SAMPLE + '12:01\tさらに別の人\t同一分2件目\n').encode()
+        first = self.root / 'first.txt'
+        first.write_bytes(based)
+        self.outbox.enqueue(first)
+        self.outbox.send(lambda *_: self.result())
+        # setUp()が先にenqueueしたSAMPLEのジョブ（未送信）がここでsupersededになる。
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1, 'superseded': 1})
+
+        second = self.root / 'second.txt'
+        second.write_bytes(based + '12:05\t別の人\t新着\n'.encode())
+        self.outbox.enqueue(second)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2, 'superseded': 1})
+        parsed = parse_android_export(captured['payload'].decode('utf-8'))
+        bodies = [message['body'] for message in parsed]
+        self.assertIn('末尾', bodies)
+        self.assertIn('同一分2件目', bodies)
+        self.assertIn('新着', bodies)
+
+    def test_kgi4_failed_send_is_recovered_with_later_new_messages(self):
+        """KGI4: 失敗した回は基準を進めないため、次回は失敗分も含めて取り戻す。"""
+        self.outbox.send(lambda *_: self.result())
+        appended1 = self.source.read_bytes() + '12:05\t別の人\t追加1\n'.encode()
+        second = self.root / 'second.txt'
+        second.write_bytes(appended1)
+        self.outbox.enqueue(second)
+        self.outbox.send(lambda *_: (0, ''))
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1, 'retry': 1})
+
+        appended2 = appended1 + '12:10\t別の人\t追加2\n'.encode()
+        third = self.root / 'third.txt'
+        third.write_bytes(appended2)
+        self.outbox.enqueue(third)  # 失敗した'second'(retry)をsupersede
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2, 'superseded': 1})
+        bodies = [message['body'] for message in parse_android_export(captured['payload'].decode('utf-8'))]
+        self.assertIn('追加1', bodies)
+        self.assertIn('追加2', bodies)
+
+    def test_kgi5_large_export_enqueues_and_sends_small_payload(self):
+        """KGI5: 10MiB上限を64MiBに上げたことで、12MiBの書き出しファイルでも
+        enqueueが成功し、かつ切り出し後の送信ペイロードは20KB以下であること。"""
+        self.outbox.send(lambda *_: self.result())  # baseline watermark: 2026-09-12 12:01:00
+        lines = []
+        padding_body = 'x' * 1600
+        for day_offset in range(150):
+            d = date(2026, 1, 1) + timedelta(days=day_offset)
+            lines.append(f'{d.year}/{d.month}/{d.day}(月)')
+            for minute in range(60):
+                lines.append(f'10:{minute:02d}\t送信者\t{padding_body}')
+        lines.append('2026/9/12(土)')
+        lines.append('12:01\t別の人\t末尾')  # SAMPLEの最後のメッセージと同一（基準と一致させる）
+        for i in range(1, 9):
+            lines.append(f'12:{1 + i:02d}\t別の人\t新着{i}')
+        big_bytes = ('\n'.join(lines) + '\n').encode('utf-8')
+        self.assertGreater(len(big_bytes), 12 * 1024 * 1024)
+
+        big_source = self.root / 'big.txt'
+        big_source.write_bytes(big_bytes)
+        enqueue_result = self.outbox.enqueue(big_source)
+        self.assertEqual(enqueue_result['bytes'], len(big_bytes))
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        send_result = self.outbox.send(transport)
+        self.assertEqual(self.counts(send_result), {'accepted': 2})
+        payload = captured['payload']
+        self.assertLessEqual(len(payload), 20 * 1024)
+        parsed = parse_android_export(payload.decode('utf-8'))
+        self.assertTrue(any(message['body'].startswith('新着') for message in parsed))
+
+    # -- notifications and history -------------------------------------------------
+
+    def test_success_events_and_notification(self):
+        self.outbox.send(lambda *_: self.result(message_count=3))
+        stages = [(row[0], row[1]) for row in
+                  self.outbox.db.execute('SELECT stage, result FROM events ORDER BY id')]
+        self.assertIn(('received', 'ok'), stages)
+        self.assertIn(('store', 'ok'), stages)
+        self.assertIn(('send', 'started'), stages)
+        self.assertIn(('send', 'accepted'), stages)
+        self.assertEqual(len(self.notifier.calls), 1)
+        _, title, content = self.notifier.calls[0]
+        self.assertIn('取り込み完了', title)
+        self.assertIn('3件', content)
+
+    def test_pending_review_notification(self):
+        self.outbox.send(lambda *_: (200, json.dumps({
+            'status': 'imported', 'review_status': 'pending_review',
+            'import_job_id': 'job', 'unresolved_count': 2})))
+        self.assertEqual(len(self.notifier.calls), 1)
+        nid, title, content = self.notifier.calls[0]
+        self.assertEqual(nid, NOTIFY_PROGRESS)
+        self.assertIn('確認待ち', title)
+        self.assertIn('2件', content)
+
+    def test_network_failure_reason_and_notification(self):
+        self.outbox.send(lambda *_: (0, ''))
+        reasons = [row[0] for row in self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' AND result='retry'")]
+        self.assertTrue(any('通信できません' in (reason or '') for reason in reasons))
+        self.assertEqual(len(self.notifier.calls), 1)
+        self.assertIn('失敗', self.notifier.calls[0][1])
+
+    def test_notify_failure_is_recorded_but_does_not_block_send(self):
+        self.notifier.ok = False
+        result = self.outbox.send(lambda *_: self.result())
+        self.assertEqual(self.counts(result), {'accepted': 1})
+        failed = self.outbox.db.execute(
+            "SELECT 1 FROM events WHERE stage='notify' AND result='failed'").fetchall()
+        self.assertTrue(failed)
+
+    def test_notify_exception_is_recorded_but_does_not_block_send(self):
+        self.notifier.ok = RuntimeError('boom')
+        result = self.outbox.send(lambda *_: self.result())
+        self.assertEqual(self.counts(result), {'accepted': 1})
+        failed = self.outbox.db.execute(
+            "SELECT 1 FROM events WHERE stage='notify' AND result='failed'").fetchall()
+        self.assertTrue(failed)
+
+    # -- single-original retention -------------------------------------------------
+
+    def test_second_enqueue_supersedes_first_and_cleans_inbox(self):
+        first_digest = self.outbox.db.execute('SELECT digest FROM jobs').fetchone()[0]
+        inbox = self.root / 'inbox'
+        first_dir = inbox / 'received-AAAAAAAAAA'
+        first_dir.mkdir(parents=True)
+        (first_dir / 'talk.txt').write_bytes(self.source.read_bytes())
+        second_dir = inbox / 'received-BBBBBBBBBB'
+        second_dir.mkdir(parents=True)
+        second_source = self.root / 'second.txt'
+        second_source.write_bytes((SAMPLE + '12:05\t別の人\t追加\n').encode())
+        (second_dir / 'talk.txt').write_bytes(second_source.read_bytes())
+
+        result = self.outbox.enqueue(second_source)
+        self.outbox.remove_old_files(result['digest'], inbox=inbox, keep_inbox=second_dir)
+
+        states = dict(self.outbox.db.execute('SELECT digest, state FROM jobs'))
+        self.assertEqual(states[first_digest], 'superseded')
+        self.assertEqual(states[result['digest']], 'queued')
+        self.assertFalse((self.outbox.base / 'originals' / (first_digest + '.txt')).exists())
+        self.assertTrue((self.outbox.base / 'originals' / (result['digest'] + '.txt')).exists())
+        self.assertFalse(first_dir.exists())
+        self.assertTrue(second_dir.exists())
+
+    def test_remove_old_files_skips_unexpected_entries(self):
+        originals = self.outbox.base / 'originals'
+        keep_digest = self.outbox.db.execute('SELECT digest FROM jobs').fetchone()[0]
+        stray_file = originals / 'not-a-digest.txt'
+        stray_file.write_text('x')
+        real_old = originals / (('0' * 64) + '.txt')
+        real_old.write_text('y')
+        link_name = originals / (('1' * 64) + '.txt')
+        try:
+            link_name.symlink_to(real_old)
+        except (OSError, NotImplementedError):
+            self.skipTest('この環境ではシンボリックリンクを作成できません')
+
+        inbox = self.root / 'inbox'
+        messy_dir = inbox / 'received-CCCCCCCCCC'
+        messy_dir.mkdir(parents=True)
+        (messy_dir / 'sub').mkdir()
+
+        dry = self.outbox.remove_old_files(keep_digest, inbox=inbox, dry_run=True)
+        self.assertTrue(stray_file.exists())
+        self.assertTrue(link_name.is_symlink())
+        self.assertTrue(messy_dir.exists())
+        self.assertIn(real_old, dry)
+
+        removed = self.outbox.remove_old_files(keep_digest, inbox=inbox)
+        self.assertTrue(stray_file.exists(), '名前規則外は消さない')
+        # real_old (a legitimate target) is removed, but the symlink entry
+        # itself (never a target because is_symlink() excludes it) stays;
+        # it is left dangling, which is expected since we never follow links.
+        self.assertTrue(link_name.is_symlink(), 'シンボリックリンク自体は消さない')
+        self.assertTrue(messy_dir.exists(), 'サブディレクトリ入りは消さない')
+        self.assertFalse(real_old.exists())
+        self.assertIn(real_old, removed)
+
+    # -- periodic check: stall detection ---------------------------------------------
+
+    def _mark_stalled(self, attempts=1):
+        digest = self.outbox.db.execute('SELECT digest FROM jobs').fetchone()[0]
+        now = self.clock()
+        with self.outbox.db:
+            # retry_at far in the future so check()'s own resend attempt (which would
+            # otherwise hit the real network transport) finds nothing to do.
+            self.outbox.db.execute(
+                "UPDATE jobs SET state='retry', attempts=?, retry_at=?, received_at=? WHERE digest=?",
+                (attempts, now + 10 ** 9, now, digest))
+        self.outbox.record('send', 'retry', digest=digest,
+                            reason='通信できません（圏外・タイムアウト等）')
+        return digest
+
+    def test_check_no_stall_notification_when_unset(self):
+        self._mark_stalled()
+        self.clock.advance(10000)
+        self.outbox.check()
+        self.assertFalse(any(call[0] == NOTIFY_STALL for call in self.notifier.calls))
+
+    def test_check_no_stall_notification_before_threshold(self):
+        self.outbox.set_stall(600)
+        self._mark_stalled()
+        self.clock.advance(100)
+        self.outbox.check()
+        self.assertFalse(any(call[0] == NOTIFY_STALL for call in self.notifier.calls))
+
+    def test_check_stall_notification_after_threshold(self):
+        self.outbox.set_stall(600)
+        self._mark_stalled(attempts=3)
+        self.clock.advance(700)
+        self.outbox.check()
+        stall_calls = [call for call in self.notifier.calls if call[0] == NOTIFY_STALL]
+        self.assertEqual(len(stall_calls), 1)
+        _, title, content = stall_calls[0]
+        self.assertIn('詰まり', title)
+        self.assertIn('分', content)
+        self.assertIn('再送3回', content)
+        self.assertIn('通信できません', content)
+
+    # -- periodic check: no-import detection ------------------------------------------
+
+    def test_check_no_import_notification_after_threshold(self):
+        # setUp()のenqueue()が記録したreceived/okを「最後の取り込み」として使う。
+        # checkが自前のsend()で未送信ジョブに触れて実ネットワークへ出ないよう、先に片付けておく。
+        self.outbox.send(lambda *_: self.result())
+        self.clock.advance(NO_IMPORT_SECONDS + 1)
+        self.outbox.check()
+        no_import_calls = [call for call in self.notifier.calls if call[0] == NOTIFY_NO_IMPORT]
+        self.assertEqual(len(no_import_calls), 1)
+        _, title, content = no_import_calls[0]
+        self.assertIn('3時間以上取り込みがありません', title)
+        self.assertIn('時間', content)
+        self.assertIn('確認してください', content)
+        recorded = self.outbox.db.execute(
+            "SELECT 1 FROM events WHERE stage='check' AND result='no_import'").fetchall()
+        self.assertTrue(recorded)
+
+    def test_check_no_import_no_notification_before_threshold(self):
+        self.outbox.send(lambda *_: self.result())
+        self.clock.advance(3600)  # 1時間。閾値（3時間）未満
+        self.outbox.check()
+        self.assertFalse(any(call[0] == NOTIFY_NO_IMPORT for call in self.notifier.calls))
+
+    def test_check_no_import_no_notification_without_prior_received(self):
+        # 一度も取り込みが無い新規環境を模す。setUp()のenqueue()を経由しない、まっさらなOutbox。
+        # config.json/device.jsonを置かないため、check()は自前のsend()を試みない（ネットワーク不要）。
+        clock = FakeClock()
+        notifier = FakeNotifier()
+        outbox = Outbox(self.root / 'fresh-state', clock=clock, notifier=notifier)
+        try:
+            clock.advance(NO_IMPORT_SECONDS + 1)
+            outbox.check()
+            self.assertFalse(any(call[0] == NOTIFY_NO_IMPORT for call in notifier.calls))
+        finally:
+            outbox.db.close()
+
+    def test_check_resends_due_retry_job_as_check(self):
+        self.outbox.send(lambda *_: (0, ''))
+        self.clock.advance(120)
+        self.outbox.check(transport=lambda *_: self.result())
+        state = self.outbox.db.execute('SELECT state FROM jobs').fetchone()[0]
+        self.assertEqual(state, 'accepted')
+        detected = self.outbox.db.execute(
+            "SELECT 1 FROM events WHERE stage='send' AND detected_by='check'").fetchall()
+        self.assertTrue(detected)
+
+    # -- prune -------------------------------------------------------------------
+
+    def test_prune_removes_old_events_keeps_recent(self):
+        self.outbox.record('send', 'accepted', digest='old')
+        old_time = self.clock() - 91 * 86400
+        with self.outbox.db:
+            self.outbox.db.execute(
+                "UPDATE events SET at=? WHERE stage='send' AND result='accepted' AND digest='old'", (old_time,))
+        self.outbox.record('send', 'accepted', digest='new')
+        self.outbox.prune()
+        remaining = [row[0] for row in self.outbox.db.execute(
+            "SELECT digest FROM events WHERE stage='send' AND result='accepted'")]
+        self.assertNotIn('old', remaining)
+        self.assertIn('new', remaining)
+
+    def test_prune_removes_old_finished_jobs_without_original(self):
+        digest = 'f' * 64
+        now = self.clock()
+        with self.outbox.db:
+            self.outbox.db.execute(
+                'INSERT INTO jobs (digest,state,finished_at) VALUES (?,?,?)',
+                (digest, 'accepted', now - 91 * 86400))
+        self.outbox.prune()
+        row = self.outbox.db.execute('SELECT 1 FROM jobs WHERE digest=?', (digest,)).fetchone()
+        self.assertIsNone(row)
+
+    # -- schema migration ----------------------------------------------------------
+
+    def test_opens_legacy_schema_and_adds_columns(self):
+        legacy_root = self.root / 'legacy'
+        legacy_root.mkdir()
+        (legacy_root / 'originals').mkdir()
+        db = sqlite3.connect(legacy_root / 'outbox.sqlite3')
+        db.execute('''CREATE TABLE jobs (
+            digest TEXT PRIMARY KEY, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+            retry_at REAL NOT NULL DEFAULT 0, job_id TEXT, response TEXT, error TEXT)''')
+        db.execute("INSERT INTO jobs (digest, state) VALUES ('abc', 'queued')")
+        db.commit()
+        db.close()
+        legacy = Outbox(legacy_root)
+        try:
+            columns = {row[1] for row in legacy.db.execute('PRAGMA table_info(jobs)')}
+            self.assertTrue({'received_at', 'last_attempt_at', 'finished_at'} <= columns)
+            self.assertEqual(dict(legacy.db.execute('SELECT digest, state FROM jobs')), {'abc': 'queued'})
+        finally:
+            legacy.db.close()
+
+    # -- config merging ------------------------------------------------------------
+
+    def test_set_stall_preserves_other_keys(self):
+        self.outbox.set_stall(900)
+        config = json.loads((self.outbox.base / 'config.json').read_text())
+        self.assertEqual(config['enabled'], True)
+        self.assertEqual(config['endpoint'], ENDPOINT)
+        self.assertEqual(config['stall_seconds'], 900)
+
+    def test_enable_preserves_stall_seconds(self):
+        self.outbox.set_stall(300)
+        self.outbox.db.close()
+        argv = ['client.py', '--state-dir', str(self.outbox.base), 'enable']
+        with mock.patch.object(sys, 'argv', argv):
+            client_module.main()
+        config = json.loads((self.outbox.base / 'config.json').read_text())
+        self.assertEqual(config.get('stall_seconds'), 300)
+        self.assertTrue(config.get('enabled'))
+        self.assertEqual(config.get('endpoint'), ENDPOINT)
+        # Reopen so tearDown's close() call still targets a live connection.
+        self.outbox.db = sqlite3.connect(self.outbox.base / 'outbox.sqlite3')
+
+    # -- check locking ---------------------------------------------------------------
+
+    def test_check_returns_zero_when_locked(self):
+        self.outbox.db.close()
+        lock_path = self.outbox.base / 'lock'
+        with lock_path.open('a') as lock_fd:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            argv = ['client.py', '--state-dir', str(self.outbox.base), 'check']
+            with mock.patch.object(sys, 'argv', argv):
+                code = client_module.main()
+            self.assertEqual(code, 0)
+        # Reopen so tearDown's close() call still targets a live connection.
+        self.outbox.db = sqlite3.connect(self.outbox.base / 'outbox.sqlite3')
+
+    def test_enqueue_send_setup_failure_is_notified_and_recorded(self):
+        self.outbox.db.close()
+        (self.outbox.base / 'config.json').write_text(json.dumps({'enabled': False}))
+        notifier = FakeNotifier()
+        argv = ['client.py', '--state-dir', str(self.outbox.base), 'enqueue', str(self.source)]
+        with mock.patch.object(sys, 'argv', argv), \
+                mock.patch.object(client_module, 'termux_notify', notifier):
+            code = client_module.main()
+        self.assertEqual(code, 1)
+        self.assertEqual(notifier.calls[-1][:2], (NOTIFY_PROGRESS, 'LINE取込：失敗'))
+        self.outbox.db = sqlite3.connect(self.outbox.base / 'outbox.sqlite3')
+        row = self.outbox.db.execute(
+            "SELECT result, reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(row[0], 'failed')
+        self.assertIn('Android専用API', row[1])
 
 
 if __name__ == '__main__':

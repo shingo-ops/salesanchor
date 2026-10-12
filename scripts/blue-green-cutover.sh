@@ -130,16 +130,22 @@ if [ "${GREEN_READY}" != "true" ]; then
   exit 1
 fi
 
-# health 確認完了後は ERR trap を解除（以降の cleanup は不要）
+# health 確認完了後: green は healthy なので cleanup 方針を切替
+# ここからは green を残し、旧 backend の切断失敗でもスクリプトを継続させる
 trap - ERR
+set +e  # Steps 4-6 は個別にエラーを処理する
 
 # ── Step 4: frontnet の backend エイリアスを原子的に切替 ────────────────────────
 echo "Step 4: Switching 'backend' alias on frontnet (connect green → disconnect old)..."
 # 4a. green を frontnet に接続（backend エイリアス付き）
 #     ※この瞬間から Docker DNS が old/green 両方を返す（最大 TTL 秒 = 瞬時）
 docker network connect --alias backend "${FRONTNET}" "${GREEN_BACKEND}"
-# 4b. 旧 backend を frontnet から切断（backend エイリアスの旧向き先を削除）
-docker network disconnect "${FRONTNET}" "${OLD_BACKEND}"
+# 4b. 旧 backend を frontnet から切断（存在する場合のみ）
+if docker inspect "${OLD_BACKEND}" >/dev/null 2>&1; then
+  docker network disconnect "${FRONTNET}" "${OLD_BACKEND}" 2>/dev/null || echo "  ⚠️ Old backend not on frontnet (already disconnected?)"
+else
+  echo "  ⚠️ Old backend container not found — skipping disconnect"
+fi
 # 4c. nginx reload — Docker DNS キャッシュをリフレッシュして green の IP を掴む
 docker exec "${NGINX}" nginx -s reload
 echo "  ✅ nginx reload done — traffic now flows to green (${GREEN_BACKEND})"
@@ -152,9 +158,15 @@ echo "  ✅ Old backend stopped and removed."
 
 # ── Step 6: Green を正規名にリネーム（次回デプロイとの整合性） ──────────────────
 echo "Step 6: Renaming green → ${OLD_BACKEND}..."
-docker rename "${GREEN_BACKEND}" "${OLD_BACKEND}"
-docker update --restart unless-stopped "${OLD_BACKEND}"
-echo "  ✅ Done."
+if docker rename "${GREEN_BACKEND}" "${OLD_BACKEND}"; then
+  docker update --restart unless-stopped "${OLD_BACKEND}"
+  echo "  ✅ Done."
+else
+  echo "  ⚠️ Rename failed — green container serves as '${GREEN_BACKEND}'"
+  docker update --restart unless-stopped "${GREEN_BACKEND}"
+fi
+
+set -e  # 安全モードを復帰
 
 echo "============================================"
 echo "Blue-green cutover complete."

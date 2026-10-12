@@ -61,17 +61,36 @@ END $$;
 
 -- tenant_006（撮影/デモ）の products のうち public.products に名前一致が無いもの（5 件想定）を
 -- public 中央へ移行する。冪等: name 完全一致が既にあれば skip。tenant_006 が無い環境（CI 等）は skip。
+-- work_id NOT NULL ガード: public.products.work_id が NOT NULL の場合は INSERT をスキップ。
+-- tenant→public 移行は 20260914_140000_unify_tcg_products_to_public.sql が正式に担当するため不要。
 DO $$
 BEGIN
+    -- Skip if work_id is NOT NULL (handled by later migrations)
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'products'
+        AND a.attname = 'work_id' AND a.attnotnull = true
+        AND NOT a.attisdropped
+    ) THEN
+        RAISE NOTICE 'public.products.work_id is NOT NULL — skipping tenant_006 INSERT (handled by later migrations)';
+        RETURN;
+    END IF;
+
+    -- incident 2026-10-03 (deploy run 37130920016): condition は public.products から
+    -- 削除済み（20260602_000000 参照）。ここで condition 列を INSERT 対象に含めると
+    -- 「column condition does not exist」で失敗するため、この列リストから除外する。
+    -- 詳細: docs/handoff/products-column-churn/design.md
     IF to_regclass('tenant_006.products') IS NOT NULL THEN
         INSERT INTO public.products (
-            name, name_en, category, mark, status, condition,
+            name, name_en, category, mark, status,
             unit_price, stock_quantity, weight, notes, release_date,
             jan_code, card_number, expansion_code, rarity, language,
             unit_price_usd, unit_price_eur, image_url
         )
         SELECT
-            tp.name_ja, tp.name_en, tp.category, tp.mark, tp.status, tp.condition,
+            tp.name_ja, tp.name_en, tp.category, tp.mark, tp.status,
             tp.unit_price, tp.quantity, tp.weight, tp.notes, tp.release_date,
             tp.jan_code, tp.card_number, tp.expansion_code, tp.rarity, tp.language,
             tp.unit_price_usd, tp.unit_price_eur, tp.image_url

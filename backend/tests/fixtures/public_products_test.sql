@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     release_date         DATE,
     tcg_uuid             UUID UNIQUE DEFAULT gen_random_uuid(),
     division_id          UUID,
+    product_kind_id      INTEGER,
     work_id              INTEGER,
     manufacturer_id      UUID,
     product_category_id  UUID,
@@ -28,6 +29,7 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS mark VARCHAR(100);
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS release_date DATE;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS division_id UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_kind_id INTEGER;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id INTEGER;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_category_id UUID;

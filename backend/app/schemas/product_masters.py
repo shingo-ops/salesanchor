@@ -3,7 +3,7 @@
 
 商品マスタ画面「各種マスタ」タブで編集する選択肢系マスタ:
   product_kind / set_type / rarity / language / unit / hs_code / item / material
-（TCGシリーズは public.tcg_type_master 側で管理するため対象外）
+（TCGシリーズは public.type_master 側で管理するため対象外）
 
 すべて require_super_admin 経由で書込される public schema のマスタ。
 """

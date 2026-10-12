@@ -39,7 +39,7 @@
     "initialPythonAttempt": "local CA trust lookup failed; not counted as service failure"
   },
   "relatedRecordPr": "https://github.com/shingo-ops/salesanchor/pull/3496",
-  "action": "GO #3497 retained; recovery verified, main integrated; final CI before merge/deploy.",
+  "action": "AP3497 merged and deployed successfully. PO visual/authenticated form verification remains unperformed.",
   "recoveryVerification": {
     "checkedAt": "2026-09-14T04:01:57.960797+00:00",
     "pr": 3500,
@@ -126,5 +126,25 @@
     "baselineFilesUnchanged": 23,
     "productFilesUnchanged": 3,
     "rawLogSha256": "478d3b778fe183c0fc6fe04c0197b54497bf8ece82bf44fb7dd71b05738147d5"
+  },
+  "deploymentResult": {
+    "merge": "26d5688946dc6f6144f3cea6bc9b2cb85db5bace",
+    "head": "ee14624102b6add06c52e93b30e953143666a3b3",
+    "ciSuccess": 39,
+    "ciSkipped": 8,
+    "run": 34916422461,
+    "job": 104214916879,
+    "conclusion": "success",
+    "finishedAt": "2026-09-15T01:17:11Z",
+    "backup": "salesanchor_db_20260915_101420.sql.gz (9.9M)",
+    "migrations": "skipped",
+    "sa19": "skipped",
+    "finalize": "success",
+    "verify": "success",
+    "frontend": "healthy",
+    "appHttp": 200,
+    "apiHttp": 200,
+    "dbRedisCelery": "connected",
+    "logSha256": "4a20273a98a7b4ee67630ce9e9fa9b5865de9d4b991ba05e7455f3221bd8e248"
   }
 }

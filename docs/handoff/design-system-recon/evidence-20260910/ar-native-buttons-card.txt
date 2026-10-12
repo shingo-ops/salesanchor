@@ -1,0 +1,55 @@
+CARD-AR-NATIVE-BUTTONS-01
+受領確認: 報告冒頭に「本報告はカードCARD-AR-NATIVE-BUTTONS-01の実行結果である」と記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+担当: Sol実装。root(Astra)は設計/文書/台帳。ほかの担当も作業中、他者の変更を取り消さず共存する。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+目的: design.md §ARの固定28件を既存Buttonへ移管し動作契約を維持する。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch
+固定基準: 99899eb824234c7158c14855301c9412f440db2d
+監査: docs/handoff/design-system-recon/evidence-20260910/ar-button-audit.json
+契約: docs/handoff/design-system-recon/evidence-20260910/ar-contracts.md
+所有製品14ファイル:
+- frontend/src/components/master-list-editor/MasterListEditor.tsx
+- frontend/src/pages/notifications/NotificationsPage.tsx
+- frontend/src/pages/badges/BadgesPage.tsx
+- frontend/src/pages/shifts/ShiftsPage.tsx
+- frontend/src/pages/buddy/BuddyPage.tsx
+- frontend/src/pages/orders/OrdersFormModal.tsx
+- frontend/src/pages/leads/LeadsPage.tsx
+- frontend/src/pages/roles/RolesPage.tsx
+- frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx
+- frontend/src/pages/units/UnitsPage.tsx
+- frontend/src/pages/product-categories/ProductCategoriesPage.tsx
+- frontend/src/pages/suppliers/SuppliersPage.tsx
+- frontend/src/pages/conditions/ConditionsPage.tsx
+- frontend/src/pages/status-master/StatusMasterPage.tsx
+所有新規試験4ファイル（必要な場合のみ作成）:
+- frontend/src/components/FormActionButtonMigration.test.tsx
+- frontend/src/components/OrderLeadButtonMigration.test.tsx
+- frontend/src/components/RoleKnowledgeButtonMigration.test.tsx
+- frontend/src/components/MasterSearchButtonMigration.test.tsx
+禁止: 所有外編集、既存試験の期待値変更、DB/API/権限/業務処理/共通CSS/トークン/金型/翻訳/依存/CI変更、skip/ガード解除、commit/push/PR/GO/本番/secret操作。
+禁止: 新エージェント、前回AQページ/試験編集、実ネットワーク通信（試験はmock境界で拒否）。ログ/一時監査スクリプトは/tmp/ar-validationだけ可。
+手順0: preflightとgit状態確認。監査14基準hash/28原文/対象外53/共有15hashが一致しなければ編集前停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && ./scripts/dev/executor-preflight.sh
+手順1: 対象28タグのみ。btn-primary→Button variant=primary size=md、btn-secondary[ field-h-md]→secondary/md。
+Button named importは未導入ファイルだけ追加。type/form/disabled/data-testid/onClick/children/既存属性を字句保持。
+loading/aria-busy/style/layoutClassName/追加disabledの導入不可。元の暗黙typeは明示化しない。業務本文・配線は触らない。
+14ファイルを逆変換しbyte一致。対象外53raw維持、共有15不変、AST common231/legacy266。
+手順2: 実ページと実Modal/Button/Select/usePermissions/i18nを使う回帰。API/authのみmock、実通信拒否。契約表を期待値にする。
+10 nativeフォームの成功payload/数値/null/空白・required・取消/再開・失敗再試行・pendingを既存契約別に確認。
+X/Escape/焦点は9つのModal form。inline MasterListにX/Escapeを期待しない。Roles割当は別のtype=button/onClick群で、Enter submitを期待せずdisabled/PUT/取消reset/Modal閉鎖を検証。
+create/edit分岐、権限、disabled、reset/GET追加、filter維持、data-testidを照合。成功resetをcancelに勝手に追加しない。
+GET検索5系統はclick/Enter、trim/encoding、page=1、clear、exact GET、write0。MasterListのlocal検索1系統はclick/Enter/trim/clear、追加API通信0を確認。
+実装を写すだけのクラス試験にしない。fixture不一致は実DOM/ソース照合を残し新規試験だけ補正可。初回ログは消さない。
+手順3: 変更全TSX stricteslint、4新規suite+Button、全体coverage/check:all/build/storybook/diff check。logs保存しexitを報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && git diff --check
+手順4: 差分/hash/逆変換/件数/検証matrixとexit/初回失敗/最終ログ場所をrootへ返す。担当報告の件数は原ログを読み出す。
+rootが独立Solレビュー→必要補強→正式保存/PRを担当。画面/本番login/PO目視は省略・未検証、DOM成功を本番動作成功と呼ばない。
+不明・既存不良・範囲外・他者競合は停止して根拠報告。成功のための仕様変更やguard解除をしない。
+追補2026-09-28: RoleKnowledgeButtonMigration.test.tsxの所有はCARD-AR-ROLE-KNOWLEDGE-TEST-02で別の既存Solへ移管。元担当は同ファイルを編集しない。残り3試験と製品14は継続所有。
+END OF CARD

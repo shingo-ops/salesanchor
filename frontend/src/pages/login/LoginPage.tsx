@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
+import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 type Mode = "signIn" | "reset";
 
@@ -89,7 +91,8 @@ export default function LoginPage() {
             <form onSubmit={handleSignIn}>
               <div className="form-group">
                 <label htmlFor="email">{t("login.email")}</label>
-                <input
+                <TextFieldControl
+                  variant="login"
                   id="email"
                   type="email"
                   value={email}
@@ -100,7 +103,8 @@ export default function LoginPage() {
               </div>
               <div className="form-group">
                 <label htmlFor="password">{t("login.password")}</label>
-                <input
+                <TextFieldControl
+                  variant="login"
                   id="password"
                   type="password"
                   value={password}
@@ -116,9 +120,9 @@ export default function LoginPage() {
                   {t("login.forgotPassword")}
                 </button>
               </div>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
                 {loading ? t("login.signingIn") : t("login.signIn")}
-              </button>
+              </Button>
             </form>
           </>
         ) : (
@@ -132,7 +136,8 @@ export default function LoginPage() {
               <form onSubmit={handleReset}>
                 <div className="form-group">
                   <label htmlFor="reset-email">{t("login.email")}</label>
-                  <input
+                  <TextFieldControl
+                    variant="login"
                     id="reset-email"
                     type="email"
                     value={email}
@@ -141,9 +146,9 @@ export default function LoginPage() {
                     autoComplete="email"
                   />
                 </div>
-                <button type="submit" className="btn-primary" disabled={loading}>
+                <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
                   {loading ? t("login.sendingEmail") : t("login.sendResetEmail")}
-                </button>
+                </Button>
               </form>
             )}
             <button type="button" className="login-back-link" onClick={switchToSignIn}>

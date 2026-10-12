@@ -15,6 +15,7 @@ import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
+import { Button } from "../../components/Button";
 
 interface FxRate {
   currency: string;
@@ -36,7 +37,7 @@ export default function FxRatePage() {
     setFetching(true);
     setError("");
     try {
-      const data = await api.get<FxRate>("/fx-rate/USD");
+      const data = await api.get<FxRate>("/fx-rates/USD");
       setRate(data);
     } catch {
       // 404 = まだ未取得（noData 表示）。他エラーは error 表示。
@@ -90,16 +91,16 @@ export default function FxRatePage() {
     >
       <ContentToolbar
         right={
-          <button
+          <Button variant="primary" size="sm" layoutClassName="field-h-md"
             type="button"
-            className="btn-primary field-h-md"
+
             onClick={handleRefresh}
             disabled={refreshing}
             data-testid="fx-rate-refresh-btn"
           >
             <RefreshIcon size={16} aria-hidden="true" />
             {refreshing ? t("common.loading") : t("superAdmin.fxRate.refreshBtn")}
-          </button>
+          </Button>
         }
       />
       {error && (

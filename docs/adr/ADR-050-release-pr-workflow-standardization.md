@@ -191,3 +191,13 @@ grep -c "develop.*常設" ~/.claude/agents/generator.md
   - **真因**: Ruleset 15777895 の bypass_actors に `{actor_id: 5, actor_type: RepositoryRole, bypass_mode: always}`（Admin 常時バイパス）が登録されており、Admin（shingo-ops）には `allowed_merge_methods: ["merge"]` の制約が一切効かない状態だった。Ruleset はあったが Admin がフリーパスを持っていた。
   - **措置**: bypass_actors から Admin エントリを除去（空配列に変更）。Admin を含むすべてのユーザーが `allowed_merge_methods: ["merge"]`（merge commit のみ）の制約を受けるようになった。I2（`allow_squash_merge: false`）は CI パイプライン（feature→develop の自動マージ）が squash を使用しているため見送り。
   - **緊急時手順（break-glass）**: 緊急リリースが必要で status checks の bypass が必要な場合、① Ruleset の bypass_actors に Admin を一時追加 → ② マージ実行（`--merge` で） → ③ bypass_actors を即除去。この手順は GitHub Issues に記録を残すこと。squash は緊急時でも禁止（ADR-050 §2-2）。
+
+---
+
+## 追補：auto-merge の限定（2026-09-29）
+
+- **背景**: GitHub の「Allow auto-merge」はリポジトリ全体の設定で、PR の種類ごとに許可を分けられない。GO 記録を検査する gate は必須チェックに入っていないため、設定を ON にすると GO のない PR にも自動マージを予約できてしまう。
+- **決定 1**: auto-merge は「台帳 DONE化 PR」だけに使う。台帳 DONE化 PR 以外に予約された auto-merge は、`.github/workflows/auto-merge-guard.yml` が取り消してコメントを残す。
+- **決定 2**: 「台帳 DONE化 PR」かどうかの判定の正は `scripts/ci/is-ledger-done-pr.sh` の1か所（head が `release/ledger-done-` で始まる・タイトルが台帳DONE化の形・変更が `.claude-pipeline/active-work.d/` の下だけ・作成者が `shingo-ops`）。判定条件を別の場所に複製しない。
+- **決定 3**: GITHUB_TOKEN で `gh pr merge --auto` を実行するワークフローの追加を禁止する。GITHUB_TOKEN が起こした出来事では他のワークフローが起動せず、見張り（auto-merge-guard.yml）が動かないため。`--auto` を使う場合は PIPELINE_PAT を使う。
+- **詳細**: docs/handoff/ledger-auto-done-main/design.md（追補節）

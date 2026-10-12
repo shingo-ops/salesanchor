@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Button } from "./Button";
 import { ContentToolbar } from "./ContentToolbar";
 
 const meta: Meta<typeof ContentToolbar> = {
@@ -13,7 +14,7 @@ export const FilterAndAction: Story = {
   render: () => (
     <ContentToolbar
       left={<select><option>全ステータス</option></select>}
-      right={<button className="btn-primary">新規登録</button>}
+      right={<Button variant="primary" size="md">新規登録</Button>}
     />
   ),
 };
@@ -21,6 +22,6 @@ export const FilterAndAction: Story = {
 export const ActionOnlyNoFilter: Story = {
   name: "実行ボタンのみ_フィルタ無し",
   render: () => (
-    <ContentToolbar right={<button className="btn-primary">新規発注</button>} />
+    <ContentToolbar right={<Button variant="primary" size="md">新規発注</Button>} />
   ),
 };

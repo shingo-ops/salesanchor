@@ -93,7 +93,15 @@ services:
       # この行が無いと .env に値があっても os.getenv が空になり、LLM が
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
+      # 既定は直接接続（2026-10-02: prod1 の Google 位置判定が修正・確認済みのため）。
+      # 中継は緊急手段として gemini-egress サービスは起動したまま残置する。
+      # 再発時は .env に GEMINI_PROXY_URL / GEMINI_GRPC_PROXY を設定して中継ONにする。
+      # 手順: docs/runbooks/gemini-egress-emergency.md
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
+      - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
@@ -204,6 +212,10 @@ services:
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
+      - EXTRACTION_SHADOW_ENABLED=${EXTRACTION_SHADOW_ENABLED:-0}
+      - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
+      # LINE解析の本番エンジン（v6 / v102）。既定 v102（便E で v6 から切替）。切替・戻しは既定値を変える PR（docs/handoff/v102-prod-switch/design.md §4-1）
+      - LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
@@ -217,18 +229,34 @@ services:
       - REVIEW_MAIL_DISCORD_MENTION=${REVIEW_MAIL_DISCORD_MENTION:-}
       # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
+      # Google Sheets SA キーファイル（backend サービスと同パターン）
+      - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
+      # 既定は直接接続（2026-10-02: prod1 の Google 位置判定が修正・確認済みのため）。
+      # 中継は緊急手段として gemini-egress サービスは起動したまま残置する。
+      # 再発時は .env に GEMINI_PROXY_URL / GEMINI_GRPC_PROXY を設定して中継ONにする。
+      # 手順: docs/runbooks/gemini-egress-emergency.md
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+      - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    # デプロイ時の warm shutdown 用（docs/handoff/extraction-job-recovery/design.md §B-3）
+    # task_acks_late=True のため、SIGTERM 後に実行中タスクを終えるだけの猶予を与える。
+    # time_limit=330秒（tcg.extract_source_message）より短いが、
+    # deploy.yml 側で `docker compose stop -t 60` を使うため実質 60 秒が上限になる。
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
           cpus: "1.0"
     logging:
       driver: json-file
@@ -296,6 +324,8 @@ services:
       # チケット作成で DB アクセスが必要（ticket_channel_creator.get_ticket_config）。
       # 未設定だと database.py のデフォルト myapp_user にフォールバックして接続失敗する。
       - DATABASE_URL=${DATABASE_URL}
+      # サーバー名義の案内（webhook 保管 token の暗号化・復号）に必要（ADR-159）。backend と同じ鍵を渡す
+      - METADATA_FERNET_KEY=${METADATA_FERNET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -314,6 +344,52 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:size=16M
+    networks:
+      - backnet
+
+  # ============================================================
+  # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 2026-09-30 改訂2）
+  # ============================================================
+  # backnet のコンテナから host-gateway（172.17.0.1）は ufw の既定 INPUT DROP により
+  # 到達できない（V4不合格・2026-09-30実測）。代わりにこのコンテナが中継専用鍵
+  # （restrict + permitopen="127.0.0.1:8888"）で prod2 へ SSH し、-L で
+  # 127.0.0.1:18888 を prod2 の tinyproxy（127.0.0.1:8888）へフォワードする。
+  # ホストには公開しない（ports なし、backnet 内のみ到達可能）。
+  # イメージは monitoring/prod1/gemini-egress/Dockerfile でビルド（起動時の apk 取得なし、design §5-4）
+  gemini-egress:
+    build: ./monitoring/prod1/gemini-egress
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/.ssh/gemini_egress_ed25519:/run/secrets/gemini_egress_key:ro
+    command:
+      - -i
+      - /run/secrets/gemini_egress_key
+      - -o
+      - StrictHostKeyChecking=no
+      - -o
+      - UserKnownHostsFile=/dev/null
+      - -o
+      - ServerAliveInterval=30
+      - -o
+      - ServerAliveCountMax=3
+      - -o
+      - ExitOnForwardFailure=yes
+      - -N
+      - -L
+      - 0.0.0.0:18888:127.0.0.1:8888
+      - ubuntu@49.212.160.98
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    security_opt:
+      - no-new-privileges:true
     networks:
       - backnet
 

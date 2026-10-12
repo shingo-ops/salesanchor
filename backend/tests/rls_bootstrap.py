@@ -7,6 +7,7 @@ from pathlib import Path
 from sqlalchemy import text
 
 from app.services.tenant import create_tenant_schema
+from tests.seed_data import aggregation_rules_seed_sql, country_seed_sql, type_master_seed_sql
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATIONS_DIR = _REPO_ROOT / "migrations"
@@ -27,6 +28,8 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260616_000000_fix_tcg_type_dedup.sql",
     "20260623_060000_add_products_tcg_type_fk.sql",
     "20260920_020000_supplier_line_name_unique.sql",
+    "20260921_060000_create_product_kinds.sql",
+    "20260921_070000_rename_tcg_type_master_to_type_master.sql",
 ]
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
@@ -152,12 +155,35 @@ async def _ensure_public_users(conn) -> None:
     )
 
 
+async def seed_type_master(conn) -> None:
+    """public.type_master に 12 種別を入れる（冪等）。20260921_070000（rename）の後で呼ぶ。"""
+    await conn.exec_driver_sql(type_master_seed_sql())
+
+
+async def bootstrap_public_countries(admin_engine) -> None:
+    """public.countries: 構造は migration（冪等）、データは試験側の seed（ADR-1007 段2）。"""
+    async with public_bootstrap_lock(admin_engine):
+        await _apply_migration(admin_engine, "20260621_010000_create_countries_master.sql")
+        async with admin_engine.begin() as conn:
+            await conn.exec_driver_sql(country_seed_sql())
+
+
+async def bootstrap_inventory_aggregation_rules(admin_engine) -> None:
+    """public.inventory_aggregation_rules: 構造は migration（冪等）、4 行はアプリの既定から入れる。"""
+    async with public_bootstrap_lock(admin_engine):
+        await _apply_migration(admin_engine, "20260620_010000_create_inventory_aggregation_rules.sql")
+        async with admin_engine.begin() as conn:
+            await conn.exec_driver_sql(aggregation_rules_seed_sql())
+
+
 async def _bootstrap_public_shared(conn) -> None:
     """shared public bootstrap を 1 接続内で適用する。"""
     raw = await conn.get_raw_connection()
     for filename in _PG_BOOTSTRAP_MIGRATIONS:
         sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
         await raw.driver_connection.execute(sql)
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    await seed_type_master(conn)
 
     fk_exists = await conn.scalar(
         text("""
@@ -196,6 +222,8 @@ async def bootstrap_public_products(admin_engine) -> None:
     async with public_bootstrap_lock(admin_engine):
         for filename in _PG_BOOTSTRAP_MIGRATIONS:
             await _apply_migration(admin_engine, filename)
+        async with admin_engine.begin() as conn:
+            await seed_type_master(conn)
 
         async with admin_engine.connect() as conn:
             fk_exists = await conn.scalar(

@@ -34,7 +34,10 @@ celery_app = Celery(
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
+        "app.tasks.tcg_extraction_recovery",  # 抽出ジョブの停滞回収（design: docs/handoff/extraction-job-recovery/design.md）
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
+        "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
+        "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
     ],
 )
 
@@ -133,7 +136,8 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.review_mail_monitor.check_review_mail_inbox",
         "schedule": 300.0,  # 5分
     },
-    # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rates に UPSERT
+    # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rate_history に追記
+    # （ADR-148 2026-10-03 追記: public.app_fx_rates へのUPSERTから履歴テーブルへの追記専用INSERTに切替）
     # 外部 API: open.er-api.com（API キー不要）。失敗時は前回値を残して警告ログのみ。
     "update-fx-rate-morning": {
         "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
@@ -156,5 +160,19 @@ celery_app.conf.beat_schedule = {
     "discard-stale-pending-import-jobs": {
         "task": "app.tasks.tcg_import_discard.discard_stale_pending_jobs",
         "schedule": crontab(minute=0),  # 毎時0分
+    },
+    # ADR-157: 外部買取店（シンソク + 買取ホムラ）の買取価格を 1日3回取得（JST 10:00/13:00/22:00）
+    # public.buyback_shop_products / public.buyback_price_logs に蓄積
+    "fetch-buyback-prices": {
+        "task": "buyback.fetch_all_prices",
+        "schedule": crontab(minute=0, hour="1,4,13"),
+    },
+    # 抽出ジョブの停滞回収（10分ごと）
+    # design: docs/handoff/extraction-job-recovery/design.md §B
+    # デプロイ時の強制コンテナ削除等で running/pending のまま取り残された
+    # extraction_jobs を回収する。
+    "recover-stale-extraction-jobs": {
+        "task": "tcg.recover_stale_extraction_jobs",
+        "schedule": 600.0,  # 10分
     },
 }

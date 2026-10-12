@@ -1,0 +1,91 @@
+.line-workflow-guide,
+.line-workflow-guide__section,
+.line-workflow-guide__card {
+  display: grid;
+  min-width: 0;
+}
+
+.line-workflow-guide {
+  gap: var(--space-8);
+  color: var(--role-body-color);
+}
+
+.line-workflow-guide__section,
+.line-workflow-guide__card {
+  gap: var(--space-4);
+}
+
+.line-workflow-guide__section-title,
+.line-workflow-guide__card-title,
+.line-workflow-guide__body,
+.line-workflow-guide__caption,
+.line-workflow-guide__list,
+.line-workflow-guide__toc-list,
+.line-workflow-guide__steps,
+.line-workflow-guide__details,
+.line-workflow-guide__detail dd {
+  margin: 0;
+}
+
+.line-workflow-guide__section-title {
+  color: var(--role-section-title-color);
+  font-size: var(--role-section-title-size);
+}
+
+.line-workflow-guide__card-title {
+  color: var(--role-card-title-color);
+  font-size: var(--role-card-title-size);
+}
+
+.line-workflow-guide__caption,
+.line-workflow-guide__detail dt {
+  color: var(--role-caption-color);
+  font-size: var(--role-caption-size);
+}
+
+.line-workflow-guide__step-heading,
+.line-workflow-guide__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.line-workflow-guide__toc-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.line-workflow-guide__step-heading {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.line-workflow-guide__steps {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line-workflow-guide__details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.line-workflow-guide__detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.line-workflow-guide__detail dd,
+.line-workflow-guide__actions {
+  overflow-wrap: anywhere;
+}
+
+.line-workflow-guide__toc-list a {
+  color: var(--role-body-color);
+}

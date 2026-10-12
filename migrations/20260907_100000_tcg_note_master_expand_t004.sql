@@ -56,18 +56,8 @@ BEGIN
         ON CONFLICT (id) DO NOTHING
     $q$, _schema);
 
-    -- 既存2行の検索語を更新（同値の再代入で冪等）
-    EXECUTE format($q$
-        UPDATE %I.tcg_note_master
-        SET search_keywords = '再販,再版,再販分,再販仕様,再販品,二次再販,第二版,2版,２版'
-        WHERE id = 'NJ004'
-    $q$, _schema);
-
-    EXECUTE format($q$
-        UPDATE %I.tcg_note_master
-        SET search_keywords = '箱痛み,箱ダメ,箱潰れ,箱凹み,箱へこみ,傷みあり,傷み有り,傷み,いたみあり,箱いたみ,箱傷み'
-        WHERE id = 'NJ014'
-    $q$, _schema);
+    -- DEPRECATED: UPDATE values removed — values now managed via app UI/CSV per ADR-155
+    -- Original UPDATE set search_keywords for NJ004 and NJ014
 
     -- 本ファイルが投入した26件のみを数える
     EXECUTE format('SELECT count(*) FROM %I.tcg_note_master WHERE id = ANY($1)', _schema)

@@ -4,6 +4,7 @@
  * アカウント設定ページのフォームスタイル確認
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Button } from '../../components/Button'
 import './account-settings.css'
 
 const meta: Meta = {
@@ -46,8 +47,8 @@ export const SuccessMessage: Story = {
           設定が保存されました。
         </div>
         <div className="account-settings-actions">
-          <button className="btn-primary">保存</button>
-          <button className="btn-secondary">キャンセル</button>
+          <Button variant="primary" size="md">保存</Button>
+          <Button variant="secondary" size="md">キャンセル</Button>
         </div>
       </div>
     </div>

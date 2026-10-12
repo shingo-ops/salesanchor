@@ -13,7 +13,7 @@ import logging
 
 from app.auth.dependencies import clear_tenant_context, reset_tenant_context, set_tenant_context
 from app.celery_app import celery_app
-from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
+from app.services.llm_errors import LLMConfigError, LLMParseError
 
 logger = logging.getLogger(__name__)
 

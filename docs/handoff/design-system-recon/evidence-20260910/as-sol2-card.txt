@@ -1,0 +1,42 @@
+CARD-AS-STATIC-BUTTONS-02
+受領確認: 報告冒頭に「本報告はカードCARD-AS-STATIC-BUTTONS-02の実行結果である」と記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。実在worktree/対象/所有を照合済み。
+担当: sol2。同じworktreeに他担当がいる。他者の変更を取り消さず調整する。rootは設計/文書/台帳。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-action-button-batch
+固定基準: 1675bfa0275a1ac76210ae489abbcb818287da02
+設計: docs/specs/design-system/design.md §AS
+監査: docs/handoff/design-system-recon/evidence-20260910/as-button-audit.json のowner=sol2のみ。
+契約: 同フォルダas-static-contracts.md/json、as-test-plan.md。
+所有製品:
+- frontend/src/pages/integrations/CarrierCredentialForm.tsx
+- frontend/src/pages/integrations/CarrierIntegrationPage.tsx
+- frontend/src/pages/integrations/FedexEtdSetupGuide.tsx
+- frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx
+- frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx
+- frontend/src/pages/roles/RolesPage.tsx
+- frontend/src/pages/super-admin/DexTab.tsx
+- frontend/src/pages/super-admin/LLMBudgetTab.tsx
+- frontend/src/pages/super-admin/TcgSeriesTab.tsx
+所有新規試験:
+- frontend/src/components/IntegrationLaunchButtonMigration.test.tsx
+- frontend/src/components/PurchaseAdminEditorButtonMigration.test.tsx
+禁止: 所有外編集、既存試験変更、DB/API/配線/業務処理/共有部品/CSS/トークン/翻訳/依存/CI変更。
+禁止: skip/ガード解除、新エージェント、commit/push/PR/GO/本番/secret操作。ログ/一時スクリプトは/tmp/as-sol2-validationに保存可。
+手順0: preflight、git状態、所有基準hash/対象原文一致を確認。不一致は編集前停止しrootへ報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-action-button-batch && ./scripts/dev/executor-preflight.sh
+手順1: 所有原文を監査のmigratedと完全一致へ変換する。未importの場合だけ既存Buttonへのnamed importを独立1行で追加。
+type省略もそのまま、disabled/onClick/children/業務本文逐語保持。追加loading/aria-busy/disabled/style/layoutClassNameなし。
+import/タグ/variant/size以外差分0、所有file全byte逆変換一致。対象外raw保持、共有hash不変。
+手順2: as-test-plan.mdの所有新規試験を実装。実コンポーネント/Router/Modal/権限を使いAPI/auth境界だけ合成する。実通信拒否。
+未被覆の実callback/状態/正確なGET/遷移/disabled/取消書込0/失敗再試行を検査。クラス文字列だけの鏡写し試験を作らない。
+既存10被覆へ重複試験は追加しない。全deferred settle、権限待機、GET初期回数と追加回数を分離する。
+実物に基づくfixture補正は所有新規試験だけ許可、初回失敗ログを保存。仕様不明は停止しrootへ根拠報告。
+手順3: 所有変更TSX stricteslint、所有新規suiteを実行しログ/exitを保存。全体品質はrootが統合後実施する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-action-button-batch && git diff --check
+手順4: 実変更一覧/原ログ/実測件数/残不明点をrootへ返す。画面/本番login/PO目視は省略・未検証。
+rootによるカード範囲のread-only交差レビューへの回答も許可。修正は所有範囲のみ、検証に失敗したまま完了としない。
+追補: 自担当実装完了後、sol1所有製品と新規試験をread-only交差レビューする。
+設計§AS/契約/受入と照合し、対象hash・APPROVE/REVISE・根拠を/tmp/as-sol2-validation/07-cross-review.mdへ保存可。
+他担当編集中の試験は完成連絡後に最終判定。自分の実装と第二レビューの範囲を区別する。製品編集の追加許可はない。
+END OF CARD

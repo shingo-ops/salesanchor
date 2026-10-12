@@ -53,6 +53,11 @@
   margin-top: var(--space-1);
 }
 
+/* 補足文の直後に出るエラー（英語名の入力検証など）との間隔 */
+.account-settings-note + .error-message {
+  margin-top: var(--space-3);
+}
+
 .account-settings-coming-soon {
   font-size: var(--font-xs);
   color: var(--text-muted);
@@ -145,20 +150,7 @@
 
 /* Language select */
 .account-settings-lang-select {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--font-sm);
-  cursor: pointer;
   min-width: var(--size-lang-select-min);
-}
-
-.account-settings-lang-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring-shadow);
 }
 
 .account-settings-success {

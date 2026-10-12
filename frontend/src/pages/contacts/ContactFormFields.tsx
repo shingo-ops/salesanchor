@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface ContactFormState {
   company_id: string;
@@ -53,21 +54,21 @@ export function ContactFormFields({ form, onChange, companies }: Props) {
       />
       <div className="form-group">
         <label>{t("contacts.surname")}</label>
-        <input
+        <TextFieldControl
           value={form.surname}
           onChange={(e) => onChange("surname", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("contacts.givenName")}</label>
-        <input
+        <TextFieldControl
           value={form.given_name}
           onChange={(e) => onChange("given_name", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("common.email")}</label>
-        <input
+        <TextFieldControl
           type="email"
           value={form.primary_email}
           onChange={(e) => onChange("primary_email", e.target.value)}
@@ -75,7 +76,7 @@ export function ContactFormFields({ form, onChange, companies }: Props) {
       </div>
       <div className="form-group">
         <label>{t("common.phone")}</label>
-        <input
+        <TextFieldControl
           value={form.primary_phone}
           onChange={(e) => onChange("primary_phone", e.target.value)}
         />

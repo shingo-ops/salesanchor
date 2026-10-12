@@ -28,7 +28,7 @@ type RegistrationForm = {
 };
 
 type RegistrationValues = {
-  division_id: string;
+  product_kind_id: string;
   work_id: string;
   manufacturer_id: string;
   product_category_id: string;
@@ -87,7 +87,7 @@ function SearchSelect({
 function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   const [form, setForm] = useState<RegistrationForm>();
   const [values, setValues] = useState<RegistrationValues>({
-    division_id: '',
+    product_kind_id: '',
     work_id: '',
     manufacturer_id: '',
     product_category_id: '',
@@ -128,7 +128,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   }, [item]);
 
   const required = Boolean(
-    values.division_id && values.work_id && values.manufacturer_id &&
+    values.product_kind_id && values.work_id && values.manufacturer_id &&
     values.product_category_id && values.japanese_title
   );
 
@@ -192,7 +192,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
       ) : (
         <>
           <div className="pmd-fields">
-            <SearchSelect label="大分類" lookupKey="division_id" options={form?.lookups.division_id || []} value={values.division_id} onChange={setValue} />
+            <SearchSelect label="大分類" lookupKey="product_kind_id" options={form?.lookups.product_kind_id || []} value={values.product_kind_id} onChange={setValue} />
             <SearchSelect label="作品" lookupKey="work_id" options={form?.lookups.work_id || []} value={values.work_id} onChange={setValue} />
             <SearchSelect label="メーカー" lookupKey="manufacturer_id" options={form?.lookups.manufacturer_id || []} value={values.manufacturer_id} onChange={setValue} />
             <SearchSelect label="商品カテゴリ" lookupKey="product_category_id" options={form?.lookups.product_category_id || []} value={values.product_category_id} onChange={setValue} />
@@ -223,7 +223,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
           </div>
           <section className="pmd-result">
             <h4>登録内容確認</h4>
-            <p>大分類: {optionName('division_id')}</p>
+            <p>大分類: {optionName('product_kind_id')}</p>
             <p>作品: {optionName('work_id')}</p>
             <p>メーカー: {optionName('manufacturer_id')}</p>
             <p>商品カテゴリ: {optionName('product_category_id')}</p>

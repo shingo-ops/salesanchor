@@ -27,10 +27,10 @@
 ALTER TABLE {schema}.tenant_meta_config
     ADD COLUMN IF NOT EXISTS granted_scopes JSONB;
 
--- 既存接続済み行を旧 6 permission で backfill（再認証前の状態）
-UPDATE {schema}.tenant_meta_config
-    SET granted_scopes = '["pages_show_list","pages_manage_metadata","pages_messaging","pages_read_engagement","instagram_basic","instagram_manage_messages"]'::jsonb
-    WHERE granted_scopes IS NULL;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- granted_scopes が NULL の行への旧 6 permission の補充を外した（本番は NULL の行が 0）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: granted_scopes backfill removed (055)'; END $$;
 
 COMMENT ON COLUMN {schema}.tenant_meta_config.granted_scopes IS
     'OAuth granted scopes JSONB array (ADR-041). business_management 不在の行は再認証対象。';

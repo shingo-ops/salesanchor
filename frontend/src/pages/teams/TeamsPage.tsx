@@ -23,6 +23,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
 import "./TeamsPage.css";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Team {
   id: number;
@@ -178,9 +179,9 @@ export default function TeamsPage() {
       {hasPermission("teams.create") ? (
         <ContentToolbar
           right={
-            <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
+            <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
               {t("teams.newTeam")}
-            </button>
+            </Button>
           }
         />
       ) : undefined}
@@ -239,9 +240,9 @@ export default function TeamsPage() {
             {hasPermission("teams.manage_members") && (
               <form onSubmit={addMember} className="teams-add-member-form">
                 <div className="form-group"><label>{t("teams.addUserIdLabel")}</label>
-                  <input type="number" min="1" required value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} />
+                  <TextFieldControl type="number" min="1" required value={newMemberId} onChange={(e) => setNewMemberId(e.target.value)} />
                 </div>
-                <button type="submit" className="btn-primary">{t("common.add")}</button>
+                <Button variant="primary" size="md" type="submit">{t("common.add")}</Button>
               </form>
             )}
             {(() => {
@@ -251,7 +252,7 @@ export default function TeamsPage() {
                 { key: "joined_at", header: t("teams.colJoinedAt"), renderCell: (m) => new Date(m.joined_at).toLocaleDateString() },
                 { key: "actions", header: t("common.actions"), renderCell: (m) => (
                   hasPermission("teams.manage_members")
-                    ? <button className="btn-sm btn-danger" onClick={() => removeMember(m.user_id)}>{t("common.remove")}</button>
+                    ? <Button variant="danger" size="sm" onClick={() => removeMember(m.user_id)}>{t("common.remove")}</Button>
                     : null
                 )},
               ];
@@ -278,12 +279,12 @@ export default function TeamsPage() {
           { key: "leader_id", header: t("teams.colLeaderId"), renderCell: (team) => String(team.leader_id ?? "-") },
           { key: "actions", header: t("common.actions"), renderCell: (team) => (
             <span className="actions">
-              <button className="btn-sm" onClick={(e) => { e.stopPropagation(); openMembers(team); }}>{t("teams.membersBtn")}</button>
+              <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); openMembers(team); }}>{t("teams.membersBtn")}</Button>
               {hasPermission("teams.update") && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(team); }}>{t("common.edit")}</button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(team); }}>{t("common.edit")}</Button>
               )}
               {hasPermission("teams.delete") && (
-                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(team); }}>{t("common.delete")}</button>
+                <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(team); }}>{t("common.delete")}</Button>
               )}
             </span>
           )},

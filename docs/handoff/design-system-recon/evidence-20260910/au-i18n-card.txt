@@ -1,0 +1,16 @@
+CARD-AU-PAGES-02
+受領確認: 本報告はカードCARD-AU-PAGES-02の実行結果であると記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。strict警告を実ソースとlocale索引で照合した。
+担当/場所/手順/所有はCARD-AU-PAGES-01を継承。他者の変更を戻さない。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+追加所有: frontend/src/locales/ja.json、frontend/src/locales/en.json（goals.advisorRecommendedの1keyだけ）。
+手順1: GoalSettingPage.tsxのAdvisorMetricRow内へconst { t } = useTranslation();を追加する。
+既存の日本語template literalをt("goals.advisorRecommended", { value: formatAdviceNumber(recommended) })へ置換する。
+jaの新keyは「おすすめ {{value}}」、enは「Recommended {{value}}」。null/undefined分岐と数値整形を変更しない。
+手順2: 新規AllLegacyButtonOperationMigration.test.tsx内で、locale同keyとja文言/数値差込を確認する。機械的実装写し試験を増やさず実ページ試験に組み込める場合はそこで検証する。
+手順3: GoalSettingのstrict警告0、ja/en同key、i18nチェックを確認し原ログ保存。親カードの全数監査にはこの2コード編集を明示的例外としてrootが別検査する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && git diff --check
+これは変更ファイルに残る既存i18n違反1件を解消する限定補正である。ESLint無効化/閾値緩和はしない。
+不明/失敗は該当操作停止しrootへ根拠報告。未保存の他者locale変更があれば上書きせず報告する。
+END OF CARD

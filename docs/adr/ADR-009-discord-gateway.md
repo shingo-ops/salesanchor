@@ -1,6 +1,7 @@
 # ADR-009: Discord Gateway Worker
 
 **日付**: 2026-06-17  
+**更新**: 2026-09-27  
 **ステータス**: 実装済み（M2 完了・M3 完了）  
 **担当**: Hikky-dev / shingo-ops
 
@@ -28,6 +29,7 @@ Discord Bot の WebSocket 接続を維持する専用コンテナ（`discord-gat
 | M4 | DM / ticket channel 作成 | 完了 |
 | M5 | bots テーブル拡張・テナント越境拒否 | 未着手 |
 | M6 | Prometheus metrics / Grafana パネル | 未着手 |
+| M7 | リアクションイベント受信・DB書き込み・送信 | ✅ 完了（PR #TBD） |
 
 ## 影響
 

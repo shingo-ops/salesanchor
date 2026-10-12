@@ -82,6 +82,7 @@
   font-size: var(--font-sm);
   font-weight: var(--font-weight-normal);
   color: var(--text-primary);
+  text-decoration: none;
   background: none;
   border: none;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;

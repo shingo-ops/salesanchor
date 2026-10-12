@@ -20,6 +20,8 @@ import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { FedExRateModal } from "../../components/FedExRateModal";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -27,6 +29,7 @@ import {
   buildInitialItems,
   weightForUnit,
 } from "./quoteDraft";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function QuoteCreatePage() {
   const { t } = useTranslation();
@@ -153,14 +156,14 @@ export default function QuoteCreatePage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("common.currency")}</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <SelectControl fullWidth value={currency} onChange={(e) => setCurrency(e.target.value)}>
               <option value="JPY">JPY</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
-            </select>
+            </SelectControl>
           </div>
           <div className="form-group"><label>{t("common.notes")}</label>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <TextFieldControl value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
 
@@ -186,14 +189,14 @@ export default function QuoteCreatePage() {
                   <td style={{ minWidth: 'var(--table-col-product-name-min-w)' }}>
                     {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。
                         いずれも自由記入可（マスタに無い商品も入力できる）。 */}
-                    <input
+                    <TextFieldControl size="sm"
                       value={item.name_en ?? ""}
                       onChange={(e) => updateItem(i, "name_en", e.target.value || null)}
                       placeholder={t("quotes.titleColumn")}
                       style={{ width: "100%", minWidth: 'var(--input-width-product-name)', fontWeight: "var(--font-weight-semi)" }}
                       data-testid={`quote-item-row-${i}-name-en`}
                     />
-                    <input
+                    <TextFieldControl size="sm"
                       value={item.product_name}
                       onChange={(e) => updateItem(i, "product_name", e.target.value)}
                       placeholder={t("quotes.productNamePlaceholder")}
@@ -211,11 +214,11 @@ export default function QuoteCreatePage() {
                     )}
                   </td>
                   <td>
-                    <input value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-condition`} />
+                    <TextFieldControl size="sm" value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-condition`} />
                   </td>
                   <td>
                     {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}
-                    <input
+                    <TextFieldControl size="sm"
                       value={item.unit ?? ""}
                       onChange={(e) => {
                         const nextUnit = e.target.value || null;
@@ -228,18 +231,18 @@ export default function QuoteCreatePage() {
                     />
                   </td>
                   <td>
-                    <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: 'var(--input-width-qty)' }} data-testid={`quote-item-row-${i}-qty`} />
+                    <TextFieldControl size="sm" type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: 'var(--input-width-qty)' }} data-testid={`quote-item-row-${i}-qty`} />
                   </td>
                   <td>
-                    <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: 'var(--input-width-year)' }} />
+                    <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: 'var(--input-width-price)' }} />
                   </td>
                   <td>
-                    <input type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-weight`} />
+                    <TextFieldControl size="sm" type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-weight`} />
                   </td>
                   <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                   <td>
                     {items.length > 1 && (
-                      <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                      <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                     )}
                   </td>
                 </tr>
@@ -249,7 +252,7 @@ export default function QuoteCreatePage() {
         </div>
 
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <button type="button" className="btn-secondary" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</Button>
         </div>
 
         <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
@@ -263,12 +266,12 @@ export default function QuoteCreatePage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("quotes.shippingFee")}</label>
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-              <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
-              <button type="button" className="btn-sm btn-secondary" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</button>
+              <TextFieldControl type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</Button>
             </div>
           </div>
           <div className="form-group"><label>{t("quotes.tax")}</label>
-            <input type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
+            <TextFieldControl type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
           </div>
           <div className="form-group"><label>{t("quotes.total")}</label>
             <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{total.toLocaleString()} {currency}</div>
@@ -279,8 +282,8 @@ export default function QuoteCreatePage() {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.cancel")}</button>
-          <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={() => navigate("/quotes")}>{t("common.cancel")}</Button>
+          <Button type="submit" variant="primary" size="md" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</Button>
         </div>
       </form>
       <FedExRateModal

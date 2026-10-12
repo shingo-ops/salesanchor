@@ -11,9 +11,14 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX
+from app.services.review_reason_codes_svc import build_review_reason_details, load_review_reason_codes
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
+from app.services.v102_gap_lines import gap_suspects_by_item
+from app.services.v102_gap_suspect_view import with_candidate_names
+
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数
@@ -35,10 +40,10 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
     JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
     JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
-    JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+    JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
-    LEFT JOIN public.tcg_type_master ws ON ws.id = p.work_id
+    LEFT JOIN public.type_master ws ON ws.id = p.work_id
     {review_joins(schema=TCG_SCHEMA)}
 """
 
@@ -65,7 +70,7 @@ def _build_where(
         conditions.append(
             "(ei.raw_product_name ILIKE :query"
             " OR COALESCE(ps.name, '') ILIKE :query"
-            " OR COALESCE(p.product_code, '') ILIKE :query)"
+            " OR p.id::text ILIKE :query)"
         )
         params["query"] = f"%{query}%"
 
@@ -197,8 +202,10 @@ async def fetch_analysis_results(
         SELECT
             ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
+            ej.system_review_detail,
             COALESCE(ps.name, '不明')            AS provider,
             sm.raw_text,
+            sm.line_posted_at                    AS posted_at,
             ei.raw_product_name,
             ei.raw_quantity,
             ei.raw_price,
@@ -210,7 +217,7 @@ async def fetch_analysis_results(
             p.work_id::text                      AS work_id,
             ws.name_ja                           AS work_name,
             ws.name_en                           AS work_alt_name,
-            p.product_code                       AS product_code,
+            p.id::text                           AS product_code,
             p.name                               AS product_title,
             ar.product_id::text                  AS product_uuid,
             ar.pid_resolved,
@@ -224,6 +231,7 @@ async def fetch_analysis_results(
             ar.status,
             ar.exclusion,
             (ps.id IS NOT NULL)                  AS supplier_registered,
+            COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
             COALESCE(
                 (SELECT ic.system_value = ic.human_value
                  FROM {TCG_SCHEMA}.item_corrections ic
@@ -238,9 +246,15 @@ async def fetch_analysis_results(
         {where}
         ORDER BY {result_order_sql()}
     """
-    item_params = dict(params, limit=limit, offset=offset)
+    item_params = dict(params, limit=limit, offset=offset, v102_prefix=V102_PROMPT_VERSION_PREFIX)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
 
+    reason_table = await load_review_reason_codes(db)
+    page_ids = {row.extraction_item_id for row in rows}
+    raw_suspects: dict[str, dict] = {}
+    for row in rows:
+        raw_suspects.update(gap_suspects_by_item(row.system_review_detail))
+    suspects = await with_candidate_names(db, {k: v for k, v in raw_suspects.items() if k in page_ids})
     items = []
     for row in rows:
         span = (
@@ -253,6 +267,7 @@ async def fetch_analysis_results(
                 "extraction_item_id": row.extraction_item_id,
                 "source_message_id": row.source_message_id,
                 "provider": row.provider,
+                "posted_at": row.posted_at,
                 "raw_text": row.raw_text or "",
                 "gemini": {
                     "name": row.raw_product_name or "",
@@ -283,6 +298,9 @@ async def fetch_analysis_results(
                     "needs_review": row.needs_review, "review_reasons": row.review_reasons or "",
                     "confirmed": row.condition_confirmed, "classification": row.empty_box_classification,
                 },
+                "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
+                "is_v102": bool(row.is_v102),
+                "gap_suspect": suspects.get(row.extraction_item_id),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,
                     pid_basis=row.pid_basis,
@@ -300,7 +318,7 @@ async def fetch_analysis_results(
 
     # works 一覧取得（tcg_product_import.py:134-142 と同一パターン）
     work_rows = await db.execute(text(
-        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.tcg_type_master s "
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.type_master s "
         "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))

@@ -1,0 +1,129 @@
+{
+  "originalBase": "a1cd9ea379cc7d85b797cca6b1cc092192296bc3",
+  "integratedMain": "638cc6f91025c623a9ab47032b9466cdb03e3cff",
+  "frontendFilesFromMain": [
+    "frontend/src/locales/en.json",
+    "frontend/src/locales/ja.json",
+    "frontend/src/pages/super-admin/AnalysisRulesPage.tsx",
+    "frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx",
+    "frontend/src/pages/super-admin/components/LineWorkflowGuidePanel.css",
+    "frontend/src/pages/super-admin/components/LineWorkflowGuidePanel.test.tsx",
+    "frontend/src/pages/super-admin/components/LineWorkflowGuidePanel.tsx",
+    "frontend/tests-e2e/analysis-rules-line-guide.spec.ts"
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "originalSha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "originalSha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "originalSha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "originalSha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "originalSha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263",
+      "sha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "originalSha256": "34334cb8fe05afa50ddc89f8bc06cf98286b8408eef34dc276232a772f4c6762",
+      "sha256": "34334cb8fe05afa50ddc89f8bc06cf98286b8408eef34dc276232a772f4c6762",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "originalSha256": "fd7e6dbf80831ed034234e625008e8eda4bb454f2fb16cdc132ddf6e950b3115",
+      "sha256": "fd7e6dbf80831ed034234e625008e8eda4bb454f2fb16cdc132ddf6e950b3115",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "originalSha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components.css",
+      "originalSha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "originalSha256": "c0e82655697f716ee8ca1f8307ee9cbb746932b2ec3c863c8426caacd8014ee8",
+      "sha256": "c0e82655697f716ee8ca1f8307ee9cbb746932b2ec3c863c8426caacd8014ee8",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "originalSha256": "fdc09f98cae7cdfbc1ba791e075f70f8fa71454090dfa09fbb4b2398adf6d8b0",
+      "sha256": "e88f6be57853fb12a9d524535de44b597ce0e124ea8c345cbe5c53218c239f8f",
+      "changedByMain": true
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "originalSha256": "0a40f8dca2e612c0a61463c2db87737169f48533f290447873501b5ed0050720",
+      "sha256": "be397a19b205c3b3049ea16b287eb137795b29356d425e251f66d1af50fa5cc4",
+      "changedByMain": true
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "originalSha256": "6a2981925541cdeeeda4693b62f977255c3369281437156a1d17b39e0a61a1a8",
+      "sha256": "6a2981925541cdeeeda4693b62f977255c3369281437156a1d17b39e0a61a1a8",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "originalSha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597",
+      "sha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/components/field-size.css",
+      "originalSha256": "6acbe76e817dc0428f1eb930ca104fd00a7f25d16a80c04e0be9db0e23c8e4b6",
+      "sha256": "6acbe76e817dc0428f1eb930ca104fd00a7f25d16a80c04e0be9db0e23c8e4b6",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/pages/company-detail/useCompanyDetail.ts",
+      "originalSha256": "994af0fbb183b2f1e80c70e5e64bc4efd95a1426543a14c81fdb7af88f59e735",
+      "sha256": "994af0fbb183b2f1e80c70e5e64bc4efd95a1426543a14c81fdb7af88f59e735",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/contexts/UiPrefsContext.tsx",
+      "originalSha256": "93e2e7bf0d247b6b13e07da451645441a4e7d56ac88acfee850854218b7de2d6",
+      "sha256": "93e2e7bf0d247b6b13e07da451645441a4e7d56ac88acfee850854218b7de2d6",
+      "changedByMain": false
+    },
+    {
+      "file": "frontend/src/lib/staffProfile.ts",
+      "originalSha256": "e9e393587ac5c4b62f10e1b223d669a781a532fd4894341d8248612560abb729",
+      "sha256": "e9e393587ac5c4b62f10e1b223d669a781a532fd4894341d8248612560abb729",
+      "changedByMain": false
+    }
+  ],
+  "expectedCounts": {
+    "common": 277,
+    "legacy": 221
+  },
+  "explanation": "main PR3831 adds one Button JSX occurrence and changes locale resources; AT itself adds eleven Button occurrences. Original AT-only audit remains preserved."
+}

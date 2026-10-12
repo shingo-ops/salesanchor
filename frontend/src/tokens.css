@@ -233,11 +233,26 @@
   --size-toggle-knob: 18px;  /* トグルつまみ直径 */
 
   /* ---- Form controls ---- */
+  --size-search-field-max:   320px;  /* ツールバー内検索フィールド最大幅（BuybackPricesPage 等） */
   --size-lang-select-min:    120px;  /* 言語選択プルダウン最小幅 */
   --size-carrier-label-col:  120px;  /* キャリア設定カード: ラベル列幅 */
   --size-substep-nav:        160px;  /* セットアップガイド サブ手順左ナビ幅（2ペイン） */
   --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
+  --size-pipeline-map-min-h: 600px;           /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
+  --size-proc-card-w:        260px;           /* 業務手順カード幅（ProcedureNode） */
+  --size-proc-master-w:      200px;           /* マスタ/完了カード幅（MasterNode / EndNode） */
+  --color-badge-overlay:     rgba(255, 255, 255, 0.2); /* バッジ背景オーバーレイ（ProcedureNode ヘッダー） */
+
+  /* ---- Pipeline map カテゴリ色（PipelineMapPanel ノードヘッダー背景） ---- */
+  --cat-supplier:     #1e40af;  /* 仕入先 — 青系 */
+  --cat-pipeline:     #7c3aed;  /* パイプライン — 紫系 */
+  --cat-product:      #059669;  /* 商品 — 緑系 */
+  --cat-master:       #d97706;  /* マスタ — 橙系 */
+  --cat-import:       #0891b2;  /* インポート — シアン系 */
+  --cat-discord:      #6366f1;  /* Discord — インディゴ系 */
+  --cat-distribution: #dc2626;  /* 配信 — 赤系 */
+  --cat-inventory:    #ca8a04;  /* 在庫 — 黄系 */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
@@ -256,6 +271,7 @@
   --height-tab-item:       36px;   /* 受信箱タブボタン高さ（バー内で中央寄せ） */
   --width-inbox-panel:    443px;   /* 受信箱左パネル幅 */
   --min-height-conv-item:  92px;   /* 会話アイテム最小高 */
+  --min-height-conv-item-mobile: 76px;   /* 会話アイテム最小高（スマホ）: お手本実測76dp。PCは上の92pxのまま。出典 docs/specs/design-system/visual-language/benchmark/ */
   --min-width-dropdown:   180px;   /* 管理ドロップダウン最小幅 */
   --selection-strip-w:      2px;   /* 選択中会話アイテムの右端インジケータ幅 */
   --platform-dot-offset:   -2px;   /* プラットフォームドットのavatar外側オフセット */
@@ -386,6 +402,18 @@
   --cal-release:         #0d9488;  --cal-release-tint:  #e0f1ef;  --cal-release-text:  #0b6e66;
   --cal-holiday:         #64748b;  --cal-holiday-tint:  #eef1f4;  --cal-holiday-text:  #475569;
 
+  /* ---- Chart categorical series palette (ADR-067 新規トークン追加手順) ----
+     使いみち別グラフ等、カレンダー以外のドメインでカテゴリカルな塗り分けが
+     必要な箇所はこちらを参照する（--cal-* を他ドメインから直接参照しない）。
+     値は既存の --cal-* をそのままエイリアスしており、新規 hex は追加しない。 */
+  --chart-series-1: var(--cal-personal);
+  --chart-series-2: var(--cal-meeting);
+  --chart-series-3: var(--cal-purchase);
+  --chart-series-4: var(--cal-shipping);
+  --chart-series-5: var(--cal-billing);
+  --chart-series-6: var(--cal-release);
+  --chart-series-7: var(--cal-holiday);
+
   /* ---- Field sizes ---- */
   --min-width-input-sm:   120px;  /* 小型入力フィールド最小幅 */
 
@@ -396,6 +424,7 @@
   --table-col-product-name-min-w: 320px; /* 明細テーブル商品名カラム最小幅 */
   --input-width-weight:    80px;   /* 重量入力フィールド */
   --input-width-year:      90px;   /* 年・単価入力フィールド */
+  --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
   --input-width-month:     60px;   /* 月入力フィールド */
 
   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */
@@ -555,6 +584,15 @@
   --cal-billing:   #e0a35a; --cal-billing-tint:  #3a2a10; --cal-billing-text:  #f1c48e;
   --cal-release:   #2dd4bf; --cal-release-tint:  #0c322d; --cal-release-text:  #8de6da;
   --cal-holiday:   #94a3b8; --cal-holiday-tint:  #1f2a3a; --cal-holiday-text:  #c2cdda;
+
+  /* ---- Chart categorical series palette（ダーク・--cal-* のエイリアス） ---- */
+  --chart-series-1: var(--cal-personal);
+  --chart-series-2: var(--cal-meeting);
+  --chart-series-3: var(--cal-purchase);
+  --chart-series-4: var(--cal-shipping);
+  --chart-series-5: var(--cal-billing);
+  --chart-series-6: var(--cal-release);
+  --chart-series-7: var(--cal-holiday);
 
   --schedule-gridline:  #2d3b52;
   --schedule-slot-hover: rgba(91, 141, 217, .10);

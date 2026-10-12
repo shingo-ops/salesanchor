@@ -14,6 +14,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
+import { Button } from "../../components/Button";
 
 interface FxRateResult {
   currency: string;
@@ -130,23 +131,23 @@ export default function QuoteDetailPage() {
         right={
           <>
             {quote.status === "draft" && hasPermission("quotes.update") && (
-              <button className="btn-primary field-h-md" onClick={() => doAction("send")}>{t("quotes.send")}</button>
+              <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("send")}>{t("quotes.send")}</Button>
             )}
             {quote.status === "sent" && hasPermission("quotes.approve") && (
               <>
-                <button className="btn-primary field-h-md" onClick={() => doAction("approve")}>{t("quotes.approve")}</button>
-                <button className="btn-danger field-h-md" onClick={() => doAction("reject")}>{t("quotes.reject")}</button>
+                <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("approve")}>{t("quotes.approve")}</Button>
+                <Button variant="danger" size="sm" layoutClassName="field-h-md" onClick={() => doAction("reject")}>{t("quotes.reject")}</Button>
               </>
             )}
             {quote.status === "approved" && hasPermission("invoices.create") && (
-              <button className="btn-primary field-h-md" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</button>
+              <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</Button>
             )}
             {quote.currency !== "JPY" && (
-              <button className="btn-secondary field-h-md" onClick={handleFetchFxRate} disabled={fxLoading}>
+              <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleFetchFxRate} disabled={fxLoading}>
                 {fxLoading ? t("common.loading") : t("quotes.fx.fetchRate")}
-              </button>
+              </Button>
             )}
-            <button className="btn-secondary field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</button>
+            <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</Button>
           </>
         }
       />

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
 from app.services import item_corrections_svc as corrections
+from app.services.review_reason_codes_svc import split_reason_codes
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_analysis_review_svc as review
 from app.services import tcg_condition_review_svc as condition
@@ -27,7 +28,13 @@ from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
-from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
+from tests.seed_data import type_master_seed_sql
+from tests.test_tcg_work_matching_integration import (
+    _PUBLIC_PRODUCTS_DDL,
+    _rewire_keyword_fks,
+    create_soldout_extra_targets,
+    provision,
+)
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATION = MIGRATIONS / "20260913_150000_tcg_empty_box_condition.sql"
@@ -35,7 +42,7 @@ SCHEMA = "tenant_004"
 
 
 @pytest.fixture
-def pg():
+def pg(monkeypatch):
     assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI PostgreSQL service required"
     configured = os.getenv("RLS_ADMIN_DATABASE_URL")
     assert configured, "Required PostgreSQL acceptance has no administrator URL"
@@ -59,6 +66,10 @@ def pg():
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
             cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
             cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+            cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+            cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+            # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）
+            cursor.execute(type_master_seed_sql())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
@@ -70,6 +81,23 @@ def pg():
             # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
             _supplier_ssot_premigration(cursor, SCHEMA)
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
+            # Step 4/5: create pipeline tables in public schema
+            cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
+            # 段2a: 要確認一覧が読む extraction_jobs.system_review_detail（本番適用済みの migration をそのまま当てる）
+            cursor.execute((MIGRATIONS / "20261012_100000_add_extraction_jobs_system_review_detail.sql").read_text())
+            # 便A: 要確認の理由コード表（構造のみ。行は試験側で入れる）
+            cursor.execute((MIGRATIONS / "20261009_200000_create_review_reason_codes.sql").read_text())
+            # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+            cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+            create_soldout_extra_targets(cursor, SCHEMA)  # 便2-1: ADR-158 のマージが読む表
+            # この試験は TCG_SCHEMA を差し替えず public の analysis_results を使うので、public にも作る（migration の本来の置き場）
+            create_soldout_extra_targets(cursor, "public")
+            # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+            cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
+            cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
+            # Seed a public.supplier_channels row for test data insertion
+            cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) "
+                           "SELECT 'line',true,id FROM public.suppliers LIMIT 1")
             provision(cursor, "tenant_006")
             cursor.execute("INSERT INTO tenant_006.conditions (code,canonical,is_active) VALUES ('CN0099','untouched',true)")
             cursor.execute("INSERT INTO public.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) VALUES ('CN0003','Sealed box',4,'箱系','未開封','',true) RETURNING id")
@@ -84,7 +112,7 @@ def pg():
             cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
             cursor.execute("INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active) VALUES ('PC_BOX', 'Box', '箱系', true) ON CONFLICT (code) DO NOTHING")
             cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,public.tcg_product_categories c
+                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.type_master w,public.tcg_product_categories c
                 WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,'Test Booster',0)", (product,))
@@ -100,18 +128,18 @@ def seed(pg, *, name="Test Booster 空箱", state="", memo="", reasons="empty_bo
     smid, job, eid = str(uuid4()), str(uuid4()), str(uuid4())
     raw = name + state + memo
     with pg["connection"].cursor() as cursor:
-        cursor.execute("""INSERT INTO tenant_004.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM tenant_004.supplier_channels LIMIT 1""",
+        cursor.execute("""INSERT INTO public.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+            SELECT %s,id,%s,%s,true,now(),now() FROM public.supplier_channels LIMIT 1""",
             (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
-        cursor.execute("INSERT INTO tenant_004.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')", (job,smid))
-        cursor.execute("""INSERT INTO tenant_004.extraction_items(id,extraction_job_id,line_start,line_end,raw_product_name,
+        cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')", (job,smid))
+        cursor.execute("""INSERT INTO public.extraction_items(id,extraction_job_id,line_start,line_end,raw_product_name,
             raw_quantity,raw_price,raw_unit,raw_state,raw_memo) VALUES (%s,%s,1,1,%s,'1','10','Box',%s,%s)""", (eid,job,name,state,memo))
         values = {"product_id":pg["product"],"pid_resolved":True,"pid_basis":"EXACT","unit_id":pg["unit"],
             "unit_canonical":"Box","unit_resolved":True,"condition_id":pg["empty"],"condition_canonical":"Empty box",
             "condition_basis":"EMPTY_BOX:explicit","quantity_normalized":1,"price_normalized":10,"note_ja":None,
             "status":"active","exclusion":None,"needs_review":bool(reasons),"review_reasons":reasons or None,"engine_version":"test"}
         values.update(overrides)
-        cursor.execute(sql.SQL("INSERT INTO tenant_004.analysis_results(extraction_item_id,{}) VALUES (%s,{})").format(
+        cursor.execute(sql.SQL("INSERT INTO public.analysis_results(extraction_item_id,{}) VALUES (%s,{})").format(
             sql.SQL(',').join(map(sql.Identifier, values)), sql.SQL(',').join(sql.Placeholder() for _ in values)), (eid,*values.values()))
     return {"eid":eid,"smid":smid,"job":job}
 
@@ -138,6 +166,23 @@ async def save_async(pg, item, payload):
 
 def save(pg, item, payload=None):
     return asyncio.run(save_async(pg,item,payload or request(pg,item)))
+
+
+def set_max_age_hours(pg, value):
+    """tcg_distribution_settings の max_age_hours を入れる（None なら行を消す）。"""
+    with pg["connection"].cursor() as cursor:
+        if value is None:
+            cursor.execute("DELETE FROM public.tcg_distribution_settings WHERE key='max_age_hours'")
+        else:
+            cursor.execute("INSERT INTO public.tcg_distribution_settings(key,value) VALUES ('max_age_hours',%s) "
+                           "ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (str(value),))
+
+
+def age_message(pg, item, hours):
+    """seed 済みの投稿日時を hours 時間前にずらす。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.source_messages SET line_posted_at=now()-make_interval(hours=>%s) WHERE id=%s",
+                       (hours, item["smid"]))
 
 
 def output(pg):
@@ -192,12 +237,12 @@ def test_15_confirmation_states(pg):
         item=seed(pg,**extra)
         if label!='unconfirmed': save(pg,item)
         changes={
-            'changed-raw':("UPDATE tenant_004.extraction_items SET raw_quantity='2' WHERE id=%s",item['eid']),
-            'changed-source_hash':("UPDATE tenant_004.source_messages SET raw_text=raw_text || 'changed' WHERE id=%s",item['smid']),
-            'changed-product':("UPDATE tenant_004.analysis_results SET product_id=NULL WHERE extraction_item_id=%s",item['eid']),
-            'changed-unit':("UPDATE tenant_004.analysis_results SET unit_canonical='Case' WHERE extraction_item_id=%s",item['eid']),
-            'changed-quantity':("UPDATE tenant_004.analysis_results SET quantity_normalized=2 WHERE extraction_item_id=%s",item['eid']),
-            'changed-price':("UPDATE tenant_004.analysis_results SET price_normalized=20 WHERE extraction_item_id=%s",item['eid']),
+            'changed-raw':("UPDATE public.extraction_items SET raw_quantity='2' WHERE id=%s",item['eid']),
+            'changed-source_hash':("UPDATE public.source_messages SET raw_text=raw_text || 'changed' WHERE id=%s",item['smid']),
+            'changed-product':("UPDATE public.analysis_results SET product_id=NULL WHERE extraction_item_id=%s",item['eid']),
+            'changed-unit':("UPDATE public.analysis_results SET unit_canonical='Case' WHERE extraction_item_id=%s",item['eid']),
+            'changed-quantity':("UPDATE public.analysis_results SET quantity_normalized=2 WHERE extraction_item_id=%s",item['eid']),
+            'changed-price':("UPDATE public.analysis_results SET price_normalized=20 WHERE extraction_item_id=%s",item['eid']),
             'changed-condition_def':("UPDATE public.conditions SET search_kw='altered' WHERE id=%s",pg['empty']),
         }
         if label in changes:
@@ -206,7 +251,7 @@ def test_15_confirmation_states(pg):
             with Session(pg['engine']) as db: analyzer.analyze_extraction_job(db,item['job'])
         row=context(pg,item)
         with Session(pg['engine']) as db:
-            ar=db.execute(text('SELECT * FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)'),item).mappings().one()
+            ar=db.execute(text('SELECT * FROM public.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)'),item).mappings().one()
             eligible=not row['needs_review'] and ar['pid_resolved'] and ar['unit_resolved'] and ar['price_normalized'] is not None and ar['exclusion']!='excluded'
         assert eligible == (label in ('confirmed-empty','same-input-reanalysis')),label
         if label=='changed-condition_def':
@@ -235,7 +280,7 @@ def test_rejections_replay_and_concurrent_requests(pg):
     outcomes=asyncio.run(different_race())
     assert sum(isinstance(value,HTTPException) and value.status_code==409 for value in outcomes)==1
     with pg['connection'].cursor() as cursor:
-        cursor.execute('SELECT count(*) FROM tenant_004.item_corrections WHERE extraction_item_id=%s',(item['eid'],))
+        cursor.execute('SELECT count(*) FROM public.item_corrections WHERE extraction_item_id=%s',(item['eid'],))
         assert cursor.fetchone()[0]==1
 
 
@@ -243,7 +288,7 @@ def test_malformed_latest_never_falls_back(pg):
     for corrupt in (r'{"v":1,"bad":"\u0000"}', '{"v":1,"bad":1e1000000}', 'bad json','[]','{"v":0}', '{"v":1,"condition_id":"not-a-uuid"}', '{"v":1,"request_id":123}'):
         item=seed(pg);save(pg,item)
         with pg['connection'].cursor() as cursor:
-            cursor.execute("""INSERT INTO tenant_004.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by)
+            cursor.execute("""INSERT INTO public.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by)
                 VALUES (%s,%s,'condition_review',%s,'test')""",(item['eid'],item['smid'],corrupt))
         assert context(pg,item)['needs_review'] is True
     assert output(pg)==[]
@@ -273,6 +318,7 @@ def test_ambiguous_requires_correction_and_preserves_selected_on_reanalysis(pg):
 
 def test_review_tabs_count_paging_and_preview(pg):
     a,b=seed(pg),seed(pg)
+    set_max_age_hours(pg,48)
     save(pg,a)
     async def run():
         engine=create_async_engine(pg['url'])
@@ -305,14 +351,14 @@ def test_product_confirmation_skip_and_unit_change_invalidate(pg):
     asyncio.run(confirm_product())
     assert context(pg,item)['review_version']!=old
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.extraction_items SET raw_price='20' WHERE id=%s",(item['eid'],))
+        cursor.execute("UPDATE public.extraction_items SET raw_price='20' WHERE id=%s",(item['eid'],))
     with Session(pg['engine']) as db:
         result=analyzer.analyze_extraction_job(db,item['job'])
         assert result['skipped_product_corrections']==1
     assert context(pg,item)['needs_review'] is True
     save(pg,item)
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.analysis_results SET unit_canonical='Case' WHERE extraction_item_id=%s",(item['eid'],))
+        cursor.execute("UPDATE public.analysis_results SET unit_canonical='Case' WHERE extraction_item_id=%s",(item['eid'],))
     assert context(pg,item)['needs_review'] is True
 
 
@@ -366,7 +412,7 @@ def test_raw_update_waits_for_review_source_lock(pg, monkeypatch):
                 await second.execute(text("SET LOCAL lock_timeout='100ms'"))
                 try:
                     with pytest.raises(Exception,match='lock timeout'):
-                        await second.execute(text("UPDATE tenant_004.source_messages SET raw_text='changed' WHERE id=CAST(:smid AS uuid)"),item)
+                        await second.execute(text("UPDATE public.source_messages SET raw_text='changed' WHERE id=CAST(:smid AS uuid)"),item)
                 finally:
                     await second.rollback()
                     proceed.set()
@@ -383,8 +429,8 @@ def test_migration_partial_structure_rejects_before_insert(pg):
         provision(cursor, 'tenant_907')
         cursor.execute('CREATE SCHEMA tenant_908')
         cursor.execute('ALTER TABLE tenant_907.extraction_items SET SCHEMA tenant_908')
-        with pytest.raises(psycopg2.Error,match='incomplete TCG structure'): cursor.execute(script)
-        cursor.execute('ROLLBACK')
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute(script)
         cursor.execute('SELECT count(*) FROM tenant_907.conditions')
         assert cursor.fetchone()[0]==0
         # An entirely absent TCG structure is the documented no-op, not partial success.
@@ -409,13 +455,13 @@ def test_product_correction_changes_binding_and_retains_manual_product(pg):
     assert context(pg,item)['needs_review'] is True
     with Session(pg['engine']) as db:
         analyzer.analyze_extraction_job(db,item['job'])
-        assert str(db.execute(text("SELECT product_id FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).scalar_one())==other
+        assert str(db.execute(text("SELECT product_id FROM public.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).scalar_one())==other
 
 
 def test_real_input_change_rejects_old_screen_without_writes(pg):
     item=seed(pg);payload=request(pg,item)
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.extraction_items SET raw_price='20' WHERE id=%s",(item['eid'],))
+        cursor.execute("UPDATE public.extraction_items SET raw_price='20' WHERE id=%s",(item['eid'],))
     before=context(pg,item)
     with pytest.raises(HTTPException) as error:save(pg,item,payload)
     assert error.value.status_code==409
@@ -433,10 +479,10 @@ def test_missing_empty_definition_holds(pg):
 def test_quantity_and_price_binding_matches_storage_precision(pg):
     item=seed(pg)
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.extraction_items SET raw_quantity='2.345',raw_price='10.125' WHERE id=%s",(item['eid'],))
+        cursor.execute("UPDATE public.extraction_items SET raw_quantity='2.345',raw_price='10.125' WHERE id=%s",(item['eid'],))
     with Session(pg['engine']) as db:
         analyzer.analyze_extraction_job(db,item['job'])
-        numeric=db.execute(text("SELECT quantity_normalized::text,price_normalized::text FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        numeric=db.execute(text("SELECT quantity_normalized::text,price_normalized::text FROM public.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
         assert tuple(numeric)==('2.35','10.13')
     save(pg,item)
     binding=context(pg,item)['ack_binding_hash']
@@ -444,3 +490,179 @@ def test_quantity_and_price_binding_matches_storage_precision(pg):
     after=context(pg,item)
     assert after['valid_ack'] is True and after['needs_review'] is False
     assert after['ack_binding_hash']==binding
+
+def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
+    """理由ごとの配列は API 自身の review_reasons から作られ、表の出どころが付く（便A）。
+
+    seed() は condition_canonical='Empty box' で入れるため、API の導出（tcg_condition_review_svc.py）が
+    empty_box を足す。期待は固定の配列ではなく API 自身の文字列との一致で書く。
+    """
+    table = {"gemini_unsure": ("gemini", "extraction"),
+             "empty_box": ("system", "analysis")}
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.review_reason_codes(code,source,fix_stage) VALUES "
+                       "('gemini_unsure','gemini','extraction'),('empty_box','system','analysis')")
+    known = seed(pg, name="Known", reasons="gemini_unsure, gemini_unsure ,,")
+    unknown = seed(pg, name="Unknown", reasons="not_registered_code")
+    empty = seed(pg, name="Empty", reasons="", needs_review=False, condition_canonical="Sealed box")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await review.fetch_analysis_results(db, limit=500)
+        finally:
+            await engine.dispose()
+
+    items = {item["extraction_item_id"]: item for item in asyncio.run(run())["items"]}
+    for seeded in (known, unknown, empty):
+        item = items[seeded["eid"]]
+        codes = [d["code"] for d in item["review_reason_details"]]
+        assert codes == split_reason_codes(item["condition_review"]["review_reasons"])
+        for d in item["review_reason_details"]:
+            expected = table.get(d["code"], (None, None))
+            assert (d["source"], d["fix_stage"]) == expected
+    by_code = {d["code"]: d for d in items[known["eid"]]["review_reason_details"]}
+    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction", "ackable": True}
+    assert [d["code"] for d in items[known["eid"]]["review_reason_details"]].count("gemini_unsure") == 1
+    assert {"code": "not_registered_code", "source": None, "fix_stage": None, "ackable": True} in items[unknown["eid"]]["review_reason_details"]
+    assert items[empty["eid"]]["review_reason_details"] == []
+
+
+# --- effect='EXCLUDE' の状態（Error）は配信しない・選べない（便ER） ------------------------------------
+
+
+def add_error_condition(pg):
+    """旧い試験 DB には effect 列が無いので足す（本番にはある）。Error = effect EXCLUDE の1行。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS effect TEXT NOT NULL DEFAULT 'OUTPUT'")
+        cursor.execute("INSERT INTO public.conditions(code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active,effect) "
+                       "VALUES ('CN0012','Error',99,'','','',true,'EXCLUDE') RETURNING id")
+        return str(cursor.fetchone()[0])
+
+
+def seed_deliverable(pg, name, condition_id, canonical):
+    return seed(pg, name=name, reasons="", needs_review=False, condition_id=condition_id, condition_canonical=canonical)
+
+
+@pytest.mark.parametrize("include_flag_single", [False, True])
+def test_excluded_effect_condition_is_not_delivered_even_when_review_is_clear(pg, include_flag_single):
+    error_id = add_error_condition(pg)
+    set_max_age_hours(pg, 48)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    seed_deliverable(pg, "Test Booster", error_id, "Error")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return (await distribution.fetch_output_rows(db, include_flag_single=include_flag_single),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+
+    rows, preview = asyncio.run(run())
+    assert [row[4] for row in rows] == ["Sealed box"]
+    assert preview["output_count"] == 1 and preview["exclusion"]["flag_series"] == 1
+
+
+def test_review_context_exposes_effect_of_the_effective_condition(pg):
+    error_id = add_error_condition(pg)
+    error = seed_deliverable(pg, "Test Booster", error_id, "Error")
+    normal = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    assert context(pg, error)["effect"] == "EXCLUDE"
+    assert context(pg, normal)["effect"] == "OUTPUT"
+
+
+def test_condition_options_hide_excluded_effect_and_saving_it_is_422(pg):
+    error_id = add_error_condition(pg)
+    item = seed(pg, name="Test Booster", reasons="condition_unknown")
+
+    async def options():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await condition.condition_options(db)
+        finally:
+            await engine.dispose()
+
+    codes = [o["code"] for o in asyncio.run(options())]
+    assert "CN0012" not in codes and "CN0003" in codes
+    with pytest.raises(HTTPException) as caught:
+        save(pg, item, request(pg, item, decision="correct", target=error_id))
+    assert caught.value.status_code == 422
+
+
+@pytest.mark.parametrize(("reasons", "expected_reasons", "expected_needs_review"), [
+    ("condition_unknown", "", False),
+    ("condition_unknown,condition_multiple_candidates", "", False),
+    ("condition_unknown,gemini_unsure", "gemini_unsure", True),
+])
+def test_saving_a_condition_removes_condition_reasons_at_save_time(pg, reasons, expected_reasons, expected_needs_review):
+    """人が状態を選んで保存した直後に condition_unknown 等が外れる（再解析が積めなくても詰まらない）。他の理由は残る。"""
+    item = seed(pg, name="Test Booster", reasons=reasons, condition_id=pg["normal"], condition_canonical="Sealed box")
+    save(pg, item, request(pg, item, decision="correct", target=pg["normal"]))
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT needs_review, COALESCE(review_reasons,'') FROM public.analysis_results WHERE extraction_item_id=%s", (item["eid"],))
+        needs_review, stored = cursor.fetchone()
+    assert needs_review is expected_needs_review
+    assert stored == expected_reasons
+    assert "condition_unknown" not in context(pg, item)["review_reasons"]
+
+
+def _age_window_run(pg):
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                settings = await distribution.load_distribution_settings(db)
+                hours = distribution._max_age_hours(settings)
+                return (await distribution.fetch_output_rows(db, max_age_hours=hours),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+    return asyncio.run(run())
+
+
+def test_age_window_same_condition_for_delivery_count_and_exclusion_breakdown(pg):
+    """48時間(設定値)より前の行は 配信・件数・除外内訳 のどれにも入らない。"""
+    set_max_age_hours(pg, 48)
+    fresh_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    fresh_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, fresh_ok, 47)
+    age_message(pg, old_ok, 49)
+    age_message(pg, fresh_unresolved, 1)
+    age_message(pg, old_unresolved, 100)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1  # 48時間より前の1件は数えない
+
+
+def test_age_window_zero_is_unbounded_everywhere(pg):
+    set_max_age_hours(pg, 0)
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, old_ok, 1000)
+    age_message(pg, old_unresolved, 1000)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1
+
+
+@pytest.mark.parametrize("value", [None, "", "abc", "-1"])
+def test_preview_raises_when_max_age_hours_missing_or_invalid(pg, value):
+    set_max_age_hours(pg, value)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await distribution.fetch_preview_data(db)
+        finally:
+            await engine.dispose()
+
+    with pytest.raises(distribution.MaxAgeHoursUnsetError):
+        asyncio.run(run())

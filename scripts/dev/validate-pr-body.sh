@@ -3,18 +3,13 @@
 # PR本文を stdin から受け取り、プロセス成果物の必須項目を検査する。
 # 合格: exit 0 (stdout に ✅ メッセージ)
 # 不合格: exit 1 (stderr に ❌ エラーを全列挙)
-# バイパス: PR_BODY_VALIDATE_SKIP=1 で即 exit 0
 set -euo pipefail
-
-if [[ "${PR_BODY_VALIDATE_SKIP:-}" == "1" ]]; then
-  echo "✅ PR本文検証スキップ（PR_BODY_VALIDATE_SKIP=1）"
-  exit 0
-fi
 
 # リポジトリルートを取得
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
 if [[ -z "$REPO_ROOT" ]]; then
-  echo "⚠️  git リポジトリルートが取得できません。ファイル実在確認をスキップします" >&2
+  echo "❌ git リポジトリルートが取得できません" >&2
+  exit 1
 fi
 
 # PR本文を stdin から読み込む
@@ -121,16 +116,14 @@ if repo_root and touch_match:
     ]
 
     try:
-        # git fetch して最新の origin/main を取得
-        subprocess.run(['git', 'fetch', 'origin', 'main', '--quiet'],
-                       cwd=repo_root, capture_output=True, timeout=30)
-
-        # git diff --numstat origin/main...HEAD
+        # 提出wrapperが取得済みの origin/main と現在HEADの実diffを使う。
         result = subprocess.run(
             ['git', 'diff', '--numstat', 'origin/main...HEAD'],
             cwd=repo_root, capture_output=True, text=True, timeout=30
         )
-        if result.returncode == 0 and result.stdout.strip():
+        if result.returncode != 0:
+            errors.append('❌ origin/main...HEAD の実diffを取得できません')
+        elif result.stdout.strip():
             # 変更ファイル一覧を取得
             diff_files = []
             delete_files = []
@@ -202,8 +195,8 @@ if repo_root and touch_match:
                         errors.append(f'   - {ud}')
                     errors.append('   → 「削除するファイル:」に追記してください')
 
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass  # git が使えない環境ではスキップ
+    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
+        errors.append(f'❌ 実diffの検査に失敗しました: {exc}')
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 検査7: 設計docの「外部・過去事例の参照と我々への応用」セクション
@@ -279,50 +272,7 @@ if repo_root:
                 recon_content = f.read()
             errors.extend(check_backtick_paths(recon_content, 'recon.md'))
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 検査10: ユーザー影響変更時のGO記録チェック
-# CIの check-process-artifacts.js 行849-866 と同じロジック
-# ──────────────────────────────────────────────────────────────────────────────
-if repo_root:
-    USER_IMPACT_PATTERNS = [
-        re.compile(r'^frontend/src/'),
-        re.compile(r'^backend/app/routers/'),
-        re.compile(r'^backend/app/services/'),
-    ]
-    try:
-        import subprocess as _subprocess
-        diff_result = _subprocess.run(
-            ['git', 'diff', '--numstat', 'origin/main...HEAD'],
-            cwd=repo_root, capture_output=True, text=True, timeout=30
-        )
-        has_user_impacting = False
-        if diff_result.returncode == 0 and diff_result.stdout.strip():
-            for line in diff_result.stdout.strip().split('\n'):
-                parts = line.split('\t')
-                if len(parts) == 3:
-                    _, _, fpath = parts
-                    if any(p.search(fpath) for p in USER_IMPACT_PATTERNS):
-                        has_user_impacting = True
-                        break
-
-        if has_user_impacting:
-            go_section_match = re.search(r'###\s*GO記録\s*\n([\s\S]*?)(?=\n###|\n##|\n#|$)', pr_body)
-            if not go_section_match:
-                errors.append('❌ ユーザー影響変更があります。PR本文に「### GO記録」セクションがありません')
-                errors.append('   → frontend/src / backend/app/routers / backend/app/services の変更は Shingo の GO 記録が必要です')
-            else:
-                go_section = go_section_match.group(1)
-                go_errors = []
-                if not re.search(r'GO発行者\s*:', go_section):
-                    go_errors.append('❌ GO記録に「GO発行者:」がありません')
-                if not re.search(r'GO原文\s*:', go_section):
-                    go_errors.append('❌ GO記録に「GO原文:」がありません')
-                if not re.search(r'GO\s*#\d+', go_section):
-                    go_errors.append('❌ GO記録に「GO #<PR番号>」形式の番号がありません（番号のないGOは無効）')
-                errors.extend(go_errors)
-    except (Exception,):
-        pass  # git が使えない環境ではスキップ
-
+# GO記録はPR番号確定後のマージ前full gateで検査する。
 # 結果出力
 for e in errors:
     print(e)
@@ -331,6 +281,40 @@ PYEOF
 
 if [[ -n "$PARSE_RESULT" ]]; then
   echo "$PARSE_RESULT" >&2
+  exit 1
+fi
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CI と同じ process-artifacts 検査を、PR 作成前の事前検査として先に呼ぶ
+# （docs/handoff/local-gate-ci-parity/design.md §2、写さずに呼ぶ）
+# ──────────────────────────────────────────────────────────────────────────────
+if ! command -v node >/dev/null 2>&1; then
+  echo "❌ node が見つかりません。手元の事前検査（process-artifacts）を実行できません" >&2
+  exit 1
+fi
+
+PRECHECK_AUTHOR="$(gh api user --jq .login 2>/dev/null)" || {
+  echo "❌ gh api user の取得に失敗しました（GitHub認証を確認してください）。手元の事前検査を実行できません" >&2
+  exit 1
+}
+
+PRECHECK_CHANGED_FILES="$(cd "$REPO_ROOT" && git diff --name-only origin/main...HEAD)"
+PRECHECK_HEAD_REF="$(cd "$REPO_ROOT" && git branch --show-current)"
+PRECHECK_BASE_SHA="$(cd "$REPO_ROOT" && git rev-parse origin/main)"
+PRECHECK_HEAD_SHA="$(cd "$REPO_ROOT" && git rev-parse HEAD)"
+
+# 外から注入された GITHUB_ACTIONS に左右されない（gh-pr-create-safe.sh:138 と同じ理由）。
+# CI の gate は本スクリプトを通らず JS を直接呼ぶため、CI での LOCAL_PRECHECK 拒否は有効なまま
+if ! env -u GITHUB_ACTIONS \
+     LOCAL_PRECHECK=1 \
+     CHANGED_FILES="$PRECHECK_CHANGED_FILES" \
+     MOCK_PR_BODY="$PR_BODY" \
+     MOCK_PR_AUTHOR="$PRECHECK_AUTHOR" \
+     MOCK_HEAD_REF="$PRECHECK_HEAD_REF" \
+     MOCK_BASE_REF="main" \
+     BASE_SHA="$PRECHECK_BASE_SHA" \
+     HEAD_SHA="$PRECHECK_HEAD_SHA" \
+     node "$REPO_ROOT/scripts/check-process-artifacts.js"; then
   exit 1
 fi
 

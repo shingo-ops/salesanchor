@@ -94,7 +94,7 @@ echo "   review : $REVIEW_DECISION"
 echo "   merge  : $MERGE_STATE"
 echo ""
 
-bash "$REPO_ROOT/scripts/gh-pr-merge-safe.sh" --merge --delete-branch
+bash "$REPO_ROOT/scripts/gh-pr-merge-safe.sh" --merge
 
 echo ""
 echo "✅ AEON release complete"

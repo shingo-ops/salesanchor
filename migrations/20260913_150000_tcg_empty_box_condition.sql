@@ -18,7 +18,14 @@ BEGIN
             'product_exclude_keywords','product_search_keywords','products_logistics','supplier_channels',
             'unit_aliases','units','unparsed_lines'))
     ) THEN RETURN; END IF;
-    IF table_count <> 6 THEN RAISE EXCEPTION 'empty box: incomplete TCG structure'; END IF;
+    -- パイプラインテーブルが部分的または全面的に削除済みの場合はスキップ
+    -- analysis_results が存在しない = pipeline teardown 中（20260921_050000）
+    -- conditions は残存するが analysis_results が削除されると table_count < 6 となる
+    IF to_regclass('tenant_004.analysis_results') IS NULL THEN
+        RAISE NOTICE 'empty box: analysis_results not found (pipeline teardown), skipping';
+        RETURN;
+    END IF;
+    IF table_count <> 6 THEN RAISE NOTICE 'empty box: partial structure (% of 6 tables), skipping (SSOT migration moved to public)', table_count; RETURN; END IF;
     LOCK TABLE tenant_004.conditions IN SHARE ROW EXCLUSIVE MODE;
     IF (SELECT count(*) FROM tenant_004.conditions WHERE code='CN0011' OR canonical='Empty box') > 1 THEN
         RAISE EXCEPTION 'empty box: conflicting condition identities';

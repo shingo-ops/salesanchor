@@ -41,7 +41,7 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-- 既存の `frontend/src/pages/super-admin/components/SoldOutRulesPanel.tsx` および `frontend/src/pages/super-admin/components/DateRulesPanel.tsx` が同パターン（hub-content 内パネル・PageLayout なし・useSuperAdmin ガードなし）の先例として機能。同じ設計を踏襲した。
+- 既存の `frontend/src/pages/super-admin/components/ProductMasterPanel.tsx` および `frontend/src/pages/super-admin/components/SupplierMasterPanel.tsx` が同パターン（hub-content 内パネル・PageLayout なし・useSuperAdmin ガードなし）の先例として機能。同じ設計を踏襲した。
 - AnalysisRulesPage 内の AccuracyManagementPanel（同ファイル内インライン定義）も先例。
 
 ## 維持の仕組み

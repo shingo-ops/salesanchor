@@ -8,14 +8,10 @@
 --
 -- 冪等: ON CONFLICT (code) DO NOTHING。
 -- ============================================================================
-INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
-    ('gundam',        'ガンダムカードゲーム', 'Gundam Card Game',           60),
-    ('weiss_schwarz', 'ヴァイスシュヴァルツ', 'Weiß Schwarz',               70),
-    ('digimon',       'デジモンカードゲーム', 'Digimon Card Game',          80),
-    ('hololive',      'ホロライブ',           'hololive Official Card Game', 90),
-    ('lorcana',       'ディズニー ロルカナ',  'Disney Lorcana',            100),
-    ('xross_stars',   'クロススタァ',         'Xross Stars',               110)
-ON CONFLICT (code) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 種別 6 行（gundam ... xross_stars）の seed を外した。type_master は画面（ADR-156）で管理する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: type master additional seed removed (086)'; END $$;
 
 -- ============================================================================
 -- Rollback:

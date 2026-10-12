@@ -25,7 +25,7 @@ def result_order_sql() -> str:
     ) + f" ELSE {len(RESULT_CONDITION_ORDER)} END"
     return (
         "p.release_date DESC NULLS LAST, "
-        "p.product_code ASC NULLS LAST, p.id ASC NULLS LAST, "
+        "p.id ASC NULLS LAST, "
         f"{condition_rank}, "
         'cr.canonical COLLATE "C" ASC NULLS LAST, '
         "ar.price_normalized ASC NULLS LAST, ei.id ASC"

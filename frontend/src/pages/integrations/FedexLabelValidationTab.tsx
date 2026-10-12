@@ -24,6 +24,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { FedexEtdSetupGuide } from "./FedexEtdSetupGuide";
 import "./FedexLabelValidationTab.css";
+import { Button } from "../../components/Button";
+import { ButtonLink } from "../../components/ButtonLink";
+import { TextFieldControl } from "../../components/TextField";
 
 interface LVSampleLabel {
   service_abbr: string;
@@ -181,14 +184,14 @@ export function FedexLabelValidationTab({
           <StepHeader num={1} title={t("carrierIntegration.fedexGuidePart1Step1Title")} />
           <p className="form-hint">{t("carrierIntegration.fedexGuidePart1Step1Desc")}</p>
           <div className="lv-step-action">
-            <a
+            <ButtonLink variant="primary" size="md"
               href="https://developer.fedex.com/api/ja-jp/home.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-primary"
+
             >
               {t("carrierIntegration.fedexGuideDeveloperPortalButton")}
-            </a>
+            </ButtonLink>
           </div>
         </section>
 
@@ -249,13 +252,13 @@ export function FedexLabelValidationTab({
         <StepHeader num={2} title={t("carrierIntegration.lvStep2Title")} done={!!labels} />
         <p className="form-hint">{t("carrierIntegration.lvStep2Desc")}</p>
         <div className="form-actions">
-          <button
-            className="btn-primary"
+          <Button variant="primary" size="md"
+
             disabled={labelBusy}
             onClick={handleIssueLabels}
           >
             {labelBusy ? t("carrierIntegration.lvStep2Issuing") : t("carrierIntegration.lvStep2Button")}
-          </button>
+          </Button>
         </div>
         {labelError && <p className="error-message">{labelError}</p>}
         {labels && (
@@ -266,12 +269,12 @@ export function FedexLabelValidationTab({
                 <span className="lv-service-badge">{label.service_abbr}</span>
                 <span className="lv-service-name">{label.service_name}</span>
                 <span className="lv-tracking-number">{label.tracking_number}</span>
-                <button
-                  className="btn-secondary btn-sm"
+                <Button variant="secondary" size="sm"
+
                   onClick={() => handleDownloadPdf(label)}
                 >
                   {t("carrierIntegration.lvStep2DownloadPdf")}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -329,7 +332,7 @@ export function FedexLabelValidationTab({
         <div className="update-form">
           <div className="form-group">
             <label htmlFor="lv-contact-name">{t("carrierIntegration.lvContactName")}</label>
-            <input
+            <TextFieldControl
               id="lv-contact-name"
               type="text"
               value={contactName}
@@ -340,7 +343,7 @@ export function FedexLabelValidationTab({
           </div>
           <div className="form-group">
             <label htmlFor="lv-printer-model">{t("carrierIntegration.lvPrinterModel")}</label>
-            <input
+            <TextFieldControl
               id="lv-printer-model"
               type="text"
               value={printerModel}
@@ -351,7 +354,7 @@ export function FedexLabelValidationTab({
           </div>
           <div className="form-group">
             <label htmlFor="lv-printer-count">{t("carrierIntegration.lvPrinterCount")}</label>
-            <input
+            <TextFieldControl
               id="lv-printer-count"
               type="text"
               value={printerCount}
@@ -363,13 +366,13 @@ export function FedexLabelValidationTab({
         </div>
 
         <div className="form-actions">
-          <button
-            className="btn-secondary"
+          <Button variant="secondary" size="md"
+
             disabled={coverBusy || !contactName || !printerModel || !printerCount}
             onClick={handleDownloadCoverSheet}
           >
             {coverBusy ? t("carrierIntegration.lvStep6Downloading") : t("carrierIntegration.lvStep6Button")}
-          </button>
+          </Button>
         </div>
         {coverError && <p className="error-message">{coverError}</p>}
       </section>
@@ -379,13 +382,13 @@ export function FedexLabelValidationTab({
         <StepHeader num={7} title={t("carrierIntegration.lvStep7Title")} done={!!emailTemplate} />
         <p className="form-hint">{t("carrierIntegration.lvStep7Desc")}</p>
         <div className="form-actions">
-          <button
-            className="btn-secondary"
+          <Button variant="secondary" size="md"
+
             disabled={emailBusy}
             onClick={handleGetEmailTemplate}
           >
             {emailBusy ? t("carrierIntegration.lvStep7Loading") : t("carrierIntegration.lvStep7Button")}
-          </button>
+          </Button>
         </div>
         {emailError && <p className="error-message">{emailError}</p>}
         {emailTemplate && (
@@ -399,11 +402,11 @@ export function FedexLabelValidationTab({
               <pre className="lv-email-body">{emailTemplate.body}</pre>
             </div>
             <div className="form-actions">
-              <button className="btn-secondary" onClick={handleCopyEmailBody}>
+              <Button variant="secondary" size="md" onClick={handleCopyEmailBody}>
                 {emailCopied
                   ? t("carrierIntegration.lvStep7Copied")
                   : t("carrierIntegration.lvStep7CopyButton")}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -414,12 +417,12 @@ export function FedexLabelValidationTab({
         <StepHeader num={8} title={t("carrierIntegration.lvStep8Title")} />
         <p className="form-hint">{t("carrierIntegration.lvStep8Desc")}</p>
         <div className="form-actions">
-          <a
+          <ButtonLink variant="primary" size="md"
             href={mailtoHref}
-            className="btn-primary"
+
           >
             {t("carrierIntegration.lvStep8MailtoButton")}
-          </a>
+          </ButtonLink>
         </div>
       </section>
 

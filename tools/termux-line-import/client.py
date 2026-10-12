@@ -6,18 +6,56 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
+import subprocess
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 import urllib.error
 import urllib.request
 import uuid
 
-from android_parser import parse_android_export
+from android_parser import DATE, parse_android_export
 from device_session import AuthError, Session
 
 ENDPOINT = 'https://api.salesanchor.jp/api/v1/tcg/line-devices/import'
-MAX_BYTES = 10 * 1024 * 1024
+# send() は原本全体ではなく基準時刻-60分以降だけを切り出して送るため、送信ペイロードは
+# 20KB以下になる（docs/handoff/line-import-incremental-send/design.md「60分を採用」）。
+# この定数はもはやサーバー負荷の上限ではなく、端末側で壊れた/暴走した書き出しファイルを
+# 読み込まないための歯止めだけが役目。1件平均1,590B（recon事実5）なら64MiBは約4万件＝数年分。
+MAX_BYTES = 64 * 1024 * 1024
+# 基準より前にどこまで重なりを持たせて送り直すか。1分（記録の時刻精度・同一分最大4件）が
+# 必須の下限だが、60分でも5.0KB（実測）と同じ桁のため、想定外の挿し込みに対する保険として
+# 60分を採用する（design.md「重なりを60分にする根拠」）。
+OVERLAP = timedelta(hours=1)
+
+TERMUX_NOTIFICATION = '/data/data/com.termux/files/usr/bin/termux-notification'
+TERMUX_JOB_SCHEDULER = '/data/data/com.termux/files/usr/bin/termux-job-scheduler'
+NOTIFY_PROGRESS = 4201
+NOTIFY_STALL = 4202
+# 4203/4204 は tools/line-auto-export/auto-export.sh（Termuxの別プロセス、job 4203）が使う通知IDなので
+# ここでは使わない。
+NOTIFY_NO_IMPORT = 4205
+JOB_ID = 4201
+
+ORIGINAL_RE = re.compile(r'^[0-9a-f]{64}\.txt$')
+RECEIVED_RE = re.compile(r'^received-[A-Za-z0-9]{10}$')
+JST = timezone(timedelta(hours=9))
+NINETY_DAYS = 90 * 86400
+# 取り込みが起きたか（stage='received' result='ok'、ファイル受信のたびに記録される）が3時間以上無ければ
+# 通知する。PO決定2026-10-09で、取り込みはアプリ自身が自律的に行う（通知検知＋コアタイム7:00-0:00は
+# 30分・コアタイム外は60分のタイマー補完）運用に変わり、Termuxの15分ジョブ（job 4203、auto-export.sh）は
+# 平常時は止める。4203があった頃はそちら側で「3時間以上成功していません」を見張っていたが、4203を止める
+# とその見張りも消えるため、データの正（outbox.sqlite3）がある此処（job 4201の定期点検）へ移した。
+# 3時間はコアタイム30分・コアタイム外60分という運用上の間隔に対して十分な余裕を持たせた値。
+NO_IMPORT_SECONDS = 3 * 3600
+
+# Actions whose failures are recorded under a specific stage by main()'s generic
+# handler; anything not listed falls back to 'unknown'. 'enqueue' is intentionally
+# absent: Outbox.enqueue() already records its own parse/store failure before
+# re-raising, so recording again here would duplicate the event.
+_EXCEPTION_STAGE = {'send': 'send', 'cleanup': 'cleanup', 'check': 'check'}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -25,64 +63,370 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def termux_notify(nid, title, content):
+    try:
+        result = subprocess.run(
+            [TERMUX_NOTIFICATION, '--id', str(nid), '-t', title, '-c', content, '--alert-once'],
+            timeout=10, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, check=False)
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
 class Outbox:
-    def __init__(self, base):
+    def __init__(self, base, clock=time.time, notifier=None):
         self.base = Path(base)
         self.base.mkdir(mode=0o700, parents=True, exist_ok=True)
         (self.base / 'originals').mkdir(mode=0o700, exist_ok=True)
+        self.clock = clock
+        self.notifier = notifier or termux_notify
         self.db = sqlite3.connect(self.base / 'outbox.sqlite3')
         self.db.execute('''CREATE TABLE IF NOT EXISTS jobs (
             digest TEXT PRIMARY KEY, state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
             retry_at REAL NOT NULL DEFAULT 0, job_id TEXT, response TEXT, error TEXT)''')
+        self.db.execute('''CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY, at REAL NOT NULL, digest TEXT, stage TEXT NOT NULL,
+            result TEXT NOT NULL, reason TEXT, http_code INTEGER, elapsed_seconds REAL,
+            detected_by TEXT)''')
+        # 受理された送信に含まれていた最後のメッセージのtimestampを「基準」として持つ
+        # （キーは 'sent_watermark'）。jobs/eventsのスキーマは変えない。
+        self.db.execute('''CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY, value TEXT)''')
+        existing = {row[1] for row in self.db.execute('PRAGMA table_info(jobs)')}
+        for column in ('received_at', 'last_attempt_at', 'finished_at'):
+            if column not in existing:
+                self.db.execute(f'ALTER TABLE jobs ADD COLUMN {column} REAL')
 
-    def enqueue(self, path):
-        with Path(path).open('rb') as f:
-            raw = f.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
-            raise ValueError('ファイルは10MiB以下にしてください')
-        messages = parse_android_export(raw.decode('utf-8-sig'))
+    # -- history -----------------------------------------------------------
+
+    def record(self, stage, result, digest=None, reason=None, http_code=None,
+               elapsed=None, detected_by=None):
+        with self.db:
+            self.db.execute(
+                'INSERT INTO events (at,digest,stage,result,reason,http_code,elapsed_seconds,detected_by) '
+                'VALUES (?,?,?,?,?,?,?,?)',
+                (self.clock(), digest, stage, result, reason, http_code, elapsed, detected_by))
+
+    def _notify(self, nid, title, content, digest=None):
+        try:
+            ok = self.notifier(nid, title, content)
+        except Exception:
+            ok = False
+        if not ok:
+            self.record('notify', 'failed', digest=digest)
+
+    def history(self, limit=20):
+        rows = self.db.execute(
+            'SELECT at, stage, result, reason, http_code, elapsed_seconds, detected_by '
+            'FROM events ORDER BY id DESC LIMIT ?', (limit,)).fetchall()
+        lines = []
+        for at, stage, result, reason, http_code, elapsed, detected_by in rows:
+            when = datetime.fromtimestamp(at, JST).strftime('%Y-%m-%d %H:%M:%S')
+            lines.append('{} {} {} {} {} {} {}'.format(
+                when, stage, result, reason or '',
+                http_code if http_code is not None else '',
+                f'{elapsed:.1f}s' if elapsed is not None else '', detected_by or ''))
+        return lines
+
+    def prune(self):
+        cutoff = self.clock() - NINETY_DAYS
+        with self.db:
+            self.db.execute('DELETE FROM events WHERE at < ?', (cutoff,))
+            rows = self.db.execute('SELECT digest, received_at, finished_at FROM jobs').fetchall()
+            for digest, received_at, finished_at in rows:
+                basis = finished_at if finished_at is not None else received_at
+                if basis is None or basis >= cutoff:
+                    continue
+                if (self.base / 'originals' / (digest + '.txt')).exists():
+                    continue
+                self.db.execute('DELETE FROM jobs WHERE digest=?', (digest,))
+
+    # -- meta (sent_watermark) ------------------------------------------------
+
+    def _get_meta(self, key):
+        row = self.db.execute('SELECT value FROM meta WHERE key=?', (key,)).fetchone()
+        return row[0] if row else None
+
+    def _set_meta(self, key, value):
+        with self.db:
+            self.db.execute(
+                'INSERT INTO meta (key,value) VALUES (?,?) '
+                'ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, value))
+
+    # -- config --------------------------------------------------------------
+
+    def _load_config(self):
+        path = self.base / 'config.json'
+        if path.exists():
+            return json.loads(path.read_text())
+        return {}
+
+    def set_stall(self, seconds):
+        if isinstance(seconds, bool) or not isinstance(seconds, int) or seconds <= 0:
+            raise ValueError('詰まり判定時間は正の整数（秒）で指定してください')
+        config = self._load_config()
+        config['stall_seconds'] = seconds
+        (self.base / 'config.json').write_text(json.dumps(config))
+
+    # -- intake ----------------------------------------------------------------
+
+    def enqueue(self, path, detected_by='share'):
+        self.record('received', 'ok', detected_by=detected_by)
+        try:
+            with Path(path).open('rb') as f:
+                raw = f.read(MAX_BYTES + 1)
+        except OSError:
+            reason = 'ファイルを読み込めません'
+            self.record('parse', 'failed', reason=reason, detected_by=detected_by)
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
+            raise
+        try:
+            if len(raw) > MAX_BYTES:
+                raise ValueError('ファイルは64MiB以下にしてください')
+            try:
+                text = raw.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                raise ValueError('文字コードを確認してください（UTF-8を想定）') from None
+            try:
+                messages = parse_android_export(text)
+            except ValueError:
+                raise ValueError('LINEのトーク履歴の形式を確認してください') from None
+        except ValueError as error:
+            reason = str(error)
+            self.record('parse', 'failed', reason=reason, detected_by=detected_by)
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
+            raise
         digest = hashlib.sha256(raw).hexdigest()
         target = self.base / 'originals' / (digest + '.txt')
-        if target.exists():
-            if target.read_bytes() != raw:
-                raise ValueError('保存済み原本の整合性エラー')
-        else:
-            temporary = target.with_name('.' + uuid.uuid4().hex)
-            try:
-                with temporary.open('xb') as f:
-                    f.write(raw)
-                    f.flush()
-                    os.fsync(f.fileno())
-                temporary.replace(target)
-            finally:
-                temporary.unlink(missing_ok=True)
+        try:
+            if target.exists():
+                if target.read_bytes() != raw:
+                    raise ValueError('保存済み原本の整合性エラー')
+            else:
+                temporary = target.with_name('.' + uuid.uuid4().hex)
+                try:
+                    with temporary.open('xb') as f:
+                        f.write(raw)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    temporary.replace(target)
+                finally:
+                    temporary.unlink(missing_ok=True)
+        except (OSError, ValueError) as error:
+            reason = str(error) if isinstance(error, ValueError) else '原本の保存に失敗しました'
+            self.record('store', 'failed', digest=digest, reason=reason, detected_by=detected_by)
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
+            raise
+        now = self.clock()
         with self.db:
-            self.db.execute('INSERT OR IGNORE INTO jobs (digest,state) VALUES (?,?)',
-                            (digest, 'queued'))
+            self.db.execute('INSERT OR IGNORE INTO jobs (digest,state) VALUES (?,?)', (digest, 'queued'))
+            self.db.execute('UPDATE jobs SET received_at=? WHERE digest=?', (now, digest))
+        self.record('store', 'ok', digest=digest, detected_by=detected_by)
+        state = self.db.execute('SELECT state FROM jobs WHERE digest=?', (digest,)).fetchone()[0]
+        if state in ('accepted', 'pending_review'):
+            # Same bytes were already imported: nothing to send, but the share still gets a result.
+            reason = '同じ内容を取り込み済みのため送信なし'
+            self.record('send', 'duplicate', digest=digest, reason=reason, detected_by=detected_by)
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：取り込み済み', reason, digest=digest)
+        self.supersede_and_cleanup(digest)
         return {'digest': digest, 'messages': len(messages), 'bytes': len(raw)}
 
-    def status(self):
-        return dict(self.db.execute('SELECT state, COUNT(*) FROM jobs GROUP BY state'))
+    def supersede_and_cleanup(self, digest):
+        now = self.clock()
+        rows = self.db.execute(
+            "SELECT digest FROM jobs WHERE digest<>? AND state IN ('queued','retry','auth_required')",
+            (digest,)).fetchall()
+        if rows:
+            with self.db:
+                self.db.execute(
+                    "UPDATE jobs SET state='superseded', finished_at=? "
+                    "WHERE digest<>? AND state IN ('queued','retry','auth_required')",
+                    (now, digest))
+            for (old_digest,) in rows:
+                self.record('cleanup', 'superseded', digest=old_digest)
+        self.remove_old_files(keep_digest=digest)
 
-    def send(self, transport=None, force=False):
+    def remove_old_files(self, keep_digest, inbox=None, keep_inbox=None, dry_run=False):
+        targets = []
+        keep_name = keep_digest + '.txt'
+        originals = self.base / 'originals'
+        if originals.is_dir():
+            for entry in sorted(originals.iterdir()):
+                if entry.name == keep_name:
+                    continue
+                if not ORIGINAL_RE.fullmatch(entry.name):
+                    continue
+                if entry.is_symlink() or not entry.is_file():
+                    continue
+                targets.append(entry)
+        if inbox is not None:
+            inbox = Path(inbox)
+            keep_resolved = keep_inbox.resolve() if keep_inbox is not None else None
+            if inbox.is_dir():
+                for entry in sorted(inbox.iterdir()):
+                    if not RECEIVED_RE.fullmatch(entry.name):
+                        continue
+                    if entry.is_symlink() or not entry.is_dir():
+                        continue
+                    if keep_resolved is not None and entry.resolve() == keep_resolved:
+                        continue
+                    targets.append(entry)
+        if dry_run:
+            return targets
+        removed = []
+        for entry in targets:
+            try:
+                if entry.is_dir():
+                    children = list(entry.iterdir())
+                    if any(child.is_symlink() or not child.is_file() for child in children):
+                        self.record('cleanup', 'skipped', reason=f'{entry.name}に想定外の中身')
+                        continue
+                    for child in children:
+                        child.unlink()
+                    entry.rmdir()
+                else:
+                    entry.unlink()
+            except OSError:
+                self.record('cleanup', 'skipped', reason=f'{entry.name}を削除できません')
+                continue
+            removed.append(entry)
+        if removed:
+            self.record('cleanup', 'deleted', reason=f'{len(removed)}件')
+        return removed
+
+    # -- status ----------------------------------------------------------------
+
+    def status(self):
+        counts = dict(self.db.execute('SELECT state, COUNT(*) FROM jobs GROUP BY state'))
+        row = self.db.execute(
+            'SELECT state, received_at FROM jobs WHERE received_at IS NOT NULL '
+            'ORDER BY received_at DESC LIMIT 1').fetchone()
+        if row is None:
+            latest = None
+        else:
+            state, received_at = row
+            latest = {
+                'state': state,
+                'received_at': datetime.fromtimestamp(received_at, JST).strftime('%Y-%m-%d %H:%M:%S'),
+                'elapsed_minutes': int((self.clock() - received_at) // 60),
+            }
+        stall_seconds = self._load_config().get('stall_seconds')
+        if isinstance(stall_seconds, bool) or not isinstance(stall_seconds, int) or stall_seconds <= 0:
+            stall_seconds = '未設定（計測後に設定）'
+        counts['latest'] = latest
+        counts['stall_seconds'] = stall_seconds
+        return counts
+
+    # -- sending ----------------------------------------------------------------
+
+    def _build_payload(self, raw):
+        """送るバイト列を決める。戻り値は
+        (payload_or_None, new_watermark_or_None, new_tail_count_or_None, basis)。
+
+        基準（sent_watermark）が無ければ原本をそのまま返す（現状と同じ挙動。
+        design.md「送るものの決め方」3）。基準があり、新規メッセージが1件も無ければ
+        payloadはNoneになる（呼び出し側はジョブをskippedにして送らない）。
+
+        新規の有無は次の『いずれか』で判定する（design.md追補 2026-10-08）:
+        1. 基準と同じtimestampを持つ、ファイル内で一番後ろのメッセージより
+           さらに後に何かある（従来の判定。基準送信は常にファイル末尾まで
+           含んでいたので、これより後は必ず『まだ送っていない』）。
+        2. 基準と同じtimestamp（同一分）のメッセージの件数が、前回送信時に
+           記録した件数（sent_watermark_tail_count）より増えている。
+        1だけでは『基準と同じ分に新規が1件増え、その後により新しい時刻の
+        メッセージが続かない』場合を検知できない（recon事実5: 同一分最大4件、
+        17%が同一分）。その新規はtimestampが基準と文字列として同じになるため、
+        次に別の時刻のメッセージが届くまで送信が遅れてしまう（60分の重なりで
+        いずれ失われずに送られるが、鮮度を求める今回の目的に反する）。2はこの
+        穴を閉じる。
+
+        sent_watermark_tail_countが無い（本改修前のDBから移行した直後）場合は
+        安全側に倒し、新規ありとして扱う。一度だけ必要以上に送るだけで済み、
+        取りこぼす方が重大なため（design.md「弊害・トレードオフ」の安全側方針
+        と一致）。
+
+        1件以上あれば、送信ペイロードは辞書から再直列化せず原本テキストの行スライスで
+        作る（android_parser.py:3-4、本文のバイト完全復元は保証されないため）。切り出し
+        開始位置は基準時刻-OVERLAP（60分）以降の最初のメッセージで、その行から原本末尾
+        までに、その日の日付行（パーサが要求するため。android_parser.py:31）を前置する。
+
+        基準がこのファイルのどのメッセージよりも新しい場合（共有は任意のトークを受け
+        付けるため、利用者が別のトーク・古い書き出しを手で共有すると実在する経路）、
+        基準時刻-60分以降のメッセージが1件も無く切り出し開始位置を特定できない。この
+        場合と、日付行が見つからない想定外のケースは、どちらも原本をそのまま送ることで
+        安全側に倒す（取りこぼすより一度多く送る方が安全。弊害・トレードオフと同じ方針）。
+        """
+        watermark = self._get_meta('sent_watermark')
+        text = raw.decode('utf-8-sig')
+        messages = parse_android_export(text)
+        if watermark is None:
+            tail_count = sum(1 for message in messages if message['timestamp'] == messages[-1]['timestamp'])
+            return raw, messages[-1]['timestamp'], tail_count, None
+        matches = [i for i, message in enumerate(messages) if message['timestamp'] == watermark]
+        last_sent_index = max(matches) if matches else -1
+        tail_count = len(matches)
+        stored_tail_count = self._get_meta('sent_watermark_tail_count')
+        has_new = (last_sent_index < len(messages) - 1
+                   or stored_tail_count is None or tail_count > int(stored_tail_count))
+        if not has_new:
+            return None, None, None, watermark
+        new_watermark = messages[-1]['timestamp']
+        new_tail_count = sum(1 for message in messages if message['timestamp'] == new_watermark)
+        cutoff = (datetime.strptime(watermark, '%Y-%m-%d %H:%M:%S') - OVERLAP).strftime('%Y-%m-%d %H:%M:%S')
+        start_message = next((message for message in messages if message['timestamp'] >= cutoff), None)
+        if start_message is None:
+            # 基準がこのファイルのどのメッセージよりも新しい（例: 共有はどのトークでも
+            # 受け付けるため、利用者が別のトーク・古い書き出しを手で共有した場合に実在
+            # する経路）。切り出す範囲が無いので、原本の最初のメッセージから送る＝実質
+            # ファイル全体を送る。取りこぼすより一度多く送る方が安全（既存の安全側方針）。
+            start_message = messages[0]
+        lines = text.lstrip('﻿').splitlines()
+        start_line = start_message['line']
+        date_line = next((line for line in reversed(lines[:start_line - 1]) if DATE.fullmatch(line)), None)
+        if date_line is None:
+            # 日付行が見つからない（通常は起こらない想定外ケースへの保険）。切り出しに
+            # 失敗したら原本をそのまま送る方が、メッセージを取りこぼすより安全。
+            return raw, new_watermark, new_tail_count, watermark
+        payload = '\n'.join([date_line] + lines[start_line - 1:]).encode('utf-8')
+        return payload, new_watermark, new_tail_count, watermark
+
+    def send(self, transport=None, force=False, detected_by='share'):
         # Deployment must be confirmed explicitly; do not post to the old PC API.
-        config = json.loads((self.base / 'config.json').read_text())
+        config = self._load_config()
         if config.get('endpoint') != ENDPOINT or config.get('enabled') is not True:
             raise ValueError('Android専用APIの導入確認後に送信を有効にしてください')
         token = Session(self.base).token()
         transport = transport or post
-        rows = self.db.execute("SELECT digest,attempts FROM jobs WHERE state IN ('queued','retry','auth_required') AND (retry_at <= ? OR ?)",
-                               (time.time(), int(force))).fetchall()
+        rows = self.db.execute(
+            "SELECT digest,attempts FROM jobs WHERE state IN ('queued','retry','auth_required') "
+            "AND (retry_at <= ? OR ?)", (self.clock(), int(force))).fetchall()
         for digest, attempts in rows:
             raw = (self.base / 'originals' / (digest + '.txt')).read_bytes()
             if hashlib.sha256(raw).hexdigest() != digest:
                 raise ValueError('原本の整合性エラー。送信を停止しました')
+            payload, new_watermark, new_tail_count, basis = self._build_payload(raw)
+            if payload is None:
+                # 基準より後に新規が無い: サーバーには何も送らない（KGI1）。jobsのstateを
+                # 'skipped'にしてfinished_atを入れる（再送クエリ:297に残すと毎回この判定を
+                # 繰り返すだけになり、supersede_and_cleanupの対象判定も濁るため）。
+                now = self.clock()
+                with self.db:
+                    self.db.execute(
+                        "UPDATE jobs SET state='skipped', finished_at=? WHERE digest=?", (now, digest))
+                self.record('send', 'skipped', digest=digest,
+                            reason=f'新規なし（基準: {basis}）', detected_by=detected_by)
+                continue
+            start = self.clock()
             # Crash after POST leaves 'retry': identical raw file is resent; the server
             # must serialize and deduplicate by its Android-specific content key.
             with self.db:
-                self.db.execute("UPDATE jobs SET state='retry', attempts=?, retry_at=? WHERE digest=?",
-                                (attempts + 1, time.time() + 60, digest))
-            code, response = transport(raw, token)
+                self.db.execute(
+                    "UPDATE jobs SET state='retry', attempts=?, retry_at=?, last_attempt_at=? WHERE digest=?",
+                    (attempts + 1, start + 60, start, digest))
+            self.record('send', 'started', digest=digest, detected_by=detected_by)
+            code, response = transport(payload, token)
+            elapsed = self.clock() - start
             state, error, job_id = 'retry', '通信結果を確認できません', None
             data = None
             try:
@@ -102,16 +446,133 @@ class Outbox:
                         and data['import_job_id']):
                     state = 'pending_review' if data['review_status'] == 'pending_review' else 'accepted'
                     job_id, error = data['import_job_id'], None
+            detail = safe_detail(data)
+            if detail and state not in ('accepted', 'pending_review'):
+                error = f'{error}（サーバー: {detail}）'
+            event_reason = '通信できません（圏外・タイムアウト等）' if code == 0 else error
+            if state in ('accepted', 'pending_review'):
+                # 受理されたときだけ基準を進める（失敗時は進めない→次回が取り戻す。KGI4）。
+                # tail_countも併せて進める。これが無いと『同一分に孤立した新規』が
+                # 翌朝まで送信を遅らされ得る穴が残る（design.md追補 2026-10-08）。
+                # メッセージ本文は記録せず、バイト数とtimestampの基準のみ残す（KGI2計測用）。
+                self._set_meta('sent_watermark', new_watermark)
+                self._set_meta('sent_watermark_tail_count', str(new_tail_count))
+                event_reason = '送信 {}バイト（基準 {} / 全体 {}バイト）'.format(
+                    len(payload), basis if basis is not None else 'なし', len(raw))
             # Only expected response fields; never persist an arbitrary HTML/error body.
-            safe = {key: data.get(key) for key in ('status','review_status','message_count',
-                    'provider_count','unresolved_count','skipped_message_count','import_job_id')} if isinstance(data, dict) and state in ('accepted','pending_review') else None
+            safe = {key: data.get(key) for key in ('status', 'review_status', 'message_count',
+                    'provider_count', 'unresolved_count', 'skipped_message_count', 'import_job_id')
+                    } if isinstance(data, dict) and state in ('accepted', 'pending_review') else None
+            now = self.clock()
+            finished_at = now if state in ('accepted', 'pending_review', 'rejected') else None
             with self.db:
-                self.db.execute('UPDATE jobs SET state=?, retry_at=?, job_id=?, response=?, error=? WHERE digest=?',
-                                (state, time.time() + min(3600, 30 * 2 ** min(attempts, 7)),
-                                 job_id, json.dumps(safe), error, digest))
+                self.db.execute(
+                    'UPDATE jobs SET state=?, retry_at=?, job_id=?, response=?, error=?, finished_at=? '
+                    'WHERE digest=?',
+                    (state, now + min(3600, 30 * 2 ** min(attempts, 7)), job_id, json.dumps(safe), error,
+                     finished_at, digest))
+            self.record('send', state, digest=digest, reason=event_reason, http_code=code,
+                        elapsed=elapsed, detected_by=detected_by)
+            self._send_result_notification(state, digest, safe, error)
             if code in (401, 403, 404):
                 break
         return self.status()
+
+    def _send_result_notification(self, state, digest, safe, error):
+        if state == 'accepted':
+            count = safe.get('message_count') if safe else None
+            content = f'投稿{count}件' if count is not None else '投稿完了'
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：取り込み完了', content, digest=digest)
+        elif state == 'pending_review':
+            count = safe.get('unresolved_count') if safe else None
+            content = (f'取引先確認待ち{count}件。PC画面で確認してください' if count is not None
+                       else '取引先確認待ち。PC画面で確認してください')
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：取り込み完了（確認待ち）', content, digest=digest)
+        elif state == 'rejected':
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{error}（原本は保持。再送しません）', digest=digest)
+        elif state == 'auth_required':
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{error}（原本は保持。再認可が必要です）', digest=digest)
+        else:
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗',
+                        f'{error}（原本は保持。次の点検で自動再送します）', digest=digest)
+
+    # -- periodic check ----------------------------------------------------------
+
+    def check(self, transport=None):
+        self.prune()
+        if (self.base / 'config.json').exists() and (self.base / 'device.json').exists():
+            try:
+                self.send(transport=transport, force=False, detected_by='check')
+            except (ValueError, AuthError, OSError, sqlite3.Error, KeyError, TypeError, EOFError) as error:
+                reason = str(error)
+                self.record('check', 'failed', reason=reason, detected_by='check')
+                self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
+        self._check_stall()
+        self._check_no_import()
+        self.record('check', 'ok', detected_by='check')
+
+    def _check_stall(self):
+        stall_seconds = self._load_config().get('stall_seconds')
+        if isinstance(stall_seconds, bool) or not isinstance(stall_seconds, int) or stall_seconds <= 0:
+            return
+        now = self.clock()
+        rows = self.db.execute(
+            "SELECT digest, received_at, attempts FROM jobs WHERE state IN ('queued','retry','auth_required') "
+            "AND received_at IS NOT NULL AND ? - received_at >= ?", (now, stall_seconds)).fetchall()
+        for digest, received_at, attempts in rows:
+            last_event = self.db.execute(
+                'SELECT stage, result FROM events WHERE digest=? ORDER BY id DESC LIMIT 1',
+                (digest,)).fetchone()
+            if last_event is None:
+                stage_label = '不明'
+            elif last_event[0] == 'send' and last_event[1] == 'started':
+                stage_label = '送信中に中断'
+            else:
+                stage_label = last_event[0]
+            reason_row = self.db.execute(
+                'SELECT reason FROM events WHERE digest=? AND reason IS NOT NULL ORDER BY id DESC LIMIT 1',
+                (digest,)).fetchone()
+            reason = reason_row[0] if reason_row else '不明'
+            minutes = int((now - received_at) // 60)
+            received_label = datetime.fromtimestamp(received_at, JST).strftime('%H:%M')
+            content = (f'{received_label}から{minutes}分未完了／段階:{stage_label}／理由:{reason}／'
+                       f'再送{attempts}回／点検で検知')
+            self._notify(NOTIFY_STALL, 'LINE取込：詰まり', content, digest=digest)
+            self.record('check', 'stalled', digest=digest, reason=reason,
+                        elapsed=now - received_at, detected_by='check')
+
+    def _check_no_import(self):
+        # stage='received' result='ok' はファイルが届くたびに記録される（enqueue()参照）ため、
+        # 「取り込みが起きたか」の正しい指標になる。_check_stall() はキューに残ったジョブが対象で
+        # 役割が違うため変更しない（アプリが一切動かず新しいジョブが作られない場合はそちらでは拾えない）。
+        row = self.db.execute(
+            "SELECT at FROM events WHERE stage='received' AND result='ok' "
+            "ORDER BY id DESC LIMIT 1").fetchone()
+        if row is None:
+            # 一度も取り込みが無い（新規導入直後など）。基準となる時刻が無いため通知しない。
+            return
+        last_at = row[0]
+        elapsed = self.clock() - last_at
+        if elapsed < NO_IMPORT_SECONDS:
+            return
+        hours, minutes = divmod(int(elapsed) // 60, 60)
+        last_label = datetime.fromtimestamp(last_at, JST).strftime('%H:%M')
+        reason = f'最後の取り込み {last_label} から{hours}時間{minutes}分'
+        content = f'{reason}。アプリの自動実行がONか、通知が届いているか確認してください'
+        self._notify(NOTIFY_NO_IMPORT, 'LINE取込：3時間以上取り込みがありません', content)
+        self.record('check', 'no_import', reason=reason, detected_by='check')
+
+
+def safe_detail(data):
+    """サーバーの JSON 応答から detail だけを取り出す。任意のHTML/本文は保存しない方針のため、
+    dict の 'detail' が文字列のときだけ、制御文字を除いて120文字までに切って返す。"""
+    if not isinstance(data, dict):
+        return None
+    detail = data.get('detail')
+    if not isinstance(detail, str):
+        return None
+    cleaned = ''.join(ch for ch in detail if ch.isprintable()).strip()
+    return cleaned[:120] if cleaned else None
 
 
 def post(raw, token):
@@ -126,7 +587,13 @@ def post(raw, token):
         with urllib.request.build_opener(NoRedirect()).open(request, timeout=60) as response:
             return response.status, response.read(131072).decode('utf-8', errors='replace')
     except urllib.error.HTTPError as error:
-        return error.code, ''
+        # 本文も返す。捨てるとサーバー側の理由が端末に一切残らず、原因調査ができない
+        # （2026-09-21 の500障害では、本文を取り直すまで「通信結果を確認できません」しか
+        # 記録されていなかった）。保存するのは JSON の detail だけに絞る（下の safe_detail）。
+        try:
+            return error.code, error.read(8192).decode('utf-8', errors='replace')
+        except OSError:
+            return error.code, ''
     except (OSError, urllib.error.URLError, TimeoutError):
         return 0, ''
 
@@ -135,35 +602,98 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--state-dir', default=str(Path.home() / '.local/state/line-android-import'))
-    parser.add_argument('action', choices=['enqueue', 'send', 'status', 'enable', 'connect', 'login'])
+    parser.add_argument('--inbox', default=None)
+    parser.add_argument('--keep-inbox', default=None)
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('action', choices=['enqueue', 'send', 'status', 'enable', 'connect', 'login',
+                                            'check', 'history', 'cleanup', 'set-stall', 'schedule'])
     parser.add_argument('file', nargs='?')
     args = parser.parse_args()
     outbox = Outbox(args.state_dir)
+    inbox_path = Path(args.inbox) if args.inbox else Path(args.state_dir).parent / 'inbox'
     with (outbox.base / 'lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+        if args.action == 'check':
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                outbox.db.close()
+                return 0
+        else:
+            fcntl.flock(lock, fcntl.LOCK_EX)
         try:
             if args.action == 'enqueue':
                 if not args.file:
                     raise ValueError('ファイルを指定してください')
-                print(json.dumps(outbox.enqueue(args.file), ensure_ascii=False))
+                result = outbox.enqueue(args.file)
+                keep_inbox = Path(args.keep_inbox) if args.keep_inbox else None
+                outbox.remove_old_files(result['digest'], inbox=inbox_path, keep_inbox=keep_inbox)
+                print(json.dumps(result, ensure_ascii=False))
                 if (outbox.base / 'config.json').exists() and (outbox.base / 'device.json').exists():
-                    print(json.dumps(outbox.send(), ensure_ascii=False))
+                    try:
+                        print(json.dumps(outbox.send(), ensure_ascii=False))
+                    except (ValueError, OSError, sqlite3.Error, KeyError, TypeError, EOFError) as error:
+                        # Setup failures before any POST must still reach the user and the history.
+                        reason = str(error) if isinstance(error, ValueError) else type(error).__name__
+                        outbox.record('send', 'failed', reason=reason, detected_by='share')
+                        outbox._notify(NOTIFY_PROGRESS, 'LINE取込：失敗',
+                                       f'{reason}（原本は保持。次の点検で自動再送します）')
+                        raise
                 else:
                     print('原本を保存しました。API導入・認証設定後に送信できます。')
             elif args.action == 'send':
-                print(json.dumps(outbox.send(force=True), ensure_ascii=False))
+                print(json.dumps(outbox.send(force=True, detected_by='manual'), ensure_ascii=False))
             elif args.action == 'status':
                 print(json.dumps(outbox.status(), ensure_ascii=False))
             elif args.action in ('connect', 'login'):
                 Session(outbox.base).connect()
             elif args.action == 'enable':
-                (outbox.base / 'config.json').write_text(json.dumps({'enabled':True,'endpoint':ENDPOINT}))
+                config = outbox._load_config()
+                config['enabled'] = True
+                config['endpoint'] = ENDPOINT
+                (outbox.base / 'config.json').write_text(json.dumps(config))
                 print('Android専用APIへの送信を有効にしました。')
+            elif args.action == 'check':
+                outbox.check()
+            elif args.action == 'history':
+                limit = int(args.file) if args.file else 20
+                for line in outbox.history(limit):
+                    print(line)
+            elif args.action == 'cleanup':
+                row = outbox.db.execute(
+                    'SELECT digest FROM jobs ORDER BY received_at IS NULL, received_at DESC, '
+                    'rowid DESC LIMIT 1').fetchone()
+                if row is None:
+                    print('対象がありません。')
+                else:
+                    removed = outbox.remove_old_files(row[0], inbox=inbox_path, dry_run=args.dry_run)
+                    for entry in removed:
+                        print(str(entry))
+                    verb = '削除対象です（--dry-runのため未削除）' if args.dry_run else '削除しました'
+                    print(f'{len(removed)}件が{verb}。')
+            elif args.action == 'set-stall':
+                if not args.file:
+                    raise ValueError('秒数を指定してください')
+                outbox.set_stall(int(args.file))
+                print('詰まり判定時間を設定しました。')
+            elif args.action == 'schedule':
+                result = subprocess.run(
+                    # Offline or low battery must not suppress the stall check itself.
+                    [TERMUX_JOB_SCHEDULER, '--job-id', str(JOB_ID), '--period-ms', '900000',
+                     '--persisted', 'true', '--network', 'none', '--battery-not-low', 'false',
+                     '--script', str(Path.home() / 'bin/line-import-check')],
+                    timeout=20, capture_output=True, text=True)
+                print(result.stdout.strip() or f'登録結果コード: {result.returncode}')
         except AuthError as error:
+            if args.action != 'enqueue':
+                outbox.record(_EXCEPTION_STAGE.get(args.action, 'unknown'), 'failed', reason=str(error))
             print(str(error), file=sys.stderr)
             return 1
-        except (ValueError, OSError, sqlite3.Error, KeyError, TypeError, EOFError):
-            print('処理を完了できませんでした。原本は保持されています。形式・認証・設定を確認してください。', file=sys.stderr)
+        except (ValueError, OSError, sqlite3.Error, KeyError, TypeError, EOFError) as error:
+            if args.action != 'enqueue':
+                outbox.record(_EXCEPTION_STAGE.get(args.action, 'unknown'), 'failed',
+                              reason=type(error).__name__)
+            print('処理を完了できませんでした。原本は保持されています。形式・認証・設定を確認してください。',
+                  file=sys.stderr)
             return 1
         finally:
             outbox.db.close()

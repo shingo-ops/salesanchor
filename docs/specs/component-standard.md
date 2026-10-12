@@ -293,3 +293,16 @@ npm run dev
 1. リード一覧・会社一覧・注文一覧への DataTable 適用
 2. 列固定（sticky ヘッダー / sticky チェックボックス列）の検討
 3. ページネーション連携（`page` / `hasNextPage` / `onPageChange` props — step-2 で実装済み）
+
+
+## AU ButtonLink と外側配置の登録（2026-09-29）
+
+設計: [design-system/design.md §AU](design-system/design.md)。全旧221件の共通部品移管依頼に必要な、既存§Z設計の実装登録。実装/試験合格は別途記録する。
+
+| componentId | module/export | native | story/test | 外観正本 |
+|---|---|---|---|---|
+| button-link | frontend/src/components/ButtonLink.tsx / ButtonLink | a または Router Link | ButtonLink.stories.tsx / ButtonLink.test.tsx | Button.css / buttonAppearance.ts（Buttonと共用） |
+
+ButtonLinkはhref/to排他、variant primary/secondary/ghost/danger/outline、size sm/md/lg、fullWidth/layoutClassName。loading/disabled/className/styleを持たず、href/target/rel/download/Router挙動とanchor refを保持。
+外側配置専用classはButton.cssで所有: comp-btn-layout--mt-2（margin-top var(--space-2)）、comp-btn-layout--ml-2（margin-left var(--space-2)）、comp-btn-layout--ml-3（margin-left var(--space-3)）、comp-btn-layout--ml-auto（margin-left auto）。色/枠/字体/paddingを持たない。既存field-h-md、gs-save-btn（align-self）、gs-advisor__run-btn（min-height/nowrap）も同じDOMへのlayoutClassName使用のみ許可。
+旧bare btn-smはsecondary smへ統一（旧背景の完全再現ではない）。btn-danger-linkはdanger sm。全数の詳細対応と無効旧CSS宣言の扱いは§AUを正とする。

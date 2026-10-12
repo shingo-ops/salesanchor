@@ -25,10 +25,10 @@
 
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
-- **エージェントは制限付き鍵のみ使用**（`salesanchor-claude`、ForceCommand 制限）
-- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）は人間の明示許可があるタスクでのみ使用可**
-  - 許可は都度・タスク単位。`permit-danger.sh` 相当の明示承認が必要
-  - 人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない（人間用として温存）
+- **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
+- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**（PO 決定 2026-09-30「CLAUDE.md のこのルール変更を許可する」）
+  - 読み取りだけの調査（SELECT・ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可で使用可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
+  - 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
 - 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
 
 ---
@@ -54,7 +54,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
   - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
 - **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
-- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）単独。Hikky-devのApproveバイパスは廃止
+- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）。ADR-1003により例外を除き Claude Opus 設計担当へ常時委譲（PO「委譲停止」で解除）
 - **リリース PR 作成時**は `git diff main...HEAD --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
 
 ### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）

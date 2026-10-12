@@ -1,0 +1,28 @@
+CARD-AR-ROLE-KNOWLEDGE-TEST-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 冒頭に「本報告はCARD-AR-ROLE-KNOWLEDGE-TEST-02の実行結果である」と記載する。
+担当: 既存Sol sol_button_inventory。本便はread-only調査から限定試験実装への切替。新エージェント起動なし。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+設計: docs/specs/design-system/design.md §AR。正式契約: docs/handoff/design-system-recon/evidence-20260910/ar-contracts.md。
+場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch
+所有は frontend/src/components/RoleKnowledgeButtonMigration.test.tsx 1ファイルだけ。
+前担当は編集停止と実行中コマンドなしを明示確認済み。他者も作業中。共有ファイル/他者の変更を戻さない。
+前担当sol_staff_report_generatorはFormAction/MasterSearch/OrderLead3試験、rootは文書所有。
+許可: 所有テスト内でカードAR受入の不足補強、stricteslint/対象unit、/tmp/ar-validation-roleへのログ保存。
+禁止: 製品/他3試験/AQ試験/DB/API/権限/共通CSS/翻訳/依存/CI/ガード/GO/commit/push/PR/本番/secret変更。
+禁止: 新エージェント、実ネットワーク通信、skip/既存期待値変更、例外握り潰しでの合格。
+手順0: preflight、他者変更確認、既存所有テスト/実ページ2件/Modal/usePermissions/翻訳と契約表を照合。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && ./scripts/dev/executor-preflight.sh
+手順1: Roles create/edit exact method/URL/全payload・required・権限・成功GET/reset・cancel入力保持・X/Escape/focus・失敗retry・pending2/取消後resolve/rejectを既存挙動どおり検査。
+Roles assignmentは非form、type=button/onClick、!targetUserId disabled、exact PUT /users/77/roles + role_ids、成功/取消/閉鎖reset、失敗とpending契約。Enter formsubmitを期待しない。
+Knowledge rule/alias create/edit計4分岐のexact method/URL/全payload、現在queryでの再GET増分、required/supplier guard書込0、testid保持、取消/閉鎖/focus、失敗retry、pending2/取消後resolve/rejectを検査。
+実ページ/Modal/Button/Select/usePermissions/i18nを使用。mockはAPI/auth境界のみ。payload部分一致だけにしない。
+権限拒否は旧mock callと初期空権限で偽陽性にしない。新permission応答と非同期反映の完了後にassert。
+fixtureは実物照合して所有テスト内だけ補正可。初回失敗ログを保持、製品の仕様を変えて通さない。
+手順2: stricteslintと所有unitを実行し各exit/件数/未解決を報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npx eslint src/components/RoleKnowledgeButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run test:unit -- src/components/RoleKnowledgeButtonMigration.test.tsx
+手順3: 受入項目→試験名matrix、最終hash、原ログの場所/件数/exitをrootへ報告して停止。
+全体品質は両担当完成後に前担当が実行。自己実装した本ファイルを独立レビュー合格と称さない。別担当が交差レビューする。
+失敗/不明/所有外が必要ならその操作を停止してrootへ根拠報告。
+END OF CARD

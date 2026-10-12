@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
 URL = os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -52,14 +53,30 @@ async def create_schema(conn, schema, corrections=True):
     except Exception:
         await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
     await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
-    # Guarantee work_id column exists even if SAVEPOINT rolled back (pre-existing table)
-    await conn.exec_driver_sql("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
+    # Guarantee public.products exists even if SAVEPOINT rolled back mid-way
+    # (e.g. public.suppliers DDL failed after public.products was created inside the SAVEPOINT,
+    # causing the entire SAVEPOINT — including the products CREATE — to be rolled back).
+    # _PUBLIC_PRODUCTS_DDL uses CREATE TABLE IF NOT EXISTS / CREATE UNIQUE INDEX IF NOT EXISTS
+    # so re-running outside the SAVEPOINT is safe (idempotent).
+    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            await conn.exec_driver_sql(stmt)
+    # Guarantee work_id column exists (belt-and-suspenders; also covers pre-existing tables).
+    await conn.exec_driver_sql("ALTER TABLE IF EXISTS public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
-    # Phase 2 SSOT: public.tcg_type_master required by fetch_output_rows JOIN
-    for sql_file in ("085_create_tcg_type_master.sql", "086_seed_additional_tcg_types.sql"):
+    # Phase 2 SSOT: public.type_master required by fetch_output_rows JOIN
+    for sql_file in (
+        "085_create_tcg_type_master.sql",
+        "086_seed_additional_tcg_types.sql",
+        "20260921_060000_create_product_kinds.sql",
+        "20260921_070000_rename_tcg_type_master_to_type_master.sql",
+    ):
         sql_path = migrations / sql_file
         if sql_path.exists():
             await _exec_multi_stmt(conn, sql_path.read_text())
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    await conn.exec_driver_sql(type_master_seed_sql())
     # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
     # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
@@ -71,6 +88,19 @@ async def create_schema(conn, schema, corrections=True):
         names.insert(1, "20260903_170000_item_corrections_t004.sql")
     for name in names:
         await conn.exec_driver_sql((migrations / name).read_text().replace("tenant_004", schema))
+    # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+    await conn.exec_driver_sql(
+        f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE"
+    )
+    # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+    await _exec_multi_stmt(conn, (migrations / "20260926_010000_add_raw_product_code.sql").read_text())
+    await conn.exec_driver_sql(
+        f"ALTER TABLE IF EXISTS {schema}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text"
+    )
+    # distribution-max-age-filter: line_posted_at column on source_messages (needed by fetch_output_rows SELECT).
+    await conn.exec_driver_sql(
+        f"ALTER TABLE {schema}.source_messages ADD COLUMN IF NOT EXISTS line_posted_at TIMESTAMPTZ"
+    )
 
 
 @pytest_asyncio.fixture
@@ -221,6 +251,9 @@ async def test_missing_correction_table_is_reported(monkeypatch):
 async def test_preview_api_uses_real_service_and_keeps_flag_disabled(distribution_db, monkeypatch):
     db, schema = distribution_db
     await add_flag(db, schema, await transaction_now(db))
+    # 便AGE: max_age_hours が無いとプレビューは 409。試験の準備で設定を入れる
+    await db.execute(text(f"INSERT INTO {schema}.tcg_distribution_settings(key, value) VALUES ('max_age_hours', '48') "
+                          "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"))
     monkeypatch.setattr(routes.svc, "TCG_SCHEMA", schema)
     monkeypatch.setattr(svc, "_build_gspread_client", lambda: (_ for _ in ()).throw(AssertionError("preview called Sheets")))
     settings_before = await svc.load_distribution_settings(db)

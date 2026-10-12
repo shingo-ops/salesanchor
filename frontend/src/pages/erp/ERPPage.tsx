@@ -7,6 +7,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface SyncLog { id: number; sync_type: string; direction: string; record_count: number; status: string; error_message: string | null; started_at: string; completed_at: string | null; }
 
@@ -55,9 +56,9 @@ export default function ERPPage() {
       {hasPermission("erp.sync") ? (
         <ContentToolbar
           right={
-            <button className="btn-primary field-h-md" onClick={exportInvoices} disabled={exporting}>
+            <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={exportInvoices} disabled={exporting}>
               {exporting ? t("erp.exporting") : t("erp.exportInvoices")}
-            </button>
+            </Button>
           }
         />
       ) : undefined}

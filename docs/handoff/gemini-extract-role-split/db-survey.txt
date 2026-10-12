@@ -1,0 +1,140 @@
+SET
+=== schema: knowledge_rules / supplier_knowledge_links ===
+                                        Table "public.knowledge_rules"
+    Column     |           Type           | Collation | Nullable |                   Default                   
+---------------+--------------------------+-----------+----------+---------------------------------------------
+ id            | integer                  |           | not null | nextval('knowledge_rules_id_seq'::regclass)
+ category      | character varying(50)    |           | not null | 
+ pattern_type  | character varying(20)    |           | not null | 
+ pattern       | text                     |           | not null | 
+ normalized_to | text                     |           |          | 
+ priority      | integer                  |           | not null | 100
+ language      | character(2)             |           | not null | 'ja'::bpchar
+ is_active     | boolean                  |           | not null | true
+ description   | text                     |           |          | 
+ created_by    | integer                  |           |          | 
+ created_at    | timestamp with time zone |           | not null | now()
+ updated_at    | timestamp with time zone |           | not null | now()
+Indexes:
+    "knowledge_rules_pkey" PRIMARY KEY, btree (id)
+    "idx_knowledge_rules_active_priority" btree (priority DESC, category) WHERE is_active = true
+    "idx_knowledge_rules_category" btree (category, language) WHERE is_active = true
+Check constraints:
+    "knowledge_rules_language_check" CHECK (language = ANY (ARRAY['ja'::bpchar, 'en'::bpchar, 'ko'::bpchar, 'zh'::bpchar]))
+    "knowledge_rules_pattern_type_check" CHECK (pattern_type::text = ANY (ARRAY['regex'::character varying, 'prefix'::character varying, 'substring'::character varying, 'exact'::character varying]::text[]))
+Referenced by:
+    TABLE "supplier_knowledge_links" CONSTRAINT "supplier_knowledge_links_knowledge_rule_id_fkey" FOREIGN KEY (knowledge_rule_id) REFERENCES knowledge_rules(id) ON DELETE CASCADE
+Triggers:
+    trigger_set_updated_at_knowledge_rules BEFORE UPDATE ON knowledge_rules FOR EACH ROW EXECUTE FUNCTION set_updated_at_knowledge_rules()
+
+                                          Table "public.supplier_knowledge_links"
+      Column       |           Type           | Collation | Nullable |                       Default                        
+-------------------+--------------------------+-----------+----------+------------------------------------------------------
+ id                | integer                  |           | not null | nextval('supplier_knowledge_links_id_seq'::regclass)
+ supplier_id       | integer                  |           | not null | 
+ knowledge_rule_id | integer                  |           | not null | 
+ is_active         | boolean                  |           | not null | true
+ created_at        | timestamp with time zone |           | not null | now()
+ updated_at        | timestamp with time zone |           | not null | now()
+Indexes:
+    "supplier_knowledge_links_pkey" PRIMARY KEY, btree (id)
+    "idx_skl_supplier_id" btree (supplier_id) WHERE is_active = true
+    "uq_supplier_knowledge_links" UNIQUE, btree (supplier_id, knowledge_rule_id)
+Foreign-key constraints:
+    "supplier_knowledge_links_knowledge_rule_id_fkey" FOREIGN KEY (knowledge_rule_id) REFERENCES knowledge_rules(id) ON DELETE CASCADE
+    "supplier_knowledge_links_supplier_id_fkey" FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE
+
+BEGIN
+=== a) 1日あたりの抽出明細数（直近14日） ===
+    day     | count 
+------------+-------
+ 2026-09-14 |   300
+ 2026-09-15 |   426
+ 2026-09-16 |   957
+ 2026-09-19 |  1975
+ 2026-09-20 |  2312
+ 2026-09-21 |   444
+ 2026-09-22 |   758
+ 2026-09-23 |  2127
+ 2026-09-24 |  2272
+ 2026-09-25 |  2463
+ 2026-09-26 |   617
+ 2026-09-27 |    31
+ 2026-09-28 |  1971
+(13 rows)
+
+=== b) 有効な商品数 / 作品が空の商品数 ===
+ active_products | work_id_null 
+-----------------+--------------
+            1336 |            0
+(1 row)
+
+=== c) 仕入元の抽出ルール欄の入力数 ===
+ suppliers | price_fmt | qty_fmt | order_pat | default_unit | notes | state_fmt | example_text 
+-----------+-----------+---------+-----------+--------------+-------+-----------+--------------
+       265 |        14 |      14 |        14 |          258 |    13 |         7 |            3
+(1 row)
+
+=== d) supplier_prompts の件数 ===
+ total | non_empty 
+-------+-----------
+    32 |        32
+(1 row)
+
+=== e) knowledge_rules の種類別件数 ===
+         category         | pattern_type | count 
+--------------------------+--------------+-------
+ block_delimiter          | exact        |    18
+ message_exclude          | exact        |     1
+ message_exclude          | substring    |     8
+ message_exclude_no_digit | substring    |     1
+ skip_condition           | exact        |     3
+ skip_condition           | substring    |    10
+ status_keyword           | substring    |     4
+(7 rows)
+
+=== e2) 完売・売り切れ・サーチ済を含む knowledge_rules ===
+ id |    category    | pattern_type |   pattern    | normalized_to | priority | language | is_active |         description          | created_by |          created_at          |          updated_at          
+----+----------------+--------------+--------------+---------------+----------+----------+-----------+------------------------------+------------+------------------------------+------------------------------
+ 21 | skip_condition | exact        | [サーチ済み] | skip          |      100 | ja       | t         | 出力抑止: サーチ痕あり       |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+ 22 | skip_condition | exact        | [サーチ済]   | skip          |      100 | ja       | t         | 出力抑止: サーチ痕あり(短縮) |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+ 23 | skip_condition | substring    | サーチ済     | skip          |      100 | ja       | t         | 出力抑止: サーチ済(部分一致) |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+ 24 | skip_condition | substring    | 完売しました | skip          |      100 | ja       | t         | 出力抑止: 完売               |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+ 25 | skip_condition | substring    | 売り切れ     | skip          |      100 | ja       | t         | 出力抑止: 売り切れ           |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+ 26 | skip_condition | substring    | 売切         | skip          |      100 | ja       | t         | 出力抑止: 売切(短縮)         |            | 2026-09-24 08:56:45.90597+00 | 2026-09-24 08:56:45.90597+00
+(6 rows)
+
+=== f) 抽出の指示文の設定 ===
+     prompt_key     | is_active | version | chars 
+--------------------+-----------+---------+-------
+ base_extraction    | t         |       1 |  1079
+ work_id_extraction | t         |       1 |  1385
+(2 rows)
+
+=== g) 直近7日の Gemini 呼び出し数と送信量 ===
+ attempts | avg_input_bytes | median_input_bytes 
+----------+-----------------+--------------------
+     1046 |          655910 |           638608.5
+(1 row)
+
+=== j) 状態マスタ CN0007 / CN0010 ===
+ id |  code  |    canonical    | app_kubun | is_active | priority |                        search_kw                         |                                                      exclude_kw                                                      |          created_at           |          updated_at           | tenant_id | condition_def_id | match_type | effect | unit_id | note 
+----+--------+-----------------+-----------+-----------+----------+----------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------+-------------------------------+-------------------------------+-----------+------------------+------------+--------+---------+------
+ 21 | CN0010 | Searched pack   | パック系  | t         |        2 | サーチ済,サーチ済み                                      | 未サーチ,サーチ痕なし                                                                                                | 2026-09-19 16:35:26.371048+00 | 2026-09-19 16:35:26.371048+00 |           |                  | KEYWORD    | OUTPUT |         | 
+ 22 | CN0007 | Unsearched pack |           | t         |        3 | 未サーチ,サーチなし,サーチ痕なし,サーチ痕無し,サーチ無し | [サーチ済み],未サーチではない,未サーチではありません,未サーチとは限らない,未サーチ保証なし,未サーチ保証無し,サーチ済 | 2026-09-19 16:35:26.371048+00 | 2026-09-19 16:35:26.371048+00 |           |                  | KEYWORD    | OUTPUT |         | 
+(2 rows)
+
+=== k) ステータスマスタ ST0011-ST0013 ===
+ id | canonical | search_pattern |      exclude_pattern       | priority | enabled | note | match_type | effect  |          created_at           |          updated_at           | status_id | tenant_id 
+----+-----------+----------------+----------------------------+----------+---------+------+------------+---------+-------------------------------+-------------------------------+-----------+-----------
+  8 | Sold out  | 在庫なし       |                            |       20 | t       |      | LITERAL    | EXCLUDE | 2026-09-19 16:35:26.371048+00 | 2026-09-19 16:35:26.371048+00 | ST0011    |          
+  9 | Sold out  | 売り切れ       | 売り切れの場合がございます |       30 | t       |      | LITERAL    | EXCLUDE | 2026-09-19 16:35:26.371048+00 | 2026-09-20 22:54:27.116711+00 | ST0012    |          
+ 10 | Sold out  | 完売           | 予告なく完売となる場合     |       40 | t       |      | LITERAL    | EXCLUDE | 2026-09-19 16:35:26.371048+00 | 2026-09-20 22:54:27.118054+00 | ST0013    |          
+(3 rows)
+
+=== l) 備考マスタ NJ039 / NJ040 / NJ073 ===
+ id | label_ja | label_en | enabled | search_keywords | exclude_keywords | category | priority | match_type | search_pattern | label_template | created_at | updated_at | tenant_id 
+----+----------+----------+---------+-----------------+------------------+----------+----------+------------+----------------+----------------+------------+------------+-----------
+(0 rows)
+
+ROLLBACK

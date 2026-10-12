@@ -1,0 +1,203 @@
+/**
+ * PipelineMapPanel — 業務手順書フローチャートのスタイル
+ *
+ * CSS変数のみ使用（ハードコードの色・サイズ禁止）。
+ * ADR-027: i18n準拠。ADR-144: 金型クラスのみ使用。
+ * カテゴリ色は tokens.css の --cat-* 変数を使用。
+ */
+
+/* React Flow デフォルトスタイル */
+@import "@xyflow/react/dist/style.css";
+
+/* ── パネル全体 ─────────────────────────────────────────────────────────────── */
+
+.pipeline-map-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── React Flow キャンバス領域 ────────────────────────────────────────────── */
+
+.pipeline-map-panel__canvas {
+  flex: 1;
+  min-height: var(--size-pipeline-map-min-h);
+}
+
+/* ── ProcedureNode ──────────────────────────────────────────────────────────── */
+
+.procedure-node {
+  width: var(--size-proc-card-w);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  cursor: default;
+  transition: var(--transition-fast);
+  border: 1px solid var(--border);
+}
+
+.procedure-node:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.procedure-node__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+}
+
+.procedure-node__header--manual {
+  background-color: var(--cat-supplier);
+}
+
+.procedure-node__header--auto {
+  background-color: var(--cat-product);
+}
+
+.procedure-node__header--mixed {
+  background-color: var(--cat-master);
+}
+
+.procedure-node__step {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--on-accent);
+}
+
+.procedure-node__badge {
+  font-size: var(--font-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  color: var(--on-accent);
+  background: var(--color-badge-overlay);
+}
+
+.procedure-node__body {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.procedure-node__title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.procedure-node__why {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.procedure-node__section {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.procedure-node__section-label {
+  display: block;
+}
+
+.procedure-node__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.procedure-node__screen {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.procedure-node__check {
+  font-size: var(--font-xs);
+  color: var(--cat-product);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ── MasterNode ────────────────────────────────────────────────────────── */
+
+.master-node {
+  width: var(--size-proc-master-w);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border-left: 4px solid var(--cat-pipeline);
+  cursor: default;
+  transition: var(--transition-fast);
+}
+
+.master-node:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.master-node__title {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.master-node__detail {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.master-node__screen {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── EndNode ───────────────────────────────────────────────────────────── */
+
+.end-node {
+  width: var(--size-proc-master-w);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  border: 2px solid var(--cat-product);
+  cursor: default;
+}
+
+.end-node__title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--cat-product);
+}
+
+.end-node__detail {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* ── Handle ────────────────────────────────────────────────────────────── */
+
+.procedure-handle {
+  width: var(--space-2) !important;
+  height: var(--space-2) !important;
+  background: var(--border) !important;
+  border: none !important;
+  opacity: 0;
+}

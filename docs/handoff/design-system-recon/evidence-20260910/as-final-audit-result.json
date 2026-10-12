@@ -1,0 +1,410 @@
+{
+  "base": "1675bfa0275a1ac76210ae489abbcb818287da02",
+  "files": [
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "sha256": "8292cd30c57b2b4a10714fc123f5b16e78b7cf8773d540ac1ff7075981f4f79f",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 263,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "sha256": "7cc9d8489476696941d82353225098c79203051ec069724d49c4e9e727776721",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 209,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "sha256": "7975d6aac1ee5948ace7ad6a5aec7cb220ab15bec74b24f5b383efb8da875832",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 49,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "sha256": "ce5766290a165795e9a1c5af2eeba0ddb1a9d56f85f669d2ae222f05a8a9687c",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 54,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "sha256": "4162677a457ce51767cf7340ae9d55448cbb33a6ae1a1387d0d4a824b671b59b",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 136,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "sha256": "f89755a39a8467fc2771daddda536e08a33f90796e7719d3fc494b55fe0c47a1",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 205,
+          "count": 1
+        },
+        {
+          "line": 276,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "sha256": "efbd738985459756e1158e25b76a49760b2bcd2fdb62f3e22b54b80066c66e06",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 474,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "sha256": "980152abcf7fcb9753a549ebab9643e1fe3834a4e294234f1d1d18454662b1a2",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 602,
+          "count": 1
+        },
+        {
+          "line": 608,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "sha256": "02d5ec6caeda67812b228857580621fb44f500e5fd572704d62f9eaadfa6412c",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 223,
+          "count": 1
+        },
+        {
+          "line": 271,
+          "count": 1
+        },
+        {
+          "line": 434,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "sha256": "46ab51550e62227515f41d5f752d96fee9f59b42818c2225db428316bdaf0542",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 272,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "sha256": "7e3f4df27002d9068de868dd0c0723fd2dcfe2a9a8715a39ae2ef5d3522d673c",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 52,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "sha256": "cdcc3a26af46f762f2cfbdfc23e3309d5e41b672117542401ab52ed3efb1a9a0",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 48,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "sha256": "07ebd09a56acd36e382b38011337a604e279810ef3ef6357fd3d7af4b95f1419",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 175,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "sha256": "167f2f133b99c3a240b13fa009d79d372445d98d6c06dd5796941fa6545f33c0",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 190,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "sha256": "ce75b41352e694a1bb33c63ef0b3b2394ed62e0c69011bdda6070da86525ec66",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 134,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "sha256": "d59513f54cd656dd9cf0d0c045f337bdefae09c3f501541216724712c72d1794",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 198,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "sha256": "7160a349f2dd95cb8f7279593da2bcda447fe1f7b9effbe066d8a1541b46ebf6",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 267,
+          "count": 1
+        },
+        {
+          "line": 282,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "sha256": "205d898a96e8852be654d2c0a8b4f5d5982c6b39316f36fc4814f62639dee361",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 137,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "sha256": "f949c42743ad339971fed7f19203aeeb6d0ad1008082cdaedcd5351ee6e73a6e",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 404,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "sha256": "3c066a086fcd5bc7eb649c6f464ae2863a6c5855f1ecb1695c2276d8f06d1c1a",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 53,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "sha256": "e8863bffa6b44ba6cfb882690d25682d3f780789baeb314aa62ce4bb938e5e7f",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 69,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "sha256": "9e4003190f426132b98e3267183a61da6ec98a70ed93c08ac10f6b5aecf896c1",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 173,
+          "count": 1
+        },
+        {
+          "line": 206,
+          "count": 1
+        },
+        {
+          "line": 324,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "sha256": "490f7de53c795f6231001e667970de9c099f838e5097bfa62166bf12b72d19f3",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 339,
+          "count": 1
+        },
+        {
+          "line": 417,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "sha256": "93e94706b0b3e6c7f759bbfc1ef794f967904a101681fc871540d0ebe0cf9e0d",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 148,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "sha256": "996a09baa481abadad1e45cd1d77a46a4ffd7bb0ddfeb236262ba8111737f753",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 197,
+          "count": 1
+        },
+        {
+          "line": 359,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components.css",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/field-size.css",
+      "unchanged": true
+    }
+  ],
+  "counts": {
+    "common": 265,
+    "legacy": 232
+  },
+  "syntaxErrors": [],
+  "outsideLegacyByteEqual": true,
+  "pass": true
+}

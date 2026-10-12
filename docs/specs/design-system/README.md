@@ -20,6 +20,7 @@ PO: しんご
 - [../../handoff/design-system-recon/recon.md](../../handoff/design-system-recon/recon.md) — 現状実測(recon)
 - [migration.md](migration.md) — 移行計画（既存→理想・便0〜6・部品台帳）
 - [track-record.md](track-record.md) — 便履歴と逸脱ログ
+- [visual-language/README.md](visual-language/README.md) — アプリ視覚デザイン言語（見た目の質・PC/スマホの使いやすさを扱う子テーマ。草案 2026-10-02）
 
 ## 後続予定（未作成・在るだけ詐称をしないための明記）
 - 関所実装（design.md 維持の仕組み欄参照）
@@ -49,3 +50,23 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 ## 最新の設計審査
 
 全体設計は[§AA](design.md#aa-全体設計の自己審査2026-09-10)で同一AI自己審査APPROVE。これは設計合格でありPOの具体的ADR承認・製品実装/テスト・製品PRマージではない。文書PR #3407は保存済み。追加契約を次の文書PRへ保存し、数値ICON生成の限定実装カードへ進む。CIは最後、画面目視は完成後PO。
+
+
+## 2026-09-28 最新の実施状況
+
+上記9月10日の「製品未着手」は当時の履歴。現在はAS製品PR #3834と結果文書PR #3835まで本番反映済み。AS時点の共通Button265/旧232、606自動試験成功。証跡は[migration.md](migration.md)と[AS検収](../../handoff/design-system-recon/evidence-20260910/as-implementation.md)。ATは[design.md §AT](design.md#at-既存フォーム11ボタンの共通金型移管2026-09-28)に基づく11件を実装・ローカル検収済み（最新main統合後634試験成功）。画面・本番フォーム操作・PO目視はPO指示で省略・未検証。全体の残件と最後のCI補強は未完了。
+
+
+2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+
+2026-09-29 AU着手: POは残旧221件の全数移管を依頼。最新基準303c3cfe7で221件/71fileを再測定。設計はdesign.md §AU、証拠は[全数棚卸し](../../handoff/design-system-recon/evidence-20260910/au-inventory.md)。実装前審査中。
+
+
+AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855本人GO後マージ・本番反映・公開配信照合済み（Deploy36522989354）。画面省略・未検証。
+
+
+2026-10-02 AV着手: §Y順序3の入力本体へ進む。基準55d99a97eで入力599件を再棚卸し（[入力棚卸し](../../handoff/design-system-recon/evidence-20260910/av0-input-audit.md)）。設計はdesign.md §AV。AV-1はSelectControl本体拡張のみで画面変化なし、製品未変更。
+
+
+2026-10-05 AV-1本番反映（PR #3931、Deploy37254291709）。AW設計: 生select76の扱いを意図資料で判定し、カルテ・ヘッダー・タブバーは金型の種類として登録、一般フォームは標準へ統一、商品編集9・報酬1は保留。設計はdesign.md §AW、証跡は[select対応表](../../handoff/design-system-recon/evidence-20260910/av2-select-mapping.md)と[変更前の実測](../../handoff/design-system-recon/evidence-20260910/aw1-baseline.md)。製品未変更。

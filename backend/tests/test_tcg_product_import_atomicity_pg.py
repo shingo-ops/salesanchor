@@ -79,7 +79,7 @@ def sentinel_snapshot(connection):
 def observe(connection):
     """Independent committed view of every product/word/receipt/job, C1/C9."""
     with connection.cursor() as cur:
-        cur.execute(f"SELECT p.name AS japanese_title,p.product_code AS code FROM public.products p WHERE p.name LIKE '原子商品%%' ORDER BY p.name")
+        cur.execute(f"SELECT p.name AS japanese_title,p.id::text AS code FROM public.products p WHERE p.name LIKE '原子商品%%' ORDER BY p.name")
         products = dict(cur.fetchall())
         words = {}
         for table in ("product_search_keywords", "product_exclude_keywords"):
@@ -140,7 +140,7 @@ def failing_session(connection, mode, target):
                         raise asyncio.CancelledError("cancelled creation")
                     if mode == "collision":
                         params = dict(params, code="PM0001")
-            if self.current == target and "SELECT product_code FROM public.products WHERE id" in query:
+            if self.current == target and "SELECT id FROM public.products WHERE id" in query:
                 if mode in ("verify_value", "rollback_failure"):
                     raise ValueError("post-write verification")
             if f"INSERT INTO {SCHEMA}.tcg_product_import_rows" in query:

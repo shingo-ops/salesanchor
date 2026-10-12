@@ -1,0 +1,40 @@
+CARD-AQ-STAFF-REPORT-01（正式検査成功・発行済み）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 報告冒頭に「本報告はカードCARD-AQ-STAFF-REPORT-01の実行結果である」と記載する。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。実在パス・対象原文・L32照合済。
+担当: Sol実装。POはAstra設計/Sol調査実装と根拠確立後の続行を明示。設計§AQ自己審査APPROVE。
+基準: 4bad43a4dca6368ffa7370792a3c912e90bba521、aq-staff-report-audit.json。
+所有: frontend/src/pages/staff-reports/StaffReportsPage.tsx と新規frontend/src/components/StaffReportFormButtonMigration.test.tsx の製品2件のみ。
+他者も作業中。他者の変更を取り消さず調整する。rootは文書と台帳所有。パスは一字一句そのまま使う。
+許可: ページ末尾2ボタンの金型移管、新規実ページ回帰試験、ローカル品質検証。ログ/合成fixtureは/tmp/aq-validation。
+禁止: DB/API/配線/認証/権限/翻訳/依存/共有部品/CI/本番/secrets変更、外部通信、commit/push/PR/GO編集、新エージェント起動。
+禁止: 対象外起動1件、入力/一覧/TYPE_LABELS/業務本文変更、新トークン/新CSS/ハードコード追加。
+手順0: preflight、監査のページ/共有14hash・対象2原文を確認し不一致なら編集前停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && git status --short
+手順1: named import Button追加、末尾2タグをButtonにしclassNameを除去、取消secondary/追加primary、両size md。
+既存type/onClick/childrenを保持。loading/disabled/aria-busy/style/layoutClassName/fullWidth等を加えない。逆変換全byte一致。
+手順2: 新規試験ファイルを作成。実ページ/Modal/Select/Button/usePermissions/翻訳を使用、API/認証だけ合成。
+5キーpayload原値/空null、daily/weekly/monthly、required period/review送信0、textareaEnter、成功close/reset/GET追加1。
+取消close/書込0/再開入力保持、X/Esc/focus復帰、失敗入力保持/再送、pending2回の2通信とボタン有効・文言維持。
+create権限許可拒否、一覧filter GET query維持、対象外ボタン原文保持。実ネットワークは拒否。
+pending取消後のPOST成功はreset/GET、失敗は入力保持/エラーという既存契約も確認。
+テストfixtureのタイトルやラベルは実物を参照。実装を写しただけのクラス試験だけで業務契約合格としない。
+手順3: 品質を実行し各ログを/tmp/aq-validationへ保存。npm ciはroot実行済み。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npx eslint src/pages/staff-reports/StaffReportsPage.tsx src/components/StaffReportFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run test:unit -- src/components/StaffReportFormButtonMigration.test.tsx src/components/Button.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch && git diff --check
+初回失敗は原ログを保持。fixtureの修正は実物照合で確立した場合のみ同じ所有テストに限定して可、理由を報告。
+既存品質不良や依存不備は変更せず原因/基準再現を報告して停止。skip/期待値削除/握り潰しで通さない。
+手順4: 実行結果・件数・exit・製品2hash・共有14一致・逆変換結果・全ログ場所をrootへ報告して停止。
+成功: 対象2/対象外1/共有14維持、期待共通203/旧294、回帰違反0、品質各exit0。
+PO画面確認は省略、実ブラウザー/PO目視/本番フォーム操作を成功と称さない。自動回帰は省略しない。
+停止時: 手順番号/最後のコマンド/対象名/理由をroot宛に報告。不明・範囲外変更を自己判断しない。
+既存専用worktreeは公式作成/台帳登録済。new-worktree.sh再実行禁止。後続PRはrootがreadyで起票、下書き禁止。
+補足検収: 第二レビュー指摘に基づき、空白原値5キーpayload・pending両ボタンdisabled=false/aria-busyなし・filter下POST後GET維持を明示assertする。
+新規試験のみ変更時はstricteslint/対象unit/coverageを再実行し旧ログを保持する。製品build等は製品不変hashで前回結果と対応付ける。
+END OF CARD

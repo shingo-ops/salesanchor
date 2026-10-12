@@ -1,0 +1,73 @@
+== deleted keys ja
+nav.purchaseOrders
+products.unitPrice
+purchaseOrders.actionCancel
+purchaseOrders.actionDownloadPdf
+purchaseOrders.actionOrder
+purchaseOrders.actionReceive
+purchaseOrders.actionResendEmail
+purchaseOrders.actionSendEmail
+purchaseOrders.actionUnreceive
+purchaseOrders.allStatuses
+purchaseOrders.confirmOrderMessage
+purchaseOrders.confirmOrderNo
+purchaseOrders.confirmOrderTitle
+purchaseOrders.confirmOrderYes
+purchaseOrders.createdInfo
+purchaseOrders.deletePO
+purchaseOrders.editPO
+purchaseOrders.emailResent
+purchaseOrders.emailSendFailed
+purchaseOrders.emailSent
+purchaseOrders.fromInventoryMultiSupplier
+purchaseOrders.itemsRequired
+purchaseOrders.newPO
+purchaseOrders.noPos
+purchaseOrders.orderedAt
+purchaseOrders.pdfDownloadFailed
+purchaseOrders.poNumber
+purchaseOrders.receivedAt
+purchaseOrders.status_pending
+purchaseOrders.subtitle
+purchaseOrders.supplier
+purchaseOrders.supplierRequired
+purchaseOrders.title
+quotes.selectProduct
+== en identical?
+same
+== per-key reference count (src, tests-e2e, excluding locales)
+nav.purchaseOrders refs=0
+products.unitPrice refs=0
+purchaseOrders.actionCancel refs=0
+purchaseOrders.actionDownloadPdf refs=0
+purchaseOrders.actionOrder refs=0
+purchaseOrders.actionReceive refs=0
+purchaseOrders.actionResendEmail refs=0
+purchaseOrders.actionSendEmail refs=0
+purchaseOrders.actionUnreceive refs=0
+purchaseOrders.allStatuses refs=0
+purchaseOrders.confirmOrderMessage refs=0
+purchaseOrders.confirmOrderNo refs=0
+purchaseOrders.confirmOrderTitle refs=0
+purchaseOrders.confirmOrderYes refs=0
+purchaseOrders.createdInfo refs=0
+purchaseOrders.deletePO refs=0
+purchaseOrders.editPO refs=0
+purchaseOrders.emailResent refs=0
+purchaseOrders.emailSendFailed refs=0
+purchaseOrders.emailSent refs=0
+purchaseOrders.fromInventoryMultiSupplier refs=0
+purchaseOrders.itemsRequired refs=0
+purchaseOrders.newPO refs=0
+purchaseOrders.noPos refs=0
+purchaseOrders.orderedAt refs=0
+purchaseOrders.pdfDownloadFailed refs=0
+purchaseOrders.poNumber refs=0
+purchaseOrders.receivedAt refs=0
+purchaseOrders.status_pending refs=0
+purchaseOrders.subtitle refs=0
+purchaseOrders.supplier refs=0
+purchaseOrders.supplierRequired refs=0
+purchaseOrders.title refs=0
+quotes.selectProduct refs=0
+== key counts: ja before 4693 after 4659; en before 4693 after 4659; purchaseOrders block 36 -> 5

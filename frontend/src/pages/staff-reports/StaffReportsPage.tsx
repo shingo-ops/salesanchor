@@ -6,6 +6,9 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 import { Select } from "../../components/Select";
+import { Button } from "../../components/Button";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface StaffReport {
   id: number; report_code: string | null; report_type: string; user_id: number; period: string;
@@ -65,7 +68,7 @@ export default function StaffReportsPage() {
           />
         }
         right={hasPermission("staff_reports.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("common.add")}</button>
+          <Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("common.add")}</Button>
         ) : undefined}
       />
       {error && <div className="error-message">{error}</div>}
@@ -85,13 +88,13 @@ export default function StaffReportsPage() {
               label: v,
             }))}
           />
-          <div className="form-group"><label>{t("common.date")} *</label><input required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.description")} *</label><textarea required value={form.review} onChange={e => setForm({ ...form, review: e.target.value })} style={{ minHeight: 'var(--textarea-min-h-lg)' }} /></div>
-          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.challenges} onChange={e => setForm({ ...form, challenges: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.date")} *</label><TextFieldControl required value={form.period} onChange={e => setForm({ ...form, period: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.description")} *</label><TextareaControl required value={form.review} onChange={e => setForm({ ...form, review: e.target.value })} style={{ minHeight: 'var(--textarea-min-h-lg)' }} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><TextareaControl value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.notes")}</label><TextareaControl value={form.challenges} onChange={e => setForm({ ...form, challenges: e.target.value })} /></div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.add")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.add")}</Button>
           </div>
         </form>
       </Modal>

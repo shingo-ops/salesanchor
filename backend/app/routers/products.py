@@ -97,23 +97,23 @@ def _products_ctx(db: AsyncSession) -> dict[str, str]:
     return {"ref": "products", "name": "name_ja", "qty": "quantity"}
 
 
-def _tcg_type_master_ref(db: AsyncSession) -> str:
-    return "public.tcg_type_master" if is_postgresql(db) else "tcg_type_master"
+def _type_master_ref(db: AsyncSession) -> str:
+    return "public.type_master" if is_postgresql(db) else "type_master"
 
 
 async def _validate_tcg_type(db: AsyncSession, tcg_type: str | None) -> None:
     if tcg_type is None:
         return
     if is_postgresql(db):
-        has_master = await db.scalar(text("SELECT to_regclass('public.tcg_type_master') IS NOT NULL"))
+        has_master = await db.scalar(text("SELECT to_regclass('public.type_master') IS NOT NULL"))
         if not has_master:
             if tcg_type not in _TCG_TYPE_CANONICAL_CODES:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="tcg_type は tcg_type_master.code に存在する値か NULL のみ指定できます",
+                    detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
                 )
             return
-    ref = _tcg_type_master_ref(db)
+    ref = _type_master_ref(db)
     exists = await db.execute(
         text(f"SELECT 1 FROM {ref} WHERE code = :code LIMIT 1"),
         {"code": tcg_type},
@@ -121,7 +121,7 @@ async def _validate_tcg_type(db: AsyncSession, tcg_type: str | None) -> None:
     if exists.scalar_one_or_none() is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="tcg_type は tcg_type_master.code に存在する値か NULL のみ指定できます",
+            detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
         )
 
 
@@ -155,7 +155,7 @@ async def list_products(
     per_page: int = Query(default=20, ge=1, le=100),
     search: str | None = Query(default=None, max_length=255),
     category: str | None = Query(default=None, max_length=100),
-    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別コードで絞り込み（tcg_type_master.code）"),
+    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別コードで絞り込み（type_master.code）"),
     status_filter: str | None = Query(default=None, alias="status"),
     sort: str | None = Query(
         default=None,
@@ -268,17 +268,17 @@ async def list_product_tcg_types(
     """
     # マスタ未投入環境（SQLite テスト等）では空配列を返す。
     if is_postgresql(db):
-        exists = await db.execute(text("SELECT to_regclass('public.tcg_type_master') IS NOT NULL"))
+        exists = await db.execute(text("SELECT to_regclass('public.type_master') IS NOT NULL"))
         if not exists.scalar():
             return []
-        ref = "public.tcg_type_master"
+        ref = "public.type_master"
     else:
         exists = await db.execute(
-            text("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='tcg_type_master')")
+            text("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='type_master')")
         )
         if not exists.scalar():
             return []
-        ref = "tcg_type_master"
+        ref = "type_master"
     result = await db.execute(
         text(f"SELECT code, name_ja FROM {ref} WHERE is_active ORDER BY sort_order, code")
     )

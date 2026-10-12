@@ -4,7 +4,9 @@ The imported fixture permits only disposable CI PostgreSQL databases. No live
 Sheets, source-message rewrite, or production credentials are used.
 """
 import asyncio
+import hashlib
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -15,7 +17,6 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_import_progress as progress
 from tests.test_tcg_condition_review import pg as condition_pg
 from tests.test_tcg_condition_review import request, save, seed
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 
 # Reuse the existing isolated-CI database fixture with its safety checks intact.
 pg = condition_pg
@@ -30,11 +31,10 @@ MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 def link_import(pg, entries):
     job = str(uuid4())
     with pg["connection"].cursor() as cursor:
-        cursor.execute((MIGRATIONS / "20260910_010000_tcg_import_message_links.sql").read_text())
-        cursor.execute("INSERT INTO tenant_004.import_jobs(id,filename,raw_sha256,messages_linked_at) "
+        cursor.execute("INSERT INTO public.import_jobs(id,filename,raw_sha256,messages_linked_at) "
                        "VALUES (%s,'order-test.txt',%s,now())", (job, uuid4().hex * 2))
         for entry in entries:
-            cursor.execute("INSERT INTO tenant_004.import_job_messages "
+            cursor.execute("INSERT INTO public.import_job_messages "
                            "(import_job_id,source_message_id,relation_kind) VALUES (%s,%s,'created')",
                            (job, entry["smid"]))
     return job
@@ -59,7 +59,7 @@ def snapshot(pg):
     with pg["connection"].cursor() as cursor:
         result = {}
         for table in ("analysis_results", "extraction_items", "source_messages"):
-            cursor.execute(f"SELECT to_jsonb(t) FROM tenant_004.{table} t ORDER BY id")
+            cursor.execute(f"SELECT to_jsonb(t) FROM public.{table} t ORDER BY id")
             result[table] = cursor.fetchall()
         return result
 
@@ -74,15 +74,10 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
                            "FROM public.products WHERE id=%s RETURNING id",
                            (f"PM09{n+10}", date, pg["product"]))
             products.append(str(cursor.fetchone()[0]))
-        cursor.execute(_PUBLIC_SUPPLIERS_DDL)
-        # Sprint 1: run supplier SSOT migration to convert supplier_channels.supplier_id UUID→INTEGER
-        sprint1 = MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql"
-        _supplier_ssot_premigration(cursor, "tenant_004")
-        cursor.execute(sprint1.read_text())
         cursor.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
                        "VALUES ('SP-09999','Earlier Supplier','Earlier Supplier','corporate',true) RETURNING id")
         supplier = cursor.fetchone()[0]
-        cursor.execute("INSERT INTO tenant_004.supplier_channels(supplier_id,channel,is_active) "
+        cursor.execute("INSERT INTO public.supplier_channels(supplier_id,channel,is_active) "
                        "VALUES (%s,'line',true) RETURNING id", (supplier,))
         channel = str(cursor.fetchone()[0])
     entries = []
@@ -95,7 +90,7 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
                             condition_basis="TEST", price_normalized=price, note_ja=token)
                 if price != 100:
                     with pg["connection"].cursor() as cursor:
-                        cursor.execute("UPDATE tenant_004.source_messages SET supplier_channel_id=%s WHERE id=%s",
+                        cursor.execute("UPDATE public.source_messages SET supplier_channel_id=%s WHERE id=%s",
                                        (channel, item["smid"]))
                 entries.append(item)
     import_id = link_import(pg, entries)
@@ -106,7 +101,7 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
     assert [r[7] for r in output] == expected
-    assert all(len(r) == 12 for r in output)
+    assert all(len(r) == 13 for r in output)
     assert all("sort_ordinal" not in r for r in imported["items"])
     assert Counter(r["extraction_item_id"] for r in reviewed["items"]) == Counter(e["eid"] for e in entries)
     assert Counter(r["id"] for r in imported["items"]) == Counter(e["eid"] for e in entries)
@@ -135,12 +130,16 @@ def test_unknown_state_missing_values_and_inactive_source_remain(pg):
     entries.append(inactive)
     pending = {"smid": str(uuid4()), "job": str(uuid4()), "eid": str(uuid4())}
     with pg["connection"].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.source_messages SET is_active=false WHERE id=%s", (inactive["smid"],))
-        cursor.execute("INSERT INTO tenant_004.source_messages(id,raw_text,raw_sha256,is_active) "
+        cursor.execute("UPDATE public.source_messages SET is_active=false WHERE id=%s", (inactive["smid"],))
+        # ADR-158: delivery visibility is now controlled by ar.is_current (not sm.is_active).
+        # Mark the inactive source's analysis_result as not current so fetch_output_rows excludes it.
+        cursor.execute("UPDATE public.analysis_results SET is_current=false WHERE extraction_item_id=%s",
+                       (inactive["eid"],))
+        cursor.execute("INSERT INTO public.source_messages(id,raw_text,raw_sha256,is_active) "
                        "VALUES (%s,'pending',%s,true)", (pending["smid"], uuid4().hex * 2))
-        cursor.execute("INSERT INTO tenant_004.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')",
+        cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')",
                        (pending["job"], pending["smid"]))
-        cursor.execute("INSERT INTO tenant_004.extraction_items(id,extraction_job_id,raw_product_name) "
+        cursor.execute("INSERT INTO public.extraction_items(id,extraction_job_id,raw_product_name) "
                        "VALUES (%s,%s,'pending')", (pending["eid"], pending["job"]))
     entries.append(pending)
     import_id = link_import(pg, entries)
@@ -166,7 +165,7 @@ def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
     save(pg, confirmed, request(pg, confirmed, decision="correct", target=case_id))
     with pg["connection"].cursor() as cursor:
         # The current acknowledgement takes precedence over a stale stored label.
-        cursor.execute("UPDATE tenant_004.analysis_results SET condition_canonical='Searched pack' "
+        cursor.execute("UPDATE public.analysis_results SET condition_canonical='Searched pack' "
                        "WHERE extraction_item_id=%s", (confirmed["eid"],))
     ties = [seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"],
                  condition_canonical="Sealed box", note_ja=str(i)) for i in range(3)]
@@ -196,15 +195,18 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
     expected = [(0, 10, baseline["eid"], "baseline")]
     with pg["connection"].cursor() as cursor:
         cursor.execute("SELECT supplier_channel_id,raw_text,raw_sha256,received_at "
-                       "FROM tenant_004.source_messages WHERE id=%s", (baseline["smid"],))
+                       "FROM public.source_messages WHERE id=%s", (baseline["smid"],))
         source = cursor.fetchone()
-        execute_values(cursor, "INSERT INTO tenant_004.source_messages "
-                       "(id,supplier_channel_id,raw_text,raw_sha256,received_at,is_active) VALUES %s",
-                       [(e["smid"], *source, True) for e in entries])
-        execute_values(cursor, "INSERT INTO tenant_004.extraction_jobs "
+        _now = datetime.now(timezone.utc)
+        execute_values(cursor, "INSERT INTO public.source_messages "
+                       "(id,supplier_channel_id,raw_text,raw_sha256,received_at,is_active,line_posted_at) VALUES %s",
+                       [(e["smid"], source[0], source[1],
+                         hashlib.sha256(e["smid"].encode()).hexdigest(),
+                         source[3], True, _now) for e in entries])
+        execute_values(cursor, "INSERT INTO public.extraction_jobs "
                        "(id,source_message_id,status) VALUES %s",
                        [(e["job"], e["smid"], "done") for e in entries])
-        execute_values(cursor, "INSERT INTO tenant_004.extraction_items "
+        execute_values(cursor, "INSERT INTO public.extraction_items "
                        "(id,extraction_job_id,line_start,line_end,raw_product_name,raw_quantity,raw_price,raw_unit) VALUES %s",
                        [(e["eid"], e["job"], 1, 1, "Test Booster", "1", "10", "Box") for e in entries])
         values = []
@@ -213,7 +215,7 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
             expected.append((rank, price, entry["eid"], str(n)))
             values.append((entry["eid"], pg["product"], True, "EXACT", pg["unit"], "Box", True,
                            pg["normal"], STATES[rank], "TEST", 1, price, str(n), "active", False, "test"))
-        execute_values(cursor, "INSERT INTO tenant_004.analysis_results "
+        execute_values(cursor, "INSERT INTO public.analysis_results "
                        "(extraction_item_id,product_id,pid_resolved,pid_basis,unit_id,unit_canonical,unit_resolved,"
                        "condition_id,condition_canonical,condition_basis,quantity_normalized,price_normalized,"
                        "note_ja,status,needs_review,engine_version) VALUES %s", values)
@@ -225,12 +227,13 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                 # Prepare planner statistics only in the disposable fixture DB.
                 # This does not change production settings or the 10-second bound.
                 for table in ("source_messages", "extraction_jobs", "extraction_items", "analysis_results",
-                              "import_jobs", "import_job_messages", "conditions",
-                              "item_corrections", "supplier_channels", "tcg_series"):
-                    cursor.execute(f"ANALYZE tenant_004.{table}")
+                              "import_jobs", "import_job_messages", "item_corrections",
+                              "supplier_channels"):
+                    cursor.execute(f"ANALYZE public.{table}")
                 cursor.execute("ANALYZE public.products")
+                cursor.execute("ANALYZE public.conditions")
             cursor.execute("SELECT relname,reltuples FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
-                           "WHERE n.nspname='tenant_004' AND relname IN "
+                           "WHERE n.nspname='public' AND relname IN "
                            "('source_messages','extraction_jobs','extraction_items','analysis_results') ORDER BY relname")
             statistics[phase] = cursor.fetchall()
     before = snapshot(pg)
@@ -297,3 +300,52 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                   "transaction_read_only": True, "statement_timeout_ms": 10000,
                   "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI",
                   "statistics": statistics, "plans": plans}), UserWarning, stacklevel=1)
+
+
+# ---------------------------------------------------------------------------
+# viewer-keyword-kana-search: 13th column "Search Keywords" in fetch_output_rows
+# ---------------------------------------------------------------------------
+
+def _product_with_keywords(pg, keywords):
+    """Insert a public.products row plus (keyword, position) pairs; return its id."""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.products (product_code,name,name_en,mark,release_date,is_active) "
+                       "VALUES ('PM09800','Keyword title','Test Title','TM','2026-01-02',true) RETURNING id")
+        product_id = str(cursor.fetchone()[0])
+        for keyword, position in keywords:
+            cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) "
+                           "VALUES (%s,%s,%s)", (product_id, keyword, position))
+    return product_id
+
+
+def _single_output_row(pg, keywords):
+    product_id = _product_with_keywords(pg, keywords)
+    seed(pg, name="Keyword title", reasons="", product_id=product_id, condition_id=pg["normal"],
+         condition_canonical="Sealed box", condition_basis="TEST", price_normalized=1000,
+         quantity_normalized=3, note_ja=None)
+    _, _, output = fetch(pg, link_import(pg, []))
+    assert len(output) == 1
+    assert len(output[0]) == 13
+    return output[0]
+
+
+def test_search_keywords_joined_in_position_order(pg):
+    row = _single_output_row(pg, [("second", 2), ("first", 1)])
+    assert row[12] == "first | second"
+
+
+def test_search_keywords_empty_string_when_none(pg):
+    row = _single_output_row(pg, [])
+    assert row[12] == ""
+
+
+def test_existing_twelve_columns_unchanged(pg):
+    row = _single_output_row(pg, [("kw", 1)])
+    assert distribution.DIST_HEADERS[:12] == [
+        "投稿日時", "Mark", "Japanese Title", "English Title", "Condition", "Unit Price",
+        "Quantity", "Note_JA", "Status", "Release Date", "Series", "提供者",
+    ]
+    assert distribution.DIST_HEADERS[12] == "Search Keywords"
+    assert row[1:4] == ["TM", "Keyword title", "Test Title"]
+    assert row[4:7] == ["Sealed box", "1000", "3"]
+    assert row[9] == "2026-01-02"

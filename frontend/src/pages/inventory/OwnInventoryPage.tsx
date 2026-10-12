@@ -7,27 +7,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import type { components } from "../../api/generated/schema";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
-interface OwnInventoryRow {
-  id: number;
-  tenant_id: number;
-  product_id: number;
-  physical_qty: number;
-  reserved_qty: number;
-  available_qty: number | null;
-  unit_price: number | null;
-  condition: string | null;
-  status: string;
-  note_ja: string | null;
-  note_en: string | null;
-  antique_ledger_id: number | null;
-  created_at: string;
-  updated_at: string;
-}
+type OwnInventoryRow = components["schemas"]["OwnInventoryResponse"];
 
 type ActionKind = "reserve" | "release" | "ship";
 
@@ -165,30 +153,30 @@ export default function OwnInventoryPage() {
                   header: t("ownInventory.col.actions"),
                   renderCell: (row) => (
                     <span className="actions-cell">
-                      <button
+                      <Button variant="primary" size="sm"
                         type="button"
-                        className="btn btn-sm btn-primary"
+
                         onClick={() => openAction(row, "reserve")}
                         aria-label={t("ownInventory.reserve")}
                       >
                         {t("ownInventory.reserve")}
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="secondary" size="sm"
                         type="button"
-                        className="btn btn-sm btn-secondary"
+
                         onClick={() => openAction(row, "release")}
                         aria-label={t("ownInventory.release")}
                       >
                         {t("ownInventory.release")}
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="danger" size="sm"
                         type="button"
-                        className="btn btn-sm btn-danger"
+
                         onClick={() => openAction(row, "ship")}
                         aria-label={t("ownInventory.ship")}
                       >
                         {t("ownInventory.ship")}
-                      </button>
+                      </Button>
                     </span>
                   ),
                 },
@@ -242,7 +230,7 @@ export default function OwnInventoryPage() {
               </p>
               <label>
                 {t("ownInventory.qty")}
-                <input
+                <TextFieldControl
                   type="number"
                   min={1}
                   value={qtyInput}
@@ -250,8 +238,8 @@ export default function OwnInventoryPage() {
                     setQtyInput(e.target.value);
                     setActionError("");
                   }}
-                  className="qty-input"
                   aria-label={t("ownInventory.qty")}
+                  style={{ width: "auto" }}
                 />
               </label>
               {actionError && (

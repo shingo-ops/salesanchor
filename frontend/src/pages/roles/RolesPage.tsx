@@ -19,9 +19,12 @@ import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
+import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Role {
   id: number;
@@ -336,7 +339,7 @@ export default function RolesPage() {
           <div className="roles-sidebar-header">
             <h3>{t("roles.title")}</h3>
             {hasPermission("roles.create") && (
-              <button className="btn-primary btn-sm" onClick={openCreateRole}>+ {t("common.new")}</button>
+              <Button variant="primary" size="sm" onClick={openCreateRole}>+ {t("common.new")}</Button>
             )}
           </div>
           <ul className="roles-list">
@@ -362,9 +365,9 @@ export default function RolesPage() {
             })}
           </ul>
           {hasPermission("roles.assign") && (
-            <button className="btn-secondary btn-block" onClick={() => setUserAssignOpen(true)}>
+            <Button variant="secondary" size="md" fullWidth onClick={() => setUserAssignOpen(true)}>
               {t("roles.assignUsers")}
-            </button>
+            </Button>
           )}
         </aside>
 
@@ -394,18 +397,18 @@ export default function RolesPage() {
                 <div className="roles-main-actions">
                   {canEditPerms && !selectedRole.is_system && (
                     <>
-                      <button className="btn-sm" onClick={() => openEditRole(selectedRole)}>{t("common.edit")}</button>
+                      <Button variant="secondary" size="sm" onClick={() => openEditRole(selectedRole)}>{t("common.edit")}</Button>
                       {hasPermission("roles.delete") && (
-                        <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(selectedRole)}>{t("common.delete")}</button>
+                        <Button variant="danger" size="sm" onClick={() => setDeleteTarget(selectedRole)}>{t("common.delete")}</Button>
                       )}
                     </>
                   )}
-                  <button className="btn-secondary" disabled={!dirty || savingPerms} onClick={cancelEdits}>
+                  <Button variant="secondary" size="md" disabled={!dirty || savingPerms} onClick={cancelEdits}>
                     {t("roles.cancelChanges")}
-                  </button>
-                  <button className="btn-primary" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
+                  </Button>
+                  <Button variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
                     {savingPerms ? t("common.saving") : t("roles.saveChanges")}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -489,7 +492,7 @@ export default function RolesPage() {
       >
         <form onSubmit={submitRoleForm}>
               <div className="form-group"><label>{t("roles.roleName")} *</label>
-                <input required value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
+                <TextFieldControl required value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} />
               </div>
               <div className="form-group"><label>{t("roles.color")}</label>
                 <div className="color-picker" role="radiogroup" aria-label={t("roles.color")}>
@@ -534,11 +537,11 @@ export default function RolesPage() {
                 options={priorityOptions}
               />
               <div className="form-group"><label>{t("common.description")}</label>
-                <textarea value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
+                <TextareaControl value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{editingRoleId ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md">{editingRoleId ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>
@@ -551,7 +554,7 @@ export default function RolesPage() {
         size="md"
       >
         <div className="form-group"><label>{t("roles.targetUserId")} *</label>
-          <input type="number" min="1" required value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} />
+          <TextFieldControl type="number" min="1" required value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} />
         </div>
         <div className="form-group"><label>{t("roles.grantRoles")}</label>
           {roles.map((r) => (
@@ -563,8 +566,8 @@ export default function RolesPage() {
           ))}
         </div>
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={closeUserAssign}>{t("common.cancel")}</button>
-          <button type="button" className="btn-primary" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={closeUserAssign}>{t("common.cancel")}</Button>
+          <Button type="button" variant="primary" size="md" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</Button>
         </div>
       </Modal>
 

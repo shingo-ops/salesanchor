@@ -56,6 +56,7 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--input-width-qty`   | `70px` | 数量入力 |
 | `--input-width-weight`| `80px` | 重量・小数点入力 |
 | `--input-width-year`  | `90px` | 年・金額入力 |
+| `--input-width-price` | `120px` | 単価入力（請求書・見積の明細、金型 sm） |
 | `--size-thread-avatar`| `36px` | 受信箱スレッド送信者アバター |
 | `--size-icon-btn`     | `36px` | ヘッダーアクション・アイコンボタン共通サイズ（SSoT） |
 | `--table-min-width-base` | `720px` | テーブル最小幅（見積等） |
@@ -134,6 +135,20 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--inbox-hover` | index.css | 会話アイテムホバー背景色 |
 | `--inbox-action-icon-color` | index.css | ヘッダーアクションアイコン色 |
 | `--inbox-bulk-icon-color` | index.css | 一括操作アイコン色 |
+
+---
+
+## カラートークン（tokens.css — グラフ系列 / ADR-1004 LLM使用量グラフ）
+
+| トークン名 | 定義ファイル | 用途 |
+|-----------|-----------|------|
+| `--chart-series-1` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-2` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-3` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-4` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-5` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-6` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
+| `--chart-series-7` | tokens.css | グラフのカテゴリ塗り分け（既存 --cal-* のエイリアス。他ドメインから --cal-* を直接参照しない） |
 
 ---
 

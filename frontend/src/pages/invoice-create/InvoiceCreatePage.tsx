@@ -15,6 +15,8 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
+import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -22,6 +24,7 @@ import {
   buildInitialItems,
   weightForUnit,
 } from "../quote-create/quoteDraft";
+import { TextFieldControl } from "../../components/TextField";
 
 interface QuoteSummary {
   id: number;
@@ -220,9 +223,9 @@ export default function InvoiceCreatePage() {
       subtitleKey="invoices.createSubtitle"
       headerAction={
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>
+          <Button variant="secondary" size="md" onClick={() => navigate("/management-center/tenant-profile")}>
             {t("nav.tenantProfile")}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -230,20 +233,20 @@ export default function InvoiceCreatePage() {
       {error && <div className="error-message">{error}</div>}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
-        <button
-          className={mode === "inventory" ? "btn-primary" : "btn-secondary"}
+        <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"
+
           onClick={() => setMode("inventory")}
           data-testid="invoice-mode-inventory"
         >
           {t("invoices.fromInventory")}
-        </button>
-        <button
-          className={mode === "quote" ? "btn-primary" : "btn-secondary"}
+        </Button>
+        <Button variant={mode === "quote" ? "primary" : "secondary"} size="md"
+
           onClick={() => { setSourceQuoteCode(null); setMode("quote"); }}
           data-testid="invoice-mode-quote"
         >
           {t("invoices.fromQuote")}
-        </button>
+        </Button>
       </div>
 
       {mode === "quote" ? (
@@ -268,14 +271,14 @@ export default function InvoiceCreatePage() {
                     <td>{q.quote_code}</td>
                     <td>{fmtAmount(q.total_amount, q.currency)}</td>
                     <td>
-                      <button
-                        className="btn-sm btn-primary"
+                      <Button
+                        variant="primary" size="sm"
                         disabled={saving}
                         onClick={() => loadQuoteForEdit(q.id)}
                         data-testid={`invoice-edit-from-quote-${q.id}`}
                       >
                         {t("invoices.editFromThisQuote")}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -304,15 +307,15 @@ export default function InvoiceCreatePage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
             <div className="form-group">
               <label>{t("common.currency")}</label>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <SelectControl fullWidth value={currency} onChange={(e) => setCurrency(e.target.value)}>
                 <option value="JPY">JPY</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <label>{t("common.notes")}</label>
-              <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <TextFieldControl value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
 
@@ -337,14 +340,14 @@ export default function InvoiceCreatePage() {
                   <tr key={i} data-testid={`invoice-item-row-${i}`}>
                     <td style={{ minWidth: "var(--table-col-product-name-min-w)" }}>
                       {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。 */}
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.name_en ?? ""}
                         onChange={(e) => updateItem(i, "name_en", e.target.value || null)}
                         placeholder={t("quotes.titleColumn")}
                         style={{ width: "100%", minWidth: "var(--input-width-product-name)", fontWeight: "var(--font-weight-semi)" }}
                         data-testid={`invoice-item-row-${i}-name-en`}
                       />
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.product_name}
                         onChange={(e) => updateItem(i, "product_name", e.target.value)}
                         placeholder={t("quotes.productNamePlaceholder")}
@@ -362,11 +365,11 @@ export default function InvoiceCreatePage() {
                       )}
                     </td>
                     <td>
-                      <input value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-condition`} />
+                      <TextFieldControl size="sm" value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-condition`} />
                     </td>
                     <td>
                       {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}
-                      <input
+                      <TextFieldControl size="sm"
                         value={item.unit ?? ""}
                         onChange={(e) => {
                           const nextUnit = e.target.value || null;
@@ -379,18 +382,18 @@ export default function InvoiceCreatePage() {
                       />
                     </td>
                     <td>
-                      <input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
+                      <TextFieldControl size="sm" type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-year)" }} />
+                      <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-price)" }} />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
+                      <TextFieldControl size="sm" type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
                     </td>
                     <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                     <td>
                       {items.length > 1 && (
-                        <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                        <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                       )}
                     </td>
                   </tr>
@@ -400,7 +403,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</Button>
           </div>
 
           <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
@@ -414,11 +417,11 @@ export default function InvoiceCreatePage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
             <div className="form-group">
               <label>{t("quotes.shippingFee")}</label>
-              <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
+              <TextFieldControl type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
             </div>
             <div className="form-group">
               <label>{t("quotes.tax")}</label>
-              <input type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
+              <TextFieldControl type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
             </div>
             <div className="form-group">
               <label>{t("quotes.total")}</label>
@@ -431,8 +434,8 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate("/invoices")}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</Button>
           </div>
         </form>
       )}
