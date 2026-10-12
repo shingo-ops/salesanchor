@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, require_super_admin, set_tenant_context
+from app.auth.dependencies import require_super_admin, set_tenant_context
 from app.auth.schemas import UserRegister, UserResponse
 from app.auth.utils import set_tenant_claim
 from app.cache import (
