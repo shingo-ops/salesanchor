@@ -3770,6 +3770,7 @@
     "quantity_source_mismatch": "数量がGeminiと原文で違う",
     "value_out_of_range": "数値が大きすぎる",
     "item_mapping_mismatch": "件の対応が合わない",
+    "unit_price_mismatch": "単位と価格が相場と合わない",
     "excluded": "除外の対象",
     "item_shape_invalid": "Gemini の出力の形が正しくない",
     "price_not_in_lines": "価格が原文の行に無い",

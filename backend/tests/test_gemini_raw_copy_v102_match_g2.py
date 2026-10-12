@@ -183,7 +183,7 @@ def test_loader_reads_code_only_off_marks(monkeypatch):
     monkeypatch.setattr(pf, "load_product_kubun_type_map", lambda s: {"1": "箱系"})
     queries = []
 
-    def execute(stmt):
+    def execute(stmt, params=None):
         sql = str(stmt)
         queries.append(sql)
         if "code_only_match = FALSE" in sql:
