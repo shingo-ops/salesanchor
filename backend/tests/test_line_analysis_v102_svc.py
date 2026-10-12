@@ -768,3 +768,33 @@ def test_analysis_values_puts_ship_text_in_note_ja_and_none_stays_empty():
     assert with_ship["note_ja"] == "発送日要相談（国内のみ）"
     assert without["note_ja"] is None
     assert {k: v for k, v in with_ship.items() if k != "note_ja"} == {k: v for k, v in without.items() if k != "note_ja"}
+
+
+def _run_extraction_with_result(monkeypatch, result: dict) -> MagicMock:
+    session = MagicMock()
+    recorder = MagicMock()
+    recorder.prepare_items.return_value = []
+    monkeypatch.setattr(task, "load_extraction_context", lambda _s, _j: _CTX)
+    monkeypatch.setattr(svc, "load_prompt_from_db", lambda _s, _k: "prompt")
+    monkeypatch.setattr(svc, "_call_gemini", lambda *_a: result)
+    monkeypatch.setattr(svc, "_record_usage", lambda *_a: None)
+
+    svc.run_v102_extraction(session, "job1", recorder=recorder)
+
+    return recorder
+
+
+def test_run_v102_extraction_hands_thought_summaries_to_the_recorder(monkeypatch):
+    result = {"response_text": _response([]), "thought_summaries": ["考え1", "考え2"], "usage_counts": None}
+
+    recorder = _run_extraction_with_result(monkeypatch, result)
+
+    recorder.on_response.assert_called_once_with(result["response_text"], thought_summaries=["考え1", "考え2"])
+
+
+def test_run_v102_extraction_hands_none_when_the_result_has_no_thought_summaries(monkeypatch):
+    result = {"response_text": _response([]), "usage_counts": None}
+
+    recorder = _run_extraction_with_result(monkeypatch, result)
+
+    recorder.on_response.assert_called_once_with(result["response_text"], thought_summaries=None)
