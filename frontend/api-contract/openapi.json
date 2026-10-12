@@ -35783,7 +35783,7 @@
     },
     "/api/v1/admin/tenants": {
       "post": {
-        "description": "テナント（契約企業）を登録し、専用スキーマを自動生成する。\n\nフロー:\n  ① tenant_codeの重複チェック\n  ② public.tenants にテナント情報を保存\n  ③ tenant_{id:03d} スキーマを自動作成\n  ④ スキーマ内に業務テーブル（companies, deals, orders, audit_logs）を作成\n  ⑤ Row Level Security（RLS）ポリシーを自動適用\n\n注意:\n  - tenant_codeは英小文字・数字・ハイフンのみ（例: \"demo-a\", \"company-123\"）\n  - 管理者（role=\"admin\"）のみ実行可能",
+        "description": "テナント（契約企業）を登録し、専用スキーマを自動生成する。\n\nフロー:\n  ① tenant_codeの重複チェック\n  ② public.tenants にテナント情報を保存\n  ③ tenant_{id:03d} スキーマを自動作成\n  ④ スキーマ内に業務テーブル（companies, deals, orders, audit_logs）を作成\n  ⑤ Row Level Security（RLS）ポリシーを自動適用\n\n注意:\n  - tenant_codeは英小文字・数字・ハイフンのみ（例: \"demo-a\", \"company-123\"）\n  - super admin（is_super_admin=true）のみ実行可能",
         "operationId": "register_tenant_api_v1_admin_tenants_post",
         "requestBody": {
           "content": {
@@ -36842,7 +36842,7 @@
     },
     "/api/v1/auth/register": {
       "post": {
-        "description": "ユーザー登録API（管理者のみ実行可能）。\n\nフロー:\n  ① 管理者権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成\n  ⑤ Firebaseカスタムクレームにテナントを設定\n\n注意:\n  - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。",
+        "description": "ユーザー登録API（super admin のみ実行可能）。\n\nフロー:\n  ① super admin 権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成\n  ⑤ Firebaseカスタムクレームにテナントを設定\n\n注意:\n  - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。",
         "operationId": "register_user_api_v1_auth_register_post",
         "requestBody": {
           "content": {
