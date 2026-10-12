@@ -9,18 +9,18 @@ PO 指定: 「スマホには受信箱というヘッダーを消して欲しい
 | # | 事実 | 根拠 |
 |---|---|---|
 | A1 | 帯は `.mobile-topbar` で、中身は**ページ名のテキスト1つだけ** | `frontend/src/components/MobileShell.tsx:190-193` — `<div className="mobile-topbar"><span className="mobile-topbar-title">{pageTitle}</span></div>` |
-| A2 | 帯に押せる要素は無い（メニュー・アバター・戻るのいずれも持たない） | 同上。`MobileShell.tsx:9-26` の DOM 構造コメントにも子は PageTitle のみと記載 |
+| A2 | 帯に押せる要素は無い（メニュー・アバター・戻るのいずれも持たない） | 同上。`frontend/src/components/MobileShell.tsx:9-26` の DOM 構造コメントにも子は PageTitle のみと記載 |
 | A3 | 高さは 56px（トークン参照） | `frontend/src/mobile-shell.css:23` の `height: var(--topbar-height)` ／ `frontend/src/tokens.css:171` の `--topbar-height: 56px` |
 | A4 | 帯のスタイルは2ブロック・25行 | `frontend/src/mobile-shell.css:15-37`（`.mobile-topbar` と `.mobile-topbar-title`） |
 | A5 | ページ名の出どころ | `frontend/src/hooks/usePageTitle.ts:16-21` → `frontend/src/config/routeTitles.ts:17`（`"/lead-chat": "nav.leadChat"`）→ `frontend/src/locales/ja.json:206`（`"leadChat": "受信箱"`） |
-| A6 | `pageTitle` は帯の中だけで使われている | `MobileShell.tsx:36`（import）・`:75`（呼び出し）・`:192`（使用）の3箇所のみ |
+| A6 | `pageTitle` は帯の中だけで使われている | `frontend/src/components/MobileShell.tsx:36`（import）・`:75`（呼び出し）・`:192`（使用）の3箇所のみ |
 | A7 | `usePageTitle` は副作用を持たない純粋な hook（文書タイトル等を変えない） | `frontend/src/hooks/usePageTitle.ts:16-21` は `t(key)` を返すだけ |
 
 ## B. 消しても操作が失われないことの確認
 
 | # | 事実 | 根拠 |
 |---|---|---|
-| B1 | メニュー（「もっと」シート）を開く手段は**下部タブバーにある** | `MobileShell.tsx:311-318` の `button.mobile-tab`（`onClick={() => setMoreSheetOpen(true)}`・`aria-label={t("nav.menu")}`） |
+| B1 | メニュー（「もっと」シート）を開く手段は**下部タブバーにある** | `frontend/src/components/MobileShell.tsx:311-318` の `button.mobile-tab`（`onClick={() => setMoreSheetOpen(true)}`・`aria-label={t("nav.menu")}`） |
 | B2 | 実機でも下部タブバーが4つ出ている | 実機ダンプ（1080x2340 @480dpi）: `y=2130-2295` に 受信箱 / 在庫表 / 受注管理 / メニュー、各 `270x165` device px（＝90x55dp） |
 | B3 | 実機の帯は押せる要素を含まない | 同ダンプ: `(0,111)-(1080,279)` は `TextView`（文字のみ）。内側に clickable な節点なし |
 | B4 | 本文エリアの余白は**タブバー**の高さだけを見ている（帯の高さは参照していない） | `frontend/src/mobile-shell.css:41-44` の `.mobile-content { padding-bottom: calc(var(--tabbar-height, 56px) + env(safe-area-inset-bottom, 0px)); }` |

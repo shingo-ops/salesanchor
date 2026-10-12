@@ -46,7 +46,7 @@ PO 指定: 2026-10-13「スマホには受信箱というヘッダーを消し�
 
 ## 3. 触らない範囲（明示）
 
-- **PC・タブレット**: MobileShell は 767px 以下でしか描かれない（`App.tsx:137` の `useIsMobile()` 分岐・ADR-137）。768px 以上の DOM は1行も変えない。
+- **PC・タブレット**: MobileShell は 767px 以下でしか描かれない（`frontend/src/App.tsx:137` の `useIsMobile()` 分岐・ADR-137）。768px 以上の DOM は1行も変えない。
 - **下部タブバー**（`.mobile-tabbar`）: ADR-140 の所有範囲。触らない。
 - **ページ内の見出し**（`PageLayout` の `.text-page-title`）: 残す。受信箱の視覚的な隠し（`slimHeaderOnMobile`）も現状維持。
 - **トークン**: `tokens.css` は変更しない。
