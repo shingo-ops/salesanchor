@@ -2,6 +2,7 @@
 # 番人: 受付が止まっていたら、監視通知とは別の webhook で PO に知らせる（launchd から 5 分ごと）。
 # 判定: ① tmux セッション ② cwd が discord-ops の bun server.ts ③ heartbeat が 600 秒以内
 set -euo pipefail
+export PATH="/opt/homebrew/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 SESSION="sa-ops-intake"
 HEARTBEAT="$HOME/.claude/channels/discord-ops/heartbeat"

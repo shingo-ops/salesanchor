@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 受付役の tmux セッションを終了し、discord-ops の bun server.ts が残っていれば終了させる。
 set -euo pipefail
+export PATH="/opt/homebrew/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 SESSION="sa-ops-intake"
 

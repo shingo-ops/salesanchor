@@ -24,9 +24,17 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>-lc</string>
-    <string>/Users/tanizawashingo/sa-ops-intake-tools/bin/sa-ops-intake-watchdog</string>
+    <string>/Users/tanizawashingo/sa-ops-intake/tools/claude-channels/bin/sa-ops-intake-watchdog</string>
   </array>
+
+  <!-- launchd は PATH が最小のため明示する（tmux・bun・claude を見つける） -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/tanizawashingo/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>/Users/tanizawashingo</string>
+  </dict>
 
   <!-- 300 秒ごとに実行 -->
   <key>StartInterval</key>
