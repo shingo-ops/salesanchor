@@ -65,7 +65,7 @@
       "duplicateFile": "This file has already been imported.",
       "columnCount": "Row {{value}} does not have 10 columns.",
       "duplicateRow": "Duplicates row {{value}} in this file.",
-      "markUsed": "The same mark is already used by product {{value}}.",
+      "markUsed": "The product code overlaps {{value}}. Adding exclude keywords is recommended.",
       "shortKeyword": "This search keyword is very short: {{value}}",
       "keywordShared": "This search keyword also matches another product: {{value}}",
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
@@ -224,7 +224,6 @@
     "admin": "Admin",
     "deals": "Deals",
     "suppliers": "Suppliers",
-    "purchaseOrders": "Purchase Orders",
     "staff": "Staff",
     "bots": "Bots",
     "teams": "Teams",
@@ -256,15 +255,10 @@
     "tenantPolicy": "Tenant Policy",
     "discordConfig": "Discord Integration",
     "discordAnnounce": "Discord Announce",
-    "superAdminTcgProductMaster": "Product master",
     "superAdminFxRate": "FX Rate Management",
-    "superAdminTcgParallelReport": "Parallel Engine Report",
     "superAdminTcgLineImport": "Import",
-    "superAdminTcgSoldOut": "Sold-out rules",
-    "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
     "superAdminAnalysisRules": "LINE Analysis",
-    "superAdminNeedsReview": "Needs Review",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -284,7 +278,6 @@
     "statusMaster": "Status Master",
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
-    "superAdminSupplierMaster": "Supplier Master",
     "superAdminSupplierExtractionRules": "Extraction Rules",
     "units": "Units",
     "noteMaster": "Note Master",
@@ -1274,7 +1267,9 @@
     "manage": "Manage",
     "markAllRead": "Mark all as read",
     "filterUnread": "Unread",
-    "filterFollowUp": "Follow-up",
+    "filterFollowUp": "Unreplied",
+    "mobileFilters": "Filters",
+    "backToList": "Back to list",
     "subtitle": "Manage and respond to messages.",
     "fetchError": "Failed to load data",
     "unreadBadge": "{{count}} unread",
@@ -1335,6 +1330,14 @@
       "permissionDenied": "More than 24 hours have passed, so this message cannot be sent. Please reply directly from Instagram / Messenger.",
       "rateLimited": "Sending is temporarily limited. Please try again later.",
       "attachmentNotSaved": "The image was sent, but saving a copy failed.",
+      "discordEnNameRequired": "To reply on Discord, you need to register your English name.",
+      "discordEnNameInvalid": "Your English name contains a word that can't be used (such as \"discord\").",
+      "discordSendFailed": "The message could not be sent. Your text is still here.",
+      "discordWebhookPermissionAdmin": "The message can't be sent because the Discord setup is incomplete.",
+      "discordWebhookPermissionStaff": "The message can't be sent because the Discord setup is incomplete. Please contact an administrator.",
+      "ctaOpenAccountSettings": "Open account settings",
+      "ctaRetry": "Send again",
+      "ctaOpenDiscordConfig": "Open Discord settings",
       "generic": "Failed to send the message.",
       "codeSuffix": " (code: {{code}})"
     }
@@ -1594,7 +1597,6 @@
     "weight": "Weight (kg)",
     "addItem": "Add item",
     "removeItem": "Remove",
-    "selectProduct": "Select product",
     "productNamePlaceholder": "Product name (free text if not in master)",
     "addMethod": "Add method",
     "addModeInventory": "From inventory",
@@ -1734,7 +1736,6 @@
     "productCode": "Product code",
     "nameJa": "Name (JA)",
     "nameEn": "Name (EN)",
-    "unitPrice": "Unit price",
     "msrp": "MSRP",
     "weight": "Weight (kg)",
     "stockQty": "Stock qty",
@@ -1847,6 +1848,17 @@
     "confirmDelete": "Delete selected units?",
     "total": "Units: {{count}}"
   },
+  "unitIgnorePhrases": {
+    "title": "Phrases Not Treated as Units",
+    "description": "Register phrases that contain a unit alias but are not a unit (e.g. a title name).",
+    "phrase": "Phrase",
+    "note": "Reason",
+    "isActive": "Active",
+    "empty": "No phrases registered",
+    "createTitle": "Add Phrase",
+    "editTitle": "Edit Phrase",
+    "confirmDelete": "Delete the selected phrases?"
+  },
   "statusMaster": {
     "title": "Status Rules",
     "statusId": "Status ID",
@@ -1871,42 +1883,11 @@
     "total": "Statuses: {{count}}"
   },
   "purchaseOrders": {
-    "title": "Purchase Orders",
-    "newPO": "New Purchase Order",
-    "editPO": "Edit Purchase Order",
-    "poNumber": "PO number",
-    "noPos": "No purchase orders registered",
-    "deletePO": "Delete Purchase Order",
-    "allStatuses": "All statuses",
     "status_draft": "Draft",
-    "status_pending": "Pending",
     "status_ordered": "Ordered",
     "status_received": "Received",
     "status_cancelled": "Cancelled",
-    "status_error": "Send error",
-    "orderedAt": "Order date",
-    "receivedAt": "Receipt date",
-    "actionOrder": "Order",
-    "actionReceive": "Receive",
-    "actionUnreceive": "Undo receipt",
-    "actionCancel": "Cancel",
-    "actionDownloadPdf": "PDF",
-    "actionSendEmail": "Send email",
-    "actionResendEmail": "Resend",
-    "emailSent": "Email sent",
-    "emailResent": "Email resent",
-    "emailSendFailed": "Failed to send email",
-    "pdfDownloadFailed": "PDF download failed (HTTP {{status}})",
-    "confirmOrderTitle": "Mark as ordered?",
-    "confirmOrderMessage": "The purchase order PDF has been created. Mark this order as \"Ordered\"?",
-    "confirmOrderYes": "Mark as ordered",
-    "confirmOrderNo": "Keep as draft",
-    "subtitle": "Manage purchase orders from creation to receipt.",
-    "supplier": "Supplier",
-    "supplierRequired": "Please select a supplier",
-    "itemsRequired": "All line items must have product and quantity",
-    "createdInfo": "Purchase order created",
-    "fromInventoryMultiSupplier": "Multiple suppliers were selected. Creating a purchase order for the first supplier only; please create separate orders for the other {{count}} supplier(s)."
+    "status_error": "Send error"
   },
   "tenantProfile": {
     "title": "Issuer Profile",
@@ -1953,6 +1934,7 @@
     "givenNameJp": "First name (JA)",
     "surnameEn": "Last name (EN)",
     "givenNameEn": "First name (EN)",
+    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord.",
     "primaryEmail": "Primary email",
     "role": "Role",
     "status": "Status",
@@ -1967,12 +1949,10 @@
     "showSidebar": "Show sidebar",
     "status_active": "Active",
     "status_inactive": "Inactive",
-    "staffCodeLabel": "Staff code (auto-generated EMP-00001 if blank)",
     "surnameKana": "Surname (Kana)",
     "givenNameKana": "Given name (Kana)",
     "status_pending": "Pending",
     "fullName": "Full Name",
-    "staffCodePlaceholder": "e.g., EMP-00001",
     "subtitle": "Manage staff accounts and UI preferences."
   },
   "teams": {
@@ -2406,42 +2386,10 @@
       "attrMasters": "Various masters",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
-      "llmBudget": "LLM Budget",
-      "parseStats": "Accuracy Summary"
-    },
-    "attrMasters": {
-      "title": "Various masters",
-      "desc": "Add, edit, and delete the product master dropdown options.",
-      "empty": "No entries yet",
-      "addBtn": "Add",
-      "searchPlaceholder": "Search by name",
-      "reorderHint": "Drag rows to reorder.",
-      "activeOn": "Active",
-      "activeOff": "Inactive",
-      "col": {
-        "labelJa": "Label",
-        "labelEn": "Label (EN)",
-        "code": "Code (optional)",
-        "sortOrder": "Order",
-        "active": "Status"
-      },
-      "attr": {
-        "productKind": "Product type",
-        "setType": "Set type",
-        "tcgSeries": "TCG series",
-        "rarity": "Rarity",
-        "language": "Language",
-        "unit": "Unit",
-        "hsCode": "HS code",
-        "item": "Item",
-        "material": "Material"
-      }
+      "llmBudget": "LLM Budget"
     },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
-      "promptSection": "Per-Supplier Parsing Prompt (on hold)",
-      "promptHelp": "Manage the Gemini parsing prompt per supplier (imported from the spreadsheet).",
-      "promptPlaceholder": "Enter the Gemini parsing prompt for this supplier",
       "rulesSection": "Normalization Rules",
       "rulesHelp": "Rules that automatically convert a word found in an inbound message into another word.",
       "aliasesSection": "Per-Supplier Rules",
@@ -2460,7 +2408,6 @@
         "message_exclude": "Message Exclude (Immediate)",
         "message_exclude_no_digit": "Message Exclude (No Digit)",
         "block_delimiter": "Product Block Delimiter",
-        "skip_condition": "Gemini Skip Condition",
         "status_keyword": "Status Keyword"
       },
       "langs": {
@@ -2497,30 +2444,6 @@
       "previewWouldInsert": "Rows would be inserted",
       "invalidCsv": "Invalid CSV format"
     },
-    "tcg": {
-      "title": "TCG Series Master",
-      "newSeries": "New Series",
-      "fields": {
-        "tcgType": "TCG Type",
-        "seriesCode": "Series Code",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "releaseDate": "Release Date",
-        "category": "Category"
-      },
-      "types": {
-        "pokemon": "Pokemon TCG",
-        "one_piece": "One Piece TCG",
-        "dragon_ball": "Dragon Ball TCG",
-        "union_arena": "Union Arena",
-        "yugioh": "Yu-Gi-Oh!"
-      },
-      "typeManager": {
-        "title": "Manage Types",
-        "code": "Type Code",
-        "addBtn": "Add Type"
-      }
-    },
     "supplierQuality": {
       "columns": {
         "supplierName": "Supplier",
@@ -2528,7 +2451,9 @@
         "needsReviewCount": "Needs Review",
         "productIdUnresolvedCount": "Product ID Unresolved",
         "unitUnresolvedCount": "Unit Unresolved",
-        "conditionFallbackCount": "Condition Unresolved (pending)"
+        "conditionFallbackCount": "Condition Unresolved",
+        "conditionGiveUpCount": "of which No Clue",
+        "conditionManualReviewedCount": "Manually Reviewed"
       },
       "conditionPending": "Pending",
       "backToList": "← Back to list",
@@ -2594,30 +2519,6 @@
       "retryConfirmErrors": "Re-enqueue the displayed error jobs? (up to 50)",
       "retrySuccess": "Enqueued: {{enqueued}} / Skipped: {{skipped}}",
       "retryError": "Retry failed (Celery may be unavailable)."
-    },
-    "dex": {
-      "title": "Pokemon / Trainer Dex",
-      "kinds": {
-        "pokemon": "Pokemon",
-        "trainer": "Trainer"
-      },
-      "newEntry": "New Dex Entry",
-      "fields": {
-        "dexNumber": "Dex Number",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "generation": "Generation",
-        "region": "Region",
-        "era": "Era"
-      },
-      "import": {
-        "previewBtn": "Import from PokeAPI",
-        "applyBtn": "Import {{count}} entries",
-        "upToDate": "Up to date (no new entries)",
-        "diffSummary": "{{count}} new (PokeAPI {{source}} / DB {{db}})",
-        "applied": "Imported {{count}} entries",
-        "truncated": "Many new entries — showing/importing the first {{max}} only"
-      }
     },
     "suppliersAdmin": {
       "title": "Supplier Master (Central Admin)",
@@ -2708,23 +2609,6 @@
       "refreshError": "Failed to fetch the rate. Please try again later.",
       "currency": "Currency",
       "rateJpy": "1 Foreign = N JPY"
-    },
-    "llmBudget": {
-      "title": "Monthly LLM Budget (Gemini 2.5 Flash)",
-      "subtitle": "Manage per-tenant LLM fallback usage and monthly cap.",
-      "noRows": "No budget rows have been registered yet.",
-      "savedNotice": "Saved.",
-      "editTitle": "Edit budget for tenant {{tenant_id}}",
-      "fields": {
-        "tenantId": "Tenant ID",
-        "tenantName": "Tenant Name",
-        "monthlyBudget": "Monthly Budget (USD)",
-        "currentMonth": "Used This Month",
-        "utilization": "Utilization",
-        "hardStop": "Hard stop on overrun",
-        "notifyAdmin": "Notify admin",
-        "lastResetAt": "Last reset"
-      }
     },
     "inbound": {
       "title": "Discord Inbound Messages",
@@ -2842,12 +2726,6 @@
       "helpPhaseA": "Phase A (emergency rollback): only receive history is recorded, stock counts are not updated. Not the normal mode.",
       "helpPhaseB": "Phase B (normal): stock counts are updated on approval. Spreadsheet data is used as reference data.",
       "helpPhaseC": "Phase C: full spreadsheet closure + bulk data migration. Currently disabled, separate ADR pending."
-    },
-    "parseReview": {
-      "phaseAWarning": {
-        "always": "Currently in \"emergency rollback\" mode. Approvals will not update stock counts (receive history is still recorded). To return to normal operation, go to Management Center → Super Admin → Phase Switch.",
-        "afterApprove": "Approved successfully, but stock counts were not updated due to \"emergency rollback\" mode. {{count}} receive history entries were recorded."
-      }
     },
     "inventoryOffers": {
       "subtitle": "Manage the \"currently available products / stock / unit price\" per supplier. Saved automatically when Discord parse review is approved, and editable manually here.",
@@ -3112,7 +2990,20 @@
     "changing": "Changing...",
     "sectionPreferences": "Preferences",
     "darkModeLabel": "Dark mode",
-    "languageLabel": "Language"
+    "languageLabel": "Language",
+    "avatarLabel": "Icon",
+    "avatarChoose": "Choose image",
+    "avatarChange": "Change image",
+    "avatarRemove": "Remove",
+    "avatarUploading": "Saving...",
+    "avatarHint": "JPG, PNG or WebP, 2MB or smaller. Shown on your Discord replies.",
+    "avatarAlt": "Icon",
+    "avatarErrorInvalid": "Please choose a JPG, PNG or WebP image of 2MB or smaller.",
+    "avatarErrorInvalidAction": "Choose another image",
+    "avatarErrorSave": "We could not save the image.",
+    "avatarErrorSaveAction": "Try again",
+    "englishNameHelp": "Used as your display name when you reply on Discord. Your first name (English) is shown to customers.",
+    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord."
   },
   "badges": {
     "subtitle": "Manage badges and achievement conditions.",
@@ -3156,16 +3047,18 @@
     "deleteSettings": "Delete Discord settings"
   },
   "discordConfig": {
-    "title": "Discord Integration",
-    "description": "Register your Discord server's Guild ID to automatically assign roles when a lead's scale changes.",
-    "guildIdLabel": "Guild ID",
-    "guildIdPlaceholder": "e.g. 1288437029213835356",
-    "guildIdHint": "Right-click your Discord server name → 'Copy Server ID' (Developer Mode required).",
-    "roleMappingTitle": "Role Mapping (Fixed)",
-    "loadError": "Failed to load configuration",
-    "saveError": "Failed to save configuration",
-    "invalidGuildId": "Guild ID must be a 17–20 digit number",
-    "saved": "Configuration saved",
+    "connectionTitle": "Server connection",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "serverIdLabel": "Server ID",
+    "serverIdPlaceholder": "e.g. 1288437029213835356",
+    "serverIdHint": "Right-click the server name → \"Copy Server ID\"",
+    "change": "Change",
+    "connect": "Connect",
+    "loadError": "Could not load",
+    "saveError": "Could not save",
+    "invalidGuildId": "Enter a 17–20 digit number",
+    "saved": "Saved",
     "syncStatus": {
       "success": "Synced",
       "failed": "Sync failed",
@@ -3173,73 +3066,70 @@
       "not_linked": "Discord not linked"
     }
   },
-  "discordTicketConfig": {
-    "title": "Ticket Settings",
-    "description": "Configure the ticket feature to automatically create private channels for customers.",
-    "categoryIdLabel": "Ticket Category ID",
-    "categoryIdPlaceholder": "e.g. 1288437029213835356",
-    "categoryIdHint": "ID of the category where private channels will be created. Right-click a category in Discord → 'Copy ID'.",
-    "buttonChannelIdLabel": "Button Channel ID",
-    "buttonChannelIdPlaceholder": "e.g. 1288437029213835357",
-    "buttonChannelIdHint": "ID of the channel where the 'Open Ticket' button will be posted.",
-    "staffRoleIdLabel": "Staff Role ID (Optional)",
-    "staffRoleIdPlaceholder": "e.g. 1288437029213835358",
-    "staffRoleIdHint": "ID of the staff role to add to ticket channels automatically. Leave blank to add only the bot.",
-    "welcomeTemplateLabel": "Welcome Message",
-    "welcomeTemplatePlaceholder": "Message sent when a ticket channel is created",
-    "welcomeTemplateHint": "Message sent to the customer when they open a ticket (max 500 characters).",
-    "loadError": "Failed to load ticket configuration",
-    "saveError": "Failed to save ticket configuration",
-    "saved": "Ticket configuration saved",
-    "invalidSnowflake": "ID must be a 17–20 digit number",
-    "deployButtonTitle": "Post Button to Discord",
-    "deployButtonHint": "Posts a message with a 'Open Ticket' button to the configured channel.",
-    "deployButton": "Post Button",
-    "deploying": "Posting...",
-    "deployDone": "Button message posted successfully",
-    "deployError": "Failed to post. Check bot permissions and channel ID.",
-    "smallChannelIdLabel": "Small Customer Channel ID (optional)",
-    "largeChannelIdLabel": "Large Customer Channel ID (optional)",
-    "scaleChannelIdPlaceholder": "e.g. 1288437029213835356",
-    "smallChannelIdHint": "Used for channel invitation messages to Small-scale customers.",
-    "largeChannelIdHint": "Used for channel invitation messages to Large-scale customers.",
-    "roleMappingTitle": "Auto Role Assignment",
-    "roleMappingHint": "Automatically assigns Discord roles based on estimated_scale. The role name must exactly match a role in your Discord server (Bot will create it if it doesn't exist).",
-    "smallRoleNameLabel": "Role name for Small customers",
-    "largeRoleNameLabel": "Role name for Large customers",
-    "invalidRoleName": "Role name must not be empty",
-    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
-  },
   "discordAutoSetup": {
-    "title": "Discord server auto setup",
-    "description": "Automatically creates the required roles, category, channels, and ticket button after Bot invitation. Safe to run again at any time.",
+    "title": "Auto setup",
+    "description": "Creates roles, channels and the ticket button in one go. Safe to run any number of times.",
     "runButton": "Run auto setup",
-    "running": "Setting up...",
-    "disabledHint": "Please connect your Discord server first.",
-    "completed": "Setup completed successfully.",
-    "partial": "Some setup steps failed.",
-    "failed": "Setup failed.",
-    "retryHint": "Review the details and try again.",
-    "stepsTitle": "Results",
-    "roleOrderGuidePrompt": "Next, move the Sales Anchor Bot role above Partner / Member in Discord.",
-    "roleOrderGuideLink": "View role order guide",
-    "requestFailed": "Auto setup failed.",
+    "running": "Running...",
+    "needConnect": "Connect the server first",
+    "completed": "Completed",
+    "partial": "Partly failed",
+    "failed": "Failed",
+    "retryHint": "You can run it again",
+    "nextStep": "Move the Bot role above Partner / Member",
+    "nextStepBadge": "Next",
+    "guideLink": "See how",
+    "requestFailed": "Could not run",
+    "groups": {
+      "roles": "Roles",
+      "categories": "Categories",
+      "channels": "Channels",
+      "button": "Button",
+      "other": "Other"
+    },
     "steps": {
-      "role_staff": "Sales Anchor Staff role",
-      "role_partner": "Partner role",
-      "role_member": "Member role",
-      "category": "Sales Anchor category",
-      "ch_ticket": "ticket-start channel",
-      "ch_member": "member-announcements channel",
-      "ch_partner": "partner-announcements channel",
-      "button": "Ticket button"
+      "role_staff": "Sales Anchor Staff",
+      "role_partner": "Partner",
+      "role_member": "Member",
+      "category": "DM",
+      "category_stock_member": "Stock (Member)",
+      "category_stock_large": "Stock (Large)",
+      "ch_ticket": "ticket-start",
+      "ch_member": "member-announcements",
+      "ch_partner": "partner-announcements",
+      "button": "Ticket start button"
     },
     "statuses": {
       "created": "Created",
-      "skipped": "Skipped (already exists)",
+      "skipped": "Exists",
+      "updated": "Updated",
       "posted": "Posted",
       "failed": "Failed"
     }
+  },
+  "discordTicketConfig": {
+    "welcomeTitle": "Ticket welcome message",
+    "welcomeHint": "Sent first when a customer opens a ticket ({{count}}/{{max}} characters)",
+    "welcomePlaceholder": "e.g. Thanks for contacting us. A staff member will help you.",
+    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
+    "saved": "Saved",
+    "saveError": "Could not save",
+    "invalidSnowflake": "Enter IDs as 17–20 digit numbers",
+    "invalidRoleName": "Enter a role name",
+    "needIds": "Run auto setup first",
+    "deployButton": "Re-post button",
+    "deploying": "Posting...",
+    "deployDone": "Posted",
+    "deployError": "Could not post. Check the Bot permissions and channel ID",
+    "detailsToggle": "Advanced settings (usually no change needed)",
+    "categoryIdLabel": "Where tickets go (category ID)",
+    "buttonChannelIdLabel": "Button channel ID",
+    "staffRoleIdLabel": "Staff role ID",
+    "smallChannelIdLabel": "Channel ID for small customers",
+    "largeChannelIdLabel": "Channel ID for large customers",
+    "smallRoleNameLabel": "Small role name",
+    "largeRoleNameLabel": "Large role name",
+    "idPlaceholder": "e.g. 1288437029213835356"
   },
   "discordAnnounce": {
     "description": "Post announcements to a Discord channel directly from the app — no need to open Discord.",
@@ -3268,26 +3158,6 @@
     "grossProfitTotal": "Total gross profit",
     "count": "Count",
     "editFinancial": "Edit financial"
-  },
-  "supplier": {
-    "parseStats": {
-      "selectSupplier": "Select Supplier",
-      "selectPlaceholder": "-- Select a supplier --",
-      "noData": "No data yet (no parse logs for this supplier)",
-      "columns": {
-        "day": "Date",
-        "totalLines": "Total Lines",
-        "parsedCount": "Parsed",
-        "excludedCount": "Excluded",
-        "unparsedCount": "Unparsed",
-        "excludeRate": "Exclude Rate",
-        "avgConfidence": "Avg Confidence"
-      },
-      "legend": {
-        "highExclude": "Exclude rate > 30% (drift warning)",
-        "lowConfidence": "Avg confidence < 0.5 (quality warning)"
-      }
-    }
   },
   "company": {
     "stats": {
@@ -3586,7 +3456,7 @@
     },
     "preview": {
       "candidateUnit": " delivery candidates",
-      "excFlag": "FLAG excluded",
+      "excFlag": "FLAG / Error excluded",
       "excPid": "PID unresolved",
       "excUnit": "Unit unresolved",
       "excBoth": "Both unresolved",
@@ -3811,11 +3681,6 @@
       "filtered": "Filtered",
       "unknown": "Not recorded"
     },
-    "reviewReason": {
-      "pid_unresolved": "Product could not be identified",
-      "multi_candidate": "Multiple product candidates",
-      "note_unmatched": "No conversion target found for the note"
-    },
     "viewMessages": "View imported messages",
     "viewItems": "View extracted items",
     "viewResults": "View all {{total}} analysis result(s)",
@@ -3847,17 +3712,116 @@
     "changed": "The content changed. Review the refreshed details before confirming again.",
     "reloadFailed": "The content changed, but refreshing failed. Reload before confirming again.",
     "saveFailed": "Could not confirm the condition. Please retry.",
-    "loadFailed": "Could not load the condition choices.",
-    "otherReason": "Another issue requires review.",
-    "separator": " / ",
-    "reasons": {
-      "empty_box": "Empty box requires confirmation.",
-      "empty_box_ambiguous": "The empty-box description is ambiguous. Select the actual condition.",
-      "empty_box_master_unavailable": "The empty-box definition is unavailable.",
-      "note_unmatched": "The note still requires review.",
-      "pid_unresolved": "The product is not identified.",
-      "multi_candidate": "More than one product matched."
+    "loadFailed": "Could not load the condition choices."
+  },
+  "v102Posts": {
+    "empty": "No posts to fix",
+    "columns": {
+      "supplier": "Supplier",
+      "postedAt": "Posted at",
+      "postReasons": "Post reasons",
+      "counts": "Items to fix / total",
+      "lines": "Line numbers",
+      "price": "Price",
+      "quantity": "Quantity",
+      "reasons": "Reasons",
+      "remove": "Delete"
+    },
+    "modalTitle": "Fix the transcription",
+    "jobReasons": "Post reasons: {{reasons}}",
+    "linesPlaceholder": "e.g. 3,5,7",
+    "noRows": "No items",
+    "addItem": "Add item",
+    "remove": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Saved. Re-running the analysis",
+    "unchanged": "No changes",
+    "saveFailed": "Could not save. Please try again",
+    "errors": {
+      "lines": {
+        "empty": "Enter line numbers",
+        "notInteger": "Enter whole numbers separated by commas",
+        "outOfRange": "Line numbers must be between 1 and {{max}}",
+        "duplicate": "The same line number appears twice"
+      },
+      "textTooLong": "Use {{max}} characters or fewer",
+      "noItems": "There are no items. Keep at least one"
     }
+  },
+  "reviewItem": {
+    "drawerTitle": "Item to review",
+    "reasonsHeading": "Reasons for review",
+    "noReasons": "No reasons",
+    "sourceLine": "Source: {{source}}",
+    "ack": "Keep as is",
+    "acked": "Marked as checked. Re-running the analysis",
+    "ackFailed": "Could not mark as checked. Please try again",
+    "gapLines": "Gap lines: {{lines}}",
+    "gapLineNumber": "L{{n}}",
+    "gapCandidates": "Candidates: {{names}}"
+  },
+  "reviewReason": {
+    "pid_unresolved": "Product not identified",
+    "multi_candidate": "Multiple product candidates",
+    "note_unmatched": "No match for the note",
+    "empty_box": "Empty box needs confirmation",
+    "empty_box_ambiguous": "Empty-box description is ambiguous",
+    "empty_box_master_unavailable": "Empty-box definition unavailable",
+    "unit_unresolved": "Unit not identified",
+    "price_unresolved": "Price not readable",
+    "quantity_unresolved": "Quantity not readable",
+    "price_source_mismatch": "Price differs between Gemini and source",
+    "quantity_source_mismatch": "Quantity differs between Gemini and source",
+    "value_out_of_range": "Value out of range",
+    "item_mapping_mismatch": "Item mapping mismatch",
+    "unit_price_mismatch": "Unit and price do not match the market",
+    "gemini_gap_suspect": "Possible Gemini omission (gap lines may hold the product name)",
+    "excluded": "Excluded",
+    "item_shape_invalid": "Gemini output has an invalid shape",
+    "price_not_in_lines": "Price not found in the source lines",
+    "duplicate_price_line": "Duplicate price line",
+    "ship": "Check whether this is a shipping line",
+    "condition": "Check whether this is a condition line",
+    "quantity_no_number": "Quantity has no number",
+    "quantity_not_in_text": "Copied quantity not found in the source lines",
+    "possible_footer_line": "May be a footer line",
+    "unit_unknown": "Unit unknown",
+    "category_unknown": "Category unknown",
+    "heading_ship_with_own_ship": "Shipping stated in both heading and item",
+    "no_items": "No items extracted",
+    "possible_missing_item": "An item may be missing",
+    "product_not_in_master": "Not in the product master",
+    "product_multiple": "Multiple product candidates (new method)",
+    "condition_multiple_candidates": "Multiple condition candidates",
+    "condition_unknown": "Condition unknown",
+    "gemini_unsure": "Gemini reported it is unsure",
+    "gemini_unsure_invalid": "Gemini's report has an invalid shape",
+    "response_unreadable": "Gemini response unreadable",
+    "extract_exception": "Error during analysis",
+    "unknown": "Unregistered reason ({{code}})",
+    "source": {
+      "gemini": "Gemini",
+      "system": "System"
+    },
+    "separator": ", "
+  },
+  "codeCollision": {
+    "title": "The product code overlaps existing products",
+    "hint": "Adding exclude keywords is recommended so the products can be told apart.",
+    "itemWithWork": "{{name}} ({{work}})",
+    "matched": "Overlapping {{field}}: {{value}}",
+    "fields": { "product_code": "product code", "mark": "mark" },
+    "addToThis": "Words to add to this product's exclude keywords: {{words}}",
+    "addToOther": "Words to add to the other product's exclude keywords: {{words}}",
+    "registered": "Exclude keywords are already registered",
+    "addToThisButton": "Add to this product",
+    "addToOtherButton": "Add to that product",
+    "confirmTitle": "Add exclude keyword",
+    "confirmMessage": "Add \"{{word}}\" to the exclude keywords of {{product}}",
+    "confirmAction": "Add",
+    "result": { "added": "Added", "exists": "Already registered", "staged": "Added to the field (saved when you save)" },
+    "addError": "Could not add the keyword. Please try again"
   },
   "productDetail": {
     "title": "Product details and editing",
@@ -3995,6 +3959,7 @@
       "groupAnalysisStatus": "Analysis Status",
       "groupMasterManagement": "Master Management",
       "accuracyManagement": "Accuracy Management",
+      "accuracyManagementV7": "Accuracy Management (New)",
       "needsReview": "Needs Review",
       "productMaster": "Product Master",
       "statusMaster": "Status Rules",
@@ -4018,6 +3983,7 @@
       "knowledgeAliases": "Extraction Filter / Rules",
       "promptConfig": "Extraction Prompt Config",
       "errorLog": "Error Log",
+      "soldOutResults": "Sold-out results",
       "groupSystem": "System",
       "pipelineMap": "Pipeline Map",
       "lineWorkflowGuide": "LINE Analysis Workflow",
@@ -4322,7 +4288,6 @@
     },
     "needsReview": {
       "title": "Needs Review",
-      "comingSoon": "Coming soon",
       "count": "{{count}} items"
     },
     "dashboard": {
@@ -4361,6 +4326,7 @@
       "tabExtraction": "Extraction",
       "tabAnalysis": "Analysis",
       "tabDistribution": "Distribution",
+      "tabUsage": "Usage",
       "importTotal": "Total Imports",
       "importMessages": "Total Messages",
       "importUnresolvedRate": "Unresolved Name Rate",
@@ -4476,6 +4442,61 @@
       "periodLabel": "Period",
       "distribution": {
         "nullPostedAtWarning": "No posted_at {{count}} items (anomaly)"
+      },
+      "usage": {
+        "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
+        "notReported": "Not reported",
+        "costRowTitle": "Cost",
+        "byPurposeTitle": "By Purpose",
+        "dailyTitle": "Daily",
+        "byModelTitle": "By Model",
+        "dailyByPurposeChartTitle": "Daily Cost by Purpose",
+        "monthlyByPurposeChartTitle": "Monthly Cost by Purpose",
+        "totalMismatchNote": "{{count}} call(s) do not match the total Google returned",
+        "colPurpose": "Purpose",
+        "colCalls": "Calls with response",
+        "colInput": "Input",
+        "colCached": "Cached",
+        "colOutput": "Output",
+        "colThoughts": "Thinking",
+        "colTool": "Tool",
+        "colTotal": "Total",
+        "colCost": "Cost",
+        "colDate": "Date",
+        "colModel": "Model",
+        "purpose": {
+          "line_extraction": "LINE Extraction",
+          "line_extraction_shadow": "LINE Extraction (Shadow)",
+          "inventory_parse_fallback": "Inventory Parse Fallback",
+          "translation_inbound": "Inbound Translation",
+          "translation_inbound_escalation": "Inbound Translation (Escalation)",
+          "translation_outbound": "Outbound Translation"
+        },
+        "health": {
+          "title": "Overview (LINE Extraction)",
+          "note": "Success rate is completed calls divided by completed + failed (in-progress calls are excluded). Translation is excluded because it has no failure records.",
+          "requestsChartTitle": "Requests & Success Rate",
+          "errorsChartTitle": "Errors by Type",
+          "attemptsLabel": "Requests",
+          "successRateLabel": "Success Rate",
+          "modelTrendTitle": "By Model",
+          "inputTokensChartTitle": "Input Tokens",
+          "outputTokensChartTitle": "Output Tokens",
+          "requestsByModelChartTitle": "Requests"
+        },
+        "summary": {
+          "costLabel": "Total Cost",
+          "callsLabel": "Calls with response",
+          "inputLabel": "Input Tokens",
+          "outputLabel": "Output Tokens",
+          "successRateLabel": "Success Rate (LINE Extraction)",
+          "errorCountLabel": "Error Count (LINE Extraction)"
+        },
+        "fx": {
+          "note": "1 USD = ¥{{rate}} (latest rate, as of {{fetchedAt}}). Each use is converted at the rate in effect when it occurred.",
+          "fallbackCountNote": "Uses before {{historyStart}} ({{count}} calls) are converted using the earliest recorded rate.",
+          "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
+        }
       },
       "costSectionTitle": "API Cost",
       "costTotalUsd": "Period Cost",
@@ -4885,12 +4906,16 @@
     },
     "effect": {
       "EXCLUDE": "Exclude",
-      "OUTPUT": "Output"
+      "OUTPUT": "Output",
+      "HEADING": "Heading",
+      "DATE_AHEAD": "Upcoming date",
+      "RELEASE_AHEAD": "Release date"
     },
     "matchType": {
       "REGEX": "Regex",
       "LITERAL": "Literal",
-      "DEFAULT": "Default"
+      "DEFAULT": "Default",
+      "RELEASE": "Release date"
     },
     "enabled": {
       "true": "Enabled",
@@ -4905,7 +4930,8 @@
       "soldOut": "Sold-out Rules",
       "date": "Date Rules",
       "default": "Default",
-      "test": "Test"
+      "test": "Test",
+      "context": "Pre-order clues"
     },
     "test": {
       "gateOpen": "Tests passed — rules can be enabled",
@@ -4959,7 +4985,13 @@
       "effectOutput": "Detect and show",
       "effectExclude": "Detect and exclude",
       "testRequired": "Create available after test passes",
-      "testPassed": "Test passed"
+      "testPassed": "Test passed",
+      "effectHeading": "Decide from heading",
+      "effectDateAhead": "Decide from upcoming date",
+      "effectReleaseAhead": "Decide from release date",
+      "matchType": "Match type",
+      "excludePattern": "Exclude word",
+      "testNotNeeded": "Release date rules need no test"
     },
     "edit": {
       "title": "Edit Rule",
@@ -4985,26 +5017,6 @@
     "productMasterUnregistered": "Product Master Unregistered",
     "supplierUnregistered": "Supplier Unregistered",
     "confirmed": "Confirmed"
-  },
-  "tcgParallelReport": {
-    "title": "Parallel Report",
-    "overallSummary": "Overall Summary",
-    "metric": "Metric",
-    "difference": "Difference",
-    "totalItems": "Total Items",
-    "pidResolved": "PID Resolved",
-    "supplierComparison": "Supplier Comparison",
-    "count": "Count",
-    "refreshReport": "Refresh Report",
-    "calculating": "Calculating...",
-    "superAdminOnly": "This page is for super_admin only.",
-    "fetchError": "Failed to fetch report",
-    "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
-    "calculatingDetail": "Calculating (DB read + in-memory matching)...",
-    "readOnlyNote": "* No DB writes. Report is read-only.",
-    "compatV1Description": "Legacy GAS matching result (existing DB values, gemini_all.json basis)",
-    "namefirstV1Description": "New server engine (in-memory calculation, keyword longest-match)",
-    "pidResolutionRate": "PID Resolution Rate"
   },
   "supplierExtractionRules": {
     "title": "Supplier Extraction Rules",
@@ -5066,8 +5078,6 @@
     "knowledgeSection": "Knowledge Rules",
     "knowledgeBlockDelimiters": "Block Delimiters",
     "knowledgeBlockDelimitersHelper": "Select symbols that mark product block start",
-    "knowledgeSkipConditions": "Skip Conditions",
-    "knowledgeSkipConditionsHelper": "Blocks containing these keywords are excluded",
     "knowledgeStatusKeywords": "Status Keywords",
     "knowledgeStatusKeywordsHelper": "Keywords for Pre-order / In Stock status",
     "addRule": "Add",
@@ -5077,12 +5087,17 @@
     "ruleLinked": "Linked",
     "noRulesLinked": "Not configured",
     "shipFormat": "Ship timing format",
-    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)"
+    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)",
+    "layoutRules": "Layout rules (new pipeline only)",
+    "layoutRulesHelper": "Describe how each instruction step applies to this supplier. Not used by the current production extraction.",
+    "hardCases": "Hard cases (new pipeline only)",
+    "hardCasesHelper": "Original text and expected output for cases that were actually misread. Not used by the current production extraction."
   },
   "needsReview": {
     "title": "Needs Review",
     "productName": "Product Name",
     "supplier": "Supplier",
+    "source": "Source",
     "reviewReasons": "Review Reasons",
     "createdAt": "Date",
     "noItems": "No items need review",
@@ -5092,7 +5107,8 @@
     "tabs": {
       "production": "Production review",
       "shadow": "Shadow run review",
-      "bottlenecks": "Bottlenecks"
+      "bottlenecks": "Bottlenecks",
+      "posts": "Posts"
     }
   },
   "distributionSettings": {
@@ -5136,6 +5152,115 @@
     "byItem": "By item",
     "matchedRatio": "Auto-match ratio",
     "needsReviewCount": "Needs review count",
-    "totalCount": "Total"
+    "totalCount": "Total",
+    "itemLabel": {
+      "product": "Product identification",
+      "verify_copied": "Copy verification",
+      "price_qty": "Price and quantity"
+    },
+    "priceQtyReason": {
+      "multiple_values": "Multiple values, so it cannot be fixed",
+      "gemini_disagrees": "Does not match Gemini's copy",
+      "rule_vs_shape": "The rule's order does not fit the number shapes",
+      "irregular_comma": "Invalid digit separators",
+      "unresolved": "Cannot determine price and quantity",
+      "no_order_rule": "The supplier rule has no order",
+      "quantity_unmarked": "The quantity has no marker"
+    }
+  },
+  "shadowAccuracy": {
+    "tabs": {
+      "summary": "Accuracy summary",
+      "posts": "Post comparison"
+    },
+    "filter": {
+      "period": "Period",
+      "supplier": "Supplier",
+      "allSuppliers": "All suppliers"
+    },
+    "period": {
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "0": "All time"
+    },
+    "supplier": "Supplier",
+    "empty": "No data",
+    "metric": {
+      "blocks": "Blocks",
+      "autoConfirmed": "Auto-confirmed",
+      "needsReviewRatio": "Needs-review ratio",
+      "matched": "Product matched",
+      "ambiguous": "Product ambiguous",
+      "unmatched": "Product unmatched",
+      "priceFixed": "Price fixed",
+      "quantityFixed": "Quantity fixed",
+      "soldOut": "Sold out",
+      "preOrder": "Pre-order"
+    },
+    "conditions": {
+      "title": "Condition breakdown",
+      "condition": "Condition"
+    },
+    "signal": {
+      "title": "Signals",
+      "note": "Signals are candidates for errors, not errors themselves. Press a count to see the posts with that signal in Post comparison.",
+      "count": "{{count}}",
+      "openPosts": "Show posts with {{signal}}",
+      "label": {
+        "S1": "Missed sold-out",
+        "S2": "Missed pre-order",
+        "S3": "Single-item by unit",
+        "S4": "Confirmed by short mark",
+        "S5": "Heading product not matched",
+        "S6": "Unit filled in"
+      },
+      "short": {
+        "S1": "Sold out",
+        "S2": "Pre-order",
+        "S3": "Single by unit",
+        "S4": "Short mark",
+        "S5": "Heading unmatched",
+        "S6": "Unit filled"
+      }
+    },
+    "bySupplier": {
+      "title": "By supplier"
+    },
+    "posts": {
+      "filterReview": "Review status",
+      "reviewAll": "All",
+      "reviewPending": "Has pending blocks",
+      "reviewConfirmed": "All confirmed",
+      "filterSignal": "Signal",
+      "signalAll": "All",
+      "postedAt": "Posted at",
+      "pending": "Pending",
+      "noItems": "No matching posts",
+      "total": "{{count}} in total",
+      "selectHint": "Select a post from the list on the left."
+    },
+    "detail": {
+      "run": "Engine {{engine}} / model {{model}}",
+      "block": "Block {{index}}",
+      "needsReview": "Needs review",
+      "showInSource": "Show in source"
+    },
+    "stage": {
+      "title": "Stage",
+      "copy": "Copied",
+      "judgement": "Judgement",
+      "reason": "Reason and evidence",
+      "product": "Product",
+      "price": "Price",
+      "unit": "Unit",
+      "quantity": "Quantity",
+      "state": "Condition",
+      "ship": "Shipping"
+    },
+    "source": {
+      "title": "Source text",
+      "legendBlock": "Block range",
+      "legendHeading": "Heading range"
+    }
   }
 }

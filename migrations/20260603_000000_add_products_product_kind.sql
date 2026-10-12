@@ -16,5 +16,7 @@
 ALTER TABLE public.products
     ADD COLUMN IF NOT EXISTS product_kind VARCHAR(50) DEFAULT 'TCG';
 
--- DEFAULT 未補完の既存行（理論上は出ないが冪等のため）を 'TCG' に揃える。
-UPDATE public.products SET product_kind = 'TCG' WHERE product_kind IS NULL;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- product_kind の補完 UPDATE を外した（本番は 0 行）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: product_kind backfill removed'; END $$;

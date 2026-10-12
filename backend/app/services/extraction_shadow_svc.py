@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -26,15 +27,17 @@ from app.services.extraction_judgement_svc import (
     ProductEntry,
     block_text,
     match_product,
+    order_from_pattern,
+    product_match_text,
+    resolve_price_quantity,
     verify_copied,
 )
 from app.services.extraction_judgement_svc import (
     ship_timing as judge_ship_timing,
 )
 from app.services.gemini_extraction_svc import call_gemini_raw_copy, parse_raw_copy_response
-from app.services.llm_budget import calculate_cost
+from app.services.llm_budget import UsageCounts, record_usage_event_sync
 from app.services.tcg_analyzer_svc import (
-    _parse_numeric,
     build_note_ja,
     load_condition_entries,
     load_lookup_maps,
@@ -52,7 +55,27 @@ _REQUESTED_MODEL = "gemini-3.1-flash-lite"
 _PROMPT_KEY = "raw_copy_extraction"
 
 # verify_copied で照合する Gemini 書き写し値のうち、原文検証の対象にするフィールド。
-_VERIFY_FIELDS = ("raw_price", "raw_state", "raw_ship")
+_VERIFY_FIELDS = ("raw_price", "raw_state", "raw_ship", "raw_quantity")
+
+# 試運転に必要な仕入元ルール（design 追補2 §6）。3つとも空でなければ試運転する。
+_REQUIRED_SUPPLIER_RULE_KEYS = (
+    "extraction_price_format",
+    "extraction_qty_format",
+    "extraction_order_pattern",
+)
+
+
+def _is_filled(value: Any) -> bool:
+    if isinstance(value, (list, tuple, dict)):
+        return bool(value)
+    return value is not None and str(value).strip() != ""
+
+
+def has_required_supplier_rule(supplier_context: dict | None) -> bool:
+    """price_format・qty_format・order_pattern の3つが、どれも空白を除いて空でなければ True。"""
+    if not supplier_context:
+        return False
+    return all(_is_filled(supplier_context.get(key)) for key in _REQUIRED_SUPPLIER_RULE_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -108,12 +131,15 @@ def insert_shadow_run(
     status: str,
     error_code: str | None = None,
     error_detail: str | None = None,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    cost_usd: float | None = None,
     started_at: datetime | None = None,
 ) -> str:
-    """extraction_shadow_runs に1行 INSERT して run_id を返す（PR-B1 migration 前提）。"""
+    """extraction_shadow_runs に1行 INSERT して run_id を返す（PR-B1 migration 前提）。
+
+    ADR-1004: input_tokens/output_tokens/cost_usd は本 PR 以降 llm_usage_events 台帳が
+    SSOT。ここでは書き込まない（列は残置、NULL のまま）。呼び出し元が run_id を受けて
+    record_usage_event_sync(purpose='line_extraction_shadow', extraction_shadow_run_id=run_id)
+    を呼ぶこと。
+    """
     run_id = str(uuid.uuid4())
     session.execute(
         text(
@@ -121,11 +147,11 @@ def insert_shadow_run(
             INSERT INTO public.extraction_shadow_runs
                 (id, extraction_job_id, prompt_key, engine_version, requested_model,
                  input_bytes, response_text, status, error_code, error_detail,
-                 input_tokens, output_tokens, cost_usd, started_at, finished_at)
+                 started_at, finished_at)
             VALUES
                 (:id, :extraction_job_id, :prompt_key, :engine_version, :requested_model,
                  :input_bytes, :response_text, :status, :error_code, :error_detail,
-                 :input_tokens, :output_tokens, :cost_usd, COALESCE(:started_at, now()), now())
+                 COALESCE(:started_at, now()), now())
             """
         ),
         {
@@ -139,9 +165,6 @@ def insert_shadow_run(
             "status": status,
             "error_code": error_code,
             "error_detail": error_detail,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost_usd": cost_usd,
             "started_at": started_at,
         },
     )
@@ -215,6 +238,16 @@ def insert_shadow_results(session: Session, run_id: str, results: list[dict[str,
 # ---------------------------------------------------------------------------
 
 
+def _heading_text(raw_text: str, heading_start: Any, heading_end: Any) -> str:
+    """見出し行の原文。行番号が無い・int にできない場合は空文字。"""
+    try:
+        start = int(heading_start)
+        end = int(heading_end) if heading_end is not None else start
+    except (TypeError, ValueError):
+        return ""
+    return block_text(raw_text, start, end)
+
+
 def _judge_block(
     block_item: dict,
     raw_text: str,
@@ -225,11 +258,15 @@ def _judge_block(
     unit_alias_to_info: dict,
     status_entries: list[dict],
     note_entries: list[dict],
+    unit_aliases: Iterable[str] = (),
+    order: Literal["price_first", "quantity_first"] | None = None,
 ) -> dict:
     """1ブロック（v7の書き写し1行）をシステム判定し、shadow_results 用の1行を返す。"""
     block = block_text(raw_text, block_item["line_start"], block_item["line_end"])
 
-    match: MatchResult = match_product(block, products)
+    heading = _heading_text(raw_text, block_item.get("heading_line_start"), block_item.get("heading_line_end"))
+    match_text, name_source = product_match_text(block, heading, block_item.get("raw_product_name"))
+    match: MatchResult = match_product(match_text, products)
 
     _unit_canonical, kubun, _unit_resolved = resolve_unit_v2(block_item["raw_unit"], unit_alias_to_info)
     _cond_canonical, condition_id, _basis = resolve_condition_v2(
@@ -255,12 +292,51 @@ def _judge_block(
         review_items.append(
             {"item": "product", "reason": match.reason, "candidates": list(match.candidates)}
         )
+    heading_name_used = name_source == "HEADING" and match.status == "matched"
+    if heading_name_used:
+        # 導入から1週間は見出し由来の特定を要確認にする（外す作業は別PR）
+        review_items.append({"item": "product_heading", "reason": "heading_name", "candidates": []})
+    # 境界の条件で他の候補が消え、1つに決まったものは自動確定にしない
+    eliminated_by_boundary = match.status == "matched" and bool(match.boundary_dropped)
+    if eliminated_by_boundary:
+        review_items.append(
+            {"item": "product_boundary", "reason": "boundary_dropped", "candidates": list(match.boundary_dropped)}
+        )
     if verify_failures:
         review_items.append(
             {"item": "verify_copied", "reason": ",".join(verify_failures), "candidates": []}
         )
 
-    needs_review = match.status != "matched" or bool(verify_failures)
+    price_qty = resolve_price_quantity(
+        block,
+        gemini_price=block_item["raw_price"],
+        gemini_quantity=block_item["raw_quantity"],
+        unit_aliases=unit_aliases,
+        order=order,
+        gemini_product_name=block_item["raw_product_name"],
+    )
+    if price_qty.reasons:
+        review_items.append(
+            {"item": "price_qty", "reason": ",".join(price_qty.reasons), "candidates": []}
+        )
+
+    needs_review = (
+        match.status != "matched" or bool(verify_failures) or price_qty.needs_review or heading_name_used
+        or eliminated_by_boundary
+    )
+
+    evidence: dict = {
+        "basis": match.basis,
+        "name_source": name_source,
+        "price_qty": {
+            "basis": price_qty.basis,
+            "reasons": list(price_qty.reasons),
+            "price_line": price_qty.price_line,
+            "quantity_line": price_qty.quantity_line,
+        },
+    }
+    if eliminated_by_boundary:
+        evidence["boundary_dropped"] = list(match.boundary_dropped)
 
     return {
         "line_start": block_item["line_start"],
@@ -277,8 +353,8 @@ def _judge_block(
         "product_id": match.product_id,
         "work_id": match.work_id,
         "condition_id": condition_id,
-        "quantity_normalized": _parse_numeric(block_item["raw_quantity"]),
-        "price_normalized": _parse_numeric(block_item["raw_price"]),
+        "quantity_normalized": price_qty.quantity,
+        "price_normalized": price_qty.price,
         "ship_offer_type": ship_offer_type,
         "ship_timing": ship_timing_value,
         "note_ja": note_ja,
@@ -287,7 +363,7 @@ def _judge_block(
         "match_status": match.status,
         "needs_review": needs_review,
         "review_items": review_items,
-        "evidence": {"basis": match.basis},
+        "evidence": evidence,
         "verify_failures": verify_failures,
     }
 
@@ -295,16 +371,6 @@ def _judge_block(
 # ---------------------------------------------------------------------------
 # エントリポイント
 # ---------------------------------------------------------------------------
-
-
-def _calc_shadow_cost(input_tokens: int | None, output_tokens: int | None) -> float | None:
-    """tcg_extraction_record_svc.complete() と同じ扱い：未知モデルは None（design.md PR-C）。"""
-    if not input_tokens and not output_tokens:
-        return None
-    try:
-        return float(calculate_cost(input_tokens or 0, output_tokens or 0, model=_REQUESTED_MODEL))
-    except ValueError:
-        return None
 
 
 def run_shadow_for_job(
@@ -336,9 +402,7 @@ def run_shadow_for_job(
         )
 
     response_text = raw_copy["response_text"]
-    input_tokens = raw_copy.get("input_tokens")
-    output_tokens = raw_copy.get("output_tokens")
-    cost_usd = _calc_shadow_cost(input_tokens, output_tokens)
+    usage_counts: UsageCounts = raw_copy.get("usage_counts") or UsageCounts()
 
     try:
         blocks, parse_errors = parse_raw_copy_response(response_text, raw_text)
@@ -346,8 +410,7 @@ def run_shadow_for_job(
         logger.error("[extraction_shadow] parse failed ej=%s: %s", extraction_job_id, exc)
         return _record_failed_run(
             session, extraction_job_id, input_bytes, response_text, "PARSE_FAILED", str(exc),
-            input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,
-            started_at=started_at,
+            usage_counts=usage_counts, started_at=started_at,
         )
 
     try:
@@ -356,6 +419,7 @@ def run_shadow_for_job(
         status_entries = load_status_master(session)
         note_entries = load_note_master(session)
         (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
+        order = order_from_pattern((supplier_context or {}).get("extraction_order_pattern"))
 
         results = [
             _judge_block(
@@ -367,6 +431,8 @@ def run_shadow_for_job(
                 unit_alias_to_info=unit_alias_to_info,
                 status_entries=status_entries,
                 note_entries=note_entries,
+                unit_aliases=set(unit_alias_to_info),
+                order=order,
             )
             for block_item in blocks
         ]
@@ -380,10 +446,15 @@ def run_shadow_for_job(
             input_bytes=input_bytes,
             response_text=response_text,
             status="completed",
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_usd=cost_usd,
             started_at=started_at,
+        )
+        record_usage_event_sync(
+            session,
+            purpose="line_extraction_shadow",
+            model=_REQUESTED_MODEL,
+            sdk="google-genai",
+            counts=usage_counts,
+            extraction_shadow_run_id=run_id,
         )
         insert_shadow_results(session, run_id, results)
         session.commit()
@@ -407,14 +478,16 @@ def _record_failed_run(
     error_code: str,
     error_detail: str,
     *,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    cost_usd: float | None = None,
+    usage_counts: UsageCounts | None = None,
     started_at: datetime | None = None,
 ) -> dict:
-    """Gemini 呼び出し／パース失敗を failed run として記録する（記録自体の失敗も吸収）。"""
+    """Gemini 呼び出し／パース失敗を failed run として記録する（記録自体の失敗も吸収）。
+
+    usage_counts が None なのは呼び出し自体が失敗した場合（応答が無く usage 不明）。
+    その場合は llm_usage_events に行を作らない（design.md: 推測で作らない）。
+    """
     try:
-        insert_shadow_run(
+        run_id = insert_shadow_run(
             session,
             extraction_job_id=extraction_job_id,
             prompt_key=_PROMPT_KEY,
@@ -425,11 +498,17 @@ def _record_failed_run(
             status="failed",
             error_code=error_code,
             error_detail=error_detail[:2000],
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_usd=cost_usd,
             started_at=started_at,
         )
+        if usage_counts is not None:
+            record_usage_event_sync(
+                session,
+                purpose="line_extraction_shadow",
+                model=_REQUESTED_MODEL,
+                sdk="google-genai",
+                counts=usage_counts,
+                extraction_shadow_run_id=run_id,
+            )
         session.commit()
     except Exception:  # noqa: BLE001
         session.rollback()
@@ -446,4 +525,5 @@ __all__ = [
     "insert_shadow_run",
     "insert_shadow_results",
     "run_shadow_for_job",
+    "has_required_supplier_rule",
 ]

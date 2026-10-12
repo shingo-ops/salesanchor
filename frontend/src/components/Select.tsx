@@ -8,11 +8,13 @@
  * 実画面への展開は Task 2E で行う。
  */
 
-import { useId } from "react";
-import type { SelectHTMLAttributes } from "react";
+import { forwardRef, useId } from "react";
+import type { ReactNode, SelectHTMLAttributes } from "react";
 import "./FormField.css";
 
 export type SelectSize = "sm" | "md" | "lg";
+export type SelectIndicator = "default" | "none";
+export type SelectVariant = "standard" | "karte" | "header" | "tabbar";
 
 export interface SelectOption {
   value: string;
@@ -28,42 +30,87 @@ interface SelectControlOwnProps {
   appearance?: "field" | "bare";
 }
 
-export type SelectControlProps = SelectControlOwnProps &
-  Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectControlOwnProps>;
+type SelectControlNativeProps = Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  keyof SelectControlOwnProps | "indicator" | "children"
+>;
 
-export function SelectControl({
-  options,
-  size = "md",
-  fullWidth = false,
-  placeholder,
-  appearance = "bare",
-  className,
-  ...rest
-}: SelectControlProps) {
-  const controlClass = [
-    appearance === "field" ? "comp-field__select" : "comp-select__control",
-    appearance !== "field" && size !== "md" ? `comp-select__control--${size}` : "",
-    appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
-    className ?? "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <select className={controlClass} {...rest}>
-      {placeholder != null && (
-        <option value="" disabled={rest.required}>
-          {placeholder}
-        </option>
-      )}
-      {options.map((opt) => (
-        <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
-  );
+interface SelectControlOptionsModeProps extends SelectControlOwnProps, SelectControlNativeProps {
+  indicator?: SelectIndicator;
+  children?: never;
 }
+
+interface SelectControlChildrenModeProps
+  extends Pick<SelectControlOwnProps, "size" | "fullWidth" | "appearance">,
+    SelectControlNativeProps {
+  indicator?: SelectIndicator;
+  children: ReactNode;
+  options?: never;
+  placeholder?: never;
+}
+
+/** 用途別の種類は bare 専用。appearance="field" は standard 以外を受けない（design.md §AW） */
+type SelectControlVariantProps =
+  | { appearance?: "bare"; variant?: SelectVariant }
+  | { appearance: "field"; variant?: "standard" };
+
+export type SelectControlProps = (
+  | SelectControlOptionsModeProps
+  | SelectControlChildrenModeProps
+) &
+  SelectControlVariantProps;
+
+export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
+  function SelectControl(props, ref) {
+    const {
+      options,
+      children,
+      size = "md",
+      fullWidth = false,
+      placeholder,
+      appearance = "bare",
+      indicator = "default",
+      variant = "standard",
+      className,
+      ...rest
+    } = props;
+
+    const controlClass = [
+      appearance === "field" ? "comp-field__select" : "comp-select__control",
+      appearance !== "field" && size !== "md" ? `comp-select__control--${size}` : "",
+      appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
+      indicator === "none" ? "comp-select--no-indicator" : "",
+      variant !== "standard" ? `comp-select--${variant}` : "",
+      className ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (props.options === undefined) {
+      return (
+        <select ref={ref} className={controlClass} {...rest}>
+          {children}
+        </select>
+      );
+    }
+
+    return (
+      <select ref={ref} className={controlClass} {...rest}>
+        {placeholder != null && (
+          <option value="" disabled={rest.required}>
+            {placeholder}
+          </option>
+        )}
+        {props.options.map((opt) => (
+          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    );
+  },
+);
+SelectControl.displayName = "SelectControl";
 
 interface SelectOwnProps extends SelectControlOwnProps {
   label?: string;
@@ -72,7 +119,7 @@ interface SelectOwnProps extends SelectControlOwnProps {
 }
 
 export type SelectProps = SelectOwnProps &
-  Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectOwnProps>;
+  Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectOwnProps | "children">;
 
 export function Select({
   options,

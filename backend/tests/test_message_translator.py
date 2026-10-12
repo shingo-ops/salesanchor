@@ -71,7 +71,9 @@ def _make_gemini_json_response(
     })
     response = MagicMock()
     response.text = payload
-    usage = MagicMock()
+    # spec を絞ることで未設定フィールドは getattr(..., None) で None になる
+    # （MagicMock() の自動属性生成で int(MagicMock()) == 1 になる事故を防ぐ。ADR-1003）。
+    usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
     usage.prompt_token_count = prompt_tokens
     usage.candidates_token_count = candidates_tokens
     response.usage_metadata = usage
@@ -193,6 +195,8 @@ async def test_cache_miss_calls_gemini_and_saves():
     fake_resp = _make_gemini_json_response("テスト翻訳", confidence=0.88, original_language="en")
     _install_fake_genai(fake_resp)
 
+    call_order: list[str] = []
+
     with patch.object(
         message_translator,
         "_get_cached_translation",
@@ -203,10 +207,14 @@ async def test_cache_miss_calls_gemini_and_saves():
         new_callable=AsyncMock,
         return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
+        side_effect=lambda *a, **k: call_order.append("reset"),
+    ) as mock_reset, patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock,
-        return_value=BudgetStatus.UNDER,
-    ), patch(
+        side_effect=lambda *a, **k: call_order.append("check") or BudgetStatus.UNDER,
+    ) as mock_check, patch(
         "app.services.message_translator.record_cost",
         new_callable=AsyncMock,
     ) as mock_cost, patch.object(
@@ -234,6 +242,12 @@ async def test_cache_miss_calls_gemini_and_saves():
     mock_save.assert_awaited_once()
     db.commit.assert_awaited_once()
 
+    # reset_monthly_if_needed は check_budget より前に呼ばれる（月初リセット→予算チェックの順）
+    mock_reset.assert_awaited_once_with(db, 1)
+    assert mock_check.await_count >= 1
+    assert call_order[0] == "reset"
+    assert call_order[1] == "check"
+
 
 @pytest.mark.asyncio
 async def test_budget_exceeded_raises_error():
@@ -247,6 +261,9 @@ async def test_budget_exceeded_raises_error():
         "app.services.message_translator.load_glossary",
         new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
+    ) as mock_reset, patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.HARD_STOP,
     ):
@@ -258,6 +275,7 @@ async def test_budget_exceeded_raises_error():
             )
 
     assert exc_info.value.status == BudgetStatus.HARD_STOP
+    mock_reset.assert_awaited_once_with(db, 1)
 
 
 @pytest.mark.asyncio
@@ -271,6 +289,9 @@ async def test_no_budget_row_raises_error():
         "app.services.message_translator.load_glossary",
         new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
+    ) as mock_reset, patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.NO_BUDGET_ROW,
     ):
@@ -282,6 +303,7 @@ async def test_no_budget_row_raises_error():
             )
 
     assert exc_info.value.status == BudgetStatus.NO_BUDGET_ROW
+    mock_reset.assert_awaited_once_with(db, 1)
 
 
 @pytest.mark.asyncio
@@ -299,6 +321,9 @@ async def test_translate_inbound_override_persists_to_save():
         "app.services.message_translator.load_glossary",
         new_callable=AsyncMock,
         return_value=[],
+    ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
     ), patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock,
@@ -502,13 +527,20 @@ async def test_outbound_uses_send_model():
     fake_resp = _make_gemini_json_response("Draft EN text", confidence=0.91)
     genai_mock = _install_fake_genai(fake_resp)
 
+    call_order: list[str] = []
+
     with patch(
         "app.services.message_translator.load_glossary",
         new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
+        side_effect=lambda *a, **k: call_order.append("reset"),
+    ) as mock_reset, patch(
         "app.services.message_translator.check_budget",
-        new_callable=AsyncMock, return_value=BudgetStatus.UNDER,
-    ), patch(
+        new_callable=AsyncMock,
+        side_effect=lambda *a, **k: call_order.append("check") or BudgetStatus.UNDER,
+    ) as mock_check, patch(
         "app.services.message_translator.record_cost",
         new_callable=AsyncMock,
     ), patch.object(
@@ -537,6 +569,12 @@ async def test_outbound_uses_send_model():
     )
     mock_save_draft.assert_awaited_once()
 
+    # reset_monthly_if_needed は check_budget より前に呼ばれる（月初リセット→予算チェックの順）
+    mock_reset.assert_awaited_once_with(db, 1)
+    assert mock_check.await_count >= 1
+    assert call_order[0] == "reset"
+    assert call_order[1] == "check"
+
 
 @pytest.mark.asyncio
 async def test_outbound_budget_exceeded_raises():
@@ -547,6 +585,9 @@ async def test_outbound_budget_exceeded_raises():
         "app.services.message_translator.load_glossary",
         new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed",
+        new_callable=AsyncMock,
+    ) as mock_reset, patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.HARD_STOP,
     ):
@@ -558,6 +599,8 @@ async def test_outbound_budget_exceeded_raises():
                 draft_text="テスト",
                 target_language="en",
             )
+
+    mock_reset.assert_awaited_once_with(db, 1)
 
 
 # ---------------------------------------------------------------------------

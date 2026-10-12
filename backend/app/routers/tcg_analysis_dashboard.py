@@ -457,16 +457,22 @@ async def get_cost_summary(
     db: AsyncSession = Depends(get_db),
     _admin=Depends(require_super_admin),
 ) -> CostSummaryResponse:
+    # ADR-1004: llm_usage_events 台帳が SSOT。extraction_attempts.input_tokens/output_tokens/
+    # cost_usd は本 PR 以降書き込まれないため参照しない（input_bytes/3 推定も廃止）。
+    # LEFT JOIN で extraction_attempt_id 経由の line_extraction 行のみ拾う
+    # （FK の性質上 purpose='line_extraction' の行しか extraction_attempt_id を持たない）。
+
     # --- daily ---
     daily_rows = (await db.execute(text(f"""
         SELECT
             DATE(ea.started_at) AS date,
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE ea.phase = 'completed') AS success_calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY DATE(ea.started_at)
         ORDER BY date DESC
@@ -477,15 +483,16 @@ async def get_cost_summary(
         SELECT
             s.name AS supplier_name,
             COUNT(*) AS total_calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd,
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd,
             COALESCE(AVG(NULLIF(ea.item_count, 0)), 0.0)::double precision AS avg_items
         FROM {_TCG_SCHEMA}.extraction_attempts ea
         JOIN {_TCG_SCHEMA}.extraction_jobs ej ON ej.id = ea.extraction_job_id
         JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ea.source_message_id
         LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY s.name
         ORDER BY cost_usd DESC
@@ -495,10 +502,11 @@ async def get_cost_summary(
     total_row = (await db.execute(text(f"""
         SELECT
             COUNT(*) AS calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
     """), {"days": days})).mappings().first()
 
@@ -543,6 +551,476 @@ async def get_cost_summary(
             monthly_budget_usd=float(budget_row["monthly_budget_usd"]) if budget_row else 0.0,
             current_month_usd=float(budget_row["current_month_usd"]) if budget_row else 0.0,
         ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# LLM 使用量台帳サマリー スキーマ（ADR-1004）
+# ---------------------------------------------------------------------------
+
+
+class LlmUsageTotal(BaseModel):
+    calls: int
+    prompt_tokens: int | None
+    cached_content_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+    tool_use_prompt_tokens: int | None
+    total_tokens: int | None
+    cost_usd: float | None
+    # ADR-148 2026-10-03 追記（PR-B）: 各イベント発生時点の app_fx_rate_history レートで
+    # 換算した JPY コスト。cost_usd が NULL の行は NULL のまま伝播する（0 と推測しない）。
+    # 履歴テーブルに USD 行が無い場合は全体が NULL（fx ブロックも None になる）。
+    cost_jpy: float | None
+    computed_total_tokens: int | None
+    total_mismatch_calls: int
+
+
+class LlmUsageByPurposeItem(BaseModel):
+    purpose: str
+    calls: int
+    prompt_tokens: int | None
+    cached_content_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+    tool_use_prompt_tokens: int | None
+    total_tokens: int | None
+    cost_usd: float | None
+    cost_jpy: float | None
+    computed_total_tokens: int | None
+    total_mismatch_calls: int
+
+
+class LlmUsageByModelItem(BaseModel):
+    model: str
+    calls: int
+    cost_usd: float | None
+    cost_jpy: float | None
+
+
+class LlmUsageDailyItem(BaseModel):
+    date: str
+    calls: int
+    cost_usd: float | None
+    cost_jpy: float | None
+    prompt_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+
+
+class LlmUsageDailyByPurposeItem(BaseModel):
+    date: str
+    purpose: str
+    cost_usd: float | None
+    cost_jpy: float | None
+    calls: int
+
+
+class LlmUsageMonthlyByPurposeItem(BaseModel):
+    month: str
+    purpose: str
+    calls: int
+    cost_usd: float | None
+    cost_jpy: float | None
+
+
+class LlmUsageDailyRequestsItem(BaseModel):
+    date: str
+    attempts: int
+    completed: int
+    failed: int
+    success_rate: float | None
+
+
+class LlmUsageDailyErrorItem(BaseModel):
+    date: str
+    error_code: str
+    count: int
+
+
+class LlmUsageDailyByModelItem(BaseModel):
+    date: str
+    model: str
+    calls: int
+    prompt_tokens: int | None
+    output_tokens: int | None
+    cost_usd: float | None
+    cost_jpy: float | None
+
+
+class LlmUsageFx(BaseModel):
+    """ADR-148 2026-10-03 追記（PR-B）: cost_jpy 換算の出典情報。
+
+    public.app_fx_rate_history に USD 行が1件も無い場合は None（cost_jpy も全行 None）。
+    """
+
+    currency: str
+    latest_rate_jpy: float
+    latest_fetched_at: str
+    history_start: str
+    # 履歴の最古行より古い occurred_at を持つイベント数（最古レートへフォールバックした件数）。
+    fallback_calls: int
+
+
+class LlmUsageResponse(BaseModel):
+    total: LlmUsageTotal
+    by_purpose: list[LlmUsageByPurposeItem]
+    by_model: list[LlmUsageByModelItem]
+    daily: list[LlmUsageDailyItem]
+    daily_by_purpose: list[LlmUsageDailyByPurposeItem]
+    monthly_by_purpose: list[LlmUsageMonthlyByPurposeItem]
+    daily_requests: list[LlmUsageDailyRequestsItem]
+    daily_errors: list[LlmUsageDailyErrorItem]
+    daily_by_model: list[LlmUsageDailyByModelItem]
+    fx: LlmUsageFx | None
+
+
+_LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()"
+
+# ADR-148 2026-10-03 追記（PR-B）: 各イベントに「発生時点で有効なレート」を付与する CTE。
+# - fx_rate_jpy: occurred_at 以前の最新の app_fx_rate_history 行。無ければ（occurred_at が
+#   履歴の最古行より古い）最古行にフォールバックする（COALESCE の2項目目）。
+#   履歴テーブルに USD 行が1件も無ければ両方 NULL → fx_rate_jpy も NULL → cost_jpy も NULL。
+# - fx_is_fallback: 「occurred_at 以前に履歴行が無かった」= 最古レートへフォールバックした
+#   イベントかどうか。全7コスト集計クエリがこの CTE を共有する（1箇所に集約・DRY）。
+_EVENT_FX_CTE = f"""
+    SELECT
+        e.*,
+        COALESCE(
+            (
+                SELECT h.rate_jpy FROM public.app_fx_rate_history h
+                WHERE h.currency = 'USD' AND h.fetched_at <= e.occurred_at
+                ORDER BY h.fetched_at DESC LIMIT 1
+            ),
+            (
+                SELECT h2.rate_jpy FROM public.app_fx_rate_history h2
+                WHERE h2.currency = 'USD'
+                ORDER BY h2.fetched_at ASC LIMIT 1
+            )
+        ) AS fx_rate_jpy,
+        NOT EXISTS (
+            SELECT 1 FROM public.app_fx_rate_history h3
+            WHERE h3.currency = 'USD' AND h3.fetched_at <= e.occurred_at
+        ) AS fx_is_fallback
+    FROM public.llm_usage_events e
+    WHERE {_LLM_USAGE_WHERE}
+"""
+
+# computed_total_tokens: SDK が返した4項目（prompt/candidates/thoughts/tool_use_prompt）の
+# 単純合算。1件でも報告があれば COALESCE(...,0) で合算し、全項目が NULL の行は SUM の対象外
+# （SUM は NULL を無視するため、グループ内の全行がこの4項目すべて NULL のときだけ結果が NULL
+# になる＝推測で 0 に丸めない）。
+_COMPUTED_TOTAL_TOKENS_EXPR = """
+    SUM(
+        CASE
+            WHEN prompt_tokens IS NULL AND candidates_tokens IS NULL
+                 AND thoughts_tokens IS NULL AND tool_use_prompt_tokens IS NULL
+            THEN NULL
+            ELSE COALESCE(prompt_tokens, 0) + COALESCE(candidates_tokens, 0)
+                 + COALESCE(thoughts_tokens, 0) + COALESCE(tool_use_prompt_tokens, 0)
+        END
+    ) AS computed_total_tokens
+"""
+
+# total_mismatch_calls: Google が返した total_tokens と、こちらで計算した4項目合算が
+# 食い違う行数。total_tokens が NULL の行（未報告）はカウントしない。
+_TOTAL_MISMATCH_CALLS_EXPR = """
+    COUNT(*) FILTER (
+        WHERE total_tokens IS NOT NULL
+          AND total_tokens != COALESCE(prompt_tokens, 0) + COALESCE(candidates_tokens, 0)
+               + COALESCE(thoughts_tokens, 0) + COALESCE(tool_use_prompt_tokens, 0)
+    ) AS total_mismatch_calls
+"""
+
+
+@router.get(
+    "/tcg/analysis-dashboard/llm-usage",
+    response_model=LlmUsageResponse,
+    summary="LLM 使用量台帳サマリー（super_admin 限定）",
+)
+async def get_llm_usage(
+    days: int = Query(default=30, ge=1, le=360),
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_super_admin),
+) -> LlmUsageResponse:
+    # ADR-1004: public.llm_usage_events が SSOT。extraction_attempts 等の旧列は読まない。
+    # 日別バケットは import-trend / pipeline-trend（tcg_analysis_dashboard_svc.py の
+    # get_import_trend/get_pipeline_trend）と同じ JST DATE_TRUNC 表現に合わせる。
+    # cost-summary の daily は DATE()（セッションTZ依存）だが、こちらは「トレンド」相当の
+    # 集計のため trend 系の表現を優先した。
+    # SDK が値を返さなかった列は SUM() が NULL を返す（COALESCE で 0 に丸めない＝推測しない）。
+    #
+    # ADR-148 2026-10-03 追記（PR-B）: fx メタ情報（最新レート・最古レートの取得時刻）を
+    # 事前に1回だけ取得する。public.app_fx_rate_history に USD 行が無い場合は全列 NULL。
+    fx_meta_row = (await db.execute(text("""
+        SELECT
+            (SELECT rate_jpy FROM public.app_fx_rate_history
+             WHERE currency = 'USD' ORDER BY fetched_at DESC LIMIT 1) AS latest_rate_jpy,
+            (SELECT fetched_at FROM public.app_fx_rate_history
+             WHERE currency = 'USD' ORDER BY fetched_at DESC LIMIT 1) AS latest_fetched_at,
+            (SELECT fetched_at FROM public.app_fx_rate_history
+             WHERE currency = 'USD' ORDER BY fetched_at ASC LIMIT 1) AS history_start
+    """))).mappings().first()
+
+    total_row = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(cached_content_tokens) AS cached_content_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens,
+            SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
+            SUM(total_tokens) AS total_tokens,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy,
+            COUNT(*) FILTER (WHERE fx_is_fallback) AS fallback_calls,
+            {_COMPUTED_TOTAL_TOKENS_EXPR},
+            {_TOTAL_MISMATCH_CALLS_EXPR}
+        FROM event_fx
+    """), {"days": days})).mappings().first()
+
+    by_purpose_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            purpose,
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(cached_content_tokens) AS cached_content_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens,
+            SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
+            SUM(total_tokens) AS total_tokens,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy,
+            {_COMPUTED_TOTAL_TOKENS_EXPR},
+            {_TOTAL_MISMATCH_CALLS_EXPR}
+        FROM event_fx
+        GROUP BY purpose
+        ORDER BY cost_usd DESC NULLS LAST
+    """), {"days": days})).mappings().all()
+
+    by_model_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            model,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy
+        FROM event_fx
+        GROUP BY model
+        ORDER BY cost_usd DESC NULLS LAST
+    """), {"days": days})).mappings().all()
+
+    daily_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens
+        FROM event_fx
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo')
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') DESC
+    """), {"days": days})).mappings().all()
+
+    daily_by_purpose_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            purpose,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy
+        FROM event_fx
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), purpose
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    monthly_by_purpose_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            TO_CHAR(DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM') AS month,
+            purpose,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy
+        FROM event_fx
+        GROUP BY DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo'), purpose
+        ORDER BY DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # --- daily_requests（Google AI Studio の「リクエスト数と成功率」相当） ---
+    # extraction_attempts.started_at が母集団。success_rate は完了/（完了+失敗）で、
+    # 処理中（in-flight）のフェーズは分母から除く（ドキュメントに明記）。
+    daily_requests_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COUNT(*) AS attempts,
+            COUNT(*) FILTER (WHERE phase = 'completed') AS completed,
+            COUNT(*) FILTER (WHERE phase = 'failed') AS failed
+        FROM {_TCG_SCHEMA}.extraction_attempts
+        WHERE started_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()
+        GROUP BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo')
+        ORDER BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # --- daily_errors（種類別。error_code が NULL の行は 'UNKNOWN' に丸める） ---
+    daily_errors_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COALESCE(error_code, 'UNKNOWN') AS error_code,
+            COUNT(*) AS count
+        FROM {_TCG_SCHEMA}.extraction_attempts
+        WHERE started_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()
+          AND phase = 'failed'
+        GROUP BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), COALESCE(error_code, 'UNKNOWN')
+        ORDER BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # --- daily_by_model（モデル別の日次トークン・リクエスト数） ---
+    daily_by_model_rows = (await db.execute(text(f"""
+        WITH event_fx AS ({_EVENT_FX_CTE})
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            model,
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(
+                CASE
+                    WHEN candidates_tokens IS NULL AND thoughts_tokens IS NULL THEN NULL
+                    ELSE COALESCE(candidates_tokens, 0) + COALESCE(thoughts_tokens, 0)
+                END
+            ) AS output_tokens,
+            SUM(cost_usd) AS cost_usd,
+            SUM(cost_usd * fx_rate_jpy) AS cost_jpy
+        FROM event_fx
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), model
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # ADR-148 2026-10-03 追記（PR-B）: fx ブロック。履歴テーブルに USD 行が無ければ None
+    # （このとき各 cost_jpy も COALESCE 無しの SUM 伝播により全行 None になる）。
+    fx_block: LlmUsageFx | None = None
+    if fx_meta_row is not None and fx_meta_row["latest_rate_jpy"] is not None:
+        fx_block = LlmUsageFx(
+            currency="USD",
+            latest_rate_jpy=float(fx_meta_row["latest_rate_jpy"]),
+            latest_fetched_at=fx_meta_row["latest_fetched_at"].isoformat(),
+            history_start=fx_meta_row["history_start"].isoformat(),
+            fallback_calls=int(total_row["fallback_calls"]) if total_row and total_row["fallback_calls"] is not None else 0,
+        )
+
+    return LlmUsageResponse(
+        total=LlmUsageTotal(
+            calls=int(total_row["calls"]) if total_row else 0,
+            prompt_tokens=total_row["prompt_tokens"] if total_row else None,
+            cached_content_tokens=total_row["cached_content_tokens"] if total_row else None,
+            candidates_tokens=total_row["candidates_tokens"] if total_row else None,
+            thoughts_tokens=total_row["thoughts_tokens"] if total_row else None,
+            tool_use_prompt_tokens=total_row["tool_use_prompt_tokens"] if total_row else None,
+            total_tokens=total_row["total_tokens"] if total_row else None,
+            cost_usd=float(total_row["cost_usd"]) if total_row and total_row["cost_usd"] is not None else None,
+            cost_jpy=float(total_row["cost_jpy"]) if total_row and total_row["cost_jpy"] is not None else None,
+            computed_total_tokens=total_row["computed_total_tokens"] if total_row else None,
+            total_mismatch_calls=int(total_row["total_mismatch_calls"]) if total_row else 0,
+        ),
+        by_purpose=[
+            LlmUsageByPurposeItem(
+                purpose=r["purpose"],
+                calls=int(r["calls"]),
+                prompt_tokens=r["prompt_tokens"],
+                cached_content_tokens=r["cached_content_tokens"],
+                candidates_tokens=r["candidates_tokens"],
+                thoughts_tokens=r["thoughts_tokens"],
+                tool_use_prompt_tokens=r["tool_use_prompt_tokens"],
+                total_tokens=r["total_tokens"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+                computed_total_tokens=r["computed_total_tokens"],
+                total_mismatch_calls=int(r["total_mismatch_calls"]),
+            )
+            for r in by_purpose_rows
+        ],
+        by_model=[
+            LlmUsageByModelItem(
+                model=r["model"],
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+            )
+            for r in by_model_rows
+        ],
+        daily=[
+            LlmUsageDailyItem(
+                date=str(r["date"]),
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+                prompt_tokens=r["prompt_tokens"],
+                candidates_tokens=r["candidates_tokens"],
+                thoughts_tokens=r["thoughts_tokens"],
+            )
+            for r in daily_rows
+        ],
+        daily_by_purpose=[
+            LlmUsageDailyByPurposeItem(
+                date=str(r["date"]),
+                purpose=r["purpose"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+                calls=int(r["calls"]),
+            )
+            for r in daily_by_purpose_rows
+        ],
+        monthly_by_purpose=[
+            LlmUsageMonthlyByPurposeItem(
+                month=str(r["month"]),
+                purpose=r["purpose"],
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+            )
+            for r in monthly_by_purpose_rows
+        ],
+        daily_requests=[
+            LlmUsageDailyRequestsItem(
+                date=str(r["date"]),
+                attempts=int(r["attempts"]),
+                completed=int(r["completed"]),
+                failed=int(r["failed"]),
+                success_rate=(
+                    float(r["completed"]) / float(r["completed"] + r["failed"])
+                    if (r["completed"] + r["failed"]) > 0
+                    else None
+                ),
+            )
+            for r in daily_requests_rows
+        ],
+        daily_errors=[
+            LlmUsageDailyErrorItem(
+                date=str(r["date"]),
+                error_code=str(r["error_code"]),
+                count=int(r["count"]),
+            )
+            for r in daily_errors_rows
+        ],
+        daily_by_model=[
+            LlmUsageDailyByModelItem(
+                date=str(r["date"]),
+                model=r["model"],
+                calls=int(r["calls"]),
+                prompt_tokens=r["prompt_tokens"],
+                output_tokens=r["output_tokens"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                cost_jpy=float(r["cost_jpy"]) if r["cost_jpy"] is not None else None,
+            )
+            for r in daily_by_model_rows
+        ],
+        fx=fx_block,
     )
 
 

@@ -1,0 +1,34 @@
+name: Deploy Script Test
+
+# scripts/deploy/app-services-plan.sh の単体テスト（偽物の docker を使う。本番には触れない）。
+# docs/handoff/deploy-selective-recreate/design.md §8。
+# ※ 必須チェック（Branch Protection）には登録しない。
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/deploy/**'
+      - 'scripts/tests/test_app_services_plan.py'
+      - '.github/workflows/deploy-script-test.yml'
+  push:
+    paths:
+      - 'scripts/deploy/**'
+      - 'scripts/tests/test_app_services_plan.py'
+      - '.github/workflows/deploy-script-test.yml'
+
+jobs:
+  test:
+    name: app-services-plan test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run app-services-plan tests
+        run: python3 scripts/tests/test_app_services_plan.py

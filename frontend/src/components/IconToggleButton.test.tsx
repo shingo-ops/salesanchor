@@ -57,4 +57,27 @@ describe('IconToggleButton', () => {
     );
     expect(screen.queryByText('3')).toBeNull();
   });
+
+  it('badge variant keeps the on icon and no pressed class when not pressed', () => {
+    setup({ variant: 'badge', pressed: false });
+    const btn = screen.getByRole('button', { name: 'toggle' });
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByTestId('icon-on')).not.toBeNull();
+    expect(screen.queryByTestId('icon-off')).toBeNull();
+    expect(btn.className).toContain('comp-icon-toggle--badge');
+    expect(btn.className).not.toContain('comp-icon-toggle--pressed');
+  });
+
+  it('badge variant adds the pressed class and aria-pressed=true when pressed', () => {
+    setup({ variant: 'badge', pressed: true });
+    const btn = screen.getByRole('button', { name: 'toggle' });
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(btn.className).toContain('comp-icon-toggle--badge');
+    expect(btn.className).toContain('comp-icon-toggle--pressed');
+  });
+
+  it('default variant has no badge class', () => {
+    setup();
+    expect(screen.getByRole('button', { name: 'toggle' }).className).not.toContain('comp-icon-toggle--badge');
+  });
 });

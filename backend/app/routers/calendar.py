@@ -25,9 +25,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    get_user_system_keys,
     load_user_permissions,
+    require_tenant_admin,
     reset_tenant_context,
 )
+from app.auth.system_roles import is_tenant_admin
 from app.database import get_db
 from app.models import User
 from app.services import calendar_service as cal_svc
@@ -39,14 +42,6 @@ router = APIRouter()
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
-
-
-def _require_admin(user: User) -> None:
-    if getattr(user, "role", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作は管理者のみ実行できます",
-        )
 
 
 def _owner_display_name(row: dict) -> str:
@@ -384,7 +379,7 @@ async def update_event(
             detail="更新フィールドが指定されていません",
         )
 
-    # 権限確認: 自分のイベントか channels.manage 権限保持者のみ
+    # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
     row = await db.execute(
         text("SELECT created_by_user_id, calendar_type FROM calendar_events WHERE id = :id"),
         {"id": event_id},
@@ -394,7 +389,7 @@ async def update_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
     created_by, _ = record[0], record[1]
-    if created_by != user.id and getattr(user, "role", None) != "admin":
+    if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
 
     try:
@@ -435,7 +430,7 @@ async def delete_event(
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
-    if record[0] != user.id and getattr(user, "role", None) != "admin":
+    if record[0] != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")
 
     await cal_svc.delete_event(db, tenant_id=tenant_id, event_id=event_id)
@@ -466,11 +461,10 @@ async def get_sync_mode(
 async def update_sync_mode(
     body: SyncModeBody,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """同期モードを変更する（admin のみ）。"""
-    _require_admin(user)
 
     if body.sync_mode not in _VALID_SYNC_MODES:
         raise HTTPException(

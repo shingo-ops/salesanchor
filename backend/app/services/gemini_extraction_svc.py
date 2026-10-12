@@ -2,7 +2,7 @@
 MIG-04 Stage 2: Gemini 抽出サービス。
 
 RawExtractionV2.js (GAS) の RAW_EXTRACTION_V2_PROMPT_TEXT を Python に移植し、
-Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
+Gemini（モデルは _GEMINI_MODEL を参照）で LINE メッセージから商品明細を抽出する。
 
 設計:
   - google-genai SDK (新) を使用
@@ -12,7 +12,7 @@ Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
 
 既存APIとの互換:
   - プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + input（v3では作品マスタ参照を追加）
-  - モデル: gemini-3.6-flash / temperature=0
+  - モデル: _GEMINI_MODEL / temperature=0
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 
+from app.services import llm_budget
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
@@ -344,7 +345,6 @@ def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[d
     # Knowledge リンクからの注入
     if knowledge_links:
         delimiters = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "block_delimiter"]
-        skip_conds = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "skip_condition"]
         status_kws = [
             (lnk["pattern"], lnk.get("normalized_to") or "")
             for lnk in knowledge_links if lnk["category"] == "status_keyword"
@@ -353,8 +353,6 @@ def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[d
         if delimiters:
             lines.append(f"商品ブロックの区切り記号: {', '.join(delimiters)}")
             lines.append("上記の記号で始まる行が各商品ブロックの開始です。")
-        if skip_conds:
-            lines.append(f"以下のキーワードを含むブロックは出力対象外（スキップ）: {', '.join(skip_conds)}")
         if status_kws:
             status_parts = [f"「{kw}」→{norm}" for kw, norm in status_kws]
             lines.append(f"ステータス判定: {', '.join(status_parts)}")
@@ -374,7 +372,7 @@ def call_gemini_extraction(
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
 
-    モデル: gemini-3.6-flash（GAS 側デフォルトと同一）
+    モデル: _GEMINI_MODEL
     temperature: 0
     プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + prompt_input（v3では作品マスタ参照を追加）
     同期 SDK (models.generate_content) を使用。
@@ -444,12 +442,16 @@ def call_gemini_extraction(
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
-    # トークン数取得
+    # トークン数取得（ADR-1004: llm_usage_events 台帳が SSOT）
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    usage_counts = llm_budget.usage_counts_from(usage)
+    input_tokens = usage_counts.prompt_tokens or 0
+    output_tokens = (usage_counts.candidates_tokens or 0) + (usage_counts.thoughts_tokens or 0)
     if recorder is not None:
-        recorder.on_response(result_text, input_tokens=input_tokens, output_tokens=output_tokens)
+        recorder.on_response(
+            result_text, input_tokens=input_tokens, output_tokens=output_tokens,
+            usage_counts=usage_counts,
+        )
     logger.info(
         "[gemini_extraction] API response received, response_len=%d", len(result_text)
     )
@@ -525,12 +527,18 @@ def call_gemini_raw_copy(
 
     result_text = getattr(response, "text", "") or ""
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    usage_counts = llm_budget.usage_counts_from(usage)
+    input_tokens = usage_counts.prompt_tokens or 0
+    output_tokens = (usage_counts.candidates_tokens or 0) + (usage_counts.thoughts_tokens or 0)
     logger.info(
         "[gemini_extraction] raw_copy API response received, response_len=%d", len(result_text)
     )
-    return {"response_text": result_text, "input_tokens": input_tokens, "output_tokens": output_tokens}
+    return {
+        "response_text": result_text,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "usage_counts": usage_counts,
+    }
 
 
 # ---------------------------------------------------------------------------

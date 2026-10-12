@@ -46,8 +46,6 @@ from app.schemas.central_masters import (
     SupplierExtractionRulesUpdate,
     SupplierKnowledgeLinkCreate,
     SupplierKnowledgeLinkResponse,
-    SupplierPromptResponse,
-    SupplierPromptUpdate,
     SupplierSourceMessagesResponse,
 )
 
@@ -597,151 +595,6 @@ async def delete_routing(routing_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # ============================================================================
-# ADR-085: 仕入先別 Gemini プロンプト (public.supplier_prompts)
-#   GET  /super-admin/suppliers/{id}/prompt  未登録なら空プロンプトを返す
-#   PUT  /super-admin/suppliers/{id}/prompt  upsert (UNIQUE(supplier_id))
-# ============================================================================
-@router.get(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
-)
-async def get_supplier_prompt(
-    supplier_id: int, db: AsyncSession = Depends(get_db)
-):
-    row = (
-        await db.execute(
-            text(
-                "SELECT supplier_id, prompt, is_active "
-                "FROM public.supplier_prompts WHERE supplier_id = :sid"
-            ),
-            {"sid": supplier_id},
-        )
-    ).mappings().first()
-    if not row:
-        # 未登録の仕入先は空プロンプトを返す（編集開始用）
-        return SupplierPromptResponse(
-            supplier_id=supplier_id, prompt="", is_active=True
-        )
-    return SupplierPromptResponse(**dict(row))
-
-
-@router.put(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
-)
-async def upsert_supplier_prompt(
-    supplier_id: int,
-    data: SupplierPromptUpdate,
-    user: User = Depends(require_super_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        row = (
-            await db.execute(
-                text(
-                    "INSERT INTO public.supplier_prompts "
-                    "(supplier_id, prompt, is_active, updated_by) "
-                    "VALUES (:sid, :prompt, :active, :uid) "
-                    "ON CONFLICT (supplier_id) DO UPDATE SET "
-                    "prompt = EXCLUDED.prompt, is_active = EXCLUDED.is_active, "
-                    "updated_by = EXCLUDED.updated_by, updated_at = NOW() "
-                    "RETURNING supplier_id, prompt, is_active"
-                ),
-                {
-                    "sid": supplier_id,
-                    "prompt": data.prompt,
-                    "active": data.is_active,
-                    "uid": user.id,
-                },
-            )
-        ).mappings().first()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"仕入先が存在しません: {exc.orig}",
-        )
-    await db.commit()
-    return SupplierPromptResponse(**dict(row))
-
-
-# ============================================================================
-# ADR SA-06: 解析精度サマリー (v_supplier_parse_stats)
-#   GET /super-admin/suppliers/{id}/parse-stats
-# ============================================================================
-
-
-class SupplierParseStatRow(BaseModel):
-    """v_supplier_parse_stats の 1 行（フロントエンド表示用）。"""
-
-    supplier_id: int
-    supplier_name: str | None
-    day: str  # ISO date string (YYYY-MM-DD)
-    total_lines: int
-    parsed_count: int
-    excluded_count: int
-    unparsed_count: int
-    exclude_rate_pct: float | None
-    avg_confidence: float | None
-
-
-@router.get(
-    "/super-admin/suppliers/{supplier_id}/parse-stats",
-    response_model=list[SupplierParseStatRow],
-    dependencies=[Depends(require_super_admin)],
-)
-async def get_supplier_parse_stats(
-    supplier_id: int,
-    days: int = Query(default=30, ge=1, le=365),
-    db: AsyncSession = Depends(get_db),
-):
-    """仕入元の解析精度サマリーを v_supplier_parse_stats から取得する。
-
-    Args:
-        supplier_id: 対象の仕入元 ID
-        days: 過去 N 日分を返す（最大 365）
-    """
-    result = await db.execute(
-        text(
-            """
-            SELECT
-                supplier_id,
-                supplier_name,
-                day::date AS day,
-                total_lines,
-                parsed_count,
-                excluded_count,
-                unparsed_count,
-                exclude_rate_pct,
-                avg_confidence
-            FROM public.v_supplier_parse_stats
-            WHERE supplier_id = :supplier_id
-              AND day >= NOW() - INTERVAL '1 day' * :days
-            ORDER BY day DESC
-            """
-        ),
-        {"supplier_id": supplier_id, "days": days},
-    )
-    rows = result.mappings().all()
-    return [
-        SupplierParseStatRow(
-            supplier_id=row["supplier_id"],
-            supplier_name=row["supplier_name"],
-            day=str(row["day"]),
-            total_lines=int(row["total_lines"] or 0),
-            parsed_count=int(row["parsed_count"] or 0),
-            excluded_count=int(row["excluded_count"] or 0),
-            unparsed_count=int(row["unparsed_count"] or 0),
-            exclude_rate_pct=float(row["exclude_rate_pct"]) if row["exclude_rate_pct"] is not None else None,
-            avg_confidence=float(row["avg_confidence"]) if row["avg_confidence"] is not None else None,
-        )
-        for row in rows
-    ]
-
-
-# ============================================================================
 # 仕入元抽出ルール (public.suppliers.extraction_* 列)
 #   GET  /super-admin/suppliers/extraction-overview  — 全仕入元 + unit_ng数 + ルール有無
 #   GET  /super-admin/suppliers/{id}/extraction-rules — ルール取得 + 最新原文
@@ -751,7 +604,8 @@ async def get_supplier_parse_stats(
 _EXTRACTION_RULE_COLS = (
     "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
     "extraction_default_unit, extraction_notes, extraction_state_format, "
-    "extraction_example_text, extraction_ship_format"
+    "extraction_example_text, extraction_ship_format, "
+    "extraction_layout_rules, extraction_hard_cases"
 )
 
 _EXTRACTION_RULE_UPDATABLE = {
@@ -763,6 +617,8 @@ _EXTRACTION_RULE_UPDATABLE = {
     "extraction_state_format",
     "extraction_example_text",
     "extraction_ship_format",
+    "extraction_layout_rules",
+    "extraction_hard_cases",
 }
 
 
@@ -870,6 +726,8 @@ async def get_supplier_extraction_rules(
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
         extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
         latest_raw_text=raw_row["raw_text"] if raw_row else None,
     )
 
@@ -921,6 +779,8 @@ async def update_supplier_extraction_rules(
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
         extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
         latest_raw_text=None,  # PATCH 応答では原文は含まない
     )
 
@@ -968,7 +828,7 @@ async def list_supplier_source_messages(
 #   POST /super-admin/knowledge-rules
 # ============================================================================
 
-_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "skip_condition", "status_keyword")
+_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "status_keyword")
 
 
 @router.get(
@@ -978,7 +838,7 @@ _EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "skip_condition", "status
     summary="共用Knowledgeルール一覧（カテゴリ別）",
 )
 async def list_knowledge_rules(
-    category: str = Query(..., description="block_delimiter / skip_condition / status_keyword"),
+    category: str = Query(..., description="block_delimiter / status_keyword"),
     db: AsyncSession = Depends(get_db),
 ) -> list[KnowledgeRuleSimpleResponse]:
     if category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:

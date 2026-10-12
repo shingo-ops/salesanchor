@@ -2,10 +2,13 @@ import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
+import { addExcludeWord } from "./productDetailModel";
 import { importMessage } from "./importMessages";
+import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
 
-export interface PreviewRow { row_no: string; japanese_title: string; mark: string; blocking: string[]; warnings: string[]; product_id?: string; action?: "updated" | "unchanged"; changes?: { field: string; before: string | string[]; after: string | string[] }[] }
+export interface PreviewRow { row_no: string; japanese_title: string; mark: string; blocking: string[]; warnings: string[]; product_id?: string; action?: "updated" | "unchanged"; code_collisions?: CodeCollision[]; changes?: { field: string; before: string | string[]; after: string | string[] }[] }
 export interface PreviewResponse { filename: string; digest: string; file_errors: string[]; total: number; ok: number; blocked: number; rows: PreviewRow[]; mode?: "update"; updated?: number; unchanged?: number }
+const collisionNames = (items: CodeCollision[] = []) => Object.fromEntries(items.map(c => [c.product_id, c.work_name ? `${c.name} (${c.work_name})` : c.name]));
 interface Props { preview: PreviewResponse; busy: boolean; onCommit: () => void; onCancel: () => void }
 export function TcgProductImportPreview({ preview, busy, onCommit, onCancel }: Props) {
   const { t } = useTranslation();
@@ -15,7 +18,7 @@ export function TcgProductImportPreview({ preview, busy, onCommit, onCancel }: P
     { key: "japanese_title", header: t("productCsv.title") },
     { key: "mark", header: t("productCsv.mark") },
     { key: "status", header: t("productCsv.status"), renderCell: row => t(row.blocking.length ? "productCsv.blocked" : update ? row.action === "updated" ? "productCsv.updated" : "productCsv.unchanged" : row.warnings.length ? "productCsv.warning" : "productCsv.ready") },
-    { key: "messages", header: t("productCsv.details"), renderCell: row => <ul>{[...row.blocking, ...row.warnings].map((code, index) => <li key={index}>{importMessage(code, t)}</li>)}</ul> },
+    { key: "messages", header: t("productCsv.details"), renderCell: row => <><ul>{[...row.blocking, ...row.warnings].map((code, index) => <li key={index}>{importMessage(code, t, collisionNames(row.code_collisions))}</li>)}</ul><CodeCollisionNotice collisions={row.code_collisions ?? []} onAddToOther={addExcludeWord} /></> },
   ];
   if (update) {
     columns.splice(1, 0, { key: "product_id", header: t("productCsv.id") });

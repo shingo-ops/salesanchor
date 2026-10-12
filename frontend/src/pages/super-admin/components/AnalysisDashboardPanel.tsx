@@ -43,13 +43,15 @@ import { DashboardIcons } from "../../../constants/icons";
 import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import type { SupplierQualitySummary } from "../../../features/tcg-analysis-review/supplierQuality";
+import { reviewReasonLabel } from "../../../features/tcg-analysis-review/reviewReasonLabel";
+import { LlmUsageSection } from "./LlmUsageSection";
 import "./AnalysisDashboardPanel.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
 // ──────────────────────────────────────────────────────────────────────────────
 
-type DashboardTab = "import" | "extraction" | "analysis" | "distribution";
+type DashboardTab = "import" | "extraction" | "analysis" | "distribution" | "usage";
 
 interface ImportResultResponse {
   status: "imported" | "already_imported";
@@ -431,6 +433,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       product_id_unresolved_count: number;
       unit_unresolved_count: number;
       condition_fallback_count: number | null;
+      condition_give_up_count?: number | null;
+      condition_manual_reviewed_count?: number | null;
     }
     interface ApiQualityResponse {
       summaries: ApiSummaryRaw[];
@@ -448,6 +452,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             productIdUnresolvedCount: raw.product_id_unresolved_count,
             unitUnresolvedCount: raw.unit_unresolved_count,
             conditionFallbackCount: raw.condition_fallback_count,
+            conditionGiveUpCount: raw.condition_give_up_count ?? null,
+            conditionManualReviewedCount: raw.condition_manual_reviewed_count ?? null,
           }))
         );
       })
@@ -465,6 +471,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
     { key: "extraction", label: t("analysisRules.dashboard.tabExtraction") },
     { key: "analysis", label: t("analysisRules.dashboard.tabAnalysis") },
     { key: "distribution", label: t("analysisRules.dashboard.tabDistribution") },
+    { key: "usage", label: t("analysisRules.dashboard.tabUsage") },
   ];
 
   const periodOptions: SelectOption[] = [
@@ -577,6 +584,9 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           t={t}
         />
       )}
+
+      {/* ── Usage Tab ────────────────────────────────────────────────────── */}
+      {activeTab === "usage" && <LlmUsageSection days={trendDays} t={t} />}
     </div>
   );
 }
@@ -1629,7 +1639,7 @@ function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualit
             <ul className="analysis-dashboard-reason-list">
               {data.review_reasons.map((item) => (
                 <li key={item.reason} className="analysis-dashboard-reason-item">
-                  <span>{item.reason}</span>
+                  <span>{reviewReasonLabel(t, item.reason)}</span>
                   <span className="analysis-dashboard-reason-count">
                     {item.count.toLocaleString()}
                     {t("analysisRules.dashboard.items")}

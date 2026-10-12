@@ -1,0 +1,7 @@
+ProductEditPage: files=frontend/src/pages/products/ProductEditPage.tsx n=14 byType={"omitted":5,"date":1,"number":7,"url":1} groups={"G06":14} lines=215,224,251,262,270,274,294,298,317,321,325,329,333,337
+CommissionPanel: files= n=0 byType={} groups={} lines=
+pages/commission-settings/CommissionSettingsPage.tsx:220 number G02
+pages/commission-settings/CommissionSettingsPage.tsx:275 number G21
+pages/commission-settings/CommissionSettingsPage.tsx:287 number G20
+pages/commissions/CommissionsPage.tsx:141 number G21
+pages/commissions/CommissionsPage.tsx:153 number G20

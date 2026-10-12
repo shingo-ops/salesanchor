@@ -354,6 +354,21 @@ async def get_company(
     return await _compose_response(db, dict(row))
 
 
+async def _ensure_sales_rep_in_tenant(db: AsyncSession, sales_rep_id: int | None, tenant_id: int) -> None:
+    """sales_rep_id（public.users.id）が同テナントに存在することを確認する（ADR-1008）。NULL は許可。"""
+    if sales_rep_id is None:
+        return
+    user_check = await db.execute(
+        text("SELECT id FROM public.users WHERE id = :uid AND tenant_id = :tid"),
+        {"uid": sales_rep_id, "tid": tenant_id},
+    )
+    if not user_check.first():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="指定された担当者が見つかりません",
+        )
+
+
 @router.post(
     "/companies",
     response_model=CompanyResponse,
@@ -372,6 +387,8 @@ async def create_company(
         lead_check = await db.execute(text("SELECT id FROM leads WHERE id = :id"), {"id": data.lead_id})
         if not lead_check.first():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
+
+        await _ensure_sales_rep_in_tenant(db, data.sales_rep_id, tenant_id)
 
         explicit_code = data.company_code and data.company_code.strip()
         # CO-PEND-<8hex> = 最大 16 文字 (VARCHAR(20) に収まる)。
@@ -521,6 +538,9 @@ async def update_company(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="更新するフィールドを少なくとも1つ指定してください",
         )
+
+    if "sales_rep_id" in update_data:
+        await _ensure_sales_rep_in_tenant(db, update_data["sales_rep_id"], tenant_id)
 
     addresses = update_data.pop("addresses", None)
     sales_channels = update_data.pop("sales_channels", None)

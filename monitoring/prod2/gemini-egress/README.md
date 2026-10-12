@@ -53,4 +53,4 @@ prod2 側に残るのは `tinyproxy` だけになった。転送は prod1 側が
 - prod1 の `gemini-egress` コンテナ（backnet 上）が、中継専用鍵（`ubuntu@`、`restrict` + `permitopen="127.0.0.1:8888"` 制限付き）で prod2 に SSH し、`-L 0.0.0.0:18888:127.0.0.1:8888` で prod2 の tinyproxy をローカルの 18888 番に転送する。中継の起動・停止は prod1 側（`docker-compose.yml` の `gemini-egress` サービス）で行う。
 - prod2 の `~/.ssh/authorized_keys` に、中継専用鍵の公開鍵を `restrict,permitopen="127.0.0.1:8888"` 付きの1行として登録している（鍵の中身はこの README には書かない）。
 
-`tunnel/`（Dockerfile）は 2026-09-30 の方式変更で使わなくなった。compose からは外してある。削除は、あとの片付けの便で行う。
+`tunnel/`（Dockerfile）は 2026-09-30 の方式変更で使わなくなり、同日の片付け PR で削除した。

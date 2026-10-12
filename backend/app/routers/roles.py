@@ -14,17 +14,19 @@ from __future__ import annotations
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    get_user_system_keys,
     load_user_permissions,
     require_permission,
     reset_tenant_context,
 )
+from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS, is_tenant_admin
 from app.cache import invalidate_tenant_permissions, invalidate_user_permissions
 from app.database import get_db
 from app.models import User
@@ -44,24 +46,53 @@ router = APIRouter()
 _UPDATABLE_COLUMNS = {"name", "color", "priority", "description"}
 
 
-async def _get_role(db: AsyncSession, role_id: int) -> dict | None:
+def _is_super_admin(user: User) -> bool:
+    return bool(getattr(user, "is_super_admin", False))
+
+
+def _visible_role_sql(column: str = "system_key") -> str:
+    """super admin 以外には見せないロール（system_key で見分ける）を除く SQL 条件。
+
+    使う側は _hidden_role_params() の値を渡し、_visible_text() で text を作る。
+    """
+    return f"(:show_hidden OR {column} IS NULL OR {column} NOT IN :hidden_keys)"
+
+
+def _hidden_role_params(user: User) -> dict:
+    return {
+        "show_hidden": _is_super_admin(user),
+        "hidden_keys": sorted(TENANT_HIDDEN_SYSTEM_KEYS),
+    }
+
+
+def _visible_text(sql: str):
+    return text(sql).bindparams(bindparam("hidden_keys", expanding=True))
+
+
+async def _get_role(db: AsyncSession, role_id: int, current_user: User) -> dict | None:
+    """ロールを1件取る。super admin 以外には隠すロールを「無い」ものとして扱う。"""
     result = await db.execute(
         text("""
             SELECT id, tenant_id, name, color, priority, is_system, description,
-                   created_at, updated_at
+                   system_key, created_at, updated_at
             FROM roles WHERE id = :id
         """),
         {"id": role_id},
     )
     row = result.mappings().first()
-    return dict(row) if row else None
+    if not row:
+        return None
+    role = dict(row)
+    is_hidden = role.pop("system_key") in TENANT_HIDDEN_SYSTEM_KEYS
+    if is_hidden and not _is_super_admin(current_user):
+        return None
+    return role
 
 
 async def _max_priority_for_user(db: AsyncSession, user_id: int) -> int:
     """
     該当ユーザーが保持しているロールの最大 priority を返す。
-    ロール未割当ユーザーは -1（何も管理できない）。
-    adminロール保持者は 1000（オーナーと同等扱い、後方互換）。
+    ロール未割当ユーザーは -1（何も管理できない）。users.role は見ない（正本は user_roles）。
     """
     result = await db.execute(
         text("""
@@ -73,18 +104,7 @@ async def _max_priority_for_user(db: AsyncSession, user_id: int) -> int:
         {"uid": user_id},
     )
     row = result.first()
-    max_prio = int(row.max_prio) if row and row.max_prio is not None else -1
-
-    if max_prio < 0:
-        # ロール未割当: 後方互換で public.users.role を確認
-        user_result = await db.execute(
-            text("SELECT role FROM public.users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        user_row = user_result.fetchone()
-        if user_row and user_row[0] == "admin":
-            return 1000
-    return max_prio
+    return int(row.max_prio) if row and row.max_prio is not None else -1
 
 
 # =========================================================================
@@ -122,6 +142,7 @@ async def get_my_permissions(
       導線を出すかどうかの判定に使用）。
     """
     keys = await load_user_permissions(db, tenant_id, current_user.id)
+    system_keys = await get_user_system_keys(db, current_user.id)
 
     # テナント単位フィーチャーフラグ: enabled=true の feature_key を配列で返す
     features_result = await db.execute(
@@ -136,6 +157,9 @@ async def get_my_permissions(
 
     return {
         "permissions": sorted(keys),
+        "user_id": current_user.id,
+        # owner / admin のシステムロールを持つか（user_roles が正本。users.role は使わない）
+        "is_tenant_admin": is_tenant_admin(system_keys),
         "is_super_admin": bool(getattr(current_user, "is_super_admin", False)),
         # Sprint 9 / F9 v1.2: 中央 admin が自テナントの Phase 状態を取得するために必要
         "tenant_id": tenant_id,
@@ -163,13 +187,14 @@ async def list_roles(
     """ロール一覧を取得する（priority降順）"""
     offset = (page - 1) * per_page
     result = await db.execute(
-        text("""
+        _visible_text(f"""
             SELECT id, tenant_id, name, color, priority, is_system, description,
                    created_at, updated_at
-            FROM roles ORDER BY priority DESC, name
+            FROM roles WHERE {_visible_role_sql()}
+            ORDER BY priority DESC, name
             LIMIT :limit OFFSET :offset
         """),
-        {"limit": per_page, "offset": offset},
+        {"limit": per_page, "offset": offset, **_hidden_role_params(current_user)},
     )
     rows = result.mappings().all()
     return [RoleResponse(**row) for row in rows]
@@ -244,7 +269,7 @@ async def update_role(
     current_user: User = Depends(get_current_user),
 ):
     """ロール情報を更新する（部分更新）。システムロール不可、priority制限あり。"""
-    old = await _get_role(db, role_id)
+    old = await _get_role(db, role_id, current_user)
     if not old:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
     if old["is_system"]:
@@ -316,7 +341,7 @@ async def delete_role(
     current_user: User = Depends(get_current_user),
 ):
     """ロールを削除する（システムロール不可、priority制限あり）"""
-    old = await _get_role(db, role_id)
+    old = await _get_role(db, role_id, current_user)
     if not old:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
     if old["is_system"]:
@@ -357,7 +382,7 @@ async def get_role_permissions(
     current_user: User = Depends(get_current_user),
 ):
     """ロールに割り当てられている権限一覧を取得する"""
-    role = await _get_role(db, role_id)
+    role = await _get_role(db, role_id, current_user)
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
 
@@ -387,7 +412,7 @@ async def set_role_permissions(
     current_user: User = Depends(get_current_user),
 ):
     """ロールに割り当てる権限を一括更新する（既存の割り当てを置き換える）"""
-    role = await _get_role(db, role_id)
+    role = await _get_role(db, role_id, current_user)
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
     if role["is_system"]:
@@ -479,14 +504,14 @@ async def get_user_roles(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたユーザーが見つかりません")
 
     result = await db.execute(
-        text("""
+        _visible_text(f"""
             SELECT ur.role_id, r.name AS role_name, r.color, r.priority, ur.assigned_at
             FROM user_roles ur
             JOIN roles r ON r.id = ur.role_id
-            WHERE ur.user_id = :uid
+            WHERE ur.user_id = :uid AND {_visible_role_sql("r.system_key")}
             ORDER BY r.priority DESC
         """),
-        {"uid": user_id},
+        {"uid": user_id, **_hidden_role_params(current_user)},
     )
     rows = result.mappings().all()
     return [UserRoleResponse(**row) for row in rows]
@@ -514,9 +539,13 @@ async def set_user_roles(
 
     # 指定ロールの妥当性確認＋priority制限
     my_max = await _max_priority_for_user(db, current_user.id)
+    hidden_params = _hidden_role_params(current_user)
+    # 隠すロールは super admin 以外には「存在しない」扱い（下の missing で 400）
     role_check = await db.execute(
-        text("SELECT id, priority FROM roles WHERE id = ANY(:ids)"),
-        {"ids": data.role_ids},
+        _visible_text(
+            f"SELECT id, priority FROM roles WHERE id IN :ids AND {_visible_role_sql()}"
+        ).bindparams(bindparam("ids", expanding=True)),
+        {"ids": data.role_ids, **hidden_params},
     )
     role_rows = role_check.fetchall()
     found_ids = {row.id for row in role_rows}
@@ -533,10 +562,14 @@ async def set_user_roles(
                 detail=f"自分の最大priority以上のロール（id={row.id}）は付与できません",
             )
 
-    # 既存割り当てを全削除してから挿入
+    # 既存割り当てを消してから挿入。super admin 以外の操作では、既に持つ隠すロールは外さない
     await db.execute(
-        text("DELETE FROM user_roles WHERE user_id = :uid"),
-        {"uid": user_id},
+        _visible_text(f"""
+            DELETE FROM user_roles WHERE user_id = :uid AND role_id IN (
+                SELECT id FROM roles WHERE {_visible_role_sql()}
+            )
+        """),
+        {"uid": user_id, **hidden_params},
     )
     for rid in data.role_ids:
         await db.execute(

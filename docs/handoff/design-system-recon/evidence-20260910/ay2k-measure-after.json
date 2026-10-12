@@ -1,0 +1,1396 @@
+{
+ "invoice-1280": {
+  "rows": [
+   [
+    {
+     "testid": "invoice-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 293
+    },
+    {
+     "testid": "invoice-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 319,
+     "clientWidth": 293
+    },
+    {
+     "testid": "invoice-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "invoice-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ],
+   [
+    {
+     "testid": "invoice-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 293
+    },
+    {
+     "testid": "invoice-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 319,
+     "clientWidth": 293
+    },
+    {
+     "testid": "invoice-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(30, 58, 138)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "invoice-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ]
+  ],
+  "tableWidth": 1130,
+  "tableScroll": 1130,
+  "tableParentClient": 1130,
+  "docScrollWidth": 1280,
+  "docClientWidth": 1280,
+  "priceCheck": {
+   "12345.67-unfocused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   },
+   "12345.67-focused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-focused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-unfocused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   }
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies"
+  ]
+ },
+ "invoice-1440": {
+  "rows": [
+   [
+    {
+     "testid": "invoice-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 453
+    },
+    {
+     "testid": "invoice-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 453,
+     "clientWidth": 453
+    },
+    {
+     "testid": "invoice-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "invoice-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ],
+   [
+    {
+     "testid": "invoice-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 453
+    },
+    {
+     "testid": "invoice-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 453,
+     "clientWidth": 453
+    },
+    {
+     "testid": "invoice-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "invoice-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(30, 58, 138)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "invoice-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ]
+  ],
+  "tableWidth": 1290,
+  "tableScroll": 1290,
+  "tableParentClient": 1290,
+  "docScrollWidth": 1440,
+  "docClientWidth": 1440,
+  "priceCheck": {
+   "12345.67-unfocused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   },
+   "12345.67-focused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-focused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-unfocused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   }
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies"
+  ]
+ },
+ "quote-1280": {
+  "rows": [
+   [
+    {
+     "testid": "quote-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 293
+    },
+    {
+     "testid": "quote-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 319,
+     "clientWidth": 293
+    },
+    {
+     "testid": "quote-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "quote-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ],
+   [
+    {
+     "testid": "quote-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 293
+    },
+    {
+     "testid": "quote-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 295.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 319,
+     "clientWidth": 293
+    },
+    {
+     "testid": "quote-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(30, 58, 138)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "quote-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ]
+  ],
+  "tableWidth": 1130,
+  "tableScroll": 1130,
+  "tableParentClient": 1130,
+  "docScrollWidth": 1280,
+  "docClientWidth": 1280,
+  "priceCheck": {
+   "12345.67-unfocused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   },
+   "12345.67-focused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-focused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-unfocused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   }
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ },
+ "quote-1440": {
+  "rows": [
+   [
+    {
+     "testid": "quote-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 453
+    },
+    {
+     "testid": "quote-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 453,
+     "clientWidth": 453
+    },
+    {
+     "testid": "quote-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "quote-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ],
+   [
+    {
+     "testid": "quote-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "600",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": false,
+     "scrollWidth": 652,
+     "clientWidth": 453
+    },
+    {
+     "testid": "quote-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 455.421875,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 453,
+     "clientWidth": 453
+    },
+    {
+     "testid": "quote-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    },
+    {
+     "testid": "quote-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 68,
+     "clientWidth": 68
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 120,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(30, 58, 138)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 118,
+     "clientWidth": 118
+    },
+    {
+     "testid": "quote-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 30.390625,
+     "style": {
+      "border": "1px solid rgb(226, 232, 240)",
+      "padding": "4px 8px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "border-radius": "6px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)",
+      "height": "30.3906px"
+     },
+     "notClipped": true,
+     "scrollWidth": 78,
+     "clientWidth": 78
+    }
+   ]
+  ],
+  "tableWidth": 1290,
+  "tableScroll": 1290,
+  "tableParentClient": 1290,
+  "docScrollWidth": 1440,
+  "docClientWidth": 1440,
+  "priceCheck": {
+   "12345.67-unfocused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   },
+   "12345.67-focused": {
+    "value": "12345.67",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-focused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": true,
+    "fits": true
+   },
+   "123456.78-unfocused(ref)": {
+    "value": "123456.78",
+    "scrollWidth": 118,
+    "clientWidth": 118,
+    "width": 120,
+    "focused": false,
+    "fits": true
+   }
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ }
+}

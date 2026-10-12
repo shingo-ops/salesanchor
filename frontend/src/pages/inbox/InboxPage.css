@@ -69,20 +69,6 @@
 .inbox-platform-select {
   margin-left: auto;
   flex-shrink: 0;
-  height: var(--height-tab-item);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-  font-family: inherit;
-  cursor: pointer;
-}
-.inbox-platform-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  color: var(--text-primary);
 }
 
 /* 3カラムコンテンツエリア */
@@ -126,10 +112,9 @@
   pointer-events: none;
   flex-shrink: 0;
 }
-/* inbox固有: width と icon用 padding-left のみ上書き */
+/* inbox固有: width のみ（見た目・icon用 padding は金型 TextFieldControl の種類 search） */
 .inbox-search-input {
   width: 100%;
-  padding: calc(var(--space-2) + 1.5px) var(--space-3) calc(var(--space-2) + 1.5px) calc(var(--space-3) + 16px + var(--space-2));
 }
 
 /* 管理ボタン */
@@ -409,17 +394,6 @@
 .inbox-page-filter-wrap {
   padding: var(--space-1) var(--space-3) var(--space-6px);
 }
-.inbox-page-filter-select {
-  width: 100%;
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--font-xs);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  box-sizing: border-box;
-}
 
 /* ---- 中央パネル ---- */
 .inbox-center {
@@ -658,18 +632,7 @@
 .inbox-textarea {
   flex: 1;
   min-width: 0;
-  border: none;
-  padding: 0;
-  font-size: var(--font-base);
-  resize: none;
-  font-family: inherit;
-  outline: none;
-  background: transparent;
-  color: var(--text-primary);
-  box-sizing: border-box;
-  line-height: 1.4;
 }
-.inbox-textarea:disabled { cursor: not-allowed; opacity: var(--opacity-disabled); }
 /* 添付ボタン（ピル内右端・Meta と同配置） */
 .send-attach-btn {
   flex-shrink: 0;
@@ -1009,6 +972,12 @@
   font-size: var(--font-xs);
   margin-bottom: 6px;
 }
+.inbox-send-error--with-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 
 /* ============================================================
    レスポンシブ対応
@@ -1022,6 +991,17 @@
 
 /* ====== カルテ ドロワー / ボトムシート — デフォルト（≥1280px）では非表示 ====== */
 .karte-toggle-btn { display: none; }
+
+/* スマホ用の絞り込みボタン。PC・タブレットでは出さない（タブと絞り込みが常時見えているため）。
+   .icon-btn と2クラスで指定する理由: このボタンは icon-btn も併せ持ち、
+   components.css の `.icon-btn { display: flex }` が本ファイルより後に読み込まれる。
+   クラス1つ（詳細度 0,1,0）同士では後者が勝つため、PR 4155 の時点から（番号に # を付けないのは色コードと誤検出されるため） PC でも
+   見えてしまっていた（本番の束ねた CSS で隠す指定が位置 136845、icon-btn が 269611）。
+   2クラス（詳細度 0,2,0）にして確実に勝たせる。3幅の画面検査がこれを検出した。 */
+.icon-btn.inbox-mobile-filter-toggle { display: none; }
+
+/* スマホ用の「一覧へ戻る」。PC・タブレットでは一覧が常に見えているので出さない */
+.inbox-back-to-list { display: none; }
 .karte-close-row  { display: none; }
 .karte-overlay    { display: none; }
 
@@ -1150,19 +1130,76 @@
   .inbox-main-area { overflow: visible; }
   .inbox-columns   { flex-direction: column; overflow: visible; }
 
+  /* 1画面1ページ（design.md §10-4 / benchmark 実測）。
+     お手本2本（WhatsApp / Meta Business Suite）はどちらもスマホで
+     一覧と会話を同時に出さず、画面を切り替える。
+     上下分割（一覧45vh）では下部タブ80dpもあるため会話に使える高さが
+     約328dpしか残らず、メッセージがほとんど読めない（実機実測）。
+     会話を選ぶまでは一覧が全画面、選んだら会話が全画面。
+     戻るときは useInboxState の backToList が URL の lead_id まで消す
+     （状態だけ消すと初期値が URL から作られる経路で戻ってしまう）。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
   .inbox-left-panel {
     width: 100%;
-    max-height: 45vh;
-    flex-shrink: 0;
+    max-height: none;
+    flex: 1;
+    flex-shrink: 1;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
     overflow-y: auto;
   }
-  /* overflow:hidden を明示してデスクトップと sticky スコープを統一 */
-  .inbox-center  { width: 100%; flex: 1; min-height: var(--inbox-center-min-h); overflow: hidden; }
+  .inbox-center { display: none; }
+
+  .inbox-wrapper.thread-open .inbox-left-panel { display: none; }
+  .inbox-wrapper.thread-open .inbox-center {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    min-height: var(--inbox-center-min-h);
+    overflow: hidden;
+  }
+
+  /* 一覧へ戻る。お手本は上部バーの左端に置き当たり判定を48dp取っている
+     （benchmark/whatsapp-reproduction-spec.md §2） */
+  .inbox-back-to-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--comp-btn-height-lg);
+    height: var(--comp-btn-height-lg);
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
   .msg-stack     { max-width: 85%; }
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
+
+  /* 絞り込みを普段は出さない（design.md §10-4 / benchmark 実測）。
+     お手本の WhatsApp は絞り込みチップを引き下げたときだけ出す作りで、
+     出していない時は一覧が 56dp 高い位置から始まる（実測で確認）。
+     既定の絞り込みは受信箱の設定（defaultTab / defaultUnreadOnly）で
+     適用済みのため、毎回開く必要がない。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
+  /* 既定の非表示を2クラスで書いているため、こちらも2クラスで上書きする */
+  .icon-btn.inbox-mobile-filter-toggle { display: inline-flex; }
+  .inbox-mobile-filter-toggle.has-active { color: var(--accent); }
+
+  .inbox-full-tab-bar,
+  .inbox-sub-filter-bar { display: none; }
+
+  .inbox-wrapper.filters-open .inbox-full-tab-bar,
+  .inbox-wrapper.filters-open .inbox-sub-filter-bar { display: flex; }
+
+  /* 一覧の密度をお手本に合わせる（design.md §10-3 / benchmark 実測）。
+     行の高さ: お手本は76dp。右の余白: お手本は16dp（左は 余白+アバター+gap で72dp）。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
+  .conv-item {
+    min-height: var(--min-height-conv-item-mobile);
+    padding-right: var(--space-4);
+  }
 
   /* カルテをボトムシートに変換（下から 80vh でスライドアップ） */
   .inbox-right-panel {
@@ -1195,11 +1232,7 @@
   font-family: inherit;
   transition: border-color var(--transition-micro);
 }
-.right-panel-field::placeholder { color: var(--text-muted); }
-/* 見本: select はネイティブ▼なしのプレーン箱 */
-select.right-panel-field { appearance: none; -webkit-appearance: none; }
 .right-panel-field:focus { outline: none; border-color: var(--accent); }
-textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
   font-weight: 600; font-size: var(--font-base); text-align: left;
   border: 1px solid transparent; background: transparent;
@@ -1431,12 +1464,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   padding: var(--space-2) 0; border-bottom: 1px solid var(--border);
 }
 .inbox-settings-label { font-size: var(--font-sm); color: var(--text-primary); }
-.inbox-settings-select {
-  background: var(--bg-primary); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: var(--space-1) var(--space-2);
-  font-size: var(--font-sm); color: var(--text-primary);
-  cursor: pointer;
-}
 .inbox-settings-close-btn {
   margin-top: var(--space-5); width: 100%;
   background: var(--accent); color: var(--on-accent);
@@ -1553,13 +1580,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .outbound-translation-flag-item { font-size: var(--font-xs); color: var(--text); }
 .outbound-translation-flag-term { font-weight: 600; }
 .outbound-translation-flag-reason { color: var(--text-muted); }
-.outbound-translation-edit {
-  width: 100%; padding: var(--space-3); resize: vertical;
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--bg-input); color: var(--text); font-size: var(--font-sm);
-  line-height: 1.5; font-family: inherit;
-}
-.outbound-translation-edit:focus { outline: none; border-color: var(--accent); }
 .outbound-translation-meta {
   font-size: var(--font-xs); color: var(--text-muted);
 }

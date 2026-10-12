@@ -56,6 +56,23 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      // 3幅検査（visual-language）は専用 project でのみ実行する
+      testIgnore: /visual-language\/.*\.spec\.ts/,
+    },
+    {
+      name: "vl-mobile-390",
+      testMatch: /visual-language\/.*\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
+    {
+      name: "vl-tablet-768",
+      testMatch: /visual-language\/.*\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 } },
+    },
+    {
+      name: "vl-desktop-1280",
+      testMatch: /visual-language\/.*\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } },
     },
   ],
 

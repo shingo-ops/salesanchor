@@ -32,6 +32,6 @@ USER appuser
 EXPOSE 8000
 
 # Uvicornでアプリケーションを起動
-# workers=2: 512MB VPSでの上限（メモリ制限による）
-# workers=1に戻す場合はメモリ確認後に判断すること
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# workers=1: ADR-081 C項（backend は workers=1 を標準）。
+# ループを塞ぐ同期I/Oは #3912・#3934 でスレッドへ退避済み。2 に戻す条件は ADR-081 D項。
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

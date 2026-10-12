@@ -8,8 +8,6 @@
  *
  * DOM 構造:
  *   MobileShell (.mobile-shell)
- *   ├── MobileTopBar (.mobile-topbar — sticky, z-index: var(--z-topbar)=100)
- *   │   └── PageTitle (span.mobile-topbar-title)
  *   ├── .mobile-content → <Outlet />
  *   ├── .mobile-more-backdrop（moreSheetOpen 時のみ）
  *   ├── .mobile-more-sheet（slide-up, z-index: var(--z-sidebar-overlay)=210）
@@ -22,6 +20,12 @@
  *   │   └── MenuButton（「…」シート開閉）
  *   └── ConfirmModal（ログアウト確認）
  *
+ * 2026-10-13: 上部のページ名バー（高さ 56px）を削除した（PO 指定）。中身はページ名の
+ * テキストだけで操作を持たず、現在地は下部タブバーの点灯で分かる。ページ名そのものは
+ * 各ページの PageLayout が見出しとして出す（受信箱のみ slimHeaderOnMobile で視覚的に
+ * 隠し、読み上げ用には残す）。空いた 56px は本文（会話一覧など）に回る。
+ * トークン --topbar-height は PC の topbar.css が使うため残す。
+ *
  * 参照: docs/handoff/mobile-responsive/design.md §B-2
  */
 
@@ -33,7 +37,6 @@ import { useLocale } from "../contexts/LocaleContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
-import { usePageTitle } from "../hooks/usePageTitle";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { listConversations } from "../lib/messages";
@@ -72,7 +75,6 @@ export default function MobileShell() {
   const { hasPermission, loading: permsLoading } = usePermissions();
   const { prefs, loading: uiPrefsLoading } = useUiPrefs();
   const { isSuperAdmin } = useSuperAdmin();
-  const pageTitle = usePageTitle();
 
   const navLoading = permsLoading || uiPrefsLoading;
 
@@ -168,12 +170,6 @@ export default function MobileShell() {
                 "/super-admin/analysis-rules",
               ),
               resolveItem(
-                "needsReview",
-                "nav.superAdminNeedsReview",
-                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
-                "/super-admin/needs-review",
-              ),
-              resolveItem(
                 "buybackPrices",
                 "nav.buybackPrices",
                 <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
@@ -193,11 +189,6 @@ export default function MobileShell() {
 
   return (
     <div className="mobile-shell">
-      {/* ============ MobileTopBar（タイトルのみ） ============ */}
-      <div className="mobile-topbar">
-        <span className="mobile-topbar-title">{pageTitle}</span>
-      </div>
-
       {/* ============ Outlet ============ */}
       <main className="mobile-content">
         <Outlet />

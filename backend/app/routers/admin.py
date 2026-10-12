@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import require_super_admin
 from app.database import get_admin_db, get_db
 from app.models import Tenant, User
 from app.schemas.tenant import TenantCreate, TenantResponse
@@ -19,7 +19,7 @@ async def register_tenant(
     data: TenantCreate,
     db: AsyncSession = Depends(get_db),
     admin_db: AsyncSession = Depends(get_admin_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_super_admin),
 ):
     """
     テナント（契約企業）を登録し、専用スキーマを自動生成する。
@@ -33,13 +33,13 @@ async def register_tenant(
 
     注意:
       - tenant_codeは英小文字・数字・ハイフンのみ（例: "demo-a", "company-123"）
-      - 管理者（role="admin"）のみ実行可能
+      - super admin（is_super_admin=true）のみ実行可能
     """
-    # 管理者権限チェック
-    if current_user.role != "admin":
+    # super admin 権限チェック（require_super_admin との二重防御）
+    if not getattr(current_user, "is_super_admin", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="テナント作成は管理者のみ可能です",
+            detail="テナント作成はsuper adminのみ可能です",
         )
 
     # tenant_codeの重複チェック

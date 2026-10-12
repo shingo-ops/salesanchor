@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -167,15 +168,16 @@ export default function ScheduleSettingsPage() {
                           />
                           <span className="toggle-switch-slider" />
                         </label>
-                        <select
-                          className="schedule-input"
+                        <SelectControl
+                          size="sm"
+                          fullWidth
                           value={selfOwner.shareMode}
                           onChange={(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner["shareMode"] })}
                         >
                           <option value="self">{t("schedule.settingsShareSelf")}</option>
                           <option value="view">{t("schedule.settingsShareView")}</option>
                           <option value="edit">{t("schedule.settingsShareEdit")}</option>
-                        </select>
+                        </SelectControl>
                         <Button
                           variant="secondary"
                           onClick={() => saveOwner(selfOwner)}
@@ -222,15 +224,16 @@ export default function ScheduleSettingsPage() {
                             />
                             <span className="toggle-switch-slider" />
                           </label>
-                          <select
-                            className="schedule-input"
+                          <SelectControl
+                            size="sm"
+                            fullWidth
                             value={owner.shareMode}
                             onChange={(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner["shareMode"] })}
                           >
                             <option value="self">{t("schedule.settingsShareSelf")}</option>
                             <option value="view">{t("schedule.settingsShareView")}</option>
                             <option value="edit">{t("schedule.settingsShareEdit")}</option>
-                          </select>
+                          </SelectControl>
                           <Button
                             variant="secondary"
                             onClick={() => saveOwner(owner)}

@@ -17,6 +17,7 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -47,6 +48,11 @@ _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})\s+(.+)$")
 # （旧 _SYSTEM_EVENT_RE は削除。docs/handoff/line-parser-unify/design.md §3 C1）
 # メッセージ結合セパレーター（SQR-05）
 _MSG_SEPARATOR = "\n\n"
+# 本文末尾の「改行＋空白だけの行」を除く対象文字（半角空白・\t・\r・\n・U+3000）。
+# 再利用判定の SQL（_write_source_messages）にも同じ集合を直書きしている
+# （SQL への変数展開は tests/test_tcg_schema_qualification.py が禁止）。変更時は両方そろえる。
+_TRAILING_BLANK_CHARS = " \t\r\n\u3000"
+_TRAILING_BLANK_RE = re.compile(rf"\n[{_TRAILING_BLANK_CHARS}]*\Z")
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +63,16 @@ _MSG_SEPARATOR = "\n\n"
 def sha256_text(text_content: str) -> str:
     """UTF-8 SHA-256 hex を返す。"""
     return hashlib.sha256(text_content.encode("utf-8")).hexdigest()
+
+
+def normalize_message_body(text_content: str) -> str:
+    """本文末尾の「改行と、その後ろの空白だけの行」をすべて取り除く。
+
+    最後の内容行の行末空白・先頭・途中は変えない。
+    Android エクスポートでは、投稿の直後に空行が続くと本文末尾に改行が付き、
+    ファイル末尾の同じ投稿（空行なし）と別物になるため、比べる前に揃える。
+    """
+    return _TRAILING_BLANK_RE.sub("", text_content)
 
 
 def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
@@ -336,7 +352,14 @@ async def _write_source_messages(
     enqueued_ids: list[str] = []
 
     # Stable lock order prevents deadlocks between overlapping import files.
-    for entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+    for raw_entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+        # 本文末尾の空行を除いた値で保存・再利用判定する（sha256 も計算し直す）
+        normalized_body = normalize_message_body(raw_entry["raw_text"])
+        entry = {
+            **raw_entry,
+            "raw_text": normalized_body,
+            "sha256": sha256_text(normalized_body),
+        }
         sp_code = entry["sp_code"]
 
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
@@ -389,13 +412,14 @@ async def _write_source_messages(
         # Legacy rows have no proven posting timestamp and must not be inferred.
         posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
         reused = await db.execute(
-            text(f"""
+            text(rf"""
                 SELECT id FROM {TCG_SCHEMA}.source_messages
                 WHERE supplier_channel_id = :scid AND line_posted_at = :posted_at
-                  AND raw_sha256 = :sha256 AND raw_text = :body
+                  AND (raw_text = :body
+                       OR regexp_replace(raw_text, E'\n[ \t\r\n\u3000]*$', '') = :body)
             """),
             {"scid": str(supplier_channel_id), "posted_at": posted_at,
-             "sha256": entry["sha256"], "body": entry["raw_text"]},
+             "body": entry["raw_text"]},
         )
         reused_row = reused.fetchone()
         if reused_row:
@@ -494,6 +518,19 @@ async def _link_message(db: AsyncSession, job_id: str, message_id: str, kind: st
     )
 
 
+def _mark_system_events(all_messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            **m,
+            "is_system_event": (
+                m["is_system_event"]
+                or match_system_event(m["display_name"], m["body"]) is not None
+            ),
+        }
+        for m in all_messages
+    ]
+
+
 async def import_line_export(
     db: AsyncSession,
     filename: str,
@@ -536,7 +573,7 @@ async def import_line_export(
     """
     if source_format not in ("pc", "android"):
         raise ValueError("Unsupported LINE export format")
-    android_messages = parse_android_export(export_text) if source_format == "android" else None
+    android_messages = (await asyncio.to_thread(parse_android_export, export_text)) if source_format == "android" else None
     # Keep the legacy PC digest unchanged. Android has a separate identity so that
     # an Android file previously misread as PC (zero messages) can be retried.
     file_sha256 = sha256_text(
@@ -573,19 +610,10 @@ async def import_line_export(
     supplier_names = sorted((s["line_name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
-    all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
+    all_messages = android_messages if android_messages is not None else await asyncio.to_thread(parse_line_export, export_text, supplier_names)
     # PC・スマホ双方の全メッセージへ同じ文言表を当てる（二重の網）。
     # 元の dict は書き換えず、新しい list/dict を作る。
-    all_messages = [
-        {
-            **m,
-            "is_system_event": (
-                m["is_system_event"]
-                or match_system_event(m["display_name"], m["body"]) is not None
-            ),
-        }
-        for m in all_messages
-    ]
+    all_messages = await asyncio.to_thread(_mark_system_events, all_messages)
     messages = [m for m in all_messages if not m["is_system_event"]]
 
     # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）

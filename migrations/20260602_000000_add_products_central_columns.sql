@@ -12,11 +12,15 @@
 --
 -- 冪等: ADD COLUMN IF NOT EXISTS で再走可。全列 NULL 許可 + status のみ default のため
 -- ゼロダウンタイム（既存 185 行は status='active' 既定、他は NULL で投入）。
+--
+-- incident 2026-10-03 (deploy run 37130920016): condition は 20260629_020000 で永久 DROP
+-- される列のため、ここから削除。毎デプロイで ADD→DROP が繰り返され、DROP された列も
+-- attribute number を消費し続けるため public.products が 1600 列上限に達し、デプロイが
+-- 失敗していた。詳細: docs/handoff/products-column-churn/design.md
 
 ALTER TABLE public.products
     ADD COLUMN IF NOT EXISTS mark      VARCHAR(100),
     ADD COLUMN IF NOT EXISTS status    VARCHAR(20) DEFAULT 'active',
-    ADD COLUMN IF NOT EXISTS condition VARCHAR(50),
     ADD COLUMN IF NOT EXISTS weight    NUMERIC(10, 3),
     ADD COLUMN IF NOT EXISTS notes     TEXT;
 

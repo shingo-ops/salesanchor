@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 import type { Conversation } from "../../lib/messages";
 import { getInitials, relativeTime } from "./inbox.types";
 
@@ -18,6 +20,16 @@ interface Props {
   setFollowUpOnly: (fn: (v: boolean) => boolean) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  /**
+   * スマホ用の絞り込み（ステータスタブと詳細条件の開閉）。
+   * PC・タブレットではタブが常時見えているため、ボタン自体を出さない。
+   * 2026-10-13（PO 指定）: 一覧ではヘッダーの操作行を出さないため、
+   * 絞り込みは検索欄の横に置く。
+   */
+  mobileFiltersOpen: boolean;
+  toggleMobileFilters: () => void;
+  /** 既定（すべて・絞り込みなし）から外れているか。外れていればボタンに印を付ける */
+  hasActiveFilter: boolean;
   pageIdFilter: string;
   availablePageIds: string[];
   onPageFilterChange: (pid: string) => void;
@@ -44,7 +56,8 @@ interface Props {
 export function InboxConversationList({
   manageRef, manageOpen, selectMode, toggleSelectMode, handleMarkAllRead,
   unreadOnly, setUnreadOnly, followUpOnly, setFollowUpOnly,
-  searchQuery, setSearchQuery, pageIdFilter, availablePageIds, onPageFilterChange,
+  searchQuery, setSearchQuery,
+  mobileFiltersOpen, toggleMobileFilters, hasActiveFilter, pageIdFilter, availablePageIds, onPageFilterChange,
   selectedLeadIds, isAllSelected, toggleSelectAll,
   handleBulkMarkRead, handleBulkMarkUnread, handleBulkExclude, handleBulkDelete,
   convLoading, convError, filteredConversations, loadConversations,
@@ -58,14 +71,27 @@ export function InboxConversationList({
       <div className="inbox-search-row">
         <div className="inbox-search-wrap">
           <NAV_ICONS.search size={14} weight="fill" className="inbox-search-icon" aria-hidden="true" />
-          <input
+          <TextFieldControl
+            variant="search"
             type="text"
-            className="search-input-field inbox-search-input"
+            className="inbox-search-input"
             placeholder={t("common.search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        {/* スマホ用の絞り込み。検索と役割が近いので検索欄の隣に置く
+            （PC・タブレットでは CSS で非表示） */}
+        <button
+          type="button"
+          className={`icon-btn inbox-mobile-filter-toggle${hasActiveFilter ? " has-active" : ""}`}
+          aria-expanded={mobileFiltersOpen}
+          onClick={toggleMobileFilters}
+          aria-label={t("inbox.mobileFilters")}
+          data-tooltip={t("inbox.mobileFilters")}
+        >
+          <NAV_ICONS.filter size={ICON.md} aria-hidden="true" />
+        </button>
         <div className="inbox-manage-wrap" ref={manageRef}>
           <button
             type="button"
@@ -144,17 +170,18 @@ export function InboxConversationList({
       {/* Page フィルタ */}
       {(availablePageIds.length > 1 || !!pageIdFilter) && (
         <div className="inbox-page-filter-wrap">
-          <select
+          <SelectControl
+            size="sm"
+            fullWidth
             value={pageIdFilter}
             onChange={(e) => onPageFilterChange(e.target.value)}
             aria-label="Filter by Page"
-            className="inbox-page-filter-select"
           >
             <option value="">{t("inbox.allPages")}</option>
             {availablePageIds.map((pid) => (
               <option key={pid} value={pid}>Page: {pid}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
       )}
 

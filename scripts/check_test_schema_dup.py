@@ -23,7 +23,6 @@ TESTS_DIR = "backend/tests/"
 EXCLUDE_FILES = {
     "backend/tests/conftest.py",
     "backend/tests/test_tenant_service.py",
-    "backend/tests/test_inventory_parser_real_samples.py",
 }
 
 _CREATE = re.compile(r"CREATE\s+TABLE\b", re.IGNORECASE)

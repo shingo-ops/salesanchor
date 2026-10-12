@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface DriveStatus {
   oauth_configured: boolean;
@@ -159,7 +160,7 @@ export default function GoogleDriveIntegrationPage() {
               <label htmlFor="gdrive-url">
                 {t("googleDriveIntegration.driveUrlLabel")}
               </label>
-              <input
+              <TextFieldControl
                 id="gdrive-url"
                 type="url"
                 value={driveUrl}

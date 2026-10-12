@@ -1,5 +1,5 @@
 /**
- * /super-admin/masters — 仕入先別プロンプト + 正規化ルール + 仕入元個別ルール タブ。
+ * /super-admin/masters — 正規化ルール + 仕入元個別ルール タブ。
  *
  * ADR-093 UX 改修 (2026-06-03):
  *   - 正規化ルール: 一致方法(pattern_type)を日本語ラベル化、パターン→変換前ワード /
@@ -14,7 +14,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import ConfirmModal from "../../components/ConfirmModal";
+import { TextFieldControl } from "../../components/TextField";
 
 interface KnowledgeRule {
   id: number;
@@ -42,8 +44,8 @@ const PATTERN_TYPES = ["exact", "prefix", "substring", "regex"];
 
 // カテゴリはパーサが解釈する処理段階の固定値（inventory_parser）。
 // message_exclude / message_exclude_no_digit は Gemini 呼び出し前の事前フィルタ用カテゴリ。
-// block_delimiter / skip_condition / status_keyword は DB に存在する追加カテゴリ。
-const RULE_CATEGORIES = ["normalize", "split", "alias_normalize", "exclude", "message_exclude", "message_exclude_no_digit", "block_delimiter", "skip_condition", "status_keyword"];
+// block_delimiter / status_keyword は DB に存在する追加カテゴリ。
+const RULE_CATEGORIES = ["normalize", "split", "alias_normalize", "exclude", "message_exclude", "message_exclude_no_digit", "block_delimiter", "status_keyword"];
 
 // 言語コード（日本語/英語ラベルは i18n の langs.* で表示）。
 const LANGS = ["ja", "en", "ko", "zh"];
@@ -72,14 +74,9 @@ const SEARCH_WIDTH = "30rem";
 export default function KnowledgeAliasesTab() {
   const { t } = useTranslation();
 
-  // ---- 仕入先別 Gemini プロンプト (ADR-085) ----
+  // ---- 仕入元一覧（仕入元個別ルールの表示名解決に使用） ----
   const [suppliers, setSuppliers] = useState<{ id: number; name: string }[]>([]);
-  const [promptSupplierId, setPromptSupplierId] = useState<number | null>(null);
-  const [promptText, setPromptText] = useState("");
-  const [promptActive, setPromptActive] = useState(true);
-  const [promptMsg, setPromptMsg] = useState("");
-  const [promptError, setPromptError] = useState("");
-  const [promptSaving, setPromptSaving] = useState(false);
+  const [suppliersError, setSuppliersError] = useState("");
 
   // ---- 正規化ルール ----
   const [rules, setRules] = useState<KnowledgeRule[]>([]);
@@ -131,39 +128,7 @@ export default function KnowledgeAliasesTab() {
       );
       setSuppliers(data);
     } catch (e) {
-      setPromptError(e instanceof Error ? e.message : t("common.fetchError"));
-    }
-  };
-
-  const loadPrompt = async (supplierId: number) => {
-    setPromptError("");
-    setPromptMsg("");
-    try {
-      const data = await api.get<{ prompt: string; is_active: boolean }>(
-        `/super-admin/suppliers/${supplierId}/prompt`,
-      );
-      setPromptText(data.prompt);
-      setPromptActive(data.is_active);
-    } catch (e) {
-      setPromptError(e instanceof Error ? e.message : t("common.fetchError"));
-    }
-  };
-
-  const savePrompt = async () => {
-    if (promptSupplierId === null) return;
-    setPromptError("");
-    setPromptMsg("");
-    setPromptSaving(true);
-    try {
-      await api.put(`/super-admin/suppliers/${promptSupplierId}/prompt`, {
-        prompt: promptText,
-        is_active: promptActive,
-      });
-      setPromptMsg(t("common.saved"));
-    } catch (e) {
-      setPromptError(e instanceof Error ? e.message : t("common.saveError"));
-    } finally {
-      setPromptSaving(false);
+      setSuppliersError(e instanceof Error ? e.message : t("common.fetchError"));
     }
   };
 
@@ -405,6 +370,7 @@ export default function KnowledgeAliasesTab() {
           {t("superAdmin.knowledge.aliasesHelp")}
         </p>
         {aliasError && <div className="error-message">{aliasError}</div>}
+        {suppliersError && <div className="error-message">{suppliersError}</div>}
         <div style={{ display: "flex", gap: "var(--space-2)", margin: "0.5rem 0", alignItems: "center", flexWrap: "wrap" }}>
           <input
             placeholder={t("common.search")}
@@ -470,67 +436,6 @@ export default function KnowledgeAliasesTab() {
         </table>
       </section>
 
-      {/* ============ 仕入先別 Gemini プロンプト (ADR-085) ============ */}
-      <section style={{ marginBottom: "var(--space-8)" }}>
-        <h3>{t("superAdmin.knowledge.promptSection")}</h3>
-        <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
-          {t("superAdmin.knowledge.promptHelp")}
-        </p>
-        {promptError && <div className="error-message">{promptError}</div>}
-        <div style={{ margin: "0.5rem 0" }}>
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", marginBottom: "var(--space-2)", flexWrap: "wrap" }}>
-            <label>
-              {t("superAdmin.suppliersAdmin.fields.name")}:{" "}
-              <select
-                value={promptSupplierId ?? ""}
-                data-testid="supplier-prompt-select"
-                onChange={(e) => {
-                  const id = e.target.value ? Number(e.target.value) : null;
-                  setPromptSupplierId(id);
-                  setPromptText("");
-                  setPromptMsg("");
-                  if (id !== null) loadPrompt(id);
-                }}
-              >
-                <option value="">—</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={promptActive}
-                onChange={(e) => setPromptActive(e.target.checked)}
-              />{" "}
-              {t("superAdmin.suppliersAdmin.fields.isActive")}
-            </label>
-            <Button variant="primary" size="md"
-              type="button"
-
-              disabled={promptSupplierId === null || promptSaving}
-              onClick={savePrompt}
-              data-testid="supplier-prompt-save"
-            >
-              {promptSaving ? t("common.saving") : t("common.save")}
-            </Button>
-            {promptMsg && <span style={{ color: "var(--text-secondary)" }}>{promptMsg}</span>}
-          </div>
-          <textarea
-            value={promptText}
-            data-testid="supplier-prompt-textarea"
-            disabled={promptSupplierId === null}
-            onChange={(e) => setPromptText(e.target.value)}
-            placeholder={t("superAdmin.knowledge.promptPlaceholder")}
-            rows={16}
-            style={{ width: "100%", fontFamily: "var(--font-mono, monospace)", fontSize: "var(--font-sm)" }}
-          />
-        </div>
-      </section>
-
       {/* ============ 正規化ルール 編集/新規 ポップアップ ============ */}
       <Modal
         open={showRuleForm}
@@ -541,36 +446,36 @@ export default function KnowledgeAliasesTab() {
         <form onSubmit={submitRule}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
                 <div className="form-group"><label>{t(`${f}.category`)} *</label>
-                  <select required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>
+                  <SelectControl fullWidth required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>
                     {RULE_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.categoryHelp")}</small>
                 </div>
                 <div className="form-group"><label>{t(`${f}.patternType`)}</label>
-                  <select value={ruleForm.pattern_type} onChange={(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}>
+                  <SelectControl fullWidth value={ruleForm.pattern_type} onChange={(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}>
                     {PATTERN_TYPES.map((pt) => (
                       <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.patternTypeHelp")}</small>
                 </div>
                 <div className="form-group"><label>{t(`${f}.pattern`)} *</label>
-                  <input required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.normalizedTo`)} *</label>
-                  <input required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.priority`)}</label>
-                  <input type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
+                  <TextFieldControl type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.language`)}</label>
-                  <select value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
+                  <SelectControl fullWidth value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
                     {LANGS.map((l) => (
                       <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                 </div>
                 <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                   <input type="checkbox" checked={ruleForm.is_active} onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })} />
@@ -595,7 +500,8 @@ export default function KnowledgeAliasesTab() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-3)" }}>
                 {/* 仕入元（解析対象の絞り込み）を最初に選ぶ */}
                 <div className="form-group"><label>{t(`${f}.supplierName`)} *</label>
-                  <select
+                  <SelectControl
+                    fullWidth
                     required
                     value={aliasForm.supplier_id || ""}
                     data-testid="alias-supplier-select"
@@ -605,10 +511,10 @@ export default function KnowledgeAliasesTab() {
                     {suppliers.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                 </div>
                 <div className="form-group"><label>{t(`${f}.aliasText`)} *</label>
-                  <input
+                  <TextFieldControl
                     required
                     value={aliasForm.alias_text}
                     data-testid="alias-text-input"
@@ -617,7 +523,8 @@ export default function KnowledgeAliasesTab() {
                 </div>
                 {/* 変換後（解決先の商品）。public.products から選択。任意。 */}
                 <div className="form-group"><label>{t(`${f}.resolvedProduct`)}</label>
-                  <select
+                  <SelectControl
+                    fullWidth
                     value={aliasForm.product_id ?? ""}
                     data-testid="alias-product-select"
                     onChange={(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}
@@ -626,7 +533,7 @@ export default function KnowledgeAliasesTab() {
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : ""}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.resolvedProductHelp")}</small>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 /**
  * IconToggleButton — ストーリーカタログ
- * 状態: 未押下 / 押下 / 件数つき / サイズ / 無効
+ * 状態: 未押下 / 押下 / 件数つき / サイズ / 無効 / バッジ（他者のみ・自分あり）
  */
 import { useState, type ComponentProps } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
@@ -30,6 +30,12 @@ export const Off: Story = {};
 export const On: Story = { args: { pressed: true } };
 
 export const WithCount: Story = { args: { pressed: true, count: 3 } };
+
+/** badge: 他者だけがハートを付けた状態（赤の塗り＋件数・枠なし） */
+export const BadgeOthersOnly: Story = { args: { variant: 'badge', pressed: false, count: 2 } };
+
+/** badge: 自分も付けた状態（赤の塗り＋件数・枠と背景で区別） */
+export const BadgeMine: Story = { args: { variant: 'badge', pressed: true, count: 3 } };
 
 export const Disabled: Story = { args: { disabled: true } };
 

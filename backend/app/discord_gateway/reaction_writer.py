@@ -100,89 +100,93 @@ class ReactionWriter:
 
         try:
             async with self._pool.acquire() as conn:
-                # テナントコンテキストをセット（RLS 用）
-                await conn.execute(
-                    "SELECT set_config('app.tenant_id', $1, true)",
-                    str(tenant_id),
-                )
-
-                # discord message_id から meta_message_id を特定
-                meta_message_row = await conn.fetchrow(
-                    f"SELECT id FROM {schema}.meta_messages"
-                    " WHERE message_id = $1 AND tenant_id = $2 LIMIT 1",
-                    message_id,
-                    tenant_id,
-                )
-                if meta_message_row is None:
-                    logger.debug(
-                        "[reaction-writer] meta_message not found tenant=%s msg=%s — skip",
-                        tenant_id, message_id,
-                    )
-                    return
-
-                meta_message_id: int = meta_message_row["id"]
-
-                if action == "add":
+                # set_config(..., true) はトランザクション局所。明示トランザクション内で
+                # set_config → SELECT → INSERT/DELETE を実行しないと RLS が空設定を見て失敗する
+                # （ADR-072）。
+                async with conn.transaction():
+                    # テナントコンテキストをセット（RLS 用）
                     await conn.execute(
-                        f"""
-                        INSERT INTO {schema}.meta_message_reactions
-                            (tenant_id, meta_message_id, emoji_name, emoji_id,
-                             emoji_animated, reactor_discord_user_id,
-                             reactor_display_name, is_bot_reaction)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                        ON CONFLICT ON CONSTRAINT uq_reaction_per_user_emoji DO NOTHING
-                        """,
+                        "SELECT set_config('app.tenant_id', $1, true)",
+                        str(tenant_id),
+                    )
+
+                    # discord message_id から meta_message_id を特定
+                    meta_message_row = await conn.fetchrow(
+                        f"SELECT id FROM {schema}.meta_messages"
+                        " WHERE message_id = $1 AND tenant_id = $2 LIMIT 1",
+                        message_id,
                         tenant_id,
-                        meta_message_id,
-                        emoji_name,
-                        emoji_id,
-                        emoji_animated,
-                        user_id,
-                        reactor_display_name,
-                        is_bot_reaction,
                     )
-                    logger.info(
-                        "[reaction-writer] add tenant=%s meta_msg=%d emoji=%s user=%s",
-                        tenant_id, meta_message_id, emoji_name, user_id,
-                    )
-                elif action == "remove":
-                    if emoji_id is not None:
+                    if meta_message_row is None:
+                        logger.debug(
+                            "[reaction-writer] meta_message not found tenant=%s msg=%s — skip",
+                            tenant_id, message_id,
+                        )
+                        return
+
+                    meta_message_id: int = meta_message_row["id"]
+
+                    if action == "add":
                         await conn.execute(
                             f"""
-                            DELETE FROM {schema}.meta_message_reactions
-                            WHERE meta_message_id = $1
-                              AND emoji_name = $2
-                              AND emoji_id = $3
-                              AND reactor_discord_user_id = $4
+                            INSERT INTO {schema}.meta_message_reactions
+                                (tenant_id, meta_message_id, emoji_name, emoji_id,
+                                 emoji_animated, reactor_discord_user_id,
+                                 reactor_display_name, is_bot_reaction)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            ON CONFLICT ON CONSTRAINT uq_reaction_per_user_emoji DO NOTHING
                             """,
+                            tenant_id,
                             meta_message_id,
                             emoji_name,
                             emoji_id,
+                            emoji_animated,
                             user_id,
+                            reactor_display_name,
+                            is_bot_reaction,
+                        )
+                        logger.info(
+                            "[reaction-writer] add tenant=%s meta_msg=%d emoji=%s user=%s",
+                            tenant_id, meta_message_id, emoji_name, user_id,
+                        )
+                    elif action == "remove":
+                        if emoji_id is not None:
+                            await conn.execute(
+                                f"""
+                                DELETE FROM {schema}.meta_message_reactions
+                                WHERE meta_message_id = $1
+                                  AND emoji_name = $2
+                                  AND emoji_id = $3
+                                  AND reactor_discord_user_id = $4
+                                """,
+                                meta_message_id,
+                                emoji_name,
+                                emoji_id,
+                                user_id,
+                            )
+                        else:
+                            await conn.execute(
+                                f"""
+                                DELETE FROM {schema}.meta_message_reactions
+                                WHERE meta_message_id = $1
+                                  AND emoji_name = $2
+                                  AND emoji_id IS NULL
+                                  AND reactor_discord_user_id = $3
+                                """,
+                                meta_message_id,
+                                emoji_name,
+                                user_id,
+                            )
+                        logger.info(
+                            "[reaction-writer] remove tenant=%s meta_msg=%d emoji=%s user=%s",
+                            tenant_id, meta_message_id, emoji_name, user_id,
                         )
                     else:
-                        await conn.execute(
-                            f"""
-                            DELETE FROM {schema}.meta_message_reactions
-                            WHERE meta_message_id = $1
-                              AND emoji_name = $2
-                              AND emoji_id IS NULL
-                              AND reactor_discord_user_id = $3
-                            """,
-                            meta_message_id,
-                            emoji_name,
-                            user_id,
+                        logger.warning(
+                            "[reaction-writer] unknown action=%s tenant=%s msg=%s",
+                            action, tenant_id, message_id,
                         )
-                    logger.info(
-                        "[reaction-writer] remove tenant=%s meta_msg=%d emoji=%s user=%s",
-                        tenant_id, meta_message_id, emoji_name, user_id,
-                    )
-                else:
-                    logger.warning(
-                        "[reaction-writer] unknown action=%s tenant=%s msg=%s",
-                        action, tenant_id, message_id,
-                    )
-                    return
+                        return
 
         except Exception:
             logger.warning(

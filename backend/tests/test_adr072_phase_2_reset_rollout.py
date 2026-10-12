@@ -36,9 +36,9 @@ def test_phase_2_routers_import_reset_tenant_context(module):
 
 _EXPECTED_RESET_CALLS = {
     # router_module_name: count of `await reset_tenant_context(db, tenant_id)`
-    # staff.py: create / update / delete / patch-me-profile の 4 箇所
+    # staff.py: create / update / delete / patch-me-profile / upload-avatar / delete-avatar の 6 箇所
     #   (L228 / L252 は public.users 操作なので Phase 2 対象外)
-    "staff": 4,
+    "staff": 6,
     # suppliers.py: create / update / delete / csv_import_commit の 4 箇所
     "suppliers": 4,
     # roles.py: create / update / delete / set_permissions / set_user_roles の 5 箇所

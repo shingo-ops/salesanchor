@@ -1,0 +1,54 @@
+$ grep -rnE "(^|[^A-Za-z0-9_-])\.input([^A-Za-z0-9_-]|$)" src --include=*.css
+(件数        0)
+
+$ grep -rnE "input *[{,.:\[]" src --include=*.css | grep -v "input\[type=.\(checkbox\|radio\)"  (tag input を主語にする規則、先頭付近)
+src/topbar.css:44:.topbar-search input {
+src/topbar.css:54:.topbar-search input::placeholder {
+src/pages-layout.css:340:.color-swatch input[type="radio"] {
+src/pages-layout.css:595:.chk-label input[type="checkbox"] {
+src/pages-layout.css:619:.permission-item input[type="checkbox"] {
+src/company-forms.css:101:/* stylelint-disable no-descending-specificity -- intentional: focus state after general input style */
+src/company-forms.css:102:.form-grid > .form-row input:focus {
+src/company-forms.css:137:.modal-content .form-row input:focus,
+src/company-forms.css:138:.modal-content-wide .form-row input:focus {
+src/company-forms.css:212:.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]) {
+src/company-forms.css:217:/* 商品編集の input は標準金型へ移管せず（AY-2b で保留）、旧 .form-group input の宣言を写して見た目を保つ */
+src/company-forms.css:218:.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]) {
+src/company-forms.css:228:.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]):focus {
+src/components.css:19:.form-group input[type="checkbox"],
+src/components.css:20:.form-group input[type="radio"],
+src/components.css:21:.form-group input[type="range"],
+src/components.css:22:.form-group input[type="file"] {
+src/components.css:33:.form-group input[type="checkbox"]:focus,
+src/components.css:34:.form-group input[type="radio"]:focus,
+src/components.css:35:.form-group input[type="range"]:focus,
+src/components.css:36:.form-group input[type="file"]:focus {
+src/components.css:56:.search-bar input,
+src/components.css:726:/* stylelint-disable-next-line no-descending-specificity -- intentional: toggle input overrides form-group input:focus */
+src/components.css:727:.toggle-switch input { opacity: 0; width: 0; height: 0; }
+src/components.css:739:.toggle-switch input:checked + .toggle-switch-slider { background: var(--accent); }
+src/components.css:740:.toggle-switch input:checked + .toggle-switch-slider::before { transform: translateX(18px); }
+src/features/tcg-analysis-review/source-raw-pane.css:48:.source-search input { min-width: 0; }
+src/features/tcg-analysis-review/supplier-detail-view.css:244:.pmd-field input,
+src/pages/schedule.css:1215:.schedule-settings .toggle-switch input:checked + .toggle-switch-slider,
+src/pages/schedule.css:1216:.schedule-page .toggle-switch input:checked + .toggle-switch-slider {
+src/pages/schedule.css:1220:.schedule-settings .toggle-switch input:checked + .toggle-switch-slider::before,
+src/pages/schedule.css:1221:.schedule-page .toggle-switch input:checked + .toggle-switch-slider::before {
+src/pages/inbox/InboxPage.css:1337:input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color: transparent; }
+src/pages/inbox/InboxPage.css:1410:.inbox-toggle input { opacity: 0; width: 0; height: 0; }
+src/pages/inbox/InboxPage.css:1422:.inbox-toggle input:checked + .inbox-toggle-slider { background: var(--accent); }
+src/pages/inbox/InboxPage.css:1423:.inbox-toggle input:checked + .inbox-toggle-slider::before { transform: translateX(var(--toggle-translate)); }
+src/pages/inbox/InboxPage.css:1619:.sales-form-option input[type="checkbox"] {
+src/pages/account-settings/account-settings.css:111:.toggle-switch input {
+src/pages/account-settings/account-settings.css:139:.toggle-switch input:checked + .toggle-slider {
+src/pages/account-settings/account-settings.css:143:.toggle-switch input:checked + .toggle-slider::before {
+src/pages/account-settings/account-settings.css:147:.toggle-switch input:focus-visible + .toggle-slider {
+
+$ grep -rln "register" src --include=*.css
+(件数        0)
+
+$ grep -rn "import.*css" src/pages/register
+(exit=1)
+
+$ grep -rln "pages/register\|RegisterPage\|RegisterAddress\|RegisterChange\|CountryCombobox" src tests-e2e (試験)
+src/pages/leads/LeadFormFields.test.tsx

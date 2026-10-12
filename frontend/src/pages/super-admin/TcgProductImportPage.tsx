@@ -10,7 +10,7 @@ export default function TcgProductImportPage() {
   const navigate = useNavigate();
   const { isSuperAdmin, loading } = useSuperAdmin();
   return <PageLayout titleText={t("productCsv.importTitle")}>
-    {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <TcgProductImportPanel onDone={() => navigate("/super-admin/tcg-product-master")} />}
-    {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/tcg-product-master")}>{t("productCsv.back")}</HeaderButton>}
+    {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <TcgProductImportPanel onDone={() => navigate("/super-admin/analysis-rules?section=product-master")} />}
+    {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules?section=product-master")}>{t("productCsv.back")}</HeaderButton>}
   </PageLayout>;
 }

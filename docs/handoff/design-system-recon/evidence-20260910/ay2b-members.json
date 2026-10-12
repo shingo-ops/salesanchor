@@ -1,0 +1,6185 @@
+{
+ "summary": {
+  "baseHead": "fb036a2388c2",
+  "totalPageSideInputs": 415,
+  "matchedAny": 194,
+  "byCategory": {
+   "target": 161,
+   "non-text": 19,
+   "product-edit(hold)": 14
+  },
+  "matchedDefinite": 166,
+  "matchedOnlyUnconfirmed": 28,
+  "byCategoryDefinite": {
+   "target": 143,
+   "non-text": 9,
+   "product-edit(hold)": 14
+  },
+  "byCategoryOnlyUnconfirmed": {
+   "non-text": 10,
+   "target": 18
+  },
+  "loginDefinite": 3
+ },
+ "targetGroups": [
+  {
+   "id": "T01",
+   "count": 124,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus",
+   "byType": {
+    "text": 15,
+    "number": 20,
+    "date": 3,
+    "dynamic": 2,
+    "tel": 1,
+    "omitted": 64,
+    "password": 4,
+    "email": 12,
+    "url": 1,
+    "time": 2
+   },
+   "members": [
+    {
+     "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+     "line": 91,
+     "type": "text",
+     "className": "\"input\"",
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/CountryCombobox.tsx",
+     "line": 90,
+     "type": "text",
+     "className": "\"input\"",
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/OrderFinancialPanel.tsx",
+     "line": 223,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 328,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 338,
+     "type": "date",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 361,
+     "type": "dynamic",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 385,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+     "line": 412,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 401,
+     "type": "dynamic",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 425,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 449,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 476,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 487,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 529,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/ShippingDetailPanel.tsx",
+     "line": 539,
+     "type": "date",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 163,
+     "type": "tel",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 169,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 173,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 180,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 184,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 191,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+     "line": 195,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 67,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 79,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+     "line": 91,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 192,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 207,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 222,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 238,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+     "line": 253,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 145,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 158,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 183,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 196,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 209,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+     "line": 222,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": true,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 54,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 83,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotFormFields.tsx",
+     "line": 90,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 228,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 231,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 255,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/bots/BotsPage.tsx",
+     "line": 258,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 37,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 51,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+     "line": 58,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 154,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 157,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 160,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 163,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 166,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 175,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+     "line": 178,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 56,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 63,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 70,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+     "line": 78,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+     "line": 162,
+     "type": "url",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+     "line": 144,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+     "line": 154,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 317,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 419,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+     "line": 423,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 172,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 175,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 178,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 181,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+     "line": 277,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 110,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 118,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+     "line": 126,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 330,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 333,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 336,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 339,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 427,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 465,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/leads/LeadsPage.tsx",
+     "line": 468,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+     "line": 63,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+     "line": 64,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+     "line": 72,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+     "line": 80,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 165,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 268,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+     "line": 273,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/roles/RolesPage.tsx",
+     "line": 494,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/roles/RolesPage.tsx",
+     "line": 556,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 63,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 64,
+     "type": "date",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 65,
+     "type": "time",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+     "line": 66,
+     "type": "time",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+     "line": 90,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 161,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 164,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 167,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 170,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 173,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 176,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 179,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 182,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+     "line": 203,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 43,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 51,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 59,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+     "line": 82,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 238,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 241,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 244,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 247,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 250,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 253,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 256,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/staff/StaffPage.tsx",
+     "line": 259,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 464,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 467,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 470,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+     "line": 516,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 32,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 40,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 47,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+     "line": 55,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+     "line": 28,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+     "line": 36,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/teams/TeamsPage.tsx",
+     "line": 242,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T02",
+   "count": 13,
+   "signature": " [UNCONF]",
+   "byType": {
+    "omitted": 12,
+    "number": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 157,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 164,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 200,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": true,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 298,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 303,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 309,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/DexTab.tsx",
+     "line": 315,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+     "line": 187,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 230,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 238,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 311,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 317,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+     "line": 323,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T03",
+   "count": 12,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus [UNCONF]",
+   "byType": {
+    "omitted": 3,
+    "number": 3,
+    "text": 5,
+    "password": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 61,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 62,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 64,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/badges/BadgesPage.tsx",
+     "line": 66,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+     "line": 65,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+     "line": 66,
+     "type": "number",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 95,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 106,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+     "line": 121,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 334,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 345,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+     "line": 356,
+     "type": "text",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+      "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+     ],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T04",
+   "count": 3,
+   "signature": "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input | frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus | frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class [UNCONF]",
+   "byType": {
+    "text": 3
+   },
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 182,
+     "type": "text",
+     "className": "{`dist-input${errors.name ? \" dist-input--error\" : \"\"}`}",
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+      "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+     ],
+     "otherAppliedRules": [
+      "features/tcg-distribution/distribution.css:322 .dist-input",
+      "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+      "features/tcg-distribution/distribution.css:340 .dist-input--error"
+     ]
+    },
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 199,
+     "type": "text",
+     "className": "{`dist-input${errors.spreadsheet_id ? \" dist-input--error\" : \"\"}`}",
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+      "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+     ],
+     "otherAppliedRules": [
+      "features/tcg-distribution/distribution.css:322 .dist-input",
+      "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+      "features/tcg-distribution/distribution.css:340 .dist-input--error"
+     ]
+    },
+    {
+     "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+     "line": 223,
+     "type": "text",
+     "className": "{`dist-input${errors.sheet_name ? \" dist-input--error\" : \"\"}`}",
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+      "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+     ],
+     "otherAppliedRules": [
+      "features/tcg-distribution/distribution.css:322 .dist-input",
+      "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+      "features/tcg-distribution/distribution.css:340 .dist-input--error"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "T05",
+   "count": 3,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:246 .login-card .form-group input | frontend/src/pages-layout.css:255 .login-card .form-group input:focus",
+   "byType": {
+    "email": 2,
+    "password": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 93,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 104,
+     "type": "password",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    },
+    {
+     "file": "frontend/src/pages/login/LoginPage.tsx",
+     "line": 136,
+     "type": "email",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T06",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}",
+   "byType": {
+    "text": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/components/InventoryPicker.tsx",
+     "line": 217,
+     "type": "text",
+     "className": null,
+     "inlineStyle": "style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}",
+     "disabledAttr": true,
+     "hasRef": true,
+     "hasOnKeyDown": true,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T07",
+   "count": 1,
+   "signature": "frontend/src/components.css:50 .search-bar input | frontend/src/components/field-size.css:13 .field-w-sm | frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm | frontend/src/components/field-size.css:8 .field-h-md [UNCONF]",
+   "byType": {
+    "text": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+     "line": 135,
+     "type": "text",
+     "className": "\"field-h-md field-w-sm\"",
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+      "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+     ],
+     "otherAppliedRules": [
+      "components/field-size.css:8 .field-h-md",
+      "components/field-size.css:13 .field-w-sm",
+      "components/field-size.css:22 .content-toolbar .field-w-sm",
+      "components.css:50 .search-bar input"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "T08",
+   "count": 1,
+   "signature": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input [UNCONF]",
+   "byType": {
+    "omitted": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+     "line": 68,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": null,
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [
+      "components.css:19 .form-group input [depth limit]",
+      "components.css:30 .form-group input:focus [depth limit]"
+     ],
+     "otherAppliedRules": [
+      "features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "T09",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm)}",
+   "byType": {
+    "omitted": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 191,
+     "type": "omitted",
+     "className": null,
+     "inlineStyle": "style{min-width:var(--min-width-input-sm)}",
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T10",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-qty)}",
+   "byType": {
+    "number": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 194,
+     "type": "number",
+     "className": null,
+     "inlineStyle": "style{width:var(--input-width-qty)}",
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  },
+  {
+   "id": "T11",
+   "count": 1,
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-year)}",
+   "byType": {
+    "number": 1
+   },
+   "members": [
+    {
+     "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+     "line": 197,
+     "type": "number",
+     "className": null,
+     "inlineStyle": "style{width:var(--input-width-year)}",
+     "disabledAttr": false,
+     "hasRef": false,
+     "hasOnKeyDown": false,
+     "hitUnconfirmed": [],
+     "otherAppliedRules": []
+    }
+   ]
+  }
+ ],
+ "all": [
+  {
+   "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+   "line": 91,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "\"input\"",
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/CountryCombobox.tsx",
+   "line": 90,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "\"input\"",
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/DataTable.tsx",
+   "line": 174,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": "\"comp-table__check\"",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": true,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]"
+   ],
+   "otherAppliedRules": [
+    "components/DataTable.css:136 .comp-table__check"
+   ],
+   "signature": "frontend/src/components/DataTable.css:136 .comp-table__check"
+  },
+  {
+   "file": "frontend/src/components/DataTable.tsx",
+   "line": 262,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": "\"comp-table__check\"",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [ancestor className unresolved (.form-group possible); no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]",
+    "components.css:30 .form-group input:focus [ancestor className unresolved (.form-group possible); no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]",
+    "pages-layout.css:246 .login-card .form-group input [ancestor className unresolved (.form-group possible); no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]",
+    "pages-layout.css:255 .login-card .form-group input:focus [ancestor className unresolved (.form-group possible); no JSX usage found for DataTableSection (frontend/src/pages/design-preview/sections/DataTableSection.tsx); DataTableSection referenced outside JSX tag 1 time(s); no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx); too many usage chains]"
+   ],
+   "otherAppliedRules": [
+    "components/DataTable.css:136 .comp-table__check"
+   ],
+   "signature": "frontend/src/components/DataTable.css:136 .comp-table__check"
+  },
+  {
+   "file": "frontend/src/components/InventoryPicker.tsx",
+   "line": 217,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": "style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}",
+   "disabledAttr": true,
+   "hasRef": true,
+   "hasOnKeyDown": true,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm);padding:var(--space-6px) var(--space-2);width:100%}"
+  },
+  {
+   "file": "frontend/src/components/OrderFinancialPanel.tsx",
+   "line": 223,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PriorityScoreOverride.tsx",
+   "line": 81,
+   "type": "range",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for PriorityScoreOverride (frontend/src/components/PriorityScoreOverride.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for PriorityScoreOverride (frontend/src/components/PriorityScoreOverride.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 328,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 338,
+   "type": "date",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 361,
+   "type": "dynamic",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 385,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+   "line": 412,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 401,
+   "type": "dynamic",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 425,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 449,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 476,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 487,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 529,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/ShippingDetailPanel.tsx",
+   "line": 539,
+   "type": "date",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+   "line": 135,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "\"field-h-md field-w-sm\"",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+   ],
+   "otherAppliedRules": [
+    "components/field-size.css:8 .field-h-md",
+    "components/field-size.css:13 .field-w-sm",
+    "components/field-size.css:22 .content-toolbar .field-w-sm",
+    "components.css:50 .search-bar input"
+   ],
+   "signature": "frontend/src/components.css:50 .search-bar input | frontend/src/components/field-size.css:13 .field-w-sm | frontend/src/components/field-size.css:22 .content-toolbar .field-w-sm | frontend/src/components/field-size.css:8 .field-h-md"
+  },
+  {
+   "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+   "line": 157,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+   "line": 164,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for ProductMastersTab (frontend/src/pages/super-admin/ProductMastersTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/features/supplier-master/SupplierDetailDrawer.tsx",
+   "line": 413,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for SupplierDetailDrawer (frontend/src/features/supplier-master/SupplierDetailDrawer.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for SupplierDetailDrawer (frontend/src/features/supplier-master/SupplierDetailDrawer.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+   "line": 68,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [depth limit]",
+    "components.css:30 .form-group input:focus [depth limit]"
+   ],
+   "otherAppliedRules": [
+    "features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+   ],
+   "signature": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244 .pmd-field input"
+  },
+  {
+   "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+   "line": 182,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "{`dist-input${errors.name ? \" dist-input--error\" : \"\"}`}",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+    "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+   ],
+   "otherAppliedRules": [
+    "features/tcg-distribution/distribution.css:322 .dist-input",
+    "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+    "features/tcg-distribution/distribution.css:340 .dist-input--error"
+   ],
+   "signature": "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input | frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus | frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class"
+  },
+  {
+   "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+   "line": 199,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "{`dist-input${errors.spreadsheet_id ? \" dist-input--error\" : \"\"}`}",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+    "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+   ],
+   "otherAppliedRules": [
+    "features/tcg-distribution/distribution.css:322 .dist-input",
+    "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+    "features/tcg-distribution/distribution.css:340 .dist-input--error"
+   ],
+   "signature": "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input | frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus | frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class"
+  },
+  {
+   "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+   "line": 223,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": "{`dist-input${errors.sheet_name ? \" dist-input--error\" : \"\"}`}",
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+    "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+   ],
+   "otherAppliedRules": [
+    "features/tcg-distribution/distribution.css:322 .dist-input",
+    "features/tcg-distribution/distribution.css:334 .dist-input:focus",
+    "features/tcg-distribution/distribution.css:340 .dist-input--error"
+   ],
+   "signature": "frontend/src/features/tcg-distribution/distribution.css:322 .dist-input | frontend/src/features/tcg-distribution/distribution.css:334 .dist-input:focus | frontend/src/features/tcg-distribution/distribution.css:340 .dist-input--error ?conditional-class"
+  },
+  {
+   "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+   "line": 238,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [DistributionWorkspace referenced outside JSX tag 1 time(s)]",
+    "components.css:30 .form-group input:focus [DistributionWorkspace referenced outside JSX tag 1 time(s)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 163,
+   "type": "tel",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 169,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 173,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 180,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 184,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 191,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+   "line": 195,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+   "line": 67,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+   "line": 79,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+   "line": 91,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+   "line": 192,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+   "line": 207,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+   "line": 222,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+   "line": 238,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+   "line": 253,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 145,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 158,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 183,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 196,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 209,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+   "line": 222,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": true,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/badges/BadgesPage.tsx",
+   "line": 61,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/badges/BadgesPage.tsx",
+   "line": 62,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/badges/BadgesPage.tsx",
+   "line": 64,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/badges/BadgesPage.tsx",
+   "line": 66,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BadgesPage (frontend/src/pages/badges/BadgesPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotFormFields.tsx",
+   "line": 54,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotFormFields.tsx",
+   "line": 83,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotFormFields.tsx",
+   "line": 90,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotsPage.tsx",
+   "line": 228,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotsPage.tsx",
+   "line": 231,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotsPage.tsx",
+   "line": 255,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/bots/BotsPage.tsx",
+   "line": 258,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+   "line": 65,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+   "line": 66,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for BuddyPage (frontend/src/pages/buddy/BuddyPage.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+   "line": 37,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+   "line": 51,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+   "line": 58,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 154,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 157,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 160,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 163,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 166,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 170,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 175,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+   "line": 178,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+   "line": 56,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+   "line": 63,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+   "line": 70,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/contacts/ContactFormFields.tsx",
+   "line": 78,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+   "line": 95,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [
+    "94:{/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}"
+   ],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+   "line": 106,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+   "line": 121,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [
+    "120:{/* ui-allow: CarrierIntegrationPage から移動した既存 input のリファクタ（挙動不変） (#2601) */}"
+   ],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [element passed as prop substeps of <SubstepPane> (placement not resolved); no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+   "line": 509,
+   "type": "file",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": true,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+   "line": 538,
+   "type": "file",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": true,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 288,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 302,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 316,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 334,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 345,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+   "line": 356,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [
+    "pages-layout.css:246 .login-card .form-group input [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]",
+    "pages-layout.css:255 .login-card .form-group input:focus [no JSX usage found for FedexLabelValidationTab (frontend/src/pages/integrations/FedexLabelValidationTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+   "line": 162,
+   "type": "url",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+   "line": 144,
+   "type": "text",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+   "line": 154,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+   "line": 317,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+   "line": 419,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+   "line": 423,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 172,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 175,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 178,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 181,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+   "line": 277,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+   "line": 110,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+   "line": 118,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+   "line": 126,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 330,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 333,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 336,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 339,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 427,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 465,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/leads/LeadsPage.tsx",
+   "line": 468,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/login/LoginPage.tsx",
+   "line": 93,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus",
+    "pages-layout.css:246 .login-card .form-group input",
+    "pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:246 .login-card .form-group input | frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/login/LoginPage.tsx",
+   "line": 104,
+   "type": "password",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus",
+    "pages-layout.css:246 .login-card .form-group input",
+    "pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:246 .login-card .form-group input | frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/login/LoginPage.tsx",
+   "line": 136,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus",
+    "pages-layout.css:246 .login-card .form-group input",
+    "pages-layout.css:255 .login-card .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:246 .login-card .form-group input | frontend/src/pages-layout.css:255 .login-card .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+   "line": 63,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+   "line": 64,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+   "line": 72,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+   "line": 80,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 215,
+   "type": "omitted",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 224,
+   "type": "omitted",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 251,
+   "type": "omitted",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 262,
+   "type": "date",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 270,
+   "type": "omitted",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 274,
+   "type": "omitted",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 294,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 298,
+   "type": "url",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 317,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 321,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 325,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 329,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 333,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/products/ProductEditPage.tsx",
+   "line": 337,
+   "type": "number",
+   "textLike": true,
+   "category": "product-edit(hold)",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"])"
+   ],
+   "signature": "frontend/src/company-forms.css:238 .product-edit-form .form-group input:not([type=\"checkbox\"]):not([type=\"radio\"]) | frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+   "line": 191,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": "style{min-width:var(--min-width-input-sm)}",
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{min-width:var(--min-width-input-sm)}"
+  },
+  {
+   "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+   "line": 194,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": "style{width:var(--input-width-qty)}",
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-qty)}"
+  },
+  {
+   "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+   "line": 197,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": "style{width:var(--input-width-year)}",
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | style{width:var(--input-width-year)}"
+  },
+  {
+   "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+   "line": 165,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+   "line": 268,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+   "line": 273,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 494,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 505,
+   "type": "radio",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "pages-layout.css:354 .color-swatch input[type=\"radio\"]"
+   ],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:354 .color-swatch input[type=\"radio\"]"
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 521,
+   "type": "radio",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [
+    "pages-layout.css:354 .color-swatch input[type=\"radio\"]"
+   ],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus | frontend/src/pages-layout.css:354 .color-swatch input[type=\"radio\"]"
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 556,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/roles/RolesPage.tsx",
+   "line": 561,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+   "line": 63,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+   "line": 64,
+   "type": "date",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+   "line": 65,
+   "type": "time",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+   "line": 66,
+   "type": "time",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+   "line": 90,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 161,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 164,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 167,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 170,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 173,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 176,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 179,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 182,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 203,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+   "line": 219,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+   "line": 43,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+   "line": 51,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+   "line": 59,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+   "line": 82,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 238,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 241,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 244,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 247,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 250,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 253,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 256,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 259,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/staff/StaffPage.tsx",
+   "line": 292,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/super-admin/DexTab.tsx",
+   "line": 200,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": true,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/DexTab.tsx",
+   "line": 298,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/DexTab.tsx",
+   "line": 303,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/DexTab.tsx",
+   "line": 309,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/DexTab.tsx",
+   "line": 315,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for DexTab (frontend/src/pages/super-admin/DexTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+   "line": 464,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+   "line": 467,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+   "line": 470,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+   "line": 516,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+   "line": 187,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+   "line": 202,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+   "line": 215,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for LLMBudgetTab (frontend/src/pages/super-admin/LLMBudgetTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+   "line": 230,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+   "line": 238,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+   "line": 311,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+   "line": 317,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+   "line": 323,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for TcgSeriesTab (frontend/src/pages/super-admin/TcgSeriesTab.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+   "line": 352,
+   "type": "checkbox",
+   "textLike": false,
+   "category": "non-text",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [],
+   "hitUnconfirmed": [
+    "components.css:19 .form-group input [no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx)]",
+    "components.css:30 .form-group input:focus [no JSX usage found for StatusMasterPanel (frontend/src/pages/super-admin/components/StatusMasterPanel.tsx)]"
+   ],
+   "otherAppliedRules": [],
+   "signature": ""
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 32,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 40,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 47,
+   "type": "email",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+   "line": 55,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+   "line": 28,
+   "type": "omitted",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+   "line": 36,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  },
+  {
+   "file": "frontend/src/pages/teams/TeamsPage.tsx",
+   "line": 242,
+   "type": "number",
+   "textLike": true,
+   "category": "target",
+   "className": null,
+   "inlineStyle": null,
+   "disabledAttr": false,
+   "hasRef": false,
+   "hasOnKeyDown": false,
+   "uiAllow": [],
+   "hitDefinite": [
+    "components.css:19 .form-group input",
+    "components.css:30 .form-group input:focus"
+   ],
+   "hitUnconfirmed": [],
+   "otherAppliedRules": [],
+   "signature": "frontend/src/components.css:19 .form-group input | frontend/src/components.css:30 .form-group input:focus"
+  }
+ ]
+}

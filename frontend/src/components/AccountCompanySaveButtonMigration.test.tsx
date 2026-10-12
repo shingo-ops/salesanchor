@@ -14,7 +14,7 @@ vi.mock('../lib/api', () => ({ api: mock }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => authState }));
 let instance = createInstance();
 const tr = (key: string) => String(instance.t(key));
-const staff = { id: 9, primary_email: 'me@example.com', surname_jp: 'Old', given_name_jp: 'Name', surname_kana: null, given_name_kana: null, surname_en: null, given_name_en: null, phone: '09000000000', ui_preferences: null };
+const staff = { id: 9, primary_email: 'me@example.com', surname_jp: 'Old', given_name_jp: 'Name', surname_kana: null, given_name_kana: null, surname_en: 'Stored', given_name_en: 'Name', phone: '09000000000', ui_preferences: null };
 const company = { id: 41, tenant_id: 1, company_code: 'CO-41', lead_id: 2, sales_rep_id: null, name: 'Old Co', name_en: null, normalized_name: null, industry: null, website: null, priority_focus: null, per_order_amount: null, monthly_frequency: null, monthly_forecast: null, monthly_forecast_source: null, monthly_forecast_updated_at: null, billing_display_name: null, payment_recipient_name: null, fedex_account: null, shipping_note: null, status: 'active', notes: null, addresses: [], sales_channels: ['old'], discord: null, created_at: '', updated_at: '', conversation_count: 0, last_conversation_at: null };
 function deferred() { let resolve!: (v: unknown) => void; let reject!: (e: Error) => void; const promise = new Promise((r, j) => { resolve = r; reject = j; }); return { promise, resolve, reject }; }
 function provider(node: React.ReactNode) { return <I18nextProvider i18n={instance}>{node}</I18nextProvider>; }
@@ -40,8 +40,8 @@ describe('account and company save Button migration', () => {
     fireEvent.change(screen.getByLabelText(tr('accountSettings.givenNameJp')), { target: { value: ' Person ' } });
     fireEvent.change(screen.getByLabelText(tr('staff.surnameKana')), { target: { value: ' kana ' } });
     fireEvent.change(screen.getByLabelText(tr('staff.givenNameKana')), { target: { value: ' given ' } });
-    fireEvent.change(screen.getByLabelText(tr('accountSettings.surnameEn')), { target: { value: ' Last ' } });
-    fireEvent.change(screen.getByLabelText(tr('accountSettings.givenNameEn')), { target: { value: ' First ' } });
+    fireEvent.change(screen.getByLabelText(tr('accountSettings.surnameEn') + ' *'), { target: { value: ' Last ' } });
+    fireEvent.change(screen.getByLabelText(tr('accountSettings.givenNameEn') + ' *'), { target: { value: ' First ' } });
     fireEvent.change(screen.getByLabelText(tr('accountSettings.phoneLabel')), { target: { value: '' } });
     const reads = mock.get.mock.calls.filter(c => c[0] === '/staff/me').length; const save = screen.getByRole('button', { name: tr('common.save') }) as HTMLButtonElement;
     fireEvent.click(save); expect(mock.patch).toHaveBeenCalledExactlyOnceWith('/staff/me/profile', { surname_jp: ' New ', given_name_jp: ' Person ', surname_kana: ' kana ', given_name_kana: ' given ', surname_en: ' Last ', given_name_en: ' First ', phone: null });

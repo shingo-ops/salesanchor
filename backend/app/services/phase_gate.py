@@ -25,7 +25,10 @@ API:
       ...
 
 呼出元:
-  backend/app/services/inventory_movements.py (apply_inbound_items)
+  backend/app/routers/super_admin_phase_switch.py
+  backend/app/services/tenant.py
+  (旧呼出元 backend/app/services/inventory_movements.py の apply_inbound_items は
+   2026-10-02 Discord 在庫取り込み機能削除に伴い撤去済み)
 
 冪等性/キャッシュ:
   - 各呼出で 1 度 SELECT する（毎承認操作で <1ms、キャッシュ不要）。

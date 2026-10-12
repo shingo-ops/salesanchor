@@ -19,6 +19,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.services.tcg_status_values import VALID_EFFECTS, VALID_MATCH_TYPES
+
 # ============================================================================
 # knowledge_rules
 # ============================================================================
@@ -384,23 +386,6 @@ class RoleVisibilityAssign(BaseModel):
     visibility_keys: list[str]
 
 
-# ============================================================================
-# ADR-085: 仕入先別 Gemini プロンプト (public.supplier_prompts)
-# ============================================================================
-
-
-class SupplierPromptResponse(BaseModel):
-    supplier_id: int
-    prompt: str
-    is_active: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class SupplierPromptUpdate(BaseModel):
-    prompt: str = Field(default="", max_length=50000)
-    is_active: bool = True
-
 
 # ============================================================================
 # supplier extraction rules: 仕入元ごとの抽出ルール (public.suppliers 列)
@@ -417,6 +402,8 @@ class SupplierExtractionRulesResponse(BaseModel):
     extraction_state_format: Optional[str] = None
     extraction_example_text: Optional[str] = None
     extraction_ship_format: Optional[str] = None
+    extraction_layout_rules: Optional[str] = None  # 新しい仕組み専用（本番 v7 は読まない）
+    extraction_hard_cases: Optional[str] = None  # 新しい仕組み専用（本番 v7 は読まない）
     latest_raw_text: Optional[str] = None  # source_messages.raw_text の最新1件
 
     model_config = ConfigDict(from_attributes=True)
@@ -431,6 +418,8 @@ class SupplierExtractionRulesUpdate(BaseModel):
     extraction_state_format: Optional[str] = Field(default=None, max_length=5000)
     extraction_example_text: Optional[str] = Field(default=None, max_length=50000)
     extraction_ship_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_layout_rules: Optional[str] = Field(default=None, max_length=50000)
+    extraction_hard_cases: Optional[str] = Field(default=None, max_length=50000)
 
 
 class SupplierExtractionOverviewItem(BaseModel):
@@ -560,8 +549,9 @@ class UnitAliasResponse(UnitAliasBase):
 # tcg_status_master
 # ============================================================================
 
-_VALID_MATCH_TYPES = {"REGEX", "LITERAL", "DEFAULT"}
-_VALID_EFFECTS = {"OUTPUT", "EXCLUDE"}
+# 値は services/tcg_status_values.py の1か所の定数（読む側の v102_status_context と共有）
+_VALID_MATCH_TYPES = VALID_MATCH_TYPES
+_VALID_EFFECTS = VALID_EFFECTS
 
 
 class TcgStatusMasterBase(BaseModel):
@@ -672,7 +662,7 @@ class TcgNoteMasterResponse(TcgNoteMasterBase):
 
 
 # ============================================================================
-# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / skip_condition / status_keyword）
+# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / status_keyword）
 # ============================================================================
 
 class KnowledgeRuleSimpleResponse(BaseModel):
@@ -715,3 +705,31 @@ class SupplierKnowledgeLinkResponse(BaseModel):
 
 class SupplierKnowledgeLinkCreate(BaseModel):
     knowledge_rule_id: int
+
+
+# ============================================================================
+# line_unit_ignore_phrases（単位にしない言い回し）
+# ============================================================================
+
+
+class UnitIgnorePhraseCreate(BaseModel):
+    phrase: str = Field(min_length=1, max_length=200, description="単位にしない言い回し（例: ONE PIECE）。重複不可")
+    note: Optional[str] = Field(default=None, max_length=500, description="登録理由。省略可")
+    is_active: bool = Field(default=True, description="有効フラグ。false の言い回しは解析で使わない")
+
+
+class UnitIgnorePhraseUpdate(BaseModel):
+    phrase: Optional[str] = Field(default=None, min_length=1, max_length=200, description="単位にしない言い回し。指定時のみ更新")
+    note: Optional[str] = Field(default=None, max_length=500, description="登録理由。指定時のみ更新")
+    is_active: Optional[bool] = Field(default=None, description="有効フラグ。指定時のみ更新")
+
+
+class UnitIgnorePhraseResponse(BaseModel):
+    id: int = Field(description="主キー")
+    phrase: str = Field(description="単位にしない言い回し")
+    note: Optional[str] = Field(default=None, description="登録理由")
+    is_active: bool = Field(description="有効フラグ")
+    created_at: datetime = Field(description="作成日時")
+    updated_at: datetime = Field(description="最終更新日時")
+
+    model_config = ConfigDict(from_attributes=True)

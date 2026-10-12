@@ -49,6 +49,17 @@
   color: var(--icon-action-danger);
 }
 
+/* badge: 常に危険色。pressed（自分の分）は枠と背景で区別する */
+.comp-icon-toggle--badge,
+.comp-icon-toggle--badge:hover:not(:disabled) {
+  color: var(--icon-action-danger);
+}
+
+.comp-icon-toggle--badge.comp-icon-toggle--pressed {
+  border-color: var(--accent);
+  background: var(--link-active-bg);
+}
+
 .comp-icon-toggle__count {
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-semi);

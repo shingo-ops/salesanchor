@@ -6,7 +6,7 @@ Accepted
 
 ## Date
 
-2026-06-02（起案） / 2026-06-03（実装完了・記録更新） / 2026-06-16（権限定義追記） / 2026-09-27（Add Reactions 実装済み記録）
+2026-06-02（起案） / 2026-06-03（実装完了・記録更新） / 2026-06-16（権限定義追記） / 2026-09-27（Add Reactions 実装済み記録） / 2026-10-01（Manage Webhooks 実装済み記録・ADR-159 便B）
 
 ## Context
 
@@ -72,7 +72,7 @@ API 呼び出し実装は承認後に行うこと。
 
 | 権限（英語） | 権限（日本語） | 意図・注意 |
 |---|---|---|
-| Manage Webhooks | ウェブフックを管理 | 営業担当・スタッフがアプリ側で Webhook 設定できるようにする構想のため |
+| Manage Webhooks | ウェブフックを管理 | 返信を担当者の名前・アイコンで送るため、Bot がチャンネルに webhook を1本作成して使う。**実装済み: ADR-159 便B（2026-10-01）**。webhook 実行 token は暗号化保存し、Bot 名義へのフォールバックはしない。リアクションは引き続き Bot 名義 |
 | Manage Messages | メッセージを管理 | アプリ側から Discord メッセージ削除を行う構想のため。**強い権限のため、実装時は監査ログ・確認画面・権限制御を必須とする** |
 | Embed Links | リンクを埋め込み | 追跡番号 URL・請求書リンク等のプレビュー表示に必要 |
 | Attach Files | ファイルを添付 | 請求書 PDF・写真共有を Bot 経由で行う構想のため |
@@ -101,7 +101,7 @@ Developer Portal に存在する以下の項目は、現時点では使用しな
 - Sales Anchor の Bot 接続フローは `/discord/oauth/start` → `/discord/oauth/callback` の OAuth2 フローを使用する
 - Discord Webhook Events（Discord → Sales Anchor への公開エンドポイント）は現時点で用意していない
 - Developer Portal の "Webhooks" タブ（Bot がサーバー内に Webhook を作成するための設定画面）も現時点では使用しない
-- **注意**: 「将来機能として許容」に記載の Manage Webhooks 権限（Bot がサーバー内 Webhook を作成・管理する）は Developer Portal の Webhooks タブとは**別物**である
+- **注意**: Manage Webhooks 権限（Bot がサーバー内 Webhook を作成・管理する。ADR-159 便B で担当者名義の返信送信に使用開始）は Developer Portal の Webhooks タブとは**別物**であり、タブの設定は引き続き不要
 
 ### Application Testers
 

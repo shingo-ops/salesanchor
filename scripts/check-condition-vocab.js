@@ -8,11 +8,13 @@ const { join } = require('path');
 const repoRoot = process.env.CONDITION_VOCAB_SCAN_ROOT
   || execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 
-const CODE_FILES = [
-  'backend/app/services/inventory_parser.py',
-  'backend/app/services/inventory_parser_llm.py',
-  'frontend/src/pages/super-admin/ParseReviewPage.tsx',
-];
+// 2026-10-02: 旧3ファイルは Discord 在庫取り込み機能の削除に伴い削除済み
+// (backend/app/services/inventory_parser.py / inventory_parser_llm.py /
+// frontend/src/pages/super-admin/ParseReviewPage.tsx)。CODE_RULES のレガシー語彙
+// スキャン対象コードファイルは現在ゼロ件。checkCodeFile() は existsSync ガードと
+// 空配列ループで安全に no-op になるため、スクリプト自体はクラッシュしない。
+// JSON_FILES のチェックは引き続き有効。
+const CODE_FILES = [];
 
 const JSON_FILES = [
   'frontend/src/locales/ja.json',

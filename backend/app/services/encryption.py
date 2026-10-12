@@ -88,6 +88,15 @@ def reset_cache() -> None:
     _get_default_fernet.cache_clear()
 
 
+def ensure_configured() -> None:
+    """鍵が設定済みで使えることを確認する（暗号化・復号の前提チェック用）。
+
+    Raises:
+        EncryptionConfigurationError: 鍵未設定 / 形式不正
+    """
+    _get_default_fernet()
+
+
 def encrypt(plaintext: str, *, fernet: Optional[Fernet] = None) -> str:
     """平文を暗号化して urlsafe base64 文字列で返す。
 

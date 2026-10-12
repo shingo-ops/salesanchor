@@ -44,6 +44,8 @@ interface SupplierExtractionDetail {
   extraction_notes: string | null;
   extraction_example_text: string | null;
   extraction_ship_format: string | null;
+  extraction_layout_rules: string | null;
+  extraction_hard_cases: string | null;
   latest_raw_text: string | null;
 }
 
@@ -83,6 +85,8 @@ type RulesFormState = {
   extraction_notes: string;
   extraction_example_text: string;
   extraction_ship_format: string;
+  extraction_layout_rules: string;
+  extraction_hard_cases: string;
 };
 
 const emptyForm: RulesFormState = {
@@ -94,6 +98,8 @@ const emptyForm: RulesFormState = {
   extraction_notes: "",
   extraction_example_text: "",
   extraction_ship_format: "",
+  extraction_layout_rules: "",
+  extraction_hard_cases: "",
 };
 
 function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
@@ -106,6 +112,8 @@ function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
     extraction_notes: detail.extraction_notes ?? "",
     extraction_example_text: detail.extraction_example_text ?? "",
     extraction_ship_format: detail.extraction_ship_format ?? "",
+    extraction_layout_rules: detail.extraction_layout_rules ?? "",
+    extraction_hard_cases: detail.extraction_hard_cases ?? "",
   };
 }
 
@@ -144,16 +152,16 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [knowledgeLinks, setKnowledgeLinks] = useState<KnowledgeLink[]>([]);
   const [allKnowledgeRules, setAllKnowledgeRules] = useState<Record<string, KnowledgeRule[]>>({});
   const [knowledgeAddMode, setKnowledgeAddMode] = useState<Record<string, "none" | "select" | "create">>(
-    { block_delimiter: "none", skip_condition: "none", status_keyword: "none" }
+    { block_delimiter: "none", status_keyword: "none" }
   );
   const [knowledgeSelectValue, setKnowledgeSelectValue] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
   const [knowledgeNewPattern, setKnowledgeNewPattern] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
   const [knowledgeNewNormalizedTo, setKnowledgeNewNormalizedTo] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
 
   // ---------------------------------------------------------------------------
@@ -228,7 +236,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   }, []);
 
   const fetchAllKnowledgeRules = useCallback(async () => {
-    const categories = ["block_delimiter", "skip_condition", "status_keyword"] as const;
+    const categories = ["block_delimiter", "status_keyword"] as const;
     const results: Record<string, KnowledgeRule[]> = {};
     await Promise.all(
       categories.map(async (cat) => {
@@ -307,7 +315,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       setMessages([]);
       setMessageIndex(0);
       setKnowledgeLinks([]);
-      setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
+      setKnowledgeAddMode({ block_delimiter: "none", status_keyword: "none" });
       void fetchDetail(row.supplier_id);
       void fetchMessages(row.supplier_id);
       void fetchKnowledgeLinks(row.supplier_id);
@@ -325,7 +333,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setMessageIndex(0);
     setFormatTokens([]);
     setKnowledgeLinks([]);
-    setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
+    setKnowledgeAddMode({ block_delimiter: "none", status_keyword: "none" });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -427,6 +435,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         extraction_notes: form.extraction_notes || null,
         extraction_example_text: form.extraction_example_text || null,
         extraction_ship_format: form.extraction_ship_format || null,
+        extraction_layout_rules: form.extraction_layout_rules || null,
+        extraction_hard_cases: form.extraction_hard_cases || null,
       };
       await api.patch(
         `/super-admin/suppliers/${selectedSupplier.supplier_id}/extraction-rules`,
@@ -634,11 +644,9 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
               <label style={{ display: "block", fontSize: "var(--font-sm)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
                 {t("supplierExtractionRules.knowledgeSection")}
               </label>
-              {(["block_delimiter", "skip_condition", "status_keyword"] as const).map((category) => {
+              {(["block_delimiter", "status_keyword"] as const).map((category) => {
                 const labelKey = category === "block_delimiter"
                   ? "knowledgeBlockDelimiters"
-                  : category === "skip_condition"
-                  ? "knowledgeSkipConditions"
                   : "knowledgeStatusKeywords";
                 const helperKey = (labelKey + "Helper") as `${typeof labelKey}Helper`;
                 const linkedItems = knowledgeLinks.filter((l) => l.category === category);
@@ -803,6 +811,28 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                 setForm((prev) => ({ ...prev, extraction_ship_format: e.target.value }))
               }
               rows={4}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.layoutRules")}
+              helperText={t("supplierExtractionRules.layoutRulesHelper")}
+              value={form.extraction_layout_rules}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_layout_rules: e.target.value }))
+              }
+              rows={8}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.hardCases")}
+              helperText={t("supplierExtractionRules.hardCasesHelper")}
+              value={form.extraction_hard_cases}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_hard_cases: e.target.value }))
+              }
+              rows={8}
               fullWidth
             />
 

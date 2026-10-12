@@ -37,7 +37,7 @@ export default function FxRatePage() {
     setFetching(true);
     setError("");
     try {
-      const data = await api.get<FxRate>("/fx-rate/USD");
+      const data = await api.get<FxRate>("/fx-rates/USD");
       setRate(data);
     } catch {
       // 404 = まだ未取得（noData 表示）。他エラーは error 表示。
