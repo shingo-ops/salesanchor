@@ -2,7 +2,7 @@
 
 > この文書は何か: 会社の新規作成と利用者の登録を、運営者（super admin）だけができるようにする変更の設計。
 > 親: [docs/specs/auth-roles/README.md](../../specs/auth-roles/README.md)
-> recon: [recon.md](recon.md)
+> recon: docs/handoff/admin-api-super-admin-only/recon.md
 > 対象ADR: ADR-023（POST /auth/register の再設計・廃止判断は本件の対象外）
 
 ## 目的
