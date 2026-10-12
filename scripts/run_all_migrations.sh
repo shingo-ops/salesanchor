@@ -907,3 +907,6 @@ run_sql migrations/20261012_100000_add_extraction_jobs_system_review_detail.sql
 
 # extraction_attempts に Gemini の思考要約の列を足す（構造のみ）
 run_sql migrations/20261012_200000_add_extraction_attempts_thought_summaries.sql
+
+# tcg_distribution_targets に要確認タブ名の列を足す（構造のみ・冪等。値は docs/handoff/review-sheet-export/data/ の1回だけのデータ変更）
+run_sql migrations/20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql
