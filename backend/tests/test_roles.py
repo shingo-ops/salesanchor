@@ -84,8 +84,18 @@ class TestPermissions:
         assert isinstance(data["permissions"], list)
 
     async def test_my_permissions_includes_mocked_all_perms(self, client):
-        """テスト環境では ALL_TEST_PERMISSIONS が返る"""
-        res = await client.get("/api/v1/me/permissions")
+        """/me/permissions は load_user_permissions の結果をそのまま返す。
+
+        routers.roles が束縛している load_user_permissions は、最初に import された時点の
+        自動モックか実関数かが実行順で変わる。以前は実関数でも users.role の救済で全権限が出ていたが、
+        救済は撤去したので、この試験は束縛を明示してモックする。
+        """
+        from unittest.mock import patch
+
+        from tests.conftest import _mock_load_user_permissions
+
+        with patch("app.routers.roles.load_user_permissions", _mock_load_user_permissions):
+            res = await client.get("/api/v1/me/permissions")
         assert res.status_code == 200
         perms = set(res.json()["permissions"])
         # bypass_permissions で全権限がモックされていることを確認
