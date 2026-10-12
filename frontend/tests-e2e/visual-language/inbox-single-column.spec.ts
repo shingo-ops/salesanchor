@@ -102,6 +102,32 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
   });
 
+  test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みは検索欄の横に出る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指定）: 一覧では操作行（テンプレート / FAQ / 受信箱の設定）を出さない。
+    // 一覧では使い道がなく、その高さを一覧に回す。
+    await expect(page.locator(".page-header-actions")).toHaveCount(0);
+
+    // 絞り込みは一覧専用なので検索欄の横へ移した。一覧では必ず使えること。
+    const filterInSearchRow = page.locator(".inbox-search-row .inbox-mobile-filter-toggle");
+    await expect(filterInSearchRow).toBeVisible();
+    // 押すと絞り込み（ステータスタブ）が開くこと
+    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await filterInSearchRow.click();
+    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await filterInSearchRow.click();
+    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+
+    // 会話を開くと操作行が出ること（返信中に使うため）
+    await openConversation(page);
+    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 一覧専用の絞り込みは会話側では見えない（一覧が隠れているため）
+    await expect(filterInSearchRow).toBeHidden();
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -119,5 +145,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // モバイル専用の殻（MobileShell）は 768px 以上では描かれない＝PC 側は無関係
     await expect(page.locator(".mobile-tabbar")).toHaveCount(0);
     await expect(page.locator(".mobile-topbar")).toHaveCount(0);
+    // ヘッダーの操作行は PC・タブレットでは一覧を見ているときも出す（従来どおり）
+    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 絞り込みボタンは DOM にはあるが PC・タブレットでは表示しない
+    await expect(page.locator(".inbox-search-row .inbox-mobile-filter-toggle")).toBeHidden();
   });
 });
