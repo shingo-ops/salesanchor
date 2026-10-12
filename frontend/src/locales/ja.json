@@ -4902,12 +4902,16 @@
     },
     "effect": {
       "EXCLUDE": "除外",
-      "OUTPUT": "出力"
+      "OUTPUT": "出力",
+      "HEADING": "見出し",
+      "DATE_AHEAD": "先の日付",
+      "RELEASE_AHEAD": "発売日"
     },
     "matchType": {
       "REGEX": "正規表現",
       "LITERAL": "完全一致",
-      "DEFAULT": "デフォルト"
+      "DEFAULT": "デフォルト",
+      "RELEASE": "発売日"
     },
     "enabled": {
       "true": "有効",
@@ -4922,7 +4926,8 @@
       "soldOut": "完売ルール",
       "date": "日付ルール",
       "default": "デフォルト",
-      "test": "テスト"
+      "test": "テスト",
+      "context": "予約の手がかり"
     },
     "test": {
       "gateOpen": "テスト合格 — ルール有効化可能",
@@ -4976,7 +4981,13 @@
       "effectOutput": "検索して表示",
       "effectExclude": "検索して除外",
       "testRequired": "テスト合格後に作成できます",
-      "testPassed": "テスト合格"
+      "testPassed": "テスト合格",
+      "effectHeading": "見出しから決める",
+      "effectDateAhead": "先の日付から決める",
+      "effectReleaseAhead": "発売日から決める",
+      "matchType": "照合方法",
+      "excludePattern": "除外ワード",
+      "testNotNeeded": "発売日の規則はテスト不要です"
     },
     "edit": {
       "title": "ルール編集",

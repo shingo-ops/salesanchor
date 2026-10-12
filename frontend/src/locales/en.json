@@ -4902,12 +4902,16 @@
     },
     "effect": {
       "EXCLUDE": "Exclude",
-      "OUTPUT": "Output"
+      "OUTPUT": "Output",
+      "HEADING": "Heading",
+      "DATE_AHEAD": "Upcoming date",
+      "RELEASE_AHEAD": "Release date"
     },
     "matchType": {
       "REGEX": "Regex",
       "LITERAL": "Literal",
-      "DEFAULT": "Default"
+      "DEFAULT": "Default",
+      "RELEASE": "Release date"
     },
     "enabled": {
       "true": "Enabled",
@@ -4922,7 +4926,8 @@
       "soldOut": "Sold-out Rules",
       "date": "Date Rules",
       "default": "Default",
-      "test": "Test"
+      "test": "Test",
+      "context": "Pre-order clues"
     },
     "test": {
       "gateOpen": "Tests passed — rules can be enabled",
@@ -4976,7 +4981,13 @@
       "effectOutput": "Detect and show",
       "effectExclude": "Detect and exclude",
       "testRequired": "Create available after test passes",
-      "testPassed": "Test passed"
+      "testPassed": "Test passed",
+      "effectHeading": "Decide from heading",
+      "effectDateAhead": "Decide from upcoming date",
+      "effectReleaseAhead": "Decide from release date",
+      "matchType": "Match type",
+      "excludePattern": "Exclude word",
+      "testNotNeeded": "Release date rules need no test"
     },
     "edit": {
       "title": "Edit Rule",
