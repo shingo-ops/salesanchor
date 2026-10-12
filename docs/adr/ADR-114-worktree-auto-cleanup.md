@@ -61,12 +61,12 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
   - 動作：該当ブランチの行を DONE に更新 → commit → develop に push
   - 権限：develop は保護下のため `PIPELINE_PAT`（既存・Issue #300 で rotation 管理）でコミット。Generator 着手前に `gh api .../actions/secrets` で存在を確認。
   - 制約：更新後も `active-work-lint.yml` の6列フォーマットを満たすこと。
-- **未改訂の注（2026-10-10）**：現行の `.github/workflows/active-work-auto-done.yml` は develop 前提のまま（`:6-9` `branches: [develop]`、`:25` `ref: develop`、`:130` develop へ直接 push）。main マージでは本節の自動DONEは動かない。本節の main 対応は別途設計する（本改訂の対象外）。フォルダの回収（§4）は台帳の DONE に依存せず、gh のマージ判定（`scripts/reaper-worktree.sh:233-234`）で動く。
+- **main マージ時の行 DONE 化（2026-10-10 改訂）**：`.github/workflows/ledger-auto-done-main.yml`（`:16-18` pull_request closed・base=main）が担う。単票 `.claude-pipeline/active-work.d/<branch>.md` を `scripts/ledger-update.sh` で DONE にし（`:71`）、`release/ledger-done-<PR>` の PR を作って auto-merge する（`:138`・`:151`）。`.github/workflows/active-work-auto-done.yml` は develop 前提のまま（`:6-9`）で main では動かない。フォルダの回収（§4）は台帳の DONE に依存せず、gh のマージ判定でも動く。
 
 ### 4. フォルダを自動削除（各Mac側・掃除係＝reaper）
 フォルダはその Mac の中にしかないので、削除は Mac 側でしか行えない。掃除係は次の条件を**すべて満たす**部屋だけ消す。
 - ノートが DONE（または PR がマージ済み）
-- かつ **未保存の作業がない**（未コミット・未pushがゼロ）
+- かつ **未保存の作業がない**（未コミット・未pushがゼロ）（2026-10-10 R8：未push の判定は「HEAD までの全コミットが origin のどれかの ref から到達できるか」で行う。走査前に `git fetch --prune`、失敗時は削除しない）
 
 起動タイミング：
 - (a) 新規作成時に先に1回（`new-worktree.sh` の上限判定の前。これはその Mac 上でローカル完結）
@@ -77,6 +77,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 ### 5. 安全条件（非交渉）
 - **IN_PROGRESS の部屋は絶対に消さない。**
 - **未保存の作業がある部屋は絶対に消さない**（現状162中16件該当）。これらは消さず、通知して人の判断に回す。
+  - 例外（2026-10-11 R9）：未追跡の `*pr-body*.md`（PR 本文の下書き）だけが残る部屋は、main へのマージ済み PR の本文に下書きの全行があるときだけ未保存扱いしない。実削除前に `.git/reaper-drafts/` へ下書きを控え、控えに失敗した部屋は消さない。本文を取れない・下書きが空・本文に無い行がある・他の未保存がある場合は従来どおり保護。HEAD までのコミットの到達判定（R8）は従来どおり行う。
 - **使用中（そのフォルダか配下を作業場所にしているプロセスがある）の部屋は消さない**（`scripts/reaper-worktree.sh:161`、#4055）。マージ直後の即時回収で作業中のセッションの部屋を消さないため。（2026-10-10 改訂）
 - 実削除の前に dry-run（消す予定一覧の表示）を経由。
 
@@ -133,10 +134,10 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 
 マージ判定の切り分け（③・採用）：
 - `merged` かつ base=main → 回収対象（2026-10-10 改訂）
-- `closed`（未マージ）→ 消さない（安全側）※2026-10-10 注：現行実装は base=main の closed（未マージ）PR を削除対象にしている（`scripts/reaper-worktree.sh:239-252`。未保存・使用中は先に保護）。ADR と実装のどちらに合わせるかは未決（PO 判断事項）
-- PR が一度も無いブランチ → 消さない（確証なし）
+- `closed`（未マージ）→ 取り戻せる（全コミットが origin にある）場合のみ回収（2026-10-10 PO 承認。`scripts/reaper-worktree.sh` の closed 判定）
+- PR が一度も無いブランチ → 台帳が DONE かつ取り戻せる場合のみ回収。それ以外は消さない（2026-10-10 改訂）
 - IN_PROGRESS かつ未マージ → 絶対に消さない
-- 未コミット・未push あり → 絶対に消さない
+- 未コミット・未push あり（未push＝origin のどの ref からも到達できないコミット） → 絶対に消さない
 
 ## 順序制約・依存（実装時の必須事項）
 1. `shingo-mac` ラベル付与は Shingo-Mac-Temp オンライン化と**同時**（先付与は全停止）。
@@ -153,3 +154,5 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 | 日付 | 内容 | 根拠 |
 |------|------|------|
 | 2026-10-10 | develop 前提を main 前提に改訂。main マージ直後の即時回収・本体基点での実行・使用中保護・排他ロック・GH_TOKEN を追記（R5） | docs/handoff/reaper-on-merge/design.md／#4053・#4055・#4059・#4064・#4071 |
+| 2026-10-10 | R8：取り戻せる部屋だけ消す（未push＝origin のどの ref からも到達できないコミット。走査前 fetch --prune、失敗時は削除しない）。§3 の台帳 DONE 化の注を実物に合わせて改訂 | docs/handoff/reaper-on-merge/design.md（R8 節）／本 PR |
+| 2026-10-11 | R9：PR 本文の下書き（未追跡の *pr-body*.md）だけが残るマージ済みの部屋は、下書きの全行がマージ済み PR の本文にあるとき回収する。実削除前に .git/reaper-drafts/ へ控える | docs/handoff/reaper-on-merge/design.md（R9 節）／本 PR |

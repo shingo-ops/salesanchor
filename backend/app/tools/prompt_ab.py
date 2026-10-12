@@ -11,7 +11,7 @@
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME] [--prompt-key raw_copy_v101_NAME]
         [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
-（--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_c）
+（--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_ct）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
 extraction_shadow_runs / extraction_jobs など本番の表には書かない。
@@ -585,7 +585,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
-    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_c）を指示書にする")
+    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_ct）を指示書にする")
     p.add_argument("--prompt-key", help="--config v101・v102 のみ。public.extraction_prompt_config の prompt_key（raw_copy_v101_<名前>、is_active）の本文を指示書にする。--prompt-name とは同時に使えない")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")

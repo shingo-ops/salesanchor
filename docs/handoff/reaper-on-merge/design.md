@@ -81,3 +81,73 @@
   - フォークの PR の扱いのリポジトリ設定。
 
 worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTREE_LIMIT=101 を1回限り使用（PO の個別許可による1回限りの例外。ADR-114 §6 は上限の引き上げ案内を廃止している。本 PR が回収の仕組みの修正のため）
+
+## R8：取り戻せる部屋だけ消す（2026-10-10、PO 承認）
+
+### 目的
+- PO 方針の原文：「途中の作業を消してしまうのは避けて本当に必要ない場合に削除してほしい」。
+- 設計者提案「後から完全に取り戻せるときだけ消す」に、PO が y（2026-10-10）。
+
+### 変更前の穴
+- `scripts/reaper-worktree.sh` 旧 L210：`origin/<branch>` も upstream も無い部屋は、ローカルのみのコミットを未保存扱いしない（コメント「upstream 未設定だけを理由に未push 扱いしない」）。
+- 削除は L383 `git worktree remove --force` ＋ L388 `git branch -D`。ローカルだけにあるコミットは、削除後に取り戻せない。
+- 走査前に fetch が無く、origin の ref が古いまま判定していた。
+- 2026-10-10 時点の該当：1 件（`release/import-trend-graph-fix-gate`）。
+
+### 変更後の条件
+- 未コミット（台帳 `.claude-pipeline/` のみは除く）が無い。
+- かつ HEAD までの全コミットが、origin のどれかの ref（main・各ブランチ）から到達できる：`git rev-list --count HEAD --not --remotes=origin` が 0。upstream の設定有無・向き先は問わない。
+- コミットが1つも無い部屋（HEAD なし）は、失うコミットが無いので判定しない。
+- 判定は走査前の `git fetch --prune origin` の後に行う。
+
+### fetch 失敗時は削除しない
+- fetch に失敗したら、警告を出し、その回の削除候補を空にする（保護・分類の表示は通常どおり）。
+- テストは `REAPER_SKIP_FETCH=1` で fetch を省略し、`REAPER_FETCH_REMOTE` で remote 名を差し替えられる。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1：テストが全 PASS | `bash scripts/tests/test-reaper-safety.sh` が FAIL 0（R8-a〜d を含む） |
+| K2：到達不能コミットを持つ部屋が削除対象に出ない | 本体で dry-run を実行し、`reach.tsv` の unreachable_count>0 の行が「削除対象」に 0 件であること |
+| K3：マージ後の自 PR の部屋が消え、fetch 失敗の警告が出ない | マージ後の reaper-schedule の run ログで、自 PR のブランチが削除され、「git fetch に失敗しました」が無いこと |
+| K4：fetch 失敗時は削除しない | テスト R8-d（存在しない remote 名で呼ぶ）で、削除対象が出ず、警告が出ること |
+
+### 戻し方
+- 本 PR を revert する（スクリプト・テスト・文書のみ。データの変更なし）。
+
+### 変えないこと
+- 削除部（L383・L388）、gh によるマージ済み・closed 判定、使用中保護、排他ロック、IN_PROGRESS/REVIEW の保護、台帳のみの変更を未保存に数えない扱い。
+
+## R9：PR 本文の下書きだけ残った部屋（2026-10-11、PO 承認）
+
+### 変更前の穴
+- `scripts/reaper-worktree.sh:194`：`git status --porcelain` から `.claude-pipeline/` を除いた行が1行でもあれば UNSAVED=1。未追跡ディレクトリは「?? .scratch/」の形で出て、中のファイル名が見えない。
+- `scripts/reaper-worktree.sh:222-234`：マージ済み判定は `gh pr list --state merged --head` で base=main を数える（本文は見ていない）。
+- `scripts/reaper-worktree.sh:384-392`：削除は `worktree remove --force` と `branch -D`。
+- 2026-10-11 の実測：マージ済み5部屋が「?? pr-body-*.md / ?? .pr-body-*.md」の1ファイルだけで保護されていた。手で照合し、手で削除済み。証拠：/tmp/CC報告ファイル/worktree-r9/inventory.tsv・delete.log。
+
+### 新しい決まり
+- 変更A（チェック2a）：`git status --porcelain --untracked-files=all` を行ごとに見る。`.claude-pipeline/` を含む行は除外。「?? 」で始まり basename が「*pr-body*.md」の形の行は下書き候補。それ以外の行が1行でもあれば従来どおり UNSAVED=1。
+- 下書き候補があり他に未保存が無いときだけ、次の全部を満たす場合に許容する（1つでも外れたら UNSAVED=1）。
+  - ① main へのマージ済み PR の本文を取れる（`gh pr list --state merged --head <branch> --json baseRefName,body`。部屋ごとに1回。失敗・空は保護）
+  - ② 下書きが空でない
+  - ③ 下書きの全行が本文にある（各行の末尾の空白・\r を除いて `diff` し、下書き側にだけある行が0）
+- 許容した下書きは `DRAFT_BACKUPS`（部屋のパス::相対パス）に記録。R8 の到達判定は下書きを許容した部屋にも従来どおり行う。
+- 変更B（実削除ループ）：`worktree remove` の前に、`<git-common-dir>/reaper-drafts/<ブランチ名の/を-に>/<相対パス>` へ cp。1件でも失敗したらその部屋は消さず次へ。成功時「📝 下書きを控えました」を出す。dry-run では写さず、候補一覧に「（PR本文の下書き N 件は GitHub の本文と一致）」を添える。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1：マージ済み＋未追跡 pr-body.md（全行が本文にある）が削除候補 | テスト R9-a |
+| K2：下書きに本文に無い行があれば保護 | テスト R9-b |
+| K3：下書きでない未追跡ファイル（notes.md）は保護 | テスト R9-c |
+| K4：下書きがありマージ済み PR が無ければ保護 | テスト R9-d |
+| K5：gh の本文取得が失敗したら保護 | テスト R9-e |
+| K6：サブフォルダの .scratch/pr-body.md も、全行が本文にあれば削除候補 | テスト R9-f（--execute で控えができ部屋が消えることは R9-g） |
+| K7：実データ dry-run で、新たに削除候補になるのは残りが下書きのみのマージ済み部屋だけ | origin/main 版と新版の dry-run 出力の差分を列挙し、増えた部屋ごとに `git status --porcelain -uall` を確認 |
+
+### 戻し方
+- 本 PR を revert する（スクリプト・テスト・文書のみ。データの変更なし）。控えは `.git/reaper-drafts/` に残るが、害は無く手で消せる。
+
+### 外部事例
+- 該当なし（理由：社内スクリプトの判定条件の追加）。

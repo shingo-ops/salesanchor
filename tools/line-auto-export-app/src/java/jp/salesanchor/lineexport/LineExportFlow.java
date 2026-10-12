@@ -47,6 +47,16 @@ final class LineExportFlow {
     /** auto-export.sh:154 `focus | grep -q TermuxFileReceiverActivity`。 */
     private static final String TERMUX_EDIT_CLASS_NAME = "TermuxFileReceiverActivity";
     /**
+     * Termuxの保存ダイアログのEDITボタンのテキスト（design.md追補 2026-10-11、2026-10-11実機
+     * uiautomator dumpで確認。`[Button] text="EDIT" clickable=true`）。
+     */
+    private static final String EDIT_BUTTON_LABEL = "EDIT";
+    /**
+     * TermuxのパッケージID。EDITボタン探索（NodeOps.findNodeByTextInPackage）でLINE側の
+     * 別ノードに誤って一致しないようにするための必須条件（design.md追補 2026-10-11）。
+     */
+    private static final String TERMUX_PACKAGE_NAME = "com.termux";
+    /**
      * LINEのパッケージ名。LineNotifyListenerService.java:53 の `PACKAGE_LINE` と同じ値
      * （同サービスが対象にしているLINEの会話通知のパッケージ）。手順3の到達判定に使う。
      */
@@ -73,6 +83,19 @@ final class LineExportFlow {
     private static final String STAGE_SHARE_SHEET = "share_sheet";
     private static final String STAGE_TERMUX_TARGET = "termux_target";
     private static final String STAGE_EDIT_BUTTON = "edit_button";
+    /**
+     * design.md追補 2026-10-11: EDITを押した後、ダイアログ（EDITノード）がEDIT_CLOSE_TIMEOUT_MS
+     * 経っても消えなかった（＝押せていない明確な証拠がある）場合の失敗段階名。
+     */
+    private static final String STAGE_EDIT_NOT_CLOSED = "edit_not_closed";
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 遮断モード（{@code overlayBlocking==true}）で、EDIT_CLASS_WAIT_TIMEOUT_MS経っても
+     * EDITノードが見つからなかった場合の失敗段階名。遮断中は座標タップが吸われ配信されない
+     * ことが実機で確定しているため（06:30・06:32・09:13）、比率座標タップへは落とさず
+     * この段階で失敗にする。
+     */
+    private static final String STAGE_EDIT_NODE_NOT_FOUND = "edit_node_not_found";
 
     // ---- 待ち時間（ADB版と同値に揃える。design.md追補の「待ち時間」節） --------------------
 
@@ -99,6 +122,23 @@ final class LineExportFlow {
     /** auto-export.sh:157 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）を比率に換算した値。 */
     private static final float EDIT_TAP_X_RATIO = 0.8074f;
     private static final float EDIT_TAP_Y_RATIO = 0.5287f;
+
+    /**
+     * EDITを押した後、ダイアログが閉じた（＝配信された）ことを確認するためのポーリング間隔／
+     * 上限（design.md追補 2026-10-11）。dispatchGestureもACTION_CLICKも「押した」ことしか
+     * 保証しないため、ダイアログが消えたことで配信を確認する。
+     */
+    private static final long EDIT_CLOSE_POLL_MS = 150L;
+    private static final long EDIT_CLOSE_TIMEOUT_MS = 3000L;
+
+    // ---- edit_buttonのstepログに記録するeditClickPathの値（design.md追補 2026-10-11） -----
+
+    /** NodeOps.findNodeByTextInPackageでノードが見つかり、ACTION_CLICKで押せた。 */
+    private static final String EDIT_CLICK_PATH_NODE_ACTION = "node-action";
+    /** ノードは見つかったがACTION_CLICKが使えず、ノード領域の中心を座標タップした。 */
+    private static final String EDIT_CLICK_PATH_NODE_BOUNDS_TAP = "node-bounds-tap";
+    /** ノードが見つからず、従来の比率座標タップをした（フォールバック）。 */
+    private static final String EDIT_CLICK_PATH_RATIO_TAP = "ratio-tap";
 
     /**
      * AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN の値。API28で追加された定数で、
@@ -157,6 +197,7 @@ final class LineExportFlow {
 
     private final UnlockAccessibilityService service;
     private final boolean lockOnFinish;
+    private final boolean armRetryOnFailure;
     private final String triggerLabel;
     private final Listener listener;
     private final Handler handler = new Handler();
@@ -184,6 +225,39 @@ final class LineExportFlow {
     private boolean overlayShown;
     private boolean overlayRemoved;
 
+    /**
+     * 遮断モードの帯を出すかどうか。design.md追補 2026-10-11「遮断モードの帯（検証用）」で
+     * 検証用のone-shotフラグ経由として導入し、同日の追補「遮断モードを常時有効にし、再試行を
+     * 3回にする（PO決定）」で本番常時有効化した: {@code armRetryOnFailure}の値をそのまま
+     * {@code blocking}として渡す。armRetryOnFailure==true（本番実行、RUN_ALL経由）なら
+     * 遮断モード、armRetryOnFailure==false（EXPORT単体・手動検証）なら従来の非遮断の細い帯
+     * になる（診断のため非遮断の経路を残す）。
+     *
+     * armRetryOnFailureを再利用する理由: 「本番実行かどうか」を示す既存のフラグが
+     * armRetryOnFailureであり（lockOnFinishは「使用中に起動したら施錠しない」という別の
+     * 意味を持つため使えない。コンストラクタのjavadoc参照）、新しいフラグを増やさずに
+     * 済ませられる。
+     */
+    private boolean overlayBlocking;
+
+    /**
+     * design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする（PO決定）」の
+     * 検知項目: 遮断モードが有効（{@code overlayBlocking==true}）な間に、座標ベースの
+     * ジェスチャ（{@link GestureCompat#tap}/{@link GestureCompat#swipe}）を呼んだら
+     * trueにする。少なくとも次の3か所で立てる: EDITの比率座標タップ
+     * （{@code editClickPath==}{@link #EDIT_CLICK_PATH_RATIO_TAP}の経路）、
+     * {@link NodeOps#clickNode}がノード領域の中心を座標タップした経路
+     * （{@code editClickPath==}{@link #EDIT_CLICK_PATH_NODE_BOUNDS_TAP}）、
+     * スクロールの座標スワイプ（{@code scrollMode=="gesture"}になる経路）。
+     *
+     * 座標スワイプが遮断中に通るかは未確定（2026-10-11の遮断4回は{@code scrollMode:"gesture"}
+     * で成功したが、スクロールが実際に必要だったか（＝通ったから成功したのか、たまたま
+     * ノード探索が試行内で目標を見つけただけなのか）を区別できていない）。先に記録を取り、
+     * {@code blockedCoordinateGesture:true}の回に段階失敗が集まるかを見てから判断する
+     * （PO決定・この依頼の範囲では座標ジェスチャを止めたり失敗にしたりしない。記録専用）。
+     */
+    private boolean blockedCoordinateGesture;
+
     // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
     // 挙動には一切使わない。診断ログにのみ出す。
 
@@ -200,22 +274,62 @@ final class LineExportFlow {
     private long editClassWaitMs = -1L;
     private long editSettleMs = -1L;
     private long editTapMs = -1L;
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 準備完了の判定本体。classDetected/classPolls/classWaitMs（TYPE_WINDOW_STATE_CHANGED
+     * 由来）は診断用としてそのまま残すが、判定には使わない。2026-10-11 09:13に
+     * classDetected=falseで盲目タップ（比率座標タップ）に落ち配信できなかったため、
+     * 判定はNodeOps.findNodeByTextInPackageによるEDITノード探索に移した。
+     */
+    private int editNodePolls;
+    /** EDITノードが見つかるまでのms。見つからなければ-1Lのまま（ログには出さない）。 */
+    private long editNodeWaitMs = -1L;
+    /**
+     * EDIT_CLASS_WAIT_TIMEOUT_MSの期限までにEDITノードが見つかったか（＝押す前にノードが
+     * 実在したか）。waitForEditDialogClosedで配信確認の前提として使う（この値がfalseの回は
+     * 比率座標タップへフォールバックした非遮断の経路のみ）。
+     */
+    private boolean editNodeWasFound;
+    // design.md追補 2026-10-11: どの経路でEDITを押したか（EDIT_CLICK_PATH_*のいずれか）と、
+    // 押した後にダイアログが消えたことを確認できたか・消えるまでのms。
+    private String editClickPath;
+    private boolean editDialogClosed;
+    private long editCloseWaitMs = -1L;
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * 配信を確認できたか（null=未確認）。editNodeWasFound==falseの経路では配信を確認した
+     * と主張しない（editDialogClosedは出さずfalseを記録する）。
+     */
+    private Boolean editVerified;
     // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測。手順11自体の内訳ではないが、
     // 依頼文の分類に合わせてEDIT関連として記録する。
     private long editLockDelayMs = -1L;
 
     /**
-     * lockOnFinishはRUN_ALL（ロック解除→LINE操作）のときだけtrueにする。EXPORT単体
-     * （すでに解除して使っている状態での検証用）では施錠しない。成功・失敗どちらの
-     * 終了でも、trueなら最後に画面を施錠する（旧ADB方式のKEYCODE_HOME→KEYCODE_SLEEPに
-     * 相当。解除したまま放置するのを避けるため、失敗で中止したときも施錠する）。
+     * lockOnFinishとarmRetryOnFailureは別の意味を持つ（design.md追補 2026-10-10
+     * 「使用中に起動した回は施錠しない」で分離。UnlockAccessibilityService#startExportFlow
+     * のjavadoc参照）。
+     *
+     * lockOnFinish: 終了時に画面を施錠するか。trueなら最後に画面を施錠する（旧ADB方式の
+     * KEYCODE_HOME→KEYCODE_SLEEPに相当。解除したまま放置するのを避けるため、失敗で中止
+     * したときも施錠する）。falseになるのは2つの場合がある: ①EXPORT単体（手動検証用、
+     * すでに解除して使っている状態での検証）②開始時に既に解除済みだった（＝利用者が使用中に
+     * 起動した）本番実行（使用中に画面が消えて操作を妨げるのを避けるため施錠しない）。
+     *
+     * armRetryOnFailure: 失敗時にRunScheduler.scheduleRetryAfterFailureを張るか
+     * （本番実行＝RUN_ALL経由かどうかの印。①のEXPORT単体ではfalse、②の「使用中に起動」と
+     * checkResult()の解除成功後の続行ではtrue）。lockOnFinishだけで本番実行かどうかを
+     * 判定していると、①②の両方がlockOnFinish=falseになったときに再試行が退行するため、
+     * 分けてある。
+     *
      * triggerLabelは結果通知の本文に「引き金:」として残す診断用（design.md追補
      * 2026-10-08「段階3の方式変更」）。
      */
-    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, String triggerLabel,
-            Listener listener) {
+    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, boolean armRetryOnFailure,
+            String triggerLabel, Listener listener) {
         this.service = service;
         this.lockOnFinish = lockOnFinish;
+        this.armRetryOnFailure = armRetryOnFailure;
         this.triggerLabel = triggerLabel == null ? "" : triggerLabel;
         this.listener = listener;
     }
@@ -245,8 +359,21 @@ final class LineExportFlow {
         acquireWakeLock();
 
         // 自動取り込み中バナーを表示する（design.md追補「実行中の表示」参照）。表示に失敗しても
-        // フローは継続する（補助表示のみ）。
-        overlayShown = overlay.show(service);
+        // フローは継続する（補助表示のみ）。design.md追補 2026-10-11「遮断モードを常時有効に
+        // し、再試行を3回にする（PO決定）」: armRetryOnFailureの値をそのまま遮断モードの
+        // on/offとして使う。本番実行（RUN_ALL経由、armRetryOnFailure==true）は遮断モード、
+        // EXPORT単体（手動検証、armRetryOnFailure==false）は従来の非遮断の細い帯になる
+        // （診断のため非遮断の経路を残す）。
+        //
+        // この帯はLineExportFlow（書き出しフェーズ）だけで出す。UnlockAccessibilityService
+        // （ロック解除フェーズ、PIN入力）側には広げない: PIN入力は座標タップ（dispatchGesture）
+        // で行っており、座標タップは遮断モードの帯に吸われる（design.md追補 2026-10-11
+        // 「EDITをノードクリックにし…」の「ノードクリックが使えると分かった意味」節。
+        // ノードクリックは帯を素通りするが座標タップは吸われることを実機で確認済み）。
+        // PIN入力の画面にはクリック可能なノードが無く座標タップしか手段が無いため、帯を
+        // 広げるとPIN入力そのものが吸われて解除できなくなる。
+        overlayBlocking = armRetryOnFailure;
+        overlayShown = overlay.show(service, overlayBlocking);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
         service.startWindowRecording();
@@ -434,45 +561,71 @@ final class LineExportFlow {
         step11WaitEditClassThenTap();
     }
 
-    // ---- 手順11: EDITを座標タップ -----------------------------------------------------------
+    // ---- 手順11: EDITを押す（準備完了の判定はEDITノードの探索） -----------------------------
     //
-    // Termuxの保存ダイアログはノードに露出しないため座標タップにする（ADB版auto-export.sh:
-    // 157のEDIT_X/EDIT_Yと同じ脆さ）。TermuxFileReceiverActivityのクラス名検出は
-    // onAccessibilityEventの記録（診断用）を使うだけで、判定の本筋（タップするか否か）には
-    // 使わない＝検出できてもできなくても最終的にはタップする。
+    // design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+    // 準備完了の判定本体はNodeOps.findNodeByTextInPackageによるEDITノード探索にする
+    // （NODE_WAIT_POLL_MS間隔・EDIT_CLASS_WAIT_TIMEOUT_MS期限、値は変更していない）。
+    // TYPE_WINDOW_STATE_CHANGED由来のクラス名検出（classDetected/classPolls/classWaitMs）は
+    // 診断用としてそのまま残すが、判定には使わない。2026-10-11 09:13にclassDetected=falseで
+    // 盲目的な比率座標タップに落ち、遮断モードで座標タップが吸われて配信できなかったため。
 
     private void step11WaitEditClassThenTap() {
         editClassWaitStartedAt = System.currentTimeMillis();
         editClassPolls = 0;
+        editNodePolls = 0;
         pollEditClass(editClassWaitStartedAt + EDIT_CLASS_WAIT_TIMEOUT_MS);
     }
 
     private void pollEditClass(final long deadlineAt) {
         editClassPolls++;
-        String className = service.getLastWindowClassName();
-        boolean detected = className != null && className.contains(TERMUX_EDIT_CLASS_NAME);
-        if (detected) {
-            editClassDetected = true;
-            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+        editNodePolls++;
+
+        // 診断専用（判定には使わない。上記コメント参照）。
+        if (!editClassDetected) {
+            String className = service.getLastWindowClassName();
+            if (className != null && className.contains(TERMUX_EDIT_CLASS_NAME)) {
+                editClassDetected = true;
+                editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            }
+        }
+
+        // 判定本体: EDITノードが見つかるか。
+        AccessibilityNodeInfo editNode = NodeOps.findNodeByTextInPackage(
+                service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME);
+        if (editNode != null) {
+            editNodeWasFound = true;
+            editNodeWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
             final long settleStartedAt = System.currentTimeMillis();
-            // auto-export.sh:156 の `sleep 1` と同値。検出してからタップまでの落ち着き待ち。
+            // auto-export.sh:156 の `sleep 1` と同値。見つかってからタップまでの落ち着き待ち。
             schedule("editSettle", EDIT_TAP_SETTLE_DELAY_MS, new Runnable() {
                 @Override
                 public void run() {
                     editSettleMs = System.currentTimeMillis() - settleStartedAt;
-                    tapEditButton(true);
+                    tapEditButton();
                 }
             });
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
-            // 5秒で検出できなくてもタップは行う（ADB版auto-export.sh:155はここで失敗扱いだが、
-            // このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めない
-            // ことを失敗とみなさない。診断にeditクラス未検出を残すだけ）。
-            editClassDetected = false;
-            editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            editNodeWasFound = false;
+            if (!editClassDetected) {
+                // 最後までクラス名を検出できなかった回の診断値（既存と同じ記録方法）。
+                editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
+            }
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11: 遮断モードでは座標タップが吸われ配信されないことが
+                // 実機で確定している（06:30・06:32・09:13）。見つからないまま比率座標タップへ
+                // 落とすと09:13の再発になるため、ここで失敗にする。scheduleRetryAfterFailureが
+                // 自動で張られ、合計3回まで試される。
+                recordStep(STAGE_EDIT_NODE_NOT_FOUND, null, buildEditStageExtraFields());
+                finish(false, STAGE_EDIT_NODE_NOT_FOUND);
+                return;
+            }
+            // 非遮断（EXPORT単体の手動検証）は従来どおり比率座標タップへフォールバックする
+            // （tapEditButton内でEDITノードが見つからなければEDIT_CLICK_PATH_RATIO_TAPになる）。
             editSettleMs = 0L; // この経路では落ち着き待ちを取っていない。
-            tapEditButton(false);
+            tapEditButton();
             return;
         }
         schedule("classPoll", NODE_WAIT_POLL_MS, new Runnable() {
@@ -483,25 +636,127 @@ final class LineExportFlow {
         });
     }
 
-    private void tapEditButton(boolean classDetected) {
-        Point size = getScreenSize();
+    /**
+     * design.md追補 2026-10-11「EDITをノードクリックにし、配信をダイアログの消滅で確認する」:
+     * まずNodeOps.findNodeByTextInPackageでEDITボタンのノード（text完全一致＋パッケージ名が
+     * com.termux）を探し、見つかればNodeOps.clickNodeで押す（クリック可能な祖先が無ければ
+     * ノード領域の中心への座標タップへフォールバック）。ノードが見つからなければ、従来の
+     * 比率座標タップ（EDIT_TAP_X_RATIO/EDIT_TAP_Y_RATIO、値は変更していない）をそのまま行う。
+     * どの経路を使ったかはeditClickPathに記録する。
+     */
+    private void tapEditButton() {
         long tapStartedAt = System.currentTimeMillis();
-        GestureCompat.DispatchReport report = GestureCompat.tap(
-                service, size.x * EDIT_TAP_X_RATIO, size.y * EDIT_TAP_Y_RATIO, 80L, "edit");
+        AccessibilityNodeInfo editNode = NodeOps.findNodeByTextInPackage(
+                service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME);
+        boolean accepted;
+        String traceMessage;
+        if (editNode != null) {
+            NodeOps.ClickResult result = NodeOps.clickNode(service, editNode);
+            accepted = result.accepted;
+            traceMessage = result.traceMessage;
+            editClickPath = result.viaAction ? EDIT_CLICK_PATH_NODE_ACTION : EDIT_CLICK_PATH_NODE_BOUNDS_TAP;
+            if (!result.viaAction && overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // NodeOps.clickNodeがノード領域の中心を座標タップ（GestureCompat.tap）に
+                // フォールバックした経路。記録のみ、挙動は変えない（blockedCoordinateGesture
+                // のjavadoc参照）。
+                blockedCoordinateGesture = true;
+            }
+        } else {
+            Point size = getScreenSize();
+            GestureCompat.DispatchReport report = GestureCompat.tap(
+                    service, size.x * EDIT_TAP_X_RATIO, size.y * EDIT_TAP_Y_RATIO, 80L, "edit");
+            accepted = report.accepted;
+            traceMessage = report.describe();
+            editClickPath = EDIT_CLICK_PATH_RATIO_TAP;
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // EDITの比率座標タップ（フォールバック経路）。記録のみ、挙動は変えない。
+                blockedCoordinateGesture = true;
+            }
+        }
         editTapMs = System.currentTimeMillis() - tapStartedAt;
-        recordStep(STAGE_EDIT_BUTTON, (classDetected ? "" : "editクラス未検出 ") + report.describe(),
-                buildEditStageExtraFields());
-        if (!report.accepted) {
+        String classNote = editClassDetected ? "" : "editクラス未検出 ";
+        String stepExtra = classNote + (traceMessage != null ? traceMessage : "");
+        if (!accepted) {
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
             finish(false, STAGE_EDIT_BUTTON);
             return;
         }
-        // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
-        // いない: auto-export.sh:143が`flow.sh 1 keep`と呼び、flow.sh:73の`keep`分岐が
-        // 後片付けの手前でexit 0する。本番はEDITタップ後、outbox.sqlite3の送信結果を最大240秒
-        // 待ってからHOME+SLEEPする（auto-export.sh:159-170）。EDITタップ直後にBACKを撃つと
-        // Termuxの保存ダイアログを取り消し、取り込みが行われない恐れがあるため、段階2では
-        // 画面をそのまま残して終了する。HOME・再ロックは段階3の範囲。
-        finish(true, null);
+        // 押せた（OSが受理した）だけでは配信されたとは言えないため、ダイアログが実際に
+        // 消えたことを確認してから成功と判定する（waitForEditDialogClosed参照）。
+        // recordStep(STAGE_EDIT_BUTTON, ...)はこの確認結果とあわせて1回だけ呼ぶ。
+        waitForEditDialogClosed(System.currentTimeMillis(), stepExtra);
+    }
+
+    /**
+     * design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し、配信確認の条件を正す」:
+     * EDITを押した直後から、EDIT_CLOSE_POLL_MS間隔・EDIT_CLOSE_TIMEOUT_MSを上限に、EDITの
+     * ノード（手順1と同じNodeOps.findNodeByTextInPackage）が消えたかを見る。dispatchGestureも
+     * ACTION_CLICKも「押した」ことしか保証しないため、ダイアログが消えたことで配信を確認する。
+     *
+     * ただし、この判定は押す前に一度もノードが見つかっていない（editNodeWasFound==false、
+     * 比率座標タップへフォールバックした非遮断の経路のみ）場合は意味を持たない。2026-10-11
+     * 09:13の実機で、ノードが一度も見つかっていないのに「消えた＝配信された」と誤判定し、
+     * successとして記録された（実際はファイルが届いていなかった）。そのため editNodeWasFound
+     * で前提を分ける: ノードが実在した回だけ消滅確認を信じ、そうでない回は配信を確認したと
+     * 主張しない（editVerified:falseを記録する。詳細は下の分岐参照）。
+     *
+     * editNodeWasFound==trueの経路: ノードが見つからなければ「消えた＝成功」とする（安全側）。
+     * 探索が例外で失敗した場合も「押せていない明確な証拠」ではないため成功扱いにする
+     * （既存の挙動を壊さないため。失敗にするのは「EDITのノードがまだ存在する」という明確な
+     * 未押下の証拠があるときだけ）。3,000ms経ってもノードが残っていたときだけedit_not_closed
+     * として失敗にする（これによりarmRetryOnFailureの経路でscheduleRetryAfterFailureが自動で
+     * 張られ、次回で取り戻せる）。
+     */
+    private void waitForEditDialogClosed(final long startedAt, final String stepExtra) {
+        if (!editNodeWasFound) {
+            // design.md追補 2026-10-11: 押す前にEDITノードが一度も見つかっていない
+            // （＝比率座標タップへフォールバックした非遮断の経路）ため、ノードの消滅で配信を
+            // 確認したとは主張しない。editDialogClosedは出さずeditVerified:falseを記録する。
+            // 挙動は従来どおり成功として終える: この経路は手動検証（EXPORT単体、
+            // overlayBlocking==false）専用で、座標タップが歴史的に効いていたため、今まで
+            // 通っていた回を失敗に変えない（依頼文の判断どおり）。
+            editVerified = Boolean.FALSE;
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
+            finish(true, null);
+            return;
+        }
+        boolean stillOpen;
+        try {
+            stillOpen = NodeOps.findNodeByTextInPackage(service, EDIT_BUTTON_LABEL, TERMUX_PACKAGE_NAME) != null;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "edit dialog close check failed: " + e);
+            stillOpen = false;
+        }
+        if (!stillOpen) {
+            editDialogClosed = true;
+            editVerified = Boolean.TRUE;
+            editCloseWaitMs = System.currentTimeMillis() - startedAt;
+            recordStep(STAGE_EDIT_BUTTON, stepExtra, buildEditStageExtraFields());
+            // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
+            // いない: auto-export.sh:143が`flow.sh 1 keep`と呼び、flow.sh:73の`keep`分岐が
+            // 後片付けの手前でexit 0する。本番はEDITタップ後、outbox.sqlite3の送信結果を最大240秒
+            // 待ってからHOME+SLEEPする（auto-export.sh:159-170）。EDITタップ直後にBACKを撃つと
+            // Termuxの保存ダイアログを取り消し、取り込みが行われない恐れがあるため、段階2では
+            // 画面をそのまま残して終了する。HOME・再ロックは段階3の範囲。
+            finish(true, null);
+            return;
+        }
+        if (System.currentTimeMillis() - startedAt >= EDIT_CLOSE_TIMEOUT_MS) {
+            editDialogClosed = false;
+            editVerified = Boolean.FALSE;
+            editCloseWaitMs = System.currentTimeMillis() - startedAt;
+            recordStep(STAGE_EDIT_NOT_CLOSED, stepExtra, buildEditStageExtraFields());
+            finish(false, STAGE_EDIT_NOT_CLOSED);
+            return;
+        }
+        schedule("editCloseWait", EDIT_CLOSE_POLL_MS, new Runnable() {
+            @Override
+            public void run() {
+                waitForEditDialogClosed(startedAt, stepExtra);
+            }
+        });
     }
 
     // ---- 共通: 期待パッケージのウィンドウが現れるのを待つ（300ms間隔・期限10秒） -------------------
@@ -670,6 +925,13 @@ final class LineExportFlow {
             Point size = getScreenSize();
             GestureCompat.swipe(service, size.x * 0.5f, size.y * SCROLL_SWIPE_FROM_Y_RATIO,
                     size.x * 0.5f, size.y * SCROLL_SWIPE_TO_Y_RATIO, SCROLL_SWIPE_DURATION_MS, "scroll");
+            if (overlayBlocking) {
+                // design.md追補 2026-10-11「遮断モードを常時有効にし…」の検知項目:
+                // スクロールの座標スワイプ（GestureCompat.swipe）。記録のみ、挙動は変えない
+                // （座標スワイプが遮断中に通るかは未確定。blockedCoordinateGestureのjavadoc
+                // 参照）。
+                blockedCoordinateGesture = true;
+            }
             return "gesture";
         }
         return "node";
@@ -684,11 +946,33 @@ final class LineExportFlow {
     private JSONObject buildEditStageExtraFields() {
         JSONObject o = new JSONObject();
         try {
+            // 診断用。判定には使わない（classDetectedのjavadoc参照）。
             o.put("classDetected", editClassDetected);
             o.put("classPolls", editClassPolls);
             o.put("classWaitMs", editClassWaitMs);
+            // design.md追補 2026-10-11「EDITの準備完了判定をノード探索に移し…」: 判定本体。
+            o.put("editNodePolls", editNodePolls);
+            // 見つからなければフィールド自体を出さない（editNodeWaitMsは未設定のまま-1L）。
+            if (editNodeWaitMs >= 0) {
+                o.put("editNodeWaitMs", editNodeWaitMs);
+            }
             o.put("settleMs", editSettleMs);
             o.put("tapMs", editTapMs);
+            // design.md追補 2026-10-11: どの経路でEDITを押したか。edit_node_not_foundの段階
+            // （タップ自体を行っていない）ではnullのまま出さない。
+            o.put("editClickPath", editClickPath);
+            // ダイアログの消滅確認はaccepted==trueのときだけ行うため、未確認（押下自体が
+            // 失敗した回・edit_node_not_foundの回）はeditCloseWaitMsが-1Lのままになり、その
+            // 場合は出さない。editNodeWasFound==falseの経路（比率座標タップへフォールバック
+            // した非遮断の経路）は配信を確認したと主張しないため、editDialogClosedはここでも
+            // 出さず（editCloseWaitMsが-1Lのまま）editVerified:falseだけを出す。
+            if (editCloseWaitMs >= 0) {
+                o.put("editDialogClosed", editDialogClosed);
+                o.put("editCloseWaitMs", editCloseWaitMs);
+            }
+            if (editVerified != null) {
+                o.put("editVerified", editVerified.booleanValue());
+            }
         } catch (JSONException e) {
             Log.w(TAG, "edit stage extra fields build failed: " + e);
         }
@@ -787,14 +1071,58 @@ final class LineExportFlow {
         final String bodyBeforeLock = body;
 
         if (!lockOnFinish) {
-            // 施錠を行わない経路（EXPORT単体検証）。ここが画面保持の最終地点になるため
-            // ここで解放する。解放前にウェイクロックの実効性（design.md追補参照:
-            // 安全タイムアウト120秒で勝手に解放されていないか）を記録する。
+            if (armRetryOnFailure) {
+                // 施錠を行わないが本番実行の経路（design.md追補 2026-10-10「使用中に起動した
+                // 回は施錠しない」: 開始時に既に解除済みだった回）。施錠（performGlobalAction
+                // (GLOBAL_ACTION_LOCK_SCREEN)）だけを行わないが、EDITタップ直後に画面状態を
+                // 変えるとジェスチャが取り消される2026-10-08の不具合と同じリスクを避けるため、
+                // 施錠する経路（lockOnFinish==true、下記）と同じく
+                // GestureCompat.drainCallbackSummary()とLOCK_DELAY_AFTER_EDIT_MSの待ちだけは
+                // 素通しする。
+                final long lockDelayStartedAt = System.currentTimeMillis();
+                GestureCompat.drainCallbackSummary();
+                schedule("lockDelay", LOCK_DELAY_AFTER_EDIT_MS, new Runnable() {
+                    @Override
+                    public void run() {
+                        editLockDelayMs = System.currentTimeMillis() - lockDelayStartedAt;
+                        boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
+                        long wakeHeldMs = wakeAcquiredAt > 0
+                                ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
+                        releaseWakeLock();
+                        postResultNotification(service, title, bodyBeforeLock);
+                        logExportEnd(success, failedStage, elapsed, elapsedUptime, null,
+                                wakeHeldAtEnd, wakeHeldMs);
+                        // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」と同じ
+                        // 再試行。armRetryOnFailure==true（本番実行）のときだけ張る。
+                        if (!success && armRetryOnFailure) {
+                            RunScheduler.scheduleRetryAfterFailure(service);
+                        }
+                        // フローが終わったので見張りスレッドを止める（design.md追補参照。
+                        // リーク防止）。
+                        if (stallWatchdog != null) {
+                            stallWatchdog.stop();
+                        }
+                        if (listener != null) {
+                            listener.onFinished();
+                        }
+                    }
+                });
+                return;
+            }
+
+            // 施錠を行わず、本番実行でもない経路（EXPORT単体検証）。ここが画面保持の最終
+            // 地点になるためここで解放する。解放前にウェイクロックの実効性
+            // （design.md追補参照: 安全タイムアウト120秒で勝手に解放されていないか）を記録する。
             boolean wakeHeldAtEnd = wakeLock != null && wakeLock.isHeld();
             long wakeHeldMs = wakeAcquiredAt > 0 ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
             releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
             logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs);
+            // armRetryOnFailure==falseのため実際には呼ばれないが、lockOnFinish==trueの経路
+            // （下記）と対称に条件を書いておく（design.md追補 2026-10-10の指示どおり）。
+            if (!success && armRetryOnFailure) {
+                RunScheduler.scheduleRetryAfterFailure(service);
+            }
             // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
             if (stallWatchdog != null) {
                 stallWatchdog.stop();
@@ -836,13 +1164,17 @@ final class LineExportFlow {
                 logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
                         wakeHeldAtEnd, wakeHeldMs);
                 // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」: 5分後に
-                // 再試行を予約する。lockOnFinish==trueの経路（RUN_ALL）だけが対象
-                // （lockOnFinish==falseのEXPORT単体＝手動検証用はifの手前でreturnしており、
-                // finish()がこの経路を通るのはlockOnFinish==trueのときだけなので二重に
-                // 呼ばれることはない）。logExportEndの呼び出しより後にすること: logExportEndは
-                // SchedulerStoreのpending-nextを読んで終了行に書くため、先に再試行を張ると
-                // 終了行のnextTriggerが上書きされ、診断が読みにくくなる。
-                if (!success) {
+                // 再試行を予約する。armRetryOnFailure==true（本番実行）のときだけ対象
+                // （design.md追補2026-10-10でlockOnFinishと分離。checkResult()からの
+                // 解除成功後の続行はlockOnFinish=true, armRetryOnFailure=trueで渡しており、
+                // この経路に来るのは常にarmRetryOnFailure=trueだが、
+                // !lockOnFinish側（finish()上部）と条件の書き方を揃えてある）。
+                // finish()は!lockOnFinishの分岐で必ずreturnするため、1回のfinish()呼び出しで
+                // scheduleRetryAfterFailureが二重に呼ばれることはない。
+                // logExportEndの呼び出しより後にすること: logExportEndはSchedulerStoreの
+                // pending-nextを読んで終了行に書くため、先に再試行を張ると終了行のnextTriggerが
+                // 上書きされ、診断が読みにくくなる。
+                if (!success && armRetryOnFailure) {
                     RunScheduler.scheduleRetryAfterFailure(service);
                 }
                 // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
@@ -877,12 +1209,31 @@ final class LineExportFlow {
             extraFields.put("wakeAcquired", wakeAcquired);
             extraFields.put("overlayShown", overlayShown);
             extraFields.put("overlayRemoved", overlayRemoved);
+            // design.md追補 2026-10-11「遮断モードの帯（検証用）」、同日追補「遮断モードを
+            // 常時有効にし、再試行を3回にする」: 遮断モードで出したときだけoverlayBlockingを
+            // trueで出す（通常=EXPORT単体のときは出さない）。「停止」ボタンは削除済み
+            // （overlayEscapeTappedのログ項目も削除）。
+            if (overlayBlocking) {
+                extraFields.put("overlayBlocking", true);
+            }
+            // design.md追補 2026-10-11「遮断モードを常時有効にし、再試行を3回にする」:
+            // 遮断モード中に座標ベースのジェスチャ（タップ/スワイプ）を使った回だけtrueで出す
+            // （検知のための記録。挙動は変えない。blockedCoordinateGestureの定数コメント参照）。
+            if (blockedCoordinateGesture) {
+                extraFields.put("blockedCoordinateGesture", true);
+            }
             extraFields.put("wakeHeldAtEnd", wakeHeldAtEnd);
             if (wakeHeldMs >= 0) {
                 extraFields.put("wakeHeldMs", wakeHeldMs);
             }
             if (editLockDelayMs >= 0) {
                 extraFields.put("editLockDelayMs", editLockDelayMs);
+            }
+            // design.md追補 2026-10-10「使用中に起動した回は施錠しない」: 施錠しなかった回
+            // （lockOnFinish==false）だけtrueを出す（行った回は出さない）。lockedフィールドは
+            // 施錠を試みていないのでnull（既存どおりlogExportEnd呼び出し側でnullを渡す）。
+            if (!lockOnFinish) {
+                extraFields.put("lockSkipped", true);
             }
         } catch (JSONException e) {
             Log.w(TAG, "export end extra fields build failed: " + e);

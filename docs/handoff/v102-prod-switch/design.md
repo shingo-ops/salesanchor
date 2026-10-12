@@ -372,3 +372,181 @@ recon（基準 origin/main f0d710185、file:line は本節に転記）。本番�
 | 未設定時は v6（安全側） | get_engine のテスト（test_line_analysis_v102_svc.py:42-50） | CI |
 | compose の既定値 | PR レビュー。compose の既定値を検査するテスト・CI は無い（git grep で docker-compose.yml:218 以外に参照なし） | PR レビュー |
 | 費用 | llm_usage_events（purpose='line_extraction'）を切替後に日次確認 | 設計担当 Opus |
+
+---
+
+## 15. 便PQ（v102 の価格・数量を Gemini の写しの数字で補う／数字にできない時は要確認）
+設計: Opus（2026-10-10）。PO 承認: 「数字のみに整形することは出来る？」「→対策が必要」「PRマージ、デプロイまで完走させてくれ」。カード: card-PQ.md。根拠: recon.md §8。
+
+### 15-1. 目的
+本番の v102 で、Gemini の写しに数字があるのに price_normalized / quantity_normalized が NULL になる件（数量9件・価格4件、うち数量6件は要確認にならず配信）をなくす。補えない件は必ず要確認にして配信から外す。
+
+### 15-2. 変更前後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| backend/app/services/gemini_raw_copy_v101.py:854-874 `_extract_one` | price_normalized / quantity_normalized = resolve_price_quantity の結果そのまま | `if v102:`（:886 付近）で、結果が None のときだけ `_fill_from_copy`（:842）で Gemini の写しの数字を採用。pq が値を持つ時は変えない |
+| 同 :828 `_single_number`（新規） | なし | 写しに数字がちょうど1つの時だけ数にする。万・千・億・k を含む／0個／2個以上／小数は None |
+| 同 :1181 `_item_reasons` | 数量・価格が NULL でも理由なし | 写しに数字があるのに補いの後も NULL なら `quantity_unresolved` / `price_unresolved` を review に足す |
+| 理由コード quantity_unresolved | なし | 定数 :1153、frontend ja/en の reviewReason、整合テスト、表の1行（docs/handoff/v102-prod-switch/data/review_reason_codes/qu_*.sql、seed_20261010_quantity_unresolved.sql） |
+
+補いの採用条件は2つ両方: ①数が1つに決まる ②その数が、その件の行（own_text）に独立した数として現れる（既存の `_quantity_not_in_text(..., v102=True)` と同じ判定を再利用）。補った印の理由コードは足さない。
+理由が1つでも付けば line_analysis_v102_svc.py:559 で needs_review=True になり、配信から外れる（tcg_distribution_svc.py:262、既存の流れ）。読み取り時の price_unresolved の付与（tcg_condition_review_svc.py:144）は `SELECT DISTINCT reason` で重複を除くため、保存値に price_unresolved が入っていても二重にならない（:151 の除外条件は price_normalized が非 NULL の時だけ外すので、NULL のままなら残る＝正しい）。
+
+### 15-3. 対象外（理由: 共有経路への波及）
+v6・v10.1・shadow・`_price_of`（付け直し）・resolve_price_quantity 本体・_STOCK_START_RE と _mask_product_name の根本修正。いずれも v10.1 や他の経路と共有されており、v102 だけの補いで足りるため触らない。
+
+### 15-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1 保存値が非 NULL の価格・数量で、値が変わる件 = 0 | 置き換え試験（現行702件、旧・新コードを同じ入力で通し保存値と比較）: 0件 |
+| K2 数量 NULL→値 9件前後・価格 NULL→値 4件前後 | 同試験: 数量9件・価格4件（2件は数量と価格の両方） |
+| K3 数字があるのに NULL のまま残る件はすべて理由が付く | 同試験: 残る件 0（理由付与そのものは単体テストで確認） |
+| K4 価格・数量以外の違い = 0 | 同試験: 旧コード対新コードで product_id・unit・condition・match_status・status・name・ship・理由コードの差 0件 |
+| 補い／補えず理由／補わない（写しの数が原文に無い）／v10.1 回帰 | backend/tests/test_gemini_raw_copy_v101.py の test_pq_*・test_single_number |
+| 理由コードの SSOT 整合 | backend/tests/test_review_reason_codes_consistency.py |
+
+置き換え試験の限界: dump.json に状態マスタ・直前投稿・人の判断が無いため、それらは空・ダミーで実行した。K4 は旧コードと新コードの差であり、保存値の product_id・unit・condition との比較ではない。価格数量の order は投稿元ごとに旧コードが保存値を最もよく再現する順を選んだ。
+
+### 15-5. 戻し方
+この PR を戻す。表に入れた1行は qu_rollback.sql（その1コードだけ戻す）。戻した後は、補われた件の価格・数量が元の NULL に戻り、quantity_unresolved の理由は消える（再解析時）。
+
+### 15-6. 外部事例
+外部事例は使わない。新しい仕組みを足さず、既存の検算（_quantity_not_in_text）と既存の理由コードの流れに沿って、v102 の1か所に補いを足すだけのため。
+
+### 15-7. 維持の仕組み
+| 何を守るか | 仕組み | 担当 |
+|---|---|---|
+| 理由コードの表・コード・翻訳の一致 | tests/test_review_reason_codes_consistency.py（quantity_unresolved・price_unresolved を含む） | CI |
+| 補い・補えず理由・v10.1 不変 | tests/test_gemini_raw_copy_v101.py の test_pq_*・test_single_number | CI |
+
+## 16. 便G（v102 は Gemini の抽出を採用し、システムの上書きをやめて確認役にする）
+
+### 16-1. 目的（PO の言葉、2026-10-11）
+- 「A4,A6,A7,A11,A12,は不要なので廃止する」
+- 「原則geminiの抽出を信頼しているのでそれを採用したいが揺れで違う数値を抽出していないかどうかだけは確認が必要…おかしい場合は理由を添えて要確認に回す」→ A4 は残し A11 は確認役にする案に「y」
+- A15「理由も付ける」／A16「全件停止でなくズレた部分だけ分析して特定することは出来る？」（できると回答）／A17「残す」
+- 対象外: A10（さかのぼって名前を取る）は件数を見せてから決める（未決）。状態 Error 化（FLAG_SINGLE の受け皿）は別便。
+
+### 16-2. 発端（観測事実。詳細は recon §9）
+- 2026-10-10T21:2xZ に状態の表 Opened box（line_conditions id=18）の search_kw へ「検品のため開封済み」を追加（PO「開封箱に検索ワードを追加」、data/conditions/kw_*.sql）。
+- 21:31Z〜21:32Z に該当6ジョブを再解析（PO の ! 実行）。狙いの6行は FLAG_SINGLE→Opened box。想定外に2ジョブ（a1a120c6・a100097a）で、同じ商品の2件の状態が4組ずつ計16件入れ替わった（価格・数量・source_lines は不変）。21:33Z の配信（812行）に入れ替わった行が含まれる。
+- 原因: v102 の迷う行の付け直し reassign_ambiguous（gemini_raw_copy_v101.py:555-590）の「並び方の証拠」（:502 _evidence、:543 _decide_target）。追加した語で投稿末尾の1行が状態の行になり、「価格の下に書く形」の証拠になって、投稿内の迷う行すべてを上の価格の件へ付け直した。語を足す前は証拠が空で値段の規則（:520）に回り、正しかった。コード変更は原因でない（#4114 前後のコードで再現結果が同一）。Gemini は2件とも正しく分けていた。
+
+### 16-3. 変更（v102 経路だけ。v6・v10・v10.1・shadow は変えない）
+| 場面 | 変更前 | 変更後 |
+|---|---|---|
+| A6 迷う行の付け直し | 並び方→値段の規則で別の件へ移す | 呼ばない。Gemini の付け方のまま |
+| A7 F1 親の見出しを外す | 発送語のある共有の見出しを件から外す | 呼ばない |
+| A11 価格・数量 | 原文から読み直した値を採用（食い違いは記録せず上書き） | Gemini の写しの数字1つを採用。原文の読み直しは確認役: 両方数で違えば price_source_mismatch / quantity_source_mismatch で要確認 |
+| A12 Gemini の数字で補う | A11 が空のとき補う | 不要（A11 の採用に置き換わる） |
+| A15 桁あふれ | 黙って NULL（理由なし→配信にも要確認にも出ない） | NULL ＋ value_out_of_range で要確認 |
+| A16 件と保存の対応 | 1件ずれると投稿全体を書かない | gemini_index で対応し、ずれた行だけ item_mapping_mismatch で要確認。他は書く |
+| A4 価格の行 | Gemini の価格の文字を含む最初の行 | 変えない（作り話・二重の件を止める土台） |
+| A17 応答が読めない | 件0・response_unreadable | 変えない |
+- 安全網（便PQ）の price_unresolved / quantity_unresolved、quantity_not_in_text はそのまま。
+- 理由コード4つを public.review_reason_codes（SSOT）に追加（data/review_reason_codes/gt_*.sql、DRY-RUN→COMMIT、ADR-1007 により migration に書かない）。翻訳 ja/en は reviewReason.<code>。
+
+### 16-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| G1 a1a120c6・a100097a の16件が原文どおりの状態（ダメージ有り・シュリンク無しの行を含む件だけがその状態）になる | 置き換え試験 R2、本番再解析後の読み取り diff |
+| G2 迷う行の付け直しが v102 で0件 | テスト（A6）・置き換え試験 R2 |
+| G3 価格・数量は Gemini の写しの数字。原文と違えば理由付きで要確認 | テスト（A11）・置き換え試験 R3/R4 |
+| G4 現在配信対象のうち新たに要確認になる件 ≤ 5% | 置き換え試験 R5（超えたら設計者が止めて PO に確認） |
+| G5 桁あふれ・対応ずれは理由付きで要確認、他の行は書かれる | テスト（A15・A16） |
+| G6 v10.1 経路の結果は変わらない | 回帰テスト |
+| G7 理由コード4つが表・翻訳・コード定数で一致 | test_review_reason_codes_consistency.py、本番 gt_verify.sql（ROWS 35） |
+
+### 16-5. 代替案
+- 付け直しを残し規則の順番だけ変える（値段→並び方）: PO が付け直し自体を不要と判断したため不採用。
+- 足した語を外して元に戻す: 次の投稿でも同じ形で入れ替わりうる（証拠の規則が残る）ため、根本の A6 廃止を選んだ。語は残す。
+- A11 を丸ごと廃止: 揺れの確認手段が無くなるため、PO 判断で確認役として残す。
+
+### 16-6. リスクと対処
+- Gemini が迷う行を両方の件に入れていると、両方に同じ状態が付く → 置き換え試験 R6 で件数を測る。
+- A11 確認役で要確認が増える → R5 で測り、5% 超なら止める。
+- Gemini の写しに数字が2つ（「26,000円／27,000円」等）・万単位 → 値 None ＋ price_unresolved（要確認）。R3/R4 で件数を出す。
+
+### 16-7. 戻し方
+- コード: PR を revert（v102 経路の切り替えだけなので v10.1 等に波及しない）。
+- 表: gt_rollback.sql（4コードだけ削除）。状態の語: data/conditions/kw_rollback.sql。
+- 戻した後、対象ジョブを再解析すれば元の判定に戻る。
+
+### 16-8. 外部・過去事例
+- 外部事例は使わない（理由: 社内の LLM 抽出と規則の分担の話で、比べられる公開の実測が無い）。過去事例: 便PQ（#4114）で「原文の読み直しが空になる」誤りが配信まで出た。今回は「規則の上書きが Gemini の正しい答えを壊した」。どちらも上書きの規則が原因で、確認役に変える根拠とする。
+
+### 維持の仕組み（便G）
+- 回帰テスト（A6・A7・A11・A15・A16 の v102／v10.1 両経路）と理由コード整合テストが CI で毎回走る。
+- 新しい理由コードの件数は要確認画面で見える（reviewReason.<code> の表示）。
+
+### 16-9. 設計審査（Opus 自己審査。独立レビューではない）
+- 判定: APPROVE（2026-10-11）。根拠は置き換え試験（v102 の54ジョブ・1,277件、本番読み取り、手元 /tmp/CC報告ファイル/v102-gemini-trust/replay.md）:
+  - 再現性: 変更前コードの再計算と本番保存値の食い違い 状態0・価格0・数量0・要確認1（元から）。
+  - R2 状態の変化16件＝a1a120c6・a100097a の入れ替わり16件が全件、語追加前の正しい形に戻る（G1）。
+  - R3 価格・数量の値の変化0件（途中で _single_number が「Pack」の k を千とみなす不具合を見つけ修正: aa2bc5ede）。
+  - R4 新しい4コードの該当0件。理由の増減は ship −12（付け直しの「決まらない迷う行」の要確認が消えた）、product_not_in_master ±2。
+  - R5 配信対象555件のうち要確認になる件2件（0.36%、うち1件は変更前から）→ G4 を満たす。1件（5cf9ace3）は付け直しをやめた結果、Gemini の分け方で名前の行が変わり商品未特定→要確認（配信されない側に倒れる）。
+  - R6 迷う行を Gemini が両方の件に入れた例 0。
+  - 未解決事項: 比べられない部分（followup・〆の参照・人の判断）は前後同条件で除外。A10 と状態 Error 化は別便。
+
+## 17. 便ER（状態を決められない物は「Error」にし、理由を付けて必ず要確認へ）
+
+### 17-1. 目的（PO の言葉、2026-10-11）
+- 「状態が判断できなかった場合は状態はErrorにして理由を添えて要確認に回すようにしたい」
+- Error にするのは「決められなかった」場合だけ。PSA・鑑定・プロモ・単品・枚などの語で単品と分かった物は FLAG_SINGLE のまま（PO「y」）。
+- 対象外: v6・v10.1・shadow（resolve_condition_v2 本体は変えない）、FLAG_SINGLE の配信ゲート（include_flag_single）。
+
+### 17-2. 現状（観測事実。詳細は recon §10）
+- 最終フォールバック（backend/app/services/tcg_analyzer_svc.py:903-904）は区分に関係なく FLAG_SINGLE・basis "R4:単位既定:単位不明"。v102 が condition_unknown を付けるのは「商品不明かつ単位不明」の時だけ（gemini_raw_copy_v102_product_first.py:490-492）。
+- 本番 v102 is_current で basis に単位不明を含む 137件のうち、condition_unknown 無し 85件、要確認でもない 8件（配信にも要確認にも出ない）。
+- condition_unknown は「このままで良い」で外せる（item_corrections.py:188-190 は登録済みかだけを見る）。状態を選ぶ画面（ConditionReviewPanel.tsx:22-23）は空箱の件にしか出ない。
+- 配信は canonical の 'FLAG_%' で除外（tcg_distribution_svc.py:213）。"Error" はこれに当たらない。line_conditions.effect（OUTPUT/EXCLUDE）はどこからも読まれていない。
+
+### 17-3. 変更
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| 状態の表（line_conditions） | 13行 | CN0012 'Error'（priority 99・search_kw 空・effect EXCLUDE）を追加。照合には当たらない |
+| v102 の状態（_resolve_condition） | 商品不明＋単位不明の時だけ "不明"＋condition_unknown、他は FLAG_SINGLE・理由なし | 最終フォールバックは全部 Error＋condition_unknown。basis は変えない。語で決まった FLAG_SINGLE は不変 |
+| 配信 | canonical 'FLAG_%' を除外 | 加えて effect='EXCLUDE' の状態を除外（review_joins の cr.effect） |
+| 状態を選ぶ画面 | 空箱の件だけ | condition_unknown の件にも出す。選択肢から EXCLUDE の状態を外す |
+| 「このままで良い」 | どの理由でも外せる | condition_unknown は外せない（バックエンドの1か所の定数・details.ackable） |
+| 〆の引き継ぎ | FLAG_ 始まりだけ未決定扱い | effect EXCLUDE も未決定扱い |
+
+### 17-4. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| ER1 最終フォールバックの件は状態 Error・理由 condition_unknown・要確認 | テスト E1・置き換え試験 R2・本番再解析後の読み取り |
+| ER2 語で決まった FLAG_SINGLE は不変 | テスト E2・R2 |
+| ER3 Error は人が状態を選ぶまで配信されない（「このままで良い」でも外れない） | テスト E4・E5、本番の配信件数の前後 |
+| ER4 condition_unknown の件で人が状態を選べる・Error は選べない | テスト E6・E9 |
+| ER5 状態以外（商品・単位・価格・数量）の変化 0、今配信している件が配信されなくなる数 0 | 置き換え試験 R3・R5 |
+| ER6 v6・v10.1・shadow 不変 | テスト E8 |
+
+### 17-5. 代替案
+- 配信の除外を canonical の文字で足す（'Error' を SQL に直書き）: 表の外に状態の意味が散るので不採用。effect 列（既にある・未使用）で決める。
+- ack 可否を review_reason_codes の新しい列にする: migration（表の構造変更）が要るので、本便はバックエンドの1か所の定数とし、details.ackable で画面に渡す。
+- Error を "FLAG_ERROR" のように FLAG_ 始まりにして既存の除外に乗せる: PO の名前「Error」と違い、意味を名前の接頭辞に頼る形が増えるので不採用。
+
+### 17-6. リスクと対処
+- Error 行が無い（データ投入前のデプロイ等）→ 従来どおり FLAG_SINGLE＋condition_unknown に倒す（E3）。データはマージ前に投入。
+- 要確認が増える（今 condition_unknown が無い 85件が対象）→ 置き換え試験 R4・R6 で数を出す。PO 方針どおり。
+- 戻すとき、analysis_results が CN0012 を参照していると行を消せない → コードを戻して再解析してから er_rollback.sql。
+
+### 17-7. 戻し方
+- コード: PR を revert。データ: er_rollback.sql（上の順で）。
+
+### 17-8. 外部・過去事例
+- 外部事例は使わない（社内の状態マスタと要確認の流れの話で、比べられる公開の実測が無い）。過去事例: 便G（#4127）で「要確認にも配信にも出ない件」を A15 で塞いだのと同じ型の問題（FLAG_SINGLE の理由なし8件）。
+
+### 維持の仕組み（便ER）
+- 回帰テスト（E1〜E9）と理由コード整合テストが CI で毎回走る。Error の意味（配信しない）は状態の表の effect 列にあり、スーパー管理の状態マスタ画面で見える。
+
+### 17-9. 設計審査（Opus 自己審査。独立レビューではない）
+- 判定: APPROVE（2026-10-11）。根拠は置き換え試験（v102 の52ジョブ・1,314件、本番読み取り、手元 /tmp/CC報告ファイル/v102-cond-error-replay/replay.md）:
+  - R2 状態の変化158件＝全件「FLAG_SINGLE かつ basis 単位不明 → Error（basis 不変）」。語で決まった FLAG_SINGLE 9件は不変。期待以外0。
+  - R3 状態以外（商品・単位・価格・数量・status・pid_basis・work_id）の変化0。
+  - R4 理由の増減は condition_unknown +104 のみ。要確認 false→true 23件、true→false 0件。
+  - R5 配信されなくなる件: 変更前の再計算基準で0。保存値基準の1件（5cf9ace3）は変更前後の再計算で同一＝本便と無関係（保存値が便G 以前の計算）。
+  - 実装時の訂正: line_conditions.id は identity（conditions_id_seq）。id を明示すると sequence が進まず次の画面追加が主キー重複になるため、id は identity に任せる（er_*.sql）。
+  - 手入力の補正欄（ItemComparison.tsx の corrected_condition）は本番の呼び出し元が readOnly で選択肢を渡さず、バックエンドに読み書きが無い＝Error を選べる経路は ConditionReviewPanel だけ（除外済み）。
+  - 未解決事項: 本番で既にある単位不明の137件（32ジョブ）は再解析で Error にする（デプロイ後）。

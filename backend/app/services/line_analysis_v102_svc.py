@@ -37,10 +37,26 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
-from app.services.gemini_raw_copy_v102_soldout_ref import MATCH_STATUS_MATCHED_SOLDOUT_REF, SoldoutRefPost
+from app.services.gemini_raw_copy_v102_soldout_ref import (
+    MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    SoldItem,
+    SoldoutRefPost,
+    StockItem,
+)
 from app.services.llm_budget import record_usage_event_sync
+from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は他モジュールが line_analysis_v102_svc から読む
+    CONDITION_EFFECT_EXCLUDE,
+    CONDITION_REVIEW_REASONS,
+    REASON_CONDITION_MULTIPLE,
+    REASON_CONDITION_UNKNOWN,
+    condition_effect_sql,
+)
 from app.services.tcg_extraction_record_svc import RecordError
+from app.services.v102_buyback_unit_svc import apply_buyback_units
+from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
+from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
+from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +64,9 @@ logger = logging.getLogger(__name__)
 ENGINE_ENV = "LINE_ANALYSIS_ENGINE"
 ENGINE_V6 = "v6"
 ENGINE_V102 = "v102"
-V102_ENGINE_VERSION = "v102-f_c"  # analysis_results.engine_version
+V102_ENGINE_VERSION = "v102-f_ct"  # analysis_results.engine_version
 V102_THINKING_LEVEL = "high"  # PO 採用 2026-10-08（試作版の試験と同じ）
-V102_PROMPT_KEY = "raw_copy_v101_f_c"  # public.extraction_prompt_config の prompt_key（既定の指示書）
+V102_PROMPT_KEY = "raw_copy_v101_f_ct"  # public.extraction_prompt_config の prompt_key（既定の指示書）
 V102_PROMPT_VERSION_PREFIX = "v102:"  # extraction_jobs.prompt_version の先頭。再解析はこれで v6 / v102 を見分ける
 V102_PROMPT = V102_PROMPT_KEY  # 試作版 prompt_ab が使ってきた名前
 
@@ -68,21 +84,29 @@ _PROMPT_HASH_LENGTH = 12
 # 理由コード（このファイルが付けるもの）
 REASON_RESPONSE_UNREADABLE = "response_unreadable"
 REASON_EXTRACT_EXCEPTION = "extract_exception"
+REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
+REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
+MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
+# REASON_UNIT_PRICE_MISMATCH（単位と価格が相場と合わない・便UP）は v102_unit_price_check_svc が定義し、_write_results が付ける
 # 人の判断で外す理由（condition_review で状態を決めたとき）
-REASON_CONDITION_UNKNOWN = "condition_unknown"
-REASON_CONDITION_MULTIPLE = "condition_multiple_candidates"
-CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
+# 値は tcg_condition_review_svc の1か所（保存時の除去と同じ集合）。ここは import して使う
 # 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
 PID_BASIS_MANUAL = "MANUAL"
 CONDITION_BASIS_MANUAL = "MANUAL_CONDITION_REVIEW"
+# 〆の件が、参照した在庫の行の状態を引き継いだ印（analysis_results の condition_basis）
+CONDITION_BASIS_SOLDOUT_REF = "SOLDOUT_REF"
+STATUS_SOLD_OUT = "Sold out"  # 〆の件の status（analysis_results.status）。完売の相手にしない
 
 # analysis_results の列の幅・精度（migrations/20260921_110000_pipeline_tables_public.sql）
 _PID_BASIS_MAX = 100
 _CONDITION_BASIS_MAX = 100
+_PRICE_BASIS_MAX = 100
 _NUMERIC_LIMIT = Decimal(10) ** 12  # NUMERIC(14,2)
 _INT4_MAX = 2**31 - 1
 _FLAG_SINGLE = "FLAG_SINGLE"
+# 状態が決まっていない印: canonical がこの接頭辞（FLAG_SINGLE 等）、または conditions.effect が EXCLUDE（Error。配信しない状態）
+CONDITION_UNDECIDED_PREFIX = "FLAG_"
 _FLAG_SINGLE_CODE = "CN0008"
 
 _PROMPT_KEY_SQL = """
@@ -236,11 +260,23 @@ def _with_review_sources(fields: dict, unsure: list[dict]) -> dict:
     return {**fields, "v102_items": [_item_with_sources(it, unsure) for it in fields["v102_items"]], "v102_flags": new_flags}
 
 
+def _gap_detail(fields: dict, ctx, masters: dict) -> dict | None:
+    """間の行の検知の記録（段1）。件・要確認・照合の結果は読むだけで変えない。失敗しても解析は止めず None にする。"""
+    try:
+        return build_gap_detail(
+            fields["v102_items"], ctx.raw_text.split("\n"), masters.get("product_first"),
+            fields["v102_flags"].get("post_review") or [],
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("[line_analysis] 間の行の検知の記録を作れませんでした（解析の結果には影響しません）")
+        return None
+
+
 def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
     fixed_products: dict[int, int] | None = None,
 ) -> dict:
-    """v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+    """v102 の行に足す v102_items（F2〜F6 あり・F1 と迷う行の付け直しは廃止・価格数量は Gemini の写しを採る。便G）・v102_flags。v101 の欄は書かない。失敗しても止めない。
 
     落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
     ctx は raw_text と supplier_context を持つもの。extract_items は試験の道具（prompt_ab）からの差し替え用（既定は本番と同じ extract_v101_items）。
@@ -253,18 +289,20 @@ def run_v102_pipeline(
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         fixed = {"fixed_products": fixed_products} if fixed_products else {}
         extracted, flags = extract_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters, **fixed
+            items, ctx.raw_text, order=order, reassign=False, v102_fixes=True, review_reasons=True, gemini_trust=True,
+            **masters, **fixed
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         unsure = _gemini_review(response_text, ctx.raw_text, extracted)
-        return _with_review_sources(
+        fields = _with_review_sources(
             {
                 "v102_items": _with_gemini_review(extracted, unsure),
                 "v102_flags": {**flags, "gemini_review": unsure},
             },
             unsure,
         )
+        return {**fields, "v102_gap_detail": _gap_detail(fields, ctx, masters)}
     except Exception as exc:  # noqa: BLE001
         message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
         return {
@@ -273,6 +311,7 @@ def run_v102_pipeline(
                 "post_review": [{"kind": "extract_exception", "error": message, "source": SOURCE_SYSTEM}],
                 "gemini_review": [],
             },
+            "v102_gap_detail": None,
         }
 
 
@@ -485,25 +524,36 @@ def _lines_agree(item: dict, row: object) -> bool:
     return bool(set(lines) & set(source))
 
 
-def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
-    """v102 の件を extraction_items の行に対応付ける（gemini_index 順の rows を受ける）。
+def _mapping_mismatch_item() -> dict:
+    """対応が付かない行に書く値（値は空・未解決の状態・理由 item_mapping_mismatch）。"""
+    return {"match_status": MAPPING_MISMATCH_MATCH_STATUS, "review": [{"kind": REASON_ITEM_MAPPING_MISMATCH, "source": SOURCE_SYSTEM}]}
 
-    落とした件（rejected）は自分の gemini_index を持つ。残りの件は Gemini の順を保つので、
-    落とした件を除いた行を gemini_index の昇順に並べたものと、先頭から1対1で対応する。件数が合わなければ _MappingError。
+
+def _items_by_position(v102_items: list[dict]) -> dict[int, dict]:
+    """v102 の件を gemini_index（応答の中の位置）で引く表。位置が整数でない・重複する件は入れない（その行は対応なしになる）。"""
+    seen: dict[int, dict] = {}
+    duplicated: set[int] = set()
+    for item in v102_items:
+        index = item.get("gemini_index")
+        if not _is_plain_int(index):
+            continue
+        if index in seen:
+            duplicated.add(index)
+        seen[index] = item
+    return {i: it for i, it in seen.items() if i not in duplicated}
+
+
+def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
+    """v102 の件を extraction_items の行に gemini_index で対応付ける（rows は gemini_index 昇順）。
+
+    応答は rows の順に作る（_response_from_rows）ので、応答の位置 i の件は rows[i] に当たる。
+    対応する件が無い行・行番号が合わない組は、その行だけ「値は空＋ item_mapping_mismatch」の件にする（他の行は通常どおり）。
     """
-    by_index = {r.gemini_index: r for r in rows}
-    rejected = [it for it in v102_items if it.get("rejected")]
-    accepted = [it for it in v102_items if not it.get("rejected")]
-    rejected_indexes = [it.get("gemini_index") for it in rejected]
-    if len(v102_items) != len(rows) or any(i not in by_index for i in rejected_indexes) or len(set(rejected_indexes)) != len(rejected):
-        raise _MappingError(f"件数が合いません: v102={len(v102_items)} extraction_items={len(rows)}")
-    rest = [r for r in rows if r.gemini_index not in set(rejected_indexes)]
-    if len(rest) != len(accepted):
-        raise _MappingError(f"受理した件の数が合いません: v102={len(accepted)} extraction_items={len(rest)}")
-    pairs = [*zip(rejected, (by_index[i] for i in rejected_indexes), strict=True), *zip(accepted, rest, strict=True)]
-    for item, row in pairs:
-        if not _lines_agree(item, row):
-            raise _MappingError(f"行番号が合いません: gemini_index={row.gemini_index}")
+    by_position = _items_by_position(v102_items)
+    pairs: list[tuple[dict, object]] = []
+    for position, row in enumerate(rows):
+        item = by_position.get(position)
+        pairs.append((item if item is not None and _lines_agree(item, row) else _mapping_mismatch_item(), row))
     return pairs
 
 
@@ -545,7 +595,14 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
     condition = item.get("condition")
     condition_canonical, condition_id, _resolved = _condition_columns(None if condition in (None, "none") else condition, masters)
-    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or [])])
+    quantity = _bounded_number(item.get("quantity_normalized"))
+    price = _bounded_number(item.get("price_normalized"))
+    out_of_range = [
+        REASON_VALUE_OUT_OF_RANGE
+        for raw, bounded in ((item.get("quantity_normalized"), quantity), (item.get("price_normalized"), price))
+        if raw is not None and bounded is None
+    ]
+    reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or []), *out_of_range])
     return {
         "product_id": product_id if matched else None, "pid_resolved": bool(matched),
         "pid_basis": f"V102:{item.get('match_status')}"[:_PID_BASIS_MAX],
@@ -553,11 +610,12 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "unit_resolved": unit_id is not None,
         "condition_id": condition_id, "condition_canonical": condition_canonical,
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
-        "quantity_normalized": _bounded_number(item.get("quantity_normalized")),
-        "price_normalized": _bounded_number(item.get("price_normalized")),
+        "quantity_normalized": quantity,
+        "price_normalized": price,
         "note_ja": None, "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
+        "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
     }
 
 
@@ -565,11 +623,13 @@ _UPSERT_SQL = """
     INSERT INTO {schema}.analysis_results (
         id, extraction_item_id, product_id, pid_resolved, pid_basis, unit_id, unit_canonical, unit_resolved,
         condition_id, condition_canonical, condition_basis, quantity_normalized, price_normalized, note_ja,
-        status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id
+        status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
+        price_basis
     ) VALUES (
         :id, :extraction_item_id, :product_id, :pid_resolved, :pid_basis, :unit_id, :unit_canonical, :unit_resolved,
         :condition_id, :condition_canonical, :condition_basis, :quantity_normalized, :price_normalized, :note_ja,
-        :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id
+        :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
+        :price_basis
     )
     ON CONFLICT (extraction_item_id) DO UPDATE SET
         product_id = EXCLUDED.product_id, pid_resolved = EXCLUDED.pid_resolved, pid_basis = EXCLUDED.pid_basis,
@@ -579,7 +639,8 @@ _UPSERT_SQL = """
         price_normalized = EXCLUDED.price_normalized, note_ja = EXCLUDED.note_ja, status = EXCLUDED.status,
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
-        work_id = EXCLUDED.work_id
+        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis
+    RETURNING id
 """
 
 
@@ -599,6 +660,32 @@ def _set_job_review_reasons(session: Session, extraction_job_id: str, review_rea
     )
 
 
+def _set_job_review_detail(session: Session, extraction_job_id: str, detail: dict | None) -> None:
+    """extraction_jobs.system_review_detail を上書きする（解析のたびに。detail が None なら NULL）。"""
+    session.execute(
+        text(f"UPDATE {analyzer.TCG_SCHEMA}.extraction_jobs SET system_review_detail = CAST(:d AS jsonb) WHERE id = :ej"),
+        {"d": json.dumps(detail, ensure_ascii=False) if detail is not None else None, "ej": extraction_job_id},
+    )
+
+
+def _clear_job_review_detail(session: Session, extraction_job_id: str) -> None:
+    """例外の経路で古い明細を NULL にする。SAVEPOINT の中で行い、失敗しても警告だけ残して review_reasons の更新を巻き込まない。"""
+    try:
+        with session.begin_nested():
+            _set_job_review_detail(session, extraction_job_id, None)
+    except Exception:  # noqa: BLE001
+        logger.warning("[line_analysis] system_review_detail を NULL にできませんでした: job=%s", extraction_job_id, exc_info=True)
+
+
+def _stored_review_detail(pipeline: dict, pairs: list[tuple[dict, object]]) -> dict | None:
+    """書く値（版 1）。件は _map_to_rows が付けた対応（gemini_index → 行の id）で extraction_item_id に置き換える。"""
+    detail = pipeline.get("v102_gap_detail")
+    if detail is None:
+        return None
+    item_ids = {item["gemini_index"]: row.id for item, row in pairs if _is_plain_int(item.get("gemini_index"))}
+    return to_stored_detail(detail, item_ids)
+
+
 def _job_review_reasons(flags: dict) -> str | None:
     return _join_unique([*_kinds(flags.get("post_review") or []), *_kinds(flags.get("gemini_review") or [])])
 
@@ -614,6 +701,17 @@ def _load_condition_canonicals(session: Session, condition_ids: list[int]) -> di
         text("SELECT id, canonical FROM public.conditions WHERE id = ANY(:ids)"), {"ids": sorted(set(condition_ids))}
     ).fetchall()
     return {int(r[0]): str(r[1]) for r in rows}
+
+
+def _load_excluded_condition_ids(session: Session, condition_ids: list[int]) -> frozenset[int]:
+    """effect='EXCLUDE'（配信しない状態。Error）の状態 id。"""
+    if not condition_ids:
+        return frozenset()
+    rows = session.execute(
+        text(f"SELECT id FROM public.conditions WHERE id = ANY(:ids) AND {condition_effect_sql('conditions')} = :effect"),
+        {"ids": sorted(set(condition_ids)), "effect": CONDITION_EFFECT_EXCLUDE},
+    ).fetchall()
+    return frozenset(int(r[0]) for r in rows)
 
 
 def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
@@ -638,6 +736,115 @@ def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canon
     return out
 
 
+def _has_human_judgement(decision: Decisions | None) -> bool:
+    """商品または状態の人の判断があるか（確認済みの印だけの判断は含まない）。"""
+    return decision is not None and (decision.product_id is not None or decision.condition_id is not None)
+
+
+def _apply_soldout_targets(
+    values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str],
+    excluded_ids: frozenset[int] = frozenset(),
+) -> dict:
+    """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。
+
+    相手が無い件・人の判断（商品または状態）がある件・状態の名前が引けない件は上書きしない（何も外さない）。
+    上書きしたときは、人の状態判断（_apply_decisions）と同じ理由 CONDITION_REVIEW_REASONS を外し、空になれば要確認を外す。
+    """
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return values
+    condition_id = targets[0]["condition_id"]
+    canonical = canonicals.get(condition_id)
+    if canonical is None:
+        return values
+    basis = item.get("soldout_target_basis") or CONDITION_BASIS_SOLDOUT_REF
+    overwritten = {**values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": basis}
+    if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
+        return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
+    return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
+
+
+def _extra_targets(values: dict, item: dict, decision: Decisions | None) -> list[dict]:
+    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。相手が無い件・人の判断がある件は空。"""
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return []
+    written = (values["product_id"], values["condition_id"])
+    return [t for t in targets if (t["product_id"], t["condition_id"]) != written]
+
+
+_DELETE_EXTRA_TARGETS_SQL = """
+    DELETE FROM {schema}.analysis_soldout_extra_targets WHERE analysis_result_id IN (
+        SELECT ar.id FROM {schema}.analysis_results ar
+        JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+        WHERE ei.extraction_job_id = :ej
+    )
+"""
+_INSERT_EXTRA_TARGET_SQL = """
+    INSERT INTO {schema}.analysis_soldout_extra_targets (analysis_result_id, product_id, condition_id, ref_message_id, ref_line)
+    VALUES (:analysis_result_id, :product_id, :condition_id, :ref_message_id, :ref_line)
+"""
+
+
+def _soldout_condition_ids(pairs: list[tuple[dict, object]]) -> list[int]:
+    return [it["soldout_targets"][0]["condition_id"] for it, _ in pairs if it.get("soldout_targets")]
+
+
+def _write_extra_targets(session: Session, result_id: str, extras: list[dict]) -> None:
+    for target in extras:
+        session.execute(
+            text(_INSERT_EXTRA_TARGET_SQL.format(schema=analyzer.TCG_SCHEMA)),
+            {"analysis_result_id": result_id, "product_id": target["product_id"], "condition_id": target["condition_id"],
+             "ref_message_id": target["ref_message_id"], "ref_line": target["ref_line"]},
+        )
+
+
+def _buyback_units(
+    session: Session, pairs: list, base_values: list[dict], unit_ids: dict, extraction_job_id: str, decisions: dict[str, Decisions],
+) -> list[dict]:
+    """単位も状態も語が無い件を、買取価格との比で Sealed box / Case に決める（便BB）。失敗したらこの投稿では決めない。"""
+    if not any(is_buyback_candidate(item, values) for (item, _row), values in zip(pairs, base_values)):
+        return base_values  # 対象が無ければ DB も SAVEPOINT も使わない
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            human_condition = frozenset(
+                i for i, (_item, row) in enumerate(pairs) if (d := decisions.get(str(row.id))) is not None and d.condition_id is not None
+            )
+            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, human_condition)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[buyback_unit] 買取価格による単位・状態の判定に失敗したので、この投稿では判定をしません: job=%s error=%r", extraction_job_id, exc)
+        return base_values
+
+
+def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values: list[dict]) -> frozenset[int]:
+    """単位と価格が相場と合わない件の位置（便UP）。商品・単位・価格が揃った件だけを相場と比べる。"""
+    candidates = [
+        Candidate(key=index, product_id=int(v["product_id"]), unit=str(v["unit_canonical"]), price=Decimal(str(v["price_normalized"])))
+        for index, v in enumerate(base_values)
+        if v["pid_resolved"] and v["product_id"] is not None and v["unit_canonical"] and v["price_normalized"] is not None
+    ]
+    if not candidates:
+        return frozenset()
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            source_message_id = session.execute(
+                text(f"SELECT source_message_id::text FROM {analyzer.TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+            ).scalar_one()
+            return find_mismatches(session, analyzer.TCG_SCHEMA, candidates, source_message_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[unit_price_check] 単位と価格の確認に失敗したので、この投稿では確認をしません: job=%s error=%r", extraction_job_id, exc)
+        return frozenset()
+
+
+def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
+    """理由 unit_price_mismatch を末尾に足す（元の values は変えない）。人の「このままで良い」は _apply_decisions が外す。"""
+    if not is_mismatch:
+        return values
+    reasons = _split_reasons(values["review_reasons"])
+    return {**values, "review_reasons": REASON_SEPARATOR.join([*reasons, REASON_UNIT_PRICE_MISMATCH]), "needs_review": True}
+
+
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
     decisions: dict[str, Decisions] | None = None,
@@ -649,22 +856,33 @@ def _write_results(
     pairs = _map_to_rows(v102_items, rows)
     matched_ids = [it["product_id"] for it, _ in pairs if it.get("product_id") is not None]
     work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
-    canonicals = _load_condition_canonicals(session, [d.condition_id for d in decisions.values() if d.condition_id is not None])
+    condition_ids = [d.condition_id for d in decisions.values() if d.condition_id is not None]
+    target_ids = [*condition_ids, *_soldout_condition_ids(pairs)]
+    canonicals = _load_condition_canonicals(session, target_ids)
+    excluded_ids = _load_excluded_condition_ids(session, target_ids)
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
-    for item, row in pairs:
-        values = _apply_decisions(
-            _analysis_values(item, masters, unit_ids, work_ids), item, decisions.get(str(row.id)), canonicals
+    session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
+    base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+    base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
+    mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
+    for index, (item, row) in enumerate(pairs):
+        decision = decisions.get(str(row.id))
+        values = _apply_soldout_targets(
+            _apply_decisions(_with_unit_price_reason(base_values[index], index in mismatches), item, decision, canonicals),
+            item, decision, canonicals, excluded_ids,
         )
-        session.execute(
+        result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
              "computed_at": now, "updated_at": now},
-        )
+        ).scalar_one()
+        _write_extra_targets(session, result_id, _extra_targets(values, item, decision))
         stats["pid_resolved"] += int(values["pid_resolved"])
         stats["unit_resolved"] += int(values["unit_resolved"])
         stats["needs_review"] += int(values["needs_review"])
     _set_job_review_reasons(session, extraction_job_id, _job_review_reasons(pipeline["v102_flags"]))
+    _set_job_review_detail(session, extraction_job_id, _stored_review_detail(pipeline, pairs))
     return stats
 
 
@@ -688,13 +906,19 @@ def _fixed_products(response_text: str, ctx, masters: dict, rows: list, decision
 
 
 def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple[int, int]]:
-    """この投稿の今の (product_id, condition_id) の組。書き直す前に読み、is_current の付け直しに渡す。"""
+    """この投稿の今の (product_id, condition_id) の組（〆の完売の相手の組を含む）。書き直す前に読み、is_current の付け直しに渡す。"""
     rows = session.execute(
         text(f"""
-            SELECT DISTINCT ar.product_id, ar.condition_id
+            SELECT ar.product_id, ar.condition_id
             FROM {analyzer.TCG_SCHEMA}.analysis_results ar
             JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
             WHERE ei.extraction_job_id = :ej AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL
+            UNION
+            SELECT et.product_id, et.condition_id
+            FROM {analyzer.TCG_SCHEMA}.analysis_soldout_extra_targets et
+            JOIN {analyzer.TCG_SCHEMA}.analysis_results ar ON ar.id = et.analysis_result_id
+            JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej
         """),
         {"ej": extraction_job_id},
     ).fetchall()
@@ -765,7 +989,80 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
         text(_SOLDOUT_REF_POSTS_SQL.format(schema=schema)),
         {"channel": current.supplier_channel_id, "posted_at": current.line_posted_at, "gap": SOLDOUT_REF_MAX_GAP_SECONDS},
     ).fetchall()
-    return tuple(SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "") for r in rows)
+    ids = [str(r.id) for r in rows]
+    stock, sold = _load_stock_items(session, ids), _load_sold_items(session, ids)
+    return tuple(
+        SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "", stock.get(str(r.id), ()), sold.get(str(r.id), ())) for r in rows
+    )
+
+
+_STOCK_ITEMS_SQL = """
+    SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id,
+           COALESCE(ar.condition_canonical, '') AS condition_canonical
+    FROM {schema}.extraction_jobs ej
+    JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
+    JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
+    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+      AND ar.status IS DISTINCT FROM :sold_out
+    ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
+"""
+
+
+_SOLD_ITEMS_SQL = """
+    SELECT ej.source_message_id, ar.product_id, COALESCE(ar.condition_canonical, '') AS condition_canonical
+    FROM {schema}.extraction_jobs ej
+    JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
+    JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
+    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+      AND ar.status = :sold_out
+    ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
+"""
+
+
+def _stock_lines(source_lines: list[int] | None, line_start: int | None, line_end: int | None) -> frozenset[int]:
+    """件の行番号：source_lines があればその集合、無ければ line_start〜line_end（どちらかが NULL なら空）。"""
+    if source_lines:
+        return frozenset(int(n) for n in source_lines)
+    if line_start is None or line_end is None:
+        return frozenset()
+    return frozenset(range(int(line_start), int(line_end) + 1))
+
+
+def _load_stock_items(session: Session, message_ids: list[str]) -> dict[str, tuple[StockItem, ...]]:
+    """規則11：参照する投稿ごとの、その投稿の最新の job の保存済みの解析結果（商品が決まり、'Sold out' でない件）。読み取りのみ。"""
+    if not message_ids:
+        return {}
+    rows = session.execute(
+        text(_STOCK_ITEMS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ids": message_ids, "sold_out": STATUS_SOLD_OUT}
+    ).fetchall()
+    found: dict[str, list[StockItem]] = {}
+    for r in rows:
+        found.setdefault(str(r.source_message_id), []).append(
+            StockItem(
+                _stock_lines(r.source_lines, r.line_start, r.line_end), int(r.product_id), int(r.condition_id),
+                str(r.condition_canonical or ""),
+            )
+        )
+    return {k: tuple(v) for k, v in found.items()}
+
+
+def _load_sold_items(session: Session, message_ids: list[str]) -> dict[str, tuple[SoldItem, ...]]:
+    """規則12：参照する投稿ごとの、その投稿の最新の job の保存済みの解析結果のうち 'Sold out' で商品と状態が決まった件。読み取りのみ。"""
+    if not message_ids:
+        return {}
+    rows = session.execute(
+        text(_SOLD_ITEMS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ids": message_ids, "sold_out": STATUS_SOLD_OUT}
+    ).fetchall()
+    found: dict[str, list[SoldItem]] = {}
+    for r in rows:
+        found.setdefault(str(r.source_message_id), []).append(SoldItem(int(r.product_id), str(r.condition_canonical or "")))
+    return {k: tuple(v) for k, v in found.items()}
 
 
 def masters_with_followup(
@@ -825,6 +1122,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         session.rollback()
         logger.exception("[line_analysis] v102 のシステム段が失敗しました: job=%s", extraction_job_id)
         _set_job_review_reasons(session, extraction_job_id, REASON_EXTRACT_EXCEPTION)
+        _clear_job_review_detail(session, extraction_job_id)
         session.commit()
         return empty_stats
     analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）

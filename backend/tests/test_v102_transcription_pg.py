@@ -259,13 +259,13 @@ def test_detail_shape_lines_and_reasons(pg, tx):
     status, out = call(pg, "GET", f"/api/v1/tcg/v102/posts/{job_id}")
     assert status == 200 and (out["job_id"], out["source_message_id"]) == (job_id, source_id)
     assert out["lines"] == [{"number": n, "text": t} for n, t in enumerate(RAW_MULTI.split("\n"), 1)]  # 1 始まり・空行も数える・Gemini 側と同じ
-    assert out["job_review_reason_details"] == [{"code": EXTRACTION_CODE, "source": "gemini", "fix_stage": "extraction"}]
+    assert out["job_review_reason_details"] == [{"code": EXTRACTION_CODE, "source": "gemini", "fix_stage": "extraction", "ackable": True}]
     assert out["gemini_unsure"] == [{"line": 2, "candidates": [2, 4]}]
     assert [i["id"] for i in out["items"]] == [r["id"] for r in items]  # gemini_index 順
     assert [i["gemini_index"] for i in out["items"]] == [0, 1, 2, 3]
     assert out["items"][1]["review_reason_details"] == [
-        {"code": ANALYSIS_CODE, "source": "system", "fix_stage": "analysis"},
-        {"code": EXTRACTION_CODE, "source": "gemini", "fix_stage": "extraction"},
+        {"code": ANALYSIS_CODE, "source": "system", "fix_stage": "analysis", "ackable": True},
+        {"code": EXTRACTION_CODE, "source": "gemini", "fix_stage": "extraction", "ackable": True},
     ]
     assert out["items"][3]["review_reason_details"] == []
     expected_provider = one(
@@ -301,7 +301,7 @@ def test_list_includes_job_reason_or_extraction_stage_item_reason_only_for_v102(
     assert status == 200
     listed = {i["job_id"]: i for i in out["items"]}
     assert set(listed) == {posts["job_reason"], posts["item_extraction"]} and out["total"] == 2
-    assert listed[posts["job_reason"]]["job_review_reason_details"] == [{"code": ANALYSIS_CODE, "source": "system", "fix_stage": "analysis"}]
+    assert listed[posts["job_reason"]]["job_review_reason_details"] == [{"code": ANALYSIS_CODE, "source": "system", "fix_stage": "analysis", "ackable": True}]
     assert (listed[posts["job_reason"]]["item_count"], listed[posts["job_reason"]]["extraction_item_count"]) == (4, 0)
     assert (listed[posts["item_extraction"]]["item_count"], listed[posts["item_extraction"]]["extraction_item_count"]) == (4, 2)
     assert listed[posts["item_extraction"]]["job_review_reason_details"] == []

@@ -86,9 +86,11 @@ def test_loader_applies_name_only_works(monkeypatch):
     monkeypatch.setattr(pf, "load_product_entries", lambda s: list(_entries()))
     monkeypatch.setattr(pf, "load_product_kubun_type_map", lambda s: {"1": "箱系"})
 
-    def execute(stmt):
+    def execute(stmt, params=None):
         sql = str(stmt)
         if "code_only_match" in sql:
+            rows = []
+        elif "name_ja" in sql:  # 便2-2: 〆の作品名の判定に使う中分類の名前の読み込み
             rows = []
         elif "type_master" in sql:
             assert "match_by_code = FALSE" in sql

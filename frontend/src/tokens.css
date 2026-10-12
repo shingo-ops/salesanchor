@@ -271,6 +271,7 @@
   --height-tab-item:       36px;   /* 受信箱タブボタン高さ（バー内で中央寄せ） */
   --width-inbox-panel:    443px;   /* 受信箱左パネル幅 */
   --min-height-conv-item:  92px;   /* 会話アイテム最小高 */
+  --min-height-conv-item-mobile: 76px;   /* 会話アイテム最小高（スマホ）: お手本実測76dp。PCは上の92pxのまま。出典 docs/specs/design-system/visual-language/benchmark/ */
   --min-width-dropdown:   180px;   /* 管理ドロップダウン最小幅 */
   --selection-strip-w:      2px;   /* 選択中会話アイテムの右端インジケータ幅 */
   --platform-dot-offset:   -2px;   /* プラットフォームドットのavatar外側オフセット */
@@ -423,6 +424,7 @@
   --table-col-product-name-min-w: 320px; /* 明細テーブル商品名カラム最小幅 */
   --input-width-weight:    80px;   /* 重量入力フィールド */
   --input-width-year:      90px;   /* 年・単価入力フィールド */
+  --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
   --input-width-month:     60px;   /* 月入力フィールド */
 
   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */

@@ -251,6 +251,9 @@ async def test_missing_correction_table_is_reported(monkeypatch):
 async def test_preview_api_uses_real_service_and_keeps_flag_disabled(distribution_db, monkeypatch):
     db, schema = distribution_db
     await add_flag(db, schema, await transaction_now(db))
+    # 便AGE: max_age_hours が無いとプレビューは 409。試験の準備で設定を入れる
+    await db.execute(text(f"INSERT INTO {schema}.tcg_distribution_settings(key, value) VALUES ('max_age_hours', '48') "
+                          "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value"))
     monkeypatch.setattr(routes.svc, "TCG_SCHEMA", schema)
     monkeypatch.setattr(svc, "_build_gspread_client", lambda: (_ for _ in ()).throw(AssertionError("preview called Sheets")))
     settings_before = await svc.load_distribution_settings(db)

@@ -26562,6 +26562,11 @@
       },
       "ReasonDetail": {
         "properties": {
+          "ackable": {
+            "default": true,
+            "title": "Ackable",
+            "type": "boolean"
+          },
           "code": {
             "title": "Code",
             "type": "string"
@@ -27399,6 +27404,11 @@
       },
       "ReviewReasonDetail": {
         "properties": {
+          "ackable": {
+            "default": true,
+            "title": "Ackable",
+            "type": "boolean"
+          },
           "code": {
             "title": "Code",
             "type": "string"

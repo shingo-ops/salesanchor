@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 # --- 区分の値（マスタの値。比較に使うので、ここ1か所にまとめる） -------------------------------
 # public.tcg_product_categories.kubun_type（商品の分類）の値
 PRODUCT_KUBUN_BOX = "箱系"
+PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
 PRODUCT_KUBUN_UNKNOWN = "不明"
 # public.line_units.kubun（単位の区分）の値。resolve_condition_v2 に渡す値と、resolve_unit_v2 が返す値
@@ -58,15 +59,24 @@ UNIT_KUBUN_QUANTITY_ONLY = "数量専用"
 BOX_RECHECK_UNIT_KUBUNS = frozenset({
     UNIT_KUBUN_EMPTY, UNIT_KUBUN_UNKNOWN, UNIT_KUBUN_CONDITIONAL, UNIT_KUBUN_COMPOUND, UNIT_KUBUN_QUANTITY_ONLY,
 })
-# 商品が不明のとき、単位の区分がこれなら「単位既定の落ち先」を要確認にする
-UNKNOWN_PRODUCT_UNIT_KUBUNS = frozenset({UNIT_KUBUN_EMPTY, UNIT_KUBUN_UNKNOWN})
 # 箱系の商品で、単位がこの区分なら単位を状態から決め直す（単位の候補が1つに決まらない区分）
 UNIT_KUBUN_REPLACEABLE_FOR_BOX = UNIT_KUBUN_CONDITIONAL
+# 状態の既定を箱系でやり直す商品の分類（単位が決め手にならないとき、語が無ければ Sealed box になる）
+PRODUCT_KUBUNS_DEFAULTING_TO_BOX = frozenset({PRODUCT_KUBUN_BOX, PRODUCT_KUBUN_SET})
+
+# 単位 Set の行の code（public.line_units.code。名前は masters から code で引く）
+UNIT_SET_CODE = "UN0005"
+# 状態が原文の語で決まったことを示す basis の接頭辞（tcg_analyzer_svc.resolve_condition_v2 の R1〜R3）。R4 以降は既定
+_STATE_WORD_BASIS_RE = re.compile(r"^R[123]:")
+UNIT_BASIS_STATE_WORD = "state_word"  # unit_basis の from_condition に添える理由
+UNIT_BASIS_FROM_CATEGORY = "from_category"  # 分類から単位を決めたときの unit_basis のキー
 
 # --- この道具が決める出力の言葉（マスタの値ではない） ------------------------------------------
 NONE_VALUE = "none"
 FLAG_SINGLE_CANONICAL = "FLAG_SINGLE"  # resolve_condition_v2 が返す単品の印（tcg_analyzer_svc.py の R4b）
 CONDITION_UNKNOWN = "不明"
+# 状態を決められなかった件に付ける状態「Error」の code（名前は masters から code で引く。effect='EXCLUDE' = 配信しない）
+CONDITION_ERROR_CODE = "CN0012"
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（試運転 extraction_shadow_svc.py の要確認と同じ判定・同じ意味）
@@ -84,6 +94,14 @@ _LINE_ORDER_ROLES = ("stock", "name")  # 価格の行のあと、この順に見
 
 
 @dataclass(frozen=True)
+class WorkName:
+    """有効な中分類（type_master）の名前（name_ja・name_en。空は除く）。〆の件の作品名の判定に使う（soldout_ref が import する側）。"""
+
+    work_id: int
+    names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ProductFirstMasters:
     """商品を先に決める流れに要るマスタ（読み取り専用）。"""
 
@@ -95,6 +113,10 @@ class ProductFirstMasters:
     g2_index: G2Index | None = None
     # 直前の投稿から商品を決めない言葉（複数を指す言葉）。knowledge_rules の category=followup_plural_word。空なら働かない
     followup_plural_words: tuple[str, ...] = ()
+    # 〆の件の作品名の判定に使う有効な中分類の名前（type_master is_active = TRUE）。空なら作品名の〆は働かない
+    work_names: tuple[WorkName, ...] = ()
+    # 単位 Set の名前（line_units.code = UNIT_SET_CODE の canonical）。None なら分類「セット系」の単位決めは働かない
+    set_unit: str | None = None
 
 
 _CONDITION_UNIT_SQL = """
@@ -103,6 +125,7 @@ _CONDITION_UNIT_SQL = """
     JOIN public.line_units u ON u.id = c.unit_id
     WHERE c.is_active = TRUE AND u.is_active = TRUE
 """
+_SET_UNIT_SQL = "SELECT canonical FROM public.line_units WHERE code = :code AND is_active = TRUE"
 _IGNORE_PHRASES_SQL = """
     SELECT phrase FROM public.line_unit_ignore_phrases WHERE is_active = TRUE ORDER BY id
 """
@@ -112,6 +135,9 @@ _FOLLOWUP_PLURAL_WORDS_SQL = """
     SELECT pattern FROM public.knowledge_rules
     WHERE category = 'followup_plural_word' AND pattern_type = 'substring' AND is_active = TRUE
     ORDER BY priority, id
+"""
+_WORK_NAMES_SQL = """
+    SELECT id, name_ja, name_en FROM public.type_master WHERE is_active = TRUE ORDER BY id
 """
 _NAME_ONLY_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = FALSE"
 
@@ -251,6 +277,16 @@ def match_text_g2(match_text: str, masters: ProductFirstMasters):
     return match_product_g2(match_text, g2_index)
 
 
+def _load_work_names(session: Session) -> tuple[WorkName, ...]:
+    """有効な中分類の名前。name_ja・name_en が NULL・空なら除き、名前が1つも無い中分類は入れない。"""
+    found = []
+    for work_id, name_ja, name_en in session.execute(text(_WORK_NAMES_SQL)).fetchall():
+        names = tuple(str(n) for n in (name_ja, name_en) if n and str(n).strip())
+        if names:
+            found.append(WorkName(int(work_id), names))
+    return tuple(found)
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
     """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
 
@@ -266,7 +302,10 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
     g2_index = build_g2_index(source_entries, name_only, code_only_off)
     plural_words = tuple(str(r[0]) for r in session.execute(text(_FOLLOWUP_PLURAL_WORDS_SQL)).fetchall() if r[0])
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words)
+    work_names = _load_work_names(session)
+    set_rows = session.execute(text(_SET_UNIT_SQL), {"code": UNIT_SET_CODE}).fetchall()
+    set_unit = str(set_rows[0][0]) if set_rows and set_rows[0][0] else None
+    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit)
     check_product_first_masters(masters)
     return masters
 
@@ -453,20 +492,34 @@ def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> 
     return []
 
 
+def _error_condition(cond_entries: list[dict]) -> str | None:
+    """状態「Error」の名前（masters の code で引く）。行が無ければ None。"""
+    return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_ERROR_CODE), None)
+
+
+def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict]) -> tuple[str | None, list[dict]]:
+    """最終フォールバック（FLAG_SINGLE かつ basis が単位不明）なら状態を Error にして理由 condition_unknown を付ける。
+
+    語で決まった FLAG_SINGLE（basis R1:…）は対象外。Error の行が masters に無いときは「不明」（安全側）。
+    """
+    if cond != FLAG_SINGLE_CANONICAL or BASIS_UNIT_UNKNOWN not in basis:
+        return cond, []
+    return (_error_condition(cond_entries) or CONDITION_UNKNOWN), [{"kind": REVIEW_CONDITION_UNKNOWN}]
+
+
 def _resolve_condition(
     block: str, product_kubun: str, unit_kubun: str, cond_entries: list[dict], cond_canonical_to_uuid: dict,
 ) -> tuple[str | None, str, list[dict]]:
     """(状態, basis, 要確認の理由の一覧 [{"kind": ..., ...}])。"""
-    if product_kubun == PRODUCT_KUBUN_BOX and unit_kubun in BOX_RECHECK_UNIT_KUBUNS:
+    if product_kubun in PRODUCT_KUBUNS_DEFAULTING_TO_BOX and unit_kubun in BOX_RECHECK_UNIT_KUBUNS:
         cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block)
         codes = _other_kubun_hits(block, UNIT_KUBUN_BOX, cond_entries)
         reviews = [{"kind": REVIEW_MULTIPLE_CANDIDATES, "codes": codes}] if codes else []
-        return cond, basis, reviews
+        cond, undecided = _undecided_condition(cond, basis, cond_entries)
+        return cond, basis, [*reviews, *undecided]
     cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block)
-    if product_kubun == PRODUCT_KUBUN_UNKNOWN and unit_kubun in UNKNOWN_PRODUCT_UNIT_KUBUNS \
-            and cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis:
-        return CONDITION_UNKNOWN, basis, [{"kind": REVIEW_CONDITION_UNKNOWN}]
-    return cond, basis, []
+    cond, undecided = _undecided_condition(cond, basis, cond_entries)
+    return cond, basis, undecided
 
 
 def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[dict]) -> list[str]:
@@ -496,6 +549,35 @@ def _fixed_match(match: MatchResult, fixed_product_id: int | None, masters: Prod
         match, status="matched", product_id=fixed_product_id, work_id=work_of[fixed_product_id],
         candidates=(fixed_product_id,), boundary_dropped=(),
     )
+
+
+def _resolve_unit_from_state(
+    *, unit: str | None, unit_kubun: str, unit_basis: dict, product_kubun: str, condition: str | None, basis: str,
+    masters: ProductFirstMasters, unit_alias_to_info: dict,
+) -> tuple[str | None, str, dict]:
+    """(単位, 単位の区分, unit_basis)。分類と状態から単位を決め直す。
+
+    セット系：単位の語が無ければ単位 Set（状態の単位では置き換えない）。書かれた単位はそのまま。
+    それ以外：単位が無い・箱系で「条件つき」なら状態の単位。状態が原文の語（R1〜R3）で決まり、その状態の単位が今の単位と違えば、
+    状態の単位を優先する（理由 state_word）。
+    """
+    if product_kubun == PRODUCT_KUBUN_SET:
+        if unit is None and masters.set_unit:
+            set_unit, set_kubun, _resolved = resolve_unit_v2(masters.set_unit, unit_alias_to_info)
+            return set_unit, set_kubun, {**unit_basis, UNIT_BASIS_FROM_CATEGORY: PRODUCT_KUBUN_SET}
+        if unit is not None:
+            return unit, unit_kubun, unit_basis
+    replace = unit is None or (product_kubun == PRODUCT_KUBUN_BOX and unit_kubun == UNIT_KUBUN_REPLACEABLE_FOR_BOX)
+    from_condition = masters.condition_unit.get(condition or "")
+    if not from_condition:
+        return unit, unit_kubun, unit_basis
+    if replace:
+        new_unit, new_kubun, _resolved = resolve_unit_v2(from_condition, unit_alias_to_info)
+        return new_unit, new_kubun, {**unit_basis, "from_condition": condition}
+    if product_kubun != PRODUCT_KUBUN_SET and _STATE_WORD_BASIS_RE.match(basis or "") and from_condition != unit:
+        new_unit, new_kubun, _resolved = resolve_unit_v2(from_condition, unit_alias_to_info)
+        return new_unit, new_kubun, {**unit_basis, "from_condition": condition, "reason": UNIT_BASIS_STATE_WORD}
+    return unit, unit_kubun, unit_basis
 
 
 def resolve_product_first(
@@ -528,11 +610,10 @@ def resolve_product_first(
     )
     unit, unit_kubun, _resolved = resolve_unit_v2(alias or "", unit_alias_to_info)
     condition, basis, reviews = _resolve_condition(block, product_kubun, unit_kubun, cond_entries, cond_canonical_to_uuid)
-    replace = unit is None or (product_kubun == PRODUCT_KUBUN_BOX and unit_kubun == UNIT_KUBUN_REPLACEABLE_FOR_BOX)
-    from_condition = masters.condition_unit.get(condition or "") if replace else None
-    if from_condition:
-        unit, unit_kubun, _resolved = resolve_unit_v2(from_condition, unit_alias_to_info)
-        unit_basis = {**unit_basis, "from_condition": condition}
+    unit, unit_kubun, unit_basis = _resolve_unit_from_state(
+        unit=unit, unit_kubun=unit_kubun, unit_basis=unit_basis, product_kubun=product_kubun, condition=condition,
+        basis=basis, masters=masters, unit_alias_to_info=unit_alias_to_info,
+    )
     return {
         "product_id": product_id, "product_category": product_kubun, "match_status": match.status,
         "match_candidates": list(match.candidates),

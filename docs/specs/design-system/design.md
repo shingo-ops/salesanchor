@@ -3140,3 +3140,326 @@ git diff -M の旧→新（本体 SoldOutResultsPanel.tsx。全文は ay2i-move-
 - 読み込み中: PageLayout 包みを `<p role="status">` に。非管理者: PageLayout 包みを外して `<p role="alert">` のみ。
 - 本体: PageLayout を Fragment に替え、先頭に `<p>{t("soldOut.subtitle")}</p>` を追加。
 - SourceDetail・列・ページ送り・インライン style は変更なし。
+
+#### AY-2i 本番反映（2026-10-10 記録）
+
+AY-2i の PR #4112 は、merge 7477019c3（2026-10-10T12:39:27Z、HEAD 4a083e895）で main に入った。
+- 必須チェック: 15件すべて pass。
+- Deploy 38052758953: success（12:39:31Z〜12:42:23Z）。
+- 本番 JS の検索結果:
+  - soldOutResults: 3件
+  - superAdminTcgSoldOut: 0件
+  - 「完売の結果」: 1件
+  - tcg-sold-out: 1件（転送表の1行）
+- 本番の応答: 旧 URL・app・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+
+#### AY-2j 完売の結果：原文を Drawer で開く・列の整理（2026-10-10）
+
+mode: handoff。PO の決定（2026-10-10、本セッション）は次の2件。
+- 設計者の問い1: 「一覧の『原文表示』を、押すと右から画面がスライドして出る方式に変えます。中身は今と同じ（商品名・状態・メモの原文、投稿の全文、該当行に色）。閉じ方は ×・Esc・外側クリック」。PO の回答: 「y」
+- 設計者の問い2: 「1.『原文表示』列をなくし、行のどこを押しても原文がスライドで出る。2.『判定』列をなくす（全行が『売り切れ』の固定表示）。3. 商品名の列に幅の上限を付ける（表の部品の既存の幅機能を使う）」。PO の回答: 「y」
+- 背景: PO のスクリーンショット（2026-10-10 22:03）では、仕入元・判定・原文の状態・原文表示の各列が2行に折り返していた。
+
+GO は ADR-1003 の委任に基づき Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（origin/main 7477019c3。調査全文は /tmp/CC報告ファイル/super-admin-menu/sold-out-drawer-recon.md）:
+- SoldOutResultsPanel.tsx の各部分:
+  - :17-39 SourceDetail。`<details>` と summary の中に、dl（rawName・rawState・rawMemo）、invalidSpan の p、`<pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>`（該当行は `<mark>`）がある。
+  - 列は8本。:78 が source 列、status 列の renderCell は `() => t("soldOut.soldOut")` で、常に固定の文言を返す。
+  - :96-97 の DataTable には onRowClick が無い。
+- Drawer 金型（components/Drawer.tsx）:
+  - props（:22-30）: open・onClose・title・children・onOpenFullPage?・footer?
+  - Esc で閉じる（:69-80）。外側クリックで閉じる（:117-122）。× ボタンは aria-label が common.close（:150-159）。
+  - 本文は .comp-drawer-body（:164）。パネルは常にマウントされており、開くと comp-drawer-panel--open が付く（:128）。
+  - 前例: NoteMasterPanel.tsx:230 `<Drawer open={showForm} …>`、NeedsReviewTabsPanel.tsx:145・:465 `onRowClick={setDrawerItem}`。
+- DataTable 金型:
+  - 列の width?（:34-35）は th の style.width に入る（:190）。前例は AnalysisDashboardPanel.tsx:708 他の `width: "80px"` など。
+  - onRowClick は行を tabIndex=0 にし、Enter と Space にも反応する（:248-258）。セルの中のボタンでは発火しない（:93-98）。
+  - 見出し（th）は white-space: nowrap（DataTable.css:37）。データのセルには nowrap が無い。日本語はどの文字の間でも折り返せるので、列が細くなると折り返す。
+- PO の画面幅の推定（推定。実測ではない）: スクリーンショットの横幅は1999px。左のアイコン列と LINE解析のサイドバーが占める割合は約17.5%。開発での実画面（幅1280）では、同じ部分が約20%（254px）だった。この比から、PO の表示幅は CSS 換算で約1450px と推定した。このため、検証は幅1280と幅1440の2つで行う。
+- 試験 SoldOutResultsPanel.test.tsx:
+  - :36-39 は列の位置で検査している。cells[3]="BOX"、cells[6]="Past sources"。
+  - :40-45 は details の summary を押して、mark・script・memo を検査している。
+  - :84-85 は、全行の SourceDetail が常に DOM にある前提で、"Invalid source position" が2件あることを検査している。
+- インライン style: eslint（eslint.config.js:40-115）が検査するのは、色・opacity・zIndex・寸法の数値リテラルだけ。whiteSpace と overflowWrap は対象外で、既存の書き方のまま CI を通っている。
+
+AY-2j 変更契約（SoldOutResultsPanel.tsx と、その試験だけを変更する）:
+1. 列（columns）:
+   - status 列と source 列を削除し、6本にする。並びは product_title・provider・raw_quantity・raw_price・line_posted_at・source_is_active。
+   - product_title 列に `width` を指定する。値は前例と同じ px 文字列とし、受入の「1行判定」を満たす最大の値を、実測で決める（候補の初期値は "240px"）。決めた値と、その実測の根拠を design.md に記録する。
+   - ほかの列の定義は変えない。
+2. Drawer:
+   - `const [sourceItem, setSourceItem] = useState<SoldOutItem | null>(null);` を置く。
+   - DataTable に `onRowClick={setSourceItem}` を付ける。
+   - パネルの末尾に `<Drawer open={sourceItem !== null} onClose={() => setSourceItem(null)} title={t("soldOut.source")}>{sourceItem && <SourceDetail item={sourceItem} />}</Drawer>` を置く。
+   - 一覧を再取得するとき（q・scope・offset・reload が変わったとき）は、sourceItem を null に戻す。既存の useEffect の中で、setData(null) と同じ場所で行う。
+3. SourceDetail:
+   - `<details>` と `<summary>` を外す。中身（dl、invalidSpan の p、pre と mark）は、1文字も変えずにそのまま返す（fragment で包む）。
+   - 新しい CSS・クラス・トークン・i18n キーは追加しない。title は既存の soldOut.source を使う。
+4. 試験（SoldOutResultsPanel.test.tsx）:
+   - :36-39 の列の位置は、列の削除に合わせて番号だけを直す（BOX→2、Past sources→5）。期待する値は変えない。
+   - :40-45: 行を押すまでは mark が無いことを検査する。行（"Shared" を含む行）を押したあとは、role=dialog の中に次の3点があることを検査する。
+     - mark の textContent が "<script>private</script>" であること（元と同じ値）
+     - script 要素が無いこと
+     - "Possibly more tomorrow" があること
+   - :84-85: 1行目を押したあと、"Invalid source position" が1件、mark が null であることを検査する。2行目に切り替えたときも同じであることを検査する。
+   - 追加の it:
+     - 見出しに "Status" と "View source" が無いこと
+     - Escape と × ボタン（data-testid="drawer-close"）で閉じること（comp-drawer-panel--open が外れる）
+     - Enter キーで開くこと
+   - 変えた expect と、その理由を一覧にする。
+5. 変更しないもの: Drawer・DataTable の金型、CSS、トークン、i18n、soldOutApi.ts、backend、ほかの画面、CI、依存。
+6. design.md に、AY-2i の本番反映の記録、本節、実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| 一覧の列 | 8本（判定・原文表示を含む） | 6本 |
+| 原文を見る | 行の中で開き、行が縦に伸びる | 行を押す（Enter でも可）と、右から原文が出る。×・Esc・外側クリックで閉じる |
+| 原文の中身 | 原文の商品名・状態語・備考と全文、該当行に色 | 同じ |
+| 短い列 | 2行に折り返す | 幅1280と幅1440で1行 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 1行判定 | 開発モードの build と preview に、偽ログインと API モックを使う（実データに近いダミー5行: 長い商品名「ワンピースカードゲーム ブースターパック 蒼海の七傑【OP-14】BOX」等、仕入元「倉田 和博」、価格「¥174,000」、数量「none」、状態は有効と過去の両方）。幅1280と幅1440それぞれで、各行の provider・raw_quantity・raw_price・line_posted_at・source_is_active のセルについて、Range.getClientRects() の行数（同じ top の矩形をまとめた数）が1であることを JSON に記録する。商品名の列だけは折り返してよい |
+| Drawer | 同じ環境で行を押すと、dialog（comp-drawer-panel--open）に原文が出て mark で強調され、Esc で閉じることを JSON に記録する。幅1440で、開いた状態のスクリーンショットと一覧のスクリーンショットを撮る（設計者が目視） |
+| 試験 | 契約4の差分。変えた expect と理由の一覧 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS に comp-drawer があり、SoldOutResultsPanel の変更が入っている（"soldOut.status" の参照が1件減ったことを、可能な範囲で確かめる）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2j）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（社内の金型 Drawer と、その onRowClick の前例をそのまま使うため）。
+- 根拠:
+  - PO の明示の決定が2件ある。
+  - 部品は既存の金型だけを使い、新しい CSS・トークン・キーは0。
+  - 列の幅は金型の既存の機能を使い、前例と同じ書き方にする。
+  - データ・API は変えない。
+- 残るリスク（MEDIUM）: 幅の上限だけでは、画面幅によって短い列が1行に収まらないことがある。幅1280か幅1440で1行判定を満たせない場合、担当は止まって実測を報告する。次の手（例: 金型 DataTable に列単位の nowrap を追加する）は、設計者が決める。
+- 残るリスク（LOW）: 「原文表示」の列が無くなるので、行を押せることが見た目では分かりにくくなる。行にマウスを乗せたときの表示は、金型の既存の挙動に従う。
+
+維持の仕組み:
+- 守り手: SoldOutResultsPanel.test.tsx（列の数、Drawer の開閉、Enter、Esc）、Drawer と DataTable 金型の既存の試験、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2j 実装結果
+
+実装: 変更契約1〜4のとおり。変更したファイルは SoldOutResultsPanel.tsx とその試験だけ。
+
+決めた width: product_title 列は "250px"。実測（開発モード build と vite preview、偽ログイン、API モック、Chromium、DPR1。ダミー5行。5行目は設計の受入表に追加した、より長い仕入元「株式会社トレジャーアイランド販売部」）。仕入元・数量・価格・投稿日・原文の状態のセルの最大行数（ay2j-oneline.json は250px の最終結果）:
+
+| width | 幅1280 | 幅1440 |
+|---|---|---|
+| 240px | 1 | 1 |
+| 250px | 1 | 1 |
+| 260px | 2 | 1 |
+| 270px | 2 | 1 |
+| 280px | 2 | 1 |
+| 320px | 2 | 1 |
+| 360px | 2 | 1 |
+| 400px | 3 | 1 |
+| 480px | 9 | 2 |
+
+10px 刻みで測り、幅1280・1440 の両方で最大行数が1になる最大値は 250px。250px のとき、幅1280 の th 幅は 250・248・121・104・145・108（商品名・仕入元・数量・価格・投稿日・状態）、scrollWidth と clientWidth は 1280 と 1280。幅1440 は 250・302・148・126・177・132、1440 と 1440。商品名セルの行数は 2・2・4・2・2（折り返し可）。
+
+検証（生出力は docs/handoff/design-system-recon/evidence-20260910/ay2j-*）:
+- generate: exit 0（ay2j-chk-generate.txt）
+- tsc --noEmit: exit 0（ay2j-chk-tsc.txt）
+- lint: exit 0（ay2j-chk-lint.txt）
+- check:all: exit 0（ay2j-chk-check-all.txt）
+- test:coverage --maxWorkers=1: exit 0、80 files・990 tests 成功（ay2i の 989 から +1 = 追加した it 1本。ay2j-chk-coverage.txt）。frontend/coverage は worktree 外へ移動した。
+- build: exit 0（ay2j-chk-build.txt）。build-storybook: exit 0（ay2j-chk-storybook.txt）。
+- 実画面（ay2j-oneline.json、ay2j-drawer.json、ay2j-list-1440.png、ay2j-list-1280.png、ay2j-drawer-1440.png）: 行を押す前は dialog が閉じていて mark が0件。行を押すと comp-drawer-panel--open が付き、role=dialog、タイトル「原文表示」、mark に該当行（背景 rgb(255, 255, 0)）が出た。Esc で閉じた（幅1280・1440 とも）。GET /tcg/sold-out-results は各幅で1回。
+
+変えた expect と理由（差分は ay2j-test-diff.txt）:
+1. cells[3] の "BOX" を cells[2] に（期待値は同じ）。理由: 判定列の削除で列の位置が1つ前にずれた。
+2. cells[6] の "Past sources" を cells[5] に（期待値は同じ）。理由: 判定列と原文表示列の削除で位置が1つ前にずれた。
+3. details の open が false、summary を押す、detail 内の script が無い、の3つを、「押す前は mark が無い」「"Shared" を含む行を押す」「dialog の中の mark の textContent が "<script>private</script>"」「dialog の中に script が無い」に置き換えた。理由: details と summary を外し Drawer に移したため。mark・script・memo の期待値は元と同じ。memo は dialog の中で検査する。
+4. "Invalid source position" が2件ある、の検査を、1行目と2行目を順に押して、dialog の中に1件で mark が無い、に変えた。理由: Drawer は押した行の原文だけを出す（設計の契約4）。
+- 追加した it（1本）: 見出しに "Status" と "View source" が無いこと、Enter で開くこと、Escape と × ボタンで閉じること。
+- ほかの it の expect は変えていない。
+
+#### AY-2j 本番反映（2026-10-10 記録）
+
+AY-2j の PR #4119 は、merge c035c440b（2026-10-10T13:32:39Z、HEAD e5f0d3ae5）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38056123526: success（13:32:42Z〜13:35:12Z）。
+- 本番 JS: 商品名の列の width `250px` あり、Drawer の title は soldOut.source、soldOut.status の参照0件。
+- 本番の応答: app・/super-admin/analysis-rules・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- PO の本番確認（2026-10-11）: 「成功」。
+- 既知: 数量・価格の列に出る「none」は、解析（指示書）が「原文に記載なし」を表す文字として保存した値で、画面・API は変換していない（調査 /tmp/CC報告ファイル/super-admin-menu/sold-out-none-recon.md）。扱いは PO の指示により別セッションで対応する。
+
+#### AY-2k 請求書作成・見積作成の明細入力欄の標準化（2026-10-11）
+
+mode: handoff。§AY の一行入力を金型 TextFieldControl へ移す便の続き。PO 方針（一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-11、本セッション）「金型整備に戻る」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+現在地（origin/main 994543744。調査全文は /tmp/CC報告ファイル/ssot-ay2k/recon.md）:
+- 対象は14件。請求書作成 frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:343,350,368,372,385,388,391 の7件と、見積作成 frontend/src/pages/quote-create/QuoteCreatePage.tsx:192,199,217,221,234,237,240 の7件。2画面は共有部品ではなく複製で、明細の7件は同じ形（data-testid の接頭辞だけが invoice-／quote- で異なる）。
+- 14件とも明細の表（table.data-table）のセルの中にある。className なし。CSS 規則0（bare input・`.data-table input` の規則も0）で、今はブラウザ既定の見た目（くぼんだ枠・余白ほぼ0）。
+- インライン style はすべてトークン（px 直書き0）。
+  | 欄 | 配置 | 外観 |
+  |---|---|---|
+  | name_en（英語名・主） | width 100%、minWidth var(--input-width-product-name) | fontWeight var(--font-weight-semi) |
+  | product_name（日本語名・参考） | width 100%、minWidth 同、marginTop var(--space-1) | fontSize var(--font-sm)、color var(--text-secondary) |
+  | condition・unit | width var(--input-width-weight) | なし |
+  | quantity（number, min=1） | width var(--input-width-qty) | なし |
+  | unit_price（number, min=0, step=0.01） | width var(--input-width-year) | なし |
+  | weight（number, min=0, step=0.001） | width var(--input-width-weight) | なし |
+- 金型 frontend/src/components/TextField.tsx: TextFieldControl は forwardRef（:41）。variant（:33）、size sm|md|lg（standard のみ、:35-39）、style は素通し（:52）。外観は frontend/src/components/FormField.css:47-62（width 100%・padding var(--space-2) var(--space-3)・枠 1px var(--border)・角 var(--comp-input-radius)・文字 var(--font-base)）、sm は :133-140（padding var(--space-1) var(--space-2)・文字 var(--font-sm)・min-height var(--comp-input-height-sm)）。inline の width は金型の width 100% に勝つ。
+- 試験依存: CommerceSubmitButtonMigration.test.tsx:67-68,:100-101,:111,:113,:120,:126（testid と、spinbutton の並び順 [0]=数量・[1]=単価）、tests-e2e/quote-create-inventory-search.spec.ts:137,:143（quote-item-row-1-name の値）。class 名の参照0。
+- 別枠（本便の対象外）: 共有の InventorySearchBar.tsx:272（1件、両画面に出る。inline の padding を持つ）、見積のみ FedExRateModal.tsx:176,193,210,239（4件、px 直書きの外観あり）。外観の直書きの整理が要るため、それぞれ別の便にする。
+- ページ側の生 text 系の総数: 70（groups.cjs で origin/main を再計測）。
+
+設計判断（設計者、2026-10-11）:
+- 大きさは size="sm" にする。理由: 1行に入力が7つ並ぶ明細の表で、幅は 70〜90px（数量・単価・重量・状態・形態）。標準 md は左右の余白が var(--space-3) ずつで、数量の欄では数字の見える幅が狭くなり、行の高さも大きく増える。sm は金型に登録済みの大きさで、文字の大きさも今の既定に近い。前例の表のセル（AY-2e #5、1行に1欄）とは並ぶ数が違うため、この判断を変える根拠にはしない。スマホでの 44px の触れる高さは金型の既存規則に従う（PO 決定によりスマホ幅は本便の判定対象外）。
+- inline style はすべて残す。配置（width・minWidth・marginTop）は並びを保つため。外観の3つ（name_en の太字、product_name の小さい文字と薄い色）は「英語名が主・日本語名が参考」という意図した区別で、値はすべてトークンのため金型の規則外の直書きには当たらない。product_name の fontSize は sm と同じトークンで、結果は変わらない。
+
+AY-2k 変更契約（2ファイルとその試験以外は変えない）:
+1. 14件の `<input` を `<TextFieldControl size="sm"` に置換し、閉じタグの形はそのまま（自己終了）。type・value・onChange・placeholder・min・step・style・data-testid・onChange の中身は逐語で保持。属性の順も変えない（size は最初に置く）。
+2. 両ファイルに `import { TextFieldControl } from "../../components/TextField";` を追加（既存の import の並びに合わせる。実際の相対パスは置換前に確認）。
+3. CSS・トークン・金型本体・i18n・API・backend・試験・e2e・ほかの画面・InventorySearchBar・FedExRateModal は変更しない。既存の試験が落ちた場合は、試験を直さずに止まって報告する。
+4. design.md に、AY-2j の本番反映の記録、本節、実装結果を追記する。
+
+前後表（予定。実画面で確定）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 14件 | ブラウザ既定の入力欄 → 金型の標準 sm（薄い灰の枠 1px・余白 var(--space-1) var(--space-2)・角 var(--comp-input-radius)・アプリ書体・文字 var(--font-sm)・背景 var(--bg-surface)・フォーカス時の枠色） |
+| 各欄の幅・並び | 変化なし（inline の width・minWidth・marginTop を保持） |
+| 英語名の太字、日本語名の小さい文字と薄い色 | 変化なし |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 並びが保たれる | 開発モードの build と preview に、偽ログインと API モック（明細2行が入る状態）を使い、/invoices/new と /quotes/new を幅1280・1440で、変更前と変更後の全画面スクリーンショットを撮る（DPR2、設計者が目視）。各明細行の14件について getBoundingClientRect の width が前後で ±2px 以内、明細の表の幅が前後で ±2px 以内、表の横はみ出し0（scrollWidth ≤ clientWidth、または変更前と同じ）を JSON に記録する |
+| 外観が前後表どおり | 14件の computed style（border・padding・font-size・font-family・border-radius・background・height）を前後で採取し、前後表の項目以外に差が無い。name_en の font-weight と product_name の color・font-size は前後で同じ |
+| 非外観属性が不変 | 差分の照合で、14件のタグ名の置換・size="sm" の追加・import の追加以外の差分が0 |
+| 置換漏れ0 | groups.cjs の再計測で、ページ側の生 text 系が 70→56 |
+| 試験 | 既存の単体試験が全件成功（CommerceSubmitButtonMigration.test.tsx の testid と spinbutton の順を含む）。e2e の testid（quote-create-inventory-search.spec.ts:137,:143）が保持されていることを grep で確認 |
+| 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |
+| 本番 | Deploy が成功。本番 JS の請求書作成・見積作成のチャンクに comp-field__input--sm（または金型の sm のクラス）が入っている。app と /api/health が 200 |
+
+幅375 は PO 決定によりスマホ版で扱うため、判定の対象外（撮影は記録として残してよい）。
+
+Architect 自己審査（AY-2k）: APPROVE（条件: 実画面で並びと幅の保持を実装後に確認）。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（既存の金型を前例どおり使うため）。
+- 根拠: 対象14件を file:line・置き場所・style つきで確定。CSS 規則0・class 依存0。inline はすべてトークン。試験の依存（testid・number の順）は属性の逐語保持で守れる。データ・配線・トークンは変えない。
+- 残るリスク（MEDIUM）: 金型の枠と余白が付くため、狭い欄（数量 var(--input-width-qty)）で数字の見える幅が今より狭くなる。幅1280・1440のスクリーンショットで、4桁の数量と「12345.67」の単価が欄の中で切れずに見えるかを確かめ、切れる場合は担当は止まって実測を報告する（次の手は設計者が決める）。
+- 残るリスク（LOW）: 行の高さが少し増える（min-height var(--comp-input-height-sm)）。
+
+維持の仕組み:
+- 守り手: frontend/src/components/TextField.test.tsx、CommerceSubmitButtonMigration.test.tsx、ui-governance、design-token-guard、frontend-check、ay2k のスクリーンショットと計測 JSON（evidence）。
+- 守っていないもの: 残るページ側の生 text 系 56（InventorySearchBar 1・FedExRateModal 4・保留22を含む）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+#### AY-2k 契約改訂（2026-10-11、実装中の実測を受けた設計者判断）
+
+- 設計判断（追記）: 実画面の計測で単価欄（90px）の値 12345.67 が金型 sm の余白と枠で 2px 切れた（scrollWidth 90 / clientWidth 88）。--input-width-year は他の4か所が使うため値を変えず、単価用のトークン --input-width-price（120px）を登録して単価欄2件だけに使う。単価列が 30px 広がり、商品名の列が同じだけ縮む。
+- 契約1b: frontend/src/tokens.css の --input-width-year の次の行に `--input-width-price: 120px;` を追加。請求書・見積の unit_price（type=number step=0.01）2件の style だけを `{ width: "var(--input-width-price)" }` に変える。他の12件・他の属性は逐語保持。
+- 契約2（実物との食い違いの記録）: TextFieldControl の import は両ファイルに既存（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:27、frontend/src/pages/quote-create/QuoteCreatePage.tsx:32）。追加0行。
+- 契約3の改訂: トークン登録先 docs/adr/ADR-067-design-token-enforcement.md のトークン表に1行追記（ADR を変更したため node scripts/generate-adr-index.js を実行、docs/adr/README.md に差分なし）。対象ADRに ADR-067 を含める。
+- 前後表（追加）: 単価欄の幅 90px → 120px。商品名の列（name_en・product_name）の幅 -30px。ほかの欄の幅・表の幅は変化0。
+- 受入（追加・変更）: 単価欄の幅は 90→120px。表の幅は前後 ±2px、横はみ出しは前と同じかそれ以下。単価以外の欄の幅は前後 ±2px（商品名の列は縮み分を除く）。12345.67 でフォーカス無し・有りの両方で scrollWidth <= clientWidth（参考値 123456.78 も記録、合否に含めない）。
+- 触るファイル（追加）: frontend/src/tokens.css、docs/adr/ADR-067-design-token-enforcement.md。
+
+#### AY-2k 実装結果（2026-10-11、基準 origin/main 34da7b297）
+
+計測（開発モード build + preview、偽ログイン + API モック、DPR2、明細2行、1行目 数量1234・単価12345.67・長い英語名。前 evidence-20260910/ay2k-measure-before.json、後 ay2k-measure-after.json）:
+- 各欄の幅（前→後）: 状態 80→80、形態 80→80、数量 70→70、単価 90→120、重量 80→80。商品名の列 1280幅 325.4→295.4、1440幅 485.4→455.4（-30、単価列の広がり分）。
+- 表の幅: 1280幅 1130→1130、1440幅 1290→1290（差0）。document scrollWidth/clientWidth: 1280/1280→1280/1280、1440/1440→1440/1440（横はみ出し 0、前後同じ）。
+- 行の高さ: 全欄 19px→30.39px。外観: 枠 2px inset→1px solid rgb(226,232,240)、padding 0→4px 8px、角 0→6px、font 13.33px Arial→13.6px アプリ書体。name_en の font-weight 600→600、product_name の color rgb(74,85,104)・font-size 13.6px→同じ。
+- 単価の切れ判定（4画面とも）: 12345.67 フォーカス無し 118/118、有り 118/118（OK）。参考 123456.78 も 118/118。数量 68/68、重量 78/78。初回実装（単価90px）では単価 90/88 で不合格だったため契約1bで改訂した。
+- 商品名欄（長い英語名・日本語名のテスト値）は前後とも幅を超える場合は切れる（前 626/321 → 後 652/293、1280幅）。
+- 変更前は元々 name_en が切れる状態。
+
+品質（すべて exit 0。evidence-20260910/ay2k-chk-*.txt）: tsc 0、lint 0、check:all 0、build 0、build-storybook 0、unit 試験（npx vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1）80 files・990 tests 全件成功 exit 0。素の `npx vitest run --coverage` は storybook ブラウザ project が playwright の chromium_headless_shell 未導入で起動失敗（環境要因、ay2k-chk-vitest-all-projects-env-fail.txt）。
+置換数: groups.cjs targets 70→56（nested css rules 0、css files 70）。変更した expect 0件。e2e の testid（frontend/tests-e2e/quote-create-inventory-search.spec.ts:137,:143）は保持。
+差分: git diff origin/main -- frontend/src は 3 files（14 `<input`→`<TextFieldControl size="sm"` 置換 14行、単価2件の style のトークン変更を同じ行に含む、tokens.css +1）。import 追加 0行。
+
+#### AY-2k 本番反映（2026-10-11 記録）
+
+AY-2k の PR #4125 は、merge 113def4b5（2026-10-10T22:50:36Z、HEAD 7d3f9e4b5。実装 HEAD 5898033009 に、CI に更新後の PR 本文を読ませるための空コミットを足したもの）で main に入った。
+- 必須チェック: 15件すべて pass（全体 pass 39・skipping 8）。
+- Deploy 38092915511: success（22:50:39Z〜22:53:17Z）。
+- 本番: CSS に `--input-width-price:120px`、JS に invoice-item-row・quote-item-row と var(--input-width-price)。app・/invoices/new・/quotes/new・/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（LOW 2件）。
+- 学び: 新しいトークンを足すと check-new-tokens.js が PR 本文の「### デザイントークン変更時」を求める。frontend-check は PR 本文をイベント時点で読むため、本文を直したあとの再実行では読み直さない。
+
+
+#### AY-2l 発注管理（/purchase-orders）ページの削除（2026-10-11）
+
+mode: handoff。PO 原文（2026-10-11、本セッション）「https://app.salesanchor.jp/purchase-ordersだが使っていないページなので削除してくれ」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+範囲の判断（設計者）: PO の指示は「ページ」の削除。画面（frontend）だけを消し、backend の API・DB の表（tenant_xxx.purchase_orders / purchase_order_items）・権限シード・openapi・ダッシュボードの po_pending_count は変えない。データを消す操作は含まない（不可逆のため、別の判断事項として扱う）。
+
+現在地（origin/main 1af58612e。調査全文は /tmp/CC報告ファイル/po-remove/recon.md）:
+- Route: frontend/src/App.tsx:53（import）、:264-265 `/purchase-orders`、:393 `/management-center/purchase-orders`（同じページ）。詳細・新規作成のルートは無い（新規作成はモーダル）。
+- 入口: frontend/src/components/DesktopShell.tsx:277-286（サイドバー「発注管理」、purchase_orders.view で表示）、:183-188（管理センターのリンク表示条件の OR に purchase_orders.view）、frontend/src/pages/management-center/ManagementCenterPage.tsx:57（左メニュー）、frontend/src/config/routeTitles.ts:27、frontend/src/constants/icons.tsx:268（NAV_ICONS.purchaseOrders。参照は DesktopShell.tsx:283 と試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 だけ）。モバイルの項目なし。他画面からのリンク 0。
+- 専用ファイル: pages/purchase-orders/PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx（it 2本とも発注）。components/PurchaseAdminEditorButtonMigration.test.tsx は発注の it 3本と import 2行だけが発注（:59 の役割の試験は残す）。
+- 削除で孤立する部品: components/InventoryPicker.tsx と InventoryPicker.stories.tsx（import 元は発注モーダルだけ）。
+- 残すもの: 共有の金型（Select・Textarea・TextField・ConfirmModal・DataTable・ContentToolbar・Modal）、utils/statusPresentation.ts:108-115 の purchaseOrder 定義（statusPresentation.test.ts:98 と design-preview/StatusSection.tsx:18 が参照）、トークン（すべて他でも使用）、tests-e2e/utils/common-mocks.ts。
+- i18n: purchaseOrders は ja・en とも 36 キー。動的キー 0。status_draft/ordered/received/cancelled/error の5キーは statusPresentation が参照するので残す。
+- 旧 URL: App.tsx に `path="*"` の受け皿は無い。削除後の /purchase-orders は、ほかの存在しない URL と同じ表示になる（実画面で確認して記録する）。
+
+AY-2l 変更契約:
+1. 削除: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、tests-e2e/po-pdf-mail.spec.ts、components/AdminMasterSaveButtonMigration.test.tsx。
+2. 編集:
+   - App.tsx: import 1行と Route 2本（:264-265 の要素一式、:393）を削除。
+   - DesktopShell.tsx: サイドバーの発注管理ブロック（直前のコメント行を含む）を削除。showManagementCenter の hasAny から "purchase_orders.view" だけを除く（他の権限・順は保持）。
+   - ManagementCenterPage.tsx:57 の発注の項目を削除。
+   - routeTitles.ts:27 を削除。
+   - icons.tsx:268 の purchaseOrders を削除し、試験のモック DesktopShell.test.tsx:77・MobileShell.test.tsx:106 の purchaseOrders 行も削除。ReceiptOutline の import が他で使われていなければ import からも外す。
+   - PurchaseAdminEditorButtonMigration.test.tsx: 発注の it 3本と、それだけが使う import を削除。
+   - NavDropdown.stories.tsx:32 は、発注の画面・キー・アイコンを参照していれば同じく直し、ただのサンプル文字列なら触らない（どちらかを記録）。
+   - ja.json・en.json: 削除後に参照 0 になる purchaseOrders.* キー、nav.purchaseOrders、products.unitPrice、quotes.selectProduct を両方から同じだけ削除。statusPresentation が参照する5キーは残す。削除前後でキー数が ja=en であること。
+3. 変更しない: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts・他の画面。
+4. design.md に、AY-2k の本番反映の記録、本節、実装結果を追記。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 入口が消える | 開発モードの build と preview（偽ログイン・API モック、purchase_orders.view を含む権限）で幅1280。サイドバーに「発注管理」が無い、管理センターの左メニューに発注が無いことを、変更前後のスクリーンショットと DOM の文字列検索（t("nav.purchaseOrders") の訳語の件数 前1以上→後0）で記録 |
+| 管理センターの表示条件 | purchase_orders.view だけを持つ権限で、変更前は管理センターのリンクが出て、変更後は出ないこと。ほかの権限（例 staff.view）では前後とも出ること |
+| 旧 URL | /purchase-orders と /management-center/purchase-orders を開いた結果を前後で記録し、変更後は /no-such-page と同じ表示であること（例外・白画面のエラーが出ないこと、console error を記録） |
+| 参照漏れ0 | `git grep -n "PurchaseOrders\|purchase-orders\|InventoryPicker\|purchaseOrders\." -- frontend/src frontend/tests-e2e` の残りが、statusPresentation の5キー関連・backend 向けでない記述だけであることを列挙 |
+| i18n | ja・en のキー数が一致、削除したキーの一覧と、各キーの参照 0 を grep で示す |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須がすべて成功 |
+| 本番 | Deploy 成功。本番 JS に PurchaseOrders のチャンク・"purchase-orders" の Route 文字列が無い（/api/v1/purchase-orders の API 文字列も 0 になる見込み）。app と /api/health が 200 |
+
+Architect 自己審査（AY-2l）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（前例 #4098・#4107 と同じ削除の型）。
+- 根拠: 専用ファイルと入口を git grep で全件確定。共有部品・データ・API・DB は変えない。旧 URL は他の未知 URL と同じ扱いで、実画面で確認する。
+- 残るリスク（LOW）: 発注の権限だけを持つ利用者は、管理センターへのリンクが出なくなる（中身が無くなるため意図どおり）。
+- 未処理として残すもの（別の判断事項）: backend の発注 API 10本・DB の表2つ・権限シード・ダッシュボードの po_pending_count。
+
+維持の仕組み:
+- 守り手: DesktopShell.test.tsx・MobileShell.test.tsx・ManagementCenter の既存試験、i18n のキー一致検査、frontend-check。
+- 切戻し: 本 PR の merge commit を revert する（データへの影響なし）。
+
+#### AY-2l 実装結果
+
+基準 origin/main 1af58612e。実画面の計測は開発モード build と preview（偽ログイン・API モック）、幅1280、同じスクリプトを前後で実行（ay2l-measure-before.json、ay2l-measure-after.json）。権限モック (a) purchase_orders.view を含む20権限、(b) purchase_orders.view だけ、(c) staff.view だけ。
+
+| 項目 | 前 | 後 |
+|---|---|---|
+| (a) サイドバーの「発注管理」件数 | 1 | 0 |
+| (a) 管理センター左メニューの「発注管理」件数 | 1 | 0 |
+| (b) 管理センターのリンク | 有り | 無し |
+| (c) 管理センターのリンク | 有り | 有り |
+| /purchase-orders の本文先頭 | 発注ページ（「発注書の作成から受取まで管理します。」） | 空（/no-such-page と同じ） |
+| /management-center/purchase-orders の本文先頭 | 管理センター | 空（/no-such-page と同じ） |
+| console error（3 URL） | 0 | 0 |
+
+- スクリーンショット: docs/handoff/design-system-recon/evidence-20260910/ay2l-sidebar-before.png、ay2l-sidebar-after.png、ay2l-mc-before.png、ay2l-mc-after.png、ay2l-old-url-after.png。
+- 品質（ay2l-chk-*）: tsc・lint・check:all・build・build-storybook・単体試験（79 files・988 tests、coverage、maxWorkers=1）すべて exit 0。
+- 削除したファイル 6 本: PurchaseOrdersPage.tsx、PurchaseOrdersFormModal.tsx、InventoryPicker.tsx、InventoryPicker.stories.tsx、po-pdf-mail.spec.ts、AdminMasterSaveButtonMigration.test.tsx。
+- 編集: App.tsx、DesktopShell.tsx、ManagementCenterPage.tsx、routeTitles.ts、icons.tsx（purchaseOrders と、これだけが使っていた ReceiptOutline とその import）、DesktopShell.test.tsx、MobileShell.test.tsx、PurchaseAdminEditorButtonMigration.test.tsx（発注の it 3 本・import 2 行に加え、これだけが使う within の import と deferred ヘルパーも除去）、ja.json、en.json。
+- i18n: 削除 34 キー（purchaseOrders.* 31、nav.purchaseOrders、products.unitPrice、quotes.selectProduct）。ja・en とも 4693→4659。purchaseOrders ブロックは 36→5（status_draft・ordered・received・cancelled・error。statusPresentation が参照）。各削除キーの参照 0 は ay2l-i18n.txt。
+- 参照漏れ grep の残り（ay2l-grep-after.txt）: statusPresentation.ts の 5 キー、locales の purchaseOrders ブロック（その 5 キー）、PurchaseAdminEditorButtonMigration.test.tsx:22 の api モック応答（ロールの試験が使う無害な分岐。契約外のため残した）、NavDropdown.stories.tsx:32 のサンプル文字列。
+- NavDropdown.stories の扱い: activePaths のただのサンプル文字列で、発注の画面・キー・アイコンを参照していないため触らない。
+- 変更していないもの: backend・DB・migrations・openapi・api 型・権限・statusPresentation・トークン・CSS・金型・common-mocks.ts。

@@ -29,7 +29,12 @@ from app.services.tcg_empty_box_rules import classification_sql, classify_empty_
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.seed_data import type_master_seed_sql
-from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
+from tests.test_tcg_work_matching_integration import (
+    _PUBLIC_PRODUCTS_DDL,
+    _rewire_keyword_fks,
+    create_soldout_extra_targets,
+    provision,
+)
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATION = MIGRATIONS / "20260913_150000_tcg_empty_box_condition.sql"
@@ -82,6 +87,9 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20261009_200000_create_review_reason_codes.sql").read_text())
             # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+            create_soldout_extra_targets(cursor, SCHEMA)  # 便2-1: ADR-158 のマージが読む表
+            # この試験は TCG_SCHEMA を差し替えず public の analysis_results を使うので、public にも作る（migration の本来の置き場）
+            create_soldout_extra_targets(cursor, "public")
             # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
             cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
             cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
@@ -156,6 +164,23 @@ async def save_async(pg, item, payload):
 
 def save(pg, item, payload=None):
     return asyncio.run(save_async(pg,item,payload or request(pg,item)))
+
+
+def set_max_age_hours(pg, value):
+    """tcg_distribution_settings の max_age_hours を入れる（None なら行を消す）。"""
+    with pg["connection"].cursor() as cursor:
+        if value is None:
+            cursor.execute("DELETE FROM public.tcg_distribution_settings WHERE key='max_age_hours'")
+        else:
+            cursor.execute("INSERT INTO public.tcg_distribution_settings(key,value) VALUES ('max_age_hours',%s) "
+                           "ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (str(value),))
+
+
+def age_message(pg, item, hours):
+    """seed 済みの投稿日時を hours 時間前にずらす。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.source_messages SET line_posted_at=now()-make_interval(hours=>%s) WHERE id=%s",
+                       (hours, item["smid"]))
 
 
 def output(pg):
@@ -291,6 +316,7 @@ def test_ambiguous_requires_correction_and_preserves_selected_on_reanalysis(pg):
 
 def test_review_tabs_count_paging_and_preview(pg):
     a,b=seed(pg),seed(pg)
+    set_max_age_hours(pg,48)
     save(pg,a)
     async def run():
         engine=create_async_engine(pg['url'])
@@ -495,7 +521,146 @@ def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
             expected = table.get(d["code"], (None, None))
             assert (d["source"], d["fix_stage"]) == expected
     by_code = {d["code"]: d for d in items[known["eid"]]["review_reason_details"]}
-    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction"}
+    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction", "ackable": True}
     assert [d["code"] for d in items[known["eid"]]["review_reason_details"]].count("gemini_unsure") == 1
-    assert {"code": "not_registered_code", "source": None, "fix_stage": None} in items[unknown["eid"]]["review_reason_details"]
+    assert {"code": "not_registered_code", "source": None, "fix_stage": None, "ackable": True} in items[unknown["eid"]]["review_reason_details"]
     assert items[empty["eid"]]["review_reason_details"] == []
+
+
+# --- effect='EXCLUDE' の状態（Error）は配信しない・選べない（便ER） ------------------------------------
+
+
+def add_error_condition(pg):
+    """旧い試験 DB には effect 列が無いので足す（本番にはある）。Error = effect EXCLUDE の1行。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS effect TEXT NOT NULL DEFAULT 'OUTPUT'")
+        cursor.execute("INSERT INTO public.conditions(code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active,effect) "
+                       "VALUES ('CN0012','Error',99,'','','',true,'EXCLUDE') RETURNING id")
+        return str(cursor.fetchone()[0])
+
+
+def seed_deliverable(pg, name, condition_id, canonical):
+    return seed(pg, name=name, reasons="", needs_review=False, condition_id=condition_id, condition_canonical=canonical)
+
+
+@pytest.mark.parametrize("include_flag_single", [False, True])
+def test_excluded_effect_condition_is_not_delivered_even_when_review_is_clear(pg, include_flag_single):
+    error_id = add_error_condition(pg)
+    set_max_age_hours(pg, 48)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    seed_deliverable(pg, "Test Booster", error_id, "Error")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return (await distribution.fetch_output_rows(db, include_flag_single=include_flag_single),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+
+    rows, preview = asyncio.run(run())
+    assert [row[4] for row in rows] == ["Sealed box"]
+    assert preview["output_count"] == 1 and preview["exclusion"]["flag_series"] == 1
+
+
+def test_review_context_exposes_effect_of_the_effective_condition(pg):
+    error_id = add_error_condition(pg)
+    error = seed_deliverable(pg, "Test Booster", error_id, "Error")
+    normal = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    assert context(pg, error)["effect"] == "EXCLUDE"
+    assert context(pg, normal)["effect"] == "OUTPUT"
+
+
+def test_condition_options_hide_excluded_effect_and_saving_it_is_422(pg):
+    error_id = add_error_condition(pg)
+    item = seed(pg, name="Test Booster", reasons="condition_unknown")
+
+    async def options():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await condition.condition_options(db)
+        finally:
+            await engine.dispose()
+
+    codes = [o["code"] for o in asyncio.run(options())]
+    assert "CN0012" not in codes and "CN0003" in codes
+    with pytest.raises(HTTPException) as caught:
+        save(pg, item, request(pg, item, decision="correct", target=error_id))
+    assert caught.value.status_code == 422
+
+
+@pytest.mark.parametrize(("reasons", "expected_reasons", "expected_needs_review"), [
+    ("condition_unknown", "", False),
+    ("condition_unknown,condition_multiple_candidates", "", False),
+    ("condition_unknown,gemini_unsure", "gemini_unsure", True),
+])
+def test_saving_a_condition_removes_condition_reasons_at_save_time(pg, reasons, expected_reasons, expected_needs_review):
+    """人が状態を選んで保存した直後に condition_unknown 等が外れる（再解析が積めなくても詰まらない）。他の理由は残る。"""
+    item = seed(pg, name="Test Booster", reasons=reasons, condition_id=pg["normal"], condition_canonical="Sealed box")
+    save(pg, item, request(pg, item, decision="correct", target=pg["normal"]))
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT needs_review, COALESCE(review_reasons,'') FROM public.analysis_results WHERE extraction_item_id=%s", (item["eid"],))
+        needs_review, stored = cursor.fetchone()
+    assert needs_review is expected_needs_review
+    assert stored == expected_reasons
+    assert "condition_unknown" not in context(pg, item)["review_reasons"]
+
+
+def _age_window_run(pg):
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                settings = await distribution.load_distribution_settings(db)
+                hours = distribution._max_age_hours(settings)
+                return (await distribution.fetch_output_rows(db, max_age_hours=hours),
+                        await distribution.fetch_preview_data(db))
+        finally:
+            await engine.dispose()
+    return asyncio.run(run())
+
+
+def test_age_window_same_condition_for_delivery_count_and_exclusion_breakdown(pg):
+    """48時間(設定値)より前の行は 配信・件数・除外内訳 のどれにも入らない。"""
+    set_max_age_hours(pg, 48)
+    fresh_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    fresh_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, fresh_ok, 47)
+    age_message(pg, old_ok, 49)
+    age_message(pg, fresh_unresolved, 1)
+    age_message(pg, old_unresolved, 100)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1  # 48時間より前の1件は数えない
+
+
+def test_age_window_zero_is_unbounded_everywhere(pg):
+    set_max_age_hours(pg, 0)
+    old_ok = seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    old_unresolved = seed(pg, name="Test Booster", reasons="", needs_review=False, pid_resolved=False)
+    age_message(pg, old_ok, 1000)
+    age_message(pg, old_unresolved, 1000)
+    rows, preview = _age_window_run(pg)
+    assert len(rows) == 1 and preview["output_count"] == 1
+    assert preview["exclusion"]["pid_unresolved_only"] == 1
+
+
+@pytest.mark.parametrize("value", [None, "", "abc", "-1"])
+def test_preview_raises_when_max_age_hours_missing_or_invalid(pg, value):
+    set_max_age_hours(pg, value)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await distribution.fetch_preview_data(db)
+        finally:
+            await engine.dispose()
+
+    with pytest.raises(distribution.MaxAgeHoursUnsetError):
+        asyncio.run(run())

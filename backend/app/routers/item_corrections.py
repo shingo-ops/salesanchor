@@ -24,7 +24,7 @@ from app.database import get_db
 from app.models import User
 from app.services.item_corrections_svc import save_corrections
 from app.services.line_analysis_v102_svc import is_v102_prompt_version
-from app.services.review_reason_codes_svc import load_review_reason_codes
+from app.services.review_reason_codes_svc import load_review_reason_codes, non_ackable_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
     FIELD_PRODUCT_ID,
@@ -185,6 +185,9 @@ async def save_item_review_ack(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ) -> ReviewAckResponse:
+    refused = non_ackable_codes(body.codes)
+    if refused:
+        raise HTTPException(422, f"Review reason codes that cannot be acknowledged: {', '.join(refused)}")
     unknown = unknown_codes(body.codes, await load_review_reason_codes(db))
     if unknown:
         raise HTTPException(422, f"Unregistered review reason codes: {', '.join(unknown)}")

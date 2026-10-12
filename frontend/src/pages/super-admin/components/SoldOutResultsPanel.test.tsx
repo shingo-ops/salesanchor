@@ -34,15 +34,15 @@ it("shows saved decisions, blank raw quantity, historical source, absent date an
   expect(screen.getByText(/does not show current stock/)).toBeTruthy();
   expect(screen.getByText("Posting date not recorded")).toBeTruthy();
   const cells = within(screen.getAllByRole("row")[1]).getAllByRole("cell");
-  expect(cells[3].textContent).toBe("BOX");
+  expect(cells[2].textContent).toBe("BOX");
   expect(cells[0].textContent).toContain("(original name)");
-  expect(cells[6].textContent).toBe("Past sources");
-  const detail = document.querySelector("details")!;
-  expect(detail.open).toBe(false);
-  fireEvent.click(screen.getByText("View source", { selector: "summary" }));
-  expect(document.querySelector("mark")?.textContent).toBe("<script>private</script>");
-  expect(detail.querySelector("script")).toBeNull();
-  expect(screen.getByText("Possibly more tomorrow")).toBeTruthy();
+  expect(cells[5].textContent).toBe("Past sources");
+  expect(document.querySelector("mark")).toBeNull();
+  fireEvent.click(screen.getByText("Shared", { selector: "td" }).closest("tr")!);
+  const dialog = screen.getByRole("dialog");
+  expect(within(dialog).getByText("<script>private</script>", { selector: "mark" }).textContent).toBe("<script>private</script>");
+  expect(dialog.querySelector("script")).toBeNull();
+  expect(within(dialog).getByText("Possibly more tomorrow")).toBeTruthy();
 });
 it("confirms search once, treats wildcards literally, resets paging and filters history", async () => {
   view(); await screen.findByText("Analysis results: 51");
@@ -81,8 +81,28 @@ it("preserves separate same-name rows, displays null source and invalid span wit
   view(); await screen.findByText("Analysis results: 2");
   expect(screen.getAllByRole("row")).toHaveLength(3);
   expect(screen.getByText("Unknown source state")).toBeTruthy();
-  expect(document.querySelector("mark")).toBeNull();
-  expect(screen.getAllByText(/Invalid source position/)).toHaveLength(2);
+  const rows = screen.getAllByRole("row");
+  for (const row of [rows[1], rows[2]]) {
+    fireEvent.click(row);
+    expect(within(screen.getByRole("dialog")).getAllByText(/Invalid source position/)).toHaveLength(1);
+    expect(document.querySelector("mark")).toBeNull();
+  }
+});
+it("has no status or source columns, and opens/closes the source drawer by Enter, Escape and the close button", async () => {
+  view(); await screen.findByText("Analysis results: 51");
+  const headers = screen.getAllByRole("columnheader").map(h => h.textContent);
+  expect(headers).not.toContain("Status");
+  expect(headers).not.toContain("View source");
+  const row = screen.getAllByRole("row")[1];
+  const panel = () => document.querySelector(".comp-drawer-panel")!;
+  fireEvent.keyDown(row, { key: "Enter" });
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(true);
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(false);
+  fireEvent.click(row);
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(true);
+  fireEvent.click(screen.getByTestId("drawer-close"));
+  expect(panel().classList.contains("comp-drawer-panel--open")).toBe(false);
 });
 it("formats date in JST", async () => {
   vi.mocked(api.get).mockResolvedValue({ ...response, items: [{ ...item, line_posted_at: "2026-09-13T15:30:00Z" }] });
