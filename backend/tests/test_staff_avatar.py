@@ -59,10 +59,10 @@ async def _seed_staff(db_session, token: str | None = None) -> None:
     await db_session.execute(
         text("""
             INSERT INTO staff (
-                id, tenant_id, staff_code, surname_jp, given_name_jp,
+                id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
                 primary_email, role_id, status, avatar_token
             ) VALUES (
-                500, 999, 'EMP-AV01', '山田', '太郎',
+                500, 999, 999, 'EMP-AV01', '山田', '太郎',
                 'test@example.com', 1, 'active', :token
             )
         """),

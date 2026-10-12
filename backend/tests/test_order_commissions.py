@@ -397,16 +397,17 @@ async def _create_staff_direct(
         text(
             """
             INSERT INTO staff (
-                id, tenant_id, staff_code, surname_jp, given_name_jp,
+                id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
                 primary_email, role_id, status, is_employee
             ) VALUES (
-                :id, 999, :code, :sjp, :gjp,
+                :id, 999, :uid, :code, :sjp, :gjp,
                 :email, :rid, 'active', :is_emp
             )
             """
         ),
         {
             "id": sid,
+            "uid": sid + _USER_ID_OFFSET,
             "code": f"EMP-{sid:05d}",
             "sjp": surname,
             "gjp": given,
