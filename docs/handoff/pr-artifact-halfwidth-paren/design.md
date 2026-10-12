@@ -25,12 +25,13 @@ scripts/check-process-artifacts.js:266 と :274 の2行。
 |変更前は a と d が失敗する|変更前に実行し 2 FAIL を確認済み（121+4=125 件中 123 PASS / 2 FAIL）|
 |既存テストと CI が通る|同スクリプト全 PASS（125 PASS / 0 FAIL）と PR の checks|
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし：社内の正規表現修正のため。
+該当なし：社内の正規表現修正のため。過去事例は旧 PR #3557（同じ修正を1か所だけ行っていた）で、2か所とも直す形に作り直す。
 
 ## 維持の仕組み
 
+- 守り手: scripts/tests/test-process-artifacts.js
 scripts/tests/test-process-artifacts.js に追加したテスト a〜d。
 
 ## 戻し方
