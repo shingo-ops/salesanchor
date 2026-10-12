@@ -204,7 +204,7 @@ en: "backToList": "Back to list"
 |---|---|---|
 | 1 | 390px 幅で、会話を選ぶまで**一覧が全画面**（上下分割でない） | 3幅の画面検査（`--project=vl-mobile-390`）＋ `.inbox-center` が非表示であること |
 | 2 | 390px 幅で行をタップすると**会話が全画面**になり、一覧が消える | 同検査で `.inbox-left-panel` が非表示・`.inbox-center` が表示 |
-| 3 | 390px 幅で「一覧へ戻る」を押すと**一覧に戻る** | 同検査で `selectedLeadId` が null に戻ること |
+| 3 | 390px 幅で「一覧へ戻る」を押すと**一覧に戻る**（URL の `lead_id` も消える） | `inbox-single-column.spec.ts`（§13）で一覧が表示・会話が非表示・`searchParams.get("lead_id")` が null になることを検査 |
 | 4 | 390px 幅で**横にはみ出さない**（scrollWidth − innerWidth = 0） | 段階1の検査と同じ測り方 |
 | 5 | 「一覧へ戻る」の当たり判定が **48x48** | 検査で boundingBox を測る |
 | 6 | **1280px の PC 表示が変わらない** | `--project=vl-desktop-1280` の結果を段階1のベースラインと比べる |
@@ -255,10 +255,10 @@ en: "backToList": "Back to list"
 
 ## 11. 維持の仕組み
 
-- **守り手**: `frontend/package.json` の `check:all`（25項目）と、CI の `Process Artifacts Gate` / `UI Governance Gate` / `guard-hex-increase`。
+- 守り手: `frontend/package.json` の `check:all`（25項目）、`.github/workflows/e2e.yml` のジョブ `visual-language`（3幅の画面検査）、CI の `Process Artifacts Gate` / `UI Governance Gate` / `guard-hex-increase`。
 - **対象**: 生の値の直書き（`check:css-values`）、色の直書き（`check:css-colors`）、文言の直書き（`check:i18n-missing-keys`）、ライト/ダークの片方欠落（`check:dark-parity`）、新規アイコンの無断追加（`check:icon-sync`）、新規トークンの無断追加（`check:new-tokens`）。
 - **切替点の同期**: `check:breakpoint-sync` が `tokens.css` の `--breakpoint-*` と `@media` の値の一致を検査する。本カードの 767px はこれに準拠する。
-- **関所が無い部分**: **1列切り替えが実際に効いているか（会話を選んだときに一覧が消え、戻ると戻るか）は機械で検査していない。** 3幅の画面検査が作業端末で実行できない（Playwright が ubuntu26.04-arm64 向けの chromium を提供しない）ため、**当面は実機の Chrome で本番を撮って測ることで守る**（構造データで `.inbox-left-panel` と `.inbox-center` の表示状態を確認する方法を確立済み）。機械化するには CI の画面検査を再開する必要がある。
+- **1列切り替えが効いているかの検査（2026-10-12 に機械化・§13）**: 「会話を選ぶと一覧が消え、戻ると戻る」は CI の `画面検査（受信箱 3幅 Playwright）`（`.github/workflows/e2e.yml`）が毎 PR で検査する。作業端末では Playwright が chromium を提供しない（`ERROR: Playwright does not support chromium on ubuntu26.04-arm64`）ため、**マージ前の確認は CI（x86）で行う**。実機の Chrome での構造データ確認は、CI を通した後の最終確認として併用する。
 
 ## 12. 実装の結果と revert（2026-10-12）
 
@@ -280,9 +280,116 @@ en: "backToList": "Back to list"
 
 1. `onBackToList` が実際に呼ばれているか（`/design-preview` での再現、または一時的な確認手段）
 2. `.karte-overlay`（`showKartePanel` 時に `position: fixed; inset: 0`）がクリックを奪っていないか
-3. **既存の解除の型に揃える**。`onPageFilterChange`（`useInboxState.ts:544-556`）は `setSelectedLeadId(null)` に加えて `setLeadDetail(null)` と **URL の `lead_id` 削除**（`params.delete("lead_id")` ＋ `setSearchParams`）を行っている。**URL を消していないことが原因である可能性が高い。**
+3. ~~**URL を消していないことが原因である可能性が高い。**~~ → **誤り。真因は別だった（§14 で確定）。** 既存の解除の型（`onPageFilterChange` / `useInboxState.ts:544-556`）に揃えること自体は正しいが、それだけでは戻れない。
 4. **Mac 側で3幅の画面検査を通してから再投入する。** 作業端末では Playwright が chromium を提供しないため（`ERROR: Playwright does not support chromium on ubuntu26.04-arm64`）、構造変更の検証ができない。
 
 ### この便から得た教訓
 
 **この端末で画面検査ができないまま構造変更を本番に出してはいけない。** 寸法や色の変更（#4147 / #4148 / #4155）は構造データの実測で検証できたが、**操作が成立するか**は画面検査または実機での往復確認が必要で、往復の確認を本番投入の前に行う手段を用意してから着手する。
+
+## 13. 画面検査の恒久化（2026-10-12・PO指示「恒久的に画面を確認するようにして」）
+
+#12 の退行を二度と本番に出さないため、**開く→戻るの構造だけは CI で毎回検査する**ことにした。
+
+### 何を足したか
+
+| 対象 | 中身 |
+|---|---|
+| `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` | **合否を出す**検査。390px で「一覧だけ→会話だけ→一覧だけ」と切り替わること、戻るボタンが48px以上であること、**URL の `lead_id` が消えること**、戻った後にもう一度開けることを検査する。1280px / 768px では一覧と会話が同時に見え、戻るボタンが出ないことを検査する（PC 不変の保証） |
+| `frontend/tests-e2e/visual-language/inbox-helpers.ts` | 2本の spec が共用する mock と開き方。mock を2か所に分けて書くと片方が古くなるため唯一の置き場にした |
+| `frontend/tests-e2e/visual-language/inbox-baseline.spec.ts` | 共通部品へ寄せ、**待ち方を状態ごとに直した**。元の作りは状態A（会話未選択）でも入力欄を待っていたが、`InboxMessageThread.tsx:358-369` は未選択時に empty-state を返すため**入力欄は存在しない**＝全幅で失敗する作りだった。状態B のスマホでは一覧が消えるため一覧も待たない |
+| `frontend/package.json` | `test:e2e:vl` — 3幅の project だけを走らせる |
+| `.github/workflows/e2e.yml` | ジョブ `visual-language-run`（表示名「画面検査（内部）」・`frontend/**` 変更時のみ・10分上限）と、集約ジョブ `visual-language`（表示名「画面検査（受信箱 3幅 Playwright）」・`if: always()`）。`lint-run` → `lint` と同じ型 |
+
+### なぜ全部の E2E を再開しないのか
+
+`e2e.yml:105` の `playwright` ジョブは `if: false`（**2026-06-01 に CI ボトルネック解消まで停止**）。これを外すと当時の待ち時間が戻る。今回必要なのは受信箱の3幅だけなので、**停止中のジョブはそのまま残し**、`visual-language` の spec（現状2本）に絞った別ジョブを足した。
+
+### #4165 を捕まえられるか（この検査の根拠）
+
+#12 の3番で特定した原因は「`setSelectedLeadId(null)` だけで **URL の `lead_id` を消していない**」こと。`inbox-single-column.spec.ts` は戻った直後に `new URL(page.url()).searchParams.get("lead_id")` が `null` であることを検査するため、**同じ作りに戻した時点で赤くなる**。表示状態（一覧が出る／会話が消える）も併せて検査する。
+
+### 残る限界（正直に）
+
+1. **必須チェックには入れていない。** 必須チェックの追加は Branch Protection の変更（CLAUDE.md §不可逆操作）であり PO の判断が必要。現状は PR 画面に結果が出るが、赤でもマージは機械的には止まらない。**許可が出た場合の手順は下記**。
+2. **見た目（色・字の大きさ・影）は検査していない。** 検査するのは構造と寸法のみ。ベースライン計測（`inbox-baseline.spec.ts`）は記録を残すだけで合否を出さない。
+3. **実機の操作感（スライドの速さ・慣性）は検査できない。** 別便で扱う。
+
+## 14. #4165 の真因（2026-10-12・画面検査が検出）
+
+§13 で足した画面検査を PR #4171 の CI で初めて実行したところ、**390px で3件すべてが赤**になり、原因が確定した。
+
+### 確定した事実（CI のログ）
+
+```
+Locator:  locator('button.conversation-item').first()
+Expected: visible
+Received: hidden
+  14 × locator resolved to <button class="conv-item conversation-item selected">
+```
+
+**受信箱を開いた直後に、会話が既に `selected` になっている。** 出どころは `useInboxState.ts:641-646`:
+
+```ts
+// 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択
+useEffect(() => {
+  if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
+  selectLead(filteredConversations[0].lead_id);
+}, [filteredConversations, selectedLeadId, convLoading, selectLead]);
+```
+
+### なぜ「一覧へ戻る」が効かなかったのか
+
+1. 戻るを押す → `setSelectedLeadId(null)`
+2. この効果の依存に `selectedLeadId` が入っているため**即座に再実行**
+3. 「未選択かつ一覧がある」が成立 → **先頭の会話を選び直す**
+4. `thread-open` が付き直し、会話が全画面のまま＝**押しても何も起きないように見える**
+
+#12 で「配線は正しいのに状態が変わらない」と記録した現象の説明がついた。**URL の `lead_id` は原因ではない**（消しても効果が選び直す）。#12 の「作り直しの前に確かめること」3番は誤った推定であり、取り消す。
+
+### 直し方
+
+スマホ幅では自動選択しない。判定は **ADR-137 の `useIsMobile`**（`matchMedia` ＋ `BREAKPOINTS.MOBILE_MAX`）を使い、CSS 側の `@media (max-width: 767px)` と同じ切替点に揃える。新しい hook は作らない。
+
+```ts
+const isMobile = useIsMobile();
+useEffect(() => {
+  if (isMobile) return;
+  ...
+}, [..., isMobile]);
+```
+
+**PC・タブレットは従来どおり自動選択する**（一覧が常に見えているため自動選択が親切に働く）。画面検査の1280/768px 側（一覧と会話が同時に見える）がこれを守る。
+
+### 副産物として分かったこと
+
+現状の本番でも、**スマホで受信箱を開くと先頭の会話が自動で開き、`selectLead` 経由で既読化される**（`useInboxState.ts:521` のコメント「lead 選択時 → メッセージ取得 + 既読化」）。既読は取り消せないため、この修正は見た目の問題だけでなく**意図しない既読化を止める**意味も持つ。
+
+### 教訓
+
+**#12 で書いた「原因の推定」を実装の根拠にしてはいけなかった。** 推定（URL）と真因（自動選択の再実行）は別物で、推定のまま作り直せば同じ退行を繰り返していた。画面検査を先に用意したことで、**本番に出す前に**事実で確定できた。
+
+### 必須チェック化の手順（PO の許可が出てから実行・未実行）
+
+必須チェックは Ruleset **16619490** が持つ（`docs/BRANCH_PROTECTION_SETUP.md:322-333` の削除手順の逆）。**不可逆操作のため `bash scripts/permit-danger.sh` ＋ PO の明示許可が必要。**
+
+```bash
+# 1. 現状を保存（戻せるようにする）
+gh api repos/shingo-ops/salesanchor/rulesets/16619490 > /tmp/ruleset-before.json
+
+# 2. 画面検査を required に追加したものを作る
+jq '.rules |= map(
+      if .type == "required_status_checks"
+      then .parameters.required_status_checks += [{"context":"画面検査（受信箱 3幅 Playwright）"}]
+      else . end)' /tmp/ruleset-before.json > /tmp/ruleset-after.json
+
+# 3. 差分を目で確認してから適用
+diff <(jq -S . /tmp/ruleset-before.json) <(jq -S . /tmp/ruleset-after.json)
+gh api -X PUT -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/shingo-ops/salesanchor/rulesets/16619490 \
+  -d @/tmp/ruleset-after.json | jq '{id,name,updated_at}'
+```
+
+**戻し方**: `/tmp/ruleset-before.json` を同じ `PUT` で適用する。
+
+**デッドロック対策は本便で済ませた**: 検査本体は `detect-changes` が `frontend/**` の変更を検出したときだけ走るため、フロント未変更の PR では skipped になる。そのまま必須チェックにすると「報告が来ない」デッドロック（Issue #523 / PR #534 と同型）が再発する。そこで `lint` と同じ型（`detect-changes` → `visual-language-run`（内部） → `visual-language`（集約・`if: always()`））にし、**集約が skipped を成功として報告する**ようにした。必須チェックに指定するのは集約側の名前 `画面検査（受信箱 3幅 Playwright）`。
