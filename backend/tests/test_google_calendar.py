@@ -266,31 +266,56 @@ class TestRouterStatus:
 
 
 class TestRouterConnectStart:
-    """GET /google-calendar/connect/start の管理者チェックテスト。"""
+    """GET /google-calendar/connect/start と DELETE /google-calendar/connect の管理者チェック。
 
-    @pytest.mark.asyncio
-    async def test_non_admin_raises_403(self):
-        from app.routers.google_calendar import connect_start, _require_admin
+    判定は require_tenant_admin（user_roles の system_key）を通す。users.role は見ない。
+    """
+
+    @staticmethod
+    def _user(legacy_role: str):
         from app.models import User
-        from fastapi import HTTPException
 
         user = MagicMock(spec=User)
-        user.role = "staff"
+        user.id = 5
+        user.role = legacy_role
+        return user
 
-        with pytest.raises(HTTPException) as exc_info:
-            _require_admin(user)
+    @pytest.mark.asyncio
+    async def test_sales_role_gets_403_via_dependency(self):
+        from fastapi import HTTPException
+
+        from app.auth.dependencies import require_tenant_admin
+
+        user = self._user("admin")  # users.role が admin でも、営業ロールなら 403
+        with patch("app.auth.dependencies.get_user_system_keys", AsyncMock(return_value={"sales"})):
+            with pytest.raises(HTTPException) as exc_info:
+                await require_tenant_admin(tenant_id=1, user=user, db=AsyncMock())
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_admin_passes_check(self):
-        from app.routers.google_calendar import _require_admin
-        from app.models import User
+    async def test_owner_passes_dependency_and_connect_start_runs(self):
+        from app.auth.dependencies import require_tenant_admin
+        from app.routers.google_calendar import connect_start
 
-        user = MagicMock(spec=User)
-        user.role = "admin"
+        user = self._user("user")  # users.role が user でも owner なら通る
+        with patch("app.auth.dependencies.get_user_system_keys", AsyncMock(return_value={"owner"})):
+            passed = await require_tenant_admin(tenant_id=1, user=user, db=AsyncMock())
+        assert passed is user
+        with patch(
+            "app.routers.google_calendar.cal_svc.get_auth_url", AsyncMock(return_value="https://auth.example/x")
+        ):
+            result = await connect_start(tenant_id=1, user=passed, db=AsyncMock())
+        assert result == {"auth_url": "https://auth.example/x"}
 
-        # admin は例外なし
-        _require_admin(user)
+    def test_both_routes_depend_on_require_tenant_admin(self):
+        import inspect
+
+        from app.auth.dependencies import require_tenant_admin
+        from app.routers import google_calendar as gc
+
+        for fn in (gc.connect_start, gc.disconnect):
+            default = inspect.signature(fn).parameters["user"].default
+            assert default.dependency is require_tenant_admin
 
 
 class TestRouterEvents:
@@ -388,20 +413,6 @@ class TestRouterDisconnect:
         await disconnect(tenant_id=1, user=user, db=mock_db)
         mock_db.execute.assert_called_once()
         mock_db.commit.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_disconnect_non_admin_403(self):
-        from app.routers.google_calendar import disconnect
-        from app.models import User
-        from fastapi import HTTPException
-
-        user = MagicMock(spec=User)
-        user.role = "staff"
-        mock_db = AsyncMock()
-
-        with pytest.raises(HTTPException) as exc_info:
-            await disconnect(tenant_id=1, user=user, db=mock_db)
-        assert exc_info.value.status_code == 403
 
 
 # ---------------------------------------------------------------------------

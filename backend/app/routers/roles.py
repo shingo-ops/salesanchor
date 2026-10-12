@@ -21,11 +21,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    get_user_system_keys,
     load_user_permissions,
     require_permission,
     reset_tenant_context,
 )
-from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS
+from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS, is_tenant_admin
 from app.cache import invalidate_tenant_permissions, invalidate_user_permissions
 from app.database import get_db
 from app.models import User
@@ -91,8 +92,7 @@ async def _get_role(db: AsyncSession, role_id: int, current_user: User) -> dict 
 async def _max_priority_for_user(db: AsyncSession, user_id: int) -> int:
     """
     該当ユーザーが保持しているロールの最大 priority を返す。
-    ロール未割当ユーザーは -1（何も管理できない）。
-    adminロール保持者は 1000（オーナーと同等扱い、後方互換）。
+    ロール未割当ユーザーは -1（何も管理できない）。users.role は見ない（正本は user_roles）。
     """
     result = await db.execute(
         text("""
@@ -104,18 +104,7 @@ async def _max_priority_for_user(db: AsyncSession, user_id: int) -> int:
         {"uid": user_id},
     )
     row = result.first()
-    max_prio = int(row.max_prio) if row and row.max_prio is not None else -1
-
-    if max_prio < 0:
-        # ロール未割当: 後方互換で public.users.role を確認
-        user_result = await db.execute(
-            text("SELECT role FROM public.users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        user_row = user_result.fetchone()
-        if user_row and user_row[0] == "admin":
-            return 1000
-    return max_prio
+    return int(row.max_prio) if row and row.max_prio is not None else -1
 
 
 # =========================================================================
@@ -153,6 +142,7 @@ async def get_my_permissions(
       導線を出すかどうかの判定に使用）。
     """
     keys = await load_user_permissions(db, tenant_id, current_user.id)
+    system_keys = await get_user_system_keys(db, current_user.id)
 
     # テナント単位フィーチャーフラグ: enabled=true の feature_key を配列で返す
     features_result = await db.execute(
@@ -167,6 +157,9 @@ async def get_my_permissions(
 
     return {
         "permissions": sorted(keys),
+        "user_id": current_user.id,
+        # owner / admin のシステムロールを持つか（user_roles が正本。users.role は使わない）
+        "is_tenant_admin": is_tenant_admin(system_keys),
         "is_super_admin": bool(getattr(current_user, "is_super_admin", False)),
         # Sprint 9 / F9 v1.2: 中央 admin が自テナントの Phase 状態を取得するために必要
         "tenant_id": tenant_id,

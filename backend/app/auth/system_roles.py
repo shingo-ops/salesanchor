@@ -14,6 +14,11 @@ SYSTEM_MANAGE_KEY = "system.manage"  # admin だけが持たない権限キー�
 TENANT_HIDDEN_SYSTEM_KEYS = frozenset({ROLE_KEY_ADMIN})
 
 
+def is_tenant_admin(system_keys: set[str]) -> bool:
+    """owner または admin のシステムロールを持つか（権限判定の正本は user_roles。users.role は使わない）。"""
+    return bool(system_keys & {ROLE_KEY_OWNER, ROLE_KEY_ADMIN})
+
+
 def compute_permission_keys(
     stored_keys: set[str],
     system_keys: set[str],

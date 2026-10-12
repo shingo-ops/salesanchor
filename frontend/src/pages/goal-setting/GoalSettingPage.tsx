@@ -52,7 +52,12 @@ interface Team {
 
 interface CurrentUser {
   id: number;
-  role: string;
+  isTenantAdmin: boolean;
+}
+
+interface MyPermissionsResponse {
+  user_id: number;
+  is_tenant_admin: boolean;
 }
 
 interface GoalAdviceInputs {
@@ -534,17 +539,17 @@ export default function GoalSettingPage() {
   const { year: weekYear, week: curWeek } = currentYearWeek();
 
   const isLeader = (user: CurrentUser | null, team: Team | null) =>
-    user?.role === "admin" ||
+    user?.isTenantAdmin === true ||
     (team !== null && team.leader_id === user?.id);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      api.get<{ id: number; role: string }>("/auth/me"),
+      api.get<MyPermissionsResponse>("/me/permissions"),
       api.get<Team[]>("/teams"),
     ])
       .then(([me, teamList]) => {
-        setCurrentUser(me);
+        setCurrentUser({ id: me.user_id, isTenantAdmin: me.is_tenant_admin });
         setTeams(teamList);
         if (teamList.length > 0) setSelectedTeamId(teamList[0].id);
       })
