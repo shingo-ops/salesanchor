@@ -696,13 +696,8 @@ async def test_send_success_inserts_outbound_meta_message(app_client, db_session
 
 
 @pytest.mark.asyncio
-async def test_send_success_resolves_sent_by_staff_id(app_client, db_session):
-    """user.email → staff.id を解決してセット。"""
-    await db_session.execute(text(
-        "INSERT INTO staff (id, tenant_id, primary_email) "
-        "VALUES (7, 999, 'tester@example.com')"
-    ))
-    await db_session.commit()
+async def test_send_success_sets_sent_by_staff_id_to_current_user_id(app_client, db_session):
+    """sent_by_staff_id にはログイン中の users.id が入る（ADR-1008 P2。staff の有無に依らない）。"""
     await _insert_lead(db_session, lead_id=1)
     await _insert_inbound(db_session, lead_id=1, minutes_ago=60)
     await _insert_tenant_meta_config(db_session)
@@ -719,7 +714,7 @@ async def test_send_success_resolves_sent_by_staff_id(app_client, db_session):
         "SELECT sent_by_staff_id FROM meta_messages "
         "WHERE lead_id = 1 AND direction = 'outbound'"
     ))
-    assert res.first()[0] == 7
+    assert res.first()[0] == 1  # この試験のログインユーザー（users.id）
 
 
 # ---------------------------------------------------------------------------

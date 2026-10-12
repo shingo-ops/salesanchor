@@ -99,10 +99,13 @@ async def test_update_calendar_owner_updates_only_provided_fields():
 
     body = SimpleNamespace(color="#abcdef", is_visible=True, share_mode="edit")
     with patch("app.routers.calendar.load_user_permissions", new=AsyncMock(return_value={"staff.view"})):
-        result = await update_calendar_owner(7, body, tenant_id=1, user=_mock_user(), db=db)
+        result = await update_calendar_owner(101, body, tenant_id=1, user=_mock_user(), db=db)
 
     assert result.color == "#abcdef"
     assert result.is_visible is True
     assert result.share_mode == "edit"
     assert result.is_self is True
     assert "INSERT INTO calendar_owner_settings" in db.execute.call_args_list[2].args[0].text
+    # ADR-1008 P2: パス引数は users.id。名簿は user_id で引き、設定の staff_id 列には users.id を入れる
+    assert db.execute.call_args_list[0].args[1] == {"user_id": 101}
+    assert db.execute.call_args_list[2].args[1]["staff_id"] == 101

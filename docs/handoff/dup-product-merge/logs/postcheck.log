@@ -1,0 +1,46 @@
+-- postcheck 2026-10-05 ~02:04Z: three read-only queries (docker compose exec -T postgres psql -X -c '<SQL>'), each inside BEGIN READ ONLY ... ROLLBACK
+-- ==== 1. is_active and reference counts for the six ids ====
+BEGIN READ ONLY; SELECT p.id, p.product_code, p.is_active, (SELECT count(*) FROM public.analysis_results ar WHERE ar.product_id = p.id) AS analysis_results, (SELECT count(*) FROM public.extraction_items ei WHERE ei.resolved_product_code = p.id::text) AS extraction_items, (SELECT count(*) FROM public.buyback_shop_products b WHERE b.product_id = p.id) AS buyback_shop_products, (SELECT count(*) FROM public.product_search_keywords k WHERE k.product_id = p.id) AS search_kw_rows FROM public.products p WHERE p.id IN (440561, 226, 440572, 625, 440571, 626) ORDER BY p.id; ROLLBACK;
+BEGIN
+   id   | product_code | is_active | analysis_results | extraction_items | buyback_shop_products | search_kw_rows
+--------+--------------+-----------+------------------+------------------+-----------------------+----------------
+    226 | DB-FB09      | t         |              128 |               90 |                     0 |              3
+    625 | YGO-LOCR     | t         |              114 |               67 |                     1 |              2
+    626 | YGO-LOCH     | t         |               58 |               33 |                     0 |              2
+ 440561 | PM0226       | f         |                0 |                0 |                     0 |              3
+ 440571 | PM0223       | f         |                0 |                0 |                     0 |              2
+ 440572 | PM0224       | f         |                0 |                0 |                     0 |              2
+(6 rows)
+
+ROLLBACK
+-- ==== 2. is_current rows per (channel, condition) among pid_resolved rows of the three survivors ====
+BEGIN READ ONLY; SELECT product_id, count(*) AS partitions, count(*) FILTER (WHERE cur = 0) AS partitions_with_0_current, count(*) FILTER (WHERE cur = 1) AS partitions_with_1_current, count(*) FILTER (WHERE cur NOT BETWEEN 0 AND 1) AS partitions_with_more_than_1_current, max(cur) AS max_current_in_a_partition FROM (SELECT ar.product_id, sm.supplier_channel_id AS channel, ar.condition_id, count(*) FILTER (WHERE ar.is_current IS TRUE) AS cur FROM public.analysis_results ar JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id JOIN public.source_messages sm ON sm.id = ej.source_message_id WHERE ar.product_id IN (226, 625, 626) AND ar.pid_resolved = TRUE GROUP BY 1, 2, 3) q GROUP BY product_id ORDER BY product_id; (second query: the partitions with more than 1 current row) ROLLBACK;
+BEGIN
+ product_id | partitions | partitions_with_0_current | partitions_with_1_current | partitions_with_more_than_1_current | max_current_in_a_partition
+------------+------------+---------------------------+---------------------------+-------------------------------------+----------------------------
+        226 |         26 |                         0 |                        26 |                                   0 |                          1
+        625 |         15 |                         0 |                        15 |                                   0 |                          1
+        626 |         12 |                         0 |                        12 |                                   0 |                          1
+(3 rows)
+
+ product_id | channel | condition_id | current_rows | rows
+------------+---------+--------------+--------------+------
+(0 rows)
+
+ROLLBACK
+-- ==== 3. audit_log rows of this merge ====
+BEGIN READ ONLY; SELECT count(*) AS n FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-05)$q$ AND new_values LIKE $q$%dup-merge-20261005%$q$; SELECT id, changed_at FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-05)$q$ AND new_values LIKE $q$%dup-merge-20261005%$q$ ORDER BY id; ROLLBACK;
+BEGIN
+ n
+---
+ 3
+(1 row)
+
+ id |          changed_at
+----+-------------------------------
+ 31 | 2026-10-05 02:03:16.717601+00
+ 32 | 2026-10-05 02:03:16.717601+00
+ 33 | 2026-10-05 02:03:16.717601+00
+(3 rows)
+
+ROLLBACK
