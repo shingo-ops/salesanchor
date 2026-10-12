@@ -913,3 +913,6 @@ run_sql migrations/20261012_210000_add_tcg_distribution_targets_review_sheet_nam
 
 # companies.sales_rep_id の参照先を public.users(id) に付け替える（ADR-1008 P1・構造のみ・冪等）
 run_sql migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql
+
+# bots/order_commissions/calendar_owner_settings/tenant_meta_config/meta_messages の「人」列の参照先を public.users(id) に付け替える（ADR-1008 P2・構造のみ・冪等）
+run_sql migrations/20261013_110000_repoint_person_columns_to_users.sql
