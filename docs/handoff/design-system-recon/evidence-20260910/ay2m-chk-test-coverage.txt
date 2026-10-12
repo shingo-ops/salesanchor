@@ -1,0 +1,50 @@
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-fedex-modal-inputs/frontend
+      Coverage enabled with v8
+
+ ❯ |unit| src/components/RoleKnowledgeButtonMigration.test.tsx (19 tests | 2 failed) 30808ms
+     × covers role create failure/retry and pending duplicate cancel then resolve/reject 5289ms
+     × covers role edit failure/retry and pending duplicate cancel then resolve/reject 5954ms
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+ ❯ |unit| src/components/SubMenu.test.tsx (2 tests | 1 failed) 5594ms
+     × door item navigates 5150ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers role create failure/retry and pending duplicate cancel then resolve/reject
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers role edit failure/retry and pending duplicate cancel then resolve/reject
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/RoleKnowledgeButtonMigration.test.tsx:110:38
+    108|   });
+    109|
+    110|   it.each(['create', 'edit'] as const)('covers role %s failure/retry a…
+       |                                      ^
+    111|     const send = mode === 'create' ? mock.post : mock.patch;
+    112|     const label = tr(mode === 'create' ? 'common.create' : 'common.upd…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |unit| src/components/SubMenu.test.tsx > SubMenu > door item navigates
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/SubMenu.test.tsx:8:3
+      6|
+      7| describe("SubMenu", () => {
+      8|   it("door item navigates", () => {
+       |   ^
+      9|     const groups: SubMenuGroup[] = [
+     10|       { items: [{ key: "staff", label: "Staff", to: "/mc/staff" }] },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+ Test Files  2 failed | 81 passed (83)
+      Tests  3 failed | 1000 passed (1003)
+   Start at  01:04:28
+   Duration  419.12s (transform 7.26s, setup 3.31s, import 67.24s, tests 134.17s, environment 137.43s)
+
+exit=1
