@@ -16,8 +16,8 @@
 ## 記録欄（設計者が実施後に記入）
 | 項目 | 内容 |
 |---|---|
-| 実施日時 | |
-| precheck | |
-| dryrun | |
-| commit | |
-| verify | |
+| 実施日時 | 2026-10-12T13:29Z（PR① #4170 本番反映 13:28:47Z の後・PR② のマージ前。Opus 実行、PO 委任「必要な権限は全て使用して良い」・許可チケット psql write） |
+| precheck | COLUMN|1・TARGET_ROWS|1・TARGET_NULL|1・OTHER_NOT_NULL|0・ALL_ROWS|3・PRECHECK_DONE |
+| dryrun | UPDATED|1・CHECK_OK 1・SET_ROWS_OK 1・ROLLBACK・DRYRUN_OK |
+| commit | UPDATED|1・CHECK_OK 1・SET_ROWS_OK 1・COMMIT・COMMIT_DONE |
+| verify | 山崎涼太郎 NULL・無料トライアルシート NULL・配信テスト 要確認（SELECT name, review_sheet_name の読み取り） |
