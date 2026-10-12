@@ -20,11 +20,11 @@
 - 段1の候補の作り方 `backend/app/services/v102_gap_lines.py`：
   - :146-151 `_is_target`：raw_price と raw_quantity の写しがあり（none・空でない）、`match_status == "unmatched"` の件だけ。
   - :178-211 `gap_name_candidates`：件ごとに `gemini_index`・`gap_lines`・`support_lines`・`candidates`。
-  - :242-262 `to_stored_detail`：gemini_index → 件の id に置き換えて `extraction_jobs.system_review_detail` に書く（`line_analysis_v102_svc.py:885`）。
+  - :242-262 `to_stored_detail`：gemini_index → 件の id に置き換えて `extraction_jobs.system_review_detail` に書く（`backend/app/services/line_analysis_v102_svc.py:885`）。
 - 本番での記録（読み取り、2026-10-11 23:02 UTC の新しい2投稿）：両方とも非 NULL・`unmapped` 0。gap_name は 14件と1件。
 
 ## 3. 件の理由 → 要確認 → 配信
-- `line_analysis_v102_svc.py:589-619` `_analysis_values`：
+- `backend/app/services/line_analysis_v102_svc.py:589-619` `_analysis_values`：
   - :592 `matched = product_id is not None and match_status in _RESOLVED_MATCH_STATUSES`（:584-586。matched・matched_context・matched_followup・matched_soldout_ref）
   - :605 理由＝件の `review` の kind 名・Gemini の迷い・値の範囲外を、出た順・重複なしでカンマ結合
   - :607 `"product_id": product_id if matched else None, "pid_resolved": bool(matched)`
@@ -32,8 +32,8 @@
 - 配信 `backend/app/services/tcg_distribution_svc.py:290-296`（:361-367 の件数も同じ）：`ar.pid_resolved = TRUE AND ar.is_current = TRUE AND cr.needs_review IS FALSE ...`
 - 最新の行の決め方 `backend/app/services/tcg_analyzer_svc.py:1744-1879` `_merge_supplier_products`：`pid_resolved = TRUE AND product_id IS NOT NULL` の行だけで順位を付け、is_current を書く。
 - よって、`match_status == "unmatched"` の件は pid_resolved が FALSE になり、配信にも、最新の行の順位付けにも入らない（:592・:607、distribution :290、analyzer :1744-1879）。
-- 人の「このままで良い」：`backend/app/routers/item_corrections.py:177-206` → `v102_human_decisions_svc.py:64-68, :243-258`（item_corrections に記録）→ 再解析で `line_analysis_v102_svc.py:717-736` `_apply_decisions` がその kind を外す。
-- 人の商品の訂正：`item_corrections.py:127-169` → `item_corrections_svc.py:59-73` で product_id・`pid_basis='MANUAL'`・`pid_resolved=TRUE`。
+- 人の「このままで良い」：`backend/app/routers/item_corrections.py:177-206` → `v102_human_decisions_svc.py:64-68, :243-258`（item_corrections に記録）→ 再解析で `backend/app/services/line_analysis_v102_svc.py:717-736` `_apply_decisions` がその kind を外す。
+- 人の商品の訂正：`backend/app/routers/item_corrections.py:127-169` → `backend/app/services/item_corrections_svc.py:59-73` で product_id・`pid_basis='MANUAL'`・`pid_resolved=TRUE`。
 
 ## 4. 本番の読み取りで分かった危険（段2a の形を決めた事実）
 2026-10-11 23:02 UTC の投稿 6e135e76 の「候補が1つ」の 9件の商品は、すべて同じ仕入れ先の別の投稿 a1a5dcbe（同じ 18:09 投稿）に、要確認の理由なし・is_current の行がある（読み取り SQL の結果。商品 440301・440302・440476 等）。
@@ -51,11 +51,11 @@
 - 「このままで良い」で外せない理由の置き場所：`backend/app/services/review_reason_codes_svc.py:16`（condition_unknown だけ）。
 
 ## 6. 画面（段2a の PR-B で使う）
-- 要確認の一覧 `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:339-355` → `ReviewItemDrawer.tsx:71-95` の理由の表示は `reviewReasonLabel(t, code)` だけで、行番号は持たない。
+- 要確認の一覧 `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:339-355` → `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx:71-95` の理由の表示は `reviewReasonLabel(t, code)` だけで、行番号は持たない。
 - API `backend/app/routers/tcg_analysis_review.py:72-76`（理由は {code, source, fix_stage, ackable}）、:85-96 `AnalysisResultItem`。SQL `backend/app/services/tcg_analysis_review_svc.py:38-44` は extraction_jobs を JOIN 済み。SELECT は :147-327。
 - 投稿の画面 `backend/app/routers/tcg_v102_posts.py:68-82`（lines[{number,text}]・items[...review_reason_details]）、値は `backend/app/services/v102_transcription_svc.py:32, :233`。
 - `system_review_detail` を返す API は無い（grep は書き込み4行と migration 2行だけ）。
-- 差し込み付きの i18n の前例：`reviewItem.sourceLine`（ja.json:3754 `{{source}}`、ReviewItemDrawer.tsx:75）。理由の区切りは `reviewReason.separator`（ja.json :3759-3802 の範囲）。
+- 差し込み付きの i18n の前例：`reviewItem.sourceLine`（ja.json:3754 `{{source}}`、frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx:75）。理由の区切りは `reviewReason.separator`（ja.json :3759-3802 の範囲）。
 - 金型：`frontend/src/components/Badge.tsx`、`frontend/src/components/Callout.tsx`、`frontend/src/components/Stack.tsx`。ReviewItemDrawer は Button・Callout・Drawer・Stack を使う。
 
 ## 7. 未確認

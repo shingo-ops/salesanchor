@@ -20,7 +20,7 @@
 ## 2. 設計の選択（Fable 案からの変更）
 - Fable 案の段2a は「候補が1つなら商品を当てて matched にする（要確認のまま）」だった。
 - recon.md §4 の本番の読み取りで、matched（pid_resolved=TRUE）にすると、最新の行の順位付け（`backend/app/services/tcg_analyzer_svc.py:1744-1879`）に入る。そのため、同じ仕入れ先の今配信中の行が要確認の行に置き換わり、集計リストから消える恐れがある、と分かった。投稿 6e135e76 では、候補1つの 9件すべてに該当した。
-- よって段2a では商品を当てない。候補は段1の記録（`extraction_jobs.system_review_detail`）にだけあり、画面で人に見せる。人は既存の商品の訂正（`item_corrections.py:127-169`）で決める。
+- よって段2a では商品を当てない。候補は段1の記録（`extraction_jobs.system_review_detail`）にだけあり、画面で人に見せる。人は既存の商品の訂正（`backend/app/routers/item_corrections.py:127-169`）で決める。
 - 商品を自動で当てるのは段2b（配信に影響するので、基準と GO は PO が決める）。
 - 案の比較:
 
@@ -32,8 +32,8 @@
 
 ## 3. 配信が変わらないことの根拠
 - 理由を足すのは、段1の対象の件だけ（`backend/app/services/v102_gap_lines.py:146-151`：`match_status == "unmatched"`、価格と数量の写しあり）。
-- unmatched の件は `line_analysis_v102_svc.py:592` で matched=False → :607 で `product_id=None`・`pid_resolved=False`。
-- 配信は `ar.pid_resolved = TRUE` が条件（`tcg_distribution_svc.py:290`・:361）。最新の行の順位付けも `pid_resolved = TRUE` の行だけ（`tcg_analyzer_svc.py:1744-1879`）。
+- unmatched の件は `backend/app/services/line_analysis_v102_svc.py:592` で matched=False → :607 で `product_id=None`・`pid_resolved=False`。
+- 配信は `ar.pid_resolved = TRUE` が条件（`backend/app/services/tcg_distribution_svc.py:290`・:361）。最新の行の順位付けも `pid_resolved = TRUE` の行だけ（`backend/app/services/tcg_analyzer_svc.py:1744-1879`）。
 - よって、この理由が付く件は、今も変更後も配信にも順位付けにも入らない。product_id・pid_resolved・is_current は変えない。
 
 ## 4. 変更（PR を2つに分ける。データ変更は PR-A のマージ前）
@@ -53,7 +53,7 @@
    - 段1の記録（`v102_gap_detail`）は、理由を足す前の件から作る。そのため中身は今と同じ。
 2. 理由コードの3点セット（`backend/tests/test_review_reason_codes_consistency.py` :60・:66・:71 がそろいを検査）
    - 新規 `docs/handoff/v102-prod-switch/data/review_reason_codes/seed_20261012_gemini_gap_suspect.sql`：`('gemini_gap_suspect', 'system', 'extraction')`
-     - fix_stage を extraction にする理由：原因は書き写しの抜け。`v102_transcription_svc.py:47` により、書き写しを直す投稿の一覧に出る。
+     - fix_stage を extraction にする理由：原因は書き写しの抜け。`backend/app/services/v102_transcription_svc.py:47` により、書き写しを直す投稿の一覧に出る。
    - `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `reviewReason.gemini_gap_suspect`
      - ja: 「Gemini取りこぼし疑い（間の行に商品名がある可能性）」
      - en: 「Possible Gemini omission (gap lines may hold the product name)」
@@ -74,7 +74,7 @@
 
 ### データ変更（PR-A の CI 合格後・マージ前に1回）
 - gs_precheck → gs_dryrun → gs_commit → gs_verify を本番で実行し、README に記録する（ADR-1007。前例：便G の gt_* を本 PR マージ前に Opus が実行）。
-- 先に入れる理由：コードが先に出ると、表に無いコードで「このままで良い」が拒否される（`item_corrections.py:177-206` の検査）。行が先にあっても、使われないだけで害は無い。
+- 先に入れる理由：コードが先に出ると、表に無いコードで「このままで良い」が拒否される（`backend/app/routers/item_corrections.py:177-206` の検査）。行が先にあっても、使われないだけで害は無い。
 
 ### PR-B（画面：間の行番号と候補を見せる。コードのみ。PR-A の本番反映を確かめてから）
 1. backend
@@ -114,7 +114,7 @@
 
 ## 6. 危険と対処
 - 対象の件で、人が前に「このままで良い」で product_not_in_master を外していた件は、再解析で gemini_gap_suspect が新しく付き、要確認に戻る。配信は変わらない（§3）。数は受入3で数える。
-- 書き写しを直す投稿の一覧（`v102_transcription_svc.py:47`）に出る投稿が増える。これは目的（§1-3）。
+- 書き写しを直す投稿の一覧（`backend/app/services/v102_transcription_svc.py:47`）に出る投稿が増える。これは目的（§1-3）。
 - `_with_gap_reasons` の失敗で解析が止まる → 例外を握って件を変えずに返す（試験あり）。
 - 画面の候補の商品名の取得が重い → 一覧の1回の要求につき、候補の id をまとめて1回だけ引く。
 
