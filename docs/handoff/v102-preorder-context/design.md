@@ -1,6 +1,6 @@
 # design: 試作版 v102 の予約の判定に「発売日・先の日付・見出し」を加える（便PO）
 
-参照: [recon.md](./recon.md)、[card-PO.md](./card-PO.md)、docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:26。
+参照: docs/handoff/v102-preorder-context/recon.md、[card-PO.md](./card-PO.md)、docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:26。
 
 ## 1. 目的（PO の言葉、2026-10-12）
 - 「商品マスタの発売日から商品の発売日が未来→予約商品と判断することは出来ると考えるがどうか」
@@ -63,4 +63,4 @@
 ## 維持の仕組み
 - テスト（規則の分岐・既存の読み手の互換・管理画面）が CI で毎回走る。
 - 規則の語は管理画面「予約の手がかり」タブで直せる（コード変更不要）。
-- 守り手：CI（backend/tests/test_v102_status_context.py、backend/tests/test_status_master_context_values.py、frontend の RuleDrawer.test.tsx・ruleEffects.test.ts）
+- 守り手: CI（backend/tests/test_v102_status_context.py、backend/tests/test_status_master_context_values.py、frontend の RuleDrawer.test.tsx・ruleEffects.test.ts）
