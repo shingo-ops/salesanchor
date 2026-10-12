@@ -406,18 +406,6 @@ def tenant_table_ref(db: AsyncSession, tenant_id: int, name: str) -> str:
     return name
 
 
-async def get_current_admin(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """管理者ロールを要求するDependency。adminルーターレベルで適用する。"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作には管理者権限が必要です",
-        )
-    return current_user
-
-
 async def set_operator_context(db: AsyncSession) -> None:
     """operator（is_super_admin=true）のリクエストで app.is_operator='true' をセット。
 
