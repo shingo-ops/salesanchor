@@ -180,16 +180,25 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(contrast, "プレビュー文の明暗差が測れない").not.toBeNull();
     expect(contrast!, "12px の副文字の明暗差").toBeGreaterThanOrEqual(4.5);
 
-    // ③ 一覧の面が画面の下端近くまで伸びている（下に地が広く残らない）
-    const fill = await page.evaluate(() => {
-      const el = document.querySelector(".inbox-left-panel") as HTMLElement | null;
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { bottom: Math.round(r.bottom), viewport: window.innerHeight };
+    // ③ 地が1色であること。
+    //    一覧の面は画面の高さまで伸びていない（この検査環境では画面の約34%で止まる）。
+    //    根因は wrapper の height:100% が親まで届かないことだが、直すと
+    //    PageLayout / MobileShell という全ページ共通の部品に波及するため、
+    //    本便では「覆われていない領域の色を一覧の面と同じにする」方針を採った
+    //    （design: docs/handoff/inbox-mobile-polish/design.md §2-1・§7-1）。
+    //    したがってここで検査するのは高さではなく**色が同じであること**。
+    const ground = await page.evaluate(() => {
+      const wrap = document.querySelector(".inbox-wrapper") as HTMLElement | null;
+      const panel = document.querySelector(".inbox-left-panel") as HTMLElement | null;
+      if (!wrap || !panel) return null;
+      return {
+        wrapper: getComputedStyle(wrap).backgroundColor,
+        panel: getComputedStyle(panel).backgroundColor,
+      };
     });
-    expect(fill, "一覧の面が見つからない").not.toBeNull();
-    // 下部タブバー（約56px）より下に食い込む必要はないが、画面の7割より下まで伸びること
-    expect(fill!.bottom).toBeGreaterThan(fill!.viewport * 0.7);
+    expect(ground, "受信箱の下地が測れない").not.toBeNull();
+    expect(ground!.wrapper, "下地が透明のままだと一覧の下にページの地が出る").not.toBe("rgba(0, 0, 0, 0)");
+    expect(ground!.wrapper, "下地と一覧の面の色が違うと地が2色に割れる").toBe(ground!.panel);
 
     await expect(row).toBeVisible();
     await expect(panel).toBeVisible();
