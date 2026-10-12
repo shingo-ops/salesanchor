@@ -1,3 +1,4 @@
+import type { GapSuspectData } from "./GapSuspectNote";
 import type { ReviewReasonDetail } from "./reviewReasonLabel";
 
 /** GET /api/v1/tcg/v102/posts の1行（backend: tcg_v102_posts.PostSummary） */
@@ -26,6 +27,7 @@ export interface V102PostItem {
   raw_price: string | null;
   raw_quantity: string | null;
   review_reason_details: ReviewReasonDetail[];
+  gap_suspect?: GapSuspectData | null;
 }
 
 export interface V102PostDetail {

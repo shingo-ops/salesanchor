@@ -15,6 +15,8 @@ from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX
 from app.services.review_reason_codes_svc import build_review_reason_details, load_review_reason_codes
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
+from app.services.v102_gap_lines import gap_suspects_by_item
+from app.services.v102_gap_suspect_view import with_candidate_names
 
 TCG_SCHEMA = "public"
 
@@ -200,6 +202,7 @@ async def fetch_analysis_results(
         SELECT
             ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
+            ej.system_review_detail,
             COALESCE(ps.name, '不明')            AS provider,
             sm.raw_text,
             ei.raw_product_name,
@@ -246,6 +249,11 @@ async def fetch_analysis_results(
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
 
     reason_table = await load_review_reason_codes(db)
+    page_ids = {row.extraction_item_id for row in rows}
+    raw_suspects: dict[str, dict] = {}
+    for row in rows:
+        raw_suspects.update(gap_suspects_by_item(row.system_review_detail))
+    suspects = await with_candidate_names(db, {k: v for k, v in raw_suspects.items() if k in page_ids})
     items = []
     for row in rows:
         span = (
@@ -290,6 +298,7 @@ async def fetch_analysis_results(
                 },
                 "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
                 "is_v102": bool(row.is_v102),
+                "gap_suspect": suspects.get(row.extraction_item_id),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,
                     pid_basis=row.pid_basis,

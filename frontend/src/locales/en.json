@@ -3755,7 +3755,10 @@
     "sourceLine": "Source: {{source}}",
     "ack": "Keep as is",
     "acked": "Marked as checked. Re-running the analysis",
-    "ackFailed": "Could not mark as checked. Please try again"
+    "ackFailed": "Could not mark as checked. Please try again",
+    "gapLines": "Gap lines: {{lines}}",
+    "gapLineNumber": "L{{n}}",
+    "gapCandidates": "Candidates: {{names}}"
   },
   "reviewReason": {
     "pid_unresolved": "Product not identified",

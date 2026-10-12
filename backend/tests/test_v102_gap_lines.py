@@ -17,6 +17,7 @@ from app.services.v102_gap_lines import (
     classify_lines,
     gap_name_candidates,
     gap_price_qty_lines,
+    gap_suspects_by_item,
     has_money,
     has_q,
     to_stored_detail,
@@ -294,3 +295,49 @@ def test_t2_matches_the_support_lines_of_a_group_only_once_for_several_target_it
     module.gap_name_candidates(accepted_items(items), lines, masters(entry(1001, "BASESHOP matA")))
 
     assert singles.count("BASESHOP") == 1  # 支えの行の単独照合は、まとまりごとに1回
+
+
+# --- gap_suspects_by_item（段2a PR-B：記録 v1 の読み取り） -------------------------------------------
+
+
+def _stored(*entries: dict, v: int = 1) -> dict:
+    return {"v": v, "post_review": [], "gap_price_qty": [], "gap_name": list(entries), "unmapped": 0}
+
+
+def _entry(item_id: str = "item-1", gap_lines=(14, 15), candidates=(1001,)) -> dict:
+    return {"extraction_item_id": item_id, "gap_lines": list(gap_lines), "support_lines": [14], "candidates": list(candidates)}
+
+
+def test_gap_suspects_by_item_reads_version_1_into_item_id_map():
+    stored = _stored(_entry("item-1", (14,), (1001, 1002)), _entry("item-2", (20, 21), ()))
+
+    assert gap_suspects_by_item(stored) == {
+        "item-1": {"gap_lines": [14], "candidates": [1001, 1002]},
+        "item-2": {"gap_lines": [20, 21], "candidates": []},
+    }
+
+
+def test_gap_suspects_by_item_reads_json_string():
+    import json
+
+    assert gap_suspects_by_item(json.dumps(_stored(_entry()))) == {"item-1": {"gap_lines": [14, 15], "candidates": [1001]}}
+
+
+def test_gap_suspects_by_item_returns_empty_for_none_other_version_and_broken_shapes():
+    assert gap_suspects_by_item(None) == {}
+    assert gap_suspects_by_item(_stored(_entry(), v=2)) == {}
+    assert gap_suspects_by_item({"gap_name": [_entry()]}) == {}
+    assert gap_suspects_by_item("not json") == {}
+    assert gap_suspects_by_item([1, 2]) == {}
+    assert gap_suspects_by_item({"v": 1, "gap_name": "x"}) == {}
+
+
+def test_gap_suspects_by_item_skips_malformed_entries_only():
+    bad = [
+        "text", {"extraction_item_id": 5, "gap_lines": [1], "candidates": []},
+        {"extraction_item_id": "a", "gap_lines": "1", "candidates": []},
+        {"extraction_item_id": "b", "gap_lines": [True], "candidates": []},
+        {"extraction_item_id": "c", "gap_lines": [1], "candidates": None},
+    ]
+
+    assert gap_suspects_by_item(_stored(*bad, _entry("ok"))) == {"ok": {"gap_lines": [14, 15], "candidates": [1001]}}

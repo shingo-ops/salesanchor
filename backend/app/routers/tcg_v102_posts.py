@@ -23,6 +23,7 @@ from app.database import get_db
 from app.models import User
 from app.services import v102_transcription_svc as svc
 from app.services.review_reason_codes_svc import load_review_reason_codes
+from app.services.v102_gap_suspect_view import GapSuspect
 from app.tasks.tcg_extraction import enqueue_v102_reanalyze
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class PostItem(BaseModel):
     raw_price: str | None
     raw_quantity: str | None
     review_reason_details: list[ReasonDetail]
+    gap_suspect: GapSuspect | None = None
 
 
 class PostDetailResponse(BaseModel):
