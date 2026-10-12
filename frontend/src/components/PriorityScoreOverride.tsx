@@ -12,6 +12,7 @@ import { usePermissions } from "../hooks/usePermissions";
 import type { CustomerScoreData } from "./PriorityScoreBadge";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { TextareaControl } from "./Textarea";
 
 interface Props {
   leadId: number;
@@ -88,7 +89,7 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
 
               <div className="form-group">
                 <label>{t("priority.overrideNote")}</label>
-                <textarea
+                <TextareaControl
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   maxLength={500}

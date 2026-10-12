@@ -1,0 +1,3 @@
+# ay2g 計測 a: 参照0件（HEAD 作業ツリー、frontend/src と backend）
+exit=1 (1=0件)
+exit=1 (1=0件)

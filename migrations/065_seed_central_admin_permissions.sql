@@ -35,32 +35,10 @@
 -- 作成日: 2026-05-21
 -- ============================================================================
 
-INSERT INTO public.permissions (key, resource, action, description, category) VALUES
-    ('central.knowledge.edit',
-        'central_knowledge', 'edit',
-        '正規化辞書（public.knowledge_rules）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.aliases.edit',
-        'central_aliases', 'edit',
-        '仕入元 alias（public.supplier_aliases）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.tcg.edit',
-        'central_tcg', 'edit',
-        'TCG シリーズマスタ（public.tcg_series_master）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.dex.edit',
-        'central_dex', 'edit',
-        'ポケモン / トレーナー図鑑（public.pokemon_dex / trainer_dex）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.supplier.edit',
-        'central_supplier', 'edit',
-        '仕入元マスタ（public.suppliers）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ'),
-    ('central.supplier_discord_routing.edit',
-        'central_supplier_discord_routing', 'edit',
-        '仕入元 × Discord routing（public.supplier_discord_routing）の CRUD（Jarvis 運用 admin 専用）',
-        '中央マスタ')
-ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- central.* の 6 キーの seed を外した（本番は 6/6 あり）。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: central admin permissions seed removed (065)'; END $$;
 
 -- ============================================================================
 -- Rollback（緊急時のみ手動実行）:

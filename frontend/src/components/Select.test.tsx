@@ -275,3 +275,43 @@ describe('SelectControl type exclusivity', () => {
     expect(typeof render2).toBe('function');
   });
 });
+
+describe('SelectControl variant', () => {
+  const VARIANTS = ['karte', 'header', 'tabbar'] as const;
+
+  it.each(VARIANTS)('adds comp-select--%s after indicator and before className (options mode)', (variant) => {
+    const { container } = render(<SelectControl options={OPTIONS} variant={variant} indicator="none" className="x" />);
+    expect((container.querySelector('select') as HTMLSelectElement).className).toBe(
+      `comp-select__control comp-select--no-indicator comp-select--${variant} x`,
+    );
+  });
+
+  it.each(VARIANTS)('adds comp-select--%s in children mode', (variant) => {
+    const { container } = render(<SelectControl variant={variant} className="x"><option value="a">A</option></SelectControl>);
+    expect((container.querySelector('select') as HTMLSelectElement).className).toBe(`comp-select__control comp-select--${variant} x`);
+  });
+
+  it.each(['unspecified', 'standard'] as const)('omits any variant class when variant is %s', (mode) => {
+    const props = mode === 'standard' ? { variant: 'standard' as const } : {};
+    const options = render(<SelectControl options={OPTIONS} {...props} className="x" />);
+    expect((options.container.querySelector('select') as HTMLSelectElement).className).toBe('comp-select__control x');
+    cleanup();
+    const children = render(<SelectControl {...props} className="x"><option value="a">A</option></SelectControl>);
+    expect((children.container.querySelector('select') as HTMLSelectElement).className).toBe('comp-select__control x');
+  });
+
+  it('does not forward variant to the DOM', () => {
+    const { container } = render(<SelectControl options={OPTIONS} variant="karte" />);
+    expect((container.querySelector('select') as HTMLSelectElement).hasAttribute('variant')).toBe(false);
+  });
+
+  it('accepts standard only for appearance=field and rejects other variants at compile time', () => {
+    const ok = () => <SelectControl options={OPTIONS} appearance="field" variant="standard" />;
+    const ng = () => (
+      // @ts-expect-error appearance=field accepts only the standard variant
+      <SelectControl options={OPTIONS} appearance="field" variant="karte" />
+    );
+    expect(typeof ok).toBe('function');
+    expect(typeof ng).toBe('function');
+  });
+});

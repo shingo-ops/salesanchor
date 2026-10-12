@@ -29,6 +29,7 @@ import { TypeMasterPanel } from "./components/TypeMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
+import { UnitIgnorePhrasesPanel } from "./components/UnitIgnorePhrasesPanel";
 import { NoteMasterPanel } from "./components/NoteMasterPanel";
 import { ProductLinesMasterPanel } from "./components/ProductLinesMasterPanel";
 import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
@@ -38,6 +39,7 @@ import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel"
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { ExtractionErrorLogPanel } from "./components/ExtractionErrorLogPanel";
+import { SoldOutResultsPanel } from "./components/SoldOutResultsPanel";
 import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import ExtractionPromptConfigTab from "./ExtractionPromptConfigTab";
 import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
@@ -52,7 +54,7 @@ import { PipelineMapPanel } from "./components/PipelineMapPanel";
 import { LineWorkflowGuidePanel } from "./components/LineWorkflowGuidePanel";
 
 // ---------------------------------------------------------------------------
-// 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
+// 解析精度管理パネル（旧スタンドアロンページ（AY-2g で削除）の内容を移植）
 // ---------------------------------------------------------------------------
 
 function AccuracyManagementPanel() {
@@ -163,13 +165,19 @@ export default function AnalysisRulesPage() {
               {activeSection === "accuracy-management-v7" && <ShadowAccuracyPanel />}
               {activeSection === "needs-review" && <NeedsReviewTabsPanel />}
               {activeSection === "error-log" && <ExtractionErrorLogPanel />}
+              {activeSection === "sold-out-results" && <SoldOutResultsPanel />}
               {activeSection === "product-master" && <ProductMasterPanel />}
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
               {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
               {activeSection === "type-master" && <TypeMasterPanel />}
               {activeSection === "supplier-master" && <SupplierMasterPanel />}
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
-              {activeSection === "unit-master" && <UnitMasterPanel />}
+              {activeSection === "unit-master" && (
+                <>
+                  <UnitMasterPanel />
+                  <UnitIgnorePhrasesPanel />
+                </>
+              )}
               {activeSection === "note-master" && <NoteMasterPanel />}
               {activeSection === "product-lines-master" && <ProductLinesMasterPanel />}
               {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}

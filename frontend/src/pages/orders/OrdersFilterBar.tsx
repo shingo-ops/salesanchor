@@ -4,6 +4,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { SelectControl } from "../../components/Select";
 
 interface Props {
   searchInput: string;
@@ -37,8 +38,8 @@ export function OrdersFilterBar({
         onChange={(e) => setSearchInput(e.target.value)}
         data-testid="orders-search-input"
       />
-      <select
-        className="field-h-md field-w-sm"
+      <SelectControl
+        className="field-w-sm"
         value={sortBy}
         onChange={(e) => setSortBy(e.target.value)}
         aria-label={t("common.filter")}
@@ -47,7 +48,7 @@ export function OrdersFilterBar({
         {SORT_OPTIONS.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
-      </select>
+      </SelectControl>
       <button
         type="button"
         className="field-h-md"

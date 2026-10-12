@@ -1,0 +1,95 @@
+## 1. grep
+grep_exit=1
+## imports
+src/components/RoleKnowledgeButtonMigration.test.tsx:1:import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+src/components/RoleKnowledgeButtonMigration.test.tsx:2:import { createInstance } from 'i18next';
+src/components/RoleKnowledgeButtonMigration.test.tsx:3:import { I18nextProvider } from 'react-i18next';
+src/components/RoleKnowledgeButtonMigration.test.tsx:4:import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+src/components/RoleKnowledgeButtonMigration.test.tsx:5:import RolesPage from '../pages/roles/RolesPage';
+src/components/RoleKnowledgeButtonMigration.test.tsx:6:import KnowledgeAliasesTab from '../pages/super-admin/KnowledgeAliasesTab';
+src/components/RoleKnowledgeButtonMigration.test.tsx:7:import en from '../locales/en.json';
+src/components/SubMenu.test.tsx:1:import { render, screen, fireEvent } from "@testing-library/react";
+src/components/SubMenu.test.tsx:2:import { describe, expect, it, vi } from "vitest";
+src/components/SubMenu.test.tsx:3:import { MemoryRouter, Route, Routes } from "react-router-dom";
+src/components/SubMenu.test.tsx:4:import { SubMenu } from "./SubMenu";
+src/components/SubMenu.test.tsx:5:import type { SubMenuGroup } from "./SubMenu";
+## importers of FedExRateModal
+src/components/FedExRateModal.stories.tsx
+src/components/FedExRateModal.test.tsx
+src/components/FedExRateModal.tsx
+src/pages/quote-create/QuoteCreatePage.tsx
+## transitive: importers of QuoteCreatePage / quote-create
+src/App.tsx
+src/components/CommerceNavigationButtonMigration.test.tsx
+src/components/CommerceSubmitButtonMigration.test.tsx
+src/pages/invoice-create/InvoiceCreatePage.tsx
+## load
+ 1:13  up 3 days,  7:11, 7 users, load averages: 27.49 20.81 18.13
+89121  46.5 (git)
+  537  19.2 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer -daemon
+ 1294  17.7 /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder
+89320  13.9 (ps)
+  741   7.7 /System/Library/CoreServices/WindowManager.app/Contents/MacOS/WindowManager
+14269   7.1 claude --model opus --effort medium --permission-mode auto --append-system-prompt あなたは Sales Anchor の設計パートナーです。PO（しんごさん）の願いを、実装役が迷わず作れ、POが
+67824   6.3 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --app=http://127.0.0.1:4319/pair?code=6f77871e51adfd074d8993ca689fe9f7302e590
+  504   6.2 /usr/libexec/opendirectoryd
+63547   5.3 node dist-server/server/index.js
+  530   5.0 /usr/sbin/notifyd
+## run 1 (changed)
+ Test Files  2 passed (2)
+      Tests  21 passed (21)
+   Duration  27.22s (transform 2.19s, setup 314ms, import 4.21s, tests 13.72s, environment 7.20s)
+wall=37s
+## run 2 (changed)
+ Test Files  2 passed (2)
+      Tests  21 passed (21)
+   Duration  13.10s (transform 1.20s, setup 140ms, import 3.18s, tests 5.05s, environment 3.93s)
+wall=15s
+## run 3 (changed)
+ Test Files  2 passed (2)
+      Tests  21 passed (21)
+   Duration  11.23s (transform 1.07s, setup 98ms, import 2.75s, tests 4.41s, environment 3.31s)
+wall=15s
+## baseline stash
+Saved working directory and index state WIP on release/fedex-modal-inputs: 67f2e4352 Merge pull request #4173 from shingo-ops/release/design-approval-ticket
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers create/edit exact payloads, required, refresh and cancel retention
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > keeps an existing palette color and forwards a changed palette selection exactly
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 19 passed (21)
+   Duration  27.28s (transform 4.83s, setup 416ms, import 8.36s, tests 9.65s, environment 8.21s)
+wall=29s
+On branch release/fedex-modal-inputs
+Your branch is behind 'origin/main' by 2 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   ../docs/adr/ADR-067-design-token-enforcement.md
+	modified:   src/components/FedExRateModal.tsx
+	modified:   src/tokens.css
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-after-1280.png
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-after-1440.png
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-before-1280.png
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-before-1440.png
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-check-all.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-flaky-isolation.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-lint.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-test-coverage.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-test-rerun-3files.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-chk-tsc.txt
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-measure-after.json
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-measure-before.json
+	../docs/handoff/design-system-recon/evidence-20260910/ay2m-px-grep.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (fecb0ba1068c2d42ffa2e87cbefe2cb58ac8be17)
+pop_exit=0
+ docs/adr/ADR-067-design-token-enforcement.md |   2 +
+ frontend/src/components/FedExRateModal.tsx   | 113 ++++++++++-----------------
+ frontend/src/tokens.css                      |   2 +
+ 3 files changed, 47 insertions(+), 70 deletions(-)

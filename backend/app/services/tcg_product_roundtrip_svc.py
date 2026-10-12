@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_product_code_collision_svc import find_code_collisions
 from app.services.tcg_product_import_svc import CSV_COLUMNS, LOOKUP_ARGS, LOOKUP_TABLES
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
@@ -225,6 +226,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
             "changes": [],
             "blocking": [],
             "warnings": [],
+            "code_collisions": [],
         }
         errors = item["blocking"]
         code = row["product_id"]
@@ -282,6 +284,24 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                 item["changes"].append({"field": field, "before": before, "after": after})
             if item["changes"]:
                 item["action"] = "updated"
+            if any(change["field"] == "mark" for change in item["changes"]):
+                collisions = await find_code_collisions(
+                    db,
+                    product_code="",
+                    mark=row["mark"],
+                    name=row["japanese_title"],
+                    search_keywords=plan["words"].get(
+                        "search_keywords", [w["keyword"] for w in snapshot["search_keywords"]]
+                    ),
+                    exclude_keywords=plan["words"].get(
+                        "exclude_keywords", [w["keyword"] for w in snapshot["exclude_keywords"]]
+                    ),
+                    exclude_product_id=snapshot["product"]["id"],
+                )
+                item["code_collisions"] = collisions
+                item["warnings"].extend(
+                    "MARK_ALREADY_USED_BY_" + c["product_id"] for c in collisions
+                )
         response["rows"].append(item)
         response["blocked" if errors else "ok"] += 1
         if not errors:

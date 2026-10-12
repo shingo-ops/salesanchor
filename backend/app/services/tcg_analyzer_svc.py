@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -784,6 +785,22 @@ def resolve_unit_v2(
     return (stripped, "不明", False)
 
 
+def _entry_hit(e: dict, text_combined: str) -> tuple[bool, Optional[str]]:
+    """状態マスタ1行が text_combined に当たるか（主ループと R4c のガードで共用）。"""
+    match_type = e.get("match_type", "KEYWORD")
+    if match_type in ("REGEX", "LITERAL", "DEFAULT"):
+        if match_type == "DEFAULT":
+            return True, "DEFAULT"
+        hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
+        if hit and e["exclude_kw"]:
+            hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
+        return hit, (e["search_kw"] if hit else None)
+    # KEYWORD（デフォルト）: 既存動作を維持
+    s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+    x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+    return match_keyword(text_combined, s_kws, x_kws)
+
+
 def resolve_condition_v2(
     raw_state: str,
     raw_product_name: str,
@@ -792,6 +809,7 @@ def resolve_condition_v2(
     cond_canonical_to_uuid: dict,
     *,
     raw_memo: str = "",
+    product_kubun_type: str = "",
 ) -> tuple[Optional[str], Optional[str], str]:
     """
     (canonical, cond_id, basis) を返す。
@@ -804,6 +822,8 @@ def resolve_condition_v2(
     R3 (priority=3): 特殊語（シュリなし / ペリなし / 未サーチ）
     R4a(priority=4): data-driven（通常品 / 未開封等）
     R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
+    R4c(code):       商品分類既定（照合済み商品が箱系 × 単位が 条件つき/複合/数量専用 → Sealed box）。
+                     product_kubun_type は pid_resolved のときだけ呼び出し側が渡す（省略時は従来どおり）
     """
     empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
     if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
@@ -828,20 +848,7 @@ def resolve_condition_v2(
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
-        match_type = e.get("match_type", "KEYWORD")
-        if match_type in ("REGEX", "LITERAL", "DEFAULT"):
-            if match_type == "DEFAULT":
-                hit, matched_kw = True, "DEFAULT"
-            else:
-                hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
-                if hit and e["exclude_kw"]:
-                    hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
-                matched_kw = e["search_kw"] if hit else None
-        else:
-            # KEYWORD（デフォルト）: 既存動作を維持
-            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
-            x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
-            hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        hit, matched_kw = _entry_hit(e, text_combined)
         if not hit:
             continue
         prefix = f"{flag_note}," if flag_note else ""
@@ -875,6 +882,23 @@ def resolve_condition_v2(
                 return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
         cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
         return ("Searched pack", cid, b4_prefix + "R5:パック既定")
+
+    # --- R4c: 商品分類既定 — 単位では箱か決まらないが、照合された商品が箱系 ---
+    # CN0008（FLAG_SINGLE）の語は適用区分が 枚系,単位不明 で主ループに当たらないため、
+    # 適用区分を見ずに同じ照合（_entry_hit）で検査し、当たれば R4c を返さない。
+    if (
+        product_kubun_type in {"箱系", "箱系大"}
+        and kubun in {"条件つき", "複合", "数量専用"}
+        and not any(_entry_hit(e, text_combined)[0] for e in cond_entries if e["code"] == "CN0008")
+    ):
+        # 箱の状態の語（難あり・開封済み等）は適用区分が「箱系」のため、同じ行を箱系として
+        # 状態判定をやり直す（product_kubun_type は渡さない＝再帰は1段で止まる）。
+        # flag_note は内側の呼び出しが自分で付けるので、ここでは付けない。
+        canonical, cid, inner_basis = resolve_condition_v2(
+            raw_state, raw_product_name, "箱系", cond_entries, cond_canonical_to_uuid,
+            raw_memo=raw_memo,
+        )
+        return (canonical, cid, "R4c:商品分類既定>" + inner_basis)
 
     cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
     return ("FLAG_SINGLE", cid, b4 + ":単位不明")
@@ -1191,6 +1215,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     Returns:
         {total, pid_resolved, unit_resolved, needs_review}
     """
+    # v102 の投稿（prompt_version が `v102:` 始まり）は v6 の判定を通さず、v102 のシステム段へ渡す。
+    # 再解析 API など全部の呼び出し元が、投稿の記録で振り分けられる（設定ではなく記録で決める＝途中で設定を変えても混ざらない）。
+    # lazy import: line_analysis_v102_svc → tcg_analyzer_svc の循環インポートを回避
+    from app.services.line_analysis_v102_svc import is_v102_prompt_version, run_v102_analysis  # noqa: PLC0415
+
+    prompt_version = session.execute(
+        text(f"SELECT prompt_version FROM {TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+    ).scalar()
+    if is_v102_prompt_version(prompt_version):
+        return run_v102_analysis(session, extraction_job_id)
+
     # ルックアップマップをロード
     (
         product_code_to_uuid,
@@ -1509,6 +1544,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
             norm_condition, norm_product_name, kubun, [e for e in cond_entries if e["code"] != EMPTY_CODE], cond_canonical_to_uuid,
             raw_memo=condition_memo,
+            product_kubun_type=(product_code_to_kubun_type.get(matched_code, "") if pid_resolved and matched_code else ""),
         )
 
         empty_class = classify_empty_box(raw_product_name, raw_state, raw_memo)
@@ -1706,7 +1742,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
 
 def _merge_supplier_products(
-    session: Session, extraction_job_id: str, schema: str
+    session: Session, extraction_job_id: str, schema: str,
+    extra_pairs: Iterable[tuple[int, int]] = (),
 ) -> int:
     """ADR-158: 同一仕入元の analysis_results を商品×コンディション単位で整理。
 
@@ -1715,6 +1752,9 @@ def _merge_supplier_products(
     各ペアごとに最新メッセージの結果だけを is_current=TRUE に設定する。
     古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
     データ自体は履歴として保持される。
+
+    extra_pairs: 付け直す組に足す (product_id, condition_id)。やり直しで商品や状態が変わった件の
+    「前の組」を渡す（前の組で次に新しい投稿の件を最新に戻すため）。無指定なら今まで通り。
 
     Returns:
         is_current の値が変更された analysis_results の件数
@@ -1748,7 +1788,8 @@ def _merge_supplier_products(
         {"job_id": extraction_job_id},
     ).all()
 
-    if not new_pairs:
+    extra = sorted({(int(product_id), int(condition_id)) for product_id, condition_id in extra_pairs})
+    if not new_pairs and not extra:
         return 0
 
     # 3. 同一 supplier_channel_id の全メッセージを対象に、各 (product_id, condition_id) ペアごとに
@@ -1763,13 +1804,19 @@ def _merge_supplier_products(
                 WHERE ei.extraction_job_id = :job_id
                   AND ar.pid_resolved = TRUE
                   AND ar.product_id IS NOT NULL
+                UNION
+                SELECT x.product_id, x.condition_id
+                FROM unnest(CAST(:extra_pids AS integer[]), CAST(:extra_cids AS integer[])) AS x(product_id, condition_id)
+                UNION
+                SELECT et.product_id, et.condition_id
+                FROM {schema}.analysis_soldout_extra_targets et
+                JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                WHERE ei.extraction_job_id = :job_id
             ),
-            ranked AS (
-                SELECT ar.id,
-                       (ROW_NUMBER() OVER (
-                           PARTITION BY ar.product_id, ar.condition_id
-                           ORDER BY sm.received_at DESC, ar.computed_at DESC
-                       ) = 1) AS should_be_current
+            candidates AS (
+                -- 本物の行
+                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at
                 FROM {schema}.analysis_results ar
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
                 JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -1782,6 +1829,28 @@ def _merge_supplier_products(
                       WHERE tt.product_id = ar.product_id
                         AND tt.condition_id = ar.condition_id
                   )
+                UNION ALL
+                -- 仮の行（〆の2つ目以降の完売の相手。順位の鍵は親の行と同じ。id は NULL で UPDATE の対象にしない）
+                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at
+                FROM {schema}.analysis_soldout_extra_targets et
+                JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+                JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+                WHERE sm.supplier_channel_id = :channel_id
+                  AND EXISTS (
+                      SELECT 1 FROM touched_triples tt
+                      WHERE tt.product_id = et.product_id
+                        AND tt.condition_id = et.condition_id
+                  )
+            ),
+            ranked AS (
+                SELECT c.id,
+                       (ROW_NUMBER() OVER (
+                           PARTITION BY c.product_id, c.condition_id
+                           ORDER BY c.received_at DESC, c.computed_at DESC, (c.id IS NULL)
+                       ) = 1) AS should_be_current
+                FROM candidates c
             )
             UPDATE {schema}.analysis_results ar_target
             SET is_current = ranked.should_be_current,
@@ -1793,6 +1862,8 @@ def _merge_supplier_products(
         {
             "channel_id": supplier_channel_id,
             "job_id": extraction_job_id,
+            "extra_pids": [pair[0] for pair in extra],
+            "extra_cids": [pair[1] for pair in extra],
         },
     )
 

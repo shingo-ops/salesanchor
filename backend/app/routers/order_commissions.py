@@ -159,7 +159,7 @@ async def _fetch_staff_for_role(
             f"""
             SELECT s.id, s.is_employee
             FROM {order_commissions_t} oc
-            JOIN {staff_t} s ON s.id = oc.staff_id
+            JOIN {staff_t} s ON s.user_id = oc.staff_id
             WHERE oc.order_id = :order_id AND oc.role = :role
             """
         ),
@@ -180,7 +180,7 @@ async def _fetch_all_staff_for_order(
             f"""
             SELECT oc.role, s.id, s.is_employee
             FROM {order_commissions_t} oc
-            LEFT JOIN {staff_t} s ON s.id = oc.staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = oc.staff_id
             WHERE oc.order_id = :order_id
             """
         ),
@@ -209,7 +209,7 @@ async def _get_one_commission_row(
             f"""
             SELECT {_COMMISSION_COLS}
             FROM {order_commissions_t} oc
-            LEFT JOIN {staff_t} s ON s.id = oc.staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = oc.staff_id
             WHERE oc.order_id = :order_id AND oc.role = :role
             """
         ),
@@ -227,7 +227,7 @@ async def _list_commissions(db: AsyncSession, order_id: int, tenant_id: int) -> 
             f"""
             SELECT {_COMMISSION_COLS}
             FROM {order_commissions_t} oc
-            LEFT JOIN {staff_t} s ON s.id = oc.staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = oc.staff_id
             WHERE oc.order_id = :order_id
             ORDER BY oc.role
             """
@@ -238,11 +238,10 @@ async def _list_commissions(db: AsyncSession, order_id: int, tenant_id: int) -> 
 
 
 async def _validate_staff(db: AsyncSession, staff_id: int, tenant_id: int) -> None:
-    """staff の存在を確認 (Issue #766: schema prefix 明示)。"""
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
+    """担当者（public.users.id）が同一テナントに存在することを確認 (ADR-1008 P2)。"""
     res = await db.execute(
-        text(f"SELECT id FROM {staff_t} WHERE id = :id"),
-        {"id": staff_id},
+        text("SELECT id FROM public.users WHERE id = :id AND tenant_id = :tid"),
+        {"id": staff_id, "tid": tenant_id},
     )
     if not res.first():
         raise HTTPException(
@@ -515,7 +514,7 @@ async def get_monthly_commissions(
             END AS staff_name,
             COALESCE(SUM(oc.calculated_amount), 0) AS total
         FROM {order_commissions_t} oc
-        LEFT JOIN {staff_t} s ON s.id = oc.staff_id
+        LEFT JOIN {staff_t} s ON s.user_id = oc.staff_id
         WHERE oc.calculated_at IS NOT NULL
           AND oc.calculated_at >= :start
           AND oc.calculated_at < :end

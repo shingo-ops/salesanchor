@@ -189,7 +189,7 @@ def test_cli_requires_limit_and_max_cost():
 # --- §6 基準4: 読み込みの切り出し（本番の動きを変えない）-----------------------
 def test_load_extraction_context_returns_four_parts():
     session = MagicMock()
-    row = ("ej", "原文", "p", "q", "o", None, None, None, None, None, 7)
+    row = ("ej", "原文", "p", "q", "o", None, None, None, None, None, 7, None, None)
     session.execute.return_value.fetchone.return_value = row
     session.execute.return_value.fetchall.return_value = [("cat", "pat", "norm")]
 

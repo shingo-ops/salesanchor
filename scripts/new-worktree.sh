@@ -74,7 +74,8 @@ WORKTREE_LIMIT="${WORKTREE_LIMIT:-100}"
 if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
   UNSAVED_COUNT=0
   if [ -f "${REAPER_SCRIPT}" ]; then
-    UNSAVED_COUNT=$(bash "${REAPER_SCRIPT}" 2>/dev/null | grep -c "未保存あり" || echo "0")
+    UNSAVED_COUNT=$(bash "${REAPER_SCRIPT}" 2>/dev/null | grep -oE '未保存あり（削除しない）: [0-9]+' | grep -oE '[0-9]+$' || true)
+    UNSAVED_COUNT="${UNSAVED_COUNT:-0}"
   fi
   echo ""
   echo "⚠️  worktree が上限（${WORKTREE_LIMIT}個）に達しています（現在 ${WORKTREE_COUNT} 個）。"

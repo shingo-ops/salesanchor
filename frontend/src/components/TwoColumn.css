@@ -1,0 +1,20 @@
+/**
+ * TwoColumn — 左右2列の並べ方
+ * ADR-067: 間隔はすべて CSS 変数参照のみ
+ */
+
+.comp-two-column {
+  display: grid;
+}
+
+.comp-two-column--ratio-1-2 { grid-template-columns: 1fr 2fr; }
+.comp-two-column--ratio-1-1 { grid-template-columns: 1fr 1fr; }
+
+.comp-two-column--gap-2 { gap: var(--space-2); }
+.comp-two-column--gap-3 { gap: var(--space-3); }
+.comp-two-column--gap-4 { gap: var(--space-4); }
+.comp-two-column--gap-6 { gap: var(--space-6); }
+
+.comp-two-column--align-start   { align-items: start; }
+.comp-two-column--align-center  { align-items: center; }
+.comp-two-column--align-stretch { align-items: stretch; }

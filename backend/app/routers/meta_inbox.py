@@ -103,29 +103,6 @@ def _app_id() -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _resolve_staff_id(db: AsyncSession, user: User) -> Optional[int]:
-    """User → 現テナントスキーマの staff.id を解決する。
-
-    - テナントスキーマに staff テーブルがない（半作成）場合は None
-    - primary_email 一致で取得（leads / teams 等と同パターン）
-    - 見つからなければ None（None でも tenant_meta_config の connected_by_staff_id は NULL 許容）
-    """
-    if not user.email:
-        return None
-    try:
-        result = await db.execute(
-            text("SELECT id FROM staff WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
-            {"email": user.email},
-        )
-    except Exception:
-        # staff テーブル未存在のケース。Sprint 1 までに全テナントへ展開予定だが
-        # フェイルセーフで握りつぶす（OAuth 接続自体は staff_id NULL でも続行可能）。
-        logger.warning("staff 解決失敗、connected_by_staff_id を NULL で続行")
-        return None
-    row = result.first()
-    return int(row[0]) if row else None
-
-
 def _build_authorize_url(state: str) -> str:
     """Facebook OAuth dialog URL を組み立てる。"""
     version = meta_graph.graph_api_version()
@@ -308,12 +285,10 @@ async def connect_start(
     db: AsyncSession = Depends(get_db),
 ):
     """OAuth 認可 URL を発行し state を Redis に保存する（spec §5-1, §6-1）。"""
-    staff_id = await _resolve_staff_id(db, current_user)
-
     try:
         issued = await oauth_state.issue_state(
             tenant_id=tenant_id,
-            staff_id=staff_id or current_user.id,
+            staff_id=current_user.id,
         )
     except oauth_state.OAuthStateError as e:
         logger.error("OAuth state 発行失敗: %s", e)
@@ -454,7 +429,7 @@ async def connect_callback(
             ),
         )
 
-    staff_id = await _resolve_staff_id(db, current_user)
+    staff_id = current_user.id  # ADR-1008: connected_by_staff_id には users.id を入れる
     connected_pages: list[dict] = []
     failed_pages: list[dict] = []
 
@@ -745,7 +720,7 @@ async def list_channels(
             COALESCE(s.surname_jp || ' ' || s.given_name_jp, s.primary_email) AS staff_name,
             tmc.granted_scopes
         FROM tenant_meta_config tmc
-        LEFT JOIN staff s ON s.id = tmc.connected_by_staff_id
+        LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """
@@ -762,7 +737,7 @@ async def list_channels(
             COALESCE(s.surname_jp || ' ' || s.given_name_jp, s.primary_email) AS staff_name,
             NULL AS granted_scopes
         FROM tenant_meta_config tmc
-        LEFT JOIN staff s ON s.id = tmc.connected_by_staff_id
+        LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """

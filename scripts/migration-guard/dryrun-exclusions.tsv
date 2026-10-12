@@ -1,0 +1,38 @@
+# 全件ドライランから外すファイルの一覧。唯一の正本。
+# migration-test.yml の「全件ドライラン（報告のみ）」が、登録された全ファイルからここにあるものを除いて流し、結果を報告する
+# （強制はしない。強制への切り替えは、報告を見てから別の PR で行う）。
+# 列（タブ区切り）: file / reason / fix_ref。# で始まる行はコメント。
+# 規則: 一覧のファイルは scripts/run_all_migrations.sh に登録されていること。直す（baseline に表を足す等）か、
+#       通ることが分かったファイルは、同じ PR でこの行を消す。
+migrations/20260601_140000_drop_customers_tables.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_000000_add_products_central_columns.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_020000_add_products_tcg_type.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260602_030000_add_products_unit.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_120000_add_discord_ticket_config.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_150000_add_discord_scale_channels.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_160000_add_discord_role_names.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_170000_add_products_master_label_columns.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260602_180000_add_inventory_offer_type_ship_timing.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_190000_create_user_inventory_filters.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260602_200000_add_discord_config_connected_by_staff.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260603_000000_add_products_product_kind.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260603_010000_add_suppliers_line_and_address.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260603_030000_seed_dragonball_products.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260603_040000_add_products_set_type.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
+migrations/20260703_030000_order_items_ben2.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260916_120000_phase_c_drop_tcg_uuid.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260919_010000_master_ssot_work_id_recast.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260919_020000_master_ssot_public_tables.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260920_130000_create_product_classification.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260921_110000_pipeline_tables_public.sql	空の DB で public.suppliers（20260921_110000 は public.products も） が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260921_120000_add_products_product_kind_id.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260922_040000_fix_phase2c_fk_blocker.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260924_010000_add_supplier_extraction_rules.sql	空の DB で public.suppliers（20260921_110000 は public.products も） が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260924_030000_add_extraction_example_text.sql	空の DB で public.suppliers（20260921_110000 は public.products も） が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260924_040000_seed_knowledge_extraction_vocab.sql	空の DB で public.knowledge_rules が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260924_050000_create_supplier_knowledge_links.sql	空の DB で public.knowledge_rules が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260928_100000_delete_skip_condition_rules.sql	空の DB で public.knowledge_rules が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
+migrations/20260928_110000_create_extraction_shadow_tables.sql	空の DB で public.suppliers（20260921_110000 は public.products も） が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）

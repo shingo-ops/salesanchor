@@ -44,6 +44,8 @@ interface SupplierExtractionDetail {
   extraction_notes: string | null;
   extraction_example_text: string | null;
   extraction_ship_format: string | null;
+  extraction_layout_rules: string | null;
+  extraction_hard_cases: string | null;
   latest_raw_text: string | null;
 }
 
@@ -83,6 +85,8 @@ type RulesFormState = {
   extraction_notes: string;
   extraction_example_text: string;
   extraction_ship_format: string;
+  extraction_layout_rules: string;
+  extraction_hard_cases: string;
 };
 
 const emptyForm: RulesFormState = {
@@ -94,6 +98,8 @@ const emptyForm: RulesFormState = {
   extraction_notes: "",
   extraction_example_text: "",
   extraction_ship_format: "",
+  extraction_layout_rules: "",
+  extraction_hard_cases: "",
 };
 
 function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
@@ -106,6 +112,8 @@ function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
     extraction_notes: detail.extraction_notes ?? "",
     extraction_example_text: detail.extraction_example_text ?? "",
     extraction_ship_format: detail.extraction_ship_format ?? "",
+    extraction_layout_rules: detail.extraction_layout_rules ?? "",
+    extraction_hard_cases: detail.extraction_hard_cases ?? "",
   };
 }
 
@@ -427,6 +435,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         extraction_notes: form.extraction_notes || null,
         extraction_example_text: form.extraction_example_text || null,
         extraction_ship_format: form.extraction_ship_format || null,
+        extraction_layout_rules: form.extraction_layout_rules || null,
+        extraction_hard_cases: form.extraction_hard_cases || null,
       };
       await api.patch(
         `/super-admin/suppliers/${selectedSupplier.supplier_id}/extraction-rules`,
@@ -801,6 +811,28 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                 setForm((prev) => ({ ...prev, extraction_ship_format: e.target.value }))
               }
               rows={4}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.layoutRules")}
+              helperText={t("supplierExtractionRules.layoutRulesHelper")}
+              value={form.extraction_layout_rules}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_layout_rules: e.target.value }))
+              }
+              rows={8}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.hardCases")}
+              helperText={t("supplierExtractionRules.hardCasesHelper")}
+              value={form.extraction_hard_cases}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_hard_cases: e.target.value }))
+              }
+              rows={8}
               fullWidth
             />
 

@@ -179,7 +179,7 @@ class TestAdminRoleCheck:
 
         app.dependency_overrides.clear()
         assert resp.status_code == 403
-        assert "管理者" in resp.json()["detail"]
+        assert "権限" in resp.json()["detail"]
 
 
 class TestLogoutSecurity:
