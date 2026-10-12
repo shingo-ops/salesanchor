@@ -122,3 +122,21 @@ async def test_user_id_in_request_returns_400(client, db_session):
     assert res.status_code == 400, res.text
     assert res.json()["detail"] == "user_id は指定できません"
     assert await _count(db_session, "staff") == staff_before
+
+
+@pytest.mark.asyncio
+async def test_patch_with_user_id_returns_400_and_keeps_roster_user_id(client, db_session):
+    await _seed_role(db_session)
+    created = await client.post("/api/v1/staff", json=_body("patchuid@example.com"))
+    assert created.status_code == 201, created.text
+    staff_id = created.json()["id"]
+    before = (await db_session.execute(text(
+        "SELECT user_id FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
+
+    res = await client.patch(f"/api/v1/staff/{staff_id}", json={"user_id": 999999})
+
+    assert res.status_code == 400, res.text
+    assert res.json()["detail"] == "user_id は変更できません"
+    after = (await db_session.execute(text(
+        "SELECT user_id FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
+    assert after == before

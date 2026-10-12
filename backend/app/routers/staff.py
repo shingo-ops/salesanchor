@@ -117,7 +117,7 @@ _STAFF_COLS = """
 _UPDATABLE = {
     "surname_jp", "given_name_jp", "surname_kana", "given_name_kana",
     "surname_en", "given_name_en", "primary_email", "discord_user_id",
-    "role_id", "status", "firebase_uid", "user_id", "is_employee",
+    "role_id", "status", "firebase_uid", "is_employee",
 }
 
 
@@ -647,7 +647,7 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
         logger.warning("create_staff IntegrityError: tenant=%d err=%s", tenant_id, e.orig)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="スタッフの登録に失敗しました（staff_code / discord_user_id / firebase_uid 重複の可能性）",
+            detail="スタッフの登録に失敗しました（同じ値がすでに登録されています: スタッフコード・Discord ID・メールアドレスのいずれか）",
         )
     fetched = await db.execute(
         text(f"""
@@ -676,6 +676,9 @@ async def update_staff(staff_id: int, data: StaffUpdate,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="スタッフが見つかりません")
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
+    if "user_id" in update_data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="user_id は変更できません")
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="更新するフィールドを少なくとも1つ指定してください")
