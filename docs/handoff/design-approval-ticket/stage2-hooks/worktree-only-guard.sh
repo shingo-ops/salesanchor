@@ -94,9 +94,19 @@ try:
         raise ValueError("unavailable working directory")
     print(base)
 except (ValueError, TypeError, AttributeError, OSError, IndexError):
-    print("BLOCKED: working directory could not be resolved safely.", file=sys.stderr)
     sys.exit(2)
-') || { _hook_blocked_log "worktree-only-guard" "BLOCKED: working directory could not be resolved safely."; exit 2; }
+' 2>/dev/null) || TARGET_DIR=""
+# 設計承認チケット 段2: cd の行き先を判定できないとき（例: cd "$X" && ...）は、
+# git commit / git push を含むコマンドだけ止める。それ以外は通して cwd_unresolved を記録する。
+if [ -z "$TARGET_DIR" ]; then
+  if echo "$COMMAND" | grep -qE '(^|[^[:alnum:]_])git[[:space:]]+(.*[[:space:]])?(commit|push)([[:space:]]|$)'; then
+    _hook_blocked_log "worktree-only-guard" "BLOCKED: working directory could not be resolved safely."
+    echo 'BLOCKED: working directory could not be resolved safely.' >&2
+    exit 2
+  fi
+  printf '{"type":"cwd_unresolved","hook":"worktree-only-guard","ts":"%s"}\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$HOME/.claude/logs/agent-events.jsonl" 2>/dev/null || true
+  exit 0
+fi
 TARGET_ROOT=$(git -C "$TARGET_DIR" rev-parse --show-toplevel 2>/dev/null || true)
 BRANCH=$(git -C "$TARGET_DIR" branch --show-current 2>/dev/null || true)
 if [[ -z "$BRANCH" ]] && echo "$COMMAND" | grep -qE 'git commit'; then

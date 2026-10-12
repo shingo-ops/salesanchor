@@ -54,11 +54,20 @@ COMMAND="$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); 
 
 # gh pr create --body(-file) または gh pr edit --body(-file) を含まなければスキップ
 # gh pr comment --body には反応しない（create/edit のみ対象）
+#
+# 設計承認チケット 段2: ファイルに書く heredoc の本文（cat > f <<'E' ... E）は判定の対象外にする。
+# 判定用の文字列 SCAN_COMMAND は heredoc 本文だけを取り除いたもの。取り除けないときは元のコマンドを使う。
+# 本文の抽出と検証（下の extract-pr-body.py）は、これまでどおり元の COMMAND に対して行う。
+SANITIZER="${DANGER_SANITIZER:-/Users/tanizawashingo/.claude/scripts/danger_sanitize.py}"
+SCAN_COMMAND="$(printf '%s' "$INPUT" | python3 "$SANITIZER" heredoc 2>/dev/null)" || SCAN_COMMAND="$COMMAND"
+if [[ -z "$SCAN_COMMAND" ]]; then
+  SCAN_COMMAND="$COMMAND"
+fi
 IS_PR_CREATE=false
 IS_PR_EDIT_BODY=false
-if echo "$COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create' && echo "$COMMAND" | grep -qE '\-\-body(\-file)?([[:space:]=]|$)'; then
+if echo "$SCAN_COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create' && echo "$SCAN_COMMAND" | grep -qE '\-\-body(\-file)?([[:space:]=]|$)'; then
   IS_PR_CREATE=true
-elif echo "$COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+edit' && echo "$COMMAND" | grep -qE '\-\-body(\-file)?([[:space:]=]|$)'; then
+elif echo "$SCAN_COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+edit' && echo "$SCAN_COMMAND" | grep -qE '\-\-body(\-file)?([[:space:]=]|$)'; then
   IS_PR_EDIT_BODY=true
 fi
 if [[ "$IS_PR_CREATE" == "false" ]] && [[ "$IS_PR_EDIT_BODY" == "false" ]]; then
@@ -69,7 +78,7 @@ fi
 if [[ "${PR_BODY_VALIDATE_SKIP:-}" == "1" ]]; then
   exit 0
 fi
-if echo "$COMMAND" | grep -qE '(^|[[:space:];&&])PR_BODY_VALIDATE_SKIP=1([[:space:];&&]|$)'; then
+if echo "$SCAN_COMMAND" | grep -qE '(^|[[:space:];&&])PR_BODY_VALIDATE_SKIP=1([[:space:];&&]|$)'; then
   exit 0
 fi
 

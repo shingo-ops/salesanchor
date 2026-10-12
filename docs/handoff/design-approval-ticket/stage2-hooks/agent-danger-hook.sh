@@ -64,6 +64,17 @@ if [ -z "$COMMAND" ]; then
   exit 0
 fi
 
+# 設計承認チケット 段2（誤検知修正）: 危険語・psql 書き込みの照合前に、ただの文字を取り除く。
+# 取り除くもの: ファイルに書く heredoc の本文 / git commit -m の文 / gh pr の --body と --title /
+#   grep の検索語 / 作業場所と /private/tmp/claude-501/ の下だけを消す rm -r
+# bash -c / eval の中身、$(...) を含む語は取り除かない。解析できないときは元のコマンドをそのまま照合する。
+# permits 自己発行ブロックと破壊的 git の検出は、取り除く前の COMMAND を使う（緩めない）。
+SANITIZER="${DANGER_SANITIZER:-/Users/tanizawashingo/.claude/scripts/danger_sanitize.py}"
+SCAN_COMMAND=$(printf '%s' "$INPUT" | python3 "$SANITIZER" all 2>/dev/null) || SCAN_COMMAND="$COMMAND"
+if [ -z "$SCAN_COMMAND" ]; then
+  SCAN_COMMAND="$COMMAND"
+fi
+
 # ── SalesAnchor スコープ判定 ─────────────────────────────────────────────────
 # このブロックは shingo-ops/salesanchor リポジトリ内でのみ発火させる
 # 他プロジェクト（crm-app 等）への誤爆を防ぐ
@@ -79,7 +90,7 @@ fi
 # 許可: ssh ... psql -c "SELECT ..."
 # ブロック: < file / -f file / | psql / -c "INSERT/UPDATE/..."
 if [ "$SALESANCHOR_SCOPE" = "1" ]; then
-  PSQL_WRITE_BLOCKED=$(python3 - "$COMMAND" <<'PYEOF'
+  PSQL_WRITE_BLOCKED=$(python3 - "$SCAN_COMMAND" <<'PYEOF'
 import sys, re
 
 cmd = sys.argv[1]
@@ -354,6 +365,9 @@ def is_readonly_display_segment(seg):
     s = seg.strip()
     if not s:
         return False
+    # 段2: 複数行（heredoc 本文を含む）・コマンド置換・バッククォートを含む区間は読み取り専用扱いにしない
+    if '\n' in s or (chr(36) + '(') in s or chr(96) in s:
+        return False
     m = re.match(r'([\w./-]+)', s)
     if not m:
         return False
@@ -386,7 +400,7 @@ try:
             break
 except:
     pass
-" "$COMMAND" 2>/dev/null)
+" "$SCAN_COMMAND" 2>/dev/null)
 
 if [ -n "$MATCHED" ]; then
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
