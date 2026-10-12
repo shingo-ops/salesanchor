@@ -20,6 +20,10 @@
 #   [R9-e] gh の本文取得に失敗 → 保護
 #   [R9-f] .scratch/pr-body.md（サブフォルダ・全行が本文にある）→ 削除候補
 #   [R9-g] --execute で下書きが .git/reaper-drafts/ に控えられ、部屋が消える
+#   [B-a] REAPER_BASE_BRANCH=staging → gh の PR 行き先判定が staging（main ではない）
+#   [B-b] REAPER_BASE_BRANCH 未指定 → gh の PR 行き先判定は main（既定）
+#   [B-c] ブランチ名が main・develop・REAPER_BASE_BRANCH と同じ部屋は DONE でも削除対象に出ない（本体ブランチ保護）
+#   [B-d] 上の保護の対照: 通常ブランチの DONE の部屋は削除対象に出る
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -36,6 +40,8 @@ TMPDIR_TEST=$(mktemp -d /tmp/reaper-test.XXXXXX)
 trap 'rm -rf "${TMPDIR_TEST}"' EXIT
 
 FAKE_WORKTREES="${TMPDIR_TEST}/worktrees"
+# 他セッション・ランナーの本物の reaper が /tmp のロックを持っていても影響されないよう、ロックを試験専用にする
+export REAPER_LOCK_DIR="${TMPDIR_TEST}/default.lock.d"
 FAKE_ACTIVE_WORK="${TMPDIR_TEST}/active-work.md"
 
 mkdir -p "${FAKE_WORKTREES}"
@@ -48,6 +54,7 @@ mkdir -p "${MOCK_BIN}"
 cat > "${MOCK_BIN}/gh" << 'GHEOF'
 #!/bin/bash
 # モック gh: --state merged クエリに応答
+[ -n "${MOCK_GH_ARGS_LOG:-}" ] && echo "$*" >> "${MOCK_GH_ARGS_LOG}"
 # 本文取得クエリ（--json baseRefName,body）: MOCK_GH_BODY_DIR/<ブランチの/を-に>.txt を返す。
 #   ファイルが無ければ空（マージ済み PR なし相当）。MOCK_GH_BODY_FAIL=1 なら非0で終了。
 if [[ "$*" == *"--state merged"* && "$*" == *"body"* ]]; then
@@ -617,6 +624,98 @@ if [ ! -d "${R9G_ROOMS}/room" ] \
   PASS=$(( PASS + 1 ))
 else
   echo "❌ FAIL [R9-g --execute]: 控え不足または部屋が残っています"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# ── テスト B: REAPER_BASE_BRANCH と本体ブランチ保護 ─────────────────────────
+BASE_ROOMS="${TMPDIR_TEST}/base-rooms"
+mkdir -p "${BASE_ROOMS}"
+_mk_base_room() {
+  local name="$1" branch="$2"
+  mkdir -p "${BASE_ROOMS}/${name}"
+  python3 -c "
+import json
+json.dump({'branch': '${branch}', 'uuid': 'test-uuid', 'created_at': '2026-06-06T00:00:00Z', 'worktree_path': '${BASE_ROOMS}/${name}'}, open('${BASE_ROOMS}/${name}/.worktree-id', 'w'))
+"
+}
+_mk_base_room "wt-b-main" "main"
+_mk_base_room "wt-b-develop" "develop"
+_mk_base_room "wt-b-staging" "staging"
+_mk_base_room "wt-b-normal" "feature/test/base-normal"
+{
+  echo "| main | テスト | 2026-06-06 | DONE | | | |"
+  echo "| develop | テスト | 2026-06-06 | DONE | | | |"
+  echo "| staging | テスト | 2026-06-06 | DONE | | | |"
+  echo "| feature/test/base-normal | テスト | 2026-06-06 | DONE | | | |"
+} >> "${FAKE_ACTIVE_WORK}"
+
+run_reaper_base() {
+  local base_value="$1" log="$2"
+  : > "${log}"
+  if [ -n "${base_value}" ]; then
+    REAPER_BASE_BRANCH="${base_value}" \
+    REAPER_WORKTREES_DIR="${BASE_ROOMS}" \
+    REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+    REAPER_REPO_NAME="test/test" \
+    REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${TMPDIR_TEST}/base.lock.d" \
+    MOCK_GH_ARGS_LOG="${log}" \
+    bash "${REAPER}" 2>&1
+  else
+    REAPER_WORKTREES_DIR="${BASE_ROOMS}" \
+    REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+    REAPER_REPO_NAME="test/test" \
+    REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${TMPDIR_TEST}/base.lock.d" \
+    MOCK_GH_ARGS_LOG="${log}" \
+    bash "${REAPER}" 2>&1
+  fi
+}
+
+# gh を呼ばせるため、台帳に行のないブランチの部屋を別に用意する
+_mk_base_room "wt-b-nogh" "feature/test/base-nogh"
+BASE_LOG_DEV="${TMPDIR_TEST}/gh-args-develop.log"
+BASE_LOG_DEF="${TMPDIR_TEST}/gh-args-default.log"
+OUTPUT_B_DEV=$(run_reaper_base "staging" "${BASE_LOG_DEV}")
+echo ""
+echo "=== テスト B（REAPER_BASE_BRANCH=staging）出力 ==="
+echo "${OUTPUT_B_DEV}"
+
+# B-c / B-d: staging を行き先にした実行で、main・develop・staging の部屋は保護、通常ブランチは候補
+if echo "${OUTPUT_B_DEV}" | grep -q "本体ブランチ（削除しない）: 3 件"; then
+  echo "✅ PASS [B-c]: main・develop・REAPER_BASE_BRANCH の3部屋が本体ブランチとして保護されました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [B-c]: 本体ブランチ 3 件の保護表示がありません"
+  FAIL=$(( FAIL + 1 ))
+fi
+if echo "${OUTPUT_B_DEV}" | grep -A 20 "🗑️  削除対象" | grep -q "feature/test/base-normal" \
+   && ! echo "${OUTPUT_B_DEV}" | grep -A 20 "🗑️  削除対象" | grep -qE "^   - (main|develop|staging)$"; then
+  echo "✅ PASS [B-d]: 通常ブランチの DONE は削除対象、main/develop/staging は削除対象にない"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [B-d]: 削除対象の内訳が期待と違います"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# B-a: 行き先が staging（main ではない）で gh が呼ばれている
+if grep -q 'baseRefName == "staging"' "${BASE_LOG_DEV}" && ! grep -q 'baseRefName == "main"' "${BASE_LOG_DEV}"; then
+  echo "✅ PASS [B-a]: REAPER_BASE_BRANCH=staging で gh の行き先判定が staging になりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [B-a]: gh 呼び出しの行き先が staging になっていません"
+  sed 's/^/    /' "${BASE_LOG_DEV}"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# B-b: 未指定なら main
+run_reaper_base "" "${BASE_LOG_DEF}" > /dev/null
+if grep -q 'baseRefName == "main"' "${BASE_LOG_DEF}" && ! grep -q 'baseRefName == "staging"' "${BASE_LOG_DEF}"; then
+  echo "✅ PASS [B-b]: 未指定の既定は main のままです"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [B-b]: 既定の行き先が main になっていません"
+  sed 's/^/    /' "${BASE_LOG_DEF}"
   FAIL=$(( FAIL + 1 ))
 fi
 
