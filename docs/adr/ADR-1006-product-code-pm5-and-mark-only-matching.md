@@ -35,7 +35,7 @@
   - `tcg_product_master_svc._next_pm_code()`（PM＋4桁）。
   - `routers/products.py:379, 407-410`（PD-{id:05d}）。
   - 形がそろわない原因になっている（SSOT 違反）。
-- 毎回流し直される migration `20260604_010000_seed_product_marks.sql` が、名前で一致した商品の mark を上書きしている（:23-25、MEGAドリームex を M3 に戻した。2026-10-05 02:38Z）。
+- 毎回流し直される migration `20260604_010000_seed_product_marks.sql` が、名前で一致した商品の mark を上書きしている（:23-25、MEGAドリームex を M3 に戻した。2026-10-05 02:38Z）。（事実：#4051 でファイルごと削除済み、PO 2026-10-09。追記 2026-10-13）
   - mark を型番の正としてそろえる前に、これを無効にする必要がある（別の PR で、migration の変更として PO の GO を待つ）。
 - 店頭の在庫のシート（GAS）は、PM 系のコードを product_id として持っている。人が入力したもので、IMPORTRANGE で取り込んでいる。DB の product_code と自動で同期する処理は、コードからは見つからなかった（未確認として扱う）。
 
@@ -89,7 +89,7 @@
 ## 実施順序
 
 ```
-PR-0: seed_product_marks migration の無効化（mark の上書きを止める）
+PR-0: seed_product_marks migration の無効化（mark の上書きを止める）（事実：#4051 でファイルごと削除済み、PO 2026-10-09。追記 2026-10-13）
     ↓ デプロイ後、MEGAドリームex の mark を M2a に直し直す（データの変更）
 PR-1: migration A（legacy_product_code の列と一意の索引のみ）
     ↓

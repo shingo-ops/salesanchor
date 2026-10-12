@@ -12,7 +12,7 @@
 - 照合は、v6 が mark→id を引き、product_code で上書きする（tcg_analyzer_svc.py:1219-1224, :1431）。v7 は品番か mark で候補を作る（extraction_judgement_svc.py:140-148）。
 - 投稿に出る品番で、product_code にしか一致しないものは 0件。
 - 共有されている mark の決まり方は、DB が返す順しだいで、今も定まっていない（34組のうち 29組）。
-- seed_product_marks migration が、デプロイのたびに mark を上書きしている（MEGAドリームex を M3 に戻した）。
+- seed_product_marks migration が、デプロイのたびに mark を上書きしている（MEGAドリームex を M3 に戻した）。（事実：#4051 でファイルごと削除済み、PO 2026-10-09。追記 2026-10-13）
 
 ## 3. 既存の ADR との関係
 - ADR-1002 §4（PM＋4桁の自動採番）を、ADR-1006 で変更する（Amends）。

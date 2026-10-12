@@ -73,7 +73,7 @@ extraction_items.resolved_product_code 20703（うち現在のコードと等し
 - 02:38:41 の 1 秒間に products が 110 行更新された（updated_at が同一）。audit_log に対応する行はない（アプリを通らない直接 SQL、つまりマイグレーション）。同じ時刻帯に main への Deploy to VPS が 2 本（run 37256103838、run 37256155526）あり、どちらも 02:38:41 を含む。どちらが書いたかは未確認。
 - 原因（ファイルから）: migrations/20260604_010000_seed_product_marks.sql（scripts/run_all_migrations.sh:264 に登録。毎回のデプロイで再実行）が、:23-25 で `UPDATE public.products p SET mark = v.mark, updated_at = NOW() FROM (VALUES ...) AS v(name, mark) WHERE p.tenant_id IS NULL AND p.name = v.name`、:36 で `('MEGAドリームex', 'M3')`。125 組の (名称, mark)。`updated_at = NOW()` が 110 行の同時刻を説明する。migration-guard の Check 7 は新しい PR のマイグレーションだけを見るので、この古い UPDATE は止まらない。
 - 手元のコピー（M2a 修正後、有効 1333）で、シードの名称に一致する行は 109。mark が異なるのは 440559 の 1 行だけ。ほかの行は同じ値を書き直す。本番の 110 と手元の 109 の差 1 行は未確認。
-- 同じ仕組みでほかの修正が戻るか: デッキビルドの 58/74/103 は同じ mark（SV9/SV7/SV3）を書く。60/75/105 の名称はシードの名称と一致しない。統合の退役行の is_active、キーワードの表はシードが触らない。次のデプロイでも 440559 は M3 に戻る（この PR は直さない。ADR-1006 の範囲外）。
+- 同じ仕組みでほかの修正が戻るか: デッキビルドの 58/74/103 は同じ mark（SV9/SV7/SV3）を書く。60/75/105 の名称はシードの名称と一致しない。統合の退役行の is_active、キーワードの表はシードが触らない。次のデプロイでも 440559 は M3 に戻る（この PR は直さない。ADR-1006 の範囲外）。（事実：#4051 でファイルごと削除済み、PO 2026-10-09。追記 2026-10-13）
 - [未確認] migrations/20260902_110100 と migrations/20260903_180000 にある ('PM0198','M3',...) が今も public.products に対して動くか。
 
 ## 7. 未確認の一覧
