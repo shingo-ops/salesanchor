@@ -79,6 +79,29 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(list(page)).toBeHidden();
   });
 
+  test("スマホ: 上部のページ名バーが無く、下部タブバーで移動できる", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指定）: 上部のページ名バー（高さ56px）を MobileShell から削除した。
+    // 中身はページ名のテキストだけで操作を持たず、空いた高さは一覧に回る。
+    await expect(page.locator(".mobile-topbar")).toHaveCount(0);
+
+    // ただし移動手段は失ってはいけない。メニュー（「もっと」シート）を開けるのは
+    // 下部タブバーだけなので、タブバーの存在と押せる大きさをここで守る。
+    const tabbar = page.locator(".mobile-tabbar");
+    await expect(tabbar).toBeVisible();
+    const tabs = tabbar.locator("a, button");
+    expect(await tabs.count()).toBeGreaterThanOrEqual(2);
+    const menuBox = await tabs.last().boundingBox();
+    expect(menuBox, "下部タブの寸法が取得できない").not.toBeNull();
+    expect(menuBox!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+
+    // ページ名は読み上げ用に残っていること（見出しとして取得できる＝現在地が分かる）
+    await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -93,5 +116,8 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.locator("button.conversation-item", { hasText: SAMPLE_CONVERSATION_NAME })).toBeVisible();
     // 戻るボタンは DOM にはあるが表示しない
     await expect(backButton(page)).toBeHidden();
+    // モバイル専用の殻（MobileShell）は 768px 以上では描かれない＝PC 側は無関係
+    await expect(page.locator(".mobile-tabbar")).toHaveCount(0);
+    await expect(page.locator(".mobile-topbar")).toHaveCount(0);
   });
 });
