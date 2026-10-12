@@ -64,3 +64,20 @@
 - 中分類の印の現状：public.type_master.match_by_code（migrations/20261009_100000_type_master_match_by_code.sql）だけ。ProductEntry.work_id は type_master.id。load_product_first_masters の呼び出し元は backend/app/tools/prompt_ab.py の比較試験の道具だけで、本番の経路からは呼ばれない。
 - 既存 ADR 検索：docs/adr/FEATURE-INDEX.md は照合・型番・商品特定で該当なし。git grep -i docs/adr/ で ADR-155（マスタ値は表から読む・値の INSERT を migration に書かない）と ADR-156。この規則を変える ADR は無し。ADR は新設しない（試作版の照合規則の変更）。
 - 試算（手元・社外秘のため件数のみ）：1回あたり 決まる件 3,260→3,332、正判定の崩れ 0、別商品 0。
+
+## 追記（記号を含む値の隙間・2026-10-12）
+- 現状（origin/main d46598323）：backend/app/services/extraction_judgement_svc.py の _strict_code_pattern（L152-168）は、fold 後の値から英数字だけを取り出し、英数字の各文字の間に _CODE_SEPARATOR_RE（L139）を挟む。区切り集合 _CODE_SEPARATOR_CHARS（L136-138）は空白・ハイフン類・中黒・下線・ピリオド・アポストロフィ類で、× / : & @ ; ～ ☆ ＊ 括弧 などを含まない。値の中にこれらの記号があると、原文に同じ記号が書かれていてもパターンの隙間に入らず当たらない。
+- 呼び出し元（git grep）：_strict_code_hits（同ファイル L171）→ _value_hits → _code_candidate_basis・_keyword_matches・_excluded_keywords（strict_codes=True のときだけ）。v102 は backend/app/services/gemini_raw_copy_v102_product_first.py の resolve_product_first が match_product(strict_codes=True) を呼ぶ経路。
+- 既存 ADR 検索：git grep -i "strict" docs/adr/ は ADR-042・ADR-050・ADR-1001 の「Restrict」に当たるのみ（照合と無関係）。docs/adr/FEATURE-INDEX.md は strict で該当なし、照合・型番・商品特定の行も取り込み・解析（ADR-100・ADR-014）のみで、この規則を決めた ADR は無し。ADR は新設しない（試作版の照合規則の修正）。
+- M1 自己照合（手元・本番接続なし・2026-10-12 取得の product_search_keywords 2,988 行のうち is_archived=f）：値＝検索ワードを空白で分けた各語・product_code・mark（重複除く 3,016＋1,341＋1,232）。pattern が None の対象外 1,218、対象 4,371。「その値と同じ書き方の原文」に対し _strict_code_hits が True か。
+  - origin/main：False 47 値（検索ワードの語 42 種・行をまたぐ延べ 79 回、product_code 2、mark 3。例：HUNTER×HUNTER、SPY×FAMILY、Fate/Zero、IDOLM@STER、STEINS;GATE、AR/CHR、Re:Edit、Lose&Whisp、SV11B(DX)）。
+  - 本ブランチ：False 0 値。
+  - 記号を含まない値（fold 後に英数字・区切り文字以外が無い値）の _strict_code_pattern(raw)[1].pattern が origin/main と完全一致：4,262/4,262。
+  - 道具：手元 scratchpad の symgap/m1.py（リポジトリに入れない）。原文・仕入元名は使っていない。
+- M2 本番前後比較（2026-10-12）：
+  - 方法：本番 celery-worker の別コンテナ、DB は READ ONLY、Gemini 呼び出しなし。v102 ジョブで完了済み応答（extraction_attempts.response_text）があるもの全件を、現行の _strict_code_pattern とブランチ版に差し替えた2通りで run_v102_pipeline に通し、品目ごとに (product_id, match_status, 候補集合) を比較。20件ずつ7回に分けて実行。
+  - 結果：対象 140 ジョブ、2,952 品目、違う品目 0、件数・位置が違うジョブ 0、例外 0。同じ入力で現行を2回通した決定性確認（各回の先頭最大30件）で違い 0。
+  - 陽性対照（差し替えが効いていることの確認）：M1 で現行が同じ書き方に当たらなかった値（重複を除いて 44 値。M1 の 47 は DC/W128・SV11B(DX)・SV11W(DX) が検索ワード・商品コード・記号の複数欄で重複して数えられたもの）を、本番コンテナ内で同じ差し替え方で照合：現行 0/44、ブランチ 44/44。
+  - 本番 v102 投稿 143 件の原文で、ブランチで当たるようになる値は「AR/CHR」の1つ（9投稿）。うち3投稿を確認：該当品目は現行でも検索ワード「AR」等で 202・440371・440373 の3候補が既に当たっており要確認（ambiguous）。ブランチでも候補集合は同じで、結果は変わらない。この3候補が曖昧なまま残る件は本 PR の範囲外。
+  - 初回の実行が exit 137 で止まったのは、ほかの PR のデプロイ（deploy.yml の実行時刻と backend/celery-worker の稼働時間で確認）と重なったため。分割実行で全件完了。
+- レビュー指摘により、記号の隙間でも改行類（\r 等）はまたがないよう狭めた。本番前後比較(M2)は狭める前のコードで実施。狭めた変更は当たる範囲を減らす方向だけで、M1 の 44 値の自己照合は変わらない（実測：values.txt 47 行・重複除き 44 値を新コードの _strict_code_hits に通し、47/47 True・False 0）。

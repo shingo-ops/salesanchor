@@ -137,6 +137,8 @@ _CODE_SEPARATOR_CHARS = (
     " \u3000-\u2010\u2011\u2013\u2014\u2015\u30fc\u2212\u30fb_.'\u2019\u2018\u00b4\u0301`"
 )
 _CODE_SEPARATOR_RE = "[" + "".join(re.escape(ch) for ch in _CODE_SEPARATOR_CHARS) + "]*"
+# 値の中に記号（区切り集合外の P*/S*）があった隙間で許す文字：改行類（\n \r \v \f NEL LS PS）以外の非単語文字と下線（かな・漢字・英数字は含まない）。
+_SYMBOL_GAP_RE = r"(?:[^\w\n\r\x0b\x0c\x85\u2028\u2029]|_)*"
 # 区切り文字のうち normalize_for_match で消えずに nb に残るもの（ー と結合アクセント U+0301）。事前絞り込みで除く。
 _NB_SEPARATORS_REMOVED = {ord("ー"): None, 0x0301: None}
 _ALNUM_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789")
@@ -154,7 +156,8 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
     """品番らしい値なら（英数字だけ並べた文字列, 区切りを許す正規表現）を返す。品番らしくなければ None。
 
     品番らしい値：fold_for_match 後の文字が英字・数字・区切り文字・記号(P*/S*)だけで、英字を1つ以上含み、
-    英数字が3文字以上（2文字以下・数字だけの値は既存の規則のまま）。値の中の記号はパターンに入れない。
+    英数字が3文字以上（2文字以下・数字だけの値は既存の規則のまま）。値の先頭より前・末尾より後ろの記号はパターンに入れない。
+    値の中で記号があった隙間だけ、原文の記号・空白を許す（記号のない隙間は区切り文字だけを許す）。
     """
     folded = fold_for_match(raw)
     if not all(_is_code_char(ch) for ch in folded):
@@ -162,9 +165,17 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
     alnum = "".join(ch for ch in folded if ch in _ALNUM_CHARS)
     if len(alnum) <= _SHORT_VALUE_MAX_LEN or alnum.isdigit() or not any(ch in _LETTER_CHARS for ch in alnum):
         return None
-    pattern = re.compile(
-        r"(?<![a-z0-9])" + _CODE_SEPARATOR_RE.join(re.escape(ch) for ch in alnum) + r"(?![a-z0-9])"
-    )
+    parts: list[str] = []
+    gap_has_symbol = False
+    for ch in folded:
+        if ch in _ALNUM_CHARS:
+            if parts:
+                parts.append(_SYMBOL_GAP_RE if gap_has_symbol else _CODE_SEPARATOR_RE)
+            parts.append(re.escape(ch))
+            gap_has_symbol = False
+        elif ch not in _CODE_SEPARATOR_CHARS:
+            gap_has_symbol = True
+    pattern = re.compile(r"(?<![a-z0-9])" + "".join(parts) + r"(?![a-z0-9])")
     return alnum, pattern
 
 

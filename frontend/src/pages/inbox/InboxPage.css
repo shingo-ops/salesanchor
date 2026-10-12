@@ -991,6 +991,9 @@
 
 /* ====== カルテ ドロワー / ボトムシート — デフォルト（≥1280px）では非表示 ====== */
 .karte-toggle-btn { display: none; }
+
+/* スマホ用の絞り込みボタン。PC・タブレットでは出さない（タブと絞り込みが常時見えているため） */
+.inbox-mobile-filter-toggle { display: none; }
 .karte-close-row  { display: none; }
 .karte-overlay    { display: none; }
 
@@ -1132,6 +1135,21 @@
   .msg-stack     { max-width: 85%; }
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
+
+  /* 絞り込みを普段は出さない（design.md §10-4 / benchmark 実測）。
+     お手本の WhatsApp は絞り込みチップを引き下げたときだけ出す作りで、
+     出していない時は一覧が 56dp 高い位置から始まる（実測で確認）。
+     既定の絞り込みは受信箱の設定（defaultTab / defaultUnreadOnly）で
+     適用済みのため、毎回開く必要がない。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
+  .inbox-mobile-filter-toggle { display: inline-flex; }
+  .inbox-mobile-filter-toggle.has-active { color: var(--accent); }
+
+  .inbox-full-tab-bar,
+  .inbox-sub-filter-bar { display: none; }
+
+  .inbox-wrapper.filters-open .inbox-full-tab-bar,
+  .inbox-wrapper.filters-open .inbox-sub-filter-bar { display: flex; }
 
   /* 一覧の密度をお手本に合わせる（design.md §10-3 / benchmark 実測）。
      行の高さ: お手本は76dp。右の余白: お手本は16dp（左は 余白+アバター+gap で72dp）。
