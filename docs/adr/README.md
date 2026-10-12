@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-12 / ADR 総数: 167 件
+最終更新: 2026-10-12 / ADR 総数: 168 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -186,6 +186,7 @@
 | [ADR-1005](./ADR-1005-migration-run-once-ledger.md) | ADR-1005: マイグレーションを「実行済み記録＋未実行のみ1回」方式へ段階移行する | Accepted | — | — |
 | [ADR-1007](./ADR-1007-migration-structure-only-run-once.md) | ADR-1007: migration は構造の変更だけ・1回だけ流す。テナントの作成と権限は migration の再実行に頼らない | Superseded | — | 2026-10-05 |
 | [ADR-1008](./ADR-1008-person-ssot-users-id.md) | ADR-1008: 「人」の正本は public.users.id 一本にする（名簿 staff は会社内の詳細） | Accepted | — | — |
+| [ADR-1009](./ADR-1009-discord-ops-intake.md) | ADR-1009: Discord の監視通知を Claude Code の常駐受付で受け、不具合ごとの担当が承認チャンネルで対応する | Accepted | — | — |
 
 ## ステータス凡例
 
