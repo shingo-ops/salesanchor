@@ -1,0 +1,20 @@
+-- query (read-only, run after apply on 2026-10-04 ~23:12Z via: docker compose exec -T postgres psql -X -c '<SQL>')
+BEGIN READ ONLY; SELECT count(*) AS n FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-04)$q$; SELECT id, changed_at FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-04)$q$ ORDER BY id; ROLLBACK;
+-- output (verbatim)
+BEGIN
+ n
+---
+ 6
+(1 row)
+
+ id |          changed_at
+----+-------------------------------
+ 20 | 2026-10-04 23:11:34.417695+00
+ 21 | 2026-10-04 23:11:34.417695+00
+ 22 | 2026-10-04 23:11:34.417695+00
+ 23 | 2026-10-04 23:11:34.417695+00
+ 24 | 2026-10-04 23:11:34.417695+00
+ 25 | 2026-10-04 23:11:34.417695+00
+(6 rows)
+
+ROLLBACK
