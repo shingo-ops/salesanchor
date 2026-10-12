@@ -91,3 +91,9 @@ Architect 審査（AY-2m）: 2回目 APPROVE（Fable、2026-10-12）。Fable は
 
 ## 外部・過去事例の参照と我々への応用
 外部事例: 不要。既存の金型 TextField を、前例（AY-2k #4125 の明細入力欄、AY-2e のラベル付き入力）と同じ型で使うため。前例からの応用: 新トークンを足す場合は PR 作成時点で「デザイントークン変更時」節を入れる（AY-2k で本文の後追い編集が CI に読まれなかった学び）。
+
+## 関係する ADR
+- ADR-144（UI ガバナンス）: 生 input を金型 TextField へ移す本便の根拠。docs/CC_UI_GOVERNANCE.md の「生 input 禁止」に従う。
+- ADR-067（デザイントークン強制）: 幅・余白の px 直書きをトークンへ置き換え、新トークン2件を ADR-067 の表に登録。
+- ADR-027（UI 国際化）: ラベル・placeholder は既存の t() キーを逐語で保持し、i18n のキーは追加・変更しない。
+- 相互参照: recon は docs/handoff/fedex-rate-modal-inputs/recon.md。
