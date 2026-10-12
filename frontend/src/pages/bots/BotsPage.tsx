@@ -249,7 +249,7 @@ export default function BotsPage() {
           <div className="form-group"><label>{t("bots.ownerStaff")} *</label>
             <SelectControl fullWidth required value={createForm.owner_staff_id} onChange={(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}>
               <option value="">{t("common.pleaseSelect")}</option>
-              {staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}
+              {staff.filter((s) => s.user_id != null).map((s) => <option key={s.id} value={s.user_id as number}>{s.surname_jp} {s.given_name_jp}</option>)}
             </SelectControl>
           </div>
           <div className="form-group"><label>Discord Bot ID</label>

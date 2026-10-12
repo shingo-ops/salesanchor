@@ -38360,16 +38360,16 @@
         ]
       }
     },
-    "/api/v1/calendar/owners/{staff_id}": {
+    "/api/v1/calendar/owners/{user_id}": {
       "patch": {
-        "operationId": "update_calendar_owner_api_v1_calendar_owners__staff_id__patch",
+        "operationId": "update_calendar_owner_api_v1_calendar_owners__user_id__patch",
         "parameters": [
           {
             "in": "path",
-            "name": "staff_id",
+            "name": "user_id",
             "required": true,
             "schema": {
-              "title": "Staff Id",
+              "title": "User Id",
               "type": "integer"
             }
           }
