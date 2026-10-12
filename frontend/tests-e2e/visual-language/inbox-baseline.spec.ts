@@ -2,66 +2,23 @@
  * visual-language/inbox-baseline.spec.ts — 受信箱の3幅ベースライン計測（段階1・測るだけ）
  *
  * 実行は vl-mobile-390 / vl-tablet-768 / vl-desktop-1280 の project のみ（playwright.config.ts）。
+ * 合否を出す検査は inbox-single-column.spec.ts（開く→戻るの構造）にある。
  * 記録のみで、はみ出し・44px未満の部品があっても失敗にしない。
  * 失敗にするのは「画面が開かない（待っている要素が出ない）」ときだけ。
  *
- *   cd frontend && npx playwright test --project=vl-mobile-390 --project=vl-tablet-768 --project=vl-desktop-1280
+ *   cd frontend && npm run test:e2e:vl
  */
 
 import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
-import { installAuthBypass } from "../utils/auth";
-import { mockApi } from "../utils/api-mock";
-import { commonMocks } from "../utils/common-mocks";
-import { loadFixture } from "../utils/fixtures";
+import {
+  MIN_TOUCH_TARGET_PX,
+  isSingleColumn,
+  openConversation,
+  openInboxList,
+} from "./inbox-helpers";
 
-const conversationsFixture = loadFixture("mock-conversations.json");
-const messagesFullFixture = loadFixture<Record<string, unknown>>("mock-messages.json");
-const messagesFixture = messagesFullFixture["messenger_within_24h"] as Record<string, unknown>;
-
-const MIN_TOUCH_TARGET_PX = 44;
 const INTERACTIVE_SELECTOR = 'button, a[href], [role="button"], input, select, textarea';
-
-function baseMocks() {
-  return {
-    ...commonMocks(),
-    "GET /conversations": conversationsFixture,
-    "GET /leads/5001/messages": messagesFixture,
-    "POST /leads/5001/messages/mark-read": { marked_count: 1 },
-    "GET /leads/5001": {
-      id: 5001,
-      customer_name: "Taro Sender",
-      platform: "messenger",
-      discord_dm_channel_id: null,
-      discord_user_id: null,
-    },
-    "GET /staff/me": {
-      id: 1,
-      primary_email: "review@salesanchor.jp",
-      ui_preferences: {
-        dark_mode: false,
-        show_chat_menu: true,
-        show_sales_menu: true,
-        show_settings_menu: true,
-        show_admin_menu: true,
-        show_sidebar: true,
-      },
-    },
-  };
-}
-
-async function openInboxList(page: Page): Promise<void> {
-  await installAuthBypass(page);
-  await mockApi(page, baseMocks());
-  await page.goto("/lead-chat");
-  await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
-}
-
-async function openConversation(page: Page): Promise<void> {
-  await page.locator("button.conversation-item", { hasText: "Taro Sender" }).click();
-  await expect(page.locator(".inbox-textarea")).toBeVisible({ timeout: 10_000 });
-}
 
 async function measureOverflow(page: Page) {
   return page.evaluate(() => ({
@@ -134,9 +91,16 @@ async function measurePanes(page: Page) {
 }
 
 async function record(page: Page, testInfo: TestInfo, state: "A" | "B"): Promise<void> {
-  // 再読み込み中（一覧が「読み込み中」に戻る瞬間）を撮らないよう、一覧の項目が見えてから測る
-  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
-  await expect(page.locator(".inbox-textarea")).toBeVisible({ timeout: 10_000 });
+  // 再読み込み中（一覧が「読み込み中」に戻る瞬間）を撮らないよう、見えるべきものが出てから測る。
+  // 状態A（会話未選択）は入力欄が存在しない（InboxMessageThread は empty-state を返す）。
+  // 状態B のスマホは1画面1ページなので一覧が消えている。待つ対象を状態と幅で切り替える。
+  const singleColumn = await isSingleColumn(page);
+  if (state === "A" || !singleColumn) {
+    await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+  }
+  if (state === "B") {
+    await expect(page.locator(".inbox-textarea")).toBeVisible({ timeout: 10_000 });
+  }
   const overflow = await measureOverflow(page);
   const targets = await measureSmallTargets(page, MIN_TOUCH_TARGET_PX, INTERACTIVE_SELECTOR);
   const metrics = {
