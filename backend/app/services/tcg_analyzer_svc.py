@@ -1749,8 +1749,8 @@ def _merge_supplier_products(
 
     この解析ジョブで生成された (product_id, condition_id) ペアについて、
     同一仕入元チャネルの全メッセージを投稿日時 (received_at) で比較し、
-    各ペアごとに最新メッセージの結果だけを is_current=TRUE に設定する。
-    古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
+    ペアごとに最新の投稿を1つ決め、その投稿のペアの行をすべて is_current=TRUE に設定する（ADR-158:26）。
+    同じ投稿の同じペアの行は、どれも TRUE のまま残る。古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
     データ自体は履歴として保持される。
 
     extra_pairs: 付け直す組に足す (product_id, condition_id)。やり直しで商品や状態が変わった件の
@@ -1793,7 +1793,8 @@ def _merge_supplier_products(
         return 0
 
     # 3. 同一 supplier_channel_id の全メッセージを対象に、各 (product_id, condition_id) ペアごとに
-    #    received_at 最新1件のみ is_current=TRUE、残りを FALSE にする（全体最新ロジック）。
+    #    最新の投稿を1つ決め、その投稿の行をすべて is_current=TRUE、ほかの投稿の行を FALSE にする（全体最新ロジック）。
+    #    投稿の順は received_at → 組の行の computed_at の最大 → extraction_job_id（必ず1つに決まる）。
     #    IS DISTINCT FROM で既に正しい値の行は更新しない（無駄な書き込み防止）。
     result = session.execute(
         text(f"""
@@ -1816,7 +1817,7 @@ def _merge_supplier_products(
             ),
             candidates AS (
                 -- 本物の行
-                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at
+                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id
                 FROM {schema}.analysis_results ar
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
                 JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -1831,7 +1832,7 @@ def _merge_supplier_products(
                   )
                 UNION ALL
                 -- 仮の行（〆の2つ目以降の完売の相手。順位の鍵は親の行と同じ。id は NULL で UPDATE の対象にしない）
-                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at
+                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id
                 FROM {schema}.analysis_soldout_extra_targets et
                 JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
@@ -1844,13 +1845,26 @@ def _merge_supplier_products(
                         AND tt.condition_id = et.condition_id
                   )
             ),
+            job_rank AS (
+                -- 組と投稿ごとに、投稿日時と計算時刻の最大値を出す
+                SELECT c.product_id, c.condition_id, c.job_id,
+                       MAX(c.received_at) AS received_at, MAX(c.computed_at) AS max_computed_at
+                FROM candidates c
+                GROUP BY c.product_id, c.condition_id, c.job_id
+            ),
+            top_job AS (
+                -- 組ごとに最新の投稿を1つ決める（同順位は job_id の大きい方）
+                SELECT DISTINCT ON (jr.product_id, jr.condition_id)
+                       jr.product_id, jr.condition_id, jr.job_id
+                FROM job_rank jr
+                ORDER BY jr.product_id, jr.condition_id,
+                         jr.received_at DESC, jr.max_computed_at DESC, jr.job_id DESC
+            ),
             ranked AS (
                 SELECT c.id,
-                       (ROW_NUMBER() OVER (
-                           PARTITION BY c.product_id, c.condition_id
-                           ORDER BY c.received_at DESC, c.computed_at DESC, (c.id IS NULL)
-                       ) = 1) AS should_be_current
+                       (c.job_id = t.job_id) AS should_be_current
                 FROM candidates c
+                JOIN top_job t ON t.product_id = c.product_id AND t.condition_id = c.condition_id
             )
             UPDATE {schema}.analysis_results ar_target
             SET is_current = ranked.should_be_current,
