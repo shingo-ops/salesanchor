@@ -29,6 +29,9 @@ from app.services.extraction_judgement_svc import order_from_pattern
 from app.services.gemini_extraction_svc import _GEMINI_MODEL, _classify_error, _safe_error_message
 from app.services.gemini_raw_copy_v8 import build_prompt_v8, call_gemini_raw_copy_v8
 from app.services.gemini_raw_copy_v101 import (
+    _NONE as _SHIP_NONE,
+)
+from app.services.gemini_raw_copy_v101 import (
     V101_PROMPT_NAME_RE,
     V102_RESPONSE_SCHEMA,
     extract_v101_items,
@@ -616,6 +619,31 @@ _RESOLVED_MATCH_STATUSES = (
 )
 
 
+_SHIP_SEPARATOR = " / "
+_BRACKET_PAIRS = (("（", "）"), ("(", ")"), ("【", "】"), ("「", "」"), ("［", "］"), ("[", "]"))
+
+
+def _balance_brackets(text_: str) -> str:
+    """開きの無い閉じは消し、閉じが足りない開きには末尾に対の閉じを足す。前後の空白は除く。"""
+    for opener, closer in _BRACKET_PAIRS:
+        depth, kept = 0, []
+        for ch in text_:
+            if ch == closer and depth == 0:
+                continue
+            depth += (ch == opener) - (ch == closer)
+            kept.append(ch)
+        text_ = "".join(kept) + closer * depth
+    return text_.strip()
+
+
+def ship_note(ship: str | None) -> str | None:
+    """発送日の文字 → 備考（note_ja）。無い・none は None。片側だけ残った括弧は直す（便PO3）。"""
+    if ship is None or not ship.strip() or ship.strip() == _SHIP_NONE:
+        return None
+    parts = [_balance_brackets(part) for part in ship.split(_SHIP_SEPARATOR)]
+    return _SHIP_SEPARATOR.join(p for p in parts if p) or None
+
+
 def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) -> dict:
     """v102 の1件 → analysis_results の列（設計 §4-4）。"""
     product_id = item.get("product_id")
@@ -642,7 +670,7 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
         "quantity_normalized": quantity,
         "price_normalized": price,
-        "note_ja": None, "status": item.get("status"), "exclusion": item.get("status_effect"),
+        "note_ja": ship_note(item.get("ship")), "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
         "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
