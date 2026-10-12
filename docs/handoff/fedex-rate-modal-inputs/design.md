@@ -83,3 +83,11 @@ Architect 審査（AY-2m）: 1回目 REVISE（Fable、2026-10-12）。指摘へ�
 Architect 審査（AY-2m）: 2回目 APPROVE（Fable、2026-10-12）。Fable は AI の審査で、PO 承認や人のレビューではない。残った指摘は LOW の2件。
 - PR 本文の色の項目に「色トークンは」という文字列を含めない。AY-2k の PR #4125 と同じ書き方にする。
 - 日本語のラベルは 80px より広いため、ラベルの幅で枠の幅が決まる。今も同じ決まり方なので、並びは変わらない。並びは受入の「並び」の項目で確かめる。
+
+## 維持の仕組み
+- 守り手: frontend/src/components/FedExRateModal.test.tsx（ラベルと id の結び付き）、frontend/src/components/TextField.test.tsx、frontend/scripts/check-new-tokens.js（トークン追加時の PR 本文検査）、scripts/check-ui-governance.js（生 input の検出）、.github/workflows/frontend-check.yml。
+- 守っていないもの: FedExRateModal.tsx の API エラー表示以降の px 直書き、InventorySearchBar の生 input 1件。次の便で扱う。
+- 切戻し: 本 PR の merge commit を revert（DB への影響なし）。
+
+## 外部・過去事例の参照と我々への応用
+外部事例: 不要。既存の金型 TextField を、前例（AY-2k #4125 の明細入力欄、AY-2e のラベル付き入力）と同じ型で使うため。前例からの応用: 新トークンを足す場合は PR 作成時点で「デザイントークン変更時」節を入れる（AY-2k で本文の後追い編集が CI に読まれなかった学び）。
