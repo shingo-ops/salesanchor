@@ -6,7 +6,7 @@
 - 調査日: 2026-10-12（JST）
 - 調査者: Sonnet（読み取りのみ）→ 結果の確認と判定は Opus
 - 調査対象期間: 2026-10-05 13:01Z 〜 2026-10-12（直近7日）
-- 生データの置き場所: 社外に出さないため、セッションの作業領域に置いた（`permission-recon.md`、`design-recon.md`、`permit-bridge.md`）。本書には集計値だけを記す。
+- 生データの置き場所: 社外に出さないため、セッションの作業領域に置いた（permission-recon.md、design-recon.md、permit-bridge.md）。本書には集計値だけを記す。
 
 ## 0. 既存 ADR の検索結果
 
@@ -102,12 +102,12 @@
   - 照合の対象はコマンド全体の文字列。`&&` `||` `;` `|` で単純に分割し、引用符は解釈しない。
   - 例外は、分割した各部分の先頭が grep / rg / cat / head / tail / less / `sed -n` の場合だけ（:312-337）。
   - 【事実】ヒアドキュメントの本文、`echo` の引数、`git commit -m` の文字列に危険語が入っていても止まる。今回の調査中にも、集計スクリプトの本文に `rm -rf` の文字列があっただけで止められた（実行はしていない）。
-- :362-391 permit の消費 — `~/.claude/permits/danger-permit-*.json` を読み、op が部分一致すれば `os.remove` で削除する（1回限り）。
+- :362-391 permit の消費 — ~/.claude/permits/danger-permit-*.json を読み、op が部分一致すれば `os.remove` で削除する（1回限り）。
 
 ### 3-3. permit の発行と消費
 
 - 発行: `scripts/permit-danger.sh:15-36`
-  - `~/.claude/permits/danger-permit-<op>-<UTC時刻>.json` を作る。
+  - ~/.claude/permits/danger-permit-<op>-<UTC時刻>.json を作る。
   - 中身は `{op, created_at, expires_at: 30分後, created_by: "manual"}`。
   - 本人を確認する仕組みはない。AI が発行できないのは、フック（permits-guard）が止めているからにすぎない。
 - psql 用の消費: `/Users/tanizawashingo/.codex/salesanchor/permit_bridge.py`（105行）
@@ -116,7 +116,7 @@
   - :59 で受理と同時にチケットを削除する。
   - :15-21、:60-62 で、そのコマンドの sha256 に束縛された30秒の領収書を作る。
   - 【事実】repo 内の参照（`git grep permit_bridge`）は0件。repo の外だけにある仕組み。
-- 【事実】PO は、本番 DB に1回書き込むたびに `permit-danger.sh` を1回実行している（7日で44回）。
+- 【事実】PO は、本番 DB に1回書き込むたびに `scripts/permit-danger.sh` を1回実行している（7日で44回）。
 
 ### 3-4. pr-body-guard（`/Users/tanizawashingo/.claude/scripts/pr-body-guard.sh`、115行）
 
@@ -127,7 +127,7 @@
 
 ### 3-5. 現在の許可設定
 
-- `~/.claude/settings.json`
+- ~/.claude/settings.json
   - `defaultMode: auto`
   - `permissions.allow`: Read / Write / Edit / Glob / Grep / WebFetch / WebSearch
   - `autoMode.allow`: `$defaults` に加えて、PO の決定に基づく文章の規則が約20件ある（GO 委任、本番の読み取り、PO が合意した本番データ変更、個別の作業の許可など）。
@@ -148,7 +148,7 @@
 
 | 項目 | 設計での扱い |
 |---|---|
-| `~/.claude/agent-tokens.json` の danger_ops 一覧（自動判定が読み取りを拒否） | 段2の実装の前に、PO の端末で `!` を付けて読み取ってもらう（段2カードの最初の手順） |
+| ~/.claude/agent-tokens.json の danger_ops 一覧（自動判定が読み取りを拒否） | 段2の実装の前に、PO の端末で `!` を付けて読み取ってもらう（段2カードの最初の手順） |
 | PermissionDenied フックの入力 JSON の全項目 | 段1で実際の入力をそのまま保存し、項目を確定する（保存する項目を絞らない作りにする） |
 | PO の `!` 実行に PreToolUse フックがかかるか | 段3の受入試験 T3-1 で実測する |
 | 承認チケットがサブエージェントの自動判定にも効くか | 段4の受入試験 T4-1 で実測する。効かなければ段4の時点で報告する |

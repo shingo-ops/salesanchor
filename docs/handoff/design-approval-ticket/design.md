@@ -40,7 +40,7 @@ status: draft（PO 承認待ち・実装未着手）
   - 自動判定（111件）
   - 作業場所のフック（100件。うち75件は誤判定）
   - `sleep` の拒否（78件）
-- PO は本番 DB に1回書き込むたびに `permit-danger.sh` を実行している（7日で44回）。
+- PO は本番 DB に1回書き込むたびに `scripts/permit-danger.sh` を実行している（7日で44回）。
 - 危険操作のフックは、コマンド全体の文字列に危険語が含まれるだけで止める（`/Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:301-411`）。
 - 公式仕様では、`allow` に文章の規則を足すか、ユーザーが操作そのものを具体的に書いた発言があれば、自動判定は通す。
 
@@ -50,14 +50,14 @@ status: draft（PO 承認待ち・実装未着手）
 
 ### 段1：止まった操作を全件記録する（基準値を取る）
 
-- 新規ファイル `~/.claude/scripts/permission-denied-log.sh`
+- 新規ファイル ~/.claude/scripts/permission-denied-log.sh
   - 公式の `PermissionDenied` フックとして登録する。
   - 受け取った JSON をそのまま `~/.claude/logs/permission-denied.jsonl` に1行ずつ追記する。項目は絞らない。
   - `tool_input` の中の秘密値の形（`*_TOKEN=`、`Bearer `、`password=`）は伏せ字にしてから保存する。
 - 既存の4つのフック（worktree-only-guard、agent-danger-hook、pr-body-guard、gh-scope-guard）
   - 止める箇所の直前に、`agent-events.jsonl` に `{type:"hook_blocked", hook, reason, cmd_head(120字)}` を1行書く処理を足す。
   - 止める条件そのものは変えない。
-- 触らない範囲: フックの判定ロジック、`settings.json` の autoMode。
+- 触らない範囲: フックの判定ロジック、settings.json の autoMode。
 
 ### 段2：関係のない停止をなくす
 
@@ -85,7 +85,7 @@ status: draft（PO 承認待ち・実装未着手）
 
 ### 段3：設計承認チケット
 
-1. 操作一覧ファイル `docs/handoff/<topic>/ops.yaml`
+1. 操作一覧ファイル docs/handoff/<topic>/ops.yaml
    - 設計者（Opus）が設計書と一緒に作り、PR に載せる。
    - 書くこと: 設計 ID、作業場所のパス、期限（既定は72時間、上限は7日）、操作の一覧。
    - 操作は次の種類だけを書ける。
@@ -102,32 +102,32 @@ status: draft（PO 承認待ち・実装未着手）
    - 各操作に `max_uses`（既定は1）を書く。
 2. 発行スクリプト（新規）`scripts/approve-design.sh <ops.yaml>`
    - PO が `!` を付けて1回実行する。
-   - 操作の一覧を画面に表示し、`~/.claude/permits/design-approval-<id>.json` を作る。
+   - 操作の一覧を画面に表示し、~/.claude/permits/design-approval-<id>.json を作る。
    - ファイルの中身: ops.yaml の内容、SQL ファイルの sha256、`approved_at`、`expires_at`、`created_by: "po-bang"`。
    - 次のどれかが一覧にあれば、拒否して終了する。
      - SQL の中の `DROP` / `TRUNCATE` / `ALTER TABLE … DROP`、行の条件がない `DELETE`
      - secrets
      - `gh api` によるブランチ保護の変更
      - force push
-3. AI による発行を防ぐ（`agent-danger-hook.sh` の permits-guard の並びに追加する）
+3. AI による発行を防ぐ（agent-danger-hook.sh の permits-guard の並びに追加する）
    - AI のコマンド文字列に `approve-design` が出たら、例外なく exit 2 で止める。
    - 既存の permits-guard が、`~/.claude/permits` への AI の読み書きを止める仕組みはそのまま使う。
-4. チケットの消費（`agent-danger-hook.sh` に新しい関数 `consume_design_ticket` を追加する）
+4. チケットの消費（agent-danger-hook.sh に新しい関数 `consume_design_ticket` を追加する）
    - psql-write-guard（:41-106）と danger_ops の照合（:301-411）で止める直前に、有効なチケットを探す。
    - 次の条件をすべて満たせば通し、使用回数を1つ減らす。
      - kind と束縛が一致する（psql-write なら、コマンドが参照する SQL ファイルの sha256 とホストが一致する）
      - 期限内である
      - 作業場所が一致する
    - 通したときは、段1の記録に `ticket_used` を書く。
-   - 既存の `permit-danger.sh`（1回限り・30分）は残す（設計外の単発作業に使う）。
+   - 既存の `scripts/permit-danger.sh`（1回限り・30分）は残す（設計外の単発作業に使う）。
 5. ADR
    - ADR-1003 に追補として「設計承認チケット」の節を足す。PO の承認文と残す例外を書く。
    - `node scripts/generate-adr-index.js` で索引を作り直す。
 
 ### 段4：自動判定（classifier）にチケットを伝える
 
-- `~/.claude/settings.json` の `autoMode.allow` に、次の文章の規則を1件足す。
-  > Operations listed in a PO-issued design approval: when the user ran `scripts/approve-design.sh` via a `!` command in this session and its output lists the operations, executing exactly those listed operations (same SQL file, host, PR number, path or command) before the printed expiry is explicitly authorized by the user, including when performed by a subagent whose prompt quotes the design ID and the listed operation verbatim.
+- ~/.claude/settings.json の `autoMode.allow` に、次の文章の規則を1件足す。
+  > Operations listed in a PO-issued design approval: when the user ran scripts/approve-design.sh via a `!` command in this session and its output lists the operations, executing exactly those listed operations (same SQL file, host, PR number, path or command) before the printed expiry is explicitly authorized by the user, including when performed by a subagent whose prompt quotes the design ID and the listed operation verbatim.
 - 書き込みは Self-Modification に当たるので、PO が `!` を付けて追記スクリプトを1回実行する。スクリプトは Opus が作る。
 - Sonnet への委任文には、設計 ID と ops.yaml の該当操作を原文のまま書き写す。
 
@@ -137,7 +137,7 @@ status: draft（PO 承認待ち・実装未着手）
 - `hard_deny`。
 - `.github/workflows/workflow-lint.yml`、Branch Protection、Ruleset。
 - 本番の secrets。
-- `permit_bridge.py`（Codex 側の仕組みで、本便では変えない）。
+- permit_bridge.py（Codex 側の仕組みで、本便では変えない）。
 
 ## 6. 弊害・トレードオフ
 
@@ -178,35 +178,35 @@ status: draft（PO 承認待ち・実装未着手）
 | T3-5 | 期限切れ、または `max_uses` を超えたら止まる | 試験用チケットで確認する |
 | T4-1 | 段4の規則のあと、チケットにある操作を Sonnet が実行して自動判定を通る | 試験用の設計で1件実行して確認する |
 
-- 試験用の入力は `scripts/dev/test-agent-hooks.sh`（新規）にまとめる。フックに JSON を渡して exit 値を比べる。
+- 試験用の入力は scripts/dev/test-agent-hooks.sh（新規）にまとめる。フックに JSON を渡して exit 値を比べる。
 
 ## 9. 維持の仕組み
 
 - 守り手: Opus（設計担当）。
   - 毎週月曜に `permission-denied.jsonl` と `hook_blocked` を数える。新しく増えた定型の停止は、規則を足す案として PO に1件ずつ出す。
-- 関所: `scripts/dev/test-agent-hooks.sh`。
+- 関所: scripts/dev/test-agent-hooks.sh。
   - フックを変えるたびに実行する。全件 exit が期待どおりでなければ、フックの変更を戻す。
 - 期限: チケットそのものに `expires_at` がある。期限切れのチケットは、フックが見つけ次第削除する（既存の permit と同じ）。
-- 解除: PO が「委譲停止」と言えば、`~/.claude/permits/design-approval-*.json` をすべて削除する（PO が `!` で実行する）。ADR-1003:49 と同じ。
+- 解除: PO が「委譲停止」と言えば、~/.claude/permits/design-approval-*.json をすべて削除する（PO が `!` で実行する）。ADR-1003:49 と同じ。
 
 ## 10. 接触面分析
 
 | 面 | 影響 |
 |---|---|
-| ①人（PO） | 設計を承認するときに `!` で1回実行する。単発の `permit-danger.sh` は設計外の作業でだけ使う |
+| ①人（PO） | 設計を承認するときに `!` で1回実行する。単発の `scripts/permit-danger.sh` は設計外の作業でだけ使う |
 | ②エージェント | Opus は ops.yaml を作り、委任文に原文を書き写す。Sonnet は委任文の定型（§5 段2-4）に従う。並行セッションのフックも同じものなので、段2の誤検知の修正は全セッションに効く |
-| ③機械 | `~/.claude/scripts` の4つのフック、`settings.json` の hooks と autoMode、新しく `PermissionDenied` を登録する。CI は変えない |
+| ③機械 | `~/.claude/scripts` の4つのフック、settings.json の hooks と autoMode、新しく `PermissionDenied` を登録する。CI は変えない |
 | ④データ | 本番 DB の中身は変えない。psql 書き込みの許可の経路だけが変わる（tenant_004 を含め、承認した SQL ファイルに限る） |
 | ⑤本番 | deploy.yml と VPS の設定は変えない |
 | ⑥外部 | 外部 API と利用者への影響はない。理由: 変わるのはローカルの Claude Code の設定とフックだけだから |
 
-逆参照: `permit-danger.sh` / `permit_bridge` / `pr-body-guard` / `worktree-only-guard` を repo 内で grep した。`docs/handoff/design-partner-card-ops/guards/02-db.md:23-24`、`docs/handoff/fx-rate-history/design.md:80`、`docs/handoff/dist-deploy-guard/gas-deploy-runbook.md:30` が `permit-danger.sh` を案内している。単発の許可として残すので、書き換えは不要。
+逆参照: `scripts/permit-danger.sh` / `permit_bridge` / `pr-body-guard` / `worktree-only-guard` を repo 内で grep した。`docs/handoff/design-partner-card-ops/guards/02-db.md:23-24`、`docs/handoff/fx-rate-history/design.md:80`、`docs/handoff/dist-deploy-guard/gas-deploy-runbook.md:30` が `scripts/permit-danger.sh` を案内している。単発の許可として残すので、書き換えは不要。
 
 ## 実装の順番と承認
 
 | 段 | 内容 | 実装の承認 | PO の操作 |
 |---|---|---|---|
-| 段1 | 記録 | 要（本設計の承認とは別） | `settings.json` への hooks 登録を `!` で1回 |
+| 段1 | 記録 | 要（本設計の承認とは別） | settings.json への hooks 登録を `!` で1回 |
 | 段2 | 誤検知の修正・委任文の定型 | 要 | 実行前に danger_ops 一覧の読み取りを `!` で1回 |
 | 段3 | 設計承認チケット・ADR-1003 追補 | 要（ADR の承認を含む） | 試験 T3-1 を `!` で実行 |
 | 段4 | autoMode.allow の規則 | 要 | 追記スクリプトを `!` で1回 |
