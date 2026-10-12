@@ -702,6 +702,40 @@ class TestMatchProductStrictCodes:
         assert self._hits("SM5+", [sm5], strict_codes=True) == (1,)
         assert self._hits("SM5＋", [sm5], strict_codes=True) == (1,)
 
+    @pytest.mark.parametrize(
+        ("keyword", "text"),
+        [
+            ("HUNTER×HUNTER", "HUNTER×HUNTER 1BOX"),
+            ("Fate/Zero", "Fate/Zero ブースター"),
+            ("THE IDOLM@STER", "THE IDOLM@STER"),
+            ("STEINS;GATE", "STEINS;GATE"),
+            ("AR/CHR ダブりなし", "AR/CHR ダブりなし"),
+        ],
+    )
+    def test_symbol_inside_value_hits_same_writing(self, keyword, text):
+        product = _product(id_=1, search_keywords=(keyword,))
+        assert self._hits(text, [product], strict_codes=True) == (1,)
+
+    def test_symbol_inside_value_does_not_cross_line_break(self):
+        product = _product(id_=1, search_keywords=("Fate/Zero",))
+        assert self._hits("Fate/\nZero", [product], strict_codes=True) == ()
+
+    def test_symbol_inside_value_does_not_hit_kana_between(self):
+        product = _product(id_=1, search_keywords=("Fate/Zero",))
+        assert self._hits("fateのzero", [product], strict_codes=True) == ()
+
+    def test_value_without_symbol_does_not_hit_inside_longer_word(self):
+        product = _product(id_=1, search_keywords=("INFO",))
+        assert self._hits("INFORMATION", [product], strict_codes=True) == ()
+
+    def test_ex10_does_not_hit_ex_with_yen_price(self):
+        ex10 = _product(id_=1, mark="EX10")
+        assert self._hits("ex ¥10,000", [ex10], strict_codes=True) == ()
+
+    def test_sm5_plus_does_not_hit_psm5(self):
+        sm5 = _product(id_=1, mark="SM5+")
+        assert self._hits("PSM5", [sm5], strict_codes=True) == ()
+
     def test_default_output_is_identical_without_strict_codes(self):
         products = [
             _product(id_=1, mark="EX10"),
@@ -740,6 +774,12 @@ class TestExcludeKeywordsStrictCodes:
         result = match_product("ピカチュウ PSA10 鑑定品", [product], strict_codes=True)
         assert result.status == "unmatched"
         assert result.excluded_by == {1: ("PSA10",)}
+
+    def test_strict_symbol_exclude_keyword_excludes_same_writing(self):
+        product = _product(id_=1, search_keywords=("ナツコミ",), exclude_keywords=("SPY×FAMILY",))
+        result = match_product("ナツコミ SPY×FAMILY", [product], strict_codes=True)
+        assert result.status == "unmatched"
+        assert result.excluded_by == {1: ("SPY×FAMILY",)}
 
     def test_non_strict_sar_still_excludes_inside_anniversary(self):
         product = _product(id_=1, search_keywords=("3rd anniversary",), exclude_keywords=("SAR",))

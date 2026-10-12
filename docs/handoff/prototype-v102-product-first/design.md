@@ -170,3 +170,23 @@ PO 決定（2026-10-09）：基本は検索ワードで照合し、複数商品�
 - 外部事例：該当なし（使わない）。理由：根拠は自社の実測（保存済み応答の再計算）と PO の業務知識（作品ごとに型番の使い方が違う）で足り、出典と数値のそろった外部事例は確認していないため。
 - 維持の仕組み：対象の付け替えは type_master.match_by_code・code_only_match の値の変更だけ（コード変更なし）。照合は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_match_g2.py。
 - 触るファイル: migrations/20261009_150000_type_master_code_only_match.sql, scripts/run_all_migrations.sh, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_match_g2.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（記号を含む値の隙間・2026-10-12）
+- 目的：厳しい照合（strict_codes=True）で、× / : & @ ; ～ ☆ 括弧 など区切り集合外の記号を含む値が、同じ書き方の原文にも当たらない不具合を直す。本番マスタで検索ワードの語 79 回（42 種）が該当（recon 参照）。記号を含まない値の照合は1文字も変えない。
+- 変更前：backend/app/services/extraction_judgement_svc.py の _strict_code_pattern は、英数字の各文字の間に _CODE_SEPARATOR_RE を挟む。
+- 変更後：fold 後の値を先頭から走査し、連続する2つの英数字のあいだにあった文字に「英数字でも _CODE_SEPARATOR_CHARS の文字でもない文字（P*/S* 記号）」が1つでもあれば、その隙間は新定数 _SYMBOL_GAP_RE（r"(?:[^\w\n]|_)*"：改行以外の非単語文字と下線を0個以上。かな・漢字・英数字は含まない）、なければ従来どおり _CODE_SEPARATOR_RE。値の先頭より前・末尾より後ろの記号は今までどおりパターンに入れない。前後の境界、対象判定、_strict_code_hits の事前絞り込み、lru_cache、戻り値の形は不変。
+- 触らない：_strict_code_hits・_value_hits・_keyword_matches・_excluded_keywords・match_product・v102 側の呼び出し・v6・試運転・レビュー画面・マスタのデータ。
+- 代替案：(1) 区切り集合を英数字以外すべてに広げる案は、「EX10」が「ex ¥10,000」に当たるため不採用。(2) 記号を含む値を strict から外す案は、「SM5+」が「PSM5」に当たる取り違えが戻るため不採用。
+- リスク：記号を含む値だけ、原文の同じ位置に別の記号・空白があっても当たる（例：「Fate/Zero」が「Fate Zero」に当たる）。かな・漢字・英数字・改行をまたぐ当たりは許さない。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|記号を含む値が同じ書き方の原文に当たる|テスト：test_symbol_inside_value_hits_same_writing（HUNTER×HUNTER・Fate/Zero・THE IDOLM@STER・STEINS;GATE・AR/CHR）、test_strict_symbol_exclude_keyword_excludes_same_writing（除外ワード SPY×FAMILY）。手元 M1：本番マスタ自己照合で False が 47→0|
+|改行・かなをまたいで当たらない|テスト：test_symbol_inside_value_does_not_cross_line_break、test_symbol_inside_value_does_not_hit_kana_between|
+|記号を含まない値は不変|テスト：test_value_without_symbol_does_not_hit_inside_longer_word、test_ex10_does_not_hit_ex_with_yen_price、test_sm5_plus_does_not_hit_psm5 ＋既存テスト全通過。手元 M1：記号を含まない値の pattern が origin/main と完全一致 4,262/4,262|
+|共有関数・v6・試運転は不変|git diff が _strict_code_pattern と新定数のみ|
+
+- 外部事例：該当なし（数値事例は無し）。語の境界で辞書照合の部分一致誤ヒットを防ぐ一般手法の延長で、根拠は自社の本番マスタ自己照合（手元 M1）のみ。
+- 維持の仕組み：守り手＝追加テスト（backend/tests/test_extraction_judgement_svc.py の TestMatchProductStrictCodes・TestExcludeKeywordsStrictCodes）。
+- 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md, .claude-pipeline/active-work.d/release-v102-strict-code-symbol-gap.md
