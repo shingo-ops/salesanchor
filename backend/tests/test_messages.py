@@ -486,13 +486,8 @@ async def test_mark_read_idempotent_second_call_returns_zero(app_client, db_sess
 
 
 @pytest.mark.asyncio
-async def test_mark_read_resolves_seen_by_staff_id_when_present(app_client, db_session):
-    """user.email が staff にあれば seen_by_staff_id にセット。"""
-    await db_session.execute(text("""
-        INSERT INTO staff (id, tenant_id, primary_email)
-        VALUES (5, 999, 'tester@example.com')
-    """))
-    await db_session.commit()
+async def test_mark_read_sets_seen_by_staff_id_to_current_user_id(app_client, db_session):
+    """seen_by_staff_id にはログイン中の users.id が入る（ADR-1008 P2。staff の有無に依らない）。"""
     await _insert_lead(db_session, lead_id=1)
     await _insert_message(db_session, lead_id=1, direction="inbound", message_text="m1")
 
@@ -503,7 +498,7 @@ async def test_mark_read_resolves_seen_by_staff_id_when_present(app_client, db_s
         "SELECT seen_by_staff_id FROM meta_messages WHERE lead_id = 1"
     ))
     row = res.first()
-    assert row[0] == 5
+    assert row[0] == 1  # この試験のログインユーザー（users.id）
 
 
 @pytest.mark.asyncio

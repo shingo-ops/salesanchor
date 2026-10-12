@@ -2,7 +2,7 @@
  * MobileShell unit tests（ADR-140 PR-B）
  *
  * テスト対象:
- *   - rendering: MobileTopBar / MobileTabBar / NavItemList が描画される
+ *   - rendering: MobileTabBar / NavItemList が描画される（上部のページ名バーは 2026-10-13 に削除）
  *   - menu sheet open/close: 「…」ボタン click で open、backdrop click で close
  *   - Escape key: keydown Escape で more sheet close
  *   - nav click: onNavClick で more sheet close
@@ -79,9 +79,6 @@ vi.mock("../hooks/useSuperAdmin", () => ({
   useSuperAdmin: () => ({ isSuperAdmin: false }),
 }));
 
-vi.mock("../hooks/usePageTitle", () => ({
-  usePageTitle: () => "Dashboard",
-}));
 
 vi.mock("../lib/messages", () => ({
   listConversations: mockLoadUnread,
@@ -148,9 +145,14 @@ describe("MobileShell", () => {
   });
 
   describe("rendering", () => {
-    it("renders MobileTopBar with pageTitle", () => {
-      renderMobileShell();
-      expect(screen.getByText("Dashboard")).toBeTruthy();
+    // 2026-10-13（PO 指定）: 上部のページ名バー（高さ56px）を削除した。
+    // 中身はページ名のテキストだけで操作を持たず、現在地は下部タブバーの点灯で分かる。
+    // ページ名は各ページの PageLayout が見出しとして出す。
+    // 復活させないための検査（design: docs/handoff/mobile-topbar-removal/design.md §10）。
+    it("does not render the page-title top bar", () => {
+      const { container } = renderMobileShell();
+      expect(container.querySelector(".mobile-topbar")).toBeNull();
+      expect(screen.queryByText("Dashboard")).toBeNull();
     });
 
     it("renders Outlet", () => {

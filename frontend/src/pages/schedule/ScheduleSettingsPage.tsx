@@ -85,11 +85,13 @@ export default function ScheduleSettingsPage() {
   };
 
   const saveOwner = async (owner: CalendarOwner) => {
+    // PATCH のパスは users.id（ADR-1008）。user_id が無い名簿行は保存できない
+    if (owner.userId == null) return;
     setSavingStaffId(owner.staffId);
     setSavedStaffId(null);
     setError(null);
     try {
-      await api.patch(`/calendar/owners/${owner.staffId}`, {
+      await api.patch(`/calendar/owners/${owner.userId}`, {
         color: owner.color,
         is_visible: owner.visible,
         share_mode: owner.shareMode,
@@ -181,6 +183,7 @@ export default function ScheduleSettingsPage() {
                         <Button
                           variant="secondary"
                           onClick={() => saveOwner(selfOwner)}
+                          disabled={selfOwner.userId == null}
                           loading={savingStaffId === selfOwner.staffId}
                           loadingText={t("common.saving")}
                         >
@@ -237,6 +240,7 @@ export default function ScheduleSettingsPage() {
                           <Button
                             variant="secondary"
                             onClick={() => saveOwner(owner)}
+                            disabled={owner.userId == null}
                             loading={savingStaffId === owner.staffId}
                             loadingText={t("common.saving")}
                           >
