@@ -1,0 +1,236 @@
+===== disk-janitor 開始 2026-10-13 03:44:17 mode=dry-run =====
+--- df（開始）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   191Gi   6.2Gi    97%    4.6M   65M    7%   /System/Volumes/Data
+根: /Users/tanizawashingo/worktrees /Users/tanizawashingo/agent-console-wt /Users/tanizawashingo/salesanchor /Users/tanizawashingo/agent-console /Users/tanizawashingo/Library/Application Support/agent-console/versions
+lsof: 27002 行を取得
+
+== R1 散らばった .npm-cache ==
+  [R1] /Users/tanizawashingo/agent-console-wt/activity/.npm-cache (50.4MB)
+  [R1] /Users/tanizawashingo/agent-console-wt/chat/.npm-cache (67.4MB)
+  [R1] /Users/tanizawashingo/agent-console-wt/ci-badge/.npm-cache (213.2MB)
+  [R1] /Users/tanizawashingo/agent-console-wt/icon/.npm-cache (44KB)
+  [R1] /Users/tanizawashingo/agent-console-wt/layout/.npm-cache (50.4MB)
+  [R1] /Users/tanizawashingo/agent-console-wt/locale/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/agent-console-wt/terminal-ux/.npm-cache (54.5MB)
+  [R1] /Users/tanizawashingo/agent-console/.npm-cache (282.3MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.7.0/.npm-cache (50.5MB)
+  [R1] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.9.1/.npm-cache (50.5MB)
+  [飛ばす] /Users/tanizawashingo/salesanchor/.npm-cache （使用中（プロセスが開いている））
+  [R1] /Users/tanizawashingo/salesanchor/backend/.npm-cache (84KB)
+  [R1] /Users/tanizawashingo/salesanchor/frontend/.npm-cache (1.2GB)
+  [R1] /Users/tanizawashingo/salesanchor/lp/.npm-cache (119.2MB)
+  [R1] /Users/tanizawashingo/worktrees/code-staging-recovery/release-private-product-import-recovery/frontend/.npm-cache (8KB)
+  [R1] /Users/tanizawashingo/worktrees/crm-app/docs-phase-s-close-log/.npm-cache (4KB)
+  [R1] /Users/tanizawashingo/worktrees/crm-app/release-leads-header-audit/.npm-cache (78.1MB)
+  [R1] /Users/tanizawashingo/worktrees/crm-app/release-leads-header-p1/.npm-cache (12KB)
+  [R1] /Users/tanizawashingo/worktrees/crm-app/release-leads-karte-header-p3a/.npm-cache (78.2MB)
+  [R1] /Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/.npm-cache (138.9MB)
+  [R1] /Users/tanizawashingo/worktrees/import-trend-graph-fix/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/sa-code-staging-source/release-line-box-heading-guards/frontend/.npm-cache (99.0MB)
+  [R1] /Users/tanizawashingo/worktrees/sa-code-staging-source/release-private-product-import/frontend/.npm-cache (44KB)
+  [R1] /Users/tanizawashingo/worktrees/sa-secret-transfer-source/release-sealed-settings-transfer/frontend/.npm-cache (98.9MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/feature-morimoto-analytics-rls-fix4/.npm-cache (4KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-condition-kw-kenpin-kaifu/.npm-cache (4KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-cross-dept-integrity-foundation/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-discord-ops-intake-design/.npm-cache (4KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/.npm-cache (8KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/frontend/.npm-cache (114.7MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-migration-ledger/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/.npm-cache (4KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-tenant-template-parity/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/.npm-cache (464KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/.npm-cache (8KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/frontend/.npm-cache (4.0MB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/.npm-cache (472KB)
+  [R1] /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/frontend/.npm-cache (105.5MB)
+  [R1] /Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/.npm-cache (113.2MB)
+[R1] 削除候補: 55 件 / 3.7GB（3921368KB）、飛ばした: 1 件
+
+== R2 使っていない作業用コピーの node_modules ==
+  [飛ばす] /Users/tanizawashingo/worktrees/code-staging-recovery/release-private-product-import-recovery/frontend/node_modules （ガード: シンボリックリンク）
+  [R2] /Users/tanizawashingo/worktrees/crm-app/feat-customer-tax-number-form/frontend/node_modules (190.9MB)
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-check-unused-files/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-cleanup-product-combobox/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-combobox-portal/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-customer-aggregate-prefetch/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-display-name-label/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-editor-perf-common/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-fix-order-list-navigate/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [R2] /Users/tanizawashingo/worktrees/crm-app/release-frontend-assignee-id-display/frontend/node_modules (190.9MB)
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-inventory-tabs-fix/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-inventory-tabs-v2/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-invoice-b-route-fix/frontend/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-invoice-pdf-fixes/frontend/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-label-unify-line-item/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-line-item-default-labels/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-line-item-editor/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-order-customer-combobox/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-order-editor-no-skeleton/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-orders-front-cache/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-quotes-front-cache/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-remove-conditions-from-options/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-revert-order-editor-no-skeleton/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-staff-front-cache/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [R2] /Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/node_modules (617.7MB)
+  [飛ばす] /Users/tanizawashingo/worktrees/sa-code-staging-source/release-line-box-heading-guards/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/sa-code-staging-source/release-private-product-import/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/sa-secret-transfer-source/release-sealed-settings-transfer/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/frontend/node_modules （14日以内に更新されたファイルあり）
+  [R2] /Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/node_modules (617.7MB)
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/activity/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/chat/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/ci-badge/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/icon/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/layout/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/locale/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/terminal-ux/node_modules （14日以内に更新されたファイルあり）
+[R2] 削除候補: 4 件 / 1.6GB（1656128KB）、飛ばした: 34 件
+
+== R3 agent-console の旧版 ==
+  current=v0.9.1、1つ前=v0.7.0（これらと current より新しい版は残す）
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0 (310.9MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1 (310.9MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0 (311.3MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1 (312.7MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2 (312.7MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3 (312.7MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4 (312.8MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5 (312.8MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6 (312.8MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7 (312.9MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8 (313.1MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9 (313.1MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0 (313.5MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0 (313.8MB)
+  [R3] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0 (314.3MB)
+[R3] 削除候補: 15 件 / 4.6GB（4802844KB）、飛ばした: 0 件
+
+== R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
+  -- /Users/tanizawashingo/agent-console (GEN-RYU-System/agent-console, 行き先 main) reaper rc=0, 28 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 9 件
+     
+     === reaper 結果 ===
+     
+     ⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+        - release/board
+        - release/chat
+        - feat/app-icon
+        - fix/terminal-locale
+     
+     🔄 未マージ（削除しない）: 1 件
+        - release/card-labels
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/agent-console
+     
+     👻 GHOST: 0件
+     
+     🗑️  削除対象（安全条件クリア）: 4 件
+        - release/activity
+        - release/ci-badge
+        - release/layout
+        - release/terminal-ux
+     
+     ℹ️  dry-run モード（上記は削除候補の一覧です）
+        実削除するには: bash scripts/reaper-worktree.sh --execute
+  -- /Users/tanizawashingo/ebay-gas-automation (GEN-RYU-System/bay-auto, 行き先 develop) reaper rc=0, 23 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 6 件
+     
+     === reaper 結果 ===
+     
+     🔄 未マージ（削除しない）: 2 件
+        - release/execution-api-contract-probe
+        - release/policy-ssot-masters
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/ebay-gas-automation
+     
+     👻 GHOST: 0件
+     
+     🗑️  削除対象（安全条件クリア）: 4 件
+        - release/fulfillment-policy-http-classification
+        - release/menu-policy-result-contract
+        - release/account-policy-token-guard
+        - release/fulfillment-token-refresh
+     
+     ℹ️  dry-run モード（上記は削除候補の一覧です）
+        実削除するには: bash scripts/reaper-worktree.sh --execute
+  -- /Users/tanizawashingo/crm-app-current (GEN-RYU-System/crm-app, 行き先 develop) reaper rc=0, 31 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 10 件
+     
+     === reaper 結果 ===
+     
+     🛡️  本体ブランチ（削除しない）: 1 件
+        - develop
+     
+     ⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+        - release/demo-seed-leads
+        - release/invoice-b-route-fix
+        - release/invoice-pdf-fixes
+        - release/worklog-pr662-sha
+     
+     🔄 未マージ（削除しない）: 4 件
+        - investigation/discord-one-time-invites
+        - docs/phase-s-close-log
+        - release/demo-seed-order-lines
+        - release/dev-incident-worklog-20260826
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/crm-app-current
+     
+     👻 GHOST: 0件
+     
+     🗑️  削除対象（安全条件クリア）: 1 件
+        - perf/inbox-cache-v2
+     
+     ℹ️  dry-run モード（上記は削除候補の一覧です）
+        実削除するには: bash scripts/reaper-worktree.sh --execute
+  -- /Users/tanizawashingo/crm-app-canonical-20260830 (GEN-RYU-System/crm-app, 行き先 develop) reaper rc=0, 16 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 2 件
+     
+     === reaper 結果 ===
+     
+     ⚠️  未保存あり（削除しない）: 2 件 ← 人の判断が必要
+        - feat/customer-tax-number-form
+        - release/frontend-assignee-id-display
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/crm-app-canonical-20260830
+     
+     👻 GHOST: 0件
+     
+     ✅ 削除対象なし
+[R4] 削除候補: 9 件 / 0KB（0KB）、飛ばした: 0 件
+
+--- df（終了）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   190Gi   6.7Gi    97%    4.5M   70M    6%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-13 03:55:13 mode=dry-run 合計 83 件 / 9.9GB（R4 の容量は含まない） =====
+exit code: 0

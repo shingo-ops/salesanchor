@@ -217,6 +217,34 @@ tail ~/Library/Logs/reaper-onlogin.log
 launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
 ```
 
+### 毎日の開発データ自動片付け（disk-janitor）
+
+`ops/launchd/jp.salesanchor.disk-janitor.plist` を配置すると、毎日 04:00 に `scripts/disk-janitor.sh --execute` が動く。
+消すのは根5か所の中で、作り直せる物（散らばった `.npm-cache`、使っていない作業用コピーの `node_modules`、agent-console の旧版）と、
+reaper の安全条件を満たす他リポジトリの作業用コピーだけ。設計: `docs/handoff/disk-janitor/design.md`、ADR-114。
+
+```bash
+# 事前: 何が消えるかを確認（dry-run。何も消えない）
+bash scripts/disk-janitor.sh
+
+# 設置（初回のみ）
+cp ops/launchd/jp.salesanchor.disk-janitor.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.disk-janitor.plist
+
+# 確認（state・runs・last exit code）
+launchctl print gui/$(id -u)/jp.salesanchor.disk-janitor
+diff ops/launchd/jp.salesanchor.disk-janitor.plist ~/Library/LaunchAgents/jp.salesanchor.disk-janitor.plist
+tail -50 ~/Library/Logs/disk-janitor.log
+
+# すぐ1回動かす
+launchctl kickstart -k gui/$(id -u)/jp.salesanchor.disk-janitor
+
+# 停止（止めた後の再開は bootstrap）
+launchctl bootout gui/$(id -u)/jp.salesanchor.disk-janitor
+```
+
+消された物の作り直し: salesanchor は `npm ci --prefix frontend`、agent-console は `npm ci`（pre-commit の lint-staged が node_modules を使うため）、agent-console の版は ac-install、作業用コピーは `git worktree add`。
+
 ---
 
 ## 関連 doc
