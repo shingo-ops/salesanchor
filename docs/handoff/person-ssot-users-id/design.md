@@ -42,8 +42,8 @@
 | D1 | 本番データ | 名簿の紐付け（§5） | PO 合意（本設計の承認）→ Opus 実行 |
 | P1 | PR（migration＋コード） | companies.sales_rep_id の参照先を users(id) に変更。書き込み時に同じテナントの users か確かめる | 委任 GO（ADR-1003） |
 | D2 | 本番データ | t4 companies.sales_rep_id 1→3（42件） | PO 合意（本設計の承認）→ Opus 実行 |
-| P2 | PR（migration＋コード＋画面） | 残りの人を指す列（bots.owner_staff_id、order_commissions.staff_id、calendar_owner_settings.staff_id、tenant_meta_config.connected_by_staff_id、meta_messages.sent_by_staff_id・seen_by_staff_id）を users(id) 参照に移す。列名は *_user_id に改める（RENAME。列の削除はしない）。書き込み側は current_user.id を直接使い、メールから staff を引く処理を撤去 | 委任 GO |
-| D3 | 本番データ | P2 で移した列の値を staff.id→users.id に付け替え（t1 meta_messages 2件、t4 meta_messages 25件・tenant_meta_config 11件、t6 tenant_meta_config 1件） | PO 合意（本設計の承認）→ Opus 実行 |
+| P2 | PR（migration＋コード＋画面） | 残りの人を指す列（bots.owner_staff_id、order_commissions.staff_id、calendar_owner_settings.staff_id、tenant_meta_config.connected_by_staff_id、meta_messages.sent_by_staff_id・seen_by_staff_id）を users(id) 参照に移す。列名は変えない（2026-10-13 設計変更: scripts/run_all_migrations.sh が毎デプロイ全件を流し直すため、改名すると migrations/041・20260602_200000 が旧名列を作り直し、migrations/050 の索引作成が失敗する。recon-p2.md §0-1。改名は ADR-1005 の1回だけ流す方式の後に別途行う）。書き込み側は current_user.id を直接使い、メールから staff を引く処理を撤去 | 委任 GO |
+| D3 | 本番データ | P2 で移した列の値を staff.id→users.id に付け替え（t4 meta_messages 25件以上・tenant_meta_config 11件は 1→3、t6 tenant_meta_config 1件は 1→10。t1 は staff 1＝users 1 で値が同じため付け替え不要）。SQL: d3_person_columns_users.sql | PO 合意（本設計の承認）→ Opus 実行 |
 | P3 | PR（migration＋コード） | staff.user_id を NOT NULL に。名簿の行の引き方を user_id に統一。スタッフ追加（POST /staff）で users・staff・user_roles を1トランザクションで作る（ログインする人は is_active=true、しない人は false） | 委任 GO |
 | P4 | PR（migration） | 重複列の削除（staff.role_id・primary_email・firebase_uid、users.role） | **PO 本人の GO**（ADR-1003 の例外） |
 
@@ -110,3 +110,11 @@ SQL: docs/handoff/person-ssot-users-id/d1_link_roster.sql。戻し: d1_rollback.
 
 - 外部事例: 該当なし。理由: 自社スキーマ内の参照先の統一で、数値の根拠を外部事例に頼る判断が無い。1つの実体を1つの表で持つ正規化の原則にのみ依拠する。
 - 過去事例: #4163（ロール判定を user_roles に一本化）で、二重の正本が「片方だけ更新されて判定が食い違う」問題を起こしていた。本件も同じ構造（人の番号が2種類）で、t4 の42件で誤結合が実際に起きている。応用: 正本を1つに決め、参照する列を外部キーで縛り、DB が誤りを拒む形にする。
+
+## 11. 実施記録
+
+| 段 | 結果 | 根拠 |
+|---|---|---|
+| P1 | #4174 マージ 63340e9a、deploy run 38276162902 success。本番5テナントの companies.sales_rep_id の外部キーが users(id) に | #4174 コメント issuecomment-6128245847 |
+| D1 | 2026-10-13 PO が ! で run_d1.sh 実行。DRY-RUN「D1 ok」→ COMMIT「D1 ok」。名簿6行すべて user_id あり（t1 1→1、t4 1→3、t6 1→10・8→80・9→81・10→82）、users 80〜82 は is_active=f、user_roles (80,4)(81,4)(82,3)、t4 staff 7 削除、tenant_meta_config id 2・3 の接続者を空に | ~/CC報告ファイル-keep/user-ssot/d1/ の dryrun.log・apply.log・postcheck.log |
+| D2 | 2026-10-13 PO が ! で run_d2.sh 実行。DRY-RUN「D2 ok」→ COMMIT「D2 ok」。tenant_004.companies の sales_rep_id は 3→42件 | ~/CC報告ファイル-keep/user-ssot/d2/ |

@@ -108,7 +108,7 @@ async def setup_schemas(admin_engine, pg_engine):
                     instagram_business_account_id VARCHAR(50),
                     instagram_username VARCHAR(100),
                     subscribed_fields JSONB,
-                    connected_by_staff_id INTEGER REFERENCES {schema}.staff(id),
+                    connected_by_staff_id INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
                     connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     last_token_refreshed_at TIMESTAMPTZ,
                     is_active BOOLEAN NOT NULL DEFAULT TRUE,

@@ -50,6 +50,7 @@ export interface OrderCommissionsBundleDto {
 
 interface StaffMini {
   id: number;
+  user_id: number | null;
   surname_jp: string;
   given_name_jp: string;
   primary_email: string;
@@ -109,10 +110,13 @@ export default function CommissionPanel({
   }, [orderId]);
 
   const staffOptions = useMemo(() => {
-    return staffList.map((s) => ({
-      value: s.id,
-      label: `${s.surname_jp} ${s.given_name_jp}${s.is_employee ? t("commission.isEmployee") : ""}`,
-    }));
+    // 担当者の値は users.id（ADR-1008）。user_id が無い名簿行は選べない
+    return staffList
+      .filter((s) => s.user_id != null)
+      .map((s) => ({
+        value: s.user_id as number,
+        label: `${s.surname_jp} ${s.given_name_jp}${s.is_employee ? t("commission.isEmployee") : ""}`,
+      }));
   }, [staffList, t]);
 
   const handleAssign = async (role: RoleKey, staffId: number | null) => {
