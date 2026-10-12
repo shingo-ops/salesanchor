@@ -916,3 +916,6 @@ run_sql migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql
 
 # bots/order_commissions/calendar_owner_settings/tenant_meta_config/meta_messages の「人」列の参照先を public.users(id) に付け替える（ADR-1008 P2・構造のみ・冪等）
 run_sql migrations/20261013_110000_repoint_person_columns_to_users.sql
+
+# staff.user_id を NOT NULL にする（ADR-1008 P3・構造のみ・冪等。NULL 行のあるテナントは WARNING で飛ばす）
+run_sql migrations/20261013_120000_staff_user_id_not_null.sql
