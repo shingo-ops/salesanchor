@@ -18,7 +18,7 @@
 
 ## 3. CSV の前例（同じ形を使い回す）
 - 商品マスタの CSV：`backend/app/routers/tcg_product_import.py`（GET export・POST import/preview は検査のみ・POST import/commit は confirmed_digest の不一致で 409）。上限は 2 MiB・.csv・UTF-8。行の版（revision＝SHA256）と、数式注入の対策は `backend/app/services/tcg_product_roundtrip_svc.py:44-53, :96-98`。
-- 画面：`frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx`・`TcgProductImportPreview.tsx`。金型は TextField・ContentToolbar・Button・HeaderButton・DataTable。画面側でも 2MiB・.csv・空ファイルを事前に検査している。
+- 画面：`frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx`・`frontend/src/features/tcg-product-import/TcgProductImportPreview.tsx`。金型は TextField・ContentToolbar・Button・HeaderButton・DataTable。画面側でも 2MiB・.csv・空ファイルを事前に検査している。
 
 ## 4. 要確認の一覧（出力の正本）
 - `backend/app/services/tcg_analysis_review_svc.py` の fetch_analysis_results（status_tab=NEEDS_REVIEW）。シートへの出力は `backend/app/services/tcg_review_sheet_svc.py` の 13 列（2026-10-12 本番反映 #4172）。
