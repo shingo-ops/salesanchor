@@ -1,0 +1,74 @@
+exists /Users/tanizawashingo/agent-console-wt/activity/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/chat/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/ci-badge/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/icon/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/layout/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/locale/.npm-cache
+exists /Users/tanizawashingo/agent-console-wt/terminal-ux/.npm-cache
+exists /Users/tanizawashingo/agent-console/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.7.0/.npm-cache
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.9.1/.npm-cache
+exists /Users/tanizawashingo/salesanchor/backend/.npm-cache
+exists /Users/tanizawashingo/salesanchor/frontend/.npm-cache
+exists /Users/tanizawashingo/salesanchor/lp/.npm-cache
+exists /Users/tanizawashingo/worktrees/code-staging-recovery/release-private-product-import-recovery/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/crm-app/docs-phase-s-close-log/.npm-cache
+exists /Users/tanizawashingo/worktrees/crm-app/release-leads-header-audit/.npm-cache
+exists /Users/tanizawashingo/worktrees/crm-app/release-leads-header-p1/.npm-cache
+exists /Users/tanizawashingo/worktrees/crm-app/release-leads-karte-header-p3a/.npm-cache
+exists /Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/import-trend-graph-fix/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/sa-code-staging-source/release-line-box-heading-guards/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/sa-code-staging-source/release-private-product-import/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/sa-secret-transfer-source/release-sealed-settings-transfer/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/feature-morimoto-analytics-rls-fix4/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-condition-kw-kenpin-kaifu/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-cross-dept-integrity-foundation/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-discord-ops-intake-design/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-migration-ledger/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-tenant-template-parity/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/.npm-cache
+exists /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/.npm-cache
+exists /Users/tanizawashingo/worktrees/crm-app/feat-customer-tax-number-form/frontend/node_modules
+exists /Users/tanizawashingo/worktrees/crm-app/release-frontend-assignee-id-display/frontend/node_modules
+exists /Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/node_modules
+exists /Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/node_modules
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0
+exists /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0
