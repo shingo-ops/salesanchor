@@ -1,0 +1,8 @@
+OK(候補に無い): /Users/tanizawashingo/.npm-shared-cache
+OK(候補に無い): /Users/tanizawashingo/.npm-cache
+OK(候補に無い): /Users/tanizawashingo/salesanchor/node_modules
+OK(候補に無い): /Users/tanizawashingo/salesanchor/frontend/node_modules
+OK(候補に無い): /Users/tanizawashingo/agent-console/node_modules
+OK(候補に無い): /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.9.1
+OK(候補に無い): /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.7.0
+  [飛ばす] /Users/tanizawashingo/salesanchor/.npm-cache （使用中（プロセスが開いている））
