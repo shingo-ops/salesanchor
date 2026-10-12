@@ -109,6 +109,29 @@ def test_date_ahead(suffix, posted, expected):
     assert row["status"] == expected
 
 
+@pytest.mark.parametrize(
+    ("suffix", "posted", "expected"),
+    [
+        (" (10/11発送)", date(2026, 10, 10), "In Stock"),
+        (" (10/12発送)", date(2026, 10, 10), "Pre-order"),
+        (" 10月中旬発送", date(2026, 10, 19), "In Stock"),
+        (" 10月中旬発送", date(2026, 10, 11), "Pre-order"),
+        (" 9/30入荷", date(2026, 10, 11), "In Stock"),
+        (" 9月入荷", date(2026, 10, 11), "In Stock"),
+        (" 8月入荷", date(2026, 10, 11), "Pre-order"),
+        (" 2月入荷分", date(2026, 10, 11), "Pre-order"),
+        (" 6月入荷分", date(2026, 10, 11), "Pre-order"),
+        (" 12/20入荷", date(2027, 1, 15), "In Stock"),
+        (" 12月入荷", date(2027, 1, 15), "In Stock"),
+        (" 11月入荷", date(2027, 1, 15), "Pre-order"),
+        (" 10/5入荷", date(2026, 10, 11), "In Stock"),
+    ],
+)
+def test_date_ahead_next_day_grace_and_past_month_rule(suffix, posted, expected):
+    row = _run(f"サンプル拡張\n{_price_line(suffix)}", [1, 2], posted=posted)
+    assert row["status"] == expected
+
+
 def test_date_ahead_basis_is_matched_text():
     row = _run(f"サンプル拡張\n{_price_line(' [10/14入荷]')}", [1, 2])
     assert row["status_basis"] == "DATE_AHEAD:10/14入荷"

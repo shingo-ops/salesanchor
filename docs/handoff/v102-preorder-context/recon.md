@@ -33,3 +33,8 @@
 
 ## 未確認
 - 「N月入荷分」（同じ投稿で2月・4月・6月が並ぶ）が将来の入荷分の案内かどうか。PO の確認待ち（design.md §7）。
+
+## 便PO2（先の日付の読み方、2026-10-12 追記）
+- 基準 origin/main 49acb712f（#4158 マージ後）。backend/app/services/v102_status_context.py:69 `_period_end` は `year = posted.year + (1 if month < posted.month else 0)`（前の月も翌年）、backend/app/services/v102_status_context.py:85 `_date_ahead` は期限 > 投稿日で当たり（翌日も予約）。
+- 置き換え試験（候補6行を足した状態、2,693 件）で投稿 10/10 の「10/11発送」2件が Pre-order。投稿月より前の月の日付で当たった件は「2月・4月・6月入荷分」だけ（前の月の件は 0）。
+- PO 決定（2026-10-12）は design.md §7。翌日までは在庫のまま、過ぎた月は来年、ただし投稿月の1つ前の月は今年。
