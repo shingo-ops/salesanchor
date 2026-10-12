@@ -83,6 +83,8 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             # Step 4/5: create pipeline tables in public schema
             cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
+            # 段2a: 要確認一覧が読む extraction_jobs.system_review_detail（本番適用済みの migration をそのまま当てる）
+            cursor.execute((MIGRATIONS / "20261012_100000_add_extraction_jobs_system_review_detail.sql").read_text())
             # 便A: 要確認の理由コード表（構造のみ。行は試験側で入れる）
             cursor.execute((MIGRATIONS / "20261009_200000_create_review_reason_codes.sql").read_text())
             # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
