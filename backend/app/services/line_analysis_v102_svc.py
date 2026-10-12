@@ -88,6 +88,7 @@ REASON_RESPONSE_UNREADABLE = "response_unreadable"
 REASON_EXTRACT_EXCEPTION = "extract_exception"
 REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
 REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
+REASON_GEMINI_GAP_SUSPECT = "gemini_gap_suspect"  # 件の間の行を Gemini が使わず、商品が決まらなかった（段2a。段1の記録の gap_name の件）
 MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
 # REASON_UNIT_PRICE_MISMATCH（単位と価格が相場と合わない・便UP）は v102_unit_price_check_svc が定義し、_write_results が付ける
@@ -274,6 +275,32 @@ def _gap_detail(fields: dict, ctx, masters: dict) -> dict | None:
         return None
 
 
+def _gap_reason_element(entry: dict, item: dict) -> dict:
+    return {
+        "kind": REASON_GEMINI_GAP_SUSPECT, "line": item.get("price_line"),
+        "lines": list(entry["gap_lines"]), "candidates": list(entry["candidates"]), "source": SOURCE_SYSTEM,
+    }
+
+
+def _with_gap_reasons(items: list[dict], detail: dict | None) -> list[dict]:
+    """段1の記録（gap_name）の件に、要確認の理由 gemini_gap_suspect を review の最後に1つ足す（段2a）。純粋：元の件・一覧は変えない。
+
+    detail が None なら items をそのまま返す。rejected の件・gemini_index が引けない件は変えない。失敗しても解析は止めず items をそのまま返す。
+    """
+    if detail is None:
+        return items
+    try:
+        by_index = {e["gemini_index"]: e for e in detail["gap_name"] if e.get("gemini_index") is not None}
+        return [
+            item if "rejected" in item or item.get("gemini_index") not in by_index
+            else {**item, "review": [*(item.get("review") or []), _gap_reason_element(by_index[item["gemini_index"]], item)]}
+            for item in items
+        ]
+    except Exception:  # noqa: BLE001
+        logger.exception("[line_analysis] 取りこぼし疑いの理由を足せませんでした（件はそのままにします）")
+        return items
+
+
 def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
     fixed_products: dict[int, int] | None = None,
@@ -304,7 +331,8 @@ def run_v102_pipeline(
             },
             unsure,
         )
-        return {**fields, "v102_gap_detail": _gap_detail(fields, ctx, masters)}
+        detail = _gap_detail(fields, ctx, masters)  # 理由を足す前の件から作る（段1の記録は変えない）
+        return {**fields, "v102_items": _with_gap_reasons(fields["v102_items"], detail), "v102_gap_detail": detail}
     except Exception as exc:  # noqa: BLE001
         message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
         return {
