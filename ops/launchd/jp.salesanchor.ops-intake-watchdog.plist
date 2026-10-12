@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.ops-intake-watchdog.plist — 受付の番人（discord-ops-intake）
+  5 分ごとに tools/claude-channels/bin/sa-ops-intake-watchdog を実行する。
+  受付の停止を別 webhook で PO に知らせる（再起動はしない）。
+
+  配置コマンド:
+    cp ops/launchd/jp.salesanchor.ops-intake-watchdog.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/jp.salesanchor.ops-intake-watchdog.plist
+
+  動作確認:
+    launchctl list | grep ops-intake-watchdog
+    tail /tmp/sa-ops-intake-watchdog.log
+
+  無効化:
+    launchctl unload ~/Library/LaunchAgents/jp.salesanchor.ops-intake-watchdog.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.ops-intake-watchdog</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/tanizawashingo/sa-ops-intake/tools/claude-channels/bin/sa-ops-intake-watchdog</string>
+  </array>
+
+  <!-- launchd は PATH が最小のため明示する（tmux・bun・claude を見つける） -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/Users/tanizawashingo/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key>
+    <string>/Users/tanizawashingo</string>
+  </dict>
+
+  <!-- 300 秒ごとに実行 -->
+  <key>StartInterval</key>
+  <integer>300</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/sa-ops-intake-watchdog.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/sa-ops-intake-watchdog.log</string>
+</dict>
+</plist>

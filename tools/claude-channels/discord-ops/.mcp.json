@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "discord-ops": {
+      "command": "bun",
+      "args": ["run", "--cwd", "${CLAUDE_PLUGIN_ROOT}", "--shell=bun", "--silent", "start"],
+      "env": {
+        "DISCORD_STATE_DIR": "${HOME}/.claude/channels/discord-ops"
+      }
+    }
+  }
+}
