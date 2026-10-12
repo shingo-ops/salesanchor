@@ -229,6 +229,31 @@ def test_give_up_pattern_rejects(basis):
     assert not re.search(CONDITION_GIVE_UP_PATTERN, basis)
 
 
+@pytest.mark.parametrize(
+    "basis", ["MANUAL_CONDITION_REVIEW", "MANUAL_RAW_REVIEW:PO_RULES"]
+)
+def test_manual_pattern_matches(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_MANUAL_PATTERN
+
+    assert re.search(CONDITION_MANUAL_PATTERN, basis)
+
+
+@pytest.mark.parametrize(
+    "basis",
+    ["MANUAL_RAW_REVIEW:PO_RULES_X", "X,MANUAL_CONDITION_REVIEW", "R4:単位既定", ""],
+)
+def test_manual_pattern_rejects(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_MANUAL_PATTERN
+
+    assert not re.search(CONDITION_MANUAL_PATTERN, basis)
+
+
+def test_fallback_pattern_rejects_po_rules_basis():
+    from app.services.tcg_supplier_quality_svc import CONDITION_FALLBACK_PATTERN
+
+    assert not re.search(CONDITION_FALLBACK_PATTERN, "MANUAL_RAW_REVIEW:PO_RULES")
+
+
 async def test_service_passes_three_bind_params():
     from app.services import tcg_supplier_quality_svc as svc
 
@@ -243,5 +268,5 @@ async def test_service_passes_three_bind_params():
     assert params == {
         "fallback_pattern": svc.CONDITION_FALLBACK_PATTERN,
         "give_up_pattern": svc.CONDITION_GIVE_UP_PATTERN,
-        "manual_basis": svc.CONDITION_MANUAL_BASIS,
+        "manual_pattern": svc.CONDITION_MANUAL_PATTERN,
     }

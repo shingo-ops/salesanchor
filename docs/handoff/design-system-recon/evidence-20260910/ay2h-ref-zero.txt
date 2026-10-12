@@ -1,0 +1,3 @@
+src/pages/super-admin/legacyPageRedirects.test.tsx:20:    { from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" },
+src/pages/super-admin/legacyPageRedirects.ts:7:  { from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" },
+exit=0

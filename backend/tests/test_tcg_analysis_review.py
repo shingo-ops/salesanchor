@@ -47,6 +47,7 @@ _DUMMY_ITEM = {
         "exclusion": "",
     },
     "review_issues": [],
+    "review_reason_details": [{"code": "pid_unresolved", "source": "system", "fix_stage": "analysis"}],
 }
 
 _DUMMY_FETCH_RESULT = {
@@ -126,6 +127,7 @@ async def test_list_analysis_results_response_shape(fake_super_admin_override):
     assert "gemini" in item
     assert "system" in item
     assert "review_issues" in item
+    assert item["review_reason_details"] == [{"code": "pid_unresolved", "source": "system", "fix_stage": "analysis", "ackable": True}]
 
     gemini = item["gemini"]
     for f in ("name", "quantity", "price", "unit", "state", "memo", "span"):
@@ -153,3 +155,57 @@ async def test_status_tab_invalid_falls_back_to_all(fake_super_admin_override):
             )
 
     assert resp.status_code == 200, resp.text
+
+
+async def test_list_analysis_results_returns_gap_suspect(fake_super_admin_override):
+    """gap_suspect（間の行番号と候補）が応答に載る。無い件は null。"""
+    from app.main import app
+
+    suspect = {"gap_lines": [14, 15], "candidates": [{"product_id": "1001", "name": "商品A"}]}
+    result = dict(_DUMMY_FETCH_RESULT, items=[
+        dict(_DUMMY_ITEM, gap_suspect=suspect),
+        dict(_DUMMY_ITEM, extraction_item_id="other"),
+    ])
+    with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=AsyncMock(return_value=result)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/api/v1/tcg/analysis-results")
+
+    assert resp.status_code == 200, resp.text
+    items = resp.json()["items"]
+    assert items[0]["gap_suspect"] == suspect
+    assert items[1]["gap_suspect"] is None
+
+
+async def test_with_candidate_names_queries_names_once_for_all_candidates():
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from app.services.v102_gap_suspect_view import with_candidate_names
+
+    db = MagicMock()
+    rows = MagicMock()
+    rows.fetchall.return_value = [SimpleNamespace(id=1001, name="商品A"), SimpleNamespace(id=1002, name=None)]
+    db.execute = AsyncMock(return_value=rows)
+
+    out = await with_candidate_names(db, {
+        "i1": {"gap_lines": [3], "candidates": [1001, 1002]},
+        "i2": {"gap_lines": [5], "candidates": [1001, 9999]},
+    })
+
+    assert db.execute.await_count == 1
+    assert out["i1"]["candidates"] == [{"product_id": "1001", "name": "商品A"}, {"product_id": "1002", "name": ""}]
+    assert out["i2"]["candidates"] == [{"product_id": "1001", "name": "商品A"}, {"product_id": "9999", "name": ""}]
+
+
+async def test_with_candidate_names_skips_query_without_candidates():
+    from unittest.mock import MagicMock
+
+    from app.services.v102_gap_suspect_view import with_candidate_names
+
+    db = MagicMock()
+    db.execute = AsyncMock()
+
+    out = await with_candidate_names(db, {"i1": {"gap_lines": [3], "candidates": []}})
+
+    assert out == {"i1": {"gap_lines": [3], "candidates": []}}
+    db.execute.assert_not_awaited()

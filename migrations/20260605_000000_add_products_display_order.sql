@@ -16,7 +16,7 @@ BEGIN
     ELSE
         ALTER TABLE public.products
             ADD COLUMN IF NOT EXISTS display_order INTEGER;
-        -- 未設定行のみ id を初期順として付与（設定済みの手動順は保持）
-        UPDATE public.products SET display_order = id WHERE display_order IS NULL;
+        -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): display_order の補完 UPDATE を外した（本番は 0 行）。
+        RAISE NOTICE 'ADR-1007 neutralized: display_order backfill removed';
     END IF;
 END $$;

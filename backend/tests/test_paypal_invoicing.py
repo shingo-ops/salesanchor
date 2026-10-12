@@ -121,6 +121,27 @@ def test_get_invoice_status_paid_extracts_fee():
     assert out["fee"] == "3.30"
 
 
+def test_get_invoice_status_returns_payment_date_as_date():
+    from datetime import date
+    body = {
+        "status": "PAID",
+        "payments": {"transactions": [{"payment_date": "2026-10-01",
+                                       "paypal_fee": {"value": "3.30"}}]},
+    }
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "get", return_value=_resp(200, body)):
+        out = svc.get_invoice_status("sandbox", "id", "sec", "INV2-1")
+    assert out["payment_date"] == date(2026, 10, 1)
+
+
+def test_get_invoice_status_payment_date_missing_is_none():
+    body = {"status": "PAID", "payments": {"transactions": [{"paypal_fee": {"value": "3.30"}}]}}
+    with patch.object(svc, "_get_token", return_value="tok"), \
+         patch.object(svc.httpx, "get", return_value=_resp(200, body)):
+        out = svc.get_invoice_status("sandbox", "id", "sec", "INV2-1")
+    assert out["payment_date"] is None
+
+
 def test_get_invoice_status_sent_not_paid():
     with patch.object(svc, "_get_token", return_value="tok"), \
          patch.object(svc.httpx, "get", return_value=_resp(200, {"status": "SENT"})):

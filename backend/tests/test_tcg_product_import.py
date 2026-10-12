@@ -357,6 +357,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     db.execute = AsyncMock(side_effect=execute)
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
     monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0001"))
+    monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
     args = dict(extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
                 manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date=None,
                 search_keywords="検索", exclude_keywords="除外")
@@ -366,7 +367,9 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
         with pytest.raises(ValueError, match="POST_WRITE_GATE"):
             await master.create_product(db, **args)
     else:
-        assert await master.create_product(db, **args) == {"ok": True, "product_id": "1"}
+        assert await master.create_product(db, **args) == {
+            "ok": True, "product_id": "1", "code_collisions": [],
+        }
     assert db.commit.await_count == (0 if commit is False else 1)
 
 

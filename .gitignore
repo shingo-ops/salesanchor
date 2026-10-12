@@ -125,3 +125,4 @@ nginx/htpasswd.d/
 
 # QA スクリーンショット（生成物・git管理不要）
 qa-screenshots/
+frontend/src/api/generated/

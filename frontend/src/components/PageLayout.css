@@ -1,0 +1,42 @@
+/**
+ * PageLayout — スマホ幅でのヘッダーの圧縮（ADR-144 §4 / card-mobile-molds.md §2）
+ *
+ * スマホでは画面の高さが限られるため、上部バーと重複する情報を画面から外す。
+ * 対象は slimHeaderOnMobile を渡したページのみで、他のページには一切影響しない。
+ *
+ * 実機実測（1080x2340・本番）での内訳:
+ *   タイトル 30dp（上部バーの同じ文字と重複）/ 操作ボタン 44dp（機能なので残す）/
+ *   説明文 20dp / 余白 約31dp = 合計 125dp
+ * このうちタイトルと説明文の 50dp ＋ 余白を回収する。操作ボタンは残す。
+ *
+ * タイトルは画面から外すが **読み上げには残す**（見出しとしての役割を失わないため、
+ * display:none ではなく視覚的に隠す指定を使う）。
+ *
+ * PC・タブレットには適用しない（この @media の内側のみ）。
+ * 出典: docs/specs/design-system/visual-language/benchmark/README.md
+ */
+
+@media (max-width: 767px) {
+  /* タイトル: 画面から外し、読み上げには残す */
+  .page-layout.page-layout--slim-header .text-page-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  /* 説明文: 上部バーとタイトルで用は足りているため出さない */
+  .page-layout.page-layout--slim-header .page-subtitle {
+    display: none;
+  }
+
+  /* タイトルと説明文が無くなる分の余白を詰める（操作ボタンの高さは変えない） */
+  .page-layout.page-layout--slim-header .page-layout-title-row {
+    min-height: 0;
+    margin-bottom: 0;
+  }
+}

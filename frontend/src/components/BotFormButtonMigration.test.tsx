@@ -12,7 +12,7 @@ const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), de
 vi.mock('../lib/api', () => ({ api: mock }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ user: mock.user, loading: false }) }));
 const bot = { id: 7, tenant_id: 1, bot_code: 'FIXTURE', display_name: 'Fixture Bot', purpose: 'invoice', status: 'active', discord_user_id: null, sender_email: null, owner_staff_id: 9, owner_staff_name: 'Fixture Staff', last_executed_at: null, execution_count: 0, created_at: '', updated_at: '' };
-const staff = [{ id: 9, surname_jp: 'Fixture', given_name_jp: 'Staff' }, { id: 10, surname_jp: 'Other', given_name_jp: 'Staff' }];
+const staff = [{ id: 9, user_id: 9, surname_jp: 'Fixture', given_name_jp: 'Staff' }, { id: 10, user_id: 10, surname_jp: 'Other', given_name_jp: 'Staff' }];
 const syntheticKey = 'SYNTHETIC-TEST-ONLY-NOT-A-CREDENTIAL';
 type Mode = 'create' | 'quick' | 'full';
 const modes: Mode[] = ['create', 'quick', 'full'];

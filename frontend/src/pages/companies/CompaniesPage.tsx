@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
@@ -25,6 +26,8 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -447,72 +450,72 @@ export default function CompaniesPage() {
                 <>
                   <div className="form-row">
                     <label>{t("companies.companyCodeLabel")}</label>
-                    <input value={createForm.company_code} onChange={(e) => setCreateForm({ ...createForm, company_code: e.target.value })} />
+                    <TextFieldControl value={createForm.company_code} onChange={(e) => setCreateForm({ ...createForm, company_code: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.nameLabel")}</label>
-                    <input required value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+                    <TextFieldControl required value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.nameEn")}</label>
-                    <input value={createForm.name_en} onChange={(e) => setCreateForm({ ...createForm, name_en: e.target.value })} />
+                    <TextFieldControl value={createForm.name_en} onChange={(e) => setCreateForm({ ...createForm, name_en: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.industry")}</label>
-                    <input value={createForm.industry} onChange={(e) => setCreateForm({ ...createForm, industry: e.target.value })} />
+                    <TextFieldControl value={createForm.industry} onChange={(e) => setCreateForm({ ...createForm, industry: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.website")}</label>
-                    <input value={createForm.website} onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })} />
+                    <TextFieldControl value={createForm.website} onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.priorityFocus")}</label>
-                    <input value={createForm.priority_focus} onChange={(e) => setCreateForm({ ...createForm, priority_focus: e.target.value })} />
+                    <TextFieldControl value={createForm.priority_focus} onChange={(e) => setCreateForm({ ...createForm, priority_focus: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.perOrderAmount")}</label>
-                    <input value={createForm.per_order_amount} onChange={(e) => setCreateForm({ ...createForm, per_order_amount: e.target.value })} />
+                    <TextFieldControl value={createForm.per_order_amount} onChange={(e) => setCreateForm({ ...createForm, per_order_amount: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.monthlyFrequency")}</label>
-                    <input type="number" min="0" value={createForm.monthly_frequency} onChange={(e) => setCreateForm({ ...createForm, monthly_frequency: e.target.value })} />
+                    <TextFieldControl type="number" min="0" value={createForm.monthly_frequency} onChange={(e) => setCreateForm({ ...createForm, monthly_frequency: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.monthlyForecast")}</label>
-                    <input value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
+                    <TextFieldControl value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.billingDisplayName")}</label>
-                    <input value={createForm.billing_display_name} onChange={(e) => setCreateForm({ ...createForm, billing_display_name: e.target.value })} />
+                    <TextFieldControl value={createForm.billing_display_name} onChange={(e) => setCreateForm({ ...createForm, billing_display_name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.paymentRecipientName")}</label>
-                    <input value={createForm.payment_recipient_name} onChange={(e) => setCreateForm({ ...createForm, payment_recipient_name: e.target.value })} />
+                    <TextFieldControl value={createForm.payment_recipient_name} onChange={(e) => setCreateForm({ ...createForm, payment_recipient_name: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.fedexAccount")}</label>
-                    <input value={createForm.fedex_account} onChange={(e) => setCreateForm({ ...createForm, fedex_account: e.target.value })} />
+                    <TextFieldControl value={createForm.fedex_account} onChange={(e) => setCreateForm({ ...createForm, fedex_account: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.shippingNote")}</label>
-                    <textarea value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
+                    <TextareaControl value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.salesChannelsLabel")}</label>
-                    <input value={createForm.sales_channels} onChange={(e) => setCreateForm({ ...createForm, sales_channels: e.target.value })} />
+                    <TextFieldControl value={createForm.sales_channels} onChange={(e) => setCreateForm({ ...createForm, sales_channels: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("common.status")}</label>
-                    <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
+                    <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
                       <option value="active">active</option>
                       <option value="inactive">inactive</option>
                       <option value="archived">archived</option>
                       <option value="pending_dedup_review">pending_dedup_review</option>
-                    </select>
+                    </SelectControl>
                   </div>
                   <div className="form-row">
                     <label>{t("common.notes")}</label>
-                    <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+                    <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
                   </div>
                 </>
               )}
@@ -528,22 +531,22 @@ export default function CompaniesPage() {
                   <>
                     <div className="form-row">
                       <label>{t("companies.branchNameLabel")}</label>
-                      <input value={addr.branch_name} onChange={(e) => setAddr({ branch_name: e.target.value })} />
+                      <TextFieldControl value={addr.branch_name} onChange={(e) => setAddr({ branch_name: e.target.value })} />
                     </div>
-                    <div className="form-row"><label>{t("companies.contactName")}</label><input value={addr.name} onChange={(e) => setAddr({ name: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("common.email")}</label><input type="email" value={addr.email} onChange={(e) => setAddr({ email: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("companies.contactName")}</label><TextFieldControl value={addr.name} onChange={(e) => setAddr({ name: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("common.email")}</label><TextFieldControl type="email" value={addr.email} onChange={(e) => setAddr({ email: e.target.value })} /></div>
                     <div className="form-row">
                       <label>{t("common.phone")}</label>
-                      <input value={addr.telephone} onChange={(e) => setAddr({ telephone: e.target.value })} />
+                      <TextFieldControl value={addr.telephone} onChange={(e) => setAddr({ telephone: e.target.value })} />
                       {key === "billing" && phoneError && <span className="field-error">{t("companies.phoneError")}</span>}
                     </div>
-                    <div className="form-row"><label>{t("companies.taxId")}</label><input value={addr.tax_id} onChange={(e) => setAddr({ tax_id: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.address1")}</label><input value={addr.address_line_1} onChange={(e) => setAddr({ address_line_1: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.address2")}</label><input value={addr.address_line_2} onChange={(e) => setAddr({ address_line_2: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.city")}</label><input value={addr.city} onChange={(e) => setAddr({ city: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.stateCode")}</label><input value={addr.state} onChange={(e) => setAddr({ state: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.zipCode")}</label><input value={addr.zip} onChange={(e) => setAddr({ zip: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("companies.countryCodeWithHint")}</label><input value={addr.country_code} onChange={(e) => setAddr({ country_code: e.target.value })} maxLength={2} /></div>
+                    <div className="form-row"><label>{t("companies.taxId")}</label><TextFieldControl value={addr.tax_id} onChange={(e) => setAddr({ tax_id: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("shipping.address1")}</label><TextFieldControl value={addr.address_line_1} onChange={(e) => setAddr({ address_line_1: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("shipping.address2")}</label><TextFieldControl value={addr.address_line_2} onChange={(e) => setAddr({ address_line_2: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("shipping.city")}</label><TextFieldControl value={addr.city} onChange={(e) => setAddr({ city: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("shipping.stateCode")}</label><TextFieldControl value={addr.state} onChange={(e) => setAddr({ state: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("shipping.zipCode")}</label><TextFieldControl value={addr.zip} onChange={(e) => setAddr({ zip: e.target.value })} /></div>
+                    <div className="form-row"><label>{t("companies.countryCodeWithHint")}</label><TextFieldControl value={addr.country_code} onChange={(e) => setAddr({ country_code: e.target.value })} maxLength={2} /></div>
                   </>
                 );
               })()}

@@ -11,7 +11,6 @@
  *     このマップには登録しない（各ページで個別に対応）
  */
 export const ROUTE_TITLE_KEYS: Record<string, string> = {
-  "/super-admin/tcg-sold-out":     "nav.superAdminTcgSoldOut",
   "/super-admin/analysis-rules":              "nav.superAdminAnalysisRules",
   "/super-admin/supplier-extraction-rules":   "nav.superAdminSupplierExtractionRules",
   "/":                           "nav.dashboard",
@@ -25,7 +24,6 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/invoices":                   "nav.quotesInvoices",
   "/reports":                    "nav.reports",
   "/suppliers":                  "nav.suppliers",
-  "/purchase-orders":            "nav.purchaseOrders",
   "/staff":                      "nav.staff",
   "/bots":                       "nav.bots",
   "/teams":                      "nav.teams",

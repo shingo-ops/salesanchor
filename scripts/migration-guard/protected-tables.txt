@@ -1,0 +1,37 @@
+# 共用マスタ（保護対象）テーブルの一覧。migration-guard のチェック 7・8 と、全件走査
+# （scripts/check-migration-value-writes.py）が、この 1 ファイルだけを読む（唯一の正本）。
+# マイグレーションは構造変更のみ。ここに名前がある表への INSERT / UPDATE / DELETE / SELECT は禁止（ADR-155）。
+# 1 行に 1 つ。# で始まる行はコメント。名前を足すと、全件走査が見つける違反が増える
+# （残すものは value-write-allowlist.tsv に理由つきで書く）。
+#
+# 経緯: ADR-155 の決定は 4 表 → e364dd233（2026-09-18、Stage D）で 14 表 →
+#       57dd67c55（2026-09-19）で 21 表 → 48731a698（2026-09-21）で 23 表。
+#       ADR-1007 決定1（全マスタ表が対象）に合わせ、product_lines / product_formats / product_kinds /
+#       supplier_aliases を足した（27 表）。
+products
+tcg_products
+product_search_keywords
+product_exclude_keywords
+product_attribute_masters
+permissions
+type_master
+meta_page_routing
+countries
+link_templates
+inventory_aggregation_rules
+suppliers
+tenant_settings
+tenant_llm_budgets
+units
+unit_aliases
+conditions
+condition_aliases
+tcg_note_master
+tcg_status_master
+tcg_product_categories
+quantity_units
+weight_classes
+product_lines
+product_formats
+product_kinds
+supplier_aliases

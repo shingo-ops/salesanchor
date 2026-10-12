@@ -91,3 +91,49 @@ export const BareSizes: Story = {
     </div>
   ),
 }
+
+export const ChildrenMode: Story = {
+  name: 'childrenモード',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <SelectControl fullWidth defaultValue="">
+        <option value="">-- Select status --</option>
+        {STATUS_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+            {opt.label}
+          </option>
+        ))}
+      </SelectControl>
+    </div>
+  ),
+}
+
+export const NoIndicator: Story = {
+  name: '矢印なし (indicator=none)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <SelectControl options={STATUS_OPTIONS} indicator="none" fullWidth />
+      <SelectControl options={STATUS_OPTIONS} indicator="none" appearance="field" />
+    </div>
+  ),
+}
+
+export const Variants: Story = {
+  name: '用途別の種類 (karte / header / tabbar)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>karte</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="karte" fullWidth />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>header</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="header" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>tabbar</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="tabbar" />
+      </div>
+    </div>
+  ),
+}

@@ -15,12 +15,35 @@
 制約:
   - set_role_permissions / set_user_roles の非空 ANY クエリは PostgreSQL 専用のため
     空リストのケースのみ SQLite テスト対象とする。
-  - テストユーザー (id=999) は users.role='admin' → max_priority=1000 として振る舞う
-    (conftest._max_priority_for_user の後方互換ロジック)。
+  - 権限判定の正本は user_roles（users.role は見ない）。優先度が要るテストは、
+    top_user フィクスチャ（priority=1000）か grant_priority で、テストユーザー (id=999) にロールを付与する。
 """
 
 import pytest
 from sqlalchemy import text
+
+
+@pytest.fixture
+async def grant_priority(db_session):
+    """テストユーザー (id=999) に、指定した優先度のロールを user_roles 経由で付与する関数を返す。"""
+    async def _grant(priority: int) -> int:
+        res = await db_session.execute(text(
+            "INSERT INTO roles (tenant_id, name, priority, is_system) "
+            "VALUES (999, :n, :p, FALSE) RETURNING id"
+        ), {"n": f"試験用付与ロール{priority}", "p": priority})
+        role_id = res.scalar_one()
+        await db_session.execute(text(
+            "INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES (999, :r, 999)"
+        ), {"r": role_id})
+        await db_session.commit()
+        return role_id
+    return _grant
+
+
+@pytest.fixture
+async def top_user(grant_priority):
+    """テストユーザー (id=999) に priority=1000 のロールを付与する。"""
+    return await grant_priority(1000)
 
 
 # ---------------------------------------------------------------------------
@@ -61,8 +84,18 @@ class TestPermissions:
         assert isinstance(data["permissions"], list)
 
     async def test_my_permissions_includes_mocked_all_perms(self, client):
-        """テスト環境では ALL_TEST_PERMISSIONS が返る"""
-        res = await client.get("/api/v1/me/permissions")
+        """/me/permissions は load_user_permissions の結果をそのまま返す。
+
+        routers.roles が束縛している load_user_permissions は、最初に import された時点の
+        自動モックか実関数かが実行順で変わる。以前は実関数でも users.role の救済で全権限が出ていたが、
+        救済は撤去したので、この試験は束縛を明示してモックする。
+        """
+        from unittest.mock import patch
+
+        from tests.conftest import _mock_load_user_permissions
+
+        with patch("app.routers.roles.load_user_permissions", _mock_load_user_permissions):
+            res = await client.get("/api/v1/me/permissions")
         assert res.status_code == 200
         perms = set(res.json()["permissions"])
         # bypass_permissions で全権限がモックされていることを確認
@@ -75,6 +108,7 @@ class TestPermissions:
 # ロール CRUD
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("top_user")
 class TestRolesCRUD:
     """ロールの基本 CRUD"""
 
@@ -196,6 +230,7 @@ class TestRolesPriorityGuard:
     代わりに user_roles を操作して max_priority を任意の値に設定するテストにする。
     """
 
+    @pytest.mark.usefixtures("top_user")
     async def test_can_create_role_at_schema_max_priority(self, client):
         """priority=999（スキーマ上限）のロールは作成できる"""
         res = await client.post("/api/v1/roles", json={
@@ -245,6 +280,7 @@ class TestRolesPriorityGuard:
         })
         assert res.status_code == 201
 
+    @pytest.mark.usefixtures("top_user")
     async def test_cannot_edit_high_priority_role(self, client, db_session):
         """max_priority と等しい priority を持つロールは更新不可（403）"""
         # DB に priority=1000 のロールを直接挿入（スキーマ上限外のため API 不可）
@@ -260,6 +296,7 @@ class TestRolesPriorityGuard:
         res = await client.patch(f"/api/v1/roles/{role_id}", json={"description": "変更試み"})
         assert res.status_code == 403
 
+    @pytest.mark.usefixtures("top_user")
     async def test_cannot_delete_high_priority_role(self, client, db_session):
         """max_priority と等しい priority を持つロールは削除不可（403）"""
         await db_session.execute(text(
@@ -303,6 +340,7 @@ class TestRolesPriorityGuard:
 # システムロール保護
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("top_user")
 class TestRolesSystemProtection:
     """is_system=TRUE のロールは編集・削除不可"""
 
@@ -339,6 +377,7 @@ class TestRolesSystemProtection:
 # ロール権限（role_permissions）
 # ---------------------------------------------------------------------------
 
+@pytest.mark.usefixtures("top_user")
 class TestRolePermissions:
     """ロールへの権限割り当て"""
 
@@ -405,6 +444,7 @@ class TestUserRoles:
         assert res.status_code == 200
         assert res.json() == []
 
+    @pytest.mark.usefixtures("top_user")
     async def test_get_user_roles_after_insert(self, client, db_session):
         """ロールを割り当てた後に一覧で確認できる"""
         # ロール作成
@@ -422,6 +462,7 @@ class TestUserRoles:
         role_names = [r["role_name"] for r in res.json()]
         assert "割当確認ロール" in role_names
 
+    @pytest.mark.usefixtures("top_user")
     async def test_get_user_roles_user_not_found(self, client):
         """同テナントに存在しないユーザーIDは 404"""
         res = await client.get("/api/v1/users/99999/roles")

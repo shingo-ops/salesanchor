@@ -8,32 +8,10 @@
 --
 -- 冪等: ON CONFLICT (code) DO NOTHING。
 -- ============================================================================
--- ADR-156 Phase 2 互換ガード: tcg_type_master が VIEW の場合は type_master に INSERT する。
-DO $$
-DECLARE
-    _target TEXT;
-    _relkind CHAR(1);
-BEGIN
-    SELECT relkind INTO _relkind
-      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master';
-
-    IF _relkind = 'v' THEN
-        _target := 'type_master';
-    ELSE
-        _target := 'tcg_type_master';
-    END IF;
-
-    EXECUTE format('
-        INSERT INTO public.%I (code, name_ja, name_en, sort_order) VALUES
-            (''gundam'',        ''ガンダムカードゲーム'', ''Gundam Card Game'',            60),
-            (''weiss_schwarz'', ''ヴァイスシュヴァルツ'', ''Weiß Schwarz'',                70),
-            (''digimon'',       ''デジモンカードゲーム'', ''Digimon Card Game'',           80),
-            (''hololive'',      ''ホロライブ'',           ''hololive Official Card Game'', 90),
-            (''lorcana'',       ''ディズニー ロルカナ'',  ''Disney Lorcana'',             100),
-            (''xross_stars'',   ''クロススタァ'',         ''Xross Stars'',                110)
-        ON CONFLICT (code) DO NOTHING', _target);
-END $$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 種別 6 行（gundam ... xross_stars）の seed を外した。type_master は画面（ADR-156）で管理する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: type master additional seed removed (086)'; END $$;
 
 -- ============================================================================
 -- Rollback:

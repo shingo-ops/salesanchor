@@ -1,0 +1,9 @@
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  08:15:41
+   Duration  1.31s (transform 52ms, setup 27ms, import 252ms, tests 55ms, environment 835ms)
+

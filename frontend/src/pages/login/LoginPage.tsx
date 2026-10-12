@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 type Mode = "signIn" | "reset";
 
@@ -90,7 +91,8 @@ export default function LoginPage() {
             <form onSubmit={handleSignIn}>
               <div className="form-group">
                 <label htmlFor="email">{t("login.email")}</label>
-                <input
+                <TextFieldControl
+                  variant="login"
                   id="email"
                   type="email"
                   value={email}
@@ -101,7 +103,8 @@ export default function LoginPage() {
               </div>
               <div className="form-group">
                 <label htmlFor="password">{t("login.password")}</label>
-                <input
+                <TextFieldControl
+                  variant="login"
                   id="password"
                   type="password"
                   value={password}
@@ -133,7 +136,8 @@ export default function LoginPage() {
               <form onSubmit={handleReset}>
                 <div className="form-group">
                   <label htmlFor="reset-email">{t("login.email")}</label>
-                  <input
+                  <TextFieldControl
+                    variant="login"
                     id="reset-email"
                     type="email"
                     value={email}
