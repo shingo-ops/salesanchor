@@ -12,30 +12,10 @@
   min-height: 100dvh;
 }
 
-/* ---- MobileTopBar: sticky header（タイトルのみ） ---- */
-.mobile-topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  position: sticky;
-  top: 0;
-  z-index: var(--z-topbar); /* 100 */
-  height: var(--topbar-height);
-  padding: 0 var(--space-4);
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.mobile-topbar-title {
-  flex: 1;
-  font-size: var(--font-base);
-  font-weight: var(--font-medium);
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+/* ---- 上部のページ名バーは 2026-10-13 に削除（PO 指定） ----
+   中身がページ名のテキストだけで操作を持たず、現在地は下部タブバーの点灯で分かるため
+   取り除いた。空いた 56px は本文に回る。ページ名は各ページの PageLayout が見出しとして出す。
+   トークン --topbar-height は PC の topbar.css が使うため残している。 */
 
 /* ---- mobile-content: Outlet 表示エリア ---- */
 /* padding-bottom でタブバー高さ分のスペースを確保（コンテンツが隠れないように） */
