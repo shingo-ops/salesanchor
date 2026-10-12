@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, set_tenant_context
+from app.auth.dependencies import get_current_user, require_super_admin, set_tenant_context
 from app.auth.schemas import UserRegister, UserResponse
 from app.auth.utils import set_tenant_claim
 from app.cache import (
@@ -24,13 +24,13 @@ security = HTTPBearer()
 async def register_user(
     data: UserRegister,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_super_admin),
 ):
     """
-    ユーザー登録API（管理者のみ実行可能）。
+    ユーザー登録API（super admin のみ実行可能）。
 
     フロー:
-      ① 管理者権限を確認
+      ① super admin 権限を確認
       ② tenant_codeからテナントを検索
       ③ 同じメールアドレスのユーザーがいないか確認（いれば409）
       ④ usersテーブルにユーザーを作成
@@ -39,11 +39,11 @@ async def register_user(
     注意:
       - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。
     """
-    # 管理者権限チェック
-    if current_user.role != "admin":
+    # super admin 権限チェック（require_super_admin との二重防御）
+    if not getattr(current_user, "is_super_admin", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="ユーザー登録は管理者のみ可能です",
+            detail="ユーザー登録はsuper adminのみ可能です",
         )
 
     # テナントの存在確認（エラーメッセージにテナントコードを含めない）

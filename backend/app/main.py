@@ -9,7 +9,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 _logger = logging.getLogger(__name__)
 
-from app.auth.dependencies import get_current_admin, get_current_tenant
+from app.auth.dependencies import get_current_tenant, require_super_admin
 from app.cache import close_redis, init_redis
 from app.metrics import register_metrics
 from app.middleware.audit import AuditMiddleware
@@ -248,7 +248,7 @@ app.include_router(
     admin.router,
     prefix="/api/v1/admin",
     tags=["admin"],
-    dependencies=[Depends(get_current_tenant), Depends(get_current_admin)],
+    dependencies=[Depends(get_current_tenant), Depends(require_super_admin)],
 )
 # ADR-091 KPI4: Discord アナウンス投稿 API
 app.include_router(
