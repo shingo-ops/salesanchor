@@ -186,6 +186,7 @@ PO 決定（2026-10-09）：基本は検索ワードで照合し、複数商品�
 |改行・かなをまたいで当たらない|テスト：test_symbol_inside_value_does_not_cross_line_break、test_symbol_inside_value_does_not_hit_kana_between|
 |記号を含まない値は不変|テスト：test_value_without_symbol_does_not_hit_inside_longer_word、test_ex10_does_not_hit_ex_with_yen_price、test_sm5_plus_does_not_hit_psm5 ＋既存テスト全通過。手元 M1：記号を含まない値の pattern が origin/main と完全一致 4,262/4,262|
 |共有関数・v6・試運転は不変|git diff が _strict_code_pattern と新定数のみ|
+|本番 v102 全件で記号を含まない値による変化 0|本番前後比較 M2（recon 参照）：対象 140 ジョブ・2,952 品目で違う品目 0・例外 0、現行2回の決定性確認で違い 0。陽性対照：現行 0/44、ブランチ 44/44|
 
 - 外部事例：該当なし（数値事例は無し）。語の境界で辞書照合の部分一致誤ヒットを防ぐ一般手法の延長で、根拠は自社の本番マスタ自己照合（手元 M1）のみ。
 - 維持の仕組み：守り手＝追加テスト（backend/tests/test_extraction_judgement_svc.py の TestMatchProductStrictCodes・TestExcludeKeywordsStrictCodes）。
