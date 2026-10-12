@@ -885,6 +885,23 @@ jobs:
               fetched_at TIMESTAMPTZ   NOT NULL,
               updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
           );
+
+          -- public.tcg_distribution_targets: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql が ALTER TABLE ... ADD COLUMN
+          --   するため、前提として最小定義を登録する（review_sheet_name は当該 migration が足す列なので含めない）。
+          CREATE TABLE IF NOT EXISTS public.tcg_distribution_targets (
+              id                     UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+              name                   TEXT        NOT NULL,
+              spreadsheet_id         TEXT        NOT NULL,
+              sheet_name             TEXT        NOT NULL,
+              is_active              BOOLEAN     NOT NULL DEFAULT true,
+              sa_key_secret_name     TEXT        NOT NULL DEFAULT 'TCG_SHEETS_SA_KEY_FILE',
+              last_distributed_at    TIMESTAMPTZ,
+              last_distributed_count INTEGER,
+              last_result            TEXT,
+              created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────

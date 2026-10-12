@@ -394,7 +394,7 @@ async def setup_test_db(test_engine):
                 api_key_hash VARCHAR(128) NOT NULL,
                 discord_user_id VARCHAR(50),
                 sender_email VARCHAR(255),
-                owner_staff_id INTEGER NOT NULL REFERENCES staff(id),
+                owner_staff_id INTEGER NOT NULL REFERENCES users(id),
                 last_executed_at TIMESTAMP,
                 execution_count INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -610,7 +610,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 role TEXT NOT NULL
                     CHECK (role IN ('sales','order','ship','purchase','trouble')),
-                staff_id INTEGER REFERENCES staff(id) ON DELETE SET NULL,
+                staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 calculated_amount NUMERIC(14,2) NOT NULL DEFAULT 0,
                 calculated_at TIMESTAMP,
                 notes TEXT,

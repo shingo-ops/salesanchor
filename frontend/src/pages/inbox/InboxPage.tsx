@@ -15,6 +15,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PAGE_ICONS, NAV_ICONS } from "../../constants/icons";
 import { PageLayout } from "../../components/PageLayout";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { SelectControl } from "../../components/Select";
 import { ICON } from "../../constants/iconSizes";
 import { useInboxState } from "./useInboxState";
@@ -57,7 +58,19 @@ export default function InboxPage() {
   const hasActiveFilter =
     state.statusTab !== "all" || state.unreadOnly || state.followUpOnly;
 
-  const headerActions = (
+  const isMobile = useIsMobile();
+
+  /**
+   * ヘッダーの操作行（テンプレート / FAQ / 受信箱の設定）。
+   * 2026-10-13（PO 指定）: スマホで会話一覧を見ているときは出さない。
+   * 一覧では使い道がなく、44dp ぶんの高さを一覧に回せる。
+   * 会話（スレッド）を開いているときは返信中に使うので出す。
+   * 絞り込みは一覧専用なので検索欄の横へ移した（InboxConversationList）。
+   * PC・タブレットは従来どおり常に出す（一覧と会話が同時に見えているため）。
+   */
+  const showHeaderActions = !isMobile || selectedLeadId != null;
+
+  const headerActionsContent = (
     <div className="page-header-actions">
       <Button variant="ghost" size="md"
         type="button"
@@ -79,16 +92,6 @@ export default function InboxPage() {
       </Button>
       <button
         type="button"
-        className={`icon-btn inbox-mobile-filter-toggle${hasActiveFilter ? " has-active" : ""}`}
-        aria-expanded={mobileFiltersOpen}
-        onClick={() => setMobileFiltersOpen((v) => !v)}
-        aria-label={t("inbox.mobileFilters")}
-        data-tooltip={t("inbox.mobileFilters")}
-      >
-        <NAV_ICONS.filter size={ICON.md} aria-hidden="true" />
-      </button>
-      <button
-        type="button"
         className="icon-btn"
         onClick={() => setShowSettings(true)}
         aria-label={t("inbox.settings.title")}
@@ -99,10 +102,12 @@ export default function InboxPage() {
     </div>
   );
 
+  const headerActions = showHeaderActions ? headerActionsContent : undefined;
+
   return (
     <>
       <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
-        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}`}>
+        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}${selectedLeadId != null ? " thread-open" : ""}`}>
           {/* 左+中央エリア */}
           <div className="inbox-main-area">
             {/* ステータスタブ + プラットフォームフィルタ */}
@@ -136,6 +141,9 @@ export default function InboxPage() {
                 setFollowUpOnly={state.setFollowUpOnly}
                 searchQuery={state.searchQuery}
                 setSearchQuery={state.setSearchQuery}
+                mobileFiltersOpen={mobileFiltersOpen}
+                toggleMobileFilters={() => setMobileFiltersOpen((v) => !v)}
+                hasActiveFilter={hasActiveFilter}
                 pageIdFilter={state.pageIdFilter}
                 availablePageIds={state.availablePageIds}
                 onPageFilterChange={state.onPageFilterChange}
@@ -163,6 +171,7 @@ export default function InboxPage() {
               />
 
               <InboxMessageThread
+                onBackToList={state.backToList}
                 selectedLeadId={selectedLeadId}
                 selectedConversation={selectedConversation}
                 leadDetail={leadDetail}

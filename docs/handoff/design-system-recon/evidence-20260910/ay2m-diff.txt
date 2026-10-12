@@ -1,0 +1,151 @@
+diff --git a/frontend/src/components/FedExRateModal.tsx b/frontend/src/components/FedExRateModal.tsx
+index 4debe3022..a6ff463c8 100644
+--- a/frontend/src/components/FedExRateModal.tsx
++++ b/frontend/src/components/FedExRateModal.tsx
+@@ -19,6 +19,7 @@ import { useState } from "react";
+ import { useTranslation } from "react-i18next";
+ import { Modal } from "./Modal";
+ import { Button } from "./Button";
++import { TextField } from "./TextField";
+ import { api } from "../lib/api";
+ 
+ // ---------------------------------------------------------------------------
+@@ -164,59 +165,38 @@ export function FedExRateModal({
+       size="lg"
+     >
+       {/* 発送元 / 宛先 国コード入力 */}
+-      <div style={{ marginBottom: "12px" }}>
+-        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "8px" }}>
+-          <div>
+-            <label
+-              htmlFor="fedex-origin"
+-              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+-            >
+-              {t("fedexRateModal.originLabel")}
+-            </label>
+-            <input
+-              id="fedex-origin"
+-              type="text"
+-              value={originCountryCode}
+-              maxLength={3}
+-              placeholder={t("fedexRateModal.originPlaceholder")}
+-              onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
+-              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
+-            />
+-          </div>
+-          <div>
+-            <label
+-              htmlFor="fedex-dest-cc"
+-              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+-            >
+-              {t("fedexRateModal.destinationLabel")}
+-            </label>
+-            <input
+-              id="fedex-dest-cc"
+-              type="text"
+-              value={destCC}
+-              maxLength={3}
+-              placeholder={t("fedexRateModal.destinationPlaceholder")}
+-              onChange={(e) => setDestCC(e.target.value.toUpperCase())}
+-              style={{ width: "80px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
+-            />
+-          </div>
+-          <div>
+-            <label
+-              htmlFor="fedex-weight"
+-              style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+-            >
+-              {t("fedexRateModal.weightLabel")}
+-            </label>
+-            <input
+-              id="fedex-weight"
+-              type="number"
+-              min="0"
+-              step="0.001"
+-              value={internalWeightKg}
+-              onChange={(e) => setInternalWeightKg(Number(e.target.value))}
+-              style={{ width: "100px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
+-            />
+-          </div>
++      <div style={{ marginBottom: "var(--space-3)" }}>
++        <div style={{ display: "flex", gap: "var(--space-4)", flexWrap: "wrap" }}>
++          <TextField
++            label={t("fedexRateModal.originLabel")}
++            id="fedex-origin"
++            type="text"
++            value={originCountryCode}
++            maxLength={3}
++            placeholder={t("fedexRateModal.originPlaceholder")}
++            onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
++            style={{ width: "var(--input-width-country-code)" }}
++          />
++          <TextField
++            label={t("fedexRateModal.destinationLabel")}
++            id="fedex-dest-cc"
++            type="text"
++            value={destCC}
++            maxLength={3}
++            placeholder={t("fedexRateModal.destinationPlaceholder")}
++            onChange={(e) => setDestCC(e.target.value.toUpperCase())}
++            style={{ width: "var(--input-width-country-code)" }}
++          />
++          <TextField
++            label={t("fedexRateModal.weightLabel")}
++            id="fedex-weight"
++            type="number"
++            min="0"
++            step="0.001"
++            value={internalWeightKg}
++            onChange={(e) => setInternalWeightKg(Number(e.target.value))}
++            style={{ width: "var(--input-width-shipping-weight)" }}
++          />
+         </div>
+         <Button
+           variant="primary"
+@@ -229,23 +209,16 @@ export function FedExRateModal({
+       </div>
+ 
+       {/* 宛先郵便番号（任意）— rate_precision 制御用 */}
+-      <div style={{ marginBottom: "16px" }}>
+-        <label
+-          htmlFor="fedex-dest-postal"
+-          style={{ display: "block", marginBottom: "4px", fontWeight: 500, fontSize: "13px" }}
+-        >
+-          {t("fedexRateModal.postalCodeLabel")}
+-        </label>
+-        <input
+-          id="fedex-dest-postal"
+-          type="text"
+-          value={destinationPostalCode}
+-          maxLength={20}
+-          placeholder={t("fedexRateModal.postalCodePlaceholder")}
+-          onChange={(e) => setDestinationPostalCode(e.target.value)}
+-          style={{ width: "160px", padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "4px", fontSize: "13px" }}
+-        />
+-      </div>
++      <TextField
++        label={t("fedexRateModal.postalCodeLabel")}
++        id="fedex-dest-postal"
++        type="text"
++        value={destinationPostalCode}
++        maxLength={20}
++        placeholder={t("fedexRateModal.postalCodePlaceholder")}
++        onChange={(e) => setDestinationPostalCode(e.target.value)}
++        style={{ width: "var(--field-w-sm)" }}
++      />
+ 
+       {/* API エラー（fetch 自体の失敗） */}
+       {fetchError && (
+diff --git a/frontend/src/tokens.css b/frontend/src/tokens.css
+index acc124b9c..ec5c1a78d 100644
+--- a/frontend/src/tokens.css
++++ b/frontend/src/tokens.css
+@@ -425,6 +425,8 @@
+   --input-width-weight:    80px;   /* 重量入力フィールド */
+   --input-width-year:      90px;   /* 年・単価入力フィールド */
+   --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
++  --input-width-country-code:    80px;  /* 国コード入力フィールド (FedEx 見積) */
++  --input-width-shipping-weight: 100px; /* 発送重量入力フィールド (FedEx 見積) */
+   --input-width-month:     60px;   /* 月入力フィールド */
+ 
+   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */

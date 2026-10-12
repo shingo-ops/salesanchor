@@ -1,0 +1,254 @@
+{
+ "w1280": {
+  "inputs": {
+   "fedex-origin": {
+    "value": "JP",
+    "top": 438.390625,
+    "width": 80,
+    "height": 39.609375,
+    "scrollWidth": 78,
+    "clientWidth": 78,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-dest-cc": {
+    "value": "USA",
+    "top": 438.390625,
+    "width": 80,
+    "height": 39.609375,
+    "scrollWidth": 78,
+    "clientWidth": 78,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-weight": {
+    "value": "12.345",
+    "top": 438.390625,
+    "width": 100,
+    "height": 39.609375,
+    "scrollWidth": 98,
+    "clientWidth": 98,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-dest-postal": {
+    "value": "SW1A 1AA",
+    "top": 567.75,
+    "width": 160,
+    "height": 39.609375,
+    "scrollWidth": 158,
+    "clientWidth": 158,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(30, 58, 138)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   }
+  },
+  "labels": {
+   "fedex-origin": {
+    "text": "発送元国コード",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-dest-cc": {
+    "text": "宛先国コード",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-weight": {
+    "text": "重量 (kg)",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-dest-postal": {
+    "text": "宛先郵便番号（任意）",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   }
+  },
+  "button": {
+   "text": "見積もりを取得",
+   "top": 494
+  },
+  "rowBottomToButtonTop": 16,
+  "postal20": {
+   "scrollWidth": 210,
+   "clientWidth": 158
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ },
+ "w1440": {
+  "inputs": {
+   "fedex-origin": {
+    "value": "JP",
+    "top": 438.390625,
+    "width": 80,
+    "height": 39.609375,
+    "scrollWidth": 78,
+    "clientWidth": 78,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-dest-cc": {
+    "value": "USA",
+    "top": 438.390625,
+    "width": 80,
+    "height": 39.609375,
+    "scrollWidth": 78,
+    "clientWidth": 78,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-weight": {
+    "value": "12.345",
+    "top": 438.390625,
+    "width": 100,
+    "height": 39.609375,
+    "scrollWidth": 98,
+    "clientWidth": 98,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   },
+   "fedex-dest-postal": {
+    "value": "SW1A 1AA",
+    "top": 567.75,
+    "width": 160,
+    "height": 39.609375,
+    "scrollWidth": 158,
+    "clientWidth": 158,
+    "fits": true,
+    "className": "comp-field__input",
+    "style": {
+     "padding": "8px 12px",
+     "font-size": "14.4px",
+     "border": "1px solid rgb(30, 58, 138)",
+     "border-radius": "6px",
+     "background-color": "rgb(255, 255, 255)"
+    }
+   }
+  },
+  "labels": {
+   "fedex-origin": {
+    "text": "発送元国コード",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-dest-cc": {
+    "text": "宛先国コード",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-weight": {
+    "text": "重量 (kg)",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   },
+   "fedex-dest-postal": {
+    "text": "宛先郵便番号（任意）",
+    "className": "comp-field__label",
+    "style": {
+     "font-size": "13.6px",
+     "color": "rgb(74, 85, 104)",
+     "font-weight": "500"
+    }
+   }
+  },
+  "button": {
+   "text": "見積もりを取得",
+   "top": 494
+  },
+  "rowBottomToButtonTop": 16,
+  "postal20": {
+   "scrollWidth": 210,
+   "clientWidth": 158
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ }
+}

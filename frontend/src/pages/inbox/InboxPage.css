@@ -992,8 +992,16 @@
 /* ====== カルテ ドロワー / ボトムシート — デフォルト（≥1280px）では非表示 ====== */
 .karte-toggle-btn { display: none; }
 
-/* スマホ用の絞り込みボタン。PC・タブレットでは出さない（タブと絞り込みが常時見えているため） */
-.inbox-mobile-filter-toggle { display: none; }
+/* スマホ用の絞り込みボタン。PC・タブレットでは出さない（タブと絞り込みが常時見えているため）。
+   .icon-btn と2クラスで指定する理由: このボタンは icon-btn も併せ持ち、
+   components.css の `.icon-btn { display: flex }` が本ファイルより後に読み込まれる。
+   クラス1つ（詳細度 0,1,0）同士では後者が勝つため、PR 4155 の時点から（番号に # を付けないのは色コードと誤検出されるため） PC でも
+   見えてしまっていた（本番の束ねた CSS で隠す指定が位置 136845、icon-btn が 269611）。
+   2クラス（詳細度 0,2,0）にして確実に勝たせる。3幅の画面検査がこれを検出した。 */
+.icon-btn.inbox-mobile-filter-toggle { display: none; }
+
+/* スマホ用の「一覧へ戻る」。PC・タブレットでは一覧が常に見えているので出さない */
+.inbox-back-to-list { display: none; }
 .karte-close-row  { display: none; }
 .karte-overlay    { display: none; }
 
@@ -1122,16 +1130,49 @@
   .inbox-main-area { overflow: visible; }
   .inbox-columns   { flex-direction: column; overflow: visible; }
 
+  /* 1画面1ページ（design.md §10-4 / benchmark 実測）。
+     お手本2本（WhatsApp / Meta Business Suite）はどちらもスマホで
+     一覧と会話を同時に出さず、画面を切り替える。
+     上下分割（一覧45vh）では下部タブ80dpもあるため会話に使える高さが
+     約328dpしか残らず、メッセージがほとんど読めない（実機実測）。
+     会話を選ぶまでは一覧が全画面、選んだら会話が全画面。
+     戻るときは useInboxState の backToList が URL の lead_id まで消す
+     （状態だけ消すと初期値が URL から作られる経路で戻ってしまう）。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
   .inbox-left-panel {
     width: 100%;
-    max-height: 45vh;
-    flex-shrink: 0;
+    max-height: none;
+    flex: 1;
+    flex-shrink: 1;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
     overflow-y: auto;
   }
-  /* overflow:hidden を明示してデスクトップと sticky スコープを統一 */
-  .inbox-center  { width: 100%; flex: 1; min-height: var(--inbox-center-min-h); overflow: hidden; }
+  .inbox-center { display: none; }
+
+  .inbox-wrapper.thread-open .inbox-left-panel { display: none; }
+  .inbox-wrapper.thread-open .inbox-center {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    min-height: var(--inbox-center-min-h);
+    overflow: hidden;
+  }
+
+  /* 一覧へ戻る。お手本は上部バーの左端に置き当たり判定を48dp取っている
+     （benchmark/whatsapp-reproduction-spec.md §2） */
+  .inbox-back-to-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--comp-btn-height-lg);
+    height: var(--comp-btn-height-lg);
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
   .msg-stack     { max-width: 85%; }
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
@@ -1142,7 +1183,8 @@
      既定の絞り込みは受信箱の設定（defaultTab / defaultUnreadOnly）で
      適用済みのため、毎回開く必要がない。
      PC・タブレットには適用しない（この @media の内側のみ）。 */
-  .inbox-mobile-filter-toggle { display: inline-flex; }
+  /* 既定の非表示を2クラスで書いているため、こちらも2クラスで上書きする */
+  .icon-btn.inbox-mobile-filter-toggle { display: inline-flex; }
   .inbox-mobile-filter-toggle.has-active { color: var(--accent); }
 
   .inbox-full-tab-bar,

@@ -20,6 +20,16 @@ interface Props {
   setFollowUpOnly: (fn: (v: boolean) => boolean) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  /**
+   * スマホ用の絞り込み（ステータスタブと詳細条件の開閉）。
+   * PC・タブレットではタブが常時見えているため、ボタン自体を出さない。
+   * 2026-10-13（PO 指定）: 一覧ではヘッダーの操作行を出さないため、
+   * 絞り込みは検索欄の横に置く。
+   */
+  mobileFiltersOpen: boolean;
+  toggleMobileFilters: () => void;
+  /** 既定（すべて・絞り込みなし）から外れているか。外れていればボタンに印を付ける */
+  hasActiveFilter: boolean;
   pageIdFilter: string;
   availablePageIds: string[];
   onPageFilterChange: (pid: string) => void;
@@ -46,7 +56,8 @@ interface Props {
 export function InboxConversationList({
   manageRef, manageOpen, selectMode, toggleSelectMode, handleMarkAllRead,
   unreadOnly, setUnreadOnly, followUpOnly, setFollowUpOnly,
-  searchQuery, setSearchQuery, pageIdFilter, availablePageIds, onPageFilterChange,
+  searchQuery, setSearchQuery,
+  mobileFiltersOpen, toggleMobileFilters, hasActiveFilter, pageIdFilter, availablePageIds, onPageFilterChange,
   selectedLeadIds, isAllSelected, toggleSelectAll,
   handleBulkMarkRead, handleBulkMarkUnread, handleBulkExclude, handleBulkDelete,
   convLoading, convError, filteredConversations, loadConversations,
@@ -69,6 +80,18 @@ export function InboxConversationList({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        {/* スマホ用の絞り込み。検索と役割が近いので検索欄の隣に置く
+            （PC・タブレットでは CSS で非表示） */}
+        <button
+          type="button"
+          className={`icon-btn inbox-mobile-filter-toggle${hasActiveFilter ? " has-active" : ""}`}
+          aria-expanded={mobileFiltersOpen}
+          onClick={toggleMobileFilters}
+          aria-label={t("inbox.mobileFilters")}
+          data-tooltip={t("inbox.mobileFilters")}
+        >
+          <NAV_ICONS.filter size={ICON.md} aria-hidden="true" />
+        </button>
         <div className="inbox-manage-wrap" ref={manageRef}>
           <button
             type="button"

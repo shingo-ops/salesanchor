@@ -81,6 +81,7 @@ class AnalysisResultItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
     provider: str
+    posted_at: AwareDatetime | None = None
     raw_text: str
     gemini: GeminiFields
     system: SystemFields

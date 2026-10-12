@@ -1,0 +1,95 @@
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-fedex-modal-inputs/frontend
+      Coverage enabled with v8
+
+ ❯ |unit| src/components/RoleKnowledgeButtonMigration.test.tsx (19 tests | 4 failed) 47374ms
+     × covers create/edit exact payloads, required, refresh and cancel retention 14099ms
+     × keeps an existing palette color and forwards a changed palette selection exactly 8349ms
+     × covers role create failure/retry and pending duplicate cancel then resolve/reject 7033ms
+     × covers role edit failure/retry and pending duplicate cancel then resolve/reject 5729ms
+ ❯ |unit| src/components/StaffFormButtonMigration.test.tsx (31 tests | 1 failed) 46130ms
+     × full update refreshes actual provider only for self=null 5181ms
+ ❯ |unit| src/components/LeadFormButtonMigration.test.tsx (67 tests | 2 failed) 105035ms
+     × 'create' sends exact nullable keys with 'click' and resets 5907ms
+     × 'create' sends exact nullable keys with 'enter' and resets 5069ms
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' sends exact nullable keys with 'click' and resets
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' sends exact nullable keys with 'enter' and resets
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:99:84
+     97| }
+     98| describe('Lead form migration with real input, permission and SSE hook…
+     99|   it.each(modes.flatMap(mode => ['click', 'enter'].map(input => ({ mod…
+       |                                                                                    ^
+    100|     sender(mode).mockResolvedValue(lead); const scope = await mountFor…
+    101|     expect(save(scope, mode).type).toBe('submit'); expect(cancel(scope…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers create/edit exact payloads, required, refresh and cancel retention
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/RoleKnowledgeButtonMigration.test.tsx:64:3
+     62|
+     63| describe('role Button migration contracts', () => {
+     64|   it('covers create/edit exact payloads, required, refresh and cancel …
+       |   ^
+     65|     mock.post.mockResolvedValue({}); mock.patch.mockResolvedValue({});…
+     66|     let { dialog } = openRole(); expect(dialog.querySelectorAll('[requ…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > keeps an existing palette color and forwards a changed palette selection exactly
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/RoleKnowledgeButtonMigration.test.tsx:87:3
+     85|   });
+     86|
+     87|   it('keeps an existing palette color and forwards a changed palette s…
+       |   ^
+     88|     mock.patch.mockResolvedValue({}); await renderRoles();
+     89|     let { dialog } = openRole();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers role create failure/retry and pending duplicate cancel then resolve/reject
+ FAIL  |unit| src/components/RoleKnowledgeButtonMigration.test.tsx > role Button migration contracts > covers role edit failure/retry and pending duplicate cancel then resolve/reject
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/RoleKnowledgeButtonMigration.test.tsx:110:38
+    108|   });
+    109|
+    110|   it.each(['create', 'edit'] as const)('covers role %s failure/retry a…
+       |                                      ^
+    111|     const send = mode === 'create' ? mock.post : mock.patch;
+    112|     const label = tr(mode === 'create' ? 'common.create' : 'common.upd…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |unit| src/components/StaffFormButtonMigration.test.tsx > staff form Button migration with real UI preferences provider > full update refreshes actual provider only for self=null
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/StaffFormButtonMigration.test.tsx:223:24
+    221|     expect(mock.post.mock.calls).toEqual([['/staff', payload('create')…
+    222|   });
+    223|   it.each([7, 99, null])('full update refreshes actual provider only f…
+       |                        ^
+    224|     selfId = identity;
+    225|     const scope = await mountForm('full'), pending = deferred();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+
+ Test Files  3 failed | 80 passed (83)
+      Tests  7 failed | 996 passed (1003)
+   Start at  01:21:36
+   Duration  649.51s (transform 18.16s, setup 2.88s, import 108.63s, tests 325.61s, environment 148.01s)
+
+exit=1
