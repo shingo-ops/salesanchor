@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# 受付役（Claude Code 常駐セッション）を tmux で起動する。引数なし。
+set -euo pipefail
+export PATH="/opt/homebrew/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+SESSION="sa-ops-intake"
+INTAKE_DIR="${SA_OPS_INTAKE_DIR:-$HOME/sa-ops-intake}"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  echo "既に起動しています（tmux セッション: $SESSION）。何もしません。" >&2
+  echo "確認画面に答える・様子を見るには: tmux attach -t $SESSION" >&2
+  exit 1
+fi
+
+if [ ! -d "$INTAKE_DIR" ]; then
+  echo "受付用ディレクトリがありません: $INTAKE_DIR" >&2
+  echo "SA_OPS_INTAKE_DIR で場所を指定するか、配置手順（tools/claude-channels/README.md）を先に行ってください。" >&2
+  exit 2
+fi
+
+tmux new-session -d -s "$SESSION" -c "$INTAKE_DIR" \
+  "caffeinate -s claude --dangerously-load-development-channels plugin:discord-ops@sa-local --permission-mode default"
+
+echo "受付役を起動しました（tmux セッション: $SESSION、作業場所: $INTAKE_DIR）。"
+echo "確認画面に答えるには: tmux attach -t $SESSION"
