@@ -109,7 +109,8 @@
 - 発行: `scripts/permit-danger.sh:15-36`
   - ~/.claude/permits/danger-permit-<op>-<UTC時刻>.json を作る。
   - 中身は `{op, created_at, expires_at: 30分後, created_by: "manual"}`。
-  - 本人を確認する仕組みはない。AI が発行できないのは、フック（permits-guard）が止めているからにすぎない。
+  - 本人を確認する仕組みはない。permits-guard は permits のパスの文字列だけを照合するので、`bash scripts/permit-danger.sh "psql write"` という形の実行は止めない。
+  - `~/.claude/settings.json` の autoMode.allow には、PO の決定に基づいて AI がこれを1回実行してよいとする規則がある（Reviewer 再審査 LOW-F で確認）。
 - psql 用の消費: `/Users/tanizawashingo/.codex/salesanchor/permit_bridge.py`（105行）
   - :1-4 で "No ticket issuance" と宣言している（発行はしない）。
   - :55-56 の受理条件: op == "psql write"、created_by == "manual"、有効期間が1800秒以下、uid が一致する、symlink でない。
