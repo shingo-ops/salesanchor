@@ -118,3 +118,10 @@ SQL: docs/handoff/person-ssot-users-id/d1_link_roster.sql。戻し: d1_rollback.
 | P1 | #4174 マージ 63340e9a、deploy run 38276162902 success。本番5テナントの companies.sales_rep_id の外部キーが users(id) に | #4174 コメント issuecomment-6128245847 |
 | D1 | 2026-10-13 PO が ! で run_d1.sh 実行。DRY-RUN「D1 ok」→ COMMIT「D1 ok」。名簿6行すべて user_id あり（t1 1→1、t4 1→3、t6 1→10・8→80・9→81・10→82）、users 80〜82 は is_active=f、user_roles (80,4)(81,4)(82,3)、t4 staff 7 削除、tenant_meta_config id 2・3 の接続者を空に | ~/CC報告ファイル-keep/user-ssot/d1/ の dryrun.log・apply.log・postcheck.log |
 | D2 | 2026-10-13 PO が ! で run_d2.sh 実行。DRY-RUN「D2 ok」→ COMMIT「D2 ok」。tenant_004.companies の sales_rep_id は 3→42件 | ~/CC報告ファイル-keep/user-ssot/d2/ |
+| P2 | #4180 マージ b05cdd4e、deploy run 38286599569 success。本番で staff(id) を参照する外部キーは staff_emails・staff_ui_preferences の10本だけ（K2） | #4180 コメント issuecomment-6129797683 |
+| D3 | 2026-10-13 PO が ! で run_d3.sh 実行。DRY-RUN・COMMIT とも「D3 ok」。t4 seen_by 1→3 25件・connected_by 1→3 11件、t6 connected_by 1→10 1件 | ~/CC報告ファイル-keep/user-ssot/d3/ |
+
+### P3 の範囲の決定（設計者 2026-10-13）
+- 名簿の行は user_id で引く。スタッフ追加で users・staff・user_roles を同時に作る（同テナントに名簿の無い同メールの users があれば紐付ける）。staff.user_id を NOT NULL に。
+- 範囲外（PO 判断待ち）: staff.status（在籍）と users.is_active（ログイン可否）の連動、名簿行の削除時の users の扱い、Firebase アカウントの作成と仮パスワードの渡し方。理由: 在籍とログイン可否は別の事実で、連動させるかは事業の判断。users 行を作るだけではログインできない（Firebase アカウントと初回 MFA が別に要る。recon-p3.md §3）ため、今回の変更でログインできる人は増えない。
+
