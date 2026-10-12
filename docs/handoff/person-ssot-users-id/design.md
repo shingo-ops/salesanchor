@@ -124,4 +124,5 @@ SQL: docs/handoff/person-ssot-users-id/d1_link_roster.sql。戻し: d1_rollback.
 ### P3 の範囲の決定（設計者 2026-10-13）
 - 名簿の行は user_id で引く。スタッフ追加で users・staff・user_roles を同時に作る（同テナントに名簿の無い同メールの users があれば紐付ける）。staff.user_id を NOT NULL に。
 - 範囲外（PO 判断待ち）: staff.status（在籍）と users.is_active（ログイン可否）の連動、名簿行の削除時の users の扱い、Firebase アカウントの作成と仮パスワードの渡し方。理由: 在籍とログイン可否は別の事実で、連動させるかは事業の判断。users 行を作るだけではログインできない（Firebase アカウントと初回 MFA が別に要る。recon-p3.md §3）ため、今回の変更でログインできる人は増えない。
-
+- スタッフ追加で作る users は常に is_active=true（PO「基本的にログインする人間しか登録しない」）。ログインしない人を画面から登録する手段（is_active=false で作る選択）は今回作らない（画面の文言の追加が必要なため）。必要になったら別に設計する。
+- 名簿行の user_id は作成時に決まり、PATCH /staff では変更できない（400）。
