@@ -137,8 +137,8 @@ _CODE_SEPARATOR_CHARS = (
     " \u3000-\u2010\u2011\u2013\u2014\u2015\u30fc\u2212\u30fb_.'\u2019\u2018\u00b4\u0301`"
 )
 _CODE_SEPARATOR_RE = "[" + "".join(re.escape(ch) for ch in _CODE_SEPARATOR_CHARS) + "]*"
-# 値の中に記号（区切り集合外の P*/S*）があった隙間で許す文字：改行以外の非単語文字と下線（かな・漢字・英数字は含まない）。
-_SYMBOL_GAP_RE = r"(?:[^\w\n]|_)*"
+# 値の中に記号（区切り集合外の P*/S*）があった隙間で許す文字：改行類（\n \r \v \f NEL LS PS）以外の非単語文字と下線（かな・漢字・英数字は含まない）。
+_SYMBOL_GAP_RE = r"(?:[^\w\n\r\x0b\x0c\x85\u2028\u2029]|_)*"
 # 区切り文字のうち normalize_for_match で消えずに nb に残るもの（ー と結合アクセント U+0301）。事前絞り込みで除く。
 _NB_SEPARATORS_REMOVED = {ord("ー"): None, 0x0301: None}
 _ALNUM_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789")

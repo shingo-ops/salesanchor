@@ -709,7 +709,7 @@ class TestMatchProductStrictCodes:
             ("Fate/Zero", "Fate/Zero ブースター"),
             ("THE IDOLM@STER", "THE IDOLM@STER"),
             ("STEINS;GATE", "STEINS;GATE"),
-            ("AR/CHR ダブりなし", "AR/CHR ダブりなし"),
+            ("AR/CHR", "AR/CHR ダブりなし"),
         ],
     )
     def test_symbol_inside_value_hits_same_writing(self, keyword, text):
@@ -719,6 +719,10 @@ class TestMatchProductStrictCodes:
     def test_symbol_inside_value_does_not_cross_line_break(self):
         product = _product(id_=1, search_keywords=("Fate/Zero",))
         assert self._hits("Fate/\nZero", [product], strict_codes=True) == ()
+
+    def test_symbol_inside_value_does_not_cross_carriage_return(self):
+        product = _product(id_=1, search_keywords=("Fate/Zero",))
+        assert self._hits("Fate/\rZero", [product], strict_codes=True) == ()
 
     def test_symbol_inside_value_does_not_hit_kana_between(self):
         product = _product(id_=1, search_keywords=("Fate/Zero",))
