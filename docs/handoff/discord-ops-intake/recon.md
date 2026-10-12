@@ -66,6 +66,18 @@
 | M5 | プラグインの有効範囲 | `-s user` で入れると他の全 Claude セッションでもプラグインの MCP サーバーが起動する（fakechat の残骸が 22:30 起動・親なしで観測）→ `~/discord-test` の local スコープのみに変更済み |
 | M6 | Developer Portal | Public Bot OFF は Installation の Install Link を「なし」にしないと保存エラー（同時に Intent も未保存→`Used disallowed intents` でログイン失敗） |
 
+## 本番 Discord サーバーの実物（Discord API 読み取り・2026-10-13 03 時台 JST）
+
+| チャンネル | ID | 直近の投稿元 webhook | 実測 |
+|---|---|---|---|
+| 🚨│サーバー監視アラート（カテゴリ「アラート」） | 1527986848490717245 | 1528064418448146552「サーバー監視」 | 直近 50 件すべてこの webhook（2026-10-12 08:22〜17:58 UTC）。49 件は content 空・embed 1 件（title `[FIRING:1] <alertname> (<severity>)` / `[RESOLVED] ...`、description は Alertmanager 既定テンプレート、fields なし）。1 件は embed なしの「tasks/todo.md に 40 件の未更新タスク」通知。発火と解消を繰り返していたのは BackendHighLatency・BruteForceAttempt・SustainedAuthFailure |
+| api（同カテゴリ） | 1544914659595915325 | 1544914720987807804「Deploy Bot」 | 1 件（2026-09-04「FedEx live smoke 失敗」・embed なし） |
+| 検証用サーバーのテストチャンネル | 1559230296975474959 | 1559230387799068754（試験用） | 試作の擬似アラート |
+| approval-test | 1559254677768380537 | 1559254844735361134（試験用・許可外） | 試作の承認チャンネル |
+
+- ボット（SA Bug Intake）は上記 4 チャンネルとも読める（HTTP 200）。権限は閲覧・送信・履歴・添付・リアクション・公開スレッド作成・スレッド内送信。管理者なし（2026-10-13 実測）
+- 「検証用サーバー」と呼んでいたものは本番 Sales Anchor サーバー内のチャンネルだった
+
 ## 公式仕様（Context7 は月間上限で利用不可のため公式資料を直接確認・2026-10-13）
 
 - https://code.claude.com/docs/en/channels-reference 「Test during the research preview」: 自作・改変した channel は `--dangerously-load-development-channels plugin:<name>@<marketplace>` が必要。起動時に全画面の確認が出る。`-p` では無視される
