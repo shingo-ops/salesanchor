@@ -13,16 +13,25 @@
 - agent-danger-hook.sh: 危険語・psql 書き込みの照合の前に danger_sanitize.py で「ただの文字」を取り除く。permits 自己発行と破壊的 git の検出は取り除く前のコマンドで行う（緩めていない）。あわせて、危険語照合の「読み取り専用区間は照合から外す」処理が、複数行（ヒアドキュメント本文を含む）・`$(`・バッククォートを含む区間を外してしまう既存の穴を塞いだ（試験 T2-9f で発見）。
 - pr-body-guard.sh: ヒアドキュメント本文を除いた文字列で gh pr create/edit の起動を判定する。本文の抽出・検証は元のコマンドで行う。
 - danger_sanitize.py（新規）: 取り除く対象は次のみ。
-  - ファイルに書く heredoc（cat > / tee）の本文。タグを引用符で囲んだ形、または引用符なしで本文に `$(`・バッククォート・`${` が無い場合だけ。
+  - ファイルに書く heredoc（cat > / tee）の本文。次をすべて満たす場合だけ。①タグを引用符で囲んだ形、または引用符なしで本文に `$(`・バッククォート・`${` が無い ②コマンド全体（本文を除く）に `|`・`>(`・`<(`・`;`・`&`（`&&` 含む）が無い ③cat の書き先と tee のオプションでない引数が、すべて普通のパスで `/dev/`・`/proc/` の下でない（tee のオプションは -a -i -p のみ）。
   - git commit -m / --message の引数。
   - gh pr の --body / --title の引数。
   - grep / egrep / fgrep / rg / ag の区間。
-  - rm -r の対象が全部「作業場所の下」か /private/tmp/claude-501/ の下のとき。
+  - recursive な rm の対象が全部**絶対パス**で、入力 JSON の cwd を含む git worktree の下か /private/tmp/claude-501/ の下のとき。相対パス・`~`・変数・glob・`..`・`.git` を含むもの、worktree の根そのものは外さない。cd の追跡はしない（絶対パスは cwd に依存しないため）。
   - ダブルクォート内や語の中に `$(`・バッククォート・`${` があれば、その語は取り除かない。bash -c / eval の中身は取り除かない。解析できないときは元の文字列をそのまま照合する。
 
 ## 判定方法（作業場所の判定）
 
-worktree-access-guard の所有判定（TTY/TERM_SESSION_ID の claims.json 照合）は、フックのプロセスから「このセッション」を特定できないため使えない。代わりに「~/worktrees/salesanchor/<名前>/ の下にあり、かつ <名前>/.git がファイルである」ことを条件にする（根そのもの・`.git`・`..`・`~` 単独・パス中の glob は不許可）。ホームは環境変数 HOME ではなく pwd.getpwuid で取る。
+worktree-access-guard の所有判定（TTY/TERM_SESSION_ID の claims.json 照合）は、フックのプロセスから「このセッション」を特定できないため使えない。代わりに「入力 JSON の cwd を含む git worktree（~/worktrees/salesanchor/<名前>/ の下で、<名前>/.git がファイル）」の下だけを許可する（レビュー指摘 F3 の反映。別の worktree への削除は止める。cwd が worktree の外なら /private/tmp/claude-501/ の下だけ）。根そのもの・`.git`・`..`・`~`・変数・glob・相対パスは不許可。ホームは環境変数 HOME ではなく pwd.getpwuid で取る。
+
+## Reviewer の指摘（REQUEST_CHANGES）への対応
+
+- F1: `(cd /etc; …)`・`{ cd /etc; …; }`・`pushd /etc && …` の相対パス削除のすり抜けを塞いだ（絶対パスだけ除外。試験 T2-11a〜e）。
+- F2: `tee … | bash`・`cat > /dev/stdout … | bash`・`cat > >(bash) …` の本文除外のすり抜けを塞いだ（試験 T2-12a〜e）。
+- F3: 別の worktree への削除を止める。cwd が worktree の外なら /private/tmp/claude-501/ の下だけ（試験 T2-11f〜h）。po_register_stage2_allow.py の B2 の文を、Reviewer 指定の文に差し替えた。別の worktree 役には、本物の ~/worktrees/salesanchor/ にある自分以外の worktree を使う（作成はしていない。無ければ SKIP）。
+- F4: danger_sanitize.py を本物に置くときの権限は 555（agent-danger-hook.sh と同じ）。
+- F5: po-apply-stage2.sh は、~/.claude/permits/ に danger-permit-*.json があれば何も変えずに中止する（本物の試験の直前にも再確認）。本物の試験の開始・終了時刻を表示し、~/.claude/logs/test-runs.log に1行追記する（PO が実行したときだけ書かれる）。
+- F6: 復元ループで cp・cmp の失敗を検出し、失敗したら「ROLLBACK FAILED: <ファイル>」を表示して exit 3。成功したときだけ「ROLLED BACK」。
 
 ## 試験（scripts/dev/test-agent-hooks.sh）
 
@@ -32,7 +41,7 @@ worktree-access-guard の所有判定（TTY/TERM_SESSION_ID の claims.json 照�
 注記:
 - S1-1（段1の `cd $(pwd) && ls`）は段1では 2、段2の許可①により 0 になる。意図した変化。止めるべき `cd $(pwd) && git commit -m x`（S1-1b）は 2 のまま。
 - S1-10（gh-scope-guard）はフックが stage2-hooks/ に無いため SKIP。本物のディレクトリに対する試験（反映スクリプトの手順4）でのみ実行される。
-- 変更前の FAIL 10件の内訳: T2-1、T2-3、T2-4、T2-5、T2-5b、T2-7、T2-8、S1-1 は誤検知（意図した変化）。T2-9f と T2-10b は、引用符なし heredoc の本文で実行される `$(…)`／`${…}` が、元のフックでは「cat は読み取り専用」として素通りしていた既存の穴（変更後は塞がっている）。
+- 変更前の FAIL 13件の内訳: T2-1、T2-3、T2-4、T2-5、T2-5b、T2-7、T2-8、S1-1 は誤検知（意図した変化）。T2-11g は /private/tmp/claude-501/ 配下の削除を、本店 cwd からも通す意図した変化。T2-9f、T2-10b、T2-12c、T2-12d は、元のフックでは「cat は読み取り専用」として、heredoc 本文の中の実行される文字列が素通りしていた既存の穴（変更後は塞がっている）。
 
 ## 試験の表（変更前: 元の写し）
 
@@ -70,6 +79,19 @@ T2-9f     agent-danger-hook.sh   W      2     0      FAIL
 T2-10a    agent-danger-hook.sh   W      2     2      PASS
 T2-10b    agent-danger-hook.sh   W      2     0      FAIL
 T2-10c    agent-danger-hook.sh   W      2     2      PASS
+T2-11a    agent-danger-hook.sh   W      2     2      PASS
+T2-11b    agent-danger-hook.sh   W      2     2      PASS
+T2-11c    agent-danger-hook.sh   W      2     2      PASS
+T2-11d    agent-danger-hook.sh   W      2     2      PASS
+T2-11e    agent-danger-hook.sh   W      2     2      PASS
+T2-11f    agent-danger-hook.sh   HONTEN 2     2      PASS
+T2-11g    agent-danger-hook.sh   HONTEN 0     2      FAIL
+T2-11h    agent-danger-hook.sh   W      2     2      PASS
+T2-12a    agent-danger-hook.sh   W      2     2      PASS
+T2-12b    agent-danger-hook.sh   W      2     2      PASS
+T2-12c    agent-danger-hook.sh   W      2     0      FAIL
+T2-12d    agent-danger-hook.sh   W      2     0      FAIL
+T2-12e    agent-danger-hook.sh   W      2     2      PASS
 T2-9g     agent-danger-hook.sh   W      2     2      PASS
 T2-9h     agent-danger-hook.sh   W      2     2      PASS
 T2-9i     worktree-only-guard.sh W      2     2      PASS
@@ -85,7 +107,7 @@ S1-7      agent-danger-hook.sh   W      0     0      PASS
 S1-8      pr-body-guard.sh       W      2     2      PASS
 S1-9      pr-body-guard.sh       W      0     0      PASS
 S1-10     gh-scope-guard.sh      W      0     -      SKIP(フック無し)
-PASS=33 FAIL=10
+PASS=43 FAIL=13
 ```
 
 ## 試験の表（変更後: stage2-hooks/）
@@ -124,6 +146,19 @@ T2-9f     agent-danger-hook.sh   W      2     2      PASS
 T2-10a    agent-danger-hook.sh   W      2     2      PASS
 T2-10b    agent-danger-hook.sh   W      2     2      PASS
 T2-10c    agent-danger-hook.sh   W      2     2      PASS
+T2-11a    agent-danger-hook.sh   W      2     2      PASS
+T2-11b    agent-danger-hook.sh   W      2     2      PASS
+T2-11c    agent-danger-hook.sh   W      2     2      PASS
+T2-11d    agent-danger-hook.sh   W      2     2      PASS
+T2-11e    agent-danger-hook.sh   W      2     2      PASS
+T2-11f    agent-danger-hook.sh   HONTEN 2     2      PASS
+T2-11g    agent-danger-hook.sh   HONTEN 0     0      PASS
+T2-11h    agent-danger-hook.sh   W      2     2      PASS
+T2-12a    agent-danger-hook.sh   W      2     2      PASS
+T2-12b    agent-danger-hook.sh   W      2     2      PASS
+T2-12c    agent-danger-hook.sh   W      2     2      PASS
+T2-12d    agent-danger-hook.sh   W      2     2      PASS
+T2-12e    agent-danger-hook.sh   W      2     2      PASS
 T2-9g     agent-danger-hook.sh   W      2     2      PASS
 T2-9h     agent-danger-hook.sh   W      2     2      PASS
 T2-9i     worktree-only-guard.sh W      2     2      PASS
@@ -139,7 +174,7 @@ S1-7      agent-danger-hook.sh   W      0     0      PASS
 S1-8      pr-body-guard.sh       W      2     2      PASS
 S1-9      pr-body-guard.sh       W      0     0      PASS
 S1-10     gh-scope-guard.sh      W      0     -      SKIP(フック無し)
-PASS=43 FAIL=0
+PASS=56 FAIL=0
 ```
 
 ## PO の実行手順（この順に2行）
@@ -159,7 +194,7 @@ PASS=43 FAIL=0
 
 - 逸脱: 担当が danger_sanitize.py の置換を、ヒアドキュメントの中に Python を書く形で1回実行した（「ヒアドキュメントに Python を書かない」への違反。結果は py_compile で確認済み）。
 - 気づき（音声）: 試験スクリプトが偽の HOME を使うため、notify.sh（`$HOME/.claude/VOICEVOX_MUTED` があれば何もしない）のミュートの印が見つからず、止めたときの通知（agent-danger-hook.sh の notify.sh 呼び出し）が試験のたびに鳴った。直し方: 偽 HOME/.claude/VOICEVOX_MUTED（空ファイル）を必ず作り、無ければ試験を中止する。notify.sh はフックが絶対パスで呼ぶため PATH による差し替えは効かず、フック側に通知を切る仕組みも無い。直した後に1件（ONLY=S1-3）だけ回して全件に進んだ。担当は音を聞けないため、「鳴らない」ことは ミュートの印の存在と notify.sh 6行目の早期終了で確認したもので、聴感での確認は PO にお願いしたい。
-- 気づき（診断コマンドの停止）: 担当の診断コマンドの文字列に危険語（rm -rf）を含めたため、旧版の本物フックが止めた（今回直す誤検知と同種）。計2回。言い換えずに停止して報告し、設計担当の指示で、入力を Write ツールでファイルに書いて渡す形に切り替えた。
+- 気づき（診断コマンドの停止）: 担当の診断コマンドの文字列に危険語（rm -rf）を含めたため、旧版の本物フックが止めた（今回直す誤検知と同種）。計4回（Reviewer 指摘への対応中にも、検索コマンドの文字列に危険語を含めて止められた。再試行せず、同じ確認を Read ツールで行った）。最初の2回は言い換えずに停止して報告し、設計担当の指示で、入力を Write ツールでファイルに書いて渡す形に切り替えた。
 - 気づき（既存の穴）: 上記 T2-9f／T2-10b の既存の穴。
 
 ## 差分の全文（git diff 01bd0ccbf HEAD）
@@ -168,24 +203,24 @@ PASS=43 FAIL=0
 
 ```diff
 diff --git a/docs/ai-agents/design-partner.md b/docs/ai-agents/design-partner.md
-index 36e184da0..e1e5632a4 100644
+index 36e184da0..12cb68071 100644
 --- a/docs/ai-agents/design-partner.md
 +++ b/docs/ai-agents/design-partner.md
 @@ -192,6 +192,8 @@ design（③設計）は、PO自筆の「理想の設計図（あるべき姿）
  
  12. 停止条件は2段に分ける: 停止させるのは不可逆・本番影響を伴うもの（削除・マージ・push・DB書き込み・本番設定変更）に限る。行数・件数・文字列一致などの確認は「記録のみで続行」とし、値を報告させて判定は設計パートナーが行う。安全に無関係な数値の食い違いを停止条件にすると、実装役が正しく止まっているのに往復だけが増える（2026-07-29 実測: 一時ファイルの行数不一致・git add 済み件数の数え違いで2便を空費。2段構成を適用した便は完走）。
  
-+13. 委任文に定型の4点を入れる: ①担当に sleep させない（待ちは設計者が期限付きで行う） ②ファイルの作成と編集は Write/Edit ツールで行い、ヒアドキュメントで書かせない ③PR を作る前に `scripts/dev/validate-pr-body.sh` で exit 0 を確かめさせる ④フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える（2026-10-13 PR #未定）。
++13. 委任文に定型の4点を入れる: ①担当に sleep させない（待ちは設計者が期限付きで行う） ②ファイルの作成と編集は Write/Edit ツールで行い、ヒアドキュメントで書かせない ③PR を作る前に `scripts/dev/validate-pr-body.sh` で exit 0 を確かめさせる ④フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える（2026-10-13 PR #4182）。
 +
  ## 6. 実務の教訓（分類別・作業前に該当分類を必ず読む）
  
  読み方（どこに何が入っているか・どう読むか）:
 diff --git a/docs/handoff/design-approval-ticket/po-apply-stage2.sh b/docs/handoff/design-approval-ticket/po-apply-stage2.sh
 new file mode 100755
-index 000000000..3b558b0c6
+index 000000000..e6cff1850
 --- /dev/null
 +++ b/docs/handoff/design-approval-ticket/po-apply-stage2.sh
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,116 @@
 +#!/bin/bash
 +# po-apply-stage2.sh — 段2のフック修正版を本物（~/.claude/scripts）へ反映する（PO が `!` で実行する）
 +#
@@ -211,6 +246,13 @@ index 000000000..3b558b0c6
 +
 +[ -f "$HOME/.claude/VOICEVOX_MUTED" ] || { echo "中止: $HOME/.claude/VOICEVOX_MUTED が無い（試験で通知が鳴るため）"; exit 1; }
 +
++# 本物の試験は使い捨て許可チケットを消費しかねない。1つでも残っていれば、何も変えずに中止する。
++if ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
++  echo "中止: $HOME/.claude/permits/ に danger-permit-*.json がある（本物の試験が消費しかねない）。"
++  ls "$HOME/.claude/permits"/danger-permit-*.json
++  exit 1
++fi
++
 +# 1. バックアップ
 +mkdir -p "$BK" || { echo "中止: バックアップ先を作れない"; exit 1; }
 +for f in "${ORIG_FILES[@]}"; do
@@ -233,35 +275,68 @@ index 000000000..3b558b0c6
 +    mode="$(stat -f %Lp "$DST/$f")"
 +    chmod u+w "$DST/$f"
 +  else
-+    mode="644"
++    mode="555"
 +  fi
++  # danger_sanitize.py は agent-danger-hook.sh と同じ 555（r-xr-xr-x）にする
++  [ "$f" = "danger_sanitize.py" ] && mode="555"
 +  cp "$SRC/$f" "$DST/$f" || { echo "反映失敗 $f"; BAD=1; }
 +  chmod "$mode" "$DST/$f"
 +  cmp "$SRC/$f" "$DST/$f" && echo "  反映 $f（権限 $mode）"
 +done
 +
++# 自動で戻す。cp・cmp の失敗を検出し、失敗したら ROLLBACK FAILED を表示して exit 3 で終える。
++rollback() {
++  echo
++  echo "== 本物の試験が不合格（または試験できず）。自動で戻す =="
++  local failed=""
++  for f in "${ORIG_FILES[@]}"; do
++    chmod u+w "$DST/$f" 2>/dev/null
++    if cp -p "$BK/$f" "$DST/$f" && cmp "$BK/$f" "$DST/$f"; then
++      echo "  復元 $f"
++    else
++      echo "ROLLBACK FAILED: $f"
++      failed="1"
++    fi
++  done
++  # 新規ファイル（元には無かった）は取り除く
++  chmod u+w "$DST/danger_sanitize.py" 2>/dev/null
++  if ! rm -f "$DST/danger_sanitize.py" || [ -e "$DST/danger_sanitize.py" ]; then
++    echo "ROLLBACK FAILED: danger_sanitize.py"
++    failed="1"
++  fi
++  if [ -n "$failed" ]; then
++    echo "バックアップ: $BK から手で戻してください。"
++    exit 3
++  fi
++  echo "ROLLED BACK"
++  exit 1
++}
++
 +# 4. 本物の試験
++# (a) 使い捨て許可チケットが残っていれば、本物の試験が消費しかねないので中止する（再確認）
++if ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
++  echo "danger-permit-*.json が現れた。本物の試験を中止して戻す。"
++  rollback
++fi
++# (b) 試験の開始・終了時刻を表示し、test-runs.log にも1行残す（段1の記録 agent-events.jsonl から試験分を除く目印）
 +echo "[4] 本物に対する試験"
-+if bash "$TEST" "$DST" --real-home && [ -z "${BAD:-}" ]; then
++T_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
++echo "  試験開始: $T_START"
++bash "$TEST" "$DST" --real-home
++TEST_RC=$?
++T_END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
++echo "  試験終了: $T_END"
++mkdir -p "$HOME/.claude/logs"
++echo "$T_START $T_END po-apply-stage2 real-home-test rc=$TEST_RC" >> "$HOME/.claude/logs/test-runs.log"
++
++if [ "$TEST_RC" -eq 0 ] && [ -z "${BAD:-}" ]; then
 +  echo
 +  echo "== 結果: 反映成功（全件 PASS） =="
 +  echo "バックアップ: $BK"
 +  echo "次の手順: bash $HERE/po-register-stage2-allow.sh"
 +  exit 0
 +fi
-+
-+# 5. 自動で戻す
-+echo
-+echo "== 本物の試験が不合格。自動で戻す =="
-+for f in "${ORIG_FILES[@]}"; do
-+  chmod u+w "$DST/$f" 2>/dev/null
-+  cp -p "$BK/$f" "$DST/$f"
-+  cmp "$BK/$f" "$DST/$f" && echo "  復元 $f"
-+done
-+# 新規ファイル（元には無かった）は取り除く
-+rm -f "$DST/danger_sanitize.py"
-+echo "ROLLED BACK"
-+exit 1
++rollback
 diff --git a/docs/handoff/design-approval-ticket/po-register-stage2-allow.sh b/docs/handoff/design-approval-ticket/po-register-stage2-allow.sh
 new file mode 100755
 index 000000000..a24aee8c0
@@ -292,10 +367,10 @@ index 000000000..a24aee8c0
 +python3 -c "import json,sys; a=json.load(open(sys.argv[1])).get('autoMode',{}).get('allow',[]); print('autoMode.allow entries:', len(a))" "$SETTINGS"
 diff --git a/docs/handoff/design-approval-ticket/po_register_stage2_allow.py b/docs/handoff/design-approval-ticket/po_register_stage2_allow.py
 new file mode 100644
-index 000000000..20d7f24b6
+index 000000000..1b57e3ba2
 --- /dev/null
 +++ b/docs/handoff/design-approval-ticket/po_register_stage2_allow.py
-@@ -0,0 +1,68 @@
+@@ -0,0 +1,69 @@
 +#!/usr/bin/env python3
 +"""settings.json の autoMode.allow の末尾に、段2の恒常許可3件（B2・B3・B4）を足す。
 +
@@ -309,10 +384,11 @@ index 000000000..20d7f24b6
 +import sys
 +
 +B2 = (
-+    "Recursive deletion inside the agent's own worktree (PO decision 2026-10-13): "
-+    "`rm -rf` / `rm -r` is allowed when every target path resolves under a worktree the current session "
-+    "created under /Users/tanizawashingo/worktrees/salesanchor/, or under /private/tmp/claude-501/. "
-+    "Never the worktree root itself, never a `.git` directory, never a path containing `..`, `~` alone, or a bare glob."
++    "Recursive deletion inside the agent's current worktree (PO decision 2026-10-13): "
++    "`rm -rf` / `rm -r` is allowed when every target is an absolute path that resolves under the git worktree "
++    "containing the command's working directory (a directory under /Users/tanizawashingo/worktrees/salesanchor/ "
++    "whose .git is a file), or under /private/tmp/claude-501/. "
++    "Never the worktree root itself, never a `.git` directory, never a path containing `..`, `~`, a variable, or a glob."
 +)
 +B3 = (
 +    "Branch housekeeping on the agent's own PRs (PO decision 2026-10-13): in shingo-ops/salesanchor, "
@@ -416,10 +492,10 @@ index 033432d26..d844a5bf7 100755
    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 diff --git a/docs/handoff/design-approval-ticket/stage2-hooks/danger_sanitize.py b/docs/handoff/design-approval-ticket/stage2-hooks/danger_sanitize.py
 new file mode 100644
-index 000000000..d38db2319
+index 000000000..c95828481
 --- /dev/null
 +++ b/docs/handoff/design-approval-ticket/stage2-hooks/danger_sanitize.py
-@@ -0,0 +1,416 @@
+@@ -0,0 +1,463 @@
 +#!/usr/bin/env python3
 +"""danger_sanitize.py - 危険語照合の前に、誤検知の元になる「ただの文字」を取り除く。
 +
@@ -648,51 +724,41 @@ index 000000000..d38db2319
 +    return "".join(toks)
 +
 +
-+def strictly_allowed(real_path):
-+    """作業場所（~/worktrees/salesanchor/<名前>/ の下）か /private/tmp/claude-501/ の下か。根そのものは不可。"""
-+    if real_path.startswith(TMP_BASE + "/"):
-+        rel = real_path[len(TMP_BASE) + 1:].split("/")
-+        return ".git" not in rel
-+    if real_path.startswith(WT_BASE + "/"):
-+        rel = real_path[len(WT_BASE) + 1:].split("/")
-+        if len(rel) < 2 or ".git" in rel:
-+            return False
-+        # 所有判定: worktree-access-guard.sh は TTY/TERM_SESSION_ID の claims.json 照合だが、
-+        # フックのプロセスからは「このセッション」を特定できない。
-+        # 代わりに「.git がファイル（= git worktree）」であることを条件にする。
-+        return os.path.isfile(os.path.join(WT_BASE, rel[0], ".git"))
-+    return False
++def worktree_root_of(cwd):
++    """cwd を含む git worktree（~/worktrees/salesanchor/<名前>/ で、.git がファイルのもの）の根。無ければ None。
++
++    所有判定: worktree-access-guard.sh は TTY/TERM_SESSION_ID の claims.json 照合だが、
++    フックのプロセスからは「このセッション」を特定できない。代わりに入力 JSON の cwd を含む worktree に限る。
++    """
++    if not isinstance(cwd, str) or not os.path.isabs(cwd):
++        return None
++    real = os.path.realpath(cwd)
++    if not real.startswith(WT_BASE + "/"):
++        return None
++    name = real[len(WT_BASE) + 1:].split("/")[0]
++    root = os.path.join(WT_BASE, name)
++    return root if os.path.isfile(os.path.join(root, ".git")) else None
 +
 +
-+def target_ok(target, base):
-+    if any(ch in target for ch in "$`\\{"):
-+        return False
-+    if target == "~" or target.startswith("~/"):
-+        target = HOME + target[1:]
-+    elif target.startswith("~"):
++ABS_PATH_RE = re.compile(r"/[A-Za-z0-9_./@%+,:=-]*")
++
++
++def target_ok(target, wt_root):
++    """rm の対象を除外してよいか。絶対パスだけ。~・変数・glob・.. ・.git を含むものは不可。根そのものも不可。"""
++    if not ABS_PATH_RE.fullmatch(target):
 +        return False
 +    parts = target.split("/")
 +    if ".." in parts or ".git" in parts:
 +        return False
-+    last = parts[-1]
-+    parent_parts = parts[:-1]
-+    if any(ch in p for p in parent_parts for ch in "*?["):
-+        return False
-+    is_glob = any(ch in last for ch in "*?[")
-+    if is_glob:
-+        if not parent_parts or parent_parts == ["."]:
-+            return False
-+        path = "/".join(parent_parts) or "/"
-+    else:
-+        path = target
-+    if not os.path.isabs(path):
-+        if base is None:
-+            return False
-+        path = os.path.join(base, path)
-+    return strictly_allowed(os.path.realpath(path))
++    real = os.path.realpath(target)
++    if real.startswith(TMP_BASE + "/"):
++        return ".git" not in real[len(TMP_BASE) + 1:].split("/")
++    if wt_root is not None and real.startswith(wt_root + "/"):
++        return ".git" not in real[len(wt_root) + 1:].split("/")
++    return False
 +
 +
-+def rm_allowed(texts, words, base):
++def rm_allowed(texts, words, wt_root):
 +    if any(w[2] for w in words):
 +        return False
 +    recursive = False
@@ -726,7 +792,61 @@ index 000000000..d38db2319
 +        targets.append(t)
 +    if not recursive or not targets:
 +        return False
-+    return all(target_ok(t, base) for t in targets)
++    return all(target_ok(t, wt_root) for t in targets)
++
++
++HD_FORBIDDEN_RE = re.compile(r"\||>\(|<\(|;|&")
++DEST_RE = re.compile(r"[A-Za-z0-9_./@%+,:=~-]+")
++
++
++def heredoc_command_ok(cmd, segs):
++    """heredoc 本文を除外してよいのは、コマンド全体（本文を除く）に | >( <( ; & && || が無いときだけ。"""
++    bodies = sorted((b[0], b[1]) for s in segs for b in s.bodies)
++    parts = []
++    pos = 0
++    for start, end in bodies:
++        parts.append(cmd[pos:start])
++        pos = end
++    parts.append(cmd[pos:])
++    return HD_FORBIDDEN_RE.search("".join(parts)) is None
++
++
++def _dest_ok(path, cwd):
++    if path is None or not DEST_RE.fullmatch(path):
++        return False
++    base = cwd if isinstance(cwd, str) and os.path.isabs(cwd) else "/"
++    norm = os.path.normpath(os.path.join(base, path))
++    for prefix in ("/dev", "/proc"):
++        if norm == prefix or norm.startswith(prefix + "/"):
++            return False
++    return True
++
++
++def heredoc_dest_ok(first, texts, cwd):
++    """cat の書き先、tee のオプションでない引数が、すべて普通のパス（/dev/・/proc/ でない）か。"""
++    if any(t is None for t in texts):
++        return False
++    if first == "cat":
++        dests = []
++        items = texts[1:]
++        for i, t in enumerate(items):
++            if t in (">", ">>"):
++                if i + 1 >= len(items):
++                    return False
++                dests.append(items[i + 1])
++            elif t.startswith(">") and not t.startswith(">&"):
++                dests.append(t.lstrip(">"))
++        return bool(dests) and all(_dest_ok(d, cwd) for d in dests)
++    if first == "tee":
++        dests = []
++        for t in texts[1:]:
++            if t.startswith("-"):
++                if not re.fullmatch(r"-[aip]+|--append", t):
++                    return False
++                continue
++            dests.append(t)
++        return bool(dests) and all(_dest_ok(d, cwd) for d in dests)
++    return False
 +
 +
 +def writes_file(first, texts):
@@ -765,21 +885,24 @@ index 000000000..d38db2319
 +    if segs is None:
 +        return cmd
 +    reps = []
-+    base = cwd if isinstance(cwd, str) and os.path.isabs(cwd) and os.path.isdir(cwd) else None
++    # rm の除外は絶対パスだけなので cd の追跡はしない（絶対パスは cwd に依存しない）。
++    # 入力 JSON の cwd を含む worktree の下と /private/tmp/claude-501/ の下だけが対象。
++    wt_root = worktree_root_of(cwd)
++    heredoc_global_ok = heredoc_command_ok(cmd, segs)
 +    for seg in segs:
 +        words = seg.words
 +        texts = [unquote(cmd, w) for w in words]
 +        first = texts[0] if texts else None
 +        if first is not None:
 +            first = os.path.basename(first)
-+        if first == "cd":
-+            if len(texts) >= 2 and texts[1] is not None and "$" not in texts[1] and base is not None:
-+                cand = os.path.join(base, texts[1].replace("~", HOME, 1) if texts[1].startswith("~") else texts[1])
-+                base = os.path.realpath(cand) if os.path.isdir(cand) else None
-+            else:
-+                base = None
-+            continue
-+        if "heredoc" in modes and seg.bodies and first in ("cat", "tee") and writes_file(first, texts):
++        if (
++            "heredoc" in modes
++            and heredoc_global_ok
++            and seg.bodies
++            and first in ("cat", "tee")
++            and writes_file(first, texts)
++            and heredoc_dest_ok(first, texts, cwd)
++        ):
 +            for body_start, body_end, _tag, quoted in seg.bodies:
 +                body = cmd[body_start:body_end]
 +                if quoted or ("$(" not in body and "`" not in body and "${" not in body):
@@ -806,7 +929,7 @@ index 000000000..d38db2319
 +        if "grep" in modes and first in GREP_CMDS:
 +            if not any(w[2] for w in words) and not any(t is not None and t.startswith("--pre") for t in texts):
 +                reps.append((words[0][0], words[-1][1], " "))
-+        if "rm" in modes and first == "rm" and rm_allowed(texts, words, base):
++        if "rm" in modes and first == "rm" and rm_allowed(texts, words, wt_root):
 +            reps.append((words[0][0], words[-1][1], " "))
 +    accepted = []
 +    for start, end, text in sorted(reps, key=lambda r: (r[0], r[1])):
@@ -900,10 +1023,10 @@ index f96aa218c..b208ce115 100755
  if [[ -z "$BRANCH" ]] && echo "$COMMAND" | grep -qE 'git commit'; then
 diff --git a/scripts/dev/test-agent-hooks.sh b/scripts/dev/test-agent-hooks.sh
 new file mode 100755
-index 000000000..62fc04a56
+index 000000000..906e9c911
 --- /dev/null
 +++ b/scripts/dev/test-agent-hooks.sh
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,167 @@
 +#!/bin/bash
 +# test-agent-hooks.sh — PreToolUse フック3本の受入試験（設計承認チケット 段2）
 +#
@@ -987,6 +1110,12 @@ index 000000000..62fc04a56
 +}
 +
 +OWN="$WT_ROOT/docs/handoff/stage2-test-nonexistent"
++# 別の worktree 役: 本物のホームの ~/worktrees/salesanchor/ にある、自分以外の worktree（.git がファイルのもの）
++REAL_HOME_DIR="$(python3 -c 'import pwd,os; print(pwd.getpwuid(os.getuid()).pw_dir)')"
++OTHER_WT=""
++for d in "$REAL_HOME_DIR"/worktrees/salesanchor/*/; do
++  if [ -f "${d}.git" ] && [ "${d%/}" != "$WT_ROOT" ]; then OTHER_WT="${d%/}"; break; fi
++done
 +
 +# ── 段2 受入試験 ─────────────────────────────────────────────────
 +# 通すべきもの（誤検知の修正）
@@ -1021,7 +1150,26 @@ index 000000000..62fc04a56
 +t T2-10a agent-danger-hook.sh   W 2 'git commit -m "x `rm -rf /x`"'
 +t T2-10b agent-danger-hook.sh   W 2 $'cat > /tmp/f.txt <<EOF\n${X} rm -rf /x\nEOF\n'
 +t T2-10c agent-danger-hook.sh   W 2 'gh pr create --title "${X} DROP TABLE" --body "y"'
-+t T2-9g agent-danger-hook.sh   W 2 'cd /tmp && rm -rf x'
++# F1: cd を挟んだ相対パスの削除、F3: 別の worktree・cwd が worktree の外
++t T2-11a agent-danger-hook.sh   W 2 '(cd /etc; rm -rf y)'
++t T2-11b agent-danger-hook.sh   W 2 '{ cd /etc; rm -rf y; }'
++t T2-11c agent-danger-hook.sh   W 2 'pushd /etc && rm -rf y'
++t T2-11d agent-danger-hook.sh   W 2 'rm -rf docs/handoff/stage2-test-nonexistent'
++t T2-11e agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/*'
++t T2-11f agent-danger-hook.sh   HONTEN 2 "rm -rf $OWN"
++t T2-11g agent-danger-hook.sh   HONTEN 0 'rm -rf /private/tmp/claude-501/x'
++if [ -n "$OTHER_WT" ]; then
++  t T2-11h agent-danger-hook.sh W 2 "rm -rf $OTHER_WT/x"
++else
++  RESULTS+=("T2-11h   (別の worktree が無いので SKIP)")
++fi
++# F2: heredoc 本文の除外をすり抜けるパイプ・プロセス置換・/dev 書き込み
++t T2-12a agent-danger-hook.sh   W 2 $'tee /tmp/x <<\'E\' | bash\nrm -rf /x\nE\n'
++t T2-12b agent-danger-hook.sh   W 2 $'cat > /dev/stdout <<\'E\' | bash\nrm -rf /x\nE\n'
++t T2-12c agent-danger-hook.sh   W 2 $'cat > >(bash) <<\'E\'\nrm -rf /x\nE\n'
++t T2-12d agent-danger-hook.sh   W 2 $'cat > /dev/stdout <<\'E\'\nrm -rf /x\nE\n'
++t T2-12e agent-danger-hook.sh   W 2 $'tee /dev/fd/1 <<\'E\'\nrm -rf /x\nE\n'
++t T2-9g  agent-danger-hook.sh   W 2 'cd /tmp && rm -rf x'
 +t T2-9h  agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/../x'
 +t T2-9i  worktree-only-guard.sh W 2 'git push --force origin main'
 +t T2-9j  pr-body-guard.sh       W 2 'GH_TOKEN=x gh pr create --title t --body-file /nonexistent/x.md'
