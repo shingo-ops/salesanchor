@@ -19,6 +19,8 @@ from app.services import tcg_analyzer_svc as analyzer
 from app.services import v102_human_decisions_svc as decisions
 from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import ReasonTable, build_review_reason_details
+from app.services.v102_gap_lines import gap_suspects_by_item
+from app.services.v102_gap_suspect_view import with_candidate_names
 
 # テスト互換性のため属性を維持する（monkeypatch.setattr 対象。本番は public）
 TCG_SCHEMA = "public"
@@ -44,6 +46,7 @@ _ITEMS_SQL = """
     WHERE ei.extraction_job_id = CAST(:job_id AS uuid)
     ORDER BY ei.gemini_index NULLS LAST, ei.id
 """
+_DETAIL_SQL = "SELECT system_review_detail FROM {schema}.extraction_jobs WHERE id = CAST(:job_id AS uuid)"
 # 一覧の対象: v102 の投稿で、(a) 投稿の理由がある、または (b) 件の理由に fix_stage='extraction' のコードがある
 _LIST_BASE_SQL = """
     WITH ext AS (
@@ -226,6 +229,8 @@ async def list_posts(db: AsyncSession, table: ReasonTable, *, limit: int, offset
 
 async def get_post(db: AsyncSession, job: PostJob, table: ReasonTable) -> dict:
     rows = (await db.execute(text(_ITEMS_SQL.format(schema=TCG_SCHEMA)), {"job_id": job.job_id})).fetchall()
+    stored = (await db.execute(text(_DETAIL_SQL.format(schema=TCG_SCHEMA)), {"job_id": job.job_id})).scalar_one_or_none()
+    suspects = await with_candidate_names(db, gap_suspects_by_item(stored))
     return {
         "job_id": job.job_id, "source_message_id": job.source_message_id, "provider": job.provider,
         "line_posted_at": job.line_posted_at, "lines": split_raw_lines(job.raw_text),
@@ -236,6 +241,7 @@ async def get_post(db: AsyncSession, job: PostJob, table: ReasonTable) -> dict:
                 "id": r.id, "gemini_index": r.gemini_index, "source_lines": _int_list(r.source_lines),
                 "raw_price": r.raw_price, "raw_quantity": r.raw_quantity,
                 "review_reason_details": build_review_reason_details(r.review_reasons, table),
+                "gap_suspect": suspects.get(r.id),
             }
             for r in rows
         ],
