@@ -74,6 +74,14 @@ export interface UseInboxStateReturn {
 
   // 選択中会話
   selectedLeadId: number | null;
+  /**
+   * 一覧へ戻る（スマホの1画面1ページ用）。
+   * 既存の onPageFilterChange と同じ型で解除する:
+   * 選択の解除・カルテ詳細のクリア・URL の lead_id 削除をまとめて行う。
+   * 状態だけ消して URL を残すと、初期値が URL から作られる経路（:171-174, :201）で
+   * 戻ってしまうため、URL も必ず消すこと。
+   */
+  backToList: () => void;
   selectedConversation: Conversation | null;
   selectedPlatform: ReturnType<typeof inferPlatform>;
   messagesData: MessagesResponse | null;
@@ -539,6 +547,14 @@ export function useInboxState(): UseInboxStateReturn {
     setSearchParams(params, { replace: true });
   }, [closeKartePanel, clearAttachment, searchParams, setSearchParams, conversations]);
 
+  const backToList = useCallback(() => {
+    setSelectedLeadId(null);
+    setLeadDetail(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete("lead_id");
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const onPageFilterChange = useCallback((value: string) => {
     setPageIdFilter(value);
     setSelectedLeadId(null);
@@ -891,6 +907,7 @@ export function useInboxState(): UseInboxStateReturn {
 
     // 選択中会話
     selectedLeadId,
+    backToList,
     selectedConversation,
     selectedPlatform,
     messagesData,
