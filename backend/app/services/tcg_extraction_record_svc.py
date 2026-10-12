@@ -131,13 +131,25 @@ class AttemptRecorder:
 
     @staticmethod
     def _thoughts_json(thought_summaries: list[str] | None) -> str | None:
-        """思考要約を JSON 文字列にする。None・MAX_BYTES 超は None（列は NULL）。"""
+        """思考要約を JSON 文字列にする。None・MAX_BYTES 超・変換失敗は None（列は NULL）。
+
+        例外は出さない（応答の保存を止めないため）。str 以外は捨て、NUL を除き、
+        孤立サロゲートは置換する。元のリストは変えない。
+        """
         if thought_summaries is None:
             return None
-        body = json.dumps(thought_summaries, ensure_ascii=False)
-        if len(body.encode("utf-8")) > MAX_BYTES:
+        try:
+            cleaned = [
+                item.replace("\x00", "").encode("utf-8", "replace").decode("utf-8")
+                for item in thought_summaries if isinstance(item, str)
+            ]
+            body = json.dumps(cleaned, ensure_ascii=False)
+            if len(body.encode("utf-8")) > MAX_BYTES:
+                return None
+            return body
+        except Exception:
+            logger.warning("thought_summaries の JSON 化に失敗したため NULL で保存する", exc_info=True)
             return None
-        return body
 
     def on_response(
         self, response: str, *, input_tokens: int = 0, output_tokens: int = 0,

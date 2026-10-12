@@ -65,3 +65,46 @@ def test_on_response_keeps_thought_summaries_at_exactly_max_bytes(monkeypatch):
     recorder.on_response("ok", thought_summaries=["x" * 6])
 
     assert json.loads(_bound_thoughts(recorder)) == ["x" * 6]
+
+
+def test_on_response_strips_nul_characters_from_thoughts(monkeypatch):
+    recorder = _recorder(monkeypatch)
+
+    recorder.on_response("response", thought_summaries=["a\x00b", "c"])
+
+    assert json.loads(_bound_thoughts(recorder)) == ["ab", "c"]
+    assert "\\u0000" not in _bound_thoughts(recorder)
+    assert recorder.response_saved is True
+
+
+def test_on_response_replaces_lone_surrogate_and_still_updates(monkeypatch):
+    recorder = _recorder(monkeypatch)
+
+    recorder.on_response("response", thought_summaries=["x\ud800y"])
+
+    thoughts = _bound_thoughts(recorder)
+    assert thoughts is not None
+    assert json.loads(thoughts)[0].startswith("x")
+    assert recorder.response_saved is True
+
+
+def test_on_response_drops_non_str_thought_items(monkeypatch):
+    recorder = _recorder(monkeypatch)
+
+    recorder.on_response("response", thought_summaries=["a", 1, None, {"k": "v"}, "b"])
+
+    assert json.loads(_bound_thoughts(recorder)) == ["a", "b"]
+
+
+def test_on_response_writes_null_thoughts_when_json_dumps_raises(monkeypatch):
+    recorder = _recorder(monkeypatch)
+
+    def boom(*args, **kwargs):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(records.json, "dumps", boom)
+
+    recorder.on_response("response", thought_summaries=["a"])
+
+    assert _bound_thoughts(recorder) is None
+    assert recorder.response_saved is True
