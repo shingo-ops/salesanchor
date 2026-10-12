@@ -74,7 +74,9 @@ async function measurePanes(page: Page) {
     Object.entries(PANE_SELECTORS).map(async ([name, selector]) => {
       const locator = page.locator(selector).first();
       const isVisible = await locator.isVisible();
-      const box = await locator.boundingBox();
+      // boundingBox() は要素が見えるまで待つ（見えないと actionTimeout で失敗する）。
+      // スマホの状態Aでは会話側の区画が存在しないため、見えているときだけ測る。
+      const box = isVisible ? await locator.boundingBox() : null;
       return [
         name,
         {
