@@ -56,21 +56,21 @@ mode: handoff
 
 ## 2. 自前版プラグイン discord-ops の変更点
 
-公式 discord 0.0.4（Apache-2.0）を複写し、変更は下表の P0〜P9 に限る（P0 = 状態ディレクトリの既定値を `~/.claude/channels/discord-ops` に変更）。判定ロジック（P1 の webhook 判定・P3 の本文組み立て・P6 の送り先判定・P8 の proposal 保存と照合）は `lib.ts` の純粋関数に切り出し、`bun test` で単体テストする（下記「受け入れ基準」）。それ以外の行は触らない（公式の更新を取り込むとき差分を小さく保つため）。
+公式 discord 0.0.4（Apache-2.0）を複写し、変更は下表の P0〜P9 に限る（P0 = 状態ディレクトリの既定値を `~/.claude/channels/discord-ops` に変更）。判定ロジック（P1 の webhook 判定・P3 の本文組み立て・P6 の送り先判定・P8 の proposal 保存と照合）は lib.ts の純粋関数に切り出し、`bun test` で単体テストする（下記「受け入れ基準」）。それ以外の行は触らない（公式の更新を取り込むとき差分を小さく保つため）。
 
 | # | 場所（公式版の行） | 変更内容 | 理由 |
 |---|---|---|---|
 | P1 | server.ts:805-808 `messageCreate` | ボット投稿のうち `msg.webhookId` があり、かつ `access.monitorChannels[親チャンネルID].allowWebhooks` に含まれるものだけ P2 へ。それ以外のボット投稿は捨てる。捨てた webhook は stderr に ID だけ 1 行出す | 許可した通知だけを AI に渡す（KGI-2）。本番の webhook ID を URL を出さずに観測する |
 | P2 | 新関数 `handleMonitorAlert` | `gate()` と承認返信の判定（server.ts:79 `PERMISSION_REPLY_RE`）を**通さず**、通知だけ送る。meta に `kind="alert"`・`monitor_channel`・`webhook_id` | webhook 本文の「yes xxxxx」を承認として扱わせない |
 | P3 | 通知本文（server.ts:870 付近） | `msg.content` に加え `msg.embeds` の title・description・fields を連結（上限 4,000 文字） | 監視通知は embed 形式の可能性が高く、公式版は embed を読まない（server.ts に `embeds` の処理が 0 件） |
-| P4 | `.claude-plugin/plugin.json` | name を `discord-ops`、状態ディレクトリを `~/.claude/channels/discord-ops` | 公式版と取り違えない |
+| P4 | .claude-plugin/plugin.json | name を `discord-ops`、状態ディレクトリを `~/.claude/channels/discord-ops` | 公式版と取り違えない |
 | P5 | 生存の記録 | 60 秒ごとに `heartbeat` ファイルへ時刻を書く | 番人（§5）が止まりを判定する |
 | P6 | reply 系ツール | 送信先を `access.opsChannel`（承認チャンネル）と、その中のスレッドに限定。`create_thread`（不具合ごとのスレッド作成）を追加 | AI が監視チャンネルや他所に書かない |
 | P7 | 承認の中継（server.ts:472-513・507 は DM 送信） | 許可確認の送り先を、DM ではなく承認チャンネル（該当スレッドが分かればスレッド）に変更。ボタンを押せるのは DM 許可リスト `allowFrom` の人だけ（server.ts:750-754 のまま） | PO の運用像。押せる人は PO だけのまま |
-| P8 | 新ツール `propose`（引数 thread_id・proposal_id・summary・action） | 解決策を【承認】【却下】【修正】ボタン付きで投稿する。本文には `summary` と、実行する操作そのもの `action`（コマンド・書き込み内容を省略なしで）を必ず表示する。サーバーは `${STATE_DIR}/proposals/<proposal_id>.json` に {thread_id, summary, action, 投稿メッセージID} を保存する。同じ proposal_id の再登録はエラー。押された結果は `kind="decision"`・`proposal_id`・`decision`・`thread_id` と、**保存しておいた `action` の原文**を付けて受付役へ届ける。押せるのは `allowFrom` の人だけ | 承認を「PO が画面で読んだ操作の原文」に結び付ける（レビュー HIGH-2）。受付役は担当の依頼ではなく、この通知の `action` だけを実行する |
+| P8 | 新ツール `propose`（引数 thread_id・proposal_id・summary・action） | 解決策を【承認】【却下】【修正】ボタン付きで投稿する。本文には `summary` と、実行する操作そのもの `action`（コマンド・書き込み内容を省略なしで）を必ず表示する。サーバーは ${STATE_DIR}/proposals/<proposal_id>.json に {thread_id, summary, action, 投稿メッセージID} を保存する。同じ proposal_id の再登録はエラー。押された結果は `kind="decision"`・`proposal_id`・`decision`・`thread_id` と、**保存しておいた `action` の原文**を付けて受付役へ届ける。押せるのは `allowFrom` の人だけ | 承認を「PO が画面で読んだ操作の原文」に結び付ける（レビュー HIGH-2）。受付役は担当の依頼ではなく、この通知の `action` だけを実行する |
 | P9 | 新ツール `list_monitor_alerts`（引数 limit ≤50） | 登録済み監視チャンネルの直近メッセージのうち、許可 webhook の投稿だけを P3 の本文形式で返す（読むだけ） | 受付が止まっていた間のアラートを再起動時に拾う（レビュー MEDIUM-8） |
 
-置き場所: リポジトリ `tools/claude-channels/`（新規・計画票 T1）。`marketplace.json`（マーケット名 `sa-local`）と `discord-ops/`（公式 LICENSE 同梱・変更点の注記）。改変を PR でレビューし、版を残すため。
+置き場所: リポジトリ `tools/claude-channels/`（新規・計画票 T1）。marketplace.json（マーケット名 `sa-local`）と `discord-ops/`（公式 LICENSE 同梱・変更点の注記）。改変を PR でレビューし、版を残すため。
 
 ## 3. 受付役と担当（不具合ごとの責任者）
 
@@ -79,8 +79,8 @@ mode: handoff
 | 起動 | `claude --dangerously-load-development-channels plugin:discord-ops@sa-local`。起動時の確認は PO が 1 回答える | 改変版は公式の許可リスト外（recon 公式仕様） |
 | 作業場所 | 専用 worktree `~/worktrees/salesanchor/ops-intake`（origin/main 起点・読み取り専用）。調査前に `git fetch origin main` → `git merge --ff-only origin/main`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
 | 許可モード | manual（default）。auto mode にしない | auto mode では承認の中継が開かない（recon 公式仕様） |
-| 許可設定 | 受付用 worktree の `.claude/settings.local.json`。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする | KGI-3・レビュー MEDIUM-7 |
-| 担当の型 | custom agent `ops-worker`（`.claude/agents/ops-worker.md`）。`tools:` を Read・Grep・Glob・SendMessage・discord-ops の reply/propose/fetch_messages/react に限定。`permissionMode: dontAsk`・`background: true`（いずれも公式 sub-agents 資料に記載の項目） | 担当は書き込み道具をそもそも持たない（レビュー HIGH-3）。dontAsk 単独に頼らない |
+| 許可設定 | 受付用 worktree の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする | KGI-3・レビュー MEDIUM-7 |
+| 担当の型 | custom agent `ops-worker`（.claude/agents/ops-worker.md）。`tools:` を Read・Grep・Glob・SendMessage・discord-ops の reply/propose/fetch_messages/react に限定。`permissionMode: dontAsk`・`background: true`（いずれも公式 sub-agents 資料に記載の項目） | 担当は書き込み道具をそもそも持たない（レビュー HIGH-3）。dontAsk 単独に頼らない |
 | 担当の立て方 | 受付役は新しい不具合（同じ alertname×instance の未完了が無い）を受けたら、承認チャンネルにスレッドを作り、`ops-worker` を 1 つ立てる。担当には「スレッド ID・アラート本文・委任表・報告の型」を渡す | PO の運用像「不具合ごとに担当・完了まで責任」 |
 | 承認後の実行 | **受付役が、P8 の decision 通知に付いた `action` の原文だけを実行する**。担当からの依頼文は実行の根拠にしない。実行時の許可確認（委任表の外）は P7 で承認チャンネルに出る。結果は担当へ SendMessage で渡し、担当が完了報告を書く | 承認を PO が読んだ原文に結び付ける（レビュー HIGH-2）。担当経由の注入で別の操作をさせない |
 | 続報・ボタン・PO の発言 | 受付役が「どのスレッド／どの担当か」を判定し、その担当へ渡す（SendMessage） | 不具合ごとに話を混ぜない |
@@ -151,7 +151,7 @@ mode: handoff
 | KGI-3: 委任表の範囲内は承認なし・範囲外は承認チャンネルにボタン | 擬似アラートで範囲内操作が承認なし、範囲外操作でボタンが出て押すまで止まる |
 | 担当: 不具合 2 件を同時に流すと担当が 2 つ立ち、スレッドが分かれ、両方が完了報告を書いて終わる | 検証用サーバーで同時投稿し、スレッド 2 本と完了報告 2 件を確認 |
 | KGI-4: 停止から 10 分以内に通知 | tmux を止め、番人の通知時刻を記録 |
-| 公式版との差分が P0〜P9 と `lib.ts` だけ | 公式 0.0.4 と自前版の diff を PR 本文に貼り、Reviewer（Fable）が確認 |
+| 公式版との差分が P0〜P9 と lib.ts だけ | 公式 0.0.4 と自前版の diff を PR 本文に貼り、Reviewer（Fable）が確認 |
 | 単体テスト: 許可外 webhook・未登録チャンネル・他メンバー・webhook 以外のボットは渡らない／許可 webhook は渡る | `bun test`（`tools/claude-channels/discord-ops/lib.test.ts`）。CI 外のため PR 本文に実行結果の生出力を貼る |
 | 単体テスト: 返信先は承認チャンネルとその子スレッド・DM だけ（監視チャンネル宛ては拒否） | 同上 |
 | 単体テスト: proposal は保存した action 原文で decision を返す・同じ ID の再登録は拒否・未登録 ID の decision は拒否 | 同上 |
@@ -181,9 +181,9 @@ mode: handoff
 | ステップ | 内容 | 担当 |
 |---------|------|------|
 | T0 | 本テーマの ADR を起案し、本設計一式と同じ docs PR で main へマージ（**T1 の PR 作成前に完了**。T1 PR 本文の対象 ADR に記載）。`node scripts/generate-adr-index.js` 実行 | 設計パートナー |
-| T1 | `tools/claude-channels/` に自前版（P0〜P9・`lib.ts`・`lib.test.ts`）と marketplace。公式との diff と `bun test` の生出力を PR 本文に貼る | Sonnet（実装カード） |
+| T1 | `tools/claude-channels/` に自前版（P0〜P9・lib.ts・lib.test.ts）と marketplace。公式との diff と `bun test` の生出力を PR 本文に貼る | Sonnet（実装カード） |
 | T2 | 番人（launchd plist・判定スクリプト）と起動スクリプト（tmux＋caffeinate） | Sonnet（同じ PR） |
-| T3 | 受付用の指示書（CLAUDE.md）・`ops-worker.md`・許可設定の雛形（委任表の初期値とツール単位で 1 対 1）を `tools/claude-channels/intake/` に置く | Sonnet（同じ PR） |
+| T3 | 受付用の指示書（CLAUDE.md）・ops-worker.md・許可設定の雛形（委任表の初期値とツール単位で 1 対 1）を `tools/claude-channels/intake/` に置く | Sonnet（同じ PR） |
 | T4 | PR を Fable がレビュー → CI 緑 → main へマージ | 設計パートナー |
 | T5 | Mac に配置: 受付用 worktree を main から作り、雛形を配置・プラグインを local スコープで導入・本番監視チャンネルと許可 webhook を access.json に登録・受付を起動（起動確認画面は PO）・番人を登録 → E7・E8・E10・KGI-4 を実測し evidence-registry に記録 | 設計パートナー＋Sonnet（起動確認は PO） |
 | T6（PO） | 本番の承認チャンネルを非公開化（PO・担当エンジニア・ボットのみ閲覧）し、ID を access.json の opsChannel に入れる。それまでは #approval-test を承認チャンネルとして使う | PO |
