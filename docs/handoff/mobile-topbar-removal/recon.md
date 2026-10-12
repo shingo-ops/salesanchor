@@ -37,7 +37,7 @@ PO 指定: 「スマホには受信箱というヘッダーを消して欲しい
 
 ## D. 影響範囲（コード参照の網羅）
 
-`grep -rn "mobile-topbar" --include=*.ts --include=*.tsx --include=*.css` の結果、**現行コードの参照は `MobileShell.tsx` と `mobile-shell.css` の2ファイルのみ**。他の一致はすべて過去の作業記録（`docs/handoff/mobile-responsive/`、`docs/handoff/mobile-shell-pr-r2b/`、`docs/handoff/mobile-shell-pr-r2d/`、`docs/handoff/fix-z-drawer-close/`）で、現行仕様ではない。E2E の spec に `.mobile-topbar` への参照は**0件**。
+`grep -rn "mobile-topbar" --include=*.ts --include=*.tsx --include=*.css` の結果、**現行コードの参照は `frontend/src/components/MobileShell.tsx` と `frontend/src/mobile-shell.css` の2ファイルのみ**。他の一致はすべて過去の作業記録（`docs/handoff/mobile-responsive/`、`docs/handoff/mobile-shell-pr-r2b/`、`docs/handoff/mobile-shell-pr-r2d/`、`docs/handoff/fix-z-drawer-close/`）で、現行仕様ではない。E2E の spec に `.mobile-topbar` への参照は**0件**。
 
 ## E. ADR との関係
 

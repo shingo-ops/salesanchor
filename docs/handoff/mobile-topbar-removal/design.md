@@ -49,7 +49,7 @@ PO 指定: 2026-10-13「スマホには受信箱というヘッダーを消し�
 - **PC・タブレット**: MobileShell は 767px 以下でしか描かれない（`frontend/src/App.tsx:137` の `useIsMobile()` 分岐・ADR-137）。768px 以上の DOM は1行も変えない。
 - **下部タブバー**（`.mobile-tabbar`）: ADR-140 の所有範囲。触らない。
 - **ページ内の見出し**（`PageLayout` の `.text-page-title`）: 残す。受信箱の視覚的な隠し（`slimHeaderOnMobile`）も現状維持。
-- **トークン**: `tokens.css` は変更しない。
+- **トークン**: `frontend/src/tokens.css` は変更しない。
 - **API・DB・migrations**: 一切触らない。
 
 ## 4. 守る決まり（CI が検査する）
@@ -60,7 +60,7 @@ PO 指定: 2026-10-13「スマホには受信箱というヘッダーを消し�
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| 1 | 390px で**上部のページ名バーが無い** | `inbox-single-column.spec.ts` で `.mobile-topbar` が `toHaveCount(0)` |
+| 1 | 390px で**上部のページ名バーが無い** | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` で `.mobile-topbar` が `toHaveCount(0)` |
 | 2 | 390px で**下部タブバーが残り、押せる大きさがある** | 同検査で `.mobile-tabbar` が表示・タブが2つ以上・最後のタブ（メニュー）の高さが44px以上 |
 | 3 | 390px で**現在地が読み上げで分かる**（ページ名が見出しとして存在） | 同検査で `getByRole("heading", { name: "受信箱" })` が `toHaveCount(1)` |
 | 4 | **1280px / 768px にモバイル用の殻が出ない**（PC 不変） | 同検査の PC・タブレット側で `.mobile-tabbar` と `.mobile-topbar` が `toHaveCount(0)` |
