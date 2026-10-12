@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useInboxSSE } from "../../hooks/useInboxSSE";
 import { api, ApiError } from "../../lib/api";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import {
   Conversation,
   MessagesResponse,
@@ -638,11 +639,22 @@ export function useInboxState(): UseInboxStateReturn {
       });
   }, [conversations, statusTab, unreadOnly, followUpOnly, searchQuery]);
 
-  // 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択
+  // 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択。
+  // スマホ（1画面1ページ）では自動選択しない。理由は2つある。
+  //   1. 受信箱を開いた瞬間に会話が全画面になり、一覧が一度も見えない
+  //      （PC は一覧が常に見えているため自動選択が親切に働く）
+  //   2. 「一覧へ戻る」で selectedLeadId を null に戻しても、この効果が即座に
+  //      先頭を選び直すため一覧に戻れない。PR #4165 で本番に出た機能退行の原因。
+  //      3幅の画面検査（tests-e2e/visual-language/inbox-single-column.spec.ts）が
+  //      これを検出した。
+  // 判定は ADR-137 の useIsMobile（matchMedia + BREAKPOINTS.MOBILE_MAX）を使い、
+  // CSS 側の @media (max-width: 767px) と同じ切替点に揃える。
+  const isMobile = useIsMobile();
   useEffect(() => {
+    if (isMobile) return;
     if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
     selectLead(filteredConversations[0].lead_id);
-  }, [filteredConversations, selectedLeadId, convLoading, selectLead]);
+  }, [filteredConversations, selectedLeadId, convLoading, selectLead, isMobile]);
 
   // ---------------------------------------------------------------------------
   // 送信

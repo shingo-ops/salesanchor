@@ -280,7 +280,7 @@ en: "backToList": "Back to list"
 
 1. `onBackToList` が実際に呼ばれているか（`/design-preview` での再現、または一時的な確認手段）
 2. `.karte-overlay`（`showKartePanel` 時に `position: fixed; inset: 0`）がクリックを奪っていないか
-3. **既存の解除の型に揃える**。`onPageFilterChange`（`useInboxState.ts:544-556`）は `setSelectedLeadId(null)` に加えて `setLeadDetail(null)` と **URL の `lead_id` 削除**（`params.delete("lead_id")` ＋ `setSearchParams`）を行っている。**URL を消していないことが原因である可能性が高い。**
+3. ~~**URL を消していないことが原因である可能性が高い。**~~ → **誤り。真因は別だった（§14 で確定）。** 既存の解除の型（`onPageFilterChange` / `useInboxState.ts:544-556`）に揃えること自体は正しいが、それだけでは戻れない。
 4. **Mac 側で3幅の画面検査を通してから再投入する。** 作業端末では Playwright が chromium を提供しないため（`ERROR: Playwright does not support chromium on ubuntu26.04-arm64`）、構造変更の検証ができない。
 
 ### この便から得た教訓
@@ -314,3 +314,57 @@ en: "backToList": "Back to list"
 1. **必須チェックには入れていない。** 必須チェックの追加は Branch Protection の変更（CLAUDE.md §不可逆操作）であり PO の判断が必要。現状は PR 画面に結果が出るが、赤でもマージは機械的には止まらない。
 2. **見た目（色・字の大きさ・影）は検査していない。** 検査するのは構造と寸法のみ。ベースライン計測（`inbox-baseline.spec.ts`）は記録を残すだけで合否を出さない。
 3. **実機の操作感（スライドの速さ・慣性）は検査できない。** 別便で扱う。
+
+## 14. #4165 の真因（2026-10-12・画面検査が検出）
+
+§13 で足した画面検査を PR #4171 の CI で初めて実行したところ、**390px で3件すべてが赤**になり、原因が確定した。
+
+### 確定した事実（CI のログ）
+
+```
+Locator:  locator('button.conversation-item').first()
+Expected: visible
+Received: hidden
+  14 × locator resolved to <button class="conv-item conversation-item selected">
+```
+
+**受信箱を開いた直後に、会話が既に `selected` になっている。** 出どころは `useInboxState.ts:641-646`:
+
+```ts
+// 初期表示: 会話未選択かつ一覧が存在する場合、先頭を自動選択
+useEffect(() => {
+  if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
+  selectLead(filteredConversations[0].lead_id);
+}, [filteredConversations, selectedLeadId, convLoading, selectLead]);
+```
+
+### なぜ「一覧へ戻る」が効かなかったのか
+
+1. 戻るを押す → `setSelectedLeadId(null)`
+2. この効果の依存に `selectedLeadId` が入っているため**即座に再実行**
+3. 「未選択かつ一覧がある」が成立 → **先頭の会話を選び直す**
+4. `thread-open` が付き直し、会話が全画面のまま＝**押しても何も起きないように見える**
+
+#12 で「配線は正しいのに状態が変わらない」と記録した現象の説明がついた。**URL の `lead_id` は原因ではない**（消しても効果が選び直す）。#12 の「作り直しの前に確かめること」3番は誤った推定であり、取り消す。
+
+### 直し方
+
+スマホ幅では自動選択しない。判定は **ADR-137 の `useIsMobile`**（`matchMedia` ＋ `BREAKPOINTS.MOBILE_MAX`）を使い、CSS 側の `@media (max-width: 767px)` と同じ切替点に揃える。新しい hook は作らない。
+
+```ts
+const isMobile = useIsMobile();
+useEffect(() => {
+  if (isMobile) return;
+  ...
+}, [..., isMobile]);
+```
+
+**PC・タブレットは従来どおり自動選択する**（一覧が常に見えているため自動選択が親切に働く）。画面検査の1280/768px 側（一覧と会話が同時に見える）がこれを守る。
+
+### 副産物として分かったこと
+
+現状の本番でも、**スマホで受信箱を開くと先頭の会話が自動で開き、`selectLead` 経由で既読化される**（`useInboxState.ts:521` のコメント「lead 選択時 → メッセージ取得 + 既読化」）。既読は取り消せないため、この修正は見た目の問題だけでなく**意図しない既読化を止める**意味も持つ。
+
+### 教訓
+
+**#12 で書いた「原因の推定」を実装の根拠にしてはいけなかった。** 推定（URL）と真因（自動選択の再実行）は別物で、推定のまま作り直せば同じ退行を繰り返していた。画面検査を先に用意したことで、**本番に出す前に**事実で確定できた。
