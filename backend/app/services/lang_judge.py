@@ -81,7 +81,7 @@ async def judge_recipient_language(
                   AND cl.direction        = 'inbound'
                   AND cl.original_language IS NOT NULL
                   AND cl.deleted_at       IS NULL
-                  AND cl.channel_type    NOT IN :excluded_channels
+                  AND cl.channel_type    <> ALL(:excluded_channels)
             ) sub
             GROUP BY original_language
             ORDER BY cnt DESC
@@ -89,7 +89,7 @@ async def judge_recipient_language(
         """),
         {
             "lead_id": lead_id,
-            "excluded_channels": _EXCLUDED_MANUAL_CHANNELS,
+            "excluded_channels": list(_EXCLUDED_MANUAL_CHANNELS),
         },
     )
     row = result.first()
@@ -119,12 +119,12 @@ async def judge_recipient_language(
                   AND cl.direction        = 'inbound'
                   AND cl.original_language IS NOT NULL
                   AND cl.deleted_at       IS NULL
-                  AND cl.channel_type    NOT IN :excluded_channels
+                  AND cl.channel_type    <> ALL(:excluded_channels)
             ) sub
         """),
         {
             "lead_id": lead_id,
-            "excluded_channels": _EXCLUDED_MANUAL_CHANNELS,
+            "excluded_channels": list(_EXCLUDED_MANUAL_CHANNELS),
         },
     )
     total_row = total_result.first()

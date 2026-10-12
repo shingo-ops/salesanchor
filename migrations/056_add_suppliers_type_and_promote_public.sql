@@ -96,62 +96,11 @@ COMMENT ON TABLE  public.suppliers IS 'spec F1 / A6 マーケットプレイス�
 COMMENT ON COLUMN public.suppliers.supplier_type    IS 'A4 確定: individual / corporate。PO PDF 敬称分岐に使用（F8）';
 COMMENT ON COLUMN public.suppliers.default_language IS 'PO PDF / メール送信時の既定言語。alias 解決の言語選択にも使用（F8 AC8.4）';
 
--- === 2. 既存 {tenant_xxx}.suppliers から public.suppliers へ INITIAL コピー ===
--- 既存 tenant_004 / tenant_006 等の suppliers 行を public.suppliers にプロモート。
--- 重複なし: public.suppliers.id は SERIAL なので衝突しない（id は再採番）。
--- 衝突回避: supplier_code がある場合のみ UNIQUE 制約で重複検出、ON CONFLICT で skip。
--- supplier_type は spec A4 で 'corporate' を仮置き（admin が後で UI 修正）。
-DO $promote$
-DECLARE
-    schema_rec RECORD;
-    insert_count INTEGER;
-    total_inserted INTEGER := 0;
-BEGIN
-    FOR schema_rec IN
-        SELECT nspname FROM pg_namespace
-        WHERE nspname ~ '^tenant_\d+$'
-        ORDER BY nspname
-    LOOP
-        -- {tenant_xxx}.suppliers が存在しない schema は skip
-        IF NOT EXISTS (
-            SELECT 1 FROM pg_tables
-            WHERE schemaname = schema_rec.nspname AND tablename = 'suppliers'
-        ) THEN
-            CONTINUE;
-        END IF;
-
-        -- supplier_code が重複しないものだけ insert（idempotent）
-        EXECUTE format($f$
-            INSERT INTO public.suppliers
-                (supplier_code, name, supplier_type, default_language,
-                 contact_name, email, phone, address, notes, is_active,
-                 created_at, updated_at)
-            SELECT
-                src.supplier_code,
-                src.name,
-                'corporate' AS supplier_type,   -- A4 初期値、admin UI で個別修正
-                'ja'        AS default_language,
-                src.contact_name,
-                src.email,
-                src.phone,
-                src.address,
-                src.notes,
-                COALESCE(src.is_active, TRUE),
-                COALESCE(src.created_at, NOW()),
-                COALESCE(src.updated_at, NOW())
-            FROM %I.suppliers src
-            WHERE src.supplier_code IS NOT NULL
-            ON CONFLICT (supplier_code) DO NOTHING
-        $f$, schema_rec.nspname);
-
-        GET DIAGNOSTICS insert_count = ROW_COUNT;
-        total_inserted := total_inserted + insert_count;
-        RAISE NOTICE 'migration 056: %: % 仕入元行を public.suppliers にプロモート',
-            schema_rec.nspname, insert_count;
-    END LOOP;
-    RAISE NOTICE 'migration 056: 全体で % 仕入元行をプロモート (supplier_type=corporate 初期値)',
-        total_inserted;
-END $promote$;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- テナントの suppliers から public.suppliers へのコピー（INSERT … ON CONFLICT DO NOTHING）を外した。
+-- 本番では、どのテナントにも suppliers 表が無く、もともと何もしていなかった。表・制約・トリガーは残す。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: suppliers promote from tenants removed (056)'; END $$;
 
 -- === 3. updated_at 自動更新トリガ ===
 CREATE OR REPLACE FUNCTION public.set_updated_at_suppliers()

@@ -1,0 +1,20 @@
+const fs=require('fs');
+const old=JSON.parse(fs.readFileSync(process.argv[2]+'/input-semantic-audit.json','utf8')).entries.filter(e=>!/\.(stories|test)\.tsx$/.test(e.file));
+const nw=JSON.parse(fs.readFileSync(process.argv[2]+'/av0-input-audit.json','utf8')).rows;
+const ot=e=>e.tag==='input'?(e.type==='text-default'?'omitted':e.type):'-';
+const nt=r=>r.tag==='input'?(r.type.startsWith('dynamic')?'dynamic':r.type==='omitted+spread'?'omitted':r.type):'-';
+const oa=e=>e.attrs.map(a=>a.name).sort().join(',');
+const O=old.map(e=>({file:e.file,line:e.line,tag:e.tag,type:ot(e),sig:oa(e),cls:(e.attrs.find(a=>a.name==='className')||{}).value||''}));
+const N=nw.map(r=>({file:r.file,line:r.line,tag:r.tag,type:nt(r),sig:r.attrNames.join(','),cls:r.className||''}));
+const lv=[(a,b)=>a.sig===b.sig&&a.cls===b.cls,(a,b)=>a.sig===b.sig,()=>true];
+const usedN=new Set(),matched=[];const left=new Set(O.keys());
+lv.forEach((f,li)=>{for(const i of [...left]){const a=O[i];let best=-1,bd=1e9;N.forEach((b,j)=>{if(usedN.has(j)||b.file!==a.file||b.tag!==a.tag||b.type!==a.type||!f(a,b))return;const d=Math.abs(b.line-a.line);if(d<bd){bd=d;best=j}});if(best>=0){usedN.add(best);left.delete(i);matched.push([i,best,li])}}});
+const cnt=(arr,f)=>arr.reduce((m,r)=>{const k=f(r);m[k]=(m[k]||0)+1;return m},{});
+const tt=a=>cnt(a,r=>r.tag+'/'+r.type);
+const to=tt(O),tn=tt(N),keys=[...new Set([...Object.keys(to),...Object.keys(tn)])].sort();
+let s=`\n## 2026-09-10 監査との比較\n\n旧: input-semantic-audit.json（origin/main 3bdf33d55、stories/test除外後 ${O.length}件）。新: 本スキャン ${N.length}件。旧 text-default は新 omitted と対応づけ。\n\n|tag/type|旧|新|差|\n|---|---:|---:|---:|\n`;
+for(const k of keys)s+=`|${k}|${to[k]||0}|${tn[k]||0}|${(tn[k]||0)-(to[k]||0)}|\n`;
+s+=`\n### 照合結果\n照合方法: file+tag+type が一致するもの同士を、(1)属性名集合+className一致 (2)属性名集合一致 (3)なし の順に、行番号が近い順に1対1で対応づけ。\n- 対応づけ成功: ${matched.length}（段階別 ${JSON.stringify(cnt(matched,m=>m[2]+1))}）\n- 旧のみ（削除候補）: ${left.size}\n- 新のみ（追加候補）: ${N.length-usedN.size}\n- 段階3で対応づけたもの（属性が変化）: ${matched.filter(m=>m[2]===2).length}\n`;
+const byF=(arr,f)=>{const m={};arr.forEach(x=>{(m[x.file]=m[x.file]||[]).push(`${x.line}:${x.tag}/${x.type}`)});return Object.entries(m).sort().map(([k,v])=>`- ${k}  ${v.join(' ')}`).join('\n')||'なし'};
+s+=`\n### 旧のみ（削除側）ファイル別\n${byF([...left].map(i=>O[i]))}\n\n### 新のみ（追加側）ファイル別\n${byF(N.filter((_,j)=>!usedN.has(j)))}\n\n### 段階3対応（属性変化・参考）\n${byF(matched.filter(m=>m[2]===2).map(m=>({...N[m[1]],line:`${O[m[0]].line}->${N[m[1]].line}`})))}\n`;
+fs.appendFileSync(process.argv[2]+'/av0-input-audit.md',s);console.log(s)

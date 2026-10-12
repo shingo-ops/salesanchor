@@ -8,6 +8,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface BotFormState {
   display_name: string;
@@ -20,6 +21,7 @@ export interface BotFormState {
 
 export interface BotStaff {
   id: number;
+  user_id: number | null;
   surname_jp: string;
   given_name_jp: string;
 }
@@ -43,15 +45,18 @@ export function BotFormFields({ form, onChange, staff }: Props) {
     { value: "inactive", label: t("bots.statusInactive") },
     { value: "maintenance", label: t("bots.statusMaintenance") },
   ];
-  const staffOptions = staff.map((s) => ({
-    value: String(s.id),
-    label: `${s.surname_jp} ${s.given_name_jp}`,
-  }));
+  // 担当者の値は users.id（ADR-1008）。user_id が無い名簿行は選べない
+  const staffOptions = staff
+    .filter((s) => s.user_id != null)
+    .map((s) => ({
+      value: String(s.user_id),
+      label: `${s.surname_jp} ${s.given_name_jp}`,
+    }));
   return (
     <>
       <div className="form-group">
         <label>{t("bots.displayName")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.display_name}
           onChange={(e) => onChange("display_name", e.target.value)}
@@ -80,14 +85,14 @@ export function BotFormFields({ form, onChange, staff }: Props) {
       />
       <div className="form-group">
         <label>Discord Bot ID</label>
-        <input
+        <TextFieldControl
           value={form.discord_user_id}
           onChange={(e) => onChange("discord_user_id", e.target.value)}
         />
       </div>
       <div className="form-group">
         <label>{t("bots.senderEmail")}</label>
-        <input
+        <TextFieldControl
           type="email"
           value={form.sender_email}
           onChange={(e) => onChange("sender_email", e.target.value)}

@@ -65,7 +65,7 @@
       "duplicateFile": "This file has already been imported.",
       "columnCount": "Row {{value}} does not have 10 columns.",
       "duplicateRow": "Duplicates row {{value}} in this file.",
-      "markUsed": "The same mark is already used by product {{value}}.",
+      "markUsed": "The product code overlaps {{value}}. Adding exclude keywords is recommended.",
       "shortKeyword": "This search keyword is very short: {{value}}",
       "keywordShared": "This search keyword also matches another product: {{value}}",
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
@@ -224,7 +224,6 @@
     "admin": "Admin",
     "deals": "Deals",
     "suppliers": "Suppliers",
-    "purchaseOrders": "Purchase Orders",
     "staff": "Staff",
     "bots": "Bots",
     "teams": "Teams",
@@ -256,12 +255,8 @@
     "tenantPolicy": "Tenant Policy",
     "discordConfig": "Discord Integration",
     "discordAnnounce": "Discord Announce",
-    "superAdminTcgProductMaster": "Product master",
     "superAdminFxRate": "FX Rate Management",
-    "superAdminTcgParallelReport": "Parallel Engine Report",
     "superAdminTcgLineImport": "Import",
-    "superAdminTcgSoldOut": "Sold-out rules",
-    "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
     "superAdminAnalysisRules": "LINE Analysis",
     "account": "Account",
@@ -283,7 +278,6 @@
     "statusMaster": "Status Master",
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
-    "superAdminSupplierMaster": "Supplier Master",
     "superAdminSupplierExtractionRules": "Extraction Rules",
     "units": "Units",
     "noteMaster": "Note Master",
@@ -1273,7 +1267,9 @@
     "manage": "Manage",
     "markAllRead": "Mark all as read",
     "filterUnread": "Unread",
-    "filterFollowUp": "Follow-up",
+    "filterFollowUp": "Unreplied",
+    "mobileFilters": "Filters",
+    "backToList": "Back to list",
     "subtitle": "Manage and respond to messages.",
     "fetchError": "Failed to load data",
     "unreadBadge": "{{count}} unread",
@@ -1601,7 +1597,6 @@
     "weight": "Weight (kg)",
     "addItem": "Add item",
     "removeItem": "Remove",
-    "selectProduct": "Select product",
     "productNamePlaceholder": "Product name (free text if not in master)",
     "addMethod": "Add method",
     "addModeInventory": "From inventory",
@@ -1741,7 +1736,6 @@
     "productCode": "Product code",
     "nameJa": "Name (JA)",
     "nameEn": "Name (EN)",
-    "unitPrice": "Unit price",
     "msrp": "MSRP",
     "weight": "Weight (kg)",
     "stockQty": "Stock qty",
@@ -1854,6 +1848,17 @@
     "confirmDelete": "Delete selected units?",
     "total": "Units: {{count}}"
   },
+  "unitIgnorePhrases": {
+    "title": "Phrases Not Treated as Units",
+    "description": "Register phrases that contain a unit alias but are not a unit (e.g. a title name).",
+    "phrase": "Phrase",
+    "note": "Reason",
+    "isActive": "Active",
+    "empty": "No phrases registered",
+    "createTitle": "Add Phrase",
+    "editTitle": "Edit Phrase",
+    "confirmDelete": "Delete the selected phrases?"
+  },
   "statusMaster": {
     "title": "Status Rules",
     "statusId": "Status ID",
@@ -1878,42 +1883,11 @@
     "total": "Statuses: {{count}}"
   },
   "purchaseOrders": {
-    "title": "Purchase Orders",
-    "newPO": "New Purchase Order",
-    "editPO": "Edit Purchase Order",
-    "poNumber": "PO number",
-    "noPos": "No purchase orders registered",
-    "deletePO": "Delete Purchase Order",
-    "allStatuses": "All statuses",
     "status_draft": "Draft",
-    "status_pending": "Pending",
     "status_ordered": "Ordered",
     "status_received": "Received",
     "status_cancelled": "Cancelled",
-    "status_error": "Send error",
-    "orderedAt": "Order date",
-    "receivedAt": "Receipt date",
-    "actionOrder": "Order",
-    "actionReceive": "Receive",
-    "actionUnreceive": "Undo receipt",
-    "actionCancel": "Cancel",
-    "actionDownloadPdf": "PDF",
-    "actionSendEmail": "Send email",
-    "actionResendEmail": "Resend",
-    "emailSent": "Email sent",
-    "emailResent": "Email resent",
-    "emailSendFailed": "Failed to send email",
-    "pdfDownloadFailed": "PDF download failed (HTTP {{status}})",
-    "confirmOrderTitle": "Mark as ordered?",
-    "confirmOrderMessage": "The purchase order PDF has been created. Mark this order as \"Ordered\"?",
-    "confirmOrderYes": "Mark as ordered",
-    "confirmOrderNo": "Keep as draft",
-    "subtitle": "Manage purchase orders from creation to receipt.",
-    "supplier": "Supplier",
-    "supplierRequired": "Please select a supplier",
-    "itemsRequired": "All line items must have product and quantity",
-    "createdInfo": "Purchase order created",
-    "fromInventoryMultiSupplier": "Multiple suppliers were selected. Creating a purchase order for the first supplier only; please create separate orders for the other {{count}} supplier(s)."
+    "status_error": "Send error"
   },
   "tenantProfile": {
     "title": "Issuer Profile",
@@ -2414,34 +2388,6 @@
       "suppliers": "Suppliers",
       "llmBudget": "LLM Budget"
     },
-    "attrMasters": {
-      "title": "Various masters",
-      "desc": "Add, edit, and delete the product master dropdown options.",
-      "empty": "No entries yet",
-      "addBtn": "Add",
-      "searchPlaceholder": "Search by name",
-      "reorderHint": "Drag rows to reorder.",
-      "activeOn": "Active",
-      "activeOff": "Inactive",
-      "col": {
-        "labelJa": "Label",
-        "labelEn": "Label (EN)",
-        "code": "Code (optional)",
-        "sortOrder": "Order",
-        "active": "Status"
-      },
-      "attr": {
-        "productKind": "Product type",
-        "setType": "Set type",
-        "tcgSeries": "TCG series",
-        "rarity": "Rarity",
-        "language": "Language",
-        "unit": "Unit",
-        "hsCode": "HS code",
-        "item": "Item",
-        "material": "Material"
-      }
-    },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
       "rulesSection": "Normalization Rules",
@@ -2497,30 +2443,6 @@
       "csvErrors": "CSV Errors",
       "previewWouldInsert": "Rows would be inserted",
       "invalidCsv": "Invalid CSV format"
-    },
-    "tcg": {
-      "title": "TCG Series Master",
-      "newSeries": "New Series",
-      "fields": {
-        "tcgType": "TCG Type",
-        "seriesCode": "Series Code",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "releaseDate": "Release Date",
-        "category": "Category"
-      },
-      "types": {
-        "pokemon": "Pokemon TCG",
-        "one_piece": "One Piece TCG",
-        "dragon_ball": "Dragon Ball TCG",
-        "union_arena": "Union Arena",
-        "yugioh": "Yu-Gi-Oh!"
-      },
-      "typeManager": {
-        "title": "Manage Types",
-        "code": "Type Code",
-        "addBtn": "Add Type"
-      }
     },
     "supplierQuality": {
       "columns": {
@@ -2597,30 +2519,6 @@
       "retryConfirmErrors": "Re-enqueue the displayed error jobs? (up to 50)",
       "retrySuccess": "Enqueued: {{enqueued}} / Skipped: {{skipped}}",
       "retryError": "Retry failed (Celery may be unavailable)."
-    },
-    "dex": {
-      "title": "Pokemon / Trainer Dex",
-      "kinds": {
-        "pokemon": "Pokemon",
-        "trainer": "Trainer"
-      },
-      "newEntry": "New Dex Entry",
-      "fields": {
-        "dexNumber": "Dex Number",
-        "nameJa": "Name (Japanese)",
-        "nameEn": "Name (English)",
-        "generation": "Generation",
-        "region": "Region",
-        "era": "Era"
-      },
-      "import": {
-        "previewBtn": "Import from PokeAPI",
-        "applyBtn": "Import {{count}} entries",
-        "upToDate": "Up to date (no new entries)",
-        "diffSummary": "{{count}} new (PokeAPI {{source}} / DB {{db}})",
-        "applied": "Imported {{count}} entries",
-        "truncated": "Many new entries — showing/importing the first {{max}} only"
-      }
     },
     "suppliersAdmin": {
       "title": "Supplier Master (Central Admin)",
@@ -2711,23 +2609,6 @@
       "refreshError": "Failed to fetch the rate. Please try again later.",
       "currency": "Currency",
       "rateJpy": "1 Foreign = N JPY"
-    },
-    "llmBudget": {
-      "title": "Monthly LLM Budget (Gemini 2.5 Flash)",
-      "subtitle": "Manage per-tenant LLM fallback usage and monthly cap.",
-      "noRows": "No budget rows have been registered yet.",
-      "savedNotice": "Saved.",
-      "editTitle": "Edit budget for tenant {{tenant_id}}",
-      "fields": {
-        "tenantId": "Tenant ID",
-        "tenantName": "Tenant Name",
-        "monthlyBudget": "Monthly Budget (USD)",
-        "currentMonth": "Used This Month",
-        "utilization": "Utilization",
-        "hardStop": "Hard stop on overrun",
-        "notifyAdmin": "Notify admin",
-        "lastResetAt": "Last reset"
-      }
     },
     "inbound": {
       "title": "Discord Inbound Messages",
@@ -3575,7 +3456,7 @@
     },
     "preview": {
       "candidateUnit": " delivery candidates",
-      "excFlag": "FLAG excluded",
+      "excFlag": "FLAG / Error excluded",
       "excPid": "PID unresolved",
       "excUnit": "Unit unresolved",
       "excBoth": "Both unresolved",
@@ -3800,11 +3681,6 @@
       "filtered": "Filtered",
       "unknown": "Not recorded"
     },
-    "reviewReason": {
-      "pid_unresolved": "Product could not be identified",
-      "multi_candidate": "Multiple product candidates",
-      "note_unmatched": "No conversion target found for the note"
-    },
     "viewMessages": "View imported messages",
     "viewItems": "View extracted items",
     "viewResults": "View all {{total}} analysis result(s)",
@@ -3836,17 +3712,116 @@
     "changed": "The content changed. Review the refreshed details before confirming again.",
     "reloadFailed": "The content changed, but refreshing failed. Reload before confirming again.",
     "saveFailed": "Could not confirm the condition. Please retry.",
-    "loadFailed": "Could not load the condition choices.",
-    "otherReason": "Another issue requires review.",
-    "separator": " / ",
-    "reasons": {
-      "empty_box": "Empty box requires confirmation.",
-      "empty_box_ambiguous": "The empty-box description is ambiguous. Select the actual condition.",
-      "empty_box_master_unavailable": "The empty-box definition is unavailable.",
-      "note_unmatched": "The note still requires review.",
-      "pid_unresolved": "The product is not identified.",
-      "multi_candidate": "More than one product matched."
+    "loadFailed": "Could not load the condition choices."
+  },
+  "v102Posts": {
+    "empty": "No posts to fix",
+    "columns": {
+      "supplier": "Supplier",
+      "postedAt": "Posted at",
+      "postReasons": "Post reasons",
+      "counts": "Items to fix / total",
+      "lines": "Line numbers",
+      "price": "Price",
+      "quantity": "Quantity",
+      "reasons": "Reasons",
+      "remove": "Delete"
+    },
+    "modalTitle": "Fix the transcription",
+    "jobReasons": "Post reasons: {{reasons}}",
+    "linesPlaceholder": "e.g. 3,5,7",
+    "noRows": "No items",
+    "addItem": "Add item",
+    "remove": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Saved. Re-running the analysis",
+    "unchanged": "No changes",
+    "saveFailed": "Could not save. Please try again",
+    "errors": {
+      "lines": {
+        "empty": "Enter line numbers",
+        "notInteger": "Enter whole numbers separated by commas",
+        "outOfRange": "Line numbers must be between 1 and {{max}}",
+        "duplicate": "The same line number appears twice"
+      },
+      "textTooLong": "Use {{max}} characters or fewer",
+      "noItems": "There are no items. Keep at least one"
     }
+  },
+  "reviewItem": {
+    "drawerTitle": "Item to review",
+    "reasonsHeading": "Reasons for review",
+    "noReasons": "No reasons",
+    "sourceLine": "Source: {{source}}",
+    "ack": "Keep as is",
+    "acked": "Marked as checked. Re-running the analysis",
+    "ackFailed": "Could not mark as checked. Please try again",
+    "gapLines": "Gap lines: {{lines}}",
+    "gapLineNumber": "L{{n}}",
+    "gapCandidates": "Candidates: {{names}}"
+  },
+  "reviewReason": {
+    "pid_unresolved": "Product not identified",
+    "multi_candidate": "Multiple product candidates",
+    "note_unmatched": "No match for the note",
+    "empty_box": "Empty box needs confirmation",
+    "empty_box_ambiguous": "Empty-box description is ambiguous",
+    "empty_box_master_unavailable": "Empty-box definition unavailable",
+    "unit_unresolved": "Unit not identified",
+    "price_unresolved": "Price not readable",
+    "quantity_unresolved": "Quantity not readable",
+    "price_source_mismatch": "Price differs between Gemini and source",
+    "quantity_source_mismatch": "Quantity differs between Gemini and source",
+    "value_out_of_range": "Value out of range",
+    "item_mapping_mismatch": "Item mapping mismatch",
+    "unit_price_mismatch": "Unit and price do not match the market",
+    "gemini_gap_suspect": "Possible Gemini omission (gap lines may hold the product name)",
+    "excluded": "Excluded",
+    "item_shape_invalid": "Gemini output has an invalid shape",
+    "price_not_in_lines": "Price not found in the source lines",
+    "duplicate_price_line": "Duplicate price line",
+    "ship": "Check whether this is a shipping line",
+    "condition": "Check whether this is a condition line",
+    "quantity_no_number": "Quantity has no number",
+    "quantity_not_in_text": "Copied quantity not found in the source lines",
+    "possible_footer_line": "May be a footer line",
+    "unit_unknown": "Unit unknown",
+    "category_unknown": "Category unknown",
+    "heading_ship_with_own_ship": "Shipping stated in both heading and item",
+    "no_items": "No items extracted",
+    "possible_missing_item": "An item may be missing",
+    "product_not_in_master": "Not in the product master",
+    "product_multiple": "Multiple product candidates (new method)",
+    "condition_multiple_candidates": "Multiple condition candidates",
+    "condition_unknown": "Condition unknown",
+    "gemini_unsure": "Gemini reported it is unsure",
+    "gemini_unsure_invalid": "Gemini's report has an invalid shape",
+    "response_unreadable": "Gemini response unreadable",
+    "extract_exception": "Error during analysis",
+    "unknown": "Unregistered reason ({{code}})",
+    "source": {
+      "gemini": "Gemini",
+      "system": "System"
+    },
+    "separator": ", "
+  },
+  "codeCollision": {
+    "title": "The product code overlaps existing products",
+    "hint": "Adding exclude keywords is recommended so the products can be told apart.",
+    "itemWithWork": "{{name}} ({{work}})",
+    "matched": "Overlapping {{field}}: {{value}}",
+    "fields": { "product_code": "product code", "mark": "mark" },
+    "addToThis": "Words to add to this product's exclude keywords: {{words}}",
+    "addToOther": "Words to add to the other product's exclude keywords: {{words}}",
+    "registered": "Exclude keywords are already registered",
+    "addToThisButton": "Add to this product",
+    "addToOtherButton": "Add to that product",
+    "confirmTitle": "Add exclude keyword",
+    "confirmMessage": "Add \"{{word}}\" to the exclude keywords of {{product}}",
+    "confirmAction": "Add",
+    "result": { "added": "Added", "exists": "Already registered", "staged": "Added to the field (saved when you save)" },
+    "addError": "Could not add the keyword. Please try again"
   },
   "productDetail": {
     "title": "Product details and editing",
@@ -4008,6 +3983,7 @@
       "knowledgeAliases": "Extraction Filter / Rules",
       "promptConfig": "Extraction Prompt Config",
       "errorLog": "Error Log",
+      "soldOutResults": "Sold-out results",
       "groupSystem": "System",
       "pipelineMap": "Pipeline Map",
       "lineWorkflowGuide": "LINE Analysis Workflow",
@@ -4930,12 +4906,16 @@
     },
     "effect": {
       "EXCLUDE": "Exclude",
-      "OUTPUT": "Output"
+      "OUTPUT": "Output",
+      "HEADING": "Heading",
+      "DATE_AHEAD": "Upcoming date",
+      "RELEASE_AHEAD": "Release date"
     },
     "matchType": {
       "REGEX": "Regex",
       "LITERAL": "Literal",
-      "DEFAULT": "Default"
+      "DEFAULT": "Default",
+      "RELEASE": "Release date"
     },
     "enabled": {
       "true": "Enabled",
@@ -4950,7 +4930,8 @@
       "soldOut": "Sold-out Rules",
       "date": "Date Rules",
       "default": "Default",
-      "test": "Test"
+      "test": "Test",
+      "context": "Pre-order clues"
     },
     "test": {
       "gateOpen": "Tests passed — rules can be enabled",
@@ -5004,7 +4985,13 @@
       "effectOutput": "Detect and show",
       "effectExclude": "Detect and exclude",
       "testRequired": "Create available after test passes",
-      "testPassed": "Test passed"
+      "testPassed": "Test passed",
+      "effectHeading": "Decide from heading",
+      "effectDateAhead": "Decide from upcoming date",
+      "effectReleaseAhead": "Decide from release date",
+      "matchType": "Match type",
+      "excludePattern": "Exclude word",
+      "testNotNeeded": "Release date rules need no test"
     },
     "edit": {
       "title": "Edit Rule",
@@ -5030,26 +5017,6 @@
     "productMasterUnregistered": "Product Master Unregistered",
     "supplierUnregistered": "Supplier Unregistered",
     "confirmed": "Confirmed"
-  },
-  "tcgParallelReport": {
-    "title": "Parallel Report",
-    "overallSummary": "Overall Summary",
-    "metric": "Metric",
-    "difference": "Difference",
-    "totalItems": "Total Items",
-    "pidResolved": "PID Resolved",
-    "supplierComparison": "Supplier Comparison",
-    "count": "Count",
-    "refreshReport": "Refresh Report",
-    "calculating": "Calculating...",
-    "superAdminOnly": "This page is for super_admin only.",
-    "fetchError": "Failed to fetch report",
-    "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
-    "calculatingDetail": "Calculating (DB read + in-memory matching)...",
-    "readOnlyNote": "* No DB writes. Report is read-only.",
-    "compatV1Description": "Legacy GAS matching result (existing DB values, gemini_all.json basis)",
-    "namefirstV1Description": "New server engine (in-memory calculation, keyword longest-match)",
-    "pidResolutionRate": "PID Resolution Rate"
   },
   "supplierExtractionRules": {
     "title": "Supplier Extraction Rules",
@@ -5120,12 +5087,17 @@
     "ruleLinked": "Linked",
     "noRulesLinked": "Not configured",
     "shipFormat": "Ship timing format",
-    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)"
+    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)",
+    "layoutRules": "Layout rules (new pipeline only)",
+    "layoutRulesHelper": "Describe how each instruction step applies to this supplier. Not used by the current production extraction.",
+    "hardCases": "Hard cases (new pipeline only)",
+    "hardCasesHelper": "Original text and expected output for cases that were actually misread. Not used by the current production extraction."
   },
   "needsReview": {
     "title": "Needs Review",
     "productName": "Product Name",
     "supplier": "Supplier",
+    "source": "Source",
     "reviewReasons": "Review Reasons",
     "createdAt": "Date",
     "noItems": "No items need review",
@@ -5135,7 +5107,8 @@
     "tabs": {
       "production": "Production review",
       "shadow": "Shadow run review",
-      "bottlenecks": "Bottlenecks"
+      "bottlenecks": "Bottlenecks",
+      "posts": "Posts"
     }
   },
   "distributionSettings": {

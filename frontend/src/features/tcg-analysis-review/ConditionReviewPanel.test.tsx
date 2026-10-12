@@ -62,5 +62,21 @@ describe("ConditionReviewPanel", () => {
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(api.post).toHaveBeenCalledOnce();
   });
+  it("shows the selection panel for a condition_unknown item and saves the chosen condition", async () => {
+    vi.mocked(api.post).mockResolvedValue({ok:true,saved:1,condition_review:{needs_review:false}});
+    const unknown: AnalysisReviewItem = { ...item, system: { condition: "Error" },
+      condition_review: { ...item.condition_review!, condition_id: "error", review_reasons: "condition_unknown", classification: "none" } };
+    render(<ConditionReviewPanel item={unknown} onRefresh={vi.fn().mockResolvedValue(undefined)} />);
+    await screen.findByRole("option",{name:"Sealed box"});
+    fireEvent.change(screen.getByRole("combobox"),{target:{value:"normal"}});
+    fireEvent.click(screen.getByRole("button",{name:"Save selected condition"}));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith(expect.anything(),expect.objectContaining({condition_review:expect.objectContaining({decision:"correct",condition_id:"normal"})})));
+  });
+  it("renders nothing for an item with neither an empty-box nor a condition_unknown reason", () => {
+    const plain: AnalysisReviewItem = { ...item, system: { condition: "Sealed box" },
+      condition_review: { ...item.condition_review!, review_reasons: "pid_unresolved", classification: "none" } };
+    const { container } = render(<ConditionReviewPanel item={plain} onRefresh={vi.fn()} />);
+    expect(container.innerHTML).toBe("");
+  });
   it("marks empty-only review rows as needing review", () => { expect(hasNeedsReview(["CONDITION_REVIEW_REQUIRED"])).toBe(true); });
 });

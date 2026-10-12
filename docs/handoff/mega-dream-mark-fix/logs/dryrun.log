@@ -1,0 +1,13 @@
+BEGIN
+SET
+SET
+SET
+NOTICE:  id=440559 products UPDATE rows=1: mark M3 -> M2a
+DO
+NOTICE:  DONE: 1 products changed, 1 audit_log rows
+   id   | product_code | mark |      name      | is_active |                 search_keywords                  |                                   exclude_keywords                                   |          updated_at           
+--------+--------------+------+----------------+-----------+--------------------------------------------------+--------------------------------------------------------------------------------------+-------------------------------
+ 440559 | PM0198       | M2a  | MEGAドリームex | t         | 0:MEGAドリームex | 1:MEGA Dream | 2:メガドリーム | 1:AR | 2:PSA | 3:PSA10 | 4:PSA9 | 5:SAR | 6:SR | 7:パラレル | 8:マスターボールミラー | 2026-10-05 00:32:53.545518+00
+(1 row)
+
+ROLLBACK

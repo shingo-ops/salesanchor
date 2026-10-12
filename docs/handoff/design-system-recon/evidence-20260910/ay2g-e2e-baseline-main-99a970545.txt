@@ -1,0 +1,817 @@
+
+Running 22 tests using 4 workers
+
+  ✘   3 [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 390 (19.7s)
+  ✘   4 [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 390 (20.0s)
+  ✘   1 [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 1280 (20.1s)
+  ✘   2 [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 1280 (20.2s)
+  ✘   5 [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: overlay (30.2s)
+  ✘   7 [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: button (31.1s)
+  ✘   8 [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: escape (31.2s)
+  ✘   6 [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 409 retains inputs with no automatic retry (31.3s)
+  ✘  11 [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 390 (13.1s)
+  ✘  12 [chromium] › tests-e2e/tcg-product-detail.spec.ts:134:1 › detail load failure offers reload and cannot save an empty form (17.8s)
+  ✘  13 [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 1440 (5.4s)
+  ✘  14 [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 390 (5.7s)
+  ✘   9 [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 422 retains inputs with no automatic retry (30.5s)
+  ✘  10 [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 500 retains inputs with no automatic retry (30.7s)
+  ✘  15 [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 1440 (6.6s)
+Screenshot: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-result-d298619a-92d2-4d10-8da7-53686826e95f.png
+  ✓  16 [chromium] › tests-e2e/tcg-product-import.spec.ts:67:1 › list to confirmation and registration: no commit before explicit confirmation (6.3s)
+[WebServer] 7:34:50 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+[WebServer] 7:34:51 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+[WebServer] 7:34:52 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+Screenshot: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-tabs-ja-332a2fc0-6107-4c15-b7de-035a79716e58.png
+  ✓  17 [chromium] › tests-e2e/tcg-product-import.spec.ts:92:3 › AC8 work tabs use ja names, scroll and support keyboard selection (8.2s)
+[WebServer] 7:34:54 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+[WebServer] 7:34:54 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+[WebServer] 7:34:55 [vite] (client) [console.warn] [UiPrefs] /staff/me 取得失敗、デフォルト値で動作: ApiError: [E2E] no mock for GET /staff/me
+[WebServer]     at request (http://localhost:5173/src/lib/api.ts:87:11)
+[WebServer]     at async http://localhost:5173/src/contexts/UiPrefsContext.tsx:58:15
+[WebServer] 7:34:55 [vite] (client) [console.warn] [UiPrefs] /staff/me 取得失敗、デフォルト値で動作: ApiError: [E2E] no mock for GET /staff/me
+[WebServer]     at request (http://localhost:5173/src/lib/api.ts:87:11)
+[WebServer]     at async http://localhost:5173/src/contexts/UiPrefsContext.tsx:58:15
+[WebServer] 7:34:55 [vite] (client) [console.error] Warning: Encountered two children with the same key, `undefined`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+[WebServer]     at tbody
+[WebServer]     at table
+[WebServer]     at div
+[WebServer]     at DataTable (http://localhost:5173/src/components/DataTable.tsx:16:29)
+[WebServer]     at div
+[WebServer]     at div
+[WebServer]     at PageLayout (http://localhost:5173/src/components/PageLayout.tsx:5:30)
+[WebServer]     at TcgProductMasterPage (http://localhost:5173/src/pages/super-admin/TcgProductMasterPage.tsx:21:22)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4763:25)
+[WebServer]     at main
+[WebServer]     at div
+[WebServer]     at MobileShell (http://localhost:5173/src/components/MobileShell.tsx:60:16)
+[WebServer]     at ShellSwitch (http://localhost:5173/src/App.tsx:156:19)
+[WebServer]     at ProtectedRoute (http://localhost:5173/src/components/ProtectedRoute.tsx:10:42)
+[WebServer]     at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4136:26)
+[WebServer]     at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4816:19)
+[WebServer]     at ThemeProvider (http://localhost:5173/src/contexts/ThemeContext.tsx:46:33)
+[WebServer]     at LocaleProvider (http://localhost:5173/src/contexts/LocaleContext.tsx:26:34)
+[WebServer]     at UiPrefsProvider (http://localhost:5173/src/contexts/UiPrefsContext.tsx:38:35)
+[WebServer]     at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:4768:29)
+[WebServer]     at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=bf78d8e9:7208:26)
+[WebServer]     at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:13:32)
+[WebServer]     at App (http://localhost:5173/src/App.tsx:173:16)
+Screenshot: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-tabs-en-4f4e2781-b0e2-43a2-bd68-f32b13916008.png
+[WebServer] 7:34:57 [vite] (client) [console.warn] [UiPrefs] /staff/me 取得失敗、デフォルト値で動作: ApiError: [E2E] no mock for GET /staff/me
+[WebServer]     at request (http://localhost:5173/src/lib/api.ts:87:11)
+[WebServer]     at async http://localhost:5173/src/contexts/UiPrefsContext.tsx:58:15
+[WebServer] 7:34:57 [vite] (client) [console.warn] [UiPrefs] /staff/me 取得失敗、デフォルト値で動作: ApiError: [E2E] no mock for GET /staff/me
+[WebServer]     at request (http://localhost:5173/src/lib/api.ts:87:11)
+[WebServer]     at async http://localhost:5173/src/contexts/UiPrefsContext.tsx:58:15
+  ✓  18 [chromium] › tests-e2e/tcg-product-import.spec.ts:92:3 › AC8 work tabs use en names, scroll and support keyboard selection (14.2s)
+  ✓  19 [chromium] › tests-e2e/tcg-product-import.spec.ts:147:1 › AC8 non-admin cannot request product list or see tabs (12.8s)
+Screenshot: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-template-ja-f3ee12e2-1c05-4c86-9522-7241187fdcc8.png
+  ✓  20 [chromium] › tests-e2e/tcg-product-import.spec.ts:157:1 › non-admin cannot enter CSV import (13.9s)
+  ✓  21 [chromium] › tests-e2e/tcg-product-import.spec.ts:170:3 › blank CSV download and empty preview in ja (10.7s)
+Screenshot: /tmp/reports/CARD-PRODUCT-CSV-TEMPLATE-IMPL-02-template-en-d2344589-4bf5-44d1-8669-5653f6c73c89.png
+  ✓  22 [chromium] › tests-e2e/tcg-product-import.spec.ts:170:3 › blank CSV download and empty preview in en (4.3s)
+
+
+  1) [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 1280 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: '日本語名', exact: true })
+    Expected: "日本語の商品"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      68 |       await row.focus(); await page.keyboard.press("Enter");
+      69 |       const dialog = page.getByRole("dialog", { name: /商品詳細|Product details/ });
+    > 70 |       await expect(dialog.getByRole("textbox", { name: locale === "ja" ? "日本語名" : "Japanese name", exact: true })).toHaveValue(product.japanese_title);
+         |                                                                                                                    ^
+      71 |       await expect(dialog.getByLabel(locale === "ja" ? "商品コード" : "Product code", { exact: true })).toHaveAttribute("readonly", "");
+      72 |       await dialog.getByLabel(locale === "ja" ? "英語名" : "English name", { exact: true }).fill("Edited English");
+      73 |       await dialog.getByLabel(locale === "ja" ? "検索キーワード" : "Search keywords", { exact: true }).fill("Changed\nSecond");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:70:116
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-dd220-ng-and-saved-values-ja-1280-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-dd220-ng-and-saved-values-ja-1280-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D1-D4-b-dd220-ng-and-saved-values-ja-1280-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-dd220-ng-and-saved-values-ja-1280-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D1-D4-b-dd220-ng-and-saved-values-ja-1280-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 390 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: '日本語名', exact: true })
+    Expected: "日本語の商品"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      68 |       await row.focus(); await page.keyboard.press("Enter");
+      69 |       const dialog = page.getByRole("dialog", { name: /商品詳細|Product details/ });
+    > 70 |       await expect(dialog.getByRole("textbox", { name: locale === "ja" ? "日本語名" : "Japanese name", exact: true })).toHaveValue(product.japanese_title);
+         |                                                                                                                    ^
+      71 |       await expect(dialog.getByLabel(locale === "ja" ? "商品コード" : "Product code", { exact: true })).toHaveAttribute("readonly", "");
+      72 |       await dialog.getByLabel(locale === "ja" ? "英語名" : "English name", { exact: true }).fill("Edited English");
+      73 |       await dialog.getByLabel(locale === "ja" ? "検索キーワード" : "Search keywords", { exact: true }).fill("Changed\nSecond");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:70:116
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-1eae8-ing-and-saved-values-ja-390-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-1eae8-ing-and-saved-values-ja-390-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D1-D4-b-1eae8-ing-and-saved-values-ja-390-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-1eae8-ing-and-saved-values-ja-390-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D1-D4-b-1eae8-ing-and-saved-values-ja-390-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 1280 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: 'Japanese name', exact: true })
+    Expected: "日本語の商品"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: 'Japanese name', exact: true })
+
+
+      68 |       await row.focus(); await page.keyboard.press("Enter");
+      69 |       const dialog = page.getByRole("dialog", { name: /商品詳細|Product details/ });
+    > 70 |       await expect(dialog.getByRole("textbox", { name: locale === "ja" ? "日本語名" : "Japanese name", exact: true })).toHaveValue(product.japanese_title);
+         |                                                                                                                    ^
+      71 |       await expect(dialog.getByLabel(locale === "ja" ? "商品コード" : "Product code", { exact: true })).toHaveAttribute("readonly", "");
+      72 |       await dialog.getByLabel(locale === "ja" ? "英語名" : "English name", { exact: true }).fill("Edited English");
+      73 |       await dialog.getByLabel(locale === "ja" ? "検索キーワード" : "Search keywords", { exact: true }).fill("Changed\nSecond");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:70:116
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-44f45-ng-and-saved-values-en-1280-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-44f45-ng-and-saved-values-en-1280-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D1-D4-b-44f45-ng-and-saved-values-en-1280-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-44f45-ng-and-saved-values-en-1280-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D1-D4-b-44f45-ng-and-saved-values-en-1280-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 390 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: 'Japanese name', exact: true })
+    Expected: "日本語の商品"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('dialog', { name: /商品詳細|Product details/ }).getByRole('textbox', { name: 'Japanese name', exact: true })
+
+
+      68 |       await row.focus(); await page.keyboard.press("Enter");
+      69 |       const dialog = page.getByRole("dialog", { name: /商品詳細|Product details/ });
+    > 70 |       await expect(dialog.getByRole("textbox", { name: locale === "ja" ? "日本語名" : "Japanese name", exact: true })).toHaveValue(product.japanese_title);
+         |                                                                                                                    ^
+      71 |       await expect(dialog.getByLabel(locale === "ja" ? "商品コード" : "Product code", { exact: true })).toHaveAttribute("readonly", "");
+      72 |       await dialog.getByLabel(locale === "ja" ? "英語名" : "English name", { exact: true }).fill("Edited English");
+      73 |       await dialog.getByLabel(locale === "ja" ? "検索キーワード" : "Search keywords", { exact: true }).fill("Changed\nSecond");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:70:116
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-0019d-ing-and-saved-values-en-390-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-0019d-ing-and-saved-values-en-390-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D1-D4-b-0019d-ing-and-saved-values-en-390-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D1-D4-b-0019d-ing-and-saved-values-en-390-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D1-D4-b-0019d-ing-and-saved-values-en-390-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: button 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+       95 |     await row.focus(); await page.keyboard.press("Space");
+       96 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    >  97 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("未保存の商品名");
+          |                                                                      ^
+       98 |     const closeIt = async () => {
+       99 |       if (close === "button") await dialog.getByTestId("drawer-close").click();
+      100 |       else if (close === "escape") await page.keyboard.press("Escape");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:97:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-a68b2--discards-explicitly-button-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-a68b2--discards-explicitly-button-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D5-dirt-a68b2--discards-explicitly-button-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-a68b2--discards-explicitly-button-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D5-dirt-a68b2--discards-explicitly-button-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: escape 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+       95 |     await row.focus(); await page.keyboard.press("Space");
+       96 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    >  97 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("未保存の商品名");
+          |                                                                      ^
+       98 |     const closeIt = async () => {
+       99 |       if (close === "button") await dialog.getByTestId("drawer-close").click();
+      100 |       else if (close === "escape") await page.keyboard.press("Escape");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:97:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-c4817--discards-explicitly-escape-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-c4817--discards-explicitly-escape-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D5-dirt-c4817--discards-explicitly-escape-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-c4817--discards-explicitly-escape-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D5-dirt-c4817--discards-explicitly-escape-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: overlay 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+       95 |     await row.focus(); await page.keyboard.press("Space");
+       96 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    >  97 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("未保存の商品名");
+          |                                                                      ^
+       98 |     const closeIt = async () => {
+       99 |       if (close === "button") await dialog.getByTestId("drawer-close").click();
+      100 |       else if (close === "escape") await page.keyboard.press("Escape");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:97:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-3678e-discards-explicitly-overlay-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-3678e-discards-explicitly-overlay-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D5-dirt-3678e-discards-explicitly-overlay-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D5-dirt-3678e-discards-explicitly-overlay-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D5-dirt-3678e-discards-explicitly-overlay-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 409 retains inputs with no automatic retry 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      118 |     await page.getByRole("cell", { name: "MODEL-01", exact: true }).click();
+      119 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    > 120 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("保持する入力");
+          |                                                                      ^
+      121 |     await dialog.getByRole("button", { name: "保存", exact: true }).click();
+      122 |     await expect(dialog.getByRole("alert")).toBeVisible();
+      123 |     await expect(dialog.getByRole("textbox", { name: "日本語名", exact: true })).toHaveValue("保持する入力");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:120:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-16b20-uts-with-no-automatic-retry-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-16b20-uts-with-no-automatic-retry-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D6-serv-16b20-uts-with-no-automatic-retry-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-16b20-uts-with-no-automatic-retry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D6-serv-16b20-uts-with-no-automatic-retry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 422 retains inputs with no automatic retry 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      118 |     await page.getByRole("cell", { name: "MODEL-01", exact: true }).click();
+      119 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    > 120 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("保持する入力");
+          |                                                                      ^
+      121 |     await dialog.getByRole("button", { name: "保存", exact: true }).click();
+      122 |     await expect(dialog.getByRole("alert")).toBeVisible();
+      123 |     await expect(dialog.getByRole("textbox", { name: "日本語名", exact: true })).toHaveValue("保持する入力");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:120:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-676d3-uts-with-no-automatic-retry-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-676d3-uts-with-no-automatic-retry-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D6-serv-676d3-uts-with-no-automatic-retry-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-676d3-uts-with-no-automatic-retry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D6-serv-676d3-uts-with-no-automatic-retry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 500 retains inputs with no automatic retry 
+
+    TimeoutError: locator.fill: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      118 |     await page.getByRole("cell", { name: "MODEL-01", exact: true }).click();
+      119 |     const dialog = page.getByRole("dialog", { name: "商品詳細・編集" });
+    > 120 |     await dialog.getByRole("textbox", { name: "日本語名", exact: true }).fill("保持する入力");
+          |                                                                      ^
+      121 |     await dialog.getByRole("button", { name: "保存", exact: true }).click();
+      122 |     await expect(dialog.getByRole("alert")).toBeVisible();
+      123 |     await expect(dialog.getByRole("textbox", { name: "日本語名", exact: true })).toHaveValue("保持する入力");
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:120:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-8bc10-uts-with-no-automatic-retry-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-8bc10-uts-with-no-automatic-retry-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-D6-serv-8bc10-uts-with-no-automatic-retry-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-D6-serv-8bc10-uts-with-no-automatic-retry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-D6-serv-8bc10-uts-with-no-automatic-retry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests-e2e/tcg-product-detail.spec.ts:134:1 › detail load failure offers reload and cannot save an empty form 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator: getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+    Expected: "日本語の商品"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('dialog', { name: '商品詳細・編集' }).getByRole('textbox', { name: '日本語名', exact: true })
+
+
+      139 |   await expect(dialog.getByRole("button", { name: "保存", exact: true })).toHaveCount(0);
+      140 |   await dialog.getByRole("button", { name: "最新の内容を読み直す" }).click();
+    > 141 |   await expect(dialog.getByRole("textbox", { name: "日本語名", exact: true })).toHaveValue(product.japanese_title);
+          |                                                                            ^
+      142 |   expect(calls.saves()).toBe(0);
+      143 | });
+      144 |
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-detail.spec.ts:141:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-detail--c2447-d-cannot-save-an-empty-form-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-detail--c2447-d-cannot-save-an-empty-form-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-detail-detail--c2447-d-cannot-save-an-empty-form-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-detail-detail--c2447-d-cannot-save-an-empty-form-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-detail-detail--c2447-d-cannot-save-an-empty-form-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 390 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Fixture"
+    Received: null
+
+      31 |       "GET /tcg/products/export": async route => {
+      32 |         const params = new URL(route.request().url()).searchParams;
+    > 33 |         expect(params.get("query")).toBe("Fixture"); expect(params.get("work_id")).toBe(works[0].id);
+         |                                     ^
+      34 |         expect(params.has("limit")).toBe(false);
+      35 |         await route.fulfill({ contentType: "text/csv", body: raw });
+      36 |       },
+        at entry (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:33:37)
+        at handler (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/utils/api-mock.ts:98:14)
+
+    Error: page.waitForEvent: Test ended.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      43 |     const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
+      44 |     await downloadButton.focus();
+    > 45 |     const pending = page.waitForEvent("download"); await page.keyboard.press("Enter");
+         |                          ^
+      46 |     const download = await pending;
+      47 |     expect(download.suggestedFilename()).toBe("tcg-products-update.csv");
+      48 |     const path = await download.path(); expect(path).toBeTruthy(); expect(readFileSync(path!)).toEqual(raw);
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:45:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-ec1ef-xplicit-confirmation-ja-390-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-ec1ef-xplicit-confirmation-ja-390-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-import-R10-upd-ec1ef-xplicit-confirmation-ja-390-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-ec1ef-xplicit-confirmation-ja-390-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-import-R10-upd-ec1ef-xplicit-confirmation-ja-390-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 1440 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Fixture"
+    Received: null
+
+      31 |       "GET /tcg/products/export": async route => {
+      32 |         const params = new URL(route.request().url()).searchParams;
+    > 33 |         expect(params.get("query")).toBe("Fixture"); expect(params.get("work_id")).toBe(works[0].id);
+         |                                     ^
+      34 |         expect(params.has("limit")).toBe(false);
+      35 |         await route.fulfill({ contentType: "text/csv", body: raw });
+      36 |       },
+        at entry (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:33:37)
+        at handler (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/utils/api-mock.ts:98:14)
+
+    Error: page.waitForEvent: Test ended.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      43 |     const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
+      44 |     await downloadButton.focus();
+    > 45 |     const pending = page.waitForEvent("download"); await page.keyboard.press("Enter");
+         |                          ^
+      46 |     const download = await pending;
+      47 |     expect(download.suggestedFilename()).toBe("tcg-products-update.csv");
+      48 |     const path = await download.path(); expect(path).toBeTruthy(); expect(readFileSync(path!)).toEqual(raw);
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:45:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-cb901-plicit-confirmation-ja-1440-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-cb901-plicit-confirmation-ja-1440-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-import-R10-upd-cb901-plicit-confirmation-ja-1440-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-cb901-plicit-confirmation-ja-1440-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-import-R10-upd-cb901-plicit-confirmation-ja-1440-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 390 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Fixture"
+    Received: null
+
+      31 |       "GET /tcg/products/export": async route => {
+      32 |         const params = new URL(route.request().url()).searchParams;
+    > 33 |         expect(params.get("query")).toBe("Fixture"); expect(params.get("work_id")).toBe(works[0].id);
+         |                                     ^
+      34 |         expect(params.has("limit")).toBe(false);
+      35 |         await route.fulfill({ contentType: "text/csv", body: raw });
+      36 |       },
+        at entry (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:33:37)
+        at handler (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/utils/api-mock.ts:98:14)
+
+    Error: page.waitForEvent: Test ended.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      43 |     const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
+      44 |     await downloadButton.focus();
+    > 45 |     const pending = page.waitForEvent("download"); await page.keyboard.press("Enter");
+         |                          ^
+      46 |     const download = await pending;
+      47 |     expect(download.suggestedFilename()).toBe("tcg-products-update.csv");
+      48 |     const path = await download.path(); expect(path).toBeTruthy(); expect(readFileSync(path!)).toEqual(raw);
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:45:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-0f48f-xplicit-confirmation-en-390-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-0f48f-xplicit-confirmation-en-390-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-import-R10-upd-0f48f-xplicit-confirmation-en-390-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-0f48f-xplicit-confirmation-en-390-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-import-R10-upd-0f48f-xplicit-confirmation-en-390-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15) [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 1440 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Fixture"
+    Received: null
+
+      31 |       "GET /tcg/products/export": async route => {
+      32 |         const params = new URL(route.request().url()).searchParams;
+    > 33 |         expect(params.get("query")).toBe("Fixture"); expect(params.get("work_id")).toBe(works[0].id);
+         |                                     ^
+      34 |         expect(params.has("limit")).toBe(false);
+      35 |         await route.fulfill({ contentType: "text/csv", body: raw });
+      36 |       },
+        at entry (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:33:37)
+        at handler (/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/utils/api-mock.ts:98:14)
+
+    Error: page.waitForEvent: Test ended.
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      43 |     const downloadButton = page.getByRole("button", { name: locale === "ja" ? "更新用CSVを出力" : "Export update CSV", exact: true });
+      44 |     await downloadButton.focus();
+    > 45 |     const pending = page.waitForEvent("download"); await page.keyboard.press("Enter");
+         |                          ^
+      46 |     const download = await pending;
+      47 |     expect(download.suggestedFilename()).toBe("tcg-products-update.csv");
+      48 |     const path = await download.path(); expect(path).toBeTruthy(); expect(readFileSync(path!)).toEqual(raw);
+        at /Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-dup-pages/frontend/tests-e2e/tcg-product-import.spec.ts:45:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-deb2f-plicit-confirmation-en-1440-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-deb2f-plicit-confirmation-en-1440-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/tcg-product-import-R10-upd-deb2f-plicit-confirmation-en-1440-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tcg-product-import-R10-upd-deb2f-plicit-confirmation-en-1440-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/tcg-product-import-R10-upd-deb2f-plicit-confirmation-en-1440-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15 failed
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 1280 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values ja 390 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 1280 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:50:5 › D1-D4 bilingual list, row editing and saved values en 390 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: button 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: escape 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:92:3 › D5 dirty confirmation preserves draft and discards explicitly: overlay 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 409 retains inputs with no automatic retry 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 422 retains inputs with no automatic retry 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:116:3 › D6 server error 500 retains inputs with no automatic retry 
+    [chromium] › tests-e2e/tcg-product-detail.spec.ts:134:1 › detail load failure offers reload and cannot save an empty form 
+    [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 390 
+    [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation ja 1440 
+    [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 390 
+    [chromium] › tests-e2e/tcg-product-import.spec.ts:21:3 › R10 update export and explicit confirmation en 1440 
+  7 passed (2.1m)
+exit=1

@@ -13,6 +13,8 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface CompanyMini {
   id: number;
@@ -150,19 +152,19 @@ export default function ContactEditPage() {
             }))}
           />
           <div className="form-group"><label>{t("contacts.surname")}</label>
-            <input value={form.surname} onChange={(e) => setForm({ ...form, surname: e.target.value })} />
+            <TextFieldControl value={form.surname} onChange={(e) => setForm({ ...form, surname: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("contacts.givenName")}</label>
-            <input value={form.given_name} onChange={(e) => setForm({ ...form, given_name: e.target.value })} />
+            <TextFieldControl value={form.given_name} onChange={(e) => setForm({ ...form, given_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("contacts.displayName")}</label>
-            <input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
+            <TextFieldControl value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("contacts.position")}</label>
-            <input value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} />
+            <TextFieldControl value={form.job_title} onChange={(e) => setForm({ ...form, job_title: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("contacts.department")}</label>
-            <input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+            <TextFieldControl value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
           </div>
           <div className="form-group">
             <label>
@@ -171,10 +173,10 @@ export default function ContactEditPage() {
             </label>
           </div>
           <div className="form-group"><label>{t("common.email")}</label>
-            <input type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
+            <TextFieldControl type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("common.phone")}</label>
-            <input value={form.primary_phone} onChange={(e) => setForm({ ...form, primary_phone: e.target.value })} />
+            <TextFieldControl value={form.primary_phone} onChange={(e) => setForm({ ...form, primary_phone: e.target.value })} />
           </div>
           <Select
             label={t("common.status")}
@@ -188,7 +190,7 @@ export default function ContactEditPage() {
             ]}
           />
           <div className="form-group"><label>{t("common.notes")}</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
 
           {form.status === "pending_dedup_review" && (

@@ -2,7 +2,6 @@
  * RuleManagementPanel — ルール管理パネル
  *
  * tcg_status_master のルール運用ビュー。
- * StatusMasterPanel（マスタ管理）とは別で、ルールのメンテナンスに特化。
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
@@ -21,10 +20,11 @@ import { Tabs, type TabItem } from "../../../components/Tabs";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { RuleTestPanel } from "./RuleTestPanel";
 import { RuleDrawer, type RuleEntry } from "./RuleDrawer";
+import { EFFECT_EXCLUDE, MATCH_DEFAULT, MATCH_LITERAL, MATCH_REGEX, MATCH_RELEASE, isContextEffect } from "./ruleEffects";
 
 const PER_PAGE = 50;
 
-type RuleTab = "sold-out" | "date" | "default" | "test";
+type RuleTab = "sold-out" | "date" | "default" | "context" | "test";
 
 export function RuleManagementPanel() {
   const { t } = useTranslation();
@@ -98,6 +98,7 @@ export function RuleManagementPanel() {
       case "sold-out": return item.effect === "EXCLUDE";
       case "date": return item.effect === "OUTPUT" && item.match_type !== "DEFAULT";
       case "default": return item.match_type === "DEFAULT";
+      case "context": return isContextEffect(item.effect);
       case "test": return false;
     }
   });
@@ -106,6 +107,7 @@ export function RuleManagementPanel() {
     { key: "sold-out", label: t(`${f}.tabs.soldOut`), count: items.filter((i) => i.effect === "EXCLUDE").length },
     { key: "date", label: t(`${f}.tabs.date`), count: items.filter((i) => i.effect === "OUTPUT" && i.match_type !== "DEFAULT").length },
     { key: "default", label: t(`${f}.tabs.default`), count: items.filter((i) => i.match_type === "DEFAULT").length },
+    { key: "context", label: t(`${f}.tabs.context`), count: items.filter((i) => isContextEffect(i.effect)).length },
     { key: "test", label: t(`${f}.tabs.test`) },
   ];
 
@@ -118,9 +120,10 @@ export function RuleManagementPanel() {
       header: t(`${f}.columns.matchType`),
       renderCell: (row) => {
         const variantMap: Record<string, "info" | "neutral"> = {
-          REGEX: "info",
-          LITERAL: "neutral",
-          DEFAULT: "neutral",
+          [MATCH_REGEX]: "info",
+          [MATCH_LITERAL]: "neutral",
+          [MATCH_DEFAULT]: "neutral",
+          [MATCH_RELEASE]: "info",
         };
         const variant = variantMap[row.match_type] ?? "neutral";
         const label = t(`${f}.matchType.${row.match_type}`, { defaultValue: row.match_type });
@@ -131,7 +134,7 @@ export function RuleManagementPanel() {
       key: "effect",
       header: t(`${f}.columns.effect`),
       renderCell: (row) => {
-        const variant = row.effect === "EXCLUDE" ? "danger" : "success";
+        const variant = row.effect === EFFECT_EXCLUDE ? "danger" : isContextEffect(row.effect) ? "info" : "success";
         const label = t(`${f}.effect.${row.effect}`, { defaultValue: row.effect });
         return <Badge variant={variant}>{label}</Badge>;
       },

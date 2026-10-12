@@ -1,0 +1,153 @@
+# 設計：マージされた worktree の即時回収（reaper の配線修正）
+
+- 状態：R1 #4053・R3/R4 #4055・R2 #4059・R6 #4064・R7 #4071（GH_TOKEN）はマージ済み。R5 は ADR-114 改訂 PR で対応（PO 承認待ち）
+- 置き場所（予定）：`docs/handoff/reaper-on-merge/design.md`。recon を兼ねる。
+- 対象の ADR：`docs/adr/ADR-114-worktree-auto-cleanup.md`（ADR-114-worktree-auto-cleanup）
+- PO の要望（2026-10-08〜09）：「main に入った時点で自動で削除される仕組みにしたい」「頻度を上げて、常に不要なものを消したい」。設計に進むことに「y」。
+
+## 1. 現在地（事実。origin/main 0f5d7e537、2026-10-09 の調査）
+- worktree は本体を除いて 100 個。上限 100 に到達している（`scripts/new-worktree.sh:73-74`）。
+- 内訳
+  - PR が OPEN：62
+  - MERGED：6、CLOSED：1、PR 無し：31
+  - 台帳以外の未保存あり：31
+  - 未 push あり：16
+  - 最後のコミットが 30日より古い：23
+  - 合計の大きさ：約 10.4GB（手元の Mac。ディスクの空きは約170MB）
+- 回収の経路は3つ。
+  1. launchd `jp.salesanchor.reaper-onlogin`：ログイン時と毎日 03:00。本体 `/Users/tanizawashingo/salesanchor` で `reaper-worktree.sh --execute` を実行する。
+     - **実際に削除しているのは、この経路だけ。** ログでは、ほぼ毎回「削除 1 件」。
+  2. GitHub Actions の `.github/workflows/reaper-schedule.yml`：毎日 18:00 UTC、self-hosted macOS。
+     - runner の checkout（`_work`）で実行し、`REAPER_WORKTREES_DIR=/Users/tanizawashingo/worktrees/salesanchor` で、走査だけを本体側に向けている（:25-37）。
+     - しかし `MAIN_REPO_ROOT` は、cwd の `git rev-parse --git-common-dir` から決まる（`scripts/reaper-worktree.sh:40-45`）。そのため `_work` 側を指す。
+     - 削除は `git -C "${MAIN_REPO_ROOT}" worktree remove`（:352）と `branch -D`（:357）で行うので、本体の worktree を消せない。台帳の照合も `_work` 側を見る。
+     - 直近の run 37698305644 は「削除対象なし」だった。
+  3. 即時の経路：`repository_dispatch: reaper-run`（`.github/workflows/reaper-schedule.yml:13-14`）。
+     - 発火元は `.github/workflows/active-work-auto-done.yml:137-145` だけで、これは **develop** への PR のマージで動く（:6-9）。
+     - main へのマージでは発火しない（main 用の `.github/workflows/ledger-auto-done-main.yml` は dispatch していない）。
+- 削除の条件（`scripts/reaper-worktree.sh:150-242`）
+  - 台帳以外の未保存・未 push があれば保護する。
+  - 台帳が DONE であるか、gh で main へのマージ済み、または CLOSED の PR があれば削除する。
+  - IN_PROGRESS・REVIEW の未マージ、および PR 無しは保護する。
+- 使用中（どこかのセッションの作業ディレクトリ）かどうかは、確認していない。
+- GitHub Actions の仕様（Context7 `/websites/github_en_actions`、events-that-trigger-workflows の pull_request）
+  - `types: [closed]` で、マージで閉じたときに動かせる。マージの場合、`GITHUB_REF` は base のブランチになる。
+  - GITHUB_TOKEN で行ったマージの closed では、workflow は起動しない。
+
+## 2. 正直な見立て
+- 即時回収にしても、すぐに減るのは「マージ済みで、未保存の変更が無いもの」だけ。
+- 100 個のうち大半（OPEN 62、未保存あり約40）は、自動では消せないし、消してはいけない。この分は §5 の「判断リスト」で、人が判断する。
+
+## 3. 変更（1便に1つずつ）
+| 便 | 箇所 | 変更前 | 変更後 | 目的 |
+|---|---|---|---|---|
+| R1 | `.github/workflows/reaper-schedule.yml:25-37` | `REAPER_WORKTREES_DIR` を注入し、`_work` を cwd にして `bash scripts/reaper-worktree.sh --execute` | `REAPER_WORKTREES_DIR` を外し、`working-directory: /Users/tanizawashingo/salesanchor` で `bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" --execute` を実行する（スクリプトは最新の checkout のもの、git の基点は本体） | GitHub Actions 経路が、本体の worktree を実際に回収できるようにする。台帳の照合も本体を見る |
+| R2 | 同 `:9-14` の `on:` | schedule / workflow_dispatch / repository_dispatch | `pull_request: types: [closed], branches: [main]` を追加する。job に `if: github.event_name != 'pull_request' \|\| github.event.pull_request.merged == true` と `concurrency: { group: reaper, cancel-in-progress: false }` を付ける | main へのマージの直後に回収する |
+| R3 | `scripts/reaper-worktree.sh` のチェック2の直前 | 使用中かどうかを見ない | `lsof -a -d cwd -Fn 2>/dev/null` の結果に、その worktree のパス（またはその配下）があれば、新しい区分 `SKIP_IN_USE` に入れて保護する。サマリに件数を出す | マージ直後に、まだそのフォルダで作業しているセッションを壊さない |
+| R4 | `scripts/new-worktree.sh:77` | `grep -c "未保存あり" \|\| echo "0"`（一致が0件のとき "0\n0" になり、:83 の比較が壊れる。一致してもヘッダ行の数しか数えない） | `grep -oE '未保存あり（削除しない）: [0-9]+' \| grep -oE '[0-9]+$' \|\| true` とし、空なら 0 | 上限に到達したときの案内を正しく出す |
+| R5 | `docs/adr/ADR-114-worktree-auto-cleanup.md` | develop 前提、即時経路は develop のみ | main のマージで即時回収すること、本体を基点に実行すること、使用中を保護することを、改訂の節として追記する（PO の承認が必要） | 決まりを実物に合わせる |
+
+- 変えないこと：削除の安全条件（未保存・未 push の保護）、CLOSED の扱い、上限の値（100）、launchd の経路。
+- self-hosted runner の上で `pull_request` を動かすことについて：このリポジトリはフォークからの PR を前提にしていない。それでも、`if` で merged かつ base が main の場合に限る。フォークの扱いのリポジトリ設定は未確認なので、実装の前に確かめる。
+
+## 4. テスト・受入条件
+| 基準 | 検証方法 |
+|---|---|
+| R1：GitHub Actions 経路が、本体の worktree を走査・削除できる | `workflow_dispatch` で手動実行し、ログの「対象 worktree 数」が本体の `git worktree list` の数と一致し、GHOST の誤検出が無いこと |
+| R2：main へのマージの直後に起動する | 次のマージで、reaper-schedule の run が `pull_request` のイベントで起動し、そのブランチの worktree（未保存が無い場合）が消えること |
+| R3：使用中は消さない | 使い捨ての worktree を作り、その中で `sleep` するプロセスを置いた状態で dry-run を実行し、`SKIP_IN_USE` に入ること。プロセスが無ければ、通常どおり判定されること |
+| R4：上限の案内が正しい | 未保存ありが0件の状態と、N件の状態で、`UNSAVED_COUNT` が 0 と N になること（bash の単体の確認） |
+| 既存の動作を壊さない | launchd の 03:00 の実行ログで、削除の件数・保護の件数が、前日と同じ傾向であること |
+
+## 5. 判断リスト（今回の実装の外。PO に提示するだけ）
+- 30日以上更新の無い OPEN の PR（23件）と、未保存ありの worktree（約40件）の一覧は、`/tmp/CC報告ファイル/ops-memory/20261008-worktrees/inventory.tsv` に保存済み。続けるか閉じるかは、PO と作業の持ち主が決める。
+
+## 外部・過去事例の参照と我々への応用
+- 社内の過去事例：`.github/workflows/reaper-schedule.yml:26-29` のコメント（2026-07-20 の実測「対象0件」）と、それへの対処のコミット d2498937a。走査先だけを本体に向けたが、git の基点（MAIN_REPO_ROOT）は `_work` のまま残った。R1 は、その残りを直す。
+- 公式の仕様：GitHub Actions の pull_request の closed イベント（上記 §1）。
+- 外部の一般事例は使わない。
+
+## 維持の仕組み
+- 守り手: ADR-114（R5 の改訂）、reaper-schedule の run のログ、launchd のログ（`~/Library/Logs/reaper-onlogin.log`）。
+
+## 戻し方
+- 各便の PR を revert する。R1 と R2 は workflow のみ。R3 と R4 はスクリプトのみ。データ（worktree）の削除は、安全条件を変えていないので、増えるのは「マージ済みで、未保存が無いもの」の回収だけ。
+
+## 審査（自己審査）
+- 判定：APPROVE（設計の範囲）。
+- 当初案の「main の祖先なら削除」は取り下げた。作ったばかりで変更が無い worktree も祖先になるため、作業の開始直後に消してしまう危険がある（2026-10-08 の実測で、祖先 21 件のうち 19 件に、コミットされていない作業が残っていた）。
+- 未確認：
+  - runner のラベルと online の状態（`gh api .../actions/runners` が 403）。runner のサービス `actions.runner.shingo-ops-salesanchor.Shingo-Mac-Temp` は launchd で稼働中。
+  - フォークの PR の扱いのリポジトリ設定。
+
+worktree 作成：上限100到達のため、PO 決定（2026-10-09）で WORKTREE_LIMIT=101 を1回限り使用（PO の個別許可による1回限りの例外。ADR-114 §6 は上限の引き上げ案内を廃止している。本 PR が回収の仕組みの修正のため）
+
+## R8：取り戻せる部屋だけ消す（2026-10-10、PO 承認）
+
+### 目的
+- PO 方針の原文：「途中の作業を消してしまうのは避けて本当に必要ない場合に削除してほしい」。
+- 設計者提案「後から完全に取り戻せるときだけ消す」に、PO が y（2026-10-10）。
+
+### 変更前の穴
+- `scripts/reaper-worktree.sh` 旧 L210：`origin/<branch>` も upstream も無い部屋は、ローカルのみのコミットを未保存扱いしない（コメント「upstream 未設定だけを理由に未push 扱いしない」）。
+- 削除は L383 `git worktree remove --force` ＋ L388 `git branch -D`。ローカルだけにあるコミットは、削除後に取り戻せない。
+- 走査前に fetch が無く、origin の ref が古いまま判定していた。
+- 2026-10-10 時点の該当：1 件（`release/import-trend-graph-fix-gate`）。
+
+### 変更後の条件
+- 未コミット（台帳 `.claude-pipeline/` のみは除く）が無い。
+- かつ HEAD までの全コミットが、origin のどれかの ref（main・各ブランチ）から到達できる：`git rev-list --count HEAD --not --remotes=origin` が 0。upstream の設定有無・向き先は問わない。
+- コミットが1つも無い部屋（HEAD なし）は、失うコミットが無いので判定しない。
+- 判定は走査前の `git fetch --prune origin` の後に行う。
+
+### fetch 失敗時は削除しない
+- fetch に失敗したら、警告を出し、その回の削除候補を空にする（保護・分類の表示は通常どおり）。
+- テストは `REAPER_SKIP_FETCH=1` で fetch を省略し、`REAPER_FETCH_REMOTE` で remote 名を差し替えられる。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1：テストが全 PASS | `bash scripts/tests/test-reaper-safety.sh` が FAIL 0（R8-a〜d を含む） |
+| K2：到達不能コミットを持つ部屋が削除対象に出ない | 本体で dry-run を実行し、`reach.tsv` の unreachable_count>0 の行が「削除対象」に 0 件であること |
+| K3：マージ後の自 PR の部屋が消え、fetch 失敗の警告が出ない | マージ後の reaper-schedule の run ログで、自 PR のブランチが削除され、「git fetch に失敗しました」が無いこと |
+| K4：fetch 失敗時は削除しない | テスト R8-d（存在しない remote 名で呼ぶ）で、削除対象が出ず、警告が出ること |
+
+### 戻し方
+- 本 PR を revert する（スクリプト・テスト・文書のみ。データの変更なし）。
+
+### 変えないこと
+- 削除部（L383・L388）、gh によるマージ済み・closed 判定、使用中保護、排他ロック、IN_PROGRESS/REVIEW の保護、台帳のみの変更を未保存に数えない扱い。
+
+## R9：PR 本文の下書きだけ残った部屋（2026-10-11、PO 承認）
+
+### 変更前の穴
+- `scripts/reaper-worktree.sh:194`：`git status --porcelain` から `.claude-pipeline/` を除いた行が1行でもあれば UNSAVED=1。未追跡ディレクトリは「?? .scratch/」の形で出て、中のファイル名が見えない。
+- `scripts/reaper-worktree.sh:222-234`：マージ済み判定は `gh pr list --state merged --head` で base=main を数える（本文は見ていない）。
+- `scripts/reaper-worktree.sh:384-392`：削除は `worktree remove --force` と `branch -D`。
+- 2026-10-11 の実測：マージ済み5部屋が「?? pr-body-*.md / ?? .pr-body-*.md」の1ファイルだけで保護されていた。手で照合し、手で削除済み。証拠：/tmp/CC報告ファイル/worktree-r9/inventory.tsv・delete.log。
+
+### 新しい決まり
+- 変更A（チェック2a）：`git status --porcelain --untracked-files=all` を行ごとに見る。`.claude-pipeline/` を含む行は除外。「?? 」で始まり basename が「*pr-body*.md」の形の行は下書き候補。それ以外の行が1行でもあれば従来どおり UNSAVED=1。
+- 下書き候補があり他に未保存が無いときだけ、次の全部を満たす場合に許容する（1つでも外れたら UNSAVED=1）。
+  - ① main へのマージ済み PR の本文を取れる（`gh pr list --state merged --head <branch> --json baseRefName,body`。部屋ごとに1回。失敗・空は保護）
+  - ② 下書きが空でない
+  - ③ 下書きの全行が本文にある（各行の末尾の空白・\r を除いて `diff` し、下書き側にだけある行が0）
+- 許容した下書きは `DRAFT_BACKUPS`（部屋のパス::相対パス）に記録。R8 の到達判定は下書きを許容した部屋にも従来どおり行う。
+- 変更B（実削除ループ）：`worktree remove` の前に、`<git-common-dir>/reaper-drafts/<ブランチ名の/を-に>/<相対パス>` へ cp。1件でも失敗したらその部屋は消さず次へ。成功時「📝 下書きを控えました」を出す。dry-run では写さず、候補一覧に「（PR本文の下書き N 件は GitHub の本文と一致）」を添える。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1：マージ済み＋未追跡 pr-body.md（全行が本文にある）が削除候補 | テスト R9-a |
+| K2：下書きに本文に無い行があれば保護 | テスト R9-b |
+| K3：下書きでない未追跡ファイル（notes.md）は保護 | テスト R9-c |
+| K4：下書きがありマージ済み PR が無ければ保護 | テスト R9-d |
+| K5：gh の本文取得が失敗したら保護 | テスト R9-e |
+| K6：サブフォルダの .scratch/pr-body.md も、全行が本文にあれば削除候補 | テスト R9-f（--execute で控えができ部屋が消えることは R9-g） |
+| K7：実データ dry-run で、新たに削除候補になるのは残りが下書きのみのマージ済み部屋だけ | origin/main 版と新版の dry-run 出力の差分を列挙し、増えた部屋ごとに `git status --porcelain -uall` を確認 |
+
+### 戻し方
+- 本 PR を revert する（スクリプト・テスト・文書のみ。データの変更なし）。控えは `.git/reaper-drafts/` に残るが、害は無く手で消せる。
+
+### 外部事例
+- 該当なし（理由：社内スクリプトの判定条件の追加）。

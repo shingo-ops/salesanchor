@@ -20,6 +20,7 @@ URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
 
 
+from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
     _rewire_keyword_fks,
@@ -69,6 +70,8 @@ async def create_product_schema(conn, schema):
     # ADR-156 Phase 3A: add product_kind_id FK column to public.products (idempotent if already added)
     await _exec_multi_stmt(conn, (migrations / "20260921_120000_add_products_product_kind_id.sql").read_text())
     await _exec_multi_stmt(conn, (migrations / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+    await conn.exec_driver_sql(type_master_seed_sql())
     await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
     # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER

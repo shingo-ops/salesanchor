@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_title"
+        android:textSize="20sp"
+        android:paddingBottom="16dp" />
+
+    <!-- PINそのものはここに表示しない。保存済みかどうかだけを表示する。 -->
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="16dp" />
+
+    <LinearLayout
+        android:id="@+id/input_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- inputType=numberPassword でマスク表示（平文を画面に出さない）。 -->
+        <EditText
+            android:id="@+id/pin_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberPassword"
+            android:hint="@string/pin_hint" />
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/save_button" />
+    </LinearLayout>
+
+    <!-- ここから通知記録（LineNotifyListenerService）関連。PIN機能とは独立。送信はしない。 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"
+        android:background="#33000000" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/notify_section_title"
+        android:textSize="20sp"
+        android:paddingBottom="16dp" />
+
+    <TextView
+        android:id="@+id/notify_access_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/notify_open_settings_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/notify_open_settings_button" />
+
+    <TextView
+        android:id="@+id/notify_count_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingTop="16dp" />
+
+    <TextView
+        android:id="@+id/notify_last_time_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/notify_storage_path_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="16dp" />
+
+    <Button
+        android:id="@+id/notify_request_storage_permission_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/notify_request_storage_permission_button" />
+
+    <EditText
+        android:id="@+id/notify_target_groups_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:inputType="text"
+        android:hint="@string/notify_target_groups_hint" />
+
+    <Button
+        android:id="@+id/notify_target_groups_save_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/notify_target_groups_save_button" />
+
+    <!-- ここから段階3: アプリ内タイマー（AlarmManager）。既定OFF。利用者が自分で止められる
+         手段として必ず用意する（design.md「追補 2026-10-08 段階3の設計」参照）。 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"
+        android:background="#33000000" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/scheduler_section_title"
+        android:textSize="20sp"
+        android:paddingBottom="16dp" />
+
+    <TextView
+        android:id="@+id/scheduler_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/scheduler_toggle_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</LinearLayout>
+</ScrollView>

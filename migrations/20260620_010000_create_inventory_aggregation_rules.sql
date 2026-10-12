@@ -22,14 +22,9 @@ CREATE TABLE IF NOT EXISTS public.inventory_aggregation_rules (
     CONSTRAINT inventory_aggregation_rules_condition_key UNIQUE (condition)
 );
 
-INSERT INTO public.inventory_aggregation_rules
-    (condition, price_tolerance, stock_tolerance)
-VALUES
-    ('Case', 1000, 5),
-    ('Sealed box', 100, 30),
-    ('Damaged sealed box', 100, 10),
-    ('No shrink box', 100, 5)
-ON CONFLICT (condition) DO UPDATE SET
-    price_tolerance = EXCLUDED.price_tolerance,
-    stock_tolerance = EXCLUDED.stock_tolerance,
-    updated_at = NOW();
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 集計ルール 4 行の seed と上書きを外した。値は本番に入っている（ver4.1）。
+-- 新規環境の既定は backend/app/services/inventory_aggregation.py の DEFAULT_AGGREGATION_RULES、
+-- 試験の seed は backend/tests/seed_data.py。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: inventory_aggregation_rules seed removed'; END $$;

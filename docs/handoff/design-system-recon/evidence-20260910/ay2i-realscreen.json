@@ -1,0 +1,24 @@
+[
+  {
+    "case": "redirect /super-admin/tcg-sold-out",
+    "finalPath": "/super-admin/analysis-rules?section=sold-out-results",
+    "selectedSidebar": [
+      "完売の結果"
+    ],
+    "selectedTabsOrCurrent": [
+      "LINE解析"
+    ],
+    "headings": [
+      "LINE解析",
+      "配信設定"
+    ],
+    "soldOutApiCalled": [
+      "GET /tcg/sold-out-results"
+    ],
+    "rowCount": 2,
+    "rowTexts": [
+      "Dummy Product OneDummy Supplier A売り切れ3 BOX12002026/10/09 10:00有効な原文原文表示原文の商品名Dummy One原文の状態語sold out原文の備考memoHeader\nDumm",
+      "Dummy Two （原文名）Dummy Supplier B売り切れ800投稿日未記録過去の原文原文表示原文の商品名Dummy Two原文の状態語sold out原文の備考Dummy Two sold out"
+    ]
+  }
+]

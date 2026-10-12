@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { TextFieldControl } from "../../components/TextField";
 import type { SalesFormOption, SalesFormSelectionState } from "./inbox.types";
 
 interface Props {
@@ -145,9 +146,10 @@ export function SalesFormMultiSelect({ options, value, onChange, onBlur }: Props
 
       {/* 「その他」自由記述欄 */}
       {otherOption && isSelected(otherOption.id) && (
-        <input
+        <TextFieldControl
+          variant="karte"
           type="text"
-          className="right-panel-field sales-form-other-input"
+          className="sales-form-other-input"
           placeholder={t("leads.salesFormOtherPlaceholder")}
           value={otherSelection?.other_text ?? ""}
           onChange={(e) => handleOtherTextChange(e.target.value)}

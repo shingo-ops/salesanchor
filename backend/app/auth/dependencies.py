@@ -11,6 +11,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from app.auth.system_roles import compute_permission_keys, is_tenant_admin
 from app.cache import (
     cache_jwt_result,
     cache_tenant,
@@ -405,18 +406,6 @@ def tenant_table_ref(db: AsyncSession, tenant_id: int, name: str) -> str:
     return name
 
 
-async def get_current_admin(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    """管理者ロールを要求するDependency。adminルーターレベルで適用する。"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作には管理者権限が必要です",
-        )
-    return current_user
-
-
 async def set_operator_context(db: AsyncSession) -> None:
     """operator（is_super_admin=true）のリクエストで app.is_operator='true' をセット。
 
@@ -482,6 +471,24 @@ async def require_super_admin(
     return current_user
 
 
+async def get_user_system_keys(db: AsyncSession, user_id: int) -> set[str]:
+    """ユーザーが user_roles 経由で持つシステムロールの system_key 集合（権限判定の正本）。
+
+    search_path は呼び出し元（get_current_tenant）で設定済みのため、user_roles / roles は
+    テナントスキーマから参照される。
+    """
+    role_result = await db.execute(
+        text("""
+            SELECT DISTINCT r.system_key
+            FROM user_roles ur
+            JOIN roles r ON r.id = ur.role_id
+            WHERE ur.user_id = :user_id AND r.system_key IS NOT NULL
+        """),
+        {"user_id": user_id},
+    )
+    return {row[0] for row in role_result.fetchall()}
+
+
 async def load_user_permissions(
     db: AsyncSession,
     tenant_id: int,
@@ -512,21 +519,32 @@ async def load_user_permissions(
     )
     keys = {row[0] for row in result.fetchall()}
 
-    # admin後方互換: User.role='admin'なら全権限を持つ扱い
-    # （Phase 1移行期間中、ロール未割当ユーザーを救済）
-    if not keys:
-        # adminユーザーなら全権限取得、それ以外は最低限のビュー権限を付与
-        user_result = await db.execute(
-            text("SELECT role FROM public.users WHERE id = :uid"),
-            {"uid": user_id},
-        )
-        row = user_result.fetchone()
-        if row and row[0] == "admin":
-            all_perms = await db.execute(text("SELECT key FROM public.permissions"))
-            keys = {r[0] for r in all_perms.fetchall()}
+    # システムロール（owner / admin）は role_permissions の行に頼らず、権限マスタから計算した集合を
+    # 保存済みの付与に和集合で加える（新しい権限キーが行の追加なしで owner / admin に届く）
+    system_keys = await get_user_system_keys(db, user_id)
+    if is_tenant_admin(system_keys):
+        master = await db.execute(text("SELECT key FROM public.permissions"))
+        keys = compute_permission_keys(keys, system_keys, {row[0] for row in master.fetchall()})
 
     await cache_user_permissions(tenant_id, user_id, keys)
     return keys
+
+
+async def require_tenant_admin(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """テナントのオーナー（system_key=owner）またはシステム管理者（system_key=admin）だけ通す。
+
+    判定の正本は user_roles。users.role は見ない。
+    """
+    if not is_tenant_admin(await get_user_system_keys(db, user.id)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="この操作は管理者のみ実行できます",
+        )
+    return user
 
 
 def require_permission(*permission_keys: str):

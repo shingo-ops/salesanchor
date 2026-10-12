@@ -86,7 +86,7 @@ async def list_bots(
         text(f"""
             SELECT {_BOT_COLS}
             FROM {bots_t} b
-            LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id
             {where}
             ORDER BY b.bot_code
             LIMIT :limit OFFSET :offset
@@ -107,7 +107,7 @@ async def get_bot(bot_id: int, db: AsyncSession = Depends(get_db),
         text(f"""
             SELECT {_BOT_COLS}
             FROM {bots_t} b
-            LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id
             WHERE b.id = :id
         """),
         {"id": bot_id},
@@ -118,26 +118,30 @@ async def get_bot(bot_id: int, db: AsyncSession = Depends(get_db),
     return BotResponse(**row)
 
 
+async def _ensure_owner_user_exists(db: AsyncSession, user_id: int, tenant_id: int) -> None:
+    """owner_staff_id（= public.users.id）が同一テナントに存在することを確認する (ADR-1008 P2)。"""
+    check = await db.execute(
+        text("SELECT id FROM public.users WHERE id = :uid AND tenant_id = :tid"),
+        {"uid": user_id, "tid": tenant_id},
+    )
+    if not check.first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="指定の担当者はこのテナントに存在しません")
+
+
 @router.post("/bots", response_model=BotCreatedResponse, status_code=201,
              dependencies=[Depends(require_permission("bots.create"))])
 async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
                      tenant_id: int = Depends(get_current_tenant),
                      current_user: User = Depends(get_current_user)):
-    # owner_staff_id の存在チェック（同一テナント）
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
-    check = await db.execute(
-        text(f"SELECT id FROM {staff_t} WHERE id = :sid AND tenant_id = :tid"),
-        {"sid": data.owner_staff_id, "tid": tenant_id},
-    )
-    if not check.first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="指定の owner_staff_id はこのテナントに存在しません")
+    await _ensure_owner_user_exists(db, data.owner_staff_id, tenant_id)
 
     explicit_code = data.bot_code and data.bot_code.strip()
     bot_code = explicit_code if explicit_code else f"BOT-PENDING-{uuid.uuid4().hex}"
     plain_key, key_hash = _generate_api_key()
 
     bots_t = tenant_table_ref(db, tenant_id, "bots")
+    staff_t = tenant_table_ref(db, tenant_id, "staff")
     try:
         result = await db.execute(
             text(f"""
@@ -180,7 +184,7 @@ async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
         text(f"""
             SELECT {_BOT_COLS}
             FROM {bots_t} b
-            LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id
+            LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id
             WHERE b.id = :id
         """),
         {"id": new_id},
@@ -199,7 +203,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
     bots_t = tenant_table_ref(db, tenant_id, "bots")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
     old = await db.execute(
-        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id WHERE b.id = :id"),
+        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
         {"id": bot_id},
     )
     old_row = old.mappings().first()
@@ -211,6 +215,8 @@ async def update_bot(bot_id: int, data: BotUpdate,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="更新するフィールドを少なくとも1つ指定してください")
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
+    if update_data.get("owner_staff_id") is not None:
+        await _ensure_owner_user_exists(db, update_data["owner_staff_id"], tenant_id)
     for k, v in list(update_data.items()):
         if hasattr(v, "value"):
             update_data[k] = v.value
@@ -229,7 +235,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
     await db.commit()
 
     fetched = await db.execute(
-        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id WHERE b.id = :id"),
+        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
         {"id": bot_id},
     )
     return BotResponse(**dict(fetched.mappings().first()))
@@ -260,7 +266,7 @@ async def rotate_bot_api_key(bot_id: int, db: AsyncSession = Depends(get_db),
     await db.commit()
 
     fetched = await db.execute(
-        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id WHERE b.id = :id"),
+        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
         {"id": bot_id},
     )
     row = dict(fetched.mappings().first())
@@ -275,7 +281,7 @@ async def delete_bot(bot_id: int, db: AsyncSession = Depends(get_db),
     bots_t = tenant_table_ref(db, tenant_id, "bots")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
     old = await db.execute(
-        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.id = b.owner_staff_id WHERE b.id = :id"),
+        text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
         {"id": bot_id},
     )
     old_row = old.mappings().first()
