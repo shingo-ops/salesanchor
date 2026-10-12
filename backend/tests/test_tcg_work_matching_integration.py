@@ -326,6 +326,10 @@ def migrate(cursor):
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS input_tokens integer")
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS output_tokens integer")
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
+    # 思考要約: AttemptRecorder.on_response が thought_summaries を書く。本番の migration を public に当て、
+    # TCG_SCHEMA を差し替えた tenant 側の attempts にも同じ列を足す。
+    cursor.execute((MIGRATIONS / "20261012_200000_add_extraction_attempts_thought_summaries.sql").read_text())
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
 
 
 @pytest.fixture
@@ -723,6 +727,8 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS input_tokens integer")
         cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS output_tokens integer")
         cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
+        # 思考要約: on_response の UPDATE が thought_summaries を書くため、tenant_004 の attempts にも列が要る。
+        cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
