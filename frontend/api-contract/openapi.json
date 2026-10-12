@@ -1057,6 +1057,27 @@
         "title": "Body_commit_import_endpoint_api_v1_tcg_products_import_commit_post",
         "type": "object"
       },
+      "Body_commit_review_csv_api_v1_tcg_review_csv_commit_post": {
+        "properties": {
+          "confirmed_digest": {
+            "description": "内容確認で受け取った指紋",
+            "title": "Confirmed Digest",
+            "type": "string"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "要確認の CSV ファイル",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "confirmed_digest"
+        ],
+        "title": "Body_commit_review_csv_api_v1_tcg_review_csv_commit_post",
+        "type": "object"
+      },
       "Body_data_deletion_callback_api_v1_meta_data_deletion_post": {
         "properties": {
           "signed_request": {
@@ -1531,6 +1552,21 @@
           "file"
         ],
         "title": "Body_preview_import_api_v1_tcg_products_import_preview_post",
+        "type": "object"
+      },
+      "Body_preview_review_csv_api_v1_tcg_review_csv_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "要確認の CSV ファイル",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_review_csv_api_v1_tcg_review_csv_preview_post",
         "type": "object"
       },
       "Body_send_lead_image_message_api_v1_leads__lead_id__messages_image_post": {
@@ -64189,6 +64225,124 @@
           }
         ],
         "summary": "商品マスタ検索キーワード追加（PARITY-03 Phase 3 B-5）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/commit": {
+      "post": {
+        "operationId": "commit_review_csv_api_v1_tcg_review_csv_commit_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_commit_review_csv_api_v1_tcg_review_csv_commit_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Commit Review Csv Api V1 Tcg Review Csv Commit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認 CSV の反映",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/export": {
+      "get": {
+        "operationId": "export_review_csv_api_v1_tcg_review_csv_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認の一覧を CSV で出す",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/preview": {
+      "post": {
+        "operationId": "preview_review_csv_api_v1_tcg_review_csv_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_review_csv_api_v1_tcg_review_csv_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Preview Review Csv Api V1 Tcg Review Csv Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認 CSV の内容確認（書き込まない）",
         "tags": [
           "super-admin"
         ]
