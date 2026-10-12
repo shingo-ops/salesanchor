@@ -226,51 +226,41 @@ def unquote(cmd, word):
     return "".join(toks)
 
 
-def strictly_allowed(real_path):
-    """作業場所（~/worktrees/salesanchor/<名前>/ の下）か /private/tmp/claude-501/ の下か。根そのものは不可。"""
-    if real_path.startswith(TMP_BASE + "/"):
-        rel = real_path[len(TMP_BASE) + 1:].split("/")
-        return ".git" not in rel
-    if real_path.startswith(WT_BASE + "/"):
-        rel = real_path[len(WT_BASE) + 1:].split("/")
-        if len(rel) < 2 or ".git" in rel:
-            return False
-        # 所有判定: worktree-access-guard.sh は TTY/TERM_SESSION_ID の claims.json 照合だが、
-        # フックのプロセスからは「このセッション」を特定できない。
-        # 代わりに「.git がファイル（= git worktree）」であることを条件にする。
-        return os.path.isfile(os.path.join(WT_BASE, rel[0], ".git"))
-    return False
+def worktree_root_of(cwd):
+    """cwd を含む git worktree（~/worktrees/salesanchor/<名前>/ で、.git がファイルのもの）の根。無ければ None。
+
+    所有判定: worktree-access-guard.sh は TTY/TERM_SESSION_ID の claims.json 照合だが、
+    フックのプロセスからは「このセッション」を特定できない。代わりに入力 JSON の cwd を含む worktree に限る。
+    """
+    if not isinstance(cwd, str) or not os.path.isabs(cwd):
+        return None
+    real = os.path.realpath(cwd)
+    if not real.startswith(WT_BASE + "/"):
+        return None
+    name = real[len(WT_BASE) + 1:].split("/")[0]
+    root = os.path.join(WT_BASE, name)
+    return root if os.path.isfile(os.path.join(root, ".git")) else None
 
 
-def target_ok(target, base):
-    if any(ch in target for ch in "$`\\{"):
-        return False
-    if target == "~" or target.startswith("~/"):
-        target = HOME + target[1:]
-    elif target.startswith("~"):
+ABS_PATH_RE = re.compile(r"/[A-Za-z0-9_./@%+,:=-]*")
+
+
+def target_ok(target, wt_root):
+    """rm の対象を除外してよいか。絶対パスだけ。~・変数・glob・.. ・.git を含むものは不可。根そのものも不可。"""
+    if not ABS_PATH_RE.fullmatch(target):
         return False
     parts = target.split("/")
     if ".." in parts or ".git" in parts:
         return False
-    last = parts[-1]
-    parent_parts = parts[:-1]
-    if any(ch in p for p in parent_parts for ch in "*?["):
-        return False
-    is_glob = any(ch in last for ch in "*?[")
-    if is_glob:
-        if not parent_parts or parent_parts == ["."]:
-            return False
-        path = "/".join(parent_parts) or "/"
-    else:
-        path = target
-    if not os.path.isabs(path):
-        if base is None:
-            return False
-        path = os.path.join(base, path)
-    return strictly_allowed(os.path.realpath(path))
+    real = os.path.realpath(target)
+    if real.startswith(TMP_BASE + "/"):
+        return ".git" not in real[len(TMP_BASE) + 1:].split("/")
+    if wt_root is not None and real.startswith(wt_root + "/"):
+        return ".git" not in real[len(wt_root) + 1:].split("/")
+    return False
 
 
-def rm_allowed(texts, words, base):
+def rm_allowed(texts, words, wt_root):
     if any(w[2] for w in words):
         return False
     recursive = False
@@ -304,7 +294,61 @@ def rm_allowed(texts, words, base):
         targets.append(t)
     if not recursive or not targets:
         return False
-    return all(target_ok(t, base) for t in targets)
+    return all(target_ok(t, wt_root) for t in targets)
+
+
+HD_FORBIDDEN_RE = re.compile(r"\||>\(|<\(|;|&")
+DEST_RE = re.compile(r"[A-Za-z0-9_./@%+,:=~-]+")
+
+
+def heredoc_command_ok(cmd, segs):
+    """heredoc 本文を除外してよいのは、コマンド全体（本文を除く）に | >( <( ; & && || が無いときだけ。"""
+    bodies = sorted((b[0], b[1]) for s in segs for b in s.bodies)
+    parts = []
+    pos = 0
+    for start, end in bodies:
+        parts.append(cmd[pos:start])
+        pos = end
+    parts.append(cmd[pos:])
+    return HD_FORBIDDEN_RE.search("".join(parts)) is None
+
+
+def _dest_ok(path, cwd):
+    if path is None or not DEST_RE.fullmatch(path):
+        return False
+    base = cwd if isinstance(cwd, str) and os.path.isabs(cwd) else "/"
+    norm = os.path.normpath(os.path.join(base, path))
+    for prefix in ("/dev", "/proc"):
+        if norm == prefix or norm.startswith(prefix + "/"):
+            return False
+    return True
+
+
+def heredoc_dest_ok(first, texts, cwd):
+    """cat の書き先、tee のオプションでない引数が、すべて普通のパス（/dev/・/proc/ でない）か。"""
+    if any(t is None for t in texts):
+        return False
+    if first == "cat":
+        dests = []
+        items = texts[1:]
+        for i, t in enumerate(items):
+            if t in (">", ">>"):
+                if i + 1 >= len(items):
+                    return False
+                dests.append(items[i + 1])
+            elif t.startswith(">") and not t.startswith(">&"):
+                dests.append(t.lstrip(">"))
+        return bool(dests) and all(_dest_ok(d, cwd) for d in dests)
+    if first == "tee":
+        dests = []
+        for t in texts[1:]:
+            if t.startswith("-"):
+                if not re.fullmatch(r"-[aip]+|--append", t):
+                    return False
+                continue
+            dests.append(t)
+        return bool(dests) and all(_dest_ok(d, cwd) for d in dests)
+    return False
 
 
 def writes_file(first, texts):
@@ -343,21 +387,24 @@ def sanitize(cmd, cwd, modes):
     if segs is None:
         return cmd
     reps = []
-    base = cwd if isinstance(cwd, str) and os.path.isabs(cwd) and os.path.isdir(cwd) else None
+    # rm の除外は絶対パスだけなので cd の追跡はしない（絶対パスは cwd に依存しない）。
+    # 入力 JSON の cwd を含む worktree の下と /private/tmp/claude-501/ の下だけが対象。
+    wt_root = worktree_root_of(cwd)
+    heredoc_global_ok = heredoc_command_ok(cmd, segs)
     for seg in segs:
         words = seg.words
         texts = [unquote(cmd, w) for w in words]
         first = texts[0] if texts else None
         if first is not None:
             first = os.path.basename(first)
-        if first == "cd":
-            if len(texts) >= 2 and texts[1] is not None and "$" not in texts[1] and base is not None:
-                cand = os.path.join(base, texts[1].replace("~", HOME, 1) if texts[1].startswith("~") else texts[1])
-                base = os.path.realpath(cand) if os.path.isdir(cand) else None
-            else:
-                base = None
-            continue
-        if "heredoc" in modes and seg.bodies and first in ("cat", "tee") and writes_file(first, texts):
+        if (
+            "heredoc" in modes
+            and heredoc_global_ok
+            and seg.bodies
+            and first in ("cat", "tee")
+            and writes_file(first, texts)
+            and heredoc_dest_ok(first, texts, cwd)
+        ):
             for body_start, body_end, _tag, quoted in seg.bodies:
                 body = cmd[body_start:body_end]
                 if quoted or ("$(" not in body and "`" not in body and "${" not in body):
@@ -384,7 +431,7 @@ def sanitize(cmd, cwd, modes):
         if "grep" in modes and first in GREP_CMDS:
             if not any(w[2] for w in words) and not any(t is not None and t.startswith("--pre") for t in texts):
                 reps.append((words[0][0], words[-1][1], " "))
-        if "rm" in modes and first == "rm" and rm_allowed(texts, words, base):
+        if "rm" in modes and first == "rm" and rm_allowed(texts, words, wt_root):
             reps.append((words[0][0], words[-1][1], " "))
     accepted = []
     for start, end, text in sorted(reps, key=lambda r: (r[0], r[1])):

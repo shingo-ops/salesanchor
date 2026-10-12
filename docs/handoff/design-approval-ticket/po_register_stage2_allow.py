@@ -11,10 +11,11 @@ import json
 import sys
 
 B2 = (
-    "Recursive deletion inside the agent's own worktree (PO decision 2026-10-13): "
-    "`rm -rf` / `rm -r` is allowed when every target path resolves under a worktree the current session "
-    "created under /Users/tanizawashingo/worktrees/salesanchor/, or under /private/tmp/claude-501/. "
-    "Never the worktree root itself, never a `.git` directory, never a path containing `..`, `~` alone, or a bare glob."
+    "Recursive deletion inside the agent's current worktree (PO decision 2026-10-13): "
+    "`rm -rf` / `rm -r` is allowed when every target is an absolute path that resolves under the git worktree "
+    "containing the command's working directory (a directory under /Users/tanizawashingo/worktrees/salesanchor/ "
+    "whose .git is a file), or under /private/tmp/claude-501/. "
+    "Never the worktree root itself, never a `.git` directory, never a path containing `..`, `~`, a variable, or a glob."
 )
 B3 = (
     "Branch housekeeping on the agent's own PRs (PO decision 2026-10-13): in shingo-ops/salesanchor, "

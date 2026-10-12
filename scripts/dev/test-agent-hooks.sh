@@ -81,6 +81,12 @@ t() {
 }
 
 OWN="$WT_ROOT/docs/handoff/stage2-test-nonexistent"
+# 別の worktree 役: 本物のホームの ~/worktrees/salesanchor/ にある、自分以外の worktree（.git がファイルのもの）
+REAL_HOME_DIR="$(python3 -c 'import pwd,os; print(pwd.getpwuid(os.getuid()).pw_dir)')"
+OTHER_WT=""
+for d in "$REAL_HOME_DIR"/worktrees/salesanchor/*/; do
+  if [ -f "${d}.git" ] && [ "${d%/}" != "$WT_ROOT" ]; then OTHER_WT="${d%/}"; break; fi
+done
 
 # ── 段2 受入試験 ─────────────────────────────────────────────────
 # 通すべきもの（誤検知の修正）
@@ -115,7 +121,26 @@ t T2-9f  agent-danger-hook.sh   W 2 $'cat > /tmp/f.txt <<EOF\n$(rm -rf /x)\nEOF\
 t T2-10a agent-danger-hook.sh   W 2 'git commit -m "x `rm -rf /x`"'
 t T2-10b agent-danger-hook.sh   W 2 $'cat > /tmp/f.txt <<EOF\n${X} rm -rf /x\nEOF\n'
 t T2-10c agent-danger-hook.sh   W 2 'gh pr create --title "${X} DROP TABLE" --body "y"'
-t T2-9g agent-danger-hook.sh   W 2 'cd /tmp && rm -rf x'
+# F1: cd を挟んだ相対パスの削除、F3: 別の worktree・cwd が worktree の外
+t T2-11a agent-danger-hook.sh   W 2 '(cd /etc; rm -rf y)'
+t T2-11b agent-danger-hook.sh   W 2 '{ cd /etc; rm -rf y; }'
+t T2-11c agent-danger-hook.sh   W 2 'pushd /etc && rm -rf y'
+t T2-11d agent-danger-hook.sh   W 2 'rm -rf docs/handoff/stage2-test-nonexistent'
+t T2-11e agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/*'
+t T2-11f agent-danger-hook.sh   HONTEN 2 "rm -rf $OWN"
+t T2-11g agent-danger-hook.sh   HONTEN 0 'rm -rf /private/tmp/claude-501/x'
+if [ -n "$OTHER_WT" ]; then
+  t T2-11h agent-danger-hook.sh W 2 "rm -rf $OTHER_WT/x"
+else
+  RESULTS+=("T2-11h   (別の worktree が無いので SKIP)")
+fi
+# F2: heredoc 本文の除外をすり抜けるパイプ・プロセス置換・/dev 書き込み
+t T2-12a agent-danger-hook.sh   W 2 $'tee /tmp/x <<\'E\' | bash\nrm -rf /x\nE\n'
+t T2-12b agent-danger-hook.sh   W 2 $'cat > /dev/stdout <<\'E\' | bash\nrm -rf /x\nE\n'
+t T2-12c agent-danger-hook.sh   W 2 $'cat > >(bash) <<\'E\'\nrm -rf /x\nE\n'
+t T2-12d agent-danger-hook.sh   W 2 $'cat > /dev/stdout <<\'E\'\nrm -rf /x\nE\n'
+t T2-12e agent-danger-hook.sh   W 2 $'tee /dev/fd/1 <<\'E\'\nrm -rf /x\nE\n'
+t T2-9g  agent-danger-hook.sh   W 2 'cd /tmp && rm -rf x'
 t T2-9h  agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/../x'
 t T2-9i  worktree-only-guard.sh W 2 'git push --force origin main'
 t T2-9j  pr-body-guard.sh       W 2 'GH_TOKEN=x gh pr create --title t --body-file /nonexistent/x.md'
