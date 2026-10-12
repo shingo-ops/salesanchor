@@ -739,3 +739,32 @@ def test_pipeline_gap_reason_matches_the_stage1_detail_and_does_not_change_the_d
     [review] = out["v102_items"][0]["review"]
     assert review["lines"] == detail["gap_name"][0]["gap_lines"] and review["candidates"] == detail["gap_name"][0]["candidates"]
     assert out["v102_gap_detail"] is detail
+
+
+# ---------------------------------------------------------------------------
+# 便PO3：発送日の文字を備考（note_ja）へ
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("ship, expected", [
+    ("none", None),
+    (None, None),
+    (" ", None),
+    ("発送日要相談", "発送日要相談"),
+    ("入荷次第注文順に発送）", "入荷次第注文順に発送"),
+    ("発送日要相談（国内のみ", "発送日要相談（国内のみ）"),
+    ("【10/16発送】", "【10/16発送】"),
+    ("※発送日相談 / ※移し替えて発送予定", "※発送日相談 / ※移し替えて発送予定"),
+    ("a） / b（c", "a / b（c）"),
+])
+def test_ship_note(ship, expected):
+    assert svc.ship_note(ship) == expected
+
+
+def test_analysis_values_puts_ship_text_in_note_ja_and_none_stays_empty():
+    base = {"unit": "BOX", "price_normalized": 1000.0, "quantity_normalized": 3.0}
+    with_ship = svc._analysis_values({**base, "ship": "発送日要相談（国内のみ"}, _MASTERS, {"BOX": 5}, {})
+    without = svc._analysis_values({**base, "ship": "none"}, _MASTERS, {"BOX": 5}, {})
+    assert with_ship["note_ja"] == "発送日要相談（国内のみ）"
+    assert without["note_ja"] is None
+    assert {k: v for k, v in with_ship.items() if k != "note_ja"} == {k: v for k, v in without.items() if k != "note_ja"}
