@@ -12,8 +12,9 @@ import logging
 import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dataclasses import replace as dataclass_replace
+from datetime import date
 from typing import Any
 
 from sqlalchemy import text
@@ -117,8 +118,15 @@ class ProductFirstMasters:
     work_names: tuple[WorkName, ...] = ()
     # 単位 Set の名前（line_units.code = UNIT_SET_CODE の canonical）。None なら分類「セット系」の単位決めは働かない
     set_unit: str | None = None
+    # 商品ID（文字列）→ 発売日（products.release_date。NULL は入れない）。予約の手がかり（便PO）が使う。空なら発売日の規則は働かない
+    product_release: Mapping[str, date] = field(default_factory=dict)
+    # 今の投稿の投稿日（line_posted_at の JST の日付）。run_v102_analysis が job ごとに足す。None なら日付の規則は働かない
+    posted_date: date | None = None
 
 
+_RELEASE_DATE_SQL = """
+    SELECT id, release_date FROM public.products WHERE is_active = TRUE AND release_date IS NOT NULL
+"""
 _CONDITION_UNIT_SQL = """
     SELECT c.canonical, u.canonical
     FROM public.line_conditions c
@@ -305,7 +313,10 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     work_names = _load_work_names(session)
     set_rows = session.execute(text(_SET_UNIT_SQL), {"code": UNIT_SET_CODE}).fetchall()
     set_unit = str(set_rows[0][0]) if set_rows and set_rows[0][0] else None
-    masters = ProductFirstMasters(entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit)
+    release = {str(r[0]): r[1] for r in session.execute(text(_RELEASE_DATE_SQL)).fetchall()}
+    masters = ProductFirstMasters(
+        entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit, product_release=release
+    )
     check_product_first_masters(masters)
     return masters
 

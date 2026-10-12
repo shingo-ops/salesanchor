@@ -51,6 +51,7 @@ from app.services.gemini_raw_copy_v102_soldout_ref import (
 )
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
+from app.services.v102_status_context import StatusContext, context_status
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 DEFAULT_V101_PROMPT_NAME = "raw_copy_v101_a"
@@ -893,12 +894,13 @@ def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
     name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None, fixed_product_id: int | None = None,
-    gemini_trust: bool = False,
+    gemini_trust: bool = False, status_context: StatusContext | None = None,
 ) -> dict:
     """chosen_product_id（試作版 v102）：前後の商品の作品で決めた商品。ambiguous の候補にあるときだけ使う。
     fixed_product_id（試作版 v102）：人が決めた商品。照合の結果に関わらずこの商品に決める。
     gemini_trust（便G・v102 のときだけ）：価格・数量は Gemini の写しの数字をそのまま採る。原文からの読み直し（resolve_price_quantity）は
     値に使わず、両方とも数で違うときだけ price_source_mismatch / quantity_source_mismatch を付ける（確認役）。
+    status_context（便PO・v102 のときだけ）：発売日・投稿日・件に入っていない行。あれば、DEFAULT で決まったステータスを予約などに決め直す（v102_status_context）。
     name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
     shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
@@ -922,6 +924,12 @@ def _extract_one(
             block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
         )
     status, effect = resolve_status_v2(block, ctx.status_entries, raw_memo=block)
+    status_basis = None
+    if v102 and status_context is not None:
+        status, status_basis = context_status(
+            status, effect, block=block, item_lines=item["lines"], lines=lines,
+            product_id=(product_first or {}).get("product_id"), status_entries=ctx.status_entries, context=status_context,
+        )
     pq = resolve_price_quantity(
         own_text, gemini_price=item["price"], gemini_quantity=item["quantity"],
         unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
@@ -956,6 +964,7 @@ def _extract_one(
         "price_normalized": price_normalized, "quantity_normalized": quantity_normalized,
         "price_reasons": list(pq.reasons), "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block, v102=v102),
         "reassigned": reassigned, "review": review, **trust_extra,
+        **({"status_basis": status_basis} if status_basis is not None else {}),
     }
 
 
@@ -1318,6 +1327,14 @@ def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int])
     return reasons
 
 
+def _status_context(ctx: V101Context, items: list[dict], rejected: list[dict]) -> StatusContext | None:
+    """予約の手がかり（便PO）に渡す、投稿日・発売日・どの件の lines にも入っている行（落とした件の分も含む）。商品先行でなければ None。"""
+    if ctx.product_first is None:
+        return None
+    owned = frozenset(n for it in [*items, *rejected] for n in it["lines"])
+    return StatusContext(ctx.product_first.posted_date, ctx.product_first.product_release, owned)
+
+
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
     *, rejected: list[dict] | None = None, review_reasons: bool = False, fixed_products: dict[int, int] | None = None,
@@ -1343,12 +1360,14 @@ def _extract_v102(
     shared = _shared_line_numbers(items)
     f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)
 
+    status_context = _status_context(ctx, items, rejected or [])
+
     def build(i: int, chosen_product_id: int | None = None) -> dict:
         item = items[i]
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
             v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i], chosen_product_id=chosen_product_id,
-            fixed_product_id=(fixed_products or {}).get(i), gemini_trust=gemini_trust,
+            fixed_product_id=(fixed_products or {}).get(i), gemini_trust=gemini_trust, status_context=status_context,
         )
         if "gemini_index" in item:
             one = {**one, "gemini_index": item["gemini_index"]}

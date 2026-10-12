@@ -16,7 +16,8 @@ import logging
 import os
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timezone
+from dataclasses import replace as dataclass_replace
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -56,6 +57,7 @@ from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
 from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
+from app.services.v102_status_context import posted_jst_date
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
 logger = logging.getLogger(__name__)
@@ -1095,13 +1097,30 @@ def _load_sold_items(session: Session, message_ids: list[str]) -> dict[str, tupl
 
 def masters_with_followup(
     masters: dict, followup_ref: tuple[str, str] | None, soldout_posts: tuple[SoldoutRefPost, ...] = (),
+    posted_date: date | None = None,
 ) -> dict:
-    """マスタに直前の投稿の参照・〆の件が参照する過去の投稿を足した新しい辞書（run_v102_pipeline が extract_v101_items にそのまま渡す）。無ければ元のまま。"""
+    """マスタに直前の投稿の参照・〆の件が参照する過去の投稿・投稿日（便PO）を足した新しい辞書（run_v102_pipeline が extract_v101_items にそのまま渡す）。無ければ元のまま。"""
     extra = {
         **({"followup_ref": followup_ref} if followup_ref is not None else {}),
         **({"soldout_posts": soldout_posts} if soldout_posts else {}),
     }
-    return {**masters, **extra} if extra else masters
+    base = masters
+    if posted_date is not None and masters.get("product_first") is not None:
+        base = {**masters, "product_first": dataclass_replace(masters["product_first"], posted_date=posted_date)}
+    return {**base, **extra} if extra else base
+
+
+_POSTED_AT_SQL = """
+    SELECT sm.line_posted_at
+    FROM {schema}.extraction_jobs ej JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+    WHERE ej.id = :ej
+"""
+
+
+def load_posted_date(session: Session, extraction_job_id: str) -> date | None:
+    """投稿日（source_messages.line_posted_at の JST の日付）。投稿・時刻が無いときは None。読み取りのみ。run_v102_analysis と prompt_ab_recompute が共通で呼ぶ。"""
+    row = session.execute(text(_POSTED_AT_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id}).first()
+    return posted_jst_date(row.line_posted_at) if row is not None else None
 
 
 def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
@@ -1141,7 +1160,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
         previous_pairs = _load_resolved_pairs(session, extraction_job_id)
         followup_masters = masters_with_followup(
-            masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id)
+            masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id),
+            load_posted_date(session, extraction_job_id),
         )
         pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
         stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions)

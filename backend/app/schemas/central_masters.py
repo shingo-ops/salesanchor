@@ -19,6 +19,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.services.tcg_status_values import VALID_EFFECTS, VALID_MATCH_TYPES
+
 # ============================================================================
 # knowledge_rules
 # ============================================================================
@@ -547,8 +549,9 @@ class UnitAliasResponse(UnitAliasBase):
 # tcg_status_master
 # ============================================================================
 
-_VALID_MATCH_TYPES = {"REGEX", "LITERAL", "DEFAULT"}
-_VALID_EFFECTS = {"OUTPUT", "EXCLUDE"}
+# 値は services/tcg_status_values.py の1か所の定数（読む側の v102_status_context と共有）
+_VALID_MATCH_TYPES = VALID_MATCH_TYPES
+_VALID_EFFECTS = VALID_EFFECTS
 
 
 class TcgStatusMasterBase(BaseModel):
