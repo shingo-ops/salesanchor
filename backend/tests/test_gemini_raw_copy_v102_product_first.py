@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -344,7 +345,8 @@ def test_loader_reads_condition_units_and_active_ignore_phrases(monkeypatch):
         sql = str(stmt)
         calls.append(sql)
         rows = (
-            [] if "type_master" in sql else [("Set",)] if "line_units" in sql and "line_conditions" not in sql
+            [] if "type_master" in sql else [(7, date(2026, 10, 16))] if "release_date" in sql
+            else [("Set",)] if "line_units" in sql and "line_conditions" not in sql
             else [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
         )
         return SimpleNamespace(fetchall=lambda: rows)
@@ -354,6 +356,7 @@ def test_loader_reads_condition_units_and_active_ignore_phrases(monkeypatch):
     masters = pf.load_product_first_masters(session)
     assert masters.condition_unit == {"Sealed box": "Box"} and masters.ignore_phrases == ("ONE PIECE",)
     assert any("line_unit_ignore_phrases" in c and "is_active = TRUE" in c for c in calls)
+    assert masters.product_release == {"7": date(2026, 10, 16)} and masters.posted_date is None
 
 
 def test_loader_stops_when_condition_units_are_empty(monkeypatch):

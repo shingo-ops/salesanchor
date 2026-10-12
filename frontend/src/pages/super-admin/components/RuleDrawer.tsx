@@ -6,10 +6,9 @@
  *
  * 機能:
  *  - status_id は backend で自動採番（フォームから除去）
- *  - match_type は LITERAL に固定（フォームから除去）
- *  - exclude_pattern は空文字に固定（フォームから除去）
- *  - canonical はDBから取得した Select に変更（effect を自動セット）
- *  - テストゲート: 判定合格後のみ作成 / 更新ボタンが有効になる
+ *  - match_type: 新規は効果に応じた初期値（従来の効果は LITERAL）。編集は今の値を保つ（予約の手がかりの行を LITERAL に壊さない）
+ *  - canonical はDBから取得した Select（同じ canonical に効果が1つだけのときだけ effect を合わせる）
+ *  - テストゲート: 判定合格後のみ作成 / 更新ボタンが有効になる（照合方法が発売日の行は文字の照合が無いのでテスト不要）
  *  - 無効化ボタン: 編集モードかつ enabled=true のときのみ表示
  *
  * ADR-027: 全UI文字列は t("key") 経由。
@@ -24,6 +23,19 @@ import { Button } from "../../../components/Button";
 import { Badge } from "../../../components/Badge";
 import { Card } from "../../../components/Card";
 import { api } from "../../../lib/api";
+import {
+  EFFECT_DATE_AHEAD,
+  EFFECT_EXCLUDE,
+  EFFECT_HEADING,
+  EFFECT_OUTPUT,
+  EFFECT_RELEASE_AHEAD,
+  MATCH_DEFAULT,
+  MATCH_LITERAL,
+  MATCH_REGEX,
+  MATCH_RELEASE,
+  defaultMatchTypeFor,
+  effectAfterCanonicalChange,
+} from "./ruleEffects";
 
 export interface RuleEntry {
   id: number;
@@ -62,15 +74,19 @@ interface CanonicalOption {
 interface FormDraft {
   canonical: string;
   effect: string;
+  matchType: string;
   searchPattern: string;
+  excludePattern: string;
   priority: string;
   note: string;
 }
 
 const emptyDraft: FormDraft = {
   canonical: "",
-  effect: "OUTPUT",
+  effect: EFFECT_OUTPUT,
+  matchType: MATCH_LITERAL,
   searchPattern: "",
+  excludePattern: "",
   priority: "0",
   note: "",
 };
@@ -78,7 +94,9 @@ const emptyDraft: FormDraft = {
 const ruleToFormDraft = (rule: RuleEntry): FormDraft => ({
   canonical: rule.canonical,
   effect: rule.effect,
+  matchType: rule.match_type,
   searchPattern: rule.search_pattern,
+  excludePattern: rule.exclude_pattern ?? "",
   priority: String(rule.priority),
   note: rule.note ?? "",
 });
@@ -138,13 +156,24 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
 
   const handleCanonicalChange = (value: string) => {
     const found = canonicals.find((c) => c.canonical === value);
-    setDraft((prev) => ({
+    setDraft((prev) => {
+      const effect = found ? effectAfterCanonicalChange(canonicals, value, prev.effect) : prev.effect;
+      return { ...prev, canonical: value, effect, matchType: isEditMode || effect === prev.effect ? prev.matchType : defaultMatchTypeFor(effect) };
+    });
+    resetTestState();
+  };
+
+  const handleEffectChange = (value: string) => {
+    setDraft((prev: FormDraft) => ({
       ...prev,
-      canonical: value,
-      effect: found ? found.effect : prev.effect,
+      effect: value,
+      matchType: isEditMode ? prev.matchType : defaultMatchTypeFor(value),
     }));
     resetTestState();
   };
+
+  // 発売日の行は文字の照合が無い（パターンを使わない）ので、テストの合格を求めない
+  const needsPatternTest = draft.matchType !== MATCH_RELEASE;
 
   const handleTest = async () => {
     if (!testInput.trim()) return;
@@ -153,7 +182,7 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
     setTestPassed(false);
     try {
       const result = await api.post<PreviewResponse>("/super-admin/status-master/preview", {
-        match_type: "LITERAL",
+        match_type: draft.matchType,
         search_pattern: draft.searchPattern,
         input_text: testInput,
       });
@@ -180,7 +209,8 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
         await api.patch(`/super-admin/status-master/${editRule.id}`, {
           canonical: draft.canonical,
           search_pattern: draft.searchPattern,
-          match_type: "LITERAL",
+          exclude_pattern: draft.excludePattern,
+          match_type: draft.matchType,
           effect: draft.effect,
           priority: Number(draft.priority) || 0,
           note: draft.note,
@@ -190,8 +220,8 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
         await api.post("/super-admin/status-master", {
           canonical: draft.canonical,
           search_pattern: draft.searchPattern,
-          exclude_pattern: "",
-          match_type: "LITERAL",
+          exclude_pattern: draft.excludePattern,
+          match_type: draft.matchType,
           effect: draft.effect,
           priority: Number(draft.priority) || 0,
           enabled: false,
@@ -230,9 +260,17 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
   };
 
   const effectOptions = [
-    { value: "OUTPUT", label: t(`${fc}.effectOutput`) },
-    { value: "EXCLUDE", label: t(`${fc}.effectExclude`) },
+    { value: EFFECT_OUTPUT, label: t(`${fc}.effectOutput`) },
+    { value: EFFECT_EXCLUDE, label: t(`${fc}.effectExclude`) },
+    { value: EFFECT_RELEASE_AHEAD, label: t(`${fc}.effectReleaseAhead`) },
+    { value: EFFECT_DATE_AHEAD, label: t(`${fc}.effectDateAhead`) },
+    { value: EFFECT_HEADING, label: t(`${fc}.effectHeading`) },
   ];
+
+  const matchTypeOptions = [MATCH_LITERAL, MATCH_REGEX, MATCH_DEFAULT, MATCH_RELEASE].map((m) => ({
+    value: m,
+    label: t(`${f}.matchType.${m}`),
+  }));
 
   const canonicalOptions = canonicals.map((c) => ({
     value: c.canonical,
@@ -265,7 +303,7 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
       <Button
         variant="primary"
         onClick={() => { void handleSubmit(); }}
-        disabled={!testPassed || isSubmitBusy}
+        disabled={(needsPatternTest && !testPassed) || isSubmitBusy}
         loading={submitting}
         loadingText={isEditMode ? t(`${fe}.updating`) : t(`${fc}.creating`)}
         data-testid="rule-drawer-submit-btn"
@@ -300,9 +338,19 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
           label={t(`${fc}.effect`)}
           options={effectOptions}
           value={draft.effect}
-          onChange={(e) => set("effect", e.target.value)}
+          onChange={(e) => handleEffectChange(e.target.value)}
           fullWidth
           data-testid="rule-drawer-effect"
+        />
+
+        {/* 2b. 照合方法 (match_type) */}
+        <Select
+          label={t(`${fc}.matchType`)}
+          options={matchTypeOptions}
+          value={draft.matchType}
+          onChange={(e) => set("matchType", e.target.value)}
+          fullWidth
+          data-testid="rule-drawer-match-type"
         />
 
         {/* 3. ワード (search_pattern) */}
@@ -312,6 +360,15 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
           onChange={(e) => set("searchPattern", e.target.value)}
           fullWidth
           data-testid="rule-drawer-search-pattern"
+        />
+
+        {/* 3b. 除外ワード (exclude_pattern) */}
+        <TextField
+          label={t(`${fc}.excludePattern`)}
+          value={draft.excludePattern}
+          onChange={(e) => set("excludePattern", e.target.value)}
+          fullWidth
+          data-testid="rule-drawer-exclude-pattern"
         />
 
         {/* 4. 優先度 (priority) */}
@@ -373,12 +430,17 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
         </Card>
 
         {/* テストゲートメッセージ */}
-        {!testPassed && (
+        {!needsPatternTest && (
+          <p style={{ margin: 0, fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
+            {t(`${fc}.testNotNeeded`)}
+          </p>
+        )}
+        {needsPatternTest && !testPassed && (
           <p style={{ margin: 0, fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
             {t(`${fc}.testRequired`)}
           </p>
         )}
-        {testPassed && (
+        {needsPatternTest && testPassed && (
           <p style={{ margin: 0, fontSize: "var(--font-sm)", color: "var(--color-success)" }}>
             {t(`${fc}.testPassed`)}
           </p>
