@@ -26,7 +26,7 @@ dj_config() {
   : "${DJ_ROOT_AGENT_CONSOLE:=${home_dir}/agent-console}"
   : "${DJ_ROOT_VERSIONS:=${home_dir}/Library/Application Support/agent-console/versions}"
   : "${DJ_CURRENT_LINK:=${DJ_ROOT_VERSIONS}/../current}"
-  : "${DJ_NPM_CACHE_KEEP:=${home_dir}/.npm-cache}"
+  : "${DJ_NPM_CACHE_KEEP:=${home_dir}/.npm-shared-cache}"
   : "${DJ_STALE_DAYS:=14}"
   : "${DJ_LOG_FILE:=}"                 # 空なら標準出力のまま。LaunchAgent の plist が指定する
   : "${DJ_LOG_MAX_BYTES:=1048576}"
@@ -167,18 +167,19 @@ dj_rule_r1() {
   if [ "${DJ_LSOF_OK}" -ne 1 ]; then
     echo "  [規則ごと飛ばす] lsof が失敗したため使用中を判定できない"; dj_rule_end R1; return 0
   fi
-  local cache_now
-  cache_now="$(cd / 2>/dev/null; ${DJ_NPM_CMD} 2>/dev/null | tail -n 1)"
-  if [ -z "${cache_now}" ]; then
+  # D1 適用の確認: 場所（/ と HOME）を変えて2回測り、2つとも保護する cache と完全一致したときだけ進む。
+  # 相対パス設定（cache=./.npm-cache）に戻ると、場所によって値が変わるので一致しない。
+  local cache_root cache_home
+  cache_root="$(cd / 2>/dev/null && ${DJ_NPM_CMD} 2>/dev/null | tail -n 1)"
+  cache_home="$(cd "${HOME:-/}" 2>/dev/null && ${DJ_NPM_CMD} 2>/dev/null | tail -n 1)"
+  if [ -z "${cache_root}" ] || [ -z "${cache_home}" ]; then
     echo "  [規則ごと飛ばす] npm config get cache が取得できない"; dj_rule_end R1; return 0
   fi
-  local r
-  for r in ${DJ_ROOTS[@]+"${DJ_ROOTS[@]}"}; do
-    if dj_under "${cache_now}" "${r}"; then
-      echo "  [警告] npm の cache が根の下 (${cache_now}) を指す。D1 未適用の可能性。R1 全体を飛ばす"
-      dj_rule_end R1; return 0
-    fi
-  done
+  if [ "${cache_root}" != "${DJ_NPM_CACHE_KEEP}" ] || [ "${cache_home}" != "${DJ_NPM_CACHE_KEEP}" ]; then
+    echo "  [警告] npm の cache が保護先 (${DJ_NPM_CACHE_KEEP}) と一致しない（/ では '${cache_root}'、HOME では '${cache_home}'）。D1 未適用の可能性。R1 全体を飛ばす"
+    dj_rule_end R1; return 0
+  fi
+  local cache_now="${cache_root}"
   local cand
   while IFS= read -r cand; do
     [ -n "${cand}" ] || continue

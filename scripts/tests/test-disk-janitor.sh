@@ -44,7 +44,7 @@ mkdir -p "${R_WT}/repoA" "${R_ACWT}" "${R_SA}" "${R_AC}" "${R_VER}" "${T}/outsid
 # 一時ディレクトリの中だけを指す設定
 export DJ_ROOT_WORKTREES="${R_WT}" DJ_ROOT_AC_WT="${R_ACWT}" DJ_ROOT_SALESANCHOR="${R_SA}" \
        DJ_ROOT_AGENT_CONSOLE="${R_AC}" DJ_ROOT_VERSIONS="${R_VER}" DJ_CURRENT_LINK="${T}/current" \
-       DJ_NPM_CACHE_KEEP="${KEEP_CACHE}" DJ_NPM_CMD="echo ${T}/home/.npm-cache" \
+       DJ_NPM_CACHE_KEEP="${KEEP_CACHE}" DJ_NPM_CMD="echo ${KEEP_CACHE}" \
        DJ_LOCK_DIR="${T}/lock.d" DJ_LOG_FILE="" DJ_STALE_DAYS=14
 
 start_sleeper() { # start_sleeper <dir>: dir を cwd にしたプロセスを起動
@@ -202,6 +202,12 @@ check "lsof 失敗: R1〜R3 を飛ばすと出る" [ "$(grep -c '規則ごと飛
 OUT_REL="$(DJ_NPM_CMD="echo ${R_SA}/.npm-cache" bash "${JANITOR}" --execute 2>&1)"
 check "npm の cache が根の下: R1 全体を飛ばし何も消えない" exists "${R_SA}/again/.npm-cache"
 check "npm の cache が根の下: 警告が出る" grep -q "D1 未適用の可能性" <<<"${OUT_REL}"
+# 相対パス設定を模した偽 npm: 呼ばれた場所（pwd）によって値が変わる
+FAKE_NPM="${T}/fake-npm.sh"
+printf '%s\n' '#!/bin/bash' 'echo "$(pwd -P)/.npm-cache"' > "${FAKE_NPM}"
+OUT_REL2="$(DJ_NPM_CMD="bash ${FAKE_NPM}" bash "${JANITOR}" --execute 2>&1)"
+check "相対パス設定（場所で値が変わる）: R1 全体を飛ばし何も消えない" exists "${R_SA}/again/.npm-cache"
+check "相対パス設定（場所で値が変わる）: 警告が出る" grep -q "D1 未適用の可能性" <<<"${OUT_REL2}"
 OUT_NOCUR="$(DJ_CURRENT_LINK="${T}/no-such-link" bash "${JANITOR}" --execute 2>&1)"
 check "current が読めない: R3 全体を飛ばす" grep -q "current が読めない" <<<"${OUT_NOCUR}"
 mkdir -p "${R_VER}/v0.1.0"

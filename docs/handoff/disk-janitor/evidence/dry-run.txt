@@ -1,9 +1,9 @@
-===== disk-janitor 開始 2026-10-13 02:56:28 mode=dry-run =====
+===== disk-janitor 開始 2026-10-13 03:44:17 mode=dry-run =====
 --- df（開始）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   190Gi   9.1Gi    96%    4.5M   96M    5%   /System/Volumes/Data
+/dev/disk3s1   228Gi   191Gi   6.2Gi    97%    4.6M   65M    7%   /System/Volumes/Data
 根: /Users/tanizawashingo/worktrees /Users/tanizawashingo/agent-console-wt /Users/tanizawashingo/salesanchor /Users/tanizawashingo/agent-console /Users/tanizawashingo/Library/Application Support/agent-console/versions
-lsof: 20345 行を取得
+lsof: 27002 行を取得
 
 == R1 散らばった .npm-cache ==
   [R1] /Users/tanizawashingo/agent-console-wt/activity/.npm-cache (50.4MB)
@@ -97,7 +97,7 @@ lsof: 20345 行を取得
   [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/frontend/node_modules （14日以内に更新されたファイルあり）
   [R2] /Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/node_modules (617.7MB)
   [飛ばす] /Users/tanizawashingo/agent-console-wt/activity/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /Users/tanizawashingo/agent-console-wt/chat/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/chat/node_modules （14日以内に更新されたファイルあり）
   [飛ばす] /Users/tanizawashingo/agent-console-wt/ci-badge/node_modules （14日以内に更新されたファイルあり）
   [飛ばす] /Users/tanizawashingo/agent-console-wt/icon/node_modules （14日以内に更新されたファイルあり）
   [飛ばす] /Users/tanizawashingo/agent-console-wt/layout/node_modules （14日以内に更新されたファイルあり）
@@ -125,19 +125,21 @@ lsof: 20345 行を取得
 [R3] 削除候補: 15 件 / 4.6GB（4802844KB）、飛ばした: 0 件
 
 == R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
-  -- /Users/tanizawashingo/agent-console (GEN-RYU-System/agent-console, 行き先 main) reaper rc=0, 26 行 --
+  -- /Users/tanizawashingo/agent-console (GEN-RYU-System/agent-console, 行き先 main) reaper rc=0, 28 行 --
      🔍 worktree を走査（全件）: git worktree list
      
-        対象 worktree 数: 7 件
+        対象 worktree 数: 9 件
      
      === reaper 結果 ===
      
-     🧑‍💻 使用中（削除しない）: 1 件
+     ⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+        - release/board
         - release/chat
-     
-     ⚠️  未保存あり（削除しない）: 2 件 ← 人の判断が必要
         - feat/app-icon
         - fix/terminal-locale
+     
+     🔄 未マージ（削除しない）: 1 件
+        - release/card-labels
      
      === ゴースト検出 ===
         走査: /Users/tanizawashingo/worktrees/agent-console
@@ -229,6 +231,6 @@ lsof: 20345 行を取得
 
 --- df（終了）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   190Gi   9.1Gi    96%    4.5M   95M    5%   /System/Volumes/Data
-===== disk-janitor 終了 2026-10-13 02:57:18 mode=dry-run 合計 83 件 / 9.9GB（R4 の容量は含まない） =====
+/dev/disk3s1   228Gi   190Gi   6.7Gi    97%    4.5M   70M    6%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-13 03:55:13 mode=dry-run 合計 83 件 / 9.9GB（R4 の容量は含まない） =====
 exit code: 0

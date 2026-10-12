@@ -1,18 +1,8 @@
---- 保護の確認 ---
+OK(候補に無い): /Users/tanizawashingo/.npm-shared-cache
 OK(候補に無い): /Users/tanizawashingo/.npm-cache
 OK(候補に無い): /Users/tanizawashingo/salesanchor/node_modules
 OK(候補に無い): /Users/tanizawashingo/salesanchor/frontend/node_modules
 OK(候補に無い): /Users/tanizawashingo/agent-console/node_modules
 OK(候補に無い): /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.9.1
 OK(候補に無い): /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.7.0
-current -> versions/v0.9.1
-使用中として飛ばした物:
   [飛ばす] /Users/tanizawashingo/salesanchor/.npm-cache （使用中（プロセスが開いている））
-  [飛ばす] /Users/tanizawashingo/agent-console-wt/chat/node_modules （使用中（プロセスが開いている））
-     🧑‍💻 使用中（削除しない）: 1 件
-salesanchor 本体の .npm-cache(使用中)が候補に無いこと:
-0
-候補に ~/.npm-cache 配下・本体 node_modules が含まれる行数:
-0
-候補のうち versions 配下の版ディレクトリ(R3)に v0.9.1/v0.7.0 が含まれる行数:
-0

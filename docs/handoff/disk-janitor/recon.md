@@ -8,7 +8,7 @@
 - npm キャッシュ・不要物の片付けを定めた ADR は無し（本件が初）。
 
 ## 事実（file:line）
-1. npm キャッシュが散らばる原因: `~/.npmrc` の `cache=./.npm-cache` が実行場所の相対パス。実測 `/tmp/CC報告ファイル/disk-cleanup/phase3/npm.txt:2`（`cache=./.npm-cache`）。/tmp→/private/tmp/.npm-cache、~→~/.npm-cache、agent-console→agent-console/.npm-cache（同ファイルの実測）。D1 で `cache=/Users/tanizawashingo/.npm-cache` に変更済み（現在の ~/.npmrc で確認）。
+1. npm キャッシュが散らばる原因: `~/.npmrc` の `cache=./.npm-cache` が実行場所の相対パス。実測 `/tmp/CC報告ファイル/disk-cleanup/phase3/npm.txt:2`（`cache=./.npm-cache`）。/tmp→/private/tmp/.npm-cache、~→~/.npm-cache、agent-console→agent-console/.npm-cache（同ファイルの実測）。D1 は `cache=/Users/tanizawashingo/.npm-shared-cache`（crm-app と同じ共有の置き場）に変更済み（旧 .npm-cache は root 所有のファイルがあり EACCES になったため。改訂 2）（現在の ~/.npmrc で確認）。
 2. reaper は salesanchor 専用で PR の行き先が main 固定: 変更前 `/Users/tanizawashingo/worktrees/salesanchor/release-disk-janitor/scripts/reaper-worktree.sh:235`（`select(.baseRefName=="main")`）、`:282`、`:297`、リポジトリ名の既定 `:65`。MAIN_REPO_ROOT は作業場所から決まる（`:59`、`:61`）。使用中判定は cwd のみ（`:164`）。→ 本 PR で `REAPER_BASE_BRANCH` 化。
 3. agent-console の旧版: `ac_install_version` は `versions/<tag>` に足すだけ（`/tmp/CC報告ファイル/disk-cleanup/phase3/ac.txt:20`）、切り戻し先は current の1つ前（semver 順・`ac.txt:440`-`ac.txt:455` の ac-rollback.sh）。実機: current -> versions/v0.9.1、versions は v0.2.0〜v0.9.1 の17版。
 4. 自動で消えるので対処しない物: Claude Code の一時ファイル・会話記録は `cleanupPeriodDays` 既定30日（`/tmp/CC報告ファイル/disk-cleanup/phase3/doc-scratchpad.txt:3`）。/tmp の報告ファイルは tmp_cleaner が3日超を削除（`/tmp/CC報告ファイル/disk-cleanup/phase2/summary.md:12`）。

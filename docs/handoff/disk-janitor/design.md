@@ -7,7 +7,7 @@ PO 原文（2026-10-13）:「他に不要なものも調査して溜まってい
 ## 1. 目的と成功条件
 - 開発作業で増える「消しても作り直せる物」と「GitHub に同じ内容がある物」が、人の手なしで毎日片付き、たまり続けない。
 - 判定（○×）:
-  1. `npm config get cache` を ~・salesanchor・任意の worktree の3か所で実行すると、3つとも `/Users/tanizawashingo/.npm-cache` を返す。
+  1. `npm config get cache` を ~・salesanchor・任意の worktree の3か所で実行すると、3つとも `/Users/tanizawashingo/.npm-shared-cache` を返す。
   2. 片付けの仕組みが毎日1回動き、ログ ~/Library/Logs/disk-janitor.log に、規則ごとの件数・容量・前後の df が残る。
   3. 初回実行の後、規則の対象（下の R1〜R4 で「消す」に当たる物）が0件になる（2回目の dry-run で候補0件）。
   4. 消してはいけない物（各規則の「保護」）は1件も消えていない（初回の実行前一覧と実行後一覧の照合）。
@@ -23,13 +23,14 @@ PO 原文（2026-10-13）:「他に不要なものも調査して溜まってい
 対処しない物（理由）:
 - Claude Code の一時ファイル（/private/tmp/claude-501）と会話記録（~/.claude/projects）: 公式の保持期間（cleanupPeriodDays 既定30日）で、会話記録と一緒に消える（doc-scratchpad.txt 原文、doc-claude-directory.md:1534）。
 - /tmp の報告ファイル: macOS の tmp_cleaner が毎日、3日触られていないファイルを消す（phase2 summary 項目6）。
+- 旧 /Users/tanizawashingo/.npm-cache（1.1GB・HOME 直下で根の外）: root 所有のファイル18個があり、消すには sudo が要る。自動では触らない（PO に別途渡す）。
 - Codex の会話記録 4.5GB、colima の停止中ディスク、Chrome の履歴、macOS Install Data: PO 個人のデータ・判断。自動では消さない（PO に別途 y/n）。
 - git として読めない作業用コピー 113件: 中身が GitHub と一致するか判定できない物が大半（phase2 G-crm.tsv）。自動では消さない。
 
 ## 3. 変更（一度に1つ。D1 → 測定 → D2 → 測定）
 
 ### D1 npm キャッシュを1か所に（ローカル設定・リポジトリ外）
-- ~/.npmrc の `cache=./.npm-cache` を `cache=/Users/tanizawashingo/.npm-cache` に変える（1行）。`prefix=` の行は変えない。
+- ~/.npmrc の `cache=./.npm-cache` を `cache=/Users/tanizawashingo/.npm-shared-cache` に変える（1行）。`prefix=` の行は変えない。
 - 前例: crm-app は 2026-08-25 b187243 で `cache=${HOME}/.npm-shared-cache` に変え、worktree 間でキャッシュを共有している（npm-crm.txt）。
 - 測定: 判定1。変更前の値を記録してから変える。
 - 戻し方: 1行を元に戻す（控えを ~/.npmrc.bak-20261013 に置く）。
@@ -47,7 +48,7 @@ PO 原文（2026-10-13）:「他に不要なものも調査して溜まってい
 
 R1 散らばった .npm-cache
 - 対象: 根の下の、名前が `.npm-cache` のディレクトリ。深さ4まで（`find -P <根> -maxdepth 4 -type d -name .npm-cache -prune`）。
-- 保護: D1 の設定先 /Users/tanizawashingo/.npm-cache（実行時に `npm config get cache` で得た値と同じパスは消さない）。npm のプロセス（`pgrep -x npm` が1件以上）が動いている時は R1 全体を飛ばす。
+- 保護: D1 の設定先 /Users/tanizawashingo/.npm-shared-cache（実行時に `npm config get cache` で得た値と同じパスは消さない）。npm のプロセス（`pgrep -x npm` が1件以上）が動いている時は R1 全体を飛ばす。
 - 前提: D1 の後でのみ有効にする（`npm config get cache` が根の下の相対の場所を返すなら R1 全体を飛ばして警告）。
 
 R2 使っていない作業用コピーの node_modules
@@ -73,7 +74,7 @@ LaunchAgent
 ## 4. 受入と検証
 | 基準 | 検証方法 |
 |---|---|
-| D1 | 変更前後で、~・/Users/tanizawashingo/salesanchor・残っている worktree 1つで `npm config get cache` の出力を記録。後は3つとも /Users/tanizawashingo/.npm-cache |
+| D1 | 変更前後で、~・/Users/tanizawashingo/salesanchor・残っている worktree 1つで `npm config get cache` の出力を記録。後は3つとも /Users/tanizawashingo/.npm-shared-cache |
 | 試験 | scripts/tests/test-disk-janitor.sh を一時ディレクトリで実行し、R1〜R4 それぞれの「消す」「保護」の場合がすべて期待どおり（消すべき物が消え、保護が残る）。reaper の既存試験 scripts/tests/test-reaper-safety.sh が変更後も全件成功 |
 | dry-run | マージ前に、実機で `bash scripts/disk-janitor.sh`（dry-run）の全出力を保存。候補一覧を設計者が見て、保護に当たる物が候補に入っていないことを確認 |
 | 初回実行 | 設置後に1回 `--execute` を手で実行し、前後の df・規則ごとの件数と容量を記録。直後の dry-run で候補0件 |
@@ -103,7 +104,7 @@ LaunchAgent
 - F7（受入の追加）: 設置後に `launchctl print gui/$(id -u)/jp.salesanchor.disk-janitor` の出力（state・runs・last exit code）を記録し、`launchctl kickstart -k gui/$(id -u)/jp.salesanchor.disk-janitor` で1回すぐに動かしてログを確認する。plist はリポジトリの版に StartCalendarInterval（毎日 04:00）を必ず入れ、設置した物と `diff` して差が無いことを記録する（reaper の plist はリポジトリ版に日時が無い前例があるため）。ログの肥大化: 1回の出力は規則ごとの件数・容量と、消した物の先頭20件まで。ログが 1MB を超えたら disk-janitor.log.1 に移してから書く（1世代だけ）。
 - F8（R4 の事実）: 対象と行き先は次で確定（origin の実測と、マージ済み PR 直近50件の base の分布）。/Users/tanizawashingo/agent-console → GEN-RYU-System/agent-console・main、/Users/tanizawashingo/ebay-gas-automation → GEN-RYU-System/bay-auto・develop、/Users/tanizawashingo/crm-app-current と /Users/tanizawashingo/crm-app-canonical-20260830 → GEN-RYU-System/crm-app・develop。owner/repo は実行時に origin から求め、上の値と違えばそのリポジトリを飛ばす。reaper は MAIN_REPO_ROOT を作業場所から決めるため、`( cd <repo> && <env> bash <salesanchor>/scripts/reaper-worktree.sh --execute )` のように別のシェルで呼ぶ。
 - F9（R3）: current はシンボリックリンクの指し先の basename で比べる。現状は current=v0.9.1、1つ前=v0.7.0（ac-rollback.sh:16-20 と同じ決め方）。current より新しい版が versions/ にあれば、それも残す。
-- F10（D1）: 値は `cache=/Users/tanizawashingo/.npm-cache`。判定1は、各ディレクトリへ移動してから `npm config get cache` を実行する（`--prefix` では作業場所が変わらないため）。
+- F10（D1）: 値は `cache=/Users/tanizawashingo/.npm-shared-cache`。判定1は、各ディレクトリへ移動してから `npm config get cache` を実行する（`--prefix` では作業場所が変わらないため）。
 - F11（範囲の実測）: R1 の候補は 57件（salesanchor 本体の .npm-cache・backend・frontend・lp を含む。本体の未コミットのファイルは名前が違うので対象外）。R2 は本体を対象外のまま。~/worktrees/crm-app/* の frontend/node_modules 2件は R2 の対象に入る（.git がファイルの作業用コピーのとき）。
 
 ## 審査と PO の決定
@@ -111,6 +112,10 @@ LaunchAgent
 - PO の決定（2026-10-13、F6 の y/n）: 「y」。質問文は「毎日朝4時に、人の手を通さずに自動で消してよいですか？ 消すのは、決めた5つの場所の中で、作り直せるものか GitHub に同じ内容があるものだけです」。範囲は根5か所の中で R1〜R4 の条件に当たる物だけ。
 
 ---
+
+## 改訂 2（2026-10-13、設計者決定。上の記述より優先）
+- npm の置き場は crm-app と同じ `/Users/tanizawashingo/.npm-shared-cache` に1本化する（旧 `.npm-cache` は root 所有のファイル18個で別担当の `npm ci` が EACCES）。`~/.npmrc` は `cache=/Users/tanizawashingo/.npm-shared-cache`。R1 の保護先（`DJ_NPM_CACHE_KEEP` 既定）も同じ。上の本文・F10 の `.npm-cache` の絶対パスは、この値に読み替える（本ファイル内の絶対パスは置換済み）。
+- R1 の D1 確認は、`/` と HOME の2か所で `npm config get cache` を実行し、2つとも保護先と完全一致したときだけ行う（1つでも違えば R1 全体を飛ばして警告）。
 
 ## 実装での確定事項（実装担当・2026-10-13）
 - 実装物: `scripts/disk-janitor.sh`（R1〜R4・dj_guard 1関数・設定は dj_config 1か所・`DJ_` 環境変数で上書き）、`scripts/reaper-worktree.sh`（`REAPER_BASE_BRANCH`・本体ブランチ保護）、`ops/launchd/jp.salesanchor.disk-janitor.plist`、`scripts/tests/test-disk-janitor.sh`、`scripts/tests/test-reaper-safety.sh`（B-a〜B-d 追加）。

@@ -20,7 +20,7 @@
 #   [R9-e] gh の本文取得に失敗 → 保護
 #   [R9-f] .scratch/pr-body.md（サブフォルダ・全行が本文にある）→ 削除候補
 #   [R9-g] --execute で下書きが .git/reaper-drafts/ に控えられ、部屋が消える
-#   [B-a] REAPER_BASE_BRANCH=develop → gh の PR 行き先判定が develop（main ではない）
+#   [B-a] REAPER_BASE_BRANCH=staging → gh の PR 行き先判定が staging（main ではない）
 #   [B-b] REAPER_BASE_BRANCH 未指定 → gh の PR 行き先判定は main（既定）
 #   [B-c] ブランチ名が main・develop・REAPER_BASE_BRANCH と同じ部屋は DONE でも削除対象に出ない（本体ブランチ保護）
 #   [B-d] 上の保護の対照: 通常ブランチの DONE の部屋は削除対象に出る
@@ -40,6 +40,8 @@ TMPDIR_TEST=$(mktemp -d /tmp/reaper-test.XXXXXX)
 trap 'rm -rf "${TMPDIR_TEST}"' EXIT
 
 FAKE_WORKTREES="${TMPDIR_TEST}/worktrees"
+# 他セッション・ランナーの本物の reaper が /tmp のロックを持っていても影響されないよう、ロックを試験専用にする
+export REAPER_LOCK_DIR="${TMPDIR_TEST}/default.lock.d"
 FAKE_ACTIVE_WORK="${TMPDIR_TEST}/active-work.md"
 
 mkdir -p "${FAKE_WORKTREES}"
@@ -656,6 +658,7 @@ run_reaper_base() {
     REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
     REAPER_REPO_NAME="test/test" \
     REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${TMPDIR_TEST}/base.lock.d" \
     MOCK_GH_ARGS_LOG="${log}" \
     bash "${REAPER}" 2>&1
   else
@@ -663,6 +666,7 @@ run_reaper_base() {
     REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
     REAPER_REPO_NAME="test/test" \
     REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${TMPDIR_TEST}/base.lock.d" \
     MOCK_GH_ARGS_LOG="${log}" \
     bash "${REAPER}" 2>&1
   fi
