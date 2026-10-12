@@ -21,7 +21,7 @@ mode: handoff
 
 ### 1. 新規: backend/tools/export_openapi.py
 ```python
-"""FastAPI の OpenAPI スキーマを、サーバーを起動せずに書き出す（ADR-1005）。"""
+"""FastAPI の OpenAPI スキーマを、サーバーを起動せずに書き出す（ADR-1010）。"""
 import json
 import sys
 from pathlib import Path
