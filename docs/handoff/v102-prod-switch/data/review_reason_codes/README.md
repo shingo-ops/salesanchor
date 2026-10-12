@@ -65,8 +65,8 @@ gemini_gap_suspect（system・extraction）。unit_price_mismatch の追加（up
 
 | 項目 | 内容 |
 |---|---|
-| 実施日時 | |
-| precheck | |
-| dryrun | |
-| commit | |
-| verify | |
+| 実施日時 | 2026-10-12T03:20Z（PR #4157 マージ前・Opus 実行。PO 委任「必要な権限は全て使用して良い」・許可チケット psql write） |
+| precheck | TABLE|review_reason_codes・ROWS|36・HAS_NEW|0・PRECHECK_DONE |
+| dryrun | INSERTED|1・CHECK_OK 1・ROWS_OK 37・ROLLBACK・DRYRUN_OK |
+| commit | INSERTED|1・CHECK_OK 1・ROWS_OK 37・COMMIT・COMMIT_DONE |
+| verify | gemini_gap_suspect|system|extraction・ROWS|37・VERIFY_DONE |
