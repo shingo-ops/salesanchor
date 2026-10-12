@@ -1,7 +1,7 @@
 # recon: 生成型の横展開（便C-4、OwnInventoryPage）
 
 - 基準: origin/main `2cdbcc9b3`（BASE_OK。worktree 作成直後の HEAD と一致）
-- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠: ADR-1009（旧 ADR-1005）。前提の便C-2（PR #4009）は本番反映済み。
+- 親テーマ: cross-dept-integrity-foundation（PR #3942）。根拠: ADR-1010（旧 ADR-1005）。前提の便C-2（PR #4009）は本番反映済み。
 - 調査: Sonnet（読み取りとローカル実行）。判断: Opus
 
 ## 事実

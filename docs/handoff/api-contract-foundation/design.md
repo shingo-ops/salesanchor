@@ -2,11 +2,11 @@
 
 - 参照:
   - 現状調査: docs/handoff/api-contract-foundation/recon.md
-  - ADR: ADR-1009（ファイル docs/adr/ADR-1009-api-contract-and-wiring-ledger.md、PR #3942 でマージ。PO 承認済み。旧番号 ADR-1005）
+  - ADR: ADR-1010（ファイル docs/adr/ADR-1010-api-contract-and-wiring-ledger.md、PR #3942 でマージ。PO 承認済み。旧番号 ADR-1005）
   - 関連ADR: ADR-067、ADR-144
 - 実装カード: PR #3942 の docs/handoff/cross-dept-integrity-foundation/card-c1.md
 - 承認:
-  - 2026-10-04 PO が ADR-1009（旧 ADR-1005）を承認
+  - 2026-10-04 PO が ADR-1010（旧 ADR-1005）を承認
   - 2026-10-05 PO がこのカードどおりの実装と PR 作成を承認（チャット）
   - マージ前に PO 本人の「GO #番号」が必要
 

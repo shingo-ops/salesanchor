@@ -2,7 +2,7 @@
 
 - 参照:
   - 現状調査: docs/handoff/api-types-own-inventory/recon.md
-  - ADR: ADR-1009、関連する ADR-144
+  - ADR: ADR-1010、関連する ADR-144
 - 実装カード: docs/handoff/cross-dept-integrity-foundation/card-c3.md の「便C-4」と「両便に共通する手順」
 - 見本: PR #4009（便C-2）
 - 承認: PO の横展開の承認は設計者経由。マージ前に PO 本人の「GO #番号」が必要。

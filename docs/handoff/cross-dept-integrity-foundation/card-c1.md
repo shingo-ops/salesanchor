@@ -3,7 +3,7 @@ mode: handoff
 ---
 # 実装カード 便C-1: API型契約の土台（スキーマと型の生成＋ずれ検査）
 
-- 根拠: ADR-1009（Accepted 2026-10-04）、design.md の便C
+- 根拠: ADR-1010（Accepted 2026-10-04）、design.md の便C
 - 現状調査（2026-10-04、origin/main 基準。Sonnet が実行した結果）:
   - `from app.main import app; app.openapi()` は、DBも Redis もない状態で `ENVIRONMENT=test` を付ければ成功する。結果は paths 442、schemas 554。
     - Python 3.12.8 で実行し、入れた依存は `backend/requirements.txt` だけ。

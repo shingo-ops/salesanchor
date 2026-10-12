@@ -1,10 +1,12 @@
-# ADR-1009: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成
+# ADR-1010: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成
 
-- 状態: Accepted
+| 項目 | 内容 |
+|------|------|
+| ステータス | Accepted（PO 承認 2026-10-04） |
 - 起案日: 2026-10-04
 - 起案: Claude Opus（設計担当）
 - 決定者: Shingo（PO）
-- 承認: 2026-10-04。ccopusgo セッションのチャットで「ADR-1009 を承認するか（y/n）」に対し、PO本人が「ｙ」と回答した。
+- 承認: 2026-10-04。ccopusgo セッションのチャットで「ADR-1010 を承認するか（y/n）」に対し、PO本人が「ｙ」と回答した。
 - 関連: ADR-027, ADR-067, ADR-072, ADR-135, ADR-144
 - 設計: docs/handoff/cross-dept-integrity-foundation/design.md（便C・便D）
 - 現状調査: docs/handoff/cross-dept-integrity-foundation/recon.md
