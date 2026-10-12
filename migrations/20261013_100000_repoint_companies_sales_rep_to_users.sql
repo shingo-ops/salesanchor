@@ -13,6 +13,12 @@ BEGIN
         IF to_regclass(schema_rec.nspname || '.companies') IS NULL THEN
             CONTINUE;
         END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_rec.nspname AND table_name = 'companies' AND column_name = 'sales_rep_id'
+        ) THEN
+            CONTINUE;
+        END IF;
 
         -- sales_rep_id の staff(id) 向け外部キー（fk_companies_sales_rep / companies_sales_rep_id_fkey）を全て外す
         FOR fk_name IN
