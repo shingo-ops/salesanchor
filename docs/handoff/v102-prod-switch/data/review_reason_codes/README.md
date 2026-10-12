@@ -59,3 +59,14 @@ price_source_mismatch / quantity_source_mismatch / value_out_of_range / item_map
 | dryrun | INSERTED 4・CHECK_OK 4・ROWS_OK 35・ROLLBACK・DRYRUN_OK |
 | commit | INSERTED 4・CHECK_OK 4・ROWS_OK 35・COMMIT・COMMIT_DONE |
 | verify | 4行（item_mapping_mismatch・price_source_mismatch・quantity_source_mismatch・value_out_of_range、いずれも system・analysis）・ROWS 35・VERIFY_DONE |
+
+## 追加: gemini_gap_suspect（段2a）
+gemini_gap_suspect（system・extraction）。unit_price_mismatch の追加（up_*）の verify 成功（ROWS|36）の後に、PR-A のマージ前にだけ、gs_precheck（ROWS|36・HAS_NEW|0・PRECHECK_DONE）→ gs_dryrun（INSERTED|1・CHECK_OK 1・ROWS_OK 37・DRYRUN_OK）→ gs_commit（INSERTED|1・CHECK_OK 1・ROWS_OK 37・COMMIT_DONE）→ gs_verify（gemini_gap_suspect|system|extraction・ROWS|37・VERIFY_DONE）。戻し方 gs_rollback.sql（この1コードだけ戻す）。値は seed_20261012_gemini_gap_suspect.sql が正本。設計 docs/handoff/v102-gap-fill-review/design.md §4。
+
+| 項目 | 内容 |
+|---|---|
+| 実施日時 | |
+| precheck | |
+| dryrun | |
+| commit | |
+| verify | |

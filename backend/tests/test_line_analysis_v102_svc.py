@@ -644,3 +644,98 @@ def test_a_failed_detail_clear_only_logs_and_keeps_the_extract_exception_reason(
 
     assert reasons == [svc.REASON_EXTRACT_EXCEPTION] and stats["pid_resolved"] == 0
     assert session.commit.called and "system_review_detail" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# 段2a：取りこぼし疑い（gemini_gap_suspect）
+# ---------------------------------------------------------------------------
+
+
+def _gap_entry(index: int, lines: list[int], candidates: list[int]) -> dict:
+    return {"gemini_index": index, "gap_lines": lines, "support_lines": lines, "candidates": candidates}
+
+
+def _gap_items() -> list[dict]:
+    return [
+        {"gemini_index": 0, "price_line": 7, "match_status": "unmatched", "review": [{"kind": "product_not_in_master", "source": "system"}]},
+        {"gemini_index": 1, "price_line": 9, "match_status": "matched", "product_id": 5},
+        {"gemini_index": 2, "price_line": 11, "rejected": "item_shape_invalid", "match_status": "unmatched"},
+        {"gemini_index": 3, "price_line": 13, "match_status": "unmatched"},
+    ]
+
+
+def test_gap_reason_is_appended_to_the_target_item_with_lines_and_candidates():
+    items = _gap_items()
+    detail = {"gap_name": [_gap_entry(0, [4, 5], [10, 11]), _gap_entry(3, [12], [])]}
+
+    result = svc._with_gap_reasons(items, detail)
+
+    assert result[0]["review"][-1] == {
+        "kind": svc.REASON_GEMINI_GAP_SUSPECT, "line": 7, "lines": [4, 5], "candidates": [10, 11], "source": svc.SOURCE_SYSTEM,
+    }
+    assert [r["kind"] for r in result[0]["review"]] == ["product_not_in_master", "gemini_gap_suspect"]
+    assert result[3]["review"] == [{
+        "kind": "gemini_gap_suspect", "line": 13, "lines": [12], "candidates": [], "source": "system",
+    }]
+
+
+def test_gap_reason_leaves_other_items_rejected_items_and_the_inputs_unchanged():
+    items = _gap_items()
+    snapshot = json.loads(json.dumps(items))
+    detail = {"gap_name": [_gap_entry(0, [4], [10]), _gap_entry(2, [8], [10]), _gap_entry(99, [1], [])]}
+    detail_snapshot = json.loads(json.dumps(detail))
+
+    result = svc._with_gap_reasons(items, detail)
+
+    assert result[1] is items[1] and result[2] is items[2] and result[3] is items[3]
+    assert items == snapshot and detail == detail_snapshot
+    assert result is not items and result[0] is not items[0]
+
+
+def test_gap_reason_ignores_entries_without_gemini_index():
+    items = _gap_items()
+
+    assert svc._with_gap_reasons(items, {"gap_name": [_gap_entry(None, [4], [])]}) == items
+
+
+def test_gap_reason_returns_the_same_items_when_detail_is_none():
+    items = _gap_items()
+
+    assert svc._with_gap_reasons(items, None) is items
+
+
+def test_gap_reason_failure_logs_and_returns_the_items_unchanged(caplog):
+    items = _gap_items()
+
+    with caplog.at_level("ERROR"):
+        result = svc._with_gap_reasons(items, {"gap_name": [{"gemini_index": 0}]})  # gap_lines が無い＝例外
+
+    assert result is items and "取りこぼし疑い" in caplog.text
+
+
+def test_gap_reason_makes_the_item_needs_review_without_resolving_the_product():
+    item = {"match_status": "unmatched", "product_id": None, "unit": "BOX", "price_normalized": 1000.0, "quantity_normalized": 3.0}
+    [flagged] = svc._with_gap_reasons([{**item, "gemini_index": 0, "price_line": 7}], {"gap_name": [_gap_entry(0, [4], [10])]})
+
+    before = svc._analysis_values(item, _MASTERS, {"BOX": 5}, {})
+    after = svc._analysis_values(flagged, _MASTERS, {"BOX": 5}, {})
+
+    assert before["needs_review"] is False
+    assert after["needs_review"] is True and "gemini_gap_suspect" in after["review_reasons"].split(svc.REASON_SEPARATOR)
+    assert after["pid_resolved"] is False and after["product_id"] is None
+    assert after["pid_resolved"] == before["pid_resolved"] and after["product_id"] == before["product_id"]
+
+
+def test_pipeline_gap_reason_matches_the_stage1_detail_and_does_not_change_the_detail(monkeypatch):
+    ctx = SimpleNamespace(raw_text="商品A\n3BOX@1,000円", supplier_context=None, knowledge_links=None, new_system_rules=None)
+    detail = {"post_review": [], "gap_price_qty": [], "gap_name": [_gap_entry(0, [1], [7])]}
+
+    def extract(items, raw, **_kw):
+        return [{"gemini_index": 0, "price_line": 2, "match_status": "unmatched", "review": []}], {}
+
+    monkeypatch.setattr(svc, "_gap_detail", lambda *_a: detail)
+    out = svc.run_v102_pipeline(_response([]), ctx, _MASTERS, extract_items=extract)
+
+    [review] = out["v102_items"][0]["review"]
+    assert review["lines"] == detail["gap_name"][0]["gap_lines"] and review["candidates"] == detail["gap_name"][0]["candidates"]
+    assert out["v102_gap_detail"] is detail

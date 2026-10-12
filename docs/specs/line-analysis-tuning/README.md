@@ -40,6 +40,7 @@
 | v102：価格の行の探し直しに円・¥・￥を除いた形 | （この PR） | 価格の写しに「円」が付き原文に無いとき、除いた形でも探す（v102 のみ・見つからないときだけ）。保存済み応答 1,021 回で落ちる件 48→4、期待外の違い 0 | [v102-price-line-yen-retry](../../handoff/v102-price-line-yen-retry/) |
 | v102：価格の行の決め方の印 price_basis | （この PR） | 円・¥を除いた探し直しで見つけた件に analysis_results.price_basis = V102:yen_free。配信・要確認は不変 | [v102-price-basis](../../handoff/v102-price-basis/) |
 | 段1 間の行の検知の記録（system_review_detail） | （この PR） | 投稿ごとの取りこぼしの疑いの行番号・間の行から出る商品の候補を extraction_jobs.system_review_detail に残す。要確認の判定・配信・画面は不変 | [v102-gap-detect-record](../../handoff/v102-gap-detect-record/) |
+| 段2a 取りこぼし疑いを要確認の理由に | （この PR） | 段1の記録の gap_name の件（unmatched・価格数量あり・間の行あり）の review に gemini_gap_suspect（fix_stage=extraction）を足す。商品は当てない（product_id・pid_resolved 不変）ので配信は不変。間の行番号の画面は PR-B | [v102-gap-fill-review](../../handoff/v102-gap-fill-review/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 
