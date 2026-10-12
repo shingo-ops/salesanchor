@@ -575,6 +575,16 @@
             "title": "Extraction Item Id",
             "type": "string"
           },
+          "gap_suspect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GapSuspect"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "gemini": {
             "$ref": "#/components/schemas/GeminiFields"
           },
@@ -10125,6 +10135,49 @@
           "updated_at"
         ],
         "title": "FxRateResponse",
+        "type": "object"
+      },
+      "GapCandidate": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "name"
+        ],
+        "title": "GapCandidate",
+        "type": "object"
+      },
+      "GapSuspect": {
+        "description": "API の応答の型（要確認 API と v102 投稿 API で共有）。",
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/GapCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "gap_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Gap Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "gap_lines",
+          "candidates"
+        ],
+        "title": "GapSuspect",
         "type": "object"
       },
       "GeminiFields": {
@@ -22097,6 +22150,16 @@
       },
       "PostItem": {
         "properties": {
+          "gap_suspect": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GapSuspect"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "gemini_index": {
             "anyOf": [
               {
