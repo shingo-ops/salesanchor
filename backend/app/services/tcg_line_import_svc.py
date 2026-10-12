@@ -48,6 +48,11 @@ _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})\s+(.+)$")
 # （旧 _SYSTEM_EVENT_RE は削除。docs/handoff/line-parser-unify/design.md §3 C1）
 # メッセージ結合セパレーター（SQR-05）
 _MSG_SEPARATOR = "\n\n"
+# 本文末尾の「改行＋空白だけの行」を除く対象文字（半角空白・\t・\r・\n・U+3000）。
+# 再利用判定の SQL（_write_source_messages）にも同じ集合を直書きしている
+# （SQL への変数展開は tests/test_tcg_schema_qualification.py が禁止）。変更時は両方そろえる。
+_TRAILING_BLANK_CHARS = " \t\r\n\u3000"
+_TRAILING_BLANK_RE = re.compile(rf"\n[{_TRAILING_BLANK_CHARS}]*\Z")
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +63,16 @@ _MSG_SEPARATOR = "\n\n"
 def sha256_text(text_content: str) -> str:
     """UTF-8 SHA-256 hex を返す。"""
     return hashlib.sha256(text_content.encode("utf-8")).hexdigest()
+
+
+def normalize_message_body(text_content: str) -> str:
+    """本文末尾の「改行と、その後ろの空白だけの行」をすべて取り除く。
+
+    最後の内容行の行末空白・先頭・途中は変えない。
+    Android エクスポートでは、投稿の直後に空行が続くと本文末尾に改行が付き、
+    ファイル末尾の同じ投稿（空行なし）と別物になるため、比べる前に揃える。
+    """
+    return _TRAILING_BLANK_RE.sub("", text_content)
 
 
 def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
@@ -337,7 +352,14 @@ async def _write_source_messages(
     enqueued_ids: list[str] = []
 
     # Stable lock order prevents deadlocks between overlapping import files.
-    for entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+    for raw_entry in sorted(provider_entries, key=lambda e: e["sp_code"]):
+        # 本文末尾の空行を除いた値で保存・再利用判定する（sha256 も計算し直す）
+        normalized_body = normalize_message_body(raw_entry["raw_text"])
+        entry = {
+            **raw_entry,
+            "raw_text": normalized_body,
+            "sha256": sha256_text(normalized_body),
+        }
         sp_code = entry["sp_code"]
 
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
@@ -390,13 +412,14 @@ async def _write_source_messages(
         # Legacy rows have no proven posting timestamp and must not be inferred.
         posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
         reused = await db.execute(
-            text(f"""
+            text(rf"""
                 SELECT id FROM {TCG_SCHEMA}.source_messages
                 WHERE supplier_channel_id = :scid AND line_posted_at = :posted_at
-                  AND raw_sha256 = :sha256 AND raw_text = :body
+                  AND (raw_text = :body
+                       OR regexp_replace(raw_text, E'\n[ \t\r\n\u3000]*$', '') = :body)
             """),
             {"scid": str(supplier_channel_id), "posted_at": posted_at,
-             "sha256": entry["sha256"], "body": entry["raw_text"]},
+             "body": entry["raw_text"]},
         )
         reused_row = reused.fetchone()
         if reused_row:
