@@ -19,7 +19,7 @@
 
 ## Decision
 
-1. 公式 discord プラグイン 0.0.4 を複写した `discord-ops` を `tools/claude-channels/` に置き、変更は P0〜P9 に限る（許可 webhook だけ通す・webhook は承認できない・embed を読む・返信先は承認チャンネルとその子スレッド・許可確認と解決策のボタンは承認チャンネルへ・承認は保存した操作の原文に結び付ける・停止中のアラートを拾う）。
+1. 公式 discord プラグイン 0.0.4 を複写した `discord-ops` を `tools/claude-channels/` に置き、変更は P0〜P9 と判定ロジックの lib.ts への切り出し（単体テスト付き）に限る（許可 webhook だけ通す・webhook は承認できない・embed を読む・返信先は承認チャンネルとその子スレッド・許可確認と解決策のボタンは承認チャンネルへ・承認は保存した操作の原文に結び付ける・停止中のアラートを拾う）。
 2. 受付役は PO の Mac 上の常駐 Claude Code セッション 1 つ（manual モード）。不具合ごとに custom agent `ops-worker`（書き込み道具を持たない・dontAsk・background）を立て、承認チャンネルの不具合スレッドで対応させる。
 3. 承認後の実行は受付役だけが行い、実行するのは decision 通知に付いた操作の原文だけ。委任表の外の操作は承認チャンネルの許可確認で PO が押すまで止まる。
 4. AI が承認なしで行える範囲は委任表（docs/specs/discord-ops-intake/delegation.md）で定め、受付の許可設定とツール単位で 1 対 1 にする。委任の拡大は PO の言葉を起点に履歴を残す。

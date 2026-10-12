@@ -17,7 +17,7 @@
 
 | 区分 | 承認なしで実行してよい操作 | 許可設定の行 |
 |---|---|---|
-| 読む | リポジトリのファイルを読む・検索する | Read / Grep / Glob（Claude Code の既定で許可） |
+| 読む | リポジトリのファイルを読む・検索する | Read / Grep / Glob（Claude Code の既定で許可されるため allow 行なし。1 対 1 の唯一の例外） |
 | 読む | Git の履歴を読む | `Bash(git log:*)`・`Bash(git show:*)` |
 | 読む | GitHub の状態を読む | `Bash(gh pr list:*)`・`Bash(gh run list:*)`・`Bash(gh run view:*)` |
 | Discord | 承認チャンネルに不具合スレッドを作る・書く・解決策を出す・読む・反応を付ける | `mcp__plugin_discord-ops_discord-ops__create_thread`・`__reply`・`__propose`・`__fetch_messages`・`__react`・`__list_monitor_alerts` |

@@ -9,7 +9,7 @@
 
 **仕事名**: discord-ops-intake  
 **日付**: 2026-10-13  
-**対象ADR**: ADR-080（監視VPS分離・Proposed）、ADR-069（Uptime Kuma）、ADR-136（危険PRのGO）。本テーマ専用の ADR は未作成  
+**対象ADR**: ADR-080（監視VPS分離・Proposed）、ADR-069（Uptime Kuma）、ADR-136（危険PRのGO）。本テーマ専用の ADR は recon 時点で未作成 → ADR-1009 を設計 PR #4185 で起案  
 **担当**: 設計パートナー（Opus。調査の実行は Sonnet）  
 **基準**: origin/main `67f2e4352`
 
