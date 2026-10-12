@@ -105,8 +105,8 @@ jobs:
   # 全 E2E の再開は 2026-06-01 に止めた CI ボトルネックが戻るため、
   # visual-language の 3 幅（vl-mobile-390 / vl-tablet-768 / vl-desktop-1280）だけを走らせる。
   # 対象 spec: frontend/tests-e2e/visual-language/*.spec.ts（現状 2 本・テスト 8 件）
-  visual-language:
-    name: 画面検査（受信箱 3幅 Playwright）
+  visual-language-run:
+    name: 画面検査（内部）
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
@@ -176,6 +176,30 @@ jobs:
           path: frontend/test-results
           retention-days: 14
           if-no-files-found: ignore
+
+  # lint と同じ集約の型（detect-changes → *-run → aggregator）。
+  # フロント未変更の PR では visual-language-run が skipped になるため、
+  # そのまま必須チェックにすると「報告が来ない」デッドロック（Issue #523 / PR #534）
+  # が再発する。if: always() の集約が skipped を成功として報告することで防ぐ。
+  # 必須チェックに入れる場合はこのジョブ名を指定する（手順は
+  # docs/handoff/app-visual-language/card-stage4b-inbox-mobile.md §13）。
+  visual-language:
+    name: 画面検査（受信箱 3幅 Playwright）
+    needs: [detect-changes, visual-language-run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report results
+        run: |
+          r="${{ needs.visual-language-run.result }}"
+          echo "visual-language-run: $r"
+          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
+            echo "OK: 画面検査が通過、またはフロントエンド変更なし"
+            exit 0
+          else
+            echo "FAIL: visual-language-run=$r"
+            exit 1
+          fi
 
   # ─── E2E テスト ────────────────────────────────────────────────────────────
   playwright:

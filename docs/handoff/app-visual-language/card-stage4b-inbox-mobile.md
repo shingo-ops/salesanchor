@@ -299,7 +299,7 @@ en: "backToList": "Back to list"
 | `frontend/tests-e2e/visual-language/inbox-helpers.ts` | 2本の spec が共用する mock と開き方。mock を2か所に分けて書くと片方が古くなるため唯一の置き場にした |
 | `frontend/tests-e2e/visual-language/inbox-baseline.spec.ts` | 共通部品へ寄せ、**待ち方を状態ごとに直した**。元の作りは状態A（会話未選択）でも入力欄を待っていたが、`InboxMessageThread.tsx:358-369` は未選択時に empty-state を返すため**入力欄は存在しない**＝全幅で失敗する作りだった。状態B のスマホでは一覧が消えるため一覧も待たない |
 | `frontend/package.json` | `test:e2e:vl` — 3幅の project だけを走らせる |
-| `.github/workflows/e2e.yml` | ジョブ `visual-language`（表示名「画面検査（受信箱 3幅 Playwright）」）。`detect-changes` で `frontend/**` に変更があるときだけ走る。10分上限 |
+| `.github/workflows/e2e.yml` | ジョブ `visual-language-run`（表示名「画面検査（内部）」・`frontend/**` 変更時のみ・10分上限）と、集約ジョブ `visual-language`（表示名「画面検査（受信箱 3幅 Playwright）」・`if: always()`）。`lint-run` → `lint` と同じ型 |
 
 ### なぜ全部の E2E を再開しないのか
 
@@ -311,7 +311,7 @@ en: "backToList": "Back to list"
 
 ### 残る限界（正直に）
 
-1. **必須チェックには入れていない。** 必須チェックの追加は Branch Protection の変更（CLAUDE.md §不可逆操作）であり PO の判断が必要。現状は PR 画面に結果が出るが、赤でもマージは機械的には止まらない。
+1. **必須チェックには入れていない。** 必須チェックの追加は Branch Protection の変更（CLAUDE.md §不可逆操作）であり PO の判断が必要。現状は PR 画面に結果が出るが、赤でもマージは機械的には止まらない。**許可が出た場合の手順は下記**。
 2. **見た目（色・字の大きさ・影）は検査していない。** 検査するのは構造と寸法のみ。ベースライン計測（`inbox-baseline.spec.ts`）は記録を残すだけで合否を出さない。
 3. **実機の操作感（スライドの速さ・慣性）は検査できない。** 別便で扱う。
 
@@ -368,3 +368,28 @@ useEffect(() => {
 ### 教訓
 
 **#12 で書いた「原因の推定」を実装の根拠にしてはいけなかった。** 推定（URL）と真因（自動選択の再実行）は別物で、推定のまま作り直せば同じ退行を繰り返していた。画面検査を先に用意したことで、**本番に出す前に**事実で確定できた。
+
+### 必須チェック化の手順（PO の許可が出てから実行・未実行）
+
+必須チェックは Ruleset **16619490** が持つ（`docs/BRANCH_PROTECTION_SETUP.md:322-333` の削除手順の逆）。**不可逆操作のため `bash scripts/permit-danger.sh` ＋ PO の明示許可が必要。**
+
+```bash
+# 1. 現状を保存（戻せるようにする）
+gh api repos/shingo-ops/salesanchor/rulesets/16619490 > /tmp/ruleset-before.json
+
+# 2. 画面検査を required に追加したものを作る
+jq '.rules |= map(
+      if .type == "required_status_checks"
+      then .parameters.required_status_checks += [{"context":"画面検査（受信箱 3幅 Playwright）"}]
+      else . end)' /tmp/ruleset-before.json > /tmp/ruleset-after.json
+
+# 3. 差分を目で確認してから適用
+diff <(jq -S . /tmp/ruleset-before.json) <(jq -S . /tmp/ruleset-after.json)
+gh api -X PUT -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/shingo-ops/salesanchor/rulesets/16619490 \
+  -d @/tmp/ruleset-after.json | jq '{id,name,updated_at}'
+```
+
+**戻し方**: `/tmp/ruleset-before.json` を同じ `PUT` で適用する。
+
+**デッドロック対策は本便で済ませた**: 検査本体は `detect-changes` が `frontend/**` の変更を検出したときだけ走るため、フロント未変更の PR では skipped になる。そのまま必須チェックにすると「報告が来ない」デッドロック（Issue #523 / PR #534 と同型）が再発する。そこで `lint` と同じ型（`detect-changes` → `visual-language-run`（内部） → `visual-language`（集約・`if: always()`））にし、**集約が skipped を成功として報告する**ようにした。必須チェックに指定するのは集約側の名前 `画面検査（受信箱 3幅 Playwright）`。
