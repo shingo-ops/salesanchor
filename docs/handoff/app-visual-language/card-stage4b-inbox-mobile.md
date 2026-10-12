@@ -259,3 +259,30 @@ en: "backToList": "Back to list"
 - **対象**: 生の値の直書き（`check:css-values`）、色の直書き（`check:css-colors`）、文言の直書き（`check:i18n-missing-keys`）、ライト/ダークの片方欠落（`check:dark-parity`）、新規アイコンの無断追加（`check:icon-sync`）、新規トークンの無断追加（`check:new-tokens`）。
 - **切替点の同期**: `check:breakpoint-sync` が `tokens.css` の `--breakpoint-*` と `@media` の値の一致を検査する。本カードの 767px はこれに準拠する。
 - **関所が無い部分**: **1列切り替えが実際に効いているか（会話を選んだときに一覧が消え、戻ると戻るか）は機械で検査していない。** 3幅の画面検査が作業端末で実行できない（Playwright が ubuntu26.04-arm64 向けの chromium を提供しない）ため、**当面は実機の Chrome で本番を撮って測ることで守る**（構造データで `.inbox-left-panel` と `.inbox-center` の表示状態を確認する方法を確立済み）。機械化するには CI の画面検査を再開する必要がある。
+
+## 12. 実装の結果と revert（2026-10-12）
+
+本カードの設計で実装し（PR #4165）本番に投入したが、**実機で「一覧へ戻る」が機能せず、会話を開くと一覧に戻れない機能退行**を確認したため revert した（PR #4168）。
+
+### 確認した事実
+
+| 確認 | 結果 |
+|---|---|
+| 戻るボタンの存在 | あり（48x48dp・その座標で最前面の押せる要素） |
+| タップの到達 | 到達している（同じ方法で「絞り込み」ボタンは正常動作＝対照実験） |
+| 一覧の非表示 | `.inbox-sub-filter-bar` の項目が構造データに出ない＝`.inbox-left-panel` が `display: none` |
+| 押下後の変化 | **なし**（10秒待っても送信・添付・戻るが残る） |
+| 配信コード | **正しい**。JS に `(0,G.jsx)(i0,{onBackToList:()=>e.setSelectedLeadId(null),...})` と `function i0({onBackToList:e,...})`、CSS に `inbox-back-to-list` / `thread-open` が存在 |
+
+**配線は正しいのに状態が変わらない**という状況で原因が未特定。利用者は会話を開くと戻れなくなる（URL を `replace` で書き換えるため端末の戻るでも履歴が無い）ため、調査より先に退行の解消を優先した。
+
+### 作り直しの前に確かめること
+
+1. `onBackToList` が実際に呼ばれているか（`/design-preview` での再現、または一時的な確認手段）
+2. `.karte-overlay`（`showKartePanel` 時に `position: fixed; inset: 0`）がクリックを奪っていないか
+3. **既存の解除の型に揃える**。`onPageFilterChange`（`useInboxState.ts:544-556`）は `setSelectedLeadId(null)` に加えて `setLeadDetail(null)` と **URL の `lead_id` 削除**（`params.delete("lead_id")` ＋ `setSearchParams`）を行っている。**URL を消していないことが原因である可能性が高い。**
+4. **Mac 側で3幅の画面検査を通してから再投入する。** 作業端末では Playwright が chromium を提供しないため（`ERROR: Playwright does not support chromium on ubuntu26.04-arm64`）、構造変更の検証ができない。
+
+### この便から得た教訓
+
+**この端末で画面検査ができないまま構造変更を本番に出してはいけない。** 寸法や色の変更（#4147 / #4148 / #4155）は構造データの実測で検証できたが、**操作が成立するか**は画面検査または実機での往復確認が必要で、往復の確認を本番投入の前に行う手段を用意してから着手する。

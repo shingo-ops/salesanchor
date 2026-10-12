@@ -994,9 +994,6 @@
 
 /* スマホ用の絞り込みボタン。PC・タブレットでは出さない（タブと絞り込みが常時見えているため） */
 .inbox-mobile-filter-toggle { display: none; }
-
-/* スマホ用の「一覧へ戻る」。PC・タブレットでは一覧が常に見えているので出さない */
-.inbox-back-to-list { display: none; }
 .karte-close-row  { display: none; }
 .karte-overlay    { display: none; }
 
@@ -1125,47 +1122,16 @@
   .inbox-main-area { overflow: visible; }
   .inbox-columns   { flex-direction: column; overflow: visible; }
 
-  /* 1列で切り替える（design.md §10-4 / benchmark 実測）。
-     お手本2本（WhatsApp / Meta Business Suite）はどちらもスマホで
-     一覧と会話を同時に出さず、画面を切り替える。
-     上下分割（一覧45vh）では下部タブ80dpもあるため会話に使える高さが
-     約328dpしか残らず、メッセージがほとんど読めない（実機実測）。
-     会話を選ぶまでは一覧が全画面、選んだら会話が全画面になる。
-     PC・タブレットには適用しない（この @media の内側のみ）。 */
   .inbox-left-panel {
     width: 100%;
-    max-height: none;
-    flex: 1;
-    flex-shrink: 1;
+    max-height: 45vh;
+    flex-shrink: 0;
     border-right: none;
-    border-bottom: none;
+    border-bottom: 1px solid var(--border);
     overflow-y: auto;
   }
-  .inbox-center { display: none; }
-
-  .inbox-wrapper.thread-open .inbox-left-panel { display: none; }
-  .inbox-wrapper.thread-open .inbox-center {
-    display: flex;
-    width: 100%;
-    flex: 1;
-    min-height: var(--inbox-center-min-h);
-    overflow: hidden;
-  }
-
-  /* 一覧へ戻る。お手本は上部バーの左端に置き当たり判定を48dp取っている
-     （benchmark/whatsapp-reproduction-spec.md §2） */
-  .inbox-back-to-list {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--comp-btn-height-lg);
-    height: var(--comp-btn-height-lg);
-    flex-shrink: 0;
-    border: none;
-    background: transparent;
-    color: var(--text-primary);
-    cursor: pointer;
-  }
+  /* overflow:hidden を明示してデスクトップと sticky スコープを統一 */
+  .inbox-center  { width: 100%; flex: 1; min-height: var(--inbox-center-min-h); overflow: hidden; }
   .msg-stack     { max-width: 85%; }
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
