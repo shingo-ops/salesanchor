@@ -201,6 +201,30 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         await engine.dispose()
 
 
+async def test_empty_mark_and_english_title_are_saved_as_null_and_values_kept(edit_pg):
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(mark="  ", english_title="")
+            result = await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            row = (await db.execute(text("SELECT mark, name_en, name FROM public.products WHERE id=:p"), {"p": pid})).one()
+            assert row.mark is None and row.name_en is None and row.name == "Original"
+            assert result["product"]["mark"] is None and result["product"]["english_title"] is None
+            # 値ありはそのまま、NULL のまま再保存しても audit の変更前後に mark の差は出ない
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(mark="KEEP", english_title="Kept EN")
+            await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            row = (await db.execute(text("SELECT mark, name_en FROM public.products WHERE id=:p"), {"p": pid})).one()
+            assert row.mark == "KEEP" and row.name_en == "Kept EN"
+    finally:
+        await engine.dispose()
+
+
 async def test_unchanged_words_keep_row_ids_and_stale_edit_is_rejected(edit_pg):
     connection, url = edit_pg
     before = observed(connection)

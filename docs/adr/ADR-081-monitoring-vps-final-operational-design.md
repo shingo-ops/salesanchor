@@ -137,6 +137,37 @@ Celery に重い I/O を逃がしている現在の構成では、backend の同
 4. `workers=1` で p95/p99 とメモリが安定している
 5. swap が継続的に増えない
 
+## 改訂（2026-10-07）：workers=1 の実施と、実測にもとづく前提の追記
+
+PO 承認：2026-10-07、PR #3909（原文「よい#3909 承認」）
+
+### 経緯（事実）
+- 本 ADR の C 項・Scope IN（workers を 1 に固定）は、2026-05-30 から 2026-10-03 まで実装に反映されていなかった。`backend/Dockerfile:37` は `--workers 2` のままだった（2026-05-22 のコミット 2850394a1）。
+- 2026-10-01〜07 の見直し（記録：`docs/handoff/server-resource-optimization/recon-20261001.md`、`docs/handoff/server-resource-optimization/design-20261001.md`）で、次のことを実測した。
+  - backend の1ワーカーは、起動した時点で約245MB（import の大きさ。長く動いて太ったものではない）。2ワーカーと親プロセスで、上限 512M を超えていた。cgroup の `memory.events max` は70分で354回。
+  - celery-worker は、子が google.genai の遅延 import で約257MB になり、合計約620MBで上限 512M を超えていた。`memory.events max` は37分で707回。
+  - async のエンドポイント（609件）の中に、同期の I/O でイベントループを塞ぐ箇所があった（SMTP、PDF の生成、Google API、LINE 取込のパース、Firebase の検証など）。1ワーカーにすると、その間は全員の要求が止まる。
+
+### 追記する決定
+- **C-1（前提条件）**：backend を1ワーカーで動かす前提として、async の経路で同期の I/O・CPU 処理を直接呼ばない。`asyncio.to_thread` / `run_in_threadpool` で逃がす。守り手は CI の `backend/tests/test_event_loop_nonblocking.py`（PR #3912・#3934）。
+- **C-2（実施）**：`backend/Dockerfile:37` を `--workers 1` にした（PR #3954、2026-10-03 本番反映）。
+- **E（メモリ上限）**：コンテナのメモリ上限は、実測の必要量より上に置く。celery-worker は 768M（PR #4005、2026-10-06 本番反映）。上限の見直しは、cgroup の `memory.events max` と swap.current を基準にする。
+
+### 実施の後の実測（本番）
+| 項目 | 前 | 後 |
+|---|---|---|
+| backend のメモリ | 489MiB / 512MiB | 266MiB / 512MiB |
+| backend の `memory.events max` | 354（70分） | 0 |
+| celery の `memory.events max` | 707（37分） | 0 |
+| celery の swap | 約294MiB | 0 |
+| ホストの MemAvailable の最小 | 約569MiB（②の後、③の前） | 約1359MiB（③の後） |
+| backend の 5xx | 0 | 0 |
+| p99 の中央値 | 2.06 秒 | 2.48 秒（戻す基準 3.08 秒の範囲内） |
+
+### D 項について
+- 2026-09-20 に、アプリVPSのメモリは 2GB から 4GB に増強された。D 項の条件1（増強）は満たしている。
+- ただし、in_flight の実績（7日の最大3、1以上の時間は0.19%）からは、2ワーカーにする必要は無いと判断した。workers=1 を続ける。
+
 ## 関連ドキュメント
 
 - 移行 runbook: `docs/runbooks/monitoring-vps-migration.md`

@@ -1,0 +1,277 @@
+product_id,product_code,name,new_category
+201,AR10D,ARカード PSA10 鑑定用,PC_SINGLE
+203,ARCHR10D,AR/CHR PSA10 鑑定済み,PC_SINGLE
+202,ARCHRD,AR/CHR ダブりあり,PC_SINGLE
+199,ARD,ARカード ダブりあり,PC_SINGLE
+200,ARND,ARカード ダブりなし,PC_SINGLE
+209,MMD,モンスターボールミラー,PC_SINGLE
+208,RRD,RRカード,PC_SINGLE
+207,RRRD,RRRカード,PC_SINGLE
+204,SARD,SARカード,PC_SINGLE
+206,SD,Sカード,PC_SINGLE
+205,SRD,SRカード,PC_SINGLE
+415742,DB-E02A,エナジーマーカーパック -2nd Anniversary Edition-,保留
+664,GD-ST10,Generation Pulse,保留
+35,MA,MEGA,保留
+424594,OP-2ANNY-GD,2nd ANNIVERSARY COMPLETE GUIDE,保留
+424591,OP-CHP01,CHOPPER's 1 プロモカード,保留
+420580,OP-DONCARD,×ドン!!カードセット,保留
+420568,OP-IB01,Vol.1,保留
+420569,OP-IB02,Vol.2,保留
+420571,OP-IB04,Vol.4,保留
+424592,OP-NATSU26,ナツコミ 2026 メタキラカード ワンピース ルフィ,保留
+424593,OP-P041,モンキー・D・ルフィ P-041 EMOTION,保留
+424590,OP-P159,モンキー・D・ルフィ P-159 肉ルフィ,保留
+420530,OP-PCC-29,プレミアムカードコレクション -29thアニバーサリー-,保留
+420565,OP-PCS25,プロモーションカードセット 2025,保留
+424589,OP-PP-R1,-ROUND1 プロモーションパック-,保留
+420475,OP-SD01,Set Sail Deck Set,保留
+420562,OP-SJ,最強ジャンプ付録カード,保留
+420459,OP-ST21,ギア5,保留
+420467,OP-ST29,EGGHEAD,保留
+424595,OP-VJ2610,Vジャンプ 2026年10月号 麦わらの一味3人の最強セット,保留
+1403,PKM-SVD-07,悪 ヘルガー,保留
+11,PROMO,MEGA スペシャルカードセット メガエルレイドex,保留
+197,SM1S,コレクションサン,保留
+195,SM2K,アローラの月光,保留
+194,SM2L,キミを待つ島々,保留
+187,SM4+,GXバトルブースト,保留
+189,SM4A,超次元の暴獣,保留
+182,SM6a,ドラゴンストーム,保留
+122,SVB,ex,保留
+100,SVEM,スターターセット テラスタル ミュウツーex,保留
+84,SVI,いつでもどこでもバトルアカデミー,保留
+55,SVOD,スターターセットex ダイゴのダンバル＆メタグロスex,保留
+54,SVOM,スターターセットex マリィのモルペコ＆オーロンゲex,保留
+110,SVP1,ex,保留
+487,UA-UA04BT,アイドルマスター シャイニーカラーズ,保留
+454,UA-UA18ST,勝利の女神：NIKKE,保留
+438,UA-UA27BT,学園アイドルマスター,保留
+433,UA-UA30BT,アークナイツ,保留
+408,UA-UA44BT,ヱヴァンゲリヲン新劇場版,保留
+407,UA-UA44ST,ヱヴァンゲリヲン新劇場版,保留
+388,UA-UA55ST,アイドルマスター シンデレラガールズ,保留
+1018,WS-re-zero_tdplus,Re:ゼロから始める異世界生活,保留
+737,WS-rkn_bp,るろうに剣心 －明治剣客浪漫譚－,保留
+515,YGO-DAMA,DAWN OF MAJESTY,保留
+637,YGO-QCDB,QUARTER CENTURY DUELIST BOX,保留
+324,,神龍への願い,PC_BOX
+325,,迫り来る脅威,PC_BOX
+326,,未知なる冒険,PC_BOX
+327,,限界を超えし者,PC_BOX
+328,,怒りの咆哮,PC_BOX
+329,,烈火の闘気,PC_BOX
+330,,覚醒の鼓動,PC_BOX
+12187,,俺だけレベルアップな件,PC_BOX
+125081,,30th CELEBRATION FUTURISTIC BOX,PC_BOX
+415713,DB-1ANNIV,1st,PC_BOX
+415714,DB-2ANNIV,2nd ANNIVERSARY SET,PC_BOX
+424586,DB-DIVERS,ドラゴンボールスーパーダイバーズ,PC_BOX
+225,DB-FB08,誇り高き戦闘民族,PC_BOX
+226,DB-FB09,DUAL EVOLUTION,PC_BOX
+227,DB-FB10,CROSS FORCE,PC_BOX
+228,DB-FB11,BRIGHTNESS OF HOPE,PC_BOX
+415695,DB-FB12,REACH THE GOD,PC_BOX
+232,DB-FS01,孫悟空,PC_BOX
+231,DB-ST01,STORY BOOSTER 01,PC_BOX
+1288,DGM-AD01,アドバンスブースター DIGIMON GENERATION,PC_BOX
+1346,DGM-ST01,ガイアレッド,PC_BOX
+87,EB-01,メモリアルコレクション,PC_BOX
+57,EB-02,Anime25th collection,PC_BOX
+18,EB-03,Heroines edition,PC_BOX
+7,EB-04,EGGHEAD CRISIS,PC_BOX
+655,GD-EB01,Eternal Nexus,PC_BOX
+656,GD-GD04,Phantom Aria,PC_BOX
+654,GD-GD05,Freedom Ascension,PC_BOX
+653,GD-GD06,Stardust Trails,PC_BOX
+38,GD01,Newtype Rising,PC_BOX
+17,GD02,Dual Impact,PC_BOX
+1355,HOL-hBP02,クインテットスペクトラム,PC_BOX
+1350,HOL-hBP07,ディーヴァフィーバー,PC_BOX
+1348,HOL-hBP08,バウンサーバウンド,PC_BOX
+1349,HOL-エクストラブースター サマー・ホログラム,サマー・ホログラム,PC_BOX
+33,M1L,メガブレイブ,PC_BOX
+34,M1S,メガシンフォニア,PC_BOX
+21,M2,インフェルノX,PC_BOX
+12,M3,ムニキスゼロ,PC_BOX
+3,M4,ニンジャスピナー,PC_BOX
+10,MBB,MEGA スタートデッキ100 バトルコレクション,PC_BOX
+26,MBD,スターターセットMEGA メガディアンシーex,PC_BOX
+25,MBG,スターターセットMEGA メガゲンガーex,PC_BOX
+128,OP-01,ROMANCE DAWN,PC_BOX
+125,OP-02,頂上決戦,PC_BOX
+116,OP-03,強大な敵,PC_BOX
+107,OP-04,謀略の王国,PC_BOX
+93,OP-05,新時代の主役,PC_BOX
+83,OP-06,双璧の覇者,PC_BOX
+76,OP-07,500年後の未来,PC_BOX
+68,OP-08,二つの伝説,PC_BOX
+69,OP-09,新たなる皇帝,PC_BOX
+50,OP-10,王族の血統,PC_BOX
+53,OP-11,神速の拳,PC_BOX
+30,OP-12,師弟の絆,PC_BOX
+14,OP-14,蒼海の七傑,PC_BOX
+5,OP-15,神の島の冒険,PC_BOX
+420497,OP-1ANNY,1st ANNIVERSARY SET,PC_BOX
+420498,OP-2ANNY,2nd ANNIVERSARY SET,PC_BOX
+420499,OP-3ANNY,3rd ANNIVERSARY SET,PC_BOX
+420519,OP-BS01,プレミアムカードコレクション -ベストセレクション vol.1-,PC_BOX
+420520,OP-BS02,プレミアムカードコレクション -ベストセレクション vol.2-,PC_BOX
+420521,OP-BS03,プレミアムカードコレクション -ベストセレクション vol.3-,PC_BOX
+420522,OP-BS04,プレミアムカードコレクション -ベストセレクション vol.4-,PC_BOX
+420436,OP-EB05,Heroines Edition vol.2,PC_BOX
+420500,OP-HERO-SS,Heroines Special Set,PC_BOX
+458213,OP-OP17,世界最強の戦士,PC_BOX
+420506,OP-PCC-25,プレミアムカードコレクション 25周年エディション,PC_BOX
+420526,OP-PCC-6A1,プレミアムカードコレクション -6 assort vol.1-,PC_BOX
+424587,OP-PCC-DAY24,プレミアムカードコレクション -ONE PIECE DAY'24-,PC_BOX
+420529,OP-PCC-DAY25,プレミアムカードコレクション -ONE PIECE DAY'25-,PC_BOX
+420505,OP-PCC-FR,プレミアムカードコレクション -FILM RED Edition-,PC_BOX
+420507,OP-PCC-KUMA,プレミアムカードコレクション -熊本県スペシャル-,PC_BOX
+420502,OP-PCC-LA1,プレミアムカードコレクション -Live Action Edition-,PC_BOX
+420503,OP-PCC-LA2-BW,プレミアムカードコレクション -Live Action Edition vol.2 バロックワークス-,PC_BOX
+420504,OP-PCC-LA2-SH,プレミアムカードコレクション -Live Action Edition vol.2 麦わらの一味-,PC_BOX
+420528,OP-PCC-LEAD,プレミアムカードコレクション -リーダーコレクション-,PC_BOX
+420581,OP-PCC-MERA,プレミアムカードコレクション -メラメラの実争奪戦Edition-,PC_BOX
+424588,OP-PCC-NIKE,プレミアムカードコレクション -Nikeコラボエディション-,PC_BOX
+420501,OP-PCC-UTA,プレミアムカードコレクション -ウタ-,PC_BOX
+420579,OP-SGS,スペシャルグッズセット -Ace/Sabo/Luffy-,PC_BOX
+420439,OP-ST01,麦わらの一味,PC_BOX
+420443,OP-ST05,FILM edition,PC_BOX
+420464,OP-ST26,紫黒 モンキー・D・ルフィ,PC_BOX
+420468,OP-ST30,ルフィ&エース,PC_BOX
+420469,OP-ST31,赤 モンキー・D・ルフィ,PC_BOX
+36,PCJ,メガブレイブ ポケモンセンターセット,PC_BOX
+125079,PKM-MF,30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー,PC_BOX
+73,PRB-01,THE BEST,PC_BOX
+39,PRB-02,THE BEST vol.2,PC_BOX
+61,S-P,プレシャス ソード&シールド,PC_BOX
+133,S10D,タイムゲイザー,PC_BOX
+132,S10P,スペースジャグラー,PC_BOX
+131,S10a,ダークファンタズマ,PC_BOX
+130,S10b,Pokemon GO,PC_BOX
+129,S11,ロストアビス,PC_BOX
+127,S11a,白熱のアルカナ,PC_BOX
+126,S12,パラダイムトリガー,PC_BOX
+123,S12a,VSTARユニバース,PC_BOX
+163,S1H,シールド,PC_BOX
+162,S1W,ソード,PC_BOX
+161,S1a,VMAXライジング,PC_BOX
+160,S2,反逆クラッシュ,PC_BOX
+159,S2a,爆炎ウォーカー,PC_BOX
+158,S3,ムゲンゾーン,PC_BOX
+157,S3a,伝説の鼓動,PC_BOX
+156,S4,仰天のボルテッカー,PC_BOX
+154,S4a,シャイニースターV,PC_BOX
+153,S5I,一撃マスター,PC_BOX
+152,S5R,連撃マスター,PC_BOX
+151,S5a,双璧のファイター,PC_BOX
+149,S6H,白銀のランス,PC_BOX
+150,S6K,漆黒のガイスト,PC_BOX
+144,S6a,イーブイヒーローズ,PC_BOX
+143,S7D,摩天パーフェクト,PC_BOX
+142,S7R,蒼空ストリーム,PC_BOX
+140,S8,フュージョンアーツ,PC_BOX
+137,S8a,25th Anniversary Collection,PC_BOX
+136,S8b,VMAXクライマックス,PC_BOX
+135,S9,スターバース,PC_BOX
+134,S9a,バトルリージョン,PC_BOX
+40,SB01,MANGA BOOSTER 01,PC_BOX
+15,SB02,MANGA BOOSTER 02,PC_BOX
+146,SGG,ゲンガーVMAX,PC_BOX
+196,SM1+,サン&ムーン,PC_BOX
+171,SM10,ジージーエンド,PC_BOX
+170,SM10a,スカイレジェンド,PC_BOX
+169,SM10b,名探偵ピカチュウ,PC_BOX
+168,SM11,ミラクルツイン,PC_BOX
+167,SM11a,リミックスバウト,PC_BOX
+166,SM11b,ドリームリーグ,PC_BOX
+165,SM12,オルタージェネシス,PC_BOX
+164,SM12a,TAG TEAM GX タッグオールスターズ,PC_BOX
+198,SM1M,コレクションムーン,PC_BOX
+191,SM3H,光を喰らう闇,PC_BOX
+192,SM3K,闘う虹を見たか,PC_BOX
+188,SM4S,覚醒の勇者,PC_BOX
+184,SM5+,ウルトラフォース,PC_BOX
+186,SM5L,ウルトラムーン,PC_BOX
+185,SM5M,ウルトラサン,PC_BOX
+183,SM6,禁断の光,PC_BOX
+181,SM6b,チャンピオンロード,PC_BOX
+180,SM7,裂空のカリスマ,PC_BOX
+179,SM7a,迅雷スパーク,PC_BOX
+178,SM7b,フェアリーライズ,PC_BOX
+177,SM8,超爆インパクト,PC_BOX
+176,SM8a,ダークオーダー,PC_BOX
+175,SM8b,GXウルトラシャイニー,PC_BOX
+174,SM9,ナイトユニゾン,PC_BOX
+172,SM9a,ダブルブレイズ,PC_BOX
+173,SM9b,フルメタルウォール,PC_BOX
+49,SV10,ロケット団の栄光,PC_BOX
+44,SV11B,ブラックボルト,PC_BOX
+42,SV11B(DX),ブラックボルトDX,PC_BOX
+45,SV11W,ホワイトフレア,PC_BOX
+43,SV11W(DX),ホワイトフレアDX,PC_BOX
+117,SV1S,スカーレットex,PC_BOX
+118,SV1V,バイオレットex,PC_BOX
+115,SV1a,トリプレットビート,PC_BOX
+112,SV2D,クレイバースト,PC_BOX
+111,SV2P,スノーハザード,PC_BOX
+106,SV2a,ポケモンカード151,PC_BOX
+103,SV3,黒炎の支配者,PC_BOX
+99,SV3a,レイジングサーフ,PC_BOX
+96,SV4K,古代の咆哮,PC_BOX
+97,SV4M,未来の一閃,PC_BOX
+92,SV4a,シャイニートレジャーex,PC_BOX
+89,SV5K,ワイルドフォース,PC_BOX
+88,SV5M,サイバージャッジ,PC_BOX
+82,SV5a,クリムゾンヘイズ,PC_BOX
+81,SV6,変幻の仮面,PC_BOX
+77,SV6a,ナイトワンダラー,PC_BOX
+74,SV7,ステラミラクル,PC_BOX
+67,SV7a,楽園ドラゴーナ,PC_BOX
+66,SV8,超電ブレイカー,PC_BOX
+63,SV8a,テラスタルフェスex,PC_BOX
+58,SV9,バトルパートナーズ,PC_BOX
+51,SV9a,熱風のアリーナ,PC_BOX
+105,SVF,黒炎の支配者 デッキビルドBOX,PC_BOX
+95,SVG,スペシャルデッキセットex フシギバナ・リザードン・カメックス,PC_BOX
+75,SVK,ステラミラクル デッキビルドBOX,PC_BOX
+60,SVN,バトルパートナーズ デッキビルドBOX,PC_BOX
+441,UA-EX07BT,BLEACH 千年血戦篇 Vol.2,PC_BOX
+390,UA-EX14BT,｢マクロス｣シリーズ Vol.2,PC_BOX
+386,UA-EX15BT,BLEACH 千年血戦篇 Vol.3,PC_BOX
+384,UA-EX16BT,魔法少女まどか☆マギカ Magia Exedra,PC_BOX
+383,UA-EX17BT,Re:ゼロから始める異世界生活 Vol.2,PC_BOX
+398,UA-PC02BT,プレシャス 勝利の女神：NIKKE,PC_BOX
+385,UA-UA01DC,アドバンスドデッキ BLEACH 千年血戦篇,PC_BOX
+473,UA-UA08BT,BLEACH 千年血戦篇,PC_BOX
+472,UA-UA08ST,BLEACH 千年血戦篇,PC_BOX
+462,UA-UA15BT,ソードアート・オンライン,PC_BOX
+455,UA-UA18BT,勝利の女神：NIKKE,PC_BOX
+431,UA-UA31BT,魔法少女まどか☆マギカ,PC_BOX
+427,UA-UA33BT,2.5次元の誘惑,PC_BOX
+405,UA-UA45BT,To LOVEる-とらぶる- Memory of Heroines,PC_BOX
+404,UA-UA46BT,カグラバチ,PC_BOX
+394,UA-UA52BT,陰の実力者になりたくて！,PC_BOX
+393,UA-UA53BT,チェンソーマン,PC_BOX
+389,UA-UA55BT,アイドルマスター シンデレラガールズ,PC_BOX
+104,WCS23,ポケモンワールドチャンピオンシップス2023横浜 記念デッキ ピカチュウ,PC_BOX
+684,WS-anm_td,anemoi,PC_BOX
+678,WS-bp_ga,GA文庫,PC_BOX
+675,WS-bp_rzvol-4,「Re:ゼロから始める異世界生活」Vol.4,PC_BOX
+797,WS-disney100_bp,Disney100,PC_BOX
+830,WS-pb_hol,ホロライブプロダクション,PC_BOX
+750,WS-sfn_bp,葬送のフリーレン,PC_BOX
+687,WS-sfn_bp_new,葬送のフリーレン 新装版,PC_BOX
+494,YGO-BETB,BEYOND THE BRAVE,PC_BOX
+496,YGO-BLZD,BLAZING DOMINION,PC_BOX
+497,YGO-BPRO,BURST PROTOCOL,PC_BOX
+624,YGO-CG2087,LIMITED PACK GX -  ラーイエロー -,PC_BOX
+623,YGO-CG2128,UTILITY SELECTION,PC_BOX
+618,YGO-CG2134,ORIGINAL ARTWORK DUEL SET －遊戯編－,PC_BOX
+622,YGO-CG2137,LIMITED PACK WORLD CHAMPIONSHIP 2026,PC_BOX
+495,YGO-CORI,CHAOS ORIGINS,PC_BOX
+626,YGO-LOCH,LIMIT OVER COLLECTION - THE HEROES -,PC_BOX
+625,YGO-LOCR,LIMIT OVER COLLECTION - THE RIVALS -,PC_BOX
+631,YGO-QCAC,QUARTER CENTURY ART COLLECTION,PC_BOX
+561,YGO-WPP7,WORLD PREMIERE PACK 2026,PC_BOX

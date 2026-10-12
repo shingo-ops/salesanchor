@@ -25,7 +25,11 @@ with ThreadPoolExecutor(max_workers=600) as ex:
     print('\n'.join(str(r) for r in ex.map(probe,range(lo,hi+1)) if r))
 PY
 )
-[ -z "$candidates" ] && exit 1
+scan_rc=$?
+# 走査自体が失敗/タイムアウトした場合（python3が無い、timeout 180 で打ち切られた等）。
+[ "$scan_rc" -ne 0 ] && exit 1
+# 走査範囲に待ち受けポートが1つも無い＝ワイヤレスデバッグOFF、またはWi-Fi未接続。
+[ -z "$candidates" ] && exit 2
 
 for p in $candidates; do
   timeout 15 adb connect "127.0.0.1:$p" >/dev/null 2>&1
@@ -37,4 +41,7 @@ for p in $candidates; do
   fi
   timeout 10 adb disconnect "127.0.0.1:$p" >/dev/null 2>&1
 done
-exit 1
+# 待ち受けポートは見つかったが、どれも device にならない＝ペア設定失効の疑い。
+# 標準出力は汚さず、候補ポートは標準エラーに出す。
+echo "candidates:" $candidates >&2
+exit 3

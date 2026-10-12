@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models import User
 from app.routers import leads as leads_router
 from scripts.migrate_20260621_020000_backfill_lead_country import backfill_schema
+from tests.rls_bootstrap import bootstrap_public_countries
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -84,6 +85,8 @@ async def test_lead_country_backfill_and_rls_readability_under_tenant_006():
             schema_exists = await conn.scalar(text("SELECT 1 FROM information_schema.schemata WHERE schema_name = 'tenant_006'"))
         if not schema_exists:
             pytest.skip('tenant_006 schema is not present in this CI PostgreSQL database')
+        # 国マスタは他の試験ファイルが先に流した状態に頼らず、この試験が自分で用意する（ADR-1007 段2）
+        await bootstrap_public_countries(admin_engine)
         tenant_id = 6
 
         async def override_get_current_user():

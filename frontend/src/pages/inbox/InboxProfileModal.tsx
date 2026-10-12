@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 import { getInitials } from "./inbox.types";
 import type { LeadDetail, KarteTabKey } from "./inbox.types";
 
@@ -112,19 +115,19 @@ export function InboxProfileModal({
             <div className="right-panel-section">
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.email")}</span>
-                <input className="right-panel-field" type="email" value={cardForm.email ?? ""}
+                <TextFieldControl variant="karte" type="email" value={cardForm.email ?? ""}
                   onChange={(e) => handleCardFieldChange("email", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.phone")}</span>
-                <input className="right-panel-field" type="tel" value={cardForm.phone ?? ""}
+                <TextFieldControl variant="karte" type="tel" value={cardForm.phone ?? ""}
                   onChange={(e) => handleCardFieldChange("phone", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               {/* Discord user ID (read-only) */}
               {leadDetail.discord_user_id && (
                 <div className="right-panel-row">
                   <span className="right-panel-label">{t("leads.discordUserId")}</span>
-                  <input className="right-panel-field" type="text" value={leadDetail.discord_user_id}
+                  <TextFieldControl variant="karte" type="text" value={leadDetail.discord_user_id}
                     readOnly tabIndex={-1} />
                 </div>
               )}
@@ -143,41 +146,41 @@ export function InboxProfileModal({
             <div className="right-panel-section">
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.companyName")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.company_name ?? ""}
+                <TextFieldControl variant="karte" type="text" value={cardForm.company_name ?? ""}
                   onChange={(e) => handleCardFieldChange("company_name", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.nickname")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
+                <TextFieldControl variant="karte" type="text" value={cardForm.nickname ?? ""}
                   onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.country")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
+                <TextFieldControl variant="karte" type="text" value={cardForm.country ?? ""}
                   onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.customerType")}</span>
-                <select className="right-panel-field" value={cardForm.customer_type ?? ""}
+                <SelectControl variant="karte" fullWidth value={cardForm.customer_type ?? ""}
                   onChange={(e) => handleCardFieldChange("customer_type", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
                   <option value="信頼重視">{t("leads.customerType_trust")}</option>
                   <option value="価格重視">{t("leads.customerType_price")}</option>
-                </select>
+                </SelectControl>
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.targetTitles")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
+                <TextFieldControl variant="karte" type="text" value={cardForm.target_titles ?? ""}
                   onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
                   onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.salesForm")}</span>
-                <input className="right-panel-field" type="text" value={cardForm.sales_form ?? ""}
+                <TextFieldControl variant="karte" type="text" value={cardForm.sales_form ?? ""}
                   onChange={(e) => handleCardFieldChange("sales_form", e.target.value)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-memo-label">{t("leads.csMemo")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.cs_memo ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.cs_memo ?? ""}
                 onChange={(e) => handleCardFieldChange("cs_memo", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.csMemo")} />
             </div>
@@ -187,63 +190,63 @@ export function InboxProfileModal({
           {profileModalTab === "deal" && (
             <div className="right-panel-section">
               <div className="right-panel-memo-label">{t("leads.nextAction")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.next_action ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.next_action ?? ""}
                 onChange={(e) => handleCardFieldChange("next_action", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.nextAction")} />
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.nextActionDate")}</span>
-                <input className="right-panel-field" type="date" value={cardForm.next_action_date ?? ""}
+                <TextFieldControl variant="karte" type="date" value={cardForm.next_action_date ?? ""}
                   onChange={(e) => handleCardFieldChange("next_action_date", e.target.value || null)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.responseSpeed")}</span>
-                <select className="right-panel-field" value={cardForm.response_speed ?? ""}
+                <SelectControl variant="karte" fullWidth value={cardForm.response_speed ?? ""}
                   onChange={(e) => handleCardFieldChange("response_speed", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
                   <option value="24h以内">{t("leads.responseSpeed_24h")}</option>
                   <option value="3日以内">{t("leads.responseSpeed_3days")}</option>
                   <option value="3日超">{t("leads.responseSpeed_over3days")}</option>
-                </select>
+                </SelectControl>
               </div>
               <div className="right-panel-memo-label">{t("leads.challenge")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.challenge ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.challenge ?? ""}
                 onChange={(e) => handleCardFieldChange("challenge", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.challenge")} />
               <hr className="right-panel-divider" />
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.temperature")}</span>
-                <select className="right-panel-field" value={cardForm.temperature ?? ""}
+                <SelectControl variant="karte" fullWidth value={cardForm.temperature ?? ""}
                   onChange={(e) => handleCardFieldChange("temperature", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
                   <option value="Hot">Hot</option>
                   <option value="Warm">Warm</option>
                   <option value="Cold">Cold</option>
-                </select>
+                </SelectControl>
               </div>
               <hr className="right-panel-divider" />
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.estimatedScale")}</span>
-                <select className="right-panel-field" value={cardForm.estimated_scale ?? ""}
+                <SelectControl variant="karte" fullWidth value={cardForm.estimated_scale ?? ""}
                   onChange={(e) => handleCardFieldChange("estimated_scale", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
                   <option value="Small">Small</option>
                   <option value="Medium">Medium</option>
                   <option value="Large">Large</option>
-                </select>
+                </SelectControl>
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.monthlyForecast")}</span>
-                <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_forecast ?? ""}
+                <TextFieldControl variant="karte" type="number" min="0" value={cardForm.monthly_forecast ?? ""}
                   onChange={(e) => handleCardFieldChange("monthly_forecast", e.target.value || null)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.perOrderAmount")}</span>
-                <input className="right-panel-field" type="number" min="0" value={cardForm.per_order_amount ?? ""}
+                <TextFieldControl variant="karte" type="number" min="0" value={cardForm.per_order_amount ?? ""}
                   onChange={(e) => handleCardFieldChange("per_order_amount", e.target.value || null)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.monthlyFrequency")}</span>
-                <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_frequency ?? ""}
+                <TextFieldControl variant="karte" type="number" min="0" value={cardForm.monthly_frequency ?? ""}
                   onChange={(e) => handleCardFieldChange("monthly_frequency", e.target.value || null)} onBlur={handleCardFieldBlur} />
               </div>
               <div className="right-panel-row">
@@ -261,7 +264,7 @@ export function InboxProfileModal({
               </div>
               <hr className="right-panel-divider" />
               <div className="right-panel-memo-label">{t("leads.meetingMemo")}</div>
-              <textarea className="right-panel-field" rows={3} value={cardForm.meeting_memo ?? ""}
+              <TextareaControl variant="karte" rows={3} value={cardForm.meeting_memo ?? ""}
                 onChange={(e) => handleCardFieldChange("meeting_memo", e.target.value)}
                 onBlur={handleCardFieldBlur} placeholder={t("leads.meetingMemo")} />
             </div>

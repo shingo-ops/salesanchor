@@ -30,7 +30,7 @@ test.describe("Goal setting advisor", () => {
 
     let adviceUrl = "";
     await mockApi(page, {
-      "GET /auth/me": { id: 6, role: "admin" },
+      "GET /me/permissions": { user_id: 6, is_tenant_admin: true, permissions: [] },
       "GET /teams": [{ id: 1, name: "営業本部", leader_id: 6 }],
       "GET /goals": (route) => {
         const url = new URL(route.request().url());
@@ -120,7 +120,7 @@ test.describe("Goal setting advisor", () => {
     const { week } = currentWeek();
 
     await mockApi(page, {
-      "GET /auth/me": { id: 6, role: "admin" },
+      "GET /me/permissions": { user_id: 6, is_tenant_admin: true, permissions: [] },
       "GET /teams": [{ id: 1, name: "営業本部", leader_id: 6 }],
       "GET /goals": (route) => {
         const url = new URL(route.request().url());

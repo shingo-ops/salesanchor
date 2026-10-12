@@ -1,0 +1,1640 @@
+{
+  "before": {
+    "elements": [
+      {
+        "file": "frontend/src/components/MergeLeadModal.tsx",
+        "line": 234,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "rows": "{2}",
+          "placeholder": "{t(\"mergeLead.reasonPlaceholder\")}",
+          "value": "{reason}",
+          "onChange": "{(e) => setReason(e.target.value)}",
+          "maxLength": "{500}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/OrderFinancialPanel.tsx",
+        "line": 239,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{notes}",
+          "onChange": "{(e) => setNotes(e.target.value)}",
+          "aria-label": "{t(\"financial.notesAriaLabel\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/PriorityScoreOverride.tsx",
+        "line": 91,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{note}",
+          "onChange": "{(e) => setNote(e.target.value)}",
+          "maxLength": "{500}",
+          "placeholder": "{t(\"priority.overrideNotePlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+        "line": 442,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.purchase_note}",
+          "onChange": "{(ev) => setField(\"purchase_note\", ev.target.value)}",
+          "data-testid": "\"pur-input-purchase_note\""
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/ShippingDetailPanel.tsx",
+        "line": 551,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.ship_memo}",
+          "onChange": "{(ev) => setField(\"ship_memo\", ev.target.value)}",
+          "data-testid": "\"ship-input-ship_memo\""
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "line": 27,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{values[key]}",
+          "maxLength": "{2000}",
+          "aria-label": "{t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })}",
+          "onChange": "{(event) => onChange(key, event.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "line": 34,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "{`note-${item.extraction_item_id}`}",
+          "value": "{note}",
+          "maxLength": "{2000}",
+          "onChange": "{(event) => onNoteChange(event.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+        "line": 98,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": "\"input w-full resize-y\"",
+        "style": null,
+        "attrs": {
+          "value": "{message}",
+          "onChange": "{(e) => setMessage(e.target.value)}",
+          "disabled": "{!canEdit}",
+          "placeholder": "{t(\"discordAnnounce.messagePlaceholder\")}",
+          "maxLength": "{2000}",
+          "rows": "{6}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+        "line": 170,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "\"tp-address\"",
+          "data-testid": "\"tp-address\"",
+          "value": "{form.address}",
+          "onChange": "{handleChange(\"address\")}",
+          "disabled": "{!canEdit}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/badges/BadgesPage.tsx",
+        "line": 62,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.description}",
+          "onChange": "{e => setForm({ ...form, description: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+        "line": 66,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{e => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "line": 499,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.shipping_note}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "line": 516,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+        "line": 64,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "line": 81,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "disabled": "{!canEdit}",
+          "value": "{basicForm.shipping_note}",
+          "onChange": "{(e) => { setBasicForm({ ...basicForm, shipping_note: e.target.value }); setBasicDirty(true); }}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "line": 94,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "disabled": "{!canEdit}",
+          "value": "{basicForm.notes}",
+          "onChange": "{(e) => { setBasicForm({ ...basicForm, notes: e.target.value }); setBasicDirty(true); }}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "line": 340,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": "\"field field-h-md\"",
+        "style": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}",
+        "attrs": {
+          "value": "{form.search_kw}",
+          "onChange": "{e => setForm({ ...form, search_kw: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "line": 350,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": "\"field field-h-md\"",
+        "style": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}",
+        "attrs": {
+          "value": "{form.exclude_kw}",
+          "onChange": "{e => setForm({ ...form, exclude_kw: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+        "line": 191,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "line": 349,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+        "line": 159,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": "\"manual-record-textarea\"",
+        "style": null,
+        "attrs": {
+          "value": "{contentText}",
+          "onChange": "{(e) => setContentText(e.target.value)}",
+          "onKeyDown": "{handleKeyDown}",
+          "placeholder": "{t(\"inbox.manualRecord.contentPlaceholder\")}",
+          "rows": "{3}",
+          "disabled": "{saving}",
+          "aria-label": "{t(\"inbox.manualRecord.contentPlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+        "line": 147,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": "\"outbound-translation-edit\"",
+        "style": null,
+        "attrs": {
+          "value": "{editedText}",
+          "onChange": "{(e) => setEditedText(e.target.value)}",
+          "rows": "{4}",
+          "disabled": "{confirming}",
+          "aria-label": "{t(\"translation.outbound.editAriaLabel\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+        "line": 279,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "line": 84,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "{memoId}",
+          "value": "{closeReasonMemo}",
+          "onChange": "{(e) => onCloseReasonMemoChange(e.target.value)}",
+          "placeholder": "{t(\"leads.lostReasonPlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "line": 153,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadsPage.tsx",
+        "line": 429,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+        "line": 95,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+        "line": 217,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "rows": "{3}",
+          "value": "{notes}",
+          "onChange": "{(e) => setNotes(e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/roles/RolesPage.tsx",
+        "line": 538,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{roleForm.description}",
+          "onChange": "{(e) => setRoleForm({ ...roleForm, description: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 90,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": "{{ minHeight: 'var(--textarea-min-h-lg)' }}",
+        "attrs": {
+          "required": "true",
+          "value": "{form.review}",
+          "onChange": "{e => setForm({ ...form, review: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 91,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.goals}",
+          "onChange": "{e => setForm({ ...form, goals: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 92,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.challenges}",
+          "onChange": "{e => setForm({ ...form, challenges: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+        "line": 222,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": "{{\n              width: \"100%\",\n              fontFamily: \"var(--font-mono, monospace)\",\n              fontSize: \"var(--font-sm)\",\n              boxSizing: \"border-box\",\n            }}",
+        "attrs": {
+          "value": "{configs[key].prompt_text}",
+          "data-testid": "{`prompt-textarea-${key}`}",
+          "onChange": "{(e) =>\n              setConfigs((prev) => ({\n                ...prev,\n                [key]: { ...prev[key], prompt_text: e.target.value },\n              }))\n            }",
+          "placeholder": "{t(`${p}.placeholder`)}",
+          "rows": "{16}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "line": 367,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": "{{ width: \"100%\", resize: \"vertical\" }}",
+        "attrs": {
+          "value": "{form.search_kw}",
+          "onChange": "{e => setForm({ ...form, search_kw: e.target.value })}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "line": 380,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": "{{ width: \"100%\", resize: \"vertical\" }}",
+        "attrs": {
+          "value": "{form.exclude_kw}",
+          "onChange": "{e => setForm({ ...form, exclude_kw: e.target.value })}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "line": 61,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.address}",
+          "onChange": "{e => onChange(\"address\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "line": 68,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{e => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+        "line": 44,
+        "tag": "textarea",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.description}",
+          "onChange": "{(e) => onChange(\"description\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      }
+    ],
+    "uiAllow": {
+      "frontend/src/components/MergeLeadModal.tsx": 0,
+      "frontend/src/components/OrderFinancialPanel.tsx": 0,
+      "frontend/src/components/PriorityScoreOverride.tsx": 0,
+      "frontend/src/components/PurchaseDetailPanel.tsx": 0,
+      "frontend/src/components/ShippingDetailPanel.tsx": 0,
+      "frontend/src/features/tcg-analysis-review/ItemComparison.tsx": 0,
+      "frontend/src/pages/admin/DiscordAnnouncePage.tsx": 0,
+      "frontend/src/pages/admin/TenantProfilePage.tsx": 0,
+      "frontend/src/pages/badges/BadgesPage.tsx": 0,
+      "frontend/src/pages/buddy/BuddyPage.tsx": 0,
+      "frontend/src/pages/companies/CompaniesPage.tsx": 0,
+      "frontend/src/pages/companies/CompanyFormFields.tsx": 0,
+      "frontend/src/pages/company-detail/CompanyBasicTab.tsx": 0,
+      "frontend/src/pages/conditions/ConditionsPage.tsx": 2,
+      "frontend/src/pages/contacts/ContactEditPage.tsx": 0,
+      "frontend/src/pages/contacts/ContactsPage.tsx": 0,
+      "frontend/src/pages/inbox/ManualRecordSection.tsx": 0,
+      "frontend/src/pages/inbox/OutboundTranslationPreview.tsx": 0,
+      "frontend/src/pages/leads/LeadEditPage.tsx": 0,
+      "frontend/src/pages/leads/LeadFormFields.tsx": 0,
+      "frontend/src/pages/leads/LeadsPage.tsx": 0,
+      "frontend/src/pages/orders/OrdersFormModal.tsx": 0,
+      "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx": 0,
+      "frontend/src/pages/roles/RolesPage.tsx": 0,
+      "frontend/src/pages/staff-reports/StaffReportsPage.tsx": 0,
+      "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx": 0,
+      "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx": 0,
+      "frontend/src/pages/suppliers/SupplierFormFields.tsx": 0,
+      "frontend/src/pages/teams/TeamFormFields.tsx": 0
+    }
+  },
+  "after": {
+    "elements": [
+      {
+        "file": "frontend/src/components/MergeLeadModal.tsx",
+        "line": 235,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "rows": "{2}",
+          "placeholder": "{t(\"mergeLead.reasonPlaceholder\")}",
+          "value": "{reason}",
+          "onChange": "{(e) => setReason(e.target.value)}",
+          "maxLength": "{500}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/OrderFinancialPanel.tsx",
+        "line": 240,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{notes}",
+          "onChange": "{(e) => setNotes(e.target.value)}",
+          "aria-label": "{t(\"financial.notesAriaLabel\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/PriorityScoreOverride.tsx",
+        "line": 92,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{note}",
+          "onChange": "{(e) => setNote(e.target.value)}",
+          "maxLength": "{500}",
+          "placeholder": "{t(\"priority.overrideNotePlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+        "line": 443,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.purchase_note}",
+          "onChange": "{(ev) => setField(\"purchase_note\", ev.target.value)}",
+          "data-testid": "\"pur-input-purchase_note\""
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/components/ShippingDetailPanel.tsx",
+        "line": 552,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.ship_memo}",
+          "onChange": "{(ev) => setField(\"ship_memo\", ev.target.value)}",
+          "data-testid": "\"ship-input-ship_memo\""
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "line": 28,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{values[key]}",
+          "maxLength": "{2000}",
+          "aria-label": "{t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })}",
+          "onChange": "{(event) => onChange(key, event.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "line": 35,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "{`note-${item.extraction_item_id}`}",
+          "value": "{note}",
+          "maxLength": "{2000}",
+          "onChange": "{(event) => onNoteChange(event.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+        "line": 99,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{message}",
+          "onChange": "{(e) => setMessage(e.target.value)}",
+          "disabled": "{!canEdit}",
+          "placeholder": "{t(\"discordAnnounce.messagePlaceholder\")}",
+          "maxLength": "{2000}",
+          "rows": "{6}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+        "line": 171,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "\"tp-address\"",
+          "data-testid": "\"tp-address\"",
+          "value": "{form.address}",
+          "onChange": "{handleChange(\"address\")}",
+          "disabled": "{!canEdit}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/badges/BadgesPage.tsx",
+        "line": 63,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.description}",
+          "onChange": "{e => setForm({ ...form, description: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+        "line": 67,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{e => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "line": 500,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.shipping_note}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "line": 517,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+        "line": 65,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "line": 82,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "disabled": "{!canEdit}",
+          "value": "{basicForm.shipping_note}",
+          "onChange": "{(e) => { setBasicForm({ ...basicForm, shipping_note: e.target.value }); setBasicDirty(true); }}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "line": 95,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "disabled": "{!canEdit}",
+          "value": "{basicForm.notes}",
+          "onChange": "{(e) => { setBasicForm({ ...basicForm, notes: e.target.value }); setBasicDirty(true); }}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "line": 340,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.search_kw}",
+          "onChange": "{e => setForm({ ...form, search_kw: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "line": 347,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.exclude_kw}",
+          "onChange": "{e => setForm({ ...form, exclude_kw: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+        "line": 192,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "line": 350,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+        "line": 160,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{contentText}",
+          "onChange": "{(e) => setContentText(e.target.value)}",
+          "onKeyDown": "{handleKeyDown}",
+          "placeholder": "{t(\"inbox.manualRecord.contentPlaceholder\")}",
+          "rows": "{3}",
+          "disabled": "{saving}",
+          "aria-label": "{t(\"inbox.manualRecord.contentPlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+        "line": 148,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{editedText}",
+          "onChange": "{(e) => setEditedText(e.target.value)}",
+          "rows": "{4}",
+          "disabled": "{confirming}",
+          "aria-label": "{t(\"translation.outbound.editAriaLabel\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+        "line": 280,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "line": 85,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "id": "{memoId}",
+          "value": "{closeReasonMemo}",
+          "onChange": "{(e) => onCloseReasonMemoChange(e.target.value)}",
+          "placeholder": "{t(\"leads.lostReasonPlaceholder\")}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "line": 154,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/leads/LeadsPage.tsx",
+        "line": 430,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{createForm.notes}",
+          "onChange": "{(e) => setCreateForm({ ...createForm, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+        "line": 96,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{(e) => setForm({ ...form, notes: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+        "line": 218,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "rows": "{3}",
+          "value": "{notes}",
+          "onChange": "{(e) => setNotes(e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/roles/RolesPage.tsx",
+        "line": 539,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{roleForm.description}",
+          "onChange": "{(e) => setRoleForm({ ...roleForm, description: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 91,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": "{{ minHeight: 'var(--textarea-min-h-lg)' }}",
+        "attrs": {
+          "required": "true",
+          "value": "{form.review}",
+          "onChange": "{e => setForm({ ...form, review: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 92,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.goals}",
+          "onChange": "{e => setForm({ ...form, goals: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "line": 93,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.challenges}",
+          "onChange": "{e => setForm({ ...form, challenges: e.target.value })}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+        "line": 223,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{configs[key].prompt_text}",
+          "data-testid": "{`prompt-textarea-${key}`}",
+          "onChange": "{(e) =>\n              setConfigs((prev) => ({\n                ...prev,\n                [key]: { ...prev[key], prompt_text: e.target.value },\n              }))\n            }",
+          "placeholder": "{t(`${p}.placeholder`)}",
+          "rows": "{16}",
+          "textStyle": "\"code\""
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "line": 368,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.search_kw}",
+          "onChange": "{e => setForm({ ...form, search_kw: e.target.value })}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "line": 380,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.exclude_kw}",
+          "onChange": "{e => setForm({ ...form, exclude_kw: e.target.value })}",
+          "rows": "{3}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "line": 62,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.address}",
+          "onChange": "{e => onChange(\"address\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "line": 69,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.notes}",
+          "onChange": "{e => onChange(\"notes\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      },
+      {
+        "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+        "line": 45,
+        "tag": "TextareaControl",
+        "selfClosing": true,
+        "className": null,
+        "style": null,
+        "attrs": {
+          "value": "{form.description}",
+          "onChange": "{(e) => onChange(\"description\", e.target.value)}"
+        },
+        "spread": 0,
+        "children": ""
+      }
+    ],
+    "uiAllow": {
+      "frontend/src/components/MergeLeadModal.tsx": 0,
+      "frontend/src/components/OrderFinancialPanel.tsx": 0,
+      "frontend/src/components/PriorityScoreOverride.tsx": 0,
+      "frontend/src/components/PurchaseDetailPanel.tsx": 0,
+      "frontend/src/components/ShippingDetailPanel.tsx": 0,
+      "frontend/src/features/tcg-analysis-review/ItemComparison.tsx": 0,
+      "frontend/src/pages/admin/DiscordAnnouncePage.tsx": 0,
+      "frontend/src/pages/admin/TenantProfilePage.tsx": 0,
+      "frontend/src/pages/badges/BadgesPage.tsx": 0,
+      "frontend/src/pages/buddy/BuddyPage.tsx": 0,
+      "frontend/src/pages/companies/CompaniesPage.tsx": 0,
+      "frontend/src/pages/companies/CompanyFormFields.tsx": 0,
+      "frontend/src/pages/company-detail/CompanyBasicTab.tsx": 0,
+      "frontend/src/pages/conditions/ConditionsPage.tsx": 0,
+      "frontend/src/pages/contacts/ContactEditPage.tsx": 0,
+      "frontend/src/pages/contacts/ContactsPage.tsx": 0,
+      "frontend/src/pages/inbox/ManualRecordSection.tsx": 0,
+      "frontend/src/pages/inbox/OutboundTranslationPreview.tsx": 0,
+      "frontend/src/pages/leads/LeadEditPage.tsx": 0,
+      "frontend/src/pages/leads/LeadFormFields.tsx": 0,
+      "frontend/src/pages/leads/LeadsPage.tsx": 0,
+      "frontend/src/pages/orders/OrdersFormModal.tsx": 0,
+      "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx": 0,
+      "frontend/src/pages/roles/RolesPage.tsx": 0,
+      "frontend/src/pages/staff-reports/StaffReportsPage.tsx": 0,
+      "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx": 0,
+      "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx": 0,
+      "frontend/src/pages/suppliers/SupplierFormFields.tsx": 0,
+      "frontend/src/pages/teams/TeamFormFields.tsx": 0
+    }
+  },
+  "result": {
+    "elements": 38,
+    "totalDiffs": 0,
+    "rows": [
+      {
+        "index": 1,
+        "file": "frontend/src/components/MergeLeadModal.tsx",
+        "beforeLine": 234,
+        "afterLine": 235,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 2,
+        "file": "frontend/src/components/OrderFinancialPanel.tsx",
+        "beforeLine": 239,
+        "afterLine": 240,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 3,
+        "file": "frontend/src/components/PriorityScoreOverride.tsx",
+        "beforeLine": 91,
+        "afterLine": 92,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 4,
+        "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+        "beforeLine": 442,
+        "afterLine": 443,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 5,
+        "file": "frontend/src/components/ShippingDetailPanel.tsx",
+        "beforeLine": 551,
+        "afterLine": 552,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 6,
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "beforeLine": 27,
+        "afterLine": 28,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 7,
+        "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+        "beforeLine": 34,
+        "afterLine": 35,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 8,
+        "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+        "beforeLine": 98,
+        "afterLine": 99,
+        "beforeClass": "\"input w-full resize-y\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 9,
+        "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+        "beforeLine": 170,
+        "afterLine": 171,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 10,
+        "file": "frontend/src/pages/badges/BadgesPage.tsx",
+        "beforeLine": 62,
+        "afterLine": 63,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 11,
+        "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+        "beforeLine": 66,
+        "afterLine": 67,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 12,
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "beforeLine": 499,
+        "afterLine": 500,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 13,
+        "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+        "beforeLine": 516,
+        "afterLine": 517,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 14,
+        "file": "frontend/src/pages/companies/CompanyFormFields.tsx",
+        "beforeLine": 64,
+        "afterLine": 65,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 15,
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "beforeLine": 81,
+        "afterLine": 82,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 16,
+        "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+        "beforeLine": 94,
+        "afterLine": 95,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 17,
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "beforeLine": 340,
+        "afterLine": 340,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}",
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 18,
+        "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+        "beforeLine": 350,
+        "afterLine": 347,
+        "beforeClass": "\"field field-h-md\"",
+        "afterClass": null,
+        "beforeStyle": "{{ height: \"80px\", resize: \"vertical\", width: \"100%\" }}",
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 19,
+        "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+        "beforeLine": 191,
+        "afterLine": 192,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 20,
+        "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+        "beforeLine": 349,
+        "afterLine": 350,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 21,
+        "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+        "beforeLine": 159,
+        "afterLine": 160,
+        "beforeClass": "\"manual-record-textarea\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 22,
+        "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+        "beforeLine": 147,
+        "afterLine": 148,
+        "beforeClass": "\"outbound-translation-edit\"",
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 23,
+        "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+        "beforeLine": 279,
+        "afterLine": 280,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 24,
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "beforeLine": 84,
+        "afterLine": 85,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 25,
+        "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+        "beforeLine": 153,
+        "afterLine": 154,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 26,
+        "file": "frontend/src/pages/leads/LeadsPage.tsx",
+        "beforeLine": 429,
+        "afterLine": 430,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 27,
+        "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+        "beforeLine": 95,
+        "afterLine": 96,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 28,
+        "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+        "beforeLine": 217,
+        "afterLine": 218,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 29,
+        "file": "frontend/src/pages/roles/RolesPage.tsx",
+        "beforeLine": 538,
+        "afterLine": 539,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 30,
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "beforeLine": 90,
+        "afterLine": 91,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": "{{ minHeight: 'var(--textarea-min-h-lg)' }}",
+        "afterStyle": "{{ minHeight: 'var(--textarea-min-h-lg)' }}",
+        "diffs": []
+      },
+      {
+        "index": 31,
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "beforeLine": 91,
+        "afterLine": 92,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 32,
+        "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+        "beforeLine": 92,
+        "afterLine": 93,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 33,
+        "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+        "beforeLine": 222,
+        "afterLine": 223,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": "{{\n              width: \"100%\",\n              fontFamily: \"var(--font-mono, monospace)\",\n              fontSize: \"var(--font-sm)\",\n              boxSizing: \"border-box\",\n            }}",
+        "afterStyle": null,
+        "textStyle": "\"code\"",
+        "diffs": []
+      },
+      {
+        "index": 34,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "beforeLine": 367,
+        "afterLine": 368,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": "{{ width: \"100%\", resize: \"vertical\" }}",
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 35,
+        "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+        "beforeLine": 380,
+        "afterLine": 380,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": "{{ width: \"100%\", resize: \"vertical\" }}",
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 36,
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "beforeLine": 61,
+        "afterLine": 62,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 37,
+        "file": "frontend/src/pages/suppliers/SupplierFormFields.tsx",
+        "beforeLine": 68,
+        "afterLine": 69,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      },
+      {
+        "index": 38,
+        "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+        "beforeLine": 44,
+        "afterLine": 45,
+        "beforeClass": null,
+        "afterClass": null,
+        "beforeStyle": null,
+        "afterStyle": null,
+        "diffs": []
+      }
+    ]
+  }
+}

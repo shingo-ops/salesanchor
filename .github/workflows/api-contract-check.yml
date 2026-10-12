@@ -1,0 +1,55 @@
+name: API Contract Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: API contract is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt
+
+      - name: Export OpenAPI schema
+        working-directory: backend
+        env:
+          ENVIRONMENT: test
+        run: python -m tools.export_openapi ../frontend/api-contract/openapi.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate TypeScript types
+        working-directory: frontend
+        run: npm run generate:api-types
+
+      - name: Check openapi.json is committed
+        run: |
+          if ! git diff --exit-code -- frontend/api-contract/; then
+            echo "::error::API の形と frontend/api-contract/openapi.json がずれています。cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json を実行して、openapi.json をコミットしてください"
+            exit 1
+          fi

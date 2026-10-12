@@ -3399,3 +3399,28 @@ tradeoff: av1-css-mapping.md は snapshot 946e6dbc の写し（frontend/src 同�
 decision: AV-1（SelectControl に children モード・forwardRef・indicator を追加、利用ページ変更0）を設計自己審査 APPROVE。同一AIの自己審査であり独立レビューではない。番号付きGO・Opus委任の有効化は創作しない。
 follow_up: PO 実装承認→実装カード→Sonnet 実装→PR→番号付きGO。AV-2 は見た目の前後表を PO 提示。
 ```
+
+```text
+id: EV-20261005-FRONTEND-AV1-DEPLOY-AW-DESIGN
+date: 2026-10-05
+agent: Claude Code (Opus 設計 / Sonnet 調査・実装)
+task: AV-1（SelectControl本体拡張）の本番反映記録と、生select76の移管方針AWの設計
+scope: frontend/src の SelectControl と生 select。AW は製品未変更。基準 origin/main 3210edeea（作業台HEAD 3f4dbbdf9 と frontend/src 同一）。
+evidence:
+  - type: command
+    reference: PR #3931 / merge 4a54206dd125d1add4d526814b63d53edd39accc / Deploy 37254291709
+    summary: 必須13/13成功で merge（2026-10-05T02:09:48Z）、deploy success。本番 asset が index-BVLZdWZ6.js / index-DQ5Tuc_9.css に変化し comp-select--no-indicator を各1件含む。app 200、/api/health 200。
+  - type: external
+    reference: PO(Shingo) セッション内発言「GO #3931」と、本人による permit-danger チケット発行・PR本文反映・gh-pr-merge-safe.sh 実行（2026-10-04〜05）
+    summary: 実装担当（Sonnet）は伝聞GOを根拠にできず permits も読めないため、GO記録の反映とマージは PO 本人の端末操作で実施。
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av2-select-mapping.md / av2-recon2.md / aw1-baseline.md
+    summary: 生select76（ParseReviewPage 4件はファイル削除で消滅）。裸 select のページ規則10件は全て金型より詳細度が高く、既存金型利用の確定7・未確認9を上書き中。変更前の computed style を Chromium 147 で80条件実測。
+  - type: external
+    reference: PO(Shingo) セッション内回答（2026-10-05）
+    summary: 「特別な見た目に意図があるのであれば金型を追加したほうが良い」との問いに対し、意図資料（ADR-108/110、tokens.css注記、CSS注記）に基づく方針案を提示し、PO が「この方針で進める」を選択。
+confidence: high
+tradeoff: 外観の同等性は静的解析と単体ページでの実測であり、実画面・実ログインでの目視ではない。証跡スクリプトは scratchpad の絶対パスを含む。
+decision: カルテ9・ヘッダー2・タブバー2は SelectControl の種類として登録し現行外観を保持、一般55は標準へ統一、商品編集9と報酬1は保留。AW-1 は同一AI自己審査 APPROVE、AW-2 は REVISE。
+follow_up: AW-1 の PO 実装承認とカード。header の Arial 書体・karte の暗い表示未対応を現行どおり写すかを PO に確認。
+```

@@ -19,11 +19,7 @@ CREATE TABLE IF NOT EXISTS public.link_templates (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 初期データ投入（冪等: ON CONFLICT DO NOTHING）
-INSERT INTO public.link_templates (channel, url_pattern, required_ids, is_verified, notes, updated_at) VALUES
-  ('whatsapp',  'https://wa.me/{phone}',                               '{"phone":true}',                                       TRUE,  NULL,                                              NOW()),
-  ('telegram',  'https://t.me/{username}',                             '{"username":true,"phone":true}',                       TRUE,  NULL,                                              NOW()),
-  ('discord',   'https://discord.com/channels/{guild_id}/{channel_id}','{"guild_id":true,"channel_id":true}',                  TRUE,  NULL,                                              NOW()),
-  ('messenger', 'https://business.facebook.com/latest/inbox/messenger','{"page_id":true,"bm_id":true,"psid":true}',            FALSE, 'Meta内部URL・Meta担当パートナー検証待ち',          NOW()),
-  ('instagram', 'https://business.facebook.com/latest/inbox/instagram','{"igsid":true,"page_id":true}',                       FALSE, 'Meta内部URL・Meta担当パートナー検証待ち',          NOW())
-ON CONFLICT (channel) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 連携リンクの雛形 5 チャネルの seed を外した。link_templates は画面／CSV で管理する。
+-- 元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: link_templates seed removed'; END $$;

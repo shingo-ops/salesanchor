@@ -104,12 +104,14 @@ Phase 1〜3 の間、アプリVPSの監視コンテナは稼働を続けるた�
 | TCP | 3000 | `49.212.137.46` | 許可 |
 | TCP | 3001 | `49.212.137.46` | 許可 |
 | TCP | 9090 | `49.212.137.46` | 許可 |
+| TCP | 9091 | `49.212.137.46` | 許可 |
 
 **入力のしかた**
 
 - 1件目: `TCP / 3000 / 49.212.137.46 / 許可`
 - 2件目: `TCP / 3001 / 49.212.137.46 / 許可`
 - 3件目: `TCP / 9090 / 49.212.137.46 / 許可`
+- 4件目: `TCP / 9091 / 49.212.137.46 / 許可`（Pushgateway。sop-health-reporter の送信経路、2026-10-11 追加）
 
 **入れ終わったら**
 
@@ -127,6 +129,7 @@ Phase 1〜3 の間、アプリVPSの監視コンテナは稼働を続けるた�
 | 3000 | TCP | アプリVPSのIP / PO のIP / Agent のIP | Grafana（app.salesanchor.jp/grafana/ の転送先） |
 | 3001 | TCP | アプリVPSのIP / PO のIP / Agent のIP | Uptime Kuma（/status/ と monitor.salesanchor.jp の転送先） |
 | 9090 | TCP | PO のIP / Agent のIP | Prometheus API / Targets 確認 |
+| 9091 | TCP | アプリVPSのIP | Pushgateway（app.salesanchor.jp/pushgateway/ の転送先） |
 
 > 監視VPS の `3000/3001/9090` は、少なくともアプリVPS `49.212.137.46` から届くようにする。`ufw` だけではなく、さくらVPS のパケットフィルタでも同じ許可を入れること。
 

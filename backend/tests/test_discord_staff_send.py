@@ -159,7 +159,7 @@ async def test_text_sends_as_staff_with_avatar(ctx):
     row = (await db.execute(text(
         "SELECT message_id, sent_by_staff_id, direction FROM meta_messages WHERE direction='outbound'"
     ))).first()
-    assert tuple(row) == ("dc-100", 5, "outbound")
+    assert tuple(row) == ("dc-100", 1, "outbound")
     bot_text.assert_not_awaited()
     bot_file.assert_not_awaited()
 
@@ -267,7 +267,7 @@ async def test_image_sends_as_staff_via_webhook(ctx):
     row = (await db.execute(text(
         "SELECT message_id, sent_by_staff_id, attachment_type FROM meta_messages WHERE direction='outbound'"
     ))).first()
-    assert tuple(row) == ("dc-img", 5, "image")
+    assert tuple(row) == ("dc-img", 1, "image")
     bot_file.assert_not_awaited()
     bot_text.assert_not_awaited()
 

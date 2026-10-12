@@ -36,6 +36,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.schemas.tcg_product_code_collision import (
+    ProductCreateResult,
+    ProductDetailSaveResult,
+)
 from app.services import tcg_product_roundtrip_svc as roundtrip
 from app.services.tcg_product_detail_svc import (
     ProductDetailError,
@@ -291,7 +295,12 @@ class ProductDetailUpdate(BaseModel):
         return value
 
 
-@router.put("/tcg/products/detail/{product_id}", summary="商品マスタ詳細保存（DETAIL-01）")
+@router.put(
+    "/tcg/products/detail/{product_id}",
+    summary="商品マスタ詳細保存（DETAIL-01）",
+    response_model=ProductDetailSaveResult,
+    response_model_exclude_unset=True,
+)
 async def save_product_detail(
     product_id: int,
     payload: ProductDetailUpdate,
@@ -370,7 +379,12 @@ class CreateProductBody(BaseModel):
     exclude_keywords: str = ""
 
 
-@router.post("/tcg/products/create", summary="商品マスタ新規追加（CREATE-01）")
+@router.post(
+    "/tcg/products/create",
+    summary="商品マスタ新規追加（CREATE-01）",
+    response_model=ProductCreateResult,
+    response_model_exclude_unset=True,
+)
 async def create_product_standalone(
     body: CreateProductBody,
     db: AsyncSession = Depends(get_db),

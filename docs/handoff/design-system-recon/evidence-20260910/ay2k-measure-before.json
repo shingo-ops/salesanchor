@@ -1,0 +1,1260 @@
+{
+ "invoice-1280": {
+  "rows": [
+   [
+    {
+     "testid": "invoice-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 321
+    },
+    {
+     "testid": "invoice-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 326,
+     "clientWidth": 321
+    },
+    {
+     "testid": "invoice-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "invoice-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ],
+   [
+    {
+     "testid": "invoice-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 321
+    },
+    {
+     "testid": "invoice-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 326,
+     "clientWidth": 321
+    },
+    {
+     "testid": "invoice-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "invoice-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ]
+  ],
+  "tableWidth": 1130,
+  "tableScroll": 1130,
+  "tableParentClient": 1130,
+  "docScrollWidth": 1280,
+  "docClientWidth": 1280,
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies"
+  ]
+ },
+ "invoice-1440": {
+  "rows": [
+   [
+    {
+     "testid": "invoice-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 481
+    },
+    {
+     "testid": "invoice-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 481,
+     "clientWidth": 481
+    },
+    {
+     "testid": "invoice-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "invoice-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ],
+   [
+    {
+     "testid": "invoice-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 481
+    },
+    {
+     "testid": "invoice-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 481,
+     "clientWidth": 481
+    },
+    {
+     "testid": "invoice-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "invoice-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "invoice-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ]
+  ],
+  "tableWidth": 1290,
+  "tableScroll": 1290,
+  "tableParentClient": 1290,
+  "docScrollWidth": 1440,
+  "docClientWidth": 1440,
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies"
+  ]
+ },
+ "quote-1280": {
+  "rows": [
+   [
+    {
+     "testid": "quote-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 321
+    },
+    {
+     "testid": "quote-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 326,
+     "clientWidth": 321
+    },
+    {
+     "testid": "quote-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "quote-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ],
+   [
+    {
+     "testid": "quote-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 321
+    },
+    {
+     "testid": "quote-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 325.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 326,
+     "clientWidth": 321
+    },
+    {
+     "testid": "quote-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "quote-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ]
+  ],
+  "tableWidth": 1130,
+  "tableScroll": 1130,
+  "tableParentClient": 1130,
+  "docScrollWidth": 1280,
+  "docClientWidth": 1280,
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ },
+ "quote-1440": {
+  "rows": [
+   [
+    {
+     "testid": "quote-item-row-0-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 481
+    },
+    {
+     "testid": "quote-item-row-0-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 481,
+     "clientWidth": 481
+    },
+    {
+     "testid": "quote-item-row-0-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-0-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-0-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "quote-item-row-0-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ],
+   [
+    {
+     "testid": "quote-item-row-1-name-en",
+     "type": "text",
+     "value": "Pokemon Card Game Scarlet & Violet Enhanced Expansion Pack Black Bolt Booster Box Japanese",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "600",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": false,
+     "scrollWidth": 626,
+     "clientWidth": 481
+    },
+    {
+     "testid": "quote-item-row-1-name",
+     "type": "text",
+     "value": "ポケモンカード 強化拡張パック ブラックボルト BOX",
+     "width": 485.421875,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.6px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(74, 85, 104)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 481,
+     "clientWidth": 481
+    },
+    {
+     "testid": "quote-item-row-1-condition",
+     "type": "text",
+     "value": "NM",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-1-unit",
+     "type": "text",
+     "value": "BOX",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    },
+    {
+     "testid": "quote-item-row-1-qty",
+     "type": "number",
+     "value": "1234",
+     "width": 70,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 66,
+     "clientWidth": 66
+    },
+    {
+     "testid": null,
+     "type": "number",
+     "value": "12345.67",
+     "width": 90,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 86,
+     "clientWidth": 86
+    },
+    {
+     "testid": "quote-item-row-1-weight",
+     "type": "number",
+     "value": "12.345",
+     "width": 80,
+     "height": 19,
+     "style": {
+      "border": "2px inset rgb(118, 118, 118)",
+      "padding": "0px",
+      "font-size": "13.3333px",
+      "font-weight": "400",
+      "font-family": "Arial",
+      "border-radius": "0px",
+      "background-color": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "height": "19px"
+     },
+     "notClipped": true,
+     "scrollWidth": 76,
+     "clientWidth": 76
+    }
+   ]
+  ],
+  "tableWidth": 1290,
+  "tableScroll": 1290,
+  "tableParentClient": 1290,
+  "docScrollWidth": 1440,
+  "docClientWidth": 1440,
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me"
+  ]
+ }
+}

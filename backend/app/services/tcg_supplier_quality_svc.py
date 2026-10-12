@@ -16,7 +16,8 @@ TCG_SCHEMA = "public"
 # 接頭辞「単品語あり・要確認(<kw>),」が付く場合があるため末尾一致で判定する。
 CONDITION_FALLBACK_PATTERN = r"(^|,)(R4:単位既定(:単位不明)?|R5:パック既定)$"
 CONDITION_GIVE_UP_PATTERN = r"(^|,)R4:単位既定:単位不明$"
-CONDITION_MANUAL_BASIS = "MANUAL_CONDITION_REVIEW"
+# 人が状態を確定した basis（画面レビュー: tcg_condition_review_svc.py:286 ／ PO許可の一括修正: item_corrections.corrected_by='codex:PO-authorized:20260916-1203'）。
+CONDITION_MANUAL_PATTERN = r"^(MANUAL_CONDITION_REVIEW|MANUAL_RAW_REVIEW:PO_RULES)$"
 
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
@@ -33,7 +34,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
       needsReview         = いずれか1つ以上
       conditionFallback   = condition_basis が CONDITION_FALLBACK_PATTERN に末尾一致
       conditionGiveUp     = condition_basis が CONDITION_GIVE_UP_PATTERN に末尾一致（fallback の内数）
-      conditionManual     = condition_basis = 'MANUAL_CONDITION_REVIEW'（人が確認済み）
+      conditionManual     = condition_basis が MANUAL_CONDITION_REVIEW または MANUAL_RAW_REVIEW:PO_RULES（人が確認済み）
     """
     sql = f"""
         SELECT
@@ -49,7 +50,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
             COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count,
             COUNT(CASE WHEN ar.condition_basis ~ :fallback_pattern THEN 1 END) AS condition_fallback_count,
             COUNT(CASE WHEN ar.condition_basis ~ :give_up_pattern THEN 1 END)  AS condition_give_up_count,
-            COUNT(CASE WHEN ar.condition_basis = :manual_basis THEN 1 END)     AS condition_manual_reviewed_count
+            COUNT(CASE WHEN ar.condition_basis ~ :manual_pattern THEN 1 END)     AS condition_manual_reviewed_count
         FROM {TCG_SCHEMA}.source_messages sm
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
@@ -63,7 +64,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     params = {
         "fallback_pattern": CONDITION_FALLBACK_PATTERN,
         "give_up_pattern": CONDITION_GIVE_UP_PATTERN,
-        "manual_basis": CONDITION_MANUAL_BASIS,
+        "manual_pattern": CONDITION_MANUAL_PATTERN,
     }
     rows = (await db.execute(text(sql), params)).fetchall()
     return [

@@ -14,7 +14,9 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import ConfirmModal from "../../components/ConfirmModal";
+import { TextFieldControl } from "../../components/TextField";
 
 interface KnowledgeRule {
   id: number;
@@ -444,36 +446,36 @@ export default function KnowledgeAliasesTab() {
         <form onSubmit={submitRule}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
                 <div className="form-group"><label>{t(`${f}.category`)} *</label>
-                  <select required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>
+                  <SelectControl fullWidth required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>
                     {RULE_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.categoryHelp")}</small>
                 </div>
                 <div className="form-group"><label>{t(`${f}.patternType`)}</label>
-                  <select value={ruleForm.pattern_type} onChange={(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}>
+                  <SelectControl fullWidth value={ruleForm.pattern_type} onChange={(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}>
                     {PATTERN_TYPES.map((pt) => (
                       <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.patternTypeHelp")}</small>
                 </div>
                 <div className="form-group"><label>{t(`${f}.pattern`)} *</label>
-                  <input required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.normalizedTo`)} *</label>
-                  <input required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.priority`)}</label>
-                  <input type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
+                  <TextFieldControl type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.language`)}</label>
-                  <select value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
+                  <SelectControl fullWidth value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
                     {LANGS.map((l) => (
                       <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                 </div>
                 <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                   <input type="checkbox" checked={ruleForm.is_active} onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })} />
@@ -498,7 +500,8 @@ export default function KnowledgeAliasesTab() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-3)" }}>
                 {/* 仕入元（解析対象の絞り込み）を最初に選ぶ */}
                 <div className="form-group"><label>{t(`${f}.supplierName`)} *</label>
-                  <select
+                  <SelectControl
+                    fullWidth
                     required
                     value={aliasForm.supplier_id || ""}
                     data-testid="alias-supplier-select"
@@ -508,10 +511,10 @@ export default function KnowledgeAliasesTab() {
                     {suppliers.map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                 </div>
                 <div className="form-group"><label>{t(`${f}.aliasText`)} *</label>
-                  <input
+                  <TextFieldControl
                     required
                     value={aliasForm.alias_text}
                     data-testid="alias-text-input"
@@ -520,7 +523,8 @@ export default function KnowledgeAliasesTab() {
                 </div>
                 {/* 変換後（解決先の商品）。public.products から選択。任意。 */}
                 <div className="form-group"><label>{t(`${f}.resolvedProduct`)}</label>
-                  <select
+                  <SelectControl
+                    fullWidth
                     value={aliasForm.product_id ?? ""}
                     data-testid="alias-product-select"
                     onChange={(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}
@@ -529,7 +533,7 @@ export default function KnowledgeAliasesTab() {
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : ""}</option>
                     ))}
-                  </select>
+                  </SelectControl>
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.resolvedProductHelp")}</small>
                 </div>
               </div>

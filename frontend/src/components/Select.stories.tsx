@@ -117,3 +117,23 @@ export const NoIndicator: Story = {
     </div>
   ),
 }
+
+export const Variants: Story = {
+  name: '用途別の種類 (karte / header / tabbar)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>karte</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="karte" fullWidth />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>header</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="header" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>tabbar</strong>
+        <SelectControl options={STATUS_OPTIONS} variant="tabbar" />
+      </div>
+    </div>
+  ),
+}

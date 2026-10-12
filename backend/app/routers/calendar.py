@@ -25,9 +25,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    get_user_system_keys,
     load_user_permissions,
+    require_tenant_admin,
     reset_tenant_context,
 )
+from app.auth.system_roles import is_tenant_admin
 from app.database import get_db
 from app.models import User
 from app.services import calendar_service as cal_svc
@@ -39,14 +42,6 @@ router = APIRouter()
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
-
-
-def _require_admin(user: User) -> None:
-    if getattr(user, "role", None) != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="この操作は管理者のみ実行できます",
-        )
 
 
 def _owner_display_name(row: dict) -> str:
@@ -181,7 +176,7 @@ async def list_calendar_owners(
             COALESCE(cos.is_visible, FALSE) AS is_visible,
             COALESCE(cos.share_mode, 'self') AS share_mode
         FROM staff s
-        LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
+        LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
     """
     params = {"default_color": _DEFAULT_OWNER_COLOR}
     if can_manage_others:
@@ -217,9 +212,9 @@ async def list_calendar_owners(
     )
 
 
-@router.patch("/calendar/owners/{staff_id}", tags=["calendar"], response_model=OwnerRosterItem)
+@router.patch("/calendar/owners/{user_id}", tags=["calendar"], response_model=OwnerRosterItem)
 async def update_calendar_owner(
-    staff_id: int,
+    user_id: int,
     body: OwnerSettingsBody,
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
@@ -255,10 +250,10 @@ async def update_calendar_owner(
         text("""
             SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
             FROM staff
-            WHERE id = :staff_id
+            WHERE user_id = :user_id
             LIMIT 1
         """),
-        {"staff_id": staff_id},
+        {"user_id": user_id},
     )
     if not staff_row.first():
         raise HTTPException(
@@ -271,7 +266,7 @@ async def update_calendar_owner(
 
     insert_columns = ["staff_id"]
     insert_values = [":staff_id"]
-    params: dict[str, object] = {"staff_id": staff_id}
+    params: dict[str, object] = {"staff_id": user_id}
     update_parts: list[str] = []
     for key in ("color", "is_visible", "share_mode"):
         if key in payload:
@@ -303,11 +298,11 @@ async def update_calendar_owner(
                 COALESCE(cos.is_visible, FALSE) AS is_visible,
                 COALESCE(cos.share_mode, 'self') AS share_mode
             FROM staff s
-            LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
-            WHERE s.id = :staff_id
+            LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
+            WHERE s.user_id = :user_id
             LIMIT 1
         """),
-        {"staff_id": staff_id, "default_color": _DEFAULT_OWNER_COLOR},
+        {"user_id": user_id, "default_color": _DEFAULT_OWNER_COLOR},
     )
     row = refreshed.mappings().first()
     if not row:
@@ -384,7 +379,7 @@ async def update_event(
             detail="更新フィールドが指定されていません",
         )
 
-    # 権限確認: 自分のイベントか channels.manage 権限保持者のみ
+    # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
     row = await db.execute(
         text("SELECT created_by_user_id, calendar_type FROM calendar_events WHERE id = :id"),
         {"id": event_id},
@@ -394,7 +389,7 @@ async def update_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
     created_by, _ = record[0], record[1]
-    if created_by != user.id and getattr(user, "role", None) != "admin":
+    if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
 
     try:
@@ -435,7 +430,7 @@ async def delete_event(
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
-    if record[0] != user.id and getattr(user, "role", None) != "admin":
+    if record[0] != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")
 
     await cal_svc.delete_event(db, tenant_id=tenant_id, event_id=event_id)
@@ -466,11 +461,10 @@ async def get_sync_mode(
 async def update_sync_mode(
     body: SyncModeBody,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """同期モードを変更する（admin のみ）。"""
-    _require_admin(user)
 
     if body.sync_mode not in _VALID_SYNC_MODES:
         raise HTTPException(

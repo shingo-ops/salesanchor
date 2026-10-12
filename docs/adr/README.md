@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-05 / ADR 総数: 165 件
+最終更新: 2026-10-12 / ADR 総数: 168 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -183,7 +183,10 @@
 | [ADR-1002](./ADR-1002-unify-product-id-and-fix-migration-compat.md) | ADR-1002: 商品IDをINTEGER一本化し、旧テーブル参照migrationを修復する | Accepted | Amended by ADR-1006 | — |
 | [ADR-1003](./ADR-1003-go-delegation-to-opus.md) | ADR-1003: GO 発行を Claude Opus 設計担当へ常時委譲する（例外あり） | Accepted | — | — |
 | [ADR-1004](./ADR-1004-llm-usage-ledger.md) | ADR-1004: LLM 使用量台帳（llm_usage_events）新設 | Accepted | — | — |
+| [ADR-1005](./ADR-1005-migration-run-once-ledger.md) | ADR-1005: マイグレーションを「実行済み記録＋未実行のみ1回」方式へ段階移行する | Accepted | — | — |
 | [ADR-1006](./ADR-1006-product-code-pm5-and-mark-only-matching.md) | ADR-1006: 商品コードを PM-00001 形式の連番にそろえ、品番の照合は型番（mark）だけで行う | Accepted | Amends ADR-1002 | 2026-10-05 |
+| [ADR-1007](./ADR-1007-migration-structure-only-run-once.md) | ADR-1007: migration は構造の変更だけ・1回だけ流す。テナントの作成と権限は migration の再実行に頼らない | Superseded | — | 2026-10-05 |
+| [ADR-1008](./ADR-1008-person-ssot-users-id.md) | ADR-1008: 「人」の正本は public.users.id 一本にする（名簿 staff は会社内の詳細） | Accepted | — | — |
 
 ## ステータス凡例
 

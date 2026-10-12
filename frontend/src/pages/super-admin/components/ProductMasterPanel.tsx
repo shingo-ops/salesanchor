@@ -1,7 +1,7 @@
 /**
  * ProductMasterPanel — 商品マスタパネル（AnalysisRulesPage の hub-content 内で使用）
  *
- * TcgProductMasterPage の内容を PageLayout なしで抽出。
+ * 旧スタンドアロンページ（AY-2g で削除）の内容を PageLayout なしで抽出。
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */

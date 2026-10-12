@@ -9,9 +9,13 @@
 .field-h-lg { min-height: var(--field-h-lg, 44px); box-sizing: border-box; }
 
 /* --- 幅3段（widthで固定。lgは伸びるが上限あり）--- */
-.field-w-sm { width: var(--field-w-sm, 160px); }
-.field-w-md { width: var(--field-w-md, 280px); }
-.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
+/* SelectControl の既定幅（width:auto）より優先させるため複合セレクタを併記（design.md §AW AW-2b） */
+.field-w-sm,
+.comp-select__control.field-w-sm { width: var(--field-w-sm, 160px); }
+.field-w-md,
+.comp-select__control.field-w-md { width: var(--field-w-md, 280px); }
+.field-w-lg,
+.comp-select__control.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
 
 /* 操作台の中で使うとき、金型付き入力は縦積みラッパーの癖を打ち消す
    （.comp-field の flex-column/margin-bottom/width:100% を金型側で上書き）*/
