@@ -102,7 +102,7 @@ export default function InboxPage() {
   return (
     <>
       <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
-        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}`}>
+        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}${selectedLeadId != null ? " thread-open" : ""}`}>
           {/* 左+中央エリア */}
           <div className="inbox-main-area">
             {/* ステータスタブ + プラットフォームフィルタ */}
@@ -163,6 +163,7 @@ export default function InboxPage() {
               />
 
               <InboxMessageThread
+                onBackToList={() => state.setSelectedLeadId(null)}
                 selectedLeadId={selectedLeadId}
                 selectedConversation={selectedConversation}
                 leadDetail={leadDetail}
