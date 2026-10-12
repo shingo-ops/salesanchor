@@ -28,6 +28,16 @@ async def seeded(db_session):
             {"n": name, "p": prio, "s": sys_key is not None, "k": sys_key},
         )
         rows[key] = res.scalar_one()
+    # 操作する側（テストユーザー 999）に priority=1000 のロールを user_roles 経由で付与する（users.role は見ない）
+    top = await db_session.execute(
+        text(
+            "INSERT INTO roles (tenant_id, name, priority, is_system) "
+            "VALUES (999, '試験用最上位ロール', 1000, FALSE) RETURNING id"
+        )
+    )
+    await db_session.execute(
+        text("INSERT INTO user_roles (user_id, role_id) VALUES (999, :r)"), {"r": top.scalar_one()}
+    )
     await db_session.execute(
         text(
             "INSERT OR IGNORE INTO users (id, tenant_id, username, email, role, is_active) "

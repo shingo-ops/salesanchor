@@ -1596,6 +1596,7 @@ async def client(db_session):
     from app.auth.dependencies import (
         get_current_tenant,
         get_current_user,
+        require_tenant_admin,
     )
     from app.database import get_db
     from app.main import app
@@ -1613,6 +1614,9 @@ async def client(db_session):
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = override_get_current_user
+    # tenant admin 判定は user_roles（SQLite では系統が違う）を引くため、client 経由の試験ではモックユーザーを通す。
+    # 判定そのものは test_tenant_admin_ssot.py で検証する
+    app.dependency_overrides[require_tenant_admin] = override_get_current_user
     app.dependency_overrides[get_current_tenant] = override_get_current_tenant
 
     transport = ASGITransport(app=app)
