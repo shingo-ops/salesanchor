@@ -12,7 +12,7 @@
 ## ADR の検索結果
 
 - 検索語 combobox / autocomplete / オートコンプリート を `docs/adr/` と `docs/adr/FEATURE-INDEX.md` で検索した結果、ADR 本文に該当は 0 件。
-- `docs/adr/ADR-144-ui-component-governance.md:59-63`「金型がない場合の手順」: 実装を止めて PO に報告 → PO 許可を得て `components/` に新設（`Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx`）→ 金型を使って実装。PO は 2026-10-13 に「y」で許可済み。
+- `docs/adr/ADR-144-ui-component-governance.md:59-63`「金型がない場合の手順」: 実装を止めて PO に報告 → PO 許可を得て `components/` に新設（Xxx.tsx + Xxx.css（var() のみ）+ Xxx.stories.tsx）→ 金型を使って実装。PO は 2026-10-13 に「y」で許可済み。
 - `docs/adr/ADR-144-ui-component-governance.md:37`: 生 `<input type="text">` は禁止。`TextFieldControl` を使う。
 - ADR-027（`docs/adr/ADR-027-ui-internationalization.md`）: 全 UI 文字列は `t("key")`。ja と en は同一キー。
 - ADR-067（`docs/adr/ADR-067-design-token-enforcement.md`）: 色・余白・重なりは var() のトークン。直値禁止。
@@ -37,7 +37,7 @@
 | `frontend/src/components/Popover.tsx:101` | 位置は開いたときの 1 回だけ。スクロール・リサイズに追従しない |
 | `frontend/src/components/Popover.tsx:125` | トリガーのクリックで開閉が切り替わる |
 | `frontend/src/tokens.css:121` | `--z-dropdown` |
-| `frontend/scripts/check-stories-count.js:32` | `components/` の各 tsx に `.stories.tsx` が必要 |
+| `frontend/scripts/check-stories-count.js:32` | `components/` の各 tsx に .stories.tsx が必要 |
 
 ## 実測（Chromium）
 

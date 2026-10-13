@@ -27,17 +27,17 @@
 - 保存先と API は、今の画面と同じ：
   - 商品：POST /tcg/items/{id}/corrections（field_name='product_id'・system_value=今の product_uuid・human_value=選んだ product_uuid）
   - このままで良い：POST /tcg/items/{id}/review-ack
-- API を呼ぶ処理を、新しい小さなファイル `reviewActions.ts`（frontend/src/features/tcg-analysis-review/）にまとめる。行の操作と、件を開いた画面（ReviewItemDrawer の「このままで良い」、ProductMasterDrawer の ProductAssignSection の保存）の両方から使う。送る中身の正本を1か所にする。
+- API を呼ぶ処理を、新しい小さなファイル `frontend/src/features/tcg-analysis-review/reviewActions.ts`（frontend/src/features/tcg-analysis-review/）にまとめる。行の操作と、件を開いた画面（ReviewItemDrawer の「このままで良い」、ProductMasterDrawer の ProductAssignSection の保存）の両方から使う。送る中身の正本を1か所にする。
 - 商品の候補は GET /tcg/products/search?query=（有効な商品・名前の部分一致・最大10件）を使う。新しい API は作らない。
 
 ## 4. 変更（PR 1つ。frontend のみ）
 1. 新しい金型 `AsyncCombobox`（frontend/src/components/）
-   - 作るもの：`AsyncCombobox.tsx` と `AsyncCombobox.css`（色・余白・重なりは var() のトークンだけ）と `AsyncCombobox.stories.tsx`。
+   - 作るもの：`frontend/src/components/AsyncCombobox.tsx` と `frontend/src/components/AsyncCombobox.css`（色・余白・重なりは var() のトークンだけ）と `frontend/src/components/AsyncCombobox.stories.tsx`。
    - 作りは CountryCombobox と同じ：TextFieldControl の入力、role="listbox" の一覧、role="option" のボタン、矢印キー・Enter・Esc の操作。
    - props：id、ariaLabel、value（表示する文字）、placeholder、disabled、loadOptions(query) => Promise<{value,label}[]>、onSelect(option)、minChars（既定1）、debounceMs（既定300）、noResultsText、loadingText。
    - 文字は呼ぶ側が t() で渡す。部品の中に文字を直書きしない。
    - 表のセルに置いたとき、一覧が表の枠で切れないことを確かめる。DataTable.css の overflow を読んで判断する。切れる場合は、推測で直さずに止めて報告する。
-2. `reviewActions.ts`：postProductCorrection(item, productUuid) と postReviewAck(item, codes)。
+2. `frontend/src/features/tcg-analysis-review/reviewActions.ts`：postProductCorrection(item, productUuid) と postReviewAck(item, codes)。
    - 送る中身は、今の ProductMasterDrawer と ReviewItemDrawer と同じ。
    - 今の2つの画面も、これを使う形に変える。画面の動きは変えない。
 3. `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx`（本番の確認待ちのタブ）に「直す」の列を足す。
@@ -90,7 +90,7 @@
 
 - 事実（実測）: `frontend/src/components/DataTable.css:12-18` の `.comp-table` は `overflow-x: auto`。CSS の仕様では、片方が `auto` のとき、もう片方の `visible` も `auto` になるので overflow-y も `auto` になる。実際の Chromium で、`.comp-table` と同じ CSS の表の一番下の行に position:absolute の一覧（高さ 240px）を置くと、枠の `clientHeight` 144 に対して `scrollHeight` 371 となり、枠の外には出ずに枠の中のスクロールになる（枠の下端より下を調べると一覧ではなく枠の外の要素が取れる）。つまり CountryCombobox の作り（`frontend/src/components/CountryCombobox.tsx:145-161` の position:absolute）のままでは、表の下の行で一覧が切れる。
 - 判断: 一覧を `document.body` 直下に Portal で描き、`position: fixed` で入力欄の位置に合わせる。スクロール（capture）とリサイズで位置を取り直し、下に収まらなければ上に開き、画面の左右からははみ出さない。
-- 既存の金型の再利用: `frontend/src/components/Popover.tsx` は Portal を持つが、次の理由で使えなかった。位置は開いたときの 1 回だけ計算しスクロール・リサイズに追従しない（`Popover.tsx:97-107`）。`position:fixed` なのに `window.scrollY` を足している（`Popover.tsx:50-67`）。トリガーのクリックで開閉が切り替わる（`Popover.tsx:125`）ため入力欄のフォーカスと合わない。パネルが入力欄の幅に合わない（中央寄せ）。Popover 自体は変えていない。
+- 既存の金型の再利用: `frontend/src/components/Popover.tsx` は Portal を持つが、次の理由で使えなかった。位置は開いたときの 1 回だけ計算しスクロール・リサイズに追従しない（`frontend/src/components/Popover.tsx:97-107`）。`position:fixed` なのに `window.scrollY` を足している（`frontend/src/components/Popover.tsx:50-67`）。トリガーのクリックで開閉が切り替わる（`frontend/src/components/Popover.tsx:125`）ため入力欄のフォーカスと合わない。パネルが入力欄の幅に合わない（中央寄せ）。Popover 自体は変えていない。
 - 設計との違い: 一覧の描き方（Portal＋fixed）だけ。入力欄・role="listbox"・role="option"・キー操作・文字を props で受ける点は設計どおり。
 - 設計に足した点（props）: 候補の取得に失敗したときの文字 `errorText`（省略可・省略時は noResultsText）。黙って捨てないため。
 - 行の「このままで良い」ボタンには、行ごとの読み上げ名（`needsReview.inline.ackAria`）を付けた。件を開いた画面の同名のボタンと、読み上げ名が重ならない（既存の試験を変えずに通すためでもある）。
