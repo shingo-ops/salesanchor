@@ -1,0 +1,101 @@
+/**
+ * Sheet — 下から出るシート
+ *
+ * 名前空間: .comp-sheet-*
+ * ADR-067: 色・余白・寸法・重ね順はすべて CSS 変数参照のみ（生の値を書かない）
+ * z-index: オーバーレイ --z-backdrop(298) / 本体 --z-modal(400)
+ *          画面全体を覆うため Drawer(301) より前面に置く
+ * transition: Drawer.css と同じ --transition-slow
+ *
+ * 高さ: 中身に合わせて伸び、画面の 80dvh を上限にして内側でスクロールする。
+ *       下端は env(safe-area-inset-bottom) を足して端末のホームバーを避ける
+ *       （mobile-shell.css と同じ作法）。
+ */
+
+/* ----------------------------------------------------------------
+   オーバーレイ（背景暗幕）
+   ---------------------------------------------------------------- */
+
+.comp-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: var(--z-backdrop);
+}
+
+/* ----------------------------------------------------------------
+   シート本体
+   ---------------------------------------------------------------- */
+
+.comp-sheet-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 80dvh;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-modal);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  /* 下から出るスライド */
+  transform: translateY(100%);
+  transition: transform var(--transition-slow);
+}
+
+.comp-sheet-panel--open {
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------
+   ヘッダ
+   ---------------------------------------------------------------- */
+
+.comp-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.comp-sheet-title {
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+}
+
+/* ----------------------------------------------------------------
+   本体（中身が多いときはここがスクロールする）
+   ---------------------------------------------------------------- */
+
+.comp-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ----------------------------------------------------------------
+   フッタ（省略可）
+   ---------------------------------------------------------------- */
+
+.comp-sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}

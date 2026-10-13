@@ -189,7 +189,7 @@
 | [ADR-1008](./ADR-1008-person-ssot-users-id.md) | ADR-1008: 「人」の正本は public.users.id 一本にする（名簿 staff は会社内の詳細） | Accepted | — | — |
 | [ADR-1009](./ADR-1009-discord-ops-intake.md) | ADR-1009: Discord の監視通知を Claude Code の常駐受付で受け、不具合ごとの担当が承認チャンネルで対応する | Accepted | — | — |
 | [ADR-1010](./ADR-1010-api-contract-and-wiring-ledger.md) | ADR-1010: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成 | Accepted | — | — |
-| [ADR-1011](./ADR-1011-permission-self-maintenance.md) | ADR-1011: AI による許可の自律保守（週1回・SM- の文だけ・台帳必須） | Proposed | — | — |
+| [ADR-1011](./ADR-1011-permission-self-maintenance.md) | ADR-1011: AI による許可の自律保守（週1回・SM- の文だけ・台帳必須） | Accepted | — | — |
 
 ## ステータス凡例
 

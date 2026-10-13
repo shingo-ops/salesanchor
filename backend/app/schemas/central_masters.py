@@ -620,6 +620,7 @@ class TcgNoteMasterBase(BaseModel):
     match_type: str = "LITERAL"
     search_pattern: Optional[str] = None
     label_template: Optional[str] = None
+    label_template_en: Optional[str] = None
 
     @field_validator("match_type")
     @classmethod
@@ -644,6 +645,7 @@ class TcgNoteMasterUpdate(BaseModel):
     match_type: Optional[str] = None
     search_pattern: Optional[str] = None
     label_template: Optional[str] = None
+    label_template_en: Optional[str] = None
 
     @field_validator("match_type")
     @classmethod

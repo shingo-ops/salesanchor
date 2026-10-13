@@ -114,12 +114,35 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // 絞り込みは一覧専用なので検索欄の横へ移した。一覧では必ず使えること。
     const filterInSearchRow = page.locator(".inbox-search-row .inbox-mobile-filter-toggle");
     await expect(filterInSearchRow).toBeVisible();
-    // 押すと絞り込み（ステータスタブ）が開くこと
+
+    // 2026-10-13（PO 指定）: 押すと帯が開くのではなく、下から出るシート
+    // （Sheet 金型）が出て、選んだら閉じる。
+    const sheet = page.locator('[data-testid="sheet-panel"]');
+    const sheetOpen = page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open');
+    // 帯はスマホでは常に出さない
     await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await expect(sheetOpen).toHaveCount(0);
+
+    // 押すとシートが開く
     await filterInSearchRow.click();
-    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await expect(sheetOpen).toHaveCount(1);
+    await expect(sheet.getByRole("heading")).toBeVisible();
+
+    // 選ぶと閉じて、絞り込みが効く（印が付く）
+    const option = page.locator(".inbox-filter-sheet-option").first();
+    await expect(option).toBeVisible();
+    const optionBox = await option.boundingBox();
+    expect(optionBox, "選択肢の寸法が取れない").not.toBeNull();
+    expect(optionBox!.height, "選択肢の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    await page.locator(".inbox-filter-sheet-option", { hasText: "未読" }).first().click();
+    await expect(sheetOpen).toHaveCount(0);
+    await expect(filterInSearchRow).toHaveClass(/has-active/);
+
+    // もう一度開いて背景タップで閉じる
     await filterInSearchRow.click();
-    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await expect(sheetOpen).toHaveCount(1);
+    await page.locator(".comp-sheet-overlay").click();
+    await expect(sheetOpen).toHaveCount(0);
 
     // 会話を開くと操作行が出ること（返信中に使うため）
     await openConversation(page);
@@ -323,6 +346,114 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(dark.nameContrast!, "ダークの名前の明暗差").toBeGreaterThanOrEqual(4.5);
   });
 
+  test("スマホ: 主要な操作ボタンが44px以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（WCAG 2.5.5）: 押す場所を 44px 以上にする。
+    // ピルの外側にある3つを 44px（--size-icon-btn-lg）にした。
+    // 一覧では絞り込み、会話ではスレッドの操作と送信を測る。
+    const measure = async (sel: string) => {
+      const box = await page.locator(sel).first().boundingBox();
+      return box ? { w: Math.round(box.width), h: Math.round(box.height) } : null;
+    };
+
+    const filter = await measure(".inbox-search-row .inbox-mobile-filter-toggle");
+    expect(filter, "絞り込みボタンが見つからない").not.toBeNull();
+
+    await openConversation(page);
+    const sendBtn = await measure(".inbox-send-btn");
+    const karteToggle = await measure(".karte-toggle-btn");
+    // 本便で変更していないものも値を記録に残す（design §7）。
+    //   .send-attach-btn … 送信ピルの内側（44px にするとピルが膨らむ）
+    //   .inbox-header-menu-btn … 実機実測で 15x38dp。幅が足りないのは画面右端で
+    //     切れているため（ヘッダの中身が 360dp に収まっていない）。寸法ではなく
+    //     ヘッダの中身を減らす判断が必要なので本便では触らない。
+    const attach = await measure(".send-attach-btn");
+    const headerMenu = await measure(".inbox-header-menu-btn");
+
+    await testInfo.attach("touch-targets", {
+      body: JSON.stringify(
+        {
+          絞り込み: filter,
+          送信: sendBtn,
+          顧客情報: karteToggle,
+          "添付（この便では未対応）": attach,
+          "三点メニュー（この便では未対応・右端で切れている）": headerMenu,
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(filter!.w, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(filter!.h, "絞り込みの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn, "送信ボタンが見つからない").not.toBeNull();
+    expect(sendBtn!.w, "送信の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn!.h, "送信の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(karteToggle, "顧客情報ボタンが見つからない").not.toBeNull();
+    // 幅はアイコンと文言に任せるため高さだけを基準にする
+    expect(karteToggle!.h, "顧客情報ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+  });
+
+  test("スマホ: 検索欄の2つのボタンが別のアイコンで、管理は文言を出さない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指摘）: 検索欄の右に同じ filter アイコンが2つ並んで区別できなかった。
+    // 管理ボタンを「選択モード」の通例である丸いチェック（outline）に差し替え、
+    // スマホでは文言を隠してアイコンだけにした。
+    const info = await page.evaluate(() => {
+      const pick = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const svg = el.querySelector("svg");
+        return {
+          // svg の中身（path の d 属性）が同じなら同じアイコン
+          icon: svg ? Array.from(svg.querySelectorAll("path")).map((p) => p.getAttribute("d")).join("|") : null,
+          accessibleName: el.getAttribute("aria-label"),
+          visibleText: (el.innerText || "").trim(),
+        };
+      };
+      return {
+        filter: pick(".inbox-search-row .inbox-mobile-filter-toggle"),
+        manage: pick(".inbox-manage-btn"),
+      };
+    });
+    await testInfo.attach("search-row-buttons", {
+      body: JSON.stringify(
+        {
+          filter: { ...info.filter, icon: info.filter?.icon?.slice(0, 40) },
+          manage: { ...info.manage, icon: info.manage?.icon?.slice(0, 40) },
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(info.filter, "絞り込みボタンが見つからない").not.toBeNull();
+    expect(info.manage, "管理ボタンが見つからない").not.toBeNull();
+    // 1. 2つのアイコンが別物であること（同じ図形を2つ並べない）
+    expect(info.manage!.icon, "管理のアイコンが取れない").not.toBeNull();
+    expect(info.manage!.icon).not.toBe(info.filter!.icon);
+    // 2. 管理はスマホで文言を出さない
+    expect(info.manage!.visibleText, "管理の文言がスマホで出ている").toBe("");
+    // 3. 文言が無くても読み上げで分かること
+    expect(info.manage!.accessibleName, "管理の読み上げ名が無い").toBeTruthy();
+
+    // 4. 押す場所が 44px 以上（WCAG 2.5.5）。PR 4204 では対象から漏れていた
+    //    （padding で寸法が決まるため width/height の grep で拾えなかった）。
+    //    文言を隠すと幅も狭くなるので、ここで必ず確認する。
+    const manageBox = await page.locator(".inbox-manage-btn").first().boundingBox();
+    expect(manageBox, "管理ボタンの寸法が取れない").not.toBeNull();
+    expect(Math.round(manageBox!.width), "管理ボタンの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(Math.round(manageBox!.height), "管理ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -342,7 +473,12 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.locator(".mobile-topbar")).toHaveCount(0);
     // ヘッダーの操作行は PC・タブレットでは一覧を見ているときも出す（従来どおり）
     await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 管理ボタンの文言は PC・タブレットでは出す（スマホだけ隠す）
+    await expect(page.locator(".inbox-manage-btn .inbox-manage-label")).toBeVisible();
     // 絞り込みボタンは DOM にはあるが PC・タブレットでは表示しない
     await expect(page.locator(".inbox-search-row .inbox-mobile-filter-toggle")).toBeHidden();
+    // PC・タブレットでは帯が常時出て、シートは開かない
+    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await expect(page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open')).toHaveCount(0);
   });
 });

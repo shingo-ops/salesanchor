@@ -34,6 +34,7 @@ interface TcgNoteMaster {
   match_type: string;
   search_pattern: string | null;
   label_template: string | null;
+  label_template_en: string | null;
 }
 
 type NoteFormState = {
@@ -47,6 +48,7 @@ type NoteFormState = {
   exclude_keywords: string;
   search_pattern: string;
   label_template: string;
+  label_template_en: string;
 };
 
 const emptyForm: NoteFormState = {
@@ -60,6 +62,7 @@ const emptyForm: NoteFormState = {
   exclude_keywords: "",
   search_pattern: "",
   label_template: "",
+  label_template_en: "",
 };
 
 const toForm = (n: TcgNoteMaster): NoteFormState => ({
@@ -73,6 +76,7 @@ const toForm = (n: TcgNoteMaster): NoteFormState => ({
   exclude_keywords: n.exclude_keywords,
   search_pattern: n.search_pattern ?? "",
   label_template: n.label_template ?? "",
+  label_template_en: n.label_template_en ?? "",
 });
 
 const MATCH_TYPE_OPTIONS = [
@@ -156,6 +160,7 @@ export default function NoteMasterPage() {
       exclude_keywords: createForm.exclude_keywords,
       search_pattern: toNull(createForm.search_pattern),
       label_template: toNull(createForm.label_template),
+      label_template_en: toNull(createForm.label_template_en),
     };
     try {
       await api.post("/note-master", payload);
@@ -183,6 +188,7 @@ export default function NoteMasterPage() {
       exclude_keywords: editForm.exclude_keywords,
       search_pattern: toNull(editForm.search_pattern),
       label_template: toNull(editForm.label_template),
+      label_template_en: toNull(editForm.label_template_en),
     };
     try {
       await api.patch(`/note-master/${editId}`, payload);
@@ -338,6 +344,13 @@ export default function NoteMasterPage() {
             label={t(`${f}.labelTemplate`)}
             value={formState.label_template}
             onChange={e => setFormState({ ...formState, label_template: e.target.value })}
+          />
+        </div>
+        <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+          <TextField
+            label={t(`${f}.labelTemplateEn`)}
+            value={formState.label_template_en}
+            onChange={e => setFormState({ ...formState, label_template_en: e.target.value })}
           />
         </div>
       </div>
