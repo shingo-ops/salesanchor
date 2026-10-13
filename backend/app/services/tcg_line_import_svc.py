@@ -84,7 +84,7 @@ def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
     一致しなければ最初のスペースで分割（GAS のフォールバックと同等）。
 
     Args:
-        tail:         時刻行から時刻部分を除いた残り文字列（例: "倉田 和博 本文..."）
+        tail:         時刻行から時刻部分を除いた残り文字列（例: "提供者I 太郎 本文..."）
         sorted_names: public.suppliers.line_name を長さ降順に並べたリスト
 
     Returns:
