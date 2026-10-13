@@ -39,4 +39,31 @@
     min-height: 0;
     margin-bottom: 0;
   }
+
+  /* 本文の面を画面の下端まで敷く（2026-10-13・PO 指定）。
+     お手本（WhatsApp のチャット一覧・ライト）を実測すると、一覧の面は
+     画面の上端から下端まで1色（白 79.76%・全幅を占める範囲 y=111〜2129）で、
+     会話が5件しかなくても最後の行より下も同じ色だった。
+     当方は投入前の実測で白 45.7% ／ ページの地 44.1% に割れており、
+     地が出ているのは一覧の最後の行より下（231dp）だった。
+     本文の領域に面の色を敷くことで、空き領域も一覧と同じ色になる。
+     対象は slimHeaderOnMobile を渡したページのみ（現在は受信箱だけ）。
+     出典: docs/handoff/inbox-mobile-fill-height/recon.md */
+  .page-layout.page-layout--slim-header .page-layout-content {
+    background: var(--bg-surface);
+  }
+
+  /* 面を画面の下端まで届かせるには、本文の高さを**実寸**で出す必要がある。
+     理由（PR 4196 の CI 実測）:
+       .mobile-content = 844px（画面の全高）／.page-layout = 287px
+     スマホの殻 .mobile-shell は height ではなく min-height: 100dvh のため、
+     親の高さが「確定」扱いにならず .page-layout の height: 100% が
+     中身の高さ（287px）に落ちていた。
+     そこで 100dvh から下部タブバーぶんを引いた実寸を最低の高さとして与える。
+     .mobile-content は padding-bottom でタブバーぶんを確保しているので、
+     この値がちょうど本文の領域の高さに一致し、はみ出さない。
+     対象は slimHeaderOnMobile を渡したページのみ（現在は受信箱だけ）。 */
+  .page-layout.page-layout--slim-header {
+    min-height: calc(100dvh - var(--tabbar-height));
+  }
 }
