@@ -3698,3 +3698,133 @@ Architect 審査（AY-2n）: 1回目 REVISE（Fable、HIGH 1・MEDIUM 2・LOW 2�
 - e2e quote-create-inventory-search.spec.ts: 手元で実行を試みたが、3件とも起動前に失敗（ay2n-chk-e2e.txt）。原文: `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1217/chrome-headless-shell`（手元の Playwright のブラウザは 1248 のみ）。.github/workflows/e2e.yml:207 で CI の Playwright ジョブも `if: false`。代わりに上の preview での観測（AND の aria-pressed、候補選択で明細に値）を前後で行った。
 - 残件: AND/OR の生 button 2つ（Button variant="tab" 化は見た目が変わるため、前後表と PO の確認が要る別の便）。（設計時に挙げた InventoryPicker.tsx:218 は AY-2l 7a2f39c20 で削除済みのため残件ではない。Fable コード審査 MEDIUM-1）
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2n-*。
+
+#### AY-2n 本番反映の記録（2026-10-13）
+
+- PR #4223、merge 701566a9f（2026-10-13T09:28:35Z）。
+- Deploy 38376575372 success（09:28:38Z〜09:31:13Z）。
+- 本番 main JS assets/index-DHS-HzYc.js で旧 padding の文字列が 0。app と /api/health は 200。
+- GO は ADR-1003 の委任（Claude Opus が発行）。Reviewer（Fable）APPROVE。
+
+
+#### AY-2o 請求書詳細と報酬の入力欄6件の標準化（2026-10-13）
+
+mode: handoff。§AY の一行入力を金型へ移す便の続き。PO 原文（2026-10-13）「後で反映させるので並行して進めている金型の部品に置き換える作業を進めてくれ」、同日の離席時の一任「フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。…PRマージ、デプロイまで完走させてくれ」。GO は ADR-1003 の委任に基づき Claude Opus が発行する。
+
+現在地（origin/main 0aef04b30。調査全文は /tmp/CC報告ファイル/ssot-ay2o/recon-raw.md と recon-b.md）:
+- 生のテキスト系 input は金型本体を除き 51 件（保留 22）。今回の6件は保留ではなく、ページ側の ref 使用0、ui-allow なし。
+- A1 frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:241 `<input readOnly value={invoice.paypal_approval_url} style={{ flex: 1, padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }} />`。PayPal の顧客支払い URL の読み取り専用表示。親 :236 は flex・gap space-2・alignItems center、兄弟は :242 ButtonLink size="md"（h36）。表示条件は paypal_approval_url が真かつ status≠paid。試験の参照0。
+- A2 同 :290-291 `<input style={{ width: "100%", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} value={voidReason} onChange={…} placeholder={t("invoices.voidReasonPlaceholder")} />`。無効化理由の入力（無効化ボタンで開くフォーム）。親は block。試験 frontend/src/components/CommerceNavigationButtonMigration.test.tsx:98-102 が placeholder で参照。
+- B1/B2 frontend/src/pages/commissions/CommissionsPage.tsx:141,153、B3/B4 frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:277,289。`<label>年:<input type="number" … style={{ width: "var(--input-width-year)", marginLeft: "var(--space-2)" }} data-testid="…"/></label>`（月は --input-width-month）。月次集計の年・月。親 label、その親は flex・gap space-2・alignItems center。testid は commissions-year/-month、monthly-year/-month（参照0）。同じ設定ページの表 :208 SelectControl・:221 TextFieldControl type=number はどちらも金型 md（h39.6）。
+- 6件に当たる CSS 規則は0（祖先に .form-group 等なし）。現状の見た目は A がブラウザ既定 Arial＋inline、B がブラウザ既定（padding 0・2px inset・角0・Arial 13.33px・h19）。
+- A1/A2 の `1px solid var(--border)` は金型を通らない枠の直書き（px 1件ずつ）。
+- トークン: --input-width-year 90px（tokens.css:429）、--input-width-month 60px（:433）。
+
+設計判断（設計者、2026-10-13）:
+- 6件とも TextFieldControl の standard・md（size 指定なし）。理由: 一般フォームは標準（PO 方針、AY-2m・AY-2n と同じ）。B3/B4 は同じ画面の表の入力（:208・:221）が md なので、同画面で高さがそろう。B1/B2 は B3/B4 の複製なので同じ扱い。
+- inline style は配置だけ残し外観を消す（AY-2e・AY-2n の規則）:
+  - A1: `{{ flex: 1 }}`（padding・borderRadius・border・fontSize を削除）
+  - A2: `{{ width: "100%" }}`（padding・borderRadius・border を削除）
+  - B1〜B4: 変更なし（width トークンと marginLeft はどちらも配置）
+- 新トークンなし。i18n・testid・属性は逐語保持（A1 に aria-label を足すことはしない＝i18n キー追加になり本便の範囲外）。
+- 月の欄 60px は md だと内容幅 34px（左右余白 12px×2＋枠 2px）。値「12」が切れないことを実測で確認する。切れた場合は実装を止めて報告（幅トークンの変更は並びを変えるので設計者が判断し直す）。
+
+AY-2o 変更契約:
+1. InvoiceDetailPage.tsx:241 の `<input` を `<TextFieldControl` に、style を `{{ flex: 1 }}` に。readOnly・value は逐語、属性の順も変えない。
+2. InvoiceDetailPage.tsx:290 の `<input` を `<TextFieldControl` に、style を `{{ width: "100%" }}` に。value・onChange・placeholder は逐語、順も変えない。
+3. CommissionsPage.tsx:141,153 と CommissionSettingsPage.tsx:277,289 の `<input` を `<TextFieldControl` に。type・value・min・max・onChange・style・data-testid は逐語、順も変えない。
+4. import: 3ファイルに TextFieldControl の import が無ければ既存の並びに合わせて追加（CommissionSettingsPage.tsx と InvoiceDetailPage.tsx は既に import 済みか実物で確認し、重複させない）。
+5. 変えないもの: 上記以外の要素、ButtonLink・Button、label、親の div、CSS、トークン、i18n、試験・e2e、backend。既存の試験が落ちたら試験を直さず止まって報告。
+6. design.md（docs/specs/design-system/design.md）に AY-2n の本番反映の記録、本節、実装結果を追記。recon.md・design.md を docs/handoff/sales-doc-commission-inputs/ に置く（AY-2n の docs/handoff/inventory-search-input/ と同じ型）。
+
+前後表（予定。実画面で確定）:
+| 対象 | 変わる項目 |
+|---|---|
+| A1・A2 | 余白 8px → 8px 12px、文字 Arial 13.6/13.33px → inherit 14.4px、line-height normal → 1.5、角 4px → var(--comp-input-radius)、高さ 33 → 約39.6。枠の色・太さは同じ値（1px var(--border)）だが金型経由になる |
+| B1〜B4 | 余白 0 → 8px 12px、枠 2px inset → 1px solid var(--border)、角 0 → var(--comp-input-radius)、文字 Arial 13.33px → inherit 14.4px、高さ 19 → 約39.6。幅 90/60px は変化なし |
+| 並び | A1 と ButtonLink、B の年・月と label の文字は横に並んだまま（縦中心の差 ±2px 以内） |
+
+受入:
+| 基準 | 検証方法 |
+|---|---|
+| 金型に変わる | 開発モードの build と preview（偽ログイン・API モック、/tmp/CC報告ファイル/ssot-ay2o/ay2o-measure.cjs）で /invoices/3・/commissions・/commission-settings を幅1280・1440、DPR2 で開き、6件に class comp-field__input があることを DOM で記録。前後のスクリーンショット |
+| 幅・並び | 6件の left・width の差 ±1px 以内（A1 は flex なので兄弟 ButtonLink の left・width も ±1px）。A1 と ButtonLink、B の各欄と親 label の縦中心の差が after で ±2px 以内。top・height は記録のみ |
+| 文字が切れない | B の年に 2026・月に 12、A1 に既定のダミー URL、A2 に 30 文字の理由を入れ、scrollWidth ≤ clientWidth。月の欄は focus・hover 状態（数字の上下ボタンが出る状態）のスクリーンショットも撮り、設計者が目視で「12」が欠けないことを確認 |
+| 動作 | A2: 無効化ボタンで開き、文字を入れて値が入る、キャンセルで閉じる（前後同じ）。B: 年・月を変えると月次集計の API 呼び出しの query が変わる（前後同じ URL） |
+| 横はみ出し | document の scrollWidth == clientWidth（前後とも） |
+| 試験 | 単体試験の全件成功（CommerceNavigationButtonMigration.test.tsx を含む）。testid・placeholder の保持を grep で確認 |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須がすべて成功 |
+| 本番 | Deploy 成功。本番 JS に該当画面の testid（commissions-year・monthly-year）と comp-field__input、旧 inline の `border:"1px solid var(--border)"` を持つ input 定義が 0。app と /api/health が 200 |
+
+外部事例: 不要（既存の金型 TextFieldControl を前例 AY-2k・AY-2m・AY-2n と同じ型で使う）。
+
+維持の仕組み:
+- 守り手: CommerceNavigationButtonMigration.test.tsx（A2 placeholder）、TextField.test.tsx、scripts/check-ui-governance.js（pages の生 input の増加を検出。ただし number 型は検出対象外＝:87-90）、frontend-check。
+- 守っていないもの: type=number の生 input は check-ui-governance.js が検出しない（別便で検出範囲の拡張を検討）。一覧画面の検索欄5件（search 変種か standard かの方針判断が要る）、AND/OR の生 button、保留 22 件。
+- 切戻し: 本 PR の merge commit を revert（DB 影響なし）。
+
+改訂1（2026-10-13、Fable 設計審査1回目 REVISE への対応。本文と食い違う所は改訂1が優先）:
+- LOW-1 行番号の訂正: A1 の親の flex div は InvoiceDetailPage.tsx:240（:236 は表示条件）。number 型を検出しない根拠は scripts/check-ui-governance.js:213-218 isDetectableInput（:87-90 ではない）。トークンは frontend/src/tokens.css:429・:433。
+- LOW-2 import の確定: CommissionsPage.tsx だけに `import { TextFieldControl } from "../../components/TextField";` を追加する（既存 import 文の並びに合わせ、実際の相対パスは同ファイルの他の components import と同じ書き方に従う）。InvoiceDetailPage.tsx:19 と CommissionSettingsPage.tsx:18 は import 済みなので触らない。
+- HIGH-1 計測手順の固定（before もこの手順で取り直す）:
+  1. 計測スクリプト /tmp/CC報告ファイル/ssot-ay2o/ay2o-measure.cjs を複製して ay2o-measure2.cjs を作り、次を足す。
+     - B の4欄: 年に fill("2026")、月に fill("12") を入れてから scrollWidth・clientWidth・getBoundingClientRect を記録。
+     - 月の欄: focus 状態と hover 状態のそれぞれで、欄の周り（要素の矩形＋上下左右 8px）を切り出したスクリーンショットを撮る（幅1280・1440、DPR2）。
+     - A2: 無効化ボタンで開き、30 文字の理由（例「テスト用の無効化理由です。三十文字ちょうどになるように調整す」＝30文字。実際の文字数を記録）を fill、scrollWidth・clientWidth・value を記録。その後キャンセルで閉じ、A2 が DOM から消えたことを記録。
+     - API の記録: page.route で記録する URL を pathname だけでなく pathname＋search（query 込み）にする。B は年・月を変えた後に呼ばれた月次集計 API の URL を記録。
+  2. 実装担当は、新しい作業ツリーで「変更前のコード」のまま build・preview して before を取り、次に変更を入れて同じスクリプトで after を取る。出力先は /tmp/CC報告ファイル/ssot-ay2o/before2/ と after/。
+  3. 判定: 月「12」・年「2026」・A2 の30文字・A1 の URL で scrollWidth ≤ clientWidth（A1 だけは URL の長さ次第で切れて表示されるのが readOnly の一行欄の通常動作なので、before と after で scrollWidth>clientWidth の真偽が同じであることを基準にする。before の実測では 1020/1020・1180/1180 で切れていない）。月 focus/hover の画像で「12」の2文字が欠けずに見えることを設計者が目視で判定。API の URL（query 込み）が before と after で同一。
+  4. 分岐（LOW-3）: 月「12」が after で切れた場合は実装を commit せずに止めて報告する。設計者が次のどちらかを選び直す — (a) 月だけ size="sm"（同じ画面の md と高さがそろわなくなる）、(b) --input-width-month を広げる（前後表と並びが変わる）。担当は自分で選ばない。
+- MEDIUM-1 本番の判定文字列の差し替え: 本番の main JS で (1) `padding:"var(--space-2)",borderRadius:"var(--radius-sm)",border:"1px solid var(--border)"` の並びが 0 件（現在 frontend/src では :241・:290 の2件だけがこの並び。実装後に git grep で 0 件を確認してから本番でも 0 件を確認）、(2) `commissions-year`・`monthly-year`・`comp-field__input` がそれぞれ1件以上。3画面は App.tsx で静的 import なので main chunk で判定できる。
+- LOW-4 記録: A1 は readOnly のまま。金型に readonly 専用の見た目は無く、前後とも通常の入力欄と同じ見た目（変化なし）。
+- 基準 SHA: 実装時に origin/main を取り直して記録する。
+
+Architect 審査（AY-2o）: 1回目 REVISE（Fable）→ 改訂1 → 2回目 APPROVE（2026-10-13）。Fable は AI の審査で、PO 承認や人のレビューではない。
+
+#### AY-2o 実装結果（2026-10-13）
+
+基準 origin/main 37194570b。実画面の計測は開発モード build（NODE_ENV=development、VITE_FIREBASE_* はダミー値を前後同じ）と preview（ポート 4180、偽ログイン・API モック）、幅1280・1440、DPR2、同じスクリプト（ay2o-measure2.cjs）を前後で実行（ay2o-measure-before2.json、ay2o-measure-after.json）。計測内容は改訂1の手順1どおり（年 2026・月 12 を fill、月の欄の focus・hover 切り出し、A2 に30文字を fill してからキャンセル、API は pathname＋search を記録）。
+
+幅 1280（left / width / height / scrollWidth÷clientWidth / 親 label（A は兄弟 ButtonLink）との縦中心の差）:
+
+| 対象 | class 前 → 後 | left 前 → 後 | width 前 → 後 | height 前 → 後 | sw/cw 前 → 後 | 縦中心の差 前 → 後 |
+|---|---|---|---|---|---|---|
+| A1 | なし → comp-field__input | 91 → 91 | 1022.22 → 1022.22 | 33 → 39.61 | 1020/1020 → 1020/1020 | 0 → 0.01 |
+| A2 | なし → comp-field__input | 94 → 94 | 1146 → 1146 | 33 → 39.61 | 1144/1144 → 1144/1144 | - → - |
+| B1 年 | なし → comp-field__input | 129.22 → 129.22 | 90 → 90 | 19 → 39.61 | 86/86 → 88/88 | 0.7 → 0 |
+| B2 月 | なし → comp-field__input | 254.44 → 254.44 | 60 → 60 | 19 → 39.61 | 56/56 → 58/58 | 0.7 → 0 |
+| B3 年 | なし → comp-field__input | 107.22 → 107.22 | 90 → 90 | 19 → 39.61 | 86/86 → 88/88 | 0.7 → 0 |
+| B4 月 | なし → comp-field__input | 232.44 → 232.44 | 60 → 60 | 19 → 39.61 | 56/56 → 58/58 | 0.7 → 0 |
+
+幅 1440（left / width / height / scrollWidth÷clientWidth / 親 label（A は兄弟 ButtonLink）との縦中心の差）:
+
+| 対象 | class 前 → 後 | left 前 → 後 | width 前 → 後 | height 前 → 後 | sw/cw 前 → 後 | 縦中心の差 前 → 後 |
+|---|---|---|---|---|---|---|
+| A1 | なし → comp-field__input | 91 → 91 | 1182.22 → 1182.22 | 33 → 39.61 | 1180/1180 → 1180/1180 | 0 → 0.01 |
+| A2 | なし → comp-field__input | 94 → 94 | 1306 → 1306 | 33 → 39.61 | 1304/1304 → 1304/1304 | - → - |
+| B1 年 | なし → comp-field__input | 129.22 → 129.22 | 90 → 90 | 19 → 39.61 | 86/86 → 88/88 | 0.7 → 0 |
+| B2 月 | なし → comp-field__input | 254.44 → 254.44 | 60 → 60 | 19 → 39.61 | 56/56 → 58/58 | 0.7 → 0 |
+| B3 年 | なし → comp-field__input | 107.22 → 107.22 | 90 → 90 | 19 → 39.61 | 86/86 → 88/88 | 0.7 → 0 |
+| B4 月 | なし → comp-field__input | 232.44 → 232.44 | 60 → 60 | 19 → 39.61 | 56/56 → 58/58 | 0.7 → 0 |
+
+- 変更ファイル: frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx（A1・A2、style を `{ flex: 1 }`・`{ width: "100%" }` へ）、frontend/src/pages/commissions/CommissionsPage.tsx（import 1行と `<input` → `<TextFieldControl` 2件）、frontend/src/pages/commission-settings/CommissionSettingsPage.tsx（同 2件）。diff は ay2o-diff.txt。
+- 6件とも class comp-field__input（前は class なし）。padding 8px 12px、font 14.4px（前は A: 8px・13.6/13.33px Arial、B: 0・13.33px Arial）。
+- 判定基準（改訂1 手順3）:
+
+| 判定基準 | 結果 |
+|---|---|
+| 6件の left・width の差 ±1px 以内 | 差 0（上の表）合格。A1 の兄弟 ButtonLink も left 1121.22・width 121.78（1440 は left 1281.22）で前後同じ |
+| 縦中心の差 ±2px 以内（A1 と ButtonLink、B と親 label） | A1 前 0・後 0.01、B 前 0.7・後 0 合格 |
+| 月「12」・年「2026」が切れない（scrollWidth ≤ clientWidth） | 月 58/58、年 88/88（3画面×2幅とも）合格。月の focus・hover 画像（ay2o-after-*-month-focus.png・month-hover.png）で「12」の2文字が見える（設計者が最終目視） |
+| A2 の30文字 | 値と文字数 30（期待30）、scrollWidth 1144/1144（1280）・1304/1304（1440）、前後同じ。キャンセルで A2 が DOM から消える（前後とも） |
+| A1 の URL | scrollWidth÷clientWidth 1020/1020（1280）・1180/1180（1440）で前後同じ（切れていない） |
+| API の URL（query 込み） | 前後同じ: `GET /commissions/monthly?year=2026&month=10` 2回の後、月を12にして `GET /commissions/monthly?year=2026&month=12`（3画面とも）。/commission-settings は `GET /tenant-commission-settings` も前後同じ |
+| 横はみ出し | document の scrollWidth == clientWidth（3画面×2幅、前後とも。1280/1280・1440/1440） |
+| 保持の grep | testid（commissions-year・commissions-month・monthly-year・monthly-month）と placeholder（invoices.voidReasonPlaceholder）が残っている。旧 padding の並び（`padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)"`）は frontend/src で 0 件（ay2o-grep.txt） |
+
+- top・height は値の記録のみ（height は A 33→39.61、B 19→39.61。A1 の top は 205.48→203.98、ButtonLink の top は 203.98→205.78 で、親が alignItems:center のため中心はそろったまま）。
+- A1 は readOnly のまま。金型に readonly 専用の見た目は無く、前後とも通常の入力欄と同じ見た目。
+- スクリーンショット: ay2o-before2-*.png、ay2o-after-*.png（ページ全体＋月の focus・hover の切り出し＋ A2 入力後）。
+- 品質（ay2o-chk-quality.txt）: generate:icon-sizes・generate:api-types・tsc・lint・check:all・build・build-storybook は exit 0。test:coverage（maxWorkers=1）は exit 1: `Test Files 1 failed | 86 passed (87)`、`Tests 1 failed | 1026 passed (1027)`。落ちたのは CommerceNavigationButtonMigration.test.tsx の「paginates inventory with exact GETs and disabled pending boundaries」1件で、原文は `Test timed out in 5000ms`（全件実行中の負荷）。同じファイルを単体で再実行すると 11/11 成功（ay2o-chk-rerun-commerce.txt）。A2 の placeholder を使うテストは成功。
+- 残件: type=number の生 input を check-ui-governance.js が検出しない（:213-218）、一覧画面の検索欄5件、AND/OR の生 button。
+- 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2o-*。

@@ -1,0 +1,109 @@
+### npm run generate:icon-sizes
+
+> salesanchor-frontend@1.0.0 generate:icon-sizes
+> node scripts/generate-icon-sizes.js
+
+EXIT=0
+### npm run generate:api-types
+
+> salesanchor-frontend@1.0.0 generate:api-types
+> openapi-typescript api-contract/openapi.json -o src/api/generated/schema.d.ts
+
+✨ openapi-typescript 7.13.0
+🚀 api-contract/openapi.json → src/api/generated/schema.d.ts [2s]
+EXIT=0
+### npx tsc --noEmit
+EXIT=0
+### npm run lint
+  174:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/dashboard/FollowUpsPage.tsx
+  112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+  25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+  130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 138 problems (0 errors, 138 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+
+EXIT=0
+### npm run check:all
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/dashboard/FollowUpsPage.tsx
+[1]   112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+[1]   25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+[1]   130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] ✖ 138 problems (0 errors, 138 warnings)
+[1]   0 errors and 5 warnings potentially fixable with the `--fix` option.
+[1] 
+[1] npm run lint exited with code 0
+EXIT=0
+### npm run test:coverage -- --maxWorkers=1
+
+ FAIL  |unit| src/components/CommerceNavigationButtonMigration.test.tsx > commerce navigation Button migration contracts > paginates inventory with exact GETs and disabled pending boundaries
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/CommerceNavigationButtonMigration.test.tsx:45:3
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 86 passed (87)
+      Tests  1 failed | 1026 passed (1027)
+   Start at  19:34:46
+   Duration  697.73s (transform 16.05s, setup 4.68s, import 136.01s, tests 197.89s, environment 248.94s)
+
+EXIT=1
+### (rerun) vitest unit CommerceNavigationButtonMigration.test.tsx 単体再実行
+
+ Test Files  1 passed (1)
+      Tests  11 passed (11)
+   Start at  19:46:34
+   Duration  19.99s (transform 1.72s, setup 88ms, import 4.02s, tests 12.12s, environment 3.14s)
+
+EXIT=0
+### npm run build
+[2Ktransforming...✓ 1777 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     1.08 kB │ gzip:   0.49 kB
+dist/assets/index-BP54Intq.css    295.55 kB │ gzip:  44.53 kB
+dist/assets/index-B9jZTv2p.js   2,545.55 kB │ gzip: 647.85 kB
+
+[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/firebase-auth.ts is dynamically imported by src/pages/erp/ERPPage.tsx but also statically imported by src/contexts/AuthContext.tsx, src/pages/account-settings/SecuritySection.tsx, dynamic import will not move module into another chunk.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 23.60s
+EXIT=0
+### npm run build-storybook
+│  - Use build.rolldownOptions.output.codeSplitting to improve chunking:
+│  ]8;;https://rolldown.rs/reference/OutputOptions.codeSplittinghttps://rolldown.rs/reference/OutputOptions.codeSplitting]8;;
+│  - Adjust chunk size limit for this warning via
+│  build.chunkSizeWarningLimit.
+│  Vite ✓ built in 1m 14s
+│
+●  Storybook collects completely anonymous usage telemetry. We use it to
+│  shape Storybook's roadmap and prioritize features. You can learn more,
+│  including how to opt out, at ]8;;https://storybook.js.org/telemetryhttps://storybook.js.org/telemetry]8;;
+│
+◇  Output directory:
+│  /Users/tanizawashingo/worktrees/salesanchor/release-sales-doc-commission-inputs/frontend/storybook-static
+│
+└  Storybook build completed successfully
+
+EXIT=0
