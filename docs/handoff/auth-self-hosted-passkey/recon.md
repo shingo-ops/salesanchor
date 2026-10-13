@@ -95,6 +95,8 @@
 | P11 | qa-smoke.yml・external-state-snapshot.yml | 直近 5 回・3 回すべて failure（原因は未調査） |
 | P12 | public.users と Firebase のメール突き合わせ（小文字化。結果ファイル /tmp/CC報告ファイル/auth-user-diff-20261013-121557.txt） | 両方にある 9 人（全員 is_active=true）。DB にだけある 4 人: id=2（is_active=true・tenant 3・jarvis-test.local）、id=80〜82（is_active=false・tenant 6・salesanchor.demo）。Firebase にだけある 3 人（いずれも salesanchor.jp・DB に行が無いためアプリは使えない）。DB 側の大文字小文字重複 0 |
 | P13 | review@salesanchor.jp の public.users（結果ファイル /tmp/CC報告ファイル/auth-review-in-db-20261013-122432.txt） | 1 件: id=10・tenant_id=6（tenant_code `tenant-review`）・is_active=true・role=admin。P6 と合わせ、ログインできない原因はパスワード不一致のみ |
+| P14 | `scripts/run_all_migrations.sh` 冒頭のコメント、`.github/workflows/deploy.yml` の「Run database migrations」 | 本番は毎デプロイ、登録済み migration を先頭から全件やり直す |
+| P15 | `scripts/run_all_migrations.sh:409` | `migrations/20260612_150000_drop_password_hash.sql`（`ALTER TABLE public.users DROP COLUMN IF EXISTS password_hash;`）が毎回走る。新しいパスワード列に password_hash という名前は使えない |
 
 → 今ログインして使える人は 9 人（P12 の両方にある人）。
 
