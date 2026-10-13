@@ -1,0 +1,1 @@
+tsc --noEmit exit 0 (r2 時点。成功時は無出力のため本ファイルは空。記録元: /tmp/CC報告ファイル/ssot-ay2q/before-after.md の品質表)。r3 は tsc 単体の exit code ログなし。r3-build.txt の npm run build (tsc && vite build) が exit 0 で完了（built in 2.60s、r3-measure-run.txt も build exit 0）。
