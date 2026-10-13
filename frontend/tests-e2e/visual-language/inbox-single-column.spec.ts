@@ -200,6 +200,46 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(ground!.wrapper, "下地が透明のままだと一覧の下にページの地が出る").not.toBe("rgba(0, 0, 0, 0)");
     expect(ground!.wrapper, "下地と一覧の面の色が違うと地が2色に割れる").toBe(ground!.panel);
 
+    // ④ 面の色が画面の下端近くまで届いていること（2026-10-13・PO 指定）。
+    //    お手本（WhatsApp のチャット一覧・ライト）は一覧の面が画面の上端から
+    //    下端まで1色（実測 白 79.76%・全幅を占める範囲 y=111〜2129）。
+    //    当方は投入前 白 45.7% ／ ページの地 44.1% で、地が出ていたのは
+    //    一覧の最後の行より下（231dp）だった。
+    //    どの段で高さが切れているか後から分かるよう、鎖の各段を記録に残す。
+    const chain = await page.evaluate(() => {
+      const pick = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return {
+          top: Math.round(r.top),
+          bottom: Math.round(r.bottom),
+          height: Math.round(r.height),
+          background: getComputedStyle(el).backgroundColor,
+        };
+      };
+      return {
+        viewport: window.innerHeight,
+        mobileContent: pick(".mobile-content"),
+        pageLayout: pick(".page-layout"),
+        pageContent: pick(".page-layout-content"),
+        wrapper: pick(".inbox-wrapper"),
+        leftPanel: pick(".inbox-left-panel"),
+      };
+    });
+    await testInfo.attach("height-chain", {
+      body: JSON.stringify(chain, null, 2),
+      contentType: "application/json",
+    });
+    // 面の色を敷いている要素のうち、最も下まで届いているものを見る
+    const painted = [chain.pageContent, chain.wrapper, chain.leftPanel]
+      .filter((e): e is NonNullable<typeof e> => e !== null && e.background !== "rgba(0, 0, 0, 0)")
+      .map((e) => e.bottom);
+    expect(painted.length, "面の色を敷いた要素が1つも見つからない").toBeGreaterThan(0);
+    expect(Math.max(...painted), "面の色が画面の7割より下まで届いていない").toBeGreaterThan(
+      chain.viewport * 0.7,
+    );
+
     await expect(row).toBeVisible();
     await expect(panel).toBeVisible();
   });
