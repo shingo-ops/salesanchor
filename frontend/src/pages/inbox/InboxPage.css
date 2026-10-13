@@ -1232,11 +1232,11 @@
   .icon-btn.inbox-mobile-filter-toggle { display: inline-flex; }
   .inbox-mobile-filter-toggle.has-active { color: var(--accent); }
 
+  /* 2026-10-13（PO 指定）: スマホでは帯を開かず、下から出るシート（Sheet 金型）で
+     選んで閉じる形にした。したがって帯は常に出さない（開閉のクラスも使わない）。
+     PC・タブレットでは従来どおり常時表示（この @media の内側のみ）。 */
   .inbox-full-tab-bar,
   .inbox-sub-filter-bar { display: none; }
-
-  .inbox-wrapper.filters-open .inbox-full-tab-bar,
-  .inbox-wrapper.filters-open .inbox-sub-filter-bar { display: flex; }
 
   /* 一覧の密度をお手本に合わせる（design.md §10-3 / benchmark 実測）。
      行の高さ: お手本は76dp。右の余白: お手本は16dp（左は 余白+アバター+gap で72dp）。
@@ -1942,3 +1942,42 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   font-weight: var(--font-weight-semi);
 }
 
+/* ====== スマホの絞り込みシートの中身（2026-10-13・PO 指定）======
+   Sheet 金型（components/Sheet.tsx）の中に入れる選択肢の並び。
+   押す場所は 44px 以上（--size-icon-btn-lg・WCAG 2.5.5）。
+   シート自体はどの画面幅でも同じ見た目なので @media の外に置く
+   （開くのはスマホだけ＝絞り込みボタンがスマホでしか出ないため）。 */
+.inbox-filter-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.inbox-filter-sheet-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inbox-filter-sheet-option {
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--font-base);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-micro), color var(--transition-micro);
+}
+
+.inbox-filter-sheet-option:hover {
+  background: var(--bg-subtle);
+}
+
+.inbox-filter-sheet-option.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
