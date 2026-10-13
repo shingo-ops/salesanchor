@@ -43,7 +43,7 @@ TCG_SCHEMA = "public"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・13列）
+# 出力ヘッダー（確定・14列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
@@ -58,6 +58,7 @@ DIST_HEADERS = [
     "Series",
     "提供者",
     "Search Keywords",
+    "Ship_JA",
 ]
 
 _SCOPES = [
@@ -271,7 +272,8 @@ async def fetch_output_rows(
                 SELECT string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)
                 FROM public.product_search_keywords psk
                 WHERE psk.product_id = p.id
-            ), '')                                                  AS search_keywords
+            ), '')                                                  AS search_keywords,
+            COALESCE(ar.ship_ja, '')                                AS ship_ja
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -316,6 +318,7 @@ async def fetch_output_rows(
             row["series"],
             row["provider"],
             row["search_keywords"],
+            row["ship_ja"],
         ]
         for row in rows
     ]

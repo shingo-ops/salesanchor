@@ -177,6 +177,10 @@ def effective_new_system_rules(new_system_rules: dict | None) -> dict | None:
     return base if any(base.values()) else None
 
 
+# masters の中で発送日（ship_ja）の書き方を持つキー。解析の部品（extract_v101_items）には渡さない
+_SHIP_ENTRIES_KEY = "ship_entries"
+
+
 def load_v102_masters(session: Session) -> tuple[dict, dict]:
     """(run_v102_pipeline に渡すマスタ, 単位 canonical → 単位 id)。読み取りのみ。商品・分類・状態の単位が空なら ValueError。
 
@@ -189,6 +193,7 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
         "product_first": load_product_first_masters(session),
+        _SHIP_ENTRIES_KEY: analyzer.load_ship_master(session),
     }
     return masters, unit_canonical_to_uuid
 
@@ -320,9 +325,11 @@ def run_v102_pipeline(
         )
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         fixed = {"fixed_products": fixed_products} if fixed_products else {}
+        # 発送マスタは配信用の ship_ja を作る側（_analysis_values）だけが使う。extract_items はキーワード固定なので渡さない
+        extraction_masters = {k: v for k, v in masters.items() if k != _SHIP_ENTRIES_KEY}
         extracted, flags = extract_items(
             items, ctx.raw_text, order=order, reassign=False, v102_fixes=True, review_reasons=True, gemini_trust=True,
-            **masters, **fixed
+            **extraction_masters, **fixed
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
@@ -661,6 +668,7 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         for raw, bounded in ((item.get("quantity_normalized"), quantity), (item.get("price_normalized"), price))
         if raw is not None and bounded is None
     ]
+    ship_ja, ship_en = analyzer.build_ship_labels(ship_note(item.get("ship")), masters[_SHIP_ENTRIES_KEY])
     reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or []), *out_of_range])
     return {
         "product_id": product_id if matched else None, "pid_resolved": bool(matched),
@@ -671,7 +679,8 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
         "quantity_normalized": quantity,
         "price_normalized": price,
-        "note_ja": ship_note(item.get("ship")), "status": item.get("status"), "exclusion": item.get("status_effect"),
+        "note_ja": None, "ship_ja": ship_ja, "ship_en": ship_en,
+        "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
         "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
@@ -683,12 +692,12 @@ _UPSERT_SQL = """
         id, extraction_item_id, product_id, pid_resolved, pid_basis, unit_id, unit_canonical, unit_resolved,
         condition_id, condition_canonical, condition_basis, quantity_normalized, price_normalized, note_ja,
         status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
-        price_basis
+        price_basis, ship_ja, ship_en
     ) VALUES (
         :id, :extraction_item_id, :product_id, :pid_resolved, :pid_basis, :unit_id, :unit_canonical, :unit_resolved,
         :condition_id, :condition_canonical, :condition_basis, :quantity_normalized, :price_normalized, :note_ja,
         :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
-        :price_basis
+        :price_basis, :ship_ja, :ship_en
     )
     ON CONFLICT (extraction_item_id) DO UPDATE SET
         product_id = EXCLUDED.product_id, pid_resolved = EXCLUDED.pid_resolved, pid_basis = EXCLUDED.pid_basis,
@@ -698,7 +707,8 @@ _UPSERT_SQL = """
         price_normalized = EXCLUDED.price_normalized, note_ja = EXCLUDED.note_ja, status = EXCLUDED.status,
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
-        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis
+        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis,
+        ship_ja = EXCLUDED.ship_ja, ship_en = EXCLUDED.ship_en
     RETURNING id
 """
 

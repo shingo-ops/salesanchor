@@ -4552,6 +4552,7 @@
       "excludeKeywords": "Exclude Keywords",
       "searchPattern": "Search Pattern",
       "labelTemplate": "Label Template",
+      "labelTemplateEn": "English template (REGEX)",
       "addNote": "Add Note Rule",
       "editNote": "Edit Note Rule",
       "deleteConfirm": "Are you sure you want to delete this note rule?",

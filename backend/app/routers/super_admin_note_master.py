@@ -91,6 +91,7 @@ def _parse_note_master(raw: bytes) -> tuple[list[dict], list[str]]:
             "match_type": (raw_row.get("match_type") or "").strip() or "",
             "search_pattern": (raw_row.get("search_pattern") or "").strip() or "",
             "label_template": (raw_row.get("label_template") or "").strip() or None,
+            "label_template_en": (raw_row.get("label_template_en") or "").strip() or None,
             "_line": line_num,
         })
     return rows, errors
@@ -99,7 +100,7 @@ router = APIRouter()
 
 _NOTE_COLS = (
     "id, label_ja, label_en, enabled, search_keywords, exclude_keywords, "
-    "category, priority, match_type, search_pattern, label_template, "
+    "category, priority, match_type, search_pattern, label_template, label_template_en, "
     "created_at, updated_at"
 )
 
@@ -114,6 +115,7 @@ _NOTE_UPDATABLE = {
     "match_type",
     "search_pattern",
     "label_template",
+    "label_template_en",
 }
 
 
@@ -162,9 +164,9 @@ async def create_note_master(
             text(
                 "INSERT INTO public.tcg_note_master "
                 "(label_ja, label_en, enabled, search_keywords, exclude_keywords, "
-                " category, priority, match_type, search_pattern, label_template, tenant_id) "
+                " category, priority, match_type, search_pattern, label_template, label_template_en, tenant_id) "
                 "VALUES (:label_ja, :label_en, :enabled, :search_keywords, :exclude_keywords, "
-                "        :category, :priority, :match_type, :search_pattern, :label_template, NULL) "
+                "        :category, :priority, :match_type, :search_pattern, :label_template, :label_template_en, NULL) "
                 f"RETURNING {_NOTE_COLS}"
             ),
             data.model_dump(),
@@ -249,7 +251,7 @@ async def export_note_master_csv(db: AsyncSession = Depends(get_db)) -> Response
     result = await db.execute(
         text(
             "SELECT label_ja, label_en, enabled, search_keywords, exclude_keywords, "
-            "category, priority, match_type, search_pattern, label_template "
+            "category, priority, match_type, search_pattern, label_template, label_template_en "
             "FROM public.tcg_note_master "
             "WHERE tenant_id IS NULL "
             "ORDER BY id"
@@ -258,7 +260,7 @@ async def export_note_master_csv(db: AsyncSession = Depends(get_db)) -> Response
     rows = result.mappings().all()
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["label_ja", "label_en", "enabled", "search_keywords", "exclude_keywords", "category", "priority", "match_type", "search_pattern", "label_template"])
+    writer.writerow(["label_ja", "label_en", "enabled", "search_keywords", "exclude_keywords", "category", "priority", "match_type", "search_pattern", "label_template", "label_template_en"])
     for r in rows:
         writer.writerow([
             r["label_ja"] or "",
@@ -271,6 +273,7 @@ async def export_note_master_csv(db: AsyncSession = Depends(get_db)) -> Response
             r["match_type"] or "",
             r["search_pattern"] or "",
             r["label_template"] or "",
+            r["label_template_en"] or "",
         ])
     return Response(
         content=buf.getvalue(),
@@ -349,7 +352,7 @@ async def import_note_master_commit(
                         "UPDATE public.tcg_note_master SET label_en = :label_en, enabled = :enabled, "
                         "search_keywords = :search_keywords, exclude_keywords = :exclude_keywords, "
                         "category = :category, priority = :priority, match_type = :match_type, "
-                        "search_pattern = :search_pattern, label_template = :label_template, "
+                        "search_pattern = :search_pattern, label_template = :label_template, label_template_en = :label_template_en, "
                         "updated_at = NOW() "
                         "WHERE id = :id AND tenant_id IS NULL"
                     ),
@@ -361,9 +364,9 @@ async def import_note_master_commit(
                     text(
                         "INSERT INTO public.tcg_note_master "
                         "(label_ja, label_en, enabled, search_keywords, exclude_keywords, "
-                        " category, priority, match_type, search_pattern, label_template, tenant_id) "
+                        " category, priority, match_type, search_pattern, label_template, label_template_en, tenant_id) "
                         "VALUES (:label_ja, :label_en, :enabled, :search_keywords, :exclude_keywords, "
-                        "        :category, :priority, :match_type, :search_pattern, :label_template, NULL)"
+                        "        :category, :priority, :match_type, :search_pattern, :label_template, :label_template_en, NULL)"
                     ),
                     data,
                 )
