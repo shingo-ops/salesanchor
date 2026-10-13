@@ -1177,7 +1177,8 @@
   /* 押す場所を 44px 以上にする（2026-10-13・WCAG 2.5.5）。
      実測で 44px 未満だったのは次の5つ（CSS の実値）:
        .send-attach-btn / .send-preview-remove  28px（--size-icon-btn-sm）
-       .inbox-thread-action-btn                 36px（--size-icon-btn）
+       .inbox-thread-action-btn                 36px だが**スマホでは非表示**（:1075 の
+                                                .inbox-thread-actions { display: none; }）＝対象外
        .inbox-mobile-filter-toggle              36px（--size-icon-btn・.icon-btn 経由）
        .inbox-send-btn                          スマホで 32px（--size-avatar-sm）に縮めていた
      このうち**ピルの外側にある3つ**を 44px にする。トークンは既にある
@@ -1193,9 +1194,11 @@
     width: var(--size-icon-btn-lg);
     height: var(--size-icon-btn-lg);
   }
-  .inbox-thread-action-btn {
-    width: var(--size-icon-btn-lg);
-    height: var(--size-icon-btn-lg);
+  /* 会話ヘッダの「顧客情報」（カルテ切替）。実機実測で 90x28dp だった。
+     アイコンと文言を持つので幅は中身に任せ、高さだけ 44px を下限にする。
+     ヘッダの行は「一覧へ戻る」の 48dp で既に決まっているため行は高くならない。 */
+  .karte-toggle-btn {
+    min-height: var(--size-icon-btn-lg);
   }
   .icon-btn.inbox-mobile-filter-toggle {
     width: var(--size-icon-btn-lg);

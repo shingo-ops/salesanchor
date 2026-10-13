@@ -10,7 +10,7 @@ PO 指示: 並べた「次にできること」を順番に進める。その2�
 |---|---|---|---|
 | `.send-attach-btn` | `--size-icon-btn-sm` | **28px** | **送信ピルの内側**（`.send-input-wrap` の中） |
 | `.send-preview-remove` | `--size-icon-btn-sm` | **28px** | 添付プレビューの行（`.send-attachment-preview` の中） |
-| `.inbox-thread-action-btn` | `--size-icon-btn` | **36px** | 会話の上部バー |
+| ~~`.inbox-thread-action-btn`~~ | `--size-icon-btn` | 36px | **スマホでは非表示**（`frontend/src/pages/inbox/InboxPage.css` の `@media` 内 `.inbox-thread-actions { display: none; }`）＝**対象外**。画面検査で「見つからない」となって判明した |
 | `.inbox-mobile-filter-toggle` | `.icon-btn` 経由 → `--size-icon-btn` | **36px** | 検索欄（`.inbox-search-row` の中） |
 | `.inbox-send-btn` | スマホで `--size-avatar-sm` に上書き | **32px** | 送信行の右端（ピルの外） |
 
@@ -55,3 +55,19 @@ PO 指示: 並べた「次にできること」を順番に進める。その2�
 ## E. 詳細度の注意
 
 `.inbox-mobile-filter-toggle` は `icon-btn` も併せ持つ。`frontend/src/components.css` の `.icon-btn { width/height: var(--size-icon-btn) }` が後に読み込まれるため、**単一クラスの指定では負ける**（PR 4179 で同じ原因で PC 側の非表示が効いていなかった）。**2クラス（`.icon-btn.inbox-mobile-filter-toggle`）で指定する。**
+
+## F. 実機で測り直した会話ヘッダ（当初の机上の想定を訂正）
+
+画面検査が `.inbox-thread-action-btn` を「見つからない」と報告したため、実機の構造データで会話ヘッダを測り直した（1080x2340 @480dpi）。
+
+| 要素 | 実寸（device px / dp） | 44dp 以上か |
+|---|---|---|
+| 一覧へ戻る | 144x144 = **48x48dp** | ✅ |
+| 言語（自動） | 219x108 = 73x**36dp** | ❌ |
+| **顧客情報（カルテ切替）** | 270x84 = 90x**28dp** | ❌ → **本便で高さを44pxに** |
+| **三点メニュー** | 45x114 = **15x38dp** | ❌ **幅が足りないのは画面右端で切れているため** |
+| 受信箱の設定（ヘッダー操作行） | 108x108 = 36x36dp | ❌ |
+
+**三点メニューは x=1035〜1080 で画面の右端に達している**＝ヘッダの中身が 360dp に収まっていない。これは**寸法の問題ではなく中身の量の問題**で、直すには「言語セレクトをメニューへ移す」「顧客情報の文言を隠す」などヘッダの構成を変える判断が必要。**本便では触らず、値を記録に残して PO 判断を仰ぐ。**
+
+`.karte-toggle-btn` は幅は中身（アイコン＋文言）に任せ、**高さだけ 44px を下限**にする。会話ヘッダの行は「一覧へ戻る」の 48dp で既に決まっているため**行は高くならない**。

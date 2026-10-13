@@ -341,12 +341,27 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     await openConversation(page);
     const sendBtn = await measure(".inbox-send-btn");
-    const threadAction = await measure(".inbox-thread-action-btn");
-    // ピルの内側にある2つは本便では変更していない。値を記録に残す（design §7）。
+    const karteToggle = await measure(".karte-toggle-btn");
+    // 本便で変更していないものも値を記録に残す（design §7）。
+    //   .send-attach-btn … 送信ピルの内側（44px にするとピルが膨らむ）
+    //   .inbox-header-menu-btn … 実機実測で 15x38dp。幅が足りないのは画面右端で
+    //     切れているため（ヘッダの中身が 360dp に収まっていない）。寸法ではなく
+    //     ヘッダの中身を減らす判断が必要なので本便では触らない。
     const attach = await measure(".send-attach-btn");
+    const headerMenu = await measure(".inbox-header-menu-btn");
 
     await testInfo.attach("touch-targets", {
-      body: JSON.stringify({ 絞り込み: filter, 送信: sendBtn, スレッドの操作: threadAction, "添付（この便では未対応）": attach }, null, 2),
+      body: JSON.stringify(
+        {
+          絞り込み: filter,
+          送信: sendBtn,
+          顧客情報: karteToggle,
+          "添付（この便では未対応）": attach,
+          "三点メニュー（この便では未対応・右端で切れている）": headerMenu,
+        },
+        null,
+        2,
+      ),
       contentType: "application/json",
     });
 
@@ -355,9 +370,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(sendBtn, "送信ボタンが見つからない").not.toBeNull();
     expect(sendBtn!.w, "送信の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
     expect(sendBtn!.h, "送信の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
-    expect(threadAction, "スレッドの操作ボタンが見つからない").not.toBeNull();
-    expect(threadAction!.w, "スレッドの操作の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
-    expect(threadAction!.h, "スレッドの操作の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(karteToggle, "顧客情報ボタンが見つからない").not.toBeNull();
+    // 幅はアイコンと文言に任せるため高さだけを基準にする
+    expect(karteToggle!.h, "顧客情報ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
   });
 
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
