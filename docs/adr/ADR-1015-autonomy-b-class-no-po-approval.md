@@ -17,7 +17,7 @@
      - `migrations/`・`scripts/`・`ops/`・`tools/`・`.github/`・`backend/app/auth/` などの危険パスを触る。
      - ファイル名に auth／session／permission／payment などの語を含む（見るのは `frontend/src/`・`backend/app/`・リポジトリ直下だけ）。
      - 正本の文書（ADR・STANDARD-WORKFLOW・CLAUDE.md／AGENTS.md・ai-agents・specs の ideal-state／kgi）を触る。
-     - `.sql` を含む。
+     - .sql を含む。
      - 新機能（PR タイトルが feat、または今は無い状態を作るもの）である。
      - 新しい画面・API・表のファイルを足す。
      - ADR-1003 の7つの例外に当たる。
@@ -27,7 +27,7 @@
    - **B-2 文言・見た目**: 既に在る文言・CSS・配置だけを変え、変更は `frontend/src/` の中に限る。`frontend/api-contract/` と新しい画面ファイルは含まない。
    - **B-3 テスト・文書**: テストと、`docs/` のうち正本でないものだけを触る。
    - **L 台帳**: `.claude-pipeline/` だけを触る。
-2. B 区分（B-1・B-2・B-3・L）は、KGI の PO 承認と設計の PO 承認を取らない。AI が KGI・recon・design を書いて記録に残し、Fable 審査が APPROVE なら実装へ進む。審査の記録は `docs/handoff/<仕事名>/review-fable.md` に置く。
+2. B 区分（B-1・B-2・B-3・L）は、KGI の PO 承認と設計の PO 承認を取らない。AI が KGI・recon・design を書いて記録に残し、Fable 審査が APPROVE なら実装へ進む。審査の記録は docs/handoff/<仕事名>/review-fable.md に置く。
 3. B 区分でも、次は今までどおりとする。
    - 必須 CI。
    - Reviewer・Evaluator。
@@ -49,7 +49,7 @@
 
 - **PO の手間**: 今は1件ごとに、KGI と実装前の2回、PO の承認が要る（STANDARD-WORKFLOW.md:23・:79、CLAUDE.md:72）。PO の願いは、危険でない変更を AI に任せ、PO は危険な所だけを判断することである。
 - **変えるのは文書だけで足りる**: KGI 承認と設計承認を見ているのは文書の規則だけで、CI もフックも見ていない（`docs/handoff/devflow-autonomy-b/recon.md` の実物確認。Fable も同じことを確かめた）。そのため、CI・フック・許可は緩めなくてよい。
-- **基準値は実測した**: 9/22〜10/6 にマージされた PR 284 件を、この区分で分けた。結果は A 186・B 55・L 38・どれにも当たらない 5 件（直す前の版で分けた値。リポジトリの classify.py は直した版で、A 185・B 56 になる。移る #3980・#3992・#4006 は docs だけか `.sql` を含むもので、下の分母 50 件には入らない）。
+- **基準値は実測した**: 9/22〜10/6 にマージされた PR 284 件を、この区分で分けた。結果は A 186・B 55・L 38・どれにも当たらない 5 件（直す前の版で分けた値。リポジトリの classify.py は直した版で、A 185・B 56 になる。移る #3980・#3992・#4006 は docs だけか .sql を含むもので、下の分母 50 件には入らない）。
   - B のうちコードを触るもの 50 件では、それが原因の fix PR が 2 件あった（#3736・#3763）。2/50＝4.0%。
   - ログインに関わるファイル9本は、すべて A に入った。
   - 根拠は `docs/handoff/devflow-autonomy-b/baseline.md` にある。
@@ -84,4 +84,4 @@ zenn に貼られた記事（個人の SaaS）では、人は危険な所だけ�
   - PR 本文の「区分」「PO承認」欄と、分けた結果が合っているか（S2）。
   - fix PR の原因の判定（S3）。
   - PO の返答回数（S1）。
-- 監査の記録は `docs/handoff/devflow-autonomy-b/audit-YYYY-MM-DD.md` に残す。
+- 監査の記録は docs/handoff/devflow-autonomy-b/audit-YYYY-MM-DD.md に残す。

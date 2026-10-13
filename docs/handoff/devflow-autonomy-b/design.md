@@ -42,7 +42,7 @@
 | 段 | 今 | 変更後 |
 |---|---|---|
 | KGI | PO 承認 | AI が書いて記録に残す（承認は取らない） |
-| 設計 | 実装前に PO の明示承認 | recon/design を AI が書き、Fable 審査が APPROVE なら実装へ進む。審査記録は `docs/handoff/<仕事名>/review-fable.md` |
+| 設計 | 実装前に PO の明示承認 | recon/design を AI が書き、Fable 審査が APPROVE なら実装へ進む。審査記録は docs/handoff/<仕事名>/review-fable.md |
 | 実装〜PR | 同じ | 同じ。PR 本文に「区分」「PO承認」「Fable 審査記録のパス」の3欄を必須にする |
 | CI の順序 | 同じ | PR を作った直後は process-artifacts gate が赤になる（GO 原文に PR 番号が要るため。check-process-artifacts.js:373-379）。Reviewer APPROVE → Opus が GO 記録を転記 → 緑。PO は緑になってからマージする |
 | GO | ADR-1003 で Opus | 同じ |
@@ -55,8 +55,8 @@
 - 変更ファイルが1つでも次に当たる
   - ディレクトリ: `migrations/`・`scripts/`・`ops/`・`tools/`・`backend/tools/`・`backend/app/tools/`・`backend/app/tasks/`・`backend/scripts/`・`frontend/scripts/`・`frontend/api-contract/`・`.github/`・`backend/app/auth/`
   - ファイル名の語（大文字と小文字は区別しない。見るのは `frontend/src/`・`backend/app/`・リポジトリ直下のファイルだけ）: auth・oauth・session・permission・firebase・credential・secret・password・payment・billing・stripe のどれかを含む。token を含む（`.css` は除く）
-  - 正本: `docs/adr/`・`docs/STANDARD-WORKFLOW.md`・各 `CLAUDE.md`/`AGENTS.md`・`docs/ai-agents/`（lessons.d を除く）・`docs/specs/**/ideal-state.md`・`docs/specs/**/kgi.md`（全階層）
-  - 拡張子が `.sql` のファイル（`docs/` の下も含む。本番データの変更記録のため。review-fable.md LOW-3）
+  - 正本: `docs/adr/`・`docs/STANDARD-WORKFLOW.md`・各 `CLAUDE.md`/`AGENTS.md`・`docs/ai-agents/`（lessons.d を除く）・docs/specs/**/ideal-state.md・docs/specs/**/kgi.md（全階層）
+  - 拡張子が .sql のファイル（`docs/` の下も含む。本番データの変更記録のため。review-fable.md LOW-3）
   - deploy・docker-compose を名前に含むファイル（見る範囲は上と同じ。`.github/` の下は上の条件ですでに A）
 - 新機能（PR タイトルが feat、または design.md の目的が「今は無い状態を作る」もの）
 - 新しいファイルが `frontend/src/pages/`・`backend/app/routers/`・`backend/app/models` に追加される（新しい画面・API・表になりうるため）
@@ -77,9 +77,9 @@
 ## 4. 監査（S1〜S3）
 - 実行者: Opus。週1回、毎週月曜。agent-console の定期実行に載せるかは、別便で PO に確認する
 - 手順: `gh pr list --state merged --base main` → 変更ファイルを取る → §3 のパス条件で分類する（classify.py。§3 と同じ条件）→ 本文の「区分」「PO承認」欄と突き合わせる（S2）→ B-1・B-2 の7日以内の後続 fix の diff を読み、「原因／別件／判定不能」に分ける（S3）→ PO の返答回数を数える（S1）
-- 保存先: `docs/handoff/<仕事名>/audit-YYYY-MM-DD.md`
+- 保存先: docs/handoff/<仕事名>/audit-YYYY-MM-DD.md
 - PO への提示: 3行（A の承認なしマージ件数／B-1・B-2 の原因 fix の件数と率・基準値 4.0%・B が原因の EMERGENCY 件数／判定）
-- 空振り実行: 試行前の版 classify-v5.py（作業用・リポジトリ外）で 9/22〜10/6 の284件を分類した。A 186・B 55・L 38・どちらでもない 5。認証9本はすべて A（baseline.md）。リポジトリの classify.py はこれを §3 に合わせて4点直した版（deploy・docker-compose の語を見る範囲、token の除外から `styles/` を消す、`.sql` は A、入力のファイルと期間は引数）。直すと、docs だけの #3980・#3992 が A から B-3 に、`.sql` を含む #4006 が B-3 から A に移る見込み。S3 の分母（B-1・B-2 の50件）は変わらない。実際の件数は文書 PR の作業で実行して PR 本文に書く
+- 空振り実行: 試行前の版 classify-v5.py（作業用・リポジトリ外）で 9/22〜10/6 の284件を分類した。A 186・B 55・L 38・どちらでもない 5。認証9本はすべて A（baseline.md）。リポジトリの classify.py はこれを §3 に合わせて4点直した版（deploy・docker-compose の語を見る範囲、token の除外から `styles/` を消す、.sql は A、入力のファイルと期間は引数）。直すと、docs だけの #3980・#3992 が A から B-3 に、.sql を含む #4006 が B-3 から A に移る見込み。S3 の分母（B-1・B-2 の50件）は変わらない。実際の件数は文書 PR の作業で実行して PR 本文に書く
 
 ## 5. 直す文書（PO の OK 後・文書だけの PR。正本のパスを含むため GO 記録が要る。Opus が ADR-1003 で発行する）
 | 文書 | 直し方 |
@@ -116,5 +116,5 @@ PO が「自律停止」と言えば、元の規則に戻る。試行期間は14
 ## 維持の仕組み
 
 - 守り手: docs/handoff/devflow-autonomy-b/classify.py（毎週月曜に Opus が実行し、マージ済み PR を分ける）
-- 監査の記録: `docs/handoff/devflow-autonomy-b/audit-YYYY-MM-DD.md`。PR 本文の「区分」「PO承認」欄と分けた結果の突き合わせ（S2）、原因 fix の判定（S3）、PO の返答回数（S1）を残す
+- 監査の記録: docs/handoff/devflow-autonomy-b/audit-YYYY-MM-DD.md。PR 本文の「区分」「PO承認」欄と分けた結果の突き合わせ（S2）、原因 fix の判定（S3）、PO の返答回数（S1）を残す
 - 止め方: PO が「自律停止」と言えば ADR-1015 より前の規則に戻る。14日目の成績表で、続けるか戻すかを PO が決める
