@@ -1454,7 +1454,7 @@
       "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier"
     },
-    "expiryWarning": "Offers are automatically removed 18 hours after they are posted.",
+    "expiryWarning": "Showing offers within {{hours}} hours of the LINE post.",
     "filter": {
       "allTypes": "All types",
       "allOfferTypes": "Stock & pre-order",
@@ -1483,7 +1483,9 @@
       "unitPrice": "Unit price",
       "quantity": "Qty",
       "supplier": "Supplier",
-      "releaseDate": "Release date"
+      "releaseDate": "Release date",
+      "note": "Note",
+      "ship": "Shipping"
     },
     "condition": {
       "shrink": "Shrink-wrapped",
@@ -1510,6 +1512,17 @@
       "case": "Case",
       "set": "Set"
     },
+    "settings": {
+      "open": "Open inventory settings",
+      "title": "Inventory settings",
+      "mergeSamePost": "Merge rows from the same post",
+      "mergeSamePostNote": "Rows from the same post, product and condition are shown as one row.",
+      "on": "ON",
+      "off": "OFF"
+    },
+    "mergedCount": "{{count}} rows",
+    "windowUnlimited": "Showing offers with no posting time limit.",
+    "distributionOff": "Distribution is turned off, so nothing is shown.",
     "noResults": "No matching inventory",
     "pageOf": "Page {{page}} / {{total}} ({{count}} items)",
     "sortAsc": "▲",

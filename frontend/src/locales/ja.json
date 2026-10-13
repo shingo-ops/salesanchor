@@ -1454,7 +1454,7 @@
       "subtitle": "仕入元の現在オファーを表示します。",
       "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索"
     },
-    "expiryWarning": "オファーは掲載から18時間で自動的に削除されます。",
+    "expiryWarning": "LINE の投稿から {{hours}} 時間以内のオファーを表示しています。",
     "filter": {
       "allTypes": "全種別",
       "allOfferTypes": "在庫・予約すべて",
@@ -1483,7 +1483,9 @@
       "unitPrice": "単価",
       "quantity": "数量",
       "supplier": "仕入元",
-      "releaseDate": "発売日"
+      "releaseDate": "発売日",
+      "note": "備考",
+      "ship": "発送"
     },
     "condition": {
       "shrink": "シュリンク付き",
@@ -1510,6 +1512,17 @@
       "case": "Case",
       "set": "セット"
     },
+    "settings": {
+      "open": "在庫表の設定を開く",
+      "title": "在庫表の設定",
+      "mergeSamePost": "同じ投稿の行をまとめる",
+      "mergeSamePostNote": "同じ投稿・同じ商品・同じ状態の行を1行にまとめて表示します。",
+      "on": "ON",
+      "off": "OFF"
+    },
+    "mergedCount": "{{count}}行分",
+    "windowUnlimited": "掲載期間の制限なしで表示しています。",
+    "distributionOff": "配信設定がオフのため表示できません。",
     "noResults": "該当する在庫がありません",
     "pageOf": "{{page}} / {{total}} ページ（全 {{count}} 件）",
     "sortAsc": "▲",
