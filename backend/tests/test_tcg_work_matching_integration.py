@@ -330,6 +330,12 @@ def migrate(cursor):
     # TCG_SCHEMA を差し替えた tenant 側の attempts にも同じ列を足す。
     cursor.execute((MIGRATIONS / "20261012_200000_add_extraction_attempts_thought_summaries.sql").read_text())
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
+    # 発送日の専用列（v102）: ship_ja・ship_en と tcg_note_master.label_template_en（本番の public 固定の migration をそのまま）。
+    cursor.execute((MIGRATIONS / "20261013_140000_add_analysis_results_ship_ja_ship_en.sql").read_text())
+    cursor.execute((MIGRATIONS / "20261013_140100_add_tcg_note_master_label_template_en.sql").read_text())
+    # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
+    cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
+    cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
 
 
 @pytest.fixture
@@ -729,6 +735,9 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
         # 思考要約: on_response の UPDATE が thought_summaries を書くため、tenant_004 の attempts にも列が要る。
         cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
+        # 発送日の専用列（v102）: tenant_004 の analysis_results・extraction_items にも列が要る（_merge_supplier_products が読む）。
+        cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
+        cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]

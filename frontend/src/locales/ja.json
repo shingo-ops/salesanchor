@@ -4552,6 +4552,7 @@
       "excludeKeywords": "除外キーワード",
       "searchPattern": "検索パターン",
       "labelTemplate": "ラベルテンプレート",
+      "labelTemplateEn": "英語の書式（REGEX）",
       "addNote": "備考ルール追加",
       "editNote": "備考ルール編集",
       "deleteConfirm": "この備考ルールを削除しますか？",

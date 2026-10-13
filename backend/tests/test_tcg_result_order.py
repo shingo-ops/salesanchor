@@ -101,7 +101,7 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
     assert [r[7] for r in output] == expected
-    assert all(len(r) == 13 for r in output)
+    assert all(len(r) == 14 for r in output)
     assert all("sort_ordinal" not in r for r in imported["items"])
     assert Counter(r["extraction_item_id"] for r in reviewed["items"]) == Counter(e["eid"] for e in entries)
     assert Counter(r["id"] for r in imported["items"]) == Counter(e["eid"] for e in entries)
@@ -325,7 +325,7 @@ def _single_output_row(pg, keywords):
          quantity_normalized=3, note_ja=None)
     _, _, output = fetch(pg, link_import(pg, []))
     assert len(output) == 1
-    assert len(output[0]) == 13
+    assert len(output[0]) == 14
     return output[0]
 
 
@@ -346,6 +346,7 @@ def test_existing_twelve_columns_unchanged(pg):
         "Quantity", "Note_JA", "Status", "Release Date", "Series", "提供者",
     ]
     assert distribution.DIST_HEADERS[12] == "Search Keywords"
+    assert distribution.DIST_HEADERS[13] == "Ship_JA"
     assert row[1:4] == ["TM", "Keyword title", "Test Title"]
     assert row[4:7] == ["Sealed box", "1000", "3"]
     assert row[9] == "2026-01-02"
