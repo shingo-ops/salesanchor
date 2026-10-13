@@ -18,6 +18,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Drawer } from "../../components/Drawer";
+import { TextFieldControl } from "../../components/TextField";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -431,7 +432,7 @@ export default function InventoryPage() {
         <ContentToolbar
           left={
             <>
-              <input
+              <TextFieldControl
                 type="search"
                 className="field-h-md field-w-md"
                 placeholder={t("inventory.view.searchPlaceholder")}
