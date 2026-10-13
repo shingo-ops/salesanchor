@@ -196,3 +196,98 @@ def test_t4_off_count_equals_distribution_count_and_on_differs_by_merged_rows(pg
     assert all(r["merged_count"] == 1 for r in off)
     assert len(off) - len(on) == sum(r["merged_count"] - 1 for r in on) == 1
     assert [r["sort_ord"] for r in on] == sorted(r["sort_ord"] for r in on)
+
+
+# --- 在庫表 GET /inventory を1文にする便 --------------------------------------------------------------------------
+
+_VIEW_CASES = [
+    {},
+    {"sort": "unit_price", "order": "asc"},
+    {"tcg_type_filter": True},
+    {"page": 99},
+]
+
+
+def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
+                          limit: int, offset: int):
+    """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
+    def rows_sql(m: bool) -> str:
+        inner_rows = distribution.distribution_rows_sql(**_ARGS, merge_same_post=m)
+        return ("SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
+                f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id")
+
+    inner = rows_sql(merge)
+    total = session.execute(text(f"SELECT COUNT(*) FROM ({inner}) d {where}"), params).scalar_one()
+    page_rows = [dict(r) for r in session.execute(
+        text(f"SELECT d.* FROM ({inner}) d {where} ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC "
+             "LIMIT :limit OFFSET :offset"), {**params, "limit": limit, "offset": offset}).mappings().all()]
+    facets = {tuple(r[k] for k in ("supplier_id", "provider", "category", "condition", "unit_canonical"))
+              for r in session.execute(text(
+                  "SELECT DISTINCT d.supplier_id, d.provider, d.category, d.condition, d.unit_canonical "
+                  f"FROM ({rows_sql(False)}) d"), {}).mappings().all()}
+    return int(total), page_rows, facets
+
+
+def _new_single_statement(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
+                          limit: int, offset: int):
+    from app.routers.inventory_offers import _build_inventory_view_sql
+
+    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=merge)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=merge, where=where, sort_col=sort_col,
+                                    order_dir=order_dir)
+    total, pages, facets = None, [], set()
+    for r in session.execute(text(sql), {**params, "limit": limit, "offset": offset}).mappings().all():
+        r = dict(r)
+        assert [k for k in r if k.startswith("__")] == ["__kind", "__total", "__ord", "__f_supplier_id",
+                                                        "__f_provider", "__f_category", "__f_condition", "__f_unit"]
+        if r["__kind"] == "total":
+            total = int(r["__total"])
+        elif r["__kind"] == "page":
+            pages.append((r["__ord"], {k: v for k, v in r.items() if not k.startswith("__")}))
+        else:
+            facets.add((r["__f_supplier_id"], r["__f_provider"], r["__f_category"], r["__f_condition"], r["__f_unit"]))
+    pages.sort(key=lambda t: t[0])
+    return total, [p for _, p in pages], facets
+
+
+@pytest.mark.parametrize("merge", [True, False])
+@pytest.mark.parametrize("case", _VIEW_CASES)
+def test_single_statement_equals_the_previous_three_statements(pg, ids, merge, case):
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_view_filters
+
+    _seed_mixed(pg, ids)
+    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    with Session(pg[1]) as session:
+        if case.get("tcg_type_filter"):
+            none["tcg_type"] = session.execute(text("SELECT tcg_type FROM public.products WHERE id = :i"),
+                                               {"i": ids.p1}).scalar_one()
+        conditions, params = _build_view_filters(**none)
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        page = case.get("page", 1)
+        kw = {"merge": merge, "where": where, "params": params,
+              "sort_col": _SORT_COLUMNS.get(case.get("sort", "release_date"), "d.japanese_title"),
+              "order_dir": "ASC" if case.get("order", "desc") == "asc" else "DESC", "limit": 1, "offset": (page - 1)}
+        old = _old_three_statements(session, **kw)
+        new = _new_single_statement(session, **kw)
+    assert new == old
+    if case.get("page") == 99:  # 最終頁+1: items は空だが total は正しい
+        assert new[1] == [] and new[0] > 0
+
+
+def test_facets_are_not_affected_by_filters(pg, ids):
+    from app.routers.inventory_offers import _build_view_filters
+
+    _seed_mixed(pg, ids)
+    base = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    results = []
+    with Session(pg[1]) as session:
+        for override in ({}, {"condition": "Case"}, {"qty_min": 4}):
+            conditions, params = _build_view_filters(**{**base, **override})
+            where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+            results.append(_new_single_statement(
+                session, merge=True, where=where, params=params, sort_col="d.japanese_title", order_dir="ASC",
+                limit=50, offset=0))
+    assert results[0][2] and all(r[2] == results[0][2] for r in results)
+    assert results[1][0] < results[0][0]  # 絞り込みで total だけが減る
