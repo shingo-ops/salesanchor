@@ -1,4 +1,7 @@
 /* GAS item-comparison-readonly.css — readOnly 2-column override (Gemini | System) */
+/* 全体の余白（元 supplier-detail-view.css から移動） */
+.item-comparison--readonly { padding: var(--space-3); }
+
 /* stylelint-disable-next-line no-descending-specificity -- intentional: overrides 3-col from analysis-review.css */
 .item-comparison--readonly .item-head-grid,
 .item-comparison--readonly .aligned-fields,
@@ -7,3 +10,80 @@
   grid-template-columns: minmax(300px, 1fr) minmax(320px, 1.05fr);
   column-gap: var(--space-3);
 }
+
+/* ItemComparison の出どころ・システム側メタ行（元 source-raw-pane.css） */
+.comparison-metadata-row {
+  display: grid;
+  grid-template-columns: var(--comparison-label-col-w) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.comparison-metadata-row b {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.comparison-metadata-value {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-1);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── ItemComparison field styles (analysis-review.css is loaded only by the old review page)
+   These mirror .tcg-analysis-review rules scoped to .item-comparison--readonly
+   (moved from supplier-detail-view.css so Drawer/story also get them). ── */
+
+/* GAS style.css h3 header row（確認スライドの原文見出しも同じ見た目） */
+.review-item-source h3,
+.item-comparison--readonly .item-head-grid h3 {
+  font-size: var(--font-xs);
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.item-comparison--readonly .inline-badges {
+  display: inline-flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+.item-comparison--readonly .aligned-fields { align-items: stretch; }
+
+/* GAS style.css — label:value row inside each comparison field */
+.item-comparison--readonly .comparison-field {
+  display: grid;
+  grid-template-columns: var(--comparison-label-col-w) minmax(0, 1fr);
+  gap: var(--space-2);
+  min-height: var(--space-10);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+}
+
+.item-comparison--readonly .comparison-field b,
+.item-comparison--readonly .comparison-extra b {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.item-comparison--readonly .comparison-field small,
+.item-comparison--readonly .comparison-extra small {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--font-2xs);
+  margin-top: var(--space-1);
+}
+
+/* extra metadata area at bottom of each item */
+.item-comparison--readonly .item-extra-grid { padding-top: var(--space-2); }
+
+.item-comparison--readonly .comparison-extra {
+  display: grid;
+  grid-template-columns: var(--comparison-label-col-w) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.item-comparison--readonly .system-extra { display: grid; gap: var(--space-2); }

@@ -51,3 +51,38 @@ describe("ReviewItemDrawer gap suspect", () => {
     expect(screen.queryByText(/Gap lines/)).toBeNull();
   });
 });
+
+describe("ReviewItemDrawer layout", () => {
+  const withRaw = (span: string): ReviewDrawerItem => ({
+    ...makeItem("pid_unresolved", false),
+    raw_text: "line one\nline two\nline three\nline four",
+    gemini: { span },
+  });
+
+  it("shows the source text with the block range marked", () => {
+    renderDrawer(withRaw("L2-3"));
+
+    expect(screen.getByText("Source text")).toBeTruthy();
+    expect(screen.getByText("line two")).toBeTruthy();
+    const marked = Array.from(document.querySelectorAll('[data-range="block"]')).map((el) => el.getAttribute("data-line-number"));
+    expect(marked).toEqual(["2", "3"]);
+  });
+
+  it("marks nothing when the span cannot be read", () => {
+    renderDrawer(withRaw("unknown"));
+
+    expect(document.querySelectorAll('[data-range="block"]').length).toBe(0);
+  });
+
+  it("opens the drawer in the wide size", () => {
+    renderDrawer(withRaw("L1"));
+
+    expect(screen.getByTestId("supplier-drawer").className).toContain("comp-drawer-panel--wide");
+  });
+
+  it("shows the fix heading", () => {
+    renderDrawer(withRaw("L1"));
+
+    expect(screen.getByText("Fix")).toBeTruthy();
+  });
+});

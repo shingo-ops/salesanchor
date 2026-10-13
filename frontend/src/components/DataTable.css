@@ -55,6 +55,18 @@
   padding: 0 var(--space-3);
 }
 
+/* ellipsis 列（1行に収め、はみ出しは …）。中の div が実際に省略する */
+.comp-table__td--ellipsis {
+  white-space: nowrap;
+}
+
+.comp-table__cell-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: var(--comp-table-ellipsis-max-w);
+}
+
 /* ── 3. 密度バリアント (0,2,0) ── */
 .comp-table--compact .comp-table__th,
 .comp-table--compact .comp-table__td {
