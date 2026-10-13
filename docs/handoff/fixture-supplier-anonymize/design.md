@@ -1,7 +1,7 @@
 # Design: 在庫集計テスト用データの仕入元名を仮名に置き換える
 
 recon: `docs/handoff/fixture-supplier-anonymize/recon.md`
-対象 ADR: なし（PO 判断 2026-10-01・2026-10-13 に基づく。ADR 起案は不要と判断。理由：テストデータの表記のみの変更で、設計判断を伴わない）
+対象 ADR: ADR-099（在庫モデル。この fixture が検証する在庫集計の親 ADR。本変更はテストデータの表記のみで、ADR の判断は変えない）。仮名化そのものは PO 判断（2026-10-01・2026-10-13）に基づく
 
 ## 変更前後
 
@@ -22,13 +22,13 @@ recon: `docs/handoff/fixture-supplier-anonymize/recon.md`
 |実名が 0 件|`git diff origin/main...HEAD` と追加ファイルに対し、対応表の実名で `grep -F -f` して 0 件|
 |行数・列数が同じ|変更前後で CSV の行数（142/95/6/4）と列数（18/18/19/19）が同じ|
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 該当なし。理由：自社の社外秘情報を自社 repo のテストデータから外す作業で、外部の導入事例が設計を左右しない。
 
 ## 維持の仕組み
 
-守り手：今回のテスト（`backend/tests/test_inventory_aggregation.py` のゴールデンテスト）。仮名に置き換えても入力と期待値の対応がずれれば即座に落ちる。新しい実 export を fixture に足すときは、仮名化してから置く（`backend/tests/fixtures/inventory_aggregation/README.md` に明記）。
+守り手: 今回のテスト（`backend/tests/test_inventory_aggregation.py` のゴールデンテスト）。仮名に置き換えても入力と期待値の対応がずれれば即座に落ちる。新しい実 export を fixture に足すときは、仮名化してから置く（`backend/tests/fixtures/inventory_aggregation/README.md` に明記）。
 
 ## 戻し方
 
