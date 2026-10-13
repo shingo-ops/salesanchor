@@ -1,6 +1,7 @@
 # 発送日欄の未訳10行の整理 — 設計（草案・2026-10-13）
 
 状態：設計案作成済み・Fable 再審査 APPROVE（2026-10-14、/tmp/CC報告ファイル/ship_cleanup_design_review2.txt）・PO の方針 y と実装着手 y 済み・便A 実装委任中・便B 未着手。
+recon: docs/handoff/ship-drop-category/recon.md ／ 対象ADR: ADR-155
 社外秘：仕入元の原文は書かない。下の例はすべて一般化した形。repo に移すときもこのままの粒度で。
 
 ## 1. 目的と成功条件
@@ -96,4 +97,5 @@ dryrun は前回の commit と同じ157ジョブ全部で行い（148行が変�
 - 審査：PO 方針（2026-10-12）により設計審査は Fable（architect, model fable）に依頼する。上の自己審査は下書き。
 
 ## 維持の仕組み
+守り手: backend/tests/test_tcg_keyword_matching.py（build_ship_labels の捨て札3分岐と drop 省略時の従来動作を CI の pytest で守る）と backend/tests/test_line_analysis_v102_svc.py（drop キーが extract_items に渡らないことを守る）。マスタの中身（どの言い方を捨てるか）は人手で守る：管理画面の備考マスタ一覧で区分「発送欄除外」を見て直す。
 新しい言い方が出たら、マスタに行を足すだけで済む（コード変更不要）。未訳行の件数は、当て直しのたびに「ship_ja あり・ship_en なし」の件数で見る。
