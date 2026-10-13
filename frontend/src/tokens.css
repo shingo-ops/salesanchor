@@ -425,6 +425,8 @@
   --input-width-weight:    80px;   /* 重量入力フィールド */
   --input-width-year:      90px;   /* 年・単価入力フィールド */
   --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
+  --input-width-country-code:    80px;  /* 国コード入力フィールド (FedEx 見積) */
+  --input-width-shipping-weight: 100px; /* 発送重量入力フィールド (FedEx 見積) */
   --input-width-month:     60px;   /* 月入力フィールド */
 
   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */
