@@ -35,16 +35,16 @@
 担当には生出力だけを返させる。長い待ち（CI など）は担当にさせず、期限を決めて自分で確認する。担当がフックや自動判定に止められたら、言い換えず全停止して事実を報告させる。
 
 ### 手順（順序がそのまま安全の条件）
-0. `~/.claude/logs/permission-maintenance-pending.json` が残っていれば、`python3 -I routine/sm_apply.py recover` を実行する（書かれた `SM-` の文1件だけを外す。settings.json 全体は戻さない）。台帳に「結果=戻した」の行を足してから始める。
-1. `python3 -I routine/sm_count.py` で過去7日の停止を形ごとに数える（試験の時間帯は自動で除く）。読み取りだけ。まず、前回以降に PO が autoMode を変えていないか台帳と照合し、変えていたら source=PO の行を先に追記する（追記がすむまで自動の変更はしない）。
-2. 設計 §5-3 の基準で候補を作る。足す条件: 入口が permission-denied・同じ形が7日で5件以上・`python3 -I routine/sm_check_entry.py --text "<文>"` が合格・1回3件まで。外す条件は §5-3。判断がつかないものは「保留」。
+0. `~/.claude/logs/permission-maintenance-pending.json` が残っていれば、`python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py recover` を実行する（書かれた `SM-` の文1件だけを外す。settings.json 全体は戻さない）。台帳に「結果=戻した」の行を足してから始める。
+1. `python3 -I docs/handoff/design-approval-ticket/routine/sm_count.py` で過去7日の停止を形ごとに数える（試験の時間帯は自動で除く）。読み取りだけ。まず、前回以降に PO が autoMode を変えていないか台帳と照合し、変えていたら source=PO の行を先に追記する（追記がすむまで自動の変更はしない）。
+2. 設計 §5-3 の基準で候補を作る。足す条件: 入口が permission-denied・同じ形が7日で5件以上・`python3 -I docs/handoff/design-approval-ticket/routine/sm_check_entry.py --text "<文>"` が合格・1回3件まで。外す条件は §5-3。判断がつかないものは「保留」。
 3. 報告書(docs/handoff/design-approval-ticket/permission-reports/YYYY-MM-DD.md)と、台帳の「予定」行(結果=未適用)を作り、文書 PR を出す。報告書には足す文の全文・根拠の件数・代表例3件(伏せ字)を入れる。
 4. Fable が最終の head を審査する。APPROVE が出なければここで終える(変更しない)。
 5. 必須 CI が緑なら PR をマージする。マージできなければここで終える(変更しない)。
-6. `python3 -I routine/sm_apply.py add --text "<文>"`（外すときは `remove`）。バックアップ → pending.json → 変更の順で動く。そのあと main の scripts/dev/test-agent-hooks.sh で試験する。
-7. 試験が不合格なら、その `SM-` の文を外す(pending.json は残す)。
-8. 台帳に「結果」行(適用した／戻した、試験の結果、バックアップの場所)を追記する。文書 PR を出し、手順4・5と同じ条件でマージする。マージできたときだけ `python3 -I routine/sm_apply.py --clear-pending`。マージできなかったときは、その文を外して pending.json を残す(次の回の手順0で「戻した」行を記録する)。
-9. `python3 -I routine/sm_k1_k3.py`（K1 と K3）を実行する。不一致・変化ありなら、以後の自動の変更を止めて PO に報告する。問題がなければ `--k3 --save` で保護対象の値を保存する。
+6. `python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py add --text "<文>"`（外すときは `remove`）。バックアップ → pending.json → 変更の順で動く。そのあと main の scripts/dev/test-agent-hooks.sh で試験する。
+7. 試験が不合格なら、`python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py withdraw` で pending.json に書いた `SM-` の文1件だけを外す(pending.json は残り、withdrawn の日時が足される)。
+8. 台帳に「結果」行(適用した／戻した、試験の結果、バックアップの場所)を追記する。文書 PR を出し、手順4・5と同じ条件でマージする。マージできたときだけ `python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py --clear-pending`。マージできなかったときは、`sm_apply.py withdraw` でその文を外して pending.json を残す(次の回の手順0の `recover` は、文が既に無くても失敗せず pending.json を .done-<日時> に改名する。「戻した」行を記録する)。
+9. `python3 -I docs/handoff/design-approval-ticket/routine/sm_k1_k3.py`（K1 と K3）を実行する。不一致・変化ありなら、以後の自動の変更を止めて PO に報告する。問題がなければ `--k3 --save` で保護対象の値を保存する。
 
 ### 保留の扱い
 形がばらばら、または件数が4件以下のものは、報告書に「保留」として載せ、PO に1件ずつ y/n で聞く。勝手に足さない。

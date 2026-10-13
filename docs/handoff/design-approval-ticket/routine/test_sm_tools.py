@@ -69,7 +69,8 @@ def sha(text):
 def test_a():
     d = os.path.join(TMP, "a")
     NOW = "2026-10-13T00:00:00Z"
-    reason = "Reason: [Self-Modification] blocked"
+    reason = "[Self-Modification]"  # 本物の形（Reason: が付かない）
+    old_reason = "Reason: [Self-Modification] blocked"  # 旧形
     denied = []
     for i in range(5):  # 窓の外・7日以内: 数える
         denied.append({"ts": "2026-10-12T0%d:00:00Z" % i, "tool_name": "Bash",
@@ -78,6 +79,14 @@ def test_a():
     for i in range(2):  # 試験の時間帯: 除く
         denied.append({"ts": "2026-10-11T10:0%d:00Z" % i, "tool_name": "Bash",
                        "tool_input": {"command": "git push origin x"}, "reason": reason})
+    for i in range(3):  # 別の分類名: 別の形として数える
+        denied.append({"ts": "2026-10-12T1%d:00:00Z" % i, "tool_name": "Bash",
+                       "tool_input": {"command": "git push origin y"}, "reason": "[Auto-Mode Bypass]"})
+    denied.append({"ts": "2026-10-12T12:00:00Z", "tool_name": "Bash",  # 旧形 Reason: [X]
+                   "tool_input": {"command": "gh pr merge 1"}, "reason": old_reason})
+    for cmd in ("cd /w; git status", 'cd "/a b" && git status', "cd /w\ngit status"):  # cd の除き方
+        denied.append({"ts": "2026-10-12T13:00:00Z", "tool_name": "Bash",
+                       "tool_input": {"command": cmd}, "reason": "[Cd-Test]"})
     denied.append({"ts": "2026-10-01T00:00:00Z", "tool_name": "Bash",  # 7日より前: 除く
                    "tool_input": {"command": "git push origin x"}, "reason": reason})
     denied.append({"ts": "2026-10-12T09:00:00Z", "tool_name": "Bash",  # 理由なし
@@ -100,10 +109,16 @@ def test_a():
     record("(a) 同じ形の件数=5（試験の窓2件・古い1件を除く）", bool(push) and push["count"] == 5, out[:300] + err)
     record("(a) 理由なしは no explanation として別の形（1件）",
            shapes.get(("permission-denied", "no explanation", WORD_DEL), {}).get("count") == 1)
+    bypass = shapes.get(("permission-denied", "Auto-Mode Bypass", "git push"), {})
+    record("(a) 本物の形 [X]（Reason: なし）を拾う・別の分類は別の形（3件）", bypass.get("count") == 3, out[:300])
+    record("(a) 旧形 Reason: [X] も拾う（1件）",
+           shapes.get(("permission-denied", "Self-Modification", "gh pr"), {}).get("count") == 1)
+    record("(a) cd X; / cd \"引用符付き\" && / cd X+改行 を除いて同じ形（3件）",
+           shapes.get(("permission-denied", "Cd-Test", "git status"), {}).get("count") == 3, out[:300])
     record("(a) hook_blocked の形の件数=3（窓内1件・他の型1件を除く）",
            shapes.get(("hook_blocked", "pr-body-guard", "gh pr"), {}).get("count") == 3)
     got = (data.get("total_denied"), data.get("total_hook_blocked"), data.get("excluded_test_records"))
-    record("(a) 合計 denied=6・hook=3・除外=3", got == (6, 3, 3), str(got))
+    record("(a) 合計 denied=13・hook=3・除外=3", got == (13, 3, 3), str(got))
     record("(a) 代表例は最大3件・伏せ字（abc123 が出ない）",
            bool(push) and len(push["examples"]) == 3 and "abc123" not in out)
     rc, md, _ = run(COUNT, *base, "--format", "md")
@@ -134,6 +149,17 @@ def test_b():
     record("(b) 接頭辞が違う文は不合格", check("XX-2026-10-20-1: Allow running `git status` only.") != 0)
     record("(b) 日付の形が違う接頭辞は不合格", check("SM-2026-10-1-1: Allow running `git status` only.") != 0)
     record("(b) environment のホストのアドレスを含む文は不合格", check(GOOD + " Host " + DUMMY_HOST) != 0)
+    record("(b) 改行を含む文は不合格", check(GOOD + "\nSecond line.") != 0)
+    record("(b) | を含む文は不合格", check(GOOD + " a | b") != 0)
+    weak = os.path.join(d, "design-weak.md")  # 設計書の写しから ssh のバッククォートを外す
+    with open(DESIGN, encoding="utf-8") as f:
+        weak_text = f.read().replace("`" + WORD_SSH + "`", WORD_SSH, 1)
+    write(weak, weak_text)
+    rc, out, _ = run(CHECK, "--text", GOOD + " Uses " + WORD_SSH + " too.", "--design", weak, "--settings", settings)
+    record("(b) 設計書から語が抜けても最低限の一覧で不合格・警告が出る",
+           rc != 0 and "warnings" in out and "抜き出せなかった" in out, out[:400])
+    rc, out, _ = run(CHECK, "--text", GOOD, "--design", weak, "--settings", settings)
+    record("(b) 設計書の写しが欠けていても良い文は合格", rc == 0)
     rc, out, _ = run(CHECK, "--text", GOOD, "--design", os.path.join(d, "none.md"), "--settings", settings)
     record("(b) 設計書を読めないときは不合格に倒れる", rc != 0)
     rc, _o, _e = run(CHECK, "--design", DESIGN, "--settings", settings, stdin=GOOD)
@@ -265,6 +291,37 @@ def test_d():
     rc, _o, err = run(APPLY, "add", "--text", GOOD + " " + WORD_SSH, *common)
     record("(d) 禁止語を含む文の add は拒否・ファイル不変",
            rc == 1 and snapshot() == before and not os.path.exists(pending), err)
+    # withdraw: add → withdraw で settings は元と同一・pending は残り withdrawn 付き → recover で .done- 改名
+    for stale in glob.glob(pending + ".done-*"):
+        os.remove(stale)
+    rc, _o, _e = run(APPLY, "add", "--text", GOOD, *common)
+    rc2, out, err = run(APPLY, "withdraw", *common)
+    pend = {}
+    if os.path.isfile(pending):
+        with open(pending, encoding="utf-8") as f:
+            pend = json.load(f)
+    record("(d) add → withdraw で settings は元と同一(cmp)", rc == 0 and rc2 == 0
+           and filecmp.cmp(settings, original, shallow=False), out + err)
+    record("(d) withdraw: pending.json は残り withdrawn が付く", pend.get("statement") == GOOD and "withdrawn" in pend)
+    rc, out, err = run(APPLY, "recover", *common)
+    record("(d) withdraw 済みでも recover は成功し .done- に改名・settings は同一のまま",
+           rc == 0 and not os.path.exists(pending) and len(glob.glob(pending + ".done-*")) == 1
+           and filecmp.cmp(settings, original, shallow=False), out + err)
+    write_json(pending, {"statement": "keep two"})
+    rc, _o, err = run(APPLY, "withdraw", *common)
+    record("(d) pending に SM- でない文があれば withdraw は拒否・不変・pending 残る",
+           rc == 1 and snapshot() == before and os.path.exists(pending), err)
+    os.remove(pending)
+    rc, _o, err = run(APPLY, "add", "--text", GOOD + "\nline two", *common)
+    record("(d) 改行を含む文の add は拒否・不変", rc == 1 and snapshot() == before and not os.path.exists(pending), err)
+    rc, _o, err = run(APPLY, "add", "--text", GOOD + " a | b", *common)
+    record("(d) | を含む文の add は拒否・不変", rc == 1 and snapshot() == before and not os.path.exists(pending), err)
+    blocker = os.path.join(d, "blocker")
+    write(blocker, "x")
+    rc, _o, err = run(APPLY, "add", "--text", GOOD, "--settings", settings,
+                      "--pending", os.path.join(blocker, "pending.json"), "--design", DESIGN)
+    record("(d) pending を書けないとき REFUSED の1行だけ・traceback なし・settings 不変",
+           rc == 1 and "REFUSED" in err and "Traceback" not in err and snapshot() == before, err)
     write_json(pending, {"statement": "keep two"})
     rc, _o, err = run(APPLY, "recover", *common)
     record("(d) pending に SM- でない文があれば recover は拒否・不変", rc == 1 and snapshot() == before, err)

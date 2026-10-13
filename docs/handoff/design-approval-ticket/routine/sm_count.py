@@ -15,6 +15,7 @@ import datetime
 import json
 import os
 import re
+import shlex
 import sys
 
 LOG_DIR = os.path.expanduser("~/.claude/logs")
@@ -28,7 +29,7 @@ NO_EXPLANATION = "no explanation"
 MAX_EXAMPLES = 3
 EXAMPLE_LEN = 120
 
-REASON_RE = re.compile(r"Reason:\s*\[([^\]]+)\]")
+REASON_RE = re.compile(r"Reason:\s*\[([^\]]+)\]")  # 任意。無い形は BRACKET_RE で拾う
 BRACKET_RE = re.compile(r"\[([^\]]+)\]")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S*$")
 MASK_PATTERNS = [
@@ -102,15 +103,21 @@ def in_windows(ts, windows):
     return any(start <= ts <= end for start, end in windows)
 
 
+CD_PREFIX_RE = re.compile(r"""^cd\s+("[^"]*"|'[^']*'|[^\s;&]+)\s*(?:&&|;|\n)\s*""")
+
+
 def first_two_words(command):
-    """環境変数の代入と `cd … &&` を除いた最初の2語。"""
+    """環境変数の代入と `cd X &&` / `cd X;` / `cd X` + 改行を除いた最初の2語。"""
     text = command.strip()
     while True:
-        m = re.match(r"^cd\s+\S+\s*&&\s*", text)
+        m = CD_PREFIX_RE.match(text)
         if not m:
             break
         text = text[m.end():]
-    words = text.split()
+    try:
+        words = shlex.split(text)
+    except ValueError:
+        words = text.split()
     while words and ENV_ASSIGN_RE.match(words[0]):
         words = words[1:]
     return " ".join(words[:2]) if words else "(empty)"
@@ -127,10 +134,18 @@ def denied_command(rec):
 
 
 def denied_reason_class(rec):
-    """tool_input 以外の全項目(入れ子を含む)から `Reason: [X]` を探す。"""
+    """tool_input 以外の項目から分類名を探す。`Reason: [X]` を優先し、無ければ文字列項目の `[X]`。"""
     rest = {k: v for k, v in rec.items() if k != "tool_input"}
     m = REASON_RE.search(json.dumps(rest, ensure_ascii=False))
-    return m.group(1).strip() if m else NO_EXPLANATION
+    if m:
+        return m.group(1).strip()
+    for key, value in rest.items():
+        if key in ("ts", "tool_name") or not isinstance(value, str):
+            continue
+        m = BRACKET_RE.search(value)
+        if m:
+            return m.group(1).strip()
+    return NO_EXPLANATION
 
 
 def hook_reason_class(rec):

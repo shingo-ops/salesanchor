@@ -3,13 +3,14 @@
 
   add     --text T      足す（sm_check_entry.py に通してから）
   remove  --text T      外す（SM- の文に限る）
-  recover               pending.json に書いた SM- の文1件だけを外し、pending.json を .done-<日時> に改名
+  withdraw              pending.json に書いた SM- の文1件だけを外す（手順7・8用）。pending.json は残し "withdrawn" を足す
+  recover               pending.json に書いた SM- の文1件だけを外し（既に無ければ何もせず）、pending.json を .done-<日時> に改名
   --clear-pending       pending.json を消す（台帳の結果行がマージされたあとにだけ使う）
 
 settings.json 全体は戻さない。SM- でない文には触れない。
 既定のパスは本物（~/.claude/）。引数で差し替えられる。標準ライブラリだけ。
 
-使い方: python3 -I sm_apply.py <add|remove|recover|--clear-pending> [--text T] [--settings S]
+使い方: python3 -I sm_apply.py <add|remove|withdraw|recover|--clear-pending> [--text T] [--settings S]
          [--pending P] [--design D]
 終了コード: 0=成功 / 1=拒否・失敗 / 2=使い方の誤り
 """
@@ -113,32 +114,68 @@ def do_change(args, action):
             return fail("外す対象が無い")
         idx = allow.index(text)
         new_allow = allow[:idx] + allow[idx + 1:]
-    backup_path = backup(args.settings)
-    write_pending(args.pending, action, text, backup_path)
+    try:
+        backup_path = backup(args.settings)
+        write_pending(args.pending, action, text, backup_path)
+    except OSError as exc:
+        return fail("バックアップか pending.json を書けない（settings.json は不変）: %s" % exc)
     write_settings(args.settings, with_allow(settings, new_allow))
     print("%s: done. allow entries %d -> %d. backup=%s pending=%s"
           % (action, len(allow), len(new_allow), backup_path, args.pending))
     return 0
 
 
+def read_pending_statement(args):
+    with open(args.pending, encoding="utf-8") as f:
+        pending = json.load(f)
+    text = pending["statement"]
+    if not isinstance(text, str) or not text.startswith(SM_PREFIX):
+        raise ValueError("pending.json の文が SM- で始まらない。何も変えない")
+    return pending, text
+
+
+def remove_statement(args, text):
+    """allow から text を1件外す。外したら True。既に無ければ False。"""
+    settings = load_settings(args.settings)
+    allow = allow_list(settings)
+    if text not in allow:
+        return False
+    idx = allow.index(text)
+    backup(args.settings)
+    write_settings(args.settings, with_allow(settings, allow[:idx] + allow[idx + 1:]))
+    return True
+
+
+def do_withdraw(args):
+    if not os.path.isfile(args.pending):
+        return fail("pending.json が無い")
+    try:
+        pending, text = read_pending_statement(args)
+        removed = remove_statement(args, text)
+        write_json_file(args.pending, {**pending, "withdrawn": stamp()})
+    except (OSError, ValueError, KeyError) as exc:
+        return fail(str(exc))
+    print("withdraw: %s. pending kept: %s" % ("removed 1 entry" if removed else "entry not present", args.pending))
+    return 0
+
+
+def write_json_file(path, obj):
+    tmp = path + ".tmp-sm"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
 def do_recover(args):
     if not os.path.isfile(args.pending):
         return fail("pending.json が無い")
     try:
-        with open(args.pending, encoding="utf-8") as f:
-            text = json.load(f)["statement"]
-        settings = load_settings(args.settings)
-        allow = allow_list(settings)
+        _pending, text = read_pending_statement(args)
+        removed = remove_statement(args, text)
     except (OSError, ValueError, KeyError) as exc:
         return fail(str(exc))
-    if not isinstance(text, str) or not text.startswith(SM_PREFIX):
-        return fail("pending.json の文が SM- で始まらない。何も変えない")
-    if text in allow:
-        idx = allow.index(text)
-        write_settings(args.settings, with_allow(settings, allow[:idx] + allow[idx + 1:]))
-        print("recover: removed 1 entry (allow %d -> %d)" % (len(allow), len(allow) - 1))
-    else:
-        print("recover: entry not present; nothing removed")
+    print("recover: removed 1 entry" if removed else "recover: entry not present (already withdrawn); nothing removed")
     done = "%s.done-%s" % (args.pending, stamp())
     os.replace(args.pending, done)
     print("pending renamed to %s" % done)
@@ -155,7 +192,7 @@ def do_clear(args):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("command", nargs="?", choices=("add", "remove", "recover"))
+    ap.add_argument("command", nargs="?", choices=("add", "remove", "withdraw", "recover"))
     ap.add_argument("--clear-pending", action="store_true")
     ap.add_argument("--text")
     ap.add_argument("--settings", default=DEFAULT_SETTINGS)
@@ -168,9 +205,11 @@ def main(argv=None):
         return do_clear(args)
     if args.command in ("add", "remove"):
         return do_change(args, args.command)
+    if args.command == "withdraw":
+        return do_withdraw(args)
     if args.command == "recover":
         return do_recover(args)
-    ap.error("add / remove / recover / --clear-pending のどれかが要る")
+    ap.error("add / remove / withdraw / recover / --clear-pending のどれかが要る")
 
 
 if __name__ == "__main__":

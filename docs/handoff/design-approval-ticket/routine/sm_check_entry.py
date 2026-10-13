@@ -22,6 +22,15 @@ SECTION_HEADING = "### 5-2."
 QUOTE_START = "> Permission self-maintenance"
 PREFIX_RE = re.compile(r"^SM-\d{4}-\d{2}-\d{2}-\d+:")
 MAX_WORDS = 120
+# 設計書から抜き出せなかった語があっても落とさないための最低限の一覧（和集合で厳しい側に倒す）。
+# 危険語は連結して作り、このファイルに直書きしない。
+BUILTIN_FORBIDDEN = (
+    "Bash" + "(", ":" + "*", "ss" + "h", "ps" + "ql", "dock" + "er", "su" + "do", "gh " + "api",
+    "permit-" + "danger", "sec" + "ret", "tok" + "en", "pass" + "word", "cred" + "ential",
+    "." + "env", "." + "pem", "id_" + "ed25519", ".clas" + "prc", "~/." + "claude", "/." + "claude" + "/",
+    "set" + "tings", "ho" + "ok",
+)
+BUILTIN_UNIVERSAL = ("a" + "ny", "a" + "ll", "ev" + "ery", "regard" + "less")
 FORBIDDEN_MARK = "contains none of these strings:"
 UNIVERSAL_MARK = "universal wording ("
 HOST_RE = re.compile(
@@ -77,6 +86,13 @@ def environment_hosts(settings_path):
     return sorted(hosts)
 
 
+def merge_lists(extracted, builtin):
+    """和集合(大文字小文字を区別せず)。設計書から抜けた最低限の語を返す。"""
+    have = {w.lower() for w in extracted}
+    missing = [w for w in builtin if w.lower() not in have]
+    return list(extracted) + missing, missing
+
+
 def check(text, forbidden, universal, hosts):
     lowered = text.lower()
     results = []
@@ -84,6 +100,7 @@ def check(text, forbidden, universal, hosts):
     def add(name, ok, detail=""):
         results.append({"check": name, "ok": ok, "detail": detail})
 
+    add("single_line_no_pipe", not re.search(r"[\r\n|]", text), "改行と | を含まない")
     add("prefix", bool(PREFIX_RE.match(text)), "先頭が SM-YYYY-MM-DD-N: の形")
     words = len(text.split())
     add("max_words", words <= MAX_WORDS, "%d 語（上限 %d）" % (words, MAX_WORDS))
@@ -121,9 +138,16 @@ def main(argv=None):
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
         return 1
 
+    forbidden, missing_f = merge_lists(forbidden, BUILTIN_FORBIDDEN)
+    universal, missing_u = merge_lists(universal, BUILTIN_UNIVERSAL)
+    warnings = []
+    if missing_f or missing_u:
+        warnings.append("設計書 §5-2 から抜き出せなかった語が %d 件ある（最低限の一覧で補った）"
+                        % (len(missing_f) + len(missing_u)))
     results = check(text, forbidden, universal, hosts)
     ok = all(r["ok"] for r in results)
-    print(json.dumps({"ok": ok, "words": len(text.split()), "checks": results}, ensure_ascii=False, indent=2))
+    print(json.dumps({"ok": ok, "words": len(text.split()), "warnings": warnings, "checks": results},
+                     ensure_ascii=False, indent=2))
     return 0 if ok else 1
 
 
