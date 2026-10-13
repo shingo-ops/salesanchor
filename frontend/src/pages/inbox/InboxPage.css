@@ -1987,7 +1987,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
    InboxConversationListMobile.tsx 自体を出さないため、ここに @media は不要。
      ヘッダー全体の高さ 56dp               = --topbar-height
      タイトルの左余白 16dp                 = --space-4
-     タイトルの文字（漢字インク高さ19.0dp）  = --font-xl
+     タイトルの文字（漢字インク高さ19.0dp）  = --font-title-mobile（第3便で --font-xl から変更。字種をそろえた再測定の経緯は design カード §17 参照）
      ヘッダーのアイコン 44dp以上            = --size-icon-btn-lg
      検索欄の外枠 左右12dpずつ              = --space-3
      検索欄の高さ 48dp                     = --comp-btn-height-lg
@@ -2020,7 +2020,10 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   white-space: nowrap;
   text-overflow: ellipsis;
   margin: 0;
-  font-size: var(--font-xl);
+  /* 第3便（2026-10-14・PO決定）: --font-xl（20px）だと漢字インクが18.0dpで
+     お手本（通話画面の題字「電話」19.0dp）より1dp足りない。21px相当の
+     --font-title-mobile に変更（このヘッダー専用。他のページ見出しは変えない）。 */
+  font-size: var(--font-title-mobile);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.2;

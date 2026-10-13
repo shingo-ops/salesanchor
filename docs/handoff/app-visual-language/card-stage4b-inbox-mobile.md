@@ -657,7 +657,7 @@ PO 依頼（2026-10-14）: 「スクロールしてもヘッダーが固定さ�
 |---|---|---|---|
 | 1 | ヘッダーが `position: fixed` を使わず固定される | `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` に `position: sticky; top: 0;` を追加 | 修正済み（コードレビューで確認） |
 | 2 | 検索欄は固定しない（お手本と同じ） | `.inbox-mobile-search-row` は無変更 | 変更なしを確認済み |
-| 3 | 新規トークンを足していない | `var(--z-base)` と `var(--bg-surface)` のみ使用。新規トークンの追加なし | コードレビューで確認済み・§5 の token ratchet で機械確認 |
+| 3 | ヘッダー固定自体は新規トークンを足していない | `var(--z-base)` と `var(--bg-surface)` のみ使用。新規トークンの追加なし | コードレビューで確認済み・§5 の token ratchet で機械確認。**題字の文字サイズ（§17-8）は別件として1トークン新設した** |
 | 4 | 既存の7本の画面検査が壊れていない | `npx playwright test --list` で収集確認（この端末では実行不可のため構文確認のみ） | §6 に実行結果を記載 |
 | 5 | 新規テストを追加した | `inbox-single-column.spec.ts` に `スマホ: 一覧をスクロールしてもヘッダーが動かない` を新設 | 追加済み（§17-5） |
 | 6 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §6 に実行結果を記載 |
@@ -671,3 +671,45 @@ PO 依頼（2026-10-14）: 「スクロールしてもヘッダーが固定さ�
 1. **Playwright をこの端末で実行できない。** `npx playwright test --list` で構文とセレクタの収集は確認したが、実際に assertion が通るかは CI（x86）の初回実行で初めて分かる。
 2. **実機の画素比較は未実施。** sticky の挙動そのものはブラウザの標準機能だが、実機（Android Chrome）での手触り確認は本番反映後に別途行う必要がある。
 3. **`.inbox-left-panel` 自体が将来 `overflow` の設定を変えると sticky が効かなくなる。** `position: sticky` は祖先のスクロール文脈に依存するため、`.inbox-left-panel` の `overflow-y: auto` を変更する際はヘッダー固定への影響を確認する必要がある。
+
+### 17-8. 題字の文字サイズ（PO 決定・2026-10-14・字種をそろえて再測定）
+
+> この節は何か（専門用語なしの1行）: 受信箱の題字「受信箱」とお手本の題字を、同じ字種（漢字）で測り直したところ1dp足りなかったため、スマホの題字だけ専用のサイズに直した作業記録。
+
+**訂正（重要）**: §16-2 の表にある「ヘッダーのタイトルの文字サイズ 約20sp」および冒頭のコメント（第2便時点の `.inbox-mobile-header` 直前コメント）の「タイトルの文字（漢字インク高さ19.0dp）」は、**ロゴ画像を含む測定**から来ていた。チャット一覧の題字はロゴ画像（§16-2 注記「チャット一覧の題字はロゴ画像」参照）であり、漢字の文字そのものではない。そのため当方の漢字の題字と字種をそろえた比較になっていなかった。
+
+今回、お手本の**通話画面**の題字「電話」（漢字）と、当方の「受信箱」（漢字）を同じ方法（画素のインク高さ測定）で測り直した。
+
+| 対象 | インク高さ |
+|---|---|
+| お手本 通話画面の題字「電話」（漢字） | 19.0dp |
+| 当方 受信箱の題字「受信箱」（漢字・font-size 20px＝`--font-xl`） | 18.0dp |
+| （参考）お手本チャット一覧の題字はロゴ画像 | 21.0dp |
+
+字種をそろえた漢字どうしの比較では差は1dp（19.0 − 18.0）。当方は20pxでインク18.0dp＝比率0.90。お手本の19.0dpに合わせるには 19.0 ÷ 0.90 ≒ 21px（21pxなら18.9dpで一致）。**PO決定: お手本に合わせる（21px相当を新設）。**
+
+**実装**:
+
+| ファイル | 変更内容 |
+|---|---|
+| `frontend/src/tokens.css` | `--font-xl` の直後に `--font-title-mobile: 1.3125rem;`（21px）を新設。色トークンではないため `:root.force-dark` への追加は不要 |
+| `frontend/src/pages/inbox/InboxPage.css` | `.inbox-mobile-header-title` の `font-size` を `var(--font-xl)` から `var(--font-title-mobile)` に変更。**このヘッダー専用**で、他のページ見出し（`--font-xl` を使う他箇所）は変えていない |
+| `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` | `スマホ: 一覧の上にヘッダーが出て、検索欄が横幅いっぱいのピルになる` の `titleFontSize` 比較を `20` から `21` に変更 |
+
+**受け入れ基準**:
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | 新規トークンは `--font-title-mobile` の1個のみ | `git diff` で `frontend/src/tokens.css` の追加行を確認 | 1行のみ追加（コードレビューで確認） |
+| 2 | 色トークンではないので force-dark 側への追加は不要 | `npm run check:dark-parity` | `✅ ダークモード変数パリティチェック PASSED (134 変数すべて対応済み)` |
+| 3 | 使用箇所がヘッダーのタイトルのみ | `grep -rn "font-title-mobile" frontend/src` | `tokens.css`（定義）と `InboxPage.css`（`.inbox-mobile-header-title` のみ）の2箇所 |
+| 4 | 画面検査が新しい値（21px）に追従している | `inbox-single-column.spec.ts` の `titleFontSize` 比較を21に変更 | 変更済み（この文書の実装表） |
+| 5 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 25項目すべて `exited with code 0` |
+| 6 | 型が通る | `cd frontend && npx tsc --noEmit` | エラー0件 |
+| 7 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | 1054件中1047件成功・7件失敗（6ファイル）。全て `Test timed out in 5000ms`（本変更と無関係のファイル）。該当6ファイルを個別実行した結果 **123件すべて成功**。フルスイート実行時の worker タイムアウト（§16-5 item 7 と同種の既知の現象） |
+| 8 | 生の16進色コードを増やしていない（ratchet。`frontend/src/*` の `.css`/`.ts`/`.tsx` が対象で `tokens.css` 自体は対象外＝新規トークン追加そのものを禁止する仕組みではない） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | `PASS: 対象1ファイル・増加なし`（コミット後に実行した実際の出力。対象は `frontend/src/pages/inbox/InboxPage.css` のみ。`tests-e2e/` 配下は対象パス外） |
+| 9 | 未使用トークンの監査 | `npm run audit:unused-tokens` | 新設した `--font-title-mobile` は一覧に含まれない（1箇所で使用されているため「未使用」扱いではない）。既存の未使用29件はこの便と無関係 |
+
+**残るリスク**:
+1. §16-2／本便冒頭コメントの「お手本 19.0dp」という記録は、今回の訂正後も文書内の別箇所（§16-2 の表そのもの）には修正を入れていない。混乱を避けるため、§16-2 を読む際はこの §17-8 の訂正を優先する。
+2. 実機（Android Chrome）での最終確認は未実施。21pxでの見た目（インク高さ・行間）は計算上の推定であり、本番反映後に実測で裏取りする必要がある。

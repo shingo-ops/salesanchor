@@ -524,8 +524,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // タイトルの左端 x = 16px（--space-4）
     expect(Math.abs(titleBox!.x - 16), "タイトルの左端 x").toBeLessThanOrEqual(1);
 
-    // タイトルの文字サイズ 20px（--font-xl）
-    expect(titleFontSize, "タイトルの文字サイズ").toBe(20);
+    // タイトルの文字サイズ 21px（--font-title-mobile）。
+    // お手本の漢字インク 19.0dp に合わせた値（第3便で 20→21。字種をそろえて測り直した結果、
+    // --font-xl の20pxでは漢字インクが18.0dpで1dp足りなかった）。
+    expect(titleFontSize, "タイトルの文字サイズ").toBe(21);
 
     // ヘッダー内の押せる部品2つ（絞り込み・管理）は 44px 以上×44px 以上（WCAG 2.5.5）
     expect(filterBox!.width, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
