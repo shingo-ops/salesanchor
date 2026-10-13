@@ -37,6 +37,13 @@ _PRICE, _QTY, _NOTE, _STATUS, _SHIP = 5, 6, 7, 8, 13  # 14列の位置
 def ids(pg, v102):  # noqa: F811
     products = [r[0] for r in one(pg, "SELECT id FROM public.products ORDER BY id")]
     conditions = {r[1]: r[0] for r in one(pg, "SELECT id, canonical FROM public.conditions")}
+    # テスト用 DB の public.products には tcg_type・category が無い。本番の型（VARCHAR(50)）に合わせて足す。
+    # 根拠: migrations/20260602_020000_add_products_tcg_type.sql、migrations/082_extend_products_box_attributes.sql
+    with pg[0].cursor() as cur:
+        cur.execute("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_type VARCHAR(50)")
+        cur.execute("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category VARCHAR(50)")
+        cur.execute("UPDATE public.products SET tcg_type = 'T_A', category = 'C_A' WHERE id = %s", (products[0],))
+        cur.execute("UPDATE public.products SET tcg_type = 'T_B', category = 'C_B' WHERE id = %s", (products[1],))
     return SimpleNamespace(p1=products[0], p2=products[1], box=conditions["Sealed box"], case=conditions["Case"])
 
 
@@ -205,6 +212,8 @@ _VIEW_CASES = [
     {"sort": "unit_price", "order": "asc"},
     {"tcg_type_filter": True},
     {"page": 99},
+    {"limit": 3},
+    {"limit": 3, "page": 2, "sort": "unit_price", "order": "asc"},
 ]
 
 
@@ -260,14 +269,14 @@ def test_single_statement_equals_the_previous_three_statements(pg, ids, merge, c
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     with Session(pg[1]) as session:
         if case.get("tcg_type_filter"):
-            none["tcg_type"] = session.execute(text("SELECT tcg_type FROM public.products WHERE id = :i"),
-                                               {"i": ids.p1}).scalar_one()
+            none["tcg_type"] = "T_A"
         conditions, params = _build_view_filters(**none)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         page = case.get("page", 1)
         kw = {"merge": merge, "where": where, "params": params,
               "sort_col": _SORT_COLUMNS.get(case.get("sort", "release_date"), "d.japanese_title"),
-              "order_dir": "ASC" if case.get("order", "desc") == "asc" else "DESC", "limit": 1, "offset": (page - 1)}
+              "order_dir": "ASC" if case.get("order", "desc") == "asc" else "DESC", "limit": case.get("limit", 1),
+              "offset": (page - 1) * case.get("limit", 1)}
         old = _old_three_statements(session, **kw)
         new = _new_single_statement(session, **kw)
     assert new == old
