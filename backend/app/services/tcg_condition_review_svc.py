@@ -7,6 +7,7 @@ fail closed, without falling back to an older acknowledgment.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -100,8 +101,45 @@ def _binding(selected: str) -> str:
     return digest_sql(_object_sql(pairs))
 
 
-def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None, schema: str | None = None) -> str:
+def _fence_sub(pattern: str, repl: str, sql: str, expect: int) -> str:
+    new, count = re.subn(pattern, repl, sql)
+    if count != expect:
+        raise RuntimeError(f"review_joins fence: pattern {pattern!r} expected={expect} got={count}")
+    return new
+
+
+def _fence_review_joins(sql: str) -> str:
+    """配信行 SQL 用: 展開(pull-up)で to_jsonb(...) が参照ごとに再計算されるのを OFFSET 0 の壁で防ぐ。
+
+    変換の個数が想定と違えば例外にする（SQL 正本は review_joins の1か所に保つ）。
+    docs/handoff/v102-sp2-perf/design.md
+    """
+    sql = _fence_sub(r"\)\s*(cr_input|cr_hash|cr_valid|cr_reasons|cr)(?=\s*(?:CROSS|LEFT|JOIN|$))", r" OFFSET 0) \1", sql, 5)
+    sql = re.sub(r"to_jsonb\(ei\)->", "cr_ei.j->", sql)
+    if "cr_ei.j->" not in sql:
+        raise RuntimeError("review_joins fence: to_jsonb(ei)-> not found")
+    marker = "LEFT JOIN public.products cr_product"
+    if sql.count(marker) != 1:
+        raise RuntimeError("review_joins fence: cr_product marker count != 1")
+    sql = sql.replace(marker, "CROSS JOIN LATERAL (SELECT to_jsonb(ei) AS j OFFSET 0) cr_ei\n    " + marker)
+    for alias in ("cr_product", "cr_selected", "cr_ack_condition", "cr_empty", "cr_arc"):
+        sql = re.sub(rf"to_jsonb\({alias}\)", f"cr_js.j_{alias}", sql)
+    lines = sql.split("\n")
+    idx = [i for i, ln in enumerate(lines) if "public.conditions cr_arc" in ln]
+    if len(idx) != 1:
+        raise RuntimeError("review_joins fence: cr_arc line count != 1")
+    lines.insert(idx[0] + 1, (
+        "    CROSS JOIN LATERAL (SELECT to_jsonb(cr_product) AS j_cr_product, to_jsonb(cr_selected) AS j_cr_selected, "
+        "to_jsonb(cr_ack_condition) AS j_cr_ack_condition, to_jsonb(cr_empty) AS j_cr_empty, "
+        "to_jsonb(cr_arc) AS j_cr_arc OFFSET 0) cr_js"))
+    return "\n".join(lines)
+
+
+def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
+                 schema: str | None = None, fenced: bool = False) -> str:
     """SQL requires ar/ei/ej/sm aliases plus source_cte; optional candidate for reanalysis.
+
+    fenced=True は配信行 SQL 専用（OFFSET 0 の壁を追加）。既定 False は従来と同一の文字列。
 
     Expressions come exclusively from trusted source code, never request text.
     selected_expression is used for a POST's new binding, after old-version checking.
@@ -124,7 +162,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         **{key: f"cr_data.ar->'{key}'" for key in ("review_reasons", "needs_review", "status", "exclusion", "note_ja")},
         "latest_correction_id": "cr_latest.id",
     }))
-    return f"""
+    sql = f"""
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
     -- OFFSET 0 は PostgreSQL の展開（pull-up）を止め、to_jsonb(ar) を行ごとに1回だけ作るため。外すと要確認一覧が約3倍遅くなる（docs/handoff/review-speed/design.md）
     CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar OFFSET 0) cr_data
@@ -201,6 +239,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
              ELSE {condition_effect_sql('cr_arc')} END AS effect
     ) cr
     """
+    return _fence_review_joins(sql) if fenced else sql
 
 
 def context_sql(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,

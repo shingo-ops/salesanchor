@@ -209,7 +209,13 @@ def _set_refresh_cookie(response: Response, raw: str, expires_at: datetime) -> N
 
 
 def _clear_refresh_cookie(response: Response | JSONResponse) -> None:
-    response.delete_cookie(self_tokens.REFRESH_COOKIE_NAME, path=self_tokens.REFRESH_COOKIE_PATH)
+    response.delete_cookie(
+        self_tokens.REFRESH_COOKIE_NAME,
+        path=self_tokens.REFRESH_COOKIE_PATH,
+        secure=self_tokens.cookie_secure(),
+        httponly=True,
+        samesite="strict",
+    )
 
 
 def _invalid_credentials() -> HTTPException:

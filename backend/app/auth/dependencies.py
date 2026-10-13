@@ -90,7 +90,8 @@ async def _authenticate_self_token(token: str, client_ip: str, db: AsyncSession)
     try:
         claims = self_tokens.decode_access_token(token)
         user_id = int(claims["sub"])
-    except (JWTError, ValueError, KeyError, TypeError):
+        issued_at = datetime.fromtimestamp(claims["iat"], timezone.utc)
+    except (JWTError, ValueError, KeyError, TypeError, OverflowError, OSError):
         raise await _reject_self_token(client_ip)
 
     row = (
@@ -102,7 +103,6 @@ async def _authenticate_self_token(token: str, client_ip: str, db: AsyncSession)
     if row is None or not row.is_active or claims.get("email") != row.email:
         raise await _reject_self_token(client_ip)
     changed_at = self_tokens._as_utc(row.password_changed_at)
-    issued_at = datetime.fromtimestamp(claims["iat"], timezone.utc)
     if changed_at is not None and issued_at < changed_at:
         raise await _reject_self_token(client_ip)
 
