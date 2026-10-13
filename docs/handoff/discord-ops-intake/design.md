@@ -77,9 +77,9 @@ mode: handoff
 | 項目 | 設定 | 理由 |
 |---|---|---|
 | 起動 | `claude --dangerously-load-development-channels plugin:discord-ops@sa-local`。起動時の確認は PO が 1 回答える | 改変版は公式の許可リスト外（recon 公式仕様） |
-| 作業場所 | 専用 worktree `~/worktrees/salesanchor/ops-intake`（origin/main 起点・読み取り専用）。調査前に `git fetch origin main` → `git merge --ff-only origin/main`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
+| 作業場所 | main の専用クローン ~/sa-ops-intake（読み取り専用で使う。worktree はマージ後に reaper が回収するため使わない・PR #4188 で変更）。調査前に `git pull --ff-only`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
 | 許可モード | manual（default）。auto mode にしない | auto mode では承認の中継が開かない（recon 公式仕様） |
-| 許可設定 | 受付用 worktree の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする | KGI-3・レビュー MEDIUM-7 |
+| 許可設定 | 受付用クローン（~/sa-ops-intake） の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする。リポジトリ共有設定の allow のうち読み取り以外は deny で塞ぐ（配置時に発見・delegation.md） | KGI-3・レビュー MEDIUM-7 |
 | 担当の型 | custom agent `ops-worker`（.claude/agents/ops-worker.md）。`tools:` を Read・Grep・Glob・SendMessage・discord-ops の reply/propose/fetch_messages/react に限定。`permissionMode: dontAsk`・`background: true`（いずれも公式 sub-agents 資料に記載の項目） | 担当は書き込み道具をそもそも持たない（レビュー HIGH-3）。dontAsk 単独に頼らない |
 | 担当の立て方 | 受付役は新しい不具合（同じ alertname×instance の未完了が無い）を受けたら、承認チャンネルにスレッドを作り、`ops-worker` を 1 つ立てる。担当には「スレッド ID・アラート本文・委任表・報告の型」を渡す | PO の運用像「不具合ごとに担当・完了まで責任」 |
 | 承認後の実行 | **受付役が、P8 の decision 通知に付いた `action` の原文だけを実行する**。担当からの依頼文は実行の根拠にしない。実行時の許可確認（委任表の外）は P7 で承認チャンネルに出る。結果は担当へ SendMessage で渡し、担当が完了報告を書く | 承認を PO が読んだ原文に結び付ける（レビュー HIGH-2）。担当経由の注入で別の操作をさせない |
@@ -116,7 +116,7 @@ mode: handoff
 | 面 | 接触 | 対処 |
 |---|---|---|
 | 人 | PO がボタン役。承認チャンネルの閲覧者には許可確認の中身（コマンド全文）が見える（レビュー MEDIUM-10・server.ts の See more） | 本番の承認チャンネルは PO・担当エンジニア・ボットだけが見える非公開チャンネルにする（PO の Discord 操作。計画票 T5） |
-| エージェント | プラグインを user スコープで入れると他の全 Claude セッションで MCP が起動する（recon M5） | discord-ops は受付用 worktree の local スコープだけで有効にする |
+| エージェント | プラグインを user スコープで入れると他の全 Claude セッションで MCP が起動する（recon M5） | discord-ops は受付用クローン（~/sa-ops-intake）の local スコープだけで有効にする |
 | 機械 | launchd の番人。CI は関与しない | 番人の通知は監視チャンネルとは別の webhook |
 | データ | DB・アプリのデータには触れない。状態は Mac の `~/.claude/channels/discord-ops/`（access.json・proposals/・heartbeat）だけ | SSOT: 承認の原文は proposals/ の 1 か所。Discord の表示は写し |
 | 本番 | ボットは本番 Discord サーバーに参加済み（PO 画面で確認）。受付が読むのは access.json 登録チャンネルだけ（server.ts の gate・P1） | 単体テストで「未登録チャンネル・他メンバー・許可外 webhook は渡らない」を固定 |
@@ -185,7 +185,7 @@ mode: handoff
 | T2 | 番人（launchd plist・判定スクリプト）と起動スクリプト（tmux＋caffeinate） | Sonnet（同じ PR） |
 | T3 | 受付用の指示書（CLAUDE.md）・ops-worker.md・許可設定の雛形（委任表の初期値とツール単位で 1 対 1）を `tools/claude-channels/intake/` に置く | Sonnet（同じ PR） |
 | T4 | PR を Fable がレビュー → CI 緑 → main へマージ | 設計パートナー |
-| T5 | Mac に配置: 受付用 worktree を main から作り、雛形を配置・プラグインを local スコープで導入・本番監視チャンネルと許可 webhook を access.json に登録・受付を起動（起動確認画面は PO）・番人を登録 → E7・E8・E10・KGI-4 を実測し evidence-registry に記録 | 設計パートナー＋Sonnet（起動確認は PO） |
+| T5 | Mac に配置: 受付用クローン ~/sa-ops-intake を main から作り、雛形を配置・プラグインを local スコープで導入・本番監視チャンネルと許可 webhook を access.json に登録・受付を起動（起動確認画面は PO）・番人を登録 → E7・E8・E10・KGI-4 を実測し evidence-registry に記録 | 設計パートナー＋Sonnet（起動確認は PO） |
 | T6（PO） | 本番の承認チャンネルを非公開化（PO・担当エンジニア・ボットのみ閲覧）し、ID を access.json の opsChannel に入れる。それまでは #approval-test を承認チャンネルとして使う | PO |
 
 ## 継続

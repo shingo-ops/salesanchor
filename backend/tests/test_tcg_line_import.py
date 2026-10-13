@@ -4,7 +4,7 @@ MIG-04 Stage 1 & REVIEW-STAGE: tcg_line_import_svc の単体テスト（DB 不�
 テスト対象:
   - parse_line_export: 日付行 / 時刻行 / 継続行 / システムイベント / エッジケース
   - parse_line_export: GAS latest24SplitHeader_ 準拠の送信者名切り出し
-      - マスタに「倉田 和博」があるとき「12:00 倉田 和博 本文」→ display_name=「倉田 和博」
+      - マスタに「提供者I 太郎」があるとき「12:00 提供者I 太郎 本文」→ display_name=「提供者I 太郎」
       - マスタにない「とも」は最初のスペースで切り出し
       - 「仕入元A」と「仕入元AB社」の両方がマスタにあるとき誤マッチしない
   - resolve_suppliers: 完全一致（GAS byName[displayName] 準拠）/ 未解決 / 全員未解決
@@ -683,25 +683,25 @@ async def test_enqueue_called_after_commit():
 
 def test_split_sender_multiword_master_name():
     """
-    マスタに「倉田 和博」（スペース含む複合語）があるとき、
-    「12:00 倉田 和博 本文テキスト」の display_name が「倉田 和博」になること。
+    マスタに「提供者I 太郎」（スペース含む複合語）があるとき、
+    「12:00 提供者I 太郎 本文テキスト」の display_name が「提供者I 太郎」になること。
 
     根拠: GAS latest24SplitHeader_ は tail.indexOf(name + ' ') === 0 でマスタ名を
-          優先確定する。従来の Python は split(' ', 1) で「倉田」のみを取り出してしまい、
+          優先確定する。従来の Python は split(' ', 1) で「提供者I」のみを取り出してしまい、
           resolve_suppliers での完全一致が成立しなかった。
 
     GAS 参照: Latest24LineImport.js:31-32
     """
-    export = "2026.08.01 金曜日\n12:00 倉田 和博 本文テキスト\n"
-    supplier_names = ["倉田 和博"]
+    export = "2026.08.01 金曜日\n12:00 提供者I 太郎 本文テキスト\n"
+    supplier_names = ["提供者I 太郎"]
 
     msgs = parse_line_export(export, supplier_names)
     user_msgs = [m for m in msgs if not m["is_system_event"]]
 
     assert len(user_msgs) == 1
-    assert user_msgs[0]["display_name"] == "倉田 和博", (
+    assert user_msgs[0]["display_name"] == "提供者I 太郎", (
         f"display_name={user_msgs[0]['display_name']!r}: "
-        "マスタ名「倉田 和博」で前方一致すべきだが最初のスペースで分割された"
+        "マスタ名「提供者I 太郎」で前方一致すべきだが最初のスペースで分割された"
     )
     assert user_msgs[0]["body"] == "本文テキスト"
 
@@ -713,7 +713,7 @@ def test_split_sender_unresolved_falls_back_to_first_space():
     GAS 参照: latest24SplitHeader_ のフォールバック（Latest24LineImport.js:35-36）
     """
     export = "2026.08.01 金曜日\n12:00 とも 本文テキスト\n"
-    supplier_names = ["倉田 和博"]  # 「とも」はマスタにない
+    supplier_names = ["提供者I 太郎"]  # 「とも」はマスタにない
 
     msgs = parse_line_export(export, supplier_names)
     user_msgs = [m for m in msgs if not m["is_system_event"]]
