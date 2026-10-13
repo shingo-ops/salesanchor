@@ -66,9 +66,7 @@ export const Default: Story = {
 
 export const WithSort: Story = {
   render: () => {
-     
     const [sortKey, setSortKey] = useState<string>('name');
-     
     const [sortDir, setSortDir] = useState<SortDir>('asc');
 
     const sorted = [...SAMPLE_LEADS].sort((a, b) => {
@@ -93,7 +91,6 @@ export const WithSort: Story = {
 
 export const WithSelection: Story = {
   render: () => {
-     
     const [selected, setSelected] = useState<Set<string>>(new Set(['1', '3']));
 
     return (
