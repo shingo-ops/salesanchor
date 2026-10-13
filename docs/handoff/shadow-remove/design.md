@@ -65,7 +65,7 @@
 - 戻し方：段1a は revert。段1b はバックアップから戻す。
 
 ## 7. 維持の仕組み
-- 守り手: v102 の既存の試験、CI（tsc・pytest・UI governance・migration 検査）。
+- 守り手: backend/tests/test_v102_human_decisions_pg.py（load_product_entries の実行）、backend/tests/test_tcg_gemini_extraction.py（抽出の流れ）、frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.test.tsx（タブが2つ）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 社内の前例：#4134（発注管理ページの削除。画面だけを先に外し、API・DB は残した）。今回は PO の指定により、段1b で表まで外す。

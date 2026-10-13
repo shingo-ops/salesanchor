@@ -2,7 +2,7 @@
 
 - 基準: origin/main = 3c451d5e01138b6c52aa149693442f0a34d3eb3b（worktree 作成時点。`git rev-parse HEAD`）
 - 設計: [design.md](design.md)
-- 本番の事実の出典: `/Users/tanizawashingo/CC報告ファイル-keep/review-page-20261013/recon-facts.md` の A・B 節（本店コードの基準は dbef8b19。今回の洗い出しは 3c451d5e0 で再実施）
+- 本番の事実の出典: リポジトリ外の記録（~/CC報告ファイル-keep/review-page-20261013/recon-facts.md） の A・B 節（本店コードの基準は dbef8b19。今回の洗い出しは 3c451d5e0 で再実施）
 
 ## 1. 既存 ADR の検索結果
 
