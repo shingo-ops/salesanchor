@@ -1981,3 +1981,86 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   border-color: var(--accent);
   color: var(--on-accent);
 }
+
+/* ===== スマホ版・会話一覧ヘッダー新設（第2便・2026-10-13） =====
+   お手本（WhatsApp チャット一覧）を実測して合わせた値。PC・タブレットでは
+   InboxConversationListMobile.tsx 自体を出さないため、ここに @media は不要。
+     ヘッダー全体の高さ 56dp               = --topbar-height
+     タイトルの左余白 16dp                 = --space-4
+     タイトルの文字（漢字インク高さ19.0dp）  = --font-xl
+     ヘッダーのアイコン 44dp以上            = --size-icon-btn-lg
+     検索欄の外枠 左右12dpずつ              = --space-3
+     検索欄の高さ 48dp                     = --comp-btn-height-lg
+     検索欄の丸み 半径24dp＝完全なピル       = --radius-full
+     検索アイコンの左 16dp                 = --space-4
+     ヘッダーと検索欄の間 4dp               = --space-1 */
+.inbox-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+  padding-left: var(--space-4);
+  padding-right: 0;
+  flex-shrink: 0;
+}
+.inbox-mobile-header-title {
+  /* 見出しタグではなく span（読み上げの二重を避けるため・tsx のコメント参照）。
+     span は既定で行の中に流れるので、縦中央に揃うよう明示する。 */
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.inbox-mobile-header-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+/* ヘッダー内では .icon-btn に勝つため2クラス＋親で指定（PR 4179 の教訓） */
+.inbox-mobile-header .icon-btn.inbox-mobile-filter-toggle {
+  width: var(--size-icon-btn-lg);
+  height: var(--size-icon-btn-lg);
+}
+/* ヘッダー内の管理ボタンは枠のないアイコンボタンにする（お手本のヘッダーも枠なし） */
+.inbox-mobile-header .inbox-manage-btn {
+  min-width: var(--size-icon-btn-lg);
+  min-height: var(--size-icon-btn-lg);
+  justify-content: center;
+  border: none;
+  background: transparent;
+}
+.inbox-mobile-header .inbox-manage-label {
+  display: none;
+}
+
+/* 検索（横幅いっぱい・左右12dp・上下4dp。上4dpはヘッダーと検索欄の間の4dp分） */
+.inbox-mobile-search-row {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  flex-shrink: 0;
+}
+.inbox-mobile-search-row .inbox-search-wrap {
+  flex: 1;
+  min-width: 0;
+}
+/* 検索欄: 48dp高さの完全なピル。左 padding は
+   「検索アイコンの左16dp（--space-4）＋アイコンの箱（--size-icon-btn）」で、
+   実アイコン（14px）より十分広く確保し文字と重ならないようにする。
+   金型（FormField.css の .comp-input--search）に詳細度で勝つため2クラスで書く。 */
+.inbox-mobile-search-row .inbox-search-input {
+  height: var(--comp-btn-height-lg);
+  border-radius: var(--radius-full);
+  padding-left: calc(var(--space-4) + var(--size-icon-btn));
+  padding-right: var(--space-4);
+}
+.inbox-mobile-search-row .inbox-search-icon {
+  left: var(--space-4);
+}
