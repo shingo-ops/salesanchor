@@ -6,15 +6,20 @@
 --
 -- 不可逆。適用には PO 本人の GO #番号 が必要（ADR-136、ADR-1003 の例外）。
 --
--- 事前確認済み事実（/Users/tanizawashingo/CC報告ファイル-keep/review-page-20261013/drop-recon-facts.md 由来）:
+-- 事前確認済み事実（出典: recon-facts.md:53 と drop-recon-1b-prod-catalog.txt
+--   〔2026-10-13 10:21 UTC 本番 jarvis_db への SELECT〕）:
 --   - FK: この2表を外から参照する外部キーは0件（extraction_shadow_results -> extraction_shadow_runs の
---     1本のみで、2表の内側）。
+--     1本のみで、2表の内側）。2表が持つ FK は extraction_shadow_runs -> extraction_jobs、
+--     extraction_shadow_results -> extraction_shadow_runs、extraction_shadow_results -> products の3本。
 --   - llm_usage_events から extraction_shadow_runs への FK は無い（ADR-1004 決定6）。
---   - view / trigger / RLS は0件。
+--   - RLS 無効（relrowsecurity / relforcerowsecurity とも f）、policy 0件。
+--   - 人が作った trigger 0件（trigger 8件はすべて FK の内部 trigger〔tgisinternal = t〕のみ）。
+--   - view（pg_rewrite 経由の依存）0件、関数本文での参照 0件。
+--   - 行数: extraction_shadow_runs 368 / extraction_shadow_results 7063。
 --
 -- 作成 migration（20260928_110000_create_extraction_shadow_tables.sql）の登録は残す:
 --   その migration は表以外（suppliers への列追加と extraction_prompt_config の INSERT）も含むため。
---   毎デプロイで「作成 → 本 migration で削除」となり、最終状態は表なし。
+--   migration が走るデプロイのたびに「作成 → 本 migration で削除」となり、最終状態は表なし。
 --
 -- バックアップ（PO 保管・ローカル、本リポジトリにはコミットしない）:
 --   適用前に2表の CSV 退避と行数の記録を行う。

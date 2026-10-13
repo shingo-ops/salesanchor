@@ -69,3 +69,14 @@ frontend
 - 本店 `/Users/tanizawashingo/salesanchor` の docs/ への参照切れ（docs 内のリンクで外したファイルを指すもの）は未走査
 
 段1b 追加調査: /Users/tanizawashingo/CC報告ファイル-keep/review-page-20261013/drop-recon-1b-v2.md
+
+## 7. 本番カタログ確認（2026-10-13 10:21 UTC）
+
+- 実行: 設計者が prod1 jarvis_db に SELECT のみ。生出力: `/Users/tanizawashingo/CC報告ファイル-keep/review-page-20261013/drop-recon-1b-prod-catalog.txt`
+- RLS: `extraction_shadow_runs`・`extraction_shadow_results` とも `relrowsecurity` = f、`relforcerowsecurity` = f
+- policy: `pg_policies` 0件
+- trigger: 8件すべて `tgisinternal` = t（`RI_ConstraintTrigger_*`＝FK が自動で作る内部 trigger）。人が作った trigger 0件
+- FK: `extraction_shadow_runs_extraction_job_id_fkey`（→ extraction_jobs）、`extraction_shadow_results_run_id_fkey`（→ extraction_shadow_runs）、`extraction_shadow_results_product_id_fkey`（→ products）の3本のみ。外部からこの2表を参照する FK 0件
+- view（`pg_rewrite` 経由の依存）: 0件
+- 関数本文での参照: 0件
+- 行数: extraction_shadow_runs 368 / extraction_shadow_results 7063
