@@ -623,6 +623,8 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 
 `.inbox-conversation-list` が `flex: 1` ＋ `min-height: 0` で自分だけスクロールを受け持つため、親の `.inbox-left-panel` はちょうど収まる高さのまま＝`scrollHeight === clientHeight` になる。`.inbox-mobile-header` と `.inbox-mobile-search-row` はこの `.inbox-conversation-list` の**外**（flex の兄弟要素として前）にあるため、**そもそも最初からスクロールで動かない**。これは第2便（ヘッダー新設）の時点から変わっていない構造上の事実であり、何かを固定する実装を新たに追加する必要はなかった。
 
+**2度目の推測の反省**: 検査を書き直す際、いったん「スクロール箱は `.inbox-conversation-list`」と要素名を決め打ちした版を作った。しかし「どの要素名を使うか」を決め打ちする設計は、1度目の `.inbox-left-panel` のときと同じ失敗パターン（将来構造が変わったときに追従できない）を繰り返す。そのため `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の最終版（§17-6）では、要素名を書かずに「`scrollHeight > clientHeight` かつ `overflow-y` が `auto`/`scroll` である最初の祖先」をブラウザ内で実際に探して使う形に直した。
+
 ### 17-4. 対応: sticky の指定を撤回
 
 `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` から、§17-2 で追加した `position: sticky; top: 0; z-index: var(--z-base); background: var(--bg-surface);` とその直前のコメントを削除した。**効果を示せないコードは入れない方針**のため（ヘッダーは `.inbox-conversation-list` の外にあり、sticky は何もしない）。
@@ -637,7 +639,7 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 |---|---|
 | `manyConversations(count)`（`inbox-helpers.ts`） | `mock-conversations.json` の1件目を複製し、`lead_id`／`lead_code`／`customer_name` だけずらして `count` 件の一覧を作る。fixture JSON ファイル自体は変更していない |
 | `openInboxListWithConversations(page, count)`（`inbox-helpers.ts`） | `baseMocks()` の `"GET /conversations"` だけ `manyConversations(count)` に差し替えて受信箱を開く。既存の `openInboxList`（3件）はそのまま残している |
-| `スマホ: 一覧をスクロールしてもヘッダーが動かない`（`inbox-single-column.spec.ts`） | 本当のスクロール箱 `.inbox-conversation-list` を基準に測り直す形に書き直した。§17-6 の assertion 一覧を参照 |
+| `スマホ: 一覧をスクロールしてもヘッダーが動かない`（`inbox-single-column.spec.ts`） | 要素名を決め打ちせず、実際にスクロールしている祖先をブラウザ内で探して測り直す形に書き直した（§17-3 の「2度目の推測の反省」参照）。§17-6 の assertion 一覧を参照 |
 
 件数の根拠（コメントは `frontend/tests-e2e/visual-language/inbox-helpers.ts` にも記載）: vl-mobile-390 の viewport は 390x844、`--min-height-conv-item-mobile` が76px。ヘッダー56px＋検索欄56pxで画面上112pxを占有し、残り732pxに収まる行数は約9.6件。600pxスクロールさせても十分な余りが残るよう、収まる件数の2倍以上を確保する目的で20件とした（この根拠自体はスクロール箱の取り違えとは無関係で、訂正後も変えていない）。
 
@@ -647,15 +649,15 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 
 | # | 測るもの | 比較対象 |
 |---|---|---|
-| 1 | `.inbox-conversation-list` の `scrollHeight > clientHeight` | 真であること（満たさなければ「行の一覧がスクロールできる高さになっていない（検査データが足りない）」で検査自体を失敗させる） |
+| 1 | 1行目（`button.conversation-item`）の祖先を順にたどり、`scrollHeight > clientHeight` かつ `overflow-y` が `auto`/`scroll` である最初の要素（見つからなければ `document.scrollingElement`）を探し、`[data-vl-scrollbox]` を付けて以降の操作対象にする | その要素が1つ見つかること（0件なら「スクロールできる箱が1つも無い（検査データが足りない）」で検査自体を失敗させる。たどった祖先の一覧はエラーメッセージと `testInfo.attach("scroll-box-detection", ...)` に残す） |
 | 2 | スクロール前後の `.inbox-mobile-header` の `boundingBox().y` | 差が1px以内 |
 | 3 | スクロール前後の `.inbox-mobile-header` の `boundingBox().height` | 差が1px以内 |
 | 4 | スクロール前後の `.inbox-mobile-search-row` の `boundingBox().y` | 差が1px以内（§17-7 参照：当方はヘッダーと同じく固定側） |
 | 5 | スクロール後の管理ボタン（ヘッダー右端）の右端 x | ビューポート右端との差が1px以内 |
 | 6 | スクロール前後の1行目（`button.conversation-item`）の `boundingBox().y` | スクロール後の方が小さい（行が実際に上へ流れた証拠） |
-| 7 | スクロール後の `.inbox-conversation-list` の `scrollTop` | 指定した600になっている（スクロールが本当に効いた証拠） |
+| 7 | `[data-vl-scrollbox]` に `scrollTop = 600` を指定した後の実際の `scrollTop` | 0より大きい（スクロールが本当に効いた証拠。どの要素が実際にスクロールするかで到達できる量が変わるため、厳密に600であることは求めない） |
 
-背景色が透明でないことの assert（旧 §17-5 の7番）は削除した。sticky をやめたため「ヘッダーの下に行が潜り込む」という前提自体が成り立たず、assert の意味が変わるため。測った値はすべて `testInfo.attach("sticky-header-scroll", ...)` に JSON で残している。
+背景色が透明でないことの assert（旧 §17-5 の7番）は削除した。sticky をやめたため「ヘッダーの下に行が潜り込む」という前提自体が成り立たず、assert の意味が変わるため。測った値はすべて `testInfo.attach("scroll-box-detection", ...)` と `testInfo.attach("sticky-header-scroll", ...)` に JSON で残している。
 
 ### 17-7. 当方とお手本の差（検索欄の扱い）
 
@@ -677,7 +679,7 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 
 ### 17-9. 残るリスクと教訓
 
-1. **教訓（再発防止）**: 「スクロールする箱」をCSSの一箇所（`.inbox-left-panel` の `overflow-y: auto`）だけで判断し、実際に中身があふれるかを確認しなかったことが誤りの原因だった。次に同種の判断をするときは、対象要素の `scrollHeight > clientHeight` を実測するか、その箱の子要素に別の `overflow` 指定がないかを必ず確認する。
+1. **教訓（再発防止）**: 「スクロールする箱」をCSSの一箇所（`.inbox-left-panel` の `overflow-y: auto`）だけで判断し、実際に中身があふれるかを確認しなかったことが誤りの原因だった。次に同種の判断をするときは、対象要素の `scrollHeight > clientHeight` を実測するか、その箱の子要素に別の `overflow` 指定がないかを必ず確認する。**この教訓を検査そのものにも適用し**、書き直した検査では「スクロール箱は `.inbox-conversation-list`」という2度目の決め打ちもやめ、要素名を書かずに実際にスクロールしている祖先をブラウザ内で探す形にした（§17-3・§17-6）。
 2. **Playwright をこの端末で実行できない。** `npx playwright test --list` で構文とセレクタの収集は確認したが、実際に assertion が通るかは CI（x86）の初回実行で初めて分かる。
 3. **検索欄もヘッダーと同じく固定側になっている（§17-7）。** お手本と一致していない。直すかどうかは PO 判断待ち。
 4. **実機での確認は未実施。** 今便は構造の訂正のみで見た目の変更はないが、CI（x86）で新テストが実際に通ることは別途確認が必要。

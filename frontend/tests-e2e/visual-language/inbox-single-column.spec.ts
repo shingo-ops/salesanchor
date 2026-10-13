@@ -562,17 +562,16 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
   test("スマホ: 一覧をスクロールしてもヘッダーが動かない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
-    // 2026-10-14（第3便・CI の検査が検出・PO 訂正）: 当初「スクロール箱は
-    // .inbox-left-panel」という推測で sticky を足したが誤りだった。実際に
-    // スクロールする箱は .inbox-conversation-list（frontend/src/pages/inbox/InboxPage.css
-    // の .inbox-conversation-list: flex:1; min-height:0; overflow-y:auto）で、
+    // 2026-10-14（第3便）: 当初「スクロール箱は .inbox-left-panel」という推測で
+    // sticky を足したが誤りだった（CI がこの検査の関所の行で検出）。直した先として
+    // 一旦は「スクロール箱は .inbox-conversation-list」と決め打ちしたが、要素名を
+    // 決め打ちすると将来別の箇所がスクロールを持つようになったときに追従できない。
+    // そのため下の 1. では要素名を書かず「実際に scrollHeight > clientHeight かつ
+    // overflow-y が auto/scroll の最初の祖先」をブラウザ内で探して使う形にしている。
     // ヘッダー（.inbox-mobile-header）と検索欄（.inbox-mobile-search-row）は
-    // InboxConversationListMobile.tsx 内でその外側（flex の兄弟要素として前）に
-    // 置かれている。.inbox-left-panel 自身は中身があふれないため
-    // scrollHeight === clientHeight のまま＝sticky を置いても何もしない。
-    // 調べた結果「ヘッダーは元から動かない」ことが構造上の事実と分かったため、
-    // sticky の指定は撤回し（InboxPage.css 参照）、この検査は「本当のスクロール箱」
-    // である .inbox-conversation-list を600pxスクロールさせて確認する形に直した。
+    // InboxConversationListMobile.tsx 内で一覧の行より外側（flex の兄弟要素として前）に
+    // 置かれているため、どの要素が実際にスクロールしても「ヘッダーと検索欄は動かない」
+    // ことが構造上の事実（frontend/src/pages/inbox/InboxPage.css:82-91・252-256）。
     // お手本（WhatsApp）は検索欄が一覧と一緒に流れるが、当方は検索欄もヘッダーと
     // 同じ外側にあるため両方固定側になる。これは意図した差ではなく構造上そうなる
     // というだけだが、現状の事実としてここで記録する。

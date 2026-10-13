@@ -62,8 +62,20 @@
      そこで 100dvh から下部タブバーぶんを引いた実寸を最低の高さとして与える。
      .mobile-content は padding-bottom でタブバーぶんを確保しているので、
      この値がちょうど本文の領域の高さに一致し、はみ出さない。
-     対象は slimHeaderOnMobile を渡したページのみ（現在は受信箱だけ）。 */
+     対象は slimHeaderOnMobile を渡したページのみ（現在は受信箱だけ）。
+
+     2026-10-14（第3便・CI の画面検査で実測）: これを min-height で与えていたため
+     高さが「確定」せず、中の箱が順に中身の高さまで伸びて**ページ全体がスクロール**
+     していた。20件の一覧で測った実測値（スクロール箱の特定を spec が出力）:
+       div.inbox-conversation-list  scrollH=1520 clientH=1520 overflowY=auto
+       aside.inbox-left-panel       scrollH=1632 clientH=1632 overflowY=auto
+       main.mobile-content          scrollH=1698 clientH=1698 overflowY=auto
+       html                         scrollH=1698 clientH= 844  ← ここだけがスクロール
+     ページごと動くため、ヘッダーも一緒に流れていた。min-height を実寸の height に
+     変えると高さが確定し、flex の子（.inbox-conversation-list は flex:1 / min-height:0）
+     が縮んで**行の一覧だけ**がスクロールする＝ヘッダーと検索欄は動かない。
+     値は変えていない（100dvh から下部タブバーぶんを引いた実寸のまま）。 */
   .page-layout.page-layout--slim-header {
-    min-height: calc(100dvh - var(--tabbar-height));
+    height: calc(100dvh - var(--tabbar-height));
   }
 }
