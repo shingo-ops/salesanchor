@@ -179,3 +179,8 @@ recon: docs/handoff/review-compare-table/recon.md（基準 origin/main d39e25183
 2. 値の2列は等分にならない（見出しの文字幅の比で余りが配られる。約 98:128）。これは許容し、NG にしない。
 3. 行の型 `ComparisonRow` には node を持たせない（text・line? などの純データだけ）。node は renderCell の中で作り、ComparisonCell と fixed の span の props としてだけ渡す。
 4. KGI C の折り返しの判定は、tr の高さ ≤ `--comp-table-row-h-compact`＋1px で行う（display:block の span の getClientRects は判定に使わない）。ラベル列と採用元列では、加えて span の scrollWidth ≤ clientWidth（省略されていない）を確かめる。
+
+## 関連 ADR（相互参照）
+- docs/adr/ADR-144-ui-component-governance.md: DataTable の金型を使い、td・th を上書きしない。新しい金型は作らない。
+- docs/adr/ADR-067-design-token-enforcement.md: 幅は tokens.css のトークンだけで決める（新しいトークンは `--comparison-source-col-w` の1件）。
+- docs/adr/ADR-027-ui-internationalization.md: 見出しと「—」は t() 経由（新しいキーは3件。ja・en は同じキー）。
