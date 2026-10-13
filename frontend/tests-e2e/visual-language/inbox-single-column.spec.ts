@@ -323,6 +323,43 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(dark.nameContrast!, "ダークの名前の明暗差").toBeGreaterThanOrEqual(4.5);
   });
 
+  test("スマホ: 主要な操作ボタンが44px以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（WCAG 2.5.5）: 押す場所を 44px 以上にする。
+    // ピルの外側にある3つを 44px（--size-icon-btn-lg）にした。
+    // 一覧では絞り込み、会話ではスレッドの操作と送信を測る。
+    const measure = async (sel: string) => {
+      const box = await page.locator(sel).first().boundingBox();
+      return box ? { w: Math.round(box.width), h: Math.round(box.height) } : null;
+    };
+
+    const filter = await measure(".inbox-search-row .inbox-mobile-filter-toggle");
+    expect(filter, "絞り込みボタンが見つからない").not.toBeNull();
+
+    await openConversation(page);
+    const sendBtn = await measure(".inbox-send-btn");
+    const threadAction = await measure(".inbox-thread-action-btn");
+    // ピルの内側にある2つは本便では変更していない。値を記録に残す（design §7）。
+    const attach = await measure(".send-attach-btn");
+
+    await testInfo.attach("touch-targets", {
+      body: JSON.stringify({ 絞り込み: filter, 送信: sendBtn, スレッドの操作: threadAction, "添付（この便では未対応）": attach }, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(filter!.w, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(filter!.h, "絞り込みの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn, "送信ボタンが見つからない").not.toBeNull();
+    expect(sendBtn!.w, "送信の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn!.h, "送信の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(threadAction, "スレッドの操作ボタンが見つからない").not.toBeNull();
+    expect(threadAction!.w, "スレッドの操作の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(threadAction!.h, "スレッドの操作の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
