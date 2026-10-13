@@ -4,79 +4,57 @@
 
 親: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 
-**日付**: 2026-10-13  
+**日付**: 2026-10-14
 **書いた人**: 設計パートナー（Opus・ccopusgo セッション）
 
-## 状態（2026-10-13 時点・証拠つき）
+## 状態（2026-10-14 時点・証拠つき）
 
 | 段階 | 状態 | 証拠 |
 |---|---|---|
-| 設計案 | 作成済み | `docs/handoff/auth-self-hosted-passkey/design.md` |
-| 設計審査 | 済み（Fable 2 回。審査 2 は「示した直し方どおりに直せば再審査不要」） | design.md §10 |
-| PO 承認 | 済み（2026-10-13 チャット「y」） | `docs/specs/auth-login/ideal-state.md` |
-| 文書の保存 | コミット 2 件を push 済み（4a6b15550・3fd159513） | ブランチ release/auth-self-hosted-passkey-design |
-| PR 提出 | **未提出** | `gh pr list --head release/auth-self-hosted-passkey-design` が空 |
-| 実装 | 未着手 | — |
+| 便0（設計・ADR-1013） | main にマージ済み | #4225（ADR 改名・カード b1 を含む） |
+| 便1（DB の置き場・migration） | 本番反映済み | #4227 マージ 9b407b41f（2026-10-13 19:51 JST）。deploy run 38386226760 success。直前バックアップ salesanchor_db_20261013_195212.sql.gz（371M） |
+| 便2（自社ログインの心臓部・backend） | main にマージ済み | #4231 マージ 6c8a5955a（2026-10-14 00:41 JST）。CI 42 pass・fail 0。Fable セキュリティ審査 APPROVE（HEAD 1436bb344）。本番反映の確認は下の「便2 本番確認」 |
+| 便3〜便6 | 未着手 | 便3・便4・便6 は PO の作業（外部 GUI・秘密の追加・パスワード配布・Firebase 削除）が要る |
+
+### 便1 本番確認（2026-10-13 19:57 JST 前後・読み取りのみ）
+
+- 新 3 表（webauthn_credentials・password_reset_tokens・auth_refresh_tokens）が存在し、全て 0 行
+- users 13 行。password_argon2_hash が入った行 0・failed_login_count が 0 以外の行 0（＝この 2 列は存在する）
+- **未確認**: users の password_changed_at・locked_until の 2 列。information_schema の SELECT が自動の権限判定に拒否されたため。迂回はしていない。便3 のカード作成前に、PO の端末か許可を取った読み取りで `\d public.users` を確かめる
+- HTTP: app /health 200、login（Origin 付き）404、トークンなしの logout 401（反映前の基準値と同じ）
+
+### 便2 本番確認
+
+- deploy run 38424242587 は success（2026-10-14 00:46 JST 完了）。Finalize の「Step 6: Health check passed」、FedEx smoke passed、設計図書サイト smoke ①〜⑤ 合格。ログに `##[error]` は 0 行。migrations は含まない
+- HTTP（00:47 JST、`https://app.salesanchor.jp`）:
+  - /health 200、トークンなしの /api/v1/auth/logout 401（反映前と同じ）
+  - /api/v1/auth/login に正しい形の本文（存在しない宛先）を送ると、Origin の有無どちらも 404 `{"detail":"Not Found"}`。/api/v1/auth/refresh も 404。既定の `AUTH_PROVIDER=firebase` で発行の口が閉じていることを確認
+  - 反映前との違い: 本文が空の login は 404 から 422 に変わった。口が新設されたため、入力の形の検査（FastAPI の本文検査）が 404 の判定より先に走る。DB には触れない（`backend/app/routers/auth.py:219-229`）
+- 今の Firebase ログインを実際に試す確認はしていない（本番のパスワードを持たないため）。Firebase の経路のコードは変えていない（便2 審査）
+
+## 便4 の前に直す残件（便2 審査の LOW 3 件・未確認 1 件）
+
+1. `backend/app/routers/auth.py` の `_clear_refresh_cookie`（211-212 行目）が、Cookie を消すときに secure・httponly・samesite を付けていない。付けた時と同じ属性で消す
+2. `backend/app/auth/dependencies.py` 105 行目の `fromtimestamp` が try の外にある。不正な時刻の値で 500 になりうるので、try の中へ入れて 401 にする
+3. `backend/tests/test_self_auth.py` が httpx の「リクエストごとの cookies 指定」（非推奨）を使っている。クライアントの cookie に設定する形へ直す
+4. **未確認**: 本番 `public.users.last_login` の型（タイムゾーン付きかどうか）。便4 で login が last_login を更新する（K1 の測り方）ため、便4 のカード作成前に確かめる
 
 ## 次の一手（順番どおり）
 
-1. この引き継ぎ書のコミットを含めて、PR を出す（docs のみ・Draft にしない）
-   - 本文は下の「PR 本文の下書き」をそのまま使い、「触るファイル」にこの handoff.md を足す
-   - 提出前に関所を通す: `bash scripts/dev/validate-pr-body.sh < 本文ファイル`
-   - ローカルの main が古いと関所が終わらないことがある（2026-10-13 実測。main..HEAD が約 1960 コミット）。その場合は `scripts/dev/validate-pr-body.sh:304-317` と同じ環境変数で `node scripts/check-process-artifacts.js` を直接実行し、環境変数 MOCK_BASE_REF を origin/main にする
-   - 「削除するファイル:」は、行を 1 行でも消したファイルを書く決まり（`scripts/check-process-artifacts.js` の削除行の判定）。今回は ADR-138 と docs/adr/README.md
-   - バッククォートの中は実在するパスだけ（関所が実在を確かめる）。API の経路・環境変数・新しく作る予定のファイルは囲まない
-2. PR のマージは、ルールどおりに判断する（docs のみ。マージの判断は次のセッションで規則を確かめてから）
-3. 便1（migration）の実装カードを作る → カードチェック → PO に実装承認を y/n で聞く。便ごとに「カード → 実装承認 → Sonnet が実装 → Fable がコード審査 → CI → 危険便は GO」
+1. 便3 の実装カードを作る（design.md §6 便3）。その前に、上の未確認 2 列を確かめる
+2. 便3 には PO の作業が要る。さくらで送信用アドレスを作り DKIM を有効にする。DNS に DMARC を追加する。SMTP の secrets を登録する。手順書は便3 のカードに付ける
+3. 便4（切替・パスワード配布）・便6（Firebase 削除・不可逆）も PO の作業と GO が要る
 
 ## 途中で分かった注意
 
-- Sonnet は週の利用上限に達した（2026-10-13 夕方。回復は 10/16 18:00 JST）。それまで調査・実装の委任はできない
-- 担当のコマンドに「psql」の語と「|」が両方あると、フック psql-write-guard が誤検知して止める。言い換えて再試行するのは迂回になるので禁止
-- 本番 backend は `docker run` で入れ替える作り（`scripts/blue-green-cutover.sh`）。compose のサービス名では見つからない。コンテナ名 astro-webapp-backend-1 で読む
-- ADR 索引のスクリプトは、状態の欄に「承認」の語があると Accepted と判定する（`scripts/generate-adr-index.js:59`）。未承認の ADR に「未承認」と書かない
-- PO の端末で実行した読み取りスクリプト（結果は PO の Mac の /tmp/CC報告ファイル/auth-*）はセッション専用の置き場にあり、次のセッションからは見えない。必要な事実は recon.md の P1〜P13 に転記済み
+- 本番 DB の読み取りで `<>` を使うと、フック agent-danger-hook.sh の正規表現が「ssh＋psql＜ファイル」と誤検知して止める。`!=` を使う
+- pr-body-guard は recon.md・design.md を作業ディレクトリ基準で探す。`gh pr edit --body-file` は worktree に移動してから実行する
+- guard-authoring・guard-evaluation の state=error は、base が head の祖先でないときに起きる（`scripts/run-guard-evaluation.js:25`）。main を取り込めば消える
+- main が速く進むため、マージ前に update-branch（merge commit）→ CI 待ち → GO 記録の HEAD 書き換え、を何度か繰り返した。rebase はフックで禁止
+- 本番 backend は `docker run` で入れ替える作り（`scripts/blue-green-cutover.sh`）。コンテナ名 astro-webapp-backend-1 で読む
+- ADR 索引のスクリプトは、状態の欄に「承認」の語があると Accepted と判定する（`scripts/generate-adr-index.js:59`）
 
 ## 最初の依頼（審査用アカウント）
 
-- review@salesanchor.jp は Firebase に存在し（停止なし）、public.users にも id=10・tenant 6・使用中で存在する（recon P6・P13）。ログインできない原因はパスワード不一致だけ
-- 直し方は PO に案内済み: ログイン画面「パスワードをお忘れの方」→ さくらの Web メール（review の受信箱）で再設定リンクを開く。PO が実施したかは未確認
-
-## PR 本文の下書き
-
-```
-## なぜ
-ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す方針を、ADR-1013 と設計仕様書にまとめるため。PO が 2026-10-13 にチャットで「y」と承認済み。
-
-## 何を変えたか
-- ADR-1013（Accepted）を新規追加。ADR-138（password_hash 列廃止）を Superseded に更新
-- 設計仕様書 docs/specs/auth-login/（README・ideal-state・kgi）を新規追加し、索引を更新
-- recon.md・design.md・handoff.md を docs/handoff/auth-self-hosted-passkey/ に追加
-- ADR 索引（docs/adr/README.md・FEATURE-INDEX.md）を再生成
-
-## 変更規模
-大（11ファイル・文書のみ）
-
-## 概要
-- docs のみ。製品コード・DB・本番には触れていない
-- 実装は未着手
-- PO 承認: 2026-10-13 チャットで「y」
-- Fable による審査 2 回（REVISE → 反映済み）
-- 計画: 便0〜6 の段階実装（詳細は design.md）
-
----
-
-### 標準ワークフロー確認
-
-- recon: docs/handoff/auth-self-hosted-passkey/recon.md
-- 設計: docs/handoff/auth-self-hosted-passkey/design.md
-- 対象ADR: ADR-1013
-- 設計仕様書（あるべき姿）: docs/specs/auth-login/README.md
-- 触るファイル: docs/adr/ADR-1013-self-hosted-auth-and-passkey.md, docs/adr/ADR-138-remove-password-hash.md, docs/adr/FEATURE-INDEX.md, docs/adr/README.md, docs/specs/README.md, docs/specs/auth-login/README.md, docs/specs/auth-login/ideal-state.md, docs/specs/auth-login/kgi.md, docs/handoff/auth-self-hosted-passkey/recon.md, docs/handoff/auth-self-hosted-passkey/design.md, docs/handoff/auth-self-hosted-passkey/handoff.md
-- 削除するファイル: docs/adr/ADR-138-remove-password-hash.md, docs/adr/README.md
-
-### 共通
-- [x] 文書のみの変更（テスト対象なし）
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
+- review@salesanchor.jp は Firebase と public.users（id=10・tenant 6）の両方に存在し、ログインできない原因はパスワード不一致だけ（recon P6・P13）
+- 直し方は PO に案内済み（ログイン画面「パスワードをお忘れの方」→ さくらの Web メールで再設定）。PO が実施したかは未確認

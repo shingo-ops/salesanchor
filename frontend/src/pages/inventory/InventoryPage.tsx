@@ -16,10 +16,14 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { HeaderButton } from "../../components/HeaderButton";
+import { Drawer } from "../../components/Drawer";
 import { TextFieldControl } from "../../components/TextField";
+import { PAGE_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
 
 interface InventoryRow {
-  id: number;
+  id: string;
   product_id: number;
   product_name: string | null;
   name_en: string | null;
@@ -27,12 +31,17 @@ interface InventoryRow {
   mark: string | null;
   condition: string;
   unit: string | null;
-  offer_type: string;
+  offer_type: string | null;
+  status: string | null;
+  note_ja: string | null;
+  ship_ja: string | null;
+  merged_count: number;
+  posted_at: string | null;
   ship_timing: string | null;
   supplier_id: number;
   supplier_name: string | null;
   unit_price: number;
-  quantity: number;
+  quantity: number | null;
   tcg_type: string | null;
   offered_at: string;
   release_date: string | null;
@@ -52,6 +61,7 @@ interface InventoryListResponse {
   categories?: string[];
   conditions?: string[];
   units?: string[];
+  window_hours?: number | null;
 }
 
 const PER_PAGE = 50;
@@ -68,7 +78,7 @@ const toNonNegInt = (s: string): number | null => {
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
-  "category", "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier",
+  "category", "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
 export default function InventoryPage() {
@@ -81,7 +91,7 @@ export default function InventoryPage() {
     fromQuote?: boolean;
     returnTo?: string;
     draft?: unknown;
-    preselectedInventoryIds?: number[];
+    preselectedInventoryIds?: string[];
   } | null;
 
   const [items, setItems] = useState<InventoryRow[]>([]);
@@ -94,7 +104,7 @@ export default function InventoryPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
   // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
   );
   const [loading, setLoading] = useState(false);
@@ -119,6 +129,10 @@ export default function InventoryPage() {
   const [conditionFacet, setConditionFacet] = useState<string[]>([]);
   const [unitFacet, setUnitFacet] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
+  // 同じ投稿の行をまとめる（既定 ON）。設定パネルで切り替え、ユーザー別に永続化。
+  const [mergeSamePost, setMergeSamePost] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
   // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
   const tcgTypeName = useMemo(() => new Map(tcgTypes.map((tt) => [tt.code, tt.name_ja])), [tcgTypes]);
@@ -157,6 +171,7 @@ export default function InventoryPage() {
       params.set("per_page", String(PER_PAGE));
       params.set("sort", sortField);
       params.set("order", sortDir);
+      params.set("merge_same_post", mergeSamePost ? "true" : "false");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
       if (activeTab !== "all") params.set("tcg_type", activeTab);
@@ -183,6 +198,7 @@ export default function InventoryPage() {
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
       setItems(d.items);
       setTotal(d.total);
+      setWindowHours(d.window_hours);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
       if (d.conditions) setConditionFacet(d.conditions);
@@ -192,7 +208,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     void load();
@@ -224,6 +240,7 @@ export default function InventoryPage() {
         qty_max?: number | null;
         price_min?: number | null;
         price_max?: number | null;
+        merge_same_post?: boolean;
       }>("/me/inventory-filters")
       .then((f) => {
         if (cancelled) return;
@@ -238,6 +255,7 @@ export default function InventoryPage() {
         setQtyMax(f.qty_max != null ? String(f.qty_max) : "");
         setPriceMin(f.price_min != null ? String(f.price_min) : "");
         setPriceMax(f.price_max != null ? String(f.price_max) : "");
+        setMergeSamePost(f.merge_same_post ?? true);
       })
       .catch(() => { /* デフォルト（全表示）のまま */ })
       .finally(() => { if (!cancelled) setFiltersLoaded(true); });
@@ -263,13 +281,14 @@ export default function InventoryPage() {
           qty_max: toNonNegInt(qtyMax),
           price_min: toNonNegInt(priceMin),
           price_max: toNonNegInt(priceMax),
+          merge_same_post: mergeSamePost,
         })
         .catch(() => { /* 保存失敗は致命でない */ });
     }, 250);
     return () => clearTimeout(timer);
-  }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax]);
+  }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, mergeSamePost]);
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -371,7 +390,38 @@ export default function InventoryPage() {
   };
 
   return (
-    <PageLayout navKey="nav.inventory" subtitleKey="inventory.view.subtitle">
+    <PageLayout
+      navKey="nav.inventory"
+      subtitleKey="inventory.view.subtitle"
+      headerAction={
+        <HeaderButton
+          variant="icon"
+          aria-label={t("inventory.settings.open")}
+          data-testid="inventory-settings-open"
+          onClick={() => setShowSettings(true)}
+        >
+          <PAGE_ICONS.settingsSolid size={ICON.md} aria-hidden="true" />
+        </HeaderButton>
+      }
+    >
+      <Drawer open={showSettings} onClose={() => setShowSettings(false)} title={t("inventory.settings.title")}>
+        <div data-testid="inventory-settings-panel">
+          <div>{t("inventory.settings.mergeSamePost")}</div>
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+            {t("inventory.settings.mergeSamePostNote")}
+          </p>
+          <Button
+            variant={mergeSamePost ? "primary" : "secondary"}
+            size="sm"
+            type="button"
+            data-testid="inventory-merge-toggle"
+            aria-pressed={mergeSamePost}
+            onClick={() => { setMergeSamePost((v) => !v); setPage(1); }}
+          >
+            {mergeSamePost ? t("inventory.settings.on") : t("inventory.settings.off")}
+          </Button>
+        </div>
+      </Drawer>
       {error && (
         <div className="error-message" role="alert" data-testid="inventory-error">
           {error}
@@ -494,7 +544,14 @@ export default function InventoryPage() {
           data-testid="inventory-expiry-warning"
           style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
         >
-          {"※"}{t("inventory.expiryWarning")}
+          {"※"}
+          {windowHours === undefined
+            ? null
+            : windowHours === null
+              ? t("inventory.distributionOff")
+              : windowHours === 0
+                ? t("inventory.windowUnlimited")
+                : t("inventory.expiryWarning", { hours: windowHours })}
         </p>
       </div>
 
@@ -518,6 +575,8 @@ export default function InventoryPage() {
               {colVisible("quantity") && sortTh("quantity", "quantity", "right")}
               {colVisible("unitPrice") && sortTh("unitPrice", "unit_price", "right")}
               {colVisible("supplier") && sortTh("supplier", "supplier")}
+              {colVisible("note") && <th style={{ textAlign: "left" }}>{t("inventory.col.note")}</th>}
+              {colVisible("ship") && <th style={{ textAlign: "left" }}>{t("inventory.col.ship")}</th>}
               {sortTh("releaseDate", "release_date")}
             </tr>
           </thead>
@@ -546,19 +605,22 @@ export default function InventoryPage() {
                   {colVisible("mark") && <td>{it.mark ?? "-"}</td>}
                   <td>
                     <div style={{ fontWeight: "var(--font-weight-semi)" }}>{it.product_name ?? `#${it.product_id}`}</div>
+
                     {it.name_en && (
                       <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{it.name_en}</div>
                     )}
                   </td>
                   {colVisible("condition") && (
-                    <td>{t(`inventory.condition.${it.condition}`, { defaultValue: it.condition })}</td>
+                    <td>{it.condition}</td>
                   )}
                   {colVisible("unit") && (
-                    <td>{it.unit ? t(`inventory.unit.${it.unit}`, { defaultValue: it.unit }) : "-"}</td>
+                    <td>{it.unit ?? "-"}</td>
                   )}
                   {colVisible("offerType") && (
                     <td>
-                      {it.offer_type === "pre_order" ? (
+                      {it.offer_type === null ? (
+                        (it.status ?? "-")
+                      ) : it.offer_type === "pre_order" ? (
                         <span className="badge badge-negotiating">{t("inventory.offerType.pre_order")}</span>
                       ) : (
                         t("inventory.offerType.in_stock")
@@ -570,7 +632,16 @@ export default function InventoryPage() {
                       )}
                     </td>
                   )}
-                  {colVisible("quantity") && <td style={{ textAlign: "right" }}>{it.quantity}</td>}
+                  {colVisible("quantity") && (
+                    <td style={{ textAlign: "right" }}>
+                      {it.quantity ?? ""}
+                      {it.merged_count >= 2 && (
+                        <div data-testid={`inventory-row-${it.id}-merged`} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+                          {t("inventory.mergedCount", { count: it.merged_count })}
+                        </div>
+                      )}
+                    </td>
+                  )}
                   {colVisible("unitPrice") && (
                     <td style={{ textAlign: "right" }}>¥{it.unit_price.toLocaleString()}</td>
                   )}
@@ -582,6 +653,8 @@ export default function InventoryPage() {
                       </div>
                     </td>
                   )}
+                  {colVisible("note") && <td>{it.note_ja ?? ""}</td>}
+                  {colVisible("ship") && <td>{it.ship_ja ?? ""}</td>}
                   <td>{it.release_date ?? "-"}</td>
                 </tr>
               ))

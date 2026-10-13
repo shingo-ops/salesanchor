@@ -14,7 +14,7 @@ AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理す
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -37,6 +37,12 @@ from app.services.inventory_axes import (
     log_axis_isolation,
     project_inventory_axes,
     resolve_condition_view,
+)
+from app.services.tcg_distribution_svc import (
+    _age_window,
+    _max_age_hours,
+    distribution_rows_sql,
+    load_distribution_settings,
 )
 
 router = APIRouter()
@@ -91,81 +97,134 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 # 各クライアントの営業担当ロール以上（products.view）が閲覧。読み取り専用。
 # ---------------------------------------------------------------------------
 
-# 在庫表ビュー用 SELECT（参考画像準拠の列。admin 専用の notes/source/status は除外）。
-_VIEW_SELECT = """
-    SELECT i.id, i.product_id, i.raw_condition,
-           -- ADR-093: 在庫オファーの単位（空文字列は NULL として扱う）
-           NULLIF(i.unit, '') AS unit,
-           i.seal, i.search_cond, i.grade, i.damage,
-           i.offer_type, i.ship_timing, i.unit_price,
-           i.quantity, i.offered_at, i.supplier_id,
-           s.name AS supplier_name,
-           p.name AS product_name,
-           p.name_en AS name_en,
-           p.category AS category,
-           p.mark AS mark,
-           p.tcg_type AS tcg_type,
-           p.release_date AS release_date
-    FROM public.inventory i
-    LEFT JOIN public.suppliers s ON s.id = i.supplier_id
-    LEFT JOIN public.products  p ON p.id = i.product_id
-"""
-
-_VIEW_COUNT_FROM = (
-    "FROM public.inventory i "
-    "LEFT JOIN public.suppliers s ON s.id = i.supplier_id "
-    "LEFT JOIN public.products  p ON p.id = i.product_id "
-)
+# 区分（offer_type）と LINE 解析の status の対応。1つの定数で持ち、絞り込みは逆引きに使う。
+OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pre-order"}
+_STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
 
 
-# ADR-093 在庫表改修: 全列ソート用のホワイトリスト（sort キー → SQL 列。SQLi 防止）。
+def round_half_up(value: object) -> int:
+    """SQL の ROUND(numeric) と同じ丸め（0.5 は0から遠い側）。Python の round は銀行丸めなので使わない。"""
+    return int(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def status_to_offer_type(status_value: str | None) -> str | None:
+    """LINE 解析の status を区分に写す。対応に無い status は None。"""
+    return _STATUS_TO_OFFER_TYPE.get(status_value or "")
+
+
+# 在庫表の全列ソート用ホワイトリスト（sort キー → 配信行の列。SQLi 防止）。d は distribution_rows_sql の副問い合わせ。
 _SORT_COLUMNS = {
-    "name": "p.name",
-    "category": "p.category",
-    "mark": "p.mark",
-    "condition": "COALESCE(NULLIF(i.raw_condition, ''), '')",
-    "unit": "NULLIF(i.unit, '')",
-    "offer_type": "i.offer_type",
-    "quantity": "i.quantity",
-    "unit_price": "i.unit_price",
-    "supplier": "s.name",
-    "offered_at": "i.offered_at",
-    "release_date": "p.release_date",
+    "name": "d.japanese_title",
+    "category": "d.category",
+    "mark": "NULLIF(d.mark, '')",
+    "condition": "d.condition",
+    "unit": "NULLIF(d.unit_canonical, '')",
+    "offer_type": "d.status",
+    "quantity": "d.qty_num",
+    "unit_price": "d.price_num",
+    "supplier": "d.provider",
+    "offered_at": "d.posted_ts",
+    "release_date": "NULLIF(d.release_date, '')",
 }
 
 
-def _project_inventory_rows(
-    raw_rows: list[dict[str, object]],
-    best_map: dict[int, tuple[bool, str | None, str | None]],
-) -> list[InventoryRow]:
+def _split_csv(raw: str | None) -> list[str]:
+    return [tok.strip() for tok in (raw or "").split(",") if tok.strip()]
+
+
+def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[InventoryRow]:
     projected: list[InventoryRow] = []
     for row in raw_rows:
-        row_id = int(row["id"])
-        best_flag, reason_category, reason = best_map.get(row_id, (False, None, None))
+        quantity = row.get("qty_num")
+        status_value = row.get("status") or None
         projected.append(
             InventoryRow(
-                id=row_id,
+                id=str(row["row_key"]),
                 product_id=int(row["product_id"]),
-                product_name=row.get("product_name"),
-                name_en=row.get("name_en"),
+                product_name=row.get("japanese_title") or None,
+                name_en=row.get("english_title") or None,
                 category=row.get("category"),
-                mark=row.get("mark"),
-                condition=str(resolve_condition_view(row) or row.get("raw_condition") or ""),
-                unit=row.get("unit"),
-                offer_type=row.get("offer_type") or "in_stock",
-                ship_timing=row.get("ship_timing"),
+                mark=row.get("mark") or None,
+                condition=str(row.get("condition") or ""),
+                unit=row.get("unit_canonical") or None,
+                offer_type=status_to_offer_type(status_value),
+                ship_timing=None,
                 supplier_id=int(row["supplier_id"]),
-                supplier_name=row.get("supplier_name"),
-                unit_price=int(row["unit_price"] or 0),
-                quantity=int(row["quantity"] or 0),
+                supplier_name=row.get("provider") or None,
+                unit_price=round_half_up(row["price_num"] or 0),
+                quantity=None if quantity is None else round_half_up(quantity),
                 tcg_type=row.get("tcg_type"),
-                offered_at=row.get("offered_at") or datetime.now(timezone.utc),
-                is_best=best_flag,
-                best_reason_category=reason_category,
-                best_reason=reason,
+                offered_at=row["posted_ts"],
+                posted_at=row["posted_ts"],
+                release_date=row.get("release_date") or None,
+                note_ja=row.get("note_ja") or None,
+                ship_ja=row.get("ship_ja") or None,
+                status=status_value,
+                merged_count=int(row.get("merged_count") or 1),
             )
         )
     return projected
+
+
+def _build_view_filters(
+    *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
+    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max,
+) -> tuple[list[str], dict]:
+    """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
+    conditions: list[str] = []
+    params: dict = {}
+    if tcg_type:
+        conditions.append("d.tcg_type = :tcg_type")
+        params["tcg_type"] = tcg_type
+    if category:
+        conditions.append("d.category = :category")
+        params["category"] = category
+    if q:
+        conditions.append(
+            "(d.provider ILIKE :q OR d.japanese_title ILIKE :q OR d.english_title ILIKE :q "
+            "OR d.product_id::text ILIKE :q OR d.category ILIKE :q OR d.mark ILIKE :q)"
+        )
+        params["q"] = f"%{q}%"
+    # 「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）。supplier_id は public.suppliers の id。
+    hidden_ids = [int(tok) for tok in _split_csv(hide_supplier_ids) if tok.lstrip("-").isdigit()]
+    if hidden_ids:
+        placeholders = ", ".join(f":hsid{i}" for i in range(len(hidden_ids)))
+        conditions.append(f"d.supplier_id NOT IN ({placeholders})")
+        params.update({f"hsid{i}": sid for i, sid in enumerate(hidden_ids)})
+    hidden_cats = _split_csv(hide_categories)
+    if hidden_cats:
+        placeholders = ", ".join(f":hcat{i}" for i in range(len(hidden_cats)))
+        conditions.append(f"d.category NOT IN ({placeholders})")
+        params.update({f"hcat{i}": c for i, c in enumerate(hidden_cats)})
+    requested_conditions = [c.strip() for c in [condition or "", *_split_csv(condition_in)] if c.strip()]
+    if requested_conditions:
+        placeholders = ", ".join(f":cond{i}" for i in range(len(requested_conditions)))
+        conditions.append(f"d.condition IN ({placeholders})")
+        params.update({f"cond{i}": c for i, c in enumerate(requested_conditions)})
+    unit_list = _split_csv(unit_in)
+    if unit_list:
+        placeholders = ", ".join(f":unit{i}" for i in range(len(unit_list)))
+        conditions.append(f"d.unit_canonical IN ({placeholders})")
+        params.update({f"unit{i}": u for i, u in enumerate(unit_list)})
+    for index, requested in enumerate([[offer_type] if offer_type else [], _split_csv(offer_type_in)]):
+        if not requested:
+            continue
+        statuses = [OFFER_TYPE_TO_STATUS[o] for o in requested if o in OFFER_TYPE_TO_STATUS]
+        if not statuses:  # 対応に無い区分だけが指定された: 出す行は無い
+            conditions.append("FALSE")
+            continue
+        placeholders = ", ".join(f":ot{index}_{i}" for i in range(len(statuses)))
+        conditions.append(f"d.status IN ({placeholders})")
+        params.update({f"ot{index}_{i}": st for i, st in enumerate(statuses)})
+    # 数量・単価の範囲は、まとめた後の値で判定する。数量が空の行は、範囲指定があれば出さない。
+    for column, name, value, op in (
+        ("d.qty_num", "qty_min", qty_min, ">="), ("d.qty_num", "qty_max", qty_max, "<="),
+        ("d.price_num", "price_min", price_min, ">="), ("d.price_num", "price_max", price_max, "<="),
+    ):
+        if value is not None:
+            conditions.append(f"{column} {op} CAST(:{name} AS integer)")
+            params[name] = value
+    return conditions, params
 
 
 @router.get(
@@ -180,7 +239,7 @@ async def list_inventory_view(
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
     hide_categories: str | None = Query(default=None, max_length=2000, description="非表示にするカテゴリーのCSV（ユーザー別フィルタ用）"),
-    # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
+    # 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
     condition: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)の単一指定"),
     condition_in: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)のCSV"),
     unit_in: str | None = Query(default=None, max_length=2000, description="表示する形態(unit)のCSV"),
@@ -189,6 +248,7 @@ async def list_inventory_view(
     qty_max: int | None = Query(default=None, ge=0, description="数量の上限（以下）"),
     price_min: int | None = Query(default=None, ge=0, description="単価の下限（以上）"),
     price_max: int | None = Query(default=None, ge=0, description="単価の上限（以下）"),
+    merge_same_post: bool = Query(default=True, description="同じ投稿のランク違いを1行にまとめる"),
     sort: str = Query(
         default="release_date",
         pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at|release_date)$",
@@ -199,162 +259,73 @@ async def list_inventory_view(
     per_page: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
-    """在庫表（最終ユーザー向け）。
+    """在庫表（最終ユーザー向け）。LINE 解析の配信行（GAS 在庫一覧と同じ行）を返す。
 
-    public.inventory の status='in_stock' かつ未失効 (expires_at > NOW()) のオファーを
-    「商品×仕入元×状態」の明細行で返す。名前ソート + TCG種別フィルタ + 検索 + ページング。
-
-    - 権限: products.view（各クライアントの営業担当ロール以上）。編集/削除は持たない。
-    - 18h 失効: expires_at <= NOW() の行は非表示（表示フィルタのみ、実データは消さない）。
-    - 在庫数マスクなし（I-05 撤廃 / 在庫は全テナント共通で見える）。
+    行の定義は tcg_distribution_svc.distribution_rows_sql の1か所だけ（ここに配信の WHERE は書かない）。
+    - 権限: products.view（各クライアントの営業担当ロール以上）。読み取り専用。
+    - max_age_hours が未設定または不正なら GAS と同じく配信しない（items 空・window_hours null）。
+    - merge_same_post=true で、同じ投稿のランク違いの行を1行にまとめる（数量は合計・単価は最大）。
     """
-    offset = (page - 1) * per_page
-    conditions: list[str] = [
-        "i.status = 'in_stock'",
-        "(i.expires_at IS NULL OR i.expires_at > NOW())",
-    ]
-    params: dict = {"limit": per_page, "offset": offset}
-    if tcg_type:
-        conditions.append("p.tcg_type = :tcg_type")
-        params["tcg_type"] = tcg_type
-    if category:
-        conditions.append("p.category = :category")
-        params["category"] = category
-    if offer_type:
-        conditions.append("i.offer_type = :offer_type")
-        params["offer_type"] = offer_type
-    if q:
-        conditions.append(
-            "(s.name ILIKE :q OR p.name ILIKE :q OR p.name_en ILIKE :q "
-            "OR p.id::text ILIKE :q OR p.category ILIKE :q OR p.mark ILIKE :q)"
+    settings = await load_distribution_settings(db)
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        return InventoryListResponse(items=[], total=0, page=page, per_page=per_page, window_hours=None)
+    include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
+    age_condition, age_params = _age_window(max_age_hours)
+
+    def rows_sql(merge: bool) -> str:
+        # 配信行（GAS と同じ定義）に、在庫表だけが使う products の列（tcg_type, category）を外側で足す。
+        inner_rows = distribution_rows_sql(
+            include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=merge,
         )
-        params["q"] = f"%{q}%"
-    # ADR-093 Phase 4: ユーザー別フィルタ「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）
-    hidden_ids = [
-        int(tok)
-        for tok in (hide_supplier_ids or "").split(",")
-        if tok.strip().lstrip("-").isdigit()
-    ]
-    if hidden_ids:
-        placeholders = ", ".join(f":hsid{i}" for i in range(len(hidden_ids)))
-        conditions.append(f"i.supplier_id NOT IN ({placeholders})")
-        for i, sid in enumerate(hidden_ids):
-            params[f"hsid{i}"] = sid
-    # ADR-093 在庫表改修: 「カテゴリー 非表示」（CSV → NOT IN）
-    hidden_cats = [c.strip() for c in (hide_categories or "").split(",") if c.strip()]
-    if hidden_cats:
-        cat_ph = ", ".join(f":hcat{i}" for i in range(len(hidden_cats)))
-        conditions.append(f"p.category NOT IN ({cat_ph})")
-        for i, c in enumerate(hidden_cats):
-            params[f"hcat{i}"] = c
-    # ADR-093 表示条件: 状態/形態/区分の複数選択（CSV → IN。値は bind param で SQLi 防止）。
-    cond_in = [c.strip() for c in (condition_in or "").split(",") if c.strip()]
-    requested_conditions = [c.strip() for c in [condition or "", *cond_in] if c.strip()]
-    condition_clause, condition_params = build_condition_filter_clause(requested_conditions)
-    if condition_clause is not None:
-        conditions.append(condition_clause)
-        params.update(condition_params)
-    unit_list = [u.strip() for u in (unit_in or "").split(",") if u.strip()]
-    if unit_list:
-        ph = ", ".join(f":unit{i}" for i in range(len(unit_list)))
-        conditions.append(f"NULLIF(i.unit, '') IN ({ph})")
-        for i, u in enumerate(unit_list):
-            params[f"unit{i}"] = u
-    ot_list = [o.strip() for o in (offer_type_in or "").split(",") if o.strip()]
-    if ot_list:
-        ph = ", ".join(f":ot{i}" for i in range(len(ot_list)))
-        conditions.append(f"i.offer_type IN ({ph})")
-        for i, o in enumerate(ot_list):
-            params[f"ot{i}"] = o
-    # ADR-093 表示条件: 数量/単価の範囲（以上・以下）。
-    if qty_min is not None:
-        conditions.append("i.quantity >= :qty_min")
-        params["qty_min"] = qty_min
-    if qty_max is not None:
-        conditions.append("i.quantity <= :qty_max")
-        params["qty_max"] = qty_max
-    if price_min is not None:
-        conditions.append("i.unit_price >= :price_min")
-        params["price_min"] = price_min
-    if price_max is not None:
-        conditions.append("i.unit_price <= :price_max")
-        params["price_max"] = price_max
-    where = "WHERE " + " AND ".join(conditions)
+        return (
+            "SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
+            f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id"
+        )
+
+    conditions, filter_params = _build_view_filters(
+        q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
+        hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
+        condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
+        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max,
+    )
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    params = {**age_params, **filter_params}
     order_dir = "ASC" if order == "asc" else "DESC"
-    sort_col = _SORT_COLUMNS.get(sort, "p.name")
+    sort_col = _SORT_COLUMNS.get(sort, "d.japanese_title")
+    inner = rows_sql(merge_same_post)
 
     total = (
-        await db.execute(
-            text(f"SELECT COUNT(*) {_VIEW_COUNT_FROM} {where}"),
-            params,
-        )
+        await db.execute(text(f"SELECT COUNT(*) FROM ({inner}) d {where}"), params)
     ).scalar_one()
-
     result = await db.execute(
         text(
-            f"{_VIEW_SELECT} {where} "
-            f"ORDER BY {sort_col} {order_dir} NULLS LAST, i.id ASC "
+            f"SELECT d.* FROM ({inner}) d {where} "
+            f"ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC "
             "LIMIT :limit OFFSET :offset"
         ),
-        params,
+        {**params, "limit": per_page, "offset": (page - 1) * per_page},
     )
-    items = _project_inventory_rows([dict(r) for r in result.mappings().all()], {})
+    items = _project_inventory_rows([dict(r) for r in result.mappings().all()])
 
-    # ADR-093 Phase 4: フィルタ UI 用の仕入元ファセット（在庫品・未失効のみ。
-    # 他フィルタ非依存で全候補を返す＝非表示にした仕入元もチェックボックスに残る）。
-    facet_rows = await db.execute(
-        text(
-            "SELECT DISTINCT i.supplier_id AS id, s.name AS name "
-            "FROM public.inventory i "
-            "LEFT JOIN public.suppliers s ON s.id = i.supplier_id "
-            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "ORDER BY s.name NULLS LAST"
+    # フィルタ UI の候補は、まとめなし・絞り込みなしの配信行から作る（非表示にした候補も残る）。
+    facet_rows = (
+        await db.execute(
+            text(
+                "SELECT DISTINCT d.supplier_id, d.provider, d.category, d.condition, d.unit_canonical "
+                f"FROM ({rows_sql(False)}) d"
+            ),
+            age_params,
         )
-    )
-    suppliers = [InventorySupplierFacet(**dict(r)) for r in facet_rows.mappings().all()]
-
-    # ADR-093 在庫表改修: カテゴリーファセット（在庫品・未失効のみ。フィルタ非依存で全候補）。
-    cat_rows = await db.execute(
-        text(
-            "SELECT DISTINCT p.category AS category "
-            "FROM public.inventory i "
-            "LEFT JOIN public.products p ON p.id = i.product_id "
-            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "AND p.category IS NOT NULL AND p.category <> '' "
-            "ORDER BY p.category"
-        )
-    )
-    categories = [r["category"] for r in cat_rows.mappings().all()]
-
-    # ADR-093 表示条件: 状態(condition)・形態(unit)ファセット（在庫品・未失効のみ。
-    # 他フィルタ非依存で全候補を返す＝複数選択チェックボックスの候補に使う）。
-    cond_rows = await db.execute(
-        text(
-            "SELECT i.raw_condition, i.seal, i.search_cond, i.grade, i.damage, "
-            "NULLIF(i.unit, '') AS unit "
-            "FROM public.inventory i "
-            "LEFT JOIN public.products p ON p.id = i.product_id "
-            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-        )
-    )
-    condition_facet = sorted(
-        {
-            resolve_condition_view(r)
-            for r in cond_rows.mappings().all()
-            if resolve_condition_view(r)
-        }
-    )
-    unit_rows = await db.execute(
-        text(
-            "SELECT DISTINCT NULLIF(i.unit, '') AS v "
-            "FROM public.inventory i LEFT JOIN public.products p ON p.id = i.product_id "
-            "WHERE i.status = 'in_stock' AND (i.expires_at IS NULL OR i.expires_at > NOW()) "
-            "AND NULLIF(i.unit, '') IS NOT NULL "
-            "AND NULLIF(i.unit, '') <> '' "
-            "ORDER BY 1"
-        )
-    )
-    unit_facet = [r["v"] for r in unit_rows.mappings().all()]
+    ).mappings().all()
+    supplier_names = {r["supplier_id"]: r["provider"] or None for r in facet_rows}
+    suppliers = [
+        InventorySupplierFacet(id=sid, name=name)
+        for sid, name in sorted(supplier_names.items(), key=lambda kv: (kv[1] is None, kv[1] or ""))
+    ]
+    categories = sorted({r["category"] for r in facet_rows if r["category"]})
+    condition_facet = sorted({r["condition"] for r in facet_rows if r["condition"]})
+    unit_facet = sorted({r["unit_canonical"] for r in facet_rows if r["unit_canonical"]})
     return InventoryListResponse(
         items=items,
         total=int(total or 0),
@@ -364,6 +335,7 @@ async def list_inventory_view(
         categories=categories,
         conditions=condition_facet,
         units=unit_facet,
+        window_hours=max_age_hours,
     )
 
 
