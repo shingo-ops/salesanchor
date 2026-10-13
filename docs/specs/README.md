@@ -8,6 +8,7 @@
 
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
+| AI 保守運用 24 時間化（ai-ops-247。報知器の感度・精度、応急処置、Mac に頼らない AI 起動〔routines〕、障害記録と月次成績表。discord-ops-intake は Mac 依存のため本テーマの予備 C） | [ai-ops-247/README.md](ai-ops-247/README.md) | あるべき姿・KGI 6件 PO承認 2026-10-13・recon・design・ADR-1012 草案・実装未着手 |
 | Discord 監視通知 → AI 保守運用（discord-ops-intake。監視 webhook を Claude Code が受けて調査・委任範囲で対応） | [discord-ops-intake/README.md](discord-ops-intake/README.md) | あるべき姿・KGI提示（KGI-3 PO修正反映）・recon・design草案 2026-10-13・実装未着手 |
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
 | reaper 自動掃除（worktree の自動回収） | [reaper-auto-cleanup/README.md](reaper-auto-cleanup/README.md) | あるべき姿・KGI・recon・design済 2026-07-22 |

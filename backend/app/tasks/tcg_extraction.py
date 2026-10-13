@@ -28,7 +28,6 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
 from app.services.line_analysis_v102_svc import (
     ENGINE_V102,
@@ -319,7 +318,7 @@ def _build_extraction_context(session: Session, row) -> ExtractionContext:
 def load_extraction_context(session: Session, extraction_job_id: str) -> ExtractionContext | None:
     """extraction_job_id のジョブの原文・仕入元ルール・knowledge リンク・仕入元 ID を読む。
 
-    _run_extraction（本番）と shadow_backfill（過去ジョブへの一括実行）が共有する。
+    _run_extraction（本番）と prompt_ab（試験の道具）が共有する。
     ジョブが無ければ None。
     """
     row = session.execute(
@@ -440,7 +439,7 @@ def _run_v102_extraction(session, extraction_job_id, recorder) -> dict:
     """LINE_ANALYSIS_ENGINE=v102 の抽出。Gemini 段（run_v102_extraction）→ TCG_AUTO_ANALYZE=1 ならシステム段 → 自動配信。
 
     status（done/empty）・試行の記録・自動配信・停滞回収は v6 と同じ流れに乗せる。Gemini の失敗は例外のまま送出し、
-    呼び出し元（_run_extraction）が recorder.fail で status='error' にする。v7 試運転（EXTRACTION_SHADOW_ENABLED）は v6 のときだけ動かす。
+    呼び出し元（_run_extraction）が recorder.fail で status='error' にする。
     """
     extracted = run_v102_extraction(session, extraction_job_id, recorder=recorder)
     analysis_stats = None
@@ -611,32 +610,6 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             logger.info(
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id
             )
-
-        # --- 6b. 試運転（Shadow run, PR-C）。EXTRACTION_SHADOW_ENABLED=1 のときのみ ---
-        # design.md PR-C: 本番の解析が終わった後、同じ raw_text/supplier_context/
-        # knowledge_links（本番用に上で既に読み込んだ値）で v7 を呼び、結果は
-        # extraction_shadow_results にのみ書く。例外は本番へ一切伝播させない。
-        if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":
-            if not has_required_supplier_rule(supplier_context):
-                logger.info(
-                    "[tcg_extraction] shadow skipped: no supplier rule supplier_id=%s ej=%s",
-                    supplier_id,
-                    extraction_job_id,
-                )
-            else:
-                try:
-                    run_shadow_for_job(
-                        session,
-                        extraction_job_id,
-                        raw_text=raw_text,
-                        supplier_context=supplier_context,
-                        knowledge_links=knowledge_links,
-                    )
-                except Exception:
-                    logger.exception(
-                        "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
-                        extraction_job_id,
-                    )
 
     return {
         "extraction_job_id": extraction_job_id,

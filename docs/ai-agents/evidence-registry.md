@@ -23,6 +23,28 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20261013-AI-OPS-247
+date: 2026-10-13
+agent: Claude Opus（設計担当）＋ Sonnet（読み取り調査）
+task: AI 保守運用 24 時間化の現状調査と全体設計（実装なし）
+scope: docs/specs/ai-ops-247/、docs/handoff/ai-ops-247/、docs/adr/ADR-1012-ai-ops-247.md
+evidence:
+  - type: file
+    reference: docs/handoff/ai-ops-247/recon.md
+    summary: 計器の無いルール 4 本、BackendHighLatency 14 日で 320 区間、unhealthy 自動再起動なし、一次記録のある過去障害 4 件中 報知器先行 0 件（1 件未確認）、障害記録なし。未解決の不明点 5 件（#3〜#7）は各段階のカード前に解消。
+  - type: external
+    reference: Claude Code 公式 routines ページ（Context7 月間上限のため公式ページを直接参照）
+    summary: /fire API 起動・Alert triage の使い道掲載・サブスク枠から利用・1 時間の上限・network secrets。規約本文に routines を名指しした一文は無い。
+  - type: external
+    reference: AWS 101925 ポストモーテム／Replit 2025-07／Google SRE book 6 章／ITBench（ICML 2025）
+    summary: 全停止スイッチと回数上限・権限で塞ぐ・対応不要の通知はページにしない・AI の自動解決 11.4%。
+confidence: medium
+tradeoff: routines は研究プレビューでサブスク枠を B と C で共有する。本番の事実 6 項目（recon 不明点 #3・#6）は段階0 の PO 実行まで未確認。監視からの常時起動がサブスクの ordinary usage に入るか（不明点 #7）は公式に明言なし。
+decision: 7 段階（0 基準値〜6 PDCA）で進める。KGI 6 件は PO 承認済み。実装は段階ごとのカードと PO の実装承認後。
+follow_up: 段階0 の読み取り専用 script を作り PO が ! で実行。段階5 の実測は使用量の枠が戻った後（日時は PO の画面で確認）。
+```
+
+```text
 id: EV-20260928-PR-LIFECYCLE-GATES
 date: 2026-09-28
 agent: Sol implementation/validation
