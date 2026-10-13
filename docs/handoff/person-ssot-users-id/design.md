@@ -135,4 +135,9 @@ SQL: docs/handoff/person-ssot-users-id/d1_link_roster.sql。戻し: d1_rollback.
 - マネージャーのロール画面閲覧は残す（PO「n→マネージャーは見えるが操作できない仕様で残す、ただしadminが後から編集できるようにする」）。admin（priority 900）はマネージャー（500・is_system=f）の権限を既存の PUT /roles/{id}/permissions で編集できる（backend/app/routers/roles.py の is_system・priority 検査）ので変更不要。
 - 分割: P4a（ロール: card-p4a.md）→ P4b（メール表示・firebase_uid と users.role の使用停止）→ P4c（列削除・PO 本人 GO）。
 - P4a で設計者が加えた決まり: 自分と同格以上の人のロールは変えられない（自分の権限を下げて管理者がいなくなるのを防ぐ）。スタッフ追加でも自分以上のロールは付けられない（例: オーナーは新しいオーナーを画面から作れない）。
+- P4a 審査（#4206）で確認した事実と残件:
+  - オーナーの交代は画面からできない（オーナーはオーナーロールを付けられず、同格の人のロールも変えられない）。P4a 以前も PUT /users/{id}/roles の priority 検査で同じだった。交代が必要になったら手順を別に決める（PO 判断）。
+  - 本番の super admin（users 1・3）は自分のテナントで owner ロールを持つ（user_roles t1 (1,1)、t4 (3,1)）ので、スタッフ追加・ロール変更は止まらない。
+  - PUT /users/{id}/roles にも「同格以上の人は変えられない」検査を同じ関数で追加（501135274）。
+  - P4c（列削除）の前に必須: staff.role_id を直接読み書きする scripts/qa/seed-tenant.sql:107-128、scripts/data_migration/migrate_staff_from_sheet.py・verify_staff_migration.py、scripts/setup_review_tenant.py:254、scripts/setup_single_test_user.py:279,316-317、tests/qa-smoke/scene-06.spec.ts:75,79 を user_roles へ直す。
 
