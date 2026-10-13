@@ -189,6 +189,7 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
         "product_first": load_product_first_masters(session),
+        "ship_entries": analyzer.load_ship_master(session),
     }
     return masters, unit_canonical_to_uuid
 
@@ -661,6 +662,7 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         for raw, bounded in ((item.get("quantity_normalized"), quantity), (item.get("price_normalized"), price))
         if raw is not None and bounded is None
     ]
+    ship_ja, ship_en = analyzer.build_ship_labels(ship_note(item.get("ship")), masters["ship_entries"])
     reasons = _join_unique([*_kinds(item.get("review") or []), *_kinds(item.get("gemini_review") or []), *out_of_range])
     return {
         "product_id": product_id if matched else None, "pid_resolved": bool(matched),
@@ -671,7 +673,8 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "condition_basis": str(item.get("condition_basis") or "")[:_CONDITION_BASIS_MAX],
         "quantity_normalized": quantity,
         "price_normalized": price,
-        "note_ja": ship_note(item.get("ship")), "status": item.get("status"), "exclusion": item.get("status_effect"),
+        "note_ja": None, "ship_ja": ship_ja, "ship_en": ship_en,
+        "status": item.get("status"), "exclusion": item.get("status_effect"),
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
         "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
@@ -683,12 +686,12 @@ _UPSERT_SQL = """
         id, extraction_item_id, product_id, pid_resolved, pid_basis, unit_id, unit_canonical, unit_resolved,
         condition_id, condition_canonical, condition_basis, quantity_normalized, price_normalized, note_ja,
         status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
-        price_basis
+        price_basis, ship_ja, ship_en
     ) VALUES (
         :id, :extraction_item_id, :product_id, :pid_resolved, :pid_basis, :unit_id, :unit_canonical, :unit_resolved,
         :condition_id, :condition_canonical, :condition_basis, :quantity_normalized, :price_normalized, :note_ja,
         :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
-        :price_basis
+        :price_basis, :ship_ja, :ship_en
     )
     ON CONFLICT (extraction_item_id) DO UPDATE SET
         product_id = EXCLUDED.product_id, pid_resolved = EXCLUDED.pid_resolved, pid_basis = EXCLUDED.pid_basis,
@@ -698,7 +701,8 @@ _UPSERT_SQL = """
         price_normalized = EXCLUDED.price_normalized, note_ja = EXCLUDED.note_ja, status = EXCLUDED.status,
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
-        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis
+        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis,
+        ship_ja = EXCLUDED.ship_ja, ship_en = EXCLUDED.ship_en
     RETURNING id
 """
 

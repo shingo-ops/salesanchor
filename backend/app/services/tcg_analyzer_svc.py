@@ -1054,12 +1054,14 @@ def _expand_note_label(template: str, match: re.Match[str]) -> str:
     return re.sub(r"\$(\d+)", replace_group, template)
 
 
-def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "") -> Optional[str]:
-    """Memo-only legacy notes; STATE_LITERAL explicitly also reads state."""
+def _note_matches(
+    raw_memo: str, note_entries: list[dict], *, raw_state: str = ""
+) -> list[tuple[dict, Optional[re.Match[str]]]]:
+    """備考マスタの当たり判定。(当たった行, REGEX の match / LITERAL は None) を priority 順に返す。"""
     if not (raw_memo or raw_state) or not note_entries:
-        return None
+        return []
     norm_memo = normalize_en(raw_memo)
-    labels = []
+    hits: list[tuple[dict, Optional[re.Match[str]]]] = []
     for entry in note_entries:
         match_type = entry.get("match_type", "LITERAL")
         if not raw_memo and match_type != "STATE_LITERAL":
@@ -1070,7 +1072,7 @@ def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "
                 note_input, entry["search_keywords"], entry["exclude_keywords"]
             )
             if hit:
-                labels.append(entry["label_ja"])
+                hits.append((entry, None))
             continue
 
         if any(match_one_kw(kw, norm_memo) for kw in entry["exclude_keywords"]):
@@ -1088,9 +1090,92 @@ def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "
             )
             continue
         if regex_match:
-            template = entry.get("label_template") or entry["label_ja"]
-            labels.append(_expand_note_label(template, regex_match))
+            hits.append((entry, regex_match))
+    return hits
+
+
+def _note_label_ja(entry: dict, match: Optional[re.Match[str]]) -> str:
+    if match is None:
+        return entry["label_ja"]
+    return _expand_note_label(entry.get("label_template") or entry["label_ja"], match)
+
+
+def _note_label_en(entry: dict, match: Optional[re.Match[str]]) -> Optional[str]:
+    if match is not None and entry.get("label_template_en"):
+        return _expand_note_label(entry["label_template_en"], match)
+    return entry.get("label_en") or None
+
+
+def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "") -> Optional[str]:
+    """Memo-only legacy notes; STATE_LITERAL explicitly also reads state."""
+    labels = [_note_label_ja(entry, match) for entry, match in _note_matches(raw_memo, note_entries, raw_state=raw_state)]
     return ",".join(labels) if labels else None
+
+
+# 発送日（v102 の ship_ja）の書き方を持つ備考マスタの category 値
+SHIP_NOTE_CATEGORY = "発送時期系"
+_SHIP_PART_SEPARATOR = " / "
+
+
+def load_ship_master(session: Session) -> list[dict]:
+    """tcg_note_master の発送時期系（enabled）を build_note_ja と同じ形で返す。例外は握りつぶさない。"""
+    rows = session.execute(
+        text(
+            """
+            SELECT id, label_ja, label_en, search_keywords, exclude_keywords, priority,
+                   match_type, search_pattern, label_template, label_template_en
+            FROM public.tcg_note_master
+            WHERE enabled = TRUE AND category = :category
+            ORDER BY priority ASC, id ASC
+            """
+        ),
+        {"category": SHIP_NOTE_CATEGORY},
+    ).fetchall()
+    if not rows:
+        logger.warning("[tcg_analyzer] tcg_note_master に category=%s の行が0件", SHIP_NOTE_CATEGORY)
+    return [
+        {
+            "id": r[0],
+            "label_ja": r[1],
+            "label_en": r[2] or "",
+            "search_keywords": [k.strip() for k in (r[3] or "").split(",") if k.strip()],
+            "exclude_keywords": [k.strip() for k in (r[4] or "").split(",") if k.strip()],
+            "match_type": r[6] or "LITERAL",
+            "search_pattern": r[7] or "",
+            "label_template": r[8] or "",
+            "label_template_en": r[9] or "",
+        }
+        for r in rows
+    ]
+
+
+def _unique_in_order(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(values))
+
+
+def build_ship_labels(ship: Optional[str], ship_entries: list[dict]) -> tuple[Optional[str], Optional[str]]:
+    """発送日の文字（ship_note 済み）→ (ship_ja, ship_en)。
+
+    " / " の部分ごとにマスタへ当て、当たれば label をつなぐ（ja は ","、en は ", "）。
+    当たらない部分の ja は文字のまま・en は無し。en は全部の部分に en があるときだけ入れる。
+    """
+    if ship is None:
+        return None, None
+    ja_parts: list[str] = []
+    en_parts: list[Optional[str]] = []
+    for part in ship.split(_SHIP_PART_SEPARATOR):
+        hits = _note_matches(part, ship_entries)
+        if not hits:
+            ja_parts.append(part)
+            en_parts.append(None)
+            continue
+        ja_parts.append(",".join(_note_label_ja(entry, match) for entry, match in hits))
+        en_labels = [label for label in (_note_label_en(entry, match) for entry, match in hits) if label]
+        en_parts.append(", ".join(en_labels) if en_labels else None)
+    ship_ja = _SHIP_PART_SEPARATOR.join(_unique_in_order(ja_parts))
+    all_en = all(part is not None for part in en_parts)
+    ship_en = _SHIP_PART_SEPARATOR.join(_unique_in_order([p for p in en_parts if p])) if all_en else None
+    return ship_ja or None, ship_en or None
 
 
 def build_review_reasons(
@@ -1752,6 +1837,8 @@ def _merge_supplier_products(
     各ペアごとに最新メッセージの結果だけを is_current=TRUE に設定する。
     古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
     データ自体は履歴として保持される。
+    発送日 (ship_ja) が違う件は、最新の投稿の中では別の件として全部 current にする。
+    同じ発送日の重複は投稿の上の行 (gemini_index, line_start) を1件だけ採る。
 
     extra_pairs: 付け直す組に足す (product_id, condition_id)。やり直しで商品や状態が変わった件の
     「前の組」を渡す（前の組で次に新しい投稿の件を最新に戻すため）。無指定なら今まで通り。
@@ -1816,7 +1903,8 @@ def _merge_supplier_products(
             ),
             candidates AS (
                 -- 本物の行
-                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at
+                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at,
+                       ar.ship_ja, ei.gemini_index, ei.line_start
                 FROM {schema}.analysis_results ar
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
                 JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -1831,7 +1919,8 @@ def _merge_supplier_products(
                   )
                 UNION ALL
                 -- 仮の行（〆の2つ目以降の完売の相手。順位の鍵は親の行と同じ。id は NULL で UPDATE の対象にしない）
-                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at
+                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at,
+                       ar.ship_ja, ei.gemini_index, ei.line_start
                 FROM {schema}.analysis_soldout_extra_targets et
                 JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
@@ -1846,10 +1935,14 @@ def _merge_supplier_products(
             ),
             ranked AS (
                 SELECT c.id,
-                       (ROW_NUMBER() OVER (
-                           PARTITION BY c.product_id, c.condition_id
-                           ORDER BY c.received_at DESC, c.computed_at DESC, (c.id IS NULL)
-                       ) = 1) AS should_be_current
+                       (RANK() OVER (PARTITION BY c.product_id, c.condition_id
+                                     ORDER BY c.received_at DESC, c.computed_at DESC) = 1
+                        AND ROW_NUMBER() OVER (
+                            PARTITION BY c.product_id, c.condition_id, COALESCE(c.ship_ja, '')
+                            ORDER BY c.received_at DESC, c.computed_at DESC, (c.id IS NULL),
+                                     c.gemini_index NULLS LAST, c.line_start NULLS LAST, c.id
+                        ) = 1
+                       ) AS should_be_current
                 FROM candidates c
             )
             UPDATE {schema}.analysis_results ar_target
