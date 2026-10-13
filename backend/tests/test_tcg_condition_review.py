@@ -670,3 +670,17 @@ def test_preview_raises_when_max_age_hours_missing_or_invalid(pg, value):
 
     with pytest.raises(distribution.MaxAgeHoursUnsetError):
         asyncio.run(run())
+
+
+def test_review_joins_keeps_offset_zero_pullup_barrier():
+    # OFFSET 0 stops PostgreSQL from pulling up the LATERAL subquery (docs/handoff/review-speed/design.md)
+    barrier = "AS ar OFFSET 0) cr_data"
+    plain = "AS ar) cr_data"
+
+    joins = condition.review_joins()
+    assert barrier in joins and plain not in joins
+
+    context = condition.context_sql(analysis_expression="to_jsonb(ar) || CAST(:candidate AS jsonb)")
+    assert barrier in context and plain not in context
+
+    assert review._BASE_FROM.count(barrier) == 1 and plain not in review._BASE_FROM
