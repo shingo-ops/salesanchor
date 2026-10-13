@@ -53,13 +53,14 @@ tcg_condition_review_svc.py:129 を次に変える:
 - ALL 500件 500〜 は短縮が小さい（5.35→4.2秒）。主因は別の場所（並び替え）であり今回の対象外。
 
 ## 7. 維持の仕組み
+- 守り手: CI の pytest（backend/tests/test_tcg_condition_review.py::test_review_joins_keeps_offset_zero_pullup_barrier。DB 不要で毎回走る）。速さの測り直しは設計担当（Opus）が本書 §5 の方法で行う。
 - 単体試験（文字列の固定）＋ コードコメントで理由と本設計へのリンク。
 - 測定スクリプト: repo 外の ~/CC報告ファイル-keep/review-page-20261013/x.py（再測用・本番データの中身を出さず件数と sha256 だけ出す）。repo には測り方（別コンテナ・READ ONLY・OLD/NEW 文字列を差し替えて同時に測る）を本書に記すに留める。
 
 ## 審査
 - 2026-10-13 Fable（設計審査）: APPROVE。指摘（行番号・文言・ADR 参照・試験の置き場所・recon の未確認解消）は本版で反映済み。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - PostgreSQL 公式ソース（上記 §3）。OFFSET 0 で展開を止めるのは PostgreSQL 開発者の文書に基づく方法で、本件の効果は本番の実測（§4）で確認した。他社事例の数値は使わない（本件の判断は自社本番の実測だけで足りるため）。
 
 ## 9. 戻し方
