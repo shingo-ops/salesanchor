@@ -114,12 +114,35 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // 絞り込みは一覧専用なので検索欄の横へ移した。一覧では必ず使えること。
     const filterInSearchRow = page.locator(".inbox-search-row .inbox-mobile-filter-toggle");
     await expect(filterInSearchRow).toBeVisible();
-    // 押すと絞り込み（ステータスタブ）が開くこと
+
+    // 2026-10-13（PO 指定）: 押すと帯が開くのではなく、下から出るシート
+    // （Sheet 金型）が出て、選んだら閉じる。
+    const sheet = page.locator('[data-testid="sheet-panel"]');
+    const sheetOpen = page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open');
+    // 帯はスマホでは常に出さない
     await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await expect(sheetOpen).toHaveCount(0);
+
+    // 押すとシートが開く
     await filterInSearchRow.click();
-    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await expect(sheetOpen).toHaveCount(1);
+    await expect(sheet.getByRole("heading")).toBeVisible();
+
+    // 選ぶと閉じて、絞り込みが効く（印が付く）
+    const option = page.locator(".inbox-filter-sheet-option").first();
+    await expect(option).toBeVisible();
+    const optionBox = await option.boundingBox();
+    expect(optionBox, "選択肢の寸法が取れない").not.toBeNull();
+    expect(optionBox!.height, "選択肢の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    await page.locator(".inbox-filter-sheet-option", { hasText: "未読" }).first().click();
+    await expect(sheetOpen).toHaveCount(0);
+    await expect(filterInSearchRow).toHaveClass(/has-active/);
+
+    // もう一度開いて背景タップで閉じる
     await filterInSearchRow.click();
-    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await expect(sheetOpen).toHaveCount(1);
+    await page.locator(".comp-sheet-overlay").click();
+    await expect(sheetOpen).toHaveCount(0);
 
     // 会話を開くと操作行が出ること（返信中に使うため）
     await openConversation(page);
@@ -454,5 +477,8 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.locator(".inbox-manage-btn .inbox-manage-label")).toBeVisible();
     // 絞り込みボタンは DOM にはあるが PC・タブレットでは表示しない
     await expect(page.locator(".inbox-search-row .inbox-mobile-filter-toggle")).toBeHidden();
+    // PC・タブレットでは帯が常時出て、シートは開かない
+    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await expect(page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open')).toHaveCount(0);
   });
 });
