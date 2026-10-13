@@ -196,7 +196,7 @@ if [ "$SALESANCHOR_SCOPE" = "1" ]; then
   # SCOPE_RESULT: "<label>\t<effective_dir>"
   # effective_dir は 1) マッチしたサブコマンド自身の `git -C <path>` を最優先、
   # 2) なければ先頭の `cd <path> &&`（worktree-only-guard.sh の解析方式を再利用）、
-  # 3) どちらもなければ $PWD。
+  # 3) どちらもなければ ${PWD}。
   SCOPE_RESULT=$(python3 - "$COMMAND" "$PWD" "$INPUT" <<'PYEOF'
 import sys, re, os, json, shlex
 

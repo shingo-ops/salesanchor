@@ -36,7 +36,7 @@ for f in "${ORIG_FILES[@]}"; do
   cp -p "$DST/$f" "$BK/$f" || { echo "中止: バックアップ失敗 $f"; exit 1; }
   cmp "$DST/$f" "$BK/$f" || { echo "中止: バックアップが一致しない $f"; exit 1; }
 done
-echo "[1] バックアップ完了: $BK（5ファイル一致）"
+echo "[1] バックアップ完了: ${BK}（5ファイル一致）"
 
 # 2. 試作の試験
 echo "[2] 試作に対する試験"
@@ -58,7 +58,7 @@ for f in "${DEPLOY_FILES[@]}"; do
   [ "$f" = "danger_sanitize.py" ] && mode="555"
   cp "$SRC/$f" "$DST/$f" || { echo "反映失敗 $f"; BAD=1; }
   chmod "$mode" "$DST/$f"
-  cmp "$SRC/$f" "$DST/$f" && echo "  反映 $f（権限 $mode）"
+  cmp "$SRC/$f" "$DST/$f" && echo "  反映 ${f}（権限 ${mode}）"
 done
 
 # 自動で戻す。cp・cmp の失敗を検出し、失敗したら ROLLBACK FAILED を表示して exit 3 で終える。
