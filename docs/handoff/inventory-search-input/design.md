@@ -62,3 +62,17 @@ AY-2n 変更契約:
 - 受入の前提（再審査 r2 の注記）: /invoices/new は既定 mode="quote"（InvoiceCreatePage.tsx:75）で検索欄が出ない（:252）。`data-testid="invoice-mode-inventory"`（:239）を押してから観測する。候補選択の観測は引き継ぎなし（空行1件）で開く前提で、選んだ候補は見積は `quote-item-row-1-name`、請求書は `invoice-item-row-1-name`（InvoiceCreatePage.tsx:355）に入る。
 
 Architect 審査（AY-2n）: 1回目 REVISE（Fable、HIGH 1・MEDIUM 2・LOW 2）→ 改訂1 → 2回目 APPROVE（2026-10-13）。Fable は AI の審査で、PO 承認や人のレビューではない。
+
+## 維持の仕組み
+- 守り手: frontend/tests-e2e/quote-create-inventory-search.spec.ts（testid・placeholder・aria-pressed。CI では e2e.yml:207 `if: false` のため手元実行のみ）、frontend/src/components/TextField.test.tsx、scripts/check-ui-governance.js（生 input の検出）、.github/workflows/frontend-check.yml。
+- 守っていないもの: InventorySearchBar の AND/OR の生 button 2つ（Button variant="tab" へ寄せるかは見た目が変わるため PO 確認の別便）、FedExRateModal.tsx の API エラー表示以降の px 直書き。
+- 切戻し: 本 PR の merge commit を revert（DB への影響なし）。
+
+## 外部・過去事例の参照と我々への応用
+外部事例: 不要。既存の金型 TextFieldControl を、前例（AY-2k #4125 の明細入力欄、AY-2m #4181 の FedEx モーダル）と同じ型で使うため。前例からの応用: ref が必要な欄はラベル付き TextField ではなく forwardRef の TextFieldControl を使う。外観の inline style（padding）は消し、配置（flex・minWidth）だけ残す（AY-2e の「金型移行は見た目を変え、並びは変えない」）。
+
+## 関係する ADR
+- ADR-144（UI ガバナンス）: 生 input を金型へ移す本便の根拠。docs/CC_UI_GOVERNANCE.md の「生 input 禁止」に従う。
+- ADR-067（デザイントークン強制）: 新トークンなし。残す inline style はトークンのみ。
+- ADR-027（UI 国際化）: placeholder・aria-label は既存の t() キーを逐語で保持。
+- 相互参照: recon は docs/handoff/inventory-search-input/recon.md。
