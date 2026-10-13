@@ -119,6 +119,7 @@ export default function InventorySearchBar({
   // 親 div で clip されて見えなくなる。createPortal で document.body 直下にマウントし、
   // 座標は getBoundingClientRect() で動的計算する。
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const rowRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLUListElement | null>(null);
   const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number }>(
     { top: 0, left: 0, width: 0 },
@@ -127,7 +128,9 @@ export default function InventorySearchBar({
   const recalcDropdownPosition = useCallback(() => {
     if (!inputRef.current) return;
     const r = inputRef.current.getBoundingClientRect();
-    setDropdownRect({ top: r.bottom + 2, left: r.left, width: r.width });
+    // top だけ行 div の bottom 基準にする（幅が狭く AND/OR 群が次行へ折り返しても候補一覧が覆わない）
+    const rowBottom = rowRef.current?.getBoundingClientRect().bottom ?? r.bottom;
+    setDropdownRect({ top: rowBottom + 2, left: r.left, width: r.width });
   }, []);
 
   // open 時 + scroll/resize で位置再計算
@@ -270,7 +273,7 @@ export default function InventorySearchBar({
       style={{ position: "relative", width: "100%" }}
       data-testid={`${testIdPrefix}-root`}
     >
-      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+      <div ref={rowRef} style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
         <TextFieldControl
           ref={inputRef}
           type="text"

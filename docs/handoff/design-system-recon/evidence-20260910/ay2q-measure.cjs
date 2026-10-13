@@ -53,6 +53,7 @@ const CANDS = ["ポケモンカード テスト箱A", "ポケモンカード テ
         and: info(a), or: info(o),
         centerDiffAnd: (ra.top + ra.height/2) - (ri.top + ri.height/2), centerDiffOr: (ro.top + ro.height/2) - (ri.top + ri.height/2),
         gapInputToGroup: R(g).left - ri.right, gapAndOr: ro.left - ra.right,
+        listbox: (() => { const lb = document.querySelector('[role="listbox"]'); if (!lb) return null; const hit = document.elementFromPoint(R(a).left + R(a).width/2, R(a).top + R(a).height/2); return { rect: R(lb), andCenterHitTestid: hit && hit.getAttribute('data-testid'), andCenterHitIsAnd: !!(hit && a.contains(hit)), topGeGroupBottom: R(lb).top >= R(g).bottom - 0.01, topMinusInputBottom: R(lb).top - R(inp).bottom, topMinusRowBottom: R(lb).top - R(g.parentElement).bottom }; })(),
         docScrollW: document.documentElement.scrollWidth, docClientW: document.documentElement.clientWidth };
     }, [T("input"), T("op-and"), T("op-or"), T("op-toggle"), PROPS]);
     const clip = async (name) => { const g = await page.locator(T("root")).first().boundingBox(); await page.screenshot({ path: OUT + `${LABEL}-${pg.key}-${w}-${name}.png`, clip: { x: Math.max(0,g.x-8), y: Math.max(0,g.y-8), width: Math.min(g.width+16, w), height: Math.max(90, Math.min(260, Math.round((await page.locator(T("op-toggle")).boundingBox()).y + (await page.locator(T("op-toggle")).boundingBox()).height - g.y + 24))) } }); };

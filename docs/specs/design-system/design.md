@@ -3953,7 +3953,7 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 
 #### AY-2q 実装結果（2026-10-14）
 
-- 変更ファイル: frontend/src/components/InventorySearchBar.tsx のみ（import 追加、行 div と群 div に flexWrap:"wrap"、群 div の role を radiogroup から group へ、群 div の opacity 削除、AND/OR を `<Button variant="tab" active disabled onClick data-testid>` へ）。diff は ay2q-diff.txt。
+- 変更ファイル: frontend/src/components/InventorySearchBar.tsx のみ（import 追加、rowRef 追加と候補一覧 top の行基準化（r3）、行 div と群 div に flexWrap:"wrap"、群 div の role を radiogroup から group へ、群 div の opacity 削除、AND/OR を `<Button variant="tab" active disabled onClick data-testid>` へ）。diff は ay2q-diff.txt。
 - 設計外の追加: Button に `type="button"` を付けた。Button は type の既定を持たず、InventorySearchBar は QuoteCreatePage.tsx:145 と InvoiceCreatePage.tsx:290 の `<form>` の中にあるため。元の生 button の属性の維持で、無いと押下でフォーム送信になる。
 - 見た目の前後（見積作成・実測、dev build、preview。請求書作成も同じ結果）:
 
@@ -3971,8 +3971,8 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 
 - 受入結果（全て○）: class は初期 AND=`comp-btn comp-btn--tab`、OR=`... comp-btn--active`。aria-pressed は初期 AND=false・OR=true で、押下で反転。1語以下は両方 disabled、2語で有効。API は op=and / op=or に追従。scrollWidth==clientWidth は 1280/1440/375 で成立し、群 right ≤ 行 right も成立（1280・1440 は 742≤742、375 は 327≤327）。
 - 分岐: B1 群 div の opacity を削除（二重減光なし）。B2 行と群の両方に flexWrap（1280・1440 は1行、375 は群が下の行で AND/OR 縦2段、枠は行幅いっぱい・ボタン左寄せ）。B3 型エラーなし。B4 title は群 div に残した。
-- B5（設計外の発見・未決）: 幅375 で、2語入力後の候補一覧が AND/OR 群の真上に重なる（elementFromPoint(AND 中心) が候補 `quote-add-search-result-0-name`）。変更前は AND/OR が検索欄の右隣で重ならなかった。候補を閉じれば操作できる。Playwright の click は成功する。実機の指での挙動は未確認。375 の hover は取得できていない。扱いは設計者の判断待ち。
-- 品質: generate・tsc・lint・check:all・build・build-storybook は exit 0。test:coverage（maxWorkers=1）は 2 failed / 1052 passed で exit 1。落ちたのは StaffFormButtonMigration.test.tsx の2件（`Test timed out in 5000ms`、本変更と無関係）。同ファイルと Button.test.tsx の単体再実行は 43 passed。
+- B5（設計外の発見・r3 で解消済み）: 幅375 で候補一覧が AND/OR 群に重なっていた。行 div に rowRef を付け、候補一覧の top だけを行の bottom+2 にして解消（left・width は input のまま）。実測（ay2q-after-r3.json）: 幅375 で候補 top が群 bottom 以下（quote 752.84 / invoice 824.84）、AND 中心の最前面は AND 自身、hover は rgb(247,250,252)。幅1280・1440 の候補 top は変更前（input.bottom+2）と差 0。固定値は変更前コードの式からの算出で、変更前ビルドでの再測定はしていない。
+- 品質: r2 時点は generate・tsc・lint・check:all・build・build-storybook が exit 0、test:coverage は StaffFormButtonMigration.test.tsx の2件がタイムアウトで 2 failed（単体再実行は 43 passed）。r3 実装後は tsc・lint・check:all・build が exit 0、test:coverage（maxWorkers=1）は 91 files・1054 tests 全て passed で exit 0。
 - e2e（quote-create-inventory-search.spec.ts）: 手元で実行不可（`browserType.launch: Executable doesn't exist`、chromium_headless_shell-1217 が無く 1248 のみ）。CI も e2e.yml:207 で `if: false`。aria-pressed の検証は preview 実測を正とした。
 - 守っていないもの: check-ui-governance.js は生 `<button>` を検出しない（別テーマ）。
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2q-*（ay2q-before-after.md、ay2q-before.json、ay2q-after.json、ay2q-measure.cjs、スクリーンショット）。

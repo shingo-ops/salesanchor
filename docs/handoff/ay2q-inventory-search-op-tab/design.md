@@ -28,7 +28,7 @@ InventorySearchBar（見積作成・請求書作成で共用）の AND/OR は cl
 - B2（確定）: 行 div と群 div に flexWrap:"wrap"。実測: 1280/1440 は1行のまま、375 は群が検索欄の下の行へ落ち AND と OR が縦2段。scrollWidth==clientWidth、群 right ≤ 行 right を満たす。
 - B3（分岐不要）: Button.tsx:40 は className/style のみ Omit。disabled は :52、data-testid は :54,:67 の rest で通る。tsc exit 0。
 - B4: `title` は群 div に残す（disabled button はホバーを出さないため子に移さない）。
-- B5（実測で判明・未決）: 幅375 で、検索結果の候補一覧が AND/OR 群の真上に重なる（evidence ay2q-after-quote-375-2-hover-and-listcovers.png）。候補表示中は AND の中心位置の最前面が候補になる。before は AND/OR が検索欄の右隣で重ならなかった。候補を閉じれば操作できる。扱いは設計者の判断。
+- B5（解消済み・r3、Opus 判断 2026-10-14）: 幅375 で候補一覧が AND/OR 群に重なっていた。行 div に `rowRef` を付け、recalcDropdownPosition の top だけを `行の bottom + 2` にした（left・width は input のまま。行が取れない場合は input の bottom にフォールバック）。実測: 幅375 で候補 top（quote 752.84 / invoice 824.84）≥ 群 bottom、AND 中心の elementFromPoint は AND 自身。幅1280/1440 は候補 top が変更前と一致（差 0）。
 
 ## 3. 見た目の変化
 | 項目 | 変更前（実測） | 変更後（実測） |
@@ -58,6 +58,9 @@ InventorySearchBar（見積作成・請求書作成で共用）の AND/OR は cl
 | 幅1280/1440/375 で scrollWidth==clientWidth、かつ群の right ≤ 行の right | after 実測 |
 | 見積作成・請求書作成の前後スクショ（初期・選択後・hover・focus・無効） | before/after 各30枚（/tmp/CC報告ファイル/ssot-ay2q/）、代表16枚を evidence ay2q-* |
 | 品質: generate / tsc / lint / check:all / test:coverage(maxWorkers=1) / build / build-storybook | 実行ログ（evidence ay2q-chk-*） |
+| 幅375 で候補一覧の top ≥ 群の bottom、かつ AND 中心の elementFromPoint が AND 自身（r3） | after-r3 実測（ay2q-after-r3.json の listbox） |
+| 幅1280/1440 で候補一覧の top が変更前と ±1px 以内（r3） | 変更前は input.bottom+2（変更前コード :129、input.bottom は ay2q-before.json）、after-r3 の listbox top と比較 |
+| 1語ヒント表示中も候補一覧は行の直下（ヒントに重なるのは変更前と同じ。記録のみ）（r3） | 記録のみ（本便では専用の再測定をしていない） |
 | 本番: 反映後の JS チャンク（assets/index-*.js）に、生 button の op style 文字列 `var(--space-1) var(--space-10px)` が 0（CSS は InboxPage.css:154,1022 に同じ文字列があるので対象外） | prod bundle grep |
 
 ## 外部・過去事例の参照と我々への応用
@@ -73,7 +76,7 @@ InventorySearchBar（見積作成・請求書作成で共用）の AND/OR は cl
 ## リスクと戻し方
 - 選択中の目立ち方が「紺ベタ」から「薄青」に弱まる。金型の正本色であり CompanyDetailPage 等と統一される。戻し方は本 PR の revert（1ファイル）。
 - 用途: page-header-v2 の記述では tab は表示切替・ソート用。AND/OR は検索条件の2択切替として同種に扱う（PO が tab を選択済み）。
-- 幅375 の縦2段と B5（候補一覧が AND/OR に重なる）。
+- 幅375 の縦2段。候補一覧が AND/OR に重なる件は B5（r3 で解消済み）。
 
 ## 維持の仕組み
 - 守り手: frontend/src/components/Button.tsx（tab の aria-pressed 自動付与）、frontend/src/components/Button.test.tsx:103（tab・active・aria-pressed の試験）、frontend/tests-e2e/quote-create-inventory-search.spec.ts（AND/OR の aria-pressed 動作。CI では停止中）。

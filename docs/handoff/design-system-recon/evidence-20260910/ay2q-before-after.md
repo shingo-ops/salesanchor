@@ -59,3 +59,15 @@
 | build | exit 0 | build.txt |
 | build-storybook | exit 0 | storybook.txt |
 | e2e quote-create-inventory-search.spec.ts | 実行不可。`browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1217/...`（手元は 1248 のみ）。3件とも起動前に失敗 | e2e.txt |
+
+## r3（B5 解消）
+
+r3 追補（B5 解消、実測 ay2q-after-r3.json・ay2q-r3-summary.txt）: 行 div に rowRef を付け、候補一覧の top だけを行の bottom+2 にした（left・width は input のまま。InventorySearchBar.tsx）。
+
+| 基準 | 実測 | 判定 |
+|---|---|---|
+| 幅375 で候補 top ≥ 群 bottom、AND 中心の最前面が AND | quote・invoice とも True / AND 自身。候補 top 752.84 / 824.84（行 bottom+2） | ○ |
+| 幅1280/1440 の候補 top が変更前と ±1px | 606.45・587.27（quote）、666.45・647.27（invoice）。変更前（input.bottom+2）と差 0 | ○ |
+| 1語ヒント表示中 | 記録のみ（専用の再測定なし） | 記録 |
+| 375 hover | rgb(247,250,252) を取得（B5 解消で取れるようになった） | ○ |
+| B5 | 解消済み | ○ |
