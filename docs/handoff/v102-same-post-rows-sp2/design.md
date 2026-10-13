@@ -183,7 +183,7 @@
 - 危険なパス（migrations/、deploy.yml、本番の scripts/）は含まない。ADR-136 の GO の対象外だが、GO 記録は委任の範囲で残す。
 
 ## 9. ADR
-- 新しい ADR（次の空き番号）「在庫表は LINE 解析の配信行を出す」。様式は ADR-113 の形にする。
+- 新しい ADR（次の空き番号 = ADR-1014）「在庫表は LINE 解析の配信行を出す」。様式は ADR-113 の形にする。
   - Why: 在庫表が5月の88行のまま止まっていて、テナントに渡す解析結果を見せる場所が GAS だけだった。行の定義を1か所にして、GAS と在庫表をずらさない。
   - 置き換える部分: ADR-093 の「/inventory は public.inventory を表示する」。
 - docs/adr/ADR-093-inventory-table-product-master-redesign.md の冒頭に、置き換えた部分と新しい ADR への参照を書く。本文は消さない（同じ番号の docs/adr/ADR-093-sales-management-page.md は触らない）。
@@ -192,6 +192,7 @@
 ## 10. 維持の仕組み
 - 配信行の定義は distribution_rows_sql の1か所だけ。T1 と T4 のテストが、GAS と在庫表のずれを CI で止める。
 - まとめの鍵と条件は同じ関数の中に置き、テスト T2・T3 で固める。
+- 守り手: backend/tests/test_inventory_distribution_rows_pg.py
 
 ## 11. 外部・過去事例の参照と我々への応用
 - 該当なし。理由: 社内の SQL を1か所にまとめる変更と、利用者ごとの表示設定の追加で、外部の事例で成否が変わる判断を含まない。
