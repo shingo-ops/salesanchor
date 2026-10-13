@@ -928,3 +928,6 @@ run_sql migrations/20261013_140000_add_analysis_results_ship_ja_ship_en.sql
 
 # tcg_note_master に REGEX の行の英語の書式（label_template_en）を足す（構造のみ・冪等）
 run_sql migrations/20261013_140100_add_tcg_note_master_label_template_en.sql
+
+# 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
+run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql

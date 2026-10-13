@@ -67,3 +67,5 @@ frontend
 - 本番バンドルでタブが 2 つになること（デプロイ後に確認。段1a の PR ではコードのみ）
 - 段1b（表の DROP）の前例・登録の扱い（`scripts/run_all_migrations.sh:843` は IF NOT EXISTS で再作成される）は、段1b の設計で調べる
 - 本店 `/Users/tanizawashingo/salesanchor` の docs/ への参照切れ（docs 内のリンクで外したファイルを指すもの）は未走査
+
+段1b 追加調査: /Users/tanizawashingo/CC報告ファイル-keep/review-page-20261013/drop-recon-1b-v2.md
