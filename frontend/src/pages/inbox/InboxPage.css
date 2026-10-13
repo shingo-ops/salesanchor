@@ -1174,8 +1174,53 @@
     cursor: pointer;
   }
   .msg-stack     { max-width: 85%; }
-  .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
+  /* 押す場所を 44px 以上にする（2026-10-13・WCAG 2.5.5）。
+     実測で 44px 未満だったのは次の5つ（CSS の実値）:
+       .send-attach-btn / .send-preview-remove  28px（--size-icon-btn-sm）
+       .inbox-thread-action-btn                 36px だが**スマホでは非表示**（:1075 の
+                                                .inbox-thread-actions { display: none; }）＝対象外
+       .inbox-mobile-filter-toggle              36px（--size-icon-btn・.icon-btn 経由）
+       .inbox-send-btn                          スマホで 32px（--size-avatar-sm）に縮めていた
+     このうち**ピルの外側にある3つ**を 44px にする。トークンは既にある
+     --size-icon-btn-lg（44px・コメントに「モバイルタッチターゲット基準 WCAG 2.5.5」）。
+     お手本（WhatsApp）は入力欄の操作ボタンが全て 48x48dp で、行自体が高い。
+     ピルの内側にある2つ（28px）は、44px にするとピルが膨らみ、当たり判定だけ
+     広げると入力欄に重なる。どちらも見た目と操作に影響するため**この便では触らず**、
+     お手本の作り（行を高くする）と合わせて別途判断する（design §7）。
+     .inbox-mobile-filter-toggle は .icon-btn も併せ持つため2クラスで指定する
+     （単一クラスでは components.css の .icon-btn に負ける・PR 4179 の教訓）。
+     PC・タブレットには適用しない（この @media の内側のみ）。 */
+  .inbox-send-btn {
+    width: var(--size-icon-btn-lg);
+    height: var(--size-icon-btn-lg);
+  }
+  /* 会話ヘッダの「顧客情報」（カルテ切替）。実機実測で 90x28dp だった。
+     アイコンと文言を持つので幅は中身に任せ、高さだけ 44px を下限にする。
+     ヘッダの行は「一覧へ戻る」の 48dp で既に決まっているため行は高くならない。 */
+  .karte-toggle-btn {
+    min-height: var(--size-icon-btn-lg);
+  }
+  .icon-btn.inbox-mobile-filter-toggle {
+    width: var(--size-icon-btn-lg);
+    height: var(--size-icon-btn-lg);
+  }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
+
+  /* 管理ボタンはスマホでは文言を隠してアイコンだけにする（PO 指摘 2026-10-13）。
+     読み上げ用には aria-label を付けてあるので、見た目から消しても役割は伝わる。
+     PC・タブレットでは文言を残す（この @media の内側のみ）。 */
+  .inbox-manage-label { display: none; }
+
+  /* 押す場所を 44px 以上にする（WCAG 2.5.5）。
+     PR 4204 の実機実測で 71x34dp だったが、あのときの対象から漏れていた
+     （CSS に width/height を書いているクラスだけを探し、padding で寸法が
+     決まるボタンを拾えていなかった）。文言を隠すと幅も狭くなるため、
+     ここで最低の幅と高さを与える。中身は中央に寄せる（既に align-items: center）。 */
+  .inbox-manage-btn {
+    min-width: var(--size-icon-btn-lg);
+    min-height: var(--size-icon-btn-lg);
+    justify-content: center;
+  }
 
   /* 絞り込みを普段は出さない（design.md §10-4 / benchmark 実測）。
      お手本の WhatsApp は絞り込みチップを引き下げたときだけ出す作りで、

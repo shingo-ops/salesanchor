@@ -87,6 +87,7 @@ import {
   Bars3Icon as Bars3OutlineIcon,
   PlusIcon as PlusOutlineIcon,
   HeartIcon as HeartOutlineIcon,
+  CheckCircleIcon as CheckCircleOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -161,6 +162,7 @@ const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 const SquaresFour       = hi(Squares2X2Icon);
 const Heart             = hi(HeartIcon);
 const HeartOutline      = hi(HeartOutlineIcon);
+const CheckCircleOutline = hi(CheckCircleOutlineIcon);
 const UsersOutline      = hi(UsersOutlineIcon);
 const PackageOutline    = hi(CubeOutlineIcon);
 const FileTextOutline   = hi(DocumentTextOutlineIcon);
@@ -377,6 +379,12 @@ export const INBOX_ACTION_ICONS = {
   attach:     Paperclip,       // PaperClipIcon     — 画像添付ボタン
   heart:       HeartOutline,   // HeartIcon outline — リアクション（未押下・ホバー時の型枠）
   heartFilled: Heart,          // HeartIcon solid   — リアクション（押下済み）
+  // 一覧の「管理」＝選択モードに入るボタン。2026-10-13 に filter から差し替えた。
+  // 同じ行に「絞り込み」(NAV_ICONS.filter) が並び、同じアイコンが2つ出て
+  // 区別できなかったため（PO 指摘）。選択モードは丸いチェックが通例。
+  // outline を使うのは、未選択の状態で「すでに選び終わった」ように見せないため
+  // （heart / heartFilled と同じ使い分け）。
+  select:     CheckCircleOutline, // CheckCircleIcon outline — 選択モード
 } satisfies Record<string, Icon>;
 
 // スケジュールポップオーバー用（outline バリアント — Google Calendar 準拠）
