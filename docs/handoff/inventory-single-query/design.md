@@ -28,5 +28,6 @@
 手元は PG 無し。DB 不要のテストと既存テストの結果: /tmp/CC報告ファイル/same-post-rows/sp2/perf2/impl/pytest.txt。PG 必須テストは CI で実行（手元は skip）。
 
 ## 維持の仕組み
-- 文字列固定テストが distribution_rows_sql の意図しない変更を CI で止める。
-- PG テストが旧3文との全項目一致を CI で固定する。
+- 守り手: backend/tests/test_inventory_distribution_rows.py
+- 対象: distribution_rows_sql の意図しない文字列変更（4通りの長さ+SHA-256 固定）
+- 補足: 旧3文との全項目一致は backend/tests/test_inventory_distribution_rows_pg.py が CI の PostgreSQL で固定する。
