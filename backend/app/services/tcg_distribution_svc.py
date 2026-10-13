@@ -248,7 +248,7 @@ def _distribution_final_select(source: str, *, price: str, qty: str, merged_coun
             COALESCE(ROUND({price})::bigint::text, '')  AS unit_price,
             COALESCE(ROUND({qty})::bigint::text, '') AS quantity,
             note_ja, status, release_date, series, provider, search_keywords, ship_ja,
-            posted_ts, row_key, product_id, tcg_type, category, supplier_id, unit_canonical,
+            posted_ts, row_key, product_id, supplier_id, unit_canonical,
             {price} AS price_num, {qty} AS qty_num, {merged_count} AS merged_count, {sort_ord} AS sort_ord
         FROM {source}"""
 
@@ -256,7 +256,7 @@ def _distribution_final_select(source: str, *, price: str, qty: str, merged_coun
 def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merge_same_post: bool) -> str:
     """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 配信・配信プレビュー件数・アプリの在庫表が使う）。
 
-    出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, tcg_type, category, supplier_id,
+    出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, supplier_id,
     unit_canonical, price_num, qty_num, merged_count, sort_ord。並びは sort_ord（result_order_sql の通し番号）。
     merge_same_post=True のとき、同じ投稿・同じ商品・同じ状態・同じ形態・同じ備考・同じ発送・同じ status の行で、
     根拠（cr.basis）がすべて違い、根拠と数量に NULL が無い組だけを1行にまとめる（数量は合計・単価は最大）。
@@ -289,8 +289,6 @@ def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merg
             COALESCE(ar.ship_ja, '')                                AS ship_ja,
             ar.id::text                                             AS row_key,
             ar.product_id                                           AS product_id,
-            p.tcg_type                                              AS tcg_type,
-            p.category                                              AS category,
             sc.supplier_id                                          AS supplier_id,
             COALESCE(ar.unit_canonical, '')                         AS unit_canonical,
             cr.basis                                                AS basis,
@@ -395,13 +393,28 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
         raise MaxAgeHoursUnsetError(MAX_AGE_UNSET_MESSAGE)
 
-    # 配信候補件数（GAS に出す行と同じ定義: distribution_rows_sql・まとめなし）
+    # 配信候補件数（変更前と同じ問い合わせ。products を結合しない。行の絞り込み条件は _condition_filter と共通）
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
+    cond_filter = _condition_filter(include_flag_single)
     age_condition, age_bind_params = _age_window(max_age_hours)
-    inner = distribution_rows_sql(
-        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=False,
-    )
-    count_result = await db.execute(text(f"SELECT COUNT(*) AS cnt FROM ({inner}) dist"), age_bind_params)
+
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+        SELECT COUNT(*) AS cnt
+        FROM {TCG_SCHEMA}.analysis_results ar
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        {review_joins(schema=TCG_SCHEMA)}
+        WHERE ar.pid_resolved = TRUE
+          AND ar.is_current = TRUE
+          AND cr.needs_review IS FALSE
+          AND ar.exclusion IS DISTINCT FROM 'excluded'
+          AND ar.unit_resolved = TRUE
+          AND ar.price_normalized IS NOT NULL
+          AND sm.line_posted_at IS NOT NULL
+          AND {cond_filter}{age_condition}
+    """), age_bind_params)
     output_count = count_result.scalar()
 
     # 除外内訳

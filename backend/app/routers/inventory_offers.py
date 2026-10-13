@@ -274,8 +274,13 @@ async def list_inventory_view(
     age_condition, age_params = _age_window(max_age_hours)
 
     def rows_sql(merge: bool) -> str:
-        return distribution_rows_sql(
+        # 配信行（GAS と同じ定義）に、在庫表だけが使う products の列（tcg_type, category）を外側で足す。
+        inner_rows = distribution_rows_sql(
             include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=merge,
+        )
+        return (
+            "SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
+            f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id"
         )
 
     conditions, filter_params = _build_view_filters(

@@ -49,8 +49,9 @@ def test_fetch_functions_do_not_define_their_own_where() -> None:
     import inspect
 
     assert "ar.pid_resolved" not in inspect.getsource(svc.fetch_output_rows)
-    # プレビューの件数は同じ関数を使う（除外の内訳は解析の行単位の数え方のまま別に残る）
-    assert "distribution_rows_sql(" in inspect.getsource(svc.fetch_preview_data)
+    # プレビューの件数は変更前の問い合わせ（products を結合しない）。状態の条件は _condition_filter と共通。
+    src = inspect.getsource(svc.fetch_preview_data)
+    assert "_condition_filter(" in src and "public.products" not in src
 
 
 def test_inventory_router_has_no_distribution_where() -> None:
