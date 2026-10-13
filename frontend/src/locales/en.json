@@ -5111,6 +5111,17 @@
       "shadow": "Shadow run review",
       "bottlenecks": "Bottlenecks",
       "posts": "Posts"
+    },
+    "inline": {
+      "header": "Fix here",
+      "productAria": "Product (type a name to search)",
+      "productPlaceholder": "Type a product name",
+      "noResults": "No matching product",
+      "searchError": "Could not search products",
+      "saved": "Saved",
+      "error": "Could not save: {{reason}}",
+      "unknownError": "Please try again",
+      "ackAria": "Keep as is: {{name}}"
     }
   },
   "distributionSettings": {

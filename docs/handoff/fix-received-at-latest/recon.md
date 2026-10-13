@@ -66,7 +66,7 @@ is_current の再計算を試算した結果（並べ替えを line_posted_at DE
 ```
 - analysis_results は全体で 22,894 行
 
-実例（PR #3840 の調査記録 §6-2）: 平田光希の 2026-09-28 21:36 の投稿（received_at 2026-08-30 12:50）の product 621／125079／125081／440406 が、同じチャネルの 2026-09-24 23:01 の投稿（received_at 2026-09-24 16:58）に負けて is_current=FALSE になっている
+実例（PR #3840 の調査記録 §6-2）: 担当者9の 2026-09-28 21:36 の投稿（received_at 2026-08-30 12:50）の product 621／125079／125081／440406 が、同じチャネルの 2026-09-24 23:01 の投稿（received_at 2026-09-24 16:58）に負けて is_current=FALSE になっている
 
 ## 5. デプロイの順番（事実）
 `.github/workflows/deploy.yml:160`「Deploy to VPS」で backend と celery-worker を再起動したあとに、`.github/workflows/deploy.yml:441`「Run database migrations」（`scripts/run_all_migrations.sh`）が実行される。**新しいコードが先に起動し、マイグレーションはそのあと**
@@ -78,14 +78,14 @@ is_current の再計算を試算した結果（並べ替えを line_posted_at DE
 ## 6-2. 配信への実際の影響（2026-09-29 追加照会、事実）
 - 配信のSQLは、origin/main の `source_cte()`／`review_joins()`（`backend/app/services/tcg_condition_review_svc.py:41-54`、`:108-179`）で生成した文字列をそのまま、本番に読み取り専用で流して再現した（`backend/app/services/tcg_distribution_svc.py:188-263`）
 - 本番の設定: `tcg_distribution_settings.max_age_hours = 48`（`backend/app/services/tcg_distribution_svc.py:751`）。有効な配信先は3件。仕入元ごとの絞り込みはない
-- **現在の配信: 249行**。平田光希（supplier_id 25505）は **0行**
+- **現在の配信: 249行**。担当者9（supplier_id 25505）は **0行**
   - is_current=TRUE になっているのは 2026-09-24 23:01 の投稿の行だけで、48時間の絞り込みで外れている。2026-09-28 21:36 の投稿（received_at 2026-08-30 12:50）は is_current=FALSE
 - **修正を再現した場合（design.md §5 と同じ並べ替え）: 852行**
-  - 新しく出る: 607件（例: 伊石侑生 product 125081 ¥65,000、2026-09-28 20:04 の投稿）
+  - 新しく出る: 607件（例: 担当者1 product 125081 ¥65,000、2026-09-28 20:04 の投稿）
   - 消える: 4件（たいき 5／14／440570、kaishi 440569。どれも 2026-09-27 の投稿。消える理由は未確認）
   - 価格が変わる: 5件
-  - 平田光希: 0行 → 4行（621 ¥8,000／125079 ¥19,000／125081 ¥96,000／440406 ¥28,000。すべて 2026-09-28 21:36 の投稿）
-- 仕入元ごとの MAX(received_at) と MAX(line_posted_at)（JST）の比較: oyama 09-24 14:02／09-28 21:03、ヒロト 09-24 10:21／09-29 01:11、もと 09-24 14:52／09-28 22:03、やまざきけんと 09-23 13:01／09-28 22:24、平田光希 09-24 16:58／09-28 23:15
+  - 担当者9: 0行 → 4行（621 ¥8,000／125079 ¥19,000／125081 ¥96,000／440406 ¥28,000。すべて 2026-09-28 21:36 の投稿）
+- 仕入元ごとの MAX(received_at) と MAX(line_posted_at)（JST）の比較: 担当者18 09-24 14:02／09-28 21:03、ヒロト 09-24 10:21／09-29 01:11、もと 09-24 14:52／09-28 22:03、担当者27 09-23 13:01／09-28 22:24、担当者9 09-24 16:58／09-28 23:15
 - 「最終受信日時」（`backend/app/services/tcg_analysis_dashboard_svc.py:457`）は、frontend に型定義（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:68`）があるだけで、画面に表示している箇所は grep では見つからなかった（未確認）
 - source_messages で最も古い行の created_at は 2026-09-10 11:49 JST。9/10 以降、どの日にもずれがある（日によっては全件）。9/10 より前は、テーブルにデータがないため確かめられない
 - TRUE が0件のグループ: もと（チャネル 1cba1d0a…）の product 36、condition 14。行は1行だけで、is_current=FALSE（2026-09-25 15:30 の投稿）。原因は未確認
