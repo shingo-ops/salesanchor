@@ -350,7 +350,7 @@ async def setup_test_db(test_engine):
                 given_name_en VARCHAR(100),
                 primary_email VARCHAR(255) NOT NULL,
                 discord_user_id VARCHAR(50),
-                role_id INTEGER NOT NULL,
+                role_id INTEGER,
                 status VARCHAR(20) NOT NULL DEFAULT 'active',
                 firebase_uid VARCHAR(128) UNIQUE,
                 is_employee BOOLEAN NOT NULL DEFAULT 0,
@@ -1644,6 +1644,7 @@ async def client(db_session):
         "app.routers.companies", "app.routers.contacts",
         # Phase 1-B-1 wiring (B-1): /staff/me 追加に伴うスタッフ系テスト
         "app.routers.staff",
+        "app.services.role_assignment",
         # Sprint 8 / F8: テナント発行者情報
         "app.routers.tenant_profile",
         # Sprint D2: Discord Guild 設定

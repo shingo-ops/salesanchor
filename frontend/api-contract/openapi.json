@@ -29856,8 +29856,15 @@
             "type": "string"
           },
           "role_id": {
-            "title": "Role Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Id"
           },
           "role_name": {
             "anyOf": [
@@ -29953,7 +29960,6 @@
           "given_name_en",
           "primary_email",
           "discord_user_id",
-          "role_id",
           "status",
           "firebase_uid",
           "created_at",
