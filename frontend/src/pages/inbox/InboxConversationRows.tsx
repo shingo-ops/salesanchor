@@ -1,9 +1,3 @@
-import { useTranslation } from "react-i18next";
-import { PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
-import { ICON } from "../../constants/iconSizes";
-import type { Conversation } from "../../lib/messages";
-import { getInitials, relativeTime } from "./inbox.types";
-
 /**
  * 会話一覧の「行の描画」だけを担う共通部品。
  * スマホ版とPC版で共通の行描画であり、InboxConversationList.tsx（PC）と
@@ -11,6 +5,13 @@ import { getInitials, relativeTime } from "./inbox.types";
  * PR 4171 以降のスマホ対応で、上部（検索・絞り込み・管理・一括アクション等）だけを
  * 出し分けるために、この行描画部分を分離した。
  */
+
+import { useTranslation } from "react-i18next";
+import { PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
+import type { Conversation } from "../../lib/messages";
+import { getInitials, relativeTime } from "./inbox.types";
+
 export interface InboxConversationRowsProps {
   convLoading: boolean;
   convError: string;
