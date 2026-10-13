@@ -212,7 +212,6 @@ services:
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
-      - EXTRACTION_SHADOW_ENABLED=${EXTRACTION_SHADOW_ENABLED:-0}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       # LINE解析の本番エンジン（v6 / v102）。既定 v102（便E で v6 から切替）。切替・戻しは既定値を変える PR（docs/handoff/v102-prod-switch/design.md §4-1）
       - LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}

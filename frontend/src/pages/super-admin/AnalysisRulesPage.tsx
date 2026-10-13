@@ -21,7 +21,6 @@ import {
   type AnalysisRulesSidebarKey,
 } from "./components/AnalysisRulesSidebar";
 import NeedsReviewTabsPanel from "./components/NeedsReviewTabsPanel";
-import { ShadowAccuracyPanel } from "./components/ShadowAccuracyPanel";
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { ProductKindsMasterPanel } from "./components/ProductKindsMasterPanel";
@@ -162,7 +161,6 @@ export default function AnalysisRulesPage() {
           {activeSection !== "dashboard" && (
             <div className="analysis-panel-content">
               {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
-              {activeSection === "accuracy-management-v7" && <ShadowAccuracyPanel />}
               {activeSection === "needs-review" && <NeedsReviewTabsPanel />}
               {activeSection === "error-log" && <ExtractionErrorLogPanel />}
               {activeSection === "sold-out-results" && <SoldOutResultsPanel />}

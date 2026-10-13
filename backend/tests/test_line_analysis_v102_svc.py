@@ -327,8 +327,6 @@ def test_v102_engine_skips_v6_and_analyzes_done_and_empty_jobs(monkeypatch, stat
     monkeypatch.setenv("TCG_AUTO_DISTRIBUTE", "0")
     monkeypatch.setattr(task, "extract_message", _boom)
     monkeypatch.setattr(task, "analyze_extraction_job", _boom)
-    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
-    monkeypatch.setattr(task, "run_shadow_for_job", _boom)
     extraction = MagicMock(return_value={"status": status, "items_count": 2 if status == "done" else 0})
     analysis = MagicMock(return_value={"total": 2})
     monkeypatch.setattr(task, "run_v102_extraction", extraction)
