@@ -9,11 +9,12 @@ import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
 import { Drawer } from "../../components/Drawer";
 import { Stack } from "../../components/Stack";
-import { api, ApiError } from "../../lib/api";
+import { ApiError } from "../../lib/api";
 import { ConditionReviewPanel } from "./ConditionReviewPanel";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
+import { postReviewAck } from "./reviewActions";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 
 export type ReviewDrawerItem = AnalysisReviewItem & { is_v102?: boolean; gap_suspect?: GapSuspectData | null };
@@ -43,10 +44,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
     setPendingCode(code);
     setNotice(null);
     try {
-      await api.post(`/tcg/items/${item.extraction_item_id}/review-ack`, {
-        source_message_id: item.source_message_id,
-        codes: [code],
-      });
+      await postReviewAck(item, [code]);
       setAckedCodes((current) => [...current, code]);
       setNotice({ variant: "info", title: t("reviewItem.acked") });
       await onRefresh();
