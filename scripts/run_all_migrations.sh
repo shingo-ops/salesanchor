@@ -922,3 +922,9 @@ run_sql migrations/20261013_120000_staff_user_id_not_null.sql
 
 # staff.role_id の NOT NULL を外す（ADR-1008 P4a・構造のみ・冪等。ロールの正本は user_roles）
 run_sql migrations/20261013_130000_staff_role_id_nullable.sql
+
+# analysis_results に発送日の専用列（ship_ja・ship_en）を足す（構造のみ・冪等）
+run_sql migrations/20261013_140000_add_analysis_results_ship_ja_ship_en.sql
+
+# tcg_note_master に REGEX の行の英語の書式（label_template_en）を足す（構造のみ・冪等）
+run_sql migrations/20261013_140100_add_tcg_note_master_label_template_en.sql

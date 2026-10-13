@@ -32,6 +32,7 @@ interface TcgNoteMaster {
   match_type: string;
   search_pattern: string | null;
   label_template: string | null;
+  label_template_en: string | null;
 }
 
 type NoteFormState = {
@@ -45,6 +46,7 @@ type NoteFormState = {
   exclude_keywords: string;
   search_pattern: string;
   label_template: string;
+  label_template_en: string;
 };
 
 const emptyForm: NoteFormState = {
@@ -58,6 +60,7 @@ const emptyForm: NoteFormState = {
   exclude_keywords: "",
   search_pattern: "",
   label_template: "",
+  label_template_en: "",
 };
 
 const toForm = (n: TcgNoteMaster): NoteFormState => ({
@@ -71,6 +74,7 @@ const toForm = (n: TcgNoteMaster): NoteFormState => ({
   exclude_keywords: n.exclude_keywords,
   search_pattern: n.search_pattern ?? "",
   label_template: n.label_template ?? "",
+  label_template_en: n.label_template_en ?? "",
 });
 
 const MATCH_TYPE_OPTIONS = [
@@ -151,6 +155,7 @@ export function NoteMasterPanel() {
       exclude_keywords: form.exclude_keywords,
       search_pattern: toNull(form.search_pattern),
       label_template: toNull(form.label_template),
+      label_template_en: toNull(form.label_template_en),
     };
     try {
       if (editId !== null) {
@@ -326,6 +331,13 @@ export function NoteMasterPanel() {
                 label={t(`${f}.labelTemplate`)}
                 value={form.label_template}
                 onChange={e => setForm({ ...form, label_template: e.target.value })}
+              />
+            </div>
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <TextField
+                label={t(`${f}.labelTemplateEn`)}
+                value={form.label_template_en}
+                onChange={e => setForm({ ...form, label_template_en: e.target.value })}
               />
             </div>
           </div>
