@@ -30,6 +30,7 @@
 
 - KPI: 1回の訪問での GET /inventory = 1回（本番 nginx ログで Opus が確認）
 - 変更: `frontend/src/pages/inventory/InventoryPage.tsx` の load の先頭で要求番号を増やし、await 後に最新でなければ state を更新しない。読込 effect は filtersLoaded が true になるまで待つ。
+- 変更: `frontend/src/components/CommerceNavigationButtonMigration.test.tsx` の1行（最初の読込完了を waitFor で待ってから next の有効を判定する）。
 - 触らない: 保存（PATCH）の effect、API クライアント、backend、CSS、i18n。
 
 ## 弊害・トレードオフ
