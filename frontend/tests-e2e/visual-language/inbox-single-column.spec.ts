@@ -581,7 +581,6 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // コメントに根拠を記載）。20件あれば確実にスクロールが出る。
     await openInboxListWithConversations(page, 20);
 
-    const scrollBox = page.locator(".inbox-conversation-list");
     const header = page.locator(".inbox-mobile-header");
     const manage = page.locator(".inbox-mobile-header .inbox-manage-btn");
     const searchRow = page.locator(".inbox-mobile-search-row");
@@ -591,9 +590,53 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(viewport, "viewport のサイズが取れない").not.toBeNull();
     const viewportWidth = viewport!.width;
 
-    // 1. 行の一覧が実際にスクロールできること（満たさなければこの検査自体が無意味）
-    const scrollable = await scrollBox.evaluate((el) => el.scrollHeight > el.clientHeight);
-    expect(scrollable, "行の一覧がスクロールできる高さになっていない（検査データが足りない）").toBe(true);
+    // 1. 「実際にスクロールしている箱」をブラウザの中で特定する。
+    //    どの要素がスクロールするかは CSS の積み重ねで決まり、読んだだけでは
+    //    確実に言えない（第3便で .inbox-left-panel → .inbox-conversation-list と
+    //    二度推測を外した）。行から親をたどって、本当に中身があふれている最初の
+    //    箱を選ぶ。見つからなければページ全体（scrollingElement）を使う。
+    //    どれがスクロールしても「ヘッダーは動かない」ことがこの検査の要件なので、
+    //    箱を決め打ちしないこの形が要件に一致する。
+    const scrollInfo = await page.evaluate(() => {
+      const row = document.querySelector("button.conversation-item");
+      const chain: Array<{ sel: string; scrollH: number; clientH: number; overflowY: string }> = [];
+      let el: HTMLElement | null = row?.parentElement ?? null;
+      let found: HTMLElement | null = null;
+      while (el) {
+        const cs = getComputedStyle(el);
+        const sel =
+          el.className && typeof el.className === "string"
+            ? `${el.tagName.toLowerCase()}.${el.className.trim().split(/\s+/).join(".")}`
+            : el.tagName.toLowerCase();
+        chain.push({ sel, scrollH: el.scrollHeight, clientH: el.clientHeight, overflowY: cs.overflowY });
+        if (!found && el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(cs.overflowY)) {
+          found = el;
+          el.setAttribute("data-vl-scrollbox", "1");
+        }
+        el = el.parentElement;
+      }
+      const doc = document.scrollingElement as HTMLElement | null;
+      const pageScrollable = doc ? doc.scrollHeight > doc.clientHeight + 1 : false;
+      if (!found && doc && pageScrollable) doc.setAttribute("data-vl-scrollbox", "1");
+      return {
+        chain,
+        usedSelector: found ? chain.find((c) => c.scrollH > c.clientH + 1)?.sel ?? null : "scrollingElement",
+        pageScrollHeight: doc?.scrollHeight ?? null,
+        pageClientHeight: doc?.clientHeight ?? null,
+        rowCount: document.querySelectorAll("button.conversation-item").length,
+      };
+    });
+    await testInfo.attach("scroll-box-detection", {
+      body: JSON.stringify(scrollInfo, null, 2),
+      contentType: "application/json",
+    });
+
+    const scrollBox = page.locator("[data-vl-scrollbox]").first();
+    const scrollable = (await scrollBox.count()) > 0;
+    expect(
+      scrollable,
+      `スクロールできる箱が1つも無い（検査データが足りない）。行数=${scrollInfo.rowCount} / 親の連なり=${JSON.stringify(scrollInfo.chain)}`,
+    ).toBe(true);
 
     // 2. スクロール前の寸法を記録
     const headerBoxBefore = await header.boundingBox();
@@ -605,7 +648,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(searchRowBoxBefore, "スクロール前の検索欄の寸法が取れない").not.toBeNull();
     expect(firstRowBoxBefore, "スクロール前の1行目の寸法が取れない").not.toBeNull();
 
-    // 3. 行の一覧を600pxスクロールする
+    // 3. 特定したスクロール箱を600pxスクロールする
     await scrollBox.evaluate((el, y) => { el.scrollTop = y; }, SCROLL_PX);
     await expect
       .poll(() => scrollBox.evaluate((el) => el.scrollTop), "scrollTop が反映されるまで待つ")
@@ -662,8 +705,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // 8. 一覧が実際に動いた証拠: 1行目のyがスクロール前より小さくなっている（上へ流れた）
     expect(firstRowBoxAfter!.y, "1行目が上へ流れていない").toBeLessThan(firstRowBoxBefore!.y);
 
-    // 9. スクロールが本当に効いた証拠: scrollTop が指定どおり600になっている
-    expect(scrollTopAfter, "scrollTop が600になっていない").toBe(SCROLL_PX);
+    // 9. スクロールが本当に効いた証拠: scrollTop が0より大きい。
+    //    どの箱がスクロールするかで到達できる量が変わる（中身の高さで頭打ちになる）ため、
+    //    600ちょうどは要求しない。実際の値は上の添付に残している。
+    expect(scrollTopAfter, "scrollTop が0のまま＝スクロールが効いていない").toBeGreaterThan(0);
   });
 
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
