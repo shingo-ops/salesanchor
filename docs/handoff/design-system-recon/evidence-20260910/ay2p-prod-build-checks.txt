@@ -18,3 +18,14 @@ arch`,className:`field-h-md field-w-md`,placeholder:e(`inventory.view.searchPlac
        0
 (double-quote form per design, vacuous since esbuild emits backticks):
        0
+
+== 実行した grep コマンド（実行履歴からの転記。frontend/dist/assets/ は npm run build の出力）
+1. grep -o '"input",{type:"search",className:"field-h-md field-w-md"' frontend/dist/assets/*.js | wc -l
+2. grep -o '\.comp-field__input\.field-w-md' frontend/dist/assets/*.css | wc -l
+3. grep -o 'orders-search-input' frontend/dist/assets/*.js | wc -l
+4. grep -o '"data-testid":"inventory-search"' frontend/dist/assets/*.js | wc -l
+5. grep -o 'type:`search`,className:`field-h-md field-w-md`' frontend/dist/assets/*.js | wc -l
+6. grep -oE 'type:(`|")search(`|"),className:(`|")field-h-md field-w-md(`|")' frontend/dist/assets/*.js | wc -l
+7. grep -o '.\{80\}orders-search-input.\{5\}' frontend/dist/assets/*.js
+8. grep -o '.\{90\}"data-testid":`inventory-search`' frontend/dist/assets/*.js
+9. grep -o '`input`,{type:`search`,className:`field-h-md field-w-md`' frontend/dist/assets/*.js | wc -l

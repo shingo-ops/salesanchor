@@ -20,7 +20,7 @@ mode: handoff。§AY の一行入力を金型へ移す便の続き。PO 決定�
 
 設計判断（設計者、2026-10-14）:
 1. 5件とも TextFieldControl standard・md（size 指定なし）。PO 決定どおり。
-2. 幅を守るため field-size.css の幅規則に `.comp-field__input.field-w-sm/md/lg` を併記する（AW-2b の select と同じ型。既存の利用0なので影響は本便の5件だけ）。新トークンなし。
+2. 幅を守るため field-size.css の幅規則に `.comp-field__input.field-w-sm/md/lg` を併記する（AW-2b #4033 の `.comp-select__control.field-w-*`（選択欄）と同じ型を入力欄へ新設。既存の利用0なので影響は本便の5件だけ）。新トークンなし。
 3. S5 は親 div の className "search-bar" を外し、input の幅クラスを field-w-sm → field-w-md にする。理由: `.search-bar input` が金型の外観（角4px 等）を上書きするため金型に移らない。共有の components.css は他5画面が使うので触らない。field-w-md（280）にすると現在の実幅 280 が保たれる。外した結果 margin-bottom space-4 も消える（ツールバー内の縦位置が変わる。現状の右スロットとの縦中心差 8px が縮む見込み。実測で記録）。
 4. その他の属性は逐語保持（`search-input`・`field-h-md` も残す。どちらも after では効果なし＝死にクラス・min-height 36 < 39.6 だが、外す変更は本便の範囲外）。type="search"・data-testid・aria-label・onKeyDown も保持。
 5. 高さは 36 → 39.6 に変わる。兄弟のボタン（28/36）とは高さがそろわないが、同じ行の SelectControl は既に 39.6 で同じ状態。縦中心は flex center でそろう（受入で確認）。
@@ -75,12 +75,12 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 
 ## 維持の仕組み
 - 守り手: frontend/src/components/TextField.test.tsx、scripts/check-ui-governance.js（pages の生 input 増加を検出。ただし type=number は検出対象外＝:213-218）、frontend の horizontal-overflow e2e、frontend-check（CI）。
-- 守っていないもの: `.search-bar input`（frontend/src/components/components.css:56-65）を使う他画面の form 内入力は生 input/旧外観のまま（別便）。死にクラス search-input と効果のない field-h-md の除去（別便）。type=number の生 input は check-ui-governance.js:213-218 が検出しない。在庫一覧のツールバーは幅375でボタンが画面に収まらない（変更前から。別便で折り返し等を設計。改訂2）。
+- 守っていないもの: `.search-bar input`（frontend/src/components.css:56-65）を使う他画面の form 内入力は生 input/旧外観のまま（別便）。死にクラス search-input と効果のない field-h-md の除去（別便）。type=number の生 input は check-ui-governance.js:213-218 が検出しない。在庫一覧のツールバーは幅375でボタンが画面に収まらない（変更前から。別便で折り返し等を設計。改訂2）。
 - 切戻し: 本 PR の merge commit を revert（DB 影響なし）。
 
 ## 外部・過去事例の参照と我々への応用
 - 外部事例: 不要。既存の金型 TextFieldControl と field-size の複合セレクタを再利用するだけで、新しい仕組みを入れないため。
-- 過去事例: AW-2b #4033 の複合セレクタ（`.comp-field__input.field-w-*` で幅を指定する型）を、field-size.css に sm/md/lg を併記して踏襲した。AY-2k〜2o の同型移管（生 input を TextFieldControl へ移し、外観は金型に任せ、並びは変えない）を5画面の検索欄に適用した。
+- 過去事例: AW-2b #4033 は `.comp-select__control.field-w-*`（選択欄）。`.comp-field__input.field-w-*` は本便で同じ型を入力欄へ新設し、field-size.css に sm/md/lg を併記した。AY-2k〜2o の同型移管（生 input を TextFieldControl へ移し、外観は金型に任せ、並びは変えない）を5画面の検索欄に適用した。
 - 応用: 幅は前後差0を計測で確認し、幅375のみ flex の自動最小幅で S2 149→160、S3 149→192 になったが、変更前からの不具合の延長として改訂2で許容した。
 
 ## 関係する ADR
