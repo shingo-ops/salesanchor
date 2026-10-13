@@ -95,3 +95,7 @@
 - 設計に足した点（props）: 候補の取得に失敗したときの文字 `errorText`（省略可・省略時は noResultsText）。黙って捨てないため。
 - 行の「このままで良い」ボタンには、行ごとの読み上げ名（`needsReview.inline.ackAria`）を付けた。件を開いた画面の同名のボタンと、読み上げ名が重ならない（既存の試験を変えずに通すためでもある）。
 - 保存のあとの読み直しは、`reloadKey` だけが変わったときに表を消さない（ページ送り・タブ切替のときは今までどおり消す）。
+- 審査の指摘（HIGH）: 候補が届いても先頭を自動で選ばない（activeIndex=-1）。Enter は矢印で選んだ候補があるときだけ保存する。
+- 審査の指摘（HIGH）: 日本語変換中（`nativeEvent.isComposing` または `keyCode === 229`）のキーは何もしない。前例は `frontend/src/pages/inbox/InboxMessageThread.tsx:236`。
+- 審査の指摘（MEDIUM）: ReviewRowActions に省略可の `searchDebounceMs`（既定は AsyncCombobox の 300）を足し、試験では 0 を渡す。製品の既定は変えない。
+- 審査の指摘（LOW）: 一覧が閉じている間は `aria-controls` を付けない。

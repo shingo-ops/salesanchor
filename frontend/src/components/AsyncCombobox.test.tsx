@@ -64,12 +64,50 @@ describe("AsyncCombobox", () => {
     fireEvent.change(input, { target: { value: "box" } });
     await screen.findByRole("option", { name: "Alpha Box" });
     fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(screen.getByRole("option", { name: "Beta Box" }).getAttribute("aria-selected")).toBe("true");
     fireEvent.keyDown(input, { key: "ArrowUp" });
     fireEvent.keyDown(input, { key: "ArrowUp" });
     expect(screen.getByRole("option", { name: "Beta Box" }).getAttribute("aria-selected")).toBe("true");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onSelect).toHaveBeenCalledWith({ value: "u-2", label: "Beta Box" });
+  });
+
+  it("does not select when Enter confirms Japanese composition (isComposing)", async () => {
+    const { input, onSelect } = setup();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "box" } });
+    await screen.findByRole("option", { name: "Alpha Box" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("listbox")).toBeTruthy();
+  });
+
+  it("does not select the first option on Enter when options only appeared", async () => {
+    const { input, onSelect } = setup();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "box" } });
+    await screen.findByRole("option", { name: "Alpha Box" });
+    expect(screen.getAllByRole("option").every((o) => o.getAttribute("aria-selected") === "false")).toBe(true);
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("selects with Enter after choosing an option by arrow key, and by click", async () => {
+    const { input, onSelect } = setup();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "box" } });
+    await screen.findByRole("option", { name: "Alpha Box" });
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSelect).toHaveBeenCalledWith({ value: "u-1", label: "Alpha Box" });
+  });
+
+  it("does not point aria-controls at a missing list while closed", () => {
+    const { input } = setup();
+    expect(input.getAttribute("aria-controls")).toBeNull();
   });
 
   it("closes with Escape without selecting", async () => {

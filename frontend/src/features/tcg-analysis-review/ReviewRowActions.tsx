@@ -23,6 +23,8 @@ interface Props {
   item: ReviewRowItem;
   /** 保存に成功したあと、一覧を読み直す */
   onSaved: () => void;
+  /** 候補検索の待ち（ms・省略時は既定の 300）。試験で 0 を渡す */
+  searchDebounceMs?: number;
 }
 
 type RowState =
@@ -36,7 +38,7 @@ export function ackableCodes(details: ReviewReasonDetail[] | undefined): string[
   return (details ?? []).filter((detail) => detail.ackable !== false).map((detail) => detail.code);
 }
 
-export function ReviewRowActions({ item, onSaved }: Props) {
+export function ReviewRowActions({ item, onSaved, searchDebounceMs }: Props) {
   const { t } = useTranslation();
   const [state, setState] = useState<RowState>({ status: "idle" });
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export function ReviewRowActions({ item, onSaved }: Props) {
         placeholder={t("needsReview.inline.productPlaceholder")}
         disabled={isSaving}
         loadOptions={searchProductOptions}
+        debounceMs={searchDebounceMs}
         onSelect={(option) => void selectProduct(option)}
         noResultsText={t("needsReview.inline.noResults")}
         loadingText={t("common.loading")}

@@ -40,7 +40,7 @@ describe("ReviewRowActions", () => {
 
   it("posts the same product correction as the drawer when a candidate is chosen, then shows Saved and reloads", async () => {
     const onSaved = vi.fn();
-    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} />);
+    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} searchDebounceMs={0} />);
     const input = screen.getByRole("combobox");
     expect((input as HTMLInputElement).value).toBe("Old Product");
     fireEvent.focus(input);
@@ -57,7 +57,7 @@ describe("ReviewRowActions", () => {
   });
 
   it("does not save while only typing", async () => {
-    render(<ReviewRowActions item={makeItem()} onSaved={() => undefined} />);
+    render(<ReviewRowActions item={makeItem()} onSaved={() => undefined} searchDebounceMs={0} />);
     const input = screen.getByRole("combobox");
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "New" } });
@@ -67,7 +67,7 @@ describe("ReviewRowActions", () => {
 
   it("sends only the ackable reasons together with keep-as-is", async () => {
     const onSaved = vi.fn();
-    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} />);
+    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} searchDebounceMs={0} />);
     fireEvent.click(screen.getByRole("button", { name: "Keep as is: item-1" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
     expect(api.post).toHaveBeenCalledWith("/tcg/items/item-1/review-ack", {
@@ -81,7 +81,7 @@ describe("ReviewRowActions", () => {
 
   it("has no keep-as-is button when no reason can be acknowledged", () => {
     const item = makeItem({ review_reason_details: [{ code: "condition_unknown", source: "system", fix_stage: "analysis", ackable: false }] });
-    render(<ReviewRowActions item={item} onSaved={() => undefined} />);
+    render(<ReviewRowActions item={item} onSaved={() => undefined} searchDebounceMs={0} />);
     expect(screen.queryByRole("button", { name: "Keep as is: item-1" })).toBeNull();
     expect(screen.getByRole("combobox")).toBeTruthy();
   });
@@ -89,7 +89,7 @@ describe("ReviewRowActions", () => {
   it("shows an error badge with the reason and does not reload when saving fails", async () => {
     vi.mocked(api.post).mockRejectedValue(new Error("nope"));
     const onSaved = vi.fn();
-    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} />);
+    render(<ReviewRowActions item={makeItem()} onSaved={onSaved} searchDebounceMs={0} />);
     fireEvent.click(screen.getByRole("button", { name: "Keep as is: item-1" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
     await waitFor(() => expect(screen.queryByText(/Could not save/)).toBeTruthy());
@@ -101,7 +101,7 @@ describe("ReviewRowActions", () => {
     const onRowClick = vi.fn();
     render(
       <div onClick={onRowClick}>
-        <ReviewRowActions item={makeItem()} onSaved={() => undefined} />
+        <ReviewRowActions item={makeItem()} onSaved={() => undefined} searchDebounceMs={0} />
       </div>,
     );
     fireEvent.click(screen.getByRole("combobox"));

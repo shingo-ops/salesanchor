@@ -124,7 +124,7 @@ export function AsyncCombobox({
         .then((rows) => {
           if (requestRef.current !== requestId) return;
           setOptions(rows);
-          setActiveIndex(rows.length > 0 ? 0 : -1);
+          setActiveIndex(-1);
           setStatus("done");
         })
         .catch(() => {
@@ -170,6 +170,8 @@ export function AsyncCombobox({
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    // 日本語変換中のキー（確定の Enter など）では何もしない（keyCode 229 は一部ブラウザの変換中）
+    if (event.nativeEvent.isComposing === true || event.keyCode === 229) return;
     if (event.key === "Escape") {
       if (editing) {
         event.preventDefault();
@@ -216,7 +218,7 @@ export function AsyncCombobox({
         role="combobox"
         aria-label={ariaLabel}
         aria-expanded={isListOpen}
-        aria-controls={listId}
+        aria-controls={isListOpen ? listId : undefined}
         aria-autocomplete="list"
         aria-activedescendant={hasOptions && activeIndex >= 0 ? optionId(activeIndex) : undefined}
         autoComplete="off"
