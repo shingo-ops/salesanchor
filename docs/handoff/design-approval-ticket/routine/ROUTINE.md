@@ -5,12 +5,19 @@
 
 ## 登録手順（PO）
 
-1. Claude Desktop を開く → Code → Routines → New routine → Local を選ぶ。【未確認】画面の項目名は2026-10-13 時点で実物を見ていない。実際の表示に合わせて読み替える。
-2. 名前: 許可保守（週次）
-3. 実行間隔: 毎週月曜 9:00 JST。【未確認】入力欄の形式。
-4. フォルダ: /Users/tanizawashingo/salesanchor
-5. 指示文: 下の「指示文」を貼り付ける。
-6. 止めるとき: チャットで「許可保守停止」と言う、または定期タスクを無効にする。
+前提（2026-10-13 確認）: この Mac には Claude Desktop が入っていない（/Applications/Claude.app なし・~/Library/Application Support/Claude なし・~/.claude/scheduled-tasks/ なし）。登録には Claude Desktop 1.1.5368 以上のインストールが必要。インストールするかは PO の判断。
+
+出典: https://code.claude.com/docs/en/desktop-scheduled-tasks （2026-10-13 参照）。以下はその記載。
+
+1. Desktop の Code タブ → サイドバーの Routines（またはサイドバーの More メニュー）→ New routine → Local。
+2. 名前: 許可保守（週次）。名前は小文字のケバブ形式に変換されてフォルダ名になる（~/.claude/scheduled-tasks/<名前>/SKILL.md に指示文が保存される）。
+3. Schedule は Weekly のプリセットを選び、月曜 9:00 にする。【未確認】曜日・時刻の入力欄の形は資料に記載なし。
+4. フォルダ: /Users/tanizawashingo/salesanchor（未信頼なら保存前に信頼を求められる）。worktree の切り替えは使わない（指示文の中で scripts/new-worktree.sh を使うため）。
+5. 権限モードは作成画面でタスクごとに選ぶ。Manual だと許可のない操作で実行が止まり、承認するまで待つ。~/.claude/settings.json の allow はこのタスクにも効く。【未確認】選択肢の名前は資料に記載なし。
+6. 作成後に Run now を押し、出てきた許可の確認に「always allow」を選ぶと、次回から同じ道具は確認なしで動く。
+7. 実行されるのは Desktop が起動中かつ Mac がスリープしていないときだけ。スリープで逃した回は、起動・復帰時に直近の1回だけ追いかけて実行される（7日以内）。Settings > This computer > System の Keep computer awake でアイドルスリープを防げる（蓋を閉じるとスリープする）。
+8. 指示文: 下の「指示文」を貼り付ける。
+9. 止めるとき: チャットで「許可保守停止」と言う、または定期タスクを無効にする。
 
 ## 指示文（ここから下を貼る）
 
