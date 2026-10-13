@@ -1,0 +1,8 @@
+$ grep -n "data-testid\|placeholder=\|aria-pressed" src/components/InventorySearchBar.tsx | head -30
+284:          placeholder={placeholderText}
+306:            aria-pressed={op === "and"}
+322:            aria-pressed={op === "or"}
+$ git diff --stat
+ frontend/src/components/InventorySearchBar.tsx | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+285:          data-testid={`${testIdPrefix}-input`}

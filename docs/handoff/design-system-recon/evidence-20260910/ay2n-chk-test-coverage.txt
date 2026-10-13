@@ -1,0 +1,538 @@
+
+> salesanchor-frontend@1.0.0 test:coverage
+> vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend
+      Coverage enabled with v8
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'negative' without sending
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'negative' without sending
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'fraction' without sending
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'fraction' without sending
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create lost sends fifteen keys without reason fields
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+stderr | src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create textarea Enter adds newline only
+Warning: An update to ChannelTypeCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ChannelTypeCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/ChannelTypeCombobox.tsx:13:32)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+Warning: An update to CountryCombobox inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at CountryCombobox (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/CountryCombobox.tsx:13:28)
+    at div
+    at form
+    at div
+    at div
+    at div
+    at Modal (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/Modal.tsx:30:18)
+    at div
+    at div
+    at PageLayout (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/components/PageLayout.tsx:9:23)
+    at LeadsPage (/Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/src/pages/leads/LeadsPage.tsx:110:56)
+    at RenderedRoute (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6218:26)
+    at Routes (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7097:3)
+    at Router (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:7036:13)
+    at MemoryRouter (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-router/dist/development/chunk-4ZMWKKQ3.mjs:6952:3)
+    at I18nextProvider (file:///Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend/node_modules/react-i18next/dist/es/I18nextProvider.js:4:3)
+
+ ❯ |unit| src/components/LeadFormButtonMigration.test.tsx (67 tests | 14 failed) 221427ms
+     × 'create' rejects 'negative' without sending 6155ms
+     × 'create' rejects 'fraction' without sending 6634ms
+     × 'quick' rejects 'name' without sending 6721ms
+     × create lost sends fifteen keys without reason fields 11274ms
+     × create cancel writes zero and reopening restores source 10622ms
+     × quick cancel writes zero and reopening restores source 9291ms
+     × create pending stays enabled and error retains values before retry 8131ms
+     × create textarea Enter adds newline only 5382ms
+     × 'create' 'country' 'select' uses real combobox 6088ms
+     × 'create' 'channel' 'select' uses real combobox 5643ms
+     × 'create' 'channel' 'query' uses real combobox 6009ms
+     × 'create' 'channel' 'clear' uses real combobox 12496ms
+     × 'quick' 'country' 'select' uses real combobox 5698ms
+     × 'quick' 'country' 'clear' uses real combobox 5373ms
+ ❯ |unit| src/components/StaffFormButtonMigration.test.tsx (31 tests | 1 failed) 36886ms
+     × 'create' sends exact method, ID and payload through 'click' 8457ms
+ ❯ |unit| src/components/BotFormButtonMigration.test.tsx (32 tests | 4 failed) 87168ms
+     × 'create' submits exact payload through 'click' 6280ms
+     × 'create' submits exact payload through 'enter' 12936ms
+     × 'quick' submits exact payload through 'click' 8244ms
+     × 'quick' submits exact payload through 'enter' 6141ms
+ ❯ |unit| src/components/AllLegacyButtonOperationMigration.test.tsx (5 tests | 1 failed) 14752ms
+     × submits the exact credentials once, remains pending, and navigates to the original route 6187ms
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+ ❯ |unit| src/pages/super-admin/components/UnitIgnorePhrasesPanel.test.tsx (4 tests | 1 failed) 16087ms
+   × deletes the selected phrase after confirmation 7973ms
+ ❯ |unit| src/pages/super-admin/AnalysisRulesPage.test.tsx (3 tests | 2 failed) 23064ms
+   × shows the product master panel with its export button for a super admin on ?section=product-master 13071ms
+   × selects the sold-out results menu item and renders its panel for a super admin on ?section=sold-out-results 8370ms
+ ❯ |unit| src/pages/management-center/ManagementCenterPage.test.tsx (6 tests | 1 failed) 17449ms
+   × links the 4 admin pages under the management-center layout 8190ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 24 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/AllLegacyButtonOperationMigration.test.tsx > all legacy Button operation migration > submits the exact credentials once, remains pending, and navigates to the original route
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/AllLegacyButtonOperationMigration.test.tsx:41:3
+     39|     await localized.changeLanguage('en'); expect(localized.t('goals.ad…
+     40|   });
+     41|   it('submits the exact credentials once, remains pending, and navigat…
+       |   ^
+     42|     const pending = deferred(); auth.signIn.mockReturnValue(pending.pr…
+     43|     fireEvent.change(screen.getByLabelText(String(instance.t('login.em…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/24]⎯
+
+ FAIL  |unit| src/components/BotFormButtonMigration.test.tsx > Bot form migration using real pages and permissions > 'create' submits exact payload through 'click'
+ FAIL  |unit| src/components/BotFormButtonMigration.test.tsx > Bot form migration using real pages and permissions > 'create' submits exact payload through 'enter'
+ FAIL  |unit| src/components/BotFormButtonMigration.test.tsx > Bot form migration using real pages and permissions > 'quick' submits exact payload through 'click'
+ FAIL  |unit| src/components/BotFormButtonMigration.test.tsx > Bot form migration using real pages and permissions > 'quick' submits exact payload through 'enter'
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/BotFormButtonMigration.test.tsx:81:95
+     79| });
+     80| describe('Bot form migration using real pages and permissions', () => {
+     81|   it.each(modes.flatMap(mode => (['click', 'enter'] as const).map(inpu…
+       |                                                                                               ^
+     82|     const send = mode === 'create' ? mock.post : mock.patch; send.mock…
+     83|     const scope = await mountForm(mode), target = save(scope, mode), b…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'negative' without sending
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' rejects 'fraction' without sending
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'quick' rejects 'name' without sending
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:119:142
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create lost sends fifteen keys without reason fields
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:131:3
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create cancel writes zero and reopening restores source
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > quick cancel writes zero and reopening restores source
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:135:16
+    133|     expect(within(scope).queryByText(tr('leads.lostReasonCode'))).toBe…
+    134|   });
+    135|   it.each(modes)('%s cancel writes zero and reopening restores source'…
+       |                ^
+    136|     const scope = await mountForm(mode); fireEvent.click(cancel(scope)…
+    137|     if (mode !== 'full') expect(field(await open(mode), 'leads.custome…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create pending stays enabled and error retains values before retry
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:139:16
+    137|     if (mode !== 'full') expect(field(await open(mode), 'leads.custome…
+    138|   });
+    139|   it.each(modes)('%s pending stays enabled and error retains values be…
+       |                ^
+    140|     const pending = deferred(); sender(mode).mockReturnValue(pending.p…
+    141|     for (const b of [save(scope, mode), cancel(scope)]) { expect(b.dis…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > create textarea Enter adds newline only
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:151:16
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/24]⎯
+
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' 'country' 'select' uses real combobox
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' 'channel' 'select' uses real combobox
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' 'channel' 'query' uses real combobox
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'create' 'channel' 'clear' uses real combobox
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'quick' 'country' 'select' uses real combobox
+ FAIL  |unit| src/components/LeadFormButtonMigration.test.tsx > Lead form migration with real input, permission and SSE hooks > 'quick' 'country' 'clear' uses real combobox
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/LeadFormButtonMigration.test.tsx:154:177
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/24]⎯
+
+ FAIL  |unit| src/components/StaffFormButtonMigration.test.tsx > staff form Button migration with real UI preferences provider > 'create' sends exact method, ID and payload through 'click'
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/StaffFormButtonMigration.test.tsx:140:95
+    138|
+    139| describe('staff form Button migration with real UI preferences provide…
+    140|   it.each(modes.flatMap(mode => (['click', 'enter'] as const).map(inpu…
+       |                                                                                               ^
+    141|     '$mode sends exact method, ID and payload through $input',
+    142|     async ({ mode, input }) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/24]⎯
+
+ FAIL  |unit| src/pages/management-center/ManagementCenterPage.test.tsx > links the 4 admin pages under the management-center layout
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pages/management-center/ManagementCenterPage.test.tsx:41:1
+     39|   );
+     40|
+     41| it("links the 4 admin pages under the management-center layout", () =>…
+       | ^
+     42|   mockPermissions(true);
+     43|   view("staff");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/24]⎯
+
+ FAIL  |unit| src/pages/super-admin/AnalysisRulesPage.test.tsx > shows the product master panel with its export button for a super admin on ?section=product-master
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pages/super-admin/AnalysisRulesPage.test.tsx:32:1
+     30| });
+     31|
+     32| it("shows the product master panel with its export button for a super …
+       | ^
+     33|   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAd…
+     34|   vi.mocked(api.get).mockResolvedValue({ total: 0, items: [], works: […
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/24]⎯
+
+ FAIL  |unit| src/pages/super-admin/AnalysisRulesPage.test.tsx > selects the sold-out results menu item and renders its panel for a super admin on ?section=sold-out-results
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pages/super-admin/AnalysisRulesPage.test.tsx:45:1
+     43|
+     44| // AY-2i: the sold-out results screen now lives in the LINE analysis s…
+     45| it("selects the sold-out results menu item and renders its panel for a…
+       | ^
+     46|   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAd…
+     47|   vi.mocked(api.get).mockResolvedValue({ total: 0, offset: 0, limit: 5…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/24]⎯
+
+ FAIL  |unit| src/pages/super-admin/components/UnitIgnorePhrasesPanel.test.tsx > deletes the selected phrase after confirmation
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pages/super-admin/components/UnitIgnorePhrasesPanel.test.tsx:62:1
+     60| });
+     61|
+     62| it("deletes the selected phrase after confirmation", async () => {
+       | ^
+     63|   render(<UnitIgnorePhrasesPanel />);
+     64|   await screen.findByText("ALPHA PHRASE");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/24]⎯
+
+
+ Test Files  7 failed | 81 passed (88)
+      Tests  24 failed | 1013 passed (1037)
+   Start at  17:36:03
+   Duration  1612.56s (transform 36.26s, setup 11.87s, import 243.92s, tests 605.23s, environment 510.02s)
+
+exit=1
