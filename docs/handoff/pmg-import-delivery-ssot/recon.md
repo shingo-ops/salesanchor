@@ -364,7 +364,7 @@ POが許可したSSH経路で、稼働中APIの既存resolve_supplierへaction=c
 | SP0241 | Ryum. | 1 |
 | SP0242 | 谷村 | 1 |
 | SP0243 | Ty事務員 | 1 |
-| SP0244 | 板谷よしみつ | 1 |
+| SP0244 | 担当者35 | 1 |
 | SP0245 | 鈴木（板谷STAFFアカウント） | 1 |
 
 直接実行した検証: /tmp/pmg-register-five.py の外側/内側Python構文検査成功、check exit0、apply exit0。登録応答の残件数4→3→2→1→0、登録後の読取専用照会で上記5コード・各LINE接続1件・unresolved_count=0を確認。review_status=pending_review、messages_linked_at=NULLは維持。次は取込確定と抽出開始の運用工程であり、仕入元登録だけで解析済みと扱わない。製品履歴/切替設計のREVISEは継続。
