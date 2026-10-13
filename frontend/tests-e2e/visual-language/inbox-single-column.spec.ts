@@ -244,6 +244,74 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(panel).toBeVisible();
   });
 
+  test("スマホ: 名前と本文に大きさと太さの段差がある", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13: お手本（WhatsApp のチャット一覧）を同じ文字種どうしで実測すると
+    //   日付のインク高さ 28px ／ 名前 37px ＝ 名前は日付の 1.32 倍
+    //   線の太さ: 名前 6.0px ／ 本文 4.0px ＝ 1.5 倍
+    // 当方は投入前 名前 14.4px/400・本文 12px/400 ＝ 大きさ 1.2 倍・太さの差なし。
+    // 名前を 16px/600 にして段差を付けた（16÷12 = 1.33 でお手本に一致）。
+    const type = await page.evaluate(() => {
+      const read = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const st = getComputedStyle(el);
+        return { fontSize: parseFloat(st.fontSize), fontWeight: Number(st.fontWeight) };
+      };
+      return { name: read(".conv-name"), preview: read(".conv-preview-text"), time: read(".conv-time") };
+    });
+    await testInfo.attach("type-scale", { body: JSON.stringify(type, null, 2), contentType: "application/json" });
+    expect(type.name, "名前が見つからない").not.toBeNull();
+    expect(type.preview, "本文が見つからない").not.toBeNull();
+    // 大きさの段差（お手本 1.32 倍）
+    expect(type.name!.fontSize / type.preview!.fontSize).toBeGreaterThanOrEqual(1.3);
+    // 太さの段差（お手本 1.5 倍の線幅に相当。数値では 400 より重いこと）
+    expect(type.name!.fontWeight).toBeGreaterThan(type.preview!.fontWeight);
+
+    // ダークモードでも役割の割り当てが崩れないことを確認する。
+    // このアプリは OS 設定を無視しアプリ設定（users.theme）で切り替えるため
+    // （src/index.css:212 / src/contexts/ThemeContext.tsx:15）、実機では
+    // 利用者の保存設定を書き換えないと測れない。検査では force-dark クラスを
+    // 直接付けて測り、DB には一切触らない。
+    const dark = await page.evaluate(() => {
+      document.documentElement.classList.add("force-dark");
+      const lum = (c: string) => {
+        const m = c.match(/\d+/g);
+        if (!m) return null;
+        const [r, g, b] = m.slice(0, 3).map((v) => {
+          const x = Number(v) / 255;
+          return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const ratio = (fg: string, bg: string) => {
+        const a = lum(fg), b = lum(bg);
+        if (a === null || b === null) return null;
+        const hi = Math.max(a, b), lo = Math.min(a, b);
+        return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+      };
+      const panel = document.querySelector(".inbox-left-panel") as HTMLElement | null;
+      const prev = document.querySelector(".conv-preview-text") as HTMLElement | null;
+      const nameEl = document.querySelector(".conv-name") as HTMLElement | null;
+      const bg = panel ? getComputedStyle(panel).backgroundColor : "";
+      const out = {
+        panelBackground: bg,
+        previewContrast: prev ? ratio(getComputedStyle(prev).color, bg) : null,
+        nameContrast: nameEl ? ratio(getComputedStyle(nameEl).color, bg) : null,
+      };
+      document.documentElement.classList.remove("force-dark");
+      return out;
+    });
+    await testInfo.attach("dark-mode-contrast", { body: JSON.stringify(dark, null, 2), contentType: "application/json" });
+    // ダークでも 12px の副文字が本文の基準を満たすこと
+    expect(dark.previewContrast, "ダークの副文字の明暗差が測れない").not.toBeNull();
+    expect(dark.previewContrast!, "ダークの副文字の明暗差").toBeGreaterThanOrEqual(4.5);
+    expect(dark.nameContrast!, "ダークの名前の明暗差").toBeGreaterThanOrEqual(4.5);
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
