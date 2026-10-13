@@ -54,7 +54,6 @@ class TokenData(BaseModel):
     email: str
     tenant_id: int
     tenant_code: str
-    role: str
 
 
 class UserResponse(BaseModel):
@@ -64,7 +63,6 @@ class UserResponse(BaseModel):
     username: str
     full_name: str | None
     tenant_id: int
-    role: str
     is_active: bool
 
     model_config = {"from_attributes": True}

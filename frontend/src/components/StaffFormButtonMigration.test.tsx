@@ -21,7 +21,7 @@ const staff = {
   id: 7, staff_code: 'ST7', surname_jp: 'Fixture', given_name_jp: 'Staff', primary_email: 'fixture@example.test',
   surname_kana: null, given_name_kana: null, surname_en: 'EnFixture', given_name_en: 'EnStaff',
   discord_user_id: null, role_id: 2, role_name: 'Fixture role', status: 'active',
-  firebase_uid: null, ui_preferences: originalPrefs, emails: [],
+  ui_preferences: originalPrefs, emails: [],
 };
 const roles = [{ id: 2, name: 'Fixture role' }, { id: 3, name: 'Other fixture role' }];
 type Mode = 'create' | 'quick' | 'full';
@@ -59,10 +59,12 @@ function closed(scope: HTMLElement, mode: Mode) {
   else expect(screen.getByTestId('location').textContent).toBe('/staff');
 }
 function payload(mode: Mode) {
-  const common = { surname_jp: 'Edited', given_name_jp: 'Staff', primary_email: 'fixture@example.test', role_id: 3, status: 'active', discord_user_id: null };
+  // 編集（quick/full）はメール欄が表示だけなので送らない。作成は送る（ADR-1008 P4b）
+  const base = { surname_jp: 'Edited', given_name_jp: 'Staff', role_id: 3, status: 'active', discord_user_id: null };
+  const common = mode === 'create' ? { ...base, primary_email: 'fixture@example.test' } : base;
   return mode === 'quick' ? common : {
     ...common, surname_kana: null, given_name_kana: null, surname_en: 'EnFixture', given_name_en: 'EnStaff',
-    firebase_uid: null, ui_preferences: editedPrefs,
+    ui_preferences: editedPrefs,
   };
 }
 async function mountForm(mode: Mode) {
@@ -186,7 +188,7 @@ describe('staff form Button migration with real UI preferences provider', () => 
     fireEvent.click(save(scope, 'create'));
     await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/staff', payload('create')));
   });
-  it.each(modes.flatMap(mode => ['staff.surnameJp', 'staff.givenNameJp', 'staff.primaryEmail', 'staff.role'].map(key => ({ mode, key }))))(
+  it.each(modes.flatMap(mode => ['staff.surnameJp', 'staff.givenNameJp', 'staff.role', ...(mode === 'create' ? ['staff.primaryEmail'] : [])].map(key => ({ mode, key }))))(
     '$mode preserves required $key',
     async ({ mode, key }) => {
       const scope = await mountForm(mode), input = field(scope, key);
@@ -198,6 +200,11 @@ describe('staff form Button migration with real UI preferences provider', () => 
       expect(mock.patch).not.toHaveBeenCalled();
     },
   );
+  it.each(modes.filter(mode => mode !== 'create'))('%s shows the login email read-only (ADR-1008 P4b)', async (mode) => {
+    const input = field(await mountForm(mode), 'staff.primaryEmail');
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe('fixture@example.test');
+  });
   it('create blocks repeat submit/cancel and permits retry after failure', async () => {
     const pending = deferred();
     mock.post.mockReturnValue(pending.promise);
