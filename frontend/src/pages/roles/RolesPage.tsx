@@ -2,7 +2,7 @@
  * ロール・権限管理ページ（Discord式カスタムロール / GAS UI互換 split-view版）。
  *
  * レイアウト:
- *   - 左サイドバー: 役割一覧（クリックで選択）+ 「新規ロール」「ユーザー割当」ボタン
+ *   - 左サイドバー: 役割一覧（クリックで選択）+ 「新規ロール」ボタン
  *   - 右メインペイン: 選択中ロールの権限編集
  *     - カテゴリ単位でグループ化（アイコン + カテゴリ名 + メニュー表示トグル）
  *     - 各カテゴリ内に個別権限のチェックボックス
@@ -117,11 +117,6 @@ export default function RolesPage() {
   const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
   const [roleForm, setRoleForm] = useState(emptyRoleForm);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
-
-  // ユーザー割当モーダル
-  const [userAssignOpen, setUserAssignOpen] = useState(false);
-  const [targetUserId, setTargetUserId] = useState("");
-  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(new Set());
 
   // 初回ロード
   useEffect(() => {
@@ -302,31 +297,6 @@ export default function RolesPage() {
     }
   };
 
-  // ユーザー割当
-  const toggleUserRole = (id: number) => {
-    const next = new Set(selectedRoleIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedRoleIds(next);
-  };
-  const saveUserRoles = async () => {
-    try {
-      await api.put(`/users/${targetUserId}/roles`, {
-        role_ids: Array.from(selectedRoleIds),
-      });
-      setUserAssignOpen(false);
-      setTargetUserId("");
-      setSelectedRoleIds(new Set());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.saveError"));
-    }
-  };
-  const closeUserAssign = () => {
-    setUserAssignOpen(false);
-    setTargetUserId("");
-    setSelectedRoleIds(new Set());
-  };
-
   if (loading) return <div className="page"><div className="loading">{t("common.loading")}</div></div>;
 
   return (
@@ -364,11 +334,6 @@ export default function RolesPage() {
               );
             })}
           </ul>
-          {hasPermission("roles.assign") && (
-            <Button variant="secondary" size="md" fullWidth onClick={() => setUserAssignOpen(true)}>
-              {t("roles.assignUsers")}
-            </Button>
-          )}
         </aside>
 
         {/* === 右メインペイン: 権限編集 === */}
@@ -544,31 +509,6 @@ export default function RolesPage() {
                 <Button type="submit" variant="primary" size="md">{editingRoleId ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
-      </Modal>
-
-      {/* === ユーザー割当モーダル === */}
-      <Modal
-        open={userAssignOpen}
-        onClose={closeUserAssign}
-        title={t("roles.assignUsers")}
-        size="md"
-      >
-        <div className="form-group"><label>{t("roles.targetUserId")} *</label>
-          <TextFieldControl type="number" min="1" required value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} />
-        </div>
-        <div className="form-group"><label>{t("roles.grantRoles")}</label>
-          {roles.map((r) => (
-            <label key={r.id} style={{ display: "block", padding: "var(--space-1)" }}>
-              <input type="checkbox" checked={selectedRoleIds.has(r.id)} onChange={() => toggleUserRole(r.id)} />{" "}
-              <span className="badge" style={{ background: r.color || "var(--bg-hover)", color: "var(--on-accent)" }}>{r.name}</span>
-              <small style={{ marginLeft: "var(--space-2)", color: "var(--text-muted)" }}>priority: {r.priority}</small>
-            </label>
-          ))}
-        </div>
-        <div className="form-actions">
-          <Button type="button" variant="secondary" size="md" onClick={closeUserAssign}>{t("common.cancel")}</Button>
-          <Button type="button" variant="primary" size="md" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</Button>
-        </div>
       </Modal>
 
       {/* === 削除確認 === */}

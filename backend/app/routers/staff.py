@@ -38,6 +38,7 @@ from app.schemas.staff import (
     StaffUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.role_assignment import assign_single_role
 from app.services.staff_avatar import (
     AVATAR_MAX_BYTES,
     ERR_SAVE_FAILED,
@@ -105,35 +106,33 @@ async def _resolve_user_for_new_staff(
 
 router = APIRouter()
 
+# PATCH /staff で role_id が変わるときだけ要る権限（roles.assign）。Depends の外から呼ぶ。
+_require_roles_assign = require_permission("roles.assign")
+
 _STAFF_COLS = """
     s.id, s.tenant_id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp,
     s.surname_kana, s.given_name_kana, s.surname_en, s.given_name_en,
-    s.primary_email, s.discord_user_id, s.role_id, s.status, s.firebase_uid,
+    s.primary_email, s.discord_user_id, rr.id AS role_id, s.status, s.firebase_uid,
     s.is_employee, s.phone, s.avatar_token,
     s.created_at, s.updated_at,
-    r.name AS role_name
+    rr.name AS role_name
+"""
+
+# 名簿のロールの正本は user_roles（ADR-1008 P4a）。見えるロールのうち priority 最大の1つを出す。
+# 使う側は _visible_text() で text を作り、_hidden_role_params(current_user) を渡す。
+_ROLE_JOIN = f"""
+    LEFT JOIN roles rr ON rr.id = (
+        SELECT r.id FROM user_roles ur JOIN roles r ON r.id = ur.role_id
+        WHERE ur.user_id = s.user_id AND {_visible_role_sql("r.system_key")}
+        ORDER BY r.priority DESC, r.id LIMIT 1
+    )
 """
 
 _UPDATABLE = {
     "surname_jp", "given_name_jp", "surname_kana", "given_name_kana",
     "surname_en", "given_name_en", "primary_email", "discord_user_id",
-    "role_id", "status", "firebase_uid", "is_employee",
+    "status", "firebase_uid", "is_employee",
 }
-
-
-async def _ensure_assignable_role(
-    db: AsyncSession, role_id: int, tenant_id: int, current_user: User
-) -> None:
-    """role_id が同一テナントに存在し、かつ（super admin 以外には）隠すロールでないことを確かめる。"""
-    check = await db.execute(
-        _visible_text(
-            "SELECT id FROM roles WHERE id = :rid AND tenant_id = :tid "
-            f"AND {_visible_role_sql()}"
-        ),
-        {"rid": role_id, "tid": tenant_id, **_hidden_role_params(current_user)},
-    )
-    if not check.first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定の role_id はこのテナントに存在しません")
 
 
 async def _fetch_emails(db: AsyncSession, staff_id: int) -> list[str]:
@@ -271,14 +270,14 @@ async def get_my_staff(
       （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）
     """
     result = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             WHERE s.user_id = :uid
             LIMIT 1
         """),
-        {"uid": current_user.id},
+        {"uid": current_user.id, **_hidden_role_params(current_user)},
     )
     row = result.mappings().first()
 
@@ -353,14 +352,14 @@ async def update_my_profile(
     本人確認: get_current_user が返す current_user.id（staff.user_id）で staff を特定。
     """
     result = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             WHERE s.user_id = :uid
             LIMIT 1
         """),
-        {"uid": current_user.id},
+        {"uid": current_user.id, **_hidden_role_params(current_user)},
     )
     row = result.mappings().first()
     if not row:
@@ -391,13 +390,13 @@ async def update_my_profile(
     await reset_tenant_context(db, tenant_id)
 
     fetched = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             WHERE s.id = :id
         """),
-        {"id": staff_id},
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     return await _compose(db, dict(fetched.mappings().first()))
 
@@ -432,10 +431,12 @@ async def _my_staff_id_and_token(db: AsyncSession, user_id: int) -> tuple[int, s
     return row["id"], row["avatar_token"]
 
 
-async def _fetch_staff_response(db: AsyncSession, staff_id: int) -> StaffResponse:
+async def _fetch_staff_response(
+    db: AsyncSession, staff_id: int, current_user: User,
+) -> StaffResponse:
     fetched = await db.execute(
-        text(f"SELECT {_STAFF_COLS} FROM staff s LEFT JOIN roles r ON r.id = s.role_id WHERE s.id = :id"),
-        {"id": staff_id},
+        _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     return await _compose(db, dict(fetched.mappings().first()))
 
@@ -490,7 +491,7 @@ async def upload_my_avatar(
         raise _avatar_http_error(ERR_SAVE_FAILED, status.HTTP_500_INTERNAL_SERVER_ERROR) from None
 
     delete_avatar_file(old_token)
-    return await _fetch_staff_response(db, staff_id)
+    return await _fetch_staff_response(db, staff_id, current_user)
 
 
 @router.delete("/staff/me/avatar", response_model=StaffResponse, status_code=200)
@@ -514,7 +515,7 @@ async def delete_my_avatar(
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072
         delete_avatar_file(old_token)
-    return await _fetch_staff_response(db, staff_id)
+    return await _fetch_staff_response(db, staff_id, current_user)
 
 
 @router.get("/staff", response_model=list[StaffResponse],
@@ -539,15 +540,15 @@ async def list_staff(
         params["st"] = status_filter
     where = f"WHERE {' AND '.join(conds)}" if conds else ""
     result = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             {where}
             ORDER BY s.staff_code
             LIMIT :limit OFFSET :offset
         """),
-        params,
+        {**params, **_hidden_role_params(current_user)},
     )
     rows = result.mappings().all()
     return [await _compose(db, dict(row)) for row in rows]
@@ -559,13 +560,13 @@ async def get_staff(staff_id: int, db: AsyncSession = Depends(get_db),
                     tenant_id: int = Depends(get_current_tenant),
                     current_user: User = Depends(get_current_user)):
     result = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             WHERE s.id = :id
         """),
-        {"id": staff_id},
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     row = result.mappings().first()
     if not row:
@@ -583,9 +584,6 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user_id は指定できません",
         )
-    # role_id 存在検証（同一テナント内）
-    await _ensure_assignable_role(db, data.role_id, tenant_id, current_user)
-
     # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
     staff_code = _new_placeholder_code()
     try:
@@ -596,12 +594,12 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                     tenant_id, user_id, staff_code,
                     surname_jp, given_name_jp, surname_kana, given_name_kana,
                     surname_en, given_name_en, primary_email, discord_user_id,
-                    role_id, status, firebase_uid, is_employee
+                    status, firebase_uid, is_employee
                 ) VALUES (
                     :tid, :uid, :code,
                     :sjp, :gjp, :sk, :gk,
                     :sen, :gen, :email, :did,
-                    :rid, :st, :fbuid, :is_emp
+                    :st, :fbuid, :is_emp
                 )
                 RETURNING id
             """),
@@ -611,7 +609,7 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                 "sk": data.surname_kana, "gk": data.given_name_kana,
                 "sen": data.surname_en, "gen": data.given_name_en,
                 "email": data.primary_email, "did": data.discord_user_id,
-                "rid": data.role_id, "st": data.status.value,
+                "st": data.status.value,
                 "fbuid": data.firebase_uid,
                 "is_emp": bool(data.is_employee),
             },
@@ -621,14 +619,8 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             text("UPDATE staff SET staff_code = :code WHERE id = :id"),
             {"code": f"EMP-{new_id:05d}", "id": new_id},
         )
-        await db.execute(
-            text("""
-                INSERT INTO user_roles (user_id, role_id, assigned_by)
-                VALUES (:uid, :rid, :by)
-                ON CONFLICT (user_id, role_id) DO NOTHING
-            """),
-            {"uid": user_id, "rid": data.role_id, "by": current_user.id},
-        )
+        # ロールの正本は user_roles。staff.role_id には書かない（ADR-1008 P4a）
+        await assign_single_role(db, tenant_id, current_user, user_id, data.role_id)
         await _upsert_ui_prefs(db, new_id, data.ui_preferences)
         await _replace_additional_emails(db, new_id, data.additional_emails)
         await record_audit_log(
@@ -650,13 +642,13 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             detail="スタッフの登録に失敗しました（同じ値がすでに登録されています: スタッフコード・Discord ID・メールアドレスのいずれか）",
         )
     fetched = await db.execute(
-        text(f"""
+        _visible_text(f"""
             SELECT {_STAFF_COLS}
             FROM staff s
-            LEFT JOIN roles r ON r.id = s.role_id
+            {_ROLE_JOIN}
             WHERE s.id = :id
         """),
-        {"id": new_id},
+        {"id": new_id, **_hidden_role_params(current_user)},
     )
     return await _compose(db, dict(fetched.mappings().first()))
 
@@ -668,8 +660,8 @@ async def update_staff(staff_id: int, data: StaffUpdate,
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
     old = await db.execute(
-        text(f"SELECT {_STAFF_COLS} FROM staff s LEFT JOIN roles r ON r.id = s.role_id WHERE s.id = :id"),
-        {"id": staff_id},
+        _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     old_row = old.mappings().first()
     if not old_row:
@@ -685,13 +677,20 @@ async def update_staff(staff_id: int, data: StaffUpdate,
 
     ui_prefs = update_data.pop("ui_preferences", None)
     additional_emails = update_data.pop("additional_emails", None)
+    new_role_id = update_data.pop("role_id", None)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     for k, v in list(update_data.items()):
         if hasattr(v, "value"):
             update_data[k] = v.value
 
-    if update_data.get("role_id") is not None:
-        await _ensure_assignable_role(db, update_data["role_id"], tenant_id, current_user)
+    # ロールの正本は user_roles（ADR-1008 P4a）。staff.role_id は更新しない。
+    # 編集フォームは role_id を毎回送るため、今の表示と同じ値なら何もしない。
+    if new_role_id is not None and new_role_id != old_row["role_id"]:
+        await _require_roles_assign(current_user=current_user, tenant_id=tenant_id, db=db)
+        await assign_single_role(db, tenant_id, current_user, old_row["user_id"], new_role_id)
+        role_changed = True
+    else:
+        role_changed = False
 
     if update_data:
         set_sql = ", ".join(f"{k} = :{k}" for k in update_data)
@@ -717,10 +716,12 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2: commit 後の SELECT で search_path 喪失を防ぐ
+    if role_changed:
+        await invalidate_user_permissions(tenant_id, old_row["user_id"])
 
     fetched = await db.execute(
-        text(f"SELECT {_STAFF_COLS} FROM staff s LEFT JOIN roles r ON r.id = s.role_id WHERE s.id = :id"),
-        {"id": staff_id},
+        _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     return await _compose(db, dict(fetched.mappings().first()))
 
@@ -731,8 +732,8 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
     old = await db.execute(
-        text(f"SELECT {_STAFF_COLS} FROM staff s LEFT JOIN roles r ON r.id = s.role_id WHERE s.id = :id"),
-        {"id": staff_id},
+        _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
+        {"id": staff_id, **_hidden_role_params(current_user)},
     )
     old_row = old.mappings().first()
     if not old_row:
