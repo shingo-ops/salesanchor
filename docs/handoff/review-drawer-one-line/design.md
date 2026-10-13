@@ -16,7 +16,7 @@ PO 許可: 「GO #4226 y」の「y」＝金型3件（DataTable の列ごと1行�
 - 狭い理由（作業4）: frontend/src/components/Drawer.css:30 `width: var(--drawer-panel-width, 480px)` で変数は未定義＝常に 480px。比較表は item-comparison-readonly.css:3-9 で最小 632px 必要。
 - 間隔がそろわない理由: 項目の間隔の CSS が frontend/src/features/tcg-analysis-review/supplier-detail-view.css:314-369 で `.supplier-detail-items` の下に限定され、body へポータルされる Drawer（Drawer.tsx:114）には効かない。
 - 原文は API から届いている（backend/app/services/tcg_analysis_review_svc.py:260-279 の raw_text と gemini.span `L{start}-{end}`）が、ReviewItemDrawer.tsx:31-32 は原文を出していない。
-- 関連 ADR: ADR-144（金型）・ADR-067（トークン）・ADR-027（i18n）。DataTable/Drawer の仕様を定める ADR はない（recon §ADR 検索）。
+- 関連 ADR: docs/adr/ADR-144-ui-component-governance.md（金型）・docs/adr/ADR-067-design-token-enforcement.md（トークン）・docs/adr/ADR-027-ui-internationalization.md（i18n）。DataTable/Drawer の仕様を定める ADR はない（recon §ADR 検索）。
 
 ## 3. 直し方
 
