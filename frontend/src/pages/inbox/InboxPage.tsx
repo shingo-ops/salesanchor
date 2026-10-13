@@ -17,6 +17,7 @@ import { PAGE_ICONS, NAV_ICONS } from "../../constants/icons";
 import { PageLayout } from "../../components/PageLayout";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { SelectControl } from "../../components/Select";
+import { Sheet } from "../../components/Sheet";
 import { ICON } from "../../constants/iconSizes";
 import { useInboxState } from "./useInboxState";
 import { STATUS_TABS } from "./inbox.types";
@@ -107,10 +108,13 @@ export default function InboxPage() {
   return (
     <>
       <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
-        <div className={`inbox-wrapper${mobileFiltersOpen ? " filters-open" : ""}${selectedLeadId != null ? " thread-open" : ""}`}>
+        <div className={`inbox-wrapper${selectedLeadId != null ? " thread-open" : ""}`}>
           {/* 左+中央エリア */}
           <div className="inbox-main-area">
-            {/* ステータスタブ + プラットフォームフィルタ */}
+            {/* ステータスタブ + プラットフォームフィルタ
+                2026-10-13（PO 指定）: スマホでは帯を開くのではなく、下から出る
+                シート（Sheet 金型）で出して「選んだら閉じる」形にする。
+                PC・タブレットは従来どおり常時この帯を出す（触らない）。 */}
             <div className="inbox-full-tab-bar">
               {STATUS_TABS.map((tab) => (
                 <button key={tab.key} type="button"
@@ -239,6 +243,78 @@ export default function InboxPage() {
           />
         </div>
       </PageLayout>
+
+      {/* スマホの絞り込みシート（2026-10-13・PO 指定）
+          帯を開くのではなく下から出るシートで選び、選んだら閉じる。
+          PC・タブレットでは絞り込みボタン自体が出ないため開かれない
+          （CSS: .icon-btn.inbox-mobile-filter-toggle は @media の内側だけ表示）。
+          中身は PC の帯と同じ項目（ステータス・プラットフォーム・未読・未返信）。 */}
+      <Sheet
+        open={mobileFiltersOpen}
+        onClose={() => setMobileFiltersOpen(false)}
+        title={t("inbox.mobileFilters")}
+      >
+        <div className="inbox-filter-sheet">
+          <div className="inbox-filter-sheet-group">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`inbox-filter-sheet-option${state.statusTab === tab.key ? " active" : ""}`}
+                aria-pressed={state.statusTab === tab.key}
+                onClick={() => {
+                  state.setStatusTab(tab.key);
+                  setMobileFiltersOpen(false);
+                }}
+              >
+                {t(tab.labelKey)}
+              </button>
+            ))}
+          </div>
+
+          <div className="inbox-filter-sheet-group">
+            <button
+              type="button"
+              className={`inbox-filter-sheet-option${state.unreadOnly ? " active" : ""}`}
+              aria-pressed={state.unreadOnly}
+              onClick={() => {
+                state.setUnreadOnly((v) => !v);
+                setMobileFiltersOpen(false);
+              }}
+            >
+              {t("inbox.filterUnread")}
+            </button>
+            <button
+              type="button"
+              className={`inbox-filter-sheet-option${state.followUpOnly ? " active" : ""}`}
+              aria-pressed={state.followUpOnly}
+              onClick={() => {
+                state.setFollowUpOnly((v) => !v);
+                setMobileFiltersOpen(false);
+              }}
+            >
+              {t("inbox.filterFollowUp")}
+            </button>
+          </div>
+
+          <div className="inbox-filter-sheet-group">
+            <SelectControl
+              fullWidth
+              value={state.platformFilter}
+              onChange={(e) => {
+                state.setPlatformFilter(e.target.value as PlatformFilter);
+                setMobileFiltersOpen(false);
+              }}
+              aria-label={t("inbox.platformFilter")}
+            >
+              <option value="all">{t("inbox.platformAll")}</option>
+              <option value="messenger">{t("inbox.platformMessenger")}</option>
+              <option value="instagram">{t("inbox.platformInstagram")}</option>
+              <option value="discord">{t("inbox.platformDiscord")}</option>
+            </SelectControl>
+          </div>
+        </div>
+      </Sheet>
 
       {/* 受信箱設定モーダル */}
       {showSettings && (

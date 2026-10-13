@@ -31874,6 +31874,17 @@
             ],
             "title": "Label Template"
           },
+          "label_template_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Template En"
+          },
           "match_type": {
             "default": "LITERAL",
             "title": "Match Type",
@@ -31952,6 +31963,17 @@
               }
             ],
             "title": "Label Template"
+          },
+          "label_template_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Template En"
           },
           "match_type": {
             "default": "LITERAL",
@@ -32062,6 +32084,17 @@
               }
             ],
             "title": "Label Template"
+          },
+          "label_template_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Template En"
           },
           "match_type": {
             "anyOf": [

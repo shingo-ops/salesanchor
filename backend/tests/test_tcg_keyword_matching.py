@@ -12,13 +12,17 @@ GAS 対応行:
 """
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.services.tcg_analyzer_svc import (
+    SHIP_NOTE_CATEGORY,
+    _note_matches,
     app_kubun_matches,
     build_note_ja,
+    build_ship_labels,
     build_review_reasons,
     load_note_master,
     match_keyword,
@@ -40,10 +44,14 @@ def _note_entry(
     exclude_keywords: list[str] | None = None,
     search_pattern: str = "",
     label_template: str = "",
+    label_en: str = "",
+    label_template_en: str = "",
 ) -> dict:
     return {
         "id": note_id,
         "label_ja": label_ja,
+        "label_en": label_en,
+        "label_template_en": label_template_en,
         "match_type": match_type,
         "search_keywords": search_keywords or [],
         "exclude_keywords": exclude_keywords or [],
@@ -455,6 +463,61 @@ class TestBuildNoteJa:
             )
         ]
         assert build_note_ja("任意のメモ", entries) is None
+
+
+class TestNoteMatchesSplit:
+    def test_build_note_ja_output_unchanged_after_note_matches_split(self):
+        # LITERAL
+        literal = [_note_entry("NJ063", "予約商品", search_keywords=["予約商品"])]
+        assert build_note_ja("予約商品です", literal) == "予約商品"
+        assert [e["id"] for e, m in _note_matches("予約商品です", literal)] == ["NJ063"]
+        # REGEX（捕捉の展開）
+        regex = [_note_entry("NJ030", "指定日発送", match_type="REGEX",
+                             search_pattern=r"(\d{1,2})[/月](\d{1,2})日?.{0,4}?(発送|出荷)", label_template="$1/$2発送")]
+        assert build_note_ja("９／１６（水）発送", regex) == "9/16発送"
+        (entry, match), = _note_matches("９／１６（水）発送", regex)
+        assert entry["id"] == "NJ030" and match is not None and match.group(1) == "9"
+        # 除外
+        excluded = [_note_entry("NJ031", "日付範囲発送", match_type="REGEX",
+                                search_pattern=r"(\d{1,2})月(\d{1,2})日[〜~ー-](\d{1,2})日出荷",
+                                label_template="$1/$2〜$1/$3発送", exclude_keywords=["完売"])]
+        assert build_note_ja("9月16日〜18日出荷は完売", excluded) is None
+        assert _note_matches("9月16日〜18日出荷は完売", excluded) == []
+        # re.error
+        broken = [_note_entry("BROKEN", "壊れた札", match_type="REGEX", search_pattern="(", label_template="$1")]
+        assert build_note_ja("任意のメモ", broken) is None
+        assert _note_matches("任意のメモ", broken) == []
+        # 空入力・空マスタ
+        assert build_note_ja("", literal) is None and build_note_ja("x", []) is None
+        assert _note_matches("", literal) == [] and _note_matches("x", []) == []
+
+
+_SHIP_ENTRIES = [
+    _note_entry("NJ030", "指定日発送", match_type="REGEX", search_pattern=r"(\d{1,2})/(\d{1,2})発送",
+                label_template="$1/$2発送", label_en="Ships on date", label_template_en="Ships $1/$2"),
+    _note_entry("NJ040", "入荷次第発送", search_keywords=["届き次第発送"], label_en="Ships upon arrival"),
+    _note_entry("NJ041", "発送日要相談", search_keywords=["発送日相談"], label_en="Ship date TBD"),
+]
+
+
+def test_build_ship_labels_literal_regex_and_unmatched_parts():
+    assert build_ship_labels("【10/16発送】", _SHIP_ENTRIES) == ("10/16発送", "Ships 10/16")
+    assert build_ship_labels("届き次第発送", _SHIP_ENTRIES) == ("入荷次第発送", "Ships upon arrival")
+    assert build_ship_labels("発送日相談 / 移し替えて発送予定", _SHIP_ENTRIES) == ("発送日要相談 / 移し替えて発送予定", None)
+    assert build_ship_labels(None, _SHIP_ENTRIES) == (None, None)
+    # REGEX で label_template_en が空なら label_en
+    no_tpl = [_note_entry("X", "指定日発送", match_type="REGEX", search_pattern=r"(\d+)/(\d+)発送",
+                          label_template="$1/$2発送", label_en="Ships on date")]
+    assert build_ship_labels("10/16発送", no_tpl) == ("10/16発送", "Ships on date")
+    # 同じ値は1つ、全部当たれば en も " / " でつなぐ
+    assert build_ship_labels("届き次第発送 / 届き次第発送", _SHIP_ENTRIES) == ("入荷次第発送", "Ships upon arrival")
+    assert build_ship_labels("届き次第発送 / 10/16発送", _SHIP_ENTRIES) == ("入荷次第発送 / 10/16発送", "Ships upon arrival / Ships 10/16")
+
+
+def test_ship_note_category_constant_matches_seed_migrations():
+    migrations = Path(__file__).resolve().parents[2] / "migrations"
+    for name in ("20260907_100000_tcg_note_master_expand_t004.sql", "20260909_130000_tcg_note_b2_t004.sql"):
+        assert SHIP_NOTE_CATEGORY in (migrations / name).read_text(encoding="utf-8"), name
 
 
 class TestBuildReviewReasons:

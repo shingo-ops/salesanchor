@@ -25,6 +25,7 @@ _MASTERS = {
          "search_kw": "単品", "exclude_kw": "", "match_type": "KEYWORD", "effect": "OUTPUT"},
     ],
     "cond_canonical_to_uuid": {"Sealed box": "11", "FLAG_SINGLE": "18"},
+    "ship_entries": [],
     "status_entries": [],
     "unit_alias_to_info": {"BOX": ("BOX", "箱系")},
 }
@@ -193,6 +194,23 @@ def test_pipeline_error_is_still_extract_exception_for_the_whole_post():
 
     out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, _MASTERS, extract_items=boom)
     assert out["v102_items"] == [] and out["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
+
+
+def test_pipeline_does_not_pass_ship_entries_to_extract_items():
+    # 発送マスタは _analysis_values だけが使う。キーワード固定の extract_v101_items に渡すと TypeError で投稿全体が落ちる
+    received: dict = {}
+
+    def extract(items, raw, *, order, reassign, v102_fixes, review_reasons, gemini_trust, cond_entries,
+                cond_canonical_to_uuid, unit_alias_to_info, status_entries, **kwargs):
+        received.update(kwargs)
+        return [], {}
+
+    masters = {**_MASTERS, "ship_entries": [{"id": "NJ040"}]}
+    out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, masters, extract_items=extract)
+
+    assert "ship_entries" not in received
+    assert "post_review" not in out["v102_flags"]
+    assert masters["ship_entries"] == [{"id": "NJ040"}]  # 元の masters は変えない
 
 
 # ---------------------------------------------------------------------------
@@ -761,13 +779,28 @@ def test_ship_note(ship, expected):
     assert svc.ship_note(ship) == expected
 
 
-def test_analysis_values_puts_ship_text_in_note_ja_and_none_stays_empty():
+def test_analysis_values_puts_ship_in_ship_ja_and_ship_en_and_leaves_note_ja_empty():
+    ship_entries = [
+        {"id": "NJ040", "label_ja": "入荷次第発送", "label_en": "Ships upon arrival", "label_template_en": "",
+         "match_type": "LITERAL", "search_keywords": ["届き次第発送"], "exclude_keywords": [],
+         "search_pattern": "", "label_template": ""},
+    ]
+    masters = {**_MASTERS, "ship_entries": ship_entries}
     base = {"unit": "BOX", "price_normalized": 1000.0, "quantity_normalized": 3.0}
-    with_ship = svc._analysis_values({**base, "ship": "発送日要相談（国内のみ"}, _MASTERS, {"BOX": 5}, {})
-    without = svc._analysis_values({**base, "ship": "none"}, _MASTERS, {"BOX": 5}, {})
-    assert with_ship["note_ja"] == "発送日要相談（国内のみ）"
-    assert without["note_ja"] is None
-    assert {k: v for k, v in with_ship.items() if k != "note_ja"} == {k: v for k, v in without.items() if k != "note_ja"}
+    matched = svc._analysis_values({**base, "ship": "届き次第発送"}, masters, {"BOX": 5}, {})
+    unmatched = svc._analysis_values({**base, "ship": "発送日要相談（国内のみ"}, masters, {"BOX": 5}, {})
+    without = svc._analysis_values({**base, "ship": "none"}, masters, {"BOX": 5}, {})
+    assert (matched["ship_ja"], matched["ship_en"], matched["note_ja"]) == ("入荷次第発送", "Ships upon arrival", None)
+    assert (unmatched["ship_ja"], unmatched["ship_en"], unmatched["note_ja"]) == ("発送日要相談（国内のみ）", None, None)
+    assert (without["ship_ja"], without["ship_en"], without["note_ja"]) == (None, None, None)
+    keys = {"note_ja", "ship_ja", "ship_en"}
+    assert {k: v for k, v in unmatched.items() if k not in keys} == {k: v for k, v in without.items() if k not in keys}
+
+
+def test_upsert_sql_writes_ship_columns_in_all_three_places():
+    assert "price_basis, ship_ja, ship_en" in svc._UPSERT_SQL
+    assert ":price_basis, :ship_ja, :ship_en" in svc._UPSERT_SQL
+    assert "ship_ja = EXCLUDED.ship_ja, ship_en = EXCLUDED.ship_en" in svc._UPSERT_SQL
 
 
 def _run_extraction_with_result(monkeypatch, result: dict) -> MagicMock:
