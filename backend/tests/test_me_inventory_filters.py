@@ -87,3 +87,59 @@ class TestMeInventoryFilters:
         assert d["show_offer_types"] == []
         assert d["qty_min"] is None
         assert d["price_max"] is None
+
+    async def test_get_default_merge_same_post_is_true(self, client):
+        """便SP2: 同じ投稿のまとめは既定 ON。"""
+        res = await client.get("/api/v1/me/inventory-filters")
+        assert res.json()["merge_same_post"] is True
+
+    async def test_patch_merge_same_post_false_echoes(self, client):
+        res = await client.patch("/api/v1/me/inventory-filters", json={"merge_same_post": False})
+        assert res.status_code == 200
+        assert res.json()["merge_same_post"] is False
+
+    async def test_patch_merge_same_post_wrong_type_422(self, client):
+        res = await client.patch("/api/v1/me/inventory-filters", json={"merge_same_post": "maybe"})
+        assert res.status_code == 422
+
+
+class TestMergeSamePostPersistence:
+    """便SP2: 保存 JSON に merge_same_post が入ること・キーの無い保存済みの行は True で読めること。"""
+
+    async def test_saved_row_without_key_reads_as_true(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.routers import me_inventory_filters as mod
+
+        row = {"enabled": True, "filters": {"hidden_columns": ["unit"]}}  # merge_same_post キー無し
+        result = MagicMock()
+        result.mappings.return_value.first.return_value = row
+        db = MagicMock()
+        db.execute = AsyncMock(return_value=result)
+        with patch.object(mod, "is_postgresql", return_value=True):
+            payload = await mod.get_my_inventory_filters(db=db, current_user=MagicMock(id=1))
+        assert payload.merge_same_post is True
+        assert payload.hidden_columns == ["unit"]
+
+    async def test_saved_false_is_read_back_and_written_in_json(self):
+        import json
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from app.routers import me_inventory_filters as mod
+
+        db = MagicMock()
+        db.execute = AsyncMock()
+        db.commit = AsyncMock()
+        with patch.object(mod, "is_postgresql", return_value=True):
+            await mod.update_my_inventory_filters(
+                payload=mod.InventoryFilterPayload(merge_same_post=False), db=db, current_user=MagicMock(id=1)
+            )
+        saved = json.loads(db.execute.call_args.args[1]["filters"])
+        assert saved["merge_same_post"] is False
+
+        result = MagicMock()
+        result.mappings.return_value.first.return_value = {"enabled": False, "filters": saved}
+        db.execute = AsyncMock(return_value=result)
+        with patch.object(mod, "is_postgresql", return_value=True):
+            payload = await mod.get_my_inventory_filters(db=db, current_user=MagicMock(id=1))
+        assert payload.merge_same_post is False

@@ -9,6 +9,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 _logger = logging.getLogger(__name__)
 
+from app.auth import self_tokens
 from app.auth.dependencies import get_current_tenant, require_super_admin
 from app.cache import close_redis, init_redis
 from app.metrics import register_metrics
@@ -164,6 +165,9 @@ async def lifespan(app: FastAPI):
         _logger.warning(
             "METADATA_FERNET_KEY の検証に失敗しました（Meta OAuth 系統は無効化されます）: %s", e
         )
+
+    # ADR-1013: 自社ログインの設定検査（既定 firebase・秘密なしなら何も起きない）
+    self_tokens.validate_settings()
 
     # 基盤環境変数チェック（DATABASE_URL, REDIS_URL, CELERY_BROKER_URL）
     for _infra_var in ("DATABASE_URL", "REDIS_URL", "CELERY_BROKER_URL"):

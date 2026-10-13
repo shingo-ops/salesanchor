@@ -1,0 +1,117 @@
+diff --git a/frontend/src/components/field-size.css b/frontend/src/components/field-size.css
+index bda15369a..5bf4baf35 100644
+--- a/frontend/src/components/field-size.css
++++ b/frontend/src/components/field-size.css
+@@ -9,13 +9,17 @@
+ .field-h-lg { min-height: var(--field-h-lg, 44px); box-sizing: border-box; }
+ 
+ /* --- 幅3段（widthで固定。lgは伸びるが上限あり）--- */
+-/* SelectControl の既定幅（width:auto）より優先させるため複合セレクタを併記（design.md §AW AW-2b） */
++/* SelectControl の既定幅（width:auto）より優先させるため複合セレクタを併記（design.md §AW AW-2b）。
++   TextFieldControl の width:100%（.comp-field__input）より優先（§AY AY-2p） */
+ .field-w-sm,
+-.comp-select__control.field-w-sm { width: var(--field-w-sm, 160px); }
++.comp-select__control.field-w-sm,
++.comp-field__input.field-w-sm { width: var(--field-w-sm, 160px); }
+ .field-w-md,
+-.comp-select__control.field-w-md { width: var(--field-w-md, 280px); }
++.comp-select__control.field-w-md,
++.comp-field__input.field-w-md { width: var(--field-w-md, 280px); }
+ .field-w-lg,
+-.comp-select__control.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
++.comp-select__control.field-w-lg,
++.comp-field__input.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
+ 
+ /* 操作台の中で使うとき、金型付き入力は縦積みラッパーの癖を打ち消す
+    （.comp-field の flex-column/margin-bottom/width:100% を金型側で上書き）*/
+diff --git a/frontend/src/pages/companies/CompaniesPage.tsx b/frontend/src/pages/companies/CompaniesPage.tsx
+index 0e15a3a86..ac9d31952 100644
+--- a/frontend/src/pages/companies/CompaniesPage.tsx
++++ b/frontend/src/pages/companies/CompaniesPage.tsx
+@@ -384,7 +384,7 @@ export default function CompaniesPage() {
+       {error && <div className="error-banner">{error}</div>}
+       <ContentToolbar
+         left={
+-          <input
++          <TextFieldControl
+             type="text"
+             className="search-input field-h-md field-w-md"
+             placeholder={t("companies.searchPlaceholder")}
+diff --git a/frontend/src/pages/contacts/ContactsPage.tsx b/frontend/src/pages/contacts/ContactsPage.tsx
+index 7ab4fd47d..c7d3a543b 100644
+--- a/frontend/src/pages/contacts/ContactsPage.tsx
++++ b/frontend/src/pages/contacts/ContactsPage.tsx
+@@ -279,7 +279,7 @@ export default function ContactsPage() {
+                 <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
+               ))}
+             </SelectControl>
+-            <input
++            <TextFieldControl
+               type="text"
+               placeholder={t("contacts.searchPlaceholder")}
+               value={search}
+diff --git a/frontend/src/pages/inventory/InventoryPage.tsx b/frontend/src/pages/inventory/InventoryPage.tsx
+index 8396d6043..67c2b775b 100644
+--- a/frontend/src/pages/inventory/InventoryPage.tsx
++++ b/frontend/src/pages/inventory/InventoryPage.tsx
+@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
+ import InventoryFilterPanel from "./InventoryFilterPanel";
+ import { Button } from "../../components/Button";
+ import { SelectControl } from "../../components/Select";
++import { TextFieldControl } from "../../components/TextField";
+ 
+ interface InventoryRow {
+   id: number;
+@@ -381,7 +382,7 @@ export default function InventoryPage() {
+         <ContentToolbar
+           left={
+             <>
+-              <input
++              <TextFieldControl
+                 type="search"
+                 className="field-h-md field-w-md"
+                 placeholder={t("inventory.view.searchPlaceholder")}
+diff --git a/frontend/src/pages/orders/OrdersFilterBar.tsx b/frontend/src/pages/orders/OrdersFilterBar.tsx
+index 0d5a3106b..9142037c6 100644
+--- a/frontend/src/pages/orders/OrdersFilterBar.tsx
++++ b/frontend/src/pages/orders/OrdersFilterBar.tsx
+@@ -5,6 +5,7 @@
+ 
+ import { useTranslation } from "react-i18next";
+ import { SelectControl } from "../../components/Select";
++import { TextFieldControl } from "../../components/TextField";
+ 
+ interface Props {
+   searchInput: string;
+@@ -29,7 +30,7 @@ export function OrdersFilterBar({
+       <div
+         style={{ display: "flex", gap: "var(--space-2)", flexWrap: "nowrap", alignItems: "center" }}
+       >
+-      <input
++      <TextFieldControl
+         type="search"
+         className="field-h-md field-w-md"
+         aria-label={t("orders.title")}
+diff --git a/frontend/src/pages/products/ProductsPage.tsx b/frontend/src/pages/products/ProductsPage.tsx
+index 5cc3889ee..964ad8f59 100644
+--- a/frontend/src/pages/products/ProductsPage.tsx
++++ b/frontend/src/pages/products/ProductsPage.tsx
+@@ -18,6 +18,7 @@ import { usePermissions } from "../../hooks/usePermissions";
+ import { PageLayout } from "../../components/PageLayout";
+ import { ContentToolbar } from "../../components/ContentToolbar";
+ import { SelectControl } from "../../components/Select";
++import { TextFieldControl } from "../../components/TextField";
+ import type { Product } from "./products.types";
+ import { Button } from "../../components/Button";
+ 
+@@ -215,8 +216,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean
+     <>
+       <ContentToolbar
+         left={
+-          <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
+-            <input className="field-h-md field-w-sm" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
++          <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
++            <TextFieldControl className="field-h-md field-w-md" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+             {tcgTypes.length > 0 && (
+               <SelectControl
+                 className="field-w-sm"

@@ -47,6 +47,8 @@ class InventoryFilterPayload(BaseModel):
     qty_max: int | None = Field(default=None, ge=0, description="数量の上限（以下）")
     price_min: int | None = Field(default=None, ge=0, description="単価の下限（以上）")
     price_max: int | None = Field(default=None, ge=0, description="単価の上限（以下）")
+    # 便SP2: 同じ投稿のランク違いの行を1行にまとめる（既定 ON。キーの無い保存済みの行も ON で読む）。
+    merge_same_post: bool = Field(default=True, description="同じ投稿のランク違いを1行にまとめる")
 
 
 def _coerce_int_list(raw: object) -> list[int]:
@@ -74,6 +76,10 @@ def _coerce_opt_int(raw: object) -> int | None:
     if isinstance(raw, str) and raw.strip().lstrip("-").isdigit():
         return int(raw)
     return None
+
+
+def _coerce_bool(raw: object, *, default: bool) -> bool:
+    return raw if isinstance(raw, bool) else default
 
 
 @router.get("/me/inventory-filters", response_model=InventoryFilterPayload)
@@ -110,6 +116,7 @@ async def get_my_inventory_filters(
         qty_max=_coerce_opt_int(f.get("qty_max")),
         price_min=_coerce_opt_int(f.get("price_min")),
         price_max=_coerce_opt_int(f.get("price_max")),
+        merge_same_post=_coerce_bool(f.get("merge_same_post"), default=True),
     )
 
 
@@ -134,6 +141,7 @@ async def update_my_inventory_filters(
             "qty_max": payload.qty_max,
             "price_min": payload.price_min,
             "price_max": payload.price_max,
+            "merge_same_post": payload.merge_same_post,
         }
     )
     await db.execute(

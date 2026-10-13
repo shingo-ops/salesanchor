@@ -1,0 +1,7 @@
+generate exit 0
+tsc exit 0
+lint exit 0
+checkall exit 0
+coverage exit 0
+build exit 0
+ALLDONE

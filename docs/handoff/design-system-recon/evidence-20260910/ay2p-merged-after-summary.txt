@@ -1,0 +1,3 @@
+inventory-w1280 | comp-field__input field-h-md field-w-md | w 280 left 78 top 78.0 h 39.61 tbH 39.61 list ('div', 129.6) doc 1280 1280 sel [102] cdiff [-0.01, -0.01, -0.01] retry [] url /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_
+inventory-w1440 | comp-field__input field-h-md field-w-md | w 280 left 78 top 78.0 h 39.61 tbH 39.61 list ('div', 129.6) doc 1440 1440 sel [102] cdiff [-0.01, -0.01, -0.01] retry [] url /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_
+inventory-w375 | comp-field__input field-h-md field-w-md | w 192 left 24 top 78.0 h 44 tbH 44 list ('div', 134.0) doc 375 375 sel [102] cdiff [0, 0, 0] retry [] url /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_

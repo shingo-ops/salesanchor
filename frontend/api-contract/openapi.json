@@ -11016,6 +11016,12 @@
             "title": "Hidden Supplier Ids",
             "type": "array"
           },
+          "merge_same_post": {
+            "default": true,
+            "description": "同じ投稿のランク違いを1行にまとめる",
+            "title": "Merge Same Post",
+            "type": "boolean"
+          },
           "price_max": {
             "anyOf": [
               {
@@ -11149,6 +11155,17 @@
             },
             "title": "Units",
             "type": "array"
+          },
+          "window_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Hours"
           }
         },
         "required": [
@@ -11794,7 +11811,7 @@
           },
           "id": {
             "title": "Id",
-            "type": "integer"
+            "type": "string"
           },
           "mark": {
             "anyOf": [
@@ -11807,6 +11824,11 @@
             ],
             "title": "Mark"
           },
+          "merged_count": {
+            "default": 1,
+            "title": "Merged Count",
+            "type": "integer"
+          },
           "name_en": {
             "anyOf": [
               {
@@ -11818,15 +11840,45 @@
             ],
             "title": "Name En"
           },
+          "note_ja": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Ja"
+          },
           "offer_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "default": "in_stock",
-            "title": "Offer Type",
-            "type": "string"
+            "title": "Offer Type"
           },
           "offered_at": {
             "format": "date-time",
             "title": "Offered At",
             "type": "string"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
           },
           "product_id": {
             "title": "Product Id",
@@ -11844,8 +11896,37 @@
             "title": "Product Name"
           },
           "quantity": {
-            "title": "Quantity",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "ship_ja": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ship Ja"
           },
           "ship_timing": {
             "anyOf": [
@@ -11857,6 +11938,17 @@
               }
             ],
             "title": "Ship Timing"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           },
           "supplier_id": {
             "title": "Supplier Id",
@@ -11906,7 +11998,6 @@
           "condition",
           "supplier_id",
           "unit_price",
-          "quantity",
           "offered_at"
         ],
         "title": "InventoryRow",
@@ -28281,6 +28372,55 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "SelfLoginRequest": {
+        "properties": {
+          "email": {
+            "description": "ログインに使うメールアドレス",
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "パスワード",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "SelfLoginRequest",
+        "type": "object"
+      },
+      "SelfTokenResponse": {
+        "properties": {
+          "access_token": {
+            "description": "自社アクセストークン（Bearer）",
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "アクセストークンの有効秒数",
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "token_type": {
+            "default": "bearer",
+            "description": "トークン種別",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "SelfTokenResponse",
+        "type": "object"
+      },
       "SettingUpdate": {
         "properties": {
           "value": {
@@ -36897,9 +37037,51 @@
         ]
       }
     },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "自社ログイン。失敗理由は区別せず 1 種類の文言で返す。",
+        "operationId": "self_login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Self Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nFirebase IDトークンの残存有効期限（最大1時間）をTTLとする。",
+        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nFirebase IDトークンの残存有効期限（最大1時間）をTTLとする。\n自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。",
         "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
           "200": {
@@ -36917,6 +37099,28 @@
           }
         ],
         "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "更新用 Cookie を入れ替え、新しいアクセストークンを返す。",
+        "operationId": "self_refresh_api_v1_auth_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Self Refresh",
         "tags": [
           "auth"
         ]
@@ -42360,7 +42564,7 @@
     },
     "/api/v1/inventory": {
       "get": {
-        "description": "在庫表（最終ユーザー向け）。\n\npublic.inventory の status='in_stock' かつ未失効 (expires_at > NOW()) のオファーを\n「商品×仕入元×状態」の明細行で返す。名前ソート + TCG種別フィルタ + 検索 + ページング。\n\n- 権限: products.view（各クライアントの営業担当ロール以上）。編集/削除は持たない。\n- 18h 失効: expires_at <= NOW() の行は非表示（表示フィルタのみ、実データは消さない）。\n- 在庫数マスクなし（I-05 撤廃 / 在庫は全テナント共通で見える）。",
+        "description": "在庫表（最終ユーザー向け）。LINE 解析の配信行（GAS 在庫一覧と同じ行）を返す。\n\n行の定義は tcg_distribution_svc.distribution_rows_sql の1か所だけ（ここに配信の WHERE は書かない）。\n- 権限: products.view（各クライアントの営業担当ロール以上）。読み取り専用。\n- max_age_hours が未設定または不正なら GAS と同じく配信しない（items 空・window_hours null）。\n- merge_same_post=true で、同じ投稿のランク違いの行を1行にまとめる（数量は合計・単価は最大）。",
         "operationId": "list_inventory_view_api_v1_inventory_get",
         "parameters": [
           {
@@ -42627,6 +42831,18 @@
               ],
               "description": "単価の上限（以下）",
               "title": "Price Max"
+            }
+          },
+          {
+            "description": "同じ投稿のランク違いを1行にまとめる",
+            "in": "query",
+            "name": "merge_same_post",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "同じ投稿のランク違いを1行にまとめる",
+              "title": "Merge Same Post",
+              "type": "boolean"
             }
           },
           {
