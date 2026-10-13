@@ -24,6 +24,7 @@ import {
   SAMPLE_CONVERSATION_NAME,
   openConversation,
   openInboxList,
+  openInboxListWithConversations,
 } from "./inbox-helpers";
 
 /** project の viewport 幅。実行前に分かる値なので test.skip の条件に使える */
@@ -554,6 +555,115 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     // 見出しの二重がないこと（新ヘッダーのタイトルは aria-hidden の span なので増えない）
     expect(headingCount, "「受信箱」の見出しが複数ある").toBe(1);
+  });
+
+  test("スマホ: 一覧をスクロールしてもヘッダーが動かない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // 2026-10-14（第3便・PO 依頼）: PR 4235 で新設した .inbox-mobile-header が
+    // スクロールする箱（.inbox-left-panel）の中にあるため、一覧と一緒に上へ
+    // 流れてしまっていた。sticky にして止める。
+    // お手本（WhatsApp チャット一覧）の実測ではヘッダーは固定だが検索欄は
+    // 一覧と一緒に流れる（search_bar が list の中にある）ため、検索欄は
+    // 固定しないことを合わせて確認する。
+    const SCROLL_PX = 600;
+    // 画面が埋まる行数より十分多い件数（inbox-helpers.ts の manyConversations
+    // コメントに根拠を記載）。20件あれば確実にスクロールが出る。
+    await openInboxListWithConversations(page, 20);
+
+    const panel = page.locator(".inbox-left-panel");
+    const header = page.locator(".inbox-mobile-header");
+    const manage = page.locator(".inbox-mobile-header .inbox-manage-btn");
+    const searchRow = page.locator(".inbox-mobile-search-row");
+    const firstRow = page.locator("button.conversation-item").first();
+
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    const viewportWidth = viewport!.width;
+
+    // 1. 一覧が実際にスクロールできること（満たさなければこの検査自体が無意味）
+    const scrollable = await panel.evaluate((el) => el.scrollHeight > el.clientHeight);
+    expect(scrollable, "一覧がスクロールできる高さになっていない（検査データが足りない）").toBe(true);
+
+    // 2. スクロール前の寸法を記録
+    const headerBoxBefore = await header.boundingBox();
+    const manageBoxBefore = await manage.boundingBox();
+    const searchRowVisibleBefore = await searchRow.isVisible();
+    const searchRowBoxBefore = searchRowVisibleBefore ? await searchRow.boundingBox() : null;
+    const firstRowBoxBefore = await firstRow.boundingBox();
+    expect(headerBoxBefore, "スクロール前のヘッダーの寸法が取れない").not.toBeNull();
+    expect(manageBoxBefore, "スクロール前の管理ボタンの寸法が取れない").not.toBeNull();
+    expect(firstRowBoxBefore, "スクロール前の1行目の寸法が取れない").not.toBeNull();
+
+    // 3. 一覧を600pxスクロールする
+    await panel.evaluate((el, y) => { el.scrollTop = y; }, SCROLL_PX);
+    await expect
+      .poll(() => panel.evaluate((el) => el.scrollTop), "scrollTop が反映されるまで待つ")
+      .toBeGreaterThan(0);
+
+    // 4. スクロール後の寸法を記録
+    const headerBoxAfter = await header.boundingBox();
+    const manageBoxAfter = await manage.boundingBox();
+    const searchRowVisibleAfter = await searchRow.isVisible();
+    const searchRowBoxAfter = searchRowVisibleAfter ? await searchRow.boundingBox() : null;
+    const firstRowBoxAfter = await firstRow.boundingBox();
+    const headerBg = await header.evaluate((el) => getComputedStyle(el).backgroundColor);
+    const scrollTopAfter = await panel.evaluate((el) => el.scrollTop);
+
+    await testInfo.attach("sticky-header-scroll", {
+      body: JSON.stringify(
+        {
+          scrollTopAfter,
+          viewportWidth,
+          headerBoxBefore,
+          headerBoxAfter,
+          manageBoxBefore,
+          manageBoxAfter,
+          searchRowVisibleBefore,
+          searchRowBoxBefore,
+          searchRowVisibleAfter,
+          searchRowBoxAfter,
+          firstRowBoxBefore,
+          firstRowBoxAfter,
+          headerBg,
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(headerBoxAfter, "スクロール後のヘッダーの寸法が取れない").not.toBeNull();
+    expect(manageBoxAfter, "スクロール後の管理ボタンの寸法が取れない").not.toBeNull();
+    expect(firstRowBoxAfter, "スクロール後の1行目の寸法が取れない").not.toBeNull();
+
+    // 5. ヘッダーのy・高さが変わっていない（±1px）
+    expect(Math.abs(headerBoxAfter!.y - headerBoxBefore!.y), "ヘッダーのyが動いた").toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(headerBoxAfter!.height - headerBoxBefore!.height),
+      "ヘッダーの高さが変わった",
+    ).toBeLessThanOrEqual(1);
+
+    // 6. ヘッダー右端のボタン（管理）の右端がビューポート右端のまま（±1px）
+    const manageRightAfter = manageBoxAfter!.x + manageBoxAfter!.width;
+    expect(Math.abs(manageRightAfter - viewportWidth), "管理ボタンの右端がビューポート右端からずれた").toBeLessThanOrEqual(1);
+
+    // 7. 一覧が実際に動いた証拠: 1行目のyがスクロール前より小さくなっている（上へ流れた）
+    expect(firstRowBoxAfter!.y, "1行目が上へ流れていない").toBeLessThan(firstRowBoxBefore!.y);
+
+    // 8. 検索欄はヘッダーと違い、一覧と一緒に流れる（お手本どおり固定しない）。
+    //    画面外へ出て見えなくなるか、yが小さくなっているかのどちらでも通す。
+    if (searchRowVisibleAfter) {
+      expect(searchRowBoxBefore, "スクロール前の検索欄の寸法が取れない").not.toBeNull();
+      expect(searchRowBoxAfter, "スクロール後の検索欄の寸法が取れない").not.toBeNull();
+      expect(searchRowBoxAfter!.y, "検索欄が一覧と一緒に流れていない").toBeLessThan(searchRowBoxBefore!.y);
+    } else {
+      // 画面外へ出て見えなくなった＝流れた証拠として十分
+      expect(searchRowVisibleAfter, "検索欄が画面外へ出ていない").toBe(false);
+    }
+
+    // 9. ヘッダーの下に一覧の行が潜り込んでいる（＝ヘッダーが透けていない）ことの確認
+    expect(headerBg, "ヘッダーの背景が透明のまま（下の行が透けて見える）").not.toBe("rgba(0, 0, 0, 0)");
   });
 
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {

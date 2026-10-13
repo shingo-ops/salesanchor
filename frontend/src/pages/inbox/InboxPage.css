@@ -2002,6 +2002,13 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   padding-left: var(--space-4);
   padding-right: 0;
   flex-shrink: 0;
+  /* 第3便（2026-10-14）: スクロールしてもヘッダーだけ固定する（お手本＝WhatsApp も
+     検索欄は一覧と一緒に流れる＝固定しない）。.inbox-left-panel が overflow-y: auto の
+     スクロール箱なので sticky で効く。背景がないと下の一覧行が透けて見えるため明示する。 */
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+  background: var(--bg-surface);
 }
 .inbox-mobile-header-title {
   /* 見出しタグではなく span（読み上げの二重を避けるため・tsx のコメント参照）。
