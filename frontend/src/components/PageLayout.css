@@ -39,4 +39,17 @@
     min-height: 0;
     margin-bottom: 0;
   }
+
+  /* 本文の面を画面の下端まで敷く（2026-10-13・PO 指定）。
+     お手本（WhatsApp のチャット一覧・ライト）を実測すると、一覧の面は
+     画面の上端から下端まで1色（白 79.76%・全幅を占める範囲 y=111〜2129）で、
+     会話が5件しかなくても最後の行より下も同じ色だった。
+     当方は投入前の実測で白 45.7% ／ ページの地 44.1% に割れており、
+     地が出ているのは一覧の最後の行より下（231dp）だった。
+     本文の領域に面の色を敷くことで、空き領域も一覧と同じ色になる。
+     対象は slimHeaderOnMobile を渡したページのみ（現在は受信箱だけ）。
+     出典: docs/handoff/inbox-mobile-fill-height/recon.md */
+  .page-layout.page-layout--slim-header .page-layout-content {
+    background: var(--bg-surface);
+  }
 }
