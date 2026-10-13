@@ -1,4 +1,4 @@
-# ADR-1012: ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す
+# ADR-1013: ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す
 
 | 項目 | 内容 |
 |------|------|
@@ -22,6 +22,7 @@
 1. パスワードの照合・ログイン後のトークンの発行と失効・パスワード再設定メール・パスキーを自社サーバー（FastAPI＋PostgreSQL）で持つ。
 2. ログイン情報は人の正本 public.users.id にだけぶら下げる（users の 4 列と、子表 webauthn_credentials・password_reset_tokens・auth_refresh_tokens）。人の名簿は増やさない。
 3. パスワードは Argon2id で保管する。長さ 15〜64 文字、漏洩・常用一覧の照合あり、定期変更なし。口座単位で 10 回失敗すると 15 分止める。
+3b. パスワードを入れる新しい列の名前は password_argon2_hash とする（password_hash にしない）。`scripts/run_all_migrations.sh` は毎デプロイ登録済み migration を全件やり直し、409 行目で `migrations/20260612_150000_drop_password_hash.sql`（DROP COLUMN IF EXISTS password_hash）が毎回走るため、同じ名前の列は毎デプロイ消えるから（2026-10-13 便1 調査）。
 4. 移行時は、既存パスワードを Firebase から持ち出さず、使用中の全員に新しいパスワードを発行する。平文は PO の Mac のファイルにだけ書き出す（PO 2026-10-13）。
 5. 移行後の再設定は、本人がメールのリンクで行う（PO 2026-10-13「n」）。メールは salesanchor.jp のアドレスから自社サーバーが送る。新しく作るユーザーにも、同じ仕組みで「初回設定メール」を送る（使い捨て鍵の表は再設定と共用）。
 5b. ログイン関連の API は、画面のオリジン（app.salesanchor.jp）以外から呼ばれたら拒否する。パスキーの RP ID は app.salesanchor.jp とする（PO 2026-10-13「y」）。後から変えると登録済みのパスキーが全部使えなくなるため、変更には新しい ADR を要する。
