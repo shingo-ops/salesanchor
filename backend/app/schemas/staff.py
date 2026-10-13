@@ -157,7 +157,7 @@ class StaffResponse(BaseModel):
     given_name_en: str | None
     primary_email: str
     discord_user_id: str | None
-    role_id: int
+    role_id: int | None = None
     role_name: str | None = None
     status: str
     firebase_uid: str | None

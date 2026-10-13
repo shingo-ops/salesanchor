@@ -607,7 +607,7 @@ CREATE TABLE IF NOT EXISTS {schema}.staff (
     given_name_en VARCHAR(100),
     primary_email VARCHAR(255) NOT NULL,
     discord_user_id VARCHAR(50),
-    role_id INTEGER NOT NULL REFERENCES {schema}.roles(id),
+    role_id INTEGER REFERENCES {schema}.roles(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active','inactive','pending')),
     firebase_uid VARCHAR(128) UNIQUE,

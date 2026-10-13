@@ -4,11 +4,11 @@
 作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column（ブランチ release/v102-ship-column）。本体フォルダ /Users/tanizawashingo/salesanchor は変えない。
 
 ## 1. migration（新規2本・値の操作なし・ADR-1007）
-- migrations/20261013_130000_add_analysis_results_ship_ja_ship_en.sql
+- migrations/20261013_140000_add_analysis_results_ship_ja_ship_en.sql
   - `ALTER TABLE public.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT;`
   - `ALTER TABLE public.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT;`
   - COMMENT 2つ（ship_ja：発送日（v102）。備考マスタの分類「発送時期系」でそろえた形、当たらない部分は拾った文字。違えば同じ投稿の中で別の件として配信／ship_en：ship_ja の英語。全部の部分がマスタに当たったときだけ入る。配信シートには出さない）。
-- migrations/20261013_130100_add_tcg_note_master_label_template_en.sql
+- migrations/20261013_140100_add_tcg_note_master_label_template_en.sql
   - `ALTER TABLE public.tcg_note_master ADD COLUMN IF NOT EXISTS label_template_en TEXT;` ＋ COMMENT（REGEX の行の英語の書式。$1 などの捕捉を展開。空なら label_en）。
 - scripts/run_all_migrations.sh の末尾（今の :912 の次）に2行 `run_sql migrations/<file>` を同じ順で追記。
 - 書き方は migrations/20261011_150000_add_analysis_results_price_basis.sql に合わせる（冒頭コメント「構造のみ。値の操作は含めない（ADR-1007）。冪等。」）。

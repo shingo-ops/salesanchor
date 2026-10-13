@@ -91,7 +91,7 @@ def pg(monkeypatch):
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
             create_soldout_extra_targets(cursor, SCHEMA)  # 便2-1: ADR-158 のマージが読む表
             # 発送日の専用列（v102）: 配信の SELECT が ship_ja を読む。
-            cursor.execute((MIGRATIONS / "20261013_130000_add_analysis_results_ship_ja_ship_en.sql").read_text())
+            cursor.execute((MIGRATIONS / "20261013_140000_add_analysis_results_ship_ja_ship_en.sql").read_text())
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
             # この試験は TCG_SCHEMA を差し替えず public の analysis_results を使うので、public にも作る（migration の本来の置き場）

@@ -24,12 +24,16 @@ async def test_get_my_staff_by_user_id_even_if_email_differs(client, db_session)
     await db_session.execute(text("""
         INSERT INTO staff (
             id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
-            primary_email, role_id, status
+            primary_email, status
         ) VALUES (
             500, 999, 999, 'EMP-TEST01', '山田', '太郎',
-            'other@example.com', 1, 'active'
+            'other@example.com', 'active'
         )
     """))
+    # 名簿のロールの正本は user_roles（ADR-1008 P4a）。staff.role_id は NULL のまま
+    await db_session.execute(text(
+        "INSERT INTO user_roles (user_id, role_id) VALUES (999, 1)"
+    ))
     # ui_preferences 行を作る（dark_mode のみ true）
     await db_session.execute(text("""
         INSERT INTO staff_ui_preferences (
@@ -44,6 +48,7 @@ async def test_get_my_staff_by_user_id_even_if_email_differs(client, db_session)
     data = res.json()
     assert data["id"] == 500
     assert data["primary_email"] == "other@example.com"
+    assert data["role_id"] == 1
     assert data["role_name"] == "staff"
     assert data["ui_preferences"] is not None
     assert data["ui_preferences"]["dark_mode"] is True

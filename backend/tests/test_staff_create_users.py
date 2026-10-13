@@ -11,6 +11,12 @@ async def _seed_role(db_session):
         INSERT INTO roles (id, tenant_id, name, color, priority, is_system)
         VALUES (1, 999, 'staff', '#888888', 0, FALSE)
     """))
+    # 操作する側（テストユーザー 999）に priority=1000 のロールを user_roles 経由で付与する
+    await db_session.execute(text("""
+        INSERT INTO roles (id, tenant_id, name, color, priority, is_system)
+        VALUES (2, 999, 'actor', '#000000', 1000, FALSE)
+    """))
+    await db_session.execute(text("INSERT INTO user_roles (user_id, role_id) VALUES (999, 2)"))
     await db_session.commit()
 
 
