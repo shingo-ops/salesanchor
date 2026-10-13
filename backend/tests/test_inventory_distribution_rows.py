@@ -133,3 +133,43 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
     async with _client(perms=frozenset({"products.view"})) as client:
         res = await client.get("/api/v1/tcg/distribution/targets")
     assert res.status_code == 403
+
+
+# --- 在庫表を1文にする便: distribution_rows_sql の文字列が変更前と1文字も違わないこと ---------------------------
+# 期待値は変更前（origin/main 4803be067）の distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の
+# 長さと SHA-256。旧実装をテスト内で再現せず、変更前版から生成した値を固定する。
+_GOLDEN = {
+    (False, False): (22572, "8d869d87424028f16f61beeaadfdf0fa8f870eff6bbe39d7a0540abb05d3d5fc"),
+    (False, True): (23553, "062f8f2599d7b79610040b2840498ebb72c7d9da771f01f029f465293a8c7cd8"),
+    (True, False): (22606, "6151c4f5745bbff8d94e0150245789d35f4a52ab049b3e7087c17eef228acf28"),
+    (True, True): (23587, "bf2ef6e6a75721e8fd289c4cf366e16e6dd8f32331541e195a170447eb54d6d6"),
+}
+
+
+@pytest.mark.parametrize(("flag_single", "merge"), list(_GOLDEN))
+def test_distribution_rows_sql_is_byte_identical_to_before(flag_single: bool, merge: bool) -> None:
+    import hashlib
+
+    kwargs = {"include_flag_single": flag_single, "age_condition": " AND x = :y", "merge_same_post": merge}
+    sql = svc.distribution_rows_sql(**kwargs)
+    assert (len(sql), hashlib.sha256(sql.encode()).hexdigest()) == _GOLDEN[(flag_single, merge)]
+    head, final = svc.distribution_rows_parts(**kwargs)
+    assert sql == f"{head}\n        {final}"
+
+
+def test_parts_head_has_dist_base_and_final_is_plain_when_not_merged() -> None:
+    head, final = svc.distribution_rows_parts(**_COND, merge_same_post=False)
+    assert "dist_base AS (" in head and "dist_groups" not in head
+    assert final == svc.distribution_final_select_plain()
+    head_m, final_m = svc.distribution_rows_parts(**_COND, merge_same_post=True)
+    assert head_m.startswith(head) and head_m.rstrip().endswith("dist_merged AS (SELECT * FROM dist_agg WHERE rn = 1)")
+    assert final_m != final
+
+
+def test_distribution_sql_has_no_double_underscore_alias() -> None:
+    """在庫表の1文は __kind, __total, __ord, __f_* を足す。配信行の列に `__` で始まる名前があると衝突する。"""
+    import re
+
+    for merge in (False, True):
+        head, final = svc.distribution_rows_parts(**_COND, merge_same_post=merge)
+        assert not re.search(r"\bAS\s+__", head + final)
