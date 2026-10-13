@@ -16,6 +16,12 @@
       "mcp__plugin_discord-ops_discord-ops__react",
       "mcp__plugin_discord-ops_discord-ops__list_monitor_alerts"
     ],
+    "deny": [
+      "Bash(bash scripts/*)",
+      "Bash(scripts/*)",
+      "Bash(./scripts/*)",
+      "Bash(docker *)"
+    ],
     "ask": [
       "Write",
       "Edit",
