@@ -1,0 +1,2824 @@
+{
+ "quote-w1280": {
+  "initialSingleToken": {
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 565.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 603.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 566.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 566.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 565.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 603.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": {
+    "rect": {
+     "top": 606.453125,
+     "left": 102,
+     "width": 720,
+     "height": 201.03125,
+     "bottom": 807.484375,
+     "right": 822
+    },
+    "andCenterHitTestid": "quote-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 2,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 566.640625,
+    "left": 419.34375,
+    "width": 152.59375,
+    "height": 36,
+    "bottom": 602.640625,
+    "right": 571.9375
+   },
+   "computed": {
+    "height": "36px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 308.109375,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 410.109375
+   },
+   "row": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 565.640625,
+     "left": 418.109375,
+     "width": 323.890625,
+     "height": 38,
+     "bottom": 603.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 419.109375,
+     "width": 153.09375,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 572.203125
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 572.203125,
+     "width": 168.796875,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 604.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 565.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 603.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 566.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 602.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "quote-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "quote-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ },
+ "quote-w1440": {
+  "initialSingleToken": {
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 546.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 584.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 547.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 547.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 546.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 584.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": {
+    "rect": {
+     "top": 587.265625,
+     "left": 102,
+     "width": 720,
+     "height": 201.03125,
+     "bottom": 788.296875,
+     "right": 822
+    },
+    "andCenterHitTestid": "quote-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 2,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 547.453125,
+    "left": 419.34375,
+    "width": 152.59375,
+    "height": 36,
+    "bottom": 583.453125,
+    "right": 571.9375
+   },
+   "computed": {
+    "height": "36px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 308.109375,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 410.109375
+   },
+   "row": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 546.453125,
+     "left": 418.109375,
+     "width": 323.890625,
+     "height": 38,
+     "bottom": 584.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 419.109375,
+     "width": 153.09375,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 572.203125
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 572.203125,
+     "width": 168.796875,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 585.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 546.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 584.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 547.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 583.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "quote-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "quote-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ },
+ "quote-w375": {
+  "initialSingleToken": {
+   "input": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 652.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 750.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 660.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 750.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 661.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 705.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 705.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 749.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 652.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 750.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 660.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 750.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 661.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 705.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 705.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 749.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": {
+    "rect": {
+     "top": 752.84375,
+     "left": 48,
+     "width": 400,
+     "height": 201.03125,
+     "bottom": 953.875,
+     "right": 448
+    },
+    "andCenterHitTestid": "quote-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 100,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 661.84375,
+    "left": 49,
+    "width": 152.59375,
+    "height": 44,
+    "bottom": 705.84375,
+    "right": 201.59375
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 652.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 750.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 660.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 750.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 661.84375,
+     "left": 49,
+     "width": 153.09375,
+     "height": 44,
+     "bottom": 705.84375,
+     "right": 202.09375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 705.84375,
+     "left": 49,
+     "width": 168.796875,
+     "height": 44,
+     "bottom": 749.84375,
+     "right": 217.796875
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -153.09375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 652.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 608.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 750.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 660.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 750.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 661.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 705.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 705.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 749.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "quote-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "quote-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ },
+ "invoice-w1280": {
+  "initialSingleToken": {
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 625.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 663.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 626.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 626.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 625.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 663.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": {
+    "rect": {
+     "top": 666.453125,
+     "left": 102,
+     "width": 720,
+     "height": 201.03125,
+     "bottom": 867.484375,
+     "right": 822
+    },
+    "andCenterHitTestid": "invoice-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 2,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 626.640625,
+    "left": 419.34375,
+    "width": 152.59375,
+    "height": 36,
+    "bottom": 662.640625,
+    "right": 571.9375
+   },
+   "computed": {
+    "height": "36px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 308.109375,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 410.109375
+   },
+   "row": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 625.640625,
+     "left": 418.109375,
+     "width": 323.890625,
+     "height": 38,
+     "bottom": 663.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 419.109375,
+     "width": 153.09375,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 572.203125
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 572.203125,
+     "width": 168.796875,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 664.453125,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 625.640625,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 663.640625,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 626.640625,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 662.640625,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1280,
+   "docClientW": 1280
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "invoice-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "invoice-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ },
+ "invoice-w1440": {
+  "initialSingleToken": {
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 606.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 644.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 607.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 607.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 606.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 644.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": {
+    "rect": {
+     "top": 647.265625,
+     "left": 102,
+     "width": 720,
+     "height": 201.03125,
+     "bottom": 848.296875,
+     "right": 822
+    },
+    "andCenterHitTestid": "invoice-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 2,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 607.453125,
+    "left": 419.34375,
+    "width": 152.59375,
+    "height": 36,
+    "bottom": 643.453125,
+    "right": 571.9375
+   },
+   "computed": {
+    "height": "36px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 308.109375,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 410.109375
+   },
+   "row": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 606.453125,
+     "left": 418.109375,
+     "width": 323.890625,
+     "height": 38,
+     "bottom": 644.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 419.109375,
+     "width": 153.09375,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 572.203125
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 572.203125,
+     "width": 168.796875,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 308.34375,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 410.34375
+   },
+   "row": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 640,
+    "height": 39.609375,
+    "bottom": 645.265625,
+    "right": 742
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 606.453125,
+     "left": 418.34375,
+     "width": 323.65625,
+     "height": 38,
+     "bottom": 644.453125,
+     "right": 742
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 419.34375,
+     "width": 152.59375,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 571.9375
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 607.453125,
+     "left": 571.9375,
+     "width": 169.0625,
+     "height": 36,
+     "bottom": 643.453125,
+     "right": 741
+    },
+    "computed": {
+     "height": "36px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": -0.0078125,
+   "centerDiffOr": -0.0078125,
+   "gapInputToGroup": 8,
+   "gapAndOr": 0,
+   "listbox": null,
+   "docScrollW": 1440,
+   "docClientW": 1440
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "invoice-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "invoice-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ },
+ "invoice-w375": {
+  "initialSingleToken": {
+   "input": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 724.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 822.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 732.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 822.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": true,
+    "rect": {
+     "top": 733.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 777.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": true,
+    "rect": {
+     "top": 777.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 821.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "not-allowed",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "0.6"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "enabledInitial": {
+   "input": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 724.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 822.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 732.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 822.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 733.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 777.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 777.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 821.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": {
+    "rect": {
+     "top": 824.84375,
+     "left": 48,
+     "width": 400,
+     "height": 201.03125,
+     "bottom": 1025.875,
+     "right": 448
+    },
+    "andCenterHitTestid": "invoice-add-search-op-and",
+    "andCenterHitIsAnd": true,
+    "topGeGroupBottom": true,
+    "topMinusInputBottom": 100,
+    "topMinusRowBottom": 2
+   },
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "hoverAnd": {
+   "class": "comp-btn comp-btn--tab",
+   "ariaPressed": "false",
+   "disabled": false,
+   "rect": {
+    "top": 733.84375,
+    "left": 49,
+    "width": 152.59375,
+    "height": 44,
+    "bottom": 777.84375,
+    "right": 201.59375
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 20px",
+    "font-size": "14.4px",
+    "font-weight": "500",
+    "color": "rgb(74, 85, 104)",
+    "background-color": "rgb(247, 250, 252)",
+    "border": "1px solid rgba(0, 0, 0, 0)",
+    "border-radius": "6px",
+    "box-shadow": "none",
+    "cursor": "pointer",
+    "outline": "rgb(74, 85, 104) none 3px",
+    "opacity": "1"
+   },
+   "text": "AND（全部一致）"
+  },
+  "afterAnd": {
+   "input": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 724.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 822.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 732.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 822.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 733.84375,
+     "left": 49,
+     "width": 153.09375,
+     "height": 44,
+     "bottom": 777.84375,
+     "right": 202.09375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 777.84375,
+     "left": 49,
+     "width": 168.796875,
+     "height": 44,
+     "bottom": 821.84375,
+     "right": 217.796875
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -153.09375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "afterAndSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "afterOr": {
+   "input": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 44,
+    "bottom": 724.84375,
+    "right": 327
+   },
+   "row": {
+    "top": 680.84375,
+    "left": 48,
+    "width": 279,
+    "height": 142,
+    "bottom": 822.84375,
+    "right": 327
+   },
+   "groupInRow": true,
+   "group": {
+    "rect": {
+     "top": 732.84375,
+     "left": 48,
+     "width": 279,
+     "height": 90,
+     "bottom": 822.84375,
+     "right": 327
+    },
+    "computed": {
+     "border": "1px solid rgb(204, 204, 204)",
+     "borderRadius": "4px",
+     "opacity": "1",
+     "display": "flex",
+     "gap": "0px"
+    }
+   },
+   "and": {
+    "class": "comp-btn comp-btn--tab",
+    "ariaPressed": "false",
+    "disabled": false,
+    "rect": {
+     "top": 733.84375,
+     "left": 49,
+     "width": 152.59375,
+     "height": 44,
+     "bottom": 777.84375,
+     "right": 201.59375
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "500",
+     "color": "rgb(74, 85, 104)",
+     "background-color": "rgba(0, 0, 0, 0)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(74, 85, 104) none 3px",
+     "opacity": "1"
+    },
+    "text": "AND（全部一致）"
+   },
+   "or": {
+    "class": "comp-btn comp-btn--tab comp-btn--active",
+    "ariaPressed": "true",
+    "disabled": false,
+    "rect": {
+     "top": 777.84375,
+     "left": 49,
+     "width": 169.0625,
+     "height": 44,
+     "bottom": 821.84375,
+     "right": 218.0625
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 20px",
+     "font-size": "14.4px",
+     "font-weight": "600",
+     "color": "rgb(30, 58, 138)",
+     "background-color": "rgb(235, 239, 248)",
+     "border": "1px solid rgba(0, 0, 0, 0)",
+     "border-radius": "6px",
+     "box-shadow": "none",
+     "cursor": "pointer",
+     "outline": "rgb(30, 58, 138) none 3px",
+     "opacity": "1"
+    },
+    "text": "OR（いずれか一致）"
+   },
+   "centerDiffAnd": 53,
+   "centerDiffOr": 97,
+   "gapInputToGroup": -279,
+   "gapAndOr": -152.59375,
+   "listbox": null,
+   "docScrollW": 375,
+   "docClientW": 375
+  },
+  "afterOrSearchUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterOrUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1&lang=ja&op=or&limit=20"
+  ],
+  "typedAfterAndUrls": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20"
+  ],
+  "focusAfterTab": {
+   "testid": "invoice-add-search-op-and",
+   "tag": "BUTTON",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "outlineOffset": "2px",
+   "boxShadow": "none",
+   "matchesFocusVisible": true,
+   "bg": "rgba(0, 0, 0, 0)"
+  },
+  "focusAfterTab2": {
+   "testid": "invoice-add-search-op-or",
+   "outline": "rgb(26, 32, 44) solid 2px",
+   "matchesFocusVisible": true
+  },
+  "searchUrlsAll": [
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=and&limit=20",
+   "/api/v1/inventory/search?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89%20%E7%AE%B1A&lang=ja&op=or&limit=20"
+  ]
+ }
+}

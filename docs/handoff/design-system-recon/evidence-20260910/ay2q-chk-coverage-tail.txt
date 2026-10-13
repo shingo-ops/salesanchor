@@ -1,0 +1,39 @@
+
+> salesanchor-frontend@1.0.0 test:coverage
+> vitest run --config vitest.unit.config.ts --project unit --coverage --maxWorkers=1
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-ay2q-inventory-search-op-tab/frontend
+      Coverage enabled with v8
+
+ ❯ |unit| src/components/StaffFormButtonMigration.test.tsx (31 tests | 2 failed) 26647ms
+     × 'create' preserves required 'staff.role' 6022ms
+     × 'create' preserves required 'staff.primaryEmail' 5763ms
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/StaffFormButtonMigration.test.tsx > staff form Button migration with real UI preferences provider > 'create' preserves required 'staff.role'
+ FAIL  |unit| src/components/StaffFormButtonMigration.test.tsx > staff form Button migration with real UI preferences provider > 'create' preserves required 'staff.primaryEmail'
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/StaffFormButtonMigration.test.tsx:191:170
+    189|     await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceW…
+    190|   });
+    191|   it.each(modes.flatMap(mode => ['staff.surnameJp', 'staff.givenNameJp…
+       |                                                                                                                                                                          ^
+    192|     '$mode preserves required $key',
+    193|     async ({ mode, key }) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed | 90 passed (91)
+      Tests  2 failed | 1052 passed (1054)
+   Start at  06:05:06
+   Duration  425.77s (transform 8.75s, setup 3.16s, import 78.93s, tests 131.60s, environment 150.42s)
+
