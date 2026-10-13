@@ -4593,6 +4593,8 @@
     "manualCorrection": "Manual Correction {{field}}",
     "hasCorrected": "Has corrections",
     "uncorrected": "Uncorrected",
+    "compareColumns": { "field": "Field", "source": "Source" },
+    "notApplicable": "—",
     "sourcePosition": "Source position",
     "productId": "Product ID",
     "saleStatus": "Sale Status",

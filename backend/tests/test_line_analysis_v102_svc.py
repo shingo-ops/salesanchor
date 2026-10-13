@@ -205,10 +205,11 @@ def test_pipeline_does_not_pass_ship_entries_to_extract_items():
         received.update(kwargs)
         return [], {}
 
-    masters = {**_MASTERS, "ship_entries": [{"id": "NJ040"}]}
+    masters = {**_MASTERS, "ship_entries": [{"id": "NJ040"}], "ship_drop_entries": [{"id": "D1"}]}
     out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, masters, extract_items=extract)
 
     assert "ship_entries" not in received
+    assert "ship_drop_entries" not in received
     assert "post_review" not in out["v102_flags"]
     assert masters["ship_entries"] == [{"id": "NJ040"}]  # 元の masters は変えない
 

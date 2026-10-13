@@ -1,0 +1,9 @@
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-ay2q-inventory-search-op-tab/frontend
+
+
+ Test Files  2 passed (2)
+      Tests  43 passed (43)
+   Start at  06:14:02
+   Duration  10.33s (transform 967ms, setup 144ms, import 2.93s, tests 6.71s, environment 3.41s)
+
