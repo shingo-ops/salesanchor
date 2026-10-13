@@ -3,11 +3,13 @@
  *
  * Meta Business Suite 風の 3 カラムレイアウト。
  * コンポーネント構成:
- *   InboxConversationList  — 左パネル（タブ + 会話一覧）
- *   InboxMessageThread     — 中央パネル（メッセージスレッド + 送信エリア）
- *   InboxKartePanel        — 右パネル（商談カルテ）
- *   InboxSettingsModal     — 受信箱設定モーダル
- *   InboxProfileModal      — プロフィールモーダル
+ *   InboxConversationList       — 左パネル・PC版（タブ + 会話一覧）
+ *   InboxConversationListMobile — 左パネル・スマホ版（PR 4171 以降の組み立て分離）
+ *   InboxConversationRows       — 会話一覧の行描画（PC・スマホ共通）
+ *   InboxMessageThread          — 中央パネル（メッセージスレッド + 送信エリア）
+ *   InboxKartePanel             — 右パネル（商談カルテ）
+ *   InboxSettingsModal          — 受信箱設定モーダル
+ *   InboxProfileModal           — プロフィールモーダル
  */
 
 import "./InboxPage.css";
@@ -23,6 +25,8 @@ import { useInboxState } from "./useInboxState";
 import { STATUS_TABS } from "./inbox.types";
 import type { PlatformFilter } from "../../lib/messages";
 import { InboxConversationList } from "./InboxConversationList";
+import type { InboxConversationListProps } from "./InboxConversationList";
+import { InboxConversationListMobile } from "./InboxConversationListMobile";
 import { InboxMessageThread } from "./InboxMessageThread";
 import { InboxKartePanel } from "./InboxKartePanel";
 import { InboxSettingsModal } from "./InboxSettingsModal";
@@ -105,6 +109,42 @@ export default function InboxPage() {
 
   const headerActions = showHeaderActions ? headerActionsContent : undefined;
 
+  const conversationListProps: InboxConversationListProps = {
+    unreadOnly: state.unreadOnly,
+    setUnreadOnly: state.setUnreadOnly,
+    followUpOnly: state.followUpOnly,
+    setFollowUpOnly: state.setFollowUpOnly,
+    searchQuery: state.searchQuery,
+    setSearchQuery: state.setSearchQuery,
+    mobileFiltersOpen,
+    toggleMobileFilters: () => setMobileFiltersOpen((v) => !v),
+    hasActiveFilter,
+    pageIdFilter: state.pageIdFilter,
+    availablePageIds: state.availablePageIds,
+    onPageFilterChange: state.onPageFilterChange,
+    manageRef: state.manageRef,
+    manageOpen: state.manageOpen,
+    selectMode: state.selectMode,
+    toggleSelectMode: state.toggleSelectMode,
+    handleMarkAllRead: state.handleMarkAllRead,
+    selectedLeadIds: state.selectedLeadIds,
+    isAllSelected: state.isAllSelected,
+    toggleSelectAll: state.toggleSelectAll,
+    handleBulkMarkRead: state.handleBulkMarkRead,
+    handleBulkMarkUnread: state.handleBulkMarkUnread,
+    handleBulkExclude: state.handleBulkExclude,
+    handleBulkDelete: state.handleBulkDelete,
+    convLoading: state.convLoading,
+    convError: state.convError,
+    filteredConversations: state.filteredConversations,
+    loadConversations: state.loadConversations,
+    selectedLeadId,
+    avatarErrors,
+    handleAvatarError,
+    selectLead: state.selectLead,
+    toggleSelectConv: state.toggleSelectConv,
+  };
+
   return (
     <>
       <PageLayout navKey="nav.leadChat" subtitleKey="inbox.subtitle" noScroll slimHeaderOnMobile headerAction={headerActions}>
@@ -138,41 +178,11 @@ export default function InboxPage() {
             </div>
 
             <div className="inbox-columns">
-              <InboxConversationList
-                unreadOnly={state.unreadOnly}
-                setUnreadOnly={state.setUnreadOnly}
-                followUpOnly={state.followUpOnly}
-                setFollowUpOnly={state.setFollowUpOnly}
-                searchQuery={state.searchQuery}
-                setSearchQuery={state.setSearchQuery}
-                mobileFiltersOpen={mobileFiltersOpen}
-                toggleMobileFilters={() => setMobileFiltersOpen((v) => !v)}
-                hasActiveFilter={hasActiveFilter}
-                pageIdFilter={state.pageIdFilter}
-                availablePageIds={state.availablePageIds}
-                onPageFilterChange={state.onPageFilterChange}
-                manageRef={state.manageRef}
-                manageOpen={state.manageOpen}
-                selectMode={state.selectMode}
-                toggleSelectMode={state.toggleSelectMode}
-                handleMarkAllRead={state.handleMarkAllRead}
-                selectedLeadIds={state.selectedLeadIds}
-                isAllSelected={state.isAllSelected}
-                toggleSelectAll={state.toggleSelectAll}
-                handleBulkMarkRead={state.handleBulkMarkRead}
-                handleBulkMarkUnread={state.handleBulkMarkUnread}
-                handleBulkExclude={state.handleBulkExclude}
-                handleBulkDelete={state.handleBulkDelete}
-                convLoading={state.convLoading}
-                convError={state.convError}
-                filteredConversations={state.filteredConversations}
-                loadConversations={state.loadConversations}
-                selectedLeadId={selectedLeadId}
-                avatarErrors={avatarErrors}
-                handleAvatarError={handleAvatarError}
-                selectLead={state.selectLead}
-                toggleSelectConv={state.toggleSelectConv}
-              />
+              {isMobile ? (
+                <InboxConversationListMobile {...conversationListProps} />
+              ) : (
+                <InboxConversationList {...conversationListProps} />
+              )}
 
               <InboxMessageThread
                 onBackToList={state.backToList}
