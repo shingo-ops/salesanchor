@@ -24,6 +24,18 @@ recon: [recon.md](./recon.md)（`docs/handoff/inbox-mobile-fill-height/recon.md`
 
 `.page-layout-content` は `flex: 1`（recon C2）で**本文の高さを持つ段**。`slimHeaderOnMobile` を渡しているのは受信箱だけ（`frontend/src/pages/inbox/InboxPage.tsx`）なので、対象は受信箱に限られる。2クラスで書くのは、単一クラスだと他の指定に負ける可能性があるため（前便の `.icon-btn` の教訓）。
 
+### 2-1b. 本文の高さを実寸で出す（CI の実測で判明した真因への対応）
+
+```css
+.page-layout.page-layout--slim-header {
+  min-height: calc(100dvh - var(--tabbar-height));
+}
+```
+
+**なぜ必要か**: 色を敷くだけでは届かなかった。CI の `height-chain` 実測で `.mobile-content` が 844px（全高）なのに `.page-layout` が 287px で切れていることが判明（recon C-2）。`.mobile-shell` が `height` ではなく `min-height: 100dvh` のため、`.page-layout` の `height: 100%` が中身の高さに落ちる。**パーセントでは解決できないので実寸で与える。**
+
+あわせて `frontend/src/tokens.css` に `--tabbar-height: 56px` を登録する（従来 `frontend/src/mobile-shell.css` の2箇所が代替値付きで参照していた値。非色トークンなので `:root` のみ・`force-dark` 不要）。
+
 ### 2-2. `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`
 
 **高さの鎖の各段を記録に残す**（`height-chain` 添付）。`.mobile-content` / `.page-layout` / `.page-layout-content` / `.inbox-wrapper` / `.inbox-left-panel` の top・bottom・height・背景色を取る。あわせて「**面の色を敷いた要素のうち最も下まで届くものが画面の7割より下**」を基準にする。
@@ -59,7 +71,8 @@ recon: [recon.md](./recon.md)（`docs/handoff/inbox-mobile-fill-height/recon.md`
 
 ## 7. 残るリスク（正直に）
 
-1. **`.page-layout-content` 自身が画面の高さを持っていない場合、この方法でも届かない。** その場合は基準 #1 が赤になり、`height-chain` の記録でどの段が短いか分かる。次の便でその段を直す（本便では推測で先回りしない）。
+1. ~~`.page-layout-content` 自身が画面の高さを持っていない場合、この方法でも届かない~~ → **実際に起きた。** CI の1回目で `.page-layout` が 287px で切れていることが判明し、§2-1b で実寸の高さを与える対応を追加した（recon C-2）。記録を残す設計にしていたため、**推測せず1回で原因を特定できた。**
+2. **`min-height` を実寸（`calc(100dvh - var(--tabbar-height))`）で与えるため、将来タブバーの高さが変わると値がずれる。** トークン参照にしてあるので、タブバー側の高さもこのトークンを使う限りずれない（`frontend/src/mobile-shell.css` は現在 `var(--tabbar-height, 56px)` の形で同じトークンを参照している）。
 2. **本文の領域が白くなるため、受信箱のスマホで「カードが浮いている」見え方は無くなる。** これは意図（お手本は面が1枚）。
 3. **`slimHeaderOnMobile` を他のページが使い始めると、そのページも白くなる。** 現在の利用は受信箱のみ。金型のコメントに対象と理由を明記した。
 4. 他の全画面型ページ（8枚）は未対応のまま（recon D の判断）。

@@ -42,7 +42,21 @@
 | C6 | `.mobile-shell` は `min-height: 100dvh`（`height` ではない） | 同ファイル |
 | C7 | **`--tabbar-height` はトークンとして登録されていない**（2箇所とも代替値付きで参照） | `frontend/src/mobile-shell.css` の2箇所のみ |
 
-**鎖はコード上は繋がって見えるのに、実測では切れている。** どの段で切れているかは画素だけでは分からないため、本便では**画面検査に各段の高さを記録させる**（`height-chain` という添付）。
+**鎖はコード上は繋がって見えるのに、実測では切れている。** そこで画面検査に各段の高さを記録させ（`height-chain` 添付）、**CI で実測した**。
+
+## C-2. 切れている段の特定（CI の実測・PR 4196 の1回目）
+
+| 段 | 高さ | 背景 |
+|---|---|---|
+| `.mobile-content` | **844px（画面の全高）** | 透明 |
+| `.page-layout` | **287px** ← **ここで切れている** | 透明 |
+| `.page-layout-content` | 277px | **白（本便の指定が効いている）** |
+| `.inbox-wrapper` | 277px | 白 |
+| `.inbox-left-panel` | 277px | 白 |
+
+**原因**: スマホの殻 `.mobile-shell` は `height` ではなく **`min-height: 100dvh`**（recon C6）。親の高さが「確定」扱いにならないため、`.page-layout` の `height: 100%`（C1）が**中身の高さ（287px）に落ちる**。パーセントの高さでは解決できない＝**実寸で与える必要がある**。
+
+**対応**: `--tabbar-height` をトークンとして登録し（`frontend/src/tokens.css`。従来 `frontend/src/mobile-shell.css` の2箇所が代替値付きで参照していた値）、`min-height: calc(100dvh - var(--tabbar-height))` を `slimHeaderOnMobile` のページに与える。`.mobile-content` は `padding-bottom` でタブバーぶんを確保しているので（C5）、この値がちょうど本文の領域の高さに一致し、はみ出さない。
 
 ## D. 「他の画面も同じ扱いにすべきか」への答え（実測）
 
