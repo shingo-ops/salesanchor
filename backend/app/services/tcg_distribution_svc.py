@@ -311,7 +311,7 @@ def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merg
             ON p.id = ar.product_id
         LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema=TCG_SCHEMA, fenced=True)}
         WHERE ar.pid_resolved = TRUE
           AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
