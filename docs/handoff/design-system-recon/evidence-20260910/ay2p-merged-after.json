@@ -1,0 +1,570 @@
+{
+ "inventory-w1280": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box"
+  ],
+  "initial": {
+   "search": {
+    "tag": "input",
+    "type": "search",
+    "className": "comp-field__input field-h-md field-w-md",
+    "testid": "inventory-search",
+    "placeholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
+    "rect": {
+     "left": 78,
+     "top": 78.03125,
+     "width": 280,
+     "height": 39.609375
+    },
+    "style": {
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "line-height": "21.6px",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "36px",
+     "box-sizing": "border-box",
+     "height": "39.6094px",
+     "width": "280px",
+     "color": "rgb(26, 32, 44)",
+     "margin": "0px",
+     "display": "block"
+    },
+    "parentTag": "div",
+    "parentClass": "content-toolbar__left"
+   },
+   "toolbarRect": {
+    "left": 78,
+    "top": 78.03125,
+    "width": 1178,
+    "height": 39.609375
+   },
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-search-btn",
+     "className": "comp-btn comp-btn--primary comp-btn--sm field-h-md",
+     "text": "検索",
+     "rect": {
+      "left": 370,
+      "top": 83.828125,
+      "width": 48.171875,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-reset-sort",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "リセット",
+     "rect": {
+      "left": 430.171875,
+      "top": 83.828125,
+      "width": 70.328125,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-filter-toggle",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "詳細フィルタ",
+     "rect": {
+      "left": 512.5,
+      "top": 83.828125,
+      "width": 92.484375,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    }
+   ]
+  },
+  "focused": {
+   "borderColor": "rgb(226, 232, 240)",
+   "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+   "outline": "rgb(26, 32, 44) none 3px"
+  },
+  "listUrlBeforeFill": "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+  "listUrlAfterFill": "/inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box",
+  "afterFill": {
+   "value": "テスト検索ワード",
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "rectWidth": 280,
+   "height": 39.609375
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "extra": {
+   "searchHeight": 39.609375,
+   "toolbarHeight": 39.609375,
+   "toolbarTop": 78.03125,
+   "toolbarBottom": 117.640625,
+   "listFirst": {
+    "tag": "div",
+    "className": "loading-indicator",
+    "top": 129.640625,
+    "left": 78
+   },
+   "docScrollWidth": 1280,
+   "docClientWidth": 1280,
+   "selects": [
+    {
+     "className": "comp-select__control comp-select__control--sm",
+     "width": 102
+    }
+   ]
+  },
+  "synthetic": {
+   "A comp-field__input field-h-md field-w-md": {
+    "width": 280,
+    "height": 39.609375,
+    "minHeight": "36px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "B comp-field__input field-h-md field-w-sm": {
+    "width": 160,
+    "height": 39.609375,
+    "minHeight": "36px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "C comp-field__input (class only)": {
+    "width": 280,
+    "height": 39.609375,
+    "minHeight": "auto",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "D comp-field__input field-w-sm": {
+    "width": 160,
+    "height": 39.609375,
+    "minHeight": "auto",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   }
+  }
+ },
+ "inventory-w1440": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box"
+  ],
+  "initial": {
+   "search": {
+    "tag": "input",
+    "type": "search",
+    "className": "comp-field__input field-h-md field-w-md",
+    "testid": "inventory-search",
+    "placeholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
+    "rect": {
+     "left": 78,
+     "top": 78.03125,
+     "width": 280,
+     "height": 39.609375
+    },
+    "style": {
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "line-height": "21.6px",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "36px",
+     "box-sizing": "border-box",
+     "height": "39.6094px",
+     "width": "280px",
+     "color": "rgb(26, 32, 44)",
+     "margin": "0px",
+     "display": "block"
+    },
+    "parentTag": "div",
+    "parentClass": "content-toolbar__left"
+   },
+   "toolbarRect": {
+    "left": 78,
+    "top": 78.03125,
+    "width": 1338,
+    "height": 39.609375
+   },
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-search-btn",
+     "className": "comp-btn comp-btn--primary comp-btn--sm field-h-md",
+     "text": "検索",
+     "rect": {
+      "left": 370,
+      "top": 83.828125,
+      "width": 48.171875,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-reset-sort",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "リセット",
+     "rect": {
+      "left": 430.171875,
+      "top": 83.828125,
+      "width": 70.328125,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-filter-toggle",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "詳細フィルタ",
+     "rect": {
+      "left": 512.5,
+      "top": 83.828125,
+      "width": 92.484375,
+      "height": 28
+     },
+     "centerDiffToSearch": -0.0078125
+    }
+   ]
+  },
+  "focused": {
+   "borderColor": "rgb(226, 232, 240)",
+   "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+   "outline": "rgb(26, 32, 44) none 3px"
+  },
+  "listUrlBeforeFill": "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+  "listUrlAfterFill": "/inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box",
+  "afterFill": {
+   "value": "テスト検索ワード",
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "rectWidth": 280,
+   "height": 39.609375
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "extra": {
+   "searchHeight": 39.609375,
+   "toolbarHeight": 39.609375,
+   "toolbarTop": 78.03125,
+   "toolbarBottom": 117.640625,
+   "listFirst": {
+    "tag": "div",
+    "className": "loading-indicator",
+    "top": 129.640625,
+    "left": 78
+   },
+   "docScrollWidth": 1440,
+   "docClientWidth": 1440,
+   "selects": [
+    {
+     "className": "comp-select__control comp-select__control--sm",
+     "width": 102
+    }
+   ]
+  },
+  "synthetic": {
+   "A comp-field__input field-h-md field-w-md": {
+    "width": 280,
+    "height": 39.609375,
+    "minHeight": "36px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "B comp-field__input field-h-md field-w-sm": {
+    "width": 160,
+    "height": 39.609375,
+    "minHeight": "36px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "C comp-field__input (class only)": {
+    "width": 280,
+    "height": 39.609375,
+    "minHeight": "auto",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "D comp-field__input field-w-sm": {
+    "width": 160,
+    "height": 39.609375,
+    "minHeight": "auto",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   }
+  }
+ },
+ "inventory-w375": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box"
+  ],
+  "initial": {
+   "search": {
+    "tag": "input",
+    "type": "search",
+    "className": "comp-field__input field-h-md field-w-md",
+    "testid": "inventory-search",
+    "placeholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
+    "rect": {
+     "left": 24,
+     "top": 78.03125,
+     "width": 192,
+     "height": 44
+    },
+    "style": {
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "line-height": "21.6px",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "height": "44px",
+     "width": "192px",
+     "color": "rgb(26, 32, 44)",
+     "margin": "0px",
+     "display": "block"
+    },
+    "parentTag": "div",
+    "parentClass": "content-toolbar__left"
+   },
+   "toolbarRect": {
+    "left": 24,
+    "top": 78.03125,
+    "width": 327,
+    "height": 44
+   },
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-search-btn",
+     "className": "comp-btn comp-btn--primary comp-btn--sm field-h-md",
+     "text": "検索",
+     "rect": {
+      "left": 228,
+      "top": 78.03125,
+      "width": 48.171875,
+      "height": 44
+     },
+     "centerDiffToSearch": 0
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-reset-sort",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "リセット",
+     "rect": {
+      "left": 288.171875,
+      "top": 78.03125,
+      "width": 70.328125,
+      "height": 44
+     },
+     "centerDiffToSearch": 0
+    },
+    {
+     "tag": "button",
+     "type": "button",
+     "testid": "inventory-filter-toggle",
+     "className": "comp-btn comp-btn--secondary comp-btn--sm field-h-md",
+     "text": "詳細フィルタ",
+     "rect": {
+      "left": 370.5,
+      "top": 78.03125,
+      "width": 92.484375,
+      "height": 44
+     },
+     "centerDiffToSearch": 0
+    }
+   ]
+  },
+  "focused": {
+   "borderColor": "rgb(226, 232, 240)",
+   "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+   "outline": "rgb(26, 32, 44) none 3px"
+  },
+  "listUrlBeforeFill": "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+  "listUrlAfterFill": "/inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&q=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2%E3%83%AF%E3%83%BC%E3%83%89&tcg_type=pokemon_booster_box",
+  "afterFill": {
+   "value": "テスト検索ワード",
+   "scrollWidth": 190,
+   "clientWidth": 190,
+   "rectWidth": 192,
+   "height": 44
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "extra": {
+   "searchHeight": 44,
+   "toolbarHeight": 44,
+   "toolbarTop": 78.03125,
+   "toolbarBottom": 122.03125,
+   "listFirst": {
+    "tag": "div",
+    "className": "loading-indicator",
+    "top": 134.03125,
+    "left": 24
+   },
+   "docScrollWidth": 375,
+   "docClientWidth": 375,
+   "selects": [
+    {
+     "className": "comp-select__control comp-select__control--sm",
+     "width": 102
+    }
+   ]
+  },
+  "synthetic": {
+   "A comp-field__input field-h-md field-w-md": {
+    "width": 192,
+    "height": 44,
+    "minHeight": "44px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "B comp-field__input field-h-md field-w-sm": {
+    "width": 160,
+    "height": 44,
+    "minHeight": "44px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "C comp-field__input (class only)": {
+    "width": 26,
+    "height": 44,
+    "minHeight": "44px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   },
+   "D comp-field__input field-w-sm": {
+    "width": 160,
+    "height": 44,
+    "minHeight": "44px",
+    "padding": "8px 12px",
+    "fontSize": "14.4px",
+    "borderRadius": "6px",
+    "borderTop": "1px rgb(226, 232, 240)"
+   }
+  }
+ }
+}

@@ -31,8 +31,14 @@ export interface DataTableColumn<T = Record<string, unknown>> {
   key: string;
   /** ヘッダーラベル */
   header: string;
-  /** 列幅（CSS width 値。例: "120px", "1fr"） */
+  /**
+   * 列幅（CSS width 値。例: "120px", "1fr"）。
+   * ellipsis 列では max-width としても使う。max-width として無効な値（例: "1fr"）のときは
+   * CSS 既定（--comp-table-ellipsis-max-w 200px）になる。
+   */
   width?: string;
+  /** true で1行に収め、はみ出しは … にする。width があればその幅まで。文字列のセルは title に全文を付ける */
+  ellipsis?: boolean;
   /** ソートボタンを表示するか */
   sortable?: boolean;
   /** カスタムセルレンダラー */
@@ -268,13 +274,25 @@ export function DataTable<T = Record<string, unknown>>({
                       />
                     </td>
                   )}
-                  {columns.map((col) => (
-                    <td key={col.key} className="comp-table__td">
-                      {col.renderCell
-                        ? col.renderCell(row, key)
-                        : String((row as Record<string, unknown>)[col.key] ?? '')}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    const content = col.renderCell
+                      ? col.renderCell(row, key)
+                      : String((row as Record<string, unknown>)[col.key] ?? '');
+                    if (!col.ellipsis) {
+                      return <td key={col.key} className="comp-table__td">{content}</td>;
+                    }
+                    return (
+                      <td key={col.key} className="comp-table__td comp-table__td--ellipsis">
+                        <div
+                          className="comp-table__cell-ellipsis"
+                          style={col.width ? { maxWidth: col.width } : undefined}
+                          title={typeof content === 'string' ? content : undefined}
+                        >
+                          {content}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })

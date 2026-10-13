@@ -179,6 +179,8 @@ async def test_engine():
             statement = statement.replace("public.tenant_features", "tenant_features")
         if "public.suppliers" in statement:
             statement = statement.replace("public.suppliers", "suppliers")
+        if "public.auth_refresh_tokens" in statement:
+            statement = statement.replace("public.auth_refresh_tokens", "auth_refresh_tokens")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1178,7 +1180,30 @@ async def setup_test_db(test_engine):
                 role VARCHAR(50) DEFAULT 'user',
                 is_active BOOLEAN DEFAULT TRUE,
                 locale VARCHAR(10) NOT NULL DEFAULT 'ja',
-                theme VARCHAR(10) NOT NULL DEFAULT 'light'
+                theme VARCHAR(10) NOT NULL DEFAULT 'light',
+                is_super_admin BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP,
+                password_argon2_hash TEXT,
+                password_changed_at TIMESTAMP,
+                failed_login_count INTEGER NOT NULL DEFAULT 0,
+                locked_until TIMESTAMP
+            )
+        """))
+        # ADR-1013 便2: public.auth_refresh_tokens の SQLite 版（BYTEA→BLOB, UUID→TEXT, BIGSERIAL→INTEGER）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token_hash BLOB NOT NULL UNIQUE,
+                family_id TEXT NOT NULL,
+                family_created_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                revoked_at TIMESTAMP,
+                created_at TIMESTAMP NOT NULL,
+                last_used_at TIMESTAMP,
+                user_agent_hash BLOB
             )
         """))
         # テストユーザー投入

@@ -31,3 +31,18 @@ it("marks nothing when the ranges are missing or null", () => {
   render(<ShadowSourcePane rawText={RAW} blockRange={{ start: null, end: null }} headingRange={null} />);
   expect([attr(1), attr(2), attr(3), attr(4)]).toEqual([null, null, null, null]);
 });
+
+const legendText = () => document.querySelector(".shadow-source-legend")?.textContent ?? "";
+
+it("shows only the legend items whose range is given", () => {
+  render(<ShadowSourcePane rawText={RAW} blockRange={{ start: 1, end: 2 }} />);
+  expect(document.querySelectorAll(".shadow-source-legend-item").length).toBe(1);
+  expect(document.querySelector(".shadow-source-legend-item--block")).not.toBeNull();
+  expect(document.querySelector(".shadow-source-legend-item--heading")).toBeNull();
+  expect(legendText()).not.toBe("");
+});
+
+it("shows both legend items when both ranges are given", () => {
+  render(<ShadowSourcePane rawText={RAW} blockRange={{ start: 1, end: 2 }} headingRange={{ start: 3, end: 3 }} />);
+  expect(document.querySelectorAll(".shadow-source-legend-item").length).toBe(2);
+});

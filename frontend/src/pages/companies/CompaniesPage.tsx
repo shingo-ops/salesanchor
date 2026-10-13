@@ -384,7 +384,7 @@ export default function CompaniesPage() {
       {error && <div className="error-banner">{error}</div>}
       <ContentToolbar
         left={
-          <input
+          <TextFieldControl
             type="text"
             className="search-input field-h-md field-w-md"
             placeholder={t("companies.searchPlaceholder")}

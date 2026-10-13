@@ -18,6 +18,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 import type { Product } from "./products.types";
 import { Button } from "../../components/Button";
 
@@ -215,8 +216,8 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     <>
       <ContentToolbar
         left={
-          <div className="search-bar" style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
-            <input className="field-h-md field-w-sm" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
+            <TextFieldControl className="field-h-md field-w-md" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
             {tcgTypes.length > 0 && (
               <SelectControl
                 className="field-w-sm"

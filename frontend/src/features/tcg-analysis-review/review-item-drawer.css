@@ -1,0 +1,12 @@
+/* 確認スライドの上段（原文 | Gemini | システム）。
+   1279px 以下は原文が上・比較表が下の縦積み（= --breakpoint-tablet-max）。
+   特異度 0,2,0 で TwoColumn.css の読み込み順に依存しない。 */
+.review-item-source {
+  padding: var(--space-3);
+}
+
+@media (max-width: 1279px) { /* = --breakpoint-tablet-max */
+  .comp-two-column.review-item-top {
+    grid-template-columns: 1fr;
+  }
+}

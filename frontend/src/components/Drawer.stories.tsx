@@ -59,6 +59,26 @@ export const WithFullPage: Story = {
   },
 }
 
+export const Wide: Story = {
+  name: 'wide — 広幅（1100px・スマホは全幅）',
+  render: () => {
+    const [open, setOpen] = useState(false)
+    return (
+      <div style={{ height: '100vh', background: 'var(--bg-canvas)', padding: '2rem' }}>
+        <button onClick={() => setOpen(true)}>Drawer を開く</button>
+        <Drawer
+          open={open}
+          onClose={() => setOpen(false)}
+          title="広幅のドロワー"
+          size="wide"
+        >
+          <p>size="wide" で幅が 1100px になる（画面が狭いときは画面幅）</p>
+        </Drawer>
+      </div>
+    )
+  },
+}
+
 export const Closed: Story = {
   name: 'closed — 閉じた状態',
   args: {

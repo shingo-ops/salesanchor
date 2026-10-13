@@ -279,7 +279,7 @@ export default function ContactsPage() {
                 <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
               ))}
             </SelectControl>
-            <input
+            <TextFieldControl
               type="text"
               placeholder={t("contacts.searchPlaceholder")}
               value={search}
