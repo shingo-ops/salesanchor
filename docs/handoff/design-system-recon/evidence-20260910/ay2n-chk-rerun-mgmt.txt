@@ -1,0 +1,12 @@
+18:05  up 4 days, 3 mins, 1 user, load averages: 33.76 80.21 76.52
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  18:05:36
+   Duration  2.49s (transform 332ms, setup 48ms, import 704ms, tests 570ms, environment 965ms)
+
+exit=0
+18:05  up 4 days, 3 mins, 1 user, load averages: 33.76 80.21 76.52
