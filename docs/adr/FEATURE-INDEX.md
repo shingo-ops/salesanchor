@@ -27,6 +27,7 @@
 | テナント / RLS / schema prefix / tenant_context | **ADR-072** ／ ADR-034 ／ ADR-036 | 書込後 reset_tenant_context・新規テナント migration 自動化・整合性 |
 | 権限 / role / 認証 / Firebase | ADR-023 ／ ADR-032 | 認証3層同期・カスタム認証ドメイン |
 | password_hash / bcrypt / 認証情報 DB 保存 | **ADR-138** | password_hash 列廃止（Firebase 専一）。列削除 recon では ORM モデル定義確認必須 |
+| ログイン / パスキー / WebAuthn / 生体認証 / パスワード再設定 / 自社認証 | **ADR-1012** | Firebase から自社サーバーへ移行・Argon2id・パスキー・再設定メール。ADR-138 を覆す |
 
 ## 横断・運用・プロセス
 

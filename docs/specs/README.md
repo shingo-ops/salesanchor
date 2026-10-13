@@ -63,6 +63,7 @@
 | Discord連携 | （仕様書未作成・関連: ADR-009, 014, 100, 091） | 未 |
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
 | 認証・権限・ロール（auth-roles。各社のロールと運営者 super admin の境界） | [auth-roles/README.md](auth-roles/README.md)（関連: ADR-023, 032, 138, 147, 1007） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-10） |
+| ログイン方式（auth-login。自社サーバーでのパスワード・パスキー・再設定メール） | [auth-login/README.md](auth-login/README.md)（関連: ADR-1012, 138, 1008） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-13） |
 | テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
 | 権限・秘密SSOT化（secrets-permission-ssot。鍵・権限を1冊の台帳で管理し置き間違いを警報） | [secrets-permission-ssot/README.md](secrets-permission-ssot/README.md) | あるべき姿確定・KGI確定 2026-07-20 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |

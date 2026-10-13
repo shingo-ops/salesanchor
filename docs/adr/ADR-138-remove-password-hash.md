@@ -1,6 +1,6 @@
 # ADR-138: password_hash 列廃止
 
-**ステータス**: Accepted  
+**ステータス**: Superseded by [ADR-1012](./ADR-1012-self-hosted-auth-and-passkey.md)（2026-10-13。移行の便6 が終わるまで、本番の実装は本 ADR のとおり Firebase 専一のまま）  
 **決定日**: 2026-06-12  
 **決定者**: Shingo（PO）  
 **実装**: PR #2067
