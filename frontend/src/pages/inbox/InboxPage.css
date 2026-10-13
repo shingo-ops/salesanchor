@@ -1206,6 +1206,22 @@
   }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
 
+  /* 管理ボタンはスマホでは文言を隠してアイコンだけにする（PO 指摘 2026-10-13）。
+     読み上げ用には aria-label を付けてあるので、見た目から消しても役割は伝わる。
+     PC・タブレットでは文言を残す（この @media の内側のみ）。 */
+  .inbox-manage-label { display: none; }
+
+  /* 押す場所を 44px 以上にする（WCAG 2.5.5）。
+     PR 4204 の実機実測で 71x34dp だったが、あのときの対象から漏れていた
+     （CSS に width/height を書いているクラスだけを探し、padding で寸法が
+     決まるボタンを拾えていなかった）。文言を隠すと幅も狭くなるため、
+     ここで最低の幅と高さを与える。中身は中央に寄せる（既に align-items: center）。 */
+  .inbox-manage-btn {
+    min-width: var(--size-icon-btn-lg);
+    min-height: var(--size-icon-btn-lg);
+    justify-content: center;
+  }
+
   /* 絞り込みを普段は出さない（design.md §10-4 / benchmark 実測）。
      お手本の WhatsApp は絞り込みチップを引き下げたときだけ出す作りで、
      出していない時は一覧が 56dp 高い位置から始まる（実測で確認）。
