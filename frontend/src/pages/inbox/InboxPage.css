@@ -1177,6 +1177,11 @@
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
 
+  /* 管理ボタンはスマホでは文言を隠してアイコンだけにする（PO 指摘 2026-10-13）。
+     読み上げ用には aria-label を付けてあるので、見た目から消しても役割は伝わる。
+     PC・タブレットでは文言を残す（この @media の内側のみ）。 */
+  .inbox-manage-label { display: none; }
+
   /* 絞り込みを普段は出さない（design.md §10-4 / benchmark 実測）。
      お手本の WhatsApp は絞り込みチップを引き下げたときだけ出す作りで、
      出していない時は一覧が 56dp 高い位置から始まる（実測で確認）。

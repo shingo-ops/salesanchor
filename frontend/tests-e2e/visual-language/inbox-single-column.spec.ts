@@ -323,6 +323,54 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(dark.nameContrast!, "ダークの名前の明暗差").toBeGreaterThanOrEqual(4.5);
   });
 
+  test("スマホ: 検索欄の2つのボタンが別のアイコンで、管理は文言を出さない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指摘）: 検索欄の右に同じ filter アイコンが2つ並んで区別できなかった。
+    // 管理ボタンを「選択モード」の通例である丸いチェック（outline）に差し替え、
+    // スマホでは文言を隠してアイコンだけにした。
+    const info = await page.evaluate(() => {
+      const pick = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const svg = el.querySelector("svg");
+        return {
+          // svg の中身（path の d 属性）が同じなら同じアイコン
+          icon: svg ? Array.from(svg.querySelectorAll("path")).map((p) => p.getAttribute("d")).join("|") : null,
+          accessibleName: el.getAttribute("aria-label"),
+          visibleText: (el.innerText || "").trim(),
+        };
+      };
+      return {
+        filter: pick(".inbox-search-row .inbox-mobile-filter-toggle"),
+        manage: pick(".inbox-manage-btn"),
+      };
+    });
+    await testInfo.attach("search-row-buttons", {
+      body: JSON.stringify(
+        {
+          filter: { ...info.filter, icon: info.filter?.icon?.slice(0, 40) },
+          manage: { ...info.manage, icon: info.manage?.icon?.slice(0, 40) },
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(info.filter, "絞り込みボタンが見つからない").not.toBeNull();
+    expect(info.manage, "管理ボタンが見つからない").not.toBeNull();
+    // 1. 2つのアイコンが別物であること（同じ図形を2つ並べない）
+    expect(info.manage!.icon, "管理のアイコンが取れない").not.toBeNull();
+    expect(info.manage!.icon).not.toBe(info.filter!.icon);
+    // 2. 管理はスマホで文言を出さない
+    expect(info.manage!.visibleText, "管理の文言がスマホで出ている").toBe("");
+    // 3. 文言が無くても読み上げで分かること
+    expect(info.manage!.accessibleName, "管理の読み上げ名が無い").toBeTruthy();
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -342,6 +390,8 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.locator(".mobile-topbar")).toHaveCount(0);
     // ヘッダーの操作行は PC・タブレットでは一覧を見ているときも出す（従来どおり）
     await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 管理ボタンの文言は PC・タブレットでは出す（スマホだけ隠す）
+    await expect(page.locator(".inbox-manage-btn .inbox-manage-label")).toBeVisible();
     // 絞り込みボタンは DOM にはあるが PC・タブレットでは表示しない
     await expect(page.locator(".inbox-search-row .inbox-mobile-filter-toggle")).toBeHidden();
   });
