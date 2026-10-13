@@ -1,0 +1,74 @@
+/Users/tanizawashingo/agent-console-wt/activity/.npm-cache
+/Users/tanizawashingo/agent-console-wt/chat/.npm-cache
+/Users/tanizawashingo/agent-console-wt/ci-badge/.npm-cache
+/Users/tanizawashingo/agent-console-wt/icon/.npm-cache
+/Users/tanizawashingo/agent-console-wt/layout/.npm-cache
+/Users/tanizawashingo/agent-console-wt/locale/.npm-cache
+/Users/tanizawashingo/agent-console-wt/terminal-ux/.npm-cache
+/Users/tanizawashingo/agent-console/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.7.0/.npm-cache
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.9.1/.npm-cache
+/Users/tanizawashingo/salesanchor/backend/.npm-cache
+/Users/tanizawashingo/salesanchor/frontend/.npm-cache
+/Users/tanizawashingo/salesanchor/lp/.npm-cache
+/Users/tanizawashingo/worktrees/code-staging-recovery/release-private-product-import-recovery/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/crm-app/docs-phase-s-close-log/.npm-cache
+/Users/tanizawashingo/worktrees/crm-app/release-leads-header-audit/.npm-cache
+/Users/tanizawashingo/worktrees/crm-app/release-leads-header-p1/.npm-cache
+/Users/tanizawashingo/worktrees/crm-app/release-leads-karte-header-p3a/.npm-cache
+/Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/import-trend-graph-fix/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/sa-code-staging-source/release-line-box-heading-guards/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/sa-code-staging-source/release-private-product-import/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/sa-secret-transfer-source/release-sealed-settings-transfer/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/feature-morimoto-analytics-rls-fix4/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-condition-kw-kenpin-kaifu/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-cross-dept-integrity-foundation/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-discord-ops-intake-design/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-llm-usage-charts/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-migration-ledger/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-permission-stage2-falsepos/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-tenant-template-parity/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-gap-fill/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-same-post-rows/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/.npm-cache
+/Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/.npm-cache
+/Users/tanizawashingo/worktrees/crm-app/feat-customer-tax-number-form/frontend/node_modules
+/Users/tanizawashingo/worktrees/crm-app/release-frontend-assignee-id-display/frontend/node_modules
+/Users/tanizawashingo/worktrees/fix-sold-out-menu-visibility/frontend/node_modules
+/Users/tanizawashingo/worktrees/supplier-knowledge-links/frontend/node_modules
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.0
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.2.1
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.0
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.1
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.2
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.3
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.4
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.5
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.6
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.7
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.8
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.3.9
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.4.0
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.5.0
+/Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.6.0

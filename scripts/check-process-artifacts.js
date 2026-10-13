@@ -115,6 +115,7 @@ function hasCanonicalDoc(files) {
 const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
   /^scripts\//,                          // 本番スクリプト全般（ADR-135 B-2）
+  /^ops\/launchd\//,                     // 毎朝この Mac でファイルを消す LaunchAgent（disk-janitor）の入口
   /^\.github\/workflows\/deploy\.yml$/,  // デプロイワークフロー
   /^frontend\/src\/pages-layout\.css$/,  // 全ページ共通レイアウト（共有＝変更にGO必須）
   /^docs\/STANDARD-WORKFLOW\.md$/,                      // 正本（自己保護）
@@ -263,7 +264,7 @@ function parseSOPDeclaration(prBody) {
     ? touchFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
+        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/[（(][^）)]*[）)]/g, '').trim())
         .filter(f => f.length > 0)
     : [];
   const deleteFilesMatch = section.match(/削除するファイル:\s*((?:[\s\S]*?)(?=\n[^\s-*]|\n*$))/);
@@ -271,7 +272,7 @@ function parseSOPDeclaration(prBody) {
     ? deleteFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
+        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/[（(][^）)]*[）)]/g, '').trim())
         .filter(f => f.length > 0 && f !== 'なし')
     : [];
   const hasDeleteFilesDeclared = !!deleteFilesMatch;

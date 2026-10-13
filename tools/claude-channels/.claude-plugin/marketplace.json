@@ -1,0 +1,15 @@
+{
+  "name": "sa-local",
+  "description": "Sales Anchor local marketplace for the discord-ops channel plugin",
+  "owner": {
+    "name": "salesanchor"
+  },
+  "plugins": [
+    {
+      "name": "discord-ops",
+      "description": "Discord ops channel: monitoring alerts in, threaded replies and approval buttons out",
+      "category": "productivity",
+      "source": "./discord-ops"
+    }
+  ]
+}

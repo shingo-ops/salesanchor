@@ -1057,6 +1057,27 @@
         "title": "Body_commit_import_endpoint_api_v1_tcg_products_import_commit_post",
         "type": "object"
       },
+      "Body_commit_review_csv_api_v1_tcg_review_csv_commit_post": {
+        "properties": {
+          "confirmed_digest": {
+            "description": "内容確認で受け取った指紋",
+            "title": "Confirmed Digest",
+            "type": "string"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "要確認の CSV ファイル",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "confirmed_digest"
+        ],
+        "title": "Body_commit_review_csv_api_v1_tcg_review_csv_commit_post",
+        "type": "object"
+      },
       "Body_data_deletion_callback_api_v1_meta_data_deletion_post": {
         "properties": {
           "signed_request": {
@@ -1531,6 +1552,21 @@
           "file"
         ],
         "title": "Body_preview_import_api_v1_tcg_products_import_preview_post",
+        "type": "object"
+      },
+      "Body_preview_review_csv_api_v1_tcg_review_csv_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "要確認の CSV ファイル",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_review_csv_api_v1_tcg_review_csv_preview_post",
         "type": "object"
       },
       "Body_send_lead_image_message_api_v1_leads__lead_id__messages_image_post": {
@@ -38393,16 +38429,16 @@
         ]
       }
     },
-    "/api/v1/calendar/owners/{staff_id}": {
+    "/api/v1/calendar/owners/{user_id}": {
       "patch": {
-        "operationId": "update_calendar_owner_api_v1_calendar_owners__staff_id__patch",
+        "operationId": "update_calendar_owner_api_v1_calendar_owners__user_id__patch",
         "parameters": [
           {
             "in": "path",
-            "name": "staff_id",
+            "name": "user_id",
             "required": true,
             "schema": {
-              "title": "Staff Id",
+              "title": "User Id",
               "type": "integer"
             }
           }
@@ -52040,7 +52076,7 @@
     },
     "/api/v1/staff/me": {
       "get": {
-        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  users.email と staff.primary_email の一致で staff を引く。\n  共有メール運用（migration 019: primary_email に UNIQUE 制約なし）に対応するため\n  `ORDER BY s.id ASC` で決定性を担保し、最も古い staff レコードを返す。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  当初は firebase_uid 経路を主、email を fallback として設計したが、\n  `User` モデル（app/models.py）に `firebase_uid` カラムが無いため\n  `getattr(current_user, \"firebase_uid\", None)` は常に None を返し、\n  firebase_uid 経路は dead code になっていた（PR #166 review F1）。\n  `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、\n  経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。\n  将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに\n  経路を再導入する（その際は `ORDER BY` も維持）。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
+        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  current_user.id（users.id）と staff.user_id の一致で staff を引く（ADR-1008）。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  当初は firebase_uid 経路を主、email を fallback として設計したが、\n  `User` モデル（app/models.py）に `firebase_uid` カラムが無いため\n  `getattr(current_user, \"firebase_uid\", None)` は常に None を返し、\n  firebase_uid 経路は dead code になっていた（PR #166 review F1）。\n  `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、\n  経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。\n  将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに\n  経路を再導入する（その際は `ORDER BY` も維持）。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
         "operationId": "get_my_staff_api_v1_staff_me_get",
         "responses": {
           "200": {
@@ -52185,7 +52221,7 @@
     },
     "/api/v1/staff/me/profile": {
       "patch": {
-        "description": "現在ログイン中ユーザ自身の氏名を更新する。\n\n管理者権限不要。メールアドレス・ロール・ステータス等は変更不可。\n本人確認: get_current_user が返す current_user.email で staff を特定。",
+        "description": "現在ログイン中ユーザ自身の氏名を更新する。\n\n管理者権限不要。メールアドレス・ロール・ステータス等は変更不可。\n本人確認: get_current_user が返す current_user.id（staff.user_id）で staff を特定。",
         "operationId": "update_my_profile_api_v1_staff_me_profile_patch",
         "requestBody": {
           "content": {
@@ -64222,6 +64258,124 @@
           }
         ],
         "summary": "商品マスタ検索キーワード追加（PARITY-03 Phase 3 B-5）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/commit": {
+      "post": {
+        "operationId": "commit_review_csv_api_v1_tcg_review_csv_commit_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_commit_review_csv_api_v1_tcg_review_csv_commit_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Commit Review Csv Api V1 Tcg Review Csv Commit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認 CSV の反映",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/export": {
+      "get": {
+        "operationId": "export_review_csv_api_v1_tcg_review_csv_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認の一覧を CSV で出す",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/review/csv/preview": {
+      "post": {
+        "operationId": "preview_review_csv_api_v1_tcg_review_csv_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_review_csv_api_v1_tcg_review_csv_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Preview Review Csv Api V1 Tcg Review Csv Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "要確認 CSV の内容確認（書き込まない）",
         "tags": [
           "super-admin"
         ]

@@ -348,6 +348,7 @@ async def _create_order(client, order_number="ORD-COM-1", status_value="awaiting
 
 _role_counter = {"n": 1000}
 _staff_counter = {"n": 1000}
+_USER_ID_OFFSET = 5000  # users.id と staff.id を取り違えても気づけるよう離す
 
 
 async def _create_role_direct(db_session, name="営業", priority=10):
@@ -381,7 +382,7 @@ async def _create_staff_direct(
     is_employee=False,
     role_id=None,
 ):
-    """staff を直接 INSERT して id を返す（test_staff_me と同じ方式）。
+    """staff を直接 INSERT し、ひも付く users.id を返す（test_staff_me と同じ方式）。
 
     /api/v1/staff 経由は role_id 検証 + audit log で複雑なので避ける。
     is_employee は migration 050 で追加された BOOLEAN カラム。
@@ -396,16 +397,17 @@ async def _create_staff_direct(
         text(
             """
             INSERT INTO staff (
-                id, tenant_id, staff_code, surname_jp, given_name_jp,
+                id, tenant_id, user_id, staff_code, surname_jp, given_name_jp,
                 primary_email, role_id, status, is_employee
             ) VALUES (
-                :id, 999, :code, :sjp, :gjp,
+                :id, 999, :uid, :code, :sjp, :gjp,
                 :email, :rid, 'active', :is_emp
             )
             """
         ),
         {
             "id": sid,
+            "uid": sid + _USER_ID_OFFSET,
             "code": f"EMP-{sid:05d}",
             "sjp": surname,
             "gjp": given,
@@ -414,8 +416,21 @@ async def _create_staff_direct(
             "is_emp": 1 if is_employee else 0,
         },
     )
+    # ADR-1008 P2: 担当の値は users.id。staff.user_id にひも付く同テナントの users 行を作り、その id を返す
+    uid = sid + _USER_ID_OFFSET
+    await db_session.execute(
+        text(
+            "INSERT INTO users (id, tenant_id, username, email, role, is_active) "
+            "VALUES (:uid, 999, :uname, :email, 'user', TRUE)"
+        ),
+        {"uid": uid, "uname": f"user{uid}", "email": email},
+    )
+    await db_session.execute(
+        text("UPDATE staff SET user_id = :uid WHERE id = :sid"),
+        {"uid": uid, "sid": sid},
+    )
     await db_session.commit()
-    return sid
+    return uid
 
 
 async def _create_staff(
@@ -506,6 +521,29 @@ class TestAssignEndpoint:
         res = await client.post(
             f"/api/v1/orders/{order_id}/commissions/assign",
             json={"role": "sales", "staff_id": 9999999},
+        )
+        assert res.status_code == 400
+
+    async def test_assign_user_of_other_tenant_returns_400(self, client):
+        """別テナントの users.id は担当にできない（ADR-1008 P2）"""
+        from sqlalchemy import text
+
+        from app.database import get_db
+        from app.main import app
+
+        agen = app.dependency_overrides[get_db]()
+        db = await agen.__anext__()
+        await db.execute(
+            text(
+                "INSERT INTO users (id, tenant_id, username, email, role, is_active) "
+                "VALUES (777777, 888, 'other', 'other@example.com', 'user', TRUE)"
+            )
+        )
+        await db.commit()
+        order_id = await _create_order(client, "ORD-COM-OTHERTENANT")
+        res = await client.post(
+            f"/api/v1/orders/{order_id}/commissions/assign",
+            json={"role": "sales", "staff_id": 777777},
         )
         assert res.status_code == 400
 

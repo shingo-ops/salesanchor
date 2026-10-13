@@ -1,0 +1,6 @@
+{
+  "name": "discord-ops",
+  "description": "Discord ops channel for Claude Code: allowlisted webhook alerts in, ops-channel threads and approval buttons out.",
+  "version": "0.1.0",
+  "keywords": ["discord", "channel", "mcp", "ops"]
+}

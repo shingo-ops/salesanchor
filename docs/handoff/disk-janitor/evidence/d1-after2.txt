@@ -1,0 +1,10 @@
+== ~/.npmrc (変更後) ==
+cache=/Users/tanizawashingo/.npm-shared-cache
+prefix=/Users/tanizawashingo/.npm-global
+cd /: /Users/tanizawashingo/.npm-shared-cache
+cd /Users/tanizawashingo: /Users/tanizawashingo/.npm-shared-cache
+cd /Users/tanizawashingo/salesanchor/frontend: /Users/tanizawashingo/.npm-shared-cache
+== cd /private/tmp && npm view lodash version ==
+4.18.1
+exit=0
+root所有以外のファイル数 (~/.npm-shared-cache, ! -user tanizawashingo): 0

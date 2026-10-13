@@ -217,6 +217,53 @@ tail ~/Library/Logs/reaper-onlogin.log
 launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
 ```
 
+### 毎日の開発データ自動片付け（disk-janitor）
+
+`ops/launchd/jp.salesanchor.disk-janitor.plist` を配置すると、毎日 04:00 に道具専用の作業用コピー `/Users/tanizawashingo/.salesanchor-tools` を `origin/main` に更新してから `scripts/disk-janitor.sh --execute` が動く。
+消すのは根5か所の中で、作り直せる物（散らばった `.npm-cache`、使っていない作業用コピーの `node_modules`、agent-console の旧版）と、
+reaper の安全条件を満たす他リポジトリの作業用コピーだけ。設計: `docs/handoff/disk-janitor/design.md`（改訂 3・3a・3b）、ADR-114。
+
+本体 `/Users/tanizawashingo/salesanchor` は古いまま・未コミットの変更が多いので、janitor は本体ではなく道具のコピーから動かす。
+
+**道具のコピーでは作業しない**（人も AI も。編集・コミット・未追跡ファイルの作成も禁止）。plist は、コピーが完全にきれい（未コミット・未追跡が0）で、fetch と checkout の後に HEAD が `origin/main` と同じときだけ janitor を動かす。そうでなければ何も消さず、終了コード 1 で終わる。
+
+```bash
+# 道具のコピーの作成（手で1回だけ。new-worktree.sh は detached を作れない）
+git -C /Users/tanizawashingo/salesanchor worktree add --detach /Users/tanizawashingo/.salesanchor-tools origin/main
+
+# 作り直し（壊れた・きれいでなくなったとき。コピーの中身は捨ててよい物だけ）
+git -C /Users/tanizawashingo/salesanchor worktree remove --force /Users/tanizawashingo/.salesanchor-tools
+git -C /Users/tanizawashingo/salesanchor worktree add --detach /Users/tanizawashingo/.salesanchor-tools origin/main
+
+# 事前: 何が消えるかを確認（dry-run。何も消えない）
+cd /Users/tanizawashingo/.salesanchor-tools && bash scripts/disk-janitor.sh
+
+# plist の確認（lint と、実行する1行の復元）
+plutil -lint ops/launchd/jp.salesanchor.disk-janitor.plist
+plutil -extract ProgramArguments.2 raw ops/launchd/jp.salesanchor.disk-janitor.plist
+
+# 設置（初回のみ）
+cp ops/launchd/jp.salesanchor.disk-janitor.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.disk-janitor.plist
+
+# 確認（state・runs・last exit code。正常は 0）
+launchctl print gui/$(id -u)/jp.salesanchor.disk-janitor
+diff ops/launchd/jp.salesanchor.disk-janitor.plist ~/Library/LaunchAgents/jp.salesanchor.disk-janitor.plist
+
+# すぐ1回動かす
+launchctl kickstart -k gui/$(id -u)/jp.salesanchor.disk-janitor
+
+# 停止（止めた後の再開は bootstrap）
+launchctl bootout gui/$(id -u)/jp.salesanchor.disk-janitor
+```
+
+ログの見方:
+- `~/Library/Logs/disk-janitor.log`: janitor 自身が書く。開始・規則ごとの結果・終了と前後の `df`。`tail -50` で見る（1MB 超で `.log.1` に1世代だけ退避）。
+- `~/Library/Logs/disk-janitor.err`: 起動直後の異常。正常時は空。
+- 失敗時: コピーの更新・確認に失敗すると janitor は動かず、`.err` に「disk-janitor: 道具のコピーの更新・確認に失敗したため実行しない」と出て、`launchctl print` の last exit code が 1 になる。原因（未追跡ファイル・未コミットの変更など）を確認し、必要なら上の「作り直し」を行う。
+
+消された物の作り直し: salesanchor は `npm ci --prefix frontend`、agent-console は `npm ci`（pre-commit の lint-staged が node_modules を使うため）、agent-console の版は ac-install、作業用コピーは `git worktree add`。
+
 ---
 
 ## 関連 doc

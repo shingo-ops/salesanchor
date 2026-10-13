@@ -79,6 +79,171 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(list(page)).toBeHidden();
   });
 
+  test("スマホ: 上部のページ名バーが無く、下部タブバーで移動できる", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指定）: 上部のページ名バー（高さ56px）を MobileShell から削除した。
+    // 中身はページ名のテキストだけで操作を持たず、空いた高さは一覧に回る。
+    await expect(page.locator(".mobile-topbar")).toHaveCount(0);
+
+    // ただし移動手段は失ってはいけない。メニュー（「もっと」シート）を開けるのは
+    // 下部タブバーだけなので、タブバーの存在と押せる大きさをここで守る。
+    const tabbar = page.locator(".mobile-tabbar");
+    await expect(tabbar).toBeVisible();
+    const tabs = tabbar.locator("a, button");
+    expect(await tabs.count()).toBeGreaterThanOrEqual(2);
+    const menuBox = await tabs.last().boundingBox();
+    expect(menuBox, "下部タブの寸法が取得できない").not.toBeNull();
+    expect(menuBox!.height).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+
+    // ページ名は読み上げ用に残っていること（見出しとして取得できる＝現在地が分かる）
+    await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
+  });
+
+  test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みは検索欄の横に出る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（PO 指定）: 一覧では操作行（テンプレート / FAQ / 受信箱の設定）を出さない。
+    // 一覧では使い道がなく、その高さを一覧に回す。
+    await expect(page.locator(".page-header-actions")).toHaveCount(0);
+
+    // 絞り込みは一覧専用なので検索欄の横へ移した。一覧では必ず使えること。
+    const filterInSearchRow = page.locator(".inbox-search-row .inbox-mobile-filter-toggle");
+    await expect(filterInSearchRow).toBeVisible();
+    // 押すと絞り込み（ステータスタブ）が開くこと
+    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+    await filterInSearchRow.click();
+    await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
+    await filterInSearchRow.click();
+    await expect(page.locator(".inbox-full-tab-bar")).toBeHidden();
+
+    // 会話を開くと操作行が出ること（返信中に使うため）
+    await openConversation(page);
+    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 一覧専用の絞り込みは会話側では見えない（一覧が隠れているため）
+    await expect(filterInSearchRow).toBeHidden();
+  });
+
+  test("スマホ: 地が1色・左右対称・12px文字のコントラストが基準以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13: 実機の画素を数えて分かった3点を、ここで数値として固定する。
+    //   ① 行の左右の余白が対称（以前は左12px・右0px の非対称だった）
+    //   ② 12px の副文字が 4.5:1 以上（以前は --text-muted で 3.74:1）
+    //   ③ 一覧の面が画面の下まで伸びる（以前は下の空き領域にページの地が出て
+    //      地が2色に割れていた。実測 45.9% + 44.0%）
+    const row = page.locator("button.conversation-item").first();
+    const panel = page.locator(".inbox-left-panel");
+
+    // ① 行の左端と右端の余白が同じ（左右対称）
+    const geo = await page.evaluate(() => {
+      const el = document.querySelector("button.conversation-item") as HTMLElement | null;
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { left: Math.round(r.left), right: Math.round(window.innerWidth - r.right) };
+    });
+    expect(geo, "会話の行が見つからない").not.toBeNull();
+    expect(geo!.left, "行の左の余白").toBe(geo!.right);
+
+    // ② 12px の文字（時刻・プレビュー）の明暗差が 4.5:1 以上
+    const contrast = await page.evaluate(() => {
+      const lum = (c: string) => {
+        const m = c.match(/\d+/g);
+        if (!m) return null;
+        const [r, g, b] = m.slice(0, 3).map((v) => {
+          const x = Number(v) / 255;
+          return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const el = document.querySelector(".conv-preview-text") as HTMLElement | null;
+      if (!el) return null;
+      const fg = lum(getComputedStyle(el).color);
+      // 背景は祖先をたどって透明でない最初の色を使う
+      let node: HTMLElement | null = el;
+      let bg: number | null = null;
+      while (node) {
+        const c = getComputedStyle(node).backgroundColor;
+        if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") { bg = lum(c); break; }
+        node = node.parentElement;
+      }
+      if (fg === null || bg === null) return null;
+      const hi = Math.max(fg, bg), lo = Math.min(fg, bg);
+      return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100;
+    });
+    expect(contrast, "プレビュー文の明暗差が測れない").not.toBeNull();
+    expect(contrast!, "12px の副文字の明暗差").toBeGreaterThanOrEqual(4.5);
+
+    // ③ 地が1色であること。
+    //    一覧の面は画面の高さまで伸びていない（この検査環境では画面の約34%で止まる）。
+    //    根因は wrapper の height:100% が親まで届かないことだが、直すと
+    //    PageLayout / MobileShell という全ページ共通の部品に波及するため、
+    //    本便では「覆われていない領域の色を一覧の面と同じにする」方針を採った
+    //    （design: docs/handoff/inbox-mobile-polish/design.md §2-1・§7-1）。
+    //    したがってここで検査するのは高さではなく**色が同じであること**。
+    const ground = await page.evaluate(() => {
+      const wrap = document.querySelector(".inbox-wrapper") as HTMLElement | null;
+      const panel = document.querySelector(".inbox-left-panel") as HTMLElement | null;
+      if (!wrap || !panel) return null;
+      return {
+        wrapper: getComputedStyle(wrap).backgroundColor,
+        panel: getComputedStyle(panel).backgroundColor,
+      };
+    });
+    expect(ground, "受信箱の下地が測れない").not.toBeNull();
+    expect(ground!.wrapper, "下地が透明のままだと一覧の下にページの地が出る").not.toBe("rgba(0, 0, 0, 0)");
+    expect(ground!.wrapper, "下地と一覧の面の色が違うと地が2色に割れる").toBe(ground!.panel);
+
+    // ④ 面の色が画面の下端近くまで届いていること（2026-10-13・PO 指定）。
+    //    お手本（WhatsApp のチャット一覧・ライト）は一覧の面が画面の上端から
+    //    下端まで1色（実測 白 79.76%・全幅を占める範囲 y=111〜2129）。
+    //    当方は投入前 白 45.7% ／ ページの地 44.1% で、地が出ていたのは
+    //    一覧の最後の行より下（231dp）だった。
+    //    どの段で高さが切れているか後から分かるよう、鎖の各段を記録に残す。
+    const chain = await page.evaluate(() => {
+      const pick = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return {
+          top: Math.round(r.top),
+          bottom: Math.round(r.bottom),
+          height: Math.round(r.height),
+          background: getComputedStyle(el).backgroundColor,
+        };
+      };
+      return {
+        viewport: window.innerHeight,
+        mobileContent: pick(".mobile-content"),
+        pageLayout: pick(".page-layout"),
+        pageContent: pick(".page-layout-content"),
+        wrapper: pick(".inbox-wrapper"),
+        leftPanel: pick(".inbox-left-panel"),
+      };
+    });
+    await testInfo.attach("height-chain", {
+      body: JSON.stringify(chain, null, 2),
+      contentType: "application/json",
+    });
+    // 面の色を敷いている要素のうち、最も下まで届いているものを見る
+    const painted = [chain.pageContent, chain.wrapper, chain.leftPanel]
+      .filter((e): e is NonNullable<typeof e> => e !== null && e.background !== "rgba(0, 0, 0, 0)")
+      .map((e) => e.bottom);
+    expect(painted.length, "面の色を敷いた要素が1つも見つからない").toBeGreaterThan(0);
+    expect(Math.max(...painted), "面の色が画面の7割より下まで届いていない").toBeGreaterThan(
+      chain.viewport * 0.7,
+    );
+
+    await expect(row).toBeVisible();
+    await expect(panel).toBeVisible();
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -93,5 +258,12 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.locator("button.conversation-item", { hasText: SAMPLE_CONVERSATION_NAME })).toBeVisible();
     // 戻るボタンは DOM にはあるが表示しない
     await expect(backButton(page)).toBeHidden();
+    // モバイル専用の殻（MobileShell）は 768px 以上では描かれない＝PC 側は無関係
+    await expect(page.locator(".mobile-tabbar")).toHaveCount(0);
+    await expect(page.locator(".mobile-topbar")).toHaveCount(0);
+    // ヘッダーの操作行は PC・タブレットでは一覧を見ているときも出す（従来どおり）
+    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    // 絞り込みボタンは DOM にはあるが PC・タブレットでは表示しない
+    await expect(page.locator(".inbox-search-row .inbox-mobile-filter-toggle")).toBeHidden();
   });
 });

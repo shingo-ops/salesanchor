@@ -36,6 +36,7 @@ from tests.test_message_image_send import _LEAD_DDL, _META_MESSAGES_DDL, _STAFF_
 _ALL_PERMS = {"channels.view", "channels.manage", "messaging.view", "messaging.send"}
 # 既存の staff 定義を再利用し、本便で必要な列だけ足す（表定義を新規コピーしない）
 _STAFF_EXTRA_COLUMNS = (
+    "ALTER TABLE staff ADD COLUMN user_id INTEGER",
     "ALTER TABLE staff ADD COLUMN given_name_en VARCHAR(100)",
     "ALTER TABLE staff ADD COLUMN avatar_token TEXT",
 )
@@ -108,8 +109,8 @@ async def _seed_lead(db, *, channel: str | None = _CHANNEL):
 async def _seed_staff(db, given_name_en, avatar_token=None):
     await db.execute(
         text(
-            "INSERT INTO staff (id, tenant_id, primary_email, given_name_en, avatar_token) "
-            "VALUES (5, 999, 'tester@example.com', :n, :a)"
+            "INSERT INTO staff (id, tenant_id, user_id, primary_email, given_name_en, avatar_token) "
+            "VALUES (5, 999, 1, 'tester@example.com', :n, :a)"
         ),
         {"n": given_name_en, "a": avatar_token},
     )
@@ -159,7 +160,7 @@ async def test_text_sends_as_staff_with_avatar(ctx):
     row = (await db.execute(text(
         "SELECT message_id, sent_by_staff_id, direction FROM meta_messages WHERE direction='outbound'"
     ))).first()
-    assert tuple(row) == ("dc-100", 5, "outbound")
+    assert tuple(row) == ("dc-100", 1, "outbound")
     bot_text.assert_not_awaited()
     bot_file.assert_not_awaited()
 
@@ -267,7 +268,7 @@ async def test_image_sends_as_staff_via_webhook(ctx):
     row = (await db.execute(text(
         "SELECT message_id, sent_by_staff_id, attachment_type FROM meta_messages WHERE direction='outbound'"
     ))).first()
-    assert tuple(row) == ("dc-img", 5, "image")
+    assert tuple(row) == ("dc-img", 1, "image")
     bot_file.assert_not_awaited()
     bot_text.assert_not_awaited()
 

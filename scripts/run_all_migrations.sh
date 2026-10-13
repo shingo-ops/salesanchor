@@ -911,8 +911,16 @@ run_sql migrations/20261012_200000_add_extraction_attempts_thought_summaries.sql
 # tcg_distribution_targets に要確認タブ名の列を足す（構造のみ・冪等。値は docs/handoff/review-sheet-export/data/ の1回だけのデータ変更）
 run_sql migrations/20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql
 
+# companies.sales_rep_id の参照先を public.users(id) に付け替える（ADR-1008 P1・構造のみ・冪等）
+run_sql migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql
+
+# bots/order_commissions/calendar_owner_settings/tenant_meta_config/meta_messages の「人」列の参照先を public.users(id) に付け替える（ADR-1008 P2・構造のみ・冪等）
+run_sql migrations/20261013_110000_repoint_person_columns_to_users.sql
+
+# staff.user_id を NOT NULL にする（ADR-1008 P3・構造のみ・冪等。NULL 行のあるテナントは WARNING で飛ばす）
+run_sql migrations/20261013_120000_staff_user_id_not_null.sql
 # analysis_results に発送日の専用列（ship_ja・ship_en）を足す（構造のみ・冪等）
-run_sql migrations/20261012_220000_add_analysis_results_ship_ja_ship_en.sql
+run_sql migrations/20261013_130000_add_analysis_results_ship_ja_ship_en.sql
 
 # tcg_note_master に REGEX の行の英語の書式（label_template_en）を足す（構造のみ・冪等）
-run_sql migrations/20261012_220100_add_tcg_note_master_label_template_en.sql
+run_sql migrations/20261013_130100_add_tcg_note_master_label_template_en.sql

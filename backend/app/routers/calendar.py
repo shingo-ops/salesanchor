@@ -54,16 +54,14 @@ def _owner_display_name(row: dict) -> str:
 
 
 async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | None:
-    user_email = getattr(current_user, "email", None)
     result = await db.execute(
         text("""
             SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
             FROM staff
-            WHERE user_id = :uid OR primary_email = :email
-            ORDER BY CASE WHEN user_id = :uid THEN 0 ELSE 1 END, id ASC
+            WHERE user_id = :uid
             LIMIT 1
         """),
-        {"uid": current_user.id, "email": user_email},
+        {"uid": current_user.id},
     )
     row = result.mappings().first()
     return dict(row) if row else None
@@ -176,7 +174,7 @@ async def list_calendar_owners(
             COALESCE(cos.is_visible, FALSE) AS is_visible,
             COALESCE(cos.share_mode, 'self') AS share_mode
         FROM staff s
-        LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
+        LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
     """
     params = {"default_color": _DEFAULT_OWNER_COLOR}
     if can_manage_others:
@@ -212,9 +210,9 @@ async def list_calendar_owners(
     )
 
 
-@router.patch("/calendar/owners/{staff_id}", tags=["calendar"], response_model=OwnerRosterItem)
+@router.patch("/calendar/owners/{user_id}", tags=["calendar"], response_model=OwnerRosterItem)
 async def update_calendar_owner(
-    staff_id: int,
+    user_id: int,
     body: OwnerSettingsBody,
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
@@ -250,10 +248,10 @@ async def update_calendar_owner(
         text("""
             SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
             FROM staff
-            WHERE id = :staff_id
+            WHERE user_id = :user_id
             LIMIT 1
         """),
-        {"staff_id": staff_id},
+        {"user_id": user_id},
     )
     if not staff_row.first():
         raise HTTPException(
@@ -266,7 +264,7 @@ async def update_calendar_owner(
 
     insert_columns = ["staff_id"]
     insert_values = [":staff_id"]
-    params: dict[str, object] = {"staff_id": staff_id}
+    params: dict[str, object] = {"staff_id": user_id}
     update_parts: list[str] = []
     for key in ("color", "is_visible", "share_mode"):
         if key in payload:
@@ -298,11 +296,11 @@ async def update_calendar_owner(
                 COALESCE(cos.is_visible, FALSE) AS is_visible,
                 COALESCE(cos.share_mode, 'self') AS share_mode
             FROM staff s
-            LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.id
-            WHERE s.id = :staff_id
+            LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
+            WHERE s.user_id = :user_id
             LIMIT 1
         """),
-        {"staff_id": staff_id, "default_color": _DEFAULT_OWNER_COLOR},
+        {"user_id": user_id, "default_color": _DEFAULT_OWNER_COLOR},
     )
     row = refreshed.mappings().first()
     if not row:

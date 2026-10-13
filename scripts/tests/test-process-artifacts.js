@@ -146,6 +146,10 @@ test('scripts/ は dangerous 区分', () => {
   assert.strictEqual(classifyFile('scripts/check-process-artifacts.js'), 'dangerous');
 });
 
+test('ops/launchd/ は dangerous 区分', () => {
+  assert.strictEqual(classifyFile('ops/launchd/jp.salesanchor.disk-janitor.plist'), 'dangerous');
+});
+
 test('frontend/src/ は real-code 区分', () => {
   assert.strictEqual(classifyFile('frontend/src/App.tsx'), 'real-code');
 });
@@ -253,6 +257,33 @@ test('緊急モードを検出', () => {
 test('セクションがない場合は null', () => {
   const d = parseSOPDeclaration('## なぜ\nなし\n');
   assert.strictEqual(d, null);
+});
+
+// ── ユニットテスト: 注記かっこの除去（全角・半角） ───────────────────────────
+console.log('\n【注記かっこ除去テスト】');
+
+function parenBody(touch, del) {
+  return `### 標準ワークフロー確認\n- 対象ADR: ADR-1\n- recon: docs/handoff/x/recon.md\n- 設計: docs/handoff/x/design.md\n触るファイル:\n${touch}\n削除するファイル:\n${del}\n`;
+}
+
+test('削除するファイル: 半角かっこの注記を外す (a)', () => {
+  const d = parseSOPDeclaration(parenBody('- docs/t.md', '- migrations/a.sql (22行削除)'));
+  assert.deepStrictEqual(d.deleteFiles, ['migrations/a.sql']);
+});
+
+test('削除するファイル: 全角かっこの注記を外す（従来どおり） (b)', () => {
+  const d = parseSOPDeclaration(parenBody('- docs/t.md', '- migrations/b.sql （22行削除）'));
+  assert.deepStrictEqual(d.deleteFiles, ['migrations/b.sql']);
+});
+
+test('削除するファイル: 注記なしはそのまま (c)', () => {
+  const d = parseSOPDeclaration(parenBody('- docs/t.md', '- docs/c.md'));
+  assert.deepStrictEqual(d.deleteFiles, ['docs/c.md']);
+});
+
+test('触るファイル: 半角かっこの注記を外す (d)', () => {
+  const d = parseSOPDeclaration(parenBody('- migrations/d.sql (新規)\n- docs/e.md （修正）', '- なし'));
+  assert.deepStrictEqual(d.touchFiles, ['migrations/d.sql', 'docs/e.md']);
 });
 
 // ── ユニットテスト: GO記録パース ─────────────────────────────────────────────

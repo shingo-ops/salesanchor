@@ -19,6 +19,8 @@
 #                               未指定（本番）: git worktree list --porcelain で全登録 worktree を対象にする
 #   REAPER_ACTIVE_WORK_FILE   — active-work.md のパス（既定: <repo>/.claude-pipeline/active-work.md）
 #   REAPER_REPO_NAME          — gh コマンドに使うリポジトリ名（既定: shingo-ops/salesanchor）
+#   REAPER_BASE_BRANCH        — PR の行き先ブランチ（既定 main）。develop 運用の他リポジトリ用。
+#                               ブランチ名が main・develop・この値と同じ worktree は候補にしない（本体ブランチ保護）
 #   REAPER_LOCK_WAIT_SEC      — ロック取得できないときの待ち秒数（既定 0 = 待たずに skip）
 #   REAPER_LOCK_DIR           — ロックの場所（テスト用。既定 /tmp/reaper-worktree.lock.d）
 #   REAPER_SKIP_FETCH         — 1 で走査前の git fetch --prune を省略（テスト用）
@@ -63,6 +65,7 @@ fi
 
 ACTIVE_WORK_FILE="${REAPER_ACTIVE_WORK_FILE:-${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md}"
 REPO_NAME="${REAPER_REPO_NAME:-shingo-ops/salesanchor}"
+BASE_BRANCH="${REAPER_BASE_BRANCH:-main}"
 
 # ── 事前: GitHub 側の最新状態を取り込む（R8）──────────────────────────────
 # 「取り戻せるか」を origin の ref で判定するため、古い ref を残さない（--prune）。
@@ -82,6 +85,7 @@ SKIP_IN_PROGRESS=()
 SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
 SKIP_IN_USE=()
+SKIP_BASE_BRANCH=()
 # R9: 下書きを許容した部屋の「部屋のパス::相対パス」（実削除前に控える）
 DRAFT_BACKUPS=()
 
@@ -168,6 +172,14 @@ for _IDX in "${!WT_PATHS[@]}"; do
   WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
   BRANCH="${WT_BRANCHES[${_IDX}]}"
 
+  # ── チェック 0: 本体ブランチ（main・develop・PR の行き先）の worktree は候補にしない ──
+  case "${BRANCH}" in
+    main|develop|"${BASE_BRANCH}")
+      SKIP_BASE_BRANCH+=("${BRANCH}")
+      continue
+      ;;
+  esac
+
   # ── チェック 1: active-work.md のステータス ──────────────────────────────
   ACTIVE_STATUS="NOT_FOUND"
   ROW="$(ACTIVE_WORK_FILE="${ACTIVE_WORK_FILE}" bash "$(dirname "$0")/ledger-lookup.sh" "${BRANCH}" 2>/dev/null)"
@@ -232,7 +244,7 @@ for _IDX in "${!WT_PATHS[@]}"; do
         --state merged \
         --head "${BRANCH}" \
         --json baseRefName,body \
-        --jq '[.[]|select(.baseRefName=="main")]|.[0].body // empty' \
+        --jq '[.[]|select(.baseRefName=="'"${BASE_BRANCH}"'")]|.[0].body // empty' \
         2>/dev/null) || _PR_BODY=""
       if [ -z "${_PR_BODY}" ]; then
         UNSAVED=1
@@ -279,7 +291,7 @@ for _IDX in "${!WT_PATHS[@]}"; do
       --state merged \
       --head "${BRANCH}" \
       --json number,baseRefName \
-      --jq '[.[] | select(.baseRefName == "main")] | length' \
+      --jq '[.[] | select(.baseRefName == "'"${BASE_BRANCH}"'")] | length' \
       2>/dev/null || echo "0")
     [ "${MERGED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -294,7 +306,7 @@ for _IDX in "${!WT_PATHS[@]}"; do
       --state closed \
       --head "${BRANCH}" \
       --json number,baseRefName,mergedAt \
-      --jq '[.[] | select(.baseRefName == "main") | select(.mergedAt == null)] | length' \
+      --jq '[.[] | select(.baseRefName == "'"${BASE_BRANCH}"'") | select(.mergedAt == null)] | length' \
       2>/dev/null || echo "0")
     [ "${CLOSED_COUNT:-0}" -gt 0 ] && IS_DONE=1
   fi
@@ -327,6 +339,12 @@ echo ""
 if [ "${#SKIP_IN_USE[@]}" -gt 0 ]; then
   echo "🧑‍💻 使用中（削除しない）: ${#SKIP_IN_USE[@]} 件"
   for B in "${SKIP_IN_USE[@]}"; do echo "   - ${B}"; done
+  echo ""
+fi
+
+if [ "${#SKIP_BASE_BRANCH[@]}" -gt 0 ]; then
+  echo "🛡️  本体ブランチ（削除しない）: ${#SKIP_BASE_BRANCH[@]} 件"
+  for B in "${SKIP_BASE_BRANCH[@]}"; do echo "   - ${B}"; done
   echo ""
 fi
 

@@ -96,6 +96,7 @@ async def engine():
             CREATE TABLE staff (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
+                user_id INTEGER,
                 primary_email VARCHAR(255) NOT NULL,
                 surname_jp VARCHAR(50),
                 given_name_jp VARCHAR(50)
@@ -343,11 +344,11 @@ async def test_list_channels_filters_other_tenants(app_client, db_session):
 
 @pytest.mark.asyncio
 async def test_list_channels_resolves_staff_name_when_present(app_client, db_session):
-    """connected_by_staff_id が staff にある場合、staff_name が `surname_jp + ' ' + given_name_jp` で返る。"""
+    """connected_by_staff_id（= users.id）が staff.user_id にひも付く場合、staff_name が `surname_jp + ' ' + given_name_jp` で返る。"""
     # staff 行を投入
     await db_session.execute(text("""
-        INSERT INTO staff (id, tenant_id, primary_email, surname_jp, given_name_jp)
-        VALUES (5, 999, 'yamada@example.com', '山田', '太郎')
+        INSERT INTO staff (id, tenant_id, user_id, primary_email, surname_jp, given_name_jp)
+        VALUES (50, 999, 5, 'yamada@example.com', '山田', '太郎')
     """))
     await db_session.commit()
 

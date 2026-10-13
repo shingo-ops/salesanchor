@@ -331,12 +331,11 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "20261012_200000_add_extraction_attempts_thought_summaries.sql").read_text())
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS thought_summaries jsonb")
     # 発送日の専用列（v102）: ship_ja・ship_en と tcg_note_master.label_template_en（本番の public 固定の migration をそのまま）。
-    cursor.execute((MIGRATIONS / "20261012_220000_add_analysis_results_ship_ja_ship_en.sql").read_text())
-    cursor.execute((MIGRATIONS / "20261012_220100_add_tcg_note_master_label_template_en.sql").read_text())
-    # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。_merge_supplier_products が ship_ja と gemini_index を読む。
+    cursor.execute((MIGRATIONS / "20261013_130000_add_analysis_results_ship_ja_ship_en.sql").read_text())
+    cursor.execute((MIGRATIONS / "20261013_130100_add_tcg_note_master_label_template_en.sql").read_text())
+    # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
-    cursor.execute(f"ALTER TABLE {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS gemini_index INTEGER")
 
 
 @pytest.fixture
@@ -509,10 +508,10 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
         finally:
             await async_engine.dispose()
     candidates = asyncio.run(output())  # read-only, never delivery
-    # ADR-158: rows 3 and 4 both resolve to PM0285 with same (product_id, condition_id);
-    # new global-latest logic keeps only one is_current=TRUE per pair.
-    # PSA10 row (pid unresolved), needs-review corrected row, and duplicate PM0285 are excluded → 2.
-    assert len(candidates) == 2
+    # ADR-158:26 / 便SP: 同じ投稿の同じ組 (product_id, condition_id) の行は全部 is_current=TRUE のまま配信に出る。
+    # 行4・行5 はどちらも PM0285 で同じ投稿 → 2行とも出る。PM0200 の1行と合わせて 3。
+    # 未解決行 (PSA10 / 商品なし) と要確認の訂正行 (行2) は除外される。
+    assert len(candidates) == 3
     assert sum(r[2] == NORMAL for r in candidates) == 1
 
 
@@ -739,7 +738,6 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # 発送日の専用列（v102）: tenant_004 の analysis_results・extraction_items にも列が要る（_merge_supplier_products が読む）。
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
-        cursor.execute("ALTER TABLE tenant_004.extraction_items ADD COLUMN IF NOT EXISTS gemini_index INTEGER")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
@@ -802,10 +800,9 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         finally:
             await async_engine.dispose()
     rows = asyncio.run(outputs())
-    # ADR-158: 16 basic 匿名箱 records all share (PM0141, same condition_id);
-    # global-latest logic keeps only one is_current=TRUE per (product_id, condition_id) pair.
-    # Output: 1 × PM0268/Unsearched pack + 1 × PM0141/Case+note + 1 × PM0141/Case basic = 3.
-    assert len(rows) == 3
+    # ADR-158:26 / 便SP: 16件の 匿名箱 は同じ投稿・同じ組 (PM0141, 同じ condition_id)。同じ投稿の行は全部 TRUE。
+    # 出力: PM0268/Unsearched pack 1 + PM0141/Case+note 1 + PM0141/Case 基本 16 = 18。
+    assert len(rows) == 18
     assert sum(r[4] == "Unsearched pack" for r in rows) == 1
     assert sum(r[4] == "Case" and r[7] == "伝票剥がし跡あり" for r in rows) == 1
 RECOVERY_JOBS = ["6da3ca68-651e-4ff6-8316-1c9135508ad2", "bfa07018-9b34-42b6-990a-017e3c1cf140"]

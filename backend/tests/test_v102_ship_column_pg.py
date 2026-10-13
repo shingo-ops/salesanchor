@@ -1,15 +1,14 @@
 # ruff: noqa: F811
-"""発送日の専用列 ship_ja を ADR-158 のマージ（_merge_supplier_products）の決め手に足した PostgreSQL 試験（CI の使い捨て PostgreSQL 専用）。
+"""発送日の専用列 ship_ja が違う件が ADR-158 のマージ（_merge_supplier_products）で全部 current になることの PostgreSQL 試験（CI の使い捨て PostgreSQL 専用）。
 
-K2（同じ投稿で発送日が違えば全部 current）・K3（同じ発送日は1件）・K4（新しい投稿は古い投稿を発送日が違っても外す）・
-K7（同じ順位は投稿の上の行を毎回採る）。商品・原文はすべて架空。
+K2（同じ投稿で発送日が違えば全部 current）・K4（新しい投稿は古い投稿を発送日が違っても外す）。
+同じ投稿の同じ組の行はどれも current（#4169・ADR-158:26）なので、発送日が同じ件の重複も1件にはしない。商品・原文はすべて架空。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 from uuid import uuid4
 
-from tests.test_line_analysis_v102_pg import one
 from tests.test_line_analysis_v102_pg import v102 as v102  # noqa: F401  fixture
 from tests.test_tcg_work_matching_integration import SCHEMA
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
@@ -52,28 +51,9 @@ def test_k2_same_post_different_ship_are_all_current(pg, ids):
     assert [_current(pg, r) for r in post.results] == [True, True, True]
 
 
-def test_k3_same_post_same_ship_keeps_one_current(pg, ids):
-    post = _add_ship_post(pg, 1, [(ids.p1, ids.box, "10/19発送", 0), (ids.p1, ids.box, "10/19発送", 1), (ids.p1, ids.box, None, 2), (ids.p1, ids.box, None, 3)])
-    _merge(pg, post.job)
-    assert [_current(pg, r) for r in post.results] == [True, False, True, False]
-
-
 def test_k4_newer_post_demotes_older_post_even_with_different_ship(pg, ids):
     older = _add_ship_post(pg, 5, [(ids.p1, ids.box, "10/16発送", 0)])
     newer = _add_ship_post(pg, 1, [(ids.p1, ids.box, "10/19発送", 0)])
     _merge(pg, older.job)
     _merge(pg, newer.job)
     assert (_current(pg, older.results[0]), _current(pg, newer.results[0])) == (False, True)
-
-
-def test_k7_same_rank_picks_lowest_gemini_index_every_time(pg, ids):
-    # 行の入れ順を gemini_index の逆にして、入れ順や id に頼らず上の行が採られることを見る
-    post = _add_ship_post(pg, 1, [(ids.p1, ids.box, "10/19発送", 2), (ids.p1, ids.box, "10/19発送", 1), (ids.p1, ids.box, "10/19発送", 0)])
-    picked = []
-    for _ in range(2):
-        _merge(pg, post.job)
-        picked.append([_current(pg, r) for r in post.results])
-    assert picked == [[False, False, True], [False, False, True]]
-    indexes = one(pg, f"SELECT ei.gemini_index FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id "
-                      f"WHERE ar.id=%s", (post.results[2],))
-    assert indexes == [(0,)]

@@ -169,6 +169,9 @@
   --size-msg-attach-h:  200px;  /* メッセージバブル内画像添付 最大高 */
   --textarea-min-h:     80px;   /* テキストエリア最小高 */
   --topbar-height:      56px;   /* トップバー・ブランドバー高さ */
+  --tabbar-height:      56px;   /* スマホ下部タブバー高さ（ADR-140）。
+                                   mobile-shell.css が代替値付きで参照していた値を登録した。
+                                   受信箱のスマホで本文の高さを実寸で出すのに使う */
   --drawer-width:      300px;   /* ユーザードロワー幅 */
   --logo-size:          36px;   /* サイドバー・ブランドバーのロゴアイコン正方形サイズ（折りたたみ・展開共通） */
 
@@ -425,6 +428,8 @@
   --input-width-weight:    80px;   /* 重量入力フィールド */
   --input-width-year:      90px;   /* 年・単価入力フィールド */
   --input-width-price:     120px;  /* 単価入力フィールド (見積/明細・金型 sm) */
+  --input-width-country-code:    80px;  /* 国コード入力フィールド (FedEx 見積) */
+  --input-width-shipping-weight: 100px; /* 発送重量入力フィールド (FedEx 見積) */
   --input-width-month:     60px;   /* 月入力フィールド */
 
   /* ---- Phase 5: テーブル構造 (ADR-067) ---- */

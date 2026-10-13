@@ -39,7 +39,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network request'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/orders/7/commissions') return bundle;
-    if (url === '/staff?per_page=100') return [{ id: 2, surname_jp: 'Test', given_name_jp: 'Staff' }];
+    if (url === '/staff?per_page=100') return [{ id: 2, user_id: 2, surname_jp: 'Test', given_name_jp: 'Staff' }];
     if (url === '/orders/7/financial') return financial;
     if (url === '/orders/7/purchase') return purchase;
     if (url === '/orders/7/shipping') return shipping;
