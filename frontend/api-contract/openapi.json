@@ -28372,6 +28372,55 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "SelfLoginRequest": {
+        "properties": {
+          "email": {
+            "description": "ログインに使うメールアドレス",
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "パスワード",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "SelfLoginRequest",
+        "type": "object"
+      },
+      "SelfTokenResponse": {
+        "properties": {
+          "access_token": {
+            "description": "自社アクセストークン（Bearer）",
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "アクセストークンの有効秒数",
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "token_type": {
+            "default": "bearer",
+            "description": "トークン種別",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "SelfTokenResponse",
+        "type": "object"
+      },
       "SettingUpdate": {
         "properties": {
           "value": {
@@ -36988,9 +37037,51 @@
         ]
       }
     },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "自社ログイン。失敗理由は区別せず 1 種類の文言で返す。",
+        "operationId": "self_login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Self Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nFirebase IDトークンの残存有効期限（最大1時間）をTTLとする。",
+        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nFirebase IDトークンの残存有効期限（最大1時間）をTTLとする。\n自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。",
         "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
           "200": {
@@ -37008,6 +37099,28 @@
           }
         ],
         "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "更新用 Cookie を入れ替え、新しいアクセストークンを返す。",
+        "operationId": "self_refresh_api_v1_auth_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Self Refresh",
         "tags": [
           "auth"
         ]
