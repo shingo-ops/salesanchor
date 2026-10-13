@@ -20,8 +20,7 @@
       "Bash(bash scripts/*)",
       "Bash(scripts/*)",
       "Bash(./scripts/*)",
-      "Bash(docker *)",
-      "Bash(docker compose *)"
+      "Bash(docker *)"
     ],
     "ask": [
       "Write",

@@ -9,9 +9,9 @@
 ## 運用ルール
 
 - 委任を広げる・狭めるのは PO の言葉が起点。変更したら下の「変更履歴」に日時・PO の言葉・追加/削除した操作を 1 行で残す。
-- この表は、受付用 worktree の Claude Code 許可設定（`.claude/settings.local.json` の `permissions.allow`）と**ツール単位で 1 対 1** にする。表と設定が食い違ったら、設定を表に合わせる。
+- この表は、受付用クローン（~/sa-ops-intake） の Claude Code 許可設定（`.claude/settings.local.json` の `permissions.allow`）と**ツール単位で 1 対 1** にする。表と設定が食い違ったら、設定を表に合わせる。
 - 書き込み系（Write・Edit・NotebookEdit）は `permissions.ask` に入れ、Claude Code が既定で通す書き込みも必ず許可確認にする（2026-10-13 実測: /tmp への Write が無確認で通った）。
-- 受付の作業場所はリポジトリのクローンのため、リポジトリ共有設定（.claude/settings.json）の allow も効く。そのうち読み取り（git status/diff/log/branch/fetch/show、gh pr view/list/diff、gh run list/view、gh workflow view/list、gh issue view/list）は「読む」区分として認める。読み取り以外（scripts/ の実行・docker）は受付の settings.local.json の deny で塞ぐ（2026-10-13 配置時に発見）。
+- 受付の作業場所はリポジトリのクローンのため、リポジトリ共有設定（.claude/settings.json）の allow も効く。そのうち本番・GitHub・外部に書き込まない操作（git status/diff/log/branch/fetch/show、gh pr view/list/diff、gh run list/view、gh workflow view/list、gh issue view/list）は「読む」区分として認める。うち git branch・git fetch・--output 付きの git diff/log/show は作業場所（~/sa-ops-intake）の中だけを書き換えうるが、外部には影響しない。読み取り以外（scripts/ の実行・docker）は受付の settings.local.json の deny で塞ぐ（2026-10-13 配置時に発見）。
 - [kgi.md](kgi.md) の「変えない約束」に挙がる操作は、この表に入れない。
 
 ## 現在の委任（第1段・初期値）
