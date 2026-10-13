@@ -54,7 +54,6 @@ interface Staff {
   role_id: number;
   role_name: string | null;
   status: string;
-  firebase_uid: string | null;
   emails: string[];
   ui_preferences: StaffUIPreferences | null;
   created_at: string;
@@ -81,7 +80,6 @@ type CreateFormState = {
   discord_user_id: string;
   role_id: string;
   status: string;
-  firebase_uid: string;
   ui_preferences: StaffUIPreferences;
 };
 
@@ -89,7 +87,7 @@ const emptyCreateForm: CreateFormState = {
   surname_jp: "", given_name_jp: "",
   surname_kana: "", given_name_kana: "", surname_en: "", given_name_en: "",
   primary_email: "", discord_user_id: "", role_id: "", status: "active",
-  firebase_uid: "", ui_preferences: { ...emptyPrefs },
+  ui_preferences: { ...emptyPrefs },
 };
 
 const emptyEditForm: StaffFormState = {
@@ -165,7 +163,6 @@ export default function StaffPage() {
       discord_user_id: toNull(createForm.discord_user_id),
       role_id: parseInt(createForm.role_id, 10),
       status: createForm.status,
-      firebase_uid: toNull(createForm.firebase_uid),
       ui_preferences: createForm.ui_preferences,
     };
     try {
@@ -189,7 +186,6 @@ export default function StaffPage() {
       await api.patch(`/staff/${editId}`, {
         surname_jp: editForm.surname_jp,
         given_name_jp: editForm.given_name_jp,
-        primary_email: editForm.primary_email,
         role_id: parseInt(editForm.role_id, 10),
         status: editForm.status,
         discord_user_id: toNull(editForm.discord_user_id),
