@@ -135,22 +135,28 @@ class InventoryRow(BaseModel):
     （inventory_offers 500 の教訓）。
     """
 
-    id: int
+    id: str                           # 行の識別（LINE 解析の analysis_results.id。まとめた行は組の先頭の行）
     product_id: int
     product_name: str | None = None   # 商品名（= public.products.name = name_ja）
     name_en: str | None = None        # 英語名（任意表示）
     category: str | None = None       # カテゴリ（例: Pokemon）
     mark: str | None = None           # マーク（例: M4）
-    condition: str                    # 状態 16 値（フロントで i18n ラベル化）
-    unit: str | None = None           # 形態 piece/pack/box/case/set
-    offer_type: str = "in_stock"      # 区分 在庫/予約（ADR-093 Phase 3）
-    ship_timing: str | None = None    # 発送日（予約品のみ。在庫品は None）
+    condition: str                    # 状態（LINE 解析の canonical をそのまま。GAS 在庫一覧と同じ英語）
+    unit: str | None = None           # 形態（LINE 解析の unit_canonical をそのまま）
+    offer_type: str | None = "in_stock"  # 区分 在庫/予約。status から写す。対応外の status は None
+    ship_timing: str | None = None    # 常に None（発送は ship_ja）
     supplier_id: int
     supplier_name: str | None = None  # 仕入元
     unit_price: int                   # 単価
-    quantity: int                     # 数量
+    quantity: int | None = None       # 数量（空の行は None）
     tcg_type: str | None = None       # TCG 種別（フィルタ用 = public.products.tcg_type）
-    offered_at: datetime              # 掲載時間（≒ Discord 受信時刻）
+    offered_at: datetime              # 掲載時間（LINE の投稿日時）
+    posted_at: datetime | None = None  # LINE の投稿日時（offered_at と同じ値）
+    release_date: str | None = None   # 発売日
+    note_ja: str | None = None        # 備考
+    ship_ja: str | None = None        # 発送
+    status: str | None = None         # LINE 解析の status（In Stock / Pre-order など。値のまま）
+    merged_count: int = 1             # まとめた行数（まとめない行は 1）
 
 
 class InventorySupplierFacet(BaseModel):
@@ -178,6 +184,8 @@ class InventoryListResponse(BaseModel):
     # ADR-093 表示条件: 在庫オファーに存在する状態(condition)・形態(unit)の一覧（複数選択 UI 用）。
     conditions: list[str] = []
     units: list[str] = []
+    # LINE の投稿から何時間以内の行を出しているか（0 は絞らない・None は配信設定なしで空）。
+    window_hours: int | None = None
 
 
 __all__ = [

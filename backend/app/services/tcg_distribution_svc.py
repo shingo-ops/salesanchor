@@ -222,47 +222,60 @@ def _age_window(max_age_hours: int | None) -> tuple[str, dict]:
     )
 
 
-async def fetch_output_rows(
-    db: AsyncSession,
-    *,
-    include_flag_single: bool = False,
-    max_age_hours: int | None = None,
-) -> list[list[str]]:
-    """
-    配信対象行を13列で取得する。
-    フィルター:
-      pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
-      AND price_normalized IS NOT NULL  ← 価格未解決行を除外
-    include_flag_single=True のとき FLAG_SINGLE も含める。
+def _condition_filter(include_flag_single: bool) -> str:
+    """配信する状態の条件（唯一の定義）。FLAG_ 系は除外し、include_flag_single のとき FLAG_SINGLE だけ通す。
 
-    注意: 現在の全レコードは engine_version='compat-v1'（GAS計算値）。
-    正規化ルール（NR0001〜NR0136）は新エンジン再解析まで未適用。
-    再解析後は価格 NULL が減り配信件数が変動する。
+    effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外する。
     """
-    # include_flag_single=True のとき FLAG_SINGLE だけは通す。他の FLAG_* は常に除外。
     if include_flag_single:
-        cond_filter = (
-            "(cr.canonical NOT LIKE 'FLAG_%'"
-            " OR cr.canonical = 'FLAG_SINGLE')"
-        )
+        base = "(cr.canonical NOT LIKE 'FLAG_%' OR cr.canonical = 'FLAG_SINGLE')"
     else:
-        cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
-    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
-    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
+        base = "cr.canonical NOT LIKE 'FLAG_%'"
+    return f"{base} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
 
-    # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
-    age_condition, bind_params = _age_window(max_age_hours)
 
-    sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+# 配信行の出力列（GAS の14列 → 在庫表が使う列の順）。distribution_rows_sql の最終 SELECT と同じ並び。
+_GAS_COLUMNS = (
+    "posted_at", "mark", "japanese_title", "english_title", "condition", "unit_price", "quantity",
+    "note_ja", "status", "release_date", "series", "provider", "search_keywords", "ship_ja",
+)
+
+
+def _distribution_final_select(source: str, *, price: str, qty: str, merged_count: str, sort_ord: str) -> str:
+    """最終 SELECT。GAS 14列は今までと同じ式・同じ書式。price/qty は集約後の列名を受ける。"""
+    return f"""SELECT
+            posted_at, mark, japanese_title, english_title, condition,
+            COALESCE(ROUND({price})::bigint::text, '')  AS unit_price,
+            COALESCE(ROUND({qty})::bigint::text, '') AS quantity,
+            note_ja, status, release_date, series, provider, search_keywords, ship_ja,
+            posted_ts, row_key, product_id, supplier_id, unit_canonical,
+            {price} AS price_num, {qty} AS qty_num, {merged_count} AS merged_count, {sort_ord} AS sort_ord
+        FROM {source}"""
+
+
+def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merge_same_post: bool) -> str:
+    """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 出力とアプリの在庫表が使う。配信プレビューの件数は変更前の問い合わせを残しており（products を結合しない）、状態の条件だけ _condition_filter を共有する）。
+
+    出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, supplier_id,
+    unit_canonical, price_num, qty_num, merged_count, sort_ord。並びは sort_ord（result_order_sql の通し番号）。
+    merge_same_post=True のとき、同じ投稿・同じ商品・同じ状態・同じ形態・同じ備考・同じ発送・同じ status の行で、
+    根拠（cr.basis）がすべて違い、根拠と数量に NULL が無い組だけを1行にまとめる（数量は合計・単価は最大）。
+    状態の鍵と判定は cr の列（表示と同じ値）を使う。ランクを表す語はコードに書かない。
+    age_condition は _age_window が返す信頼できる SQL 断片（bind は呼び出し側が渡す）。
+    """
+    cond_filter = _condition_filter(include_flag_single)
+    base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)},
+    dist_base AS (
         SELECT
             COALESCE(TO_CHAR(sm.line_posted_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
+            sm.line_posted_at                                       AS posted_ts,
             COALESCE(p.mark, '')                                    AS mark,
             COALESCE(p.name, '')                                    AS japanese_title,
             COALESCE(p.name_en, '')                                 AS english_title,
-            cr.canonical                                   AS condition,
-            COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
-            COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
+            cr.canonical                                            AS condition,
+            ar.price_normalized                                     AS price_num,
+            ar.quantity_normalized                                  AS qty_num,
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
@@ -273,7 +286,16 @@ async def fetch_output_rows(
                 FROM public.product_search_keywords psk
                 WHERE psk.product_id = p.id
             ), '')                                                  AS search_keywords,
-            COALESCE(ar.ship_ja, '')                                AS ship_ja
+            COALESCE(ar.ship_ja, '')                                AS ship_ja,
+            ar.id::text                                             AS row_key,
+            ar.product_id                                           AS product_id,
+            sc.supplier_id                                          AS supplier_id,
+            COALESCE(ar.unit_canonical, '')                         AS unit_canonical,
+            cr.basis                                                AS basis,
+            concat_ws(chr(31), ej.id::text, ar.product_id::text, COALESCE(cr.condition_id, ''),
+                      COALESCE(ar.unit_canonical, ''), COALESCE(ar.note_ja, ''),
+                      COALESCE(ar.ship_ja, ''), COALESCE(ar.status, '')) AS gkey,
+            ROW_NUMBER() OVER (ORDER BY {result_order_sql()})       AS sort_ord
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -298,30 +320,61 @@ async def fetch_output_rows(
           AND ar.price_normalized IS NOT NULL
           AND sm.line_posted_at IS NOT NULL
           AND {cond_filter}{age_condition}
-        ORDER BY {result_order_sql()}
-    """)
+    )"""
+    if not merge_same_post:
+        return f"""{base}
+        {_distribution_final_select("dist_base", price="price_num", qty="qty_num", merged_count="1", sort_ord="sort_ord")}"""
+    return f"""{base},
+    dist_groups AS (
+        SELECT gkey,
+               (COUNT(*) >= 2
+                AND COUNT(DISTINCT basis) = COUNT(*)
+                AND COUNT(*) FILTER (WHERE basis IS NULL) = 0
+                AND COUNT(*) FILTER (WHERE qty_num IS NULL) = 0) AS can_merge
+        FROM dist_base
+        GROUP BY gkey
+    ),
+    dist_keyed AS (
+        SELECT b.*, CASE WHEN g.can_merge THEN b.gkey ELSE b.row_key END AS ekey
+        FROM dist_base b
+        JOIN dist_groups g ON g.gkey = b.gkey
+    ),
+    dist_agg AS (
+        SELECT k.*,
+               ROW_NUMBER() OVER (PARTITION BY ekey ORDER BY sort_ord) AS rn,
+               SUM(qty_num)   OVER (PARTITION BY ekey) AS qty_agg,
+               MAX(price_num) OVER (PARTITION BY ekey) AS price_agg,
+               COUNT(*)       OVER (PARTITION BY ekey) AS group_n,
+               MIN(sort_ord)  OVER (PARTITION BY ekey) AS sort_min
+        FROM dist_keyed k
+    ),
+    dist_merged AS (SELECT * FROM dist_agg WHERE rn = 1)
+        {_distribution_final_select("dist_merged", price="price_agg", qty="qty_agg", merged_count="group_n", sort_ord="sort_min")}"""
+
+
+async def fetch_output_rows(
+    db: AsyncSession,
+    *,
+    include_flag_single: bool = False,
+    max_age_hours: int | None = None,
+) -> list[list[str]]:
+    """
+    配信対象行を14列（DIST_HEADERS）で取得する。行の定義は distribution_rows_sql（まとめなし）。
+
+    注意: 現在の全レコードは engine_version='compat-v1'（GAS計算値）。
+    正規化ルール（NR0001〜NR0136）は新エンジン再解析まで未適用。
+    再解析後は価格 NULL が減り配信件数が変動する。
+    """
+    # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
+    age_condition, bind_params = _age_window(max_age_hours)
+    inner = distribution_rows_sql(
+        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=False,
+    )
+    sql = text(f"SELECT * FROM ({inner}) dist ORDER BY sort_ord")
 
     result = await db.execute(sql, bind_params)
     rows = result.mappings().all()
-    return [
-        [
-            row["posted_at"],
-            row["mark"],
-            row["japanese_title"],
-            row["english_title"],
-            row["condition"],
-            row["unit_price"],
-            row["quantity"],
-            row["note_ja"],
-            row["status"],
-            row["release_date"],
-            row["series"],
-            row["provider"],
-            row["search_keywords"],
-            row["ship_ja"],
-        ]
-        for row in rows
-    ]
+    return [[row[column] for column in _GAS_COLUMNS] for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -340,18 +393,9 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
         raise MaxAgeHoursUnsetError(MAX_AGE_UNSET_MESSAGE)
 
-    # 配信候補件数
-    if include_flag_single:
-        cond_filter = (
-            "(cr.canonical NOT LIKE 'FLAG_%'"
-            " OR cr.canonical = 'FLAG_SINGLE')"
-        )
-    else:
-        cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
-    # effect='EXCLUDE'（Error 等・配信しない状態）は include_flag_single に関わらず常に除外
-    cond_filter = f"{cond_filter} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
-
+    # 配信候補件数（変更前と同じ問い合わせ。products を結合しない。行の絞り込み条件は _condition_filter と共通）
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
+    cond_filter = _condition_filter(include_flag_single)
     age_condition, age_bind_params = _age_window(max_age_hours)
 
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}

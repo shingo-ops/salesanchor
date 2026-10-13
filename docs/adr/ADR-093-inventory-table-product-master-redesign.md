@@ -1,5 +1,7 @@
 # ADR-093: 在庫表 / 仕入元オファー / 商品マスタ 再設計
 
+> **注記（2026-10-13）**: 「/inventory は public.inventory を表示する」は [ADR-1014](ADR-1014-inventory-view-shows-distribution-rows.md) で置き換えられた。在庫表は LINE 解析の配信行を表示する。
+
 ## Status
 Accepted
 
