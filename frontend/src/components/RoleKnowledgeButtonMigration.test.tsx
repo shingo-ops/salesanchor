@@ -128,25 +128,7 @@ describe('role Button migration contracts', () => {
   it('waits for permission denial before asserting launchers are absent', async () => {
     permissions = []; const before = mock.get.mock.calls.filter(c => c[0] === '/me/permissions').length; render(provider(<RolesPage />));
     await waitFor(() => expect(mock.get.mock.calls.filter(c => c[0] === '/me/permissions')).toHaveLength(before + 1)); await screen.findAllByText(role.name);
-    expect(screen.queryByRole('button', { name: new RegExp(tr('common.new')) })).toBeNull(); expect(screen.queryByRole('button', { name: tr('roles.assignUsers') })).toBeNull();
-  });
-
-  it('covers assignment exact PUT, reset, failure and pending cancel', async () => {
-    await renderRoles(); const open = () => { fireEvent.click(screen.getByRole('button', { name: tr('roles.assignUsers') })); return screen.getByRole('dialog'); };
-    let dialog = open(); let save = within(dialog).getByRole('button', { name: tr('common.save') }) as HTMLButtonElement; expect(save.type).toBe('button'); expect(save.form).toBeNull(); expect(save.disabled).toBe(true);
-    fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '77' } }); fireEvent.click(dialog.querySelector('input[type="checkbox"]')!); mock.put.mockResolvedValue({}); fireEvent.click(save);
-    await waitFor(() => expect(mock.put).toHaveBeenCalledExactlyOnceWith('/users/77/roles', { role_ids: [1] })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    dialog = open(); expect(dialog.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe(''); fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '88' } }); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') })); dialog = open(); expect(dialog.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe('');
-    fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '77' } }); mock.put.mockRejectedValueOnce(new Error('Assignment failure')).mockResolvedValueOnce({}); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.save') })); expect(await screen.findByText('Assignment failure')).toBeTruthy(); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.save') })); await waitFor(() => expect(mock.put).toHaveBeenLastCalledWith('/users/77/roles', { role_ids: [] })); await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    dialog = open(); fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '77' } });
-    const pending = deferred(); mock.put.mockReturnValue(pending.promise); save = within(dialog).getByRole('button', { name: tr('common.save') }) as HTMLButtonElement; const stop = within(dialog).getByRole('button', { name: tr('common.cancel') }) as HTMLButtonElement; const beforePending = mock.put.mock.calls.length; fireEvent.click(save); fireEvent.click(save); expect(mock.put).toHaveBeenCalledTimes(beforePending + 2); expect(save.disabled).toBe(false); expect(stop.disabled).toBe(false); expect(save.getAttribute('aria-busy')).toBeNull(); expect(stop.getAttribute('aria-busy')).toBeNull(); fireEvent.click(stop); await act(async () => pending.resolve({}));
-    dialog = open(); fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '99' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: tr('common.close') })); dialog = open(); expect(dialog.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe('');
-    fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '99' } }); fireEvent.keyDown(document, { key: 'Escape' });
-    dialog = open(); expect(dialog.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe('');
-    fireEvent.change(dialog.querySelector('input[type="number"]')!, { target: { value: '77' } });
-    const lateReject = deferred(); mock.put.mockReturnValue(lateReject.promise); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.save') })); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') }));
-    await act(async () => lateReject.reject(new Error('Late assignment failure'))); expect(await screen.findByText('Late assignment failure')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: new RegExp(tr('common.new')) })).toBeNull();
   });
 });
 

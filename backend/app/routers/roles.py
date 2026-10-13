@@ -561,6 +561,9 @@ async def set_user_roles(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"自分の最大priority以上のロール（id={row.id}）は付与できません",
             )
+    # 循環 import を避けるため関数内で import（role_assignment は本モジュールを import する）
+    from app.services.role_assignment import ensure_target_below_me
+    await ensure_target_below_me(db, user_id, my_max)
 
     # 既存割り当てを消してから挿入。super admin 以外の操作では、既に持つ隠すロールは外さない
     await db.execute(
