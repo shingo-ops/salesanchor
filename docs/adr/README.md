@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-13 / ADR 総数: 172 件
+最終更新: 2026-10-13 / ADR 総数: 173 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -190,6 +190,7 @@
 | [ADR-1009](./ADR-1009-discord-ops-intake.md) | ADR-1009: Discord の監視通知を Claude Code の常駐受付で受け、不具合ごとの担当が承認チャンネルで対応する | Accepted | — | — |
 | [ADR-1010](./ADR-1010-api-contract-and-wiring-ledger.md) | ADR-1010: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成 | Accepted | — | — |
 | [ADR-1011](./ADR-1011-permission-self-maintenance.md) | ADR-1011: AI による許可の自律保守（週1回・SM- の文だけ・台帳必須） | Accepted | — | — |
+| [ADR-1012](./ADR-1012-ai-ops-247.md) | ADR-1012: 監視の通知から応急処置と AI（Claude Code routines）を起動し、障害記録で振り返る 24 時間保守運用 | Proposed | — | — |
 | [ADR-1012](./ADR-1012-self-hosted-auth-and-passkey.md) | ADR-1012: ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す | Accepted | Supersedes ADR-138 | — |
 
 ## ステータス凡例

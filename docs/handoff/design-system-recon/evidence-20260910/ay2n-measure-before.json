@@ -1,0 +1,440 @@
+{
+ "quote-w1280": {
+  "initial": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 595.84375
+   },
+   "and": {
+    "top": 565.84375,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 594.84375
+   },
+   "or": {
+    "top": 565.84375,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 594.84375
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "opened": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 564.84375,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 595.84375
+   },
+   "and": {
+    "top": 565.84375,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 594.84375
+   },
+   "or": {
+    "top": 565.84375,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 594.84375
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "dropdown": {
+   "left": 102,
+   "top": 597.84375,
+   "width": 720,
+   "height": 201.03125
+  },
+  "dropdownTopMinusInputBottom": 2,
+  "openAfterInsideClick": true,
+  "openAfterOutsideClick": false,
+  "preAnd": {
+   "and": "false",
+   "or": "true"
+  },
+  "afterAnd": {
+   "and": "true",
+   "or": "false"
+  },
+  "searchUrls": [
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20",
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "openAfterAndClick": false,
+  "rowName": {
+   "tag": "INPUT",
+   "value": "ポケモンカード テスト箱A",
+   "text": ""
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /inventory/search"
+  ]
+ },
+ "quote-w1440": {
+  "initial": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 576.65625
+   },
+   "and": {
+    "top": 546.65625,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 575.65625
+   },
+   "or": {
+    "top": 546.65625,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 575.65625
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "opened": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 545.65625,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 576.65625
+   },
+   "and": {
+    "top": 546.65625,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 575.65625
+   },
+   "or": {
+    "top": 546.65625,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 575.65625
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "dropdown": {
+   "left": 102,
+   "top": 578.65625,
+   "width": 720,
+   "height": 201.03125
+  },
+  "dropdownTopMinusInputBottom": 2,
+  "openAfterInsideClick": true,
+  "openAfterOutsideClick": false,
+  "preAnd": {
+   "and": "false",
+   "or": "true"
+  },
+  "afterAnd": {
+   "and": "true",
+   "or": "false"
+  },
+  "searchUrls": [
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20",
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "openAfterAndClick": false,
+  "rowName": {
+   "tag": "INPUT",
+   "value": "ポケモンカード テスト箱A",
+   "text": ""
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /companies",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /inventory/search"
+  ]
+ },
+ "invoice-w1280": {
+  "initial": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 655.84375
+   },
+   "and": {
+    "top": 625.84375,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 654.84375
+   },
+   "or": {
+    "top": 625.84375,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 654.84375
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "opened": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 624.84375,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 655.84375
+   },
+   "and": {
+    "top": 625.84375,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 654.84375
+   },
+   "or": {
+    "top": 625.84375,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 654.84375
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "dropdown": {
+   "left": 102,
+   "top": 657.84375,
+   "width": 720,
+   "height": 201.03125
+  },
+  "dropdownTopMinusInputBottom": 2,
+  "openAfterInsideClick": true,
+  "openAfterOutsideClick": false,
+  "preAnd": {
+   "and": "false",
+   "or": "true"
+  },
+  "afterAnd": {
+   "and": "true",
+   "or": "false"
+  },
+  "searchUrls": [
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20",
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "openAfterAndClick": false,
+  "rowName": {
+   "tag": "INPUT",
+   "value": "ポケモンカード テスト箱A",
+   "text": ""
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies",
+   "GET /inventory/search"
+  ]
+ },
+ "invoice-w1440": {
+  "initial": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 636.65625
+   },
+   "and": {
+    "top": 606.65625,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 635.65625
+   },
+   "or": {
+    "top": 606.65625,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 635.65625
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "opened": {
+   "className": "",
+   "style": {
+    "padding": "6px 8px",
+    "font-size": "13.3333px",
+    "font-family": "Arial",
+    "line-height": "normal",
+    "border": "2px inset rgb(118, 118, 118)",
+    "border-radius": "0px",
+    "background-color": "rgb(255, 255, 255)",
+    "border-top-color": "rgb(118, 118, 118)"
+   },
+   "input": {
+    "top": 605.65625,
+    "left": 102,
+    "width": 355.625,
+    "height": 31,
+    "bottom": 636.65625
+   },
+   "and": {
+    "top": 606.65625,
+    "left": 466.625,
+    "width": 128.125,
+    "height": 29,
+    "bottom": 635.65625
+   },
+   "or": {
+    "top": 606.65625,
+    "left": 594.75,
+    "width": 146.25,
+    "height": 29,
+    "bottom": 635.65625
+   },
+   "centerDiffAnd": 0,
+   "centerDiffOr": 0
+  },
+  "dropdown": {
+   "left": 102,
+   "top": 638.65625,
+   "width": 720,
+   "height": 201.03125
+  },
+  "dropdownTopMinusInputBottom": 2,
+  "openAfterInsideClick": true,
+  "openAfterOutsideClick": false,
+  "preAnd": {
+   "and": "false",
+   "or": "true"
+  },
+  "afterAnd": {
+   "and": "true",
+   "or": "false"
+  },
+  "searchUrls": [
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=or&limit=20",
+   "?q=%E3%83%9D%E3%82%B1%E3%83%A2%E3%83%B3%20%E3%82%AB%E3%83%BC%E3%83%89&lang=ja&op=and&limit=20"
+  ],
+  "openAfterAndClick": false,
+  "rowName": {
+   "tag": "INPUT",
+   "value": "ポケモンカード テスト箱A",
+   "text": ""
+  },
+  "unmockedCalls": [
+   "GET /conversations/stream",
+   "GET /quotes",
+   "GET /me/permissions",
+   "GET /conversations",
+   "GET /staff/me",
+   "GET /companies",
+   "GET /inventory/search"
+  ]
+ }
+}

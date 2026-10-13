@@ -23,6 +23,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { TextFieldControl } from "./TextField";
 
 // spec v1.3 F11 AC11.4: 検索結果に同梱する仕入元現在オファー
 export interface InventoryOfferSummary {
@@ -269,7 +270,7 @@ export default function InventorySearchBar({
       data-testid={`${testIdPrefix}-root`}
     >
       <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-        <input
+        <TextFieldControl
           ref={inputRef}
           type="text"
           value={query}
@@ -282,7 +283,7 @@ export default function InventorySearchBar({
           disabled={disabled}
           placeholder={placeholderText}
           data-testid={`${testIdPrefix}-input`}
-          style={{ flex: 1, minWidth: "var(--min-width-input-sm)", padding: "var(--space-6px) var(--space-2)" }}
+          style={{ flex: 1, minWidth: "var(--min-width-input-sm)" }}
           aria-label={t("inventory.search.placeholder")}
         />
         <div
