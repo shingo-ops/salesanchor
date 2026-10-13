@@ -13,7 +13,8 @@ from sqlalchemy import text
 async def test_get_my_staff_by_user_id_even_if_email_differs(client, db_session):
     """
     conftest の mock_user は id=999・email='test@example.com'。
-    名簿の primary_email は別のメールにしても、user_id=999 で引けることを確認する。
+    名簿の primary_email は別のメールにしても、user_id=999 で引け、
+    応答のメールは users.email（ログイン用）になることを確認する（ADR-1008 P4b）。
     """
     # 役割を1件作成
     await db_session.execute(text("""
@@ -47,7 +48,7 @@ async def test_get_my_staff_by_user_id_even_if_email_differs(client, db_session)
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["id"] == 500
-    assert data["primary_email"] == "other@example.com"
+    assert data["primary_email"] == "test@example.com"
     assert data["role_id"] == 1
     assert data["role_name"] == "staff"
     assert data["ui_preferences"] is not None

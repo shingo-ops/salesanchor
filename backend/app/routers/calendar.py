@@ -56,9 +56,11 @@ def _owner_display_name(row: dict) -> str:
 async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | None:
     result = await db.execute(
         text("""
-            SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
-            FROM staff
-            WHERE user_id = :uid
+            SELECT s.id, s.tenant_id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp,
+                   u.email AS primary_email
+            FROM staff s
+            JOIN public.users u ON u.id = s.user_id
+            WHERE s.user_id = :uid
             LIMIT 1
         """),
         {"uid": current_user.id},
@@ -169,11 +171,12 @@ async def list_calendar_owners(
     current_staff_id = int(current_staff["id"])
     query = """
         SELECT
-            s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, s.primary_email,
+            s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
             COALESCE(cos.color, :default_color) AS color,
             COALESCE(cos.is_visible, FALSE) AS is_visible,
             COALESCE(cos.share_mode, 'self') AS share_mode
         FROM staff s
+        JOIN public.users u ON u.id = s.user_id
         LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
     """
     params = {"default_color": _DEFAULT_OWNER_COLOR}
@@ -246,9 +249,11 @@ async def update_calendar_owner(
 
     staff_row = await db.execute(
         text("""
-            SELECT id, tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email
-            FROM staff
-            WHERE user_id = :user_id
+            SELECT s.id, s.tenant_id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp,
+                   u.email AS primary_email
+            FROM staff s
+            JOIN public.users u ON u.id = s.user_id
+            WHERE s.user_id = :user_id
             LIMIT 1
         """),
         {"user_id": user_id},
@@ -291,11 +296,12 @@ async def update_calendar_owner(
     refreshed = await db.execute(
         text("""
             SELECT
-                s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, s.primary_email,
+                s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
                 COALESCE(cos.color, :default_color) AS color,
                 COALESCE(cos.is_visible, FALSE) AS is_visible,
                 COALESCE(cos.share_mode, 'self') AS share_mode
             FROM staff s
+            JOIN public.users u ON u.id = s.user_id
             LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
             WHERE s.user_id = :user_id
             LIMIT 1
