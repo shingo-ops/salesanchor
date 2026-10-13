@@ -205,3 +205,23 @@ async def test_patch_role_without_roles_assign_is_403(client, seeded, db_session
 async def test_hidden_role_cannot_be_assigned_by_non_super_admin(client, seeded):
     res = await client.post("/api/v1/staff", json=_body("hid2@example.com", seeded["hidden"]))
     assert res.status_code == 400, res.text
+
+
+# ---------- PUT /users/{id}/roles（複数ロール API） ----------
+
+async def test_put_user_roles_of_peer_at_or_above_own_priority_is_403(client, seeded, db_session):
+    await _insert_peer(db_session, seeded["same"], 7101)
+
+    res = await client.put("/api/v1/users/7101/roles", json={"role_ids": [seeded["low"]]})
+
+    assert res.status_code == 403, res.text
+    assert await _user_role_ids(db_session, 7101) == {seeded["same"]}
+
+
+async def test_put_user_roles_of_lower_user_still_succeeds(client, seeded, db_session):
+    await _insert_peer(db_session, seeded["low"], 7102)
+
+    res = await client.put("/api/v1/users/7102/roles", json={"role_ids": [seeded["mid"]]})
+
+    assert res.status_code == 200, res.text
+    assert await _user_role_ids(db_session, 7102) == {seeded["mid"]}

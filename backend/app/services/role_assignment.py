@@ -20,6 +20,18 @@ from app.routers.roles import (
 from app.services.audit import record_audit_log
 
 
+async def ensure_target_below_me(
+    db: AsyncSession, target_user_id: int, my_max: int
+) -> None:
+    """対象の人の今の最大 priority が自分の最大 priority 以上なら 403。"""
+    target_max = await _max_priority_for_user(db, target_user_id)
+    if target_max >= my_max:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="自分と同格以上のスタッフのロールは変更できません",
+        )
+
+
 async def assign_single_role(
     db: AsyncSession,
     tenant_id: int,
@@ -55,12 +67,7 @@ async def assign_single_role(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"自分の最大priority以上のロール（id={role_id}）は付与できません",
         )
-    target_max = await _max_priority_for_user(db, target_user_id)
-    if target_max >= my_max:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="自分と同格以上のスタッフのロールは変更できません",
-        )
+    await ensure_target_below_me(db, target_user_id, my_max)
 
     await db.execute(
         _visible_text(
