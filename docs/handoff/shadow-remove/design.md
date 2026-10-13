@@ -44,6 +44,7 @@
   - 毎回のデプロイで表が作り直されないように、scripts/run_all_migrations.sh の作成の登録（:843 付近）の扱いを、前例どおりに決める。
   - CI の参照（migration-test.yml・migration-guard.yml・dryrun-exclusions.tsv）を直す。
   - 前例（表を消す migration と、その登録の扱い・ADR-1002 の振り返り）を調べてから設計し、マージ前に PO の GO をいただく。
+  - **段1b の決定（2026-10-13 Opus 設計・前例 #3937 踏襲）**：作成 migration（20260928_110000）の登録は残し、末尾に削除の migration（20261013_180000）を登録する。作成 migration は表以外（suppliers の列追加・extraction_prompt_config の INSERT）も含むため。毎デプロイで作成→削除となり、最終状態は表なし。削除順は results → runs、IF EXISTS・CASCADE なし。migration-guard の PUBLIC_TABLES から2表を除く。適用前に2表の CSV 退避と行数の記録を行い、PO 本人の GO #番号 を受けてからマージする。
 - そのあと、PO の指定どおりの順に進める。
   1. 2（読み込みの速さ）
   2. 3（表の1行）
