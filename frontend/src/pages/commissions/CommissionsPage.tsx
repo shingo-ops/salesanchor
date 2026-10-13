@@ -20,6 +20,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -138,7 +139,7 @@ export default function CommissionsPage() {
         <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
           <label>
             {t("commissions.year")}:
-            <input
+            <TextFieldControl
               type="number"
               value={year}
               min={2000}
@@ -150,7 +151,7 @@ export default function CommissionsPage() {
           </label>
           <label>
             {t("commissions.month")}:
-            <input
+            <TextFieldControl
               type="number"
               value={month}
               min={1}
