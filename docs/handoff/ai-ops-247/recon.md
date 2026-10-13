@@ -132,19 +132,51 @@ mode: handoff
 
 ---
 
+## 段階0 実測（2026-10-13 21:11 JST・PO 手元実行・読み取り専用）
+
+根拠: PO 実行の読み取り script 出力（repo 外保存）。比較基準の origin/main は b905eab150a0865564c91d5e4fac9e4a5cb0969a。サーバーは prod1（アプリ）・prod2（監視）と表記する（repo は PUBLIC のため接続先は書かない）。
+
+【事実】
+
+| 項目 | 実測 |
+|---|---|
+| Prometheus ルール | repo 15 本・prod2 ファイル 15 本・稼働中 15 本。ルール名・ファイル内容とも一致（稼働中とファイルの差＝reload 漏れも無し） |
+| Loki ルール（ファイル） | repo 6 本・prod2 ファイル 4 本。repo のみ: BackendErrorSpike・DiscordDmWriterError・DiscordGatewayReconnectFailure。prod2 のみ: DatabaseError。内容は不一致 |
+| Loki ルール（稼働中 API の応答） | 0 本 |
+| 通知設定ファイル | alertmanager.yml・prometheus.yml・docker-compose.monitoring.yml は prod2 と一致。grafana の alerting.yml は prod2 で読めず判定不能 |
+| Alertmanager | v0.28.1（repo 記載と一致）。起動 2026-07-18 |
+| Grafana | 管理アラートルール 0 件。contact point は discord 1 件 |
+| Uptime Kuma | 通知先 discord 1 件（有効）。監視 4 項目すべてに紐付け |
+| 空きメモリ（available） | prod1 1133MB（swap 415/2047MB 使用）・prod2 2541MB（swap なし） |
+| HighDiskUsage 発火区間（UTC） | 2026-09-30T10:55〜10-01T03:39、10-01T06:30〜10-02T11:44 |
+| 後者区間の送信 | Prometheus→Alertmanager 破棄 0・エラー 0 |
+| Alertmanager→Discord | 送信試行 累計 3967・失敗 累計 0（7/18 起動以降。10/2 を含む） |
+| F2CleanupStale | 2026-09-28T00:00Z〜10-03T19:00Z 連続発火（雑音候補。KGI 2 の精度に影響） |
+| 現在の状態 | 発火中アラート 0・サイレンス 0 |
+
+【事実】Discord の監視チャンネルに 2026-09-30 19:55〜10-02 20:44 JST の間の HighDiskUsage 通知が表示されていた（根拠: PO 目視 2026-10-13・PO 回答 "y"）。
+
+【未確認】
+
+- Loki の稼働中 0 本が「実際に未読込」か「テナント指定（auth_enabled:false 時の fake テナント等）による見え方」かは未切り分け。段階1の最初に確認する。
+- F2CleanupStale の連続発火に対する対応の要否の一次記録。
+- grafana の alerting.yml の repo と prod2 の一致（prod2 で読めない）。
+
+---
+
 ## 不明点リスト
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | クラウドの AI セッションから VPS へ SSH（22 番）で入れるか | 公式に記述なし。設計では SSH を使わず、HTTPS の受け口だけにする（design §5 段階4）。SSH 可否は確かめない | ✅ 設計で回避 |
 | 2 | Alertmanager v0.28.1 が `http_headers` を受け付けるか | 設計では Alertmanager から routines を直接呼ばず、保守 API（prod1 の backend）が呼ぶ（design §5 段階2・4）。保守 API への認証は Bearer（`authorization`）だけを使う | ✅ 設計で回避（段階2 カードで `amtool check-config` を必須確認にする） |
-| 3 | prod2 で動いているルール・Alertmanager の版・Kuma の通知先・prod1/prod2 の空きメモリ | 本番の読み取りを Sonnet に委任したが、自動の安全装置に止められた（「Credential Exploration」。言い換え再試行はしていない）。段階0 で PO に読み取り専用の script を `!` で 1 回実行してもらう | ⏳ 段階0 で解消（解消まで段階1 のカードは発行しない） |
+| 3 | prod2 で動いているルール・Alertmanager の版・Kuma の通知先・prod1/prod2 の空きメモリ | 本番の読み取りを Sonnet に委任したが、自動の安全装置に止められた（「Credential Exploration」。言い換え再試行はしていない）。段階0 で PO に読み取り専用の script を `!` で 1 回実行してもらう | ⏳ 段階0 で解消（解消まで段階1 のカードは発行しない） → 【更新 2026-10-13】閉じた（上記「段階0 実測」。Loki ルールの差と稼働 0 本は段階1 へ） |
 | 4 | アプリの bot API キーを保守 AI 用に流用できるか | テナント単位のキー（`backend/app/routers/bots.py:55`）。段階2 の設計カードで、保守専用の範囲を絞ったキーを新設するか流用するかを比較する | ⏳ 段階2 カードで解消 |
 | 5 | クラウドの AI が Grafana の読み取り専用トークンで必要な問い合わせをできるか | 段階4 の試作で 1 回試す（network secrets に Viewer トークンを登録） | ⏳ 段階4 試作で解消 |
-| 6 | 2026-10-02 の HighDiskUsage が Discord に届いたか | Discord の監視チャンネル履歴を段階0 で確認 | ⏳ 段階0 で解消 |
+| 6 | 2026-10-02 の HighDiskUsage が Discord に届いたか | Discord の監視チャンネル履歴を段階0 で確認 | ⏳ 段階0 で解消 → 【更新 2026-10-13】機械側は送信失敗 0 まで確認（上記「段階0 実測」）。Discord 表示は PO 目視待ち → 【閉じた 2026-10-13】PO 目視で Discord の監視チャンネルに 2026-09-30 19:55〜10-02 20:44 JST の HighDiskUsage 通知が表示されていたことを確認 |
 | 7 | 監視からの routines の常時起動が、サブスクの「ordinary, individual usage」の範囲に入るか | 公式文書に明言なし。段階4 の前に PO 判断を仰ぐ（Anthropic への問い合わせ・案 D/E への切替を含む）。それまで段階4 の実装カードは発行しない | ⏳ 段階4 前に解消 |
 
-**未解決の状態**: 未解決 5 件（#3〜#7）。いずれも該当する段階のカード発行前に解消する条件にした（design §5）。本 recon と design は「設計案」であり、各段階の実装可否は解消後に判断する。
+**未解決の状態**: 未解決 3 件（#4・#5・#7。#3・#6 は 2026-10-13 に閉じた）。いずれも該当する段階のカード発行前に解消する条件にした（design §5）。本 recon と design は「設計案」であり、各段階の実装可否は解消後に判断する。
 
 ---
 
