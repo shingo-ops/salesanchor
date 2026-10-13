@@ -18,7 +18,7 @@
 |---|---|---|
 | F1 | Cookie を付けるときは `httponly=True`・`secure=self_tokens.cookie_secure()`・`samesite="strict"`・`path=REFRESH_COOKIE_PATH` | `backend/app/routers/auth.py:198-208` |
 | F2 | Cookie を消すときは `response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)` だけで、secure・httponly・samesite を渡していない（消すための Set-Cookie の属性が付けたときと食い違う） | `backend/app/routers/auth.py:211-212` |
-| F3 | `datetime.fromtimestamp(claims["iat"], timezone.utc)` が try の外にある。iat が無い・数値でない・範囲外のとき KeyError・TypeError・ValueError・OverflowError・OSError が出て、401 ではなく 500 になる | `backend/app/auth/dependencies.py:105` |
+| F3 | `datetime.fromtimestamp(claims["iat"], timezone.utc)` が try の外にある。iat が範囲外の大きな整数・数値の文字列・範囲外の負の値のとき OverflowError・TypeError・ValueError が出て、401 ではなく 500 になる。iat が無い・数値に直せない文字列のときは、python-jose が先に弾くため（`require_iat: True`・`backend/app/auth/self_tokens.py:131`）修正前から 401（2026-10-14 Fable 審査で訂正。実測は審査の報告による） | `backend/app/auth/dependencies.py:105` |
 | F4 | テストが `http.post(..., cookies={"sa_refresh": cookie})` の「リクエストごとの cookies 指定」を使っている（httpx 0.28 で非推奨） | `backend/tests/test_self_auth.py:203`・`:306` |
 | F5 | 依存の版: starlette==1.3.1・httpx==0.28.1 | `backend/requirements.txt:2`・`:15` |
 
