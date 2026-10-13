@@ -6,7 +6,7 @@
 - KGI-1: 要確認タブの最初の20件の取得（GET /api/v1/tcg/analysis-results?status_tab=NEEDS_REVIEW&limit=20 の中の SQL 合計）が **本番で 3.0 秒以下**（変更前 7.7〜7.9 秒・3周）
 - KGI-2: 一覧に出る中身が **1文字も変わらない**（同じ条件で変更前後の戻り値の sha256 が一致）
 
-## 2. 現在地（recon の要約。全文は recon.md）
+## 2. 現在地（recon の要約。全文は docs/handoff/review-speed/recon.md）
 - 遅い場所: backend/app/services/tcg_condition_review_svc.py:129 `CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar) cr_data` を PostgreSQL が展開（subquery pull-up）し、:130 の `cr_product.id::text = cr_data.ar->>'product_id'` などの比較のたびに to_jsonb(ar) を作り直している。EXPLAIN（measure-out-explain-raw.txt:372-378）で当該ノード actual time 約3,750ms。変更後も除去行数は同程度（candidateA:491 Rows Removed 240,081）で、減るのは1比較あたりの費用（to_jsonb を行ごとに1回だけ作る）。同ノードは約140ms（candidateA:486-494）。
 - 本番の列型: products.id integer・analysis_results.product_id integer（speed-measure-candidateA.txt:25-28、pg_attribute）。
 - この部品 review_joins を使う経路（全走査 speed-recon-2.md §4、Fable 審査で `git grep` 再確認）: 要確認一覧 API（tcg_analysis_review_svc.py:47 _BASE_FROM → :180/:186/:197/:244）・CSV 出力（tcg_review_csv_svc.py:75）・シート出力（tcg_review_sheet_svc.py:108）・配信（tcg_distribution_svc.py:292/364/407）・取り込み進捗（tcg_import_progress.py:129）・状態保存と再解析（context_sql 経由 tcg_condition_review_svc.py:205-225、:283-325）。

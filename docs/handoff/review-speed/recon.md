@@ -1,5 +1,7 @@
 # 要確認一覧 速度 recon-2（基準 origin/main、読み取りのみ）2026-10-13
 
+設計: docs/handoff/review-speed/design.md
+
 ## 1 呼び出しの流れ
 【事実】
 - フロント NeedsReviewTabsPanel.tsx:88-89 → GET /tcg/analysis-results
@@ -40,12 +42,12 @@
 
 ## 4 同じ関数を使う他の呼び出し元（全走査）
 【事実】grep origin/main:
-- fetch_analysis_results: routers/tcg_analysis_review.py:137（API）、services/tcg_review_csv_svc.py:75（CSV出力、NEEDS_REVIEW, limit=DIST_ROW_LIMIT）、services/tcg_review_sheet_svc.py:108（シート出力、同条件）。
-- review_joins / source_cte を直接使う: services/tcg_distribution_svc.py:256,292,357,364,377,407（配信出力・件数・除外内訳、include_inactive=True）、services/tcg_import_progress.py:129。
+- fetch_analysis_results: backend/app/routers/tcg_analysis_review.py:137（API）、backend/app/services/tcg_review_csv_svc.py:75（CSV出力、NEEDS_REVIEW, limit=DIST_ROW_LIMIT）、backend/app/services/tcg_review_sheet_svc.py:108（シート出力、同条件）。
+- review_joins / source_cte を直接使う: backend/app/services/tcg_distribution_svc.py:256,292,357,364,377,407（配信出力・件数・除外内訳、include_inactive=True）、backend/app/services/tcg_import_progress.py:129。
 - review_joins を context_sql 経由で使う: tcg_condition_review_svc.py:208-212, :283,:286,:299,:320,:325（save_condition_review＝状態保存、各1行 WHERE ei.id=:eid）、:224 reanalysis_condition ← tcg_analyzer_svc.py:1472,:1666。item_corrections.py:27 が save_condition_review を呼ぶ。
-- v102 系 services/line_analysis_v102_svc.py:51 は REASON_* を import するのみ。v102_human_decisions_svc.py:22 は not_excluded_condition_sql のみ。
+- v102 系 backend/app/services/line_analysis_v102_svc.py:51 は REASON_* を import するのみ。v102_human_decisions_svc.py:22 は not_excluded_condition_sql のみ。
 → review_joins を書き換えると配信(tcg_distribution_svc)・取り込み進捗・状態保存・再解析に波及する。fetch_analysis_results だけの変更なら API/CSV/シートの3つ。
-- 画面側の別呼び出し元: features/tcg-analysis-review/SupplierDetailView.tsx:52, :74（provider 指定・limit=500・strip_raw_text=true）。同じ3本の重い SQL を通る（status_tab 省略=ALL）。
+- 画面側の別呼び出し元: frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:52, :74（provider 指定・limit=500・strip_raw_text=true）。同じ3本の重い SQL を通る（status_tab 省略=ALL）。
 
 ## 5 既存テスト（backend/tests/）
 【事実】
