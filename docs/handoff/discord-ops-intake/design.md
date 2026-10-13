@@ -116,7 +116,7 @@ mode: handoff
 | 面 | 接触 | 対処 |
 |---|---|---|
 | 人 | PO がボタン役。承認チャンネルの閲覧者には許可確認の中身（コマンド全文）が見える（レビュー MEDIUM-10・server.ts の See more） | 本番の承認チャンネルは PO・担当エンジニア・ボットだけが見える非公開チャンネルにする（PO の Discord 操作。計画票 T5） |
-| エージェント | プラグインを user スコープで入れると他の全 Claude セッションで MCP が起動する（recon M5） | discord-ops は受付用 worktree の local スコープだけで有効にする |
+| エージェント | プラグインを user スコープで入れると他の全 Claude セッションで MCP が起動する（recon M5） | discord-ops は受付用クローン（~/sa-ops-intake）の local スコープだけで有効にする |
 | 機械 | launchd の番人。CI は関与しない | 番人の通知は監視チャンネルとは別の webhook |
 | データ | DB・アプリのデータには触れない。状態は Mac の `~/.claude/channels/discord-ops/`（access.json・proposals/・heartbeat）だけ | SSOT: 承認の原文は proposals/ の 1 か所。Discord の表示は写し |
 | 本番 | ボットは本番 Discord サーバーに参加済み（PO 画面で確認）。受付が読むのは access.json 登録チャンネルだけ（server.ts の gate・P1） | 単体テストで「未登録チャンネル・他メンバー・許可外 webhook は渡らない」を固定 |
@@ -185,7 +185,7 @@ mode: handoff
 | T2 | 番人（launchd plist・判定スクリプト）と起動スクリプト（tmux＋caffeinate） | Sonnet（同じ PR） |
 | T3 | 受付用の指示書（CLAUDE.md）・ops-worker.md・許可設定の雛形（委任表の初期値とツール単位で 1 対 1）を `tools/claude-channels/intake/` に置く | Sonnet（同じ PR） |
 | T4 | PR を Fable がレビュー → CI 緑 → main へマージ | 設計パートナー |
-| T5 | Mac に配置: 受付用 worktree を main から作り、雛形を配置・プラグインを local スコープで導入・本番監視チャンネルと許可 webhook を access.json に登録・受付を起動（起動確認画面は PO）・番人を登録 → E7・E8・E10・KGI-4 を実測し evidence-registry に記録 | 設計パートナー＋Sonnet（起動確認は PO） |
+| T5 | Mac に配置: 受付用クローン ~/sa-ops-intake を main から作り、雛形を配置・プラグインを local スコープで導入・本番監視チャンネルと許可 webhook を access.json に登録・受付を起動（起動確認画面は PO）・番人を登録 → E7・E8・E10・KGI-4 を実測し evidence-registry に記録 | 設計パートナー＋Sonnet（起動確認は PO） |
 | T6（PO） | 本番の承認チャンネルを非公開化（PO・担当エンジニア・ボットのみ閲覧）し、ID を access.json の opsChannel に入れる。それまでは #approval-test を承認チャンネルとして使う | PO |
 
 ## 継続
