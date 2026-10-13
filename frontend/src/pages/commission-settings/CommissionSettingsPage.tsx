@@ -274,7 +274,7 @@ export default function CommissionSettingsPage() {
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
               <label>
                 {t("commissions.year")}:
-                <input
+                <TextFieldControl
                   type="number"
                   value={year}
                   min={2000}
@@ -286,7 +286,7 @@ export default function CommissionSettingsPage() {
               </label>
               <label>
                 {t("commissions.month")}:
-                <input
+                <TextFieldControl
                   type="number"
                   value={month}
                   min={1}
