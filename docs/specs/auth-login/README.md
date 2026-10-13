@@ -21,6 +21,7 @@
 ## ぶら下がる文書（子）
 - [../../handoff/auth-self-hosted-passkey/recon.md](../../handoff/auth-self-hosted-passkey/recon.md)
 - [../../handoff/auth-self-hosted-passkey/design.md](../../handoff/auth-self-hosted-passkey/design.md)
+- [../../handoff/auth-self-hosted-passkey/handoff.md](../../handoff/auth-self-hosted-passkey/handoff.md)（引き継ぎ）
 
 ## ステータス
 - 2026-10-13 新規作成。あるべき姿は PO の発言（2026-10-13）から転記。KGI と設計は PO 承認済み（2026-10-13 チャット「y」）。
