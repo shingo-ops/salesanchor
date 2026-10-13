@@ -393,3 +393,77 @@ gh api -X PUT -H "Accept: application/vnd.github+json" \
 **戻し方**: `/tmp/ruleset-before.json` を同じ `PUT` で適用する。
 
 **デッドロック対策は本便で済ませた**: 検査本体は `detect-changes` が `frontend/**` の変更を検出したときだけ走るため、フロント未変更の PR では skipped になる。そのまま必須チェックにすると「報告が来ない」デッドロック（Issue #523 / PR #534 と同型）が再発する。そこで `lint` と同じ型（`detect-changes` → `visual-language-run`（内部） → `visual-language`（集約・`if: always()`））にし、**集約が skipped を成功として報告する**ようにした。必須チェックに指定するのは集約側の名前 `画面検査（受信箱 3幅 Playwright）`。
+
+## 15. 分離の便（2026-10-13・PO 承認済みの2段計画の第1便）
+
+> この節は何か（専門用語なしの1行）: スマホ用のヘッダーを足す前に、**一覧の組み立てだけをスマホ用とPC用に分け、見た目は1画素も変えない**ための作業記録。
+
+### 15-1. なぜ分けるのか
+
+PO 依頼（2026-10-13）: 「顧客一覧の検索欄とアイコンボタンの上部にヘッダーをつけて、アイコンボタンをヘッダーアクションに移して検索欄を横幅いっぱいに」。
+
+これを `frontend/src/pages/inbox/InboxConversationList.tsx` 1枚のまま実装すると、**同じファイルが PC とスマホの2つの見た目を同時に持つ**ことになり、どちらの変更がどちらに効くのか追えなくなる。そこで PO と「**DB の SSOT は遵守してフロントのパーツやデザインだけ独立させる**」方針で合意し、進め方を2段に分けた。
+
+- **第1便（この節）**: 分けるだけ。見た目と DOM は変えない。
+- **第2便**: 分けたスマホ側だけにヘッダーを新設する。
+
+**混ぜない理由**: 分離と見た目変更を同じ PR でやると、見た目が変わったとき「分離の事故」か「意図した変更」かを切り分けられない。第1便を「見た目が変わらないこと」だけに絞れば、第2便で出た差はすべて意図した変更だと確定できる。
+
+### 15-2. 何をどう分けたか
+
+| ファイル | 役割 | 行数 |
+|---|---|---|
+| `frontend/src/pages/inbox/InboxConversationRows.tsx`（新規） | 行の描画だけ。**スマホPC共通** | 126 |
+| `frontend/src/pages/inbox/InboxConversationListMobile.tsx`（新規） | スマホ専用の組み立て（上部＋共通の行） | 172 |
+| `frontend/src/pages/inbox/InboxConversationList.tsx`（変更） | PC の組み立て（上部＋共通の行）。285行→198行 | 198 |
+| `frontend/src/pages/inbox/InboxPage.tsx`（変更） | `isMobile` で2つを出し分ける | 348 |
+
+- **状態と配線は分けない**。`frontend/src/pages/inbox/useInboxState.ts` は共有のままで、スマホ版とPC版には**同じ33個の props を同じ名前・同じ値で**渡す。`InboxPage.tsx:112` の `conversationListProps` にまとめ、`{...conversationListProps}` で両方へ展開する。
+- 出し分けは `frontend/src/hooks/useIsMobile.ts`（`matchMedia` ＋ `BREAKPOINTS.MOBILE_MAX`）。`InboxPage.tsx:62` で既に呼んでいるものを再利用し、新しく呼ばない。
+- **CSS は1行も変えない**。`frontend/src/pages/inbox/InboxPage.css` は差分に含まれない。
+
+### 15-3. 受け入れ基準
+
+| # | 基準 | 検証 | 結果 |
+|---|---|---|---|
+| 1 | 行の描画が**1文字も変わっていない** | `git show origin/main:frontend/src/pages/inbox/InboxConversationList.tsx` の 196〜282行と `frontend/src/pages/inbox/InboxConversationRows.tsx` の該当部分を `diff -b` | **差分0**（87行） |
+| 2 | 上部の組み立てが**PC版・スマホ版ともに元と同一** | `<aside className="inbox-left-panel">` から `{/* 会話リスト */}` の直前までを3者で `diff -b` | **126行で3者一致** |
+| 3 | 渡す props が**増減も改名もしていない** | `frontend/src/pages/inbox/InboxPage.tsx` の旧 JSX の props 名と新 `conversationListProps` のキーを照合 | **33個すべて同名** |
+| 4 | CSS を変更していない | `git diff --name-only origin/main...HEAD` に `.css` が無いこと | **0件** |
+| 5 | 1列切り替え（開く→戻る）が壊れていない | CI の `画面検査（受信箱 3幅 Playwright）` 15件。`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` は `button.conversation-item` / `.conv-name` / `.conv-preview-text` / `.conv-time` / `.inbox-left-panel` を見るため、**分離した範囲を実際に覆っている** | CI で確認 |
+| 6 | `npm run check:all` が緑 | 実行 | **25項目すべて成功** |
+| 7 | 型が通る | `npx tsc --noEmit` | 本変更由来のエラー**0件**（既存の `src/api/generated/schema` 欠落4件のみ） |
+| 8 | 単体テストが壊れていない | `npm run test:unit` | 1037件中1036件成功。失敗1件（`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`）は単独実行で5/5成功＝**既存のフレーキー**で本変更と無関係 |
+| 9 | 生UI部品を増やしていない | `BASE_SHA=... HEAD_SHA=... node scripts/check-ui-governance.js` | **新規ハードコードなし**（対象4ファイル） |
+| 10 | 実機でも見た目が変わらない | 実機 360px ライトで分離前後を撮り、画素で比較（画面検査は構造と座標だけで**画素の一致は見ていない**ため別途必要） | **未実施**（§15-6） |
+
+### 15-4. ADR との関係（抵触しないことの確認）
+
+- **ADR-144 §4（金型がない場合の手順）は対象外**。§4 は `components/` に**金型を新設**するときの手順（PO 許可＋`Xxx.tsx`＋`Xxx.css`＋`Xxx.stories.tsx`）であり、この便が作るのは `pages/inbox/` 内の**ページ固有の組み立てファイル**で金型ではない。入力欄と選択欄は既存の金型（`frontend/src/components/TextField.tsx` の `TextFieldControl` / `frontend/src/components/Select.tsx` の `SelectControl`）をそのまま使い続ける。
+- **ADR-144 §2 の CI ゲートは緑**。検査対象の3種（生 `<select>` / 生 `<input type=text|search|省略>` / 自作タブ）は新ファイルに1件も無い。一括バーの `<input type="checkbox">` は検査対象の type ではない。
+- **正直な射程**: 移した行の描画には生の `<button>` `<div>` `<img>` `<a>` とインライン `style` が元から含まれる。これらは ADR-144 §5 の「既存の独自実装」にあたり、件数が増えていないため赤化しない。**この便では直さない**（金型への置き換えは ADR-144 §5 のとおり別トラック）。
+- **ADR-108（カルテ）には触らない**。`InboxKartePanel` とボトムシートの指定は変更していない。
+
+### 15-5. 残るリスク（正直に）
+
+1. **画面幅を 767px の前後でまたぐと、一覧が作り直される**（React が別の部品として扱うため）。スクロール位置や入力中の文字が失われる可能性がある。スマホ実機では幅が変わらないため起きない。PC で窓の幅を変える操作でのみ起きる。**第2便以降も同じ構造なので、気になる場合は別便で `key` の統一や状態の持ち上げを検討する。**
+2. **上部の126行が PC版とスマホ版に二重にある**。第2便でスマホ側だけを書き換えるための意図的な重複だが、第2便までの間に上部を直すときは**2箇所直す必要がある**。第2便が終われば中身が別物になるため重複ではなくなる。
+3. **画面検査は構造と座標しか見ない**。クラス名と DOM が同じであることは §15-3 の #1〜#3 で機械的に確かめたが、「本当に1画素も変わっていない」ことは実機の画素比較（#10）でしか言えない。
+
+### 15-6. 実機での画素比較の手順（未実施）
+
+- **分離前の撮影は保存済み**: `/root/vl-benchmark-raw/before-split-20261013-143133.png`（1080x2340・一覧5件）。
+- **同じ日に撮った `before-split-20261013-143101.png` は使えない**。画素を数えた結果、Chrome の翻訳案内の暗い幕（`(0,210)-(1080,562)`）が上部を**63.7%覆っていた**。使えるのは 143133 の1枚だけ。
+- 手順: 実機を `adb` でつなぎ直す → PWA（`org.chromium.webapk.a396ac817a983e9b4_v2`）を `am force-stop` してから開き直す → 同じ条件（ライト・360px・一覧5件・1行目 y=309）で撮る → 143133 と画素差を取る。**翻訳案内が出ていない状態で撮ること。**
+- 2026-10-13 時点で**ワイヤレスデバッグが落ちている**（`127.0.0.1:45133` は応答せず、`adb devices` には `emulator-5554 offline` のみ）。PO からペア設定コードを受領して再接続する必要がある。
+
+### 15-7. 戻し方
+
+この PR の revert のみ。CSS・トークン・API・DB を変更しないため波及はない。revert すれば `frontend/src/pages/inbox/InboxConversationList.tsx` 1枚に戻る。
+
+### 15-8. この便に含めない作業
+
+| 便 | 中身 |
+|---|---|
+| 第2便 | スマホ側だけにヘッダーを新設（お手本の実測値: ヘッダー56dp・タイトル約20sp＝`--font-xl`・アイコン48dp右端寄せ・検索欄は左右12dpでピル形＝`--radius-full`） |
+| 別便 | カルテの全画面化 / 遷移の動き / 送信ピル内の28pxボタン / 会話ヘッダの詰まり（三点メニューが 27x38dp で画面右端で切れている） |

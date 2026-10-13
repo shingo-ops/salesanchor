@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-13 / ADR 総数: 172 件
+最終更新: 2026-10-13 / ADR 総数: 173 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -155,7 +155,7 @@
 | [ADR-137](./ADR-137-nginx-config-deploy-reliability.md) | ADR-137: nginx 反映の確実化（inode ズレ対策 + 502 再発防止） | Completed（PR-A・PR-B 両問題とも解消済み） | — | — |
 | [ADR-137](./ADR-137-v-company-stats-ssot-filter.md) | ADR-137: v_company_stats フィルタ定義統一（取引額 SSOT） | Accepted | — | — |
 | [ADR-138](./ADR-138-funnel-dashboard-stage1.md) | ADR-138: ファネル型目標対比ダッシュボード 第1弾 | Accepted | — | — |
-| [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Accepted | — | — |
+| [ADR-138](./ADR-138-remove-password-hash.md) | ADR-138: password_hash 列廃止 | Superseded | — | — |
 | [ADR-139](./ADR-139-funnel-kgi-dashboard-frontend.md) | ADR-139: ファネル型目標対比ダッシュボード フロントエンド（第1弾） | Accepted | — | — |
 | [ADR-140](./ADR-140-mobile-nav-bottom-tabs.md) | ADR-140: モバイルナビ刷新 — 下部タブバー方式への移行 | Accepted | — | — |
 | [ADR-141](./ADR-141-inbound-translation-entry.md) | ADR-141: 受信翻訳の標準入口を `enqueue_inbound_translation()` に統一する | Accepted | — | — |
@@ -191,6 +191,7 @@
 | [ADR-1010](./ADR-1010-api-contract-and-wiring-ledger.md) | ADR-1010: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成 | Accepted | — | — |
 | [ADR-1011](./ADR-1011-permission-self-maintenance.md) | ADR-1011: AI による許可の自律保守（週1回・SM- の文だけ・台帳必須） | Accepted | — | — |
 | [ADR-1012](./ADR-1012-ai-ops-247.md) | ADR-1012: 監視の通知から応急処置と AI（Claude Code routines）を起動し、障害記録で振り返る 24 時間保守運用 | Proposed | — | — |
+| [ADR-1012](./ADR-1012-self-hosted-auth-and-passkey.md) | ADR-1012: ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す | Accepted | Supersedes ADR-138 | — |
 
 ## ステータス凡例
 
