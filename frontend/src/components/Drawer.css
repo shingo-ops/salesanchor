@@ -27,7 +27,7 @@
   top: 0;
   right: 0;
   height: 100dvh;
-  width: var(--drawer-panel-width, 480px);
+  width: var(--drawer-panel-w-default);
   background: var(--bg-surface);
   box-shadow: var(--shadow-modal);
   z-index: var(--z-drawer);
@@ -42,6 +42,11 @@
 
 .comp-drawer-panel--open {
   transform: translateX(0);
+}
+
+/* 広幅（size="wide"）。767px 以下の @media より前に置き、スマホは従来どおり 100% */
+.comp-drawer-panel--wide {
+  width: min(var(--drawer-panel-w-wide), 100vw);
 }
 
 /* ----------------------------------------------------------------

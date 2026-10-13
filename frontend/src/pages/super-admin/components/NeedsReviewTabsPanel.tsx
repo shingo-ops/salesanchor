@@ -21,7 +21,7 @@ import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab
 import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
 
 const PAGE_SIZE = 20;
-const INLINE_FIX_COLUMN_WIDTH = "320px";
+const INLINE_FIX_COLUMN_WIDTH = "var(--review-inline-fix-col-w)";
 
 type TabKey = "production" | "posts";
 
@@ -112,21 +112,27 @@ export default function NeedsReviewTabsPanel() {
     {
       key: "raw_product_name",
       header: t("needsReview.productName"),
+      width: "var(--col-width-wide)",
+      ellipsis: true,
       renderCell: (item) => item.gemini["name"] || item.system["product_title"] || "—",
     },
     {
       key: "provider",
       header: t("needsReview.supplier"),
+      ellipsis: true,
       renderCell: (item) => item.provider,
     },
     {
       key: "review_source",
       header: t("needsReview.source"),
+      ellipsis: true,
       renderCell: (item) => reviewSourceLabel(t, item.review_reason_details) ?? "—",
     },
     {
       key: "review_reasons",
       header: t("needsReview.reviewReasons"),
+      width: "var(--col-width-medium)",
+      ellipsis: true,
       renderCell: (item) => {
         const details = item.review_reason_details ?? [];
         if (details.length > 0) {
@@ -146,6 +152,7 @@ export default function NeedsReviewTabsPanel() {
     {
       key: "created_at",
       header: t("needsReview.createdAt"),
+      ellipsis: true,
       renderCell: (item) => {
         const spanValue = item.gemini["span"];
         if (!spanValue) return "—";

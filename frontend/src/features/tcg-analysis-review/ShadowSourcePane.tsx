@@ -41,12 +41,16 @@ export function ShadowSourcePane({ rawText, blockRange, headingRange }: Props) {
   return (
     <section className="shadow-source-pane" aria-label={t("shadowAccuracy.source.title")}>
       <div className="shadow-source-legend">
-        <span className="shadow-source-legend-item shadow-source-legend-item--block">
-          {t("shadowAccuracy.source.legendBlock")}
-        </span>
-        <span className="shadow-source-legend-item shadow-source-legend-item--heading">
-          {t("shadowAccuracy.source.legendHeading")}
-        </span>
+        {blockRange != null && (
+          <span className="shadow-source-legend-item shadow-source-legend-item--block">
+            {t("shadowAccuracy.source.legendBlock")}
+          </span>
+        )}
+        {headingRange != null && (
+          <span className="shadow-source-legend-item shadow-source-legend-item--heading">
+            {t("shadowAccuracy.source.legendHeading")}
+          </span>
+        )}
       </div>
       <div className="shadow-source-lines">
         {lines.map((line) => {
