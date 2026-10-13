@@ -1,0 +1,40 @@
+│  storybook-static/assets/react-dom-m_W_pY0Z.js
+│  132.73 kB │ gzip:  43.08 kB
+│  storybook-static/assets/DocsRenderer-LL677BLK-DJ-LbDPA.js
+│  184.71 kB │ gzip:  58.73 kB
+│  storybook-static/assets/components-_u61-kac.js
+│  548.87 kB │ gzip: 174.57 kB
+│  storybook-static/assets/axe-mFnqjVvd.js
+│  571.05 kB │ gzip: 155.78 kB
+│  storybook-static/assets/iframe-BMMgEkiO.js
+│  1,528.69 kB │ gzip: 448.83 kB
+
+│
+▲  Vite [33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins.
+│  Here is a breakdown:
+│  - storybook:react-docgen-plugin (24%)
+│  - storybook:project-annotations-plugin (20%)
+│  - plugin-csf (19%)
+│  - storybook:mock-loader (14%)
+│  - storybook:code-generator-plugin (7%)
+│  See ]8;;https://rolldown.rs/options/checks#plugintimingshttps://rolldown.rs/options/checks#plugintimings]8;; for more details.
+
+│
+▲  Vite [plugin builtin:vite-reporter]
+│  (!) Some chunks are larger than 500 kB after minification. Consider:
+│  - Using dynamic import() to code-split the application
+│  - Use build.rolldownOptions.output.codeSplitting to improve chunking:
+│  ]8;;https://rolldown.rs/reference/OutputOptions.codeSplittinghttps://rolldown.rs/reference/OutputOptions.codeSplitting]8;;
+│  - Adjust chunk size limit for this warning via
+│  build.chunkSizeWarningLimit.
+│  Vite ✓ built in 8.91s
+│
+●  Storybook collects completely anonymous usage telemetry. We use it to
+│  shape Storybook's roadmap and prioritize features. You can learn more,
+│  including how to opt out, at ]8;;https://storybook.js.org/telemetryhttps://storybook.js.org/telemetry]8;;
+│
+◇  Output directory:
+│  /Users/tanizawashingo/worktrees/salesanchor/release-list-search-inputs/frontend/storybook-static
+│
+└  Storybook build completed successfully
+

@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 interface InventoryRow {
   id: number;
@@ -381,7 +382,7 @@ export default function InventoryPage() {
         <ContentToolbar
           left={
             <>
-              <input
+              <TextFieldControl
                 type="search"
                 className="field-h-md field-w-md"
                 placeholder={t("inventory.view.searchPlaceholder")}

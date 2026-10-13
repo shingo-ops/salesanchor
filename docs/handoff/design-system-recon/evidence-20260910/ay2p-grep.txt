@@ -1,0 +1,29 @@
+== orders-search-input
+frontend/src/pages/orders/OrdersFilterBar.tsx:40:        data-testid="orders-search-input"
+frontend/tests-e2e/order-commission.spec.ts:376:    await expect(page.getByTestId("orders-search-input")).toBeVisible();
+frontend/tests-e2e/order-financial.spec.ts:297:    await expect(page.getByTestId("orders-search-input")).toBeVisible();
+frontend/tests-e2e/order-purchase.spec.ts:326:    await expect(page.getByTestId("orders-search-input")).toBeVisible();
+frontend/tests-e2e/order-shipping.spec.ts:358:    await expect(page.getByTestId("orders-search-input")).toBeVisible();
+frontend/tests-e2e/orders-list.spec.ts:154:    const searchBox = page.getByTestId("orders-search-input");
+frontend/tests-e2e/orders-list.spec.ts:222:    const searchBox = page.getByTestId("orders-search-input");
+== inventory-search testid in pages
+frontend/src/components/InventorySearchBar.tsx:100:  testIdPrefix = "inventory-search",
+frontend/src/pages/inventory/InventoryPage.tsx:389:                data-testid="inventory-search"
+== placeholder
+frontend/src/pages/orders/OrdersFilterBar.tsx:37:        placeholder={t("common.search")}
+frontend/src/pages/products/ProductsPage.tsx:220:            <TextFieldControl className="field-h-md field-w-md" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+== comp-field__input + field-w usage
+frontend/src/components/field-size.css:16:.comp-field__input.field-w-sm { width: var(--field-w-sm, 160px); }
+frontend/src/components/field-size.css:19:.comp-field__input.field-w-md { width: var(--field-w-md, 280px); }
+frontend/src/components/field-size.css:22:.comp-field__input.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
+frontend/src/pages/products/ProductsPage.tsx:220:            <TextFieldControl className="field-h-md field-w-md" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+== TextFieldControl className field-w only 5 + any multi-line
+frontend/src/pages/companies/CompaniesPage.tsx-387-          <TextFieldControl
+frontend/src/pages/inventory/InventoryPage.tsx-385-              <TextFieldControl
+frontend/src/pages/orders/OrdersFilterBar.tsx-33-      <TextFieldControl
+frontend/src/pages/products/ProductsPage.tsx:220:            <TextFieldControl className="field-h-md field-w-md" type="text" placeholder={t("common.search")} value={search} onChange={(e) => setSearch(e.target.value)} />
+== field-w in TextFieldControl across src (multi-line aware)
+frontend/src/pages/companies/CompaniesPage.tsx 387
+frontend/src/pages/inventory/InventoryPage.tsx 385
+frontend/src/pages/orders/OrdersFilterBar.tsx 33
+frontend/src/pages/products/ProductsPage.tsx 220

@@ -5,6 +5,7 @@
 
 import { useTranslation } from "react-i18next";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Props {
   searchInput: string;
@@ -29,7 +30,7 @@ export function OrdersFilterBar({
       <div
         style={{ display: "flex", gap: "var(--space-2)", flexWrap: "nowrap", alignItems: "center" }}
       >
-      <input
+      <TextFieldControl
         type="search"
         className="field-h-md field-w-md"
         aria-label={t("orders.title")}

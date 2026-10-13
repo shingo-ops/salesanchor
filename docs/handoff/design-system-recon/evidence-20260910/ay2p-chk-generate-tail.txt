@@ -1,0 +1,6 @@
+
+> salesanchor-frontend@1.0.0 generate:api-types
+> openapi-typescript api-contract/openapi.json -o src/api/generated/schema.d.ts
+
+✨ openapi-typescript 7.13.0
+🚀 api-contract/openapi.json → src/api/generated/schema.d.ts [874ms]

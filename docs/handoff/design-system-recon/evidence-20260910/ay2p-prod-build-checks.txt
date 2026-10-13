@@ -1,0 +1,20 @@
+prod build (npm run build) JS pattern count:
+       0
+prod CSS .comp-field__input.field-w-md count:
+       1
+orders-search-input in prod JS:
+       1
+inventory-search:
+       0
+backtick pattern in prod build after:
+       2
+any type:search,className:field-h-md field-w-md either quote:
+       2
+orders-search-input def:
+eholder:s(`common.search`),value:e,onChange:e=>t(e.target.value),"data-testid":`orders-search-input`}),(
+inventory-search def:
+arch`,className:`field-h-md field-w-md`,placeholder:e(`inventory.view.searchPlaceholder`),"data-testid":`inventory-search`
+== raw-input pattern (prod build, after):
+       0
+(double-quote form per design, vacuous since esbuild emits backticks):
+       0
