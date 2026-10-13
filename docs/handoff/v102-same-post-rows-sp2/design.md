@@ -189,11 +189,11 @@
 - docs/adr/ADR-093-inventory-table-product-master-redesign.md の冒頭に、置き換えた部分と新しい ADR への参照を書く。本文は消さない（同じ番号の docs/adr/ADR-093-sales-management-page.md は触らない）。
 - `node scripts/generate-adr-index.js` で目次を作り直す。
 
-## 10. 維持する仕組み
+## 10. 維持の仕組み
 - 配信行の定義は distribution_rows_sql の1か所だけ。T1 と T4 のテストが、GAS と在庫表のずれを CI で止める。
 - まとめの鍵と条件は同じ関数の中に置き、テスト T2・T3 で固める。
 
-## 11. 外部事例
+## 11. 外部・過去事例の参照と我々への応用
 - 該当なし。理由: 社内の SQL を1か所にまとめる変更と、利用者ごとの表示設定の追加で、外部の事例で成否が変わる判断を含まない。
 
 ## 12. 設計審査（Fable）
