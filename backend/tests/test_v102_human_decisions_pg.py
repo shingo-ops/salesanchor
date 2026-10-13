@@ -16,8 +16,7 @@ from sqlalchemy.orm import Session
 
 import app.services.v102_human_decisions_svc as decisions_svc
 from app.services import tcg_distribution_svc as distribution
-from app.services.extraction_shadow_svc import load_product_entries
-from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters
+from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, load_product_entries
 from tests.test_line_analysis_v102_pg import analysis_rows, one, run_analysis, run_extraction
 from tests.test_line_analysis_v102_pg import v102 as v102  # noqa: F401  fixture
 from tests.test_tcg_work_matching_integration import SCHEMA
