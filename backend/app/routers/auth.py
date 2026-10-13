@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
@@ -12,18 +14,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import self_tokens
 from app.auth.dependencies import _get_client_ip, require_super_admin, set_tenant_context
+from app.auth.password_policy import check_password
 from app.auth.passwords import hash_password, needs_rehash, verify_password
 from app.auth.schemas import UserRegister, UserResponse
 from app.auth.utils import set_tenant_claim
 from app.cache import (
+    PASSWORD_RESET_REQUEST_MAX,
     blacklist_token,
     check_auth_rate_limit,
+    count_password_reset_request,
     invalidate_user_permissions,
     record_auth_failure,
 )
 from app.database import get_db
 from app.models import Tenant, User
 from app.services.audit import record_audit_log
+from app.services.auth_mail import send_password_reset_email
 
 router = APIRouter()
 security = HTTPBearer()
@@ -328,3 +334,145 @@ async def self_refresh(
         token_type="bearer",
         expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
     )
+
+
+# ── パスワード再設定（ADR-1013 便3。AUTH_PROVIDER に関係なく動く） ─────────────
+
+INVALID_OR_EXPIRED_TOKEN = "invalid_or_expired_token"
+PASSWORD_RESET_TTL = timedelta(minutes=30)
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr = Field(description="再設定したいアカウントのメールアドレス")
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=256, description="再設定メールのリンクに入っている鍵")
+    new_password: str = Field(min_length=1, max_length=1024, description="新しいパスワード（15〜64 文字）")
+
+
+class PasswordResetAccepted(BaseModel):
+    status: str = Field(default="accepted", description="申請を受け付けた（メールが送られたかは区別しない）")
+
+
+class PasswordResetDone(BaseModel):
+    status: str = Field(default="password_updated", description="パスワードを更新した")
+
+
+def _password_reset_allowed(email: str) -> bool:
+    """再設定メールを送ってよい相手か。self なら全員。firebase の間は許可リストに載った email だけ（未設定・空は誰にも送らない）。"""
+    if self_tokens.auth_provider() == "self":
+        return True
+    allowed = {e.strip().lower() for e in os.getenv("AUTH_PASSWORD_RESET_ALLOWLIST", "").split(",") if e.strip()}
+    return email in allowed
+
+
+@router.post("/password-reset/request", response_model=PasswordResetAccepted)
+async def password_reset_request(
+    data: PasswordResetRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """再設定メールの申請。存在・停止・許可外の区別を応答に出さない（常に 200）。"""
+    _require_app_origin(request)
+    email = data.email.strip().lower()
+    if await count_password_reset_request(email) > PASSWORD_RESET_REQUEST_MAX:
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+
+    row = (
+        await db.execute(
+            text("SELECT id, tenant_id, email, is_active FROM public.users WHERE lower(email) = :email"),
+            {"email": email},
+        )
+    ).first()
+    if row is not None and row.is_active and _password_reset_allowed(email):
+        now = datetime.now(timezone.utc)
+        await db.execute(
+            text(
+                "UPDATE public.password_reset_tokens SET used_at = :now "
+                "WHERE user_id = :uid AND used_at IS NULL"
+            ),
+            {"now": now, "uid": row.id},
+        )
+        raw = secrets.token_urlsafe(32)
+        await db.execute(
+            text(
+                "INSERT INTO public.password_reset_tokens (user_id, purpose, token_hash, expires_at, created_at) "
+                "VALUES (:uid, 'reset', :h, :exp, :now)"
+            ),
+            {"uid": row.id, "h": self_tokens._hash_token(raw), "exp": now + PASSWORD_RESET_TTL, "now": now},
+        )
+        await db.commit()
+        reset_url = f"{self_tokens.rp_origin()}/reset-password?token={raw}"
+        background_tasks.add_task(send_password_reset_email, row.email, reset_url)
+    return PasswordResetAccepted(status="accepted")
+
+
+@router.post("/password-reset/confirm", response_model=PasswordResetDone)
+async def password_reset_confirm(
+    data: PasswordResetConfirmRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。自動ログインはしない。"""
+    _require_app_origin(request)
+    ip = _get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+
+    reason = check_password(data.new_password)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=reason)
+
+    now = datetime.now(timezone.utc)
+    token_row = (
+        await db.execute(
+            text(
+                "UPDATE public.password_reset_tokens SET used_at = :now "
+                "WHERE token_hash = :h AND used_at IS NULL AND expires_at > :now "
+                "RETURNING user_id, purpose"
+            ),
+            {"now": now, "h": self_tokens._hash_token(data.token)},
+        )
+    ).first()
+    if token_row is None:
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=400, detail=INVALID_OR_EXPIRED_TOKEN)
+
+    user_row = (
+        await db.execute(
+            text("SELECT id, tenant_id, is_active FROM public.users WHERE id = :uid"),
+            {"uid": token_row.user_id},
+        )
+    ).first()
+    if user_row is None or not user_row.is_active:
+        await db.commit()  # 鍵は消費済みのまま
+        raise HTTPException(status_code=400, detail=INVALID_OR_EXPIRED_TOKEN)
+
+    new_hash = await asyncio.to_thread(hash_password, data.new_password)
+    await db.execute(
+        text(
+            "UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :now, "
+            "failed_login_count = 0, locked_until = NULL WHERE id = :uid"
+        ),
+        {"h": new_hash, "now": now, "uid": user_row.id},
+    )
+    await db.execute(
+        text(
+            "UPDATE public.auth_refresh_tokens SET revoked_at = :now "
+            "WHERE user_id = :uid AND revoked_at IS NULL"
+        ),
+        {"now": now, "uid": user_row.id},
+    )
+    await record_audit_log(
+        db,
+        tenant_id=user_row.tenant_id,
+        user_id=user_row.id,
+        action="update",
+        table_name="users",
+        record_id=user_row.id,
+        new_data={"event": "password_reset_confirmed", "purpose": token_row.purpose},
+    )
+    await db.commit()
+    return PasswordResetDone(status="password_updated")

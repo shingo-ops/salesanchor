@@ -121,6 +121,15 @@ services:
       # 未設定の場合は配信 API 呼び出し時に 503 を返す（起動時エラーにはしない）。
       - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
       # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
+      # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。
+      # この行が無いと .env に値があっても os.getenv が空になり、メールが送られない。
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      - CONTACT_NOTIFY_EMAIL=${CONTACT_NOTIFY_EMAIL:-}
+      - AUTH_PASSWORD_RESET_ALLOWLIST=${AUTH_PASSWORD_RESET_ALLOWLIST:-}
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
@@ -237,6 +246,13 @@ services:
       # 手順: docs/runbooks/gemini-egress-emergency.md
       - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-}
       - grpc_proxy=${GEMINI_GRPC_PROXY-}
+      # ADR-1013 便3: 削除完了通知（tasks/email_tasks.py）が使うメール送信の設定。
+      # この行が無いと .env に値があっても os.getenv が空になり、メールが送られない。
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro

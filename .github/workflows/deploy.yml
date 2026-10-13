@@ -279,6 +279,13 @@ jobs:
               -e '/^REVIEW_MAIL_WEBMAIL_URL=/d' \
               -e '/^REVIEW_MAIL_DISCORD_WEBHOOK=/d' \
               -e '/^VITE_FUNNEL_DASHBOARD=/d' \
+              -e '/^SMTP_HOST=/d' \
+              -e '/^SMTP_PORT=/d' \
+              -e '/^SMTP_USER=/d' \
+              -e '/^SMTP_PASSWORD=/d' \
+              -e '/^MAIL_FROM=/d' \
+              -e '/^CONTACT_NOTIFY_EMAIL=/d' \
+              -e '/^AUTH_PASSWORD_RESET_ALLOWLIST=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             rm -f .env.bak
@@ -312,6 +319,14 @@ jobs:
             REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
             REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
             VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
+            # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
+            SMTP_HOST=${{ secrets.SMTP_HOST }}
+            SMTP_PORT=${{ secrets.SMTP_PORT }}
+            SMTP_USER=${{ secrets.SMTP_USER }}
+            SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+            MAIL_FROM=${{ secrets.MAIL_FROM }}
+            CONTACT_NOTIFY_EMAIL=${{ secrets.CONTACT_NOTIFY_EMAIL }}
+            AUTH_PASSWORD_RESET_ALLOWLIST=${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
 

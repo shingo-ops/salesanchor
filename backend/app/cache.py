@@ -320,6 +320,27 @@ async def record_auth_failure(ip: str) -> None:
         logger.warning("認証失敗記録に失敗")
 
 
+# パスワード再設定の申請回数制限（ADR-1013 便3・email 単位）
+PASSWORD_RESET_REQUEST_MAX = 3
+PASSWORD_RESET_REQUEST_WINDOW = 3600  # 1時間
+
+
+async def count_password_reset_request(email_lower: str) -> int:
+    """email（小文字）のハッシュ単位で申請回数を数え、今回を含む回数を返す。Redis 不通時は 0（既存の auth と同じく通す）。"""
+    r = get_redis()
+    if not r:
+        return 0
+    try:
+        key = f"pw_reset_req:{hashlib.sha256(email_lower.encode()).hexdigest()[:32]}"
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, PASSWORD_RESET_REQUEST_WINDOW)
+        return int(count)
+    except Exception:
+        logger.warning("再設定申請の回数記録に失敗: fail-openとして通過")
+        return 0
+
+
 async def is_token_blacklisted(token: str) -> bool:
     """
     トークンがブラックリストに含まれているか確認する。
