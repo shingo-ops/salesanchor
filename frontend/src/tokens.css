@@ -448,6 +448,7 @@
   --comp-table-ellipsis-max-w: var(--col-width-medium); /* DataTable ellipsis 列の最大幅（width 無指定時・200px） */
   --review-inline-fix-col-w: 320px; /* 要確認一覧「直す」列の幅 */
   --comparison-label-col-w: 72px;  /* 比較表の項目ラベル列幅 */
+  --comparison-source-col-w: 112px; /* 比較表の採用元列の内容幅（「Gemini抽出値を採用」が収まる幅） */
   --modal-commission-w:    760px;  /* 手数料パネル */
   --modal-detail-max-w:    720px;  /* 売上情報パネル */
   --dropdown-list-h:       280px;  /* マージモーダル候補リスト高さ */

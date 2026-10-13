@@ -4580,6 +4580,8 @@
     "manualCorrection": "手動修正 {{field}}",
     "hasCorrected": "手動修正あり",
     "uncorrected": "未修正",
+    "compareColumns": { "field": "項目", "source": "採用元" },
+    "notApplicable": "—",
     "sourcePosition": "原文位置",
     "productId": "商品ID",
     "saleStatus": "販売状況",
