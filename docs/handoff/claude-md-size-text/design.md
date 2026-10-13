@@ -19,8 +19,11 @@ frontend/scripts/check-claude-size.js、他の CLAUDE.md、CLAUDE.md の行数�
 |行数が 120 のまま|`wc -l CLAUDE.md`|
 |check が PASSED|`node frontend/scripts/check-claude-size.js`|
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 該当なし（文言の誤り修正で、方式の選択がないため）。
 
 ## 戻し方
 このPRを revert。
+
+## 維持の仕組み
+上限値は frontend/scripts/check-claude-size.js:23 が正本。pre-commit（frontend/.husky/pre-commit:52）と CI（.github/workflows/check-claude-size.yml:40）が超過を検査する。記述側の値の再ズレは今回の修正後も自動検出されない（新規の仕組みは追加しない。範囲外）。
