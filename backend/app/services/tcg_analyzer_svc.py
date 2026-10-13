@@ -26,7 +26,7 @@ import re
 import uuid
 from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Sequence
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -1010,6 +1010,10 @@ def apply_field_normalization(raw: str, field_rules: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 
+# 発送日の欄から捨てる部分（梱包・完売など）を持つ備考マスタの category 値。解析の出力（備考）には使わない
+SHIP_DROP_CATEGORY = "発送欄除外"
+
+
 def load_note_master(session: Session) -> list[dict]:
     """tcg_note_master ロード、graceful fallback。GAS: _NOTE_MASTER_ROWS_"""
     try:
@@ -1019,9 +1023,11 @@ def load_note_master(session: Session) -> list[dict]:
                 SELECT id, label_ja, search_keywords, exclude_keywords, priority,
                        match_type, search_pattern, label_template
                 FROM public.tcg_note_master
-                WHERE enabled = TRUE ORDER BY priority ASC, id ASC
+                WHERE enabled = TRUE AND category IS DISTINCT FROM :drop_category
+                ORDER BY priority ASC, id ASC
                 """
-            )
+            ),
+            {"drop_category": SHIP_DROP_CATEGORY},
         ).fetchall()
     except Exception as exc:
         session.rollback()
@@ -1117,8 +1123,8 @@ SHIP_NOTE_CATEGORY = "発送時期系"
 _SHIP_PART_SEPARATOR = " / "
 
 
-def load_ship_master(session: Session) -> list[dict]:
-    """tcg_note_master の発送時期系（enabled）を build_note_ja と同じ形で返す。例外は握りつぶさない。"""
+def _load_category_master(session: Session, category: str) -> list[dict]:
+    """tcg_note_master の指定 category（enabled）を build_note_ja と同じ形で返す。例外は握りつぶさない。"""
     rows = session.execute(
         text(
             """
@@ -1129,10 +1135,8 @@ def load_ship_master(session: Session) -> list[dict]:
             ORDER BY priority ASC, id ASC
             """
         ),
-        {"category": SHIP_NOTE_CATEGORY},
+        {"category": category},
     ).fetchall()
-    if not rows:
-        logger.warning("[tcg_analyzer] tcg_note_master に category=%s の行が0件", SHIP_NOTE_CATEGORY)
     return [
         {
             "id": r[0],
@@ -1149,15 +1153,31 @@ def load_ship_master(session: Session) -> list[dict]:
     ]
 
 
+def load_ship_master(session: Session) -> list[dict]:
+    """tcg_note_master の発送時期系（enabled）を build_note_ja と同じ形で返す。例外は握りつぶさない。"""
+    entries = _load_category_master(session, SHIP_NOTE_CATEGORY)
+    if not entries:
+        logger.warning("[tcg_analyzer] tcg_note_master に category=%s の行が0件", SHIP_NOTE_CATEGORY)
+    return entries
+
+
+def load_ship_drop_master(session: Session) -> list[dict]:
+    """発送日の欄から捨てる札（発送欄除外・enabled）。0件は正常（warning なし）。例外は握りつぶさない。"""
+    return _load_category_master(session, SHIP_DROP_CATEGORY)
+
+
 def _unique_in_order(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-def build_ship_labels(ship: Optional[str], ship_entries: list[dict]) -> tuple[Optional[str], Optional[str]]:
+def build_ship_labels(
+    ship: Optional[str], ship_entries: list[dict], drop_entries: Sequence[dict] = ()
+) -> tuple[Optional[str], Optional[str]]:
     """発送日の文字（ship_note 済み）→ (ship_ja, ship_en)。
 
     " / " の部分ごとにマスタへ当て、当たれば label をつなぐ（ja は ","、en は ", "）。
     当たらない部分の ja は文字のまま・en は無し。en は全部の部分に en があるときだけ入れる。
+    発送時期系に当たらず drop_entries（発送欄除外）に当たる部分は捨てる。全部捨てたら (None, None)。
     """
     if ship is None:
         return None, None
@@ -1166,6 +1186,8 @@ def build_ship_labels(ship: Optional[str], ship_entries: list[dict]) -> tuple[Op
     for part in ship.split(_SHIP_PART_SEPARATOR):
         hits = _note_matches(part, ship_entries)
         if not hits:
+            if drop_entries and _note_matches(part, list(drop_entries)):
+                continue
             ja_parts.append(part)
             en_parts.append(None)
             continue

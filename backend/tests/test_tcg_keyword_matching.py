@@ -18,13 +18,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.tcg_analyzer_svc import (
+    SHIP_DROP_CATEGORY,
     SHIP_NOTE_CATEGORY,
     _note_matches,
     app_kubun_matches,
     build_note_ja,
-    build_ship_labels,
     build_review_reasons,
+    build_ship_labels,
     load_note_master,
+    load_ship_drop_master,
     match_keyword,
     match_one_kw,
     match_pid_name_first,
@@ -313,6 +315,36 @@ class TestLoadNoteMaster:
         statement = str(session.execute.call_args.args[0])
         assert "match_type, search_pattern, label_template" in statement
 
+    def test_does_not_read_ship_drop_category(self):
+        session = MagicMock()
+        session.execute.return_value.fetchall.return_value = []
+        load_note_master(session)
+        statement = str(session.execute.call_args.args[0])
+        params = session.execute.call_args.args[1]
+        assert "category IS DISTINCT FROM :drop_category" in statement
+        assert params == {"drop_category": SHIP_DROP_CATEGORY} == {"drop_category": "発送欄除外"}
+
+
+class TestLoadShipDropMaster:
+    def test_zero_rows_is_normal_without_warning(self, caplog):
+        session = MagicMock()
+        session.execute.return_value.fetchall.return_value = []
+        with caplog.at_level("WARNING"):
+            assert load_ship_drop_master(session) == []
+        assert caplog.records == []
+        assert session.execute.call_args.args[1] == {"category": "発送欄除外"}
+
+    def test_row_shape_matches_ship_master(self):
+        session = MagicMock()
+        session.execute.return_value.fetchall.return_value = [
+            (1, "発送欄除外:完売", "", "完売", "出荷予定,発送予定", 5, "LITERAL", "", "", "")
+        ]
+        assert load_ship_drop_master(session) == [{
+            "id": 1, "label_ja": "発送欄除外:完売", "label_en": "", "search_keywords": ["完売"],
+            "exclude_keywords": ["出荷予定", "発送予定"], "match_type": "LITERAL",
+            "search_pattern": "", "label_template": "", "label_template_en": "",
+        }]
+
 
 _EXISTING_LITERAL_NOTE_CASES = [
     ("NJ001", "検品開封済み", "検品のため", ["テープカット", "カートンテープカット"]),
@@ -512,6 +544,62 @@ def test_build_ship_labels_literal_regex_and_unmatched_parts():
     # 同じ値は1つ、全部当たれば en も " / " でつなぐ
     assert build_ship_labels("届き次第発送 / 届き次第発送", _SHIP_ENTRIES) == ("入荷次第発送", "Ships upon arrival")
     assert build_ship_labels("届き次第発送 / 10/16発送", _SHIP_ENTRIES) == ("入荷次第発送 / 10/16発送", "Ships upon arrival / Ships 10/16")
+
+
+_SEP = r"(?:から|〜|~|ー|-)"
+_SHIP_ENTRIES_DROP = [
+    _note_entry("S1", "発売日発送", search_keywords=["発送日発送"], label_en="Ships on release day"),
+    _note_entry("S2", "発売日発送", match_type="REGEX", search_pattern=r"^\s*発売日\s*$",
+                label_template="発売日発送", label_en="Ships on release day"),
+    _note_entry("S3", "N日〜M日発送", match_type="REGEX",
+                search_pattern=r"(\d{1,2})日[〜~ー\-](\d{1,2})日[^\d]{0,4}?(発送|出荷)",
+                label_template="$1日〜$2日発送", label_template_en="Ships day $1-$2", exclude_keywords=["完売", "月"]),
+    _note_entry("S4", "月中旬入荷", match_type="REGEX", search_pattern=r"(\d{1,2})月中旬[^\d]{0,4}?入荷",
+                label_template="$1月中旬入荷", label_template_en="Arrives mid month $1",
+                exclude_keywords=["から下旬", "〜下旬", "~下旬", "ー下旬", "-下旬"]),
+    _note_entry("S5", "月中旬〜下旬入荷", match_type="REGEX",
+                search_pattern=r"(\d{1,2})月中旬" + _SEP + r"下旬[^\d]{0,4}?入荷",
+                label_template="$1月中旬〜下旬入荷", label_template_en="Arrives mid-to-late month $1"),
+    _note_entry("S6", "指定日発送", match_type="REGEX", search_pattern=r"(\d{1,2})/(\d{1,2})発送",
+                label_template="$1/$2発送", label_template_en="Ships $1/$2"),
+]
+_DROP_ENTRIES = [
+    _note_entry("D1", "発送欄除外:完売", search_keywords=["完売"], exclude_keywords=["出荷予定", "発送予定"]),
+    _note_entry("D2", "発送欄除外:カートン", search_keywords=["カートン可", "カートン発送可", "カートン発送可能"]),
+    _note_entry("D3", "発送欄除外:括り", search_keywords=["括り発送可", "括り可"]),
+    _note_entry("D4", "発送欄除外:発売日告知", match_type="REGEX",
+                search_pattern=r"^[^\d]{0,3}(\d{1,2})月(\d{1,2})日\s*発売\s*$"),
+]
+
+
+def test_build_ship_labels_without_drop_entries_is_unchanged():
+    ship = "3日出荷分は完売 / カートン発送可"
+    assert build_ship_labels(ship, _SHIP_ENTRIES_DROP) == (ship, None)
+    assert build_ship_labels(ship, _SHIP_ENTRIES_DROP, ()) == (ship, None)
+    assert build_ship_labels(ship, _SHIP_ENTRIES_DROP, _DROP_ENTRIES) == (None, None)
+
+
+def test_build_ship_labels_generalized_cases_with_drop_entries():
+    def run(ship):
+        return build_ship_labels(ship, _SHIP_ENTRIES_DROP, _DROP_ENTRIES)
+
+    assert run("発送日発送") == ("発売日発送", "Ships on release day")
+    assert run("発売日") == ("発売日発送", "Ships on release day")
+    assert run("5日〜8日出荷予定 / 3日出荷分は完売 / 12月5日発売") == ("5日〜8日発送", "Ships day 5-8")
+    assert run("11月中旬から下旬入荷予定") == ("11月中旬〜下旬入荷", "Arrives mid-to-late month 11")
+    # 旬の範囲の区切りで二重ラベルにならない
+    assert run("11月中旬ー下旬入荷予定") == ("11月中旬〜下旬入荷", "Arrives mid-to-late month 11")
+    assert run("11月中旬-下旬入荷予定") == ("11月中旬〜下旬入荷", "Arrives mid-to-late month 11")
+    # 梱包の文は捨てる。全部捨てたら None
+    assert run("20箱でカートン、5箱で括り発送可") == (None, None)
+    assert run("カートン発送可") == (None, None)
+    # 発送時期系に当たる部分は、捨て札にも当たっても残る
+    assert run("カートン 11/20発送") == ("11/20発送", "Ships 11/20")
+    assert run("カートン発送可 / 11/20発送") == ("11/20発送", "Ships 11/20")
+    # どちらにも当たらない言い方は原文のまま・en なし
+    assert run("未知の言い方で発送") == ("未知の言い方で発送", None)
+    assert run("未知の言い方で発送 / カートン発送可") == ("未知の言い方で発送", None)
+    assert run(None) == (None, None)
 
 
 def test_ship_note_category_constant_matches_seed_migrations():
