@@ -5,7 +5,7 @@
 - 設計: docs/handoff/auth-self-hosted-passkey/design.md §2・§3（:76-77）・§3 パスワードの決まり（:88-97）・§6 便3（:156）
 - 判断メモ（PO 決定 y1）: docs/handoff/auth-self-hosted-passkey/decision-b3-mail.md §5
 - 対象ADR: ADR-1013（本テーマ）、ADR-075（秘密は GitHub Secrets）、ADR-136（危険PRの GO）、ADR-1007（migration は構造のみ。本便は migration なし）
-- 状態: 設計案（カード草案）。Fable 審査前。**PO の実装承認前（実装未着手）**
+- 状態: 設計案。Fable 審査 REVISE（限定）→ 指摘反映済み（審査記録 /tmp/CC報告ファイル/auth-b3/fable-review-card1.md。HIGH-1・MEDIUM-1 は示された文どおりの修正で再審査不要）。**PO の実装承認前（実装未着手）**
 - 危険便: **はい**（`docker-compose.yml`・`.github/workflows/deploy.yml`・secrets）。マージ前に GO 記録（GO 委任中は「POの委任に基づくClaude Opus発行」）
 - 担当: 実装 Sonnet／コード審査 Fable（セキュリティ観点込み）／GO・マージ・反映確認 Opus／GUI 作業 PO
 
@@ -30,9 +30,9 @@
 | # | 事実 | 出典 |
 |---|---|---|
 | F1 | SMTP の「設定がそろっているか」の判定が3か所に重複（HOST・USER・PASSWORD・MAIL_FROM の4つ） | `backend/app/services/email_sender.py:40-46`・`backend/app/services/po_mailer.py:33-40`・`backend/app/routers/contact.py:41-47` |
-| F2 | 値の読み取りも3か所に重複。`int(os.getenv("SMTP_PORT", "587"))` は、値が空文字だと ValueError になる | `backend/app/services/email_sender.py:58-62`・`backend/app/routers/contact.py:58-62`・`backend/app/services/po_mailer.py:76-90` |
+| F2 | 値の読み取りも3か所に重複。email_sender・contact の `int(os.getenv("SMTP_PORT", "587"))` は、値が空文字だと ValueError になる（po_mailer.py:87 は `or "587"` で吸収済み） | `backend/app/services/email_sender.py:58-62`・`backend/app/routers/contact.py:58-62`・`backend/app/services/po_mailer.py:76-90` |
 | F3 | 問い合わせ通知の宛先は `os.getenv("CONTACT_NOTIFY_EMAIL", "support@salesanchor.jp")`。値が空文字で設定されると既定値に戻らず宛先が空になる | `backend/app/routers/contact.py:27` |
-| F4 | deploy.yml は .env の秘密の行を一度消し（:258-283）、heredoc で書き足す（:291-316）。Secret が未登録なら `KEY=`（空文字）で書かれる | `.github/workflows/deploy.yml:258-316`・同 :289-290 のコメント |
+| F4 | deploy.yml は .env の秘密の行を一度消し（:259-283。:258 は touch）、heredoc で書き足す（:291-316）。Secret が未登録なら `KEY=`（空文字）で書かれる | `.github/workflows/deploy.yml:258-316`・同 :287-290 のコメント |
 | F5 | backend は `.env` 全行を `docker run --env-file` で受け取る。ロールバック経路は compose で backend を起動する。celery-worker は compose の `environment:` だけで受け取る | `scripts/blue-green-cutover.sh:92`・`.github/workflows/deploy.yml:659-662`・`docker-compose.yml:65-124`・`:201-239` |
 | F6 | 本番の .env・backend・celery-worker に SMTP_・MAIL_ の名前は 0 件 | /tmp/CC報告ファイル/auth-b3/（判断メモ §2） |
 | F7 | deploy.yml の起動は main への push だけ（workflow_dispatch なし） | `.github/workflows/deploy.yml:3-5` |
@@ -68,6 +68,7 @@
 - `.github/workflows/deploy.yml`
 - `.env.example`
 - `docs/ENVIRONMENT_VARIABLES.md`
+- `frontend/api-contract/openapi.json`（再生成のみ。CI「API contract is up to date」＝`.github/workflows/api-contract-check.yml:35,50-53` が差分で落とすため）
 - `docs/handoff/auth-self-hosted-passkey/card-b3.md`（このカード。報告欄の追記のみ）
 
 ## 4. 作り方
@@ -158,6 +159,7 @@ def check_password(plain: str) -> str | None:
 ```
 
   - 長さは Python の `len()`（文字数）で数える。一覧は起動後の最初の呼び出しで1回だけ読み、小文字の集合で持つ（`functools.lru_cache`）。照合は `plain.lower()`。
+  - 一覧の読み方: utf-8 で読み、各行を `strip()`、空行は捨てる。判定の順は too_short → too_long → too_common。
   - 文字の種類の混在は求めない。
 
 ### 4.4 cache.py（申請の回数制限・design.md:76）
@@ -208,6 +210,7 @@ Sales Anchor
 ```
 
 - `reset_url` は `f"{self_tokens.rp_origin()}/reset-password?token={raw}"`（画面は便4 で作る。便3 の間はリンク先の画面はまだ無い）。
+- 便4 で決めること（審査 MEDIUM-2）: `?token=` は利用者がリンクを開くと nginx のアクセスログに残り得る。画面を作る便4 で `#token=`（サーバーに送られない形）に変えるかを決める。便3 は design.md:127 のとおり `?token=`。
 
 ### 4.6 routers/auth.py（2つの口）
 
@@ -220,7 +223,7 @@ Sales Anchor
 4. 送る条件: 行がある・`is_active` が真・**送信許可の判定**（下）を通る。条件を満たさなければ 5〜6 を飛ばす
 5. 同じ人の未使用の reset 鍵を `used_at = now` で使えなくする → `raw = secrets.token_urlsafe(32)` を作り、`purpose='reset'`・`token_hash=_hash_token(raw)`・`expires_at=now+30分` で INSERT → commit
 6. `background_tasks.add_task(send_password_reset_email, row.email, reset_url)`
-7. どの場合も 200 `{"status": "accepted"}`（存在・停止・許可外の区別を応答に出さない）
+7. どの場合も 200 `{"status": "accepted"}`（存在・停止・許可外の区別を応答に出さない。存在する人だけ DB 書き込みがあるため応答時間に差は出得る。設計の受入基準は時間を含まないので便3 では扱わない）
 
 送信許可の判定（design.md:156・審査 MEDIUM-6）:
 - `self_tokens.auth_provider() == "self"`（便4 で切替後）なら全員に送る
@@ -254,8 +257,8 @@ Sales Anchor
 - celery-worker の `environment:`（:201-239）に、削除完了通知（`backend/app/tasks/email_tasks.py:44`）が使う 5 行: `SMTP_HOST`・`SMTP_PORT`・`SMTP_USER`・`SMTP_PASSWORD`・`MAIL_FROM`（同じ書き方）
 - それぞれコメント1行（既存の「この行が無いと .env に値があっても os.getenv が空になる」と同じ趣旨）
 
-`.env.example`: :50-53 の後に `MAIL_FROM=`・`CONTACT_NOTIFY_EMAIL=`・`AUTH_PASSWORD_RESET_ALLOWLIST=` を足す。
-`docs/ENVIRONMENT_VARIABLES.md`: :102-105 の例を SendGrid からさくら（`salesanchor.sakura.ne.jp`・`587`・送信用アドレス・パスワード）に直し、`MAIL_FROM`・`CONTACT_NOTIFY_EMAIL`・`AUTH_PASSWORD_RESET_ALLOWLIST` の行を足す（読み取り口は `backend/app/services/mail_config.py` と書く）。
+`.env.example`: `MAIL_FROM` は :54 に既にあるので足さない。その後に `CONTACT_NOTIFY_EMAIL=`・`AUTH_PASSWORD_RESET_ALLOWLIST=` の 2 行だけ足す。
+`docs/ENVIRONMENT_VARIABLES.md`: :102-105 の例を SendGrid からさくら（`salesanchor.sakura.ne.jp`・`587`・送信用アドレス・パスワード）に直し、`CONTACT_NOTIFY_EMAIL`・`AUTH_PASSWORD_RESET_ALLOWLIST` の 2 行を足す（`MAIL_FROM` は :106 に既にある。説明だけ直す。読み取り口は `backend/app/services/mail_config.py` と書く）。
 
 ### 4.9 テスト（先に書いて、修正前に失敗することを確かめる）
 
@@ -266,6 +269,9 @@ Sales Anchor
 - 14 文字は too_short・15 文字は通る・64 文字は通る・65 文字は too_long・一覧の先頭の語（大文字にしたもの）は too_common・一覧の件数が README の件数と一致
 
 `test_password_reset.py`（`test_self_auth.py` の fixture の作り方に合わせる。送信関数は patch して呼ばれた引数だけ見る）:
+- 監査記録: `audit.py:303,313` は `tenant_NNN.audit_logs` に書くので SQLite では動かない。conftest の差し替え（`_make_noop_audit_log`、:1532-1553）は `client` fixture の `_audit_targets`（:1651-1688）にしか効かず、`app.routers.auth` は入っていない。このファイルに autouse fixture を置き `patch("app.routers.auth.record_audit_log", new=_make_noop_audit_log())` を張る（`from conftest import _make_noop_audit_log`。import できなければ同じ関数をテストファイル内に複製）。conftest の `_audit_targets` は変えない
+- 監査の確認: `SELECT COUNT(*) FROM audit_logs WHERE table_name='users' AND record_id=:uid AND new_data LIKE '%password_reset_confirmed%'` が 1
+- 後始末: test_self_auth.py:77-83 と同じ形で、`password_reset_tokens`・`audit_logs`（自分の作った行だけ）・`auth_refresh_tokens`・`users(id>=2000)` を消す fixture
 1. 許可リストに載った使用中の人 → 200・鍵が1行（purpose=reset・期限 30 分）・送信関数が1回呼ばれ、URL が `https://app.salesanchor.jp/reset-password?token=` で始まる
 2. 許可リストが空（AUTH_PROVIDER=firebase）→ 200・鍵 0 行・送信 0 回
 3. 存在しない email・`is_active=false` → 200・同じ本文・鍵 0 行・送信 0 回
@@ -287,7 +293,9 @@ Sales Anchor
 4. `git grep -n 'os.getenv("SMTP_\|os.getenv("MAIL_FROM\|os.getenv("CONTACT_NOTIFY' -- backend/app` が `backend/app/services/mail_config.py` 以外 0 件（mail_config は `_env` 経由なので 0 件でもよい）
 5. `docker compose -f docker-compose.yml config` が成功し、backend に 7 つ・celery-worker に 5 つの名前が出る（値は空でよい。出力は伏せずに件数だけ報告）
 6. `python -c "import yaml,sys; yaml.safe_load(open('.github/workflows/deploy.yml'))"` が成功。追加した 7 名が sed 削除と heredoc の両方に 1 回ずつ（`grep -c` で各 2）
-7. `git diff origin/main...HEAD --name-only` が §3 の一覧と一致
+7. `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` を実行し、`git diff --stat -- frontend/api-contract/` の最終行を貼る。増えた path が `/api/v1/auth/password-reset/request` と `/confirm` の 2 つだけであること（他の path に差分が出たら `NEEDS_DECISION:`）
+8. `git diff origin/main...HEAD --name-only` が §3 の一覧と一致
+9. `docker compose config` は警告は可・エラーは不可
 
 ## 6. 分岐ごとの対処
 
@@ -297,7 +305,7 @@ Sales Anchor
 | 追加テストが修正前でも通る | テストが的外れ。`NEEDS_DECISION:` |
 | `test_po_mailer.py` などの既存テストを変えないと通らない | 変えずに `NEEDS_DECISION:`（動きを変えてしまっている） |
 | deploy.yml に .env を作る場所が :258-316 以外にもある（`grep -n "ENV_EOF"` が 2 行より多い・別の heredoc がある） | 足さずに `NEEDS_DECISION:` |
-| `record_audit_log` が SQLite のテストで動かない | 既存テストの監査の差し替え方を探して合わせる。見つからなければ `NEEDS_DECISION:` |
+| §4.9 の監査の差し替えをしても `record_audit_log` が SQLite のテストで動かない | `NEEDS_DECISION:` |
 | BackgroundTasks を使うと既存の依存（`get_db` の後始末）と順番がぶつかる | 送信関数は DB に触らない形にしてあるので、ぶつかった場合は `BLOCKED:` |
 | §3 以外のファイルを触る必要が出た | 止まって `NEEDS_DECISION:` |
 | フックに止められた | 言い換えて再試行しない。`BLOCKED:` |
@@ -309,11 +317,12 @@ Sales Anchor
 | SMTP の設定を読むのは mail_config.py の1か所 | §5-4 の grep が 0 件 |
 | 未設定・空文字では送らずログだけ（今と同じ） | test_mail_config・既存の test_po_mailer の idle テスト |
 | 再設定は、許可リストの人・使用中の人にだけ届き、他は同じ応答で何も起きない | test_password_reset 1〜4 |
-| 申請は email ごと 1 時間 3 回まで | test_password_reset 5 |
+| 申請は email ごと 1 時間 3 回まで（Redis 稼働時。不通時は既存の auth と同じく通す） | test_password_reset 5 |
 | 鍵は 1 回だけ・30 分だけ使え、確定でその人の他の端末のログインが切れる | test_password_reset 7〜9 |
 | パスワードは 15〜64 文字・一覧に載るものは拒否 | test_password_policy・test_password_reset 10 |
 | 本番のログインの動きは変わらない | 反映後、login（正しい形の本文）が 404・logout（トークンなし）が 401 のまま |
 | 設定が backend・celery-worker・ロールバック経路のすべてに渡る | §5-5・§5-6 |
+| API の約束（openapi.json）が新しい 2 口と一致 | §5-7・CI「API contract is up to date」が緑 |
 | K5（反映後・§8 ④）: 試験用アドレスの Gmail 受信箱に届き、SPF・DKIM・DMARC が pass | PO が Gmail の「メッセージのソースを表示」で確認 |
 
 ## 8. 反映の順番と PO の作業
