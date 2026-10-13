@@ -323,6 +323,58 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(dark.nameContrast!, "ダークの名前の明暗差").toBeGreaterThanOrEqual(4.5);
   });
 
+  test("スマホ: 主要な操作ボタンが44px以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（WCAG 2.5.5）: 押す場所を 44px 以上にする。
+    // ピルの外側にある3つを 44px（--size-icon-btn-lg）にした。
+    // 一覧では絞り込み、会話ではスレッドの操作と送信を測る。
+    const measure = async (sel: string) => {
+      const box = await page.locator(sel).first().boundingBox();
+      return box ? { w: Math.round(box.width), h: Math.round(box.height) } : null;
+    };
+
+    const filter = await measure(".inbox-search-row .inbox-mobile-filter-toggle");
+    expect(filter, "絞り込みボタンが見つからない").not.toBeNull();
+
+    await openConversation(page);
+    const sendBtn = await measure(".inbox-send-btn");
+    const karteToggle = await measure(".karte-toggle-btn");
+    // 本便で変更していないものも値を記録に残す（design §7）。
+    //   .send-attach-btn … 送信ピルの内側（44px にするとピルが膨らむ）
+    //   .inbox-header-menu-btn … 実機実測で 15x38dp。幅が足りないのは画面右端で
+    //     切れているため（ヘッダの中身が 360dp に収まっていない）。寸法ではなく
+    //     ヘッダの中身を減らす判断が必要なので本便では触らない。
+    const attach = await measure(".send-attach-btn");
+    const headerMenu = await measure(".inbox-header-menu-btn");
+
+    await testInfo.attach("touch-targets", {
+      body: JSON.stringify(
+        {
+          絞り込み: filter,
+          送信: sendBtn,
+          顧客情報: karteToggle,
+          "添付（この便では未対応）": attach,
+          "三点メニュー（この便では未対応・右端で切れている）": headerMenu,
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(filter!.w, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(filter!.h, "絞り込みの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn, "送信ボタンが見つからない").not.toBeNull();
+    expect(sendBtn!.w, "送信の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(sendBtn!.h, "送信の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(karteToggle, "顧客情報ボタンが見つからない").not.toBeNull();
+    // 幅はアイコンと文言に任せるため高さだけを基準にする
+    expect(karteToggle!.h, "顧客情報ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+  });
+
   test("スマホ: 検索欄の2つのボタンが別のアイコンで、管理は文言を出さない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
