@@ -123,9 +123,9 @@ recon: docs/handoff/review-compare-table/recon.md（基準 origin/main d39e25183
 5. NG があれば直して測り直す。2回直しても NG なら止まって報告する。
 
 ## 11. 維持の仕組み
-- 単体試験 ItemComparison.test.tsx（B・F）。story を Storybook カタログに載せる（見た目の後退を目で見つけられる）。
+- 守り手: CI の vitest（frontend/src/features/tcg-analysis-review/ItemComparison.test.tsx。B・F と title）と Storybook の story（Features/ItemComparison。幅 640・960・バッジ0件）。見た目の後退はカタログで目で見つける。
 
-## 12. 外部事例（調査 /tmp/CC報告ファイル/design-sense-research-20261014.md）
+## 12. 外部・過去事例の参照と我々への応用（調査 /tmp/CC報告ファイル/design-sense-research-20261014.md）
 - 測れる基準（チェックリスト）を作り、描画した画面で審査する方法: 見た目の評価が向上した（S1: 3.0→3.9、S4: 79%→91%）。今回は A〜E を測れる基準にした。
 - 汎用の AI に美しさを判定させる方法は弱い（F2: r=0.21）。そのため判定は数値の基準だけで行う。
 - 適用の限界: 事例は新規サイトの生成で、既存のデザインシステムの1部品の修正ではない。

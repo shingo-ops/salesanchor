@@ -124,7 +124,7 @@ preflight: `./scripts/dev/executor-preflight.sh` -> 「PREFLIGHT OK — 作業�
 
 ### i. 既存の試験・ストーリーで DOM 構造に依存する箇所
 - frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx:10 `vi.mock("./ItemComparison", () => ({ ItemComparison: () => null }))`。ItemComparison はこの試験で空に差し替えられており、比較表の DOM に依存する箇所は無い。同ファイルが見るのは: ギャップ表示(:37-38)、原文ペイン `[data-range="block"]`(:67)、`data-testid="supplier-drawer"` の class `comp-drawer-panel--wide`(:80)、見出し「Fix」(:86)。
-- ItemComparison 専用の試験ファイルは無い（`ls` で `ItemComparison.test.tsx` 無し）。`grep -rln "comparison-field\|aligned-fields\|item-head-grid" frontend/src` の結果はコンポーネント・CSS 以外に試験ヒット無し（frontend/src/**/*.test.* でヒットなし）。
+- ItemComparison 専用の試験ファイルは無い（調査時点の `ls` で ItemComparison の試験ファイルは無かった。本作業で frontend/src/features/tcg-analysis-review/ItemComparison.test.tsx を新設）。`grep -rln "comparison-field\|aligned-fields\|item-head-grid" frontend/src` の結果はコンポーネント・CSS 以外に試験ヒット無し（frontend/src/**/*.test.* でヒットなし）。
 - ConditionReviewPanel.test.tsx:6 は `AnalysisReviewItem` 型の import のみ。
 - 他: frontend の src 外（e2e 等）の ItemComparison 参照は未確認（grep が完了していない）。
 - ストーリー: ReviewItemDrawer.stories.tsx（Default 1本、title 'Features/ReviewItemDrawer'）。
