@@ -3815,7 +3815,7 @@ Architect 審査（AY-2o）: 1回目 REVISE（Fable）→ 改訂1 → 2回目 AP
 |---|---|
 | 6件の left・width の差 ±1px 以内 | 差 0（上の表）合格。A1 の兄弟 ButtonLink も left 1121.22・width 121.78（1440 は left 1281.22）で前後同じ |
 | 縦中心の差 ±2px 以内（A1 と ButtonLink、B と親 label） | A1 前 0・後 0.01、B 前 0.7・後 0 合格 |
-| 月「12」・年「2026」が切れない（scrollWidth ≤ clientWidth） | 月 58/58、年 88/88（3画面×2幅とも）合格。月の focus・hover 画像（ay2o-after-*-month-focus.png・month-hover.png）で「12」の2文字が見える（設計者が最終目視） |
+| 月「12」・年「2026」が切れない（scrollWidth ≤ clientWidth） | 月 58/58、年 88/88（3画面×2幅とも）合格。月の focus・hover 画像（ay2o-after-*-month-focus.png・month-hover.png）で「12」の2文字が見える（設計者 Opus が after の commission-settings-w1280-month-focus・commission-settings-w1440-month-hover・commissions-w1440-month-focus を目視、実装担当が commissions-w1280-month-hover を目視。いずれも「12」と上下ボタンが欠けずに表示） |
 | A2 の30文字 | 値と文字数 30（期待30）、scrollWidth 1144/1144（1280）・1304/1304（1440）、前後同じ。キャンセルで A2 が DOM から消える（前後とも） |
 | A1 の URL | scrollWidth÷clientWidth 1020/1020（1280）・1180/1180（1440）で前後同じ（切れていない） |
 | API の URL（query 込み） | 前後同じ: `GET /commissions/monthly?year=2026&month=10` 2回の後、月を12にして `GET /commissions/monthly?year=2026&month=12`（3画面とも）。/commission-settings は `GET /tenant-commission-settings` も前後同じ |
