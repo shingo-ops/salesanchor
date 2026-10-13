@@ -2040,11 +2040,11 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   display: none;
 }
 
-/* 検索（横幅いっぱい・左右12dp・下に4dp） */
+/* 検索（横幅いっぱい・左右12dp・上下4dp。上4dpはヘッダーと検索欄の間の4dp分） */
 .inbox-mobile-search-row {
   display: flex;
   align-items: center;
-  padding: 0 var(--space-3) var(--space-1);
+  padding: var(--space-1) var(--space-3);
   flex-shrink: 0;
 }
 .inbox-mobile-search-row .inbox-search-wrap {
