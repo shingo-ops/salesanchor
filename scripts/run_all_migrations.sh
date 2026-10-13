@@ -922,3 +922,6 @@ run_sql migrations/20261013_120000_staff_user_id_not_null.sql
 
 # staff.role_id の NOT NULL を外す（ADR-1008 P4a・構造のみ・冪等。ロールの正本は user_roles）
 run_sql migrations/20261013_130000_staff_role_id_nullable.sql
+
+# 名簿のメールの正本を users.email にする: staff.primary_email の NOT NULL を外し v_senders を作り直す（ADR-1008 P4b・構造のみ・冪等）
+run_sql migrations/20261013_140000_staff_email_from_users.sql

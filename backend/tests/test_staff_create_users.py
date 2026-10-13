@@ -146,3 +146,88 @@ async def test_patch_with_user_id_returns_400_and_keeps_roster_user_id(client, d
     after = (await db_session.execute(text(
         "SELECT user_id FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
     assert after == before
+
+
+@pytest.mark.asyncio
+async def test_create_does_not_write_staff_primary_email_and_ignores_firebase_uid(client, db_session):
+    await _seed_role(db_session)
+
+    res = await client.post(
+        "/api/v1/staff", json=_body("loginmail@example.com", firebase_uid="fb-should-not-be-saved"))
+
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["primary_email"] == "loginmail@example.com"  # users.email から出る
+    assert "firebase_uid" not in body
+    row = (await db_session.execute(text(
+        "SELECT primary_email, firebase_uid FROM staff WHERE id = :id"), {"id": body["id"]})).mappings().first()
+    assert row["primary_email"] is None
+    assert row["firebase_uid"] is None
+    user_email = (await db_session.execute(text(
+        "SELECT email FROM users WHERE id = :id"), {"id": body["user_id"]})).scalar()
+    assert user_email == "loginmail@example.com"
+
+
+@pytest.mark.asyncio
+async def test_create_users_row_gets_default_role_without_writing_it(client, db_session):
+    await _seed_role(db_session)
+
+    res = await client.post("/api/v1/staff", json=_body("defaultrole@example.com"))
+
+    assert res.status_code == 201, res.text
+    role = (await db_session.execute(text(
+        "SELECT role FROM users WHERE email = 'defaultrole@example.com'"))).scalar()
+    assert role == "user"  # 列の既定値（INSERT には書かない）
+
+
+@pytest.mark.asyncio
+async def test_roster_email_comes_from_users_not_staff_column(client, db_session):
+    await _seed_role(db_session)
+    created = await client.post("/api/v1/staff", json=_body("fromusers@example.com"))
+    assert created.status_code == 201, created.text
+    staff_id = created.json()["id"]
+    await db_session.execute(text(
+        "UPDATE staff SET primary_email = 'stale-column@example.com' WHERE id = :id"), {"id": staff_id})
+    await db_session.commit()
+
+    one = await client.get(f"/api/v1/staff/{staff_id}")
+    listed = await client.get("/api/v1/staff", params={"search": "fromusers"})
+    stale = await client.get("/api/v1/staff", params={"search": "stale-column"})
+
+    assert one.status_code == 200, one.text
+    assert one.json()["primary_email"] == "fromusers@example.com"
+    assert [r["primary_email"] for r in listed.json()] == ["fromusers@example.com"]
+    assert stale.json() == []
+
+
+@pytest.mark.asyncio
+async def test_patch_with_primary_email_returns_400_and_keeps_users_email(client, db_session):
+    await _seed_role(db_session)
+    created = await client.post("/api/v1/staff", json=_body("keepmail@example.com"))
+    assert created.status_code == 201, created.text
+    staff_id, user_id = created.json()["id"], created.json()["user_id"]
+
+    res = await client.patch(f"/api/v1/staff/{staff_id}", json={"primary_email": "changed@example.com"})
+
+    assert res.status_code == 400, res.text
+    assert res.json()["detail"] == "メールアドレスはここでは変更できません"
+    email = (await db_session.execute(text(
+        "SELECT email FROM users WHERE id = :id"), {"id": user_id})).scalar()
+    assert email == "keepmail@example.com"
+
+
+@pytest.mark.asyncio
+async def test_patch_with_firebase_uid_is_ignored(client, db_session):
+    await _seed_role(db_session)
+    created = await client.post("/api/v1/staff", json=_body("fbpatch@example.com"))
+    assert created.status_code == 201, created.text
+    staff_id = created.json()["id"]
+
+    res = await client.patch(
+        f"/api/v1/staff/{staff_id}", json={"surname_jp": "鈴木", "firebase_uid": "fb-ignored"})
+
+    assert res.status_code == 200, res.text
+    assert "firebase_uid" not in res.json()
+    stored = (await db_session.execute(text(
+        "SELECT firebase_uid FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
+    assert stored is None

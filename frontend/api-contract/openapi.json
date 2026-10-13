@@ -29285,18 +29285,6 @@
             ],
             "title": "Discord User Id"
           },
-          "firebase_uid": {
-            "anyOf": [
-              {
-                "maxLength": 128,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firebase Uid"
-          },
           "given_name_en": {
             "description": "英語名（名）。必須・Discord 表示名（ADR-159）",
             "maxLength": 100,
@@ -29788,17 +29776,6 @@
             "title": "Emails",
             "type": "array"
           },
-          "firebase_uid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firebase Uid"
-          },
           "given_name_en": {
             "anyOf": [
               {
@@ -29961,7 +29938,6 @@
           "primary_email",
           "discord_user_id",
           "status",
-          "firebase_uid",
           "created_at",
           "updated_at"
         ],
@@ -30041,18 +30017,6 @@
               }
             ],
             "title": "Discord User Id"
-          },
-          "firebase_uid": {
-            "anyOf": [
-              {
-                "maxLength": 128,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Firebase Uid"
           },
           "given_name_en": {
             "anyOf": [
@@ -34601,10 +34565,6 @@
             "title": "Is Active",
             "type": "boolean"
           },
-          "role": {
-            "title": "Role",
-            "type": "string"
-          },
           "tenant_id": {
             "title": "Tenant Id",
             "type": "integer"
@@ -34620,7 +34580,6 @@
           "username",
           "full_name",
           "tenant_id",
-          "role",
           "is_active"
         ],
         "title": "UserResponse",

@@ -717,10 +717,11 @@ async def list_channels(
             tmc.connected_at,
             tmc.page_token_expires_at,
             tmc.connected_by_staff_id,
-            COALESCE(s.surname_jp || ' ' || s.given_name_jp, s.primary_email) AS staff_name,
+            COALESCE(s.surname_jp || ' ' || s.given_name_jp, su.email) AS staff_name,
             tmc.granted_scopes
         FROM tenant_meta_config tmc
         LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
+        LEFT JOIN public.users su ON su.id = tmc.connected_by_staff_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """
@@ -734,10 +735,11 @@ async def list_channels(
             tmc.connected_at,
             tmc.page_token_expires_at,
             tmc.connected_by_staff_id,
-            COALESCE(s.surname_jp || ' ' || s.given_name_jp, s.primary_email) AS staff_name,
+            COALESCE(s.surname_jp || ' ' || s.given_name_jp, su.email) AS staff_name,
             NULL AS granted_scopes
         FROM tenant_meta_config tmc
         LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
+        LEFT JOIN public.users su ON su.id = tmc.connected_by_staff_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """

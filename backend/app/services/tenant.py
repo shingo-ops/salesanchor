@@ -605,7 +605,7 @@ CREATE TABLE IF NOT EXISTS {schema}.staff (
     given_name_kana VARCHAR(100),
     surname_en VARCHAR(100),
     given_name_en VARCHAR(100),
-    primary_email VARCHAR(255) NOT NULL,
+    primary_email VARCHAR(255),
     discord_user_id VARCHAR(50),
     role_id INTEGER REFERENCES {schema}.roles(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active'
@@ -708,10 +708,11 @@ END $$;
 -- 送信元統一ビュー（staff と bots を UNION）
 CREATE OR REPLACE VIEW {schema}.v_senders AS
 SELECT
-    id, tenant_id, 'staff'::VARCHAR(10) AS sender_type,
-    CONCAT(surname_jp, ' ', given_name_jp) AS display_name,
-    primary_email AS contact_email
-FROM {schema}.staff
+    s.id, s.tenant_id, 'staff'::VARCHAR(10) AS sender_type,
+    CONCAT(s.surname_jp, ' ', s.given_name_jp) AS display_name,
+    u.email::VARCHAR(255) AS contact_email
+FROM {schema}.staff s
+JOIN public.users u ON u.id = s.user_id
 UNION ALL
 SELECT
     id, tenant_id, 'bot'::VARCHAR(10) AS sender_type,

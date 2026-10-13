@@ -27,7 +27,6 @@ class User(Base):
     username = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, unique=True, index=True)
     full_name = Column(String(255))
-    role = Column(String(50), default="user")
     # spec.md v1.1 F2 (Sprint 2): マーケットプレイス中央 admin フラグ。
     # テナント admin (role='admin') とは独立、Jarvis 運用 admin のみ true。
     # 詳細: migrations/064_add_users_is_super_admin.sql

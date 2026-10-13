@@ -348,7 +348,7 @@ async def setup_test_db(test_engine):
                 given_name_kana VARCHAR(100),
                 surname_en VARCHAR(100),
                 given_name_en VARCHAR(100),
-                primary_email VARCHAR(255) NOT NULL,
+                primary_email VARCHAR(255),
                 discord_user_id VARCHAR(50),
                 role_id INTEGER,
                 status VARCHAR(20) NOT NULL DEFAULT 'active',

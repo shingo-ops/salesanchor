@@ -66,6 +66,7 @@ async def engine():
     def _setup(dbapi_conn, _):
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-30 12:00:00+00:00")
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
+        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS public")
 
     async with eng.begin() as conn:
         # tenant_meta_config（migration 040 を SQLite 用に縮小。ADR-041 で granted_scopes 追加）
@@ -97,9 +98,18 @@ async def engine():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 user_id INTEGER,
-                primary_email VARCHAR(255) NOT NULL,
+                primary_email VARCHAR(255),
                 surname_jp VARCHAR(50),
                 given_name_jp VARCHAR(50)
+            )
+        """))
+
+    async with eng.begin() as conn:
+        # 名簿のメールの正本 users.email（ADR-1008 P4b）。staff_name のフォールバックで結合する
+        await conn.execute(text("""
+            CREATE TABLE public.users (
+                id INTEGER PRIMARY KEY,
+                email VARCHAR(255)
             )
         """))
 
@@ -346,9 +356,10 @@ async def test_list_channels_filters_other_tenants(app_client, db_session):
 async def test_list_channels_resolves_staff_name_when_present(app_client, db_session):
     """connected_by_staff_id（= users.id）が staff.user_id にひも付く場合、staff_name が `surname_jp + ' ' + given_name_jp` で返る。"""
     # staff 行を投入
+    await db_session.execute(text("INSERT INTO public.users (id, email) VALUES (5, 'yamada@example.com')"))
     await db_session.execute(text("""
         INSERT INTO staff (id, tenant_id, user_id, primary_email, surname_jp, given_name_jp)
-        VALUES (50, 999, 5, 'yamada@example.com', '山田', '太郎')
+        VALUES (50, 999, 5, 'stale-roster@example.com', '山田', '太郎')
     """))
     await db_session.commit()
 
@@ -361,6 +372,25 @@ async def test_list_channels_resolves_staff_name_when_present(app_client, db_ses
     ch = resp.json()["channels"][0]
     assert ch["connected_by_staff_id"] == 5
     assert ch["connected_by_staff_name"] == "山田 太郎"
+
+
+@pytest.mark.asyncio
+async def test_list_channels_staff_name_falls_back_to_users_email(app_client, db_session):
+    """氏名が空のとき staff_name は users.email（staff.primary_email ではない。ADR-1008 P4b）。"""
+    await db_session.execute(text("INSERT INTO public.users (id, email) VALUES (6, 'login@example.com')"))
+    await db_session.execute(text("""
+        INSERT INTO staff (id, tenant_id, user_id, primary_email, surname_jp, given_name_jp)
+        VALUES (51, 999, 6, 'stale-roster@example.com', NULL, NULL)
+    """))
+    await db_session.commit()
+
+    await _insert_channel(
+        db_session, tenant_id=999, page_id="page-2", page_name="P2",
+        connected_by_staff_id=6,
+    )
+    resp = await app_client.get("/api/v1/meta/channels")
+    assert resp.status_code == 200
+    assert resp.json()["channels"][0]["connected_by_staff_name"] == "login@example.com"
 
 
 @pytest.mark.asyncio
