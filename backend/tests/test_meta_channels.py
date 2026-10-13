@@ -411,6 +411,23 @@ async def test_list_channels_returns_null_staff_name_when_unlinked(app_client, d
 
 
 @pytest.mark.asyncio
+async def test_list_channels_staff_name_null_when_users_row_without_staff(app_client, db_session):
+    """users 行はあるが staff 行が無い場合、staff_name は users.email ではなく NULL（ADR-1008 P4b）。"""
+    await db_session.execute(text("INSERT INTO public.users (id, tenant_id, username, email, is_super_admin) VALUES (7, 999, 'nostaff', 'nostaff@example.com', 0)"))
+    await db_session.commit()
+
+    await _insert_channel(
+        db_session, tenant_id=999, page_id="page-3", page_name="P3",
+        connected_by_staff_id=7,
+    )
+    resp = await app_client.get("/api/v1/meta/channels")
+    assert resp.status_code == 200
+    ch = resp.json()["channels"][0]
+    assert ch["connected_by_staff_id"] == 7
+    assert ch["connected_by_staff_name"] is None
+
+
+@pytest.mark.asyncio
 async def test_list_channels_returns_token_expires_at_when_set(app_client, db_session):
     """page_token_expires_at がレスポンスに ISO 文字列として返る。"""
     await _insert_channel(

@@ -721,7 +721,7 @@ async def list_channels(
             tmc.granted_scopes
         FROM tenant_meta_config tmc
         LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
-        LEFT JOIN public.users su ON su.id = tmc.connected_by_staff_id
+        LEFT JOIN public.users su ON su.id = s.user_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """
@@ -739,7 +739,7 @@ async def list_channels(
             NULL AS granted_scopes
         FROM tenant_meta_config tmc
         LEFT JOIN staff s ON s.user_id = tmc.connected_by_staff_id
-        LEFT JOIN public.users su ON su.id = tmc.connected_by_staff_id
+        LEFT JOIN public.users su ON su.id = s.user_id
         WHERE {where_sql}
         ORDER BY tmc.connected_at DESC, tmc.id DESC
     """
