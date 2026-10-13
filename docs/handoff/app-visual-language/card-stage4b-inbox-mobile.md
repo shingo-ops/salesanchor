@@ -621,15 +621,34 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 | `frontend/src/pages/inbox/InboxConversationListMobile.tsx:32-184` | `.inbox-left-panel`（`<aside>`）の直下に、順に `.inbox-mobile-header` → `.inbox-mobile-search-row`（＋一括操作バー）→ `.inbox-sub-filter-bar` → （条件付き）`.inbox-page-filter-wrap` → `<InboxConversationRows>` が並ぶ |
 | `frontend/src/pages/inbox/InboxConversationRows.tsx:38` | `<InboxConversationRows>` がレンダーする `.inbox-conversation-list` の実体 |
 
-`.inbox-conversation-list` が `flex: 1` ＋ `min-height: 0` で自分だけスクロールを受け持つため、親の `.inbox-left-panel` はちょうど収まる高さのまま＝`scrollHeight === clientHeight` になる。`.inbox-mobile-header` と `.inbox-mobile-search-row` はこの `.inbox-conversation-list` の**外**（flex の兄弟要素として前）にあるため、**そもそも最初からスクロールで動かない**。これは第2便（ヘッダー新設）の時点から変わっていない構造上の事実であり、何かを固定する実装を新たに追加する必要はなかった。
+`.inbox-conversation-list` は `flex: 1` ＋ `min-height: 0` を持つので、**親の高さが確定していれば**自分だけスクロールを受け持ち、その外側にある `.inbox-mobile-header` と `.inbox-mobile-search-row` は動かない。ここまでは CSS を読んだだけで言えることだが、**親の高さが確定しているかどうかは読みだけでは分からない**。
 
-**2度目の推測の反省**: 検査を書き直す際、いったん「スクロール箱は `.inbox-conversation-list`」と要素名を決め打ちした版を作った。しかし「どの要素名を使うか」を決め打ちする設計は、1度目の `.inbox-left-panel` のときと同じ失敗パターン（将来構造が変わったときに追従できない）を繰り返す。そのため `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の最終版（§17-6）では、要素名を書かずに「`scrollHeight > clientHeight` かつ `overflow-y` が `auto`/`scroll` である最初の祖先」をブラウザ内で実際に探して使う形に直した。
+**2度目の推測と、その誤り（CI が検出）**: 上記の構造から「ヘッダーはそもそも最初から動かない」と結論し、検査を `.inbox-conversation-list` 決め打ちで書き直した。CI は再び `行の一覧がスクロールできる高さになっていない（検査データが足りない）` で止まった。そこで**要素名を決め打ちせず、行から親をたどって「本当に中身があふれている箱」をブラウザ内で探し、見つからなければページ全体を使う**形に書き直した（§17-6）。この版が出した実測が次である（20件の一覧・vl-mobile-390）。
 
-### 17-4. 対応: sticky の指定を撤回
+| 箱 | scrollHeight | clientHeight | overflow-y |
+|---|---|---|---|
+| `div.inbox-conversation-list` | 1520 | 1520 | auto |
+| `aside.inbox-left-panel` | 1632 | 1632 | auto |
+| `div.inbox-columns` | 1632 | 1632 | visible |
+| `div.inbox-main-area` | 1632 | 1632 | visible |
+| `div.inbox-wrapper` | 1632 | 1632 | auto |
+| `main.mobile-content` | 1698 | 1698 | auto |
+| `html` | 1698 | 844 | visible |
 
-`frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` から、§17-2 で追加した `position: sticky; top: 0; z-index: var(--z-base); background: var(--bg-surface);` とその直前のコメントを削除した。**効果を示せないコードは入れない方針**のため（ヘッダーは `.inbox-conversation-list` の外にあり、sticky は何もしない）。
+**どの箱も中身の高さまで伸びきっており、スクロールしていたのは `html`＝ページ全体だけだった。** ページごと動くのでヘッダーも一緒に流れる＝**PO の指摘は実在する不具合で、「最初から動かない」という私の2度目の結論も誤りだった**。本番の会話が5件しかなくスクロールが起きないため、これまで誰も踏んでいなかった。
 
-題字の `--font-title-mobile` 化（§17-10）はこの訂正と無関係の別件のため、そのまま残している。
+### 17-4. 真因と対応（2段階）
+
+**原因は2つあり、両方を直して初めてヘッダーが動かなくなった。**
+
+| # | 原因 | 直し方 | 根拠 |
+|---|---|---|---|
+| 1 | 高さが確定していない | `frontend/src/components/PageLayout.css` の `.page-layout.page-layout--slim-header` に与えていた `min-height: calc(100dvh - var(--tabbar-height))` を、値はそのままで `height` に変更 | `min-height` では親の高さが「確定」扱いにならず、flex の子が縮まずに中身の高さまで伸びる（PR 4196 で会話側に起きたのと同じ現象）。対象は `slimHeaderOnMobile` を渡すページ＝受信箱のみ |
+| 2 | スマホ用に「はみ出しを許す」上書きが残っていた | `frontend/src/pages/inbox/InboxPage.css` の `@media (max-width: 767px)` で `.inbox-wrapper { overflow-y: auto }` → `hidden`、`.inbox-main-area { overflow: visible }` → `hidden; min-height: 0`、`.inbox-columns { overflow: visible }` → `hidden; min-height: 0` | 1 を直した直後の CI 実測では、スクロール箱が `html` から `.inbox-wrapper`（clientH=778 / scrollH=1632）へ移っただけで、ヘッダーはその内側にあるため依然動いた。土台（`frontend/src/pages/inbox/InboxPage.css:4-21` の `height: 100%` ＋ `overflow: hidden`）は正しく組まれており、スマホだけが例外になっていた |
+
+`min-height: 0` を明示しているのは、flex の子の既定が `min-height: auto`（縮まない）であるため。これが無いと `overflow` を戻しても縮まない。
+
+**`position: sticky` は使っていない。** §17-2 で推測から足したものは撤回したままで、高さが正しく確定していれば不要であることが実測で確認できた（この節の対応後、CI の画面検査17件が合格）。
 
 ### 17-5. テストデータと新テスト（訂正後）
 
@@ -669,20 +688,24 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 
 | # | 基準 | 検証方法 | 結果 |
 |---|---|---|---|
-| 1 | 効果のない `position: sticky` を撤回した | `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` から sticky 関連4行とコメントを削除 | 修正済み（コードレビューで確認） |
-| 2 | 新テストが本当のスクロール箱（`.inbox-conversation-list`）を基準にしている | `inbox-single-column.spec.ts` の該当テストを書き直し | 修正済み（§17-6） |
-| 3 | 題字の文字サイズ（§17-10）は変更していない | `--font-title-mobile` と `.inbox-mobile-header-title` の変更箇所は無変更 | 変更なしを確認済み |
-| 4 | 既存の画面検査が壊れていない | `npx playwright test --list` で収集確認（この端末では実行不可のため構文確認のみ） | §6 に実行結果を記載 |
-| 5 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §6 に実行結果を記載 |
-| 6 | 型が通る | `cd frontend && npx tsc --noEmit` | §6 に実行結果を記載 |
-| 7 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | §6 に実行結果を記載 |
+| 1 | スマホの受信箱でページ全体がスクロールしない | CI の画面検査が「行から親をたどって見つけたスクロール箱」を出力。修正後は `html` ではなく `.inbox-conversation-list` が選ばれる | 達成（CI 画面検査17件合格） |
+| 2 | 一覧をスクロールしてもヘッダーの y と高さが変わらない | 新テスト `スマホ: 一覧をスクロールしてもヘッダーが動かない`（±1px） | 達成（CI で合格） |
+| 3 | 検索欄の y も変わらない | 同テスト（±1px） | 達成（CI で合格） |
+| 4 | 行は実際に動いている（検査が空振りしていない） | 同テストで1行目の y がスクロール後に小さくなることと `scrollTop > 0` を確認 | 達成（CI で合格） |
+| 5 | 効果を示せない `position: sticky` を入れていない | `frontend/src/pages/inbox/InboxPage.css` に sticky の記述が無いこと | 達成（撤回済み・grep で0件） |
+| 6 | 会話画面側が壊れていない | 既存の画面検査（`一覧 → 会話 → 一覧`・`会話を開いた状態`のベースライン・会話側の44px検査） | 達成（すべて緑） |
+| 7 | 題字が21pxで出ている | 同 spec の `titleFontSize` が21px（厳密一致） | 達成（CI で合格） |
+| 8 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 達成（25項目すべて成功・lint は既存 warning 135件で error 0件） |
+| 9 | 型が通る | `cd frontend && npx tsc --noEmit` | 達成（エラー0件） |
+| 10 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | フルスイートでは毎回**違うファイル**が `Test timed out in 5000ms` で落ちるが、該当ファイルを個別実行すると全件成功＝並列実行時のワーカータイムアウトで本変更とは無関係 |
+| 11 | 実機でも崩れていない | 本番反映後に SC-51G（1080x2340・3倍）で撮影し、ヘッダー56・検索欄48・行76・押す場所44以上を再確認 | **未実施**（マージ後に実施） |
 
 ### 17-9. 残るリスクと教訓
 
-1. **教訓（再発防止）**: 「スクロールする箱」をCSSの一箇所（`.inbox-left-panel` の `overflow-y: auto`）だけで判断し、実際に中身があふれるかを確認しなかったことが誤りの原因だった。次に同種の判断をするときは、対象要素の `scrollHeight > clientHeight` を実測するか、その箱の子要素に別の `overflow` 指定がないかを必ず確認する。**この教訓を検査そのものにも適用し**、書き直した検査では「スクロール箱は `.inbox-conversation-list`」という2度目の決め打ちもやめ、要素名を書かずに実際にスクロールしている祖先をブラウザ内で探す形にした（§17-3・§17-6）。
-2. **Playwright をこの端末で実行できない。** `npx playwright test --list` で構文とセレクタの収集は確認したが、実際に assertion が通るかは CI（x86）の初回実行で初めて分かる。
-3. **検索欄もヘッダーと同じく固定側になっている（§17-7）。** お手本と一致していない。直すかどうかは PO 判断待ち。
-4. **実機での確認は未実施。** 今便は構造の訂正のみで見た目の変更はないが、CI（x86）で新テストが実際に通ることは別途確認が必要。
+1. **教訓（再発防止・この便で2度踏んだ）**: 「どの要素がスクロールしているか」は **CSS を読んだだけでは決められない**。1度目は `.inbox-left-panel` の `overflow-y: auto` だけを見て「ここがスクロール箱」と推測して外し、2度目は `.inbox-conversation-list` の `flex:1 / min-height:0` を見て「ヘッダーは最初から動かない」と推測して外した。**実際にスクロールするかは、親の高さが確定しているかに依存し、それは祖先をすべてたどらないと分からない。** 対策として、検査そのものを「要素名を決め打ちせず、行から親をたどって `scrollHeight > clientHeight` かつ `overflow-y` が `auto`/`scroll` の最初の箱を使う」形にし、見つからない場合は親の連なり（セレクタ・scrollHeight・clientHeight・overflow-y）を失敗メッセージと添付に出すようにした。**この出力だけで真因（§17-4）を特定できた。**
+2. **高さの扱いを変えたので会話画面にも影響し得る。** `.page-layout--slim-header` の `min-height` → `height` は受信箱の全画面（一覧・会話の両方）に効く。既存の画面検査はすべて緑だが、実機確認はマージ後になる。
+3. **実機では本番の会話が5件しかなくスクロールが起きない。** 実機でスクロールの固定まで確かめるには、本番のテナントに会話を数件増やす必要がある（PO 相談事項）。
+4. **検索欄もヘッダーと同じく固定側になっている（§17-7）。** お手本（検索欄は一覧と一緒に流れる）と一致していない。揃えるかどうかは PO 判断待ち。
 
 ### 17-10. 題字の文字サイズ（PO 決定・2026-10-14・字種をそろえて再測定）
 
