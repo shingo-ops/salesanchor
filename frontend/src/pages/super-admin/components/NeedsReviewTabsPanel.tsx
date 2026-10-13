@@ -7,7 +7,7 @@
  *   - 詰まり: GET /api/v1/tcg/shadow-results/bottlenecks
  * 認証: ハブ（AnalysisRulesPage）が is_super_admin を制御
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
@@ -21,11 +21,13 @@ import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { api, ApiError } from "../../../lib/api";
 import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime";
+import { ReviewRowActions } from "../../../features/tcg-analysis-review/ReviewRowActions";
 import { ReviewItemDrawer } from "../../../features/tcg-analysis-review/ReviewItemDrawer";
 import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab";
 import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
 
 const PAGE_SIZE = 20;
+const INLINE_FIX_COLUMN_WIDTH = "320px";
 
 type TabKey = "production" | "shadow" | "bottlenecks" | "posts";
 
@@ -145,11 +147,16 @@ export default function NeedsReviewTabsPanel() {
   const [reloadKey, setReloadKey] = useState(0);
   const [drawerItem, setDrawerItem] = useState<NeedsReviewItem | null>(null);
 
+  // 保存のあとの読み直し（reloadKey だけが変わったとき）は、表を消さずに取り直す
+  const lastReloadKeyRef = useRef(reloadKey);
+
   useEffect(() => {
     if (authLoading || !isSuperAdmin || activeTab !== "production") return;
     let cancelled = false;
+    const isReload = lastReloadKeyRef.current !== reloadKey;
+    lastReloadKeyRef.current = reloadKey;
     setLoading(true);
-    setData(null);
+    if (!isReload) setData(null);
     setErrorKey("");
     const params = new URLSearchParams({
       status_tab: "NEEDS_REVIEW",
@@ -367,6 +374,14 @@ export default function NeedsReviewTabsPanel() {
           return spanValue;
         }
       },
+    },
+    {
+      key: "inline_fix",
+      header: t("needsReview.inline.header"),
+      width: INLINE_FIX_COLUMN_WIDTH,
+      renderCell: (item) => (
+        <ReviewRowActions item={item} onSaved={() => setReloadKey((k) => k + 1)} />
+      ),
     },
   ];
 
