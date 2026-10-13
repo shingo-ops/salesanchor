@@ -14,7 +14,7 @@
 （--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_ct）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
-extraction_shadow_runs / extraction_jobs など本番の表には書かない。
+extraction_jobs など本番の表には書かない。
 """
 from __future__ import annotations
 
@@ -102,8 +102,8 @@ _PROMPT_NAME_CONFIGS = "v9・v101・v102"
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 _JOB_IDS_SQL = f"""
-    SELECT id::text, extraction_job_id::text
-    FROM {TCG_SCHEMA}.extraction_shadow_runs
+    SELECT id::text, id::text
+    FROM {TCG_SCHEMA}.extraction_jobs
     WHERE id = ANY(CAST(:run_ids AS uuid[]))
 """
 
@@ -174,7 +174,7 @@ def read_run_ids(path: Path) -> list[str]:
 
 
 def fetch_job_ids(session: Session, run_ids: list[str]) -> dict[str, str]:
-    """run id → extraction_job_id（読み取り）。"""
+    """ファイルの id → extraction_job_id（読み取り。id は extraction_jobs.id そのもの）。"""
     if not run_ids:
         return {}
     rows = session.execute(text(_JOB_IDS_SQL), {"run_ids": run_ids}).fetchall()
@@ -583,7 +583,7 @@ def run_ab(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
-    p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
+    p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_jobs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
     p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_ct）を指示書にする")
     p.add_argument("--prompt-key", help="--config v101・v102 のみ。public.extraction_prompt_config の prompt_key（raw_copy_v101_<名前>、is_active）の本文を指示書にする。--prompt-name とは同時に使えない")

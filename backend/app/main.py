@@ -123,8 +123,6 @@ from app.routers import (
     tcg_product_import,  # IMPORT-01: 商品マスタ CSV 取り込み API
     tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
     tcg_review_csv,  # 要確認 CSV で直して戻す API
-    tcg_shadow_accuracy,  # 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API
-    tcg_shadow_review,  # design.md PR-D: 試運転（Shadow run）の確認画面用 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     tcg_v102_posts,  # 便C1: v102 の書き写しを直す API
     teams,
@@ -698,16 +696,6 @@ app.include_router(
 # 要確認を CSV で直してアプリに戻す API（require_super_admin 限定）
 app.include_router(
     tcg_review_csv.router, prefix="/api/v1", tags=["super-admin"],
-)
-
-# design.md PR-D: 試運転（Shadow run）の確認画面用 API（require_super_admin 限定）
-app.include_router(
-    tcg_shadow_review.router, prefix="/api/v1", tags=["super-admin"],
-)
-
-# 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API（読み取りのみ・require_super_admin 限定）
-app.include_router(
-    tcg_shadow_accuracy.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）

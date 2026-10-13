@@ -31,7 +31,6 @@ from app.services.extraction_judgement_svc import (
     normalize_for_match,
     product_match_text,
 )
-from app.services.extraction_shadow_svc import load_product_entries
 from app.services.gemini_raw_copy_v102_score_select import ScoreDecision, decide_by_score
 from app.services.tcg_analyzer_svc import (
     _entry_hit,
@@ -80,7 +79,7 @@ CONDITION_UNKNOWN = "不明"
 CONDITION_ERROR_CODE = "CN0012"
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
-# 商品が決まらないときの要確認の理由（試運転 extraction_shadow_svc.py の要確認と同じ判定・同じ意味）
+# 商品が決まらないときの要確認の理由（旧試運転の要確認と同じ判定・同じ意味）
 REVIEW_PRODUCT_NOT_IN_MASTER = "product_not_in_master"  # マスタに該当なし（unmatched）
 REVIEW_PRODUCT_MULTIPLE = "product_multiple"  # 候補が2件以上（ambiguous）
 BASIS_UNIT_UNKNOWN = "R4:単位既定:単位不明"  # resolve_condition_v2 の basis の一部（tcg_analyzer_svc.py の R4b）
@@ -293,6 +292,37 @@ def _load_work_names(session: Session) -> tuple[WorkName, ...]:
         if names:
             found.append(WorkName(int(work_id), names))
     return tuple(found)
+
+
+def load_product_entries(session: Session) -> list[ProductEntry]:
+    """判定用の商品リストを読む（public.products の有効な全件）。
+
+    design.md §4-1: 対象は public.products の有効な全件（解析用の別マスタは作らない）。
+    """
+    rows = session.execute(
+        text(
+            """
+            SELECT p.id, p.product_code, p.mark, p.work_id,
+                   (SELECT COALESCE(array_agg(k.keyword ORDER BY k.position, k.keyword), ARRAY[]::text[])
+                    FROM public.product_search_keywords k WHERE k.product_id = p.id) AS search_keywords,
+                   (SELECT COALESCE(array_agg(k.keyword ORDER BY k.position, k.keyword), ARRAY[]::text[])
+                    FROM public.product_exclude_keywords k WHERE k.product_id = p.id) AS exclude_keywords
+            FROM public.products p
+            WHERE p.is_active = TRUE
+            """
+        )
+    ).fetchall()
+    return [
+        ProductEntry(
+            id=int(r[0]),
+            product_code=r[1],
+            mark=r[2],
+            work_id=int(r[3]) if r[3] is not None else None,
+            search_keywords=tuple(r[4] or ()),
+            exclude_keywords=tuple(r[5] or ()),
+        )
+        for r in rows
+    ]
 
 
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
