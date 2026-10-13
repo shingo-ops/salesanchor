@@ -77,7 +77,7 @@ mode: handoff
 | 項目 | 設定 | 理由 |
 |---|---|---|
 | 起動 | `claude --dangerously-load-development-channels plugin:discord-ops@sa-local`。起動時の確認は PO が 1 回答える | 改変版は公式の許可リスト外（recon 公式仕様） |
-| 作業場所 | 専用 worktree `~/worktrees/salesanchor/ops-intake`（origin/main 起点・読み取り専用）。調査前に `git fetch origin main` → `git merge --ff-only origin/main`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
+| 作業場所 | main の専用クローン ~/sa-ops-intake（読み取り専用で使う。worktree はマージ後に reaper が回収するため使わない・PR #4188 で変更）。調査前に `git pull --ff-only`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
 | 許可モード | manual（default）。auto mode にしない | auto mode では承認の中継が開かない（recon 公式仕様） |
 | 許可設定 | 受付用 worktree の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする。リポジトリ共有設定の allow のうち読み取り以外は deny で塞ぐ（配置時に発見・delegation.md） | KGI-3・レビュー MEDIUM-7 |
 | 担当の型 | custom agent `ops-worker`（.claude/agents/ops-worker.md）。`tools:` を Read・Grep・Glob・SendMessage・discord-ops の reply/propose/fetch_messages/react に限定。`permissionMode: dontAsk`・`background: true`（いずれも公式 sub-agents 資料に記載の項目） | 担当は書き込み道具をそもそも持たない（レビュー HIGH-3）。dontAsk 単独に頼らない |
