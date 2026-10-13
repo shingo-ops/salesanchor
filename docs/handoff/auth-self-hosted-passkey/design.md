@@ -129,7 +129,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | e2e の試験用の迂回（`frontend/src/lib/firebase-auth.ts` の開発時の偽ユーザーと `frontend/tests-e2e/utils/auth.ts`） | 便4 で、自社方式でも同じように迂回できる形に移す（開発ビルドのときだけ有効。本番ビルドには入らない） | — |
 | 誤りの文言（`frontend/src/lib/firebaseErrorMessage.ts`） | 自社 API の誤りコード用に置き換え（ファイル名も変更） | — |
 
-- 新しい文言はすべて `t("key")`。`ja.json` と `en.json` に同じキー（ADR-027）。キー名は既存の `login.*`・`accountSettings.*` の下に足す。
+- 新しい文言はすべて `t("key")`。ja.json と en.json に同じキー（ADR-027）。キー名は既存の `login.*`・`accountSettings.*` の下に足す。
 - 上の表に無い部品が必要になったら、作らずに設計者へ戻す（金型を先に登録する判断は設計者と PO）。
 
 ## 5.5 接触面分析（6 面）
