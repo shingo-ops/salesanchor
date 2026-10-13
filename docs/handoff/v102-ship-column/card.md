@@ -1,6 +1,6 @@
 # card: 発送日の専用列（v102）実装カード
 
-設計: docs/handoff/v102-ship-column/design.md（§3・§3b）／recon: docs/handoff/v102-ship-column/recon.md。基準 origin/main 8a421f22c。KGI K1〜K8 は PO 承認済み（2026-10-12）。
+設計: docs/handoff/v102-ship-column/design.md（§3・§3b、§3c で §2 の `_merge_supplier_products` の変更と K3・K7 のテストは取り下げ）／recon: docs/handoff/v102-ship-column/recon.md。基準 origin/main 8a421f22c。KGI K1〜K8 は PO 承認済み（2026-10-12）。
 作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-v102-ship-column（ブランチ release/v102-ship-column）。本体フォルダ /Users/tanizawashingo/salesanchor は変えない。
 
 ## 1. migration（新規2本・値の操作なし・ADR-1007）

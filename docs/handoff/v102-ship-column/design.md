@@ -1,6 +1,6 @@
 # design: 発送日の専用列（v102）— 発送日が違えば別の件として配信する
 
-状態：KGI K1〜K8 PO 承認済み（2026-10-12「y」）。設計審査 1回目 REVISE → §3b で修正 → 2回目 APPROVE（条件 A・B を card/design に反映済み）。参照：docs/handoff/v102-ship-column/recon.md、docs/handoff/v102-ship-note/design.md（#4161）、docs/adr/ADR-158-product-level-supersession.md、docs/handoff/condition-level-supersession/design.md、docs/adr/ADR-1007-migration-structure-only-run-once.md、docs/adr/ADR-135（main＝本番投入可）／ADR-136（危険PRの GO）。
+状態：KGI K1〜K8 PO 承認済み（2026-10-12「y」）。K3・K7 と `_merge_supplier_products` の変更は #4169 の PO 決定で取り下げ（§3c）。設計審査 1回目 REVISE → §3b で修正 → 2回目 APPROVE（条件 A・B を card/design に反映済み）。参照：docs/handoff/v102-ship-column/recon.md、docs/handoff/v102-ship-note/design.md（#4161）、docs/adr/ADR-158-product-level-supersession.md、docs/handoff/condition-level-supersession/design.md、docs/adr/ADR-1007-migration-structure-only-run-once.md、docs/adr/ADR-135（main＝本番投入可）／ADR-136（危険PRの GO）。
 
 ## 1. 目的（PO の言葉、2026-10-12）
 - 「新しい列として発送日情報を入力する欄を作成して、検索ワードでフォーマットを入力する仕組みにする、この発送日情報が異なる場合は別商品として判断する」
@@ -78,3 +78,10 @@
 7. migration は1表1本の前例に合わせて2本（analysis_results の ship_ja・ship_en／tcg_note_master の label_template_en）。
 8. スキーマ（backend/app/schemas/central_masters.py の TcgNoteMaster 系）に label_template_en を足すため frontend/api-contract/openapi.json を再生成する。
 9. 変えない表示：tcg_analysis_review_svc.py:229,291・tcg_import_progress.py:32,133 の note_ja 表示、analysis_run_snapshots の複写、v6 の判定、GAS。
+
+## 3c. #4169 との調整（2026-10-13、実装中に判明）
+- main に #4169（a6e6317b0「is_current を投稿単位で決める」）が入った。組（商品・状態）ごとに最新の投稿を1つ決め、その投稿の組の行をすべて current にする（並びは received_at → computed_at の最大 → extraction_job_id）。PO 決定「同じ投稿に同じ商品が2行あるときの、行をまとめる決まり→進める」（2026-10-12）・まとめずに出す形での本番投入に「y」（2026-10-13）。
+- これは本書の K3（発送日も同じなら1件）・K7（同じ順位は上の行）より後の PO 決定なので、#4169 の決め方を正とし、本書の `_merge_supplier_products` の変更（§3・§3b-2）は取り下げた。K3・K7 のテストは削除。
+- K2（発送日が違う件は全部配信）と K4（新しい投稿で古い投稿は外れる）は #4169 の決め方で満たされる。テスト backend/tests/test_v102_ship_column_pg.py の K2・K4 で確認する。
+- 残る変更：ship_ja・ship_en の列と値（K1・K5・K6・K8）、配信の Ship_JA 列（K1）、備考マスタの label_template_en（K8）。発送日の値は「同じもの」の決め手には使わない（#4169 で同じ投稿の行は全部出るため不要）。発送日の違いを使う「まとめる」の扱いは #4169 の次の便（SP2：画面で ON/OFF）の範囲。
+- migration は main の最新（20261013_120000）の後に並ぶよう 20261013_130000・20261013_130100 に改名。
