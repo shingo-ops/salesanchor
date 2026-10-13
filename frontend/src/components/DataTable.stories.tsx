@@ -66,9 +66,7 @@ export const Default: Story = {
 
 export const WithSort: Story = {
   render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [sortKey, setSortKey] = useState<string>('name');
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [sortDir, setSortDir] = useState<SortDir>('asc');
 
     const sorted = [...SAMPLE_LEADS].sort((a, b) => {
@@ -93,7 +91,6 @@ export const WithSort: Story = {
 
 export const WithSelection: Story = {
   render: () => {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     const [selected, setSelected] = useState<Set<string>>(new Set(['1', '3']));
 
     return (
@@ -130,6 +127,46 @@ export const DensityRelaxed: Story = {
     />
   ),
 };
+
+interface LongRow {
+  id: string
+  name: string
+  reason: string
+  note: string
+}
+
+const LONG_ROWS: LongRow[] = [
+  {
+    id: '1',
+    name: 'ポケモンカードゲーム スカーレット&バイオレット 拡張パック 超電ブレイカー BOX シュリンク付き 未開封 日本語版',
+    reason: '商品IDが決まらない、数量が読み取れない、価格の桁が不自然',
+    note: '短い',
+  },
+  { id: '2', name: '短い商品名', reason: '理由', note: '短い' },
+  {
+    id: '3',
+    name: 'ONE PIECEカードゲーム 新時代の主役 ブースターパック OP-05 カートン 12BOX入り',
+    reason: '状態が決まらない、出どころが複数ある',
+    note: '短い',
+  },
+]
+
+const LONG_COLUMNS: DataTableColumn<LongRow>[] = [
+  { key: 'name', header: '商品名', width: 'var(--col-width-wide)', ellipsis: true },
+  { key: 'reason', header: '理由', width: 'var(--col-width-medium)', ellipsis: true },
+  { key: 'note', header: '備考' },
+]
+
+/** ellipsis 列: 長い文字は1行（44px）に収まり末尾が …。マウスを当てると全文（title） */
+export const Ellipsis: Story = {
+  render: () => (
+    <DataTable<LongRow>
+      columns={LONG_COLUMNS}
+      data={LONG_ROWS}
+      rowKey={(r) => r.id}
+    />
+  ),
+}
 
 export const EmptyState: Story = {
   render: () => (

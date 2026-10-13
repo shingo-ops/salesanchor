@@ -27,6 +27,8 @@ interface DrawerProps {
   /** フルページで開くコールバック。省略時はボタン非表示 */
   onOpenFullPage?: () => void;
   footer?: ReactNode;
+  /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
+  size?: "default" | "wide";
 }
 
 export function Drawer({
@@ -36,6 +38,7 @@ export function Drawer({
   children,
   onOpenFullPage,
   footer,
+  size = "default",
 }: DrawerProps) {
   const { t }     = useTranslation();
   const titleId   = useId();
@@ -125,7 +128,7 @@ export function Drawer({
       {/* パネル本体 — DOM は常にマウント、CSS クラスでアニメーション */}
       <div
         ref={panelRef}
-        className={`comp-drawer-panel${open ? " comp-drawer-panel--open" : ""}`}
+        className={`comp-drawer-panel${size === "wide" ? " comp-drawer-panel--wide" : ""}${open ? " comp-drawer-panel--open" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

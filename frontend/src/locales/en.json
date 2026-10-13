@@ -3761,6 +3761,8 @@
   },
   "reviewItem": {
     "drawerTitle": "Item to review",
+    "sourceHeading": "Source text",
+    "fixHeading": "Fix",
     "reasonsHeading": "Reasons for review",
     "noReasons": "No reasons",
     "sourceLine": "Source: {{source}}",

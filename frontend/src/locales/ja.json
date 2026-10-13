@@ -3761,6 +3761,8 @@
   },
   "reviewItem": {
     "drawerTitle": "要確認の商品",
+    "sourceHeading": "原文",
+    "fixHeading": "直す",
     "reasonsHeading": "確認が必要な理由",
     "noReasons": "理由はありません",
     "sourceLine": "出どころ：{{source}}",

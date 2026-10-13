@@ -9,6 +9,7 @@ import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
 import { Drawer } from "../../components/Drawer";
 import { Stack } from "../../components/Stack";
+import { TwoColumn } from "../../components/TwoColumn";
 import { ApiError } from "../../lib/api";
 import { ConditionReviewPanel } from "./ConditionReviewPanel";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
@@ -16,6 +17,9 @@ import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
 import { postReviewAck } from "./reviewActions";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
+import { ShadowSourcePane } from "./ShadowSourcePane";
+import { parseSourceLineRange } from "./sourceRawNavigation";
+import "./review-item-drawer.css";
 
 export type ReviewDrawerItem = AnalysisReviewItem & { is_v102?: boolean; gap_suspect?: GapSuspectData | null };
 
@@ -28,7 +32,7 @@ interface Props {
 
 type Notice = { variant: "info" | "warning"; title: string } | null;
 
-// 原文ペインを持たない画面なので、行へのジャンプは何もしない
+// 原文ペインはその商品の行へ自動で送るため、行ジャンプは何もしない
 const noJump = () => undefined;
 
 export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
@@ -58,43 +62,54 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
 
   return (
     <>
-      <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")}>
-        <Stack gap="3">
+      <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")} size="wide">
+        <Stack gap="4">
           {notice && <Callout variant={notice.variant} title={notice.title} />}
-          <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} />
-          <ConditionReviewPanel item={item} onRefresh={onRefresh} />
-          <div>
-            <Button variant="secondary" onClick={() => setIsProductDrawerOpen(true)}>
-              {t("superAdmin.supplierQuality.correctPhase3")}
-            </Button>
-          </div>
-          <section>
-            <h3>{t("reviewItem.reasonsHeading")}</h3>
-            {details.length === 0 && <p>{t("reviewItem.noReasons")}</p>}
-            {details.length > 0 && (
-              <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>
-            )}
-            <ul>
-              {details.map((detail) => (
-                <li key={detail.code}>
-                  <span>{reviewReasonLabel(t, detail.code)}</span>{" "}
-                  {item.is_v102 === true && detail.ackable !== false && !ackedCodes.includes(detail.code) && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      loading={pendingCode === detail.code}
-                      disabled={pendingCode !== null}
-                      onClick={() => void acknowledge(detail.code)}
-                    >
-                      {t("reviewItem.ack")}
-                    </Button>
-                  )}
-                  {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
-                    <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
-                  )}
-                </li>
-              ))}
-            </ul>
+          <TwoColumn ratio="1:2" gap="3" align="start" className="review-item-top">
+            <section className="review-item-source">
+              <h3>{t("reviewItem.sourceHeading")}</h3>
+              <ShadowSourcePane rawText={item.raw_text} blockRange={parseSourceLineRange(item.gemini.span)} />
+            </section>
+            <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} />
+          </TwoColumn>
+          <section className="review-item-fix">
+            <h3>{t("reviewItem.fixHeading")}</h3>
+            <Stack gap="3">
+              <ConditionReviewPanel item={item} onRefresh={onRefresh} />
+              <div>
+                <Button variant="secondary" onClick={() => setIsProductDrawerOpen(true)}>
+                  {t("superAdmin.supplierQuality.correctPhase3")}
+                </Button>
+              </div>
+              <section>
+                <h3>{t("reviewItem.reasonsHeading")}</h3>
+                {details.length === 0 && <p>{t("reviewItem.noReasons")}</p>}
+                {details.length > 0 && (
+                  <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>
+                )}
+                <ul>
+                  {details.map((detail) => (
+                    <li key={detail.code}>
+                      <span>{reviewReasonLabel(t, detail.code)}</span>{" "}
+                      {item.is_v102 === true && detail.ackable !== false && !ackedCodes.includes(detail.code) && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={pendingCode === detail.code}
+                          disabled={pendingCode !== null}
+                          onClick={() => void acknowledge(detail.code)}
+                        >
+                          {t("reviewItem.ack")}
+                        </Button>
+                      )}
+                      {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
+                        <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </Stack>
           </section>
         </Stack>
       </Drawer>
