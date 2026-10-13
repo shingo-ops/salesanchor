@@ -196,6 +196,23 @@ def test_pipeline_error_is_still_extract_exception_for_the_whole_post():
     assert out["v102_items"] == [] and out["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
 
 
+def test_pipeline_does_not_pass_ship_entries_to_extract_items():
+    # 発送マスタは _analysis_values だけが使う。キーワード固定の extract_v101_items に渡すと TypeError で投稿全体が落ちる
+    received: dict = {}
+
+    def extract(items, raw, *, order, reassign, v102_fixes, review_reasons, gemini_trust, cond_entries,
+                cond_canonical_to_uuid, unit_alias_to_info, status_entries, **kwargs):
+        received.update(kwargs)
+        return [], {}
+
+    masters = {**_MASTERS, "ship_entries": [{"id": "NJ040"}]}
+    out = svc.run_v102_pipeline(_response([{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]), _CTX, masters, extract_items=extract)
+
+    assert "ship_entries" not in received
+    assert "post_review" not in out["v102_flags"]
+    assert masters["ship_entries"] == [{"id": "NJ040"}]  # 元の masters は変えない
+
+
 # ---------------------------------------------------------------------------
 # analysis_results の列
 # ---------------------------------------------------------------------------
