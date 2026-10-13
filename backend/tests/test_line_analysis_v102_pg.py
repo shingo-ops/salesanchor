@@ -57,6 +57,7 @@ def v102(pg, monkeypatch):  # noqa: F811
     masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": {e["canonical"]: e["cond_id"] for e in cond_entries},
         "status_entries": [], "unit_alias_to_info": {"BOX": ("BOX", "箱系")},
+        "ship_entries": [],
     }
     state = SimpleNamespace(calls=0, response=RESPONSE)
 

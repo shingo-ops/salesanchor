@@ -70,7 +70,7 @@ export function InboxConversationList({
       {/* 検索 + 管理ボタン */}
       <div className="inbox-search-row">
         <div className="inbox-search-wrap">
-          <NAV_ICONS.search size={14} weight="fill" className="inbox-search-icon" aria-hidden="true" />
+          <NAV_ICONS.search size={ICON.sm} weight="fill" className="inbox-search-icon" aria-hidden="true" />
           <TextFieldControl
             variant="search"
             type="text"
@@ -93,14 +93,21 @@ export function InboxConversationList({
           <NAV_ICONS.filter size={ICON.md} aria-hidden="true" />
         </button>
         <div className="inbox-manage-wrap" ref={manageRef}>
+          {/* 管理＝選択モードに入るボタン。
+              2026-10-13（PO 指摘）: 同じ行の「絞り込み」と同じ filter アイコンを
+              使っていて区別できなかったため、選択モードの通例である丸いチェックに
+              差し替えた。スマホでは文言を隠してアイコンだけにする（CSS 側）。
+              アイコンだけになっても読み上げで分かるよう aria-label を付ける。
+              旧 size={13} は生の数値だったのでトークン（ICON.md）に直した。 */}
           <button
             type="button"
             className={`inbox-manage-btn${selectMode ? " active" : ""}`}
             onClick={toggleSelectMode}
             aria-pressed={selectMode}
+            aria-label={t("inbox.manage")}
           >
-            <NAV_ICONS.filter size={13} weight="fill" />
-            {t("inbox.manage")}
+            <INBOX_ACTION_ICONS.select size={ICON.md} aria-hidden="true" />
+            <span className="inbox-manage-label">{t("inbox.manage")}</span>
           </button>
           {!selectMode && manageOpen && (
             <div className="dropdown-menu" role="menu">
@@ -132,19 +139,19 @@ export function InboxConversationList({
           </span>
           <button type="button" className="inbox-bulk-action" onClick={handleBulkMarkRead}
             disabled={selectedLeadIds.size === 0} title={t("inbox.markAllRead")} aria-label={t("inbox.markAllRead")}>
-            <INBOX_ACTION_ICONS.markRead size={14} weight="fill" aria-hidden="true" />
+            <INBOX_ACTION_ICONS.markRead size={ICON.sm} weight="fill" aria-hidden="true" />
           </button>
           <button type="button" className="inbox-bulk-action" onClick={handleBulkMarkUnread}
             disabled={selectedLeadIds.size === 0} title={t("inbox.markUnread")} aria-label={t("inbox.markUnread")}>
-            <INBOX_ACTION_ICONS.markUnread size={14} weight="fill" aria-hidden="true" />
+            <INBOX_ACTION_ICONS.markUnread size={ICON.sm} weight="fill" aria-hidden="true" />
           </button>
           <button type="button" className="inbox-bulk-action" onClick={handleBulkExclude}
             disabled={selectedLeadIds.size === 0} title={t("inbox.exclude")} aria-label={t("inbox.exclude")}>
-            <INBOX_ACTION_ICONS.exclude size={14} weight="fill" aria-hidden="true" />
+            <INBOX_ACTION_ICONS.exclude size={ICON.sm} weight="fill" aria-hidden="true" />
           </button>
           <button type="button" className="inbox-bulk-action inbox-bulk-delete" onClick={handleBulkDelete}
             disabled={selectedLeadIds.size === 0} title={t("inbox.deleteLead")} aria-label={t("inbox.deleteLead")}>
-            <INBOX_ACTION_ICONS.delete size={14} weight="fill" aria-hidden="true" />
+            <INBOX_ACTION_ICONS.delete size={ICON.sm} weight="fill" aria-hidden="true" />
           </button>
         </div>
       )}

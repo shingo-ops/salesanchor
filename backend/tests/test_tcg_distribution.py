@@ -343,15 +343,27 @@ def test_fetch_output_rows_flag_filter_exclude():
 
 
 def test_fetch_output_rows_has_search_keywords_as_13th_column():
-    """DIST_HEADERS は13列で末尾が Search Keywords、SELECT は position 順の string_agg を返す"""
+    """DIST_HEADERS は14列で13列目が Search Keywords、末尾が Ship_JA。SELECT は position 順の string_agg を返す"""
     import inspect
     from app.services.tcg_distribution_svc import DIST_HEADERS, fetch_output_rows
 
-    assert len(DIST_HEADERS) == 13
-    assert DIST_HEADERS[-1] == "Search Keywords"
+    assert len(DIST_HEADERS) == 14
+    assert DIST_HEADERS[-1] == "Ship_JA"
+    assert DIST_HEADERS[12] == "Search Keywords"
     src = inspect.getsource(fetch_output_rows)
     assert "string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)" in src
     assert 'row["search_keywords"]' in src
+
+
+def test_fetch_output_rows_has_ship_ja_as_14th_column():
+    """SELECT は ship_ja を空文字に倒して返し、返却リストの末尾（14列目）に置く"""
+    import inspect
+    from app.services.tcg_distribution_svc import fetch_output_rows
+
+    src = inspect.getsource(fetch_output_rows)
+    assert "COALESCE(ar.ship_ja, '')" in src
+    assert 'row["search_keywords"],\n            row["ship_ja"],\n        ]' in src
+    assert "ship_en" not in src
 
 
 # ---------------------------------------------------------------------------
