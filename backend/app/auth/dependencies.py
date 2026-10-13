@@ -1,16 +1,19 @@
 import asyncio
 import os
 import secrets
+from datetime import datetime, timezone
 
 import firebase_admin
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials
+from jose import JWTError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from app.auth import self_tokens
 from app.auth.system_roles import compute_permission_keys, is_tenant_admin
 from app.cache import (
     cache_jwt_result,
@@ -67,6 +70,47 @@ def _get_client_ip(request: Request) -> str:
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+_INVALID_TOKEN_DETAIL = "無効な認証トークンです"
+
+
+async def _reject_self_token(client_ip: str) -> HTTPException:
+    await record_auth_failure(client_ip)
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=_INVALID_TOKEN_DETAIL,
+    )
+
+
+async def _authenticate_self_token(token: str, client_ip: str, db: AsyncSession) -> User:
+    """自社アクセストークン（ADR-1013）を検証し、対応するユーザーを返す。"""
+    if not self_tokens.is_verification_enabled():
+        raise await _reject_self_token(client_ip)
+    try:
+        claims = self_tokens.decode_access_token(token)
+        user_id = int(claims["sub"])
+    except (JWTError, ValueError, KeyError, TypeError):
+        raise await _reject_self_token(client_ip)
+
+    row = (
+        await db.execute(
+            text("SELECT id, email, is_active, password_changed_at FROM public.users WHERE id = :id"),
+            {"id": user_id},
+        )
+    ).first()
+    if row is None or not row.is_active or claims.get("email") != row.email:
+        raise await _reject_self_token(client_ip)
+    changed_at = self_tokens._as_utc(row.password_changed_at)
+    issued_at = datetime.fromtimestamp(claims["iat"], timezone.utc)
+    if changed_at is not None and issued_at < changed_at:
+        raise await _reject_self_token(client_ip)
+
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if user is None:
+        raise await _reject_self_token(client_ip)
+    await cache_jwt_result(token, {"email": user.email})
+    return user
 
 
 async def get_current_user(
@@ -138,6 +182,10 @@ async def get_current_user(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="認証試行が上限に達しました。しばらく時間をおいてから再試行してください",
         )
+
+    # 自社トークン（iss=salesanchor）は Firebase 検証に回さず、自社検証へ振り分ける
+    if self_tokens.peek_issuer(token) == self_tokens.ISSUER:
+        return await _authenticate_self_token(token, client_ip, db)
 
     # ④ キャッシュミス: Firebase検証
     try:
