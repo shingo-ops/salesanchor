@@ -16,6 +16,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
+import { postProductCorrection } from './reviewActions';
 import type { AnalysisReviewItem } from './ItemComparison';
 
 // ── 型定義 ──────────────────────────────────────────────────────────────────
@@ -417,15 +418,7 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
       .catch(() => { setSearching(false); });
   };
 
-  const postCorrection = (humanValue: string) => {
-    return api.post<{ ok: boolean; saved: number }>(
-      `/tcg/items/${encodeURIComponent(item.extraction_item_id)}/corrections`,
-      {
-        source_message_id: item.source_message_id,
-        fields: [{ field_name: 'product_id', system_value: item.system.product_uuid || '', human_value: humanValue }],
-      },
-    );
-  };
+  const postCorrection = (humanValue: string) => postProductCorrection(item, humanValue);
 
   const changeProduct = () => {
     if (!selected) return;

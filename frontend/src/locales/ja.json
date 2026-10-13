@@ -5110,6 +5110,17 @@
       "shadow": "試運転の確認待ち",
       "bottlenecks": "詰まり",
       "posts": "投稿"
+    },
+    "inline": {
+      "header": "ここで直す",
+      "productAria": "商品（名前を入れて探す）",
+      "productPlaceholder": "商品名を入力",
+      "noResults": "該当する商品がありません",
+      "searchError": "商品を探せませんでした",
+      "saved": "保存済み",
+      "error": "保存できませんでした: {{reason}}",
+      "unknownError": "もう一度お試しください",
+      "ackAria": "このままで良い: {{name}}"
     }
   },
   "distributionSettings": {
