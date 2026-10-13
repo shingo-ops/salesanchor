@@ -583,9 +583,9 @@ PO 依頼（2026-10-13・§15-1 と同一の依頼）: 「顧客一覧の検索�
 3. **お手本とあえて違えた2点（§16-4）はトークンの都合による妥協。** 将来 48dp のアイコンサイズ用トークンを新設する判断があれば見直しの余地がある。
 4. **ヘッダーの右端寄せは `padding-right: 0` で実現しており、管理ボタン自体の右 padding には依存していない。** 将来管理ボタンのスタイルを変える際、`.inbox-mobile-header` の右端 padding を誤って追加すると右端寄せが崩れる。
 
-## 17. ヘッダー固定の便（2026-10-14・第3便）
+## 17. ヘッダー固定の便（2026-10-14・第3便。推測で足した sticky を撤回した経緯を含む）
 
-> この節は何か（専門用語なしの1行）: 第2便で新設した `.inbox-mobile-header` が一覧と一緒に上へスクロールしてしまっていたのを、ヘッダーだけ画面に固定するための作業記録。
+> この節は何か（専門用語なしの1行）: 「スクロールしてもヘッダーが固定されるように」という PO 依頼に対し、最初は推測で `position: sticky` を足したが、CI の検査がその推測の誤りを検出した。調べ直すと**ヘッダーは最初から（スマホの一覧が別の箱でスクロールする構造のため）動かない**ことが分かり、sticky のコードは撤回し、その性質を検査で固定する形に直した記録。
 
 ### 17-1. PO 依頼の原文要点
 
@@ -593,37 +593,43 @@ PO 依頼（2026-10-14）: 「スクロールしてもヘッダーが固定さ�
 
 | 論点 | 内容 |
 |---|---|
-| 固定する対象 | `.inbox-mobile-header`（タイトル＋右端の絞り込み・管理） |
-| 固定しない対象 | `.inbox-mobile-search-row`（検索欄のピル）。お手本の構造に合わせ、一覧と一緒に流れる |
+| 固定する対象（当初の理解） | `.inbox-mobile-header`（タイトル＋右端の絞り込み・管理） |
+| 固定しない対象（当初の理解） | `.inbox-mobile-search-row`（検索欄のピル）。お手本の構造に合わせ、一覧と一緒に流れる想定だった（§17-2 で誤りと判明） |
 | テストデータ | 画面検査で長い一覧が必要なら追加してよいという許可を受領済み |
 
-### 17-2. お手本の事実（根拠：構造データのダンプ）
+### 17-2. 当初の推測と、CI の検査が検出した誤り
 
-出典: `docs/specs/design-system/visual-language/benchmark/whatsapp-chat-list.md`（WhatsApp チャット一覧・ライト・2026-10-10 実測）。
+**最初の実装（誤り）**: `frontend/src/pages/inbox/InboxPage.css:1142-1150` の `@media (max-width: 767px)` 内に `.inbox-left-panel { overflow-y: auto; }` があることだけを根拠に、「スクロールする箱は `.inbox-left-panel` である」と推測し、`.inbox-mobile-header` に `position: sticky; top: 0; z-index: var(--z-base); background: var(--bg-surface);` を追加した。この時点で `.inbox-left-panel` の中身が実際にあふれているかどうかは確認していなかった。
 
-| 部品（アプリ内部の名札） | 左上(x,y)px | 大きさpx | 親子関係の事実 |
-|---|---|---|---|
-| `header` / `toolbar_container` / `toolbar` | 0,111 | 1080x168（56dp） | スクロールする箱（`pager_holder` 配下）の**外側**に独立して置かれている |
-| `conversation_container`（スクロールする箱） | 0,111 | 1080x1942 | `my_search_bar` と `search_bar_inner_layout` の**親**にあたる |
-| `my_search_bar` / `search_bar_inner_layout` | 0,291 / 36,291 | 1080x144 / 1008x144 | `conversation_container` の**内側**＝一覧の行と同じスクロール領域に属する |
+**CI が検出した事実**: 新設した検査 `スマホ: 一覧をスクロールしてもヘッダーが動かない`（vl-mobile-390）が、スクロール可能性を確認する関所の行で失敗した。
 
-したがって「ヘッダーは固定・検索欄は流れる」はお手本の構造そのものの事実であり、見た目の推測ではない。当方の `.inbox-mobile-header` と `.inbox-mobile-search-row` は現状どちらも `.inbox-left-panel`（スクロールする箱）の内側にあるため、お手本に合わせるにはヘッダーだけをその場から持ち上げる必要がある。
+```
+Error: 一覧がスクロールできる高さになっていない（検査データが足りない）
+> 588 | expect(scrollable, "...").toBe(true);
+```
 
-### 17-3. 実装
+`.inbox-left-panel` の `scrollHeight === clientHeight` のまま＝そもそも `.inbox-left-panel` 自身はスクロールしていなかった。これにより「スクロールする箱は `.inbox-left-panel`」という前提そのものが誤りだったことが判明した。**他の16件は合格（§17-10 の題字21pxの assert も合格）していたため、この1件だけが推測の誤りを捕まえた。**
 
-対象: `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header`。
+### 17-3. 判明した事実（スクロール箱の本当の構造）
 
-| 項目 | 値 | 理由 |
-|---|---|---|
-| `position` | `sticky`（`fixed` は使わない） | `fixed` は CI の `CSS position:fixed チェック`（`check:css-fixed-position`）で自動的に止められる。`sticky` は祖先のスクロール箱（`.inbox-left-panel`）の中で効くため、レイアウト構造を変えずに固定できる |
-| `top` | `0` | スクロール箱の上端に張り付かせる |
-| `z-index` | `var(--z-base)`（10） | 下の一覧行より前面に出す。新規トークンは足していない |
-| `background` | `var(--bg-surface)` | 透明のままだと下の行がヘッダーの下に透けて見える。一覧の面と同じ色を明示する。生の色コードは使っていない |
-| `.inbox-mobile-search-row` | 変更なし | お手本と同じく固定しない（§17-2） |
+実際にスクロールしている箱は `.inbox-conversation-list` であり、`.inbox-left-panel` ではない。
 
-高さ56px・左右の余白・ボタンの寸法など、第2便で決めた既存の値は1つも変えていない。
+| ファイル:行 | 事実 |
+|---|---|
+| `frontend/src/pages/inbox/InboxPage.css:82-91` | `.inbox-left-panel` は `display: flex; flex-direction: column;`（既定 `overflow: hidden`。スマホ用 `@media` では `overflow-y: auto` に上書きされるが、中身があふれないため実際には効かない） |
+| `frontend/src/pages/inbox/InboxPage.css:252-256` | `.inbox-conversation-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }`。実際にスクロールするのはここ |
+| `frontend/src/pages/inbox/InboxConversationListMobile.tsx:32-184` | `.inbox-left-panel`（`<aside>`）の直下に、順に `.inbox-mobile-header` → `.inbox-mobile-search-row`（＋一括操作バー）→ `.inbox-sub-filter-bar` → （条件付き）`.inbox-page-filter-wrap` → `<InboxConversationRows>` が並ぶ |
+| `frontend/src/pages/inbox/InboxConversationRows.tsx:38` | `<InboxConversationRows>` がレンダーする `.inbox-conversation-list` の実体 |
 
-### 17-4. テストデータと新テスト
+`.inbox-conversation-list` が `flex: 1` ＋ `min-height: 0` で自分だけスクロールを受け持つため、親の `.inbox-left-panel` はちょうど収まる高さのまま＝`scrollHeight === clientHeight` になる。`.inbox-mobile-header` と `.inbox-mobile-search-row` はこの `.inbox-conversation-list` の**外**（flex の兄弟要素として前）にあるため、**そもそも最初からスクロールで動かない**。これは第2便（ヘッダー新設）の時点から変わっていない構造上の事実であり、何かを固定する実装を新たに追加する必要はなかった。
+
+### 17-4. 対応: sticky の指定を撤回
+
+`frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` から、§17-2 で追加した `position: sticky; top: 0; z-index: var(--z-base); background: var(--bg-surface);` とその直前のコメントを削除した。**効果を示せないコードは入れない方針**のため（ヘッダーは `.inbox-conversation-list` の外にあり、sticky は何もしない）。
+
+題字の `--font-title-mobile` 化（§17-10）はこの訂正と無関係の別件のため、そのまま残している。
+
+### 17-5. テストデータと新テスト（訂正後）
 
 対象: `frontend/tests-e2e/visual-language/inbox-helpers.ts`／`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`。
 
@@ -631,48 +637,52 @@ PO 依頼（2026-10-14）: 「スクロールしてもヘッダーが固定さ�
 |---|---|
 | `manyConversations(count)`（`inbox-helpers.ts`） | `mock-conversations.json` の1件目を複製し、`lead_id`／`lead_code`／`customer_name` だけずらして `count` 件の一覧を作る。fixture JSON ファイル自体は変更していない |
 | `openInboxListWithConversations(page, count)`（`inbox-helpers.ts`） | `baseMocks()` の `"GET /conversations"` だけ `manyConversations(count)` に差し替えて受信箱を開く。既存の `openInboxList`（3件）はそのまま残している |
-| `スマホ: 一覧をスクロールしてもヘッダーが動かない`（`inbox-single-column.spec.ts`） | §17-5 の assertion 一覧を参照 |
+| `スマホ: 一覧をスクロールしてもヘッダーが動かない`（`inbox-single-column.spec.ts`） | 本当のスクロール箱 `.inbox-conversation-list` を基準に測り直す形に書き直した。§17-6 の assertion 一覧を参照 |
 
-件数の根拠（コメントは `frontend/tests-e2e/visual-language/inbox-helpers.ts` にも記載）: vl-mobile-390 の viewport は 390x844、`--min-height-conv-item-mobile` が76px。ヘッダー56px＋検索欄56pxで画面上112pxを占有し、残り732pxに収まる行数は約9.6件。600pxスクロールさせても十分な余りが残るよう、収まる件数の2倍以上を確保する目的で20件とした。
+件数の根拠（コメントは `frontend/tests-e2e/visual-language/inbox-helpers.ts` にも記載）: vl-mobile-390 の viewport は 390x844、`--min-height-conv-item-mobile` が76px。ヘッダー56px＋検索欄56pxで画面上112pxを占有し、残り732pxに収まる行数は約9.6件。600pxスクロールさせても十分な余りが残るよう、収まる件数の2倍以上を確保する目的で20件とした（この根拠自体はスクロール箱の取り違えとは無関係で、訂正後も変えていない）。
 
-### 17-5. 新規テストの assertion 一覧
+### 17-6. 新規テストの assertion 一覧（訂正後）
 
 `スマホ: 一覧をスクロールしてもヘッダーが動かない`（`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`）で測るもの。
 
 | # | 測るもの | 比較対象 |
 |---|---|---|
-| 1 | `.inbox-left-panel` の `scrollHeight > clientHeight` | 真であること（満たさなければ検査自体を失敗させる） |
+| 1 | `.inbox-conversation-list` の `scrollHeight > clientHeight` | 真であること（満たさなければ「行の一覧がスクロールできる高さになっていない（検査データが足りない）」で検査自体を失敗させる） |
 | 2 | スクロール前後の `.inbox-mobile-header` の `boundingBox().y` | 差が1px以内 |
 | 3 | スクロール前後の `.inbox-mobile-header` の `boundingBox().height` | 差が1px以内 |
-| 4 | スクロール後の管理ボタン（ヘッダー右端）の右端 x | ビューポート右端との差が1px以内 |
-| 5 | スクロール前後の1行目（`button.conversation-item`）の `boundingBox().y` | スクロール後の方が小さい（上へ流れた証拠） |
-| 6 | スクロール後の `.inbox-mobile-search-row` の `boundingBox().y`、または `isVisible()` | yがスクロール前より小さい、または非表示（画面外）のどちらでも通す |
-| 7 | `.inbox-mobile-header` の `getComputedStyle(...).backgroundColor` | `rgba(0, 0, 0, 0)` ではないこと（下の行が透けていない） |
+| 4 | スクロール前後の `.inbox-mobile-search-row` の `boundingBox().y` | 差が1px以内（§17-7 参照：当方はヘッダーと同じく固定側） |
+| 5 | スクロール後の管理ボタン（ヘッダー右端）の右端 x | ビューポート右端との差が1px以内 |
+| 6 | スクロール前後の1行目（`button.conversation-item`）の `boundingBox().y` | スクロール後の方が小さい（行が実際に上へ流れた証拠） |
+| 7 | スクロール後の `.inbox-conversation-list` の `scrollTop` | 指定した600になっている（スクロールが本当に効いた証拠） |
 
-測った値はすべて `testInfo.attach("sticky-header-scroll", ...)` に JSON で残している。
+背景色が透明でないことの assert（旧 §17-5 の7番）は削除した。sticky をやめたため「ヘッダーの下に行が潜り込む」という前提自体が成り立たず、assert の意味が変わるため。測った値はすべて `testInfo.attach("sticky-header-scroll", ...)` に JSON で残している。
 
-### 17-6. 受け入れ基準
+### 17-7. 当方とお手本の差（検索欄の扱い）
+
+お手本（WhatsApp）は §17-2 で引用した構造データのとおり、検索欄（`search_bar_inner_layout`）がスクロールする箱（`conversation_container`）の**内側**にあり、一覧と一緒に流れる。
+
+当方は `.inbox-mobile-search-row` も `.inbox-mobile-header` と同じく `.inbox-conversation-list`（本当のスクロール箱）の**外側**にあるため、検索欄もヘッダーと同じく固定側になる（§17-3）。**これは意図した設計上の決定ではなく、現在の DOM 構造からそうなっているだけの事実**であり、お手本と一致していない点として記録する。この差を埋める（検索欄だけをスクロール箱の内側に移す）かどうかは今便の範囲外とし、PO 判断を待つ。
+
+### 17-8. 受け入れ基準
 
 | # | 基準 | 検証方法 | 結果 |
 |---|---|---|---|
-| 1 | ヘッダーが `position: fixed` を使わず固定される | `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` に `position: sticky; top: 0;` を追加 | 修正済み（コードレビューで確認） |
-| 2 | 検索欄は固定しない（お手本と同じ） | `.inbox-mobile-search-row` は無変更 | 変更なしを確認済み |
-| 3 | ヘッダー固定自体は新規トークンを足していない | `var(--z-base)` と `var(--bg-surface)` のみ使用。新規トークンの追加なし | コードレビューで確認済み・§5 の token ratchet で機械確認。**題字の文字サイズ（§17-8）は別件として1トークン新設した** |
-| 4 | 既存の7本の画面検査が壊れていない | `npx playwright test --list` で収集確認（この端末では実行不可のため構文確認のみ） | §6 に実行結果を記載 |
-| 5 | 新規テストを追加した | `inbox-single-column.spec.ts` に `スマホ: 一覧をスクロールしてもヘッダーが動かない` を新設 | 追加済み（§17-5） |
-| 6 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §6 に実行結果を記載 |
-| 7 | 型が通る | `cd frontend && npx tsc --noEmit` | §6 に実行結果を記載 |
-| 8 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | §6 に実行結果を記載 |
-| 9 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §6 に実行結果を記載 |
-| 10 | UI ガバナンス（生UI部品の新規ハードコードなし） | `node scripts/check-ui-governance.js` | §6 に実行結果を記載 |
+| 1 | 効果のない `position: sticky` を撤回した | `frontend/src/pages/inbox/InboxPage.css` の `.inbox-mobile-header` から sticky 関連4行とコメントを削除 | 修正済み（コードレビューで確認） |
+| 2 | 新テストが本当のスクロール箱（`.inbox-conversation-list`）を基準にしている | `inbox-single-column.spec.ts` の該当テストを書き直し | 修正済み（§17-6） |
+| 3 | 題字の文字サイズ（§17-10）は変更していない | `--font-title-mobile` と `.inbox-mobile-header-title` の変更箇所は無変更 | 変更なしを確認済み |
+| 4 | 既存の画面検査が壊れていない | `npx playwright test --list` で収集確認（この端末では実行不可のため構文確認のみ） | §6 に実行結果を記載 |
+| 5 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §6 に実行結果を記載 |
+| 6 | 型が通る | `cd frontend && npx tsc --noEmit` | §6 に実行結果を記載 |
+| 7 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | §6 に実行結果を記載 |
 
-### 17-7. 残るリスク
+### 17-9. 残るリスクと教訓
 
-1. **Playwright をこの端末で実行できない。** `npx playwright test --list` で構文とセレクタの収集は確認したが、実際に assertion が通るかは CI（x86）の初回実行で初めて分かる。
-2. **実機の画素比較は未実施。** sticky の挙動そのものはブラウザの標準機能だが、実機（Android Chrome）での手触り確認は本番反映後に別途行う必要がある。
-3. **`.inbox-left-panel` 自体が将来 `overflow` の設定を変えると sticky が効かなくなる。** `position: sticky` は祖先のスクロール文脈に依存するため、`.inbox-left-panel` の `overflow-y: auto` を変更する際はヘッダー固定への影響を確認する必要がある。
+1. **教訓（再発防止）**: 「スクロールする箱」をCSSの一箇所（`.inbox-left-panel` の `overflow-y: auto`）だけで判断し、実際に中身があふれるかを確認しなかったことが誤りの原因だった。次に同種の判断をするときは、対象要素の `scrollHeight > clientHeight` を実測するか、その箱の子要素に別の `overflow` 指定がないかを必ず確認する。
+2. **Playwright をこの端末で実行できない。** `npx playwright test --list` で構文とセレクタの収集は確認したが、実際に assertion が通るかは CI（x86）の初回実行で初めて分かる。
+3. **検索欄もヘッダーと同じく固定側になっている（§17-7）。** お手本と一致していない。直すかどうかは PO 判断待ち。
+4. **実機での確認は未実施。** 今便は構造の訂正のみで見た目の変更はないが、CI（x86）で新テストが実際に通ることは別途確認が必要。
 
-### 17-8. 題字の文字サイズ（PO 決定・2026-10-14・字種をそろえて再測定）
+### 17-10. 題字の文字サイズ（PO 決定・2026-10-14・字種をそろえて再測定）
 
 > この節は何か（専門用語なしの1行）: 受信箱の題字「受信箱」とお手本の題字を、同じ字種（漢字）で測り直したところ1dp足りなかったため、スマホの題字だけ専用のサイズに直した作業記録。
 
@@ -711,5 +721,5 @@ PO 依頼（2026-10-14）: 「スクロールしてもヘッダーが固定さ�
 | 9 | 未使用トークンの監査 | `npm run audit:unused-tokens` | 新設した `--font-title-mobile` は一覧に含まれない（1箇所で使用されているため「未使用」扱いではない）。既存の未使用29件はこの便と無関係 |
 
 **残るリスク**:
-1. §16-2／本便冒頭コメントの「お手本 19.0dp」という記録は、今回の訂正後も文書内の別箇所（§16-2 の表そのもの）には修正を入れていない。混乱を避けるため、§16-2 を読む際はこの §17-8 の訂正を優先する。
+1. §16-2／本便冒頭コメントの「お手本 19.0dp」という記録は、今回の訂正後も文書内の別箇所（§16-2 の表そのもの）には修正を入れていない。混乱を避けるため、§16-2 を読む際はこの §17-10 の訂正を優先する。
 2. 実機（Android Chrome）での最終確認は未実施。21pxでの見た目（インク高さ・行間）は計算上の推定であり、本番反映後に実測で裏取りする必要がある。
