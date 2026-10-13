@@ -544,11 +544,13 @@ export default function InventoryPage() {
           style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
         >
           {"※"}
-          {windowHours === null
-            ? t("inventory.distributionOff")
-            : windowHours === 0
-              ? t("inventory.windowUnlimited")
-              : t("inventory.expiryWarning", { hours: windowHours ?? 18 })}
+          {windowHours === undefined
+            ? null
+            : windowHours === null
+              ? t("inventory.distributionOff")
+              : windowHours === 0
+                ? t("inventory.windowUnlimited")
+                : t("inventory.expiryWarning", { hours: windowHours })}
         </p>
       </div>
 
@@ -602,11 +604,7 @@ export default function InventoryPage() {
                   {colVisible("mark") && <td>{it.mark ?? "-"}</td>}
                   <td>
                     <div style={{ fontWeight: "var(--font-weight-semi)" }}>{it.product_name ?? `#${it.product_id}`}</div>
-                    {it.merged_count >= 2 && (
-                      <div data-testid={`inventory-row-${it.id}-merged`} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
-                        {t("inventory.mergedCount", { count: it.merged_count })}
-                      </div>
-                    )}
+
                     {it.name_en && (
                       <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{it.name_en}</div>
                     )}
@@ -633,7 +631,16 @@ export default function InventoryPage() {
                       )}
                     </td>
                   )}
-                  {colVisible("quantity") && <td style={{ textAlign: "right" }}>{it.quantity ?? ""}</td>}
+                  {colVisible("quantity") && (
+                    <td style={{ textAlign: "right" }}>
+                      {it.quantity ?? ""}
+                      {it.merged_count >= 2 && (
+                        <div data-testid={`inventory-row-${it.id}-merged`} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+                          {t("inventory.mergedCount", { count: it.merged_count })}
+                        </div>
+                      )}
+                    </td>
+                  )}
                   {colVisible("unitPrice") && (
                     <td style={{ textAlign: "right" }}>¥{it.unit_price.toLocaleString()}</td>
                   )}

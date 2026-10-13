@@ -14,6 +14,7 @@ AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理す
 from __future__ import annotations
 
 import logging
+from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -101,6 +102,11 @@ OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pr
 _STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
 
 
+def round_half_up(value: object) -> int:
+    """SQL の ROUND(numeric) と同じ丸め（0.5 は0から遠い側）。Python の round は銀行丸めなので使わない。"""
+    return int(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
 def status_to_offer_type(status_value: str | None) -> str | None:
     """LINE 解析の status を区分に写す。対応に無い status は None。"""
     return _STATUS_TO_OFFER_TYPE.get(status_value or "")
@@ -145,8 +151,8 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 ship_timing=None,
                 supplier_id=int(row["supplier_id"]),
                 supplier_name=row.get("provider") or None,
-                unit_price=int(round(row["price_num"] or 0)),
-                quantity=None if quantity is None else int(round(quantity)),
+                unit_price=round_half_up(row["price_num"] or 0),
+                quantity=None if quantity is None else round_half_up(quantity),
                 tcg_type=row.get("tcg_type"),
                 offered_at=row["posted_ts"],
                 posted_at=row["posted_ts"],

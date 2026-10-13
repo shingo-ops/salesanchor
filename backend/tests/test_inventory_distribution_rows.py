@@ -32,6 +32,12 @@ def test_merge_on_sql_uses_cr_columns_and_ship_in_key() -> None:
     assert "ar.ship_ja" in sql.split("dist_groups")[0]  # 鍵（gkey）に ship_ja が入る
 
 
+def test_round_half_up_matches_sql_round() -> None:
+    from app.routers.inventory_offers import round_half_up
+
+    assert [round_half_up(x) for x in (2.5, 3.5, 0.5, 1.4, 1.6)] == [3, 4, 1, 1, 2]
+
+
 def test_flag_single_changes_condition_filter() -> None:
     off = svc.distribution_rows_sql(include_flag_single=False, age_condition="", merge_same_post=False)
     on = svc.distribution_rows_sql(include_flag_single=True, age_condition="", merge_same_post=False)

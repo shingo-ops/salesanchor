@@ -233,7 +233,7 @@ export default function InventoryFilterPanel({
                     checked={showConditions.has(c)}
                     onChange={() => toggleSetMember(setShowConditions, c)}
                   />
-                  {t(`inventory.condition.${c}`, { defaultValue: c })}
+                  {c}
                 </label>
               ))
             )}
@@ -255,7 +255,7 @@ export default function InventoryFilterPanel({
                     checked={showUnits.has(u)}
                     onChange={() => toggleSetMember(setShowUnits, u)}
                   />
-                  {t(`inventory.unit.${u}`, { defaultValue: u })}
+                  {u}
                 </label>
               ))
             )}
