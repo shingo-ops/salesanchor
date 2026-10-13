@@ -16,7 +16,7 @@
 
 ## 関連
 - ADR-138（Firebase 専一・本テーマで覆す）、ADR-127、ADR-023、ADR-032、ADR-1008
-- 本テーマの ADR: ADR-1012（起案中）
+- 本テーマの ADR: ADR-1013（起案中）
 
 ## ぶら下がる文書（子）
 - [../../handoff/auth-self-hosted-passkey/recon.md](../../handoff/auth-self-hosted-passkey/recon.md)

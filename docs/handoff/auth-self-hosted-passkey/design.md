@@ -10,7 +10,7 @@ mode: handoff
 
 親: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 
-**対象ADR**: ADR-1012（本テーマ・起案中。ADR-138 を覆す）、ADR-1008（人の正本＝public.users.id・不変）、ADR-1007（migration は構造のみ・1回実行）、ADR-127（認証失敗ロックの順序・維持）、ADR-136（危険PRのGO・不変）、ADR-144（UIガバナンス・不変）  
+**対象ADR**: ADR-1013（本テーマ・起案中。ADR-138 を覆す）、ADR-1008（人の正本＝public.users.id・不変）、ADR-1007（migration は構造のみ・1回実行）、ADR-127（認証失敗ロックの順序・維持）、ADR-136（危険PRのGO・不変）、ADR-144（UIガバナンス・不変）  
 **recon**: [docs/handoff/auth-self-hosted-passkey/recon.md](recon.md)  
 **KGI**: [docs/specs/auth-login/kgi.md](../../specs/auth-login/kgi.md)  
 **日付**: 2026-10-13  
@@ -52,13 +52,14 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 置き場 | 列／表 | 内容 | 理由 |
 |---|---|---|---|
-| public.users（列追加） | `password_hash` TEXT NULL | Argon2id の文字列（`$argon2id$v=19$m=19456,t=2,p=1$...`） | OWASP 第一選択（recon 公式仕様）。NULL＝パスワード未設定 |
+| public.users（列追加） | `password_argon2_hash` TEXT NULL | Argon2id の文字列（`$argon2id$v=19$m=19456,t=2,p=1$...`） | OWASP 第一選択（recon 公式仕様）。NULL＝パスワード未設定 |
 | 同 | `password_changed_at` TIMESTAMPTZ NULL | 最後に変えた時刻 | 変更後に古い更新用トークンを無効にする基準 |
 | 同 | `failed_login_count` INT NOT NULL DEFAULT 0・`locked_until` TIMESTAMPTZ NULL | 口座単位の失敗回数と停止期限 | OWASP「IP でなく口座単位」。NIST「100 回以下で止める」 |
 | public.webauthn_credentials（新表） | `id` BIGSERIAL PK、`user_id` FK users.id ON DELETE CASCADE、`credential_id` BYTEA UNIQUE（≤1023）、`public_key` BYTEA、`sign_count` BIGINT、`transports` TEXT[]、`backup_eligible` BOOL、`backup_state` BOOL、`aaguid` UUID、`label` TEXT、`created_at`、`last_used_at` | パスキー（公開鍵だけ。顔・指紋そのものは端末から出ない） | W3C の保存すべき値（recon 公式仕様） |
 | public.password_reset_tokens（新表） | `id`、`user_id` FK、`purpose` TEXT（`reset`＝再設定・期限 30 分／`invite`＝新規ユーザーの初回設定・期限 72 時間）、`token_hash` BYTEA UNIQUE（sha256）、`expires_at`、`used_at`、`created_at` | 再設定リンクと初回設定リンクの使い捨て鍵（ハッシュだけ保存。1 つの表で両方を扱い、表を増やさない） | OWASP Forgot Password |
 | public.auth_refresh_tokens（新表） | `id`、`user_id` FK、`token_hash` BYTEA UNIQUE、`family_id` UUID、`family_created_at` TIMESTAMPTZ、`expires_at`、`revoked_at`、`created_at`、`last_used_at`、`user_agent_hash` | 更新用トークン（使うたびに入れ替え、使い回しを検知したら同じ family を全部失効）。期限は family の作成から**絶対 30 日**（入れ替えても延びない）。`user_agent_hash` は記録と検知だけに使い、拒否には使わない | OWASP Session Management（絶対期限） |
 
+- 列名を password_hash にしない理由（2026-10-13 便1 調査で判明）: `scripts/run_all_migrations.sh` は毎デプロイ登録済み migration を全件やり直し、409 行目で `migrations/20260612_150000_drop_password_hash.sql`（DROP COLUMN IF EXISTS password_hash）が毎回走る。同じ名前の列は毎デプロイ消えるため、password_argon2_hash を使う。
 - 人の名簿は増やさない。上の新表はすべて `users.id` の子で、メールアドレスも持たない（メールは users.email の 1 か所）。
 - `staff.firebase_uid` は本テーマでは触らない（ADR-1008 の P4 で削除予定）。
 - Firebase にだけいる 3 人（recon P12）は移行しない（users に行が無いため）。便6 の Firebase 片付けで消える。
@@ -78,7 +79,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | POST `passkey/register/options`・`passkey/register/verify` | ログイン中 | py_webauthn で登録。`userVerification=required`、`residentKey=required`。user handle（`user.id`）は users.id を 8 バイトの固定長にしたもの（メール等の個人情報は入れない） | 顔・指紋の確認を必須にする |
 | POST `passkey/login/options`・`passkey/login/verify` | なし（端末が候補を出す） | options は challenge と、それを引くための使い捨て ID を返す（challenge は Redis に 5 分・1 回限り、鍵はその ID）。verify は ID で challenge を取り出して消し、`userVerification=required` で照合。成功でアクセストークン＋更新用 Cookie（login と同じ発行処理） | `sign_count`: 保存値と新値がどちらも 0 なら許可（同期型パスキーは 0 のまま）。保存値が 0 より大きく、新値が保存値以下なら拒否し、監査記録に残す（複製の疑い） |
 | GET/DELETE `passkeys` | ログイン中 | 自分のパスキーの一覧・削除 | 他人のものは触れない |
-| POST `register`（既存 `backend/app/routers/auth.py:23` を置き換え・super admin 専用のまま） | email・氏名・テナント・ロール | users を `password_hash` NULL で作り、purpose=invite の鍵を作って「初回設定メール」を送る。メールのリンクは再設定ページと同じ | 審査 HIGH-2。Firebase 撤去後に新しい人を作る経路。表は増やさない |
+| POST `register`（既存 `backend/app/routers/auth.py:23` を置き換え・super admin 専用のまま） | email・氏名・テナント・ロール | users を `password_argon2_hash` NULL で作り、purpose=invite の鍵を作って「初回設定メール」を送る。メールのリンクは再設定ページと同じ | 審査 HIGH-2。Firebase 撤去後に新しい人を作る経路。表は増やさない |
 
 ### パスキーの RP ID（登録したパスキーが結びつくドメイン）
 - **RP ID = app.salesanchor.jp、確認するオリジン = https://app.salesanchor.jp**（PO 2026-10-13「y」・審査 HIGH-4）。ログインする場所はアプリの画面だけなので範囲を最小にする。後から変えると、登録済みのパスキーが全部使えなくなる。
@@ -149,7 +150,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 便 | テーマ | 危険 | 戻し方 | 測り方 |
 |---|---|---|---|---|
-| 便0 | 本設計一式・ADR-1012（docs のみ） | 無 | revert | ADR 索引の CI 緑・関所 `node scripts/check-process-artifacts.js` 緑 |
+| 便0 | 本設計一式・ADR-1013（docs のみ） | 無 | revert | ADR 索引の CI 緑・関所 `node scripts/check-process-artifacts.js` 緑 |
 | 便1 | migration: §2 の列と表（構造のみ） | **危険** | 列と表は残してコードが使わない（削除は別便・PO GO） | 本番で `\d public.users` と新 3 表が §2 と一致。今のログインに影響なし（ログイン成功数が前日と同程度） |
 | 便2 | backend: パスワード照合・トークン発行／更新／失効・口座ロック・§4 の振り分け・`AUTH_PROVIDER` スイッチ（既定 firebase）。依存追加 `argon2-cffi` | 無（コードのみ）。認証のためセキュリティ審査必須 | revert | 単体・結合テスト緑。本番では既定 firebase のため挙動不変（ログイン成功数が前日と同程度） |
 | 便3 | メール: SMTP を backend に渡す（`docker-compose.yml`・`.github/workflows/deploy.yml`）、再設定 API、メール文面（ja/en）。**便3 の間は、再設定の口は環境変数 `AUTH_PASSWORD_RESET_ALLOWLIST`（試験用アドレスだけ）に載った email にしか送らない**（審査 MEDIUM-6。切替前に実ユーザーへメールが届いて混乱しないように）。画面は Firebase のままなので、K5 は試験用アドレスに対して API を直接呼んで送る。試験用アドレスは、使用中の 10 人とは別に、試験用テナント（tenant 6 `tenant-review`）に試験ユーザーとして 1 人作る（email は便3 のカードに明記。この人は K1 の対象外）。PO の GUI: さくらで送信用アドレス作成・DKIM 有効化、DNS に DMARC 追加 | **危険**（compose・deploy・secrets） | 環境変数を外せば送信停止（`backend/app/services/email_sender.py:40` が送らずログだけになる） | K5: Gmail 試験アカウントの受信箱に届き、ヘッダの SPF・DKIM・DMARC が pass |
@@ -160,8 +161,8 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 ### 便4 初回パスワード発行の手順（平文をサーバーにもリポジトリにも残さない）
 1. PO の Mac で `umask 077` の後、`ssh prod1 "docker exec astro-webapp-backend-1 python -m scripts.issue_initial_passwords --apply"`（コンテナ内の作業場所は /app ＝ backend/ なので、新設する backend/scripts/issue_initial_passwords.py がこの名前で呼べる）の標準出力を、PO の Mac のファイル（例: ~/Documents/salesanchor-initial-passwords-YYYYMMDD.tsv・権限 600）へ直接書き出す。
-2. スクリプトは「`is_active=true` かつ `password_hash` が NULL」の全員（PO 2026-10-13「y」・recon P3 で 10 人。便3 の試験ユーザーは便3 で password_hash が入るため自然に外れる）に、ランダム 20 文字を作り Argon2id で `password_hash` に保存し、`users.id`・メール・パスワードの 3 列を標準出力に出す。サーバー側のファイル・ログには平文を書かない（ログは件数だけ）。
-3. 既に `password_hash` がある人は飛ばす（2 回実行しても上書きしない）。`--apply` なしは件数だけ表示する試し実行。
+2. スクリプトは「`is_active=true` かつ `password_argon2_hash` が NULL」の全員（PO 2026-10-13「y」・recon P3 で 10 人。便3 の試験ユーザーは便3 で password_argon2_hash が入るため自然に外れる）に、ランダム 20 文字を作り Argon2id で `password_argon2_hash` に保存し、`users.id`・メール・パスワードの 3 列を標準出力に出す。サーバー側のファイル・ログには平文を書かない（ログは件数だけ）。
+3. 既に `password_argon2_hash` がある人は飛ばす（2 回実行しても上書きしない）。`--apply` なしは件数だけ表示する試し実行。
 4. PO が各人に伝え終えたら、ファイルを削除する（Mac の記憶装置では「上書きして完全に消す」ことは約束できないため、手順書には「削除」と「ゴミ箱に残っていないことの確認」だけを書く）。
 5. 発行対象のうち id=2（テスト用アドレス）と id=10（審査用）は実在の利用者ではないため、K1 の「ログインできる」の確認は PO が発行ファイルの値で行う。
 
@@ -179,7 +180,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 - 事例1: FIDO Alliance「Passkey Index」2025 年 10 月（Amazon・Google・Microsoft など 9 社の自己申告）。ログイン成功率 93%（パスキー）対 63%（その他）、ログイン時間 8.5 秒対 31.2 秒。→ 応用: 便5 の KPI の目安。ただし大企業の自己申告で、10 人規模の我々の成功の証明には使わない
 - 事例2: OWASP Password Storage・Forgot Password・Session Management の各 Cheat Sheet（2026-10-13 確認・出典は recon）→ 応用: §2・§3 の Argon2id の値、再設定の使い捨て鍵、更新用トークンの入れ替え
 - 事例3: NIST SP 800-63B-4（2025-07-31 Final）→ 応用: §3 の長さ 15 文字・漏洩一覧照合・定期変更なし。パスキーは単独で多要素相当（次のテーマの二段階認証を任意にする根拠の 1 つ）
-- 事例4（社内の過去）: ADR-138（2026-06-12）で「使われないパスワードの保管は攻撃面を増やすだけ」と判断して削除した → 応用: 今回は照合に使うので保管する理由がある。ADR-1012 で Supersedes と明記し、保管は Argon2id とし、平文は発行時の PO の Mac だけに置く
+- 事例4（社内の過去）: ADR-138（2026-06-12）で「使われないパスワードの保管は攻撃面を増やすだけ」と判断して削除した → 応用: 今回は照合に使うので保管する理由がある。ADR-1013 で Supersedes と明記し、保管は Argon2id とし、平文は発行時の PO の Mac だけに置く
 - Firebase から自社認証へ移した、規模と数値のある公開事例は見つけていない（recon 外部調査）。成否は本テーマの KGI の実測だけで判定する
 
 ---
@@ -188,7 +189,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 基準 | 検証方法 |
 |------|---------|
-| K1: 発行ファイルの行数＝対象者数（便4 の試し実行で表示される「is_active=true かつ password_hash が NULL」の件数。2026-10-13 時点 10 人・便3 の試験ユーザーは含まない）、対象者全員が新パスワードでログインできる | 便4 実施後、ファイル行数（`wc -l`、値は見ない）と、`public.users.last_login` が切替時刻より後の is_active 利用者の数（login API が成功時に last_login を更新する。今のコードは更新していない＝`git grep last_login` で認証コードに 0 件） |
+| K1: 発行ファイルの行数＝対象者数（便4 の試し実行で表示される「is_active=true かつ password_argon2_hash が NULL」の件数。2026-10-13 時点 10 人・便3 の試験ユーザーは含まない）、対象者全員が新パスワードでログインできる | 便4 実施後、ファイル行数（`wc -l`、値は見ない）と、`public.users.last_login` が切替時刻より後の is_active 利用者の数（login API が成功時に last_login を更新する。今のコードは更新していない＝`git grep last_login` で認証コードに 0 件） |
 | K2: パスワードを打たずに顔か指紋だけでログインできる | PO の端末で実演し画面録画。`webauthn_credentials` に PO の users.id の行が 1 行以上（件数のみ読み取り） |
 | K3: Firebase の登録ユーザー 0、ログイン情報は §2 の置き場だけ | 便6 後に Firebase の書き出しで総数 0。`git grep -i firebase` が許可した例外（ADR・過去の handoff）以外 0 |
 | K4: 再設定メールのリンクで新パスワードを設定してログインできる。リンクは 1 回で無効・30 分で無効 | 試験ユーザーで実演＋結合テスト（使用済み・期限切れ・別人の鍵を拒否） |
@@ -226,7 +227,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| T0 | 本設計一式と ADR-1012 を docs PR で main へ（便0）。`node scripts/generate-adr-index.js` | 設計パートナー |
+| T0 | 本設計一式と ADR-1013 を docs PR で main へ（便0）。`node scripts/generate-adr-index.js` | 設計パートナー |
 | T1〜T6 | 便1〜便6。各便の前に実装カードを作り、カードチェック → Sonnet が実装 → Fable がコード審査 → CI 緑 → 危険便は GO | 設計パートナー（カード・GO 確認）・Sonnet（実装）・Fable（審査） |
 | PO の手作業 | 便3: さくらで送信用アドレス作成と DKIM、DNS に DMARC。便4: 発行ファイルの配布。便6: Firebase のユーザー削除の GO | PO |
 

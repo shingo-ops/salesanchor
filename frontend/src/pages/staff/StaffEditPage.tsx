@@ -45,7 +45,6 @@ interface Staff {
   discord_user_id: string | null;
   role_id: number;
   status: string;
-  firebase_uid: string | null;
   ui_preferences: StaffUIPreferences | null;
 }
 
@@ -69,7 +68,6 @@ type FormState = {
   discord_user_id: string;
   role_id: string;
   status: string;
-  firebase_uid: string;
   ui_preferences: StaffUIPreferences;
 };
 
@@ -79,7 +77,7 @@ const emptyForm: FormState = {
   surname_en: "", given_name_en: "",
   primary_email: "", discord_user_id: "",
   role_id: "", status: "active",
-  firebase_uid: "", ui_preferences: { ...emptyPrefs },
+  ui_preferences: { ...emptyPrefs },
 };
 
 export default function StaffEditPage() {
@@ -110,7 +108,6 @@ export default function StaffEditPage() {
           discord_user_id: staff.discord_user_id ?? "",
           role_id: String(staff.role_id),
           status: staff.status,
-          firebase_uid: staff.firebase_uid ?? "",
           ui_preferences: staff.ui_preferences || { ...emptyPrefs },
         });
         setRoles(rs);
@@ -136,11 +133,9 @@ export default function StaffEditPage() {
         given_name_kana: toNull(form.given_name_kana),
         surname_en: toNull(form.surname_en),
         given_name_en: toNull(form.given_name_en),
-        primary_email: form.primary_email,
         discord_user_id: toNull(form.discord_user_id),
         role_id: parseInt(form.role_id, 10),
         status: form.status,
-        firebase_uid: toNull(form.firebase_uid),
         ui_preferences: form.ui_preferences,
       });
       const editedSelf = selfStaffId !== null && Number(id) === selfStaffId;
@@ -176,8 +171,8 @@ export default function StaffEditPage() {
           <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
             <TextFieldControl required aria-required="true" value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-            <TextFieldControl required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
+          <div className="form-group"><label>{t("staff.primaryEmail")}</label>
+            <TextFieldControl disabled type="email" value={form.primary_email} />
           </div>
           <div className="form-group"><label>Discord ID</label>
             <TextFieldControl value={form.discord_user_id} onChange={(e) => setForm({ ...form, discord_user_id: e.target.value })} />
@@ -200,9 +195,6 @@ export default function StaffEditPage() {
               { value: "pending", label: t("staff.status_pending") },
             ]}
           />
-          <div className="form-group"><label>Firebase UID</label>
-            <TextFieldControl value={form.firebase_uid} onChange={(e) => setForm({ ...form, firebase_uid: e.target.value })} />
-          </div>
 
           <h4>{t("staff.uiPreferences")}</h4>
           {(() => {

@@ -1,0 +1,44 @@
+== invoice-detail-w1280 stoppedAt=null doc={"scrollWidth":1280,"clientWidth":1280} err=[]
+  A1-paypal-url(:241) | class= | L=91 T=205.48 W=1022.22 H=33 | sw/cw=1020/1020 | value=https://www.sandbox.paypal.com/checkoutnow?token=DUMMY-TOKEN-0000000000000000 | pad=8px font=13.6px
+  A2-void-reason(:290) | class= | L=94 T=318.58 W=1146 H=33 | sw/cw=1144/1144 | value= | pad=8px font=13.3333px
+  extra A2 {"found":true,"className":"","left":94,"top":318.58,"width":1146,"height":33,"scrollWidth":1144,"clientWidth":1144,"value":"テスト用の無効化理由です。三十文字ちょうどになるように調整す","valueLength":30,"centerDiffToParent":-5.2,"expectedLength":30}
+  extra A1 {"found":true,"className":"","left":91,"top":205.48,"width":1022.22,"height":33,"scrollWidth":1020,"clientWidth":1020,"value":"https://www.sandbox.paypal.com/checkoutnow?token=DUMMY-TOKEN-0000000000000000","valueLength":77,"centerDiffToParent":0}
+  extra A1ButtonLink {"tag":"A","className":"comp-btn comp-btn--secondary","left":1121.22,"top":203.98,"width":121.78,"height":36,"centerDiffToA1":0}
+  extra A2AfterCancelExists false
+  calls(non-GET-empty): []
+== invoice-detail-w1440 stoppedAt=null doc={"scrollWidth":1440,"clientWidth":1440} err=[]
+  A1-paypal-url(:241) | class= | L=91 T=205.48 W=1182.22 H=33 | sw/cw=1180/1180 | value=https://www.sandbox.paypal.com/checkoutnow?token=DUMMY-TOKEN-0000000000000000 | pad=8px font=13.6px
+  A2-void-reason(:290) | class= | L=94 T=318.58 W=1306 H=33 | sw/cw=1304/1304 | value= | pad=8px font=13.3333px
+  extra A2 {"found":true,"className":"","left":94,"top":318.58,"width":1306,"height":33,"scrollWidth":1304,"clientWidth":1304,"value":"テスト用の無効化理由です。三十文字ちょうどになるように調整す","valueLength":30,"centerDiffToParent":-5.2,"expectedLength":30}
+  extra A1 {"found":true,"className":"","left":91,"top":205.48,"width":1182.22,"height":33,"scrollWidth":1180,"clientWidth":1180,"value":"https://www.sandbox.paypal.com/checkoutnow?token=DUMMY-TOKEN-0000000000000000","valueLength":77,"centerDiffToParent":0}
+  extra A1ButtonLink {"tag":"A","className":"comp-btn comp-btn--secondary","left":1281.22,"top":203.98,"width":121.78,"height":36,"centerDiffToA1":0}
+  extra A2AfterCancelExists false
+  calls(non-GET-empty): []
+== commissions-w1280 stoppedAt=null doc={"scrollWidth":1280,"clientWidth":1280} err=[]
+  B1-year(CommissionsPage:141) | class= | L=129.22 T=139.78 W=90 H=19 | sw/cw=86/86 | value=2026 | pad=0px font=13.3333px
+  B2-month(CommissionsPage:153) | class= | L=254.44 T=139.78 W=60 H=19 | sw/cw=56/56 | value=12 | pad=0px font=13.3333px
+  extra apiCallsAfterFill ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+  extra year {"found":true,"className":"","left":129.22,"top":139.78,"width":90,"height":19,"scrollWidth":86,"clientWidth":86,"value":"2026","valueLength":4,"centerDiffToParent":0.7}
+  extra month {"found":true,"className":"","left":254.44,"top":139.78,"width":60,"height":19,"scrollWidth":56,"clientWidth":56,"value":"12","valueLength":2,"centerDiffToParent":0.7}
+  calls(non-GET-empty): ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+== commissions-w1440 stoppedAt=null doc={"scrollWidth":1440,"clientWidth":1440} err=[]
+  B1-year(CommissionsPage:141) | class= | L=129.22 T=139.78 W=90 H=19 | sw/cw=86/86 | value=2026 | pad=0px font=13.3333px
+  B2-month(CommissionsPage:153) | class= | L=254.44 T=139.78 W=60 H=19 | sw/cw=56/56 | value=12 | pad=0px font=13.3333px
+  extra apiCallsAfterFill ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+  extra year {"found":true,"className":"","left":129.22,"top":139.78,"width":90,"height":19,"scrollWidth":86,"clientWidth":86,"value":"2026","valueLength":4,"centerDiffToParent":0.7}
+  extra month {"found":true,"className":"","left":254.44,"top":139.78,"width":60,"height":19,"scrollWidth":56,"clientWidth":56,"value":"12","valueLength":2,"centerDiffToParent":0.7}
+  calls(non-GET-empty): ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+== commission-settings-w1280 stoppedAt=null doc={"scrollWidth":1280,"clientWidth":1280} err=[]
+  B3-year(CommissionSettingsPage:277) | class= | L=107.22 T=609.2 W=90 H=19 | sw/cw=86/86 | value=2026 | pad=0px font=13.3333px
+  B4-month(CommissionSettingsPage:289) | class= | L=232.44 T=609.2 W=60 H=19 | sw/cw=56/56 | value=12 | pad=0px font=13.3333px
+  extra apiCallsAfterFill ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+  extra year {"found":true,"className":"","left":107.22,"top":609.2,"width":90,"height":19,"scrollWidth":86,"clientWidth":86,"value":"2026","valueLength":4,"centerDiffToParent":0.7}
+  extra month {"found":true,"className":"","left":232.44,"top":609.2,"width":60,"height":19,"scrollWidth":56,"clientWidth":56,"value":"12","valueLength":2,"centerDiffToParent":0.7}
+  calls(non-GET-empty): ["GET /tenant-commission-settings","GET /commissions/monthly?year=2026&month=10","GET /tenant-commission-settings","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+== commission-settings-w1440 stoppedAt=null doc={"scrollWidth":1440,"clientWidth":1440} err=[]
+  B3-year(CommissionSettingsPage:277) | class= | L=107.22 T=609.2 W=90 H=19 | sw/cw=86/86 | value=2026 | pad=0px font=13.3333px
+  B4-month(CommissionSettingsPage:289) | class= | L=232.44 T=609.2 W=60 H=19 | sw/cw=56/56 | value=12 | pad=0px font=13.3333px
+  extra apiCallsAfterFill ["GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]
+  extra year {"found":true,"className":"","left":107.22,"top":609.2,"width":90,"height":19,"scrollWidth":86,"clientWidth":86,"value":"2026","valueLength":4,"centerDiffToParent":0.7}
+  extra month {"found":true,"className":"","left":232.44,"top":609.2,"width":60,"height":19,"scrollWidth":56,"clientWidth":56,"value":"12","valueLength":2,"centerDiffToParent":0.7}
+  calls(non-GET-empty): ["GET /tenant-commission-settings","GET /commissions/monthly?year=2026&month=10","GET /tenant-commission-settings","GET /commissions/monthly?year=2026&month=10","GET /commissions/monthly?year=2026&month=12"]

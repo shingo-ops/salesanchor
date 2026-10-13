@@ -929,5 +929,11 @@ run_sql migrations/20261013_140000_add_analysis_results_ship_ja_ship_en.sql
 # tcg_note_master に REGEX の行の英語の書式（label_template_en）を足す（構造のみ・冪等）
 run_sql migrations/20261013_140100_add_tcg_note_master_label_template_en.sql
 
+# 名簿のメールの正本を users.email にする: staff.primary_email の NOT NULL を外し v_senders を作り直す（ADR-1008 P4b・構造のみ・冪等）
+run_sql migrations/20261013_150000_staff_email_from_users.sql
+
+# ログイン自社化の置き場（users に 4 列・新表 3 つ。構造のみ・冪等。ADR-1013 便1）
+run_sql migrations/20261013_160000_add_self_hosted_auth_tables.sql
+
 # 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
 run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql

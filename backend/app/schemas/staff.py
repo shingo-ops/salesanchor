@@ -67,7 +67,6 @@ class StaffCreate(BaseModel):
     discord_user_id: str | None = Field(default=None, max_length=50)
     role_id: int
     status: StaffStatus = StaffStatus.active
-    firebase_uid: str | None = Field(default=None, max_length=128)
     user_id: int | None = None
     is_employee: bool = Field(
         default=False,
@@ -101,7 +100,6 @@ class StaffUpdate(BaseModel):
     discord_user_id: str | None = Field(default=None, max_length=50)
     role_id: int | None = None
     status: StaffStatus | None = None
-    firebase_uid: str | None = Field(default=None, max_length=128)
     user_id: int | None = None
     is_employee: bool | None = Field(
         default=None,
@@ -160,7 +158,6 @@ class StaffResponse(BaseModel):
     role_id: int | None = None
     role_name: str | None = None
     status: str
-    firebase_uid: str | None
     is_employee: bool = Field(
         default=False,
         description="社員/役員フラグ。True の場合は ADR-021 Phase 5 報酬計算で全ロール 0 円扱い。",

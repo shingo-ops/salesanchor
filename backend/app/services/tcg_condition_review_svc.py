@@ -126,7 +126,8 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     }))
     return f"""
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
-    CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar) cr_data
+    -- OFFSET 0 は PostgreSQL の展開（pull-up）を止め、to_jsonb(ar) を行ごとに1回だけ作るため。外すと要確認一覧が約3倍遅くなる（docs/handoff/review-speed/design.md）
+    CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar OFFSET 0) cr_data
     LEFT JOIN public.products cr_product ON cr_product.id::text = cr_data.ar->>'product_id'
     LEFT JOIN public.conditions cr_empty ON cr_empty.code = 'CN0011'
     LEFT JOIN public.conditions cr_selected ON cr_selected.id::text = ({selected})
