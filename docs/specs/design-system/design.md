@@ -3225,7 +3225,7 @@ AY-2j 変更契約（SoldOutResultsPanel.tsx と、その試験だけを変更�
 
 | 基準 | 検証方法 |
 |---|---|
-| 1行判定 | 開発モードの build と preview に、偽ログインと API モックを使う（実データに近いダミー5行: 長い商品名「ワンピースカードゲーム ブースターパック 蒼海の七傑【OP-14】BOX」等、仕入元「倉田 和博」、価格「¥174,000」、数量「none」、状態は有効と過去の両方）。幅1280と幅1440それぞれで、各行の provider・raw_quantity・raw_price・line_posted_at・source_is_active のセルについて、Range.getClientRects() の行数（同じ top の矩形をまとめた数）が1であることを JSON に記録する。商品名の列だけは折り返してよい |
+| 1行判定 | 開発モードの build と preview に、偽ログインと API モックを使う（実データに近いダミー5行: 長い商品名「ワンピースカードゲーム ブースターパック 蒼海の七傑【OP-14】BOX」等、仕入元「提供者I 太郎」、価格「¥174,000」、数量「none」、状態は有効と過去の両方）。幅1280と幅1440それぞれで、各行の provider・raw_quantity・raw_price・line_posted_at・source_is_active のセルについて、Range.getClientRects() の行数（同じ top の矩形をまとめた数）が1であることを JSON に記録する。商品名の列だけは折り返してよい |
 | Drawer | 同じ環境で行を押すと、dialog（comp-drawer-panel--open）に原文が出て mark で強調され、Esc で閉じることを JSON に記録する。幅1440で、開いた状態のスクリーンショットと一覧のスクリーンショットを撮る（設計者が目視） |
 | 試験 | 契約4の差分。変えた expect と理由の一覧 |
 | 品質 | generate を実行したあとの tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook と、CI の必須チェックがすべて成功 |

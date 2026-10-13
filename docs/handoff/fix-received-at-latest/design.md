@@ -112,7 +112,7 @@ UPDATE public.analysis_results ar_target
 
 ## 11. 次の便に回すもの（事実と決定）
 - Y（前の値段を引き継ぐ）を試算した結果（本番の配信SQLを読み取り専用で再現、48時間の絞り込みあり）: 今 249行、時刻の修正だけ 852行、時刻の修正と Y 858行
-- Y で新しく出る6件のうち5件は、新しい投稿が「〆」なのに完売と判定されていない行（Nexus「30th 〆」、平田光希「EB03〆」、星野 良介「『30th CELEBRATION』〆切ります。」、たいき OP-14／OP-15「OP-14 BOX / OP-15 BOX / OP-16 BOX 〆」）。残りの1件は在庫の更新（kaishi「残り31BOX」）→ **〆の判定を直す前に Y を入れると、完売の商品が配信される**。そのため PO は「時刻の修正 → 〆の判定と Y」の順を選んだ
+- Y で新しく出る6件のうち5件は、新しい投稿が「〆」なのに完売と判定されていない行（Nexus「30th 〆」、平田光希「EB03〆」、提供者E「『30th CELEBRATION』〆切ります。」、たいき OP-14／OP-15「OP-14 BOX / OP-15 BOX / OP-16 BOX 〆」）。残りの1件は在庫の更新（kaishi「残り31BOX」）→ **〆の判定を直す前に Y を入れると、完売の商品が配信される**。そのため PO は「時刻の修正 → 〆の判定と Y」の順を選んだ
 - 並べ替えが1行に決まらないグループ（上位2行の line_posted_at と computed_at が同じ）が347件ある。例:「美品」と「難あり」が同じ condition になる。今のコードも、§5 のマイグレーションも同じ並べ替えを使う。**この便では変えない**（コードと補正で並べ替えを一致させるため）。次の便で、どの行を選ぶかを決めて扱う
 - 既存のテストには、値段のない新しい投稿の分岐を確かめるものがない。Y を入れる便でテストを追加する
 - is_current を読む箇所: `backend/app/services/tcg_distribution_svc.py:255`、`backend/app/services/tcg_distribution_svc.py:326`、`backend/app/services/tcg_distribution_svc.py:368`、`backend/app/services/tcg_analysis_dashboard_svc.py:713`

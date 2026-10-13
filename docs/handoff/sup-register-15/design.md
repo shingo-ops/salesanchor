@@ -55,4 +55,4 @@ GAS 仕入元マスタ（`Latest24LineImport.js`）を正典として採用。
 
 後日対応予定:
 - `external_id` に LINE グループ ID を設定する別 migration（GAS から取得後）
-- 統合候補（funスタッフ / Kei / 大知 / oyama↔やまちゃん）の同一性照合と統合
+- 統合候補（funスタッフ / Kei / 大知 / oyama↔提供者K）の同一性照合と統合
