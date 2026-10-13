@@ -1,0 +1,24 @@
+ops/launchd/jp.salesanchor.disk-janitor.plist: OK
+extract rc=0
+DIFF: 完全一致 (rc=0)
+--- bash -n -c
+bash -n rc=0
+--- plist diff
+diff --git a/ops/launchd/jp.salesanchor.disk-janitor.plist b/ops/launchd/jp.salesanchor.disk-janitor.plist
+index acf116862..068527470 100644
+--- a/ops/launchd/jp.salesanchor.disk-janitor.plist
++++ b/ops/launchd/jp.salesanchor.disk-janitor.plist
+@@ -31,11 +31,11 @@
+   <array>
+     <string>/bin/bash</string>
+     <string>-lc</string>
+-    <string>bash scripts/disk-janitor.sh --execute</string>
++    <string>T=/Users/tanizawashingo/.salesanchor-tools; git -C "$T" fetch -q origin main &amp;&amp; test -z "$(git -C "$T" status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" checkout -q --detach origin/main &amp;&amp; test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)" &amp;&amp; cd "$T" &amp;&amp; bash scripts/disk-janitor.sh --execute || { echo "disk-janitor: 道具のコピーの更新・確認に失敗したため実行しない" &gt;&amp;2; exit 1; }</string>
+   </array>
+ 
+   <key>WorkingDirectory</key>
+-  <string>/Users/tanizawashingo/salesanchor</string>
++  <string>/Users/tanizawashingo/.salesanchor-tools</string>
+ 
+   <key>EnvironmentVariables</key>
+   <dict>

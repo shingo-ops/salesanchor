@@ -1,0 +1,4 @@
+== ~/.npmrc (変更前) ==
+cache=/Users/tanizawashingo/.npm-cache
+prefix=/Users/tanizawashingo/.npm-global
+-rw-------  1 tanizawashingo  staff  60  5月 20 16:02 /Users/tanizawashingo/.npmrc.bak-20261013

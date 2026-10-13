@@ -23,6 +23,7 @@ import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from ".
 import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime";
 import { ReviewItemDrawer } from "../../../features/tcg-analysis-review/ReviewItemDrawer";
 import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab";
+import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
 
 const PAGE_SIZE = 20;
 
@@ -454,6 +455,10 @@ export default function NeedsReviewTabsPanel() {
 
       {activeTab === "production" && (
         <>
+          <Card>
+            <h3>{t("needsReview.csvTitle")}</h3>
+            <ReviewCsvPanel onDone={() => setReloadKey((k) => k + 1)} />
+          </Card>
           {loading && <p role="status">{t("common.loading")}</p>}
           {errorKey && <p role="alert" style={{ color: "var(--color-error)" }}>{t(errorKey)}</p>}
           {data && (

@@ -1,0 +1,25 @@
+{
+  "enabledPlugins": {
+    "discord-ops@sa-local": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "mcp__plugin_discord-ops_discord-ops__create_thread",
+      "mcp__plugin_discord-ops_discord-ops__reply",
+      "mcp__plugin_discord-ops_discord-ops__propose",
+      "mcp__plugin_discord-ops_discord-ops__fetch_messages",
+      "mcp__plugin_discord-ops_discord-ops__react",
+      "mcp__plugin_discord-ops_discord-ops__list_monitor_alerts"
+    ],
+    "ask": [
+      "Write",
+      "Edit",
+      "NotebookEdit"
+    ]
+  }
+}

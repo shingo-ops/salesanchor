@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.disk-janitor.plist — 毎日 04:00 の開発データ自動片付け（docs/handoff/disk-janitor/design.md）
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+  reaper（03:00 系）の後に動かす。消すのは根5か所の中で R1〜R4 の条件に当たる物だけ（scripts/disk-janitor.sh 冒頭）。
+
+  配置コマンド（手順の正本: docs/ops/runner-commands.md）:
+    cp ops/launchd/jp.salesanchor.disk-janitor.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.disk-janitor.plist
+
+  動作確認:
+    launchctl print gui/$(id -u)/jp.salesanchor.disk-janitor
+    tail ~/Library/Logs/disk-janitor.log
+
+  すぐ1回動かす:
+    launchctl kickstart -k gui/$(id -u)/jp.salesanchor.disk-janitor
+
+  停止:
+    launchctl bootout gui/$(id -u)/jp.salesanchor.disk-janitor
+
+  ログは disk-janitor.sh 自身が DJ_LOG_FILE に書く（1MB 超で .log.1 に1世代だけ退避）。
+  StandardOut/ErrorPath は起動直後の異常を受ける保険。
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.disk-janitor</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; git -C "$T" fetch -q origin main &amp;&amp; test -z "$(git -C "$T" status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" checkout -q --detach origin/main &amp;&amp; test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)" &amp;&amp; cd "$T" &amp;&amp; bash scripts/disk-janitor.sh --execute || { echo "disk-janitor: 道具のコピーの更新・確認に失敗したため実行しない" &gt;&amp;2; exit 1; }</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/.salesanchor-tools</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DJ_LOG_FILE</key>
+    <string>/Users/tanizawashingo/Library/Logs/disk-janitor.log</string>
+    <key>PATH</key>
+    <string>/Users/tanizawashingo/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- 毎日 04:00 に 1 回（RunAtLoad=false・KeepAlive=false = デーモン化しない） -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>4</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/disk-janitor.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/disk-janitor.err</string>
+</dict>
+</plist>

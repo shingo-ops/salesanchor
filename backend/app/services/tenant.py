@@ -597,7 +597,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS {schema}.staff (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    user_id INTEGER UNIQUE REFERENCES public.users(id),
+    user_id INTEGER NOT NULL UNIQUE REFERENCES public.users(id),
     staff_code VARCHAR(20) NOT NULL,
     surname_jp VARCHAR(50) NOT NULL,
     given_name_jp VARCHAR(50) NOT NULL,

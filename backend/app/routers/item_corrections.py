@@ -23,16 +23,16 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
 from app.services.item_corrections_svc import save_corrections
-from app.services.line_analysis_v102_svc import is_v102_prompt_version
-from app.services.review_reason_codes_svc import load_review_reason_codes, non_ackable_codes
+from app.services.review_reason_codes_svc import load_review_reason_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
     FIELD_PRODUCT_ID,
     find_job_of_item,
     invalid_product_values,
     normalize_ack_codes,
+    product_rejection,
+    review_ack_rejection,
     save_review_ack,
-    unknown_codes,
     v102_job_id_of_item,
 )
 from app.tasks.tcg_extraction import enqueue_v102_reanalyze
@@ -155,8 +155,9 @@ async def save_item_corrections(
     v102_job_id = await v102_job_id_of_item(db, extraction_item_id)
     if v102_job_id is not None:  # v102 の件だけ、無効な商品の判断は何も書かずに 422（v6 の件の挙動は変えない）
         bad = await invalid_product_values(db, [f["human_value"] for f in non_empty if f["field_name"] == FIELD_PRODUCT_ID])
-        if bad:
-            raise HTTPException(422, f"Product is not an active product: {', '.join(bad)}")
+        rejected = product_rejection(bad)
+        if rejected is not None:
+            raise HTTPException(rejected.status, rejected.message)
     result = await save_corrections(
         db,
         extraction_item_id=extraction_item_id,
@@ -185,19 +186,10 @@ async def save_item_review_ack(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ) -> ReviewAckResponse:
-    refused = non_ackable_codes(body.codes)
-    if refused:
-        raise HTTPException(422, f"Review reason codes that cannot be acknowledged: {', '.join(refused)}")
-    unknown = unknown_codes(body.codes, await load_review_reason_codes(db))
-    if unknown:
-        raise HTTPException(422, f"Unregistered review reason codes: {', '.join(unknown)}")
     found = await find_job_of_item(db, extraction_item_id)
-    if found is None:
-        raise HTTPException(404, "Item not found")
-    if not is_v102_prompt_version(found.prompt_version):
-        raise HTTPException(409, "review-ack is only for v102 items")
-    if str(body.source_message_id) != found.source_message_id:
-        raise HTTPException(422, "source_message_id does not match the item's post")
+    rejected = review_ack_rejection(body.codes, await load_review_reason_codes(db), found, str(body.source_message_id))
+    if rejected is not None:
+        raise HTTPException(rejected.status, rejected.message)
     saved = await save_review_ack(
         db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
         codes=body.codes, corrected_by=current_user.email,
