@@ -199,8 +199,14 @@ async def test_login_and_refresh_403_when_origin_wrong_or_missing(http, db_sessi
 
 # ── 7. refresh ───────────────────────────────────────────────
 
+def _set_refresh_cookie_on(http, cookie):
+    http.cookies.clear()
+    http.cookies.set("sa_refresh", cookie, domain="app.salesanchor.jp", path=self_tokens.REFRESH_COOKIE_PATH)
+
+
 async def _refresh(http, cookie):
-    return await http.post(f"{AUTH_PATH}/refresh", headers={"origin": ORIGIN}, cookies={"sa_refresh": cookie})
+    _set_refresh_cookie_on(http, cookie)
+    return await http.post(f"{AUTH_PATH}/refresh", headers={"origin": ORIGIN})
 
 
 async def _login_cookie(http):
@@ -300,10 +306,10 @@ async def test_logout_revokes_refresh_and_clears_cookie(http, db_session, passwo
     cookie = login.cookies.get("sa_refresh")
     assert cookie
 
+    _set_refresh_cookie_on(http, cookie)
     resp = await http.post(
         f"{AUTH_PATH}/logout",
         headers={"Authorization": f"Bearer {login.json()['access_token']}"},
-        cookies={"sa_refresh": cookie},
     )
 
     assert resp.status_code == 200
@@ -312,6 +318,25 @@ async def test_logout_revokes_refresh_and_clears_cookie(http, db_session, passwo
     live = await _row(db_session, "SELECT count(*) AS n FROM auth_refresh_tokens WHERE revoked_at IS NULL")
     assert live.n == 0
     assert (await _refresh(http, cookie)).status_code == 401
+
+
+async def test_logout_clear_cookie_has_same_attributes_as_set_cookie(http, db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+    login = await _login(http)
+    cookie = login.cookies.get("sa_refresh")
+    _set_refresh_cookie_on(http, cookie)
+
+    resp = await http.post(
+        f"{AUTH_PATH}/logout",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    set_cookie = resp.headers["set-cookie"].lower()
+    assert "httponly" in set_cookie
+    assert "samesite=strict" in set_cookie
+    assert "max-age=0" in set_cookie
+    assert self_tokens.cookie_secure() is True
+    assert "secure" in set_cookie
 
 
 # ── 9. get_current_user の自社トークン ───────────────────────────
@@ -386,6 +411,27 @@ async def test_get_current_user_rejects_self_token_without_secret(db_session, pa
     await _insert_user(db_session, hash_value=password_hash)
     token = _token()
     monkeypatch.delenv("AUTH_JWT_SECRET")
+
+    with pytest.raises(HTTPException) as exc:
+        await _current_user(db_session, token)
+    assert exc.value.status_code == 401
+
+
+def _token_with_iat(iat, *, has_iat=True):
+    now = int(datetime.now(timezone.utc).timestamp())
+    claims = {"iss": "salesanchor", "sub": str(USER_ID), "email": EMAIL, "jti": "j1", "exp": now + 900}
+    if has_iat:
+        claims["iat"] = iat
+    return jwt.encode(claims, SECRET, algorithm="HS256", headers={"kid": self_tokens._kid(SECRET)})
+
+
+@pytest.mark.parametrize("token", [
+    _token_with_iat(None, has_iat=False),
+    _token_with_iat("not-a-number"),
+    _token_with_iat(10**30),
+], ids=["no-iat", "string-iat", "huge-iat"])
+async def test_get_current_user_rejects_invalid_iat_with_401(db_session, password_hash, token):
+    await _insert_user(db_session, hash_value=password_hash)
 
     with pytest.raises(HTTPException) as exc:
         await _current_user(db_session, token)
