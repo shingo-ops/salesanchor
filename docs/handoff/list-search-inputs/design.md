@@ -79,3 +79,9 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - ADR-027（UI 国際化）: placeholder・aria-label の t() キーは逐語保持。docs/adr/ADR-027-ui-internationalization.md。
 - ADR-1003（GO の委任）: GO は Claude Opus が発行。docs/adr/ADR-1003-go-delegation-to-opus.md。
 - 相互参照: recon は docs/handoff/list-search-inputs/recon.md。
+
+## main 取り込み後の再確認（2026-10-14）
+- 取り込み: origin/main fbdf92a1b（基準 6c8a5955a から12コミット先行）を merge。衝突は frontend/src/pages/inventory/InventoryPage.tsx の import 行1件のみ、両方残して解消。
+- main 側の変更: InventoryPage.tsx（PageLayout headerAction・Drawer 追加、一覧 API に merge_same_post=true 追加、列追加）、locales、openapi.json 等。検索欄・ツールバー・兄弟ボタン周辺は無変更。全文: evidence-20260910/ay2p-merged-main-delta.txt。
+- 在庫一覧の再計測（幅1280・1440・375、evidence-20260910/ay2p-merged-*）: 幅 280→280（375 は 149→192 で改訂2により許容）、高さ 36→39.61（375 は 44）、toolbar 36→39.61・表の開始位置 +3.6、縦中心差 0.01 以内、横はみ出しなし、console error なし。API URL は origin/main そのままと merge 後で一致。
+- 品質（merge 後）: generate / tsc / lint / check:all / test:coverage（1054 passed）/ build すべて exit 0（ay2p-merged-quality-exitcodes.txt）。storybook は merge 前に exit 0、merge 後は未実行。
