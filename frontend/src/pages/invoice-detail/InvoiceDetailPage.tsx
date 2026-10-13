@@ -238,7 +238,7 @@ export default function InvoiceDetailPage() {
           <div style={{ fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-1)" }}>{t("invoices.paypal.linkTitle")}</div>
           <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-2)" }}>{t("invoices.paypal.linkHint")}</div>
           <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-            <input readOnly value={invoice.paypal_approval_url} style={{ flex: 1, padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }} />
+            <TextFieldControl readOnly value={invoice.paypal_approval_url} style={{ flex: 1 }} />
             <ButtonLink variant="secondary" size="md" href={invoice.paypal_approval_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openLink")}</ButtonLink>
           </div>
         </div>
@@ -287,7 +287,7 @@ export default function InvoiceDetailPage() {
       {showVoidForm && (
         <div style={{ background: "var(--danger-bg)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>
           <label style={{ display: "block", marginBottom: "var(--space-2)", fontWeight: "var(--font-weight-semi)", color: "var(--danger-text)" }}>{t("invoices.voidReasonLabel")} *</label>
-          <input style={{ width: "100%", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}
+          <TextFieldControl style={{ width: "100%" }}
                  value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder={t("invoices.voidReasonPlaceholder")} />
           <div style={{ marginTop: "var(--space-2)", display: "flex", gap: "var(--space-2)" }}>
             <Button variant="secondary" size="md" onClick={() => setShowVoidForm(false)}>{t("common.cancel")}</Button>
