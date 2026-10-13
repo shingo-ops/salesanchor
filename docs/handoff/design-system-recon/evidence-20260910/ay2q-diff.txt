@@ -1,0 +1,84 @@
+diff --git a/frontend/src/components/InventorySearchBar.tsx b/frontend/src/components/InventorySearchBar.tsx
+index af2bec256..105f500a9 100644
+--- a/frontend/src/components/InventorySearchBar.tsx
++++ b/frontend/src/components/InventorySearchBar.tsx
+@@ -23,6 +23,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
+ import { createPortal } from "react-dom";
+ import { useTranslation } from "react-i18next";
+ import { api } from "../lib/api";
++import { Button } from "./Button";
+ import { TextFieldControl } from "./TextField";
+ 
+ // spec v1.3 F11 AC11.4: 検索結果に同梱する仕入元現在オファー
+@@ -269,7 +270,7 @@ export default function InventorySearchBar({
+       style={{ position: "relative", width: "100%" }}
+       data-testid={`${testIdPrefix}-root`}
+     >
+-      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
++      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexWrap: "wrap" }}>
+         <TextFieldControl
+           ref={inputRef}
+           type="text"
+@@ -287,7 +288,7 @@ export default function InventorySearchBar({
+           aria-label={t("inventory.search.placeholder")}
+         />
+         <div
+-          role="radiogroup"
++          role="group"
+           aria-label={t("inventory.search.opGroupLabel")}
+           title={opToggleDisabled && tokenCount <= 1 ? t("inventory.search.opNeedsMultipleTokens") : undefined}
+           style={{
+@@ -295,42 +296,30 @@ export default function InventorySearchBar({
+             gap: 0,
+             border: "1px solid var(--border-color)",
+             borderRadius: "var(--radius-sm)",
+-            opacity: opToggleDisabled ? "var(--opacity-disabled)" : 1,
++            flexWrap: "wrap",
+           }}
+           data-testid={`${testIdPrefix}-op-toggle`}
+         >
+-          <button
++          <Button
+             type="button"
+-            onClick={() => setOp("and")}
++            variant="tab"
++            active={op === "and"}
+             disabled={opToggleDisabled}
+-            aria-pressed={op === "and"}
++            onClick={() => setOp("and")}
+             data-testid={`${testIdPrefix}-op-and`}
+-            style={{
+-              padding: "var(--space-1) var(--space-10px)",
+-              border: "none",
+-              background: op === "and" ? "var(--accent-bg)" : "transparent",
+-              color: op === "and" ? "var(--on-accent)" : "inherit",
+-              cursor: opToggleDisabled ? "not-allowed" : "pointer",
+-            }}
+           >
+             {t("inventory.search.opAnd")}
+-          </button>
+-          <button
++          </Button>
++          <Button
+             type="button"
+-            onClick={() => setOp("or")}
++            variant="tab"
++            active={op === "or"}
+             disabled={opToggleDisabled}
+-            aria-pressed={op === "or"}
++            onClick={() => setOp("or")}
+             data-testid={`${testIdPrefix}-op-or`}
+-            style={{
+-              padding: "var(--space-1) var(--space-10px)",
+-              border: "none",
+-              background: op === "or" ? "var(--accent-bg)" : "transparent",
+-              color: op === "or" ? "var(--on-accent)" : "inherit",
+-              cursor: opToggleDisabled ? "not-allowed" : "pointer",
+-            }}
+           >
+             {t("inventory.search.opOr")}
+-          </button>
++          </Button>
+         </div>
+       </div>
+ 

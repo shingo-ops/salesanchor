@@ -1,0 +1,40 @@
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/quote-create-inventory-sea-affde-oke-AND-OR-トグルが-UI-上でクリック可能-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/quote-create-inventory-sea-affde-oke-AND-OR-トグルが-UI-上でクリック可能-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/quote-create-inventory-sea-affde-oke-AND-OR-トグルが-UI-上でクリック可能-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K  3) [chromium] › tests-e2e/quote-create-inventory-search.spec.ts:89:3 › ADR-093 — QuoteCreatePage 検索して追加 UI smoke › 検索バーが描画され placeholder が i18n 経由 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/tanizawashingo/Library/Caches/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright was just installed or updated.       ║
+    ║ Please run the following command to download new browsers: ║
+    ║                                                            ║
+    ║     npx playwright install                                 ║
+    ║                                                            ║
+    ║ <3 Playwright Team                                         ║
+    ╚════════════════════════════════════════════════════════════╝
+
+    Error Context: test-results/quote-create-inventory-sea-fd30a-が描画され-placeholder-が-i18n-経由-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/quote-create-inventory-sea-fd30a-が描画され-placeholder-が-i18n-経由-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/quote-create-inventory-sea-fd30a-が描画され-placeholder-が-i18n-経由-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K  3 failed
+    [chromium] › tests-e2e/quote-create-inventory-search.spec.ts:89:3 › ADR-093 — QuoteCreatePage 検索して追加 UI smoke › 検索バーが描画され placeholder が i18n 経由 
+    [chromium] › tests-e2e/quote-create-inventory-search.spec.ts:101:3 › ADR-093 — QuoteCreatePage 検索して追加 UI smoke › AND/OR トグルが UI 上でクリック可能 
+    [chromium] › tests-e2e/quote-create-inventory-search.spec.ts:119:3 › ADR-093 — QuoteCreatePage 検索して追加 UI smoke › 候補選択 → 明細に行が追加され、在庫 0 行は警告が出る 
