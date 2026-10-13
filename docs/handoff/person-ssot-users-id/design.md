@@ -140,4 +140,11 @@ SQL: docs/handoff/person-ssot-users-id/d1_link_roster.sql。戻し: d1_rollback.
   - 本番の super admin（users 1・3）は自分のテナントで owner ロールを持つ（user_roles t1 (1,1)、t4 (3,1)）ので、スタッフ追加・ロール変更は止まらない。
   - PUT /users/{id}/roles にも「同格以上の人は変えられない」検査を同じ関数で追加（501135274）。
   - P4c（列削除）の前に必須: staff.role_id を直接読み書きする scripts/qa/seed-tenant.sql:107-128、scripts/data_migration/migrate_staff_from_sheet.py・verify_staff_migration.py、scripts/setup_review_tenant.py:254、scripts/setup_single_test_user.py:279,316-317、tests/qa-smoke/scene-06.spec.ts:75,79 を user_roles へ直す。
+- P4b 審査（#4217、Fable APPROVE）で確認した事実と残件:
+  - meta_inbox のチャンネル一覧の接続者名は、氏名が空のとき users.email を出す。users は staff 経由（`su.id = s.user_id`）で結ぶので、名簿に人がいない連携の接続者名は従来どおり NULL（bf4bcb719、試験 test_list_channels_staff_name_null_when_users_row_without_staff）。
+  - P4c（列削除）の前に、上の role_id 分に加えて次も直す（P4b 時点では列が残るので動く）:
+    - staff.primary_email を読み書きする: scripts/qa/seed-tenant.sql:88,91,107-118,123,128,319、scripts/setup_review_tenant.py:233,254、scripts/setup_single_test_user.py:251,279,329、scripts/data_migration/migrate_staff_from_sheet.py:139-194 → users.email で引く・書く。
+    - staff.firebase_uid を書く・数える: scripts/qa/seed-tenant.sql:107-118、scripts/setup_review_tenant.py:254、scripts/setup_single_test_user.py:279、scripts/data_migration/migrate_staff_from_sheet.py:152、verify_staff_migration.py:104-108 → 列ごと外す。
+    - users.role を書く: scripts/setup_test_users.py:226、scripts/setup_single_test_user.py:202-204 → 列から外す（ロールは user_roles）。
+  - migration-test CI（.github/workflows/migration-test.yml）の staff には primary_email 列が無く、20261013_150000 の本体は CI では動かない。代わりに審査担当がローカル PostgreSQL 16 に本番相当の定義を作って2回実行し、v_senders の列名・順・型が一致し contact_email が users.email になることを確認した。
 

@@ -165,7 +165,7 @@ _STAFF_DDL = """
     CREATE TABLE staff (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER NOT NULL DEFAULT 999,
-        primary_email VARCHAR(255) NOT NULL
+        primary_email VARCHAR(255)
     )
 """
 

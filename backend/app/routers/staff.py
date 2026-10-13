@@ -95,8 +95,8 @@ async def _resolve_user_for_new_staff(
     display_name = f"{data.surname_jp} {data.given_name_jp}"
     created = await db.execute(
         text("""
-            INSERT INTO public.users (tenant_id, username, email, full_name, role, is_active)
-            VALUES (:tid, :name, :email, :name, 'user', true)
+            INSERT INTO public.users (tenant_id, username, email, full_name, is_active)
+            VALUES (:tid, :name, :email, :name, true)
             RETURNING id
         """),
         {"tid": tenant_id, "name": display_name, "email": data.primary_email},
@@ -112,7 +112,7 @@ _require_roles_assign = require_permission("roles.assign")
 _STAFF_COLS = """
     s.id, s.tenant_id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp,
     s.surname_kana, s.given_name_kana, s.surname_en, s.given_name_en,
-    s.primary_email, s.discord_user_id, rr.id AS role_id, s.status, s.firebase_uid,
+    u.email AS primary_email, s.discord_user_id, rr.id AS role_id, s.status,
     s.is_employee, s.phone, s.avatar_token,
     s.created_at, s.updated_at,
     rr.name AS role_name
@@ -120,7 +120,9 @@ _STAFF_COLS = """
 
 # 名簿のロールの正本は user_roles（ADR-1008 P4a）。見えるロールのうち priority 最大の1つを出す。
 # 使う側は _visible_text() で text を作り、_hidden_role_params(current_user) を渡す。
+# メールの正本は users.email（ADR-1008 P4b）。staff.user_id は NOT NULL なので内部結合で足りる。
 _ROLE_JOIN = f"""
+    JOIN public.users u ON u.id = s.user_id
     LEFT JOIN roles rr ON rr.id = (
         SELECT r.id FROM user_roles ur JOIN roles r ON r.id = ur.role_id
         WHERE ur.user_id = s.user_id AND {_visible_role_sql("r.system_key")}
@@ -130,8 +132,8 @@ _ROLE_JOIN = f"""
 
 _UPDATABLE = {
     "surname_jp", "given_name_jp", "surname_kana", "given_name_kana",
-    "surname_en", "given_name_en", "primary_email", "discord_user_id",
-    "status", "firebase_uid", "is_employee",
+    "surname_en", "given_name_en", "discord_user_id",
+    "status", "is_employee",
 }
 
 
@@ -533,7 +535,7 @@ async def list_staff(
     conds: list[str] = []
     params: dict = {"limit": per_page, "offset": offset}
     if search:
-        conds.append("(s.staff_code ILIKE :search OR s.surname_jp ILIKE :search OR s.given_name_jp ILIKE :search OR s.primary_email ILIKE :search)")
+        conds.append("(s.staff_code ILIKE :search OR s.surname_jp ILIKE :search OR s.given_name_jp ILIKE :search OR u.email ILIKE :search)")
         params["search"] = f"%{search}%"
     if status_filter:
         conds.append("s.status = :st")
@@ -593,13 +595,13 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                 INSERT INTO staff (
                     tenant_id, user_id, staff_code,
                     surname_jp, given_name_jp, surname_kana, given_name_kana,
-                    surname_en, given_name_en, primary_email, discord_user_id,
-                    status, firebase_uid, is_employee
+                    surname_en, given_name_en, discord_user_id,
+                    status, is_employee
                 ) VALUES (
                     :tid, :uid, :code,
                     :sjp, :gjp, :sk, :gk,
-                    :sen, :gen, :email, :did,
-                    :st, :fbuid, :is_emp
+                    :sen, :gen, :did,
+                    :st, :is_emp
                 )
                 RETURNING id
             """),
@@ -608,9 +610,8 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
                 "sjp": data.surname_jp, "gjp": data.given_name_jp,
                 "sk": data.surname_kana, "gk": data.given_name_kana,
                 "sen": data.surname_en, "gen": data.given_name_en,
-                "email": data.primary_email, "did": data.discord_user_id,
+                "did": data.discord_user_id,
                 "st": data.status.value,
-                "fbuid": data.firebase_uid,
                 "is_emp": bool(data.is_employee),
             },
         )
@@ -671,6 +672,9 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     if "user_id" in update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="user_id は変更できません")
+    if "primary_email" in update_data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="メールアドレスはここでは変更できません")
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="更新するフィールドを少なくとも1つ指定してください")
