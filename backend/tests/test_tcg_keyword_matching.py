@@ -595,6 +595,7 @@ def test_build_ship_labels_generalized_cases_with_drop_entries():
     assert run("カートン発送可") == (None, None)
     # 発送時期系に当たる部分は、捨て札にも当たっても残る
     assert run("カートン 11/20発送") == ("11/20発送", "Ships 11/20")
+    assert run("カートン発送可 11/20発送") == ("11/20発送", "Ships 11/20")
     assert run("カートン発送可 / 11/20発送") == ("11/20発送", "Ships 11/20")
     # どちらにも当たらない言い方は原文のまま・en なし
     assert run("未知の言い方で発送") == ("未知の言い方で発送", None)
