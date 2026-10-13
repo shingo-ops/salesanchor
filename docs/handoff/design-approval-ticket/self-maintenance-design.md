@@ -116,7 +116,7 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 | 9 | K1（台帳の再生と一致）と K3（保護対象の sha256）を確かめる。不一致なら以後の自動の変更を止め、PO に報告する | Sonnet |
 
 - 変更は、台帳の「予定」行がマージされたあとにだけ行う。そのため、台帳に載らない変更は生まれない。
-- 手順6のあとで実行が途中で終わったときは、毎日の戻し確認（起動のたびに pending.json の ts が 24 時間以上前なら recover。ROUTINE.md 参照）で戻す。台帳の「戻した」行は次の本実行の手順0で追記する。
+- 手順6のあとで実行が途中で終わったときは、毎日の起動時に pending.json を読み、ts が 20 時間以上前なら PO に NEEDS_DECISION で知らせる（ROUTINE.md 参照）。戻すかどうかは PO が判断し、戻すときは手順0（recover）で行う。
 
 ### 5-6. 台帳の形（docs/handoff/design-approval-ticket/permission-ledger.md）
 

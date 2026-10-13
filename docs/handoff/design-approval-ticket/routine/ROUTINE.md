@@ -37,21 +37,23 @@
 
 あなたは Sales Anchor の許可保守の担当（Opus）。毎週1回、止まった記録を数え、決められた狭い範囲でだけ `autoMode.allow` に `SM-` で始まる文を足し引きし、理由と結果を台帳に必ず残す。
 
-### 毎日の戻し確認（毎日・最初に行う。手順0の前倒し）
+### 毎日の途中記録の確認（毎日・最初に行う。読み取りだけ）
 
-pending.json が残った状態を、次の週まで持ち越さないための確認。済みの日にも行う。
-- `python3 -I -c "import json,os,datetime as d;p=os.path.expanduser('~/.claude/logs/permission-maintenance-pending.json');print('none' if not os.path.isfile(p) else round((d.datetime.now(d.timezone.utc)-d.datetime.strptime(json.load(open(p))['ts'],'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=d.timezone.utc)).total_seconds()/3600,1))"` で、pending.json の経過時間（ts は UTC）を時間で出す。`none` なら何もしない。
-- 24 時間未満なら、同じ日の実行中とみなして触らない。
-- 24 時間以上なら、`cd /Users/tanizawashingo/salesanchor && git fetch origin main && git show origin/main:docs/handoff/design-approval-ticket/routine/sm_apply.py > /tmp/sm_apply_daily.py && python3 -I /tmp/sm_apply_daily.py recover` を実行する（本店のファイルは古いことがあるため、origin/main の道具を使う。recover は pending.json に書かれた `SM-` の文1件だけを外し、pending.json を .done-<日時> に改名する。settings.json 全体は戻さない）。結果の出力をそのまま報告に含める。
-- ここで台帳への「戻した」行は書かない（その場で PR を作らない）。次の本実行（下の確認で「済みでない」日の実行）の手順0で、台帳に追記する。
+前回の実行が手順6以降で途中終了していないかを確かめる。済みの日にも行う。戻す作業はここではしない（戻すのは PO の判断）。
+- `~/.claude/logs/permission-maintenance-pending.json` が無ければ、何もせず次の確認へ進む。
+- ある場合は、中の `ts`（UTC）を読み、現在との差を時間で出す: `python3 -I -c "import json,os,datetime as d;p=os.path.expanduser('~/.claude/logs/permission-maintenance-pending.json');print(round((d.datetime.now(d.timezone.utc)-d.datetime.strptime(json.load(open(p))['ts'],'%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=d.timezone.utc)).total_seconds()/3600,1))"`。
+- 20 時間未満なら、同じ日の実行中とみなして何もせず、次の確認へ進む。
+- 20 時間以上なら、何も変更せず、`NEEDS_DECISION: 許可保守の途中の記録が残っています（pending.json ts=<値>。手順0で戻すか判断してください）` の1行だけを報告して終わる。
+- `ts` が無い、または読めない（上のコマンドが失敗する）ときも、同じ形で `NEEDS_DECISION: 許可保守の途中の記録が残っています（pending.json ts=読めない／なし。手順0で戻すか判断してください）` の1行だけを報告して終わる。
+- .done- で始まるファイルは見ない。
 
-### 今週の分が済んでいるかの確認（戻し確認のあとに行う。済みなら、これ以外は何もしない）
+### 今週の分が済んでいるかの確認（途中記録の確認のあとに行う。済みなら、これ以外は何もしない）
 
-毎日（月〜金）起動されるので、その週の保守が済んでいるかを、他の作業より先に確かめる。ここでは、上の戻し確認の recover を除き、読み取りだけを行い、worktree も作らない。
+毎日（月〜金）起動されるので、その週の保守が済んでいるかを、他の作業より先に確かめる。ここでは読み取りだけを行い、worktree も作らない。
 - 今週 = 日本時間（JST）の月曜 0:00 から。月曜の日付は `python3 -I -c "import datetime as d;z=d.timezone(d.timedelta(hours=9));n=d.datetime.now(z);print((n-d.timedelta(days=n.weekday())).date())"` で求める。gh の createdAt は UTC なので、JST の月曜 0:00 は UTC の日曜 15:00 として比べる。
 - 確認A（済み）: `cd /Users/tanizawashingo/salesanchor && git fetch origin main` のあと、`git ls-tree --name-only origin/main docs/handoff/design-approval-ticket/permission-reports/` を見る。ファイル名が `YYYY-MM-DD.md` の形そのもの（例: 2026-10-13-s2-trial.md のように後ろに文字が続くものは数えない）で、日付が今週の月曜以降のものが1つでもあれば、済み。
 - 確認B（作業中または済み）: `gh pr list --repo shingo-ops/salesanchor --state all --limit 50 --search "head:release/permission-maintenance-" --json number,headRefName,state,createdAt,url` を見る。headRefName が `release/permission-maintenance-` で始まり、createdAt が今週の月曜 0:00 JST（UTC の日曜 15:00）以降で、state が OPEN か MERGED のものが1つでもあれば、作業中または済み。CLOSED（マージされずに閉じた）ものは数えない。
-- 放置の検出: 確認B で当たった PR が OPEN で、createdAt から 24 時間以上たっている場合は「済み」としない。保守には進まず、`NEEDS_DECISION: 保守 PR #<番号> が OPEN のまま 24 時間以上（閉じる／続ける）` の1行だけを報告して終わる。
+- 放置の検出: 確認B で当たった PR が OPEN で、createdAt から 20 時間以上たっている場合は「済み」としない。保守には進まず、`NEEDS_DECISION: 保守 PR #<番号> が OPEN のまま 20 時間以上（閉じる／続ける）` の1行だけを報告して終わる。
 - 確認A か 確認B のどちらかに当たったら（上の放置の場合を除く）、何も変更せず、`今週分は済み（根拠: <報告書のパス または PR の URL と state>）` の1行だけを報告して終わる。止めた記録の集計も、worktree の作成も、他の道具の実行もしない。
 - どちらにも当たらなければ、下の「最初に必ず行う」へ進む。
 - 「許可保守停止」と言われたときは、この確認より優先して下の停止の手順に従う。
@@ -75,7 +77,7 @@ pending.json が残った状態を、次の週まで持ち越さないための�
 担当には生出力だけを返させる。長い待ち（CI など）は担当にさせず、期限を決めて自分で確認する。担当がフックや自動判定に止められたら、言い換えず全停止して事実を報告させる。
 
 ### 手順（順序がそのまま安全の条件）
-0. （毎日の戻し確認ですでに戻して pending.json が .done-<日時> に改名されている場合は、台帳に「結果=戻した」の行が無い .done-<日時> ごとに、台帳へ「戻した」の行を足す。理由欄にその .done- のファイル名を書く。）`~/.claude/logs/permission-maintenance-pending.json` が残っていれば、`python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py recover` を実行する（書かれた `SM-` の文1件だけを外す。settings.json 全体は戻さない）。台帳に「結果=戻した」の行を足してから始める。
+0. `~/.claude/logs/permission-maintenance-pending.json` が残っていれば、`python3 -I docs/handoff/design-approval-ticket/routine/sm_apply.py recover` を実行する（書かれた `SM-` の文1件だけを外す。settings.json 全体は戻さない）。台帳に「結果=戻した」の行を足してから始める。
 1. `python3 -I docs/handoff/design-approval-ticket/routine/sm_count.py` で過去7日の停止を形ごとに数える（試験の時間帯は自動で除く）。読み取りだけ。まず、前回以降に PO が autoMode を変えていないか台帳と照合し、変えていたら source=PO の行を先に追記する（追記がすむまで自動の変更はしない）。
 2. 設計 §5-3 の基準で候補を作る。足す条件: 入口が permission-denied・同じ形が7日で5件以上・`python3 -I docs/handoff/design-approval-ticket/routine/sm_check_entry.py --text "<文>"` が合格・1回3件まで。外す条件は §5-3。判断がつかないものは「保留」。
 3. 報告書(docs/handoff/design-approval-ticket/permission-reports/YYYY-MM-DD.md)と、台帳の「予定」行(結果=未適用)を作り、文書 PR を出す。報告書には足す文の全文・根拠の件数・代表例3件(伏せ字)を入れる。
