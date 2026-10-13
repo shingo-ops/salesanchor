@@ -45,6 +45,7 @@ from app.auth.dependencies import (
     get_current_user,
 )
 from app.database import get_db
+from app.models import Tenant, User
 from app.routers import meta_inbox
 from app.services import encryption
 
@@ -66,6 +67,7 @@ async def engine():
     def _setup(dbapi_conn, _):
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-30 12:00:00+00:00")
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
+        dbapi_conn.execute("ATTACH DATABASE ':memory:' AS public")
 
     async with eng.begin() as conn:
         # tenant_meta_config（migration 040 を SQLite 用に縮小。ADR-041 で granted_scopes 追加）
@@ -97,11 +99,22 @@ async def engine():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 user_id INTEGER,
-                primary_email VARCHAR(255) NOT NULL,
+                primary_email VARCHAR(255),
                 surname_jp VARCHAR(50),
                 given_name_jp VARCHAR(50)
             )
         """))
+
+    async with eng.begin() as conn:
+        # 名簿のメールの正本 users.email（ADR-1008 P4b）。staff_name のフォールバックで結合する
+        # ORM の User.__table__ を public スキーマへ作る（本番定義のコピーを持たない）
+        public_conn = await conn.execution_options(schema_translate_map={None: "public"})
+        # users.tenant_id の FK（PRAGMA foreign_keys = ON）を満たすため tenants も ORM から作り 999 を1行入れる
+        await public_conn.run_sync(lambda c: Tenant.__table__.create(c))
+        await public_conn.run_sync(lambda c: User.__table__.create(c))
+        await public_conn.execute(
+            Tenant.__table__.insert().values(id=999, tenant_name="t999", tenant_code="t999")
+        )
 
     yield eng
     await eng.dispose()
@@ -346,9 +359,10 @@ async def test_list_channels_filters_other_tenants(app_client, db_session):
 async def test_list_channels_resolves_staff_name_when_present(app_client, db_session):
     """connected_by_staff_id（= users.id）が staff.user_id にひも付く場合、staff_name が `surname_jp + ' ' + given_name_jp` で返る。"""
     # staff 行を投入
+    await db_session.execute(text("INSERT INTO public.users (id, tenant_id, username, email, is_super_admin) VALUES (5, 999, 'yamada', 'yamada@example.com', 0)"))
     await db_session.execute(text("""
         INSERT INTO staff (id, tenant_id, user_id, primary_email, surname_jp, given_name_jp)
-        VALUES (50, 999, 5, 'yamada@example.com', '山田', '太郎')
+        VALUES (50, 999, 5, 'stale-roster@example.com', '山田', '太郎')
     """))
     await db_session.commit()
 
@@ -364,6 +378,25 @@ async def test_list_channels_resolves_staff_name_when_present(app_client, db_ses
 
 
 @pytest.mark.asyncio
+async def test_list_channels_staff_name_falls_back_to_users_email(app_client, db_session):
+    """氏名が空のとき staff_name は users.email（staff.primary_email ではない。ADR-1008 P4b）。"""
+    await db_session.execute(text("INSERT INTO public.users (id, tenant_id, username, email, is_super_admin) VALUES (6, 999, 'login', 'login@example.com', 0)"))
+    await db_session.execute(text("""
+        INSERT INTO staff (id, tenant_id, user_id, primary_email, surname_jp, given_name_jp)
+        VALUES (51, 999, 6, 'stale-roster@example.com', NULL, NULL)
+    """))
+    await db_session.commit()
+
+    await _insert_channel(
+        db_session, tenant_id=999, page_id="page-2", page_name="P2",
+        connected_by_staff_id=6,
+    )
+    resp = await app_client.get("/api/v1/meta/channels")
+    assert resp.status_code == 200
+    assert resp.json()["channels"][0]["connected_by_staff_name"] == "login@example.com"
+
+
+@pytest.mark.asyncio
 async def test_list_channels_returns_null_staff_name_when_unlinked(app_client, db_session):
     """connected_by_staff_id が NULL もしくは staff に存在しない場合 staff_name は NULL。"""
     await _insert_channel(
@@ -374,6 +407,23 @@ async def test_list_channels_returns_null_staff_name_when_unlinked(app_client, d
     assert resp.status_code == 200
     ch = resp.json()["channels"][0]
     assert ch["connected_by_staff_id"] is None
+    assert ch["connected_by_staff_name"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_channels_staff_name_null_when_users_row_without_staff(app_client, db_session):
+    """users 行はあるが staff 行が無い場合、staff_name は users.email ではなく NULL（ADR-1008 P4b）。"""
+    await db_session.execute(text("INSERT INTO public.users (id, tenant_id, username, email, is_super_admin) VALUES (7, 999, 'nostaff', 'nostaff@example.com', 0)"))
+    await db_session.commit()
+
+    await _insert_channel(
+        db_session, tenant_id=999, page_id="page-3", page_name="P3",
+        connected_by_staff_id=7,
+    )
+    resp = await app_client.get("/api/v1/meta/channels")
+    assert resp.status_code == 200
+    ch = resp.json()["channels"][0]
+    assert ch["connected_by_staff_id"] == 7
     assert ch["connected_by_staff_name"] is None
 
 

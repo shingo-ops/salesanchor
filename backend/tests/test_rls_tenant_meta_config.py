@@ -93,7 +93,7 @@ async def setup_schemas(admin_engine, pg_engine):
                 CREATE TABLE IF NOT EXISTS {schema}.staff (
                     id SERIAL PRIMARY KEY,
                     tenant_id INTEGER NOT NULL DEFAULT {tid},
-                    primary_email VARCHAR(255) NOT NULL
+                    primary_email VARCHAR(255)
                 )
             """))
             # tenant_meta_config 本体（migration 040 と同等）

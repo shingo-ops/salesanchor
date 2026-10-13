@@ -85,7 +85,6 @@ async def register_user(
         username=data.username,
         email=data.email,
         full_name=data.full_name,
-        role="user",
         is_active=True,
     )
     db.add(user)
@@ -102,7 +101,6 @@ async def register_user(
         new_data={
             "email": user.email,
             "username": user.username,
-            "role": user.role,
         },
     )
 

@@ -56,12 +56,11 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
         />
       </div>
       <div className="form-group">
-        <label>{t("staff.primaryEmail")} *</label>
+        <label>{t("staff.primaryEmail")}</label>
         <TextFieldControl
-          required
+          disabled
           type="email"
           value={form.primary_email}
-          onChange={(e) => onChange("primary_email", e.target.value)}
         />
       </div>
       <Select

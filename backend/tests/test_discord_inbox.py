@@ -125,7 +125,7 @@ _STAFF_DDL = """
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER NOT NULL DEFAULT 999,
         user_id INTEGER NOT NULL,
-        primary_email VARCHAR(255) NOT NULL,
+        primary_email VARCHAR(255),
         given_name_en VARCHAR(100),
         avatar_token TEXT
     )
