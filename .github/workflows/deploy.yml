@@ -295,6 +295,7 @@ jobs:
             #   ADR-025 trap 回避のため同じ「sed 削除 → append」パターンに合流。
             #   secret 未設定でも空値で append される（後段 LLM サービスは空判定して
             #   parsed_rule_only に graceful degrade、AC4.5）。
+            # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
             cat >> .env <<'ENV_EOF'
             META_VERIFY_TOKEN=${{ secrets.META_VERIFY_TOKEN }}
             META_APP_SECRET=${{ secrets.META_APP_SECRET }}
@@ -319,7 +320,6 @@ jobs:
             REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
             REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
             VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
-            # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
             SMTP_HOST=${{ secrets.SMTP_HOST }}
             SMTP_PORT=${{ secrets.SMTP_PORT }}
             SMTP_USER=${{ secrets.SMTP_USER }}

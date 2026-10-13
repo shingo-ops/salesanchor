@@ -121,6 +121,7 @@ services:
       # 未設定の場合は配信 API 呼び出し時に 503 を返す（起動時エラーにはしない）。
       - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
       # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
+      - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
       # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。
       # この行が無いと .env に値があっても os.getenv が空になり、メールが送られない。
       - SMTP_HOST=${SMTP_HOST:-}
@@ -130,7 +131,6 @@ services:
       - MAIL_FROM=${MAIL_FROM:-}
       - CONTACT_NOTIFY_EMAIL=${CONTACT_NOTIFY_EMAIL:-}
       - AUTH_PASSWORD_RESET_ALLOWLIST=${AUTH_PASSWORD_RESET_ALLOWLIST:-}
-      - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
