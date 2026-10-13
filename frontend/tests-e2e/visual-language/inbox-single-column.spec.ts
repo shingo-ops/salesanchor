@@ -102,7 +102,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
   });
 
-  test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みは検索欄の横に出る", async ({ page }, testInfo) => {
+  test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みはヘッダーの右端に出る", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
     await openInboxList(page);
@@ -111,9 +111,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // 一覧では使い道がなく、その高さを一覧に回す。
     await expect(page.locator(".page-header-actions")).toHaveCount(0);
 
-    // 絞り込みは一覧専用なので検索欄の横へ移した。一覧では必ず使えること。
-    const filterInSearchRow = page.locator(".inbox-search-row .inbox-mobile-filter-toggle");
-    await expect(filterInSearchRow).toBeVisible();
+    // 絞り込みは一覧専用。第2便でヘッダーの右端（お手本の位置）へ移した。一覧では必ず使えること。
+    const filterInHeader = page.locator(".inbox-mobile-header .inbox-mobile-filter-toggle");
+    await expect(filterInHeader).toBeVisible();
 
     // 2026-10-13（PO 指定）: 押すと帯が開くのではなく、下から出るシート
     // （Sheet 金型）が出て、選んだら閉じる。
@@ -124,7 +124,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(sheetOpen).toHaveCount(0);
 
     // 押すとシートが開く
-    await filterInSearchRow.click();
+    await filterInHeader.click();
     await expect(sheetOpen).toHaveCount(1);
     await expect(sheet.getByRole("heading")).toBeVisible();
 
@@ -136,10 +136,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(optionBox!.height, "選択肢の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
     await page.locator(".inbox-filter-sheet-option", { hasText: "未読" }).first().click();
     await expect(sheetOpen).toHaveCount(0);
-    await expect(filterInSearchRow).toHaveClass(/has-active/);
+    await expect(filterInHeader).toHaveClass(/has-active/);
 
     // もう一度開いて背景タップで閉じる
-    await filterInSearchRow.click();
+    await filterInHeader.click();
     await expect(sheetOpen).toHaveCount(1);
     await page.locator(".comp-sheet-overlay").click();
     await expect(sheetOpen).toHaveCount(0);
@@ -148,7 +148,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await openConversation(page);
     await expect(page.locator(".page-header-actions")).toHaveCount(1);
     // 一覧専用の絞り込みは会話側では見えない（一覧が隠れているため）
-    await expect(filterInSearchRow).toBeHidden();
+    await expect(filterInHeader).toBeHidden();
   });
 
   test("スマホ: 地が1色・左右対称・12px文字のコントラストが基準以上", async ({ page }, testInfo) => {
@@ -359,7 +359,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
       return box ? { w: Math.round(box.width), h: Math.round(box.height) } : null;
     };
 
-    const filter = await measure(".inbox-search-row .inbox-mobile-filter-toggle");
+    const filter = await measure(".inbox-mobile-header .inbox-mobile-filter-toggle");
     expect(filter, "絞り込みボタンが見つからない").not.toBeNull();
 
     await openConversation(page);
@@ -419,7 +419,7 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
         };
       };
       return {
-        filter: pick(".inbox-search-row .inbox-mobile-filter-toggle"),
+        filter: pick(".inbox-mobile-header .inbox-mobile-filter-toggle"),
         manage: pick(".inbox-manage-btn"),
       };
     });
@@ -454,6 +454,108 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(Math.round(manageBox!.height), "管理ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
   });
 
+  test("スマホ: 一覧の上にヘッダーが出て、検索欄が横幅いっぱいのピルになる", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+
+    // 2026-10-13（第2便）: お手本（WhatsApp チャット一覧・ライト・360dp幅）を実測して
+    // 合わせた値（design: docs/handoff/app-visual-language/card-stage4b-inbox-mobile.md §16）。
+    // この project（vl-mobile-390）は幅390pxでお手本の360dpとは異なるため、
+    // 幅に依存する値は viewportSize() から取った幅を基準に相対で判定する。
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    const viewportWidth = viewport!.width;
+
+    const header = page.locator(".inbox-mobile-header");
+    const title = page.locator(".inbox-mobile-header-title");
+    const filter = page.locator(".inbox-mobile-header .inbox-mobile-filter-toggle");
+    const manage = page.locator(".inbox-mobile-header .inbox-manage-btn");
+    const searchInput = page.locator(".inbox-mobile-search-row .inbox-search-input");
+
+    // 隠れている可能性のある要素は isVisible() を見てから測る
+    // （boundingBox() は要素が見えるまで待って actionTimeout で落ちる）。
+    for (const [name, loc] of [
+      ["header", header],
+      ["title", title],
+      ["filter", filter],
+      ["manage", manage],
+      ["searchInput", searchInput],
+    ] as const) {
+      expect(await loc.isVisible(), `${name} が見えない`).toBe(true);
+    }
+
+    const headerBox = await header.boundingBox();
+    const titleBox = await title.boundingBox();
+    const filterBox = await filter.boundingBox();
+    const manageBox = await manage.boundingBox();
+    const searchInputBox = await searchInput.boundingBox();
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+    expect(titleBox, "タイトルの寸法が取れない").not.toBeNull();
+    expect(filterBox, "絞り込みボタンの寸法が取れない").not.toBeNull();
+    expect(manageBox, "管理ボタンの寸法が取れない").not.toBeNull();
+    expect(searchInputBox, "検索欄の寸法が取れない").not.toBeNull();
+
+    const titleFontSize = await title.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    const searchInputRadius = await searchInput.evaluate((el) => parseFloat(getComputedStyle(el).borderRadius));
+    const headingCount = await page.getByRole("heading", { name: "受信箱" }).count();
+
+    await testInfo.attach("mobile-header-measurements", {
+      body: JSON.stringify(
+        {
+          viewportWidth,
+          header: headerBox,
+          title: { ...titleBox, fontSize: titleFontSize },
+          filter: filterBox,
+          manage: manageBox,
+          searchInput: { ...searchInputBox, borderRadius: searchInputRadius },
+          headingCount,
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    // ヘッダー全体の高さ 56px（--topbar-height）
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ").toBeLessThanOrEqual(1);
+
+    // タイトルの左端 x = 16px（--space-4）
+    expect(Math.abs(titleBox!.x - 16), "タイトルの左端 x").toBeLessThanOrEqual(1);
+
+    // タイトルの文字サイズ 20px（--font-xl）
+    expect(titleFontSize, "タイトルの文字サイズ").toBe(20);
+
+    // ヘッダー内の押せる部品2つ（絞り込み・管理）は 44px 以上×44px 以上（WCAG 2.5.5）
+    expect(filterBox!.width, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(filterBox!.height, "絞り込みの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(manageBox!.width, "管理の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(manageBox!.height, "管理の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+
+    // ヘッダーの最後の部品（管理ボタン）の右端 = ビューポート右端（お手本の右端寄せ）
+    const headerLastRight = manageBox!.x + manageBox!.width;
+    expect(Math.abs(headerLastRight - viewportWidth), "ヘッダー最後の部品の右端").toBeLessThanOrEqual(1);
+
+    // 検索欄の高さ 48px（--comp-btn-height-lg）
+    expect(Math.abs(searchInputBox!.height - 48), "検索欄の高さ").toBeLessThanOrEqual(1);
+
+    // 検索欄の左端 12px（--space-3）・右端はビューポート幅-12px（横幅いっぱい）
+    expect(Math.abs(searchInputBox!.x - 12), "検索欄の左端").toBeLessThanOrEqual(1);
+    const searchInputRight = searchInputBox!.x + searchInputBox!.width;
+    expect(Math.abs(searchInputRight - (viewportWidth - 12)), "検索欄の右端").toBeLessThanOrEqual(1);
+
+    // 検索欄の丸み: 高さの半分以上（48px 高に対し 24px 以上）＝完全なピル。
+    // --radius-full（9999px）は computed でそのまま返るため数値として比較する。
+    expect(searchInputRadius, "検索欄の丸み").toBeGreaterThanOrEqual(searchInputBox!.height / 2);
+
+    // ヘッダーの下端と検索欄（入力欄）の上端の間が 4px（--space-1。今便で padding-top に追加）
+    const gap = searchInputBox!.y - (headerBox!.y + headerBox!.height);
+    expect(Math.abs(gap - 4), "ヘッダーと検索欄の間").toBeLessThanOrEqual(1);
+
+    // 見出しの二重がないこと（新ヘッダーのタイトルは aria-hidden の span なので増えない）
+    expect(headingCount, "「受信箱」の見出しが複数ある").toBe(1);
+  });
+
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
@@ -471,6 +573,8 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // モバイル専用の殻（MobileShell）は 768px 以上では描かれない＝PC 側は無関係
     await expect(page.locator(".mobile-tabbar")).toHaveCount(0);
     await expect(page.locator(".mobile-topbar")).toHaveCount(0);
+    // スマホ専用に新設した会話一覧ヘッダー（第2便）も PC・タブレットには出ない
+    await expect(page.locator(".inbox-mobile-header")).toHaveCount(0);
     // ヘッダーの操作行は PC・タブレットでは一覧を見ているときも出す（従来どおり）
     await expect(page.locator(".page-header-actions")).toHaveCount(1);
     // 管理ボタンの文言は PC・タブレットでは出す（スマホだけ隠す）
