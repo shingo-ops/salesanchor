@@ -1,0 +1,55 @@
+/**
+ * AsyncCombobox — 名前を入れると候補が出て選べる部品
+ * ADR-067: 色・余白・重なりはすべて var() のトークン参照のみ。
+ * 一覧の位置は JS が CSS 変数（--async-combobox-*）で渡す。
+ */
+
+.comp-async-combobox {
+  position: relative;
+  width: 100%;
+}
+
+/* 一覧: body 直下の Portal。表の overflow に切られない */
+.comp-async-combobox__list {
+  position: fixed; /* fixed-ok: Portal 描画の候補一覧（表の枠で切れないため） */
+  left: var(--async-combobox-left);
+  width: var(--async-combobox-width);
+  max-height: var(--async-combobox-max-h);
+  overflow-y: auto;
+  z-index: var(--z-dropdown);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+
+.comp-async-combobox__list--bottom {
+  top: var(--async-combobox-edge);
+}
+
+.comp-async-combobox__list--top {
+  bottom: var(--async-combobox-edge);
+}
+
+.comp-async-combobox__option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.comp-async-combobox__option--active {
+  background: var(--bg-hover);
+}
+
+.comp-async-combobox__message {
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
