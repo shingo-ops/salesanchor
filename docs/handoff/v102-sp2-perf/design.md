@@ -1,7 +1,7 @@
 # design: 在庫表（配信行 SQL）の高速化（便 SP2-perf）
 
 設計者: Opus（承認済み）。PO 決定（2026-10-14）: 「速くする修正を急いで作る」。recon: [recon.md](/docs/handoff/v102-sp2-perf/recon.md)。
-関連: [v102-same-post-rows-sp2/design.md](/docs/handoff/v102-same-post-rows-sp2/design.md)、[review-speed/design.md](/docs/handoff/review-speed/design.md)。ADR: 新規なし（既存 ADR の決定を変えない。性能のみ）。
+関連: [v102-same-post-rows-sp2/design.md](/docs/handoff/v102-same-post-rows-sp2/design.md)、[review-speed/design.md](/docs/handoff/review-speed/design.md)。ADR: ADR-093（在庫表の再設計。決定は変えない・性能のみ）。新規 ADR なし。
 
 ## 設計
 - `review_joins(..., fenced: bool = False)` を追加（backend/app/services/tcg_condition_review_svc.py）。既定 False は従来と同一の文字列。
@@ -23,8 +23,13 @@
 | P4 在庫表1回分（COUNT＋ページ＋facets）の合計が ON・OFF とも2秒以内 | デプロイ後 measure.py T7（実験値: 1回 約0.5秒 ×3） |
 | P5 要確認ページの問い合わせは変わらない | P1 で担保 |
 
-## 外部事例
-不要。PostgreSQL の OFFSET 0 による最適化の壁は本リポジトリ内に前例がある（review-speed/design.md、tcg_condition_review_svc.py の cr_data）。新しい技術選択・依存追加が無いため。
+## 外部・過去事例の参照と我々への応用
+外部事例は不要。PostgreSQL の OFFSET 0 による最適化の壁は本リポジトリ内に前例がある（review-speed/design.md、tcg_condition_review_svc.py の cr_data）。新しい技術選択・依存追加が無いため。
 
 ## 手元テスト
 手元は PG 無し・argon2 無し。DB 不要の新規テスト3件は全緑。PG 必須テストは CI で実行（未実施）。結果: impl/pytest.txt。
+
+## 維持の仕組み
+- 文字列検査テスト（backend/tests/test_tcg_condition_review_fenced.py）が、既定の文字列不変（P1）と fenced の構造（P2）を CI で固定する。
+- 変換関数は置換の個数が想定と違えば RuntimeError。review_joins の SQL を変えて変換が合わなくなると CI のテストと配信で即失敗する。
+- 本番の再測定（measure.py T1・T2・T7）で P3・P4 を確認する。
