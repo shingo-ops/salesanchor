@@ -16,7 +16,7 @@
 
 ### ボトルネック
 - 最大: pid_unresolved = 3,883件 (要確認理由の90%)
-- 問題仕入先: INスタッフ(PID 23%), funスタッフ(PID 26%), Ryum.a(PID 0%)
+- 問題仕入先: INスタッフ(PID 23%), 提供者V(PID 26%), Ryum.a(PID 0%)
 
 ### 既存コード
 - `backend/app/services/tcg_analysis_dashboard_svc.py:15` — get_pipeline_summary()
