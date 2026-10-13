@@ -1,0 +1,30 @@
+18:03  up 4 days, 1 min, 1 user, load averages: 84.38 103.07 83.10
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-inventory-search-input/frontend
+
+ ❯ |unit| src/pages/management-center/ManagementCenterPage.test.tsx (6 tests | 1 failed) 13797ms
+   × links the 4 admin pages under the management-center layout 6317ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/pages/management-center/ManagementCenterPage.test.tsx > links the 4 admin pages under the management-center layout
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pages/management-center/ManagementCenterPage.test.tsx:41:1
+     39|   );
+     40|
+     41| it("links the 4 admin pages under the management-center layout", () =>…
+       | ^
+     42|   mockPermissions(true);
+     43|   view("staff");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 6 passed (7)
+      Tests  1 failed | 147 passed (148)
+   Start at  18:03:58
+   Duration  91.29s (transform 4.28s, setup 380ms, import 19.53s, tests 45.70s, environment 20.67s)
+
+exit=1
+18:05  up 4 days, 3 mins, 1 user, load averages: 38.73 82.72 77.35
