@@ -46,10 +46,10 @@
 
 ```
 ## なぜ
-ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す方針を、ADR-1012 と設計仕様書にまとめるため。PO が 2026-10-13 にチャットで「y」と承認済み。
+ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す方針を、ADR-1013 と設計仕様書にまとめるため。PO が 2026-10-13 にチャットで「y」と承認済み。
 
 ## 何を変えたか
-- ADR-1012（Accepted）を新規追加。ADR-138（password_hash 列廃止）を Superseded に更新
+- ADR-1013（Accepted）を新規追加。ADR-138（password_hash 列廃止）を Superseded に更新
 - 設計仕様書 docs/specs/auth-login/（README・ideal-state・kgi）を新規追加し、索引を更新
 - recon.md・design.md・handoff.md を docs/handoff/auth-self-hosted-passkey/ に追加
 - ADR 索引（docs/adr/README.md・FEATURE-INDEX.md）を再生成
@@ -70,9 +70,9 @@
 
 - recon: docs/handoff/auth-self-hosted-passkey/recon.md
 - 設計: docs/handoff/auth-self-hosted-passkey/design.md
-- 対象ADR: ADR-1012
+- 対象ADR: ADR-1013
 - 設計仕様書（あるべき姿）: docs/specs/auth-login/README.md
-- 触るファイル: docs/adr/ADR-1012-self-hosted-auth-and-passkey.md, docs/adr/ADR-138-remove-password-hash.md, docs/adr/FEATURE-INDEX.md, docs/adr/README.md, docs/specs/README.md, docs/specs/auth-login/README.md, docs/specs/auth-login/ideal-state.md, docs/specs/auth-login/kgi.md, docs/handoff/auth-self-hosted-passkey/recon.md, docs/handoff/auth-self-hosted-passkey/design.md, docs/handoff/auth-self-hosted-passkey/handoff.md
+- 触るファイル: docs/adr/ADR-1013-self-hosted-auth-and-passkey.md, docs/adr/ADR-138-remove-password-hash.md, docs/adr/FEATURE-INDEX.md, docs/adr/README.md, docs/specs/README.md, docs/specs/auth-login/README.md, docs/specs/auth-login/ideal-state.md, docs/specs/auth-login/kgi.md, docs/handoff/auth-self-hosted-passkey/recon.md, docs/handoff/auth-self-hosted-passkey/design.md, docs/handoff/auth-self-hosted-passkey/handoff.md
 - 削除するファイル: docs/adr/ADR-138-remove-password-hash.md, docs/adr/README.md
 
 ### 共通
