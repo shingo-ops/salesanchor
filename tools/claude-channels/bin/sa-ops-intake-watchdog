@@ -13,7 +13,7 @@ LAST_ALERT="$CONF_DIR/last-alert"
 ALERT_INTERVAL_SEC=3600
 
 if [ ! -f "$WEBHOOK_FILE" ]; then
-  echo "通知先ファイルがありません: $WEBHOOK_FILE（権限 600 の URL ファイルを置いてください）" >&2
+  echo "通知先ファイルがありません: ${WEBHOOK_FILE}（権限 600 の URL ファイルを置いてください）" >&2
   exit 2
 fi
 
@@ -74,6 +74,6 @@ if printf 'url = "%s"\n' "$url" | curl -sS -o /dev/null --fail -X POST \
   printf '%s\n' "$now" > "$LAST_ALERT"
   echo "受付停止を通知しました: $reasons"
 else
-  echo "通知の送信に失敗しました（理由: $reasons）" >&2
+  echo "通知の送信に失敗しました（理由: ${reasons}）" >&2
   exit 3
 fi

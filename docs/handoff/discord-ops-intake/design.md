@@ -79,7 +79,7 @@ mode: handoff
 | 起動 | `claude --dangerously-load-development-channels plugin:discord-ops@sa-local`。起動時の確認は PO が 1 回答える | 改変版は公式の許可リスト外（recon 公式仕様） |
 | 作業場所 | 専用 worktree `~/worktrees/salesanchor/ops-intake`（origin/main 起点・読み取り専用）。調査前に `git fetch origin main` → `git merge --ff-only origin/main`（`git reset --hard` は不可逆操作のため使わない） | 本店作業と混ざらない |
 | 許可モード | manual（default）。auto mode にしない | auto mode では承認の中継が開かない（recon 公式仕様） |
-| 許可設定 | 受付用 worktree の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする | KGI-3・レビュー MEDIUM-7 |
+| 許可設定 | 受付用 worktree の .claude/settings.local.json。`permissions.allow` は委任表の行とツール単位で 1 対 1（MCP はツール名まで書く。サーバー一括指定はしない）。`permissions.ask` に `Write`・`Edit`・`NotebookEdit` を入れ、既定で通る書き込み（実測: /tmp への Write が無確認で通った）も必ず許可確認にする。リポジトリ共有設定の allow のうち読み取り以外は deny で塞ぐ（配置時に発見・delegation.md） | KGI-3・レビュー MEDIUM-7 |
 | 担当の型 | custom agent `ops-worker`（.claude/agents/ops-worker.md）。`tools:` を Read・Grep・Glob・SendMessage・discord-ops の reply/propose/fetch_messages/react に限定。`permissionMode: dontAsk`・`background: true`（いずれも公式 sub-agents 資料に記載の項目） | 担当は書き込み道具をそもそも持たない（レビュー HIGH-3）。dontAsk 単独に頼らない |
 | 担当の立て方 | 受付役は新しい不具合（同じ alertname×instance の未完了が無い）を受けたら、承認チャンネルにスレッドを作り、`ops-worker` を 1 つ立てる。担当には「スレッド ID・アラート本文・委任表・報告の型」を渡す | PO の運用像「不具合ごとに担当・完了まで責任」 |
 | 承認後の実行 | **受付役が、P8 の decision 通知に付いた `action` の原文だけを実行する**。担当からの依頼文は実行の根拠にしない。実行時の許可確認（委任表の外）は P7 で承認チャンネルに出る。結果は担当へ SendMessage で渡し、担当が完了報告を書く | 承認を PO が読んだ原文に結び付ける（レビュー HIGH-2）。担当経由の注入で別の操作をさせない |
