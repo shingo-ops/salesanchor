@@ -3640,7 +3640,7 @@ AY-2n 変更契約:
 
 維持の仕組み:
 - 守り手: tests-e2e/quote-create-inventory-search.spec.ts、TextField.test.tsx、scripts/check-ui-governance.js、frontend-check。
-- 守っていないもの: AND/OR の生 button 2つ（2択切り替えの金型が無い）、InventoryPicker.tsx:218 の同じ型の生 input（別の便）、FedExRateModal の API エラー以降の px 直書き。
+- 守っていないもの: AND/OR の生 button 2つ（2択切り替えの金型が無い）、FedExRateModal の API エラー以降の px 直書き。
 - 切戻し: 本 PR の merge commit を revert（DB 影響なし）。
 
 改訂 1（2026-10-13、Fable 設計審査 REVISE への対応。上の記述より優先）:
@@ -3696,5 +3696,5 @@ Architect 審査（AY-2n）: 1回目 REVISE（Fable、HIGH 1・MEDIUM 2・LOW 2�
 - 品質（ay2n-chk-*）: generate:icon-sizes・generate:api-types の後、tsc・lint・check:all・build・build-storybook は exit 0。
 - test:coverage（maxWorkers=1）は exit 1。`Test Files 7 failed | 81 passed (88)`、`Tests 24 failed | 1013 passed (1037)`（ay2n-chk-test-coverage.txt）。落ちたのは LeadFormButtonMigration 14件、BotFormButtonMigration 4件、StaffFormButtonMigration 1件、AllLegacyButtonOperationMigration 1件、UnitIgnorePhrasesPanel 1件、AnalysisRulesPage 2件、ManagementCenterPage 1件。理由は「Test timed out in 5000ms」で、実行時の load averages は 83〜105。落ちた試験に InventorySearchBar の参照は0件。この7ファイルだけを maxWorkers=1 で再実行すると 6 passed、1 failed（ManagementCenterPage の1件がタイムアウト。load 約34、ay2n-chk-rerun-7files.txt）。その1ファイルだけを再実行すると 6 passed（ay2n-chk-rerun-mgmt.txt）。CI の結果を最終の判定にする。
 - e2e quote-create-inventory-search.spec.ts: 手元で実行を試みたが、3件とも起動前に失敗（ay2n-chk-e2e.txt）。原文: `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1217/chrome-headless-shell`（手元の Playwright のブラウザは 1248 のみ）。.github/workflows/e2e.yml:207 で CI の Playwright ジョブも `if: false`。代わりに上の preview での観測（AND の aria-pressed、候補選択で明細に値）を前後で行った。
-- 残件: AND/OR の生 button 2つ（Button variant="tab" 化は見た目が変わるため、前後表と PO の確認が要る別の便）、InventoryPicker.tsx:218 の生 input。
+- 残件: AND/OR の生 button 2つ（Button variant="tab" 化は見た目が変わるため、前後表と PO の確認が要る別の便）。（設計時に挙げた InventoryPicker.tsx:218 は AY-2l 7a2f39c20 で削除済みのため残件ではない。Fable コード審査 MEDIUM-1）
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2n-*。
