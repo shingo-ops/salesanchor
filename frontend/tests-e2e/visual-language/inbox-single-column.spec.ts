@@ -254,6 +254,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     //   線の太さ: 名前 6.0px ／ 本文 4.0px ＝ 1.5 倍
     // 当方は投入前 名前 14.4px/400・本文 12px/400 ＝ 大きさ 1.2 倍・太さの差なし。
     // 名前を 16px/600 にして段差を付けた（16÷12 = 1.33 でお手本に一致）。
+    // 未読の行は名前も本文も 700（既存仕様 InboxPage.css の .conv-name.unread /
+    // .conv-preview-text.unread）。太さの段差は**既読の行**で見る。
+    // 検査データ（mock-conversations.json）には既読の会話が1件ある（lead 5003・未読0）。
     const type = await page.evaluate(() => {
       const read = (sel: string) => {
         const el = document.querySelector(sel) as HTMLElement | null;
@@ -261,15 +264,23 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
         const st = getComputedStyle(el);
         return { fontSize: parseFloat(st.fontSize), fontWeight: Number(st.fontWeight) };
       };
-      return { name: read(".conv-name"), preview: read(".conv-preview-text"), time: read(".conv-time") };
+      return {
+        既読の名前: read(".conv-name:not(.unread)"),
+        既読の本文: read(".conv-preview-text:not(.unread)"),
+        未読の名前: read(".conv-name.unread"),
+        未読の本文: read(".conv-preview-text.unread"),
+        時刻: read(".conv-time"),
+      };
     });
     await testInfo.attach("type-scale", { body: JSON.stringify(type, null, 2), contentType: "application/json" });
-    expect(type.name, "名前が見つからない").not.toBeNull();
-    expect(type.preview, "本文が見つからない").not.toBeNull();
-    // 大きさの段差（お手本 1.32 倍）
-    expect(type.name!.fontSize / type.preview!.fontSize).toBeGreaterThanOrEqual(1.3);
-    // 太さの段差（お手本 1.5 倍の線幅に相当。数値では 400 より重いこと）
-    expect(type.name!.fontWeight).toBeGreaterThan(type.preview!.fontWeight);
+    const nameRead = type["既読の名前"];
+    const prevRead = type["既読の本文"];
+    expect(nameRead, "既読の行の名前が見つからない").not.toBeNull();
+    expect(prevRead, "既読の行の本文が見つからない").not.toBeNull();
+    // 大きさの段差（お手本 1.32 倍）。未読・既読で大きさは変わらない
+    expect(nameRead!.fontSize / prevRead!.fontSize).toBeGreaterThanOrEqual(1.3);
+    // 太さの段差（お手本は線幅 1.5 倍）。既読の行で名前が本文より重いこと
+    expect(nameRead!.fontWeight).toBeGreaterThan(prevRead!.fontWeight);
 
     // ダークモードでも役割の割り当てが崩れないことを確認する。
     // このアプリは OS 設定を無視しアプリ設定（users.theme）で切り替えるため
