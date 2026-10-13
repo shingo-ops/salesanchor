@@ -421,6 +421,14 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(info.manage!.visibleText, "管理の文言がスマホで出ている").toBe("");
     // 3. 文言が無くても読み上げで分かること
     expect(info.manage!.accessibleName, "管理の読み上げ名が無い").toBeTruthy();
+
+    // 4. 押す場所が 44px 以上（WCAG 2.5.5）。PR 4204 では対象から漏れていた
+    //    （padding で寸法が決まるため width/height の grep で拾えなかった）。
+    //    文言を隠すと幅も狭くなるので、ここで必ず確認する。
+    const manageBox = await page.locator(".inbox-manage-btn").first().boundingBox();
+    expect(manageBox, "管理ボタンの寸法が取れない").not.toBeNull();
+    expect(Math.round(manageBox!.width), "管理ボタンの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(Math.round(manageBox!.height), "管理ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
   });
 
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
