@@ -45,7 +45,7 @@ def test_flag_single_changes_condition_filter() -> None:
     assert "IS DISTINCT FROM 'EXCLUDE'" in off and "IS DISTINCT FROM 'EXCLUDE'" in on
 
 
-def test_fetch_functions_do_not_define_their_own_where() -> None:
+def test_output_rows_use_shared_sql_and_preview_count_does_not_join_products() -> None:
     import inspect
 
     assert "ar.pid_resolved" not in inspect.getsource(svc.fetch_output_rows)

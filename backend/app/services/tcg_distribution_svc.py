@@ -254,7 +254,7 @@ def _distribution_final_select(source: str, *, price: str, qty: str, merged_coun
 
 
 def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merge_same_post: bool) -> str:
-    """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 配信・配信プレビュー件数・アプリの在庫表が使う）。
+    """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 出力とアプリの在庫表が使う。配信プレビューの件数は変更前の問い合わせを残しており（products を結合しない）、状態の条件だけ _condition_filter を共有する）。
 
     出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, supplier_id,
     unit_canonical, price_num, qty_num, merged_count, sort_ord。並びは sort_ord（result_order_sql の通し番号）。

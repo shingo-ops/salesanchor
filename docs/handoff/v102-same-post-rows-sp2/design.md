@@ -45,7 +45,8 @@
     - merged_count（まとめた行数。まとめない行は1）
     - sort_ord（result_order_sql() の通し番号。まとめた行は組の最小）
   - fetch_output_rows は、この関数を merge_same_post=False で呼び、14列を今と同じ順・同じ書式で取り出して、sort_ord の順に並べる。
-  - fetch_preview_data の件数も、同じ関数を merge_same_post=False で呼んで数える。GAS に出す行数と同じ定義になる。
+  - fetch_preview_data の件数は、変更前の問い合わせをそのまま残す（products を結合しない）。状態の条件だけ _condition_filter を共有する。
+    - 実装時の変更（2026-10-14、CI の PG テスト失敗による）: 当初は件数も distribution_rows_sql で数える設計だったが、products の結合が入り test_tcg_distribution_pg で `integer = uuid` になったため戻した。件数と出力のずれは test_tcg_condition_review.py の output_count と len(fetch_output_rows) の比較で CI が止める。
   - 除外の内訳（:377-409）は、解析の行単位の数え方のまま変えない。
   - cond_filter（FLAG と EXCLUDE の条件。:243-251 と :344-352 に重複している）も、同じ関数の中の1か所で作る。
 - まとめ方（merge_same_post=True のときだけ働く）
@@ -190,7 +191,7 @@
 - `node scripts/generate-adr-index.js` で目次を作り直す。
 
 ## 10. 維持の仕組み
-- 配信行の定義は distribution_rows_sql の1か所だけ。T1 と T4 のテストが、GAS と在庫表のずれを CI で止める。
+- 配信行（GAS 出力と在庫表）の定義は distribution_rows_sql の1か所だけ。プレビュー件数は変更前の問い合わせを残し、_condition_filter だけ共有する。T1 と T4、および test_tcg_condition_review.py の output_count と len(fetch_output_rows) の比較が、ずれを CI で止める。
 - まとめの鍵と条件は同じ関数の中に置き、テスト T2・T3 で固める。
 - 守り手: backend/tests/test_inventory_distribution_rows_pg.py
 
