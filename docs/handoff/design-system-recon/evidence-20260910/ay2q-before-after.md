@@ -67,7 +67,7 @@ r3 追補（B5 解消、実測 ay2q-after-r3.json・ay2q-r3-summary.txt）: 行 
 | 基準 | 実測 | 判定 |
 |---|---|---|
 | 幅375 で候補 top ≥ 群 bottom、AND 中心の最前面が AND | quote・invoice とも True / AND 自身。候補 top 752.84 / 824.84（行 bottom+2） | ○ |
-| 幅1280/1440 の候補 top が変更前と ±1px | 606.45・587.27（quote）、666.45・647.27（invoice）。変更前（input.bottom+2）と差 0 | ○ |
+| 幅1280/1440 の候補 top が変更前と ±1px | 606.45・587.27（quote）、666.45・647.27（invoice）。変更前（input.bottom+2）と差 0（変更前は listbox を実測しておらず、input.bottom+2 の算出値との比較） | ○ |
 | 1語ヒント表示中 | 記録のみ（専用の再測定なし） | 記録 |
 | 375 hover | rgb(247,250,252) を取得（B5 解消で取れるようになった） | ○ |
 | B5 | 解消済み | ○ |

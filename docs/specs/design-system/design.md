@@ -3973,6 +3973,7 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 分岐: B1 群 div の opacity を削除（二重減光なし）。B2 行と群の両方に flexWrap（1280・1440 は1行、375 は群が下の行で AND/OR 縦2段、枠は行幅いっぱい・ボタン左寄せ）。B3 型エラーなし。B4 title は群 div に残した。
 - B5（設計外の発見・r3 で解消済み）: 幅375 で候補一覧が AND/OR 群に重なっていた。行 div に rowRef を付け、候補一覧の top だけを行の bottom+2 にして解消（left・width は input のまま）。実測（ay2q-after-r3.json）: 幅375 で候補 top が群 bottom 以下（quote 752.84 / invoice 824.84）、AND 中心の最前面は AND 自身、hover は rgb(247,250,252)。幅1280・1440 の候補 top は変更前（input.bottom+2）と差 0。固定値は変更前コードの式からの算出で、変更前ビルドでの再測定はしていない。
 - 品質: r2 時点は generate・tsc・lint・check:all・build・build-storybook が exit 0、test:coverage は StaffFormButtonMigration.test.tsx の2件がタイムアウトで 2 failed（単体再実行は 43 passed）。r3 実装後は tsc・lint・check:all・build が exit 0、test:coverage（maxWorkers=1）は 91 files・1054 tests 全て passed で exit 0。
+- 品質の証跡の注記: evidence-20260910/ay2q-chk-coverage-tail.txt は r2 時点（2件タイムアウト）の記録。r3 の test:coverage（91 files・1054 tests 全て passed）の末尾は evidence-20260910/ay2q-chk-coverage-r3-tail.txt。
 - e2e（quote-create-inventory-search.spec.ts）: 手元で実行不可（`browserType.launch: Executable doesn't exist`、chromium_headless_shell-1217 が無く 1248 のみ）。CI も e2e.yml:207 で `if: false`。aria-pressed の検証は preview 実測を正とした。
 - 守っていないもの: check-ui-governance.js は生 `<button>` を検出しない（別テーマ）。
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2q-*（ay2q-before-after.md、ay2q-before.json、ay2q-after.json、ay2q-measure.cjs、スクリーンショット）。
