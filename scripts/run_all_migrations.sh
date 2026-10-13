@@ -919,3 +919,6 @@ run_sql migrations/20261013_110000_repoint_person_columns_to_users.sql
 
 # staff.user_id を NOT NULL にする（ADR-1008 P3・構造のみ・冪等。NULL 行のあるテナントは WARNING で飛ばす）
 run_sql migrations/20261013_120000_staff_user_id_not_null.sql
+
+# staff.role_id の NOT NULL を外す（ADR-1008 P4a・構造のみ・冪等。ロールの正本は user_roles）
+run_sql migrations/20261013_130000_staff_role_id_nullable.sql

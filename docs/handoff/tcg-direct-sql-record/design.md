@@ -44,7 +44,7 @@
 ```
 SP0007 | 提供者I            | ch=1
 SP0184 | overlap              | ch=1
-SP0203 | 株式会社AXISグリーン | ch=1
+SP0203 | 提供者Y | ch=1
 SP0204 | Ryuta                | ch=1
 ```
 

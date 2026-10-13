@@ -1984,7 +1984,6 @@
     "unsavedChanges": "You have unsaved changes.",
     "saveChanges": "Save changes",
     "cancelChanges": "Cancel changes",
-    "assignUsers": "Assign users",
     "color": "Color",
     "priority": "Priority",
     "systemRole": "System role (cannot be deleted)",
@@ -2010,8 +2009,6 @@
     "discardAndSwitch": "Discard changes and switch?",
     "customPriority": "Custom (P{{priority}})",
     "currentColorTitle": "Current color ({{color}})",
-    "targetUserId": "Target User ID",
-    "grantRoles": "Assign Roles",
     "deleteConfirmNote": "Users with this role will be automatically unassigned.",
     "priority_1000": "Priority 1 (Highest)",
     "priority_900": "Priority 2",
@@ -5110,6 +5107,17 @@
       "shadow": "Shadow run review",
       "bottlenecks": "Bottlenecks",
       "posts": "Posts"
+    },
+    "inline": {
+      "header": "Fix here",
+      "productAria": "Product (type a name to search)",
+      "productPlaceholder": "Type a product name",
+      "noResults": "No matching product",
+      "searchError": "Could not search products",
+      "saved": "Saved",
+      "error": "Could not save: {{reason}}",
+      "unknownError": "Please try again",
+      "ackAria": "Keep as is: {{name}}"
     }
   },
   "distributionSettings": {

@@ -1984,7 +1984,6 @@
     "unsavedChanges": "未保存の変更があります。",
     "saveChanges": "変更を保存",
     "cancelChanges": "変更をキャンセル",
-    "assignUsers": "ユーザーを割り当て",
     "color": "カラー",
     "priority": "優先度",
     "systemRole": "システムロール（削除不可）",
@@ -2010,8 +2009,6 @@
     "discardAndSwitch": "破棄して切り替えますか？",
     "customPriority": "カスタム (P{{priority}})",
     "currentColorTitle": "現在の色（{{color}}）",
-    "targetUserId": "対象ユーザーID",
-    "grantRoles": "付与するロール",
     "deleteConfirmNote": "このロールを持つユーザーは自動的に剥奪されます。",
     "priority_1000": "第1順位（最上位）",
     "priority_900": "第2順位",
@@ -5110,6 +5107,17 @@
       "shadow": "試運転の確認待ち",
       "bottlenecks": "詰まり",
       "posts": "投稿"
+    },
+    "inline": {
+      "header": "ここで直す",
+      "productAria": "商品（名前を入れて探す）",
+      "productPlaceholder": "商品名を入力",
+      "noResults": "該当する商品がありません",
+      "searchError": "商品を探せませんでした",
+      "saved": "保存済み",
+      "error": "保存できませんでした: {{reason}}",
+      "unknownError": "もう一度お試しください",
+      "ackAria": "このままで良い: {{name}}"
     }
   },
   "distributionSettings": {
