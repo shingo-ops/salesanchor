@@ -51,7 +51,7 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
   - ~/.claude/logs/permission-denied.jsonl（自動判定の停止）
   - ~/.claude/logs/agent-events.jsonl の type=hook_blocked（フックの停止）
   - ~/.claude/logs/test-runs.log（試験の時間帯）
-- 定期実行: Claude Desktop のローカル定期タスク（PO 採用 2026-10-11）。定義は ~/.claude/scheduled-tasks/<名前>/SKILL.md。
+- 定期実行: 自作アプリ agent-console の定期実行（PO 決定 2026-10-14。それ以前は Claude Desktop のローカル定期タスクを採用 2026-10-11 としていたが、この Mac に Claude Desktop は無い）。月〜金の 9:00（Asia/Tokyo）に毎日起動し、その週の分が済んでいれば何もせず終える。役割 opus-designer・作業フォルダ salesanchor 本店・権限モード auto 固定。取りこぼした回は追い付かない。登録内容と制約は routine/ROUTINE.md、変更の経緯は [../permission-routine-on-agent-console/design.md](../permission-routine-on-agent-console/design.md)。
 
 ## 5. design
 
@@ -169,16 +169,16 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 ## 9. 維持の仕組み
 
 - 対象: 許可の変更がすべて台帳に載っていること（K1）。保護対象が変わっていないこと（K3）。
-- 守り手: 定期タスクの手順9（K1・K3 の確認）と、Reviewer（Fable）の審査。どちらかが不合格なら、自動の変更を止めて PO に報告する。
+- 守り手: 定期実行の手順9（K1・K3 の確認）と、Reviewer（Fable）の審査。どちらかが不合格なら、自動の変更を止めて PO に報告する。
 - 人が見るもの: 週ごとの報告書（PO が読む）。
 
 ## 10. 接触面分析
 
 | 面 | 影響 |
 |---|---|
-| ①人（PO） | 例外の文を `!` で1回書き込む。定期タスクを Desktop の画面で登録する。報告書を週1回読む。S3 に立ち会う |
+| ①人（PO） | 例外の文を `!` で1回書き込む。定期実行を agent-console の画面で登録する。報告書を週1回読む。S3 に立ち会う |
 | ②エージェント | Opus が判断と変更を、Sonnet が集計・PR・試験を、Fable が審査を担う。並行セッションへの影響は §6 の最後の行のとおり |
-| ③機械 | ~/.claude/settings.json の autoMode.allow（`SM-` の文だけ）。Desktop の定期タスク |
+| ③機械 | ~/.claude/settings.json の autoMode.allow（`SM-` の文だけ）。agent-console の定期実行 |
 | ④データ | DB は触らない（理由: 対象はローカルの設定と repo の文書だけ） |
 | ⑤本番 | 本番は触らない（理由: 本番に関わる文は §5-2 (3) で書けない） |
 | ⑥外部 | GitHub の文書 PR。利用者への影響はない |
@@ -191,4 +191,11 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 | S1 | 書き込むスクリプトと外すスクリプトを作る（Sonnet）。critique で確かめる | `!` で書き込みを1回 |
 | S2 | 無害な `SM-` の文で効き目を試す | なし |
 | S3 | never の範囲が止まることを確かめる | 立ち会い |
-| S4 | 定期タスクの SKILL.md と集計スクリプトを作り、1回目を実行する | Desktop の画面で登録。報告書を読む |
+| S4 | 定期実行の指示書（routine/ROUTINE.md）と集計スクリプトを作り、1回目を実行する | agent-console の画面で登録。報告書を読む |
+
+## 変更履歴
+
+- 2026-10-14 実行基盤を Claude Desktop から agent-console の定期実行へ変更（PO 決定）。
+  - PO 原文1:「このアプリの定期実行で管理させる」
+  - PO 原文2:「y」＝「月〜金の9:00に毎日起動し、その週の保守が済んでいれば何もせずに終える」形にする。
+  - 変更箇所: §4 の定期実行の行、§10 の ①人・③機械、段と承認の S4、§9 の守り手、routine/ROUTINE.md、s4-card.md。詳細は [../permission-routine-on-agent-console/design.md](../permission-routine-on-agent-console/design.md)。

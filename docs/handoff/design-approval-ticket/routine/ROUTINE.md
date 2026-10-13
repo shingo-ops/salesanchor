@@ -1,27 +1,51 @@
-# 許可保守の週次ルーチン（Claude Desktop ローカル定期タスク用の指示書）
+# 許可保守の週次ルーチン（agent-console の定期実行用の指示書）
 
-この文書は何か（専門用語なしの1行）: PO が Claude Desktop の定期タスクに貼り付ける、AI が毎週1回許可を保守するときの手順書。
-設計: [../self-maintenance-design.md](../self-maintenance-design.md)（§5-2〜§5-6 が正）／台帳: [../permission-ledger.md](../permission-ledger.md)／ADR-1011
+この文書は何か（専門用語なしの1行）: PO が自作アプリ agent-console の定期実行に登録する、AI が毎週1回許可を保守するときの手順書。月〜金の朝9時に毎日起動し、その週の分が済んでいれば何もせず終える。
+設計: [../self-maintenance-design.md](../self-maintenance-design.md)（§5-2〜§5-6 が正）／台帳: [../permission-ledger.md](../permission-ledger.md)／ADR-1011／実行基盤の変更記録: [../../permission-routine-on-agent-console/design.md](../../permission-routine-on-agent-console/design.md)
 
 ## 登録手順（PO）
 
-前提（2026-10-13 確認）: この Mac には Claude Desktop が入っていない（/Applications/Claude.app なし・~/Library/Application Support/Claude なし・~/.claude/scheduled-tasks/ なし）。登録には Claude Desktop 1.1.5368 以上のインストールが必要。インストールするかは PO の判断。
+前提:
+- agent-console v0.18.0 以上が導入済みであること（2026-10-14 時点の導入済みは 0.17.0。v0.19.0 への更新は手空き待ち。0.17.0 は旧仕様で、毎回新しいセッションを開く動作にならない）。
+- agent-console リポジトリの docs/handoff/routines-new-session/design.md の K15（導入後の実機確認: 2〜3分後の時刻で1件登録し、新しいセッションが開き、確認画面ではなく入力欄に指示が入り、履歴が「送信済み」になること）が合格済みであること。
 
-出典: https://code.claude.com/docs/en/desktop-scheduled-tasks （2026-10-13 参照）。以下はその記載。
+登録内容（アプリ画面の「定期実行」から登録する。HTTP API は認証方式が未確認のため、この文書では使わない）:
 
-1. Desktop の Code タブ → サイドバーの Routines（またはサイドバーの More メニュー）→ New routine → Local。
-2. 名前: 許可保守（週次）。名前は小文字のケバブ形式に変換されてフォルダ名になる（~/.claude/scheduled-tasks/<名前>/SKILL.md に指示文が保存される）。
-3. Schedule は Weekly のプリセットを選び、月曜 9:00 にする。【未確認】曜日・時刻の入力欄の形は資料に記載なし。
-4. フォルダ: /Users/tanizawashingo/salesanchor（未信頼なら保存前に信頼を求められる）。worktree の切り替えは使わない（指示文の中で scripts/new-worktree.sh を使うため）。
-5. 権限モードは作成画面でタスクごとに選ぶ。Manual だと許可のない操作で実行が止まり、承認するまで待つ。~/.claude/settings.json の allow はこのタスクにも効く。【未確認】選択肢の名前は資料に記載なし。
-6. 作成後に Run now を押し、出てきた許可の確認に「always allow」を選ぶと、次回から同じ道具は確認なしで動く。
-7. 実行されるのは Desktop が起動中かつ Mac がスリープしていないときだけ。スリープで逃した回は、起動・復帰時に直近の1回だけ追いかけて実行される（7日以内）。Settings > This computer > System の Keep computer awake でアイドルスリープを防げる（蓋を閉じるとスリープする）。
-8. 指示文: 下の「指示文」を貼り付ける。
-9. 止めるとき: チャットで「許可保守停止」と言う、または定期タスクを無効にする。
+| 項目 | 値 |
+|---|---|
+| 名前 | 許可保守（週次）（1〜40字） |
+| 役割 | opus-designer |
+| 作業フォルダ | /Users/tanizawashingo/salesanchor（本店。worktree の切り替えは使わない。指示文の中で scripts/new-worktree.sh を使うため） |
+| 曜日 | 月〜金（weekdays = [1,2,3,4,5]。日曜=0） |
+| 時刻 | 09:00（Asia/Tokyo 固定） |
+| 指示文 | 下の「指示文」を貼る（8192字以内・制御文字なし。改行は可） |
+
+止めるとき: チャットで「許可保守停止」と言う、または定期実行を無効にする。
+
+制約（登録前に PO が知っておくこと）:
+- 追い付きなし: agent-console は取りこぼした回を追いかけない。金曜 9:00 までに一度も起動できなかった週（Mac がスリープ、アプリが停止など）は、その週の保守は行われない。
+- 毎日起動する: すでに済んでいる日も、短いセッションが1つ開く。開いたセッションは自動では閉じない（開けるセッションは最大16。上限に達すると「上限のため開かなかった」になる）。古い会話は PO が閉じる。
+- 権限モードは auto 固定（役割 opus-designer の起動コマンド ccopusgo 経由）。作成画面で権限モードを選ぶことはできず、Claude Desktop の always allow に当たる機能もない。~/.claude/settings.json の allow は効く。
+- アプリの履歴の「送信済み」は、指示を送れたという意味だけである。保守の成否は、報告書（permission-reports/）と PR で確かめる。
+
+未確認（初回の試行で確かめ、確かめたら本欄を更新する）:
+- 起動直後の確認画面（フォルダの信頼など）に指示が入ってしまわないか（K15 で確認）。
+- auto モードの opus-designer で、§5-2 の SM- 例外の文が効くか。
+- opus-designer から、Sonnet と Fable を model 指定で呼べるか。
 
 ## 指示文（ここから下を貼る）
 
 あなたは Sales Anchor の許可保守の担当（Opus）。毎週1回、止まった記録を数え、決められた狭い範囲でだけ `autoMode.allow` に `SM-` で始まる文を足し引きし、理由と結果を台帳に必ず残す。
+
+### 今週の分が済んでいるかの確認（最初に行う。済みなら、これ以外は何もしない）
+
+毎日（月〜金）起動されるので、その週の保守が済んでいるかを、他の作業より先に確かめる。ここでは読み取りだけを行い、worktree も作らない。
+- 今週 = 日本時間（JST）の月曜 0:00 から。月曜の日付は `python3 -I -c "import datetime as d;z=d.timezone(d.timedelta(hours=9));n=d.datetime.now(z);print((n-d.timedelta(days=n.weekday())).date())"` で求める。
+- 確認A（済み）: `cd /Users/tanizawashingo/salesanchor && git fetch origin main` のあと、`git ls-tree --name-only origin/main docs/handoff/design-approval-ticket/permission-reports/` を見る。ファイル名が `YYYY-MM-DD.md` の形そのもの（例: 2026-10-13-s2-trial.md のように後ろに文字が続くものは数えない）で、日付が今週の月曜以降のものが1つでもあれば、済み。
+- 確認B（作業中または済み）: `gh pr list --repo shingo-ops/salesanchor --state all --limit 50 --json number,headRefName,state,createdAt,url` を見る。headRefName が `release/permission-maintenance-` で始まり、createdAt が今週の月曜 0:00 JST 以降で、state が OPEN か MERGED のものが1つでもあれば、作業中または済み。CLOSED（マージされずに閉じた）ものは数えない。
+- 確認A か 確認B のどちらかに当たったら、何も変更せず、`今週分は済み（根拠: <報告書のパス または PR の URL と state>）` の1行だけを報告して終わる。止めた記録の集計も、worktree の作成も、道具の実行もしない。
+- どちらにも当たらなければ、下の「最初に必ず行う」へ進む。
+- 「許可保守停止」と言われたときは、この確認より優先して下の停止の手順に従う。
 
 最初に必ず行う:
 - 作業は worktree で行う: `bash scripts/new-worktree.sh release/permission-maintenance-<日付> --claude`。以降の Bash は毎回 `cd <worktree の絶対パス> && ...` の形で書く。

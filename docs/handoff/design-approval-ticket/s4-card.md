@@ -35,14 +35,15 @@
    - add / remove: SM- で始まる文に限る。手順はバックアップ → pending.json → 変更。
    - recover: pending.json に書いた SM- の文1件だけを外し、pending.json を .done-<日時> に変える。
    - `--clear-pending`
-5. ROUTINE.md（Claude Desktop のローカル定期タスクに PO が貼り付ける指示書）
+5. ROUTINE.md（agent-console の定期実行に PO が登録する指示書。2026-10-14 に Claude Desktop 前提から変更）
    - 中身:
      - 設計 §5-5 の手順0〜9
      - 委任の型（Opus＝判断と変更、Sonnet＝集計・PR・試験、Fable＝審査、Haiku は使わない）
      - 「許可保守停止」
      - 保留の扱い
      - PO への5行報告の型
-   - 登録手順（Desktop → Code → Routines → New routine → Local、毎週月曜 9:00 JST、フォルダは /Users/tanizawashingo/salesanchor）。画面の項目名は【未確認】と書く。
+   - 今週の分が済んでいるかの確認（月〜金の毎日起動のため。済みなら何もせず終える）
+   - 登録手順（agent-console の定期実行の画面、役割 opus-designer、月〜金 9:00 JST、フォルダは /Users/tanizawashingo/salesanchor）。HTTP API は認証方式が未確認のため書かない。
 
 ## 試験（必須）
 
