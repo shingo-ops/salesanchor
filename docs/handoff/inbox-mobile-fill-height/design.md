@@ -97,6 +97,12 @@ recon: [recon.md](./recon.md)（`docs/handoff/inbox-mobile-fill-height/recon.md`
 
 **採用しなかったもの**: `min-height: calc(100dvh - ...)` で伸ばす案（未登録トークンが必要・`overflow-y: hidden` で溢れが切れる）。高さの鎖を整理する案（共有部品に波及・PO 選択は (A)）。`.mobile-content` に色を敷く案（全84ページに効く）。
 
+## 9-2. 新規トークン追加の手順（この便で踏んだ関所）
+
+`frontend/scripts/check-new-tokens.js` は、`frontend/src/tokens.css` などに新しい `--*` が増えると **PR 本文に4項目のチェックリストを要求**する（理由の記載／色トークンの明暗両対応／`check:dark-parity` の確認／既存トークンでの代替検討）。判定は「`- [x]` で始まり、かつ該当の語を含む行」で行われる。
+
+**注意**: このジョブは `pull_request` の `opened` / `synchronize` / `reopened` で走り、**本文の編集（`edited`）では再実行されない**。チェックリストを後から足した場合は、**push して再実行させる**必要がある。
+
 ## 10. 維持の仕組み
 
 - 守り手: `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`（基準 #1〜#4 を3幅で検査。`height-chain` 添付で鎖の各段を記録）、`.github/workflows/e2e.yml` のジョブ `visual-language`、`frontend/package.json` の `check:all`（25項目）。
