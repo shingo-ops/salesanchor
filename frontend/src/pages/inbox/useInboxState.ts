@@ -36,7 +36,7 @@ import {
   STATUS_TABS,
   readInboxSettings,
 } from "./inbox.types";
-import type { InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
+import type { ConvertAssigneeOption, InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
 import { buildReactionCreatePath, buildReactionDeletePath } from "./reactionPaths";
 
 // ---------------------------------------------------------------------------
@@ -110,8 +110,18 @@ export interface UseInboxStateReturn {
   profileModalRef: RefObject<HTMLDivElement>;
   handleCardFieldChange: (field: keyof LeadDetail, value: unknown) => void;
   handleCardFieldBlur: () => Promise<void>;
+  /** 第9便: 「商談化」ボタン押下 — 確認ポップアップを開き、担当候補（営業・リーダー）を取得する */
   handleConvertLead: () => void;
   handleCreateInvoice: () => void;
+  // 第9便: 商談化の確認ポップアップ（ConfirmModal 金型を再利用・新規金型なし）
+  showConvertModal: boolean;
+  convertAssigneeOptions: ConvertAssigneeOption[];
+  convertAssigneeLoading: boolean;
+  convertAssigneeError: string | null;
+  convertSaving: boolean;
+  convertError: string | null;
+  handleCancelConvert: () => void;
+  handleConfirmConvert: (assignedToUserId: number) => void;
 
   // 送信エリア
   draft: string;
@@ -222,6 +232,14 @@ export function useInboxState(): UseInboxStateReturn {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<"contact" | "company" | "deal">("deal");
   const profileModalRef = useRef<HTMLDivElement>(null);
+
+  // 第9便: 商談化の確認ポップアップ（担当営業の選択 → PATCH /leads/{id}）
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertAssigneeOptions, setConvertAssigneeOptions] = useState<ConvertAssigneeOption[]>([]);
+  const [convertAssigneeLoading, setConvertAssigneeLoading] = useState(false);
+  const [convertAssigneeError, setConvertAssigneeError] = useState<string | null>(null);
+  const [convertSaving, setConvertSaving] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
 
   // 入力欄
   const [draft, setDraft] = useState("");
@@ -787,10 +805,87 @@ export function useInboxState(): UseInboxStateReturn {
   // ADR-108: 固定アクションバー — ナビゲーションアクション
   // ---------------------------------------------------------------------------
 
+  // 第9便（2026-10-14・PO決定）: 旧実装は /crm/leads?convert= へ移動するだけで、
+  // ?convert= を読む画面は存在せず処理が無かった（全文検索 0 件で確認済み）。
+  // 既存の保存口 PATCH /leads/{id}（status + assigned_to の両方を受け取る）だけで
+  // 実現する。新しい API・新しい保存先は作らない。
+  const loadConvertAssignees = useCallback(async () => {
+    setConvertAssigneeLoading(true);
+    setConvertAssigneeError(null);
+    try {
+      // per_page の上限は100（backend/app/routers/staff.py）。このテナントの在籍
+      // スタッフ数は上限を大きく下回り、CommissionPanel.tsx（:92 "/staff?per_page=100"）
+      // も同じ前提でページ送りをしていない。同じ前提に揃え、新しい取り方は増やさない。
+      // 在籍中 = staff.status "active"（migrations/019_create_staff_tables.sql:49-50
+      // の CHECK (status IN ('active','inactive','pending'))で確認済み・推測ではない）。
+      const rows = await api.get<Array<{
+        user_id: number | null;
+        role_name: string | null;
+        status: string;
+        surname_jp: string;
+        given_name_jp: string;
+      }>>("/staff?per_page=100&status=active");
+      const eligible: ConvertAssigneeOption[] = rows
+        // 在籍中（status === "active"）もここで必ず絞る。クエリ（?status=active）だけに
+        // 頼ると、サーバ側の絞り込みが効かない経路で退職者が候補に出てしまうため。
+        // 値は migrations/019_create_staff_tables.sql:49-50 の
+        // CHECK (status IN ('active','inactive','pending')) で確認済み。
+        // eslint-disable-next-line local/no-japanese-literal -- DB value（migrations/021_seed_roles_and_role_permissions.sql の役割名）
+        .filter((s) => s.user_id != null && s.status === "active" && (s.role_name === "営業" || s.role_name === "リーダー"))
+        .map((s) => ({ value: String(s.user_id), label: `${s.surname_jp} ${s.given_name_jp}` }));
+      setConvertAssigneeOptions(eligible);
+    } catch (e) {
+      // staff.view 権限が無い場合は 403 になる。いずれにせよ選択肢は空のままにし、
+      // 確定ボタン側で「空なら押せない」扱いにする（新しい状態は増やさない）。
+      setConvertAssigneeOptions([]);
+      setConvertAssigneeError(
+        e instanceof ApiError && e.status === 403
+          ? t("common.forbidden")
+          : e instanceof Error ? e.message : t("common.fetchError")
+      );
+    } finally {
+      setConvertAssigneeLoading(false);
+    }
+  }, [t]);
+
   const handleConvertLead = useCallback(() => {
     if (!selectedLeadId) return;
-    navigate(`/crm/leads?convert=${selectedLeadId}`);
-  }, [selectedLeadId, navigate]);
+    setConvertError(null);
+    setShowConvertModal(true);
+    loadConvertAssignees();
+  }, [selectedLeadId, loadConvertAssignees]);
+
+  const handleCancelConvert = useCallback(() => {
+    setShowConvertModal(false);
+    setConvertError(null);
+  }, []);
+
+  const handleConfirmConvert = useCallback(async (assignedToUserId: number) => {
+    if (!leadDetail) return;
+    setConvertSaving(true);
+    setConvertError(null);
+    try {
+      // 既存の保存口のみ使う: status + assigned_to を同じ PATCH で渡す
+      // （backend/app/schemas/lead.py の LeadUpdate が両方受け取る）。
+      await api.patch<void>(`/leads/${leadDetail.id}`, {
+        status: "negotiating",
+        assigned_to: assignedToUserId,
+      });
+      // サーバが成功したときだけ画面を変える（第4便の「未読にする」と同じ作法）
+      setShowConvertModal(false);
+      await loadLeadDetail(leadDetail.id);
+      // 一覧側（conversations の lead_status）も既存の仕組み（handleMarkUnread 等と
+      // 同じ setConversations の部分更新）に揃える。新しい持ち方は増やさない。
+      setConversations((prev) =>
+        prev.map((c) => c.lead_id === leadDetail.id ? { ...c, lead_status: "negotiating" } : c)
+      );
+    } catch (e) {
+      // 失敗したら画面を変えない。モーダルは開いたままエラーを見せる。
+      setConvertError(e instanceof Error ? e.message : t("common.saveError"));
+    } finally {
+      setConvertSaving(false);
+    }
+  }, [leadDetail, loadLeadDetail, t]);
 
   const handleCreateInvoice = useCallback(() => {
     navigate("/invoices/new");
@@ -961,6 +1056,14 @@ export function useInboxState(): UseInboxStateReturn {
     handleCardFieldBlur,
     handleConvertLead,
     handleCreateInvoice,
+    showConvertModal,
+    convertAssigneeOptions,
+    convertAssigneeLoading,
+    convertAssigneeError,
+    convertSaving,
+    convertError,
+    handleCancelConvert,
+    handleConfirmConvert,
 
     // 送信エリア
     draft,

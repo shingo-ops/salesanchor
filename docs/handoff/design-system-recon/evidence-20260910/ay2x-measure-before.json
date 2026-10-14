@@ -1,0 +1,3418 @@
+{
+ "1280-en-dark": {
+  "cond": {
+   "width": 1280,
+   "height": 900,
+   "locale": "en",
+   "theme": "dark"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 326.203125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 450.078125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "e.g. Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 244.703125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 326.203125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "e.g. 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 450.078125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 349.390625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 496.453125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(91, 141, 217)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(91, 141, 217) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 326.203125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 473.265625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  }
+ },
+ "1280-en-light": {
+  "cond": {
+   "width": 1280,
+   "height": 900,
+   "locale": "en",
+   "theme": "light"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 326.203125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 450.078125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "e.g. Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 244.703125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 326.203125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "e.g. 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 450.078125,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 349.390625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 496.453125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 817,
+      "y": 244.703125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(30, 58, 138)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(30, 58, 138) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 326.203125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 473.265625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  }
+ },
+ "1280-ja-dark": {
+  "cond": {
+   "width": 1280,
+   "height": 900,
+   "locale": "ja",
+   "theme": "dark"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 346.59375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 470.46875,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "例: Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 265.09375,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 346.59375,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "例: 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 470.46875,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 369.78125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 516.84375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(91, 141, 217)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(91, 141, 217) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 346.59375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 493.65625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  }
+ },
+ "1280-ja-light": {
+  "cond": {
+   "width": 1280,
+   "height": 900,
+   "locale": "ja",
+   "theme": "light"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 346.59375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 470.46875,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "例: Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 265.09375,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 346.59375,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "例: 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 817,
+     "y": 470.46875,
+     "width": 447,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 369.78125,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 516.84375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 817,
+      "y": 265.09375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(30, 58, 138)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(30, 58, 138) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 346.59375,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 817,
+      "y": 493.65625,
+      "width": 447,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 479,
+    "clientWidth": 479,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 1280,
+    "clientWidth": 1280
+   }
+  }
+ },
+ "390-en-dark": {
+  "cond": {
+   "width": 390,
+   "height": 844,
+   "locale": "en",
+   "theme": "dark"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 470.46875,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "e.g. Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 265.09375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 346.59375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "e.g. 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 470.46875,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 369.78125,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 516.84375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(91, 141, 217)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(91, 141, 217) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 493.65625,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  }
+ },
+ "390-en-light": {
+  "cond": {
+   "width": 390,
+   "height": 844,
+   "locale": "en",
+   "theme": "light"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 470.46875,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "e.g. Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 265.09375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 346.59375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "e.g. 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 470.46875,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 369.78125,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 516.84375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "e.g. Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(30, 58, 138)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(30, 58, 138) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "e.g. 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "e.g. 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 493.65625,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  }
+ },
+ "390-ja-dark": {
+  "cond": {
+   "width": 390,
+   "height": 844,
+   "locale": "ja",
+   "theme": "dark"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 470.46875,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(51, 65, 85)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "例: Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 265.09375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 346.59375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "例: 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 470.46875,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(91, 141, 217)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(91, 141, 217) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(30, 41, 59)",
+     "color": "rgb(241, 245, 249)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 369.78125,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 516.84375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(91, 141, 217)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(91, 141, 217) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 493.65625,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(248, 113, 113)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(241, 245, 249) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(30, 41, 59)",
+      "color": "rgb(241, 245, 249)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  }
+ },
+ "390-ja-light": {
+  "cond": {
+   "width": 390,
+   "height": 844,
+   "locale": "ja",
+   "theme": "light"
+  },
+  "missing": [],
+  "normal": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 470.46875,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(226, 232, 240)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "focus": {
+   "dist-name": {
+    "id": "dist-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-name",
+     "type": "text",
+     "placeholder": "例: Treasure Island JP",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 265.09375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-spreadsheet-id": {
+    "id": "dist-spreadsheet-id",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-spreadsheet-id",
+     "type": "text",
+     "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+     "autocomplete": "off",
+     "spellcheck": "false",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 346.59375,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   },
+   "dist-sheet-name": {
+    "id": "dist-sheet-name",
+    "className": "dist-input",
+    "attrs": {
+     "id": "dist-sheet-name",
+     "type": "text",
+     "placeholder": "例: 在庫集計",
+     "value": ""
+    },
+    "rect": {
+     "x": 17,
+     "y": 470.46875,
+     "width": 357,
+     "height": 39.75
+    },
+    "focused": true,
+    "style": {
+     "fontSize": "13.6px",
+     "height": "39.75px",
+     "minHeight": "auto",
+     "padding": "8px 12px",
+     "borderColor": "rgb(30, 58, 138)",
+     "borderWidth": "1px",
+     "borderRadius": "6px",
+     "outline": "rgb(30, 58, 138) solid 2px",
+     "boxShadow": "none",
+     "backgroundColor": "rgb(255, 255, 255)",
+     "color": "rgb(26, 32, 44)"
+    }
+   }
+  },
+  "error": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 369.78125,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 516.84375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  },
+  "afterTyping": {
+   "inputs": [
+    {
+     "id": "dist-name",
+     "className": "dist-input",
+     "attrs": {
+      "id": "dist-name",
+      "type": "text",
+      "placeholder": "例: Treasure Island JP",
+      "value": "x"
+     },
+     "rect": {
+      "x": 17,
+      "y": 265.09375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": true,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(30, 58, 138)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(30, 58, 138) solid 2px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-spreadsheet-id",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-spreadsheet-id",
+      "type": "text",
+      "placeholder": "例: 1jODIuD81RG9itlMrr1...",
+      "autocomplete": "off",
+      "spellcheck": "false",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 346.59375,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    },
+    {
+     "id": "dist-sheet-name",
+     "className": "dist-input dist-input--error",
+     "attrs": {
+      "id": "dist-sheet-name",
+      "type": "text",
+      "placeholder": "例: 在庫集計",
+      "value": ""
+     },
+     "rect": {
+      "x": 17,
+      "y": 493.65625,
+      "width": 357,
+      "height": 39.75
+     },
+     "focused": false,
+     "style": {
+      "fontSize": "13.6px",
+      "height": "39.75px",
+      "minHeight": "auto",
+      "padding": "8px 12px",
+      "borderColor": "rgb(185, 28, 28)",
+      "borderWidth": "1px",
+      "borderRadius": "6px",
+      "outline": "rgb(26, 32, 44) none 3px",
+      "boxShadow": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(26, 32, 44)"
+     }
+    }
+   ],
+   "hasInvalidAttr": false,
+   "drawer": {
+    "cls": "dist-drawer-body",
+    "tag": "DIV",
+    "scrollWidth": 389,
+    "clientWidth": 389,
+    "overflowX": 0
+   },
+   "doc": {
+    "scrollWidth": 390,
+    "clientWidth": 390
+   }
+  }
+ }
+}

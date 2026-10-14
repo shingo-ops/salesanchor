@@ -30,6 +30,7 @@ import {
   openInboxListWithConversations,
   openInboxListWithDiscordUnlinkedConversation,
   openInboxListWithLeadStatus,
+  openInboxListWithLeadStatusAndStaff,
 } from "./inbox-helpers";
 
 /**
@@ -1545,5 +1546,254 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
 
     // 全画面になっていない＝幅がビューポート未満であること
     expect(box!.width, "カルテの幅がビューポートと同じ（全画面化している）").toBeLessThan(viewport!.width);
+  });
+});
+
+test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統一＋商談化の確認ポップアップ）", () => {
+  /**
+   * 第9便の背景（PO 決定・2026-10-14）:
+   * ①カルテ上部の帯を会話画面ヘッダーと同じ並び（戻る矢印→顔写真→顧客名）にする
+   *   （スマホ幅のみ。タブレットは従来の「顧客情報 ×」のまま）。
+   * ②「顧客ページを開く」リンクを削除する（PO 決定・不要）。
+   * ③「商談化」を押すと中央にポップアップが出て、担当の営業をプルダウンから選び、
+   *   確定すると PATCH /leads/{id} で status="negotiating" + assigned_to を保存する。
+   *   旧実装は /crm/leads?convert= へ移動するだけで、それを読む画面は存在せず
+   *   処理が無かった（全文検索0件で確認済み）。新しい API・保存先は作らない。
+   */
+  const karteOpenBtn = (page: Page): Locator =>
+    page.locator(".inbox-thread-header-mobile-btn[aria-label='顧客情報']");
+  const panel = (page: Page): Locator => page.locator(".inbox-right-panel");
+  const backBtn = (page: Page): Locator => page.locator(".karte-close-back-btn");
+  const mobileIdentity = (page: Page): Locator => page.locator(".karte-close-mobile-identity");
+  const convertBtn = (page: Page): Locator => page.locator('[data-testid="karte-action-primary"]');
+  const convertDialog = (page: Page): Locator => page.locator(".comp-modal-dialog[role='dialog']");
+  // ConfirmModal の .form-actions は [閉じる(secondary), 確定(primary)] の順（ConfirmModal.tsx 参照）
+  const dialogButtons = (page: Page): Locator => convertDialog(page).locator(".form-actions button");
+  const stageBadge = (page: Page): Locator => page.locator('[data-testid="karte-stage-badge"]');
+
+  // 役割を混ぜた GET /staff の仮データ。検査 4（営業・リーダーだけが並ぶ）に使う:
+  //   山田太郎=営業/在籍中/user_id あり → 出る
+  //   佐藤花子=リーダー/在籍中/user_id あり → 出る
+  //   鈴木一郎=CS/在籍中/user_id あり → 出ない（role_name 対象外）
+  //   高橋次郎=営業/在籍中/user_id なし → 出ない（assigned_to に入れられない）
+  //   田中三郎=営業/休止中/user_id あり → 出ない（在籍中のみ。status=active の
+  //     query はこの mock では無視されるため、クライアント側の絞り込みの検査も兼ねる）
+  const STAFF_SALES_LEADER_MIX = [
+    { id: 1, user_id: 11, role_name: "営業", status: "active", surname_jp: "山田", given_name_jp: "太郎" },
+    { id: 2, user_id: 12, role_name: "リーダー", status: "active", surname_jp: "佐藤", given_name_jp: "花子" },
+    { id: 3, user_id: 13, role_name: "CS", status: "active", surname_jp: "鈴木", given_name_jp: "一郎" },
+    { id: 4, user_id: null, role_name: "営業", status: "active", surname_jp: "高橋", given_name_jp: "次郎" },
+    { id: 5, user_id: 15, role_name: "営業", status: "inactive", surname_jp: "田中", given_name_jp: "三郎" },
+  ];
+
+  test("スマホ: カルテの帯に戻る矢印・顔写真・顧客名が並び、高さ56px・矢印44px以上", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const row = page.locator(".karte-close-row");
+    await expect(row).toBeVisible();
+    const rowBox = await row.boundingBox();
+    expect(rowBox, "帯の矩形が取れない").not.toBeNull();
+    expect(Math.abs(rowBox!.height - 56), "帯の高さが56pxでない").toBeLessThanOrEqual(1);
+
+    const back = backBtn(page);
+    await expect(back).toBeVisible();
+    const backBox = await back.boundingBox();
+    expect(backBox, "戻る矢印の寸法が取れない").not.toBeNull();
+    expect(backBox!.width, "戻る矢印の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(backBox!.height, "戻る矢印の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+
+    const identity = mobileIdentity(page);
+    await expect(identity).toBeVisible();
+    const avatar = identity.locator(".right-panel-avatar");
+    const name = identity.locator(".right-panel-display-name");
+    await expect(avatar).toBeVisible();
+    await expect(name).toBeVisible();
+    await expect(name).toHaveText(SAMPLE_CONVERSATION_NAME);
+
+    // 並び順: 戻る矢印 → 顔写真・顧客名（会話画面ヘッダーと同じ並び）
+    const order = await row.evaluate((el) =>
+      Array.from(el.children).map((c) => (c as HTMLElement).className)
+    );
+    const backIdx = order.findIndex((c) => c.includes("karte-close-back-btn"));
+    const identityIdx = order.findIndex((c) => c.includes("karte-close-mobile-identity"));
+    expect(backIdx, "戻る矢印が帯に見つからない").toBeGreaterThanOrEqual(0);
+    expect(identityIdx, "顔写真・顧客名の並びが帯に見つからない").toBeGreaterThan(backIdx);
+  });
+
+  test("スマホ: 「顧客ページを開く」がどこにも無い", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    // eslint-disable-next-line local/no-japanese-literal -- 削除済みテキストが無いことの確認
+    await expect(page.getByText("顧客ページを開く")).toHaveCount(0);
+    await expect(page.locator(".karte-open-link")).toHaveCount(0);
+  });
+
+  test("スマホ: 「商談化」を押すと中央にポップアップが出て、プルダウンには営業・リーダーだけが並ぶ", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithLeadStatusAndStaff(page, STAFF_SALES_LEADER_MIX);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    await convertBtn(page).click();
+    const dialog = convertDialog(page);
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute("role", "dialog");
+
+    const select = dialog.locator("select");
+    await expect(select).toBeVisible();
+
+    const optionLabels = await select.locator("option").allTextContents();
+    // eslint-disable-next-line local/no-japanese-literal -- 既存キー common.pleaseSelect の出力確認
+    const nonPlaceholder = optionLabels.filter((label) => label !== "選択してください");
+    // eslint-disable-next-line local/no-japanese-literal -- 期待値は仮データの氏名
+    expect(nonPlaceholder.sort()).toEqual(["佐藤 花子", "山田 太郎"].sort());
+  });
+
+  test("スマホ: 確定・閉じるが横並びで、確定がネイビー（--accent）・閉じるがグレーであること", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithLeadStatusAndStaff(page, STAFF_SALES_LEADER_MIX);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await convertBtn(page).click();
+    await expect(convertDialog(page)).toBeVisible();
+
+    const buttons = dialogButtons(page);
+    await expect(buttons).toHaveCount(2);
+
+    const box0 = await buttons.nth(0).boundingBox();
+    const box1 = await buttons.nth(1).boundingBox();
+    expect(box0, "閉じるの矩形が取れない").not.toBeNull();
+    expect(box1, "確定の矩形が取れない").not.toBeNull();
+    // 横並び＝ y 座標がほぼ同じ
+    expect(Math.abs(box0!.y - box1!.y), "確定・閉じるが横並びでない").toBeLessThanOrEqual(2);
+
+    const colors = await page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.backgroundColor = "var(--accent)";
+      document.body.appendChild(probe);
+      const accentRgb = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      const btns = document.querySelectorAll(".comp-modal-dialog .form-actions button");
+      return {
+        accentRgb,
+        cancelBg: getComputedStyle(btns[0]).backgroundColor,
+        confirmBg: getComputedStyle(btns[1]).backgroundColor,
+      };
+    });
+
+    expect(colors.confirmBg, "確定の背景色が --accent（ネイビー）と一致しない").toBe(colors.accentRgb);
+    expect(colors.cancelBg, "閉じるの背景色が確定と同じ（--accent）になっている").not.toBe(colors.accentRgb);
+  });
+
+  test("スマホ: 確定を押すと PATCH /leads/5001 が status=negotiating・assigned_to付きで呼ばれ、ポップアップが閉じて段階バッジが更新される", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    const calls: Array<Record<string, unknown>> = [];
+    const base = baseMocks();
+    const leadDetail = base["GET /leads/5001"] as Record<string, unknown>;
+    // サーバ側の保存結果を模すため、status を可変にする（PATCH 成功後の
+    // loadLeadDetail 再取得で「商談中」バッジに変わることまで検査するため）。
+    let leadStatus = "lead";
+
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...base,
+      "GET /leads/5001": async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ...leadDetail, status: leadStatus }),
+        });
+      },
+      "GET /staff": STAFF_SALES_LEADER_MIX,
+      "PATCH /leads/5001": async (route) => {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        calls.push(body);
+        leadStatus = body.status as string;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ...leadDetail, status: leadStatus }),
+        });
+      },
+    });
+    await page.goto("/lead-chat");
+    await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await convertBtn(page).click();
+    const dialog = convertDialog(page);
+    await expect(dialog).toBeVisible();
+
+    await dialog.locator("select").selectOption("11");
+    // ConfirmModal の .form-actions は [閉じる, 確定] の順
+    // 第9便（CI が検出した退行の歯止め）: 全画面のカルテ（重なり順）の上に
+    // ポップアップが出るため、確定ボタンの真上に他の要素が被っていないことを
+    // 先に確かめる。被っていると click は「見えて押せる」のに時間切れになる。
+    const confirmBtn = dialogButtons(page).nth(1);
+    const topMost = await confirmBtn.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return hit === el || el.contains(hit as Node);
+    });
+    expect(topMost, "確定ボタンの上に別の要素が重なっている").toBe(true);
+    await confirmBtn.click();
+
+    await expect.poll(() => calls.length, { message: "PATCH /leads/5001 が呼ばれていない" }).toBe(1);
+    expect(calls[0]).toEqual({ status: "negotiating", assigned_to: 11 });
+
+    // 確定後: ポップアップが閉じ、顧客情報に戻る
+    await expect(dialog).toHaveCount(0);
+    await expect(panel(page)).toBeVisible();
+
+    // 段階バッジが更新される（既存の読み直し処理 loadLeadDetail を使用。
+    // ja.json: leads.statusCode.negotiating = "商談中"）
+    // eslint-disable-next-line local/no-japanese-literal -- 既存キーの出力確認
+    await expect(stageBadge(page)).toHaveText("商談中");
+  });
+
+  test("PC・タブレット: カルテの帯は従来どおりで、顔写真・顧客名の重複表示が出ない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    await openInboxList(page);
+    await openConversation(page);
+    const toggle = page.locator("button.karte-toggle-btn");
+    if (await toggle.isVisible().catch(() => false)) {
+      await toggle.click();
+    }
+    await expect(panel(page)).toBeVisible();
+
+    // スマホ専用の帯（戻る矢印→顔写真→顧客名）はここでは出ない
+    await expect(mobileIdentity(page)).toBeHidden();
+
+    // タブレット幅（768〜1279px）だけ、従来の「顧客情報 ×」の帯が残っていることを確認
+    // （デスクトップ幅では .karte-close-row 自体が出ない。第8便までと同じ仕様で、
+    // 第9便では変えていない）
+    if (projectWidth(testInfo) < 1280) {
+      const title = page.locator(".karte-close-title");
+      await expect(title).toBeVisible();
+      // eslint-disable-next-line local/no-japanese-literal -- asserting i18n output
+      await expect(title).toHaveText("顧客情報");
+      await expect(page.locator(".karte-close-btn")).toBeVisible();
+    }
+
+    // 顔写真・顧客名は .right-panel-header 側にそのまま残っている（第9便で消していない）
+    await expect(page.locator(".right-panel-header .right-panel-avatar")).toBeVisible();
+    await expect(page.locator(".right-panel-header .right-panel-display-name")).toBeVisible();
   });
 });
