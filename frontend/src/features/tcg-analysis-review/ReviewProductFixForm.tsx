@@ -34,11 +34,18 @@ export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs }: Prop
     setNotice(null);
     try {
       await postProductCorrection(item, picked.value);
-      setNotice({ variant: "info", title: t("reviewItem.reassigned") });
-      await onRefresh();
     } catch (error: unknown) {
       const message = error instanceof ApiError && error.message ? error.message : t("reviewItem.reassignFailed");
       setNotice({ variant: "warning", title: message });
+      setIsSaving(false);
+      return;
+    }
+    // 保存は成功済み。一覧の読み直しの失敗は「付け替え失敗」として出さない
+    setNotice({ variant: "info", title: t("reviewItem.reassigned") });
+    try {
+      await onRefresh();
+    } catch {
+      // 読み直しの失敗は保存結果と無関係。次の操作・再表示で最新になる
     } finally {
       setIsSaving(false);
     }

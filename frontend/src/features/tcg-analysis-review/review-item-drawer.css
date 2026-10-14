@@ -28,8 +28,8 @@
   overflow-y: auto;
 }
 
-/* 「直す」欄: .comp-field の下余白が Stack の gap と二重になるのを防ぐ */
-.review-item-fix .comp-field {
+/* 「直す」欄の商品フォーム: .comp-field の下余白が Stack の gap と二重になるのを防ぐ（状態の Select には効かせない） */
+.review-item-fix__product .comp-field {
   margin-bottom: 0;
 }
 

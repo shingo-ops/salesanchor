@@ -85,4 +85,18 @@ describe("ReviewProductFixForm", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("Conflict happened");
   });
+
+  it("keeps the success callout and shows no failure when only the reload fails after saving", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    const onRefresh = vi.fn().mockRejectedValue(new Error("reload failed"));
+    render(<ReviewProductFixForm item={item} onRefresh={onRefresh} searchDebounceMs={0} />);
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("button", { name: "Reassign to this product" }));
+
+    await waitFor(() => expect(onRefresh).toHaveBeenCalledOnce());
+    expect(screen.getByRole("status").textContent).toContain("Reassigned");
+    expect(screen.queryByText("Failed to reassign")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
