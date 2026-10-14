@@ -3763,7 +3763,6 @@
     "drawerTitle": "Item to review",
     "sourceHeading": "Source text",
     "fixHeading": "Fix",
-    "reasonsHeading": "Reasons for review",
     "noReasons": "No reasons",
     "sourceLine": "Source: {{source}}",
     "ack": "Keep as is",
@@ -3773,6 +3772,9 @@
     "gapLineNumber": "L{{n}}",
     "gapCandidates": "Candidates: {{names}}",
     "compareHeading": "Comparison",
+    "fixColumn": { "tapToFix": "Tap to fix" },
+    "pickRowHint": "Select the row you want to fix in the table",
+    "removedFromList": "This item is no longer in the review list",
     "productLabel": "Product",
     "productCurrent": "Current: {{name}}",
     "reassign": "Reassign to this product",
@@ -4647,7 +4649,7 @@
     "manualCorrection": "Manual Correction {{field}}",
     "hasCorrected": "Has corrections",
     "uncorrected": "Uncorrected",
-    "compareColumns": { "field": "Field", "source": "Source" },
+    "compareColumns": { "field": "Field", "source": "Source", "fix": "Fix" },
     "notApplicable": "—",
     "sourcePosition": "Source position",
     "productId": "Product ID",
@@ -5178,15 +5180,10 @@
       "posts": "Posts"
     },
     "inline": {
-      "header": "Fix here",
       "productAria": "Product (type a name to search)",
       "productPlaceholder": "Type a product name",
       "noResults": "No matching product",
-      "searchError": "Could not search products",
-      "saved": "Saved",
-      "error": "Could not save: {{reason}}",
-      "unknownError": "Please try again",
-      "ackAria": "Keep as is: {{name}}"
+      "searchError": "Could not search products"
     }
   },
   "distributionSettings": {

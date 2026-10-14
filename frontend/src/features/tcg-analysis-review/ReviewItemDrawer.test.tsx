@@ -1,18 +1,25 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "./ReviewItemDrawer";
+import { postReviewAck } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
   ApiError: class extends Error {},
 }));
-vi.mock("./ItemComparison", () => ({
-  ItemComparison: ({ heading }: { heading?: string }) => <div data-testid="comparison-heading">{heading}</div>,
+vi.mock("./reviewActions", () => ({
+  postProductCorrection: vi.fn(),
+  postReviewAck: vi.fn(),
+  addSearchKeyword: vi.fn(),
+  fetchRegistrationForm: vi.fn(async () => ({ item: { extraction_item_id: "item-1", source_message_id: "msg-1", raw_name: "" }, lookups: {} })),
+  checkProductDuplicates: vi.fn(),
+  createProduct: vi.fn(),
+  searchProductOptions: vi.fn(async () => []),
 }));
 vi.mock("./ConditionReviewPanel", async () => ({
   ...(await vi.importActual<typeof import("./ConditionReviewPanel")>("./ConditionReviewPanel")),
-  ConditionReviewPanel: () => null,
+  ConditionReviewPanel: () => <div data-testid="condition-panel" />,
 }));
 
 const suspect = { gap_lines: [14, 15], candidates: [{ product_id: "1001", name: "Product A" }] };
@@ -30,6 +37,7 @@ const renderDrawer = (item: ReviewDrawerItem) =>
   render(<ReviewItemDrawer item={item} onClose={() => undefined} onRefresh={async () => undefined} />);
 
 beforeEach(async () => {
+  vi.clearAllMocks();
   await i18n.changeLanguage("en");
 });
 afterEach(cleanup);
@@ -84,36 +92,158 @@ describe("ReviewItemDrawer layout", () => {
     expect(screen.getByTestId("supplier-drawer").className).toContain("comp-drawer-panel--wide");
   });
 
-  it("shows the fix heading", () => {
-    renderDrawer(withRaw("L1"));
-
-    expect(screen.getByText("Fix")).toBeTruthy();
-  });
-
   it("puts the source and comparison heading rows on both panes", () => {
     renderDrawer(withRaw("L1"));
 
     const sourceHead = document.querySelector(".review-item-source > .review-item-pane-head");
     expect(sourceHead?.textContent).toBe("Source text");
-    expect(screen.getByTestId("comparison-heading").textContent).toBe("Comparison");
+    expect(document.querySelector(".item-comparison .review-item-pane-head h3")?.textContent).toBe("Comparison");
   });
 
-  it("starts the fix section with the question and no product master button", () => {
+  it("shows the pick-a-row hint first, with no question and no product master button", () => {
     renderDrawer(withRaw("L1"));
 
-    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: /Reassign to an existing product/ })).toBeTruthy();
+    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
     expect(screen.queryByText("Register or exclude in the product master")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
   });
+});
 
-  it("shows the labelled product form with a disabled reassign button after choosing to reassign", () => {
-    renderDrawer(withRaw("L1"));
+const rowOf = (label: string) => screen.getByRole("row", { name: new RegExp(`^${label}`) });
 
-    fireEvent.click(screen.getByRole("radio", { name: /Reassign to an existing product/ }));
+describe("ReviewItemDrawer reasons (K1)", () => {
+  it("puts the red reasons under the title and above the source and comparison, with no heading", () => {
+    renderDrawer({ ...makeItem("pid_unresolved", false), review_reason_details: [{ code: "pid_unresolved", source: "system", fix_stage: "extraction" }] });
 
-    expect(screen.getByText("Product").tagName).toBe("LABEL");
-    expect((screen.getByRole("button", { name: "Reassign to this product" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.queryByText("Register or exclude in the product master")).toBeNull();
+    expect(screen.queryByText("Reasons for review")).toBeNull();
+    const list = document.querySelector("ul.review-item-reasons") as HTMLElement;
+    expect(list.textContent).toContain("Product not identified");
+    expect(list.querySelector(".review-item-reasons__text")).not.toBeNull();
+    const top = document.querySelector(".review-item-top") as HTMLElement;
+    expect(list.compareDocumentPosition(top) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText(/^Source: /)).toBeTruthy();
+  });
+
+  it("shows the no-reasons text when there is no reason", () => {
+    renderDrawer({ ...makeItem("pid_unresolved", false), review_reason_details: [] });
+
+    expect(screen.getByText("No reasons")).toBeTruthy();
+  });
+});
+
+describe("ReviewItemDrawer fix column (K2-K4)", () => {
+  const item = (over: Partial<ReviewDrawerItem> = {}): ReviewDrawerItem => ({
+    ...makeItem("pid_unresolved", false),
+    system: { product_id: "PM-00001", product_title: "Title A", work_name: "Work A", condition: "Box", pid_basis: "MANUAL" },
+    review_issues: ["PRODUCT_ID_UNRESOLVED"],
+    ...over,
+  });
+
+  it("shows the Fix column instead of the Source column", () => {
+    renderDrawer(item());
+
+    expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
+    expect(screen.queryByRole("columnheader", { name: "Source" })).toBeNull();
+  });
+
+  it("selects the product row and asks what to fix (two choices)", () => {
+    renderDrawer(item());
+
+    fireEvent.click(rowOf("Product ID"));
+
+    expect(rowOf("Product ID").className).toContain("comp-table__row--selected");
+    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Reassign to an existing product/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Register as a new product/ })).toBeTruthy();
+    expect(screen.queryByText("Select the row you want to fix in the table")).toBeNull();
+  });
+
+  it("the work row opens the same product question", () => {
+    renderDrawer(item());
+
+    fireEvent.click(rowOf("Series"));
+
+    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
+  });
+
+  it("the state row opens the condition input directly when the item allows it", () => {
+    renderDrawer(item({ condition_review: { condition_id: "1", review_version: "v", needs_review: true, review_reasons: "condition_unknown", confirmed: false, classification: "none" } }));
+
+    fireEvent.click(rowOf("Condition"));
+
+    expect(screen.getByTestId("condition-panel")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+  });
+
+  it("a row that cannot be fixed does nothing when clicked, and is marked static", () => {
+    renderDrawer(item());
+
+    fireEvent.click(rowOf("Quantity"));
+    fireEvent.click(rowOf("Condition"));
+
+    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
+    expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
+  });
+
+  it("selecting the same row again keeps the selection", () => {
+    renderDrawer(item());
+
+    fireEvent.click(rowOf("Product ID"));
+    fireEvent.click(rowOf("Product ID"));
+
+    expect(rowOf("Product ID").className).toContain("comp-table__row--selected");
+  });
+});
+
+describe("ReviewItemDrawer keep as is (K7)", () => {
+  const ackable = (codes: string[]): ReviewDrawerItem => ({
+    ...makeItem("pid_unresolved", false),
+    review_reason_details: codes.map((code) => ({ code, source: "system" as const, fix_stage: "analysis" as const, ackable: true })),
+  });
+
+  it("has no button when no reason can be acknowledged", () => {
+    renderDrawer({ ...makeItem("pid_unresolved", false), is_v102: false });
+
+    expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
+  });
+
+  it("the button under the reasons opens the keep input directly", () => {
+    renderDrawer(ackable(["product_not_in_master"]));
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Keep as is" }).length).toBe(2);
+  });
+
+  it("after the last reason is acknowledged the keep input closes and a notice stays under the reasons", async () => {
+    vi.mocked(postReviewAck).mockResolvedValue({});
+    renderDrawer(ackable(["product_not_in_master"]));
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    const fix = document.querySelector(".review-item-fix") as HTMLElement;
+    fireEvent.click(within(fix).getByRole("button", { name: "Keep as is" }));
+
+    await waitFor(() => expect(screen.getByText(/Marked as checked/)).toBeTruthy());
+    expect(postReviewAck).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
+    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    const block = document.querySelector(".review-item-reasons-block") as HTMLElement;
+    expect(block.textContent).toContain("Marked as checked");
+
+    fireEvent.click(rowOf("Product ID"));
+    expect(document.querySelector(".review-item-reasons-block")?.textContent).not.toContain("Marked as checked");
+  });
+});
+
+describe("ReviewItemDrawer removedFromList (K5)", () => {
+  it("shows the removed notice only when asked", () => {
+    const { rerender } = render(<ReviewItemDrawer item={makeItem("pid_unresolved", false)} onClose={() => undefined} onRefresh={async () => undefined} />);
+    expect(screen.queryByText("This item is no longer in the review list")).toBeNull();
+
+    rerender(<ReviewItemDrawer item={makeItem("pid_unresolved", false)} removedFromList onClose={() => undefined} onRefresh={async () => undefined} />);
+    expect(screen.getByText("This item is no longer in the review list")).toBeTruthy();
   });
 });

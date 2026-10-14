@@ -53,6 +53,7 @@ class SystemFields(BaseModel):
     product_id: str
     pid_resolved: str
     pid_basis: str
+    condition_basis: str = ""
     unit: str
     unit_resolved: str
     condition: str

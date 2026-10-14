@@ -103,3 +103,46 @@ describe("ItemComparison readOnly", () => {
     cells.forEach((c) => expect(c.getAttribute("title")).toBe(c.textContent));
   });
 });
+
+const lastCell = (row: HTMLElement) => { const cells = within(row).getAllByRole("cell"); return cells[cells.length - 1]; };
+
+describe("ItemComparison readOnly fix column", () => {
+  const noop = () => undefined;
+  const manual = makeItem({ system: { ...makeItem().system, pid_basis: "MANUAL", product_title: "Title A", work_name: "Work A" } });
+
+  it("keeps the Source column when no fixColumn is given (supplier detail)", () => {
+    render(<ItemComparison item={makeItem()} readOnly={true} onJumpToSourceLine={noop} />);
+
+    expect(screen.getByRole("columnheader", { name: "Source" })).toBeTruthy();
+    expect(screen.queryByRole("columnheader", { name: "Fix" })).toBeNull();
+  });
+
+  it("replaces it with Fix, showing the manual value, the tap hint and the dash", () => {
+    render(<ItemComparison item={manual} readOnly={true} onJumpToSourceLine={noop} fixColumn={{ selectedRowKey: null, onRowSelect: noop, fixableRowKeys: ["productId", "work"] }} />);
+
+    expect(screen.queryByRole("columnheader", { name: "Source" })).toBeNull();
+    expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
+    expect(lastCell(screen.getByRole("row", { name: /^Product ID/ })).textContent).toBe("Title A");
+    expect(lastCell(screen.getByRole("row", { name: /^Quantity/ })).textContent).toBe("—");
+  });
+
+  it("shows the tap hint for a fixable row that was not fixed by a person", () => {
+    render(<ItemComparison item={makeItem()} readOnly={true} onJumpToSourceLine={noop} fixColumn={{ selectedRowKey: null, onRowSelect: noop, fixableRowKeys: ["productId", "work"] }} />);
+
+    const cell = lastCell(screen.getByRole("row", { name: /^Product ID/ }));
+    expect(cell.textContent).toBe("Tap to fix");
+    expect(cell.querySelector(".item-comparison__tap")).not.toBeNull();
+  });
+
+  it("calls onRowSelect only for fixable rows and marks the selected row", () => {
+    const onRowSelect = vi.fn();
+    render(<ItemComparison item={makeItem()} readOnly={true} onJumpToSourceLine={noop} fixColumn={{ selectedRowKey: "work", onRowSelect, fixableRowKeys: ["productId", "work"] }} />);
+
+    fireEvent.click(screen.getByRole("row", { name: /^Quantity/ }));
+    expect(onRowSelect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("row", { name: /^Product ID/ }));
+    expect(onRowSelect).toHaveBeenCalledExactlyOnceWith("productId");
+    expect(screen.getByRole("row", { name: /^Series/ }).className).toContain("comp-table__row--selected");
+    expect(screen.getByRole("row", { name: /^Quantity/ }).className).toContain("item-comparison__row--static");
+  });
+});

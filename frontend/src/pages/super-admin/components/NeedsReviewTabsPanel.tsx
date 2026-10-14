@@ -15,13 +15,11 @@ import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { api, ApiError } from "../../../lib/api";
 import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime";
-import { ReviewRowActions } from "../../../features/tcg-analysis-review/ReviewRowActions";
 import { ReviewItemDrawer } from "../../../features/tcg-analysis-review/ReviewItemDrawer";
 import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab";
 import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
 
 const PAGE_SIZE = 20;
-const INLINE_FIX_COLUMN_WIDTH = "var(--review-inline-fix-col-w)";
 
 type TabKey = "production" | "posts";
 
@@ -67,7 +65,10 @@ export default function NeedsReviewTabsPanel() {
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const [drawerItem, setDrawerItem] = useState<NeedsReviewItem | null>(null);
+  // スライドは「どの件か」(id) だけ持ち、表示する中身は一覧の最新データから引き直す。
+  // 一覧から外れた（要確認でなくなった・ページ外）ときは最後に見た内容を残す
+  const [drawerItemId, setDrawerItemId] = useState<string | null>(null);
+  const lastDrawerItemRef = useRef<NeedsReviewItem | null>(null);
 
   // 保存のあとの読み直し（reloadKey だけが変わったとき）は、表を消さずに取り直す
   const lastReloadKeyRef = useRef(reloadKey);
@@ -163,15 +164,13 @@ export default function NeedsReviewTabsPanel() {
         }
       },
     },
-    {
-      key: "inline_fix",
-      header: t("needsReview.inline.header"),
-      width: INLINE_FIX_COLUMN_WIDTH,
-      renderCell: (item) => (
-        <ReviewRowActions item={item} onSaved={() => setReloadKey((k) => k + 1)} />
-      ),
-    },
   ];
+
+  const latestDrawerItem = drawerItemId ? data?.items.find((i) => i.extraction_item_id === drawerItemId) ?? null : null;
+  if (latestDrawerItem) lastDrawerItemRef.current = latestDrawerItem;
+  if (!drawerItemId) lastDrawerItemRef.current = null;
+  const drawerItem = drawerItemId ? latestDrawerItem ?? lastDrawerItemRef.current : null;
+  const drawerRemoved = drawerItemId !== null && latestDrawerItem === null;
 
   const tabItems: TabItem<TabKey>[] = [
     { key: "production", label: t("needsReview.tabs.production") },
@@ -196,7 +195,7 @@ export default function NeedsReviewTabsPanel() {
               data={data.items}
               rowKey={(item) => item.extraction_item_id}
               emptyState={t("needsReview.noItems")}
-              onRowClick={setDrawerItem}
+              onRowClick={(item) => setDrawerItemId(item.extraction_item_id)}
               page={Math.floor(offset / PAGE_SIZE) + 1}
               hasNextPage={offset + (data.items?.length ?? 0) < data.total}
               onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
@@ -210,7 +209,8 @@ export default function NeedsReviewTabsPanel() {
       {drawerItem && (
         <ReviewItemDrawer
           item={drawerItem}
-          onClose={() => setDrawerItem(null)}
+          removedFromList={drawerRemoved}
+          onClose={() => setDrawerItemId(null)}
           onRefresh={async () => setReloadKey((k) => k + 1)}
         />
       )}

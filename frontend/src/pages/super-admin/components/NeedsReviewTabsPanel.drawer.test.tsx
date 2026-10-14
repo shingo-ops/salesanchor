@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../../lib/api";
@@ -40,12 +40,58 @@ beforeEach(async () => {
 afterEach(() => cleanup());
 
 describe("production tab row drawer", () => {
-  it("opens a drawer with the item comparison and the fix question when a row is clicked", async () => {
+  it("opens a drawer with the item comparison and the pick-a-row hint when a row is clicked", async () => {
     view();
     fireEvent.click(await screen.findByText("Card V6"));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("Item to review");
-    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
+    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+  });
+
+  it("has no inline fix column in the list", async () => {
+    view();
+    await screen.findByText("Card V6");
+    expect(screen.queryByRole("columnheader", { name: "Fix here" })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("opens the product question from the product row", async () => {
+    view();
+    fireEvent.click(await screen.findByText("Card V6"));
+    await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("row", { name: /^Product ID/ }));
+    expect(screen.getByText("Product").tagName).toBe("LABEL");
+  });
+
+  const ackFirstReason = async () => {
+    fireEvent.click(await screen.findByText("Card V102"));
+    await screen.findByRole("dialog");
+    expect(screen.queryByText("This item is no longer in the review list")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(within(document.querySelector(".review-item-fix") as HTMLElement).getByRole("button", { name: "Keep as is" }));
+  };
+
+  it("re-reads the same item from the refreshed list so the Fix column shows the saved value", async () => {
+    vi.mocked(api.post).mockResolvedValue({ ok: true, saved: 1 });
+    view();
+    const updated = { ...makeItem("v102-item", "Card V102", true), system: { product_id: "PM-00009", product_title: "Fixed Title", work_name: "Work Z", pid_basis: "MANUAL" } };
+    await screen.findByText("Card V102");
+    vi.mocked(api.get).mockResolvedValue(response([updated, makeItem("v6-item", "Card V6", false)]));
+    await ackFirstReason();
+    await waitFor(() => expect(within(screen.getByRole("dialog")).getByRole("row", { name: /^Product ID/ }).textContent).toContain("Fixed Title"));
+    expect(screen.queryByText("This item is no longer in the review list")).toBeNull();
+  });
+
+  it("keeps the last content and shows a notice when the item leaves the list", async () => {
+    vi.mocked(api.post).mockResolvedValue({ ok: true, saved: 1 });
+    view();
+    await screen.findByText("Card V102");
+    vi.mocked(api.get).mockResolvedValue(response([makeItem("v6-item", "Card V6", false)]));
+    await ackFirstReason();
+    expect(await screen.findByText("This item is no longer in the review list")).toBeTruthy();
+    expect(within(screen.getByRole("dialog")).getByRole("row", { name: /^Product name/ }).textContent).toContain("Card V102");
   });
 
   it("shows the keep-as-is button only for a v102 item and posts the reason code", async () => {
@@ -53,8 +99,8 @@ describe("production tab row drawer", () => {
     view();
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
-    fireEvent.click(screen.getByRole("radio", { name: /Keep as is/ }));
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(within(document.querySelector(".review-item-fix") as HTMLElement).getByRole("button", { name: "Keep as is" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
     expect(api.post).toHaveBeenCalledWith("/tcg/items/v102-item/review-ack", {
       source_message_id: "source-v102-item",
@@ -78,8 +124,8 @@ describe("production tab row drawer", () => {
     view();
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
-    fireEvent.click(screen.getByRole("radio", { name: /Keep as is/ }));
-    expect(screen.getAllByRole("button", { name: "Keep as is" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    expect(within(document.querySelector(".review-item-fix") as HTMLElement).getAllByRole("button", { name: "Keep as is" })).toHaveLength(1);
   });
 
   it("does not show the keep-as-is button for a v6 item", async () => {

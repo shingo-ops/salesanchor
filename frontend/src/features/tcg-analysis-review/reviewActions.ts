@@ -1,6 +1,6 @@
 /**
  * 要確認の件への保存操作の唯一の置き場所（API を呼ぶ処理と送る中身の正本）。
- * 一覧の行（ReviewRowActions）と、件を開いた画面（ReviewItemDrawer / ProductMasterDrawer）の両方が使う。
+ * 件を開いた画面（ReviewItemDrawer / ProductMasterDrawer）が使う。
  *   - 商品を直す:     POST /tcg/items/{id}/corrections （field_name='product_id'）
  *   - このままで良い: POST /tcg/items/{id}/review-ack
  *   - 商品の候補:     GET  /tcg/products/search?query=
