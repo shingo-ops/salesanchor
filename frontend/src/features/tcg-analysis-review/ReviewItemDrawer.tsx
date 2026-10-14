@@ -1,22 +1,15 @@
 /**
  * 本番タブの行から開く、1件の訂正 Drawer（設計 §13-5 の 3）。
- * 既存の ItemComparison（読み取り専用）・ConditionReviewPanel・ProductMasterDrawer をそのまま使い、
- * v102 の件だけ理由ごとの「このままで良い」を出す（POST /tcg/items/{id}/review-ack）。
+ * 既存の ItemComparison（読み取り専用）と、理由の一覧（読むだけ）、
+ * 「何を直しますか？」の質問（ReviewFixWizard）で構成する。
  */
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "../../components/Button";
-import { Callout } from "../../components/Callout";
 import { Drawer } from "../../components/Drawer";
 import { Stack } from "../../components/Stack";
 import { TwoColumn } from "../../components/TwoColumn";
-import { ApiError } from "../../lib/api";
-import { ConditionReviewPanel } from "./ConditionReviewPanel";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
-import { ProductMasterDrawer } from "./ProductMasterDrawer";
-import { ReviewProductFixForm } from "./ReviewProductFixForm";
-import { postReviewAck } from "./reviewActions";
+import { ReviewFixWizard } from "./ReviewFixWizard";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
 import { parseSourceLineRange } from "./sourceRawNavigation";
@@ -31,103 +24,50 @@ interface Props {
   onRefresh: () => Promise<void>;
 }
 
-type Notice = { variant: "info" | "warning"; title: string } | null;
-
 // 原文ペインはその商品の行へ自動で送るため、行ジャンプは何もしない
 const noJump = () => undefined;
 
 export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
   const { t } = useTranslation();
-  const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(false);
-  const [ackedCodes, setAckedCodes] = useState<string[]>([]);
-  const [pendingCode, setPendingCode] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice>(null);
   const details = item.review_reason_details ?? [];
   const gapSuspect = gapSuspectOf(item);
 
-  const acknowledge = async (code: string) => {
-    setPendingCode(code);
-    setNotice(null);
-    try {
-      await postReviewAck(item, [code]);
-      setAckedCodes((current) => [...current, code]);
-      setNotice({ variant: "info", title: t("reviewItem.acked") });
-      await onRefresh();
-    } catch (error: unknown) {
-      const message = error instanceof ApiError && error.message ? error.message : t("reviewItem.ackFailed");
-      setNotice({ variant: "warning", title: message });
-    } finally {
-      setPendingCode(null);
-    }
-  };
-
   return (
-    <>
-      <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")} size="wide">
-        <Stack gap="4">
-          {notice && <Callout variant={notice.variant} title={notice.title} />}
-          <TwoColumn ratio="1:2" gap="3" align="stretch" className="review-item-top">
-            <section className="review-item-source">
-              <div className="review-item-pane-head">
-                <h3>{t("reviewItem.sourceHeading")}</h3>
-              </div>
-              <ShadowSourcePane rawText={item.raw_text} blockRange={parseSourceLineRange(item.gemini.span)} />
-            </section>
-            <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} heading={t("reviewItem.compareHeading")} />
-          </TwoColumn>
-          <section className="review-item-fix">
-            <h3>{t("reviewItem.fixHeading")}</h3>
-            <Stack gap="3">
-              <ReviewProductFixForm item={item} onRefresh={onRefresh} />
-              <ConditionReviewPanel item={item} onRefresh={onRefresh} label={t("reviewItem.conditionLabel")} />
-              <div>
-                <Button variant="secondary" onClick={() => setIsProductDrawerOpen(true)}>
-                  {t("superAdmin.supplierQuality.correctPhase3")}
-                </Button>
-                <p className="comp-field__hint">{t("reviewItem.masterHint")}</p>
-              </div>
-              <section>
-                <h3>{t("reviewItem.reasonsHeading")}</h3>
-                {details.length === 0 && <p>{t("reviewItem.noReasons")}</p>}
-                {details.length > 0 && (
-                  <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>
-                )}
-                <ul>
-                  {details.map((detail) => (
-                    <li key={detail.code}>
-                      <span>{reviewReasonLabel(t, detail.code)}</span>{" "}
-                      {item.is_v102 === true && detail.ackable !== false && !ackedCodes.includes(detail.code) && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          loading={pendingCode === detail.code}
-                          disabled={pendingCode !== null}
-                          onClick={() => void acknowledge(detail.code)}
-                        >
-                          {t("reviewItem.ack")}
-                        </Button>
-                      )}
-                      {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
-                        <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            </Stack>
+    <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")} size="wide">
+      <Stack gap="4">
+        <TwoColumn ratio="1:2" gap="3" align="stretch" className="review-item-top">
+          <section className="review-item-source">
+            <div className="review-item-pane-head">
+              <h3>{t("reviewItem.sourceHeading")}</h3>
+            </div>
+            <ShadowSourcePane rawText={item.raw_text} blockRange={parseSourceLineRange(item.gemini.span)} />
           </section>
-        </Stack>
-      </Drawer>
-      {isProductDrawerOpen && (
-        <ProductMasterDrawer
-          item={item}
-          onClose={() => setIsProductDrawerOpen(false)}
-          onSaved={() => {
-            setIsProductDrawerOpen(false);
-            void onRefresh();
-          }}
-        />
-      )}
-    </>
+          <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} heading={t("reviewItem.compareHeading")} />
+        </TwoColumn>
+        <section className="review-item-fix">
+          <h3>{t("reviewItem.fixHeading")}</h3>
+          <Stack gap="3">
+            <section>
+              <h3>{t("reviewItem.reasonsHeading")}</h3>
+              {details.length === 0 && <p>{t("reviewItem.noReasons")}</p>}
+              {details.length > 0 && (
+                <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>
+              )}
+              <ul>
+                {details.map((detail) => (
+                  <li key={detail.code}>
+                    <span>{reviewReasonLabel(t, detail.code)}</span>
+                    {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
+                      <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <ReviewFixWizard key={item.extraction_item_id} item={item} onRefresh={onRefresh} />
+          </Stack>
+        </section>
+      </Stack>
+    </Drawer>
   );
 }

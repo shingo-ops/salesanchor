@@ -40,12 +40,12 @@ beforeEach(async () => {
 afterEach(() => cleanup());
 
 describe("production tab row drawer", () => {
-  it("opens a drawer with the item comparison and the product correction button when a row is clicked", async () => {
+  it("opens a drawer with the item comparison and the fix question when a row is clicked", async () => {
     view();
     fireEvent.click(await screen.findByText("Card V6"));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("Item to review");
-    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
   });
 
   it("shows the keep-as-is button only for a v102 item and posts the reason code", async () => {
@@ -53,6 +53,7 @@ describe("production tab row drawer", () => {
     view();
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("radio", { name: /Keep as is/ }));
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
     expect(api.post).toHaveBeenCalledWith("/tcg/items/v102-item/review-ack", {
@@ -77,6 +78,7 @@ describe("production tab row drawer", () => {
     view();
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
+    fireEvent.click(screen.getByRole("radio", { name: /Keep as is/ }));
     expect(screen.getAllByRole("button", { name: "Keep as is" })).toHaveLength(1);
   });
 
@@ -84,6 +86,7 @@ describe("production tab row drawer", () => {
     view();
     fireEvent.click(await screen.findByText("Card V6"));
     await screen.findByRole("dialog");
+    expect(screen.queryByRole("radio", { name: /Keep as is/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
     expect(api.post).not.toHaveBeenCalled();
   });
