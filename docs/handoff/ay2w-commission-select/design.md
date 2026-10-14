@@ -2,6 +2,7 @@
 
 - 状態: 設計審査済み（Fable r1 REVISE → r2 APPROVE、LOW-A〜C 反映済み）・PO 承認済み（2026-10-14「y」）・PO 承認済み（方向）。実装は release/ay2w-commission-select
 - PO 決定: 2026-10-14「y」（CommissionPanel の select を、表の見た目統一と切り離して先に共通部品へ移す。表はいまの見た目のまま）
+- PO 決定（B1 停止後）: 2026-10-14「y」（390px でモーダル本文の横 overflow が +23px 増えることを受け入れて本番へ。見切れは表統一便で直す。数値は evidence-20260910/ay2w-acceptance.md）
 - 基準: f353bb437（origin/main、WT /Users/tanizawashingo/worktrees/salesanchor/release-ay2w-commission-select）
 - 調査根拠: docs/handoff/ay2w-commission-select/recon.md（生出力 /tmp/CC報告ファイル/ssot-ay2w/recon/）
 - 対象 ADR: ADR-144（UI 部品ガバナンス・金型）、ADR-067（デザイントークン）、ADR-027（i18n）

@@ -14,7 +14,7 @@
 | 生 select が CommissionPanel.tsx に 0 件 | ○ | `git grep -n "<select" -- frontend/src/components/CommissionPanel.tsx` が 0 件（exit 1） | （コマンド出力） |
 | DOM の属性・選択肢が不変（ja/en） | ○ | 8 条件 × 5 役割で aria-label・data-testid・value・disabled・option(value, 文字列) の差分 0 | compare.txt（"DOM diffs: []"） |
 | 意図した見た目の変化を提示 | ○（意図した変化） | 下の computed style 表 | measure-before/・measure-after/ |
-| 表の横 overflow が増えない（B1） | ○（判定式どおり）。ただし下記の注記あり | 下の B1 表。document・table とも scrollWidth − clientWidth は前後とも 0 | b1-table.md、compare.txt |
+| 表の横 overflow が増えない（B1） | ×（停止条件に該当）→ PO 2026-10-14「y」で受け入れ | document・table 自身の scrollWidth − clientWidth は前後とも 0。ただし表を包む comp-modal-body（overflow-x:auto）は 390px で en 263→286・ja 162→185（+23px）。下の B1 表と祖先の表 | b1-table.md、compare.txt、/tmp/CC報告ファイル/ssot-ay2w/impl/b1-ancestor.json |
 | 試験 | ○ | SharedButtonMigration.test.tsx 単独 21 passed（追加 1 件を含む） | vitest-single.txt |
 | 新規トークン・直書き 0 | ○ | check:all exit 0、check:new-tokens exit 0、scripts/check-ui-governance.js exit 0（「新規ハードコードなし」） | q-check-all.txt、q-check-new-tokens.txt、q-ui-governance.txt |
 | 品質 | 一部 ×（無関係の timeout）。下記 | tsc 0、lint 0、build 0、build-storybook 0、test:coverage exit 1（無関係 2 件、1 回目と再実行で別のテストが 5000ms timeout。単独再実行は全て pass） | quality-exit.txt、q-test-coverage.txt、q-test-coverage-rerun.txt、q-rerun-unrelated.txt、q-rerun-unrelated2.txt |
@@ -52,3 +52,19 @@
 
 - 注記: 390px で commission-table 自体の幅（scrollWidth=clientWidth）は 605 → 628（英語）、504 → 527（日本語）と 23px 増えた。table は 390px のビューポートより元から広く（前 605 / 後 628 > 390）、document の scrollWidth は 390 のまま。判定式（scrollWidth − clientWidth）は前後とも 0 のため停止条件は成立しない。設計 §6 の文言「scrollWidth/clientWidth 後 ≤ 前」を table の scrollWidth 単独と読む場合は後が大きい。この解釈の判断は Opus に委ねる。モーダル本文の横スクロール有無は未測定。
 - B2: select 型エラーなし（tsc exit 0）。children モードで aria-label・data-testid・value・disabled が select 要素に届いた（DOM 差分 0）。
+
+## B1 追加実測: 表を包む祖先（Opus 依頼、2026-10-14）
+commission-table から祖先をたどった最初の overflow-x が auto/scroll/hidden/clip の要素は、全条件・前後とも `DIV.comp-modal-body`（overflow-x: auto）。生出力 /tmp/CC報告ファイル/ssot-ay2w/impl/b1-ancestor.json。
+
+| 条件 | 前 scrollWidth / clientWidth / 差 | 後 scrollWidth / clientWidth / 差 |
+|---|---|---|
+| 390 en | 653 / 390 / 263 | 676 / 390 / 286（+23） |
+| 390 ja | 552 / 390 / 162 | 575 / 390 / 185（+23） |
+| 1280 en | 800 / 800 / 0 | 800 / 800 / 0 |
+| 1280 ja | 800 / 800 / 0 | 800 / 800 / 0 |
+
+初期表示（scrollLeft=0）の右端の見切れ:
+- 解除ボタン: 390 en 222.9→245.9px、390 ja 122.2→145.2px。1280 は前後とも 0。
+- select: 390 en 0→9.6px（新規）。390 ja と 1280 は 0→0。
+
+判定: 設計の趣旨（表の横 overflow を増やさない）に照らし B1 の停止条件に該当すると Opus が判断し、PO に確認した。PO 2026-10-14「y」: +23px を受け入れて本番へ進める。390px の見切れは表統一便で直す。
