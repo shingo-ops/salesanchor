@@ -747,4 +747,68 @@ Error: 一覧がスクロールできる高さになっていない（検査デ�
 
 **残るリスク**:
 1. §16-2／本便冒頭コメントの「お手本 19.0dp」という記録は、今回の訂正後も文書内の別箇所（§16-2 の表そのもの）には修正を入れていない。混乱を避けるため、§16-2 を読む際はこの §17-10 の訂正を優先する。
-2. 実機（Android Chrome）での最終確認は未実施。21pxでの見た目（インク高さ・行間）は計算上の推定であり、本番反映後に実測で裏取りする必要がある。
+2. 実機での最終確認は **2026-10-14 11:25 に実施済み**（PR 4246 マージ・デプロイ後）。本番の受信箱を撮って題字のインク高さを測った結果 **19.3dp**（適用前 18.0dp・お手本の漢字題字「電話」19.0dp）＝**お手本との差は 1.0dp から 0.3dp に縮んだ**。あわせてヘッダー56dp・絞り込みと管理 各44dp・管理の右端が画面右端に接地・検索欄48dp（左右12dp）・行76dp×5件・会話の往復（開く→一覧へ戻る→同じ位置で復帰）に退行がないことを確認した。**スクロール時の固定だけは実機で確認できない**（本番の会話が5件で画面に収まりスクロールが起きないため）＝CI の画面検査が担保する。
+
+## 18. 一覧の行を長押しするとメニューを出す便（2026-10-14・第4便）
+
+> この節は何か（専門用語なしの1行）: スマホで会話一覧の行を長押しすると、「未読にする」「対象外にする」「削除」の3つを選べる小さなメニューが出るようにした作業記録。あわせて「未読にする」を画面上だけの見た目の変更から、サーバに保存する操作に変えた。
+
+### 18-1. PO 決定（2026-10-14）
+
+| 論点 | PO 決定 |
+|---|---|
+| メニューの中身 | 「未読にする」「対象外にする」「削除」の3つ。**「顧客情報」は入れない**（既読を付けずに開く改修が必要なため、別便） |
+| 「未読にする」の保存先 | **サーバに保存する**（従来は画面上だけの変更で再読込で戻っていた）。戻す範囲は**一番新しい受信メッセージ1通だけ**（＝一覧のバッジが1になる）。過去の受信の既読記録は消さない |
+| メニューの新設方法 | ADR-144 §4 の手順（金型が無い場合は実装を止めて PO に報告→許可を得て新設）。本便の PO からの指示そのものが §4 の許可にあたる |
+
+### 18-2. 現物で確認済みの事実
+
+| 事実 | 出典 |
+|---|---|
+| 「未読にする」は API を呼ばず画面上の状態だけ変える（再読込で戻る）＝本便で直す前の挙動 | `frontend/src/pages/inbox/useInboxState.ts:808-813`（変更前） |
+| 既読は `meta_messages.seen_at` と `seen_by_staff_id` に入る。mark-read は inbound かつ `seen_at IS NULL` の行に `NOW()` を入れる | `backend/app/routers/leads.py:1133-1211` |
+| mark-read の権限は `messaging.view`、監査ログの action は `mark_messages_read` | 同上 |
+| 権限名は `messaging.view` と `messaging.send` の2つのみ | `backend/app/` 全文検索 |
+| 「対象外」「削除」は API を叩くが、対象は `selectedLeadId` 固定（引数で受け取らない）＝本便で直す前の挙動 | `frontend/src/pages/inbox/useInboxState.ts:815-833`（変更前） |
+| 一括版（`handleBulkExclude` 等）は `selectedLeadIds` を使う | `frontend/src/pages/inbox/useInboxState.ts:858-885` |
+| 会話一覧（`GET /conversations`）と「直近 inbound」の取得は、どちらも `created_at DESC, id DESC` で最新を決めている | `backend/app/routers/meta_inbox.py:921-931` / `backend/app/routers/leads.py:1083-1086` / `backend/app/routers/leads.py:1786-1791` |
+| `.dropdown-menu` / `.dropdown-item` は ADR-069 として登録済み・トークンのみ | `frontend/src/components.css:673-698` |
+| 既存の長押しは `frontend/src/pages/inbox/useLongPressReveal.ts`（500ms・pointer events・`pointerType !== "touch"` で早期 return・成立時のみ contextmenu を抑止） | `frontend/src/pages/inbox/useLongPressReveal.ts:1-54` |
+| 行の描画は PC とスマホの共通部品 | `frontend/src/pages/inbox/InboxConversationRows.tsx` |
+| スマホ専用の組み立ては別ファイル | `frontend/src/pages/inbox/InboxConversationListMobile.tsx` |
+
+### 18-3. 金型新設の根拠（ADR-144 §4・PO 許可）
+
+`docs/adr/ADR-144-ui-component-governance.md` §4「金型がない場合の手順」は、①実装を止めて PO に報告→②PO 許可を得てから `components/` に金型を新設（`Xxx.tsx` + `Xxx.css`（`var()` のみ）+ `Xxx.stories.tsx`）→③登録後にそれを使って実装、の3段階を定める。
+
+本便の指示文（この設計カードの元になった PO からの作業指示）が①の報告と②の許可を兼ねている（「メニューは金型として新設する（ADR-144 §4 の手順。PO 許可は取得済み＝この指示がそれにあたる）」と明記されている）。これに従い `frontend/src/components/ContextMenu.tsx` / `ContextMenu.css` / `ContextMenu.stories.tsx` を新設した。既存の `.dropdown-menu` / `.dropdown-item`（ADR-069）と見た目のトークン（`--bg-surface` / `--border` / `--radius-lg` / `--shadow-dropdown` / `--size-icon-btn-lg` 等）を揃え、異なるのは表示位置の決め方（トリガー要素への相対配置ではなく、長押しした画面座標を基準に画面端で切れないよう収める）だけにした。
+
+長押しの検出も既存の `frontend/src/pages/inbox/useLongPressReveal.ts`（吹き出しのハート表示用・稼働中のため改造しない）とは別に `frontend/src/hooks/useLongPress.ts` を新設した。作法（500ms・pointerdown で計時・up/cancel/leave で取り消し・成立時だけ contextmenu を抑止）は踏襲しつつ、2点変えている: ① `pointerType` で絞り込まない（既存は touch のみで自動検査から叩けないため、マウスでも成立させる）、② pointerdown の座標から10px以上動いたら取り消す（スクロール中に出ないようにするため）。さらに、長押しが成立した直後に続く click を無効化し、押しただけで会話が開いてしまう退行を防いでいる。
+
+### 18-4. 未読を1通だけ戻す理由
+
+PO 決定は「戻す範囲は一番新しい受信メッセージ1通だけ（＝一覧のバッジが1になる）。過去の受信の既読記録は消さない」。これを素直に実装すると、サーバ側で「その lead の inbound のうち最新の1件」だけを選び、その1件だけ `seen_at` / `seen_by_staff_id` を `NULL` に戻す処理になる。複数の既読 inbound を一括で未読に戻す（mark-read の逆の全件版）ではない点が最大の違いで、過去にスタッフが読んだ記録（誰がいつ読んだか）を壊さないという ADR-1008 の趣旨（`seen_by_staff_id` には `users.id` を入れ、既読の事実を残す）を保つ。「最新」の決め方は会話一覧・mark-read の既存実装と同じ `created_at DESC, id DESC` に合わせ、推測で別の列を使っていない（§18-2 参照）。
+
+### 18-5. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | `POST /leads/{lead_id}/messages/mark-unread` が最新 inbound 1件だけを未読に戻す | `backend/tests/test_messages.py` に6件追加（正常系1件戻る／既に未読0件／outbound のみ0件／lead不在404／他テナント404／権限なし403） | `pytest backend/tests/test_messages.py -v` で**23件成功**（既存17件＋新規6件） |
+| 2 | フロントは mark-unread API を呼び、成功したときだけ画面を更新する（サーバを正とする） | `frontend/src/pages/inbox/useInboxState.ts` の `handleMarkUnread` を確認・コードレビュー | 失敗時は catch して画面を変えない実装に変更済み |
+| 3 | `handleExclude` / `handleDeleteLead` が対象 leadId を引数で受け取れる。開いている会話でない行を消しても閉じない | 同ファイル。`targetLeadId ?? selectedLeadId` へ変更し、`leadId === selectedLeadId` のときだけ `setSelectedLeadId(null)` | 修正済み（コードレビューで確認） |
+| 4 | `InboxMessageThread.tsx:437` の `onClick={handleMarkUnread}` が lead id を引数として渡さない | 同ファイル。`onClick={() => handleMarkUnread()}` に修正 | 修正済み |
+| 5 | 新設した金型（ContextMenu）が既存の `.dropdown-menu` と同じトークンのみを使う | `cd frontend && node scripts/check-css-hardcoded-colors.js` / `node scripts/check-css-hardcoded-values.js` | 両方 PASS（違反なし） |
+| 6 | 新設した金型に stories がある | `cd frontend && node scripts/check-stories-count.js` | PASS（全49コンポーネントに stories あり） |
+| 7 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 25項目すべて `exited with code 0`（lint は既存warningのみ・error 0件・本変更由来の新規違反なし） |
+| 8 | 型が通る | `cd frontend && npx tsc --noEmit` | 本変更由来の新規エラー0件（既存の無関係な4件は `api/generated/schema` 未生成・`SoldOutResultsPanel.tsx` に起因し、本変更の対象ファイルではない） |
+| 9 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | 1069件中1057件成功・12件失敗（10ファイル）。失敗ファイルはいずれも受信箱・ContextMenu・useLongPress と無関係（`LeadFormButtonMigration.test.tsx` 等）。個別再実行（`RuleDrawer.test.tsx` 等）では全件成功を確認し、フルスイート実行時の負荷由来のタイムアウトと判断。受信箱関連（`InboxMessageThread.discordSendError.test.tsx` 8件、`src/pages/inbox/` 配下全体47件）は単独実行で全件成功 |
+| 10 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（リポジトリ直下・4本のコミット後に実行） | `PASS: 対象11ファイル・増加なし` |
+| 11 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（4本のコミット後に実行） | `✅ UI governance: 新規ハードコードなし`（対象ファイル数5） |
+| 12 | e2e（Playwright）の構文確認 | この端末（arm64/Termux）では chromium が動かないため実行不可。`cd frontend && npx playwright test --list` | 新規6テスト×3幅（vl-mobile-390 / vl-tablet-768 / vl-desktop-1280）を含む**304件**収集成功。実機 Playwright 実行は CI（x86）に委ねる |
+| 13 | 長押し・メニューの画面検査を新設した | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` に `受信箱 第4便（一覧の行を長押しするとメニューを出す）` を新設（6テスト: メニュー3項目と文言・44px以上・行の近くに出る・はみ出さない／長押しだけでは開かない／普通のタップは開く／外側クリックで閉じる／選択モードでは出ない／mark-unread が呼ばれる） | 追加済み。`npx playwright test --list` で収集確認済み（#12 と同じ結果） |
+
+### 18-6. 残るリスク
+
+1. **実機 Playwright 実行は未確認。** この端末では chromium が起動できないため、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない。長押しの実際の成立（CDP 経由の `page.mouse.down/up` で座標ベースの長押しを再現する方式）が CI（x86）で本当に動くかは初回実行で初めて分かる。
+2. **「顧客情報」を今便のメニューに入れていない。** PO 決定どおり別便（既読を付けずに開く改修）待ち。長押しメニューの項目数が増えたときに `ContextMenu` の `items` 配列を増やすだけで対応できる設計にしてある。
+3. **この設計カードの章番号は第1便（§15）・第2便（§16）の次に本節（§18）を置いている。** 本カード内に「第3便」の節が見当たらない（§9付近の表に候補として出てくる「行の密度変更」は別候補でまだ着手されていない）。章番号の欠落（§17 相当）については本便の作業指示で「## 18. として節を作る」と明示されていたため、その指示のとおり §18 とした。欠落が意図的か記録漏れかは本カードの執筆時点では分からないため、PO/設計担当に確認が必要。
