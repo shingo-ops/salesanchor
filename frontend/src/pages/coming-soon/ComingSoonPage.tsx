@@ -6,10 +6,17 @@
  *
  * 変更履歴:
  *   2026-04-17: 初版作成
+ *   2026-10-14: 第7便（PO 指摘）。戻るボタンを追加。/templates と /faq の2ルートから
+ *     使われるが、戻る手段が無く行き止まりだった（スマホの「…」→テンプレートで開くと
+ *     元の会話に戻れない）。直前の画面に戻る（navigate(-1)）ため、呼び出し元ルートを
+ *     問わず汎用に機能する。
  */
 
 import { useTranslation } from "react-i18next";
-import { PAGE_ICONS } from "../../constants/icons";
+import { useNavigate } from "react-router-dom";
+import { PAGE_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
+import { Button } from "../../components/Button";
+import { ICON } from "../../constants/iconSizes";
 
 interface Props {
   title: string;
@@ -18,8 +25,26 @@ interface Props {
 
 export default function ComingSoonPage({ title, description }: Props) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const BackIcon = SCHEDULE_SETTINGS_ICONS.back;
   return (
     <div className="page">
+      <div className="coming-soon-back-row">
+        {/* 直前の画面に戻る。/templates・/faq のどちらから開かれても同じ挙動
+            （PO 指摘・2026-10-14: 戻る手段が無い行き止まりだった）。
+            PO 決定（2026-10-14）: **画面の左上に矢印だけ・スマホのときだけ出す**
+            （PC は左のメニューで移動できるため出さない＝CSS 側で制御）。
+            会話画面の「一覧へ戻る」と同じ見た目・同じ戻り方に揃える。 */}
+        <Button
+          variant="ghost"
+          size="lg"
+          iconOnly
+          onClick={() => navigate(-1)}
+          aria-label={t("common.back")}
+        >
+          <BackIcon size={ICON.base} aria-hidden="true" />
+        </Button>
+      </div>
       <div className="coming-soon">
         <div className="coming-soon-icon" aria-hidden="true">
           <PAGE_ICONS.comingSoon size={64} />

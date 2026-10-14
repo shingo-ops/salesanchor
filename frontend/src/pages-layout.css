@@ -346,6 +346,23 @@
   cursor: pointer;
 }
 
+/* 準備中ページ 戻るボタンの行（第7便・PO 指摘: 戻る手段が無い行き止まり対策） */
+.coming-soon-back-row {
+  /* PO 決定（2026-10-14）: 矢印は**スマホのときだけ**画面の左上に出す。
+     PC は左のメニューから移動できるため出さない。 */
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .coming-soon-back-row {
+    display: flex;
+    align-items: center;
+    /* 左端の位置は会話画面のヘッダーと同じ（--space-4） */
+    padding-left: var(--space-4);
+    padding-top: var(--space-2);
+  }
+}
+
 /* 準備中ページ
    ※ App.css L719-766 よりレガシーセクションから救出 */
 .coming-soon {
@@ -356,6 +373,17 @@
   padding: var(--space-8) var(--space-8);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+/* PO 決定（2026-10-14・B案）: 戻る矢印を足したぶんカードを上に詰め、矢印が無かった
+   ときと同じ位置に見えるようにする。矢印の行が占める高さ＝上の余白（--space-2）＋
+   ボタン（--size-icon-btn-lg）。負にならないよう max() で 0 を下限にする。
+   **この指定は上の .coming-soon より後に書く必要がある**（同じ強さの指定は
+   後に書いた方が勝つため。先に書くと `margin:` の一括指定に上書きされる）。 */
+@media (max-width: 767px) {
+  .coming-soon {
+    margin-top: max(0px, calc(var(--coming-soon-margin-top) - var(--space-2) - var(--size-icon-btn-lg)));
+  }
 }
 
 .coming-soon-icon {
