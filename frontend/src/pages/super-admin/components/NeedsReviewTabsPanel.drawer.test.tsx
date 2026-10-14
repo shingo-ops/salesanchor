@@ -71,7 +71,7 @@ describe("production tab row drawer", () => {
     await screen.findByRole("dialog");
     expect(screen.queryByText("This item is no longer in the review list")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
-    fireEvent.click(within(document.querySelector(".review-item-fix") as HTMLElement).getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Keep as it is?" })).getByRole("button", { name: "Keep" }));
   };
 
   it("re-reads the same item from the refreshed list so the Fix column shows the saved value", async () => {
@@ -101,7 +101,7 @@ describe("production tab row drawer", () => {
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
-    fireEvent.click(within(document.querySelector(".review-item-fix") as HTMLElement).getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Keep as it is?" })).getByRole("button", { name: "Keep" }));
     await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
     expect(api.post).toHaveBeenCalledWith("/tcg/items/v102-item/review-ack", {
       source_message_id: "source-v102-item",
@@ -126,7 +126,9 @@ describe("production tab row drawer", () => {
     fireEvent.click(await screen.findByText("Card V102"));
     await screen.findByRole("dialog");
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
-    expect(within(document.querySelector(".review-item-fix") as HTMLElement).getAllByRole("button", { name: "Keep as is" })).toHaveLength(1);
+    const popup = within(screen.getByRole("dialog", { name: "Keep as it is?" }));
+    expect(popup.getByText("Not in the product master")).toBeTruthy();
+    expect(popup.queryByText("Condition unknown")).toBeNull();
   });
 
   it("does not show the keep-as-is button for a v6 item", async () => {

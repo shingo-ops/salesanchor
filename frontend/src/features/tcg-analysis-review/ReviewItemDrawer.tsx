@@ -7,12 +7,15 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import ConfirmModal from "../../components/ConfirmModal";
 import { Drawer } from "../../components/Drawer";
 import { Stack } from "../../components/Stack";
 import { TwoColumn } from "../../components/TwoColumn";
+import { ApiError } from "../../lib/api";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
-import { choicesForScope, ReviewFixWizard, type FixScope } from "./ReviewFixWizard";
+import { ackableReasonCodes, ReviewFixWizard, type FixScope } from "./ReviewFixWizard";
+import { postReviewAck } from "./reviewActions";
 import { fixRowsOf } from "./reviewFixRows";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
@@ -41,37 +44,53 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [ackedCodes, setAckedCodes] = useState<string[]>([]);
   const [ackedNotice, setAckedNotice] = useState(false);
+  const [ackError, setAckError] = useState<string | null>(null);
+  const [ackPending, setAckPending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const fixRows = fixRowsOf(item, t);
   const fixableRowKeys = Object.keys(fixRows);
-  const canKeep = choicesForScope(item, "keep", ackedCodes).length > 0;
+  const keepCodes = ackableReasonCodes(item, ackedCodes);
+  const canKeep = keepCodes.length > 0;
 
   const selectRow = (rowKey: string) => {
     const rowScope = fixRows[rowKey]?.scope;
     if (!rowScope) return;
     setAckedNotice(false);
+    setAckError(null);
     setSelectedRowKey(rowKey);
     setScope(rowScope);
   };
 
-  const chooseKeep = () => {
+  const askKeep = () => {
     setAckedNotice(false);
-    setSelectedRowKey(null);
-    setScope("keep");
+    setAckError(null);
+    setConfirmOpen(true);
   };
 
-  // 理由を確認済みにできた。使い切ったら「このままで良い」を閉じて通知だけ残す
-  const handleAcked = (codes: string[]) => {
-    const next = [...ackedCodes, ...codes];
-    setAckedCodes(next);
-    if (choicesForScope(item, "keep", next).length === 0) {
-      setScope(null);
-      setAckedNotice(true);
+  // 「このまま」を押した。残っている理由をまとめて1回で確認済みにする
+  const confirmKeep = async () => {
+    setConfirmOpen(false);
+    setAckPending(true);
+    try {
+      await postReviewAck(item, keepCodes);
+    } catch (error: unknown) {
+      setAckError(error instanceof ApiError && error.message ? error.message : t("reviewItem.ackFailed"));
+      setAckPending(false);
+      return;
+    }
+    setAckedCodes([...ackedCodes, ...keepCodes]);
+    setAckedNotice(true);
+    setAckPending(false);
+    try {
+      await onRefresh();
+    } catch {
+      // 読み直しの失敗は保存結果と無関係。次の操作・再表示で最新になる
     }
   };
 
   return (
-    <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")} size="wide">
+    <Drawer open onClose={confirmOpen ? () => undefined : onClose} title={t("reviewItem.drawerTitle")} size="wide">
       <Stack gap="4">
         {removedFromList && <Callout variant="info" title={t("reviewItem.removedFromList")} />}
         <section className="review-item-reasons-block">
@@ -97,11 +116,12 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             {details.length > 0 && <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>}
             {canKeep && (
               <div>
-                <Button variant="secondary" size="sm" onClick={chooseKeep}>
-                  {t("reviewItem.wizard.choice.keep")}
+                <Button variant="secondary" size="sm" loading={ackPending} disabled={ackPending} onClick={askKeep}>
+                  {t("reviewItem.ack")}
                 </Button>
               </div>
             )}
+            {ackError && <Callout variant="warning" title={ackError} />}
             {ackedNotice && <Callout variant="info" title={t("reviewItem.acked")} />}
           </Stack>
         </section>
@@ -126,13 +146,29 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
               key={`${item.extraction_item_id}:${scope}`}
               item={item}
               scope={scope}
-              ackedCodes={ackedCodes}
-              onAcked={handleAcked}
               onRefresh={onRefresh}
             />
           </section>
         )}
       </Stack>
+      <ConfirmModal
+        open={confirmOpen}
+        title={t("reviewItem.ackConfirm.title")}
+        message={
+          <>
+            <p>{t("reviewItem.ackConfirm.message")}</p>
+            <ul className="review-item-reasons">
+              {keepCodes.map((code) => (
+                <li key={code}>{reviewReasonLabel(t, code)}</li>
+              ))}
+            </ul>
+          </>
+        }
+        confirmLabel={t("reviewItem.ackConfirm.confirm")}
+        cancelLabel={t("common.close")}
+        onConfirm={() => void confirmKeep()}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Drawer>
   );
 }
