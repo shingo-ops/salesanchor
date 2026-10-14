@@ -116,6 +116,29 @@ export async function openInboxListWithConversations(page: Page, count: number):
  * frontend/src/pages/inbox/InboxMessageThread.tsx）が成立する。
  * 既存の openInboxList() / baseMocks() はそのまま変更しない。
  */
+/**
+ * 商談段階が "lead" の相手で一覧を開く（第8便・カルテの固定操作バーの検査用）。
+ *
+ * カルテの固定操作バー（karte-action-bar）は
+ * `frontend/src/pages/inbox/InboxKartePanel.tsx` の `if (!primaryLabel) return null;` のとおり、
+ * **商談段階が "lead"（または "existing_customer"）のときだけ**描かれる。
+ * 既定の仮データ（baseMocks の "GET /leads/5001"）には status が無いため出ない。
+ * 既定を変えると他の検査の見え方が変わるので、この検査専用にここで status を足す。
+ */
+export async function openInboxListWithLeadStatus(page: Page): Promise<void> {
+  const base = baseMocks();
+  const leadDetail = base["GET /leads/5001"] as Record<string, unknown>;
+
+  await installAuthBypass(page);
+  await mockApi(page, {
+    ...base,
+    "GET /leads/5001": { ...leadDetail, status: "lead" },
+  });
+  await page.goto("/lead-chat");
+  await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+}
+
 export async function openInboxListWithDiscordUnlinkedConversation(page: Page): Promise<void> {
   const base = baseMocks();
   const conversations = (conversationsFixture as ConversationsFixture).conversations.map((c) =>

@@ -76,7 +76,7 @@ describe('InventoryPage single fetch on open', () => {
     await new Promise((r) => setTimeout(r, 30));
     const calls = inventoryCalls();
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toContain('merge_same_post=true');
+    expect(calls[0]).toContain('merge_same_post=false');
   });
 
   it('ignores a stale response that resolves after a newer one', async () => {
