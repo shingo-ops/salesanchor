@@ -136,13 +136,13 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 
 
 # --- 在庫表を1文にする便: distribution_rows_sql の文字列が変更前と1文字も違わないこと ---------------------------
-# 期待値は変更前（origin/main 4803be067）の distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の
+# 期待値は review-excluded-ack 便（cr_review_ack LATERAL 追加）で再生成した。元は変更前（origin/main 4803be067）の distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の
 # 長さと SHA-256。旧実装をテスト内で再現せず、変更前版から生成した値を固定する。
 _GOLDEN = {
-    (False, False): (22572, "8d869d87424028f16f61beeaadfdf0fa8f870eff6bbe39d7a0540abb05d3d5fc"),
-    (False, True): (23553, "062f8f2599d7b79610040b2840498ebb72c7d9da771f01f029f465293a8c7cd8"),
-    (True, False): (22606, "6151c4f5745bbff8d94e0150245789d35f4a52ab049b3e7087c17eef228acf28"),
-    (True, True): (23587, "bf2ef6e6a75721e8fd289c4cf366e16e6dd8f32331541e195a170447eb54d6d6"),
+    (False, False): (23948, "6417168e8a472e2e73019f7e2833751b9228cefd0b73eaf4583e51fd501f11b0"),
+    (False, True): (24929, "4c8990fabcf386a946a742187d0d2e9a8ae028816707a8e5a2dad2987f2b07e6"),
+    (True, False): (23982, "c7ce4b593c93ea7e7474813f8fed45596fa1ee47b608edff32688a992c54aabd"),
+    (True, True): (24963, "2343c3a08c754c560c771fa9bd2c5ecdd22b3b4f1b93451d9def7add691abbad"),
 }
 
 

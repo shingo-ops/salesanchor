@@ -3762,7 +3762,6 @@
   "reviewItem": {
     "drawerTitle": "要確認の商品",
     "sourceHeading": "原文",
-    "fixHeading": "直す",
     "noReasons": "理由はありません",
     "sourceLine": "出どころ：{{source}}",
     "ack": "このままで良い",
@@ -3773,7 +3772,8 @@
     "gapCandidates": "候補: {{names}}",
     "compareHeading": "比較",
     "fixColumn": { "tapToFix": "押して直す" },
-    "pickRowHint": "直したい行を表から押してください",
+    "excludedHelp": "「{{status}}」と読んだため、在庫の対象から外しています。合っていれば「このままで良い」、違えば表の行を押して直してください。",
+    "excludedHelpNoStatus": "販売状況から、在庫の対象から外しています。合っていれば「このままで良い」、違えば表の行を押して直してください。",
     "removedFromList": "この商品は要確認から外れました",
     "productLabel": "商品",
     "productCurrent": "今の商品: {{name}}",

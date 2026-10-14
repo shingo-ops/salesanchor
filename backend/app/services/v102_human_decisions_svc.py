@@ -67,7 +67,9 @@ _INSERT_ACK_SQL = """
     VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), :field, :sv, :hv, :cb)
 """
 _ACTIVE_PRODUCTS_SQL = "SELECT id FROM public.products WHERE id = ANY(:ids) AND is_active IS TRUE"
-_CURRENT_REASONS_SQL = "SELECT review_reasons FROM {schema}.analysis_results WHERE extraction_item_id = CAST(:eid AS uuid)"
+_CURRENT_REASONS_SQL = (
+    "SELECT review_reasons FROM {schema}.analysis_results WHERE extraction_item_id = CAST(:eid AS uuid) FOR UPDATE"
+)
 
 
 @dataclass(frozen=True)
@@ -246,7 +248,12 @@ async def save_review_ack(
     """item_corrections に field_name='review_ack' を1行追記する（system_value は今の review_reasons）。保存した行数（1）。"""
     schema = TCG_SCHEMA
     current = (await db.execute(text(_CURRENT_REASONS_SQL.format(schema=schema)), {"eid": extraction_item_id})).first()
-    human_value = json.dumps({"v": REVIEW_ACK_VERSION, "codes": normalize_ack_codes(codes)}, ensure_ascii=False)
+    # 有効な前の確認済みと和集合にする（1理由ずつ押しても先の分が消えない）。書き写し直し後は load_v102_decisions が空を返す
+    previous = (await db.run_sync(lambda sync: load_v102_decisions(sync, [extraction_item_id]))).get(extraction_item_id)
+    previous_codes = sorted(previous.ack_codes) if previous is not None else []
+    human_value = json.dumps(
+        {"v": REVIEW_ACK_VERSION, "codes": normalize_ack_codes([*previous_codes, *codes])}, ensure_ascii=False
+    )
     await db.execute(
         text(_INSERT_ACK_SQL.format(schema=schema)),
         {
