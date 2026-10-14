@@ -43,7 +43,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
   // チャネルマスタを取得して手動チャネル判定
   useEffect(() => {
     api
-      .get<ChannelMaster[]>("/api/v1/channel-masters")
+      .get<ChannelMaster[]>("/channel-masters")
       .then((res) => {
         const all: ChannelMaster[] = Array.isArray(res) ? res : (res as { data?: ChannelMaster[] }).data ?? [];
         const manuals = all.filter((c) => c.connection_type === "manual");
@@ -73,7 +73,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
     setSaveError(null);
     setDupWarning(null);
     try {
-      await api.post(`/api/v1/leads/${leadId}/conv-logs`, {
+      await api.post(`/leads/${leadId}/conv-logs`, {
         channel_type: channelType,
         direction: "inbound",
         content_text: contentText.trim(),

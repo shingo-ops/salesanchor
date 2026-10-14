@@ -33,7 +33,7 @@ export default function ChannelMastersPage() {
   const load = useCallback(() => {
     setLoading(true);
     api
-      .get<ChannelMaster[]>("/api/v1/channel-masters")
+      .get<ChannelMaster[]>("/channel-masters")
       .then((res) => {
         const all: ChannelMaster[] = Array.isArray(res) ? res : (res as { data?: ChannelMaster[] }).data ?? [];
         setChannels(all);
@@ -51,7 +51,7 @@ export default function ChannelMastersPage() {
     setSaving(true);
     setError(null);
     try {
-      await api.post("/api/v1/admin/channel-masters", { platform, display_name: displayName });
+      await api.post("/admin/channel-masters", { platform, display_name: displayName });
       setNewPlatform("");
       setNewDisplayName("");
       load();
@@ -65,7 +65,7 @@ export default function ChannelMastersPage() {
   const handleDelete = useCallback(async (id: number) => {
     setError(null);
     try {
-      await api.delete(`/api/v1/admin/channel-masters/${id}`);
+      await api.delete(`/admin/channel-masters/${id}`);
       load();
     } catch {
       setError(t("channelMasters.deleteError"));

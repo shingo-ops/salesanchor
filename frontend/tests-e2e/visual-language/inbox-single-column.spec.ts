@@ -915,3 +915,72 @@ test.describe("visual-language: 受信箱 第4便（一覧の行を長押しす�
     expect(calls).toEqual([5001]);
   });
 });
+
+test.describe("visual-language: 受信箱 第5便（メニューを左側に出し、長押しの文字選択を止める）", () => {
+  const row = (page: Page): Locator =>
+    page.locator("button.conversation-item", { hasText: SAMPLE_CONVERSATION_NAME });
+  const menu = (page: Page): Locator => page.locator(".comp-context-menu");
+
+  test("スマホ: メニューの左端が画面左から --space-3 の余白に出る（PO 指摘・右側だと押しづらい）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    const theRow = row(page);
+    const rowBoxBefore = await theRow.boundingBox();
+    expect(rowBoxBefore, "行の矩形が取れない").not.toBeNull();
+
+    await longPressRow(page, theRow);
+    await expect(menu(page)).toBeVisible();
+    await page.mouse.up();
+
+    // ContextMenu.tsx の align="left" は --space-3 トークンの値を左端の余白に使う。
+    // ここでは実際にそのトークンの値を読んで比べる（固定の 12 を書かない）。
+    const spaceToken = await page.evaluate(() =>
+      Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--space-3").trim(),
+      ),
+    );
+    expect(Number.isFinite(spaceToken), "--space-3 トークンが読めない").toBe(true);
+
+    const menuBox = await menu(page).boundingBox();
+    expect(menuBox, "メニューの矩形が取れない").not.toBeNull();
+
+    // 1. 左端が --space-3 の余白（±1px）であること＝左側に出ていること
+    expect(menuBox!.x, "メニューの左端").toBeGreaterThanOrEqual(spaceToken - 1);
+    expect(menuBox!.x, "メニューの左端").toBeLessThanOrEqual(spaceToken + 1);
+
+    // 2. 画面内に収まっていること（従来どおり）
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    expect(menuBox!.x, "メニューの左端").toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width, "メニューの右端").toBeLessThanOrEqual(viewport!.width);
+    expect(menuBox!.y + menuBox!.height, "メニューの下端").toBeLessThanOrEqual(viewport!.height);
+
+    // 3. 縦位置は従来どおり：押した行の近くに出ること（横位置が変わっても縦は変えない）
+    expect(
+      overlapsOrAdjacent(menuBox!, rowBoxBefore!),
+      "メニューが行の近くに出ていない（縦方向）",
+    ).toBe(true);
+  });
+
+  // 2026-10-14（PO 指摘・実機実測）: 指で長押しすると OS の文字選択（青いハイライトと
+  // 選択ハンドル）が働く不具合があった。この端末では Playwright が動かず実機でも
+  // 確認できないため、CI（本テスト・マウス操作）でできるのは
+  // 「user-select: none の指定が効いているか」の確認だけである。
+  // 実機の選択が実際に止まることの証明にはならない（CI はマウス操作のため、
+  // 指特有のこの不具合は元々 CI では再現しない＝検出できていなかった）。
+  test("スマホ: 行とメニューに user-select: none が指定されている（文字選択の抑止・実機確認は別途必要）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    const rowUserSelect = await row(page).evaluate((el) => getComputedStyle(el).userSelect);
+    expect(rowUserSelect, "行の user-select").toBe("none");
+
+    await longPressRow(page, row(page));
+    await expect(menu(page)).toBeVisible();
+    await page.mouse.up();
+
+    const menuUserSelect = await menu(page).evaluate((el) => getComputedStyle(el).userSelect);
+    expect(menuUserSelect, "メニューの user-select").toBe("none");
+  });
+});

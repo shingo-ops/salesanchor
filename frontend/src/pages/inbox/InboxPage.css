@@ -1254,6 +1254,16 @@
   .conv-item {
     min-height: var(--min-height-conv-item-mobile);
     padding-right: var(--space-4);
+    /* 受信箱 第5便（PO 指摘・2026-10-14・実機実測）: 指で行を長押しすると
+       OS の文字選択（青いハイライトと選択ハンドル）が働いてしまう。
+       長押しはメニューを出す操作であって文字を選ぶ操作ではないため止める。
+       PC は文字をドラッグ選択できたままにするので、この @media（スマホのみ）
+       の内側だけに書く。マウス操作の CI では再現しないため、この指定が
+       選択を止めることの確認は実機で PO が行う（本 PR では getComputedStyle
+       で指定が効いていることのみを確認する）。 */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* ===== 見た目の作り込み（2026-10-13・実測に基づく）=====

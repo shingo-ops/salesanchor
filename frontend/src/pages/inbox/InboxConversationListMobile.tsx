@@ -221,12 +221,15 @@ export function InboxConversationListMobile({
         unreadOnly={unreadOnly}
         longPressHandlersFor={bindLongPress}
       />
+      {/* 受信箱 第5便（PO 指摘・2026-10-14）: 指で押した x 座標のまま出すと
+          画面右半分に出て押しづらい。align="left" で画面左端から一定の余白に固定する。 */}
       <ContextMenu
         open={rowMenu !== null}
         onClose={closeRowMenu}
         anchor={rowMenu?.anchor ?? null}
         items={rowMenuItems}
         ariaLabel={t("inbox.moreActions")}
+        align="left"
       />
     </aside>
   );
