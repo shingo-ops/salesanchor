@@ -8,7 +8,7 @@
 |---|---|---|
 | frontend/src/tokens.css:355 | `  --input-select-min-w:      280px;  /* セレクト最小幅 */` | 行ごと削除（前後の行は逐語） |
 
-触らない: 他の未使用トークン 30 件、tokens.css の他の行、evidence の過去記録、docs/specs/design-system/design.md。
+触らない: 他の未使用トークン 30 件、tokens.css の他の行、evidence の過去記録。docs/specs/design-system/design.md は実装者は触らず、Opus が反映記録と §AY-2u 節を追記する。
 
 ## 受入
 |基準|検証方法|
