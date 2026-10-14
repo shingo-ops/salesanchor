@@ -1193,3 +1193,80 @@ PO 指摘の根拠は実機の見た目（過密）だが、コードでも裏�
 
 - **`.karte-close-row` の高さを `var(--topbar-height)`（56px）に固定する際、既存の `padding: var(--space-3) var(--space-3) var(--space-2)`（タブレット側）を完全に上書き（`padding: 0 var(--space-3)`）する形にした。** 依頼文に「帯の高さは --topbar-height（56px）」と明示されていたためこの値を採用したが、`.karte-close-title` の行間・ベースラインが会話ヘッダー（`.inbox-thread-header-mobile`）と完全に一致しているかはピクセル単位では未確認（フォントサイズ・行揃えは既存の `.karte-close-title` 指定をそのまま使用しているため大きくは外れないはずだが、実機・画面検査のどちらでも縦の文字位置までは測っていない）。
 - **`.karte-overlay` の DOM 上の存在（`.inbox-columns` の外・パネルの兄弟要素）は変更していないが、全画面化後にこの要素自体を削除すべきかは判断を保留した。** 依頼文に「挙動を変えずそのまま残す」とあったため残したが、将来 ADR-108 側でパネルの構造を見直す際にはこの幕の要否も合わせて検討した方がよいかもしれない（コードの見通しの観点。実害は§22-4 Dで確認済みの通り無い）。
+
+## 23. カルテのヘッダー統一＋商談化の確認ポップアップ便（2026-10-14・第9便）
+
+> この節は何か（専門用語なしの1行）: カルテ（顧客情報画面）の上の帯をスマホの会話画面と同じ見た目にそろえ、「商談化」ボタンを押したときに初めて担当の営業を選んで保存できるようにした作業記録。
+
+### 23-1. PO 決定（2026-10-14）
+
+| 論点 | 決定 |
+|---|---|
+| カルテの上部（スマホのみ） | 会話画面と同じヘッダー型にして統一感を出す。戻るボタンは左、顔写真と顧客名もヘッダーに入れる |
+| 「顧客ページを開く」 | 削除する（不要） |
+| 「商談化へ」を押したとき | 中央にポップアップを出して確認画面にする |
+| ポップアップの中身 | 担当の営業をプルダウンから選ぶ。下部に水平に「確定」と「閉じる」。確定＝ネイビー、閉じる＝グレー |
+| 確定したときの保存 | 状態を `negotiating`（商談進行中）にし、選んだ営業を担当者として保存 |
+| プルダウンに出す人 | 役割が「営業」または「リーダー」の人 |
+| 確定のあと | ポップアップを閉じて顧客情報に戻る（段階バッジが変わる） |
+
+### 23-2. 確認済みの事実（実装前に現物で確認済み）
+
+| 事実 | 出典 |
+|---|---|
+| **「商談化」の処理はそもそも存在していなかった。** 旧実装は `navigate('/crm/leads?convert=' + id)` で移動するだけで、`?convert=` を読む画面は全文検索で**0件**だった | `frontend/src/pages/inbox/useInboxState.ts:790-793`（変更前） |
+| 既存の `PATCH /leads/{lead_id}` が `status` と `assigned_to` の両方を受け取る（権限 `leads.update`） | `backend/app/schemas/lead.py:163,169`・`backend/app/routers/leads.py:490-498` |
+| `LeadStatus` に `negotiating`（商談進行中）があり、i18n 表示は「商談中」（`leads.statusCode.negotiating`） | `backend/app/schemas/lead.py:31-39`・`frontend/src/locales/ja.json:990` |
+| `leads.assigned_to` は `public.users.id` と結合している＝users の id を入れる | `migrations/003_add_phase1_tenant_tables.sql:92`・`backend/app/routers/analytics.py:106-113` |
+| `GET /staff`（権限 `staff.view`）が `user_id: int \| None` と `role_name` / `status` / 氏名を返す。`per_page` 上限は100 | `backend/app/routers/staff.py:523-556`・`backend/app/schemas/staff.py:145-177` |
+| **在籍中を表す値は `status = 'active'`。** `staff.status` は `CHECK (status IN ('active','inactive','pending'))` で、`active`/`inactive`/`pending` の3値のみ（推測ではなく migration の制約で確認） | `migrations/019_create_staff_tables.sql:49-50` |
+| 役割は日本語の名前で管理（`営業` / `リーダー` 等） | `migrations/021_seed_roles_and_role_permissions.sql:41-48` |
+| `ConfirmModal` 金型は `open/title/message(ReactNode)/confirmLabel/cancelLabel/onConfirm/onCancel` を取り、下部に `.form-actions` で閉じる（secondary）＋確定（primary）を横並びで出す | `frontend/src/components/ConfirmModal.tsx`（変更前） |
+| 既に `GET /staff?per_page=100` を使い `user_id != null` で絞ってから select の選択肢にする前例が別画面にある | `frontend/src/components/CommissionPanel.tsx:92-121`（担当者報酬パネル） |
+| `showProfileModal` / `InboxProfileModal` を開く唯一の入口が今回削除した「顧客ページを開く」ボタンだった | `frontend/src/pages/inbox/InboxKartePanel.tsx`（変更前・`setShowProfileModal(true)` の呼び出し箇所は1か所のみ） |
+
+### 23-3. 実装方法
+
+- **A（ヘッダー統一・スマホ幅のみ）**: `InboxKartePanel.tsx` の `.karte-close-row` に、既存の `.karte-hd-top` と**同じ値・同じ出し方**（`selectedConversation.profile_picture_url` → `getInitials` フォールバック／`cardForm.nickname` 等のフォールバック連鎖）で顔写真・顧客名を追加した。新しい取得処理（API 呼び出し・state）は増やしていない。CSS は `InboxPage.css` の既定（PC/タブレット共通ブロック）で `.karte-close-mobile-identity { display: none; }` を既定非表示にし、既存の `@media (max-width: 767px)`（第8便で導入済みのブロック）の中でのみ表示に切り替えた。同じブロックで `.karte-close-title` をスマホだけ非表示にし、左余白を会話画面ヘッダー（`.inbox-thread-header-mobile`）と同じ `padding-left: var(--space-4)` に揃えた（従来は `--space-3` だった）。タブレット（768〜1279px、既存ブロック）は一切変更していない＝「顧客情報 ×」のまま。
+  - 移設後に `.right-panel-header`（`.karte-hd-top`）に残るもの: **段階バッジ・補足情報（`.right-panel-sub` = country/customer_type）・最終連絡（`.karte-hd-meta` の `.karte-last-contact`）は残る**（空にならない）。顔写真・名前は PC/タブレットではそのまま表示を続け、スマホだけ `.karte-hd-top .right-panel-avatar, .karte-hd-top .karte-hd-name-block { display: none; }` で重複表示を隠した。
+- **B（「顧客ページを開く」削除）**: `InboxKartePanel.tsx:184` 付近の `.karte-open-link` ボタンを削除。`InboxPage.css` の `.karte-open-link` 定義も全文検索で他に使用箇所が無いことを確認した上で削除した。i18n キー `inbox.openCustomerPage` は ja/en 両方から削除（他に参照が無いことを確認済み）。`last_message_at` が無いリードで `.karte-hd-meta` が空のまま margin だけ残らないよう、`selectedConversation?.last_message_at` の条件を div ごとの描画に変更した（ボタン削除に伴う副作用の修正）。
+- **C（商談化の確認ポップアップ）**: 既存の `ConfirmModal` 金型をそのまま使用。`message` に `SelectControl`（`options` モード）を渡し、担当候補を表示する。候補は `useInboxState.ts` の `loadConvertAssignees()` が `GET /staff?per_page=100&status=active` を呼び、`role_name === "営業" || role_name === "リーダー"` かつ `user_id != null` のものだけに絞る（クライアント側フィルタ。理由は §23-5 参照）。確定で `PATCH /leads/{id}` に `{status: "negotiating", assigned_to: <user_id>}` を1回で送り、成功時だけ `loadLeadDetail`（既存の読み直し処理）でカルテを再取得し、`conversations` の `lead_status` も既存の部分更新パターン（`handleMarkUnread` 等と同じ `setConversations` の map）で揃える。失敗時は状態を変えずエラー文言を表示する（第4便の「未読にする」と同じ作法）。`ConfirmModal` には後方互換の `confirmDisabled?: boolean`（既定 `false`）を追加し、選択肢が空・未選択・保存中のときに確定を押せなくした。新しい金型は作っていない。
+
+### 23-4. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | スマホでカルテの帯に戻る矢印・顔写真・顧客名が並び、高さ56px・矢印44px以上 | `inbox-single-column.spec.ts`「受信箱 第9便」1本目 | §23-5 |
+| 2 | 「顧客ページを開く」がどこにも無い | 同2本目 | §23-5 |
+| 3 | 「商談化」で中央にポップアップ（`role="dialog"`）が出て、選択肢が営業・リーダーだけ | 同3本目 | §23-5 |
+| 4 | 確定・閉じるが横並びで、確定が `--accent`・閉じるがグレー | 同4本目（`--accent` の実値を読んで比較。生の色コードなし） | §23-5 |
+| 5 | 確定で `PATCH /leads/{id}` が `{status:"negotiating", assigned_to}` で呼ばれ、ポップアップが閉じて段階バッジが更新される | 同5本目 | §23-5 |
+| 6 | PC・タブレットでは帯は従来どおり | 同6本目 | §23-5 |
+| 7 | `npm run check:all` が緑（i18n キー数一致を含む） | `cd frontend && npm run check:all` | §23-5 |
+| 8 | 型が通る | `cd frontend && npx tsc --noEmit` | §23-5 |
+| 9 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | §23-5 |
+| 10 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §23-5 |
+| 11 | UI ガバナンス（生 UI 部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js` | §23-5 |
+
+### 23-5. 実際の検証出力
+
+- `cd frontend && npx tsc --noEmit` → 本便の変更コミット後は **エラー0件**。素の worktree では `src/api/generated/schema` 未生成による2件のエラーが出たが、`npm run generate:api-types` 実行後は解消（本便の変更とは無関係なセットアップ由来・origin/main でも同じ）。
+- `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`（`check:i18n-missing-keys` を含む。`npm run lint` は 0 errors・139 warnings → 自分の新規コードに DB 値の役割名比較（`"営業"`/`"リーダー"`）があり `local/no-japanese-literal` の警告が出たため `eslint-disable-next-line local/no-japanese-literal -- DB value` を付与し解消。残り137警告はすべて本便の変更対象外ファイル）。
+- `cd frontend && npm run test:unit`（フルスイート） → 98 Test Files中91成功・7失敗／1151 Tests中1144成功・7失敗。失敗7件はすべて `Error: Test timed out in 5000ms`（本便の変更対象外: `BotFormButtonMigration` / `CommerceSubmitButtonMigration` / `LeadFormButtonMigration` / `PageFormButtonMigration` / `RoleKnowledgeButtonMigration` / `TcgProductImportPanel` ほか1件）。このうち2ファイルを個別実行すると87件全件成功し、フルスイート実行時の負荷由来の非決定的タイムアウトであることを確認した（本カード §20-9-5・§22-6 と同じ事情）。受信箱の既存単体テスト（`InboxMessageThread.discordSendError.test.tsx`）は個別実行で8件全件成功。
+- `npx playwright test --list` → 358件→376件（新規7テスト×3幅=21件追加・既存件数の減少なし）。この端末（arm64・Ubuntu 26.04）では `npx playwright install chromium` が `ERROR: Playwright does not support chromium on ubuntu26.04-arm64` で失敗するため実行は不可（§21-7・§22-6 と同じ事情。CI に委ねる）。
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（実装・検査コミット後に実行）→ `PASS: 対象19ファイル・増加なし`
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（実装・検査コミット後に実行）→ `対象ファイル数: 3` ／ `✅ UI governance: 新規ハードコードなし`
+
+### 23-6. 残るリスク（正直に）
+
+1. **実機・CI の Playwright 実行は未確認。** この端末では chromium が実行できず、`--list` による収集確認（構文・セレクタ）までしかできていない（§21-7・§22-6 と同じ事情）。
+2. **既存の視覚回帰スナップショット2件（`karte-visual-gate.spec.ts` の `karte-lead-deal.png` / `karte-customer-company.png`、1280×900・デスクトップ幅）は、本便の「顧客ページを開く」リンク削除により見た目が変わるため、次回の `workflow_dispatch --update-snapshots` での再生成が必要。** ローカルでの生成はフォント差による誤検知のため禁止されている（同ファイルの既存コメント）。再生成しないままマージすると、CI の視覚回帰ゲートが本便のせいで赤くなる。
+3. **`GET /staff` を `per_page=100`・ページ送りなしで取得している。** 在籍中の営業・リーダーが100人を超えるテナントでは一部が選択肢から漏れる。既存の `CommissionPanel.tsx:92` も同じ前提（ページ送りなし）のため、既存の前例に揃える判断をしたが、全テナントで100人を超えないことの裏取りはしていない。
+4. **`showProfileModal` / `InboxProfileModal` / `profileModalTab` 等の配線（`useInboxState.ts` と `InboxPage.tsx`）は、削除した「顧客ページを開く」ボタンが唯一の呼び出し元だったため、今回の変更後は事実上到達不能な死んだ配線になっている。** 依頼文の範囲は「該当リンクの削除」であり、この配線自体の削除は明示されていなかったため、スコープ外と判断して残した（§23-7 参照）。
+
+### 23-7. 判断を保留したこと／迷ったこと
+
+- **`showProfileModal`／`InboxProfileModal` の配線を残すかどうか。** 「顧客ページを開く」ボタンの削除後、この state・モーダルコンポーネントは呼び出し元が無くなり事実上デッドコードになる。依頼文は「該当リンクを削除する」のみを明示していたため、モーダルや state 自体の削除は指示の範囲を超える判断と考え、**今回は手を付けず残した**。削除してよいか、PO 判断を仰ぎたい。
+- **`ConfirmModal` に `confirmDisabled` プロパティを追加したこと。** 依頼文は「新しい金型を作らない」だったが、既存の `ConfirmModal` には確定ボタンを無効化する手段が無く、「担当未選択で確定できてしまう」を防ぐには何らかの対応が必要だった。新しい金型を作る代わりに、既存コンポーネントへ**後方互換の任意プロパティ**（既定 `false`。省略時は今までと完全に同じ挙動）を1つ追加する形にした。他の既存呼び出し元（`CompaniesPage.tsx` 等）への影響は無いことを確認済みだが、「金型の変更」をどこまで独断でやってよいかは迷った点として報告する。
+- **`GET /staff` のページ送り。** 「取り切れない可能性」への対処として、全ページ走査（ループ）にするか、既存前例（`CommissionPanel.tsx`）に揃えて `per_page=100` 一発にするかで迷った。今回は**既存前例に揃える**ことを優先し、ページ送りは実装していない（§23-6 のリスク3に明記）。テナントの実際の在籍人数が100人を超える見込みがあるなら、この便と `CommissionPanel.tsx` をまとめて直す必要がある。
+- **視覚回帰スナップショット2件の扱い。** 「顧客ページを開く」削除でデスクトップ幅の見た目が変わるため、既存スナップショット（`karte-visual-gate.spec.ts`）が確実に差分を検出する想定。ローカルでの再生成は禁止されているため、**このPRのマージ後に CI の `workflow_dispatch --update-snapshots` を誰かが実行する必要がある**（自分では実行していない）。
