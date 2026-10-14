@@ -55,7 +55,6 @@ interface Props {
   setKarteTab: (tab: KarteTabKey) => void;
   showKartePanel: boolean;
   closeKartePanel: () => void;
-  setShowProfileModal: (v: boolean) => void;
   inboxSettings: { showRightPanel: boolean };
   selectedConversation: ConversationSummary | null;
   avatarErrors: Set<number>;
@@ -132,12 +131,33 @@ export function InboxKartePanel({
               （会話画面と同じ戻り方）。タブレット（768〜1279px）は従来の
               「顧客情報 ×」のまま変えない＝× ボタンと見出しは残し、
               戻る矢印はスマホ幅の CSS でのみ表示する（InboxPage.css 参照）。
-              配線は変えない: どちらを押しても同じ closeKartePanel を呼ぶ。 */}
+              配線は変えない: どちらを押しても同じ closeKartePanel を呼ぶ。
+              第9便（2026-10-14・PO決定）: スマホはここに会話画面ヘッダーと同じ並び
+              （戻る矢印→顔写真→顧客名）を出す。顔写真・顧客名は下の .karte-hd-top と
+              同じ値・同じ出し方（新しい取得処理は作らない）。タブレットでは CSS で
+              隠し、従来どおり「顧客情報 ×」のまま変えない。 */}
           <div className="karte-close-row">
             <button type="button" className="karte-close-back-btn" onClick={closeKartePanel}
               aria-label={t("common.back")}>
               <KarteCloseBackIcon size={ICON.md} aria-hidden="true" />
             </button>
+            <div className="karte-close-mobile-identity">
+              <div className="right-panel-avatar">
+                {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
+                  <img
+                    src={selectedConversation.profile_picture_url}
+                    alt={t("inbox.avatarAlt")}
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                    onError={() => handleAvatarError(selectedConversation.lead_id)}
+                  />
+                ) : (
+                  getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
+                )}
+              </div>
+              <span className="right-panel-display-name">
+                {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
+              </span>
+            </div>
             <span className="karte-close-title">{t("inbox.karteToggle")}</span>
             <button type="button" className="karte-close-btn" onClick={closeKartePanel}
               aria-label={t("common.close")} data-tooltip={t("common.close")}>
@@ -145,7 +165,11 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact+link */}
+          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact。
+              「顧客ページを開く」リンクは第9便で削除（PO 決定・不要）。
+              スマホでは顔写真・名前（.karte-hd-top 内）が上の帯と重複するため
+              CSS（InboxPage.css の @media max-width:767px）で非表示にする。
+              段階バッジ・補足情報（country/customer_type）は引き続きここに残す。 */}
           <div className="right-panel-header">
             <div className="karte-hd-top">
               <div className="right-panel-avatar">
@@ -174,16 +198,13 @@ export function InboxKartePanel({
                 </span>
               )}
             </div>
-            <div className="karte-hd-meta">
-              {selectedConversation?.last_message_at && (
+            {selectedConversation?.last_message_at && (
+              <div className="karte-hd-meta">
                 <span className="karte-last-contact" data-testid="karte-last-contact">
                   {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
                 </span>
-              )}
-              <button type="button" className="karte-open-link" onClick={() => setShowProfileModal(true)}>
-                {t("inbox.openCustomerPage")} →
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Save status */}
