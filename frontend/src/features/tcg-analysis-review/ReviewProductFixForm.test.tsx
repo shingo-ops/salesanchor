@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ApiError } from "../../lib/api";
 import { ReviewProductFixForm } from "./ReviewProductFixForm";
-import { postProductCorrection } from "./reviewActions";
+import { addSearchKeyword, postProductCorrection } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -11,7 +11,8 @@ vi.mock("../../lib/api", () => ({
 }));
 vi.mock("./reviewActions", () => ({
   postProductCorrection: vi.fn(),
-  searchProductOptions: vi.fn(async () => [{ value: "new-uuid", label: "New Product" }]),
+  addSearchKeyword: vi.fn(),
+  searchProductOptions: vi.fn(async () => [{ value: "new-uuid", label: "New Product", productId: "42" }]),
 }));
 
 const item = {
@@ -98,5 +99,101 @@ describe("ReviewProductFixForm", () => {
     expect(screen.getByRole("status").textContent).toContain("Reassigned");
     expect(screen.queryByText("Failed to reassign")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("ReviewProductFixForm search keyword", () => {
+  const renderWithKeyword = (onSaved = vi.fn()) =>
+    render(
+      <ReviewProductFixForm item={item} onRefresh={async () => undefined} searchDebounceMs={0} suggestKeyword="Pika Box" onSaved={onSaved} />,
+    );
+  const reassign = () => {
+    fireEvent.click(screen.getByRole("button", { name: "Reassign to this product" }));
+  };
+
+  it("shows no keyword question without suggestKeyword", () => {
+    render(<ReviewProductFixForm item={item} onRefresh={async () => undefined} />);
+
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+
+  it("asks about the keyword with the default Don't add, and does not add it", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    renderWithKeyword();
+
+    expect(screen.queryByRole("group", { name: "Add “Pika Box” as a search keyword?" })).toBeNull();
+    await pickCandidate();
+    expect(screen.getByRole("group", { name: "Add “Pika Box” as a search keyword?" })).toBeTruthy();
+    expect((screen.getByRole("radio", { name: "Don't add" }) as HTMLInputElement).checked).toBe(true);
+    reassign();
+
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("Reassigned"));
+    expect(addSearchKeyword).not.toHaveBeenCalled();
+  });
+
+  it("reassigns then adds the keyword with the product number when Add is chosen", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    vi.mocked(addSearchKeyword).mockResolvedValue({ ok: true });
+    const onSaved = vi.fn();
+    renderWithKeyword(onSaved);
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("radio", { name: "Add" }));
+    reassign();
+
+    await waitFor(() => expect(addSearchKeyword).toHaveBeenCalledWith("42", "Pika Box"));
+    expect(postProductCorrection).toHaveBeenCalledWith(item, "new-uuid");
+    expect(screen.getByRole("status").textContent).toContain("Reassigned and added the search keyword");
+    expect(onSaved).toHaveBeenCalledWith({ variant: "info", title: "Reassigned and added the search keyword" });
+  });
+
+  it("shows the already-exists reason when the keyword was already registered (HTTP 200, ok false)", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    vi.mocked(addSearchKeyword).mockResolvedValue({ ok: false, code: "KEYWORD_ALREADY_EXISTS" });
+    renderWithKeyword();
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("radio", { name: "Add" }));
+    reassign();
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Reassigned, but the search keyword was not added (This keyword already exists)",
+    );
+  });
+
+  it("shows the code when the keyword is refused for another reason", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    vi.mocked(addSearchKeyword).mockResolvedValue({ ok: false, code: "SOME_CODE" });
+    renderWithKeyword();
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("radio", { name: "Add" }));
+    reassign();
+
+    expect((await screen.findByRole("alert")).textContent).toContain("(SOME_CODE)");
+  });
+
+  it("shows the API error message when adding the keyword throws", async () => {
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    vi.mocked(addSearchKeyword).mockRejectedValue(new ApiError("Not found", 404, null));
+    renderWithKeyword();
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("radio", { name: "Add" }));
+    reassign();
+
+    expect((await screen.findByRole("alert")).textContent).toContain("(Not found)");
+  });
+
+  it("does not add the keyword when the reassign fails", async () => {
+    vi.mocked(postProductCorrection).mockRejectedValue(new ApiError("Conflict happened", 409, null));
+    renderWithKeyword();
+
+    await pickCandidate();
+    fireEvent.click(screen.getByRole("radio", { name: "Add" }));
+    reassign();
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Conflict happened");
+    expect(addSearchKeyword).not.toHaveBeenCalled();
   });
 });

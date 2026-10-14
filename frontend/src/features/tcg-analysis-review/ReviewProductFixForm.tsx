@@ -2,14 +2,15 @@
  * 「直す」欄の商品の付け替えフォーム（ラベル付きの候補検索 ＋ 付け替えボタン）。
  * 保存は既存の POST /tcg/items/{id}/corrections（field_name=product_id）だけを使う（reviewActions.ts）。
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AsyncCombobox, type AsyncComboboxOption } from "../../components/AsyncCombobox";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import { ChoiceCardGroup } from "../../components/ChoiceCardGroup";
 import { Stack } from "../../components/Stack";
 import { ApiError } from "../../lib/api";
-import { postProductCorrection, searchProductOptions, type ReviewActionTarget } from "./reviewActions";
+import { addSearchKeyword, postProductCorrection, searchProductOptions, type ProductOption, type ReviewActionTarget } from "./reviewActions";
 
 interface Props {
   item: ReviewActionTarget;
@@ -17,16 +18,47 @@ interface Props {
   onRefresh: () => Promise<void>;
   /** 候補検索の待ち（ms）。試験で 0 にする */
   searchDebounceMs?: number;
+  /** 空でないとき、「この書き方を検索キーワードに追加しますか？」を出す（付け替えの保存後に追加する） */
+  suggestKeyword?: string;
+  /** 付け替えが成功したとき（一覧の読み直しの前）に結果を渡す */
+  onSaved?: (notice: NonNullable<Notice>) => void;
 }
 
-type Notice = { variant: "info" | "warning"; title: string } | null;
+export type Notice = { variant: "info" | "warning"; title: string } | null;
 
-export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs }: Props) {
+type KeywordChoice = "no" | "yes";
+
+export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs, suggestKeyword, onSaved }: Props) {
   const { t } = useTranslation();
   const [picked, setPicked] = useState<AsyncComboboxOption | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  const [keywordChoice, setKeywordChoice] = useState<KeywordChoice>("no");
+  const keyword = suggestKeyword?.trim() ?? "";
+  // 候補の product_uuid → 商品の番号（検索キーワードの追加 API は番号で呼ぶ）
+  const productIds = useRef(new Map<string, string>());
   const fieldId = `review-fix-product-${item.extraction_item_id}`;
+
+  /** 検索キーワードの追加。付け替えは成功済みなので、失敗しても付け替えは取り消さず、理由を表示に載せる */
+  const saveKeyword = async (productUuid: string): Promise<NonNullable<Notice>> => {
+    const failed = (reason: string): NonNullable<Notice> => ({ variant: "warning", title: t("reviewItem.wizard.keyword.failed", { reason }) });
+    try {
+      const result = await addSearchKeyword(productIds.current.get(productUuid) ?? productUuid, keyword);
+      if (result.ok) return { variant: "info", title: t("reviewItem.wizard.keyword.added") };
+      if (result.code === "KEYWORD_ALREADY_EXISTS") return failed(t("reviewItem.wizard.keyword.exists"));
+      return failed(result.code ?? "—");
+    } catch (error: unknown) {
+      return failed(error instanceof ApiError && error.message ? error.message : "—");
+    }
+  };
+
+  const loadOptions = async (query: string): Promise<ProductOption[]> => {
+    const options = await searchProductOptions(query);
+    options.forEach((option) => {
+      if (option.productId !== undefined) productIds.current.set(option.value, option.productId);
+    });
+    return options;
+  };
 
   const save = async () => {
     if (!picked) return;
@@ -41,7 +73,10 @@ export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs }: Prop
       return;
     }
     // 保存は成功済み。一覧の読み直しの失敗は「付け替え失敗」として出さない
-    setNotice({ variant: "info", title: t("reviewItem.reassigned") });
+    const result = keyword !== "" && keywordChoice === "yes" ? await saveKeyword(picked.value) : null;
+    const done: NonNullable<Notice> = result ?? { variant: "info", title: t("reviewItem.reassigned") };
+    setNotice(done);
+    onSaved?.(done);
     try {
       await onRefresh();
     } catch {
@@ -63,7 +98,7 @@ export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs }: Prop
           value={picked?.label ?? ""}
           placeholder={t("needsReview.inline.productPlaceholder")}
           disabled={isSaving}
-          loadOptions={searchProductOptions}
+          loadOptions={loadOptions}
           debounceMs={searchDebounceMs}
           onSelect={setPicked}
           noResultsText={t("needsReview.inline.noResults")}
@@ -72,6 +107,18 @@ export function ReviewProductFixForm({ item, onRefresh, searchDebounceMs }: Prop
         />
         <p className="comp-field__hint">{t("reviewItem.productCurrent", { name: item.system.product_title || "—" })}</p>
       </div>
+      {keyword !== "" && picked !== null && (
+        <ChoiceCardGroup<KeywordChoice>
+          legend={t("reviewItem.wizard.keyword.question", { keyword })}
+          name={`${fieldId}-keyword`}
+          options={[
+            { value: "no", label: t("reviewItem.wizard.keyword.no") },
+            { value: "yes", label: t("reviewItem.wizard.keyword.yes") },
+          ]}
+          value={keywordChoice}
+          onChange={setKeywordChoice}
+        />
+      )}
       <div>
         <Button variant="primary" loading={isSaving} disabled={picked === null || isSaving} onClick={() => void save()}>
           {t("reviewItem.reassign")}

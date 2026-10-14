@@ -53,3 +53,9 @@
     max-height: var(--shadow-source-max-h);
   }
 }
+
+/* 比較表（.item-comparison--readonly）は左右に var(--space-3) の内側余白を持つ。
+   「直す」欄のカードも同じだけ内側に寄せ、右端・左端を比較表に揃える */
+.review-item-fix {
+  padding-inline: var(--space-3);
+}

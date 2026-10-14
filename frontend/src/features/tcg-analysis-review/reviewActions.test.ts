@@ -39,6 +39,6 @@ describe("reviewActions", () => {
     });
     const options = await searchProductOptions("al pha");
     expect(api.get).toHaveBeenCalledWith("/tcg/products/search?query=al+pha");
-    expect(options).toEqual([{ value: "uuid-1", label: "Alpha" }]);
+    expect(options).toEqual([{ value: "uuid-1", label: "Alpha", productId: "PM-00001" }]);
   });
 });
