@@ -293,7 +293,7 @@ export default function KnowledgeAliasesTab() {
         </p>
         {ruleError && <div className="error-message">{ruleError}</div>}
         <div style={{ display: "flex", gap: "var(--space-2)", margin: "0.5rem 0", alignItems: "center", flexWrap: "wrap" }}>
-          <input
+          <TextFieldControl
             placeholder={t("common.search")}
             value={ruleSearch}
             data-testid="rules-search"
@@ -372,7 +372,7 @@ export default function KnowledgeAliasesTab() {
         {aliasError && <div className="error-message">{aliasError}</div>}
         {suppliersError && <div className="error-message">{suppliersError}</div>}
         <div style={{ display: "flex", gap: "var(--space-2)", margin: "0.5rem 0", alignItems: "center", flexWrap: "wrap" }}>
-          <input
+          <TextFieldControl
             placeholder={t("common.search")}
             value={aliasSearch}
             data-testid="aliases-search"
