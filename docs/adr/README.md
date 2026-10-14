@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-14 / ADR 総数: 175 件
+最終更新: 2026-10-14 / ADR 総数: 176 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -194,6 +194,7 @@
 | [ADR-1013](./ADR-1013-self-hosted-auth-and-passkey.md) | ADR-1013: ログインの判定を Firebase から自社サーバーへ移し、パスキー（顔・指紋）でのログインを足す | Accepted | Supersedes ADR-138 | — |
 | [ADR-1014](./ADR-1014-inventory-view-shows-distribution-rows.md) | ADR-1014: 在庫表は LINE 解析の配信行を出す | Accepted | — | — |
 | [ADR-1015](./ADR-1015-autonomy-b-class-no-po-approval.md) | ADR-1015: 危険でない変更（B 区分）は KGI・設計の PO 承認なしで PR まで進める | Accepted | — | — |
+| [ADR-1016](./ADR-1016-inventory-viewer-separate-accounts.md) | ADR-1016: 在庫の閲覧専用ページは、アプリと交わらない閲覧専用アカウントで開く | Proposed | — | — |
 
 ## ステータス凡例
 
