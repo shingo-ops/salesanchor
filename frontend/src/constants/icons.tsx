@@ -223,6 +223,10 @@ export const PAGE_ICONS = {
   inboxEmpty:         Chat,             // solid — InboxMessageThread アクティブ表示用
   inboxEmptyOutline:  ChatBubbleOutline, // outline — 空状態プレビュー等の既定
   kartePanel:         ClipboardText,    // 受信箱モバイルドロワー「カルテ」ボタン用
+  // 受信箱・会話ヘッダー（スマホ専用 InboxThreadHeaderMobile.tsx）の
+  // 顧客情報ボタン専用（第7便・PO 指示で人型に変更）。PC 側の kartePanel は
+  // 変更しないため別キーで公開する。
+  kartePanelMobile:   User,             // 受信箱スマホ会話ヘッダー「顧客情報」ボタン用
   settingsSolid:      GearEight,        // 受信箱ヘッダー設定ボタン（solid）
 } satisfies Record<string, Icon>;
 

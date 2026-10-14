@@ -78,3 +78,13 @@
   color: var(--text-secondary);
   font-size: var(--font-2xs);
 }
+
+/* 要確認スライドの「修正」列: 直せるのに未修正の行の「押して直す」 */
+.item-comparison__tap {
+  color: var(--text-muted);
+}
+
+/* 押せない行（DataTable の onRowClick で全行に付く pointer を既定に戻す） */
+.item-comparison--readonly .comp-table__row--clickable.item-comparison__row--static {
+  cursor: default;
+}

@@ -6066,7 +6066,7 @@
       "ConditionReviewRequest": {
         "properties": {
           "condition_id": {
-            "format": "uuid",
+            "pattern": "^[1-9][0-9]{0,9}$",
             "title": "Condition Id",
             "type": "string"
           },
@@ -31945,6 +31945,11 @@
         "properties": {
           "condition": {
             "title": "Condition",
+            "type": "string"
+          },
+          "condition_basis": {
+            "default": "",
+            "title": "Condition Basis",
             "type": "string"
           },
           "exclusion": {

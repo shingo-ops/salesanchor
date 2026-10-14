@@ -57,7 +57,7 @@ class ConditionReviewRequest(BaseModel):
     request_id: UUID
     expected_review_version: str = Field(pattern=r"^[0-9a-f]{64}$")
     decision: Literal["confirm", "correct"]
-    condition_id: UUID
+    condition_id: str = Field(pattern=r"^[1-9][0-9]{0,9}$")
 
 
 class ConditionReviewResponse(BaseModel):

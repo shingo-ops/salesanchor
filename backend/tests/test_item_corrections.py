@@ -154,7 +154,7 @@ async def test_save_corrections_filters_empty_human_value(super_admin_override):
 @pytest.mark.parametrize("extra", [
     {"fields": [{"field_name": "condition_review", "human_value": "{}"}]},
     {"fields": [], "condition_review": {"request_id": _EXTRACTION_ITEM_ID,
-        "expected_review_version": "a" * 64, "decision": "confirm", "condition_id": _EXTRACTION_ITEM_ID}},
+        "expected_review_version": "a" * 64, "decision": "confirm", "condition_id": "5"}},
 ])
 async def test_condition_review_cannot_use_legacy_fields(super_admin_override, extra):
     from app.main import app
@@ -162,3 +162,51 @@ async def test_condition_review_cannot_use_legacy_fields(super_admin_override, e
         result = await client.post(f"/api/v1/tcg/items/{_EXTRACTION_ITEM_ID}/corrections",
             json={"source_message_id": _SOURCE_MESSAGE_ID, **extra})
     assert result.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# 状態の保存: condition_id は整数の文字列（conditions.id は INTEGER）
+# ---------------------------------------------------------------------------
+
+_CONDITION_REQUEST_ID = "cccccccc-0000-0000-0000-000000000001"
+
+
+def _condition_body(condition_id):
+    return {
+        "source_message_id": _SOURCE_MESSAGE_ID,
+        "condition_review": {
+            "request_id": _CONDITION_REQUEST_ID,
+            "expected_review_version": "a" * 64,
+            "decision": "correct",
+            "condition_id": condition_id,
+        },
+    }
+
+
+async def test_condition_review_accepts_integer_string(super_admin_override):
+    from app.main import app
+
+    save = AsyncMock(return_value={"saved": 1})
+    with patch("app.routers.item_corrections.save_condition_review", new=save), patch(
+        "app.routers.item_corrections._enqueue_reanalyze_if_v102", new=AsyncMock()
+    ):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                f"/api/v1/tcg/items/{_EXTRACTION_ITEM_ID}/corrections", json=_condition_body("5")
+            )
+    assert r.status_code == 200
+    assert save.await_args.kwargs["request"]["condition_id"] == "5"
+
+
+@pytest.mark.parametrize("bad", [_EXTRACTION_ITEM_ID, "abc", "0", "05", "", "12345678901"])
+async def test_condition_review_rejects_non_integer_condition_id(super_admin_override, bad):
+    from app.main import app
+
+    save = AsyncMock(return_value={"saved": 1})
+    with patch("app.routers.item_corrections.save_condition_review", new=save):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            r = await client.post(
+                f"/api/v1/tcg/items/{_EXTRACTION_ITEM_ID}/corrections", json=_condition_body(bad)
+            )
+    assert r.status_code == 422
+    save.assert_not_awaited()

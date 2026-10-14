@@ -39,6 +39,7 @@ _DUMMY_ITEM = {
         "product_id": "PM0001",
         "pid_resolved": "YES",
         "pid_basis": "EXACT",
+        "condition_basis": "MANUAL_CONDITION_REVIEW",
         "unit": "BOX",
         "unit_resolved": "YES",
         "condition": "NEW",
@@ -134,9 +135,10 @@ async def test_list_analysis_results_response_shape(fake_super_admin_override):
         assert f in gemini, f"gemini.{f} missing"
 
     system = item["system"]
-    for f in ("product_id", "pid_resolved", "pid_basis", "unit",
+    for f in ("product_id", "pid_resolved", "pid_basis", "condition_basis", "unit",
               "unit_resolved", "condition", "status", "note", "exclusion"):
         assert f in system, f"system.{f} missing"
+    assert system["condition_basis"] == "MANUAL_CONDITION_REVIEW"
 
 
 async def test_status_tab_invalid_falls_back_to_all(fake_super_admin_override):

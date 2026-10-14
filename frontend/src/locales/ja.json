@@ -3763,7 +3763,6 @@
     "drawerTitle": "要確認の商品",
     "sourceHeading": "原文",
     "fixHeading": "直す",
-    "reasonsHeading": "確認が必要な理由",
     "noReasons": "理由はありません",
     "sourceLine": "出どころ：{{source}}",
     "ack": "このままで良い",
@@ -3773,13 +3772,62 @@
     "gapLineNumber": "L{{n}}",
     "gapCandidates": "候補: {{names}}",
     "compareHeading": "比較",
+    "fixColumn": { "tapToFix": "押して直す" },
+    "pickRowHint": "直したい行を表から押してください",
+    "removedFromList": "この商品は要確認から外れました",
     "productLabel": "商品",
     "productCurrent": "今の商品: {{name}}",
     "reassign": "この商品に付け替える",
     "reassigned": "付け替えました",
     "reassignFailed": "付け替えに失敗しました",
     "conditionLabel": "状態",
-    "masterHint": "商品マスタへの登録や除外はこちら"
+    "wizard": {
+      "question": "何を直しますか？",
+      "choice": {
+        "reassign": "既存の商品に付け替える",
+        "reassignDesc": "商品を検索して選びます",
+        "register": "新しい商品として登録する",
+        "registerDesc": "商品マスタに登録し、この行を付け替えます",
+        "condition": "状態を直す",
+        "conditionDesc": "状態を確認・訂正します",
+        "keep": "このままで良い",
+        "keepDesc": "理由ごとに確認済みにします"
+      },
+      "selected": "直す内容: {{choice}}",
+      "back": "戻る",
+      "nothingToFix": "この行で直せる項目はありません",
+      "keyword": {
+        "question": "この書き方「{{keyword}}」を検索キーワードに追加しますか？",
+        "no": "追加しない",
+        "yes": "追加する",
+        "added": "付け替えました。検索キーワードに追加しました",
+        "failed": "付け替えました。検索キーワードは追加できませんでした（{{reason}}）",
+        "exists": "すでに登録済みの書き方です"
+      },
+      "register": {
+        "alreadyResolved": "この行の商品はすでに決まっています。「既存の商品に付け替える」を使ってください",
+        "kind": "商品種別",
+        "work": "作品",
+        "manufacturer": "メーカー",
+        "category": "カテゴリ",
+        "japaneseTitle": "日本語名",
+        "englishTitle": "英語名",
+        "mark": "記号",
+        "releaseDate": "発売日",
+        "keywords": "検索キーワード（1行に1つ）",
+        "required": "入力してください",
+        "checkDuplicates": "似た商品がないか確認",
+        "dupQuestion": "この中に同じ商品がありますか？",
+        "dupNone": "どれも違う。新しく登録する",
+        "dupNumber": "番号 {{id}}",
+        "useCandidate": "この商品に付け替える",
+        "submit": "登録して付け替える",
+        "done": "新しい商品（番号 {{id}}）を登録し、この行を付け替えました",
+        "reassignFailed": "新しい商品（番号 {{id}}）は登録済みです。付け替えに失敗しました（{{reason}}）。「戻る」を押しても登録は残ります",
+        "retryReassign": "付け替えだけやり直す",
+        "failed": "登録できませんでした（{{reason}}）"
+      }
+    }
   },
   "reviewReason": {
     "pid_unresolved": "商品を特定できない",
@@ -4601,7 +4649,7 @@
     "manualCorrection": "手動修正 {{field}}",
     "hasCorrected": "手動修正あり",
     "uncorrected": "未修正",
-    "compareColumns": { "field": "項目", "source": "採用元" },
+    "compareColumns": { "field": "項目", "source": "採用元", "fix": "修正" },
     "notApplicable": "—",
     "sourcePosition": "原文位置",
     "productId": "商品ID",
@@ -5132,15 +5180,10 @@
       "posts": "投稿"
     },
     "inline": {
-      "header": "ここで直す",
       "productAria": "商品（名前を入れて探す）",
       "productPlaceholder": "商品名を入力",
       "noResults": "該当する商品がありません",
-      "searchError": "商品を探せませんでした",
-      "saved": "保存済み",
-      "error": "保存できませんでした: {{reason}}",
-      "unknownError": "もう一度お試しください",
-      "ackAria": "このままで良い: {{name}}"
+      "searchError": "商品を探せませんでした"
     }
   },
   "distributionSettings": {
