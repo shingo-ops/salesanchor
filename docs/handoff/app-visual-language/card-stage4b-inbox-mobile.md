@@ -1028,10 +1028,11 @@ mock は `frontend/tests-e2e/visual-language/inbox-helpers.ts` に新設した `
 - `cd frontend && npm run lint` → 変更対象ファイルからの新規警告・エラー無し
 - `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`
 - `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` → 8件成功（影響なし確認）
-- `cd frontend && npm run test:unit`（フルスイート） → 結果は本カード §20-7 の更新箇所に転記
+- `cd frontend && npm run test:unit`（フルスイート） → 1082件中1072件成功・10件失敗（8ファイル）。失敗した8ファイル（`BotFormButtonMigration` / `CommerceNavigationButtonMigration` / `OrderLeadButtonMigration` / `PageFormButtonMigration` / `SharedButtonMigration` / `TeamFormButtonMigration` / `InventoryPage.noechopatch` / `ProductMasterPanel`）はいずれも受信箱・本便の変更対象外で、`Test timed out in 5000ms` のタイムアウトのみ。個別実行では8ファイルすべて成功（計128件全件成功）。再現したタイムアウトの内訳は実行ごとに異なるテスト名だった（1回目: `BotFormButtonMigration` の `'quick' submits exact payload through 'click'`、同ファイルを他7ファイルと一緒に再実行した2回目: 同ファイルの別2テスト）ため、フルスイート実行時の負荷由来（非決定的）と判断した。`src/pages/inbox/` 配下は単独実行で全5ファイル27件成功
 - `cd frontend && npx playwright test --list` → 325件→331件（新規2テスト×3幅=6件追加）を収集成功
 
 ### 20-9-6. 残るリスク（この追加分）
 
 1. **実機確認は未実施。** この端末では chromium が起動できないため収集確認まで。360dp 実機での最終確認は PO が行う（コーディネーターからの回答どおり）。
 2. **2段表示時の `--space-2px`（2px）という行間は実測値から逆算した見積もりであり、実機のピクセル比較はしていない。** CI の数値検査（56px±1・重なりなし）は満たす設計だが、見た目の好ましさ（行間の詰まり具合等）は実機で最終確認が必要。
+3. **この便の最後のコミット後、本エージェントが `git push` / `gh pr create` を一度も実行していないにもかかわらず、`origin/release/inbox-thread-header-mobile` にコミットが反映され、Draft PR（#4263・`shingo-cc` 名義・base=`main`）が自動で作成されていた。** コミット時刻（最後のコミット 14:37:19 JST）の約2分後（PR の `createdAt` 05:39:18Z=14:39:18 JST）に作成されており、この worktree に存在する `.claude-pipeline/` 配下の自動化（`new-worktree.sh` や reaper 等）が release/* ブランチの push を検知して自動で Draft PR を起票する仕組みと考えられる。本依頼は「push・PR 作成はしない」だったため、これは意図せず発生した事象であり、PR の un-draft・マージ・削除・force-push 等は一切行っていない（危険操作の既定方針どおり、判断が必要な操作は実行せず報告のみとした）。
