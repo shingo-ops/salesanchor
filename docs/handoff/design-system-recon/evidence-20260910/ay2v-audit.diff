@@ -1,0 +1,26 @@
+1c1
+< ⚠️  audit:unused-tokens — 30 件の未使用トークンが見つかりました:
+---
+> ⚠️  audit:unused-tokens — 12 件の未使用トークンが見つかりました:
+4,17d3
+<    --cat-import                                  (src/tokens.css)
+<    --cat-discord                                 (src/tokens.css)
+<    --cat-distribution                            (src/tokens.css)
+<    --cat-inventory                               (src/tokens.css)
+<    --max-width-modal-sm                          (src/tokens.css)
+<    --inbox-collapsed-panel-w                     (src/tokens.css)
+<    --karte-ok-bg                                 (src/tokens.css)
+<    --topnav-email-max-w                          (src/tokens.css)
+<    --schedule-cell-icon-size                     (src/tokens.css)
+<    --schedule-min-h                              (src/tokens.css)
+<    --schedule-mini-col-min-w                     (src/tokens.css)
+<    --schedule-slot-h                             (src/tokens.css)
+<    --schedule-nav-btn-size                       (src/tokens.css)
+<    --schedule-row-height-compact                 (src/tokens.css)
+23d8
+<    --color-blue-100                              (src/index.css)
+28d12
+<    --color-amber-50                              (src/index.css)
+31,32d14
+<    --calendar-today-text                         (src/index.css)
+<    --calendar-today-cell-bg                      (src/index.css)

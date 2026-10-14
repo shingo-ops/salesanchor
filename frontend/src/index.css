@@ -154,13 +154,11 @@
   --bg-badge: #eeeeff;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125） */
-  --color-blue-100:      #dbeafe;  /* ライブバッジ背景 */
   --color-blue-700:      #1d4ed8;  /* ライブバッジ文字 */
   --color-gray-100:      #f3f4f6;  /* 静的バッジ背景 */
   --color-gray-600:      #4b5563;  /* 静的バッジ文字 */
   --color-red-50:        #fef2f2;  /* エラーバナー背景 */
   --color-red-700:       #b91c1c;  /* エラーバナー文字 */
-  --color-amber-50:      #fffbeb;  /* 警告バナー背景 */
   --color-amber-800:     #92400e;  /* 警告バナー文字 */
   --color-border-subtle: #f3f4f6;  /* テーブル行区切り */
 
@@ -184,8 +182,6 @@
   --calendar-google-blue:        #1a73e8;
   --calendar-google-blue-light:  #e8f0fe;
   --calendar-today-bg:           #1a73e8;
-  --calendar-today-text:         #ffffff;
-  --calendar-today-cell-bg:      #e8f0fe;
   --calendar-grid-border:        #dadce0;
   --calendar-status-ok-bg:       #e6f4ea;
   --calendar-status-ok-text:     #1e7e34;
@@ -358,13 +354,11 @@
   --bg-badge: #3b2d5c;
 
   /* FedEx レート比較モーダル バッジカラー（ADR-125 ダーク） */
-  --color-blue-100:      #1e3a5f;  /* ライブバッジ背景 */
   --color-blue-700:      #93c5fd;  /* ライブバッジ文字 */
   --color-gray-100:      #1f2937;  /* 静的バッジ背景 */
   --color-gray-600:      #9ca3af;  /* 静的バッジ文字 */
   --color-red-50:        #450a0a;  /* エラーバナー背景 */
   --color-red-700:       #fca5a5;  /* エラーバナー文字 */
-  --color-amber-50:      #431407;  /* 警告バナー背景 */
   --color-amber-800:     #fcd34d;  /* 警告バナー文字 */
   --color-border-subtle: #374151;  /* テーブル行区切り */
 
@@ -388,8 +382,6 @@
   --calendar-google-blue:        #8ab4f8;
   --calendar-google-blue-light:  #1e3a5f;
   --calendar-today-bg:           #8ab4f8;
-  --calendar-today-text:         var(--palette-ink-deep);
-  --calendar-today-cell-bg:      #1e3a5f;
   --calendar-grid-border:        #3c4043;
   --calendar-status-ok-bg:       #14432b;
   --calendar-status-ok-text:     #4ade80;

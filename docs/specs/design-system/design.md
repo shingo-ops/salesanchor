@@ -4081,4 +4081,24 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 設計: docs/handoff/ay2u-orphan-token/design.md（recon.md 併置）。AY-2r で参照元が 0 になった残件（上記 AY-2r の残件行）の解消。
 - 変更: frontend/src/tokens.css の `--input-select-min-w: 280px;` 1 行の削除のみ。変更前の `git grep input-select-min-w -- frontend scripts .github` は tokens.css の 1 件だけ（再定義・参照なし）。
 - 判定: `audit:unused-tokens`（scripts/check-unused-tokens.js）の件数が 31→30、差分は当該 1 行のみ（evidence-20260910/ay2u-audit.diff）。dev build の CSS 差分は当該 1 行のみ（ay2u-css.diff）。
-- 対象外: 残る未使用トークン 30 件の整理（PO 判断事項として残件に残す）。
+- 対象外: 残る未使用トークン 30 件の整理（PO 判断事項として残件に残す）。→ PO 2026-10-14「y」で AY-2v へ。
+
+#### AY-2u 本番反映の記録（2026-10-14）
+
+- PR #4257、merge 3829d3f579d72b59a596d60c41a17ccf86fd467d（2026-10-14T03:04:50Z）、最終 HEAD 3d90920bb。
+- Deploy run 38504385868 success。
+- 本番 CSS index-G2qsX5Ms.css で `input-select-min-w` が 0 件。app は HTTP 200、api/health は HTTP 200。
+- GO は ADR-1003 の委任。根拠 /tmp/CC報告ファイル/ssot-ay2u/prod/checks.txt。
+
+#### AY-2v 参照 0 の未使用トークン 18 件の削除（2026-10-14）
+
+- PO 決定: 2026-10-14「y」（未使用トークン 30 件を、参照が 0 件と 1 件ずつ確かめたうえで消す）。
+- 設計: docs/handoff/ay2v-unused-tokens/design.md（recon.md 併置）。Fable 設計審査 r1 REVISE → r2 APPROVE。
+- 「参照 0」の範囲: frontend（src・tests-e2e・eslint.config.js・scripts）、lp、scripts、.github、docs/specs、docs/adr、DesignSystemPage.tsx の実行時参照。名前境界付き grep（`<name>([^A-Za-z0-9_-]|$)`）で判定。docs/handoff・docs/audits は過去の作業記録として参照に数えない（名前は残る）。
+- 削除した 18 件（tokens.css 15 行・index.css 8 行＝:root と :root.force-dark の対）: --cat-import / --cat-discord / --cat-distribution / --cat-inventory / --max-width-modal-sm / --inbox-collapsed-panel-w / --karte-ok-bg / --topnav-email-max-w / --schedule-cell-icon-size / --schedule-min-h / --schedule-mini-col-min-w / --schedule-slot-h（2 か所）/ --schedule-nav-btn-size / --schedule-row-height-compact / --color-blue-100 / --color-amber-50 / --calendar-today-text / --calendar-today-cell-bg。
+- 判定: 監査件数 30→12（消えた名前は 18 件と一致、evidence-20260910/ay2v-audit.diff）。dev build の整形 CSS 差分は 23 行の削除のみ（ay2v-css.diff）。画面の見た目は変わらない。
+- 残した 12 件と理由（残件）:
+  - 実行時参照: --bg-disabled、--accent-bg（DesignSystemPage.tsx の COLOR_TOKENS と check-color-token-sync.js が掲載を要求）。check-unused-tokens.js の EXEMPT_NAMES への追加は別テーマ。
+  - ADR-067 の登録表: --modal-commission-w、--modal-detail-max-w、--table-col-min-width（後者は eslint.config.js のエラー文も推奨）。
+  - 仕様書: --color-blue-700（本書 §5.1 の命名例）、--size-avatar-sm（visual-language の whatsapp-reproduction-spec.md）、--color-gray-100 / --color-gray-600 / --color-red-700 / --color-amber-800 / --color-border-subtle（docs/specs/design-tokens-ssot/color/calendar/design.md が参照先に指定。計画の現行性は未確認）。
+  - index.css の FedEx バッジ色ブロック（ADR-125）の見出しと中身のずれ（残る 7 名のうち 6 名は calendar 計画書由来）。

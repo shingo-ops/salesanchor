@@ -108,6 +108,34 @@ export async function openInboxListWithConversations(page: Page, count: number):
   await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
 }
 
+/**
+ * Discord 未連携の会話（第6便・会話ヘッダー2段表示の検査専用）。
+ * baseMocks() の lead 5001 はもともと discord_user_id が null なので、
+ * platform だけ "discord" に差し替えれば「messagesData.lead.platform === "discord"
+ * && !leadDetail.discord_user_id」（PC の Discord 未連携バッジと同じ式・
+ * frontend/src/pages/inbox/InboxMessageThread.tsx）が成立する。
+ * 既存の openInboxList() / baseMocks() はそのまま変更しない。
+ */
+export async function openInboxListWithDiscordUnlinkedConversation(page: Page): Promise<void> {
+  const base = baseMocks();
+  const conversations = (conversationsFixture as ConversationsFixture).conversations.map((c) =>
+    c.lead_id === 5001 ? { ...c, platform: "discord" } : c,
+  );
+  const messages = messagesFixture as { lead: Record<string, unknown> } & Record<string, unknown>;
+  const leadDetail = base["GET /leads/5001"] as Record<string, unknown>;
+
+  await installAuthBypass(page);
+  await mockApi(page, {
+    ...base,
+    "GET /conversations": { conversations, next_cursor: null },
+    "GET /leads/5001/messages": { ...messages, lead: { ...messages.lead, platform: "discord" } },
+    "GET /leads/5001": { ...leadDetail, platform: "discord" },
+  });
+  await page.goto("/lead-chat");
+  await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+}
+
 /** 会話を1件開き、入力欄が出るまで待つ */
 export async function openConversation(page: Page): Promise<void> {
   await page.locator("button.conversation-item", { hasText: SAMPLE_CONVERSATION_NAME }).click();

@@ -47,7 +47,7 @@ export function CompanyConvLogsTab({ companyId, contacts }: Props) {
     setError(null);
     const params = selectedContactId ? `?contact_id=${selectedContactId}` : "";
     api
-      .get<ConvLogEntry[]>(`/api/v1/companies/${companyId}/conv-logs${params}`)
+      .get<ConvLogEntry[]>(`/companies/${companyId}/conv-logs${params}`)
       .then((res) => {
         const data: ConvLogEntry[] = Array.isArray(res) ? res : (res as { data?: ConvLogEntry[] }).data ?? [];
         setLogs(data);
