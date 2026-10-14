@@ -346,6 +346,12 @@
   cursor: pointer;
 }
 
+/* 準備中ページ 戻るボタンの行（第7便・PO 指摘: 戻る手段が無い行き止まり対策） */
+.coming-soon-back-row {
+  max-width: var(--coming-soon-max-w);
+  margin: 0 auto var(--space-4) auto;
+}
+
 /* 準備中ページ
    ※ App.css L719-766 よりレガシーセクションから救出 */
 .coming-soon {

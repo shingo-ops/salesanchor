@@ -38,15 +38,15 @@ const LANGUAGE_OPTIONS: Array<{ value: "auto" | "ja" | "en"; labelKey: string }>
 ];
 
 /**
- * 受信箱・会話ヘッダーのスマホ専用の組み立て（第6便）。
+ * 受信箱・会話ヘッダーのスマホ専用の組み立て（第6便 → 第7便で右を2つに整理）。
  *
  * 背景（実機で確認済み・PO 決定 2026-10-14）:
  * - 旧スマホは帯が2本（上の操作行＋会話ヘッダー）あり、会話ヘッダー側の三点は
  *   27x38dp しかなく画面右端で切れていた。
- * - 1本（56dp）に統合し、右にテンプレート・顧客情報・「…」の3つを置く
- *   （テンプレートと顧客情報は独立したボタンですぐ開ける＝PO 指示）。
- * - 「…」の中身は 送信先の言語 / FAQ / 受信箱の設定（テンプレートと FAQ は
- *   スマホでは上の操作行が唯一の入口だったため、入口を失わないようここへ移す）。
+ * - 1本（56dp）に統合し、右に顧客情報・「…」の2つを置く（お手本の WhatsApp も
+ *   右は2つ。テンプレートは独立ボタンだと右が3つになり過密＝PO 指摘で第7便で
+ *   「…」の中へ移した）。
+ * - 「…」の中身は 送信先の言語 / テンプレート / FAQ / 受信箱の設定。
  * - 旧三点の中身（未読にする/対象外にする/削除/顧客情報）は第4便で一覧の
  *   長押しメニューに移設済み（本番稼働中）のため、ここには含めない。
  *
@@ -83,6 +83,12 @@ export function InboxThreadHeaderMobile({
       label: t("translation.sendGuard.langToggleLabel"),
       icon: <INBOX_ACTION_ICONS.translate size={ICON.base} aria-hidden="true" />,
       onSelect: () => setLangSheetOpen(true),
+    },
+    {
+      key: "templates",
+      label: t("nav.templates"),
+      icon: <NAV_ICONS.fileText size={ICON.base} aria-hidden="true" />,
+      onSelect: () => navigate("/templates"),
     },
     {
       key: "faq",
@@ -151,14 +157,6 @@ export function InboxThreadHeaderMobile({
         )}
       </div>
       <div className="inbox-thread-header-mobile-actions">
-        <button
-          type="button"
-          className="inbox-thread-header-mobile-btn"
-          onClick={() => navigate("/templates")}
-          aria-label={t("nav.templates")}
-        >
-          <NAV_ICONS.fileText size={ICON.base} aria-hidden="true" />
-        </button>
         {inboxSettings.showRightPanel && (
           <button
             type="button"
@@ -166,7 +164,7 @@ export function InboxThreadHeaderMobile({
             onClick={() => (showKartePanel ? closeKartePanel() : openKartePanel())}
             aria-label={t("inbox.karteToggle")}
           >
-            <PAGE_ICONS.kartePanel size={ICON.base} weight="fill" aria-hidden="true" />
+            <PAGE_ICONS.kartePanelMobile size={ICON.base} weight="fill" aria-hidden="true" />
           </button>
         )}
         <button
