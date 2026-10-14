@@ -4,14 +4,14 @@
 - 現在地の根拠: docs/handoff/ay2t-goal-inputs-mold/recon.md
 - 対象 ADR: docs/adr/ADR-027-ui-internationalization.md / docs/adr/ADR-067-design-token-enforcement.md / docs/adr/ADR-144-ui-component-governance.md
 
-## 1. 変更契約
+## 1. 変更契約（行番号は変更前 origin/main 基準。import のみ変更後の行）
 |箇所|変更前|変更後|
 |---|---|---|
-|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:163`（行入力）|生 `<input … className={`gs-input${saved ? " gs-input-saved" : ""}`}>`|`<TextFieldControl … className={saved ? "gs-input-saved" : undefined}>`（他 props 逐語）|
-|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:236`（週次指標）|`gs-input gs-advisor__metric-input`|`<TextFieldControl … className="gs-advisor__metric-input">`|
-|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:340`（月次 KGI）|`gs-input gs-advisor__monthly-input`|`<TextFieldControl id data-testid … className="gs-advisor__monthly-input">`|
+|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:162`（行入力）|生 `<input … className={`gs-input${saved ? " gs-input-saved" : ""}`}>`|`<TextFieldControl … className={saved ? "gs-input-saved" : undefined}>`（他 props 逐語）|
+|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:235`（週次指標）|`gs-input gs-advisor__metric-input`|`<TextFieldControl … className="gs-advisor__metric-input">`|
+|`frontend/src/pages/goal-setting/GoalSettingPage.tsx:339`（月次 KGI）|`gs-input gs-advisor__monthly-input`|`<TextFieldControl id data-testid … className="gs-advisor__monthly-input">`|
 |`frontend/src/pages/goal-setting/GoalSettingPage.tsx:19`|—|`import { TextFieldControl } from "../../components/TextField";`（Select の import の直後）|
-|`frontend/src/pages/goal-setting/GoalSettingPage.css:511-515`|`.gs-input{…}` `.gs-input:focus{…}` `.gs-input.gs-input-saved{…}`|基底と focus を削除。`.comp-field__input.gs-input-saved, .comp-field__input.gs-input-saved:focus {border-color: var(--success); background: var(--success-bg-subtle);}`|
+|`frontend/src/pages/goal-setting/GoalSettingPage.css:510-530`|`.gs-input{…}` `.gs-input:focus{…}` `.gs-input.gs-input-saved{…}`|基底と focus を削除。`.comp-field__input.gs-input-saved, .comp-field__input.gs-input-saved:focus {border-color: var(--success); background: var(--success-bg-subtle);}`|
 |`frontend/src/pages/goal-setting/GoalSettingPage.stories.tsx:9, 29`|生 input|`TextFieldControl`（import は `./GoalSettingPage.css` の前）|
 
 触らない: TextField.tsx・FormField.css、i18n、e2e、保存ロジック、`.gs-saved-mark`・`.gs-input-wrap`・`.gs-row`・`.gs-label`。
