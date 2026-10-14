@@ -142,3 +142,4 @@
 ## 13. 設計審査（Fable）REVISE への対応
 - 1回目 REVISE（2026-10-14）の6点を反映: codes 全要素の検査と一致試験7件（3-1・9）／定数の遅延 import（3-1）／別名 cr_review_ack と OFFSET 0 を書かない（3-1）／和集合の手順・行ロック・順序・CSV 経路（3-3・9）／進捗の記述訂正（3-4）／既存 vitest の書き換え（4）。任意の速度基準も3クエリ・マージ前測定に変更（9・11）。
 - 2回目 APPROVE（2026-10-14）。書き損じ cr_ack → cr_review_ack を統一。analysis_results に行が無い件の保存挙動は変えない（404 にしない）。
+- コード審査（Fable）REVISE 1件: §9 K5 CSV 経路の試験欠落 → test_v102_human_decisions_pg.py に追加

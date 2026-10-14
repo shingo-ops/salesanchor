@@ -359,6 +359,30 @@ def test_save_review_ack_unions_with_the_previous_valid_codes(pg, pf):
         assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset({"excluded", REASON_NOT_IN_MASTER})
 
 
+def test_csv_path_save_one_unions_ack_codes_with_the_previous_valid_codes(pg, pf):
+    from app.services import tcg_review_csv_svc as csv_svc
+
+    source_id, _job_id, item_id = prepare(pg, 0)
+    _save_ack(pg, source_id, item_id, ["excluded"])
+    apply = {"extraction_item_id": item_id, "kind": csv_svc.KIND_ACK, "value": REASON_NOT_IN_MASTER, "code": "",
+             "_item": {"source_message_id": source_id, "system": {}}}
+
+    async def save() -> None:
+        engine = create_async_engine(pg[2])
+        try:
+            async with AsyncSession(engine) as db:
+                await csv_svc._save_one(db, apply, "admin@example.com")
+        finally:
+            await engine.dispose()
+
+    asyncio.run(save())
+    rows = one(pg, f"SELECT human_value FROM {SCHEMA}.item_corrections WHERE extraction_item_id=%s AND field_name='review_ack' "
+                   f"ORDER BY corrected_at DESC, id DESC", (item_id,))
+    assert sorted(json.loads(rows[0][0])["codes"]) == sorted(["excluded", REASON_NOT_IN_MASTER])
+    with Session(pg[1]) as session:
+        assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset({"excluded", REASON_NOT_IN_MASTER})
+
+
 def test_save_review_ack_does_not_union_codes_from_before_a_transcription_fix(pg, pf):
     source_id, _job_id, item_id = prepare(pg, 0)
     correct(pg, item_id, source_id, "review_ack", ack(["excluded"]), at=10)
