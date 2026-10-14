@@ -1395,3 +1395,151 @@ test.describe("visual-language: 受信箱 第7便（テンプレートを「…�
     expect(newIcon, "顧客情報ボタンのアイコンが PAGE_ICONS.kartePanel（クリップボード）のまま変わっていない").not.toBe(oldIcon);
   });
 });
+
+test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ）をスマホで全画面にする）", () => {
+  /**
+   * 第8便の背景（PO 決定・2026-10-14）:
+   * スマホのカルテは従来「下から 80vh のボトムシート」だった
+   * （InboxPage.css の旧コメント「カルテをボトムシートに変換」）。
+   * お手本（WhatsApp）の連絡先画面は画面全体（実測 y=0〜2340・下部タブも見えない）
+   * のため、PO が次の3点を決定: ①画面全体に広げる・下部タブも覆う
+   * ②閉じ方を「← 顧客情報」の帯に統一する（会話画面と同じ戻り方）
+   * ③動きを下から上ではなく右から左にする。
+   * 重なり順は新しいトークンを足さず、既存の --z-drawer（301）を使う。
+   */
+  const karteOpenBtn = (page: Page): Locator =>
+    page.locator(".inbox-thread-header-mobile-btn[aria-label='顧客情報']");
+  const panel = (page: Page): Locator => page.locator(".inbox-right-panel");
+  const backBtn = (page: Page): Locator => page.locator(".karte-close-back-btn");
+
+  test("スマホ: カルテが画面全体になり、下部タブバーを覆う", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+
+    const measured = await page.evaluate(() => {
+      const panelEl = document.querySelector(".inbox-right-panel") as HTMLElement | null;
+      const tabbarEl = document.querySelector(".mobile-tabbar") as HTMLElement | null;
+      const panelRect = panelEl?.getBoundingClientRect() ?? null;
+      const tabbarRect = tabbarEl?.getBoundingClientRect() ?? null;
+      return {
+        panelRect: panelRect
+          ? { x: panelRect.x, y: panelRect.y, width: panelRect.width, height: panelRect.height }
+          : null,
+        tabbarRect: tabbarRect
+          ? { x: tabbarRect.x, y: tabbarRect.y, width: tabbarRect.width, height: tabbarRect.height }
+          : null,
+        panelZIndex: panelEl ? parseInt(getComputedStyle(panelEl).zIndex, 10) : null,
+        tabbarZIndex: tabbarEl ? parseInt(getComputedStyle(tabbarEl).zIndex, 10) : null,
+      };
+    });
+    await testInfo.attach("karte-fullscreen", {
+      body: JSON.stringify({ viewport, measured }, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(measured.panelRect, "カルテの矩形が取れない").not.toBeNull();
+    expect(measured.tabbarRect, "下部タブバーの矩形が取れない").not.toBeNull();
+    const panelRect = measured.panelRect!;
+    const tabbarRect = measured.tabbarRect!;
+    const v = viewport!;
+
+    // 1. カルテが画面全体であること（上端0・左右もビューポート幅と一致・高さも一致、±1px）
+    expect(Math.abs(panelRect.x), "カルテの左端が0でない").toBeLessThanOrEqual(1);
+    expect(Math.abs(panelRect.y), "カルテの上端が0でない").toBeLessThanOrEqual(1);
+    expect(Math.abs(panelRect.width - v.width), "カルテの幅がビューポート幅と一致しない").toBeLessThanOrEqual(1);
+    expect(Math.abs(panelRect.height - v.height), "カルテの高さがビューポート高さと一致しない").toBeLessThanOrEqual(1);
+
+    // 2. 下部タブバーがカルテに覆われていること（矩形がカルテの内側、かつ重なり順でも上）
+    expect(tabbarRect.y, "タブバーの上端がカルテの上端より手前").toBeGreaterThanOrEqual(panelRect.y - 1);
+    expect(tabbarRect.y + tabbarRect.height, "タブバーの下端がカルテの下端を超えている")
+      .toBeLessThanOrEqual(panelRect.y + panelRect.height + 1);
+    expect(measured.panelZIndex, "カルテの z-index が取れない").not.toBeNull();
+    expect(measured.tabbarZIndex, "タブバーの z-index が取れない").not.toBeNull();
+    expect(measured.panelZIndex!, "カルテの重なり順がタブバーより前面でない")
+      .toBeGreaterThan(measured.tabbarZIndex!);
+  });
+
+  test("スマホ: 左上の戻る矢印が44px以上で、押すとカルテが閉じて会話に戻る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const back = backBtn(page);
+    await expect(back).toBeVisible();
+    // 会話画面と同じ戻るラベル（既存キー common.back）を使っていること
+    await expect(back).toHaveAccessibleName("戻る");
+
+    const box = await back.boundingBox();
+    expect(box, "戻る矢印の寸法が取れない").not.toBeNull();
+    expect(box!.width, "戻る矢印の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(box!.height, "戻る矢印の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    await testInfo.attach("karte-back-btn-box", { body: JSON.stringify(box), contentType: "application/json" });
+
+    await back.click();
+    await expect(panel(page)).not.toHaveClass(/karte-open/);
+    // 会話に戻っていること（入力欄が見える）
+    await expect(page.locator(".inbox-textarea")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("スマホ: 固定の操作バー（karte-action-bar）が画面内に見えている", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const actionBar = page.locator('[data-testid="karte-action-bar"]');
+    await expect(actionBar).toBeVisible();
+    const box = await actionBar.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box, "操作バーの矩形が取れない").not.toBeNull();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+    await testInfo.attach("karte-action-bar-box", {
+      body: JSON.stringify({ box, viewport }),
+      contentType: "application/json",
+    });
+
+    expect(box!.y, "操作バーの上端が画面より上にある").toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height, "操作バーの下端がビューポートを超えている")
+      .toBeLessThanOrEqual(viewport!.height + 1);
+  });
+
+  test("PC・タブレット: カルテは全画面にならない（従来どおり）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+
+    // タブレット幅（768〜1279px）はドロワー方式のため .karte-toggle-btn を押して開く。
+    // デスクトップ幅（1280px以上）は常時表示なのでクリック不要（存在すれば押す）。
+    const toggle = page.locator("button.karte-toggle-btn");
+    if (await toggle.isVisible().catch(() => false)) {
+      await toggle.click();
+    }
+    await expect(panel(page)).toBeVisible();
+
+    const box = await panel(page).boundingBox();
+    expect(box, "カルテの矩形が取れない").not.toBeNull();
+    await testInfo.attach("karte-pc-tablet-box", {
+      body: JSON.stringify({ box, viewport, width: projectWidth(testInfo) }),
+      contentType: "application/json",
+    });
+
+    // 全画面になっていない＝幅がビューポート未満であること
+    expect(box!.width, "カルテの幅がビューポートと同じ（全画面化している）").toBeLessThan(viewport!.width);
+  });
+});
