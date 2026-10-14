@@ -402,6 +402,7 @@ export default function ConditionsPage() {
             <TextField
               type="text"
               size="md"
+              className="field-w-md"
               placeholder={t("common.search")}
               aria-label={t("common.search")}
               value={searchInput}

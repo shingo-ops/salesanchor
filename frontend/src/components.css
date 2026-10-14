@@ -47,23 +47,9 @@
 }
 
 /* --- Search / Filter --- */
-.search-bar,
-.filter-bar {
+.search-bar {
   margin-bottom: var(--space-4);
 }
-
-/* stylelint-disable no-descending-specificity -- intentional: search/filter context overrides form-group styles */
-.search-bar input,
-.filter-bar select {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-base);
-  min-width: var(--input-select-min-w);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-}
-/* stylelint-enable no-descending-specificity */
 
 /* --- Table --- */
 .data-table {
