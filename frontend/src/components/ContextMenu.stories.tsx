@@ -65,3 +65,30 @@ export const NearViewportEdge: Story = {
     );
   },
 };
+
+// ── align="left"（受信箱 第5便・PO 指摘）: 押した x 座標に関わらず
+//    画面左端から一定の余白の位置に左端を固定する ───────────────────────
+export const AlignLeft: Story = {
+  render: () => {
+    const [open, setOpen] = useState(false);
+    return (
+      <div style={{ padding: "48px" }}>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          style={{ marginLeft: "200px" }}
+        >
+          画面右寄りを押しても左側に出る
+        </button>
+        <ContextMenu
+          open={open}
+          onClose={() => setOpen(false)}
+          anchor={{ x: window.innerWidth - 100, y: 160 }}
+          items={sampleItems}
+          ariaLabel="会話の操作"
+          align="left"
+        />
+      </div>
+    );
+  },
+};

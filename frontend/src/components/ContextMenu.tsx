@@ -9,6 +9,10 @@
  *
  * - 開閉は制御式（open / onClose）
  * - 表示位置は anchor（画面座標 x, y）。画面の右端・下端に寄ったときは内側に収める
+ * - align（既定 "point"）で置き方を選べる。"point" は上記の従来どおり
+ *   （指で押した x 座標がそのまま左端）。"left" は画面左端から --space-3 の
+ *   余白を取った位置に左端を固定する（受信箱 第5便・PO 指摘＝右側だと押しづらい）。
+ *   縦位置（top）の決め方は align に関わらず同じ
  * - role="menu" / role="menuitem"、Esc で閉じる、外側を押すと閉じる
  * - 開いたら最初の項目へ自動でフォーカス
  * - 押す場所は 44px 以上（--size-icon-btn-lg と同じ基準）
@@ -48,6 +52,24 @@ export interface ContextMenuProps {
   items: ContextMenuItem[];
   /** role="menu" の読み上げ用ラベル */
   ariaLabel?: string;
+  /**
+   * 置き方。既定は "point"（指で押した座標がそのまま左端＝従来どおり）。
+   * "left" は画面左端から --space-3 の余白を取った位置に左端を固定する。
+   */
+  align?: "point" | "left";
+}
+
+/** align="left" のときに使う既定値。--space-3 が読めないときの安全なフォールバック */
+const DEFAULT_LEFT_ALIGN_MARGIN = 12; // px — --space-3（tokens.css）と同じ値
+
+/** --space-3 トークンの値（px）を読む。読めないときは DEFAULT_LEFT_ALIGN_MARGIN を使う */
+function getLeftAlignMargin(): number {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return DEFAULT_LEFT_ALIGN_MARGIN;
+  }
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--space-3").trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_LEFT_ALIGN_MARGIN;
 }
 
 /** 画面の端で切れないよう、anchor を内側に収めた位置を計算する */
@@ -55,12 +77,13 @@ function clampPosition(
   anchor: ContextMenuAnchor,
   panelWidth: number,
   panelHeight: number,
+  align: "point" | "left" = "point",
 ): { top: number; left: number } {
   const margin = 8; // px — 画面端との最低間隔
-  let left = anchor.x;
+  let left = align === "left" ? getLeftAlignMargin() : anchor.x;
   let top = anchor.y;
 
-  if (left + panelWidth + margin > window.innerWidth) {
+  if (align !== "left" && left + panelWidth + margin > window.innerWidth) {
     left = window.innerWidth - panelWidth - margin;
   }
   if (top + panelHeight + margin > window.innerHeight) {
@@ -71,7 +94,7 @@ function clampPosition(
   return { top, left };
 }
 
-export function ContextMenu({ open, onClose, anchor, items, ariaLabel }: ContextMenuProps) {
+export function ContextMenu({ open, onClose, anchor, items, ariaLabel, align = "point" }: ContextMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -85,8 +108,8 @@ export function ContextMenu({ open, onClose, anchor, items, ariaLabel }: Context
       return;
     }
     const rect = panelRef.current.getBoundingClientRect();
-    setPos(clampPosition(anchor, rect.width, rect.height));
-  }, [open, anchor, items]);
+    setPos(clampPosition(anchor, rect.width, rect.height, align));
+  }, [open, anchor, items, align]);
 
   // 開いたら最初の項目にフォーカス
   useEffect(() => {
