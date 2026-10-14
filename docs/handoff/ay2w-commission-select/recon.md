@@ -25,7 +25,7 @@
 - §AJ: docs/specs/design-system/design.md:1252-1270。390px・英語の実 CommissionPanel で旧から横 overflow があり body clientWidth390 に対し scrollWidth 528→537（docs/specs/design-system/design.md:1254）。表 CSS・横スクロール修正をボタン移管へ混載しない（docs/specs/design-system/design.md:1256）。
 - §AW-2b: docs/specs/design-system/design.md:2156 生 select 63 から保留 10（ProductEditPage 9、CommissionPanel 1）を除く 53 を移管。:2176 保留 10 件の見た目不変を測る基準。
 - docs/specs/design-system/design.md:2403 報酬の保留は select 1 件だけで同ファイルに生 input は無い。
-- docs/specs/design-system/migration.md:100（TB-01 components/CommissionPanel.tsx:186）、docs/specs/design-system/migration.md:219（AJ 分割）。
+- docs/specs/design-system/migration.md:100（TB-01 の記載先は frontend/src/components/CommissionPanel.tsx:186）、docs/specs/design-system/migration.md:219（AJ 分割）。
 - 既存試験: frontend/src/components/SharedButtonMigration.test.tsx（CommissionPanel の解除・再計算の操作試験）。
 
 ## E. Select.tsx の型（Select.tsx.txt）
