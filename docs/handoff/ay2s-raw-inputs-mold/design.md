@@ -54,7 +54,7 @@
 
 ## 維持の仕組み
 - 守り手: frontend/src/components/TextField.tsx（入力欄の見た目の正本）
-- 守り手2: scripts/check-ui-governance.js（pages の生 input 検出。type=number は :75-77 で対象外＝既知の穴、残件）
+- 守り手2: scripts/check-ui-governance.js（pages の生 input 検出。type=number は :213-217（isDetectableInput）で対象外＝既知の穴、残件）
 
 ## r2 追補: C3 の判定（Opus、実装中の発見）
 - 事実（docs/handoff/design-system-recon/evidence-20260910/ay2s-before.json・ay2s-after.json、knowledge-aliases-w375）: 375 では検索ボタン群が入力の次の行に折り返している（前後とも）。入力の下端からボタンの上端までの間隔は前 8px（入力 top 383.47+h19=402.47、ボタン中心 392.97+39.5 から h44 で top 410.47）、後 8px（入力 383.47+44=427.47、ボタン中心 405.47+52 から top 435.47）で同じ。

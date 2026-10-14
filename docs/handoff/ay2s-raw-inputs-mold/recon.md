@@ -17,6 +17,6 @@ border 2px inset rgb(118,118,118)、radius 0、height 19px、font 13.33px、色 
 ## 残件（今回やらない）
 - `<input type="checkbox">` は両ファイルに計10件残る（対象外）。
 - label 追加（a11y）は i18n キー新設を伴う別テーマ。
-- `scripts/check-ui-governance.js:75-77` は type=number を対象外とする（既知の穴）。
+- `scripts/check-ui-governance.js:213-217` は type=number を対象外とする（既知の穴）。
 - 375 幅の inventory-qty-min / price-min の left -11.83 は既存。
 - GoalSettingPage（AY-2t）、DistributionTargetForm（AY-2u）は別便。

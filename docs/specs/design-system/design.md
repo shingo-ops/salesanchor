@@ -4038,4 +4038,4 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 残件:
   - 6個の入力欄に label の関連付けが無い。文言追加＝i18n キー新設を伴う別テーマ。
   - 375 の inventory-qty-min・inventory-price-min の left が -11.83 になる。変更前から同値の既存事象で、本便で新たに生じたものではない。
-  - type=number の生 input は check-ui-governance.js の検出対象外（:75-77）のまま。
+  - type=number の生 input は check-ui-governance.js の検出対象外（:213-217 isDetectableInput）のまま。
