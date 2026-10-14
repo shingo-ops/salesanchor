@@ -43,7 +43,10 @@
 
 ---
 
-## 継続
+## 維持の仕組み
 
-- 完了後の監視: 人手で守る（agent-console の版や登録内容が変わったら本書を更新）
+- 守り手: 週次保守（id 5d459653）。ROUTINE.md の指示文を使って実行する
+- 対象: docs/handoff/design-approval-ticket/routine/ROUTINE.md の登録手順と、agent-console に登録済みの promptText が一致していること
+- 更新ルール: 手順書と登録済みの promptText がずれたら更新する。agent-console の版や登録内容が変わったときも本書と ROUTINE.md を更新する
+- 関所なしの場合: 人手で守る。この一致を検査する CI ワークフローは無い
 - 次フェーズへの引き継ぎ: なし
