@@ -12,9 +12,9 @@
 
 ## What（何を決めたか）
 
-1. PR を、変更ファイルと目的によって A／B-1／B-2／B-3／L に分ける。上から順に判定し、最初に当たったものに決める。条件の正本は `docs/handoff/devflow-autonomy-b/design.md` §3 とする。
+1. PR を、変更ファイルと目的によって A／B-1／B-2／B-3／L に分ける。上から順に判定し、最初に当たったものに決める。条件の正本は本 ADR とする。細かい条件と監査の手順は `docs/handoff/devflow-autonomy-b/design.md` §3 に書く。両者が食い違えば本 ADR を優先する。
    - **A（PO の判断を待つ）**: 次のどれかに当たる変更。
-     - `migrations/`・`scripts/`・`ops/`・`tools/`・`.github/`・`backend/app/auth/` などの危険パスを触る。
+     - 危険パスを触る：`migrations/`・`scripts/`・`ops/`・`tools/`・`backend/tools/`・`backend/app/tools/`・`backend/app/tasks/`・`backend/scripts/`・`frontend/scripts/`・`frontend/api-contract/`・`.github/`・`backend/app/auth/`。
      - ファイル名に auth／session／permission／payment などの語を含む（見るのは `frontend/src/`・`backend/app/`・リポジトリ直下だけ）。
      - 正本の文書（ADR・STANDARD-WORKFLOW・CLAUDE.md／AGENTS.md・ai-agents・specs の ideal-state／kgi）を触る。
      - .sql を含む。
@@ -52,7 +52,7 @@
 - **基準値は実測した**: 9/22〜10/6 にマージされた PR 284 件を、この区分で分けた。結果は A 186・B 55・L 38・どれにも当たらない 5 件（直す前の版で分けた値。リポジトリの classify.py は直した版で、A 185・B 56 になる。移る #3980・#3992・#4006 は docs だけか .sql を含むもので、下の分母 50 件には入らない）。
   - B のうちコードを触るもの 50 件では、それが原因の fix PR が 2 件あった（#3736・#3763）。2/50＝4.0%。
   - ログインに関わるファイル9本は、すべて A に入った。
-  - 根拠は `docs/handoff/devflow-autonomy-b/baseline.md` にある。
+  - 根拠は `docs/handoff/devflow-autonomy-b/baseline.md`（284 件の明細と原因の判定）と、`docs/handoff/devflow-autonomy-b/design.md` の S3 の行（2/50 の導き方）にある。
 - **審査**: Fable が v2 から v6 まで5回審査し、v6 で APPROVE を出した（`docs/handoff/devflow-autonomy-b/review-fable.md`）。
 
 ## 範囲外（この ADR では変えない）
@@ -61,10 +61,11 @@
 - 許可・フック・CI・Ruleset。
 - A 区分の進め方（今までどおり PO が判断する）。
 - マージを押すのは PO であること。
+- なお、docs/ai-agents/design-partner.md の「PO 自筆 GO 必須」の行は、ADR-1003（2026-09-29）に合わせて書き直した。これは本 ADR の新しい決定ではない。
 
 ## 解除
 
-PO が「自律停止」と言えば、この ADR より前の規則（1件ごとの PO 承認）に戻る。試行の 14 日が終わったら、成績表を見て、続けるか戻すかを PO が決める。
+PO が「自律停止」と言えば、この ADR より前の規則（1件ごとの PO 承認）に戻る。試行の 14 日が終わったら、成績表を見て、続けるか戻すかを PO が決める。自律停止は、ADR-1003（GO 委譲）と ADR-1011（許可の自律保守）の状態を変えない。
 
 ## 弊害・トレードオフ
 
