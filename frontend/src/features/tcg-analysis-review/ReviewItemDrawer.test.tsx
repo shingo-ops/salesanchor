@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "./ReviewItemDrawer";
@@ -10,8 +10,10 @@ vi.mock("../../lib/api", () => ({
 vi.mock("./ItemComparison", () => ({
   ItemComparison: ({ heading }: { heading?: string }) => <div data-testid="comparison-heading">{heading}</div>,
 }));
-vi.mock("./ConditionReviewPanel", () => ({ ConditionReviewPanel: () => null }));
-vi.mock("./ProductMasterDrawer", () => ({ ProductMasterDrawer: () => null }));
+vi.mock("./ConditionReviewPanel", async () => ({
+  ...(await vi.importActual<typeof import("./ConditionReviewPanel")>("./ConditionReviewPanel")),
+  ConditionReviewPanel: () => null,
+}));
 
 const suspect = { gap_lines: [14, 15], candidates: [{ product_id: "1001", name: "Product A" }] };
 
@@ -96,11 +98,22 @@ describe("ReviewItemDrawer layout", () => {
     expect(screen.getByTestId("comparison-heading").textContent).toBe("Comparison");
   });
 
-  it("shows the labelled product form with a disabled reassign button in the fix section", () => {
+  it("starts the fix section with the question and no product master button", () => {
     renderDrawer(withRaw("L1"));
+
+    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Reassign to an existing product/ })).toBeTruthy();
+    expect(screen.queryByText("Register or exclude in the product master")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("shows the labelled product form with a disabled reassign button after choosing to reassign", () => {
+    renderDrawer(withRaw("L1"));
+
+    fireEvent.click(screen.getByRole("radio", { name: /Reassign to an existing product/ }));
 
     expect(screen.getByText("Product").tagName).toBe("LABEL");
     expect((screen.getByRole("button", { name: "Reassign to this product" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("Register or exclude in the product master")).toBeTruthy();
+    expect(screen.queryByText("Register or exclude in the product master")).toBeNull();
   });
 });
