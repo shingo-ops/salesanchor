@@ -46,8 +46,14 @@
 
 詳細: docs/handoff/design-system-recon/evidence-20260910/ay2t-acceptance.md
 
-## 5. 外部事例
-不要（社内金型の適用のみ）。社内前例: AY-2s（#4254）、AY-2p の複合セレクタ（field-size.css）。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 不要（社内金型の適用のみ）。
+- 過去事例: AY-2s（#4254）で生 input を TextFieldControl に移行した手順を踏襲。AY-2p の複合セレクタ（frontend/src/components/field-size.css）に倣い、保存済みの見た目を `.comp-field__input.gs-input-saved`／`:focus` にして読み込み順への依存を避けた。
 
-## 6. 維持の仕組み
+## 代替案
+- 背景 --bg-primary を modifier で残す: 金型標準からの逸脱を新設する（ADR-144）ため不採用。
+- ラッパー付き TextField: 自前 label と二重・margin で行が崩れるため不採用。
+- size="sm"（文字 13.6px を保つ）: 高さ 28px になり寸法が大きく変わるため不採用。
+
+## 維持の仕組み
 守り手: frontend/src/components/TextField.tsx（入力欄の見た目の正本）。frontend/src/pages/goal-setting/GoalSettingPage.stories.tsx（saved の見た目確認）、frontend/tests-e2e/goal-setting-advisor.spec.ts（testid の維持）。既知の穴: type=number は scripts/check-ui-governance.js の検出対象外（残件）。
