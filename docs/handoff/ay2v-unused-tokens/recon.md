@@ -23,7 +23,7 @@ index.css は :root (8-219) と :root.force-dark (220-414) の2ブロック。�
 | # | トークン | 定義 (file:line) | 定義行以外のヒット | 動的組立 | 他token var() | 判定 |
 |---|---|---|---|---|---|---|
 | 1 | --size-avatar-sm | frontend/src/tokens.css:231 | InboxPage.css:1193 (コメント) / docs/specs/design-system/visual-language/benchmark/whatsapp-reproduction-spec.md:223 (「32pxはこのトークン」と指す設計表) | 無 | 無 | 保留: コード0だがspecが推奨トークンとして名指し。消すなら spec 側修正が要る |
-| 2 | --cat-import | tokens.css:256 | 無 (handoff/pipeline-map-flowchart/recon.md:21 のみ) | 無(badgeTypeは3種) | 無 | 消せる |
+| 2 | --cat-import | tokens.css:256 | 無 (docs/handoff/pipeline-map-flowchart/recon.md:21 のみ) | 無(badgeTypeは3種) | 無 | 消せる |
 | 3 | --cat-discord | tokens.css:257 | 無 | 無 | 無 | 消せる |
 | 4 | --cat-distribution | tokens.css:258 | 無 (handoff recon.md:21) | 無 | 無 | 消せる |
 | 5 | --cat-inventory | tokens.css:259 | 無 | 無 | 無 | 消せる |
@@ -45,11 +45,11 @@ index.css は :root (8-219) と :root.force-dark (220-414) の2ブロック。�
 | 21 | --color-blue-100 | index.css:157 / :361 | 無 (handoff 3件) | 無 | 無 | 消せる |
 | 22 | --color-blue-700 | index.css:158 / :362 | docs/specs/design-system/design.md:30 (命名規則の例示文のみ) | 無 | 無 | 消せる (例示文は値の説明。実在参照ではない) |
 | 23 | --color-gray-100 | index.css:159 / :363 | docs/specs/design-system/design.md:76 / docs/specs/design-tokens-ssot/color/calendar/design.md:37 (calendar-release-tint の参照先として確定値埋め込み) | 無 | 無(計画書側のみ) | 保留: 計画書が var(--color-gray-100) を使う前提 |
-| 24 | --color-gray-600 | index.css:160 / :364 | design.md:157 / calendar/design.md:36,89 (calendar-release-color の参照先) | 無 | 無 | 保留: 同上 |
-| 25 | --color-red-700 | index.css:162 / :366 | design.md:71 / calendar/design.md:34 (calendar-shipping-text) | 無 | 無 | 保留: 同上 |
+| 24 | --color-gray-600 | index.css:160 / :364 | design.md:157 / docs/specs/design-tokens-ssot/color/calendar/design.md:36,89 (calendar-release-color の参照先) | 無 | 無 | 保留: 同上 |
+| 25 | --color-red-700 | index.css:162 / :366 | design.md:71 / docs/specs/design-tokens-ssot/color/calendar/design.md:34 (calendar-shipping-text) | 無 | 無 | 保留: 同上 |
 | 26 | --color-amber-50 | index.css:163 / :367 | 無 (handoff 2件) | 無 | 無 | 消せる |
-| 27 | --color-amber-800 | index.css:164 / :368 | design.md:74 / calendar/design.md:35 (calendar-billing-text) | 無 | 無 | 保留: 同上 |
-| 28 | --color-border-subtle | index.css:165 / :369 | design.md:77 / calendar/design.md:38 (calendar-release-text) | 無 | 無 | 保留: 同上 |
+| 27 | --color-amber-800 | index.css:164 / :368 | design.md:74 / docs/specs/design-tokens-ssot/color/calendar/design.md:35 (calendar-billing-text) | 無 | 無 | 保留: 同上 |
+| 28 | --color-border-subtle | index.css:165 / :369 | design.md:77 / docs/specs/design-tokens-ssot/color/calendar/design.md:38 (calendar-release-text) | 無 | 無 | 保留: 同上 |
 | 29 | --calendar-today-text | index.css:187 / :391 (ダークは var(--palette-ink-deep)) | 無 (handoff 1件) | 無 | 無(兄弟 --calendar-today-bg は :202 から参照されるが別) | 消せる |
 | 30 | --calendar-today-cell-bg | index.css:188 / :392 | 無 | 無 | 無 | 消せる |
 
