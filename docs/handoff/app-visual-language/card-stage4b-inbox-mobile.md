@@ -891,3 +891,95 @@ PO からの依頼には「既存の『押した行の近くに出る』検査�
 1. **本便で追加・修正した検査（左端位置・user-select）は、この端末では実行確認できていない。** `npx playwright test --list` による収集成功までしか確認できておらず、実機 Playwright（CI・x86）での初回実行結果は未確認（第4便から持ち越しのリスクと同じ）。
 2. **`user-select: none` が実機で文字選択を実際に止めるかは未確認。** 19-3 のとおり、この不具合自体がマウス操作の CI では再現しないため、CI が緑になっても実機での解決を保証しない。実機確認は PO が行う。
 3. **align="left" は本便で ContextMenu を使う唯一の呼び出し（受信箱・スマホ）にのみ渡した。** 他にこの金型を使う画面が増えたとき、右側に出したい場合は `align="point"`（既定）、左側に出したい場合は `align="left"` を選べるが、画面の中央寄りに出したいなど他の置き方が要る場合は別途 `align` の値を増やす設計判断が必要になる（本便では発生していない）。
+
+## 20. 会話画面のヘッダーを一覧と同じ形にする便（2026-10-14・第6便）
+
+> この節は何か（専門用語なしの1行）: スマホの会話画面にあった帯2本（上の操作行＋会話ヘッダー）を1本に統合し、右端で切れていた旧三点メニューを廃止して、テンプレート・顧客情報・「…」の3つに置き換えた作業記録。
+
+### 20-1. 背景（実機とコードで確認済みの事実）
+
+| 事実 | 出典 |
+|---|---|
+| スマホの会話画面は帯が2本ある（上: テンプレート/FAQ/受信箱の設定、下: 戻る・顔写真・名前・言語・顧客情報・三点） | 実機の構造データ（2026-10-14） |
+| 三点メニューは実機で 27x38dp しかなく画面右端で切れている | 実機実測 |
+| 上の帯は `frontend/src/pages/inbox/InboxPage.tsx` の `headerActionsContent`。出し分けは同ファイルの `showHeaderActions` | 同ファイル |
+| 会話ヘッダーの入れ物は `frontend/src/pages/inbox/InboxMessageThread.tsx` の `<header className="inbox-center-header">` | 同ファイル |
+| 旧三点の中身（未読にする/対象外にする/削除/顧客情報）は第4便で一覧の長押しメニューに移設済み（本番稼働中） | 本カード §18 |
+| テンプレートと FAQ はスマホでは上の操作行が唯一の入口（下部タブの「…」にも無い） | `frontend/src/components/MobileShell.tsx` を全文検索して不在を確認（文字列 `templates` / `faq` が出てこない） |
+| お手本（WhatsApp）の会話ヘッダーは 56dp・左=戻る48dp＋顔写真48dp＋名前（＋状態の2段）・右=操作2つ（通話メニュー72x48dp・三点40x48dp）で右端に接地 | 実機の構造ダンプ |
+
+### 20-2. PO 決定（2026-10-14）
+
+| 論点 | 決定 |
+|---|---|
+| 帯の数 | 1本（56dp）にする。スマホでは上の操作行を出さない |
+| 右に置く操作 | テンプレート・顧客情報・「…」の3つ（テンプレートと顧客情報は独立したボタンですぐ開ける＝PO 指示） |
+| 「…」の中身 | 送信先の言語・FAQ・受信箱の設定 の3つ |
+| 送信先の言語 | 「…」から選ぶと下から出るシートで3択（自動／日本語／英語） |
+| 旧三点メニュー | スマホでは廃止（中身は長押しメニューへ移設済み） |
+| PC・タブレット | 完全に無変更 |
+
+当方が**お手本（2つ）より1つ多い3つ**を右に置いている理由は、お手本が「顧客情報」に相当する操作を持たず、当方は PO 指示で顧客情報をテンプレートと同格の独立ボタンにしたため。お手本の2つ（通話メニュー・三点）に対し、当方は（テンプレート・顧客情報・「…」）の3つになる。
+
+### 20-3. 実装方法
+
+一覧側の先例 `frontend/src/pages/inbox/InboxConversationListMobile.tsx` と同じ考え方で、会話ヘッダーのスマホ版を新規ファイル `frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx` に分離した。
+
+- `frontend/src/pages/inbox/InboxMessageThread.tsx` は `frontend/src/hooks/useIsMobile.ts` の `useIsMobile()` で出し分ける（同ファイルの `isMobile` 変数）。スマホのときだけ `InboxThreadHeaderMobile` を描き、PC・タブレットの `<header className="inbox-center-header">` 以下の JSX は中身を1行も変えていない（三項演算子で分岐を追加したのみ）
+- `frontend/src/pages/inbox/InboxPage.tsx` の `showHeaderActions` を `!isMobile` に変更（スマホでは会話を開いていても上の操作行を出さない）
+- 受信箱の設定モーダルを開く関数（`useInboxState` の `setShowSettings`）を `onOpenSettings` という新しい prop 名で `InboxPage.tsx` → `InboxMessageThread.tsx` → `InboxThreadHeaderMobile.tsx` の順にそのまま渡した（新しい状態は作っていない。SSOT は `useInboxState.ts` の `showSettings` のまま）
+- 「…」は既存の金型 `frontend/src/components/ContextMenu.tsx` を使う。押したボタンの `getBoundingClientRect()` を anchor にする（新しい金型は作っていない）
+- 「送信先の言語」は既存の金型 `frontend/src/components/Sheet.tsx` で3択を出す。値の出し入れは既存配線 `recipientLanguageSetting` / `setRecipientLanguage`（`useInboxState.ts` が SSOT）をそのまま使い、新しい状態は作っていない
+- 選択肢の見た目（選ぶと閉じる・いま選ばれている値に `active` を付ける）は一覧の絞り込みシート（`frontend/src/pages/inbox/InboxPage.tsx` の `inbox-filter-sheet` / `inbox-filter-sheet-group` / `inbox-filter-sheet-option`）と同じクラス名を再利用した。Sheet.tsx は開閉に関わらず DOM を常にマウントする作り（アニメーションのため）なので、両方のシートが同時に DOM 上に存在する。画面検査では `.comp-sheet-panel--open` が付いた方だけに絞って中の要素を探すことで区別した（`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の `openSheetPanel` ヘルパー）
+- 寸法トークン: ヘッダー全体 `--topbar-height`（56px）、戻る・顔写真は既存の `.inbox-back-to-list`（`--comp-btn-height-lg` 48px）・`.conv-avatar`（`--size-avatar-lg` 48px）を再利用、右の3つは `--size-icon-btn-lg`（44px）、左の余白は `--space-4`（16px・一覧ヘッダーと同じ値）。右端は一覧ヘッダー（`.inbox-mobile-header` の `padding-right: 0`）と同じ作法で画面右端に接地させた（`frontend/src/pages/inbox/InboxPage.css` の `.inbox-thread-header-mobile`）
+- アイコンはすべて既存を再利用（新規追加なし）: テンプレート＝`NAV_ICONS.fileText`、顧客情報＝`PAGE_ICONS.kartePanel`、「…」＝`NAV_ICONS.more`、FAQ＝`NAV_ICONS.help`、受信箱の設定＝`PAGE_ICONS.settingsSolid`、送信先の言語＝`INBOX_ACTION_ICONS.translate`
+- 文言はすべて既存の i18n キーを再利用（新規キーなし）: `nav.templates` / `inbox.karteToggle` / `faq.title` / `inbox.settings.title` / `translation.sendGuard.langToggleLabel`（`langAuto` / `langJa` / `langEn`）/ `inbox.backToList` / `inbox.avatarAlt` / `inbox.moreActions`
+
+### 20-4. 幅の計算と実測（PO 指摘事項）
+
+PO から「右に3つ置くと 360dp のうち 戻る48＋顔写真48＋ボタン44×3＝228dp を使い、名前に残るのは約132dp。収まるかは実際に測る」と指摘があった。実装したレイアウトは flexbox で、名前の要素（`.inbox-thread-header-mobile-name`）に `flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;` を与えているため、固定幅の要素（戻る・顔写真・右の3ボタン）がどれだけ幅を取っても、名前は残りの幅に自動で収まり、ボタン群に重なることは構造上起きない（重ならないことは `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の「会話を開くと帯が1本だけになり」テストで、名前の右端が右ボタン群の左端を超えていないことを実測して確認した）。
+
+CI の検査幅は 390px（`vl-mobile-390`）であり、PO が挙げた 360dp の実機とは異なる。390px では固定要素の合計 228px に加えて左余白16px・要素間の gap（`--space-3` 12px×2）を引いても、名前におおむね120px前後が残る計算になる（実測値は上記テストの `testInfo.attach("thread-header-measurements", ...)` に記録される）。実機 360dp では残りがさらに10px程度減る見込みだが、サンプル名（`"Taro Sender"`）・実機の一般的な顧客名であれば `text-overflow: ellipsis` により表示が切れるだけで重なりは起きない。**長い名前が極端に狭い端末幅でどう見えるかの実機確認はしていない**（リスク参照）。
+
+### 20-5. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | スマホで会話を開いたとき帯が1本であること（`.page-header-actions` が0件） | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の新設テスト | 収集成功（§20-7 参照）。実行は CI に委ねる |
+| 2 | 会話ヘッダーの高さが56px（±1） | 同テスト（`--topbar-height` と比較） | 同上 |
+| 3 | 戻るボタンが左端（ヘッダーの左 padding の位置）にあり48px以上 | 同テスト（`--space-4` と `--comp-btn-height-lg` の値を実測と比較） | 同上 |
+| 4 | 右の3つ（テンプレート・顧客情報・「…」）が各44px以上で、最後のボタンの右端がビューポート右端（±1） | 同テスト | 同上 |
+| 5 | 相手の名前が表示され、右のボタン群と重なっていない（名前の右端 ≦ 最初のボタンの左端） | 同テスト（flexbox の構造上保証されることをあわせて実測で確認。§20-4） | 同上 |
+| 6 | 「…」を押すと3項目（送信先の言語／FAQ／受信箱の設定）が出る | 同テスト（`受信箱 第6便` describe 内「「もっと」を押すと3項目…」） | 同上 |
+| 7 | 「送信先の言語」を押すとシートが開き、選択肢が3つ・各44px以上・選ぶと閉じる | 同テスト（`openSheetPanel` で絞り込みシートと区別。§20-3） | 同上 |
+| 8 | PC・タブレットではスマホ用ヘッダーが出ない（`.inbox-thread-header-mobile` が0件）・`.page-header-actions` が1件・言語の `SelectControl` が見える | 同テスト（`受信箱 第6便` describe 内「PC・タブレット: …」） | 同上 |
+| 9 | 既存の検査（第4便の長押し6件・第5便の2件・一覧の各件）が緑のまま | `npx playwright test --list` で324件→325件（新規4テスト×3幅=12件追加後の総数の整合）を収集確認。実行結果は CI に委ねる | 収集成功 |
+| 10 | 既存の単体テスト `InboxMessageThread.discordSendError.test.tsx` が壊れていない | `npx vitest run --config vitest.unit.config.ts --project unit src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` | 8件成功（`useIsMobile` を `vi.mock` で false 固定に変更。§20-6 参照） |
+| 11 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 25項目すべて `exited with code 0`（lint は既存 warning のみ・error 0件・本変更由来の新規違反なし） |
+| 12 | 型が通る | `cd frontend && npx tsc --noEmit` | エラー0件 |
+| 13 | 単体テスト全体が壊れていない | `cd frontend && npm run test:unit` | 96ファイル・1082件すべて成功 |
+| 14 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §20-7 に実際の出力を記載 |
+| 15 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js` | §20-7 に実際の出力を記載 |
+
+### 20-6. 既存テストへの影響（判断）
+
+1. **`frontend/src/pages/inbox/InboxMessageThread.discordSendError.test.tsx`**: `InboxMessageThread` が `useIsMobile()` を呼ぶようになったため、jsdom（`window.matchMedia` 未実装）でエラーになった。`frontend/src/pages/admin/AdminHubPage.test.tsx` と同じ作法（`vi.mock("../../hooks/useIsMobile", ...)`）でモックし、`false`（非スマホ）を返すよう固定した。このテストは送信エラー表示（PC・タブレットと同じ JSX）の検証なので、非スマホ固定が実態に合う。
+2. **`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の既存アサーション1件を変更した。** 「スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みはヘッダーの右端に出る」テスト内の「会話を開くと操作行が出ること（返信中に使うため）」という第2便時点の仕様確認（`.page-header-actions` が1件であることを期待）を、第6便の PO 決定（会話を開いても操作行は出さない）に合わせて0件に変更した。これは仕様そのものが変わったための意図的な変更であり、退行ではない。
+
+### 20-7. 実際の検証出力
+
+- `cd frontend && npx tsc --noEmit` → エラー0件
+- `cd frontend && npm run lint` → 0 errors, 137 warnings（本変更対象ファイルからの新規警告なし）
+- `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`
+- `cd frontend && npm run test:unit` → 96 Test Files passed・1082 Tests passed
+- `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` → 8件成功
+- `cd frontend && npx playwright test --list` → 325 tests in 44 files を収集成功。この端末（arm64/Termux）では chromium が起動できないため実行は不可（CI に委ねる）
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（本便の2コミット後に実行） → `PASS: 対象5ファイル・増加なし`
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（本便の2コミット後に実行） → `✅ UI governance: 新規ハードコードなし`（対象ファイル数4）
+
+### 20-8. 残るリスク
+
+1. **実機 Playwright 実行は未確認。** この端末では chromium が起動できないため、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない（第4便・第5便と同じ事情）。
+2. **極端に狭い端末幅・極端に長い顧客名での実機確認はしていない。** §20-4 のとおり flexbox の構造上重なりは起きない設計だが、CI の検査幅（390px）と PO が指摘した実機幅（360dp）には差があり、360dp 実機での最終確認は別途必要。
+3. **会話ヘッダーの Discord 未連携バッジ（`messagesData?.lead?.platform === "discord" && !leadDetail?.discord_user_id` のとき表示される既存バッジ）をスマホ版ヘッダーには含めていない。** 名前の表示幅がただでさえ狭く（§20-4）、バッジを足すとさらに狭くなるため、本便の明示的な構成リスト（戻る→顔写真→名前→テンプレート→顧客情報→「…」）に無いこの要素は含めなかった。Discord 連携状態の確認はカルテ（顧客情報）側で引き続き可能。この判断は実装時の判断であり、PO に確認していない。
+4. **顧客情報ボタン（カルテ切替）は既存の `inboxSettings.showRightPanel` 設定で表示を切る。** PO 決定は「テンプレートと顧客情報は独立したボタンですぐ開ける」であり、受信箱の設定で右パネル表示をオフにしている場合にボタン自体を出さない挙動は PC・タブレット版と揃えた既存の配線をそのまま踏襲したもので、本便で新たに判断したものではない。
