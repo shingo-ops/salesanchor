@@ -28,6 +28,7 @@ import {
   openConversation,
   openInboxList,
   openInboxListWithConversations,
+  openInboxListWithDiscordUnlinkedConversation,
 } from "./inbox-helpers";
 
 /**
@@ -187,9 +188,13 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await page.locator(".comp-sheet-overlay").click();
     await expect(sheetOpen).toHaveCount(0);
 
-    // 会話を開くと操作行が出ること（返信中に使うため）
+    // 2026-10-14（第6便・PO 決定）: 会話を開いても操作行は出さない（帯を2本から1本に統合）。
+    // テンプレート・顧客情報は会話ヘッダーの右に、FAQ・受信箱の設定は「…」に移した
+    // （InboxThreadHeaderMobile.tsx・本ファイル下部の「受信箱 第6便」describe を参照）。
+    // この assertion は第2便時点の仕様（会話を開くと操作行が出る）を検証していたが、
+    // 第6便の PO 決定で逆（出さない）になったためここを更新した。
     await openConversation(page);
-    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+    await expect(page.locator(".page-header-actions")).toHaveCount(0);
     // 一覧専用の絞り込みは会話側では見えない（一覧が隠れているため）
     await expect(filterInHeader).toBeHidden();
   });
@@ -407,14 +412,19 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     await openConversation(page);
     const sendBtn = await measure(".inbox-send-btn");
-    const karteToggle = await measure(".karte-toggle-btn");
+    // 第6便（2026-10-14）: スマホの会話ヘッダーを作り直したため、旧ヘッダーの
+    // ボタン（.karte-toggle-btn / .inbox-header-menu-btn）はスマホには存在しない。
+    // 新しいヘッダー（.inbox-thread-header-mobile）のボタンを測る。
+    //   旧 .inbox-header-menu-btn（三点）は実機実測で 27x38dp・画面右端で切れていたが、
+    //   第6便で**スマホでは廃止**した（中身は第4便で一覧の長押しメニューへ移設済み）。
+    const karteToggle = await measure(".inbox-thread-header-mobile-btn[aria-label='顧客情報']");
+    const headerMore = await measure(".inbox-thread-header-mobile-btn[aria-label='その他の操作']");
     // 本便で変更していないものも値を記録に残す（design §7）。
     //   .send-attach-btn … 送信ピルの内側（44px にするとピルが膨らむ）
-    //   .inbox-header-menu-btn … 実機実測で 15x38dp。幅が足りないのは画面右端で
-    //     切れているため（ヘッダの中身が 360dp に収まっていない）。寸法ではなく
-    //     ヘッダの中身を減らす判断が必要なので本便では触らない。
     const attach = await measure(".send-attach-btn");
-    const headerMenu = await measure(".inbox-header-menu-btn");
+    // スマホでは旧三点が存在しないことを機械で確かめる（作り直しの証拠）
+    const oldMenuCount = await page.locator(".inbox-header-menu-btn").count();
+    expect(oldMenuCount, "スマホに旧三点メニューが残っている").toBe(0);
 
     await testInfo.attach("touch-targets", {
       body: JSON.stringify(
@@ -422,8 +432,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
           絞り込み: filter,
           送信: sendBtn,
           顧客情報: karteToggle,
+          "その他の操作": headerMore,
           "添付（この便では未対応）": attach,
-          "三点メニュー（この便では未対応・右端で切れている）": headerMenu,
+          "旧三点メニュー（第6便でスマホでは廃止）": oldMenuCount,
         },
         null,
         2,
@@ -439,6 +450,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(karteToggle, "顧客情報ボタンが見つからない").not.toBeNull();
     // 幅はアイコンと文言に任せるため高さだけを基準にする
     expect(karteToggle!.h, "顧客情報ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    // 第6便: 旧三点の置き換えである「その他の操作」も 44px 以上であること
+    expect(headerMore, "その他の操作ボタンが見つからない").not.toBeNull();
+    expect(headerMore!.w, "その他の操作の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(headerMore!.h, "その他の操作の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
   });
 
   test("スマホ: 検索欄の2つのボタンが別のアイコンで、管理は文言を出さない", async ({ page }, testInfo) => {
@@ -982,5 +997,232 @@ test.describe("visual-language: 受信箱 第5便（メニューを左側に出�
 
     const menuUserSelect = await menu(page).evaluate((el) => getComputedStyle(el).userSelect);
     expect(menuUserSelect, "メニューの user-select").toBe("none");
+  });
+});
+
+test.describe("visual-language: 受信箱 第6便（会話画面のヘッダーを一覧と同じ形にする）", () => {
+  /**
+   * 第6便の背景（PO 決定 2026-10-14）: 旧スマホの会話画面は帯が2本
+   * （上の操作行＋会話ヘッダー）あり、会話ヘッダー側の旧三点メニューは
+   * 実機実測で 27x38dp しかなく画面右端で切れていた。
+   * 1本（56dp）に統合し、右にテンプレート・顧客情報・「…」を置く
+   * （テンプレートと顧客情報は独立ボタンで即開ける＝PO 指示）。
+   * 「…」の中身は 送信先の言語／FAQ／受信箱の設定（この3つはスマホでは
+   * 上の操作行が唯一の入口だったため、入口を失わないようここへ移した）。
+   * 旧三点の中身（未読にする/対象外にする/削除/顧客情報）は第4便で
+   * 一覧の長押しメニューに移設済み（本番稼働中）のためここには含まれない。
+   */
+  const header = (page: Page): Locator => page.locator(".inbox-thread-header-mobile");
+  const name = (page: Page): Locator => page.locator(".inbox-thread-header-mobile-name");
+  const actionButtons = (page: Page): Locator => page.locator(".inbox-thread-header-mobile-btn");
+  const moreMenu = (page: Page): Locator => page.locator(".comp-context-menu");
+  const moreMenuItems = (page: Page): Locator => moreMenu(page).locator('[role="menuitem"]');
+  // Sheet.tsx は開閉に関わらず DOM を常にマウントする（アニメーションのため）。
+  // このページには絞り込み用（InboxPage.tsx）と言語選択用（本便）の2つの Sheet が
+  // 同時にマウントされるため、"今開いている" パネルだけに絞って中の要素を探す。
+  const openSheetPanel = (page: Page): Locator =>
+    page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open');
+
+  test("スマホ: 会話を開くと帯が1本だけになり、各部品の寸法・配置が仕様どおり", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    const viewportWidth = viewport!.width;
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    // 1. 帯が1本だけ（上の操作行は出さない＝PO 決定）
+    await expect(page.locator(".page-header-actions")).toHaveCount(0);
+    await expect(header(page)).toBeVisible();
+
+    const headerBox = await header(page).boundingBox();
+    const backBox = await backButton(page).boundingBox();
+    const nameBox = await name(page).boundingBox();
+    const buttons = actionButtons(page);
+    const buttonCount = await buttons.count();
+    const buttonBoxes = await Promise.all((await buttons.all()).map((b) => b.boundingBox()));
+
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+    expect(backBox, "戻るボタンの寸法が取れない").not.toBeNull();
+    expect(nameBox, "名前の寸法が取れない").not.toBeNull();
+    for (const b of buttonBoxes) expect(b, "右の操作ボタンの寸法が取れない").not.toBeNull();
+
+    await testInfo.attach("thread-header-measurements", {
+      body: JSON.stringify(
+        { viewportWidth, header: headerBox, back: backBox, name: nameBox, buttonCount, buttons: buttonBoxes },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    // 2. ヘッダー全体の高さ 56px（--topbar-height）
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ").toBeLessThanOrEqual(1);
+
+    // 3. 戻るボタンが左端（ヘッダーの左 padding の位置）にあり、48px 以上
+    const spaceToken4 = await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-4").trim()),
+    );
+    expect(Number.isFinite(spaceToken4), "--space-4 トークンが読めない").toBe(true);
+    expect(Math.abs(backBox!.x - (headerBox!.x + spaceToken4)), "戻るボタンの左端").toBeLessThanOrEqual(1);
+    expect(backBox!.width, "戻るボタンの幅").toBeGreaterThanOrEqual(48);
+    expect(backBox!.height, "戻るボタンの高さ").toBeGreaterThanOrEqual(48);
+
+    // 4. 右の3つ（テンプレート・顧客情報・「…」）が各44px以上で、
+    //    最後のボタンの右端がビューポート右端に接する（一覧のヘッダーと同じ作法）
+    expect(buttonCount, "右の操作ボタンが3つであること（テンプレート・顧客情報・もっと）").toBe(3);
+    for (const b of buttonBoxes) {
+      expect(b!.width, "操作ボタンの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+      expect(b!.height, "操作ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    }
+    const lastButtonBox = buttonBoxes[buttonBoxes.length - 1]!;
+    expect(
+      Math.abs(lastButtonBox.x + lastButtonBox.width - viewportWidth),
+      "最後のボタンの右端",
+    ).toBeLessThanOrEqual(1);
+
+    // 5. 相手の名前が表示され、右のボタン群と重なっていない
+    await expect(name(page)).toContainText(SAMPLE_CONVERSATION_NAME);
+    const firstButtonBox = buttonBoxes[0]!;
+    expect(
+      nameBox!.x + nameBox!.width,
+      "名前の右端が右のボタン群の左端を超えている（重なっている）",
+    ).toBeLessThanOrEqual(firstButtonBox.x + 1);
+  });
+
+  test("スマホ: 「もっと」を押すと3項目（送信先の言語／FAQ／受信箱の設定）が出る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    const buttons = actionButtons(page);
+    await expect(buttons).toHaveCount(3);
+    await buttons.last().click();
+
+    await expect(moreMenu(page)).toBeVisible();
+    const items = moreMenuItems(page);
+    await expect(items).toHaveCount(3);
+    const labels = await items.allTextContents();
+    // 実際の i18n 文言（src/locales/ja.json）: translation.sendGuard.langToggleLabel /
+    // faq.title / inbox.settings.title
+    expect(labels).toEqual(["送信先言語", "FAQ", "受信箱の設定"]);
+
+    // 外側を押すと閉じる（第4便と同じ金型・同じ作法）
+    await name(page).click({ force: true });
+    await expect(moreMenu(page)).toHaveCount(0);
+  });
+
+  test("スマホ: 「送信先の言語」を押すとシートが開き、選択肢が3つ・各44px以上・選ぶと閉じる", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    await actionButtons(page).last().click();
+    await expect(moreMenu(page)).toBeVisible();
+    await moreMenuItems(page).filter({ hasText: "送信先言語" }).click();
+
+    // 「…」メニューは選ぶと閉じ、シートが開く
+    await expect(moreMenu(page)).toHaveCount(0);
+    const sheetOpen = openSheetPanel(page);
+    await expect(sheetOpen).toHaveCount(1);
+    await expect(sheetOpen.getByRole("heading")).toHaveText("送信先言語");
+
+    // 選択肢は3つ（自動／日本語／英語）・各44px以上
+    const options = sheetOpen.locator(".inbox-filter-sheet-option");
+    await expect(options).toHaveCount(3);
+    const labels = await options.allTextContents();
+    expect(labels).toEqual(["自動", "日本語", "英語"]);
+    const optionBoxes = await Promise.all((await options.all()).map((o) => o.boundingBox()));
+    for (const b of optionBoxes) {
+      expect(b, "選択肢の寸法が取れない").not.toBeNull();
+      expect(b!.height, "選択肢の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    }
+
+    // 既定値（auto）に active が付いている＝いま選ばれている値が分かる
+    await expect(options.nth(0)).toHaveClass(/active/);
+
+    // 選ぶと閉じる
+    await options.nth(1).click(); // 日本語
+    await expect(openSheetPanel(page)).toHaveCount(0);
+  });
+
+  test("PC・タブレット: スマホ用の会話ヘッダーは出ず、従来どおり操作行と言語の SelectControl が見える", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    // 新設したスマホ専用クラスは出ない
+    await expect(page.locator(".inbox-thread-header-mobile")).toHaveCount(0);
+
+    // 操作行（テンプレート / FAQ / 受信箱の設定）は PC・タブレットでは従来どおり1件
+    await expect(page.locator(".page-header-actions")).toHaveCount(1);
+
+    // 言語の SelectControl は会話ヘッダーの中に従来どおり見える
+    // （.inbox-platform-select は一覧側のプラットフォーム絞り込みにも同じクラス名が
+    //  使われているため、会話ヘッダー .inbox-center-header の中に限定して探す）
+    const langSelect = page.locator(".inbox-center-header .inbox-platform-select");
+    await expect(langSelect).toBeVisible();
+  });
+
+  /**
+   * 2026-10-14（Opus 判断・追加分）: Discord 未連携の表示を落とすとスマホの
+   * 利用者だけ気づけなくなるため、名前の下の2段目として残した
+   * （お手本=WhatsApp の会話ヘッダーも左側2段。実機の構造ダンプで
+   * conversation_contact_name=高さ22.7dp・conversation_contact_status=
+   * 高さ16.3dp を確認済み）。条件・i18n キーは PC と同一
+   * （`messagesData.lead.platform === "discord" && !leadDetail.discord_user_id`・
+   * `inbox.discordNotLinked`）で、新しい状態は作っていない。
+   */
+  test("スマホ: Discord 未連携のときは名前の下に表示が出て、高さ56pxのまま・ボタン群と重ならない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithDiscordUnlinkedConversation(page);
+    await openConversation(page);
+
+    const headerBox = await header(page).boundingBox();
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+
+    // Discord 未連携の表示が見えている（PC と同じ i18n キー inbox.discordNotLinked）
+    const status = page.locator(".inbox-thread-header-mobile-status");
+    await expect(status).toBeVisible();
+    await expect(status).toHaveText("Discord未連携");
+
+    // 2段になってもヘッダーの高さは 56px（--topbar-height）のまま
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ（2段表示時）").toBeLessThanOrEqual(1);
+
+    // 名前・状態の縦積みが右の操作ボタン群と重なっていない（既存の検査5と同じ判定）
+    const identity = page.locator(".inbox-thread-header-mobile-identity");
+    const identityBox = await identity.boundingBox();
+    const firstButtonBox = await actionButtons(page).first().boundingBox();
+    expect(identityBox, "名前・状態の縦積みの寸法が取れない").not.toBeNull();
+    expect(firstButtonBox, "右の操作ボタンの寸法が取れない").not.toBeNull();
+    expect(
+      identityBox!.x + identityBox!.width,
+      "名前・状態の縦積みの右端が右のボタン群の左端を超えている（重なっている）",
+    ).toBeLessThanOrEqual(firstButtonBox!.x + 1);
+
+    await testInfo.attach("discord-unlinked-two-row-header", {
+      body: JSON.stringify({ headerBox, identityBox, firstButtonBox }, null, 2),
+      contentType: "application/json",
+    });
+  });
+
+  test("スマホ: Discord 連携済み（または他プラットフォーム）のときは名前だけで高さ56pxのまま", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // 既存の openInboxList（baseMocks）は platform: "messenger" のため
+    // 2段目は出ない。高さが変わらないことの対照として確認する。
+    await openInboxList(page);
+    await openConversation(page);
+
+    await expect(page.locator(".inbox-thread-header-mobile-status")).toHaveCount(0);
+    const headerBox = await header(page).boundingBox();
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ（1段表示時）").toBeLessThanOrEqual(1);
   });
 });
