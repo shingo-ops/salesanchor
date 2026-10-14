@@ -54,10 +54,54 @@ export function baseMocks() {
   };
 }
 
+type ConversationsFixture = {
+  conversations: Array<Record<string, unknown>>;
+  next_cursor: unknown;
+};
+
+/**
+ * 件数を増やした会話一覧を作る（第3便・ヘッダー固定検査でスクロールを確実に出すため）。
+ * fixture JSON ファイル（mock-conversations.json）は変更せず、その1件目の形をそのまま
+ * 複製し、lead_id / lead_code / customer_name だけ一意にずらす。実データの入れ物の
+ * キー名（lead_id / lead_code / customer_name / platform / last_message_text /
+ * last_message_at / last_message_direction / unread_count /
+ * messaging_window_expires_at）は変えない。
+ *
+ * 件数の根拠（vl-mobile-390 の viewport 390x844・tokens.css の
+ * --min-height-conv-item-mobile: 76px）:
+ *   画面高 844px のうちヘッダー56px（--topbar-height）＋検索欄56px
+ *   （--comp-btn-height-lg 48px＋上下 padding 8px）＝112px を一覧の上で占有する。
+ *   残り (844-112)/76 ≈ 9.6 件で画面が埋まる。600px スクロールさせても
+ *   下に十分な余りが残るよう、埋まる件数の2倍以上を確保する目的で20件にする。
+ */
+export function manyConversations(count: number): { conversations: Array<Record<string, unknown>>; next_cursor: null } {
+  const base = (conversationsFixture as ConversationsFixture).conversations[0];
+  const conversations = Array.from({ length: count }, (_, i) => ({
+    ...base,
+    lead_id: 9000 + i,
+    lead_code: `LEAD-2026-STICKY-${String(i).padStart(4, "0")}`,
+    customer_name: `Sticky Header Test ${i}`,
+  }));
+  return { conversations, next_cursor: null };
+}
+
 /** 受信箱を開き、会話一覧の項目が出るまで待つ */
 export async function openInboxList(page: Page): Promise<void> {
   await installAuthBypass(page);
   await mockApi(page, baseMocks());
+  await page.goto("/lead-chat");
+  await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+}
+
+/**
+ * 件数を増やした一覧で受信箱を開く（第3便: ヘッダー固定検査専用）。
+ * baseMocks() の "GET /conversations" だけ manyConversations(count) に差し替える。
+ * 既存の openInboxList は3件のまま変更しない。
+ */
+export async function openInboxListWithConversations(page: Page, count: number): Promise<void> {
+  await installAuthBypass(page);
+  await mockApi(page, { ...baseMocks(), "GET /conversations": manyConversations(count) });
   await page.goto("/lead-chat");
   await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
