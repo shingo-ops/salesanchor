@@ -826,8 +826,12 @@ export function useInboxState(): UseInboxStateReturn {
         given_name_jp: string;
       }>>("/staff?per_page=100&status=active");
       const eligible: ConvertAssigneeOption[] = rows
-        // eslint-disable-next-line local/no-japanese-literal -- DB value (migrations/021_seed_roles_and_role_permissions.sql の役割名)
-        .filter((s) => s.user_id != null && (s.role_name === "営業" || s.role_name === "リーダー"))
+        // 在籍中（status === "active"）もここで必ず絞る。クエリ（?status=active）だけに
+        // 頼ると、サーバ側の絞り込みが効かない経路で退職者が候補に出てしまうため。
+        // 値は migrations/019_create_staff_tables.sql:49-50 の
+        // CHECK (status IN ('active','inactive','pending')) で確認済み。
+        // eslint-disable-next-line local/no-japanese-literal -- DB value（migrations/021_seed_roles_and_role_permissions.sql の役割名）
+        .filter((s) => s.user_id != null && s.status === "active" && (s.role_name === "営業" || s.role_name === "リーダー"))
         .map((s) => ({ value: String(s.user_id), label: `${s.surname_jp} ${s.given_name_jp}` }));
       setConvertAssigneeOptions(eligible);
     } catch (e) {

@@ -1742,7 +1742,17 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
 
     await dialog.locator("select").selectOption("11");
     // ConfirmModal の .form-actions は [閉じる, 確定] の順
-    await dialogButtons(page).nth(1).click();
+    // 第9便（CI が検出した退行の歯止め）: 全画面のカルテ（重なり順）の上に
+    // ポップアップが出るため、確定ボタンの真上に他の要素が被っていないことを
+    // 先に確かめる。被っていると click は「見えて押せる」のに時間切れになる。
+    const confirmBtn = dialogButtons(page).nth(1);
+    const topMost = await confirmBtn.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return hit === el || el.contains(hit as Node);
+    });
+    expect(topMost, "確定ボタンの上に別の要素が重なっている").toBe(true);
+    await confirmBtn.click();
 
     await expect.poll(() => calls.length, { message: "PATCH /leads/5001 が呼ばれていない" }).toBe(1);
     expect(calls[0]).toEqual({ status: "negotiating", assigned_to: 11 });

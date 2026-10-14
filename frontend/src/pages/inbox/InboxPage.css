@@ -1329,7 +1329,15 @@
      （タブも覆うのが PO 決定のため）。角丸・上の境界線も全画面にはそぐわないのでやめる。
      重なり順の新設はしない: :1038 で付与済みの z-index: var(--z-drawer)（301）が
      下部タブバー（.mobile-tabbar の --z-topbar=100）より前面のまま効く。 */
+  /* 第9便（CI が検出）: カルテの上にポップアップ（ConfirmModal 金型）を出すと、
+     カルテ（--z-drawer=301）の方がポップアップの土台（--z-backdrop=298）より前面で、
+     カルテの固定操作バーが確定ボタンのクリックを奪っていた。
+     カルテは「下部タブ（--z-topbar=100）より前面」であれば足りるので、
+     ポップアップの土台より後ろの段（--z-sidebar-overlay=210）に下げる。
+     あわせて、全画面では見えない幕（.karte-overlay）をスマホでは出さない
+     （210 に下げると 298 の幕がカルテの上に乗ってしまうため）。 */
   .inbox-right-panel {
+    z-index: var(--z-sidebar-overlay) !important;
     top: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -1348,6 +1356,9 @@
   .inbox-right-panel.karte-open {
     transform: translateX(0) !important;
   }
+
+  /* 全画面のカルテの下に隠れて見えない幕は出さない（上のコメント参照） */
+  .karte-overlay { display: none; }
 
   /* 第8便: カルテ上部の帯を「← 顧客情報」にする（会話画面と同じ戻り方に統一）。
      タブレット（:1056 の .karte-close-row）はここでは一切触らない。
