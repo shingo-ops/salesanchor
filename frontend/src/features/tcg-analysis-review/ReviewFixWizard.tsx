@@ -42,20 +42,40 @@ export function availableFixChoices(item: ReviewDrawerItem, ackedCodes: string[]
   return choices;
 }
 
+/** 比較表で押した行の範囲 */
+export type FixScope = "product" | "condition" | "keep";
+
+const CHOICES_OF_SCOPE: Record<FixScope, FixChoice[]> = {
+  product: ["reassign", "register"],
+  condition: ["condition"],
+  keep: ["keep"],
+};
+
+/** availableFixChoices を押した行の範囲で絞る（範囲ごとの判定はここだけ） */
+export function choicesForScope(item: ReviewDrawerItem, scope: FixScope, ackedCodes: string[]): FixChoice[] {
+  return availableFixChoices(item, ackedCodes).filter((value) => CHOICES_OF_SCOPE[scope].includes(value));
+}
+
 interface Props {
   item: ReviewDrawerItem;
+  scope: FixScope;
+  /** 確認済みにした理由（ReviewItemDrawer が持つ） */
+  ackedCodes: string[];
+  /** 理由を確認済みにできた */
+  onAcked: (codes: string[]) => void;
   /** 一覧の読み直し */
   onRefresh: () => Promise<void>;
 }
 
-export function ReviewFixWizard({ item, onRefresh }: Props) {
+export function ReviewFixWizard({ item, scope, ackedCodes, onAcked, onRefresh }: Props) {
   const { t } = useTranslation();
-  const [choice, setChoice] = useState<FixChoice | null>(null);
-  const [ackedCodes, setAckedCodes] = useState<string[]>([]);
+  const [chosen, setChoice] = useState<FixChoice | null>(null);
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
 
-  const choices = availableFixChoices(item, ackedCodes);
+  const choices = choicesForScope(item, scope, ackedCodes);
+  // 選択肢が1つだけなら質問を出さず、その入力欄を直接出す
+  const choice = chosen ?? (choices.length === 1 ? choices[0] : null);
   const labels: Record<FixChoice, { label: string; description: string }> = {
     reassign: { label: t("reviewItem.wizard.choice.reassign"), description: t("reviewItem.wizard.choice.reassignDesc") },
     register: { label: t("reviewItem.wizard.choice.register"), description: t("reviewItem.wizard.choice.registerDesc") },
@@ -85,7 +105,7 @@ export function ReviewFixWizard({ item, onRefresh }: Props) {
       setPendingCode(null);
       return;
     }
-    setAckedCodes((current) => [...current, code]);
+    onAcked([code]);
     handleSaved({ variant: "info", title: t("reviewItem.acked") });
     setPendingCode(null);
     try {
@@ -110,7 +130,7 @@ export function ReviewFixWizard({ item, onRefresh }: Props) {
           onChange={select}
         />
       )}
-      {choice !== null && (
+      {choice !== null && choices.length > 1 && (
         <div className="review-fix-wizard__summary">
           <p className="review-fix-wizard__summary-text">
             {t("reviewItem.wizard.selected", { choice: labels[choice].label })}
