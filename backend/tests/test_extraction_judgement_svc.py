@@ -790,3 +790,41 @@ class TestExcludeKeywordsStrictCodes:
         result = match_product("3rd ANNIVERSARY SET", [product])
         assert result.status == "unmatched"
         assert result.excluded_by == {1: ("SAR",)}
+
+
+class TestExcludeKeywordsLeftBoundary:
+    """短い除外ワード（2文字以下・数字だけ）は、直前が語の境界のときだけ当たり（右側は条件にしない）。"""
+
+    @staticmethod
+    def _excluded(text, keyword, strict_codes=False):
+        product = _product(id_=1, search_keywords=("anniversary", "ピカチュウ", "golden"), exclude_keywords=(keyword,))
+        return match_product(text, [product], strict_codes=strict_codes).excluded_by
+
+    def test_ar_does_not_exclude_inside_anniversary(self):
+        for strict in (False, True):
+            result = match_product(
+                "25th ANNIVERSARY GOLDEN BOX",
+                [_product(id_=1, search_keywords=("golden",), exclude_keywords=("AR",))],
+                strict_codes=strict,
+            )
+            assert result.status == "matched"
+            assert result.excluded_by == {}
+
+    def test_ar_excludes_when_standalone(self):
+        for strict in (False, True):
+            assert self._excluded("ピカチュウ AR 100枚", "AR", strict) == {1: ("AR",)}
+
+    def test_ar_excludes_before_kana(self):
+        for strict in (False, True):
+            assert self._excluded("ピカチュウ ARカード", "AR", strict) == {1: ("AR",)}
+
+    def test_ar_excludes_in_slash_list(self):
+        assert self._excluded("ピカチュウ AR/CHR", "AR") == {1: ("AR",)}
+
+    def test_sr_excludes_srr_left_boundary_only(self):
+        assert self._excluded("ピカチュウ SRR", "SR", True) == {1: ("SR",)}
+
+    def test_ssr_no_longer_excluded_by_sr(self):
+        # 挙動が変わる点：修正前は SSR の中の sr に当たって除外されていた
+        assert self._excluded("ピカチュウ SSR", "SR", True) == {}
+        assert self._excluded("ピカチュウ SSR", "SR", False) == {}
