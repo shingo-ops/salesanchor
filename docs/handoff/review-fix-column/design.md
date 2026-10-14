@@ -197,3 +197,21 @@ PO が要確認ページを使うとき、次がすべて ○ になる。
 - 行と「直す」の対応・「修正」列の値は `fixRowsOf` の1か所、scope ごとの選択肢は `choicesForScope` の1か所で決める。
 - 「修正」列の値は analysis_results の印（pid_basis・condition_basis）から読み、別の保存場所を作らない。
 - 守り手: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`、`frontend/src/features/tcg-analysis-review/ItemComparison.test.tsx`、`frontend/src/features/tcg-analysis-review/ReviewFixWizard.test.tsx`、`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`、`backend/tests/test_item_corrections.py`、`backend/tests/test_tcg_analysis_review.py`
+
+## 14. 設計審査（Fable）REVISE への対応で確定した点
+
+審査記録: Fable architect 2026-10-14 判定 REVISE（recon の行番号は全件一致・方向は承認、未記載7点）。本節は §3〜§7 に優先する。
+
+- A. ackedCodes は ReviewItemDrawer が持つ。ReviewFixWizard の props は `{ item, scope, ackedCodes, onAcked, onRefresh }`。`onAcked(codes)` は Drawer の ackedCodes に足す（今の `frontend/src/features/tcg-analysis-review/ReviewFixWizard.tsx:54,88` の setAckedCodes を移す）。
+- B. 単一選択肢の扱い: Wizard 内の state `choice` は今どおり null 始まり。表示する choice は `choice ?? (choices.length === 1 ? choices[0] : null)` で導出する（保存後 `handleSaved` が `setChoice(null)` しても単一選択肢の入力欄が出続ける）。
+- C. 既存試験の期待値変更（#4265 の K1「開くとすぐ質問」を本設計の K4 で置き換える）:
+  - `frontend/src/features/tcg-analysis-review/ReviewFixWizard.test.tsx`: scope を渡す形に全件書き換え（product は2択、condition/keep は質問なしで直接入力欄、choices 0 件は nothingToFix）。
+  - `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`: ItemComparison のモックをやめて実物を使う（行を押す試験のため）。開いた直後は pickRowHint が出て質問は出ない。
+  - `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`: 開いた直後に質問が出る前提の箇所は「行を押す／このままで良いボタンを押す」操作を挟む形に直す。
+- D. 削除対象に追加: `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.inline.test.tsx`（「ここで直す」列の試験）、`frontend/src/features/tcg-analysis-review/review-row-actions.css`、`frontend/src/tokens.css` の `--review-inline-fix-col-w` の行（使用は NeedsReviewTabsPanel.tsx:24 のみ。消す前に git grep で他使用ゼロを確認）。
+- E. i18n の削除は `needsReview.inline.header`・`needsReview.inline.saved`・`needsReview.inline.error`・`needsReview.inline.unknownError`・`needsReview.inline.ackAria` の5キーに限る（各キーを git grep して ReviewRowActions 以外の使用ゼロを確認してから）。`needsReview.inline.productAria/productPlaceholder/noResults/searchError` は ReviewProductFixForm・ReviewRegisterProductForm が使うので残す。`reviewItem.reasonsHeading` も他使用ゼロを確認してから削除。
+- F. DataTable 金型は変えない。onRowClick を渡すと全行に clickable クラスと tabIndex=0 が付く（`frontend/src/components/DataTable.tsx:244,254`）。押せない行は `rowClassName` で `item-comparison__row--static` を付け、CSS で `cursor: default` に戻す。キーボードの焦点は押せない行にも残るが、Enter を押しても何も起きない（許容。onRowClick 内で fixableRowKeys に無い行は無視）。selectedKeys は `selectedRowKey ? new Set([selectedRowKey]) : undefined`。
+- G. `backend/app/routers/item_corrections.py:145` の `model_dump(mode="json")` は変更不要（str はそのまま、request_id は文字列化され今と同じ）。「修正」列の条件に `MANUAL_RAW_REVIEW:PO_RULES` は含めない（§3 の2値だけ）。`backend/tests/test_tcg_analysis_review.py:137-139` の system キー列挙に condition_basis を足す。
+- 未解決1（長い商品名）: 「修正」列は幅指定なしの `ComparisonCell`（Gemini・システム列と同じく幅に追従し、はみ出しは省略、title で全文）。`--comparison-source-col-w` は仕入元詳細の「採用元」で使い続けるので残す。
+- 未解決2（押せない行の焦点）: F のとおり許容。
+- 未解決3（keep を使い切った後）: Drawer は onAcked のあと `choicesForScope(item, "keep", ackedCodes)` が空なら scope を null に戻し、pickRowHint を出す（ボタンも消える）。
