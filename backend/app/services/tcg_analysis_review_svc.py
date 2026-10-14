@@ -81,7 +81,7 @@ def _build_where(
     # status_tab による絞り込み（review_only より優先）
     if status_tab == "NEEDS_REVIEW":
         conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL OR cr.needs_review)"
+            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
         )
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
         conditions.append("ar.pid_basis = 'NONE'")
@@ -98,7 +98,7 @@ def _build_where(
     # チェックボックスフィルタ（タブ絞り込みに追加）
     if review_only and status_tab not in ("NEEDS_REVIEW",):
         conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL OR cr.needs_review)"
+            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
         )
     if unregistered_only:
         conditions.append("ar.pid_basis = 'NONE'")

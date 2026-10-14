@@ -3763,7 +3763,6 @@
   "reviewItem": {
     "drawerTitle": "Item to review",
     "sourceHeading": "Source text",
-    "fixHeading": "Fix",
     "noReasons": "No reasons",
     "sourceLine": "Source: {{source}}",
     "ack": "Keep as is",
@@ -3774,7 +3773,8 @@
     "gapCandidates": "Candidates: {{names}}",
     "compareHeading": "Comparison",
     "fixColumn": { "tapToFix": "Tap to fix" },
-    "pickRowHint": "Select the row you want to fix in the table",
+    "excludedHelp": "Read as \"{{status}}\", so this item is kept out of stock. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
+    "excludedHelpNoStatus": "Kept out of stock because of its sale status. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
     "removedFromList": "This item is no longer in the review list",
     "productLabel": "Product",
     "productCurrent": "Current: {{name}}",

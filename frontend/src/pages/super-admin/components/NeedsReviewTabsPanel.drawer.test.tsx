@@ -40,13 +40,14 @@ beforeEach(async () => {
 afterEach(() => cleanup());
 
 describe("production tab row drawer", () => {
-  it("opens a drawer with the item comparison and the pick-a-row hint when a row is clicked", async () => {
+  it("opens a drawer with the item comparison and no fix area or heading when a row is clicked", async () => {
     view();
     fireEvent.click(await screen.findByText("Card V6"));
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("Item to review");
     expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
-    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(screen.queryByText("Select the row you want to fix in the table")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Fix" })).toBeNull();
     expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
   });
 
