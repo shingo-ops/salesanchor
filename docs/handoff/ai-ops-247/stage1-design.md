@@ -19,7 +19,7 @@
 | S5 | Loki のルールは repo に 6 本（1 ファイル）。本番は 4 本で評価中（評価失敗 0・最終評価 2026-10-14）。差は、repo のみ = Discord の 2 本と postgres 版の `BackendErrorSpike`、本番のみ = `DatabaseError`（中身は repo の postgres 版と同じ条件） | `monitoring/loki/rules/jarvis/alerts.yml:8-77`・本番 Loki の ruler 指標・本番ファイルとの diff |
 | S6 | repo の Loki ルールは同じ名前のルール `BackendErrorSpike` が 2 本（:32・:69）、同じ名前のグループ `error_anomaly` が 2 つ（:29・:66） | `monitoring/loki/rules/jarvis/alerts.yml` |
 | S7 | Loki のルール API が 0 本に見えた（実際は HTTP 400 のエラー応答）のは、`auth_enabled: false` のため問い合わせが `fake` という名前の置き場を探して失敗したため（HTTP 400 `/loki/rules/fake` 無し）。実際の評価は `jarvis` の置き場で動いている | `monitoring/loki/loki-config.yaml:2`・`:32-36`、本番 API 応答 |
-| S8 | Grafana のアラートルールは本番で 0 件。repo の `alerting.yml` は本番では 2026-07-19 に退避済み（中身は repo と同一）。通知は Alertmanager → Discord の 1 本だけが働いている | 本番 Grafana API・本番 `retired/alerting.yml.disabled-202607191506`・`monitoring/alertmanager/alertmanager.yml` |
+| S8 | Grafana のアラートルールは本番で 0 件。repo の `monitoring/grafana/provisioning/alerting/alerting.yml` は本番では 2026-07-19 に退避済み（中身は repo と同一）。通知は Alertmanager → Discord の 1 本だけが働いている | 本番 Grafana API・本番 `retired/alerting.yml.disabled-202607191506`・`monitoring/alertmanager/alertmanager.yml` |
 | S9 | Uptime Kuma の本番の見張りは 4 件（監視基盤と prod1 の node-exporter）。既存 4 件はすべて Kuma から Discord への直通通知（既定の通知先）が付いている。利用者が使う App・API・LP の見張りは 0 件。repo の定義 7 件は本番に無い | 本番 kuma.db（読み取り専用・recon2 B8）・`monitoring/uptime-kuma-monitors.yml:1-51` |
 | S10 | repo 定義 7 件のうち PostgreSQL・Redis は `localhost` 宛てだが DB は prod1、Kuma は prod2 にあり届かない。Meta Graph API は応答するが 400（旧 script は 400 を正常扱いにしていた）、Firebase は名前解決できない | `monitoring/uptime-kuma-monitors.yml`・prod2 からの GET 結果（recon3 C9） |
 | S11 | Kuma（1.23.16）は TLS を持つ見張りにだけ `monitor_cert_days_remaining`・`monitor_cert_is_valid` を出す。今は 0 系列 | Kuma 公式ソース `server/prometheus.js`（1.23.16 タグ。recon の生出力には無い＝【未確認・便2 の合格基準で検証】）・本番 Prometheus（今 0 系列） |
@@ -49,7 +49,7 @@
 | 6 | バックアップの鮮度の見張り（あわせて動かない `scripts/setup_uptime_kuma.sh` を削除） | `scripts/backup.sh`・`scripts/backup_to_s3.sh`・`scripts/setup_uptime_kuma.sh`（削除）・Prometheus ルール | **はい**（本番 scripts） | prod1 ＋ prod2 |
 | 7 | 本番の設定と repo の一致を毎日確かめ、ずれたら鳴らす | workflow（prod2 の self-hosted runner）・Prometheus ルール | いいえ | GitHub Actions ＋ prod2 |
 
-危険便の判定は `scripts/check-process-artifacts.js` の DANGEROUS_PATTERNS（`migrations/`・`scripts/`・`deploy.yml` 等）に従う。`scripts/` 配下を触る・消すのは便6 だけにする。
+危険便の判定は `scripts/check-process-artifacts.js` の DANGEROUS_PATTERNS（`migrations/`・`scripts/`・`.github/workflows/deploy.yml` 等）に従う。`scripts/` 配下を触る・消すのは便6 だけにする。
 
 順番の理由: 便1 で正本を揃えないと、後の便の「本番と diff 0」の確認ができない。便2 は KGI 1（利用者に影響する不具合を先に知る）に一番効く（S9: 今は利用者向けの見張りが 0 件）。便3 は便2 で入れ替わったルールに札を付けるため後。便7 は全部の配置が終わってから入れないと、途中で鳴り続ける。
 
@@ -61,7 +61,7 @@
 - 担当が無制限鍵の操作で止まった場合は、Opus がカードと同じ手順を実行する。
 - この許可は段階1 の便に限る。段階1 の後に配置が要る場合は、便ごとに 1 本の script にして PO が `!` で 1 回実行する型（段階0 と同じ）に戻す。
 - 本番での出力は件数・sha256 の一致／不一致・指標の値だけを残し、鍵・IP・URL・webhook を報告や PR に書かない。
-- 便6 の prod1 側は、cron が読む作業木が deploy で main の版に更新されるかをカードで実測してから配置方法を決める（`deploy.yml` が `scripts/backup.sh` を呼ぶ箇所も同時に確認する）。
+- 便6 の prod1 側は、cron が読む作業木が deploy で main の版に更新されるかをカードで実測してから配置方法を決める（`.github/workflows/deploy.yml` が `scripts/backup.sh` を呼ぶ箇所も同時に確認する）。
 
 ### 便1 鳴らす条件の一致
 
@@ -75,7 +75,7 @@
 
 - Kuma の正本（`monitoring/uptime-kuma-monitors.yml`）を本番の実物に合わせて書き直す: 今の 4 件（監視基盤）＋ App・API（`/api/health`）・LP の 3 件（https）。PostgreSQL・Redis・Meta Graph API・Firebase は消す（S10: 届かない・名前解決できない）。
 - 正本 yml に監視基盤の 4 件を書き足すとき、IP を新たに直書きしない（公開リポジトリ。変数か伏せた書き方にする）。
-- 登録は `monitoring/scripts/register_kuma_monitors.py`（既存の `validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の `scripts/setup_uptime_kuma.sh` は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
+- 登録は新規の monitoring/scripts/register_kuma_monitors.py（既存の `monitoring/scripts/validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の `scripts/setup_uptime_kuma.sh` は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
 - 新規 3 件には Kuma の通知先を付けない（`notificationIDList` を空にし、既定の通知先の自動付与もしない）。通知は `KumaMonitorDown` → Alertmanager → Discord の 1 本だけ（ADR-1012・design.md §3）。既存 4 件の Kuma 直通通知は今は触らない（U5）。
 - Prometheus ルールを足す: `KumaMonitorDown`（`monitor_status == 0` が 2 分）、`CertExpiringSoon`（`monitor_cert_days_remaining < 14`）、`CertInvalid`（`monitor_cert_is_valid == 0`）。
 - 4 本を消すとき、`monitoring/tokens.yml` の閾値・for のトークンと `monitoring/scripts/validate_tokens.py` の検査パターンを同じ PR で消す。足すルールの閾値は `monitoring/tokens.yml` に足す。
@@ -87,7 +87,7 @@
 
 ### 便3 札と手順書と CI 検査
 
-- 全ルールにラベル `tier`（`page`／`auto`／`ticket`）と注記 `runbook_url` を付ける。手順書は `docs/runbooks/alerts.md` の 1 ファイル（ルールごとに見出し 1 つ。何が起きているか・最初に見るもの・直し方・止め方）。
+- 全ルールにラベル `tier`（`page`／`auto`／`ticket`）と注記 `runbook_url` を付ける。手順書は新規の docs/runbooks/alerts.md の 1 ファイル（ルールごとに見出し 1 つ。何が起きているか・最初に見るもの・直し方・止め方）。
 - 札の割り当て（段階1 時点。段階3 で応急処置ができたものは `auto` に移す。今は `auto` に当たる処置が無い）:
 
 | ルール | 札 | 理由 |
@@ -95,8 +95,8 @@
 | ServiceDown・KumaMonitorDown・CriticalDiskUsage・BackendHighErrorRate・BackendErrorSpike・DatabaseError・BruteForceAttempt・DiscordGatewayReconnectFailure・CertInvalid | page | 利用者に今影響が出ている／出る直前 |
 | HighCpuUsage・HighMemoryUsage・HighDiskUsage・BackendWorkerSaturated・BackendSseConnectionsHigh・BackendHighLatency・SustainedAuthFailure・DiscordDmWriterError・F2CleanupStale・F2CleanupAbsent・CertExpiringSoon | ticket | 急がないが放置すると悪化する。BackendHighLatency は便4 で条件を直すまで ticket |
 
-- 検査 script（`monitoring/scripts/check_alert_rules.py`。既存の `validate_tokens.py` と同じ置き場）: 全ルールに `tier` があり値が 3 種のどれか／`runbook_url` が手順書の実在する見出しを指す／ルール名が Prometheus・Loki を通して重複しない／1 ファイル内でグループ名が重複しない。
-- CI（`monitoring-check.yml`）に足す: 上の script、Prometheus ルールに `promtool check rules` と `promtool test rules`（ルールごとの単体試験。擬似の時系列で鳴ることを確かめる）、`amtool check-config`。promtool・amtool は本番と同じ版のイメージから使う（S17）。`amtool check-config` が `webhook_url_file` の実在を見るかは【未確認】。CI で落ちる場合はダミーのファイルを置く手順をカードに書く。
+- 検査 script（新規の monitoring/scripts/check_alert_rules.py。既存の `monitoring/scripts/validate_tokens.py` と同じ置き場）: 全ルールに `tier` があり値が 3 種のどれか／`runbook_url` が手順書の実在する見出しを指す／ルール名が Prometheus・Loki を通して重複しない／1 ファイル内でグループ名が重複しない。
+- CI（`.github/workflows/monitoring-check.yml`）に足す: 上の script、Prometheus ルールに `promtool check rules` と `promtool test rules`（ルールごとの単体試験。擬似の時系列で鳴ることを確かめる）、`amtool check-config`。promtool・amtool は本番と同じ版のイメージから使う（S17）。`amtool check-config` が `webhook_url_file` の実在を見るかは【未確認】。CI で落ちる場合はダミーのファイルを置く手順をカードに書く。
 - Loki のルール（LogQL）は promtool で検査できない（S17）。Loki は同じ版のイメージにある構文検査の道具を使う（同梱の有無は【未確認】。便3 のカードで確かめる）。無ければ、本番配置後の ruler 指標で評価失敗 0 を確かめる。
 - 札（`tier`）は段階1 では Alertmanager の通知の経路を変えない（`monitoring/alertmanager/alertmanager.yml` は group_by だけ）。Discord に届く通知の数は札では変わらない。
 - 合格: CI で検査が通る。わざと札を外した版で検査が落ちる（担当が手元で 1 回確かめて報告）。本番に配置後、`/api/v1/rules` の全ルールに `tier` が付いている。
@@ -146,7 +146,7 @@
 ## 4. 弊害と対処
 
 - 見張りを増やすと通知も増える → 便2 で足す見張りは 3 件だけ。便1 の Discord 2 本は配置前に 7 日分の鳴る回数を数える。便4 で一番うるさい 1 本を直す。
-- 通知の経路が 2 本になる恐れ → 便2 の新規の Kuma 見張りには直通通知を付けない。既存の直通通知（Kuma 4 件・`backup_to_s3.sh`）は U5 に記録し、段階1 では増やさない。
+- 通知の経路が 2 本になる恐れ → 便2 の新規の Kuma 見張りには直通通知を付けない。既存の直通通知（Kuma 4 件・`scripts/backup_to_s3.sh`）は U5 に記録し、段階1 では増やさない。
 - Loki のメモリが上限に近い（S23）→ 便1 で足すのはルール 2 本だけ。配置後 1 時間、Loki のメモリと再起動回数を記録する。
 - 本番の配置が手作業 → どの便も「控え → 置く → main と diff 0 → 読み直し → 指標で確認」の同じ手順をカードに書く。便7 でずれを機械で見つける。
 
@@ -179,3 +179,9 @@
 - U5: Alertmanager を通らない直通通知（Kuma の既存 4 件・`scripts/backup_to_s3.sh:56-70`）を Alertmanager へ寄せるか（段階2 で決める）。
 - U6: HighMemoryUsage・ServiceDown の雑音（便4 の結果を見て判断）。
 - U7: 証明書の見張りは App・API・LP の 3 ドメインだけ。残りの 2 ドメイン（監視画面・Legacy）の期限の見張り（Legacy は削除禁止・PO 確認が要る）。
+
+## 8. 外部・過去事例の参照と我々への応用
+
+- 親設計 docs/handoff/ai-ops-247/design.md §7 の事例を引き継ぐ。段階1 に直接効くのは事例3（Google SRE book 第 6 章「Every page should be actionable」）。応用: 札 page/ticket の割り当て（便3）、雑音の多い 1 本の条件の決め直し（便4）、新しい見張りの直通通知を付けず経路を 1 本に保つ（便2）。
+- 過去事例（社内）: 2026-07 に prod1 のメモリ不足で exporter 3 つを止めた（S3）。応用: 計器の無い 4 本は exporter を戻さず、Kuma と既存の指標で置き換える（便2）。
+- 段階1 のために新しく外部事例は調べていない。理由: 段階1 は既存の部品（Prometheus・Loki・Alertmanager・Kuma）の設定を直す作業で、成否は本番の指標と KGI の実測で判定するため。
