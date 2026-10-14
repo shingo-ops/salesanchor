@@ -40,3 +40,27 @@ export const Default: Story = {
     onRefresh: async () => undefined,
   },
 }
+
+/** バッジ有り（最大の4種）。見出し行の高さが変わらず、原文の枠と表の枠がそろうこと */
+export const WithBadges: Story = {
+  args: {
+    item: { ...ITEM, review_issues: ['UNIT_UNRESOLVED', 'EXCLUDED', 'PRODUCT_MASTER_UNREGISTERED'] },
+    onClose: () => undefined,
+    onRefresh: async () => undefined,
+  },
+}
+
+const LONG_RAW_TEXT = Array.from({ length: 80 }, (_, index) =>
+  index >= 11 && index <= 14
+    ? `ポケモンカード 拡張パック BOX ${index - 10}箱 ${(index - 10) * 6500}円`
+    : `サンプルの長い行 ${index + 1} ${'あ'.repeat(index % 7 === 0 ? 60 : 8)}`,
+).join('\n')
+
+/** 長い原文。枠の下端が表の下端にそろい、原文は枠の中でスクロールすること */
+export const LongSource: Story = {
+  args: {
+    item: { ...ITEM, raw_text: LONG_RAW_TEXT, review_issues: ['UNIT_UNRESOLVED'] },
+    onClose: () => undefined,
+    onRefresh: async () => undefined,
+  },
+}

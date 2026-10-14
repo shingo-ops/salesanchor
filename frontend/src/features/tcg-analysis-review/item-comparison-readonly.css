@@ -29,6 +29,29 @@
   color: var(--text-secondary);
 }
 
+/* 左右ペインの見出し行（高さ固定。左右の枠の上端をそろえる基準。値は .review-item-top の --review-pane-head-h） */
+.review-item-pane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+  height: var(--review-pane-head-h);
+  margin: 0;
+}
+
+.review-item-pane-head h3 {
+  flex: none;
+  font-size: var(--font-xs);
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.review-item-pane-head .tcg-status-badge {
+  flex: none;
+}
+
 /* 判定バッジ（0件のときは div ごと出さない） */
 .item-comparison__badges {
   display: flex;

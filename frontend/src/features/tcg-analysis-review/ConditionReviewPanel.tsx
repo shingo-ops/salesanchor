@@ -12,7 +12,7 @@ type SaveResponse = { ok: boolean; saved: number; condition_review: { needs_revi
 // 状態を決められなかった件の理由コード（backend: REASON_CONDITION_UNKNOWN）。人が状態を選ぶ画面を出す
 const CONDITION_UNKNOWN_REASON = "condition_unknown";
 
-export function ConditionReviewPanel({ item, onRefresh }: { item: AnalysisReviewItem; onRefresh: () => Promise<void> }) {
+export function ConditionReviewPanel({ item, onRefresh, label: fieldLabel }: { item: AnalysisReviewItem; onRefresh: () => Promise<void>; label?: string }) {
   const { t } = useTranslation();
   const review = item.condition_review;
   const [options, setOptions] = useState<Option[]>([]);
@@ -78,7 +78,7 @@ export function ConditionReviewPanel({ item, onRefresh }: { item: AnalysisReview
     <p>{t("conditionReview.original", { name: item.gemini.name, state: item.gemini.state, memo: item.gemini.memo })}</p>
     {review.review_reasons && <p>{reviewReasonsText(t, review.review_reasons)}</p>}
     {review.confirmed && <p>{t(review.needs_review ? "conditionReview.otherReasonsRemain" : "conditionReview.saved")}</p>}
-    <Select aria-label={t("conditionReview.select")} value={selected} disabled={saving || options.length === 0}
+    <Select {...(fieldLabel === undefined ? { "aria-label": t("conditionReview.select") } : { label: fieldLabel })} value={selected} disabled={saving || options.length === 0}
       onChange={(event) => setSelected(event.target.value)} placeholder={t("conditionReview.select")}
       options={options.map((option) => ({ value: option.id, label: label(option.canonical) }))} />
     <Button variant="secondary" type="button" disabled={saving || !canConfirm || !review.condition_id || options.length === 0}
