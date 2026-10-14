@@ -7,6 +7,7 @@ import type { ReviewReasonDetail } from './reviewReasonLabel';
 import './item-comparison-readonly.css';
 import { TextareaControl } from "../../components/Textarea";
 import { DataTable, type DataTableColumn } from '../../components/DataTable';
+import { fixRowOf, fixRowsOf } from './reviewFixRows';
 
 export type ConditionReview = {
   condition_id: string | null;
@@ -65,27 +66,38 @@ function ComparisonCell({ text, node }: { text: string; node?: React.ReactNode }
 /** ラベル列・採用元列用。省略せず、列が文字の幅まで広がる */
 function FixedCell({ text, node }: { text: string; node?: React.ReactNode }) { return <span className="item-comparison__fixed" title={text}>{node ?? text}</span>; }
 
-function ReadOnlyComparison({ item, onJumpToSourceLine, heading }: { item: AnalysisReviewItem; onJumpToSourceLine: (line: number) => void; heading?: string }) {
+/** 要確認スライド用の「修正」列。行を押す操作は onRowSelect だけ（値の変更は別の「直す」欄でしかできない） */
+export type FixColumn = { selectedRowKey: string | null; onRowSelect: (rowKey: string) => void; fixableRowKeys: string[] };
+
+function ReadOnlyComparison({ item, onJumpToSourceLine, heading, fixColumn }: { item: AnalysisReviewItem; onJumpToSourceLine: (line: number) => void; heading?: string; fixColumn?: FixColumn }) {
   const { t } = useTranslation();
   const issueBadges = reviewIssueBadges(item.review_issues || []), productIssueBadges = productMetadataIssueBadges(item.review_issues || []);
   const rows = buildComparisonRows(item, t);
+  const fixRows = fixRowsOf(item, t);
   const columns: DataTableColumn<ComparisonRow>[] = [
     { key: 'label', header: t('tcgAnalysisReview.compareColumns.field'), width: 'calc(var(--comparison-label-col-w) + 2 * var(--comp-table-cell-px))', renderCell: (r) => <FixedCell text={r.label} /> },
     { key: 'gemini', header: t('tcgAnalysisReview.geminiExtraction'), renderCell: (r) => <ComparisonCell text={r.gemini} node={r.key === 'sourcePosition' && r.line ? <button className="line-jump" type="button" onClick={() => onJumpToSourceLine(r.line as number)}>{r.gemini}</button> : undefined} /> },
     { key: 'system', header: t('tcgAnalysisReview.systemFinalResult'), renderCell: (r) => <ComparisonCell text={r.system} node={r.key === 'productId' && productIssueBadges.length > 0 ? <>{r.system}{productIssueBadges.map((badge) => <StatusBadge key={badge.id} label={badge.label} tone={badge.tone} />)}</> : undefined} /> },
-    { key: 'source', header: t('tcgAnalysisReview.compareColumns.source'), width: 'calc(var(--comparison-source-col-w) + 2 * var(--comp-table-cell-px))', renderCell: (r) => <FixedCell text={r.source} node={<span className="item-comparison__source">{r.source}</span>} /> },
+    fixColumn
+      ? { key: 'fix', header: t('tcgAnalysisReview.compareColumns.fix'), renderCell: (r) => { const fix = fixRowOf(fixRows, r.key); const text = fix.value ?? (fix.scope ? t('reviewItem.fixColumn.tapToFix') : t('tcgAnalysisReview.notApplicable')); return <ComparisonCell text={text} node={fix.value === null && fix.scope ? <span className="item-comparison__tap">{text}</span> : undefined} />; } }
+      : { key: 'source', header: t('tcgAnalysisReview.compareColumns.source'), width: 'calc(var(--comparison-source-col-w) + 2 * var(--comp-table-cell-px))', renderCell: (r) => <FixedCell text={r.source} node={<span className="item-comparison__source">{r.source}</span>} /> },
   ];
   return <article className="item-comparison item-comparison--readonly">
     {heading !== undefined
       ? <div className="review-item-pane-head"><h3>{heading}</h3>{issueBadges.map((badge) => <StatusBadge key={badge.id} label={badge.label} tone={badge.tone} />)}</div>
       : issueBadges.length > 0 && <div className="item-comparison__badges">{issueBadges.map((badge) => <StatusBadge key={badge.id} label={badge.label} tone={badge.tone} />)}</div>}
-    <DataTable columns={columns} data={rows} rowKey={(r) => r.key} density="compact" className="item-comparison__table" />
+    <DataTable columns={columns} data={rows} rowKey={(r) => r.key} density="compact" className="item-comparison__table"
+      {...(fixColumn ? {
+        onRowClick: (r: ComparisonRow) => { if (fixColumn.fixableRowKeys.includes(r.key)) fixColumn.onRowSelect(r.key); },
+        selectedKeys: fixColumn.selectedRowKey ? new Set([fixColumn.selectedRowKey]) : undefined,
+        rowClassName: (r: ComparisonRow) => (fixColumn.fixableRowKeys.includes(r.key) ? '' : 'item-comparison__row--static'),
+      } : {})} />
   </article>;
 }
 
-export function ItemComparison({ item, values = emptyCorrections(), options, correctionState, note = '', noteState, noteDiagnostic, onCorrectionChange = () => {}, onCorrectionSave = () => {}, onNoteChange = () => {}, onNoteSave = () => {}, onJumpToSourceLine, readOnly = false, heading }: { item: AnalysisReviewItem; values?: CorrectionValues; options?: CorrectionOptions; correctionState?: 'idle' | 'saving' | 'saved' | 'error'; note?: string; noteState?: 'idle' | 'saving' | 'saved' | 'error'; noteDiagnostic?: { error_code: string; stage: string; extraction_item_id: string; source_message_id: string; build_sha: string; request_id: string }; onCorrectionChange?: (key: keyof CorrectionValues, value: string) => void; onCorrectionSave?: () => void; onNoteChange?: (value: string) => void; onNoteSave?: () => void; onJumpToSourceLine: (line: number) => void; readOnly?: boolean; heading?: string }) {
+export function ItemComparison({ item, values = emptyCorrections(), options, correctionState, note = '', noteState, noteDiagnostic, onCorrectionChange = () => {}, onCorrectionSave = () => {}, onNoteChange = () => {}, onNoteSave = () => {}, onJumpToSourceLine, readOnly = false, heading, fixColumn }: { item: AnalysisReviewItem; values?: CorrectionValues; options?: CorrectionOptions; correctionState?: 'idle' | 'saving' | 'saved' | 'error'; note?: string; noteState?: 'idle' | 'saving' | 'saved' | 'error'; noteDiagnostic?: { error_code: string; stage: string; extraction_item_id: string; source_message_id: string; build_sha: string; request_id: string }; onCorrectionChange?: (key: keyof CorrectionValues, value: string) => void; onCorrectionSave?: () => void; onNoteChange?: (value: string) => void; onNoteSave?: () => void; onJumpToSourceLine: (line: number) => void; readOnly?: boolean; heading?: string; fixColumn?: FixColumn }) {
   const { t } = useTranslation();
-  if (readOnly) return <ReadOnlyComparison item={item} onJumpToSourceLine={onJumpToSourceLine} heading={heading} />;
+  if (readOnly) return <ReadOnlyComparison item={item} onJumpToSourceLine={onJumpToSourceLine} heading={heading} fixColumn={fixColumn} />;
   const corrected = Object.values(values).some(Boolean), issueBadges = reviewIssueBadges(item.review_issues || []), productIssueBadges = productMetadataIssueBadges(item.review_issues || []), lineSpan = item.gemini.span || '', line = sourceLine(lineSpan);
   return <article className={readOnly ? 'item-comparison item-comparison--readonly' : 'item-comparison'}><div className="item-head-grid"><h3>{t('tcgAnalysisReview.geminiExtraction')}</h3><div><h3>{t('tcgAnalysisReview.systemFinalResult')}</h3><span className="inline-badges">{issueBadges.map((badge) => <StatusBadge key={badge.id} label={badge.label} tone={badge.tone} />)}</span></div>{!readOnly && <div><h3>{t('tcgAnalysisReview.manualCorrection')}</h3><span className={`badge ${corrected ? 'badge-warning' : 'badge-neutral'}`}>{corrected ? t('tcgAnalysisReview.hasCorrected') : t('tcgAnalysisReview.uncorrected')}</span></div>}</div><div className="aligned-fields">{fieldOrder.map(([key, labelKey], index) => <React.Fragment key={key}><div className="comparison-field"><b>{t(labelKey)}</b><span>{rawValue(item.gemini[key]) || t('tcgAnalysisReview.unresolved')}</span></div><div className="comparison-field system-field"><b>{t(labelKey)}</b><FinalSystemValue item={item} keyName={key} /></div>{!readOnly && <div className="comparison-field manual-field"><b>{t(labelKey)}</b><ManualInput values={values} field={correctionFields[index]} options={options} onChange={onCorrectionChange} /></div>}</React.Fragment>)}</div><div className="item-extra-grid"><div className="comparison-extra"><ComparisonMetadataRow label={t('tcgAnalysisReview.sourcePosition')} value={line ? <button className="line-jump" type="button" onClick={() => onJumpToSourceLine(line)}>{lineSpan}</button> : (rawValue(lineSpan) || t('tcgAnalysisReview.unresolved'))} /></div><div className="system-extra"><ComparisonMetadataRow label={t("superAdmin.supplierQuality.workName")} value={item.system.work_name || t("common.unresolved")} /><ComparisonMetadataRow label={t('tcgAnalysisReview.productId')} value={item.system.product_id || t("common.unresolved")} badges={productIssueBadges} /><ComparisonMetadataRow label={t('tcgAnalysisReview.saleStatus')} value={item.system.status || t("common.unresolved")} /></div>{!readOnly && <div className="manual-actions"><label htmlFor={`note-${item.extraction_item_id}`}>{t('tcgAnalysisReview.yourMemo')}</label><TextareaControl id={`note-${item.extraction_item_id}`} value={note} maxLength={2000} onChange={(event) => onNoteChange(event.target.value)} /><div><button type="button" disabled={true} onClick={onCorrectionSave}>{correctionState === 'saving' ? t('tcgAnalysisReview.saving') : t('tcgAnalysisReview.saveCorrected')}</button><button type="button" disabled={true} onClick={onNoteSave}>{noteState === 'saving' ? t('tcgAnalysisReview.saving') : t('tcgAnalysisReview.saveMemo')}</button></div>{correctionState === 'saved' && <span className="note-saved">{t('tcgAnalysisReview.correctionSaved')}</span>}{correctionState === 'error' && <span className="note-error">{t('tcgAnalysisReview.correctionSaveError')}</span>}{noteState === 'saved' && <span className="note-saved">{t('tcgAnalysisReview.memoSaved')}</span>}{noteState === 'error' && <span className="note-error">{t('tcgAnalysisReview.memoSaveError')}{noteDiagnostic && <><br /><small>{t('tcgAnalysisReview.error')}: {noteDiagnostic.error_code}<br />{t('tcgAnalysisReview.process')}: {noteDiagnostic.stage}<br />{t('tcgAnalysisReview.targetId')}: {noteDiagnostic.extraction_item_id || t('tcgAnalysisReview.unresolved')}<br />{t('tcgAnalysisReview.requestId')}: {noteDiagnostic.request_id}</small></>}</span>}</div>}</div></article>;
 }

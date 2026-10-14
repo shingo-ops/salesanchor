@@ -123,21 +123,54 @@ const WIZARD_ARGS = {
   onRefresh: async () => undefined,
 }
 
-/** 質問（何を直しますか）が出ること */
-export const WizardQuestion: Story = { args: WIZARD_ARGS, decorators: [mockApi([])] }
+/** 行を選ぶ前: 赤字の理由、比較表の「修正」列（押して直す）、「直したい行を表から押してください」 */
+export const BeforeRowSelected: Story = { args: WIZARD_ARGS, decorators: [mockApi([])] }
 
-/** 選択肢1（既存の商品に付け替える）を選んだ後 */
+/** 商品IDの行を押した後: 質問（何を直しますか）が出ること */
+export const WizardQuestion: Story = {
+  args: WIZARD_ARGS,
+  decorators: [mockApi([])],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await canvas.findByRole('row', { name: /Product ID|商品ID/ }))
+  },
+}
+
+const CONDITION_ARGS = {
+  item: {
+    ...ITEM,
+    system: { ...ITEM.system, condition: 'Empty box', condition_basis: 'MANUAL_CONDITION_REVIEW', pid_basis: 'MANUAL' },
+    condition_review: { condition_id: '5', review_version: 'a'.repeat(64), needs_review: true, review_reasons: 'empty_box_ambiguous', confirmed: false, classification: 'ambiguous' },
+    review_reason_details: [{ code: 'condition_unknown', source: 'system' as const, fix_stage: 'extraction' as const }],
+  },
+  onClose: () => undefined,
+  onRefresh: async () => undefined,
+}
+
+/** 状態の行を押した後: 状態を選ぶ欄が直接出る。「修正」列に人が決めた商品名と状態（空箱）が出る */
+export const ConditionRowSelected: Story = {
+  args: CONDITION_ARGS,
+  decorators: [mockApi([])],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await canvas.findByRole('row', { name: /State|Condition|状態/ }))
+  },
+}
+
+/** 商品IDの行を押し、選択肢1（既存の商品に付け替える）を選んだ後 */
 export const WizardReassignSelected: Story = {
   args: WIZARD_ARGS,
   decorators: [mockApi([])],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await canvas.findByRole('row', { name: /Product ID|商品ID/ }))
     await userEvent.click(await canvas.findByRole('radio', { name: /Reassign to an existing product|既存の商品/ }))
   },
 }
 
 async function fillRegisterForm(canvasElement: HTMLElement) {
   const canvas = within(canvasElement.ownerDocument.body)
+  await userEvent.click(await canvas.findByRole('row', { name: /Product ID|商品ID/ }))
   await userEvent.click(await canvas.findByRole('radio', { name: /Register as a new product|新しい商品/ }))
   const pairs: Array<[RegExp, string, string]> = [
     [/Product type|商品種別/, 'カ', 'カード'],

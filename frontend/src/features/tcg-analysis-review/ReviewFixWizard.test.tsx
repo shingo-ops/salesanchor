@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
-import { availableFixChoices, ReviewFixWizard, type FixChoice } from "./ReviewFixWizard";
+import { availableFixChoices, choicesForScope, ReviewFixWizard, type FixChoice, type FixScope } from "./ReviewFixWizard";
 import type { ReviewDrawerItem } from "./ReviewItemDrawer";
 import { postReviewAck } from "./reviewActions";
 
@@ -81,33 +81,74 @@ beforeEach(async () => {
 });
 afterEach(cleanup);
 
+describe("choicesForScope", () => {
+  const all = { is_v102: true, review_reason_details: ackable, review_issues: ["PRODUCT_ID_UNRESOLVED"], condition_review: condition };
+  const cases: Array<[FixScope, string[], FixChoice[]]> = [
+    ["product", [], ["reassign", "register"]],
+    ["condition", [], ["condition"]],
+    ["keep", [], ["keep"]],
+    ["keep", ["product_not_in_master"], []],
+  ];
+
+  it.each(cases)("%s (acked %j) -> %j", (scope, acked, expected) => {
+    expect(choicesForScope(makeItem(all), scope, acked)).toEqual(expected);
+  });
+
+  it("product is only reassign when the product is already resolved", () => {
+    expect(choicesForScope(makeItem(), "product", [])).toEqual(["reassign"]);
+  });
+
+  it("condition is empty when the item has no condition review", () => {
+    expect(choicesForScope(makeItem(), "condition", [])).toEqual([]);
+  });
+});
+
 describe("ReviewFixWizard", () => {
-  const renderWizard = (item: ReviewDrawerItem, onRefresh = vi.fn().mockResolvedValue(undefined)) => {
-    render(<ReviewFixWizard item={item} onRefresh={onRefresh} />);
-    return onRefresh;
+  const renderWizard = (
+    item: ReviewDrawerItem,
+    scope: FixScope,
+    { ackedCodes = [] as string[], onAcked = vi.fn(), onRefresh = vi.fn().mockResolvedValue(undefined) } = {},
+  ) => {
+    render(<ReviewFixWizard item={item} scope={scope} ackedCodes={ackedCodes} onAcked={onAcked} onRefresh={onRefresh} />);
+    return { onAcked, onRefresh };
   };
 
-  it("asks the question and never offers an exclude choice", () => {
-    renderWizard(makeItem({ review_issues: ["PRODUCT_ID_UNRESOLVED", "EXCLUDED"], is_v102: true, review_reason_details: ackable, condition_review: condition }));
+  it("product scope with two choices asks the question and never offers an exclude choice", () => {
+    renderWizard(makeItem({ review_issues: ["PRODUCT_ID_UNRESOLVED", "EXCLUDED"], is_v102: true, review_reason_details: ackable, condition_review: condition }), "product");
 
     expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
-    expect(screen.getAllByRole("radio").length).toBe(4);
+    expect(screen.getAllByRole("radio").length).toBe(2);
     expect(screen.queryByText(/exclude/i)).toBeNull();
   });
 
+  it("product scope with one choice skips the question and the Back button", () => {
+    renderWizard(makeItem(), "product");
+
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.getByText("Product").tagName).toBe("LABEL");
+  });
+
+  it("condition scope shows the condition input directly, without the question", () => {
+    renderWizard(makeItem({ condition_review: condition }), "condition");
+
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByText("Product")).toBeNull();
+  });
+
   it("shows only the chosen input and hides the question", () => {
-    renderWizard(makeItem({ review_issues: ["PRODUCT_ID_UNRESOLVED"] }));
+    renderWizard(makeItem({ review_issues: ["PRODUCT_ID_UNRESOLVED"] }), "product");
 
     fireEvent.click(screen.getByRole("radio", { name: /Reassign to an existing product/ }));
 
     expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
     expect(screen.getByText("Fixing: Reassign to an existing product")).toBeTruthy();
     expect(screen.getByText("Product").tagName).toBe("LABEL");
-    expect(screen.queryByRole("group", { name: "Add “Pika Box” as a search keyword?" })).toBeNull();
   });
 
   it("returns to the question with Back and drops what was typed", () => {
-    renderWizard(makeItem());
+    renderWizard(makeItem({ review_issues: ["PRODUCT_ID_UNRESOLVED"] }), "product");
 
     fireEvent.click(screen.getByRole("radio", { name: /Reassign to an existing product/ }));
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "abc" } });
@@ -118,17 +159,22 @@ describe("ReviewFixWizard", () => {
     expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
   });
 
-  it("acknowledges a reason, shows the notice, returns to the question and reloads", async () => {
-    vi.mocked(postReviewAck).mockResolvedValue({});
-    const onRefresh = renderWizard(makeItem({ is_v102: true, review_reason_details: ackable }));
+  it("says there is nothing to fix when the scope has no choice", () => {
+    renderWizard(makeItem(), "condition");
 
-    fireEvent.click(screen.getByRole("radio", { name: /Keep as is/ }));
+    expect(screen.getByText("Nothing to fix on this row")).toBeTruthy();
+  });
+
+  it("keep scope acknowledges a reason, tells the parent, shows the notice and reloads", async () => {
+    vi.mocked(postReviewAck).mockResolvedValue({});
+    const { onAcked, onRefresh } = renderWizard(makeItem({ is_v102: true, review_reason_details: ackable }), "keep");
+
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
 
     await waitFor(() => expect(onRefresh).toHaveBeenCalledOnce());
     expect(postReviewAck).toHaveBeenCalledWith(expect.objectContaining({ extraction_item_id: "item-1" }), ["product_not_in_master"]);
+    expect(onAcked).toHaveBeenCalledWith(["product_not_in_master"]);
     expect(screen.getByRole("status").textContent).toContain("Marked as checked");
-    expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: /Keep as is/ })).toBeNull();
   });
 });
