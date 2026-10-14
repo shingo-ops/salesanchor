@@ -16,32 +16,17 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
-import { postProductCorrection } from './reviewActions';
+import {
+  postProductCorrection,
+  type DupCandidate,
+  type LookupOption,
+  type RegistrationForm,
+  type RegistrationValues,
+} from './reviewActions';
 import type { AnalysisReviewItem } from './ItemComparison';
 
 // ── 型定義 ──────────────────────────────────────────────────────────────────
 
-type LookupOption = { id: string; name: string };
-
-type RegistrationForm = {
-  item: { extraction_item_id: string; source_message_id: string; raw_name: string };
-  lookups: Record<string, LookupOption[]>;
-};
-
-type RegistrationValues = {
-  product_kind_id: string;
-  work_id: string;
-  manufacturer_id: string;
-  product_category_id: string;
-  mark: string;
-  japanese_title: string;
-  english_title: string;
-  release_date: string;
-  search_keywords: string;
-  exclude_keywords: string;
-};
-
-type DupCandidate = { product_id: string; japanese_title: string };
 type SearchCandidate = { product_id: string; japanese_title: string; search_keywords: string };
 
 // ── 共通 UI 部品 ─────────────────────────────────────────────────────────────

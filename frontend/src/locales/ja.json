@@ -3779,7 +3779,53 @@
     "reassigned": "付け替えました",
     "reassignFailed": "付け替えに失敗しました",
     "conditionLabel": "状態",
-    "masterHint": "商品マスタへの登録や除外はこちら"
+    "wizard": {
+      "question": "何を直しますか？",
+      "choice": {
+        "reassign": "既存の商品に付け替える",
+        "reassignDesc": "商品を検索して選びます",
+        "register": "新しい商品として登録する",
+        "registerDesc": "商品マスタに登録し、この行を付け替えます",
+        "condition": "状態を直す",
+        "conditionDesc": "状態を確認・訂正します",
+        "keep": "このままで良い",
+        "keepDesc": "理由ごとに確認済みにします"
+      },
+      "selected": "直す内容: {{choice}}",
+      "back": "戻る",
+      "nothingToFix": "この行で直せる項目はありません",
+      "keyword": {
+        "question": "この書き方「{{keyword}}」を検索キーワードに追加しますか？",
+        "no": "追加しない",
+        "yes": "追加する",
+        "added": "付け替えました。検索キーワードに追加しました",
+        "failed": "付け替えました。検索キーワードは追加できませんでした（{{reason}}）",
+        "exists": "すでに登録済みの書き方です"
+      },
+      "register": {
+        "alreadyResolved": "この行の商品はすでに決まっています。「既存の商品に付け替える」を使ってください",
+        "kind": "商品種別",
+        "work": "作品",
+        "manufacturer": "メーカー",
+        "category": "カテゴリ",
+        "japaneseTitle": "日本語名",
+        "englishTitle": "英語名",
+        "mark": "記号",
+        "releaseDate": "発売日",
+        "keywords": "検索キーワード（1行に1つ）",
+        "required": "入力してください",
+        "checkDuplicates": "似た商品がないか確認",
+        "dupQuestion": "この中に同じ商品がありますか？",
+        "dupNone": "どれも違う。新しく登録する",
+        "dupNumber": "番号 {{id}}",
+        "useCandidate": "この商品に付け替える",
+        "submit": "登録して付け替える",
+        "done": "新しい商品（番号 {{id}}）を登録し、この行を付け替えました",
+        "reassignFailed": "新しい商品（番号 {{id}}）は登録済みです。付け替えに失敗しました（{{reason}}）。「戻る」を押しても登録は残ります",
+        "retryReassign": "付け替えだけやり直す",
+        "failed": "登録できませんでした（{{reason}}）"
+      }
+    }
   },
   "reviewReason": {
     "pid_unresolved": "商品を特定できない",

@@ -3779,7 +3779,53 @@
     "reassigned": "Reassigned",
     "reassignFailed": "Failed to reassign",
     "conditionLabel": "Condition",
-    "masterHint": "Register or exclude in the product master"
+    "wizard": {
+      "question": "What do you want to fix?",
+      "choice": {
+        "reassign": "Reassign to an existing product",
+        "reassignDesc": "Search and pick a product",
+        "register": "Register as a new product",
+        "registerDesc": "Add to the product master and reassign this row",
+        "condition": "Fix the condition",
+        "conditionDesc": "Confirm or correct the condition",
+        "keep": "Keep as is",
+        "keepDesc": "Mark reasons as checked"
+      },
+      "selected": "Fixing: {{choice}}",
+      "back": "Back",
+      "nothingToFix": "Nothing to fix on this row",
+      "keyword": {
+        "question": "Add “{{keyword}}” as a search keyword?",
+        "no": "Don't add",
+        "yes": "Add",
+        "added": "Reassigned and added the search keyword",
+        "failed": "Reassigned, but the search keyword was not added ({{reason}})",
+        "exists": "This keyword already exists"
+      },
+      "register": {
+        "alreadyResolved": "This row already has a product. Use “Reassign to an existing product”.",
+        "kind": "Product type",
+        "work": "Title / series",
+        "manufacturer": "Manufacturer",
+        "category": "Category",
+        "japaneseTitle": "Japanese name",
+        "englishTitle": "English name",
+        "mark": "Code mark",
+        "releaseDate": "Release date",
+        "keywords": "Search keywords (one per line)",
+        "required": "Required",
+        "checkDuplicates": "Check for similar products",
+        "dupQuestion": "Is the same product in this list?",
+        "dupNone": "None of these. Register a new one",
+        "dupNumber": "No. {{id}}",
+        "useCandidate": "Reassign to this product",
+        "submit": "Register and reassign",
+        "done": "Registered new product (No. {{id}}) and reassigned this row",
+        "reassignFailed": "New product (No. {{id}}) was registered, but reassigning failed ({{reason}}). The product stays registered even if you go back.",
+        "retryReassign": "Retry reassign only",
+        "failed": "Could not register ({{reason}})"
+      }
+    }
   },
   "reviewReason": {
     "pid_unresolved": "Product not identified",
