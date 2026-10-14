@@ -81,6 +81,13 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
               {details.map((detail) => (
                 <li key={detail.code}>
                   <span className="review-item-reasons__text">{reviewReasonLabel(t, detail.code)}</span>
+                  {detail.code === "excluded" && (
+                    <p>
+                      {item.system.status
+                        ? t("reviewItem.excludedHelp", { status: item.system.status })
+                        : t("reviewItem.excludedHelpNoStatus")}
+                    </p>
+                  )}
                   {detail.code === GAP_SUSPECT_CODE && gapSuspect && (
                     <GapSuspectNote gapLines={gapSuspect.gap_lines} candidates={gapSuspect.candidates} />
                   )}
@@ -113,11 +120,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             fixColumn={{ selectedRowKey, onRowSelect: selectRow, fixableRowKeys }}
           />
         </TwoColumn>
-        <section className="review-item-fix">
-          <h3>{t("reviewItem.fixHeading")}</h3>
-          {scope === null ? (
-            <p>{t("reviewItem.pickRowHint")}</p>
-          ) : (
+        {scope !== null && (
+          <section className="review-item-fix">
             <ReviewFixWizard
               key={`${item.extraction_item_id}:${scope}`}
               item={item}
@@ -126,8 +130,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
               onAcked={handleAcked}
               onRefresh={onRefresh}
             />
-          )}
-        </section>
+          </section>
+        )}
       </Stack>
     </Drawer>
   );

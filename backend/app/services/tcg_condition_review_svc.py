@@ -144,7 +144,15 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     Expressions come exclusively from trusted source code, never request text.
     selected_expression is used for a POST's new binding, after old-version checking.
     """
+    from app.services.v102_human_decisions_svc import (  # noqa: PLC0415  循環 import を避ける
+        FIELD_REVIEW_ACK,
+        REVIEW_ACK_VERSION,
+        TRANSCRIPTION_FIELDS,
+    )
     schema = schema or "public"
+    ack_field = literal(FIELD_REVIEW_ACK)
+    ack_version = int(REVIEW_ACK_VERSION)
+    transcription_fields = ",".join(literal(f) for f in TRANSCRIPTION_FIELDS)
     classification = classification_sql("ei.raw_product_name", "ei.raw_state", "ei.raw_memo")
     mentions = " OR ".join(f"strpos(COALESCE(ei.{key}, ''), {literal(EMPTY_WORD)}) > 0"
                            for key in ("raw_product_name", "raw_state", "raw_memo"))
@@ -179,6 +187,23 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         FROM {schema}.item_corrections
         WHERE extraction_item_id = ei.id AND field_name = 'condition_review' ORDER BY id DESC LIMIT 1
     ) cr_event ON TRUE
+    -- 「このままで良い」(review_ack) の最新1行に excluded が入っているか。規則の正本は v102_human_decisions_svc.load_v102_decisions
+    CROSS JOIN LATERAL (SELECT COALESCE((
+        SELECT CASE WHEN a.value->'v' = '{ack_version}'::jsonb AND jsonb_typeof(a.value->'codes') = 'array'
+                    THEN NOT EXISTS (SELECT 1 FROM jsonb_array_elements(a.value->'codes') cr_e
+                                     WHERE jsonb_typeof(cr_e) != 'string' OR cr_e = '""'::jsonb)
+                         AND a.value->'codes' @> '["excluded"]'::jsonb
+                    ELSE FALSE END
+        FROM (SELECT ic.corrected_at,
+                CASE WHEN ic.human_value IS JSON OBJECT AND pg_input_is_valid(ic.human_value, 'jsonb')
+                     THEN ic.human_value::jsonb ELSE NULL END AS value
+              FROM {schema}.item_corrections ic
+              WHERE ic.extraction_item_id = ei.id AND ic.field_name = {ack_field}
+              ORDER BY ic.corrected_at DESC, ic.id DESC LIMIT 1) a
+        WHERE NOT EXISTS (SELECT 1 FROM {schema}.item_corrections tr
+                          WHERE tr.extraction_item_id = ei.id AND tr.field_name IN ({transcription_fields})
+                            AND tr.corrected_at >= a.corrected_at)
+    ), FALSE) AS excluded_acked) cr_review_ack
     LEFT JOIN public.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
     LEFT JOIN public.conditions cr_arc ON cr_arc.id::text = cr_data.ar->>'condition_id'
     CROSS JOIN LATERAL (SELECT {classification} AS classification, ({mentions}) AS mentions,
@@ -201,14 +226,14 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
                 CASE WHEN cr_data.ar->>'pid_resolved' IS DISTINCT FROM 'true' THEN 'pid_unresolved' END,
                 CASE WHEN cr_data.ar->>'unit_resolved' IS DISTINCT FROM 'true' THEN 'unit_unresolved' END,
                 CASE WHEN cr_data.ar->>'price_normalized' IS NULL THEN 'price_unresolved' END,
-                CASE WHEN cr_data.ar->>'exclusion' IS NOT NULL THEN 'excluded' END
+                CASE WHEN cr_data.ar->>'exclusion' IS NOT NULL AND NOT cr_review_ack.excluded_acked THEN 'excluded' END
             ]) reason
               WHERE reason != '' AND reason NOT IN ({empty_reasons})
                 AND NOT (reason = 'note_unmatched' AND {pure_memo})
                 AND NOT (reason = 'pid_unresolved' AND cr_data.ar->>'pid_resolved' = 'true')
                 AND NOT (reason = 'unit_unresolved' AND cr_data.ar->>'unit_resolved' = 'true')
                 AND NOT (reason = 'price_unresolved' AND cr_data.ar->>'price_normalized' IS NOT NULL)
-                AND NOT (reason = 'excluded' AND cr_data.ar->>'exclusion' IS NULL) ORDER BY reason) AS other_reasons,
+                AND NOT (reason = 'excluded' AND (cr_data.ar->>'exclusion' IS NULL OR cr_review_ack.excluded_acked)) ORDER BY reason) AS other_reasons,
         COALESCE((cr_data.ar->>'needs_review')::boolean, FALSE)
             AND COALESCE(cr_data.ar->>'review_reasons', '') = '' AS unknown_review,
         CASE WHEN cr_input.mentions AND NOT cr_input.master_valid THEN 'empty_box_master_unavailable'
@@ -220,7 +245,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     ) cr_reasons
     CROSS JOIN LATERAL (SELECT
         cr_valid.valid_ack, cr_input.classification, cr_input.mentions, cr_input.master_valid,
-        cr_hash.binding_hash, cr_hash.ack_binding_hash, {version} AS review_version,
+        cr_hash.binding_hash, cr_hash.ack_binding_hash, cr_review_ack.excluded_acked, {version} AS review_version,
         (cardinality(cr_reasons.other_reasons) > 0 OR cr_reasons.unknown_review OR cr_reasons.empty_reason IS NOT NULL)
             AS needs_review,
         array_to_string(cr_reasons.other_reasons || CASE WHEN cr_reasons.empty_reason IS NULL
