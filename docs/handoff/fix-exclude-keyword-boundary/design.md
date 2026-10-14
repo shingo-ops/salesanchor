@@ -1,5 +1,6 @@
 # Design: 除外ワードの左境界
 
+**対象ADR**: ADR-154
 recon: docs/handoff/fix-exclude-keyword-boundary/recon.md
 
 ## 外部・過去事例の参照と我々への応用
@@ -33,4 +34,4 @@ recon: docs/handoff/fix-exclude-keyword-boundary/recon.md
 | 本番の影響行を全件列挙 | impl/measure.py（実行は Opus）・impl/measure-plan.md |
 
 ## 維持の仕組み
-追加テスト（backend CI）が、AR/ANNIVERSARY・SR/SSR・SR/SRR の挙動を固定する。
+守り手: 追加テスト（backend CI の pytest）。追加テストが、AR/ANNIVERSARY・SR/SSR・SR/SRR の挙動を固定する。
