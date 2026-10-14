@@ -361,15 +361,6 @@
     padding-left: var(--space-4);
     padding-top: var(--space-2);
   }
-
-  /* PO 決定（2026-10-14・B案）: 戻る矢印を足したぶんカードを上に詰め、
-     矢印が無かったときと同じ位置に見えるようにする。
-     矢印の行が占める高さ＝上の余白（--space-2）＋ボタン（--size-icon-btn-lg）。
-     上余白（--coming-soon-margin-top: 80px）より大きくなっても負にならないよう
-     max() で 0 を下限にする。左右中央寄せ（auto）と下の余白は変えない。 */
-  .coming-soon {
-    margin-top: max(0px, calc(var(--coming-soon-margin-top) - var(--space-2) - var(--size-icon-btn-lg)));
-  }
 }
 
 /* 準備中ページ
@@ -382,6 +373,17 @@
   padding: var(--space-8) var(--space-8);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+/* PO 決定（2026-10-14・B案）: 戻る矢印を足したぶんカードを上に詰め、矢印が無かった
+   ときと同じ位置に見えるようにする。矢印の行が占める高さ＝上の余白（--space-2）＋
+   ボタン（--size-icon-btn-lg）。負にならないよう max() で 0 を下限にする。
+   **この指定は上の .coming-soon より後に書く必要がある**（同じ強さの指定は
+   後に書いた方が勝つため。先に書くと `margin:` の一括指定に上書きされる）。 */
+@media (max-width: 767px) {
+  .coming-soon {
+    margin-top: max(0px, calc(var(--coming-soon-margin-top) - var(--space-2) - var(--size-icon-btn-lg)));
+  }
 }
 
 .coming-soon-icon {
