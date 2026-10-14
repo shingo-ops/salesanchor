@@ -2087,3 +2087,57 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .inbox-mobile-search-row .inbox-search-icon {
   left: var(--space-4);
 }
+
+/* ===== スマホ版・会話ヘッダー新設（第6便・2026-10-14・PO 決定） =====
+   帯を2本（上の操作行＋会話ヘッダー）から1本に統合する。
+   PC・タブレットでは InboxThreadHeaderMobile.tsx 自体を描かないため、
+   ここに @media は不要（.inbox-mobile-header と同じ考え方）。
+     ヘッダー全体の高さ 56dp            = --topbar-height
+     戻る・顔写真はそれぞれ既存の .inbox-back-to-list（48dp）/ .conv-avatar（48dp）を再利用
+     左の余白 16dp                     = --space-4（.inbox-mobile-header と同じ値に揃える）
+     右の3つの押す場所 各44dp以上       = --size-icon-btn-lg
+     右端は一覧のヘッダーと同じ作法で画面右端に接地（padding-right: 0） */
+.inbox-thread-header-mobile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--topbar-height);
+  padding-left: var(--space-4);
+  padding-right: 0;
+  border-bottom: 1px solid var(--color-separator-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.inbox-thread-header-mobile-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.inbox-thread-header-mobile-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.inbox-thread-header-mobile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon-btn-lg);
+  height: var(--size-icon-btn-lg);
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-micro);
+}
+.inbox-thread-header-mobile-btn:hover {
+  background: var(--bg-hover);
+}
