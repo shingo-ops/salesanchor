@@ -8,11 +8,11 @@
 - `frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:296`（rules-search）・`:375`（aliases-search）: 生 `<input>`（type 省略）が2個。`style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}`（`frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:72` で SEARCH_WIDTH="30rem"）、onKeyDown で Enter→検索。
 - `frontend/src/components/TextField.tsx:41`: TextFieldControl は forwardRef で rest を input へ渡す。type/min/inputMode/style/onKeyDown/data-testid/placeholder/value/onChange は通る。
 - `frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:19`: TextFieldControl は既に import 済み。
-- 試験 `frontend/src/pages/super-admin/RoleKnowledgeButtonMigration.test.tsx:139` は testid 経由で DOM の input を操作する（要素は input のまま）。
+- 試験 `frontend/src/components/RoleKnowledgeButtonMigration.test.tsx:139` は testid 経由で DOM の input を操作する（要素は input のまま）。
 
 ## before 実測（6個とも）
 border 2px inset rgb(118,118,118)、radius 0、height 19px、font 13.33px、色 黒・背景白＝ブラウザ既定。375 幅で inventory-qty-min / price-min の left が -11.83（既存のはみ出し。doc scrollWidth==clientWidth）。
-生データ: `docs/handoff/design-system-recon/evidence-20260910/ay2s-before.json`、前後比較: 同 `ay2s-diff.md`。
+生データ: `docs/handoff/design-system-recon/evidence-20260910/ay2s-before.json`、前後比較: `docs/handoff/design-system-recon/evidence-20260910/ay2s-diff.md`。
 
 ## 残件（今回やらない）
 - `<input type="checkbox">` は両ファイルに計10件残る（対象外）。

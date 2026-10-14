@@ -53,7 +53,7 @@
 - 外部事例: 不要（社内金型の適用のみ）。
 
 ## 維持の仕組み
-- 守り手1: frontend/src/components/TextField.tsx（入力欄の見た目の正本）
+- 守り手: frontend/src/components/TextField.tsx（入力欄の見た目の正本）
 - 守り手2: scripts/check-ui-governance.js（pages の生 input 検出。type=number は :75-77 で対象外＝既知の穴、残件）
 
 ## r2 追補: C3 の判定（Opus、実装中の発見）
