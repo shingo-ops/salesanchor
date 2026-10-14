@@ -1,6 +1,6 @@
 # design: 同内容 PATCH を出さない
 
-関連: recon.md、docs/adr/ADR-1014-inventory-view-shows-distribution-rows.md
+関連: docs/handoff/inventory-filters-no-echo-patch/recon.md、docs/adr/ADR-1014-inventory-view-shows-distribution-rows.md
 
 ## 変更
 - frontend/src/pages/inventory/InventoryPage.tsx に buildFilterPayload を追加（PATCH 本体と同じ規則）
@@ -24,4 +24,4 @@ load・loadSeqRef・filtersLoaded ゲート、API クライアント、backend�
 応用: 読込値を lastSavedRef に記録し、保存 effect で同値比較して PATCH を省く。
 
 ## 維持の仕組み
-- 守り手: InventoryPage.noechopatch.test.tsx（CI の frontend vitest）。戻すと 1件目が赤になる（修正前コードで赤を確認済み）。
+- 守り手: frontend/src/pages/inventory/InventoryPage.noechopatch.test.tsx（CI の frontend vitest）。戻すと 1件目が赤になる（修正前コードで赤を確認済み）。
