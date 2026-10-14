@@ -58,7 +58,7 @@ PO が要確認スライドを開いたとき、次がすべて ○ になる。
      - → 差は 0
    - 見出し行は左右とも `height: var(--review-pane-head-h); margin:0; box-sizing:border-box`。見出し行と枠の間の余白は 0 にする。今の `.item-comparison__badges` の margin-bottom は、見出し行の中では使わない。
    - 本文 `.review-item-top .shadow-source-lines` は `flex:1; min-height:0; max-height:none; overflow-y:auto` にする。原文が長ければ枠の中でスクロールし、短ければ枠の下に余白が残る（PO 了承済み）。
-   - **上書きはすべて `.review-item-top` で始まるセレクタだけで書く**。`shadow-source-pane.css` は 1 行も変えない。これで V102PostEditModal（`frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx:227-240`）には届かない。
+   - **上書きはすべて `.review-item-top` で始まるセレクタだけで書く**。`frontend/src/features/tcg-analysis-review/shadow-source-pane.css` は 1 行も変えない。これで V102PostEditModal（`frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx:227-240`）には届かない。
 4. 外側の余白は今のままにする。
    - 左: `frontend/src/features/tcg-analysis-review/review-item-drawer.css:4-6`
    - 右: `frontend/src/features/tcg-analysis-review/item-comparison-readonly.css:3`
@@ -78,13 +78,13 @@ PO が要確認スライドを開いたとき、次がすべて ○ になる。
 変更前（recon §1-2）: ConditionReviewPanel、「修正する」ボタン（押すと自作の pmd-drawer が開く）、確認が必要な理由。
 
 変更後（`frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx:75-113` の section の中を、上から順に）:
-1. **商品の付け替え**（新しい部品 `ReviewProductFixForm.tsx`。同じフォルダに置く）
+1. **商品の付け替え**（新しい部品 `frontend/src/features/tcg-analysis-review/ReviewProductFixForm.tsx`。同じフォルダに置く）
    - ラベル「商品」（新キー）。入力欄は既存の `.comp-field` / `.comp-field__label`（`frontend/src/components/FormField.css:19-40`）のマークアップ。`<label htmlFor>` と金型 AsyncCombobox（`frontend/src/components/AsyncCombobox.tsx:25-48`）をつなぐ。
    - 候補は既存の `searchProductOptions`（`frontend/src/features/tcg-analysis-review/reviewActions.ts:56-59`）で探す。
    - 入力欄の下の補助文に、今の商品を出す。値は `item.system.product_title` で、無ければ「—」（前例 `frontend/src/features/tcg-analysis-review/ReviewRowActions.tsx:87`）。
    - AsyncCombobox の文字（ariaLabel / placeholder / noResultsText / loadingText / errorText）は、`frontend/src/features/tcg-analysis-review/ReviewRowActions.tsx:86-95` が使う `needsReview.inline.*` のキーをそのまま使う。新しいキーは作らない。
    - 金型 Button（primary）「この商品に付け替える」。候補を選ぶまでは押せない。保存中は `loading`。
-   - 保存は既存の `postProductCorrection(item, productUuid)`（`frontend/src/features/tcg-analysis-review/reviewActions.ts:30-38`）を使う。成功したら Callout（info）「付け替えました」を出し、`onRefresh()` を呼ぶ。失敗したら Callout（warning）を出す。ack の流れ（`ReviewItemDrawer.tsx:47-61`）と同じ型にする。
+   - 保存は既存の `postProductCorrection(item, productUuid)`（`frontend/src/features/tcg-analysis-review/reviewActions.ts:30-38`）を使う。成功したら Callout（info）「付け替えました」を出し、`onRefresh()` を呼ぶ。失敗したら Callout（warning）を出す。ack の流れ（`frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx:47-61`）と同じ型にする。
 2. **状態**: ConditionReviewPanel に任意の props `label?: string` を足し、ReviewItemDrawer だけがそれを渡す。
    - `label` があるときは、金型 Select の `label` prop（`frontend/src/components/Select.tsx:21-28`）を使い、今の `aria-label`（`frontend/src/features/tcg-analysis-review/ConditionReviewPanel.tsx:81`）は外す（読み上げが二重になるため）。
    - `label` が無いときは今のまま。これで SupplierDetailView（`frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:117`）の見た目は変わらない（審査 REVISE #6）。
@@ -179,3 +179,8 @@ PO が要確認スライドを開いたとき、次がすべて ○ になる。
 - 測り方: §6 の実測スクリプトの生出力と png。
 - 守り手: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`（見出し行と、フォームが出ていること）／見た目の位置は人手で守る（自動の位置検査は jsdom ではできないため）。
 - 未解決ゼロ確認: recon §2 の #1・#2 は実装前の実測（ステップ1）で解消する。#3 は PO の決定で解消済み（保存できる項目だけ）。#4 は対象外（ProductMasterDrawer を触らない）。#5 はステップ4で確かめる。#6 は該当なし（Drawer の中の配置を定める ADR は見つからなかった。recon §1-5）。#7・#8 は Generator がステップ1で grep して報告する。
+
+## 維持の仕組み
+
+- 守り手: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`（見出し行とフォームの表示）、`frontend/src/features/tcg-analysis-review/ReviewProductFixForm.test.tsx`（付け替えの保存・失敗・再読み込みの扱い）、`frontend/src/features/tcg-analysis-review/ConditionReviewPanel.test.tsx`（label の有無）。
+- 左右の枠の位置（0px）は jsdom では測れないため、人手で守る（変更時は §6 の Playwright 実測を再実行する）。
