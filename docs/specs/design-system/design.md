@@ -4039,3 +4039,32 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
   - 6個の入力欄に label の関連付けが無い。文言追加＝i18n キー新設を伴う別テーマ。
   - 375 の inventory-qty-min・inventory-price-min の left が -11.83 になる。変更前から同値の既存事象で、本便で新たに生じたものではない。
   - type=number の生 input は check-ui-governance.js の検出対象外（:213-217 isDetectableInput）のまま。
+
+#### AY-2s 本番反映の記録（2026-10-14）
+
+- PR #4254、merge 0661b6e5f8e27a9614cb60cca9cdaf8d2892331f（2026-10-14T01:11:40Z）、最終 HEAD 4f72e3f92。
+- Deploy run 38494371702 success（2026-10-14T01:14:23Z）。
+- 本番 JS index-QiwA8Abk.js で inventory-qty-min・inventory-price-max が TextFieldControl（生 `input` ではない）で描画される。app は HTTP 200、api/health は HTTP 200。
+- GO は ADR-1003 の委任。根拠 /tmp/CC報告ファイル/ssot-ay2s/prod/checks.txt。
+
+#### AY-2t 目標設定ページの数値入力の TextFieldControl 化（2026-10-14）
+
+- 設計: docs/handoff/ay2t-goal-inputs-mold/design.md（recon.md 併置）。前例は AY-2p（複合セレクタで順序依存を避ける）・AY-2s。
+- 対象3種: GoalSettingPage の行入力（GoalInputRow、最大16個）、週次指標（AdvisorMetricRow）、月次 KGI（goal-advisor-monthly-kgi）。基底クラス `.gs-input` を撤去し、見た目の正本を金型 FormField.css に一本化。
+- 保存済みの見た目は `.comp-field__input.gs-input-saved` と `.comp-field__input.gs-input-saved:focus`（frontend/src/pages/goal-setting/GoalSettingPage.css）で維持。focus 中も枠は success（読み込み順に依らない）。
+- 見た目の前後（実測、dev build、preview、幅1280/1440/375・ダーク1280）:
+
+| 項目 | 変更前 | 変更後 |
+|---|---|---|
+| 背景（未保存） | #f5f7fa（ダーク rgb(15,23,42)） | #fff（ダーク rgb(30,41,59)）＝金型標準 |
+| 文字 | 13.6px | 14.4px |
+| 行入力の高さ | 33 | 39.61（375 は 44） |
+| 月次 KGI・週次指標の高さ | 44 | 44 |
+| focus | 枠 accent のみ（週次指標はリングあり） | 枠 accent ＋金型 focus リング |
+| 保存済み（focus 中も） | 枠 success・背景 success-bg-subtle | 同じ |
+| 幅・角・枠・padding | — | 前後差 0 |
+| POST /goals の body・週次指標の自動入力 | — | 前後一致 |
+| scrollWidth / clientWidth（document） | 一致 | 一致 |
+
+- 判定の詳細: docs/handoff/design-system-recon/evidence-20260910/ay2t-acceptance.md、ay2t-cmp.txt、ay2t-before.json、ay2t-after.json。
+- 残件: GoalInputRow の label に htmlFor が無く入力と関連付いていない（既存事象。別テーマ）。
