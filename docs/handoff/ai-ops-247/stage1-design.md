@@ -20,7 +20,7 @@
 | S5 | Loki のルールは repo に 6 本（1 ファイル）。本番は 4 本で評価中（評価失敗 0・最終評価 2026-10-14）。差は、repo のみ = Discord の 2 本と postgres 版の `BackendErrorSpike`、本番のみ = `DatabaseError`（中身は repo の postgres 版と同じ条件） | `monitoring/loki/rules/jarvis/alerts.yml:8-77`・本番 Loki の ruler 指標・本番ファイルとの diff |
 | S6 | repo の Loki ルールは同じ名前のルール `BackendErrorSpike` が 2 本（:32・:69）、同じ名前のグループ `error_anomaly` が 2 つ（:29・:66） | `monitoring/loki/rules/jarvis/alerts.yml` |
 | S7 | Loki のルール API が 0 本に見えた（実際は HTTP 400 のエラー応答）のは、`auth_enabled: false` のため問い合わせが `fake` という名前の置き場を探して失敗したため（HTTP 400 `/loki/rules/fake` 無し）。実際の評価は `jarvis` の置き場で動いている | `monitoring/loki/loki-config.yaml:2`・`:32-36`、本番 API 応答 |
-| S8 | Grafana のアラートルールは本番で 0 件。repo の `monitoring/grafana/provisioning/alerting/alerting.yml` は本番では 2026-07-19 に退避済み（中身は repo と同一）。通知は Alertmanager → Discord の 1 本だけが働いている | 本番 Grafana API・本番 `retired/alerting.yml.disabled-202607191506`・`monitoring/alertmanager/alertmanager.yml` |
+| S8 | Grafana のアラートルールは本番で 0 件。repo の monitoring/grafana/provisioning/alerting/alerting.yml（便1 #4276 で削除済み） は本番では 2026-07-19 に退避済み（中身は repo と同一）。通知は Alertmanager → Discord の 1 本だけが働いている | 本番 Grafana API・本番 `retired/alerting.yml.disabled-202607191506`・`monitoring/alertmanager/alertmanager.yml` |
 | S9 | Uptime Kuma の本番の見張りは 4 件（監視基盤と prod1 の node-exporter）。既存 4 件はすべて Kuma から Discord への直通通知（既定の通知先）が付いている。利用者が使う App・API・LP の見張りは 0 件。repo の定義 7 件は本番に無い | 本番 kuma.db（読み取り専用・recon2 B8）・`monitoring/uptime-kuma-monitors.yml:1-51` |
 | S10 | repo 定義 7 件のうち PostgreSQL・Redis は `localhost` 宛てだが DB は prod1、Kuma は prod2 にあり届かない。Meta Graph API は応答するが 400（旧 script は 400 を正常扱いにしていた）、Firebase は名前解決できない | `monitoring/uptime-kuma-monitors.yml`・prod2 からの GET 結果（recon3 C9） |
 | S11 | Kuma（1.23.16）は TLS を持つ見張りにだけ `monitor_cert_days_remaining`・`monitor_cert_is_valid` を出す。今は 0 系列 | Kuma 公式ソース `server/prometheus.js`（1.23.16 タグ。recon の生出力には無い＝【未確認・便2 の合格基準で検証】）・本番 Prometheus（今 0 系列） |
@@ -70,7 +70,7 @@
 
 - Loki ルール（S5・S6）: repo の postgres 版を本番と同じ名前 `DatabaseError` にし、1 つ目の `error_anomaly` グループに入れる（グループ名の重複を消す）。Discord の 2 本は残す。結果、repo は「本番の 4 本 ＋ Discord の 2 本」の 6 本になる。
 - 配置前に、Discord の 2 本の条件式を本番 Loki で直近 7 日分問い合わせ、閾値を超えた回数を記録する（入れた途端に鳴り続けないかの確認。閾値を超えた 5 分刻みの点が 1 日平均 12 点（1 時間分）を超えるなら、配置を止めて設計に戻す）。
-- Grafana（S8）: repo の `monitoring/grafana/provisioning/alerting/alerting.yml` を削除し、本番（退避済み）に合わせる。通知の経路は Alertmanager の 1 本（design.md §3 の正本表どおり）。
+- Grafana（S8）: repo の monitoring/grafana/provisioning/alerting/alerting.yml（便1 #4276 で削除済み） を削除し、本番（退避済み）に合わせる。通知の経路は Alertmanager の 1 本（design.md §3 の正本表どおり）。
 - 本番への配置（S14 の手順）: 控え（`.bak-20261014-<PR番号>`）→ ファイルを置く → main と diff 0 → Loki は設定の置き場を定期に読み直すので再起動しない（S24）。5 分待っても Loki の ruler 指標が 6 本にならなければ `docker compose restart loki`。
 - 合格: 本番 Loki の ruler 指標で `jarvis` のルールが 6 本・評価失敗 0。本番の Loki ルールファイルと main の sha256 が一致。
 
