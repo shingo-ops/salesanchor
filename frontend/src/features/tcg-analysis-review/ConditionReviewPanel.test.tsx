@@ -34,6 +34,17 @@ describe("ConditionReviewPanel", () => {
     fireEvent.click(screen.getByRole("button",{name:"Confirm empty box"}));
     expect(await screen.findByText("Condition confirmed. Other issues still prevent delivery.")).toBeTruthy();
   });
+  it("shows a visible label on the select when label is given, and falls back to aria-label otherwise", async () => {
+    const { unmount } = render(<ConditionReviewPanel item={item} onRefresh={vi.fn()} label="Condition" />);
+    await screen.findByRole("option", { name: "Sealed box" });
+    expect(screen.getByText("Condition").tagName).toBe("LABEL");
+    expect(screen.getByLabelText("Condition")).toBe(screen.getByRole("combobox"));
+    unmount();
+    render(<ConditionReviewPanel item={item} onRefresh={vi.fn()} />);
+    await screen.findByRole("option", { name: "Sealed box" });
+    expect(document.querySelector("label.comp-field__label")).toBeNull();
+    expect(screen.getByRole("combobox").getAttribute("aria-label")).toBe("Select the actual condition");
+  });
   it("requires a selected correction for ambiguous input", async () => {
     vi.mocked(api.post).mockResolvedValue({ok:true,saved:1,condition_review:{needs_review:false}});
     render(<ConditionReviewPanel item={{...item,condition_review:{...item.condition_review!,classification:"ambiguous"}}} onRefresh={vi.fn().mockResolvedValue(undefined)} />);
