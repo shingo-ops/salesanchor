@@ -175,15 +175,9 @@ threshold_checks = [
     ("disk_warning_pct",
      r"node_filesystem_avail_bytes[^>]+>\s*(\d+)",
      "HighDiskUsage"),
-    ("db_connection_warning",
-     r"pg_stat_activity_count\s*>\s*(\d+)",
-     "HighDbConnections"),
-    ("nginx_5xx_per_5m",
-     r'nginx_http_requests_total\{status=~"5\.\."\}\[5m\]\)\s*>\s*(\d+)',
-     "HighErrorRate"),
-    ("nginx_502_per_2m",
-     r'nginx_http_requests_total\{status="502"\}\[2m\]\)\s*>\s*(\d+)',
-     "High502Rate"),
+    ("kuma_cert_days_warning",
+     r"monitor_cert_days_remaining\s*<\s*(\d+)",
+     "CertExpiringSoon"),
 ]
 
 thresholds = tokens.get("thresholds", {})
