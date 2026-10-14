@@ -215,3 +215,4 @@ PO が要確認ページを使うとき、次がすべて ○ になる。
 - 未解決1（長い商品名）: 「修正」列は幅指定なしの `ComparisonCell`（Gemini・システム列と同じく幅に追従し、はみ出しは省略、title で全文）。`--comparison-source-col-w` は仕入元詳細の「採用元」で使い続けるので残す。
 - 未解決2（押せない行の焦点）: F のとおり許容。
 - 未解決3（keep を使い切った後）: Drawer は onAcked のあと `choicesForScope(item, "keep", ackedCodes)` が空なら scope を null に戻し、pickRowHint を出す（ボタンも消える）。
+- 再審査（Fable 2026-10-14）APPROVE。付帯指示（Opus 採用）: keep を使い切って scope を null に戻すとき、「確認済みにしました」の通知（`reviewItem.acked` 系の既存文言）は Drawer が state に持ち、理由の欄の直下に Callout(info) で出す。次に行を押す等の操作で消す。Wizard 側の通知は scope が続く場合だけ使う。`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx:59-66` の送信 body・回数・GET 2 回の期待は変えない。
