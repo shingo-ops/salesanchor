@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ACCOUNT_ICONS, NAV_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.types";
+import type { LeadDetail, KarteTabKey, SalesFormSelectionState, ConvertAssigneeOption } from "./inbox.types";
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import ConfirmModal from "../../components/ConfirmModal";
 
 interface CardForm {
   nickname?: string | null;
@@ -55,7 +56,6 @@ interface Props {
   setKarteTab: (tab: KarteTabKey) => void;
   showKartePanel: boolean;
   closeKartePanel: () => void;
-  setShowProfileModal: (v: boolean) => void;
   inboxSettings: { showRightPanel: boolean };
   selectedConversation: ConversationSummary | null;
   avatarErrors: Set<number>;
@@ -64,6 +64,15 @@ interface Props {
   handleCardFieldBlur: () => void;
   handleConvertLead: () => void;
   handleCreateInvoice: () => void;
+  // 第9便: 商談化の確認ポップアップ（ConfirmModal 金型を再利用）
+  showConvertModal: boolean;
+  convertAssigneeOptions: ConvertAssigneeOption[];
+  convertAssigneeLoading: boolean;
+  convertAssigneeError: string | null;
+  convertSaving: boolean;
+  convertError: string | null;
+  handleCancelConvert: () => void;
+  handleConfirmConvert: (assignedToUserId: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,13 +101,22 @@ function elapsedLabel(iso: string | null, t: TFn): string {
 
 export function InboxKartePanel({
   selectedLeadId, leadDetail, cardForm, cardSaveStatus, cardSaveError,
-  karteTab, setKarteTab, showKartePanel, closeKartePanel, setShowProfileModal,
+  karteTab, setKarteTab, showKartePanel, closeKartePanel,
   inboxSettings, selectedConversation, avatarErrors, handleAvatarError,
   handleCardFieldChange, handleCardFieldBlur,
   handleConvertLead, handleCreateInvoice,
+  showConvertModal, convertAssigneeOptions, convertAssigneeLoading, convertAssigneeError,
+  convertSaving, convertError, handleCancelConvert, handleConfirmConvert,
 }: Props) {
   const { t } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
+  // 第9便: 商談化の確認ポップアップ内のプルダウン選択（モーダルが閉じたら毎回リセットする）
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
+  const assigneeSelectId = useId();
+
+  useEffect(() => {
+    if (!showConvertModal) setSelectedAssigneeId("");
+  }, [showConvertModal]);
 
   useEffect(() => {
     if (!leadDetail?.discord_guild_channel_id || guildId) return;
@@ -132,12 +150,33 @@ export function InboxKartePanel({
               （会話画面と同じ戻り方）。タブレット（768〜1279px）は従来の
               「顧客情報 ×」のまま変えない＝× ボタンと見出しは残し、
               戻る矢印はスマホ幅の CSS でのみ表示する（InboxPage.css 参照）。
-              配線は変えない: どちらを押しても同じ closeKartePanel を呼ぶ。 */}
+              配線は変えない: どちらを押しても同じ closeKartePanel を呼ぶ。
+              第9便（2026-10-14・PO決定）: スマホはここに会話画面ヘッダーと同じ並び
+              （戻る矢印→顔写真→顧客名）を出す。顔写真・顧客名は下の .karte-hd-top と
+              同じ値・同じ出し方（新しい取得処理は作らない）。タブレットでは CSS で
+              隠し、従来どおり「顧客情報 ×」のまま変えない。 */}
           <div className="karte-close-row">
             <button type="button" className="karte-close-back-btn" onClick={closeKartePanel}
               aria-label={t("common.back")}>
               <KarteCloseBackIcon size={ICON.md} aria-hidden="true" />
             </button>
+            <div className="karte-close-mobile-identity">
+              <div className="right-panel-avatar">
+                {selectedConversation?.profile_picture_url && !avatarErrors.has(selectedConversation.lead_id) ? (
+                  <img
+                    src={selectedConversation.profile_picture_url}
+                    alt={t("inbox.avatarAlt")}
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                    onError={() => handleAvatarError(selectedConversation.lead_id)}
+                  />
+                ) : (
+                  getInitials(cardForm.nickname || cardForm.customer_name || leadDetail.nickname || leadDetail.customer_name)
+                )}
+              </div>
+              <span className="right-panel-display-name">
+                {cardForm.nickname || leadDetail.nickname || cardForm.customer_name || leadDetail.customer_name}
+              </span>
+            </div>
             <span className="karte-close-title">{t("inbox.karteToggle")}</span>
             <button type="button" className="karte-close-btn" onClick={closeKartePanel}
               aria-label={t("common.close")} data-tooltip={t("common.close")}>
@@ -145,7 +184,11 @@ export function InboxKartePanel({
             </button>
           </div>
 
-          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact+link */}
+          {/* Header — 見本 .hd: Row1=avatar+name+badge / Row2=last-contact。
+              「顧客ページを開く」リンクは第9便で削除（PO 決定・不要）。
+              スマホでは顔写真・名前（.karte-hd-top 内）が上の帯と重複するため
+              CSS（InboxPage.css の @media max-width:767px）で非表示にする。
+              段階バッジ・補足情報（country/customer_type）は引き続きここに残す。 */}
           <div className="right-panel-header">
             <div className="karte-hd-top">
               <div className="right-panel-avatar">
@@ -174,16 +217,13 @@ export function InboxKartePanel({
                 </span>
               )}
             </div>
-            <div className="karte-hd-meta">
-              {selectedConversation?.last_message_at && (
+            {selectedConversation?.last_message_at && (
+              <div className="karte-hd-meta">
                 <span className="karte-last-contact" data-testid="karte-last-contact">
                   {t("inbox.lastContactPrefix")}&nbsp;{elapsedLabel(selectedConversation.last_message_at, t)}
                 </span>
-              )}
-              <button type="button" className="karte-open-link" onClick={() => setShowProfileModal(true)}>
-                {t("inbox.openCustomerPage")} →
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Save status */}
@@ -222,6 +262,56 @@ export function InboxKartePanel({
             leadId={leadDetail.id}
             onConvertLead={handleConvertLead}
             onCreateInvoice={handleCreateInvoice}
+          />
+
+          {/* 第9便（2026-10-14・PO決定）: 商談化の確認ポップアップ。
+              既存の ConfirmModal 金型をそのまま使う（新しい金型は作らない）。
+              担当候補は role_name が「営業」または「リーダー」・在籍中（status=active）・
+              user_id を持つ人のみ（GET /staff、useInboxState 側で絞り込み済み）。
+              確定は PATCH /leads/{id} に status="negotiating" + assigned_to をまとめて
+              送るだけ（既存の保存口のみ使用・新しい API は作らない）。 */}
+          <ConfirmModal
+            open={showConvertModal}
+            title={t("inbox.convertModalTitle")}
+            message={
+              <div>
+                <label htmlFor={assigneeSelectId} className="comp-field__label">
+                  {t("inbox.convertAssigneeLabel")}
+                </label>
+                <SelectControl
+                  id={assigneeSelectId}
+                  fullWidth
+                  options={convertAssigneeOptions}
+                  value={selectedAssigneeId}
+                  onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                  placeholder={t("common.pleaseSelect")}
+                  disabled={convertAssigneeLoading || convertSaving}
+                />
+                {convertAssigneeLoading && (
+                  <p className="comp-field__hint">{t("common.loading")}</p>
+                )}
+                {!convertAssigneeLoading && convertAssigneeOptions.length === 0 && (
+                  <p className="comp-field__hint comp-field__hint--error" role="alert">
+                    {convertAssigneeError ?? t("inbox.convertNoAssignee")}
+                  </p>
+                )}
+                {convertError && (
+                  <p className="comp-field__hint comp-field__hint--error" role="alert">{convertError}</p>
+                )}
+              </div>
+            }
+            confirmLabel={t("inbox.convertConfirm")}
+            cancelLabel={t("common.close")}
+            confirmDisabled={
+              convertAssigneeLoading || convertSaving
+              || convertAssigneeOptions.length === 0 || !selectedAssigneeId
+            }
+            onConfirm={() => {
+              const assignedToUserId = Number(selectedAssigneeId);
+              if (!assignedToUserId) return;
+              handleConfirmConvert(assignedToUserId);
+            }}
+            onCancel={handleCancelConvert}
           />
         </div>
       ) : (

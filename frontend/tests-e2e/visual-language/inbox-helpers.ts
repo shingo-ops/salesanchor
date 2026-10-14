@@ -139,6 +139,31 @@ export async function openInboxListWithLeadStatus(page: Page): Promise<void> {
   await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
 }
 
+/**
+ * 商談段階 "lead"（＝商談化ボタンが出る） かつ GET /staff の担当候補を指定して
+ * 一覧を開く（第9便・商談化の確認ポップアップの検査専用）。
+ * openInboxListWithLeadStatus と同じ土台に GET /staff のモックだけ足す
+ * （PATCH /leads/5001 を監視したい検査は、この関数を使わず mark-unread の検査
+ * と同じ流儀でその場で mockApi を組み立てること）。
+ */
+export async function openInboxListWithLeadStatusAndStaff(
+  page: Page,
+  staffRows: Array<Record<string, unknown>>,
+): Promise<void> {
+  const base = baseMocks();
+  const leadDetail = base["GET /leads/5001"] as Record<string, unknown>;
+
+  await installAuthBypass(page);
+  await mockApi(page, {
+    ...base,
+    "GET /leads/5001": { ...leadDetail, status: "lead" },
+    "GET /staff": staffRows,
+  });
+  await page.goto("/lead-chat");
+  await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+}
+
 export async function openInboxListWithDiscordUnlinkedConversation(page: Page): Promise<void> {
   const base = baseMocks();
   const conversations = (conversationsFixture as ConversationsFixture).conversations.map((c) =>

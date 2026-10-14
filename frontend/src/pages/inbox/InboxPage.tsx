@@ -44,6 +44,8 @@ export default function InboxPage() {
     profileModalTab, setProfileModalTab, profileModalRef,
     handleCardFieldChange, handleCardFieldBlur,
     handleConvertLead, handleCreateInvoice,
+    showConvertModal, convertAssigneeOptions, convertAssigneeLoading, convertAssigneeError,
+    convertSaving, convertError, handleCancelConvert, handleConfirmConvert,
     karteTab, setKarteTab,
     selectedConversation, avatarErrors, handleAvatarError,
   } = state;
@@ -246,7 +248,6 @@ export default function InboxPage() {
             setKarteTab={setKarteTab}
             showKartePanel={showKartePanel}
             closeKartePanel={closeKartePanel}
-            setShowProfileModal={setShowProfileModal}
             inboxSettings={inboxSettings}
             selectedConversation={selectedConversation}
             avatarErrors={avatarErrors}
@@ -255,6 +256,14 @@ export default function InboxPage() {
             handleCardFieldBlur={handleCardFieldBlur}
             handleConvertLead={handleConvertLead}
             handleCreateInvoice={handleCreateInvoice}
+            showConvertModal={showConvertModal}
+            convertAssigneeOptions={convertAssigneeOptions}
+            convertAssigneeLoading={convertAssigneeLoading}
+            convertAssigneeError={convertAssigneeError}
+            convertSaving={convertSaving}
+            convertError={convertError}
+            handleCancelConvert={handleCancelConvert}
+            handleConfirmConvert={handleConfirmConvert}
           />
         </div>
       </PageLayout>
