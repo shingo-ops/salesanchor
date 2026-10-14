@@ -1,0 +1,37 @@
+156,159d155
+<   --cat-import: #0891b2;
+<   --cat-discord: #6366f1;
+<   --cat-distribution: #dc2626;
+<   --cat-inventory: #ca8a04;
+187d182
+<   --max-width-modal-sm: 420px;
+200d194
+<   --inbox-collapsed-panel-w: 360px;
+216d209
+<   --karte-ok-bg: #e7f6f0;
+224d216
+<   --topnav-email-max-w: 140px;
+237,241d228
+<   --schedule-cell-icon-size: 24px;
+<   --schedule-min-h: 500px;
+<   --schedule-mini-col-min-w: 100px;
+<   --schedule-slot-h: 60px;
+<   --schedule-nav-btn-size: 32px;
+249d235
+<   --schedule-row-height-compact: 40px;
+373d358
+<     --schedule-slot-h: 40px;
+549d533
+<   --color-blue-100: #dbeafe;
+555d538
+<   --color-amber-50: #fffbeb;
+578,579d560
+<   --calendar-today-text: #fff;
+<   --calendar-today-cell-bg: #e8f0fe;
+700d680
+<   --color-blue-100: #1e3a5f;
+706d685
+<   --color-amber-50: #431407;
+729,730d707
+<   --calendar-today-text: var(--palette-ink-deep);
+<   --calendar-today-cell-bg: #1e3a5f;

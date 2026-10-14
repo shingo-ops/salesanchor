@@ -253,10 +253,6 @@
   --cat-pipeline:     #7c3aed;  /* パイプライン — 紫系 */
   --cat-product:      #059669;  /* 商品 — 緑系 */
   --cat-master:       #d97706;  /* マスタ — 橙系 */
-  --cat-import:       #0891b2;  /* インポート — シアン系 */
-  --cat-discord:      #6366f1;  /* Discord — インディゴ系 */
-  --cat-distribution: #dc2626;  /* 配信 — 赤系 */
-  --cat-inventory:    #ca8a04;  /* 在庫 — 黄系 */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
@@ -292,7 +288,6 @@
   --mc-subnav-width:         200px;  /* 管理センターサブナビ幅 */
 
   /* ---- Modal sizes ---- */
-  --max-width-modal-sm:      420px;  /* 確認モーダル・小型ダイアログ最大幅 */
   --modal-max-w:             500px;  /* 標準モーダル最大幅（旧）*/
   --modal-max-w-sm:          420px;  /* Modal 金型 sm */
   --modal-max-w-md:          600px;  /* Modal 金型 md */
@@ -309,7 +304,6 @@
 
   /* ---- Inbox layout ---- */
   --inbox-left-panel-min-w:  220px;  /* 受信箱左パネル最小幅（タブレット） */
-  --inbox-collapsed-panel-w: 360px;  /* 受信箱折りたたみパネル幅 */
   --inbox-center-min-h:      300px;  /* 受信箱中央パネル最小高（モバイル） */
   --inbox-textarea-min-h:    60px;   /* カルテメモフィールド最小高 */
 
@@ -328,7 +322,6 @@
   --karte-field-bg: #fafbfc;  /* カルテフィールド背景（見本 .fbox） */
   --karte-field-bd: #dde0e4;  /* カルテフィールド枠線色（見本 --bd2） */
   --karte-ok:      #0f9d77;   /* カルテ実績値色（見本 --ok: teal green）*/
-  --karte-ok-bg:   #e7f6f0;   /* カルテ実績値背景（見本 --ok-bg）*/
 
   /* ---- Sidebar ---- */
   --sidebar-logo-h:          64px;   /* サイドバーロゴエリア高さ */
@@ -340,7 +333,6 @@
 
   /* ---- Topbar / Responsive ---- */
   --search-bar-max-w:        480px;  /* トップバー検索フォーム最大幅 */
-  --topnav-email-max-w:      140px;  /* トップナビ メールアドレス最大幅 */
 
   /* ---- Auth / Login page ---- */
   --card-login-max-w:        400px;  /* ログインカード最大幅 */
@@ -365,11 +357,6 @@
 
   /* ---- Schedule page ---- */
   --schedule-mini-size:      46px;   /* スケジュールイベントミニサイズ */
-  --schedule-cell-icon-size: 24px;   /* スケジュールセルアイコンサイズ */
-  --schedule-min-h:          500px;  /* カレンダー最小高 */
-  --schedule-mini-col-min-w: 100px;  /* ミニカレンダーカラム最小幅 */
-  --schedule-slot-h:         60px;   /* タイムグリッド1時間スロット高（デスクトップ≥1280px） */
-  --schedule-nav-btn-size:   32px;   /* カレンダーナビボタン幅・高さ */
   --schedule-allday-row-h:   24px;   /* 終日エリア固定高（デスクトップ≥1280px） */
   --schedule-day-num-size:   1.625rem; /* 26px — カレンダー日付数字（曜日ヘッダー） */
   --schedule-today:          var(--accent-bright); /* 今日の丸囲み・アクティブ強調 */
@@ -377,7 +364,6 @@
   --schedule-now-line:       #ea4335;  /* 現在時刻ライン */
   --schedule-slot-hover:     rgba(37, 99, 235, .045); /* 空きスロット hover */
   --schedule-row-height:     48px;     /* 1時間の高さ（標準） */
-  --schedule-row-height-compact: 40px; /* 1時間の高さ（コンパクト） */
   --schedule-time-gutter-width: 60px;  /* 左の時刻ガリー幅 */
   --schedule-leftpanel-width: 256px;   /* 左パネル幅 */
   --schedule-event-radius:   6px;      /* 予定カード角丸 */
@@ -581,7 +567,6 @@
 /* タブレット（≤1279px） */
 @media (max-width: 1279px) {
   :root {
-    --schedule-slot-h:       40px;  /* タイムグリッド1時間スロット高（タブレット） */
     --schedule-allday-row-h: 14px;  /* 終日エリア固定高（タブレット） */
   }
 }
