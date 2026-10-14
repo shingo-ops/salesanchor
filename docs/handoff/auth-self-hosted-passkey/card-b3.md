@@ -359,3 +359,14 @@ Sales Anchor
 - マージは Opus が CI・Fable 審査を確かめてから行う
 
 ## 11. 報告欄（担当が追記）
+
+実装担当（Sonnet）報告 2026-10-14。生出力: /tmp/CC報告ファイル/b3/（red.txt・red-reset.txt・s5-2.txt・s5-3.txt・s5-4.txt・s5-6.txt・compose-config.txt・openapi-stat.txt）
+
+- §5-1 修正前の失敗: test_mail_config／test_password_policy は `ImportError: cannot import name 'mail_config' / 'password_policy'`（red.txt 最終行: `3 errors in 59.62s`）。test_password_reset は新 API の差し込み先が無く 16 件とも setup で AttributeError（red-reset.txt 最終行: `16 errors in 54.86s`）
+- §5-2: `89 passed, 170 warnings in 447.92s (0:07:27)`
+- §5-3: `345 passed, 9 skipped, 132 warnings, 1 error in 503.88s (0:08:23)`（error 1 件は `tests/test_tcg_sold_out_results.py::test_pg_scopes_paging_and_authoritative_values`。「Disposable CI PostgreSQL required」＝PostgreSQL 実機必須）
+- §5-4: `git grep -n 'os.getenv("SMTP_\|os.getenv("MAIL_FROM\|os.getenv("CONTACT_NOTIFY' -- backend/app` は 0 件（`grep rc=1`）
+- §5-5: `docker-compose -f docker-compose.yml config` rc=0（この環境の docker は `docker compose` サブコマンドが無く `docker-compose` を使用）。backend に 7 名・celery-worker に 5 名（警告 16 行は未設定の変数。エラー 0）
+- §5-6: yaml.safe_load 成功。追加 7 名の `grep -c "NAME="` は各 2（sed 削除と heredoc に 1 回ずつ）。`grep -c ENV_EOF` は 3 行だが、うち 1 行（:250）は origin/main にもあるコメント。heredoc は :298 の 1 つだけ
+- §5-7: ` 1 file changed, 147 insertions(+)`。増えた path は `/api/v1/auth/password-reset/request` と `/confirm` の 2 つだけ（削除行 0）
+- 判断を要した点（事実のみ）: §4.9 の「一覧の先頭の語は too_common」は、先頭語 `123456` が 15 文字未満で too_short が先に出るため、テストは「15〜64 文字で一覧に最初に載る語」で too_common を検査し、先頭語は too_short になることを別テストで確認した

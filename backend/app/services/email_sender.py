@@ -25,6 +25,8 @@ from email.mime.text import MIMEText
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.services.mail_config import smtp_settings
+
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
@@ -37,39 +39,25 @@ _engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 _SessionLocal = sessionmaker(_engine)
 
 
-def _smtp_configured() -> bool:
-    return all([
-        os.getenv("SMTP_HOST"),
-        os.getenv("SMTP_USER"),
-        os.getenv("SMTP_PASSWORD"),
-        os.getenv("MAIL_FROM"),
-    ])
-
-
 def _send(to_addr: str, subject: str, body_text: str) -> None:
     """SMTP で送信。未設定なら idle。"""
-    if not _smtp_configured():
+    settings = smtp_settings()
+    if settings is None:
         logger.info(
             "[email_sender] SMTP not configured, skipping send "
             f"(to={to_addr}, subject={subject!r})"
         )
         return
 
-    host = os.getenv("SMTP_HOST", "")
-    port = int(os.getenv("SMTP_PORT", "587"))
-    user = os.getenv("SMTP_USER", "")
-    password = os.getenv("SMTP_PASSWORD", "")
-    mail_from = os.getenv("MAIL_FROM", "")
-
     msg = MIMEMultipart("alternative")
-    msg["From"] = mail_from
+    msg["From"] = settings.mail_from
     msg["To"] = to_addr
     msg["Subject"] = subject
     msg.attach(MIMEText(body_text, "plain", "utf-8"))
 
-    with smtplib.SMTP(host, port, timeout=15) as smtp:
+    with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
         smtp.starttls()
-        smtp.login(user, password)
+        smtp.login(settings.user, settings.password)
         smtp.send_message(msg)
 
 

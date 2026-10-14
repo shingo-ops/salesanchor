@@ -95,17 +95,21 @@
 
 ---
 
-## 6. SMTP (B6 Data Deletion 完了メール)
+## 6. SMTP（メール送信。削除完了通知・発注書メール・問い合わせ通知・パスワード再設定）
+
+読み取り口は `backend/app/services/mail_config.py` の1か所。空文字は未設定と同じに扱う。
 
 | 変数名 | 必須 | 用途 | 例 |
 |---|---|---|---|
-| `SMTP_HOST` | optional | SMTP サーバー | `smtp.sendgrid.net` |
-| `SMTP_PORT` | optional | SMTP ポート | `587` |
-| `SMTP_USER` | optional | SMTP ユーザー | `apikey` |
-| `SMTP_PASSWORD` | optional | SMTP パスワード | (SendGrid API key) |
+| `SMTP_HOST` | optional | SMTP サーバー | `salesanchor.sakura.ne.jp` |
+| `SMTP_PORT` | optional | SMTP ポート（空・数字以外は 587） | `587` |
+| `SMTP_USER` | optional | SMTP ユーザー（送信用アドレス） | `support@salesanchor.jp` |
+| `SMTP_PASSWORD` | optional | SMTP パスワード | (送信用アドレスのパスワード。`$`・`#`・引用符・空白は使わない) |
 | `MAIL_FROM` | optional | 差出人 | `support@salesanchor.jp` |
+| `CONTACT_NOTIFY_EMAIL` | optional | 問い合わせ通知の宛先（空なら `support@salesanchor.jp`） | `support@salesanchor.jp` |
+| `AUTH_PASSWORD_RESET_ALLOWLIST` | optional | パスワード再設定メールの送信許可（カンマ区切り。`AUTH_PROVIDER=firebase` の間はここに載った email にだけ送る。空・未設定なら誰にも送らない） | `tester@example.com` |
 
-**運用注意**: 未設定なら idle（ログのみ）。Meta App Review はメール必須ではないので最小構成可。
+**運用注意**: `SMTP_HOST`・`SMTP_USER`・`SMTP_PASSWORD`・`MAIL_FROM` のどれかが空なら idle（ログのみ）。Meta App Review はメール必須ではないので最小構成可。
 
 ---
 

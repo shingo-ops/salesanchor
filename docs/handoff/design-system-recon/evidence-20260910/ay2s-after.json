@@ -1,0 +1,1204 @@
+{
+ "inventory-filter-w1280": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /conversations/stream",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "inventory-qty-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-min",
+    "id": null,
+    "rect": {
+     "left": 130.17,
+     "top": 693.33,
+     "width": 96,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-max",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   },
+   "inventory-qty-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-max",
+    "id": null,
+    "rect": {
+     "left": 248.95,
+     "top": 693.33,
+     "width": 96,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-min",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   },
+   "inventory-price-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-min",
+    "id": null,
+    "rect": {
+     "left": 387.13,
+     "top": 693.33,
+     "width": 112,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-max",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   },
+   "inventory-price-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-max",
+    "id": null,
+    "rect": {
+     "left": 521.91,
+     "top": 693.33,
+     "width": 112,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-min",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box"
+  ]
+ },
+ "inventory-filter-w1440": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "inventory-qty-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-min",
+    "id": null,
+    "rect": {
+     "left": 130.17,
+     "top": 693.33,
+     "width": 96,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-max",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   },
+   "inventory-qty-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-max",
+    "id": null,
+    "rect": {
+     "left": 248.95,
+     "top": 693.33,
+     "width": 96,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-min",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   },
+   "inventory-price-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-min",
+    "id": null,
+    "rect": {
+     "left": 387.13,
+     "top": 693.33,
+     "width": 112,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-max",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   },
+   "inventory-price-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-max",
+    "id": null,
+    "rect": {
+     "left": 521.91,
+     "top": 693.33,
+     "width": 112,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-min",
+      "text": "",
+      "height": 39.61,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box"
+  ]
+ },
+ "inventory-filter-w375": {
+  "path": "/inventory",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /products/tcg-types",
+   "GET /me/inventory-filters",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "PATCH /me/inventory-filters",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "PATCH /me/inventory-filters",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "inventory-qty-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-min",
+    "id": null,
+    "rect": {
+     "left": -11.83,
+     "top": 795.28,
+     "width": 96,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-max",
+      "text": "",
+      "height": 44,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   },
+   "inventory-qty-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-qty-max",
+    "id": null,
+    "rect": {
+     "left": 106.95,
+     "top": 795.28,
+     "width": 96,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "96px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 94,
+    "clientWidth": 94,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-qty-min",
+      "text": "",
+      "height": 44,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   },
+   "inventory-price-min": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-min",
+    "id": null,
+    "rect": {
+     "left": -11.83,
+     "top": 855.28,
+     "width": 112,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-max",
+      "text": "",
+      "height": 44,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   },
+   "inventory-price-max": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": "number",
+    "className": "comp-field__input",
+    "testid": "inventory-price-max",
+    "id": null,
+    "rect": {
+     "left": 122.95,
+     "top": 855.28,
+     "width": 112,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "112px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 110,
+    "clientWidth": 110,
+    "siblings": [
+     {
+      "tag": "input",
+      "type": "number",
+      "testid": "inventory-price-min",
+      "text": "",
+      "height": 44,
+      "centerDiff": 0
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box",
+   "GET /inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box"
+  ]
+ },
+ "knowledge-aliases-w1280": {
+  "path": "/super-admin/analysis-rules?section=knowledge-aliases",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /conversations/stream",
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "rules-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "rules-search",
+    "id": null,
+    "rect": {
+     "left": 278,
+     "top": 161.72,
+     "width": 480,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "480px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 478,
+    "clientWidth": 478,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-search-btn",
+      "text": "検索",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-new",
+      "text": "ルール新規作成",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-bulk-delete",
+      "text": "削除",
+      "height": 28,
+      "centerDiff": -0.01
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   },
+   "aliases-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "aliases-search",
+    "id": null,
+    "rect": {
+     "left": 278,
+     "top": 434.25,
+     "width": 480,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "480px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 478,
+    "clientWidth": 478,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-search-btn",
+      "text": "検索",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-new",
+      "text": "個別ルール新規作成",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-bulk-delete",
+      "text": "削除",
+      "height": 28,
+      "centerDiff": -0.01
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1280,
+     "clientWidth": 1280
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ]
+ },
+ "knowledge-aliases-w1440": {
+  "path": "/super-admin/analysis-rules?section=knowledge-aliases",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "rules-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "rules-search",
+    "id": null,
+    "rect": {
+     "left": 278,
+     "top": 161.72,
+     "width": 480,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "480px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 478,
+    "clientWidth": 478,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-search-btn",
+      "text": "検索",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-new",
+      "text": "ルール新規作成",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-bulk-delete",
+      "text": "削除",
+      "height": 28,
+      "centerDiff": -0.01
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   },
+   "aliases-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "aliases-search",
+    "id": null,
+    "rect": {
+     "left": 278,
+     "top": 434.25,
+     "width": 480,
+     "height": 39.61
+    },
+    "computed": {
+     "height": "39.6094px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "480px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "auto",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 478,
+    "clientWidth": 478,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-search-btn",
+      "text": "検索",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-new",
+      "text": "個別ルール新規作成",
+      "height": 28,
+      "centerDiff": -0.01
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-bulk-delete",
+      "text": "削除",
+      "height": 28,
+      "centerDiff": -0.01
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 1440,
+     "clientWidth": 1440
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ]
+ },
+ "knowledge-aliases-w375": {
+  "path": "/super-admin/analysis-rules?section=knowledge-aliases",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /super-admin/knowledge",
+   "GET /super-admin/aliases",
+   "GET /super-admin/suppliers?per_page=500",
+   "GET /super-admin/product-options?limit=2000",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "items": {
+   "rules-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "rules-search",
+    "id": null,
+    "rect": {
+     "left": 24,
+     "top": 383.47,
+     "width": 327,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "327px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 325,
+    "clientWidth": 325,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-search-btn",
+      "text": "検索",
+      "height": 44,
+      "centerDiff": 52
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-new",
+      "text": "ルール新規作成",
+      "height": 44,
+      "centerDiff": 52
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "rules-bulk-delete",
+      "text": "削除",
+      "height": 44,
+      "centerDiff": 52
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   },
+   "aliases-search": {
+    "count": 1,
+    "found": true,
+    "tag": "input",
+    "type": null,
+    "className": "comp-field__input",
+    "testid": "aliases-search",
+    "id": null,
+    "rect": {
+     "left": 24,
+     "top": 849.27,
+     "width": 327,
+     "height": 44
+    },
+    "computed": {
+     "height": "44px",
+     "padding": "8px 12px",
+     "border": "1px solid rgb(226, 232, 240)",
+     "border-radius": "6px",
+     "font-size": "14.4px",
+     "min-width": "auto",
+     "width": "327px",
+     "color": "rgb(26, 32, 44)",
+     "background-color": "rgb(255, 255, 255)",
+     "min-height": "44px",
+     "box-sizing": "border-box",
+     "display": "block"
+    },
+    "scrollWidth": 325,
+    "clientWidth": 325,
+    "siblings": [
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-search-btn",
+      "text": "検索",
+      "height": 44,
+      "centerDiff": 52
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-new",
+      "text": "個別ルール新規作成",
+      "height": 44,
+      "centerDiff": 52
+     },
+     {
+      "tag": "button",
+      "type": null,
+      "testid": "aliases-bulk-delete",
+      "text": "削除",
+      "height": 44,
+      "centerDiff": 52
+     }
+    ],
+    "parent": "div.",
+    "doc": {
+     "scrollWidth": 375,
+     "clientWidth": 375
+    }
+   }
+  },
+  "interactCalls": [
+   "GET /super-admin/knowledge?q=abc",
+   "GET /super-admin/aliases?q=xyz",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ]
+ }
+}

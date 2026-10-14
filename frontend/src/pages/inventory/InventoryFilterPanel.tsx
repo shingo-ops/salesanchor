@@ -11,6 +11,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface SupplierFacet {
   id: number;
@@ -284,18 +285,18 @@ export default function InventoryFilterPanel({
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
             <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.quantity")}</span>
-            <input type="number" min="0" inputMode="numeric" data-testid="inventory-qty-min" value={qtyMin}
+            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-qty-min" value={qtyMin}
               onChange={(e) => { setQtyMin(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.min")} />
             <span style={{ color: "var(--text-muted)" }}>〜</span>
-            <input type="number" min="0" inputMode="numeric" data-testid="inventory-qty-max" value={qtyMax}
+            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-qty-max" value={qtyMax}
               onChange={(e) => { setQtyMax(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.max")} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
             <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.unitPrice")}</span>
-            <input type="number" min="0" inputMode="numeric" data-testid="inventory-price-min" value={priceMin}
+            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-price-min" value={priceMin}
               onChange={(e) => { setPriceMin(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.min")} />
             <span style={{ color: "var(--text-muted)" }}>〜</span>
-            <input type="number" min="0" inputMode="numeric" data-testid="inventory-price-max" value={priceMax}
+            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-price-max" value={priceMax}
               onChange={(e) => { setPriceMax(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.max")} />
           </div>
         </div>
