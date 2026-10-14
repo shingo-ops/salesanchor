@@ -5,8 +5,51 @@
   padding: var(--space-3);
 }
 
+/* 原文の枠と比較表の枠を、上端・下端ともそろえる（広い幅のみ。設計 review-drawer-align-form §2-A）。
+   左右とも先頭に同じ高さの見出し行（.review-item-pane-head）を置き、
+   左の枠は右の列の高さに合わせて absolute で張る。 */
+.review-item-top {
+  --review-pane-head-h: 26px; /* component-local token: 見出し行の高さ（Badge の実測 25.92px 以上。StatusBadge: line-height 17.92 + padding 4+4） */
+}
+
+.review-item-top .review-item-source {
+  position: relative;
+}
+
+.review-item-top .shadow-source-pane {
+  position: absolute;
+  inset: calc(var(--space-3) + var(--review-pane-head-h)) var(--space-3) var(--space-3) var(--space-3);
+}
+
+.review-item-top .shadow-source-lines {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* 「直す」欄の商品フォーム: .comp-field の下余白が Stack の gap と二重になるのを防ぐ（状態の Select には効かせない） */
+.review-item-fix__product .comp-field {
+  margin-bottom: 0;
+}
+
 @media (max-width: 1279px) { /* = --breakpoint-tablet-max */
   .comp-two-column.review-item-top {
     grid-template-columns: 1fr;
+  }
+
+  /* 縦積みでは通常の流れに戻す（見出し行の高さは左右同じなのでそのまま） */
+  .review-item-top .review-item-source {
+    position: static;
+  }
+
+  .review-item-top .shadow-source-pane {
+    position: static;
+    inset: auto;
+  }
+
+  .review-item-top .shadow-source-lines {
+    flex: initial;
+    max-height: var(--shadow-source-max-h);
   }
 }

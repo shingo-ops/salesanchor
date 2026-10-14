@@ -7,7 +7,9 @@ vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
   ApiError: class extends Error {},
 }));
-vi.mock("./ItemComparison", () => ({ ItemComparison: () => null }));
+vi.mock("./ItemComparison", () => ({
+  ItemComparison: ({ heading }: { heading?: string }) => <div data-testid="comparison-heading">{heading}</div>,
+}));
 vi.mock("./ConditionReviewPanel", () => ({ ConditionReviewPanel: () => null }));
 vi.mock("./ProductMasterDrawer", () => ({ ProductMasterDrawer: () => null }));
 
@@ -84,5 +86,21 @@ describe("ReviewItemDrawer layout", () => {
     renderDrawer(withRaw("L1"));
 
     expect(screen.getByText("Fix")).toBeTruthy();
+  });
+
+  it("puts the source and comparison heading rows on both panes", () => {
+    renderDrawer(withRaw("L1"));
+
+    const sourceHead = document.querySelector(".review-item-source > .review-item-pane-head");
+    expect(sourceHead?.textContent).toBe("Source text");
+    expect(screen.getByTestId("comparison-heading").textContent).toBe("Comparison");
+  });
+
+  it("shows the labelled product form with a disabled reassign button in the fix section", () => {
+    renderDrawer(withRaw("L1"));
+
+    expect(screen.getByText("Product").tagName).toBe("LABEL");
+    expect((screen.getByRole("button", { name: "Reassign to this product" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Register or exclude in the product master")).toBeTruthy();
   });
 });

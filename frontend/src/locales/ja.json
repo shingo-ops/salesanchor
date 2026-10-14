@@ -3771,7 +3771,15 @@
     "ackFailed": "確認済みにできませんでした。もう一度お試しください",
     "gapLines": "間の行: {{lines}}",
     "gapLineNumber": "L{{n}}",
-    "gapCandidates": "候補: {{names}}"
+    "gapCandidates": "候補: {{names}}",
+    "compareHeading": "比較",
+    "productLabel": "商品",
+    "productCurrent": "今の商品: {{name}}",
+    "reassign": "この商品に付け替える",
+    "reassigned": "付け替えました",
+    "reassignFailed": "付け替えに失敗しました",
+    "conditionLabel": "状態",
+    "masterHint": "商品マスタへの登録や除外はこちら"
   },
   "reviewReason": {
     "pid_unresolved": "商品を特定できない",
