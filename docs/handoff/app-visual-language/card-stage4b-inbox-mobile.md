@@ -636,8 +636,8 @@ PO 決定は「戻す範囲は一番新しい受信メッセージ1通だけ（�
 | 7 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 25項目すべて `exited with code 0`（lint は既存warningのみ・error 0件・本変更由来の新規違反なし） |
 | 8 | 型が通る | `cd frontend && npx tsc --noEmit` | 本変更由来の新規エラー0件（既存の無関係な4件は `api/generated/schema` 未生成・`SoldOutResultsPanel.tsx` に起因し、本変更の対象ファイルではない） |
 | 9 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | 1069件中1057件成功・12件失敗（10ファイル）。失敗ファイルはいずれも受信箱・ContextMenu・useLongPress と無関係（`LeadFormButtonMigration.test.tsx` 等）。個別再実行（`RuleDrawer.test.tsx` 等）では全件成功を確認し、フルスイート実行時の負荷由来のタイムアウトと判断。受信箱関連（`InboxMessageThread.discordSendError.test.tsx` 8件、`src/pages/inbox/` 配下全体47件）は単独実行で全件成功 |
-| 10 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（リポジトリ直下・コミット後に実行） | 実行結果は本 PR のコミット後に確定（本節執筆時点では未コミットのため対象0ファイル） |
-| 11 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（コミット後に実行） | 同上（コミット後に確定） |
+| 10 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（リポジトリ直下・4本のコミット後に実行） | `PASS: 対象11ファイル・増加なし` |
+| 11 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（4本のコミット後に実行） | `✅ UI governance: 新規ハードコードなし`（対象ファイル数5） |
 | 12 | e2e（Playwright）の構文確認 | この端末（arm64/Termux）では chromium が動かないため実行不可。`cd frontend && npx playwright test --list` | 新規6テスト×3幅（vl-mobile-390 / vl-tablet-768 / vl-desktop-1280）を含む**304件**収集成功。実機 Playwright 実行は CI（x86）に委ねる |
 | 13 | 長押し・メニューの画面検査を新設した | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` に `受信箱 第4便（一覧の行を長押しするとメニューを出す）` を新設（6テスト: メニュー3項目と文言・44px以上・行の近くに出る・はみ出さない／長押しだけでは開かない／普通のタップは開く／外側クリックで閉じる／選択モードでは出ない／mark-unread が呼ばれる） | 追加済み。`npx playwright test --list` で収集確認済み（#12 と同じ結果） |
 
