@@ -70,7 +70,7 @@ describe('InventoryPage does not echo loaded filters back via PATCH', () => {
     await waitFor(() => expect(mock.patch).toHaveBeenCalledTimes(1));
     await settle();
     expect(mock.patch).toHaveBeenCalledTimes(1);
-    expect(bodies()[0].merge_same_post).toBe(true);
+    expect(bodies()[0].merge_same_post).toBe(false);
   });
 
   it('reverting while the first PATCH is still pending sends the reverted value', async () => {

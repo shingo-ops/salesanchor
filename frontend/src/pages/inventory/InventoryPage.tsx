@@ -62,6 +62,7 @@ interface InventoryListResponse {
   conditions?: string[];
   units?: string[];
   window_hours?: number | null;
+  fresh_window_hours?: number;
 }
 
 const PER_PAGE = 50;
@@ -159,8 +160,11 @@ export default function InventoryPage() {
   const [conditionFacet, setConditionFacet] = useState<string[]>([]);
   const [unitFacet, setUnitFacet] = useState<string[]>([]);
   const [filtersLoaded, setFiltersLoaded] = useState(false);
-  // 同じ投稿の行をまとめる（既定 ON）。設定パネルで切り替え、ユーザー別に永続化。
-  const [mergeSamePost, setMergeSamePost] = useState(true);
+  // 同じ投稿の行をまとめる（既定 OFF）。設定パネルで切り替え、ユーザー別に永続化。
+  const [mergeSamePost, setMergeSamePost] = useState(false);
+  // 「24時間以内」だけ出す（既定 ON）。保存しない（開き直すと ON に戻る。GAS と同じ）。
+  const [freshOnly, setFreshOnly] = useState(true);
+  const [freshWindowHours, setFreshWindowHours] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
   // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
@@ -208,6 +212,7 @@ export default function InventoryPage() {
       params.set("sort", sortField);
       params.set("order", sortDir);
       params.set("merge_same_post", mergeSamePost ? "true" : "false");
+      params.set("fresh_only", freshOnly ? "true" : "false");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
       if (activeTab !== "all") params.set("tcg_type", activeTab);
@@ -236,6 +241,7 @@ export default function InventoryPage() {
       setItems(d.items);
       setTotal(d.total);
       setWindowHours(d.window_hours);
+      setFreshWindowHours(d.fresh_window_hours);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
       if (d.conditions) setConditionFacet(d.conditions);
@@ -246,7 +252,7 @@ export default function InventoryPage() {
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     if (!filtersLoaded) return;
@@ -294,7 +300,7 @@ export default function InventoryPage() {
         setQtyMax(f.qty_max != null ? String(f.qty_max) : "");
         setPriceMin(f.price_min != null ? String(f.price_min) : "");
         setPriceMax(f.price_max != null ? String(f.price_max) : "");
-        setMergeSamePost(f.merge_same_post ?? true);
+        setMergeSamePost(f.merge_same_post ?? false);
         lastSavedRef.current = JSON.stringify(
           buildFilterPayload({
             enabled: !!f.enabled,
@@ -308,7 +314,7 @@ export default function InventoryPage() {
             qtyMax: f.qty_max != null ? String(f.qty_max) : "",
             priceMin: f.price_min != null ? String(f.price_min) : "",
             priceMax: f.price_max != null ? String(f.price_max) : "",
-            mergeSamePost: f.merge_same_post ?? true,
+            mergeSamePost: f.merge_same_post ?? false,
           }),
         );
       })
@@ -379,6 +385,11 @@ export default function InventoryPage() {
     setDebouncedQ(searchQ);
     setPage(1);
   };
+  // 期間の注記に出す時間: 24時間以内が ON なら、その窓と掲載期間の小さい方（掲載期間が 0 なら 24時間側）。
+  const noticeHours =
+    freshOnly && freshWindowHours !== undefined
+      ? windowHours && windowHours > 0 ? Math.min(freshWindowHours, windowHours) : freshWindowHours
+      : windowHours;
   const sortArrow = (field: string) =>
     sortField === field ? (sortDir === "asc" ? t("inventory.sortAsc") : t("inventory.sortDesc")) : "";
 
@@ -509,6 +520,18 @@ export default function InventoryPage() {
               <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
                 {t("inventory.resetSort")}
               </Button>
+              <Button
+                variant={freshOnly ? "primary" : "secondary"}
+                size="sm"
+                layoutClassName="field-h-md"
+                type="button"
+                data-testid="inventory-fresh-toggle"
+                aria-pressed={freshOnly}
+                disabled={freshWindowHours === undefined}
+                onClick={() => { setFreshOnly((v) => !v); setPage(1); }}
+              >
+                {freshWindowHours === undefined ? t("inventory.view.freshOnly", { hours: "" }) : t("inventory.view.freshOnly", { hours: freshWindowHours })}
+              </Button>
               <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
                 type="button"
 
@@ -608,9 +631,9 @@ export default function InventoryPage() {
             ? null
             : windowHours === null
               ? t("inventory.distributionOff")
-              : windowHours === 0
+              : noticeHours === 0
                 ? t("inventory.windowUnlimited")
-                : t("inventory.expiryWarning", { hours: windowHours })}
+                : t("inventory.expiryWarning", { hours: noticeHours })}
         </p>
       </div>
 

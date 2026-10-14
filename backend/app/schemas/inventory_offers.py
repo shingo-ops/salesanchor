@@ -186,6 +186,7 @@ class InventoryListResponse(BaseModel):
     units: list[str] = []
     # LINE の投稿から何時間以内の行を出しているか（0 は絞らない・None は配信設定なしで空）。
     window_hours: int | None = None
+    fresh_window_hours: int = 24  # 「24時間以内」トグルの窓（時間）。値は tcg_distribution_svc.FRESH_WINDOW_HOURS
 
 
 __all__ = [

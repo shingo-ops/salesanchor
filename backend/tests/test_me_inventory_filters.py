@@ -88,10 +88,10 @@ class TestMeInventoryFilters:
         assert d["qty_min"] is None
         assert d["price_max"] is None
 
-    async def test_get_default_merge_same_post_is_true(self, client):
-        """便SP2: 同じ投稿のまとめは既定 ON。"""
+    async def test_get_default_merge_same_post_is_false(self, client):
+        """便SP2 / 便1: 同じ投稿のまとめは既定 OFF（ADR-1014 改訂 2026-10-14）。"""
         res = await client.get("/api/v1/me/inventory-filters")
-        assert res.json()["merge_same_post"] is True
+        assert res.json()["merge_same_post"] is False
 
     async def test_patch_merge_same_post_false_echoes(self, client):
         res = await client.patch("/api/v1/me/inventory-filters", json={"merge_same_post": False})
@@ -104,9 +104,9 @@ class TestMeInventoryFilters:
 
 
 class TestMergeSamePostPersistence:
-    """便SP2: 保存 JSON に merge_same_post が入ること・キーの無い保存済みの行は True で読めること。"""
+    """便SP2: 保存 JSON に merge_same_post が入ること・キーの無い保存済みの行は False で読めること。"""
 
-    async def test_saved_row_without_key_reads_as_true(self):
+    async def test_saved_row_without_key_reads_as_false(self):
         from unittest.mock import AsyncMock, MagicMock, patch
 
         from app.routers import me_inventory_filters as mod
@@ -118,7 +118,7 @@ class TestMergeSamePostPersistence:
         db.execute = AsyncMock(return_value=result)
         with patch.object(mod, "is_postgresql", return_value=True):
             payload = await mod.get_my_inventory_filters(db=db, current_user=MagicMock(id=1))
-        assert payload.merge_same_post is True
+        assert payload.merge_same_post is False
         assert payload.hidden_columns == ["unit"]
 
     async def test_saved_false_is_read_back_and_written_in_json(self):

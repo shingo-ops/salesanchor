@@ -39,6 +39,7 @@ from app.services.inventory_axes import (
     resolve_condition_view,
 )
 from app.services.tcg_distribution_svc import (
+    FRESH_WINDOW_HOURS,
     _age_window,
     _max_age_hours,
     distribution_final_select_plain,
@@ -169,7 +170,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 
 def _build_view_filters(
     *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
-    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max,
+    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
     conditions: list[str] = []
@@ -225,6 +226,9 @@ def _build_view_filters(
         if value is not None:
             conditions.append(f"{column} {op} CAST(:{name} AS integer)")
             params[name] = value
+    if fresh_only:  # 「24時間以内」。件数とページ送りに連動させるため WHERE 側で絞る
+        conditions.append("d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)")
+        params["fresh_hours"] = FRESH_WINDOW_HOURS
     return conditions, params
 
 
@@ -237,7 +241,11 @@ def _build_inventory_view_sql(
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
     列並び（3枝共通）: __kind, __total, <配信行+tcg_type+category の全列>, __ord, __f_* の5列。
     """
-    order_by = f"ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+    # GAS 方式: 英語タイトルでまとめてから並べる。タイトル列そのものを並べるときは英語タイトルの昇降を切り替える。
+    if sort_col == _SORT_COLUMNS["name"]:
+        order_by = f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
+    else:
+        order_by = f"ORDER BY d.english_title ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
     join = "LEFT JOIN public.products pp ON pp.id = x.product_id"
     ctes = [f"rows_main AS ({final_main})"]
     if merge:
@@ -292,7 +300,8 @@ async def list_inventory_view(
     qty_max: int | None = Query(default=None, ge=0, description="数量の上限（以下）"),
     price_min: int | None = Query(default=None, ge=0, description="単価の下限（以上）"),
     price_max: int | None = Query(default=None, ge=0, description="単価の上限（以下）"),
-    merge_same_post: bool = Query(default=True, description="同じ投稿のランク違いを1行にまとめる"),
+    merge_same_post: bool = Query(default=False, description="同じ投稿のランク違いを1行にまとめる"),
+    fresh_only: bool = Query(default=False, description="LINE 投稿が24時間以内の行だけ出す"),
     sort: str = Query(
         default="release_date",
         pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at|release_date)$",
@@ -313,7 +322,10 @@ async def list_inventory_view(
     settings = await load_distribution_settings(db)
     max_age_hours = _max_age_hours(settings)
     if max_age_hours is None:
-        return InventoryListResponse(items=[], total=0, page=page, per_page=per_page, window_hours=None)
+        return InventoryListResponse(
+            items=[], total=0, page=page, per_page=per_page, window_hours=None,
+            fresh_window_hours=FRESH_WINDOW_HOURS,
+        )
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
     age_condition, age_params = _age_window(max_age_hours)
 
@@ -321,7 +333,7 @@ async def list_inventory_view(
         q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
-        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max,
+        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params = {**age_params, **filter_params}
@@ -374,6 +386,7 @@ async def list_inventory_view(
         conditions=condition_facet,
         units=unit_facet,
         window_hours=max_age_hours,
+        fresh_window_hours=FRESH_WINDOW_HOURS,
     )
 
 
