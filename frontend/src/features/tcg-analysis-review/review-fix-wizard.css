@@ -15,11 +15,6 @@
   color: var(--text-primary);
 }
 
-.review-fix-wizard__reasons {
-  margin: 0;
-  padding-left: var(--space-5);
-}
-
 /* .comp-field の下余白が Stack の gap と二重になるのを防ぐ */
 .review-register-form .comp-field {
   margin-bottom: 0;

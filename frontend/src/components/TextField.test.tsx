@@ -259,3 +259,23 @@ describe('TextFieldControl variant "login" (design.md §AY-2b)', () => {
     expect(element).toBeTruthy();
   });
 });
+
+describe('TextFieldControl invalid (design.md §AY-2x)', () => {
+  it('invalid adds the invalid class and no invalid / aria-invalid attribute', () => {
+    const { container } = render(<TextFieldControl invalid />);
+    const input = container.querySelector('input');
+    expect(input?.className).toBe('comp-field__input comp-field__input--invalid');
+    expect(input?.hasAttribute('invalid')).toBe(false);
+    expect(input?.hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('omitted invalid adds no invalid class', () => {
+    const { container } = render(<TextFieldControl />);
+    expect(container.querySelector('input')?.className).toBe('comp-field__input');
+  });
+
+  it('passes an explicit aria-invalid through', () => {
+    const { container } = render(<TextFieldControl invalid aria-invalid="true" />);
+    expect(container.querySelector('input')?.getAttribute('aria-invalid')).toBe('true');
+  });
+});

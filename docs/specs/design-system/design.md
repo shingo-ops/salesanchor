@@ -812,7 +812,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 | 本体props | 契約 |
 |---|---|
-| invalid?: boolean | 既存エラー条件のまま外観へ接続。aria-invalidは既存の明示属性を透過し、自動付与/上書きしない |
+| invalid?: boolean | 既存エラー条件のまま外観へ接続。aria-invalidは既存の明示属性を透過し、自動付与/上書きしない。TextFieldControl は AY-2x で実装（class comp-field__input--invalid、variant="standard" で保証）。:2369 の繰延分 |
 | status?: normal/saved | 保存完了表示の既存条件を使用。invalid優先 |
 | textStyle?: normal/secondary/code、emphasis?: normal/strong | 既存文字の用途を表す。任意font/color値は受けない |
 | appearance?: standard/embedded | TextFieldControl/TextareaControlだけ。embeddedは親が枠を所有。本体に枠を重ねない。SelectControlの既存field/bareは別契約として維持 |
@@ -4118,3 +4118,19 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 判定: DOM の aria-label・data-testid・value・disabled・option は 8 条件（390/1280 × ja/en × ライト/ダーク）で差分 0。select の見た目は金型 sm（1280px で高さ 19→30.39px、390px で 44px）。
 - B1: 390px でモーダル本文（comp-modal-body、overflow-x:auto）の横 overflow が en 263→286px・ja 162→185px（+23px）。英語では select 右端が初期表示で 9.6px 見切れる（新規）。1280px は変化なし。数値は evidence-20260910/ay2w-acceptance.md。
 - 残件: 390px の報酬表の横 overflow と見切れ（§AJ 以来の既存＋本便の +23px）は表統一便で直す。scripts/check-ui-governance.js は frontend/src/pages/ 配下のみ検出し components/ の生 select は検出しない（CI 検出範囲は PO 判断事項）。
+
+#### AY-2w 本番反映の記録（2026-10-14）
+
+- PR #4270、merge 2337378c6（2026-10-14T11:30:14Z）。
+- Deploy run 38557035113 success（2026-10-14T11:33:13Z）。
+- 本番 JS index-BWNDl7Dr.js で、担当者欄（commission-staff-）は SelectControl の呼び出し（size `sm`）。担当者欄の直前に生 select は無い。app は HTTP 200、api/health は HTTP 200（/health は元々その経路が無く 404）。
+- 出典 /tmp/CC報告ファイル/ssot-ay2w/prod/checks.txt。
+
+#### AY-2x 配信先フォームの text 入力3件と TextFieldControl の invalid（2026-10-14）
+
+- PO 決定: 2026-10-14「y」（赤枠の機能を足して3つの入力欄を移す。文字 13.6→14.4px・選択中の枠が共通の見た目になる。チェックボックスとボタンは別便）。
+- 設計: docs/handoff/ay2x-dist-form-invalid/design.md（recon.md 併置）。Fable 設計審査 APPROVE（/tmp/CC報告ファイル/ssot-ay2x/design-review.md）。
+- 変更: frontend/src/components/TextField.tsx の TextFieldControl に `invalid?: boolean`（class comp-field__input--invalid だけを付け、DOM 属性には出さない。aria-invalid は :815 の契約どおり自動付与せず、呼び出し側の明示属性を通す）。frontend/src/components/FormField.css の §5・§7 の selector 一覧に `.comp-field__input.comp-field__input--invalid`（と `:focus`）を足した。frontend/src/features/tcg-distribution/DistributionTargetForm.tsx の生 input 3件（dist-name・dist-spreadsheet-id・dist-sheet-name）を `<TextFieldControl invalid={Boolean(errors.X)}>` へ。frontend/src/features/tcg-distribution/distribution.css の `.dist-input`・`.dist-input:focus`・`.dist-input--error` を削除。試験・story を追加。
+- invalid の外観は variant="standard" で保証する。variant が standard 以外のときは、用途別の規則（FormField.css の `.comp-field__input.comp-input--*`）が §5 より後ろにあるため、非 focus 時は variant の border-color が勝つ（focus 時だけ danger）。横展開時は variant ごとに設計する。
+- 実測（390/1280 × ja/en × ライト/ダーク、通常・focus・エラー）: 文字 13.6→14.4px、高さ 1280px で 39.75→39.61px・390px で 39.75→44px、focus は outline 2px → box-shadow 3px のリング、エラー枠は #b91c1c（rgb(185, 28, 28)）→ --danger（ライト rgb(229, 62, 62)、ダークは前後とも rgb(248, 113, 113)）。DOM 属性（class 以外）は差分 0、invalid 属性は出ない、ドロワー本文の横 overflow は前後とも 0。数値は docs/handoff/design-system-recon/evidence-20260910/ay2x-acceptance.md。
+- 横展開はしない: Select.tsx・Textarea.tsx の invalid、checkbox、ボタンは別便。

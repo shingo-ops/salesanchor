@@ -3771,6 +3771,7 @@
     "ack": "Keep as is",
     "acked": "Marked as checked. Re-running the analysis",
     "ackFailed": "Could not mark as checked. Please try again",
+    "ackConfirm": { "title": "Keep as it is?", "message": "These reasons will be marked as checked and the item will leave the review list. If the transcription is corrected later, it will come back.", "confirm": "Keep" },
     "gapLines": "Gap lines: {{lines}}",
     "gapLineNumber": "L{{n}}",
     "gapCandidates": "Candidates: {{names}}",
@@ -3793,9 +3794,7 @@
         "register": "Register as a new product",
         "registerDesc": "Add to the product master and reassign this row",
         "condition": "Fix the condition",
-        "conditionDesc": "Confirm or correct the condition",
-        "keep": "Keep as is",
-        "keepDesc": "Mark reasons as checked"
+        "conditionDesc": "Confirm or correct the condition"
       },
       "selected": "Fixing: {{choice}}",
       "back": "Back",
