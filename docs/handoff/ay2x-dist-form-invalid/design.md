@@ -36,7 +36,6 @@ recon: docs/handoff/ay2x-dist-form-invalid/recon.md（生出力 /tmp/CC報告フ
 - 新しい色・数値は使わない（`var(--danger)`、`var(--danger-bg-subtle)` と、既存の `0 0 0 3px` の並びに足すだけ）。
 - :10 付近の目次コメントの §5 に「invalid」と書き足す。
 - invalid の見た目は variant="standard" で保証する（variant≠standard と併用すると、非 focus 時は variant の border-color が勝つ。本便は standard のみ）。design.md の §AY-2x にもこの1行を書く。
-- invalid の見た目は variant="standard" で保証する（variant≠standard と併用すると、非 focus 時は variant の border-color が勝つ。本便は standard のみ）。design.md の §AY-2x にもこの1行を書く。
 - stylelint の no-descending-specificity で止まる場合は、:434 と同じ書式の `-- intentional` コメントで受ける（新しい無効化方式は作らない）。それ以外で止まったら停止。
 
 ### 2-3. frontend/src/features/tcg-distribution/DistributionTargetForm.tsx:182-189 / :199-208 / :223-230
