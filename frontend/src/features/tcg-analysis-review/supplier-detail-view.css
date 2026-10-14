@@ -224,48 +224,13 @@
   white-space: nowrap;
 }
 
-.pmd-head button {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  padding: var(--space-1) var(--space-2);
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: var(--font-lg);
-  line-height: 1;
-}
-
 .pmd-body h3 {
   font-size: var(--font-sm);
   font-weight: 600;
   margin: 0 0 var(--space-2);
 }
 
-.pmd-field input,
-.pmd-field textarea {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  padding: var(--space-2);
-  font: inherit;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.pmd-field textarea {
-  min-height: var(--pmd-textarea-min-h);
-  resize: vertical;
-}
-
-.pmd-actions button {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  padding: var(--space-2) var(--space-3);
-  font: inherit;
-  cursor: pointer;
-  color: var(--text-primary);
-}
+.pmd-field .comp-field__textarea { min-height: var(--pmd-textarea-min-h); }
 
 .pmd-result h4 {
   font-size: var(--font-xs);
@@ -289,24 +254,15 @@
   font-size: var(--font-xs);
 }
 
-/* pmd-search-candidate の子セレクタ（0,1,1）は .pmd-actions button:disabled（0,2,1）より前 */
-.pmd-search-candidate button {
-  background: transparent;
-  border: none;
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: var(--text-primary);
-}
-
 .pmd-search-candidate small {
   color: var(--text-secondary);
   font-size: var(--font-2xs);
 }
 
-/* ── compound selectors（特異度 0,2,1） ────────────────────────────────── */
-.pmd-actions button:disabled {
-  opacity: var(--opacity-disabled);
-  cursor: not-allowed;
+/* 候補ボタンの配置だけ（金型 .comp-btn に勝たせるため子孫セレクタ 0,2,0） */
+.pmd-search-candidate .pmd-candidate-btn {
+  white-space: normal;
+  text-align: left;
+  width: 100%;
+  justify-content: flex-start;
 }
