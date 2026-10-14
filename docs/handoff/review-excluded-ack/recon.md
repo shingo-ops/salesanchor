@@ -31,3 +31,9 @@
 ## §5 本番実測（読み取りのみ、2026-10-14）
 - `SELECT exclusion, is_current, count(*) FROM public.analysis_results GROUP BY 1,2`: excluded/t 504、excluded/f 909、NULL/t 12846、NULL/f 29143。exclusion の値は 'excluded' と NULL だけ。生出力 /tmp/CC報告ファイル/excluded-values-prod.txt
 - 理由別件数の SQL はファイル渡しが安全フックで止まり未取得。
+
+## §6 速度の事前計測（本番・読み取りのみ、2026-10-14）
+- 一覧の SQL 全体（/tmp/CC報告ファイル/excluded-ack-speed/*.sql）は、安全フックがファイル渡しを止めるため本番で流していない。
+- 代わりに、追加した LATERAL と同じ索引引き（review_ack の最新1行＋書き写し直しの EXISTS）だけを、現行の全件（is_current 13,355 行）に付けて比べた。
+  - 付けない: Execution Time 30.963 ms／付ける: 111.113 ms（差 約 80 ms、索引 idx_pub_item_corrections_extraction_item_id を使用）。生出力 /tmp/CC報告ファイル/excluded-ack-speed/prod_lateral_overhead.txt
+  - 一覧1回の表示は3クエリなので、増えるのは最大でも約 0.24 秒。過去の実測（docs/handoff/review-speed/design.md、20件 2.25〜2.36 秒）に対して約 1.1 倍で、基準 1.2 倍以内。【未確認】今日の時点の一覧全体の所要時間は測っていない。
