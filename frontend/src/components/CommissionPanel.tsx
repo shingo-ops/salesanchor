@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { SelectControl } from "./Select";
 
 const ROLES: { key: RoleKey; labelKey: string }[] = [
   { key: "sales", labelKey: "commissions.role_sales" },
@@ -206,7 +207,8 @@ export default function CommissionPanel({
                     <tr key={key} data-testid={`commission-row-${key}`}>
                       <td>{label}</td>
                       <td>
-                        <select
+                        <SelectControl
+                          size="sm"
                           aria-label={`${label}${t("commission.assignedStaff")}`}
                           data-testid={`commission-staff-${key}`}
                           value={currentStaffId !== null ? String(currentStaffId) : ""}
@@ -222,7 +224,7 @@ export default function CommissionPanel({
                               {opt.label}
                             </option>
                           ))}
-                        </select>
+                        </SelectControl>
                       </td>
                       <td data-testid={`commission-amount-${key}`}>
                         {row ? fmt(row.calculated_amount) : "-"}
