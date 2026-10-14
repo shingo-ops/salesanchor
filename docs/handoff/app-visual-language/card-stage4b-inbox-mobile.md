@@ -960,6 +960,9 @@ CI の検査幅は 390px（`vl-mobile-390`）であり、PO が挙げた 360dp �
 | 13 | 単体テスト全体が壊れていない | `cd frontend && npm run test:unit` | 96ファイル・1082件すべて成功 |
 | 14 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §20-7 に実際の出力を記載 |
 | 15 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js` | §20-7 に実際の出力を記載 |
+| 16 | Discord 未連携のときだけ名前の下に表示が出て、ヘッダーの高さは56px（±1）のまま変わらない | `受信箱 第6便` describe 内「Discord 未連携のときは名前の下に表示が出て、高さ56pxのまま…」テスト（§20-9） | 収集成功。実行は CI に委ねる |
+| 17 | 未連携でない（または他プラットフォームの）会話では2段目が出ず、高さは56px（±1）のまま | 同 describe 内「Discord 連携済み（または他プラットフォーム）のときは名前だけで高さ56pxのまま」テスト | 収集成功。実行は CI に委ねる |
+| 18 | 2段表示のときも名前・状態の縦積みが右の操作ボタン群と重ならない | 同「Discord 未連携のとき…」テスト内で、縦積み全体（`.inbox-thread-header-mobile-identity`）の右端が最初のボタンの左端を超えていないことを実測 | 収集成功。実行は CI に委ねる |
 
 ### 20-6. 既存テストへの影響（判断）
 
@@ -981,5 +984,54 @@ CI の検査幅は 390px（`vl-mobile-390`）であり、PO が挙げた 360dp �
 
 1. **実機 Playwright 実行は未確認。** この端末では chromium が起動できないため、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない（第4便・第5便と同じ事情）。
 2. **極端に狭い端末幅・極端に長い顧客名での実機確認はしていない。** §20-4 のとおり flexbox の構造上重なりは起きない設計だが、CI の検査幅（390px）と PO が指摘した実機幅（360dp）には差があり、360dp 実機での最終確認は別途必要。
-3. **会話ヘッダーの Discord 未連携バッジ（`messagesData?.lead?.platform === "discord" && !leadDetail?.discord_user_id` のとき表示される既存バッジ）をスマホ版ヘッダーには含めていない。** 名前の表示幅がただでさえ狭く（§20-4）、バッジを足すとさらに狭くなるため、本便の明示的な構成リスト（戻る→顔写真→名前→テンプレート→顧客情報→「…」）に無いこの要素は含めなかった。Discord 連携状態の確認はカルテ（顧客情報）側で引き続き可能。この判断は実装時の判断であり、PO に確認していない。
+3. **（解消済み）会話ヘッダーの Discord 未連携バッジについて。** 実装時は名前の表示幅を優先してスマホ版ヘッダーから外していたが、Opus の判断により §20-9 のとおり名前の下の2段目として復元した。この項目は解消済みのため §20-9 に判断と実装を記載し、本リスク一覧からは除いた（履歴として本行は残す）。
 4. **顧客情報ボタン（カルテ切替）は既存の `inboxSettings.showRightPanel` 設定で表示を切る。** PO 決定は「テンプレートと顧客情報は独立したボタンですぐ開ける」であり、受信箱の設定で右パネル表示をオフにしている場合にボタン自体を出さない挙動は PC・タブレット版と揃えた既存の配線をそのまま踏襲したもので、本便で新たに判断したものではない。
+
+### 20-9. Discord 未連携表示を2段ヘッダーで復元した追加分（2026-10-14・Opus 判断）
+
+> この節は何か（専門用語なしの1行）: §20-8 のリスク#3（スマホ版ヘッダーに Discord 未連携の表示が無い）について、Opus が「情報を黙って落とさない」方針で判断を下し、名前の下に2段目として表示を復元した追加実装の記録。
+
+### 20-9-1. 判断と根拠
+
+| 論点 | 判断 | 根拠 |
+|---|---|---|
+| Discord 未連携の表示をスマホに残すか | 残す（名前の下の2段目） | 「この相手にはまだ Discord が紐づいていない」ことを知らせる情報であり、落とすとスマホの利用者だけが気づけなくなる。機能を黙って減らさない方針 |
+| 幅が足りない懸念への対処 | 横に並べず縦に2段にする | お手本（WhatsApp）の会話ヘッダーは左側が2段。実機の構造ダンプで `conversation_contact_name`（y=133-201＝高さ22.7dp）とその下の `conversation_contact_status`（y=201-250＝高さ16.3dp）を確認済み（§20-1 の表にも記載） |
+| ヘッダーの高さ | `--topbar-height`（56px）のまま変えない | 2段の合計（名前1行＋状態1行）は約37px（§20-9-2）で56px に収まるため、高さトークンを変える必要が無い |
+
+### 20-9-2. 実装方法
+
+`frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx` の左側（戻る・顔写真の右）を1段から2段に変更した。
+
+- 新しい props: `leadDetail: LeadDetail | null`（`frontend/src/pages/inbox/InboxMessageThread.tsx` から渡す。もともと同ファイルが保持している既存の state で、新しい状態は作っていない）
+- 条件式 `discordNotLinked = messagesData?.lead?.platform === "discord" && !leadDetail?.discord_user_id`（`frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx`）は PC・タブレット版（`frontend/src/pages/inbox/InboxMessageThread.tsx` の `<header className="inbox-center-header">` 内の Discord 未連携バッジ）と**同一の式**。i18n キーも同じ `inbox.discordNotLinked` を使い、新しいキーは追加していない
+- JSX は名前（`<h3 className="inbox-thread-header-mobile-name">`）と状態（`discordNotLinked` が真のときだけ出す `<span className="inbox-thread-header-mobile-status discord-unlinked-badge">`）を `<div className="inbox-thread-header-mobile-identity">` で縦に束ねた。未連携でないときは状態の `<span>` 自体を描かないため、1段のときと高さは変わらない
+- 既存クラス `.discord-unlinked-badge`（`frontend/src/pages/inbox/InboxPage.css` の既存定義・色とサイズは変更していない）をそのまま再利用し、`.inbox-thread-header-mobile-status` で `align-self: flex-start`（縦積みの中で幅いっぱいに伸びないようにする）・`max-width: 100%`・`overflow: hidden`・`text-overflow: ellipsis` のみ追加した（すべて既存トークン・生の色コード/生の px は使っていない）
+- `.inbox-thread-header-mobile-identity` に `flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2px);` を設定（この3プロパティは元々 `.inbox-thread-header-mobile-name` 側にあったものを縦積みの外側へ移した）
+
+### 20-9-3. 高さの実測根拠
+
+名前の行（`font-size: var(--font-md)` 16px・`font-weight: 700`・`line-height: 1.2`）のインク高さはおおむね19px、状態バッジ（`.discord-unlinked-badge` の `font-size: var(--font-2xs)` 11.2px・`padding: var(--space-2px) var(--space-6px)` で上下各2px）はおおむね17px、`gap: var(--space-2px)`（2px）を合わせると合計約38px。ヘッダーの高さ56px に対し上下に約9pxずつの余白が残る計算で、お手本の実測（名前22.7dp＋状態16.3dp＝39dp、56dp 中の残り17dp＝上下約8.5dpずつ）と近い配分になる。実際の高さが56px（±1）のままであることは `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の新設テストで実測して確認する（§20-5 #16, #17）。
+
+### 20-9-4. 画面検査（この端末では収集確認のみ）
+
+`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の `受信箱 第6便` describe に2本追加した:
+
+1. 「Discord 未連携のときは名前の下に表示が出て、高さ56pxのまま・ボタン群と重ならない」— 2段表示時もヘッダー高さ56px（±1）・状態表示が見える・縦積み全体の右端が右ボタン群の左端を超えない
+2. 「Discord 連携済み（または他プラットフォーム）のときは名前だけで高さ56pxのまま」— 既存の `openInboxList()`（platform: "messenger"）を使った対照検査。2段目が出ず、高さも変わらないことを確認
+
+mock は `frontend/tests-e2e/visual-language/inbox-helpers.ts` に新設した `openInboxListWithDiscordUnlinkedConversation()` を使う。既存の `baseMocks()` / `openInboxList()` は変更せず、lead 5001 の `platform` を `"discord"` に差し替えたコピーをこの検査専用に作っている（`discord_user_id` は `baseMocks()` の時点で元々 `null` のため、この上書きだけで条件が成立する）。既存テストの見え方・mock は変えていない。
+
+### 20-9-5. 検証出力（この追加分）
+
+- `cd frontend && npx tsc --noEmit` → エラー0件
+- `cd frontend && npm run lint` → 変更対象ファイルからの新規警告・エラー無し
+- `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`
+- `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` → 8件成功（影響なし確認）
+- `cd frontend && npm run test:unit`（フルスイート） → 結果は本カード §20-7 の更新箇所に転記
+- `cd frontend && npx playwright test --list` → 325件→331件（新規2テスト×3幅=6件追加）を収集成功
+
+### 20-9-6. 残るリスク（この追加分）
+
+1. **実機確認は未実施。** この端末では chromium が起動できないため収集確認まで。360dp 実機での最終確認は PO が行う（コーディネーターからの回答どおり）。
+2. **2段表示時の `--space-2px`（2px）という行間は実測値から逆算した見積もりであり、実機のピクセル比較はしていない。** CI の数値検査（56px±1・重なりなし）は満たす設計だが、見た目の好ましさ（行間の詰まり具合等）は実機で最終確認が必要。

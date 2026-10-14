@@ -400,6 +400,7 @@ export function InboxMessageThread({
         <InboxThreadHeaderMobile
           selectedLeadId={selectedLeadId}
           selectedConversation={selectedConversation}
+          leadDetail={leadDetail}
           messagesData={messagesData}
           avatarErrors={avatarErrors}
           handleAvatarError={handleAvatarError}

@@ -28,6 +28,7 @@ import {
   openConversation,
   openInboxList,
   openInboxListWithConversations,
+  openInboxListWithDiscordUnlinkedConversation,
 } from "./inbox-helpers";
 
 /**
@@ -1156,5 +1157,62 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
     //  使われているため、会話ヘッダー .inbox-center-header の中に限定して探す）
     const langSelect = page.locator(".inbox-center-header .inbox-platform-select");
     await expect(langSelect).toBeVisible();
+  });
+
+  /**
+   * 2026-10-14（Opus 判断・追加分）: Discord 未連携の表示を落とすとスマホの
+   * 利用者だけ気づけなくなるため、名前の下の2段目として残した
+   * （お手本=WhatsApp の会話ヘッダーも左側2段。実機の構造ダンプで
+   * conversation_contact_name=高さ22.7dp・conversation_contact_status=
+   * 高さ16.3dp を確認済み）。条件・i18n キーは PC と同一
+   * （`messagesData.lead.platform === "discord" && !leadDetail.discord_user_id`・
+   * `inbox.discordNotLinked`）で、新しい状態は作っていない。
+   */
+  test("スマホ: Discord 未連携のときは名前の下に表示が出て、高さ56pxのまま・ボタン群と重ならない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithDiscordUnlinkedConversation(page);
+    await openConversation(page);
+
+    const headerBox = await header(page).boundingBox();
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+
+    // Discord 未連携の表示が見えている（PC と同じ i18n キー inbox.discordNotLinked）
+    const status = page.locator(".inbox-thread-header-mobile-status");
+    await expect(status).toBeVisible();
+    await expect(status).toHaveText("Discord未連携");
+
+    // 2段になってもヘッダーの高さは 56px（--topbar-height）のまま
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ（2段表示時）").toBeLessThanOrEqual(1);
+
+    // 名前・状態の縦積みが右の操作ボタン群と重なっていない（既存の検査5と同じ判定）
+    const identity = page.locator(".inbox-thread-header-mobile-identity");
+    const identityBox = await identity.boundingBox();
+    const firstButtonBox = await actionButtons(page).first().boundingBox();
+    expect(identityBox, "名前・状態の縦積みの寸法が取れない").not.toBeNull();
+    expect(firstButtonBox, "右の操作ボタンの寸法が取れない").not.toBeNull();
+    expect(
+      identityBox!.x + identityBox!.width,
+      "名前・状態の縦積みの右端が右のボタン群の左端を超えている（重なっている）",
+    ).toBeLessThanOrEqual(firstButtonBox!.x + 1);
+
+    await testInfo.attach("discord-unlinked-two-row-header", {
+      body: JSON.stringify({ headerBox, identityBox, firstButtonBox }, null, 2),
+      contentType: "application/json",
+    });
+  });
+
+  test("スマホ: Discord 連携済み（または他プラットフォーム）のときは名前だけで高さ56pxのまま", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // 既存の openInboxList（baseMocks）は platform: "messenger" のため
+    // 2段目は出ない。高さが変わらないことの対照として確認する。
+    await openInboxList(page);
+    await openConversation(page);
+
+    await expect(page.locator(".inbox-thread-header-mobile-status")).toHaveCount(0);
+    const headerBox = await header(page).boundingBox();
+    expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
+    expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ（1段表示時）").toBeLessThanOrEqual(1);
   });
 });

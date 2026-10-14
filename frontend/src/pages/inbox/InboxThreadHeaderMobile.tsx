@@ -5,6 +5,7 @@ import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS, SCHEDULE_SETTINGS_ICONS } fr
 import { ICON } from "../../constants/iconSizes";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { getInitials } from "./inbox.types";
+import type { LeadDetail } from "./inbox.types";
 import { ContextMenu } from "../../components/ContextMenu";
 import type { ContextMenuAnchor, ContextMenuItem } from "../../components/ContextMenu";
 import { Sheet } from "../../components/Sheet";
@@ -12,6 +13,7 @@ import { Sheet } from "../../components/Sheet";
 interface Props {
   selectedLeadId: number | null;
   selectedConversation: Conversation | null;
+  leadDetail: LeadDetail | null;
   messagesData: MessagesResponse | null;
   avatarErrors: Set<number>;
   handleAvatarError: (id: number) => void;
@@ -52,7 +54,7 @@ const LANGUAGE_OPTIONS: Array<{ value: "auto" | "ja" | "en"; labelKey: string }>
  * このファイルは一切 import/使用されない。
  */
 export function InboxThreadHeaderMobile({
-  selectedLeadId, selectedConversation, messagesData,
+  selectedLeadId, selectedConversation, leadDetail, messagesData,
   avatarErrors, handleAvatarError,
   inboxSettings, showKartePanel, openKartePanel, closeKartePanel,
   recipientLanguageSetting, setRecipientLanguage,
@@ -106,6 +108,11 @@ export function InboxThreadHeaderMobile({
   const customerNameForTitle =
     customerNameForAvatar
     || `Lead #${selectedLeadId}`;
+  // PC と同じ条件（InboxMessageThread.tsx の <header className="inbox-center-header">
+  // 内の Discord 未連携バッジと同一式）。新しい状態は作らない（SSOT 遵守）。
+  // 落とすとスマホの利用者だけがこの情報に気づけなくなるため残す（PO 判断・2026-10-14）。
+  const discordNotLinked =
+    messagesData?.lead?.platform === "discord" && !leadDetail?.discord_user_id;
 
   return (
     <header className="inbox-thread-header-mobile">
@@ -129,7 +136,20 @@ export function InboxThreadHeaderMobile({
           getInitials(customerNameForAvatar)
         )}
       </div>
-      <h3 className="inbox-thread-header-mobile-name">{customerNameForTitle}</h3>
+      {/* お手本（WhatsApp）の会話ヘッダーは左側が2段（名前＋状態）。Discord 未連携の
+          表示を落とすとスマホの利用者だけ気づけなくなるため、名前の下の2段目として残す
+          （PO 判断・2026-10-14）。未連携でないときは2段目を出さず高さは変わらない。 */}
+      <div className="inbox-thread-header-mobile-identity">
+        <h3 className="inbox-thread-header-mobile-name">{customerNameForTitle}</h3>
+        {discordNotLinked && (
+          <span
+            className="inbox-thread-header-mobile-status discord-unlinked-badge"
+            title={t("inbox.discordNotLinked")}
+          >
+            {t("inbox.discordNotLinked")}
+          </span>
+        )}
+      </div>
       <div className="inbox-thread-header-mobile-actions">
         <button
           type="button"
