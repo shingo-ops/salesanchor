@@ -27,7 +27,7 @@
 
 .source-search {
   display: grid;
-  grid-template-columns: auto minmax(130px, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: var(--space-1);
   margin-bottom: var(--space-2);
@@ -35,13 +35,13 @@
 
 .source-search label,
 .source-search output {
+  grid-column: 1 / -1;
   color: var(--text-secondary);
   font-size: var(--font-xs);
 }
 
 .source-search output {
   --tcg-ar-match-min-h: 18px;
-  grid-column: 1 / -1;
   min-height: var(--tcg-ar-match-min-h);
 }
 
