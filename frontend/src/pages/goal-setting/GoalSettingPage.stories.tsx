@@ -6,6 +6,7 @@
  * ライト / ダークモード両対応
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { TextFieldControl } from '../../components/TextField'
 import './GoalSettingPage.css'
 
 const meta: Meta = {
@@ -25,10 +26,10 @@ export const SavedInputState: Story = {
   render: () => (
     <div style={{ width: 'var(--ds-preview-width)' }}>
       <div className="gs-input-wrap">
-        <input
-          className="gs-input gs-input-saved"
+        <TextFieldControl
           type="number"
           defaultValue={100}
+          className="gs-input-saved"
           style={{ width: '100%' }}
         />
       </div>

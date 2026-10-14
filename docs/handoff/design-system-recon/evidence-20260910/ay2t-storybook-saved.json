@@ -1,0 +1,30 @@
+{
+ "light": {
+  "normal": {
+   "cls": "comp-field__input gs-input-saved",
+   "border": "rgb(46, 125, 50)",
+   "bg": "rgba(72, 187, 120, 0.05)",
+   "shadow": "none"
+  },
+  "focus": {
+   "cls": "comp-field__input gs-input-saved",
+   "border": "rgb(46, 125, 50)",
+   "bg": "rgba(72, 187, 120, 0.05)",
+   "shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+  }
+ },
+ "dark": {
+  "normal": {
+   "cls": "comp-field__input gs-input-saved",
+   "border": "rgb(74, 222, 128)",
+   "bg": "rgba(74, 222, 128, 0.1)",
+   "shadow": "none"
+  },
+  "focus": {
+   "cls": "comp-field__input gs-input-saved",
+   "border": "rgb(74, 222, 128)",
+   "bg": "rgba(74, 222, 128, 0.1)",
+   "shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+  }
+ }
+}

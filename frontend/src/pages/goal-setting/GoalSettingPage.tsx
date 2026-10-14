@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 import { STATUS_ICONS } from "../../constants/icons";
 import "./GoalSettingPage.css";
 import { Button } from "../../components/Button";
@@ -159,11 +160,11 @@ function GoalInputRow({ kpiType, value, onChange, saved, t }: GoalInputRowProps)
     <div className="gs-row">
       <label className="gs-label">{t(KPI_LABEL_KEYS[kpiType])}</label>
       <div className="gs-input-wrap">
-        <input
+        <TextFieldControl
           type="number"
           min="0"
           step="1"
-          className={`gs-input${saved ? " gs-input-saved" : ""}`}
+          className={saved ? "gs-input-saved" : undefined}
           placeholder={KPI_PLACEHOLDER[kpiType]}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -232,11 +233,11 @@ function AdvisorMetricRow({ label, value, onChange, recommended, testId }: Advis
             : t("goals.advisorRecommended", { value: formatAdviceNumber(recommended) })}
         </span>
       </div>
-      <input
+      <TextFieldControl
         type="number"
         min="0"
         step="1"
-        className="gs-input gs-advisor__metric-input"
+        className="gs-advisor__metric-input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={label}
@@ -336,13 +337,13 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
               {t("goals.advisorMonthlyLabel")}
             </label>
             <div className="gs-advisor__monthly-row">
-              <input
+              <TextFieldControl
                 id="advisor-monthly-kgi"
                 data-testid="goal-advisor-monthly-kgi"
                 type="number"
                 min="0"
                 step="1"
-                className="gs-input gs-advisor__monthly-input"
+                className="gs-advisor__monthly-input"
                 value={monthlyKgi}
                 onChange={(e) => setMonthlyKgi(e.target.value)}
                 placeholder={t("goals.advisorMonthlyPlaceholder")}
