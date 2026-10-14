@@ -25,7 +25,7 @@ beforeEach(async () => {
     if (url === '/me/permissions') return { permissions: [] };
     if (url === '/products/tcg-types') return [];
     if (url === '/me/inventory-filters') return { enabled: false, merge_same_post: true };
-    if (url.startsWith('/inventory?')) return { items: [row], total: 1, page: 1, per_page: 50, window_hours: 18 };
+    if (url.startsWith('/inventory?')) return { items: [row], total: 1, page: 1, per_page: 50, window_hours: 18, fresh_window_hours: 24 };
     throw new Error(`Unexpected GET ${url}`);
   });
   mock.patch.mockResolvedValue({});
@@ -36,7 +36,7 @@ const renderPage = () =>
   render(<I18nextProvider i18n={instance}><MemoryRouter><InventoryPage /></MemoryRouter></I18nextProvider>);
 
 describe('InventoryPage settings (merge_same_post)', () => {
-  it('requests merge_same_post=true by default and renders merged/blank/null-offer rows', async () => {
+  it('requests merge_same_post=true when saved as true and renders merged/blank/null-offer rows', async () => {
     renderPage();
     await screen.findByTestId('inventory-row-r1');
     expect(mock.get.mock.calls.some(([u]) => String(u).startsWith('/inventory?') && String(u).includes('merge_same_post=true'))).toBe(true);
@@ -60,5 +60,38 @@ describe('InventoryPage settings (merge_same_post)', () => {
     await waitFor(() =>
       expect(mock.get.mock.calls.some(([u]) => String(u).startsWith('/inventory?') && String(u).includes('merge_same_post=false'))).toBe(true),
     );
+  });
+
+  it('requests fresh_only=true and merge_same_post=false by default (nothing saved)', async () => {
+    mock.get.mockImplementation(async (url: string) => {
+      if (url === '/me/permissions') return { permissions: [] };
+      if (url === '/products/tcg-types') return [];
+      if (url === '/me/inventory-filters') return { enabled: false };
+      if (url.startsWith('/inventory?')) return { items: [row], total: 1, page: 1, per_page: 50, window_hours: 48, fresh_window_hours: 24 };
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    const urls = mock.get.mock.calls.map(([u]) => String(u)).filter((u) => u.startsWith('/inventory?'));
+    expect(urls[0]).toContain('merge_same_post=false');
+    expect(urls[0]).toContain('fresh_only=true');
+    // 24時間以内が ON のときの注記は、24 と 48 の小さい方
+    expect(screen.getByTestId('inventory-expiry-warning').textContent).toContain('24 hours');
+  });
+
+  it('fresh toggle: pressed by default, click refetches with fresh_only=false on page 1 and does not PATCH', async () => {
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    const toggle = await screen.findByTestId('inventory-fresh-toggle');
+    await waitFor(() => expect((toggle as HTMLButtonElement).disabled).toBe(false));
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(toggle.textContent).toBe('Last 24 h');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('false'));
+    await waitFor(() =>
+      expect(mock.get.mock.calls.some(([u]) => String(u).startsWith('/inventory?page=1&') && String(u).includes('fresh_only=false'))).toBe(true),
+    );
+    expect(screen.getByTestId('inventory-expiry-warning').textContent).toContain('18 hours');
+    expect(mock.patch.mock.calls.some(([, b]) => 'fresh_only' in (b as object))).toBe(false);
   });
 });

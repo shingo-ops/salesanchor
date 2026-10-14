@@ -214,12 +214,20 @@ _VIEW_CASES = [
     {"page": 99},
     {"limit": 3},
     {"limit": 3, "page": 2, "sort": "unit_price", "order": "asc"},
+    {"sort": "name", "order": "desc"},
+    {"sort": "name", "order": "asc"},
 ]
 
 
 def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
                           limit: int, offset: int):
     """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
+    # 基準の ORDER BY（便1: 英語タイトルが第1キー。タイトル列そのものを並べるときは英語タイトルの昇降を切り替える）
+    if sort_col == "d.japanese_title":
+        order_by = f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
+    else:
+        order_by = f"ORDER BY d.english_title ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+
     def rows_sql(m: bool) -> str:
         inner_rows = distribution.distribution_rows_sql(**_ARGS, merge_same_post=m)
         return ("SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
@@ -228,7 +236,7 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
     inner = rows_sql(merge)
     total = session.execute(text(f"SELECT COUNT(*) FROM ({inner}) d {where}"), params).scalar_one()
     page_rows = [dict(r) for r in session.execute(
-        text(f"SELECT d.* FROM ({inner}) d {where} ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC "
+        text(f"SELECT d.* FROM ({inner}) d {where} {order_by} "
              "LIMIT :limit OFFSET :offset"), {**params, "limit": limit, "offset": offset}).mappings().all()]
     facets = {tuple(r[k] for k in ("supplier_id", "provider", "category", "condition", "unit_canonical"))
               for r in session.execute(text(
@@ -300,3 +308,73 @@ def test_facets_are_not_affected_by_filters(pg, ids):
                 limit=50, offset=0))
     assert results[0][2] and all(r[2] == results[0][2] for r in results)
     assert results[1][0] < results[0][0]  # 絞り込みで total だけが減る
+
+
+# --- 便1（在庫表と GAS 在庫一覧の揃え）------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("status", ["Sold out", " sold out ", "SoldOut"])
+def test_bin1_sold_out_rows_are_not_distribution_rows(pg, ids, status):
+    job = _add_job(pg)
+    _add_row(pg, job, ids.p1, ids.box, status=status, basis="R2:甲")
+    _add_row(pg, job, ids.p2, ids.case, status="In Stock", basis="R2:乙", canonical="Case", unit="Case")
+    for merge in (False, True):
+        rows = _rows(pg, merge=merge)
+        assert [r["status"] for r in rows] == ["In Stock"]
+
+
+def _view_items(pg_fixture, *, sort: str, order: str, fresh_only: bool = False) -> tuple[int, list[dict]]:
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
+
+    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    conditions, params = _build_view_filters(**none, fresh_only=fresh_only)
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=False)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
+                                    sort_col=_SORT_COLUMNS[sort], order_dir=order.upper())
+    total, pages = 0, []
+    with Session(pg_fixture[1]) as session:
+        for r in session.execute(text(sql), {**params, "limit": 50, "offset": 0}).mappings().all():
+            if r["__kind"] == "total":
+                total = int(r["__total"])
+            elif r["__kind"] == "page":
+                pages.append((r["__ord"], dict(r)))
+    pages.sort(key=lambda t: t[0])
+    return total, [p for _, p in pages]
+
+
+def test_bin1_fresh_only_excludes_rows_older_than_24_hours_and_total_follows(pg, ids):
+    _add_row(pg, _add_job(pg, 1), ids.p1, ids.box, basis="R2:甲")
+    _add_row(pg, _add_job(pg, 30), ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case")
+    total_all, items_all = _view_items(pg, sort="release_date", order="desc")
+    total_fresh, items_fresh = _view_items(pg, sort="release_date", order="desc", fresh_only=True)
+    assert total_all == len(items_all) == 2
+    assert total_fresh == len(items_fresh) == 1
+
+
+def test_bin1_sort_groups_by_english_title_then_release_date(pg, ids):
+    with pg[0].cursor() as cur:
+        cur.execute("UPDATE public.products SET name_en = 'Alpha', release_date = '2026-01-01' WHERE id = %s", (ids.p1,))
+        cur.execute("UPDATE public.products SET name_en = 'Beta', release_date = '2026-02-01' WHERE id = %s", (ids.p2,))
+    job = _add_job(pg)
+    _add_row(pg, job, ids.p1, ids.box, basis="R2:甲", price=1)
+    _add_row(pg, job, ids.p2, ids.case, basis="R2:乙", price=2, canonical="Case", unit="Case")
+    _add_row(pg, job, ids.p1, ids.box, basis="R2:丙", price=3, note="N")
+    _, items = _view_items(pg, sort="release_date", order="desc")
+    assert [r["english_title"] for r in items] == ["Alpha", "Alpha", "Beta"]  # 発売日の降順でも英語タイトルが先
+    _, by_name_desc = _view_items(pg, sort="name", order="desc")
+    assert [r["english_title"] for r in by_name_desc] == ["Beta", "Alpha", "Alpha"]
+    _, by_name_asc = _view_items(pg, sort="name", order="asc")
+    assert [r["english_title"] for r in by_name_asc] == ["Alpha", "Alpha", "Beta"]
+
+
+def test_bin1_empty_english_title_comes_first_in_ascending_order(pg, ids):
+    with pg[0].cursor() as cur:
+        cur.execute("UPDATE public.products SET name_en = NULL WHERE id = %s", (ids.p1,))
+        cur.execute("UPDATE public.products SET name_en = 'Beta' WHERE id = %s", (ids.p2,))
+    job = _add_job(pg)
+    _add_row(pg, job, ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case")
+    _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
+    _, items = _view_items(pg, sort="release_date", order="desc")
+    assert [r["english_title"] for r in items] == ["", "Beta"]
