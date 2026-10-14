@@ -1,5 +1,6 @@
 # design: API 呼び出しの /api/v1 二重の修正
 
+対象ADR: ADR-152（docs/adr/ADR-152-frontend-api-path-no-prefix.md）
 参照: docs/handoff/fix-api-double-prefix/recon.md
 
 ## 変更
@@ -15,8 +16,10 @@
 |本番で `/api/v1/api/v1/` が0件|デプロイ後に Opus が本番 nginx ログで数える|
 |再発を検出できる|追加テスト（CI の Frontend テスト）|
 
-## 外部事例
-不要。リポジトリ内の api クライアント規約（frontend/src/lib/api.ts:29）に合わせる局所修正のため。
+## 外部・過去事例の参照と我々への応用
+- 過去事例: ADR-152（PR #3181 の TcgParallelReportPage.tsx が /api/v1 を付けて本番 404）。同一パターンの再発。
+- 応用: ADR-152 が推奨しながら未実装だった機械検出を vitest で実装し、CI で毎回検出する。
+- 外部事例: 不要（リポジトリ内の api クライアント規約 frontend/src/lib/api.ts:29 に合わせる局所修正のため）。
 
 ## 維持の仕組み
 守り手: 追加テスト（CI）。frontend/src/lib/api.no-double-prefix.test.ts が CI の Frontend テストで毎回走る。

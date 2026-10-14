@@ -14,4 +14,4 @@
   - frontend/src/pages/company-detail/CompanyConvLogsTab.tsx:50 `/api/v1/companies/${companyId}/conv-logs${params}`
 - backend の経路（実在）: backend/app/routers/conv_logs.py:190 `/channel-masters`、backend/app/routers/conv_logs.py:226 `/leads/{lead_id}/conv-logs`、backend/app/routers/companies.py:1065 `/companies/{company_id}/conv-logs`。
 - 対象外: fetch( 直書き、useSSE の endpoint。
-- 既存 ADR 検索: `git grep -il "api/v1" docs/adr/` の範囲に二重付与を扱う ADR は無いため、新規 ADR は不要。
+- 既存 ADR 検索（`git grep -il API_BASE docs/adr`）: docs/adr/ADR-152-frontend-api-path-no-prefix.md が同一パターンを扱う。決定は「api.get/post/put/patch/delete のパスは /api/v1 なしで書く」。ADR-152 が推奨する機械検出（Consequences の最終行）は未実装のため、本便の追加テストがそれにあたる。
