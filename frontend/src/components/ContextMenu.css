@@ -14,6 +14,14 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-dropdown);
   overflow: hidden;
+  /* 受信箱 第5便（PO 指摘・2026-10-14・実機実測）: 指で長押しすると OS の文字選択
+     （青いハイライトと選択ハンドル）が働いてしまう。メニューは選べる文字を
+     持たないため、選択自体を止める。マウス操作の CI では再現しないため、
+     この指定が選択を止めることの確認は実機で PO が行う（本 PR では
+     getComputedStyle で指定が効いていることのみを確認する）。 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .comp-context-menu__item {
