@@ -1295,6 +1295,15 @@ test.describe("visual-language: 受信箱 第7便（テンプレートを「…�
     });
   });
 
+  test("PC・タブレット: 準備中ページの戻る矢印は出さない（左のメニューで移動できるため）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    await installAuthBypass(page);
+    await page.goto("/templates");
+    // PO 決定（2026-10-14）: 矢印はスマホのときだけ。PC は左のメニューから移動できる。
+    await expect(page.locator(".coming-soon-back-row")).toBeHidden();
+  });
+
   test("スマホ: FAQ（もう一方の準備中ページ）でも「戻る」が効く", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 

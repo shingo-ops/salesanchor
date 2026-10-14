@@ -31,10 +31,18 @@ export default function ComingSoonPage({ title, description }: Props) {
     <div className="page">
       <div className="coming-soon-back-row">
         {/* 直前の画面に戻る。/templates・/faq のどちらから開かれても同じ挙動
-            （PO 指摘・2026-10-14: 戻る手段が無い行き止まりだった） */}
-        <Button variant="ghost" size="lg" onClick={() => navigate(-1)}>
+            （PO 指摘・2026-10-14: 戻る手段が無い行き止まりだった）。
+            PO 決定（2026-10-14）: **画面の左上に矢印だけ・スマホのときだけ出す**
+            （PC は左のメニューで移動できるため出さない＝CSS 側で制御）。
+            会話画面の「一覧へ戻る」と同じ見た目・同じ戻り方に揃える。 */}
+        <Button
+          variant="ghost"
+          size="lg"
+          iconOnly
+          onClick={() => navigate(-1)}
+          aria-label={t("common.back")}
+        >
           <BackIcon size={ICON.base} aria-hidden="true" />
-          {t("common.back")}
         </Button>
       </div>
       <div className="coming-soon">
