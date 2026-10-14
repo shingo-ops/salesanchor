@@ -44,7 +44,7 @@
 - 変更前：外部の人を入れるには、アプリのユーザー（public.users）にするしかない。
 - 変更後：
   - 新しい表 public.viewer_accounts を作る。migration では表を作るだけで、データは入れない。
-  - 列：id、email（一意）、line_name（LINE の表示名）、discord_id（Discord の識別。形式は Q2d）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」で、Q5 が自動トライアルなら使わずに trial へ進む。Q5 の答えで migration を作り直さずに済むよう、先に5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
+  - 列：id、email（一意）、line_name（LINE の表示名）、discord_user_id（Discord の数字のID。VARCHAR(50)。既存の顧客管理 company_discord.user_id・leads.discord_user_id と同じ名前と型にそろえる＝migrations/097_create_company_discord.sql:36-47、migrations/091_add_leads_discord_messaging_columns.sql:30。入力は既存の検証 `^\d{17,20}$`（backend/app/routers/discord_ticket_config.py:48）と同じ形で受ける）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」で、Q5 が自動トライアルなら使わずに trial へ進む。Q5 の答えで migration を作り直さずに済むよう、先に5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
   - テナントは持たない。
   - ログインの方法：メールに届くリンクを押してログインする。パスワードは持たない（PO 決定 Q2、2026-10-15）。PO の条件は「リンクを知っていれば誰でも見られる形にはしない。登録フォームに入力した情報で管理する」。これを次の仕組みで守る。
     - ログイン用のリンクは、viewer_accounts に登録済みで、状態が active か「期限内の trial」の email にだけ送る。登録されていない email、pending・verified・suspended の email、期限切れの trial の email には送らない（審査 N-31）。どの場合も応答は同じ 200 にして、登録済みかどうかを外から分からないようにする。
@@ -179,7 +179,7 @@
 - 新しい認証にバグがあるリスク → 署名の仕組みは self_tokens と同じ作り方にし（鍵と iss だけ変える）、分離テストを CI で固定し、security-reviewer の審査を必須にする。
 - secret が1つ増える → 本番への追加は PO の確認を取ってから行う。
 - 鮮度は最大1分遅れる → PO が了承済み。
-- 個人情報（メール・LINE 名・Discord ID）を新しく自社の DB に持つ → 保存期間と削除の方法は Q7 で決める。
+- 個人情報（メール・LINE 名・Discord の数字のID）を新しく自社の DB に持つ → 保存期間と削除の方法は Q7 で決める。
 - GAS の利用者は、新しいページへの移行が要る → Q4 で決める。
 
 ---
@@ -221,7 +221,8 @@
 - ~~Q1. 閲覧ページに出す列~~ → **決定済み**：今の GAS と同じ13列（PO y、2026-10-15）。D2 に反映した。
 - ~~Q2a. ログインの方法~~ → **決定済み**：メールのリンクで入る。登録フォームの情報で管理し、リンクを知っているだけでは見られない形にする（PO、2026-10-15）。D1 に反映した。
 - Q2b.【決定 2026-10-15 PO】原文「トライアルではメール、LINE名、DISCORD IDのみ、本契約に進むときに詳しい情報を別途フォームで取得する」。申込フォームはメール・LINE 名・Discord ID の3つ。本契約用の詳しい情報フォームは今回の対象外（別の便で設計する）。
-- Q2d. Discord ID は「ユーザー名」と「数字の ID（18〜19桁）」のどちらで受け取るか。3つとも必須にするか。
+- Q2d.【決定 2026-10-15 PO】原文「数字のID、SAの顧客対応と同様に顧客管理で利用するため」。数字のIDで受け取る。閲覧者の行はテナントの取引先（companies）には写さない（SSOT）。本契約で取引先とつなぐ方法は、本契約フォームの便で設計する。
+- Q2e. 3つ（メール・LINE 名・Discord の数字のID）をすべて必須にするか。
 - Q2c. リンクを押した後に email を入力し直してもらう形（D1。設計の既定案）でよいか。PO の条件「登録フォームの情報で管理する」から設計で既定にした。PO が別の形を望めば変える。
 - Q3. 本契約への切り替えと停止を誰が行うか（PO だけか、社内の管理者か）。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
