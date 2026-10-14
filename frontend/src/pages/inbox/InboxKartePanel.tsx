@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ACCOUNT_ICONS, NAV_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.types";
+import type { LeadDetail, KarteTabKey, SalesFormSelectionState, ConvertAssigneeOption } from "./inbox.types";
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import ConfirmModal from "../../components/ConfirmModal";
 
 interface CardForm {
   nickname?: string | null;
@@ -63,6 +64,15 @@ interface Props {
   handleCardFieldBlur: () => void;
   handleConvertLead: () => void;
   handleCreateInvoice: () => void;
+  // 第9便: 商談化の確認ポップアップ（ConfirmModal 金型を再利用）
+  showConvertModal: boolean;
+  convertAssigneeOptions: ConvertAssigneeOption[];
+  convertAssigneeLoading: boolean;
+  convertAssigneeError: string | null;
+  convertSaving: boolean;
+  convertError: string | null;
+  handleCancelConvert: () => void;
+  handleConfirmConvert: (assignedToUserId: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,13 +101,22 @@ function elapsedLabel(iso: string | null, t: TFn): string {
 
 export function InboxKartePanel({
   selectedLeadId, leadDetail, cardForm, cardSaveStatus, cardSaveError,
-  karteTab, setKarteTab, showKartePanel, closeKartePanel, setShowProfileModal,
+  karteTab, setKarteTab, showKartePanel, closeKartePanel,
   inboxSettings, selectedConversation, avatarErrors, handleAvatarError,
   handleCardFieldChange, handleCardFieldBlur,
   handleConvertLead, handleCreateInvoice,
+  showConvertModal, convertAssigneeOptions, convertAssigneeLoading, convertAssigneeError,
+  convertSaving, convertError, handleCancelConvert, handleConfirmConvert,
 }: Props) {
   const { t } = useTranslation();
   const [guildId, setGuildId] = useState<string | null>(null);
+  // 第9便: 商談化の確認ポップアップ内のプルダウン選択（モーダルが閉じたら毎回リセットする）
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
+  const assigneeSelectId = useId();
+
+  useEffect(() => {
+    if (!showConvertModal) setSelectedAssigneeId("");
+  }, [showConvertModal]);
 
   useEffect(() => {
     if (!leadDetail?.discord_guild_channel_id || guildId) return;
@@ -243,6 +262,56 @@ export function InboxKartePanel({
             leadId={leadDetail.id}
             onConvertLead={handleConvertLead}
             onCreateInvoice={handleCreateInvoice}
+          />
+
+          {/* 第9便（2026-10-14・PO決定）: 商談化の確認ポップアップ。
+              既存の ConfirmModal 金型をそのまま使う（新しい金型は作らない）。
+              担当候補は role_name が「営業」または「リーダー」・在籍中（status=active）・
+              user_id を持つ人のみ（GET /staff、useInboxState 側で絞り込み済み）。
+              確定は PATCH /leads/{id} に status="negotiating" + assigned_to をまとめて
+              送るだけ（既存の保存口のみ使用・新しい API は作らない）。 */}
+          <ConfirmModal
+            open={showConvertModal}
+            title={t("inbox.convertModalTitle")}
+            message={
+              <div>
+                <label htmlFor={assigneeSelectId} className="comp-field__label">
+                  {t("inbox.convertAssigneeLabel")}
+                </label>
+                <SelectControl
+                  id={assigneeSelectId}
+                  fullWidth
+                  options={convertAssigneeOptions}
+                  value={selectedAssigneeId}
+                  onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                  placeholder={t("common.pleaseSelect")}
+                  disabled={convertAssigneeLoading || convertSaving}
+                />
+                {convertAssigneeLoading && (
+                  <p className="comp-field__hint">{t("common.loading")}</p>
+                )}
+                {!convertAssigneeLoading && convertAssigneeOptions.length === 0 && (
+                  <p className="comp-field__hint comp-field__hint--error" role="alert">
+                    {convertAssigneeError ?? t("inbox.convertNoAssignee")}
+                  </p>
+                )}
+                {convertError && (
+                  <p className="comp-field__hint comp-field__hint--error" role="alert">{convertError}</p>
+                )}
+              </div>
+            }
+            confirmLabel={t("inbox.convertConfirm")}
+            cancelLabel={t("common.close")}
+            confirmDisabled={
+              convertAssigneeLoading || convertSaving
+              || convertAssigneeOptions.length === 0 || !selectedAssigneeId
+            }
+            onConfirm={() => {
+              const assignedToUserId = Number(selectedAssigneeId);
+              if (!assignedToUserId) return;
+              handleConfirmConvert(assignedToUserId);
+            }}
+            onCancel={handleCancelConvert}
           />
         </div>
       ) : (
