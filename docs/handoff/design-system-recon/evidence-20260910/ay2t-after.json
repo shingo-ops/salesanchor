@@ -1,0 +1,1722 @@
+{
+ "goals-w1280": {
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /goals?team_id=1&period_year=2026",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /conversations/stream",
+   "GET /analytics/new-goal-advice?monthly_kgi=1000000&kgi_type=revenue&scope=mine&period=3m",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "POST /goals",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "posts": [],
+  "items": {
+   "row0": {
+    "normal": {
+     "found": true,
+     "count": 16,
+     "className": "comp-field__input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "3000000",
+     "classList": [
+      "comp-field__input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "39.6094px",
+      "min-height": "0px",
+      "width": "413px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 226,
+      "top": 657.89,
+      "width": 413,
+      "height": 39.61
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "413px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "monthly-kgi": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__monthly-input",
+     "id": "advisor-monthly-kgi",
+     "testid": "goal-advisor-monthly-kgi",
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "例: 3000000",
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__monthly-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "379.547px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 99,
+      "top": 247.22,
+      "width": 379.55,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "379.547px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-leads": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "リード",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.766px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 129,
+      "top": 452.39,
+      "width": 195.77,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.766px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-deals": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "商談",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.781px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 362.77,
+      "top": 452.39,
+      "width": 195.78,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.781px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-wins": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "成約",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.781px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 596.55,
+      "top": 452.39,
+      "width": 195.78,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.781px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weeklyGridAll": [
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input"
+   ]
+  },
+  "saved": {
+   "normal": {
+    "found": true,
+    "count": 16,
+    "className": "comp-field__input gs-input-saved",
+    "id": null,
+    "testid": null,
+    "ariaLabel": null,
+    "type": "number",
+    "min": "0",
+    "step": "1",
+    "placeholder": "3000000",
+    "classList": [
+     "comp-field__input",
+     "gs-input-saved"
+    ],
+    "computed": {
+     "background-color": "rgba(72, 187, 120, 0.05)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "413px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(46, 125, 50)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "none",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    },
+    "rect": {
+     "left": 226,
+     "top": 670.19,
+     "width": 413,
+     "height": 39.61
+    }
+   },
+   "mark": {
+    "input": {
+     "left": 226,
+     "top": 670.19,
+     "width": 413,
+     "height": 39.61
+    },
+    "mark": {
+     "left": 613,
+     "top": 679.11,
+     "width": 14,
+     "height": 21.75
+    },
+    "centerYDiff": -0.01,
+    "insideInput": true
+   },
+   "focus": {
+    "background-color": "rgba(72, 187, 120, 0.05)",
+    "font-size": "14.4px",
+    "line-height": "21.6px",
+    "height": "39.6094px",
+    "min-height": "0px",
+    "width": "413px",
+    "border-radius": "6px",
+    "border-top-color": "rgb(46, 125, 50)",
+    "border-top-width": "1px",
+    "padding": "8px 12px",
+    "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+    "color": "rgb(26, 32, 44)",
+    "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+    "transition-duration": "0.1s, 0.1s"
+   }
+  },
+  "rowCount": 16,
+  "htmlClass": "",
+  "weeklyValues": [
+   "50",
+   "10",
+   "5"
+  ],
+  "allInputsClass": [
+   "comp-field__input gs-advisor__monthly-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input"
+  ],
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "postBodies": [
+   "{\"user_id\":6,\"period_type\":\"monthly\",\"period_year\":2026,\"period_num\":10,\"kpi_type\":\"revenue\",\"target_value\":3000000}"
+  ],
+  "savedCount": 1
+ },
+ "goals-w1440": {
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /goals?team_id=1&period_year=2026",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /analytics/new-goal-advice?monthly_kgi=1000000&kgi_type=revenue&scope=mine&period=3m",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "POST /goals"
+  ],
+  "posts": [],
+  "items": {
+   "row0": {
+    "normal": {
+     "found": true,
+     "count": 16,
+     "className": "comp-field__input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "3000000",
+     "classList": [
+      "comp-field__input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "39.6094px",
+      "min-height": "0px",
+      "width": "493px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 226,
+      "top": 657.89,
+      "width": 493,
+      "height": 39.61
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "493px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "monthly-kgi": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__monthly-input",
+     "id": "advisor-monthly-kgi",
+     "testid": "goal-advisor-monthly-kgi",
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "例: 3000000",
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__monthly-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "482.875px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 99,
+      "top": 247.22,
+      "width": 482.88,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "482.875px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-leads": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "リード",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "230.219px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 129,
+      "top": 452.39,
+      "width": 230.22,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "230.219px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-deals": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "商談",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "230.219px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 397.22,
+      "top": 452.39,
+      "width": 230.22,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "230.219px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-wins": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "成約",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "230.219px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 665.44,
+      "top": 452.39,
+      "width": 230.22,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "230.219px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weeklyGridAll": [
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input"
+   ]
+  },
+  "saved": {
+   "normal": {
+    "found": true,
+    "count": 16,
+    "className": "comp-field__input gs-input-saved",
+    "id": null,
+    "testid": null,
+    "ariaLabel": null,
+    "type": "number",
+    "min": "0",
+    "step": "1",
+    "placeholder": "3000000",
+    "classList": [
+     "comp-field__input",
+     "gs-input-saved"
+    ],
+    "computed": {
+     "background-color": "rgba(72, 187, 120, 0.05)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "493px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(46, 125, 50)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "none",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    },
+    "rect": {
+     "left": 226,
+     "top": 670.19,
+     "width": 493,
+     "height": 39.61
+    }
+   },
+   "mark": {
+    "input": {
+     "left": 226,
+     "top": 670.19,
+     "width": 493,
+     "height": 39.61
+    },
+    "mark": {
+     "left": 693,
+     "top": 679.11,
+     "width": 14,
+     "height": 21.75
+    },
+    "centerYDiff": -0.01,
+    "insideInput": true
+   },
+   "focus": {
+    "background-color": "rgba(72, 187, 120, 0.05)",
+    "font-size": "14.4px",
+    "line-height": "21.6px",
+    "height": "39.6094px",
+    "min-height": "0px",
+    "width": "493px",
+    "border-radius": "6px",
+    "border-top-color": "rgb(46, 125, 50)",
+    "border-top-width": "1px",
+    "padding": "8px 12px",
+    "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+    "color": "rgb(26, 32, 44)",
+    "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+    "transition-duration": "0.1s, 0.1s"
+   }
+  },
+  "rowCount": 16,
+  "htmlClass": "",
+  "weeklyValues": [
+   "50",
+   "10",
+   "5"
+  ],
+  "allInputsClass": [
+   "comp-field__input gs-advisor__monthly-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input"
+  ],
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "postBodies": [
+   "{\"user_id\":6,\"period_type\":\"monthly\",\"period_year\":2026,\"period_num\":10,\"kpi_type\":\"revenue\",\"target_value\":3000000}"
+  ],
+  "savedCount": 1
+ },
+ "goals-w375": {
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /goals?team_id=1&period_year=2026",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /analytics/new-goal-advice?monthly_kgi=1000000&kgi_type=revenue&scope=mine&period=3m",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "POST /goals",
+   "GET /conversations/stream"
+  ],
+  "posts": [],
+  "items": {
+   "row0": {
+    "normal": {
+     "found": true,
+     "count": 16,
+     "className": "comp-field__input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "3000000",
+     "classList": [
+      "comp-field__input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "163px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 172,
+      "top": 964.08,
+      "width": 163,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "163px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "monthly-kgi": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__monthly-input",
+     "id": "advisor-monthly-kgi",
+     "testid": "goal-advisor-monthly-kgi",
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "例: 3000000",
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__monthly-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "285px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 45,
+      "top": 245.22,
+      "width": 285,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "285px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-leads": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "リード",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "225px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 75,
+      "top": 595.58,
+      "width": 225,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "225px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-deals": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "商談",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "225px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 75,
+      "top": 707.33,
+      "width": 225,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "225px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-wins": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "成約",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(255, 255, 255)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "225px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(26, 32, 44)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 75,
+      "top": 819.08,
+      "width": 225,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(255, 255, 255)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "225px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(30, 58, 138)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weeklyGridAll": [
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input"
+   ]
+  },
+  "saved": {
+   "normal": {
+    "found": true,
+    "count": 16,
+    "className": "comp-field__input gs-input-saved",
+    "id": null,
+    "testid": null,
+    "ariaLabel": null,
+    "type": "number",
+    "min": "0",
+    "step": "1",
+    "placeholder": "3000000",
+    "classList": [
+     "comp-field__input",
+     "gs-input-saved"
+    ],
+    "computed": {
+     "background-color": "rgba(72, 187, 120, 0.05)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "163px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(46, 125, 50)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "none",
+     "color": "rgb(26, 32, 44)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    },
+    "rect": {
+     "left": 172,
+     "top": 509.75,
+     "width": 163,
+     "height": 44
+    }
+   },
+   "mark": {
+    "input": {
+     "left": 172,
+     "top": 509.75,
+     "width": 163,
+     "height": 44
+    },
+    "mark": {
+     "left": 309,
+     "top": 520.88,
+     "width": 14,
+     "height": 21.75
+    },
+    "centerYDiff": 0,
+    "insideInput": true
+   },
+   "focus": {
+    "background-color": "rgba(72, 187, 120, 0.05)",
+    "font-size": "14.4px",
+    "line-height": "21.6px",
+    "height": "44px",
+    "min-height": "44px",
+    "width": "163px",
+    "border-radius": "6px",
+    "border-top-color": "rgb(46, 125, 50)",
+    "border-top-width": "1px",
+    "padding": "8px 12px",
+    "box-shadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px",
+    "color": "rgb(26, 32, 44)",
+    "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+    "transition-duration": "0.1s, 0.1s"
+   }
+  },
+  "rowCount": 16,
+  "htmlClass": "",
+  "weeklyValues": [
+   "50",
+   "10",
+   "5"
+  ],
+  "allInputsClass": [
+   "comp-field__input gs-advisor__monthly-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input"
+  ],
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "postBodies": [
+   "{\"user_id\":6,\"period_type\":\"monthly\",\"period_year\":2026,\"period_num\":10,\"kpi_type\":\"revenue\",\"target_value\":3000000}"
+  ],
+  "savedCount": 1
+ },
+ "goals-w1280-dark": {
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /teams",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /goals?team_id=1&period_year=2026",
+   "GET /goals?user_id=6&period_year=2026",
+   "GET /conversations/stream",
+   "GET /analytics/new-goal-advice?monthly_kgi=1000000&kgi_type=revenue&scope=mine&period=3m",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "POST /goals"
+  ],
+  "posts": [],
+  "items": {
+   "row0": {
+    "normal": {
+     "found": true,
+     "count": 16,
+     "className": "comp-field__input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "3000000",
+     "classList": [
+      "comp-field__input"
+     ],
+     "computed": {
+      "background-color": "rgb(30, 41, 59)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "39.6094px",
+      "min-height": "0px",
+      "width": "413px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(51, 65, 85)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(241, 245, 249)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 226,
+      "top": 657.89,
+      "width": 413,
+      "height": 39.61
+     }
+    },
+    "focus": {
+     "background-color": "rgb(30, 41, 59)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "413px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(91, 141, 217)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "monthly-kgi": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__monthly-input",
+     "id": "advisor-monthly-kgi",
+     "testid": "goal-advisor-monthly-kgi",
+     "ariaLabel": null,
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": "例: 3000000",
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__monthly-input"
+     ],
+     "computed": {
+      "background-color": "rgb(30, 41, 59)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "379.547px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(51, 65, 85)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(241, 245, 249)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 99,
+      "top": 247.22,
+      "width": 379.55,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(30, 41, 59)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "379.547px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(91, 141, 217)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-leads": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "リード",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(30, 41, 59)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.766px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(51, 65, 85)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(241, 245, 249)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 129,
+      "top": 452.39,
+      "width": 195.77,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(30, 41, 59)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.766px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(91, 141, 217)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-deals": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "商談",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(30, 41, 59)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.781px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(51, 65, 85)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(241, 245, 249)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 362.77,
+      "top": 452.39,
+      "width": 195.78,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(30, 41, 59)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.781px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(91, 141, 217)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weekly-wins": {
+    "normal": {
+     "found": true,
+     "count": 1,
+     "className": "comp-field__input gs-advisor__metric-input",
+     "id": null,
+     "testid": null,
+     "ariaLabel": "成約",
+     "type": "number",
+     "min": "0",
+     "step": "1",
+     "placeholder": null,
+     "classList": [
+      "comp-field__input",
+      "gs-advisor__metric-input"
+     ],
+     "computed": {
+      "background-color": "rgb(30, 41, 59)",
+      "font-size": "14.4px",
+      "line-height": "21.6px",
+      "height": "44px",
+      "min-height": "44px",
+      "width": "195.781px",
+      "border-radius": "6px",
+      "border-top-color": "rgb(51, 65, 85)",
+      "border-top-width": "1px",
+      "padding": "8px 12px",
+      "box-shadow": "none",
+      "color": "rgb(241, 245, 249)",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "transition-duration": "0.1s, 0.1s"
+     },
+     "rect": {
+      "left": 596.55,
+      "top": 452.39,
+      "width": 195.78,
+      "height": 44
+     }
+    },
+    "focus": {
+     "background-color": "rgb(30, 41, 59)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "44px",
+     "min-height": "44px",
+     "width": "195.781px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(91, 141, 217)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    }
+   },
+   "weeklyGridAll": [
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input",
+    "comp-field__input gs-advisor__metric-input"
+   ]
+  },
+  "saved": {
+   "normal": {
+    "found": true,
+    "count": 16,
+    "className": "comp-field__input gs-input-saved",
+    "id": null,
+    "testid": null,
+    "ariaLabel": null,
+    "type": "number",
+    "min": "0",
+    "step": "1",
+    "placeholder": "3000000",
+    "classList": [
+     "comp-field__input",
+     "gs-input-saved"
+    ],
+    "computed": {
+     "background-color": "rgba(74, 222, 128, 0.1)",
+     "font-size": "14.4px",
+     "line-height": "21.6px",
+     "height": "39.6094px",
+     "min-height": "0px",
+     "width": "413px",
+     "border-radius": "6px",
+     "border-top-color": "rgb(74, 222, 128)",
+     "border-top-width": "1px",
+     "padding": "8px 12px",
+     "box-shadow": "none",
+     "color": "rgb(241, 245, 249)",
+     "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+     "transition-duration": "0.1s, 0.1s"
+    },
+    "rect": {
+     "left": 226,
+     "top": 670.19,
+     "width": 413,
+     "height": 39.61
+    }
+   },
+   "mark": {
+    "input": {
+     "left": 226,
+     "top": 670.19,
+     "width": 413,
+     "height": 39.61
+    },
+    "mark": {
+     "left": 613,
+     "top": 679.11,
+     "width": 14,
+     "height": 21.75
+    },
+    "centerYDiff": -0.01,
+    "insideInput": true
+   },
+   "focus": {
+    "background-color": "rgba(74, 222, 128, 0.1)",
+    "font-size": "14.4px",
+    "line-height": "21.6px",
+    "height": "39.6094px",
+    "min-height": "0px",
+    "width": "413px",
+    "border-radius": "6px",
+    "border-top-color": "rgb(74, 222, 128)",
+    "border-top-width": "1px",
+    "padding": "8px 12px",
+    "box-shadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px",
+    "color": "rgb(241, 245, 249)",
+    "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+    "transition-duration": "0.1s, 0.1s"
+   }
+  },
+  "rowCount": 16,
+  "htmlClass": "force-dark",
+  "weeklyValues": [
+   "50",
+   "10",
+   "5"
+  ],
+  "allInputsClass": [
+   "comp-field__input gs-advisor__monthly-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input gs-advisor__metric-input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input",
+   "comp-field__input"
+  ],
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "postBodies": [
+   "{\"user_id\":6,\"period_type\":\"monthly\",\"period_year\":2026,\"period_num\":10,\"kpi_type\":\"revenue\",\"target_value\":3000000}"
+  ],
+  "savedCount": 1
+ }
+}
