@@ -684,3 +684,22 @@ def test_review_joins_keeps_offset_zero_pullup_barrier():
     assert barrier in context and plain not in context
 
     assert review._BASE_FROM.count(barrier) == 1 and plain not in review._BASE_FROM
+
+
+def test_sold_out_row_is_excluded_from_preview_count_and_output_rows(pg):
+    """便1: Sold out（前後の空白・大文字小文字を無視）は配信プレビューの件数と出力行の両方から除く。"""
+    set_max_age_hours(pg, 48)
+    seed_deliverable(pg, "Test Booster", pg["normal"], "Sealed box")
+    seed(pg, name="Test Booster", reasons="", needs_review=False, condition_id=pg["normal"],
+         condition_canonical="Sealed box", status=" Sold Out ")
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await distribution.fetch_preview_data(db), await distribution.fetch_output_rows(db)
+        finally:
+            await engine.dispose()
+
+    preview, rows = asyncio.run(run())
+    assert preview["output_count"] == len(rows) == 1
