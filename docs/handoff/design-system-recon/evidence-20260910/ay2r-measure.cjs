@@ -1,5 +1,5 @@
-const L = require("./lib.cjs"); const fs = require("fs");
-const BASE = "http://localhost:4182"; const OUT = "/tmp/CC報告ファイル/ssot-ay2r/impl/";
+const L = require("./ay2r-measure-lib.cjs"); const fs = require("fs");
+const BASE = "http://localhost:4182"; const OUT = process.env.OUT || "/tmp/CC報告ファイル/ssot-ay2r/impl/";
 const LABEL = process.argv[2]; // before | after
 fs.mkdirSync(OUT + LABEL, { recursive: true });
 const SCREENS = [

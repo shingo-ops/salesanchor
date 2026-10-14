@@ -1,7 +1,7 @@
 # design: 検索フォームの CSS 整理（AY-2r）
 
 recon 相互参照: docs/handoff/ay2r-search-bar-css/recon.md
-設計書 /tmp/CC報告ファイル/ssot-ay2r/ay2r-design.md（Fable 設計審査 r1 APPROVE、MEDIUM-1/LOW-1〜3 を改訂1で反映）の内容を転記する。対象 ADR: ADR-027 / ADR-067 / ADR-144。実装結果と前後表は docs/specs/design-system/design.md の「AY-2r」節、実測は docs/handoff/design-system-recon/evidence-20260910/ay2r-*。
+本書は設計書原本（Fable 設計審査 r1 APPROVE、MEDIUM-1/LOW-1〜3 を改訂1で反映）の内容を転記する。対象 ADR: ADR-027 / ADR-067 / ADR-144。実装結果と前後表は docs/specs/design-system/design.md の「AY-2r」節、実測は docs/handoff/design-system-recon/evidence-20260910/ay2r-*。
 
 PO 決定: 2026-10-13「一覧の検索欄は普通の入力欄の型（金型標準 md）」（AY-2p）、2026-10-14「金型への登録を全権限委譲」。
 
