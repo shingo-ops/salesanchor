@@ -24,6 +24,7 @@ import {
   SAMPLE_CONVERSATION_NAME,
   openConversation,
   openInboxList,
+  openInboxListWithConversations,
 } from "./inbox-helpers";
 
 /** project の viewport 幅。実行前に分かる値なので test.skip の条件に使える */
@@ -523,8 +524,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // タイトルの左端 x = 16px（--space-4）
     expect(Math.abs(titleBox!.x - 16), "タイトルの左端 x").toBeLessThanOrEqual(1);
 
-    // タイトルの文字サイズ 20px（--font-xl）
-    expect(titleFontSize, "タイトルの文字サイズ").toBe(20);
+    // タイトルの文字サイズ 21px（--font-title-mobile）。
+    // お手本の漢字インク 19.0dp に合わせた値（第3便で 20→21。字種をそろえて測り直した結果、
+    // --font-xl の20pxでは漢字インクが18.0dpで1dp足りなかった）。
+    expect(titleFontSize, "タイトルの文字サイズ").toBe(21);
 
     // ヘッダー内の押せる部品2つ（絞り込み・管理）は 44px 以上×44px 以上（WCAG 2.5.5）
     expect(filterBox!.width, "絞り込みの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
@@ -554,6 +557,157 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     // 見出しの二重がないこと（新ヘッダーのタイトルは aria-hidden の span なので増えない）
     expect(headingCount, "「受信箱」の見出しが複数ある").toBe(1);
+  });
+
+  test("スマホ: 一覧をスクロールしてもヘッダーが動かない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // 2026-10-14（第3便）: 当初「スクロール箱は .inbox-left-panel」という推測で
+    // sticky を足したが誤りだった（CI がこの検査の関所の行で検出）。直した先として
+    // 一旦は「スクロール箱は .inbox-conversation-list」と決め打ちしたが、要素名を
+    // 決め打ちすると将来別の箇所がスクロールを持つようになったときに追従できない。
+    // そのため下の 1. では要素名を書かず「実際に scrollHeight > clientHeight かつ
+    // overflow-y が auto/scroll の最初の祖先」をブラウザ内で探して使う形にしている。
+    // ヘッダー（.inbox-mobile-header）と検索欄（.inbox-mobile-search-row）は
+    // InboxConversationListMobile.tsx 内で一覧の行より外側（flex の兄弟要素として前）に
+    // 置かれているため、どの要素が実際にスクロールしても「ヘッダーと検索欄は動かない」
+    // ことが構造上の事実（frontend/src/pages/inbox/InboxPage.css:82-91・252-256）。
+    // お手本（WhatsApp）は検索欄が一覧と一緒に流れるが、当方は検索欄もヘッダーと
+    // 同じ外側にあるため両方固定側になる。これは意図した差ではなく構造上そうなる
+    // というだけだが、現状の事実としてここで記録する。
+    const SCROLL_PX = 600;
+    // 画面が埋まる行数より十分多い件数（inbox-helpers.ts の manyConversations
+    // コメントに根拠を記載）。20件あれば確実にスクロールが出る。
+    await openInboxListWithConversations(page, 20);
+
+    const header = page.locator(".inbox-mobile-header");
+    const manage = page.locator(".inbox-mobile-header .inbox-manage-btn");
+    const searchRow = page.locator(".inbox-mobile-search-row");
+    const firstRow = page.locator("button.conversation-item").first();
+
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    const viewportWidth = viewport!.width;
+
+    // 1. 「実際にスクロールしている箱」をブラウザの中で特定する。
+    //    どの要素がスクロールするかは CSS の積み重ねで決まり、読んだだけでは
+    //    確実に言えない（第3便で .inbox-left-panel → .inbox-conversation-list と
+    //    二度推測を外した）。行から親をたどって、本当に中身があふれている最初の
+    //    箱を選ぶ。見つからなければページ全体（scrollingElement）を使う。
+    //    どれがスクロールしても「ヘッダーは動かない」ことがこの検査の要件なので、
+    //    箱を決め打ちしないこの形が要件に一致する。
+    const scrollInfo = await page.evaluate(() => {
+      const row = document.querySelector("button.conversation-item");
+      const chain: Array<{ sel: string; scrollH: number; clientH: number; overflowY: string }> = [];
+      let el: HTMLElement | null = row?.parentElement ?? null;
+      let found: HTMLElement | null = null;
+      while (el) {
+        const cs = getComputedStyle(el);
+        const sel =
+          el.className && typeof el.className === "string"
+            ? `${el.tagName.toLowerCase()}.${el.className.trim().split(/\s+/).join(".")}`
+            : el.tagName.toLowerCase();
+        chain.push({ sel, scrollH: el.scrollHeight, clientH: el.clientHeight, overflowY: cs.overflowY });
+        if (!found && el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(cs.overflowY)) {
+          found = el;
+          el.setAttribute("data-vl-scrollbox", "1");
+        }
+        el = el.parentElement;
+      }
+      const doc = document.scrollingElement as HTMLElement | null;
+      const pageScrollable = doc ? doc.scrollHeight > doc.clientHeight + 1 : false;
+      if (!found && doc && pageScrollable) doc.setAttribute("data-vl-scrollbox", "1");
+      return {
+        chain,
+        usedSelector: found ? chain.find((c) => c.scrollH > c.clientH + 1)?.sel ?? null : "scrollingElement",
+        pageScrollHeight: doc?.scrollHeight ?? null,
+        pageClientHeight: doc?.clientHeight ?? null,
+        rowCount: document.querySelectorAll("button.conversation-item").length,
+      };
+    });
+    await testInfo.attach("scroll-box-detection", {
+      body: JSON.stringify(scrollInfo, null, 2),
+      contentType: "application/json",
+    });
+
+    const scrollBox = page.locator("[data-vl-scrollbox]").first();
+    const scrollable = (await scrollBox.count()) > 0;
+    expect(
+      scrollable,
+      `スクロールできる箱が1つも無い（検査データが足りない）。行数=${scrollInfo.rowCount} / 親の連なり=${JSON.stringify(scrollInfo.chain)}`,
+    ).toBe(true);
+
+    // 2. スクロール前の寸法を記録
+    const headerBoxBefore = await header.boundingBox();
+    const manageBoxBefore = await manage.boundingBox();
+    const searchRowBoxBefore = await searchRow.boundingBox();
+    const firstRowBoxBefore = await firstRow.boundingBox();
+    expect(headerBoxBefore, "スクロール前のヘッダーの寸法が取れない").not.toBeNull();
+    expect(manageBoxBefore, "スクロール前の管理ボタンの寸法が取れない").not.toBeNull();
+    expect(searchRowBoxBefore, "スクロール前の検索欄の寸法が取れない").not.toBeNull();
+    expect(firstRowBoxBefore, "スクロール前の1行目の寸法が取れない").not.toBeNull();
+
+    // 3. 特定したスクロール箱を600pxスクロールする
+    await scrollBox.evaluate((el, y) => { el.scrollTop = y; }, SCROLL_PX);
+    await expect
+      .poll(() => scrollBox.evaluate((el) => el.scrollTop), "scrollTop が反映されるまで待つ")
+      .toBeGreaterThan(0);
+
+    // 4. スクロール後の寸法を記録
+    const headerBoxAfter = await header.boundingBox();
+    const manageBoxAfter = await manage.boundingBox();
+    const searchRowBoxAfter = await searchRow.boundingBox();
+    const firstRowBoxAfter = await firstRow.boundingBox();
+    const scrollTopAfter = await scrollBox.evaluate((el) => el.scrollTop);
+
+    await testInfo.attach("sticky-header-scroll", {
+      body: JSON.stringify(
+        {
+          scrollTopAfter,
+          viewportWidth,
+          headerBoxBefore,
+          headerBoxAfter,
+          manageBoxBefore,
+          manageBoxAfter,
+          searchRowBoxBefore,
+          searchRowBoxAfter,
+          firstRowBoxBefore,
+          firstRowBoxAfter,
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+
+    expect(headerBoxAfter, "スクロール後のヘッダーの寸法が取れない").not.toBeNull();
+    expect(manageBoxAfter, "スクロール後の管理ボタンの寸法が取れない").not.toBeNull();
+    expect(searchRowBoxAfter, "スクロール後の検索欄の寸法が取れない").not.toBeNull();
+    expect(firstRowBoxAfter, "スクロール後の1行目の寸法が取れない").not.toBeNull();
+
+    // 5. ヘッダーのy・高さが変わっていない（±1px）
+    expect(Math.abs(headerBoxAfter!.y - headerBoxBefore!.y), "ヘッダーのyが動いた").toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(headerBoxAfter!.height - headerBoxBefore!.height),
+      "ヘッダーの高さが変わった",
+    ).toBeLessThanOrEqual(1);
+
+    // 6. 検索欄のyも変わっていない（±1px）。当方はヘッダーと同じくスクロール箱の
+    //    外側にあるため動かない（お手本は検索欄が一覧と一緒に流れる＝当方との差。
+    //    設計の意図ではなく構造上そうなっているだけなので、揃えるなら別便で判断する）
+    expect(Math.abs(searchRowBoxAfter!.y - searchRowBoxBefore!.y), "検索欄のyが動いた").toBeLessThanOrEqual(1);
+
+    // 7. ヘッダー右端のボタン（管理）の右端がビューポート右端のまま（±1px）
+    const manageRightAfter = manageBoxAfter!.x + manageBoxAfter!.width;
+    expect(Math.abs(manageRightAfter - viewportWidth), "管理ボタンの右端がビューポート右端からずれた").toBeLessThanOrEqual(1);
+
+    // 8. 一覧が実際に動いた証拠: 1行目のyがスクロール前より小さくなっている（上へ流れた）
+    expect(firstRowBoxAfter!.y, "1行目が上へ流れていない").toBeLessThan(firstRowBoxBefore!.y);
+
+    // 9. スクロールが本当に効いた証拠: scrollTop が0より大きい。
+    //    どの箱がスクロールするかで到達できる量が変わる（中身の高さで頭打ちになる）ため、
+    //    600ちょうどは要求しない。実際の値は上の添付に残している。
+    expect(scrollTopAfter, "scrollTop が0のまま＝スクロールが効いていない").toBeGreaterThan(0);
   });
 
   test("PC・タブレット: 一覧と会話が同時に見え、戻るボタンは出ない", async ({ page }, testInfo) => {
