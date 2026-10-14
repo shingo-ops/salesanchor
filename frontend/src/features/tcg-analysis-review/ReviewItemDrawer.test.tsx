@@ -198,11 +198,19 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
   });
 });
 
-describe("ReviewItemDrawer keep as is (K7)", () => {
+describe("ReviewItemDrawer keep as is (confirm popup)", () => {
   const ackable = (codes: string[]): ReviewDrawerItem => ({
     ...makeItem("pid_unresolved", false),
     review_reason_details: codes.map((code) => ({ code, source: "system" as const, fix_stage: "analysis" as const, ackable: true })),
   });
+  const keepButton = () => screen.getByRole("button", { name: "Keep as is" });
+  // Modal の × も名前が「Close」なので、下のボタン列から探す
+  const closeButton = () => within(popup().querySelector(".form-actions") as HTMLElement).getByRole("button", { name: "Close" });
+  const popup = () => screen.getByRole("dialog", { name: "Keep as it is?" });
+  const render2 = (item: ReviewDrawerItem, onClose = vi.fn(), onRefresh = vi.fn().mockResolvedValue(undefined)) => {
+    render(<ReviewItemDrawer item={item} onClose={onClose} onRefresh={onRefresh} />);
+    return { onClose, onRefresh };
+  };
 
   it("has no button when no reason can be acknowledged", () => {
     renderDrawer({ ...makeItem("pid_unresolved", false), is_v102: false });
@@ -210,32 +218,99 @@ describe("ReviewItemDrawer keep as is (K7)", () => {
     expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
   });
 
-  it("the button under the reasons opens the keep input directly", () => {
-    renderDrawer(ackable(["product_not_in_master"]));
+  it("K1: one press opens a popup with the message, the reasons and two buttons; nothing is saved yet", () => {
+    render2(ackable(["product_not_in_master"]));
 
-    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(keepButton());
 
-    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
-    expect(screen.getAllByRole("button", { name: "Keep as is" }).length).toBe(2);
+    expect(within(popup()).getByText(/will be marked as checked/)).toBeTruthy();
+    expect(within(popup()).getByText("Not in the product master")).toBeTruthy();
+    expect(within(popup()).getByRole("button", { name: "Keep" })).toBeTruthy();
+    expect(closeButton()).toBeTruthy();
+    expect(postReviewAck).not.toHaveBeenCalled();
   });
 
-  it("after the last reason is acknowledged the keep input closes and a notice stays under the reasons", async () => {
+  it("K2: Close hides the popup and saves nothing", () => {
+    render2(ackable(["product_not_in_master"]));
+
+    fireEvent.click(keepButton());
+    fireEvent.click(closeButton());
+
+    expect(screen.queryByRole("dialog", { name: "Keep as it is?" })).toBeNull();
+    expect(postReviewAck).not.toHaveBeenCalled();
+  });
+
+  it("K3: Keep saves once with all remaining codes, shows the notice and reloads", async () => {
     vi.mocked(postReviewAck).mockResolvedValue({});
-    renderDrawer(ackable(["product_not_in_master"]));
+    const { onRefresh } = render2(ackable(["product_not_in_master", "condition_unknown"]));
 
-    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
-    const fix = document.querySelector(".review-item-fix") as HTMLElement;
-    fireEvent.click(within(fix).getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(keepButton());
+    fireEvent.click(within(popup()).getByRole("button", { name: "Keep" }));
 
-    await waitFor(() => expect(screen.getByText(/Marked as checked/)).toBeTruthy());
+    await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
     expect(postReviewAck).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(postReviewAck).mock.calls[0][1]).toEqual(["product_not_in_master", "condition_unknown"]);
+    expect(screen.queryByRole("dialog", { name: "Keep as it is?" })).toBeNull();
+    expect(screen.getByText(/Marked as checked/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
-    expect(document.querySelector(".review-item-fix")).toBeNull();
-    const block = document.querySelector(".review-item-reasons-block") as HTMLElement;
-    expect(block.textContent).toContain("Marked as checked");
 
     fireEvent.click(rowOf("Product ID"));
     expect(document.querySelector(".review-item-reasons-block")?.textContent).not.toContain("Marked as checked");
+  });
+
+  it("K4: only one Keep as is button exists, even after pressing it", () => {
+    render2(ackable(["product_not_in_master"]));
+
+    expect(screen.getAllByRole("button", { name: "Keep as is" }).length).toBe(1);
+    fireEvent.click(keepButton());
+    expect(screen.getAllByRole("button", { name: "Keep as is" }).length).toBe(1);
+    expect(document.querySelector(".review-item-fix")).toBeNull();
+  });
+
+  it("K5: while saving the button is disabled", async () => {
+    let finish: (value: object) => void = () => undefined;
+    vi.mocked(postReviewAck).mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    render2(ackable(["product_not_in_master"]));
+
+    fireEvent.click(keepButton());
+    fireEvent.click(within(popup()).getByRole("button", { name: "Keep" }));
+
+    await waitFor(() => expect((keepButton() as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.click(keepButton());
+    expect(screen.queryByRole("dialog", { name: "Keep as it is?" })).toBeNull();
+    finish({});
+    await waitFor(() => expect(screen.getByText(/Marked as checked/)).toBeTruthy());
+    expect(postReviewAck).toHaveBeenCalledTimes(1);
+  });
+
+  it("a failed save shows a warning, leaves the button, and can be pressed again", async () => {
+    vi.mocked(postReviewAck).mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce({});
+    render2(ackable(["product_not_in_master"]));
+
+    fireEvent.click(keepButton());
+    fireEvent.click(within(popup()).getByRole("button", { name: "Keep" }));
+
+    await waitFor(() => expect(screen.getByText("Could not mark as checked. Please try again")).toBeTruthy());
+    expect((keepButton() as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(keepButton());
+    expect(screen.queryByText("Could not mark as checked. Please try again")).toBeNull();
+    fireEvent.click(within(popup()).getByRole("button", { name: "Keep" }));
+    await waitFor(() => expect(screen.getByText(/Marked as checked/)).toBeTruthy());
+    expect(postReviewAck).toHaveBeenCalledTimes(2);
+  });
+
+  it("Esc while the popup is open closes only the popup, not the drawer", () => {
+    const { onClose } = render2(ackable(["product_not_in_master"]));
+
+    fireEvent.click(keepButton());
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog", { name: "Keep as it is?" })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

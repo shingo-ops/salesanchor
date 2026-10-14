@@ -3768,6 +3768,7 @@
     "ack": "このままで良い",
     "acked": "確認済みにしました。解析をやり直しています",
     "ackFailed": "確認済みにできませんでした。もう一度お試しください",
+    "ackConfirm": { "title": "このままで良いですか？", "message": "次の理由を確認済みにします。要確認の一覧から外れます。書き写しをあとで直すと、また一覧に戻ります。", "confirm": "このまま" },
     "gapLines": "間の行: {{lines}}",
     "gapLineNumber": "L{{n}}",
     "gapCandidates": "候補: {{names}}",
@@ -3790,9 +3791,7 @@
         "register": "新しい商品として登録する",
         "registerDesc": "商品マスタに登録し、この行を付け替えます",
         "condition": "状態を直す",
-        "conditionDesc": "状態を確認・訂正します",
-        "keep": "このままで良い",
-        "keepDesc": "理由ごとに確認済みにします"
+        "conditionDesc": "状態を確認・訂正します"
       },
       "selected": "直す内容: {{choice}}",
       "back": "戻る",
