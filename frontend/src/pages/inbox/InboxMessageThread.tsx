@@ -19,8 +19,10 @@ import { IconToggleButton } from "../../components/IconToggleButton";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { DISCORD_CONFIG_PERMISSION, getDiscordSendErrorGuide } from "./discordSendError";
 import { toast } from "../../components/loading/Toast";
+import { InboxThreadHeaderMobile } from "./InboxThreadHeaderMobile";
 
 interface Props {
   selectedLeadId: number | null;
@@ -67,6 +69,12 @@ interface Props {
    * PC・タブレットでは一覧が常に見えているのでボタン自体を出さない。
    */
   onBackToList: () => void;
+  /**
+   * 受信箱の設定モーダルを開く（useInboxState の setShowSettings をそのまま渡す）。
+   * 第6便: スマホの会話ヘッダーの「…」メニューから開けるようにするため追加。
+   * PC・タブレットの見た目・配線には使わない（InboxPage.tsx の headerActionsContent が別経路で開く）。
+   */
+  onOpenSettings: () => void;
 }
 
 /** Per-message translation state. */
@@ -77,7 +85,7 @@ interface TranslationState {
 }
 
 export function InboxMessageThread({
-  onBackToList,
+  onBackToList, onOpenSettings,
   selectedLeadId, selectedConversation, leadDetail, messagesData, msgLoading, msgError,
   avatarErrors, handleAvatarError,
   handleMarkUnread, handleExclude, handleDeleteLead,
@@ -92,6 +100,9 @@ export function InboxMessageThread({
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  // 第6便: スマホでは会話ヘッダーを別ファイル（InboxThreadHeaderMobile）に出す。
+  // PC・タブレットの JSX（下の <header className="inbox-center-header"> 以下）は変更しない。
+  const isMobile = useIsMobile();
   // ADR-159: Discord 担当者名義送信の失敗は、文言＋行動ボタン（CTA）で案内する
   const discordGuide = getDiscordSendErrorGuide(sendErrorReason, hasPermission(DISCORD_CONFIG_PERMISSION));
   const [menuOpen, setMenuOpen] = useState(false);
@@ -384,7 +395,25 @@ export function InboxMessageThread({
           </div>
         </div>
       )}
-      {/* ヘッダ */}
+      {/* ヘッダ — スマホは第6便で新設した別ファイルを描く。PC・タブレットの JSX は変更しない */}
+      {isMobile ? (
+        <InboxThreadHeaderMobile
+          selectedLeadId={selectedLeadId}
+          selectedConversation={selectedConversation}
+          leadDetail={leadDetail}
+          messagesData={messagesData}
+          avatarErrors={avatarErrors}
+          handleAvatarError={handleAvatarError}
+          inboxSettings={inboxSettings}
+          showKartePanel={showKartePanel}
+          openKartePanel={openKartePanel}
+          closeKartePanel={closeKartePanel}
+          recipientLanguageSetting={recipientLanguageSetting}
+          setRecipientLanguage={setRecipientLanguage}
+          onBackToList={onBackToList}
+          onOpenSettings={onOpenSettings}
+        />
+      ) : (
       <header className="inbox-center-header">
         <button
           type="button"
@@ -486,6 +515,7 @@ export function InboxMessageThread({
           )}
         </div>
       </header>
+      )}
 
       {/* メッセージリスト */}
       <div ref={messageListRef} className="inbox-messages">
