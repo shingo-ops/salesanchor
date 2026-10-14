@@ -12,6 +12,8 @@ import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { Card } from "../../../components/Card";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import { useRealtimeRefresh } from "../../../hooks/useRealtimeRefresh";
+import { TOPICS } from "../../../lib/realtime/topics";
 import { api, ApiError } from "../../../lib/api";
 import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime";
@@ -72,6 +74,9 @@ export default function NeedsReviewTabsPanel() {
 
   // 保存のあとの読み直し（reloadKey だけが変わったとき）は、表を消さずに取り直す
   const lastReloadKeyRef = useRef(reloadKey);
+
+  // ADR-1016: 他の人・裏の処理で要確認が変わったら、保存後と同じ読み直しを 1 回走らせる
+  useRealtimeRefresh([TOPICS.tcgReview], () => setReloadKey((k) => k + 1));
 
   useEffect(() => {
     if (authLoading || !isSuperAdmin || activeTab !== "production") return;

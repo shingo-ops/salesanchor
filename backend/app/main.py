@@ -15,6 +15,7 @@ from app.cache import close_redis, init_redis
 from app.metrics import register_metrics
 from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.realtime import RealtimeSignalMiddleware
 from app.middleware.session_guard import SessionGuardMiddleware
 
 # spec.md v1.1 F2 (Sprint 2): マスタ編集 UI（中央 admin + テナント admin の二層）
@@ -81,6 +82,7 @@ from app.routers import (
     products,
     public_staff_avatars,  # ADR-159: 担当者アイコン公開配信（認証不要）
     purchase_orders,
+    realtime_events,  # ADR-1016 即時反映の合図 SSE
     quotes,
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
@@ -212,7 +214,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Client-Id"],
 )
 
 # 認証イベント・データアクセス自動記録ミドルウェア
@@ -221,6 +223,8 @@ app.add_middleware(AuditMiddleware)
 app.add_middleware(RateLimitMiddleware)
 # セッションハイジャック検知（物理的に不可能な移動のみ強制再認証）
 app.add_middleware(SessionGuardMiddleware)
+# ADR-1016: 書き込み成功を即時反映の合図として配る（応答は遅らせない）
+app.add_middleware(RealtimeSignalMiddleware)
 
 # Prometheus メトリクス（/metrics エンドポイント）
 # rate_limit / audit ミドルウェアの _SKIP_PATHS に "/metrics" が含まれるため除外済み
@@ -671,6 +675,9 @@ app.include_router(
     conv_logs.router, prefix="/api/v1", tags=["conv-logs"],
     dependencies=[Depends(get_current_tenant)],
 )
+
+# ADR-1016: 即時反映の合図 SSE（認証・テナントは router 内の Depends）
+app.include_router(realtime_events.router, prefix="/api/v1", tags=["realtime"])
 
 # PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
 app.include_router(
