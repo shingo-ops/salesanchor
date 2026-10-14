@@ -15,6 +15,7 @@ import { ConditionReviewPanel } from "./ConditionReviewPanel";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
+import { ReviewProductFixForm } from "./ReviewProductFixForm";
 import { postReviewAck } from "./reviewActions";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
@@ -65,21 +66,25 @@ export function ReviewItemDrawer({ item, onClose, onRefresh }: Props) {
       <Drawer open onClose={onClose} title={t("reviewItem.drawerTitle")} size="wide">
         <Stack gap="4">
           {notice && <Callout variant={notice.variant} title={notice.title} />}
-          <TwoColumn ratio="1:2" gap="3" align="start" className="review-item-top">
+          <TwoColumn ratio="1:2" gap="3" align="stretch" className="review-item-top">
             <section className="review-item-source">
-              <h3>{t("reviewItem.sourceHeading")}</h3>
+              <div className="review-item-pane-head">
+                <h3>{t("reviewItem.sourceHeading")}</h3>
+              </div>
               <ShadowSourcePane rawText={item.raw_text} blockRange={parseSourceLineRange(item.gemini.span)} />
             </section>
-            <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} />
+            <ItemComparison item={item} readOnly={true} onJumpToSourceLine={noJump} heading={t("reviewItem.compareHeading")} />
           </TwoColumn>
           <section className="review-item-fix">
             <h3>{t("reviewItem.fixHeading")}</h3>
             <Stack gap="3">
-              <ConditionReviewPanel item={item} onRefresh={onRefresh} />
+              <ReviewProductFixForm item={item} onRefresh={onRefresh} />
+              <ConditionReviewPanel item={item} onRefresh={onRefresh} label={t("reviewItem.conditionLabel")} />
               <div>
                 <Button variant="secondary" onClick={() => setIsProductDrawerOpen(true)}>
                   {t("superAdmin.supplierQuality.correctPhase3")}
                 </Button>
+                <p className="comp-field__hint">{t("reviewItem.masterHint")}</p>
               </div>
               <section>
                 <h3>{t("reviewItem.reasonsHeading")}</h3>

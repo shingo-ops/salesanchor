@@ -3771,7 +3771,15 @@
     "ackFailed": "Could not mark as checked. Please try again",
     "gapLines": "Gap lines: {{lines}}",
     "gapLineNumber": "L{{n}}",
-    "gapCandidates": "Candidates: {{names}}"
+    "gapCandidates": "Candidates: {{names}}",
+    "compareHeading": "Comparison",
+    "productLabel": "Product",
+    "productCurrent": "Current: {{name}}",
+    "reassign": "Reassign to this product",
+    "reassigned": "Reassigned",
+    "reassignFailed": "Failed to reassign",
+    "conditionLabel": "Condition",
+    "masterHint": "Register or exclude in the product master"
   },
   "reviewReason": {
     "pid_unresolved": "Product not identified",
