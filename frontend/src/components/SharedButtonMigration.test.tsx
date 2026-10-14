@@ -96,6 +96,31 @@ describe('shared button migration: real panel operations', () => {
     await act(async () => { pending.resolve(); });expect(saved).toHaveBeenCalledExactlyOnceWith(bundle);expect(mock.get.mock.calls.filter(c => c[0] === '/orders/7/commissions')).toHaveLength(2);
   });
 
+  it('renders the commission staff picker with the shared SelectControl and keeps the assign payload', async () => {
+    const posts: Array<[string, unknown]> = [];
+    mock.get.mockImplementation(async (url: string) => {
+      if (url === '/orders/7/commissions') return bundle;
+      if (url === '/staff?per_page=100') return [
+        { id: 2, user_id: 2, surname_jp: 'Test', given_name_jp: 'Staff' },
+        { id: 3, user_id: 3, surname_jp: 'Other', given_name_jp: 'Person' },
+      ];
+      throw new Error(`Unexpected GET ${url}`);
+    });
+    mock.post.mockImplementation(async (url: string, body: unknown) => { posts.push([url, body]); return {}; });
+    render(<CommissionPanel orderId={7} orderNumber="ORD-7" onClose={vi.fn()} />);
+    const select = await screen.findByTestId('commission-staff-sales') as HTMLSelectElement;
+    expect(screen.getByRole('combobox', { name: 'commissions.role_salescommission.assignedStaff' })).toBe(select);
+    expect(select.classList.contains('comp-select__control')).toBe(true);
+    expect(select.classList.contains('comp-select__control--sm')).toBe(true);
+    fireEvent.change(select, { target: { value: '3' } });
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toEqual(['/orders/7/commissions/assign', { role: 'sales', staff_id: 3 }]);
+    await waitFor(() => expect(select.disabled).toBe(false));
+    fireEvent.change(select, { target: { value: '' } });
+    await waitFor(() => expect(posts).toHaveLength(2));
+    expect(posts[1]).toEqual(['/orders/7/commissions/assign', { role: 'sales', staff_id: null }]);
+  });
+
   it('recalculates commissions once and preserves the close action', async () => {
     const saved = vi.fn(), close = vi.fn(), pending = deferred<typeof bundle>();mock.post.mockReturnValue(pending.promise);
     render(<CommissionPanel orderId={7} orderNumber="ORD-7" onClose={close} onSaved={saved} />);

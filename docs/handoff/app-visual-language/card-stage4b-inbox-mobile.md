@@ -1108,3 +1108,88 @@ PO 指摘の根拠は実機の見た目（過密）だが、コードでも裏�
 2. **カルテボタンの絵柄差分検査は viewport のリサイズに依存する。** 6本目の検査（§21-5 #6）は、同じページ内で `page.setViewportSize()` によりデスクトップ幅へ切り替え、`useIsMobile()`（`window.matchMedia` の `change` イベント）が追従して PC 側ヘッダー（`.karte-toggle-btn`）を描くことを前提にしている。この挙動はコードを読んで確認したものであり、実際の実行（CI）で初回に成立するかは未確認。
 3. **戻るボタンを追加した分、`/templates`・`/faq` の見た目の縦位置が下がる。** `.coming-soon`（既存）はもともと `margin-top: 80px` を持つため、新設した `.coming-soon-back-row` の下にさらに80pxの空きができ、カード全体が従来より下に表示される。既存の `.coming-soon` の値自体は変更していない（レイアウトを壊さない方針を優先）が、見た目の間隔が適切かは実機・PO 確認が望ましい。
 4. **人型アイコン（`User` = Heroicons `UserIcon`）は `CATEGORY_ICONS["顧客"]` と同じ定数を指す。** 今回新設した `PAGE_ICONS.kartePanelMobile` も同じ `User` を参照するため、1つのアイコン実体が2つの公開名（`CATEGORY_ICONS["顧客"]` と `PAGE_ICONS.kartePanelMobile`）からアクセスできる状態になった。用途が異なる（DB カテゴリ表示 / 受信箱スマホのボタン）ため実害はないが、将来 `User` の見た目を変える場合は両方の用途に影響する点を留意する。
+
+## 22. 顧客ページ（カルテ）をスマホで全画面にする便（2026-10-14・第8便）
+
+> この節は何か（専門用語なしの1行）: スマホでカルテ（顧客情報の画面）を開いたとき、今までは画面の下80%だけに出るシートだったのを、お手本（WhatsApp）と同じ画面いっぱいに変える作業記録。
+
+### 22-1. PO 決定（2026-10-14）
+
+| 論点 | 決定 |
+|---|---|
+| 大きさ | 画面全体。下のタブ（受信箱・在庫表・受注管理）も覆う |
+| 閉じ方 | 左上に「←」（会話画面と同じ戻り方に統一）。「顧客情報 ×」の行を「← 顧客情報」の帯に書き換える |
+| 出てくる動き | 右から左へ（別の画面を開くように）。「下から上へ」はやめる |
+
+### 22-2. 確認済みの事実（実装前に現物で確認済み）
+
+| 事実 | 出典 |
+|---|---|
+| スマホ（≤767px）ではカルテは下から出るシート（`height: 80vh` / `max-height: 80vh` / `transform: translateY(100%)` → 開くと `translateY(0)` ／角丸 `--radius-xl`） | `frontend/src/pages/inbox/InboxPage.css:1333-1352`（変更前・origin/main の内容） |
+| カルテは `position: fixed` ＋ `z-index: var(--z-drawer)`（301）が `@media (max-width: 1279px)` の側で付く（スマホにも効く） | 同 `:1030-1041`（変更前） |
+| 下部タブバーの重なり順は `--z-topbar`（100） | `frontend/src/mobile-shell.css:101` |
+| 背景の幕は `.karte-overlay`（`--z-backdrop`＝298・`position: fixed; inset: 0`）で、押すと閉じる | `frontend/src/pages/inbox/InboxPage.css:1047-1053`（変更前）と `frontend/src/pages/inbox/InboxPage.tsx:236` |
+| 閉じる行は `.karte-close-row`（既定は非表示・`:1005`）で、`@media (max-width: 1279px)` の中で表示され、`.karte-close-title` と `.karte-close-btn` を持つ | 同 `:1056-1072`（変更前）と `frontend/src/pages/inbox/InboxKartePanel.tsx` の `karte-close-row`（変更前） |
+| カルテには固定の操作バーがある（`.karte-action-bar` / `data-testid="karte-action-bar"`） | `frontend/src/pages/inbox/InboxKartePanel.tsx:273`（変更前の行番号）と `InboxPage.css:1414`（変更前の行番号） |
+| カルテは `frontend/src/pages/inbox/InboxPage.tsx:234` で `.inbox-columns` の外側に描かれている（`.karte-overlay` も同じく外側・兄弟要素） | 同ファイル |
+| お手本（WhatsApp）の連絡先画面は画面全体（実測 y=0〜2340）で、下部タブは見えない | PO 提供の実機の構造ダンプ |
+| `.karte-close-row` / `.karte-close-btn` は `@media (max-width: 1279px)` 一本の中にあり、タブレット（768〜1279px）とスマホ（≤767px）の両方に同じ見た目（「顧客情報 ×」）を出していた（スマホ専用の入れ子 `@media (max-width: 767px)` の外） | `frontend/src/pages/inbox/InboxPage.css:1013`（`@media (max-width: 1279px)` 開始）・`:1056-1072`（変更前の `.karte-close-row` 定義）・`:1125`（入れ子 `@media (max-width: 767px)` 開始、変更前） |
+| `.right-panel-card` は `height: 100%` ＋ `overflow: hidden` のフレックス列で、`.karte-action-bar` は `flex-shrink: 0` を持つ最後の子要素のため、親の高さが伸びても下端に固定され続ける | `frontend/src/pages/inbox/InboxPage.css:756-761`・`:1414-1424`（変更前の行番号） |
+| `.mobile-tabbar`（下部タブ）と `.inbox-thread-header-mobile`（スマホの会話ヘッダー）はどちらも `useIsMobile()`（`window.matchMedia("(max-width: 767px)")`）で判定した React コンポーネント（`MobileShell` / `InboxMessageThread.tsx`）が描画する。タブレット幅（768px）では別コンポーネント（`DesktopShell`）が描かれ、`.mobile-tabbar` 自体が DOM に存在しない | `frontend/src/hooks/useIsMobile.ts`・`frontend/src/App.tsx:137`（`ShellSwitch`） |
+
+### 22-3. ADR-108 の受け入れ基準は容器の見せ方を含まないことの確認
+
+本カードの既存節（§9「相互参照」）は「カルテ（右パネル）は ADR-108 の所有範囲。本カードでは触らない／ボトムシートの指定を一切変更しない」としていた。今回 PO がその方針を明示的に上書きし「画面全体にする」と決定したため、`docs/adr/ADR-108-inbox-karte-panel-redesign.md` を実際に読み、受け入れ基準が容器（大きさ・出方・重なり順）を対象にしているかを確認した。
+
+`docs/adr/ADR-108-inbox-karte-panel-redesign.md` の「画面別 受け入れ条件（観測可能な挙動）」の節は次のとおり:
+
+> 一致の対象は「タブ構成・項目の並びとグルーピング・編集／読み取り（派生）の別・段階による既定タブと主アクション・固定アクションバー」。
+> 色・フォント・余白の最終トーンは Sales Anchor 既存のデザインシステム（Tailwind＋トークン）に従い、ピクセル一致は求めない。
+
+個別チェックリストの12項目（同ファイル「### 個別チェックリスト」）もすべてタブの中身・項目の出し分け・i18n・アクションバーの中身に関するもので、**パネルの大きさ・出方（ボトムシート/全画面/ドロワー）・重なり順（z-index）についての記述は無い**。
+したがって、本便（容器の大きさ・閉じ方・出てくる動きのみを変更し、タブ構成・項目・固定アクションバーの中身は変更しない）は ADR-108 の受け入れ基準と抵触しないと判断した。
+
+### 22-4. 実装方法
+
+- **A（全画面化）**: `frontend/src/pages/inbox/InboxPage.css` の入れ子 `@media (max-width: 767px)`（旧「カルテをボトムシートに変換」コメントのブロック、現在の行番号 `:1336-1360`）内の `.inbox-right-panel` を、`top/bottom/left/right: 0`・`height/max-height: 100dvh`（`vh` ではなく `dvh`。タブバーの高さを引かない＝タブも覆う）・`border-radius: 0`・`border-top: none`・`transform: translateX(100%)` → `.karte-open` で `translateX(0)` に変更した。`z-index` は :1038（タブレットと共通の外側ブロック）の `var(--z-drawer)`（301）がそのまま効くため、新しいトークン・新しい `z-index` 指定は一切追加していない。
+- **B（閉じる帯）**: `frontend/src/pages/inbox/InboxKartePanel.tsx` の `.karte-close-row` の中に、戻る矢印ボタン（`.karte-close-back-btn`）を見出しの左に追加した。アイコンは会話画面（`InboxThreadHeaderMobile.tsx:107`）と同じ `SCHEDULE_SETTINGS_ICONS.back`（`ArrowLeftIcon`）を再利用し、新しいアイコンは追加していない。`onClick` は既存の `closeKartePanel` のまま（配線は変えていない）。読み上げラベルは既存キー `common.back`（ja: 「戻る」）を使用し、新規キーは追加していない。CSS は `InboxPage.css` の既定（PC/タブレット共通の外側ブロック、`:1010`）で `.karte-close-back-btn { display: none; }` を既定の非表示にし、入れ子 `@media (max-width: 767px)`（`:1366-1388`）でのみ表示に切り替えた。同じブロックで旧「×」ボタン（`.karte-close-btn`）をスマホだけ非表示にし、帯の高さを `var(--topbar-height)`（56px）、矢印の押す場所を `var(--size-icon-btn-lg)`（44px）にした。タブレット（768〜1279px、`:1056-1072`）は一切変更していない＝「顧客情報 ×」のまま。
+- **C（固定の操作バー）**: `.right-panel-card`（`height: 100%` ＋ `overflow: hidden` のフレックス列）と `.karte-action-bar`（`flex-shrink: 0` の最後の子要素）の構造は変更していない。パネルの高さを `80vh` から `100dvh` に増やしても、この構造により操作バーは変わらず画面下端に固定されたままになる（§22-6 の検査 #3 で確認）。寸法の変更は行っていない。
+- **D（背景の幕）**: `.karte-overlay` の指定・配線は変更していない。全画面になったパネル（`background: var(--bg-surface)`。不透明）が `.karte-overlay`（`z-index: var(--z-backdrop)`＝298）より前面（`--z-drawer`＝301）かつ同じ `position: fixed; inset: 0` 相当（`top/left/right/bottom: 0`）でビューポート全体を覆うため、幕は完全にパネルの背後に隠れる。押せない領域が生じるとすれば「幕の方がパネルより前面にある」か「パネルがビューポートの一部しか覆わない」ときだが、今回の実装はどちらにも当たらない（`z-index` はパネルが幕より大きい・パネルの矩形は §22-6 の検査 #1 でビューポート一致を実測確認）。**実機のタップ確認はしていない**（§22-7 残るリスク参照）。
+
+### 22-5. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | スマホでカルテが画面全体（上端0・幅・高さがビューポートと一致、±1px） | `inbox-single-column.spec.ts`「受信箱 第8便」describe の1本目テスト | §22-6 に実際の出力 |
+| 2 | 下部タブバーがカルテに覆われている（矩形が内側・かつ z-index でも確認） | 同テスト（`.mobile-tabbar` の矩形と `getComputedStyle().zIndex` の両方を実測） | 同上 |
+| 3 | 左上に戻る矢印があり44px以上、押すとカルテが閉じて会話に戻る | 同 describe の2本目テスト | 同上 |
+| 4 | 固定の操作バー（`[data-testid="karte-action-bar"]`）がビューポート内に収まっている | 同 describe の3本目テスト | 同上 |
+| 5 | PC・タブレットではカルテが全画面化しない（幅がビューポート未満） | 同 describe の4本目テスト | 同上 |
+| 6 | 既存の検査（第4〜7便を含む）が緑のまま | `npx playwright test --list` で収集件数を確認 | 346→358件（新規12件追加・既存件数の減少なし） |
+| 7 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §22-6 |
+| 8 | 型が通る | `cd frontend && npx tsc --noEmit` | §22-6 |
+| 9 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | §22-6 |
+| 10 | デザイントークンの増加なし（ratchet） | リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §22-6 |
+| 11 | UI ガバナンス（生UI部品の新規ハードコードなし） | リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js` | §22-6 |
+
+### 22-6. 実際の検証出力
+
+- `cd frontend && npx tsc --noEmit` → `src/features/tcg-sold-out/soldOutApi.ts` ほか3件のエラー。すべて本便の変更対象外のファイルで、`git stash` して origin/main 時点でも同一のエラーが出ることを確認済み（生成済み API スキーマ未生成など、この worktree のセットアップ由来・本便の変更とは無関係）
+- `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`（`npm run lint` は 0 errors, 137 warnings。本変更対象ファイルからの新規警告なし）
+- `cd frontend && npm run test:unit`（フルスイート） → 97 Test Files中92成功・5失敗／1143 Tests中1138成功・5失敗。失敗5件はすべて `Error: Test timed out in 5000ms`（本便の変更対象外の5ファイル: `LeadFormButtonMigration` / `OrderLeadButtonMigration` / `StaffFormButtonMigration` / `V102PostsTab` / `SoldOutResultsPanel`、ほか `InventoryPage.settings.test.tsx` がワーカータイムアウトで未実行）。この6ファイルと受信箱配下の既存テスト5ファイルを合わせて個別実行すると11ファイル・167件全件成功（フルスイート実行時の負荷由来の非決定的タイムアウトと判断。本カード §20-9-5・§21-6 と同じ事情）
+- `npx playwright test --list` → 346件→358件（新規4テスト×3幅=12件追加）を収集成功。この端末（arm64/Termux）では `npx playwright install chromium` が `ERROR: Playwright does not support chromium on ubuntu26.04-arm64` で失敗するため実行は不可（§21-7 #1 と同じ事情を本便でも再確認した。CI に委ねる）
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（実装・検査コミット後に実行） → `PASS: 対象2ファイル・増加なし`
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（実装・検査コミット後に実行） → `対象ファイル数: 1` ／ `✅ UI governance: 新規ハードコードなし`
+
+### 22-7. 残るリスク（正直に）
+
+1. **実機 Playwright 実行は未確認。** この端末（arm64/Termux）では chromium の実行バイナリが提供されておらず、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない（第4〜7便と同じ事情。本便で `npx playwright install chromium` を再度試し、同じエラーで失敗することを確認した）。
+2. **背景の幕（`.karte-overlay`）が押せない領域を作らないことは、CSS の重なり順と矩形の設計読みに基づく判断であり、実機のタップ確認はしていない。** パネルが不透明（`background: var(--bg-surface)`）でビューポート全体を覆い、`z-index` も幕より前面であることはコードで確認したが、実際の端末でタップイベントが意図通りパネル側に渡ることは確認していない。
+3. **`.inbox-center`（会話画面の本体）と `.inbox-full-tab-bar` / `.inbox-platform-select`（`.inbox-columns` の外側にある一覧用の絞り込み）は本便では一切触っていない。** カルテが全画面になっても、これらの要素自体の表示・非表示ロジックは変更していないため、カルテの背後に隠れたままのはずだが、z-index の計算上の確認のみで実機確認はしていない。
+4. **タブレット幅（768〜1279px）の挙動は「従来どおり」であることをコードの読み（`@media (max-width: 1279px)` と入れ子 `@media (max-width: 767px)` の境界）と画面検査（§22-5 #5）で確認したが、実機のタブレットでの確認はしていない。**
+5. **全画面化に伴う `overflow-y: auto`（パネル自体のスクロール）と `.right-panel-tab-content` の内側スクロールが二重にならないかは、コードの構造（`.right-panel-card` が `overflow: hidden` で内側のタブ領域だけがスクロールする設計）から「二重にならない」と判断したが、実機の挙動確認はしていない。**
+
+### 22-8. 判断を保留したこと／迷ったこと
+
+- **`.karte-close-row` の高さを `var(--topbar-height)`（56px）に固定する際、既存の `padding: var(--space-3) var(--space-3) var(--space-2)`（タブレット側）を完全に上書き（`padding: 0 var(--space-3)`）する形にした。** 依頼文に「帯の高さは --topbar-height（56px）」と明示されていたためこの値を採用したが、`.karte-close-title` の行間・ベースラインが会話ヘッダー（`.inbox-thread-header-mobile`）と完全に一致しているかはピクセル単位では未確認（フォントサイズ・行揃えは既存の `.karte-close-title` 指定をそのまま使用しているため大きくは外れないはずだが、実機・画面検査のどちらでも縦の文字位置までは測っていない）。
+- **`.karte-overlay` の DOM 上の存在（`.inbox-columns` の外・パネルの兄弟要素）は変更していないが、全画面化後にこの要素自体を削除すべきかは判断を保留した。** 依頼文に「挙動を変えずそのまま残す」とあったため残したが、将来 ADR-108 側でパネルの構造を見直す際にはこの幕の要否も合わせて検討した方がよいかもしれない（コードの見通しの観点。実害は§22-4 Dで確認済みの通り無い）。

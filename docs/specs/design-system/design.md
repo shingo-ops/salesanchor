@@ -2053,7 +2053,7 @@ PO回答（2026-10-05、本セッション）: 当初の「全件を標準に統
 | 受信箱タブ横 `.inbox-platform-select`（InboxPage 1、InboxMessageThread 1） | 2 | InboxPage.css:68「タブバー右端」、height は tokens.css:271 --height-tab-item「受信箱タブボタン高さ」。文字の小ささ・色の意図資料はなし | 種類 tabbar を登録（高さ整合の意図に基づく） |
 | 一般フォーム・その他（.form-group / .form-row / .filter-bar / .schedule-input / .gs-select / .account-settings-lang-select / .inbox-page-filter-select / .inbox-settings-select / InventoryPage inline / 装飾なし） | 55 | docs/adr・docs/specs・docs/handoff に見た目の意図記載なし（av2-recon2.md R4）。角丸 sm/md・枠 border/border-strong が不統一 | 標準に統一 |
 | 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） |
-| 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便） |
+| 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便）→ AY-2w（2026-10-14）で SelectControl size="sm" へ移管 |
 
 #### 便の分割
 
@@ -4102,3 +4102,19 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
   - ADR-067 の登録表: --modal-commission-w、--modal-detail-max-w、--table-col-min-width（後者は eslint.config.js のエラー文も推奨）。
   - 仕様書: --color-blue-700（本書 §5.1 の命名例）、--size-avatar-sm（visual-language の whatsapp-reproduction-spec.md）、--color-gray-100 / --color-gray-600 / --color-red-700 / --color-amber-800 / --color-border-subtle（docs/specs/design-tokens-ssot/color/calendar/design.md が参照先に指定。計画の現行性は未確認）。
   - index.css の FedEx バッジ色ブロック（ADR-125）の見出しと中身のずれ（残る 7 名のうち 6 名は calendar 計画書由来）。
+
+#### AY-2v 本番反映の記録（2026-10-14）
+
+- PR #4264、merge f353bb437df44fb51fdf891adc59c018b2236d3b（2026-10-14T06:18:27Z）、最終 HEAD bb8718070。
+- Deploy run 38521442586 success（2026-10-14T06:21:06Z）。
+- 本番 CSS index-2VvoALe1.css で削除した 18 名が 0 件、残す 12 名と --calendar-today-bg・--schedule-allday-row-h は存在。app は HTTP 200、api/health は HTTP 200。
+- GO は ADR-1003 の委任。根拠 /tmp/CC報告ファイル/ssot-ay2v/prod/checks.txt。
+
+#### AY-2w 報酬パネルの担当者選択を SelectControl へ移管（2026-10-14）
+
+- PO 決定: 2026-10-14「y」（表の見た目統一と切り離して select だけ先に金型へ）。B1 停止後に 2026-10-14「y」（390px の横 overflow +23px を受け入れる）。
+- 設計: docs/handoff/ay2w-commission-select/design.md（recon.md 併置）。Fable 設計審査 r1 REVISE → r2 APPROVE。
+- 変更: frontend/src/components/CommissionPanel.tsx の生 `<select>` を `<SelectControl size="sm">`（children モード、属性・選択肢は逐語）へ。import 1 行。試験 1 件を frontend/src/components/SharedButtonMigration.test.tsx に追加（class と、選択時の割り当て API 呼び出し staff_id／空選択で null を固定）。
+- 判定: DOM の aria-label・data-testid・value・disabled・option は 8 条件（390/1280 × ja/en × ライト/ダーク）で差分 0。select の見た目は金型 sm（1280px で高さ 19→30.39px、390px で 44px）。
+- B1: 390px でモーダル本文（comp-modal-body、overflow-x:auto）の横 overflow が en 263→286px・ja 162→185px（+23px）。英語では select 右端が初期表示で 9.6px 見切れる（新規）。1280px は変化なし。数値は evidence-20260910/ay2w-acceptance.md。
+- 残件: 390px の報酬表の横 overflow と見切れ（§AJ 以来の既存＋本便の +23px）は表統一便で直す。scripts/check-ui-governance.js は frontend/src/pages/ 配下のみ検出し components/ の生 select は検出しない（CI 検出範囲は PO 判断事項）。

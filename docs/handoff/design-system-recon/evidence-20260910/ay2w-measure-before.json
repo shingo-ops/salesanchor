@@ -1,0 +1,1722 @@
+{
+ "1280-en-dark": {
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "table": {
+   "scrollWidth": 752,
+   "clientWidth": 752
+  },
+  "tableRect": {
+   "x": 264,
+   "y": 309.859375,
+   "width": 752,
+   "height": 300.28125
+  },
+  "unassignBtnRect": {
+   "x": 919.171875,
+   "y": 367.046875,
+   "width": 79.4375,
+   "height": 28
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "SalesStaff",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 372.515625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "OrderStaff",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 423.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "ShippingStaff",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 473.5625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "PurchaseStaff",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 524.09375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "TroubleStaff",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 574.609375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   }
+  ]
+ },
+ "1280-en-light": {
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "table": {
+   "scrollWidth": 752,
+   "clientWidth": 752
+  },
+  "tableRect": {
+   "x": 264,
+   "y": 309.859375,
+   "width": 752,
+   "height": 300.28125
+  },
+  "unassignBtnRect": {
+   "x": 919.171875,
+   "y": 367.046875,
+   "width": 79.4375,
+   "height": 28
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "SalesStaff",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 372.515625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "OrderStaff",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 423.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "ShippingStaff",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 473.5625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "PurchaseStaff",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 524.09375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "TroubleStaff",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 574.609375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   }
+  ]
+ },
+ "1280-ja-dark": {
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "table": {
+   "scrollWidth": 752,
+   "clientWidth": 752
+  },
+  "tableRect": {
+   "x": 264,
+   "y": 309.859375,
+   "width": 752,
+   "height": 300.28125
+  },
+  "unassignBtnRect": {
+   "x": 919.171875,
+   "y": 367.046875,
+   "width": 70.328125,
+   "height": 28
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "営業担当者",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 372.515625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "受注担当者",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 423.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "発送担当者",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 473.5625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "仕入担当者",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 524.09375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "トラブル担当者",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 574.609375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   }
+  ]
+ },
+ "1280-ja-light": {
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "table": {
+   "scrollWidth": 752,
+   "clientWidth": 752
+  },
+  "tableRect": {
+   "x": 264,
+   "y": 309.859375,
+   "width": 752,
+   "height": 300.28125
+  },
+  "unassignBtnRect": {
+   "x": 919.171875,
+   "y": 367.046875,
+   "width": 70.328125,
+   "height": 28
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "営業担当者",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 372.515625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "受注担当者",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 423.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "発送担当者",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 473.5625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "仕入担当者",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 524.09375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "トラブル担当者",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 430.390625,
+     "y": 574.609375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   }
+  ]
+ },
+ "390-en-dark": {
+  "doc": {
+   "scrollWidth": 390,
+   "clientWidth": 390
+  },
+  "table": {
+   "scrollWidth": 605,
+   "clientWidth": 605
+  },
+  "tableRect": {
+   "x": 24,
+   "y": 415.71875,
+   "width": 604.90625,
+   "height": 348.28125
+  },
+  "unassignBtnRect": {
+   "x": 533.46875,
+   "y": 472.90625,
+   "width": 79.4375,
+   "height": 44
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "SalesStaff",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 486.375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "OrderStaff",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 544.90625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "ShippingStaff",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 603.421875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "PurchaseStaff",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 661.953125,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "TroubleStaff",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 720.46875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   }
+  ]
+ },
+ "390-en-light": {
+  "doc": {
+   "scrollWidth": 390,
+   "clientWidth": 390
+  },
+  "table": {
+   "scrollWidth": 605,
+   "clientWidth": 605
+  },
+  "tableRect": {
+   "x": 24,
+   "y": 415.71875,
+   "width": 604.90625,
+   "height": 348.28125
+  },
+  "unassignBtnRect": {
+   "x": 533.46875,
+   "y": 472.90625,
+   "width": 79.4375,
+   "height": 44
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "SalesStaff",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 486.375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "OrderStaff",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 544.90625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "ShippingStaff",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 603.421875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "PurchaseStaff",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 661.953125,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "TroubleStaff",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— Unassigned —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎 (Employee/Officer)"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 133.609375,
+     "y": 720.46875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   }
+  ]
+ },
+ "390-ja-dark": {
+  "doc": {
+   "scrollWidth": 390,
+   "clientWidth": 390
+  },
+  "table": {
+   "scrollWidth": 504,
+   "clientWidth": 504
+  },
+  "tableRect": {
+   "x": 24,
+   "y": 278.875,
+   "width": 504.171875,
+   "height": 485.125
+  },
+  "unassignBtnRect": {
+   "x": 441.84375,
+   "y": 375.484375,
+   "width": 70.328125,
+   "height": 44
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "営業担当者",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 388.953125,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "受注担当者",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 460.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "発送担当者",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 531.140625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "仕入担当者",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 602.234375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "トラブル担当者",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 696.375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(133, 133, 133)",
+     "color": "rgb(255, 255, 255)",
+     "backgroundColor": "rgb(59, 59, 59)"
+    }
+   }
+  ]
+ },
+ "390-ja-light": {
+  "doc": {
+   "scrollWidth": 390,
+   "clientWidth": 390
+  },
+  "table": {
+   "scrollWidth": 504,
+   "clientWidth": 504
+  },
+  "tableRect": {
+   "x": 24,
+   "y": 278.875,
+   "width": 504.171875,
+   "height": 485.125
+  },
+  "unassignBtnRect": {
+   "x": 441.84375,
+   "y": 375.484375,
+   "width": 70.328125,
+   "height": 44
+  },
+  "missing": [],
+  "selects": [
+   {
+    "className": "",
+    "ariaLabel": "営業担当者",
+    "testid": "commission-staff-sales",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 388.953125,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "受注担当者",
+    "testid": "commission-staff-order",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 460.046875,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "発送担当者",
+    "testid": "commission-staff-ship",
+    "value": "3",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 531.140625,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "仕入担当者",
+    "testid": "commission-staff-purchase",
+    "value": "",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 602.234375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   },
+   {
+    "className": "",
+    "ariaLabel": "トラブル担当者",
+    "testid": "commission-staff-trouble",
+    "value": "2",
+    "disabled": false,
+    "options": [
+     {
+      "value": "",
+      "text": "— 未割当 —"
+     },
+     {
+      "value": "2",
+      "text": "山田 太郎（社員/役員）"
+     },
+     {
+      "value": "3",
+      "text": "Bartholomew-Alexander Montgomery"
+     }
+    ],
+    "rect": {
+     "x": 85.296875,
+     "y": 696.375,
+     "width": 243,
+     "height": 19
+    },
+    "style": {
+     "width": "243px",
+     "height": "19px",
+     "minHeight": "0px",
+     "padding": "0px",
+     "fontSize": "13.3333px",
+     "backgroundImage": "none",
+     "border": "1px solid rgb(118, 118, 118)",
+     "color": "rgb(0, 0, 0)",
+     "backgroundColor": "rgb(255, 255, 255)"
+    }
+   }
+  ]
+ }
+}
