@@ -361,6 +361,15 @@
     padding-left: var(--space-4);
     padding-top: var(--space-2);
   }
+
+  /* PO 決定（2026-10-14・B案）: 戻る矢印を足したぶんカードを上に詰め、
+     矢印が無かったときと同じ位置に見えるようにする。
+     矢印の行が占める高さ＝上の余白（--space-2）＋ボタン（--size-icon-btn-lg）。
+     上余白（--coming-soon-margin-top: 80px）より大きくなっても負にならないよう
+     max() で 0 を下限にする。左右中央寄せ（auto）と下の余白は変えない。 */
+  .coming-soon {
+    margin-top: max(0px, calc(var(--coming-soon-margin-top) - var(--space-2) - var(--size-icon-btn-lg)));
+  }
 }
 
 /* 準備中ページ

@@ -1295,6 +1295,40 @@ test.describe("visual-language: 受信箱 第7便（テンプレートを「…�
     });
   });
 
+  test("スマホ: 準備中ページは戻る矢印のぶんだけカードを上に詰める（PO 決定・B案）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await installAuthBypass(page);
+    await page.goto("/templates");
+    await expect(page.locator(".coming-soon")).toBeVisible({ timeout: 10_000 });
+
+    // PO 決定（2026-10-14・B案）: 矢印を足したぶんカードを上に詰め、
+    // 矢印が無かったときと同じ位置に見えるようにする。
+    //   期待値 = --coming-soon-margin-top(80px) - --space-2(8px) - --size-icon-btn-lg(44px) = 28px
+    // 値はトークンから読んで計算し、テスト側に生の数値を書かない。
+    const measured = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement);
+      const num = (name: string) => parseFloat(root.getPropertyValue(name));
+      const card = document.querySelector(".coming-soon") as HTMLElement | null;
+      return {
+        marginTop: card ? parseFloat(getComputedStyle(card).marginTop) : null,
+        expected: num("--coming-soon-margin-top") - num("--space-2") - num("--size-icon-btn-lg"),
+        backRowVisible: !!document.querySelector(".coming-soon-back-row"),
+      };
+    });
+    await testInfo.attach("coming-soon-spacing", {
+      body: JSON.stringify(measured, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(measured.backRowVisible, "戻る矢印の行が無い").toBe(true);
+    expect(measured.marginTop, "カードの上余白が取れない").not.toBeNull();
+    expect(
+      Math.abs(measured.marginTop! - measured.expected),
+      "カードの上余白が矢印のぶんだけ詰まっていない",
+    ).toBeLessThanOrEqual(1);
+  });
+
   test("PC・タブレット: 準備中ページの戻る矢印は出さない（左のメニューで移動できるため）", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
