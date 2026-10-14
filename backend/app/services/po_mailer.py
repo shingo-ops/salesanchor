@@ -20,24 +20,15 @@
 from __future__ import annotations
 
 import logging
-import os
 import smtplib
 from dataclasses import dataclass
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from app.services.mail_config import smtp_settings
+
 logger = logging.getLogger(__name__)
-
-
-def _smtp_configured() -> bool:
-    """email_sender._smtp_configured() と同じ条件。"""
-    return all([
-        os.getenv("SMTP_HOST"),
-        os.getenv("SMTP_USER"),
-        os.getenv("SMTP_PASSWORD"),
-        os.getenv("MAIL_FROM"),
-    ])
 
 
 @dataclass
@@ -72,16 +63,21 @@ def send_po_email_sync(
         SendResult(success, error, skipped)
     """
     overrides = smtp_overrides or {}
-
-    def _g(key: str, default: str = "") -> str:
-        return overrides.get(key) or os.getenv(key.upper(), default)
-
-    if not (overrides or _smtp_configured()):
+    base = smtp_settings()
+    if not (overrides or base):
         logger.info(
             "[po_mailer] SMTP not configured, skipping send (to=%s, subject=%r)",
             to_addr, subject,
         )
         return SendResult(success=False, skipped=True)
+
+    def _g(key: str, default: str = "") -> str:
+        if overrides.get(key):
+            return overrides[key]
+        if base is None:
+            return default
+        return str({"smtp_host": base.host, "smtp_port": base.port, "smtp_user": base.user,
+                    "smtp_password": base.password, "mail_from": base.mail_from}[key])
 
     host = _g("smtp_host", "")
     port = int(_g("smtp_port", "587") or "587")
