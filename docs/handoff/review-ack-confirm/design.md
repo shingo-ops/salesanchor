@@ -83,8 +83,8 @@
 - 保存失敗 → 何も変えず warning を出し、もう一度押せる。
 - 戻し方: この PR を revert（frontend だけ。データの形は変わらない）。
 
-## 7. 外部事例
-- 該当なし。理由: 既存の金型（ConfirmModal）と社内の前例（SupplierDetailDrawer.tsx、TcgProductDetailDrawer.tsx）で足り、外部の数値を設計の根拠にしない。
+## 7. 外部・過去事例の参照と我々への応用
+- 該当事例なし（外部）。理由: 既存の金型 ConfirmModal で足り、外部の数値は判断を変えない。過去の自社事例として、ドロワーの上で ConfirmModal を出す前例（features/supplier-master/SupplierDetailDrawer.tsx:491-501、features/tcg-product-import/TcgProductDetailDrawer.tsx:242-250）を参照した。ただし前例は Esc でドロワーまで閉じる作りのままなので、本件では onClose を包んで防ぐ（§3.1）。
 
 ## 8. 維持の仕組み
 - 保存の入口が1か所（ReviewItemDrawer）であることと、ポップアップの動きを試験（§3.4）で守る。守り手: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`
