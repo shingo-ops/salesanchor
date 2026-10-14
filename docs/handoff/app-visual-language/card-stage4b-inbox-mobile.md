@@ -812,3 +812,82 @@ PO 決定は「戻す範囲は一番新しい受信メッセージ1通だけ（�
 1. **実機 Playwright 実行は未確認。** この端末では chromium が起動できないため、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない。長押しの実際の成立（CDP 経由の `page.mouse.down/up` で座標ベースの長押しを再現する方式）が CI（x86）で本当に動くかは初回実行で初めて分かる。
 2. **「顧客情報」を今便のメニューに入れていない。** PO 決定どおり別便（既読を付けずに開く改修）待ち。長押しメニューの項目数が増えたときに `ContextMenu` の `items` 配列を増やすだけで対応できる設計にしてある。
 3. **この設計カードの章番号は第1便（§15）・第2便（§16）の次に本節（§18）を置いている。** 本カード内に「第3便」の節が見当たらない（§9付近の表に候補として出てくる「行の密度変更」は別候補でまだ着手されていない）。章番号の欠落（§17 相当）については本便の作業指示で「## 18. として節を作る」と明示されていたため、その指示のとおり §18 とした。欠落が意図的か記録漏れかは本カードの執筆時点では分からないため、PO/設計担当に確認が必要。
+
+## 19. メニューを左側に出し、長押しの文字選択を止める便（2026-10-14・第5便）
+
+> この節は何か（専門用語なしの1行）: 第4便で新設した長押しメニューについて PO から2件の指摘（右側に出て押しづらい・長押しで文字が選択されてしまう）を受け、位置を左側に固定し、文字選択を止める指定を追加した作業記録。
+
+### 19-1. PO 依頼（2026-10-14）
+
+| # | 依頼 |
+|---|---|
+| 1 | メニューを左側に出してほしい（右側だと押しづらい） |
+| 2 | 長押しすると文字選択が出る不具合を直してほしい |
+
+### 19-2. 実機（SC-51G・1080x2340・3倍）で確認済みの事実
+
+| 事実 | 証拠 |
+|---|---|
+| 長押しでメニューは出る。項目は「未読にする」「対象外にする」「削除」の3つ | 実機の撮影（PO） |
+| 長押ししただけでは会話が開かない | 実機の撮影（PO） |
+| 「未読にする」は再読込後も未読のまま残る（＝サーバ保存が効いている） | PO が実機で確認 |
+| メニューが画面の右半分に出て押しづらい | 実機の撮影（PO）。指で押した x 座標をそのままメニューの左端にしていたため（`frontend/src/components/ContextMenu.tsx` の変更前の `clampPosition`） |
+| 長押しすると OS の文字選択が働き、メニューの文字が青く選択され選択ハンドルが出る | 実機の撮影（PO）。指のときだけ起きるため CI（マウス操作）では出ない |
+
+### 19-3. CI では検出できなかったことの教訓
+
+19-2 の文字選択の不具合は、指での長押し（タッチ入力）に対する OS 側の文字選択機能が作動して起きている。`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の長押し再現（`longPressRow`）は `page.mouse.down()` / `.up()` によるマウス入力を使っており、OS の文字選択はマウスのドラッグでは発生しない操作系であるため、この不具合は**そもそも CI の対象になっていなかった**（検査が緩かったのではなく、検査の原理上この入力方式では再現し得ない）。したがって本便で CI に追加した `user-select: none` の確認（19-5 の #3）は「指定が CSS として効いていること」の証明にしかならず、「実機で選択が実際に止まること」の証明にはならない。実機確認は PO が行う。
+
+### 19-4. 左端の余白をトークンからどう取ったか（実装方法）
+
+`frontend/src/components/ContextMenu.tsx` に `align?: "point" | "left"`（既定 `"point"`）を追加した（`frontend/src/components/ContextMenu.tsx:59`）。`"point"` は従来どおり指で押した x 座標がそのまま左端になる（既存の見た目は不変）。
+
+`"left"` のときは次の `getLeftAlignMargin()`（`frontend/src/components/ContextMenu.tsx:66`）で `--space-3` トークンの値を読み、画面左端からの余白として使う。
+
+```ts
+const DEFAULT_LEFT_ALIGN_MARGIN = 12; // px — --space-3（tokens.css）と同じ値
+
+function getLeftAlignMargin(): number {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return DEFAULT_LEFT_ALIGN_MARGIN;
+  }
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--space-3").trim();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_LEFT_ALIGN_MARGIN;
+}
+```
+
+`--space-3` は `frontend/src/tokens.css:71` で `12px` と定義されており、検索欄の左右の余白（`frontend/src/pages/inbox/InboxPage.css:11` の `padding-left: var(--space-3)`）と同じ値である。CSS 変数は JS から直値で書けないため `getComputedStyle` で実際の値を読む方式にし、読めない場合（テスト環境など）に備えて `DEFAULT_LEFT_ALIGN_MARGIN`（12px・`--space-3` と同じ値）を安全な既定値として用意した。縦位置（`top`）の決め方は `align` に関わらず変えていない（`clampPosition` の `top` 計算はそのまま）。
+
+呼び出し側は `frontend/src/pages/inbox/InboxConversationListMobile.tsx` の `<ContextMenu>` に `align="left"` を渡すだけ（他の画面で `align="point"`（既定）のまま使えば見た目は変わらない）。見本として `frontend/src/components/ContextMenu.stories.tsx` に `AlignLeft` ストーリーを追加した。
+
+### 19-5. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | `ContextMenu` に `align?: "point" \| "left"`（既定 `"point"`）を追加し、既存の使い方（`align` を渡さない呼び出し）の見た目が変わらない | コードレビュー（`clampPosition` は `align !== "left"` のときのみ従来の右端クランプを行う分岐に変更。`align` 未指定時のデフォルトは `"point"`） | 分岐を確認済み。既存呼び出し側（本便で `align="left"` を渡した1箇所以外）は無い |
+| 2 | 左端の余白は生の数値ではなく `--space-3` トークンから取る | コードレビュー（`getLeftAlignMargin()` が `getComputedStyle` で `--space-3` を読む。読めない場合のみ同値のフォールバック `12` を使用） | 実装済み（19-4 参照） |
+| 3 | メニューの左端が画面の左から 12px（±1）であること | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の `受信箱 第5便` 内「メニューの左端が画面左から --space-3 の余白に出る」テスト。固定値ではなく `getComputedStyle` で実際の `--space-3` の値を読んで比較 | この端末では Playwright chromium が起動できず実行不可。`npx playwright test --list` で収集成功を確認（19-7 参照） |
+| 4 | メニューが画面内に収まっていること（左端0以上・右端がビューポート幅以下・下端が高さ以下） | 同テスト内で継続確認（従来の確認を引き続き実施） | 同上（収集成功のみ確認） |
+| 5 | 縦位置は従来どおり押した行の近くに出ること | 同テスト内で `overlapsOrAdjacent` により確認（第4便の既存ヘルパーを再利用） | 同上 |
+| 6 | 行（`.conv-item` / `.conversation-item`）とメニュー（`.comp-context-menu`）に `user-select: none` ・ `-webkit-user-select: none` ・ `-webkit-touch-callout: none` を指定する | `frontend/src/pages/inbox/InboxPage.css`（`@media (max-width: 767px)` 内の `.conv-item` ブロック）と `frontend/src/components/ContextMenu.css`（`.comp-context-menu`）にそれぞれ追加 | 実装済み。PC（`@media` の外）には追加していないため PC では文字を選べるまま |
+| 7 | 行の指定はスマホ専用 `@media` の内側だけであること（PC は文字選択を保つ） | コードレビュー（`frontend/src/pages/inbox/InboxPage.css` の追加箇所が `@media (max-width: 767px) { .conv-item { ... } }` の内側にあること） | 確認済み（PC 用の `.conv-item` 基底ルールには追加していない） |
+| 8 | stylelint が `-webkit-` 接頭辞を弾かないこと | `cd frontend && npx stylelint "src/components/ContextMenu.css" "src/pages/inbox/InboxPage.css"` | 警告・エラーなしで完了（既存コードでも `-webkit-font-smoothing` 等を多数使用しており、`frontend/.stylelintrc.json` に vendor-prefix 禁止ルールは無い） |
+| 9 | 行とメニューの `user-select` が `none` であることを機械で確認する | 上記テスト内「行とメニューに user-select: none が指定されている」で `getComputedStyle(el).userSelect` を確認 | この端末では実行不可。`npx playwright test --list` で収集成功を確認のみ |
+| 10 | 生の色コード・生の px を書いていないこと | `cd frontend && node scripts/check-css-hardcoded-colors.js` / `node scripts/check-css-hardcoded-values.js` | 両方 PASS（違反なし） |
+| 11 | 第4便の既存6テストが緑のままであること | 同ファイル内の既存 `受信箱 第4便` describe は変更していない（新規テストは別の describe として追加） | コードレビューで確認（既存テストのアサーションは不変）。実行は上記と同じ理由で不可 |
+| 12 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | 25項目すべて `exited with code 0`（lint は既存warningのみ・error 0件・本変更由来の新規違反なし） |
+| 13 | 型が通る | `cd frontend && npx tsc --noEmit` | エラー0件 |
+| 14 | 単体テストが壊れていない | `cd frontend && npm run test:unit` | 1072件中1061件成功・11件失敗（9ファイル）。失敗ファイルはいずれも受信箱・ContextMenu と無関係（`OrderLeadButtonMigration.test.tsx` 等）。個別再実行では9ファイル全126件成功を確認し、フルスイート実行時の負荷由来のタイムアウトと判断。`src/pages/inbox/` 配下は単独実行で全27件成功 |
+| 15 | デザイントークンの増加なし（ratchet） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（本便の2コミット後に実行） | `PASS: 対象5ファイル・増加なし` |
+| 16 | UI ガバナンス（生UI部品の新規ハードコードなし） | `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（本便の2コミット後に実行） | `✅ UI governance: 新規ハードコードなし`（対象ファイル数1） |
+
+### 19-6. 第4便の既存検査の扱い（判断）
+
+PO からの依頼には「既存の『押した行の近くに出る』検査が右側前提になっていたら、左側に出る前提へ直す」とあった。既存テスト（第4便「行を長押しするとメニューが出て…」内の「4. メニューが押した行の近くに出て、画面からはみ出していない」）を確認したところ、`overlapsOrAdjacent()` は行の矩形とメニューの矩形の X 方向の重なりと Y 方向の近さだけを見る作りで、行（`.conv-item`）は `width: 100%` でスマホ幅いっぱいに広がる（`frontend/src/pages/inbox/InboxPage.css:264` の `.conv-item { width: 100%; }`）。そのため、メニューの左端が画面のどこにあっても（右寄りでも左寄りでも）行の矩形と X 方向で重なり、この既存アサーションは**右側前提ではなかった**と判断し、変更しなかった。新たに追加した「メニューの左端が --space-3 の余白である」確認（19-5 #3）と合わせて、横位置を明示的に検査する体制にした。
+
+### 19-7. 残るリスク
+
+1. **本便で追加・修正した検査（左端位置・user-select）は、この端末では実行確認できていない。** `npx playwright test --list` による収集成功までしか確認できておらず、実機 Playwright（CI・x86）での初回実行結果は未確認（第4便から持ち越しのリスクと同じ）。
+2. **`user-select: none` が実機で文字選択を実際に止めるかは未確認。** 19-3 のとおり、この不具合自体がマウス操作の CI では再現しないため、CI が緑になっても実機での解決を保証しない。実機確認は PO が行う。
+3. **align="left" は本便で ContextMenu を使う唯一の呼び出し（受信箱・スマホ）にのみ渡した。** 他にこの金型を使う画面が増えたとき、右側に出したい場合は `align="point"`（既定）、左側に出したい場合は `align="left"` を選べるが、画面の中央寄りに出したいなど他の置き方が要る場合は別途 `align` の値を増やす設計判断が必要になる（本便では発生していない）。
