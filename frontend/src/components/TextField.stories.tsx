@@ -120,6 +120,11 @@ export const ControlVariants: Story = {
   ),
 }
 
+export const ControlInvalid: Story = {
+  name: 'TextFieldControl invalid',
+  render: () => <TextFieldControl invalid placeholder="Invalid input" aria-label="Invalid input" />,
+}
+
 export const ControlLogin: Story = {
   name: 'TextFieldControl login variant',
   render: () => <TextFieldControl variant="login" type="email" placeholder="Login email" aria-label="Login email" />,

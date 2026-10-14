@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
+import { TextFieldControl } from "../../components/TextField";
 import type { DistributionTarget, DistributionTargetCreate, DistributionTargetUpdate } from "./distributionApi";
 import { createTarget, updateTarget, verifySpreadsheetAccess } from "./distributionApi";
 
@@ -179,9 +180,9 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
               {t("distributionTarget.form.name")}
               <span style={{ color: "var(--color-error)", marginLeft: "2px" }}>*</span>
             </label>
-            <input
+            <TextFieldControl
               id="dist-name"
-              className={`dist-input${errors.name ? " dist-input--error" : ""}`}
+              invalid={Boolean(errors.name)}
               type="text"
               value={values.name}
               onChange={(e) => set("name", e.target.value)}
@@ -196,9 +197,9 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
               {t("distributionTarget.form.spreadsheetId")}
               <span style={{ color: "var(--color-error)", marginLeft: "2px" }}>*</span>
             </label>
-            <input
+            <TextFieldControl
               id="dist-spreadsheet-id"
-              className={`dist-input${errors.spreadsheet_id ? " dist-input--error" : ""}`}
+              invalid={Boolean(errors.spreadsheet_id)}
               type="text"
               value={values.spreadsheet_id}
               onChange={(e) => set("spreadsheet_id", e.target.value)}
@@ -220,9 +221,9 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
               {t("distributionTarget.form.sheetName")}
               <span style={{ color: "var(--color-error)", marginLeft: "2px" }}>*</span>
             </label>
-            <input
+            <TextFieldControl
               id="dist-sheet-name"
-              className={`dist-input${errors.sheet_name ? " dist-input--error" : ""}`}
+              invalid={Boolean(errors.sheet_name)}
               type="text"
               value={values.sheet_name}
               onChange={(e) => set("sheet_name", e.target.value)}
