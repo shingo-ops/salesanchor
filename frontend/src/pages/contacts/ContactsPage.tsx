@@ -284,7 +284,7 @@ export default function ContactsPage() {
               placeholder={t("contacts.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="search-input field-h-md field-w-sm"
+              className="field-w-sm"
             />
           </>
         }
