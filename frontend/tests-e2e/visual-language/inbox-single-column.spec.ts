@@ -18,13 +18,55 @@
 
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
+import { installAuthBypass } from "../utils/auth";
+import { mockApi } from "../utils/api-mock";
 import {
   MIN_TOUCH_TARGET_PX,
   MOBILE_MAX_PX,
   SAMPLE_CONVERSATION_NAME,
+  baseMocks,
   openConversation,
   openInboxList,
 } from "./inbox-helpers";
+
+/**
+ * 長押しの再現方法（受信箱 第4便）:
+ * `useLongPress`（src/hooks/useLongPress.ts）は pointerType で絞り込まない作りに
+ * したため、実際の（トラステッドな）マウス入力でも成立する。
+ * Playwright の `page.mouse.down()` / `.up()` は CDP 経由の本物の入力で、
+ * Chromium はこれに対し pointerdown → mousedown の順で本物のイベントを発火し、
+ * 押しっぱなしのまま LONG_PRESS_MS（500ms）待つとハンドラ内の setTimeout が発火する。
+ * `locator.dispatchEvent("pointerdown", ...)` も試したが、合成イベントだけでは
+ * ブラウザが後続の click を合成してくれないため「長押し成立後の click 無効化」を
+ * 検査できない。本物の入力（page.mouse）のほうが「押しただけで開かない」
+ * 「普通のタップでは開く」の両方を同じ経路で検査できるため、これを採用した。
+ */
+const LONG_PRESS_WAIT_MS = 650; // LONG_PRESS_MS(500) + 余裕
+
+async function longPressRow(page: Page, row: Locator): Promise<{ x: number; y: number }> {
+  const box = await row.boundingBox();
+  if (!box) throw new Error("行の矩形が取れない");
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.waitForTimeout(LONG_PRESS_WAIT_MS);
+  return { x, y };
+}
+
+interface Rect { x: number; y: number; width: number; height: number }
+
+/** メニューの矩形が行の矩形と重なる、または上下に隣接しているか */
+function overlapsOrAdjacent(menu: Rect, row: Rect): boolean {
+  const overlapsX = menu.x < row.x + row.width && row.x < menu.x + menu.width;
+  const overlapsY = menu.y < row.y + row.height && row.y < menu.y + menu.height;
+  if (overlapsX && overlapsY) return true;
+  const adjacentGap = 16; // px — 隣接とみなす最大の隙間
+  const verticallyAdjacent =
+    Math.abs(menu.y - (row.y + row.height)) <= adjacentGap ||
+    Math.abs(row.y - (menu.y + menu.height)) <= adjacentGap;
+  return overlapsX && verticallyAdjacent;
+}
 
 /** project の viewport 幅。実行前に分かる値なので test.skip の条件に使える */
 function projectWidth(testInfo: TestInfo): number {
@@ -584,5 +626,138 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     // PC・タブレットでは帯が常時出て、シートは開かない
     await expect(page.locator(".inbox-full-tab-bar")).toBeVisible();
     await expect(page.locator('[data-testid="sheet-panel"].comp-sheet-panel--open')).toHaveCount(0);
+  });
+});
+
+test.describe("visual-language: 受信箱 第4便（一覧の行を長押しするとメニューを出す）", () => {
+  const row = (page: Page): Locator =>
+    page.locator("button.conversation-item", { hasText: SAMPLE_CONVERSATION_NAME });
+  const menu = (page: Page): Locator => page.locator(".comp-context-menu");
+  const menuItems = (page: Page): Locator => menu(page).locator('[role="menuitem"]');
+
+  test("スマホ: 行を長押しするとメニューが出て、項目は3つ・文言と押す場所が仕様どおり", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    const theRow = row(page);
+    const rowBoxBefore = await theRow.boundingBox();
+    expect(rowBoxBefore, "行の矩形が取れない").not.toBeNull();
+
+    await longPressRow(page, theRow);
+    await expect(menu(page)).toBeVisible();
+
+    // 2. 項目が3つで、文言が「未読にする」「対象外にする」「削除」であること
+    const items = menuItems(page);
+    await expect(items).toHaveCount(3);
+    const labels = await items.allTextContents();
+    expect(labels).toEqual(["未読にする", "対象外にする", "削除"]);
+
+    // 3. 各項目の押す場所が44px以上
+    const itemBoxes = await Promise.all(
+      (await items.all()).map((it) => it.boundingBox()),
+    );
+    for (const box of itemBoxes) {
+      expect(box, "メニュー項目の矩形が取れない").not.toBeNull();
+      expect(box!.height, "メニュー項目の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    }
+
+    // 4. メニューが押した行の近くに出て、画面からはみ出していない
+    const menuBox = await menu(page).boundingBox();
+    expect(menuBox, "メニューの矩形が取れない").not.toBeNull();
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport のサイズが取れない").not.toBeNull();
+    expect(overlapsOrAdjacent(menuBox!, rowBoxBefore!), "メニューが行の近くに出ていない").toBe(true);
+    expect(menuBox!.x, "メニューの左端").toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width, "メニューの右端").toBeLessThanOrEqual(viewport!.width);
+    expect(menuBox!.y + menuBox!.height, "メニューの下端").toBeLessThanOrEqual(viewport!.height);
+
+    await testInfo.attach("row-context-menu", {
+      body: JSON.stringify({ row: rowBoxBefore, menu: menuBox, items: itemBoxes, labels }, null, 2),
+      contentType: "application/json",
+    });
+
+    // 長押し中に mouse.down() のままだったので、ここで離す（後続テストへの影響防止）
+    await page.mouse.up();
+  });
+
+  test("スマホ: 長押ししただけでは会話が開かない（一覧のまま）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await longPressRow(page, row(page));
+    await expect(menu(page)).toBeVisible();
+    await page.mouse.up();
+
+    // 長押し成立後に続く click は無効化される（useLongPress.ts）→ 会話は開かない
+    await expect(page.locator(".inbox-textarea")).toHaveCount(0);
+    await expect(page.locator(".inbox-left-panel")).toBeVisible();
+  });
+
+  test("スマホ: 普通のタップでは今までどおり会話が開く（退行していない）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page); // 内部で row.click() → .inbox-textarea が出るまで待つ
+    await expect(page.locator(".inbox-textarea")).toBeVisible();
+  });
+
+  test("スマホ: 外側を押すとメニューが閉じる", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await longPressRow(page, row(page));
+    await expect(menu(page)).toBeVisible();
+    await page.mouse.up();
+
+    // ヘッダーのタイトル（メニュー・行のどちらでもない場所）を押す
+    await page.locator(".inbox-mobile-header-title").click({ force: true });
+    await expect(menu(page)).toHaveCount(0);
+  });
+
+  test("スマホ: 選択モードでは長押しでメニューが出ない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await page.locator(".inbox-manage-btn").click();
+    await expect(page.locator(".inbox-bulk-bar")).toBeVisible();
+
+    await longPressRow(page, row(page));
+    await page.mouse.up();
+    await expect(menu(page)).toHaveCount(0);
+  });
+
+  test("スマホ: 「未読にする」を押すと mark-unread が呼ばれ、対象 lead id が渡る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    const calls: number[] = [];
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...baseMocks(),
+      "POST /leads/5001/messages/mark-unread": async (route) => {
+        calls.push(5001);
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ unmarked_count: 1 }),
+        });
+      },
+    });
+    await page.goto("/lead-chat");
+    await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+    await expect(row(page)).toBeVisible({ timeout: 10_000 });
+
+    await longPressRow(page, row(page));
+    await expect(menu(page)).toBeVisible();
+    await page.mouse.up();
+
+    await menuItems(page).filter({ hasText: "未読にする" }).click();
+    await expect(menu(page)).toHaveCount(0);
+    await expect.poll(() => calls.length, { message: "mark-unread が呼ばれていない" }).toBe(1);
+
+    await testInfo.attach("mark-unread-calls", {
+      body: JSON.stringify(calls, null, 2),
+      contentType: "application/json",
+    });
+    expect(calls).toEqual([5001]);
   });
 });

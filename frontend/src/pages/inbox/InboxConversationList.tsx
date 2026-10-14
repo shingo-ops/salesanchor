@@ -37,6 +37,10 @@ export interface InboxConversationListProps extends InboxConversationRowsProps {
   handleBulkMarkUnread: () => void;
   handleBulkExclude: () => void;
   handleBulkDelete: () => void;
+  // 受信箱 第4便: 行の長押しメニュー（スマホのみ使用。PC は無変更のため受け取るだけ）
+  handleMarkUnread: (targetLeadId?: number) => Promise<void>;
+  handleExclude: (targetLeadId?: number) => Promise<void>;
+  handleDeleteLead: (targetLeadId?: number) => Promise<void>;
 }
 
 export function InboxConversationList({

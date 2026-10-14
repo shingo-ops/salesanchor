@@ -32,6 +32,7 @@ export function baseMocks() {
     "GET /conversations": conversationsFixture,
     "GET /leads/5001/messages": messagesFixture,
     "POST /leads/5001/messages/mark-read": { marked_count: 1 },
+    "POST /leads/5001/messages/mark-unread": { unmarked_count: 1 },
     "GET /leads/5001": {
       id: 5001,
       customer_name: SAMPLE_CONVERSATION_NAME,
