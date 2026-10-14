@@ -1,15 +1,19 @@
 # 許可保守の週次ルーチン（agent-console の定期実行用の指示書）
 
-この文書は何か（専門用語なしの1行）: PO が自作アプリ agent-console の定期実行に登録する、AI が毎週1回許可を保守するときの手順書。月〜金の朝9時に毎日起動し、その週の分が済んでいれば何もせず終える。
+この文書は何か（専門用語なしの1行）: 自作アプリ agent-console の定期実行に登録されている、AI が毎週1回許可を保守するときの手順書。月〜金の朝9時に毎日起動し、その週の分が済んでいれば何もせず終える。
 設計: [../self-maintenance-design.md](../self-maintenance-design.md)（§5-2〜§5-6 が正）／台帳: [../permission-ledger.md](../permission-ledger.md)／ADR-1011／実行基盤の変更記録: [../../permission-routine-on-agent-console/design.md](../../permission-routine-on-agent-console/design.md)
 
-## 登録手順（PO）
+## 登録手順
+
+登録者は Opus（opus-designer の役割）。`node "<dataDir>/bin/ac-routine.mjs" add|update|enable|disable|list` で登録・変更する（reason 必須。監査は dataDir/routine-audit.jsonl に残る。サブエージェントからは guard hook で拒否される）。アプリ画面の「定期実行」からの登録も可。
+
+登録済み: 2026-10-14 に Opus が ac-routine で登録した（id は 5d459653。opus-designer・本店・月〜金・09:00・指示文は下の「指示文」節）。
 
 前提:
-- agent-console v0.18.0 以上が導入済みであること（2026-10-14 時点の導入済みは 0.17.0。v0.19.0 への更新は手空き待ち。0.17.0 は旧仕様で、毎回新しいセッションを開く動作にならない）。
-- agent-console リポジトリの docs/handoff/routines-new-session/design.md の K15（導入後の実機確認: 2〜3分後の時刻で1件登録し、新しいセッションが開き、確認画面ではなく入力欄に指示が入り、履歴が「送信済み」になること）が合格済みであること。
+- agent-console v0.25.0 以上が導入済みであること（2026-10-14 時点で v0.25.0・a2350c9 が導入済み）。
+- agent-console リポジトリの docs/handoff/routines-new-session/design.md の K15（導入後の実機確認: 新しいセッションが開き、確認画面ではなく入力欄に指示が入り、履歴が「送信済み」になること）は合格済み（2026-10-14 18:45。AI 登録の定期実行で新しいセッションが開き、入力欄に指示が入って返答した）。
 
-登録内容（アプリ画面の「定期実行」から登録する。HTTP API は認証方式が未確認のため、この文書では使わない）:
+登録内容（ac-routine または画面から登録する。AI 用の受け口 /api/agent/routines は ac-routine 経由で使う）:
 
 | 項目 | 値 |
 |---|---|
@@ -20,7 +24,7 @@
 | 時刻 | 09:00（Asia/Tokyo 固定） |
 | 指示文 | 下の「指示文」を貼る（8192字以内・制御文字なし。改行は可） |
 
-止めるとき: チャットで「許可保守停止」と言う、または定期実行を無効にする。
+止めるとき: チャットで「許可保守停止」と言う、定期実行を画面から無効にする、または `ac-routine disable <id>`（reason 必須）で止める。
 
 制約（登録前に PO が知っておくこと）:
 - 追い付きなし: agent-console は取りこぼした回を追いかけない。金曜 9:00 までに一度も起動できなかった週（Mac がスリープ、アプリが停止など）は、その週の保守は行われない。
@@ -28,8 +32,8 @@
 - 権限モードは auto 固定（役割 opus-designer の起動コマンド ccopusgo 経由）。作成画面で権限モードを選ぶことはできず、Claude Desktop の always allow に当たる機能もない。~/.claude/settings.json の allow は効く。
 - アプリの履歴の「送信済み」は、指示を送れたという意味だけである。保守の成否は、報告書（permission-reports/）と PR で確かめる。
 
-未確認（初回の試行で確かめ、確かめたら本欄を更新する）:
-- 起動直後の確認画面（フォルダの信頼など）に指示が入ってしまわないか（K15 で確認）。
+確認状況（未確認の項目は初回の試行で確かめ、確かめたら本欄を更新する）:
+- 起動直後の確認画面（フォルダの信頼など）に指示が入ってしまわないか: K15 で確認済み（入力欄に入った）。
 - auto モードの opus-designer で、§5-2 の SM- 例外の文が効くか。
 - opus-designer から、Sonnet と Fable を model 指定で呼べるか。
 
