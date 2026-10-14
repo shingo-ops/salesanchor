@@ -4,7 +4,7 @@
 
 ## 変更
 - frontend/src/pages/inventory/InventoryPage.tsx に buildFilterPayload を追加（PATCH 本体と同じ規則）
-- lastSavedRef を追加。GET 成功時に f から作った文字列を入れ、保存 effect で同じなら PATCH しない。PATCH 成功時に更新、失敗時は更新しない
+- lastSavedRef を追加。GET 成功時に f から作った文字列を入れ、保存 effect で同じなら PATCH しない。PATCH 送信の直前に更新（応答待ち中に元へ戻されても送るため）。失敗時は、記録が同じ内容のままなら null に戻して次の変更で必ず再送
 - GET 失敗時は lastSavedRef が null のまま＝従来どおり既定値を1回保存
 
 ## 触らない範囲

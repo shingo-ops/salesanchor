@@ -335,10 +335,14 @@ export default function InventoryPage() {
     const serialized = JSON.stringify(payload);
     if (serialized === lastSavedRef.current) return;
     const timer = setTimeout(() => {
+      // 送信の直前に記録する（応答待ち中に元の値へ戻されても、戻した内容を必ず送るため）
+      lastSavedRef.current = serialized;
       void api
         .patch("/me/inventory-filters", payload)
-        .then(() => { lastSavedRef.current = serialized; })
-        .catch(() => { /* 保存失敗は致命でない（lastSaved は更新しない＝次の変更で再送） */ });
+        .catch(() => {
+          // 保存失敗は致命でない。記録を消し、次の変更で必ず再送する
+          if (lastSavedRef.current === serialized) lastSavedRef.current = null;
+        });
     }, 250);
     return () => clearTimeout(timer);
   }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, mergeSamePost]);

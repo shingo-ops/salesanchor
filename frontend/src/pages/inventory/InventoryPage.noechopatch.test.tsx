@@ -72,4 +72,21 @@ describe('InventoryPage does not echo loaded filters back via PATCH', () => {
     expect(mock.patch).toHaveBeenCalledTimes(1);
     expect(bodies()[0].merge_same_post).toBe(true);
   });
+
+  it('reverting while the first PATCH is still pending sends the reverted value', async () => {
+    setupGet(() => Promise.resolve({ enabled: true, merge_same_post: true, hidden_supplier_ids: [], hidden_categories: [], hidden_columns: [] }));
+    let release!: () => void;
+    mock.patch.mockImplementationOnce(() => new Promise((res) => { release = () => res({}); }));
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    fireEvent.click(screen.getByTestId('inventory-settings-open'));
+    const toggle = await screen.findByTestId('inventory-merge-toggle');
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mock.patch).toHaveBeenCalledTimes(1));
+    expect(bodies()[0].merge_same_post).toBe(false);
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mock.patch).toHaveBeenCalledTimes(2));
+    expect(bodies()[1].merge_same_post).toBe(true);
+    release();
+  });
 });
