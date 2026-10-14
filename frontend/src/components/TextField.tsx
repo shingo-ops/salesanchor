@@ -10,6 +10,7 @@
  *
  * TextFieldControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AY）。
  * variant: 用途別の種類（design.md §AY-2a）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。
+ * invalid: エラー外観（class comp-field__input--invalid）だけを付ける。aria-invalid は自動付与せず、呼び出し側の明示属性を通す（design.md §AY-2x）。
  */
 
 import { forwardRef, useId } from "react";
@@ -32,18 +33,19 @@ export type TextFieldProps = TextFieldOwnProps &
 /** 用途別の種類（design.md §AY-2a）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
 export type TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer" | "login";
 
-export type TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> &
+export type TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & { invalid?: boolean } &
   (
     | { variant?: "standard"; size?: TextFieldSize }
     | { variant: Exclude<TextFieldVariant, "standard">; size?: never }
   );
 
 export const TextFieldControl = forwardRef<HTMLInputElement, TextFieldControlProps>(
-  function TextFieldControl({ size = "md", variant = "standard", className, id, ...rest }, ref) {
+  function TextFieldControl({ size = "md", variant = "standard", invalid = false, className, id, ...rest }, ref) {
     const controlClass = [
       "comp-field__input",
       size !== "md" ? `comp-field__input--${size}` : "",
       variant !== "standard" ? `comp-input--${variant}` : "",
+      invalid ? "comp-field__input--invalid" : "",
       className ?? "",
     ]
       .filter(Boolean)
