@@ -67,6 +67,14 @@ def has_word_boundary(folded_text: str, value: str) -> bool:
     return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", folded_text) is not None
 
 
+def has_left_word_boundary(folded_text: str, value: str) -> bool:
+    """fold_for_match 済みの文字列の中に、直前が英字・数字でない（または先頭の）value の出現が1つでもあるか。右側は条件にしない。"""
+    needle = fold_for_match(value).strip()
+    if not needle:
+        return False
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle), folded_text) is not None
+
+
 def block_text(raw_text: str, line_start: int, line_end: int) -> str:
     """行番号（1始まり・両端含む）で raw_text の一部を切り出す。範囲外は空文字。
 
@@ -252,8 +260,11 @@ def _excluded_keywords(
                     excluded.append(keyword)
                 continue
         normalized = _normalize_value(keyword)
-        if normalized and normalized in nb:
-            excluded.append(keyword)
+        if not normalized or normalized not in nb:
+            continue
+        if folded is not None and _needs_boundary(normalized) and not has_left_word_boundary(folded, keyword):
+            continue
+        excluded.append(keyword)
     return tuple(excluded)
 
 
