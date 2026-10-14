@@ -1452,7 +1452,8 @@
   "inventory": {
     "view": {
       "subtitle": "Shows suppliers' current offers.",
-      "searchPlaceholder": "Search by TCG series, mark, title, or supplier"
+      "searchPlaceholder": "Search by TCG series, mark, title, or supplier",
+      "freshOnly": "Last {{hours}} h"
     },
     "expiryWarning": "Showing offers within {{hours}} hours of the LINE post.",
     "filter": {

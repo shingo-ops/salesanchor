@@ -1452,7 +1452,8 @@
   "inventory": {
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
-      "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索"
+      "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
+      "freshOnly": "{{hours}}時間以内"
     },
     "expiryWarning": "LINE の投稿から {{hours}} 時間以内のオファーを表示しています。",
     "filter": {

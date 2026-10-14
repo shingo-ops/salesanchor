@@ -32,6 +32,50 @@ def test_merge_on_sql_uses_cr_columns_and_ship_in_key() -> None:
     assert "ar.ship_ja" in sql.split("dist_groups")[0]  # 鍵（gkey）に ship_ja が入る
 
 
+def test_sold_out_filter_is_shared_by_dist_base_and_preview_count() -> None:
+    import inspect
+
+    cond = svc._sold_out_filter()
+    assert cond == "lower(btrim(COALESCE(ar.status, ''))) NOT IN ('sold out', 'soldout')"
+    assert "ar." in svc._sold_out_filter.__doc__  # ar. 別名が前提であることを docstring に書く
+    for merge in (False, True):
+        assert cond in svc.distribution_rows_sql(**_COND, merge_same_post=merge)
+    assert "_sold_out_filter(" in inspect.getsource(svc.fetch_preview_data)
+
+
+def test_fresh_window_is_24_hours_and_fresh_filter_is_bound() -> None:
+    from app.routers.inventory_offers import _build_view_filters
+
+    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    assert svc.FRESH_WINDOW_HOURS == 24
+    assert _build_view_filters(**none) == ([], {})  # 既定は False: 既存の呼び出しは変わらない
+    conds, params = _build_view_filters(**none, fresh_only=True)
+    assert conds == ["d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)"]
+    assert params == {"fresh_hours": 24}
+
+
+def test_view_sql_order_by_is_english_title_first() -> None:
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql
+
+    head, final = svc.distribution_rows_parts(**_COND, merge_same_post=False)
+    kw = {"head": head, "final_main": final, "merge": False, "where": ""}
+    other = _build_inventory_view_sql(**kw, sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC")
+    assert other.count("ORDER BY d.english_title ASC, NULLIF(d.release_date, '') DESC NULLS LAST, d.sort_ord ASC") == 2
+    name = _build_inventory_view_sql(**kw, sort_col=_SORT_COLUMNS["name"], order_dir="DESC")
+    assert name.count("ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC") == 2
+
+
+def test_inventory_endpoint_defaults_merge_off_and_fresh_off() -> None:
+    import inspect
+
+    from app.routers import inventory_offers as io
+
+    params = inspect.signature(io.list_inventory_view).parameters
+    assert params["merge_same_post"].default.default is False
+    assert params["fresh_only"].default.default is False
+
+
 def test_round_half_up_matches_sql_round() -> None:
     from app.routers.inventory_offers import round_half_up
 
@@ -119,6 +163,7 @@ async def test_inventory_view_allowed_with_products_view_and_empty_when_window_u
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["items"] == [] and body["total"] == 0 and body["window_hours"] is None
+    assert body["fresh_window_hours"] == 24
 
 
 @pytest.mark.asyncio
@@ -136,18 +181,19 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 
 
 # --- 在庫表を1文にする便: distribution_rows_sql の文字列が変更前と1文字も違わないこと ---------------------------
-# 期待値は review-excluded-ack 便（cr_review_ack LATERAL 追加）で再生成した。元は変更前（origin/main 4803be067）の distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の
-# 長さと SHA-256。旧実装をテスト内で再現せず、変更前版から生成した値を固定する。
+# 期待値は distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の長さと SHA-256。
+# 便1（2026-10-14）で Sold out の条件（_sold_out_filter）を足した版に更新した。
+# review-excluded-ack 便で cr_review_ack LATERAL（excluded の確認済み除外）を足して再生成した。差は4点のみ（distribution_sql_after_merge.diff）。
 _GOLDEN = {
-    (False, False): (23948, "6417168e8a472e2e73019f7e2833751b9228cefd0b73eaf4583e51fd501f11b0"),
-    (False, True): (24929, "4c8990fabcf386a946a742187d0d2e9a8ae028816707a8e5a2dad2987f2b07e6"),
-    (True, False): (23982, "c7ce4b593c93ea7e7474813f8fed45596fa1ee47b608edff32688a992c54aabd"),
-    (True, True): (24963, "2343c3a08c754c560c771fa9bd2c5ecdd22b3b4f1b93451d9def7add691abbad"),
+    (False, False): (24031, "c1795ec91258070218b9e341efd1d3ff46873f39cbf431ccad49ee843fcad959"),
+    (False, True): (25012, "c0845631ddbaf05725eb0b07761977b0be5036904fa0283991914d5d86bf81e7"),
+    (True, False): (24065, "eaeff38a48aef1a8ff82b01426c9efbdcc97fd1d199b982b153919728895c97f"),
+    (True, True): (25046, "c56f6b476d05d8a56651c7f99d9011434ffe6cb0a2c3354df72810dc26eb1ebe"),
 }
 
 
 @pytest.mark.parametrize(("flag_single", "merge"), list(_GOLDEN))
-def test_distribution_rows_sql_is_byte_identical_to_before(flag_single: bool, merge: bool) -> None:
+def test_distribution_rows_sql_is_pinned(flag_single: bool, merge: bool) -> None:
     import hashlib
 
     kwargs = {"include_flag_single": flag_single, "age_condition": " AND x = :y", "merge_same_post": merge}
