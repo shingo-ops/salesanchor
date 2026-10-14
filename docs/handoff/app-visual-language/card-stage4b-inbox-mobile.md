@@ -1036,3 +1036,75 @@ mock は `frontend/tests-e2e/visual-language/inbox-helpers.ts` に新設した `
 1. **実機確認は未実施。** この端末では chromium が起動できないため収集確認まで。360dp 実機での最終確認は PO が行う（コーディネーターからの回答どおり）。
 2. **2段表示時の `--space-2px`（2px）という行間は実測値から逆算した見積もりであり、実機のピクセル比較はしていない。** CI の数値検査（56px±1・重なりなし）は満たす設計だが、見た目の好ましさ（行間の詰まり具合等）は実機で最終確認が必要。
 3. **push と Draft PR 起票（PR 4263）、および既存検査の追従修正コミット（`dcfc1ce42`）は、設計・レビュー担当（メインセッション）が行ったものである。** 実装担当は依頼どおり push・PR 作成を行っていない。自動化や外部からの介入ではない。追従修正の中身は、第6便でスマホの会話ヘッダーを作り直したことにより、既存検査「スマホ: 主要な操作ボタンが44px以上」が参照していた旧ボタン（`.karte-toggle-btn` / `.inbox-header-menu-btn`）がスマホに存在しなくなり `boundingBox()` が待ち続けて時間切れになった件の修正である（CI が検出）。新ヘッダーのボタン（顧客情報・その他の操作）を測る形に直し、旧三点がスマホに残っていないことを件数0で確かめている。
+
+## 21. テンプレートを「…」へ移し、カルテボタンを人型にし、準備中ページの行き止まりを解消する便（2026-10-14・第7便）
+
+> この節は何か（専門用語なしの1行）: 実機を見た PO 指摘3点（テンプレートボタンを隠す・カルテの絵柄を人型にする・テンプレートを開くと戻れない行き止まりを直す）に対応した作業記録。
+
+### 21-1. PO 依頼（実機を見ての指摘・2026-10-14）
+
+| # | PO 依頼 | 対応 |
+|---|---|---|
+| 1 | テンプレートは「…」の中に隠す | `frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx` の右を顧客情報・「…」の2つにし、テンプレートは「…」の項目（送信先の言語／テンプレート／FAQ／受信箱の設定の2番目）へ移した |
+| 2 | カルテ（顧客情報）の絵柄を人型にする | `frontend/src/constants/icons.tsx` の `PAGE_ICONS` に新キー `kartePanelMobile`（人型・既存の `User` 定数を使用）を追加し、スマホ会話ヘッダーの顧客情報ボタンだけをこれに差し替えた。PC 側の `PAGE_ICONS.kartePanel`（クリップボード）は無変更 |
+| 3 | テンプレートのページから戻れるようにする | `frontend/src/pages/coming-soon/ComingSoonPage.tsx` に戻るボタン（`navigate(-1)`・金型 `Button`・既存キー `common.back`）を追加 |
+
+### 21-2. 確認済みの事実（コードで確認済み）
+
+| 事実 | 出典 |
+|---|---|
+| `/templates` は中身のない「準備中」の仮ページ（`ComingSoonPage`）で、戻る手段が元々無かった | `frontend/src/App.tsx:281`・`frontend/src/pages/coming-soon/ComingSoonPage.tsx` |
+| `ComingSoonPage` は `App.tsx` の2箇所（`/faq` と `/templates`）から使われている | `frontend/src/App.tsx:229`・`frontend/src/App.tsx:283` |
+| `ComingSoonPage` は `PageLayout` を使わず `<div className="page">` を直接描く作りで、戻る手段は無かった | `frontend/src/pages/coming-soon/ComingSoonPage.tsx` |
+| 画面の殻（下部タブ）は全ページを包むため、`ComingSoonPage` にいても下部タブで受信箱の一覧には行けるが、開いていた会話には戻れない（行き止まり） | `frontend/src/App.tsx:138` の `ShellSwitch` |
+| アイコンは `frontend/src/constants/icons.tsx` に集約。人型（`UserIcon`）は既に `const User = hi(UserIcon)` として定義済みだが、公開されているのは `CATEGORY_ICONS`（DB 由来のカテゴリキー専用・`"顧客"` という日本語キーでのみアクセス可能）経由のみで、`PAGE_ICONS` / `NAV_ICONS` / `ACCOUNT_ICONS` など再利用しやすい公開グループからは参照できなかった | `frontend/src/constants/icons.tsx:126`（`const User = hi(UserIcon)`）・`:209`（`CATEGORY_ICONS["顧客"]`） |
+| お手本（WhatsApp）の会話ヘッダーも右は2つ（通話メニュー・三点） | 本カード §20-1（実機の構造ダンプ・第6便で確認済みの事実を再掲） |
+
+### 21-3. 実装方法
+
+- **A（テンプレートを「…」へ）**: `frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx` の `moreMenuItems` に `templates` 項目を追加（アイコン `NAV_ICONS.fileText`・文言 `nav.templates`・`onSelect` で `navigate("/templates")`。第6便の独立ボタンから移植しただけで新しい文言・アイコンは作っていない）。右の操作ボタン列からテンプレートの `<button>` を削除し、顧客情報・「…」の2つにした。
+- **B（カルテの絵柄）**: `frontend/src/constants/icons.tsx` の `PAGE_ICONS` に1行追加:
+  ```
+  kartePanelMobile:   User,             // 受信箱スマホ会話ヘッダー「顧客情報」ボタン用
+  ```
+  既存の `kartePanel: ClipboardText` は変更していない（PC 側 `frontend/src/pages/inbox/InboxMessageThread.tsx` の2箇所がそのまま使用中）。スマホ版だけ `PAGE_ICONS.kartePanelMobile` に差し替えた。
+- **C（準備中ページの戻るボタン）**: `frontend/src/pages/coming-soon/ComingSoonPage.tsx` に `useNavigate()` を追加し、既存の金型 `frontend/src/components/Button.tsx` の `Button`（`variant="ghost" size="lg"`）でボタンを描いた。文言は既存キー `common.back`（ja: 「戻る」／en: 「Back」。`frontend/src/locales/ja.json:132`・`en.json:132`、両言語に既存）をそのまま使用し、新規キーは追加していない。アイコンも既存の `SCHEDULE_SETTINGS_ICONS.back`（`ArrowLeftIcon`）を再利用した。押す場所は `size="lg"` により48px（`--comp-btn-height-lg`）で44px以上を満たす。CSS は `frontend/src/pages-layout.css` に `.coming-soon-back-row`（`max-width: var(--coming-soon-max-w); margin: 0 auto var(--space-4) auto;`）を1つ追加しただけで、既存の `.coming-soon` の見た目（最大幅・中央寄せ・背景・影）は変更していない。
+
+### 21-4. なぜ「…」へ移すのが妥当か
+
+PO 指摘の根拠は実機の見た目（過密）だが、コードでも裏付けが取れた: `/templates` は本カード §21-2 のとおり中身のない仮ページであり、独立ボタンとして常時目立たせる優先度は本来低い。かつお手本（WhatsApp）の会話ヘッダーも右は2つ（本カード §20-1）であり、今回「顧客情報・「…」の2つ」にしたことでお手本と同じ個数になった。
+
+### 21-5. 受け入れ基準
+
+| # | 基準 | 検証方法 | 結果 |
+|---|---|---|---|
+| 1 | 右の操作ボタンが2つ（顧客情報・「…」）で、テンプレートの独立ボタンが無い | `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`「受信箱 第6便」describe の「会話を開くと帯が1本だけになり…」テストを更新（`buttonCount` を2に・aria-label配列を実測） | 収集成功（§21-6）。実行は CI に委ねる |
+| 2 | 2つとも44px以上、最後のボタンの右端がビューポート右端（±1） | 同テスト（既存の `MIN_TOUCH_TARGET_PX` 比較・右端比較を流用） | 同上 |
+| 3 | 「…」を押すと4項目（送信先の言語／テンプレート／FAQ／受信箱の設定）が出る | 同 describe の「「もっと」を押すと4項目…」テストに更新 | 同上 |
+| 4 | 「…」→「テンプレート」を押すと `/templates` に移動する | `inbox-single-column.spec.ts` 新設「受信箱 第7便」describe の1本目テスト（URL を実測） | 同上 |
+| 5 | 移動した先に「戻る」ボタンがあり、押すと元の会話に戻れる | 同テスト（URL と `.inbox-textarea` の可視を両方確認） | 同上 |
+| 6 | カルテのボタンの絵柄が変わったこと | 同 describe の3本目テスト（`svg path` の `d` を実測し、PC 側 `.karte-toggle-btn`＝`PAGE_ICONS.kartePanel` と別物であることを比較で確認。ハードコードした path 文字列は書いていない） | 同上 |
+| 7 | 既存の検査（第4便の長押し6件・第5便の2件・第6便の残り）が緑のまま | `npx playwright test --list` で収集件数を確認（§21-6） | 収集成功 |
+| 8 | `npm run check:all` が緑 | `cd frontend && npm run check:all` | §21-6 に実際の出力を記載 |
+| 9 | 型が通る | `cd frontend && npx tsc --noEmit` | §21-6 に実際の出力を記載 |
+| 10 | 単体テスト全体が壊れていない | `cd frontend && npm run test:unit` | §21-6 に実際の出力を記載 |
+| 11 | デザイントークンの増加なし（ratchet） | リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh` | §21-6 に実際の出力を記載 |
+| 12 | UI ガバナンス（生UI部品の新規ハードコードなし） | リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js` | §21-6 に実際の出力を記載 |
+
+### 21-6. 実際の検証出力
+
+- `cd frontend && npx tsc --noEmit` → エラー0件
+- `cd frontend && npm run lint` → 0 errors, 137 warnings（本変更対象ファイルからの新規警告なし）
+- `cd frontend && npm run check:all` → 25項目すべて `exited with code 0`
+- `cd frontend && npm run test:unit`（フルスイート） → 99 Test Files中85成功・14失敗／1119 Tests中1104成功・15失敗。失敗15件はすべて `Error: Test timed out in 5000ms`（本便の変更対象外の14ファイル。`LeadFormButtonMigration` / `MasterSearchButtonMigration` / `OrderLeadButtonMigration` / `StaffFormButtonMigration` / `TeamFormButtonMigration` / `api.no-double-prefix` / `ReviewRegisterProductForm` / `InboxMessageThread.discordSendError` / `InventoryPage.noechopatch` / `ManagementCenterPage` / `NeedsReviewTabsPanel.drawer` / `NeedsReviewTabsPanel` / `RuleDrawer` / `UnitIgnorePhrasesPanel`）。この14ファイルだけを個別実行すると204件全件成功（フルスイート実行時の負荷由来の非決定的タイムアウトと判断。本カード §20-9-5 と同じ事情）
+- `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/constants/icons.test.tsx src/components/Button.test.tsx src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` → 全件成功（本便の変更に最も近いファイルを個別に確認）
+- `cd frontend && npx playwright test --list` → 331件→340件（新規3テスト×3幅=9件追加）を収集成功。この端末（arm64/Termux）では `npx playwright install chromium` が `ERROR: Playwright does not support chromium on ubuntu26.04-arm64` で失敗するため実行は不可（CI に委ねる）
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（本便のコミット後に実行） → §21-6-1 に追記
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（本便のコミット後に実行） → §21-6-1 に追記
+
+### 21-7. 残るリスク
+
+1. **実機 Playwright 実行は未確認。** この端末（arm64/Termux）では chromium の実行バイナリが提供されておらず（`npx playwright install chromium` が `ERROR: Playwright does not support chromium on ubuntu26.04-arm64` で失敗することを本便で確認）、`npx playwright test --list` による構文・セレクタ収集の確認までしかできていない（第4便〜第6便と同じ事情）。
+2. **カルテボタンの絵柄差分検査は viewport のリサイズに依存する。** 6本目の検査（§21-5 #6）は、同じページ内で `page.setViewportSize()` によりデスクトップ幅へ切り替え、`useIsMobile()`（`window.matchMedia` の `change` イベント）が追従して PC 側ヘッダー（`.karte-toggle-btn`）を描くことを前提にしている。この挙動はコードを読んで確認したものであり、実際の実行（CI）で初回に成立するかは未確認。
+3. **戻るボタンを追加した分、`/templates`・`/faq` の見た目の縦位置が下がる。** `.coming-soon`（既存）はもともと `margin-top: 80px` を持つため、新設した `.coming-soon-back-row` の下にさらに80pxの空きができ、カード全体が従来より下に表示される。既存の `.coming-soon` の値自体は変更していない（レイアウトを壊さない方針を優先）が、見た目の間隔が適切かは実機・PO 確認が望ましい。
+4. **人型アイコン（`User` = Heroicons `UserIcon`）は `CATEGORY_ICONS["顧客"]` と同じ定数を指す。** 今回新設した `PAGE_ICONS.kartePanelMobile` も同じ `User` を参照するため、1つのアイコン実体が2つの公開名（`CATEGORY_ICONS["顧客"]` と `PAGE_ICONS.kartePanelMobile`）からアクセスできる状態になった。用途が異なる（DB カテゴリ表示 / 受信箱スマホのボタン）ため実害はないが、将来 `User` の見た目を変える場合は両方の用途に影響する点を留意する。
