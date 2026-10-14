@@ -1,7 +1,7 @@
 # 在庫表と GAS 在庫一覧の揃え 便1（4項目）設計
 
 - 状態: 設計案（Opus）。PO 決定は 2026-10-14 のチャット（下記 KGI）。
-- 現在地: [recon.md](./recon.md)（origin/main 758d84e8d、file:line 付き）。差分の全量: /tmp/CC報告ファイル/app_vs_gas_verify.txt（ローカル。社外秘を含まないが repo には置かない）
+- 現在地: [docs/handoff/inventory-parity-bin1/recon.md](./recon.md)（origin/main 758d84e8d、file:line 付き）。差分の全量: /tmp/CC報告ファイル/app_vs_gas_verify.txt（ローカル。社外秘を含まないが repo には置かない）
 - 関連 ADR: ADR-1014（在庫表=配信行。本便で改訂）、ADR-144（UI 金型）、ADR-027（i18n）、ADR-093
 
 ## KGI（PO 決定 2026-10-14、要旨）
@@ -92,9 +92,11 @@ PR を revert する。migration とデータの変更は無いので、コー�
 ## 維持の仕組み
 - 配信行の定義は distribution_rows_parts の1か所だけ。固定テストがあるので、変えると CI が止まる。
 - 並び替え・24時間・まとめの既定は、テストで固定する。
+- 守り手: CI の固定テスト backend/tests/test_inventory_distribution_rows_pg.py・backend/tests/test_inventory_distribution_rows.py・frontend/src/pages/inventory/InventoryPage.settings.test.tsx。仕様を変えるときは ADR-1014 の改訂節を更新する（設計担当 Opus）。
 
-## 外部事例
-該当なし。社内の2画面を揃える作業で、外部の数値を設計の根拠に使わないため。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 該当なし。社内の2画面を揃える作業であり、外部の数値を設計の根拠に使わないため。
+- 過去事例: ADR-1014（まとめ機能の導入）と、在庫一覧 GAS の発送日列（2026-10-14、本番版16）。どちらも、片方の画面だけを変えると差が広がった。応用として、今回は配信行の定義を SVC の1か所（`_sold_out_filter`）に寄せ、アプリと GAS の両方で同じものを使う。
 
 ## 保留（PO 判断が要るもの）
 - **4 GAS の最初のタブ**: GAS のタブは `products.work_id → type_master.name_ja`、アプリは `products.tcg_type`（recon §4）。ポケモンに当たる Series の値と、2つの結び方が一致するかは、本番 DB を見ないと決められない。type_master には seed が無い。本番 DB の読み取りは、今回、自動の安全判定（Remote Shell Writes）で止まった。
