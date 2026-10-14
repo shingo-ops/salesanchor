@@ -77,7 +77,7 @@ PO が要確認ページを使うとき、次がすべて ○ になる。
 ## 5. frontend の変更
 
 ### 5-1. 型
-- `ItemComparison.tsx` の AnalysisReviewItem の system に `pid_basis?: string`（未定義なら足す）と `condition_basis?: string`。
+- `frontend/src/features/tcg-analysis-review/ItemComparison.tsx` の AnalysisReviewItem の system に `pid_basis?: string`（未定義なら足す）と `condition_basis?: string`。
 
 ### 5-2. ItemComparison（K2・K3・K4）
 - `ReadOnlyComparison` に任意 props を足す: `fixColumn?: { selectedRowKey: string | null; onRowSelect: (rowKey: string) => void; fixableRowKeys: string[] }`。
@@ -108,7 +108,7 @@ PO が要確認ページを使うとき、次がすべて ○ になる。
 ### 5-5. NeedsReviewTabsPanel（K5・K6）
 - `drawerItem` を `drawerItemId: string | null` と `lastDrawerItem`（最後に見た件）に替える。表示する件は `data.items.find((i) => i.extraction_item_id === drawerItemId) ?? lastDrawerItem`。見つからない（要確認から外れた・ページ外）ときは Drawer に `removedFromList` を渡し、Callout（info）で `reviewItem.removedFromList`「この商品は要確認から外れました」を表の上に出す。
 - 「ここで直す」列（inline_fix、`:166-173`）を消す。
-- `frontend/src/features/tcg-analysis-review/ReviewRowActions.tsx` と `frontend/src/features/tcg-analysis-review/ReviewRowActions.test.tsx` は他から使われていなければ削除。ReviewRowActions だけが使う i18n キーは ja/en 両方から削除（`git grep` で他の使用が無いことを確認してから）。
+- frontend/src/features/tcg-analysis-review/ReviewRowActions.tsx と frontend/src/features/tcg-analysis-review/ReviewRowActions.test.tsx は他から使われていなければ削除。ReviewRowActions だけが使う i18n キーは ja/en 両方から削除（`git grep` で他の使用が無いことを確認してから）。
 
 ### 5-6. CSS
 - 新しいトークンは作らない。色・余白は既存の var() だけ。新しいクラスは `frontend/src/features/tcg-analysis-review/review-item-drawer.css` と ItemComparison の既存 CSS に置く。
@@ -208,7 +208,7 @@ PO が要確認ページを使うとき、次がすべて ○ になる。
   - `frontend/src/features/tcg-analysis-review/ReviewFixWizard.test.tsx`: scope を渡す形に全件書き換え（product は2択、condition/keep は質問なしで直接入力欄、choices 0 件は nothingToFix）。
   - `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`: ItemComparison のモックをやめて実物を使う（行を押す試験のため）。開いた直後は pickRowHint が出て質問は出ない。
   - `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`: 開いた直後に質問が出る前提の箇所は「行を押す／このままで良いボタンを押す」操作を挟む形に直す。
-- D. 削除対象に追加: `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.inline.test.tsx`（「ここで直す」列の試験）、`frontend/src/features/tcg-analysis-review/review-row-actions.css`、`frontend/src/tokens.css` の `--review-inline-fix-col-w` の行（使用は NeedsReviewTabsPanel.tsx:24 のみ。消す前に git grep で他使用ゼロを確認）。
+- D. 削除対象に追加: frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.inline.test.tsx（「ここで直す」列の試験）、frontend/src/features/tcg-analysis-review/review-row-actions.css、`frontend/src/tokens.css` の `--review-inline-fix-col-w` の行（使用は NeedsReviewTabsPanel.tsx:24 のみ。消す前に git grep で他使用ゼロを確認）。
 - E. i18n の削除は `needsReview.inline.header`・`needsReview.inline.saved`・`needsReview.inline.error`・`needsReview.inline.unknownError`・`needsReview.inline.ackAria` の5キーに限る（各キーを git grep して ReviewRowActions 以外の使用ゼロを確認してから）。`needsReview.inline.productAria/productPlaceholder/noResults/searchError` は ReviewProductFixForm・ReviewRegisterProductForm が使うので残す。`reviewItem.reasonsHeading` も他使用ゼロを確認してから削除。
 - F. DataTable 金型は変えない。onRowClick を渡すと全行に clickable クラスと tabIndex=0 が付く（`frontend/src/components/DataTable.tsx:244,254`）。押せない行は `rowClassName` で `item-comparison__row--static` を付け、CSS で `cursor: default` に戻す。キーボードの焦点は押せない行にも残るが、Enter を押しても何も起きない（許容。onRowClick 内で fixableRowKeys に無い行は無視）。selectedKeys は `selectedRowKey ? new Set([selectedRowKey]) : undefined`。
 - G. `backend/app/routers/item_corrections.py:145` の `model_dump(mode="json")` は変更不要（str はそのまま、request_id は文字列化され今と同じ）。「修正」列の条件に `MANUAL_RAW_REVIEW:PO_RULES` は含めない（§3 の2値だけ）。`backend/tests/test_tcg_analysis_review.py:137-139` の system キー列挙に condition_basis を足す。
