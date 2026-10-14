@@ -1,0 +1,17 @@
+⚠️  audit:unused-tokens — 12 件の未使用トークンが見つかりました:
+
+   --size-avatar-sm                              (src/tokens.css)
+   --table-col-min-width                         (src/tokens.css)
+   --modal-commission-w                          (src/tokens.css)
+   --modal-detail-max-w                          (src/tokens.css)
+   --bg-disabled                                 (src/index.css)
+   --accent-bg                                   (src/index.css)
+   --color-blue-700                              (src/index.css)
+   --color-gray-100                              (src/index.css)
+   --color-gray-600                              (src/index.css)
+   --color-red-700                               (src/index.css)
+   --color-amber-800                             (src/index.css)
+   --color-border-subtle                         (src/index.css)
+
+対処: 不要なトークンは削除、または使用箇所がある場合は検索パターンを確認してください。
+     意図的に未使用の場合は EXEMPT_PREFIXES に prefix を追加してください。
