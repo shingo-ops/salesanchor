@@ -41,7 +41,7 @@
 ## 5. 使える金型と文言
 
 - `frontend/src/components/ConfirmModal.tsx`: props は open / title / message / confirmLabel / cancelLabel / danger / onConfirm / onCancel。size sm 固定。読み込み中の表示は無い。中は Modal（z 400）で、Drawer（z 301、frontend/src/tokens.css:127 の --z-drawer）より上に出る。
-- ドロワーの上で ConfirmModal を出す前例: features/supplier-master/SupplierDetailDrawer.tsx:491-501、features/tcg-product-import/TcgProductDetailDrawer.tsx:242-250。
+- ドロワーの上で ConfirmModal を出す前例: frontend/src/features/supplier-master/SupplierDetailDrawer.tsx:491-501、frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:242-250。
 - 文言: common.close=閉じる（ja.json:122）、reviewItem.ack=このままで良い（ja.json:3768）、reviewItem.acked、reviewItem.ackFailed、reviewItem.removedFromList（ja.json:3769-3778）。「このまま」というボタン文言と、確認の見出し・本文のキーは無い。
 
 ## 6. 呼び出し元（全走査）

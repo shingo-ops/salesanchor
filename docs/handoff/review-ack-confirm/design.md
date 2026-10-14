@@ -25,6 +25,17 @@
 | K4 | 表の下に2つ目の「このままで良い」ボタンは出ない（押すのは1か所だけ） | 試験で「このままで良い」ボタンが1つだけ |
 | K5 | 保存中は「このままで良い」が押せない（二重保存しない） | 試験 |
 
+### 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| K1: 「このままで良い」を1回押すと画面中央にポップアップ（確認文・理由一覧・「このまま」「閉じる」）が出る | ReviewItemDrawer.test.tsx（K1）＋本番で PO 目視 |
+| K2: 「閉じる」で何も保存されない | ReviewItemDrawer.test.tsx（postReviewAck 0回） |
+| K3: 「このまま」で保存1回・一覧読み直し・要確認から外れて「外れました」が出る | ReviewItemDrawer.test.tsx（1回・codes 一致）＋NeedsReviewTabsPanel.drawer.test.tsx |
+| K4: 「このままで良い」ボタンは1つだけ | ReviewItemDrawer.test.tsx |
+| K5: 保存中は押せない | ReviewItemDrawer.test.tsx |
+| ポップアップ表示中の Esc でドロワーは閉じない | ReviewItemDrawer.test.tsx |
+
 ## 2. 変更前 → 変更後
 
 - 変更前（recon §1）: 1回目は表の下に欄を開くだけ。保存は表の下の2つ目のボタン。
@@ -84,7 +95,7 @@
 - 戻し方: この PR を revert（frontend だけ。データの形は変わらない）。
 
 ## 7. 外部・過去事例の参照と我々への応用
-- 該当事例なし（外部）。理由: 既存の金型 ConfirmModal で足り、外部の数値は判断を変えない。過去の自社事例として、ドロワーの上で ConfirmModal を出す前例（features/supplier-master/SupplierDetailDrawer.tsx:491-501、features/tcg-product-import/TcgProductDetailDrawer.tsx:242-250）を参照した。ただし前例は Esc でドロワーまで閉じる作りのままなので、本件では onClose を包んで防ぐ（§3.1）。
+- 該当事例なし（外部）。理由: 既存の金型 ConfirmModal で足り、外部の数値は判断を変えない。過去の自社事例として、ドロワーの上で ConfirmModal を出す前例（frontend/src/features/supplier-master/SupplierDetailDrawer.tsx:491-501、frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:242-250）を参照した。ただし前例は Esc でドロワーまで閉じる作りのままなので、本件では onClose を包んで防ぐ（§3.1）。
 
 ## 8. 維持の仕組み
 - 保存の入口が1か所（ReviewItemDrawer）であることと、ポップアップの動きを試験（§3.4）で守る。守り手: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`
