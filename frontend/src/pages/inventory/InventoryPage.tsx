@@ -7,7 +7,7 @@
  * - カテゴリー絞り込み（プルダウン）＋検索（ボタン）＋ユーザー別フィルタ（仕入元/カテゴリー/列の取捨・永続化）。
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -162,7 +162,11 @@ export default function InventoryPage() {
     return () => clearTimeout(timer);
   }, [searchQ]);
 
+  // 古い応答で新しい応答を上書きしないための要求番号
+  const loadSeqRef = useRef<number>(0);
+
   const load = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setError("");
     setLoading(true);
     try {
@@ -196,6 +200,7 @@ export default function InventoryPage() {
         if (pmax !== null) params.set("price_max", String(pmax));
       }
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
+      if (seq !== loadSeqRef.current) return;
       setItems(d.items);
       setTotal(d.total);
       setWindowHours(d.window_hours);
@@ -204,15 +209,17 @@ export default function InventoryPage() {
       if (d.conditions) setConditionFacet(d.conditions);
       if (d.units) setUnitFacet(d.units);
     } catch (e) {
+      if (seq !== loadSeqRef.current) return;
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
   }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
+    if (!filtersLoaded) return;
     void load();
-  }, [load]);
+  }, [load, filtersLoaded]);
 
   // 種別マスタを取得（カテゴリー列の日本語表示用）。
   useEffect(() => {
