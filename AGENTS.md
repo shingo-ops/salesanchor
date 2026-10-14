@@ -23,7 +23,7 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 | **Reviewer** | ChatGPT（最終ゲート）/ Codex app（第二レビュー） | コードレビュー・PR審査。ChatGPTが最終承認ゲートを担う |
 | **Evaluator** | Claude Code | Playwright等で動作検証 |
 
-- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → GO（ADR-1003により例外を除きClaude Opus設計担当へ常時委譲。詳細は `docs/adr/ADR-1003-go-delegation-to-opus.md`）→ main マージ（develop経由は廃止。release/* → main が現行）
+- **通常の新機能・バグ修正経路**: ChatGPT設計（Planner/Architect）→ Claude Code実装（Generator）→ Codex補助レビュー → ChatGPT最終ゲート → GO（ADR-1003により例外を除きClaude Opus設計担当へ常時委譲。詳細は `docs/adr/ADR-1003-go-delegation-to-opus.md`）→ main マージ（develop経由は廃止。release/* → main が現行）。ADR-1015 の B 区分（危険でない変更）は KGI・設計の PO 承認なしで PR まで進む
 - Plannerが確立したエビデンスは ADR の Why セクションに必ず含める
 
 ### エビデンス要件（Research → Planner → Architect の鉄則）
@@ -56,7 +56,7 @@ Runtime pipeline は次の順序で運用する。
 
 ```text
 ChatGPT (Research / Planner / Architect)
-  → PO Approval
+  → PO Approval（ADR-1015 の B 区分は不要。Fable 審査 APPROVE で代える）
   → Claude Code / Sonnet (Generator)
   → Codex app (UI/Review assist — 任意)
   → ChatGPT (final gate / Reviewer)
