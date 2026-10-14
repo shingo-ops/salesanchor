@@ -29,6 +29,7 @@ import {
   openInboxList,
   openInboxListWithConversations,
   openInboxListWithDiscordUnlinkedConversation,
+  openInboxListWithLeadStatus,
 } from "./inbox-helpers";
 
 /**
@@ -1494,7 +1495,10 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
   test("スマホ: 固定の操作バー（karte-action-bar）が画面内に見えている", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
-    await openInboxList(page);
+    // 固定操作バーは商談段階が "lead" のときだけ描かれる
+    // （frontend/src/pages/inbox/InboxKartePanel.tsx の `if (!primaryLabel) return null;`）。
+    // 既定の仮データには status が無く出ないため、この検査だけ status を足して開く。
+    await openInboxListWithLeadStatus(page);
     await openConversation(page);
     await karteOpenBtn(page).click();
     await expect(panel(page)).toHaveClass(/karte-open/);
