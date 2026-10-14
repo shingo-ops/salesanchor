@@ -412,14 +412,19 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     await openConversation(page);
     const sendBtn = await measure(".inbox-send-btn");
-    const karteToggle = await measure(".karte-toggle-btn");
+    // 第6便（2026-10-14）: スマホの会話ヘッダーを作り直したため、旧ヘッダーの
+    // ボタン（.karte-toggle-btn / .inbox-header-menu-btn）はスマホには存在しない。
+    // 新しいヘッダー（.inbox-thread-header-mobile）のボタンを測る。
+    //   旧 .inbox-header-menu-btn（三点）は実機実測で 27x38dp・画面右端で切れていたが、
+    //   第6便で**スマホでは廃止**した（中身は第4便で一覧の長押しメニューへ移設済み）。
+    const karteToggle = await measure(".inbox-thread-header-mobile-btn[aria-label='顧客情報']");
+    const headerMore = await measure(".inbox-thread-header-mobile-btn[aria-label='その他の操作']");
     // 本便で変更していないものも値を記録に残す（design §7）。
     //   .send-attach-btn … 送信ピルの内側（44px にするとピルが膨らむ）
-    //   .inbox-header-menu-btn … 実機実測で 15x38dp。幅が足りないのは画面右端で
-    //     切れているため（ヘッダの中身が 360dp に収まっていない）。寸法ではなく
-    //     ヘッダの中身を減らす判断が必要なので本便では触らない。
     const attach = await measure(".send-attach-btn");
-    const headerMenu = await measure(".inbox-header-menu-btn");
+    // スマホでは旧三点が存在しないことを機械で確かめる（作り直しの証拠）
+    const oldMenuCount = await page.locator(".inbox-header-menu-btn").count();
+    expect(oldMenuCount, "スマホに旧三点メニューが残っている").toBe(0);
 
     await testInfo.attach("touch-targets", {
       body: JSON.stringify(
@@ -427,8 +432,9 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
           絞り込み: filter,
           送信: sendBtn,
           顧客情報: karteToggle,
+          "その他の操作": headerMore,
           "添付（この便では未対応）": attach,
-          "三点メニュー（この便では未対応・右端で切れている）": headerMenu,
+          "旧三点メニュー（第6便でスマホでは廃止）": oldMenuCount,
         },
         null,
         2,
@@ -444,6 +450,10 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     expect(karteToggle, "顧客情報ボタンが見つからない").not.toBeNull();
     // 幅はアイコンと文言に任せるため高さだけを基準にする
     expect(karteToggle!.h, "顧客情報ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    // 第6便: 旧三点の置き換えである「その他の操作」も 44px 以上であること
+    expect(headerMore, "その他の操作ボタンが見つからない").not.toBeNull();
+    expect(headerMore!.w, "その他の操作の幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(headerMore!.h, "その他の操作の高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
   });
 
   test("スマホ: 検索欄の2つのボタンが別のアイコンで、管理は文言を出さない", async ({ page }, testInfo) => {
