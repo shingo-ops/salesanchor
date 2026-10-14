@@ -1004,6 +1004,10 @@
 .inbox-back-to-list { display: none; }
 .karte-close-row  { display: none; }
 .karte-overlay    { display: none; }
+/* 第8便: 「← 顧客情報」の戻る矢印はスマホ幅（767px以下）だけで表示する。
+   タブレット（768〜1279px）は従来の「顧客情報 ×」のまま変えないため、
+   既定（PC と同じ非表示）はここに置く。 */
+.karte-close-back-btn { display: none; }
 
 /* ====== 三点メニュー — デフォルト（≥1280px）では非表示 ====== */
 .inbox-header-menu-wrap { position: relative; flex-shrink: 0; }
@@ -1329,26 +1333,58 @@
         （白地では --bg-subtle が 1.05:1 で消える） */
   .conv-status-badge { color: var(--text-secondary); background: var(--neutral-bg); }
 
-  /* カルテをボトムシートに変換（下から 80vh でスライドアップ） */
+  /* 第8便（2026-10-14・PO決定）: カルテを画面全体に変更する（下部タブも覆う）。
+     旧仕様（下から 80vh のボトムシート）はやめる。
+     高さは実寸（100dvh。vh ではなく dvh）で与え、--tabbar-height は引かない
+     （タブも覆うのが PO 決定のため）。角丸・上の境界線も全画面にはそぐわないのでやめる。
+     重なり順の新設はしない: :1038 で付与済みの z-index: var(--z-drawer)（301）が
+     下部タブバー（.mobile-tabbar の --z-topbar=100）より前面のまま効く。 */
   .inbox-right-panel {
-    top: auto !important;
+    top: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 80vh;
-    max-height: 80vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
     border-left: none !important;
-    border-top: 1px solid var(--border) !important;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
-    transform: translateY(100%) !important;
+    border-top: none !important;
+    border-radius: 0 !important;
+    transform: translateX(100%) !important;
     overflow-y: auto !important;
     box-shadow: var(--shadow-xl) !important;
   }
   .inbox-right-panel.karte-open {
-    transform: translateY(0) !important;
+    transform: translateX(0) !important;
   }
+
+  /* 第8便: カルテ上部の帯を「← 顧客情報」にする（会話画面と同じ戻り方に統一）。
+     タブレット（:1056 の .karte-close-row）はここでは一切触らない。
+     帯の高さは --topbar-height（56px）。矢印の押す場所は --size-icon-btn-lg（44px）。
+     見出し（.karte-close-title）の文字指定は :1061 のものをそのまま使う。 */
+  .karte-close-row {
+    height: var(--topbar-height);
+    padding: 0 var(--space-3);
+    justify-content: flex-start;
+    gap: var(--space-2);
+  }
+  .karte-close-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-icon-btn-lg);
+    height: var(--size-icon-btn-lg);
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0;
+  }
+  /* 旧「×」ボタンはスマホでは出さない（戻る矢印に統一するため）。
+     タブレットは :1064 の .karte-close-btn がそのまま効く（ここでは触らない）。 */
+  .karte-close-btn { display: none; }
 }
 
 /* ====== カルテ常時編集フィールド ====== */

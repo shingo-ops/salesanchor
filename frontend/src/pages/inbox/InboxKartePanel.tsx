@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ACCOUNT_ICONS, NAV_ICONS } from "../../constants/icons";
+import { ACCOUNT_ICONS, NAV_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
 import { getInitials, parseDate } from "./inbox.types";
@@ -107,6 +107,10 @@ export function InboxKartePanel({
       .catch(() => { /* omit link display on error */ });
   }, [leadDetail?.discord_guild_channel_id, guildId]);
 
+  // 第8便: 会話画面の戻る矢印（InboxThreadHeaderMobile.tsx の BackIcon）と同じアイコンを使う。
+  // 新しいアイコンは増やさない。
+  const KarteCloseBackIcon = SCHEDULE_SETTINGS_ICONS.back;
+
   const stagePresentation = leadDetail ? getStatusPresentation("lead", leadDetail.status) : null;
   const subParts = leadDetail
     ? [leadDetail.country, leadDetail.customer_type].filter(Boolean)
@@ -123,8 +127,17 @@ export function InboxKartePanel({
         </div>
       ) : leadDetail ? (
         <div className="right-panel-card">
-          {/* Mobile: close button row */}
+          {/* Mobile: close button row。
+              第8便（2026-10-14・PO決定）: スマホは「← 顧客情報」の帯に統一する
+              （会話画面と同じ戻り方）。タブレット（768〜1279px）は従来の
+              「顧客情報 ×」のまま変えない＝× ボタンと見出しは残し、
+              戻る矢印はスマホ幅の CSS でのみ表示する（InboxPage.css 参照）。
+              配線は変えない: どちらを押しても同じ closeKartePanel を呼ぶ。 */}
           <div className="karte-close-row">
+            <button type="button" className="karte-close-back-btn" onClick={closeKartePanel}
+              aria-label={t("common.back")}>
+              <KarteCloseBackIcon size={ICON.md} aria-hidden="true" />
+            </button>
             <span className="karte-close-title">{t("inbox.karteToggle")}</span>
             <button type="button" className="karte-close-btn" onClick={closeKartePanel}
               aria-label={t("common.close")} data-tooltip={t("common.close")}>
