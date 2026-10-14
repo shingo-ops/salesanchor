@@ -11017,7 +11017,7 @@
             "type": "array"
           },
           "merge_same_post": {
-            "default": true,
+            "default": false,
             "description": "同じ投稿のランク違いを1行にまとめる",
             "title": "Merge Same Post",
             "type": "boolean"
@@ -11120,6 +11120,11 @@
             },
             "title": "Conditions",
             "type": "array"
+          },
+          "fresh_window_hours": {
+            "default": 24,
+            "title": "Fresh Window Hours",
+            "type": "integer"
           },
           "items": {
             "items": {
@@ -42991,9 +42996,21 @@
             "name": "merge_same_post",
             "required": false,
             "schema": {
-              "default": true,
+              "default": false,
               "description": "同じ投稿のランク違いを1行にまとめる",
               "title": "Merge Same Post",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "LINE 投稿が24時間以内の行だけ出す",
+            "in": "query",
+            "name": "fresh_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "LINE 投稿が24時間以内の行だけ出す",
+              "title": "Fresh Only",
               "type": "boolean"
             }
           },

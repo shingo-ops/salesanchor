@@ -209,6 +209,10 @@ def _max_age_hours(settings: dict[str, str]) -> int | None:
     return value if value >= 0 else None
 
 
+# 在庫表の「24時間以内」トグルが使う窓（時間）。GAS の FRESH_WINDOW_HOURS と同じ値。
+FRESH_WINDOW_HOURS = 24
+
+
 def _age_window(max_age_hours: int | None) -> tuple[str, dict]:
     """「LINE 投稿が max_age_hours 時間以内」の SQL 断片と bind を返す（唯一の定義）。
 
@@ -232,6 +236,15 @@ def _condition_filter(include_flag_single: bool) -> str:
     else:
         base = "cr.canonical NOT LIKE 'FLAG_%'"
     return f"{base} AND cr.effect IS DISTINCT FROM 'EXCLUDE'"
+
+
+def _sold_out_filter() -> str:
+    """Sold out の行を配信行から除く条件（唯一の定義）。
+
+    ar.（analysis_results）の別名を前提にしている。status は前後の空白と大文字小文字を無視し、
+    'sold out' / 'soldout' を除く（GAS の isSoldOut と同じ判定）。
+    """
+    return "lower(btrim(COALESCE(ar.status, ''))) NOT IN ('sold out', 'soldout')"
 
 
 # 配信行の出力列（GAS の14列 → 在庫表が使う列の順）。distribution_rows_sql の最終 SELECT と同じ並び。
@@ -268,6 +281,7 @@ def distribution_rows_parts(
     配信行の定義（列・WHERE・まとめ条件）はこの関数だけに置く。
     """
     cond_filter = _condition_filter(include_flag_single)
+    sold_out_filter = _sold_out_filter()
     base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)},
     dist_base AS (
         SELECT
@@ -323,7 +337,8 @@ def distribution_rows_parts(
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND sm.line_posted_at IS NOT NULL
-          AND {cond_filter}{age_condition}
+          AND {cond_filter}
+          AND {sold_out_filter}{age_condition}
     )"""
     if not merge_same_post:
         return base, distribution_final_select_plain()
@@ -416,6 +431,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     # 配信候補件数（変更前と同じ問い合わせ。products を結合しない。行の絞り込み条件は _condition_filter と共通）
     # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
     cond_filter = _condition_filter(include_flag_single)
+    sold_out_filter = _sold_out_filter()
     age_condition, age_bind_params = _age_window(max_age_hours)
 
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
@@ -433,7 +449,8 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND sm.line_posted_at IS NOT NULL
-          AND {cond_filter}{age_condition}
+          AND {cond_filter}
+          AND {sold_out_filter}{age_condition}
     """), age_bind_params)
     output_count = count_result.scalar()
 
