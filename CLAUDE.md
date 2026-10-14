@@ -50,7 +50,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
 - **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
 - **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
-  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない
+  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない（ADR-1015 の B 区分は Draft にしない）
   - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
   - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
 - **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
@@ -69,7 +69,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ## 標準開発フロー（正本: docs/STANDARD-WORKFLOW.md）
 
-**作業開始前に `docs/STANDARD-WORKFLOW.md` を必ず read すること。** 全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。成果物は中身が揃って初めて成果物（在るだけ不可）。
+**作業開始前に `docs/STANDARD-WORKFLOW.md` を必ず read すること。** 全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認。ADR-1015 の B 区分は不要）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。成果物は中身が揃って初めて成果物（在るだけ不可）。
 ### 成果物の完了定義（必須）
 - **着手前に既存 ADR を検索**（機能キーワードで `git grep -i docs/adr/` ＋ `docs/adr/FEATURE-INDEX.md`）。ADR は自動ロードされない＝指さないと見落とす。結果を recon.md に明記。
 - recon.md: フルパス:行番号 で引用（例: `.github/workflows/x.yml:15`）。短縮禁止。
