@@ -58,7 +58,7 @@ mode: handoff
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
 | `monitoring/alertmanager/alertmanager.yml:2` | 受け先は discord-server-alerts の 1 つだけ。:4 group_wait 30s、:5 group_interval 5m、:6 repeat_interval 4h。抑止（inhibit）設定なし |
-| `monitoring/grafana/provisioning/alerting/alerting.yml:23` | Grafana にも別の通知先 discord-ops がある（通知の経路が 2 本） |
+| monitoring/grafana/provisioning/alerting/alerting.yml の23行目 | Grafana にも別の通知先 discord-ops がある（通知の経路が 2 本） |
 | `docker-compose.monitoring.yml:177` | Alertmanager は v0.28.1 |
 | `monitoring/prometheus/alert_rules.yml:111` | BackendHighLatency: P99 が 2 秒超を 2 分 |
 | `docs/runbooks/claude-monitor-access.md:59` | 監視の読み取り口 GRAFANA_URL（ADR-079） |
