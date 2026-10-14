@@ -102,6 +102,10 @@ export interface MarkReadResponse {
   marked_count: number;
 }
 
+export interface MarkUnreadResponse {
+  unmarked_count: number;
+}
+
 export interface SendMessageRequest {
   text: string;
   draft_id?: number;
@@ -192,6 +196,15 @@ export async function getMessages(leadId: number): Promise<MessagesResponse> {
  */
 export async function markRead(leadId: number): Promise<MarkReadResponse> {
   return api.post<MarkReadResponse>(`/leads/${leadId}/messages/mark-read`, {});
+}
+
+/**
+ * POST /api/v1/leads/{lead_id}/messages/mark-unread
+ *
+ * 受信箱 第4便（長押しメニュー）: 最新 inbound 1 件だけを未読に戻す。
+ */
+export async function markUnread(leadId: number): Promise<MarkUnreadResponse> {
+  return api.post<MarkUnreadResponse>(`/leads/${leadId}/messages/mark-unread`, {});
 }
 
 /**

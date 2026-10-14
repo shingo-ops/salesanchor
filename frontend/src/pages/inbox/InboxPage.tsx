@@ -143,6 +143,9 @@ export default function InboxPage() {
     handleAvatarError,
     selectLead: state.selectLead,
     toggleSelectConv: state.toggleSelectConv,
+    handleMarkUnread: state.handleMarkUnread,
+    handleExclude: state.handleExclude,
+    handleDeleteLead: state.handleDeleteLead,
   };
 
   return (

@@ -509,3 +509,88 @@ async def test_mark_read_does_nothing_when_no_inbound_messages(app_client, db_se
 
     resp = await app_client.post("/api/v1/leads/1/messages/mark-read")
     assert resp.json()["marked_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# POST /leads/{id}/messages/mark-unread テスト（受信箱 第4便・長押しメニュー）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_reverts_only_latest_inbound(app_client, db_session):
+    """既読 inbound が複数あっても、最新の 1 件だけ未読に戻る。過去分は維持。"""
+    await _insert_lead(db_session, lead_id=1)
+    await _insert_message(
+        db_session, lead_id=1, direction="inbound", message_text="m1",
+        created_at="2026-04-30 09:00:00+00:00",
+        seen_at="2026-04-30 10:00:00+00:00",
+    )
+    await _insert_message(
+        db_session, lead_id=1, direction="inbound", message_text="m2",
+        created_at="2026-04-30 10:00:00+00:00",
+        seen_at="2026-04-30 11:00:00+00:00",
+    )
+    # outbound は対象外
+    await _insert_message(
+        db_session, lead_id=1, direction="outbound", message_text="m3",
+        created_at="2026-04-30 10:30:00+00:00",
+    )
+
+    resp = await app_client.post("/api/v1/leads/1/messages/mark-unread")
+    assert resp.status_code == 200
+    assert resp.json() == {"unmarked_count": 1}
+
+    res = await db_session.execute(text("""
+        SELECT message_text, seen_at FROM meta_messages
+        WHERE lead_id = 1
+        ORDER BY id
+    """))
+    by_text = {r[0]: r[1] for r in res.fetchall()}
+    assert by_text["m1"] is not None  # 過去の既読は維持
+    assert by_text["m2"] is None  # 最新 inbound のみ未読に戻る
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_returns_zero_when_already_unread(app_client, db_session):
+    """最新 inbound が既に未読なら unmarked_count=0（エラーにしない）。"""
+    await _insert_lead(db_session, lead_id=1)
+    await _insert_message(db_session, lead_id=1, direction="inbound", message_text="m1")
+
+    resp = await app_client.post("/api/v1/leads/1/messages/mark-unread")
+    assert resp.status_code == 200
+    assert resp.json() == {"unmarked_count": 0}
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_returns_zero_when_no_inbound_messages(app_client, db_session):
+    """outbound のみの会話なら unmarked_count=0。"""
+    await _insert_lead(db_session, lead_id=1)
+    await _insert_message(db_session, lead_id=1, direction="outbound", message_text="m1")
+
+    resp = await app_client.post("/api/v1/leads/1/messages/mark-unread")
+    assert resp.status_code == 200
+    assert resp.json() == {"unmarked_count": 0}
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_returns_404_when_lead_missing(app_client):
+    resp = await app_client.post("/api/v1/leads/9999/messages/mark-unread")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_returns_404_when_lead_in_other_tenant(app_client, db_session):
+    await _insert_lead(db_session, lead_id=1, tenant_id=888)
+    await _insert_message(
+        db_session, lead_id=1, tenant_id=888, message_text="x",
+        seen_at="2026-04-30 09:00:00+00:00",
+    )
+    resp = await app_client.post("/api/v1/leads/1/messages/mark-unread")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_mark_unread_returns_403_without_messaging_view(app_client_no_view, db_session):
+    await _insert_lead(db_session, lead_id=1)
+    resp = await app_client_no_view.post("/api/v1/leads/1/messages/mark-unread")
+    assert resp.status_code == 403
