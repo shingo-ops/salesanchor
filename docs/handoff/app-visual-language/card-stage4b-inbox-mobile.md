@@ -1099,8 +1099,8 @@ PO 指摘の根拠は実機の見た目（過密）だが、コードでも裏�
 - `cd frontend && npm run test:unit`（フルスイート） → 99 Test Files中85成功・14失敗／1119 Tests中1104成功・15失敗。失敗15件はすべて `Error: Test timed out in 5000ms`（本便の変更対象外の14ファイル。`LeadFormButtonMigration` / `MasterSearchButtonMigration` / `OrderLeadButtonMigration` / `StaffFormButtonMigration` / `TeamFormButtonMigration` / `api.no-double-prefix` / `ReviewRegisterProductForm` / `InboxMessageThread.discordSendError` / `InventoryPage.noechopatch` / `ManagementCenterPage` / `NeedsReviewTabsPanel.drawer` / `NeedsReviewTabsPanel` / `RuleDrawer` / `UnitIgnorePhrasesPanel`）。この14ファイルだけを個別実行すると204件全件成功（フルスイート実行時の負荷由来の非決定的タイムアウトと判断。本カード §20-9-5 と同じ事情）
 - `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/constants/icons.test.tsx src/components/Button.test.tsx src/pages/inbox/InboxMessageThread.discordSendError.test.tsx` → 全件成功（本便の変更に最も近いファイルを個別に確認）
 - `cd frontend && npx playwright test --list` → 331件→340件（新規3テスト×3幅=9件追加）を収集成功。この端末（arm64/Termux）では `npx playwright install chromium` が `ERROR: Playwright does not support chromium on ubuntu26.04-arm64` で失敗するため実行は不可（CI に委ねる）
-- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（本便のコミット後に実行） → §21-6-1 に追記
-- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（本便のコミット後に実行） → §21-6-1 に追記
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) bash scripts/check-design-token-ratchet.sh`（本便の実装・検査コミット後に実行） → `PASS: 対象4ファイル・増加なし`
+- リポジトリ直下 `BASE_SHA=$(git rev-parse origin/main) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（本便の実装・検査コミット後に実行） → `対象ファイル数: 2` ／ `✅ UI governance: 新規ハードコードなし`
 
 ### 21-7. 残るリスク
 
