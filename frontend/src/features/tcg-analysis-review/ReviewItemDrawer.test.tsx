@@ -100,10 +100,11 @@ describe("ReviewItemDrawer layout", () => {
     expect(document.querySelector(".item-comparison .review-item-pane-head h3")?.textContent).toBe("Comparison");
   });
 
-  it("shows the pick-a-row hint first, with no question and no product master button", () => {
+  it("shows no fix area before a row is selected, and no question or product master button", () => {
     renderDrawer(withRaw("L1"));
 
-    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(document.querySelector(".review-item-fix")).toBeNull();
+    expect(screen.queryByText("Select the row you want to fix in the table")).toBeNull();
     expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
     expect(screen.queryByText("Register or exclude in the product master")).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
@@ -156,7 +157,7 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
     expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Reassign to an existing product/ })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Register as a new product/ })).toBeTruthy();
-    expect(screen.queryByText("Select the row you want to fix in the table")).toBeNull();
+    expect(document.querySelector(".review-item-fix")).not.toBeNull();
   });
 
   it("the work row opens the same product question", () => {
@@ -182,7 +183,7 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
     fireEvent.click(rowOf("Quantity"));
     fireEvent.click(rowOf("Condition"));
 
-    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(document.querySelector(".review-item-fix")).toBeNull();
     expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
     expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
   });
@@ -229,7 +230,7 @@ describe("ReviewItemDrawer keep as is (K7)", () => {
     await waitFor(() => expect(screen.getByText(/Marked as checked/)).toBeTruthy());
     expect(postReviewAck).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
-    expect(screen.getByText("Select the row you want to fix in the table")).toBeTruthy();
+    expect(document.querySelector(".review-item-fix")).toBeNull();
     const block = document.querySelector(".review-item-reasons-block") as HTMLElement;
     expect(block.textContent).toContain("Marked as checked");
 
@@ -245,5 +246,23 @@ describe("ReviewItemDrawer removedFromList (K5)", () => {
 
     rerender(<ReviewItemDrawer item={makeItem("pid_unresolved", false)} removedFromList onClose={() => undefined} onRefresh={async () => undefined} />);
     expect(screen.getByText("This item is no longer in the review list")).toBeTruthy();
+  });
+
+  it("explains an excluded item in plain words under the reason, using the sale status", () => {
+    renderDrawer({ ...makeItem("excluded", false), system: { status: "Sold out" } });
+
+    expect(screen.getByText(/Read as "Sold out", so this item is kept out of stock/)).toBeTruthy();
+  });
+
+  it("uses the no-status wording when the sale status is empty", () => {
+    renderDrawer(makeItem("excluded", false));
+
+    expect(screen.getByText(/Kept out of stock because of its sale status/)).toBeTruthy();
+  });
+
+  it("does not show the excluded explanation for other reasons", () => {
+    renderDrawer(makeItem("pid_unresolved", false));
+
+    expect(screen.queryByText(/kept out of stock/i)).toBeNull();
   });
 });

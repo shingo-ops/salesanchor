@@ -11,10 +11,13 @@ import json
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
 import app.services.v102_human_decisions_svc as decisions_svc
+from app.services import tcg_analysis_review_svc as review_svc
+from app.services import tcg_condition_review_svc as condition_svc
 from app.services import tcg_distribution_svc as distribution
 from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, load_product_entries
 from tests.test_line_analysis_v102_pg import analysis_rows, one, run_analysis, run_extraction
@@ -252,6 +255,141 @@ def test_save_review_ack_writes_one_row_and_the_loader_reads_it(pg, pf):
     assert REASON_NOT_IN_MASTER in rows[0][2]  # system_value は保存時点の review_reasons
     run_analysis(pg, job_id)
     assert REASON_NOT_IN_MASTER not in reasons_of(pg, job_id)
+
+
+# --- 除外の件の「このままで良い」(review-excluded-ack) ----------------------------------------------------
+
+
+def mark_excluded(pg_fixture, job_id: str) -> None:
+    """analysis_results に除外の印を付ける（本番の exclusion は 'excluded' か NULL だけ）。"""
+    with pg_fixture[0].cursor() as cur:
+        cur.execute(
+            f"""UPDATE {SCHEMA}.analysis_results SET exclusion = 'excluded'
+                WHERE extraction_item_id IN (SELECT id FROM {SCHEMA}.extraction_items WHERE extraction_job_id = %s)""",
+            (job_id,),
+        )
+
+
+def view_of(pg_fixture, item_id: str) -> dict:
+    with Session(pg_fixture[1]) as session:
+        return dict(session.execute(text(condition_svc.context_sql(schema=SCHEMA)), {"eid": item_id}).mappings().one())
+
+
+def in_needs_review_tab(pg_fixture, item_id: str) -> bool:
+    where, _params = review_svc._build_where(
+        query=None, provider=None, status_tab="NEEDS_REVIEW", review_only=False, unregistered_only=False,
+        unresolved_unit_only=False,
+    )
+    sql = f"""{condition_svc.source_cte(schema=SCHEMA, item_only=True)} SELECT ({where.removeprefix("WHERE ")}) AS hit
+        FROM {SCHEMA}.analysis_results ar
+        JOIN {SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+        JOIN {SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        {condition_svc.review_joins(schema=SCHEMA)} WHERE ei.id = CAST(:eid AS uuid)"""
+    with Session(pg_fixture[1]) as session:
+        return bool(session.execute(text(sql), {"eid": item_id}).scalar_one())
+
+
+def test_excluded_item_leaves_needs_review_after_ack_but_stays_in_all_and_out_of_distribution(pg, pf):
+    source_id, job_id, item_id = prepare(pg, 0)
+    fix_product(pg, (source_id, job_id, item_id), pf.p_a, at=10)  # 他の理由を片付ける
+    mark_excluded(pg, job_id)
+    assert view_of(pg, item_id)["needs_review"] is True and "excluded" in view_of(pg, item_id)["review_reasons"]
+    assert in_needs_review_tab(pg, item_id) is True
+    correct(pg, item_id, source_id, "review_ack", ack(["excluded"]), at=40)
+    after = view_of(pg, item_id)
+    assert after["excluded_acked"] is True and after["needs_review"] is False and "excluded" not in after["review_reasons"]
+    assert in_needs_review_tab(pg, item_id) is False
+    assert review_svc._build_where(
+        query=None, provider=None, status_tab="ALL", review_only=False, unregistered_only=False, unresolved_unit_only=False,
+    )[0] == ""  # 「すべて」タブには絞り込みが無い＝残る
+    assert fetch_output(pg) == []  # 確認済みでも除外の件は配信に出ない
+    correct(pg, item_id, source_id, "v102_price", "1,100円", at=50)  # 書き写しを直した → 確認済みは無効になり要確認に戻る
+    assert view_of(pg, item_id)["excluded_acked"] is False and in_needs_review_tab(pg, item_id) is True
+
+
+@pytest.mark.parametrize(
+    ("human_value", "transcription_at", "ack_at"),
+    [
+        (json.dumps({"v": 1, "codes": ["excluded"]}), None, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), 5, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), 20, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), 10, 10),
+        (json.dumps({"v": 2, "codes": ["excluded"]}), None, 10),
+        ("not json", None, 10),
+        (json.dumps({"v": 1, "codes": ["excluded", ""]}), None, 10),
+        (json.dumps({"v": 1, "codes": ["excluded", 3]}), None, 10),
+    ],
+    ids=["valid", "after_transcription", "before_transcription", "same_time", "version_2", "broken_json", "empty_code", "number_code"],
+)
+def test_sql_excluded_acked_matches_python_loader(pg, pf, human_value, transcription_at, ack_at):
+    source_id, job_id, item_id = prepare(pg, 0)
+    mark_excluded(pg, job_id)
+    correct(pg, item_id, source_id, "review_ack", human_value, at=ack_at)
+    if transcription_at is not None:
+        correct(pg, item_id, source_id, "v102_lines", "[1, 2]", at=transcription_at)
+    with Session(pg[1]) as session:
+        loaded = decisions_svc.load_v102_decisions(session, [item_id])
+    python_says = "excluded" in loaded[item_id].ack_codes if item_id in loaded else False
+    assert view_of(pg, item_id)["excluded_acked"] is python_says
+
+
+def _save_ack(pg_fixture, source_id: str, item_id: str, codes: list[str]) -> None:
+    async def save() -> int:
+        engine = create_async_engine(pg_fixture[2])
+        try:
+            async with AsyncSession(engine) as db:
+                return await decisions_svc.save_review_ack(
+                    db, extraction_item_id=item_id, source_message_id=source_id, codes=codes, corrected_by="admin@example.com",
+                )
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(save()) == 1
+
+
+def test_save_review_ack_unions_with_the_previous_valid_codes(pg, pf):
+    source_id, _job_id, item_id = prepare(pg, 0)
+    _save_ack(pg, source_id, item_id, ["excluded"])
+    _save_ack(pg, source_id, item_id, [REASON_NOT_IN_MASTER])
+    rows = one(pg, f"SELECT human_value FROM {SCHEMA}.item_corrections WHERE extraction_item_id=%s "
+                   f"ORDER BY corrected_at DESC, id DESC", (item_id,))
+    assert sorted(json.loads(rows[0][0])["codes"]) == sorted(["excluded", REASON_NOT_IN_MASTER])
+    with Session(pg[1]) as session:
+        assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset({"excluded", REASON_NOT_IN_MASTER})
+
+
+def test_csv_path_save_one_unions_ack_codes_with_the_previous_valid_codes(pg, pf):
+    from app.services import tcg_review_csv_svc as csv_svc
+
+    source_id, _job_id, item_id = prepare(pg, 0)
+    _save_ack(pg, source_id, item_id, ["excluded"])
+    apply = {"extraction_item_id": item_id, "kind": csv_svc.KIND_ACK, "value": REASON_NOT_IN_MASTER, "code": "",
+             "_item": {"source_message_id": source_id, "system": {}}}
+
+    async def save() -> None:
+        engine = create_async_engine(pg[2])
+        try:
+            async with AsyncSession(engine) as db:
+                await csv_svc._save_one(db, apply, "admin@example.com")
+        finally:
+            await engine.dispose()
+
+    asyncio.run(save())
+    rows = one(pg, f"SELECT human_value FROM {SCHEMA}.item_corrections WHERE extraction_item_id=%s AND field_name='review_ack' "
+                   f"ORDER BY corrected_at DESC, id DESC", (item_id,))
+    assert sorted(json.loads(rows[0][0])["codes"]) == sorted(["excluded", REASON_NOT_IN_MASTER])
+    with Session(pg[1]) as session:
+        assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset({"excluded", REASON_NOT_IN_MASTER})
+
+
+def test_save_review_ack_does_not_union_codes_from_before_a_transcription_fix(pg, pf):
+    source_id, _job_id, item_id = prepare(pg, 0)
+    correct(pg, item_id, source_id, "review_ack", ack(["excluded"]), at=10)
+    correct(pg, item_id, source_id, "v102_lines", "[1, 2]", at=20)
+    _save_ack(pg, source_id, item_id, [REASON_NOT_IN_MASTER])
+    with Session(pg[1]) as session:
+        assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset({REASON_NOT_IN_MASTER})
 
 
 # --- D-K1 の複数件版（落とした件を含む4件の真ん中の件だけを固定する） ---------------------------------------
