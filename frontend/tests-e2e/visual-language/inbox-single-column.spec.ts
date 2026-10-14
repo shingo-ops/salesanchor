@@ -1566,7 +1566,7 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
   const backBtn = (page: Page): Locator => page.locator(".karte-close-back-btn");
   const mobileIdentity = (page: Page): Locator => page.locator(".karte-close-mobile-identity");
   const convertBtn = (page: Page): Locator => page.locator('[data-testid="karte-action-primary"]');
-  const convertDialog = (page: Page): Locator => page.getByRole("dialog");
+  const convertDialog = (page: Page): Locator => page.locator(".comp-modal-dialog[role='dialog']");
   // ConfirmModal の .form-actions は [閉じる(secondary), 確定(primary)] の順（ConfirmModal.tsx 参照）
   const dialogButtons = (page: Page): Locator => convertDialog(page).locator(".form-actions button");
   const stageBadge = (page: Page): Locator => page.locator('[data-testid="karte-stage-badge"]');
