@@ -76,6 +76,36 @@ const toNonNegInt = (s: string): number | null => {
   return s.trim() !== "" && Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
 };
 
+// 保存内容（PATCH 本文）を1か所で作る。GET 直後の「同じ内容」判定にも同じ規則を使う。
+type FilterPayloadInput = {
+  enabled: boolean;
+  hiddenSupplierIds: Iterable<number>;
+  hiddenCategories: Iterable<string>;
+  hiddenColumns: Iterable<string>;
+  showConditions: Iterable<string>;
+  showUnits: Iterable<string>;
+  showOfferTypes: Iterable<string>;
+  qtyMin: string;
+  qtyMax: string;
+  priceMin: string;
+  priceMax: string;
+  mergeSamePost: boolean;
+};
+const buildFilterPayload = (v: FilterPayloadInput) => ({
+  enabled: v.enabled,
+  hidden_supplier_ids: Array.from(v.hiddenSupplierIds),
+  hidden_categories: Array.from(v.hiddenCategories),
+  hidden_columns: Array.from(v.hiddenColumns),
+  show_conditions: Array.from(v.showConditions),
+  show_units: Array.from(v.showUnits),
+  show_offer_types: Array.from(v.showOfferTypes),
+  qty_min: toNonNegInt(v.qtyMin),
+  qty_max: toNonNegInt(v.qtyMax),
+  price_min: toNonNegInt(v.priceMin),
+  price_max: toNonNegInt(v.priceMax),
+  merge_same_post: v.mergeSamePost,
+});
+
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
   "category", "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
@@ -164,6 +194,8 @@ export default function InventoryPage() {
 
   // 古い応答で新しい応答を上書きしないための要求番号
   const loadSeqRef = useRef<number>(0);
+  // 最後に保存した（または GET で読んだ）保存内容。同じ内容は PATCH しない。
+  const lastSavedRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     const seq = ++loadSeqRef.current;
@@ -263,6 +295,22 @@ export default function InventoryPage() {
         setPriceMin(f.price_min != null ? String(f.price_min) : "");
         setPriceMax(f.price_max != null ? String(f.price_max) : "");
         setMergeSamePost(f.merge_same_post ?? true);
+        lastSavedRef.current = JSON.stringify(
+          buildFilterPayload({
+            enabled: !!f.enabled,
+            hiddenSupplierIds: new Set(f.hidden_supplier_ids ?? []),
+            hiddenCategories: new Set(f.hidden_categories ?? []),
+            hiddenColumns: new Set(f.hidden_columns ?? []),
+            showConditions: new Set(f.show_conditions ?? []),
+            showUnits: new Set(f.show_units ?? []),
+            showOfferTypes: new Set(f.show_offer_types ?? []),
+            qtyMin: f.qty_min != null ? String(f.qty_min) : "",
+            qtyMax: f.qty_max != null ? String(f.qty_max) : "",
+            priceMin: f.price_min != null ? String(f.price_min) : "",
+            priceMax: f.price_max != null ? String(f.price_max) : "",
+            mergeSamePost: f.merge_same_post ?? true,
+          }),
+        );
       })
       .catch(() => { /* デフォルト（全表示）のまま */ })
       .finally(() => { if (!cancelled) setFiltersLoaded(true); });
@@ -274,23 +322,27 @@ export default function InventoryPage() {
   // フィルタ変更を永続化（初回ロード後のみ・250ms デバウンス）
   useEffect(() => {
     if (!filtersLoaded) return;
+    const payload = buildFilterPayload({
+      enabled: filterEnabled,
+      hiddenSupplierIds: hiddenSupplierIds,
+      hiddenCategories: hiddenCategories,
+      hiddenColumns: hiddenColumns,
+      showConditions: showConditions,
+      showUnits: showUnits,
+      showOfferTypes: showOfferTypes,
+      qtyMin, qtyMax, priceMin, priceMax, mergeSamePost,
+    });
+    const serialized = JSON.stringify(payload);
+    if (serialized === lastSavedRef.current) return;
     const timer = setTimeout(() => {
+      // 送信の直前に記録する（応答待ち中に元の値へ戻されても、戻した内容を必ず送るため）
+      lastSavedRef.current = serialized;
       void api
-        .patch("/me/inventory-filters", {
-          enabled: filterEnabled,
-          hidden_supplier_ids: Array.from(hiddenSupplierIds),
-          hidden_categories: Array.from(hiddenCategories),
-          hidden_columns: Array.from(hiddenColumns),
-          show_conditions: Array.from(showConditions),
-          show_units: Array.from(showUnits),
-          show_offer_types: Array.from(showOfferTypes),
-          qty_min: toNonNegInt(qtyMin),
-          qty_max: toNonNegInt(qtyMax),
-          price_min: toNonNegInt(priceMin),
-          price_max: toNonNegInt(priceMax),
-          merge_same_post: mergeSamePost,
-        })
-        .catch(() => { /* 保存失敗は致命でない */ });
+        .patch("/me/inventory-filters", payload)
+        .catch(() => {
+          // 保存失敗は致命でない。記録を消し、次の変更で必ず再送する
+          if (lastSavedRef.current === serialized) lastSavedRef.current = null;
+        });
     }, 250);
     return () => clearTimeout(timer);
   }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, mergeSamePost]);

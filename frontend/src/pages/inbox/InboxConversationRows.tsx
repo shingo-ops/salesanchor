@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { Conversation } from "../../lib/messages";
+import type { LongPressHandlers } from "../../hooks/useLongPress";
 import { getInitials, relativeTime } from "./inbox.types";
 
 export interface InboxConversationRowsProps {
@@ -25,12 +26,18 @@ export interface InboxConversationRowsProps {
   selectMode: boolean;
   selectedLeadIds: Set<number>;
   unreadOnly: boolean;
+  /**
+   * 行の長押しハンドラ（受信箱 第4便）。PC と共通のこのファイルは任意 props として
+   * 受け取るだけで、渡されなければ（PC は無変更）従来どおり何も起きない。
+   * スマホ版（InboxConversationListMobile.tsx）だけが渡す。
+   */
+  longPressHandlersFor?: (leadId: number) => LongPressHandlers;
 }
 
 export function InboxConversationRows({
   convLoading, convError, filteredConversations, loadConversations,
   selectedLeadId, avatarErrors, handleAvatarError, selectLead, toggleSelectConv,
-  selectMode, selectedLeadIds, unreadOnly,
+  selectMode, selectedLeadIds, unreadOnly, longPressHandlersFor,
 }: InboxConversationRowsProps) {
   const { t } = useTranslation();
 
@@ -66,6 +73,9 @@ export function InboxConversationRows({
         filteredConversations.map((conv) => {
           const isSelected = conv.lead_id === selectedLeadId;
           const isBulkChecked = selectedLeadIds.has(conv.lead_id);
+          // 選択モード（チェックボックスが出ている状態）では長押しでメニューを出さない
+          // （行を押すと選択の切り替えになるため）。渡されなければ何も起きない（PC は無変更）。
+          const press = !selectMode ? longPressHandlersFor?.(conv.lead_id) : undefined;
           return (
             <button
               key={conv.lead_id}
@@ -73,7 +83,19 @@ export function InboxConversationRows({
               role={selectMode ? "checkbox" : undefined}
               aria-checked={selectMode ? isBulkChecked : undefined}
               className={`conv-item conversation-item${isSelected ? " selected" : ""}${selectMode && isBulkChecked ? " bulk-selected" : ""}`}
-              onClick={() => selectMode ? toggleSelectConv(conv.lead_id) : selectLead(conv.lead_id)}
+              onPointerDown={press?.onPointerDown}
+              onPointerMove={press?.onPointerMove}
+              onPointerUp={press?.onPointerUp}
+              onPointerCancel={press?.onPointerCancel}
+              onPointerLeave={press?.onPointerLeave}
+              onContextMenu={press?.onContextMenu}
+              onClick={(e) => {
+                press?.onClick(e);
+                // 長押しが成立した直後の click は press.onClick が preventDefault する
+                // （useLongPress.ts）→ ここでは会話を開かない
+                if (e.defaultPrevented) return;
+                selectMode ? toggleSelectConv(conv.lead_id) : selectLead(conv.lead_id);
+              }}
             >
               {selectMode && (
                 <span aria-hidden="true" className={`conv-select-check${isBulkChecked ? " checked" : ""}`} />

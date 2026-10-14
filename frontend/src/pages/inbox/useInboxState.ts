@@ -22,6 +22,7 @@ import {
   inferPlatform,
   listConversations,
   markRead as apiMarkRead,
+  markUnread as apiMarkUnread,
   sendImageMessage,
   sendMessage,
 } from "../../lib/messages";
@@ -147,9 +148,9 @@ export interface UseInboxStateReturn {
   setManageOpen: (fn: boolean | ((prev: boolean) => boolean)) => void;
   manageRef: RefObject<HTMLDivElement>;
   handleMarkAllRead: () => Promise<void>;
-  handleMarkUnread: () => void;
-  handleExclude: () => Promise<void>;
-  handleDeleteLead: () => Promise<void>;
+  handleMarkUnread: (targetLeadId?: number) => Promise<void>;
+  handleExclude: (targetLeadId?: number) => Promise<void>;
+  handleDeleteLead: (targetLeadId?: number) => Promise<void>;
 
   // 一括選択
   selectMode: boolean;
@@ -805,29 +806,39 @@ export function useInboxState(): UseInboxStateReturn {
     await Promise.all(unreadConvs.map((c) => markRead(c.lead_id)));
   }, [filteredConversations, markRead]);
 
-  const handleMarkUnread = useCallback(() => {
-    if (!selectedLeadId) return;
+  const handleMarkUnread = useCallback(async (targetLeadId?: number) => {
+    const leadId = targetLeadId ?? selectedLeadId;
+    if (!leadId) return;
+    try {
+      await apiMarkUnread(leadId);
+    } catch {
+      // サーバを正とする: 失敗したら画面も変えない
+      return;
+    }
     setConversations((prev) =>
-      prev.map((c) => c.lead_id === selectedLeadId ? { ...c, unread_count: 1 } : c)
+      prev.map((c) => c.lead_id === leadId ? { ...c, unread_count: 1 } : c)
     );
   }, [selectedLeadId]);
 
-  const handleExclude = useCallback(async () => {
-    if (!selectedLeadId) return;
+  const handleExclude = useCallback(async (targetLeadId?: number) => {
+    const leadId = targetLeadId ?? selectedLeadId;
+    if (!leadId) return;
     try {
-      await api.patch<void>(`/leads/${selectedLeadId}`, { status: "out_of_scope" });
-      setConversations((prev) => prev.filter((c) => c.lead_id !== selectedLeadId));
-      setSelectedLeadId(null);
+      await api.patch<void>(`/leads/${leadId}`, { status: "out_of_scope" });
+      setConversations((prev) => prev.filter((c) => c.lead_id !== leadId));
+      // 対象が今開いている会話のときだけ閉じる（一覧の他行を消しても開いている会話は残す）
+      if (leadId === selectedLeadId) setSelectedLeadId(null);
     } catch { /* noop */ }
   }, [selectedLeadId]);
 
-  const handleDeleteLead = useCallback(async () => {
-    if (!selectedLeadId) return;
+  const handleDeleteLead = useCallback(async (targetLeadId?: number) => {
+    const leadId = targetLeadId ?? selectedLeadId;
+    if (!leadId) return;
     if (!window.confirm(t("inbox.confirmDelete"))) return;
     try {
-      await api.delete(`/leads/${selectedLeadId}`);
-      setConversations((prev) => prev.filter((c) => c.lead_id !== selectedLeadId));
-      setSelectedLeadId(null);
+      await api.delete(`/leads/${leadId}`);
+      setConversations((prev) => prev.filter((c) => c.lead_id !== leadId));
+      if (leadId === selectedLeadId) setSelectedLeadId(null);
     } catch { /* noop */ }
   }, [selectedLeadId, t]);
 
