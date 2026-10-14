@@ -13,6 +13,11 @@ vi.mock("react-i18next", () => ({
 vi.mock("../../hooks/usePermissions", () => ({
   usePermissions: () => ({ hasPermission: (p: string) => permissions.includes(p) }),
 }));
+// 第6便: InboxMessageThread が useIsMobile を呼ぶようになった（スマホのときだけ
+// InboxThreadHeaderMobile を描く分岐）。jsdom は window.matchMedia を実装していない
+// ため、AdminHubPage.test.tsx と同じ作法でモックする。本テストは送信エラー表示
+// （PC・タブレットと同じ JSX）の検証なので false（非スマホ）を返す。
+vi.mock("../../hooks/useIsMobile", () => ({ useIsMobile: () => false }));
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(() => Promise.resolve([])), post: vi.fn(() => Promise.resolve({})) },
 }));

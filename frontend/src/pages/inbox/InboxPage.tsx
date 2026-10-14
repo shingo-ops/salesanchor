@@ -69,11 +69,12 @@ export default function InboxPage() {
    * ヘッダーの操作行（テンプレート / FAQ / 受信箱の設定）。
    * 2026-10-13（PO 指定）: スマホで会話一覧を見ているときは出さない。
    * 一覧では使い道がなく、44dp ぶんの高さを一覧に回せる。
-   * 会話（スレッド）を開いているときは返信中に使うので出す。
-   * 絞り込みは一覧専用なので検索欄の横へ移した（InboxConversationList）。
+   * 2026-10-14（第6便・PO 決定）: スマホでは会話を開いているときも出さない
+   * （帯を2本から1本に統合。テンプレート・顧客情報は会話ヘッダーの右に、
+   * FAQ・受信箱の設定は会話ヘッダーの「…」に移した＝InboxThreadHeaderMobile.tsx）。
    * PC・タブレットは従来どおり常に出す（一覧と会話が同時に見えているため）。
    */
-  const showHeaderActions = !isMobile || selectedLeadId != null;
+  const showHeaderActions = !isMobile;
 
   const headerActionsContent = (
     <div className="page-header-actions">
@@ -225,6 +226,7 @@ export default function InboxPage() {
                 setRecipientLanguage={state.setRecipientLanguage}
                 sendReaction={state.sendReaction}
                 deleteReaction={state.deleteReaction}
+                onOpenSettings={() => setShowSettings(true)}
               />
             </div>
           </div>

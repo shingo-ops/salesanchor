@@ -2087,3 +2087,79 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .inbox-mobile-search-row .inbox-search-icon {
   left: var(--space-4);
 }
+
+/* ===== スマホ版・会話ヘッダー新設（第6便・2026-10-14・PO 決定） =====
+   帯を2本（上の操作行＋会話ヘッダー）から1本に統合する。
+   PC・タブレットでは InboxThreadHeaderMobile.tsx 自体を描かないため、
+   ここに @media は不要（.inbox-mobile-header と同じ考え方）。
+     ヘッダー全体の高さ 56dp            = --topbar-height
+     戻る・顔写真はそれぞれ既存の .inbox-back-to-list（48dp）/ .conv-avatar（48dp）を再利用
+     左の余白 16dp                     = --space-4（.inbox-mobile-header と同じ値に揃える）
+     右の3つの押す場所 各44dp以上       = --size-icon-btn-lg
+     右端は一覧のヘッダーと同じ作法で画面右端に接地（padding-right: 0） */
+.inbox-thread-header-mobile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--topbar-height);
+  padding-left: var(--space-4);
+  padding-right: 0;
+  border-bottom: 1px solid var(--color-separator-subtle);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+/* 第6便・追加分（2026-10-14・PO 判断）: 左側を2段にする（お手本=WhatsApp と同じ形。
+   実機の構造ダンプで conversation_contact_name=高さ22.7dp・その下の
+   conversation_contact_status=高さ16.3dp を確認済み）。Discord 未連携のときだけ
+   2段目を出す。ヘッダーの高さは --topbar-height（56px）で固定のままなので、
+   2段の合計がそれを超えないことが前提（名前1行＋バッジ1行で約37px・画面検査で確認）。 */
+.inbox-thread-header-mobile-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2px);
+  overflow: hidden;
+}
+.inbox-thread-header-mobile-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+/* .discord-unlinked-badge（InboxPage.css 既存）はインライン配置の見た目を持つため、
+   フレックス縦積みの中では幅いっぱいに stretch されないよう明示する。
+   寸法・色は既存クラスのトークンのみを使い、ここでは追加しない。 */
+.inbox-thread-header-mobile-status {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inbox-thread-header-mobile-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.inbox-thread-header-mobile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-icon-btn-lg);
+  height: var(--size-icon-btn-lg);
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background var(--transition-micro);
+}
+.inbox-thread-header-mobile-btn:hover {
+  background: var(--bg-hover);
+}
