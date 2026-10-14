@@ -237,6 +237,8 @@ SupplierDetailView.tsx・ItemComparison.tsx・ほかの features、API・backend
 - 同じ feature の ReviewRegisterProductForm.tsx（同じ登録フォームの金型版）
 
 ## 維持の仕組み
+守り手: frontend/scripts/eslint-rules/no-japanese-literal.cjs（frontend/eslint.config.js で有効、pre-commit `--max-warnings=0`）、check:i18n-missing-keys、frontend/src/components/Button.tsx・frontend/src/components/TextField.tsx・frontend/src/components/Textarea.tsx、frontend/src/features/tcg-analysis-review/ProductMasterDrawer.test.tsx・frontend/src/features/tcg-analysis-review/SourceRawPane.test.tsx
+
 - ESLint の local/no-japanese-literal（pre-commit で `--max-warnings=0`）
 - check:i18n-missing-keys
 - 金型（TextField.tsx・Textarea.tsx・Button.tsx）

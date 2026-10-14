@@ -10,11 +10,11 @@
 ## 現在地（事実）
 - 対象は frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx と frontend/src/features/tcg-analysis-review/SourceRawPane.tsx。
 - 変更前の eslint 警告は 74 件（local/no-japanese-literal。/tmp/CC報告ファイル/ssot-ay2y/recon/eslint.txt、位置一覧 jp-literals.txt）。pre-commit は `--max-warnings=0`（frontend/package.json の lint-staged）なので、両ファイルを触るには警告 0 が前提になる。
-- 日本語直書きは ProductMasterDrawer.tsx:57（検索 placeholder）、:161、:166-168 ほか。
-- 生 input・textarea・button は frontend/src/features/tcg-analysis-review/supplier-detail-view.css の `.pmd-head button`・`.pmd-field input, textarea`・`.pmd-actions button`・`.pmd-search-candidate button` で見た目を当てていた（pmd-css.txt）。
-- frontend/src/features/tcg-analysis-review/source-raw-pane.css の `.source-search` は `grid-template-columns: auto minmax(130px, 1fr) auto auto auto`（:28-34 付近）。`.source-search input { min-width: 0; }` が :48 付近にあった。
+- 日本語直書きの例（変更前 f005b623f）: frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:57（検索 placeholder「名称で検索・選択」）、frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:175（見出し「商品マスタ新規登録」）、frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:507（閉じるボタン「×」と aria-label「閉じる」）、frontend/src/features/tcg-analysis-review/SourceRawPane.tsx:30（1行の JSX に「原文 1件」「原文検索」「移動」「前へ」「次へ」「原文全文」と生 input・button）。
+- 生 input・textarea・button の見た目は frontend/src/features/tcg-analysis-review/supplier-detail-view.css:227（`.pmd-head button`）、frontend/src/features/tcg-analysis-review/supplier-detail-view.css:244（`.pmd-field input, textarea`）、frontend/src/features/tcg-analysis-review/supplier-detail-view.css:260（`.pmd-actions button`）、frontend/src/features/tcg-analysis-review/supplier-detail-view.css:293（`.pmd-search-candidate button`）で当てていた（pmd-css.txt）。
+- frontend/src/features/tcg-analysis-review/source-raw-pane.css:30 の `.source-search` は `grid-template-columns: auto minmax(130px, 1fr) auto auto auto`。frontend/src/features/tcg-analysis-review/source-raw-pane.css:48 に `.source-search input { min-width: 0; }`（本便では残す）。
 - 既存キーの再利用元は ja.json の reviewItem.wizard.register（22 件）・superAdmin.supplierQuality.productAssign（14 件）ほか（keyprefixes.txt）。再利用は common.close・common.previous・common.next、superAdmin.supplierQuality.productAssign.searchPlaceholder・searching・noResults、reviewIssues.excluded に限った（ja 値の一致を確認済み）。
-- 手本: frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx（同じ登録フォームの金型版）、frontend/src/components/Drawer.tsx:150-158（閉じるボタンの X アイコン）。
+- 手本: frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx（同じ登録フォームの金型版）、frontend/src/components/Drawer.tsx:157（閉じるボタンの aria-label `common.close`）と frontend/src/components/Drawer.tsx:161（`<X size={20} aria-hidden="true" />`）。
 - 金型: frontend/src/components/TextField.tsx（TextFieldControl）、frontend/src/components/Textarea.tsx（TextareaControl）、frontend/src/components/Button.tsx。
 
 ## 未確認として残るもの
