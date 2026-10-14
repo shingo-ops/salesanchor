@@ -4007,7 +4007,7 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 判定の詳細: docs/handoff/design-system-recon/evidence-20260910/ay2r-acceptance.md、ay2r-diff.md、ay2r-before.json、ay2r-after.json。
 - 余白が 0 になる理由: 5画面の form は ContentToolbar 内にあり、既存の `.content-toolbar .field-w-md { margin-bottom: 0 }`（frontend/src/components/field-size.css:26-28）が効く。
 - 解消したもの: 検索欄と検索ボタンの縦中心差（約8px → 0.01 以内）、検索欄の角丸 4px → 6px（金型標準への統一。見た目が変わる点として記録）。
-- 残件: `--input-select-min-w`（frontend/src/tokens.css:355）は本便で参照元 0 の孤児になった（tokens.css は触らない。削除は別便で判断）。
+- 残件: `--input-select-min-w`（frontend/src/tokens.css:355）は本便で参照元 0 の孤児になった（tokens.css は触らない。削除は別便で判断）。→ AY-2u で削除。
 
 #### AY-2r 本番反映の記録（2026-10-14）
 
@@ -4068,3 +4068,17 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 
 - 判定の詳細: docs/handoff/design-system-recon/evidence-20260910/ay2t-acceptance.md、ay2t-cmp.txt、ay2t-before.json、ay2t-after.json。
 - 残件: GoalInputRow の label に htmlFor が無く入力と関連付いていない（既存事象。別テーマ）。
+
+#### AY-2t 本番反映の記録（2026-10-14）
+
+- PR #4256、merge 23b8292f38f3c82a54c596336f73be399979026a（2026-10-14T01:59:08Z）、最終 HEAD b9561708f。
+- Deploy run 38498635643 success。
+- 本番 CSS index-DHY1Ra-y.css で `.comp-field__input.gs-input-saved` が 2 件、`.gs-input{` が 0 件。app は HTTP 200、api/health は HTTP 200。
+- GO は ADR-1003 の委任。根拠 /tmp/CC報告ファイル/ssot-ay2t/prod/checks2.txt。
+
+#### AY-2u 参照元 0 のトークン `--input-select-min-w` の削除（2026-10-14）
+
+- 設計: docs/handoff/ay2u-orphan-token/design.md（recon.md 併置）。AY-2r で参照元が 0 になった残件（上記 AY-2r の残件行）の解消。
+- 変更: frontend/src/tokens.css の `--input-select-min-w: 280px;` 1 行の削除のみ。変更前の `git grep input-select-min-w -- frontend scripts .github` は tokens.css の 1 件だけ（再定義・参照なし）。
+- 判定: `audit:unused-tokens`（scripts/check-unused-tokens.js）の件数が 31→30、差分は当該 1 行のみ（evidence-20260910/ay2u-audit.diff）。dev build の CSS 差分は当該 1 行のみ（ay2u-css.diff）。
+- 対象外: 残る未使用トークン 30 件の整理（PO 判断事項として残件に残す）。

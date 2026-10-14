@@ -1,0 +1,57 @@
+/**
+ * ContextMenu — 押した場所の近くに出る小さなメニュー
+ * ADR-067: 全値は CSS 変数参照のみ（直値禁止）
+ * 見た目は components.css の .dropdown-menu / .dropdown-item（ADR-069）と同じトークン。
+ */
+
+.comp-context-menu {
+  position: fixed;
+  z-index: var(--z-modal);
+  min-width: var(--min-width-dropdown);
+  padding: var(--space-1) 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+  overflow: hidden;
+}
+
+.comp-context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-2) var(--space-14px);
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition-micro);
+}
+
+.comp-context-menu__item:hover,
+.comp-context-menu__item:focus-visible {
+  background: var(--bg-subtle);
+}
+
+.comp-context-menu__item--danger {
+  color: var(--danger);
+}
+
+.comp-context-menu__item--danger:hover,
+.comp-context-menu__item--danger:focus-visible {
+  background: var(--danger-bg);
+}
+
+.comp-context-menu__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.comp-context-menu__label {
+  flex: 1;
+}

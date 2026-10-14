@@ -1210,6 +1210,100 @@ async def mark_lead_messages_read(
     return {"marked_count": marked}
 
 
+@router.post(
+    "/leads/{lead_id}/messages/mark-unread",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def mark_lead_message_unread(
+    lead_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """受信箱 第4便: 長押しメニュー「未読にする」。最新 inbound 1 件だけを未読に戻す。
+
+    PO 決定（2026-10-14）: 戻す範囲は「一番新しい受信メッセージ1通だけ」
+    （＝一覧の未読バッジが 1 になる）。過去の受信の既読記録は消さない。
+
+    動作:
+        - lead の direction='inbound' のうち、会話一覧 (meta_inbox.list_conversations)
+          や mark-read の直近 inbound 取得と同じ並び順 `created_at DESC, id DESC`
+          で先頭 1 件を選ぶ
+        - その 1 件が既読 (seen_at IS NOT NULL) のときだけ
+          seen_at=NULL, seen_by_staff_id=NULL に戻す
+        - 既に未読、または inbound が 1 件も無ければ 0 件（エラーにしない）
+        - 該当 lead が同テナントに無い場合は 404
+
+    返却: { "unmarked_count": N }
+    """
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
+    lead_q = await db.execute(
+        text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": lead_id, "tenant_id": tenant_id},
+    )
+    if lead_q.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="リードが見つかりません",
+        )
+
+    latest_q = await db.execute(
+        text(f"""
+            SELECT id
+            FROM {meta_messages_t}
+            WHERE lead_id = :lead_id
+              AND tenant_id = :tenant_id
+              AND direction = 'inbound'
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+        """),
+        {"lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    latest_row = latest_q.first()
+
+    unmarked = 0
+    if latest_row is not None:
+        upd = await db.execute(
+            text(f"""
+                UPDATE {meta_messages_t}
+                SET seen_at = NULL,
+                    seen_by_staff_id = NULL
+                WHERE id = :id
+                  AND tenant_id = :tenant_id
+                  AND seen_at IS NOT NULL
+            """),
+            {"id": latest_row[0], "tenant_id": tenant_id},
+        )
+        unmarked = int(upd.rowcount or 0)
+
+    # mark-read と同じ作法: 未読化の事実を audit_log に残す。失敗時はログのみ。
+    if unmarked > 0:
+        try:
+            await record_audit_log(
+                db=db,
+                tenant_id=tenant_id,
+                user_id=current_user.id,
+                action="mark_message_unread",
+                table_name="meta_messages",
+                record_id=lead_id,
+                new_data={
+                    "lead_id": lead_id,
+                    "unmarked_count": unmarked,
+                },
+            )
+        except Exception:
+            # audit_logs テーブル不在 (テスト環境) や DB 障害でも機能を止めない
+            logger.exception(
+                "audit_log 記録失敗 (mark_message_unread), lead_id=%s",
+                lead_id,
+            )
+
+    await db.commit()
+
+    return {"unmarked_count": unmarked}
+
+
 # ---------------------------------------------------------------------------
 # ADR-088: メッセージ翻訳
 # ---------------------------------------------------------------------------

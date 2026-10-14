@@ -44984,6 +44984,52 @@
         ]
       }
     },
+    "/api/v1/leads/{lead_id}/messages/mark-unread": {
+      "post": {
+        "description": "受信箱 第4便: 長押しメニュー「未読にする」。最新 inbound 1 件だけを未読に戻す。\n\nPO 決定（2026-10-14）: 戻す範囲は「一番新しい受信メッセージ1通だけ」\n（＝一覧の未読バッジが 1 になる）。過去の受信の既読記録は消さない。\n\n動作:\n    - lead の direction='inbound' のうち、会話一覧 (meta_inbox.list_conversations)\n      や mark-read の直近 inbound 取得と同じ並び順 `created_at DESC, id DESC`\n      で先頭 1 件を選ぶ\n    - その 1 件が既読 (seen_at IS NOT NULL) のときだけ\n      seen_at=NULL, seen_by_staff_id=NULL に戻す\n    - 既に未読、または inbound が 1 件も無ければ 0 件（エラーにしない）\n    - 該当 lead が同テナントに無い場合は 404\n\n返却: { \"unmarked_count\": N }",
+        "operationId": "mark_lead_message_unread_api_v1_leads__lead_id__messages_mark_unread_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Lead Message Unread",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/api/v1/leads/{lead_id}/messages/{message_id}/attachment-url": {
       "get": {
         "description": "受信メッセージの添付画像 URL を取り直す（Meta CDN URL 期限切れ対応）。\n\nフロントが <img onError> で呼ぶ。\n成功時: {\"url\": \"...\"} を返し、meta_messages.attachment_url を最新値で UPDATE する。\n失敗時: 404 + {\"reason\": \"expired_or_unavailable\"}。\nIG の場合は直近 20 件/スレッド制限により古いメッセージは取れない場合がある。",

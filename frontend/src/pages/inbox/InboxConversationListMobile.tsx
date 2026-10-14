@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
+import { ContextMenu } from "../../components/ContextMenu";
+import type { ContextMenuAnchor } from "../../components/ContextMenu";
+import { useLongPress } from "../../hooks/useLongPress";
 import { InboxConversationRows } from "./InboxConversationRows";
 import type { InboxConversationListProps } from "./InboxConversationList";
 
@@ -25,8 +29,40 @@ export function InboxConversationListMobile({
   handleBulkMarkRead, handleBulkMarkUnread, handleBulkExclude, handleBulkDelete,
   convLoading, convError, filteredConversations, loadConversations,
   selectedLeadId, avatarErrors, handleAvatarError, selectLead, toggleSelectConv,
+  handleMarkUnread, handleExclude, handleDeleteLead,
 }: InboxConversationListProps) {
   const { t } = useTranslation();
+
+  // 受信箱 第4便: 一覧の行を長押しするとメニューを出す（スマホのみ）。
+  // メニューの対象 leadId と出す位置（長押しした座標）を持つ。
+  const [rowMenu, setRowMenu] = useState<{ leadId: number; anchor: ContextMenuAnchor } | null>(null);
+  const { bind: bindLongPress } = useLongPress<number>({
+    onLongPress: (leadId, anchor) => setRowMenu({ leadId, anchor }),
+  });
+  const closeRowMenu = () => setRowMenu(null);
+  const rowMenuItems = rowMenu
+    ? [
+        {
+          key: "markUnread",
+          label: t("inbox.markUnread"),
+          icon: <INBOX_ACTION_ICONS.markUnread size={ICON.base} weight="fill" aria-hidden="true" />,
+          onSelect: () => { void handleMarkUnread(rowMenu.leadId); },
+        },
+        {
+          key: "exclude",
+          label: t("inbox.exclude"),
+          icon: <INBOX_ACTION_ICONS.exclude size={ICON.base} weight="fill" aria-hidden="true" />,
+          onSelect: () => { void handleExclude(rowMenu.leadId); },
+        },
+        {
+          key: "delete",
+          label: t("inbox.deleteLead"),
+          icon: <INBOX_ACTION_ICONS.delete size={ICON.base} weight="fill" aria-hidden="true" />,
+          onSelect: () => { void handleDeleteLead(rowMenu.leadId); },
+          danger: true,
+        },
+      ]
+    : [];
 
   return (
     <aside className="inbox-left-panel">
@@ -183,6 +219,14 @@ export function InboxConversationListMobile({
         selectMode={selectMode}
         selectedLeadIds={selectedLeadIds}
         unreadOnly={unreadOnly}
+        longPressHandlersFor={bindLongPress}
+      />
+      <ContextMenu
+        open={rowMenu !== null}
+        onClose={closeRowMenu}
+        anchor={rowMenu?.anchor ?? null}
+        items={rowMenuItems}
+        ariaLabel={t("inbox.moreActions")}
       />
     </aside>
   );
