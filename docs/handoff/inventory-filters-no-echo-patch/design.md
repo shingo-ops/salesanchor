@@ -19,8 +19,8 @@ load・loadSeqRef・filtersLoaded ゲート、API クライアント、backend�
 |既存テストが通る|vitest src/pages/inventory と CommerceNavigationButtonMigration.test.tsx|
 |ハードコード文言・色の追加なし|lint 0 errors|
 
-## 外部事例
-React の「読込直後の初期値を保存し直さない」定石（dirty チェック／最後に保存した値との比較）。React 公式 docs "You Might Not Need an Effect" の入力値同期の考え方に沿う。新規ライブラリなし。
+## 外部・過去事例の参照と我々への応用
+参照: React の「読込直後の初期値を保存し直さない」定石（dirty チェック／最後に保存した値との比較）。React 公式 docs "You Might Not Need an Effect" の入力値同期の考え方に沿う。新規ライブラリなし。
 応用: 読込値を lastSavedRef に記録し、保存 effect で同値比較して PATCH を省く。
 
 ## 維持の仕組み
