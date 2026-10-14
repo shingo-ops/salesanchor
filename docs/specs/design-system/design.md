@@ -3889,7 +3889,7 @@ AY-2p 変更契約:
 
 維持の仕組み:
 - 守り手: TextField.test.tsx、e2e orders-*.spec.ts（testid）、horizontal-overflow.spec.ts、scripts/check-ui-governance.js（pages の生 input 増加の検出）、frontend-check。
-- 守っていないもの: `.search-bar input`（components.css:56-65）を使う他5画面の form 内入力は生 input/旧外観のまま（別便）。死にクラス search-input と効果のない field-h-md の除去（別便）。type=number の生 input は check-ui-governance.js:213-218 が検出しない。
+- 守っていないもの: `.search-bar input`（components.css:56-65）を使う他5画面の form 内入力は生 input/旧外観のまま（別便）。死にクラス search-input と効果のない field-h-md の除去（別便）。→ 前2つは AY-2r で解消。type=number の生 input は check-ui-governance.js:213-218 が検出しない。
 - 切戻し: 本 PR の merge commit を revert（DB 影響なし）。
 
 改訂1（2026-10-14、Fable 設計審査 r1 APPROVE の MEDIUM/LOW 反映。本文と食い違う所は改訂1が優先）:
@@ -3936,7 +3936,7 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - S3 の Enter 検索: onKeyDown を diff で逐語保持していることを確認した。実画面の前後比較（Enter 単独）は未実施。
 - 守っていないもの（追記）: 在庫一覧のツールバーは幅375 でボタンが画面に収まらない（変更前から。別便で折り返し等を設計）。
 - 品質（ay2p-quality-exitcodes.txt）: generate・tsc・lint・check:all・test:coverage（maxWorkers=1、Test Files 90 passed・Tests 1052 passed）・build・build-storybook はすべて exit 0。
-- 残件: `.search-bar input`（frontend/src/components.css:56-65）を使う他5画面の form 内入力、死にクラス search-input と効果のない field-h-md の除去。
+- 残件: `.search-bar input`（frontend/src/components.css:56-65）を使う他5画面の form 内入力、死にクラス search-input と効果のない field-h-md の除去。→ 解消済み（AY-2r で `.search-bar input` 規則を撤去し、5画面に field-w-md を付け、CompaniesPage・ContactsPage の search-input と field-h-md を除去）。
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2p-*（受入判定 ay2p-acceptance.md、幅375 原因調査 ay2p-w375-*）。
 
 #### AY-2p 本番反映の記録（2026-10-14）
@@ -3977,3 +3977,34 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - e2e（quote-create-inventory-search.spec.ts）: 手元で実行不可（`browserType.launch: Executable doesn't exist`、chromium_headless_shell-1217 が無く 1248 のみ）。CI も e2e.yml:207 で `if: false`。aria-pressed の検証は preview 実測を正とした。
 - 守っていないもの: check-ui-governance.js は生 `<button>` を検出しない（別テーマ）。
 - 証跡: docs/handoff/design-system-recon/evidence-20260910/ay2q-*（ay2q-before-after.md、ay2q-before.json、ay2q-after.json、ay2q-measure.cjs、スクリーンショット）。
+
+#### AY-2q 本番反映の記録（2026-10-14）
+
+- merge 84eda6a4b（2026-10-13T21:56:13Z）、HEAD 5c811b955。
+- Deploy run 38474249560 success（21:59:03Z）。
+- 本番 JS（index-73R0M4eu.js）で AND/OR は variant `tab`・role `group`。生 op の style 文字列は0件。
+- app と health は HTTP 200。
+- GO は ADR-1003 の委任。根拠 /tmp/CC報告ファイル/ssot-ay2q/prod/checks.txt。
+
+#### AY-2r 検索フォームの CSS 整理（`.search-bar input` 撤去・死にクラス除去）（2026-10-14）
+
+- 設計: docs/handoff/ay2r-search-bar-css/design.md（recon.md 併置）。Fable 設計審査 r1 APPROVE（改訂1反映）。PO 決定 2026-10-14「金型への登録を全権限委譲」、前例は AY-2p。
+- 変更ファイル: frontend/src/components.css（`.search-bar, .filter-bar` と `.search-bar input, .filter-bar select` と stylelint の disable/enable を、`.search-bar { margin-bottom: var(--space-4); }` のみに）、ConditionsPage・ProductCategoriesPage・StatusMasterPage・SuppliersPage・UnitsPage の TextField に `className="field-w-md"`、ContactsPage の `search-input field-h-md field-w-sm` → `field-w-sm`、CompaniesPage の `search-input field-h-md field-w-md` → `field-w-md`。field-size.css・tokens.css・TextField.tsx・FormField.css は触らない。
+- 見た目の前後（実測、dev build、preview、幅1280/1440/375）:
+
+| 項目 | 変更前 | 変更後 |
+|---|---|---|
+| 5画面の検索欄 width | 280 | 280（rect 差 0） |
+| 5画面の radius | 4px | 6px（金型標準） |
+| 5画面の computed min-width | 280px | auto（規則削除の帰結。描画幅は不変） |
+| 5画面の検索欄と検索ボタンの縦中心差 | 7.99（375 は 8） | -0.01（375 は 0） |
+| 5画面の height / padding / border / font / color / bg | 39.61（375 は 44）/ 8px 12px / 1px / 14.4px | 同じ |
+| Contacts・Companies の rect | — | 差 0 |
+| Contacts・Companies の computed min-height（1280・1440） | 36px | auto（field-h-md 除去の帰結。描画高は不変） |
+| 検索送信時の一覧 API の search パラメータ（7画面×3幅） | — | 前後一致 |
+| scrollWidth / clientWidth（検索欄・document） | 一致 | 一致 |
+
+- 判定の詳細: docs/handoff/design-system-recon/evidence-20260910/ay2r-acceptance.md、ay2r-diff.md、ay2r-before.json、ay2r-after.json。
+- 余白が 0 になる理由: 5画面の form は ContentToolbar 内にあり、既存の `.content-toolbar .field-w-md { margin-bottom: 0 }`（frontend/src/components/field-size.css:26-28）が効く。
+- 解消したもの: 検索欄と検索ボタンの縦中心差（約8px → 0.01 以内）、検索欄の角丸 4px → 6px（金型標準への統一。見た目が変わる点として記録）。
+- 残件: `--input-select-min-w`（frontend/src/tokens.css:355）は本便で参照元 0 の孤児になった（tokens.css は触らない。削除は別便で判断）。

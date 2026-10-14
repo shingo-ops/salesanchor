@@ -386,7 +386,7 @@ export default function CompaniesPage() {
         left={
           <TextFieldControl
             type="text"
-            className="search-input field-h-md field-w-md"
+            className="field-w-md"
             placeholder={t("companies.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
