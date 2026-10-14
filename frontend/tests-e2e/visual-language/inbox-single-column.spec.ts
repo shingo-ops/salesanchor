@@ -1011,6 +1011,12 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
    * 上の操作行が唯一の入口だったため、入口を失わないようここへ移した）。
    * 旧三点の中身（未読にする/対象外にする/削除/顧客情報）は第4便で
    * 一覧の長押しメニューに移設済み（本番稼働中）のためここには含まれない。
+   *
+   * 第7便（PO 指摘・2026-10-14）で以下を更新: テンプレートの独立ボタンは
+   * 過密（お手本の WhatsApp も右は2つ）のため「…」の中へ移し、右は
+   * 顧客情報・「…」の2つにした。このブロックの assertion は第7便時点の
+   * 形に合わせて更新している（新しい挙動の検査は後続の「受信箱 第7便」
+   * describe を参照）。
    */
   const header = (page: Page): Locator => page.locator(".inbox-thread-header-mobile");
   const name = (page: Page): Locator => page.locator(".inbox-thread-header-mobile-name");
@@ -1070,9 +1076,11 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
     expect(backBox!.width, "戻るボタンの幅").toBeGreaterThanOrEqual(48);
     expect(backBox!.height, "戻るボタンの高さ").toBeGreaterThanOrEqual(48);
 
-    // 4. 右の3つ（テンプレート・顧客情報・「…」）が各44px以上で、
-    //    最後のボタンの右端がビューポート右端に接する（一覧のヘッダーと同じ作法）
-    expect(buttonCount, "右の操作ボタンが3つであること（テンプレート・顧客情報・もっと）").toBe(3);
+    // 4. 右の2つ（顧客情報・「…」）が各44px以上で、
+    //    最後のボタンの右端がビューポート右端に接する（一覧のヘッダーと同じ作法）。
+    //    第7便（PO 指摘）: テンプレートは独立ボタンだと右が3つになり過密
+    //    （お手本の WhatsApp も右は2つ）のため「…」の中へ移した。
+    expect(buttonCount, "右の操作ボタンが2つであること（顧客情報・もっと）").toBe(2);
     for (const b of buttonBoxes) {
       expect(b!.width, "操作ボタンの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
       expect(b!.height, "操作ボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
@@ -1083,6 +1091,12 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
       "最後のボタンの右端",
     ).toBeLessThanOrEqual(1);
 
+    // テンプレートの独立ボタンが無いこと（第7便）。残る2つは顧客情報とその他の操作だけ。
+    const buttonAriaLabels = await Promise.all(
+      (await buttons.all()).map((b) => b.getAttribute("aria-label")),
+    );
+    expect(buttonAriaLabels, "右の操作ボタンの読み上げ名").toEqual(["顧客情報", "その他の操作"]);
+
     // 5. 相手の名前が表示され、右のボタン群と重なっていない
     await expect(name(page)).toContainText(SAMPLE_CONVERSATION_NAME);
     const firstButtonBox = buttonBoxes[0]!;
@@ -1092,23 +1106,25 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
     ).toBeLessThanOrEqual(firstButtonBox.x + 1);
   });
 
-  test("スマホ: 「もっと」を押すと3項目（送信先の言語／FAQ／受信箱の設定）が出る", async ({ page }, testInfo) => {
+  test("スマホ: 「もっと」を押すと4項目（送信先の言語／テンプレート／FAQ／受信箱の設定）が出る", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
     await openInboxList(page);
     await openConversation(page);
 
     const buttons = actionButtons(page);
-    await expect(buttons).toHaveCount(3);
+    // 第7便（PO 指摘）: 右は顧客情報・「もっと」の2つ
+    await expect(buttons).toHaveCount(2);
     await buttons.last().click();
 
     await expect(moreMenu(page)).toBeVisible();
     const items = moreMenuItems(page);
-    await expect(items).toHaveCount(3);
+    // 第7便: テンプレートを独立ボタンから「…」の中へ移した
+    await expect(items).toHaveCount(4);
     const labels = await items.allTextContents();
     // 実際の i18n 文言（src/locales/ja.json）: translation.sendGuard.langToggleLabel /
-    // faq.title / inbox.settings.title
-    expect(labels).toEqual(["送信先言語", "FAQ", "受信箱の設定"]);
+    // nav.templates / faq.title / inbox.settings.title
+    expect(labels).toEqual(["送信先言語", "テンプレート", "FAQ", "受信箱の設定"]);
 
     // 外側を押すと閉じる（第4便と同じ金型・同じ作法）
     await name(page).click({ force: true });
@@ -1224,5 +1240,115 @@ test.describe("visual-language: 受信箱 第6便（会話画面のヘッダー�
     const headerBox = await header(page).boundingBox();
     expect(headerBox, "ヘッダーの寸法が取れない").not.toBeNull();
     expect(Math.abs(headerBox!.height - 56), "ヘッダーの高さ（1段表示時）").toBeLessThanOrEqual(1);
+  });
+});
+
+test.describe("visual-language: 受信箱 第7便（テンプレートを「…」へ移し、カルテボタンを人型にし、準備中ページの行き止まりを解消する）", () => {
+  /**
+   * 第7便の背景（PO 指摘・実機を見て・2026-10-14）:
+   * 1. テンプレートが独立ボタンだと右が3つになり過密（お手本の WhatsApp も
+   *    会話ヘッダーの右は2つ）。「…」の中へ移し、右は顧客情報・「…」の2つにした。
+   * 2. カルテ（顧客情報）ボタンの絵柄がクリップボードのままだったため人型に変えた
+   *    （PC 側の PAGE_ICONS.kartePanel は変えていない。別キー kartePanelMobile を
+   *    新設した）。
+   * 3. 「…」→テンプレートで開く /templates は中身のない「準備中」の仮ページ
+   *    （ComingSoonPage・frontend/src/App.tsx:281 / pages/coming-soon/ComingSoonPage.tsx）で、
+   *    戻る手段が無い行き止まりだった（下部タブで受信箱の一覧には行けるが、
+   *    開いていた会話には戻れない）。ComingSoonPage に戻るボタン（navigate(-1)）を
+   *    追加した。
+   */
+  const actionButtons = (page: Page): Locator => page.locator(".inbox-thread-header-mobile-btn");
+  const moreMenu = (page: Page): Locator => page.locator(".comp-context-menu");
+  const moreMenuItems = (page: Page): Locator => moreMenu(page).locator('[role="menuitem"]');
+
+  test("スマホ: 「もっと」→「テンプレート」で /templates に移動し、「戻る」で元の会話に戻れる（行き止まりの解消）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    const beforeUrl = page.url();
+    expect(beforeUrl, "会話を開いた URL に lead_id が無い").toContain("lead_id=5001");
+
+    await actionButtons(page).last().click();
+    await expect(moreMenu(page)).toBeVisible();
+    await moreMenuItems(page).filter({ hasText: "テンプレート" }).click();
+
+    // 1. /templates に移動すること
+    await expect(page).toHaveURL(/\/templates(\?|$)/);
+
+    // 2. 戻るボタンがあり、44px以上（既存の金型 Button・既存キー common.back を使用）
+    const back = page.getByRole("button", { name: "戻る" });
+    await expect(back).toBeVisible();
+    const backBox = await back.boundingBox();
+    expect(backBox, "戻るボタンの寸法が取れない").not.toBeNull();
+    expect(backBox!.width, "戻るボタンの幅").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    expect(backBox!.height, "戻るボタンの高さ").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+
+    // 3. 押すと元の会話に戻れる（URL と、会話の入力欄が見えることの両方で確認）
+    await back.click();
+    await expect(page).toHaveURL(beforeUrl);
+    await expect(page.locator(".inbox-textarea")).toBeVisible({ timeout: 10_000 });
+
+    await testInfo.attach("templates-back-navigation", {
+      body: JSON.stringify({ beforeUrl }, null, 2),
+      contentType: "application/json",
+    });
+  });
+
+  test("スマホ: FAQ（もう一方の準備中ページ）でも「戻る」が効く", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // ComingSoonPage は /templates と /faq の2ルートから使われている（App.tsx）。
+    // 両方で意味が通ることを確認する（/faq 側は一覧に戻る動線しか無いため、
+    // ここでは一覧の URL に戻ることだけを見る）。
+    await openInboxList(page);
+    const beforeUrl = page.url();
+
+    // 一覧ではヘッダーの会話用「…」は出ないため、下部タブの「もっと」経由ではなく
+    // 直接 /faq を開いて戻る動線だけを確認する（この検査の対象は ComingSoonPage 側）。
+    await page.goto("/faq");
+    await expect(page).toHaveURL(/\/faq(\?|$)/);
+
+    const back = page.getByRole("button", { name: "戻る" });
+    await expect(back).toBeVisible();
+    await back.click();
+    await expect(page).toHaveURL(beforeUrl);
+  });
+
+  test("スマホ: カルテ（顧客情報）ボタンの絵柄がクリップボードから別物に変わっている", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+
+    const readIcon = (sel: string) =>
+      page.evaluate((s) => {
+        const el = document.querySelector(s);
+        const svg = el?.querySelector("svg");
+        if (!svg) return null;
+        // svg の中身（path の d 属性）が同じなら同じアイコン（第4便と同じ作法）
+        return Array.from(svg.querySelectorAll("path")).map((p) => p.getAttribute("d")).join("|");
+      }, sel);
+
+    const newIcon = await readIcon(".inbox-thread-header-mobile-btn[aria-label='顧客情報']");
+    expect(newIcon, "新しいカルテボタンのアイコンが取れない").toBeTruthy();
+
+    // 変更前（クリップボード = PAGE_ICONS.kartePanel）と比べる。ハードコードした
+    // path 文字列は貼らず、PC 側の同じ役割のボタン（.karte-toggle-btn。今も
+    // PAGE_ICONS.kartePanel を使用中・frontend/src/pages/inbox/InboxMessageThread.tsx）
+    // から実際に読んで比較する。useIsMobile（window.matchMedia）は resize に
+    // 追従するため、同じページ内で viewport をデスクトップ幅に変えるだけで
+    // PC 側のヘッダーが描かれる（reload 不要）。
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const oldIcon = await readIcon(".karte-toggle-btn");
+    expect(oldIcon, "PC側のクリップボードアイコン（PAGE_ICONS.kartePanel）が取れない").toBeTruthy();
+
+    await testInfo.attach("karte-icon-diff", {
+      body: JSON.stringify({ newIconLength: newIcon?.length, oldIconLength: oldIcon?.length }, null, 2),
+      contentType: "application/json",
+    });
+
+    // クリップボード（PAGE_ICONS.kartePanel）と別物であること
+    expect(newIcon, "顧客情報ボタンのアイコンが PAGE_ICONS.kartePanel（クリップボード）のまま変わっていない").not.toBe(oldIcon);
   });
 });
