@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -20,11 +19,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.base import validate_email_loose
+from app.services.mail_config import contact_notify_email, smtp_settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-ADMIN_EMAIL = os.getenv("CONTACT_NOTIFY_EMAIL", "support@salesanchor.jp")
 
 
 class ContactRequest(BaseModel):
@@ -38,28 +36,14 @@ class ContactRequest(BaseModel):
         return validate_email_loose(v)
 
 
-def _smtp_configured() -> bool:
-    return all([
-        os.getenv("SMTP_HOST"),
-        os.getenv("SMTP_USER"),
-        os.getenv("SMTP_PASSWORD"),
-        os.getenv("MAIL_FROM"),
-    ])
-
-
 def _send_notification(data: ContactRequest) -> None:
-    if not _smtp_configured():
+    settings = smtp_settings()
+    if settings is None:
         logger.info(
             "[contact] SMTP not configured — contact request received: "
             f"name={data.name!r} email={data.email!r} company={data.company!r}"
         )
         return
-
-    host = os.getenv("SMTP_HOST", "")
-    port = int(os.getenv("SMTP_PORT", "587"))
-    user = os.getenv("SMTP_USER", "")
-    password = os.getenv("SMTP_PASSWORD", "")
-    mail_from = os.getenv("MAIL_FROM", "")
 
     subject = f"[Sales Anchor] Early Access Request — {data.company}"
     body = f"""Early access request received from the LP.
@@ -73,15 +57,15 @@ Reply to: {data.email}
 """
 
     msg = MIMEMultipart("alternative")
-    msg["From"] = mail_from
-    msg["To"] = ADMIN_EMAIL
+    msg["From"] = settings.mail_from
+    msg["To"] = contact_notify_email()
     msg["Reply-To"] = data.email
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain", "utf-8"))
 
-    with smtplib.SMTP(host, port, timeout=15) as smtp:
+    with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
         smtp.starttls()
-        smtp.login(user, password)
+        smtp.login(settings.user, settings.password)
         smtp.send_message(msg)
 
 

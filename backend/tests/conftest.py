@@ -181,6 +181,8 @@ async def test_engine():
             statement = statement.replace("public.suppliers", "suppliers")
         if "public.auth_refresh_tokens" in statement:
             statement = statement.replace("public.auth_refresh_tokens", "auth_refresh_tokens")
+        if "public.password_reset_tokens" in statement:
+            statement = statement.replace("public.password_reset_tokens", "password_reset_tokens")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1204,6 +1206,18 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP NOT NULL,
                 last_used_at TIMESTAMP,
                 user_agent_hash BLOB
+            )
+        """))
+        # ADR-1013 便3: public.password_reset_tokens の SQLite 版（BYTEA→BLOB, BIGSERIAL→INTEGER）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                purpose TEXT NOT NULL CHECK (purpose IN ('reset', 'invite')),
+                token_hash BLOB NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used_at TIMESTAMP,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
         # テストユーザー投入
