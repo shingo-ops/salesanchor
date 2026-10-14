@@ -31,9 +31,9 @@ interface Props {
   msgError: string | null;
   avatarErrors: Set<number>;
   handleAvatarError: (id: number) => void;
-  handleMarkUnread: () => void;
-  handleExclude: () => void;
-  handleDeleteLead: () => void;
+  handleMarkUnread: (targetLeadId?: number) => Promise<void>;
+  handleExclude: (targetLeadId?: number) => Promise<void>;
+  handleDeleteLead: (targetLeadId?: number) => Promise<void>;
   showKartePanel: boolean;
   openKartePanel: () => void;
   closeKartePanel: () => void;
@@ -434,7 +434,7 @@ export function InboxMessageThread({
         </SelectControl>
         <div className="inbox-thread-actions">
           <button type="button" className="inbox-thread-action-btn"
-            onClick={handleMarkUnread}
+            onClick={() => handleMarkUnread()}
             aria-label={t("inbox.markUnread")} data-tooltip={t("inbox.markUnread")}>
             <INBOX_ACTION_ICONS.markUnread size={ICON.base} weight="fill" aria-hidden="true" />
           </button>
