@@ -11,8 +11,8 @@
 - `git grep -il "SSE\|リアルタイム\|realtime\|Server-Sent" docs/adr/` の結果（生出力 F3.txt）
   - 即時通知そのものを決めた ADR は無い。
   - SSE に触れているのは、中継の設定に関する次の2件だけ。
-    - `docs/adr/ADR-133-nginx-proxy-pass-variable.md`:49-56（SSE の location の proxy_pass を変数化）
-    - `docs/adr/ADR-137-adaptive-shell-architecture.md`:62,103（SSE の location 4か所で proxy_buffering off を保つ）
+    - `docs/adr/ADR-133-nginx-resolver-proxy-pass-variable.md`:49-56（SSE の location の proxy_pass を変数化）
+    - `docs/adr/ADR-137-nginx-config-deploy-reliability.md`:62,103（SSE の location 4か所で proxy_buffering off を保つ）
 - docs/adr/FEATURE-INDEX.md には SSE・即時・リアルタイムの行が無い。
 - ワーカー数1の根拠: `backend/Dockerfile`:35-37（ADR-081 C項）。
 
