@@ -57,7 +57,7 @@ describe('commerce navigation Button migration contracts', () => {
     render(wrap(<InventoryPage />));
     const next = await screen.findByTestId('inventory-next') as HTMLButtonElement;
     const prev = screen.getByTestId('inventory-prev') as HTMLButtonElement;
-    expect(prev.disabled).toBe(true); expect(next.disabled).toBe(false);
+    expect(prev.disabled).toBe(true); await waitFor(() => expect(next.disabled).toBe(false));
     fireEvent.click(next);
     await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/inventory?page=2&per_page=50&sort=release_date&order=desc&merge_same_post=true&tcg_type=pokemon_booster_box'));
     expect(next.disabled).toBe(true); expect(prev.disabled).toBe(true);

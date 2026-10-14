@@ -336,7 +336,7 @@ def test_fetch_output_rows_flag_filter_exclude():
     from app.services import tcg_distribution_svc as svc
 
     # 配信行の SQL は distribution_rows_sql / _condition_filter に集約済み（fetch_output_rows はそれを呼ぶ）
-    src = inspect.getsource(svc.distribution_rows_sql) + inspect.getsource(svc._condition_filter)
+    src = inspect.getsource(svc.distribution_rows_parts) + inspect.getsource(svc._condition_filter)
     # include_flag_single=True 分岐で OR FLAG_SINGLE を通す実装が存在すること
     assert "OR cr.canonical = 'FLAG_SINGLE'" in src
     # False 側は NOT LIKE のみ（AND != FLAG_SINGLE の古い実装がないこと）
@@ -352,7 +352,7 @@ def test_fetch_output_rows_has_search_keywords_as_13th_column():
     assert len(DIST_HEADERS) == 14
     assert DIST_HEADERS[-1] == "Ship_JA"
     assert DIST_HEADERS[12] == "Search Keywords"
-    src = inspect.getsource(svc.distribution_rows_sql)
+    src = inspect.getsource(svc.distribution_rows_parts)
     assert "string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)" in src
     assert svc._GAS_COLUMNS[12] == "search_keywords"
 
@@ -362,7 +362,7 @@ def test_fetch_output_rows_has_ship_ja_as_14th_column():
     import inspect
     from app.services import tcg_distribution_svc as svc
 
-    src = inspect.getsource(svc.distribution_rows_sql)
+    src = inspect.getsource(svc.distribution_rows_parts)
     assert "COALESCE(ar.ship_ja, '')" in src
     assert svc._GAS_COLUMNS[-2:] == ("search_keywords", "ship_ja")
     assert "ship_en" not in src

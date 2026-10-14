@@ -41,7 +41,8 @@ from app.services.inventory_axes import (
 from app.services.tcg_distribution_svc import (
     _age_window,
     _max_age_hours,
-    distribution_rows_sql,
+    distribution_final_select_plain,
+    distribution_rows_parts,
     load_distribution_settings,
 )
 
@@ -227,6 +228,49 @@ def _build_view_filters(
     return conditions, params
 
 
+def _build_inventory_view_sql(
+    *, head: str, final_main: str, merge: bool, where: str, sort_col: str, order_dir: str,
+) -> str:
+    """GET /inventory の1文。dist_base（配信行の重い計算）を1回だけ計算し、件数・ページ・絞り込み候補を UNION ALL で返す。
+
+    head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
+    _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
+    列並び（3枝共通）: __kind, __total, <配信行+tcg_type+category の全列>, __ord, __f_* の5列。
+    """
+    order_by = f"ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+    join = "LEFT JOIN public.products pp ON pp.id = x.product_id"
+    ctes = [f"rows_main AS ({final_main})"]
+    if merge:
+        ctes.append(f"rows_plain AS ({distribution_final_select_plain()})")
+    ctes.append(f"rows_x AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_main x {join})")
+    if merge:
+        ctes.append(f"rows_xp AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_plain x {join})")
+    facet_src = "rows_xp" if merge else "rows_x"  # merge=False は rows_main == rows_plain なので共用
+    ctes.append(f"rows_f AS (SELECT * FROM rows_x d {where})")
+    # 型は実物の列から: LEFT JOIN ON FALSE で rows_x と同じ型の NULL 1行を得る
+    ctes.append("rows_nx AS (SELECT o.* FROM (SELECT 1) one LEFT JOIN rows_x o ON FALSE)")
+    ctes.append(
+        f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord FROM rows_f d "
+        f"{order_by} LIMIT :limit OFFSET :offset)"
+    )
+    q_total = (
+        "SELECT 'total'::text AS __kind, (SELECT COUNT(*) FROM rows_f)::bigint AS __total, nx.*, "
+        "NULL::bigint AS __ord, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
+        "nx.category AS __f_category, nx.condition AS __f_condition, nx.unit_canonical AS __f_unit "
+        "FROM rows_nx nx"
+    )
+    q_page = (
+        "SELECT 'page'::text, NULL::bigint, pg.*, nx.supplier_id, nx.provider, nx.category, nx.condition, "
+        "nx.unit_canonical FROM rows_pg pg CROSS JOIN rows_nx nx"
+    )
+    q_facet = (
+        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
+        "fd.condition, fd.unit_canonical FROM (SELECT DISTINCT d.supplier_id, d.provider, d.category, "
+        f"d.condition, d.unit_canonical FROM {facet_src} d) fd CROSS JOIN rows_nx nx"
+    )
+    return head + ",\n" + ",\n".join(ctes) + f"\n{q_total}\nUNION ALL\n{q_page}\nUNION ALL\n{q_facet}"
+
+
 @router.get(
     "/inventory",
     response_model=InventoryListResponse,
@@ -273,16 +317,6 @@ async def list_inventory_view(
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
     age_condition, age_params = _age_window(max_age_hours)
 
-    def rows_sql(merge: bool) -> str:
-        # 配信行（GAS と同じ定義）に、在庫表だけが使う products の列（tcg_type, category）を外側で足す。
-        inner_rows = distribution_rows_sql(
-            include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=merge,
-        )
-        return (
-            "SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
-            f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id"
-        )
-
     conditions, filter_params = _build_view_filters(
         q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
@@ -293,31 +327,35 @@ async def list_inventory_view(
     params = {**age_params, **filter_params}
     order_dir = "ASC" if order == "asc" else "DESC"
     sort_col = _SORT_COLUMNS.get(sort, "d.japanese_title")
-    inner = rows_sql(merge_same_post)
-
-    total = (
-        await db.execute(text(f"SELECT COUNT(*) FROM ({inner}) d {where}"), params)
-    ).scalar_one()
-    result = await db.execute(
-        text(
-            f"SELECT d.* FROM ({inner}) d {where} "
-            f"ORDER BY {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC "
-            "LIMIT :limit OFFSET :offset"
-        ),
-        {**params, "limit": per_page, "offset": (page - 1) * per_page},
+    head, final_main = distribution_rows_parts(
+        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=merge_same_post,
     )
-    items = _project_inventory_rows([dict(r) for r in result.mappings().all()])
+    sql = _build_inventory_view_sql(
+        head=head, final_main=final_main, merge=merge_same_post, where=where, sort_col=sort_col, order_dir=order_dir,
+    )
+    result = await db.execute(
+        text(sql), {**params, "limit": per_page, "offset": (page - 1) * per_page},
+    )
+    total = 0
+    page_rows: list[tuple[int, dict]] = []
+    facet_rows: list[dict] = []
+    for r in result.mappings().all():
+        row = dict(r)
+        kind = row["__kind"]
+        if kind == "total":
+            total = int(row["__total"] or 0)
+        elif kind == "page":
+            page_rows.append((row["__ord"], {k: v for k, v in row.items() if not k.startswith("__")}))
+        elif kind == "facet":
+            facet_rows.append({
+                "supplier_id": row["__f_supplier_id"], "provider": row["__f_provider"],
+                "category": row["__f_category"], "condition": row["__f_condition"],
+                "unit_canonical": row["__f_unit"],
+            })
+    page_rows.sort(key=lambda t: t[0])
+    items = _project_inventory_rows([r for _, r in page_rows])
 
     # フィルタ UI の候補は、まとめなし・絞り込みなしの配信行から作る（非表示にした候補も残る）。
-    facet_rows = (
-        await db.execute(
-            text(
-                "SELECT DISTINCT d.supplier_id, d.provider, d.category, d.condition, d.unit_canonical "
-                f"FROM ({rows_sql(False)}) d"
-            ),
-            age_params,
-        )
-    ).mappings().all()
     supplier_names = {r["supplier_id"]: r["provider"] or None for r in facet_rows}
     suppliers = [
         InventorySupplierFacet(id=sid, name=name)
@@ -328,7 +366,7 @@ async def list_inventory_view(
     unit_facet = sorted({r["unit_canonical"] for r in facet_rows if r["unit_canonical"]})
     return InventoryListResponse(
         items=items,
-        total=int(total or 0),
+        total=total,
         page=page,
         per_page=per_page,
         suppliers=suppliers,

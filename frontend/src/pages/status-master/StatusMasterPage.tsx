@@ -348,6 +348,7 @@ export default function StatusMasterPage() {
             <TextField
               type="text"
               size="md"
+              className="field-w-md"
               placeholder={t(`${f}.search`)}
               aria-label={t(`${f}.search`)}
               value={searchInput}

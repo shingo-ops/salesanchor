@@ -253,15 +253,19 @@ def _distribution_final_select(source: str, *, price: str, qty: str, merged_coun
         FROM {source}"""
 
 
-def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merge_same_post: bool) -> str:
-    """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 出力とアプリの在庫表が使う。配信プレビューの件数は変更前の問い合わせを残しており（products を結合しない）、状態の条件だけ _condition_filter を共有する）。
+def distribution_final_select_plain() -> str:
+    """まとめなし（merge_same_post=False）の最終 SELECT。在庫表の絞り込み候補（facets）が使う。"""
+    return _distribution_final_select("dist_base", price="price_num", qty="qty_num", merged_count="1", sort_ord="sort_ord")
 
-    出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, supplier_id,
-    unit_canonical, price_num, qty_num, merged_count, sort_ord。並びは sort_ord（result_order_sql の通し番号）。
-    merge_same_post=True のとき、同じ投稿・同じ商品・同じ状態・同じ形態・同じ備考・同じ発送・同じ status の行で、
-    根拠（cr.basis）がすべて違い、根拠と数量に NULL が無い組だけを1行にまとめる（数量は合計・単価は最大）。
-    状態の鍵と判定は cr の列（表示と同じ値）を使う。ランクを表す語はコードに書かない。
-    age_condition は _age_window が返す信頼できる SQL 断片（bind は呼び出し側が渡す）。
+
+def distribution_rows_parts(
+    *, include_flag_single: bool, age_condition: str, merge_same_post: bool,
+) -> tuple[str, str]:
+    """distribution_rows_sql を (head, final_select) に分けて返す。
+
+    head は WITH 句（dist_base。merge_same_post=True なら dist_merged まで）、final_select は最終 SELECT。
+    distribution_rows_sql は f"{head}\n        {final_select}" で組み立てる。在庫表は head を共有して1文にまとめる。
+    配信行の定義（列・WHERE・まとめ条件）はこの関数だけに置く。
     """
     cond_filter = _condition_filter(include_flag_single)
     base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)},
@@ -322,9 +326,8 @@ def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merg
           AND {cond_filter}{age_condition}
     )"""
     if not merge_same_post:
-        return f"""{base}
-        {_distribution_final_select("dist_base", price="price_num", qty="qty_num", merged_count="1", sort_ord="sort_ord")}"""
-    return f"""{base},
+        return base, distribution_final_select_plain()
+    head = f"""{base},
     dist_groups AS (
         SELECT gkey,
                (COUNT(*) >= 2
@@ -348,8 +351,25 @@ def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merg
                MIN(sort_ord)  OVER (PARTITION BY ekey) AS sort_min
         FROM dist_keyed k
     ),
-    dist_merged AS (SELECT * FROM dist_agg WHERE rn = 1)
-        {_distribution_final_select("dist_merged", price="price_agg", qty="qty_agg", merged_count="group_n", sort_ord="sort_min")}"""
+    dist_merged AS (SELECT * FROM dist_agg WHERE rn = 1)"""
+    final = _distribution_final_select("dist_merged", price="price_agg", qty="qty_agg", merged_count="group_n", sort_ord="sort_min")
+    return head, final
+
+
+def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merge_same_post: bool) -> str:
+    """配信行を作る SQL（配信行の定義はここ1か所だけ。GAS 出力とアプリの在庫表が使う。配信プレビューの件数は変更前の問い合わせを残しており（products を結合しない）、状態の条件だけ _condition_filter を共有する）。
+
+    出す列: GAS の14列（_GAS_COLUMNS）+ posted_ts, row_key, product_id, supplier_id,
+    unit_canonical, price_num, qty_num, merged_count, sort_ord。並びは sort_ord（result_order_sql の通し番号）。
+    merge_same_post=True のとき、同じ投稿・同じ商品・同じ状態・同じ形態・同じ備考・同じ発送・同じ status の行で、
+    根拠（cr.basis）がすべて違い、根拠と数量に NULL が無い組だけを1行にまとめる（数量は合計・単価は最大）。
+    状態の鍵と判定は cr の列（表示と同じ値）を使う。ランクを表す語はコードに書かない。
+    age_condition は _age_window が返す信頼できる SQL 断片（bind は呼び出し側が渡す）。
+    """
+    head, final = distribution_rows_parts(
+        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=merge_same_post,
+    )
+    return f"{head}\n        {final}"
 
 
 async def fetch_output_rows(

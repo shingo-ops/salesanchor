@@ -1,0 +1,1687 @@
+{
+ "conditions-w1280": {
+  "path": "/management-center/conditions",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "conditions-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "conditions-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "conditions-w1440": {
+  "path": "/management-center/conditions",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conversations/stream",
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "conditions-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "conditions-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "conditions-w375": {
+  "path": "/management-center/conditions",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /conditions?page=1&per_page=50",
+   "GET /conditions/catalog",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "conditions-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 24,
+    "top": 279.75,
+    "width": 280,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "conditions-search-btn",
+     "text": "検索",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /conditions?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "product-categories-w1280": {
+  "path": "/management-center/product-categories",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "product-categories-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "product-categories-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "product-categories-w1440": {
+  "path": "/management-center/product-categories",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "product-categories-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "product-categories-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "product-categories-w375": {
+  "path": "/management-center/product-categories",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /product-categories?page=1&per_page=50",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "product-categories-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 24,
+    "top": 325.75,
+    "width": 280,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "product-categories-search-btn",
+     "text": "検索",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /product-categories?page=1&per_page=50&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "status-master-w1280": {
+  "path": "/management-center/status-master",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "status-master-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "status-master-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "status-master-w1440": {
+  "path": "/management-center/status-master",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "status-master-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "status-master-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "status-master-w375": {
+  "path": "/management-center/status-master",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /status-master?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "status-master-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 24,
+    "top": 279.75,
+    "width": 280,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "status-master-search-btn",
+     "text": "検索",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /status-master?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "suppliers-w1280": {
+  "path": "/management-center/suppliers",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "suppliers-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "suppliers-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "suppliers-w1440": {
+  "path": "/management-center/suppliers",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "suppliers-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "suppliers-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "suppliers-w375": {
+  "path": "/management-center/suppliers",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /suppliers?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream",
+   "GET /conversations/stream"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "suppliers-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 24,
+    "top": 279.75,
+    "width": 280,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "suppliers-search-btn",
+     "text": "検索",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /suppliers?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "units-w1280": {
+  "path": "/management-center/units",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "units-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "units-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "units-w1440": {
+  "path": "/management-center/units",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "units-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "units-search-btn",
+     "text": "検索",
+     "height": 36,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "units-w375": {
+  "path": "/management-center/units",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /units?page=1&per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ],
+  "formClass": "search-bar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input",
+   "testid": "units-search",
+   "id": ":r1:",
+   "rect": {
+    "left": 24,
+    "top": 279.75,
+    "width": 280,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": "submit",
+     "testid": "units-search-btn",
+     "text": "検索",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.comp-field field-w-md"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /units?page=1&per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "contacts-w1280": {
+  "path": "/crm/contacts",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-sm",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 450,
+    "top": 156.06,
+    "width": 160,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "160px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 158,
+   "clientWidth": 158,
+   "siblings": [
+    {
+     "tag": "select",
+     "type": null,
+     "testid": null,
+     "text": "全顧客情報",
+     "height": 39.61,
+     "centerDiff": 0
+    },
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 28,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100"
+  ]
+ },
+ "contacts-w1440": {
+  "path": "/crm/contacts",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-sm",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 450,
+    "top": 156.06,
+    "width": 160,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "160px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 158,
+   "clientWidth": 158,
+   "siblings": [
+    {
+     "tag": "select",
+     "type": null,
+     "testid": null,
+     "text": "全顧客情報",
+     "height": 39.61,
+     "centerDiff": 0
+    },
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 28,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100"
+  ]
+ },
+ "contacts-w375": {
+  "path": "/crm/contacts",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /contacts?per_page=100",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-sm",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 137,
+    "top": 286.31,
+    "width": 160,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "160px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 158,
+   "clientWidth": 158,
+   "siblings": [
+    {
+     "tag": "select",
+     "type": null,
+     "testid": null,
+     "text": "全顧客情報",
+     "height": 44,
+     "centerDiff": 0
+    },
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /contacts?search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2&per_page=100"
+  ]
+ },
+ "companies-w1280": {
+  "path": "/crm/companies",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-md",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 28,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 1280,
+   "clientWidth": 1280
+  },
+  "searchCalls": [
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "companies-w1440": {
+  "path": "/crm/companies",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-md",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 278,
+    "top": 156.06,
+    "width": 280,
+    "height": 39.61
+   },
+   "computed": {
+    "height": "39.6094px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "280px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "auto",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 278,
+   "clientWidth": 278,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 28,
+     "centerDiff": -0.01
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 1440,
+   "clientWidth": 1440
+  },
+  "searchCalls": [
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ },
+ "companies-w375": {
+  "path": "/crm/companies",
+  "stoppedAt": null,
+  "consoleErrors": [],
+  "calls": [
+   "GET /conversations/stream",
+   "GET /conversations/stream",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /me/permissions",
+   "GET /companies?per_page=100",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /me/permissions",
+   "GET /conversations?unread_only=true",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /staff/me",
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2",
+   "GET /conversations/stream"
+  ],
+  "formClass": "content-toolbar",
+  "measure": {
+   "found": true,
+   "tag": "input",
+   "type": "text",
+   "className": "comp-field__input field-w-md",
+   "testid": null,
+   "id": null,
+   "rect": {
+    "left": 24,
+    "top": 286.31,
+    "width": 221.66,
+    "height": 44
+   },
+   "computed": {
+    "height": "44px",
+    "padding": "8px 12px",
+    "border": "1px solid rgb(226, 232, 240)",
+    "border-radius": "6px",
+    "font-size": "14.4px",
+    "min-width": "auto",
+    "width": "221.656px",
+    "color": "rgb(26, 32, 44)",
+    "background-color": "rgb(255, 255, 255)",
+    "min-height": "44px",
+    "box-sizing": "border-box",
+    "display": "block"
+   },
+   "scrollWidth": 220,
+   "clientWidth": 220,
+   "siblings": [
+    {
+     "tag": "button",
+     "type": null,
+     "testid": null,
+     "text": "+ 新規登録",
+     "height": 44,
+     "centerDiff": 0
+    }
+   ],
+   "parent": "div.content-toolbar__left"
+  },
+  "doc": {
+   "scrollWidth": 375,
+   "clientWidth": 375
+  },
+  "searchCalls": [
+   "GET /companies?per_page=100&search=%E3%83%86%E3%82%B9%E3%83%88%E6%A4%9C%E7%B4%A2"
+  ]
+ }
+}
