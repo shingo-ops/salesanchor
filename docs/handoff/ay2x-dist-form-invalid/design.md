@@ -101,8 +101,9 @@ frontend/src/components/TextField.stories.tsx に `ControlInvalid`（`<TextField
 ## 11. 戻し方
 本 PR の merge commit を revert する（DB の影響なし）。
 
-## 12. 外部事例
-不要（自社の金型に、仕様書 :815 で決めてある契約を実装する便。自社の実物の前後比較が直接の根拠）。前例は §AY-2s〜2t（生 input を TextFieldControl へ逐語移管）。
+## 12. 外部・過去事例の参照と我々への応用
+- 過去: §AY-2s〜2t（生 input を TextFieldControl へ逐語で移したもの）と同じやり方を、この3欄に使う。§AY-2w の 390px 横 overflow の測定方法を、停止条件 B1 の基準に使う。
+- 外部事例: 不要（仕様書 design.md:815 で決めてある自社の金型の契約を実装する便。自社の実物の前後比較が直接の根拠になる）。
 
-## 13. 維持する仕組み
+## 維持の仕組み
 TextField.tsx と FormField.css（金型）、追加する試験、docs/CC_UI_GOVERNANCE.md、check-ui-governance。
