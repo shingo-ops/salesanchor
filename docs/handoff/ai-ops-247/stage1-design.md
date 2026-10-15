@@ -47,7 +47,7 @@
 | 3 | 全ルールに札と手順書リンクを付け、CI で検査する | Prometheus・Loki ルール・手順書 1 ファイル・検査 script・monitoring-check.yml | いいえ | prod2 |
 | 4 | 雑音を減らす（BackendHighLatency の条件の決め直し） | Prometheus ルール 1 本 | いいえ | prod2 |
 | 5 | celery の失敗・beat の停止・待ち行列の長さの見張り | backend（指標）・Prometheus ルール | いいえ | prod1（通常 deploy）＋ prod2 |
-| 6 | バックアップの鮮度の見張り（あわせて動かない `scripts/setup_uptime_kuma.sh` を削除） | `scripts/backup.sh`・`scripts/backup_to_s3.sh`・`scripts/setup_uptime_kuma.sh`（削除）・Prometheus ルール | **はい**（本番 scripts） | prod1 ＋ prod2 |
+| 6 | バックアップの鮮度の見張り（あわせて動かない scripts/setup_uptime_kuma.sh（便6 で削除済み） を削除） | `scripts/backup.sh`・`scripts/backup_to_s3.sh`・scripts/setup_uptime_kuma.sh（便6 で削除済み）・Prometheus ルール | **はい**（本番 scripts） | prod1 ＋ prod2 |
 | 7 | 本番の設定と repo の一致を毎日確かめ、ずれたら鳴らす | workflow（prod2 の self-hosted runner）・Prometheus ルール | いいえ | GitHub Actions ＋ prod2 |
 
 危険便の判定は `scripts/check-process-artifacts.js` の DANGEROUS_PATTERNS（`migrations/`・`scripts/`・`.github/workflows/deploy.yml` 等）に従う。`scripts/` 配下を触る・消すのは便6 だけにする。
@@ -78,7 +78,7 @@
 
 - Kuma の正本（`monitoring/uptime-kuma-monitors.yml`）を本番の実物に合わせて書き直す: 今の 4 件（監視基盤）＋ App・API（`/api/health`）・LP の 3 件（https）。PostgreSQL・Redis・Meta Graph API・Firebase は消す（S10: 届かない・名前解決できない）。
 - 正本 yml に監視基盤の 4 件を書き足すとき、IP を新たに直書きしない（公開リポジトリ。変数か伏せた書き方にする）。
-- 登録は新規の monitoring/scripts/register_kuma_monitors.py（既存の `monitoring/scripts/validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の `scripts/setup_uptime_kuma.sh` は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
+- 登録は新規の monitoring/scripts/register_kuma_monitors.py（既存の `monitoring/scripts/validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の scripts/setup_uptime_kuma.sh（便6 で削除済み） は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
 - 新規 3 件には Kuma の通知先を付けない（`notificationIDList` を空にし、既定の通知先の自動付与もしない）。通知は `KumaMonitorDown` → Alertmanager → Discord の 1 本だけ（ADR-1012・design.md §3）。既存 4 件の Kuma 直通通知は今は触らない（U5）。
 - Prometheus ルールを足す: `KumaMonitorDown`（`monitor_status == 0` が 2 分）、`CertExpiringSoon`（`monitor_cert_days_remaining < 14`）、`CertInvalid`（`monitor_cert_is_valid == 0`）。
 - 4 本を消すとき、`monitoring/tokens.yml` の閾値・for のトークンと `monitoring/scripts/validate_tokens.py` の検査パターンを同じ PR で消す。足すルールの閾値は `monitoring/tokens.yml` に足す。
@@ -131,7 +131,7 @@
 - `scripts/backup.sh` と `scripts/backup_to_s3.sh` の成功時に、f2-cleanup と同じ方式で node-exporter の textfile に成功時刻を書く（S19）。ルール `BackupStale`（26 時間以上更新なし・ticket。利用者に今の影響は無いため。手順書に「翌営業日までに復旧」の期限を書く）。
 - `scripts/backup.sh` は `set -euo pipefail`（:12）で、デプロイからも呼ばれる。textfile の書き込みが失敗しても exit 0 にする（`scripts/f2-cleanup.sh:61-67` と同じ `|| return` の書き方）。バックアップとデプロイを落とさない。
 - `scripts/backup_to_s3.sh:56-70` の Discord 直通の失敗通知は残す（U5）。
-- 動かない `scripts/setup_uptime_kuma.sh` を削除する（参照元を grep で確かめてから。便2 から移した）。
+- 動かない scripts/setup_uptime_kuma.sh（便6 で削除済み） を削除する（参照元を grep で確かめてから。便2 から移した）。
 - 本番 scripts を触るため危険便（ADR-135・ADR-136）。GO は委任の範囲で Opus が発行する（DROP を含む migration・データの大量 DELETE・secrets の変更を含まない。script 1 本の git rm は ADR-1003 の例外に含まれない）。
 - 合格: 翌日 3:00 の実行後に本番 Prometheus で 2 つの時刻の系列が出て、26 時間より新しい。
 
@@ -181,7 +181,7 @@
 ## 7. 未解決事項
 
 - U1: DB 接続数の見張り（HighDbConnections）を戻す時期。prod1 のメモリに余裕ができたら postgres-exporter と合わせて戻す。
-- U2: Gemini の失敗率（便5 のカードで実測して判断）。
+- U2: Gemini の失敗率。便5 の実測（2026-10-15）で 14 日の失敗のログが 0 件だったため、ルールが拾えるかを確かめられず、段階1 から外した。失敗がログに出る文言を確かめられた時点で入れる。
 - U3: ダッシュボード JSON 8 本と `generate-nav.js` の本番と repo のずれ（鳴らす条件ではないため段階1 の対象外）。
 - U4: 監視設定を prod2 に自動で配る仕組み（今は手作業。便7 はずれを見つけるだけ）。
 - U5: Alertmanager を通らない直通通知（Kuma の既存 4 件・`scripts/backup_to_s3.sh:56-70`）を Alertmanager へ寄せるか（段階2 で決める）。
@@ -190,6 +190,16 @@
 - U8: Discord のコンテナのログが Loki に 1 件も無い（便1 の事前測定・2026-10-14）。Loki の Discord の 2 本（DiscordGatewayReconnectFailure・DiscordDmWriterError）は鳴らないが、壊れていても気づけない。ログの集め方（promtail の対象）を直すかを段階2 の前に決める。
 - U9: 死活確認の口 /api/health が毎回 1〜2.5 秒かかっている（便4 の事前測定・2026-10-15。14 日の 6451 件すべて）。原因は未調査。便4 は見張りの条件から外しただけで、遅さ自体は直していない。
 - U10: BackendHighLatency の札を ticket から page に上げるか。便4 の配置後 14 日の実回数を見て決める。
+- U11: 裏方の処理（celery）の既存の失敗。translate_pending_messages が毎日 2〜3 回失敗している。また worker に登録されていないタスクの受付（`Received unregistered task`）が tcg_mirror と sa02_recon で各 14 件ある（便5 の事前測定・2026-10-15）。原因は未調査。便5 は見張りを足すだけで、これらは直さない。
+- U12: 1 日 1〜2 回しか動かない celery タスクの失敗は、便5 の CeleryTaskFailuresHigh（同じタスクで 1 時間に 3 回）では鳴らない。日次タスクの失敗の見張りをどうするか。
+- U13: `buyback.fetch_all_prices` の 1 件（10-02）が、worker の受付から完了まで 3724 秒かかっている。実行時間の最長（147.57 秒）と合わない。原因は未調査（便5 の事前測定・2026-10-15）。
+- U14: 設計 §2 便6 の `BackupStale` 1 本は、実装（#4312）で 3 本に分けた。BackupLocalStale・BackupS3Stale で、どちらのバックアップが止まったかを名前で分ける。BackupTimestampAbsent は、系列が消えると Stale が鳴らないため足した（F2CleanupAbsent と同じ形）。3 本とも ticket。本文 §2 は書き換えず、この行を正とする。
+- U15: 設計 §2 便7 の「`absent()` ルール」は、実装（#4323）で MonitoringConfigCheckStale に変えた。条件は「最後に送った時刻が 180000 秒より古い or absent」。pushgateway は最後の値を持ち続けるため、absent だけでは比較が止まったことに気づけない。本文 §2 は書き換えず、この行を正とする。
+- U16: 便6・便7 で足した bash の試験（`monitoring/scripts/tests/` 配下）は、CI で毎回は走っていない。手元とカード §5 で実行しただけ。workflow の変更になるため段階1 の範囲外とした。CI で走らせるかは段階2 の前に決める。
+- U17: 便7 の比較の対象は、スクリプトに固定した 6 本だけ。ダッシュボードなどほかの監視設定のずれは見ていない（U3・U4 と合わせて決める）。
+- U18: 便7 と同じ self-hosted runner を使う既存の `.github/workflows/qa-smoke.yml` は `pull_request` を持つ。fork の PR を実行する前に承認が要る設定になっているかは未確認。PO に GitHub の画面（Settings → Actions → General の fork の PR の承認）で確かめてもらう。
+- U19: pushgateway は値を保存しない設定（persistence の指定なし）。再起動すると便7 の値が消える。値が消えると absent の側で 1 時間後に MonitoringConfigCheckStale（ticket）が鳴り、次の毎日の実行まで続く。手順書に「pushgateway の再起動後は workflow を手動で 1 回動かす」を足すか、persistence を付けるかを決める（2026-10-15 便7 コード審査 低-2）。
+- U20: pushgateway のポートは 9091 で、機体の外向きに公開する書き方になっている。prod2 の防火壁の設定は未確認。外から送れる場合、ずれ 0 の値を送ってずれを隠せる。防火壁を確かめるか、127.0.0.1 に絞るかを決める（2026-10-15 便7 コード審査 低-4。便7 では変えていない）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 

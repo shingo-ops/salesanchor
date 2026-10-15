@@ -1456,7 +1456,14 @@
     "view": {
       "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier",
-      "freshOnly": "Last {{hours}} h"
+      "freshOnly": "Last {{hours}} h",
+      "searchNameCode": "Search by name or code"
+    },
+    "supplierFilter": {
+      "label": "Supplier",
+      "clear": "Clear selection",
+      "all": "All",
+      "count": "{{count}} selected"
     },
     "expiryWarning": "Showing offers within {{hours}} hours of the LINE post.",
     "filter": {
@@ -1533,6 +1540,12 @@
     "sortDesc": "▼",
     "sortNone": "↕",
     "sortBy": "Sort by {{col}}",
+    "sortMenu": {
+      "placeholder": "Sort",
+      "priceAsc": "Price: low to high",
+      "stockDesc": "Quantity: high to low",
+      "postedDesc": "Newest posts"
+    },
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
@@ -1546,7 +1559,6 @@
     "filterPanel": {
       "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
-      "suppliers": "Show / hide suppliers",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter).",
@@ -2093,6 +2105,17 @@
     "channelName": "Channel name",
     "noChannels": "No notification channels configured",
     "subtitle": "Configure and manage Webhook notification channels."
+  },
+  "notifications": {
+    "eventTypesLabel": "Notifications sent to this destination",
+    "eventTypesEmpty": "(none selected)",
+    "eventTypesColumn": "Notification types",
+    "editChannel": "Edit destination",
+    "eventType": {
+      "leadAssigned": "Deal assignment",
+      "metaMessageReceived": "New Meta message",
+      "tcgDistributionError": "TCG distribution error"
+    }
   },
   "erp": {
     "subtitle": "Sync inventory and sales data with external systems.",
@@ -3780,6 +3803,12 @@
     "excludedHelp": "Read as \"{{status}}\", so this item is kept out of stock. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
     "excludedHelpNoStatus": "Kept out of stock because of its sale status. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
     "removedFromList": "This item is no longer in the review list",
+    "revokeUndo": "Undo",
+    "ackedState": "This item is marked as checked",
+    "revoke": "Undo \"checked\"",
+    "revokeConfirm": { "title": "Undo \"checked\"?", "message": "All \"checked\" marks on this item are removed and the analysis runs again. If a reason still needs checking, the item returns to the review list.", "confirm": "Undo" },
+    "revoked": "Undone. Re-running the analysis",
+    "revokeFailed": "Could not undo. Please try again",
     "productLabel": "Product",
     "productCurrent": "Current: {{name}}",
     "reassign": "Reassign to this product",
@@ -5232,11 +5261,13 @@
     "reviewReasons": "Review Reasons",
     "createdAt": "Date",
     "noItems": "No items need review",
+    "ackedEmpty": "No confirmed items",
     "pidUnresolved": "Product unresolved",
     "multiCandidate": "Multiple candidates",
     "noteUnmatched": "Note unmatched",
     "tabs": {
       "production": "Production review",
+      "acked": "Checked",
       "posts": "Posts"
     },
     "inline": {

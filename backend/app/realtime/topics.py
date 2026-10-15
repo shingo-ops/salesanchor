@@ -17,6 +17,7 @@ TOPIC_TCG_REVIEW = "tcg.review"
 # {(method, route_path): (topic, scope)}
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
 }
 
 _PENDING = "段階2で画面に当てるときに決める"
@@ -139,6 +140,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("PATCH", "/api/v1/note-master/{note_id}"): _PENDING,
     ("POST", "/api/v1/notification-channels"): _PENDING,
     ("DELETE", "/api/v1/notification-channels/{channel_id}"): _PENDING,
+    ("PATCH", "/api/v1/notification-channels/{channel_id}"): _PENDING,
     ("POST", "/api/v1/orders"): _PENDING,
     ("DELETE", "/api/v1/orders/{order_id}"): _PENDING,
     ("PATCH", "/api/v1/orders/{order_id}"): _PENDING,

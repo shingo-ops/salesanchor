@@ -1,5 +1,7 @@
 # Colima 使い終わり自動停止 recon（2026-10-15）
 
+親（設計仕様書）: [docs/specs/colima-idle-stop/README.md](../../specs/colima-idle-stop/README.md)
+
 基準: origin/main 93a671476621cf79779f682f9adf85a08dcdccd7（fetch 済）。生出力: /tmp/CC報告ファイル/ac-heavy/docker-idle/ と recon2/（読み取りのみ）。
 
 ## 既存 ADR の検索

@@ -46,6 +46,15 @@ export DJ_ROOT_WORKTREES="${R_WT}" DJ_ROOT_AC_WT="${R_ACWT}" DJ_ROOT_SALESANCHOR
        DJ_ROOT_AGENT_CONSOLE="${R_AC}" DJ_ROOT_VERSIONS="${R_VER}" DJ_CURRENT_LINK="${T}/current" \
        DJ_NPM_CACHE_KEEP="${KEEP_CACHE}" DJ_NPM_CMD="echo ${KEEP_CACHE}" \
        DJ_LOCK_DIR="${T}/lock.d" DJ_LOG_FILE="" DJ_STALE_DAYS=14
+# R5・R6 の根・last-ok・古さも一時ディレクトリへ（K9。実機の /private/tmp や ~/Library/Logs に触れない）
+export DJ_ROOT_TMP_CC="${T}/tmpcc" DJ_ROOT_CLAUDE_TMP="${T}/claudetmp" DJ_CA_LAST_OK="${T}/ca.last-ok" \
+       DJ_CA_FRESH_SEC=172800 DJ_TMP_STALE_DAYS=7
+# K9: --execute より前に、全ての根・last-ok が $T の下であることを確かめる
+for v in DJ_ROOT_WORKTREES DJ_ROOT_AC_WT DJ_ROOT_SALESANCHOR DJ_ROOT_AGENT_CONSOLE DJ_ROOT_VERSIONS DJ_CURRENT_LINK \
+         DJ_NPM_CACHE_KEEP DJ_LOCK_DIR DJ_ROOT_TMP_CC DJ_ROOT_CLAUDE_TMP DJ_CA_LAST_OK; do
+  case "${!v}" in "${T}"/*) ;; *) echo "ng: K9 ${v} が一時ディレクトリの外: ${!v}"; exit 1 ;; esac
+done
+ok "K9 全ての根・last-ok が一時ディレクトリの下（--execute より前に確認）"
 
 start_sleeper() { # start_sleeper <dir>: dir を cwd にしたプロセスを起動
   ( cd "$1" && exec sleep 600 ) &
@@ -243,6 +252,102 @@ check "ガード: 根の外は拒否" bash -c 'source "$1"; ! dj_guard "$2" "." 
 check "ガード: シンボリックリンクは拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$3"' _ "${JANITOR}" "${R_WT}/repoA/linkholder/.npm-cache" "${R_WT}"
 check "ガード: 名前が規則と一致しないものは拒否" bash -c 'source "$1"; ! dj_guard "$2" "^\.npm-cache$" "$3"' _ "${JANITOR}" "${R_SA}/other-name" "${R_SA}"
 check "ガード: 存在しないパスは拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$3"' _ "${JANITOR}" "${R_SA}/nope" "${R_SA}"
+
+# ── 7. K6: R5・R6（HDD 写しの成功が前提・.md と images/ と a*.output は消さない）─────────────
+mk_k6() { # 毎回作り直す。8日前の物と1日前の物
+  local d
+  for d in "${DJ_ROOT_TMP_CC}" "${DJ_ROOT_CLAUDE_TMP}" "${T}/outside6"; do
+    [ -d "${d}" ] && find -P "${d}" -depth -delete
+    mkdir -p "${d}"
+  done
+  mkdir -p "${DJ_ROOT_TMP_CC}/sub" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/images" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/images" \
+           "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/deep"
+  echo x > "${DJ_ROOT_TMP_CC}/sub/raw.txt";   echo x > "${DJ_ROOT_TMP_CC}/sub/design.md"; echo x > "${DJ_ROOT_TMP_CC}/sub/new.txt"
+  echo x > "${DJ_ROOT_TMP_CC}/sub/old.sql";   ln -s ../../outside6/target "${DJ_ROOT_TMP_CC}/sub/link.txt"
+  echo x > "${T}/outside6/target"
+  echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/memo.txt";        echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/new.txt"
+  echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/images/pw.png";   echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/deep/a.log"
+  echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/images/po.png"
+  echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/b1.output";            echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/b2new.output"
+  echo x > "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/other.txt"
+  ln -s "${T}/outside6/target" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/alive.output"           # 指し先あり（a でなく名前外）
+  ln -s "${T}/outside6/target" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output"         # a*.output で指し先あり
+  ln -s "${T}/outside6/gone"   "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output"      # 宙に浮いた a*.output
+  ln -s "${T}/outside6/gone"   "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling-new.output"
+  local f
+  for f in "${DJ_ROOT_TMP_CC}/sub/raw.txt" "${DJ_ROOT_TMP_CC}/sub/design.md" "${DJ_ROOT_TMP_CC}/sub/old.sql" \
+           "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/memo.txt" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/images/pw.png" \
+           "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/deep/a.log" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/images/po.png" \
+           "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/b1.output" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/other.txt"; do
+    touch -t 202601010000 "${f}"
+  done
+  touch -h -t 202601010000 "${DJ_ROOT_TMP_CC}/sub/link.txt" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output" \
+        "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output"
+}
+snap6() { find -P "${DJ_ROOT_TMP_CC}" "${DJ_ROOT_CLAUDE_TMP}" "${T}/outside6" 2>/dev/null | sort; }
+fresh_ca() { echo "$(date +%s)" > "${DJ_CA_LAST_OK}"; }
+
+mk_k6; fresh_ca
+S6_BEFORE="$(snap6)"
+OUT6_DRY="$(bash "${JANITOR}" 2>&1)"
+echo "=== K6 dry-run 出力 ==="; echo "${OUT6_DRY}" | sed -n '/== R5/,/^--- df（終了）/p'; echo "=== ここまで ==="
+check "K6 dry-run: 何も消えない（前後の一覧が同一）" [ "${S6_BEFORE}" = "$(snap6)" ]
+check "K6 dry-run: R5 の候補に raw.txt が出る" grep -q "\[R5\] ${DJ_ROOT_TMP_CC}/sub/raw.txt " <<<"${OUT6_DRY}"
+check "K6 dry-run: R5 の候補に old.sql が出る" grep -q "\[R5\] ${DJ_ROOT_TMP_CC}/sub/old.sql " <<<"${OUT6_DRY}"
+check "K6 dry-run: R6 の候補に scratchpad の中が出る" grep -q "\[R6\] ${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad/memo.txt " <<<"${OUT6_DRY}"
+check "K6 dry-run: R6 の候補に宙に浮いた a*.output が出る" grep -q "\[R6\] ${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output " <<<"${OUT6_DRY}"
+check "K6 dry-run: 見出し R5・R6 の削除候補" bash -c 'grep -q "^\[R5\] 削除候補: 2 件" <<<"$1" && grep -q "^\[R6\] 削除候補: 5 件" <<<"$1"' _ "${OUT6_DRY}"
+
+bash "${JANITOR}" --execute >/dev/null 2>&1
+check "K6 R5 消す: 7日より古い .md 以外" bash -c '[ ! -e "$1/sub/raw.txt" ] && [ ! -e "$1/sub/old.sql" ]' _ "${DJ_ROOT_TMP_CC}"
+check "K6 R5 保護: .md" exists "${DJ_ROOT_TMP_CC}/sub/design.md"
+check "K6 R5 保護: 7日以内" exists "${DJ_ROOT_TMP_CC}/sub/new.txt"
+check "K6 R5 保護: シンボリックリンク（リンクも指し先も残る）" both_exist "${DJ_ROOT_TMP_CC}/sub/link.txt" "${T}/outside6/target"
+check "K6 R6 消す: scratchpad の中（images/ と深い階層も）" bash -c '[ ! -e "$1/memo.txt" ] && [ ! -e "$1/images/pw.png" ] && [ ! -e "$1/deep/a.log" ]' _ "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad"
+check "K6 R6 消す: tasks/b*.output" gone "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/b1.output"
+check "K6 R6 消す: 宙に浮いた a*.output（リンクだけ）" gone "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output"
+check "K6 R6 保護: <slug>/<uuid>/images/（PO の画像）" exists "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/images/po.png"
+check "K6 R6 保護: 7日以内（scratchpad・b*.output・宙に浮いた a*.output）" bash -c '[ -e "$1/scratchpad/new.txt" ] && [ -e "$1/tasks/b2new.output" ] && [ -L "$1/tasks/a-dangling-new.output" ]' _ "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1"
+check "K6 R6 保護: 指し先がある a*.output（リンクも指し先も残る）" both_exist "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output" "${T}/outside6/target"
+check "K6 R6 保護: tasks の b*.output 以外" exists "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/other.txt"
+check "K6 根の外は触らない" exists "${T}/outside6/target"
+
+# last-ok が古い／無いと R5・R6 を見送る
+mk_k6; echo $(( $(date +%s) - 3 * 86400 )) > "${DJ_CA_LAST_OK}"
+S6_BEFORE="$(snap6)"
+OUT6_OLD="$(bash "${JANITOR}" --execute 2>&1)"
+check "K6 last-ok が3日前: 何も消えない" [ "${S6_BEFORE}" = "$(snap6)" ]
+check "K6 last-ok が3日前: 見送りがログに出る" [ "$(grep -c 'R5/R6 見送り（HDD 写しが2日以上成功していない）' <<<"${OUT6_OLD}")" -eq 2 ]
+mk_k6; rm -f -- "${DJ_CA_LAST_OK}"
+S6_BEFORE="$(snap6)"
+OUT6_NONE="$(bash "${JANITOR}" --execute 2>&1)"
+check "K6 last-ok が無い: 何も消えない" [ "${S6_BEFORE}" = "$(snap6)" ]
+check "K6 last-ok が無い: 見送りがログに出る" [ "$(grep -c 'R5/R6 見送り' <<<"${OUT6_NONE}")" -eq 2 ]
+mk_k6; echo "abc" > "${DJ_CA_LAST_OK}"
+bash "${JANITOR}" --execute >/dev/null 2>&1
+check "K6 last-ok が数字でない: 何も消えない" exists "${DJ_ROOT_TMP_CC}/sub/raw.txt"
+mk_k6; fresh_ca
+OUT6_NOROOT="$(DJ_ROOT_TMP_CC="${T}/no-such-root" DJ_ROOT_CLAUDE_TMP="${T}/no-such-root2" bash "${JANITOR}" --execute 2>&1)"
+check "K6 根が無い: 規則ごと飛ばす" [ "$(grep -c '規則ごと飛ばす\] 根が無い' <<<"${OUT6_NOROOT}")" -eq 2 ]
+
+# dj_guard_file を直接呼ぶ
+mk_k6
+# shellcheck source=../disk-janitor.sh
+source "${JANITOR}"
+DJ_TMP_STALE_DAYS=7
+GF_OLD="${DJ_ROOT_TMP_CC}/sub/raw.txt"
+check "ガード(ファイル): 条件を満たすファイルは通る" dj_guard_file f "${GF_OLD}" '.' "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): 7日以内は拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub/new.txt" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): 根の外は拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${T}/outside6/target" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): シンボリックリンクは f で拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub/link.txt" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): ディレクトリは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): 根そのものは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): .. を含むパスは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2/sub/../sub/raw.txt" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): 相対パスは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "sub/raw.txt" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): 名前が規則と一致しないものは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "^b.*" "$3"' _ "${JANITOR}" "${GF_OLD}" "${DJ_ROOT_TMP_CC}"
+check "ガード(ファイル): dangling は指し先がある物を拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output" "${DJ_ROOT_CLAUDE_TMP}"
+check "ガード(ファイル): dangling は宙に浮いたリンクを通す" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output" "${DJ_ROOT_CLAUDE_TMP}"
+check "ガード(ファイル): 途中がシンボリックリンクなら拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ln -s "$3" "$2/linkdir"; ! dj_guard_file f "$2/linkdir/target" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}" "${T}/outside6"
 
 echo ""
 echo "=== 合計 ==="

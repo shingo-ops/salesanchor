@@ -108,7 +108,7 @@ class AnalysisResultsResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 _STATUS_TABS = {
-    "ALL", "NEEDS_REVIEW", "PRODUCT_MASTER_UNREGISTERED",
+    "ALL", "NEEDS_REVIEW", "ACKED", "PRODUCT_MASTER_UNREGISTERED",
     "SUPPLIER_UNREGISTERED", "PRODUCT_ID_UNRESOLVED", "NORMAL_COMPLETED",
 }
 

@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 14 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 22 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -65,8 +65,8 @@
 ## BackendHighLatency
 
 - 札：ticket
-- 何が起きているか：バックエンドの P99 レスポンスタイムが 2.0 秒を超えた状態が 2 分続いた。条件は便4 で見直す予定（それまで ticket）。
-- 最初に見るもの：Grafana のバックエンドのダッシュボード、遅いリクエストのパス。
+- 何が起きているか：/api/health を除いた利用者のリクエストのうち、2.5 秒を超えたものの割合が 5% を超える状態が 5 分続いた。2026-10-15 に条件を P99 > 2.0 秒から変えた。/api/health が毎回 1〜2.5 秒かかり、P99 を常に 2.0 秒より上に押し上げていたため（14 日で 393 回鳴っていた）。/api/health が遅い原因は未調査（設計 docs/handoff/ai-ops-247/stage1-design.md の U9）。
+- 最初に見るもの：Grafana のバックエンドのダッシュボード。どの handler が遅いかは `topk(5, sum by (handler) (rate(http_request_duration_seconds_count{job="backend",handler!="/api/health"}[5m])) - sum by (handler) (rate(http_request_duration_seconds_bucket{job="backend",handler!="/api/health",le="2.5"}[5m])))` で出す。Grafana の backend の画面の P99 のパネルは /api/health を含んだまま変えていない（設計 U3 の扱い）。画面の P99 が高くても、この見張りは鳴らないことがある。
 - 直し方：遅いリクエストと DB の状態を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=BackendHighLatency --duration=PERIOD --comment=REASON`
 
@@ -174,3 +174,72 @@
 - 最初に見るもの：Loki で `{job="containerlogs", container_name=~".*discord.*"} |= "[dm_writer]"`。運用の手順は [discord-gateway-operations.md](discord-gateway-operations.md)。
 - 直し方：DB 接続かスキーマかを切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=DiscordDmWriterError --duration=PERIOD --comment=REASON`
+
+## CeleryHeartbeatStale
+
+- 札：page
+- 何が起きているか：裏方の処理（celery）の 1 分ごとの heartbeat が 10 分以上更新されず、その状態が 2 分続いた。LINE 解析・翻訳・定期の集計が止まっている可能性がある。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis はメモリが一杯になると記録を消すことがある（`allkeys-lru`）ので、heartbeat のキーが消えてもこの見張りは鳴る。
+- 閾値の根拠：heartbeat と同じ短い定期タスクの、worker の受付から完了までの 14 日の最大は 60 秒。600 秒はその約 10 倍。worker に受け取られる前の待ちは測れていないので、反映後に本番で確かめた。
+- 最初に見るもの：prod1 の celery-beat と celery-worker のコンテナの状態（`docker compose ps`）→ worker が今処理中のタスク数（`celery -A app.celery_app inspect active`）→ Loki の worker のログの直近の `received`／`succeeded`。
+- 直し方：止まっている方のコンテナを `docker compose restart`。
+- 止め方：`amtool silence add alertname=CeleryHeartbeatStale --duration=PERIOD --comment=REASON`（理由と期限を書く）
+
+## CeleryTaskFailuresHigh
+
+- 札：ticket
+- 何が起きているか：同じ裏方のタスクが 1 時間に 3 回以上失敗した。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
+- 最初に見るもの：Loki で `|= "raised unexpected"` とタスク名で絞ったログ。
+- 注記：2026-10-15 時点で translate_pending_messages が毎日 2〜3 回失敗している（1 時間に 1 回まで。この見張りは鳴らない）。原因は未調査。
+- 効く範囲：1 日に 1〜2 回しか動かないタスク（sa02・為替・tcg_mirror 等）の失敗ではこの見張りは鳴らない。またタスク名の系列ができた最初の 1 件は increase に数えられない。どちらも段階1 で決めた範囲で、日次タスクの失敗の見張りは別の便で扱う。
+- 直し方：失敗の原因（ログの例外）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=CeleryTaskFailuresHigh --duration=PERIOD --comment=REASON`
+
+## CeleryQueueBacklog
+
+- 札：ticket
+- 何が起きているか：裏方の処理の待ち行列が 100 件を超えた状態が 10 分続いた。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
+- 閾値の根拠：14 日の 10 分あたりの受付の最大は 58 件なので、その 10 分に 1 件も片付かなくても 100 に届かない。
+- 最初に見るもの：待ち行列の長さの推移（`celery_queue_length`）と、worker が処理中のタスク（長いタスク `tcg.extract_source_message` 等が並んでいないか）。
+- 直し方：長いタスクが詰まっていれば Opus に報告する。worker の再起動は処理中のタスクを止めるので、Opus の判断を待つ。
+- 止め方：`amtool silence add alertname=CeleryQueueBacklog --duration=PERIOD --comment=REASON`
+
+## BackupLocalStale
+
+- 札：ticket
+- 何が起きているか：毎日 3:00 の `scripts/backup.sh`（DB バックアップ）が 26 時間以上成功していない状態が 10 分続いた。デプロイの Pre-deploy DB backup の成功でも時刻は進む。利用者に今の影響は無い。翌営業日までに復旧する。
+- 閾値の根拠：cron は毎日 1 回、所要は最大 81 秒。1 日 1 回の成功なら差は最大で約 24 時間 2 分で、26 時間には届かない。1 回抜けると、約 2 時間後に鳴る。
+- 最初に見るもの：prod1 の `/home/ubuntu/backups/postgres/backup.log` の末尾（成功の行と `TEXTFILE ... FAIL` の行）、`/home/ubuntu/backups/cron.log`（失敗の出力先）、ubuntu の crontab。
+- 直し方：失敗の原因（postgres のコンテナ・ディスクの空き）を切り分けて Opus に報告する。手動で 1 回実行してよい（`bash /home/ubuntu/salesanchor/scripts/backup.sh`）。
+- 止め方：`amtool silence add alertname=BackupLocalStale --duration=PERIOD --comment=REASON`
+
+## BackupS3Stale
+
+- 札：ticket
+- 何が起きているか：毎日 3:30 の `scripts/backup_to_s3.sh`（S3 への写し）が 26 時間以上成功していない状態が 10 分続いた。毎月 1 日は Glacier への月次の保存の失敗でも成功時刻が書かれない。利用者に今の影響は無い。翌営業日までに復旧する。
+- 最初に見るもの：`/home/ubuntu/backups/s3_backup.log` の末尾（`ERROR`・`WARN: TEXTFILE` の行）、Discord の ops チャンネルの「S3バックアップ失敗」の通知。
+- 直し方：AWS の認証・S3 の応答・ローカルのバックアップの有無を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=BackupS3Stale --duration=PERIOD --comment=REASON`
+
+## BackupTimestampAbsent
+
+- 札：ticket
+- 何が起きているか：バックアップの成功時刻（`backup_local.prom` か `backup_s3.prom`）のどちらかが 30 時間取れていない。textfile の断線かファイルの消失の疑い。利用者に今の影響は無い。翌営業日までに復旧する。
+- 最初に見るもの：prod1 の `/home/ubuntu/node_exporter_textfile/` に `backup_local.prom` と `backup_s3.prom` があるか、`node_textfile_scrape_error{instance="app-vps"}`、`backup.log` の `TEXTFILE ... FAIL` の行。
+- 直し方：断線の箇所を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=BackupTimestampAbsent --duration=PERIOD --comment=REASON`
+
+## MonitoringConfigDrift
+
+- 札：ticket
+- 何が起きているか：毎日 09:23 JST ごろの確認で、prod2 に置いた監視設定 6 本のうち 1 本以上が main と一致しない状態が 5 分続いた。main にマージしてから prod2 に置くまでの間も鳴る（置き忘れの知らせ）。利用者に今の影響は無い。翌営業日までに直す。
+- 最初に見るもの：GitHub の Actions の「Monitoring config drift check」の最新の実行ログ（`DRIFT:` の行にファイル名が出る）。
+- 直し方：どちらが正しいかを切り分ける。main が正しければ main の版を prod2 に置き直して読み直す（手順は各便のカード §8 と同じ）。prod2 の手直しが正しければ repo に PR で取り込む。置き直した後は workflow を手動で 1 回実行して、ずれ 0 を確かめる（pushgateway は次に送るまで古い値を持ち続ける）。迷ったら Opus に報告する。比べるのは `monitoring/scripts/check_config_drift.sh` の `FILES` にある 6 本だけで、監視設定のファイルを増やしたら `FILES` にも足す。
+- 止め方：`amtool silence add alertname=MonitoringConfigDrift --duration=PERIOD --comment=REASON`
+
+## MonitoringConfigCheckStale
+
+- 札：ticket
+- 何が起きているか：監視設定のずれの確認が 50 時間以上 pushgateway に送っていない状態が 1 時間続いた（毎日 1 回の確認が 2 回続けて動かなかった）。利用者に今の影響は無い。翌営業日までに直す。
+- 最初に見るもの：Actions の実行の一覧（失敗か、そもそも起動していないか）、prod2 の runner のサービス（`systemctl status actions.runner.shingo-ops-salesanchor.salesanchor-vps`）、pushgateway のコンテナ。
+- 直し方：runner・workflow・pushgateway のどこで止まっているかを切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=MonitoringConfigCheckStale --duration=PERIOD --comment=REASON`

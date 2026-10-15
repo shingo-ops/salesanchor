@@ -1,0 +1,25 @@
+     1	  /** そのセッション（claudeSessionId）で動いている担当の数。ac-routine の書き込みを止めるかの判定に使う（設計 ac-hardening §3-1） */
+     2	  runningCount(sessionId: string): number {
+     3	    return this.view(sessionId).running.length;
+     4	  }
+     5	
+     6	  /** activityKeepDays より古い日付の events-YYYYMMDD.jsonl だけを消す。消した名前を返す（本番のポートのサーバーだけが呼ぶ） */
+     7	  async pruneOldFiles(): Promise<string[]> {
+     8	    const now = this.now();
+     9	    const todayStart = Math.floor(now / MS_PER_DAY) * MS_PER_DAY;
+    10	    const cutoff = todayStart - this.keepDays * MS_PER_DAY;
+    11	    const names = await readdir(this.activityDir).catch(() => [] as string[]);
+    12	    const removed: string[] = [];
+    13	    for (const name of names.sort()) {
+    14	      const m = EVENT_FILE.exec(name);
+    15	      if (m === null) continue;
+    16	      const fileDay = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    17	      if (!Number.isFinite(fileDay) || fileDay >= cutoff) continue;
+    18	      await unlink(path.join(this.activityDir, name)).then(
+    19	        () => removed.push(name),
+    20	        () => undefined,
+    21	      );
+    22	    }
+    23	    return removed;
+    24	  }
+    25	}

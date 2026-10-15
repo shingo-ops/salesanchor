@@ -1,0 +1,32 @@
+name: Monitoring config drift check
+
+# 監視用サーバー(prod2)に置いた監視設定と main のずれを毎日数え、pushgateway に送る（ADR-1012 段階1 便7）
+# 公開リポジトリの self-hosted runner なので、pull_request・push では動かさない。secrets も使わない
+on:
+  schedule:
+    # 毎日 09:23 JST = 00:23 UTC（毎時 0 分は GitHub の時刻起動が混むため外す）
+    - cron: '23 0 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoring-config-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: 監視設定のずれの確認
+    runs-on: [self-hosted, salesanchor-vps]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: ずれを数えて pushgateway に送る
+        run: bash monitoring/scripts/check_config_drift.sh "$GITHUB_WORKSPACE" /opt/salesanchor-monitoring

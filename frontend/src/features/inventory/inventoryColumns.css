@@ -1,0 +1,10 @@
+.inventory-cell__title {
+  font-weight: var(--font-weight-semi);
+  overflow-wrap: anywhere;
+}
+
+.inventory-cell__sub {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,1 @@
+/Users/tanizawashingo/.salesanchor-tools/scripts/disk-janitor.sh:34:  : "${DJ_DF_PATH:=/System/Volumes/Data}"

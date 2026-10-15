@@ -1,0 +1,354 @@
+
+In scripts/claude-archive.sh line 154:
+    '"$1" find-generic-password -s claude-archive-hdd -a archive -w | tr -d "\n" | "$2" attach -stdinpass -nobrowse -mountpoint "$3" "$4"' \
+    ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/claude-archive.sh line 218:
+    ca_run_timeout "${CA_TIMEOUT_RSYNC}" bash -c 'cd "$1" && exec "$2" -a -R -- "$3" "$4"' _ "${root}" "${CA_RSYNC_CMD}" "${rel}/" "${dst}/" >/dev/null 2>&1 || rc=$?
+                                                 ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 24:
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-claude-archive.sh line 25:
+gone() { ! exists "$1"; }
+^-----------------------^ SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-claude-archive.sh line 26:
+lacks() { ! grep -q -- "$1" "$2" 2>/dev/null; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-claude-archive.sh line 36:
+cleanup() { find -P "${T}" -depth -delete 2>/dev/null; return 0; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-claude-archive.sh line 158:
+hdd_ls() { ls -A "${HDD}" | sort; }
+           ^------------^ SC2012 (info): Use find instead of ls to better handle non-alphanumeric filenames.
+
+
+In scripts/tests/test-claude-archive.sh line 167:
+check "K2 HDD なし: hdiutil・security・rsync を呼ばない" bash -c '! grep -Eq "^(hdiutil|security|rsync)" "$1"' _ "${STUB_CALLS}"
+                                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 191:
+check "dry-run: attach 1 回・detach 1 回" bash -c '[ "$(grep -c "^hdiutil attach" "$1")" -eq 1 ] && [ "$(grep -c "^hdiutil detach" "$1")" -eq 1 ]' _ "${STUB_CALLS}"
+                                               ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 198:
+check "写し: projects（jsonl と subagents）" bash -c '[ -f "$1/claude/projects/$2/$3.jsonl" ] && [ -f "$1/claude/projects/$2/$3/subagents/a.jsonl" ]' _ "${VOL}" "${SLUG}" "${UC}"
+                                                ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 200:
+check "写し: history・plans・keep" bash -c '[ -f "$1/claude/history.jsonl" ] && [ -f "$1/claude/plans/old.md" ] && [ -f "$1/CC報告ファイル-keep/doc.txt" ]' _ "${VOL}"
+                                       ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 201:
+check "写し: tmpmd は .md だけ" bash -c '[ -f "$1/tmp-CC報告ファイル-md/sub/old.md" ] && [ ! -e "$1/tmp-CC報告ファイル-md/sub/x.txt" ]' _ "${VOL}"
+                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 202:
+check "写し: images は構造を保つ（scratchpad の下は写さない）" bash -c '[ -f "$1/claude-tmp-images/slugA/$2/images/old.png" ] && [ ! -e "$1/claude-tmp-images/slugA/$3/scratchpad" ]' _ "${VOL}" "${UC}" "${UC}"
+                                                      ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 203:
+check "写し: dataDir の boards・routine-audit" bash -c '[ -f "$1/agent-console/boards/b.json" ] && [ -f "$1/agent-console/routine-audit.jsonl" ]' _ "${VOL}"
+                                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 206:
+check "K5 入れ物の直下は決めた名前だけ" bash -c '[ "$(ls -A "$1" | LC_ALL=C sort | tr "\n" " ")" = "$(printf "%s\n" CC報告ファイル-keep agent-console claude claude-tmp-images tmp-CC報告ファイル-md | LC_ALL=C sort | tr "\n" " ")" ]' _ "${VOL}"
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 219:
+check "K11① open-sessions にあるセッションは残る（jsonl と配下）" bash -c '[ -f "$1/$2.jsonl" ] && [ -f "$1/$2/subagents/a.jsonl" ]' _ "${P}" "${UA}"
+                                                          ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 220:
+check "K11① sessions/ にあるセッションは残る" bash -c '[ -f "$1/$2.jsonl" ] && [ -f "$1/$2/tool-results/r.txt" ]' _ "${P}" "${UB}"
+                                           ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 225:
+check "K11 UUID でない物は残る（ディレクトリ・jsonl）" bash -c '[ -f "$1/notuuid/x.txt" ] && [ -f "$1/notuuid.jsonl" ]' _ "${P}"
+                                               ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 229:
+check "K11 計画: 8日前は消え、新しい物は残る" bash -c '[ ! -e "$1/plans/old.md" ] && [ -f "$1/plans/new.md" ]' _ "${SRC}"
+                                       ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 231:
+check "K11 文書: 古い .md は消え、新しい物と .md でない物は残る" bash -c '[ ! -e "$1/tmpmd/sub/old.md" ] && [ -f "$1/tmpmd/sub/new.md" ] && [ -f "$1/tmpmd/sub/x.txt" ]' _ "${SRC}"
+                                                     ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 233:
+check "K11 画像: 古い画像は消え、新しい画像は残る" bash -c '[ ! -e "$1/claudetmp/slugA/$2/images/old.png" ] && [ -f "$1/claudetmp/slugA/$2/images/new.png" ]' _ "${SRC}" "${UC}"
+                                         ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 235:
+check "K11 keep・history・dataDir は消さない" bash -c '[ -f "$1/keep/doc.txt" ] && [ -f "$1/history.jsonl" ] && [ -f "$2/boards/b.json" ] && [ -f "$2/open-sessions.json" ]' _ "${SRC}" "${DD}"
+                                               ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 236:
+check "execute: ログに単位ごとの行" bash -c 'grep -q "片付け 計画:" "$1" && grep -q "片付け 文書:" "$1" && grep -q "片付け 画像:" "$1" && grep -q "片付け セッション:" "$1"' _ "${CA_LOG_FILE}"
+                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 237:
+check "execute: rm -rf を使っていない（スクリプト内に無い）" bash -c '! grep -Eq "^[^#]*rm +-[a-zA-Z]*r" "$1"' _ "${CA}"
+                                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 243:
+check "K11② 不一致のセッションは丸ごと残る（jsonl と配下の全ファイル）" bash -c '[ -f "$1/$2.jsonl" ] && [ -f "$1/$2/subagents/a.jsonl" ] && [ -f "$1/$2/tool-results/r.txt" ]' _ "${P}" "${UD}"
+                                                      ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 252:
+check "K11③ どのセッションも消えない（UC も残る）" bash -c '[ -f "$1/$2.jsonl" ] && [ -f "$1/$3.jsonl" ] && [ -f "$1/$4.jsonl" ] && [ -f "$1/$5.jsonl" ]' _ "${P}" "${UA}" "${UB}" "${UC}" "${UD}"
+                                          ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 277:
+check "K7 失敗項目より後ろの項目も写す（history・dataDir）" bash -c '[ -f "$1/claude/history.jsonl" ] && [ -f "$1/agent-console/boards/b.json" ]' _ "${VOL}"
+                                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 280:
+check "K7 片付け見送り（何も消えない）" bash -c '[ -f "$1/$2.jsonl" ] && [ -f "$3/plans/old.md" ]' _ "${P}" "${UC}" "${SRC}"
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 313:
+check "attach 失敗: rsync を呼ばない・last-ok を書かない・何も消えない" bash -c '! grep -q "^rsync" "$1" && [ ! -e "$2" ] && [ -f "$3/$4.jsonl" ]' _ "${STUB_CALLS}" "${CA_LAST_OK}" "${P}" "${UC}"
+                                                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 320:
+check "上限時間超え: 何も写さない" bash -c '! grep -q "^rsync" "$1"' _ "${STUB_CALLS}"
+                               ^-----------------------^ SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 326:
+check "ロック中: 実行せず skip（exit 0）" bash -c '[ "$1" -eq 0 ] && grep -q "another instance is running" "$2" && [ ! -s "$3" ]' _ "${RC}" "${CA_LOG_FILE}" "${STUB_CALLS}"
+                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-claude-archive.sh line 336:
+check "ログ: 上限超えは .1 に退避され1世代だけ" bash -c '[ -f "$1.1" ] && [ ! -e "$1.2" ]' _ "${CA_LOG_FILE}"
+                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 24:
+exists() { [ -e "$1" ] || [ -L "$1" ]; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-disk-janitor.sh line 25:
+both_exist() { exists "$1" && exists "$2"; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-disk-janitor.sh line 26:
+gone() { ! exists "$1"; }
+^-----------------------^ SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-disk-janitor.sh line 31:
+cleanup() {
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-disk-janitor.sh line 195:
+check "R4: origin が想定と違うリポジトリは呼ばれない" bash -c '! grep -q "repoY" "$1"' _ "${REAPER_LOG}"
+                                             ^----------------------^ SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 216:
+printf '%s\n' '#!/bin/bash' 'echo "$(pwd -P)/.npm-cache"' > "${FAKE_NPM}"
+                            ^---------------------------^ SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 234:
+check "ログ: 上限超えは .1 に退避され1世代だけ" bash -c '[ -f "$1.1" ] && [ ! -e "$1.2" ]' _ "${LOGF}"
+                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 236:
+check "ログ: 新しいログに規則ごとの件数・容量と df が出る" bash -c 'grep -q "^\[R1\] " "$1" && grep -q "df（開始）" "$1" && grep -q "df（終了）" "$1"' _ "${LOGF}"
+                                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 240:
+source "${JANITOR}"
+       ^----------^ SC1091 (info): Not following: ../disk-janitor.sh was not specified as input (see shellcheck -x).
+
+
+In scripts/tests/test-disk-janitor.sh line 243:
+g_pass() { dj_guard "$1" '^\.npm-cache$' "${G_ROOT1}" "${G_ROOT2}"; }
+^-- SC2329 (info): This function is never invoked. Check usage (or ignored if invoked indirectly).
+
+
+In scripts/tests/test-disk-janitor.sh line 245:
+check "ガード: 空のパスは拒否" bash -c 'source "$1"; ! dj_guard "" "." "$2"' _ "${JANITOR}" "${R_SA}"
+                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 246:
+check "ガード: / は拒否" bash -c 'source "$1"; ! dj_guard "/" "." "$2"' _ "${JANITOR}" "${R_SA}"
+                           ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 247:
+check "ガード: HOME そのものは拒否" bash -c 'source "$1"; ! dj_guard "$HOME" "." "$HOME" "$2"' _ "${JANITOR}" "${R_SA}"
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 248:
+check "ガード: 根そのものは拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$2"' _ "${JANITOR}" "${R_SA}"
+                              ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 249:
+check "ガード: 相対パスは拒否" bash -c 'source "$1"; ! dj_guard "sa/.npm-cache" "." "$2"' _ "${JANITOR}" "${R_SA}"
+                             ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 250:
+check "ガード: .. を含むパスは拒否" bash -c 'source "$1"; ! dj_guard "$2/ok-case/../ok-case/.npm-cache" "." "$2"' _ "${JANITOR}" "${R_SA}"
+                                 ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 251:
+check "ガード: 根の外は拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$3"' _ "${JANITOR}" "${T}/outside/.npm-cache" "${R_SA}"
+                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 252:
+check "ガード: シンボリックリンクは拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$3"' _ "${JANITOR}" "${R_WT}/repoA/linkholder/.npm-cache" "${R_WT}"
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 253:
+check "ガード: 名前が規則と一致しないものは拒否" bash -c 'source "$1"; ! dj_guard "$2" "^\.npm-cache$" "$3"' _ "${JANITOR}" "${R_SA}/other-name" "${R_SA}"
+                                      ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 254:
+check "ガード: 存在しないパスは拒否" bash -c 'source "$1"; ! dj_guard "$2" "." "$3"' _ "${JANITOR}" "${R_SA}/nope" "${R_SA}"
+                                ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 288:
+fresh_ca() { echo "$(date +%s)" > "${DJ_CA_LAST_OK}"; }
+                  ^-----------^ SC2005 (style): Useless echo? Instead of 'echo $(cmd)', just use 'cmd'.
+
+
+In scripts/tests/test-disk-janitor.sh line 299:
+check "K6 dry-run: 見出し R5・R6 の削除候補" bash -c 'grep -q "^\[R5\] 削除候補: 2 件" <<<"$1" && grep -q "^\[R6\] 削除候補: 5 件" <<<"$1"' _ "${OUT6_DRY}"
+                                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 302:
+check "K6 R5 消す: 7日より古い .md 以外" bash -c '[ ! -e "$1/sub/raw.txt" ] && [ ! -e "$1/sub/old.sql" ]' _ "${DJ_ROOT_TMP_CC}"
+                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 306:
+check "K6 R6 消す: scratchpad の中（images/ と深い階層も）" bash -c '[ ! -e "$1/memo.txt" ] && [ ! -e "$1/images/pw.png" ] && [ ! -e "$1/deep/a.log" ]' _ "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/scratchpad"
+                                                        ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 310:
+check "K6 R6 保護: 7日以内（scratchpad・b*.output・宙に浮いた a*.output）" bash -c '[ -e "$1/scratchpad/new.txt" ] && [ -e "$1/tasks/b2new.output" ] && [ -L "$1/tasks/a-dangling-new.output" ]' _ "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1"
+                                                                     ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 336:
+source "${JANITOR}"
+       ^----------^ SC1091 (info): Not following: ../disk-janitor.sh was not specified as input (see shellcheck -x).
+
+
+In scripts/tests/test-disk-janitor.sh line 340:
+check "ガード(ファイル): 7日以内は拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub/new.txt" "${DJ_ROOT_TMP_CC}"
+                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 341:
+check "ガード(ファイル): 根の外は拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${T}/outside6/target" "${DJ_ROOT_TMP_CC}"
+                                  ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 342:
+check "ガード(ファイル): シンボリックリンクは f で拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub/link.txt" "${DJ_ROOT_TMP_CC}"
+                                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 343:
+check "ガード(ファイル): ディレクトリは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}/sub" "${DJ_ROOT_TMP_CC}"
+                                     ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 344:
+check "ガード(ファイル): 根そのものは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+                                    ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 345:
+check "ガード(ファイル): .. を含むパスは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2/sub/../sub/raw.txt" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+                                       ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 346:
+check "ガード(ファイル): 相対パスは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "sub/raw.txt" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}"
+                                   ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 347:
+check "ガード(ファイル): 名前が規則と一致しないものは拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file f "$2" "^b.*" "$3"' _ "${JANITOR}" "${GF_OLD}" "${DJ_ROOT_TMP_CC}"
+                                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 348:
+check "ガード(ファイル): dangling は指し先がある物を拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output" "${DJ_ROOT_CLAUDE_TMP}"
+                                                ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 349:
+check "ガード(ファイル): dangling は宙に浮いたリンクを通す" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output" "${DJ_ROOT_CLAUDE_TMP}"
+                                                 ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+
+In scripts/tests/test-disk-janitor.sh line 350:
+check "ガード(ファイル): 途中がシンボリックリンクなら拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ln -s "$3" "$2/linkdir"; ! dj_guard_file f "$2/linkdir/target" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}" "${T}/outside6"
+                                            ^-- SC2016 (info): Expressions don't expand in single quotes, use double quotes for that.
+
+For more information:
+  https://www.shellcheck.net/wiki/SC1091 -- Not following: ../disk-janitor.sh...
+  https://www.shellcheck.net/wiki/SC2012 -- Use find instead of ls to better ...
+  https://www.shellcheck.net/wiki/SC2016 -- Expressions don't expand in singl...
+shellcheck rc=1
+bash -n OK scripts/claude-archive.sh
+bash -n OK scripts/disk-janitor.sh
+bash -n OK scripts/tests/test-claude-archive.sh
+bash -n OK scripts/tests/test-disk-janitor.sh

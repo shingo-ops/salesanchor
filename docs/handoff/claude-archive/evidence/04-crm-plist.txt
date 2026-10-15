@@ -1,0 +1,3 @@
+     1	<?xml version="1.0" encoding="UTF-8"?>
+     2	<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+     3	<plist version="1.0"><dict><key>Label</key><string>com.crm-app.janitor</string><key>ProgramArguments</key><array><string>/bin/sh</string><string>/Users/tanizawashingo/crm-app-canonical-20260824/scripts/janitor.sh</string></array><key>StartInterval</key><integer>604800</integer></dict></plist>

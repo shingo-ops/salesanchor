@@ -1,0 +1,83 @@
+/**
+ * Checkbox — 標準チェックボックス金型（design.md §3-6(a)）
+ * ADR-067: 全カラーは CSS 変数参照のみ。新規トークンは追加しない（既存トークンのみ使用）。
+ *
+ * DOM: label.comp-checkbox > input.comp-checkbox__input[type=checkbox] + span.comp-checkbox__label
+ */
+
+.comp-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.comp-checkbox:has(.comp-checkbox__input:disabled) {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+/* ── サイズ ── */
+.comp-checkbox--sm {
+  gap: var(--space-1);
+  font-size: var(--font-xs);
+}
+
+.comp-checkbox--lg {
+  gap: var(--space-3);
+  font-size: var(--font-base);
+}
+
+/* ── 入力要素 ── */
+.comp-checkbox__input {
+  flex-shrink: 0;
+  margin: 0;
+  width: 1.1em;
+  height: 1.1em;
+  border: 1px solid var(--border);
+  border-radius: var(--comp-input-radius);
+  background: var(--bg-surface);
+  accent-color: var(--accent);
+  cursor: pointer;
+  transition: border-color var(--transition-micro), box-shadow var(--transition-micro);
+}
+
+.comp-checkbox__input:hover {
+  background: var(--bg-hover);
+}
+
+.comp-checkbox__input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.comp-checkbox__input:disabled {
+  cursor: not-allowed;
+  background: var(--bg-hover);
+}
+
+.comp-checkbox--error .comp-checkbox__input {
+  border-color: var(--danger);
+}
+
+/* ── ラベル ── */
+.comp-checkbox__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.comp-checkbox__description {
+  font-size: var(--font-xs);
+  font-weight: normal;
+  color: var(--text-secondary);
+}
+
+.comp-checkbox--error .comp-checkbox__description {
+  color: var(--danger);
+}

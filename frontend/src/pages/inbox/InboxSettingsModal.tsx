@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { StatusTabKey } from "./inbox.types";
 import { Modal } from "../../components/Modal";
 import { SelectControl } from "../../components/Select";
+import { Toggle } from "../../components/Toggle";
 
 interface InboxSettings {
   showRightPanel: boolean;
@@ -26,11 +27,9 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
 
         <div className="inbox-settings-row">
           <span className="inbox-settings-label">{t("inbox.settings.showRightPanel")}</span>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={inboxSettings.showRightPanel}
-              onChange={(e) => updateInboxSetting("showRightPanel", e.target.checked)} />
-            <span className="toggle-switch-slider" />
-          </label>
+          <Toggle checked={inboxSettings.showRightPanel}
+            aria-label={t("inbox.settings.showRightPanel")}
+            onCheckedChange={(next) => updateInboxSetting("showRightPanel", next)} />
         </div>
 
         <div className="inbox-settings-row">
@@ -49,11 +48,9 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
 
         <div className="inbox-settings-row">
           <span className="inbox-settings-label">{t("inbox.settings.defaultUnreadOnly")}</span>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={inboxSettings.defaultUnreadOnly}
-              onChange={(e) => updateInboxSetting("defaultUnreadOnly", e.target.checked)} />
-            <span className="toggle-switch-slider" />
-          </label>
+          <Toggle checked={inboxSettings.defaultUnreadOnly}
+            aria-label={t("inbox.settings.defaultUnreadOnly")}
+            onCheckedChange={(next) => updateInboxSetting("defaultUnreadOnly", next)} />
         </div>
 
         <div className="inbox-settings-section-title" style={{ marginTop: "var(--space-4)" }}>
@@ -62,29 +59,25 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
 
         <div className="inbox-settings-row">
           <span className="inbox-settings-label">{t("inbox.settings.browserNotifications")}</span>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={inboxSettings.browserNotifications}
-              onChange={async (e) => {
-                if (e.target.checked) {
-                  const perm = await Notification.requestPermission();
-                  if (perm === "denied") {
-                    alert(t("inbox.settings.browserNotificationsDenied"));
-                    return;
-                  }
+          <Toggle checked={inboxSettings.browserNotifications}
+            aria-label={t("inbox.settings.browserNotifications")}
+            onCheckedChange={async (next) => {
+              if (next) {
+                const perm = await Notification.requestPermission();
+                if (perm === "denied") {
+                  alert(t("inbox.settings.browserNotificationsDenied"));
+                  return;
                 }
-                updateInboxSetting("browserNotifications", e.target.checked);
-              }} />
-            <span className="toggle-switch-slider" />
-          </label>
+              }
+              updateInboxSetting("browserNotifications", next);
+            }} />
         </div>
 
         <div className="inbox-settings-row">
           <span className="inbox-settings-label">{t("inbox.settings.soundEnabled")}</span>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={inboxSettings.soundEnabled}
-              onChange={(e) => updateInboxSetting("soundEnabled", e.target.checked)} />
-            <span className="toggle-switch-slider" />
-          </label>
+          <Toggle checked={inboxSettings.soundEnabled}
+            aria-label={t("inbox.settings.soundEnabled")}
+            onCheckedChange={(next) => updateInboxSetting("soundEnabled", next)} />
         </div>
 
     </Modal>

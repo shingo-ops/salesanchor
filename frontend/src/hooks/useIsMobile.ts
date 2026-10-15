@@ -12,12 +12,16 @@
 import { useState, useEffect } from "react";
 import { BREAKPOINTS } from "../constants/breakpoints";
 
+/** matchMedia が無い環境（jsdom 等）では常に false を返し、購読しない */
+const hasMatchMedia = (): boolean => typeof window.matchMedia === "function";
+
 export function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(
-    () => window.matchMedia(`(max-width: ${BREAKPOINTS.MOBILE_MAX}px)`).matches,
+    () => hasMatchMedia() && window.matchMedia(`(max-width: ${BREAKPOINTS.MOBILE_MAX}px)`).matches,
   );
 
   useEffect(() => {
+    if (!hasMatchMedia()) return undefined;
     const mql = window.matchMedia(`(max-width: ${BREAKPOINTS.MOBILE_MAX}px)`);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener("change", handler);

@@ -1,7 +1,7 @@
 # Colima 使い終わり自動停止 設計（2026-10-15・v2.1・Fable 審査 APPROVE: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-design3.md）
 
-区分（ADR-1015）: **A**（危険パス scripts/・ops/launchd/ を触る feat）。PR は Draft・GO 記録必須（ADR-136）。recon: [recon.md](recon.md)。前例: [disk-janitor 設計](../disk-janitor/design.md)。
-設計仕様書（docs/specs）: **対象外**。理由: 開発機（Mac）の保守道具で製品の機能領域ではない。前例 disk-janitor も docs/specs を持たず、handoff の recon/design と docs/ops/runner-commands.md の節を正本にしている。本件も同じ扱いとする。STANDARD-WORKFLOW.md:36 の「本番 `scripts/`」は本番サーバーで動く scripts を指し、本件は PO の Mac だけで動くため当たらないと判断した（判断者: POの委任に基づく Claude Opus、2026-10-15。委任: memory opus_admin_delegation「設計からずれる時だけPOへ相談」。v2 審査で PO 確認事項として挙がったため、最終報告で PO に明示する）。
+区分（ADR-1015）: **A**（危険パス scripts/・ops/launchd/ を触る feat）。PR は Draft・GO 記録必須（ADR-136）。recon: [docs/handoff/colima-idle-stop/recon.md](recon.md)。前例: [disk-janitor 設計](../disk-janitor/design.md)。
+設計仕様書（docs/specs）: [docs/specs/colima-idle-stop/](../../specs/colima-idle-stop/README.md)。当初は「開発機（Mac）の保守道具で製品の機能領域ではない（前例 disk-janitor と同扱い）」として対象外と判断したが、2026-10-15 に PO が最終報告の「作らない判断でよいか（y/n）」に N と答えたため、別 PR で作成した。
 v1 審査（Fable REVISE: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-design1.md）の指摘 MEDIUM-1〜5・LOW-6〜10 を本版で反映。
 PO 決定（2026-10-15 チャット、y）: 「15分ごとに見回り、DB 接続なし・CPU ほぼ0 が30分続いたら Docker を自動で止める」。
 
@@ -90,6 +90,12 @@ PO 決定（2026-10-15 チャット、y）: 「15分ごとに見回り、DB 接�
 - 見回り役自身のログ（毎回1行以上）で動作が見える。`launchctl print` の last exit code で異常が分かる。
 - 試験 scripts/tests/test-colima-idle-stop.sh が判定の正しさを固定する。
 - 手順の正本は docs/ops/runner-commands.md の新節。
+- 守り手: scripts/tests/test-colima-idle-stop.sh（判定の正しさ）、ログ ~/Library/Logs/colima-idle-stop.log（毎回の動作）、disk-janitor（道具のコピー ~/.salesanchor-tools を毎日 04:00 に main へ更新。ops/launchd/jp.salesanchor.disk-janitor.plist:34）。人の担当は POの委任に基づく Claude Opus（変更時の審査）。
+- 守っていないもの（2026-10-15 実測。生出力 /tmp/CC報告ファイル/ac-heavy/governance/G1〜G9.txt）:
+  - CI はこの試験を実行しない（`git grep -n colima origin/main -- .github/` が0件。前例 disk-janitor も同じ）。試験は変更時に手で実行して PR に記録する。
+  - 見回り役が止まった・失敗した（`result=error`／`reason=d`）ときに人へ知らせる通知は無い（colima と通知系の語を同時に含む行0件。disk-janitor も同じ）。気づく手段はログと `launchctl print` を人が見ることだけ。
+  - 道具のコピーの更新は disk-janitor に依存する。disk-janitor が更新に失敗した日は古い版のまま動く（実例: ~/Library/Logs/disk-janitor.err 10/13 の「道具のコピーの更新・確認に失敗したため実行しない」）。
+- 動き続けていることの確認: ログに約900秒ごとの新しい行があること（10/15 10:31〜11:46 の間隔 905〜912 秒を実測）。止まったら `launchctl print gui/$(id -u)/jp.salesanchor.colima-idle-stop` の last exit code を見る。
 
 ## 関係する ADR
 - ADR-136（scripts/・ops/launchd/ は危険パス＝GO 必須）。ADR-1015（区分 A）。ADR-135（PO GO まで main に入れない）。
