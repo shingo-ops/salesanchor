@@ -363,6 +363,10 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
   - 【事実】メールでの再発行にも SMTP が要る（計画票0 ①：本番は未設定）。
   - 【PO 決定 2026-10-16「y」】送信元メールの5項目（SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM）を PO が用意して GitHub の秘密設定に入れる。値はチャット・リポジトリに出さない。入れた後のデプロイで本番の .env に入り（deploy.yml:323-327）、テストメール1通の到着で確かめる。
   - 【事実 2026-10-15T16:26Z】#4344 のデプロイ後、本番 backend の5項目は全部 SET（MAIL_FROM は22文字）。backend から mail_config.smtp_settings() を使って support@ 宛てに1通送り、RESULT=SENT refused=0（/tmp/CC報告ファイル/viewer_discord/testmail_result.txt）。受信箱に届いたかは PO の目視が残り。
+- サーバー（2026-10-16）：専用サーバーを新しく作る案に PO「n,1つで管理したい」→ 説明のうえ「y」。運用サーバー「Sales Anchor」（ID 末尾 1187）1つで受ける。チケットとパスワードの送信はアプリのボット（Sales Anchor#8667、権限 805432406 で招待済み）が行い、SA Bug Intake は保守運用だけに使う。
+  - 【事実 2026-10-16】新しく入った人（@everyone）に、アラートのカテゴリと子4つ・テキスト「一般」・ボイス「一般」が見えていた（/tmp/CC報告ファイル/viewer_discord/visibility.txt）。PO「y」で、役割のなかった人間2人に PO が画面で Sales Anchor Staff を付け、対象7つを「ボット・Staff・SA Bug Intake は許可 → 最後に @everyone を拒否」の順で設定した。変更後に @everyone に見えるのは中身が空のカテゴリ2つだけ（redo_visibility_after.txt）。Staff・2つのボットは7つとも見える（redo_roles_after.txt）。戻し方は restore_overwrites.py（未実行）。1回目は @everyone を先に拒否してボットが自分を締め出し、テキスト「一般」が一時的に所有者以外に見えなくなった（PO が画面で戻した。visibility_restored.txt は最初と差分なし）。教訓：上書きはボット自身の許可を先に入れる。
+  - 【事実・調査】Discord 公式資料に、サーバー全体のメンバー一覧を一般の人から隠す設定は見つからなかった。公式にある対策は見せるチャンネルを絞ることだけ。全員が見る部屋で互いが一覧に出るかは公式に明記が無く【未確認】（memberlist_research.md）。
+- 【PO 決定 2026-10-16】原文「全体用のカテゴリとチケットチャンネルはカテゴリを分ける、全体用としては全員が投稿できるチャンネル、障害の発生と復旧報告用のチャンネルを設置、チケットチャンネルは個別のDM用の部屋として使う」。お客さんに見せるのは「全体用」カテゴリ（全員が投稿できる部屋＋障害の発生と復旧の報告の部屋）と、その人のチケット部屋だけ。チケット部屋は本人とスタッフだけの個別の連絡部屋として使う。全体用の部屋ではお客さんどうしが見えることを前提とする。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
