@@ -2398,7 +2398,7 @@ AY-2 の方針（PO 回答 2026-10-09「y」。設計者の提示案: 一般フ�
 |---|---|---|
 | AY-2a | 種類 karte・search・schedule・composer を TextFieldControl に登録し、該当 33 件（G04 22・G38 1・G39 1・G32 1・G08 6・G15 2）を移管 | 変化0（実測で差分0を判定） |
 | AY-2b 以降 | 一般（G01・G03・G05 のフォーム、G02 等のブラウザ既定、inline style の組）を領域ごとに標準へ。ログイン（G11）は `.form-group input` の撤去と同じ便で種類として登録（祖先規則 `.login-card .form-group input` (0,2,1) が種類 (0,2,0) より強く、撤去前は移管の効果が無いため） | 変化あり（前後表） |
-| 保留 | 商品編集 ProductEditPage.tsx 14（G06）のみ。ProductMasterDrawer.tsx 7 と SourceRawPane.tsx 1 は AY-2y で i18n 化と同時に移管済み | 不変 |
+| 保留 | 保留なし（商品編集 14 は AY-2z で種類 product-edit へ移管。ProductMasterDrawer.tsx 7 と SourceRawPane.tsx 1 は AY-2y で i18n 化と同時に移管済み） | 不変 |
 
 報酬（CommissionPanel.tsx）の保留は select 1件（§AW、表の overflow）だけで、同ファイルに生 input は無い（ay2-hold.txt）。一行入力では報酬関連の保留を設けない。
 
@@ -4148,3 +4148,18 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 変更: frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx と SourceRawPane.tsx の全文言を t() 化（キーは tcgAnalysisReview.productMasterDrawer.*・sourceRawPane.*）。入力は TextFieldControl size sm、複数行は TextareaControl sm、ボタンは Button md（原文欄は sm）。閉じるは文字「×」から金型の X アイコンへ。eslint 警告は 74 から 0。
 - 原文欄の検索行は2段（ラベル、続いて入力欄とボタン）にした。金型のボタンが広くなり、1行のままだと390px で横にはみ出したため。
 - 日本語の文言は変更前と1文字も違わない（実測）。保留は ProductEditPage 14 のみ。
+
+#### AY-2y 本番反映記録（2026-10-15）
+
+- PR #4284 merge 4c9d037ef（20:28:06Z）。deploy 38632319876 success（20:31:00Z）。
+- 本番 JS index-BZTUp62l.js に productMasterDrawer キー 59 件。本番 CSS index-oCYK021p.css で `.pmd-actions button{` は 0 件。app は HTTP 200、/api/health は HTTP 200。
+- 出典 /tmp/CC報告ファイル/ssot-ay2y/prod/checks.txt。
+
+#### AY-2z 商品編集ページの入力14欄を種類 product-edit へ（2026-10-15）
+
+- 目的: 商品編集ページ（/admin/products/new・/admin/products/:id/edit）の生 input 14件を TextFieldControl の種類 product-edit に移し、保留を 0 にする。見た目は変えない。
+- 根拠: frontend/src/company-forms.css:210 の旧コメント「入力枠が薄くて見えない問題の解消（--border → --border-strong で輪郭を明確に）」。2026-10-05 の PO 方針「③商品編集9か所は『枠が薄い』問題があるため保留して別に確認」（上の AY-2a の根拠節）。
+- PO 決定: 2026-10-15「Y」（質問「今の濃い枠を『商品編集用の見た目』として共通部品に登録したうえで移す。見た目は今のまま」への回答）。Fable 設計審査 APPROVE（/tmp/CC報告ファイル/ssot-ay2z/design-review.md）。
+- 設計: docs/handoff/ay2z-product-edit-inputs/design.md（recon.md 併置）。
+- 変更: frontend/src/components/TextField.tsx の `TextFieldVariant` に `"product-edit"`。frontend/src/components/FormField.css に `.comp-field__input.comp-input--product-edit`（と `:focus`）。frontend/src/company-forms.css から input 専用の3規則を削除（詳細度 (0,4,1)/(0,5,1) が種類より強いため同じ便で撤去）。ProductEditPage.tsx の input 14件を `<TextFieldControl variant="product-edit"`。試験と story を追加。
+- 実測（390/1280 × ja/en × ライト/ダーク × 通常・focus・hover × 25要素）: computed style・rect・class 以外の DOM 属性の差は 600 組で 0。date 欄の font-family は monospace で前後同じ。数値は docs/handoff/design-system-recon/evidence-20260910/ay2z-acceptance.md。

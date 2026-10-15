@@ -66,13 +66,8 @@ thresholds:
   memory_warning_pct:     85    # HighMemoryUsage: > 85
   disk_warning_pct:       80    # HighDiskUsage: > 80
 
-  # データベース（alert_rules.yml: application_alerts）
-  db_connection_warning:  80    # HighDbConnections: > 80
-
-  # Nginx エラー（alert_rules.yml: application_alerts）
-  # HighErrorRate（全5xxエラー）とHigh502Rateは別アラートのため分離
-  nginx_5xx_per_5m:       10    # HighErrorRate: increase(...[5m]) > 10
-  nginx_502_per_2m:        5    # High502Rate:   increase(...[2m]) > 5
+  # Uptime Kuma
+  kuma_cert_days_warning: 14    # CertExpiringSoon: monitor_cert_days_remaining < 14
 
   # FastAPI バックエンド API（alert_rules.yml: backend_alerts）
   # backend/app/metrics.py が出力する http_requests_total を使用
@@ -91,11 +86,11 @@ thresholds:
 # 対応ファイル: monitoring/prometheus/alert_rules.yml
 #              monitoring/loki/rules/jarvis/alerts.yml
 for_durations:
-  resource_warning:  "5m"   # HighCpuUsage / HighMemoryUsage / HighDiskUsage / HighDbConnections
+  resource_warning:  "5m"   # HighCpuUsage / HighMemoryUsage / HighDiskUsage
   service_down:      "2m"   # ServiceDown
-  db_down:           "1m"   # PostgresDown
-  nginx_5xx:         "2m"   # HighErrorRate
-  nginx_502:         "1m"   # High502Rate
+  kuma_monitor_down: "2m"   # KumaMonitorDown: monitor_status == 0
+  kuma_cert_expiring: "1h"  # CertExpiringSoon
+  kuma_cert_invalid: "10m"  # CertInvalid: monitor_cert_is_valid == 0
   brute_force:       "1m"   # BruteForceAttempt
   auth_failure:      "5m"   # SustainedAuthFailure
   backend_error:     "2m"   # BackendErrorSpike
