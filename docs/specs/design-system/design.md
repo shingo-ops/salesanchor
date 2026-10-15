@@ -276,7 +276,7 @@ JS側へ数値が必要な既存iconSizes.ts等は、正本CSSから生成する
 - 通常ボタン角丸は同文書の6px（comp-btn-radius）。現行primaryの4pxとの差は「同値置換」ではなく、統一に伴う意図した変更として見本確認に出す。
 - カード角丸8px・標準内側余白24px、compact/mobile16pxを基準。業務ページが勝手に選ぶ独自寸法を残さない。
 - 表のdensityは既存compact/default/relaxedを維持。列幅、長文、折返し、横スクロールを壊さない。行高トークンを長文を切り捨てる固定上限と解釈しない。
-- トグルは共通CSSの40×22pxを初期の見本候補とする。つまみ16px・余白3px・移動18pxは既存値。最低44pxの操作領域は見えるトラックとは別に確保する案。最終仕様は見本・ラベル・キーボード確認後に確定する。
+- トグルは44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）。つまみ18px・余白3px・移動20px。操作領域44×44は未着手（§AY-3b）。最終仕様は見本・ラベル・キーボード確認後に確定する。
 - 色の全面変更は行わず、既存の用途色と明暗定義を基準とする。個別部品で異なる色を採用する場合はその用途を説明して見本に出す。
 
 ここは候補と確定値を区別する。未確定のトグル外観を「PO承認済み」と記録しない。
@@ -379,7 +379,7 @@ PO承認は未取得、文書はローカル草案、PR未提出、製品実装�
 
 [明暗の外観見本](../../handoff/design-system-recon/evidence-20260910/proposed-controls.svg.png)。既存トークン値を読み取って作成した静的提案。実部品のスクリーンショット・Storybook・全状態の合格画像ではない。PNGを目視し、左右の切れと文字の重なりがないことを確認。資料内の取引先と金額は架空。
 
-見本の6px角丸、40×22pxトグルは§Eの候補を表示。表は外観の方向を示すもので、行高・列幅・文字サイズを全用途の確定値として追加しない。実装時の見本帳は実部品を直接使用し、このSVGの模倣CSSを製品へ転記しない。
+見本の6px角丸、トグルは44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）を表示。表は外観の方向を示すもので、行高・列幅・文字サイズを全用途の確定値として追加しない。実装時の見本帳は実部品を直接使用し、このSVGの模倣CSSを製品へ転記しない。
 
 色の追加測定: [計算値](../../handoff/design-system-recon/evidence-20260910/contrast-proposal.json)。sRGBを0.04045の境界で線形化し、相対輝度の重み0.2126/0.7152/0.0722、(明るい輝度+0.05)/(暗い輝度+0.05)で算出。半透明・重ね合わせを含まない指定色2色の計算であり、全画面適合判定ではない。
 
@@ -823,7 +823,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
 
-Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール40×22px、つまみ16px、端の間隔3px、ON時移動18px、操作領域44pxの案を維持する。
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。
 
 #### ボタンの操作契約
 
@@ -1952,7 +1952,7 @@ mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/de
 
 PO原文（2026-10-01）「フロントエンドのSSOTをcodex二依頼していたのでキャッチアップして続きを再開してくれ」「フロントエンドのパーツもデザイントークンとデザインシステムを遵守して、金型登録のないハードコードを禁止する」「配線とDBのSSOTは遵守してデータを分散させることは禁止」。PO回答（2026-10-02、本セッション）: Checkbox/Toggle/Radio の新規金型登録を「許可する」（§Z :807/:826/:921/:936 の仕様どおり）。番号付きGO・Opus委任の有効化は創作しない（docs/handoff/go-record-transcription/opus-delegation.md 不在＝委任は有効化待ち）。
 
-引継ぎ時点の事実: 最終完了便はAU（PR #3855 merge 85af04d5、Deploy 36522989354 success、旧ボタン221→0）。§AU後の設計節・進行中便は無し。tasks/todo.md:19 の残件は「表/報酬3/カレンダー色保留、新CI最後」。§AA以降に入力の実装節は無く、§Y順序3のToggle/入力本体は未着手。
+引継ぎ時点の事実: 最終完了便はAU（PR #3855 merge 85af04d5、Deploy 36522989354 success、旧ボタン221→0）。§AU後の設計節・進行中便は無し。tasks/todo.md:19 の残件は「表/報酬3/カレンダー色保留、新CI最後」。§AA以降に入力の実装節は無く、§Y順序3のToggle/入力本体は未着手（Toggle は 2026-10-15 に §AY-3b で実装）。
 
 公式作業台release/frontend-input-av1-design、基準55d99a97e441b4c0604f2b8f42418d2a7bc8ffab。preflight成功。作業台確保のため2026-10-02にPO本人がreaper --execute（マージ済み2件）と release/frontend-next-form-design の worktree remove を実行（後者の未push記録26be82bafは `git cherry` で main 同等、PR #3514で反映済みと照合）。
 
@@ -4179,3 +4179,19 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 変更: frontend/src/components/Select.tsx の `SelectVariant`、frontend/src/components/Textarea.tsx の `TextareaVariant` に `"product-edit"`。frontend/src/components/FormField.css に `.comp-select__control.comp-select--product-edit` と `.comp-field__textarea.comp-textarea--product-edit`（各 `:focus` 付き）。select は bare 由来の max-width・background-repeat・background-position を none / revert で戻す。frontend/src/company-forms.css から select・textarea の商品編集規則を削除（詳細度が種類より強いため同じ便で撤去）。ProductEditPage.tsx の select 9件・textarea 1件を金型へ。試験と story を追加。
 - 実測（390/1280 × ja/en × ライト/ダーク × 通常・focus・hover × 25要素）: computed style・rect・class 以外の DOM 属性・option の差は 600 組で 0。class は 240 件が設計どおり金型の class に変わった。数値は docs/handoff/design-system-recon/evidence-20260910/ay3a-acceptance.md。
 - これで商品編集ページの保留は 0（input 14 は AY-2z、select 9・textarea 1 は AY-3a）。
+
+#### AY-3a 本番反映記録（2026-10-15）
+
+- PR #4300 merge aca4b51bb（2026-10-15T01:53:39Z、`gh pr view 4300`）。
+- 本番 CSS index-DDKExstm.css で `.comp-select__control.comp-select--product-edit` 2 件、`.comp-field__textarea.comp-textarea--product-edit` 2 件、`.product-edit-form .form-group select` 0 件、`.product-edit-form .form-group textarea` 0 件。app は HTTP 200、/api/health は HTTP 200。
+- 出典 /tmp/CC報告ファイル/ssot-ay3a/prod/checks.txt。
+
+#### AY-3b 切替スイッチ8か所を共通部品 Toggle へ（2026-10-15）
+
+- 目的: 4 種類の旧 CSS（components.css の 40×22、account-settings.css の 44 幅・トークン、schedule.css の 42×24 上書き、使用 0 の .inbox-toggle）で 3 通りに見えていた切替スイッチ 8 か所を、共通部品 Toggle 1 つにまとめる。
+- PO 決定: 2026-10-15「Y」。幅は既存トークン --size-toggle-w（44px）。変わる画面と差の大きさはマージ前に実測で PO に見せる。設計審査 r2 APPROVE（/tmp/CC報告ファイル/ssot-toggle/design-review-r2.md）。
+- 設計: docs/handoff/ay3b-toggle/design.md（recon.md 併置）。
+- 変更: frontend/src/components/Toggle.tsx・Toggle.css（ネイティブ checkbox に role="switch"。枠 44×24、つまみ 18、移動 20、影 --shadow-drop-sm、focus-visible の輪、transition --transition-micro、disabled は --opacity-disabled）。props は checked・onCheckedChange・disabled・id・aria-label・aria-labelledby。className・style は受けない。8 か所（PreferencesSection 1・InboxSettingsModal 4・SchedulePageImpl 1・ScheduleSettingsPage 2）を置き換え。名前の無い 5 か所に隣の文言と同じ既存キーの aria-label（新キーなし）。components.css・account-settings.css・InboxPage.css・schedule.css の旧規則を撤去。tokens.css の --toggle-width・--toggle-thumb-offset・--toggle-translate を削除（参照 0）。--toggle-height・--toggle-thumb-size は残す。
+- 契約との違い: 「id/name、翻訳済み label を受け取る」は、8 か所が外にラベル文言を持つため id と aria-label／aria-labelledby で代えた。44×44 の操作領域は未着手（行の高さが変わり、対応トークンも無いため）。
+- 実測（本番 CSS と PR の vite build CSS を各 1 本のまま、390/1280 × ライト/ダーク × OFF/ON/focus-visible × 8 か所、1536 値）: 設計 §1.1 の表にない項目（色・display・flex-shrink・input の既定値など）の差は 0。表の幅 +2px の派生として、予定設定（/schedule/settings）の操作欄の幅が +2px、390px の行の scrollWidth が +2px（旧から既にはみ出している行）。数値は docs/handoff/design-system-recon/evidence-20260910/ay3b-acceptance.md。
+- 生の切替スイッチの再発は CI では検出しない（check-ui-governance への checkbox 検出追加は別判断）。

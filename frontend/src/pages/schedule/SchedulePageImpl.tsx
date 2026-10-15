@@ -15,6 +15,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
@@ -304,19 +305,16 @@ function SchedulePopover({
 
             <div className="schedule-field schedule-field--inline">
               <span className="schedule-field__label">{t("schedule.allDay")}</span>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={draft.allDay}
-                  onChange={(event) => onDraftChange({
-                    ...draft,
-                    allDay: event.target.checked,
-                    startTime: event.target.checked ? "00:00" : draft.startTime,
-                    endTime: event.target.checked ? "23:59" : draft.endTime,
-                  })}
-                />
-                <span className="toggle-switch-slider" />
-              </label>
+              <Toggle
+                checked={draft.allDay}
+                aria-label={t("schedule.allDay")}
+                onCheckedChange={(next) => onDraftChange({
+                  ...draft,
+                  allDay: next,
+                  startTime: next ? "00:00" : draft.startTime,
+                  endTime: next ? "23:59" : draft.endTime,
+                })}
+              />
             </div>
 
             <div className="schedule-field-group">

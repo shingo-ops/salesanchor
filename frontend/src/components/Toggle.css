@@ -1,0 +1,9 @@
+/* Toggle — 切替スイッチ金型（design.md §AY-3b）。詳細度の低い順。 */
+.comp-toggle { position: relative; display: inline-flex; flex-shrink: 0; width: var(--size-toggle-w); height: var(--space-6); cursor: pointer; }
+.comp-toggle__input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.comp-toggle__track { position: absolute; inset: 0; background: var(--border); border-radius: var(--radius-full); transition: background var(--transition-micro); }
+.comp-toggle__track::before { content: ""; position: absolute; left: var(--space-3px); top: var(--space-3px); width: var(--size-toggle-knob); height: var(--size-toggle-knob); background: var(--bg-surface); border-radius: 50%; box-shadow: var(--shadow-drop-sm); transition: transform var(--transition-micro); }
+.comp-toggle--disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+.comp-toggle__input:checked + .comp-toggle__track { background: var(--accent); }
+.comp-toggle__input:focus-visible + .comp-toggle__track { box-shadow: var(--focus-ring-shadow); }
+.comp-toggle__input:checked + .comp-toggle__track::before { transform: translateX(var(--space-5)); }
