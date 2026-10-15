@@ -32,6 +32,7 @@ import secrets
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.auth.dependencies import reset_tenant_context
 from app.cache import get_redis
 from app.services import encryption
 
@@ -285,6 +286,7 @@ async def _refresh_if_needed(
         },
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     return new_access
 
 
