@@ -25,7 +25,7 @@
 
 ## 3. 変更（案A。勝手に変えない）
 
-差し込み位置: `backend/app/services/line_analysis_v102_svc.py:947` と `backend/app/services/line_analysis_v102_svc.py:948` の間。ループ `for index, (item, row) in enumerate(pairs):`（:942）の中で、`values = _apply_soldout_targets(...)` の直後、`session.execute(text(_UPSERT_SQL...` の直前。`values` の `price_normalized` と `price_basis` の2つだけを差し替える。相場検査（:941 `_unit_price_mismatches`）の対象には入れない。
+差し込み位置: `backend/app/services/line_analysis_v102_svc.py:947` と `backend/app/services/line_analysis_v102_svc.py:948` の間。ループ `for index, (item, row) in enumerate(pairs):`（:942）の中で、`values = _apply_soldout_targets(...)` の直後、`session.execute(text(_UPSERT_SQL...` の直前。`values` の `price_normalized` と `price_basis` の2つだけを差し替える。相場検査（:941 `_unit_price_mismatches`）の対象には入れない。後から来る別投稿の相場の母数からも外す（3-11）。
 
 ### 3-1. 対象行（全部満たすとき）
 
@@ -34,6 +34,7 @@
 3. `values["product_id"] is not None` かつ `values["pid_resolved"]`
 4. `values["status"] != STATUS_SOLD_OUT`（完売行は引き継がない）
 5. 人が価格を消していない（3-3）
+6. 仕入元が価格を書いていない: `row.raw_price` が None、または前後の空白を除いて小文字にした値が `''` か `'none'`（`row` は extraction_items の行で、SELECT に raw_price を含む `backend/app/services/line_analysis_v102_svc.py:1187-1193`）。価格が書いてあるのに読めなかった行（本番 30日で「37万」「38万」「＠65,000円（4,400円/BOX可）」の3行。recon5）に古い価格を写して、書かれた新しい価格を隠さないため
 
 ### 3-2. 引き継ぎ元の探し方（新規の読み取り SQL 1本）
 
@@ -64,7 +65,7 @@
 
 ### 3-7. 時刻列
 
-「前の投稿」と48時間は `line_posted_at`（配信の窓 `backend/app/services/tcg_distribution_svc.py:224` と同じ）。merge は received_at 基準（`backend/app/services/tcg_analyzer_svc.py:1927`）のまま変えない。ずれる件は対象外【未確認: 本番でのずれ件数】。
+「前の投稿」と48時間は `line_posted_at`（配信の窓 `backend/app/services/tcg_distribution_svc.py:224` と同じ）。merge は received_at 基準（`backend/app/services/tcg_analyzer_svc.py:1927`）のまま変えない。本番の直近30日で、同じチャンネル内の received_at 順と line_posted_at 順の逆転は 0 組（比較 2,170 組）、line_posted_at の NULL は 0 件（recon5）。
 
 ### 3-8. 文書
 
@@ -72,12 +73,19 @@
 
 ### 3-9. 触らない範囲
 
-配信 SQL、要確認 SQL、`_merge_supplier_products`、GAS 本体、Gemini の抽出、相場検査、migrations、deploy.yml、scripts/。危険パスなし。変更は `backend/app/services/line_analysis_v102_svc.py`（定数・読み取り関数・ヘルパ・ループ内の代入1行・import 1つ）、試験（単体・PG）、README の1行に限る。
+配信 SQL、要確認 SQL、`_merge_supplier_products`、GAS 本体、Gemini の抽出、migrations、deploy.yml、scripts/。危険パスなし。変更は `backend/app/services/line_analysis_v102_svc.py`（定数・読み取り関数・ヘルパ・ループ内の代入1行・import 1つ）、`backend/app/services/v102_unit_price_check_svc.py` の `_MARKET_SQL` の条件1行（3-11）、試験（単体・PG）、README の1行に限る。
 
 ### 3-10. 選ばなかった案
 
 - 案B（配信 SQL と要確認 SQL で前の価格を補う）: SQL が重くなり、3か所で補い方を揃える必要があり、出どころが DB に残らない。
 - 案C（merge で価格なし行を現在値にしない）: 数が更新されない。
+
+### 3-11. 相場の母数から外す（SSOT の整理）
+
+- 価格の置き場は `analysis_results.price_normalized` の1か所だけ。出どころは同じ行の `price_basis` に書く（`INHERIT:<元id>`）。別の表・別の列・読み手ごとの補完は作らない。
+- 読み手は全員この列をそのまま読む（配信・在庫表・GAS・要確認・ダッシュボード。recon4 の R1〜R7・R10〜R13）。
+- 例外は相場だけ。相場は「仕入元が書いた価格」の中央値と投稿数で、写した価格を入れると同じ価格を2回数える（`backend/app/services/v102_unit_price_check_svc.py:54-67` の `_MARKET_SQL` は is_current の価格行を全部数え、今は price_basis の条件が無い。recon6）。そこで `_MARKET_SQL` の WHERE に `AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE 'INHERIT:%')` を1行足す。出どころの判定は price_basis の1か所で行い、データは分けない。
+- 買取の中央値は analysis_results を読まない（`backend/app/services/v102_buyback_unit_svc.py:54-65`。recon4）ので変えない。
 
 ## 4. 外部・過去事例の参照と我々への応用
 
@@ -94,6 +102,9 @@
 | 配信 SQL で「新しい数・前の価格」の1行が出る | CI の pytest（PG）。`backend/tests/test_inventory_distribution_rows_pg.py` の `_add_job`・`_add_row`・`_rows` の型 |
 | 連鎖しない: A 価格あり→B 数だけ（A を引き継ぐ）→C 数だけ は C が A の価格と `INHERIT:<A_id>`。A が48時間超なら C は価格なし | CI の pytest（PG） |
 | 価格あり行・完売行の price_basis は今と同じ（V102:yen_free か NULL） | CI の pytest（PG） |
+| 仕入元が価格を書いているのに読めなかった行（raw_price が「37万」のような値）は引き継がない | CI の pytest（PG） |
+| condition_id が NULL の行は引き継がない | CI の pytest（PG） |
+| 相場（`_MARKET_SQL`）の中央値と投稿数に `INHERIT:` の行が入らない | CI の pytest（PG） |
 | 読み取りで例外が出ても price_normalized は None のまま保存され、例外が外に出ない | CI の pytest（単体）。`backend/tests/test_line_analysis_v102_svc.py` の `_FakeSession` の型 |
 | 既存の試験が全部通る | CI の backend テスト全件 |
 | 本番で「前の価格（48時間以内）があるのに数だけ行で在庫表に出ていない組」= 0（現在 1） | 実装 PR のマージ・反映・再解析の後に、読み取りの件数 SQL で確認（今回は実施しない） |
@@ -109,13 +120,15 @@
 | リスク | 対処 |
 |---|---|
 | 古い価格が新しく見える | 上限を48時間にする。出どころを `INHERIT:<id>` で残す |
-| 相場検査に二重に入る | 引き継いだ価格は検査の対象に入れない。同じ組の旧行は is_current=FALSE になる（投稿数が増えうるかは【推測】→ 試験で確認） |
+| 相場検査に二重に入る | 書き込み時の検査（:941）は差し込み位置より前なので入らない。後から来る別投稿の相場は `_MARKET_SQL` で `INHERIT:` の行を外す（3-11） |
 | 人が価格を消した行に価格が付く | item_corrections の最新行が空なら引き継がない |
 | ダッシュボードの price_ok が増える | 期待どおり（受け入れ基準に入れる） |
 | 既に消えている組 | 再解析で直る。再解析は別途 PO の y が要る |
 | max_age_hours=48 のとき、引き継いだ価格の元投稿は最大96時間前になりうる | 設計で許容する。PO が運用を見て見直す【未確認: 本番の件数】 |
 
-【未確認】（合格を妨げない）: 本番の max_age_hours の現在値（文書上は48。コード側に既定なし）、GAS 本体が価格空行をどう扱うか（今回は価格が入るので影響なし）、received_at と line_posted_at のずれ件数、試験用 tenant スキーマの supplier_channels の NOT NULL 列。
+確定（recon4〜6）: 本番の max_age_hours は 48（tcg_distribution_settings、2026-09-27 更新）。配信はこれを新しい行の line_posted_at から NOW() までで測る（`backend/app/services/tcg_distribution_svc.py:224`）。投稿時刻の逆転 0 件。supplier_channels の NOT NULL 列は channel・is_active・supplier_id（`migrations/20260921_110000_pipeline_tables_public.sql:11-17`）。frontend は price_basis を使っていない（0件）。
+
+【未確認】（合格を妨げない）: GAS 本体（リポジトリ外）が価格空行をどう扱うか（今回は価格が入るので影響なし）。
 
 ## 8. 計画票
 

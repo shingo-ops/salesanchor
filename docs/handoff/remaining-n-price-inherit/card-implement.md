@@ -1,6 +1,6 @@
 # 実装カード — 価格なし・数ありの行に前の価格を引き継ぐ
 
-> この文書は何か：解析の保存時に、商品が決まっていて数だけ書かれた（価格なし）行へ、同じ仕入元・同じ商品×状態の「前の価格（48時間以内）」を引き継ぐ実装の作業指示書です。直すのは `backend/app/services/line_analysis_v102_svc.py` だけで、試験と README の1行を足します。
+> この文書は何か：解析の保存時に、商品が決まっていて数だけ書かれた（価格なし）行へ、同じ仕入元・同じ商品×状態の「前の価格（48時間以内）」を引き継ぐ実装の作業指示書です。直すのは `backend/app/services/line_analysis_v102_svc.py` と、相場の SQL（`backend/app/services/v102_unit_price_check_svc.py` の `_MARKET_SQL`）の条件1行で、試験と README の1行を足します。
 
 - 設計: docs/handoff/remaining-n-price-inherit/design.md（3章が変更の正本。変えてはいけない）
 - 事実確認: docs/handoff/remaining-n-price-inherit/recon.md（file:line は実測 HEAD 803d7c58a で確認済み）
@@ -44,10 +44,11 @@ GO の記録（Opus が記入）: 未記入（PO の GO がまだ無い）
 2. 単体試験（読み取りで例外が出ても価格なしのまま保存され、例外が外に出ない）
 3. PG 試験（引き継ぎの条件・連鎖しない・配信 SQL に出る）
 4. `docs/specs/line-analysis-tuning/README.md:41` の price_basis の表に `INHERIT:<id>` の説明を1行足す
+5. `backend/app/services/v102_unit_price_check_svc.py:54-67` の `_MARKET_SQL` の WHERE に `AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE 'INHERIT:%')` を1行足す（設計 3-11）。それ以外の行は変えない
 
 入れない（触らない）:
 - 配信 SQL（`backend/app/services/tcg_distribution_svc.py`）、要確認 SQL（`backend/app/services/tcg_condition_review_svc.py`）、`_merge_supplier_products`（`backend/app/services/tcg_analyzer_svc.py`）
-- GAS 本体、Gemini の抽出、相場検査（`backend/app/services/v102_unit_price_check_svc.py`）
+- GAS 本体、Gemini の抽出、`backend/app/services/v102_unit_price_check_svc.py` の `_MARKET_SQL` の1行以外
 - `migrations/`・`.github/workflows/`・`scripts/`
 - 価格が原文にあるのに読めていない件（別テーマ）。再解析（別途 PO の y が要る）
 
@@ -67,7 +68,8 @@ GO の記録（Opus が記入）: 未記入（PO の GO がまだ無い）
 | ファイル | 内容 |
 |---|---|
 | `backend/app/services/line_analysis_v102_svc.py` | 定数2つ・SQL2本・ヘルパ関数・ループ内の代入1行・import 1つ |
-| 単体試験（既存の `backend/tests/test_line_analysis_v102_svc.py` に足す） | 例外時の試験 |
+| `backend/app/services/v102_unit_price_check_svc.py` | `_MARKET_SQL` の WHERE に条件1行 |
+| 単体試験（既存の `backend/tests/test_line_analysis_v102_svc.py` に足す） | 例外時の試験・raw_price が書かれている行の試験 |
 | PG 試験（新規ファイル。名前は backend/tests/test_v102_price_inherit_pg.py） | 引き継ぎの条件・連鎖・配信 |
 | `docs/specs/line-analysis-tuning/README.md` | 41行目の表に1行 |
 
@@ -137,7 +139,7 @@ _PRICE_CORRECTION_SQL = """
 ```
 
 ヘルパ `_inherit_price(session, extraction_job_id, row, values)` の流れ:
-1. 純 Python の条件（設計 3-1 の 1〜4）を満たさなければ、DB を使わず `values` をそのまま返す
+1. 純 Python の条件（設計 3-1 の 1〜4 と 6）を満たさなければ、DB を使わず `values` をそのまま返す。6 は `row.raw_price` が None か、`str(row.raw_price).strip().lower()` が `''` か `'none'` のときだけ対象（`row` は SELECT に raw_price を含む。`backend/app/services/line_analysis_v102_svc.py:1187-1193`）。`values["condition_id"]` が None なら対象外
 2. `try: with session.begin_nested():` の中で、`_PRICE_CORRECTION_SQL` の最新行の `human_value` が空文字なら `values` を返す
 3. 同じ中で `_FOLLOWUP_CURRENT_SQL` から仕入元と時刻を引く（無ければ `values` を返す）
 4. 同じ中で `_INHERIT_PRICE_SQL` を、`channel`・`product_id`・`condition_id`・`sold_out=STATUS_SOLD_OUT`・`inherit_like=PRICE_BASIS_INHERIT_PREFIX + "%"`・`posted_at`・`gap=INHERIT_PRICE_MAX_GAP_SECONDS` で実行する
@@ -156,11 +158,14 @@ PG 試験（型は `backend/tests/test_inventory_distribution_rows_pg.py` の `_
 5. 配信 SQL で「新しい数・前の価格」の1行が出る
 6. 連鎖: A 価格あり → B 数だけ（A を引き継ぐ）→ C 数だけ。C は A の価格と `INHERIT:<A_id>`。A が48時間を超えると C は価格なし
 7. 価格あり行・完売行の price_basis は今と同じ（V102:yen_free か NULL）
+8. raw_price が「37万」のように書かれていて price_normalized が空の行は引き継がない（値は架空でよい）
+9. condition_id が NULL の行は引き継がない
+10. 相場: `INHERIT:` の行は `_MARKET_SQL` の中央値と投稿数に入らない（同じ商品×単位に、仕入元が書いた価格の行と `INHERIT:` の行を置いて、posts と median_price が `INHERIT:` を足す前と同じ）
 
 単体試験: 読み取りで例外 → price_normalized は None のまま保存され、例外が外に出ない（`backend/tests/test_line_analysis_v102_svc.py` の `_FakeSession` の型）。
 
 注意:
-- 別チャンネルの fixture は既存に無い（`_add_job` はいつも supplier_channels の先頭1件）。supplier_channels を直接 INSERT する。public.supplier_channels の列は `id`・`channel`（NOT NULL）・`external_id`・`is_active`（NOT NULL）・`supplier_id`（NOT NULL・suppliers 参照）。試験用 tenant スキーマ版の NOT NULL 列は【未確認】なので、CI の結果で確かめる
+- 別チャンネルの fixture は既存に無い（`_add_job` はいつも supplier_channels の先頭1件）。supplier_channels を直接 INSERT する。public.supplier_channels の列は `id`・`channel`（NOT NULL）・`external_id`・`is_active`（NOT NULL）・`supplier_id`（NOT NULL・suppliers 参照）。NOT NULL は channel・is_active・supplier_id（`migrations/20260921_110000_pipeline_tables_public.sql:11-17`）。INSERT の型は `backend/tests/test_inventory_distribution_rows_pg.py:388-404` の `_set_supplier`
 - `_add_row` は price_basis と is_current を INSERT しない（is_current は既定 TRUE）。INHERIT 行や非 current 行は UPDATE で作る
 - `pg` fixture は GITHUB_ACTIONS が true のときだけ動く。ローカルでは skip されるので、PG 試験は CI でのみ実行される。ローカルで未実行と報告に書く
 
@@ -181,7 +186,7 @@ PG 試験（型は `backend/tests/test_inventory_distribution_rows_pg.py` の `_
 | 分岐 | 対処 |
 |---|---|
 | 既存の単体試験が壊れた | 読み取りを begin_nested の外に出していないか確認。直せなければ停止 |
-| 引き継ぎで相場検査の対象行が増えた | 設計は「相場検査に入れない」。入ってしまう形になったら停止して Opus に報告 |
+| 引き継ぎで相場検査の対象行が増えた | 設計は「相場検査に入れない」（書き込み時の検査は差し込み位置より前、後から来る投稿の相場は `_MARKET_SQL` で外す）。試験 10 が通らなければ停止して Opus に報告 |
 | 同時刻・同投稿内で候補が複数 | ORDER BY の補足案（line_start・id）で決める。補足案は設計に明記が無いので、PR 本文に「未指定の補足」と書く |
 | price_basis の列が見つからない | 停止して報告（migration は触らない） |
 
