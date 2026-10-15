@@ -317,7 +317,7 @@ mjw_disk_parse() { # DISK_GIB に空き GiB（整数・切り捨て）。読め�
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 mjw_detect_states() {
   DETECTED=""
-  local l mt lim
+  local l mt
   # unloaded:*
   if [ "${JUST_BOOTED}" -eq 0 ]; then
     for l in ${MJW_LABELS}; do
