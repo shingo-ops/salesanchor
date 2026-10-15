@@ -941,3 +941,4 @@ run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
 run_sql migrations/20261015_130000_add_permissions_rls.sql
 run_sql migrations/20261016_010000_add_google_config_rls.sql
 run_sql migrations/20261016_020000_add_suppliers_rls.sql
+run_sql migrations/20261016_100000_add_paypal_regtoken_write_rls.sql
