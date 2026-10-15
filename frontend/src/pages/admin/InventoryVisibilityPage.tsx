@@ -16,6 +16,7 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 interface MatrixRow {
   role_id: number;
@@ -149,8 +150,7 @@ export default function InventoryVisibilityPage() {
                 <td>{row.role_name}</td>
                 {keys.map((k) => (
                   <td key={k}>
-                    <input
-                      type="checkbox"
+                    <CheckboxControl
                       checked={Boolean(row.grants[k])}
                       onChange={() => toggle(row.role_id, k)}
                       aria-label={`${row.role_name} ${k}`}

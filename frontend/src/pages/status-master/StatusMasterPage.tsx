@@ -20,6 +20,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Checkbox } from "../../components/Checkbox";
 
 interface StatusEntry {
   id: number;
@@ -297,14 +298,13 @@ export default function StatusMasterPage() {
           onChange={e => setForm({ ...form, note: e.target.value })}
         />
       </div>
-      <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", gridColumn: "1 / -1" }}>
-        <input
-          type="checkbox"
+      <div style={{ gridColumn: "1 / -1" }}>
+        <Checkbox
+          label={t(`${f}.enabled`)}
           checked={form.enabled}
           onChange={e => setForm({ ...form, enabled: e.target.checked })}
         />
-        {t(`${f}.enabled`)}
-      </label>
+      </div>
     </div>
   );
 

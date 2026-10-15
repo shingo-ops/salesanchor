@@ -156,13 +156,6 @@
   background: var(--bg-subtle);
   flex-shrink: 0;
 }
-.inbox-bulk-check-all {
-  width: var(--size-checkbox-sm);
-  height: var(--size-checkbox-sm);
-  cursor: pointer;
-  flex-shrink: 0;
-  accent-color: var(--accent);
-}
 .inbox-bulk-count {
   font-size: var(--font-sm);
   color: var(--text-secondary);

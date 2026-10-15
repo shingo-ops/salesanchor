@@ -9,6 +9,7 @@ import type { ContextMenuAnchor } from "../../components/ContextMenu";
 import { useLongPress } from "../../hooks/useLongPress";
 import { InboxConversationRows } from "./InboxConversationRows";
 import type { InboxConversationListProps } from "./InboxConversationList";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 /**
  * 受信箱・会話一覧のスマホ専用の組み立て。
@@ -140,9 +141,8 @@ export function InboxConversationListMobile({
       {/* 一括アクションバー */}
       {selectMode && (
         <div className="inbox-bulk-bar">
-          <input
-            type="checkbox"
-            className="inbox-bulk-check-all"
+          <CheckboxControl
+            size="sm"
             checked={isAllSelected}
             onChange={toggleSelectAll}
             aria-label={t("inbox.selectAll")}

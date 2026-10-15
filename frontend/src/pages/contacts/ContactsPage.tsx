@@ -31,6 +31,7 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { ContactFormFields, type ContactFormState, type ContactCompany } from "./ContactFormFields";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Contact {
   id: number;
@@ -329,10 +330,11 @@ export default function ContactsPage() {
               <TextFieldControl value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} />
             </div>
             <div className="form-row">
-              <label>
-                <input type="checkbox" checked={createForm.is_primary_contact} onChange={(e) => setCreateForm({ ...createForm, is_primary_contact: e.target.checked })} />
-                {" "}{t("contacts.primaryContactHint")}
-              </label>
+              <Checkbox
+                label={t("contacts.primaryContactHint")}
+                checked={createForm.is_primary_contact}
+                onChange={(e) => setCreateForm({ ...createForm, is_primary_contact: e.target.checked })}
+              />
             </div>
             <div className="form-row"><label>{t("common.email")}</label>
               <TextFieldControl type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
