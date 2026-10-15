@@ -3,7 +3,7 @@
  *
  * 名前空間: .comp-drawer-*
  * ADR-067: 全カラーは CSS 変数参照のみ
- * z-index: --z-drawer (299) で Modal (400) より下
+ * z-index: --z-drawer (301)。Modal の overlay は --z-modal (400) で前面
  * transition: user-drawer パターン踏襲（topbar.css:151-169）
  */
 

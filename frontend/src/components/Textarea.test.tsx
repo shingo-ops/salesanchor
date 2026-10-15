@@ -180,7 +180,7 @@ describe('TextareaControl', () => {
 });
 
 describe('TextareaControl variants', () => {
-  it.each(['karte', 'embedded', 'composer', 'schedule'] as const)(
+  it.each(['karte', 'embedded', 'composer', 'schedule', 'product-edit'] as const)(
     'variant %s outputs its class before className',
     (variant) => {
       const { container } = render(<TextareaControl variant={variant} className="x" />);

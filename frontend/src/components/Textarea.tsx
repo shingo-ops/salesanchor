@@ -8,6 +8,7 @@
  * 実画面への展開は Task 2E で行う。
  *
  * TextareaControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AX）。
+ * product-edit: 商品編集 ProductEditPage の濃い枠。design.md §AY-3a
  */
 
 import { forwardRef, useId } from "react";
@@ -28,7 +29,7 @@ export type TextareaProps = TextareaOwnProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, keyof TextareaOwnProps>;
 
 /** 用途別の種類（design.md §AX-2）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
-export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule";
+export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule" | "product-edit";
 
 /** 文字の用途（design.md §Z :817 / §AX-2b）。code は等幅フォント。 */
 export type TextareaTextStyle = "normal" | "code";

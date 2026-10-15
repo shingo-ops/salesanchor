@@ -119,7 +119,7 @@ export const NoIndicator: Story = {
 }
 
 export const Variants: Story = {
-  name: '用途別の種類 (karte / header / tabbar)',
+  name: '用途別の種類 (karte / header / tabbar / product-edit)',
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
@@ -133,6 +133,14 @@ export const Variants: Story = {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
         <strong>tabbar</strong>
         <SelectControl options={STATUS_OPTIONS} variant="tabbar" />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+        <strong>product-edit</strong>
+        <SelectControl variant="product-edit" fullWidth>
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </SelectControl>
       </div>
     </div>
   ),
