@@ -19,6 +19,7 @@ import app.services.v102_human_decisions_svc as decisions_svc
 from app.services import tcg_analyzer_svc as analyzer
 from tests.test_tcg_work_matching_integration import NORMAL, SCHEMA, record, run_message, seed_products
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
+from tests.test_tcg_work_matching_integration import prohibit_live_gemini as prohibit_live_gemini  # noqa: F401  autouse fixture（DBプロンプト読みのスタブ）
 
 STATUS_ROWS = [("In Stock", "DEFAULT", 1), ("In Stock", "OUTPUT", 2), ("Sold out", "EXCLUDE", 4)]
 
