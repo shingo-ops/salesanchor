@@ -46,46 +46,6 @@ groups:
 
   - name: application_alerts
     rules:
-      # PostgreSQL接続数が上限の80%を超えた場合
-      - alert: HighDbConnections
-        expr: pg_stat_activity_count > 80
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "DB接続数が80を超えています"
-          description: "現在の接続数: {{ $value }}"
-
-      # PostgreSQLがダウンした場合
-      - alert: PostgresDown
-        expr: pg_up == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "PostgreSQLがダウンしています"
-          description: "即時対応が必要です"
-
-      # Nginx 5xxエラーが5分間に10件以上
-      - alert: HighErrorRate
-        expr: increase(nginx_http_requests_total{status=~"5.."}[5m]) > 10
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "5xxエラーが急増しています"
-          description: "直近5分間の5xxエラー: {{ $value | printf \"%.0f\" }}件"
-
-      # 502 Bad Gateway（上流サービス障害）が2分間に5件以上
-      - alert: High502Rate
-        expr: increase(nginx_http_requests_total{status="502"}[2m]) > 5
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "502 Bad Gatewayが急増しています"
-          description: "直近2分間の502エラー: {{ $value | printf \"%.0f\" }}件。バックエンドまたはMeta API接続を確認してください。"
-
       # サービスダウン検知（Exporter応答なし）
       - alert: ServiceDown
         expr: up == 0
@@ -155,3 +115,35 @@ groups:
         annotations:
           summary: "F2掃除係の黒板メトリクスが消失(app-vps)"
           description: "黒板ファイルまたはtextfile配線の断線疑い。node_exporter設定を確認。"
+
+  - name: uptime_kuma
+    rules:
+      # Kuma の見張りが失敗している（App・API・LP・監視基盤）
+      - alert: KumaMonitorDown
+        expr: monitor_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "見張り {{ $labels.monitor_name }} が失敗しています"
+          description: "Uptime Kuma の見張り {{ $labels.monitor_name }} が 2 分以上失敗しています"
+
+      # 証明書の期限が近い
+      - alert: CertExpiringSoon
+        expr: monitor_cert_days_remaining < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.monitor_name }} の証明書の期限が近づいています"
+          description: "残り {{ $value }} 日です（14 日未満）"
+
+      # 証明書が無効
+      - alert: CertInvalid
+        expr: monitor_cert_is_valid == 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.monitor_name }} の証明書が無効です"
+          description: "Uptime Kuma が証明書を無効と判定しています"
