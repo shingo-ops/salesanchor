@@ -229,6 +229,7 @@
 - Q3.【決定 2026-10-15 PO】原文「Y,私もしくはあなたが切り替えできるようにする。私がやる場合はフロントエンドから切り替えをするがあなたに任せる場合はSSHを使用する」。切り替え（trial→active）と停止（→suspended）、停止の解除ができるのは PO と Claude だけ。
   - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:491）で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
   - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
+  - GO の発行者（PO 決定 2026-10-15、原文「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」）：本設計どおりの切り替え（対象1人の状態を trial→active、→suspended、suspended→元の状態のいずれかに変える）は、Opus が「POの委任に基づくClaude Opus発行」として GO を出す（委任の正式記録 docs/handoff/go-record-transcription/opus-delegation.md と同じ書き方）。複数人の一括変更・削除・本設計に無い状態の変更など、仕様から外れる操作は Opus が止めて PO に聞く。
   - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す（保存先は段2で既存の監査ログから選ぶ）。
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
