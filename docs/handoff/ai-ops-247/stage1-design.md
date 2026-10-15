@@ -198,6 +198,7 @@
 - U16: 便6・便7 で足した bash の試験（`monitoring/scripts/tests/` 配下）は、CI で毎回は走っていない。手元とカード §5 で実行しただけ。workflow の変更になるため段階1 の範囲外とした。CI で走らせるかは段階2 の前に決める。
 - U17: 便7 の比較の対象は、スクリプトに固定した 6 本だけ。ダッシュボードなどほかの監視設定のずれは見ていない（U3・U4 と合わせて決める）。
 - U18: 便7 と同じ self-hosted runner を使う既存の `.github/workflows/qa-smoke.yml` は `pull_request` を持つ。fork の PR を実行する前に承認が要る設定になっているかは未確認。PO に GitHub の画面（Settings → Actions → General の fork の PR の承認）で確かめてもらう。
+  - 解決（2026-10-15 22:18）: PO の y を受け、fork の PR の承認設定（approval_policy）を first_time_contributors から all_external_contributors に変えた。PO が `! bash ~/CC報告ファイル-keep/ai-ops-u18/po-set-fork-approval.sh` で実行し、直後の確認では旧値、少し後の確認で all_external_contributors になったことを確かめた。self-hosted runner で pull_request を受ける workflow は qa-smoke.yml（salesanchor-vps）・hook-permission-check.yml（macOS）・reaper-schedule.yml（macOS。マージ時だけ動く条件付き）の 3 本。戻し方: 同じ API に first_time_contributors を PUT する。
 - U19: pushgateway は値を保存しない設定（persistence の指定なし）。再起動すると便7 の値が消える。値が消えると absent の側で 1 時間後に MonitoringConfigCheckStale（ticket）が鳴り、次の毎日の実行まで続く。手順書に「pushgateway の再起動後は workflow を手動で 1 回動かす」を足すか、persistence を付けるかを決める（2026-10-15 便7 コード審査 低-2）。
 - U20: pushgateway のポートは 9091 で、機体の外向きに公開する書き方になっている。prod2 の防火壁の設定は未確認。外から送れる場合、ずれ 0 の値を送ってずれを隠せる。防火壁を確かめるか、127.0.0.1 に絞るかを決める（2026-10-15 便7 コード審査 低-4。便7 では変えていない）。
 
