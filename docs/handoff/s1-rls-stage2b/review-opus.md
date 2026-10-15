@@ -22,3 +22,20 @@ mode: handoff
 
 - 反映後に新しい仕入先の自動登録が起きるかは取込の内容次第。起きなければ「未観測」と記録し、CI 試験④を代替根拠とする。
 - fx_rate_updater（Celery）の is_operator が接続に残る件は本便の対象外（別件として記録）。
+
+## コード審査（2026-10-16・Opus）
+
+**判定: APPROVE**
+
+| 観点 | 結果 | 根拠 |
+|---|---|---|
+| ポリシー | products と同文 4 本・冪等（DROP IF EXISTS） | migrations/20261016_020000_add_suppliers_rls.sql |
+| 文脈の張り方 | 書込直前に set_operator_context、外側関数の finally で reset。CLI 入口では張らない | tcg_line_import_svc.py import_line_export／tcg_line_import.py resolve_supplier／line_source_names.py link_pending |
+| 運営画面 | デコレータ _operator_writes で 5 ルート（作成・更新・削除・CSV 確定・抽出ルール更新）を包む。functools.wraps で FastAPI の依存解決（引数の見え方）を保つ | super_admin_suppliers.py |
+| 発注複製 | create_po の get_current_tenant を tenant_id として明示。推測なし | purchase_orders.py |
+| 例外時 | set は session 単位。rollback 済みの経路では SET も巻き戻り、finally の reset は新しい取引で実行される | 試験⑨合格 |
+| 回帰の効き | 修正を外すと ④〜⑧ の 5 件が失敗、修正ありで 9 passed | /tmp/CC報告ファイル/s1-stage2/2b-impl-regress-*.txt |
+| 既存不具合 | resolve の assign が str(id) を整数列へ渡す（②b 以前から）。xfail で記録し本便では直さない | test_suppliers_rls.py |
+| カード外の変更 | 既存モック試験 3 本に set/reset の差し替えを追加（モック DB が追加の execute を想定していないため）。製品動作に影響なし | 試験 3 ファイル |
+
+未解決: CI の検証用 DB（migration-test.yml の Sprint 1）では public.suppliers に tenant_id 列が無い可能性（担当の読み取り。CI 実行で確認する）。
