@@ -139,7 +139,7 @@ PO の決定（2026-10-15、原文）:
 - 導入: マージ後、~/.salesanchor-tools が origin/main を取り込む形で plist を ~/Library/LaunchAgents に置き launchctl bootstrap（disk-janitor の導入手順に合わせる）。
 - 戻し方: launchctl bootout で外す。R5・R6 は revert。HDD 上の物は残る（消さない）。
 
-## 10. 維持する仕組み
+## 維持の仕組み（10. 維持する仕組み）
 - 毎日のログ（~/Library/Logs/claude-archive.log）と3日通知。
 - 試験は CI に載せない（CI は ubuntu で hdiutil・security・osascript・openrsync が無く、既存 test-disk-janitor.sh も CI では回っていない）。PR 時に両試験を手動で実行し、生出力を docs/handoff/claude-archive/evidence/ に保存する。
 - 守り手: scripts/tests/test-claude-archive.sh、scripts/tests/test-disk-janitor.sh。
@@ -148,5 +148,5 @@ PO の決定（2026-10-15、原文）:
 - 済（Opus 確認 2026-10-15）: 作成時の渡し方は commands.md のとおり末尾改行なし → §4-3 に `tr -d '\n'` で固定。K1 の最初に開けることを確かめ、開けなければ停止して Opus へ。
 - 済: recount.txt で写し先 tmp-CC報告ファイル-md 3359件・claude-tmp-images 8件（元 3369件・8件。md の差10件は【推測】初回後に作られた物）。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 不要（Mac 1台の個人用の写しで、比べる外部の事例が設計を左右しない）。
