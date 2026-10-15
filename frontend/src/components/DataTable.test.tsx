@@ -1,5 +1,5 @@
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DataTable, type DataTableColumn } from "./DataTable";
 
 afterEach(cleanup);
@@ -46,5 +46,51 @@ describe("DataTable ellipsis", () => {
     renderTable([{ key: "name", header: "Name", ellipsis: true, renderCell: (row) => <b>{row.name}</b> }]);
     const box = document.querySelector(".comp-table__cell-ellipsis") as HTMLElement;
     expect(box.hasAttribute("title")).toBe(false);
+  });
+});
+
+describe("DataTable selection", () => {
+  const TWO: Row[] = [
+    { id: "1", name: "a" },
+    { id: "2", name: "b" },
+  ];
+  const renderSelectable = (selected: Set<string>, onSelectChange: (keys: Set<string>) => void) =>
+    render(
+      <DataTable<Row>
+        columns={[{ key: "name", header: "Name" }]}
+        data={TWO}
+        rowKey={(row) => row.id}
+        selectable
+        selectedKeys={selected}
+        onSelectChange={onSelectChange}
+      />,
+    );
+
+  it("selects all keys when the header checkbox is clicked with nothing selected", () => {
+    const fn = vi.fn();
+    renderSelectable(new Set(), fn);
+    fireEvent.click(screen.getByLabelText("select all rows"));
+    expect(fn).toHaveBeenCalledWith(new Set(["1", "2"]));
+  });
+
+  it("shows the header checkbox as indeterminate when only some rows are selected", () => {
+    renderSelectable(new Set(["1"]), () => {});
+    const head = screen.getByLabelText("select all rows") as HTMLInputElement;
+    expect(head.checked).toBe(false);
+    expect(head.indeterminate).toBe(true);
+  });
+
+  it("calls onSelectChange with a Set containing the row key when a row checkbox is clicked", () => {
+    const fn = vi.fn();
+    renderSelectable(new Set(), fn);
+    fireEvent.click(screen.getByLabelText("select row 2"));
+    expect(fn).toHaveBeenCalledWith(new Set(["2"]));
+  });
+
+  it("clears the selection when the header checkbox is clicked with everything selected", () => {
+    const fn = vi.fn();
+    renderSelectable(new Set(["1", "2"]), fn);
+    fireEvent.click(screen.getByLabelText("select all rows"));
+    expect(fn).toHaveBeenCalledWith(new Set());
   });
 });

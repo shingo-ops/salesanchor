@@ -823,7 +823,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
 
-Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c）。
 
 #### ボタンの操作契約
 
@@ -4195,3 +4195,12 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 契約との違い: 「id/name、翻訳済み label を受け取る」は、8 か所が外にラベル文言を持つため id と aria-label／aria-labelledby で代えた。44×44 の操作領域は未着手（行の高さが変わり、対応トークンも無いため）。
 - 実測（本番 CSS と PR の vite build CSS を各 1 本のまま、390/1280 × ライト/ダーク × OFF/ON/focus-visible × 8 か所、1536 値）: 設計 §1.1 の表にない項目（色・display・flex-shrink・input の既定値など）の差は 0。表の幅 +2px の派生として、予定設定（/schedule/settings）の操作欄の幅が +2px、390px の行の scrollWidth が +2px（旧から既にはみ出している行）。数値は docs/handoff/design-system-recon/evidence-20260910/ay3b-acceptance.md。
 - 生の切替スイッチの再発は CI では検出しない（check-ui-governance への checkbox 検出追加は別判断）。
+
+#### AY-4a チェック欄の共通部品 CheckboxControl（2026-10-15）
+
+- 目的: 画面ごとにばらばらだったチェック欄の見た目を、共通部品 CheckboxControl 1 つにまとめる土台を作る。本便は部品の新設と、一覧表（DataTable）の選択欄 2 件（全選択・行選択）の置き換えだけ。
+- PO 決定: 2026-10-02 Checkbox/Toggle/Radio の新規金型登録を許可（:1953）。2026-10-15「y」チェック欄の色は全部アプリの基本色 --accent（ライト #1e3a8a・ダーク #5b8dd9）。
+- 設計: docs/handoff/ay4a-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 2 か所を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
+- 実測（origin/main の DataTable.tsx＋build CSS と作業ツリーの同じもの、390/1280 × ライト/ダーク × 未選択/選択/一部選択）: 差は accent-color の auto → --accent の値だけ。数値は docs/handoff/design-system-recon/evidence-20260910/ay4a-acceptance.md。
+- 残り: AY-4b（super-admin 専用 20 件と未使用 4 件）、AY-4c（一般画面 33 件・.form-group input[type=checkbox] と .form-row input:focus の撤去・Inbox の sm・予定のデータ色 dataColor）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
