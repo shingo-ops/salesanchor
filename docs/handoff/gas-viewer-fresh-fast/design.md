@@ -352,6 +352,11 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
 - 【事実】チケットができたことをほかの処理に知らせる仕組みは無い。ボットから個別メッセージ（DM）を送るコードも無い（git grep で create_dm・dm_channel の送信側 0 件。dm_writer.py は受信の記録だけ）。作るなら、チケット部屋の作成直後に閲覧者の登録とURL・パスワードの投稿を足す新規実装になる。
 - 【未確認】トライアル申込者を受けるテナント（本番の設定は tenant 1・4・6 の3つ）。申込とチケットを同じ人だと結び付ける方法。
 - 決まるまで、D1（メールのリンクでのログイン）は保留。
+- 申込とチケットの結び付け（2026-10-16 PO 質問「フォームを入力してもらったら専用のURLを発行してそのURLから入ってきたユーザーを紐付けられる？」への調査。未決）：
+  - 【事実・Discord 公式 docs.discord.com/developers/topics/oauth2】OAuth2 の identify スコープで「/users/@me」（Discord の利用者 ID）が取れる。コードの引き換えには client_secret が要る。guilds.join スコープで、ボットがその人をサーバーに入れられる（docs.discord.com/developers/resources/guild「Add Guild Member」。ボットに CREATE_INSTANT_INVITE 権限が要る）。
+  - 【事実】今のボットの権限 805432406（backend/app/routers/discord_oauth.py:72）は CREATE_INSTANT_INVITE も MANAGE_GUILD も持たない（ビット計算）。既存の OAuth はボットをサーバーに招待する流れだけで（同ファイル:1-19）、利用者 ID を取る流れは無い。DISCORD_CLIENT_SECRET を読むコードも無い（git grep 0 件）。
+  - 案A（推奨）：フォームの送信後に、その人専用の URL（使い切り）を出す。押すと Discord の「本人確認の許可」画面になり、許可すると Discord の利用者 ID が申込に結び付く。チケットを作った人の ID と同じなら、自動で URL とパスワードを部屋に出す。要るもの：Discord 開発者画面での client_secret の発行と戻り先 URL の登録（PO の GUI 作業）。
+  - 案B：その人専用の Discord 招待リンクを作り、どのリンクで入ったかを見分ける。ボットに MANAGE_GUILD が要り、ADR-091:69 で除外している権限なので ADR の変更が要る。招待の使用回数の差で見分ける方式で、確実さは案A より低い。
 - 【PO 決定 2026-10-16】原文「チケットは個別チャンネルにしたいので作り直しが原則しない、パスワードを忘れた場合はメールで再発行する機能にする」。ログインは専用URL＋1人1つのパスワード。チケットは1人1部屋で作り直さない（既存の ticket_channel_creator.py も作成済みなら同じ部屋を返す）。パスワードを忘れたらメールで再発行する。
   - 【事実】メールでの再発行にも SMTP が要る（計画票0 ①：本番は未設定）。
   - 【PO 決定 2026-10-16「y」】送信元メールの5項目（SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM）を PO が用意して GitHub の秘密設定に入れる。値はチャット・リポジトリに出さない。入れた後のデプロイで本番の .env に入り（deploy.yml:323-327）、テストメール1通の到着で確かめる。
