@@ -12,7 +12,7 @@ mode: handoff
 
 **対象ADR**: ADR-1019（草案・Proposed。`docs/adr/ADR-1019-inventory-viewer-separate-accounts.md`）  
 **recon**: docs/handoff/gas-viewer-fresh-fast/recon.md ／ docs/handoff/gas-viewer-fresh-fast/security-recon.md  
-**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち → r7 REVISE（Blocking 1、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r7.txt）→ 本版で B-1・N-1〜N-9 に対応し、PR #4293 で委任を PR の GO に絞ったことに合わせて操作の GO を PO 本人に直した（Q12 を追加）→ r8 APPROVE（Blocking 0、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r8.txt）→ 本版で r8-N-1〜N-9 に対応した。PO の承認（ADR-1019 は Proposed のまま）と §PO 決定待ち が残る  
+**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち → r7 REVISE（Blocking 1、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r7.txt）→ 本版で B-1・N-1〜N-9 に対応し、PR #4293 で委任を PR の GO に絞ったことに合わせて操作の GO を PO 本人に直した（Q12 を追加）→ r8 APPROVE（Blocking 0、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r8.txt）→ r8-N-1〜N-9 に対応した → r9 REVISE（Q14 で D4 をアプリと同じ部品に書き直した版。Blocking 3、Non-blocking 10。要点は review-fable.md の r9）→ 本版で B-r9-1〜3・N-r9-1〜10 に対応した（r10 で審査）。PO の承認（ADR-1019 は Proposed のまま）と §PO 決定待ち が残る  
 **日付**: 2026-10-15  
 **担当**: Planner（Claude Opus）  
 **状態**: 設計案（草案）。PO 決定待ちの項目が残っている。段ごとの着手の可否は §PO 決定待ち の各項に従う（審査 r8-N-6）。
@@ -31,7 +31,7 @@ mode: handoff
 
 - GAS は Google の枠を読むだけで 3.3〜6.7 秒かかる。コードを直してもこの時間は縮まない（recon.md §2）。
 - 在庫の行の定義は1か所にある（ADR-1014 の distribution_rows_sql）。中身は `backend/app/services/tcg_distribution_svc.py`:274-371 の distribution_rows_parts で、14 列を返す fetch_output_rows（:390-412）がこれを使う。fetch_output_rows はテナント文脈を自分では設定しない。
-- 今の GAS が表示している列は 13 列（ALLOWED_HEADERS。GAS のコードはリポジトリ外にある）。
+- 今の GAS が表示している列は 14 列（2026-10-14 に発送日を足して13から14になった。Q13。r9 で直した。ALLOWED_HEADERS。GAS のコードはリポジトリ外にある）。
 - アプリのユーザーにすると、在庫を見るだけの権限にしても 614 本中 74 本の入口に届く（security-recon.md §2）。
 - get_current_user（`backend/app/auth/dependencies.py`:116-239）がトークンを受け付ける経路は4本ある。
   - (a) スモーク用トークン
@@ -90,7 +90,7 @@ mode: handoff
   - GET /api/v1/viewer/inventory（get_current_viewer が要る）
 - この6本は1か所の定数（VIEWER_ROUTE_ALLOWLIST）に書き、router とテストの両方がそれを参照する。集合を2か所に書かない（審査 N-23）。
 - inventory は、Redis の作り置き（D3）をそのまま返す。在庫の表は読まない。応答の形は `{"updated_at": ISO8601, "fresh_window_hours": 数, "rows": [...]}`（fresh_window_hours は D4 の「24時間以内」の時間数。r9 で追加）。
-- 返す列は、今の本番の GAS と同じ14列にする（PO 決定 Q1=y と Q13=y、2026-10-15。r9 で13列から直した）。14列は、投稿日時・Mark・Japanese Title・English Title・Condition・Unit Price・Quantity・Note_JA・Status・Release Date・Series・提供者・Search Keywords・発送日（Ship_JA）。fetch_output_rows の14列そのまま。JSON のキーは _GAS_COLUMNS の英字14個（origin/main e1351e663 の tcg_distribution_svc.py:251-254：posted_at・mark・japanese_title・english_title・condition・unit_price・quantity・note_ja・status・release_date・series・provider・search_keywords・ship_ja）にし、表示名は i18n で付ける。キーの集合は固定し、テストで「完全に一致すること」を確認する（審査 N-25）。
+- 返す列は、今の本番の GAS と同じ14列にする（PO 決定 Q1=y と Q13=y、2026-10-15。r9 で13列から直した）。14列は、投稿日時・Mark・Japanese Title・English Title・Condition・Unit Price・Quantity・Note_JA・Status・Release Date・Series・提供者・Search Keywords・発送日（Ship_JA）。fetch_output_rows の14列そのまま。JSON のキーは _GAS_COLUMNS の英字14個（origin/main e1351e663 の tcg_distribution_svc.py:251-254：posted_at・mark・japanese_title・english_title・condition・unit_price・quantity・note_ja・status・release_date・series・provider・search_keywords・ship_ja）にし、表示名は i18n で付ける。これに、区分の `offer_type`（D4 の列の対応表。審査 r9 B-r9-2）を1つ足した15キーを返す。キーの集合は固定し、テストで「完全に一致すること」を確認する（審査 N-25）。
 
 ### D3. 1分ごとの作り置き（SSOT を守る）
 - celery beat に、60.0 秒周期のエントリ "refresh-viewer-inventory" を足す。
@@ -103,7 +103,7 @@ mode: handoff
   1. 安全装置 #8（analysis_runs に completed_at IS NULL がある）と #8b（extraction_jobs に pending・running・extracted がある）に当たったら、行を作らず「保留」を返す。
   2. load_distribution_settings（:178）→ include_flag_single（:920 と同じ式）→ _max_age_hours（:197）。None なら行を作らず「設定なし」を返す（MAX_AGE_UNSET_MESSAGE、:190）。
   3. fetch_output_rows(db, include_flag_single=…, max_age_hours=…)（:390。merge_same_post=False で固定）。
-- fetch_output_rows はキーの無いリストを返す（:412）。作り置きは、各行を _GAS_COLUMNS（:251-254）と zip して辞書にし、14キーのまま置く（r9。Q13=y）。列の並びを別の場所に書き直さない。
+- fetch_output_rows はキーの無いリストを返す（:412）。作り置きは、各行を _GAS_COLUMNS（:251-254）と zip して辞書にし、14キーに offer_type（status_to_offer_type の結果）を足した15キーにする（r9。Q13=y、B-r9-2）。列の並びを別の場所に書き直さない。
 - run_distribution の結果（戻り値の形・ログ・既存のテスト）は変えない。切り出しの前後で、既存の配信のテストがすべて通ることを受入条件にする。
 - build_distribution_rows の仕様（審査 r6 B-3。Generator に判断させない）：
   - 置き場：`backend/app/services/tcg_distribution_svc.py` の中、run_distribution の直前。
@@ -142,6 +142,7 @@ mode: handoff
   - ⑥ メール確認の結果（`#verify=` から来たとき。POST verify-email の結果で、成功・使用済み・期限切れのどれかを出す）
 - 下の 300KB の上限は、この6つの状態を全部含めた大きさとする。部品は既存の金型（`frontend/src/components/`）とデザイントークンだけを使う（ADR-144、ADR-067）。金型に無い部品は使わない（r9 の時点で、下の表の部品はすべて金型と共有部品にある）。
 - 文字はすべて i18n にする（ADR-027）。
+- 全体の CSS：viewer の main.tsx は frontend/src/index.css を読む（デザイントークンの定義。index.css:1 が tokens.css、:2 が components/field-size.css を読む）。アプリの components.css（App.tsx:116 でだけ読む）は読まない。【事実】金型のクラスは comp- で始まり components.css に依存しない。inventoryColumns.css は全10行でトークンだけを使う（審査 r9 N-r9-1）。
 - アプリ本体（約 2.5MB）は読み込まない。viewer の JS は、圧縮前で合計 300KB 以下を上限にする。
 - 作りの基準（r9 で書き直した。PO 決定 2026-10-15 Q14「アプリの在庫表も同じ作りにする」）：閲覧ページの在庫表は、アプリの在庫表（/inventory）と同じ金型・同じ共有部品で作る。アプリの在庫表は便1〜3（#4317・#4327・#4330、本番反映済み）で金型に載せ替え済み。閲覧ページはその実物をまねる。根拠は origin/main e1351e663 の実物（生の写しは /tmp/CC報告ファイル/viewer_r9/）と、docs/handoff/inventory-table-unify/design.md の「維持の仕組み」（閲覧ページも同じ部品を使う）。GAS と比べて違いが出るところは、アプリの実物を正とする（PO の12項目の回答の 5・6「アプリを正とする」と Q14）。
 - 部品と金型の対応（金型はすべて origin/main の `frontend/src/components/` にあり、stories もある。r8 までの「金型なし・Q10 で決める」4つは、便1・便3 で金型に入ったので、ここで実在の金型に置き換えた）：
@@ -161,13 +162,14 @@ mode: handoff
   | コンディションのバッジ | Badge ＋ `conditionBadgeVariant`（frontend/src/features/inventory/conditionBadge.ts:7）を import する | inventoryColumns.tsx:80 |
   | 提供者の絞り込み（選んだ人だけ出す） | MultiSelect（MultiSelect.tsx:22-35）。PC はツールバー、スマホは絞り込みの Drawer の中 | InventoryPage.tsx:476-485、InventoryFilterPanel.tsx:118 |
   | コンディションの絞り込み | MultiSelect（Drawer の中） | |
-  | 24時間以内 | Button（aria-pressed）。既定はオン | InventoryPage.tsx:152・:446-454（Toggle の金型ではない。アプリと同じにする） |
+  | 24時間以内 | Button（aria-pressed）。既定はオン | InventoryPage.tsx:153・:443-454（Toggle の金型ではない。アプリと同じにする） |
   | 絞り込みのドロワー | Drawer | |
   | 価格・在庫の範囲 | TextFieldControl type="number" | |
   | クリア・適用のボタン | Button | |
   | 空の表示・読み込み中・エラー | EmptyState と Button（DataTable の emptyState） | |
   | 商品名の2段（上＝日本語、下＝英語） | 共有の CSS `frontend/src/features/inventory/inventoryColumns.css` の inventory-cell__title・inventory-cell__sub を import して使う | inventoryColumns.tsx:67-68 |
 
+  - アプリ側の1か所の直し（段3の最初のコミット。審査 r9 B-r9-2）：【事実】アプリの予約の表示は、金型ではなく全体の CSS のクラス `<span className="badge badge-negotiating">`（inventoryColumns.tsx:105、色は components.css:245 の --info-bg・--info-text）。閲覧ページは components.css を読まないので、このクラスは使えない。アプリのこの1行を `<Badge variant="info" appearance="soft">` に替え、アプリと閲覧の両方を同じ金型にする（色のトークンは同じ。Badge.css:59）。ほかの画面の badge-negotiating（ShiftsPage・StaffReportsPage など）は触らない。
   - 新しい金型は作らない。上の表で足りる（PO の許可が要る新規登録は無い。docs/CC_UI_GOVERNANCE.md:11-13）。
   - 列の定義は、viewer の中の1ファイル `frontend/src/pages/viewer/viewerColumns.tsx` に置く。アプリの `buildInventoryColumns`（inventoryColumns.tsx:45）はそのまま使わない。【事実】アプリの行の型 InventoryRow（inventoryColumns.tsx:12-35）は product_id・supplier_id・offer_type・merged_count など22項目で、閲覧の行（D2 の14キー）と形が違う。また中で本体の辞書のキー inventory.col.* と、アプリの全体の CSS のクラス `badge badge-negotiating`（:105）を使う。
   - そのかわり、2つの列の定義がずれないように、検査で縛る（片方だけ直る事故を防ぐ）。vitest `frontend/src/pages/viewer/viewerColumns.parity.test.tsx` を作り、viewer の列と、`buildInventoryColumns` の全列（colVisible は常に true）を、下の対応表で突き合わせる。対応する列どうしで、並び順・sortable・align・stickyLeft・mobileOrder・mobileHidden が一致しなければ失敗させる。
@@ -177,7 +179,7 @@ mode: handoff
     | mark | mark | |
     | japanese_title と english_title | name | 上段に japanese_title、下段に english_title（アプリと同じ） |
     | condition | condition | Badge |
-    | status | offer_type | 閲覧の行には offer_type が無い。アプリが offer_type の無い行で出す status の文字（:103）と同じく、status をそのまま出す |
+    | status（と offer_type） | offer_type | アプリと同じ見え方にする（審査 r9 B-r9-2）。【事実】アプリは status を区分に写し（backend/app/routers/inventory_offers.py:104 の OFFER_TYPE_TO_STATUS、:113-115 の status_to_offer_type、:166）、In Stock は「在庫」の文字、Pre-order は予約のバッジ、対応に無い status だけをそのまま出す（inventoryColumns.tsx:102-108）。閲覧も同じ写しを使う：作り置きの各行に `offer_type`（in_stock・pre_order・null）を1つ足す。値は同じ status_to_offer_type で作る（段2で、この関数と OFFER_TYPE_TO_STATUS を backend/app/services/ へ移し、routers はそれを import する。写しの表を2か所に持たない）。表示は、null なら status の文字、pre_order なら Badge variant="info" appearance="soft"、in_stock なら i18n の「在庫」の文字 |
     | quantity | quantity | |
     | unit_price | unit_price | アプリと同じ整形（:146） |
     | provider と posted_at | supplier | 上段に提供者、下段に投稿日時（MM-DD HH:mm） |
@@ -186,10 +188,13 @@ mode: handoff
     | release_date | release_date | |
 
     - アプリの unit（単位）の列は、閲覧の行に無い（Q1 で決めた GAS の列に入っていない）ので、対応表から外す。検査はこの1列だけを「閲覧に無い列」として許す。series と search_keywords は列にしない（series はタブ、search_keywords は検索だけに使う。PO の回答 6「TCG シリーズ列は不要」）。
-  - 並び：アプリの実物と同じにする。既定は発売日の新しい順（InventoryPage.tsx:117-118 の release_date desc。表全体をこの順に並べる）。プルダウンは3択「価格が安い順」「在庫が多い順」「投稿が新しい」（:51 の unit_price asc・quantity desc・offered_at desc。閲覧では offered_at の代わりに posted_at）。「新しい順」は置かない（PO 決定 2026-10-15）。r8 まで書いていた「English Title で先にまとめる」GAS の並べ方は、アプリが行っていないので採らない（PO の回答 2 の【未確認】を、アプリの実物で解いた）。空欄は昇順・降順のどちらでも末尾にする。価格と数量は数として比べる。
+  - 並び：アプリの実物と同じにする（審査 r9 B-r9-1 で直した）。【事実】アプリの並びはサーバーが決め、英語タイトルでまとめてから並べる（backend/app/routers/inventory_offers.py:276-280。商品名で並べるときは english_title と japanese_title を同じ向き、ほかは english_title の昇順を第1キーにして、選んだ列を第2キー（空欄は末尾）、最後に元の並び sort_ord）。既定の選んだ列は発売日の降順（InventoryPage.tsx:117-118 の release_date desc）。閲覧ページもこのとおり手元で並べる。最後のキーは、作り置きの行の元の順（fetch_output_rows が返した順）にする。プルダウンは3択「価格が安い順」「在庫が多い順」「投稿が新しい」（:51 の unit_price asc・quantity desc・offered_at desc）。「新しい順」は置かない（PO 決定 2026-10-15）。PO の回答 2「デフォルトで発売日の新しい順」はこのアプリの今の並び（本番で稼働中）を指しているので、閲覧ページはそれと同じにする（Q14）。
+    - 列 → 比べる値（アプリの _SORT_COLUMNS、inventory_offers.py:119-131 に対応。審査 r9 N-r9-6）：mark→mark（空は末尾）、name→english_title と japanese_title、condition→condition、offer_type→status、quantity→quantity を数に、unit_price→unit_price を数に、supplier→provider、offered_at→posted_at、release_date→release_date（空は末尾）。【事実】作り置きの値はすべて文字列で、価格と数量が無いときは ''（tcg_distribution_svc.py:261-262）。'' は数にせず末尾に置く。文字は日本語の自然な順（Intl.Collator('ja', {numeric: true})）で比べる。
+    - 行のキー（DataTable の rowKey）：作り置きの行には一意の列が無い（:412 は14列だけ。審査 r9 N-r9-5）。受け取ったときの配列の位置を番号として行に付け、それを rowKey にする。
+    - 表示の整形：価格は値が '' でなければ `¥` と3桁区切り（アプリの :146 と同じ形）、'' なら空。
   - 検索の対象は japanese_title・english_title・mark・search_keywords の4つ。アプリのサーバーの検索と同じ（docs/handoff/inventory-table-unify/design.md の 3-1、:200-202）。閲覧ページは全件を手元に持つので、入力のたびにブラウザの中で絞り込み、検索ボタンは置かない。
   - 絞り込み・検索・並べ替え・ページ送りは、すべて手元の行に対して行う（D2 の応答に全件が入っているため）。条件を変えたら1ページ目に戻す。
-  - 24時間以内の時間数：アプリは在庫 API の fresh_window_hours を使う（InventoryPage.tsx:45）。閲覧ページも同じ値を使い、別の数字を書かない。作り置きの JSON に `fresh_window_hours` を1つ足し、値はアプリの在庫 API と同じ関数から取る（その関数の file:line は段0で特定し、段2のカードに書く。見つからなければ止めて設計を直す）。
+  - 24時間以内の時間数：【事実】アプリの値は定数 FRESH_WINDOW_HOURS = 24（backend/app/services/tcg_distribution_svc.py:212-213）で、在庫 API が応答に入れて（inventory_offers.py:360・:423）、絞り込みにも使う（:261-263）。閲覧ページも同じ定数を使い、別の数字を書かない：作り置きの JSON に `fresh_window_hours` として同じ定数を入れる（審査 r9 N-r9-2 で計画票0 ⑤を解決）。手元の絞り込みは、posted_at（タイムゾーン無しの日本時間の文字列 'YYYY-MM-DD HH:MM:SS'、svc:288-289）を +09:00 として読み、今の時刻から fresh_window_hours 時間以内の行だけを出す。posted_at が空の行は、オンのときは出さない（アプリの posted_ts >= の比較で NULL が落ちるのと同じ）。
   - 投稿日時の表示を「MM-DD HH:mm」にする（GAS と同じ）。Sold out の行は D3 のとおり作り置きの時点で入っていないので、ページでは除かない。
   - スマホ（767px 以下）の操作の配置は、アプリの在庫表と同じにする（提供者の MultiSelect はツールバーに出さず、絞り込みの Drawer に入れる。InventoryPage.tsx:476-485 の isMobile と同じ）。
   - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは PO の回答が無いので、決まるまで作らない。
@@ -212,7 +217,7 @@ mode: handoff
   - 閲覧ページの文言は、新しい辞書 frontend/src/locales/viewer/ja.json と en.json に置く。キーはすべて `viewer.` で始める。本体の ja.json（254KB）を閲覧ページに読み込むと 300KB の上限を超えるため。本体の辞書には `viewer.` のキーを置かない（同じ文言を2か所に持たない）。
   - 例外（審査 r6 B-5）：【事実】金型の中にも t() がある。Drawer.tsx:146 は t("suppliers.openFullPage")、Drawer.tsx:157・Sheet.tsx:141・Modal.tsx:134 は t("common.close") を使う（origin/main）。金型は変えない。閲覧ページが使う金型の中のキーだけは、viewer の辞書にも同じキー名で入れる（例：common.close）。同じ文言が本体と viewer の2か所に入るのはこの例外だけで、対象は「viewer の入口から import される、`frontend/src/pages/viewer/` の外のファイル（`frontend/src/components/` と `frontend/src/features/inventory/`）の t() のキー」に限る（r9 で features/inventory を足した。【事実】r9 の時点で viewer が import する searchNormalize.ts・conditionBadge.ts には t() が無い）。下の検査がこの集合を自動で数えるので、手で一覧を持たない。
   - 閲覧ページは frontend/src/pages/viewer/i18n.ts で、この2つの辞書だけを読み込む。本体の `frontend/src/i18n.ts` は読み込まない。
-  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、次の3つに書き分ける（審査 r7-N-4）。①src/pages/viewer/ の中のファイルは、viewer の辞書だけで探す。②そこから import される frontend/src/components/ と frontend/src/features/inventory/ のファイル（import をたどって集める）は、本体の辞書と viewer の辞書の両方で探す。③それ以外は今までどおり本体の辞書だけで探す。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
+  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、次の3つに書き分ける（審査 r7-N-4、r9 B-r9-3）。起点は viewer の入口 `frontend/src/pages/viewer/main.tsx` 1つだけにし、そこから import をたどった集合で分ける（テストのファイルは入口から import されないので、この集合に入らない）。①その集合のうち src/pages/viewer/ の中のファイルは、viewer の辞書だけで探す。②その集合のうち src/pages/viewer/ の外のファイル（frontend/src/components/ と frontend/src/features/inventory/）は、本体の辞書と viewer の辞書の両方で探す。③それ以外のファイル（テストのファイル、例えば viewerColumns.parity.test.tsx と、それが import するアプリの inventoryColumns.tsx を含む）は、今までどおり本体の辞書だけで探す。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
 - ビルドの大きさと辞書の混入の測り方（審査 r6 B-4）：
   - 【事実】Vite は JS を dist/assets/ にまとめて出す。dist/viewer/ の下には JS は出ないので、「dist/viewer の JS」では測れない。
   - manifest は vite.config.ts には書かず、CI のビルドでだけ CLI の `--manifest` を付けて出す（審査 r7-N-6。vite.config.ts に書くと、本番のビルド＝frontend/Dockerfile:22 の出力にも manifest が入り、nginx がそのまま返すため）。ビルド後に dist/.vite/manifest.json を読み（置き場は公式資料 vite.dev/config/build-options の既定値）、入口 viewer/index.html の項目から file・imports・css をたどった集合を「viewer の資産」とする（dynamicImports もたどる。たどり方は公式資料 vite.dev/guide/backend-integration の importedChunks と同じ）。
@@ -248,7 +253,7 @@ mode: handoff
 | アプリのユーザーのトークンで GET /api/v1/viewer/inventory を叩くと 401 になる | CI pytest |
 | 閲覧者のコードが cache_jwt_result と get_cached_jwt を呼んでいない | CI pytest（viewer のモジュールの中身を検査する） |
 | pending・verified・suspended・期限切れの trial は 403、期限内の trial と active は 200 になる | CI pytest（時刻を固定する） |
-| inventory の rows のキーの集合が、D2 の14キー（_GAS_COLUMNS）と完全に一致する。応答に fresh_window_hours があり、アプリの在庫 API の値と同じ | CI pytest（`set(keys) ==` 固定の集合。fresh_window_hours は同じ関数の戻り値と比べる） |
+| inventory の rows のキーの集合が、D2 の15キー（_GAS_COLUMNS の14個と offer_type）と完全に一致する。応答に fresh_window_hours があり、アプリの在庫 API の値と同じ | CI pytest（`set(keys) ==` 固定の集合。fresh_window_hours は同じ関数の戻り値と比べる） |
 | 作り置きの行が、同じ seed で run_distribution が GAS に渡す行（14列）と一致する | CI pytest（同じ seed。build_distribution_rows を両方が呼んでいることも確認する） |
 | build_distribution_rows を切り出した後も、既存の配信のテストがすべて通る | CI pytest（既存のテストを変えずに実行） |
 | analysis_runs か extraction_jobs に未完了があるとき、作り置きは前回の値と updated_at を変えず、fail_count も増えない。max_age_hours が無いときは前回の値を残し、fail_count が1増える | CI pytest |
@@ -298,6 +303,8 @@ mode: handoff
 | 金型とトークンを守っている | `node scripts/check-ui-governance.js` |
 | 閲覧ページの検索は features/inventory/searchNormalize.ts の normalizeForSearch を import して使い、viewer の中に正規化の関数を持たない。共通ベクタ（searchNormalize.vectors.json）の全件で、viewer の絞り込み関数が期待どおりに当たる | CI vitest（viewer の絞り込み関数のテストでベクタを読む）。`git grep -n "normalize(" frontend/src/pages/viewer` が normalizeForSearch の呼び出しだけ |
 | 閲覧の列の定義（viewerColumns.tsx）とアプリの列の定義（buildInventoryColumns）が、D4 の対応表の列どうしで、並び順・sortable・align・stickyLeft・mobileOrder・mobileHidden が一致する。アプリの列を変えて viewer を変えないと失敗する | CI vitest（viewerColumns.parity.test.tsx。わざとアプリの1列の mobileOrder を変えて失敗することを段3で1回確かめ、生の出力を残す） |
+| 区分の列：status が In Stock の行は「在庫」の文字、Pre-order の行は Badge（info・soft）、どちらでもない行は status の文字が出る。アプリの同じ行と同じ見え方 | CI vitest（3種の行で描画する）と CI pytest（作り置きの offer_type が status_to_offer_type と同じ） |
+| 並び：既定で english_title の昇順→release_date の降順（空は末尾）→元の順。プルダウンの3択と見出しの並べ替えも、同じ english_title の中だけで効く。アプリの /inventory と同じ並びになる | CI vitest（固定の行で）と Evaluator（本番で、アプリと閲覧ページの先頭20行の商品名の並びを比べ、生の値を残す） |
 | 閲覧ページの DataTable に stickyHeader・fitToWidth・mobileCards が付き、1ページ50件でページ送りが出る。既定の並びは release_date の降順、プルダウンは3択 | CI vitest（描画して確認する）と Evaluator（Playwright で PC と 375px） |
 | コンディションのバッジの色が、アプリと同じ conditionBadgeVariant で決まる | CI vitest |
 
@@ -329,7 +336,7 @@ mode: handoff
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| 0 | 実装前の確認を事実で埋める。①本番の SMTP。②fetch_output_rows の所要時間。③本番で配信行が指す products.tenant_id の分布（人間が SELECT を実行する。NULL 以外があれば、見え方の差を PO に報告する）。④app.salesanchor.jp の前に Cloudflare などのプロキシがいるか（審査 N-20。いるなら set_real_ip_from と real_ip_header を D4 に足す）。⑤アプリの在庫 API が fresh_window_hours を出している関数の file:line（D4 の24時間以内。r9） | Sonnet（調査）＋PO（DB 読み取り・DNS の確認） |
+| 0 | 実装前の確認を事実で埋める。①本番の SMTP。②fetch_output_rows の所要時間。③本番で配信行が指す products.tenant_id の分布（人間が SELECT を実行する。NULL 以外があれば、見え方の差を PO に報告する）。④app.salesanchor.jp の前に Cloudflare などのプロキシがいるか（審査 N-20。いるなら set_real_ip_from と real_ip_header を D4 に足す）。⑤（r9 で解決済み：FRESH_WINDOW_HOURS、tcg_distribution_svc.py:212-213） | Sonnet（調査）＋PO（DB 読み取り・DNS の確認） |
 | 1 | 表とトークンと分離テスト（D1）。守り手のテストを作る | Sonnet |
 | 2 | 作り置きと閲覧 API（D2・D3） | Sonnet |
 | 3 | 閲覧ページ（D4） | Sonnet |
@@ -370,7 +377,7 @@ mode: handoff
 
 ## PO 決定待ち（1つずつ聞く）
 
-- ~~Q1. 閲覧ページに出す列~~ → **決定済み**：今の GAS と同じ13列（PO y、2026-10-15）。D2 に反映した。
+- ~~Q1. 閲覧ページに出す列~~ → **決定済み**：今の GAS と同じ列（PO y、2026-10-15）。その後 Q13=y で発送日を含む14列になった。D2 に反映した。
 - ~~Q2a. ログインの方法~~ → **決定済み**：メールのリンクで入る。登録フォームの情報で管理し、リンクを知っているだけでは見られない形にする（PO、2026-10-15）。D1 に反映した。
 - Q2b.【置き換え済み・実装しない（Q2f）】【決定 2026-10-15 PO】原文「トライアルではメール、LINE名、DISCORD IDのみ、本契約に進むときに詳しい情報を別途フォームで取得する」。申込フォームはメール・LINE 名・Discord ID の3つ（後に Q2f でメールと LINE 名の2つに変更）。本契約用の詳しい情報フォームは今回の対象外（別の便で設計する）。
 - Q2d.【置き換え済み・実装しない（Q2f）】【決定 2026-10-15 PO】原文「数字のID、SAの顧客対応と同様に顧客管理で利用するため」。数字のIDで受け取る。閲覧者の行はテナントの取引先（companies）には写さない（SSOT）。本契約で取引先とつなぐ方法は、本契約フォームの便で設計する。
@@ -413,7 +420,7 @@ mode: handoff
   - 12 件数とページ送り：「ページ送り機能をつける」
   - 1 更新ボタンは回答なし（未決）。
   - Q14.【決定 2026-10-15 PO】原文「アプリの在庫表も同じ作りにする」。この決定を、アプリの在庫表と閲覧ページの両方に入れる（＝2つを同じ部品で作る）。アプリ側は便1〜3（#4317・#4327・#4330）で本番に反映済み。閲覧ページは r9 で D4 を書き直した。8・9 と 4 の複数選択は、便1・便3 で金型に登録済み（DataTable の stickyHeader・fitToWidth・mobileCards、MultiSelect）。
-- Q13.（2026-10-15 の突き合わせ。/tmp/CC報告ファイル/viewer_gas_parity_check.md）Q1 の「今の GAS と同じ13列」は、2026-10-14 に GAS に発送日（Ship_JA）を足す前の手元の写し（~/tcg-viewer-1hc-release、Ship_JA 0件）を基準にしていた。【事実】本番の GAS（版16）の許可リストは14列（/tmp/CC報告ファイル/gas_pull_prod/Code.js:10-25）で、画面の11列に「発送日」がある（/tmp/CC報告ファイル/k7_prod.txt K7-1、発送日が空でない行は 891 行中 37 行）。発送日を閲覧ページにも出すか →【決定 y（PO 2026-10-15）】14列にし、表示は備考の次（アプリの列の並びと同じ）。r9 で D2・D3・D4 と受入に反映した。あわせて、GAS にあって本書に書いていない次の6点は、GAS と同じにする方向で書き足す（PO の方針「GAS に合わせる」の範囲）：検索の対象列、並べ替え4択の中身と既定、英語タイトルでまとめてから並べる順、見出しで並べ替えできない列、スマホの操作の配置、タイトルの上段＝英語・下段＝日本語。
+- Q13.（2026-10-15 の突き合わせ。/tmp/CC報告ファイル/viewer_gas_parity_check.md）Q1 の「今の GAS と同じ13列」は、2026-10-14 に GAS に発送日（Ship_JA）を足す前の手元の写し（~/tcg-viewer-1hc-release、Ship_JA 0件）を基準にしていた。【事実】本番の GAS（版16）の許可リストは14列（/tmp/CC報告ファイル/gas_pull_prod/Code.js:10-25）で、画面の11列に「発送日」がある（/tmp/CC報告ファイル/k7_prod.txt K7-1、発送日が空でない行は 891 行中 37 行）。発送日を閲覧ページにも出すか →【決定 y（PO 2026-10-15）】14列にし、表示は備考の次（アプリの列の並びと同じ）。r9 で D2・D3・D4 と受入に反映した。【r9 の注記】下の6点は、その後の Q14（アプリと同じ作り）で、アプリの実物に合わせる形に置き換えた（D4。商品名は上が日本語・下が英語、並びはアプリと同じ）。元の文：あわせて、GAS にあって本書に書いていない次の6点は、GAS と同じにする方向で書き足す（PO の方針「GAS に合わせる」の範囲）：検索の対象列、並べ替え4択の中身と既定、英語タイトルでまとめてから並べる順、見出しで並べ替えできない列、スマホの操作の配置、タイトルの上段＝英語・下段＝日本語。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
 - Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
 - Q6.【決定 2026-10-15 PO「Y」】別のメールでの申込み直しは自動では止めない。気付いたら PO か Claude が停止する。判断の材料として、下のログイン記録と、申込一覧で同じ LINE 名・同じ IP の行に目印を出す。
@@ -436,7 +443,7 @@ mode: handoff
 - Q9.【決定 2026-10-15 PO「Y」】PO から一覧（22件、メールの重複0件・形式不正0件）を受け取った。個人情報なので、リポジトリと PR には載せず、リポジトリ外の ~/CC報告ファイル-keep/viewer-initial-accounts/initial_active_list.tsv（権限600、項目は申込日時・LINE 名・メールの3つだけ）に置く。登録は段4の公開前に、Q3 の Claude の経路（無制限鍵＋専用スクリプト。migration ではデータを入れない）で行う。登録の前に一覧を PO に見せる。 【訂正 2026-10-15 PO】原文「〇〇さんだけは本契約」（個人名のため伏せた）。active で登録するのは一覧のうち1人（2026/09/28 申込の行）だけ。残り21人（PO「Y」2026-10-15）：状態を trial にし、trial_expires_at を一覧の申込日時（JST）＋14日にして登録する。これで公開の時点では全員が期限切れになり、在庫表は見られない。PO が延長を決めた人から、延長の機能で「記録した時刻＋N日」まで見られるようになる。申込のやり直しは要らない。
   - 22人とも email_verified_at は NULL のままにする（新しい経路でメール確認をしていないため）。ログイン用リンクを送るかどうかは状態と期限だけで決め、email_verified_at は見ない（D1 の送る相手の条件と同じ）。
   - 登録用の専用スクリプトは、一覧ファイルを読んで1行ずつ登録する。登録済みの email は飛ばして、件数（登録・飛ばした・失敗）を出す。実行の前に、対象一覧を PO に見せる。
-- ~~Q10~~ →【r9 で解決】4つのうち3つ（複数選択・倍率合わせ・縦カード）は PO の回答 4・8・9 で採用し、便1・便3 で金型に登録済み（MultiSelect、DataTable の fitToWidth・mobileCards）。24時間以内はアプリと同じ Button（aria-pressed）にする（InventoryPage.tsx:446-454）。新しい金型は要らない。以下は元の問い：GAS の画面のうち、金型が無い4つ（24時間以内のスイッチ、コンディション・提供者の複数選択、PC で表を枠に収める倍率合わせ、スマホで行を縦のカードにする表示）をどうするか。推奨は「スイッチと複数選択は金型（Checkbox・MultiSelect）を新しく登録して再現する。倍率合わせは作らず、DataTable の横スクロールで代える。スマホの縦カードは DataTable の金型に表示の型として足す」。金型の登録には PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。PO の 10/14 の発言「原則同じ変更を入れる、ただしスプレッドシートとGASの処理を考えて全部は実装しなくても良い」に照らして、再現しない機能は PO に確認する。
+- ~~Q10~~ →【r9 で解決】4つのうち3つ（複数選択・倍率合わせ・縦カード）は PO の回答 4・8・9 で採用し、便1・便3 で金型に登録済み（MultiSelect、DataTable の fitToWidth・mobileCards）。24時間以内はアプリと同じ Button（aria-pressed）にする（InventoryPage.tsx:443-454）。新しい金型は要らない。以下は元の問い：GAS の画面のうち、金型が無い4つ（24時間以内のスイッチ、コンディション・提供者の複数選択、PC で表を枠に収める倍率合わせ、スマホで行を縦のカードにする表示）をどうするか。推奨は「スイッチと複数選択は金型（Checkbox・MultiSelect）を新しく登録して再現する。倍率合わせは作らず、DataTable の横スクロールで代える。スマホの縦カードは DataTable の金型に表示の型として足す」。金型の登録には PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。PO の 10/14 の発言「原則同じ変更を入れる、ただしスプレッドシートとGASの処理を考えて全部は実装しなくても良い」に照らして、再現しない機能は PO に確認する。
 
 ## 別件（本設計の外）
 

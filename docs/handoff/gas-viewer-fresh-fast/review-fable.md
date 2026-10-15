@@ -699,3 +699,14 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
   - B-6 申込とメール確認の画面が D4 の状態に無い → ⑤⑥と部品の対応を足した。
   - B-7 過去のコミットに個人の姓が残っている → 履歴の扱いは PO 決定待ち。
 - Non-blocking N-1〜N-14 は design.md・ADR-1019 に反映した（どこを直したかは design.md の「審査 r6 …」の注記）。
+
+---
+
+## r9（2026-10-15、Opus architect）— REVISE（Blocking 3、Non-blocking 10）
+
+対象：r9 の書き直し（PO 決定 Q14「アプリの在庫表も同じ作りにする」で D4 をアプリ在庫表と同じ金型・共有部品にした。Q13=y で14列。ADR-1017→1019 の付け替え）。照合の基準は origin/main e1351e663。全文は /tmp/CC報告ファイル/viewer_r9/review_r9.txt（消えることがあるので要点をここに残す）。r7・r8 の記録はこのファイルに無い（design.md 冒頭の「審査」欄にある）。
+
+- B-r9-1：「アプリは英語タイトルでまとめない」は誤り。並びはサーバーが決め、inventory_offers.py:276-280 で英語タイトルでまとめてから並べる → D4 の並びを実物どおりに直した。
+- B-r9-2：アプリは status をそのまま出さず、区分（offer_type）に写して出す（inventory_offers.py:104・:113-115・:166、inventoryColumns.tsx:102-108）→ 作り置きに offer_type を足し（15キー）、アプリの予約の表示を Badge の金型に替える1行を段3に入れた。
+- B-r9-3：parity テストが import する inventoryColumns.tsx の t() で辞書の検査が落ちる → 検査の起点を viewer の main.tsx からの import の集合だけにした。
+- N-r9-1 全体の CSS（index.css を読む・components.css は読まない）を D4 に書いた。N-r9-2 FRESH_WINDOW_HOURS（svc:212-213）で計画票0 ⑤を解決し、手元の24時間の絞り方を書いた。N-r9-3 13列の書き残し2か所を直した。N-r9-4 Q13 の6点に「Q14 で置き換え」の注記。N-r9-5 行のキー（受け取った位置の番号）と値が文字列であること。N-r9-6 列→比べる値の対応。N-r9-7 行番号2か所を直した。N-r9-8 inventory-table-unify の ADR-1017 を 1019 に直した。N-r9-9 列の定義は viewer に置き parity テストで縛る判断は妥当（「列の配置の定数」を共有する案はアプリの書き換えが要るので採らない）。N-r9-10 r8 の指摘は壊れていない。
