@@ -10,9 +10,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "CPU使用率が80%を超えています"
           description: "CPU使用率: {{ $value | printf \"%.1f\" }}%（5分間平均）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highcpuusage"
 
       # メモリ使用率が85%を超えた場合
       - alert: HighMemoryUsage
@@ -20,9 +22,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "メモリ使用率が85%を超えています"
           description: "メモリ使用率: {{ $value | printf \"%.1f\" }}%"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highmemoryusage"
 
       # ディスク使用率が80%を超えた場合
       - alert: HighDiskUsage
@@ -30,9 +34,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "ディスク使用率が80%を超えています"
           description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highdiskusage"
 
       # ディスク使用率が90%を超えた場合（即時対応レベル）
       - alert: CriticalDiskUsage
@@ -40,9 +46,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "ディスク使用率が90%を超えています（{{ $labels.instance }}）"
           description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%（instance={{ $labels.instance }}）。即時対応が必要です。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#criticaldiskusage"
 
   - name: application_alerts
     rules:
@@ -52,9 +60,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "{{ $labels.job }}がダウンしています"
           description: "Exporterからの応答がありません。即時確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#servicedown"
 
       # FastAPI バックエンド 5xxエラーレート（tokens.yml: backend_5xx_per_1m=5）
       # backend/app/metrics.py が出力する http_requests_total を使用
@@ -63,9 +73,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: page
         annotations:
           summary: "バックエンド 5xxエラーが急増しています"
           description: "5xxエラーが 1分間で {{ $value | printf \"%.1f\" }} req/s を超えています（閾値: 5 req/s）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhigherrorrate"
 
       # FastAPI バックエンド P99 レイテンシ（tokens.yml: backend_p99_latency_sec=2.0）
       - alert: BackendHighLatency
@@ -73,9 +85,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "バックエンド P99 レイテンシが高い"
           description: "P99 レスポンスタイムが {{ $value | printf \"%.2f\" }}s を超えています（閾値: 2.0s）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhighlatency"
 
       # FastAPI バックエンドの同時処理中リクエスト数（workers=1 前提）
       - alert: BackendWorkerSaturated
@@ -83,9 +97,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "バックエンド worker が飽和し始めています"
           description: "同時処理中リクエスト数が 1 を超えています。workers=1 運用では待ち行列が発生している可能性があります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendworkersaturated"
 
       # SSE 接続数が多いと worker 余力の確認が必要になる
       - alert: BackendSseConnectionsHigh
@@ -93,9 +109,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "バックエンド SSE 接続数が多い"
           description: "SSE 接続数が 8 を超えています。SSE は worker を占有しない一方で、接続とメモリを消費します。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendsseconnectionshigh"
 
   - name: f2_cleanup
     rules:
@@ -104,17 +122,21 @@ groups:
         for: 1h
         labels:
           severity: critical
+          tier: ticket
         annotations:
           summary: "F2掃除係の黒板が8日以上更新なし(app-vps)"
           description: "f2-cleanup.shが8日以上完全成功していない。cron・スクリプト・textfile配線を確認。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupstale"
       - alert: F2CleanupAbsent
         expr: absent(f2_cleanup_last_success_timestamp{instance="app-vps"})
         for: 24h
         labels:
           severity: critical
+          tier: ticket
         annotations:
           summary: "F2掃除係の黒板メトリクスが消失(app-vps)"
           description: "黒板ファイルまたはtextfile配線の断線疑い。node_exporter設定を確認。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupabsent"
 
   - name: uptime_kuma
     rules:
@@ -124,9 +146,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "見張り {{ $labels.monitor_name }} が失敗しています"
           description: "Uptime Kuma の見張り {{ $labels.monitor_name }} が 2 分以上失敗しています"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#kumamonitordown"
 
       # 証明書の期限が近い
       - alert: CertExpiringSoon
@@ -134,9 +158,11 @@ groups:
         for: 1h
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "{{ $labels.monitor_name }} の証明書の期限が近づいています"
           description: "残り {{ $value }} 日です（14 日未満）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certexpiringsoon"
 
       # 証明書が無効
       - alert: CertInvalid
@@ -144,6 +170,8 @@ groups:
         for: 10m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "{{ $labels.monitor_name }} の証明書が無効です"
           description: "Uptime Kuma が証明書を無効と判定しています"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certinvalid"
