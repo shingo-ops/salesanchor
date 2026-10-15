@@ -25,6 +25,7 @@ export class ApiError extends Error {
 
 import { auth } from "./firebase";
 import i18n from "../i18n";
+import { getClientId } from "./realtime/clientId";
 
 const API_BASE = "/api/v1";
 
@@ -58,6 +59,7 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
+    "X-Client-Id": getClientId(),
   };
 }
 

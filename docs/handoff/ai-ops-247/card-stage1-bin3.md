@@ -246,6 +246,12 @@ SSH は制限付き鍵で書けないため無制限鍵 `~/.ssh/manual-only/id_e
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+（記入済み 2026-10-15 Sonnet）
+- 5-1: page 9・ticket 11・計 20。5-2: `OK: Prometheus 14 rules, Loki 6 rules, runbook 20 sections`。5-3: 4 通りとも exit 1。
+- 5-4: promtool check rules は SUCCESS 14 rules、test rules は SUCCESS。tier を壊した版では FAILED（空振りでない）。amtool check-config は SUCCESS。colima では /tmp の -v が効かないため、壊した版は docker create → docker cp → docker start -a で実行した。
+- 5-5: lokitool v3.7.2（darwin-arm64）の rules check は rc=0。CI に固定する linux-amd64 zip の sha256 は 572fe8adfc919a12a02a6c9f5b0509a7cd1071156d524777fe73428bc0fcbffc、zip の中の実行ファイル名は lokitool-linux-amd64。
+- 5-6: 追加 40 行・削除 0 行。5-7: validate_tokens.py は exit 0・不一致 0。5-9: §3 の 7 ファイル。
+- 単体試験の書式の出典: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+- 生出力: /tmp/CC報告ファイル/ai-ops-stage1-bin3/
 
 END OF CARD

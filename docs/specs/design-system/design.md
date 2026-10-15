@@ -2398,7 +2398,7 @@ AY-2 の方針（PO 回答 2026-10-09「y」。設計者の提示案: 一般フ�
 |---|---|---|
 | AY-2a | 種類 karte・search・schedule・composer を TextFieldControl に登録し、該当 33 件（G04 22・G38 1・G39 1・G32 1・G08 6・G15 2）を移管 | 変化0（実測で差分0を判定） |
 | AY-2b 以降 | 一般（G01・G03・G05 のフォーム、G02 等のブラウザ既定、inline style の組）を領域ごとに標準へ。ログイン（G11）は `.form-group input` の撤去と同じ便で種類として登録（祖先規則 `.login-card .form-group input` (0,2,1) が種類 (0,2,0) より強く、撤去前は移管の効果が無いため） | 変化あり（前後表） |
-| 保留 | 商品編集 ProductEditPage.tsx 14（G06）。pre-commit の eslint 既存警告で止まる ProductMasterDrawer.tsx 7（警告63）と SourceRawPane.tsx 1（警告11）は同ファイルの i18n・警告解消と同時 | 不変 |
+| 保留 | 保留なし（商品編集 14 は AY-2z で種類 product-edit へ移管。ProductMasterDrawer.tsx 7 と SourceRawPane.tsx 1 は AY-2y で i18n 化と同時に移管済み） | 不変 |
 
 報酬（CommissionPanel.tsx）の保留は select 1件（§AW、表の overflow）だけで、同ファイルに生 input は無い（ay2-hold.txt）。一行入力では報酬関連の保留を設けない。
 
@@ -2569,7 +2569,7 @@ AY-2c: PR #4081 merge afa02b990cb9b371a5cadc1ab4ba881c88e6bf3a（2026-10-09T11:5
 mode: handoff。§AY 追補の便分割「AY-2b 以降」のうち「G02 等のブラウザ既定 → 標準」の第1便（領域: 登録画面）。PO 方針回答（2026-10-09「y」: 一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
 
 現在地（origin/main 70f607abf、frontend は f0d710185 と差分0。証跡は本便で evidence-20260910/ に保存する ay2d-*）:
-- ページ側の生 text 系 input 135（ay0-input-inventory.cjs）。当たる規則の集合で32グループ（ay2d-groups.md、全件 ay2d-rows.tsv）。保留22（ProductEditPage 14・ProductMasterDrawer 7・SourceRawPane 1）を除く113のうち、規則なし104・規則あり9。領域別は登録画面45、super-admin 17、請求書作成7、見積作成7、在庫6、他（ay2d-areas.md）。
+- ページ側の生 text 系 input 135（ay0-input-inventory.cjs）。当たる規則の集合で32グループ（ay2d-groups.md、全件 ay2d-rows.tsv）。保留22（ProductEditPage 14・ProductMasterDrawer 7・SourceRawPane 1。AY-2y で後2者を移管し、残りは14）を除く113のうち、規則なし104・規則あり9。領域別は登録画面45、super-admin 17、請求書作成7、見積作成7、在庫6、他（ay2d-areas.md）。
 - 登録画面 45 件（frontend/src/pages/register/ の RegisterPage.tsx・RegisterAddressPage.tsx・RegisterChangeBillingPage.tsx・CountryCombobox.tsx）: 全件 className="input"。`.input` を含む CSS 規則は全 CSS で0件、pages/register に CSS ファイル・CSS import は0（ay2d-register-css-grep.txt）。見た目の出所は `*` リセット（index.css:419: margin 0・padding 0・box-sizing border-box）とブラウザ既定だけ。tel 4件だけ inline style `{ flex: 1 }`（配置。電話の国番号と並ぶ行）。disabled・ref・onKeyDown・ui-allow は0。eslint 警告0。
 - 実測（ay2d-visual.md、fixture）: 現状はブラウザ既定の素の入力（padding 0、枠 2px inset、角 0、Arial 13.33px、高さ約19px、幅は内容なり約149px、focus はブラウザの outline）。標準にすると padding 8px 12px、枠 1px solid var(--border)、角 6px、アプリ書体 14.4px、高さ約40px（幅375で44px）、幅は親の100%、focus は accent 枠＋リング。
 - 試験: class `input` を参照する試験0。tests-e2e/register-form-ux.spec.ts は label 内の input と `input[type=email|tel]` で探す（class・style 非依存）。
@@ -4134,3 +4134,32 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - invalid の外観は variant="standard" で保証する。variant が standard 以外のときは、用途別の規則（FormField.css の `.comp-field__input.comp-input--*`）が §5 より後ろにあるため、非 focus 時は variant の border-color が勝つ（focus 時だけ danger）。横展開時は variant ごとに設計する。
 - 実測（390/1280 × ja/en × ライト/ダーク、通常・focus・エラー）: 文字 13.6→14.4px、高さ 1280px で 39.75→39.61px・390px で 39.75→44px、focus は outline 2px → box-shadow 3px のリング、エラー枠は #b91c1c（rgb(185, 28, 28)）→ --danger（ライト rgb(229, 62, 62)、ダークは前後とも rgb(248, 113, 113)）。DOM 属性（class 以外）は差分 0、invalid 属性は出ない、ドロワー本文の横 overflow は前後とも 0。数値は docs/handoff/design-system-recon/evidence-20260910/ay2x-acceptance.md。
 - 横展開はしない: Select.tsx・Textarea.tsx の invalid、checkbox、ボタンは別便。
+
+#### AY-2x 本番反映記録（2026-10-14）
+
+- PR #4279 merge c1fc79f12（14:06:17Z）。deploy 38577549205 success（14:09:05Z）。
+- 本番 CSS index-BGBdy_e3.css に invalid の規則があり、`.dist-input` は 0 件。app は HTTP 200、/api/health は HTTP 200。
+- 出典 /tmp/CC報告ファイル/ssot-ay2x/prod/checks.txt。
+
+#### AY-2y 商品マスタ引き出し・原文欄の i18n 化と金型移管（2026-10-15）
+
+- PO 決定: 2026-10-15「y」。Fable 設計審査 r2 APPROVE（/tmp/CC報告ファイル/ssot-ay2y/design-review-r2.md）。
+- 設計: docs/handoff/ay2y-analysis-review-i18n/design.md（recon.md 併置）。実測: docs/handoff/design-system-recon/evidence-20260910/ay2y-acceptance.md。
+- 変更: frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx と SourceRawPane.tsx の全文言を t() 化（キーは tcgAnalysisReview.productMasterDrawer.*・sourceRawPane.*）。入力は TextFieldControl size sm、複数行は TextareaControl sm、ボタンは Button md（原文欄は sm）。閉じるは文字「×」から金型の X アイコンへ。eslint 警告は 74 から 0。
+- 原文欄の検索行は2段（ラベル、続いて入力欄とボタン）にした。金型のボタンが広くなり、1行のままだと390px で横にはみ出したため。
+- 日本語の文言は変更前と1文字も違わない（実測）。保留は ProductEditPage 14 のみ。
+
+#### AY-2y 本番反映記録（2026-10-15）
+
+- PR #4284 merge 4c9d037ef（20:28:06Z）。deploy 38632319876 success（20:31:00Z）。
+- 本番 JS index-BZTUp62l.js に productMasterDrawer キー 59 件。本番 CSS index-oCYK021p.css で `.pmd-actions button{` は 0 件。app は HTTP 200、/api/health は HTTP 200。
+- 出典 /tmp/CC報告ファイル/ssot-ay2y/prod/checks.txt。
+
+#### AY-2z 商品編集ページの入力14欄を種類 product-edit へ（2026-10-15）
+
+- 目的: 商品編集ページ（/admin/products/new・/admin/products/:id/edit）の生 input 14件を TextFieldControl の種類 product-edit に移し、保留を 0 にする。見た目は変えない。
+- 根拠: frontend/src/company-forms.css:210 の旧コメント「入力枠が薄くて見えない問題の解消（--border → --border-strong で輪郭を明確に）」。2026-10-05 の PO 方針「③商品編集9か所は『枠が薄い』問題があるため保留して別に確認」（上の AY-2a の根拠節）。
+- PO 決定: 2026-10-15「Y」（質問「今の濃い枠を『商品編集用の見た目』として共通部品に登録したうえで移す。見た目は今のまま」への回答）。Fable 設計審査 APPROVE（/tmp/CC報告ファイル/ssot-ay2z/design-review.md）。
+- 設計: docs/handoff/ay2z-product-edit-inputs/design.md（recon.md 併置）。
+- 変更: frontend/src/components/TextField.tsx の `TextFieldVariant` に `"product-edit"`。frontend/src/components/FormField.css に `.comp-field__input.comp-input--product-edit`（と `:focus`）。frontend/src/company-forms.css から input 専用の3規則を削除（詳細度 (0,4,1)/(0,5,1) が種類より強いため同じ便で撤去）。ProductEditPage.tsx の input 14件を `<TextFieldControl variant="product-edit"`。試験と story を追加。
+- 実測（390/1280 × ja/en × ライト/ダーク × 通常・focus・hover × 25要素）: computed style・rect・class 以外の DOM 属性の差は 600 組で 0。date 欄の font-family は monospace で前後同じ。数値は docs/handoff/design-system-recon/evidence-20260910/ay2z-acceptance.md。

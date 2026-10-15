@@ -1584,6 +1584,9 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     { id: 3, user_id: 13, role_name: "CS", status: "active", surname_jp: "鈴木", given_name_jp: "一郎" },
     { id: 4, user_id: null, role_name: "営業", status: "active", surname_jp: "高橋", given_name_jp: "次郎" },
     { id: 5, user_id: 15, role_name: "営業", status: "inactive", surname_jp: "田中", given_name_jp: "三郎" },
+    // 第11便（PO 決定 2026-10-15）: 本番の役割名は「リーダー」ではなく「マネージャー」だった。
+    // マネージャーも候補に含める（実機で確認した事実にもとづく）。
+    { id: 6, user_id: 16, role_name: "マネージャー", status: "active", surname_jp: "渡辺", given_name_jp: "四郎" },
   ];
 
   test("スマホ: カルテの帯に戻る矢印・顔写真・顧客名が並び、高さ56px・矢印44px以上", async ({ page }, testInfo) => {
@@ -1658,7 +1661,7 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     // eslint-disable-next-line local/no-japanese-literal -- 既存キー common.pleaseSelect の出力確認
     const nonPlaceholder = optionLabels.filter((label) => label !== "選択してください");
     // eslint-disable-next-line local/no-japanese-literal -- 期待値は仮データの氏名
-    expect(nonPlaceholder.sort()).toEqual(["佐藤 花子", "山田 太郎"].sort());
+    expect(nonPlaceholder.sort()).toEqual(["佐藤 花子", "山田 太郎", "渡辺 四郎"].sort());
   });
 
   test("スマホ: 確定・閉じるが横並びで、確定がネイビー（--accent）・閉じるがグレーであること", async ({ page }, testInfo) => {
@@ -1765,6 +1768,58 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     // ja.json: leads.statusCode.negotiating = "商談中"）
     // eslint-disable-next-line local/no-japanese-literal -- 既存キーの出力確認
     await expect(stageBadge(page)).toHaveText("商談中");
+  });
+
+  test("スマホ: ポップアップが画面の中央に出て、左右に余白がある（PO 決定・2026-10-15）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithLeadStatusAndStaff(page, STAFF_SALES_LEADER_MIX);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+    await convertBtn(page).click();
+
+    const dialog = convertDialog(page);
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box, "ポップアップの矩形が取れない").not.toBeNull();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+
+    // 画面の中央: ポップアップの中心と画面の中心の差が小さいこと
+    const dialogCenterY = box!.y + box!.height / 2;
+    const viewportCenterY = viewport!.height / 2;
+    // 左右に余白があること（下から出る帯のときは全幅＝余白0だった）
+    const leftGap = box!.x;
+    const rightGap = viewport!.width - (box!.x + box!.width);
+
+    await testInfo.attach("modal-center", {
+      body: JSON.stringify({ box, viewport, dialogCenterY, viewportCenterY, leftGap, rightGap }, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(Math.abs(dialogCenterY - viewportCenterY), "ポップアップが縦の中央にない").toBeLessThanOrEqual(2);
+    expect(leftGap, "左に余白がない").toBeGreaterThan(0);
+    expect(rightGap, "右に余白がない").toBeGreaterThan(0);
+    expect(Math.abs(leftGap - rightGap), "左右の余白が揃っていない").toBeLessThanOrEqual(1);
+  });
+
+  test("スマホ: カルテの帯が画面の幅いっぱいにある（会話画面と同じ見え方）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const row = page.locator(".karte-close-row");
+    const box = await row.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box, "帯の矩形が取れない").not.toBeNull();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+    // 親が中央寄せのため帯が中央に寄っていた（2026-10-15 実機で発見）。
+    expect(Math.abs(box!.x - 0), "帯が左端から始まっていない").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.width - viewport!.width), "帯が画面の幅いっぱいでない").toBeLessThanOrEqual(1);
   });
 
   test("PC・タブレット: カルテの帯は従来どおりで、顔写真・顧客名の重複表示が出ない", async ({ page }, testInfo) => {

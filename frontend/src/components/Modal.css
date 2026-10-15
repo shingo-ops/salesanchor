@@ -95,16 +95,12 @@
    ---------------------------------------------------------------- */
 
 @media (max-width: 767px) { /* = --breakpoint-mobile-max */
-  .comp-modal-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-
+  /* 2026-10-15（PO 決定）: スマホでもポップアップを**画面の中央**に出す。
+     それまでは下から出る帯（下寄せ・全幅・下の角丸なし）に上書きしていたが、
+     PO 指示「ポップアップを中央に表示」に合わせ、既定（中央寄せ・左右に余白・
+     大きさは size 修飾子の max-width）に戻す。高さの上限だけはスマホ向けに残す。
+     影響範囲: Modal / ConfirmModal を使う画面すべて（93ファイル）。 */
   .comp-modal-dialog {
-    width: 100%;
-    max-width: 100% !important;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
     max-height: 90vh;
   }
 }

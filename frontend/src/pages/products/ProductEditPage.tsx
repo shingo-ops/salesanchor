@@ -18,6 +18,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product, FormState, AttrOption } from "./products.types";
 import { emptyForm, normalizeMaterial } from "./products.types";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function ProductEditPage() {
   const { t } = useTranslation();
@@ -212,7 +213,7 @@ export default function ProductEditPage() {
           >
             <div className="form-group form-group-full">
               <label>{t("products.nameJa")} *</label>
-              <input
+              <TextFieldControl variant="product-edit"
                 required
                 value={form.name_ja}
                 onChange={(e) => setForm({ ...form, name_ja: e.target.value })}
@@ -221,7 +222,7 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group form-group-full">
               <label>{t("products.nameEn")}</label>
-              <input
+              <TextFieldControl variant="product-edit"
                 value={form.name_en}
                 onChange={(e) => setForm({ ...form, name_en: e.target.value })}
               />
@@ -248,7 +249,7 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.field.mark")}</label>
-              <input value={form.mark} onChange={(e) => setForm({ ...form, mark: e.target.value })} />
+              <TextFieldControl variant="product-edit" value={form.mark} onChange={(e) => setForm({ ...form, mark: e.target.value })} />
             </div>
             <div className="form-group">
               <label>{t("products.field.setType")}</label>
@@ -259,7 +260,7 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.masterCol.releaseDate")}</label>
-              <input type="date" value={form.release_date} onChange={(e) => setForm({ ...form, release_date: e.target.value })} />
+              <TextFieldControl variant="product-edit" type="date" value={form.release_date} onChange={(e) => setForm({ ...form, release_date: e.target.value })} />
             </div>
 
             {/* TCG */}
@@ -267,11 +268,11 @@ export default function ProductEditPage() {
               <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>TCG</legend>
               <div className="form-group">
                 <label>{t("products.field.cardNumber")}</label>
-                <input maxLength={50} value={form.card_number} onChange={(e) => setForm({ ...form, card_number: e.target.value })} />
+                <TextFieldControl variant="product-edit" maxLength={50} value={form.card_number} onChange={(e) => setForm({ ...form, card_number: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.field.expansionCode")}</label>
-                <input maxLength={20} value={form.expansion_code} onChange={(e) => setForm({ ...form, expansion_code: e.target.value })} />
+                <TextFieldControl variant="product-edit" maxLength={20} value={form.expansion_code} onChange={(e) => setForm({ ...form, expansion_code: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.field.rarity")}</label>
@@ -291,11 +292,11 @@ export default function ProductEditPage() {
 
             <div className="form-group">
               <label>{t("products.msrp")}</label>
-              <input type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
+              <TextFieldControl variant="product-edit" type="number" min="0" step="0.01" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
             </div>
             <div className="form-group form-group-full">
               <label>{t("products.field.imageUrl")}</label>
-              <input type="url" maxLength={500} placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+              <TextFieldControl variant="product-edit" type="url" maxLength={500} placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
             </div>
             <div className="form-group">
               <label>{t("products.field.publishStatus")}</label>
@@ -314,27 +315,27 @@ export default function ProductEditPage() {
               <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.master.sectionBox")}</legend>
               <div className="form-group">
                 <label>{t("products.masterCol.boxesPerCase")}</label>
-                <input type="number" min="0" value={form.boxes_per_case} onChange={(e) => setForm({ ...form, boxes_per_case: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" value={form.boxes_per_case} onChange={(e) => setForm({ ...form, boxes_per_case: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.masterCol.packsPerBox")}</label>
-                <input type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.master.caseWeightKg")}</label>
-                <input type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.master.boxWeightKg")}</label>
-                <input type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.master.volumeWeight")}</label>
-                <input type="number" min="0" step="0.001" value={form.volume_weight} onChange={(e) => setForm({ ...form, volume_weight: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.volume_weight} onChange={(e) => setForm({ ...form, volume_weight: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>{t("products.master.moq")}</label>
-                <input type="number" min="0" value={form.moq} onChange={(e) => setForm({ ...form, moq: e.target.value })} />
+                <TextFieldControl variant="product-edit" type="number" min="0" value={form.moq} onChange={(e) => setForm({ ...form, moq: e.target.value })} />
               </div>
             </fieldset>
 

@@ -327,6 +327,70 @@ def test_d():
     record("(d) pending に SM- でない文があれば recover は拒否・不変", rc == 1 and snapshot() == before, err)
 
 
+# ---------- (f) 台帳の sha256 形式（add / env-add / env-remove） ----------
+def test_f():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("sm_k1_k3_under_test", K1K3)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    d = os.path.join(TMP, "f")
+    out_dir = os.path.join(d, "outside")
+    os.makedirs(out_dir)
+    base = {"allow": ["base one"], "environment": ["env one", "env two"], "soft_deny": ["s1"]}
+
+    def row(kind, result, change):
+        return ["2026-10-15", kind, "PO", result, change, "r", "-", "-", "-", "-", "-"]
+
+    text = "Dummy allow text 日本語 with no newline at end"
+    h = sha(text)
+    with open(os.path.join(out_dir, "allow-text-%s.txt" % h), "wb") as f:
+        f.write(text.encode("utf-8"))
+    mode, n = mod.replay(base, [row("結果", "適用（PO）", "add: sha256=%s 先頭20語「Dummy」" % h)], out_dir)
+    record("(f) T1 add: sha256= は外のファイルの全文を allow の末尾に足す",
+           mode["allow"] == ["base one", text] and n == 1)
+    try:
+        mod.replay(base, [row("結果", "適用（PO）", "add: sha256=%s" % sha("no such"))], out_dir)
+        record("(f) T2 外のファイルが無いと ValueError", False)
+    except ValueError as exc:
+        record("(f) T2 外のファイルが無いと ValueError", "外のファイルが無い" in str(exc))
+    # K1 も「エラー」になる（試験用 HOME の下には外のファイルが無い）
+    write_json(os.path.join(d, "baseline.json"), {"autoMode": base})
+    write_json(os.path.join(d, "settings.json"), {"autoMode": base})
+    write(os.path.join(d, "ledger.md"), ledger_text([("結果", "適用（PO）", "add: sha256=%s" % sha("no such"))]))
+    rc, out, _ = run(K1K3, "--k1", "--baseline", os.path.join(d, "baseline.json"),
+                     "--ledger", os.path.join(d, "ledger.md"), "--settings", os.path.join(d, "settings.json"))
+    record("(f) T2 K1 は「エラー」(exit 1)", rc == 1 and json.loads(out)["k1"] == "エラー", out)
+    h2 = sha("other content")
+    with open(os.path.join(out_dir, "allow-text-%s.txt" % h2), "wb") as f:
+        f.write(b"tampered content")
+    try:
+        mod.replay(base, [row("結果", "適用（PO）", "add: sha256=%s" % h2)], out_dir)
+        record("(f) T3 sha 不一致だと ValueError", False)
+    except ValueError as exc:
+        record("(f) T3 sha 不一致だと ValueError", "一致しない" in str(exc))
+    env_text = "Dummy env text"
+    eh = sha(env_text)
+    with open(os.path.join(out_dir, "env-text-%s.txt" % eh), "wb") as f:
+        f.write(env_text.encode("utf-8"))
+    mode, _ = mod.replay(base, [row("結果", "適用（PO）", "env-add: sha256=%s" % eh)], out_dir)
+    record("(f) T4 env-add: は environment の末尾に足す（allow は変えない）",
+           mode["environment"] == ["env one", "env two", env_text] and mode["allow"] == ["base one"])
+    mode, _ = mod.replay(base, [row("結果", "適用（PO）", "env-remove: sha256=%s" % sha("env one"))], out_dir)
+    record("(f) T4 env-remove: は environment の要素を外す", mode["environment"] == ["env two"])
+    try:
+        mod.replay(base, [row("結果", "適用（PO）", "env-remove: sha256=%s" % sha("nothing"))], out_dir)
+        record("(f) T4 env-remove: 対象が無いと ValueError", False)
+    except ValueError:
+        record("(f) T4 env-remove: 対象が無いと ValueError", True)
+    mode, _ = mod.replay(base, [row("結果", "適用", "add: plain full text sentence")], out_dir)
+    record("(f) T5 ふつうの add: は全文が足される", mode["allow"] == ["base one", "plain full text sentence"])
+    mode, n = mod.replay(base, [row("予定", "未適用", "add: sha256=%s" % h),
+                                row("予定", "適用", "env-add: sha256=%s" % eh)], out_dir)
+    record("(f) T6 種別=予定の sha 形式の行は当てない", mode == base and n == 0)
+    mode, _ = mod.replay({"allow": ["a"]}, [row("結果", "適用", "add: x")], out_dir)
+    record("(f) 基準に environment が無ければ足さない", "environment" not in mode)
+
+
 # ---------- (e) py_compile ----------
 def test_e():
     for path in TOOLS + (os.path.abspath(__file__),):
@@ -338,7 +402,7 @@ def test_e():
 
 def main():
     try:
-        for fn in (test_a, test_b, test_c, test_d, test_e):
+        for fn in (test_a, test_b, test_c, test_d, test_f, test_e):
             fn()
     finally:
         shutil.rmtree(TMP, ignore_errors=True)

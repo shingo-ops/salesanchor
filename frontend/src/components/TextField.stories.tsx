@@ -129,3 +129,8 @@ export const ControlLogin: Story = {
   name: 'TextFieldControl login variant',
   render: () => <TextFieldControl variant="login" type="email" placeholder="Login email" aria-label="Login email" />,
 }
+
+export const ControlProductEdit: Story = {
+  name: 'TextFieldControl product-edit variant',
+  render: () => <TextFieldControl variant="product-edit" placeholder="Product edit field" aria-label="Product edit field" />,
+}

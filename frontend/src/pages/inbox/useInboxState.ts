@@ -182,6 +182,23 @@ export interface UseInboxStateReturn {
 // フック本体
 // ---------------------------------------------------------------------------
 
+/**
+ * 商談化で「担当の営業」に選べる役割の名前（受信箱 第11便・PO 決定 2026-10-15）。
+ *
+ * 役割はテナントごとの `{schema}.roles.name`（日本語の名前）で管理されており、
+ * 初期値は `migrations/021_seed_roles_and_role_permissions.sql:41-48`
+ * （システム管理者 / リーダー / 営業 / CS / 仕入れ担当 / 発送担当）。
+ * ただし**実際の登録名はテナントで異なる**: 本番（2026-10-15 実機で確認）は
+ * オーナー / システム管理者 / マネージャー / 仕入れ / 発送 / CS / 営業 で、
+ * 「リーダー」が無く「マネージャー」が使われていた。
+ *
+ * PO 決定: 営業に加えて**マネージャーも候補に含める**。
+ * 「リーダー」は初期値に存在し他テナントで使われている可能性があるため**残す**
+ * （消すとその環境で候補が減るため）。
+ */
+// eslint-disable-next-line local/no-japanese-literal -- DB value（roles.name の実値）
+const CONVERT_ASSIGNEE_ROLE_NAMES = ["営業", "マネージャー", "リーダー"];
+
 export function useInboxState(): UseInboxStateReturn {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -830,8 +847,8 @@ export function useInboxState(): UseInboxStateReturn {
         // 頼ると、サーバ側の絞り込みが効かない経路で退職者が候補に出てしまうため。
         // 値は migrations/019_create_staff_tables.sql:49-50 の
         // CHECK (status IN ('active','inactive','pending')) で確認済み。
-        // eslint-disable-next-line local/no-japanese-literal -- DB value（migrations/021_seed_roles_and_role_permissions.sql の役割名）
-        .filter((s) => s.user_id != null && s.status === "active" && (s.role_name === "営業" || s.role_name === "リーダー"))
+        // 候補の役割は CONVERT_ASSIGNEE_ROLE_NAMES（ファイル上部）にまとめている
+        .filter((s) => s.user_id != null && s.status === "active" && CONVERT_ASSIGNEE_ROLE_NAMES.includes(s.role_name ?? ""))
         .map((s) => ({ value: String(s.user_id), label: `${s.surname_jp} ${s.given_name_jp}` }));
       setConvertAssigneeOptions(eligible);
     } catch (e) {
