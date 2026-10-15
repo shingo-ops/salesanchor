@@ -178,3 +178,72 @@ export const EmptyState: Story = {
     />
   ),
 };
+
+// ── 便1: 見出し固定・縮小・カード表示 ───────────────────────────────────────
+interface WideRow {
+  id: string
+  name: string
+  price: number
+  a: string
+  b: string
+  c: string
+  d: string
+}
+
+const WIDE_ROWS: WideRow[] = Array.from({ length: 30 }, (_, i) => ({
+  id: String(i + 1),
+  name: `商品サンプル ${i + 1}`,
+  price: 1000 * (i + 1),
+  a: '横に長い列のサンプル文字列',
+  b: '横に長い列のサンプル文字列',
+  c: '横に長い列のサンプル文字列',
+  d: '横に長い列のサンプル文字列',
+}))
+
+const WIDE_COLUMNS: DataTableColumn<WideRow>[] = [
+  { key: 'name', header: '商品名', width: '200px', stickyLeft: true, mobileOrder: 1 },
+  { key: 'price', header: '価格', width: '120px', align: 'right', mobileOrder: 2 },
+  { key: 'a', header: '列A', width: '240px' },
+  { key: 'b', header: '列B', width: '240px', mobileHidden: true },
+  { key: 'c', header: '列C', width: '240px', mobileLabel: 'C' },
+  { key: 'd', header: '列D', width: '240px' },
+]
+
+/** 見出し固定＋先頭列固定（縦横にスクロールしても見出しと商品名が残る） */
+export const StickyHeader: Story = {
+  render: () => (
+    <DataTable<WideRow>
+      columns={WIDE_COLUMNS}
+      data={WIDE_ROWS}
+      rowKey={(r) => r.id}
+      stickyHeader
+      selectable
+    />
+  ),
+}
+
+/** 枠の幅に合わせて表を縮める（768px 以上） */
+export const FitToWidth: Story = {
+  render: () => (
+    <DataTable<WideRow>
+      columns={WIDE_COLUMNS}
+      data={WIDE_ROWS}
+      rowKey={(r) => r.id}
+      stickyHeader
+      fitToWidth
+    />
+  ),
+}
+
+/** スマホ幅（767px 以下）でカード表示。Storybook の画面幅を狭めて確認する */
+export const MobileCards: Story = {
+  render: () => (
+    <DataTable<WideRow>
+      columns={WIDE_COLUMNS}
+      data={WIDE_ROWS.slice(0, 5)}
+      rowKey={(r) => r.id}
+      mobileCards
+      rowTestId={(r) => `row-${r.id}`}
+    />
+  ),
+}
