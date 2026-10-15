@@ -40,6 +40,13 @@ mjw_config() {
   : "${MJW_REPEAT_SECONDS:=86400}"
   : "${MJW_LAUNCHCTL:=launchctl}"
   : "${MJW_CURL:=curl}"
+  : "${MJW_DISK_PATH:=/System/Volumes/Data}"
+  : "${MJW_DISK_LOW_GIB:=20}"
+  : "${MJW_DISK_OK_GIB:=25}"
+  : "${MJW_DJ_LABEL:=jp.salesanchor.disk-janitor}"
+  : "${MJW_DISK_KICK_WAIT:=1500}"
+  : "${MJW_DISK_KICK_COOLDOWN:=86400}"
+  : "${MJW_DF:=df}"
 }
 
 DRY_RUN=0
@@ -59,9 +66,12 @@ ST_BOOT=0
 ST_SEEN=0
 ST_DRUN=0
 ST_ERR=0
+ST_DKICK=0
+DISK_KICK=0
 C_SEEN=0   # 確定した既読位置
 C_DRUN=0
 C_ERR=0
+C_DKICK=0
 N_SEEN=0   # 今回の判定で得た候補
 N_DRUN=0
 N_ERR=0
@@ -171,6 +181,7 @@ mjw_judged() {
     colima-stale) [ "${AWAKE}" -eq 1 ] ;;
     # dj-stale は、起きていた回・起動が直近 04:00 より前・04:00+猶予以降、の 3 つが揃う回だけ判定する
     dj-stale) [ "${AWAKE}" -eq 1 ] && [ "${BOOT_SEC}" -lt "${LAST04}" ] && [ "${NOW}" -ge $(( LAST04 + MJW_DJ_GRACE )) ] ;;
+    disk-low) [ -n "${DISK_GIB}" ] ;;
     *) return 0 ;;
   esac
 }
@@ -185,6 +196,7 @@ mjw_text() { # 名前 → 固定文
     dj-lock-stale) printf '毎日の自動片付けの使用中の印（/tmp/disk-janitor.lock.d）が 2 時間以上残っています。自動片付けと Docker の自動停止が動けません' ;;
     colima-stopfail) printf 'Docker の自動停止が、停止に失敗しました' ;;
     colima-judge-fail) printf 'Docker の自動停止が、2 回続けて判定に失敗しました' ;;
+    disk-low) printf '空き容量が少ないままです（いま %s GiB。自動片付けを走らせた後も %s GiB 未満）' "${DISK_GIB:-?}" "${MJW_DISK_LOW_GIB}" ;;
     dj-err) printf '毎日の自動片付けが、道具の更新に失敗して実行しませんでした' ;;
     *) printf '%s' "$1" ;;
   esac
@@ -223,6 +235,7 @@ mjw_read_state() {
     ST_SEEN="$(mjw_num "$(mjw_st_get colima_seen)")"
     ST_DRUN="$(mjw_num "$(mjw_st_get colima_d_run)")"
     ST_ERR="$(mjw_num "$(mjw_st_get dj_err_seen)")"
+    ST_DKICK="$(mjw_num "$(mjw_st_get disk_kick)")"
     PROB="$(grep -v '^$' "${PROB_F}" 2>/dev/null || true)"
   else
     FIRST=1
@@ -231,6 +244,7 @@ mjw_read_state() {
     ST_SEEN=0
     ST_DRUN=0
     ST_ERR=0
+    ST_DKICK=0
     PROB=""
   fi
 }
@@ -243,6 +257,7 @@ mjw_write_state() {
     printf 'colima_seen=%s\n' "${C_SEEN}"
     printf 'colima_d_run=%s\n' "${C_DRUN}"
     printf 'dj_err_seen=%s\n' "${C_ERR}"
+    printf 'disk_kick=%s\n' "${C_DKICK}"
   } > "${STATE_F}.tmp" 2>/dev/null && mv -f -- "${STATE_F}.tmp" "${STATE_F}"
   printf '%s\n' "${PROB}" | grep -v '^$' > "${PROB_F}.tmp" 2>/dev/null
   mv -f -- "${PROB_F}.tmp" "${PROB_F}" 2>/dev/null || true
@@ -291,6 +306,14 @@ mjw_dj_parse() {
   if [ -n "${el}" ]; then DJ_END_LN="${el%%:*}"; fi
 }
 
+mjw_disk_parse() { # DISK_GIB に空き GiB（整数・切り捨て）。読めなければ空
+  local kb
+  DISK_GIB=""
+  kb="$("${MJW_DF}" -k "${MJW_DISK_PATH}" 2>/dev/null | awk 'NR==2{print $4}')"
+  case "${kb}" in ''|*[!0-9]*) return 0 ;; esac
+  DISK_GIB=$(( kb / 1048576 ))
+}
+
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 mjw_detect_states() {
   DETECTED=""
@@ -329,6 +352,20 @@ mjw_detect_states() {
   if [ -d "${MJW_DJ_LOCK}" ]; then
     mt="$(mjw_num "$(stat -f %m "${MJW_DJ_LOCK}" 2>/dev/null)")"
     if [ $(( NOW - mt )) -gt "${MJW_DJ_UNFINISHED}" ]; then list_add DETECTED dj-lock-stale; fi
+  fi
+  # disk-low（知らせる前に、片付けをその場で走らせる。改訂1）
+  mjw_disk_parse
+  DISK_KICK=0
+  if [ -n "${DISK_GIB}" ]; then
+    if [ -n "$(prob_time disk-low)" ]; then
+      [ "${DISK_GIB}" -lt "${MJW_DISK_OK_GIB}" ] && list_add DETECTED disk-low
+    elif [ "${DISK_GIB}" -lt "${MJW_DISK_LOW_GIB}" ]; then
+      if [ "${ST_DKICK}" -eq 0 ] || [ $(( NOW - ST_DKICK )) -ge "${MJW_DISK_KICK_COOLDOWN}" ]; then
+        DISK_KICK=1
+      elif [ $(( NOW - ST_DKICK )) -ge "${MJW_DISK_KICK_WAIT}" ]; then
+        list_add DETECTED disk-low
+      fi
+    fi
   fi
 }
 
@@ -447,14 +484,26 @@ mjw_main() {
 
   mjw_detect_states
   mjw_detect_events
-  C_SEEN="${ST_SEEN}"; C_DRUN="${ST_DRUN}"; C_ERR="${ST_ERR}"
+  C_SEEN="${ST_SEEN}"; C_DRUN="${ST_DRUN}"; C_ERR="${ST_ERR}"; C_DKICK="${ST_DKICK}"
   if [ "${FIRST}" -eq 1 ]; then mjw_commit_events; fi
   NEW_BOOT="${ST_BOOT}"
   mjw_classify
 
   if [ "${DRY_RUN}" -eq 1 ]; then
-    mjw_log dry-run - "$(mjw_csv "${DETECTED}")" "$(mjw_csv "${EV_LIST}")" "${AWAKE}"
+    dry_ev="${EV_LIST}"
+    if [ "${DISK_KICK}" -eq 1 ]; then dry_ev="${dry_ev:+${dry_ev}$'\n'}disk-kick"; fi
+    mjw_log dry-run - "$(mjw_csv "${DETECTED}")" "$(mjw_csv "${dry_ev}")" "${AWAKE}"
     exit 0
+  fi
+
+  # 空き不足 → 片付けをその場で走らせる（改訂1）
+  if [ "${DISK_KICK}" -eq 1 ]; then
+    if "${MJW_LAUNCHCTL}" kickstart "gui/$(id -u)/${MJW_DJ_LABEL}" >/dev/null 2>&1; then
+      any_sent=1; mjw_log_now disk-kick ok
+    else
+      any_sent=1; mjw_log_now disk-kick fail
+    fi
+    C_DKICK="${NOW}"
   fi
 
   # 起動後の点検
