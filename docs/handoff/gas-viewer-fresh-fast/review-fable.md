@@ -707,6 +707,18 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
 対象：r9 の書き直し（PO 決定 Q14「アプリの在庫表も同じ作りにする」で D4 をアプリ在庫表と同じ金型・共有部品にした。Q13=y で14列。ADR-1017→1019 の付け替え）。照合の基準は origin/main e1351e663。全文は /tmp/CC報告ファイル/viewer_r9/review_r9.txt（消えることがあるので要点をここに残す）。r7・r8 の記録はこのファイルに無い（design.md 冒頭の「審査」欄にある）。
 
 - B-r9-1：「アプリは英語タイトルでまとめない」は誤り。並びはサーバーが決め、inventory_offers.py:276-280 で英語タイトルでまとめてから並べる → D4 の並びを実物どおりに直した。
-- B-r9-2：アプリは status をそのまま出さず、区分（offer_type）に写して出す（inventory_offers.py:104・:113-115・:166、inventoryColumns.tsx:102-108）→ 作り置きに offer_type を足し（15キー）、アプリの予約の表示を Badge の金型に替える1行を段3に入れた。
+- B-r9-2：アプリは status をそのまま出さず、区分（offer_type）に写して出す（inventory_offers.py:104・:113-115・:171、inventoryColumns.tsx:102-108。r10 N-r10-1 で :166 を直した）→ 作り置きに offer_type を足し（15キー）、アプリの予約の表示を Badge の金型に替える1行を段3に入れた。
 - B-r9-3：parity テストが import する inventoryColumns.tsx の t() で辞書の検査が落ちる → 検査の起点を viewer の main.tsx からの import の集合だけにした。
 - N-r9-1 全体の CSS（index.css を読む・components.css は読まない）を D4 に書いた。N-r9-2 FRESH_WINDOW_HOURS（svc:212-213）で計画票0 ⑤を解決し、手元の24時間の絞り方を書いた。N-r9-3 13列の書き残し2か所を直した。N-r9-4 Q13 の6点に「Q14 で置き換え」の注記。N-r9-5 行のキー（受け取った位置の番号）と値が文字列であること。N-r9-6 列→比べる値の対応。N-r9-7 行番号2か所を直した。N-r9-8 inventory-table-unify の ADR-1017 を 1019 に直した。N-r9-9 列の定義は viewer に置き parity テストで縛る判断は妥当（「列の配置の定数」を共有する案はアプリの書き換えが要るので採らない）。N-r9-10 r8 の指摘は壊れていない。
+
+## r10（2026-10-15、Opus architect）— REVISE（Blocking 1、Non-blocking 8。全文 /tmp/CC報告ファイル/viewer_r9/review_r10.txt）
+
+- B-r10-1：空欄を末尾に置くのは mark・release_date・数の2列だけで、english_title など文字の列は '' として昇順の先頭に来る。Intl.Collator の numeric は PG と違う → 案A を採った（Intl.Collator('en')・numeric なし・'' は先頭）。本番 DB は en_US.utf8・provider c（/tmp/CC報告ファイル/viewer_r9/datcollate.txt）。glibc と ICU の差（記号・空白・大文字小文字）は既知の差として書き、Evaluator の合格をその差だけに絞った。案B（DB の並び順の番号を作り置きに持つ）は、文字の列が5つあり15キーと GAS との一致の検査が崩れるので採らない。英語名が空の行が先頭に来る見え方は PO に確かめる。
+- N-r10-1：:166 → :171。N-r9-5 の :173 は設計書に書き残しが無いことを grep で確かめた（正しくは :175。受入の価格の注記で :175 を使った）。
+- N-r10-2：移す先を tcg_distribution_svc.py に決め、_STATUS_TO_OFFER_TYPE も移す。既存テストを変えずに通ることを受入に足した。
+- N-r10-3：Badge にすると形・余白・高さが変わることを書き、アプリ側の vitest を受入に足した。
+- N-r10-4：fresh_window_hours は定数と == で比べる。GAS との一致は offer_type を除いた14キーで比べる。
+- N-r10-5：:174 の「14キー」を15キーに直した。
+- N-r10-6：辞書の検査の②は import をたどった結果で決まる（constants・hooks・lib など）。import type はたどらず、動的な import() はたどる。受入の言い方を揃えた。
+- N-r10-7：24時間の「今」は閲覧者の端末の時計と書いた。
+- N-r10-8：Evaluator の比べる条件（タブ・24時間オン・絞り込みなし・同じ1分）と、価格の丸めで同じ値の中の順が違いうることを書いた。
