@@ -7,7 +7,7 @@ mode: handoff
 
 親: [docs/specs/tenant-rls/README.md](../../specs/tenant-rls/README.md)
 **対象ADR**: ADR-1018（本テーマ・起案中）、ADR-145（手本）、ADR-072、ADR-131、ADR-135、ADR-136
-**recon**: [recon.md](recon.md)
+**recon**: [docs/handoff/s1-rls-permissions/recon.md](recon.md)
 **日付**: 2026-10-15
 **状態**: 設計案作成済み・設計審査済み（§10）。KGI は PO 承認済み（2026-10-15「y」）。実装未着手。
 
@@ -21,7 +21,7 @@ mode: handoff
 
 ## 2. 変更内容
 
-### 2-1. 新 migration `migrations/20261015_130000_add_permissions_rls.sql`
+### 2-1. 新 migration migrations/20261015_130000_add_permissions_rls.sql（新規）
 
 ```sql
 -- S1 段階①（ADR-1018）: public.permissions をアプリ接続から読み取り専用にする
@@ -50,7 +50,7 @@ CREATE POLICY permissions_operator_write ON public.permissions
 run_sql migrations/20261015_130000_add_permissions_rls.sql
 ```
 
-### 2-3. テスト `backend/tests/test_permissions_rls.py`（新規）
+### 2-3. テスト backend/tests/test_permissions_rls.py（新規）（新規）
 
 `backend/tests/test_countries_master.py:113-171` と同じ作りで、実 migration 適用後の DB に salesanchor_app で接続して確かめる。
 
@@ -84,7 +84,7 @@ run_sql migrations/20261015_130000_add_permissions_rls.sql
 
 | 基準 | 検証方法 |
 |---|---|
-| salesanchor_app で書き込めない | CI の `test_permissions_rls.py` が緑。本番で salesanchor_app として `BEGIN; UPDATE public.permissions SET display_order=display_order WHERE id=(SELECT min(id) FROM public.permissions); ROLLBACK;` が 0 行 |
+| salesanchor_app で書き込めない | CI の test_permissions_rls.py（新規） が緑。本番で salesanchor_app として `BEGIN; UPDATE public.permissions SET display_order=display_order WHERE id=(SELECT min(id) FROM public.permissions); ROLLBACK;` が 0 行 |
 | 読み取りは変わらない | 本番で salesanchor_app として `SELECT count(*)` が適用前と同じ（10/15 時点 123） |
 | RLS が本番で有効 | 本番 `pg_class` の relrowsecurity / relforcerowsecurity が t、`pg_policies` が 2 本 |
 | ログイン・権限画面が壊れない | 適用後に本番でログイン成功、ロール管理画面の権限一覧が表示、アプリログの permissions 関連エラーが適用前後で増えない |
@@ -129,6 +129,6 @@ run_sql migrations/20261015_130000_add_permissions_rls.sql
 
 ## 維持の仕組み
 
-- 守り手: `backend/tests/test_permissions_rls.py`（CI の pytest で salesanchor_app の書込拒否を毎回検証）
-- 守り手: migration-guard チェック 8（保護表への値書込を引き続きブロック）
+- 守り手: scripts/check-migration-value-writes.py（migration-guard チェック 8。保護表への値書込を引き続きブロック）
+- 守り手（実装時に新設）: backend/tests/test_permissions_rls.py（新規。CI の pytest で salesanchor_app の書込拒否を毎回検証）
 - migration は冪等で毎デプロイ再実行されるため、手作業で RLS を外しても次のデプロイで戻る。

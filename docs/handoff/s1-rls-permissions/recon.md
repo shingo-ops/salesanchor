@@ -54,7 +54,7 @@ Context7 が月間上限超過で使えず、公式ページを直接確認（�
 書込は jarvis（ADMIN）経路のみ:
 
 - 番号式 migration 002/004/006/008/010（INSERT）、067_down/069_down/079（DELETE）
-- `scripts/migrate_inventory_sprint8.py` / `sprint9.py`（run_py・ADMIN 接続）
+- `scripts/migrate_inventory_sprint8.py` / `scripts/migrate_inventory_sprint9.py`（run_py・ADMIN 接続）
 - テスト `backend/tests/test_permission_resolution_pg.py`（admin 接続）
 
 ## 5. 権限の再付与（表単位 REVOKE が効かない理由）
@@ -75,7 +75,7 @@ Context7 が月間上限超過で使えず、公式ページを直接確認（�
 
 - `backend/tests/test_rls_invariants.py` はダミー表。`backend/tests/rls_bootstrap.py` が実 migration を適用（002 は :15）。
 - 実表を salesanchor_app で読む手本: `backend/tests/test_countries_master.py:113-171`。
-- CI: `.github/workflows/test.yml`（:222, :224 env、:241 pytest、:250-251）、`migration-test.yml`、`migration-guard.yml`。
+- CI: `.github/workflows/test.yml`（:222, :224 env、:241 pytest、:250-251）、`.github/workflows/migration-test.yml`、`.github/workflows/migration-guard.yml`。
 
 ## 8. 障害：migration-guard チェック 8
 
