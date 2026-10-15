@@ -10,7 +10,7 @@ import asyncio
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
@@ -108,11 +108,18 @@ def test_v6_reanalysis_keeps_human_values_including_product_corrected_item(pg, m
     holder = Session(engine)  # 別の接続が同じ鍵を持つ間は、解析が待たずに打ち切られる
     try:
         holder.execute(text(decisions_svc._LOCK_SQL), {"key": decisions_svc.v102_analysis_lock_key(jobid)})
-        with Session(engine) as session:
-            session.execute(text("SET lock_timeout='200ms'"))
-            with pytest.raises(OperationalError) as caught:
-                analyzer.analyze_extraction_job(session, jobid)
-        assert getattr(caught.value.orig, "pgcode", None) == "55P03"
+        # 接続オプションで lock_timeout を持たせる（rollback されても消えない）
+        timed_engine = create_engine(
+            engine.url,
+            connect_args={"options": "-c lock_timeout=200ms -c statement_timeout=10s"},
+        )
+        try:
+            with Session(timed_engine) as session:
+                with pytest.raises(OperationalError) as caught:
+                    analyzer.analyze_extraction_job(session, jobid)
+            assert getattr(caught.value.orig, "pgcode", None) == "55P03"
+        finally:
+            timed_engine.dispose()
     finally:
         holder.rollback()
         holder.close()
