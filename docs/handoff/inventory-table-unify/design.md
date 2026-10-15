@@ -2,6 +2,7 @@
 
 状態: 設計審査済み r3 APPROVE（Opus 作成・Opus Architect 審査。同一 AI の自己審査）。
 根拠: [recon.md](recon.md)。審査 r1 の全文: /tmp/CC報告ファイル/app_inventory_recon_20261015/review_design_r1.txt
+recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1017。
 
 ## PO の決定と許可の出所（審査 r1 B-10）
 
