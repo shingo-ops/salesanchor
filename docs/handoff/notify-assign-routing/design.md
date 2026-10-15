@@ -3,7 +3,7 @@
 **日付**: 2026-10-15
 **ベース**: `origin/main` = `e1cdbc468`（PR #4310）
 **recon**: `docs/handoff/notify-assign-routing/recon.md`
-**対象 ADR**: ADR-144（UI 金型ガバナンス）／ADR-027（i18n）／ADR-067（デザイントークン）／ADR-072（テナント文脈）／ADR-109・ADR-120（区分値 SSOT の作法）
+**対象 ADR**: ADR-144（UI 金型ガバナンス）／ADR-027（i18n）／ADR-067（デザイントークン）／ADR-072（テナント文脈）／ADR-109・ADR-120（区分値 SSOT の作法）／ADR-025（手動 DB 操作の原則禁止）／ADR-1015（PR 区分。本件は「新機能・新しい API を足す」ため **A 区分**＝ PO の GO 待ち）／ADR-1016（書き込みルートは realtime の表に必ず載せる）／ADR-147（共通6ロール。担当者の役割判定は名前で分岐しない）
 **PO 決定**: 案 A 採用 ／ Q1=レポート通知は対象外 ／ Q2=案 1（未実装 3 種類を選択肢から外す）／ Q3=Checkbox 金型の新設を許可
 
 ---
@@ -446,7 +446,7 @@ backend/app/schemas/notification.py, backend/app/routers/notifications.py, backe
 
 ---
 
-## ⑨ 外部事例の検討
+## ⑨ 外部・過去事例の参照と我々への応用
 
 | 出典 | 確認した内容 | 設計への反映 |
 |---|---|---|
