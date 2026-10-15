@@ -277,7 +277,7 @@ describe('SelectControl type exclusivity', () => {
 });
 
 describe('SelectControl variant', () => {
-  const VARIANTS = ['karte', 'header', 'tabbar'] as const;
+  const VARIANTS = ['karte', 'header', 'tabbar', 'product-edit'] as const;
 
   it.each(VARIANTS)('adds comp-select--%s after indicator and before className (options mode)', (variant) => {
     const { container } = render(<SelectControl options={OPTIONS} variant={variant} indicator="none" className="x" />);
