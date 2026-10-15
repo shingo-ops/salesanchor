@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "./ReviewItemDrawer";
-import { postReviewAck } from "./reviewActions";
+import { postReviewAck, postReviewAckRevoke } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -11,6 +11,7 @@ vi.mock("../../lib/api", () => ({
 vi.mock("./reviewActions", () => ({
   postProductCorrection: vi.fn(),
   postReviewAck: vi.fn(),
+  postReviewAckRevoke: vi.fn(),
   addSearchKeyword: vi.fn(),
   fetchRegistrationForm: vi.fn(async () => ({ item: { extraction_item_id: "item-1", source_message_id: "msg-1", raw_name: "" }, lookups: {} })),
   checkProductDuplicates: vi.fn(),
@@ -339,5 +340,109 @@ describe("ReviewItemDrawer removedFromList (K5)", () => {
     renderDrawer(makeItem("pid_unresolved", false));
 
     expect(screen.queryByText(/kept out of stock/i)).toBeNull();
+  });
+});
+
+describe("ReviewItemDrawer revoke", () => {
+  const ackable = (): ReviewDrawerItem => makeItem("product_not_in_master", false);
+  const undoPopup = () => screen.getByRole("dialog", { name: 'Undo "checked"?' });
+  const confirmUndo = () => fireEvent.click(within(undoPopup()).getByRole("button", { name: "Undo" }));
+  const keepAndConfirm = () => {
+    fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Keep as it is?" })).getByRole("button", { name: "Keep" }));
+  };
+
+  it("K1: after keeping, Undo opens a popup, revoke is posted once and the revoked notice replaces the old one", async () => {
+    vi.mocked(postReviewAck).mockResolvedValue({});
+    vi.mocked(postReviewAckRevoke).mockResolvedValue({});
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+    render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={onRefresh} />);
+
+    keepAndConfirm();
+    await screen.findByText(/Marked as checked/);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(postReviewAckRevoke).not.toHaveBeenCalled();
+    confirmUndo();
+
+    expect(await screen.findByText("Undone. Re-running the analysis")).toBeTruthy();
+    expect(postReviewAckRevoke).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Marked as checked/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(onRefresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("a failed revoke shows the failure notice and keeps the Undo button", async () => {
+    vi.mocked(postReviewAck).mockResolvedValue({});
+    vi.mocked(postReviewAckRevoke).mockRejectedValue(new Error("boom"));
+    render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    keepAndConfirm();
+    await screen.findByText(/Marked as checked/);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    confirmUndo();
+
+    expect(await screen.findByText("Could not undo. Please try again")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+  });
+
+  it("K1/K5: keep -> undo -> keep again shows Undo again and only one notice", async () => {
+    vi.mocked(postReviewAck).mockResolvedValue({});
+    vi.mocked(postReviewAckRevoke).mockResolvedValue({});
+    render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    keepAndConfirm();
+    await screen.findByText(/Marked as checked/);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    confirmUndo();
+    await screen.findByText("Undone. Re-running the analysis");
+
+    keepAndConfirm();
+    await screen.findByText(/Marked as checked/);
+    expect(screen.queryByText("Undone. Re-running the analysis")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Undo" }).length).toBe(1);
+  });
+
+  it("K2: ackedView shows the checked notice and the revoke button; without it neither appears", () => {
+    const { unmount } = render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={async () => undefined} ackedView />);
+    expect(screen.getByText("This item is marked as checked")).toBeTruthy();
+    expect(screen.getByRole("button", { name: 'Undo "checked"' })).toBeTruthy();
+    unmount();
+    render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={async () => undefined} />);
+    expect(screen.queryByText("This item is marked as checked")).toBeNull();
+    expect(screen.queryByRole("button", { name: 'Undo "checked"' })).toBeNull();
+  });
+
+  it("revokes from the acked view and swaps the notice", async () => {
+    vi.mocked(postReviewAckRevoke).mockResolvedValue({});
+    render(<ReviewItemDrawer item={ackable()} onClose={() => undefined} onRefresh={async () => undefined} ackedView />);
+    fireEvent.click(screen.getByRole("button", { name: 'Undo "checked"' }));
+    confirmUndo();
+    expect(await screen.findByText("Undone. Re-running the analysis")).toBeTruthy();
+    expect(screen.queryByText("This item is marked as checked")).toBeNull();
+  });
+
+  it("after revoking in the acked view, selecting a row does not bring the checked notice back", async () => {
+    vi.mocked(postReviewAckRevoke).mockResolvedValue({});
+    const item: ReviewDrawerItem = {
+      ...ackable(),
+      system: { product_id: "PM-00001", product_title: "Title A", work_name: "Work A", condition: "Box", pid_basis: "MANUAL" },
+      review_issues: ["PRODUCT_ID_UNRESOLVED"],
+    };
+    render(<ReviewItemDrawer item={item} onClose={() => undefined} onRefresh={async () => undefined} ackedView />);
+    fireEvent.click(screen.getByRole("button", { name: 'Undo "checked"' }));
+    confirmUndo();
+    await screen.findByText("Undone. Re-running the analysis");
+    fireEvent.click(rowOf("Product ID"));
+    expect(rowOf("Product ID").className).toContain("comp-table__row--selected");
+    expect(screen.queryByText("This item is marked as checked")).toBeNull();
+  });
+
+  it("Esc while the revoke popup is open closes only the popup, not the drawer", () => {
+    const onClose = vi.fn();
+    render(<ReviewItemDrawer item={ackable()} onClose={onClose} onRefresh={async () => undefined} ackedView />);
+    fireEvent.click(screen.getByRole("button", { name: 'Undo "checked"' }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: 'Undo "checked"?' })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
