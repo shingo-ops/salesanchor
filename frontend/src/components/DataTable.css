@@ -144,14 +144,6 @@
   filter: brightness(0.97);
 }
 
-/* ── チェックボックス ── */
-.comp-table__check {
-  width: var(--size-checkbox);
-  height: var(--size-checkbox);
-  cursor: pointer;
-  accent-color: var(--primary);
-}
-
 /* ── 空状態 ── */
 .comp-table__empty {
   padding: var(--space-8) var(--comp-table-cell-px);
