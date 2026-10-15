@@ -262,8 +262,8 @@ G6-stress｜input の高さ｜390｜14｜14｜0｜○ CheckboxControl の size=s
 G6-stress｜input の高さ｜1280｜14｜14｜0｜○ CheckboxControl の size=sm var(--size-checkbox-sm)=14px
 G6-stress｜accent-color｜390｜rgb(30, 58, 138) / rgb(91, 141, 217)｜rgb(30, 58, 138) / rgb(91, 141, 217)｜0｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
 G6-stress｜accent-color｜1280｜rgb(30, 58, 138) / rgb(91, 141, 217)｜rgb(30, 58, 138) / rgb(91, 141, 217)｜0｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
-G6-stress｜label(金型 root) の幅｜390｜14｜13｜-1｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
-G6-stress｜label(金型 root) の幅｜1280｜14｜13｜-1｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+G6-stress｜label(金型 root) の幅｜390｜14｜13｜-1｜△ CheckboxControl sm（14px）が flex-shrink:1 で 1px 縮む。折り返せない数字30桁の人工条件のみ。実際の文言「N件選択中」では 14→14（G6 行）。2026-10-16 PO に提示済み
+G6-stress｜label(金型 root) の幅｜1280｜14｜13｜-1｜△ CheckboxControl sm（14px）が flex-shrink:1 で 1px 縮む。折り返せない数字30桁の人工条件のみ。実際の文言「N件選択中」では 14→14（G6 行）。2026-10-16 PO に提示済み
 G6-stress｜label(金型 root) の高さ｜390｜14｜14｜0｜差なし
 G6-stress｜label(金型 root) の高さ｜1280｜14｜14｜0｜差なし
 G6-stress｜包む要素の幅(G3=包む div / 他は root か td か列)｜390｜14｜13｜-1｜○(派生) G3 は包む div が grid の全幅のまま。他は root・td の幅が金型の寸法で決まる差
