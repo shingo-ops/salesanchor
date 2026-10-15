@@ -59,7 +59,7 @@ from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
-from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
+from app.services.v102_human_decisions_svc import FIELD_V102_PRICE, Decisions, load_v102_decisions
 from app.services.v102_status_context import posted_jst_date
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
@@ -945,6 +945,7 @@ def _write_results(
             _apply_decisions(_with_unit_price_reason(base_values[index], index in mismatches), item, decision, canonicals),
             item, decision, canonicals, excluded_ids,
         )
+        values = _inherit_price(session, extraction_job_id, row, values)
         result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
@@ -1067,6 +1068,78 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
     return tuple(
         SoldoutRefPost(str(r.id), r.line_posted_at, r.raw_text or "", stock.get(str(r.id), ()), sold.get(str(r.id), ())) for r in rows
     )
+
+
+PRICE_BASIS_INHERIT_PREFIX = "INHERIT:"
+INHERIT_PRICE_MAX_GAP_SECONDS = SOLDOUT_REF_MAX_GAP_SECONDS  # 48時間。〆の参照と同じ測り方
+
+_INHERIT_PRICE_SQL = """
+    SELECT ar.id, ar.price_normalized
+    FROM {schema}.analysis_results ar
+    JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+    JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+    JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+    WHERE sm.supplier_channel_id = :channel
+      AND ar.product_id = :product_id AND ar.condition_id = :condition_id
+      AND ar.price_normalized IS NOT NULL
+      AND ar.status IS DISTINCT FROM :sold_out
+      AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE :inherit_like)
+      AND sm.line_posted_at < :posted_at
+      AND sm.line_posted_at >= :posted_at - make_interval(secs => :gap)
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+    ORDER BY sm.line_posted_at DESC, ei.line_start DESC NULLS LAST, ar.id DESC
+    LIMIT 1
+"""
+_PRICE_CORRECTION_SQL = """
+    SELECT human_value FROM {schema}.item_corrections
+    WHERE extraction_item_id::text = :item_id AND field_name = :field
+    ORDER BY corrected_at DESC, id DESC LIMIT 1
+"""
+
+
+def _inherit_price(session: Session, extraction_job_id: str, row, values: dict) -> dict:
+    """価格なし・数ありの件に、同じ仕入元・同じ商品×状態の前の価格（48時間以内）を引き継ぐ。失敗したら引き継がない。"""
+    if (
+        values["price_normalized"] is not None
+        or values["quantity_normalized"] is None
+        or values["product_id"] is None
+        or not values["pid_resolved"]
+        or values["condition_id"] is None
+        or values["status"] == STATUS_SOLD_OUT
+    ):
+        return values
+    raw_price = getattr(row, "raw_price", None)
+    if raw_price is not None and str(raw_price).strip().lower() not in ("", "none"):
+        return values  # 仕入元が価格を書いている（読めなかっただけ）。古い価格で隠さない
+    schema = analyzer.TCG_SCHEMA
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            correction = session.execute(
+                text(_PRICE_CORRECTION_SQL.format(schema=schema)), {"item_id": str(row.id), "field": FIELD_V102_PRICE}
+            ).first()
+            if correction is not None and (correction.human_value or "") == "":
+                return values  # 人が価格を消した
+            current = session.execute(text(_FOLLOWUP_CURRENT_SQL.format(schema=schema)), {"ej": extraction_job_id}).first()
+            if current is None or current.supplier_channel_id is None or current.line_posted_at is None:
+                return values
+            src = session.execute(
+                text(_INHERIT_PRICE_SQL.format(schema=schema)),
+                {
+                    "channel": current.supplier_channel_id, "product_id": values["product_id"], "condition_id": values["condition_id"],
+                    "sold_out": STATUS_SOLD_OUT, "inherit_like": PRICE_BASIS_INHERIT_PREFIX + "%",
+                    "posted_at": current.line_posted_at, "gap": INHERIT_PRICE_MAX_GAP_SECONDS,
+                },
+            ).first()
+            if src is None:
+                return values
+            return {
+                **values, "price_normalized": src.price_normalized,
+                "price_basis": f"{PRICE_BASIS_INHERIT_PREFIX}{src.id}"[:_PRICE_BASIS_MAX],
+            }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[inherit_price] 前の価格の引き継ぎに失敗したので、この件は価格なしのまま保存します: job=%s error=%r", extraction_job_id, exc)
+        return values
 
 
 _STOCK_ITEMS_SQL = """
