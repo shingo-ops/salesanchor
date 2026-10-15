@@ -96,7 +96,7 @@ mode: handoff
 | 2 | 実装 PR（C1〜C9）。テストを先に書く（K0） | PO の実装承認と実装カード |
 | 3 | 反映後の観測（K1〜K6）と、stage1-design §7 の U11・U13 の閉じ | 便2 の本番反映 |
 
-- 便2 は `migrations/`・`deploy.yml`・本番 `scripts/` を含まない。ADR-136 の危険 PR には当たらない（実装カードで変更ファイルを確定し、再確認する）。
+- 便2 は `migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` を含まない。ADR-136 の危険 PR には当たらない（実装カードで変更ファイルを確定し、再確認する）。
 
 ## 継続
 
