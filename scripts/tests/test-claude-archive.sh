@@ -40,7 +40,7 @@ trap cleanup EXIT
 BIN="${T}/bin"; SRC="${T}/src"; VOL="${T}/fakevol"; HDD="${T}/hdd"; MNT="${T}/mnt"
 DD="${T}/datadir"; SESS="${T}/sessions"; LOGD="${T}/logs"
 mkdir -p "${BIN}" "${LOGD}"
-export STUB_CALLS="${T}/calls.txt" STUB_VOL="${VOL}" STUB_INFO_PLIST="${T}/info.plist" STUB_SECRET="SECRETMARKER-4f9a1c0d77e2"
+export STUB_CALLS="${T}/calls.txt" STUB_VOL="${VOL}" STUB_INFO_PLIST="${T}/info.plist" STUB_SECRET="not-a-real-passphrase-for-tests" # gitleaks:allow
 
 cat > "${BIN}/security" <<'EOF'
 #!/bin/bash
