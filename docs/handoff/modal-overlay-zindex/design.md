@@ -37,8 +37,9 @@
 | 画面で確認ダイアログが Drawer の手前に出る | 要確認ページで商品ドロワーを開き「このままで良い」を押す。.comp-modal-overlay の computed z-index が 400、.comp-drawer-panel が 301（73-visual.txt は未実施。PO の目視で確認） |
 | 他の Modal の見え方が変わらない | Drawer と同時に開かない Modal は順序が変わらない（影響範囲の表を参照） |
 
-## 6. 外部事例
-不要。理由: 自社トークンの序列を実際の値に揃えるだけの修正で、設計上の新しい選択が無い（stacking context の仕様は CSS の標準）。
+## 6. 外部・過去事例の参照と我々への応用
+- 過去事例（この repo）: 受信箱のカルテ（--z-drawer=301）の上の ConfirmModal が隠れた件は、frontend/src/pages/inbox/InboxPage.css:1338-1344 でカルテ側を 210 に下げて回避していた（第9便）。Modal 側の根本原因は残っていた。今回は金型（Modal）側で直し、画面ごとの回避を不要にする。
+- 外部事例: 不要。理由: 自社トークンの序列を実際の値に揃えるだけの修正で、設計上の新しい選択が無い（stacking context の仕様は CSS の標準）。
 
 ## 7. 影響範囲
 - Modal の呼び出し元 67 ファイル（72-modal-consumers.txt）。Modal を開く全画面で overlay が 298 から 400 になる。
@@ -53,6 +54,8 @@ Modal.css:16 を `var(--z-backdrop)` に戻す（1行の revert。コメント�
 PO が要確認ページで商品ドロワー→「このままで良い」を押し、確認ダイアログが見えてボタンが押せるか（○×）。開発者ツールで .comp-modal-overlay の computed z-index が 400 であること。
 
 ## 10. 維持の仕組み
+
+- 守り手: frontend/scripts/check-css-hardcoded-values.js（pre-commit と CI。z-index の数値直書きを止め、トークン参照に限定する）
 - z-index は ADR-067 のチェック（`npm run check:css-values`、pre-commit）で数値直書きが止まる。
 - コメントを実際の値に揃えたので、同じ誤解（299）が再発しにくい。
 - 重ね順の序列を変えるときは tokens.css の値と DesignSystemPage の表示を同時に直す。
