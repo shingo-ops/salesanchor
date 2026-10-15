@@ -336,6 +336,17 @@ write_success_timestamp || true
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+（2026-10-15 Sonnet。§8 は未実施。マージ後に Opus の合図を受けて行う）
+
+- 受領: 本報告はカード 段階1 便6 の実行結果である。便5 の実装 PR #4308 は MERGED を確認（`gh pr list --state merged --head release/ai-ops-stage1-bin5`）。
+- §5-1: 足された 3 行（backup_alerts の 3 本）だけが違う。
+- §5-2: `OK: Prometheus 20 rules, Loki 6 rules, runbook 26 sections`（exit 0）。
+- §5-3: 削除行数は 3 ファイルとも 0（追加 40・21・19）。`--summary` は空（mode change 無し）。
+- §5-4: 試験 ALL PASSED（FAIL 0・exit 0）。`bash -n` 2 本とも 0。shellcheck は `scripts/backup.sh` が exit 0、`scripts/backup_to_s3.sh` は既存 :91 の SC2012（info）のみ。
+- §5-5: mkdir 側の `return 0` を `return 1` にすると、試験が FAIL 1 行・exit 1 で落ちた。戻して `--numstat` で追加のみに復帰。
+- §5-6: `SUCCESS: 20 rules found`／`test rules` SUCCESS（exit 0）。展開後の description（`1d 4h 1m 40s`）は got 側から写した。
+- §5-7: 閾値を 936000 にすると BackupLocalStaleFiring が FAILED（exit 1）。戻した。
+- §5-8: exit 0・不一致 0。§5-9: 該当 0 行。
+- 生出力: /tmp/CC報告ファイル/ai-ops-stage1-bin6/
 
 END OF CARD
