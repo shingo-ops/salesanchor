@@ -4,7 +4,7 @@
 この文書は何か: 商品の除外語（例: AR）が「ARパック」という状態の合図の語の一部としてだけ出てくるときに、その除外を無視して商品を落とさないようにする設計書です。
 親（設計仕様書）: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)／recon: [recon.md](recon.md)
 
-**対象ADR**: 該当なし（grep 済み。recon.md §1）。ADR と実装の食い違いは無い  
+**対象ADR**: ADR-154（関連：商品除外語の扱い。v102 の除外語判定そのものを定める ADR は無い。recon.md §1）  
 **recon**: docs/handoff/excl-cond-contain/recon.md  
 **日付**: 2026-10-16  
 **PO承認**: 2026-10-16（Opus 経由で y）

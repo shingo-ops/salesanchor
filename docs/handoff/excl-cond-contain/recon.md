@@ -15,7 +15,7 @@
   - docs/adr/ADR-156-product-classification-tree-and-master-separation.md:42（conditions への FK 追加 migration。照合に無関係）
   - docs/adr/ADR-159-staff-identity-on-discord.md:41（Excluded は別の意味。無関係）
 - `docs/adr/FEATURE-INDEX.md` を 除外／exclude／状態マスタ／conditions／状態 で grep → 照合に関する行は無し（hit は :61 の expand-contract のみ。無関係）
-- 結論: v102 の除外語判定の仕様を定める ADR は無い（grep 済み・該当なし）。ADR と食い違う実装は無いので「ADR 優先」の調整は発生しない。
+- 結論: v102 の除外語判定の仕様を定める ADR は無い（grep 済み）。最も近い関連は ADR-154（商品除外語の扱い。CSV 取込・name-first 側）で、本変更はそれと矛盾しない。ADR と食い違う実装は無いので「ADR 優先」の調整は発生しない。
 - 生出力: /tmp/CC報告ファイル/excl-cond-contain/adr_grep2.txt, adr_featindex.txt（作業環境の一時ファイル）
 
 ## 2. 除外語の判定（変更前）
@@ -40,7 +40,7 @@
 - `match_product`: `match_product_g2`（:261）が `base = match_product(block, index.base_entries, strict_codes=True)` で呼ぶ。最終候補は G2 側（:260）で決まり、base は matched_keywords / excluded_by / boundary_dropped などの記録の欄用。v102 の経路から呼ばれるので、同じ合図の語を渡す（記録と候補の食い違いを避けるため）。
 - `_is_candidate`: `match_product`（:295）からのみ呼ばれる。同じく v102 の経路。同じ合図の語を渡す。
 - `match_product` を v102 以外から呼ぶ場所: backend/app 内の grep（`grep -rn "match_product\b" backend --include='*.py'`）で、本体以外の呼び手は `match_product_g2` のみ（テストを除く）。
-- 試作版ツール `backend/app/tools/prompt_ab.py:247` は `load_product_first_masters(session)` を直接呼んで masters["product_first"] を作り直す。ここは合図の語を持たない（既定の空＝従来どおり）。今回の対象外（本番の v102 は `load_v102_masters` を通る）。
+- 試作版ツール `backend/app/tools/prompt_ab.py`（:247） は `load_product_first_masters(session)` を直接呼んで masters["product_first"] を作り直す。ここは合図の語を持たない（既定の空＝従来どおり）。今回の対象外（本番の v102 は `load_v102_masters` を通る）。
 
 ## 4. 状態マスタ（合図の語）
 - テーブル: `public.conditions`。読む関数 `backend/app/services/tcg_analyzer_svc.py:651-729` `load_condition_entries`
@@ -59,4 +59,4 @@
 
 ## 7. 未確認
 - conditions.search_kw の本番データの全語（件数・長さ分布）。実装は語を実行時に読むので、実装の正しさには影響しない。
-- `prompt_ab.py:247` 経由の試作版ツールの結果は、今回の変更では変わらない（意図）。
+- `backend/app/tools/prompt_ab.py` 経由の試作版ツールの結果は、今回の変更では変わらない（意図）。
