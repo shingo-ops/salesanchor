@@ -13,7 +13,8 @@
   position: fixed;
   inset: 0;
   background: var(--overlay-bg);
-  z-index: var(--z-backdrop);
+  /* overlay が重ね順の文脈を作るため、Drawer(--z-drawer) より前面にするには overlay 自体を --z-modal にする */
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
