@@ -214,3 +214,43 @@ groups:
           summary: "裏方の処理（celery）の待ち行列が溜まっています"
           description: "待ち行列が {{ $value | humanize }} 件です（閾値: 100 件・10 分継続）。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"
+
+  - name: backup_alerts
+    rules:
+      # DB バックアップ（scripts/backup.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）
+      # prod1 の node-exporter の textfile（backup_local.prom）を使用
+      - alert: BackupLocalStale
+        expr: (time() - backup_local_last_success_timestamp{instance="app-vps"}) > 93600
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "DB バックアップが 26 時間以上成功していません"
+          description: "scripts/backup.sh の最終成功から {{ $value | humanizeDuration }} たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuplocalstale"
+
+      # S3 への写し（scripts/backup_to_s3.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）
+      # prod1 の node-exporter の textfile（backup_s3.prom）を使用
+      - alert: BackupS3Stale
+        expr: (time() - backup_s3_last_success_timestamp{instance="app-vps"}) > 93600
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "S3 へのバックアップの写しが 26 時間以上成功していません"
+          description: "scripts/backup_to_s3.sh の最終成功から {{ $value | humanizeDuration }} たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backups3stale"
+
+      # 成功時刻の系列そのものが無い（textfile の断線・ファイルの消失）
+      - alert: BackupTimestampAbsent
+        expr: absent(backup_local_last_success_timestamp{instance="app-vps"}) or absent(backup_s3_last_success_timestamp{instance="app-vps"})
+        for: 30h
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "バックアップの成功時刻が取れていません(app-vps)"
+          description: "backup_local.prom か backup_s3.prom の時刻が 30 時間取れていません。textfile の置き場と 2 つのファイルの有無を確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuptimestampabsent"

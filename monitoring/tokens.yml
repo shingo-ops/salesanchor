@@ -83,6 +83,10 @@ thresholds:
   celery_task_failures_per_1h:    3  # CeleryTaskFailuresHigh: 同じタスクの increase([1h]) >= 3
   celery_queue_length_max:      100  # CeleryQueueBacklog: celery_queue_length > 100
 
+  # バックアップの鮮度（alert_rules.yml: backup_alerts）
+  # scripts/backup.sh・scripts/backup_to_s3.sh が prod1 の textfile に書く *_last_success_timestamp を使用
+  backup_stale_sec:         93600  # BackupLocalStale / BackupS3Stale: time() - 成功時刻 > 93600（26h）
+
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     20    # BruteForceAttempt: > 20
   auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
@@ -107,3 +111,5 @@ for_durations:
   celery_heartbeat:  "2m"   # CeleryHeartbeatStale
   celery_failures:   "0m"   # CeleryTaskFailuresHigh
   celery_queue:      "10m"  # CeleryQueueBacklog
+  backup_stale:      "10m"  # BackupLocalStale / BackupS3Stale
+  backup_absent:     "30h"  # BackupTimestampAbsent
