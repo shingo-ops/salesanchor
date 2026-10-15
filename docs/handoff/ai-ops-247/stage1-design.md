@@ -47,7 +47,7 @@
 | 3 | 全ルールに札と手順書リンクを付け、CI で検査する | Prometheus・Loki ルール・手順書 1 ファイル・検査 script・monitoring-check.yml | いいえ | prod2 |
 | 4 | 雑音を減らす（BackendHighLatency の条件の決め直し） | Prometheus ルール 1 本 | いいえ | prod2 |
 | 5 | celery の失敗・beat の停止・待ち行列の長さの見張り | backend（指標）・Prometheus ルール | いいえ | prod1（通常 deploy）＋ prod2 |
-| 6 | バックアップの鮮度の見張り（あわせて動かない `scripts/setup_uptime_kuma.sh` を削除） | `scripts/backup.sh`・`scripts/backup_to_s3.sh`・`scripts/setup_uptime_kuma.sh`（削除）・Prometheus ルール | **はい**（本番 scripts） | prod1 ＋ prod2 |
+| 6 | バックアップの鮮度の見張り（あわせて動かない scripts/setup_uptime_kuma.sh（便6 で削除済み） を削除） | `scripts/backup.sh`・`scripts/backup_to_s3.sh`・scripts/setup_uptime_kuma.sh（便6 で削除済み）・Prometheus ルール | **はい**（本番 scripts） | prod1 ＋ prod2 |
 | 7 | 本番の設定と repo の一致を毎日確かめ、ずれたら鳴らす | workflow（prod2 の self-hosted runner）・Prometheus ルール | いいえ | GitHub Actions ＋ prod2 |
 
 危険便の判定は `scripts/check-process-artifacts.js` の DANGEROUS_PATTERNS（`migrations/`・`scripts/`・`.github/workflows/deploy.yml` 等）に従う。`scripts/` 配下を触る・消すのは便6 だけにする。
@@ -78,7 +78,7 @@
 
 - Kuma の正本（`monitoring/uptime-kuma-monitors.yml`）を本番の実物に合わせて書き直す: 今の 4 件（監視基盤）＋ App・API（`/api/health`）・LP の 3 件（https）。PostgreSQL・Redis・Meta Graph API・Firebase は消す（S10: 届かない・名前解決できない）。
 - 正本 yml に監視基盤の 4 件を書き足すとき、IP を新たに直書きしない（公開リポジトリ。変数か伏せた書き方にする）。
-- 登録は新規の monitoring/scripts/register_kuma_monitors.py（既存の `monitoring/scripts/validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の `scripts/setup_uptime_kuma.sh` は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
+- 登録は新規の monitoring/scripts/register_kuma_monitors.py（既存の `monitoring/scripts/validate_tokens.py` と同じ置き場。`scripts/` 配下には置かない）の 1 本で行う。uptime-kuma-api を使い、名前が同じ見張りは作らない（何度実行しても同じ結果）。正本の yml だけを読む。既存の scripts/setup_uptime_kuma.sh（便6 で削除済み） は Kuma 1.23 に無い REST の口を叩くもので動かない。削除は危険便の便6 で行う。
 - 新規 3 件には Kuma の通知先を付けない（`notificationIDList` を空にし、既定の通知先の自動付与もしない）。通知は `KumaMonitorDown` → Alertmanager → Discord の 1 本だけ（ADR-1012・design.md §3）。既存 4 件の Kuma 直通通知は今は触らない（U5）。
 - Prometheus ルールを足す: `KumaMonitorDown`（`monitor_status == 0` が 2 分）、`CertExpiringSoon`（`monitor_cert_days_remaining < 14`）、`CertInvalid`（`monitor_cert_is_valid == 0`）。
 - 4 本を消すとき、`monitoring/tokens.yml` の閾値・for のトークンと `monitoring/scripts/validate_tokens.py` の検査パターンを同じ PR で消す。足すルールの閾値は `monitoring/tokens.yml` に足す。
@@ -131,7 +131,7 @@
 - `scripts/backup.sh` と `scripts/backup_to_s3.sh` の成功時に、f2-cleanup と同じ方式で node-exporter の textfile に成功時刻を書く（S19）。ルール `BackupStale`（26 時間以上更新なし・ticket。利用者に今の影響は無いため。手順書に「翌営業日までに復旧」の期限を書く）。
 - `scripts/backup.sh` は `set -euo pipefail`（:12）で、デプロイからも呼ばれる。textfile の書き込みが失敗しても exit 0 にする（`scripts/f2-cleanup.sh:61-67` と同じ `|| return` の書き方）。バックアップとデプロイを落とさない。
 - `scripts/backup_to_s3.sh:56-70` の Discord 直通の失敗通知は残す（U5）。
-- 動かない `scripts/setup_uptime_kuma.sh` を削除する（参照元を grep で確かめてから。便2 から移した）。
+- 動かない scripts/setup_uptime_kuma.sh（便6 で削除済み） を削除する（参照元を grep で確かめてから。便2 から移した）。
 - 本番 scripts を触るため危険便（ADR-135・ADR-136）。GO は委任の範囲で Opus が発行する（DROP を含む migration・データの大量 DELETE・secrets の変更を含まない。script 1 本の git rm は ADR-1003 の例外に含まれない）。
 - 合格: 翌日 3:00 の実行後に本番 Prometheus で 2 つの時刻の系列が出て、26 時間より新しい。
 
