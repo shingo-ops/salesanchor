@@ -15,7 +15,7 @@ import { ApiError } from "../../lib/api";
 import { GAP_SUSPECT_CODE, GapSuspectNote, gapSuspectOf, type GapSuspectData } from "./GapSuspectNote";
 import { ItemComparison, type AnalysisReviewItem } from "./ItemComparison";
 import { ackableReasonCodes, ReviewFixWizard, type FixScope } from "./ReviewFixWizard";
-import { postReviewAck } from "./reviewActions";
+import { postReviewAck, postReviewAckRevoke } from "./reviewActions";
 import { fixRowsOf } from "./reviewFixRows";
 import { reviewReasonLabel, reviewSourceLabel } from "./reviewReasonLabel";
 import { ShadowSourcePane } from "./ShadowSourcePane";
@@ -31,12 +31,14 @@ interface Props {
   onRefresh: () => Promise<void>;
   /** 一覧から外れた件を最後の内容のまま表示しているとき true */
   removedFromList?: boolean;
+  /** 「確認済み」タブから開いたとき true（確認済みである旨と取り消しボタンを出す） */
+  ackedView?: boolean;
 }
 
 // 原文ペインはその商品の行へ自動で送るため、行ジャンプは何もしない
 const noJump = () => undefined;
 
-export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = false }: Props) {
+export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = false, ackedView = false }: Props) {
   const { t } = useTranslation();
   const details = item.review_reason_details ?? [];
   const gapSuspect = gapSuspectOf(item);
@@ -47,6 +49,10 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const [ackError, setAckError] = useState<string | null>(null);
   const [ackPending, setAckPending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [revokedNotice, setRevokedNotice] = useState(false);
+  const [revokeError, setRevokeError] = useState(false);
+  const [revokeAsk, setRevokeAsk] = useState(false);
+  const [revokePending, setRevokePending] = useState(false);
 
   const fixRows = fixRowsOf(item, t);
   const fixableRowKeys = Object.keys(fixRows);
@@ -58,6 +64,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
     if (!rowScope) return;
     setAckedNotice(false);
     setAckError(null);
+    setRevokedNotice(false);
+    setRevokeError(false);
     setSelectedRowKey(rowKey);
     setScope(rowScope);
   };
@@ -65,6 +73,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const askKeep = () => {
     setAckedNotice(false);
     setAckError(null);
+    setRevokedNotice(false);
+    setRevokeError(false);
     setConfirmOpen(true);
   };
 
@@ -81,6 +91,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
     }
     setAckedCodes([...ackedCodes, ...keepCodes]);
     setAckedNotice(true);
+    setRevokedNotice(false);
+    setRevokeError(false);
     setAckPending(false);
     try {
       await onRefresh();
@@ -89,8 +101,45 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
     }
   };
 
+  // 確認済みを取り消す。成功したら解析のやり直しが始まっている（一覧は読み直す）
+  const confirmRevoke = async () => {
+    setRevokeAsk(false);
+    setRevokePending(true);
+    setRevokeError(false);
+    try {
+      await postReviewAckRevoke(item);
+    } catch {
+      setRevokeError(true);
+      setRevokePending(false);
+      return;
+    }
+    setAckedNotice(false);
+    setAckedCodes([]);
+    setRevokedNotice(true);
+    setRevokePending(false);
+    try {
+      await onRefresh();
+    } catch {
+      // 読み直しの失敗は保存結果と無関係。次の操作・再表示で最新になる
+    }
+  };
+
+  const revokeButton = (
+    <div>
+      <Button
+        variant="secondary"
+        size="sm"
+        loading={revokePending}
+        disabled={revokePending}
+        onClick={() => setRevokeAsk(true)}
+      >
+        {ackedNotice ? t("reviewItem.revokeUndo") : t("reviewItem.revoke")}
+      </Button>
+    </div>
+  );
+
   return (
-    <Drawer open onClose={confirmOpen ? () => undefined : onClose} title={t("reviewItem.drawerTitle")} size="wide">
+    <Drawer open onClose={confirmOpen || revokeAsk ? () => undefined : onClose} title={t("reviewItem.drawerTitle")} size="wide">
       <Stack gap="4">
         {removedFromList && <Callout variant="info" title={t("reviewItem.removedFromList")} />}
         <section className="review-item-reasons-block">
@@ -122,7 +171,12 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
               </div>
             )}
             {ackError && <Callout variant="warning" title={ackError} />}
-            {ackedNotice && <Callout variant="info" title={t("reviewItem.acked")} />}
+            {revokeError && <Callout variant="warning" title={t("reviewItem.revokeFailed")} />}
+            {ackedNotice && <Callout variant="info" title={t("reviewItem.acked")}>{revokeButton}</Callout>}
+            {ackedView && !ackedNotice && !revokedNotice && (
+              <Callout variant="info" title={t("reviewItem.ackedState")}>{revokeButton}</Callout>
+            )}
+            {revokedNotice && <Callout variant="info" title={t("reviewItem.revoked")} />}
           </Stack>
         </section>
         <TwoColumn ratio="1:2" gap="3" align="stretch" className="review-item-top">
@@ -168,6 +222,15 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
         cancelLabel={t("common.close")}
         onConfirm={() => void confirmKeep()}
         onCancel={() => setConfirmOpen(false)}
+      />
+      <ConfirmModal
+        open={revokeAsk}
+        title={t("reviewItem.revokeConfirm.title")}
+        message={<p>{t("reviewItem.revokeConfirm.message")}</p>}
+        confirmLabel={t("reviewItem.revokeConfirm.confirm")}
+        cancelLabel={t("common.close")}
+        onConfirm={() => void confirmRevoke()}
+        onCancel={() => setRevokeAsk(false)}
       />
     </Drawer>
   );

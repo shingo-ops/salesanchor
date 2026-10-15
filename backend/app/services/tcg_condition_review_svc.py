@@ -187,13 +187,19 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         FROM {schema}.item_corrections
         WHERE extraction_item_id = ei.id AND field_name = 'condition_review' ORDER BY id DESC LIMIT 1
     ) cr_event ON TRUE
-    -- 「このままで良い」(review_ack) の最新1行に excluded が入っているか。規則の正本は v102_human_decisions_svc.load_v102_decisions
-    CROSS JOIN LATERAL (SELECT COALESCE((
-        SELECT CASE WHEN a.value->'v' = '{ack_version}'::jsonb AND jsonb_typeof(a.value->'codes') = 'array'
+    -- 「このままで良い」(review_ack) の最新1行に excluded が入っているか(excluded_acked)・空でない確認済みか(review_acked)。
+    -- 規則の正本は v102_human_decisions_svc.load_v102_decisions。GROUP BY 無しの集計なので必ず1行・NULL なし
+    CROSS JOIN LATERAL (SELECT
+        COALESCE(bool_or(CASE WHEN a.value->'v' = '{ack_version}'::jsonb AND jsonb_typeof(a.value->'codes') = 'array'
                     THEN NOT EXISTS (SELECT 1 FROM jsonb_array_elements(a.value->'codes') cr_e
                                      WHERE jsonb_typeof(cr_e) != 'string' OR cr_e = '""'::jsonb)
                          AND a.value->'codes' @> '["excluded"]'::jsonb
-                    ELSE FALSE END
+                    ELSE FALSE END), FALSE) AS excluded_acked,
+        COALESCE(bool_or(CASE WHEN a.value->'v' = '{ack_version}'::jsonb AND jsonb_typeof(a.value->'codes') = 'array'
+                    THEN NOT EXISTS (SELECT 1 FROM jsonb_array_elements(a.value->'codes') cr_e
+                                     WHERE jsonb_typeof(cr_e) != 'string' OR cr_e = '""'::jsonb)
+                         AND jsonb_array_length(a.value->'codes') > 0
+                    ELSE FALSE END), FALSE) AS review_acked
         FROM (SELECT ic.corrected_at,
                 CASE WHEN ic.human_value IS JSON OBJECT AND pg_input_is_valid(ic.human_value, 'jsonb')
                      THEN ic.human_value::jsonb ELSE NULL END AS value
@@ -202,8 +208,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
               ORDER BY ic.corrected_at DESC, ic.id DESC LIMIT 1) a
         WHERE NOT EXISTS (SELECT 1 FROM {schema}.item_corrections tr
                           WHERE tr.extraction_item_id = ei.id AND tr.field_name IN ({transcription_fields})
-                            AND tr.corrected_at >= a.corrected_at)
-    ), FALSE) AS excluded_acked) cr_review_ack
+                            AND tr.corrected_at >= a.corrected_at)) cr_review_ack
     LEFT JOIN public.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
     LEFT JOIN public.conditions cr_arc ON cr_arc.id::text = cr_data.ar->>'condition_id'
     CROSS JOIN LATERAL (SELECT {classification} AS classification, ({mentions}) AS mentions,
@@ -245,7 +250,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     ) cr_reasons
     CROSS JOIN LATERAL (SELECT
         cr_valid.valid_ack, cr_input.classification, cr_input.mentions, cr_input.master_valid,
-        cr_hash.binding_hash, cr_hash.ack_binding_hash, cr_review_ack.excluded_acked, {version} AS review_version,
+        cr_hash.binding_hash, cr_hash.ack_binding_hash, cr_review_ack.excluded_acked, cr_review_ack.review_acked, {version} AS review_version,
         (cardinality(cr_reasons.other_reasons) > 0 OR cr_reasons.unknown_review OR cr_reasons.empty_reason IS NOT NULL)
             AS needs_review,
         array_to_string(cr_reasons.other_reasons || CASE WHEN cr_reasons.empty_reason IS NULL

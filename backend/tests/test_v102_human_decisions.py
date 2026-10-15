@@ -373,3 +373,64 @@ def test_context_work_leaves_a_fixed_matched_item_alone():
         {"product_id": 3, "match_status": "matched", "price_line": 3},
     ]
     assert decide_by_context(items, []) == {}  # ambiguous だけが対象。matched の固定した件は決め直されない
+
+
+# --- review-ack 取り消し API ----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def revoke_env(ack_env, monkeypatch):
+    ack_env.revoked = []
+    ack_env.revoke_result = 1
+
+    async def revoke(_db, **kwargs):
+        ack_env.revoked.append(kwargs)
+        return ack_env.revoke_result
+
+    monkeypatch.setattr(router, "save_review_ack_revoke", revoke)
+    return ack_env
+
+
+def _call_revoke(source=SOURCE):
+    body = router.ReviewAckRevokeRequest(source_message_id=source)
+    user = SimpleNamespace(email="admin@example.com")
+    return asyncio.run(router.revoke_item_review_ack(str(uuid4()), body, db=MagicMock(), current_user=user))
+
+
+def test_review_ack_revoke_success_saves_once_and_enqueues_once(revoke_env):
+    result = _call_revoke()
+    assert (result.ok, result.saved) == (True, 1)
+    assert len(revoke_env.revoked) == 1 and revoke_env.revoked[0]["corrected_by"] == "admin@example.com"
+    assert revoke_env.enqueued == ["job-1"]
+
+
+def test_review_ack_revoke_without_previous_ack_is_409_and_enqueues_nothing(revoke_env):
+    revoke_env.revoke_result = 0
+    with pytest.raises(HTTPException) as caught:
+        _call_revoke()
+    assert caught.value.status_code == 409
+    assert revoke_env.enqueued == []
+
+
+@pytest.mark.parametrize(
+    ("job", "source", "status"),
+    [
+        (None, SOURCE, 404),
+        (JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE), SOURCE, 409),
+        (JobOfItem("job-1", "v102:raw_copy_v101_f_c:abc", SOURCE), str(uuid4()), 422),
+    ],
+    ids=["missing_item", "v6_item", "source_mismatch"],
+)
+def test_review_ack_revoke_rejections_write_nothing(revoke_env, job, source, status):
+    revoke_env.job = job
+    with pytest.raises(HTTPException) as caught:
+        _call_revoke(source)
+    assert caught.value.status_code == status
+    assert revoke_env.revoked == [] and revoke_env.enqueued == []
+
+
+def test_review_ack_revoke_route_requires_super_admin():
+    from app.auth.dependencies import require_super_admin
+
+    route = next(r for r in router.router.routes if getattr(r, "name", "") == "revoke_item_review_ack")
+    assert any(d.call is require_super_admin for d in route.dependant.dependencies)
