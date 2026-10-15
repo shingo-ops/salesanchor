@@ -460,8 +460,8 @@ backend/app/schemas/notification.py, backend/app/routers/notifications.py, backe
 
 | # | 項目 | 状態 |
 |---|---|---|
-| C1 | 受信箱の「新規バッジ」 | **別便**。Q7（担当表示か未開封表示か）の回答待ち。会話一覧 API が `assigned_to` を返していないため、API 追加の有無が回答で決まる |
-| C2 | 役割名の文字列依存の恒久対策（商談化の担当候補） | 別便。`roles.system_key` は owner/admin 専用かつテナント内 1 件制限のため流用不可。`roles` への印（列追加）が必要＝`migrations/` を触るため ADR-135/136 の危険 PR 手順が必要 |
+| C1 | 受信箱の「新規バッジ」 | **別便**。PO 回答（2026-10-15）= **案 B「担当になったが、まだ開いていない」（開くと消える）**。担当者ごとの既読記録を新設する必要があるため `migrations/` を触る → **ADR-135/136 の危険 PR 手順（事前提示＋「GO #PR番号」）が必要**。会話一覧 API（`backend/app/routers/meta_inbox.py`）が `assigned_to` を返していないため、API の返却項目追加も必要 |
+| C2 | 役割名の文字列依存の恒久対策（商談化の担当候補） | 別便。**2026-10-15 訂正**: 当初「`roles.system_key` は流用不可、`roles` への列追加が必要」と書いたが誤り。正しくは**権限キーを1つ新設する**のが恒久対策。`backend/app/auth/system_roles.py:1-5` の通り owner / admin は権限マスタ（`public.permissions`）から**check 時に計算**されるため、新しい権限キーは `role_permissions` の行追加なしで自動的に届く（`compute_permission_keys`:22-37）。名前での分岐は ADR-147 追補が禁じている（`system_roles.py:13`「見分けは roles.system_key で行い、名前では分岐しない」）。`roles` への列追加は不要。権限キーの seed のみ `migrations/` を触る＝A 区分 |
 | C3 | 既存の生 checkbox 30 箇所超の金型移行 | ADR-144:66-69 に従い別トラック・1 ページ 1 部品 |
 | C4 | レポート通知の実装 | PO が必要と判断した時点で着手（Celery beat の土台はある: `backend/app/celery_app.py:58-150`） |
 | C5 | 本番 `notification_channels` の現状確認（U1） | 本 PR で `event_types` が画面に出るようになってから実機で確認 |
