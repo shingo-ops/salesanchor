@@ -830,3 +830,74 @@ def test_run_v102_extraction_hands_none_when_the_result_has_no_thought_summaries
     recorder = _run_extraction_with_result(monkeypatch, result)
 
     recorder.on_response.assert_called_once_with(result["response_text"], thought_summaries=None)
+
+
+# ---------------------------------------------------------------------------
+# 価格なし・数ありの件への価格の引き継ぎ（_inherit_price）。DB は使わず、読み取りの失敗と読まない条件だけを見る
+# ---------------------------------------------------------------------------
+class _SavepointSession:
+    """begin_nested を使え、execute を控える。fail_on を含む SQL で例外を出す。"""
+
+    def __init__(self, fail_on: str | None = None):
+        self.calls: list[str] = []
+        self.fail_on = fail_on
+
+    def begin_nested(self):
+        from contextlib import nullcontext
+
+        return nullcontext()
+
+    def execute(self, statement, params=None):
+        sql = str(statement)
+        self.calls.append(sql)
+        if self.fail_on and self.fail_on in sql:
+            raise RuntimeError("読み取りの失敗（試験用）")
+        return SimpleNamespace(first=lambda: None)
+
+
+def _inherit_values(**overrides) -> dict:
+    return {
+        "price_normalized": None, "quantity_normalized": 2, "product_id": 42, "pid_resolved": True,
+        "condition_id": 11, "status": "In Stock", "price_basis": None, **overrides,
+    }
+
+
+def test_inherit_price_keeps_the_values_when_the_read_raises():
+    session = _SavepointSession(fail_on="item_corrections")
+    values = _inherit_values()
+
+    result = svc._inherit_price(session, "job1", SimpleNamespace(id="row0", raw_price=None), values)
+
+    assert result == values and result["price_normalized"] is None and result["price_basis"] is None
+
+
+def test_inherit_price_keeps_the_values_when_begin_nested_raises():
+    values = _inherit_values()
+
+    result = svc._inherit_price(object(), "job1", SimpleNamespace(id="row0", raw_price=None), values)  # begin_nested が無い＝例外
+
+    assert result == values
+
+
+@pytest.mark.parametrize("raw_price", ["37万", " 65,000円 "])
+def test_inherit_price_does_not_read_when_raw_price_is_written(raw_price):
+    session = _SavepointSession()
+
+    result = svc._inherit_price(session, "job1", SimpleNamespace(id="row0", raw_price=raw_price), _inherit_values())
+
+    assert result["price_normalized"] is None and session.calls == []
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"price_normalized": 1000}, {"quantity_normalized": None}, {"product_id": None}, {"pid_resolved": False},
+        {"condition_id": None}, {"status": svc.STATUS_SOLD_OUT},
+    ],
+)
+def test_inherit_price_does_not_read_when_the_row_is_not_a_target(overrides):
+    session = _SavepointSession()
+
+    result = svc._inherit_price(session, "job1", SimpleNamespace(id="row0", raw_price=None), _inherit_values(**overrides))
+
+    assert result == _inherit_values(**overrides) and session.calls == []
