@@ -38,6 +38,7 @@ celery_app = Celery(
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
         "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
         "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
+        "app.tasks.ai_ops_heartbeat",  # ADR-1012 段階1 便5: celery の止まりの見張り
     ],
 )
 
@@ -175,4 +176,20 @@ celery_app.conf.beat_schedule = {
         "task": "tcg.recover_stale_extraction_jobs",
         "schedule": 600.0,  # 10分
     },
+
+    # ADR-1012 段階1 便5: 1 分ごとの heartbeat（見張り CeleryHeartbeatStale が読む）
+    "ai-ops-celery-heartbeat": {
+        "task": "app.tasks.ai_ops_heartbeat.celery_heartbeat",
+        "schedule": 60.0,  # 1分
+    },
 }
+
+# ADR-1012 段階1 便5: タスクの失敗をタスク名ごとに数える（見張り CeleryTaskFailuresHigh が読む）
+from celery.signals import task_failure  # noqa: E402
+
+from app.celery_health import record_task_failure  # noqa: E402
+
+
+@task_failure.connect
+def _count_task_failure(sender=None, **kwargs):
+    record_task_failure(getattr(sender, "name", None) or "unknown")
