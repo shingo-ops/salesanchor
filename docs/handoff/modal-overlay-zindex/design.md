@@ -44,6 +44,7 @@
 ## 7. 影響範囲
 - Modal の呼び出し元 67 ファイル（72-modal-consumers.txt）。Modal を開く全画面で overlay が 298 から 400 になる。
 - 順序が入れ替わる相手は 298 超 400 以下の層だけ: Drawer(301)、avatar(300)、同値 400（ContextMenu・Sheet 本体）。Sheet の overlay(298) は Modal より下になる。400 同士は後から開いた方が前面。
+- 利用者から見た変化: Modal を開いている間は、サイドバーのアバター（300）も暗幕に覆われて押せなくなる（変更前は暗幕 298 の上にあって押せた）。Modal が開いている間はほかを操作させない、という aria-modal の意味に沿う変化として受け入れる。
 - 50 の部品（Popover / Tooltip / AsyncCombobox / InventorySearchBar）は変更前後とも overlay の下で、順序は不変。
 - Toast(500) は Modal より前面のまま。
 
@@ -56,6 +57,7 @@ PO が要確認ページで商品ドロワー→「このままで良い」を�
 ## 10. 維持の仕組み
 
 - 守り手: frontend/scripts/check-css-hardcoded-values.js（pre-commit と CI。z-index の数値直書きを止め、トークン参照に限定する）
+- 対象: frontend 配下の CSS の z-index（重ね順の序列は tokens.css の --z-* だけで決める）
 - z-index は ADR-067 のチェック（`npm run check:css-values`、pre-commit）で数値直書きが止まる。
 - コメントを実際の値に揃えたので、同じ誤解（299）が再発しにくい。
 - 重ね順の序列を変えるときは tokens.css の値と DesignSystemPage の表示を同時に直す。

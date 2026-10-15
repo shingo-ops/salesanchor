@@ -4,6 +4,7 @@
 
 **基準**: origin/main 65ed8cd8b（worktree release-modal-overlay-zindex）  
 **日付**: 2026-10-15  
+**design**: `docs/handoff/modal-overlay-zindex/design.md`  
 **担当**: 調査・実装 Sonnet、設計 Opus。生出力は /tmp/CC報告ファイル/realtime-stage1/（72-dialog-zindex-recon.txt、72-modal-consumers.txt、73-precheck.txt、73-precheck-wt.txt）
 
 ## 0. 既存 ADR の検索
