@@ -340,7 +340,7 @@ def migrate(cursor):
 
 @pytest.fixture
 def pg(monkeypatch):
-    assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI service required; databases retained until service shutdown"
+    assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI service required; each test database is dropped at teardown"
     configured = os.getenv("RLS_ADMIN_DATABASE_URL")
     assert configured, "PostgreSQL acceptance MUST run: RLS_ADMIN_DATABASE_URL required"
     url = make_url(configured)
@@ -370,6 +370,14 @@ def pg(monkeypatch):
     finally:
         engine.dispose()
         connection.close()
+        # 共有メモリ上の統計が DB ごとに溜まり、CI の postgres が落ちたため（#4333）、試験ごとに消す。
+        admin = psycopg2.connect(dbname=url.database, **kwargs)
+        admin.autocommit = True
+        try:
+            with admin.cursor() as cursor:
+                cursor.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name)))
+        finally:
+            admin.close()
 
 
 def seed_products(connection):
