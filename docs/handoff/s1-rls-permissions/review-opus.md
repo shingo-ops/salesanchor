@@ -19,4 +19,4 @@ mode: handoff
 
 ## 未解決事項
 
-- design §2-4 のガード変更の PO 確認（STANDARD-WORKFLOW §8）。確認まで実装カードを発行しない。
+- design §2-4 のガード変更の PO 確認（STANDARD-WORKFLOW §8）: 2026-10-15 PO「y」で解消。

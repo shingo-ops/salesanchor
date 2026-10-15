@@ -15,7 +15,7 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
 
 - あるべき姿: [ideal-state.md](ideal-state.md)（PO の言葉の転記）
 - KGI: [kgi.md](kgi.md)（PO 承認済み 2026-10-15）
-- 段階①（permissions）: 設計案作成済み・設計審査済み（APPROVE 条件付き）。ガード変更の PO 確認待ち。実装未着手
+- 段階①（permissions）: 設計案作成済み・設計審査済み（APPROVE 条件付き）。ガード変更 PO 確認済み。実装カード発行済み
 - 段階②・③: 未着手
 
 ## 子文書
