@@ -1672,23 +1672,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 }
 .inbox-settings-close-btn:hover { opacity: var(--opacity-dim); }
 
-/* ====== トグルスイッチ ====== */
-.inbox-toggle { position: relative; display: inline-flex; width: var(--toggle-width); height: var(--toggle-height); cursor: pointer; }
-.inbox-toggle input { opacity: 0; width: 0; height: 0; }
-.inbox-toggle-slider {
-  position: absolute; inset: 0;
-  background: var(--border); border-radius: var(--radius-full);
-  transition: background var(--transition-micro);
-}
-.inbox-toggle-slider::before {
-  content: ""; position: absolute;
-  height: var(--toggle-thumb-size); width: var(--toggle-thumb-size); left: var(--toggle-thumb-offset); top: var(--toggle-thumb-offset);
-  background: var(--bg-surface); border-radius: 50%;
-  transition: transform var(--transition-micro);
-}
-.inbox-toggle input:checked + .inbox-toggle-slider { background: var(--accent); }
-.inbox-toggle input:checked + .inbox-toggle-slider::before { transform: translateX(var(--toggle-translate)); }
-
 /* ====== プロフィールモーダル ====== */
 .inbox-profile-modal {
   background: var(--bg-surface); border: 1px solid var(--border);
