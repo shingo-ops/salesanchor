@@ -735,3 +735,10 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
 - N-r11-7：商品名の見出しで並べるときの例外と、その降順のテストを受入に足した。
 - 【未確認】glibc 2.36 の記号の比べ方の実測は無い。B-r11-1 の合格条件は、組ごとに本番 DB で比べるので、この実測に依存しない。
 
+## r12（2026-10-15、Opus architect）— APPROVE（Blocking 0、Non-blocking 3。全文 /tmp/CC報告ファイル/viewer_r9/review_r12.txt）
+
+- N-r12-1：価格が安い順の本番比較では、まとまりの中を unit_price の昇順で比べると書いた。
+- N-r12-2：DB で比べる SQL の中の ' は '' に重ねると書いた。
+- N-r12-3：商品名の見出しの降順で english_title が '' の行が末尾に来ることを vitest の条件に足した。
+- Ready For Generator は PO 承認（ADR-1019 は Proposed）と Q15 の回答の後。
+
