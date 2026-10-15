@@ -26,6 +26,7 @@ import { ICON } from "../../constants/iconSizes";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 interface Role {
   id: number;
@@ -417,8 +418,7 @@ export default function RolesPage() {
                       <div className="permission-group-body">
                         {perms.map((p) => (
                           <label key={p.id} className="permission-item">
-                            <input
-                              type="checkbox"
+                            <CheckboxControl
                               checked={editedPermIds.has(p.id)}
                               disabled={!canEditPerms}
                               onChange={() => togglePerm(p.id)}

@@ -15,6 +15,7 @@ import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface CompanyMini {
   id: number;
@@ -167,10 +168,11 @@ export default function ContactEditPage() {
             <TextFieldControl value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
           </div>
           <div className="form-group">
-            <label>
-              <input type="checkbox" checked={form.is_primary_contact} onChange={(e) => setForm({ ...form, is_primary_contact: e.target.checked })} />
-              {" "}{t("contacts.primaryContactHint")}
-            </label>
+            <Checkbox
+              label={t("contacts.primaryContactHint")}
+              checked={form.is_primary_contact}
+              onChange={(e) => setForm({ ...form, is_primary_contact: e.target.checked })}
+            />
           </div>
           <div className="form-group"><label>{t("common.email")}</label>
             <TextFieldControl type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />
