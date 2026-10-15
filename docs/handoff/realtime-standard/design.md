@@ -2,9 +2,10 @@
      このPRに含まれないファイル・リポジトリ外のパスはバッククォートを付けない。 -->
 # Phase 3 design — realtime-standard（即時反映をアプリ全体の標準にする）
 
-**状態**: PO 承認済み（2026-10-15）・実装未着手  
+**状態**: PO 承認済み（2026-10-15）・段階1 実装 PR 提出（release/realtime-standard-stage1）  
 **recon**: `docs/handoff/realtime-standard/recon.md`  
-**ADR 案**: `docs/adr/ADR-1016-realtime-change-signal-standard.md`（Proposed）
+**ADR**: `docs/adr/ADR-1016-realtime-change-signal-standard.md`（Accepted）  
+**関係する ADR**: `docs/adr/ADR-133-nginx-resolver-proxy-pass-variable.md`（nginx の proxy_pass は変数の形）、`docs/adr/ADR-137-nginx-config-deploy-reliability.md`（nginx 設定の本番反映）、`docs/adr/ADR-027-ui-internationalization.md`（画面の文言。段階1は文言を足さない）
 
 ## 0. PO の言葉（2026-10-14〜15）
 

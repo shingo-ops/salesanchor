@@ -33,8 +33,8 @@
 - 合図（publish）を送っているのは次の5か所だけ。生出力 A2.txt。
   - webhook.py:915
   - leads.py:482, 702, 765
-  - tasks/translation.py:96
-  - discord_gateway/reaction_writer.py:199
+  - backend/app/tasks/translation.py:96
+  - backend/app/discord_gateway/reaction_writer.py:199
 - 画面側（`frontend/src/hooks/useSSE.ts`）
   - fetch でつなぎ、Firebase の ID トークンを Authorization に付ける（:33-52）。
   - update を受けたら onUpdate を呼ぶ（:81-83）。
@@ -42,8 +42,8 @@
 - 画面側の呼び出し元は次の4か所で、フックを1回呼ぶごとに通り道が1本開く。
   - DesktopShell.tsx:136
   - MobileShell.tsx:107
-  - pages/inbox/useInboxState.ts:498
-  - pages/leads/LeadsPage.tsx:184
+  - frontend/src/pages/inbox/useInboxState.ts:498
+  - frontend/src/pages/leads/LeadsPage.tsx:184
 
 ## 2. 基盤
 
