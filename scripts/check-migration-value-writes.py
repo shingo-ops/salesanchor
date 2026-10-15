@@ -37,7 +37,7 @@ ALLOW_PATTERN = re.compile(
     r"|CREATE\s+(OR\s+REPLACE\s+)?TRIGGER|COMMENT\s+ON|ADD\s+COLUMN|DROP\s+COLUMN|ALTER\s+COLUMN|REFERENCES"
     r"|information_schema|pg_namespace|pg_class|pg_trigger|to_regclass|RAISE\s+NOTICE"
     r"|CREATE\s+(OR\s+REPLACE\s+)?VIEW|CREATE\s+(OR\s+REPLACE\s+)?FUNCTION|RENAME\s+TO|table_name|table_schema"
-    r"|PRIMARY\s+KEY",
+    r"|PRIMARY\s+KEY|CREATE\s+POLICY|DROP\s+POLICY|ALTER\s+POLICY",
     re.IGNORECASE,
 )
 

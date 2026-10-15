@@ -937,3 +937,5 @@ run_sql migrations/20261013_160000_add_self_hosted_auth_tables.sql
 
 # 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
 run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
+
+run_sql migrations/20261015_130000_add_permissions_rls.sql
