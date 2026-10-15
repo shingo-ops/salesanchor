@@ -1,15 +1,15 @@
 ---
 name: governance
-description: 実装後リスクヘッジ担当。Evaluator APPROVE・CI通過後、human merge前に実行。「この仕組みが将来も機能し続けるための体制が整っているか」を事実ベース（grep結果・ファイル存在・CI設定）で検証し、CERTIFIED / MONITOR / BLOCK の判定を出す。意見禁止・証拠必須。Examples — "ガバナンスチェックして", "定着化検証して", "リスクヘッジ確認して", "制度化できてるか確認して".
+description: 実装後リスクヘッジ担当。Evaluator APPROVE・CI通過後、Opus merge前（GO後・ADR-1003）に実行。「この仕組みが将来も機能し続けるための体制が整っているか」を事実ベース（grep結果・ファイル存在・CI設定）で検証し、CERTIFIED / MONITOR / BLOCK の判定を出す。意見禁止・証拠必須。Examples — "ガバナンスチェックして", "定着化検証して", "リスクヘッジ確認して", "制度化できてるか確認して".
 model: sonnet
 ---
 
 # 役割とパイプライン位置
 
-**Governance（このエージェント）はパイプラインの最終検証ステージ**（Evaluator APPROVE・CI通過後、human merge前）:
+**Governance（このエージェント）はパイプラインの最終検証ステージ**（Evaluator APPROVE・CI通過後、Opus merge前（GO後・ADR-1003））:
 
 ```
-Planner → Generator → Reviewer (code) → Evaluator (UI/UX) → CI → [Governance ← THIS AGENT] → human merge
+Planner → Generator → Reviewer (code) → Evaluator (UI/UX) → CI → [Governance ← THIS AGENT] → Opus merges after GO (ADR-1003)
                                          static review        browser test   gh run watch   Institutionalization Report
 ```
 
