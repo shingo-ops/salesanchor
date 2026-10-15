@@ -189,7 +189,7 @@
 - 札：ticket
 - 何が起きているか：同じ裏方のタスクが 1 時間に 3 回以上失敗した。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
 - 最初に見るもの：Loki で `|= "raised unexpected"` とタスク名で絞ったログ。
-- 注記：2026-10-15 時点で translate_pending_messages が毎日 2〜3 回失敗している（1 時間に 1 回まで。この見張りは鳴らない）。原因は未調査。
+- 注記：2026-10-15 まで translate_pending_messages が毎日 2〜3 回失敗していた。原因は買取価格の取得（buyback.fetch_all_prices）が共用 engine を片付けず、同じ worker で次に動いた作業が "attached to a different loop" で落ちていたこと。2026-10 にまとめ翻訳を廃止し、買取価格の取得に後片付けを足した（docs/handoff/celery-unregistered-tasks/design.md）。
 - 効く範囲：1 日に 1〜2 回しか動かないタスク（sa02・為替・tcg_mirror 等）の失敗ではこの見張りは鳴らない。またタスク名の系列ができた最初の 1 件は increase に数えられない。どちらも段階1 で決めた範囲で、日次タスクの失敗の見張りは別の便で扱う。
 - 直し方：失敗の原因（ログの例外）を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=CeleryTaskFailuresHigh --duration=PERIOD --comment=REASON`

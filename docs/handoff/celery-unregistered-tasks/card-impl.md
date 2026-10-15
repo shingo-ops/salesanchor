@@ -346,6 +346,12 @@ def fetch_all_buyback_prices() -> None:
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード celery-unregistered-tasks 便2 の実行結果である。
+
+- 分岐: C5 は分岐 A（get_required_inbound_targets・get_existing_inbound_translation_targets は、まとめ翻訳の削除後に定義の行だけが残るため 2 関数とも削除）。根拠: /tmp/CC報告ファイル/celery-unregistered-tasks-fix/grep_before.txt・grep_after.txt
+- K0: 修正前は 1 failed（missing は sa02 と tcg_mirror の 2 件だけ）、修正後は 1 passed。生出力: /tmp/CC報告ファイル/celery-unregistered-tasks-fix/k0_before.txt・k0_after.txt
+- §5-7: デコレータを一時的に外すと 1 failed（missing は sa02 の 1 件だけ）、戻すと 1 passed。生出力: k57_broken.txt・k57_restored.txt
+- beat: 19 件、translate-pending-messages なし（beat.txt）
+- 判断を要した点: test_translation_task_context.py は ruff の F401・F811 の指示で未使用の `call` の import 2 つを外した。PR 本文の `対象ADR:` は、設計 doc が参照している ADR-136 だけを書いた（ADR-1012 は対象ADR行の外に記載）
 
 END OF CARD
