@@ -24,7 +24,7 @@
 | `type={...}` 形式で checkbox になるもの | 0 | grep_other.txt に該当なし |
 | CSS セレクタ（参考） | 5 | components.css:19,33 / pages-layout.css:623,647 / pages/inbox/InboxPage.css:1869 |
 
-補足【事実】金型の既存使用: CheckboxControl は DataTable.tsx:314,347,427、Checkbox は pages/notifications/NotificationsPage.tsx:131,157 のみ。
+補足【事実】金型の既存使用: CheckboxControl は DataTable.tsx:314,347,427、Checkbox は frontend/src/pages/notifications/NotificationsPage.tsx:131,157 のみ。
 
 ## 到達する画面の調べ方と結果
 
@@ -115,7 +115,7 @@
 
 ## 一般画面（AY-4c）33 件の所在（参考）
 
-components/ContactChannelForm.tsx:228 / components/MultiSelect.tsx:79 / pages/admin/InventoryVisibilityPage.tsx:153 / pages/company-detail/CompanyAddressModal.tsx:147, CompanyContactsTab.tsx:207, CompanyDiscordTab.tsx:44 / pages/conditions/ConditionsPage.tsx:254,354 / pages/contacts/ContactEditPage.tsx:171, ContactsPage.tsx:333 / pages/inbox/InboxConversationList.tsx:121, InboxConversationListMobile.tsx:144, InboxProfileModal.tsx:255, SalesFormMultiSelect.tsx:135 / pages/inventory/InventoryFilterPanel.tsx:132,152,183,220,242,261 / pages/note-master/NoteMasterPage.tsx:315 / pages/product-categories/ProductCategoriesPage.tsx:225 / pages/products/ProductsPage.tsx:356 / pages/roles/RolesPage.tsx:398,408,422 / pages/schedule/SchedulePageImpl.tsx:523,554 / pages/staff/StaffEditPage.tsx:213, StaffPage.tsx:289 / pages/status-master/StatusMasterPage.tsx:302 / pages/units/UnitsPage.tsx:301,353（すべて frontend/src/ 配下。general_ay4c.txt に生出力）
+frontend/src/components/ContactChannelForm.tsx:228 / frontend/src/components/MultiSelect.tsx:79 / frontend/src/pages/admin/InventoryVisibilityPage.tsx:153 / frontend/src/pages/company-detail/CompanyAddressModal.tsx:147, CompanyContactsTab.tsx:207, CompanyDiscordTab.tsx:44 / frontend/src/pages/conditions/ConditionsPage.tsx:254,354 / frontend/src/pages/contacts/ContactEditPage.tsx:171, ContactsPage.tsx:333 / frontend/src/pages/inbox/InboxConversationList.tsx:121, InboxConversationListMobile.tsx:144, InboxProfileModal.tsx:255, SalesFormMultiSelect.tsx:135 / frontend/src/pages/inventory/InventoryFilterPanel.tsx:132,152,183,220,242,261 / frontend/src/pages/note-master/NoteMasterPage.tsx:315 / frontend/src/pages/product-categories/ProductCategoriesPage.tsx:225 / frontend/src/pages/products/ProductsPage.tsx:356 / frontend/src/pages/roles/RolesPage.tsx:398,408,422 / frontend/src/pages/schedule/SchedulePageImpl.tsx:523,554 / frontend/src/pages/staff/StaffEditPage.tsx:213, StaffPage.tsx:289 / frontend/src/pages/status-master/StatusMasterPage.tsx:302 / frontend/src/pages/units/UnitsPage.tsx:301,353（すべて frontend/src/ 配下。general_ay4c.txt に生出力）
 
 ## 未確認
 
