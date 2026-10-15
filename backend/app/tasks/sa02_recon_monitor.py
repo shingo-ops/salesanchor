@@ -16,6 +16,7 @@ import os
 from datetime import datetime, timezone
 
 import httpx
+from celery import shared_task
 from sqlalchemy import text
 
 from app.auth.dependencies import clear_tenant_context, set_tenant_context
@@ -133,8 +134,15 @@ async def _run_daily_recon() -> dict:
     }
 
 
+@shared_task(name="app.tasks.sa02_recon_monitor.run_sa02_daily_recon")
 def run_sa02_daily_recon() -> dict:
     """Celery タスクから呼ばれるエントリポイント（同期ラッパー）。"""
     import asyncio
 
-    return asyncio.run(_run_daily_recon())
+    from app.database import engine
+
+    try:
+        return asyncio.run(_run_daily_recon())
+    finally:
+        # 共用 engine の接続を捨てる（translation.py と同じ。"attached to a different loop" 対策）。
+        asyncio.run(engine.dispose())

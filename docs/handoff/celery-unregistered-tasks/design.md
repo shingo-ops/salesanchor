@@ -9,8 +9,8 @@ mode: handoff
 > この文書は何か：一度も動いていない 2 つの定期作業（写しシートの書き出しと、毎朝の件数の突き合わせ）を動くように直し、成果のない 15 分ごとのまとめ翻訳を外すための設計です。あわせて、買取価格の取得が後片付けをしないせいで別の作業を失敗させる問題を直し、同じ登録漏れが二度と起きないように検査を足します。
 
 **状態**: 設計案作成済み・設計審査済み（Opus 自己審査。独立した第二者レビューではない）・PO 実装承認済み（2026-10-16、原文「y」）・実装カード発行済み（[card-impl.md](card-impl.md)）・実装未着手
-**recon**: [recon.md](recon.md)
-**出どころ**: `docs/handoff/ai-ops-247/stage1-design.md` §7 の U11・U13
+**recon**: [recon.md](recon.md)（`docs/handoff/celery-unregistered-tasks/recon.md`）
+**出どころ**: `docs/handoff/ai-ops-247/stage1-design.md` §7 の U11・U13（ADR-1012 AI保守運用 段階1 の残件）
 
 ---
 

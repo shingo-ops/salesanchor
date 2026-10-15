@@ -21,6 +21,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+from celery import shared_task
+
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -292,6 +294,7 @@ async def _write_mirror_async() -> dict[str, int]:
 # Celery タスク
 # ──────────────────────────────────────────────────────────────────────────────
 
+@shared_task(name="app.tasks.tcg_mirror.run_tcg_mirror_write")
 def run_tcg_mirror_write() -> None:
     """
     Celery タスクのエントリポイント。
@@ -299,6 +302,8 @@ def run_tcg_mirror_write() -> None:
     シート自動作成は一切行わない。
     """
     import asyncio
+
+    from app.database import engine
 
     key_file = os.getenv("TCG_SHEETS_SA_KEY_FILE", "").strip()
     if not key_file:
@@ -309,16 +314,21 @@ def run_tcg_mirror_write() -> None:
 
     logger.info("[tcg_mirror] 書き出し開始: spreadsheetId=%s", MIRROR_SPREADSHEET_ID)
     try:
-        stats = asyncio.run(_write_mirror_async())
-        logger.info(
-            "[tcg_mirror] 書き出し完了: products=%d keywords=%d suppliers=%d "
-            "supplier_summary=%d db_structure=%d",
-            stats["products"],
-            stats["keywords"],
-            stats["suppliers"],
-            stats["supplier_summary"],
-            stats["db_structure"],
-        )
-    except Exception as exc:
-        logger.error("[tcg_mirror] 書き出し失敗: %s", exc, exc_info=True)
-        raise
+        try:
+            stats = asyncio.run(_write_mirror_async())
+            logger.info(
+                "[tcg_mirror] 書き出し完了: products=%d keywords=%d suppliers=%d "
+                "supplier_summary=%d db_structure=%d",
+                stats["products"],
+                stats["keywords"],
+                stats["suppliers"],
+                stats["supplier_summary"],
+                stats["db_structure"],
+            )
+        except Exception as exc:
+            logger.error("[tcg_mirror] 書き出し失敗: %s", exc, exc_info=True)
+            raise
+    finally:
+        # 共用 engine の接続を捨てる（Celery worker の
+        # "Future attached to a different loop" を避ける。translation.py と同じ）。
+        asyncio.run(engine.dispose())
