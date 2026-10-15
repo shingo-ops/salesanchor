@@ -160,7 +160,7 @@
 - 本番の `TCG_AUTO_DISTRIBUTE` は API（astro-webapp-backend-1）と worker（astro-webapp-celery-worker-1）の両方で `1`（読み取り 2026-10-16 01:02 JST、`/tmp/CC報告ファイル/review-edit-fields/291_api_env.txt`）。schedule_distribution は本番で働く。
 - 解析の途中 commit A:1814 のあと、単位の補完 E3a/E4（`backend/app/services/tcg_unit_recovery_svc.py:873-880,1175-1182`）が `WHERE id = :ar_id` だけで ar の単位を書き換える。
 - 鍵の後でマスタを読む関数は例外時に `session.rollback()` する（A:682、969、1037、1242）。rollback で xact lock は外れる。
-- 循環 import: H や A の先頭で `v102_transcription_svc` を import すると ImportError（審査 `review-opus-bin2.md` §2-3 の実験）。transcription が先頭で H を import しているため（`v102_transcription_svc.py:18-20`）。
+- 循環 import: H や A の先頭で `v102_transcription_svc` を import すると ImportError（審査 `docs/handoff/review-edit-all-fields/review-opus-bin2.md` §2-3 の実験）。transcription が先頭で H を import しているため（`backend/app/services/v102_transcription_svc.py:18-20`）。
 - 画面通知は便1で R の POST value-override を `backend/app/realtime/topics.py` の表に載せ済み（v6 でも同じ API なので通知は出る）。
 
 ### 5-1. 決めたこと（Opus の設計判断）
@@ -168,14 +168,14 @@
 - D2 v6 の解析も同じ鍵を取る。人の値を読んだあとに保存が割り込んで、その値を古い値で上書きしないため。保存（H:581）は鍵 → FOR UPDATE の順、解析は鍵を最初に取るので、取る順が同じでデッドロックしない。呼び出し元は行ロックを先に持っていない（5-0）。
 - D3 v6 で値を直したら、配信の予約を1回積む（v102 の再解析が積むのと同じ `schedule_distribution`）。Sold out に直した件を、次の配信で外すため。v6 の再解析は積まない（即時 UPDATE で ar は直っていて、v6 の再解析は重いため）。
 - D4 状態（コンディション）の行は v6 では今のまま（空箱関連だけ）。PO の依頼の「状態」は v102 で満たし、v6 の状態の直しは便1から既存の空箱の流れだけ。
-- D5 鍵の名前を作る関数の正本を H に移す（依存の一番下。循環しない）。`v102_transcription_svc.v102_analysis_lock_key` は H の関数をそのまま使う（import して名前を残す）。H:581 と `line_analysis_v102_svc.py:1269` の直書きもこの関数に揃える。中身の文字列は変えない。
+- D5 鍵の名前を作る関数の正本を H に移す（依存の一番下。循環しない）。`v102_transcription_svc.v102_analysis_lock_key` は H の関数をそのまま使う（import して名前を残す）。H:581 と `backend/app/services/line_analysis_v102_svc.py:1269` の直書きもこの関数に揃える。中身の文字列は変えない。
 - D6 単位の補完 E3a/E4 は、人が単位を直した行（unit_resolved = TRUE）を書き換えない。UPDATE の WHERE に `AND unit_resolved = FALSE` を足す。途中 commit 後に保存が割り込んでも、人の単位が消えないため。
 
 ### 5-2. backend
 1. H:
-   - 鍵の関数 `v102_analysis_lock_key(job_id) -> str` を H に置く（中身は今の `v102_transcription_svc.py:166-168` と同じ文字列）。H:581 の直書きをこの関数に替える（D5）。
+   - 鍵の関数 `v102_analysis_lock_key(job_id) -> str` を H に置く（中身は今の `backend/app/services/v102_transcription_svc.py:166-168` と同じ文字列）。H:581 の直書きをこの関数に替える（D5）。
    - 新しい `item_basic_rejection(found, source_message_id)`: 件なし 404 → source 不一致 422。
-   - `item_rejection` は今の順（404 → v6 なら 409 → 422）を保つ: `found is None → 404`、`v102 でない → 409`、`return item_basic_rejection(found, source_message_id)`。docstring（H:432-433）も合わせる。review-ack の確定・取り消し・CSV（`tcg_review_csv_svc.py:177`）の応答は変わらない。
+   - `item_rejection` は今の順（404 → v6 なら 409 → 422）を保つ: `found is None → 404`、`v102 でない → 409`、`return item_basic_rejection(found, source_message_id)`。docstring（H:432-433）も合わせる。review-ack の確定・取り消し・CSV（`backend/app/services/tcg_review_csv_svc.py:177`）の応答は変わらない。
    - `save_value_override`（H:576 付近）は item_rejection の代わりに item_basic_rejection を使う。
 2. `backend/app/services/v102_transcription_svc.py:166-168`: 定義を消し、`from app.services.v102_human_decisions_svc import v102_analysis_lock_key` を使う（既存の H の import 行に足す。今の呼び出し元はそのまま動く）。
 3. `backend/app/services/line_analysis_v102_svc.py:1269`: 直書きの文字列を `v102_analysis_lock_key(job_id)` に替える（H から import 済みの行に足す）。
@@ -202,16 +202,16 @@
 
 ### 5-3. frontend
 - `frontend/src/features/tcg-analysis-review/reviewFixRows.ts:37` の `if (item.is_v102 === true)` を外し、数量・単価・単位・メモ・販売状況を v6 でも scope "value" にする。
-- `ReviewFixWizard.tsx:39` の availableFixChoices の "value" の v102 条件を外す。`ReviewFixWizard.tsx:27`（ackableReasonCodes）と `ConditionReviewPanel.tsx:25`（状態の行、D4）は残す。
-- 保存後の文言（`ReviewValueFixForm.tsx:87`）: v102 は今の `reviewItem.valueFix.saved`（「直しました。解析をやり直しています」）、v6 は新しいキー `reviewItem.valueFix.savedNoReanalyze`（ja「直しました」／en「Saved」）を `item.is_v102` で出し分ける。ja.json と en.json の両方に足す（ADR-027）。
-- 既存の試験の期待値を直す: `ReviewFixWizard.test.tsx:49-53`（v6 にも "value"）、`ReviewItemDrawer.test.tsx:182-191`（v6 の数量を「押せない行」の例にしている所を、v6 で押せない状態の行などに替える）。
+- `frontend/src/features/tcg-analysis-review/ReviewFixWizard.tsx:39` の availableFixChoices の "value" の v102 条件を外す。`frontend/src/features/tcg-analysis-review/ReviewFixWizard.tsx:27`（ackableReasonCodes）と `frontend/src/features/tcg-analysis-review/ConditionReviewPanel.tsx:25`（状態の行、D4）は残す。
+- 保存後の文言（`frontend/src/features/tcg-analysis-review/ReviewValueFixForm.tsx:87`）: v102 は今の `reviewItem.valueFix.saved`（「直しました。解析をやり直しています」）、v6 は新しいキー `reviewItem.valueFix.savedNoReanalyze`（ja「直しました」／en「Saved」）を `item.is_v102` で出し分ける。ja.json と en.json の両方に足す（ADR-027）。
+- 既存の試験の期待値を直す: `frontend/src/features/tcg-analysis-review/ReviewFixWizard.test.tsx:49-53`（v6 にも "value"）、`frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx:182-191`（v6 の数量を「押せない行」の例にしている所を、v6 で押せない状態の行などに替える）。
 
 ### 5-4. 受け入れ基準（便2）
 
 | 基準 | 検証方法 |
 |---|---|
 | V1 9行 | vitest: v6 の件で fixRowsOf が name・productId・work（product）、quantity・price・unit・memo・saleStatus（value）を返す。state は空箱関連のときだけ |
-| V2 API | pytest: v6 の件の value-override が 200 で保存され、即時 UPDATE される。件なし 404、source 不一致 422 は同じ。v6 の review-ack の確定と取り消しは 409 のまま（v6 かつ source 不一致も 409）。`test_v102_value_overrides.py:266` の v6→409 の期待は 200 に直す |
+| V2 API | pytest: v6 の件の value-override が 200 で保存され、即時 UPDATE される。件なし 404、source 不一致 422 は同じ。v6 の review-ack の確定と取り消しは 409 のまま（v6 かつ source 不一致も 409）。`backend/tests/test_v102_value_overrides.py:266` の v6→409 の期待は 200 に直す |
 | V3 配信の予約 | pytest: R の schedule_distribution を monkeypatch して数える。v6 で保存すると1回、enqueue_v102_reanalyze は0回。v102 は今どおり再解析が1回・配信0回 |
 | V4 再解析で残る | pytest（PG）: v6 の件で数量と販売状況（Sold out）を直し、analyze_extraction_job をやり直しても ar が人の値で、exclusion='excluded'。In Stock に直すと None |
 | V5 商品の直しがある件 | pytest（PG）: 商品の直しがある v6 の件は、やり直しても人の値が残る（V4 と同じ試験の中で確かめてよい） |
