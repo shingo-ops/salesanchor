@@ -617,7 +617,7 @@ export function useInboxState(): UseInboxStateReturn {
       return;
     }
     loadMessages(selectedLeadId);
-    markRead(selectedLeadId);
+    markRead(selectedLeadId, true);
     loadLeadDetail(selectedLeadId);
 
     // ADR-143 Phase B: auto スレッドで相手言語を多数決判定して自動設定
