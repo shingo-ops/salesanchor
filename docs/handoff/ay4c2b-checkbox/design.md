@@ -4,7 +4,7 @@
 - recon: docs/handoff/ay4c2-checkbox/recon.md 項目 8・9（行番号は origin/main 52b8a4003 のもの。2a は schedule 系のファイルに触れていない）
 - 前便: docs/handoff/ay4c2-checkbox/design.md（AY-4c-2a）
 - 対象ADR: ADR-144（UI ガバナンス）、ADR-067（デザイントークン）
-- 状態: 設計審査済み（r2 APPROVE、LOW 3 件反映）・実装未着手
+- 状態: 設計審査済み（r2 APPROVE）・実装済み（422b01d74）・コード審査 Opus APPROVE（/tmp/CC報告ファイル/ssot-checkbox/ay4c2b/code-review.md）
 
 ## 1. 目的（PO の言葉）
 
@@ -133,7 +133,7 @@ frontend/src/components/CheckboxControl.test.tsx に2つ足す:
 1. `dataColor="#123456"` を渡すと input の `style.accentColor` が `rgb(18, 52, 86)`（試験環境の jsdom は色を rgb に直して持つ。審査 r1 で実測: /tmp/CC報告ファイル/ssot-checkbox/ay4c2b/review-sim-vitest.txt）。未指定なら `input.hasAttribute("style") === false`。
 2. 登録制の試験（前例 frontend/src/components/ToggleMigration.test.tsx:21-26 の files 表の形）。frontend/src 以下の .tsx と .ts をすべて読み（`*.test.tsx`・`*.test.ts`・`*.stories.tsx`・`components/CheckboxControl.tsx` を除く）、`/\bdataColor\b\s*[=:]/g`（JSX の `dataColor=` と、createElement 等のオブジェクトの `dataColor:` の両方）が出るファイルと件数が、登録表 `[["pages/schedule/SchedulePageImpl.tsx", 2]]` とちょうど一致すること。さらに登録ファイルの中の出現がすべて `dataColor={owner.color}` の形であること（`/\bdataColor\b\s*=\s*\{owner\.color\}/g` の件数が 2）。
    - 理由: 文字列リテラルだけを数える案は、一重引用符・空白・定数・三項演算子・`??`・spread の 7 通りを見逃した（審査 r1、review-sim-grep.txt）。登録制なら新しい使い手は必ずこの表を書き換える PR になり、審査で止められる（design.md:919「完全パス＋exportName の登録で許可を広げない」と同じ考え方）。
-   - 部品名は見ないので、design.md:874 の Badge の dataColor が実装されるとこの試験は赤になる（安全側）。その便では登録表を部品ごとに分けるか、この表に足す。試験の冒頭コメントにこの1行を書く。
+   - この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、design.md:874）。試験の冒頭コメントにこの1行を書く。
    - spread（`{...props}` で dataColor を流す）は件数に出ないが、CheckboxControl の使い手で spread を使うものは今 0。spread 経由を許すかは新しい使い手が出たときに審査で判断する（残件として design.md に書く）。
 
 ### 3-5. カタログ frontend/src/components/CheckboxControl.stories.tsx
@@ -209,3 +209,4 @@ AY-4c-2a §5-1 と同じ作り方（ファイル名 ay4c2b-*）。
   - MEDIUM-1 リテラル禁止の試験は抜け道 7 通り → §3-4 の 2 を登録制に変更、§8 に 1 行追加
   - LOW-1 行番号のずれ 3 か所 → 修正。LOW-2 company-forms.css のコメント → §2 で対象外・残件と明記。LOW-3 opacity と disabled 行の画像 → §5 に追加。LOW-4 → 変更なし
 - r2（Opus、2026-10-16）: APPROVE。/tmp/CC報告ファイル/ssot-checkbox/ay4c2b/design-review-r2.md。LOW-A（.ts からの createElement）→ §3-4 の 2 を .ts と `dataColor:` も数える形に。LOW-B（§7 の文面と残件の引き継ぎ）→ §7・§3-6 を修正。LOW-C（Badge の dataColor で赤になる）→ §3-4 に注記。いずれも判定を変えない修正のため r3 は行わない。
+- コード審査（Opus、2026-10-16）: APPROVE。LOW 5 件。LOW-1・LOW-5 は本コミットで修正、LOW-2（実測の後の自分の行だけ readOnly、readonly を指す CSS は無く値に影響なし）・LOW-3（試料は1 section）・LOW-4（型キャストで style を持ち込める既存の穴、使い手0）は記録のみ。

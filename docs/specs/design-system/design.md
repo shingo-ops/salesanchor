@@ -4240,7 +4240,7 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - PO 決定: 2026-10-16「y」（カレンダーの色のまま、CheckboxControl に dataColor の口を足す）。
 - 設計: docs/handoff/ay4c2b-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
 - 変更: CheckboxControl に `dataColor?: string` を追加（未指定なら style 属性なし・--accent）。SchedulePageImpl.tsx の 2 件を CheckboxControl に載せかえ。schedule.css の `.schedule-calendar-checkbox` を行内の配置だけの `.schedule-calendar-item > input[type="checkbox"]` に置き換え。
-- 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。Badge の dataColor（:874）が実装されると登録制の試験は赤になる（安全側。その便で表を見直す）。
+- 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、:874）。
 - 結果: アプリの生 checkbox は金型・Checkbox・Toggle 以外で 0 件。
 - 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2b-measure-compare.txt と ay4c2b-*.png。想定外の差 0。disabled の自分の行の cursor が pointer から not-allowed に変わるのみ（金型の形）。
 - 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断。

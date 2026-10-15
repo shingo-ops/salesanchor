@@ -82,7 +82,7 @@ describe('CheckboxControl', () => {
 
 // dataColor の使い手は登録制（design.md:826 データ由来の色だけ。通常 UI の色をこの口で通さない）。
 // 新しい使い手は下の登録表を書き換える PR になり、審査で止まる。
-// 注: design.md:874 の Badge の dataColor が実装されるとこの試験は赤になる（安全側）。その便で登録表を部品ごとに分けるか、この表に足す。
+// 注: この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、design.md:874）。
 describe('CheckboxControl dataColor registry (AY-4c-2b)', () => {
   const srcRoot = resolve(__dirname, '..');
   const walk = (dir: string): string[] =>
