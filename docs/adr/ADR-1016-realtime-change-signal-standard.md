@@ -1,0 +1,53 @@
+# ADR-1016: 書き込みが成功したら「変わった合図」を送り、画面は表を残したまま読み直す（即時反映の標準）
+
+| 項目 | 内容 |
+|------|------|
+| ステータス | Accepted |
+| 備考 | 2026-10-15 起案。PO の依頼「全てのページにおいてこの仕組みを横展開してアプリ全体の標準仕様とすることは出来る？」に対し、進め方の案へ PO が「Y」。2026-10-15 に設計 design.md（Fable 審査 APPROVE）を示し、「この設計をアプリ全体の標準として採るか」に PO が「Y」 |
+| 起案日 | 2026-10-15 |
+| 方針の決定者 | Shingo（PO） |
+| 関連 | ADR-133・ADR-137（SSE の nginx location の扱い）、ADR-081（uvicorn は1ワーカー）、ADR-1003（GO 委譲）、ADR-1015（A 区分：`backend/app/auth/`・`backend/app/tasks/`・新しい API は PO 判断）、ADR-135 と CLAUDE.md「危険PRのGO手順」（nginx を含む PR の GO） |
+
+---
+
+## What（何を決めたか）
+
+1. 画面への即時反映は、通り道（SSE）1本 GET /api/v1/events/stream で行う。ページごとに通り道を作ることは禁止する。
+2. 合図には「何が変わったか」の名前（topic）と、送った元のタブ（origin）だけを入れる。データの中身は送らない。画面は既存の API でデータを読み直す。
+3. topic の正本は backend/app/realtime/topics.py の1か所に置く。中身は次の2つ。
+   - ルートのテンプレートとメソッド → topic と範囲（tenant か global）
+   - 合図を出さないルート → その理由
+   - 画面側の topic 名は、ここから生成した定数を使う。
+4. 書き込み API（POST/PUT/PATCH/DELETE）が 2xx で終わったら、middleware が自動で合図を送る。対応表との照合キーはルートのテンプレート（request.scope["route"].path）にする。各 router に手で publish を書くことは原則しない。
+5. 裏の処理（Celery など）がデータを書き換えたときは、終わったところで publish_change を明示的に呼ぶ。
+6. 合図のチャンネルは、会社ごとの rt:t:{tenant_id} と、会社をまたぐ共用データ用の rt:global に分ける。
+   - global は super admin だけが受け取る。
+   - 会社 ID が分からない書き込みでは、会社別の合図を送らない。
+7. 画面は useRealtimeRefresh(topics, reload) で合図を受ける。
+   - 合図はまとめてから1回だけ読み直し、表は残したまま差し替える。
+   - 自分のタブが送った合図は無視する。
+   - 裏にあるタブは、表に戻ってから読み直す。
+8. CI で全ての書き込み API を列挙し、3 の対応表にも「出さない理由」の一覧にも無いものがあれば赤にする。
+9. DB を直接 SQL で直したときは合図が出ない。これは対象外とする。
+
+## Why（なぜ）
+
+- PO の願いは「読み込み速度を落とさず、変更があったら即時反映」を全ページの標準にすることである。
+- 今の SSE は受信箱とリードの2本だけで、合図は "update" しかない。ページを増やすたびに、通り道とチャンネルが増える（`docs/handoff/realtime-standard/recon.md` §1）。
+- 書き込み API は360件ある。手で publish を書くやり方では、書き忘れを機械で止められない（recon §3）。
+- データの中身を合図で送ると、会社の分け方と権限を二重に守ることになり、データの正本が分散する。合図を名前だけにして、読み直しを既存の API に任せれば、正本は1か所のままになる。
+- 速さの面では、読み込みの処理そのものは変えない。読み直しはまとめて1回にし、表も消さないので、体感の速さは落ちない（G3 で測る）。
+
+## 代替案
+
+ポーリング、WebSocket、中身を送る方式、手書きの publish、DB トリガーの5つを比べた。比較の表は design.md §5 にある。
+
+## 影響
+
+- `backend/app/auth/dependencies.py` の get_current_tenant に、会社 ID を request.state に記録する変更が入る。これは A 区分（ADR-1015）の変更である。
+- nginx に SSE の location を1つ足す。これは危険 PR として PO の GO が要る（CLAUDE.md「危険PRのGO手順」）。
+- 受信箱とリードの古い通り道は、移行が終わるまで残す（design.md §6 段階3）。
+
+## 詳細
+
+`docs/handoff/realtime-standard/design.md`
