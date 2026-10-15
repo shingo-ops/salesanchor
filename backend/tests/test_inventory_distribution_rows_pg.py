@@ -441,7 +441,7 @@ def searchable(pg, ids):
     return SimpleNamespace(s1=s1, s2=s2)
 
 
-@pytest.mark.parametrize("q, expected", [
+_BIN3_SEARCH_CASES = [
     ("ぽけもん", ["ポケモンカード"]),   # ひらがな → カタカナ
     ("ポケモン", ["ポケモンカード"]),
     ("ＡＢＣ", ["ワンピース"]),          # 全角英数 → 半角小文字（英名 ABC Booster に当たる）
@@ -452,19 +452,23 @@ def searchable(pg, ids):
     ("sv1", ["ポケモンカード"]),          # mark（型番）
     ("甲提供者", []),                     # 提供者名では当たらない
     ("   ", ["ポケモンカード", "ワンピース"]),  # 空白だけは全件
-])
-def test_bin3_search_normalizes_and_ands_terms(pg, ids, searchable, q, expected):
-    total, names = _search_items(pg, q=q)
-    assert sorted(names) == sorted(expected)
-    assert total == len(expected)
+]
 
 
-def test_bin3_python_and_sql_normalization_agree_on_the_shared_vectors(pg, ids, searchable):
+def test_bin3_search_and_supplier_filters(pg, ids, searchable):
+    """pg フィクスチャは DB を作り捨てずに残すため、CI の /dev/shm を使い切らないよう 1 関数にまとめている。"""
     import json
     import pathlib
 
     from app.routers.inventory_offers import _KANA_FROM, _KANA_TO, normalize_search_text
 
+    # 検索の正規化と AND
+    for q, expected in _BIN3_SEARCH_CASES:
+        total, names = _search_items(pg, q=q)
+        assert sorted(names) == sorted(expected), q
+        assert total == len(expected), q
+
+    # Python と SQL の正規化が共有ベクタで一致する
     vectors = json.loads((pathlib.Path(__file__).resolve().parents[2] / "frontend/src/features/inventory/searchNormalize.vectors.json").read_text())
     with Session(pg[1]) as session:
         for v in vectors:
@@ -475,8 +479,7 @@ def test_bin3_python_and_sql_normalization_agree_on_the_shared_vectors(pg, ids, 
             ).scalar_one()
             assert sql_value == v["expected"], v
 
-
-def test_bin3_supplier_ids_shows_only_the_chosen_suppliers(pg, ids, searchable):
+    # 選んだ提供者だけを表示
     both = f"{searchable.s1},{searchable.s2}"
     assert _search_items(pg, supplier_ids=both)[0] == 2
     assert _search_items(pg, supplier_ids=str(searchable.s1)) == (1, ["ポケモンカード"])
@@ -485,8 +488,6 @@ def test_bin3_supplier_ids_shows_only_the_chosen_suppliers(pg, ids, searchable):
     assert _search_items(pg, supplier_ids="")[0] == 2
     assert _search_items(pg, supplier_ids=f"x,{searchable.s2}") == (1, ["ワンピース"])  # 整数だけ採る
 
-
-def test_bin3_supplier_ids_and_hide_supplier_ids_both_work(pg, ids, searchable):
+    # supplier_ids と hide_supplier_ids の併用
     assert _search_items(pg, hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])
     assert _search_items(pg, supplier_ids=f"{searchable.s1},{searchable.s2}", hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])
-
