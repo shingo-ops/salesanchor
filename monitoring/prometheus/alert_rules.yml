@@ -175,3 +175,42 @@ groups:
           summary: "{{ $labels.monitor_name }} の証明書が無効です"
           description: "Uptime Kuma が証明書を無効と判定しています"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certinvalid"
+
+  - name: celery_alerts
+    rules:
+      # celery の heartbeat が古い（beat の停止・worker の停止や詰まり。tokens.yml: celery_heartbeat_stale_sec=600）
+      # backend/app/metrics.py が Redis から読んで出す celery_heartbeat_last_success_timestamp_seconds を使用
+      - alert: CeleryHeartbeatStale
+        expr: (time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}) > 600
+        for: 2m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "裏方の処理（celery）が 10 分以上動いていません"
+          description: "1 分ごとの heartbeat が {{ $value | humanizeDuration }} 前から更新されていません（閾値: 10 分）。beat か worker が止まっているか詰まっています。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryheartbeatstale"
+
+      # 同じタスクの失敗が 1 時間に 3 回以上（tokens.yml: celery_task_failures_per_1h=3）
+      - alert: CeleryTaskFailuresHigh
+        expr: sum by (task) (increase(celery_task_failures{job="backend"}[1h])) >= 3
+        for: 0m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "裏方の処理（celery）の {{ $labels.task }} が失敗を繰り返しています"
+          description: "{{ $labels.task }} が直近 1 時間に {{ $value | humanize }} 回失敗しました（閾値: 3 回）。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celerytaskfailureshigh"
+
+      # 待ち行列が溜まっている（tokens.yml: celery_queue_length_max=100）
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length{job="backend"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "裏方の処理（celery）の待ち行列が溜まっています"
+          description: "待ち行列が {{ $value | humanize }} 件です（閾値: 100 件・10 分継続）。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"

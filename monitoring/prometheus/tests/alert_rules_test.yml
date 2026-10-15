@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 14 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 17 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -301,3 +301,96 @@ tests:
               summary: "App の証明書が無効です"
               description: "Uptime Kuma が証明書を無効と判定しています"
               runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certinvalid"
+
+  # time() は 0 から始まる。heartbeat を 0 のままにして 600 秒超の遅れを作る（11m から差が 600 を超え、for 2m を足して 13m 以降に鳴る）
+  - name: CeleryHeartbeatStale
+    interval: 1m
+    input_series:
+      - series: 'celery_heartbeat_last_success_timestamp_seconds{job="backend",instance="api"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: CeleryHeartbeatStale
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: CeleryHeartbeatStale
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              tier: page
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "裏方の処理（celery）が 10 分以上動いていません"
+              description: "1 分ごとの heartbeat が 15m 0s 前から更新されていません（閾値: 10 分）。beat か worker が止まっているか詰まっています。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryheartbeatstale"
+
+  - name: CeleryHeartbeatFresh
+    interval: 1m
+    input_series:
+      - series: 'celery_heartbeat_last_success_timestamp_seconds{job="backend",instance="api"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: CeleryHeartbeatStale
+        exp_alerts: []
+
+  - name: CeleryTaskFailuresHigh
+    interval: 1m
+    input_series:
+      - series: 'celery_task_failures{job="backend",instance="api",task="t1"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: CeleryTaskFailuresHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              task: t1
+            exp_annotations:
+              summary: "裏方の処理（celery）の t1 が失敗を繰り返しています"
+              description: "t1 が直近 1 時間に 30 回失敗しました（閾値: 3 回）。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celerytaskfailureshigh"
+
+  - name: CeleryTaskFailuresLow
+    interval: 1m
+    input_series:
+      - series: 'celery_task_failures{job="backend",instance="api",task="t1"}'
+        values: '0+0.02x60'
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: CeleryTaskFailuresHigh
+        exp_alerts: []
+
+  - name: CeleryQueueBacklog
+    interval: 1m
+    input_series:
+      - series: 'celery_queue_length{job="backend",instance="api"}'
+        values: '150x30'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: CeleryQueueBacklog
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: CeleryQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "裏方の処理（celery）の待ち行列が溜まっています"
+              description: "待ち行列が 150 件です（閾値: 100 件・10 分継続）。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"
+
+  - name: CeleryQueueBelowThreshold
+    interval: 1m
+    input_series:
+      - series: 'celery_queue_length{job="backend",instance="api"}'
+        values: '58x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: CeleryQueueBacklog
+        exp_alerts: []

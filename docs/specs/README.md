@@ -70,7 +70,7 @@
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
-| Docker（Colima）使い終わり自動停止（colima-idle-stop。PO の Mac で使っていない試験用 DB の入れ物を自動で止めてメモリを空ける） | [colima-idle-stop/README.md](colima-idle-stop/README.md) | あるべき姿=PO発言転記・実装済み（#4294）・KGI 6/7 合格 2026-10-15 |
+| Docker（Colima）使い終わり自動停止（colima-idle-stop。PO の Mac で使っていない試験用 DB の入れ物を自動で止めてメモリを空ける） | [colima-idle-stop/README.md](colima-idle-stop/README.md) | あるべき姿=PO発言転記・実装済み（#4294）・KGI 7/7 合格 2026-10-15 |
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |
