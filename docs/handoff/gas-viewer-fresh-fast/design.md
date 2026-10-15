@@ -157,6 +157,7 @@
 | 申込：メールか LINE 名が空なら 422。Discord ID の欄は無く、送られてきても保存しない | CI pytest |
 | 申込：在庫関連の課題が1000文字を超えたら 422。保存した文字列は画面にそのまま文字として出し、HTML として解釈しない | CI pytest |
 | 延長：期限切れの trial に N=7 を指定すると、trial_expires_at が「記録した時刻＋7日」になり、inventory が 200 になる。N が0以下か整数でなければ 422。active・suspended・pending には延長できない（409） | CI pytest（時刻を固定する） |
+| ログイン記録：session の成功・失敗、login の要求、申込のたびに viewer_login_events に1行入り、client_ip が X-Real-IP の値になる。91日前の行は毎日の処理で消える | CI pytest |
 | ログイン用のリンクは15分で無効になり、一度使ったら2回目は 401 になる | CI pytest（時刻を固定する） |
 | suspended にした後は、発行済みの12時間トークンでも inventory が 403 になる | CI pytest |
 | GET /viewer/ の応答に Cache-Control: no-cache が付いている。/viewer でも同じページに着く | Evaluator（curl と Playwright） |
@@ -238,7 +239,14 @@
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
 - Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
-- Q6. 同じ人が別のメールで（会社名は聞かないため、判定を LINE 名で行うかを含めて）申し込み直したとき、もう一度トライアルを認めるか。
+- Q6.【決定 2026-10-15 PO「Y」】別のメールでの申込み直しは自動では止めない。気付いたら PO か Claude が停止する。判断の材料として、下のログイン記録と、申込一覧で同じ LINE 名・同じ IP の行に目印を出す。
+- ログイン記録（PO 決定 2026-10-15、原文「ログインのログを取る形でいつ誰がどのIPからなどが特定できるのであれば1つのアカウントから複数人がログインしていないか、二重登録で回避していないかなど判断できる」）：
+  - 【事実】既存の public.auth_events（migrations/001_create_auth_events.sql:6-16）は、いつ・IP（client_ip VARCHAR(45)）・端末（user_agent VARCHAR(500)）を持つが、「誰が」の列が無い。また AuditMiddleware が書くのは /api/v1/auth/ 配下と 401/403 だけ（backend/app/middleware/audit.py:34・:37）。保存は90日で、毎日自動で消す（backend/app/tasks/maintenance.py:30、backend/app/celery_app.py:96-99）。tenant の audit_logs は tenant_id と user_id が必須なので、閲覧者には使えない（backend/app/services/audit.py:277-）。
+  - 決定：新しい表 public.viewer_login_events に記録する。列は id、viewer_id（viewer_accounts への FK）、event_type、client_ip、user_agent、created_at。client_ip と user_agent の名前と型、保存90日・毎日自動で消すことは、auth_events にそろえる（消す処理は maintenance.py の既存の型にならう）。auth_events には列を足さない（中間処理の全リクエスト記録と、閲覧者の本人の記録とを混ぜないため）。
+  - event_type は4つ：login_requested（リンクを要求した）、session_created（ログインできた）、session_failed（トークンか email が合わなかった。viewer_id が分かる場合だけ）、signup（申込）。在庫の表示（60秒ごとの取得）は記録しない（行が増えすぎるため。12時間のログインごとに1行で、共有は判断できる）。
+  - IP の取り方は、本設計の回数制限と同じ1つの関数を使う（X-Real-IP）。【事実】既存の _get_client_ip は X-Forwarded-For の先頭を使っている（backend/app/auth/dependencies.py:67-72）。閲覧者ではこれを使わない。理由は D1 の回数制限と同じ（なりすまされない値を使うため）。
+  - PO の画面：閲覧者ごとのログイン履歴（日時・IP・端末）を出す。目印を2つ出す。①同じ閲覧者が24時間のうちに3つ以上の別 IP からログインした。②別の閲覧者どうしで同じ IP からログインか申込がある。目印は判断の材料で、自動の停止はしない。
+
 - Q7. 閲覧者の個人情報を保存する期間と、削除の方法。LP のプライバシーポリシーに追記するか。
 - Q8.【決定 2026-10-15 PO「Y」】置き場所は app.salesanchor.jp/viewer/ にする。
 - Q9.【決定 2026-10-15 PO「Y」】PO から一覧（22件、メールの重複0件・形式不正0件）を受け取った。個人情報なので、リポジトリと PR には載せず、リポジトリ外の ~/CC報告ファイル-keep/viewer-initial-accounts/initial_active_list.tsv（権限600、項目は申込日時・LINE 名・メールの3つだけ）に置く。登録は段4の公開前に、Q3 の Claude の経路（無制限鍵＋専用スクリプト。migration ではデータを入れない）で行う。登録の前に一覧を PO に見せる。 【訂正 2026-10-15 PO】原文「武さんだけは本契約」。active で登録するのは一覧のうち1人（2026/09/28 申込の行）だけ。残り21人（PO「Y」2026-10-15）：状態を trial にし、trial_expires_at を一覧の申込日時（JST）＋14日にして登録する。これで公開の時点では全員が期限切れになり、在庫表は見られない。PO が延長を決めた人から、延長の機能で「記録した時刻＋N日」まで見られるようになる。申込のやり直しは要らない。
