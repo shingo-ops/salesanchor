@@ -16,4 +16,7 @@
 
 ## コード審査
 
-（実装後に追記）
+- 1回目（Opus architect）: REVISE。MED-1（dj-stale の誤った復旧通知）・MED-2（試験 m01〜m08 が中身のない合格）・LOW-1〜6。生出力: /tmp/CC報告ファイル/ac-heavy/mac-jobs-watch/review-code1.md
+- 対処: 設計 8a8eff529（dj-stale の判定条件を「判定する回」側へ移動・curl --max-time 20・plist は本体の終了コードを返す）、実装 7276de562。LOW-5（ロック競合）・LOW-6（状態置き場が書けない）は記録のみ（design.md リスク表）。
+- Opus 再確認（2026-10-15 実測）: /bin/bash で PASS=147 FAIL=0、plutil OK、mjw_judged の dj-stale 行は 3 条件（起きていた回・起動が直近04:00より前・04:00+猶予以降）、curl に --max-time 20。変異試験 12/12 を試験が検出（impl2/mutation.txt）。生出力: /tmp/CC報告ファイル/ac-heavy/mac-jobs-watch/impl2/
+- 判定: APPROVE（Opus 確認・同一AIによる審査）
