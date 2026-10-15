@@ -253,7 +253,11 @@ docstring（`:1-14`）に明記:
 → **金型の新設は不要。この金型をそのまま使う。**
 
 ### 6-2. 既存の未読バッジは金型を使っていない（本 PR では置き換えない）
-`frontend/src/pages/inbox/InboxConversationList.tsx:239-241`
+`frontend/src/pages/inbox/InboxConversationRows.tsx:138-140`
+
+**訂正（実装時に判明）**: 本行は当初 InboxConversationList.tsx の239-241行目として記載していたが、
+別PR（会話一覧の行描画を共通部品に分離するリファクタ）で既に上記ファイルへ移動済みだった。
+recon時点のサブエージェント報告を裏取りせず転記したことが原因。
 ```tsx
 {conv.unread_count > 0 && (
   <span className="badge conv-unread-badge">{conv.unread_count}</span>

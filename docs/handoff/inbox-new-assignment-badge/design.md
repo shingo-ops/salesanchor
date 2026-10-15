@@ -28,7 +28,7 @@
 | P3 | **新しい API を作らない** | `git diff main...HEAD` に `@router.` の追加が 0 件（既存 API の拡張のみ） |
 | P4 | **新しい UI 金型を作らない** | `frontend/src/components/` への新規ファイルが 0 件 |
 | P5 | 新しいデザイントークンを作らない | `git diff main...HEAD -- frontend/src/index.css` が空 |
-| P6 | 既存の未読バッジを触らない | `frontend/src/pages/inbox/InboxConversationList.tsx:239-241` の 3 行が diff に現れない |
+| P6 | 既存の未読バッジを触らない | `frontend/src/pages/inbox/InboxConversationRows.tsx:138-140` の 3 行が diff に現れない |
 
 ---
 
@@ -47,7 +47,7 @@
 | 会話一覧 API に `current_user` は**既に居る** | `backend/app/routers/meta_inbox.py:865-877` |
 | 会話一覧は `assigned_to` を返していない | 同 `:950-962` ／ `:1005-1018` |
 | **`Badge` 金型は既にある**（新設不要） | `frontend/src/components/Badge.tsx:16-34` |
-| 既存の未読バッジは金型未使用（本 PR では置き換えない） | `frontend/src/pages/inbox/InboxConversationList.tsx:239-241` ／ ADR-144:66-69 |
+| 既存の未読バッジは金型未使用（本 PR では置き換えない） | `frontend/src/pages/inbox/InboxConversationRows.tsx:138-140` ／ ADR-144:66-69 |
 
 ---
 
@@ -106,6 +106,18 @@ END $$;
 埋めない場合、本番反映の瞬間に**担当が付いている全会話に「新規」が付く**（意味のない大量通知）。
 埋めることで「**本番反映より後に担当が決まったものだけ**」にバッジが出る。
 → **PO に異存があれば埋めない版に切り替える**（SQL の `UPDATE` を 1 文消すだけ）。
+
+**訂正（レビュー 2026-10-15 指摘・PO が migration ファイル本体を書き直し済み）**: 上記サンプルの
+`WHERE assigned_to IS NOT NULL AND assignment_opened_at IS NULL` は**本番で毎デプロイ再実行される**
+（`scripts/run_all_migrations.sh` は冪等性のため全件を毎回流す運用）ため、2回目以降の実行で
+「担当になったがまだ開いていない」行（＝バッジを出すべき行）まで埋めてしまう欠陥があった。
+実際のファイルは `information_schema.columns` で列の有無を確認し、列が既にあれば `CONTINUE` で
+**丸ごとスキップ**する方式に修正されている。列が無いときだけ `ADD COLUMN`（`IF NOT EXISTS` 無し）
+＋ `WHERE assigned_to IS NOT NULL`（NULL ガード無し）の埋め直しを実行する。
+現物は `migrations/20261015_090000_add_leads_assignment_opened_at.sql` を参照（このファイルは
+PO が直接書き直すため、上記サンプルは更新していない）。検証:
+`backend/tests/test_inbox_new_assignment_badge.py` の
+`test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys`。
 
 **実行登録**: `scripts/run_all_migrations.sh` の**末尾に追記**
 ```bash
@@ -201,6 +213,23 @@ export function markRead(leadId: number, opened = false) {
 `frontend/src/pages/inbox/useInboxState.ts:620` の**開いたときの呼び出しだけ** `true` にする。
 `:922` と `:986` の一括既読は**無変更**（既定 `false`）。
 
+**追記（レビュー 2026-10-15 指摘・修正2）**: PC（非モバイル）では「未選択なら先頭会話を
+自動選択する」効果（`frontend/src/pages/inbox/useInboxState.ts` 内の `isMobile` 判定の効果）があり、これが
+`selectedLeadId` を立てるため、素朴な実装では開いたときの効果が自動選択でも発火し、
+**自分で開いていない先頭会話のバッジが消えてしまう**。PO 決定は**案ア「自動選択では
+消さない」**。対策: `autoSelectRef`（`useRef`）を自動選択の直前に立て、開いたときの
+効果はこのフラグが立っていれば `opened=false` を送り、フラグを消費する。
+利用者の明示操作（行クリック・URL の `lead_id` 指定での初期表示）は影響を受けず
+`opened=true` のまま。自動選択の判定条件・挙動自体（PR 4165 の退行対策）は変更しない。
+検証: `frontend/src/pages/inbox/useInboxState.autoSelectBadge.test.tsx`。
+
+**追記（レビュー 2026-10-15 指摘・修正3）**: `frontend/src/pages/inbox/useInboxState.ts` の `markRead` ローカル
+ラッパーは、`opened=true` のときだけ一覧の楽観更新に `is_new_assignment: false` を含める
+（一括既読 `opened=false` では落とさない。KGI K5 を再度満たすための対応）。
+`loadConversations()` は mount・絞り込み変更・送信・SSE でしか走らないため、これが無いと
+スマホで会話から一覧に戻った瞬間にはバッジが消えて見えない（再読込すれば消える＝サーバ側は
+正しいが、KGI K2「その場で」を満たさない）。
+
 ### 3-4. 会話一覧がバッジの有無を返す
 
 `backend/app/routers/meta_inbox.py` の SELECT（`:950-962`）に 2 列を足す。
@@ -228,8 +257,12 @@ export function markRead(leadId: number, opened = false) {
 
 ### 3-5. 画面（既存の金型を使う・新設なし）
 
-`frontend/src/pages/inbox/InboxConversationList.tsx` の既存の未読バッジ（`:239-241`）の**隣**に追加。
+`frontend/src/pages/inbox/InboxConversationRows.tsx` の既存の未読バッジ（`:138-140`）の**隣**に追加。
 既存 3 行は**触らない**（ADR-144:66-69）。
+
+**訂正（レビュー後）**: 当初 InboxConversationList.tsx の239-241行目と記載していたが、これは別PR
+（会話一覧の行描画を共通部品に分離するリファクタ）により既に `frontend/src/pages/inbox/InboxConversationRows.tsx` へ
+移動済みの実装を元に書かれた誤記だった（recon時点で未検知。実装時に判明・訂正）。
 
 ```tsx
 {conv.is_new_assignment && (
@@ -296,7 +329,7 @@ export function markRead(leadId: number, opened = false) {
 ## ⑥ 触るファイル
 
 ```
-migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_migrations.sh, backend/app/services/tenant.py, backend/app/routers/leads.py, backend/app/routers/meta_inbox.py, backend/tests/test_inbox_new_assignment_badge.py, frontend/src/lib/messages.ts, frontend/src/pages/inbox/useInboxState.ts, frontend/src/pages/inbox/InboxConversationList.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/api-contract/openapi.json, docs/handoff/inbox-new-assignment-badge/recon.md, docs/handoff/inbox-new-assignment-badge/design.md, .claude-pipeline/active-work.d/release-inbox-new-assignment-badge.md
+migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_migrations.sh, backend/app/services/tenant.py, backend/app/routers/leads.py, backend/app/routers/meta_inbox.py, backend/tests/test_inbox_new_assignment_badge.py, backend/tests/test_conversations.py, frontend/src/lib/messages.ts, frontend/src/pages/inbox/useInboxState.ts, frontend/src/pages/inbox/InboxConversationRows.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/api-contract/openapi.json, docs/handoff/inbox-new-assignment-badge/recon.md, docs/handoff/inbox-new-assignment-badge/design.md, .claude-pipeline/active-work.d/release-inbox-new-assignment-badge.md
 ```
 
 ## ⑦ 戻し方（本番適用後に問題が出た場合）
@@ -305,7 +338,7 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 
 | 段階 | 戻し方 |
 |---|---|
-| 画面だけ止める | `frontend/src/pages/inbox/InboxConversationList.tsx` のバッジ描画 3 行を外す（列もデータも無害に残る） |
+| 画面だけ止める | `frontend/src/pages/inbox/InboxConversationRows.tsx:141-143`（本便で追加した `is_new_assignment` バッジ描画 3 行）を外す（列もデータも無害に残る） |
 | API も止める | `is_new_assignment` を常に `false` で返す（1 行） |
 | 全部戻す | この PR を revert。**列は残る**が参照されないため無害。`DROP COLUMN` は**行わない**（不可逆・PO 確認必須のため） |
 
@@ -322,7 +355,7 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 - **新しい API を作らない**（既存 `mark-read` に任意フィールドを 1 つ足すのみ）→ ADR-1016 の台帳登録は**不要**
 - **新しい UI 金型を作らない**（既存 `frontend/src/components/Badge.tsx` を使う）
 - **`frontend/src/index.css` を触らない**（新しいデザイントークンを作らない）
-- **既存の未読バッジを触らない**（`frontend/src/pages/inbox/InboxConversationList.tsx:239-241`・ADR-144:66-69 により移行は別 PR）
+- **既存の未読バッジを触らない**（`frontend/src/pages/inbox/InboxConversationRows.tsx:138-140`・ADR-144:66-69 により移行は別 PR）
 - **`unread_count`（お客さまのメッセージの未読）に一切触らない**
 - **`DROP COLUMN` / `DROP TABLE` を書かない**
 - 便3（担当者別の可視範囲）は別便。本 PR では**誰に何が見えるかを変えない**

@@ -310,11 +310,14 @@ async def test_migration_do_block_is_postgresql_only_syntax_error_on_sqlite():
 
 @pytest.mark.asyncio
 async def test_sqlite_alter_table_does_not_support_add_column_if_not_exists():
-    """事実の記録: SQLite の `ALTER TABLE` 文法自体に `ADD COLUMN IF NOT EXISTS` は
-    存在しない（`IF NOT EXISTS` は `CREATE TABLE`/`CREATE INDEX` 専用。PostgreSQL は
-    `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` を独自拡張として持つが SQLite には無い）。
-    実際に SQLite へ投げて構文エラーになることを確認する（design.md の指示により、
-    動かないという事実をテストとして残す。無理に通さない）。
+    """事実の記録（一般的な SQLite の制約）: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+    は PostgreSQL 独自拡張であり SQLite の ALTER TABLE 文法には存在しない
+    （`IF NOT EXISTS` は `CREATE TABLE`/`CREATE INDEX` 専用）。
+
+    現在のマイグレーション本体はこの構文を使わず、`information_schema.columns` で
+    列の有無を調べてから `ADD COLUMN`（`IF NOT EXISTS` 無し）する方式に変更済み
+    （レビュー 2026-10-15 指摘の再実行時欠陥の修正）。本テストはそれでも一般的な
+    事実として記録しておく（design.md の指示により、動かないという事実を残す）。
     """
     eng = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     try:
@@ -327,55 +330,82 @@ async def test_sqlite_alter_table_does_not_support_add_column_if_not_exists():
 
 
 @pytest.mark.asyncio
-async def test_a1_a2_backfill_update_is_idempotent():
-    """A1: 既存の担当付き行の埋め直し。
-    A2: 同じ UPDATE を2回流しても結果が同じ（冪等）。
+async def test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys():
+    """A1: 列がまだ無いときだけ列を追加し、既存の担当付き行を埋める。
+    A2: 2回目以降（列が既に存在する）は丸ごとスキップし、1回目以降に新しく担当が付いた
+    行（＝まだ開いていない・NULL のまま）を壊さない。
 
-    列追加（`ADD COLUMN IF NOT EXISTS`）そのものの2回実行は SQLite の ALTER TABLE
-    文法に存在しないため検証できない（上のテストで確認済み）。そのため列は最初から
-    用意し、マイグレーション本体にある「既存行の埋め直し」の UPDATE 文
-    （`WHERE assigned_to IS NOT NULL AND assignment_opened_at IS NULL`）の冪等性を、
-    同じ SQL 文を2回実行して検証する。
+    これは 2026-10-15 のレビューで指摘された本番上の欠陥そのものの再現テストである:
+    旧マイグレーションは `UPDATE ... WHERE assignment_opened_at IS NULL` を毎デプロイで
+    再実行し、「担当になったがまだ開いていない」行（＝バッジを出すべき行）まで埋めて
+    しまっていた。現在のマイグレーションは `information_schema.columns` で列の存在を
+    確認し、存在すれば `CONTINUE` で完全にスキップする。
+
+    `DO $$` ループ自体は SQLite で動かせないため（上のテストで確認済み）、
+    同じ「列が無いときだけ ALTER+UPDATE、あれば完全スキップ」という分岐ロジックを
+    Python 側で再現して検証する。
     """
     migration_sql = MIGRATION_PATH.read_text(encoding="utf-8")
-    assert "ADD COLUMN IF NOT EXISTS assignment_opened_at" in migration_sql
-    backfill_sql = text(
-        "UPDATE leads SET assignment_opened_at = CURRENT_TIMESTAMP "
-        "WHERE assigned_to IS NOT NULL AND assignment_opened_at IS NULL"
-    )
-    assert "WHERE assigned_to IS NOT NULL AND assignment_opened_at IS NULL" in migration_sql
+    assert "information_schema.columns" in migration_sql
+    assert "CONTINUE" in migration_sql
+    assert "ADD COLUMN assignment_opened_at" in migration_sql
+    assert "WHERE assigned_to IS NOT NULL" in migration_sql
+    # 旧版の欠陥（再実行ごとにバッジが消える原因）が実行コード側に復活していないことの確認。
+    # コメント（審査での指摘の経緯説明）に同じ文字列が出てくるため、DO $$ 本体
+    # （実行コード）だけを取り出して検査する。
+    do_block = migration_sql[migration_sql.index("DO $$"):]
+    assert "assignment_opened_at IS NULL" not in do_block
 
     eng = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+
+    async def _column_exists(conn) -> bool:
+        result = await conn.execute(text(
+            "SELECT COUNT(*) FROM pragma_table_info('leads') WHERE name = 'assignment_opened_at'"
+        ))
+        return (result.scalar_one() or 0) > 0
+
+    async def _run_migration_once():
+        """マイグレーション本体の分岐（列が無いときだけ実行・あれば CONTINUE）を再現する。"""
+        async with eng.begin() as conn:
+            if await _column_exists(conn):
+                return  # CONTINUE 相当（何もしない）
+            await conn.execute(text("ALTER TABLE leads ADD COLUMN assignment_opened_at TIMESTAMP"))
+            await conn.execute(text(
+                "UPDATE leads SET assignment_opened_at = CURRENT_TIMESTAMP WHERE assigned_to IS NOT NULL"
+            ))
+
     try:
         async with eng.begin() as conn:
-            await conn.execute(text(
-                "CREATE TABLE leads (id INTEGER PRIMARY KEY, assigned_to INTEGER, assignment_opened_at TIMESTAMP)"
-            ))
-            await conn.execute(text("INSERT INTO leads (id, assigned_to) VALUES (1, 10)"))  # 担当あり
+            await conn.execute(text("CREATE TABLE leads (id INTEGER PRIMARY KEY, assigned_to INTEGER)"))
+            await conn.execute(text("INSERT INTO leads (id, assigned_to) VALUES (1, 10)"))  # 既存の担当付き行
             await conn.execute(text("INSERT INTO leads (id, assigned_to) VALUES (2, NULL)"))  # 担当なし
 
-        # 1回目（A1: 担当付きの既存行が埋まる）
+        # 1回目（列がまだ無い）: A1 相当。列が追加され、既存の担当付き行が埋まる
+        await _run_migration_once()
         async with eng.begin() as conn:
-            result1 = await conn.execute(backfill_sql)
             rows = (await conn.execute(
                 text("SELECT id, assigned_to, assignment_opened_at FROM leads ORDER BY id")
             )).mappings().all()
         by_id = {r["id"]: r for r in rows}
-        assert result1.rowcount == 1
-        assert by_id[1]["assignment_opened_at"] is not None  # 担当付きは埋まる
-        assert by_id[2]["assignment_opened_at"] is None      # 担当なしは埋めない
-        first_value = by_id[1]["assignment_opened_at"]
+        assert by_id[1]["assignment_opened_at"] is not None
+        assert by_id[2]["assignment_opened_at"] is None
 
-        # 2回目（A2: 冪等性。対象行が無いため rowcount=0、値も変わらない）
+        # 本番相当の経過: 1回目以降に新しく担当が付いた行（まだ開いていない＝NULL）
         async with eng.begin() as conn:
-            result2 = await conn.execute(backfill_sql)
+            await conn.execute(text(
+                "INSERT INTO leads (id, assigned_to, assignment_opened_at) VALUES (3, 20, NULL)"
+            ))
+
+        # 2回目（毎デプロイで再実行される想定）: A2 相当。列は既にあるので丸ごとスキップ
+        await _run_migration_once()
+        async with eng.begin() as conn:
             rows2 = (await conn.execute(
                 text("SELECT id, assigned_to, assignment_opened_at FROM leads ORDER BY id")
             )).mappings().all()
         by_id2 = {r["id"]: r for r in rows2}
-        assert result2.rowcount == 0
-        assert by_id2[1]["assignment_opened_at"] == first_value
+        assert by_id2[1]["assignment_opened_at"] == by_id[1]["assignment_opened_at"]  # 既存行は変化なし
         assert by_id2[2]["assignment_opened_at"] is None
+        assert by_id2[3]["assignment_opened_at"] is None  # 旧版の欠陥ポイント。消えてはいけない
     finally:
         await eng.dispose()
 
@@ -502,7 +532,9 @@ async def test_a8_a9_is_new_assignment_and_assigned_to_not_leaked(db_session):
     await _insert_lead(db_session, lead_id=1, assigned_to=10, assignment_opened_at=None)   # 自分・未開封
     await _insert_lead(db_session, lead_id=2, assigned_to=99, assignment_opened_at=None)   # 他人担当
     await _insert_lead(db_session, lead_id=3, assigned_to=None, assignment_opened_at=None)  # 担当なし
-    for lid in (1, 2, 3):
+    # 4件目: 自分担当だが既に開封済み（レビュー指摘: 3ケースだけでは不足）
+    await _insert_lead(db_session, lead_id=4, assigned_to=10, assignment_opened_at="2026-01-01T00:00:00")
+    for lid in (1, 2, 3, 4):
         await _insert_message(db_session, lead_id=lid)
 
     async with _client(db_session, user_id=10) as ac:
@@ -513,5 +545,21 @@ async def test_a8_a9_is_new_assignment_and_assigned_to_not_leaked(db_session):
     assert convs[1]["is_new_assignment"] is True
     assert convs[2]["is_new_assignment"] is False
     assert convs[3]["is_new_assignment"] is False
+    assert convs[4]["is_new_assignment"] is False  # 自分担当だが開封済みなので false
     for conv in convs.values():
         assert "assigned_to" not in conv  # A9: 他人の担当者IDを返さない
+
+
+@pytest.mark.asyncio
+async def test_assignment_cleared_to_null_resets_opened_at(db_session):
+    """担当を外す（assigned_to を NULL にする）遷移でも reset が走ることを確認する
+    （レビュー指摘: assigned_to を NULL にする遷移が未検証だった）。"""
+    await _insert_lead(db_session, lead_id=1, assigned_to=10, assignment_opened_at="2026-01-01T00:00:00")
+
+    async with _client(db_session, user_id=10) as ac:
+        resp = await ac.patch("/api/v1/leads/1", json={"assigned_to": None})
+        assert resp.status_code == 200, resp.text
+
+    row = await _get_lead(db_session, 1)
+    assert row["assigned_to"] is None
+    assert row["assignment_opened_at"] is None
