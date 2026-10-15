@@ -19,6 +19,8 @@ import type { Product, FormState, AttrOption } from "./products.types";
 import { emptyForm, normalizeMaterial } from "./products.types";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 export default function ProductEditPage() {
   const { t } = useTranslation();
@@ -229,14 +231,14 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.field.productKind")}</label>
-              <select value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>
+              <SelectControl variant="product-edit" fullWidth value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>
                 <option value="">{t("common.notSet")}</option>
                 {renderAttrOptions("product_kind", form.product_kind)}
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <label>{t("products.field.category")}</label>
-              <select
+              <SelectControl variant="product-edit" fullWidth
                 value={form.tcg_type}
                 onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}
                 data-testid="product-edit-tcg-type"
@@ -245,7 +247,7 @@ export default function ProductEditPage() {
                 {tcgTypes.map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <label>{t("products.field.mark")}</label>
@@ -253,10 +255,10 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.field.setType")}</label>
-              <select value={form.set_type} onChange={(e) => setForm({ ...form, set_type: e.target.value })}>
+              <SelectControl variant="product-edit" fullWidth value={form.set_type} onChange={(e) => setForm({ ...form, set_type: e.target.value })}>
                 <option value="">{t("common.notSet")}</option>
                 {renderAttrOptions("set_type", form.set_type)}
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <label>{t("products.masterCol.releaseDate")}</label>
@@ -276,17 +278,17 @@ export default function ProductEditPage() {
               </div>
               <div className="form-group">
                 <label>{t("products.field.rarity")}</label>
-                <select value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })}>
+                <SelectControl variant="product-edit" fullWidth value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
                   {renderAttrOptions("rarity", form.rarity)}
-                </select>
+                </SelectControl>
               </div>
               <div className="form-group">
                 <label>{t("language.label")}</label>
-                <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+                <SelectControl variant="product-edit" fullWidth value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
                   <option value="">-</option>
                   {renderAttrOptions("language", form.language)}
-                </select>
+                </SelectControl>
               </div>
             </fieldset>
 
@@ -300,14 +302,14 @@ export default function ProductEditPage() {
             </div>
             <div className="form-group">
               <label>{t("products.field.publishStatus")}</label>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <SelectControl variant="product-edit" fullWidth value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                 <option value="active">{t("products.status_active")}</option>
                 <option value="discontinued">{t("products.status_discontinued")}</option>
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group form-group-full">
               <label>{t("common.notes")}</label>
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <TextareaControl variant="product-edit" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
 
             {/* Box・梱包 */}
@@ -344,24 +346,24 @@ export default function ProductEditPage() {
               <legend style={{ padding: "0 var(--space-2)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{t("products.master.sectionShipping")}</legend>
               <div className="form-group">
                 <label>{t("products.master.hsCode")}</label>
-                <select value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value })}>
+                <SelectControl variant="product-edit" fullWidth value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
                   {renderAttrOptions("hs_code", form.hs_code)}
-                </select>
+                </SelectControl>
               </div>
               <div className="form-group">
                 <label>{t("products.master.item")}</label>
-                <select value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })}>
+                <SelectControl variant="product-edit" fullWidth value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
                   {renderAttrOptions("item", form.item)}
-                </select>
+                </SelectControl>
               </div>
               <div className="form-group">
                 <label>{t("products.master.material")}</label>
-                <select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
+                <SelectControl variant="product-edit" fullWidth value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>
                   <option value="">{t("common.notSet")}</option>
                   {renderAttrOptions("material", form.material)}
-                </select>
+                </SelectControl>
               </div>
             </fieldset>
           </form>
