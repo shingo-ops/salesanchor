@@ -193,6 +193,13 @@
 - U11: 裏方の処理（celery）の既存の失敗。translate_pending_messages が毎日 2〜3 回失敗している。また worker に登録されていないタスクの受付（`Received unregistered task`）が tcg_mirror と sa02_recon で各 14 件ある（便5 の事前測定・2026-10-15）。原因は未調査。便5 は見張りを足すだけで、これらは直さない。
 - U12: 1 日 1〜2 回しか動かない celery タスクの失敗は、便5 の CeleryTaskFailuresHigh（同じタスクで 1 時間に 3 回）では鳴らない。日次タスクの失敗の見張りをどうするか。
 - U13: `buyback.fetch_all_prices` の 1 件（10-02）が、worker の受付から完了まで 3724 秒かかっている。実行時間の最長（147.57 秒）と合わない。原因は未調査（便5 の事前測定・2026-10-15）。
+- U14: 設計 §2 便6 の `BackupStale` 1 本は、実装（#4312）で 3 本に分けた。BackupLocalStale・BackupS3Stale で、どちらのバックアップが止まったかを名前で分ける。BackupTimestampAbsent は、系列が消えると Stale が鳴らないため足した（F2CleanupAbsent と同じ形）。3 本とも ticket。本文 §2 は書き換えず、この行を正とする。
+- U15: 設計 §2 便7 の「`absent()` ルール」は、実装（#4323）で MonitoringConfigCheckStale に変えた。条件は「最後に送った時刻が 180000 秒より古い or absent」。pushgateway は最後の値を持ち続けるため、absent だけでは比較が止まったことに気づけない。本文 §2 は書き換えず、この行を正とする。
+- U16: 便6・便7 で足した bash の試験（`monitoring/scripts/tests/` 配下）は、CI で毎回は走っていない。手元とカード §5 で実行しただけ。workflow の変更になるため段階1 の範囲外とした。CI で走らせるかは段階2 の前に決める。
+- U17: 便7 の比較の対象は、スクリプトに固定した 6 本だけ。ダッシュボードなどほかの監視設定のずれは見ていない（U3・U4 と合わせて決める）。
+- U18: 便7 と同じ self-hosted runner を使う既存の `.github/workflows/qa-smoke.yml` は `pull_request` を持つ。fork の PR を実行する前に承認が要る設定になっているかは未確認。PO に GitHub の画面（Settings → Actions → General の fork の PR の承認）で確かめてもらう。
+- U19: pushgateway は値を保存しない設定（persistence の指定なし）。再起動すると便7 の値が消える。値が消えると absent の側で 1 時間後に MonitoringConfigCheckStale（ticket）が鳴り、次の毎日の実行まで続く。手順書に「pushgateway の再起動後は workflow を手動で 1 回動かす」を足すか、persistence を付けるかを決める（2026-10-15 便7 コード審査 低-2）。
+- U20: pushgateway のポートは 9091 で、機体の外向きに公開する書き方になっている。prod2 の防火壁の設定は未確認。外から送れる場合、ずれ 0 の値を送ってずれを隠せる。防火壁を確かめるか、127.0.0.1 に絞るかを決める（2026-10-15 便7 コード審査 低-4。便7 では変えていない）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 

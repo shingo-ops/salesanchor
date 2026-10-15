@@ -1,0 +1,404 @@
+     1	#!/bin/bash
+     2	# disk-janitor.sh — 開発データの毎日の自動片付け（docs/handoff/disk-janitor/design.md）
+     3	#
+     4	# 消すのは「作り直せる物」と「GitHub に同じ内容がある物」だけ。既定は dry-run（一覧と容量のみ）。
+     5	#   R1 散らばった .npm-cache            （根の下・深さ4まで）
+     6	#   R2 使っていない作業用コピーの node_modules（package-lock.json あり・14日更新なし・最終コミット14日より前・使用中でない）
+     7	#   R3 agent-console の旧版              （current・その1つ前・current より新しい版・使用中の版は残す）
+     8	#   R4 他リポジトリの作業用コピー        （reaper-worktree.sh を REAPER_BASE_BRANCH 付きで呼ぶ。安全条件は reaper のまま）
+     9	#
+    10	# 使い方:
+    11	#   bash scripts/disk-janitor.sh            # dry-run
+    12	#   bash scripts/disk-janitor.sh --execute  # 実削除（LaunchAgent はこちら）
+    13	#
+    14	# 設定（すべて DJ_ で始まる環境変数で上書きできる。試験用）は dj_config に1か所でまとめてある。
+    15	# 消す直前のガード（絶対パス・根の下・シンボリックリンクでない・名前一致）は dj_guard 1つで、全規則が必ず通る。
+    16	# このファイルは source できる（試験が dj_guard を直接呼ぶ）。source 時は何も実行しない。
+    17	
+    18	set -u
+    19	
+    20	# ── 設定（1か所）─────────────────────────────────────────────────────────────
+    21	dj_config() {
+    22	  local home_dir="${HOME:-/Users/tanizawashingo}"
+    23	  : "${DJ_ROOT_WORKTREES:=${home_dir}/worktrees}"
+    24	  : "${DJ_ROOT_AC_WT:=${home_dir}/agent-console-wt}"
+    25	  : "${DJ_ROOT_SALESANCHOR:=${home_dir}/salesanchor}"
+    26	  : "${DJ_ROOT_AGENT_CONSOLE:=${home_dir}/agent-console}"
+    27	  : "${DJ_ROOT_VERSIONS:=${home_dir}/Library/Application Support/agent-console/versions}"
+    28	  : "${DJ_CURRENT_LINK:=${DJ_ROOT_VERSIONS}/../current}"
+    29	  : "${DJ_NPM_CACHE_KEEP:=${home_dir}/.npm-shared-cache}"
+    30	  : "${DJ_STALE_DAYS:=14}"
+    31	  : "${DJ_LOG_FILE:=}"                 # 空なら標準出力のまま。LaunchAgent の plist が指定する
+    32	  : "${DJ_LOG_MAX_BYTES:=1048576}"
+    33	  : "${DJ_LOCK_DIR:=/tmp/disk-janitor.lock.d}"
+    34	  : "${DJ_DF_PATH:=/System/Volumes/Data}"
+    35	  : "${DJ_LSOF:=lsof}"
+    36	  : "${DJ_NPM_CMD:=npm config get cache}"
+    37	  : "${DJ_REAPER:=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/reaper-worktree.sh}"
+    38	  # 対象リポジトリ「パス|owner/repo|行き先」を1行ずつ（F8 の確定値）
+    39	  : "${DJ_REPOS:=${home_dir}/agent-console|GEN-RYU-System/agent-console|main
+    40	${home_dir}/ebay-gas-automation|GEN-RYU-System/bay-auto|develop
+    41	${home_dir}/crm-app-current|GEN-RYU-System/crm-app|develop
+    42	${home_dir}/crm-app-canonical-20260830|GEN-RYU-System/crm-app|develop}"
+    43	  # 1回の出力で候補を並べる上限。既定: 実削除は20件、dry-run は全件
+    44	  if [ -z "${DJ_LIST_MAX:-}" ]; then
+    45	    if [ "${EXECUTE}" -eq 1 ]; then DJ_LIST_MAX=20; else DJ_LIST_MAX=1000000; fi
+    46	  fi
+    47	}
+    48	
+    49	# ── 共通部品 ─────────────────────────────────────────────────────────────────
+    50	DJ_ROOTS=()           # 正規化済み（物理パス）の根
+    51	DJ_LSOF_FILE=""       # lsof -nP -F pn の出力（実行開始時に1回だけ取る）
+    52	DJ_LSOF_OK=0
+    53	DJ_GUARD_REASON=""
+    54	DJ_RULE_COUNT=0       # 規則ごとの集計（dj_rule_begin でリセット）
+    55	DJ_RULE_KB=0
+    56	DJ_RULE_SKIP=0
+    57	DJ_RULE_LISTED=0
+    58	
+    59	dj_canon() { # 存在するディレクトリの物理パスを返す。無ければ失敗
+    60	  [ -d "$1" ] || return 1
+    61	  (cd -P "$1" 2>/dev/null && pwd -P)
+    62	}
+    63	
+    64	dj_human() { # KB -> 人が読む容量
+    65	  awk -v k="${1:-0}" 'BEGIN{ if (k>=1048576) printf "%.1fGB", k/1048576; else if (k>=1024) printf "%.1fMB", k/1024; else printf "%dKB", k }'
+    66	}
+    67	
+    68	dj_under() { # dj_under <path> <root>: path が root の「下」（root 自身は含まない）か
+    69	  case "$1" in "$2"/?*) return 0 ;; *) return 1 ;; esac
+    70	}
+    71	
+    72	# 削除の直前ガード。通れば 0。通らなければ 1 と DJ_GUARD_REASON。
+    73	#   dj_guard <path> <名前の正規表現(ERE)> <許可する根>...
+    74	dj_guard() {
+    75	  local p="${1:-}" namepat="${2:-}" r
+    76	  shift 2 2>/dev/null || { DJ_GUARD_REASON="引数不足"; return 1; }
+    77	  DJ_GUARD_REASON=""
+    78	  case "${p}" in
+    79	    "") DJ_GUARD_REASON="空のパス"; return 1 ;;
+    80	    /*) ;;
+    81	    *) DJ_GUARD_REASON="絶対パスでない"; return 1 ;;
+    82	  esac
+    83	  case "/${p}/" in */../*|*/./*) DJ_GUARD_REASON="パスに . または .. を含む"; return 1 ;; esac
+    84	  case "${p}" in */) DJ_GUARD_REASON="末尾が /"; return 1 ;; esac
+    85	  if [ "${p}" = "/" ] || [ "${p}" = "${HOME:-/nonexistent}" ]; then
+    86	    DJ_GUARD_REASON="ルートまたはホームそのもの"; return 1
+    87	  fi
+    88	  local ok=0
+    89	  for r in "$@"; do
+    90	    [ -n "${r}" ] || continue
+    91	    [ "${p}" = "${r}" ] && { DJ_GUARD_REASON="根そのもの"; return 1; }
+    92	    dj_under "${p}" "${r}" && ok=1
+    93	  done
+    94	  [ "${ok}" -eq 1 ] || { DJ_GUARD_REASON="根の下でない"; return 1; }
+    95	  [ -L "${p}" ] && { DJ_GUARD_REASON="シンボリックリンク"; return 1; }
+    96	  [ -d "${p}" ] || { DJ_GUARD_REASON="ディレクトリでない・存在しない"; return 1; }
+    97	  local phys
+    98	  phys="$(dj_canon "${p}")" || { DJ_GUARD_REASON="実体パスを求められない"; return 1; }
+    99	  [ "${phys}" = "${p}" ] || { DJ_GUARD_REASON="途中にシンボリックリンクがある"; return 1; }
+   100	  if ! printf '%s\n' "${p##*/}" | grep -Eq "${namepat}"; then
+   101	    DJ_GUARD_REASON="名前が規則と一致しない"; return 1
+   102	  fi
+   103	  return 0
+   104	}
+   105	
+   106	dj_in_use() { # dj_in_use <path>: lsof の出力に、その配下（または自身）を開いているものが1件でもあれば 0
+   107	  [ -s "${DJ_LSOF_FILE}" ] || return 1
+   108	  P="$1" awk 'BEGIN{p="n" ENVIRON["P"]} $0==p || index($0, p "/")==1 {f=1; exit} END{exit !f}' "${DJ_LSOF_FILE}"
+   109	}
+   110	
+   111	dj_take_lsof() { # 失敗したら 1
+   112	  DJ_LSOF_FILE="$(mktemp "${TMPDIR:-/tmp}/disk-janitor-lsof.XXXXXX")" || return 1
+   113	  if ${DJ_LSOF} -nP -F pn >"${DJ_LSOF_FILE}" 2>/dev/null && [ -s "${DJ_LSOF_FILE}" ]; then
+   114	    DJ_LSOF_OK=1
+   115	  else
+   116	    DJ_LSOF_OK=0
+   117	  fi
+   118	  [ "${DJ_LSOF_OK}" -eq 1 ]
+   119	}
+   120	
+   121	dj_rule_begin() { DJ_RULE_COUNT=0; DJ_RULE_KB=0; DJ_RULE_SKIP=0; DJ_RULE_LISTED=0; echo ""; echo "== $1 =="; }
+   122	
+   123	dj_skip() { # dj_skip <path> <理由>
+   124	  DJ_RULE_SKIP=$(( DJ_RULE_SKIP + 1 ))
+   125	  echo "  [飛ばす] $1 （$2）"
+   126	}
+   127	
+   128	dj_rule_end() {
+   129	  local verb="削除候補"; [ "${EXECUTE}" -eq 1 ] && verb="削除"
+   130	  if [ "${DJ_RULE_COUNT}" -gt "${DJ_RULE_LISTED}" ]; then
+   131	    echo "  …他 $(( DJ_RULE_COUNT - DJ_RULE_LISTED )) 件は一覧省略（件数・容量には含む）"
+   132	  fi
+   133	  echo "[$1] ${verb}: ${DJ_RULE_COUNT} 件 / $(dj_human "${DJ_RULE_KB}")（${DJ_RULE_KB}KB）、飛ばした: ${DJ_RULE_SKIP} 件"
+   134	  TOTAL_COUNT=$(( TOTAL_COUNT + DJ_RULE_COUNT ))
+   135	  TOTAL_KB=$(( TOTAL_KB + DJ_RULE_KB ))
+   136	}
+   137	
+   138	# 1件の処理。ガード → dry-run なら記録だけ／execute なら容量を測って消し、無くなったことを確かめる。
+   139	#   dj_act <規則> <path> <名前ERE> <根>...
+   140	dj_act() {
+   141	  local rule="$1" p="$2" namepat="$3"
+   142	  shift 3
+   143	  if ! dj_guard "${p}" "${namepat}" "$@"; then
+   144	    dj_skip "${p}" "ガード: ${DJ_GUARD_REASON}"
+   145	    return 0
+   146	  fi
+   147	  local kb
+   148	  kb="$(du -sk "${p}" 2>/dev/null | awk '{print $1}')"
+   149	  kb="${kb:-0}"
+   150	  if [ "${EXECUTE}" -eq 1 ]; then
+   151	    if ! rm -rf -- "${p}" 2>/dev/null || [ -e "${p}" ]; then
+   152	      dj_skip "${p}" "削除に失敗または一部が残った"
+   153	      return 0
+   154	    fi
+   155	  fi
+   156	  DJ_RULE_COUNT=$(( DJ_RULE_COUNT + 1 ))
+   157	  DJ_RULE_KB=$(( DJ_RULE_KB + kb ))
+   158	  if [ "${DJ_RULE_LISTED}" -lt "${DJ_LIST_MAX}" ]; then
+   159	    DJ_RULE_LISTED=$(( DJ_RULE_LISTED + 1 ))
+   160	    echo "  [${rule}] ${p} ($(dj_human "${kb}"))"
+   161	  fi
+   162	}
+   163	
+   164	# ── R1 散らばった .npm-cache ─────────────────────────────────────────────────
+   165	dj_rule_r1() {
+   166	  dj_rule_begin "R1 散らばった .npm-cache"
+   167	  if [ "${DJ_LSOF_OK}" -ne 1 ]; then
+   168	    echo "  [規則ごと飛ばす] lsof が失敗したため使用中を判定できない"; dj_rule_end R1; return 0
+   169	  fi
+   170	  # D1 適用の確認: 場所（/ と HOME）を変えて2回測り、2つとも保護する cache と完全一致したときだけ進む。
+   171	  # 相対パス設定（cache=./.npm-cache）に戻ると、場所によって値が変わるので一致しない。
+   172	  local cache_root cache_home
+   173	  cache_root="$(cd / 2>/dev/null && ${DJ_NPM_CMD} 2>/dev/null | tail -n 1)"
+   174	  cache_home="$(cd "${HOME:-/}" 2>/dev/null && ${DJ_NPM_CMD} 2>/dev/null | tail -n 1)"
+   175	  if [ -z "${cache_root}" ] || [ -z "${cache_home}" ]; then
+   176	    echo "  [規則ごと飛ばす] npm config get cache が取得できない"; dj_rule_end R1; return 0
+   177	  fi
+   178	  if [ "${cache_root}" != "${DJ_NPM_CACHE_KEEP}" ] || [ "${cache_home}" != "${DJ_NPM_CACHE_KEEP}" ]; then
+   179	    echo "  [警告] npm の cache が保護先 (${DJ_NPM_CACHE_KEEP}) と一致しない（/ では '${cache_root}'、HOME では '${cache_home}'）。D1 未適用の可能性。R1 全体を飛ばす"
+   180	    dj_rule_end R1; return 0
+   181	  fi
+   182	  local cache_now="${cache_root}"
+   183	  local cand
+   184	  while IFS= read -r cand; do
+   185	    [ -n "${cand}" ] || continue
+   186	    if [ "${cand}" = "${DJ_NPM_CACHE_KEEP}" ] || [ "${cand}" = "${cache_now}" ]; then
+   187	      dj_skip "${cand}" "npm の設定先（保護）"; continue
+   188	    fi
+   189	    case "${DJ_NPM_CACHE_KEEP}" in "${cand}"/*) dj_skip "${cand}" "保護する cache を含む"; continue ;; esac
+   190	    if dj_in_use "${cand}"; then
+   191	      dj_skip "${cand}" "使用中（プロセスが開いている）"; continue
+   192	    fi
+   193	    dj_act R1 "${cand}" '^\.npm-cache$' ${DJ_ROOTS[@]+"${DJ_ROOTS[@]}"}
+   194	  done < <(for r in ${DJ_ROOTS[@]+"${DJ_ROOTS[@]}"}; do
+   195	             find -P "${r}" -maxdepth 4 -type d -name .npm-cache -prune -print 2>/dev/null
+   196	           done | sort -u)
+   197	  dj_rule_end R1
+   198	}
+   199	
+   200	# ── R2 使っていない作業用コピーの node_modules ────────────────────────────────
+   201	dj_wt_unused() { # dj_wt_unused <wt>: 使っていないなら 0。理由は DJ_WT_REASON
+   202	  local wt="$1" recent last_ct now cutoff
+   203	  DJ_WT_REASON=""
+   204	  if dj_in_use "${wt}"; then DJ_WT_REASON="使用中（プロセスが開いている）"; return 1; fi
+   205	  recent="$(find -P "${wt}" \( -name node_modules -o -name .npm-cache -o -name dist -o -name .sa-cache \
+   206	      -o -name coverage -o -name storybook-static -o -name test-results -o -name playwright-report -o -name .git \) -prune \
+   207	      -o -type f -mtime "-${DJ_STALE_DAYS}" -print -quit 2>/dev/null)"
+   208	  if [ -n "${recent}" ]; then DJ_WT_REASON="${DJ_STALE_DAYS}日以内に更新されたファイルあり"; return 1; fi
+   209	  last_ct="$(git -C "${wt}" log -1 --format=%ct 2>/dev/null)"
+   210	  case "${last_ct}" in ''|*[!0-9]*) DJ_WT_REASON="最終コミット時刻を取得できない（残す）"; return 1 ;; esac
+   211	  now="$(date +%s)"
+   212	  cutoff=$(( now - DJ_STALE_DAYS * 86400 ))
+   213	  if [ "${last_ct}" -ge "${cutoff}" ]; then DJ_WT_REASON="最終コミットが${DJ_STALE_DAYS}日以内"; return 1; fi
+   214	  return 0
+   215	}
+   216	
+   217	dj_rule_r2() {
+   218	  dj_rule_begin "R2 使っていない作業用コピーの node_modules"
+   219	  if [ "${DJ_LSOF_OK}" -ne 1 ]; then
+   220	    echo "  [規則ごと飛ばす] lsof が失敗したため使用中を判定できない"; dj_rule_end R2; return 0
+   221	  fi
+   222	  local r gitfile wt sub nm
+   223	  for r in "${DJ_ROOT_WORKTREES_N}" "${DJ_ROOT_AC_WT_N}"; do
+   224	    [ -n "${r}" ] || continue
+   225	    while IFS= read -r gitfile; do
+   226	      [ -n "${gitfile}" ] || continue
+   227	      wt="${gitfile%/.git}"
+   228	      # この作業用コピーの候補（直下と frontend/ 直下）。無ければ判定しない
+   229	      local cands=() c
+   230	      for sub in "" "/frontend"; do
+   231	        nm="${wt}${sub}/node_modules"
+   232	        [ -d "${nm}" ] || [ -L "${nm}" ] || continue
+   233	        if [ ! -f "${wt}${sub}/package-lock.json" ]; then
+   234	          dj_skip "${nm}" "package-lock.json が無い（作り直せない）"; continue
+   235	        fi
+   236	        cands+=("${nm}")
+   237	      done
+   238	      [ "${#cands[@]}" -gt 0 ] || continue
+   239	      if ! dj_wt_unused "${wt}"; then
+   240	        for c in "${cands[@]}"; do dj_skip "${c}" "${DJ_WT_REASON}"; done
+   241	        continue
+   242	      fi
+   243	      for c in "${cands[@]}"; do
+   244	        dj_act R2 "${c}" '^node_modules$' "${DJ_ROOT_WORKTREES_N}" "${DJ_ROOT_AC_WT_N}"
+   245	      done
+   246	    done < <(find -P "${r}" -maxdepth 3 -name .git -type f -print 2>/dev/null | sort -u)
+   247	  done
+   248	  dj_rule_end R2
+   249	}
+   250	
+   251	# ── R3 agent-console の旧版 ──────────────────────────────────────────────────
+   252	dj_ver_key() { # v1.2.3 -> 数値キー（比較用）
+   253	  local v="${1#v}" a b c
+   254	  IFS=. read -r a b c <<<"${v}"
+   255	  echo $(( 10#${a} * 100000000 + 10#${b} * 10000 + 10#${c} ))
+   256	}
+   257	
+   258	dj_rule_r3() {
+   259	  dj_rule_begin "R3 agent-console の旧版"
+   260	  if [ "${DJ_LSOF_OK}" -ne 1 ]; then
+   261	    echo "  [規則ごと飛ばす] lsof が失敗したため使用中を判定できない"; dj_rule_end R3; return 0
+   262	  fi
+   263	  local vroot="${DJ_ROOT_VERSIONS_N}"
+   264	  if [ -z "${vroot}" ]; then
+   265	    echo "  [規則ごと飛ばす] versions ディレクトリが無い"; dj_rule_end R3; return 0
+   266	  fi
+   267	  local target tag
+   268	  target="$(readlink "${DJ_CURRENT_LINK}" 2>/dev/null)"
+   269	  tag="${target##*/}"
+   270	  if ! printf '%s\n' "${tag}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || [ ! -d "${vroot}/${tag}" ]; then
+   271	    echo "  [規則ごと飛ばす] current が読めない、または指し先が無い (current -> '${target}')"
+   272	    dj_rule_end R3; return 0
+   273	  fi
+   274	  local curkey prevkey=-1 prevtag="" d name key
+   275	  curkey="$(dj_ver_key "${tag}")"
+   276	  for d in "${vroot}"/v*; do
+   277	    [ -d "${d}" ] || continue
+   278	    name="${d##*/}"
+   279	    printf '%s\n' "${name}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || continue
+   280	    key="$(dj_ver_key "${name}")"
+   281	    if [ "${key}" -lt "${curkey}" ] && [ "${key}" -gt "${prevkey}" ]; then prevkey="${key}"; prevtag="${name}"; fi
+   282	  done
+   283	  echo "  current=${tag}、1つ前=${prevtag:-なし}（これらと current より新しい版は残す）"
+   284	  for d in "${vroot}"/v*; do
+   285	    [ -e "${d}" ] || [ -L "${d}" ] || continue
+   286	    name="${d##*/}"
+   287	    printf '%s\n' "${name}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || continue
+   288	    key="$(dj_ver_key "${name}")"
+   289	    if [ "${name}" = "${tag}" ]; then continue; fi
+   290	    if [ "${name}" = "${prevtag}" ]; then continue; fi
+   291	    if [ "${key}" -gt "${curkey}" ]; then dj_skip "${d}" "current より新しい版"; continue; fi
+   292	    if dj_in_use "${d}"; then dj_skip "${d}" "使用中（プロセスが開いている）"; continue; fi
+   293	    dj_act R3 "${d}" '^v[0-9]+\.[0-9]+\.[0-9]+$' "${vroot}"
+   294	  done
+   295	  dj_rule_end R3
+   296	}
+   297	
+   298	# ── R4 他リポジトリの作業用コピー（reaper に任せる）──────────────────────────
+   299	dj_rule_r4() {
+   300	  dj_rule_begin "R4 他リポジトリの作業用コピー（reaper-worktree.sh）"
+   301	  if [ ! -f "${DJ_REAPER}" ]; then
+   302	    echo "  [規則ごと飛ばす] reaper が無い: ${DJ_REAPER}"; dj_rule_end R4; return 0
+   303	  fi
+   304	  local path want base url got out_file rc nlines
+   305	  while IFS='|' read -r path want base; do
+   306	    [ -n "${path}" ] || continue
+   307	    if [ ! -d "${path}" ]; then dj_skip "${path}" "リポジトリが無い"; continue; fi
+   308	    url="$(git -C "${path}" remote get-url origin 2>/dev/null)"
+   309	    got="$(printf '%s\n' "${url}" | sed -E 's#\.git$##; s#^.*[:/]([^/:]+/[^/:]+)$#\1#')"
+   310	    if [ -z "${url}" ] || [ "${got}" != "${want}" ]; then
+   311	      dj_skip "${path}" "origin が想定と違う（想定 ${want}、実測 ${got:-取得できない}）"; continue
+   312	    fi
+   313	    local args=()
+   314	    [ "${EXECUTE}" -eq 1 ] && args=(--execute)
+   315	    out_file="$(mktemp "${TMPDIR:-/tmp}/disk-janitor-reaper.XXXXXX")" || { dj_skip "${path}" "一時ファイルを作れない"; continue; }
+   316	    ( cd "${path}" && REAPER_REPO_NAME="${want}" REAPER_BASE_BRANCH="${base}" \
+   317	        REAPER_ACTIVE_WORK_FILE=/dev/null ACTIVE_WORK_DIR=/nonexistent-disk-janitor \
+   318	        bash "${DJ_REAPER}" ${args[@]+"${args[@]}"} ) >"${out_file}" 2>&1
+   319	    rc=$?
+   320	    nlines="$(wc -l <"${out_file}" | tr -d ' ')"
+   321	    echo "  -- ${path} (${want}, 行き先 ${base}) reaper rc=${rc}, ${nlines} 行 --"
+   322	    head -n 40 "${out_file}" | sed 's/^/     /'
+   323	    [ "${nlines}" -gt 40 ] && echo "     …(残り $(( nlines - 40 )) 行は省略)"
+   324	    if grep -Eq '^✅ reaper 完了: 削除 [0-9]+ 件' "${out_file}"; then
+   325	      DJ_RULE_COUNT=$(( DJ_RULE_COUNT + $(sed -n 's/^✅ reaper 完了: 削除 \([0-9]*\) 件.*/\1/p' "${out_file}" | tail -n 1) ))
+   326	    elif [ "${EXECUTE}" -eq 0 ]; then
+   327	      DJ_RULE_COUNT=$(( DJ_RULE_COUNT + $(grep -Ec '^   - ' <(sed -n '/🗑️  削除対象/,$p' "${out_file}") || true) ))
+   328	    fi
+   329	    rm -f -- "${out_file}"
+   330	  done <<<"${DJ_REPOS}"
+   331	  DJ_RULE_LISTED="${DJ_RULE_COUNT}"   # R4 の一覧は reaper の出力そのもの（上に表示済み）
+   332	  dj_rule_end R4
+   333	}
+   334	
+   335	# ── ログ（1MB 超で .1 に1世代だけ退避）───────────────────────────────────────
+   336	dj_setup_log() {
+   337	  [ -n "${DJ_LOG_FILE}" ] || return 0
+   338	  mkdir -p "$(dirname "${DJ_LOG_FILE}")" 2>/dev/null || true
+   339	  if [ -f "${DJ_LOG_FILE}" ]; then
+   340	    local sz
+   341	    sz="$(wc -c <"${DJ_LOG_FILE}" | tr -d ' ')"
+   342	    if [ "${sz:-0}" -gt "${DJ_LOG_MAX_BYTES}" ]; then mv -f -- "${DJ_LOG_FILE}" "${DJ_LOG_FILE}.1"; fi
+   343	  fi
+   344	  exec >>"${DJ_LOG_FILE}" 2>&1
+   345	}
+   346	
+   347	# ── main ─────────────────────────────────────────────────────────────────────
+   348	dj_main() {
+   349	  EXECUTE=0
+   350	  TOTAL_COUNT=0
+   351	  TOTAL_KB=0
+   352	  case "${1:-}" in
+   353	    "") ;;
+   354	    --execute) EXECUTE=1 ;;
+   355	    *) echo "使い方: bash scripts/disk-janitor.sh [--execute]" >&2; return 2 ;;
+   356	  esac
+   357	  dj_config
+   358	  dj_setup_log
+   359	
+   360	  if ! mkdir "${DJ_LOCK_DIR}" 2>/dev/null; then
+   361	    echo "[disk-janitor] another instance is running; skip."
+   362	    return 0
+   363	  fi
+   364	  # shellcheck disable=SC2064
+   365	  trap "rmdir '${DJ_LOCK_DIR}' 2>/dev/null || true; rm -f -- \"\${DJ_LSOF_FILE:-}\" 2>/dev/null || true" EXIT INT TERM
+   366	
+   367	  local mode="dry-run"; [ "${EXECUTE}" -eq 1 ] && mode="execute"
+   368	  echo "===== disk-janitor 開始 $(date '+%Y-%m-%d %H:%M:%S') mode=${mode} ====="
+   369	  echo "--- df（開始）---"; df -h "${DJ_DF_PATH}"
+   370	
+   371	  # 根の正規化（無いものは外す）
+   372	  DJ_ROOT_WORKTREES_N="$(dj_canon "${DJ_ROOT_WORKTREES}")" || DJ_ROOT_WORKTREES_N=""
+   373	  DJ_ROOT_AC_WT_N="$(dj_canon "${DJ_ROOT_AC_WT}")" || DJ_ROOT_AC_WT_N=""
+   374	  DJ_ROOT_VERSIONS_N="$(dj_canon "${DJ_ROOT_VERSIONS}")" || DJ_ROOT_VERSIONS_N=""
+   375	  local sa_n ac_n
+   376	  sa_n="$(dj_canon "${DJ_ROOT_SALESANCHOR}")" || sa_n=""
+   377	  ac_n="$(dj_canon "${DJ_ROOT_AGENT_CONSOLE}")" || ac_n=""
+   378	  DJ_ROOTS=()
+   379	  local r
+   380	  for r in "${DJ_ROOT_WORKTREES_N}" "${DJ_ROOT_AC_WT_N}" "${sa_n}" "${ac_n}" "${DJ_ROOT_VERSIONS_N}"; do
+   381	    [ -n "${r}" ] && DJ_ROOTS+=("${r}")
+   382	  done
+   383	  echo "根: ${DJ_ROOTS[*]:-（なし）}"
+   384	
+   385	  if dj_take_lsof; then
+   386	    echo "lsof: $(wc -l <"${DJ_LSOF_FILE}" | tr -d ' ') 行を取得"
+   387	  else
+   388	    echo "[警告] lsof が失敗した。R1〜R3 は飛ばす（R4 は reaper 自身の判定）"
+   389	  fi
+   390	
+   391	  dj_rule_r1
+   392	  dj_rule_r2
+   393	  dj_rule_r3
+   394	  dj_rule_r4
+   395	
+   396	  echo ""
+   397	  echo "--- df（終了）---"; df -h "${DJ_DF_PATH}"
+   398	  echo "===== disk-janitor 終了 $(date '+%Y-%m-%d %H:%M:%S') mode=${mode} 合計 ${TOTAL_COUNT} 件 / $(dj_human "${TOTAL_KB}")（R4 の容量は含まない） ====="
+   399	  return 0
+   400	}
+   401	
+   402	if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+   403	  dj_main "$@"
+   404	fi

@@ -1,0 +1,10 @@
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/ffa7d9cd-9c66-4f11-8bca-d449b16e994b/subagents/agent-aa23a206668679b44.jsonl
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/1dbf788f-9a93-464a-9130-a8d268ef6a54/subagents/agent-a614029a1443bc522.meta.json
+/Volumes/ClaudeArchive/CC報告ファイル-keep/session-20261007b/dm-conan/web/p/dmex18.html
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/33b6b150-3484-4948-ad65-9edcc48be02f/subagents/agent-a76f3906094e0479e.meta.json
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/8c8698c5-c1cc-44f2-a5ea-aad397d2d049/tool-results/bk8blq946.txt
+/Volumes/ClaudeArchive/CC報告ファイル-keep/gap-range-20261011/recon-src/docs/handoff/fix-reaction-writer-rls-tx/design.md
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/e7622575-f1ed-4a38-aa41-4b65ebe75b9f/subagents/agent-acc4e8285ff1c172f.meta.json
+/Volumes/ClaudeArchive/CC報告ファイル-keep/session-20261007b/suggest-rule-sim/words_M_p12a_N20.tsv
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/3da07f87-7568-40b0-9875-f806ed822c63/subagents/agent-a1c38723a19a19bf6.meta.json
+/Volumes/ClaudeArchive/claude/projects/-Users-tanizawashingo-salesanchor/8c8698c5-c1cc-44f2-a5ea-aad397d2d049/subagents/agent-a6e35ae1d42cbba2b.jsonl

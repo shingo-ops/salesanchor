@@ -1,0 +1,22 @@
+---
+name: project_disk_janitor
+description: Mac 開発データの毎日自動片付け（disk-janitor）本番設置済み 2026-10-13・道具専用コピー ~/.salesanchor-tools・npm cache は ~/.npm-shared-cache に一本化・残件
+metadata:
+  type: project
+---
+
+2026-10-13 設置完了（PO「y」= 毎日無人で消してよい、範囲は根5か所×R1〜R4 のみ）。
+- PR #4183（disk-janitor.sh・reaper の REAPER_BASE_BRANCH と main/develop 保護・plist）、#4192（道具専用 detached worktree /Users/tanizawashingo/.salesanchor-tools から origin/main のスクリプトで動かす・きれいでなければ exit 1・ops/launchd を DANGEROUS_PATTERNS に追加）。
+- LaunchAgent jp.salesanchor.disk-janitor 毎日 04:00。初回 kickstart 05:41-05:44: 80件 9.2GB 削除、空き 6.2→17GiB、last exit 0、.err 空。直後の dry-run R1〜R3 候補0。汚れ試験で exit 1 と .err 文を確認（試験ファイルは削除済み）。記録 /tmp/CC報告ファイル/disk-cleanup/install/。
+- ~/.npmrc は cache=/Users/tanizawashingo/.npm-shared-cache（crm-app と同じ。旧 ~/.npm-cache は root 所有18個、~/.npm も root 所有511個→sudo が要るので未処理、PO 判断）。控え ~/.npmrc.bak-20261013 は 5/20 の旧内容。
+
+**Why:** ディスク満杯（空き 143MB）で npm ci が ENOSPC。原因は相対 npm cache・回収されない worktree・agent-console 旧版の蓄積。
+
+**How to apply / 残件（PO に報告済み or 報告予定）:**
+- 本体 /Users/tanizawashingo/salesanchor は 650005f29（9/25）のまま約480件未コミット。既存の reaper LaunchAgent（jp.salesanchor.reaper-onlogin）は本体の古い reaper を動かしている（R8/R9/BASE_BRANCH 無し）。直すなら道具のコピー方式に寄せる。
+- crm-app-current の worktree perf/inbox-cache-v2（~/worktrees/crm-app/phase-s-inbox-cache-v2）は .git が別の消えたリポジトリを指し、reaper が毎日候補に出して remove に失敗し「削除1件」と数える（実害なし・表示のずれ）。
+- 消さない物（PO 判断）: Codex sessions 4.5GB、colima 停止ディスク、Chrome プロフィール14 履歴 5.4GB、macOS Install Data 12GB、git が読めない worktree 113件。
+- 2026-10-13 調査中に Opus が誤って `git worktree remove` を1回直接実行（git が validation failed で拒否、削除なし）。
+関連 [[project_session_20261013_disk_autonomy]] [[project_worktree_reaper_on_merge]]
+索引の要約（2026-10-13 索引から移設）: Mac 開発データの毎日自動片付け 本番設置(10/13・初回9.2GB)・道具コピー ~/.salesanchor-tools・npm cache は ~/.npm-shared-cache・残件
+- 2026-10-14 午後に再び満杯（空き 117Mi、Bash の出力すら書けず全停止）。片付けは 04:00（1.9GB）と 15:06（826MB）に動いたが空き 1.5〜2.2Gi 止まり。読み取り調査 /tmp/CC報告ファイル/disk-20261014/: /private/var/folders/…/T 15G（内訳不明）、/private/tmp/claude-501 10G（他セッションの scratchpad、最大 581c5b2c の pg 3.0G）、Chrome code_sign_clone 5.6G、colima 13G。原因は未特定。

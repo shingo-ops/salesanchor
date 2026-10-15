@@ -1,0 +1,58 @@
+     1	<?xml version="1.0" encoding="UTF-8"?>
+     2	<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+     3	<!--
+     4	  jp.salesanchor.reaper-onlogin.plist — 起動時 worktree 自動回収（ADR-114 PR-C）
+     5	  対象: Shingo-Mac-Temp (user: tanizawashingo)
+     6	
+     7	  Hikky-dev-Mac に適用する場合:
+     8	    - WorkingDirectory → /Users/hitoshi/salesanchor
+     9	    - StandardOutPath/StandardErrorPath → /Users/hitoshi/Library/Logs/reaper-onlogin.*
+    10	
+    11	  配置コマンド:
+    12	    cp ops/launchd/jp.salesanchor.reaper-onlogin.plist ~/Library/LaunchAgents/
+    13	    launchctl load ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+    14	
+    15	  動作確認:
+    16	    launchctl list | grep reaper
+    17	    tail ~/Library/Logs/reaper-onlogin.log
+    18	
+    19	  無効化:
+    20	    launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+    21	-->
+    22	<plist version="1.0">
+    23	<dict>
+    24	  <key>Label</key>
+    25	  <string>jp.salesanchor.reaper-onlogin</string>
+    26	
+    27	  <key>ProgramArguments</key>
+    28	  <array>
+    29	    <string>/bin/bash</string>
+    30	    <string>-lc</string>
+    31	    <string>bash scripts/reaper-worktree.sh --execute</string>
+    32	  </array>
+    33	
+    34	  <!-- WorkingDirectory が git rev-parse の前提を満たす（scripts/reaper-worktree.sh:28-34） -->
+    35	  <key>WorkingDirectory</key>
+    36	  <string>/Users/tanizawashingo/salesanchor</string>
+    37	
+    38	  <!-- ログイン時に 1 回だけ実行（KeepAlive=false = デーモン化しない） -->
+    39	  <key>RunAtLoad</key>
+    40	  <true/>
+    41	
+    42	  <!-- 毎日 03:00 に定期実行（日次化 2026-09-05） -->
+    43	  <key>StartCalendarInterval</key>
+    44	  <dict>
+    45	    <key>Hour</key><integer>3</integer>
+    46	    <key>Minute</key><integer>0</integer>
+    47	  </dict>
+    48	
+    49	  <key>KeepAlive</key>
+    50	  <false/>
+    51	
+    52	  <key>StandardOutPath</key>
+    53	  <string>/Users/tanizawashingo/Library/Logs/reaper-onlogin.log</string>
+    54	
+    55	  <key>StandardErrorPath</key>
+    56	  <string>/Users/tanizawashingo/Library/Logs/reaper-onlogin.err</string>
+    57	</dict>
+    58	</plist>

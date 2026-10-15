@@ -1,0 +1,31 @@
+     1	#!/bin/sh
+     2	set -eu
+     3	
+     4	LOG_FILE="$HOME/janitor.log"
+     5	TRASH_DIR="$HOME/.Trash"
+     6	ROOT=$(git rev-parse --show-toplevel)
+     7	DRY_RUN=false
+     8	[ "${1:-}" = "--dry-run" ] && DRY_RUN=true
+     9	PROTECT_DAYS="${JANITOR_PROTECT_DAYS:-7}"
+    10	ONLY_PATH="${JANITOR_ONLY_PATH:-}"
+    11	mkdir -p "$TRASH_DIR"
+    12	if [ "$DRY_RUN" = false ]; then git -C "$ROOT" worktree prune; fi
+    13	printf '%s janitor start\n' "$(date -Iseconds)" >> "$LOG_FILE"
+    14	git -C "$ROOT" worktree list --porcelain | awk '/^worktree /{p=$2}/^branch refs\/heads\//{b=$2; sub("refs/heads/","",b); print p "|" b}' | while IFS='|' read -r path branch; do
+    15	  [ "$path" = "$ROOT" ] && continue
+    16	  [ -n "$ONLY_PATH" ] && [ "$path" != "$ONLY_PATH" ] && { printf 'SKIP %s (JANITOR_ONLY_PATH)\n' "$path"; continue; }
+    17	  dirty=$(git -C "$path" status --porcelain | wc -l | tr -d ' ')
+    18	  age_days=$(( ( $(date +%s) - $(stat -f %m "$path") ) / 86400 ))
+    19	  if [ "$branch" = develop ] || [ "$branch" = main ] || [ "$age_days" -lt "$PROTECT_DAYS" ]; then
+    20	    printf 'KEEP %s (%s dirty=%s age_days=%s protected)\n' "$path" "$branch" "$dirty" "$age_days"
+    21	    continue
+    22	  fi
+    23	  if git -C "$ROOT" merge-base --is-ancestor "$branch" origin/develop 2>/dev/null && [ "$dirty" = 0 ]; then
+    24	    printf 'REMOVE %s (%s)\n' "$path" "$branch"
+    25	    if [ "$DRY_RUN" = false ]; then git -C "$ROOT" worktree remove "$path"; fi
+    26	    continue
+    27	  fi
+    28	  printf 'KEEP %s (%s dirty=%s)\n' "$path" "$branch" "$dirty"
+    29	  if [ "$DRY_RUN" = false ]; then find "$path" -type d \( -name node_modules -o -name .npm-cache -o -name test-results \) -prune -exec mv {} "$TRASH_DIR"/ \;; fi
+    30	done
+    31	if [ "$DRY_RUN" = false ]; then npm cache clean --force >> "$LOG_FILE" 2>&1; df -h / >> "$LOG_FILE"; fi

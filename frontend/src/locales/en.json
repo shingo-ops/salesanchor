@@ -1456,7 +1456,14 @@
     "view": {
       "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier",
-      "freshOnly": "Last {{hours}} h"
+      "freshOnly": "Last {{hours}} h",
+      "searchNameCode": "Search by name or code"
+    },
+    "supplierFilter": {
+      "label": "Supplier",
+      "clear": "Clear selection",
+      "all": "All",
+      "count": "{{count}} selected"
     },
     "expiryWarning": "Showing offers within {{hours}} hours of the LINE post.",
     "filter": {
@@ -1533,6 +1540,12 @@
     "sortDesc": "▼",
     "sortNone": "↕",
     "sortBy": "Sort by {{col}}",
+    "sortMenu": {
+      "placeholder": "Sort",
+      "priceAsc": "Price: low to high",
+      "stockDesc": "Quantity: high to low",
+      "postedDesc": "Newest posts"
+    },
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
@@ -1546,7 +1559,6 @@
     "filterPanel": {
       "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
-      "suppliers": "Show / hide suppliers",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter).",
@@ -2093,6 +2105,17 @@
     "channelName": "Channel name",
     "noChannels": "No notification channels configured",
     "subtitle": "Configure and manage Webhook notification channels."
+  },
+  "notifications": {
+    "eventTypesLabel": "Notifications sent to this destination",
+    "eventTypesEmpty": "(none selected)",
+    "eventTypesColumn": "Notification types",
+    "editChannel": "Edit destination",
+    "eventType": {
+      "leadAssigned": "Deal assignment",
+      "metaMessageReceived": "New Meta message",
+      "tcgDistributionError": "TCG distribution error"
+    }
   },
   "erp": {
     "subtitle": "Sync inventory and sales data with external systems.",
