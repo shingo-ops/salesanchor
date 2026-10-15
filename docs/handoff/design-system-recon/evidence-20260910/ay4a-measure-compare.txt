@@ -1,0 +1,5 @@
+比較した値の数: 612
+条件数: 12（幅2×テーマ2×状態3）× 欄3（header, row1, row2）
+DIFF accentColor: auto -> rgb(30, 58, 138)  [18件]
+DIFF accentColor: auto -> rgb(91, 141, 217)  [18件]
+差のあった項目: accentColor
