@@ -22,6 +22,7 @@
 1. 3 段階で導入し、1 段階ずつ「適用 → 本番確認 → 次」で進める。
    - 段階①: permissions（全社共通の権限マスタ）。読取は全行、書込は `app.is_operator='true'` のみ（app_fx_rates と同じ型）。
    - 段階②: suppliers・tenant_google_calendar_config・tenant_google_drive_config。会社別の型。文脈を張らずに書く経路（super_admin_suppliers.py、OAuth callback）を先に直す。
+     - 2026-10-16 追記：段階②は 2 便に分ける。②a＝Google 2 表（tenant_carrier_credentials と同じ「自社行のみ」の型。OAuth 戻り先で set_tenant_context を張り、commit 後に同表を読む経路で reset_tenant_context を呼ぶ）。②b＝suppliers（共通行 tenant_id NULL があるため products と同じ型。運用者の書込経路に app.is_operator を張ってから適用）。理由：suppliers は共通行 288 行と書込経路が多く、Google 2 表（計 1 行）と一緒に入れると不具合の切り分けができないため。
    - 段階③: tenants・tenant_paypal_config・認証系 5 表。RLS を付けるか、付けずに代わりの守りにするかを PO と決めてから設定する。
 2. 守りは RLS（ポリシー）で行い、表単位 REVOKE は使わない（毎デプロイの再付与で戻るため）。
 3. ENABLE と FORCE の両方を付ける。ポリシーは冪等（`DROP POLICY IF EXISTS` → `CREATE POLICY`）にする。
