@@ -347,6 +347,12 @@ mode: handoff
 | 各段 | コード審査（Opus。PO 決定 2026-10-15 で Fable から変更）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
 | 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。一覧ファイルは1行だけのものを別に作る。登録した時点の期限にかかわらず、登録の直後に extend N=1 で「記録した時刻＋1日」にする。審査 r7-N-7・r8-N-5）。作成は PO 本人の GO（上の「操作の GO の条件」）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | PO（GO）＋Sonnet（実行） |
 
+Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申込みが来る、フォームを送る、Discordに案内をする、専用サーバーでチケットを発行してもらう、チケット発行をトリガーに専用URLとパスワードを送る」。SMTP が未設定のため。調査の生出力は /tmp/CC報告ファイル/viewer_discord/）
+- 【事実】本番で discord-gateway が動いている（astro-webapp-discord-gateway-1 Up、DISCORD_BOT_TOKEN は SET）。チケットはボタン（custom_id が ticket_open で始まる）を押したときだけ作られる（backend/app/discord_gateway/client.py:210-221）。作ると本人・staff ロール・ボットだけが見える部屋ができ、テナントの leads に書く（ticket_channel_creator.py）。
+- 【事実】チケットができたことをほかの処理に知らせる仕組みは無い。ボットから個別メッセージ（DM）を送るコードも無い（git grep で create_dm・dm_channel の送信側 0 件。dm_writer.py は受信の記録だけ）。作るなら、チケット部屋の作成直後に閲覧者の登録とURL・パスワードの投稿を足す新規実装になる。
+- 【未確認】トライアル申込者を受けるテナント（本番の設定は tenant 1・4・6 の3つ）。申込とチケットを同じ人だと結び付ける方法。
+- 決まるまで、D1（メールのリンクでのログイン）は保留。
+
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
 - ② fetch_output_rows の DB 部分：【事実】本番設定（include_flag_single=false、max_age_hours=48）で組み立てた SQL を EXPLAIN ANALYZE で3回、1135.0 ms・525.5 ms・497.5 ms、返却 877 行（explain_1〜3.txt）。1分ごとの作り置きには収まる。Python 側の整形を含む全体の時間は【未確認】。
