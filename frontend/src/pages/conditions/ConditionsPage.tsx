@@ -20,6 +20,8 @@ import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { TextareaControl } from "../../components/Textarea";
+import { Checkbox } from "../../components/Checkbox";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 interface ConditionAlias {
   id: number;
@@ -250,8 +252,7 @@ export default function ConditionsPage() {
       header: "",
       renderCell: c => (
         hasPermission("conditions.delete") ? (
-          <input
-            type="checkbox"
+          <CheckboxControl
             checked={selected.has(c.id)}
             onChange={() => toggleSelect(c.id)}
             onClick={e => e.stopPropagation()}
@@ -349,14 +350,13 @@ export default function ConditionsPage() {
           onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
         />
       </div>
-      <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", gridColumn: "1 / -1" }}>
-        <input
-          type="checkbox"
+      <div style={{ gridColumn: "1 / -1" }}>
+        <Checkbox
+          label={t(`${f}.fields.isActive`)}
           checked={form.is_active}
           onChange={e => setForm({ ...form, is_active: e.target.checked })}
         />
-        {t(`${f}.fields.isActive`)}
-      </label>
+      </div>
     </div>
   );
 

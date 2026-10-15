@@ -17,6 +17,7 @@ import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
 import ContactChannelForm, { type ContactChannelEntry } from "../../components/ContactChannelForm";
 import MergeContactModal from "../../components/MergeContactModal";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Props {
   company: Company;
@@ -201,15 +202,11 @@ export function CompanyContactsTab({
               ]}
             />
             <div className="form-row">
-              <label>
-                {/* checkbox は TextField 対象外のため残置 */}
-                <input
-                  type="checkbox"
-                  checked={contactForm.is_primary_contact}
-                  onChange={(e) => setContactForm({ ...contactForm, is_primary_contact: e.target.checked })}
-                />
-                {" "}{t("contacts.isPrimary")}
-              </label>
+              <Checkbox
+                label={t("contacts.isPrimary")}
+                checked={contactForm.is_primary_contact}
+                onChange={(e) => setContactForm({ ...contactForm, is_primary_contact: e.target.checked })}
+              />
             </div>
           </div>
           <div className="form-actions">

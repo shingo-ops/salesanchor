@@ -4214,3 +4214,13 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 削除した規則: frontend/src/features/tcg-distribution/distribution.css の `.dist-checkbox-row`、frontend/src/pages/integrations/FedexLabelValidationTab.css の `.lv-check-label`（見出しコメント含む）。`pmd-confirm-check` は規則の無い class で、class 名のみ消えた。新しい class は作らない。
 - 実測: origin/main の build CSS と作業ツリーの build CSS を各 1 本のまま、型ごとの実物の親を再現して 390/1280 × ライト/ダーク × 未チェック/チェックを測定。表と画像は docs/handoff/design-system-recon/evidence-20260910/ay4b-measure-compare.txt と ay4b-*.png。
 - 残り: AY-4c（一般画面 33 件、.form-group input[type=checkbox] の撤去を含む）。
+
+#### AY-4c-1 一般画面のチェック欄 24 件を金型へ（2026-10-16）
+
+- 目的: 一般画面の生チェック欄 33 件のうち、金型の props でそのまま受けられる 24 件を Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」（AY-4b と同じ。文字と並ぶ欄は Checkbox、表の中などの単独の欄は CheckboxControl）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 24 件（16 ファイル）。Checkbox 19 件、CheckboxControl 5 件（InventoryVisibilityPage・ConditionsPage・ProductsPage の表のセル、Inbox の一括選択 2 件）。ConditionsPage・StatusMasterPage の全幅の欄は gridColumn だけを持つ div で包む。RolesPage の一括 2 件は title を持つ span で包む。
+- 削除した規則: frontend/src/pages-layout.css の `.chk-label`（と `.chk-label input[type="checkbox"]`）、frontend/src/pages/inbox/InboxPage.css の `.inbox-bulk-check-all`。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c-measure-compare.txt と ay4c-*.png（AY-4b と同じ作り方）。
+- 残り（AY-4c-2）: 9 件（MultiSelect、ContactEditPage・StaffEditPage・StaffPage の `.form-group label`、InboxProfileModal、SalesFormMultiSelect、RolesPage の permission-item、schedule の 2 件）。frontend/src/components.css:19・:33 の checkbox 行。frontend/src/company-forms.css:100・:135 のコメントと `.form-row input:focus`（checkbox 以外の input にも当たるため本便では残す）。予定の色（dataColor は frontend/src に実在しない。金型に色の口を足すかは PO 判断）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。

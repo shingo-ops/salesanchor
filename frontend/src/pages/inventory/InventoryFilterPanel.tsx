@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
 import { MultiSelect, type MultiSelectOption } from "../../components/MultiSelect";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Props {
   filterEnabled: boolean;
@@ -127,15 +128,12 @@ export default function InventoryFilterPanel({
         />
       )}
 
-      <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: "var(--font-weight-semi)" }}>
-        <input
-          type="checkbox"
-          data-testid="inventory-filter-enabled"
-          checked={filterEnabled}
-          onChange={(e) => { setFilterEnabled(e.target.checked); setPage(1); }}
-        />
-        {t("inventory.filterPanel.enable")}
-      </label>
+      <Checkbox
+        label={t("inventory.filterPanel.enable")}
+        data-testid="inventory-filter-enabled"
+        checked={filterEnabled}
+        onChange={(e) => { setFilterEnabled(e.target.checked); setPage(1); }}
+      />
 
       {/* 1) カテゴリーの表示／非表示（コード順で左から） */}
       <div>
@@ -147,15 +145,12 @@ export default function InventoryFilterPanel({
             <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
           ) : (
             sortedCategories.map((c) => (
-              <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <input
-                  type="checkbox"
-                  data-testid={`inventory-filter-category-${c}`}
-                  checked={!hiddenCategories.has(c)}
-                  onChange={() => toggleHiddenCategory(c)}
-                />
-                {c}
-              </label>
+              <Checkbox key={c}
+                label={c}
+                data-testid={`inventory-filter-category-${c}`}
+                checked={!hiddenCategories.has(c)}
+                onChange={() => toggleHiddenCategory(c)}
+              />
             ))
           )}
         </div>
@@ -178,15 +173,12 @@ export default function InventoryFilterPanel({
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
           {hideableColumns.map((c) => (
-            <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-              <input
-                type="checkbox"
-                data-testid={`inventory-filter-col-${c}`}
-                checked={!hiddenColumns.has(c)}
-                onChange={() => toggleHiddenColumn(c)}
-              />
-              {t(`inventory.col.${c}`)}
-            </label>
+            <Checkbox key={c}
+              label={t(`inventory.col.${c}`)}
+              data-testid={`inventory-filter-col-${c}`}
+              checked={!hiddenColumns.has(c)}
+              onChange={() => toggleHiddenColumn(c)}
+            />
           ))}
         </div>
       </div>
@@ -215,15 +207,12 @@ export default function InventoryFilterPanel({
               <span style={{ color: "var(--text-muted)" }}>{t("inventory.noResults")}</span>
             ) : (
               conditionFacet.map((c) => (
-                <label key={c} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <input
-                    type="checkbox"
-                    data-testid={`inventory-cond-${c}`}
-                    checked={showConditions.has(c)}
-                    onChange={() => toggleSetMember(setShowConditions, c)}
-                  />
-                  {c}
-                </label>
+                <Checkbox key={c}
+                  label={c}
+                  data-testid={`inventory-cond-${c}`}
+                  checked={showConditions.has(c)}
+                  onChange={() => toggleSetMember(setShowConditions, c)}
+                />
               ))
             )}
           </div>
@@ -237,15 +226,12 @@ export default function InventoryFilterPanel({
               <span style={{ color: "var(--text-muted)" }}>{t("inventory.noResults")}</span>
             ) : (
               unitFacet.map((u) => (
-                <label key={u} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <input
-                    type="checkbox"
-                    data-testid={`inventory-unit-${u}`}
-                    checked={showUnits.has(u)}
-                    onChange={() => toggleSetMember(setShowUnits, u)}
-                  />
-                  {u}
-                </label>
+                <Checkbox key={u}
+                  label={u}
+                  data-testid={`inventory-unit-${u}`}
+                  checked={showUnits.has(u)}
+                  onChange={() => toggleSetMember(setShowUnits, u)}
+                />
               ))
             )}
           </div>
@@ -256,15 +242,12 @@ export default function InventoryFilterPanel({
           <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>{t("inventory.col.offerType")}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
             {offerTypes.map((o) => (
-              <label key={o} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <input
-                  type="checkbox"
-                  data-testid={`inventory-offertype-${o}`}
-                  checked={showOfferTypes.has(o)}
-                  onChange={() => toggleSetMember(setShowOfferTypes, o)}
-                />
-                {t(`inventory.offerType.${o}`, { defaultValue: o })}
-              </label>
+              <Checkbox key={o}
+                label={t(`inventory.offerType.${o}`, { defaultValue: o })}
+                data-testid={`inventory-offertype-${o}`}
+                checked={showOfferTypes.has(o)}
+                onChange={() => toggleSetMember(setShowOfferTypes, o)}
+              />
             ))}
           </div>
         </div>
