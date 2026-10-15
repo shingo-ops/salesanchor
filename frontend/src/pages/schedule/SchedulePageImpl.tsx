@@ -16,6 +16,7 @@ import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
+import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
@@ -519,10 +520,8 @@ function ScheduleSidebar({
                   />
                   <span className="schedule-calendar-item__label">{owner.name}</span>
                 </div>
-                <input
-                  type="checkbox"
-                  className="schedule-calendar-checkbox"
-                  style={{ accentColor: owner.color }}
+                <CheckboxControl
+                  dataColor={owner.color}
                   checked={checked || owner.isSelf}
                   disabled
                   aria-label={owner.name}
@@ -550,10 +549,8 @@ function ScheduleSidebar({
                     />
                     <span className="schedule-calendar-item__label">{owner.name}</span>
                   </div>
-                  <input
-                    type="checkbox"
-                    className="schedule-calendar-checkbox"
-                    style={{ accentColor: owner.color }}
+                  <CheckboxControl
+                    dataColor={owner.color}
                     checked={checked}
                     onChange={() => owner.userId != null && onToggleOwner(key)}
                     aria-label={owner.name}

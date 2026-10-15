@@ -823,7 +823,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
 
-Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c）。
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c。AY-4c-2b で実装済み）。
 
 #### ボタンの操作契約
 
@@ -4233,4 +4233,14 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 変更: 7 件（7 ファイル）。CheckboxControl 3 件（MultiSelect、SalesFormMultiSelect、RolesPage の権限カード。外側の label はそのまま）、Checkbox 4 件（ContactEditPage・StaffEditPage・StaffPage の `.form-group` 内、InboxProfileModal の右パネル）。副作用の手当てとして NotificationsPage の既存 Checkbox 2 か所を class なしの div で包んだ。
 - 削除・変更した規則: frontend/src/components.css の `.form-group input[type="checkbox"]`（通常・:focus の 2 行）を削除、`.form-group label` を `.form-group label:where(:not(.comp-checkbox))` に変更（詳細度 0,1,1 のまま）。frontend/src/components/MultiSelect.css の `.comp-multiselect__check`、frontend/src/pages/inbox/InboxPage.css の `.sales-form-option input[type="checkbox"]` を削除。
 - 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2-measure-compare.txt と ay4c2-*.png。`.form-group` 内の金型の全数は ay4c2-formgroup-ancestors.txt。
-- 残り（AY-4c-2b、PO 判断待ち）: 2 件（schedule/SchedulePageImpl.tsx の担当者別データ色のチェック欄）。色を残すなら金型に dataColor の口を足し、--accent にそろえるなら足さない。frontend/src/company-forms.css:100・:135 のコメント見直し。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+- 残り（AY-4c-2b、PO 判断済み・下に記録）: 2 件（schedule/SchedulePageImpl.tsx の担当者別データ色のチェック欄）。次の残件は AY-4c-2b の記録に引き継ぐ。
+
+#### AY-4c-2b 予定表のカレンダーのチェック欄 2 件を、カレンダーの色のまま金型へ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（カレンダーの色のまま、CheckboxControl に dataColor の口を足す）。
+- 設計: docs/handoff/ay4c2b-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: CheckboxControl に `dataColor?: string` を追加（未指定なら style 属性なし・--accent）。SchedulePageImpl.tsx の 2 件を CheckboxControl に載せかえ。schedule.css の `.schedule-calendar-checkbox` を行内の配置だけの `.schedule-calendar-item > input[type="checkbox"]` に置き換え。
+- 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、:874）。
+- 結果: アプリの生 checkbox は金型・Checkbox・Toggle 以外で 0 件。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2b-measure-compare.txt と ay4c2b-*.png。想定外の差 0。disabled の自分の行の cursor が pointer から not-allowed に変わるのみ（金型の形）。
+- 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断。

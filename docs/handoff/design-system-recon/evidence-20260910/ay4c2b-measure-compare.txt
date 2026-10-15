@@ -1,0 +1,12 @@
+chromium 147.0.7727.15
+比較した組: 8（幅2 x テーマ2 x 状態2）  同じ指標: 472  期待の差: 8  想定外の差(×): 0
+(390, 'dark', 'checked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(390, 'dark', 'unchecked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(390, 'light', 'checked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(390, 'light', 'unchecked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(1280, 'dark', 'checked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(1280, 'dark', 'unchecked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(1280, 'light', 'checked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+(1280, 'light', 'unchecked') r1_cursor: pointer -> not-allowed  金型どおり（期待）: 金型 CheckboxControl.css:4 の disabled（設計 §5 の予想差）
+色見本とチェック欄の色が不一致の組(後): 0
+accent-color が前後で違う組: 0
