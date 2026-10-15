@@ -441,6 +441,41 @@
   border-color: var(--border-strong);
 }
 
+/* product-edit: company-forms.css の商品編集 select（枠が薄くて見えない問題の解消で --border-strong。OS 標準の▽を保つ。design.md §AY-3a） */
+.comp-select__control.comp-select--product-edit {
+  min-height: auto;
+  max-width: none;
+  padding-right: var(--space-3);
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  background-image: none;
+  background-repeat: revert;
+  background-position: revert;
+  font-family: revert;
+  line-height: normal;
+  cursor: revert;
+  appearance: revert;
+  -webkit-appearance: revert;
+  transition: initial;
+}
+
+.comp-select__control.comp-select--product-edit:focus {
+  border-color: var(--border-strong);
+}
+
+/* product-edit: company-forms.css の商品編集 textarea（同上。design.md §AY-3a） */
+.comp-field__textarea.comp-textarea--product-edit {
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: revert;
+  line-height: normal;
+  transition: initial;
+}
+
+.comp-field__textarea.comp-textarea--product-edit:focus {
+  border-color: var(--border-strong);
+}
+
 .comp-field--lg .comp-field__label {
   font-size: var(--font-base);
 }

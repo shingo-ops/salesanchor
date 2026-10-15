@@ -2052,7 +2052,7 @@ PO回答（2026-10-05、本セッション）: 当初の「全件を標準に統
 | ダッシュボード上部 `.page-header-select`（DashboardPage 2） | 2 | components.css:584「ヘッダーアクションエリア内のドロップダウン共通スタイル (SSoT: ここのみ定義)」、:589「btn-ghost / icon-btn と高さを統一 (36px)」、tokens.css:95 radius-pill「入力欄の角丸（意味的例外トークン）」 | 種類 header を登録 |
 | 受信箱タブ横 `.inbox-platform-select`（InboxPage 1、InboxMessageThread 1） | 2 | InboxPage.css:68「タブバー右端」、height は tokens.css:271 --height-tab-item「受信箱タブボタン高さ」。文字の小ささ・色の意図資料はなし | 種類 tabbar を登録（高さ整合の意図に基づく） |
 | 一般フォーム・その他（.form-group / .form-row / .filter-bar / .schedule-input / .gs-select / .account-settings-lang-select / .inbox-page-filter-select / .inbox-settings-select / InventoryPage inline / 装飾なし） | 55 | docs/adr・docs/specs・docs/handoff に見た目の意図記載なし（av2-recon2.md R4）。角丸 sm/md・枠 border/border-strong が不統一 | 標準に統一 |
-| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） |
+| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） | 【AY-3a で種類 product-edit へ移管（現行の規則は company-forms.css:234 だった）】
 | 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便）→ AY-2w（2026-10-14）で SelectControl size="sm" へ移管 |
 
 #### 便の分割
@@ -2257,7 +2257,7 @@ AX-2 の方針（PO 回答 2026-10-09「y」。設計者が提示した案: 一�
 | 種類 composer | 2 | PriorityProspectsSection.tsx:410、WeeklyAdvisorSection.tsx:381 | PO 提示案「ダッシュボードの入力欄」 |
 | 種類 schedule | 1 | SchedulePageImpl.tsx:378 | PO 提示案「予定の入力欄」 |
 | 標準 | 40 | 下記 AX-2b | PO 方針「一般フォームは標準」 |
-| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる） |
+| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる） | 【AY-3a で種類 product-edit へ移管（現行の規則は company-forms.css:213 だった）】
 
 PO 提示案に名前の無かった欄の扱い（設計者判断。規則: 意図の記録が設計書・ADR・CSS コメント・専用トークンのいずれにも無いものは一般として標準）: 送信下訳の編集欄（OutboundTranslationPreview.tsx:147、記録0）、手動記録（ManualRecordSection.tsx:159、CSS 定義0でブラウザ既定）、Discord 告知（DiscordAnnouncePage.tsx:98、CSS 定義0でブラウザ既定）、解析レビュー（ItemComparison.tsx:27/34、規則0でブラウザ既定）は標準。商品マスタ修正ドロワー（ProductMasterDrawer.tsx:217/221）は専用トークン --pmd-textarea-min-h（supplier-detail-view.css:113、「--textarea-min-h:80px より小さい専用値」、parity03 design.md:35）があるが、意図の記録は最小高だけで標準との差は color・outline-color の2項目のため、標準にして最小高だけ配置規則として残す。抽出プロンプト（ExtractionPromptConfigTab.tsx:222）の等幅は §Z :817 の textStyle=code（登録済み契約）に当たるため、標準＋textStyle=code とし枠・余白は標準になる。これらは AX-2b の前後表で PO に示し、GO 前に変更できる。
 
@@ -4163,3 +4163,19 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 設計: docs/handoff/ay2z-product-edit-inputs/design.md（recon.md 併置）。
 - 変更: frontend/src/components/TextField.tsx の `TextFieldVariant` に `"product-edit"`。frontend/src/components/FormField.css に `.comp-field__input.comp-input--product-edit`（と `:focus`）。frontend/src/company-forms.css から input 専用の3規則を削除（詳細度 (0,4,1)/(0,5,1) が種類より強いため同じ便で撤去）。ProductEditPage.tsx の input 14件を `<TextFieldControl variant="product-edit"`。試験と story を追加。
 - 実測（390/1280 × ja/en × ライト/ダーク × 通常・focus・hover × 25要素）: computed style・rect・class 以外の DOM 属性の差は 600 組で 0。date 欄の font-family は monospace で前後同じ。数値は docs/handoff/design-system-recon/evidence-20260910/ay2z-acceptance.md。
+
+#### AY-2z 本番反映記録（2026-10-15）
+
+- PR #4291 merge 597a1a80d（00:42:07Z）。deploy 38661528149 success（00:44:45Z）。
+- 本番 CSS index-D4n_eRfY.css で `.comp-field__input.comp-input--product-edit` 2 件、`.product-edit-form .form-group input:not(` 0 件（textarea・select の規則は残存、AY-3a で撤去）。app は HTTP 200、/api/health は HTTP 200。
+- 出典 /tmp/CC報告ファイル/ssot-ay2z/prod/checks.txt、`gh pr view 4291`、`gh run view 38661528149`。
+
+#### AY-3a 商品編集ページの選択欄9・複数行欄1を種類 product-edit へ（2026-10-15）
+
+- 目的: 商品編集ページの生 select 9件と生 textarea 1件を SelectControl・TextareaControl の種類 product-edit に移し、company-forms.css の商品編集専用規則を 0 にする。見た目は変えない。
+- 根拠: 2026-10-05 の PO 方針「③商品編集9か所は『枠が薄い』問題があるため保留して別に確認」（上の AW-2 の根拠節）。AW-2b・AX-2b で独立規則として保留していた分。
+- PO 決定: 2026-10-15「Y」（質問「選択欄9個と複数行欄1個を、見た目は今のまま共通部品へ移してよいか」への回答）。Fable 設計審査 r2 APPROVE（/tmp/CC報告ファイル/ssot-pe2/design-review.md）。
+- 設計: docs/handoff/ay3a-product-edit-select-textarea/design.md（recon.md 併置）。
+- 変更: frontend/src/components/Select.tsx の `SelectVariant`、frontend/src/components/Textarea.tsx の `TextareaVariant` に `"product-edit"`。frontend/src/components/FormField.css に `.comp-select__control.comp-select--product-edit` と `.comp-field__textarea.comp-textarea--product-edit`（各 `:focus` 付き）。select は bare 由来の max-width・background-repeat・background-position を none / revert で戻す。frontend/src/company-forms.css から select・textarea の商品編集規則を削除（詳細度が種類より強いため同じ便で撤去）。ProductEditPage.tsx の select 9件・textarea 1件を金型へ。試験と story を追加。
+- 実測（390/1280 × ja/en × ライト/ダーク × 通常・focus・hover × 25要素）: computed style・rect・class 以外の DOM 属性・option の差は 600 組で 0。class は 240 件が設計どおり金型の class に変わった。数値は docs/handoff/design-system-recon/evidence-20260910/ay3a-acceptance.md。
+- これで商品編集ページの保留は 0（input 14 は AY-2z、select 9・textarea 1 は AY-3a）。
