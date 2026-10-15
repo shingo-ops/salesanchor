@@ -34,3 +34,12 @@ mode: handoff
 | 試験の並列安全 | 適合（pytest は `--dist=loadfile` で同一ファイルを同じ作業者が順に流す。会社番号 980/981 は他試験で未使用） | backend/pyproject.toml:65 |
 | 実行結果（担当の報告。生出力で確認） | 関連試験 112 passed／130 passed、ローカル実 PG で RLS 試験 5 passed、ruff 0 件 | /tmp/CC報告ファイル/s1-stage2/2a-test.txt、2a-test-related.txt、2a-test-rls-local.txt、2a-ruff.txt |
 | 補足 | 初回 commit は pre-commit が `ruff` を PATH で見つけられず停止。導入済みの /Library/Frameworks/Python.framework/Versions/3.14/bin を PATH に足して通常どおりフックを通した（迂回なし） | /tmp/CC報告ファイル/s1-stage2/2a-commit.txt、2a-commit2.txt |
+
+## CI 対応（2026-10-16・Opus 判断、担当 Sonnet 実施）
+
+| 事象 | 原因（生ログ） | 対処 |
+|---|---|---|
+| マイグレーションSQL 実行（内部）失敗 | CI の検証用 DB に 2 表が無い（`relation "public.tenant_google_calendar_config" does not exist`）。この job は前提表を `.github/workflows/migration-test.yml` に最小定義で登録する方式 | tenant_carrier_credentials の RLS（20260609_090000）と同じ前例どおり、2 表の最小定義（原本の CREATE TABLE と同文）を登録。カードの範囲外だが試験用の前提登録のみで、本番には影響しない |
+| guard-authoring/evaluation が error | PR の土台（main）が枝の祖先でない＝BEHIND（scripts/run-guard-evaluation.js の merge-base --is-ancestor が失敗） | origin/main を merge commit で取り込み |
+
+回帰試験の効き（実測）: 修正を外した複製で試験 ④⑤ が失敗（2 failed, 3 passed）、修正ありで 5 passed（/tmp/CC報告ファイル/s1-stage2/2a-regress-without-fix.txt、2a-regress-with-fix.txt）。
