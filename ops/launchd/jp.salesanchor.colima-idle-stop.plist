@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.colima-idle-stop.plist — 15 分ごとの Colima 使い終わり自動停止（docs/handoff/colima-idle-stop/design.md）
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+  DB 接続なし・CPU ほぼ 0・操作中プロセスなしが 30 分続いたら colima stop -p default を 1 回実行する。
+  読み取りだけで動く（fetch・checkout はしない）。道具のコピーの更新は disk-janitor が毎日 04:00 に行う。
+
+  配置コマンド（手順の正本: docs/ops/runner-commands.md）:
+    cp ops/launchd/jp.salesanchor.colima-idle-stop.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.colima-idle-stop.plist
+
+  動作確認:
+    launchctl print gui/$(id -u)/jp.salesanchor.colima-idle-stop
+    tail ~/Library/Logs/colima-idle-stop.log
+
+  すぐ1回動かす:
+    launchctl kickstart -k gui/$(id -u)/jp.salesanchor.colima-idle-stop
+
+  停止:
+    launchctl bootout gui/$(id -u)/jp.salesanchor.colima-idle-stop
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.colima-idle-stop</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; if [ -d /tmp/disk-janitor.lock.d ]; then echo "colima-idle-stop: disk-janitor 実行中のため今回は見送り"; exit 0; fi; test -z "$(git -C "$T" --no-optional-locks status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" merge-base --is-ancestor HEAD origin/main &amp;&amp; cd "$T" &amp;&amp; bash scripts/colima-idle-stop.sh || { echo "colima-idle-stop: 道具のコピーが確認できないため実行しない" &gt;&amp;2; exit 1; }</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/.salesanchor-tools</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/tanizawashingo/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- 15 分ごと（RunAtLoad=false・KeepAlive=false = デーモン化しない） -->
+  <key>StartInterval</key>
+  <integer>900</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/colima-idle-stop.out</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/colima-idle-stop.err</string>
+</dict>
+</plist>
