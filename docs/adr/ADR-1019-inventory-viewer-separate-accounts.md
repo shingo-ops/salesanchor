@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 |------|------|
 | ステータス | Proposed |
-| 備考 | 草案。PO の決定済み：閲覧者はアプリのユーザーにしない（2026-10-15 Y）。列は今の本番の GAS と同じ14列（Q1 y・Q13 y、2026-10-15。発送日を含む）に、アプリと同じ区分の表示のための offer_type を足す。画面はアプリの在庫表と同じ金型・共有部品で作る（Q14、2026-10-15）。番号は ADR-1017 が別の ADR（smoke 認証）に使われたため 1019 に付け替えた（2026-10-15）。ログインはメールのリンクで行い、登録フォームの情報で管理する（2026-10-15）。残りの決定待ちは設計書の §PO 決定待ちに書いてある |
+| 備考 | 草案。PO の決定済み：閲覧者はアプリのユーザーにしない（2026-10-15 Y）。列は今の本番の GAS と同じ14列（Q1 y・Q13 y、2026-10-15。発送日を含む）に、アプリと同じ区分の表示のための offer_type を足す。画面はアプリの在庫表と同じ金型・共有部品で作る（Q14、2026-10-15）。番号は ADR-1017 が別の ADR（smoke 認証）に使われたため 1019 に付け替えた（2026-10-15）。ログインは専用 URL と email・パスワードで行い（2026-10-16 に、メールのリンクから置き換え）、申込コードを Discord の受付で照合してトライアルを始める（2026-10-16 案D）。残りの決定待ちは設計書の §PO 決定待ちに書いてある |
 | 起案日 | 2026-10-15 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-1014（在庫の行の定義は1か所）、ADR-1008（取引先・顧客の正本。申込の email は取引先に写さず、本契約の便で参照列でつなぐ）、ADR-1013（自社ログイン。本 ADR は、その表と鍵を閲覧者に流用しない）、ADR-144・ADR-067（金型とデザイントークン）、ADR-027（i18n） |
@@ -24,6 +24,7 @@
 6. 7本以外のすべての入口が閲覧者のトークンを拒否することを、全ルートを列挙するテストで固定する。
 7. 在庫のデータは、1分に1回だけ、run_distribution（GAS への配信）と共通の build_distribution_rows（安全装置 #8・#8b、設定の読み込み、fetch_output_rows＝ADR-1014 の1か所の定義、の順）を通して作り、Redis に置いて全員に配る。GAS に配信される行と同じものを作る。DB の表やシートには写しを作らない。
 8. 閲覧ページの画面は、アプリの在庫表（/inventory）と同じ金型（DataTable・MultiSelect・Select・Tabs・Badge・Drawer・Button・TextField）と、共有部品（frontend/src/features/inventory/ の normalizeForSearch・conditionBadgeVariant・inventoryColumns.css）で作る。列の定義は行の形が違うので viewer の中に置き、アプリの列の定義との一致を検査で固定する（design.md D4）。
+9. Discord の受付（運用サーバー1つ）で申込コードを照合する処理は discord-gateway の中で動き、public.viewer_* の表（viewer_accounts・viewer_login_tokens・viewer_status_changes・viewer_login_events）に書く。設定は public.viewer_discord_config に置き、テナントの Discord 設定には入れない（設計書 D6）。
 
 ## Why（なぜ）
 

@@ -742,3 +742,17 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
 - N-r12-3：商品名の見出しの降順で english_title が '' の行が末尾に来ることを vitest の条件に足した。
 - Ready For Generator は PO 承認（ADR-1019 は Proposed）と Q15 の回答の後。
 
+
+## r13 審査（2026-10-16、Opus architect）：REVISE → r14 で対応
+生出力：/tmp/CC報告ファイル/viewer_r13_review/
+- B-r13-1（iat は秒、password_changed_at はマイクロ秒）→ D1 に `iat < floor(password_changed_at の秒)` を get_current_viewer だけに置くと書いた。POST password は新しい12時間トークンを返す（D1・D2）。受入に「同じ秒は通る・1秒前は 401・新トークンで 200」を足した。
+- B-r13-2（gateway では get_redis() が None）→ D6 に setup_hook で init_redis()、close で close_redis() を書いた。受入に mock なしの起動テストを足した。
+- N-r13-1 行番号（:469-480・:510-534・:535-564・_bot_permission_overwrites :148-164・reason 不変）→ D6 手順4。
+- N-r13-2 auth.py:258・:262 → D1。
+- N-r13-3 strip→lower→validate_email_loose の順 → D1。
+- N-r13-4 DELETE … RETURNING の1文で消費 → D1。
+- N-r13-5 BYTEA・octet_length=32・UNIQUE・purpose CHECK・GRANT → D1。
+- N-r13-6 既存の部屋案内は先に defer、小窓の値は interaction.data から読み on_submit を使わない、【未確認】は段4の最初に確かめる → D6。
+- N-r13-7 古い文に「r13 で置き換え済み」を付けた（:85・:405・:413・:449）。ADR 備考を書き換え、What に 9 を足した。
+- N-r13-8 ui-allow を (#4338) に替えた。
+- N-r13-9 Q5 に「決まるまで段4の PR を出さない」、受入にスマホの Discord アプリの行を足した。
