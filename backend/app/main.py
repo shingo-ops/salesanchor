@@ -82,8 +82,8 @@ from app.routers import (
     products,
     public_staff_avatars,  # ADR-159: 担当者アイコン公開配信（認証不要）
     purchase_orders,
-    realtime_events,  # ADR-1016 即時反映の合図 SSE
     quotes,
+    realtime_events,  # ADR-1016 即時反映の合図 SSE
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
