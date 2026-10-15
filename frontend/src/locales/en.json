@@ -3780,6 +3780,12 @@
     "excludedHelp": "Read as \"{{status}}\", so this item is kept out of stock. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
     "excludedHelpNoStatus": "Kept out of stock because of its sale status. If that is right, choose \"Keep as is\"; if not, select a row in the table to fix it.",
     "removedFromList": "This item is no longer in the review list",
+    "revokeUndo": "Undo",
+    "ackedState": "This item is marked as checked",
+    "revoke": "Undo \"checked\"",
+    "revokeConfirm": { "title": "Undo \"checked\"?", "message": "All \"checked\" marks on this item are removed and the analysis runs again. If a reason still needs checking, the item returns to the review list.", "confirm": "Undo" },
+    "revoked": "Undone. Re-running the analysis",
+    "revokeFailed": "Could not undo. Please try again",
     "productLabel": "Product",
     "productCurrent": "Current: {{name}}",
     "reassign": "Reassign to this product",
@@ -5232,11 +5238,13 @@
     "reviewReasons": "Review Reasons",
     "createdAt": "Date",
     "noItems": "No items need review",
+    "ackedEmpty": "No confirmed items",
     "pidUnresolved": "Product unresolved",
     "multiCandidate": "Multiple candidates",
     "noteUnmatched": "Note unmatched",
     "tabs": {
       "production": "Production review",
+      "acked": "Checked",
       "posts": "Posts"
     },
     "inline": {
