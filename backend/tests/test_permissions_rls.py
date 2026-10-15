@@ -25,7 +25,7 @@ pytestmark = [
 ]
 
 _DIGEST_SQL = (
-    "SELECT md5(string_agg(id::text || key || description, ',' ORDER BY id)) "
+    "SELECT md5(string_agg(id::text || key || coalesce(description, ''), ',' ORDER BY id)) "
     "FROM public.permissions"
 )
 
@@ -84,11 +84,14 @@ async def test_permissions_writes_denied_without_operator_flag():
 
         # UPDATE / DELETE: USING で行が見えず 0 行
         async with app_engine.connect() as conn:
-            upd = await conn.execute(text("UPDATE public.permissions SET description = 'changed' WHERE id > 0"))
-            assert upd.rowcount == 0
-            dele = await conn.execute(text("DELETE FROM public.permissions WHERE id > 0"))
-            assert dele.rowcount == 0
-            await conn.commit()
+            trans = await conn.begin()
+            try:
+                upd = await conn.execute(text("UPDATE public.permissions SET description = 'changed' WHERE id > 0"))
+                assert upd.rowcount == 0
+                dele = await conn.execute(text("DELETE FROM public.permissions WHERE id > 0"))
+                assert dele.rowcount == 0
+            finally:
+                await trans.rollback()
 
         assert await _admin_scalar(admin_engine, _DIGEST_SQL) == before
         assert await _admin_scalar(admin_engine, "SELECT count(*) FROM public.permissions") == count_before
