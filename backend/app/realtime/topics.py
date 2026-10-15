@@ -140,6 +140,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("PATCH", "/api/v1/note-master/{note_id}"): _PENDING,
     ("POST", "/api/v1/notification-channels"): _PENDING,
     ("DELETE", "/api/v1/notification-channels/{channel_id}"): _PENDING,
+    ("PATCH", "/api/v1/notification-channels/{channel_id}"): _PENDING,
     ("POST", "/api/v1/orders"): _PENDING,
     ("DELETE", "/api/v1/orders/{order_id}"): _PENDING,
     ("PATCH", "/api/v1/orders/{order_id}"): _PENDING,

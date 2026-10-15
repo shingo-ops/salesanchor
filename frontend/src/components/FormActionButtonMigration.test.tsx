@@ -13,7 +13,7 @@ vi.mock('../lib/api', () => ({ api: mock }));
 
 type Kind = 'notifications' | 'badges' | 'shifts' | 'buddy';
 const configs = {
-  notifications: { Page: NotificationsPage, permission: 'notifications.manage', opener: 'settings.addChannel', title: 'settings.addDiscordWebhook', reads: ['/notification-channels'], post: '/notification-channels' },
+  notifications: { Page: NotificationsPage, permission: 'notifications.manage', opener: 'settings.addChannel', title: 'settings.addDiscordWebhook', reads: ['/notification-channels', '/notification-event-types'], post: '/notification-channels' },
   badges: { Page: BadgesPage, permission: 'badges.manage', opener: 'badges.newBadge', title: 'badges.newBadge', reads: ['/badges', '/badges/leaderboard'], post: '/badges' },
   shifts: { Page: ShiftsPage, permission: 'shifts.manage', opener: 'shifts.newShift', title: 'shifts.newShift', reads: ['/shifts'], post: '/shifts' },
   buddy: { Page: BuddyPage, permission: 'buddy.manage', opener: 'buddy.newPair', title: 'buddy.newPair', reads: ['/buddy/pairs', '/buddy/feedbacks'], post: '/buddy/pairs' },
@@ -25,7 +25,7 @@ let granted = true;
 const tr = (key: string) => String(instance.t(key));
 function deferred() { let resolve!: (v: unknown) => void; let reject!: (e: Error) => void; const promise = new Promise((res, rej) => { resolve = res; reject = rej; }); return { promise, resolve, reject }; }
 function payload(kind: Kind) {
-  if (kind === 'notifications') return { channel_name: 'Channel fixture', webhook_url: ' https://example.test/hook ' };
+  if (kind === 'notifications') return { channel_name: 'Channel fixture', webhook_url: ' https://example.test/hook ', event_types: [] };
   if (kind === 'badges') return { name: 'Badge fixture', description: null, icon: badgeIcon, criteria: '   ', points: 25 };
   if (kind === 'shifts') return { user_id: 7, shift_date: '2026-09-28', start_time: '08:30', end_time: '17:30', shift_type: 'night', notes: null };
   return { coach_user_id: 7, mentee_user_id: 8, notes: ' Buddy note ' };
