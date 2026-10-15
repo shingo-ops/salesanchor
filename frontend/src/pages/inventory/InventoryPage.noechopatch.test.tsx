@@ -89,4 +89,18 @@ describe('InventoryPage does not echo loaded filters back via PATCH', () => {
     expect(bodies()[1].merge_same_post).toBe(true);
     release();
   });
+
+  it('keeps the saved hidden_supplier_ids in the PATCH body even though the UI no longer edits them', async () => {
+    setupGet(() => Promise.resolve({
+      enabled: true, merge_same_post: true, hidden_supplier_ids: [1], hidden_categories: [], hidden_columns: [],
+    }));
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    await settle();
+    expect(mock.patch).toHaveBeenCalledTimes(0);
+    fireEvent.click(screen.getByTestId('inventory-settings-open'));
+    fireEvent.click(await screen.findByTestId('inventory-merge-toggle'));
+    await waitFor(() => expect(mock.patch).toHaveBeenCalledTimes(1));
+    expect((mock.patch.mock.calls[0][1] as { hidden_supplier_ids: number[] }).hidden_supplier_ids).toEqual([1]);
+  });
 });
