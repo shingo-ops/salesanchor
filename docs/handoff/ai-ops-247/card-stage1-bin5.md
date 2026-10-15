@@ -458,6 +458,10 @@ CELERY_QUEUE_LENGTH = Gauge(
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+- 実装（2026-10-15 Sonnet）。生出力: /tmp/CC報告ファイル/ai-ops-stage1-bin5/
+- 5-1: 差分は celery_alerts の 3 行のみ。5-2: OK: Prometheus 17 rules, Loki 6 rules, runbook 23 sections。5-3: `- ` の行 0。
+- 5-4: promtool check rules は SUCCESS: 17 rules found、test rules は SUCCESS（終了コード 0）。5-5: `> 6000` にすると試験 1 の 15m が落ちて終了コード 1、戻した。
+- 5-6: test_celery_health.py・test_metrics.py・test_celery.py で 34 passed。5-7: 差し替えを外すと試験 6 が落ちた。5-8: ruff check app/ は All checks passed。5-9: 終了コード 0・不一致 0。5-10: 該当 0 行。
+- 判断を要した点: 4-2 のタスクは既存の書き方（shared_task）に合わせた。試験 9 の偽物の sender は hashable でないと signal の send が TypeError になるため、クラスのインスタンスにした。
 
 END OF CARD
