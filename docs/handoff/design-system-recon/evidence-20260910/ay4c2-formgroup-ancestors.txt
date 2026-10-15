@@ -1,0 +1,329 @@
+# AY-4c-2a §5-2 .form-group を祖先に持つ金型の全数（TypeScript 構文木。スクリプト: docs/handoff/design-system-recon/evidence-20260910/ay4c2-formgroup-scan.cjs）
+# 走査 tsx: 444 ファイル（1 は試験・stories 含む、2 は *.test.tsx・*.stories.tsx を除く本番コードのみ）。.form-group は全て intrinsic 要素の className リテラルで付与（git grep で確認: 58 ファイル、動的付与は 0）。
+
+## 1. 同じファイルの中
+金型の使用 JSX 総数: 79（Checkbox 53 / CheckboxControl 26）、ファイル 47
+form-group を祖先に持つもの: 5 件
+  frontend/src/pages/contacts/ContactEditPage.tsx:171 <Checkbox> 祖先 form-group=frontend/src/pages/contacts/ContactEditPage.tsx:170
+  frontend/src/pages/notifications/NotificationsPage.tsx:132 <Checkbox> 祖先 form-group=frontend/src/pages/notifications/NotificationsPage.tsx:128
+  frontend/src/pages/notifications/NotificationsPage.tsx:159 <Checkbox> 祖先 form-group=frontend/src/pages/notifications/NotificationsPage.tsx:155
+  frontend/src/pages/staff/StaffEditPage.tsx:212 <Checkbox> 祖先 form-group=frontend/src/pages/staff/StaffEditPage.tsx:211
+  frontend/src/pages/staff/StaffPage.tsx:289 <Checkbox> 祖先 form-group=frontend/src/pages/staff/StaffPage.tsx:288
+祖先に読めない（動的）className がある金型: 2 件
+  frontend/src/components/DataTable.tsx:314 <CheckboxControl> 祖先 form-group=なし 動的className祖先=296,286
+  frontend/src/components/DataTable.tsx:427 <CheckboxControl> 祖先 form-group=なし 動的className祖先=409
+
+## 2. ファイルをまたぐもの（金型を描く部品 -> その部品を使う JSX の祖先に form-group があるか）
+金型を直接描く部品（名前）: 44 個
+  部品 ContactChannelForm: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/company-detail/CompanyContactsTab.tsx:225 囲む部品=CompanyContactsTab form-group=なし
+  部品 DataTable: JSX 使用 73 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/ItemComparison.tsx:92 囲む部品=ReadOnlyComparison form-group=なし
+    使用 frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx:231 囲む部品=V102PostEditModal form-group=なし
+    使用 frontend/src/features/tcg-analysis-review/V102PostsTab.tsx:74 囲む部品=V102PostsTab form-group=なし
+    使用 frontend/src/features/tcg-product-import/TcgProductImportPreview.tsx:38 囲む部品=TcgProductImportPreview form-group=なし
+    使用 frontend/src/features/tcg-review-csv/ReviewCsvPreviewTable.tsx:24 囲む部品=ReviewCsvPreviewTable form-group=なし
+    使用 frontend/src/features/tcg-review-csv/ReviewCsvPreviewTable.tsx:27 囲む部品=ReviewCsvPreviewTable form-group=なし
+    使用 frontend/src/pages/archives/ArchivesPage.tsx:68 囲む部品=ArchivesPage form-group=なし
+    使用 frontend/src/pages/bots/BotsPage.tsx:321 囲む部品=BotsPage form-group=なし
+    使用 frontend/src/pages/buyback-prices/BuybackByProductPage.tsx:256 囲む部品=BuybackByProductPage form-group=なし
+    使用 frontend/src/pages/buyback-prices/BuybackPricesPage.tsx:415 囲む部品=BuybackPricesPage form-group=なし
+    使用 frontend/src/pages/commissions/CommissionsPage.tsx:184 囲む部品=CommissionsPage form-group=なし
+    使用 frontend/src/pages/commissions/CommissionsPage.tsx:202 囲む部品=CommissionsPage form-group=なし
+    使用 frontend/src/pages/commissions/CommissionsPage.tsx:240 囲む部品=CommissionsPage form-group=なし
+    使用 frontend/src/pages/companies/CompaniesPage.tsx:423 囲む部品=CompaniesPage form-group=なし
+    使用 frontend/src/pages/conditions/ConditionsPage.tsx:563 囲む部品=ConditionsPage form-group=なし
+    使用 frontend/src/pages/conditions/ConditionsPage.tsx:624 囲む部品=ConditionsPage form-group=なし
+    使用 frontend/src/pages/contacts/ContactsPage.tsx:416 囲む部品=ContactsPage form-group=なし
+    使用 frontend/src/pages/dashboard/FollowUpsPage.tsx:166 囲む部品=FollowUpsPage form-group=なし
+    使用 frontend/src/pages/dashboard/FunnelLeadsPage.tsx:143 囲む部品=FunnelLeadsPage form-group=なし
+    使用 frontend/src/pages/design-preview/sections/DataTableSection.tsx:97 囲む部品=DataTableSection form-group=なし
+    使用 frontend/src/pages/design-preview/sections/DataTableSection.tsx:115 囲む部品=DataTableSection form-group=なし
+    使用 frontend/src/pages/design-preview/sections/DataTableSection.tsx:132 囲む部品=DataTableSection form-group=なし
+    使用 frontend/src/pages/design-preview/sections/DataTableSection.tsx:145 囲む部品=DataTableSection form-group=なし
+    使用 frontend/src/pages/erp/ERPPage.tsx:111 囲む部品=ERPPage form-group=なし
+    使用 frontend/src/pages/inventory/InventoryPage.tsx:593 囲む部品=InventoryPage form-group=なし
+    使用 frontend/src/pages/inventory/OwnInventoryPage.tsx:185 囲む部品=OwnInventoryPage form-group=なし
+    使用 frontend/src/pages/invoices/InvoicesPage.tsx:152 囲む部品=InvoicesPage form-group=なし
+    使用 frontend/src/pages/leads/LeadsPage.tsx:518 囲む部品=LeadsPage form-group=なし
+    使用 frontend/src/pages/note-master/NoteMasterPage.tsx:389 囲む部品=NoteMasterPage form-group=なし
+    使用 frontend/src/pages/notifications/NotificationsPage.tsx:223 囲む部品=NotificationsPage form-group=なし
+    使用 frontend/src/pages/orders/OrdersTable.tsx:198 囲む部品=OrdersTable form-group=なし
+    使用 frontend/src/pages/product-categories/ProductCategoriesPage.tsx:349 囲む部品=ProductCategoriesPage form-group=なし
+    使用 frontend/src/pages/quotes/QuotesPage.tsx:172 囲む部品=QuotesPage form-group=なし
+    使用 frontend/src/pages/sales/SalesPage.tsx:180 囲む部品=SalesPage form-group=なし
+    使用 frontend/src/pages/shifts/ShiftsPage.tsx:121 囲む部品=ShiftsPage form-group=なし
+    使用 frontend/src/pages/staff/StaffPage.tsx:371 囲む部品=StaffPage form-group=なし
+    使用 frontend/src/pages/status-master/StatusMasterPage.tsx:418 囲む部品=StatusMasterPage form-group=なし
+    使用 frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx:936 囲む部品=SupplierExtractionRulesPage form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:997 囲む部品=ImportTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1205 囲む部品=ExtractionTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1380 囲む部品=AnalysisTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1449 囲む部品=AnalysisTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1881 囲む部品=DistributionTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1897 囲む部品=DistributionTabContent form-group=なし
+    使用 frontend/src/pages/super-admin/components/ConditionDefsMasterPanel.tsx:155 囲む部品=ConditionDefsMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:288 囲む部品=ConditionsMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/DbViewerPanel.tsx:251 囲む部品=ColumnTable form-group=なし
+    使用 frontend/src/pages/super-admin/components/DbViewerPanel.tsx:299 囲む部品=ReferencesTable form-group=なし
+    使用 frontend/src/pages/super-admin/components/ExtractionErrorLogPanel.tsx:348 囲む部品=ExtractionErrorLogPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/LlmUsageSection.tsx:1009 囲む部品=LlmUsageSection form-group=なし
+    使用 frontend/src/pages/super-admin/components/LlmUsageSection.tsx:1023 囲む部品=LlmUsageSection form-group=なし
+    使用 frontend/src/pages/super-admin/components/LlmUsageSection.tsx:1037 囲む部品=LlmUsageSection form-group=なし
+    使用 frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:217 囲む部品=NeedsReviewTabsPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/NoteMasterPanel.tsx:223 囲む部品=NoteMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx:219 囲む部品=ProductCategoriesMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:212 囲む部品=ProductFormatsMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ProductKindsMasterPanel.tsx:152 囲む部品=ProductKindsMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:211 囲む部品=ProductLinesMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/ProductMasterPanel.tsx:118 囲む部品=ProductMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/QuantityUnitsMasterPanel.tsx:162 囲む部品=QuantityUnitsMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:226 囲む部品=RuleManagementPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/RuleTestPanel.tsx:373 囲む部品=RuleTestPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/RuleTestPanel.tsx:417 囲む部品=RuleTestPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/SoldOutResultsPanel.tsx:95 囲む部品=SoldOutResultsPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/SupplierMasterPanel.tsx:281 囲む部品=SupplierMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:186 囲む部品=TypeMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/UnitIgnorePhrasesPanel.tsx:125 囲む部品=UnitIgnorePhrasesPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/UnitMasterPanel.tsx:270 囲む部品=UnitMasterPanel form-group=なし
+    使用 frontend/src/pages/super-admin/components/WeightClassesMasterPanel.tsx:166 囲む部品=WeightClassesMasterPanel form-group=なし
+    使用 frontend/src/pages/suppliers/SuppliersPage.tsx:246 囲む部品=SuppliersPage form-group=なし
+    使用 frontend/src/pages/teams/TeamsPage.tsx:260 囲む部品=TeamsPage form-group=なし
+    使用 frontend/src/pages/teams/TeamsPage.tsx:293 囲む部品=TeamsPage form-group=なし
+    使用 frontend/src/pages/units/UnitsPage.tsx:369 囲む部品=UnitsPage form-group=なし
+  部品 MultiSelect: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inventory/InventoryFilterPanel.tsx:119 囲む部品=InventoryFilterPanel form-group=なし
+    使用 frontend/src/pages/inventory/InventoryPage.tsx:476 囲む部品=InventoryPage form-group=なし
+  部品 SupplierDetailDrawer: JSX 使用 0 件、JSX タグ以外の参照 0 件
+  部品 RegistrationSection: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:511 囲む部品=MasterMaintenanceSection form-group=なし
+  部品 DistributionTargetForm: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-distribution/DistributionTargetList.tsx:272 囲む部品=DistributionTargetList form-group=なし
+    使用 frontend/src/features/tcg-distribution/DistributionWorkspace.tsx:84 囲む部品=DistributionWorkspace form-group=なし
+  部品 InventoryVisibilityPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:353 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:372 囲む部品=App form-group=なし
+  部品 CompanyAddressModal: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/company-detail/CompanyDetailPage.tsx:203 囲む部品=CompanyDetailPage form-group=なし
+  部品 CompanyContactsTab: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/company-detail/CompanyDetailPage.tsx:153 囲む部品=CompanyDetailPage form-group=なし
+  部品 CompanyDiscordTab: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/company-detail/CompanyDetailPage.tsx:184 囲む部品=CompanyDetailPage form-group=なし
+  部品 ConditionsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:384 囲む部品=App form-group=なし
+  部品 ContactEditPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:184 囲む部品=App form-group=なし
+  部品 ContactsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:198 囲む部品=App form-group=なし
+  部品 InboxConversationList: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxPage.tsx:190 囲む部品=InboxPage form-group=なし
+  部品 InboxConversationListMobile: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxPage.tsx:188 囲む部品=InboxPage form-group=なし
+  部品 InboxProfileModal: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxPage.tsx:354 囲む部品=InboxPage form-group=なし
+  部品 SalesFormMultiSelect: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxKartePanel.tsx:571 囲む部品=KarteTabContent form-group=なし
+  部品 FedexLabelValidationTab: JSX 使用 0 件、JSX タグ以外の参照 0 件
+  部品 InventoryFilterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inventory/InventoryPage.tsx:503 囲む部品=InventoryPage form-group=なし
+  部品 NoteFormFields: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/note-master/NoteMasterPage.tsx:410 囲む部品=NoteMasterPage form-group=なし
+    使用 frontend/src/pages/note-master/NoteMasterPage.tsx:429 囲む部品=NoteMasterPage form-group=なし
+  部品 NotificationsPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:275 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:395 囲む部品=App form-group=なし
+  部品 ProductCategoriesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:385 囲む部品=App form-group=なし
+  部品 ProductsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:212 囲む部品=App form-group=なし
+  部品 RolesPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:252 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:371 囲む部品=App form-group=なし
+  部品 StaffEditPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:247 囲む部品=App form-group=なし
+  部品 StaffPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:246 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:369 囲む部品=App form-group=なし
+  部品 StatusMasterPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:383 囲む部品=App form-group=なし
+  部品 ExtractionPromptConfigTab: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:188 囲む部品=AnalysisRulesPage form-group=なし
+  部品 KnowledgeAliasesTab: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:187 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ConditionDefsMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:183 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ConditionsMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:172 囲む部品=AnalysisRulesPage form-group=なし
+  部品 NoteMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:179 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductCategoriesMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:168 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductFormatsMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:181 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductKindsMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:169 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductLinesMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:180 囲む部品=AnalysisRulesPage form-group=なし
+  部品 QuantityUnitsMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:182 囲む部品=AnalysisRulesPage form-group=なし
+  部品 RuleTestPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:163 囲む部品=RuleManagementPanel form-group=なし
+  部品 SupplierMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:171 囲む部品=AnalysisRulesPage form-group=なし
+  部品 TypeMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:170 囲む部品=AnalysisRulesPage form-group=なし
+  部品 UnitIgnorePhrasesPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:176 囲む部品=AnalysisRulesPage form-group=なし
+  部品 UnitMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:175 囲む部品=AnalysisRulesPage form-group=なし
+  部品 WeightClassesMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:184 囲む部品=AnalysisRulesPage form-group=なし
+  部品 UnitsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:386 囲む部品=App form-group=なし
+  部品 ReadOnlyComparison: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/ItemComparison.tsx:103 囲む部品=ItemComparison form-group=なし
+  部品 V102PostEditModal: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/V102PostsTab.tsx:85 囲む部品=V102PostsTab form-group=なし
+  部品 V102PostsTab: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:231 囲む部品=NeedsReviewTabsPanel form-group=なし
+  部品 TcgProductImportPreview: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx:72 囲む部品=TcgProductImportPanel form-group=なし
+  部品 ReviewCsvPreviewTable: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-review-csv/ReviewCsvPanel.tsx:78 囲む部品=ReviewCsvPanel form-group=なし
+  部品 ArchivesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:199 囲む部品=App form-group=なし
+  部品 BotsPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:248 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:381 囲む部品=App form-group=なし
+  部品 BuybackByProductPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/buyback-prices/BuybackPricesPage.tsx:392 囲む部品=BuybackPricesPage form-group=なし
+  部品 BuybackPricesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:203 囲む部品=App form-group=なし
+  部品 CommissionsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:240 囲む部品=App form-group=なし
+  部品 CompaniesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:195 囲む部品=App form-group=なし
+  部品 FollowUpsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:171 囲む部品=App form-group=なし
+  部品 FunnelLeadsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:172 囲む部品=App form-group=なし
+  部品 DataTableSection: JSX 使用 0 件、JSX タグ以外の参照 0 件
+  部品 ERPPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:253 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:388 囲む部品=App form-group=なし
+  部品 InventoryPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:206 囲む部品=App form-group=なし
+  部品 OwnInventoryPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:208 囲む部品=App form-group=なし
+  部品 InvoicesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:220 囲む部品=App form-group=なし
+  部品 LeadsPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:194 囲む部品=App form-group=なし
+  部品 NoteMasterPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:387 囲む部品=App form-group=なし
+  部品 OrdersTable: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/orders/OrdersPage.tsx:113 囲む部品=OrdersPage form-group=なし
+  部品 QuotesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:217 囲む部品=App form-group=なし
+  部品 SalesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:239 囲む部品=App form-group=なし
+  部品 ShiftsPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:262 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:370 囲む部品=App form-group=なし
+  部品 SupplierExtractionRulesPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:315 囲む部品=App form-group=なし
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:186 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ImportTabContent: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:520 囲む部品=AnalysisDashboardPanel form-group=なし
+  部品 ExtractionTabContent: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:545 囲む部品=AnalysisDashboardPanel form-group=なし
+  部品 AnalysisTabContent: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:563 囲む部品=AnalysisDashboardPanel form-group=なし
+  部品 DistributionTabContent: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:580 囲む部品=AnalysisDashboardPanel form-group=なし
+  部品 ColumnTable: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/DbViewerPanel.tsx:571 囲む部品=DbViewerPanel form-group=なし
+  部品 ReferencesTable: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/DbViewerPanel.tsx:588 囲む部品=DbViewerPanel form-group=なし
+  部品 ExtractionErrorLogPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:165 囲む部品=AnalysisRulesPage form-group=なし
+  部品 LlmUsageSection: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:589 囲む部品=AnalysisDashboardPanel form-group=なし
+  部品 NeedsReviewTabsPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:164 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductMasterPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:167 囲む部品=AnalysisRulesPage form-group=なし
+  部品 RuleManagementPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:185 囲む部品=AnalysisRulesPage form-group=なし
+  部品 SoldOutResultsPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:166 囲む部品=AnalysisRulesPage form-group=なし
+  部品 SuppliersPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:254 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:382 囲む部品=App form-group=なし
+  部品 TeamsPage: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:250 囲む部品=App form-group=なし
+    使用 frontend/src/App.tsx:368 囲む部品=App form-group=なし
+  部品 MasterMaintenanceSection: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:532 囲む部品=ProductMasterDrawer form-group=なし
+  部品 DistributionTargetList: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-distribution/DistributionWorkspace.tsx:79 囲む部品=DistributionWorkspace form-group=なし
+  部品 DistributionWorkspace: JSX 使用 2 件、JSX タグ以外の参照 1 件 [frontend/src/features/tcg-distribution/DistributionWorkspace.tsx:27]
+    使用 frontend/src/pages/super-admin/TcgDistributionPage.tsx:58 囲む部品=TcgDistributionPage form-group=なし
+    使用 frontend/src/pages/super-admin/TcgLineImportPage.tsx:500 囲む部品=TcgLineImportPage form-group=なし
+  部品 App: JSX 使用 1 件、JSX タグ以外の参照 1 件 [frontend/src/App.tsx:408]
+    使用 frontend/src/main.tsx:10 囲む部品=(なし) form-group=なし
+  部品 CompanyDetailPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:197 囲む部品=App form-group=なし
+  部品 InboxPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:188 囲む部品=App form-group=なし
+  部品 KarteTabContent: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxKartePanel.tsx:249 囲む部品=InboxKartePanel form-group=なし
+  部品 AnalysisRulesPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:311 囲む部品=App form-group=なし
+  部品 ItemComparison: JSX 使用 2 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx:193 囲む部品=ReviewItemDrawer form-group=なし
+    使用 frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:116 囲む部品=SupplierDetailView form-group=なし
+  部品 TcgProductImportPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/TcgProductImportPage.tsx:13 囲む部品=TcgProductImportPage form-group=なし
+  部品 ReviewCsvPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:211 囲む部品=NeedsReviewTabsPanel form-group=なし
+  部品 OrdersPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:237 囲む部品=App form-group=なし
+  部品 AnalysisDashboardPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:160 囲む部品=AnalysisRulesPage form-group=なし
+  部品 DbViewerPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:193 囲む部品=AnalysisRulesPage form-group=なし
+  部品 ProductMasterDrawer: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:135 囲む部品=SupplierDetailView form-group=なし
+  部品 TcgDistributionPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:301 囲む部品=App form-group=なし
+  部品 TcgLineImportPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:306 囲む部品=App form-group=なし
+  部品 InboxKartePanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/inbox/InboxPage.tsx:241 囲む部品=InboxPage form-group=なし
+  部品 ReviewItemDrawer: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:234 囲む部品=NeedsReviewTabsPanel form-group=なし
+  部品 SupplierDetailView: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:79 囲む部品=AccuracyManagementPanel form-group=なし
+  部品 TcgProductImportPage: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/App.tsx:292 囲む部品=App form-group=なし
+  部品 AccuracyManagementPanel: JSX 使用 1 件、JSX タグ以外の参照 0 件
+    使用 frontend/src/pages/super-admin/AnalysisRulesPage.tsx:163 囲む部品=AnalysisRulesPage form-group=なし
+
+form-group に当たった（ファイルをまたぐ）経路: 0 件
+たどり切れないもの: 4 件
+  frontend/src/pages/buyback-prices/BuybackByProductPage.tsx:256 <DataTable> 祖先に動的 className
+  frontend/src/pages/buyback-prices/BuybackPricesPage.tsx:415 <DataTable> 祖先に動的 className
+  部品 DistributionWorkspace: JSX タグ以外の参照 frontend/src/features/tcg-distribution/DistributionWorkspace.tsx:27
+  部品 App: JSX タグ以外の参照 frontend/src/App.tsx:408
+
+## 3. 「たどり切れないもの」4 件の手作業確認（コマンド: git grep / sed。2026-10-16）
+- BuybackByProductPage.tsx:256・BuybackPricesPage.tsx:415 の DataTable の動的 className 祖先: frontend/src/pages/buyback-prices/ の className は styles.xxx（CSS Modules）だけ。`git grep -n form-group -- frontend/src/pages/buyback-prices` は 0 行 -> form-group ではない。
+- DataTable.tsx:286・296・409 の動的 className: `['comp-table-frame', className]`・`rowCls(...,'comp-table__row')`。DataTable を呼ぶ側が className に form-group を渡していないことは下の確認で担保。
+- DistributionWorkspace.tsx:27 は forwardRef の関数名の宣言、App.tsx:408 は `export default App;`（JSX 使用ではない、参照先なし）。
+- 使用 0 件の部品: SupplierDetailDrawer（features/supplier-master/index.ts の再 export のみ）、FedexLabelValidationTab（css import のみ）、DataTableSection（pages/design-preview/sections/registry.ts:38 でコンポーネント参照。design-preview の route 部品で form-group の下ではない）。
+- form-group の付与方法の全数: `git grep -n "form-group" -- '*.tsx' | grep -v '<div className="form-group'`（試験を除く）が 0 行、`'*.ts' '*.js' '*.jsx' '*.html'` も 0 行 -> 全て intrinsic の div の className リテラル。部品の props 経由で form-group が渡る経路は無い。
+
+## 4. 結論
+- .form-group を祖先に持つ金型: 同じファイル内 5 件（ContactEditPage:171、StaffEditPage:212、StaffPage:289、NotificationsPage:132・:159）。ファイルをまたぐ経路 0 件。
+- 5 件は設計の「本便の 3 か所＋NotificationsPage の 2 か所」と一致。想定外 0 件。§5-1 の測定対象への追加なし。たどり切れない経路なし（NEEDS_DECISION なし）。

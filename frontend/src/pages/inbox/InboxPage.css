@@ -1859,11 +1859,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   font-weight: 500;
 }
 
-.sales-form-option input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-
 .sales-form-option-label {
   flex: 1;
 }

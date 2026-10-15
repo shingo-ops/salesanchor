@@ -4224,3 +4224,13 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 削除した規則: frontend/src/pages-layout.css の `.chk-label`（と `.chk-label input[type="checkbox"]`）、frontend/src/pages/inbox/InboxPage.css の `.inbox-bulk-check-all`。
 - 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c-measure-compare.txt と ay4c-*.png（AY-4b と同じ作り方）。
 - 残り（AY-4c-2）: 9 件（MultiSelect、ContactEditPage・StaffEditPage・StaffPage の `.form-group label`、InboxProfileModal、SalesFormMultiSelect、RolesPage の permission-item、schedule の 2 件）。frontend/src/components.css:19・:33 の checkbox 行。frontend/src/company-forms.css:100・:135 のコメントと `.form-row input:focus`（checkbox 以外の input にも当たるため本便では残す）。予定の色（dataColor は frontend/src に実在しない。金型に色の口を足すかは PO 判断）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4c-2a 口を足さずに移せるチェック欄 7 件を金型へ（2026-10-16）
+
+- 目的: 残り 9 件のうち、金型に口を足さずに載せかえられる 7 件を CheckboxControl / Checkbox に載せかえ、`.form-group` の古い checkbox 規則を外す。
+- PO 決定: 2026-10-15「y」（AY-4b・AY-4c-1 と同じ）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c2-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 7 件（7 ファイル）。CheckboxControl 3 件（MultiSelect、SalesFormMultiSelect、RolesPage の権限カード。外側の label はそのまま）、Checkbox 4 件（ContactEditPage・StaffEditPage・StaffPage の `.form-group` 内、InboxProfileModal の右パネル）。副作用の手当てとして NotificationsPage の既存 Checkbox 2 か所を class なしの div で包んだ。
+- 削除・変更した規則: frontend/src/components.css の `.form-group input[type="checkbox"]`（通常・:focus の 2 行）を削除、`.form-group label` を `.form-group label:where(:not(.comp-checkbox))` に変更（詳細度 0,1,1 のまま）。frontend/src/components/MultiSelect.css の `.comp-multiselect__check`、frontend/src/pages/inbox/InboxPage.css の `.sales-form-option input[type="checkbox"]` を削除。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2-measure-compare.txt と ay4c2-*.png。`.form-group` 内の金型の全数は ay4c2-formgroup-ancestors.txt。
+- 残り（AY-4c-2b、PO 判断待ち）: 2 件（schedule/SchedulePageImpl.tsx の担当者別データ色のチェック欄）。色を残すなら金型に dataColor の口を足し、--accent にそろえるなら足さない。frontend/src/company-forms.css:100・:135 のコメント見直し。生 checkbox の再発検出（check-ui-governance への追加）は別判断。

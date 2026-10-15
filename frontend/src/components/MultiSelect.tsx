@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { Button } from "./Button";
 import { Popover } from "./Popover";
+import { CheckboxControl } from "./CheckboxControl";
 import "./MultiSelect.css";
 
 export interface MultiSelectOption {
@@ -75,9 +76,7 @@ export function MultiSelect({
       <div className="comp-multiselect__list">
         {options.map((o) => (
           <label key={o.value} className="comp-multiselect__option">
-            <input
-              type="checkbox"
-              className="comp-multiselect__check"
+            <CheckboxControl
               checked={selected.includes(o.value)}
               onChange={() => toggle(o.value)}
               data-testid={tid(`option-${o.value}`)}

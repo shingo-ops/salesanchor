@@ -4,6 +4,7 @@ import { ICON } from "../../constants/iconSizes";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 import { getInitials } from "./inbox.types";
 import type { LeadDetail, KarteTabKey } from "./inbox.types";
 
@@ -251,16 +252,14 @@ export function InboxProfileModal({
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.competitorCheck")}</span>
-                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                  <input type="checkbox" checked={cardForm.competitor_check ?? false}
-                    onChange={(e) => {
-                      handleCardFieldChange("competitor_check", e.target.checked);
-                      setTimeout(handleCardFieldBlur, 0);
-                    }} />
-                  <span className="right-panel-value">
-                    {cardForm.competitor_check ? t("leads.competitorDone") : t("leads.competitorNotDone")}
-                  </span>
-                </label>
+                <Checkbox
+                  label={cardForm.competitor_check ? t("leads.competitorDone") : t("leads.competitorNotDone")}
+                  checked={cardForm.competitor_check ?? false}
+                  onChange={(e) => {
+                    handleCardFieldChange("competitor_check", e.target.checked);
+                    setTimeout(handleCardFieldBlur, 0);
+                  }}
+                />
               </div>
               <hr className="right-panel-divider" />
               <div className="right-panel-memo-label">{t("leads.meetingMemo")}</div>
