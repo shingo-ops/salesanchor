@@ -13,7 +13,7 @@
 - docs/BRANCH_PROTECTION_SETUP.md:232 に「危険変更のみ人間承認必須」。
 - .github/PULL_REQUEST_TEMPLATE.md:40 に「認可承認者のApprove」。
 - docs/ai-agents/executor-preamble.md:54 に「PO の GO を受領」。
-- docs/ai-agents/design-partner.md:215 に「POの GO #PR番号 発話を転記」。
+- docs/ai-agents/design-partner.md:215 に「POの GO #PR番号 発話を転記」。§6 本文は Lessons Guard で直接の書き換えができないため、docs/ai-agents/lessons.d/ に教訓のポストを足して補う。
 - .claude/agents/governance.md:3・:9・:12 に「human merge」。
 
 ## 見つけた危険（この PR では直さない）

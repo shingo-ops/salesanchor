@@ -9,7 +9,8 @@
 - 変更前: recon.md の各所が「GO は PO 単独」「人がマージ」「GO: Shingo」と書いている。
 - 変更後:
   - ADR-136 の3か所に「ADR-1003 により上書き」の注記を足す（決定本文は残す）。
-  - STANDARD-WORKFLOW.md・BRANCH_PROTECTION_SETUP.md・PULL_REQUEST_TEMPLATE.md・executor-preamble.md・design-partner.md・.claude/agents/governance.md を「GO は PO、ADR-1003 により例外を除き Opus へ委任。マージは GO 後に Opus」に書き換える。
+  - STANDARD-WORKFLOW.md・BRANCH_PROTECTION_SETUP.md・PULL_REQUEST_TEMPLATE.md・executor-preamble.md・.claude/agents/governance.md を「GO は PO、ADR-1003 により例外を除き Opus へ委任。マージは GO 後に Opus」に書き換える。
+  - design-partner.md §6-1 の GO記録の転記の項は、Lessons Guard の規則どおり lessons.d/20261015-go-record-delegated-issuer.md のポストで補う。
   - STANDARD-WORKFLOW.md の GO コメントの書式を、PO 本人の GO と委任の GO で分ける。
   - docs/adr/README.md は generate-adr-index.js による再生成。
 
