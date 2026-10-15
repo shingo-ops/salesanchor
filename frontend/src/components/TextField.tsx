@@ -10,6 +10,7 @@
  *
  * TextFieldControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AY）。
  * variant: 用途別の種類（design.md §AY-2a）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。
+ * product-edit: 商品編集 ProductEditPage の濃い枠。design.md §AY-2z
  * invalid: エラー外観（class comp-field__input--invalid）だけを付ける。aria-invalid は自動付与せず、呼び出し側の明示属性を通す（design.md §AY-2x）。
  */
 
@@ -31,7 +32,7 @@ export type TextFieldProps = TextFieldOwnProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, keyof TextFieldOwnProps | "size">;
 
 /** 用途別の種類（design.md §AY-2a）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
-export type TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer" | "login";
+export type TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer" | "login" | "product-edit";
 
 export type TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & { invalid?: boolean } &
   (
