@@ -404,11 +404,18 @@ async def resolve_supplier(
     body: ResolveRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """未解決仕入元を解決する（本体は _resolve_supplier_impl）。
-
-    ADR-1018 段階②b: 共通仕入先（tenant_id 空行）への書込は運営文脈のみ。
-    本体が書込前に operator 文脈を張るため、finally で必ず戻す。
     """
+    保留中ジョブの未解決仕入元を解決する。
+
+    action='assign': 指定した仕入元の name を display_name に差し替える。
+                     別の既存仕入元と name が重複する場合は 409。
+    action='create': public.suppliers に新規登録 + supplier_channels を1件作成。
+                     supplier_code は INSERT RETURNING id から SP-{id:05d} で採番。
+
+    どちらも import_jobs.unresolved_names から該当名を除く。
+    """
+    # ADR-1018 段階②b: 共通仕入先（tenant_id 空行）への書込は運営文脈のみ。
+    # 本体が書込前に operator 文脈を張るため、finally で必ず戻す（本体は _resolve_supplier_impl）。
     try:
         return await _resolve_supplier_impl(import_job_id, body, db)
     finally:
@@ -420,16 +427,6 @@ async def _resolve_supplier_impl(
     body: ResolveRequest,
     db: AsyncSession,
 ):
-    """
-    保留中ジョブの未解決仕入元を解決する。
-
-    action='assign': 指定した仕入元の name を display_name に差し替える。
-                     別の既存仕入元と name が重複する場合は 409。
-    action='create': public.suppliers に新規登録 + supplier_channels を1件作成。
-                     supplier_code は INSERT RETURNING id から SP-{id:05d} で採番。
-
-    どちらも import_jobs.unresolved_names から該当名を除く。
-    """
     # ジョブ取得
     job_row = await db.execute(
         text(

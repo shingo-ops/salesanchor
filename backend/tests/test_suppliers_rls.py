@@ -20,7 +20,7 @@ from urllib.parse import urlsplit, urlunsplit
 import pytest
 from fastapi import HTTPException, UploadFile
 
-from tests.rls_bootstrap import _apply_migration
+from tests.rls_bootstrap import _apply_migration, bootstrap_public_products
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -48,23 +48,15 @@ _MIGRATIONS = (
     "20261006_170200_add_supplier_new_system_rules.sql",
     "20261016_020000_add_suppliers_rls.sql",
 )
-# 取込経路が参照する public の表（試験用の最小定義。本物の定義は pipeline 系 migration）
+# 取込経路が参照する public の表は本物の migration を適用して得る（定義のコピーを持たない）。
+# extraction_ship_format は 20260928_110000 が追加する。
+_SUPPORT_MIGRATIONS = (
+    "20260921_110000_pipeline_tables_public.sql",
+    "20260926_080000_create_extraction_prompt_config.sql",
+    "20260928_110000_create_extraction_shadow_tables.sql",
+    "20261013_180000_drop_extraction_shadow_tables.sql",
+)
 _SUPPORT_DDL = """
-ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_ship_format TEXT;
-CREATE TABLE IF NOT EXISTS public.import_jobs (
-    id UUID PRIMARY KEY,
-    filename TEXT, raw_sha256 TEXT, message_count INT, provider_count INT,
-    unresolved_count INT, uploaded_by TEXT, status TEXT, review_status TEXT,
-    created_at TIMESTAMPTZ DEFAULT now(), window_start TIMESTAMPTZ, window_end TIMESTAMPTZ,
-    messages_linked_at TIMESTAMPTZ, unresolved_names JSONB, pending_messages JSONB
-);
-CREATE TABLE IF NOT EXISTS public.supplier_channels (
-    id UUID PRIMARY KEY, supplier_id INT, channel TEXT, is_active BOOLEAN
-);
-CREATE TABLE IF NOT EXISTS public.source_messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    supplier_channel_id UUID, raw_text TEXT, line_posted_at TIMESTAMPTZ
-);
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
 """
@@ -90,7 +82,11 @@ async def _fresh():
         _with_db(APP_PG_URL, name), echo=False, pool_size=1, max_overflow=0
     )
     try:
+        # 取込表が FK で参照する public.products 等を、本物の migration で先に用意する
+        await bootstrap_public_products(admin_engine)
         for filename in _MIGRATIONS[:-1]:
+            await _apply_migration(admin_engine, filename)
+        for filename in _SUPPORT_MIGRATIONS:
             await _apply_migration(admin_engine, filename)
         async with admin_engine.begin() as conn:
             raw = await conn.get_raw_connection()
@@ -282,9 +278,9 @@ async def _seed_job(admin_engine, names: list[str]) -> uuid.UUID:
     job_id = uuid.uuid4()
     await _admin_exec(
         admin_engine,
-        "INSERT INTO public.import_jobs (id, review_status, unresolved_names) "
-        "VALUES (:i, 'pending_review', CAST(:n AS jsonb))",
-        {"i": str(job_id), "n": json.dumps(names, ensure_ascii=False)},
+        "INSERT INTO public.import_jobs (id, filename, raw_sha256, review_status, unresolved_names) "
+        "VALUES (:i, 'test.zip', :s, 'pending_review', CAST(:n AS jsonb))",
+        {"i": str(job_id), "s": job_id.hex, "n": json.dumps(names, ensure_ascii=False)},
     )
     return job_id
 
@@ -400,8 +396,8 @@ async def test_link_pending_updates_common_supplier_line_name():
         messages = [{"display_name": name, "timestamp": "2026-10-01 12:00:00", "body": "x"}]
         await _admin_exec(
             admin_engine,
-            "INSERT INTO public.import_jobs (id, raw_sha256, review_status, pending_messages) "
-            "VALUES (:i, :s, 'pending_review', CAST(:m AS jsonb))",
+            "INSERT INTO public.import_jobs (id, filename, raw_sha256, review_status, pending_messages) "
+            "VALUES (:i, 'test.zip', :s, 'pending_review', CAST(:m AS jsonb))",
             {"i": str(job_id), "s": sha, "m": json.dumps(messages, ensure_ascii=False)},
         )
         data = {
@@ -459,9 +455,9 @@ async def test_operator_flag_cleared_even_when_path_raises():
         job_id = uuid.uuid4()
         await _admin_exec(
             admin_engine,
-            "INSERT INTO public.import_jobs (id, review_status, unresolved_names) "
-            "VALUES (:i, 'pending_review', CAST('[\"未知\"]' AS jsonb))",
-            {"i": str(job_id)},
+            "INSERT INTO public.import_jobs (id, filename, raw_sha256, review_status, unresolved_names) "
+            "VALUES (:i, 'test.zip', :s, 'pending_review', CAST('[\"未知\"]' AS jsonb))",
+            {"i": str(job_id), "s": job_id.hex},
         )
         async with _session(app_engine) as db:
             with pytest.raises(HTTPException):
