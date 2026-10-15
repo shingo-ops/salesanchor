@@ -181,7 +181,7 @@
 ## 7. 未解決事項
 
 - U1: DB 接続数の見張り（HighDbConnections）を戻す時期。prod1 のメモリに余裕ができたら postgres-exporter と合わせて戻す。
-- U2: Gemini の失敗率（便5 のカードで実測して判断）。
+- U2: Gemini の失敗率。便5 の実測（2026-10-15）で 14 日の失敗のログが 0 件だったため、ルールが拾えるかを確かめられず、段階1 から外した。失敗がログに出る文言を確かめられた時点で入れる。
 - U3: ダッシュボード JSON 8 本と `generate-nav.js` の本番と repo のずれ（鳴らす条件ではないため段階1 の対象外）。
 - U4: 監視設定を prod2 に自動で配る仕組み（今は手作業。便7 はずれを見つけるだけ）。
 - U5: Alertmanager を通らない直通通知（Kuma の既存 4 件・`scripts/backup_to_s3.sh:56-70`）を Alertmanager へ寄せるか（段階2 で決める）。
@@ -190,6 +190,9 @@
 - U8: Discord のコンテナのログが Loki に 1 件も無い（便1 の事前測定・2026-10-14）。Loki の Discord の 2 本（DiscordGatewayReconnectFailure・DiscordDmWriterError）は鳴らないが、壊れていても気づけない。ログの集め方（promtail の対象）を直すかを段階2 の前に決める。
 - U9: 死活確認の口 /api/health が毎回 1〜2.5 秒かかっている（便4 の事前測定・2026-10-15。14 日の 6451 件すべて）。原因は未調査。便4 は見張りの条件から外しただけで、遅さ自体は直していない。
 - U10: BackendHighLatency の札を ticket から page に上げるか。便4 の配置後 14 日の実回数を見て決める。
+- U11: 裏方の処理（celery）の既存の失敗。translate_pending_messages が毎日 2〜3 回失敗している。また worker に登録されていないタスクの受付（`Received unregistered task`）が tcg_mirror と sa02_recon で各 14 件ある（便5 の事前測定・2026-10-15）。原因は未調査。便5 は見張りを足すだけで、これらは直さない。
+- U12: 1 日 1〜2 回しか動かない celery タスクの失敗は、便5 の CeleryTaskFailuresHigh（同じタスクで 1 時間に 3 回）では鳴らない。日次タスクの失敗の見張りをどうするか。
+- U13: `buyback.fetch_all_prices` の 1 件（10-02）が、worker の受付から完了まで 3724 秒かかっている。実行時間の最長（147.57 秒）と合わない。原因は未調査（便5 の事前測定・2026-10-15）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 
