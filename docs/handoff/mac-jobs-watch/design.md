@@ -195,6 +195,9 @@ ops/launchd/jp.salesanchor.colima-idle-stop.plist を手本に、違いは次だ
   - 試験は CI で回っていない（colima-idle-stop・disk-janitor と同じ）。
   - 受付の番人（ops-intake-watchdog）と朝の停止要約（stop-log-digest-daily）は 10/15 時点で読み込まれていない（recon §2）。本テーマでは見張り対象に入れない（PO に事実を報告し、対象に足すかは PO 判断）。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
-本件は 1 台の Mac の launchd 常駐の死活確認で、外部の導入事例の数値を設計の根拠に使わない（直接比較できる事例が無いため）。仕組みの根拠は Apple の launchd の公式説明（recon §3）と、同じ Mac で動いている既存の番人（ADR-1009）の作り。
+- 外部事例: 1 台の Mac の launchd 常駐の死活確認で、直接比較できる数値付きの導入事例は無い。外部の数値を設計の根拠に使わない。仕組みの根拠は Apple の launchd の公式説明（recon §3）。
+- 過去事例（同じ Mac の既存の番人 ADR-1009 ops-intake-watchdog）: Webhook をファイルから読み取って Discord へ送る作りを再利用する。応用: 同じ Webhook ファイルを読み取りのみで使い、curl へは標準入力で渡して URL を引数・ログに出さない。
+- 過去事例（colima-idle-stop・disk-janitor の道具専用コピー）: 道具コピーの更新は disk-janitor に任せ、本件は読み取りだけにする（plist の起動前点検も同じ形）。
+- 過去事例からの教訓: 上記の ops-intake-watchdog は launchd に読み込まれていない状態のまま気づかれていなかった（recon の実測）。本件はこの「止まっても誰も知らない」を防ぐことが目的。
