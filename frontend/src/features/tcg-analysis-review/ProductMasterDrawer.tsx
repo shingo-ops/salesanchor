@@ -16,6 +16,7 @@
 import React, { useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '../../components/Button';
+import { Checkbox } from '../../components/Checkbox';
 import { TextFieldControl } from '../../components/TextField';
 import { TextareaControl } from '../../components/Textarea';
 import { X } from '../../constants/icons';
@@ -230,14 +231,11 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
               {candidates.map((c) => (
                 <p key={c.product_id}>{c.product_id}: {c.japanese_title}</p>
               ))}
-              <label className="pmd-confirm-check">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                />
-                {t('tcgAnalysisReview.productMasterDrawer.duplicateConfirmed')}
-              </label>
+              <Checkbox
+                label={t('tcgAnalysisReview.productMasterDrawer.duplicateConfirmed')}
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
             </section>
           )}
           {error && <p className="pmd-error">{t('tcgAnalysisReview.productMasterDrawer.registerError')}: {error}</p>}

@@ -319,14 +319,6 @@
   color: var(--color-error);
 }
 
-.dist-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-sm);
-  cursor: pointer;
-}
-
 /* ── エラー案内（アクセス失敗時） ─────────────────── */
 .dist-access-error {
   background: var(--color-error-bg-subtle);

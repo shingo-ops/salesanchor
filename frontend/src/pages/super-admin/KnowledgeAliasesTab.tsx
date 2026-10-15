@@ -13,6 +13,8 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Checkbox } from "../../components/Checkbox";
+import { CheckboxControl } from "../../components/CheckboxControl";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -337,8 +339,7 @@ export default function KnowledgeAliasesTab() {
               rules.map((r) => (
                 <tr key={r.id} data-testid={`rule-row-${r.id}`}>
                   <td style={{ textAlign: "center" }}>
-                    <input
-                      type="checkbox"
+                    <CheckboxControl
                       checked={ruleSelected.has(r.id)}
                       onChange={() => toggleRule(r.id)}
                       aria-label={r.pattern}
@@ -413,8 +414,7 @@ export default function KnowledgeAliasesTab() {
               aliases.map((a) => (
                 <tr key={a.id} data-testid={`alias-row-${a.id}`}>
                   <td style={{ textAlign: "center" }}>
-                    <input
-                      type="checkbox"
+                    <CheckboxControl
                       checked={aliasSelected.has(a.id)}
                       onChange={() => toggleAlias(a.id)}
                       aria-label={a.alias_text}
@@ -477,10 +477,11 @@ export default function KnowledgeAliasesTab() {
                     ))}
                   </SelectControl>
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                  <input type="checkbox" checked={ruleForm.is_active} onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })} />
-                  {t(`${f}.isActive`)}
-                </label>
+                <Checkbox
+                  label={t(`${f}.isActive`)}
+                  checked={ruleForm.is_active}
+                  onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })}
+                />
               </div>
               <div className="form-actions">
                 <Button type="button" variant="secondary" size="md" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</Button>

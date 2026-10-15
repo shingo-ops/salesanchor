@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { Checkbox } from "../../components/Checkbox";
 import { TextareaControl } from "../../components/Textarea";
 
 const PROMPT_KEYS = ["base_extraction", "work_id_extraction"] as const;
@@ -196,18 +197,9 @@ export default function ExtractionPromptConfigTab() {
             </div>
           )}
 
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              marginBottom: "var(--space-3)",
-              fontSize: "var(--font-sm)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            <input
-              type="checkbox"
+          <div style={{ marginBottom: "var(--space-3)" }}>
+            <Checkbox
+              label={configs[key].is_active ? t(`${p}.active`) : t(`${p}.inactive`)}
               checked={configs[key].is_active}
               data-testid={`prompt-active-${key}`}
               onChange={(e) =>
@@ -217,8 +209,7 @@ export default function ExtractionPromptConfigTab() {
                 }))
               }
             />
-            {configs[key].is_active ? t(`${p}.active`) : t(`${p}.inactive`)}
-          </label>
+          </div>
 
           <TextareaControl
             value={configs[key].prompt_text}

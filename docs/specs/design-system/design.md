@@ -4204,3 +4204,13 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 3 か所（全選択・表の行選択・スマホのカード行）を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
 - 実測（origin/main の DataTable.tsx＋build CSS と作業ツリーの同じもの、390/1280 × ライト/ダーク × 未選択/選択/一部選択）: 差は accent-color の auto → --accent の値だけ。数値は docs/handoff/design-system-recon/evidence-20260910/ay4a-acceptance.md。
 - 残り: AY-4b（super-admin 専用 20 件と未使用 4 件）、AY-4c（一般画面 33 件・.form-group input[type=checkbox] と .form-row input:focus の撤去・Inbox の sm・予定のデータ色 dataColor）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4b super-admin 専用のチェック欄 24 件を金型へ（2026-10-15）
+
+- 目的: super-admin 専用 20 件と、どの画面からも使われていない 4 件の生チェック欄を、金型 Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」。金型は役割で分ける。文字と並ぶ欄は label 型 Checkbox（frontend/src/components/Checkbox.tsx）、表の中などの単独の欄は CheckboxControl（frontend/src/components/CheckboxControl.tsx）。色は --accent。画面の前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4b-checkbox/design.md（recon.md 併置）。設計審査 r2 条件付き APPROVE（指摘反映済み）。
+- 変更: 24 件（20 ファイル）。Checkbox 22 件、CheckboxControl 2 件（KnowledgeAliasesTab の表の行選択・別名選択）。ExtractionPromptConfigTab は下の TextareaControl との余白を保つため Checkbox を div（marginBottom のトークン参照）で包む。金型が無いことを理由にした ui-allow 2 件（SupplierDetailDrawer の #3564、UnitIgnorePhrasesPanel の #4032）を削除。表の例外の ui-allow 2 件は残す。金型 Checkbox.tsx・CheckboxControl.tsx の中身は変更なし。
+- 削除した規則: frontend/src/features/tcg-distribution/distribution.css の `.dist-checkbox-row`、frontend/src/pages/integrations/FedexLabelValidationTab.css の `.lv-check-label`（見出しコメント含む）。`pmd-confirm-check` は規則の無い class で、class 名のみ消えた。新しい class は作らない。
+- 実測: origin/main の build CSS と作業ツリーの build CSS を各 1 本のまま、型ごとの実物の親を再現して 390/1280 × ライト/ダーク × 未チェック/チェックを測定。表と画像は docs/handoff/design-system-recon/evidence-20260910/ay4b-measure-compare.txt と ay4b-*.png。
+- 残り: AY-4c（一般画面 33 件、.form-group input[type=checkbox] の撤去を含む）。
