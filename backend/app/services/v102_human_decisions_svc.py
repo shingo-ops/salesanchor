@@ -265,6 +265,31 @@ async def save_review_ack(
     return 1
 
 
+async def save_review_ack_revoke(
+    db: AsyncSession, *, extraction_item_id: str, source_message_id: str, corrected_by: str,
+) -> int:
+    """確認済みの取り消し。{"v":1,"codes":[]} の review_ack 行を1行追記する（記録は消さない）。
+
+    前の有効な ack が無ければ何も書かず rollback（FOR UPDATE を外す）して 0 を返す。書いたら 1。
+    """
+    schema = TCG_SCHEMA
+    current = (await db.execute(text(_CURRENT_REASONS_SQL.format(schema=schema)), {"eid": extraction_item_id})).first()
+    previous = (await db.run_sync(lambda sync: load_v102_decisions(sync, [extraction_item_id]))).get(extraction_item_id)
+    if previous is None or not previous.ack_codes:
+        await db.rollback()
+        return 0
+    human_value = json.dumps({"v": REVIEW_ACK_VERSION, "codes": []}, ensure_ascii=False)
+    await db.execute(
+        text(_INSERT_ACK_SQL.format(schema=schema)),
+        {
+            "eid": extraction_item_id, "smid": source_message_id, "field": FIELD_REVIEW_ACK,
+            "sv": (current.review_reasons or "") if current is not None else "", "hv": human_value, "cb": corrected_by,
+        },
+    )
+    await db.commit()
+    return 1
+
+
 def unknown_codes(codes: Iterable[str], registered: Mapping[str, object]) -> list[str]:
     """review_reason_codes に無いコード（順番を保つ）。"""
     return [c for c in dict.fromkeys(codes) if c not in registered]
@@ -300,7 +325,6 @@ def review_ack_rejection(
     断る順番: 外せない理由(422)→未登録コード(422)→件なし(404)→v102 でない(409)→source_message_id 不一致(422)。
     registered は load_review_reason_codes の結果、found は find_job_of_item の結果。
     """
-    from app.services.line_analysis_v102_svc import is_v102_prompt_version  # noqa: PLC0415  循環 import を避ける
     from app.services.review_reason_codes_svc import non_ackable_codes  # noqa: PLC0415
 
     refused = non_ackable_codes(codes)
@@ -309,6 +333,13 @@ def review_ack_rejection(
     unknown = unknown_codes(codes, registered)
     if unknown:
         return DecisionRejected(422, f"Unregistered review reason codes: {', '.join(unknown)}")
+    return item_rejection(found, source_message_id)
+
+
+def item_rejection(found: JobOfItem | None, source_message_id: str) -> DecisionRejected | None:
+    """review-ack の確定と取り消しに共通の検査。件なし(404)→v102 でない(409)→source_message_id 不一致(422)。"""
+    from app.services.line_analysis_v102_svc import is_v102_prompt_version  # noqa: PLC0415  循環 import を避ける
+
     if found is None:
         return DecisionRejected(404, "Item not found")
     if not is_v102_prompt_version(found.prompt_version):
