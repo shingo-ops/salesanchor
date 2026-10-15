@@ -72,7 +72,8 @@ thresholds:
   # FastAPI バックエンド API（alert_rules.yml: backend_alerts）
   # backend/app/metrics.py が出力する http_requests_total を使用
   backend_5xx_per_1m:      5    # BackendHighErrorRate: rate(...[1m]) > 5 (5xx)
-  backend_p99_latency_sec: 2.0  # BackendHighLatency: histogram_quantile(0.99) > 2.0s
+  backend_slow_request_sec: 2.5  # BackendHighLatency: 2.5 秒を超えたリクエストを「遅い」と数える（/api/health を除く）
+  backend_slow_ratio:       0.05 # BackendHighLatency: 遅いリクエストの割合 > 0.05 が 5 分続いたら鳴らす
   backend_inflight_warning: 1    # BackendWorkerSaturated: http_requests_in_flight > 1
   backend_sse_warning:      8    # BackendSseConnectionsHigh: sum(sse_connections_active) > 8
 

@@ -209,6 +209,6 @@ SSH は制限付き鍵で書けないため無制限鍵 `~/.ssh/manual-only/id_e
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+2026-10-15 Sonnet 実装（§5-1〜5-9 合格）。promtool check rules は 14 rules found・test rules は SUCCESS。わざと壊した版（`handler!="/api/health"` を除去）では試験が失敗（終了コード 1）。試験 2（/api/health だけが遅い）は鳴る系列と入力が異なるため、別のテスト名（BackendHighLatencyHealthOnly）で置いた。配置（§8）は未実施。
 
 END OF CARD
