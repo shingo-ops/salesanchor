@@ -77,6 +77,12 @@ thresholds:
   backend_inflight_warning: 1    # BackendWorkerSaturated: http_requests_in_flight > 1
   backend_sse_warning:      8    # BackendSseConnectionsHigh: sum(sse_connections_active) > 8
 
+  # celery（alert_rules.yml: celery_alerts）
+  # backend/app/metrics.py が Redis から読んで出す celery_* を使用
+  celery_heartbeat_stale_sec:   600  # CeleryHeartbeatStale: time() - heartbeat > 600
+  celery_task_failures_per_1h:    3  # CeleryTaskFailuresHigh: 同じタスクの increase([1h]) >= 3
+  celery_queue_length_max:      100  # CeleryQueueBacklog: celery_queue_length > 100
+
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     20    # BruteForceAttempt: > 20
   auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
@@ -98,3 +104,6 @@ for_durations:
   backend_worker:    "2m"   # BackendWorkerSaturated
   backend_sse:       "5m"   # BackendSseConnectionsHigh
   db_log_error:      "1m"   # DatabaseError
+  celery_heartbeat:  "2m"   # CeleryHeartbeatStale
+  celery_failures:   "0m"   # CeleryTaskFailuresHigh
+  celery_queue:      "10m"  # CeleryQueueBacklog

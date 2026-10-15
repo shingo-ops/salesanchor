@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 14 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 17 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -174,3 +174,31 @@
 - 最初に見るもの：Loki で `{job="containerlogs", container_name=~".*discord.*"} |= "[dm_writer]"`。運用の手順は [discord-gateway-operations.md](discord-gateway-operations.md)。
 - 直し方：DB 接続かスキーマかを切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=DiscordDmWriterError --duration=PERIOD --comment=REASON`
+
+## CeleryHeartbeatStale
+
+- 札：page
+- 何が起きているか：裏方の処理（celery）の 1 分ごとの heartbeat が 10 分以上更新されず、その状態が 2 分続いた。LINE 解析・翻訳・定期の集計が止まっている可能性がある。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis はメモリが一杯になると記録を消すことがある（`allkeys-lru`）ので、heartbeat のキーが消えてもこの見張りは鳴る。
+- 閾値の根拠：heartbeat と同じ短い定期タスクの、worker の受付から完了までの 14 日の最大は 60 秒。600 秒はその約 10 倍。worker に受け取られる前の待ちは測れていないので、反映後に本番で確かめた。
+- 最初に見るもの：prod1 の celery-beat と celery-worker のコンテナの状態（`docker compose ps`）→ worker が今処理中のタスク数（`celery -A app.celery_app inspect active`）→ Loki の worker のログの直近の `received`／`succeeded`。
+- 直し方：止まっている方のコンテナを `docker compose restart`。
+- 止め方：`amtool silence add alertname=CeleryHeartbeatStale --duration=PERIOD --comment=REASON`（理由と期限を書く）
+
+## CeleryTaskFailuresHigh
+
+- 札：ticket
+- 何が起きているか：同じ裏方のタスクが 1 時間に 3 回以上失敗した。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
+- 最初に見るもの：Loki で `|= "raised unexpected"` とタスク名で絞ったログ。
+- 注記：2026-10-15 時点で translate_pending_messages が毎日 2〜3 回失敗している（1 時間に 1 回まで。この見張りは鳴らない）。原因は未調査。
+- 効く範囲：1 日に 1〜2 回しか動かないタスク（sa02・為替・tcg_mirror 等）の失敗ではこの見張りは鳴らない。またタスク名の系列ができた最初の 1 件は increase に数えられない。どちらも段階1 で決めた範囲で、日次タスクの失敗の見張りは別の便で扱う。
+- 直し方：失敗の原因（ログの例外）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=CeleryTaskFailuresHigh --duration=PERIOD --comment=REASON`
+
+## CeleryQueueBacklog
+
+- 札：ticket
+- 何が起きているか：裏方の処理の待ち行列が 100 件を超えた状態が 10 分続いた。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
+- 閾値の根拠：14 日の 10 分あたりの受付の最大は 58 件なので、その 10 分に 1 件も片付かなくても 100 に届かない。
+- 最初に見るもの：待ち行列の長さの推移（`celery_queue_length`）と、worker が処理中のタスク（長いタスク `tcg.extract_source_message` 等が並んでいないか）。
+- 直し方：長いタスクが詰まっていれば Opus に報告する。worker の再起動は処理中のタスクを止めるので、Opus の判断を待つ。
+- 止め方：`amtool silence add alertname=CeleryQueueBacklog --duration=PERIOD --comment=REASON`
