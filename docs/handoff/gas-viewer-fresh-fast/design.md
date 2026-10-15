@@ -238,7 +238,7 @@ mode: handoff
   - すでに登録されている email で申し込まれたときも、同じ 200 を返す。行が pending なら、古い確認トークンを無効にして新しい確認メールを送る（email ごとの回数制限の内側で）。確認メールを見逃した人がやり直せるようにするため（審査 B-4）。verified・trial・active・suspended なら何もしない。メールも送らない。応答の違いから、登録済みかどうかが外から分からないようにする（審査 N-19）。
 - 申込で pending の行を作り、確認メールを送る。verify-email が成功したら trial に変え、trial_expires_at を確認時刻＋14日にする（PO 決定 2026-10-15 Q5「Y」：自動で始め、起点はメールの確認が済んだ時刻）。
 - 確認用のトークンは、secrets.token_urlsafe(32) で作る。DB には sha256 のハッシュだけを保存する。24時間で失効し、一度使ったら消す（審査 N-17）。
-  - SMTP が本番で使えるかどうかは【未確認】（計画票 0）。使えないときは、PO に方式を相談する。
+  - SMTP が本番で使えるかどうか（計画票 0 ①、2026-10-15 確認）：【事実】今の本番では送れない。本番 backend コンテナの SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM が全部未設定で、送信の設定を読む backend/app/services/mail_config.py:28-34 は、どれかが空なら None を返して送らない。過去に送れていたかは、コンテナが作り直されていてログが無いため【未確認】。方式（SMTP の設定を入れるか、別の方法にするか）は PO に相談する。
 - 本人確認が済まないまま 7日たった pending の行は、毎日のタスクで消す。
 - 本契約への切り替えと停止の操作は Q3 で決める。
 
@@ -339,13 +339,19 @@ mode: handoff
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| 0 | 実装前の確認を事実で埋める。①本番の SMTP。②fetch_output_rows の所要時間。③本番で配信行が指す products.tenant_id の分布（人間が SELECT を実行する。NULL 以外があれば、見え方の差を PO に報告する）。④app.salesanchor.jp の前に Cloudflare などのプロキシがいるか（審査 N-20。いるなら set_real_ip_from と real_ip_header を D4 に足す）。⑤（r9 で解決済み：FRESH_WINDOW_HOURS、tcg_distribution_svc.py:212-213） | Sonnet（調査）＋PO（DB 読み取り・DNS の確認） |
+| 0 | 【2026-10-15 実施済み。結果は下の「計画票0の結果」】実装前の確認を事実で埋める。①本番の SMTP。②fetch_output_rows の所要時間。③本番で配信行が指す products.tenant_id の分布（人間が SELECT を実行する。NULL 以外があれば、見え方の差を PO に報告する）。④app.salesanchor.jp の前に Cloudflare などのプロキシがいるか（審査 N-20。いるなら set_real_ip_from と real_ip_header を D4 に足す）。⑤（r9 で解決済み：FRESH_WINDOW_HOURS、tcg_distribution_svc.py:212-213） | Sonnet（調査）＋PO（DB 読み取り・DNS の確認） |
 | 1 | 表とトークンと分離テスト（D1）。守り手のテストを作る | Sonnet |
 | 2 | 作り置きと閲覧 API（D2・D3） | Sonnet |
 | 3 | 閲覧ページ（D4） | Sonnet |
 | 4 | 申込、トライアル、pending の掃除、管理の操作（D5） | Sonnet |
 | 各段 | コード審査（Opus。PO 決定 2026-10-15 で Fable から変更）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
 | 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。一覧ファイルは1行だけのものを別に作る。登録した時点の期限にかかわらず、登録の直後に extend N=1 で「記録した時刻＋1日」にする。審査 r7-N-7・r8-N-5）。作成は PO 本人の GO（上の「操作の GO の条件」）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | PO（GO）＋Sonnet（実行） |
+
+計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
+- ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
+- ② fetch_output_rows の DB 部分：【事実】本番設定（include_flag_single=false、max_age_hours=48）で組み立てた SQL を EXPLAIN ANALYZE で3回、1135.0 ms・525.5 ms・497.5 ms、返却 877 行（explain_1〜3.txt）。1分ごとの作り置きには収まる。Python 側の整形を含む全体の時間は【未確認】。
+- ③ products.tenant_id：【事実】配信 877 行が指す products の tenant_id は全部 NULL、NULL 以外は 0 件（tenant_dist.txt）。PO に報告する見え方の差は無い。
+- ④ プロキシ：【事実】app.salesanchor.jp は 49.212.137.46（さくら）、応答ヘッダは server: nginx のみで cf-ray・via が無い（dig.txt・curl_head.txt）。Cloudflare は前段にいないので、D4 に set_real_ip_from・real_ip_header は足さない。
 
 ---
 
