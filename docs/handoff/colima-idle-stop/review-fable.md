@@ -8,4 +8,4 @@
 | 設計2 | design v2 | REVISE | HIGH-1 HEAD と origin/main の完全一致は実機でほぼ成立しない→`merge-base --is-ancestor` に変更／LOW-11 pgrep に docker-compose・logs・up を追加／LOW-12 janitor 実行中は exit 0 で見送り／仕様書対象外の判断を PO に明示 |
 | 設計3 | design v2.1 | APPROVE | 残る LOW は Generator 申し送り（引用符・ロック pid の書き込み位置・.err 文言の区別を手順書に1行） |
 | コード1 | commit 1b9963199 | REVISE | MEDIUM-1 試験 T8（1799 秒）が秒境界で稀に失敗→1790 秒に変更（本体は変更なし）。他は設計と全項目一致 |
-| コード2 | T8 修正後 | （下に追記） | |
+| コード2 | commit d08d4fdc3 | APPROVE | T8 を 1790 秒に変更。本体・plist・手順書は差分なし。/bin/bash 3.2 で5回＋10回連続 FAIL=0。残る指摘なし |
