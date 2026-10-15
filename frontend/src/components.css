@@ -8,7 +8,7 @@
   margin-bottom: var(--space-4);
 }
 
-.form-group label {
+.form-group label:where(:not(.comp-checkbox)) {
   display: block;
   font-size: var(--font-sm);
   font-weight: var(--font-weight-medium);
@@ -16,7 +16,6 @@
   margin-bottom: var(--space-1);
 }
 
-.form-group input[type="checkbox"],
 .form-group input[type="radio"],
 .form-group input[type="range"],
 .form-group input[type="file"] {
@@ -30,7 +29,6 @@
   box-sizing: border-box;
 }
 
-.form-group input[type="checkbox"]:focus,
 .form-group input[type="radio"]:focus,
 .form-group input[type="range"]:focus,
 .form-group input[type="file"]:focus {

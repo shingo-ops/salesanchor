@@ -30,10 +30,3 @@
 .comp-multiselect__option:hover {
   background: var(--bg-hover);
 }
-
-.comp-multiselect__check {
-  width: var(--size-checkbox);
-  height: var(--size-checkbox);
-  cursor: pointer;
-  accent-color: var(--primary);
-}
