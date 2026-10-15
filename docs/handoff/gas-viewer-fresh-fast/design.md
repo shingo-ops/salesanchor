@@ -44,7 +44,7 @@
 - 変更前：外部の人を入れるには、アプリのユーザー（public.users）にするしかない。
 - 変更後：
   - 新しい表 public.viewer_accounts を作る。migration では表を作るだけで、データは入れない。
-  - 列：id、email（一意）、line_name（LINE の表示名）、discord_user_id（Discord の数字のID。VARCHAR(50)。既存の顧客管理 company_discord.user_id・leads.discord_user_id と同じ名前と型にそろえる＝migrations/097_create_company_discord.sql:36-47、migrations/091_add_leads_discord_messaging_columns.sql:30。入力は既存の検証 `^\d{17,20}$`（backend/app/routers/discord_ticket_config.py:48）と同じ形で受ける）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」で、Q5 が自動トライアルなら使わずに trial へ進む。Q5 の答えで migration を作り直さずに済むよう、先に5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
+  - 列：id、email（一意）、line_name（LINE の表示名）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」で、Q5 が自動トライアルなら使わずに trial へ進む。Q5 の答えで migration を作り直さずに済むよう、先に5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
   - テナントは持たない。
   - ログインの方法：メールに届くリンクを押してログインする。パスワードは持たない（PO 決定 Q2、2026-10-15）。PO の条件は「リンクを知っていれば誰でも見られる形にはしない。登録フォームに入力した情報で管理する」。これを次の仕組みで守る。
     - ログイン用のリンクは、viewer_accounts に登録済みで、状態が active か「期限内の trial」の email にだけ送る。登録されていない email、pending・verified・suspended の email、期限切れの trial の email には送らない（審査 N-31）。どの場合も応答は同じ 200 にして、登録済みかどうかを外から分からないようにする。
@@ -154,7 +154,7 @@
 | 登録済みの email で signup しても、応答は新規のときと同じで、メールは送られない | CI pytest |
 | 確認トークンは24時間を過ぎると無効になり、2回目は使えない | CI pytest |
 | ログイン用のリンクは、active と期限内の trial の email にだけ送られる。未登録・pending・verified・suspended・期限切れの trial の email にはメールが送られず、応答は同じ 200 | CI pytest（メール送信を mock にする） |
-| 申込：メールか LINE 名が空なら 422。Discord ID は空欄なら NULL で保存し、入力があって `^\d{17,20}$` に合わない値（例：`abc`、`shingo_123`、`123`）は 422 で行を作らない | CI pytest |
+| 申込：メールか LINE 名が空なら 422。Discord ID の欄は無く、送られてきても保存しない | CI pytest |
 | ログイン用のリンクは15分で無効になり、一度使ったら2回目は 401 になる | CI pytest（時刻を固定する） |
 | suspended にした後は、発行済みの12時間トークンでも inventory が 403 になる | CI pytest |
 | GET /viewer/ の応答に Cache-Control: no-cache が付いている。/viewer でも同じページに着く | Evaluator（curl と Playwright） |
@@ -180,7 +180,7 @@
 - 新しい認証にバグがあるリスク → 署名の仕組みは self_tokens と同じ作り方にし（鍵と iss だけ変える）、分離テストを CI で固定し、security-reviewer の審査を必須にする。
 - secret が1つ増える → 本番への追加は PO の確認を取ってから行う。
 - 鮮度は最大1分遅れる → PO が了承済み。
-- 個人情報（メール・LINE 名・Discord の数字のID）を新しく自社の DB に持つ → 保存期間と削除の方法は Q7 で決める。
+- 個人情報（メール・LINE 名）を新しく自社の DB に持つ → 保存期間と削除の方法は Q7 で決める。
 - GAS の利用者は、新しいページへの移行が要る → Q4 で決める。
 
 ---
@@ -224,6 +224,7 @@
 - Q2b.【決定 2026-10-15 PO】原文「トライアルではメール、LINE名、DISCORD IDのみ、本契約に進むときに詳しい情報を別途フォームで取得する」。申込フォームはメール・LINE 名・Discord ID の3つ。本契約用の詳しい情報フォームは今回の対象外（別の便で設計する）。
 - Q2d.【決定 2026-10-15 PO】原文「数字のID、SAの顧客対応と同様に顧客管理で利用するため」。数字のIDで受け取る。閲覧者の行はテナントの取引先（companies）には写さない（SSOT）。本契約で取引先とつなぐ方法は、本契約フォームの便で設計する。
 - Q2e.【決定 2026-10-15 PO】原文「Discord ID だけ任意、ただし間違えて送られてくる可能性があるので数字以外は受け付けないようにしてくれ」。メールと LINE 名は必須、Discord の数字のIDは任意。入力があるときは、既存の検証と同じ `^\d{17,20}$`（backend/app/routers/discord_ticket_config.py:48）に合わない値を 422 で拒み、画面は i18n の案内文を出して送信させない。空欄は NULL で保存する。
+- Q2f.【決定 2026-10-15 PO「Y」】Q2d・Q2e を置き換える。申込フォームはメールと LINE 名の2つだけにし、Discord ID は聞かない。Discord の数字のIDは、顧客ごとの専用URL（Discord でログイン→identify と guilds.join で ID を取得→ボットがサーバーに加える）で自動取得する。この仕組みと、ID の保存先（既存の顧客管理の列にそろえるか）は本便の対象外とし、別の仕事として設計する。調査の記録は /tmp/CC報告ファイル/viewer_discord_autoid_facts.txt（公式資料：docs.discord.com/developers/topics/oauth2、resources/guild、events/gateway-events）。
 - Q2c. リンクを押した後に email を入力し直してもらう形（D1。設計の既定案）でよいか。PO の条件「登録フォームの情報で管理する」から設計で既定にした。PO が別の形を望めば変える。
 - Q3. 本契約への切り替えと停止を誰が行うか（PO だけか、社内の管理者か）。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
