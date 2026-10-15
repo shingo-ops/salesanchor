@@ -56,7 +56,7 @@ Runtime pipeline は次の順序で運用する。
 
 ```text
 ChatGPT (Research / Planner / Architect)
-  → PO Approval（ADR-1015 の B 区分は不要。Fable 審査 APPROVE で代える）
+  → PO Approval（ADR-1015 の B 区分は不要。Opus 審査 APPROVE で代える）
   → Claude Code / Sonnet (Generator)
   → Codex app (UI/Review assist — 任意)
   → ChatGPT (final gate / Reviewer)
