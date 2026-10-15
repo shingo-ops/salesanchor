@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉙）
+# test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉙ ＋ disk-low D㉕〜D㉝）
 #
 # すべて mktemp -d で作った一時ディレクトリの中だけで動く。偽の launchctl / curl を使い、
 # MJW_ 環境変数（状態・ログ・ロック・通知先・時刻）も一時領域へ向ける。HOME も一時領域に向ける。
@@ -41,6 +41,7 @@ mkdir -p "${BIN}"
 cat > "${BIN}/launchctl" <<'EOS'
 #!/bin/bash
 echo "$*" >> "${FAKE}/launchctl.calls"
+if [ "${1:-}" = kickstart ]; then exit "$(cat "${FAKE}/launchctl.kick.rc" 2>/dev/null || echo 0)"; fi
 [ "${1:-}" = print ] || exit 0
 label="${2##*/}"
 if grep -Fxq -- "${label}" "${FAKE}/absent" 2>/dev/null; then exit 113; fi
@@ -586,39 +587,65 @@ echo "jp.salesanchor.colima-idle-stop" > "${D}/fake/absent"
 run_mjw
 grep -qx -- '--max-time' "${D}/fake/curl.args.1" && grep -qx -- '20' "${D}/fake/curl.args.1" && ok "㉙-1 curl に --max-time 20" || ng "㉙-1 curl に --max-time 20"
 
-# ── 空き容量（disk-low）。設計 design-disk-low.md §4 の ㉕〜㉙（既存の ㉕〜㉙ と区別するため D を付ける）──
-setup
-export DF_KB=$(( 19 * 1048576 ))
+# ── 空き容量（disk-low）。design-disk-low.md §11-3 の D㉕〜D㉝ ──
+nkick() { grep -c -F -- "kickstart gui/$(id -u)/jp.salesanchor.disk-janitor" "${D}/fake/launchctl.calls" 2>/dev/null || true; }
+at() { set_now $(( $1 )); colima_line $(( NOW - 60 )) idle -; }
+G() { export DF_KB=$(( $1 * 1048576 )); }
+setup; G 19; T0="${NOW}"
 run_mjw
-eq "D㉕-1 19GiB: 送信 1 回" "$(ncalls)" "1"
-sentmsg 1 | grep -q '空き容量が少なくなっています（いま 19 GiB' && ok "D㉕-2 本文" || ng "D㉕-2 本文"
-has_prob "disk-low" && ok "D㉕-3 problems=disk-low" || ng "D㉕-3 problems=disk-low"
-set_now $(( NOW + 1800 ))
-colima_line $(( NOW - 60 )) idle -
+eq "D㉕-1 kickstart 1 回" "$(nkick)" "1"
+eq "D㉕-2 送信 0" "$(ncalls)" "0"
+eq "D㉕-3 ログ disk-kick send=ok" "$(logc 'result=disk-kick send=ok')" "1"
+eq "D㉕-4 状態 disk_kick=NOW" "$(stv disk_kick)" "${T0}"
+at $(( T0 + 600 )); run_mjw
+eq "D㉖-1 10 分後: kickstart 増えない" "$(nkick)" "1"
+eq "D㉖-2 送信 0" "$(ncalls)" "0"
+at $(( T0 + 1800 )); run_mjw
+eq "D㉗-1 30 分後: 送信 1" "$(ncalls)" "1"
+sentmsg 1 | grep -q '空き容量が少ないままです（いま 19 GiB' && ok "D㉗-2 本文" || ng "D㉗-2 本文"
+has_prob "disk-low" && ok "D㉗-3 problems=disk-low" || ng "D㉗-3 problems=disk-low"
+eq "D㉗-4 kickstart 増えない" "$(nkick)" "1"
+# D㉘ 知らせ済みで 22GiB → 26GiB
+setup; G 22; printf 'disk-low\t%s\n' "$(( NOW - 3600 ))" > "${D}/state/problems"
 run_mjw
-eq "D㉖ 直後（24h 未満）: 送信 0 回増" "$(ncalls)" "1"
-export DF_KB=$(( 22 * 1048576 ))
-set_now $(( NOW + 1800 ))
-colima_line $(( NOW - 60 )) idle -
-run_mjw
-eq "D㉗-1 知らせ済みで 22GiB: 送らない" "$(ncalls)" "1"
-has_prob "disk-low" && ok "D㉗-2 problems に残る" || ng "D㉗-2 problems に残る"
-export DF_KB=$(( 26 * 1048576 ))
-set_now $(( NOW + 1800 ))
-colima_line $(( NOW - 60 )) idle -
-run_mjw
-eq "D㉘-1 26GiB: 直りました 1 通" "$(ncalls)" "2"
-sentmsg 2 | grep -q '直りました' && ok "D㉘-2 復旧文" || ng "D㉘-2 復旧文"
-has_prob "disk-low" && ng "D㉘-3 problems から消える" || ok "D㉘-3 problems から消える"
-setup
-export DF_KB=$(( 19 * 1048576 ))
-run_mjw
-export DF_KB=""
-set_now $(( NOW + 1800 ))
-colima_line $(( NOW - 60 )) idle -
-run_mjw
-eq "D㉙-1 df が読めない: 送らない" "$(ncalls)" "1"
+eq "D㉘-1 22GiB: 送らない" "$(ncalls)" "0"
+has_prob "disk-low" && ok "D㉘-2 problems に残る" || ng "D㉘-2 problems に残る"
+G 26; at $(( NOW + 1800 )); run_mjw
+eq "D㉘-3 26GiB: 直りました 1 通" "$(ncalls)" "1"
+sentmsg 1 | grep -q '直りました' && ok "D㉘-4 復旧文" || ng "D㉘-4 復旧文"
+has_prob "disk-low" && ng "D㉘-5 problems から消える" || ok "D㉘-5 problems から消える"
+eq "D㉘-6 kickstart 0" "$(nkick)" "0"
+# D㉙ 知らせ済みで df が読めない
+setup; G 19; printf 'disk-low\t%s\n' "$(( NOW - 3600 ))" > "${D}/state/problems"
+export DF_KB=""; run_mjw
+eq "D㉙-1 df 不明: 送らない" "$(ncalls)" "0"
 has_prob "disk-low" && ok "D㉙-2 problems に残る" || ng "D㉙-2 problems に残る"
+# D㉚ 19GiB → 30 分後 40GiB
+setup; G 19; T0="${NOW}"; run_mjw
+G 40; at $(( T0 + 1800 )); run_mjw
+eq "D㉚-1 送信 0" "$(ncalls)" "0"
+eq "D㉚-2 problems 空" "$(grep -c . "${D}/state/problems" 2>/dev/null || true)" "0"
+eq "D㉚-3 kickstart 1" "$(nkick)" "1"
+# D㉛ kickstart 失敗
+setup; G 19; T0="${NOW}"; echo 1 > "${D}/fake/launchctl.kick.rc"; run_mjw
+eq "D㉛-1 ログ disk-kick send=fail" "$(logc 'result=disk-kick send=fail')" "1"
+eq "D㉛-2 状態 disk_kick=NOW（失敗でも記録）" "$(stv disk_kick)" "${T0}"
+at $(( T0 + 1800 )); run_mjw
+eq "D㉛-3 30 分後: 送信 1" "$(ncalls)" "1"
+# D㉜ dry-run
+setup; G 19
+before_state="$(cksum "${D}/state/state" "${D}/state/problems")"
+run_mjw --dry-run
+eq "D㉜-1 kickstart 0" "$(nkick)" "0"
+eq "D㉜-2 状態不変" "$(cksum "${D}/state/state" "${D}/state/problems")" "${before_state}"
+grep -q 'result=dry-run.*events=.*disk-kick' "${D}/mjw.log" && ok "D㉜-3 events に disk-kick" || ng "D㉜-3 events に disk-kick"
+eq "D㉜-4 送信 0" "$(ncalls)" "0"
+# D㉝ 24h 未満で再び 19GiB → すぐ送信
+setup; G 19; T0="${NOW}"; run_mjw
+G 40; at $(( T0 + 1800 )); run_mjw
+G 19; at $(( T0 + 7200 )); run_mjw
+eq "D㉝-1 kickstart 増えない" "$(nkick)" "1"
+eq "D㉝-2 すぐ送信 1" "$(ncalls)" "1"
 export DF_KB=52428800
 
 echo "----"
