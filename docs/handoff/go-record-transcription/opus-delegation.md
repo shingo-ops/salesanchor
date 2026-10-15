@@ -62,7 +62,7 @@ PO 発言の原文（2026-10-15）:
 - 外部 GUI（Cloudflare・Firebase 等）の操作
 - main / develop への force push
 
-`scripts/check-process-artifacts.js` が機械検証できるのは、このうち「migration の DROP TABLE/COLUMN」と「`.github/workflows/workflow-lint.yml` の変更」のみ。それ以外（大量DELETE・secrets変更・Ruleset/Branch Protection変更・外部GUI操作・force push）は、CLAUDE.md「不可逆操作は必ずPO確認」の既存運用（`permit-danger.sh` 等）で人手により担保する。
+`scripts/check-process-artifacts.js` が機械検証できるのは、このうち「migration の DROP TABLE/COLUMN」と「`.github/workflows/workflow-lint.yml` の変更」のみ。それ以外（大量DELETE・secrets変更・Ruleset/Branch Protection変更・外部GUI操作・force push）は、CLAUDE.md「不可逆操作は必ずPO確認」の既存運用（`scripts/permit-danger.sh` 等）で人手により担保する。
 
 ## 解除の方法
 
