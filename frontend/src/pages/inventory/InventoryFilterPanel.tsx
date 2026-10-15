@@ -4,7 +4,7 @@
  * InventoryPage から切り出した表示専用コンポーネント（ページ行数上限対策）。
  * 状態は親（InventoryPage）が保持し、props 経由で受け取る。
  *   - フィルタ有効化トグル
- *   - カテゴリー / 仕入元 の表示・非表示（除外フィルタ）
+ *   - （スマホのみ）提供者の選択 / カテゴリーの表示・非表示（除外フィルタ）
  *   - 表示する列（列トグル）
  *   - 表示条件: 状態 / 形態 / 在庫・予約 の複数選択 + 数量 / 単価 の範囲（包含フィルタ）
  */
@@ -12,11 +12,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
-
-interface SupplierFacet {
-  id: number;
-  name: string | null;
-}
+import { MultiSelect, type MultiSelectOption } from "../../components/MultiSelect";
 
 interface Props {
   filterEnabled: boolean;
@@ -25,9 +21,11 @@ interface Props {
   sortedCategories: string[];
   hiddenCategories: Set<string>;
   toggleHiddenCategory: (c: string) => void;
-  supplierFacet: SupplierFacet[];
-  hiddenSupplierIds: Set<number>;
-  toggleHiddenSupplier: (id: number) => void;
+  /** スマホだけ true: 提供者の選択をパネルの先頭に出す（PC はツールバー） */
+  showSupplierSelect: boolean;
+  supplierOptions: MultiSelectOption[];
+  selectedSupplierIds: string[];
+  onSupplierChange: (next: string[]) => void;
   hideableColumns: string[];
   hiddenColumns: Set<string>;
   toggleHiddenColumn: (c: string) => void;
@@ -58,9 +56,10 @@ export default function InventoryFilterPanel({
   sortedCategories,
   hiddenCategories,
   toggleHiddenCategory,
-  supplierFacet,
-  hiddenSupplierIds,
-  toggleHiddenSupplier,
+  showSupplierSelect,
+  supplierOptions,
+  selectedSupplierIds,
+  onSupplierChange,
   hideableColumns,
   hiddenColumns,
   toggleHiddenColumn,
@@ -115,6 +114,19 @@ export default function InventoryFilterPanel({
         maxWidth: "44rem",
       }}
     >
+      {showSupplierSelect && (
+        <MultiSelect
+          testId="inventory-supplier-filter"
+          label={t("inventory.supplierFilter.label")}
+          options={supplierOptions}
+          selected={selectedSupplierIds}
+          onChange={onSupplierChange}
+          clearLabel={t("inventory.supplierFilter.clear")}
+          allLabel={t("inventory.supplierFilter.all")}
+          countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
+        />
+      )}
+
       <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", fontWeight: "var(--font-weight-semi)" }}>
         <input
           type="checkbox"
@@ -149,31 +161,7 @@ export default function InventoryFilterPanel({
         </div>
       </div>
 
-      {/* 2) 仕入元の表示／非表示 */}
-      <div>
-        <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
-          {t("inventory.filterPanel.suppliers")}
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-          {supplierFacet.length === 0 ? (
-            <span style={{ color: "var(--text-secondary)" }}>{t("inventory.noResults")}</span>
-          ) : (
-            supplierFacet.map((s) => (
-              <label key={s.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-                <input
-                  type="checkbox"
-                  data-testid={`inventory-filter-supplier-${s.id}`}
-                  checked={!hiddenSupplierIds.has(s.id)}
-                  onChange={() => toggleHiddenSupplier(s.id)}
-                />
-                {s.name ?? `#${s.id}`}
-              </label>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* 3) 表示する列（データの絞り込みではなく列の取捨。上2つと毛色が違うため枠で区別） */}
+      {/* 3) 表示する列（データの絞り込みではなく列の取捨。上と毛色が違うため枠で区別） */}
       <div
         style={{
           background: "var(--bg-subtle)",

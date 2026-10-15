@@ -4,7 +4,7 @@
  * public.inventory の status='in_stock' かつ未失効のオファーを明細行で表示する読み取り専用画面。
  * 列: 型番 / タイトル(日上・英下) / 状態 / 形態 / 在庫・予約 / 数量 / 単価 / 仕入元(掲載時刻)。
  * - 全列で昇順/降順ソート（バックエンド）。左端「リセット」でデフォルト(タイトル昇順)に戻る。
- * - カテゴリー絞り込み（プルダウン）＋検索（ボタン）＋ユーザー別フィルタ（仕入元/カテゴリー/列の取捨・永続化）。
+ * - カテゴリー絞り込み（プルダウン）＋検索（Enter で即時）＋提供者（選んだ仕入元だけ・保存しない）＋ユーザー別フィルタ（カテゴリー/列の取捨・永続化）。
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,6 +19,8 @@ import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Drawer } from "../../components/Drawer";
 import { TextFieldControl } from "../../components/TextField";
+import { MultiSelect } from "../../components/MultiSelect";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
@@ -125,7 +127,11 @@ export default function InventoryPage() {
   // ユーザー別フィルタ（ポップアップ・永続化）
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filterEnabled, setFilterEnabled] = useState(false);
+  // hiddenSupplierIds は画面では使わない（旧「仕入元を除外」の保存値）。GET で受けて PATCH でそのまま返す。
   const [hiddenSupplierIds, setHiddenSupplierIds] = useState<Set<number>>(new Set());
+  // 提供者（選んだ仕入元だけ表示。保存しない＝開くたびに空＝全員）
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+  const isMobile = useIsMobile();
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [supplierFacet, setSupplierFacet] = useState<SupplierFacet[]>([]);
@@ -197,9 +203,7 @@ export default function InventoryPage() {
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
       if (activeTab !== "all") params.set("tcg_type", activeTab);
-      if (filterEnabled && hiddenSupplierIds.size > 0) {
-        params.set("hide_supplier_ids", Array.from(hiddenSupplierIds).join(","));
-      }
+      if (selectedSupplierIds.length > 0) params.set("supplier_ids", selectedSupplierIds.join(","));
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
       }
@@ -233,7 +237,7 @@ export default function InventoryPage() {
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, selectedSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     if (!filtersLoaded) return;
@@ -344,6 +348,7 @@ export default function InventoryPage() {
     setSortDir("desc");
     setPage(1);
   };
+  // Enter は 250ms の待ちを飛ばしてすぐ検索する（検索ボタンは無い）
   const runSearch = () => {
     setDebouncedQ(searchQ);
     setPage(1);
@@ -354,15 +359,11 @@ export default function InventoryPage() {
       ? windowHours && windowHours > 0 ? Math.min(freshWindowHours, windowHours) : freshWindowHours
       : windowHours;
 
-  const toggleHiddenSupplier = (id: number) => {
-    setHiddenSupplierIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const onSupplierChange = (next: string[]) => {
+    setSelectedSupplierIds(next);
     setPage(1);
   };
+  const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
   const toggleHiddenCategory = (c: string) => {
     setHiddenCategories((prev) => {
       const next = new Set(prev);
@@ -427,7 +428,7 @@ export default function InventoryPage() {
               <TextFieldControl
                 type="search"
                 className="field-h-md field-w-md"
-                placeholder={t("inventory.view.searchPlaceholder")}
+                placeholder={t("inventory.view.searchNameCode")}
                 data-testid="inventory-search"
                 value={searchQ}
                 onChange={(e) => {
@@ -436,9 +437,6 @@ export default function InventoryPage() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
               />
-              <Button variant="primary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-search-btn" onClick={runSearch}>
-                {t("common.search")}
-              </Button>
               <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
                 {t("inventory.resetSort")}
               </Button>
@@ -474,6 +472,18 @@ export default function InventoryPage() {
                   { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
                 ]}
               />
+              {!isMobile && (
+                <MultiSelect
+                  testId="inventory-supplier-filter"
+                  label={t("inventory.supplierFilter.label")}
+                  options={supplierOptions}
+                  selected={selectedSupplierIds}
+                  onChange={onSupplierChange}
+                  clearLabel={t("inventory.supplierFilter.clear")}
+                  allLabel={t("inventory.supplierFilter.all")}
+                  countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
+                />
+              )}
               <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
                 type="button"
 
@@ -497,9 +507,10 @@ export default function InventoryPage() {
           sortedCategories={sortedCategories}
           hiddenCategories={hiddenCategories}
           toggleHiddenCategory={toggleHiddenCategory}
-          supplierFacet={supplierFacet}
-          hiddenSupplierIds={hiddenSupplierIds}
-          toggleHiddenSupplier={toggleHiddenSupplier}
+          showSupplierSelect={isMobile}
+          supplierOptions={supplierOptions}
+          selectedSupplierIds={selectedSupplierIds}
+          onSupplierChange={onSupplierChange}
           hideableColumns={HIDEABLE_COLUMNS}
           hiddenColumns={hiddenColumns}
           toggleHiddenColumn={toggleHiddenColumn}
