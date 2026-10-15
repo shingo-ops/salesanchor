@@ -264,6 +264,45 @@ launchctl bootout gui/$(id -u)/jp.salesanchor.disk-janitor
 
 消された物の作り直し: salesanchor は `npm ci --prefix frontend`、agent-console は `npm ci`（pre-commit の lint-staged が node_modules を使うため）、agent-console の版は ac-install、作業用コピーは `git worktree add`。
 
+
+### Docker（Colima）の自動停止（colima-idle-stop）
+
+`ops/launchd/jp.salesanchor.colima-idle-stop.plist` を配置すると、15 分ごとに `scripts/colima-idle-stop.sh` が Colima（profile default）を見回る。
+DB 接続なし・CPU ほぼ 0（コンテナごとに 1.0% 未満）・`docker compose` や `psql` などの操作中プロセスなしが 30 分続いたら `colima stop -p default` を 1 回だけ実行する（状態は保存される）。
+判定に失敗したときは止めない。止めるのは default だけで、`colima delete` やディスク削除はしない。設計: `docs/handoff/colima-idle-stop/design.md`。
+
+道具のコピー `/Users/tanizawashingo/.salesanchor-tools` は読み取りだけで使う（fetch・checkout はしない）。コピーが新しい版になるまでは動かない。disk-janitor が毎日 04:00 にコピーを更新するので、PR を main に入れた後は翌 04:00 以降に動き始める。
+
+```bash
+# plist の確認（lint と、実行する1行の復元）
+plutil -lint ops/launchd/jp.salesanchor.colima-idle-stop.plist
+plutil -extract ProgramArguments.2 raw ops/launchd/jp.salesanchor.colima-idle-stop.plist
+
+# 設置（初回のみ）
+cp ops/launchd/jp.salesanchor.colima-idle-stop.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.colima-idle-stop.plist
+
+# 確認（state・runs・last exit code。正常は 0）
+launchctl print gui/$(id -u)/jp.salesanchor.colima-idle-stop
+diff ops/launchd/jp.salesanchor.colima-idle-stop.plist ~/Library/LaunchAgents/jp.salesanchor.colima-idle-stop.plist
+
+# すぐ1回動かす
+launchctl kickstart -k gui/$(id -u)/jp.salesanchor.colima-idle-stop
+
+# dry-run（判定と状態ファイル更新まで。colima stop だけ実行しない）
+cd /Users/tanizawashingo/.salesanchor-tools && bash scripts/colima-idle-stop.sh --dry-run
+
+# 停止（止めた後の再開は bootstrap）
+launchctl bootout gui/$(id -u)/jp.salesanchor.colima-idle-stop
+```
+
+ログの見方:
+- `~/Library/Logs/colima-idle-stop.log`: 見回り自身が書く。1回1行以上、`result=<stopped|busy|idle|would-stop|stop-ok|stop-fail|skip> reason=<a|b|c|d|->`（a=CPU、b=DB 接続、c=操作中プロセス、d=判定失敗）。`tail -50` で見る（1MB 超で `.log.1` に1世代だけ退避）。
+- `~/Library/Logs/colima-idle-stop.err`: 起動直後の異常。正常時は空。「道具のコピーが確認できない」はコピーが未コミット・未追跡できれいでない、HEAD が `origin/main` に含まれない、のときだけでなく、スクリプトの `colima stop` 失敗でも出る。区別はログの `result=stop-fail` で行う。
+- 状態ファイル: `~/Library/Application Support/colima-idle-stop/idle-since`（`<epoch秒> <ha.pid>`）。
+
+止まった後に DB に繋がらないときは `colima start`（自動再開は無い）。起動後 `docker ps` で `salesanchor-postgres-1` が healthy で戻ることを確かめる。
+
 ---
 
 ## 関連 doc
