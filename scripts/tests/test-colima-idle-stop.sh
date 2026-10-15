@@ -162,12 +162,12 @@ check "T7 stop を -p default 付きで 1 回呼ぶ" test "$(grep -c '^colima st
 check "T7 状態ファイルが消える" no_state
 check "T7 result=stop-ok" log_has 'result=stop-ok'
 
-# T8 1799 秒前
+# T8 1790 秒前
 setup
-echo "$(( $(now) - 1799 )) ${HAPID}" > "${STATE}"
+echo "$(( $(now) - 1790 )) ${HAPID}" > "${STATE}"
 run_cis
-check "T8 1799 秒: stop を呼ばない" no_stop_call
-check "T8 1799 秒: 状態ファイルは残る" test -e "${STATE}"
+check "T8 1790 秒: stop を呼ばない" no_stop_call
+check "T8 1790 秒: 状態ファイルは残る" test -e "${STATE}"
 
 # T9 --dry-run
 setup
