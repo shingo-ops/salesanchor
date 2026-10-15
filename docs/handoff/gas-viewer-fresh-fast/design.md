@@ -156,6 +156,7 @@
 | ログイン用のリンクは、active と期限内の trial の email にだけ送られる。未登録・pending・verified・suspended・期限切れの trial の email にはメールが送られず、応答は同じ 200 | CI pytest（メール送信を mock にする） |
 | 申込：メールか LINE 名が空なら 422。Discord ID の欄は無く、送られてきても保存しない | CI pytest |
 | 申込：在庫関連の課題が1000文字を超えたら 422。保存した文字列は画面にそのまま文字として出し、HTML として解釈しない | CI pytest |
+| 延長：期限切れの trial に N=7 を指定すると、trial_expires_at が「記録した時刻＋7日」になり、inventory が 200 になる。N が0以下か整数でなければ 422。active・suspended・pending には延長できない（409） | CI pytest（時刻を固定する） |
 | ログイン用のリンクは15分で無効になり、一度使ったら2回目は 401 になる | CI pytest（時刻を固定する） |
 | suspended にした後は、発行済みの12時間トークンでも inventory が 403 になる | CI pytest |
 | GET /viewer/ の応答に Cache-Control: no-cache が付いている。/viewer でも同じページに着く | Evaluator（curl と Playwright） |
@@ -232,6 +233,7 @@
   - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:491）で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
   - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
   - GO の発行者（PO 決定 2026-10-15、原文「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」）：本設計どおりの切り替え（対象1人の状態を trial→active、→suspended、suspended→元の状態のいずれかに変える）は、Opus が「POの委任に基づくClaude Opus発行」として GO を出す（委任の正式記録 docs/handoff/go-record-transcription/opus-delegation.md と同じ書き方）。複数人の一括変更・削除・本設計に無い状態の変更など、仕様から外れる操作は Opus が止めて PO に聞く。
+  - 期限の延長（PO 決定 2026-10-15、原文「トライアルが終了した人も任意で期間を決めて閲覧期限を延長させる機能もつけてほしい、延長させるのは延長を記録した日次から換算する」）：状態が trial の人（期限内・期限切れのどちらも）に、操作する人が日数 N（1以上の整数）を指定する。trial_expires_at は「延長を記録した時刻＋N日」になる。元の期限に足すのではない。状態は trial のまま。PO の画面と Claude の経路の両方から同じサービス関数で行い、変更前後の期限・N・実行者・日時を記録する。
   - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す（保存先は段2で既存の監査ログから選ぶ）。
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
