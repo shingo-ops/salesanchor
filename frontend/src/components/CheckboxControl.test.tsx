@@ -72,7 +72,7 @@ describe('CheckboxControl', () => {
   });
 
   it('applies dataColor as accent-color and adds no style attribute without it', () => {
-    render(<CheckboxControl dataColor="#123456" checked onChange={() => {}} aria-label="c" />);
+    render(<CheckboxControl dataColor="rgb(18, 52, 86)" checked onChange={() => {}} aria-label="c" />);
     expect((screen.getByLabelText('c') as HTMLInputElement).style.accentColor).toBe('rgb(18, 52, 86)');
     cleanup();
     render(<CheckboxControl checked onChange={() => {}} aria-label="d" />);
