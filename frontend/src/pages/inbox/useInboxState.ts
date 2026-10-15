@@ -192,12 +192,16 @@ export interface UseInboxStateReturn {
  * オーナー / システム管理者 / マネージャー / 仕入れ / 発送 / CS / 営業 で、
  * 「リーダー」が無く「マネージャー」が使われていた。
  *
- * PO 決定: 営業に加えて**マネージャーも候補に含める**。
+ * PO 決定（2026-10-15・第12便）: **「オーナー」も候補に含める**
+ * （PO の言う admin ＝ オーナー。本番で実在するスタッフはオーナー1名のみで、
+ * 小さい体制でも商談化を回せるようにするため）。
+ *
+ * PO 決定（2026-10-15・第11便）: 営業に加えて**マネージャーも候補に含める**。
  * 「リーダー」は初期値に存在し他テナントで使われている可能性があるため**残す**
  * （消すとその環境で候補が減るため）。
  */
 // eslint-disable-next-line local/no-japanese-literal -- DB value（roles.name の実値）
-const CONVERT_ASSIGNEE_ROLE_NAMES = ["営業", "マネージャー", "リーダー"];
+const CONVERT_ASSIGNEE_ROLE_NAMES = ["営業", "マネージャー", "リーダー", "オーナー"];
 
 export function useInboxState(): UseInboxStateReturn {
   const { t } = useTranslation();
