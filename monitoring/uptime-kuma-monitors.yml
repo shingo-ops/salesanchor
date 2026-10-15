@@ -1,51 +1,55 @@
 # Uptime Kuma 監視項目定義 — SSoT（Single Source of Truth）
 #
-# 目的: VPS 再構築時に「何を監視していたか」をコードで再現できるようにする
+# 正本。登録は monitoring/scripts/register_kuma_monitors.py。
+# register: false は既に本番にある見張りで、script は触らない。
+# register: true は本番に無ければ script が足す（同じ名前は作らない）。
 # 参照: docs/adr/ADR-069-uptime-kuma-activation.md
-# 注意: Uptime Kuma UI での登録は手動操作が必要（API自動投入は別途ADR起案予定）
-#       このファイルを見ながら Uptime Kuma の Settings > Monitors で設定すること
+# 注意: 監視基盤の宛先は内部向けのため、公開リポジトリには url を書かない
 
 monitors:
+  # --- 監視基盤（本番に登録済み。script は触らない）---
+  - name: "app-vps node-exporter"
+    type: http
+    interval: 60
+    register: false
+    description: "app-vps の node-exporter（監視基盤）"
+
+  - name: "Loki"
+    type: http
+    interval: 60
+    register: false
+    description: "Loki（ログ基盤）"
+
+  - name: "Alertmanager"
+    type: http
+    interval: 60
+    register: false
+    description: "Alertmanager（通知基盤）"
+
+  - name: "Prometheus"
+    type: http
+    interval: 60
+    register: false
+    description: "Prometheus（メトリクス基盤）"
+
+  # --- 利用者向け（script が足す）---
   - name: "App 本番"
     url: "https://app.salesanchor.jp/"
     type: http
-    interval: 30
+    interval: 60
+    register: true
     description: "Sales Anchor アプリ本番フロントエンド"
 
   - name: "API ヘルスチェック"
     url: "https://api.salesanchor.jp/api/health"
     type: http
-    interval: 30
+    interval: 60
+    register: true
     description: "FastAPI バックエンド ヘルスエンドポイント"
 
-  - name: "LP（ランディングページ）"
+  - name: "LP"
     url: "https://salesanchor.jp/"
     type: http
     interval: 60
+    register: true
     description: "Sales Anchor LP（Astro）"
-
-  - name: "PostgreSQL"
-    host: "localhost"
-    port: 5432
-    type: tcp
-    interval: 60
-    description: "PostgreSQL 16 データベース（VPS内部）"
-
-  - name: "Redis"
-    host: "localhost"
-    port: 6379
-    type: tcp
-    interval: 60
-    description: "Redis キャッシュ（VPS内部）"
-
-  - name: "Meta Graph API"
-    url: "https://graph.facebook.com/"
-    type: http
-    interval: 300
-    description: "Meta API 外形監視（外部依存サービス）"
-
-  - name: "Firebase"
-    url: "https://firebaseio.com/"
-    type: http
-    interval: 300
-    description: "Firebase 外形監視（認証基盤）"
