@@ -1,0 +1,147 @@
+ok: K9 全ての CA_* がスタブまたは一時ディレクトリの下
+ok: K2 HDD なし: exit 0
+ok: K2 HDD なし: ログに「HDD なし」
+ok: K2 HDD なし: last-ok を作らない
+ok: K2 HDD なし: hdiutil・security・rsync を呼ばない
+ok: K2 HDD なし: 入れ物（fakevol）に何も書かない
+ok: K2 HDD なし: 元が消えない
+ok: K4 last-ok が無い: 通知が呼ばれる（K2 の実行）
+ok: K4 last-ok が新しい（1時間前）: 通知が呼ばれない
+ok: K4 last-ok が4日前: 通知が呼ばれる
+ok: K2 HDD なし: last-ok は変わらない（4日前のまま）
+=== dry-run ログ ===
+2026-10-15 10:20:39 ===== claude-archive 開始 mode=dry-run =====
+2026-10-15 10:20:41 入れ物を開いた: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/claude-archive-test.EvH7qz/mnt/claude-archive-mnt.aJvQac
+2026-10-15 10:20:42 item=projects rc=0 src=18 dst=18 diff=0 OK
+2026-10-15 10:20:42 item=history rc=0 src=1 dst=1 diff=1 OK
+2026-10-15 10:20:43 item=plans rc=0 src=2 dst=2 diff=0 OK
+2026-10-15 10:20:43 item=keep rc=0 src=1 dst=1 diff=0 OK
+2026-10-15 10:20:43 item=tmpmd rc=0 src=2 dst=2 diff=0 OK
+2026-10-15 10:20:44 item=images places=3 rc=0 src=4 dst=4 OK
+2026-10-15 10:20:44 item=dataDir-boards rc=0 src=1 dst=1 diff=0 OK
+2026-10-15 10:20:44 item=dataDir-audit rc=0 src=1 dst=1 diff=1 OK
+2026-10-15 10:20:44 item=dataDir-diffcomments 元なし（元 0）→ 成功扱い
+2026-10-15 10:20:44 item=dataDir-uploads 元なし（元 0）→ 成功扱い
+2026-10-15 10:20:44 全項目成功。last-ok を更新
+2026-10-15 10:20:44 片付け開始 mode=dry-run 古さ=7日
+2026-10-15 10:20:45 守る集合: 2 件（sessions の json 1 件）
+2026-10-15 10:20:46 片付け セッション: 全 5 / 古い 4 / 開いているため残す 2 / 写し不一致 0 / 再確認で変化 0 / 消す予定 2 / 消す予定バイト 26
+2026-10-15 10:20:46 片付け 計画: 対象 1 / 消す予定 1 / 見送り 0 / 消す予定バイト 4
+2026-10-15 10:20:46 片付け 文書: 対象 1 / 消す予定 1 / 見送り 0 / 消す予定バイト 2
+2026-10-15 10:20:46 片付け 画像: 対象 1 / 消す予定 1 / 見送り 0 / 消す予定バイト 2
+2026-10-15 10:20:46 入れ物を閉じた
+2026-10-15 10:20:46 ===== claude-archive 終了 rc=0（open失敗=0 写し失敗=0 片付け失敗=0 detach失敗=0）=====
+=== ここまで ===
+ok: dry-run: exit 0
+ok: dry-run: 合言葉の取得 1 回
+ok: dry-run: attach の標準入力が合言葉（末尾改行なし）
+ok: dry-run: attach 1 回・detach 1 回
+ok: dry-run: 開く場所は mktemp -d（CA_MNT_PARENT の下）
+ok: dry-run: 閉じたあと開く場所が残らない
+ok: dry-run: last-ok に CA_NOW
+ok: dry-run: 元が変わらない（前後の一覧が同一）
+ok: dry-run: 片付けの一覧のみ（消す予定の記録）
+ok: dry-run: move-log を作らない
+ok: 写し: projects（jsonl と subagents）
+ok: 写し: memory
+ok: 写し: history・plans・keep
+ok: 写し: tmpmd は .md だけ
+ok: 写し: images は構造を保つ（scratchpad の下は写さない）
+ok: 写し: dataDir の boards・routine-audit
+ok: K5 入れ物の外（HDD 直下）に書かない
+ok: 写し: slug が - で始まる images も写る（rsync の -- 回帰）
+ok: K5 入れ物の直下は決めた名前だけ
+ok: K5 ログに合言葉が出ない
+ok: K5 標準出力に合言葉が出ない
+ok: K5 標準エラーに合言葉が出ない
+ok: K5 呼び出し記録（引数）に合言葉が出ない
+ok: rsync に --delete を渡さない
+=== execute ログ ===
+2026-10-15 10:20:48 ===== claude-archive 開始 mode=execute =====
+2026-10-15 10:20:48 入れ物を開いた: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/claude-archive-test.EvH7qz/mnt/claude-archive-mnt.ZDzRMX
+2026-10-15 10:20:49 item=projects rc=0 src=18 dst=18 diff=0 OK
+2026-10-15 10:20:49 item=history rc=0 src=1 dst=1 diff=1 OK
+2026-10-15 10:20:49 item=plans rc=0 src=2 dst=2 diff=0 OK
+2026-10-15 10:20:50 item=keep rc=0 src=1 dst=1 diff=0 OK
+2026-10-15 10:20:50 item=tmpmd rc=0 src=2 dst=2 diff=0 OK
+2026-10-15 10:20:50 item=images places=3 rc=0 src=4 dst=4 OK
+2026-10-15 10:20:50 item=dataDir-boards rc=0 src=1 dst=1 diff=0 OK
+2026-10-15 10:20:51 item=dataDir-audit rc=0 src=1 dst=1 diff=1 OK
+2026-10-15 10:20:51 item=dataDir-diffcomments 元なし（元 0）→ 成功扱い
+2026-10-15 10:20:51 item=dataDir-uploads 元なし（元 0）→ 成功扱い
+2026-10-15 10:20:51 全項目成功。last-ok を更新
+2026-10-15 10:20:51 片付け開始 mode=execute 古さ=7日
+2026-10-15 10:20:51 守る集合: 2 件（sessions の json 1 件）
+2026-10-15 10:20:52 片付け セッション: 全 5 / 古い 4 / 開いているため残す 2 / 写し不一致 0 / 再確認で変化 0 / 消した 2 / 消したバイト 26
+2026-10-15 10:20:52 片付け 計画: 対象 1 / 消した 1 / 見送り 0 / 消したバイト 4
+2026-10-15 10:20:53 片付け 文書: 対象 1 / 消した 1 / 見送り 0 / 消したバイト 2
+2026-10-15 10:20:53 片付け 画像: 対象 1 / 消した 1 / 見送り 0 / 消したバイト 2
+2026-10-15 10:20:53 入れ物を閉じた
+2026-10-15 10:20:53 ===== claude-archive 終了 rc=0（open失敗=0 写し失敗=0 片付け失敗=0 detach失敗=0）=====
+=== ここまで ===
+ok: execute: exit 0
+ok: K11① open-sessions にあるセッションは残る（jsonl と配下）
+ok: K11① sessions/ にあるセッションは残る
+ok: K11① どちらにも無いセッションだけ消える（jsonl）
+ok: K11① どちらにも無いセッションだけ消える（配下とディレクトリ）
+ok: K11⑤ 7日以内のセッションは残る
+ok: K11⑤ memory/ は 8日前でも残る
+ok: K11 UUID でない物は残る（ディレクトリ・jsonl）
+ok: K11 消した物は入れ物の中に在る
+ok: K12 move-log に消したセッションの名前が載る
+ok: K12 move-log に残した（開いている）セッションの名前は載らない
+ok: K11 計画: 8日前は消え、新しい物は残る
+ok: K11 計画: シンボリックリンクは消さない
+ok: K11 文書: 古い .md は消え、新しい物と .md でない物は残る
+ok: K11 画像: 開いているセッションの images は残る
+ok: K11 画像: 古い画像は消え、新しい画像は残る
+ok: K11 画像: scratchpad の下の images は触らない
+ok: K11 keep・history・dataDir は消さない
+ok: execute: ログに単位ごとの行
+ok: execute: rm -rf を使っていない（スクリプト内に無い）
+ok: K11② exit 0
+ok: K11② 不一致のセッションは丸ごと残る（jsonl と配下の全ファイル）
+ok: K11② ログに残した理由
+ok: K11② 一致する別セッション(UC)は消える
+ok: K11③ exit 0
+ok: K11③ どのセッションも消えない（UC も残る）
+ok: K11③ ログに「セッション単位の片付けを全部見送り」
+ok: K11③ 計画は続く
+ok: K11③ 文書は続く
+ok: K11③ 画像は続く
+ok: K11③' sessions/ に読めない json: セッションを消さない
+ok: K11③'' open-sessions.json が無い: セッションを消さない
+ok: K11 退避側 open-sessions.tmux-held.json のセッションも守る
+ok: K7 exit 1
+ok: K7 失敗項目より後ろの項目も写す（history・dataDir）
+ok: K7 last-ok を更新しない
+ok: K7 ログに失敗項目 NG
+ok: K7 片付け見送り（何も消えない）
+ok: K7 ログに「片付け見送り」
+ok: K7 閉じる（detach 1 回）
+ok: K10 exit 1
+ok: K10 last-ok は書かれる
+ok: K10 ログに「detach 失敗」
+ok: K10 detach を 3 回試す（trap で増えない）
+ok: K10 片付けは detach の前に済んでいる（UC が消えている）
+ok: 既に開いている: exit 0
+ok: 既に開いている: attach しない
+ok: 既に開いている: detach しない（自分で開いていない）
+ok: 既に開いている: security を呼ばない
+ok: 既に開いている: 既存の入れ物へ写す
+ok: attach 失敗: exit 1
+ok: attach 失敗: rsync を呼ばない・last-ok を書かない・何も消えない
+ok: attach 失敗: 通知が呼ばれる（last-ok なし）
+ok: attach 失敗: 開く場所が残らない
+ok: 上限時間超え: exit 1
+ok: 上限時間超え: ログに rc=124
+ok: 上限時間超え: 何も写さない
+ok: ロック中: 実行せず skip（exit 0）
+ok: 不明な引数: exit 2
+ok: 実行後にロックが解除される
+ok: ログ: 上限超えは .1 に退避され1世代だけ
+
+=== 合計 ===
+ok: 96
+ng: 0
+全試験 ok

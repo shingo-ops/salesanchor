@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.claude-archive.plist — 毎日 03:30 の Claude 関連データの HDD 退避（docs/handoff/claude-archive/design.md）
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+  reaper（03:00）の後・disk-janitor（04:00）の前に動かす。HDD の鍵付き入れ物へ足し、写ったと確かめた物（7日より古い）だけ Mac から消す（scripts/claude-archive.sh 冒頭）。
+  合言葉はキーチェーン（service=claude-archive-hdd account=archive）から読む。この plist に秘密は入れない。
+
+  配置コマンド（手順の正本: docs/ops/runner-commands.md）:
+    cp ops/launchd/jp.salesanchor.claude-archive.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.claude-archive.plist
+
+  動作確認:
+    launchctl print gui/$(id -u)/jp.salesanchor.claude-archive
+    tail ~/Library/Logs/claude-archive.log
+
+  すぐ1回動かす:
+    launchctl kickstart -k gui/$(id -u)/jp.salesanchor.claude-archive
+
+  停止:
+    launchctl bootout gui/$(id -u)/jp.salesanchor.claude-archive
+
+  ログは claude-archive.sh 自身が書く（世代管理あり）。
+  StandardOut/ErrorPath は起動直後の異常を受ける保険。
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.claude-archive</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; git -C "$T" fetch -q origin main &amp;&amp; test -z "$(git -C "$T" status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" checkout -q --detach origin/main &amp;&amp; test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)" &amp;&amp; cd "$T" &amp;&amp; bash scripts/claude-archive.sh --execute || { echo "claude-archive: 道具のコピーの更新・確認に失敗したため実行しない" &gt;&amp;2; exit 1; }</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/.salesanchor-tools</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/tanizawashingo/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- 毎日 03:30 に 1 回（RunAtLoad=false・KeepAlive=false = デーモン化しない） -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/claude-archive.out</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/claude-archive.err</string>
+</dict>
+</plist>

@@ -1,0 +1,4 @@
+dst_md files= 3359 bytes=30003398
+dst_img files= 8 bytes=2766162
+src_md files= 3369 bytes=30076737
+src_img files= 8 bytes=2766162
