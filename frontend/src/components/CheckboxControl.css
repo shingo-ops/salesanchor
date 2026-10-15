@@ -1,0 +1,4 @@
+/* CheckboxControl — チェック欄金型（design.md §AY-4a）。詳細度の低い順。 */
+.comp-checkbox-control { width: var(--size-checkbox); height: var(--size-checkbox); cursor: pointer; accent-color: var(--accent); }
+.comp-checkbox-control--sm { width: var(--size-checkbox-sm); height: var(--size-checkbox-sm); }
+.comp-checkbox-control:disabled { cursor: not-allowed; }
