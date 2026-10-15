@@ -2,6 +2,7 @@
 
 状態: 設計審査済み r3 APPROVE（Opus 作成・Opus Architect 審査。同一 AI の自己審査）。
 根拠: [recon.md](recon.md)。審査 r1 の全文: /tmp/CC報告ファイル/app_inventory_recon_20261015/review_design_r1.txt
+recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1017。
 
 ## PO の決定と許可の出所（審査 r1 B-10）
 
@@ -186,7 +187,7 @@
 |---|---|
 | KGI 4・5・6・7・8・9・10 | vitest（列の順・category なし・Badge の variant・プルダウン3択と既定の placeholder・resetAll 後 release_date desc）。本番で PO 目視 |
 | 既存 testid のテスト | CommerceNavigationButtonMigration.test（:58-71、読込中の前へ disabled を含む）、InventoryPage.settings / noechopatch / singlefetch.test が通る |
-| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e frontend/tests-e2e/inventory-table-layout.spec.ts（新規）（e2e.yml で全 PR 実行）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
+| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e frontend/tests-e2e/inventory-table-layout.spec.ts（新規）（【訂正 2026-10-15】e2e.yml:207 の Playwright E2E は `if: false` で 2026-06-01 から CI 停止中。この e2e は手元で実行し、数値を PR に残す。便2 #4327 で 3/3 成功）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
 | 生 table・インライン style が減る | `grep -c "<table" frontend/src/pages/inventory/InventoryPage.tsx` = 0、check-page-size（800行以下）、check-ui-governance 緑 |
 
 ## 便3 検索と提供者

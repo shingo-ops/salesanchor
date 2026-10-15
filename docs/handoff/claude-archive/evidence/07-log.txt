@@ -1,0 +1,15 @@
+603:===== disk-janitor 終了 2026-10-14 15:06:56 mode=execute 合計 8 件 / 826.3MB（R4 の容量は含まない） =====
+782:===== disk-janitor 終了 2026-10-14 21:24:01 mode=execute 合計 12 件 / 1.4GB（R4 の容量は含まない） =====
+958:===== disk-janitor 終了 2026-10-15 04:00:51 mode=execute 合計 7 件 / 835.5MB（R4 の容量は含まない） =====
+660:[R3] 削除: 5 件 / 1.4GB（1423288KB）、飛ばした: 0 件
+699:         ✅ フォルダ削除: /Users/tanizawashingo/agent-console-wt/cwd-picker
+701:         ✅ ブランチ削除: release/cwd-picker
+777:[R4] 削除: 7 件 / 0KB（0KB）、飛ばした: 0 件
+791:[R1] 削除: 0 件 / 0KB（0KB）、飛ばした: 0 件
+829:[R2] 削除: 0 件 / 0KB（0KB）、飛ばした: 35 件
+836:[R3] 削除: 3 件 / 835.5MB（855520KB）、飛ばした: 0 件
+870:         ✅ フォルダ削除: /Users/tanizawashingo/agent-console-wt/board-guard
+872:         ✅ ブランチ削除: release/board-guard
+876:         ✅ フォルダ削除: /Users/tanizawashingo/agent-console-wt/session-relay
+878:         ✅ ブランチ削除: release/session-relay
+953:[R4] 削除: 4 件 / 0KB（0KB）、飛ばした: 0 件

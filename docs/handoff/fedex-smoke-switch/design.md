@@ -38,6 +38,7 @@ Firebase MFA 必須環境での CI/CD smoke は「サービスアカウントト
 | `SMOKE_SERVICE_TOKEN` 未設定時にバイパスが不活性であること | pytest: `SMOKE_SERVICE_TOKEN=''` の場合、通常 Firebase 検証フローに入ること |
 | `SMOKE_SERVICE_TOKEN` 一致時に指定ユーザーが返ること | pytest: token 一致 → `SMOKE_SERVICE_EMAIL` のユーザーが返ること |
 | `SMOKE_SERVICE_TOKEN` 不一致時にバイパスが機能しないこと | pytest: 不一致トークンは Firebase 検証フローに入ること |
+| smoke 経路が super admin を返さないこと・非ASCII Bearer で 500 にならないこと（ADR-1017） | pytest: `backend/tests/test_smoke_auth_least_privilege.py`（上 3 行の pytest もここで実装済み） |
 | deploy.yml の `.env` 更新が冪等であること | 2回 deploy しても `SMOKE_SERVICE_TOKEN` が重複しないこと（CI: grep -c で確認） |
 | FedEx smoke ステップが `SALESANCHOR_API_URL` を受け取ること | deploy.yml の `envs:` に `SALESANCHOR_API_URL` が含まれること |
 | GitHub Secrets `FEDEX_SMOKE_API_TOKEN` 設定後に smoke が認証を通過すること | 本番 smoke ログで "unauthorized" エラーが出ないこと |

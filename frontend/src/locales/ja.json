@@ -1456,7 +1456,14 @@
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
       "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
-      "freshOnly": "{{hours}}時間以内"
+      "freshOnly": "{{hours}}時間以内",
+      "searchNameCode": "商品名・型番で検索"
+    },
+    "supplierFilter": {
+      "label": "提供者",
+      "clear": "選択をクリア",
+      "all": "すべて",
+      "count": "{{count}}件"
     },
     "expiryWarning": "LINE の投稿から {{hours}} 時間以内のオファーを表示しています。",
     "filter": {
@@ -1533,6 +1540,12 @@
     "sortDesc": "▼",
     "sortNone": "↕",
     "sortBy": "{{col}}で並べ替え",
+    "sortMenu": {
+      "placeholder": "並び替え",
+      "priceAsc": "価格が安い順",
+      "stockDesc": "在庫が多い順",
+      "postedDesc": "投稿が新しい"
+    },
     "justNow": "たった今",
     "minutesAgo": "{{count}}分前",
     "hoursAgo": "{{count}}時間前",
@@ -1546,7 +1559,6 @@
     "filterPanel": {
       "button": "詳細フィルタ",
       "enable": "フィルタを有効化（自分用の表示設定を適用）",
-      "suppliers": "仕入元の表示／非表示",
       "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",
       "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）",
@@ -2093,6 +2105,17 @@
     "channelName": "チャンネル名",
     "noChannels": "通知チャンネルが設定されていません",
     "subtitle": "Webhook通知チャネルを設定・管理します。"
+  },
+  "notifications": {
+    "eventTypesLabel": "この送信先に送る通知",
+    "eventTypesEmpty": "（未選択）",
+    "eventTypesColumn": "通知の種類",
+    "editChannel": "送信先を編集",
+    "eventType": {
+      "leadAssigned": "商談の担当アサイン",
+      "metaMessageReceived": "Meta の新着メッセージ",
+      "tcgDistributionError": "TCG在庫配信エラー"
+    }
   },
   "erp": {
     "subtitle": "在庫・販売データを外部システムと同期します。",

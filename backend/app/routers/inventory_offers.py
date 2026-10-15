@@ -14,6 +14,7 @@ AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理す
 from __future__ import annotations
 
 import logging
+import unicodedata
 from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -130,6 +131,24 @@ _SORT_COLUMNS = {
 }
 
 
+# 検索の語数の上限（GAS の在庫一覧と同じ「空白区切りAND」。多すぎる語で SQL を膨らませない）
+_SEARCH_MAX_TERMS = 10
+# ひらがな U+3041〜U+3096 → カタカナ U+30A1〜U+30F6（86文字ずつ）。SQL の translate() に渡す。
+_KANA_FROM = "".join(chr(c) for c in range(0x3041, 0x3097))
+_KANA_TO = "".join(chr(c + 0x60) for c in range(0x3041, 0x3097))
+
+
+def normalize_search_text(s: str) -> str:
+    """検索語の正規化。NFKC → 小文字 → ひらがなをカタカナへ（GAS 在庫一覧の normalizeForSearch と同じ）。
+
+    SQL 側の translate(lower(normalize(.., NFKC)), :kana_from, :kana_to) と同じ結果になること。
+    共通テストベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（変えるときは両方のテストを触る）。
+    """
+    return unicodedata.normalize("NFKC", s).lower().translate(
+        {c: c + 0x60 for c in range(0x3041, 0x3097)}
+    )
+
+
 def _split_csv(raw: str | None) -> list[str]:
     return [tok.strip() for tok in (raw or "").split(",") if tok.strip()]
 
@@ -171,6 +190,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 def _build_view_filters(
     *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
     unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
+    supplier_ids: str | None = None,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
     conditions: list[str] = []
@@ -181,12 +201,24 @@ def _build_view_filters(
     if category:
         conditions.append("d.category = :category")
         params["category"] = category
-    if q:
-        conditions.append(
-            "(d.provider ILIKE :q OR d.japanese_title ILIKE :q OR d.english_title ILIKE :q "
-            "OR d.product_id::text ILIKE :q OR d.category ILIKE :q OR d.mark ILIKE :q)"
+    # 語ごとに「日本語名・英語名・型番(mark)・検索ワード」のどれかに含まれる、を AND（GAS と同じ正規化）
+    terms = [t for t in normalize_search_text(q or "").split() if t][:_SEARCH_MAX_TERMS]
+    if terms:
+        params["kana_from"] = _KANA_FROM
+        params["kana_to"] = _KANA_TO
+        haystack = (
+            "translate(lower(normalize(concat_ws(E'\\n', d.japanese_title, d.english_title, d.mark, "
+            "d.search_keywords), NFKC)), CAST(:kana_from AS text), CAST(:kana_to AS text))"
         )
-        params["q"] = f"%{q}%"
+        for i, term in enumerate(terms):
+            conditions.append(f"strpos({haystack}, CAST(:qt{i} AS text)) > 0")
+            params[f"qt{i}"] = term
+    # 「提供者（選んだ仕入元だけ）」。整数のみ採用、整数が1つも無ければ絞らない。
+    shown_ids = [int(tok) for tok in _split_csv(supplier_ids) if tok.lstrip("-").isdigit()]
+    if shown_ids:
+        placeholders = ", ".join(f":sid{i}" for i in range(len(shown_ids)))
+        conditions.append(f"d.supplier_id IN ({placeholders})")
+        params.update({f"sid{i}": sid for i, sid in enumerate(shown_ids)})
     # 「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）。supplier_id は public.suppliers の id。
     hidden_ids = [int(tok) for tok in _split_csv(hide_supplier_ids) if tok.lstrip("-").isdigit()]
     if hidden_ids:
@@ -285,11 +317,12 @@ def _build_inventory_view_sql(
     dependencies=[Depends(require_permission("products.view"))],
 )
 async def list_inventory_view(
-    q: str | None = Query(default=None, max_length=255, description="商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致"),
+    q: str | None = Query(default=None, max_length=255, description="日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）"),
     tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別 (public.products.tcg_type)"),
     category: str | None = Query(default=None, max_length=100, description="カテゴリー絞り込み (public.products.category)"),
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
+    supplier_ids: str | None = Query(default=None, max_length=2000, description="表示する仕入元IDのCSV（選んだ仕入元だけ）"),
     hide_categories: str | None = Query(default=None, max_length=2000, description="非表示にするカテゴリーのCSV（ユーザー別フィルタ用）"),
     # 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
     condition: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)の単一指定"),
@@ -334,6 +367,7 @@ async def list_inventory_view(
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
         qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,
+        supplier_ids=supplier_ids,
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params = {**age_params, **filter_params}
