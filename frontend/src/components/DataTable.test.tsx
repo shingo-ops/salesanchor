@@ -1,8 +1,14 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DataTable, type DataTableColumn } from "./DataTable";
+import { useIsMobile } from "../hooks/useIsMobile";
 
-afterEach(cleanup);
+vi.mock("../hooks/useIsMobile", () => ({ useIsMobile: vi.fn(() => false) }));
+
+afterEach(() => {
+  cleanup();
+  vi.mocked(useIsMobile).mockReturnValue(false);
+});
 
 interface Row {
   id: string;
@@ -54,9 +60,14 @@ describe("DataTable selection", () => {
     { id: "1", name: "a" },
     { id: "2", name: "b" },
   ];
-  const renderSelectable = (selected: Set<string>, onSelectChange: (keys: Set<string>) => void) =>
+  const renderSelectable = (
+    selected: Set<string>,
+    onSelectChange: (keys: Set<string>) => void,
+    mobileCards = false,
+  ) =>
     render(
       <DataTable<Row>
+        mobileCards={mobileCards}
         columns={[{ key: "name", header: "Name" }]}
         data={TWO}
         rowKey={(row) => row.id}
@@ -92,5 +103,16 @@ describe("DataTable selection", () => {
     renderSelectable(new Set(["1", "2"]), fn);
     fireEvent.click(screen.getByLabelText("select all rows"));
     expect(fn).toHaveBeenCalledWith(new Set());
+  });
+
+  it("uses the shared CheckboxControl for the row checkbox in card mode", () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    const fn = vi.fn();
+    renderSelectable(new Set(), fn, true);
+    expect(document.querySelector(".comp-table__card")).not.toBeNull();
+    const box = screen.getByLabelText("select row 2") as HTMLInputElement;
+    expect(box.classList.contains("comp-checkbox")).toBe(true);
+    fireEvent.click(box);
+    expect(fn).toHaveBeenCalledWith(new Set(["2"]));
   });
 });
