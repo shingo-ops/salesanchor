@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -67,5 +69,44 @@ describe('CheckboxControl', () => {
     // @ts-expect-error type is not part of CheckboxControlProps
     render(<CheckboxControl checked={false} onChange={() => {}} aria-label="z" type="radio" />);
     expect(screen.getAllByLabelText(/^[xyz]$/)).toHaveLength(3);
+  });
+
+  it('applies dataColor as accent-color and adds no style attribute without it', () => {
+    render(<CheckboxControl dataColor="#123456" checked onChange={() => {}} aria-label="c" />);
+    expect((screen.getByLabelText('c') as HTMLInputElement).style.accentColor).toBe('rgb(18, 52, 86)');
+    cleanup();
+    render(<CheckboxControl checked onChange={() => {}} aria-label="d" />);
+    expect((screen.getByLabelText('d') as HTMLInputElement).hasAttribute('style')).toBe(false);
+  });
+});
+
+// dataColor の使い手は登録制（design.md:826 データ由来の色だけ。通常 UI の色をこの口で通さない）。
+// 新しい使い手は下の登録表を書き換える PR になり、審査で止まる。
+// 注: design.md:874 の Badge の dataColor が実装されるとこの試験は赤になる（安全側）。その便で登録表を部品ごとに分けるか、この表に足す。
+describe('CheckboxControl dataColor registry (AY-4c-2b)', () => {
+  const srcRoot = resolve(__dirname, '..');
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+      const full = join(dir, d.name);
+      if (d.isDirectory()) return walk(full);
+      return /\.tsx?$/.test(d.name) ? [full] : [];
+    });
+  const files = walk(srcRoot)
+    .map((f) => relative(srcRoot, f))
+    .filter((rel) => !/\.test\.tsx?$/.test(rel) && !/\.stories\.tsx$/.test(rel) && rel !== 'components/CheckboxControl.tsx');
+  const registry: Array<[string, number]> = [['pages/schedule/SchedulePageImpl.tsx', 2]];
+
+  it('dataColor appears only in the registered files with the registered counts', () => {
+    const found: Array<[string, number]> = [];
+    for (const rel of files) {
+      const n = readFileSync(join(srcRoot, rel), 'utf8').match(/\bdataColor\b\s*[=:]/g)?.length ?? 0;
+      if (n > 0) found.push([rel, n]);
+    }
+    expect(found.sort()).toEqual([...registry].sort());
+  });
+
+  it.each(registry)('%s passes only dataColor={owner.color}', (rel, count) => {
+    const src = readFileSync(join(srcRoot, rel), 'utf8');
+    expect(src.match(/\bdataColor\b\s*=\s*\{owner\.color\}/g)?.length).toBe(count);
   });
 });
