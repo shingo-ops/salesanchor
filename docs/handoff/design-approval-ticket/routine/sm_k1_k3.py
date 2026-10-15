@@ -5,6 +5,10 @@ sha256 の計算方法（設計書 §5-6）: json.dumps(obj, sort_keys=True, ens
 separators=(",", ":")) を UTF-8 にした sha256。
 K1: 基準の写しの autoMode に、台帳「記録」節の「種別=結果」かつ結果が 適用／適用（PO）の行を順に当てる。
     add=末尾に足す／remove: 全文=一致する要素を外す／remove: sha256=<値>=文の sha256 が一致する要素を外す。
+    add: sha256=<値>=repo の外の allow-text-<値>.txt を読み、sha256 が一致したときだけ allow の末尾に足す。
+    env-add: sha256=<値>=同様に env-text-<値>.txt を environment の末尾に足す。
+    env-remove: sha256=<値>=sha256 が一致する environment の要素を外す。
+    外のファイルが無い／一致しない=エラー（設計書 §5-6 例外の2）。
 K3: 保護対象の sha256 を前回の値と比べる。--save のときだけ前回の値を書く。
 
 使い方:
@@ -36,6 +40,10 @@ LEDGER_CELLS = 11
 APPLIED = ("適用", "適用（PO）")
 SM_PREFIX = "SM-"
 SHA_RE = re.compile(r"^remove:\s*sha256=([0-9a-f]{64})\b")
+ADD_SHA_RE = re.compile(r"^add:\s*sha256=([0-9a-f]{64})\b")
+ENV_ADD_RE = re.compile(r"^env-add:\s*sha256=([0-9a-f]{64})\b")
+ENV_REMOVE_RE = re.compile(r"^env-remove:\s*sha256=([0-9a-f]{64})\b")
+OUTSIDE_DIR = os.path.expanduser("~/.claude/logs")
 
 
 def canonical_sha(obj):
@@ -79,16 +87,41 @@ def ledger_rows(path):
     return rows
 
 
-def replay(baseline_mode, rows):
+def read_outside(outside_dir, prefix, sha):
+    path = os.path.join(outside_dir, "%s-%s.txt" % (prefix, sha))
+    try:
+        with open(path, encoding="utf-8", newline="") as f:
+            content = f.read()
+    except FileNotFoundError:
+        raise ValueError("外のファイルが無い: %s-%s…" % (prefix, sha[:12]))
+    if text_sha(content) != sha:
+        raise ValueError("外のファイルの sha256 が一致しない: %s…" % sha[:12])
+    return content
+
+
+def replay(baseline_mode, rows, outside_dir=OUTSIDE_DIR):
     allow = list(baseline_mode.get("allow", []))
+    env = list(baseline_mode.get("environment", []))
     applied = 0
     for cells in rows:
         kind, result, change = cells[1], cells[3], cells[4]
         if kind != "結果" or result not in APPLIED:
             continue
+        add_sha = ADD_SHA_RE.match(change)
+        env_add = ENV_ADD_RE.match(change)
+        env_remove = ENV_REMOVE_RE.match(change)
         sha = SHA_RE.match(change)
-        if change.startswith("add:"):
+        if add_sha:
+            allow = allow + [read_outside(outside_dir, "allow-text", add_sha.group(1))]
+        elif change.startswith("add:"):
             allow = allow + [change[len("add:"):].strip()]
+        elif env_add:
+            env = env + [read_outside(outside_dir, "env-text", env_add.group(1))]
+        elif env_remove:
+            idx = next((i for i, e in enumerate(env) if text_sha(e) == env_remove.group(1)), -1)
+            if idx < 0:
+                raise ValueError("env-remove(sha256=%s…) に一致する要素が無い" % env_remove.group(1)[:12])
+            env = env[:idx] + env[idx + 1:]
         elif sha:
             idx = next((i for i, a in enumerate(allow) if text_sha(a) == sha.group(1)), -1)
             if idx < 0:
@@ -103,7 +136,10 @@ def replay(baseline_mode, rows):
         else:
             raise ValueError("変更の欄を読めない: %s" % change[:40])
         applied += 1
-    return {**baseline_mode, "allow": allow}, applied
+    result_mode = {**baseline_mode, "allow": allow}
+    if "environment" in baseline_mode:
+        result_mode["environment"] = env
+    return result_mode, applied
 
 
 def run_k1(args):
