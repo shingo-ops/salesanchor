@@ -12,7 +12,7 @@ mode: handoff
 
 **対象ADR**: ADR-1017（草案・Proposed。`docs/adr/ADR-1017-inventory-viewer-separate-accounts.md`）  
 **recon**: docs/handoff/gas-viewer-fresh-fast/recon.md ／ docs/handoff/gas-viewer-fresh-fast/security-recon.md  
-**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち。**r7 で審査する**  
+**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち → r7 REVISE（Blocking 1、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r7.txt）→ 本版で B-1・N-1〜N-9 に対応し、PR #4293 で委任を PR の GO に絞ったことに合わせて操作の GO を PO 本人に直した（Q12 を追加）。**r8 で審査する**  
 **日付**: 2026-10-15  
 **担当**: Planner（Claude Opus）  
 **状態**: 設計案（草案）。PO 決定待ちの項目が残っているので、実装には進めない（§PO 決定待ち）。
@@ -115,9 +115,9 @@ mode: handoff
   - ログ：build_distribution_rows はログを出さない。今の4つのログ（svc:881・:909 の warning、:923・:936 の error）は run_distribution の側に残す。作り置きのタスクは "[dist]" のログを出さない（毎分の hold で "[dist]" の warning が並ばないようにするため）。作り置きは unset・error のときだけ、自分のロガーで "[viewer-cache]" を付けて1行出す。
   - run_distribution の変更前後：
     - 変更前：svc:861-943 に、手順0（#8）・0-b（#8b）・1（設定）・2（fetch_output_rows）と、4つの早期 return（svc:882・:910・:924・:937）がある。
-    - 変更後：`result = await build_distribution_rows(db)` を1回呼ぶ。kind が hold・unset・error なら、今と同じ水準のログ（hold は warning、unset・error は error。error のときのログ文は今の「出力データ取得エラー: %s」と同じ意味の文で、exc を含める）を出し、今と同じ形の辞書（run_id None、output_count 0、results []、errors [{"target_id": None, "error": result.message}]）を返す。ok なら `rows = result.rows` として svc:945 以降へ進む。
+    - 変更後：`result = await build_distribution_rows(db)` を1回呼ぶ。kind が hold・unset・error なら、今と同じ水準のログ（hold は warning、unset・error は error。ログの本文は result.message をそのまま出す。error の message は `f"出力データ取得失敗: {exc}"` なので exc の内容を含む。DistributionRowsResult に exc の欄は足さない）を出し、今と同じ形の辞書（run_id None、started_at（今と同じく run_distribution の冒頭 svc:859 で取った値の isoformat）、output_count 0、results []、errors [{"target_id": None, "error": result.message}]）の5キーを返す。ok なら `rows = result.rows` として svc:945 以降へ進む。
     - 触らない範囲：svc:945 以降（output_count の計算、配信先の取得、書き込み、DB 記録、Discord 通知）と、関数の引数・docstring の手順の番号。
-  - 作り置きの対応：ok → 書く。hold → 何もしない（前回の値と updated_at を残す。fail_count も変えない）。unset・error → 前回の値を残し、fail_count を1増やす。
+  - 作り置きの対応：ok → 書く。hold → 何もしない（前回の値と updated_at を残す。fail_count も変えない）。unset・error → 前回の値を残し、fail_count を1増やす。build_distribution_rows が外へ投げた例外（DB 接続の失敗など）と、Redis への書き込みの例外も、作り置きのタスクの中で捕まえて error と同じ扱いにする（前回の値を残し、fail_count を1増やす。審査 r7-N-3）。fail_count の incr 自体が Redis の障害で失敗したときは、ログを1行出して終わる（数えられない場合は、継続の「updated_at から10分」の監視で気付く）。
 - 結果は D2 で決めた列だけに絞った JSON にして、Redis のキー `viewer:inventory:v1` に置く。TTL は 24 時間にする。タスクが3分止まってもキーが消えず、閲覧者には「最終更新」が古いことで鮮度が伝わる（審査 B-3）。
 - キーが無いとき（Redis の再起動直後など）は、GET /viewer/inventory が 503 を返す。ページには i18n の「準備中です」を出す。
 - これは正本の一時的な写しで、書き手はこのタスク1つだけにする。DB の表やシートには写しを作らない（SSOT）。
@@ -184,13 +184,13 @@ mode: handoff
   - 閲覧ページの文言は、新しい辞書 frontend/src/locales/viewer/ja.json と en.json に置く。キーはすべて `viewer.` で始める。本体の ja.json（254KB）を閲覧ページに読み込むと 300KB の上限を超えるため。本体の辞書には `viewer.` のキーを置かない（同じ文言を2か所に持たない）。
   - 例外（審査 r6 B-5）：【事実】金型の中にも t() がある。Drawer.tsx:146 は t("suppliers.openFullPage")、Drawer.tsx:157・Sheet.tsx:141・Modal.tsx:134 は t("common.close") を使う（origin/main）。金型は変えない。閲覧ページが使う金型の中のキーだけは、viewer の辞書にも同じキー名で入れる（例：common.close）。同じ文言が本体と viewer の2か所に入るのはこの例外だけで、対象は「viewer の入口から import される `frontend/src/components/` のファイルの t() のキー」に限る。下の検査がこの集合を自動で数えるので、手で一覧を持たない。
   - 閲覧ページは frontend/src/pages/viewer/i18n.ts で、この2つの辞書だけを読み込む。本体の `frontend/src/i18n.ts` は読み込まない。
-  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、src/pages/viewer/ の中のファイルと、そこから import される frontend/src/components/ のファイル（import をたどって集める）は viewer の辞書でも探す。それ以外は今までどおり本体の辞書で探す（金型のキーは本体の辞書でも引き続き探す）。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
+  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、次の3つに書き分ける（審査 r7-N-4）。①src/pages/viewer/ の中のファイルは、viewer の辞書だけで探す。②そこから import される frontend/src/components/ のファイル（import をたどって集める）は、本体の辞書と viewer の辞書の両方で探す。③それ以外は今までどおり本体の辞書だけで探す。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
 - ビルドの大きさと辞書の混入の測り方（審査 r6 B-4）：
   - 【事実】Vite は JS を dist/assets/ にまとめて出す。dist/viewer/ の下には JS は出ないので、「dist/viewer の JS」では測れない。
-  - frontend/vite.config.ts の build に `manifest: true` を足す。ビルド後に dist/.vite/manifest.json を読み（置き場は公式資料 vite.dev/config/build-options の既定値）、入口 viewer/index.html の項目から file・imports・css をたどった集合を「viewer の資産」とする（dynamicImports もたどる。たどり方は公式資料 vite.dev/guide/backend-integration の importedChunks と同じ）。
+  - manifest は vite.config.ts には書かず、CI のビルドでだけ CLI の `--manifest` を付けて出す（審査 r7-N-6。vite.config.ts に書くと、本番のビルド＝frontend/Dockerfile:22 の出力にも manifest が入り、nginx がそのまま返すため）。ビルド後に dist/.vite/manifest.json を読み（置き場は公式資料 vite.dev/config/build-options の既定値）、入口 viewer/index.html の項目から file・imports・css をたどった集合を「viewer の資産」とする（dynamicImports もたどる。たどり方は公式資料 vite.dev/guide/backend-integration の importedChunks と同じ）。
   - 大きさ：この集合の JS の合計（圧縮前）が 300KB 以下。
-  - 辞書の混入：この集合の JS の中に、本体の ja.json にだけあるキー（`viewer.` でもなく金型のキーでもないもの）から選んだ目印の文字列が含まれない。
-  - 検査のスクリプトは frontend/scripts/check-viewer-bundle.js に置き、CI のビルドの後に実行する。わざと viewer の中で本体の frontend/src/i18n.ts を import したときに、この検査が失敗することを段3で1回確かめ、生の出力を残す。
+  - 辞書の混入：この集合の JS の中に、目印の文字列が含まれない。目印は、本体の ja.json にだけある葉のキー名（入れ子の最後の名前。ASCII で、本体の辞書の外には現れにくい長い名前）を5つ選び、check-viewer-bundle.js の先頭の定数に置く（審査 r7-N-5。点つきの「a.b」の形はバンドルに文字列として現れないので使わない）。選んだ5つが本当に本体の辞書にあることも、検査の最初に確かめる（辞書の変更で目印が消えたら失敗させる）。
+  - 検査のスクリプトは frontend/scripts/check-viewer-bundle.js に置く。実行する場所（審査 r7-B-1）：【事実】今の PR の CI にはフロントの本番ビルドが無い（.github/workflows/frontend-check.yml は npm ci・generate:api-types・check:all・tsc・unit tests・build-storybook だけ。本番ビルドは frontend/Dockerfile:22 のデプロイ時だけ）。そこで、.github/workflows/frontend-check.yml の lint ジョブの generate:api-types の後に、2つの手順「npx vite build --manifest」「node scripts/check-viewer-bundle.js」を足す。ジョブ名と必須チェックの名前は変えない（Branch Protection の変更にならないように）。CI 設定の変更なので、段3の PR は ADR-1015 の B 区分に当たらず、GO の手順に従う。わざと viewer の中で本体の frontend/src/i18n.ts を import したときに、この検査が失敗することを段3で1回確かめ、生の出力を残す。
 
 ### D5. 申込フォームとトライアル
 - 公開の POST /api/v1/viewer/signup を作る。
@@ -231,17 +231,18 @@ mode: handoff
 | 登録用の専用スクリプトは、登録・飛ばした・失敗の件数を出し、登録済みの email を飛ばす。2回続けて実行しても行が増えない | CI pytest（架空の3行のファイルで。本物の一覧は使わない） |
 | PO の画面の目印①（同じ閲覧者が24時間で3つ以上の別 IP）と目印②（別の閲覧者どうしで同じ IP）が、条件どおりの行にだけ付く。ログイン履歴に日時・IP・端末が出る | CI pytest（API の応答）と Evaluator（Playwright で画面） |
 | signup・verify-email・login・session の4本とも、Origin が違えば 403 になる | CI pytest（4本それぞれ） |
-| `npm run build` の後に dist/index.html と dist/viewer/index.html の両方ができ、manifest の viewer 入口からたどった JS に本体の辞書の目印の文字列が含まれない。viewer の中でわざと本体の i18n.ts を import すると検査が失敗する | CI（check-viewer-bundle.js。失敗の確認は段3で1回、生の出力を残す） |
+| CI の `npx vite build --manifest`（frontend-check.yml の lint ジョブに足す手順）の後に dist/index.html と dist/viewer/index.html の両方ができ、manifest の viewer 入口からたどった JS に本体の辞書の目印の文字列が含まれない。viewer の中でわざと本体の i18n.ts を import すると検査が失敗する | CI（frontend-check.yml の lint ジョブで check-viewer-bundle.js。失敗の確認は段3で1回、生の出力を残す）。本番のビルド（Dockerfile:22）の dist に .vite/manifest.json が無いことも段3で1回確かめる |
 | src/pages/viewer の t() のキーと、そこから import される金型の t() のキー（例：common.close）が viewer の辞書に無ければ検査が失敗する。viewer の ja と en のキーの集合が違えば失敗する | CI（check-i18n-missing-keys.js。わざと欠けたキーで失敗することを1回確かめる） |
 | beat に refresh-viewer-inventory があり、周期が 60.0 秒である | CI pytest |
+| build_distribution_rows が例外を投げたとき、作り置きは前回の値を残し、fail_count が1増える | CI pytest（mock） |
 | タスクが失敗した後、Redis の値と updated_at が変わらない。3回続けて失敗したら通知が1回だけ呼ばれ、4回目では呼ばれない。成功すると fail_count が 0 に戻る | CI pytest（mock。fail_count は Redis で数える） |
 | pending の email で signup し直すと新しい確認メールが送られ、古いトークンは使えない | CI pytest |
 | GET /api/v1/viewer/inventory を1分に20回叩いても 429 にならない | Evaluator（curl） |
 | Redis が使えないときの logout は 503 になる | CI pytest（mock） |
 | honeypot に値があると行が作られない。同じ email の4回目は 429 になる | CI pytest |
 | 7日たった pending の行は消え、trial の行は残る | CI pytest |
-| 本体の ja.json と en.json のキーが一致する。viewer の ja.json と en.json のキーも一致する | CI（check-i18n-missing-keys.js。本体の側は既存の検査、viewer の側は D4 で足す検査） |
-| viewer の JS が、圧縮前の合計で 300KB 以下 | CI（check-viewer-bundle.js。manifest の viewer 入口から imports・dynamicImports をたどった JS の合計） |
+| viewer の ja.json と en.json のキーの集合が一致する | CI（check-i18n-missing-keys.js に D4 で足す検査。本体の辞書どうしの比較は本設計の範囲外） |
+| viewer の JS が、圧縮前の合計で 300KB 以下 | CI（frontend-check.yml の lint ジョブで check-viewer-bundle.js。manifest の viewer 入口から imports・dynamicImports をたどった JS の合計） |
 | run_distribution の4つの早期 return（#8・#8b・設定なし・取得失敗）の戻り値の辞書とログの水準が、切り出しの前後で同じ | CI pytest（4つそれぞれ。errors の文言を変更前の文言と比べる） |
 | build_distribution_rows は、#8・#8b のとき kind="hold"、設定なしのとき "unset"、fetch_output_rows の例外のとき "error"、それ以外は "ok" を返し、ログを出さない | CI pytest（caplog で "[dist]" が出ないことを見る） |
 | ロック viewer:inventory:lock が取られているとき、タスクは何も書かず、fail_count も変えない | CI pytest |
@@ -301,7 +302,7 @@ mode: handoff
 | 3 | 閲覧ページ（D4） | Sonnet |
 | 4 | 申込、トライアル、pending の掃除、管理の操作（D5） | Sonnet |
 | 各段 | コード審査（Opus。PO 決定 2026-10-15 で Fable から変更）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
-| 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。状態は trial、期限は計測の日＋1日）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | Opus（GO）＋Sonnet（実行） |
+| 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。一覧ファイルは1行だけのものを別に作る。登録した時点では期限切れの trial になるので、続けて extend N=1 で「記録した時刻＋1日」にする。審査 r7-N-7）。作成は PO 本人の GO（上の「操作の GO の条件」）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | PO（GO）＋Sonnet（実行） |
 
 ---
 
@@ -347,15 +348,15 @@ mode: handoff
 - Q3.【決定 2026-10-15 PO】原文「Y,私もしくはあなたが切り替えできるようにする。私がやる場合はフロントエンドから切り替えをするがあなたに任せる場合はSSHを使用する」。切り替え（trial→active）と停止（→suspended）、停止の解除ができるのは PO と Claude だけ。
   - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:495（origin/main 65ed8cd8b））で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
   - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
-  - GO の発行者（PO 決定 2026-10-15、原文「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」）：本設計どおりの切り替え（対象1人の状態を trial→active、→suspended、suspended→元の状態のいずれかに変える）は、Opus が「POの委任に基づくClaude Opus発行」として GO を出す（委任の正式記録 docs/handoff/go-record-transcription/opus-delegation.md と同じ書き方）。複数人の一括変更・削除・本設計に無い状態の変更など、仕様から外れる操作は Opus が止めて PO に聞く。
-  - **操作の GO の条件（この1か所を正とする。審査 r6 N-9）**：Opus が委任で GO を出せるのは、次の3つをすべて満たすときだけ。①対象が1人。②変更が上の管理 API の4つ（activate・suspend・unsuspend・extend）のどれかで、上の表のとおりの遷移。③実行の前に PO へ3行で報告している（誰を・何から何へ・理由）。1つでも外れたら止めて PO に聞く。**Q9 の22人の一括登録は①を外れるので、GO は PO 本人が出す。** 計画票の計測用アカウントの作成（1人）は、③を満たせば Opus が出せる。
+  - GO の発行者（PO 決定 2026-10-15、原文「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」）：【2026-10-15 訂正】委任の正式記録（docs/handoff/go-record-transcription/opus-delegation.md。PR #4293 の審査で範囲を PR の GO に絞った）は、無制限鍵での本番の変更を含まない。CLAUDE.md:30 により、Claude の経路（無制限鍵）の操作は、作業ごとに PO 本人の GO が要る。委任を広げるには ADR と CLAUDE.md の改訂が要る（Q12）。PO の画面からの操作は PO 本人が行うので GO は要らない。複数人の一括変更・削除・本設計に無い状態の変更など、仕様から外れる操作は Opus が止めて PO に聞く。
+  - **操作の GO の条件（この1か所を正とする。審査 r6 N-9、r7-N-7）**：Claude の経路（無制限鍵）の操作は、Q12 が決まるまで、すべて PO 本人の GO で行う（CLAUDE.md:30）。依頼の前に PO へ3行で報告する（誰を・何から何へ・理由）。Q12 で委任が認められた後に Opus が GO を出せるのは、①対象が1人、②変更が上の管理 API の4つ（activate・suspend・unsuspend・extend）のどれかで上の表のとおりの遷移、③実行の前に PO へ3行で報告、の3つをすべて満たすときだけにする予定（Q12 の案）。Q9 の22人の一括登録と、計画票の計測用アカウントの作成は、Q12 の結果にかかわらず PO 本人の GO にする（4つの操作に当たらないため）。
   - 期限の延長（PO 決定 2026-10-15、原文「トライアルが終了した人も任意で期間を決めて閲覧期限を延長させる機能もつけてほしい、延長させるのは延長を記録した日次から換算する」）：状態が trial の人（期限内・期限切れのどちらも）に、操作する人が日数 N（1以上の整数）を指定する。trial_expires_at は「延長を記録した時刻＋N日」になる。元の期限に足すのではない。状態は trial のまま。PO の画面と Claude の経路の両方から同じサービス関数で行い、変更前後の期限・N・実行者・日時を記録する。
   - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す。保存先は新しい表 public.viewer_status_changes にする。【事実】既存の tenant の audit_logs は tenant_id と user_id が必須で、閲覧者には使えない（backend/app/services/audit.py:277-）。auth_events は「誰が」の列が無い（migrations/001_create_auth_events.sql:6-16）。public.audit_log（migrations/20260921_110000_pipeline_tables_public.sql:404-413）は record_id が UUID 型で、閲覧者の id（BIGSERIAL）を入れられない。また、この表は TCG の商品の編集の履歴で、書き手は商品詳細の処理（backend/tests/test_tcg_product_detail_pg.py:194 で確認される経路）なので、閲覧者の状態の履歴を混ぜない。
     - 列：id、viewer_id（viewer_accounts への FK）、action（activate・suspend・unsuspend・extend の4つ）、from_status、to_status、from_expires_at、to_expires_at、extend_days（extend のときだけ）、actor（po か claude の2値）、actor_user_id（PO の画面からのときの users.id。ADR-1008 に従い users を指す。Claude の経路では NULL）、created_at。
     - 停止の解除（unsuspend）は、その閲覧者の最後の suspend の行の from_status に戻す。viewer_accounts に「停止前の状態」の列は足さない（同じ事実を2か所に持たないため）。suspend の行が無いのに解除しようとしたら 409 にする。
     - 状態と期限の正本は viewer_accounts。この表は「いつ・誰が・何を変えたか」の履歴だけを持つ。保存期間は Q7 で決める。
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
-  - 管理 API と画面（段4。審査 r6 N-8）：router は新しいファイル backend/app/routers/super_admin_viewers.py にし、前例 super_admin_phase_switch.py（:60-64 の `/super-admin/...` の形、main.py:639 の prefix "/api/v1"）にならう。すべて require_super_admin。入出力は JSON。
+  - 管理 API と画面（段4。審査 r6 N-8）：router は新しいファイル backend/app/routers/super_admin_viewers.py にし、前例 super_admin_phase_switch.py（:62-66 の `/super-admin/...` の形、main.py:639 の prefix "/api/v1"）にならう。すべて require_super_admin。入出力は JSON。
 
     | method とパス | 入力 | 出力 | エラー |
     |---|---|---|---|
@@ -367,7 +368,7 @@ mode: handoff
     | POST /api/v1/super-admin/viewers/{id}/extend | {"days": N} | 同上 | 403・404・409（trial 以外）・422（N が1未満か整数でない） |
 
     - 4つの変更の API は、1つのサービス関数（backend/app/services/viewer_admin.py。Claude の専用スクリプトもこれを呼ぶ）を呼び、同じトランザクションで viewer_status_changes に1行書く。
-    - 画面は pages/super-admin/ 配下に1ページ。部品：一覧は DataTable、状態は Badge、操作は Button、延長の日数は TextField type="number"、確認は Modal、ログイン記録は Drawer。すべて既存の金型で足りる。文言は本体の ja.json・en.json（社員の画面なので viewer の辞書ではない）。
+    - 画面は frontend/src/pages/super-admin/ViewerAccountsPage.tsx の1ページ。部品：一覧は DataTable、状態は Badge、操作は Button、延長の日数は TextField type="number"、確認は Modal、ログイン記録は Drawer。すべて既存の金型で足りる。文言は本体の ja.json・en.json（社員の画面なので viewer の辞書ではない）。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
 - Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
 - Q6.【決定 2026-10-15 PO「Y」】別のメールでの申込み直しは自動では止めない。気付いたら PO か Claude が停止する。判断の材料として、下のログイン記録と、申込一覧で同じ LINE 名・同じ IP の行に目印を出す。
@@ -378,7 +379,10 @@ mode: handoff
   - IP の取り方は、本設計の回数制限と同じ1つの関数を使う（X-Real-IP）。【事実】既存の _get_client_ip は X-Forwarded-For の先頭を使っている（backend/app/auth/dependencies.py:67-72）。閲覧者ではこれを使わない。理由は D1 の回数制限と同じ（なりすまされない値を使うため）。
   - PO の画面：閲覧者ごとのログイン履歴（日時・IP・端末）を出す。目印を2つ出す。①同じ閲覧者が24時間のうちに3つ以上の別 IP からログインした。②別の閲覧者どうしで同じ IP からログインか申込がある。目印は判断の材料で、自動の停止はしない。
 
-- Q7. 閲覧者の個人情報を保存する期間と、削除の方法。LP のプライバシーポリシーに追記するか。
+- Q7. 閲覧者の個人情報を保存する期間と、削除の方法。LP のプライバシーポリシーに追記するか。**段4の公開と22人の登録の前提。決まるまで段4の公開をしない。**
+- B-7（審査 r6）：コミット bf255ae8b・af1d155f7 の追加行に、個人の姓が残っている（push 済み）。merge commit でマージすると main の履歴に残る。履歴を書き直して push し直すか、このまま入れるかは PO 決定待ち。**決まるまで PR #4283 を main にマージしない。**
+- SMTP（計画票 0 の①）：ログインそのものがメールのリンクなので、本番でメールを送れることが段2の本番での利用と段4の公開の前提。**確認できるまで段4の公開をしない。** 使えないときは方式を PO に相談する。
+- Q12. Claude の経路（無制限鍵）での閲覧者の操作の GO を、Opus に委任するか。委任するなら、ADR-1003 の改訂か新しい ADR と CLAUDE.md:30 の改訂が要る（別の PR）。委任しないなら、操作は毎回 PO 本人の GO か、PO の画面から PO が行う。
 - Q11.（審査 r6 B-1）再解析・抽出の途中（保留）の間、閲覧ページの表をどうするか。
   - 案 y：GAS と同じく前回の表のまま止める（D3 の今の案）。未確定の行を出さない（安全装置 #8 の目的）。そのかわり、保留が続くと「最終更新」が1分より古くなる。KGI2 に「保留の間を除く」を足し、受入条件に「保留でないときは updated_at が60秒以内（本番で curl）」を足す。
   - 案 n：アプリの在庫表と同じく、保留中も新しい行を出す（r5 の形）。最終更新は常に1分以内になるが、再解析の途中の行（単位が未確定のもの）が見える。GAS とは見え方がずれる。
