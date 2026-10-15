@@ -189,6 +189,16 @@ class G2Index:
     name_entries: tuple[ProductEntry, ...]
     base_entries: tuple[ProductEntry, ...]
     code_values: frozenset[str]
+    # 状態マスタ（public.conditions）の合図の語（正規化済み）。除外ワードの一致が、これより長い合図の語に収まるときは無視する。空なら従来どおり
+    cond_terms: tuple[str, ...] = ()
+
+
+def with_cond_terms(masters: ProductFirstMasters, cond_terms: tuple[str, ...]) -> ProductFirstMasters:
+    """masters の形G2 の索引に合図の語を持たせた複製を返す（元は変えない）。cond_terms が空なら masters をそのまま返す。"""
+    if not cond_terms:
+        return masters
+    index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
+    return dataclass_replace(masters, g2_index=dataclass_replace(index, cond_terms=cond_terms))
 
 
 def build_g2_index(
@@ -232,7 +242,7 @@ def _g2_hits(block: str, index: G2Index) -> dict[int, _G2Hit]:
             name_hit=name_hit,
             code_hit=False if entry.work_id in index.name_only_work_ids else (basis or code_keyword),
             any_hit=basis or bool(keywords),
-            excluded=bool(_excluded_keywords(entry, nb, folded, True)),
+            excluded=bool(_excluded_keywords(entry, nb, folded, True, index.cond_terms)),
         )
     return hits
 
@@ -258,7 +268,7 @@ def match_product_g2(block: str, index: G2Index) -> MatchResult:
     N が0：型番だけでも決めてよい中分類の商品で、型番が当たり除外ワードに当たらないもの。
     """
     candidates = _g2_candidates(_g2_hits(block, index), index)
-    base = match_product(block, index.base_entries, strict_codes=True)
+    base = match_product(block, index.base_entries, strict_codes=True, cond_terms=index.cond_terms)
     if not candidates:
         return dataclass_replace(
             base, status="unmatched", product_id=None, work_id=None, candidates=(), basis="",
