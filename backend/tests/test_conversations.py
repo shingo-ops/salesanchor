@@ -81,6 +81,8 @@ async def engine():
                 channel_type VARCHAR(30),
                 initiative VARCHAR(10),
                 status VARCHAR(50),
+                assigned_to INTEGER,
+                assignment_opened_at TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 next_action VARCHAR(500),
