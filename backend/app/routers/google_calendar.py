@@ -31,6 +31,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     require_tenant_admin,
     reset_tenant_context,
+    set_tenant_context,
 )
 from app.database import get_db
 from app.models import User
@@ -120,6 +121,7 @@ async def connect_callback(
     expiry = result["expiry"]
 
     try:
+        await set_tenant_context(db, tenant_id)
         await db.execute(
             text(
                 """
