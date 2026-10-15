@@ -9,7 +9,7 @@
  * - onOpenFullPage が渡された場合は「フルページで開く↗」ボタンをヘッダに表示
  * - a11y: role="dialog" / aria-modal / aria-labelledby
  * - ReactDOM.createPortal で document.body にマウント
- * - z-index: --z-drawer (299) — Modal (400) より下
+ * - z-index: --z-drawer (301) — Modal の overlay は --z-modal (400) で前面
  */
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";

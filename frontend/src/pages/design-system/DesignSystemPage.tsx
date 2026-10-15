@@ -313,7 +313,7 @@ const Z_TOKENS = [
   { name: "--z-sidebar",         value: "200", label: "sidebar" },
   { name: "--z-sidebar-overlay", value: "210", label: "sidebar overlay" },
   { name: "--z-backdrop",        value: "298", label: "backdrop" },
-  { name: "--z-drawer",          value: "299", label: "drawer" },
+  { name: "--z-drawer",          value: "301", label: "drawer" },
   { name: "--z-avatar",          value: "300", label: "avatar button" },
   { name: "--z-modal",           value: "400", label: "modal" },
   { name: "--z-toast",           value: "500", label: "toast" },
