@@ -242,4 +242,5 @@
 - 何が起きているか：監視設定のずれの確認が 50 時間以上 pushgateway に送っていない状態が 1 時間続いた（毎日 1 回の確認が 2 回続けて動かなかった）。利用者に今の影響は無い。翌営業日までに直す。
 - 最初に見るもの：Actions の実行の一覧（失敗か、そもそも起動していないか）、prod2 の runner のサービス（`systemctl status actions.runner.shingo-ops-salesanchor.salesanchor-vps`）、pushgateway のコンテナ。
 - 直し方：runner・workflow・pushgateway のどこで止まっているかを切り分けて Opus に報告する。
+- pushgateway を再起動・作り直した後：pushgateway は値を保存しない設定（docker-compose.monitoring.yml:133-150 に persistence の指定なし）なので、溜まっていた値が消える。再起動の後は、Actions で `monitoring-config-drift.yml` と `sop-health-reporter.yml` を手動で 1 回ずつ実行し、両方 success を確かめる（U19・2026-10-15 PO 決定）。
 - 止め方：`amtool silence add alertname=MonitoringConfigCheckStale --duration=PERIOD --comment=REASON`
