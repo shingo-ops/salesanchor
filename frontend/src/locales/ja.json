@@ -3791,6 +3791,12 @@
     "excludedHelp": "「{{status}}」と読んだため、在庫の対象から外しています。合っていれば「このままで良い」、違えば表の行を押して直してください。",
     "excludedHelpNoStatus": "販売状況から、在庫の対象から外しています。合っていれば「このままで良い」、違えば表の行を押して直してください。",
     "removedFromList": "この商品は要確認から外れました",
+    "revokeUndo": "元に戻す",
+    "ackedState": "この商品は確認済みです",
+    "revoke": "確認済みを取り消す",
+    "revokeConfirm": { "title": "確認済みを取り消しますか？", "message": "この商品の確認済みをすべて取り消し、解析をやり直します。確認が必要な理由が残っていれば、要確認の一覧に戻ります。", "confirm": "取り消す" },
+    "revoked": "確認済みを取り消しました。解析をやり直しています",
+    "revokeFailed": "取り消せませんでした。もう一度お試しください",
     "productLabel": "商品",
     "productCurrent": "今の商品: {{name}}",
     "reassign": "この商品に付け替える",
@@ -5243,11 +5249,13 @@
     "reviewReasons": "確認理由",
     "createdAt": "日時",
     "noItems": "要確認の商品はありません",
+    "ackedEmpty": "確認済みの商品はありません",
     "pidUnresolved": "商品未特定",
     "multiCandidate": "複数候補",
     "noteUnmatched": "備考未一致",
     "tabs": {
       "production": "本番の確認待ち",
+      "acked": "確認済み",
       "posts": "投稿"
     },
     "inline": {

@@ -46,10 +46,10 @@ it("fetches production review results on the default tab", async () => {
   );
 });
 
-it("shows only the production and posts tabs", async () => {
+it("shows the production, checked and posts tabs in this order", async () => {
   view();
   await waitFor(() => expect(api.get).toHaveBeenCalled());
-  expect(screen.getAllByRole("tab")).toHaveLength(2);
+  expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Production review", "Checked", "Posts"]);
   expect(screen.queryByText("Shadow run review")).toBeNull();
   expect(screen.queryByText("Bottlenecks")).toBeNull();
 });

@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useLocale } from "../../contexts/LocaleContext";
 import { SelectControl } from "../../components/Select";
+import { Toggle } from "../../components/Toggle";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -21,15 +22,11 @@ export default function PreferencesSection() {
         <label htmlFor="dark-mode-toggle" className="account-settings-pref-label">
           {t("accountSettings.darkModeLabel")}
         </label>
-        <label className="toggle-switch">
-          <input
-            id="dark-mode-toggle"
-            type="checkbox"
-            checked={theme === "dark"}
-            onChange={(e) => changeTheme(e.target.checked ? "dark" : "light")}
-          />
-          <span className="toggle-slider" aria-hidden="true" />
-        </label>
+        <Toggle
+          id="dark-mode-toggle"
+          checked={theme === "dark"}
+          onCheckedChange={(next) => changeTheme(next ? "dark" : "light")}
+        />
       </div>
 
       <div className="account-settings-pref-row">
