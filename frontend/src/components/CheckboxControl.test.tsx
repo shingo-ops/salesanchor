@@ -12,7 +12,7 @@ describe('CheckboxControl', () => {
     const el = container.firstChild as HTMLInputElement;
     expect(el.tagName).toBe('INPUT');
     expect(el.type).toBe('checkbox');
-    expect(el.className).toBe('comp-checkbox');
+    expect(el.className).toBe('comp-checkbox-control');
   });
 
   it('passes checked, onChange, disabled, aria-label, data-testid, name and value to the same input', () => {
@@ -54,9 +54,9 @@ describe('CheckboxControl', () => {
     expect(fnRef).toHaveBeenCalledWith(b);
   });
 
-  it('adds comp-checkbox--sm when size is sm', () => {
+  it('adds comp-checkbox-control--sm when size is sm', () => {
     render(<CheckboxControl size="sm" checked={false} onChange={() => {}} aria-label="x" />);
-    expect(screen.getByRole('checkbox').className).toBe('comp-checkbox comp-checkbox--sm');
+    expect(screen.getByRole('checkbox').className).toBe('comp-checkbox-control comp-checkbox-control--sm');
   });
 
   it('does not accept className, style or type (type-level)', () => {

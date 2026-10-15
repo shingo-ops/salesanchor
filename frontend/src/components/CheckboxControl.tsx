@@ -36,7 +36,7 @@ export const CheckboxControl = forwardRef<HTMLInputElement, CheckboxControlProps
     <input
       ref={setRef}
       type="checkbox"
-      className={`comp-checkbox${size === "sm" ? " comp-checkbox--sm" : ""}`}
+      className={`comp-checkbox-control${size === "sm" ? " comp-checkbox-control--sm" : ""}`}
       {...rest}
     />
   );
