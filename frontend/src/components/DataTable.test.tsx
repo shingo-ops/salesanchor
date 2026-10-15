@@ -111,7 +111,7 @@ describe("DataTable selection", () => {
     renderSelectable(new Set(), fn, true);
     expect(document.querySelector(".comp-table__card")).not.toBeNull();
     const box = screen.getByLabelText("select row 2") as HTMLInputElement;
-    expect(box.classList.contains("comp-checkbox")).toBe(true);
+    expect(box.classList.contains("comp-checkbox-control")).toBe(true);
     fireEvent.click(box);
     expect(fn).toHaveBeenCalledWith(new Set(["2"]));
   });
