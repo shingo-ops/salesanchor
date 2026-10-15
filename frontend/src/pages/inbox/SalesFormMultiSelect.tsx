@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { TextFieldControl } from "../../components/TextField";
+import { CheckboxControl } from "../../components/CheckboxControl";
 import type { SalesFormOption, SalesFormSelectionState } from "./inbox.types";
 
 interface Props {
@@ -131,8 +132,7 @@ export function SalesFormMultiSelect({ options, value, onChange, onBlur }: Props
                 className={`sales-form-option${checked ? " sales-form-option--checked" : ""}`}
                 data-testid={`sales-form-option-${option.value}`}
               >
-                <input
-                  type="checkbox"
+                <CheckboxControl
                   checked={checked}
                   onChange={() => toggleOption(option)}
                   aria-label={option.label}

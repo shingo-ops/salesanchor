@@ -244,39 +244,127 @@ def _keyword_matches(
     return tuple(matched)
 
 
+def build_cond_terms(cond_entries: Sequence[dict]) -> tuple[str, ...]:
+    """状態マスタ（public.conditions）の合図の語を、照合と同じ正規化にしたタプルで返す（長い順・重複なし）。
+
+    対象は match_type が KEYWORD / LITERAL の行の search_kw（カンマ区切り）だけ。REGEX / DEFAULT は語として扱えないので入れない。
+    """
+    terms: set[str] = set()
+    for entry in cond_entries:
+        if entry.get("match_type", "KEYWORD") not in _COND_TERM_TYPES:
+            continue
+        for raw in (entry.get("search_kw") or "").split(","):
+            normalized = _normalize_value(raw.strip())
+            if normalized:
+                terms.add(normalized)
+    return tuple(sorted(terms, key=lambda t: (-len(t), t)))
+
+
+_COND_TERM_TYPES = frozenset({"KEYWORD", "LITERAL"})
+_FOLDED_GAP = r"(?:[^\w]|_)*"
+
+
+@lru_cache(maxsize=_VALUE_CACHE_SIZE)
+def _folded_term_pattern(normalized: str) -> re.Pattern[str]:
+    """正規化済みの語の文字の間に、nb で消える文字（空白・記号）を許す正規表現。folded（空白と記号が残る文字列）用。"""
+    return re.compile(_FOLDED_GAP.join(re.escape(ch) for ch in normalized))
+
+
+def _blank_spans(text: str, spans: Sequence[tuple[int, int]]) -> str:
+    """spans の範囲を同じ長さの空白に置き換える（位置は変えない）。"""
+    chars = list(text)
+    for start, end in spans:
+        for i in range(start, end):
+            chars[i] = " "
+    return "".join(chars)
+
+
+def _mask_contained(
+    normalized: str, nb: str, folded: str | None, cond_terms: Sequence[str]
+) -> tuple[str, str | None]:
+    """除外語（正規化済み）の一致箇所のうち、より長い合図の語の一致箇所に完全に収まるものを空白にした (nb, folded) を返す。
+
+    合図の語は、除外語より正規化後の長さが長く、除外語を含むものだけが対象。nb は文字列の位置、folded は記号・空白を許す位置で探す。
+    """
+    nb_spans: list[tuple[int, int]] = []
+    fo_spans: list[tuple[int, int]] = []
+    size = len(normalized)
+    inner = re.compile("(?=" + re.escape(normalized) + ")")
+    inner_folded = _folded_term_pattern(normalized)
+    for cue in cond_terms:
+        if len(cue) <= size or normalized not in cue:
+            continue
+        offsets = [m.start() for m in inner.finditer(cue)]
+        for m in re.finditer("(?=" + re.escape(cue) + ")", nb):
+            nb_spans.extend((m.start() + o, m.start() + o + size) for o in offsets)
+        if folded is not None:
+            for m in _folded_term_pattern(cue).finditer(folded):
+                sub = folded[m.start():m.end()]
+                fo_spans.extend((m.start() + i.start(), m.start() + i.end()) for i in inner_folded.finditer(sub))
+    if not nb_spans and not fo_spans:
+        return nb, folded
+    return _blank_spans(nb, nb_spans), (_blank_spans(folded, fo_spans) if folded is not None else None)
+
+
+def _exclude_hit(keyword: str, nb: str, folded: str | None, strict_codes: bool) -> bool:
+    """除外ワード1つが nb（folded）に当たるか。"""
+    if strict_codes and folded is not None:
+        strict_result = _strict_code_hits(keyword, nb, folded)
+        if strict_result is not None:
+            return strict_result
+    normalized = _normalize_value(keyword)
+    if not normalized or normalized not in nb:
+        return False
+    if folded is not None and _needs_boundary(normalized) and not has_left_word_boundary(folded, keyword):
+        return False
+    return True
+
+
 def _excluded_keywords(
-    product: ProductEntry, nb: str, folded: str | None = None, strict_codes: bool = False
+    product: ProductEntry,
+    nb: str,
+    folded: str | None = None,
+    strict_codes: bool = False,
+    cond_terms: Sequence[str] = (),
 ) -> tuple[str, ...]:
     """exclude_keywords のうち、正規化したものが nb に含まれるものを返す。
 
     strict_codes=True（folded も必要）のときは、品番らしい除外ワードは前後が区切られているときだけ当たりとする。
+
+    cond_terms（正規化済みの状態の合図の語。既定は空＝従来どおり）を渡すと、除外ワードの一致箇所が、それより長い合図の語
+    （例：除外ワード AR・合図の語 ARパック）の一致箇所に完全に収まるときだけ、その一致を無視する。
+    無視されない一致が1つでも残れば、従来どおり除外する。
     """
     excluded: list[str] = []
     for keyword in product.exclude_keywords:
-        if strict_codes and folded is not None:
-            strict_result = _strict_code_hits(keyword, nb, folded)
-            if strict_result is not None:
-                if strict_result:
-                    excluded.append(keyword)
-                continue
-        normalized = _normalize_value(keyword)
-        if not normalized or normalized not in nb:
+        if not _exclude_hit(keyword, nb, folded, strict_codes):
             continue
-        if folded is not None and _needs_boundary(normalized) and not has_left_word_boundary(folded, keyword):
-            continue
+        if cond_terms:
+            normalized = _normalize_value(keyword)
+            if normalized:
+                nb_masked, folded_masked = _mask_contained(normalized, nb, folded, cond_terms)
+                if (nb_masked is not nb or folded_masked is not folded) and not _exclude_hit(
+                    keyword, nb_masked, folded_masked, strict_codes
+                ):
+                    continue
         excluded.append(keyword)
     return tuple(excluded)
 
 
-def _is_candidate(product: ProductEntry, nb: str, folded: str | None) -> bool:
+def _is_candidate(product: ProductEntry, nb: str, folded: str | None, cond_terms: Sequence[str] = ()) -> bool:
     """コード・検索ワードのどちらかに当たり、除外ワードに当たらないか。"""
     if _code_candidate_basis(product, nb, folded) is None and not _keyword_matches(product, nb, folded):
         return False
-    return not _excluded_keywords(product, nb)
+    return not _excluded_keywords(product, nb, cond_terms=cond_terms)
 
 
-def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes: bool = False) -> MatchResult:
-    """strict_codes=True（試作版 v102 だけが使う）：品番・記号・検索ワードの品番らしい値は、原文の書き方のまま前後が区切られているときだけ当たり。"""
+def match_product(
+    block: str, products: Sequence[ProductEntry], *, strict_codes: bool = False, cond_terms: Sequence[str] = ()
+) -> MatchResult:
+    """strict_codes=True（試作版 v102 だけが使う）：品番・記号・検索ワードの品番らしい値は、原文の書き方のまま前後が区切られているときだけ当たり。
+
+    cond_terms：除外ワードの一致が状態の合図の語に収まるときは無視する（`_excluded_keywords` を参照。既定は空＝従来どおり）。
+    """
     nb = normalize_for_match(block)
     folded = fold_for_match(block)
 
@@ -292,7 +380,7 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
         keywords = _keyword_matches(product, nb, folded, strict_codes)
         if basis is None and not keywords:
             # 境界の条件が無ければ候補になっていた商品を控える
-            if _is_candidate(product, nb, None):
+            if _is_candidate(product, nb, None, cond_terms):
                 boundary_dropped.append(product.id)
             continue
         if basis is not None:
@@ -303,7 +391,7 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
         if keywords:
             matched_keywords[product.id] = keywords
 
-        excluded = _excluded_keywords(product, nb, folded, strict_codes)
+        excluded = _excluded_keywords(product, nb, folded, strict_codes, cond_terms)
         if excluded:
             excluded_by[product.id] = excluded
             continue

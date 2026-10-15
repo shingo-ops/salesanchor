@@ -113,6 +113,8 @@ async def _seed(rows: Iterable, dry_run: bool) -> None:
 
     try:
         async with engine.begin() as conn:
+            # ADR-1018 段階②b: 共通仕入先（tenant_id 空行）の書込は運営文脈のみ（専用接続のため戻し不要）
+            await conn.execute(text("SET app.is_operator = 'true'"))
             before = (
                 await conn.execute(text("SELECT COUNT(*) FROM public.suppliers"))
             ).scalar_one()

@@ -28,6 +28,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StaffFormFields, type StaffFormState, type StaffRole } from "./StaffFormFields";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -285,10 +286,11 @@ export default function StaffPage() {
             };
             return (Object.entries(labels) as Array<[keyof StaffUIPreferences, string]>).map(([k, label]) => (
               <div className="form-group" key={k}>
-                <label>
-                  <input type="checkbox" checked={createForm.ui_preferences[k as keyof StaffUIPreferences]} onChange={(e) => setCreateForm({ ...createForm, ui_preferences: { ...createForm.ui_preferences, [k]: e.target.checked } })} />
-                  {" "}{label}
-                </label>
+                <Checkbox
+                  label={label}
+                  checked={createForm.ui_preferences[k as keyof StaffUIPreferences]}
+                  onChange={(e) => setCreateForm({ ...createForm, ui_preferences: { ...createForm.ui_preferences, [k]: e.target.checked } })}
+                />
               </div>
             ));
           })()}

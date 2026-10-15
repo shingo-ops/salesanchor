@@ -5,7 +5,7 @@ DB を使わず、ルーターの関数を差し替えた AsyncSession で直接
 """
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -16,6 +16,14 @@ from app.schemas.central_masters import (
     SupplierExtractionRulesResponse,
     SupplierExtractionRulesUpdate,
 )
+
+
+@pytest.fixture(autouse=True)
+def _no_operator_context_sql():
+    """モック DB は実行回数・順序を検証するため、ADR-1018 段階②b の operator 文脈 SQL は外す。
+    文脈そのものは tests/test_suppliers_rls.py（実 PostgreSQL）で検証する。"""
+    with patch("app.routers.super_admin_suppliers.set_operator_context", new_callable=AsyncMock), patch("app.routers.super_admin_suppliers.reset_operator_context", new_callable=AsyncMock):
+        yield
 
 _ALL_COLS = (
     "extraction_price_format", "extraction_qty_format", "extraction_order_pattern",
