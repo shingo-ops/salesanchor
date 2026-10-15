@@ -6,6 +6,7 @@
  *
  * TypeScript の型で規格外 size・options をコンパイルエラーにする。
  * 実画面への展開は Task 2E で行う。
+ * product-edit: 商品編集 ProductEditPage の濃い枠・OS 標準の▽。design.md §AY-3a
  */
 
 import { forwardRef, useId } from "react";
@@ -14,7 +15,7 @@ import "./FormField.css";
 
 export type SelectSize = "sm" | "md" | "lg";
 export type SelectIndicator = "default" | "none";
-export type SelectVariant = "standard" | "karte" | "header" | "tabbar";
+export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "product-edit";
 
 export interface SelectOption {
   value: string;

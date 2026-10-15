@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 |------|------|
 | ステータス | Accepted |
-| 備考 | 2026-10-13 に PO が方針を了承。同日、受入試験 S2 に合格（permission-reports/2026-10-13-s2-trial.md） |
+| 備考 | 2026-10-13 に PO が方針を了承。同日、受入試験 S2 に合格（permission-reports/2026-10-13-s2-trial.md）。2026-10-15 PO 決定で、審査担当を Fable から Opus へ変更（標準の審査は Opus） |
 | 起案日 | 2026-10-13 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-1003（GO 委譲。本 ADR は GO の範囲を変えない） |
@@ -57,5 +57,5 @@ PO が「許可保守停止」と言った時点で終える（ADR-1003 の「�
 
 ## 維持の仕組み
 
-- 守り手: 定期実行の手順9（台帳の再生による一致確認と、保護対象の sha256 比較）と Reviewer（Fable）の審査。
+- 守り手: 定期実行の手順9（台帳の再生による一致確認と、保護対象の sha256 比較）と Reviewer（Opus）の審査。
 - 記録: docs/handoff/design-approval-ticket/permission-ledger.md（変更はすべてここに残す。分散させない）。
