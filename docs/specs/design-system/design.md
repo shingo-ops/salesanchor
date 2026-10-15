@@ -4198,9 +4198,9 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 
 #### AY-4a チェック欄の共通部品 CheckboxControl（2026-10-15）
 
-- 目的: 画面ごとにばらばらだったチェック欄の見た目を、共通部品 CheckboxControl 1 つにまとめる土台を作る。本便は部品の新設と、一覧表（DataTable）の選択欄 2 件（全選択・行選択）の置き換えだけ。
+- 目的: 画面ごとにばらばらだったチェック欄の見た目を、共通部品 CheckboxControl 1 つにまとめる土台を作る。本便は部品の新設と、一覧表（DataTable）の選択欄 3 か所（全選択・表の行選択・カード行）の置き換えだけ。
 - PO 決定: 2026-10-02 Checkbox/Toggle/Radio の新規金型登録を許可（:1953）。2026-10-15「y」チェック欄の色は全部アプリの基本色 --accent（ライト #1e3a8a・ダーク #5b8dd9）。
 - 設計: docs/handoff/ay4a-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
-- 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 2 か所を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
+- 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 3 か所（全選択・表の行選択・スマホのカード行）を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
 - 実測（origin/main の DataTable.tsx＋build CSS と作業ツリーの同じもの、390/1280 × ライト/ダーク × 未選択/選択/一部選択）: 差は accent-color の auto → --accent の値だけ。数値は docs/handoff/design-system-recon/evidence-20260910/ay4a-acceptance.md。
 - 残り: AY-4b（super-admin 専用 20 件と未使用 4 件）、AY-4c（一般画面 33 件・.form-group input[type=checkbox] と .form-row input:focus の撤去・Inbox の sm・予定のデータ色 dataColor）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。

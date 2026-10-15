@@ -186,3 +186,11 @@ import に `import { CheckboxControl } from "./CheckboxControl";` を追加。
 - r1 REVISE（must 0 / should 3 / minor 5）: /tmp/CC報告ファイル/ssot-checkbox/ay4a/design-review.md
 - r2 APPROVE（must 0 / should 0。minor: check:all に lint と i18n が含まれ二重実行、害なし）: /tmp/CC報告ファイル/ssot-checkbox/ay4a/design-review-r2.md
 - 審査は Opus（2026-10-15 PO 決定）。同一系統の AI による審査で、独立した第二者レビューではない。
+
+## 追記（main 取り込み時）
+
+- origin/main の b4d1ad3f7 が DataTable にスマホのカード表示と見出し固定（sticky）を追加し、チェック欄が2か所から3か所（全選択・表の行選択・カード行）になった。
+- 3か所目（カード行）も同じ部品 CheckboxControl・同じ色（--accent）への変更で、PO 決定（チェック欄は全部 --accent）の範囲内。td/th の className、checkStickyCls などの外側は main のまま、input だけを差し替えた。
+- 置き換え後の位置: frontend/src/components/DataTable.tsx:314（カード行）、frontend/src/components/DataTable.tsx:347（全選択）、frontend/src/components/DataTable.tsx:427（表の行選択）。import は frontend/src/components/DataTable.tsx:32。
+- DataTable.css の .comp-table__check 規則は撤去済み。frontend/src 内の comp-table__check は0件。
+- 試験: frontend/src/components/DataTable.test.tsx にカード表示（useIsMobile を true にモック）で行チェック欄が comp-checkbox を持ちクリックで onSelectChange が呼ばれる試験を1件追加。
