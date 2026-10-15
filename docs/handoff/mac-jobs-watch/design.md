@@ -83,7 +83,7 @@ PO の言葉: ideal-state.md の「止まったり失敗したりしたら、Dis
 |---|---|---|
 | `unloaded:<label>` | `$MJW_LAUNCHCTL print gui/$(id -u)/<label> >/dev/null 2>&1` の終了コードが 0 でない（MJW_LABELS の各項目） | 起動直後でない回 |
 | `colima-stale` | Docker 自動停止ログの、時刻を解釈できた最後の行が `NOW - MJW_COLIMA_STALE` より古い。ログが無い・解釈できる行が無い場合も該当 | 起きていた回 |
-| `dj-stale` | 最後の「開始」行が `NOW - MJW_DJ_STALE` より古い（無い場合も該当）。かつ `BOOT_SEC < 直近04:00`（電源オフだった 04:00 の回は動かないため外す。recon §3）。かつ `NOW >= 直近04:00 + MJW_DJ_GRACE` | 起きていた回 |
+| `dj-stale` | 最後の「開始」行が `NOW - MJW_DJ_STALE` より古い（無い場合も該当） | 起きていた回、かつ `BOOT_SEC < 直近04:00`（電源オフだった 04:00 の回は動かないため。recon §3）、かつ `NOW >= 直近04:00 + MJW_DJ_GRACE`。この 3 つのどれかを満たさない回は「判定しない回」で、前回を持ち越す（復旧にしない） |
 | `dj-unfinished` | 最後の「開始」行より後に「終了」行が無く、開始から MJW_DJ_UNFINISHED 秒を超えた | 毎回 |
 | `dj-lock-stale` | MJW_DJ_LOCK が在り、その更新時刻（`stat -f %m`）が MJW_DJ_UNFINISHED 秒より古い（ロックが残ると自動片付けと Docker 自動停止が見送り続ける。scripts/disk-janitor.sh:360-365、ops/launchd/jp.salesanchor.colima-idle-stop.plist の 1 行） | 毎回 |
 
@@ -122,7 +122,7 @@ PO の言葉: ideal-state.md の「止まったり失敗したりしたら、Dis
 - 起動後の点検: `🖥️ Mac の見張り: 起動後の点検（起動 <date -r BOOT_SEC '+%Y-%m-%d %H:%M'>）` ＋ MJW_LABELS と MJW_SELF_LABEL の各行「<label>: 読み込み済み／読み込まれていません」。
 - 末尾に `ログ: ~/Library/Logs/mac-jobs-watch.log`。
 - JSON: 文中の `\` を `\\`、`"` を `\"`、改行を `\n` に置き換えて `{"content":"…"}`。固定文だけで組むので 2000 字を超えない（試験 ㉑ で 1 通 1900 バイト未満を確かめる。切り詰めはしない）。
-- 送り方は ADR-1009 の番人（tools/claude-channels/bin/sa-ops-intake-watchdog:71-72）と同じ: `printf 'url = "%s"\n' "$url" | "$MJW_CURL" -sS -o /dev/null --fail -X POST -H 'Content-Type: application/json' -d "$payload" --config - 2>/dev/null`。URL を引数・ログ・画面に出さない。`set -x` を使わない。curl の標準エラーは捨てる（失敗は終了コードだけで判断）。
+- 送り方は ADR-1009 の番人（tools/claude-channels/bin/sa-ops-intake-watchdog:71-72）と同じ: `printf 'url = "%s"\n' "$url" | "$MJW_CURL" -sS -o /dev/null --fail --max-time 20 -X POST -H 'Content-Type: application/json' -d "$payload" --config - 2>/dev/null`。URL を引数・ログ・画面に出さない。`set -x` を使わない。curl の標準エラーは捨てる（失敗は終了コードだけで判断）。
 
 ### 3-6. ログ 1 行の形
 
@@ -133,7 +133,7 @@ PO の言葉: ideal-state.md の「止まったり失敗したりしたら、Dis
 ### 3-7. 引数
 
 - 引数なし: 通常（launchd から）。
-- `--dry-run`: 判定してログに 1 行書くが、送らず、状態も変えない。通知先が無くても終了 0。
+- `--dry-run`: 判定してログに 1 行書くが（`problems=` 欄は今回の判定結果）、送らず、状態も変えない。通知先が無くても終了 0。
 - `--test-notify`: 判定も状態変更もせず「🖥️ Mac の見張り: 送信の試験です」を 1 通送り、`result=test send=ok|fail` を書く（成功 0・失敗 3）。
 
 ### 3-8. plist（`ops/launchd/jp.salesanchor.mac-jobs-watch.plist`）
@@ -142,6 +142,7 @@ ops/launchd/jp.salesanchor.colima-idle-stop.plist を手本に、違いは次だ
 - Label `jp.salesanchor.mac-jobs-watch`、実行は `bash scripts/mac-jobs-watch.sh`、文言の名前を mac-jobs-watch に。
 - 自動片付けの見送りは「ロックが在り、かつ 120 分より新しい」ときだけにする: `if [ -d /tmp/disk-janitor.lock.d ] && [ -z "$(find /tmp/disk-janitor.lock.d -maxdepth 0 -mmin +120)" ]; then echo "mac-jobs-watch: disk-janitor 実行中のため今回は見送り"; exit 0; fi`（道具のコピーの更新中に読まないため。古いロックが残ったときは見送らず、dj-lock-stale で知らせる）。
 - `StartInterval` 1800、`RunAtLoad` true、`KeepAlive` false。
+- 道具のコピーの確認に失敗したときだけ `.err` に「道具のコピーが確認できないため実行しない」と書いて終了 1。確認が通ったら `bash scripts/mac-jobs-watch.sh` の終了コード（0/2/3）をそのまま返す（確認と本体を `||` で一続きにしない）。
 - plist の XML では `&&` を `&amp;&amp;`、`>` を `&gt;` と書く（手本と同じ。逃がさないと `plutil -lint` が失敗する）。
 - `StandardOutPath`/`StandardErrorPath` は `/Users/tanizawashingo/Library/Logs/mac-jobs-watch.out`／`.err`。
 
@@ -180,6 +181,8 @@ ops/launchd/jp.salesanchor.colima-idle-stop.plist を手本に、違いは次だ
 | 通知先 URL の漏れ | 引数に出さない（標準入力の curl 設定）。ログ内容を送らない。試験 ㉑ と K5 |
 | 番人と同じチャンネルに届き、受付の通知と混ざる | 先頭を `🖥️ Mac の見張り:` に固定して区別する |
 | 通知が多すぎる | 新規・24 時間ごと・復旧の 3 種だけ。同じ回はまとめて 1 通 |
+| 状態フォルダに書けない | 起動後の点検が 30 分ごとに届き続ける（届くことで気づける）。自動では直さない |
+| 通信が止まって見張りが止まり続ける | curl に `--max-time 20` |
 | 見張り役自身が読み込みから外れる | 検知できない（§7）。起動後の点検に自分の行を入れ、再起動のたびに届くことで間接的に分かる |
 
 戻し方: `launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch` と `rm ~/Library/LaunchAgents/jp.salesanchor.mac-jobs-watch.plist`。状態は `~/Library/Application Support/mac-jobs-watch` を消せば初期化。PR を revert すれば道具のコピーからも消える。
