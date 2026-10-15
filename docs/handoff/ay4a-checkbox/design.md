@@ -65,7 +65,7 @@ export const CheckboxControl = forwardRef<HTMLInputElement, CheckboxControlProps
     <input
       ref={setRef}
       type="checkbox"
-      className={`comp-checkbox${size === "sm" ? " comp-checkbox--sm" : ""}`}
+      className={`comp-checkbox-control${size === "sm" ? " comp-checkbox-control--sm" : ""}`}
       {...rest}
     />
   );
@@ -77,9 +77,9 @@ CheckboxControl.displayName = "CheckboxControl";
 
 ```css
 /* CheckboxControl — チェック欄金型（design.md §AY-4a）。詳細度の低い順。 */
-.comp-checkbox { width: var(--size-checkbox); height: var(--size-checkbox); cursor: pointer; accent-color: var(--accent); }
-.comp-checkbox--sm { width: var(--size-checkbox-sm); height: var(--size-checkbox-sm); }
-.comp-checkbox:disabled { cursor: not-allowed; }
+.comp-checkbox-control { width: var(--size-checkbox); height: var(--size-checkbox); cursor: pointer; accent-color: var(--accent); }
+.comp-checkbox-control--sm { width: var(--size-checkbox-sm); height: var(--size-checkbox-sm); }
+.comp-checkbox-control:disabled { cursor: not-allowed; }
 ```
 
 - margin・focus の輪は指定しない（ブラウザ標準のまま。今の DataTable と同じ）。AY-4c で既存の行に合わせて判断する。
@@ -95,7 +95,7 @@ CheckboxControl.displayName = "CheckboxControl";
   2. checked/onChange/disabled/aria-label/data-testid/name/value が同じ input に渡る。
   3. indeterminate=true で DOM の indeterminate が true、false に戻すと false。
   4. 関数 ref・オブジェクト ref の両方で、渡されるのが input 要素そのもの。
-  5. size="sm" で comp-checkbox--sm が付く。
+  5. size="sm" で comp-checkbox-control--sm が付く。
   6. className・style・type を渡すと型エラー（@ts-expect-error）。type は `type="radio"` を渡す（`type="checkbox"` の文字列を test に書かない。下の grep 判定のため）。
 
 ### 変更 frontend/src/components/DataTable.tsx
@@ -193,4 +193,17 @@ import に `import { CheckboxControl } from "./CheckboxControl";` を追加。
 - 3か所目（カード行）も同じ部品 CheckboxControl・同じ色（--accent）への変更で、PO 決定（チェック欄は全部 --accent）の範囲内。td/th の className、checkStickyCls などの外側は main のまま、input だけを差し替えた。
 - 置き換え後の位置: frontend/src/components/DataTable.tsx:314（カード行）、frontend/src/components/DataTable.tsx:347（全選択）、frontend/src/components/DataTable.tsx:427（表の行選択）。import は frontend/src/components/DataTable.tsx:32。
 - DataTable.css の .comp-table__check 規則は撤去済み。frontend/src 内の comp-table__check は0件。
-- 試験: frontend/src/components/DataTable.test.tsx にカード表示（useIsMobile を true にモック）で行チェック欄が comp-checkbox を持ちクリックで onSelectChange が呼ばれる試験を1件追加。
+- 試験: frontend/src/components/DataTable.test.tsx にカード表示（useIsMobile を true にモック）で行チェック欄が comp-checkbox-control を持ちクリックで onSelectChange が呼ばれる試験を1件追加。
+
+---
+
+## 追記（本番反映後のクラス名衝突の修正）
+
+【事実】
+- frontend/src/components/CheckboxControl.css:2-4 が `.comp-checkbox`（width/height 16px・accent-color）・`.comp-checkbox--sm`・`.comp-checkbox:disabled` を定義していた（PR #4328、AY-4a）。
+- 同じ日に別 PR（9b10fa70e）で入った frontend/src/components/Checkbox.css:8-33 も `.comp-checkbox`（label 用 inline-flex）・`.comp-checkbox--sm`・`.comp-checkbox--lg` を定義。使用先は frontend/src/pages/notifications/NotificationsPage.tsx:131・:157。
+- Vite が全 CSS を1枚に束ねるため両方が全体にかかり、Checkbox の label に width/height 16px が、CheckboxControl の input に inline-flex 等がかかっていた。
+
+【修正】CheckboxControl 側だけ改名（Checkbox 側は変更なし）。
+- `comp-checkbox` → `comp-checkbox-control`、`comp-checkbox--sm` → `comp-checkbox-control--sm`
+- 変更箇所: frontend/src/components/CheckboxControl.tsx:39 / frontend/src/components/CheckboxControl.css:2-4 / frontend/src/components/CheckboxControl.test.tsx:15,57,59 / frontend/src/components/DataTable.test.tsx:114
