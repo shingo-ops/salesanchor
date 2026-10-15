@@ -90,6 +90,12 @@ PO 決定（2026-10-15 チャット、y）: 「15分ごとに見回り、DB 接�
 - 見回り役自身のログ（毎回1行以上）で動作が見える。`launchctl print` の last exit code で異常が分かる。
 - 試験 scripts/tests/test-colima-idle-stop.sh が判定の正しさを固定する。
 - 手順の正本は docs/ops/runner-commands.md の新節。
+- 守り手: scripts/tests/test-colima-idle-stop.sh（判定の正しさ）、ログ ~/Library/Logs/colima-idle-stop.log（毎回の動作）、disk-janitor（道具のコピー ~/.salesanchor-tools を毎日 04:00 に main へ更新。ops/launchd/jp.salesanchor.disk-janitor.plist:34）。人の担当は POの委任に基づく Claude Opus（変更時の審査）。
+- 守っていないもの（2026-10-15 実測。生出力 /tmp/CC報告ファイル/ac-heavy/governance/G1〜G9.txt）:
+  - CI はこの試験を実行しない（`git grep -n colima origin/main -- .github/` が0件。前例 disk-janitor も同じ）。試験は変更時に手で実行して PR に記録する。
+  - 見回り役が止まった・失敗した（`result=error`／`reason=d`）ときに人へ知らせる通知は無い（colima と通知系の語を同時に含む行0件。disk-janitor も同じ）。気づく手段はログと `launchctl print` を人が見ることだけ。
+  - 道具のコピーの更新は disk-janitor に依存する。disk-janitor が更新に失敗した日は古い版のまま動く（実例: ~/Library/Logs/disk-janitor.err 10/13 の「道具のコピーの更新・確認に失敗したため実行しない」）。
+- 動き続けていることの確認: ログに約900秒ごとの新しい行があること（10/15 10:31〜11:46 の間隔 905〜912 秒を実測）。止まったら `launchctl print gui/$(id -u)/jp.salesanchor.colima-idle-stop` の last exit code を見る。
 
 ## 関係する ADR
 - ADR-136（scripts/・ops/launchd/ は危険パス＝GO 必須）。ADR-1015（区分 A）。ADR-135（PO GO まで main に入れない）。
