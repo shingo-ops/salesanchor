@@ -115,3 +115,88 @@ mjw_disk_parse() { # DISK_GIB に空き GiB（整数・切り捨て）。読め�
 - 判定: APPROVE
 - 根拠: 追加は既存の状態型点検と同じ形（:295-333 の list_add、:168-176 の case、:179-191 の case）。通知・再送・復旧の共通処理（:374-390, :474-505）を変えない。PROB は mjw_read_state で detect 前に読まれる（:444→:448 の順）ため、prob_time disk-low を判定で使える。
 - 未解決: なし（実装承認のみ PO 待ち）。
+
+## 11. 改訂1: 知らせる前に自動片付けをその場で走らせる（2026-10-15 PO「y」）
+
+起点: Opus の問い「空きが20Gを切ったら、見張り役が自動片付けをその場で走らせるようにしますか？」への PO 回答「y」。
+消してよい範囲は 2026-10-13 の PO 承認（disk-janitor の根5か所×R1〜R4）のまま。本改訂は**走らせる時刻を早めるだけ**で、消す範囲は増やさない。
+
+### 11-1 流れ
+1. 空きが 20GiB 未満、かつ disk-low をまだ知らせていない回:
+   - 直近 24 時間に片付けを走らせていなければ → `launchctl kickstart gui/<uid>/jp.salesanchor.disk-janitor`（`-k` は付けない＝動いている最中なら二重に起こさない）。Discord には送らない。
+   - 走らせてから 25 分（1500 秒）以上たっても 20GiB 未満 → disk-low を知らせる（§3 の通常の流れ）。
+   - 走らせてから 25 分未満 → 待つ（送らない）。
+2. 知らせ済みの間は §3 のまま（25GiB 以上で「直りました」、24h ごとに「まだ続いています」）。
+3. 直近 24 時間に走らせ済みで再び 20GiB 未満になったら、走らせずにすぐ知らせる（直前に片付けた後なので、消せる物が残っていない見込みのため）。
+4. 片付けの起動に失敗しても、起動を試した時刻として記録する → 25 分後に知らせが出る（失敗で知らせが止まらない）。
+
+### 11-2 変更（scripts/mac-jobs-watch.sh）
+- 設定に追加: `MJW_DJ_LABEL:=jp.salesanchor.disk-janitor`、`MJW_DISK_KICK_WAIT:=1500`、`MJW_DISK_KICK_COOLDOWN:=86400`
+- 状態ファイルに `disk_kick=<最後に起動を試した時刻>` を追加（mjw_read_state で `ST_DKICK`、mjw_write_state で `C_DKICK` を書く。既定 0）
+- §3-3 の判定を置き換え:
+```bash
+  # disk-low（知らせる前に、片付けをその場で走らせる。改訂1）
+  mjw_disk_parse
+  DISK_KICK=0
+  if [ -n "${DISK_GIB}" ]; then
+    if [ -n "$(prob_time disk-low)" ]; then
+      [ "${DISK_GIB}" -lt "${MJW_DISK_OK_GIB}" ] && list_add DETECTED disk-low
+    elif [ "${DISK_GIB}" -lt "${MJW_DISK_LOW_GIB}" ]; then
+      if [ "${ST_DKICK}" -eq 0 ] || [ $(( NOW - ST_DKICK )) -ge "${MJW_DISK_KICK_COOLDOWN}" ]; then
+        DISK_KICK=1
+      elif [ $(( NOW - ST_DKICK )) -ge "${MJW_DISK_KICK_WAIT}" ]; then
+        list_add DETECTED disk-low
+      fi
+    fi
+  fi
+```
+- 起動は dry-run 判定（`exit 0`）の**後**、「起動後の点検」の前に置く（dry-run では走らせない）:
+```bash
+  # 空き不足 → 片付けをその場で走らせる（改訂1）
+  if [ "${DISK_KICK}" -eq 1 ]; then
+    if "${MJW_LAUNCHCTL}" kickstart "gui/$(id -u)/${MJW_DJ_LABEL}" >/dev/null 2>&1; then
+      any_sent=1; mjw_log_now disk-kick ok
+    else
+      any_sent=1; mjw_log_now disk-kick fail
+    fi
+    C_DKICK="${NOW}"
+  fi
+```
+  （`C_DKICK` は既定で `ST_DKICK` を引き継ぐ。`any_sent=1` は「result=ok を重ねて書かない」ための既存の印で、送信はしない。send 列は `ok/fail` を片付け起動の成否として使う）
+- 固定文を変更: `disk-low) 空き容量が少ないままです（いま N GiB。自動片付けを走らせた後も 20 GiB 未満）`
+- dry-run のログに起動予定が分かるよう、DISK_KICK=1 の回は events 列に `disk-kick` を出す（dry-run の行だけ）。
+
+### 11-3 試験（D㉕〜D㉙ を置き換え・追加）
+| 番号 | 条件 | 期待 |
+|---|---|---|
+| D㉕ | 19GiB・起動歴なし | 偽 launchctl に `kickstart gui/<uid>/jp.salesanchor.disk-janitor` が 1 回・送信 0・ログ `result=disk-kick send=ok`・状態 disk_kick=NOW |
+| D㉖ | D㉕ の 10 分後も 19GiB | kickstart 増えない・送信 0 |
+| D㉗ | D㉕ の 30 分後も 19GiB | 送信 1（本文「空き容量が少ないままです（いま 19 GiB」）・problems=disk-low・kickstart 増えない |
+| D㉘ | 知らせ済みで 22GiB → 26GiB | 22 では送らない、26 で「直りました」1 通 |
+| D㉙ | 知らせ済みで df が読めない | 送らない・problems に残る |
+| D㉚ | 19GiB → 片付け後 30 分で 40GiB | 送信 0・problems 空（片付けで直れば知らせない） |
+| D㉛ | kickstart が失敗（偽 launchctl の rc=1） | ログ `result=disk-kick send=fail`・30 分後 19GiB なら送信 1 |
+| D㉜ | dry-run・19GiB | kickstart 0・状態不変・ログ events に disk-kick |
+| D㉝ | 起動から 2 時間後（24h 未満）、一度 40GiB に戻った後に再び 19GiB | kickstart 増えない・すぐ送信 1 |
+
+### 11-4 受入条件の追加
+| ID | 基準 | 検証方法 |
+|---|---|---|
+| D7 | 20GiB 未満になった回に片付けが 1 回だけ起動し、直れば Discord に何も来ない | 試験 D㉕ D㉚ |
+| D8 | 片付けても 20GiB 未満なら、起動から 25〜55 分の間に知らせが 1 通届く | 試験 D㉗ D㉛ |
+| D9 | dry-run では片付けを起動しない | 試験 D㉜ |
+
+### 11-5 対象外（次の段）
+- Discord の知らせを受けて Claude に整備を指示させること。2026-10-15 調査（/tmp/CC報告ファイル/disk-20261015/recon-ops/）で、ADR-1009 の受付は本番監視チャンネルの許可 webhook だけを通し（~/sa-ops-intake/tools/claude-channels/discord-ops/lib.ts:29-34、access.json に見張り役の webhook ID 0 件）、担当 ops-worker は書き込み・実行不可（tools/claude-channels/intake/agents/ops-worker.md:4-8）、受付側 settings は `Bash(scripts/*)` 等を deny（~/sa-ops-intake/.claude/settings.local.json:19-23）。つなぐには受付の許可リスト・委任表の変更が要り、ADR-1009 の改訂として別に設計する。
+
+### 11-6 リスクの追加
+| リスク | 対処 |
+|---|---|
+| 片付けが 1 日に何度も走る | 24h に 1 回まで（MJW_DISK_KICK_COOLDOWN） |
+| 片付け中に見張り役が動く | 実機の plist は片付けの使用中の印が 120 分以内なら見張り役自体を見送る（recon §見張り役）。`kickstart` に `-k` を付けないので動作中の片付けは止めない |
+| 消す範囲が広がる | 片付けの中身（disk-janitor.sh）は変えない。起動経路は既存の LaunchAgent と同じ（--execute・道具のコピー） |
+
+### 11-7 設計審査（改訂1・同一AIの自己審査）
+- 判定: APPROVE
+- 根拠: 起動は既存 LaunchAgent（ops/launchd/jp.salesanchor.disk-janitor.plist:17 の label、docs/ops/runner-commands.md:254 の kickstart 手順）をそのまま使い、削除範囲は不変。状態追加は既存キーと同じ形（mjw_write_state :244-255）。dry-run は exit 0（:475-477）より後に起動するので走らない。
+- 未解決: なし。
