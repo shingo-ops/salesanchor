@@ -1533,6 +1533,12 @@
     "sortDesc": "▼",
     "sortNone": "↕",
     "sortBy": "Sort by {{col}}",
+    "sortMenu": {
+      "placeholder": "Sort",
+      "priceAsc": "Price: low to high",
+      "stockDesc": "Quantity: high to low",
+      "postedDesc": "Newest posts"
+    },
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
