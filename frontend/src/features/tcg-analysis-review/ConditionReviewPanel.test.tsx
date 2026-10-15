@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { api, ApiError } from "../../lib/api";
-import { ConditionReviewPanel } from "./ConditionReviewPanel";
+import { ConditionReviewPanel, isConditionFixable, isConditionReviewRelevant } from "./ConditionReviewPanel";
 import type { AnalysisReviewItem } from "./ItemComparison";
 import { hasNeedsReview } from "./reviewIssues";
 
@@ -88,6 +88,26 @@ describe("ConditionReviewPanel", () => {
       condition_review: { ...item.condition_review!, review_reasons: "pid_unresolved", classification: "none" } };
     const { container } = render(<ConditionReviewPanel item={plain} onRefresh={vi.fn()} />);
     expect(container.innerHTML).toBe("");
+  });
+  const plain = (): AnalysisReviewItem => ({ ...item, is_v102: true, system: { condition: "Sealed box" },
+    condition_review: { ...item.condition_review!, review_reasons: "pid_unresolved", classification: "none" } });
+  it("R1: isConditionFixable adds v102 items with a condition review; isConditionReviewRelevant is unchanged", () => {
+    expect(isConditionReviewRelevant(plain())).toBe(false);
+    expect(isConditionFixable(plain())).toBe(true);
+    expect(isConditionFixable({ ...plain(), is_v102: false })).toBe(false);
+    expect(isConditionFixable({ ...plain(), condition_review: null })).toBe(false);
+    expect(isConditionFixable(item)).toBe(true);
+  });
+  it("R1: fromWizard shows the select and Save for a non empty-box item, but not the empty-box confirm button", async () => {
+    render(<ConditionReviewPanel item={plain()} onRefresh={vi.fn()} fromWizard />);
+    await screen.findByRole("option", { name: "Sealed box" });
+    expect(screen.getByRole("button", { name: "Save selected condition" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Confirm empty box" })).toBeNull();
+  });
+  it("R1: an empty-box item still shows the confirm button (also from the wizard)", async () => {
+    render(<ConditionReviewPanel item={item} onRefresh={vi.fn()} fromWizard />);
+    await screen.findByRole("option", { name: "Sealed box" });
+    expect(screen.getByRole("button", { name: "Confirm empty box" })).toBeTruthy();
   });
   it("marks empty-only review rows as needing review", () => { expect(hasNeedsReview(["CONDITION_REVIEW_REQUIRED"])).toBe(true); });
 });

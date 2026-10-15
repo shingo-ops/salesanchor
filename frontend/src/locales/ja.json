@@ -3792,6 +3792,7 @@
     "reassigned": "付け替えました",
     "reassignFailed": "付け替えに失敗しました",
     "conditionLabel": "状態",
+    "valueFix": {"title": "{{field}}を直します", "quantity": "数量", "price": "単価", "unit": "単位", "memo": "メモ", "saleStatus": "販売状況", "save": "この値に直す", "saving": "保存中", "saved": "直しました。解析をやり直しています", "invalid": "この値は使えません。内容を確かめてください", "changed": "この件は直せません。画面を開き直してください", "saveFailed": "保存できませんでした。もう一度お試しください", "loadFailed": "選択肢を読み込めませんでした"},
     "wizard": {
       "question": "何を直しますか？",
       "choice": {
@@ -3800,7 +3801,9 @@
         "register": "新しい商品として登録する",
         "registerDesc": "商品マスタに登録し、この行を付け替えます",
         "condition": "状態を直す",
-        "conditionDesc": "状態を確認・訂正します"
+        "conditionDesc": "状態を確認・訂正します",
+        "value": "値を直す",
+        "valueDesc": "数量・単価・単位・メモ・販売状況を直します"
       },
       "selected": "直す内容: {{choice}}",
       "back": "戻る",
