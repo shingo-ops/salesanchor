@@ -118,9 +118,11 @@ async def update_channel(channel_id: int, data: ChannelUpdate, db: AsyncSession 
             [e.value if hasattr(e, "value") else e for e in update_data["event_types"]])
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = channel_id
+    # tenant_id も条件に入れる（多重防御）。他テナントの id を指定しても 404 になる。
+    update_data["tenant_id"] = tenant_id
     result = await db.execute(
         text(f"UPDATE notification_channels SET {set_clauses}, updated_at = NOW() "
-             f"WHERE id = :id RETURNING {_COLS}"),
+             f"WHERE id = :id AND tenant_id = :tenant_id RETURNING {_COLS}"),
         update_data,
     )
     row = result.mappings().first()
@@ -153,8 +155,11 @@ async def send_discord_notification(db: AsyncSession, tenant_id: int, event_type
     """Discord Webhookに通知を送信する（バックグラウンド実行用）"""
     try:
         result = await db.execute(
-            text("SELECT id, webhook_url FROM notification_channels WHERE is_active = TRUE AND event_types LIKE :pattern"),
-            {"pattern": f"%{event_type}%"},
+            # tenant_id を条件に入れるのは多重防御。search_path（ADR-072）が外れた場合でも
+            # 他テナントの webhook_url を引かない（顧客情報を他社の Discord に送る事故の防止）。
+            text("SELECT id, webhook_url FROM notification_channels "
+                 "WHERE tenant_id = :tenant_id AND is_active = TRUE AND event_types LIKE :pattern"),
+            {"tenant_id": tenant_id, "pattern": f"%{event_type}%"},
         )
         channels = result.mappings().all()
         async with httpx.AsyncClient(timeout=10.0) as client:

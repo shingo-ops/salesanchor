@@ -7,20 +7,15 @@
   - app.services.lead_assign_notifier.notify_lead_assigned（新規）
   - app.routers.leads.update_lead の fire-and-forget 呼び出し
 
-既知の制約（A11 について・design.md R2 / recon §7）:
-  本番の送信先分離は PostgreSQL の search_path によるスキーマ分離
-  （tenant_NNN.notification_channels が物理的に別テーブル）に依存しており、
-  SQL 自体には tenant_id フィルタが無い（notifications.py の
-  send_discord_notification）。pytest は SQLite で動作し、
-  `tenant_table_ref` は SQLite では prefix なし（app/auth/dependencies.py の
-  tenant_table_ref docstring）、`set_tenant_context` の SET 文も SQLite では
-  no-op になるため、「別テナントの行が物理的に見えない」という本番の分離機構
-  そのものは SQLite 上で再現できない。
-  そのため本ファイルの A11 テストは、分離を成立させている唯一のアプリ層の
-  制御——`notify_lead_assigned` が **渡された tenant_id で** `set_tenant_context`
-  を呼ぶこと——を、2 テナント分の呼び出しで検証する。真のスキーマレベル分離は
-  test_rls_invariants.py 等と同じく実 PostgreSQL が必要（本ファイルの範囲外）。
-  この限界は実装者からコーディネータへ報告済み。
+A11（他テナント漏洩防止）について:
+  本番の送信先分離は PostgreSQL の search_path によるスキーマ分離に依存していたが、
+  コーディネータの設計変更により send_discord_notification の SELECT と
+  update_channel の UPDATE に tenant_id 条件を多重防御として追加した
+  （notification_channels.tenant_id 列を使う）。これにより SQLite 上でも
+  行レベルで直接検証できる
+  （test_send_discord_notification_only_posts_to_matching_tenant_row）。
+  加えて、分離を支えるもう一段のアプリ層制御（ADR-072 の set_tenant_context 呼び出し）
+  の確認テストも残している。
 """
 from __future__ import annotations
 
@@ -31,6 +26,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sqlalchemy import text
 
+from app.routers.notifications import send_discord_notification
 from app.schemas.notification import NotificationEventType
 from app.services.lead_assign_notifier import notify_lead_assigned
 
@@ -204,6 +200,22 @@ async def test_patch_channel_404_when_missing(client):
     assert resp.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_patch_channel_404_when_other_tenant(client, db_session):
+    """他テナント（tenant_id=1）の channel_id を client（tenant_id=999）から PATCH しても 404。"""
+    await _insert_channel(db_session, tenant_id=1, channel_name="other-tenant",
+                          webhook_url="https://discord.example/webhooks/other-tenant",
+                          event_types=[])
+    await db_session.commit()
+    row = (await db_session.execute(
+        text("SELECT id FROM notification_channels WHERE tenant_id = 1"),
+    )).mappings().first()
+    channel_id = row["id"]
+
+    resp = await client.patch(f"/api/v1/notification-channels/{channel_id}", json={"channel_name": "hacked"})
+    assert resp.status_code == 404
+
+
 # ---------------------------------------------------------------------------
 # A7 / A8: leads.update_lead からの fire-and-forget 呼び出し
 # ---------------------------------------------------------------------------
@@ -335,8 +347,53 @@ async def test_notify_lead_assigned_posts_without_mention_when_discord_user_id_m
 
 
 # ---------------------------------------------------------------------------
-# A11: 他テナントの送信先に送られないこと（既知の制約は本ファイル冒頭の docstring）
+# A11: 他テナントの送信先に送られないこと
+#
+# send_discord_notification の SELECT に tenant_id 条件が追加された（多重防御・
+# コーディネータによる設計変更）ため、SQLite 上でも行レベルで直接検証できる。
+# 以下の set_tenant_context 呼び出し確認テストは、分離を支えるもう一段のアプリ層
+# 制御（ADR-072）の確認として残す。
 # ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_send_discord_notification_only_posts_to_matching_tenant_row(db_session):
+    """notification_channels に tenant_id の異なる2行を用意し、tenant_id=1 でだけ送信する。
+
+    tenant_id=1 の webhook_url にのみ POST され、tenant_id=2 の webhook_url には
+    一度も POST されないことを検証する（A11 の行レベル検証）。
+    """
+    db = db_session
+    await _insert_channel(db, tenant_id=1, channel_name="tenant-1-internal",
+                          webhook_url="https://discord.example/webhooks/tenant-1",
+                          event_types=["lead_assigned"])
+    await _insert_channel(db, tenant_id=2, channel_name="tenant-2-internal",
+                          webhook_url="https://discord.example/webhooks/tenant-2",
+                          event_types=["lead_assigned"])
+    await db.commit()
+
+    posted_urls: list[str] = []
+
+    class _CapturingAsyncClient:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_a):
+            return False
+
+        async def post(self, url, json):  # noqa: A002 - httpx の引数名に合わせる
+            posted_urls.append(url)
+            return _FakeDiscordResponse()
+
+    with patch("app.routers.notifications.httpx.AsyncClient", _CapturingAsyncClient):
+        await send_discord_notification(db=db, tenant_id=1, event_type="lead_assigned",
+                                        title="t", message="m")
+
+    assert posted_urls == ["https://discord.example/webhooks/tenant-1"]
+    assert "https://discord.example/webhooks/tenant-2" not in posted_urls
+
 
 @pytest.mark.asyncio
 async def test_notify_lead_assigned_sets_tenant_context_for_tenant_a_only(notifier_env):
