@@ -348,7 +348,7 @@ mode: handoff
 | 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。一覧ファイルは1行だけのものを別に作る。登録した時点の期限にかかわらず、登録の直後に extend N=1 で「記録した時刻＋1日」にする。審査 r7-N-7・r8-N-5）。作成は PO 本人の GO（上の「操作の GO の条件」）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | PO（GO）＋Sonnet（実行） |
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
-- ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
+- ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
 - ② fetch_output_rows の DB 部分：【事実】本番設定（include_flag_single=false、max_age_hours=48）で組み立てた SQL を EXPLAIN ANALYZE で3回、1135.0 ms・525.5 ms・497.5 ms、返却 877 行（explain_1〜3.txt）。1分ごとの作り置きには収まる。Python 側の整形を含む全体の時間は【未確認】。
 - ③ products.tenant_id：【事実】配信 877 行が指す products の tenant_id は全部 NULL、NULL 以外は 0 件（tenant_dist.txt）。PO に報告する見え方の差は無い。
 - ④ プロキシ：【事実】app.salesanchor.jp は 49.212.137.46（さくら）、応答ヘッダは server: nginx のみで cf-ray・via が無い（dig.txt・curl_head.txt）。Cloudflare は前段にいないので、D4 に set_real_ip_from・real_ip_header は足さない。
@@ -428,7 +428,7 @@ mode: handoff
   - 6 商品名：「アプリを正とする、ただし英語が下に出ていない、TCGシリーズ列は不要なので非表示にする」（【未確認】英語が出ていない原因。アプリのコード PG:666-670 は下段に英語を出す作りなので、データか表示の不具合として調べる）
   - 7 見出しの固定：採用。8 表を縮めて画面に収める：採用。9 スマホの縦カード：採用。10 色つきバッジ：採用。11 発送日の列：採用（Q13 は y で決定）
   - 12 件数とページ送り：「ページ送り機能をつける」
-  - 1 更新ボタンは回答なし（未決）。
+  - 1 更新ボタン：【決定 2026-10-15 PO「y」】アプリと同じく付けない（【事実】アプリの InventoryPage.tsx に手動の更新ボタンは無い）。作り置きは1分ごとに作り直し、最新はページの再読み込みで出る。画面には最終更新の時刻だけを出す。
   - Q14.【決定 2026-10-15 PO】原文「アプリの在庫表も同じ作りにする」。この決定を、アプリの在庫表と閲覧ページの両方に入れる（＝2つを同じ部品で作る）。アプリ側は便1〜3（#4317・#4327・#4330）で本番に反映済み。閲覧ページは r9 で D4 を書き直した。8・9 と 4 の複数選択は、便1・便3 で金型に登録済み（DataTable の stickyHeader・fitToWidth・mobileCards、MultiSelect）。
 - Q13.（2026-10-15 の突き合わせ。/tmp/CC報告ファイル/viewer_gas_parity_check.md）Q1 の「今の GAS と同じ13列」は、2026-10-14 に GAS に発送日（Ship_JA）を足す前の手元の写し（~/tcg-viewer-1hc-release、Ship_JA 0件）を基準にしていた。【事実】本番の GAS（版16）の許可リストは14列（/tmp/CC報告ファイル/gas_pull_prod/Code.js:10-25）で、画面の11列に「発送日」がある（/tmp/CC報告ファイル/k7_prod.txt K7-1、発送日が空でない行は 891 行中 37 行）。発送日を閲覧ページにも出すか →【決定 y（PO 2026-10-15）】14列にし、表示は備考の次（アプリの列の並びと同じ）。r9 で D2・D3・D4 と受入に反映した。【r9 の注記】下の6点は、その後の Q14（アプリと同じ作り）で、アプリの実物に合わせる形に置き換えた（D4。商品名は上が日本語・下が英語、並びはアプリと同じ）。元の文：あわせて、GAS にあって本書に書いていない次の6点は、GAS と同じにする方向で書き足す（PO の方針「GAS に合わせる」の範囲）：検索の対象列、並べ替え4択の中身と既定、英語タイトルでまとめてから並べる順、見出しで並べ替えできない列、スマホの操作の配置、タイトルの上段＝英語・下段＝日本語。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
