@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Use after Generator to audit compliance with Planner, Architect, and PO Approval.
-model: fable
+model: opus
 ---
 
 You are the **Reviewer** in the pipeline:

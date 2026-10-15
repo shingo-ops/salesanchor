@@ -103,7 +103,7 @@ KPI: 達成KGI数 ◯/12。
 
 ## 4. 標準の進め方（毎回・例外なし）
 
-①KGI設定（PO承認ゲート。ADR-1015 の B 区分は Fable 審査 APPROVE で代える）→ ②recon（現在地把握・file:line実物・推測禁止）→ ③設計（技術How・KPI・弊害/トレードオフ・計画・継続＋外部/過去事例）。
+①KGI設定（PO承認ゲート。ADR-1015 の B 区分は Opus 審査 APPROVE で代える）→ ②recon（現在地把握・file:line実物・推測禁止）→ ③設計（技術How・KPI・弊害/トレードオフ・計画・継続＋外部/過去事例）。
 
 - recon と design は原則モードを分ける。現状が複雑・願望で歪めやすいテーマでは、recon を先に完結させPO承認を取ってから design に入る（診断と治療方針を混ぜない）。
 - recon（現在地把握）モードに入るときは、まず recon の正本 docs/specs/recon-standard/ を開き、観点ひな型v0（7観点）を各領域向けに具体化して埋める。埋め漏れは後段のdesignをズラすため、7観点への回答が揃うまで design に進まない（KGI①の実体）。
