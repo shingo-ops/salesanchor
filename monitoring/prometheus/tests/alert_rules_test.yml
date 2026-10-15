@@ -1,0 +1,283 @@
+# Prometheus ルールの単体試験（promtool test rules）
+# 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
+# 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
+# 全 14 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+
+rule_files:
+  - ../alert_rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: HighCpuUsage
+    interval: 1m
+    input_series:
+      - series: 'node_cpu_seconds_total{mode="idle", cpu="0", instance="n1"}'
+        values: '0+6x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HighCpuUsage
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "CPU使用率が80%を超えています"
+              description: "CPU使用率: 90.0%（5分間平均）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highcpuusage"
+      - eval_time: 3m
+        alertname: HighCpuUsage
+        exp_alerts: []
+
+  - name: HighMemoryUsage
+    interval: 1m
+    input_series:
+      - series: 'node_memory_MemAvailable_bytes{instance="n1"}'
+        values: '10+0x30'
+      - series: 'node_memory_MemTotal_bytes{instance="n1"}'
+        values: '100+0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighMemoryUsage
+        exp_alerts:
+          - exp_labels:
+              instance: n1
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "メモリ使用率が85%を超えています"
+              description: "メモリ使用率: 90.0%"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highmemoryusage"
+
+  - name: HighDiskUsage
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", instance="n1"}'
+        values: '15+0x30'
+      - series: 'node_filesystem_size_bytes{mountpoint="/", instance="n1"}'
+        values: '100+0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: HighDiskUsage
+        exp_alerts:
+          - exp_labels:
+              instance: n1
+              mountpoint: /
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "ディスク使用率が80%を超えています"
+              description: "ディスク使用率: 85.0%"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highdiskusage"
+
+  - name: CriticalDiskUsage
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", instance="n1"}'
+        values: '5+0x30'
+      - series: 'node_filesystem_size_bytes{mountpoint="/", instance="n1"}'
+        values: '100+0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CriticalDiskUsage
+        exp_alerts:
+          - exp_labels:
+              instance: n1
+              mountpoint: /
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "ディスク使用率が90%を超えています（n1）"
+              description: "ディスク使用率: 95.0%（instance=n1）。即時対応が必要です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#criticaldiskusage"
+
+  - name: ServiceDown
+    interval: 1m
+    input_series:
+      - series: 'up{job="node", instance="n1"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ServiceDown
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels:
+              job: node
+              instance: n1
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "nodeがダウンしています"
+              description: "Exporterからの応答がありません。即時確認してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#servicedown"
+
+  - name: BackendHighErrorRate
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="backend", status="500"}'
+        values: '0+90x200'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: BackendHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: page
+            exp_annotations:
+              summary: "バックエンド 5xxエラーが急増しています"
+              description: "5xxエラーが 1分間で 6.0 req/s を超えています（閾値: 5 req/s）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhigherrorrate"
+
+  - name: BackendHighLatency
+    interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{job="backend", le="1"}'
+        values: '0+0x30'
+      - series: 'http_request_duration_seconds_bucket{job="backend", le="5"}'
+        values: '0+60x30'
+      - series: 'http_request_duration_seconds_bucket{job="backend", le="+Inf"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: BackendHighLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "バックエンド P99 レイテンシが高い"
+              description: "P99 レスポンスタイムが 4.96s を超えています（閾値: 2.0s）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhighlatency"
+
+  - name: BackendWorkerSaturated
+    interval: 1m
+    input_series:
+      - series: 'http_requests_in_flight{job="backend", instance="b1"}'
+        values: '3+0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: BackendWorkerSaturated
+        exp_alerts:
+          - exp_labels:
+              job: backend
+              instance: b1
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "バックエンド worker が飽和し始めています"
+              description: "同時処理中リクエスト数が 1 を超えています。workers=1 運用では待ち行列が発生している可能性があります。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendworkersaturated"
+
+  - name: BackendSseConnectionsHigh
+    interval: 1m
+    input_series:
+      - series: 'sse_connections_active{job="backend", instance="b1"}'
+        values: '10+0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: BackendSseConnectionsHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "バックエンド SSE 接続数が多い"
+              description: "SSE 接続数が 8 を超えています。SSE は worker を占有しない一方で、接続とメモリを消費します。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendsseconnectionshigh"
+
+  # time() は 0 から始まる。最終成功時刻を負の値にして 8 日以上前を作る
+  - name: F2CleanupStale
+    interval: 1m
+    input_series:
+      - series: 'f2_cleanup_last_success_timestamp{instance="app-vps"}'
+        values: '-700000+0x200'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: F2CleanupStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: critical
+              tier: ticket
+            exp_annotations:
+              summary: "F2掃除係の黒板が8日以上更新なし(app-vps)"
+              description: "f2-cleanup.shが8日以上完全成功していない。cron・スクリプト・textfile配線を確認。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupstale"
+
+  # absent() は系列を与えない形で鳴る（無関係の系列だけ置く）
+  - name: F2CleanupAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="dummy", instance="x"}'
+        values: '1x1600'
+    alert_rule_test:
+      - eval_time: 25h
+        alertname: F2CleanupAbsent
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: critical
+              tier: ticket
+            exp_annotations:
+              summary: "F2掃除係の黒板メトリクスが消失(app-vps)"
+              description: "黒板ファイルまたはtextfile配線の断線疑い。node_exporter設定を確認。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupabsent"
+
+  - name: KumaMonitorDown
+    interval: 1m
+    input_series:
+      - series: 'monitor_status{monitor_name="App"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: KumaMonitorDown
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: KumaMonitorDown
+        exp_alerts:
+          - exp_labels:
+              monitor_name: App
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "見張り App が失敗しています"
+              description: "Uptime Kuma の見張り App が 2 分以上失敗しています"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#kumamonitordown"
+
+  - name: CertExpiringSoon
+    interval: 1m
+    input_series:
+      - series: 'monitor_cert_days_remaining{monitor_name="App"}'
+        values: '10+0x200'
+    alert_rule_test:
+      - eval_time: 90m
+        alertname: CertExpiringSoon
+        exp_alerts:
+          - exp_labels:
+              monitor_name: App
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "App の証明書の期限が近づいています"
+              description: "残り 10 日です（14 日未満）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certexpiringsoon"
+
+  - name: CertInvalid
+    interval: 1m
+    input_series:
+      - series: 'monitor_cert_is_valid{monitor_name="App"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: CertInvalid
+        exp_alerts:
+          - exp_labels:
+              monitor_name: App
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "App の証明書が無効です"
+              description: "Uptime Kuma が証明書を無効と判定しています"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certinvalid"

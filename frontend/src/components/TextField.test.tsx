@@ -199,7 +199,7 @@ describe('TextFieldControl', () => {
 });
 
 describe('TextFieldControl variants (design.md §AY-2a)', () => {
-  const VARIANTS = ['karte', 'search', 'schedule', 'composer'] as const;
+  const VARIANTS = ['karte', 'search', 'schedule', 'composer', 'product-edit'] as const;
 
   it.each(VARIANTS)('variant "%s" adds its class before className', (variant) => {
     const { container } = render(<TextFieldControl variant={variant} className="x-layout" />);

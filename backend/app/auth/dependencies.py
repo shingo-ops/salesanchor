@@ -240,6 +240,7 @@ async def get_current_user(
 
 
 async def get_current_tenant(
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> int:
@@ -285,6 +286,9 @@ async def get_current_tenant(
     # テナントリクエストでは app.is_operator を明示的にリセット（フェイルクローズ）
     # コネクションプール汚染防止: 前のリクエストが operator だった場合に '' で上書き
     await db.execute(text("SET app.is_operator = ''"))
+
+    # ADR-1016: 応答後の合図ミドルウェアが宛先の会社を知るための受け渡し
+    request.state.rt_tenant_id = safe_id
 
     return safe_id
 

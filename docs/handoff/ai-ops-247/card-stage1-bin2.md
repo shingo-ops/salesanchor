@@ -240,6 +240,8 @@ SSH は制限付き鍵で書けないため無制限鍵 `~/.ssh/manual-only/id_e
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
-
-END OF CARD
+### 実装便（§1〜§7・§10。2026-10-14 Sonnet）
+- 4-1 確認: 公式 API リファレンス https://uptime-kuma-api.readthedocs.io/en/latest/api.html（1.2.1 は最新版。1.2.1 固定 URL は 404）。`UptimeKumaApi(url, timeout=10, headers=None, ssl_verify=True, wait_events=0.2)`、`login(username, password)`（例のみ。シグネチャ表は未確認）、`get_monitors() -> list[dict]`、`add_monitor(**kwargs)`（type・name・interval=60・retryInterval=60・maxretries=0・url・accepted_statuscodes・notificationIDList）、`MonitorType.HTTP`（値 'http'）。notificationIDList の記述は「Notifications, defaults to None」のみ。空リストで既定通知先が付かないかの記述なし（§8-5 の SELECT で確認）。引数名は §4-4 と一致。
+- 5-1〜5-4・5-6: 期待どおり（14 本・7 件・IP 0 行・py_compile 0・validate_tokens 終了 0 かつ不一致 0・CertExpiringSoon: 14・旧参照 0 行）。
+- 5-5: 手元の docker daemon（colima）が停止中で promtool 未実行。§8-3 で本番のコンテナの promtool を使う。
+- 生出力: /tmp/CC報告ファイル/ai-ops-stage1-bin2/

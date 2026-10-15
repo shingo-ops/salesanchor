@@ -14,7 +14,7 @@ jobs:
   monitoring-check:
     name: 監視スタック整合性チェック
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -27,7 +27,7 @@ jobs:
         run: |
           BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          if echo "$CHANGED" | grep -qE "^(monitoring/|docker-compose(\.monitoring|\.exporters)?\.yml|\.env(\.monitoring)?\.example|\.github/workflows/monitoring-check\.yml)"; then
+          if echo "$CHANGED" | grep -qE "^(monitoring/|docker-compose(\.monitoring|\.exporters)?\.yml|\.env(\.monitoring)?\.example|\.github/workflows/monitoring-check\.yml|docs/runbooks/alerts\.md)"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -55,3 +55,30 @@ jobs:
       - name: Grafana ナビゲーション同期チェック（nav-config.json SSoT）
         if: steps.changes.outputs.relevant == 'true'
         run: node monitoring/grafana/generate-nav.js --check
+
+      - name: アラートルールの札・手順書リンク検査
+        if: steps.changes.outputs.relevant == 'true'
+        run: python3 monitoring/scripts/check_alert_rules.py
+
+      - name: Prometheus ルール構文と単体試験（promtool）
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          # docker-compose.monitoring.yml:5 と同じ版
+          docker run --rm -v "$PWD/monitoring/prometheus:/r:ro" --entrypoint promtool prom/prometheus:v3.11.3 check rules /r/alert_rules.yml
+          docker run --rm -v "$PWD/monitoring/prometheus:/r:ro" --entrypoint promtool prom/prometheus:v3.11.3 test rules /r/tests/alert_rules_test.yml
+
+      - name: Alertmanager 設定検査（amtool）
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          # docker-compose.monitoring.yml:177 と同じ版
+          docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 check-config /a/alertmanager.yml
+
+      - name: Loki ルール構文検査（lokitool）
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          # docker-compose.monitoring.yml:198 の grafana/loki:3.7.2 と同じ版
+          curl -fsSL -o /tmp/lokitool.zip https://github.com/grafana/loki/releases/download/v3.7.2/lokitool-linux-amd64.zip
+          echo "572fe8adfc919a12a02a6c9f5b0509a7cd1071156d524777fe73428bc0fcbffc  /tmp/lokitool.zip" | sha256sum -c -
+          unzip -o /tmp/lokitool.zip -d /tmp/lokitool
+          chmod +x /tmp/lokitool/lokitool-linux-amd64
+          /tmp/lokitool/lokitool-linux-amd64 rules check monitoring/loki/rules/jarvis/alerts.yml

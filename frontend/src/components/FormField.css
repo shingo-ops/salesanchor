@@ -427,6 +427,20 @@
   box-shadow: var(--focus-ring-shadow);
 }
 
+/* product-edit: company-forms.css の商品編集 input（枠が薄くて見えない問題の解消で --border-strong。design.md §AY-2z） */
+.comp-field__input.comp-input--product-edit {
+  min-height: auto;
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: revert;
+  line-height: normal;
+  transition: initial;
+}
+
+.comp-field__input.comp-input--product-edit:focus {
+  border-color: var(--border-strong);
+}
+
 .comp-field--lg .comp-field__label {
   font-size: var(--font-base);
 }

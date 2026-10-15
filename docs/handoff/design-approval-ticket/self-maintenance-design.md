@@ -128,6 +128,12 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 - 各行の欄: 日時 / 種別（予定・結果）/ source（routine か PO）/ 結果（未適用・適用・適用（PO）・戻した）/ 変更（add か remove と、文の全文）/ 理由 / 根拠の件数 / 報告書のパス / バックアップのパス / 試験の結果 / PR 番号。
   - 「変更」の欄には、文を切らずに全文を書く。再生にそのまま使うため。
   - 例外: 全文に運用情報を含む文の remove（source=PO に限る）は、`remove: sha256=<値>` と先頭20語を書き、全文は repo の外（~/.claude/logs/removed-allow-<日時>.txt）に置く。再生では、sha256（文の UTF-8 の sha256）が一致する要素を外す。
+- 例外の2（PO 決定 2026-10-15）: source=PO の行に限り、運用情報を含む文の add と、environment の変更も全文を repo に書かない。書き方は次のとおり。
+  - allow への add: `add: sha256=<64桁> 先頭20語「…」`。全文は repo の外（~/.claude/logs/allow-text-<sha256>.txt。UTF-8、文そのもので末尾に改行を付けない）に置く。先頭20語に運用情報が入るときは先頭20語も書かない。
+  - environment への追加: `env-add: sha256=<64桁>`。全文は ~/.claude/logs/env-text-<sha256>.txt に置く（書き方は allow と同じ）。environment の本文は先頭20語も書かない。
+  - environment からの削除: `env-remove: sha256=<64桁>`。
+  - 再生: `add: sha256=` は repo の外のファイルを読み、UTF-8 の sha256 が一致したときだけ allow の末尾に足す。`env-add:` は同じ確かめ方で environment の末尾に足す。`env-remove:` は sha256 が一致する environment の要素を外す。ファイルが無い、または一致しないときは K1=エラー（以後の自動の変更を止める）。
+  - routine の行（`SM-` の文）は、これまでどおり全文を書く（§5-2 (3) により運用情報を含められないため）。
 - PO が `!` で autoMode を変えたとき（例: B2〜B4）も、次の回の手順1で差分を見つけ、source=PO の行として追記する。その行は種別を「結果」、結果を「適用（PO）」とし、再生のときに当てる。追記がすむまで、その回の自動の変更は行わない。
 
 ### 5-7. 止め方と、外すスクリプト
@@ -199,3 +205,4 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
   - PO 原文1:「このアプリの定期実行で管理させる」
   - PO 原文2:「y」＝「月〜金の9:00に毎日起動し、その週の保守が済んでいれば何もせずに終える」形にする。
   - 変更箇所: §4 の定期実行の行、§10 の ①人・③機械、段と承認の S4、§9 の守り手、routine/ROUTINE.md、s4-card.md。詳細は [../permission-routine-on-agent-console/design.md](../permission-routine-on-agent-console/design.md)。
+- 2026-10-15 §5-6 に例外の2を追加（add と environment を sha256 で記録。PO 決定 2026-10-15）。
