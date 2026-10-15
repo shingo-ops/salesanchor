@@ -131,7 +131,7 @@ export interface CheckboxControlProps
 
 frontend/src/components/CheckboxControl.test.tsx に2つ足す:
 1. `dataColor="#123456"` を渡すと input の `style.accentColor` が `rgb(18, 52, 86)`（試験環境の jsdom は色を rgb に直して持つ。審査 r1 で実測: /tmp/CC報告ファイル/ssot-checkbox/ay4c2b/review-sim-vitest.txt）。未指定なら `input.hasAttribute("style") === false`。
-2. 登録制の試験（前例 frontend/src/components/ToggleMigration.test.tsx:21-26 の files 表の形）。frontend/src 以下の .tsx と .ts をすべて読み（`*.test.tsx`・`*.test.ts`・`*.stories.tsx`・`components/CheckboxControl.tsx` を除く）、`/\bdataColor\b\s*[=:]/g`（JSX の `dataColor=` と、createElement 等のオブジェクトの `dataColor:` の両方）が出るファイルと件数が、登録表 `[["pages/schedule/SchedulePageImpl.tsx", 2]]` とちょうど一致すること。さらに登録ファイルの中の出現がすべて `dataColor={owner.color}` の形であること（`/\bdataColor\b\s*=\s*\{owner\.color\}/g` の件数が 2）。
+2. 登録制の試験（前例 frontend/src/components/ToggleMigration.test.tsx:21-26 の files 表の形）。frontend/src 以下の .tsx と .ts をすべて読み（名前が .test.tsx・.test.ts・.stories.tsx で終わるファイルと frontend/src/components/CheckboxControl.tsx を除く）、`/\bdataColor\b\s*[=:]/g`（JSX の `dataColor=` と、createElement 等のオブジェクトの `dataColor:` の両方）が出るファイルと件数が、登録表 `[["pages/schedule/SchedulePageImpl.tsx", 2]]` とちょうど一致すること。さらに登録ファイルの中の出現がすべて `dataColor={owner.color}` の形であること（`/\bdataColor\b\s*=\s*\{owner\.color\}/g` の件数が 2）。
    - 理由: 文字列リテラルだけを数える案は、一重引用符・空白・定数・三項演算子・`??`・spread の 7 通りを見逃した（審査 r1、review-sim-grep.txt）。登録制なら新しい使い手は必ずこの表を書き換える PR になり、審査で止められる（design.md:919「完全パス＋exportName の登録で許可を広げない」と同じ考え方）。
    - この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、design.md:874）。試験の冒頭コメントにこの1行を書く。
    - spread（`{...props}` で dataColor を流す）は件数に出ないが、CheckboxControl の使い手で spread を使うものは今 0。spread 経由を許すかは新しい使い手が出たときに審査で判断する（残件として design.md に書く）。
