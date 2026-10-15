@@ -1,6 +1,6 @@
 # Colima 使い終わり自動停止 設計（2026-10-15・v2.1・Fable 審査 APPROVE: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-design3.md）
 
-区分（ADR-1015）: **A**（危険パス scripts/・ops/launchd/ を触る feat）。PR は Draft・GO 記録必須（ADR-136）。recon: [recon.md](recon.md)。前例: [disk-janitor 設計](../disk-janitor/design.md)。
+区分（ADR-1015）: **A**（危険パス scripts/・ops/launchd/ を触る feat）。PR は Draft・GO 記録必須（ADR-136）。recon: [docs/handoff/colima-idle-stop/recon.md](recon.md)。前例: [disk-janitor 設計](../disk-janitor/design.md)。
 設計仕様書（docs/specs）: [docs/specs/colima-idle-stop/](../../specs/colima-idle-stop/README.md)。当初は「開発機（Mac）の保守道具で製品の機能領域ではない（前例 disk-janitor と同扱い）」として対象外と判断したが、2026-10-15 に PO が最終報告の「作らない判断でよいか（y/n）」に N と答えたため、別 PR で作成した。
 v1 審査（Fable REVISE: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-design1.md）の指摘 MEDIUM-1〜5・LOW-6〜10 を本版で反映。
 PO 決定（2026-10-15 チャット、y）: 「15分ごとに見回り、DB 接続なし・CPU ほぼ0 が30分続いたら Docker を自動で止める」。
