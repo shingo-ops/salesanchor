@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
+import { Checkbox } from "../../../components/Checkbox";
 import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
@@ -164,15 +165,11 @@ export function UnitIgnorePhrasesPanel() {
               value={form.note}
               onChange={e => setForm({ ...form, note: e.target.value })}
             />
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              {/* ui-allow: チェックボックスの金型が未登録のため（手本 UnitMasterPanel.tsx:332 と同じ書き方） (#4032) */}
-              <input
-                type="checkbox"
-                checked={form.is_active}
-                onChange={e => setForm({ ...form, is_active: e.target.checked })}
-              />
-              {t(`${I18N}.isActive`)}
-            </label>
+            <Checkbox
+              label={t(`${I18N}.isActive`)}
+              checked={form.is_active}
+              onChange={e => setForm({ ...form, is_active: e.target.checked })}
+            />
           </div>
         </form>
       </Drawer>
