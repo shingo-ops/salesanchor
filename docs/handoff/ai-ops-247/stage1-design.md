@@ -191,8 +191,10 @@
 - U9: 死活確認の口 /api/health が毎回 1〜2.5 秒かかっている（便4 の事前測定・2026-10-15。14 日の 6451 件すべて）。原因は未調査。便4 は見張りの条件から外しただけで、遅さ自体は直していない。
 - U10: BackendHighLatency の札を ticket から page に上げるか。便4 の配置後 14 日の実回数を見て決める。
 - U11: 裏方の処理（celery）の既存の失敗。translate_pending_messages が毎日 2〜3 回失敗している。また worker に登録されていないタスクの受付（`Received unregistered task`）が tcg_mirror と sa02_recon で各 14 件ある（便5 の事前測定・2026-10-15）。原因は未調査。便5 は見張りを足すだけで、これらは直さない。
+  - 2026-10-15 調査済み：未登録の 2 件はデコレータの付け忘れ（作られてから一度も動いていない）。まとめ翻訳は 7 日間 processed=0。失敗は買取価格の取得の後片付け漏れに続いて起きている。PO 決定：まとめ翻訳は外す、写しシートと毎朝の突き合わせは直す。設計は `docs/handoff/celery-unregistered-tasks/design.md`（実装承認待ち）。
 - U12: 1 日 1〜2 回しか動かない celery タスクの失敗は、便5 の CeleryTaskFailuresHigh（同じタスクで 1 時間に 3 回）では鳴らない。日次タスクの失敗の見張りをどうするか。
 - U13: `buyback.fetch_all_prices` の 1 件（10-02）が、worker の受付から完了まで 3724 秒かかっている。実行時間の最長（147.57 秒）と合わない。原因は未調査（便5 の事前測定・2026-10-15）。
+  - 2026-10-15 調査済み：10-02 に deploy が 2 回続き、処理の途中で止まった作業が再配送されて 2 回動いた（この 1 件だけ）。2 店の 465 商品の価格が 1 時間違いで 2 件ずつ記録されたが、各行はその時刻の正しい価格で、知らせの二重送信もない（知らせの条件 0 件）。後始末はしない。根拠は `docs/handoff/celery-unregistered-tasks/recon.md` §6。
 - U14: 設計 §2 便6 の `BackupStale` 1 本は、実装（#4312）で 3 本に分けた。BackupLocalStale・BackupS3Stale で、どちらのバックアップが止まったかを名前で分ける。BackupTimestampAbsent は、系列が消えると Stale が鳴らないため足した（F2CleanupAbsent と同じ形）。3 本とも ticket。本文 §2 は書き換えず、この行を正とする。
 - U15: 設計 §2 便7 の「`absent()` ルール」は、実装（#4323）で MonitoringConfigCheckStale に変えた。条件は「最後に送った時刻が 180000 秒より古い or absent」。pushgateway は最後の値を持ち続けるため、absent だけでは比較が止まったことに気づけない。本文 §2 は書き換えず、この行を正とする。
 - U16: 便6・便7 で足した bash の試験（`monitoring/scripts/tests/` 配下）は、CI で毎回は走っていない。手元とカード §5 で実行しただけ。workflow の変更になるため段階1 の範囲外とした。CI で走らせるかは段階2 の前に決める。
