@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 20 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 22 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -227,3 +227,19 @@
 - 最初に見るもの：prod1 の `/home/ubuntu/node_exporter_textfile/` に `backup_local.prom` と `backup_s3.prom` があるか、`node_textfile_scrape_error{instance="app-vps"}`、`backup.log` の `TEXTFILE ... FAIL` の行。
 - 直し方：断線の箇所を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=BackupTimestampAbsent --duration=PERIOD --comment=REASON`
+
+## MonitoringConfigDrift
+
+- 札：ticket
+- 何が起きているか：毎日 09:23 JST ごろの確認で、prod2 に置いた監視設定 6 本のうち 1 本以上が main と一致しない状態が 5 分続いた。main にマージしてから prod2 に置くまでの間も鳴る（置き忘れの知らせ）。利用者に今の影響は無い。翌営業日までに直す。
+- 最初に見るもの：GitHub の Actions の「Monitoring config drift check」の最新の実行ログ（`DRIFT:` の行にファイル名が出る）。
+- 直し方：どちらが正しいかを切り分ける。main が正しければ main の版を prod2 に置き直して読み直す（手順は各便のカード §8 と同じ）。prod2 の手直しが正しければ repo に PR で取り込む。置き直した後は workflow を手動で 1 回実行して、ずれ 0 を確かめる（pushgateway は次に送るまで古い値を持ち続ける）。迷ったら Opus に報告する。比べるのは `monitoring/scripts/check_config_drift.sh` の `FILES` にある 6 本だけで、監視設定のファイルを増やしたら `FILES` にも足す。
+- 止め方：`amtool silence add alertname=MonitoringConfigDrift --duration=PERIOD --comment=REASON`
+
+## MonitoringConfigCheckStale
+
+- 札：ticket
+- 何が起きているか：監視設定のずれの確認が 50 時間以上 pushgateway に送っていない状態が 1 時間続いた（毎日 1 回の確認が 2 回続けて動かなかった）。利用者に今の影響は無い。翌営業日までに直す。
+- 最初に見るもの：Actions の実行の一覧（失敗か、そもそも起動していないか）、prod2 の runner のサービス（`systemctl status actions.runner.shingo-ops-salesanchor.salesanchor-vps`）、pushgateway のコンテナ。
+- 直し方：runner・workflow・pushgateway のどこで止まっているかを切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=MonitoringConfigCheckStale --duration=PERIOD --comment=REASON`

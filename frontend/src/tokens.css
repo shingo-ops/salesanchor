@@ -517,6 +517,9 @@
   /* DataTable 最小幅（横スクロール開始点） */
   --comp-table-min-width:  480px;
 
+  /* DataTable 見出し固定時のスクロール箱の最大高（stickyHeader） */
+  --comp-table-sticky-max-h: calc(100vh - 18rem);
+
   /* ── Tabs コンポーネント ─────────────────────────────────────────────────── */
   /* 高さ */
   --comp-tab-h-sm:  28px;                    /* sm — KartePanel 系（font-xs） */

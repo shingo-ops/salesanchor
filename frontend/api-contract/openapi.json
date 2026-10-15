@@ -27645,6 +27645,20 @@
         "title": "ReviewAckResponse",
         "type": "object"
       },
+      "ReviewAckRevokeRequest": {
+        "properties": {
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id"
+        ],
+        "title": "ReviewAckRevokeRequest",
+        "type": "object"
+      },
       "ReviewReasonDetail": {
         "properties": {
           "ackable": {
@@ -62990,6 +63004,63 @@
           }
         ],
         "summary": "v102 の要確認を「このままで良い」として記録する",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke": {
+      "post": {
+        "operationId": "revoke_item_review_ack_api_v1_tcg_items__extraction_item_id__review_ack_revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAckRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewAckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の「このままで良い」（確認済み）を取り消す",
         "tags": [
           "super-admin"
         ]

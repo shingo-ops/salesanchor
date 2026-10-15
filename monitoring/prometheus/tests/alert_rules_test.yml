@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 20 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 22 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -509,3 +509,83 @@ tests:
               summary: "バックアップの成功時刻が取れていません(app-vps)"
               description: "backup_local.prom か backup_s3.prom の時刻が 30 時間取れていません。textfile の置き場と 2 つのファイルの有無を確認してください。"
               runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuptimestampabsent"
+
+  - name: MonitoringConfigDriftOne
+    interval: 1m
+    input_series:
+      - series: 'monitoring_config_drift_files{job="monitoring_config_drift"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: MonitoringConfigDrift
+        exp_alerts:
+          - exp_labels:
+              job: monitoring_config_drift
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "監視サーバーの設定が main とずれています"
+              description: "prod2 に置いた監視設定のうち 1 本が main と一致しません。workflow の実行ログでファイル名を確認し、main の版を置き直してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigdrift"
+      - eval_time: 3m
+        alertname: MonitoringConfigDrift
+        exp_alerts: []
+
+  - name: MonitoringConfigDriftZero
+    interval: 1m
+    input_series:
+      - series: 'monitoring_config_drift_files{job="monitoring_config_drift"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: MonitoringConfigDrift
+        exp_alerts: []
+
+  - name: MonitoringConfigCheckStaleOld
+    interval: 1m
+    input_series:
+      - series: 'monitoring_config_drift_last_run_timestamp{job="monitoring_config_drift"}'
+        values: '-200000+0x200'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: MonitoringConfigCheckStale
+        exp_alerts:
+          - exp_labels:
+              job: monitoring_config_drift
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "監視設定のずれの確認が 50 時間以上動いていません"
+              description: "monitoring-config-drift の workflow が 50 時間以上 pushgateway に送っていません。prod2 の runner と workflow の実行を確認してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigcheckstale"
+
+  - name: MonitoringConfigCheckStaleAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="dummy", instance="x"}'
+        values: '1x200'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: MonitoringConfigCheckStale
+        exp_alerts:
+          - exp_labels:
+              job: monitoring_config_drift
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "監視設定のずれの確認が 50 時間以上動いていません"
+              description: "monitoring-config-drift の workflow が 50 時間以上 pushgateway に送っていません。prod2 の runner と workflow の実行を確認してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigcheckstale"
+      - eval_time: 30m
+        alertname: MonitoringConfigCheckStale
+        exp_alerts: []
+
+  - name: MonitoringConfigCheckStaleFresh
+    interval: 1m
+    input_series:
+      - series: 'monitoring_config_drift_last_run_timestamp{job="monitoring_config_drift"}'
+        values: '0+60x200'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: MonitoringConfigCheckStale
+        exp_alerts: []

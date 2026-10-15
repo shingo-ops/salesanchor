@@ -428,3 +428,100 @@ def test_k1_multi_fixing_the_middle_item_affects_only_that_item(pg, pf):
     pid_basis = dict(one(pg, f"""SELECT ei.gemini_index, ar.pid_basis FROM {SCHEMA}.analysis_results ar
         JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s""", (job_id,)))
     assert pid_basis[2] == "MANUAL" and all(pid_basis[i] != "MANUAL" for i in (0, 1, 3))
+
+
+# --- 確認済みの取り消し(review-ack-revoke) ----------------------------------------------------------------
+
+
+def in_tab(pg_fixture, item_id: str, tab: str) -> bool:
+    where, _params = review_svc._build_where(
+        query=None, provider=None, status_tab=tab, review_only=False, unregistered_only=False, unresolved_unit_only=False,
+    )
+    sql = f"""{condition_svc.source_cte(schema=SCHEMA, item_only=True)} SELECT ({where.removeprefix("WHERE ")}) AS hit
+        FROM {SCHEMA}.analysis_results ar
+        JOIN {SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+        JOIN {SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        {condition_svc.review_joins(schema=SCHEMA)} WHERE ei.id = CAST(:eid AS uuid)"""
+    with Session(pg_fixture[1]) as session:
+        return bool(session.execute(text(sql), {"eid": item_id}).scalar_one())
+
+
+def _revoke(pg_fixture, source_id: str, item_id: str) -> int:
+    async def revoke() -> int:
+        engine = create_async_engine(pg_fixture[2])
+        try:
+            async with AsyncSession(engine) as db:
+                return await decisions_svc.save_review_ack_revoke(
+                    db, extraction_item_id=item_id, source_message_id=source_id, corrected_by="admin@example.com",
+                )
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(revoke())
+
+
+def _count_corrections(pg_fixture, item_id: str) -> int:
+    return one(pg_fixture, f"SELECT count(*) FROM {SCHEMA}.item_corrections WHERE extraction_item_id=%s", (item_id,))[0][0]
+
+
+def test_revoke_appends_one_row_and_clears_both_flags_and_excluded_returns_to_needs_review(pg, pf):
+    source_id, job_id, item_id = prepare(pg, 0)
+    fix_product(pg, (source_id, job_id, item_id), pf.p_a, at=10)
+    mark_excluded(pg, job_id)
+    _save_ack(pg, source_id, item_id, ["excluded"])
+    acked = view_of(pg, item_id)
+    assert acked["excluded_acked"] is True and acked["review_acked"] is True
+    assert in_tab(pg, item_id, "NEEDS_REVIEW") is False and in_tab(pg, item_id, "ACKED") is True
+    before = _count_corrections(pg, item_id)
+    assert _revoke(pg, source_id, item_id) == 1
+    assert _count_corrections(pg, item_id) == before + 1  # 追記のみ。前の行は残る
+    after = view_of(pg, item_id)
+    assert after["excluded_acked"] is False and after["review_acked"] is False
+    assert in_tab(pg, item_id, "NEEDS_REVIEW") is True and in_tab(pg, item_id, "ACKED") is False
+    with Session(pg[1]) as session:
+        assert decisions_svc.load_v102_decisions(session, [item_id])[item_id].ack_codes == frozenset()
+
+
+def test_revoke_without_previous_ack_writes_nothing(pg, pf):
+    source_id, _job_id, item_id = prepare(pg, 0)
+    before = _count_corrections(pg, item_id)
+    assert _revoke(pg, source_id, item_id) == 0
+    assert _count_corrections(pg, item_id) == before
+    _save_ack(pg, source_id, item_id, [REASON_NOT_IN_MASTER])
+    assert _revoke(pg, source_id, item_id) == 1
+    assert _revoke(pg, source_id, item_id) == 0  # 2回目は取り消すものが無い
+
+
+def test_ack_after_revoke_does_not_inherit_the_revoked_codes(pg, pf):
+    source_id, _job_id, item_id = prepare(pg, 0)
+    _save_ack(pg, source_id, item_id, ["excluded"])
+    assert _revoke(pg, source_id, item_id) == 1
+    _save_ack(pg, source_id, item_id, [REASON_NOT_IN_MASTER])
+    row = one(pg, f"SELECT human_value FROM {SCHEMA}.item_corrections WHERE extraction_item_id=%s "
+                  f"ORDER BY corrected_at DESC, id DESC LIMIT 1", (item_id,))[0]
+    assert json.loads(row[0])["codes"] == [REASON_NOT_IN_MASTER]
+
+
+@pytest.mark.parametrize(
+    ("human_value", "transcription_at", "ack_at"),
+    [
+        (json.dumps({"v": 1, "codes": []}), None, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), None, 10),
+        (json.dumps({"v": 1, "codes": ["note_unmatched"]}), None, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), 20, 10),
+        (json.dumps({"v": 1, "codes": ["excluded"]}), 10, 10),
+        (json.dumps({"v": 2, "codes": ["excluded"]}), None, 10),
+        ("not json", None, 10),
+    ],
+    ids=["empty", "excluded", "note_unmatched", "after_transcription", "same_time", "version_2", "broken_json"],
+)
+def test_sql_review_acked_matches_python_loader(pg, pf, human_value, transcription_at, ack_at):
+    source_id, _job_id, item_id = prepare(pg, 0)
+    correct(pg, item_id, source_id, "review_ack", human_value, at=ack_at)
+    if transcription_at is not None:
+        correct(pg, item_id, source_id, "v102_lines", "[1, 2]", at=transcription_at)
+    with Session(pg[1]) as session:
+        loaded = decisions_svc.load_v102_decisions(session, [item_id])
+    python_says = bool(loaded[item_id].ack_codes) if item_id in loaded else False
+    assert view_of(pg, item_id)["review_acked"] is python_says

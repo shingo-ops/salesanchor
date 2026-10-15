@@ -83,6 +83,8 @@ def _build_where(
         conditions.append(
             "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
         )
+    elif status_tab == "ACKED":
+        conditions.append("cr.review_acked")
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
         conditions.append("ar.pid_basis = 'NONE'")
     elif status_tab == "SUPPLIER_UNREGISTERED":

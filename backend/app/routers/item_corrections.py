@@ -29,10 +29,12 @@ from app.services.v102_human_decisions_svc import (
     FIELD_PRODUCT_ID,
     find_job_of_item,
     invalid_product_values,
+    item_rejection,
     normalize_ack_codes,
     product_rejection,
     review_ack_rejection,
     save_review_ack,
+    save_review_ack_revoke,
     v102_job_id_of_item,
 )
 from app.tasks.tcg_extraction import enqueue_v102_reanalyze
@@ -194,5 +196,39 @@ async def save_item_review_ack(
         db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
         codes=body.codes, corrected_by=current_user.email,
     )
+    enqueue_v102_reanalyze(found.job_id)
+    return ReviewAckResponse(ok=True, saved=saved)
+
+
+# ---------------------------------------------------------------------------
+# POST /tcg/items/{extraction_item_id}/review-ack/revoke
+# ---------------------------------------------------------------------------
+
+
+class ReviewAckRevokeRequest(BaseModel):
+    source_message_id: UUID
+
+
+@router.post(
+    "/tcg/items/{extraction_item_id}/review-ack/revoke",
+    response_model=ReviewAckResponse,
+    summary="v102 の「このままで良い」（確認済み）を取り消す",
+)
+async def revoke_item_review_ack(
+    extraction_item_id: str,
+    body: ReviewAckRevokeRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+) -> ReviewAckResponse:
+    found = await find_job_of_item(db, extraction_item_id)
+    rejected = item_rejection(found, str(body.source_message_id))
+    if rejected is not None:
+        raise HTTPException(rejected.status, rejected.message)
+    saved = await save_review_ack_revoke(
+        db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
+        corrected_by=current_user.email,
+    )
+    if saved == 0:
+        raise HTTPException(409, "No review-ack to revoke")
     enqueue_v102_reanalyze(found.job_id)
     return ReviewAckResponse(ok=True, saved=saved)
