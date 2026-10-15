@@ -12,6 +12,7 @@ import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
+import { Checkbox } from "../../../components/Checkbox";
 import { Badge } from "../../../components/Badge";
 import { Button } from "../../../components/Button";
 import { TextField } from "../../../components/TextField";
@@ -480,14 +481,11 @@ export function RuleTestPanel() {
               fullWidth
             />
           )}
-          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={addEffectExcluded}
-              onChange={(e) => setAddEffectExcluded(e.target.checked)}
-            />
-            <span style={{ fontSize: "var(--font-sm)" }}>{t(`${f}.expectedEffectExcluded`)}</span>
-          </label>
+          <Checkbox
+            label={t(`${f}.expectedEffectExcluded`)}
+            checked={addEffectExcluded}
+            onChange={(e) => setAddEffectExcluded(e.target.checked)}
+          />
           <TextField
             label={t(`${f}.note`)}
             value={addNote}

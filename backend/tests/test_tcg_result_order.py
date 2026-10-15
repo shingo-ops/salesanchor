@@ -250,6 +250,10 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                 class MeasuredSession:
                     consumer = ""
 
+                    async def run_sync(self, fn, *args, **kwargs):
+                        # load_v102_decisions（読み取りのみ）を同じ読み取り専用の取引で通す。計測対象の一覧クエリには含めない
+                        return await db.run_sync(fn, *args, **kwargs)
+
                     async def execute(self, statement, parameters=None):
                         estimated = (await db.execute(text("EXPLAIN (FORMAT JSON) " + str(statement)),
                                                        parameters)).scalar_one()[0]

@@ -25,6 +25,7 @@ import { api } from "../../lib/api";
 import { FedexEtdSetupGuide } from "./FedexEtdSetupGuide";
 import "./FedexLabelValidationTab.css";
 import { Button } from "../../components/Button";
+import { Checkbox } from "../../components/Checkbox";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextFieldControl } from "../../components/TextField";
 
@@ -285,42 +286,33 @@ export function FedexLabelValidationTab({
       <section className={`lv-step card ${step3Done ? "lv-step--done" : ""}`}>
         <StepHeader num={3} title={t("carrierIntegration.lvStep3Title")} done={step3Done} />
         <p className="form-hint">{t("carrierIntegration.lvStep3Desc")}</p>
-        <label className="lv-check-label">
-          <input
-            type="checkbox"
-            checked={step3Done}
-            onChange={(e) => setStep3Done(e.target.checked)}
-          />
-          {t("carrierIntegration.lvCheckDone")}
-        </label>
+        <Checkbox
+          label={t("carrierIntegration.lvCheckDone")}
+          checked={step3Done}
+          onChange={(e) => setStep3Done(e.target.checked)}
+        />
       </section>
 
       {/* ── Step 4: 手書き記入（手動） ── */}
       <section className={`lv-step card ${step4Done ? "lv-step--done" : ""}`}>
         <StepHeader num={4} title={t("carrierIntegration.lvStep4Title")} done={step4Done} />
         <p className="form-hint">{t("carrierIntegration.lvStep4Desc")}</p>
-        <label className="lv-check-label">
-          <input
-            type="checkbox"
-            checked={step4Done}
-            onChange={(e) => setStep4Done(e.target.checked)}
-          />
-          {t("carrierIntegration.lvCheckDone")}
-        </label>
+        <Checkbox
+          label={t("carrierIntegration.lvCheckDone")}
+          checked={step4Done}
+          onChange={(e) => setStep4Done(e.target.checked)}
+        />
       </section>
 
       {/* ── Step 5: スキャン（手動） ── */}
       <section className={`lv-step card ${step5Done ? "lv-step--done" : ""}`}>
         <StepHeader num={5} title={t("carrierIntegration.lvStep5Title")} done={step5Done} />
         <p className="form-hint">{t("carrierIntegration.lvStep5Desc")}</p>
-        <label className="lv-check-label">
-          <input
-            type="checkbox"
-            checked={step5Done}
-            onChange={(e) => setStep5Done(e.target.checked)}
-          />
-          {t("carrierIntegration.lvCheckDone")}
-        </label>
+        <Checkbox
+          label={t("carrierIntegration.lvCheckDone")}
+          checked={step5Done}
+          onChange={(e) => setStep5Done(e.target.checked)}
+        />
       </section>
 
       {/* ── Step 6: カバーシートダウンロード ── */}

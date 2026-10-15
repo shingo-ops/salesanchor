@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Drawer } from "../../components/Drawer";
+import { Checkbox } from "../../components/Checkbox";
 import { TextField } from "../../components/TextField";
 import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -408,16 +409,12 @@ export function SupplierDetailDrawer({
                   disabled={saving}
                   fullWidth
                 />
-                {/* ui-allow: single boolean toggle (#3564) */}
-                <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                  <input
-                    type="checkbox"
-                    checked={draft.is_active}
-                    onChange={e => change("is_active", e.target.checked)}
-                    disabled={saving}
-                  />
-                  {t(`${f}.isActive`)}
-                </label>
+                <Checkbox
+                  label={t(`${f}.isActive`)}
+                  checked={draft.is_active}
+                  onChange={e => change("is_active", e.target.checked)}
+                  disabled={saving}
+                />
 
                 {mode === "edit" && supplierId !== null && (
                   <div style={{ marginTop: "var(--space-4)" }}>

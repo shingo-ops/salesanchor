@@ -66,6 +66,19 @@ ENGINE_VERSION = "name-first-v9-product-all-terms"
 # ---------------------------------------------------------------------------
 
 
+_UNIT_ALIAS_SQL = """
+    SELECT ua.alias_text, u.canonical, u.id
+    FROM public.unit_aliases ua
+    JOIN public.units u ON u.id = ua.unit_id
+    WHERE u.is_active = TRUE
+"""
+
+
+def load_unit_canonical_ids(session: Session) -> dict[str, str]:
+    """単位 canonical → 単位 id（文字列）。load_lookup_maps の unit_canonical_to_uuid と同じ SQL・同じ中身（全商品は読まない）。"""
+    return {canonical: str(uid) for _alias, canonical, uid in session.execute(text(_UNIT_ALIAS_SQL)).fetchall()}
+
+
 def load_lookup_maps(
     session: Session,
 ) -> tuple[dict, dict, dict, dict, dict, dict]:
@@ -86,16 +99,7 @@ def load_lookup_maps(
     product_code_to_uuid: dict[str, int] = {str(r[0]): r[0] for r in rows}
 
     # --- 単位エイリアス → canonical + UUID ---
-    rows = session.execute(
-        text(
-            """
-            SELECT ua.alias_text, u.canonical, u.id
-            FROM public.unit_aliases ua
-            JOIN public.units u ON u.id = ua.unit_id
-            WHERE u.is_active = TRUE
-            """
-        )
-    ).fetchall()
+    rows = session.execute(text(_UNIT_ALIAS_SQL)).fetchall()
     unit_alias_to_canonical: dict[str, str] = {}
     unit_canonical_to_uuid: dict[str, str] = {}
     for alias_text, canonical, uid in rows:

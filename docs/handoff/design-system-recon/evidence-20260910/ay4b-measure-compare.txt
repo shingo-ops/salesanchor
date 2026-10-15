@@ -1,0 +1,269 @@
+# AY-4b 前後実測 比較表（147.0.7727.15）
+前: origin/main の vite build CSS ＋ 実ファイルから写した変更前マークアップ。後: 作業ツリーの vite build CSS ＋ 本物の金型 DOM（renderToStaticMarkup）。
+条件: 幅 390 / 1280 × ライト/ダーク × 未チェック/チェック × 試料（型ごとの実物の親。ay4b-render.tsx の ref）。測定した行数: 352（前後別）。
+親の再現範囲: Drawer 本体の幅と余白（--drawer-panel-w-default, padding space-5/space-6）、grid/flex の実ファイルどおりの構造、変更していない TextField 等は本物を描画。Drawer の外枠（影・ヘッダー）は含まない。
+
+## 試料
+- A-same-row | ProductCategoriesMasterPanel | frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx:256-287（form-group 3 件の後）
+- A-same-row | UnitMasterPanel | frontend/src/pages/super-admin/components/UnitMasterPanel.tsx:307-338（form-group 3 件の後）
+- A-same-row | NoteMasterPanel | frontend/src/pages/super-admin/components/NoteMasterPanel.tsx:258-307（form-group 5 件の後）
+- A-same-row | QuantityUnitsMasterPanel | frontend/src/pages/super-admin/components/QuantityUnitsMasterPanel.tsx:201-248（form-group 5 件の後）
+- A-same-row | TypeMasterPanel | frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:225-275（form-group 5 件の後）
+- A-same-row | KnowledgeAliasesTab(#10) | frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:436-483（grid 1fr 1fr、form-group 5 件の後）
+- A-alone-row | ConditionDefsMasterPanel | frontend/src/pages/super-admin/components/ConditionDefsMasterPanel.tsx:194-233（form-group 4 件の後）
+- A-alone-row | ConditionsMasterPanel | frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:318-449（g,g,F,F,F,g,g,g,g,F の後）
+- A-alone-row | ProductFormatsMasterPanel | frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:251-318（form-group 6 件の後）
+- A-alone-row | ProductKindsMasterPanel | frontend/src/pages/super-admin/components/ProductKindsMasterPanel.tsx:191-230（form-group 4 件の後）
+- A-alone-row | ProductLinesMasterPanel | frontend/src/pages/super-admin/components/ProductLinesMasterPanel.tsx:250-317（form-group 6 件の後）
+- A-alone-row | SupplierMasterPanel | frontend/src/pages/super-admin/components/SupplierMasterPanel.tsx:311-380（F,g,g,F,g,g,g,g,F の後）
+- A-alone-row | UnitIgnorePhrasesPanel | frontend/src/pages/super-admin/components/UnitIgnorePhrasesPanel.tsx:155-175（grid 1fr、TextField 2 件の後）
+- A-alone-row | WeightClassesMasterPanel | frontend/src/pages/super-admin/components/WeightClassesMasterPanel.tsx:205-260（form-group 6 件の後）
+- A-alone-row | SupplierDetailDrawer(#1) | frontend/src/features/supplier-master/SupplierDetailDrawer.tsx:341-420（form.product-detail__form: flex column gap space-4、未到達）
+- A2-span | RuleTestPanel | frontend/src/pages/super-admin/components/RuleTestPanel.tsx:463-490（flex column gap space-4）
+- B-dist | DistributionTargetForm | frontend/src/features/tcg-distribution/DistributionTargetForm.tsx:200-245（.dist-drawer-body: flex column gap space-4、.dist-field の後）
+- C-lv | FedexLabelValidationTab | frontend/src/pages/integrations/FedexLabelValidationTab.tsx:285-295（section.lv-step.card、p.form-hint の下、未到達）
+- D-pmd | ProductMasterDrawer | frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:228-241（section.pmd-warning）
+- E-prompt | ExtractionPromptConfigTab | frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx:150-232（カード内、見出しの下・TextareaControl の上）
+- F-td | KnowledgeAliasesTab(#8) | frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:339-347（table.data-table の td、text-align center）
+- F-td | KnowledgeAliasesTab(#9) | frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:415-423（table.data-table の td、text-align center）
+
+## 比較表（型｜項目｜幅｜前｜後｜差｜金型どおりの差か）  差 0 の項目も出す。値が複数ある所は試料/条件ごとの異なる値を / で並べる。
+型｜項目｜幅｜前｜後｜差｜金型どおりの差か（○/×と理由1行）
+A-alone-row｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-alone-row｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-alone-row｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-alone-row｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-alone-row｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A-alone-row｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A-alone-row｜文字 font-size｜390｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A-alone-row｜文字 font-size｜1280｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A-alone-row｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A-alone-row｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A-alone-row｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A-alone-row｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A-alone-row｜文字 line-height｜390｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+A-alone-row｜文字 line-height｜1280｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+A-alone-row｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A-alone-row｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A-alone-row｜label(金型 root) の幅｜390｜163 / 342｜163 / 342｜0｜差なし
+A-alone-row｜label(金型 root) の幅｜1280｜208 / 432｜208 / 432｜0｜差なし
+A-alone-row｜label(金型 root) の高さ｜390｜25.59｜20.39｜-5.2｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+A-alone-row｜label(金型 root) の高さ｜1280｜25.59｜20.39｜-5.2｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+A-alone-row｜input と文字の縦の中心のずれ(input-文字)｜390｜0.8｜-2.67｜-3.47｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A-alone-row｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.8｜-2.67｜-3.47｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A-alone-row｜上の要素との間隔｜390｜28 / 32｜28 / 32｜0｜差なし
+A-alone-row｜上の要素との間隔｜1280｜28 / 32｜28 / 32｜0｜差なし
+A-alone-row｜下の要素との間隔｜390｜32｜32｜0｜差なし
+A-alone-row｜下の要素との間隔｜1280｜32｜32｜0｜差なし
+A-alone-row｜root の display｜390｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A-alone-row｜root の display｜1280｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A-alone-row｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A-alone-row｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A-alone-row｜親(断片)全体の高さ｜390｜301.09 / 889.84 / 418.84 / 772.09 / 261.09 / 285.09｜295.89 / 884.64 / 413.64 / 766.89 / 255.89 / 279.89｜-5.2｜○(派生) 上の root の高さの差の合計
+A-alone-row｜親(断片)全体の高さ｜1280｜292.31 / 859.11 / 405.67 / 745.75 / 252.31 / 276.31｜287.11 / 853.91 / 400.47 / 740.55 / 247.11 / 271.11｜-5.2｜○(派生) 上の root の高さの差の合計
+A-same-row｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-same-row｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-same-row｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-same-row｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A-same-row｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A-same-row｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A-same-row｜文字 font-size｜390｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A-same-row｜文字 font-size｜1280｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A-same-row｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A-same-row｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A-same-row｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A-same-row｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A-same-row｜文字 line-height｜390｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+A-same-row｜文字 line-height｜1280｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+A-same-row｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A-same-row｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A-same-row｜label(金型 root) の幅｜390｜163｜163｜0｜差なし
+A-same-row｜label(金型 root) の幅｜1280｜208｜208｜0｜差なし
+A-same-row｜label(金型 root) の高さ｜390｜105.75 / 85.75｜105.75 / 85.75｜0｜差なし
+A-same-row｜label(金型 root) の高さ｜1280｜101.36 / 81.36｜101.36 / 81.36｜0｜差なし
+A-same-row｜input と文字の縦の中心のずれ(input-文字)｜390｜0.8｜-2.67｜-3.47｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A-same-row｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.8｜-2.67｜-3.47｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A-same-row｜input と左の TextField 入力枠の縦の中心のずれ｜390｜1.13 / -4.87｜-44.42 / -40.42｜-45.55 / -35.55｜○(派生) Checkbox.css:10 align-items:flex-start（旧は center）で、セルの上端寄せになる
+A-same-row｜input と左の TextField 入力枠の縦の中心のずれ｜1280｜1.12 / -4.88｜-42.23 / -38.23｜-43.35 / -33.35｜○(派生) Checkbox.css:10 align-items:flex-start（旧は center）で、セルの上端寄せになる
+A-same-row｜root の display｜390｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A-same-row｜root の display｜1280｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A-same-row｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A-same-row｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A-same-row｜親(断片)全体の高さ｜390｜263.5 / 381.25 / 361.25｜263.5 / 381.25 / 361.25｜0｜差なし
+A-same-row｜親(断片)全体の高さ｜1280｜254.72 / 368.08 / 348.08｜254.72 / 368.08 / 348.08｜0｜差なし
+A2-span｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A2-span｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A2-span｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A2-span｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+A2-span｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A2-span｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+A2-span｜文字 font-size｜390｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A2-span｜文字 font-size｜1280｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+A2-span｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A2-span｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+A2-span｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A2-span｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+A2-span｜文字 line-height｜390｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+A2-span｜文字 line-height｜1280｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+A2-span｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A2-span｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+A2-span｜label(金型 root) の幅｜390｜342｜342｜0｜差なし
+A2-span｜label(金型 root) の幅｜1280｜432｜432｜0｜差なし
+A2-span｜label(金型 root) の高さ｜390｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+A2-span｜label(金型 root) の高さ｜1280｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+A2-span｜input と文字の縦の中心のずれ(input-文字)｜390｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A2-span｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+A2-span｜上の要素との間隔｜390｜32｜32｜0｜差なし
+A2-span｜上の要素との間隔｜1280｜32｜32｜0｜差なし
+A2-span｜下の要素との間隔｜390｜16｜16｜0｜差なし
+A2-span｜下の要素との間隔｜1280｜16｜16｜0｜差なし
+A2-span｜root の display｜390｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A2-span｜root の display｜1280｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+A2-span｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A2-span｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+A2-span｜親(断片)全体の高さ｜390｜265.25｜263.89｜-1.36｜○(派生) 上の root の高さの差の合計
+A2-span｜親(断片)全体の高さ｜1280｜256.47｜255.11｜-1.36｜○(派生) 上の root の高さの差の合計
+B-dist｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+B-dist｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+B-dist｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+B-dist｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+B-dist｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+B-dist｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+B-dist｜文字 font-size｜390｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+B-dist｜文字 font-size｜1280｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+B-dist｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+B-dist｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+B-dist｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+B-dist｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+B-dist｜文字 line-height｜390｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+B-dist｜文字 line-height｜1280｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+B-dist｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+B-dist｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+B-dist｜label(金型 root) の幅｜390｜358｜358｜0｜差なし
+B-dist｜label(金型 root) の幅｜1280｜448｜448｜0｜差なし
+B-dist｜label(金型 root) の高さ｜390｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+B-dist｜label(金型 root) の高さ｜1280｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+B-dist｜input と文字の縦の中心のずれ(input-文字)｜390｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+B-dist｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+B-dist｜上の要素との間隔｜390｜16｜16｜0｜差なし
+B-dist｜上の要素との間隔｜1280｜16｜16｜0｜差なし
+B-dist｜root の display｜390｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+B-dist｜root の display｜1280｜flex｜flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+B-dist｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+B-dist｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+B-dist｜親(断片)全体の高さ｜390｜139.5｜138.14｜-1.36｜○(派生) 上の root の高さの差の合計
+B-dist｜親(断片)全体の高さ｜1280｜135.11｜133.75｜-1.36｜○(派生) 上の root の高さの差の合計
+C-lv｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+C-lv｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+C-lv｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+C-lv｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+C-lv｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+C-lv｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+C-lv｜文字 font-size｜390｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+C-lv｜文字 font-size｜1280｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+C-lv｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+C-lv｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+C-lv｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+C-lv｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+C-lv｜文字 line-height｜390｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+C-lv｜文字 line-height｜1280｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+C-lv｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+C-lv｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+C-lv｜label(金型 root) の幅｜390｜83.8｜85.45｜+1.65｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+C-lv｜label(金型 root) の幅｜1280｜83.8｜85.45｜+1.65｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+C-lv｜label(金型 root) の高さ｜390｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+C-lv｜label(金型 root) の高さ｜1280｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+C-lv｜input と文字の縦の中心のずれ(input-文字)｜390｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+C-lv｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+C-lv｜上の要素との間隔｜390｜20｜15.34｜-4.66｜○(派生) 旧 .lv-check-label の margin-top(space-2) が無くなる（設計 §3-2）／行ボックスの差
+C-lv｜上の要素との間隔｜1280｜20｜15.34｜-4.66｜○(派生) 旧 .lv-check-label の margin-top(space-2) が無くなる（設計 §3-2）／行ボックスの差
+C-lv｜root の display｜390｜inline-flex｜inline-flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+C-lv｜root の display｜1280｜inline-flex｜inline-flex｜0｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+C-lv｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+C-lv｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+C-lv｜親(断片)全体の高さ｜390｜144.31｜136.94｜-7.37｜○(派生) 上の root の高さの差の合計
+C-lv｜親(断片)全体の高さ｜1280｜144.31｜136.94｜-7.37｜○(派生) 上の root の高さの差の合計
+D-pmd｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+D-pmd｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+D-pmd｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+D-pmd｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+D-pmd｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+D-pmd｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+D-pmd｜文字 font-size｜390｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+D-pmd｜文字 font-size｜1280｜16px｜13.6px｜-2.4｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+D-pmd｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+D-pmd｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+D-pmd｜文字 color｜390｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+D-pmd｜文字 color｜1280｜rgb(26, 32, 44) / rgb(241, 245, 249)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜0｜○ 金型の var(--text-primary)（Checkbox.css:13）
+D-pmd｜文字 line-height｜390｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+D-pmd｜文字 line-height｜1280｜25.6px｜20.4px｜-5.2｜○ 金型の line-height var(--line-height-base) × font-size
+D-pmd｜input と文字の間隔｜390｜0｜8｜+8｜○ 金型の gap var(--space-2)=8px
+D-pmd｜input と文字の間隔｜1280｜0｜8｜+8｜○ 金型の gap var(--space-2)=8px
+D-pmd｜label(金型 root) の幅｜390｜318｜318｜0｜差なし
+D-pmd｜label(金型 root) の幅｜1280｜408｜408｜0｜差なし
+D-pmd｜label(金型 root) の高さ｜390｜25.59｜20.39｜-5.2｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+D-pmd｜label(金型 root) の高さ｜1280｜25.59｜20.39｜-5.2｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+D-pmd｜input と文字の縦の中心のずれ(input-文字)｜390｜-0.5｜-2.67｜-2.17｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+D-pmd｜input と文字の縦の中心のずれ(input-文字)｜1280｜-0.5｜-2.67｜-2.17｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+D-pmd｜上の要素との間隔｜390｜4｜4｜0｜差なし
+D-pmd｜上の要素との間隔｜1280｜4｜4｜0｜差なし
+D-pmd｜root の display｜390｜block｜flex｜変化｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+D-pmd｜root の display｜1280｜block｜flex｜変化｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+D-pmd｜root の align-items｜390｜normal｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+D-pmd｜root の align-items｜1280｜normal｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+D-pmd｜親(断片)全体の高さ｜390｜142.38｜137.17｜-5.21｜○(派生) 上の root の高さの差の合計
+D-pmd｜親(断片)全体の高さ｜1280｜142.38｜137.17｜-5.21｜○(派生) 上の root の高さの差の合計
+E-prompt｜input の幅｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+E-prompt｜input の幅｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+E-prompt｜input の高さ｜390｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+E-prompt｜input の高さ｜1280｜13｜14.66｜+1.66｜○ Checkbox の 1.1em（Checkbox.css input 1.1em。em は input 自身の font-size 13.3333px 基準）
+E-prompt｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+E-prompt｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+E-prompt｜文字 font-size｜390｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+E-prompt｜文字 font-size｜1280｜13.6px｜13.6px｜0｜○ 金型の font-size var(--font-sm)=13.6px（Checkbox.css:12）
+E-prompt｜文字 font-weight｜390｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+E-prompt｜文字 font-weight｜1280｜400｜500｜+100｜○ 金型の var(--font-weight-medium)（Checkbox.css 文字 span）
+E-prompt｜文字 color｜390｜rgb(74, 85, 104) / rgb(203, 213, 225)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜変化｜○ 金型の var(--text-primary)（Checkbox.css:13）
+E-prompt｜文字 color｜1280｜rgb(74, 85, 104) / rgb(203, 213, 225)｜rgb(26, 32, 44) / rgb(241, 245, 249)｜変化｜○ 金型の var(--text-primary)（Checkbox.css:13）
+E-prompt｜文字 line-height｜390｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+E-prompt｜文字 line-height｜1280｜21.76px｜20.4px｜-1.36｜○ 金型の line-height var(--line-height-base) × font-size
+E-prompt｜input と文字の間隔｜390｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+E-prompt｜input と文字の間隔｜1280｜8｜8｜0｜○ 金型の gap var(--space-2)=8px
+E-prompt｜label(金型 root) の幅｜390｜350｜85.45｜-264.55｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+E-prompt｜label(金型 root) の幅｜1280｜680｜85.45｜-594.55｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+E-prompt｜label(金型 root) の高さ｜390｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+E-prompt｜label(金型 root) の高さ｜1280｜21.75｜20.39｜-1.36｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+E-prompt｜input と文字の縦の中心のずれ(input-文字)｜390｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+E-prompt｜input と文字の縦の中心のずれ(input-文字)｜1280｜0.88｜-2.67｜-3.55｜○(派生) Checkbox.css:10 align-items:flex-start で input が行の上端寄せになる
+E-prompt｜上の要素との間隔｜390｜12｜12｜0｜差なし
+E-prompt｜上の要素との間隔｜1280｜12｜12｜0｜差なし
+E-prompt｜下の要素との間隔｜390｜12｜12｜0｜差なし
+E-prompt｜下の要素との間隔｜1280｜12｜12｜0｜差なし
+E-prompt｜root の display｜390｜flex｜inline-flex｜変化｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+E-prompt｜root の display｜1280｜flex｜inline-flex｜変化｜○ Checkbox.css:9 inline-flex（grid/flex の子では blockify される）
+E-prompt｜root の align-items｜390｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+E-prompt｜root の align-items｜1280｜center｜flex-start｜変化｜○ Checkbox.css:10 align-items: flex-start
+E-prompt｜親(断片)全体の高さ｜390｜266.59｜270.44｜+3.85｜○(派生) 上の root の高さの差の合計
+E-prompt｜親(断片)全体の高さ｜1280｜266.59｜270.44｜+3.85｜○(派生) 上の root の高さの差の合計
+F-td｜input の幅｜390｜13｜16｜+3｜○ CheckboxControl の var(--size-checkbox)=16px
+F-td｜input の幅｜1280｜13｜16｜+3｜○ CheckboxControl の var(--size-checkbox)=16px
+F-td｜input の高さ｜390｜13｜16｜+3｜○ CheckboxControl の var(--size-checkbox)=16px
+F-td｜input の高さ｜1280｜13｜16｜+3｜○ CheckboxControl の var(--size-checkbox)=16px
+F-td｜accent-color｜390｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+F-td｜accent-color｜1280｜auto｜rgb(30, 58, 138) / rgb(91, 141, 217)｜変化｜○ アプリの基本色 --accent（PO 決定 2026-10-15）
+F-td｜label(金型 root) の幅｜390｜13｜16｜+3｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+F-td｜label(金型 root) の幅｜1280｜13｜16｜+3｜○(派生) 金型 root の inline-flex（文字の幅まで縮む）／input 1.1em・16px で決まる幅
+F-td｜label(金型 root) の高さ｜390｜13｜16｜+3｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+F-td｜label(金型 root) の高さ｜1280｜13｜16｜+3｜○(派生) 文字の line-height（金型 line-height×font-size）と input 1.1em で決まる高さ
+F-td｜親(断片)全体の高さ｜390｜94.23｜94.23｜0｜差なし
+F-td｜親(断片)全体の高さ｜1280｜94.23｜94.23｜0｜差なし
+F-td｜td の幅｜390｜78.8 / 91.34｜82.94 / 95.94｜+4.14 / +4.6｜○(派生) input 13→16px で列幅が広がる
+F-td｜td の幅｜1280｜145.48 / 168.64｜153.13 / 177.13｜+7.65 / +8.49｜○(派生) input 13→16px で列幅が広がる
+F-td｜td の高さ｜390｜49.55｜49.55｜0｜差なし
+F-td｜td の高さ｜1280｜49.55｜49.55｜0｜差なし
+F-td｜input の横中心の td 中心とのずれ｜390｜-0.01 / 0｜0｜+0.01 / 0｜○(派生) text-align:center のまま中心に入る
+F-td｜input の横中心の td 中心とのずれ｜1280｜-0.01｜0｜+0.01｜○(派生) text-align:center のまま中心に入る
+
+## 集計
+行数: 差あり 158 / 差なし 76。金型の定義値と不一致（×）: 0 件 []
+テーマ・チェック状態で値が変わった (型,試料,項目,幅,側) の数: 0 []

@@ -17,6 +17,7 @@ from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
 from app.services.v102_gap_lines import gap_suspects_by_item
 from app.services.v102_gap_suspect_view import with_candidate_names
+from app.services.v102_human_decisions_svc import Decisions, format_decimal, load_v102_decisions
 
 TCG_SCHEMA = "public"
 
@@ -30,6 +31,19 @@ _ISSUE_EXCLUDED = "EXCLUDED"
 _ISSUE_MASTER_UNREGISTERED = "PRODUCT_MASTER_UNREGISTERED"
 _ISSUE_SUPPLIER_UNREGISTERED = "SUPPLIER_UNREGISTERED"
 _ISSUE_PRODUCT_CONFIRMED = "PRODUCT_CONFIRMED"
+
+def _manual_values(decision: Decisions | None) -> dict[str, str]:
+    """人が直した項目だけ（数字は format_decimal の書式。メモを空にした件は note が空文字）。"""
+    if decision is None:
+        return {}
+    v = decision.values
+    candidates = {
+        "quantity": format_decimal(v.quantity) if v.quantity is not None else None,
+        "price": format_decimal(v.price) if v.price is not None else None,
+        "unit": v.unit, "note": v.note, "status": v.status,
+    }
+    return {key: value for key, value in candidates.items() if value is not None}
+
 
 # ---------------------------------------------------------------------------
 # 共通 FROM 句（全クエリで再利用）
@@ -233,6 +247,8 @@ async def fetch_analysis_results(
             ar.note_ja,
             ar.status,
             ar.exclusion,
+            ar.quantity_normalized,
+            ar.price_normalized,
             (ps.id IS NOT NULL)                  AS supplier_registered,
             COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
             COALESCE(
@@ -258,6 +274,7 @@ async def fetch_analysis_results(
     for row in rows:
         raw_suspects.update(gap_suspects_by_item(row.system_review_detail))
     suspects = await with_candidate_names(db, {k: v for k, v in raw_suspects.items() if k in page_ids})
+    decisions = await db.run_sync(lambda sync: load_v102_decisions(sync, page_ids))  # 直した値の読み方の正本
     items = []
     for row in rows:
         span = (
@@ -296,7 +313,10 @@ async def fetch_analysis_results(
                     "status": row.status or "",
                     "note": row.note_ja or "",
                     "exclusion": row.exclusion or "",
+                    "quantity": format_decimal(row.quantity_normalized),
+                    "price": format_decimal(row.price_normalized),
                 },
+                "manual_values": _manual_values(decisions.get(row.extraction_item_id)),
                 "condition_review": {
                     "condition_id": row.condition_id, "review_version": row.review_version,
                     "needs_review": row.needs_review, "review_reasons": row.review_reasons or "",
