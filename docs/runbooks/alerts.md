@@ -65,8 +65,8 @@
 ## BackendHighLatency
 
 - 札：ticket
-- 何が起きているか：バックエンドの P99 レスポンスタイムが 2.0 秒を超えた状態が 2 分続いた。条件は便4 で見直す予定（それまで ticket）。
-- 最初に見るもの：Grafana のバックエンドのダッシュボード、遅いリクエストのパス。
+- 何が起きているか：/api/health を除いた利用者のリクエストのうち、2.5 秒を超えたものの割合が 5% を超える状態が 5 分続いた。2026-10-15 に条件を P99 > 2.0 秒から変えた。/api/health が毎回 1〜2.5 秒かかり、P99 を常に 2.0 秒より上に押し上げていたため（14 日で 393 回鳴っていた）。/api/health が遅い原因は未調査（設計 docs/handoff/ai-ops-247/stage1-design.md の U9）。
+- 最初に見るもの：Grafana のバックエンドのダッシュボード。どの handler が遅いかは `topk(5, sum by (handler) (rate(http_request_duration_seconds_count{job="backend",handler!="/api/health"}[5m])) - sum by (handler) (rate(http_request_duration_seconds_bucket{job="backend",handler!="/api/health",le="2.5"}[5m])))` で出す。Grafana の backend の画面の P99 のパネルは /api/health を含んだまま変えていない（設計 U3 の扱い）。画面の P99 が高くても、この見張りは鳴らないことがある。
 - 直し方：遅いリクエストと DB の状態を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=BackendHighLatency --duration=PERIOD --comment=REASON`
 
