@@ -201,6 +201,7 @@
   - 解決（2026-10-15 22:18）: PO の y を受け、fork の PR の承認設定（approval_policy）を first_time_contributors から all_external_contributors に変えた。PO が `! bash ~/CC報告ファイル-keep/ai-ops-u18/po-set-fork-approval.sh` で実行し、直後の確認では旧値、少し後の確認で all_external_contributors になったことを確かめた。self-hosted runner で pull_request を受ける workflow は qa-smoke.yml（salesanchor-vps）・hook-permission-check.yml（macOS）・reaper-schedule.yml（macOS。マージ時だけ動く条件付き）の 3 本。戻し方: 同じ API に first_time_contributors を PUT する。
 - U19: pushgateway は値を保存しない設定（persistence の指定なし）。再起動すると便7 の値が消える。値が消えると absent の側で 1 時間後に MonitoringConfigCheckStale（ticket）が鳴り、次の毎日の実行まで続く。手順書に「pushgateway の再起動後は workflow を手動で 1 回動かす」を足すか、persistence を付けるかを決める（2026-10-15 便7 コード審査 低-2）。
 - U20: pushgateway のポートは 9091 で、機体の外向きに公開する書き方になっている。prod2 の防火壁の設定は未確認。外から送れる場合、ずれ 0 の値を送ってずれを隠せる。防火壁を確かめるか、127.0.0.1 に絞るかを決める（2026-10-15 便7 コード審査 低-4。便7 では変えていない）。
+  - 解決（2026-10-15）: 変更なしで閉じる。根拠 ①prod2:9091 への直接の到達は、さくら prod2 のパケットフィルタで「TCP 9091 / 送信元 49.212.137.46/32 のみ許可」（2026-10-15 に PO が管理画面で現在値を確認。記録 docs/runbooks/monitoring-vps-migration.md:107）。Mac から `curl -m 5 http://49.212.160.98:9091/-/healthy` は timeout。②prod1 の nginx が中継するのは `location /pushgateway/metrics/job/sop-health-reporter/` の POST/PUT だけ（nginx/nginx.conf:215-222）。GET は 403（2026-10-15 実測）。便7 の job（monitoring_config_drift）へは外から届かない。③127.0.0.1 に絞ると、prod1 nginx からの中継（nginx.conf:217）が届かず sop-health-reporter が止まる。残るリスク: 記録係 job への POST/PUT は認証なしで外から可能（docs/handoff/server-resource-optimization/design-20261001.md:186 で既知、影響は SOP 指標のみ）。ufw の現在値は未確認（制限鍵で読めない）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 
