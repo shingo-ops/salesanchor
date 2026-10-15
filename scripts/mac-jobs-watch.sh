@@ -82,6 +82,7 @@ CL_RSN=()
 DJ_START_T=""
 DJ_START_LN=0
 DJ_END_LN=0
+LAST04=0
 
 STATE_F=""
 PROB_F=""
@@ -138,7 +139,7 @@ mjw_send() { # mjw_send <text>
   s="${s//\"/\\\"}"
   s="${s//$'\n'/\\n}"
   payload="{\"content\":\"${s}\"}"
-  printf 'url = "%s"\n' "${URL}" | "${MJW_CURL}" -sS -o /dev/null --fail -X POST \
+  printf 'url = "%s"\n' "${URL}" | "${MJW_CURL}" -sS -o /dev/null --fail --max-time 20 -X POST \
     -H 'Content-Type: application/json' -d "${payload}" --config - 2>/dev/null
 }
 
@@ -167,7 +168,9 @@ prob_set() { # prob_set <名前> <時刻>
 mjw_judged() {
   case "$1" in
     unloaded:*) [ "${JUST_BOOTED}" -eq 0 ] ;;
-    colima-stale|dj-stale) [ "${AWAKE}" -eq 1 ] ;;
+    colima-stale) [ "${AWAKE}" -eq 1 ] ;;
+    # dj-stale は、起きていた回・起動が直近 04:00 より前・04:00+猶予以降、の 3 つが揃う回だけ判定する
+    dj-stale) [ "${AWAKE}" -eq 1 ] && [ "${BOOT_SEC}" -lt "${LAST04}" ] && [ "${NOW}" -ge $(( LAST04 + MJW_DJ_GRACE )) ] ;;
     *) return 0 ;;
   esac
 }
@@ -291,7 +294,7 @@ mjw_dj_parse() {
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 mjw_detect_states() {
   DETECTED=""
-  local l last04 mt
+  local l mt
   # unloaded:*
   if [ "${JUST_BOOTED}" -eq 0 ]; then
     for l in ${MJW_LABELS}; do
@@ -309,14 +312,12 @@ mjw_detect_states() {
     fi
   fi
   # dj-stale
-  last04="$(date -j -r "${NOW}" -v"${MJW_DJ_HOUR}"H -v0M -v0S +%s 2>/dev/null)"
-  last04="$(mjw_num "${last04}")"
-  if [ "${last04}" -gt "${NOW}" ]; then last04=$(( last04 - 86400 )); fi
-  if [ "${AWAKE}" -eq 1 ]; then
+  LAST04="$(date -j -r "${NOW}" -v"${MJW_DJ_HOUR}"H -v0M -v0S +%s 2>/dev/null)"
+  LAST04="$(mjw_num "${LAST04}")"
+  if [ "${LAST04}" -gt "${NOW}" ]; then LAST04=$(( LAST04 - 86400 )); fi
+  if mjw_judged dj-stale; then
     if [ -z "${DJ_START_T}" ] || [ $(( NOW - DJ_START_T )) -gt "${MJW_DJ_STALE}" ]; then
-      if [ "${BOOT_SEC}" -lt "${last04}" ] && [ "${NOW}" -ge $(( last04 + MJW_DJ_GRACE )) ]; then
-        list_add DETECTED dj-stale
-      fi
+      list_add DETECTED dj-stale
     fi
   fi
   # dj-unfinished
@@ -452,7 +453,7 @@ mjw_main() {
   mjw_classify
 
   if [ "${DRY_RUN}" -eq 1 ]; then
-    mjw_log_now dry-run -
+    mjw_log dry-run - "$(mjw_csv "${DETECTED}")" "$(mjw_csv "${EV_LIST}")" "${AWAKE}"
     exit 0
   fi
 

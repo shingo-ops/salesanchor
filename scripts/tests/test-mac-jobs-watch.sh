@@ -196,11 +196,11 @@ rm -f "${D}/colima.log" "${D}/dj.log"
 colima_line $(( NOW - 20000 )) idle -
 dj_start $(( NOW - 120000 )); dj_end $(( NOW - 119900 ))
 mk_state $(( NOW - 5000 )) "${BOOT}" $(( NOW - 20000 )) 0 0
-printf 'colima-stale\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+printf 'colima-stale\t%s\ndj-stale\t%s\n' "$(( NOW - 100 ))" "$(( NOW - 100 ))" > "${D}/state/problems"
 run_mjw
 eq "⑧-1 眠り明け: 送らない（recover も出ない）" "$(ncalls)" "0"
 has_prob "colima-stale" && ok "⑧-2 前回の問題を持ち越す" || ng "⑧-2 前回の問題を持ち越す"
-has_prob "dj-stale" && ng "⑧-3 dj-stale は新しく付かない" || ok "⑧-3 dj-stale は新しく付かない"
+has_prob "dj-stale" && ok "⑧-3 dj-stale も前回を持ち越す（復旧にしない）" || ng "⑧-3 dj-stale も前回を持ち越す（復旧にしない）"
 eq "⑧-4 ログ awake=0" "$(logc 'awake=0')" "1"
 
 # ── ⑨ colima-stale ───────────────────────────────────────────────────────────
@@ -279,6 +279,7 @@ rm -f "${D}/state/state"
 echo "error text" > "${D}/dj.err"; settime "${D}/dj.err" $(( NOW - 30 ))
 run_mjw
 eq "⑬-1 初回: dj-err を出さない" "$(sentmsg 1 | grep -c '道具の更新に失敗')" "0"
+eq "⑬-1b 初回: 送るのは起動後の点検の 1 通だけ（2 通目に dj-err が出ない）" "$(ncalls)" "1"
 eq "⑬-2 初回: 既読位置が err の更新時刻" "$(stv dj_err_seen)" "$(( NOW - 30 ))"
 set_now $(( NOW + 900 ))
 run_mjw
@@ -296,8 +297,10 @@ before="$(ncalls)"
 : > "${D}/dj.err"; settime "${D}/dj.err" $(( NOW + 30 ))
 set_now $(( NOW + 900 ))
 colima_line $(( NOW - 60 )) idle -
+zero_m=$(( NOW - 900 + 30 ))
 run_mjw
 eq "⑬-6 大きさ 0 の更新: 出さない" "$(ncalls)" "${before}"
+eq "⑬-6b 大きさ 0 の更新でも既読位置は進む" "$(stv dj_err_seen)" "${zero_m}"
 eq "⑬-7 recover は出ない" "$(logc 'result=recover')" "0"
 
 # ── ⑭ 起動後の点検 ───────────────────────────────────────────────────────────
@@ -467,6 +470,113 @@ mk_state $(( NOW - 1800 )) "${BOOT}" $(( NOW - 60 )) 1 0
 run_mjw
 eq "㉔-1 既読位置より新しい行が 0 行: 送らない" "$(ncalls)" "0"
 eq "㉔-2 既読位置は戻らない" "$(stv colima_seen)" "$(( NOW - 60 ))"
+
+# ── ㉕ dj-stale は「判定する回」だけで判定する（猶予内・起動後は前回を持ち越す）─────────
+dj_stale_setup() { # dj_stale_setup [now]
+  setup "$@"
+  rm -f "${D}/dj.log"
+  dj_start $(( NOW - 120000 )); dj_end $(( NOW - 119900 ))
+  printf 'dj-stale\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+}
+dj_stale_setup $(( T04 + 1800 ))
+run_mjw
+eq "㉕-1 猶予内（04:30）: 復旧も異常も送らない" "$(ncalls)" "0"
+has_prob "dj-stale" && ok "㉕-2 猶予内: 前回を持ち越す" || ng "㉕-2 猶予内: 前回を持ち越す"
+eq "㉕-3 猶予内: recover が無い" "$(logc 'result=recover')" "0"
+dj_stale_setup $(( T04 + 3600 ))
+run_mjw
+eq "㉕-4 猶予の終わり（05:00）: 続いているだけなので送らない" "$(ncalls)" "0"
+has_prob "dj-stale" && ok "㉕-5 05:00: 問題は残る" || ng "㉕-5 05:00: 問題は残る"
+dj_stale_setup
+export MJW_BOOT_SEC=$(( NOW - 10800 ))
+mk_state $(( NOW - 1800 )) "$(( NOW - 10800 ))" $(( NOW - 60 )) 0 0
+printf 'dj-stale\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+run_mjw
+eq "㉕-6 04:00 より後に起動: 復旧を送らない" "$(ncalls)" "0"
+has_prob "dj-stale" && ok "㉕-7 04:00 より後に起動: 前回を持ち越す" || ng "㉕-7 04:00 より後に起動: 前回を持ち越す"
+setup
+printf 'dj-stale\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+run_mjw
+eq "㉕-8 判定する回で直っていれば recover" "$(logc 'result=recover send=ok')" "1"
+has_prob "dj-stale" && ng "㉕-9 直ったら problems から消える" || ok "㉕-9 直ったら problems から消える"
+
+# ── ㉖ 空振り防止（設計 ⑧⑬⑭⑯）──────────────────────────────────────────────
+setup
+rm -f "${D}/state/state" "${D}/colima.log"
+colima_line $(( NOW - 100 )) stop-fail -
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "㉖-1 初回: colima_seen はログ最後の行の時刻" "$(stv colima_seen)" "$(( NOW - 60 ))"
+eq "㉖-2 初回: 古い stop-fail は知らせない（点検の 1 通のみ）" "$(ncalls)" "1"
+set_now $(( NOW + 900 ))
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "㉖-3 初回の次の回: 古い stop-fail を誤報しない" "$(ncalls)" "1"
+setup
+export MJW_BOOT_SEC=$(( NOW - 100 ))
+mk_state $(( NOW - 1800 )) "$(( NOW - 100 ))" $(( NOW - 60 )) 0 0
+printf 'unloaded:jp.salesanchor.colima-idle-stop\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+run_mjw
+eq "㉖-4 起動直後: unloaded を復旧にしない" "$(ncalls)" "0"
+has_prob "unloaded:jp.salesanchor.colima-idle-stop" && ok "㉖-5 起動直後: unloaded を持ち越す" || ng "㉖-5 起動直後: unloaded を持ち越す"
+setup
+mk_state $(( NOW - 1800 )) "$(( BOOT - 1000 ))" $(( NOW - 60 )) 0 0
+echo 1 > "${D}/fake/curl.rc"
+run_mjw; rc=$?
+eq "㉖-6 点検の送信失敗: 終了 3" "${rc}" "3"
+eq "㉖-7 点検の送信失敗: boot_sec は進まない" "$(stv boot_sec)" "$(( BOOT - 1000 ))"
+setup
+echo "jp.salesanchor.colima-idle-stop" > "${D}/fake/absent"
+old_t=$(( NOW - 90000 ))
+printf 'unloaded:jp.salesanchor.colima-idle-stop\t%s\n' "${old_t}" > "${D}/state/problems"
+echo 1 > "${D}/fake/curl.rc"
+run_mjw; rc=$?
+eq "㉖-8 ②送信失敗: 終了 3" "${rc}" "3"
+eq "㉖-9 ②送信失敗: 最後に知らせた時刻を変えない" "$(grep -c -F "${old_t}" "${D}/state/problems")" "1"
+setup
+printf 'unloaded:jp.salesanchor.removed\t%s\n' "$(( NOW - 100 ))" > "${D}/state/problems"
+echo 1 > "${D}/fake/curl.rc"
+run_mjw; rc=$?
+eq "㉖-10 ③送信失敗: 終了 3" "${rc}" "3"
+has_prob "unloaded:jp.salesanchor.removed" && ok "㉖-11 ③送信失敗: 問題を消さない" || ng "㉖-11 ③送信失敗: 問題を消さない"
+setup
+mk_state $(( NOW - 1800 )) "${BOOT}" $(( NOW - 60 )) 2 0
+colima_line $(( NOW - 30 )) busy d
+run_mjw
+eq "㉖-12 d が 3 回目: 2 回目の知らせは出ない" "$(ncalls)" "0"
+eq "㉖-13 d が 3 回目: colima_d_run=3 を持ち越す" "$(stv colima_d_run)" "3"
+
+# ── ㉗ 自分のログ回転・「起きていた」の境界 ────────────────────────────────────
+setup
+export MJW_LOG_MAX_BYTES=100
+head -c 300 /dev/zero | tr '\0' 'x' > "${D}/mjw.log"
+run_mjw
+unset MJW_LOG_MAX_BYTES
+[ -f "${D}/mjw.log.1" ] && ok "㉗-1 大きいログは .1 に退避" || ng "㉗-1 大きいログは .1 に退避"
+eq "㉗-2 退避後の新しいログに 1 行" "$(wc -l < "${D}/mjw.log" | tr -d ' ')" "1"
+setup
+mk_state $(( NOW - 1920 )) "${BOOT}" $(( NOW - 60 )) 0 0
+run_mjw
+eq "㉗-3 前回から 1920 秒ちょうど: 起きていた" "$(logc 'awake=1')" "1"
+setup
+mk_state $(( NOW - 1921 )) "${BOOT}" $(( NOW - 60 )) 0 0
+run_mjw
+eq "㉗-4 前回から 1921 秒: 起きていない" "$(logc 'awake=0')" "1"
+
+# ── ㉘ --dry-run の problems 欄は今回の判定結果 ───────────────────────────────
+setup
+echo "jp.salesanchor.colima-idle-stop" > "${D}/fake/absent"
+run_mjw --dry-run
+eq "㉘-1 dry-run の problems に今回の判定結果が出る" "$(logc 'problems=unloaded:jp.salesanchor.colima-idle-stop')" "1"
+setup
+run_mjw --dry-run
+eq "㉘-2 異常が無ければ problems=-" "$(logc 'problems=-')" "1"
+
+# ── ㉙ curl に時間制限 ────────────────────────────────────────────────────────
+setup
+echo "jp.salesanchor.colima-idle-stop" > "${D}/fake/absent"
+run_mjw
+grep -qx -- '--max-time' "${D}/fake/curl.args.1" && grep -qx -- '20' "${D}/fake/curl.args.1" && ok "㉙-1 curl に --max-time 20" || ng "㉙-1 curl に --max-time 20"
 
 echo "----"
 echo "PASS=${PASS} FAIL=${FAIL}"

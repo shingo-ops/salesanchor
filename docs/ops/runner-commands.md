@@ -339,7 +339,7 @@ launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch
 
 ログの見方:
 - `~/Library/Logs/mac-jobs-watch.log`: 見張り自身が書く。送った通知ごとに 1 行、何も送らなかった回は 1 行。`result=<ok|alert|repeat|recover|boot-notice|skip|no-webhook|test|dry-run> send=<ok|fail|-> problems=<今ある異常、無ければ -> events=<今回の出来事、無ければ -> awake=<1|0>`。`tail -50` で見る（1MB 超で `.log.1` に1世代だけ退避）。
-- `~/Library/Logs/mac-jobs-watch.err`: 起動直後の異常。正常時は空。「道具のコピーが確認できない」は colima-idle-stop と同じ条件で出る。`result=no-webhook`（終了 2）は通知先ファイルが読めない、`send=fail`（終了 3）は Discord への送信失敗（次の回にまた送る）。
+- `~/Library/Logs/mac-jobs-watch.err`: 起動直後の異常。正常時は空。「道具のコピーが確認できない」は colima-idle-stop と同じ条件で出て、そのときだけ終了 1 になる（確認が通れば見張り本体の終了コードがそのまま launchd に返る）。`result=no-webhook`（終了 2）は通知先ファイルが読めない、`send=fail`（終了 3）は Discord への送信失敗（次の回にまた送る）。
 - 状態フォルダ: `~/Library/Application Support/mac-jobs-watch/`（`state` と `problems`）。消すと初期化される（次の回が「初回」になり、点検が 1 通届く）。
 
 ---

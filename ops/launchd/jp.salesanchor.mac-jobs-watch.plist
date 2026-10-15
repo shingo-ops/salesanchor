@@ -30,7 +30,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>T=/Users/tanizawashingo/.salesanchor-tools; if [ -d /tmp/disk-janitor.lock.d ] &amp;&amp; [ -z "$(find /tmp/disk-janitor.lock.d -maxdepth 0 -mmin +120)" ]; then echo "mac-jobs-watch: disk-janitor 実行中のため今回は見送り"; exit 0; fi; test -z "$(git -C "$T" --no-optional-locks status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" merge-base --is-ancestor HEAD origin/main &amp;&amp; cd "$T" &amp;&amp; bash scripts/mac-jobs-watch.sh || { echo "mac-jobs-watch: 道具のコピーが確認できないため実行しない" &gt;&amp;2; exit 1; }</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; if [ -d /tmp/disk-janitor.lock.d ] &amp;&amp; [ -z "$(find /tmp/disk-janitor.lock.d -maxdepth 0 -mmin +120)" ]; then echo "mac-jobs-watch: disk-janitor 実行中のため今回は見送り"; exit 0; fi; if test -z "$(git -C "$T" --no-optional-locks status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" merge-base --is-ancestor HEAD origin/main &amp;&amp; cd "$T"; then bash scripts/mac-jobs-watch.sh; else echo "mac-jobs-watch: 道具のコピーが確認できないため実行しない" &gt;&amp;2; exit 1; fi</string>
   </array>
 
   <key>WorkingDirectory</key>
