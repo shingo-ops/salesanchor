@@ -570,9 +570,18 @@ async def update_lead(
             merged["response_speed"], merged["monthly_forecast"],
         )
 
+    # 受信箱「新規」バッジ: 担当が変わったら「開いた」記録を白紙に戻す（design.md §3-2）
+    # 同じ人への再保存では戻さない（バッジが無駄に再出現しないため）
+    reset_assignment_badge = (
+        "assigned_to" in update_data
+        and update_data["assigned_to"] != old_row["assigned_to"]
+    )
+
     # leads テーブル更新（update_data が空の場合は selections のみ更新）
     if update_data:
         set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
+        if reset_assignment_badge:
+            set_clauses += ", assignment_opened_at = NULL"
         update_data["id"] = lead_id
         result = await db.execute(
             text(f"""
@@ -1145,12 +1154,23 @@ async def list_lead_messages(
     }
 
 
+class MarkReadRequest(BaseModel):
+    """mark-read の任意パラメータ。
+
+    opened=True は「会話を実際に開いた」ことを表す。受信箱の「新規」バッジを消すのは
+    この場合のみ（一括既読では消さない。design.md §3-3 / KGI K5）。
+    既定 False なので、フィールドを送らない既存の呼び出しは挙動が変わらない。
+    """
+    opened: bool = False
+
+
 @router.post(
     "/leads/{lead_id}/messages/mark-read",
     dependencies=[Depends(require_permission("messaging.view"))],
 )
 async def mark_lead_messages_read(
     lead_id: int,
+    data: MarkReadRequest = MarkReadRequest(),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
@@ -1161,6 +1181,8 @@ async def mark_lead_messages_read(
         - direction='inbound' AND seen_at IS NULL の行に seen_at=NOW(),
           seen_by_staff_id=<current> を UPDATE
         - 該当 lead が同テナントに無い場合は 404
+        - 受信箱「新規」バッジ: data.opened=True のときだけ、自分が担当の
+          未開封会話を「開いた済み」にする（design.md §3-3）
 
     返却: { "marked_count": N }
 
@@ -1195,6 +1217,20 @@ async def mark_lead_messages_read(
         {"lead_id": lead_id, "tenant_id": tenant_id, "staff_id": staff_id},
     )
     marked = int(upd.rowcount or 0)
+
+    # 受信箱「新規」バッジ: 自分が担当の会話を開いたときだけ消す（design.md §3-3）
+    if data.opened:
+        await db.execute(
+            text(f"""
+                UPDATE {leads_t}
+                SET assignment_opened_at = NOW()
+                WHERE id = :lead_id
+                  AND tenant_id = :tenant_id
+                  AND assigned_to = :me
+                  AND assignment_opened_at IS NULL
+            """),
+            {"lead_id": lead_id, "tenant_id": tenant_id, "me": current_user.id},
+        )
 
     # Phase 1-E F9-S4 (Sprint 4 Reviewer F2): mark-read アクションを audit_log に記録。
     # 既読化の事実を残す。失敗時はログのみ（ユーザー操作は中断しない）。

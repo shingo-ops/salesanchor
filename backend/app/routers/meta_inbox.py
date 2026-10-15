@@ -881,7 +881,8 @@ async def list_conversations(
     返却フィールド:
         lead_id, lead_code, customer_name, platform, page_id,
         last_message_text, last_message_at, last_message_direction,
-        unread_count, messaging_window_expires_at
+        unread_count, messaging_window_expires_at, is_new_assignment
+        （受信箱「新規」バッジ: 自分が担当で未開封のときだけ true。design.md §3-4）
 
     並び順: `last_message_at DESC`（最新会話が先）。
     pagination: limit/offset。Spec §5-3 では cursor も触れるが、MVP は offset 方式で十分。
@@ -959,7 +960,9 @@ async def list_conversations(
             lat.direction           AS last_message_direction,
             lat.created_at          AS last_message_at,
             COALESCE(agg.unread_count, 0) AS unread_count,
-            agg.last_inbound_at     AS last_inbound_at
+            agg.last_inbound_at     AS last_inbound_at,
+            l.assigned_to           AS assigned_to,
+            l.assignment_opened_at  AS assignment_opened_at
         FROM latest lat
         LEFT JOIN leads l
             ON l.id = lat.lead_id
@@ -1015,6 +1018,12 @@ async def list_conversations(
             "unread_count": unread_count,
             "messaging_window_expires_at": _compute_window_expires(last_inbound_at),
             "profile_picture_url": profile_picture_url,
+            # 受信箱「新規」バッジ: 自分が担当で、まだ開いていない（design.md §3-4）
+            # 生の assigned_to は返さない（他人の担当者IDを漏らさないため・A9）
+            "is_new_assignment": (
+                row.get("assigned_to") == current_user.id
+                and row.get("assignment_opened_at") is None
+            ),
         })
 
     return {"conversations": conversations, "next_cursor": None}
