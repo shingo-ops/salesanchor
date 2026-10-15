@@ -1767,6 +1767,58 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     await expect(stageBadge(page)).toHaveText("商談中");
   });
 
+  test("スマホ: ポップアップが画面の中央に出て、左右に余白がある（PO 決定・2026-10-15）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxListWithLeadStatusAndStaff(page, STAFF_SALES_LEADER_MIX);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+    await convertBtn(page).click();
+
+    const dialog = convertDialog(page);
+    await expect(dialog).toBeVisible();
+    const box = await dialog.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box, "ポップアップの矩形が取れない").not.toBeNull();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+
+    // 画面の中央: ポップアップの中心と画面の中心の差が小さいこと
+    const dialogCenterY = box!.y + box!.height / 2;
+    const viewportCenterY = viewport!.height / 2;
+    // 左右に余白があること（下から出る帯のときは全幅＝余白0だった）
+    const leftGap = box!.x;
+    const rightGap = viewport!.width - (box!.x + box!.width);
+
+    await testInfo.attach("modal-center", {
+      body: JSON.stringify({ box, viewport, dialogCenterY, viewportCenterY, leftGap, rightGap }, null, 2),
+      contentType: "application/json",
+    });
+
+    expect(Math.abs(dialogCenterY - viewportCenterY), "ポップアップが縦の中央にない").toBeLessThanOrEqual(2);
+    expect(leftGap, "左に余白がない").toBeGreaterThan(0);
+    expect(rightGap, "右に余白がない").toBeGreaterThan(0);
+    expect(Math.abs(leftGap - rightGap), "左右の余白が揃っていない").toBeLessThanOrEqual(1);
+  });
+
+  test("スマホ: カルテの帯が画面の幅いっぱいにある（会話画面と同じ見え方）", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    await openInboxList(page);
+    await openConversation(page);
+    await karteOpenBtn(page).click();
+    await expect(panel(page)).toHaveClass(/karte-open/);
+
+    const row = page.locator(".karte-close-row");
+    const box = await row.boundingBox();
+    const viewport = page.viewportSize();
+    expect(box, "帯の矩形が取れない").not.toBeNull();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+    // 親が中央寄せのため帯が中央に寄っていた（2026-10-15 実機で発見）。
+    expect(Math.abs(box!.x - 0), "帯が左端から始まっていない").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.width - viewport!.width), "帯が画面の幅いっぱいでない").toBeLessThanOrEqual(1);
+  });
+
   test("PC・タブレット: カルテの帯は従来どおりで、顔写真・顧客名の重複表示が出ない", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
 
