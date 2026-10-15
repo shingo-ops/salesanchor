@@ -5,7 +5,7 @@
 
 ## PO の決定と許可の出所（審査 r1 B-10）
 
-- Q14=y（アプリの在庫表も同じ部品で作る）の原文: PO の 2026-10-15 のチャット「アプリの在庫表も同じ作りにする」。記録はメモ `~/.claude/projects/-Users-tanizawashingo-salesanchor/memory/project_session_20261015_viewer_autonomy.md`（引用元 design.md:393 は「確認中」のまま。閲覧ページ設計の書き直し時に決定へ直す＝審査 r2 N-r2-4）。
+- Q14=y（アプリの在庫表も同じ部品で作る）の原文: PO の 2026-10-15 のチャット「アプリの在庫表も同じ作りにする」。記録はメモ project_session_20261015_viewer_autonomy（Claude のメモ置き場・リポジトリ外）（引用元 design.md:393 は「確認中」のまま。閲覧ページ設計の書き直し時に決定へ直す＝審査 r2 N-r2-4）。
 - 12 項目の回答（2026-10-15）: release/gas-viewer-fresh-fast の docs/handoff/gas-viewer-fresh-fast/design.md「PO 決定（2026-10-15、アプリと GAS の差分12項目への回答…）」。7 見出しの固定・8 表を縮めて画面に収める・9 スマホの縦カード・10 色つきバッジ・11 発送日の列は「採用」、4 提供者は「選んだ人だけ出す、レイアウトも同じ」、12「ページ送り機能をつける」。
 - 金型の新設の許可: 同 design.md の Q10 は「金型が無い4部品（24時間スイッチ・複数選択・倍率合わせ・スマホの縦カード）をどうするか。金型の登録には PO の許可が要る」と問い、PO は上の回答で複数選択（4）・倍率合わせ（8）・縦カード（9）を「採用」とした（同 design.md「Q10 の4部品のうち3つを『採用』と決定」）。さらに PO の 2026-10-15 の指示原文「フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する」「アプリの在庫表も同じ作りにする」（Q14=y）。よって MultiSelect の新設と DataTable の機能追加（見出し固定・縮小・カード表示）は、PO が採用した3部品を金型として登録する作業として行う。24時間スイッチは対象外（アプリに既にあり、PO の回答に無い）。
 - 更新ボタン（項目1）は未決 → 入れない。
@@ -88,11 +88,11 @@
   - 固定列は stickyHeader が true のときだけ効く（クラスは付くが、CSS が `.comp-table--sticky` 配下だけなので stickyHeader なしでは今と同じ見た目）。stylelint が並び順で止めた場合は、上の詳細度を保ったまま並び順だけ直す（値は変えない）。
 
 ### 1-3. 表を幅に合わせて縮める `fitToWidth`（審査 r1 B-4・N-4・N-6）
-- 定数ファイル `frontend/src/constants/tableFit.ts`: `MAX_ZOOM_ADJUST_STEPS = 200`、`ZOOM_ADJUST_DECREMENT = 0.001`、`ZOOM_PRECISION = 1000`（GAS H:1506-1569 と同じ値）。
-- 計算は純関数に分ける `frontend/src/lib/tableFitZoom.ts`:
+- 定数ファイル frontend/src/constants/tableFit.ts（新規）: `MAX_ZOOM_ADJUST_STEPS = 200`、`ZOOM_ADJUST_DECREMENT = 0.001`、`ZOOM_PRECISION = 1000`（GAS H:1506-1569 と同じ値）。
+- 計算は純関数に分ける frontend/src/lib/tableFitZoom.ts（新規）:
   - `initialZoom(frameWidth: number, naturalWidth: number): number` = `Math.floor(Math.min(1, frameWidth / naturalWidth) * ZOOM_PRECISION) / ZOOM_PRECISION`（naturalWidth ≤ 0 なら 1）。
   - `refineZoom(z: number, overflows: (z: number) => boolean): number` = `steps < MAX_ZOOM_ADJUST_STEPS && z > ZOOM_ADJUST_DECREMENT && overflows(z)` の間 `z = Math.round((z - ZOOM_ADJUST_DECREMENT) * ZOOM_PRECISION) / ZOOM_PRECISION`。
-- フック `frontend/src/hooks/useFitTableZoom.ts`（frame・card・scroll の ref を受ける）。手順:
+- フック frontend/src/hooks/useFitTableZoom.ts（新規）（frame・card・scroll の ref を受ける）。手順:
   1. `window.matchMedia(\`(min-width: ${BREAKPOINTS.TABLET_MIN}px)\`)` が偽、またはカード表示中 → `--comp-table-fit-zoom` を消して終わり。
   2. 測る前に zoom を外す: `card.style.removeProperty('--comp-table-fit-zoom')`（GAS H:1524 と同じ）。
   3. natural = `scroll.scrollWidth + scroll の左右 border`（border を持つのはスクロール箱 `.comp-table`（DataTable.css:16）。`getComputedStyle(scroll)` の borderLeftWidth + borderRightWidth）。frame = `frame.clientWidth`。
@@ -118,7 +118,7 @@
 - CSS: カードは `--comp-table-*` と既存の間隔・枠トークンだけ（border: 1px solid var(--border)、border-radius: var(--comp-table-radius)、padding: var(--space-3) など）。table の min-width（tokens.css:521 の 480px）はカードに掛からない。
 
 ### 1-5. MultiSelect 金型（新設）
-- ファイル: `frontend/src/components/MultiSelect.tsx`、`MultiSelect.css`（var() のみ）、`MultiSelect.stories.tsx`、`MultiSelect.test.tsx`（docs/CC_UI_GOVERNANCE.md:13-15 の型）。
+- ファイル: frontend/src/components/MultiSelect.tsx（新規）、`MultiSelect.css`（var() のみ）、MultiSelect.stories.tsx（新規）、MultiSelect.test.tsx（新規）（docs/CC_UI_GOVERNANCE.md:13-15 の型）。
 - props: `label: string`、`options: { value: string; label: string }[]`、`selected: string[]`、`onChange(next: string[])`、`clearLabel: string`、`allLabel: string`、`countLabel: (n: number) => string`、`testId?: string`。文言は呼び出し側が t() で渡す（金型に文言を書かない）。
 - 中身: Popover（components/Popover.tsx）を土台にボタン＋メニュー。メニュー先頭に「選択をクリア」ボタン、その下にチェックの一覧（`max-height: var(--dropdown-max-h)`、overflow:auto）。checkbox のサイズは `var(--size-checkbox)`。
 - ボタンの表示: 0件「{label}: {allLabel}」／1件 その選択肢の label／2件以上 countLabel(n)（GAS H:1313-1328）。
@@ -141,7 +141,7 @@
 ## 便2 在庫表の載せ替え
 
 ### 2-1. 列定義（審査 r1 B-6）
-置き場所: `frontend/src/features/inventory/inventoryColumns.tsx`（InventoryPage.tsx は今 771 行、上限 800（frontend/scripts/check-page-size.js:19）なので列の中身はこちらへ移す）。`buildInventoryColumns({ t, colVisible, ... }): DataTableColumn<InventoryItem>[]`。各セルの中身は今の InventoryPage.tsx:683-741 の td をそのまま renderCell に移す（表示内容は変えない。状態だけ Badge に変える。選択の checkbox :676-682 は DataTable の selectable に置き換わる）。
+置き場所: frontend/src/features/inventory/inventoryColumns.tsx（新規）（InventoryPage.tsx は今 771 行、上限 800（frontend/scripts/check-page-size.js:19）なので列の中身はこちらへ移す）。`buildInventoryColumns({ t, colVisible, ... }): DataTableColumn<InventoryItem>[]`。各セルの中身は今の InventoryPage.tsx:683-741 の td をそのまま renderCell に移す（表示内容は変えない。状態だけ Badge に変える。選択の checkbox :676-682 は DataTable の selectable に置き換わる）。
 - 文字の大きさ（審査 r2 N-r2-2）: 今の表は font-md（:645。:640 の注記「フォントは少し大きめ」）、DataTable は font-sm（DataTable.css:25）。GAS も font-sm（H:400）なので、DataTable の font-sm に揃える（文字が1段小さくなる。KGI の PO 目視で確認してもらう）。
 - 未使用になるもの（審査 r2 N-r2-1）: カテゴリ列を消すと categoryLabel・tcgTypeName（:172-177）と visibleColCount（:183-184）が使われなくなるので消す。tcgTypes はタブ（:600-617）で使うので残す。
 
@@ -171,7 +171,7 @@
   - `paginationTestIds={{ prev: "inventory-prev", next: "inventory-next", label: "inventory-pagination-label" }}`、`paginationDisabled={loading}`
   - `stickyHeader`、`fitToWidth`、`mobileCards`、`emptyState={t("inventory.noResults")}`
   - `data-testid="inventory-table"` と表の `aria-busy` は付けない（【事実】参照は frontend/src・frontend/tests-e2e に 0 件＝審査 r2）。DataTable に testId・busy の口は足さない。
-- 状態バッジ: `frontend/src/features/inventory/conditionBadge.ts` に `conditionBadgeVariant(condition: string): BadgeVariant`（trim・小文字化して完全一致: sealed→success、damaged→danger、case→info、他→neutral。GAS H:1591-1605）。閲覧ページも同じ関数を使う。
+- 状態バッジ: frontend/src/features/inventory/conditionBadge.ts（新規） に `conditionBadgeVariant(condition: string): BadgeVariant`（trim・小文字化して完全一致: sealed→success、damaged→danger、case→info、他→neutral。GAS H:1591-1605）。閲覧ページも同じ関数を使う。
 
 ### 2-2. 並び替えプルダウン
 - SelectControl（Select.tsx）、placeholder は t("inventory.sortMenu.placeholder")（value ""）。選択肢: `unit_price:asc`「価格が安い順」、`quantity:desc`「在庫が多い順」、`offered_at:desc`「投稿が新しい」。選ぶと sortField/sortDir を設定し page=1。表示値は `${sortField}:${sortDir}` が3つのどれかならそれ、違えば ""（placeholder）。
@@ -186,7 +186,7 @@
 |---|---|
 | KGI 4・5・6・7・8・9・10 | vitest（列の順・category なし・Badge の variant・プルダウン3択と既定の placeholder・resetAll 後 release_date desc）。本番で PO 目視 |
 | 既存 testid のテスト | CommerceNavigationButtonMigration.test（:58-71、読込中の前へ disabled を含む）、InventoryPage.settings / noechopatch / singlefetch.test が通る |
-| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e `frontend/tests-e2e/inventory-table-layout.spec.ts`（e2e.yml で全 PR 実行）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
+| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e frontend/tests-e2e/inventory-table-layout.spec.ts（新規）（e2e.yml で全 PR 実行）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
 | 生 table・インライン style が減る | `grep -c "<table" frontend/src/pages/inventory/InventoryPage.tsx` = 0、check-page-size（800行以下）、check-ui-governance 緑 |
 
 ## 便3 検索と提供者
@@ -199,7 +199,7 @@
   - SQL: 各語 i について `strpos(translate(lower(normalize(concat_ws(E'\n', d.japanese_title, d.english_title, d.mark, d.search_keywords), NFKC)), :kana_from, :kana_to), :qt{i}) > 0` を AND で足す。:kana_from / :kana_to は U+3041〜U+3096 と U+30A1〜U+30F6 から作る86文字ずつの文字列（モジュール定数）。【事実】ローカル PG16.15 で「ぽけもん」→「ポケモン」・「ＡＢＣ」→「abc」・concat_ws の NULL 飛ばしを確認（/tmp/CC報告ファイル/app_inventory_recon_20261015/review_r1_sql.txt）。本番 DB の datctype は en_US.utf8【事実: pg_database を読み取り確認】なので lower() は非 ASCII も小文字化する。
   - バインドの型: asyncpg で text と推論されるかは【未確認】→ 実装では `CAST(:kana_from AS text)` のように明示して型推論に頼らない。
   - provider・product_id・category は対象から外す（GAS と同じ）。q の description（:288）を「日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）」に直す。
-- 共通テストベクタ: `frontend/src/features/inventory/searchNormalize.vectors.json`（入力→期待値。ひらがな・全角英数・半角カナ・大文字・空白混じり）。backend のテストは repo ルートからの相対パスで読み Python 関数と照合。frontend の `features/inventory/searchNormalize.ts`（閲覧ページで使う normalizeForSearch。GAS H:987-993 と同じ）も同じベクタで照合。【事実】backend の pytest は paths フィルタ（test.yml:17-26）に frontend/** が無いため、ベクタだけを変える PR では Python 側が走らない。ベクタを変えるときは backend のテストファイルも同じ PR で触る（テストの冒頭にその旨のコメント）。
+- 共通テストベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（新規）（入力→期待値。ひらがな・全角英数・半角カナ・大文字・空白混じり）。backend のテストは repo ルートからの相対パスで読み Python 関数と照合。frontend の features/inventory/searchNormalize.ts（新規）（閲覧ページで使う normalizeForSearch。GAS H:987-993 と同じ）も同じベクタで照合。【事実】backend の pytest は paths フィルタ（test.yml:17-26）に frontend/** が無いため、ベクタだけを変える PR では Python 側が走らない。ベクタを変えるときは backend のテストファイルも同じ PR で触る（テストの冒頭にその旨のコメント）。
 - frontend:
   - 検索ボタン（:517、testid inventory-search-btn）を削除。250ms 待つ検索は残す。Enter（:515）は待ちを飛ばしてすぐ検索（setDebouncedQ(searchQ)）。【事実】inventory-search-btn と runSearch を使うテストは無い（審査 r1 N-5、grep 0 件）。
   - プレースホルダ: 新キー `inventory.view.searchNameCode`「商品名・型番で検索」/"Search by name or code" を作って在庫表だけで使う。既存の inventory.view.searchPlaceholder は見積・請求（QuoteCreatePage.tsx:262・InvoiceCreatePage.tsx:413）が使うので変えない。
@@ -256,6 +256,7 @@
 
 ## 維持の仕組み
 
+- 守り手: .github/workflows/frontend-check.yml（check:all・tsc・新トークン検査・Storybook ビルド。e2e は .github/workflows/e2e.yml）
 - 金型にしたので、閲覧ページ（ADR-1017）も同じ部品を使う → 片方だけ直る事故を防ぐ。
 - 正規化は共通テストベクタで Python と JS を照合（ベクタを変えるときは両方のテストを同じ PR で触る）。
 - アプリ在庫表を変えるときは GAS 在庫一覧にも揃える方針（メモ app_inventory_gas_parity）。
