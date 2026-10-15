@@ -226,7 +226,11 @@
 - Q2e.【決定 2026-10-15 PO】原文「Discord ID だけ任意、ただし間違えて送られてくる可能性があるので数字以外は受け付けないようにしてくれ」。メールと LINE 名は必須、Discord の数字のIDは任意。入力があるときは、既存の検証と同じ `^\d{17,20}$`（backend/app/routers/discord_ticket_config.py:48）に合わない値を 422 で拒み、画面は i18n の案内文を出して送信させない。空欄は NULL で保存する。
 - Q2f.【決定 2026-10-15 PO「Y」】Q2d・Q2e を置き換える。申込フォームはメールと LINE 名の2つだけにし、Discord ID は聞かない。Discord の数字のIDは、顧客ごとの専用URL（Discord でログイン→identify と guilds.join で ID を取得→ボットがサーバーに加える）で自動取得する。この仕組みと、ID の保存先（既存の顧客管理の列にそろえるか）は本便の対象外とし、別の仕事として設計する。調査の記録は /tmp/CC報告ファイル/viewer_discord_autoid_facts.txt（公式資料：docs.discord.com/developers/topics/oauth2、resources/guild、events/gateway-events）。
 - Q2c. リンクを押した後に email を入力し直してもらう形（D1。設計の既定案）でよいか。PO の条件「登録フォームの情報で管理する」から設計で既定にした。PO が別の形を望めば変える。
-- Q3. 本契約への切り替えと停止を誰が行うか（PO だけか、社内の管理者か）。
+- Q3.【決定 2026-10-15 PO】原文「Y,私もしくはあなたが切り替えできるようにする。私がやる場合はフロントエンドから切り替えをするがあなたに任せる場合はSSHを使用する」。切り替え（trial→active）と停止（→suspended）、停止の解除ができるのは PO と Claude だけ。
+  - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:491）で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
+  - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
+  - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す（保存先は段2で既存の監査ログから選ぶ）。
+  - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
 - Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
 - Q6. 同じ人が別のメールで（会社名は聞かないため、判定を LINE 名で行うかを含めて）申し込み直したとき、もう一度トライアルを認めるか。
