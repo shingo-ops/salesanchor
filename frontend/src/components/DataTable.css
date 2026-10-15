@@ -190,3 +190,143 @@
   min-width: 4ch;
   text-align: center;
 }
+
+/* ── 列の寄せ（ベースセルより後・同じ詳細度で上書き） ── */
+.comp-table__cell--align-right {
+  text-align: right;
+}
+
+.comp-table__cell--align-center {
+  text-align: center;
+}
+
+/* ── 見出し固定・先頭列固定（stickyHeader）。詳細度が上がる順に書く ── */
+.comp-table-frame {
+  width: 100%;
+}
+
+.comp-table--sticky {
+  max-height: var(--comp-table-sticky-max-h);
+  overflow: auto;
+}
+
+/* 1. 本文の固定列 (0,2,2) */
+.comp-table--sticky tbody td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody td.comp-table__cell--sticky-left-after-check {
+  position: sticky;
+  z-index: calc(var(--z-base) - 5);
+  background: var(--bg-surface);
+}
+
+.comp-table--sticky tbody td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody td.comp-table__cell--sticky-left {
+  left: 0;
+}
+
+.comp-table--sticky tbody td.comp-table__cell--sticky-left-after-check {
+  left: var(--comp-table-check-col-w);
+}
+
+/* 2. 見出し (0,1,2) */
+.comp-table--sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+  background: var(--bg-subtle);
+}
+
+/* 3. 見出しの角 (0,2,2) — 見出しに勝つ */
+.comp-table--sticky thead th.comp-table__cell--sticky-check,
+.comp-table--sticky thead th.comp-table__cell--sticky-left,
+.comp-table--sticky thead th.comp-table__cell--sticky-left-after-check {
+  z-index: calc(var(--z-base) + 5);
+}
+
+.comp-table--sticky thead th.comp-table__cell--sticky-check,
+.comp-table--sticky thead th.comp-table__cell--sticky-left {
+  left: 0;
+}
+
+.comp-table--sticky thead th.comp-table__cell--sticky-left-after-check {
+  left: var(--comp-table-check-col-w);
+}
+
+/* 4. 行の色を固定列にも当てる (0,3,2) → (0,4,2) */
+.comp-table--sticky tbody .comp-table__row--danger td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody .comp-table__row--danger td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody .comp-table__row--danger td.comp-table__cell--sticky-left-after-check {
+  background: var(--danger-bg);
+}
+
+.comp-table--sticky tbody .comp-table__row--warning td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody .comp-table__row--warning td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody .comp-table__row--warning td.comp-table__cell--sticky-left-after-check {
+  background: var(--warning-bg);
+}
+
+.comp-table--sticky tbody .comp-table__row--selected td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody .comp-table__row--selected td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody .comp-table__row--selected td.comp-table__cell--sticky-left-after-check {
+  background: var(--info-bg);
+}
+
+.comp-table--sticky tbody .comp-table__row:hover td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody .comp-table__row:hover td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody .comp-table__row:hover td.comp-table__cell--sticky-left-after-check {
+  background: var(--bg-hover);
+}
+
+.comp-table--sticky tbody .comp-table__row--selected:hover td.comp-table__cell--sticky-check,
+.comp-table--sticky tbody .comp-table__row--selected:hover td.comp-table__cell--sticky-left,
+.comp-table--sticky tbody .comp-table__row--selected:hover td.comp-table__cell--sticky-left-after-check {
+  background: var(--info-bg);
+}
+
+/* ── 幅に合わせて縮める（fitToWidth）。倍率は ref の setProperty で渡す ── */
+.comp-table-fit__card {
+  zoom: var(--comp-table-fit-zoom, 1);
+}
+
+.comp-table-fit__card .comp-table--sticky {
+  max-height: calc(var(--comp-table-sticky-max-h) / var(--comp-table-fit-zoom, 1));
+}
+
+/* ── スマホのカード表示（mobileCards）。table の min-width はカードに掛からない ── */
+.comp-table-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.comp-table__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--comp-table-radius);
+  background: var(--bg-surface);
+  font-size: var(--font-sm);
+}
+
+.comp-table__card-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.comp-table__card-label {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-muted);
+}
+
+.comp-table__card-value {
+  min-width: 0;
+  text-align: right;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
