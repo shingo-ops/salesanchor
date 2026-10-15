@@ -123,3 +123,45 @@ def test_run_tcg_mirror_write_skips_when_no_key(monkeypatch: pytest.MonkeyPatch)
 def test_assert_no_create_path_callable() -> None:
     """_assert_no_create_path が例外なく呼べる（コントラクト存在確認）"""
     _assert_no_create_path()  # raises なければ OK
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 問い合わせ SQL の形（本番 DB で落ちた 2 つの誤りの再発防止）
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _capture_sql(fetch_func) -> str:
+    """偽の db に SQL 文字列だけを記録させ、fetch 関数を実行して返す。"""
+    import asyncio
+
+    captured: list[str] = []
+
+    class _FakeDb:
+        async def execute(self, stmt):
+            captured.append(str(stmt))
+            result = MagicMock()
+            result.fetchall.return_value = []
+            return result
+
+    asyncio.run(fetch_func(_FakeDb()))
+    assert len(captured) == 1
+    return captured[0]
+
+
+def test_keywords_sql_order_by_only_after_union() -> None:
+    """_fetch_keywords: ORDER BY は 1 回だけで、最後の UNION ALL より後にある"""
+    from app.tasks.tcg_mirror import _fetch_keywords
+
+    sql = _capture_sql(_fetch_keywords)
+    assert sql.count("ORDER BY") == 1
+    assert sql.index("ORDER BY") > sql.rindex("UNION ALL")
+
+
+def test_suppliers_sql_uses_real_channel_columns() -> None:
+    """_fetch_suppliers: 表に無い sc.channel_type / sc.channel_identifier を読まない"""
+    from app.tasks.tcg_mirror import _fetch_suppliers
+
+    sql = _capture_sql(_fetch_suppliers)
+    assert "sc.channel_type" not in sql
+    assert "sc.channel_identifier" not in sql
+    assert "sc.channel AS channel_type" in sql
+    assert "sc.external_id AS channel_identifier" in sql

@@ -138,23 +138,27 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
     result = await db.execute(text("""
-        SELECT
-            p.id::text AS product_id,
-            p.name AS product_name,
-            'search' AS keyword_type,
-            k.keyword
-        FROM public.product_search_keywords k
-        JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.id, k.keyword
-        UNION ALL
-        SELECT
-            p.id::text AS product_id,
-            p.name AS product_name,
-            'exclude',
-            k.keyword
-        FROM public.product_exclude_keywords k
-        JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.id, k.keyword
+        SELECT product_id, product_name, keyword_type, keyword
+        FROM (
+            SELECT
+                p.id AS sort_id,
+                p.id::text AS product_id,
+                p.name AS product_name,
+                'search' AS keyword_type,
+                k.keyword
+            FROM public.product_search_keywords k
+            JOIN public.products p ON p.id = k.product_id
+            UNION ALL
+            SELECT
+                p.id AS sort_id,
+                p.id::text AS product_id,
+                p.name AS product_name,
+                'exclude' AS keyword_type,
+                k.keyword
+            FROM public.product_exclude_keywords k
+            JOIN public.products p ON p.id = k.product_id
+        ) u
+        ORDER BY u.keyword_type DESC, u.sort_id, u.keyword
     """))
     rows = result.fetchall()
     headers = ["product_id", "product_name", "keyword_type", "keyword"]
@@ -170,11 +174,11 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
             ps.supplier_code AS code,
             ps.name,
             NULL AS contact_name,
-            sc.channel_type,
-            sc.channel_identifier
+            sc.channel AS channel_type,
+            sc.external_id AS channel_identifier
         FROM public.suppliers ps
         LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
-        ORDER BY ps.supplier_code, sc.channel_type
+        ORDER BY ps.supplier_code, sc.channel
     """))
     rows = result.fetchall()
     headers = ["code", "name", "contact_name", "channel_type", "channel_identifier"]
