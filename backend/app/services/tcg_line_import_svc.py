@@ -28,6 +28,7 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import reset_operator_context, set_operator_context
 from app.services.tcg_line_android_parser import parse_android_export
 from app.services.tcg_line_system_events import match_system_event
 
@@ -541,6 +542,37 @@ async def import_line_export(
     window_hours: int = 24,
     source_format: Literal["pc", "android"] = "pc",
 ) -> dict[str, Any]:
+    """LINE エクスポートを取り込む（本体は _import_line_export_impl）。
+
+    ADR-1018 段階②b: 共通仕入先（public.suppliers の tenant_id 空行）の自動登録は
+    app.is_operator='true' のセッションだけが書ける。本体が 4b で operator 文脈を張るため、
+    どの終わり方でも finally で必ず戻す。
+    """
+    try:
+        return await _import_line_export_impl(
+            db,
+            filename,
+            export_text,
+            uploaded_by,
+            window_start,
+            window_end,
+            window_hours,
+            source_format,
+        )
+    finally:
+        await reset_operator_context(db)
+
+
+async def _import_line_export_impl(
+    db: AsyncSession,
+    filename: str,
+    export_text: str,
+    uploaded_by: str | None,
+    window_start: str | None = None,
+    window_end: str | None = None,
+    window_hours: int = 24,
+    source_format: Literal["pc", "android"] = "pc",
+) -> dict[str, Any]:
     """
     LINE エクスポートファイルを取り込む。
 
@@ -635,6 +667,8 @@ async def import_line_export(
     # display_name を name / line_name として新規 supplier + supplier_channel を作成し、
     # resolved_msgs に追加することで unresolved_count を 0 にする。
     if unresolved:
+        # 共通行（tenant_id 空）の INSERT/UPDATE は運営文脈のみ（ADR-1018 段階②b）
+        await set_operator_context(db)
         for u_entry in unresolved:
             dn = u_entry["display_name"]
             # INSERT RETURNING id で採番
