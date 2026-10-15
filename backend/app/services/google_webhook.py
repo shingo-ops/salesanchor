@@ -30,7 +30,7 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import set_tenant_context
+from app.auth.dependencies import reset_tenant_context, set_tenant_context
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,7 @@ async def register_webhook(db: AsyncSession, tenant_id: int) -> Optional[dict]:
         },
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     logger.info(
         "Webhook チャンネル登録完了 (tenant=%s, channel=%s, expiry=%s)",
         tenant_id, channel_id, expiration_dt,
@@ -154,6 +155,7 @@ async def stop_webhook(db: AsyncSession, tenant_id: int) -> None:
         {"tid": tenant_id},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
 
 # ---------------------------------------------------------------------------
