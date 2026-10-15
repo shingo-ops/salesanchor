@@ -94,10 +94,10 @@
 - CSS: frontend/src/components/Checkbox.css:8-16（inline-flex, align flex-start, gap, font-size sm, color text-primary, cursor）、:35-46（input 1.1em, border, accent-color: var(--accent)）、:68-73（label span は flex column, font-weight medium）
 
 ### CheckboxControl（frontend/src/components/CheckboxControl.tsx）
-- `CheckboxControlProps`（:79-83）: input の属性から `type|className|style|size|role` を除いたもの + `size?: "md"|"sm"` + `indeterminate?: boolean`
-- 受ける: checked, onChange, disabled, id, name, value, aria-*, data-*（`...rest` を同じ input へ、:107）、ref
+- `CheckboxControlProps`（:12-16）: input の属性から `type|className|style|size|role` を除いたもの + `size?: "md"|"sm"` + `indeterminate?: boolean`
+- 受ける: checked, onChange, disabled, id, name, value, aria-*, data-*（`...rest` を同じ input へ、:40）、ref
 - 受けない: className, style, type, role
-- DOM: `input.comp-checkbox-control` 1つ（:103-108）
+- DOM: `input.comp-checkbox-control` 1つ（:36-41）
 - CSS: frontend/src/components/CheckboxControl.css:2-4（width/height var(--size-checkbox)=16px, accent-color: var(--accent), disabled の cursor）
 
 ## 置き換え可否（そのまま置き換えられるか）
@@ -221,6 +221,11 @@ components/ContactChannelForm.tsx:228 / components/MultiSelect.tsx:79 / pages/ad
 214:                 setConfigs((prev) => ({
 215:                   ...prev,
 216:                   [key]: { ...prev[key], is_active: e.target.checked },
+217:                 }))
+218:               }
+219:             />
+220:             {configs[key].is_active ? t(`${p}.active`) : t(`${p}.inactive`)}
+221:           </label>
 ```
 
 ### frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:341
