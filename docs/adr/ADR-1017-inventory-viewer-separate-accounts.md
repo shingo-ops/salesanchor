@@ -34,4 +34,4 @@
 
 - docs/handoff/gas-viewer-fresh-fast/recon.md
 - docs/handoff/gas-viewer-fresh-fast/security-recon.md
-- docs/handoff/gas-viewer-fresh-fast/design.md（審査は r1〜r5 が Fable、r6 から Opus。r5 APPROVE の後に PO 決定を反映した版を r6 で REVISE。r7 で再審査する。最新の判定は design.md 冒頭の「審査」欄を正とする）
+- docs/handoff/gas-viewer-fresh-fast/design.md（審査は r1〜r5 が Fable、r6 から Opus。r5 APPROVE の後に PO 決定を反映した版を r6・r7 で REVISE、r8 で APPROVE（Blocking 0）。最新の判定は design.md 冒頭の「審査」欄を正とする）
