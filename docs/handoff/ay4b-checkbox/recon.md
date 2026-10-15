@@ -39,7 +39,7 @@
 - DistributionTargetForm.tsx は DistributionWorkspace / DistributionTargetList 経由で TcgDistributionPage と TcgLineImportPage のみ（どちらも super-admin 専用）。
 - 未到達:
   - frontend/src/features/supplier-master/SupplierDetailDrawer.tsx は frontend/src/features/supplier-master/index.ts:1 でだけ export される。index.ts を import するファイルは frontend 全体で 0（`git grep SupplierDetailDrawer -- frontend` が index.ts と自身のみ）。
-  - frontend/src/pages/integrations/FedexLabelValidationTab.tsx は import するファイル 0。`FedexEtdSetupGuide.tsx:9` は同名の CSS を読むだけ（`git grep FedexLabelValidationTab -- frontend`）。
+  - frontend/src/pages/integrations/FedexLabelValidationTab.tsx は import するファイル 0。`frontend/src/pages/integrations/FedexEtdSetupGuide.tsx:9` は同名の CSS を読むだけ（`git grep FedexLabelValidationTab -- frontend`）。
 - 一般画面（AY-4c）は全ページが App.tsx 直下のページ（InventoryPage, CompanyDetailPage, InboxPage など）に到達。一覧は末尾。
 
 ## AY-4b 対象 24 件

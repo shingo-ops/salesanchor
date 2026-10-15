@@ -150,7 +150,7 @@ span(font-sm) と cursor:pointer は Checkbox md が同じ値を持つ（fronten
 | 試験・型・lint・ビルドが通る | tsc・lint・vitest（§4 の試験全部、unit project 直列）・check:all・check:i18n-missing-keys・build が exit 0 |
 | 前後の差が §5 の表で全部見える | evidence に ay4b-measure-compare.txt と前後画像。PO に提示し「y」を得てからマージ |
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
 不要。社内の既存金型2つへの載せかえで、外部の事例は判断材料にならない。過去事例は §AY-4a（#4328・#4339）と §AY-3b（#4313、前後実測を PO に提示）。
 
