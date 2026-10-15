@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS {schema}.notification_channels (
 ```
 
 - **UNIQUE 制約は存在しない** → 1 テナントで送信先を複数登録可能（表の作りとして既に可能）
-- `event_types` は **TEXT に JSON 配列文字列**を格納（`notifications.py:83` が `json.dumps`）
+- `event_types` は **TEXT に JSON 配列文字列**を格納（`backend/app/routers/notifications.py:83` が `json.dumps`）
 - RLS 有効化のみが後続変更（`migrations/009_...:72`）。ALTER による列追加は無い
 - `migrations/009_...:24` の `notification_logs.channel_id` が本表を FK 参照
 
@@ -256,7 +256,7 @@ FOR role_rec IN EXECUTE format(
 ### 4. 金型がない場合の手順
 1. 実装を止め PO に報告する
 2. PO 許可を得てから `components/` に金型を新設する
-   (`Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx` の作法で）
+   (「Xxx.tsx」 + 「Xxx.css」（var() のみ）+ 「Xxx.stories.tsx」 の作法で）
 3. 金型登録後にそれを使って実装する
 ```
 → 2026-10-15 に PO へ報告し「Q3 はよい」＝**新設許可を受領**。
@@ -288,10 +288,10 @@ FOR role_rec IN EXECUTE format(
   );
 })}
 ```
-DOM の形＝`label > input[type=checkbox] + span`。CSS はページ側（`InboxPage.css`）にあり、**金型化されていない**。
+DOM の形＝`label > input[type=checkbox] + span`。CSS はページ側（`frontend/src/pages/inbox/InboxPage.css`）にあり、**金型化されていない**。
 
 ### 11-4. 既存金型には複数選択が無い
-- `frontend/src/components/` 全数確認 → **`Checkbox.tsx` は存在しない**
+- `frontend/src/components/` 全数確認 → **`frontend/src/components/Checkbox.tsx` は存在しない**
 - `frontend/src/components/Select.tsx:15-32` … `SelectOption { value; label; disabled? }`、`SelectSize = "sm"|"md"|"lg"`。**`multiple` 非対応＝単一選択のみ**
 
 ### 11-5. ガバナンス禁止リスト（checkbox は対象外）
@@ -330,13 +330,13 @@ DOM の形＝`label > input[type=checkbox] + span`。CSS はページ側（`Inbo
 
 | スクリプト | 要求 |
 |---|---|
-| `frontend/scripts/check-stories-count.js` | 全 `.tsx` コンポーネントに対応する `.stories.tsx` が必須（EXEMPT 配列のみ除外） |
-| `check-css-hardcoded-colors.js` | CSS に hex / rgba() 直書き禁止 |
-| `check-css-hardcoded-values.js` | opacity / border-radius / z-index / spacing / sizing / font-size の数値直書き禁止 |
-| `check-css-var-fallbacks.js` | `var(--x, #hex)` のフォールバック禁止 |
-| `check-dark-parity.js` | `index.css` の `:root` と `:root.force-dark` で色系変数名が完全一致 |
-| `check-new-tokens.js` | 新規トークン追加時は PR 本文のチェックリスト 4 項目が必須 |
-| `check-i18n-missing-keys.js` | §12 |
+| `frontend/scripts/check-stories-count.js` | 全 「.tsx」 コンポーネントに対応する 「.stories.tsx」 が必須（EXEMPT 配列のみ除外） |
+| `frontend/scripts/check-css-hardcoded-colors.js` | CSS に hex / rgba() 直書き禁止 |
+| `frontend/scripts/check-css-hardcoded-values.js` | opacity / border-radius / z-index / spacing / sizing / font-size の数値直書き禁止 |
+| `frontend/scripts/check-css-var-fallbacks.js` | `var(--x, #hex)` のフォールバック禁止 |
+| `frontend/scripts/check-dark-parity.js` | `frontend/src/index.css` の `:root` と `:root.force-dark` で色系変数名が完全一致 |
+| `frontend/scripts/check-new-tokens.js` | 新規トークン追加時は PR 本文のチェックリスト 4 項目が必須 |
+| `frontend/scripts/check-i18n-missing-keys.js` | §12 |
 | eslint `local/no-japanese-literal` | §12（lint-staged は `--max-warnings=0`） |
 
 → **新規デザイントークンを作らず既存トークンのみで組めば `check-new-tokens` / `check-dark-parity` を回避できる**（§13 の方針）。

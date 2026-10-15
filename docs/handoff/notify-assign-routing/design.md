@@ -39,13 +39,13 @@
 | **画面が種類を送っていない** | `frontend/src/pages/notifications/NotificationsPage.tsx:35` |
 | **変更 API が無い**（GET/POST/DELETE のみ） | `backend/app/routers/notifications.py:62,71,94` |
 | 変更用の部品はデッドコードとして既に存在 | 同 `:41-45`（`ChannelUpdate`）／`:59`（`_UPDATABLE`） |
-| 実装済みの種類は 2 つだけ。既定 3 種類は送信元ゼロ | `webhook.py:938-947` ／ `tcg_distribution_svc.py:857-866` |
+| 実装済みの種類は 2 つだけ。既定 3 種類は送信元ゼロ | `backend/app/routers/webhook.py:938-947` ／ `backend/app/services/tcg_distribution_svc.py:857-866` |
 | **埋め込みカード内のメンションは通知されない** | Discord 公式 `https://docs.discord.com/developers/resources/message` |
 | 後追い処理の作法＝commit 後 `asyncio.create_task` | `backend/app/routers/leads.py:699-726` |
 | 背景セッションは自前で開く | `backend/app/services/discord_role_sync.py:59-60` |
 | テナント文脈は `set_tenant_context` 経由のみ（生 SET は CI がブロック） | `backend/app/auth/dependencies.py:309-318` |
 | オーナーは `notifications.manage` を保持 | `migrations/025_resync_owner_admin_all_permissions.sql:48-70` |
-| 複数選択の金型は存在しない／手本はある | `components/` 全数確認 ／ `pages/inbox/SalesFormMultiSelect.tsx:126-143` |
+| 複数選択の金型は存在しない／手本はある | `components/` 全数確認 ／ `frontend/src/pages/inbox/SalesFormMultiSelect.tsx:126-143` |
 
 ---
 
@@ -77,7 +77,7 @@ class NotificationEventType(str, Enum):
 
 **部分一致の安全性チェック（実装時に必ず確認）**: 3 値は互いに部分文字列関係に無い（`lead_assigned` / `meta_message_received` / `tcg_distribution_error`）。将来値を増やす際は同じ確認を行う。
 
-**フロントが持つのは表示名の対応表のみ**（ADR-027 が i18n キーを要求し、`check-i18n-missing-keys.js` は literal キーしか検査できないため、キーはリテラルで書く）。
+**フロントが持つのは表示名の対応表のみ**（ADR-027 が i18n キーを要求し、`frontend/scripts/check-i18n-missing-keys.js` は literal キーしか検査できないため、キーはリテラルで書く）。
 
 **新規** `frontend/src/constants/notificationEventTypes.ts`
 ```ts
@@ -198,7 +198,7 @@ async def send_discord_notification(db, tenant_id, event_type, title, message,
                         # 指定した相手だけを鳴らす（@everyone / @here / role の暴発を防ぐ）
                         payload["allowed_mentions"] = {"parse": [], "users": list(mention_user_ids)}
 ```
-- **引数は末尾に既定値付きで追加** → 既存の 2 箇所の呼び出し（`webhook.py:938-947` / `tcg_distribution_svc.py:857-866`）は**無変更で動く**
+- **引数は末尾に既定値付きで追加** → 既存の 2 箇所の呼び出し（`backend/app/routers/webhook.py:938-947` / `backend/app/services/tcg_distribution_svc.py:857-866`）は**無変更で動く**
 - `allowed_mentions.parse: []` により、文面に `@everyone` 等が混ざっても鳴らない（フェイルクローズ）
 - `mention_user_ids` は数字のみの Discord Snowflake を想定。呼び出し側で `str.isdigit()` を確認してから渡す（文字列埋め込みによる細工を防ぐ）
 
@@ -260,8 +260,8 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
     except Exception as exc:  # noqa: BLE001
         logger.warning("[leads] アサイン通知失敗（商談化自体には影響なし）: lead=%s %s", lead_id, exc)
 ```
-- 例外は**外に出さない**（商談化の成否に影響させない）。既存 `tcg_distribution_svc.py:867-868` と同じ方針
-- `send_discord_notification` が末尾で `db.commit()` と `reset_tenant_context` を行う（`notifications.py:132-133`）ため、本関数側では行わない
+- 例外は**外に出さない**（商談化の成否に影響させない）。既存 `backend/app/services/tcg_distribution_svc.py:867-868` と同じ方針
+- `send_discord_notification` が末尾で `db.commit()` と `reset_tenant_context` を行う（`backend/app/routers/notifications.py:132-133`）ため、本関数側では行わない
 - `discord_user_id` が未登録のスタッフでも**投稿自体は行う**（メンションのみ付かない）。通知が無言で消えるより運用上安全
 
 ---
@@ -312,18 +312,18 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
   export type CheckboxProps = CheckboxOwnProps &
     Omit<InputHTMLAttributes<HTMLInputElement>, keyof CheckboxOwnProps | "size" | "type">;
   ```
-  - `TextField.tsx:16-27` と同じ `Omit<..., keyof OwnProps | "size">` 方式に揃える
+  - `frontend/src/components/TextField.tsx:16-27` と同じ `Omit<..., keyof OwnProps | "size">` 方式に揃える
   - `type` は固定（`Omit` で外から変えられないようにする）
 - `frontend/src/components/Checkbox.css`
   - クラス名は BEM: `comp-checkbox` / `comp-checkbox--sm|md|lg` / `comp-checkbox__input` / `comp-checkbox__label` / `comp-checkbox__description` / `comp-checkbox--error`
-  - **既存トークンのみを使用**（`index.css` に新規トークンを足さない＝KPI P3）
+  - **既存トークンのみを使用**（`frontend/src/index.css` に新規トークンを足さない＝KPI P3）
     `--border` / `--bg-surface` / `--text-primary` / `--text-secondary` / `--danger` / `--accent` /
     `--space-1` / `--space-2` / `--space-3` / `--comp-input-radius` /
     `--font-xs` / `--font-sm` / `--font-base` / `--font-weight-medium` / `--line-height-base` /
     `--transition-micro` / `--focus-ring-shadow` / `--bg-hover`
   - hex / rgba / 生数値・`var(--x, fallback)` は書かない（`check:css-colors` / `check:css-values` / `check:css-var-fallbacks`）
 - `frontend/src/components/Checkbox.stories.tsx`
-  - `check-stories-count.js` の必須要件。`Meta` ＋ `tags: ['autodocs']`、Story は `Default` / `Checked` / `WithDescription` / `WithError` / `Disabled` / `Sizes` / `Group`（縦並びの複数選択例）
+  - `frontend/scripts/check-stories-count.js` の必須要件。`Meta` ＋ `tags: ['autodocs']`、Story は `Default` / `Checked` / `WithDescription` / `WithError` / `Disabled` / `Sizes` / `Group`（縦並びの複数選択例）
 
 #### (b) 通知設定画面を改修
 `frontend/src/pages/notifications/NotificationsPage.tsx`
@@ -350,7 +350,7 @@ await api.post("/notification-channels", {
 ```
 
 #### (c) i18n（ADR-027・ja.json と en.json の両方に同一キー）
-`frontend/src/locales/{ja,en}.json` の `notifications` 配下に追加:
+`frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の `notifications` 配下に追加:
 
 | キー | ja |
 |---|---|
@@ -362,7 +362,7 @@ await api.post("/notification-channels", {
 | `notifications.eventType.metaMessageReceived` | Meta の新着メッセージ |
 | `notifications.eventType.tcgDistributionError` | TCG在庫配信エラー |
 
-既存 `settings.*`（`ja.json:2000-2007`）はそのまま使う（`addChannel` / `channelName` / `noChannels` 等）。
+既存 `settings.*`（`frontend/src/locales/ja.json:2000-2007`）はそのまま使う（`addChannel` / `channelName` / `noChannels` 等）。
 
 ---
 
@@ -375,7 +375,7 @@ await api.post("/notification-channels", {
 | **ア（顧客名あり）** | `<@123456789>` | `🤝 商談化：担当アサイン` | `顧客: 山田商事\nリード: L-00123\n担当: 谷澤 伸吾` |
 | **イ（顧客名なし）** | `<@123456789>` | `🤝 商談化：担当アサイン` | `リード: L-00123\n担当: 谷澤 伸吾` |
 
-→ 実装では文面生成を `lead_assign_notifier.py` 内の 1 箇所に閉じ、案ア／イの切替が 1 行で済む形にする。**日本語文字列はバックエンドのため i18n 制約の対象外**（ADR-027 は UI 文字列が対象。既存 `webhook.py:934-936` / `tcg_distribution_svc.py:860-865` も日本語直書き）。
+→ 実装では文面生成を `backend/app/services/lead_assign_notifier.py` 内の 1 箇所に閉じ、案ア／イの切替が 1 行で済む形にする。**日本語文字列はバックエンドのため i18n 制約の対象外**（ADR-027 は UI 文字列が対象。既存 `backend/app/routers/webhook.py:934-936` / `backend/app/services/tcg_distribution_svc.py:860-865` も日本語直書き）。
 
 ---
 
@@ -384,14 +384,14 @@ await api.post("/notification-channels", {
 | # | リスク | 対策 | 検証 |
 |---|---|---|---|
 | R1 | `event_types LIKE '%x%'` の部分一致で別の種類に誤ヒット | 3 値が互いに部分文字列でないことを実装時に確認。Enum の docstring に明記 | 単体テストで 3 値の相互部分文字列チェックを自動化 |
-| R2 | 背景タスクでテナント文脈を張り忘れ、**別テナントの送信先に送る**（最悪の事故） | `notify_lead_assigned` 冒頭で `set_tenant_context` を必ず呼ぶ。`notification_channels` はスキーマ修飾なしの SQL（`notifications.py:112`）なので文脈が命 | テナント 2 つを用意した単体テストで、他テナントの送信先に送られないことを検証 |
-| R3 | 既存 2 箇所の通知呼び出しを壊す | `mention_user_ids` は**末尾に既定値 None で追加**。既存呼び出しは無変更 | 既存テスト `test_webhook_instagram.py:317` / `test_conv_backbone_ben1b.py:179` が緑 |
+| R2 | 背景タスクでテナント文脈を張り忘れ、**別テナントの送信先に送る**（最悪の事故） | `notify_lead_assigned` 冒頭で `set_tenant_context` を必ず呼ぶ。`notification_channels` はスキーマ修飾なしの SQL（`backend/app/routers/notifications.py:112`）なので文脈が命 | テナント 2 つを用意した単体テストで、他テナントの送信先に送られないことを検証 |
+| R3 | 既存 2 箇所の通知呼び出しを壊す | `mention_user_ids` は**末尾に既定値 None で追加**。既存呼び出しは無変更 | 既存テスト `backend/tests/test_webhook_instagram.py:317` / `backend/tests/test_conv_backbone_ben1b.py:179` が緑 |
 | R4 | `@everyone` 等の暴発 | `allowed_mentions = {"parse": [], "users": [...]}` でフェイルクローズ | 単体テストで payload を検証 |
-| R5 | 商談化の応答が Discord の遅延（timeout 10s）で遅くなる | commit 後の `asyncio.create_task`（`leads.py:707-726` と同じ作法） | 商談化の応答時間が変わらないことを実機で体感確認 |
+| R5 | 商談化の応答が Discord の遅延（timeout 10s）で遅くなる | commit 後の `asyncio.create_task`（`backend/app/routers/leads.py:707-726` と同じ作法） | 商談化の応答時間が変わらないことを実機で体感確認 |
 | R6 | 通知失敗で商談化そのものが失敗する | サービス全体を try/except で包み warning ログのみ | 単体テストで webhook 送信失敗時も 200 を返すことを検証 |
 | R7 | 新規トークン追加で `check:new-tokens` / `check:dark-parity` に引っかかる | 既存トークンのみで CSS を書く（KPI P3） | `git diff -- frontend/src/index.css` が空 |
 | R8 | 保存済みの `customer_created` 等が画面に出ず「設定が消えた」と誤解される | 一覧では**未知コードもそのまま表示**する。黙って隠さない | 画面で確認 |
-| R9 | PATCH の SET 句にユーザー入力のカラム名が入る | `_UPDATABLE`（`notifications.py:59`）の allow-list で固定 | コードレビュー |
+| R9 | PATCH の SET 句にユーザー入力のカラム名が入る | `_UPDATABLE`（`backend/app/routers/notifications.py:59`）の allow-list で固定 | コードレビュー |
 | R10 | **メンションが実際に鳴らない**（公式制約の読み違い） | `content` に置く設計（公式ドキュメント根拠あり）。**実機の自社サーバーで鳴ることを確認するまで完了にしない** | 実機確認（U3） |
 
 ---
@@ -412,7 +412,7 @@ await api.post("/notification-channels", {
 | A10 | `discord_user_id` 未登録でも投稿は行われ、メンションは付かない | 単体テスト |
 | A11 | 他テナントの送信先に送られない | 単体テスト（2 テナントの送信先を用意） |
 | A12 | 通知が失敗しても `PATCH /leads/{id}` は 200 を返す | 単体テスト |
-| A13 | 既存の Meta / TCG 通知の呼び出しが壊れていない | 既存テストが緑（`test_webhook_instagram.py` / `test_conv_backbone_ben1b.py`） |
+| A13 | 既存の Meta / TCG 通知の呼び出しが壊れていない | 既存テストが緑（`backend/tests/test_webhook_instagram.py` / `backend/tests/test_conv_backbone_ben1b.py`） |
 | A14 | `Checkbox` 金型が 3 点セットで登録され CI が緑 | `npm run check:all`（`check:stories` 含む）が緑 |
 | A15 | 新規デザイントークンがゼロ | `git diff main...HEAD -- frontend/src/index.css` が空 |
 | A16 | i18n キーが ja/en 両方に存在 | `npm run check:i18n` が緑 |
@@ -442,7 +442,7 @@ backend/app/schemas/notification.py, backend/app/routers/notifications.py, backe
 - `frontend/src/index.css`（新規トークンを作らない）
 - 受信箱の「新規バッジ」（PO 要望の 3 つ目・**別便**。Q7 の回答が必要）
 - レポート通知（PO 決定 Q1 により対象外）
-- 受信箱の商談化ポップアップ（`InboxKartePanel.tsx`）— 既に本番稼働中。本 PR では変更しない
+- 受信箱の商談化ポップアップ（`frontend/src/pages/inbox/InboxKartePanel.tsx`）— 既に本番稼働中。本 PR では変更しない
 
 ---
 
@@ -456,12 +456,38 @@ backend/app/schemas/notification.py, backend/app/routers/notifications.py, backe
 
 ---
 
+## 維持の仕組み
+
+守り手: `backend/tests/test_notification_event_routing.py`
+
+この仕組みが将来壊れたときに**自動で赤くなる**関所を並べる。人手の記憶に頼らない。
+
+| 守るもの | 関所 | 壊れたときに出る症状 |
+|---|---|---|
+| 通知の種類の SSOT（3種類・相互に部分文字列でない） | `backend/tests/test_notification_event_routing.py`（A1・R1） | 種類を増やして部分一致が衝突すると赤 |
+| 未知の種類を API が拒否する | 同上（A2） | Enum 外の値を受け付けるようになると赤 |
+| 振り分けを後から変更できる | 同上（A4〜A6） | PATCH が壊れると赤 |
+| **他テナントへ送らない** | 同上（A11：行レベル検証） | `tenant_id` 条件を外すと赤 |
+| メンションが `content` に入り `allowed_mentions` が閉じている | 同上（A9） | `embeds` だけに戻すと赤（＝通知が鳴らない状態に戻る） |
+| 担当が変わったときだけ1回送る | 同上（A7・A8） | 二重通知・誤通知になると赤 |
+| 通知失敗が商談化を壊さない | 同上（A12） | 例外が外に漏れると赤 |
+| 既存の Meta / TCG 通知を壊さない | `backend/tests/test_webhook_instagram.py` ／ `backend/tests/test_conv_backbone_ben1b.py` | 引数追加で既存呼び出しが壊れると赤 |
+| 書き込み API を台帳に登録する（ADR-1016） | `backend/tests/test_realtime_topics.py` | 新しい書き込み API を足して登録を忘れると赤 |
+| Checkbox 金型の3点セット | `frontend/scripts/check-stories-count.js` | 「.stories.tsx」を消すと赤 |
+| CSS に直値を書かない | `frontend/scripts/check-css-hardcoded-colors.js` ／ `frontend/scripts/check-css-hardcoded-values.js` ／ `frontend/scripts/check-css-var-fallbacks.js` | hex・生数値・フォールバックを書くと赤 |
+| i18n キーが ja/en 両方にある | `frontend/scripts/check-i18n-missing-keys.js` | 片方だけ足すと赤 |
+| API の形と台帳が一致する | CI「API contract is up to date」 | `frontend/api-contract/openapi.json` の更新を忘れると赤 |
+
+**人手に残る部分**: メンションで実際にスマホが鳴るかの確認（A19）。Discord 公式仕様の根拠はあるが、実機の自社サーバーでの実測は自動化していない。送信先の Webhook URL は秘密情報のため CI に置かない。
+
+---
+
 ## ⑩ 継続（この PR の後）
 
 | # | 項目 | 状態 |
 |---|---|---|
 | C1 | 受信箱の「新規バッジ」 | **別便**。PO 回答（2026-10-15）= **案 B「担当になったが、まだ開いていない」（開くと消える）**。担当者ごとの既読記録を新設する必要があるため `migrations/` を触る → **ADR-135/136 の危険 PR 手順（事前提示＋「GO #PR番号」）が必要**。会話一覧 API（`backend/app/routers/meta_inbox.py`）が `assigned_to` を返していないため、API の返却項目追加も必要 |
-| C2 | 役割名の文字列依存の恒久対策（商談化の担当候補） | 別便。**2026-10-15 訂正**: 当初「`roles.system_key` は流用不可、`roles` への列追加が必要」と書いたが誤り。正しくは**権限キーを1つ新設する**のが恒久対策。`backend/app/auth/system_roles.py:1-5` の通り owner / admin は権限マスタ（`public.permissions`）から**check 時に計算**されるため、新しい権限キーは `role_permissions` の行追加なしで自動的に届く（`compute_permission_keys`:22-37）。名前での分岐は ADR-147 追補が禁じている（`system_roles.py:13`「見分けは roles.system_key で行い、名前では分岐しない」）。`roles` への列追加は不要。権限キーの seed のみ `migrations/` を触る＝A 区分 |
+| C2 | 役割名の文字列依存の恒久対策（商談化の担当候補） | 別便。**2026-10-15 訂正**: 当初「`roles.system_key` は流用不可、`roles` への列追加が必要」と書いたが誤り。正しくは**権限キーを1つ新設する**のが恒久対策。`backend/app/auth/system_roles.py:1-5` の通り owner / admin は権限マスタ（`public.permissions`）から**check 時に計算**されるため、新しい権限キーは `role_permissions` の行追加なしで自動的に届く（`compute_permission_keys`:22-37）。名前での分岐は ADR-147 追補が禁じている（`backend/app/auth/system_roles.py:13`「見分けは roles.system_key で行い、名前では分岐しない」）。`roles` への列追加は不要。権限キーの seed のみ `migrations/` を触る＝A 区分 |
 | C3 | 既存の生 checkbox 30 箇所超の金型移行 | ADR-144:66-69 に従い別トラック・1 ページ 1 部品 |
 | C4 | レポート通知の実装 | PO が必要と判断した時点で着手（Celery beat の土台はある: `backend/app/celery_app.py:58-150`） |
 | C5 | 本番 `notification_channels` の現状確認（U1） | 本 PR で `event_types` が画面に出るようになってから実機で確認 |
