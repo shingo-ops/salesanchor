@@ -1,7 +1,7 @@
 # AY-4c-2b 設計: 予定表のカレンダーのチェック欄 2 件を、カレンダーの色のまま金型へ
 
 - 作成: 2026-10-16 Opus（Planner）/ 基点 origin/main（AY-4c-2a マージ後）/ ブランチ release/checkbox-ay4c2b
-- recon: docs/handoff/ay4c2-checkbox/recon.md 項目 8・9（行番号は origin/main 52b8a4003 のもの。2a は schedule 系のファイルに触れていない）
+- recon: docs/handoff/ay4c2b-checkbox/recon.md（元の調査は docs/handoff/ay4c2-checkbox/recon.md 項目 8・9（行番号は origin/main 52b8a4003 のもの。2a は schedule 系のファイルに触れていない））
 - 前便: docs/handoff/ay4c2-checkbox/design.md（AY-4c-2a）
 - 対象ADR: ADR-144（UI ガバナンス）、ADR-067（デザイントークン）
 - 状態: 設計審査済み（r2 APPROVE）・実装済み（422b01d74）・コード審査 Opus APPROVE（/tmp/CC報告ファイル/ssot-checkbox/ay4c2b/code-review.md）
@@ -199,7 +199,7 @@ AY-4c-2a §5-1 と同じ作り方（ファイル名 ay4c2b-*）。
 
 ## 11. 維持の仕組み
 
-- 守り手: CheckboxControl.test.tsx（3-4 の 2 つ。2 は登録制で、新しい使い手は登録表の変更が要る）、Storybook の DataColor story、check:all。
+- 守り手: frontend/src/components/CheckboxControl.test.tsx（3-4 の 2 つ。2 は登録制で、新しい使い手は登録表の変更が要る）、Storybook の DataColor story、check:all。
 - 生 checkbox が 0 件になるので、check-ui-governance に「金型以外の `type="checkbox"` を禁止」を足すかを別便で判断する（docs/specs/design-system/design.md に残件として書く）。
 
 ## 12. 審査
