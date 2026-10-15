@@ -141,15 +141,94 @@
 ### 4-6. 文言（ja/en 同一キー、ADR-027）
 - reviewItem.wizard.choice.value / valueDesc、reviewItem.valueFix.{title, quantity, price, unit, memo, saleStatus, save, saving, saved, invalid, changed, saveFailed, loadFailed}。
 
-## 5. 便2（v6）
-- item_rejection の代わりに、value-override 専用の検査で v6 も通す（件なし 404、source 不一致 422 は同じ）。
-- v6 の再解析（`backend/app/services/tcg_analyzer_svc.py` 1489-1505 行と 1708-1790 行）:
-  - product_id 行がある件は今も上書きしないので、即時 UPDATE の値が残る（追加の作業なし）。
-  - product_id 行が無い件は、UPSERT の直後に `load_v102_decisions` → `apply_value_overrides` で該当列を UPDATE する。
-- 画面: reviewFixRows の v102 の条件を外し、v6 も同じ9行にする。状態は v6 でも condition_review が動く（95 §5）。
-- 便2の詳細は便1マージ後に本書へ追記して、同じ審査を通す。未決の点:
-  - v6 では状態以外が理由の除外（本番で In Stock + excluded が 90 件）がある。status の上書きで exclusion を None にすると、その除外まで外れる。v6 では「status 由来の除外だけを動かす」別の規則が要る。
-  - v6 の status 'active' の扱い。
+## 5. 便2（v6。便1 #4333 マージ後の main 759cee4d5 を基準。PO の回答「n」＝v6 にも同じ仕組みを足す）
+
+略称: A=`backend/app/services/tcg_analyzer_svc.py`、H=`backend/app/services/v102_human_decisions_svc.py`、R=`backend/app/routers/item_corrections.py`、T=`backend/app/tasks/tcg_extraction.py`。
+
+### 5-0. 便2の recon（事実）
+- v6 の値の出どころ: 数量 A:1669、単価 A:1670、単位 A:1523-1524（`unit_uuid` は `str`、A:107 で `str(uid)`）、メモ A:1674、販売状況と除外 A:1678（`resolve_status_v2`）。UPSERT は A:1709 付近〜1812（`"unit_id": unit_uuid` A:1794、`"exclusion": exclusion_val` A:1804）。最初の commit は A:1814。
+- 商品の直しがある件は A:1493-1507 で UPSERT に来ない（状態だけ更新して continue）。即時 UPDATE した人の値はそのまま残る。
+- 状態の確定の束縛ハッシュ（`backend/app/services/tcg_condition_review_svc.py:93-96`）に単位・数量・単価が入る。直すと確定が外れる（v102 と同じ。既存の挙動）。
+- v6 の exclusion を書くのは A:1804 だけで、値は `resolve_status_v2`（A:1273-1312）の「販売状況マスタの effect=EXCLUDE 行に一致」だけから来る。状態以外の理由で除外が付く経路はコードに無い（全走査）。
+- 本番（読み取り）: v6 の status×exclusion は In Stock/空 35672、Sold out/excluded 1033、In Stock/excluded 90、Pre-order/空 8。'active' は 0 件。In Stock/excluded の 90 件は engine_version name-first-v9-product-all-terms（9/16〜10/09）で、review_reasons の大半が 'manual_review_pending'。この文字はコードにも git の全履歴にも無い。
+- `resolve_status_v2` が 'active' を返すのは、マスタが空・読めない・どの行にも当たらないとき（A:1283、1309。A:1243-1244 はマスタが読めないとき空の一覧を返す）。apply_value_overrides は今の値を見ないので、'active' の件も上書きできる。
+- `analyze_extraction_job`（A:1317）の呼び出し元は2つだけ: T:599（新規抽出。直前に commit T:588、行ロック・advisory lock なし）と `backend/app/services/tcg_product_master_svc.py:753`（再解析 API。analysis_runs の INSERT だけ先にある）。どちらも 1 取引 1 job。753 の前は analysis_runs と snapshots を INSERT してそれぞれ commit 済み（`tcg_product_master_svc.py:654-667,724` 付近）で、開いた取引は無い。
+- 同じ鍵: `backend/app/services/v102_transcription_svc.py:166` `v102_analysis_lock_key(job_id)`。v102 の解析は `backend/app/services/line_analysis_v102_svc.py:1269` で取引の最初に取る。H:581 は同じ文字列を直書きしている。
+- `load_v102_decisions`（H:231-279）は prompt_version を見ない。v6 でも読める。要確認一覧の manual_values（`backend/app/services/tcg_analysis_review_svc.py:277,319`）も v6 で返る。
+- `item_rejection`（H:446）は 404 → v6 なら 409 → 422 の順。呼ぶのは H:443（review_ack_rejection）、R:231（取り消し）、R:273（value-override）。H:576 の save_value_override は 404 だけを自前で作る。
+- 配信: `backend/app/services/tcg_distribution_svc.py:247` が status の 'sold out' を外し、:336・:448 が `exclusion IS DISTINCT FROM 'excluded'` を見る。配信の予約 `schedule_distribution`（T:670）を呼ぶのは v102 の再解析（T:723）だけ。v6 の人の直しは、今は配信の予約も画面通知もしない。
+- 本番の `TCG_AUTO_DISTRIBUTE` は API（astro-webapp-backend-1）と worker（astro-webapp-celery-worker-1）の両方で `1`（読み取り 2026-10-16 01:02 JST、`/tmp/CC報告ファイル/review-edit-fields/291_api_env.txt`）。schedule_distribution は本番で働く。
+- 解析の途中 commit A:1814 のあと、単位の補完 E3a/E4（`backend/app/services/tcg_unit_recovery_svc.py:873-880,1175-1182`）が `WHERE id = :ar_id` だけで ar の単位を書き換える。
+- 鍵の後でマスタを読む関数は例外時に `session.rollback()` する（A:682、969、1037、1242）。rollback で xact lock は外れる。
+- 循環 import: H や A の先頭で `v102_transcription_svc` を import すると ImportError（審査 `review-opus-bin2.md` §2-3 の実験）。transcription が先頭で H を import しているため（`v102_transcription_svc.py:18-20`）。
+- 画面通知は便1で R の POST value-override を `backend/app/realtime/topics.py` の表に載せ済み（v6 でも同じ API なので通知は出る）。
+
+### 5-1. 決めたこと（Opus の設計判断）
+- D1 除外の規則は v102 と同じにする。人が販売状況を直したら、exclusion はその状態に合わせる（EXCLUDE なら 'excluded'、ほかは None）。根拠: v6 の exclusion は status 由来しかなく（5-0）、v6 を解析し直せば exclusion はもともと無条件に上書きされる。90 件の 'manual_review_pending' はコードに根拠が無い文字なので、それで分ける処理は作らない。
+- D2 v6 の解析も同じ鍵を取る。人の値を読んだあとに保存が割り込んで、その値を古い値で上書きしないため。保存（H:581）は鍵 → FOR UPDATE の順、解析は鍵を最初に取るので、取る順が同じでデッドロックしない。呼び出し元は行ロックを先に持っていない（5-0）。
+- D3 v6 で値を直したら、配信の予約を1回積む（v102 の再解析が積むのと同じ `schedule_distribution`）。Sold out に直した件を、次の配信で外すため。v6 の再解析は積まない（即時 UPDATE で ar は直っていて、v6 の再解析は重いため）。
+- D4 状態（コンディション）の行は v6 では今のまま（空箱関連だけ）。PO の依頼の「状態」は v102 で満たし、v6 の状態の直しは便1から既存の空箱の流れだけ。
+- D5 鍵の名前を作る関数の正本を H に移す（依存の一番下。循環しない）。`v102_transcription_svc.v102_analysis_lock_key` は H の関数をそのまま使う（import して名前を残す）。H:581 と `line_analysis_v102_svc.py:1269` の直書きもこの関数に揃える。中身の文字列は変えない。
+- D6 単位の補完 E3a/E4 は、人が単位を直した行（unit_resolved = TRUE）を書き換えない。UPDATE の WHERE に `AND unit_resolved = FALSE` を足す。途中 commit 後に保存が割り込んでも、人の単位が消えないため。
+
+### 5-2. backend
+1. H:
+   - 鍵の関数 `v102_analysis_lock_key(job_id) -> str` を H に置く（中身は今の `v102_transcription_svc.py:166-168` と同じ文字列）。H:581 の直書きをこの関数に替える（D5）。
+   - 新しい `item_basic_rejection(found, source_message_id)`: 件なし 404 → source 不一致 422。
+   - `item_rejection` は今の順（404 → v6 なら 409 → 422）を保つ: `found is None → 404`、`v102 でない → 409`、`return item_basic_rejection(found, source_message_id)`。docstring（H:432-433）も合わせる。review-ack の確定・取り消し・CSV（`tcg_review_csv_svc.py:177`）の応答は変わらない。
+   - `save_value_override`（H:576 付近）は item_rejection の代わりに item_basic_rejection を使う。
+2. `backend/app/services/v102_transcription_svc.py:166-168`: 定義を消し、`from app.services.v102_human_decisions_svc import v102_analysis_lock_key` を使う（既存の H の import 行に足す。今の呼び出し元はそのまま動く）。
+3. `backend/app/services/line_analysis_v102_svc.py:1269`: 直書きの文字列を `v102_analysis_lock_key(job_id)` に替える（H から import 済みの行に足す）。
+4. R の value-override（R:261-284）: R:273 を item_basic_rejection にする。保存後、v102 なら今どおり `enqueue_v102_reanalyze`、v6 なら `await run_in_threadpool(schedule_distribution)`（`starlette.concurrency`。同期の Redis 待ちで event loop を止めないため。import は R:45 の tasks の import 行に足す）。
+5. A（v6 の解析）:
+   - 鍵は、全マスタを読み終えたあと、extraction_items を読む SELECT（A:1440 付近、FOR SHARE）の直前で1回取る: `session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": v102_analysis_lock_key(str(extraction_job_id))})`。H は A の先頭で import してよい（審査の実験で循環しないことを確認済み）。job_id の型は v102 の呼び方と同じ文字列にする。
+   - 鍵から A:1814 の commit までの間に rollback・commit が無いことを実装担当が確かめて報告する（審査時点で無い）。
+   - SELECT の直後、ループの前に `decisions = load_v102_decisions(session, [件の id の文字列])` を1回。
+   - A:1690（empty_box の理由を足す所）の後、A:1691-1692（`reanalysis_condition` の呼び出し）の前に、その件の判断があって values が空でないときだけ重ねる:
+     ```python
+     merged = apply_value_overrides(
+         {"quantity_normalized": quantity_normalized, "price_normalized": price_normalized,
+          "unit_id": unit_uuid, "unit_canonical": unit_canonical, "unit_resolved": unit_resolved,
+          "note_ja": note_ja, "status": status_val, "exclusion": exclusion_val},
+         d.values, unit_canonical_to_uuid, status_entries)
+     ```
+     のあと各変数へ戻す。unit_id は `str(v) if v is not None else None` で今の型（str）に揃える。
+     - review_reasons・needs_review・`stats["unit_resolved"]`（A:1526-1527）は重ねる前の値のまま（便1の約束と同じ）。
+     - 人の単位は商品照合の kubun の絞り込み（A:1530-1533）には効かない（v102 と同じ）。
+     - candidate（A:1692）はこの後で作られるので、人の値が束縛ハッシュに入る。
+   - 商品の直しがある件の分岐（A:1493-1507）には手を入れない。
+6. `backend/app/services/tcg_unit_recovery_svc.py:873-880` と `:1175-1182`: UPDATE の WHERE に `AND unit_resolved = FALSE` を足す（D6）。v102 の解析がこの2つを呼ぶかを実装担当が grep で確かめて報告する。呼ぶなら v102 にも同じ守りが効く（悪化しない）。読む側の SELECT が既に unit_resolved = FALSE の行だけなら、競合時以外は結果が変わらないことも報告する。違う場合は止めて Opus に報告。
+7. 対象外: v6 の再解析を積む仕組み、`resolve_status_v2`、配信の SQL、要確認一覧の SQL、`save_condition_review`。
+
+### 5-3. frontend
+- `frontend/src/features/tcg-analysis-review/reviewFixRows.ts:37` の `if (item.is_v102 === true)` を外し、数量・単価・単位・メモ・販売状況を v6 でも scope "value" にする。
+- `ReviewFixWizard.tsx:39` の availableFixChoices の "value" の v102 条件を外す。`ReviewFixWizard.tsx:27`（ackableReasonCodes）と `ConditionReviewPanel.tsx:25`（状態の行、D4）は残す。
+- 保存後の文言（`ReviewValueFixForm.tsx:87`）: v102 は今の `reviewItem.valueFix.saved`（「直しました。解析をやり直しています」）、v6 は新しいキー `reviewItem.valueFix.savedNoReanalyze`（ja「直しました」／en「Saved」）を `item.is_v102` で出し分ける。ja.json と en.json の両方に足す（ADR-027）。
+- 既存の試験の期待値を直す: `ReviewFixWizard.test.tsx:49-53`（v6 にも "value"）、`ReviewItemDrawer.test.tsx:182-191`（v6 の数量を「押せない行」の例にしている所を、v6 で押せない状態の行などに替える）。
+
+### 5-4. 受け入れ基準（便2）
+
+| 基準 | 検証方法 |
+|---|---|
+| V1 9行 | vitest: v6 の件で fixRowsOf が name・productId・work（product）、quantity・price・unit・memo・saleStatus（value）を返す。state は空箱関連のときだけ |
+| V2 API | pytest: v6 の件の value-override が 200 で保存され、即時 UPDATE される。件なし 404、source 不一致 422 は同じ。v6 の review-ack の確定と取り消しは 409 のまま（v6 かつ source 不一致も 409）。`test_v102_value_overrides.py:266` の v6→409 の期待は 200 に直す |
+| V3 配信の予約 | pytest: R の schedule_distribution を monkeypatch して数える。v6 で保存すると1回、enqueue_v102_reanalyze は0回。v102 は今どおり再解析が1回・配信0回 |
+| V4 再解析で残る | pytest（PG）: v6 の件で数量と販売状況（Sold out）を直し、analyze_extraction_job をやり直しても ar が人の値で、exclusion='excluded'。In Stock に直すと None |
+| V5 商品の直しがある件 | pytest（PG）: 商品の直しがある v6 の件は、やり直しても人の値が残る（V4 と同じ試験の中で確かめてよい） |
+| V6 鍵 | pytest（PG、V4 と同じ試験の中）: 別の接続で `pg_advisory_xact_lock(hashtextextended('v102_analysis:<job>',0))` を持ったまま、解析側で `SET lock_timeout='200ms'` にして analyze_extraction_job を呼ぶと LockNotAvailable（55P03）になる |
+| V6b 鍵の正本 | pytest: H の v102_analysis_lock_key と transcription の名前が同じ関数で、文字列が `v102_analysis:<job>` のまま。app の import が循環しない（`python -c 'import app.main'` 相当） |
+| V6c 単位の補完 | pytest: E3a/E4 の UPDATE が unit_resolved=TRUE の行を書き換えない（SQL 文字列か PG で確かめる） |
+| V6d 文言 | vitest: v6 で保存すると「直しました」、v102 は今の文言。ja/en のキーが揃う（既存の i18n の検査） |
+| V7 既存 | test_tcg_work_matching_integration.py、test_line_analysis_v102_svc.py、test_v102_value_overrides*.py、test_item_corrections*.py、tcg_unit_recovery の試験、tcg-analysis-review の vitest が緑（5-3・V2 の期待値更新のうえで） |
+| V8 PG 試験の数 | PG の試験の追加は2本まで（共有の pg fixture は試験ごとに DB を作るため） |
+
+### 5-5. リスクと対処（便2）
+- 待ちは2方向: 解析は同じ投稿の保存1回分を待つ。保存は同じ投稿の v6 ループ（鍵から A:1814 まで）を待つ。v6 ループ1投稿の所要時間は未測定。別の投稿とはぶつからない。
+- 便1の保存側も、鍵の後の `load_status_master`（H:584）が例外で rollback すると鍵が外れる。本番には表があり実害は無い。同じ型の穴として記録だけ残す（今回は直さない）。
+- 人が Sold out にした v6 の件にも excluded の確認済みが付く（便1と同じ H の処理）。v6 では確認済みの取り消しが 409 のため、取り消すには販売状況を別の値に直す（exclusion が None になり、除外の理由そのものが消える）。
+- 90 件の In Stock/excluded の件で販売状況を直すと、除外が外れる（D1）。人が明示して直したときだけ起き、もともと v6 を解析し直しても同じことが起きる。
+- 戻し方: PR を revert。override_* の行は残っても、古いコードの v6 解析は読まないので、次の解析で解析の値に戻る。
+- 測り方（反映後）: ①デプロイ success ②本番 bundle に `savedNoReanalyze` がある ③PO が v6 の件を1件直したとき、item_corrections と ar を読み取りで確かめ、worker のログに `scheduled_distribution` が出る。TCG_AUTO_DISTRIBUTE=1 は確認済み（5-0）。
 
 ## 6. 影響範囲（呼び出し元）
 - load_v102_decisions: run_v102_analysis（1202 行）、save_review_ack・save_review_ack_revoke（252・277 行）、_fixed_products。Decisions に項目が増えるだけで、既存の3つの意味は変えない。

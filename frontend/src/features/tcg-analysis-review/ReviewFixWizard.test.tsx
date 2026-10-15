@@ -47,11 +47,12 @@ const ackable = [{ code: "product_not_in_master", source: "system" as const, fix
 
 describe("availableFixChoices", () => {
   const cases: Array<[string, Partial<ReviewDrawerItem>, FixChoice[]]> = [
-    ["a plain v6 item only reassigns", {}, ["reassign"]],
-    ["PRODUCT_ID_UNRESOLVED adds register", { review_issues: ["PRODUCT_ID_UNRESOLVED"] }, ["reassign", "register"]],
-    ["PRODUCT_MASTER_UNREGISTERED adds register", { review_issues: ["PRODUCT_MASTER_UNREGISTERED"] }, ["reassign", "register"]],
-    ["a resolved product does not offer register", { review_issues: ["UNIT_UNRESOLVED"] }, ["reassign"]],
-    ["a condition review adds condition", { condition_review: condition }, ["reassign", "condition"]],
+    ["a plain v6 item reassigns and fixes values", {}, ["reassign", "value"]],
+    ["PRODUCT_ID_UNRESOLVED adds register", { review_issues: ["PRODUCT_ID_UNRESOLVED"] }, ["reassign", "register", "value"]],
+    ["PRODUCT_MASTER_UNREGISTERED adds register", { review_issues: ["PRODUCT_MASTER_UNREGISTERED"] }, ["reassign", "register", "value"]],
+    ["a resolved product does not offer register", { review_issues: ["UNIT_UNRESOLVED"] }, ["reassign", "value"]],
+    ["a condition review adds condition", { condition_review: condition }, ["reassign", "condition", "value"]],
+    ["a v6 item with is_v102 false also offers value", { is_v102: false }, ["reassign", "value"]],
     ["a v102 item adds value", { is_v102: true }, ["reassign", "value"]],
     ["a v102 item with a condition review (not empty-box) adds condition and value", { is_v102: true, condition_review: { ...condition, review_reasons: "pid_unresolved" } }, ["reassign", "condition", "value"]],
     ["an ackable reason does not add a choice (keep lives in the drawer)", { is_v102: true, review_reason_details: ackable }, ["reassign", "value"]],

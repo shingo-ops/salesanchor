@@ -129,7 +129,8 @@ describe("ItemComparison readOnly fix column", () => {
     expect(screen.queryByRole("columnheader", { name: "Source" })).toBeNull();
     expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
     expect(lastCell(screen.getByRole("row", { name: /^Product ID/ })).textContent).toBe("Title A");
-    expect(lastCell(screen.getByRole("row", { name: /^Quantity/ })).textContent).toBe("—");
+    expect(lastCell(screen.getByRole("row", { name: /^Quantity/ })).textContent).toBe("Tap to fix");
+    expect(lastCell(screen.getByRole("row", { name: /^Condition/ })).textContent).toBe("—");
   });
 
   it("shows the tap hint for a fixable row that was not fixed by a person", () => {

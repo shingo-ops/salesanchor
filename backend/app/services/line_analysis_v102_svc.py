@@ -65,6 +65,7 @@ from app.services.v102_human_decisions_svc import (
     apply_value_overrides,
     load_v102_decisions,
     status_available_by_human,
+    v102_analysis_lock_key,
 )
 from app.services.v102_status_context import posted_jst_date
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
@@ -1266,7 +1267,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
 
     schema = analyzer.TCG_SCHEMA
     # 同じ投稿のやり直しが並行して走ると、判断の読み込みと書き込みが交差する。取引の最初に投稿ごとの鍵を取り、順番に走らせる
-    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"v102_analysis:{extraction_job_id}"})
+    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": v102_analysis_lock_key(extraction_job_id)})
     ctx = load_extraction_context(session, extraction_job_id)
     if ctx is None:
         raise ValueError(f"extraction_job が見つかりません: {extraction_job_id}")

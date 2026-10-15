@@ -866,8 +866,10 @@ def apply_unit_recovery_for_job(
         }
 
     # E3a DB 書き込み
+    # 人が単位を直した行（unit_resolved = TRUE）は書き換えない。書けなかった行（rowcount 0）は復旧件数と E5 の対象から外す
+    applied_updates: list[dict] = []
     for upd in e3a_updates:
-        session.execute(
+        result = session.execute(
             text(
                 f"""
                 UPDATE {tenant_schema}.analysis_results
@@ -876,7 +878,7 @@ def apply_unit_recovery_for_job(
                     unit_canonical = :unit_canonical,
                     unit_resolved  = TRUE,
                     unit_basis     = :unit_basis
-                WHERE id = :ar_id
+                WHERE id = :ar_id AND unit_resolved = FALSE
                 """
             ),
             {
@@ -886,6 +888,9 @@ def apply_unit_recovery_for_job(
                 "ar_id": upd["ar_id"],
             },
         )
+        if result.rowcount:
+            applied_updates.append(upd)
+    e3a_updates = applied_updates
 
     if e3a_updates:
         logger.info(
@@ -1169,7 +1174,7 @@ def apply_unit_from_condition_for_job(
             continue  # 未登録 or 衝突
 
         unit_id, unit_canonical = unit_info
-        session.execute(
+        result = session.execute(
             text(
                 f"""
                 UPDATE {tenant_schema}.analysis_results
@@ -1178,7 +1183,7 @@ def apply_unit_from_condition_for_job(
                     unit_canonical = :unit_canonical,
                     unit_resolved  = TRUE,
                     unit_basis     = 'COND_INFERRED'
-                WHERE id = :ar_id
+                WHERE id = :ar_id AND unit_resolved = FALSE
                 """
             ),
             {
@@ -1187,7 +1192,8 @@ def apply_unit_from_condition_for_job(
                 "ar_id": ar_id,
             },
         )
-        resolved += 1
+        if result.rowcount:  # 人が単位を直した行（unit_resolved = TRUE）は書き換わらない
+            resolved += 1
 
     if resolved:
         logger.info(
