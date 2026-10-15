@@ -1533,6 +1533,12 @@
     "sortDesc": "▼",
     "sortNone": "↕",
     "sortBy": "{{col}}で並べ替え",
+    "sortMenu": {
+      "placeholder": "並び替え",
+      "priceAsc": "価格が安い順",
+      "stockDesc": "在庫が多い順",
+      "postedDesc": "投稿が新しい"
+    },
     "justNow": "たった今",
     "minutesAgo": "{{count}}分前",
     "hoursAgo": "{{count}}時間前",
