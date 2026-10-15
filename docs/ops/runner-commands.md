@@ -303,6 +303,45 @@ launchctl bootout gui/$(id -u)/jp.salesanchor.colima-idle-stop
 
 止まった後に DB に繋がらないときは `colima start`（自動再開は無い）。起動後 `docker ps` で `salesanchor-postgres-1` が healthy で戻ることを確かめる。
 
+### Mac の自動お手入れの見張り（mac-jobs-watch）
+
+`ops/launchd/jp.salesanchor.mac-jobs-watch.plist` を配置すると、30 分ごと（とログイン時）に `scripts/mac-jobs-watch.sh` が、Docker の自動停止（colima-idle-stop）と毎日の自動片付け（disk-janitor）を見張る。止まった・読み込みから外れた・失敗した、のどれかが起きたら Discord へ知らせる（新しく起きたとき・24 時間続いたとき・直ったときの 3 種。同じ回の分は 1 通にまとまる）。再起動後の最初の回には「起動後の点検」を 1 通送る。設計: `docs/handoff/mac-jobs-watch/design.md`。
+
+通知先は ADR-1009 の番人と同じ `~/.config/sa-ops-intake/watchdog-webhook`（読むだけ。作り直し・権限変更はしない）。URL は画面・ログ・引数に出さない。見張り役自身が止まったことは検知できない（Mac の外に見張りが無い）。
+
+自動片付けの時刻（`ops/launchd/jp.salesanchor.disk-janitor.plist` の `Hour`）を変えたら、`scripts/mac-jobs-watch.sh` の設定 `MJW_DJ_HOUR` も合わせること（ずれると「毎日の自動片付けが動いていません」の誤報や見逃しが出る）。
+
+```bash
+# plist の確認（lint と、実行する1行の復元）
+plutil -lint ops/launchd/jp.salesanchor.mac-jobs-watch.plist
+plutil -extract ProgramArguments.2 raw ops/launchd/jp.salesanchor.mac-jobs-watch.plist
+
+# 設置（初回のみ）
+cp ops/launchd/jp.salesanchor.mac-jobs-watch.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.mac-jobs-watch.plist
+
+# 確認（state・runs・last exit code。正常は 0）
+launchctl print gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+diff ops/launchd/jp.salesanchor.mac-jobs-watch.plist ~/Library/LaunchAgents/jp.salesanchor.mac-jobs-watch.plist
+
+# すぐ1回動かす
+launchctl kickstart -k gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+
+# 送信の試験（Discord に「送信の試験です」を 1 通送る。状態は変えない）
+cd /Users/tanizawashingo/.salesanchor-tools && bash scripts/mac-jobs-watch.sh --test-notify
+
+# dry-run（判定してログに 1 行書くだけ。送らず、状態も変えない）
+cd /Users/tanizawashingo/.salesanchor-tools && bash scripts/mac-jobs-watch.sh --dry-run
+
+# 停止（止めた後の再開は bootstrap。状態を初期化するなら下の状態フォルダを消す）
+launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+```
+
+ログの見方:
+- `~/Library/Logs/mac-jobs-watch.log`: 見張り自身が書く。送った通知ごとに 1 行、何も送らなかった回は 1 行。`result=<ok|alert|repeat|recover|boot-notice|skip|no-webhook|test|dry-run> send=<ok|fail|-> problems=<今ある異常、無ければ -> events=<今回の出来事、無ければ -> awake=<1|0>`。`tail -50` で見る（1MB 超で `.log.1` に1世代だけ退避）。
+- `~/Library/Logs/mac-jobs-watch.err`: 起動直後の異常。正常時は空。「道具のコピーが確認できない」は colima-idle-stop と同じ条件で出て、そのときだけ終了 1 になる（確認が通れば見張り本体の終了コードがそのまま launchd に返る）。`result=no-webhook`（終了 2）は通知先ファイルが読めない、`send=fail`（終了 3）は Discord への送信失敗（次の回にまた送る）。
+- 状態フォルダ: `~/Library/Application Support/mac-jobs-watch/`（`state` と `problems`）。消すと初期化される（次の回が「初回」になり、点検が 1 通届く）。
+
 ---
 
 ## 関連 doc
