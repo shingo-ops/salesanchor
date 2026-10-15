@@ -21,6 +21,7 @@ import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
 import type { Product } from "./products.types";
 import { Button } from "../../components/Button";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -352,8 +353,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   onClick={() => { if (!reorderMode && hasPermission("products.update")) navigate(`/admin/products/${p.id}/edit`); }}
                 >
                   <td rowSpan={2} style={{ textAlign: "center", verticalAlign: "middle" }} onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
+                    <CheckboxControl
                       checked={selectedIds.has(p.id)}
                       onChange={() => toggleSelect(p.id)}
                       aria-label={t("common.select")}

@@ -25,6 +25,7 @@ import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Role {
   id: number;
@@ -393,25 +394,23 @@ export default function RolesPage() {
                           <span>{t("roles.categoryPagePerm", { category })}</span>
                         </div>
                         <div className="permission-group-toggles">
-                          <label className="chk-label" title={t("roles.toggleAllTitle")}>
-                            <input
-                              type="checkbox"
+                          <span title={t("roles.toggleAllTitle")}>
+                            <Checkbox
+                              label={t("roles.selectAll")}
                               checked={allChecked}
                               disabled={!canEditPerms}
                               onChange={(e) => toggleCategory(category, e.target.checked)}
                             />
-                            {t("roles.selectAll")}
-                          </label>
+                          </span>
                           {MENU_VIEW_KEY[category] && (
-                            <label className="chk-label" title={t("roles.menuVisibilityTitle")}>
-                              <input
-                                type="checkbox"
+                            <span title={t("roles.menuVisibilityTitle")}>
+                              <Checkbox
+                                label={t("roles.showMenu")}
                                 checked={menuVisible}
                                 disabled={!canEditPerms}
                                 onChange={(e) => toggleMenuVisibility(category, e.target.checked)}
                               />
-                              {t("roles.showMenu")}
-                            </label>
+                            </span>
                           )}
                         </div>
                       </header>

@@ -3,6 +3,7 @@ import { INBOX_ACTION_ICONS, NAV_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
+import { CheckboxControl } from "../../components/CheckboxControl";
 import { InboxConversationRows, type InboxConversationRowsProps } from "./InboxConversationRows";
 
 export interface InboxConversationListProps extends InboxConversationRowsProps {
@@ -117,9 +118,8 @@ export function InboxConversationList({
       {/* 一括アクションバー */}
       {selectMode && (
         <div className="inbox-bulk-bar">
-          <input
-            type="checkbox"
-            className="inbox-bulk-check-all"
+          <CheckboxControl
+            size="sm"
             checked={isAllSelected}
             onChange={toggleSelectAll}
             aria-label={t("inbox.selectAll")}
