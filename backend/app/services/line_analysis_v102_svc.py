@@ -59,7 +59,13 @@ from app.services.tcg_extraction_record_svc import RecordError
 from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
-from app.services.v102_human_decisions_svc import FIELD_V102_PRICE, Decisions, load_v102_decisions
+from app.services.v102_human_decisions_svc import (
+    FIELD_V102_PRICE,
+    Decisions,
+    apply_value_overrides,
+    load_v102_decisions,
+    status_available_by_human,
+)
 from app.services.v102_status_context import posted_jst_date
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
@@ -838,10 +844,13 @@ def _apply_soldout_targets(
     return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
 
 
-def _extra_targets(values: dict, item: dict, decision: Decisions | None) -> list[dict]:
-    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。相手が無い件・人の判断がある件は空。"""
+def _extra_targets(values: dict, item: dict, decision: Decisions | None, status_entries: list[dict] | None = None) -> list[dict]:
+    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。
+
+    相手が無い件・人の判断がある件・人が販売状況を在庫あり側に直した件は空（ほかの商品の is_current を落とさない）。
+    """
     targets = item.get("soldout_targets") or []
-    if not targets or _has_human_judgement(decision):
+    if not targets or _has_human_judgement(decision) or status_available_by_human(decision, status_entries or []):
         return []
     written = (values["product_id"], values["condition_id"])
     return [t for t in targets if (t["product_id"], t["condition_id"]) != written]
@@ -881,8 +890,10 @@ def _buyback_units(
         return base_values  # 対象が無ければ DB も SAVEPOINT も使わない
     try:
         with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
-            human_condition = frozenset(
-                i for i, (_item, row) in enumerate(pairs) if (d := decisions.get(str(row.id))) is not None and d.condition_id is not None
+            human_condition = frozenset(  # 状態の判断がある件と、単位か価格を人が直した件は、買取価格では決めない
+                i for i, (_item, row) in enumerate(pairs)
+                if (d := decisions.get(str(row.id))) is not None
+                and (d.condition_id is not None or d.values.unit is not None or d.values.price is not None)
             )
             return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, human_condition)
     except Exception as exc:  # noqa: BLE001
@@ -937,6 +948,11 @@ def _write_results(
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+    status_entries = masters["status_entries"]  # load_status_master を呼び直さない（例外時に rollback するため）
+    base_values = [  # 人が直した値（数量・単価・単位・メモ・販売状況）。買取単位・単位と価格の確認は、この人の値で判定する
+        apply_value_overrides(values, d.values, unit_ids, status_entries) if (d := decisions.get(str(row.id))) is not None else values
+        for values, (_item, row) in zip(base_values, pairs)
+    ]
     base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
@@ -951,7 +967,7 @@ def _write_results(
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
              "computed_at": now, "updated_at": now},
         ).scalar_one()
-        _write_extra_targets(session, result_id, _extra_targets(values, item, decision))
+        _write_extra_targets(session, result_id, _extra_targets(values, item, decision, status_entries))
         stats["pid_resolved"] += int(values["pid_resolved"])
         stats["unit_resolved"] += int(values["unit_resolved"])
         stats["needs_review"] += int(values["needs_review"])

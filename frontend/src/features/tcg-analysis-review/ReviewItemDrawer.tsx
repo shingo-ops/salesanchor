@@ -1,7 +1,7 @@
 /**
  * 本番タブの行から開く、1件の訂正 Drawer（設計 §13-5 の 3、review-fix-column）。
  * 上から: 赤字の理由 → 原文 | 比較表（「修正」列、行を押すと選べる）→ 「直す」欄。
- * 比較表は表示だけで、値を変えられるのは「直す」欄（ReviewFixWizard）だけ。
+ * 比較表の行を押すと、その行に合わせた「直す」欄（ReviewFixWizard）が出る。値を変えられるのは「直す」欄だけ。
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -201,9 +201,10 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
         {scope !== null && (
           <section className="review-item-fix">
             <ReviewFixWizard
-              key={`${item.extraction_item_id}:${scope}`}
+              key={`${item.extraction_item_id}:${scope}:${selectedRowKey ?? ""}`}
               item={item}
               scope={scope}
+              rowKey={selectedRowKey ?? ""}
               onRefresh={onRefresh}
             />
           </section>
