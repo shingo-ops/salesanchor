@@ -42,7 +42,7 @@ PO 本人しか GO を出せない従来の運用（ADR-136 §承認フロー v2
 
 `scripts/check-process-artifacts.js` は、変更ファイルがこれらの例外パス（`.github/workflows/workflow-lint.yml`）に該当する場合、または migration ファイルの追加行に `DROP TABLE` / `DROP COLUMN` を含む場合、`GO発行者` が委譲名義（「POの委任に基づくClaude Opus発行」）であれば fail させる。既存の `DANGEROUS_PATTERNS`（危険パス判定）と同じ regex 方式で判定する。
 
-大量 DELETE・secrets 変更・Ruleset/Branch Protection 変更・外部 GUI 操作・force push は、現状 `check-process-artifacts.js` が機械検証できる対象ではない（ファイル diff だけでは判定不能、または GitHub API / 外部操作を伴う）。これらは CLAUDE.md「不可逆操作は必ず PO 確認」の運用（`permit-danger.sh` 等）で従来どおり人手で担保する。
+大量 DELETE・secrets 変更・Ruleset/Branch Protection 変更・外部 GUI 操作・force push は、現状 `check-process-artifacts.js` が機械検証できる対象ではない（ファイル diff だけでは判定不能、または GitHub API / 外部操作を伴う）。これらは CLAUDE.md「不可逆操作は必ず PO 確認」の運用（`scripts/permit-danger.sh` 等）で従来どおり人手で担保する。
 
 ## 委譲の解除
 

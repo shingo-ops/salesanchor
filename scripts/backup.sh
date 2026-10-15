@@ -57,3 +57,24 @@ fi
 FILESIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
 echo "[$(date)] Backup completed: ${BACKUP_PREFIX}_${DATE}.sql.gz (${FILESIZE})" \
   >> "${BACKUP_DIR}/backup.log"
+
+# 成功時刻を node-exporter の textfile に書く（ADR-1012 段階1 便6。見張り BackupLocalStale が読む）
+# 書き方は scripts/f2-cleanup.sh の write_blackboard と同じ。書けなくてもバックアップは成功のまま終える
+# （cron とデプロイの Pre-deploy DB backup を落とさない）
+TEXTFILE_DIR="${BACKUP_TEXTFILE_DIR:-/home/ubuntu/node_exporter_textfile}"
+write_success_timestamp() {
+  local tmp
+  mkdir -p "${TEXTFILE_DIR}" 2>/dev/null \
+    || { echo "[$(date)] TEXTFILE mkdir FAIL" >> "${BACKUP_DIR}/backup.log"; return 0; }
+  tmp=$(mktemp "${TEXTFILE_DIR}/.backup_local.XXXXXX") \
+    || { echo "[$(date)] TEXTFILE mktemp FAIL" >> "${BACKUP_DIR}/backup.log"; return 0; }
+  # shellcheck disable=SC2015  # && の連鎖のどこかが失敗したら右の後始末だけを動かす（意図どおり）
+  {
+    echo "# HELP backup_local_last_success_timestamp scripts/backup.sh last success unix time"
+    echo "# TYPE backup_local_last_success_timestamp gauge"
+    echo "backup_local_last_success_timestamp $(date +%s)"
+  } > "${tmp}" && chmod 644 "${tmp}" && mv "${tmp}" "${TEXTFILE_DIR}/backup_local.prom" \
+    || { rm -f "${tmp}"; echo "[$(date)] TEXTFILE write FAIL" >> "${BACKUP_DIR}/backup.log"; }
+  return 0
+}
+write_success_timestamp || true

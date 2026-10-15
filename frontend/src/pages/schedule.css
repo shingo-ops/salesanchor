@@ -1198,30 +1198,6 @@
   color: var(--text-secondary);
 }
 
-.schedule-settings .toggle-switch,
-.schedule-page .toggle-switch {
-  width: 2.625rem;
-  height: 1.5rem;
-}
-
-.schedule-settings .toggle-switch-slider::before,
-.schedule-page .toggle-switch-slider::before {
-  width: 1.125rem;
-  height: 1.125rem;
-  left: 0.1875rem;
-  top: 0.1875rem;
-}
-
-.schedule-settings .toggle-switch input:checked + .toggle-switch-slider,
-.schedule-page .toggle-switch input:checked + .toggle-switch-slider {
-  background: var(--accent);
-}
-
-.schedule-settings .toggle-switch input:checked + .toggle-switch-slider::before,
-.schedule-page .toggle-switch input:checked + .toggle-switch-slider::before {
-  transform: translateX(1.125rem);
-}
-
 .schedule-banner__close {
   margin-left: var(--space-3);
   border: none;

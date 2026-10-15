@@ -48,6 +48,8 @@ CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が�
 
 ## 承認フロー v2（チャット GO 方式・PO 単独権限）
 
+> 注記（2026-09-29 ADR-1003 により上書き：GO は例外を除き Claude Opus 設計担当へ常時委譲。例外は PO 本人の GO）。以下の本文は決定当時のまま残す。
+
 **変更日**: 2026-06-13 | **決定者**: Shingo（PO）
 
 ### 変更の背景
@@ -66,7 +68,7 @@ CC が `shingo-ops` 名義で PR を作成していたため、Shingo 本人が�
    - `バックアップ確認` フィールドが存在する
 5. 全通過 → gate pass / 1 件でも欠ける → gate fail
 
-**GO 権限は PO（Shingo）単独**。Hikky-dev による Approve バイパスは構造的に廃止。
+**GO 権限は PO（Shingo）単独**（2026-09-29 ADR-1003 により上書き：GO は例外を除き Claude Opus 設計担当へ常時委譲。例外は PO 本人の GO）。Hikky-dev による Approve バイパスは構造的に廃止。
 
 ## 構造的ギャップ（2026-06-12 発覚）と break-glass ルール
 
@@ -103,6 +105,6 @@ CLAUDE.md「ブランチ運用ルール」にインライン記載済み。
 
 当初提案として Ruleset に `required_approving_review_count: 1` を設定する案があったが、**承認フロー v2（チャット GO 方式）の採用により不採用**となった。
 
-理由: 2 人体制での GitHub Approve 摩擦（過去に 0→1→0 往復実績）を解消しつつ、PO 単独権限によるより厳格な管制を実現するため、Ruleset 技術封鎖ではなくチャット GO 記録＋gate スクリプト検証を選択した。
+理由: 2 人体制での GitHub Approve 摩擦（過去に 0→1→0 往復実績）を解消しつつ、PO 単独権限によるより厳格な管制を実現するため、Ruleset 技術封鎖ではなくチャット GO 記録＋gate スクリプト検証を選択した。（2026-09-29 ADR-1003 により上書き：GO は例外を除き Claude Opus 設計担当へ常時委譲。例外は PO 本人の GO）
 
 Ruleset 現状: develop #16619490 = `pull_request` rule なし / main #15777895 = `required_approving_review_count: 0`（変更なし）。

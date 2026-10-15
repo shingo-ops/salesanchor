@@ -10,9 +10,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "CPU使用率が80%を超えています"
           description: "CPU使用率: {{ $value | printf \"%.1f\" }}%（5分間平均）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highcpuusage"
 
       # メモリ使用率が85%を超えた場合
       - alert: HighMemoryUsage
@@ -20,9 +22,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "メモリ使用率が85%を超えています"
           description: "メモリ使用率: {{ $value | printf \"%.1f\" }}%"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highmemoryusage"
 
       # ディスク使用率が80%を超えた場合
       - alert: HighDiskUsage
@@ -30,9 +34,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "ディスク使用率が80%を超えています"
           description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#highdiskusage"
 
       # ディスク使用率が90%を超えた場合（即時対応レベル）
       - alert: CriticalDiskUsage
@@ -40,9 +46,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "ディスク使用率が90%を超えています（{{ $labels.instance }}）"
           description: "ディスク使用率: {{ $value | printf \"%.1f\" }}%（instance={{ $labels.instance }}）。即時対応が必要です。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#criticaldiskusage"
 
   - name: application_alerts
     rules:
@@ -52,9 +60,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "{{ $labels.job }}がダウンしています"
           description: "Exporterからの応答がありません。即時確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#servicedown"
 
       # FastAPI バックエンド 5xxエラーレート（tokens.yml: backend_5xx_per_1m=5）
       # backend/app/metrics.py が出力する http_requests_total を使用
@@ -63,19 +73,23 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: page
         annotations:
           summary: "バックエンド 5xxエラーが急増しています"
           description: "5xxエラーが 1分間で {{ $value | printf \"%.1f\" }} req/s を超えています（閾値: 5 req/s）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhigherrorrate"
 
-      # FastAPI バックエンド P99 レイテンシ（tokens.yml: backend_p99_latency_sec=2.0）
+      # FastAPI バックエンドの遅いリクエストの割合（/api/health を除く。tokens.yml: backend_slow_request_sec=2.5・backend_slow_ratio=0.05）
       - alert: BackendHighLatency
-        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="backend"}[5m])) by (le)) > 2.0
-        for: 2m
+        expr: (1 - (sum(rate(http_request_duration_seconds_bucket{job="backend",handler!="/api/health",le="2.5"}[5m])) / sum(rate(http_request_duration_seconds_count{job="backend",handler!="/api/health"}[5m])))) > 0.05
+        for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
-          summary: "バックエンド P99 レイテンシが高い"
-          description: "P99 レスポンスタイムが {{ $value | printf \"%.2f\" }}s を超えています（閾値: 2.0s）"
+          summary: "バックエンドの遅いリクエストの割合が高い"
+          description: "/api/health を除くリクエストのうち 2.5 秒を超えた割合が {{ $value | humanizePercentage }} です（閾値: 5%・5 分継続）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhighlatency"
 
       # FastAPI バックエンドの同時処理中リクエスト数（workers=1 前提）
       - alert: BackendWorkerSaturated
@@ -83,9 +97,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "バックエンド worker が飽和し始めています"
           description: "同時処理中リクエスト数が 1 を超えています。workers=1 運用では待ち行列が発生している可能性があります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendworkersaturated"
 
       # SSE 接続数が多いと worker 余力の確認が必要になる
       - alert: BackendSseConnectionsHigh
@@ -93,9 +109,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "バックエンド SSE 接続数が多い"
           description: "SSE 接続数が 8 を超えています。SSE は worker を占有しない一方で、接続とメモリを消費します。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendsseconnectionshigh"
 
   - name: f2_cleanup
     rules:
@@ -104,17 +122,21 @@ groups:
         for: 1h
         labels:
           severity: critical
+          tier: ticket
         annotations:
           summary: "F2掃除係の黒板が8日以上更新なし(app-vps)"
           description: "f2-cleanup.shが8日以上完全成功していない。cron・スクリプト・textfile配線を確認。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupstale"
       - alert: F2CleanupAbsent
         expr: absent(f2_cleanup_last_success_timestamp{instance="app-vps"})
         for: 24h
         labels:
           severity: critical
+          tier: ticket
         annotations:
           summary: "F2掃除係の黒板メトリクスが消失(app-vps)"
           description: "黒板ファイルまたはtextfile配線の断線疑い。node_exporter設定を確認。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#f2cleanupabsent"
 
   - name: uptime_kuma
     rules:
@@ -124,9 +146,11 @@ groups:
         for: 2m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "見張り {{ $labels.monitor_name }} が失敗しています"
           description: "Uptime Kuma の見張り {{ $labels.monitor_name }} が 2 分以上失敗しています"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#kumamonitordown"
 
       # 証明書の期限が近い
       - alert: CertExpiringSoon
@@ -134,9 +158,11 @@ groups:
         for: 1h
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "{{ $labels.monitor_name }} の証明書の期限が近づいています"
           description: "残り {{ $value }} 日です（14 日未満）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certexpiringsoon"
 
       # 証明書が無効
       - alert: CertInvalid
@@ -144,6 +170,114 @@ groups:
         for: 10m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "{{ $labels.monitor_name }} の証明書が無効です"
           description: "Uptime Kuma が証明書を無効と判定しています"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#certinvalid"
+
+  - name: celery_alerts
+    rules:
+      # celery の heartbeat が古い（beat の停止・worker の停止や詰まり。tokens.yml: celery_heartbeat_stale_sec=600）
+      # backend/app/metrics.py が Redis から読んで出す celery_heartbeat_last_success_timestamp_seconds を使用
+      - alert: CeleryHeartbeatStale
+        expr: (time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}) > 600
+        for: 2m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "裏方の処理（celery）が 10 分以上動いていません"
+          description: "1 分ごとの heartbeat が {{ $value | humanizeDuration }} 前から更新されていません（閾値: 10 分）。beat か worker が止まっているか詰まっています。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryheartbeatstale"
+
+      # 同じタスクの失敗が 1 時間に 3 回以上（tokens.yml: celery_task_failures_per_1h=3）
+      - alert: CeleryTaskFailuresHigh
+        expr: sum by (task) (increase(celery_task_failures{job="backend"}[1h])) >= 3
+        for: 0m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "裏方の処理（celery）の {{ $labels.task }} が失敗を繰り返しています"
+          description: "{{ $labels.task }} が直近 1 時間に {{ $value | humanize }} 回失敗しました（閾値: 3 回）。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celerytaskfailureshigh"
+
+      # 待ち行列が溜まっている（tokens.yml: celery_queue_length_max=100）
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length{job="backend"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "裏方の処理（celery）の待ち行列が溜まっています"
+          description: "待ち行列が {{ $value | humanize }} 件です（閾値: 100 件・10 分継続）。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"
+
+  - name: backup_alerts
+    rules:
+      # DB バックアップ（scripts/backup.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）
+      # prod1 の node-exporter の textfile（backup_local.prom）を使用
+      - alert: BackupLocalStale
+        expr: (time() - backup_local_last_success_timestamp{instance="app-vps"}) > 93600
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "DB バックアップが 26 時間以上成功していません"
+          description: "scripts/backup.sh の最終成功から {{ $value | humanizeDuration }} たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuplocalstale"
+
+      # S3 への写し（scripts/backup_to_s3.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）
+      # prod1 の node-exporter の textfile（backup_s3.prom）を使用
+      - alert: BackupS3Stale
+        expr: (time() - backup_s3_last_success_timestamp{instance="app-vps"}) > 93600
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "S3 へのバックアップの写しが 26 時間以上成功していません"
+          description: "scripts/backup_to_s3.sh の最終成功から {{ $value | humanizeDuration }} たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backups3stale"
+
+      # 成功時刻の系列そのものが無い（textfile の断線・ファイルの消失）
+      - alert: BackupTimestampAbsent
+        expr: absent(backup_local_last_success_timestamp{instance="app-vps"}) or absent(backup_s3_last_success_timestamp{instance="app-vps"})
+        for: 30h
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "バックアップの成功時刻が取れていません(app-vps)"
+          description: "backup_local.prom か backup_s3.prom の時刻が 30 時間取れていません。textfile の置き場と 2 つのファイルの有無を確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuptimestampabsent"
+
+  - name: config_drift_alerts
+    rules:
+      # prod2 に置いた監視設定 6 本と main のずれ（.github/workflows/monitoring-config-drift.yml が毎日 pushgateway に送る）
+      - alert: MonitoringConfigDrift
+        expr: monitoring_config_drift_files{job="monitoring_config_drift"} > 0
+        for: 5m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "監視サーバーの設定が main とずれています"
+          description: "prod2 に置いた監視設定のうち {{ $value }} 本が main と一致しません。workflow の実行ログでファイル名を確認し、main の版を置き直してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigdrift"
+
+      # ずれの確認そのものが止まった（tokens.yml: config_check_stale_sec=180000）
+      # pushgateway は最後の値を持ち続けるので、送った時刻の古さで見る
+      - alert: MonitoringConfigCheckStale
+        expr: (time() - monitoring_config_drift_last_run_timestamp{job="monitoring_config_drift"}) > 180000 or absent(monitoring_config_drift_last_run_timestamp{job="monitoring_config_drift"})
+        for: 1h
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "監視設定のずれの確認が 50 時間以上動いていません"
+          description: "monitoring-config-drift の workflow が 50 時間以上 pushgateway に送っていません。prod2 の runner と workflow の実行を確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigcheckstale"

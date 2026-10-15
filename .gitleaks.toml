@@ -29,6 +29,10 @@ regexes = [
   "Fernet\\.generate_key\\(\\)",
   # スクリプト内のサンプルARN・リソースID
   "AWS_ACCOUNT_ID",
+  # テスト用の架空 Discord ユーザー ID（18桁の数字。実値でない。PR #4318 の履歴に残るため除外）
+  # 現行コードは数字リテラルを書かず組み立てている（backend/tests/test_notification_event_routing.py）
+  "999888777666555444",
+  "123456789012345678",
   # E2Eテスト用ダミーFirebase APIキー（実値でない）
   "AIzaSyE2E-dummy",
   "e2e-fixture\\.firebaseapp\\.com",

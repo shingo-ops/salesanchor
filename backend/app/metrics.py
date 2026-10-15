@@ -3,6 +3,8 @@ import time
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
+from app.celery_health import read_celery_health
+
 REQUEST_COUNT = Counter(
     "http_requests_total",
     "Total HTTP requests",
@@ -24,6 +26,22 @@ SSE_CONNECTIONS_ACTIVE = Gauge(
     "sse_connections_active",
     "Current active SSE connections",
     ("stream",),
+)
+
+CELERY_HEARTBEAT_TS = Gauge(
+    "celery_heartbeat_last_success_timestamp_seconds",
+    "Unix time of the last celery heartbeat task run (0 when missing)",
+)
+
+CELERY_TASK_FAILURES = Gauge(
+    "celery_task_failures",
+    "Cumulative celery task failures per task name, as recorded in Redis",
+    ("task",),
+)
+
+CELERY_QUEUE_LENGTH = Gauge(
+    "celery_queue_length",
+    "Current length of the default celery queue",
 )
 
 
@@ -57,4 +75,11 @@ def register_metrics(app: FastAPI) -> None:
 
     @app.get("/metrics", include_in_schema=False)
     async def metrics() -> Response:
+        health = await read_celery_health()
+        if health is not None:
+            heartbeat_ts, failures, queue_len = health
+            CELERY_HEARTBEAT_TS.set(heartbeat_ts)
+            for task_name, count in failures.items():
+                CELERY_TASK_FAILURES.labels(task_name).set(count)
+            CELERY_QUEUE_LENGTH.set(queue_len)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

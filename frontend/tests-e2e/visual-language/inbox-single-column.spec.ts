@@ -1584,6 +1584,11 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     { id: 3, user_id: 13, role_name: "CS", status: "active", surname_jp: "鈴木", given_name_jp: "一郎" },
     { id: 4, user_id: null, role_name: "営業", status: "active", surname_jp: "高橋", given_name_jp: "次郎" },
     { id: 5, user_id: 15, role_name: "営業", status: "inactive", surname_jp: "田中", given_name_jp: "三郎" },
+    // 第11便（PO 決定 2026-10-15）: 本番の役割名は「リーダー」ではなく「マネージャー」だった。
+    // マネージャーも候補に含める（実機で確認した事実にもとづく）。
+    { id: 6, user_id: 16, role_name: "マネージャー", status: "active", surname_jp: "渡辺", given_name_jp: "四郎" },
+    // 第12便（PO 決定 2026-10-15）: PO の言う admin ＝ オーナー。候補に含める。
+    { id: 7, user_id: 17, role_name: "オーナー", status: "active", surname_jp: "伊藤", given_name_jp: "五郎" },
   ];
 
   test("スマホ: カルテの帯に戻る矢印・顔写真・顧客名が並び、高さ56px・矢印44px以上", async ({ page }, testInfo) => {
@@ -1658,7 +1663,7 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     // eslint-disable-next-line local/no-japanese-literal -- 既存キー common.pleaseSelect の出力確認
     const nonPlaceholder = optionLabels.filter((label) => label !== "選択してください");
     // eslint-disable-next-line local/no-japanese-literal -- 期待値は仮データの氏名
-    expect(nonPlaceholder.sort()).toEqual(["佐藤 花子", "山田 太郎"].sort());
+    expect(nonPlaceholder.sort()).toEqual(["伊藤 五郎", "佐藤 花子", "山田 太郎", "渡辺 四郎"].sort());
   });
 
   test("スマホ: 確定・閉じるが横並びで、確定がネイビー（--accent）・閉じるがグレーであること", async ({ page }, testInfo) => {

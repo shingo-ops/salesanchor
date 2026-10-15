@@ -74,4 +74,11 @@ describe("useIsMobile", () => {
     renderHook(() => useIsMobile());
     expect(mockFn).toHaveBeenCalledWith("(max-width: 767px)");
   });
+
+  it("returns false and does not subscribe when matchMedia is missing", () => {
+    vi.stubGlobal("matchMedia", undefined);
+    const { result, unmount } = renderHook(() => useIsMobile());
+    expect(result.current).toBe(false);
+    unmount();
+  });
 });

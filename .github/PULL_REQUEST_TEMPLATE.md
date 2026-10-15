@@ -18,7 +18,7 @@
 
 - [ ] `git diff main...develop --name-only` で変更ファイル一覧を確認した
 - [ ] 上記一覧を PR 本文に貼り付けた（または「変更ファイル一覧: なし／全て意図済み」と明記）
-- [ ] `migrations/`・`.github/workflows/deploy.yml`・`scripts/` が含まれる場合、PO の GO を確認済み
+- [ ] `migrations/`・`.github/workflows/deploy.yml`・`scripts/` が含まれる場合、GO（PO、または ADR-1003 に基づく Opus の委任 GO）を確認済み
 - [ ] 今回出荷するつもりがない変更が develop に混入していない（相乗り 0 確認）
 
 ---
@@ -34,10 +34,10 @@
 - 削除するファイル: <!-- 1行でも変更・削除した行があるファイルを全列挙。追加のみなら「なし」 -->
 - 区分: <!-- A / B-1 / B-2 / B-3 / L（ADR-1015）。B 区分は Draft にしない -->
 - PO承認: <!-- PO の言葉そのままと日時。B 区分は「不要（B）」 -->
-- Fable 審査記録: <!-- docs/handoff/<仕事名>/review-fable.md -->
+- Opus 審査記録: <!-- docs/handoff/<仕事名>/review-opus.md -->
 
 <!-- 書類のみのPRは「書類のみ」と記入してスキップ可 -->
-<!-- 危険変更（migrations/deploy.yml/本番scripts）は認可承認者のApproveが別途必要 -->
+<!-- 危険変更（migrations/deploy.yml/本番scripts）は GO（PO、または ADR-1003 に基づく Opus の委任 GO）が別途必要 -->
 
 ### 共通
 - [ ] テストを追加・更新した

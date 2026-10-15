@@ -24,6 +24,34 @@
 2. Reviewer エージェントが APPROVE している
 3. PO に3行まとめ（対象・変更内容・バックアップ確認）を報告済み
 
+## 範囲の追加（2026-10-15：設計どおりの計画）
+
+PO 発言の原文（2026-10-15）:
+- 「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」
+- 「N,設計をした計画に関してはGOを出す権限を恒久的にあなたに与えたい、ただし設計から逸脱した場合は私に報連相をして壁打ちし直すことを条件とする、OPUSは管理者なので恒久的に許可を権限委譲したいと考えている」
+
+内容:
+1. PO と壁打ちして決めた設計（PO の決定を記録した design.md・ADR）の範囲に収まる計画は、Opus が委任の GO を出せる。対象は、上の「範囲」と同じ PR のマージ前の GO（ADR-1003 の範囲）に限る。無制限鍵での本番の変更（CLAUDE.md「VPS 直作業禁止」節の「作業ごとに PO の GO」）は、この追加に含めない。含めるには ADR と CLAUDE.md の改訂が要るので、別の PR で扱う。
+2. 期限は設けない（恒久）。解除は従来どおり「委譲停止」の発言による。
+3. 条件：設計から外れる操作・判断（設計に無い操作、一括変更や削除、数値や前提が設計と合わない場合を含む）は GO を出さず、その操作を止めて PO に報告・連絡・相談し、壁打ちし直す。
+4. 下の「例外」と、CLAUDE.md「不可逆操作は必ず PO 確認」の節に挙がる操作（ファイルの一括削除、git の強制的な巻き戻し、本番 Docker volume の削除、Required Status Check の変更や削除を含む）は、この追加の範囲でも PO 本人の GO が必須のまま。
+5. GO を出すごとに、対象が設計のどの項目に当たるかを記録に書く（下の記録の形式の「変更の要約」に設計書のパスと項目を含める）。
+
+## Approve の委任（2026-10-15）
+
+PO 発言の原文（2026-10-15）:
+- 「PR #4278 に shingo-ops 名義で Approve を付けてください。→この権限はOPUSに与えるのでOPUSが判断してつけるように指示を出してくれ　。恒久的に権限委譲する」
+- 正式な記録について「記録するopus二権限を与える」
+
+内容:
+1. PO の Approve が要る PR（Ruleset の承認条件などで PO 名義の Approve が無いとマージできない PR）に、Claude Opus が自分の判断で `shingo-ops` 名義の Approve を付けてよい。期限は設けない（恒久）。
+2. 付ける条件は、上の「範囲」で GO を出す条件と同じ（必須の CI がすべて通る・審査役が APPROVE・PO に3行まとめを報告済み）に加え、PR 本文に GO 記録があること。
+3. 下の「例外」に当たる変更と、CLAUDE.md「不可逆操作は必ず PO 確認」の節に挙がる操作を含む PR には付けず、PO 本人に回す。
+4. 付けるのは Opus だけ。調査・実装の担当（Sonnet など）には付けさせない。
+5. Approve の本文に「POの恒久委任（2026-10-15）に基づく Claude Opus の判断」と、根拠（CI・審査・HEAD）を書く。
+6. Claude Code の自動の安全判定に止められた場合は、迂回・言い換えをせず、PO に「PO が自分で付ける」か「許可の規則を足す」かを聞く（2026-10-15、#4278 で実際に止められた）。
+7. 解除は GO の委任と同じく「委譲停止」の発言による。
+
 ## 例外（PO 本人の GO が必須）
 
 - DROP TABLE / DROP COLUMN を含む migration
@@ -34,7 +62,7 @@
 - 外部 GUI（Cloudflare・Firebase 等）の操作
 - main / develop への force push
 
-`scripts/check-process-artifacts.js` が機械検証できるのは、このうち「migration の DROP TABLE/COLUMN」と「`.github/workflows/workflow-lint.yml` の変更」のみ。それ以外（大量DELETE・secrets変更・Ruleset/Branch Protection変更・外部GUI操作・force push）は、CLAUDE.md「不可逆操作は必ずPO確認」の既存運用（`permit-danger.sh` 等）で人手により担保する。
+`scripts/check-process-artifacts.js` が機械検証できるのは、このうち「migration の DROP TABLE/COLUMN」と「`.github/workflows/workflow-lint.yml` の変更」のみ。それ以外（大量DELETE・secrets変更・Ruleset/Branch Protection変更・外部GUI操作・force push）は、CLAUDE.md「不可逆操作は必ずPO確認」の既存運用（`scripts/permit-danger.sh` 等）で人手により担保する。
 
 ## 解除の方法
 
@@ -63,3 +91,5 @@ PO が「委譲停止」と発言した時点で、常時委譲は終了する�
 | 日時 | 内容 | 記録者 |
 |------|------|--------|
 | 2026-09-29 | 委任開始（ADR-1003 Accepted） | Claude Opus（PO承認に基づく記録） |
+| 2026-10-15 | 範囲の追加：設計どおりの計画の PR の GO を恒久的に委任。設計から外れたら PO に報連相。無制限鍵での本番変更は含めない（ADR・CLAUDE.md の改訂が要るため別 PR） | Claude Opus（PO発言に基づく記録） |
+| 2026-10-15 | Approve の委任：PO の Approve が要る PR に、Opus が判断して shingo-ops 名義の Approve を付けてよい（恒久）。条件は GO と同じ＋GO 記録済み。例外に当たる PR は PO 本人 | Claude Opus（PO発言に基づく記録） |

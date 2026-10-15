@@ -1,0 +1,2775 @@
+{
+ "mode": "after",
+ "css": "/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/c1969e14-e49b-41b8-91a9-253c75b54070/scratchpad/ay3b/after/dist/assets/index-Bne_nC5F.css",
+ "chromium": "147.0.7727.15",
+ "results": {
+  "390/light/modal": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/light/pref": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/light/allday": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/light/settings": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/dark/modal": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 310,
+      "scrollW": 310,
+      "clientW": 310,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/dark/pref": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 340,
+      "scrollW": 340,
+      "clientW": 340,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/dark/allday": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "390/dark/settings": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 136.75,
+      "w": 114,
+      "scrollW": 221,
+      "clientW": 112,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/light/modal": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/light/pref": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/light/allday": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/light/settings": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(226, 232, 240)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(30, 58, 138)",
+      "knobBg": "rgb(255, 255, 255)",
+      "knobShadow": "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(30, 58, 138, 0.15) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/dark/modal": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Show right panel"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Default unread only"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Browser notifications"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Sound"
+     }
+    ],
+    "rows": [
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 38.75,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 41,
+      "w": 372,
+      "scrollW": 372,
+      "clientW": 372,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/dark/pref": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "label[for] text=Dark mode"
+     }
+    ],
+    "rows": [
+     {
+      "h": 49,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     },
+     {
+      "h": 45.75,
+      "w": 1230,
+      "scrollW": 1230,
+      "clientW": 1230,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/dark/allday": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=All day"
+     }
+    ],
+    "rows": [
+     {
+      "h": 24,
+      "w": 286,
+      "scrollW": 286,
+      "clientW": 286,
+      "actionsW": null,
+      "actionsScrollW": null,
+      "actionsClientW": null
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  },
+  "1280/dark/settings": {
+   "off": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 0,
+      "knobLeftEdge": 3,
+      "knobRightGap": 23,
+      "trackBg": "rgb(51, 65, 85)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "on": {
+    "toggles": [
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     },
+     {
+      "trackW": 44,
+      "trackH": 24,
+      "labelW": 44,
+      "labelH": 24,
+      "knobW": 18,
+      "knobH": 18,
+      "knobTop": 3,
+      "knobMove": 20,
+      "knobLeftEdge": 23,
+      "knobRightGap": 3,
+      "trackBg": "rgb(91, 141, 217)",
+      "knobBg": "rgb(30, 41, 59)",
+      "knobShadow": "rgba(0, 0, 0, 0.35) 0px 2px 4px 0px",
+      "radius": "9999px",
+      "trackTransition": "background 0.1s",
+      "knobTransition": "transform 0.1s",
+      "trackShadow": "none",
+      "display": "flex",
+      "flexShrink": "0",
+      "inputOpacity": "0",
+      "inputW": "0px",
+      "inputPos": "absolute",
+      "role": "switch",
+      "name": "input aria-label=Visible"
+     }
+    ],
+    "rows": [
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     },
+     {
+      "h": 72.78125,
+      "w": 1004,
+      "scrollW": 1002,
+      "clientW": 1002,
+      "actionsW": 197.390625,
+      "actionsScrollW": 197,
+      "actionsClientW": 197
+     }
+    ]
+   },
+   "focus": [
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    },
+    {
+     "tabbed": true,
+     "trackShadow": "rgba(91, 141, 217, 0.3) 0px 0px 0px 3px"
+    }
+   ]
+  }
+ }
+}

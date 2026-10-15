@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-14 / ADR 総数: 176 件
+最終更新: 2026-10-15 / ADR 総数: 177 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -195,6 +195,7 @@
 | [ADR-1014](./ADR-1014-inventory-view-shows-distribution-rows.md) | ADR-1014: 在庫表は LINE 解析の配信行を出す | Accepted | — | — |
 | [ADR-1015](./ADR-1015-autonomy-b-class-no-po-approval.md) | ADR-1015: 危険でない変更（B 区分）は KGI・設計の PO 承認なしで PR まで進める | Accepted | — | — |
 | [ADR-1016](./ADR-1016-realtime-change-signal-standard.md) | ADR-1016: 書き込みが成功したら「変わった合図」を送り、画面は表を残したまま読み直す（即時反映の標準） | Accepted | — | — |
+| [ADR-1017](./ADR-1017-smoke-auth-least-privilege.md) | ADR-1017: smoke 認証経路は最小権限の専用ユーザーだけを許可し、全権ユーザーはコードで拒否する | Proposed | — | — |
 
 ## ステータス凡例
 

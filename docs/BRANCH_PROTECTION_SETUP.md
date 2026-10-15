@@ -229,7 +229,7 @@ Required approvals: **0** に戻す。防御は次の通り分業:
 | Approve しようとすると「もう一方の Admin に依頼」が必要 | `shingo-ops` は常に `shingo-cc` PR を Approve 可能（自己 PR ではない） |
 | 全 PR に必須 Approve → 通常の docs や CI 修正も重い | 危険変更（migrations/deploy.yml/本番スクリプト）のみ Approve 必須。通常 PR は process-artifacts gate（成果物チェック）のみ |
 
-**結論**: ADR-136 ＋ process-artifacts gate の組み合わせで「危険変更のみ人間承認必須・通常 PR は CI 緑で自動マージ」が実現。5月20日型の相互依頼摩擦は発生しない。
+**結論**: ADR-136 ＋ process-artifacts gate の組み合わせで「危険変更のみ GO 必須（PO、または ADR-1003 に基づく Opus の委任 GO。例外は PO 本人）・通常 PR は CI 緑で自動マージ」が実現。5月20日型の相互依頼摩擦は発生しない。
 
 ---
 

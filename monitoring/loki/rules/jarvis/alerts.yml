@@ -11,9 +11,11 @@ groups:
         for: 1m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "ブルートフォース攻撃の可能性を検知"
           description: "直近5分間に認証失敗が20回以上発生しています。即時確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#bruteforceattempt"
 
       # 認証失敗が1時間に50回以上（低頻度の攻撃）
       - alert: SustainedAuthFailure
@@ -22,9 +24,11 @@ groups:
         for: 5m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "認証失敗が継続的に発生しています"
           description: "直近1時間に認証失敗が50回以上です。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#sustainedauthfailure"
 
   - name: error_anomaly
     rules:
@@ -35,9 +39,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: page
         annotations:
           summary: "バックエンドのエラーログが急増しています"
           description: "直近5分間にERROR/Exceptionが30件以上検出されました。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backenderrorspike"
 
       # PostgreSQLエラーログ検知
       - alert: DatabaseError
@@ -46,9 +52,11 @@ groups:
         for: 1m
         labels:
           severity: critical
+          tier: page
         annotations:
           summary: "PostgreSQLでエラーが発生しています"
           description: "直近5分間にDB ERROR/FATAL/PANICログを検出しました。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#databaseerror"
 
   - name: discord_gateway
     rules:
@@ -59,9 +67,11 @@ groups:
         for: 2m
         labels:
           severity: warning
+          tier: page
         annotations:
           summary: "Discord Gateway が再接続に繰り返し失敗しています"
           description: "直近10分間に reconnect/LoginFailure ログが3件以上。DM 受信が停止している可能性があります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#discordgatewayreconnectfailure"
 
       # dm_writer DB 書き込みエラー（lead 取得失敗）
       - alert: DiscordDmWriterError
@@ -70,6 +80,8 @@ groups:
         for: 1m
         labels:
           severity: warning
+          tier: ticket
         annotations:
           summary: "Discord DM 受信箱への書き込みエラーが発生しています"
           description: "dm_writer が5分間に5件以上のエラーを出力しました。DB 接続またはスキーマを確認してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#discorddmwritererror"

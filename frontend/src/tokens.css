@@ -279,11 +279,8 @@
   /* ---- Promoted tokens（InboxPage由来 → アプリ標準へ昇格 / ADR-069） ---- */
   --send-top-row-padding:    var(--space-10px) var(--space-10px) var(--space-6px);
   --center-header-min-h:     81px;   /* パネル中央ヘッダー最小高（受信箱実測値） */
-  --toggle-width:            40px;   /* トグルスイッチ幅 */
   --toggle-height:           22px;   /* トグルスイッチ高さ */
   --toggle-thumb-size:       16px;   /* トグルサムサイズ */
-  --toggle-thumb-offset:     3px;    /* トグルサム内側マージン */
-  --toggle-translate:        18px;   /* トグルサム移動量（checked状態） */
   --right-panel-avatar-size: var(--size-avatar-md);  /* 右パネルアバター（40px） */
   --mc-subnav-width:         200px;  /* 管理センターサブナビ幅 */
 
@@ -519,6 +516,9 @@
 
   /* DataTable 最小幅（横スクロール開始点） */
   --comp-table-min-width:  480px;
+
+  /* DataTable 見出し固定時のスクロール箱の最大高（stickyHeader） */
+  --comp-table-sticky-max-h: calc(100vh - 18rem);
 
   /* ── Tabs コンポーネント ─────────────────────────────────────────────────── */
   /* 高さ */
