@@ -725,6 +725,22 @@ async def update_lead(
                     "[leads] Discord role sync task creation failed lead=%d", lead_id,
                 )
 
+    # 商談アサイン通知 (fire-and-forget)
+    # 担当が「変わったとき」のみ。同じ担当への再保存では鳴らさない。
+    new_assigned = update_data.get("assigned_to")
+    if "assigned_to" in update_data and new_assigned and new_assigned != old_row["assigned_to"]:
+        try:
+            from app.services.lead_assign_notifier import notify_lead_assigned
+            asyncio.create_task(
+                notify_lead_assigned(
+                    tenant_id=tenant_id,
+                    lead_id=lead_id,
+                    assigned_to_user_id=int(new_assigned),
+                )
+            )
+        except Exception:
+            logger.warning("[leads] assign notify task creation failed lead=%d", lead_id)
+
     # ADR-108 Phase B-1: 更新後のレスポンスに selections + options を付加
     lead_dict = dict(row)
     lead_dict["sales_form_selections"] = await _fetch_lead_selections(db, tenant_id, lead_id)
