@@ -361,6 +361,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
 - 【PO 決定 2026-10-16】原文「チケットは個別チャンネルにしたいので作り直しが原則しない、パスワードを忘れた場合はメールで再発行する機能にする」。ログインは専用URL＋1人1つのパスワード。チケットは1人1部屋で作り直さない（既存の ticket_channel_creator.py も作成済みなら同じ部屋を返す）。パスワードを忘れたらメールで再発行する。
   - 【事実】メールでの再発行にも SMTP が要る（計画票0 ①：本番は未設定）。
   - 【PO 決定 2026-10-16「y」】送信元メールの5項目（SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM）を PO が用意して GitHub の秘密設定に入れる。値はチャット・リポジトリに出さない。入れた後のデプロイで本番の .env に入り（deploy.yml:323-327）、テストメール1通の到着で確かめる。
+  - 【事実 2026-10-15T16:26Z】#4344 のデプロイ後、本番 backend の5項目は全部 SET（MAIL_FROM は22文字）。backend から mail_config.smtp_settings() を使って support@ 宛てに1通送り、RESULT=SENT refused=0（/tmp/CC報告ファイル/viewer_discord/testmail_result.txt）。受信箱に届いたかは PO の目視が残り。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
