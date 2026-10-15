@@ -756,3 +756,7 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
 - N-r13-7 古い文に「r13 で置き換え済み」を付けた（:85・:405・:413・:449）。ADR 備考を書き換え、What に 9 を足した。
 - N-r13-8 ui-allow を (#4338) に替えた。
 - N-r13-9 Q5 に「決まるまで段4の PR を出さない」、受入にスマホの Discord アプリの行を足した。
+
+## r14 審査（2026-10-16、Opus architect）：APPROVE（Blocking 0、Non-blocking 7）
+生出力：/tmp/CC報告ファイル/viewer_r14_review/review_r14.txt。r13 の指摘11件は origin/main 2bd773fcd の実物と照合して解消。
+- N-r14-1 D6 の消費を DELETE…RETURNING に寄せた。N-r14-2 前例の形が UPDATE…RETURNING であることを明記。N-r14-3 既存の setup_hook/close に足す・再接続・起動テストで reaction_writer を patch・gateway の DB ロールを【未確認】として段4の最初に確認。N-r14-4 iat を整数の秒・1秒未満の残るリスク。N-r14-5 一意の部分索引に訂正。N-r14-6 log_context 引数。N-r14-7 設計書冒頭の審査欄に r13・r14 を追記。
