@@ -682,3 +682,6 @@ r4 指摘の解消状況: B-5 解消 ／ N-28〜N-33 解消 6
 r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 交換・3 条件消費）で解消し、N-28〜N-33 もすべて本文と受け入れ基準に入った。設計の骨（トークン分離・allowlist・SSOT 作り置き・マジックリンク＋email 再入力・IP ロック）に Blocking の穴は無い。
 残りは 6 件の 1〜2 行の追記（email 不一致時にトークンを残すか、ページの 4 状態、フラグメントの消去、verify の GET 非消費、Origin 検査、localStorage のキー名）と重複行 1 つ。設計 PR のコミット前に反映すれば、段 0〜2 は着手できる。
 ```
+
+---
+注記（2026-10-15 Opus）: 上の r1〜r5 の記録で「ADR-1016」と書いた ADR は、origin/main の ADR-1016-realtime-change-signal-standard.md と番号が重なったため、ADR-1017（docs/adr/ADR-1017-inventory-viewer-separate-accounts.md）に振り直した。記録の本文は審査時のまま残す。

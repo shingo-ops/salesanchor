@@ -1,6 +1,12 @@
 <!-- GAS のコードは repo 外（~/tcg-viewer-1hc-release 等）。そのパスにはバッククォートを付けない。守り手: 人手で守る -->
 # recon — 在庫一覧 GAS をアプリと同じ鮮度・1秒表示にするための材料集め
 
+> この文書は何か：今の GAS 在庫一覧がなぜ遅いか、どこから在庫を取っているかを調べた記録。
+
+- 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
+- 設計: [design.md](./design.md) ／ ADR: ADR-1017（docs/adr/ADR-1017-inventory-viewer-separate-accounts.md）
+- 基準 SHA: 計測時（2026-10-14）の SHA は記録していない。設計で引く行番号は、2026-10-15 に origin/main 65ed8cd8b で再照合した（design.md「現在地」）。
+
 **仕事名**: gas-viewer-fresh-fast  
 **日付**: 2026-10-14  
 **対象ADR**: ADR-1014（配信行の定義）、ADR-154  
