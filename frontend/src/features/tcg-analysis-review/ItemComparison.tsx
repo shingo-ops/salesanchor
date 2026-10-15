@@ -17,7 +17,9 @@ export type ConditionReview = {
   confirmed: boolean;
   classification: string;
 };
-export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[]; condition_review?: ConditionReview | null; review_reason_details?: ReviewReasonDetail[] };
+/** 人が直した値（直した項目だけ入る）。backend の manual_values */
+export type ManualValues = Partial<Record<"quantity" | "price" | "unit" | "note" | "status", string>>;
+export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[]; condition_review?: ConditionReview | null; review_reason_details?: ReviewReasonDetail[]; is_v102?: boolean; manual_values?: ManualValues };
 export type CorrectionValues = { corrected_product_name: string; corrected_quantity: string; corrected_price: string; corrected_unit: string; corrected_condition: string; corrected_memo: string };
 export type CorrectionOptions = { units: string[]; conditions: string[] };
 
@@ -33,6 +35,7 @@ export type SystemCellResult = { value: string; source: string | null };
 export function systemCell(item: AnalysisReviewItem, keyName: string, t: Translate): SystemCellResult {
   const system = item.system;
   const unresolved = t('tcgAnalysisReview.unresolved');
+  if ((keyName === 'quantity' || keyName === 'price') && system[keyName]) return { value: system[keyName], source: t('tcgAnalysisReview.systemConfirmed') };
   if (keyName === 'name' || keyName === 'quantity' || keyName === 'price') return { value: item.gemini[keyName] || unresolved, source: item.gemini[keyName] ? t('tcgAnalysisReview.geminiExtracted') : unresolved };
   if (keyName === 'unit') return { value: system.unit || unresolved, source: system.unit && system.unit_resolved === 'YES' ? t('tcgAnalysisReview.systemConfirmed') : unresolved };
   if (keyName === 'state') return { value: system.condition || unresolved, source: system.condition ? t('tcgAnalysisReview.systemConfirmed') : unresolved };

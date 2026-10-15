@@ -20,7 +20,13 @@ export function isConditionReviewRelevant(item: AnalysisReviewItem): boolean {
     item.system.condition === "Empty box"));
 }
 
-export function ConditionReviewPanel({ item, onRefresh, label: fieldLabel }: { item: AnalysisReviewItem; onRefresh: () => Promise<void>; label?: string }) {
+/** 比較表の「状態」行から直せる件か（isConditionReviewRelevant の件 ＋ v102 で状態の判断を持つ件）。常設パネルの表示条件には使わない */
+export function isConditionFixable(item: AnalysisReviewItem): boolean {
+  return isConditionReviewRelevant(item) || (item.is_v102 === true && Boolean(item.condition_review));
+}
+
+/** fromWizard: 「直す」欄の中から出すとき true（空箱関連でない件でも状態を選ぶ欄だけ出す） */
+export function ConditionReviewPanel({ item, onRefresh, label: fieldLabel, fromWizard = false }: { item: AnalysisReviewItem; onRefresh: () => Promise<void>; label?: string; fromWizard?: boolean }) {
   const { t } = useTranslation();
   const review = item.condition_review;
   const [options, setOptions] = useState<Option[]>([]);
@@ -30,7 +36,8 @@ export function ConditionReviewPanel({ item, onRefresh, label: fieldLabel }: { i
   const [error, setError] = useState("");
   const savingRef = useRef(false);
   const pending = useRef<{ key: string; requestId: string }>();
-  const relevant = isConditionReviewRelevant(item);
+  const emptyBoxRelated = isConditionReviewRelevant(item);
+  const relevant = emptyBoxRelated || fromWizard;
 
   useEffect(() => {
     setSelected(review?.condition_id || "");
@@ -83,12 +90,12 @@ export function ConditionReviewPanel({ item, onRefresh, label: fieldLabel }: { i
     <p>{t("conditionReview.current", { condition: label(item.system.condition || t("conditionReview.unknown")) })}</p>
     <p>{t("conditionReview.original", { name: item.gemini.name, state: item.gemini.state, memo: item.gemini.memo })}</p>
     {review.review_reasons && <p>{reviewReasonsText(t, review.review_reasons)}</p>}
-    {review.confirmed && <p>{t(review.needs_review ? "conditionReview.otherReasonsRemain" : "conditionReview.saved")}</p>}
+    {emptyBoxRelated && review.confirmed && <p>{t(review.needs_review ? "conditionReview.otherReasonsRemain" : "conditionReview.saved")}</p>}
     <Select {...(fieldLabel === undefined ? { "aria-label": t("conditionReview.select") } : { label: fieldLabel })} value={selected} disabled={saving || options.length === 0}
       onChange={(event) => setSelected(event.target.value)} placeholder={t("conditionReview.select")}
       options={options.map((option) => ({ value: option.id, label: label(option.canonical) }))} />
-    <Button variant="secondary" type="button" disabled={saving || !canConfirm || !review.condition_id || options.length === 0}
-      onClick={() => void save("confirm")}>{t("conditionReview.confirm")}</Button>
+    {emptyBoxRelated && <Button variant="secondary" type="button" disabled={saving || !canConfirm || !review.condition_id || options.length === 0}
+      onClick={() => void save("confirm")}>{t("conditionReview.confirm")}</Button>}
     <Button variant="secondary" type="button" disabled={saving || !selected || !options.some((option) => option.id === selected)}
       onClick={() => void save("correct")}>{t("conditionReview.correct")}</Button>
     {saving && <p role="status">{t("conditionReview.saving")}</p>}

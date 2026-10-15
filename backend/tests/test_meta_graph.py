@@ -93,7 +93,8 @@ def test_app_id_missing_raises(monkeypatch):
     monkeypatch.delenv("META_APP_ID", raising=False)
     import asyncio
     with pytest.raises(MetaGraphError, match="META_APP_ID"):
-        asyncio.get_event_loop().run_until_complete(
+        # 他の試験の asyncio.run が現在のループを外すため、get_event_loop() ではなく asyncio.run を使う
+        asyncio.run(
             exchange_code_for_short_token("dummy-code", "https://example.com/cb",
                                           client=_make_client(lambda req: _ok({"access_token": "x"})))
         )

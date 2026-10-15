@@ -55,6 +55,12 @@ describe("systemCell source (4 cases)", () => {
     expect(systemCell(makeItem(), "unit", t).source).toBe(t("tcgAnalysisReview.systemConfirmed"));
     expect(systemCell(makeItem({ system: { unit: "BOX", unit_resolved: "NO" } }), "unit", t).source).toBe(t("tcgAnalysisReview.unresolved"));
   });
+  it("quantity / price: the system value (ar) wins over gemini; empty falls back to gemini", () => {
+    const withSystem = makeItem({ system: { quantity: "5", price: "1000" } });
+    expect(systemCell(withSystem, "quantity", t)).toEqual({ value: "5", source: t("tcgAnalysisReview.systemConfirmed") });
+    expect(systemCell(withSystem, "price", t)).toEqual({ value: "1000", source: t("tcgAnalysisReview.systemConfirmed") });
+    expect(systemCell(makeItem({ system: { quantity: "", price: "" } }), "quantity", t)).toEqual({ value: "2", source: t("tcgAnalysisReview.geminiExtracted") });
+  });
   it("memo: note present vs absent", () => {
     expect(systemCell(makeItem({ system: { note: "hello" } }), "memo", t)).toEqual({ value: "hello", source: t("tcgAnalysisReview.systemConfirmed") });
     expect(systemCell(makeItem(), "memo", t)).toEqual({ value: t("tcgAnalysisReview.none"), source: null });
