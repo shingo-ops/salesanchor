@@ -20,15 +20,15 @@
    - sub："viewer:<id>"
    - Redis：`jwt:` の名前空間を使わない
 4. この結果、既存の get_current_user は閲覧者のトークンを受け付けない。逆に、閲覧者用の get_current_viewer はアプリのトークンを受け付けない。
-5. 閲覧者が呼べる入口は、VIEWER_ROUTE_ALLOWLIST の6本だけにする（signup・verify-email・login・session・logout・inventory）。
-6. 6本以外のすべての入口が閲覧者のトークンを拒否することを、全ルートを列挙するテストで固定する。
+5. 閲覧者が呼べる入口は、VIEWER_ROUTE_ALLOWLIST の7本だけにする（signup・login・logout・inventory・password・password-reset/request・password-reset/confirm）。ログインは専用 URL と1人1つのパスワード（PO 決定 2026-10-16。保存は既存の hash_password（Argon2）、規則は既存の check_password）。パスワードを忘れたときだけメールで再発行する。申込と本人の結び付けは、運用の Discord サーバーの受付で申込コードを照合して行う（design.md D5・D6）。
+6. 7本以外のすべての入口が閲覧者のトークンを拒否することを、全ルートを列挙するテストで固定する。
 7. 在庫のデータは、1分に1回だけ、run_distribution（GAS への配信）と共通の build_distribution_rows（安全装置 #8・#8b、設定の読み込み、fetch_output_rows＝ADR-1014 の1か所の定義、の順）を通して作り、Redis に置いて全員に配る。GAS に配信される行と同じものを作る。DB の表やシートには写しを作らない。
 8. 閲覧ページの画面は、アプリの在庫表（/inventory）と同じ金型（DataTable・MultiSelect・Select・Tabs・Badge・Drawer・Button・TextField）と、共有部品（frontend/src/features/inventory/ の normalizeForSearch・conditionBadgeVariant・inventoryColumns.css）で作る。列の定義は行の形が違うので viewer の中に置き、アプリの列の定義との一致を検査で固定する（design.md D4）。
 
 ## Why（なぜ）
 
 - GAS は、Google の枠を読むだけで 3〜7 秒かかる。目標の「1秒以内の表示」は GAS の外でしか届かない。
-- 閲覧者をアプリのユーザーにすると、在庫を見るだけの権限にしても 614 本中 74 本の入口に届き、仕入元の情報や会話本文まで見えてしまう。閲覧者を別のアカウントにすれば、届く入口は6本になる。API を後から足しても、閲覧者に漏れる経路が仕組みとして生まれない。
+- 閲覧者をアプリのユーザーにすると、在庫を見るだけの権限にしても 614 本中 74 本の入口に届き、仕入元の情報や会話本文まで見えてしまう。閲覧者を別のアカウントにすれば、届く入口は7本（ログインの後に使うのは3本）になる。API を後から足しても、閲覧者に漏れる経路が仕組みとして生まれない。
 - 全員に同じ作り置きを配れば、閲覧者が増えても DB の負荷は増えない。
 - 画面をアプリの在庫表と同じ部品で作れば、片方だけ直って見え方がずれることを防げる（PO 決定 Q14「アプリの在庫表も同じ作りにする」）。
 

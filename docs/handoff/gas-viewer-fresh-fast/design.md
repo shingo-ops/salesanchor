@@ -47,48 +47,65 @@ mode: handoff
 
 ## 設計（変更前 → 変更後）
 
-### D1. 閲覧専用アカウントと、アプリと交わらないトークン（審査 B-1 への対応）
+### D1. 閲覧専用アカウントと、アプリと交わらないトークン（審査 B-1 への対応。r13 でログインの方法を書き直した）
 - 変更前：外部の人を入れるには、アプリのユーザー（public.users）にするしかない。
+- r13 の書き直しの理由（PO 決定 2026-10-16）：本番の SMTP が未設定だったため、ログインを「メールのリンク」から「専用 URL＋1人1つのパスワード」に変え、申込とお客さんの結び付けは Discord の受付で申込コードを照合する形（案D）にした。パスワードを忘れたときだけメールで再発行する（PO 原文「チケットは個別チャンネルにしたいので作り直しが原則しない、パスワードを忘れた場合はメールで再発行する機能にする」）。r12 までのメールのリンクでのログイン・確認メール（verify-email）は作らない。
 - 変更後：
   - 新しい表 public.viewer_accounts を作る。migration では表を作るだけで、データは入れない。
-  - 列：id、email（一意）、line_name（LINE の表示名）、inventory_issue（在庫関連の課題。自由記述。TEXT。1000文字まで。任意＝空欄は NULL（Q2g）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」。Q5 で自動トライアルに決まったので、今回は使わない（メールの確認が済んだら pending から trial へ直接進む）。将来、承認を挟む形に変えるときに migration を作り直さずに済むよう、5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
+  - 列：
+    - id、email（一意）、line_name（LINE の表示名）、inventory_issue（在庫関連の課題。自由記述。TEXT。1000文字まで。任意＝空欄は NULL（Q2g））。
+    - 状態（pending ／ verified ／ trial ／ active ／ suspended の5値）。pending は「申込済み・申込コードの照合前」。verified は今回使わない（将来、承認を挟む形に変えるときに migration を作り直さずに済むよう、5値で作る）。コードの照合が済んだら pending から trial へ直接進む（D5）。
+    - password_argon2_hash（TEXT。NULL 可。pending の間と、Q9 の登録直後は NULL。列名は ADR-1013:24-25 の public.users にそろえる）。
+    - password_must_change（BOOLEAN NOT NULL DEFAULT false。ボットが初期パスワードを作ったときに true にし、本人が変えたら false に戻す）。【事実】public.users にこの列は無い（migrations と backend の grep で 0 件。/tmp/CC報告ファイル/viewer_d1_recon2/q5.txt）。閲覧者だけの列として持つ。
+    - password_changed_at（TIMESTAMPTZ。NULL 可。名前と意味は public.users の同名の列にそろえる。migrations/20261013_160000_add_self_hosted_auth_tables.sql:7）。
+    - discord_user_id（VARCHAR(50)。NULL 可。一意の索引（NULL は除く）。型は既存の leads.discord_user_id にそろえる。migrations/091_add_leads_discord_messaging_columns.sql:30）。1つの Discord アカウントには1人の閲覧者だけを結び付ける。
+    - discord_channel_id（VARCHAR(32)。NULL 可。その人のチケット部屋。型は既存の tenant_discord_ticket_config のチャンネルの列にそろえる。migrations/20260602_120000_add_discord_ticket_config.sql:5-9）。
+    - trial_expires_at、作成・更新の日時。
+    - r12 までの email_verified_at は作らない（メールでの確認をしないため）。
   - テナントは持たない。
-  - 本設計で作る4つの表（viewer_accounts・viewer_login_tokens・viewer_login_events・viewer_status_changes）の id は、すべて BIGSERIAL にする（既存の public の表と同じ。例：public.audit_log、migrations/20260921_110000_pipeline_tables_public.sql:405）。viewer_id など他の表を指す列は BIGINT ＋ FK（ON DELETE CASCADE。閲覧者の行を消したら、その人のトークン・記録・履歴も一緒に消える）。
-  - 人の正本（ADR-1008）との境界：ADR-1008 の正本 public.users は「ログインして社内の業務をする人」（担当者・作成者など、人を指す列の参照先）。閲覧者は社外のお客さんで、アプリにはログインしない。このため users には入れず、viewer_accounts だけに持つ（1人1行。email の一意制約）。同じ人の email が users と viewer_accounts の両方に入らないようにする：申込（signup）の email が users.email にあるとき（大文字小文字は無視して比べる）は、行を作らずメールも送らない（応答は同じ 200）。登録用の専用スクリプト（Q9）でも同じ検査をし、users.email にある行は「飛ばした」に数える。社員はアプリ本体の在庫表を見る。逆向き（閲覧者の後で同じ email の社員を users に足す場合）は本便では扱わない（社員の追加はアプリ本体の操作で、閲覧者は少数のため、気付いたときに停止で対応する）。
-  - email の正規化（審査 r6 N-6）：保存・比較・回数制限のキーのすべてで、前後の空白を除いて小文字にした値を使う。一意は `lower(email)` の一意索引で守る（保存の時点で小文字にしているが、DB でも守る）。正規化は1つの関数に書き、signup・login・session・登録スクリプトのすべてがそれを呼ぶ。
-  - DB の SSOT の原則（docs/specs/db-ssot/README.md）に従い、同じ事実を2つの表に持たない。
+  - 本設計で作る表（viewer_accounts・viewer_login_tokens・viewer_login_events・viewer_status_changes・viewer_discord_config）の id は、すべて BIGSERIAL にする（既存の public の表と同じ。例：public.audit_log、migrations/20260921_110000_pipeline_tables_public.sql:405）。viewer_id など他の表を指す列は BIGINT ＋ FK（ON DELETE CASCADE。閲覧者の行を消したら、その人のトークン・記録・履歴も一緒に消える）。
+  - 人の正本（ADR-1008）との境界：ADR-1008 の正本 public.users は「ログインして社内の業務をする人」（担当者・作成者など、人を指す列の参照先）。閲覧者は社外のお客さんで、アプリにはログインしない。このため users には入れず、viewer_accounts だけに持つ（1人1行。email の一意制約）。同じ人の email が users と viewer_accounts の両方に入らないようにする：申込（signup）の email が users.email にあるとき（大文字小文字は無視して比べる）は、行を作らない（応答は D5 の「登録済みの email」と同じ形）。登録用の専用スクリプト（Q9）でも同じ検査をし、users.email にある行は「飛ばした」に数える。社員はアプリ本体の在庫表を見る。逆向き（閲覧者の後で同じ email の社員を users に足す場合）は本便では扱わない（社員の追加はアプリ本体の操作で、閲覧者は少数のため、気付いたときに停止で対応する）。
+  - email の正規化（審査 r6 N-6）：保存・比較・回数制限のキーのすべてで、前後の空白を除いて小文字にした値を使う。一意は `lower(email)` の一意索引で守る（保存の時点で小文字にしているが、DB でも守る）。正規化は1つの関数に書き、signup・login・password-reset/request・登録スクリプトのすべてがそれを呼ぶ。形式の検査は既存の validate_email_loose（backend/app/schemas/base.py:32-38。公開の問い合わせ contact.py:36 と同じ）を使う。
+  - DB の SSOT の原則（docs/specs/db-ssot/README.md）に従い、同じ事実を2つの表に持たない。Discord の利用者 ID は viewer_accounts だけに持ち、テナントの leads には入れない（PO 決定 2026-10-16「y」）。
   - 顧客管理（取引先 companies・担当者 contacts）には写さない。本契約のときに取引先とつなぐ方法は、本契約フォームの便で設計する。そのときは viewer_accounts から取引先を指す列（参照）で結び、email・LINE 名を取引先側に二重に持たない形を前提にする。
-  - ログインの方法：メールに届くリンクを押してログインする。パスワードは持たない（PO 決定 Q2、2026-10-15）。PO の条件は「リンクを知っていれば誰でも見られる形にはしない。登録フォームに入力した情報で管理する」。これを次の仕組みで守る。
-    - ログイン用のリンクは、viewer_accounts に登録済みで、状態が active か「期限内の trial」の email にだけ送る。登録されていない email、pending・verified・suspended の email、期限切れの trial の email には送らない（審査 N-31）。どの場合も応答は同じ 200 にして、登録済みかどうかを外から分からないようにする。
-    - リンクのトークンは、アカウントごとに毎回新しく作る。作り方は secrets.token_urlsafe(32) で、DB には sha256 だけを保存する。有効期限は15分で、一度使ったら消す。同じアカウントの未使用のログイン用トークンは、新しく作るときに消すので、有効なリンクは常に1本だけになる（審査 N-32）。そのため、リンクを他の人に転送しても、使い終わった後や15分を過ぎた後には開けない。
-    - リンクを押した後、ページは登録した email の入力を求め、トークンと email の両方が合ったときだけログインできる。登録情報を知らない人は、転送されたリンクを15分以内に押しても入れない。PO の条件「登録フォームの情報で管理する」を、文字どおり仕組みにしたもの（審査 N-29。Q2c）。
-    - 残るリスク：転送された人が、本人の email も知っていて、本人より先に15分以内に押した場合は入れる。これは仕組みでは完全には防げない。本人は「使用済み」の表示で気付ける。
-    - リンクの形は `https://app.salesanchor.jp/viewer/#login=<トークン>`（確認メールは `#verify=<トークン>`）にする。`#` より後ろはサーバーに送られないので、nginx のアクセスログにトークンが残らない。ページの JS が POST でトークンを交換する。GET ではトークンを一切消費しない。メールの安全検査（Microsoft の Safe Links など）が届いた時点でリンクを開いても、トークンは使われない（審査 B-5）。
-    - 交換で発行した12時間トークンは JSON の本文で返し、URL には載せない。ブラウザでは localStorage に置く（既存の firebase-auth.ts と同じ置き場）。キー名は `viewer_access_token` にし、アプリ本体のキーと分ける。/viewer/ はアプリ本体と同じオリジンなので、アプリ本体で XSS が起きれば閲覧者のトークンにも届く（逆も同じ）。閲覧者のトークンで届く API は6本だけなので、このリスクは受け入れる（審査 N-39）。
-    - ページの JS は、`#` の後ろのトークンを読んだらすぐに history.replaceState で消す。履歴やブックマークに、トークン入りの URL を残さないため（審査 N-36）。
-    - リンクを押すと、そのアカウントに結び付いた12時間のトークン（D1 のトークンの分け方の 1〜7）を発行する。トークンは毎回のリクエストでアカウントの状態を確認するので、停止（suspended）にすれば次のリクエストから見られなくなる。
-    - 新しい表 public.viewer_login_tokens（id、viewer_account_id、token_sha256、purpose［login ／ verify_email］、expires_at、created_at）を作る。D5 の確認トークンもこの表を使う。トークンを消費するときは、token_sha256・purpose・expires_at > now の3つの条件で引く。purpose を省くと、確認用のトークンでログインできてしまうため。session で email が合わなかったときは、トークンを消さずに残し、IP ごとの失敗だけを数える。転送された人が間違えて押しても、本人のリンクが使えなくならないようにするため（審査 N-34）。ADR-1013 の表は public.users に紐づいているので流用しない。
+  - ログインの方法（PO 決定 2026-10-16）：配る URL は1つ `https://app.salesanchor.jp/viewer/`。ページで email とパスワードを入れてログインする。パスワードは1人1つ。
+    - パスワードの保存と照合は、既存の hash_password・verify_password（backend/app/auth/passwords.py:20・:24。argon2-cffi 25.1.0）をそのまま使う。照合は既存の login と同じく asyncio.to_thread で呼ぶ（backend/app/routers/auth.py:453 が実例）。email が無いとき・password_argon2_hash が NULL のときも、決まった捨てのハッシュに対して verify_password を1回呼んでから 401 を返す（応答の時間で登録済みかどうかが分からないようにする）。
+    - パスワードの規則は、既存の check_password（backend/app/auth/password_policy.py:24。15〜64文字、:11-12。よくあるパスワードの一覧 common-passwords.txt）をそのまま使う。閲覧者用の規則を別に書かない。
+    - ログインできるのは、状態が active か「期限内の trial」で、password_argon2_hash が NULL でない人だけ。email かパスワードが合わないとき、pending のときは、同じ 401（i18n の「メールアドレスまたはパスワードが違います」）。パスワードが合ったうえで suspended・期限切れの trial のときは 403 にし、理由（停止中・期限切れ）を i18n で出す（正しいパスワードを知っている本人にだけ理由が見える）。
+    - 初回の変更（password_must_change が true の人）：ログインは通し、12時間トークンを返すが、応答に `must_change_password: true` を入れる。トークンの中身には入れず、get_current_viewer が毎回 DB の列を見る。true の間は inventory を 403（`password_change_required`）にし、ページはパスワード変更の画面だけを出す。
+    - パスワードの変更（ログイン中の本人）：今のパスワードと新しいパスワードを受け取る。今のパスワードが合わなければ 401（IP ごとの失敗に数える）。新しいパスワードは check_password を通り、今のものと違うこと。通ったら password_argon2_hash を替え、password_must_change を false、password_changed_at を今にする。【事実】アプリの側に、ログイン中の本人がパスワードを変える API は無い（auth.py の POST は :38・:150・:231・:308・:370・:412 の6つ。q5.txt）ので、前例は無い。
+    - 再発行（メール）：D1 の下の「パスワードの再発行」。
+  - パスワードの再発行（PO 決定 2026-10-16「パスワードを忘れた場合はメールで再発行する」）：既存のアプリのパスワードの再設定（auth.py:370 の request、:412 の confirm）と同じ作りにする。
+    - request：email を受け取り、常に同じ 200 を返す。送るのは、viewer_accounts にあり、状態が trial（期限内・期限切れのどちらも）か active の人だけ（期限切れの trial の人も、延長された後にログインできるように）。pending・suspended・未登録には送らない。同じ email は1時間に3回まで（既存の cache.py:324 と同じ数。4回目からは送らずに同じ 200）。
+    - トークンは secrets.token_urlsafe(32) で作り、DB には sha256 だけを viewer_login_tokens（purpose password_reset）に保存する。期限は30分（既存の auth.py:342 と同じ）。同じ人の未使用の再発行トークンは、新しく作るときに消す（有効なリンクは常に1本）。
+    - メールの文面と送信：backend/app/services/auth_mail.py に閲覧者用の関数 send_viewer_password_reset_email を足す（既存の send_password_reset_email、auth_mail.py:49 は文面がアプリ用で固定のため、同じファイルに並べる）。送信の設定は既存の smtp_settings（mail_config.py:28）をそのまま使う。リンクは `https://app.salesanchor.jp/viewer/#reset=<トークン>`。`#` より後ろはサーバーに送られないので、nginx のアクセスログにトークンが残らない。ページの JS は読んだらすぐに history.replaceState で消し、POST でトークンを渡す。GET ではトークンを一切消費しない（メールの安全検査が先にリンクを開いてもトークンは使われない。審査 B-5）。
+    - confirm：トークンと新しいパスワードを受け取る。トークンは token_sha256・purpose = password_reset・expires_at > now の3つの条件で引く（purpose を省くと、申込コードで再発行できてしまうため）。新しいパスワードは check_password を通す。通ったら password_argon2_hash を替え、password_must_change を false、password_changed_at を今にし、トークンを消す。無効なトークンは IP ごとの失敗に数える。
+    - 【事実】SMTP は 2026-10-16 に PO が5項目を GitHub の秘密設定に登録し、本番からのテスト送信は SENT。受信箱での到着の目視は PO に残っている（§PO 決定待ち の SMTP）。
+  - 新しい表 public.viewer_login_tokens（id、viewer_account_id、token_sha256、purpose［signup_code ／ password_reset］、expires_at、created_at）を作る。申込コード（D5）と再発行のトークンの両方をこの表に置く。ADR-1013 の表は public.users に紐づいているので流用しない。
+  - 交換で発行した12時間トークンは JSON の本文で返し、URL には載せない。ブラウザでは localStorage に置く（既存の firebase-auth.ts と同じ置き場）。キー名は `viewer_access_token` にし、アプリ本体のキーと分ける。/viewer/ はアプリ本体と同じオリジンなので、アプリ本体で XSS が起きれば閲覧者のトークンにも届く（逆も同じ）。閲覧者のトークンで届く API は D2 の7本のうち3本（logout・inventory・password）だけなので、このリスクは受け入れる（審査 N-39）。
+  - トークンは毎回のリクエストでアカウントの状態を確認するので、停止（suspended）にすれば次のリクエストから見られなくなる。
 - トークンの分け方（ここで決める。Generator には判断させない）：
   1. iss は "salesanchor-viewer" にする（新しい定数。self_tokens.py の ISSUER とは別）。これで閲覧者のトークンは get_current_user の (c) に入らず、(d) の Firebase 検証で 401 になる（dependencies.py:187-198）。
   2. 署名鍵は、新しい環境変数 AUTH_VIEWER_JWT_SECRET にする。アプリの鍵とは分けるので、壁は iss と鍵の二重になる。secret を本番に追加するときは、PO の確認を取る（secrets の変更にあたるため）。
   3. sub は "viewer:<id>" の形にする。email のクレームは入れない。これで、回数制限（rate_limit.py:39-50）とセッション追跡（session_guard.py:45-55）がアプリのユーザーと同じ枠に混ざらない（審査 N-10）。
-  4. 新しい dependency の get_current_viewer は、iss "salesanchor-viewer" と閲覧者用の鍵の両方を要求する。アプリのトークンは 401 にする。
-  5. Redis のキャッシュは `jwt:` の名前空間を使わない。cache_jwt_result と get_cached_jwt を閲覧者側から呼ばない。署名の検証結果をキャッシュするときは `viewer_jwt:` を使う。アカウントの状態と trial_expires_at はキャッシュせず、毎回 DB を読む（審査 N-30）。
+  4. 新しい dependency の get_current_viewer は、iss "salesanchor-viewer" と閲覧者用の鍵の両方を要求する。アプリのトークンは 401 にする。トークンの iat が password_changed_at より前なら 401 にする（パスワードを変えたり再発行したりしたら、ほかの端末のログインは切れる）。
+  5. Redis のキャッシュは `jwt:` の名前空間を使わない。cache_jwt_result と get_cached_jwt を閲覧者側から呼ばない。署名の検証結果をキャッシュするときは `viewer_jwt:` を使う。アカウントの状態・trial_expires_at・password_must_change・password_changed_at はキャッシュせず、毎回 DB を読む（審査 N-30）。
   6. ログアウトでは、既存のブラックリスト（is_token_blacklisted と blacklist_token）を使ってよい。拒否する側の仕組みなので安全。ただし blacklist_token の ttl の既定値は 3600 秒（cache.py:141）なので、トークンの exp までの残りの秒数を必ず渡す（審査 N-12）。
   7. 更新用トークン（refresh）は持たない。アクセス用トークンの寿命は 12 時間にし、切れたら再ログインしてもらう。
-  8. 総当たり対策（審査 N-15・N-28）：パスワードが無いので、守りは次の2つに整理する。①リンクを送る login は、同じ email に1時間に3回までにする（メールの連打を防ぐ）。②交換（session）と verify-email に無効なトークンや合わない email が来たら、既存の check_auth_rate_limit と record_auth_failure（cache.py:292、:309）で IP ごとに数え、10回で15分ロックにする（self_tokens.py:28-29 と同じ数）。トークンは256ビットの乱数なので、総当たりでは当たらない。IP は D5 と同じく X-Real-IP から取る（既存の _get_client_ip は X-Forwarded-For の先頭を使うので使わない。審査 N-27）。nginx の login ゾーン（10r/m）は、`location = /api/v1/viewer/login`・`location = /api/v1/viewer/verify-email`・`location = /api/v1/viewer/session` の完全一致の3ブロックで当てる。前方一致にすると inventory まで 10r/m になるので使わない（前例は nginx/nginx.conf:112 の完全一致。審査 N-22）。
-- 期限の判定：リクエストのたびに、DB の状態と trial_expires_at を見る（主キーで1行を読むだけ）。pending、verified、suspended、期限切れの trial は 403 にする。
+  8. 総当たり対策（審査 N-15・N-28。r13 でパスワードに合わせて直した）：①login・password（変更）・password-reset/confirm で、合わないパスワードか無効なトークンが来たら、既存の check_auth_rate_limit と record_auth_failure（cache.py:292、:309）で IP ごとに数え、10回で15分ロックにする（self_tokens.py:28-29 と同じ数）。②login は email ごとにも数え、同じ email に15分で10回失敗したら、その email は15分ロックにする（IP を替えた総当たりを止める。キーは `viewer_login_fail:<正規化した email の sha256>`。数は①と同じ）。③再発行のトークンは256ビットの乱数なので総当たりでは当たらない。IP は D5 と同じく X-Real-IP から取る（既存の _get_client_ip は X-Forwarded-For の先頭を使うので使わない。審査 N-27）。nginx の login ゾーン（10r/m）は、`location = /api/v1/viewer/login`・`location = /api/v1/viewer/password-reset/request`・`location = /api/v1/viewer/password-reset/confirm` の完全一致の3ブロックで当てる。前方一致にすると inventory まで 10r/m になるので使わない（前例は nginx/nginx.conf:112 の完全一致。審査 N-22）。
+- 期限の判定：リクエストのたびに、DB の状態・trial_expires_at・password_must_change・password_changed_at を見る（主キーで1行を読むだけ）。pending、verified、suspended、期限切れの trial は 403 にする。
 
 ### D2. 閲覧用 API
-- 新しい router `viewer` を作る。入口の allowlist は次の6本だけにする（審査 N-18、B-5）。
-  - signup・verify-email・login・session の4本は、既存の _require_app_origin（auth.py:199-201）と同じ検査を通す。Origin が rp_origin と一致しなければ 403 にする。ほかのサイトからの申込やメールの連打を、安く防げる（審査 N-38）。
-  - POST /api/v1/viewer/signup（D5）
-  - POST /api/v1/viewer/verify-email（D5）
-  - POST /api/v1/viewer/login（email を受け取り、ログイン用のリンクをメールで送るだけ。応答は常に 200）
-  - POST /api/v1/viewer/session（本文の token と email を受け取り、12時間トークンを返す。交換だけを行う）。1つの入口には1つの働きだけを持たせる。login は送るだけ、verify-email は状態を進めるだけ、session は交換するだけにする。
+- 新しい router `viewer` を作る。入口の allowlist は次の7本だけにする（審査 N-18、B-5。r13 でパスワード方式に合わせて直した）。
+  - signup・login・password-reset/request・password-reset/confirm の4本（ログインの前に呼ぶもの）は、既存の _require_app_origin（auth.py:199-201）と同じ検査を通す。Origin が rp_origin と一致しなければ 403 にする。ほかのサイトからの申込やメールの連打を、安く防げる（審査 N-38）。
+  - POST /api/v1/viewer/signup（D5。申込コードを返す）
+  - POST /api/v1/viewer/login（本文の email と password を受け取り、12時間トークンと must_change_password を返す）
   - POST /api/v1/viewer/logout（get_current_viewer が要る。blacklist_token が False を返したら 503 にする。既存の auth と同じ扱い。cache.py:146。審査 N-24）
-  - GET /api/v1/viewer/inventory（get_current_viewer が要る）
-- この6本は1か所の定数（VIEWER_ROUTE_ALLOWLIST）に書き、router とテストの両方がそれを参照する。集合を2か所に書かない（審査 N-23）。
+  - GET /api/v1/viewer/inventory（get_current_viewer が要る。password_must_change が true なら 403）
+  - POST /api/v1/viewer/password（get_current_viewer が要る。今のパスワードと新しいパスワード。password_must_change が true でも呼べる）
+  - POST /api/v1/viewer/password-reset/request（email を受け取り、再発行のリンクをメールで送るだけ。応答は常に 200）
+  - POST /api/v1/viewer/password-reset/confirm（本文の token と新しいパスワードを受け取り、パスワードを替えるだけ。12時間トークンは返さない。替えた後はログインの画面に戻す）。1つの入口には1つの働きだけを持たせる。
+- この7本は1か所の定数（VIEWER_ROUTE_ALLOWLIST）に書き、router とテストの両方がそれを参照する。集合を2か所に書かない（審査 N-23）。
 - inventory は、Redis の作り置き（D3）をそのまま返す。在庫の表は読まない。応答の形は `{"updated_at": ISO8601, "fresh_window_hours": 数, "rows": [...]}`（fresh_window_hours は D4 の「24時間以内」の時間数。r9 で追加）。
 - 返す列は、今の本番の GAS と同じ14列にする（PO 決定 Q1=y と Q13=y、2026-10-15。r9 で13列から直した）。14列は、投稿日時・Mark・Japanese Title・English Title・Condition・Unit Price・Quantity・Note_JA・Status・Release Date・Series・提供者・Search Keywords・発送日（Ship_JA）。fetch_output_rows の14列そのまま。JSON のキーは _GAS_COLUMNS の英字14個（origin/main e1351e663 の tcg_distribution_svc.py:251-254：posted_at・mark・japanese_title・english_title・condition・unit_price・quantity・note_ja・status・release_date・series・provider・search_keywords・ship_ja）にし、表示名は i18n で付ける。これに、区分の `offer_type`（D4 の列の対応表。審査 r9 B-r9-2）を1つ足した15キーを返す。キーの集合は固定し、テストで「完全に一致すること」を確認する（審査 N-25）。
 
@@ -133,13 +150,13 @@ mode: handoff
 - frontend/nginx.conf に `location = /viewer/index.html` と `location = /viewer/` を足し、本体の index.html と同じ `Cache-Control: no-cache, must-revalidate` を付ける（frontend/nginx.conf:7-12 と同じ理由。デプロイ後に古い index が残って白画面になるのを防ぐ。審査 N-13）。
 - 配る URL は `/viewer/`（末尾にスラッシュ）に固定する。`/viewer` で来たときの転送先を Playwright で確かめる。ポート 8080 が混ざったら `port_in_redirect off; absolute_redirect off;` を足す（審査 N-14）。
 - 外側の nginx は、D1-8 の login ゾーンを足すところだけ変える。
-- ページの状態は次の6つにする（審査 N-35、r6 B-6）。文言はすべて i18n にする。
-  - ① ログインの申込（email を入れる → POST login）
-  - ② リンクから来たときの email の確認（POST session）
+- ページの状態は次の6つにする（審査 N-35、r6 B-6。r13 でパスワード方式に合わせて直した）。文言はすべて i18n にする。
+  - ① ログイン（email とパスワード → POST login）。「パスワードを忘れた」と「申込」への切り替えを置く
+  - ② パスワードの変更（初回の変更が要るとき、または本人が選んだとき → POST password）
   - ③ 在庫表と「最終更新 HH:MM」
-  - ④ 案内（準備中、リンクが使用済み、期限切れ）
-  - ⑤ 申込（email・LINE 名・在庫関連の課題・隠し欄 → POST signup）
-  - ⑥ メール確認の結果（`#verify=` から来たとき。POST verify-email の結果で、成功・使用済み・期限切れのどれかを出す）
+  - ④ 案内（準備中、停止中、期限切れ）
+  - ⑤ 申込（email・LINE 名・在庫関連の課題・隠し欄 → POST signup）と、その結果（申込コード・招待リンク・受付での手順）
+  - ⑥ パスワードの再発行（email の入力 → POST password-reset/request。`#reset=` から来たときは新しいパスワードの入力 → POST password-reset/confirm の結果で、成功・期限切れ（使用済みを含む）のどちらかを出す）
 - 下の 300KB の上限は、この6つの状態を全部含めた大きさとする。部品は既存の金型（`frontend/src/components/`）とデザイントークンだけを使う（ADR-144、ADR-067）。金型に無い部品は使わない（r9 の時点で、下の表の部品はすべて金型と共有部品にある）。
 - 文字はすべて i18n にする（ADR-027）。
 - 全体の CSS：viewer の main.tsx は frontend/src/index.css を読む（デザイントークンの定義。index.css:1 が tokens.css、:2 が components/field-size.css を読む）。アプリの components.css（App.tsx:116 でだけ読む）は読まない。【事実】金型のクラスは comp- で始まり components.css に依存しない。inventoryColumns.css は全10行でトークンだけを使う（審査 r9 N-r9-1）。
@@ -198,16 +215,17 @@ mode: handoff
   - 投稿日時の表示を「MM-DD HH:mm」にする（GAS と同じ）。Sold out の行は D3 のとおり作り置きの時点で入っていないので、ページでは除かない。
   - スマホ（767px 以下）の操作の配置は、アプリの在庫表と同じにする（提供者の MultiSelect はツールバーに出さず、絞り込みの Drawer に入れる。InventoryPage.tsx:476-485 の isMobile と同じ）。
   - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは PO の回答が無いので、決まるまで作らない。
-  - 申込とメール確認の画面（審査 r6 B-6）：
+  - ログイン・申込・パスワードの画面（審査 r6 B-6。r13 で直した）：
 
     | 画面の部品 | 使う金型 |
     |---|---|
     | email の入力 | TextField type="email" |
+    | パスワードの入力（ログイン・変更・再発行） | TextField type="password"（components/TextField.tsx:4。パスワード専用の金型は無いので、これを使う。新しい金型は作らない） |
     | LINE 名の入力 | TextField |
     | 在庫関連の課題 | Textarea |
-    | 送信 | Button |
+    | 送信・切り替え | Button |
     | 隠し欄（ハニーポット） | 金型なし（下の ui-allow） |
-    | メール確認の結果（成功・使用済み・期限切れ） | EmptyState と Button |
+    | 申込コードの表示・各画面の結果（成功・期限切れ・停止中など） | EmptyState と Button |
   - ハニーポットの欄（D5）は、画面に見せない入力欄なので金型を使わない。生の input に `ui-allow: 申込のボット対策の隠し欄 (#4283)` を付ける。
 - 置き場：
   - 入口の HTML は frontend/viewer/index.html。中の script は /src/pages/viewer/main.tsx を指す。
@@ -225,22 +243,51 @@ mode: handoff
   - 辞書の混入：この集合の JS の中に、目印の文字列が含まれない。目印は、本体の ja.json にだけある葉のキー名（入れ子の最後の名前。ASCII で、本体の辞書の外には現れにくい長い名前）を5つ選び、check-viewer-bundle.js の先頭の定数に置く（審査 r7-N-5。点つきの「a.b」の形はバンドルに文字列として現れないので使わない）。選んだ5つが本当に本体の辞書にあること、そして viewer の ja.json・en.json の葉のキー名には無いこと（金型の例外キーと重ならないこと）を、検査の最初に確かめる（辞書の変更で目印が消えたり viewer 側に入ったりしたら失敗させる。審査 r8-N-3）。
   - 検査のスクリプトは frontend/scripts/check-viewer-bundle.js に置く。実行する場所（審査 r7-B-1）：【事実】今の PR の CI にはフロントの本番ビルドが無い（.github/workflows/frontend-check.yml は npm ci・generate:api-types・check:all・tsc・unit tests・build-storybook だけ。本番ビルドは frontend/Dockerfile:22 のデプロイ時だけ）。そこで、.github/workflows/frontend-check.yml の check ジョブ（表示名 Frontend lint & custom checks、:10-11）の generate:api-types の後に、2つの手順「npx vite build --manifest」「node scripts/check-viewer-bundle.js」を足す。どちらも既存の手順と同じく working-directory: frontend を付ける（審査 r8-N-1）。ジョブ名と必須チェックの名前は変えない（Branch Protection の変更にならないように）。CI 設定の変更なので、段3の PR は ADR-1015 の B 区分に当たらず、GO の手順に従う。わざと viewer の中で本体の frontend/src/i18n.ts を import したときに、この検査が失敗することを段3で1回確かめ、生の出力を残す。
 
-### D5. 申込フォームとトライアル
+### D5. 申込フォームと申込コード（r13 で確認メールを申込コードに置き換えた）
 - 公開の POST /api/v1/viewer/signup を作る。
   - 項目（Q2f・Q2g の決定。Q2b・Q2d・Q2e の Discord ID は置き換え済みなので作らない）：
-    - email：必須。254文字まで。形式の検査は既存の申込フォームと同じ方法にする（段1で既存の検査関数を指定する）。
+    - email：必須。254文字まで。形式の検査は validate_email_loose（backend/app/schemas/base.py:32-38）。
     - line_name：必須。前後の空白を除いて1〜100文字。
     - inventory_issue：任意。1000文字まで。空欄は NULL。
     - 上の範囲を外れたら 422 を返し、画面は i18n の案内文を出して送信させない。
-  - honeypot の欄に値が入っていたら、200 を返すが行は作らない。
+  - honeypot の欄に値が入っていたら、200 を返すが行は作らない（応答は下の「登録済みの email」と同じ形）。
   - 同じ email は 1時間に3回、同じ IP は 1時間に10回までにし、超えたら 429 を返す。
   - IP は nginx が付ける X-Real-IP から取る。X-Forwarded-For をそのまま信用しない（security-recon.md の指摘）。
-  - すでに登録されている email で申し込まれたときも、同じ 200 を返す。行が pending なら、古い確認トークンを無効にして新しい確認メールを送る（email ごとの回数制限の内側で）。確認メールを見逃した人がやり直せるようにするため（審査 B-4）。verified・trial・active・suspended なら何もしない。メールも送らない。応答の違いから、登録済みかどうかが外から分からないようにする（審査 N-19）。
-- 申込で pending の行を作り、確認メールを送る。verify-email が成功したら trial に変え、trial_expires_at を確認時刻＋14日にする（PO 決定 2026-10-15 Q5「Y」：自動で始め、起点はメールの確認が済んだ時刻）。
-- 確認用のトークンは、secrets.token_urlsafe(32) で作る。DB には sha256 のハッシュだけを保存する。24時間で失効し、一度使ったら消す（審査 N-17）。
-  - SMTP が本番で使えるかどうか（計画票 0 ①、2026-10-15 確認）：【事実】今の本番では送れない。本番 backend コンテナの SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM が全部未設定で、送信の設定を読む backend/app/services/mail_config.py:28-34 は、どれかが空なら None を返して送らない。過去に送れていたかは、コンテナが作り直されていてログが無いため【未確認】。方式（SMTP の設定を入れるか、別の方法にするか）は PO に相談する。
-- 本人確認が済まないまま 7日たった pending の行は、毎日のタスクで消す。
+- 申込で pending の行を作り、その人だけの申込コードを作って、画面に出す（PO 決定 2026-10-16 案D「y」）。メールは送らない。
+  - 申込コードの形：Crockford base32 の文字（0-9 と A-Z から I・L・O・U を除いた32字）から secrets.choice で16文字（80ビット）。画面では4文字ずつハイフンで区切って出す（例 ABCD-EFGH-JKMN-PQRS）。照合のときは、大文字にし、ハイフンと空白を除いてから比べる。Discord の小窓に手で打てる長さにするため、token_urlsafe(32) は使わない。
+  - DB には正規化したコードの sha256 だけを viewer_login_tokens（purpose signup_code）に保存する。期限は7日。一度使ったら消す。
+  - 応答は `{"signup_code": "XXXX-XXXX-XXXX-XXXX", "expires_at": ISO8601}`。画面は、コードと、運用サーバーへの招待リンク（i18n の文言の中に固定で置く。招待リンクは PO が作る）と、「受付の部屋のボタンを押してコードを入れてください」の案内を出す。コードはこの画面でしか見られない（再表示の API は作らない）。
+  - すでに登録されている email で申し込まれたとき：行が pending なら、古い申込コードを消して新しいコードを作り、画面に出す（コードを控え損ねた人がやり直せるようにする。email ごとの回数制限の内側で）。trial・active・suspended・verified なら、DB に保存しない同じ形の捨てのコードを返す（応答の形から、登録済みかどうかが外から分からないようにする。審査 N-19）。画面には常に「すでにお申込み済みの方は、ログイン画面の『パスワードを忘れた』から再発行してください」を添える。users.email にある email でも同じ（D1）。
+  - 残るリスク（r13）：email の持ち主かどうかは確かめない（メールの確認をやめたため）。他人の email で申し込まれると、その email は本人が後から申し込めない。本人はパスワードの再発行のメールでログインでき、PO は Discord の利用者 ID・ログイン記録（下）を見て停止できる（Q6 と同じく、自動では止めない）。
+- 申込コードの照合とトライアルの開始は、Discord の受付で行う（D6）。照合が済んだら trial に変え、trial_expires_at を照合した時刻＋14日にする（Q5 の再決定待ち。§PO 決定待ち）。
+- 申込コードを照合しないまま7日たった pending の行は、毎日のタスクで消す（申込コードの期限と同じ日数）。
 - 本契約への切り替えと停止の操作は Q3 で決める。
+
+### D6. Discord の受付（申込コードの照合と、本人だけの部屋）（r13 で追加。PO 決定 2026-10-16）
+- 決まっていること（§PO 決定待ち の Discord 案に原文）：運用サーバー「Sales Anchor」（ID 末尾 1187）1つで受ける。お客さんに見せるのは「全体用」カテゴリ（全員が投稿できる部屋・障害の発生と復旧の報告の部屋・受付の部屋）と、その人のチケット部屋だけ。受付の部屋はボタンだけを置き、お客さんは読むだけ。チケット部屋は1人1部屋で作り直さない。部屋の作成と URL・パスワードの投稿は、アプリのボット（Sales Anchor#8667）が行う。トライアル申込者はテナントの leads に入れない。お客さんから見た動きは顧客用チケットと同じにし、部屋を作る部品は使い回すが、処理はトライアル専用に分ける。顧客用チケットの動きは変えない。
+- 設定の正本：新しい表 public.viewer_discord_config を作る。列は id、guild_id（VARCHAR(32)、一意）、reception_channel_id（受付の部屋）、ticket_category_id（チケット部屋を作るカテゴリ）、staff_role_id（部屋を見られるスタッフのロール）、作成・更新の日時。ID の列の型は既存の tenant_discord_ticket_config にそろえる（VARCHAR(32)。migrations/20260602_120000_add_discord_ticket_config.sql:5-9）。テナントの tenant_discord_config・tenant_discord_ticket_config には入れない（1 guild = 1 テナントの一意制約があり、運用サーバーはテナントではないため。§PO 決定待ち の Discord 案の 1・2）。migration では表だけを作り、1行の登録は下の専用スクリプトで行う（migration でデータを入れない）。
+- 専用スクリプト（Q3 の Claude の経路と同じ形。backend コンテナの中で実行し、SQL を手で書かない）に、2つの操作を持たせる。
+  - set-config：guild_id・reception_channel_id・ticket_category_id・staff_role_id の4つを受け取り、viewer_discord_config の1行を作るか更新する。
+  - post-button：受付の部屋にボタン（custom_id `viewer_trial_open`）を投稿する。既存の _ensure_ticket_button_step（backend/app/routers/discord_auto_setup.py:689・:729-735）と同じく、直近50件にボタンがあれば投稿しない。送信は既存の共通ヘルパー discord_api_request（backend/app/services/discord_rest.py。Bot 認証 :52）で、backend コンテナの DISCORD_BOT_TOKEN（docker-compose.yml:109）を使う。ボタンの文面は、新しいファイル backend/app/discord_gateway/viewer_bot_texts.py に置く（既存の bot_texts.py:26-29・:63-78 は顧客用チケットの固定の文面なので変えない）。
+  - どちらも実行の前に PO へ3行で報告する（操作の GO の条件）。
+- custom_id は `viewer_trial_open`（ボタン）と `viewer_trial_code`（小窓）。どちらも ticket_open で始めない（既存の押下は startswith("ticket_open") で受けるため。client.py:219）。
+- gateway の分岐（backend/app/discord_gateway/client.py の on_interaction、:210-）：
+  - 【事実】今の on_interaction は、component 以外を :216-217 で、ticket_open 以外を :219-220 で return し、:226 で defer してから :239 でテナントを引く。運用サーバーはテナントに無いので、今のままでは :241-249 で「未登録」の案内を返して終わる（/tmp/CC報告ファイル/viewer_d1_recon2/q8.txt）。
+  - 変更：:218 で custom_id を取った直後、:219 の判定より前に、`viewer_trial_` で始まる custom_id を新しいファイル backend/app/discord_gateway/viewer_trial.py の処理へ渡して return する。modal の送信（type 5）は component ではなく :216 で落ちるので、その判定より前で `viewer_trial_code` だけを先に渡す。顧客用チケットの行（:219 以降）は変えない。
+  - viewer_trial.py は、押された guild が viewer_discord_config の guild_id と一致するときだけ動く。一致しなければ何もしない（本人だけに見える「このサーバーでは使えません」を返す）。
+- ボタンを押したとき（`viewer_trial_open`）：
+  1. 押した人の Discord ID（interaction.user.id。既存の client.py:231 と同じ取り方）が、すでに viewer_accounts の discord_user_id にあるか見る。あれば小窓を出さず、本人だけに見える返事（ephemeral）でその人の部屋（discord_channel_id）を案内する。部屋が消えていたら、下の手順 3〜4 の部屋の作成だけをやり直し、discord_channel_id を替える（作り直しは原則しないが、部屋が無いと連絡できないため）。
+  2. 無ければ、小窓（send_modal）で申込コードを聞く。【事実】discord.py 2.4.0 の send_modal は最初の応答で呼ぶ必要があり、defer の後に呼ぶと InteractionResponded になる（/tmp/CC報告ファイル/viewer_d1_recon/）。このため、この分岐では defer しない。入力欄は1つ（TextInput、16〜19文字）。小窓の題と入力欄の文言は viewer_bot_texts.py に置く。
+- 小窓が送られたとき（`viewer_trial_code`）：
+  1. 最初に defer（ephemeral）する（照合と部屋の作成が3秒を超えうるため）。
+  2. 回数制限：同じ Discord ID の失敗は1時間に5回まで。Redis のキー `viewer_code_fail:<Discord ID>`（incr ＋ EXPIRE 3600）。gateway の Redis は docker-compose.yml:334 の REDIS_URL、取得は既存の get_redis（backend/app/cache.py:43）を使う。【事実】gateway から backend/app の他のモジュールを import する前例がある（dm_writer.py:38-39、reaction_writer.py:13）。get_redis が None を返したとき（Redis が使えない）は照合をせず、「時間をおいてもう一度」を返す（回数を数えられないまま照合させない）。
+  3. コードを正規化して sha256 を取り、viewer_login_tokens を purpose = signup_code・expires_at > now で引き、行を FOR UPDATE で取る。結び付く viewer_accounts の状態が pending でなければ、合わないものとして扱う。合わなければ失敗を1回数え、「コードが違うか、期限が切れています」を返す。
+  4. 部屋を作る：既存の ticket_channel_creator.py から、部屋の作成の部品（:469-480 の権限の組み立てと、:511-565 のチャンネルの作成）を、新しい関数 `create_private_text_channel(guild, category_id, member, staff_role_id, name)` として新しいファイル backend/app/discord_gateway/private_channel.py に切り出す。既存の関数（:457-625）はこれを呼ぶ形に替え、動きは変えない（既存のチケットのテストを変えずに通すことを受入にする）。leads を読む既存チェック（:486-508）と leads の INSERT（:570-622）は切り出さない（トライアルでは使わない）。部屋の名前は `trial-<viewer_accounts.id>`（個人の名前を部屋の名前に入れない）。
+  5. 同じトランザクションで、viewer_accounts に discord_user_id と discord_channel_id を入れ、状態を trial、trial_expires_at を今＋14日にする。初期パスワードを secrets.token_urlsafe(18)（24文字。check_password の15〜64文字に入る）で作り、hash_password（asyncio.to_thread）で password_argon2_hash に入れ、password_must_change を true にする。申込コードの行を消す。viewer_status_changes に action start_trial・actor system の1行、viewer_login_events に code_matched の1行を入れる。コミットする。discord_user_id の一意の違反（同じ Discord アカウントが別の申込に結び付いている）なら、ロールバックして作った部屋を消し、「この Discord アカウントは別のお申込みに結び付いています」を返す。
+  6. コミットの後で、その部屋に URL（https://app.salesanchor.jp/viewer/）・登録の email・初期パスワード・「最初のログインでパスワードを変えてください」を1通投稿する。本人には ephemeral で部屋を案内する。投稿に失敗したら "[viewer-trial]" のログを1行出す（本人はパスワードの再発行のメールでログインできる）。
+  - 部屋の作成（4）が失敗したらロールバックし、「時間をおいてもう一度」を返す（失敗の回数には数えない）。コミット（5）が失敗したら、作った部屋を消す。
+- 部屋での発言：【事実】on_message は、テナントに登録の無い guild のメッセージを :356-362 で捨てる。運用サーバーはテナントに無いので、チケット部屋の発言（初期パスワードの投稿を含む）は meta_messages に保存されず、翻訳にも回らない。本設計ではこの動きを変えない。
+- 初期パスワードは部屋の履歴に残る（本人とスタッフが見られる）。最初のログインで必ず変えさせる（D1 の password_must_change）ので、変えた後は使えない。
 
 ---
 
@@ -248,7 +295,7 @@ mode: handoff
 
 | 基準 | 検証方法 |
 |------|---------|
-| 閲覧者のトークンで既存の全 APIRoute（VIEWER_ROUTE_ALLOWLIST の6本を除く）を全 method で叩くと、すべて 401 になる | CI pytest test_viewer_isolation：app.routes を列挙する。パスの変数は 1 か固定の UUID で埋める。get_current_user は override しない。patch は _init_firebase と is_token_blacklisted→False と check_auth_rate_limit→False だけにし、get_cached_jwt は patch しない |
+| 閲覧者のトークンで既存の全 APIRoute（VIEWER_ROUTE_ALLOWLIST の7本を除く）を全 method で叩くと、すべて 401 になる | CI pytest test_viewer_isolation：app.routes を列挙する。パスの変数は 1 か固定の UUID で埋める。get_current_user は override しない。patch は _init_firebase と is_token_blacklisted→False と check_auth_rate_limit→False だけにし、get_cached_jwt は patch しない |
 | get_current_viewer を一度通った後でも、同じトークンで既存の API を叩くと 401 になる（Redis 経由の抜け道がない） | 同上の別ケース |
 | アプリのユーザーのトークンで GET /api/v1/viewer/inventory を叩くと 401 になる | CI pytest |
 | 閲覧者のコードが cache_jwt_result と get_cached_jwt を呼んでいない | CI pytest（viewer のモジュールの中身を検査する） |
@@ -258,20 +305,20 @@ mode: handoff
 | 対応表を services へ移した後も、既存のテスト test_offer_type_status_mapping_is_one_constant（test_inventory_distribution_rows.py:111-118）を変えずに通り、inventory_offers から同じ名前で読める | CI pytest（そのテストのファイルに差分が無いことを PR の diff で確かめる） |
 | build_distribution_rows を切り出した後も、既存の配信のテストがすべて通る | CI pytest（既存のテストを変えずに実行） |
 | analysis_runs か extraction_jobs に未完了があるとき、作り置きは前回の値と updated_at を変えず、fail_count も増えない。max_age_hours が無いときは前回の値を残し、fail_count が1増える | CI pytest |
-| verify-email が成功すると状態が trial になり、trial_expires_at が「確認した時刻＋14日」になる | CI pytest（時刻を固定する） |
+| 申込コードの照合が成功すると、状態が trial、trial_expires_at が「照合した時刻＋14日」、discord_user_id と discord_channel_id が入り、password_must_change が true、申込コードの行が消え、viewer_status_changes（start_trial・system）と viewer_login_events（code_matched）に1行ずつ入る。leads には1行も入らない | CI pytest（viewer_trial.py の照合の関数を、Discord の部分を mock にして直接呼ぶ。時刻を固定する） |
 | 切り替え（trial→active）・停止・解除・延長の API は、super admin 以外のトークンでは 403 になる | CI pytest（require_super_admin） |
 | 切り替え・停止・解除・延長のたびに viewer_status_changes に1行入り、action・from/to・actor が正しい。解除は最後の suspend の from_status に戻る。suspend の行が無い解除は 409 | CI pytest |
 | Claude 用の専用スクリプトは、PO の画面と同じサービス関数を呼び、actor が claude で記録される | CI pytest（スクリプトの関数を直接呼ぶ） |
 | 登録用の専用スクリプトは、登録・飛ばした・失敗の件数を出し、登録済みの email を飛ばす。2回続けて実行しても行が増えない | CI pytest（架空の3行のファイルで。本物の一覧は使わない） |
 | PO の画面の目印①（同じ閲覧者が24時間で3つ以上の別 IP）と目印②（別の閲覧者どうしで同じ IP）が、条件どおりの行にだけ付く。ログイン履歴に日時・IP・端末が出る | CI pytest（API の応答）と Evaluator（Playwright で画面） |
-| signup・verify-email・login・session の4本とも、Origin が違えば 403 になる | CI pytest（4本それぞれ） |
+| signup・login・password-reset/request・password-reset/confirm の4本とも、Origin が違えば 403 になる | CI pytest（4本それぞれ） |
 | CI の `npx vite build --manifest`（frontend-check.yml の check ジョブに足す手順）の後に dist/index.html と dist/viewer/index.html の両方ができ、manifest の viewer 入口からたどった JS に本体の辞書の目印の文字列が含まれない。viewer の中でわざと本体の i18n.ts を import すると検査が失敗する | CI（frontend-check.yml の check ジョブで check-viewer-bundle.js。失敗の確認は段3で1回、生の出力を残す）。本番と同じ設定のビルドで manifest が出ないことも段3で1回確かめる：段3のブランチで `npm run build`（vite.config.ts は本番と同じ。--manifest を付けない）を実行し、`test ! -e dist/.vite/manifest.json` の結果を生の出力で残す（審査 r8-N-2。本番 URL への curl は nginx.conf:23-25 の try_files で無くても 200 が返るので判定に使わない） |
 | viewer の入口 main.tsx から import をたどった集合（import type は除き、動的な import() は含む）の t() のキー（例：金型の common.close）が viewer の辞書に無ければ検査が失敗する。viewer の ja と en のキーの集合が違えば失敗する | CI（check-i18n-missing-keys.js。わざと欠けたキーで失敗することを1回確かめる） |
 | beat に refresh-viewer-inventory があり、周期が 60.0 秒である | CI pytest |
 | build_distribution_rows が例外を投げたとき、また Redis への書き込み（SET）が例外を投げたとき、どちらも作り置きは前回の値を残し、fail_count が1増える | CI pytest（mock） |
 | 保留でないときは、本番の閲覧 API が返す updated_at が今の時刻から60秒以内（Q11=y） | Evaluator（本番で curl。analysis_runs・extraction_jobs に未完了が無いことを同じ時刻に DB 読み取りで確かめ、生の出力を残す） |
 | タスクが失敗した後、Redis の値と updated_at が変わらない。3回続けて失敗したら通知が1回だけ呼ばれ、4回目では呼ばれない。成功すると fail_count が 0 に戻る | CI pytest（mock。fail_count は Redis で数える） |
-| pending の email で signup し直すと新しい確認メールが送られ、古いトークンは使えない | CI pytest |
+| pending の email で signup し直すと新しい申込コードが返り、古いコードは照合で合わない | CI pytest |
 | GET /api/v1/viewer/inventory を1分に20回叩いても 429 にならない | Evaluator（curl） |
 | Redis が使えないときの logout は 503 になる | CI pytest（mock） |
 | honeypot に値があると行が作られない。同じ email の4回目は 429 になる | CI pytest |
@@ -285,19 +332,24 @@ mode: handoff
 | app.salesanchor.jp/viewer/ が閲覧ページの title を返す | Evaluator（Playwright） |
 | Redis のキーが無いとき、inventory は 503 を返す | CI pytest |
 | ログアウトした後、時刻を2時間進めても、同じトークンで inventory を叩くと 401 になる | CI pytest（時刻を固定する） |
-| 無効なトークンで session に10回失敗した IP は、11回目が 429 になる。同じ email への login は4回目からメールを送らない | CI pytest |
-| リンク先を GET で2回開いた後でも、POST の session と verify-email でトークンが使える（GET ではトークンを消費しない） | CI pytest |
-| トークンが正しくても、email が登録と違えば session は 401 になる。そのあと正しい email を入れれば、同じトークンで入れる | CI pytest |
-| 確認用（verify_email）のトークンでは session に入れない | CI pytest |
-| 新しいログイン用トークンを作ると、前の未使用のトークンは使えなくなる | CI pytest |
-| 登録済みの email で signup しても、応答は新規のときと同じで、メールは送られない | CI pytest |
-| 確認トークンは24時間を過ぎると無効になり、2回目は使えない | CI pytest |
-| ログイン用のリンクは、active と期限内の trial の email にだけ送られる。未登録・pending・verified・suspended・期限切れの trial の email にはメールが送られず、応答は同じ 200 | CI pytest（メール送信を mock にする） |
+| login でパスワードを10回間違えた IP は、11回目が 429 になる。同じ email に別々の IP から15分で10回失敗すると、その email の11回目は 429 になる。同じ email への password-reset/request は4回目からメールを送らない | CI pytest |
+| email が未登録・パスワードが違う・pending のときの login は、どれも同じ 401 と同じ本文になる。パスワードが合った suspended・期限切れの trial は 403 で理由が分かる | CI pytest |
+| password_must_change が true の人は、login は通るが応答に must_change_password: true があり、inventory は 403（password_change_required）。POST password で変えた後は inventory が 200 | CI pytest |
+| POST password：今のパスワードが違えば 401。新しいパスワードが check_password（15〜64文字・よくあるパスワード）を通らなければ 422。今のものと同じなら 422 | CI pytest |
+| パスワードを変えるか再発行した後、その前に発行した12時間トークンでは inventory が 401 になる（iat が password_changed_at より前） | CI pytest（時刻を固定する） |
+| 再発行：リンク先を GET で2回開いた後でも、POST の confirm でトークンが使える（GET ではトークンを消費しない） | CI pytest |
+| 再発行のトークンは30分で無効になり、一度使ったら2回目は使えない。新しい再発行のトークンを作ると、前の未使用のトークンは使えなくなる。申込コード（signup_code）では confirm できない | CI pytest（時刻を固定する） |
+| 再発行のメールは、trial（期限内・期限切れ）と active の email にだけ送られる。未登録・pending・suspended の email にはメールが送られず、応答は同じ 200 | CI pytest（メール送信を mock にする） |
+| 登録済み（trial・active・suspended）の email や users.email の email で signup しても、応答の形は新規のときと同じで、返るコードは DB に無い（照合で合わない） | CI pytest |
+| 申込コードは7日で無効になり、一度使ったら2回目は合わない。ハイフン・空白・小文字を混ぜても同じコードとして合う | CI pytest（時刻を固定する） |
+| 同じ Discord ID でコードを5回間違えると、6回目は照合せずに断る。Redis が使えないときは照合しない | CI pytest（mock） |
+| すでに結び付いた Discord ID でボタンを押すと、小窓を出さずにその人の部屋を案内する。別の申込に結び付いた Discord ID でコードを入れると、結び付けずに断り、作った部屋を消す | CI pytest（mock） |
+| custom_id が ticket_open のボタンの動き（部屋の作成と leads の INSERT）は変わらない。部屋の作成の部品を切り出した後も、既存のチケットのテストを変えずにすべて通る | CI pytest（既存のテストを変えずに実行） |
+| viewer_discord_config の guild_id と違うサーバーで viewer_trial_open を押しても、部屋も行も作られない | CI pytest（mock） |
 | 申込：メールか LINE 名が空なら 422。Discord ID の欄は無く、送られてきても保存しない | CI pytest |
 | 申込：在庫関連の課題が1000文字を超えたら 422。保存した文字列は画面にそのまま文字として出し、HTML として解釈しない | CI pytest |
 | 延長：期限切れの trial に N=7 を指定すると、trial_expires_at が「記録した時刻＋7日」になり、inventory が 200 になる。N が0以下か整数でなければ 422。active・suspended・pending・verified には延長できない（409） | CI pytest（時刻を固定する） |
-| ログイン記録：session の成功・失敗、login の要求、申込のたびに、閲覧者の行がある場合だけ viewer_login_events に1行入り、client_ip が X-Real-IP の値になる。閲覧者の行が無い email（未登録の login、合わない email の session）では行が入らない。91日前の行は毎日の処理で消える | CI pytest |
-| ログイン用のリンクは15分で無効になり、一度使ったら2回目は 401 になる | CI pytest（時刻を固定する） |
+| ログイン記録：login の成功・失敗（閲覧者の行がある email だけ）、パスワードの変更、再発行の要求と完了、申込、コードの照合のたびに viewer_login_events に1行入り、client_ip が X-Real-IP の値になる（コードの照合は Discord 経由で IP が無いので NULL）。閲覧者の行が無い email の login では行が入らない。91日前の行は毎日の処理で消える | CI pytest |
 | suspended にした後は、発行済みの12時間トークンでも inventory が 403 になる | CI pytest |
 | GET /viewer/ の応答に Cache-Control: no-cache が付いている。/viewer でも同じページに着く | Evaluator（curl と Playwright） |
 | 開いてから表が出るまでの時間が、本番の中央値で 1 秒以内 | Evaluator（Playwright で本番を5回計測する。ログイン済み（12時間トークンが保存済み）の状態で開く。ログインの操作の時間は含めない。始点は navigationStart、終点は表の最初の行が DOM に出た時刻。キャッシュなしの初回で計測し、生の値を残す） |
@@ -320,7 +372,7 @@ mode: handoff
   - 閲覧 API のサーバー時間：50ms 以下を目標にし、実測で確定する。
   - 在庫の読み取り：1分に1回で一定にする。閲覧者が何人いても増えない。閲覧者の状態の確認（主キーで1行を読む）だけは、リクエストのたびに行う（審査 N-16）。
 - 技術の選択：閲覧者をアプリのユーザーと分ける。
-  - 理由1：閲覧者が届く入口が、74 本から6本に減る。
+  - 理由1：閲覧者が届く入口が、74 本から7本（うちログインの後に使うのは logout・inventory・password の3本）に減る。
   - 理由2：API を後から足しても、閲覧者に漏れる経路が仕組みとして生まれない（security-recon.md §6）。
 
 ---
@@ -343,15 +395,15 @@ mode: handoff
 | 1 | 表とトークンと分離テスト（D1）。守り手のテストを作る | Sonnet |
 | 2 | 作り置きと閲覧 API（D2・D3） | Sonnet |
 | 3 | 閲覧ページ（D4） | Sonnet |
-| 4 | 申込、トライアル、pending の掃除、管理の操作（D5） | Sonnet |
+| 4 | 申込と申込コード、パスワードの変更と再発行、pending の掃除、管理の操作（D5・D1 のパスワード）。Discord の受付（D6：設定の表と専用スクリプト、部屋の作成の部品の切り出し、gateway の分岐）は段4の中で別の PR に分ける（gateway の変更と、既存のチケットの部品の切り出しを、ほかと混ぜないため） | Sonnet |
 | 各段 | コード審査（Opus。PO 決定 2026-10-15 で Fable から変更）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
 | 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。一覧ファイルは1行だけのものを別に作る。登録した時点の期限にかかわらず、登録の直後に extend N=1 で「記録した時刻＋1日」にする。審査 r7-N-7・r8-N-5）。作成は PO 本人の GO（上の「操作の GO の条件」）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | PO（GO）＋Sonnet（実行） |
 
-Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申込みが来る、フォームを送る、Discordに案内をする、専用サーバーでチケットを発行してもらう、チケット発行をトリガーに専用URLとパスワードを送る」。SMTP が未設定のため。調査の生出力は /tmp/CC報告ファイル/viewer_discord/）
+Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 提案「トライアルの申込みが来る、フォームを送る、Discordに案内をする、専用サーバーでチケットを発行してもらう、チケット発行をトリガーに専用URLとパスワードを送る」。SMTP が未設定のため。調査の生出力は /tmp/CC報告ファイル/viewer_discord/）
 - 【事実】本番で discord-gateway が動いている（astro-webapp-discord-gateway-1 Up、DISCORD_BOT_TOKEN は SET）。チケットはボタン（custom_id が ticket_open で始まる）を押したときだけ作られる（backend/app/discord_gateway/client.py:210-221）。作ると本人・staff ロール・ボットだけが見える部屋ができ、テナントの leads に書く（ticket_channel_creator.py）。
 - 【事実】チケットができたことをほかの処理に知らせる仕組みは無い。ボットから個別メッセージ（DM）を送るコードも無い（git grep で create_dm・dm_channel の送信側 0 件。dm_writer.py は受信の記録だけ）。作るなら、チケット部屋の作成直後に閲覧者の登録とURL・パスワードの投稿を足す新規実装になる。
 - 【未確認】トライアル申込者を受けるテナント（本番の設定は tenant 1・4・6 の3つ）。申込とチケットを同じ人だと結び付ける方法。
-- 決まるまで、D1（メールのリンクでのログイン）は保留。
+- 【r13 で解決】D1 は「専用 URL＋パスワード＋メールでの再発行＋申込コード」に書き直した（D1・D2・D5・D6）。
 - 申込とチケットの結び付け（2026-10-16 PO 質問「フォームを入力してもらったら専用のURLを発行してそのURLから入ってきたユーザーを紐付けられる？」への調査。未決）：
   - 【事実・Discord 公式 docs.discord.com/developers/topics/oauth2】OAuth2 の identify スコープで「/users/@me」（Discord の利用者 ID）が取れる。コードの引き換えには client_secret が要る。guilds.join スコープで、ボットがその人をサーバーに入れられる（docs.discord.com/developers/resources/guild「Add Guild Member」。ボットに CREATE_INSTANT_INVITE 権限が要る）。
   - 【事実】今のボットの権限 805432406（backend/app/routers/discord_oauth.py:72）は CREATE_INSTANT_INVITE も MANAGE_GUILD も持たない（ビット計算）。既存の OAuth はボットをサーバーに招待する流れだけで（同ファイル:1-19）、利用者 ID を取る流れは無い。DISCORD_CLIENT_SECRET を読むコードも無い（git grep 0 件）。
@@ -376,7 +428,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
     5. 設定はテナントごとに1組（カテゴリ・ボタン部屋・staff ロール）。send_modal を使うコードは無い（git grep 0件）。
   - 【PO 決定 2026-10-16「y」】トライアル申込者はアプリの見込み客（tenant の leads）に入れない。お客さんから見た動き（ボタン→自分専用の部屋）は顧客用チケットと同じにし、部屋を作る部品は使い回すが、処理はトライアル専用に分ける（ボタンの名前は ticket_open で始めない。申込者の記録は viewer_accounts などの閲覧ページ用の表だけ）。顧客用チケットの動きは変えない。
   - 【PO 質問 2026-10-16】原文「ツールの顧客管理も出来るように出来る？」。回答：管理画面（super admin の ViewerAccountsPage。下の Q3 の「管理 API と画面」）で、一覧・状態の切り替え・停止と解除・期限の延長・ログイン記録を扱う設計が既にある。Discord 案に合わせて、一覧に Discord の利用者 ID と、その人のチケット部屋への移動を足す（列の追加は D1 の書き直しで扱う）。
-  - 【PO 決定 2026-10-16】原文「saas管理者y」。管理画面は SaaS 管理者（super admin）専用でこの内容でよい。置き場所【事実 origin/main】：SaaS 管理者メニューは frontend/src/components/DesktopShell.tsx:192-196 の saasAdminItems（今は LINE解析・買取相場・為替レートの3つ、isSuperAdmin のときだけ出る）。画面のルートは frontend/src/App.tsx:293-301 の /super-admin/* の並び（例 /super-admin/fx-rate → FxRatePage）。新しい画面は /super-admin/viewers に ViewerAccountsPage を置き、saasAdminItems の最後に「閲覧者管理」（labelKey nav.superAdminViewers、ja/en 両方）を足す。スマホの殻（ADR-137）にも SaaS 管理者メニューがあるかは段4のカードの前に確かめる【未確認】。
+  - 【PO 決定 2026-10-16】原文「saas管理者y」。管理画面は SaaS 管理者（super admin）専用でこの内容でよい。置き場所【事実 origin/main】：SaaS 管理者メニューは frontend/src/components/DesktopShell.tsx:192-196 の saasAdminItems（今は LINE解析・買取相場・為替レートの3つ、isSuperAdmin のときだけ出る）。画面のルートは frontend/src/App.tsx:293-301 の /super-admin/* の並び（例 /super-admin/fx-rate → FxRatePage）。新しい画面は /super-admin/viewers に ViewerAccountsPage を置き、saasAdminItems の最後に「閲覧者管理」（labelKey nav.superAdminViewers、ja/en 両方）を足す。【事実 r13】スマホの殻は別の定義で、frontend/src/components/MobileShell.tsx:165-186 に isSuperAdmin のときの3項目（analysisRules・buybackPrices・supplierExtractionRules）がある。DesktopShell の3つとは同じではない（為替レートはスマホに無い。/tmp/CC報告ファイル/viewer_d1_recon2/q2.txt）。MobileShell の同じ並びの最後にも「閲覧者管理」（同じ labelKey と /super-admin/viewers）を足す。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
@@ -391,6 +443,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
 - 過去事例（社内）：GAS の在庫一覧は、Google の枠だけで 3〜7 秒かかる（recon.md §2）。応用：閲覧ページを Google の枠の外に置く。
 - 過去事例（社内）：ADR-097・126・127 で、署名トークン付きの公開登録フォームを作った。応用：公開の入口は署名と回数制限で守る。
 - 過去事例（社内）：GAS への配信を Celery から作る前例（tcg_extraction.py の _run_auto_distribution（origin/main 65ed8cd8b では :736 から））。応用：同じ接続条件で作り置きを作る。
+- 外部事例の r13 の注記：下の Yelp・DigitalService・Supabase ほかの事例は、r12 までの「メールのリンクでのログイン」の根拠として集めたもの。r13 でログインはパスワードになったので、今も当てはまるのは「再発行のリンクを GET で消費しない・1回限り・期限付き・最新の1本だけ有効」の部分だけ（D1 の再発行）。パスワードの保存・規則・総当たり対策は、既存のアプリのログイン（ADR-1013 の hash_password・check_password・check_auth_rate_limit）と同じ部品と数をそのまま使うので、新しい外部事例は足さない（社内の既存の実装と同じ水準を、閲覧者にも当てるだけのため）。Discord のボタン→小窓→部屋の流れも、既存の顧客用チケット（ticket_channel_creator.py）と同じ部品を使う。
 - 外部事例（調査 2026-10-15。全文と出典は PR に載せず、要点だけを下に書く。数値は出典に書かれたものだけ）：
   - 成功・Yelp（2021-03、Yelp Engineering Blog）：事業者向けの再ログインを、メールのリンクに置き換えた。導入前は、パスワードの再設定で失敗したことを知らせるメールを1日に約7,500回送っていた。リンクは1回だけ使え、期限が付いている。無効なリンクのときは通常のログイン画面に戻す。応用：D1 のトークンも1回限りで期限付きにし、無効なときは「ログインの申込」の画面に戻す。
   - 成功・ドイツ連邦 DigitalService（2022-08、公式ブログ）：固定資産税の申告サービスで、メールのリンクによる登録・ログインを始め、4週間で15万人を超えた。手順はパスワードの再設定の6段から4段に減った。学び（審査 r6 N-11 で訂正）：利用者は「リンクは1回限り」「最新のリンクだけが有効」を想定しておらず、説明が要った。応用：リンクが1回限りであること、新しく頼むと前のリンクが使えなくなることを、メールの本文と画面④の i18n の文言で出す。ブラウザに縛らず email の再入力で本人を確かめる（Q2c）。
@@ -419,13 +472,13 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
 
 - Q15.【決定 2026-10-15 PO「y」】アプリと同じ並びのまま作る（英語名が空の行は既定の並びで先頭）。以下は質問の原文。（審査 r10 B-r10-1）：英語名が空の行（33商品）は、アプリと同じく既定の並びで表の先頭にまとまる。この見え方のままでよいか。y ならアプリと同じ並びで作る。n なら空の行を末尾に回すが、アプリ（inventory_offers.py:276-280）も同じに直す設計を足す（アプリと閲覧で並びを分けない）。段3の並びの実装はこの回答の後に行う。
 - ~~Q1. 閲覧ページに出す列~~ → **決定済み**：今の GAS と同じ列（PO y、2026-10-15）。その後 Q13=y で発送日を含む14列になった。D2 に反映した。
-- ~~Q2a. ログインの方法~~ → **決定済み**：メールのリンクで入る。登録フォームの情報で管理し、リンクを知っているだけでは見られない形にする（PO、2026-10-15）。D1 に反映した。
+- ~~Q2a. ログインの方法~~ →【2026-10-16 の PO 決定（専用 URL＋パスワード、忘れたらメールで再発行）で置き換え済み。r13】元の決定：メールのリンクで入る。登録フォームの情報で管理し、リンクを知っているだけでは見られない形にする（PO、2026-10-15）。D1 に反映した。
 - Q2b.【置き換え済み・実装しない（Q2f）】【決定 2026-10-15 PO】原文「トライアルではメール、LINE名、DISCORD IDのみ、本契約に進むときに詳しい情報を別途フォームで取得する」。申込フォームはメール・LINE 名・Discord ID の3つ（後に Q2f でメールと LINE 名の2つに変更）。本契約用の詳しい情報フォームは今回の対象外（別の便で設計する）。
 - Q2d.【置き換え済み・実装しない（Q2f）】【決定 2026-10-15 PO】原文「数字のID、SAの顧客対応と同様に顧客管理で利用するため」。数字のIDで受け取る。閲覧者の行はテナントの取引先（companies）には写さない（SSOT）。本契約で取引先とつなぐ方法は、本契約フォームの便で設計する。
 - Q2e.【置き換え済み・実装しない（Q2f）】【決定 2026-10-15 PO】原文「Discord ID だけ任意、ただし間違えて送られてくる可能性があるので数字以外は受け付けないようにしてくれ」。メールと LINE 名は必須、Discord の数字のIDは任意。入力があるときは、既存の検証と同じ `^\d{17,20}$`（backend/app/routers/discord_ticket_config.py:48）に合わない値を 422 で拒み、画面は i18n の案内文を出して送信させない。空欄は NULL で保存する。
 - Q2f.【決定 2026-10-15 PO「Y」】Q2d・Q2e を置き換える。申込フォームはメールと LINE 名の2つだけにし、Discord ID は聞かない。Discord の数字のIDは、顧客ごとの専用URL（Discord でログイン→identify と guilds.join で ID を取得→ボットがサーバーに加える）で自動取得する。この仕組みと、ID の保存先（既存の顧客管理の列にそろえるか）は本便の対象外とし、別の仕事として設計する。調査の記録は /tmp/CC報告ファイル/viewer_discord_autoid_facts.txt（公式資料：docs.discord.com/developers/topics/oauth2、resources/guild、events/gateway-events）。
 - Q2g.【決定 2026-10-15 PO】原文「在庫関連の課題も自由記述で最初のフォームに入力させる」。申込フォームはメール・LINE 名・在庫関連の課題（自由記述）の3つ。課題は任意（PO「Y」2026-10-15）。空欄でも申し込める。
-- Q2c.【決定 2026-10-15 PO「Y」】リンクを押した後に、登録した email を入力し直してもらう（D1 のまま）。
+- Q2c.【r13 で置き換え済み・実装しない（ログインのリンクを作らないため）】【決定 2026-10-15 PO「Y」】リンクを押した後に、登録した email を入力し直してもらう（D1 のまま）。
 - Q3.【決定 2026-10-15 PO】原文「Y,私もしくはあなたが切り替えできるようにする。私がやる場合はフロントエンドから切り替えをするがあなたに任せる場合はSSHを使用する」。切り替え（trial→active）と停止（→suspended）、停止の解除ができるのは PO と Claude だけ。
   - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:495（origin/main 65ed8cd8b））で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
   - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
@@ -433,7 +486,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
   - **操作の GO の条件（この1か所を正とする。審査 r6 N-9、r7-N-7）**：Claude の経路（無制限鍵）の操作は、Q12 が決まるまで、すべて PO 本人の GO で行う（CLAUDE.md:30）。依頼の前に PO へ3行で報告する（誰を・何から何へ・理由）。無制限鍵の操作を Sonnet に頼むときは、PO が `bash scripts/permit-danger.sh "<操作>"` を1回実行したチケットを証拠にする（Opus が伝えた PO の許可は、Sonnet にとって伝聞になるため。審査 r8-N-5）。Q12 で委任が認められた後に Opus が GO を出せるのは、①対象が1人、②変更が上の管理 API の4つ（activate・suspend・unsuspend・extend）のどれかで上の表のとおりの遷移、③実行の前に PO へ3行で報告、の3つをすべて満たすときだけにする予定（Q12 の案）。Q9 の22人の一括登録と、計画票の計測用アカウントの作成は、Q12 の結果にかかわらず PO 本人の GO にする（4つの操作に当たらないため）。
   - 期限の延長（PO 決定 2026-10-15、原文「トライアルが終了した人も任意で期間を決めて閲覧期限を延長させる機能もつけてほしい、延長させるのは延長を記録した日次から換算する」）：状態が trial の人（期限内・期限切れのどちらも）に、操作する人が日数 N（1以上の整数）を指定する。trial_expires_at は「延長を記録した時刻＋N日」になる。元の期限に足すのではない。状態は trial のまま。PO の画面と Claude の経路の両方から同じサービス関数で行い、変更前後の期限・N・実行者・日時を記録する。
   - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す。保存先は新しい表 public.viewer_status_changes にする。【事実】既存の tenant の audit_logs は tenant_id と user_id が必須で、閲覧者には使えない（backend/app/services/audit.py:277-）。auth_events は「誰が」の列が無い（migrations/001_create_auth_events.sql:6-16）。public.audit_log（migrations/20260921_110000_pipeline_tables_public.sql:404-413）は record_id が UUID 型で、閲覧者の id（BIGSERIAL）を入れられない。また、この表は TCG の商品の編集の履歴で、書き手は商品詳細の処理（backend/tests/test_tcg_product_detail_pg.py:194 で確認される経路）なので、閲覧者の状態の履歴を混ぜない。
-    - 列：id、viewer_id（viewer_accounts への FK）、action（activate・suspend・unsuspend・extend の4つ）、from_status、to_status、from_expires_at、to_expires_at、extend_days（extend のときだけ）、actor（po か claude の2値）、actor_user_id（PO の画面からのときの users.id。ADR-1008 に従い users を指す。Claude の経路では NULL）、created_at。
+    - 列：id、viewer_id（viewer_accounts への FK）、action（activate・suspend・unsuspend・extend の4つと、D6 のコードの照合で書く start_trial。r13）、from_status、to_status、from_expires_at、to_expires_at、extend_days（extend のときだけ）、actor（po・claude・system の3値。system は D6 のボットの処理。r13）、actor_user_id（PO の画面からのときの users.id。ADR-1008 に従い users を指す。Claude の経路では NULL）、created_at。
     - 停止の解除（unsuspend）は、その閲覧者の最後の suspend の行の from_status に戻す。viewer_accounts に「停止前の状態」の列は足さない（同じ事実を2か所に持たないため）。suspend の行が無いのに解除しようとしたら 409 にする。
     - 状態と期限の正本は viewer_accounts。この表は「いつ・誰が・何を変えたか」の履歴だけを持つ。保存期間は Q7 で決める。
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
@@ -441,7 +494,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
 
     | method とパス | 入力 | 出力 | エラー |
     |---|---|---|---|
-    | GET /api/v1/super-admin/viewers | なし | 閲覧者の一覧（id・email・line_name・inventory_issue・状態・trial_expires_at・作成日時・目印①②） | 403 |
+    | GET /api/v1/super-admin/viewers | なし | 閲覧者の一覧（id・email・line_name・inventory_issue・状態・trial_expires_at・作成日時・目印①②・discord_user_id・その人の部屋への URL `https://discord.com/channels/<viewer_discord_config.guild_id>/<discord_channel_id>`（部屋が無ければ空）。r13） | 403 |
     | GET /api/v1/super-admin/viewers/{id}/logins | なし | ログイン記録（日時・event_type・IP・端末。新しい順） | 403・404 |
     | POST /api/v1/super-admin/viewers/{id}/activate | なし | 変更後の閲覧者 | 403・404・409（trial 以外） |
     | POST /api/v1/super-admin/viewers/{id}/suspend | なし | 同上 | 403・404・409（すでに suspended） |
@@ -463,18 +516,18 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
   - Q14.【決定 2026-10-15 PO】原文「アプリの在庫表も同じ作りにする」。この決定を、アプリの在庫表と閲覧ページの両方に入れる（＝2つを同じ部品で作る）。アプリ側は便1〜3（#4317・#4327・#4330）で本番に反映済み。閲覧ページは r9 で D4 を書き直した。8・9 と 4 の複数選択は、便1・便3 で金型に登録済み（DataTable の stickyHeader・fitToWidth・mobileCards、MultiSelect）。
 - Q13.（2026-10-15 の突き合わせ。/tmp/CC報告ファイル/viewer_gas_parity_check.md）Q1 の「今の GAS と同じ13列」は、2026-10-14 に GAS に発送日（Ship_JA）を足す前の手元の写し（~/tcg-viewer-1hc-release、Ship_JA 0件）を基準にしていた。【事実】本番の GAS（版16）の許可リストは14列（/tmp/CC報告ファイル/gas_pull_prod/Code.js:10-25）で、画面の11列に「発送日」がある（/tmp/CC報告ファイル/k7_prod.txt K7-1、発送日が空でない行は 891 行中 37 行）。発送日を閲覧ページにも出すか →【決定 y（PO 2026-10-15）】14列にし、表示は備考の次（アプリの列の並びと同じ）。r9 で D2・D3・D4 と受入に反映した。【r9 の注記】下の6点は、その後の Q14（アプリと同じ作り）で、アプリの実物に合わせる形に置き換えた（D4。商品名は上が日本語・下が英語、並びはアプリと同じ）。元の文：あわせて、GAS にあって本書に書いていない次の6点は、GAS と同じにする方向で書き足す（PO の方針「GAS に合わせる」の範囲）：検索の対象列、並べ替え4択の中身と既定、英語タイトルでまとめてから並べる順、見出しで並べ替えできない列、スマホの操作の配置、タイトルの上段＝英語・下段＝日本語。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
-- Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
+- Q5.【再決定待ち（r13）。メールの確認をやめたため】案：Discord の受付で申込コードの照合が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。元の決定（2026-10-15 PO「Y」）：メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。
 - Q6.【決定 2026-10-15 PO「Y」】別のメールでの申込み直しは自動では止めない。気付いたら PO か Claude が停止する。判断の材料として、下のログイン記録と、申込一覧で同じ LINE 名・同じ IP の行に目印を出す。
 - ログイン記録（PO 決定 2026-10-15、原文「ログインのログを取る形でいつ誰がどのIPからなどが特定できるのであれば1つのアカウントから複数人がログインしていないか、二重登録で回避していないかなど判断できる」）：
   - 【事実】既存の public.auth_events（migrations/001_create_auth_events.sql:6-16）は、いつ・IP（client_ip VARCHAR(45)）・端末（user_agent VARCHAR(500)）を持つが、「誰が」の列が無い。また AuditMiddleware が書くのは /api/v1/auth/ 配下と 401/403 だけ（backend/app/middleware/audit.py:34・:37）。保存は90日で、毎日自動で消す（backend/app/tasks/maintenance.py:30、backend/app/celery_app.py:96-99）。tenant の audit_logs は tenant_id と user_id が必須なので、閲覧者には使えない（backend/app/services/audit.py:277-）。
   - 決定：新しい表 public.viewer_login_events に記録する。列は id、viewer_id（viewer_accounts への FK）、event_type、client_ip、user_agent、created_at。client_ip と user_agent の名前と型、保存90日・毎日自動で消すことは、auth_events にそろえる（消す処理は maintenance.py の既存の型にならう）。auth_events には列を足さない（中間処理の全リクエスト記録と、閲覧者の本人の記録とを混ぜないため）。
-  - event_type は4つ：login_requested（リンクを要求した）、session_created（ログインできた）、session_failed（トークンか email が合わなかった。viewer_id が分かる場合だけ）、signup（申込）。viewer_id は NOT NULL にする。閲覧者の行が無いとき（未登録の email への login、トークンが無効で誰のものか分からない session）は記録しない（審査 r6 N-7。その失敗は D1-8 の IP ごとの回数制限だけで数える）。在庫の表示（60秒ごとの取得）は記録しない（行が増えすぎるため。12時間のログインごとに1行で、共有は判断できる）。
+  - event_type は7つ（r13 でパスワード方式に合わせて直した）：login_succeeded（ログインできた）、login_failed（パスワードが合わなかった）、password_changed（本人が変えた）、password_reset_requested（再発行のメールを送った）、password_reset_done（再発行で替えた）、signup（申込）、code_matched（Discord で申込コードが合った。client_ip と user_agent は NULL）。viewer_id は NOT NULL にする。閲覧者の行が無いとき（未登録の email への login、無効なトークンの confirm）は記録しない（審査 r6 N-7。その失敗は D1-8 の IP ごとの回数制限だけで数える）。在庫の表示（60秒ごとの取得）は記録しない（行が増えすぎるため。12時間のログインごとに1行で、共有は判断できる）。
   - IP の取り方は、本設計の回数制限と同じ1つの関数を使う（X-Real-IP）。【事実】既存の _get_client_ip は X-Forwarded-For の先頭を使っている（backend/app/auth/dependencies.py:67-72）。閲覧者ではこれを使わない。理由は D1 の回数制限と同じ（なりすまされない値を使うため）。
   - PO の画面：閲覧者ごとのログイン履歴（日時・IP・端末）を出す。目印を2つ出す。①同じ閲覧者が24時間のうちに3つ以上の別 IP からログインした。②別の閲覧者どうしで同じ IP からログインか申込がある。目印は判断の材料で、自動の停止はしない。
 
 - Q7.【決定 2026-10-15 PO「y」】今のプライバシーポリシーと同じルールにする（lp/src/pages/privacy.astro:209「During account active period」・:219「契約終了後90日以内に削除」）。trial の期限が切れて延長が無いまま90日たった人、または本契約（active）が終わって90日たった人の閲覧者の行と関連の記録を消す。privacy.astro:206-214 の保存期間の表に閲覧者の1行を足す（段4）。消す仕組み（定期実行か専用スクリプトか）と、viewer_status_changes など関連の表の扱いは、段4のカードの前に設計して審査する。以下は質問の原文。LP のプライバシーポリシーに追記するか。**段4の公開と22人の登録の前提。決まるまで段4の公開をしない。**
 - B-7.【決定 2026-10-15 PO「y」】履歴を書き直す。名字を含む作業記録を除いて1つのコミットにまとめ直した PR #4338 に置き換え、#4283 は閉じて古いブランチを消した。以下は質問の原文。（審査 r6）：コミット bf255ae8b・af1d155f7 の追加行に、個人の姓が残っている（push 済み）。merge commit でマージすると main の履歴に残る。履歴を書き直して push し直すか、このまま入れるかは PO 決定待ち。**決まるまで PR #4283 を main にマージしない。** 段1以降の実装カードは、B-7 が決まって #4283（design.md・ADR-1019）が main に入った後に出す（作業ブランチは origin/main から作るため。審査 r8-N-9）。
-- SMTP（計画票 0 の①）：ログインそのものがメールのリンクなので、本番でメールを送れることが段2の本番での利用と段4の公開の前提。**確認できるまで段4の公開をしない。** 使えないときは方式を PO に相談する。
+- SMTP（計画票 0 の①）：r13 でログインはパスワードになり、メールはパスワードの再発行だけに使う。2026-10-16 に5項目を登録し、本番からのテスト送信は SENT。**PO の受信箱での到着の目視が済むまで、段4の公開をしない**（再発行ができないと、パスワードを忘れた人が入れないため）。
 - Q12. Claude の経路（無制限鍵）での閲覧者の操作の GO を、Opus に委任するか。委任するなら、ADR-1003 の改訂か新しい ADR と CLAUDE.md:30 の改訂が要る（別の PR）。委任しないなら、操作は毎回 PO 本人の GO か、PO の画面から PO が行う。
 - ~~Q11~~ → **決定済み：y**（PO「Y」、2026-10-15。保留中は前回の表のまま止める。KGI2 に「保留の間を除く」を足す）。元の問い：（審査 r6 B-1）再解析・抽出の途中（保留）の間、閲覧ページの表をどうするか。
   - 案 y：GAS と同じく前回の表のまま止める（D3 の今の案）。未確定の行を出さない（安全装置 #8 の目的）。そのかわり、保留が続くと「最終更新」が1分より古くなる。KGI2 に「保留の間を除く」を足し、受入条件に「保留でないときは updated_at が60秒以内（本番で curl）」を足す。
@@ -482,7 +535,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
   - 推奨は y（今の GAS の利用者の見え方を変えないため）。
 - Q8.【決定 2026-10-15 PO「Y」】置き場所は app.salesanchor.jp/viewer/ にする。
 - Q9.【決定 2026-10-15 PO「Y」】PO から一覧（22件、メールの重複0件・形式不正0件）を受け取った。個人情報なので、リポジトリと PR には載せず、リポジトリ外の ~/CC報告ファイル-keep/viewer-initial-accounts/initial_active_list.tsv（権限600、項目は申込日時・LINE 名・メールの3つだけ）に置く。登録は段4の公開前に、Q3 の Claude の経路（無制限鍵＋専用スクリプト。migration ではデータを入れない）で行う。登録の前に一覧を PO に見せる。 【訂正 2026-10-15 PO】原文「〇〇さんだけは本契約」（個人名のため伏せた）。active で登録するのは一覧のうち1人（2026/09/28 申込の行）だけ。残り21人（PO「Y」2026-10-15）：状態を trial にし、trial_expires_at を一覧の申込日時（JST）＋14日にして登録する。これで公開の時点では全員が期限切れになり、在庫表は見られない。PO が延長を決めた人から、延長の機能で「記録した時刻＋N日」まで見られるようになる。申込のやり直しは要らない。
-  - 22人とも email_verified_at は NULL のままにする（新しい経路でメール確認をしていないため）。ログイン用リンクを送るかどうかは状態と期限だけで決め、email_verified_at は見ない（D1 の送る相手の条件と同じ）。
+  - 【r13 で直した】22人とも password_argon2_hash・discord_user_id・discord_channel_id は NULL で登録する。最初のパスワードは、本人がログイン画面の「パスワードを忘れた」から再発行のメールで決める（再発行は trial（期限切れを含む）と active に送るので、延長された人も、active の1人も使える）。Discord の受付は通らないので、部屋は無い。
   - 登録用の専用スクリプトは、一覧ファイルを読んで1行ずつ登録する。登録済みの email は飛ばして、件数（登録・飛ばした・失敗）を出す。実行の前に、対象一覧を PO に見せる。
 - ~~Q10~~ →【r9 で解決】4つのうち3つ（複数選択・倍率合わせ・縦カード）は PO の回答 4・8・9 で採用し、便1・便3 で金型に登録済み（MultiSelect、DataTable の fitToWidth・mobileCards）。24時間以内はアプリと同じ Button（aria-pressed）にする（InventoryPage.tsx:443-454）。新しい金型は要らない。以下は元の問い：GAS の画面のうち、金型が無い4つ（24時間以内のスイッチ、コンディション・提供者の複数選択、PC で表を枠に収める倍率合わせ、スマホで行を縦のカードにする表示）をどうするか。推奨は「スイッチと複数選択は金型（Checkbox・MultiSelect）を新しく登録して再現する。倍率合わせは作らず、DataTable の横スクロールで代える。スマホの縦カードは DataTable の金型に表示の型として足す」。金型の登録には PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。PO の 10/14 の発言「原則同じ変更を入れる、ただしスプレッドシートとGASの処理を考えて全部は実装しなくても良い」に照らして、再現しない機能は PO に確認する。
 
