@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '../../components/Button';
+import { TextFieldControl } from '../../components/TextField';
 import { exactSourceLineMatches, parseSourceLineReference, sourceRawLines } from './sourceRawNavigation';
 import './source-raw-pane.css';
 
 export type SourceLineJump = { line: number; requestId: number };
 
 export function SourceRawPane({ sourceMessageId, rawText, itemCount, jump }: { sourceMessageId: string; rawText: string; itemCount: number; jump?: SourceLineJump }) {
+  const { t } = useTranslation();
   const lines = useMemo(() => sourceRawLines(rawText), [rawText]);
   const lineElements = useRef<Record<number, HTMLSpanElement | null>>({});
   const [query, setQuery] = useState('');
@@ -12,7 +16,7 @@ export function SourceRawPane({ sourceMessageId, rawText, itemCount, jump }: { s
   const [highlightLine, setHighlightLine] = useState<number>();
   const lineReference = parseSourceLineReference(query);
   const matches = lineReference ? (lineReference <= lines.length ? [lineReference] : []) : exactSourceLineMatches(lines, query);
-  const status = query && matches.length === 0 ? '該当行がありません' : matches.length > 1 ? `${activeMatch + 1} / ${matches.length}` : '';
+  const status = query && matches.length === 0 ? t('tcgAnalysisReview.sourceRawPane.noMatch') : matches.length > 1 ? `${activeMatch + 1} / ${matches.length}` : '';
   const moveToLine = (line: number) => {
     const element = lineElements.current[line];
     if (!element) return;
@@ -25,7 +29,33 @@ export function SourceRawPane({ sourceMessageId, rawText, itemCount, jump }: { s
     setActiveMatch(index);
     moveToLine(matches[index]);
   };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run only when jump.requestId changes
   useEffect(() => { if (jump) { setQuery(`L${String(jump.line).padStart(4, '0')}`); setActiveMatch(0); moveToLine(jump.line); } }, [jump?.requestId]);
   useEffect(() => { if (!highlightLine) return; const timer = window.setTimeout(() => setHighlightLine(undefined), 2600); return () => window.clearTimeout(timer); }, [highlightLine]);
-  return <aside className="source-raw"><div className="source-raw-pane"><div className="source-meta"><span>原文 1件</span><span>抽出商品 {itemCount}件</span></div><form className="source-search" onSubmit={(event) => { event.preventDefault(); moveToMatch(0); }}><label htmlFor={`source-search-${sourceMessageId}`}>原文検索</label><input id={`source-search-${sourceMessageId}`} value={query} onChange={(event) => { setQuery(event.target.value); setActiveMatch(0); }} placeholder="L0006 または文字列" /><button type="submit">移動</button>{matches.length > 1 && <><button type="button" onClick={() => moveToMatch(activeMatch - 1)}>前へ</button><button type="button" onClick={() => moveToMatch(activeMatch + 1)}>次へ</button></>}<output aria-live="polite">{status}</output></form><div className="raw" aria-label="原文全文">{lines.map((line) => <span key={line.number} ref={(element) => { lineElements.current[line.number] = element; }} data-line-number={line.number} className={highlightLine === line.number ? 'raw-line raw-line-highlight' : 'raw-line'}>{line.text}</span>)}</div></div></aside>;
+  return (
+    <aside className="source-raw">
+      <div className="source-raw-pane">
+        <div className="source-meta"><span>{t('tcgAnalysisReview.sourceRawPane.sourceCount')}</span><span>{t('tcgAnalysisReview.sourceRawPane.extractedItems', { n: itemCount })}</span></div>
+        <form className="source-search" onSubmit={(event) => { event.preventDefault(); moveToMatch(0); }}>
+          <label htmlFor={`source-search-${sourceMessageId}`}>{t('tcgAnalysisReview.sourceRawPane.searchLabel')}</label>
+          <TextFieldControl
+            size="sm"
+            id={`source-search-${sourceMessageId}`}
+            value={query}
+            onChange={(event) => { setQuery(event.target.value); setActiveMatch(0); }}
+            placeholder={t('tcgAnalysisReview.sourceRawPane.searchPlaceholder')}
+          />
+          <Button type="submit" variant="secondary" size="sm">{t('tcgAnalysisReview.sourceRawPane.move')}</Button>
+          {matches.length > 1 && (
+            <>
+              <Button type="button" variant="secondary" size="sm" onClick={() => moveToMatch(activeMatch - 1)}>{t('common.previous')}</Button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => moveToMatch(activeMatch + 1)}>{t('common.next')}</Button>
+            </>
+          )}
+          <output aria-live="polite">{status}</output>
+        </form>
+        <div className="raw" aria-label={t('tcgAnalysisReview.sourceRawPane.rawAriaLabel')}>{lines.map((line) => <span key={line.number} ref={(element) => { lineElements.current[line.number] = element; }} data-line-number={line.number} className={highlightLine === line.number ? 'raw-line raw-line-highlight' : 'raw-line'}>{line.text}</span>)}</div>
+      </div>
+    </aside>
+  );
 }

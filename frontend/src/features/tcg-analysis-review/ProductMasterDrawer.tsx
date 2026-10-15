@@ -14,7 +14,11 @@
  * mark / english_title は配信機能用列（ADR: BE 側で migration 追加予定）。
  */
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { Button } from '../../components/Button';
+import { TextFieldControl } from '../../components/TextField';
+import { TextareaControl } from '../../components/Textarea';
+import { X } from '../../constants/icons';
 import { api } from '../../lib/api';
 import {
   postProductCorrection,
@@ -44,6 +48,7 @@ function SearchSelect({
   value: string;
   onChange: (key: keyof RegistrationValues, value: string) => void;
 }) {
+  const { t } = useTranslation();
   const selected = options.find((o) => o.id === value);
   const listId = `lookup-${lookupKey}`;
   const [query, setQuery] = useState(selected?.name || '');
@@ -51,10 +56,11 @@ function SearchSelect({
   return (
     <label className="pmd-field">
       {label}
-      <input
+      <TextFieldControl
+        size="sm"
         list={listId}
         value={query}
-        placeholder="名称で検索・選択"
+        placeholder={t('tcgAnalysisReview.productMasterDrawer.searchSelectPlaceholder')}
         onChange={(e) => {
           setQuery(e.target.value);
           const match = options.find((o) => o.name === e.target.value);
@@ -71,6 +77,7 @@ function SearchSelect({
 // ── 商品マスタ新規登録フォーム（PRODUCT_MASTER_UNREGISTERED） ─────────────────
 
 function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<RegistrationForm>();
   const [values, setValues] = useState<RegistrationValues>({
     product_kind_id: '',
@@ -158,69 +165,68 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   };
 
   const optionName = (key: string) =>
-    form?.lookups[key]?.find((o) => o.id === values[key as keyof RegistrationValues])?.name || '未選択';
+    form?.lookups[key]?.find((o) => o.id === values[key as keyof RegistrationValues])?.name || t('tcgAnalysisReview.productMasterDrawer.unselected');
 
   if (status === 'saved') {
     return (
       <div className="pmd-result">
-        <strong>商品マスタへの登録が完了しました（次回解析で反映）</strong>
-        <p>商品: {values.japanese_title}</p>
-        <small>発行された商品ID: {issuedProductId}</small>
+        <strong>{t('tcgAnalysisReview.productMasterDrawer.registeredTitle')}</strong>
+        <p>{t('tcgAnalysisReview.productMasterDrawer.product')}: {values.japanese_title}</p>
+        <small>{t('tcgAnalysisReview.productMasterDrawer.issuedProductId')}: {issuedProductId}</small>
       </div>
     );
   }
 
   return (
     <>
-      <h3>商品マスタ新規登録</h3>
+      <h3>{t('tcgAnalysisReview.productMasterDrawer.registerHeading')}</h3>
       {status === 'loading' ? (
-        <p>登録フォームを読み込み中…</p>
+        <p>{t('tcgAnalysisReview.productMasterDrawer.formLoading')}</p>
       ) : (
         <>
           <div className="pmd-fields">
-            <SearchSelect label="大分類" lookupKey="product_kind_id" options={form?.lookups.product_kind_id || []} value={values.product_kind_id} onChange={setValue} />
-            <SearchSelect label="作品" lookupKey="work_id" options={form?.lookups.work_id || []} value={values.work_id} onChange={setValue} />
-            <SearchSelect label="メーカー" lookupKey="manufacturer_id" options={form?.lookups.manufacturer_id || []} value={values.manufacturer_id} onChange={setValue} />
-            <SearchSelect label="商品カテゴリ" lookupKey="product_category_id" options={form?.lookups.product_category_id || []} value={values.product_category_id} onChange={setValue} />
+            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldKind')} lookupKey="product_kind_id" options={form?.lookups.product_kind_id || []} value={values.product_kind_id} onChange={setValue} />
+            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldWork')} lookupKey="work_id" options={form?.lookups.work_id || []} value={values.work_id} onChange={setValue} />
+            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')} lookupKey="manufacturer_id" options={form?.lookups.manufacturer_id || []} value={values.manufacturer_id} onChange={setValue} />
+            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldCategory')} lookupKey="product_category_id" options={form?.lookups.product_category_id || []} value={values.product_category_id} onChange={setValue} />
             <label className="pmd-field">
-              マーク
-              <input value={values.mark} onChange={(e) => setValue('mark', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldMark')}
+              <TextFieldControl size="sm" value={values.mark} onChange={(e) => setValue('mark', e.target.value)} />
             </label>
             <label className="pmd-field">
-              日本語タイトル
-              <input value={values.japanese_title} required onChange={(e) => setValue('japanese_title', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldJapaneseTitle')}
+              <TextFieldControl size="sm" value={values.japanese_title} required onChange={(e) => setValue('japanese_title', e.target.value)} />
             </label>
             <label className="pmd-field">
-              英語タイトル
-              <input value={values.english_title} onChange={(e) => setValue('english_title', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldEnglishTitle')}
+              <TextFieldControl size="sm" value={values.english_title} onChange={(e) => setValue('english_title', e.target.value)} />
             </label>
             <label className="pmd-field">
-              発売日
-              <input type="date" value={values.release_date} onChange={(e) => setValue('release_date', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldReleaseDate')}
+              <TextFieldControl size="sm" type="date" value={values.release_date} onChange={(e) => setValue('release_date', e.target.value)} />
             </label>
             <label className="pmd-field">
-              検索キーワード
-              <textarea value={values.search_keywords} onChange={(e) => setValue('search_keywords', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldSearchKeywords')}
+              <TextareaControl size="sm" value={values.search_keywords} onChange={(e) => setValue('search_keywords', e.target.value)} />
             </label>
             <label className="pmd-field">
-              除外キーワード
-              <textarea value={values.exclude_keywords} onChange={(e) => setValue('exclude_keywords', e.target.value)} />
+              {t('tcgAnalysisReview.productMasterDrawer.fieldExcludeKeywords')}
+              <TextareaControl size="sm" value={values.exclude_keywords} onChange={(e) => setValue('exclude_keywords', e.target.value)} />
             </label>
           </div>
           <section className="pmd-result">
-            <h4>登録内容確認</h4>
-            <p>大分類: {optionName('product_kind_id')}</p>
-            <p>作品: {optionName('work_id')}</p>
-            <p>メーカー: {optionName('manufacturer_id')}</p>
-            <p>商品カテゴリ: {optionName('product_category_id')}</p>
-            <p>マーク: {values.mark || '未入力'}</p>
-            <p>日本語タイトル: {values.japanese_title || '未入力'}</p>
-            <p>英語タイトル: {values.english_title || '未入力'}</p>
+            <h4>{t('tcgAnalysisReview.productMasterDrawer.confirmHeading')}</h4>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldKind')}: {optionName('product_kind_id')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldWork')}: {optionName('work_id')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')}: {optionName('manufacturer_id')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldCategory')}: {optionName('product_category_id')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldMark')}: {values.mark || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldJapaneseTitle')}: {values.japanese_title || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldEnglishTitle')}: {values.english_title || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
           </section>
           {candidates.length > 0 && (
             <section className="pmd-warning">
-              {/* eslint-disable-next-line local/no-japanese-literal -- UI label */}
-              <strong>既存商品の可能性があります（確認してください）</strong>
+              <strong>{t('tcgAnalysisReview.productMasterDrawer.duplicateWarning')}</strong>
               {candidates.map((c) => (
                 <p key={c.product_id}>{c.product_id}: {c.japanese_title}</p>
               ))}
@@ -230,27 +236,30 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
                 />
-                {/* eslint-disable-next-line local/no-japanese-literal -- UI label */}
-                重複候補を確認しました（新規商品です）
+                {t('tcgAnalysisReview.productMasterDrawer.duplicateConfirmed')}
               </label>
             </section>
           )}
-          {error && <p className="pmd-error">登録エラー: {error}</p>}
+          {error && <p className="pmd-error">{t('tcgAnalysisReview.productMasterDrawer.registerError')}: {error}</p>}
           <div className="pmd-actions">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               disabled={!required || status === 'checking' || status === 'saving'}
               onClick={checkDuplicates}
             >
-              {status === 'checking' ? '確認中…' : '重複候補を確認'}
-            </button>
-            <button
+              {status === 'checking' ? t('tcgAnalysisReview.productMasterDrawer.checking') : t('tcgAnalysisReview.productMasterDrawer.checkDuplicates')}
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               disabled={!required || (candidates.length > 0 && !confirmed) || status === 'saving'}
               onClick={save}
             >
-              {status === 'saving' ? '登録中…' : '商品マスタに登録'}
-            </button>
+              {status === 'saving' ? t('tcgAnalysisReview.productMasterDrawer.saving') : t('tcgAnalysisReview.productMasterDrawer.register')}
+            </Button>
           </div>
         </>
       )}
@@ -261,6 +270,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
 // ── 検索ワード追記セクション（PRODUCT_ID_UNRESOLVED） ────────────────────────
 
 function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(item.gemini.name || '');
   const [candidates, setCandidates] = useState<SearchCandidate[]>([]);
   const [searching, setSearching] = useState(false);
@@ -292,10 +302,10 @@ function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
           setAddStatus('saved');
         } else if (result.code === 'KEYWORD_ALREADY_EXISTS') {
           setAddStatus('idle');
-          setAddError('このキーワードはすでに登録済みです。');
+          setAddError(t('tcgAnalysisReview.productMasterDrawer.keywordExists'));
         } else {
           setAddStatus('error');
-          setAddError('追記に失敗しました。');
+          setAddError(t('tcgAnalysisReview.productMasterDrawer.keywordAddFailed'));
         }
       })
       .catch((reason: unknown) => {
@@ -307,57 +317,66 @@ function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
   if (addStatus === 'saved') {
     return (
       <div className="pmd-result">
-        <strong>検索キーワードを追記しました（次回解析で反映）</strong>
-        <p>商品: {selected?.japanese_title}</p>
-        <small>追記したキーワード: {item.gemini.name}</small>
+        <strong>{t('tcgAnalysisReview.productMasterDrawer.keywordAddedTitle')}</strong>
+        <p>{t('tcgAnalysisReview.productMasterDrawer.product')}: {selected?.japanese_title}</p>
+        <small>{t('tcgAnalysisReview.productMasterDrawer.addedKeyword')}: {item.gemini.name}</small>
       </div>
     );
   }
 
   return (
     <>
-      <h3>マスタ検索・検索キーワード追記</h3>
-      <p>Gemini抽出名「<strong>{item.gemini.name || '未取得'}</strong>」を既存商品の検索キーワードに追記します。</p>
+      <h3>{t('tcgAnalysisReview.productMasterDrawer.keywordHeading')}</h3>
+      <p>
+        <Trans
+          i18nKey={'tcgAnalysisReview.productMasterDrawer.keywordIntro'}
+          values={{ name: item.gemini.name || t('tcgAnalysisReview.productMasterDrawer.notAvailable') }}
+          components={{ strong: <strong /> }}
+          tOptions={{ interpolation: { escapeValue: true } }}
+          shouldUnescape
+        />
+      </p>
       <div className="pmd-fields">
         <label className="pmd-field">
-          商品名で検索
-          <input
+          {t('tcgAnalysisReview.productMasterDrawer.searchByName')}
+          <TextFieldControl
+            size="sm"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="商品名を入力"
+            placeholder={t('superAdmin.supplierQuality.productAssign.searchPlaceholder')}
           />
         </label>
       </div>
       <div className="pmd-actions">
-        <button type="button" disabled={!query.trim() || searching} onClick={search}>
-          {searching ? '検索中…' : 'マスタを検索'}
-        </button>
+        <Button type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
+          {searching ? t('superAdmin.supplierQuality.productAssign.searching') : t('tcgAnalysisReview.productMasterDrawer.searchMaster')}
+        </Button>
       </div>
       {candidates.length === 0 && !searching && (
-        <p className="pmd-note">検索結果なし</p>
+        <p className="pmd-note">{t('superAdmin.supplierQuality.productAssign.noResults')}</p>
       )}
       {candidates.map((c) => (
         <div
           key={c.product_id}
           className={`pmd-search-candidate${selected?.product_id === c.product_id ? ' pmd-search-candidate--selected' : ''}`}
         >
-          <button type="button" onClick={() => setSelected(c === selected ? undefined : c)}>
-            <strong>{c.product_id}</strong> {c.japanese_title}
-          </button>
-          {c.search_keywords && <small>現在の検索KW: {c.search_keywords}</small>}
+          <Button type="button" variant="ghost" size="md" layoutClassName="pmd-candidate-btn" onClick={() => setSelected(c === selected ? undefined : c)}>
+            <span><strong>{c.product_id}</strong> {c.japanese_title}</span>
+          </Button>
+          {c.search_keywords && <small>{t('tcgAnalysisReview.productMasterDrawer.currentKeywords')}: {c.search_keywords}</small>}
         </div>
       ))}
       {selected && (
         <>
           <div className="pmd-result">
-            <p>選択中: <strong>{selected.japanese_title}</strong></p>
-            <p>追記するキーワード: <strong>{item.gemini.name}</strong></p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.selected')}: <strong>{selected.japanese_title}</strong></p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.keywordToAdd')}: <strong>{item.gemini.name}</strong></p>
           </div>
           {addError && <p className="pmd-error">{addError}</p>}
           <div className="pmd-actions">
-            <button type="button" disabled={addStatus === 'saving'} onClick={addKeyword}>
-              {addStatus === 'saving' ? '追記中…' : 'キーワードを追記'}
-            </button>
+            <Button type="button" variant="primary" size="md" disabled={addStatus === 'saving'} onClick={addKeyword}>
+              {addStatus === 'saving' ? t('tcgAnalysisReview.productMasterDrawer.adding') : t('tcgAnalysisReview.productMasterDrawer.addKeyword')}
+            </Button>
           </div>
         </>
       )}
@@ -368,13 +387,14 @@ function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
 // ── 除外対象表示セクション（EXCLUDED） ─────────────────────────────────────
 
 function ExcludedSection({ item }: { item: AnalysisReviewItem }) {
+  const { t } = useTranslation();
   return (
     <div className="pmd-warning">
-      <h3>除外対象</h3>
-      <p>この商品は商品マスタの除外キーワードに一致したため、解析から除外されています。</p>
-      <p>Gemini抽出名: <strong>{item.gemini.name || '未取得'}</strong></p>
-      <p>除外キーワードの確認・変更は 商品マスタV2 シートの Exclude Keywords 列から直接行ってください。</p>
-      <small>（編集機能は今後のリリースで追加予定）</small>
+      <h3>{t('reviewIssues.excluded')}</h3>
+      <p>{t('tcgAnalysisReview.productMasterDrawer.excludedBody')}</p>
+      <p>{t('tcgAnalysisReview.productMasterDrawer.geminiName')}: <strong>{item.gemini.name || t('tcgAnalysisReview.productMasterDrawer.notAvailable')}</strong></p>
+      <p>{t('tcgAnalysisReview.productMasterDrawer.excludedHowTo')}</p>
+      <small>{t('tcgAnalysisReview.productMasterDrawer.editLater')}</small>
     </div>
   );
 }
@@ -445,7 +465,8 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
       <div className="pmd-fields">
         <label className="pmd-field">
           {t('superAdmin.supplierQuality.productAssign.searchPlaceholder')}
-          <input
+          <TextFieldControl
+            size="sm"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
@@ -454,9 +475,9 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
         </label>
       </div>
       <div className="pmd-actions">
-        <button type="button" disabled={!query.trim() || searching} onClick={search}>
+        <Button type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
           {searching ? t('superAdmin.supplierQuality.productAssign.searching') : t('superAdmin.supplierQuality.productAssign.searchBtn')}
-        </button>
+        </Button>
       </div>
       {candidates.length === 0 && !searching && query && (
         <p className="pmd-note">{t('superAdmin.supplierQuality.productAssign.noResults')}</p>
@@ -466,20 +487,20 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
           key={c.product_uuid}
           className={`pmd-search-candidate${selected?.product_uuid === c.product_uuid ? ' pmd-search-candidate--selected' : ''}`}
         >
-          <button type="button" onClick={() => setSelected(c === selected ? undefined : c)}>
-            <strong>{c.product_id}</strong>  {c.japanese_title}
-          </button>
+          <Button type="button" variant="ghost" size="md" layoutClassName="pmd-candidate-btn" onClick={() => setSelected(c === selected ? undefined : c)}>
+            <span><strong>{c.product_id}</strong>  {c.japanese_title}</span>
+          </Button>
           {c.search_keywords && <small>{c.search_keywords}</small>}
         </div>
       ))}
       {error && <p className="pmd-error">{error}</p>}
       <div className="pmd-actions">
-        <button type="button" disabled={!selected || busy} onClick={changeProduct}>
+        <Button type="button" variant="primary" size="md" disabled={!selected || busy} onClick={changeProduct}>
           {status === 'changing' ? t('superAdmin.supplierQuality.productAssign.changing') : t('superAdmin.supplierQuality.productAssign.changeBtn')}
-        </button>
-        <button type="button" disabled={!item.system.product_uuid || busy} onClick={markConfirmed}>
+        </Button>
+        <Button type="button" variant="secondary" size="md" disabled={!item.system.product_uuid || busy} onClick={markConfirmed}>
           {status === 'confirming' ? t('superAdmin.supplierQuality.productAssign.confirming') : t('superAdmin.supplierQuality.productAssign.confirmBtn')}
-        </button>
+        </Button>
       </div>
     </>
   );
@@ -498,13 +519,16 @@ function MasterMaintenanceSection({ item, onSaved }: { item: AnalysisReviewItem;
 // ── ドロワー本体 ──────────────────────────────────────────────────────────────
 
 export function ProductMasterDrawer({ item, onClose, onSaved }: { item: AnalysisReviewItem; onClose: () => void; onSaved?: () => void }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="pmd-backdrop" onClick={onClose} />
-      <aside className="pmd-drawer" aria-label="商品マスタメンテナンス">
+      <aside className="pmd-drawer" aria-label={t('tcgAnalysisReview.productMasterDrawer.drawerAriaLabel')}>
         <div className="pmd-head">
-          <h2>{item.gemini.name || '商品マスタ修正'}</h2>
-          <button type="button" onClick={onClose} aria-label="閉じる">×</button>
+          <h2>{item.gemini.name || t('tcgAnalysisReview.productMasterDrawer.drawerTitleFallback')}</h2>
+          <Button type="button" variant="ghost" size="md" iconOnly aria-label={t('common.close')} onClick={onClose}>
+            <X size={20} aria-hidden="true" />
+          </Button>
         </div>
         <div className="pmd-body">
           <MasterMaintenanceSection item={item} onSaved={onSaved} />
