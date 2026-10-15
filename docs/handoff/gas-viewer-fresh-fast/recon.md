@@ -59,7 +59,7 @@
 - repo 内で UrlFetchApp を使うのは `docs/feedback_form_to_github.gs:127,219,254` のみ。宛先は GitHub API と Discord webhook で、api.salesanchor.jp ではない（同ファイルに api.salesanchor の記述 0件）。トークンは ScriptProperties（`docs/feedback_form_to_github.gs:27,190`）。在庫一覧 GAS には UrlFetchApp も PropertiesService も無い（Code.js 全文）。
 - バックエンド側に「匿名向け API をトークンで守る」GAS 専用の前例は無い。近い既存の仕組み:
   - 端末トークン: `backend/app/routers/line_import_devices.py:15,64-65` の HTTPBearer、`backend/app/services/line_import_devices.py:89-111`（token_hash 照合・scope・失効・有効期限 90日）。用途は LINE 取り込み専用で super admin 所有の端末のみ。
-  - Bot API キー: `backend/app/routers/bots.py:55-59`（`botkey_` + bcrypt）。発行・ローテートはあるが、検証側の dependency は backend/app 内に見つからない（`git grep api_key_hash` は bots.py, schemas/bot.py, services/tenant.py:675 のみ）。
+  - Bot API キー: `backend/app/routers/bots.py:55-59`（`botkey_` + bcrypt）。発行・ローテートはあるが、検証側の dependency は backend/app 内に見つからない（`git grep api_key_hash` は bots.py, schemas/bot.py, backend/app/services/tenant.py:675 のみ）。
   - スモーク用: `backend/app/auth/dependencies.py:38-41,140-150`（SMOKE_SERVICE_TOKEN、compare_digest。CI 専用）。
 - 既存の在庫読み出し口: `GET /inventory`（`backend/app/routers/inventory_offers.py:282-287`）は `require_permission("products.view")`＝ログインユーザー必須。匿名では呼べない。
 - ADR: GAS／UrlFetch／service token／api key を扱う外部連携トークン方式の ADR は見つからなかった（`git grep -il` で docs/adr を検索。ヒットは ADR-154 等の「GAS 解析の移植」で別件。docs/adr/FEATURE-INDEX.md に該当行なし）。
@@ -175,7 +175,7 @@
 
 ### 6. 軽いページの置き場所
 【事実】
-- (a) app.salesanchor.jp の React: `/` は frontend コンテナに proxy（nginx/nginx.conf:237-238）、`/api/` は backend（:151-155）。本番 index は `/assets/index-wkjOFFUl.js` **2,577,818 byte**（圧縮なし。Content-Encoding 無し、`curl -I -H 'Accept-Encoding: gzip, br'` で content-length 2577818 のまま。/tmp/CC報告ファイル/viewer_recon/bundle_headers.txt）＋ CSS 301,247 byte（bundle_sizes.txt）。ブラウザ側キャッシュは max-age=31536000 immutable（2回目以降は読み込み不要。初回のみ重い）。コード分割: `React.lazy`/`import()` は frontend/src 全体で16行のみ、App.tsx:154-158 のルートは通常 import（lazy 0件）＝ほぼ分割されていない。公開ルートは /login, /register 等（App.tsx:154-158）。CSP は script-src 'self'（外部 JS 不可）。
+- (a) app.salesanchor.jp の React: `/` は frontend コンテナに proxy（nginx/nginx.conf:237-238）、`/api/` は backend（:151-155）。本番 index は `https://app.salesanchor.jp/assets/index-wkjOFFUl.js` **2,577,818 byte**（圧縮なし。Content-Encoding 無し、`curl -I -H 'Accept-Encoding: gzip, br'` で content-length 2577818 のまま。/tmp/CC報告ファイル/viewer_recon/bundle_headers.txt）＋ CSS 301,247 byte（bundle_sizes.txt）。ブラウザ側キャッシュは max-age=31536000 immutable（2回目以降は読み込み不要。初回のみ重い）。コード分割: `React.lazy`/`import()` は frontend/src 全体で16行のみ、App.tsx:154-158 のルートは通常 import（lazy 0件）＝ほぼ分割されていない。公開ルートは /login, /register 等（App.tsx:154-158）。CSP は script-src 'self'（外部 JS 不可）。
 - (b) backend が HTML を直接返す: `/api/` は backend へ proxy（nginx.conf:151-155）。api.salesanchor.jp も同様（:347-351）。FastAPI で HTMLResponse を返せば bundle 無しで可。Redis にそのまま HTML 文字列を置ける。nginx の `limit_req zone=api` 30r/s が掛かる。
 - (c) Astro LP: salesanchor.jp は nginx が静的ファイルを配信（root /var/www/salesanchor、nginx.conf:457,461-476）。静的なので閲覧の表（動的データ）は JS で API から取るしかない。LP の CORS・CSP は未確認。
 - nginx の `location = /design` のように専用パスを切る前例あり（nginx.conf:211-223）。

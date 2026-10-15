@@ -121,7 +121,7 @@
 - auth/dependencies.py:242 get_current_tenant: DB の user.tenant_id から `tenant_{id:03d}` を作り :280 SET search_path={schema}, public、:283 SET app.tenant_id、:287 app.is_operator=''。get_db が finally で解除 (database.py:46-61)。アプリDB接続は NOBYPASSRLS ロール（dependencies.py コメント）。スキーマ存在の確認は無い。get_current_tenant を使わない login_only 系は search_path 未設定。
 - RLS 付き public 表は5つ: products (migrations/20260626_130000_force_rls_public_products.sql:5-14; SELECT は tenant_id IS NULL OR 自テナント)、app_fx_rates、app_fx_rate_history、tenant_features、translation_glossary。
 - `public.` 明示 CREATE TABLE 88 表中 RLS 無しは 83（public_tables_rls.tsv）: analysis_results, extraction_items/jobs, source_messages(LINE原文), suppliers, supplier_channels, supplier_aliases, inventory, inventory_movements, buyback_*, audit_log, auth_events, auth_refresh_tokens, password_reset_tokens, webauthn_credentials, registration_tokens, tenant_discord_config, meta_page_routing, llm_usage_events, line_import_devices, user_inventory_filters, permissions, countries ほか。
-- tenantスキーマ側 (services/tenant.py) 41表中36表が RLS（policy: tenant_id = current_setting('app.tenant_id') tenant.py:1240-1248）。無し: close_reasons, deal_close_reasons, goals, lead_channels, tenant_profile。
+- tenantスキーマ側 (backend/app/services/tenant.py) 41表中36表が RLS（policy: tenant_id = current_setting('app.tenant_id') tenant.py:1240-1248）。無し: close_reasons, deal_close_reasons, goals, lead_channels, tenant_profile。
 - 共通 products 行 (tenant_id IS NULL) は全テナントに見える。配信行(/inventoryの元)は pipeline 表で全テナント同一内容。
 【推測】tenant_002 のスキーマが無い場合 search_path が public に落ち、public にも products/suppliers 同名表があるため意図しない表を読む恐れ（未検証）。
 
@@ -131,7 +131,7 @@
 - JWT claims は iss/sub/email/jti/iat/exp のみで role/tenant を載せない (services/self_tokens.py:86-98)。検証は DB の is_active/email一致/password_changed_at (dependencies.py:86-113)。Firebase 経路は tenant_id クレームを DB と照合し不一致は 403 (:229-231)。→ トークンの書換えによる権限偽装の経路は見つからない。
 - テナント切替ヘッダー無し（X-Tenant 系 grep 0件）。tenant_id をパス/ボディで受けるのは super-admin 系のみ。
 - super admin は public.users.is_super_admin のみで判定 (require_super_admin :491-519)。
-- 注意点: POST /auth/register (routers/auth.py:38, super admin専用) は作成時に既定ロール "CS" を自動付与 (auth.py:115-135, services/tenant.py:125-146, :189)。CS は customers/leads/deals/orders/quotes/invoices/shipping/reports/dashboard の view 等を含む。閲覧専用にするには作成後に CS を外し products.view のみのロールへ付け替えが必須（初期値が開く側）。権限キャッシュ5分のため変更反映に遅延。
+- 注意点: POST /auth/register (routers/auth.py:38, super admin専用) は作成時に既定ロール "CS" を自動付与 (auth.py:115-135, backend/app/services/tenant.py:125-146, :189)。CS は customers/leads/deals/orders/quotes/invoices/shipping/reports/dashboard の view 等を含む。閲覧専用にするには作成後に CS を外し products.view のみのロールへ付け替えが必須（初期値が開く側）。権限キャッシュ5分のため変更反映に遅延。
 - 気になる点: スモーク用サービストークンのバイパス (dependencies.py:136-155、環境変数設定時のみ有効)。X-Forwarded-For をそのまま信用して IP 決定 (dependencies.py:67-75, rate_limit.py:54, session_guard.py:59, audit.py:66)。rate_limit は JWT を署名検証せずバケットキーに使用 (rate_limit.py:39-)。
 - 「全エンドポイントに権限必須」を強制する CI テストは見つからない。
 
