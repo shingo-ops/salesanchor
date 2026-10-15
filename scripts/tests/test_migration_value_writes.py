@@ -24,6 +24,10 @@ BEGIN
     INSERT INTO public.permissions (key) VALUES ('a.b');
 END $$;
 """
+POLICY_ONLY = (
+    "DROP POLICY IF EXISTS permissions_read ON public.permissions;\n"
+    "CREATE POLICY permissions_read ON public.permissions FOR SELECT USING (true);\n"
+)
 NEUTRALIZED = """-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 権限キーの INSERT を外した。
 DO $$ BEGIN RAISE NOTICE 'neutralized'; END $$;
 """
@@ -121,6 +125,20 @@ class DiffMode(unittest.TestCase):
     def test_added_structure_change_passes_check8(self) -> None:
         self.repo.write("migrations/20260101_000000_a.sql", VALUE_WRITING + STRUCTURE_ONLY)
         self.assertEqual(self.diff("8").returncode, 0)
+
+    def test_added_policy_on_protected_table_passes_check8(self) -> None:
+        self.repo.write(
+            "migrations/20260101_000000_a.sql",
+            VALUE_WRITING + POLICY_ONLY,
+        )
+        self.assertEqual(self.diff("8").returncode, 0)
+
+    def test_added_policy_plus_insert_fails_check7(self) -> None:
+        self.repo.write(
+            "migrations/20260101_000000_a.sql",
+            VALUE_WRITING + POLICY_ONLY + "INSERT INTO public.permissions (key) VALUES ('c.d');\n",
+        )
+        self.assertEqual(self.diff("7").returncode, 1)
 
     def test_new_file_with_insert_fails_and_structure_only_passes(self) -> None:
         self.repo.write("migrations/20260102_000000_b.sql", VALUE_WRITING)
