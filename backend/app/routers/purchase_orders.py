@@ -55,7 +55,7 @@ async def _get_po_items(db: AsyncSession, po_id: int) -> list[dict]:
     return [dict(row) for row in result.mappings().all()]
 
 
-async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int) -> int:
+async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int, tenant_id: int) -> int:
     """発注モーダルの仕入元プルダウンは中央カタログ public.suppliers の id を送る。
 
     PO は tenant.suppliers への FK を持つため、選択された public 仕入元を
@@ -102,14 +102,14 @@ async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int) -> int
     if existing is not None:
         return existing[0]
 
-    # 無ければ tenant.suppliers に複製（tenant_id は schema 既定値で補完される）
+    # 無ければ自社の仕入元として複製（tenant_id を明示。共通行にすると RLS で拒否される: ADR-1018 段階②b）
     new_id = (await db.execute(
         text(
-            "INSERT INTO suppliers (supplier_code, name, contact_name, email, phone, address, notes, is_active) "
-            "VALUES (:code, :name, :contact, :email, :phone, :address, :notes, TRUE) RETURNING id"
+            "INSERT INTO suppliers (tenant_id, supplier_code, name, contact_name, email, phone, address, notes, is_active) "
+            "VALUES (:tenant_id, :code, :name, :contact, :email, :phone, :address, :notes, TRUE) RETURNING id"
         ),
         {
-            "code": pub["supplier_code"], "name": pub["name"], "contact": pub["contact_name"],
+            "tenant_id": tenant_id, "code": pub["supplier_code"], "name": pub["name"], "contact": pub["contact_name"],
             "email": pub["email"], "phone": pub["phone"], "address": pub["address"], "notes": pub["notes"],
         },
     )).scalar_one()
@@ -171,7 +171,7 @@ async def create_po(
     tenant.suppliers へ複製してから FK を満たす（Option A）。
     """
     # 中央カタログ → tenant.suppliers へ解決（必要なら複製）
-    resolved_supplier_id = await _resolve_tenant_supplier_id(db, data.supplier_id)
+    resolved_supplier_id = await _resolve_tenant_supplier_id(db, data.supplier_id, tenant_id)
 
     total = sum(item.quantity * item.unit_cost for item in data.items)
 

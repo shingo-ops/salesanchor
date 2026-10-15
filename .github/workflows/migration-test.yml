@@ -943,6 +943,12 @@ jobs:
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
 
+      # public.suppliers.tenant_id: migrations/20260918_030000_supplier_ssot_phase2.sql:52 で本番追加済み。
+      #   Sprint 1（056-063）の suppliers には tenant_id が無く、20261016_020000_add_suppliers_rls.sql（S1 段階②b）の前提として追加する。
+      - name: suppliers.tenant_id を最小定義で追加（本番 phase2 相当）
+        run: |
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF to_regclass('public.suppliers') IS NOT NULL THEN ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS tenant_id INTEGER; END IF; END \$\$;"
+
       # ── Step 3: PR で変更されたマイグレーションスクリプトを実行 ──────────────────
       - name: 変更されたマイグレーションを検出
         id: detect
@@ -1604,6 +1610,12 @@ jobs:
           else
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
+
+      # public.suppliers.tenant_id: migrations/20260918_030000_supplier_ssot_phase2.sql:52 で本番追加済み。
+      #   Sprint 1（056-063）の suppliers には tenant_id が無く、20261016_020000_add_suppliers_rls.sql（S1 段階②b）の前提として追加する。
+      - name: suppliers.tenant_id を最小定義で追加（本番 phase2 相当）
+        run: |
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF to_regclass('public.suppliers') IS NOT NULL THEN ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS tenant_id INTEGER; END IF; END \$\$;"
 
       # ── 廃止列前提検出: run_all_migrations.sh に登録された Python スクリプトを静的解析 ──
       # ADR-138 §D1-3 で廃止された leads.source 列を information_schema ガードなしで
