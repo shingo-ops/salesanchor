@@ -4,21 +4,17 @@ from __future__ import annotations
 ADR-110: 翻訳バックグラウンドタスク（Celery）。
 
 3点セットの「本体」担当:
-  - 未処理受信メッセージ（translated_text = NULL）を定期バッチ翻訳
+  - 受信メッセージの単発翻訳（定期バッチ翻訳は 2026-10 に廃止。docs/handoff/celery-unregistered-tasks/design.md）
   - 3点セットの「状態検証」担当: 未処理件数チェック
   - 3点セットの「監視/通知」担当: 翻訳異常を Discord 通知
 """
 
 import logging
 
-from app.auth.dependencies import clear_tenant_context, reset_tenant_context, set_tenant_context
+from app.auth.dependencies import clear_tenant_context, set_tenant_context
 from app.celery_app import celery_app
-from app.services.llm_errors import LLMConfigError, LLMParseError
 
 logger = logging.getLogger(__name__)
-
-# 1 回のバッチで処理する最大件数
-_BATCH_SIZE = 20
 
 
 @celery_app.task(
@@ -121,143 +117,6 @@ async def _run_translate_inbound_message(
 
 
 @celery_app.task(
-    name="app.tasks.translation.translate_pending_messages",
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-)
-def translate_pending_messages(self: object) -> dict:
-    """未処理の受信メッセージを一括翻訳するバッチタスク。
-
-    各テナントの inbound メッセージについて、新ルールに基づき
-    必要な target_language が欠けているものだけ補完する。
-    失敗は non-fatal でスキップ（ADR-110 受け入れ条件 9）。
-    """
-    import asyncio
-
-    from app.database import engine
-
-    try:
-        return asyncio.run(_run_batch())
-    finally:
-        # Celery fork-pool は asyncio.run() を呼ぶたびに新ループを生成する。
-        # asyncpg 接続プールはループに紐づいた asyncio.Lock/Event を保持するため、
-        # ループ close 後も古いオブジェクトがプールに残り次回タスクで
-        # "Future attached to a different loop" を起こす（recon.md A-1）。
-        # engine.dispose() でプール接続を全破棄してから終了することで回避する。
-        asyncio.run(engine.dispose())
-
-
-async def _run_batch() -> dict:
-    from app.database import AsyncSessionLocal
-    from app.services.message_translator import (
-        BudgetExceededError,
-        ensure_inbound_translations,
-        get_existing_inbound_translation_targets,
-        get_required_inbound_targets,
-    )
-
-    processed = 0
-    skipped = 0
-    failed = 0
-
-    async with AsyncSessionLocal() as db:
-        # 全テナントの処理待ちメッセージを取得
-        from sqlalchemy import text
-
-        # テナント一覧
-        tenants_result = await db.execute(
-            text(
-                "SELECT t.id "
-                "FROM public.tenants t "
-                "WHERE t.is_active = true "
-                "ORDER BY t.id"
-            )
-        )
-        tenants = tenants_result.fetchall()
-
-        for tenant_row in tenants:
-            tenant_id = int(tenant_row[0])
-            schema_name = f"tenant_{tenant_id:03d}"
-            meta_t = f"{schema_name}.meta_messages"
-            trans_t = f"{schema_name}.message_translations"
-
-            await set_tenant_context(db, tenant_id)
-            try:
-                # 未翻訳の受信メッセージを取得
-                result = await db.execute(
-                    text(
-                        f"SELECT m.message_id, m.message_text "
-                        f"FROM {meta_t} m "
-                        f"WHERE m.direction = 'inbound' "
-                        f"  AND m.message_text IS NOT NULL AND m.message_text <> '' "
-                        f"  AND NOT EXISTS ( "
-                        f"      SELECT 1 FROM {trans_t} t "
-                        f"      WHERE t.message_id = m.message_id "
-                        f"        AND t.target_language = 'ja' "
-                        f"  ) "
-                        f"ORDER BY m.created_at ASC "
-                        f"LIMIT :limit"
-                    ),
-                        {"limit": _BATCH_SIZE},
-                )
-                rows = result.fetchall()
-
-                for message_id, message_text in rows:
-                    try:
-                        existing_targets, ja_original_language = await get_existing_inbound_translation_targets(
-                            db,
-                            trans_t,
-                            str(message_id),
-                        )
-                        required_targets = get_required_inbound_targets(
-                            str(message_text),
-                            ja_original_language,
-                        )
-                        if required_targets.issubset(existing_targets):
-                            continue
-                        await ensure_inbound_translations(
-                            db=db,
-                            tenant_id=tenant_id,
-                            table_ref=trans_t,
-                            message_id=str(message_id),
-                            message_text=str(message_text),
-                        )
-                        processed += 1
-                    except BudgetExceededError:
-                        logger.info(
-                            "[translation_task] budget exceeded for tenant %s, skip remaining",
-                            tenant_id,
-                        )
-                        # 残メッセージをスキップとしてカウント
-                        remaining = len(rows) - rows.index((message_id, message_text)) - 1
-                        skipped += remaining
-                        break
-                    except (LLMConfigError, LLMParseError) as exc:
-                        logger.warning(
-                            "[translation_task] non-fatal error message_id=%s: %s",
-                            message_id, exc,
-                        )
-                        failed += 1
-                    except Exception as exc:
-                        logger.exception(
-                            "[translation_task] unexpected error message_id=%s: %s",
-                            message_id, exc,
-                        )
-                        failed += 1
-                    finally:
-                        await reset_tenant_context(db, tenant_id)
-            finally:
-                await clear_tenant_context(db)
-
-    logger.info(
-        "[translation_task] batch done: processed=%d skipped=%d failed=%d",
-        processed, skipped, failed,
-    )
-    return {"processed": processed, "skipped": skipped, "failed": failed}
-
-
-@celery_app.task(
     name="app.tasks.translation.check_translation_health",
     bind=True,
 )
@@ -270,7 +129,7 @@ def check_translation_health_task(self: object) -> dict:
     try:
         return asyncio.run(_run_health_check())
     finally:
-        # translate_pending_messages と同様の EventLoop クラッシュ対策（recon.md A-1）。
+        # Celery fork-pool の EventLoop 再利用で起きる "Future attached to a different loop" 対策（recon.md A-1）。
         asyncio.run(engine.dispose())
 
 

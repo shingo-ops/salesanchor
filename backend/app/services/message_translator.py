@@ -151,21 +151,6 @@ def infer_original_language(text: str) -> str | None:
     return None
 
 
-def get_required_inbound_targets(
-    text: str,
-    original_language_hint: str | None = None,
-) -> set[str]:
-    """受信文の保存済み翻訳から、必要な target_language を返す。"""
-    signals = detect_inbound_language(text)
-    if signals.has_kana and not signals.has_latin_word:
-        return {"en"}
-    if signals.has_kana and signals.has_latin_word:
-        return {"ja", "en"}
-    if (original_language_hint or "").strip().lower() == "en":
-        return {"ja"}
-    return {"ja", "en"}
-
-
 # ---------------------------------------------------------------------------
 # DB cache (inbound translations)
 # ---------------------------------------------------------------------------
@@ -190,33 +175,6 @@ async def _get_cached_translation(
     if row:
         return str(row[0]), row[1], row[2]
     return None
-
-
-async def get_existing_inbound_translation_targets(
-    db: AsyncSession,
-    table_ref: str,
-    message_id: str,
-) -> tuple[set[str], str | None]:
-    """保存済み翻訳の target_language 群と、ja 行の original_language を返す。"""
-    result = await db.execute(
-        text(
-            f"SELECT target_language, original_language "
-            f"FROM {table_ref} "
-            "WHERE message_id = :message_id"
-        ),
-        {"message_id": message_id},
-    )
-    targets: set[str] = set()
-    ja_original_language: str | None = None
-    for target_language, original_language in result.fetchall():
-        # target_language は保存時に一意、ja 行の original_language はバッチ判定に使う。
-        if target_language is None:
-            continue
-        target = str(target_language).strip().lower()[:10]
-        targets.add(target)
-        if target == "ja" and original_language is not None:
-            ja_original_language = str(original_language).strip().lower()[:10]
-    return targets, ja_original_language
 
 
 async def _save_translation(

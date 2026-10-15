@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.discord_gateway import ticket_channel_writer
-from app.tasks.translation import _run_batch, _run_translate_inbound_message, translate_inbound_message
+from app.tasks.translation import _run_translate_inbound_message, translate_inbound_message
 
 
 class _DBContext:
@@ -189,42 +189,3 @@ async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation(
     assert session.commit.await_count == 0
     enqueue_mock.assert_not_called()
     publish_mock.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_batch_skips_completed_messages_and_translates_only_missing():
-    session = AsyncMock()
-    tenants_result = MagicMock()
-    tenants_result.fetchall.return_value = [(7,)]
-    messages_result = MagicMock()
-    messages_result.fetchall.return_value = [
-        ("mid-ja", "こんにちは"),
-        ("mid-en", "Hello stock"),
-        ("mid-es", "Hola stock"),
-    ]
-    session.execute = AsyncMock(side_effect=[tenants_result, messages_result])
-
-    missing_result = MagicMock(
-        cached=False,
-        engine="gemini-1.5-flash",
-        confidence=0.97,
-        translated_text="translated",
-    )
-
-    with patch("app.database.AsyncSessionLocal", return_value=_DBContext(session)), patch(
-        "app.services.message_translator.get_existing_inbound_translation_targets",
-        AsyncMock(side_effect=[
-            ({"en"}, "ja"),
-            ({"ja"}, "en"),
-            ({"ja"}, "es"),
-        ]),
-    ), patch(
-        "app.services.message_translator.ensure_inbound_translations",
-        AsyncMock(return_value={"en": missing_result}),
-    ) as ensure_mock:
-        result = await _run_batch()
-
-    assert result["processed"] == 1
-    assert result["failed"] == 0
-    assert ensure_mock.await_count == 1
-    assert ensure_mock.await_args.kwargs["message_id"] == "mid-es"
