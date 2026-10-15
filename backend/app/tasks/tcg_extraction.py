@@ -693,6 +693,16 @@ def schedule_distribution() -> bool:
     return True
 
 
+def _publish_review_changed() -> None:
+    """ADR-1016: 要確認の一覧が変わったことを合図する。失敗しても仕事は失敗させない。"""
+    try:
+        from app.realtime.publisher import publish_change_sync
+
+        publish_change_sync("tcg.review", "global")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] realtime publish skipped: %s", exc)
+
+
 def reanalyze_v102_job(extraction_job_id: str) -> dict:
     """v102 の投稿のシステム段をやり直し（Gemini は呼ばない）、配信を予約する。v6 の投稿・投稿なしは何もしない。"""
     session = _get_sync_session()
@@ -707,6 +717,7 @@ def reanalyze_v102_job(extraction_job_id: str) -> dict:
         session.commit()
     finally:
         session.close()
+    _publish_review_changed()
     return {
         "extraction_job_id": extraction_job_id, "status": "reanalyzed", "analysis_stats": stats,
         "scheduled": schedule_distribution(),
@@ -779,7 +790,9 @@ try:
         Redis 起動時のみ .delay() で非同期実行可能。
         """
         try:
-            return extract_and_analyze_source_message(source_message_id)
+            result = extract_and_analyze_source_message(source_message_id)
+            _publish_review_changed()
+            return result
         except Exception as exc:
             logger.exception(
                 "[tcg_extraction] task failed for sm=%s: %s", source_message_id, exc

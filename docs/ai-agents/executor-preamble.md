@@ -51,7 +51,7 @@ gh pr create --body-file <テンプレートを埋めたファイル> で作成�
   そのPRで削除するファイルは、バッククォートを付けずプレーンテキストで書く。
 
 frontend/src、backend/app/routers、backend/app/services 等の変更は
-PO の GO を受領し「### GO記録」に転記してからマージする。
+GO（PO、または ADR-1003 に基づく Opus の委任 GO）を受領し「### GO記録」に転記してからマージする。
 
 PR作成後、マージ前に gh pr checks で赤を確認する。
 赤が出たら自力で直さず、失敗ログ全文を報告して停止する。
