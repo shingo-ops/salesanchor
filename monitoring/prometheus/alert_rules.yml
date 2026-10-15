@@ -79,16 +79,16 @@ groups:
           description: "5xxエラーが 1分間で {{ $value | printf \"%.1f\" }} req/s を超えています（閾値: 5 req/s）"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhigherrorrate"
 
-      # FastAPI バックエンド P99 レイテンシ（tokens.yml: backend_p99_latency_sec=2.0）
+      # FastAPI バックエンドの遅いリクエストの割合（/api/health を除く。tokens.yml: backend_slow_request_sec=2.5・backend_slow_ratio=0.05）
       - alert: BackendHighLatency
-        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job="backend"}[5m])) by (le)) > 2.0
-        for: 2m
+        expr: (1 - (sum(rate(http_request_duration_seconds_bucket{job="backend",handler!="/api/health",le="2.5"}[5m])) / sum(rate(http_request_duration_seconds_count{job="backend",handler!="/api/health"}[5m])))) > 0.05
+        for: 5m
         labels:
           severity: warning
           tier: ticket
         annotations:
-          summary: "バックエンド P99 レイテンシが高い"
-          description: "P99 レスポンスタイムが {{ $value | printf \"%.2f\" }}s を超えています（閾値: 2.0s）"
+          summary: "バックエンドの遅いリクエストの割合が高い"
+          description: "/api/health を除くリクエストのうち 2.5 秒を超えた割合が {{ $value | humanizePercentage }} です（閾値: 5%・5 分継続）"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhighlatency"
 
       # FastAPI バックエンドの同時処理中リクエスト数（workers=1 前提）

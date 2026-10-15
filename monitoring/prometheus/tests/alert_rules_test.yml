@@ -133,23 +133,43 @@ tests:
   - name: BackendHighLatency
     interval: 1m
     input_series:
-      - series: 'http_request_duration_seconds_bucket{job="backend", le="1"}'
-        values: '0+0x30'
-      - series: 'http_request_duration_seconds_bucket{job="backend", le="5"}'
-        values: '0+60x30'
-      - series: 'http_request_duration_seconds_bucket{job="backend", le="+Inf"}'
-        values: '0+60x30'
+      - series: 'http_request_duration_seconds_bucket{job="backend", handler="/api/v1/conversations", le="2.5"}'
+        values: '0+90x20'
+      - series: 'http_request_duration_seconds_count{job="backend", handler="/api/v1/conversations"}'
+        values: '0+100x20'
     alert_rule_test:
-      - eval_time: 12m
+      # 鳴る: 遅い割合 0.1 が 5 分以上続く
+      - eval_time: 15m
         alertname: BackendHighLatency
         exp_alerts:
           - exp_labels:
               severity: warning
               tier: ticket
             exp_annotations:
-              summary: "バックエンド P99 レイテンシが高い"
-              description: "P99 レスポンスタイムが 4.96s を超えています（閾値: 2.0s）"
+              summary: "バックエンドの遅いリクエストの割合が高い"
+              description: "/api/health を除くリクエストのうち 2.5 秒を超えた割合が 10% です（閾値: 5%・5 分継続）"
               runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendhighlatency"
+      # 鳴らない: for（5m）より前
+      - eval_time: 4m
+        alertname: BackendHighLatency
+        exp_alerts: []
+
+  - name: BackendHighLatencyHealthOnly
+    interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{job="backend", handler="/api/health", le="2.5"}'
+        values: '0x20'
+      - series: 'http_request_duration_seconds_count{job="backend", handler="/api/health"}'
+        values: '0+100x20'
+      - series: 'http_request_duration_seconds_bucket{job="backend", handler="/api/v1/conversations", le="2.5"}'
+        values: '0+100x20'
+      - series: 'http_request_duration_seconds_count{job="backend", handler="/api/v1/conversations"}'
+        values: '0+100x20'
+    alert_rule_test:
+      # 鳴らない: /api/health だけが遅い
+      - eval_time: 15m
+        alertname: BackendHighLatency
+        exp_alerts: []
 
   - name: BackendWorkerSaturated
     interval: 1m
