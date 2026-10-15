@@ -3537,7 +3537,7 @@
           },
           "event_types": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/NotificationEventType"
             },
             "title": "Event Types",
             "type": "array"
@@ -3727,6 +3727,61 @@
           "gross_margin"
         ],
         "title": "ChannelRow",
+        "type": "object"
+      },
+      "ChannelUpdate": {
+        "properties": {
+          "channel_name": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Name"
+          },
+          "event_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/NotificationEventType"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Types"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "webhook_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          }
+        },
+        "title": "ChannelUpdate",
         "type": "object"
       },
       "ChannelsResponse": {
@@ -9313,6 +9368,19 @@
           }
         },
         "title": "EventPatchBody",
+        "type": "object"
+      },
+      "EventTypeResponse": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "EventTypeResponse",
         "type": "object"
       },
       "ExportRequest": {
@@ -16599,6 +16667,16 @@
         ],
         "title": "NewCustomersBlock",
         "type": "object"
+      },
+      "NotificationEventType": {
+        "description": "通知の種類の SSOT。\n\nここに無い値は API が拒否する。送信元が存在しない種類を増やしてはいけない\n（recon §6: customer_created / deal_won / invoice_issued は送信元ゼロのため除外）。\n値は notification_channels.event_types に JSON 配列として保存され、\n送信時は LIKE '%値%' の部分一致で照合される（notifications.py:112）ため、\n**ある値が他の値の部分文字列になってはいけない**。",
+        "enum": [
+          "lead_assigned",
+          "meta_message_received",
+          "tcg_distribution_error"
+        ],
+        "title": "NotificationEventType",
+        "type": "string"
       },
       "OrderCommissionAssignmentRequest": {
         "description": "`POST /orders/{id}/commissions/assign` リクエスト。\n\nrole と staff_id を 1 ペア指定して UPSERT する。\nstaff_id=None で「担当解除（行は残し staff_id を NULL に戻す）」も可能。",
@@ -46441,6 +46519,93 @@
           }
         ],
         "summary": "Delete Channel",
+        "tags": [
+          "notifications"
+        ]
+      },
+      "patch": {
+        "description": "通知チャンネルを部分更新する（event_types の振り分けを含む）",
+        "operationId": "update_channel_api_v1_notification_channels__channel_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "title": "Channel Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Channel",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notification-event-types": {
+      "get": {
+        "description": "通知の種類の一覧（SSOT: NotificationEventType）",
+        "operationId": "list_event_types_api_v1_notification_event_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventTypeResponse"
+                  },
+                  "title": "Response List Event Types Api V1 Notification Event Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Event Types",
         "tags": [
           "notifications"
         ]

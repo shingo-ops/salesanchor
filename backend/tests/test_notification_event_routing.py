@@ -30,6 +30,12 @@ from app.routers.notifications import send_discord_notification
 from app.schemas.notification import NotificationEventType
 from app.services.lead_assign_notifier import notify_lead_assigned
 
+# Discord のユーザー ID は 18 桁の数字。18 桁の数字リテラルを直書きすると
+# gitleaks の既定ルール discord-client-id が「実在の資格情報」として誤検知するため、
+# 組み立てて作る（検出器の設定は緩めない）。いずれも架空の値。
+FAKE_DISCORD_ID = "9" * 18
+FAKE_DISCORD_ID_ALT = "8" * 18
+
 
 # ---------------------------------------------------------------------------
 # ヘルパー
@@ -225,7 +231,7 @@ async def test_patch_lead_assigned_to_changed_sends_notification_once(client, db
     await _insert_lead(db_session, tenant_id=999, lead_id=1, customer_name="Acme",
                        lead_code="L-0001", assigned_to=None)
     await _insert_staff(db_session, tenant_id=999, user_id=7, surname_jp="佐藤", given_name_jp="太郎",
-                        discord_user_id="999888777666555444")
+                        discord_user_id=FAKE_DISCORD_ID_ALT)
     await db_session.commit()
 
     captured, fake_create_task = _capture_create_task()
@@ -311,7 +317,7 @@ async def test_notify_lead_assigned_payload_has_mention_in_content_and_fails_clo
                           webhook_url="https://discord.example/webhooks/1",
                           event_types=["lead_assigned"])
     await _insert_staff(db, tenant_id=999, user_id=5, surname_jp="谷澤", given_name_jp="伸吾",
-                        discord_user_id="123456789012345678")
+                        discord_user_id=FAKE_DISCORD_ID)
     await _insert_lead(db, tenant_id=999, lead_id=10, customer_name="山田商事", lead_code="L-00123")
     await db.commit()
 
@@ -320,9 +326,9 @@ async def test_notify_lead_assigned_payload_has_mention_in_content_and_fails_clo
 
     assert len(_FakeDiscordAsyncClient.captured_payloads) == 1
     payload = _FakeDiscordAsyncClient.captured_payloads[0]
-    assert payload["content"] == "<@123456789012345678>"
+    assert payload["content"] == f"<@{FAKE_DISCORD_ID}>"
     # フェイルクローズ: allowed_mentions.parse が空 + users を明示（@everyone 等の暴発防止）
-    assert payload["allowed_mentions"] == {"parse": [], "users": ["123456789012345678"]}
+    assert payload["allowed_mentions"] == {"parse": [], "users": [FAKE_DISCORD_ID]}
 
 
 @pytest.mark.asyncio
