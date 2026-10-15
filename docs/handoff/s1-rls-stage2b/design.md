@@ -19,7 +19,7 @@ mode: handoff
 
 ### 2-1. migration（ADR-145 products と同じ 4 ポリシー）
 
-`migrations/<日時>_add_suppliers_rls.sql`
+`migrations/20261016_020000_add_suppliers_rls.sql`
 
 - ENABLE / FORCE ROW LEVEL SECURITY
 - SELECT: `tenant_id IS NULL OR tenant_id = 自社`
@@ -89,10 +89,15 @@ ALTER TABLE public.suppliers DISABLE ROW LEVEL SECURITY;
 | is_operator が接続に残る | 各経路の finally で reset。get_db の後始末（clear_tenant_context）でも空に戻る（dependencies.py:421-440）。試験⑨ |
 | UPDATE が静かに 0 行 | 試験⑤⑥⑦で更新後の値を確認 |
 
-## 6. 外部事例
+## 6. 外部・過去事例の参照と我々への応用
 
 PostgreSQL 公式 docs/16/ddl-rowsecurity（FORCE で所有者にも適用、ポリシー不一致の UPDATE は 0 行・INSERT は error）。社内前例 ADR-145 products（同じ 4 ポリシーで 2026-06 から稼働）を手本にする。数値の外部事例は不要（社内前例で挙動を実測できるため）。
 
 ## 7. 触らない範囲
 
 suppliers.py（会社画面）、Celery タスク、fx_rate_updater の is_operator 残留（別件として記録のみ）、段階③の表。
+
+## 維持の仕組み
+
+- 守り手（新設）: backend/tests/test_suppliers_rls.py（CI の pytest で、共通行は運営文脈でのみ書ける・会社固有行は自社のみ・各書込経路が文脈を張る、を毎回検証）。
+- migration は冪等で毎デプロイ再実行されるため、手作業で RLS を外しても次のデプロイで戻る。

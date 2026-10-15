@@ -6,14 +6,14 @@ mode: handoff
 > この文書は何か：仕入先台帳（public.suppliers）に RLS を付ける前に、本番の中身と、この表へ書き込む経路をすべて調べた記録です。
 
 親: [docs/specs/tenant-rls/README.md](../../specs/tenant-rls/README.md)
-生データ（リポジトリ外）: `/tmp/CC報告ファイル/s1-stage2/2b-recon-raw.md`、`2b2-recon-raw.md`、`2b-prod-recent.txt`、`2b-schemas.txt`。file:line は worktree 基準の相対パス。読取のみで調べた。
+生データ（リポジトリ外）: `/tmp/CC報告ファイル/s1-stage2/2b-recon-raw.md`、`/tmp/CC報告ファイル/s1-stage2/2b2-recon-raw.md`、`/tmp/CC報告ファイル/s1-stage2/2b-prod-recent.txt`、`/tmp/CC報告ファイル/s1-stage2/2b-schemas.txt`。file:line は worktree 基準の相対パス。読取のみで調べた。
 
 ## §1 本番データ
 
-- 【事実】本番 `public.suppliers` は 288 行。全行が共通行（tenant_id が空）。根拠: design.md:15、`2b-prod-recent.txt`（直近 updated_at 順の一覧で tenant_id 列が空）。
-- 【事実】各社スキーマに suppliers 表は無い（public のみ）。根拠: design.md:16、`2b-schemas.txt`。
+- 【事実】本番 `public.suppliers` は 288 行。全行が共通行（tenant_id が空）。根拠: design.md:15、`/tmp/CC報告ファイル/s1-stage2/2b-prod-recent.txt`（直近 updated_at 順の一覧で tenant_id 列が空）。
+- 【事実】各社スキーマに suppliers 表は無い（public のみ）。根拠: design.md:16、`/tmp/CC報告ファイル/s1-stage2/2b-schemas.txt`。
 - 【事実】会社画面 `/suppliers` は `tenant_id = 自社` で絞って読む（backend/app/routers/suppliers.py:152）ため、表示件数は 0 件のまま変わらない。
-- 【事実】直近 14 日にも作成・更新がある。最新 created/updated は 2026-10-15 13:11:10Z（`2b-recon-raw.md` Q3）。
+- 【事実】直近 14 日にも作成・更新がある。最新 created/updated は 2026-10-15 13:11:10Z（`/tmp/CC報告ファイル/s1-stage2/2b-recon-raw.md` Q3）。
 
 ## §2 書込経路の全列挙
 
@@ -34,7 +34,7 @@ mode: handoff
 - 認証は端末トークン（Bearer）。get_current_tenant も set_operator_context も無い。tcg_line_import.py:690 の `require_super_admin` は直接呼出のため評価されない。
 
 ### 発注複製
-- backend/app/routers/purchase_orders.py:108 `_resolve_tenant_supplier_id`（create_po :160/:173 から）: INSERT の列リストに tenant_id なし。frontend からの呼出は 0 件（`2b-recon-raw.md` Q2）。
+- backend/app/routers/purchase_orders.py:108 `_resolve_tenant_supplier_id`（create_po :160/:173 から）: INSERT の列リストに tenant_id なし。frontend からの呼出は 0 件（`/tmp/CC報告ファイル/s1-stage2/2b-recon-raw.md` Q2）。
 
 ### サービス・CLI・CI
 - backend/app/services/line_source_names.py:114（link_pending :81）: UPDATE line_name（WHERE id のみ）。:98 は LOCK TABLE。
@@ -47,7 +47,7 @@ mode: handoff
 
 ## §3 毎日の自動登録が端末取込であることの突合
 
-【事実】suppliers 26049 は HTTP で作られていた。経路は `POST /api/v1/tcg/line-devices/import`（Celery ではない）。根拠（`2b2-recon-raw.md`）:
+【事実】suppliers 26049 は HTTP で作られていた。経路は `POST /api/v1/tcg/line-devices/import`（Celery ではない）。根拠（`/tmp/CC報告ファイル/s1-stage2/2b2-recon-raw.md`）:
 - suppliers 26049.created_at = 2026-10-15 13:11:10.682679+00 が import_jobs 376ad277-… の created_at とマイクロ秒まで一致。26048（10-13 08:06:09.260071）・26047（10-12 22:49:10.041225）も、それぞれ別の import_jobs と一致。
 - 3 件とも import_jobs.filename=android-talk.txt、uploaded_by=運営管理者、status=ok。
 - nginx の 13:11:10 +0000 に `POST /api/v1/tcg/line-devices/import HTTP/1.1 200`（Python-urllib/3.14）1 行。同窓の import_jobs 43 件と nginx の同パス 43 件が一致。
@@ -57,7 +57,7 @@ mode: handoff
 
 ## §4 試験と CI
 
-- suppliers を触る既存試験は 31 ファイル（`2b-recon-raw.md` Q6）。RLS 役（salesanchor_app）で suppliers を検証する既存試験は 0 件。
+- suppliers を触る既存試験は 31 ファイル（`/tmp/CC報告ファイル/s1-stage2/2b-recon-raw.md` Q6）。RLS 役（salesanchor_app）で suppliers を検証する既存試験は 0 件。
 - CI の実 PG は .github/workflows/test.yml:223,225（RLS_TEST_DATABASE_URL=salesanchor_app、RLS_ADMIN_DATABASE_URL=jarvis）。
 - 【事実】.github/workflows/migration-test.yml は migrate_inventory_sprint1.py（migrations/056〜062）で public.suppliers を作る（:568 のコメント）。migrations/056_add_suppliers_type_and_promote_public.sql:24 は「tenant_id 列を持たない」とあり、tenant_id 列を足すのは migrations/20260918_030000_supplier_ssot_phase2.sql:52。
 - 【事実（実装時の確認）】したがって PR で変更された SQL だけを流す migration-test の経路では、本 migration（ポリシーが tenant_id を参照）の前提の列が無い状態になる。この確認は workflow を読んだ結果で、CI 実行結果は【未確認】。対処（②a と同様に migration-test.yml へ列だけ登録する案）は、実装担当の権限で workflow の変更が拒否されたため未実施。
