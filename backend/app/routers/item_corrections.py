@@ -27,14 +27,19 @@ from app.services.review_reason_codes_svc import load_review_reason_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
     FIELD_PRODUCT_ID,
+    MAX_NOTE_LENGTH,
+    OVERRIDE_PREFIX,
+    DecisionRejected,
     find_job_of_item,
     invalid_product_values,
     item_rejection,
     normalize_ack_codes,
+    override_options,
     product_rejection,
     review_ack_rejection,
     save_review_ack,
     save_review_ack_revoke,
+    save_value_override,
     v102_job_id_of_item,
 )
 from app.tasks.tcg_extraction import enqueue_v102_reanalyze
@@ -84,6 +89,8 @@ class SaveCorrectionsRequest(BaseModel):
             UUID(self.source_message_id)
         if any(field.field_name == "condition_review" for field in self.fields):
             raise ValueError("condition_review is reserved")
+        if any(field.field_name.startswith(OVERRIDE_PREFIX) for field in self.fields):
+            raise ValueError("override_ field names are reserved (use /value-override)")
         return self
 
 
@@ -232,3 +239,62 @@ async def revoke_item_review_ack(
         raise HTTPException(409, "No review-ack to revoke")
     enqueue_v102_reanalyze(found.job_id)
     return ReviewAckResponse(ok=True, saved=saved)
+
+
+# ---------------------------------------------------------------------------
+# POST /tcg/items/{extraction_item_id}/value-override
+# GET  /tcg/review/value-options
+# ---------------------------------------------------------------------------
+
+
+class ValueOverrideRequest(BaseModel):
+    source_message_id: UUID
+    field: Literal["quantity", "price", "unit", "note", "status"]
+    value: str = Field(max_length=MAX_NOTE_LENGTH)
+
+
+class ValueOptionsResponse(BaseModel):
+    units: list[str]
+    statuses: list[str]
+
+
+@router.post(
+    "/tcg/items/{extraction_item_id}/value-override",
+    response_model=ReviewAckResponse,
+    summary="v102 の件の数量・単価・単位・メモ・販売状況を人の値に直す",
+)
+async def save_item_value_override(
+    extraction_item_id: str,
+    body: ValueOverrideRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+) -> ReviewAckResponse:
+    found = await find_job_of_item(db, extraction_item_id)
+    rejected = item_rejection(found, str(body.source_message_id))
+    if rejected is not None:
+        raise HTTPException(rejected.status, rejected.message)
+    try:
+        saved = await save_value_override(
+            db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
+            field=body.field, value=body.value, corrected_by=current_user.email,
+        )
+    except DecisionRejected as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    enqueue_v102_reanalyze(found.job_id)
+    return ReviewAckResponse(ok=True, saved=saved)
+
+
+@router.get(
+    "/tcg/review/value-options",
+    response_model=ValueOptionsResponse,
+    summary="数量・単価などを直す欄の選択肢（単位・販売状況）",
+)
+async def get_value_options(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+) -> ValueOptionsResponse:
+    from app.services.tcg_analyzer_svc import load_status_master, load_unit_canonical_ids  # noqa: PLC0415
+
+    unit_ids = await db.run_sync(load_unit_canonical_ids)
+    status_entries = await db.run_sync(load_status_master)
+    return ValueOptionsResponse(**override_options(unit_ids, status_entries))
