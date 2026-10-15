@@ -18,6 +18,6 @@
 - `.product-edit-form` の利用は ProductEditPage.tsx:210 と company-forms.css、試験の data-testid 参照のみ（frontend/src 全体の grep、他ページなし）。
 
 ## 試験の制約
-- frontend/src/components/CommerceSubmitButtonMigration.test.tsx:43 と :148 が form 内の input・select・textarea を DOM 順で触る。ラッパー追加・順序変更は壊す。
+- frontend/src/components/CommerceSubmitButtonMigration.test.tsx:42 と :148 が form 内の input・select・textarea を DOM 順で触る。ラッパー追加・順序変更は壊す。
 - frontend/src/components/CommerceNavigationButtonMigration.test.tsx:107、:127 も ProductEditPage を描画する。
 - frontend/src/pages/products/ProductEditPage.inputs.test.tsx:37-39 は select・textarea に `comp-` が無いことを断言していた（本便で書き換え）。

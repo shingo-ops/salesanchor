@@ -2052,7 +2052,7 @@ PO回答（2026-10-05、本セッション）: 当初の「全件を標準に統
 | ダッシュボード上部 `.page-header-select`（DashboardPage 2） | 2 | components.css:584「ヘッダーアクションエリア内のドロップダウン共通スタイル (SSoT: ここのみ定義)」、:589「btn-ghost / icon-btn と高さを統一 (36px)」、tokens.css:95 radius-pill「入力欄の角丸（意味的例外トークン）」 | 種類 header を登録 |
 | 受信箱タブ横 `.inbox-platform-select`（InboxPage 1、InboxMessageThread 1） | 2 | InboxPage.css:68「タブバー右端」、height は tokens.css:271 --height-tab-item「受信箱タブボタン高さ」。文字の小ささ・色の意図資料はなし | 種類 tabbar を登録（高さ整合の意図に基づく） |
 | 一般フォーム・その他（.form-group / .form-row / .filter-bar / .schedule-input / .gs-select / .account-settings-lang-select / .inbox-page-filter-select / .inbox-settings-select / InventoryPage inline / 装飾なし） | 55 | docs/adr・docs/specs・docs/handoff に見た目の意図記載なし（av2-recon2.md R4）。角丸 sm/md・枠 border/border-strong が不統一 | 標準に統一 |
-| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） | 【AY-3a で種類 product-edit へ移管（現行の規則は company-forms.css:234 だった）】
+| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便）→ AY-3a（2026-10-15）で種類 product-edit へ移管（現行の規則は company-forms.css:234 だった） |
 | 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便）→ AY-2w（2026-10-14）で SelectControl size="sm" へ移管 |
 
 #### 便の分割
@@ -2257,7 +2257,7 @@ AX-2 の方針（PO 回答 2026-10-09「y」。設計者が提示した案: 一�
 | 種類 composer | 2 | PriorityProspectsSection.tsx:410、WeeklyAdvisorSection.tsx:381 | PO 提示案「ダッシュボードの入力欄」 |
 | 種類 schedule | 1 | SchedulePageImpl.tsx:378 | PO 提示案「予定の入力欄」 |
 | 標準 | 40 | 下記 AX-2b | PO 方針「一般フォームは標準」 |
-| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる） | 【AY-3a で種類 product-edit へ移管（現行の規則は company-forms.css:213 だった）】
+| 保留 | 1 | ProductEditPage.tsx:309 | PO 方針「商品編集は保留」（選択欄と同じ「枠が薄くて見えない」対策の規則 company-forms.css:254 が当たる）→ AY-3a（2026-10-15）で種類 product-edit へ移管（現行の規則は company-forms.css:213 だった） |
 
 PO 提示案に名前の無かった欄の扱い（設計者判断。規則: 意図の記録が設計書・ADR・CSS コメント・専用トークンのいずれにも無いものは一般として標準）: 送信下訳の編集欄（OutboundTranslationPreview.tsx:147、記録0）、手動記録（ManualRecordSection.tsx:159、CSS 定義0でブラウザ既定）、Discord 告知（DiscordAnnouncePage.tsx:98、CSS 定義0でブラウザ既定）、解析レビュー（ItemComparison.tsx:27/34、規則0でブラウザ既定）は標準。商品マスタ修正ドロワー（ProductMasterDrawer.tsx:217/221）は専用トークン --pmd-textarea-min-h（supplier-detail-view.css:113、「--textarea-min-h:80px より小さい専用値」、parity03 design.md:35）があるが、意図の記録は最小高だけで標準との差は color・outline-color の2項目のため、標準にして最小高だけ配置規則として残す。抽出プロンプト（ExtractionPromptConfigTab.tsx:222）の等幅は §Z :817 の textStyle=code（登録済み契約）に当たるため、標準＋textStyle=code とし枠・余白は標準になる。これらは AX-2b の前後表で PO に示し、GO 前に変更できる。
 
