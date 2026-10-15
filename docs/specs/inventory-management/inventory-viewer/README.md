@@ -13,7 +13,7 @@
 - recon: [docs/handoff/gas-viewer-fresh-fast/recon.md](../../../handoff/gas-viewer-fresh-fast/recon.md)
 - security-recon: [docs/handoff/gas-viewer-fresh-fast/security-recon.md](../../../handoff/gas-viewer-fresh-fast/security-recon.md)
 - design: [docs/handoff/gas-viewer-fresh-fast/design.md](../../../handoff/gas-viewer-fresh-fast/design.md)
-- ADR: [ADR-1017](../../../adr/ADR-1017-inventory-viewer-separate-accounts.md)
+- ADR: [ADR-1019](../../../adr/ADR-1019-inventory-viewer-separate-accounts.md)
 
 ## 境界（他テーマとの取り決め）
 

@@ -684,7 +684,7 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
 ```
 
 ---
-注記（2026-10-15 Opus）: 上の r1〜r5 の記録で「ADR-1016」と書いた ADR は、origin/main の ADR-1016-realtime-change-signal-standard.md と番号が重なったため、ADR-1017（docs/adr/ADR-1017-inventory-viewer-separate-accounts.md）に振り直した。記録の本文は審査時のまま残す。
+注記（2026-10-15 Opus）: 上の r1〜r5 の記録で「ADR-1016」と書いた ADR は、origin/main の ADR-1016-realtime-change-signal-standard.md と番号が重なったため、ADR-1019（docs/adr/ADR-1019-inventory-viewer-separate-accounts.md）に振り直した。記録の本文は審査時のまま残す。
 
 ---
 ## r6（2026-10-15、審査役は Opus の architect。Fable の利用上限による PO 決定で、審査の標準を Opus に変更。設計を書いたのも Opus なので、独立した第二者レビューではない）
@@ -698,4 +698,4 @@ r4 の Blocking（B-5）は案 C（6 本目 session・フラグメント・POST 
   - B-5 金型（Drawer・Sheet・Modal）の中の t() キーが viewer の辞書に無い → 例外と検査の範囲を D4 に書いた。
   - B-6 申込とメール確認の画面が D4 の状態に無い → ⑤⑥と部品の対応を足した。
   - B-7 過去のコミットに個人の姓が残っている → 履歴の扱いは PO 決定待ち。
-- Non-blocking N-1〜N-14 は design.md・ADR-1017 に反映した（どこを直したかは design.md の「審査 r6 …」の注記）。
+- Non-blocking N-1〜N-14 は design.md・ADR-1019 に反映した（どこを直したかは design.md の「審査 r6 …」の注記）。

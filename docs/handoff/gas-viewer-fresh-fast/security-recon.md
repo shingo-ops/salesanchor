@@ -3,7 +3,7 @@
 > この文書は何か：お客さんをアプリの利用者として入れた場合に、在庫表以外も見えてしまうかを調べた記録。
 
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
-- 設計: [design.md](./design.md) ／ ADR: ADR-1017（docs/adr/ADR-1017-inventory-viewer-separate-accounts.md）
+- 設計: [design.md](./design.md) ／ ADR: ADR-1019（docs/adr/ADR-1019-inventory-viewer-separate-accounts.md）
 
 基準: origin/main = e69ed67（読み取りのみ。本番・DB・secrets 未接触。値は一切記載しない）。
 証拠: /tmp/CC報告ファイル/viewer_security/ （routes_matrix.tsv, routes_raw.tsv, decorators_grep.txt, login_only_body_scan.txt, public_tables_rls.tsv, tenant_py_tables.txt）
