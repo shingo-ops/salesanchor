@@ -15,13 +15,19 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
 
 - あるべき姿: [ideal-state.md](ideal-state.md)（PO の言葉の転記）
 - KGI: [kgi.md](kgi.md)（PO 承認済み 2026-10-15）
-- 段階①（permissions）: 設計案作成済み・設計審査済み（APPROVE 条件付き）。ガード変更 PO 確認済み。実装カード発行済み
-- 段階②・③: 未着手
+- 段階①（permissions）: 本番反映済み（PR #4332、2026-10-15 23:39 JST マージ）。本番で RLS t/t・ポリシー 2 本・123 行不変、アプリ接続役の書込拒否を確認（2026-10-16 01:15）。ロール管理画面の目視は未実施
+- 段階②a（Google カレンダー・Drive 接続設定の 2 表）: 設計案作成済み・設計審査済み（APPROVE）。実装中
+- 段階②b（suppliers）: 未着手（②a の本番確認後）
+- 段階③: 未着手（方針を PO と決めてから）
 
 ## 子文書
 
 - 段階① recon: [../../handoff/s1-rls-permissions/recon.md](../../handoff/s1-rls-permissions/recon.md)
 - 段階① 設計: [../../handoff/s1-rls-permissions/design.md](../../handoff/s1-rls-permissions/design.md)
+- 段階②a recon: [../../handoff/s1-rls-stage2a/recon.md](../../handoff/s1-rls-stage2a/recon.md)
+- 段階②a 設計: [../../handoff/s1-rls-stage2a/design.md](../../handoff/s1-rls-stage2a/design.md)
+- 段階②a 審査: [../../handoff/s1-rls-stage2a/review-opus.md](../../handoff/s1-rls-stage2a/review-opus.md)
+- 段階②a 実装カード: [../../handoff/s1-rls-stage2a/card.md](../../handoff/s1-rls-stage2a/card.md)
 
 ## 関連 ADR
 
