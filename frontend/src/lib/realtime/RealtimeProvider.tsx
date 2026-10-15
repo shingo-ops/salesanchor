@@ -40,6 +40,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     let retry = INIT_RETRY_MS;
     let everConnected = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // cleanup で fetch を即座に止める（StrictMode の二重実行で 2 本つないだままにしない）
+    const abort = new AbortController();
 
     function emit(ev: RealtimeEvent): void {
       for (const sub of Array.from(subscribersRef.current)) {
@@ -79,6 +81,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             Accept: "text/event-stream",
             "Cache-Control": "no-cache",
           },
+          signal: abort.signal,
         });
       } catch {
         scheduleReconnect();
@@ -129,6 +132,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     void connect();
     return () => {
       cancelled = true;
+      abort.abort();
       if (timer) clearTimeout(timer);
     };
   }, []);

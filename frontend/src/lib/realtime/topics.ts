@@ -2,5 +2,3 @@
 export const TOPICS = {
   tcgReview: "tcg.review",
 } as const;
-
-export type Topic = (typeof TOPICS)[keyof typeof TOPICS];

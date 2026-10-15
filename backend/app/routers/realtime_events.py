@@ -5,11 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials
 
-from app.auth.dependencies import get_current_tenant, get_current_user, require_super_admin
+from app.auth.dependencies import get_current_tenant, get_current_user, require_super_admin, security
+from app.database import get_db
 from app.models import User
 from app.realtime.hub import Connection, hub
 
@@ -47,20 +50,34 @@ def _release(user_id: int) -> None:
         _active_by_user[user_id] = n - 1
 
 
+def _db_scope():
+    """短命の DB セッション。get_db と同じ後始末（ロールバック・テナント文脈クリア）を使う。"""
+    return asynccontextmanager(get_db)()
+
+
 @router.get("/events/stream")
 async def stream_change_signals(
     request: Request,
-    user: User = Depends(get_current_user),
-    tenant_id: int = Depends(get_current_tenant),
+    cred: HTTPAuthorizationCredentials = Depends(security),
 ) -> StreamingResponse:
-    """書き込み成功の合図（"event: change"）を送る。30 秒ごとにハートビート ping。"""
-    user_id = int(user.id)
+    """書き込み成功の合図（"event: change"）を送る。30 秒ごとにハートビート ping。
+
+    DB 依存（Depends）は持たない。yield 依存はストリーム送出が終わるまで閉じず、
+    SSE 1 本ごとに DB 接続を握り続けてしまうため。認証・会社 ID・super admin の判定だけ
+    短いセッションで行い、ストリームを返す前に閉じる。
+    """
+    async with _db_scope() as db:
+        user = await get_current_user(request, cred, db)
+        tenant_id = await get_current_tenant(request, user, db)
+        is_super_admin = await _is_super_admin(user)
+        user_id = int(user.id)
+
     if not _try_acquire(user_id):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="接続数が上限に達しています",
         )
-    conn = Connection(tenant_id=tenant_id, is_super_admin=await _is_super_admin(user))
+    conn = Connection(tenant_id=tenant_id, is_super_admin=is_super_admin)
     hub.register(conn)
 
     async def event_generator():

@@ -43,14 +43,18 @@ def _payload(topic: str, origin: Optional[str]) -> str:
 def _get_async() -> aioredis.Redis:
     global _async_client
     if _async_client is None:
-        _async_client = aioredis.from_url(RT_REDIS_URL, decode_responses=True)
+        _async_client = aioredis.from_url(
+            RT_REDIS_URL, decode_responses=True, socket_connect_timeout=2, socket_timeout=2
+        )
     return _async_client
 
 
 def _get_sync() -> redis.Redis:
     global _sync_client
     if _sync_client is None:
-        _sync_client = redis.from_url(RT_REDIS_URL, decode_responses=True)
+        _sync_client = redis.from_url(
+            RT_REDIS_URL, decode_responses=True, socket_connect_timeout=2, socket_timeout=2
+        )
     return _sync_client
 
 
