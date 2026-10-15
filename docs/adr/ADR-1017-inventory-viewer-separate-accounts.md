@@ -22,7 +22,7 @@
 4. この結果、既存の get_current_user は閲覧者のトークンを受け付けない。逆に、閲覧者用の get_current_viewer はアプリのトークンを受け付けない。
 5. 閲覧者が呼べる入口は、VIEWER_ROUTE_ALLOWLIST の6本だけにする（signup・verify-email・login・session・logout・inventory）。
 6. 6本以外のすべての入口が閲覧者のトークンを拒否することを、全ルートを列挙するテストで固定する。
-7. 在庫のデータは、1分に1回だけ fetch_output_rows（ADR-1014 の1か所の定義）から作り、Redis に置いて全員に配る。DB の表やシートには写しを作らない。
+7. 在庫のデータは、1分に1回だけ、run_distribution（GAS への配信）と共通の build_distribution_rows（安全装置 #8・#8b、設定の読み込み、fetch_output_rows＝ADR-1014 の1か所の定義、の順）を通して作り、Redis に置いて全員に配る。GAS に配信される行と同じものを作る。DB の表やシートには写しを作らない。
 
 ## Why（なぜ）
 
@@ -34,4 +34,4 @@
 
 - docs/handoff/gas-viewer-fresh-fast/recon.md
 - docs/handoff/gas-viewer-fresh-fast/security-recon.md
-- docs/handoff/gas-viewer-fresh-fast/design.md（Fable の審査は r1〜r5。r5 で APPROVE）
+- docs/handoff/gas-viewer-fresh-fast/design.md（審査は r1〜r5 が Fable、r6 から Opus。r5 APPROVE の後に PO 決定を反映した版を r6 で REVISE。r7 で再審査する。最新の判定は design.md 冒頭の「審査」欄を正とする）

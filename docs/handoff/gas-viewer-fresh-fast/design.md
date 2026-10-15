@@ -12,7 +12,7 @@ mode: handoff
 
 **対象ADR**: ADR-1017（草案・Proposed。`docs/adr/ADR-1017-inventory-viewer-separate-accounts.md`）  
 **recon**: docs/handoff/gas-viewer-fresh-fast/recon.md ／ docs/handoff/gas-viewer-fresh-fast/security-recon.md  
-**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した。**これらは未審査。r6 で審査する（r5 の APPROVE は r5 時点の本文にだけ当たる）**  
+**審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち。**r7 で審査する**  
 **日付**: 2026-10-15  
 **担当**: Planner（Claude Opus）  
 **状態**: 設計案（草案）。PO 決定待ちの項目が残っているので、実装には進めない（§PO 決定待ち）。
@@ -54,7 +54,9 @@ mode: handoff
   - 列：id、email（一意）、line_name（LINE の表示名）、inventory_issue（在庫関連の課題。自由記述。TEXT。1000文字まで。任意＝空欄は NULL（Q2g）、状態（pending ／ verified ／ trial ／ active ／ suspended の5値。verified は「メール確認済み・承認待ち」。Q5 で自動トライアルに決まったので、今回は使わない（メールの確認が済んだら pending から trial へ直接進む）。将来、承認を挟む形に変えるときに migration を作り直さずに済むよう、5値で作る）、email_verified_at、trial_expires_at、作成・更新の日時。
   - テナントは持たない。
   - 本設計で作る4つの表（viewer_accounts・viewer_login_tokens・viewer_login_events・viewer_status_changes）の id は、すべて BIGSERIAL にする（既存の public の表と同じ。例：public.audit_log、migrations/20260921_110000_pipeline_tables_public.sql:405）。viewer_id など他の表を指す列は BIGINT ＋ FK（ON DELETE CASCADE。閲覧者の行を消したら、その人のトークン・記録・履歴も一緒に消える）。
-  - 人の正本（ADR-1008）との境界：ADR-1008 の正本 public.users は「ログインして社内の業務をする人」（担当者・作成者など、人を指す列の参照先）。閲覧者は社外のお客さんで、アプリにはログインしない。このため users には入れず、viewer_accounts だけに持つ（1人1行。email の一意制約）。同じ人の email が users と viewer_accounts の両方に入らないようにする：申込（signup）の email が users.email にあるときは、行を作らずメールも送らない（応答は同じ 200）。社員はアプリ本体の在庫表を見る。
+  - 人の正本（ADR-1008）との境界：ADR-1008 の正本 public.users は「ログインして社内の業務をする人」（担当者・作成者など、人を指す列の参照先）。閲覧者は社外のお客さんで、アプリにはログインしない。このため users には入れず、viewer_accounts だけに持つ（1人1行。email の一意制約）。同じ人の email が users と viewer_accounts の両方に入らないようにする：申込（signup）の email が users.email にあるとき（大文字小文字は無視して比べる）は、行を作らずメールも送らない（応答は同じ 200）。登録用の専用スクリプト（Q9）でも同じ検査をし、users.email にある行は「飛ばした」に数える。社員はアプリ本体の在庫表を見る。逆向き（閲覧者の後で同じ email の社員を users に足す場合）は本便では扱わない（社員の追加はアプリ本体の操作で、閲覧者は少数のため、気付いたときに停止で対応する）。
+  - email の正規化（審査 r6 N-6）：保存・比較・回数制限のキーのすべてで、前後の空白を除いて小文字にした値を使う。一意は `lower(email)` の一意索引で守る（保存の時点で小文字にしているが、DB でも守る）。正規化は1つの関数に書き、signup・login・session・登録スクリプトのすべてがそれを呼ぶ。
+  - DB の SSOT の原則（docs/specs/db-ssot/README.md）に従い、同じ事実を2つの表に持たない。
   - 顧客管理（取引先 companies・担当者 contacts）には写さない。本契約のときに取引先とつなぐ方法は、本契約フォームの便で設計する。そのときは viewer_accounts から取引先を指す列（参照）で結び、email・LINE 名を取引先側に二重に持たない形を前提にする。
   - ログインの方法：メールに届くリンクを押してログインする。パスワードは持たない（PO 決定 Q2、2026-10-15）。PO の条件は「リンクを知っていれば誰でも見られる形にはしない。登録フォームに入力した情報で管理する」。これを次の仕組みで守る。
     - ログイン用のリンクは、viewer_accounts に登録済みで、状態が active か「期限内の trial」の email にだけ送る。登録されていない email、pending・verified・suspended の email、期限切れの trial の email には送らない（審査 N-31）。どの場合も応答は同じ 200 にして、登録済みかどうかを外から分からないようにする。
@@ -92,8 +94,10 @@ mode: handoff
 
 ### D3. 1分ごとの作り置き（SSOT を守る）
 - celery beat に、60.0 秒周期のエントリ "refresh-viewer-inventory" を足す。
+- 重なり対策（審査 r6 N-4）：タスクの最初に Redis の `SET viewer:inventory:lock <任意の値> NX EX 55` を取る。取れなかった回は何もせずに終わり、成功にも失敗にも数えない（前の回がまだ動いているため）。worker が2プロセスでも、同じ1分に作るのは1回だけになる。
 - タスクの作りは tcg_extraction.py の _run_auto_distribution（origin/main 65ed8cd8b では :736 から） にならう。async engine を作り、下の共通関数を呼んで、最後に dispose する。
 - テナント文脈は設定しない。GAS への配信（_run_auto_distribution）と同じ条件にし、見え方も今の GAS と同じにする（審査 N-1）。
+- Sold out の行は、配信の正本の中で除かれている（svc:241-248・:341）。閲覧ページの側では除く処理を書かない（審査 r6 N-2）。
 - 照合の基準は「GAS に配信される行と同じ」にする。アプリの /inventory との一致は求めない（/inventory は max_age_hours が無いときに空を返すなど、条件が違う。inventory_offers.py:323-328）。
 - 設定の取り方と「作ってよいか」の判定は、run_distribution と同じものを使う。2か所に同じ条件を書かないため、run_distribution の手順 0〜2（origin/main 0094e6d9a の `backend/app/services/tcg_distribution_svc.py`:861-943）を、新しい関数 `build_distribution_rows(db)` に切り出す。run_distribution と作り置きの両方がこれを呼ぶ。中身は次の順（今の run_distribution と同じ）：
   1. 安全装置 #8（analysis_runs に completed_at IS NULL がある）と #8b（extraction_jobs に pending・running・extracted がある）に当たったら、行を作らず「保留」を返す。
@@ -101,27 +105,42 @@ mode: handoff
   3. fetch_output_rows(db, include_flag_single=…, max_age_hours=…)（:390。merge_same_post=False で固定）。
 - fetch_output_rows はキーの無いリストを返す（:412）。作り置きは、各行を _GAS_COLUMNS（:251-254）と zip して辞書にし、ship_ja を除いた13キーにする。列の並びを別の場所に書き直さない。
 - run_distribution の結果（戻り値の形・ログ・既存のテスト）は変えない。切り出しの前後で、既存の配信のテストがすべて通ることを受入条件にする。
+- build_distribution_rows の仕様（審査 r6 B-3。Generator に判断させない）：
+  - 置き場：`backend/app/services/tcg_distribution_svc.py` の中、run_distribution の直前。
+  - 戻り値：`DistributionRowsResult`（dataclass。frozen）。欄は kind・rows・message の3つ。
+    - kind は "ok"・"hold"・"unset"・"error" の4つ（Literal）。
+    - rows は kind が "ok" のときだけ fetch_output_rows の戻り値そのまま。ほかは空のリスト。
+    - message は今の4つの文言をそのまま持つ（文言を変えない）。hold の #8 は svc:877-880 の文言、hold の #8b は svc:905-908 の文言、unset は MAX_AGE_UNSET_MESSAGE、error は `f"出力データ取得失敗: {exc}"`（svc:942）。ok のときは空文字。
+  - 例外：fetch_output_rows の例外は中で捕まえて kind="error" にする（今の svc:935 の try/except を中へ移す）。analysis_runs・extraction_jobs・load_distribution_settings の例外は、今と同じく捕まえずに外へ投げる（今の run_distribution もここは捕まえていない）。
+  - ログ：build_distribution_rows はログを出さない。今の4つのログ（svc:881・:909 の warning、:923・:936 の error）は run_distribution の側に残す。作り置きのタスクは "[dist]" のログを出さない（毎分の hold で "[dist]" の warning が並ばないようにするため）。作り置きは unset・error のときだけ、自分のロガーで "[viewer-cache]" を付けて1行出す。
+  - run_distribution の変更前後：
+    - 変更前：svc:861-943 に、手順0（#8）・0-b（#8b）・1（設定）・2（fetch_output_rows）と、4つの早期 return（svc:882・:910・:924・:937）がある。
+    - 変更後：`result = await build_distribution_rows(db)` を1回呼ぶ。kind が hold・unset・error なら、今と同じ水準のログ（hold は warning、unset・error は error。error のときのログ文は今の「出力データ取得エラー: %s」と同じ意味の文で、exc を含める）を出し、今と同じ形の辞書（run_id None、output_count 0、results []、errors [{"target_id": None, "error": result.message}]）を返す。ok なら `rows = result.rows` として svc:945 以降へ進む。
+    - 触らない範囲：svc:945 以降（output_count の計算、配信先の取得、書き込み、DB 記録、Discord 通知）と、関数の引数・docstring の手順の番号。
+  - 作り置きの対応：ok → 書く。hold → 何もしない（前回の値と updated_at を残す。fail_count も変えない）。unset・error → 前回の値を残し、fail_count を1増やす。
 - 結果は D2 で決めた列だけに絞った JSON にして、Redis のキー `viewer:inventory:v1` に置く。TTL は 24 時間にする。タスクが3分止まってもキーが消えず、閲覧者には「最終更新」が古いことで鮮度が伝わる（審査 B-3）。
 - キーが無いとき（Redis の再起動直後など）は、GET /viewer/inventory が 503 を返す。ページには i18n の「準備中です」を出す。
 - これは正本の一時的な写しで、書き手はこのタスク1つだけにする。DB の表やシートには写しを作らない（SSOT）。
 - 止まるときの扱い（審査 N-3、B-3）：
-  - 再解析・抽出の途中（「保留」）は、前回の値を残す。updated_at も変えない。GAS のシートも、この間は前回の配信のままなので、見え方が GAS と同じになる。通知はしない（正常な待ち）。（r5 までの「再解析の途中でも作る」「設定なしなら空を書く」は、アプリの /inventory に合わせた案だった。照合の基準を GAS に揃えたので改めた。）
+  - 再解析・抽出の途中（「保留」）は、前回の値を残す。updated_at も変えない。GAS のシートも、この間は前回の配信のままなので、見え方が GAS と同じになる。通知はしない（正常な待ち）。（r5 までの「再解析の途中でも作る」「設定なしなら空を書く」は、アプリの /inventory に合わせた案だった。照合の基準を GAS に揃えたので改めた。）**この扱いは PO 決定待ち（Q11）。** ideal-state の「アプリと同じ仕様」と KGI2 の「最終更新が1分以内」と、保留の間は表が止まることとが食い違うため（審査 r6 B-1）。Q11 が決まるまで、段2の実装カードは出さない。
   - max_age_hours が設定されていない（「設定なし」）ときも、前回の値を残し、下の失敗として数える。run_distribution もこの場合はエラーとして扱う（:922-930）。
 - 失敗したときは前回の値を残す。updated_at も TTL も変えない。
   - 失敗の回数は Redis のキー `viewer:inventory:fail_count` に incr で持つ。成功したとき（行が0件でも書けたとき）は 0 に戻す。「保留」は失敗にも成功にも数えない。Celery の worker は2プロセスで動くので（docker-compose.yml:209）、プロセスの中の変数では数えない（審査 N-26）。
   - 3回目の失敗で1回だけ知らせる。回復するまでは毎分は送らない。知らせる経路は、既存の send_discord_notification(tenant_id=4, event_type="tcg_distribution_error") の経路で知らせる（tcg_distribution_svc.py:1066-1081 と同じ。新しい経路は作らない）。
 
 ### D4. 閲覧ページ（軽い別の入口）
-- Vite の入力に `viewer/index.html` を足す。ビルドすると dist/viewer/index.html になり、frontend/nginx.conf の `$uri/` で当たる（frontend/nginx.conf:23-25）。
+- Vite の入力に viewer/index.html を足す。ビルドすると dist/viewer/index.html になり、frontend/nginx.conf の `$uri/` で当たる（frontend/nginx.conf:23-25）。
 - frontend/nginx.conf に `location = /viewer/index.html` と `location = /viewer/` を足し、本体の index.html と同じ `Cache-Control: no-cache, must-revalidate` を付ける（frontend/nginx.conf:7-12 と同じ理由。デプロイ後に古い index が残って白画面になるのを防ぐ。審査 N-13）。
 - 配る URL は `/viewer/`（末尾にスラッシュ）に固定する。`/viewer` で来たときの転送先を Playwright で確かめる。ポート 8080 が混ざったら `port_in_redirect off; absolute_redirect off;` を足す（審査 N-14）。
 - 外側の nginx は、D1-8 の login ゾーンを足すところだけ変える。
-- ページの状態は次の4つにする（審査 N-35）。文言はすべて i18n にする。
+- ページの状態は次の6つにする（審査 N-35、r6 B-6）。文言はすべて i18n にする。
   - ① ログインの申込（email を入れる → POST login）
   - ② リンクから来たときの email の確認（POST session）
   - ③ 在庫表と「最終更新 HH:MM」
   - ④ 案内（準備中、リンクが使用済み、期限切れ）
-- 下の 300KB の上限は、この4つの状態を全部含めた大きさとする。部品は既存の金型（`frontend/src/components/`）とデザイントークンだけを使う（ADR-144、ADR-067）。金型に無い部品は、PO の許可（Q10）を得て金型として登録してから使う。
+  - ⑤ 申込（email・LINE 名・在庫関連の課題・隠し欄 → POST signup）
+  - ⑥ メール確認の結果（`#verify=` から来たとき。POST verify-email の結果で、成功・使用済み・期限切れのどれかを出す）
+- 下の 300KB の上限は、この6つの状態を全部含めた大きさとする。部品は既存の金型（`frontend/src/components/`）とデザイントークンだけを使う（ADR-144、ADR-067）。金型に無い部品は、PO の許可（Q10）を得て金型として登録してから使う。
 - 文字はすべて i18n にする（ADR-027）。
 - アプリ本体（約 2.5MB）は読み込まない。viewer の JS は、圧縮前で合計 300KB 以下を上限にする。
 - GAS の画面の部品と金型の対応（GAS は在庫一覧 GAS の index.html。根拠は /tmp/CC報告ファイル/viewer_frontend_facts.md の A・B。金型はすべて origin/main の `frontend/src/components/` にあり、stories もある）：
@@ -143,17 +162,35 @@ mode: handoff
   | コンディション・提供者の複数選択 | **金型なし**（Popover はある） | Q10 で決める |
   | 表の倍率合わせ（PC で表を枠に収める） | **金型なし** | Q10 で決める |
 
-  - Sold out の行を除くこと、投稿日時の表示を「MM-DD HH:mm」にすることは、GAS と同じにする（部品ではなく表示の規則）。
-  - 金型を新しく登録するには PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。Q10 が決まるまで、この3つは実装カードに入れない。
+  - 投稿日時の表示を「MM-DD HH:mm」にすることは、GAS と同じにする（部品ではなく表示の規則）。Sold out の行は D3 のとおり作り置きの時点で入っていないので、ページでは除かない。
+  - スマホの縦カード表示：【事実】DataTable にはスマホで行を縦のカードにする表示が無い（審査 r6 N-3）。GAS はスマホで縦のカードにしている。これも Q10 で決める（4つ目）。
+  - 金型を新しく登録するには PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。Q10 が決まるまで、この4つは実装カードに入れない。
+  - 申込とメール確認の画面（審査 r6 B-6）：
+
+    | 画面の部品 | 使う金型 |
+    |---|---|
+    | email の入力 | TextField type="email" |
+    | LINE 名の入力 | TextField |
+    | 在庫関連の課題 | Textarea |
+    | 送信 | Button |
+    | 隠し欄（ハニーポット） | 金型なし（下の ui-allow） |
+    | メール確認の結果（成功・使用済み・期限切れ） | EmptyState と Button |
   - ハニーポットの欄（D5）は、画面に見せない入力欄なので金型を使わない。生の input に `ui-allow: 申込のボット対策の隠し欄 (#4283)` を付ける。
 - 置き場：
-  - 入口の HTML は `frontend/viewer/index.html`。中の script は `/src/pages/viewer/main.tsx` を指す。
-  - tsx はすべて `frontend/src/pages/viewer/` の中に置く（ViewerPage.tsx など）。check-page-folder.js は pages の直下の .tsx だけを禁止し（:23-29）、check-ui-governance.js は pages 配下を検査する（:36）ので、閲覧ページも金型の検査の対象に入る。
-  - frontend/vite.config.ts の build に `rollupOptions.input`（main: index.html、viewer: viewer/index.html）を足す。前例は無いので、段1で `npm run build` の後に dist/index.html と dist/viewer/index.html の両方ができることを確かめる。
+  - 入口の HTML は frontend/viewer/index.html。中の script は /src/pages/viewer/main.tsx を指す。
+  - tsx はすべて frontend/src/pages/viewer/ の中に置く（ViewerPage.tsx など）。check-page-folder.js は pages の直下の .tsx だけを禁止し（:23-29）、check-ui-governance.js は pages 配下を検査する（:36）ので、閲覧ページも金型の検査の対象に入る。
+  - frontend/vite.config.ts の build に `rolldownOptions.input`（main: index.html、viewer: viewer/index.html）を足す。【事実】入っている Vite は 8.0.16（origin/main の package-lock.json）。公式資料（vite.dev/config/build-options、2026-10-15 に確認）では `build.rollupOptions` は `build.rolldownOptions` の非推奨の別名と書かれているので、新しい名前を使う。前例は無いので、段1で `npm run build` の後に dist/index.html と dist/viewer/index.html の両方ができることを確かめる。
 - 辞書（i18n）：
-  - 閲覧ページの文言は、新しい辞書 `frontend/src/locales/viewer/ja.json` と `en.json` に置く。キーはすべて `viewer.` で始める。本体の ja.json（254KB）を閲覧ページに読み込むと 300KB の上限を超えるため。本体の辞書には `viewer.` のキーを置かない（同じ文言を2か所に持たない）。
-  - 閲覧ページは `frontend/src/pages/viewer/i18n.ts` で、この2つの辞書だけを読み込む。本体の `frontend/src/i18n.ts` は読み込まない。
-  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、`src/pages/viewer/` の中のファイルは viewer の辞書で探し、それ以外は今までどおり本体の辞書で探す。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
+  - 閲覧ページの文言は、新しい辞書 frontend/src/locales/viewer/ja.json と en.json に置く。キーはすべて `viewer.` で始める。本体の ja.json（254KB）を閲覧ページに読み込むと 300KB の上限を超えるため。本体の辞書には `viewer.` のキーを置かない（同じ文言を2か所に持たない）。
+  - 例外（審査 r6 B-5）：【事実】金型の中にも t() がある。Drawer.tsx:146 は t("suppliers.openFullPage")、Drawer.tsx:157・Sheet.tsx:141・Modal.tsx:134 は t("common.close") を使う（origin/main）。金型は変えない。閲覧ページが使う金型の中のキーだけは、viewer の辞書にも同じキー名で入れる（例：common.close）。同じ文言が本体と viewer の2か所に入るのはこの例外だけで、対象は「viewer の入口から import される `frontend/src/components/` のファイルの t() のキー」に限る。下の検査がこの集合を自動で数えるので、手で一覧を持たない。
+  - 閲覧ページは frontend/src/pages/viewer/i18n.ts で、この2つの辞書だけを読み込む。本体の `frontend/src/i18n.ts` は読み込まない。
+  - 検査 `frontend/scripts/check-i18n-missing-keys.js` を直す。今は、src の全ファイルの t("a.b") を本体の ja.json・en.json で探す（:16-19、:63-65）。直した後は、src/pages/viewer/ の中のファイルと、そこから import される frontend/src/components/ のファイル（import をたどって集める）は viewer の辞書でも探す。それ以外は今までどおり本体の辞書で探す（金型のキーは本体の辞書でも引き続き探す）。あわせて、viewer の ja と en のキーの集合が完全に一致することも検査する。
+- ビルドの大きさと辞書の混入の測り方（審査 r6 B-4）：
+  - 【事実】Vite は JS を dist/assets/ にまとめて出す。dist/viewer/ の下には JS は出ないので、「dist/viewer の JS」では測れない。
+  - frontend/vite.config.ts の build に `manifest: true` を足す。ビルド後に dist/.vite/manifest.json を読み（置き場は公式資料 vite.dev/config/build-options の既定値）、入口 viewer/index.html の項目から file・imports・css をたどった集合を「viewer の資産」とする（dynamicImports もたどる。たどり方は公式資料 vite.dev/guide/backend-integration の importedChunks と同じ）。
+  - 大きさ：この集合の JS の合計（圧縮前）が 300KB 以下。
+  - 辞書の混入：この集合の JS の中に、本体の ja.json にだけあるキー（`viewer.` でもなく金型のキーでもないもの）から選んだ目印の文字列が含まれない。
+  - 検査のスクリプトは frontend/scripts/check-viewer-bundle.js に置き、CI のビルドの後に実行する。わざと viewer の中で本体の frontend/src/i18n.ts を import したときに、この検査が失敗することを段3で1回確かめ、生の出力を残す。
 
 ### D5. 申込フォームとトライアル
 - 公開の POST /api/v1/viewer/signup を作る。
@@ -194,8 +231,8 @@ mode: handoff
 | 登録用の専用スクリプトは、登録・飛ばした・失敗の件数を出し、登録済みの email を飛ばす。2回続けて実行しても行が増えない | CI pytest（架空の3行のファイルで。本物の一覧は使わない） |
 | PO の画面の目印①（同じ閲覧者が24時間で3つ以上の別 IP）と目印②（別の閲覧者どうしで同じ IP）が、条件どおりの行にだけ付く。ログイン履歴に日時・IP・端末が出る | CI pytest（API の応答）と Evaluator（Playwright で画面） |
 | signup・verify-email・login・session の4本とも、Origin が違えば 403 になる | CI pytest（4本それぞれ） |
-| `npm run build` の後に dist/index.html と dist/viewer/index.html の両方ができ、dist/viewer の JS に本体の i18n 辞書（ja.json）が含まれない | CI（ビルドの後に確認） |
-| src/pages/viewer の t() のキーが viewer の辞書に無ければ検査が失敗する。viewer の ja と en のキーの集合が違えば失敗する | CI（check-i18n-missing-keys.js。わざと欠けたキーで失敗することを1回確かめる） |
+| `npm run build` の後に dist/index.html と dist/viewer/index.html の両方ができ、manifest の viewer 入口からたどった JS に本体の辞書の目印の文字列が含まれない。viewer の中でわざと本体の i18n.ts を import すると検査が失敗する | CI（check-viewer-bundle.js。失敗の確認は段3で1回、生の出力を残す） |
+| src/pages/viewer の t() のキーと、そこから import される金型の t() のキー（例：common.close）が viewer の辞書に無ければ検査が失敗する。viewer の ja と en のキーの集合が違えば失敗する | CI（check-i18n-missing-keys.js。わざと欠けたキーで失敗することを1回確かめる） |
 | beat に refresh-viewer-inventory があり、周期が 60.0 秒である | CI pytest |
 | タスクが失敗した後、Redis の値と updated_at が変わらない。3回続けて失敗したら通知が1回だけ呼ばれ、4回目では呼ばれない。成功すると fail_count が 0 に戻る | CI pytest（mock。fail_count は Redis で数える） |
 | pending の email で signup し直すと新しい確認メールが送られ、古いトークンは使えない | CI pytest |
@@ -203,14 +240,17 @@ mode: handoff
 | Redis が使えないときの logout は 503 になる | CI pytest（mock） |
 | honeypot に値があると行が作られない。同じ email の4回目は 429 になる | CI pytest |
 | 7日たった pending の行は消え、trial の行は残る | CI pytest |
-| ja.json と en.json のキーが一致する | 既存の CI（i18n チェック） |
-| viewer の JS が、圧縮前の合計で 300KB 以下 | CI でビルドした後に dist/viewer の資産の大きさを合計する |
+| 本体の ja.json と en.json のキーが一致する。viewer の ja.json と en.json のキーも一致する | CI（check-i18n-missing-keys.js。本体の側は既存の検査、viewer の側は D4 で足す検査） |
+| viewer の JS が、圧縮前の合計で 300KB 以下 | CI（check-viewer-bundle.js。manifest の viewer 入口から imports・dynamicImports をたどった JS の合計） |
+| run_distribution の4つの早期 return（#8・#8b・設定なし・取得失敗）の戻り値の辞書とログの水準が、切り出しの前後で同じ | CI pytest（4つそれぞれ。errors の文言を変更前の文言と比べる） |
+| build_distribution_rows は、#8・#8b のとき kind="hold"、設定なしのとき "unset"、fetch_output_rows の例外のとき "error"、それ以外は "ok" を返し、ログを出さない | CI pytest（caplog で "[dist]" が出ないことを見る） |
+| ロック viewer:inventory:lock が取られているとき、タスクは何も書かず、fail_count も変えない | CI pytest |
+| signup の email は前後の空白を除いて小文字にしてから保存・比較される。「 A@x.com 」と「a@x.com」は同じ人として扱われる。users.email と同じ email（大文字小文字は無視）では行が作られない | CI pytest |
 | app.salesanchor.jp/viewer/ が閲覧ページの title を返す | Evaluator（Playwright） |
-| Redis のキーが無いとき、inventory は 503 を返す。max_age_hours が設定されていないときは、空の rows が書かれる | CI pytest |
+| Redis のキーが無いとき、inventory は 503 を返す | CI pytest |
 | ログアウトした後、時刻を2時間進めても、同じトークンで inventory を叩くと 401 になる | CI pytest（時刻を固定する） |
 | 無効なトークンで session に10回失敗した IP は、11回目が 429 になる。同じ email への login は4回目からメールを送らない | CI pytest |
 | リンク先を GET で2回開いた後でも、POST の session と verify-email でトークンが使える（GET ではトークンを消費しない） | CI pytest |
-| Origin が違う POST login は 403 になる | CI pytest |
 | トークンが正しくても、email が登録と違えば session は 401 になる。そのあと正しい email を入れれば、同じトークンで入れる | CI pytest |
 | 確認用（verify_email）のトークンでは session に入れない | CI pytest |
 | 新しいログイン用トークンを作ると、前の未使用のトークンは使えなくなる | CI pytest |
@@ -219,8 +259,8 @@ mode: handoff
 | ログイン用のリンクは、active と期限内の trial の email にだけ送られる。未登録・pending・verified・suspended・期限切れの trial の email にはメールが送られず、応答は同じ 200 | CI pytest（メール送信を mock にする） |
 | 申込：メールか LINE 名が空なら 422。Discord ID の欄は無く、送られてきても保存しない | CI pytest |
 | 申込：在庫関連の課題が1000文字を超えたら 422。保存した文字列は画面にそのまま文字として出し、HTML として解釈しない | CI pytest |
-| 延長：期限切れの trial に N=7 を指定すると、trial_expires_at が「記録した時刻＋7日」になり、inventory が 200 になる。N が0以下か整数でなければ 422。active・suspended・pending には延長できない（409） | CI pytest（時刻を固定する） |
-| ログイン記録：session の成功・失敗、login の要求、申込のたびに viewer_login_events に1行入り、client_ip が X-Real-IP の値になる。91日前の行は毎日の処理で消える | CI pytest |
+| 延長：期限切れの trial に N=7 を指定すると、trial_expires_at が「記録した時刻＋7日」になり、inventory が 200 になる。N が0以下か整数でなければ 422。active・suspended・pending・verified には延長できない（409） | CI pytest（時刻を固定する） |
+| ログイン記録：session の成功・失敗、login の要求、申込のたびに、閲覧者の行がある場合だけ viewer_login_events に1行入り、client_ip が X-Real-IP の値になる。閲覧者の行が無い email（未登録の login、合わない email の session）では行が入らない。91日前の行は毎日の処理で消える | CI pytest |
 | ログイン用のリンクは15分で無効になり、一度使ったら2回目は 401 になる | CI pytest（時刻を固定する） |
 | suspended にした後は、発行済みの12時間トークンでも inventory が 403 になる | CI pytest |
 | GET /viewer/ の応答に Cache-Control: no-cache が付いている。/viewer でも同じページに着く | Evaluator（curl と Playwright） |
@@ -260,7 +300,8 @@ mode: handoff
 | 2 | 作り置きと閲覧 API（D2・D3） | Sonnet |
 | 3 | 閲覧ページ（D4） | Sonnet |
 | 4 | 申込、トライアル、pending の掃除、管理の操作（D5） | Sonnet |
-| 各段 | コード審査（Fable）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
+| 各段 | コード審査（Opus。PO 決定 2026-10-15 で Fable から変更）、セキュリティ審査、マージ。secret の追加は PO の確認を取る | Opus |
+| 計測用 | 本番の表示時間（受入条件の最後から2行目）を測るための閲覧者アカウントは、段4の後に登録用の専用スクリプトで1件だけ作る（email は社内で受け取れるアドレス。状態は trial、期限は計測の日＋1日）。計測が終わったら Q3 の Claude の経路で suspended にし、viewer_status_changes に残す。行は消さない（履歴を残すため）。作る前と止めた後に PO へ3行で報告する（審査 r6 N-12） | Opus（GO）＋Sonnet（実行） |
 
 ---
 
@@ -271,11 +312,11 @@ mode: handoff
 - 過去事例（社内）：GAS への配信を Celery から作る前例（tcg_extraction.py の _run_auto_distribution（origin/main 65ed8cd8b では :736 から））。応用：同じ接続条件で作り置きを作る。
 - 外部事例（調査 2026-10-15。全文と出典は PR に載せず、要点だけを下に書く。数値は出典に書かれたものだけ）：
   - 成功・Yelp（2021-03、Yelp Engineering Blog）：事業者向けの再ログインを、メールのリンクに置き換えた。導入前は、パスワードの再設定で失敗したことを知らせるメールを1日に約7,500回送っていた。リンクは1回だけ使え、期限が付いている。無効なリンクのときは通常のログイン画面に戻す。応用：D1 のトークンも1回限りで期限付きにし、無効なときは「ログインの申込」の画面に戻す。
-  - 成功・ドイツ連邦 DigitalService（2022-08、公式ブログ）：固定資産税の申告サービスで、メールのリンクによる登録・ログインを始め、4週間で15万人を超えた。手順はパスワードの再設定の6段から4段に減った。ただし「申し込んだブラウザでしか使えない」ことが利用者に伝わっていなかった。応用：本設計では、ブラウザに縛らず email の再入力で本人を確かめる（Q2c）。リンクが1回限りであることは、i18n の文言で画面に出す。
+  - 成功・ドイツ連邦 DigitalService（2022-08、公式ブログ）：固定資産税の申告サービスで、メールのリンクによる登録・ログインを始め、4週間で15万人を超えた。手順はパスワードの再設定の6段から4段に減った。学び（審査 r6 N-11 で訂正）：利用者は「リンクは1回限り」「最新のリンクだけが有効」を想定しておらず、説明が要った。応用：リンクが1回限りであること、新しく頼むと前のリンクが使えなくなることを、メールの本文と画面④の i18n の文言で出す。ブラウザに縛らず email の再入力で本人を確かめる（Q2c）。
   - 失敗・Supabase の議論（2025-12）、Microsoft Defender の議論（2023-07）、Ghost のフォーラム（2020〜2023）：企業のメールの安全検査が、届いた時点でリンクを先に開いた。GET でトークンを使ったり状態を変えたりする作りだったため、リンクが無効になったり、承認が勝手に実行されたりした。件数は書かれていない。応用：D1 は、トークンを `#` の後ろに置き、ページで POST するまで使わない。受入条件の「GET で2回開いた後でも使える」がこの対策の確認になる。
   - 失敗・Auth0 の公式記事（2025-10 更新）：リンクを、申し込んだのとは別のブラウザで開くと失敗する作りのため、利用者に「リンクをコピーして元のブラウザに貼る」よう案内している。応用：email の再入力方式は、この縛りを持たない。
   - トライアル期間・Management Science の論文（2023、新規利用者 337,724人に無作為に割り当て）：購読した割合は、7日が15.35%、14日が14.97%、30日が14.67%で、差は1ポイント未満。Tunguz の約600社の調査（SaaStr）でも、7・14・21・30日のあいだに有意な差は無く、14日が最も多かった。応用：14日（Q5）は外部の実測から外れていない。ただし対象は個人向けのソフトなので、本件での転換率を予想する根拠にはしない。
-  - 共有の検知・Netflix の株主向けレター（2023 Q2、SEC に提出）：世帯の外での共有を有料にした後、有料会員の純増は590万人だった（前年の同じ期はマイナス100万人）。世帯の判定には IP・端末・利用の状況を使っている。一方、先に始めたスペインでは、2023 Q1 に約100万人が減り、解約率が3倍になった（Kantar の推計の報道。二次情報）。誤って検知した割合を数値で公開した例は見つからなかった。応用：本設計は自動では止めず、目印を出して PO が判断する（Q6）。止めすぎによる離脱を避けられる。
+  - 共有の検知・Netflix の株主向けレター（2023 Q2、SEC に提出）：世帯の外での共有を有料にした後、有料会員の純増は590万人だった（前年の同じ期はマイナス100万人）。世帯の判定には IP・端末・利用の状況を使っている（この判定方法の部分は、レターの本文を読んでおらず、検索結果の要約による【未確認】）。一方、先に始めたスペインでは、2023 Q1 に約100万人が減り、解約率が3倍になった（Kantar の推計の報道。二次情報）。誤って検知した割合を数値で公開した例は見つからなかった。応用：本設計は自動では止めず、目印を出して PO が判断する（Q6）。止めすぎによる離脱を避けられる。
   - 短い作り置き・NGINX の公式ブログ（2015-12）：WordPress で、作り置きが無いときは毎秒5.53件しか返せなかった。1秒だけ作り置きすると毎秒2,185件になった。期限が切れた瞬間にリクエストが元に集中することへの対策も要る、と書いている。Facebook の論文（NSDI 2013）では、作り直しを10秒に1回に絞ることで、DB への問い合わせのピークが毎秒17,000件から1,300件に下がった。応用：D3 は閲覧者のリクエストでは作り直さず、1分ごとのタスクが1本で作る。期限が切れたときの集中は構造上起きない。
   - 適用の限界：上の事例は、どれも本件より大きな規模か、個人向けのサービス。メールのリンクの成功率・離脱率、60秒の作り置きの効果、GAS からの移行前後の速度について、数値を出した一次の事例は見つからなかった。本件の成否は、受入条件の表と、段0〜2 の実測で判定する。
 
@@ -288,6 +329,7 @@ mode: handoff
 ## 継続
 
 - 完了後の監視：作り置きタスクが続けて失敗した回数（D3 の Discord 通知）。タスクがそもそも動かない場合（worker の停止）は失敗として数えられないので、updated_at から10分以上たったら知らせる仕組みを足す（経路は段2で既存のものから選ぶ。審査 N-26）。ほかに、閲覧 API の p50、閲覧者の数（trial と active）。
+- 保留の間との関係（審査 r6 N-5）：保留（再解析・抽出の途中）が10分を超えて続くと、updated_at の通知も鳴る。これは「表が10分以上止まっている」という事実の知らせとして正しいので、保留の間も止めない。通知の文に「保留中かどうか」（analysis_runs・extraction_jobs の未完了の件数）を添え、受け取った人が正常な待ちか故障かを見分けられるようにする。Q11 で「保留中も作る」に決まった場合は、この段落は要らなくなる。
 - 次のフェーズ：GAS の停止（Q4）。社内ユーザーの権限の穴は別の設計で扱う（下の「別件」）。
 
 ---
@@ -306,28 +348,46 @@ mode: handoff
   - PO の経路：super admin 画面。API は既存の require_super_admin（backend/app/auth/dependencies.py:495（origin/main 65ed8cd8b））で守り、画面は pages/super-admin/ 配下に置く（既存例 backend/app/routers/super_admin_phase_switch.py:65・:89）。
   - Claude の経路：【事実】制限付き鍵 salesanchor-claude で実行できるのは監視の4コマンドだけで、DB の読み書きはできない（docs/adr/ADR-079-claude-code-monitoring-access.md:57、docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58-59・:220-224）。DB 書き込みには無制限鍵が要り、CLAUDE.md:29-30 により作業ごとに PO の GO が要る。そこで、SQL を手で書かず、backend コンテナ内の専用スクリプト（引数は email と変更後の状態だけ。PO の画面と同じサービス関数を呼ぶ）を無制限鍵で実行する。GO 原文は依頼文と記録に転記する。
   - GO の発行者（PO 決定 2026-10-15、原文「N,仕様に関しては壁打ちして決めているので仕様から逸脱していないGOは全てOPUSに権限委譲する」）：本設計どおりの切り替え（対象1人の状態を trial→active、→suspended、suspended→元の状態のいずれかに変える）は、Opus が「POの委任に基づくClaude Opus発行」として GO を出す（委任の正式記録 docs/handoff/go-record-transcription/opus-delegation.md と同じ書き方）。複数人の一括変更・削除・本設計に無い状態の変更など、仕様から外れる操作は Opus が止めて PO に聞く。
+  - **操作の GO の条件（この1か所を正とする。審査 r6 N-9）**：Opus が委任で GO を出せるのは、次の3つをすべて満たすときだけ。①対象が1人。②変更が上の管理 API の4つ（activate・suspend・unsuspend・extend）のどれかで、上の表のとおりの遷移。③実行の前に PO へ3行で報告している（誰を・何から何へ・理由）。1つでも外れたら止めて PO に聞く。**Q9 の22人の一括登録は①を外れるので、GO は PO 本人が出す。** 計画票の計測用アカウントの作成（1人）は、③を満たせば Opus が出せる。
   - 期限の延長（PO 決定 2026-10-15、原文「トライアルが終了した人も任意で期間を決めて閲覧期限を延長させる機能もつけてほしい、延長させるのは延長を記録した日次から換算する」）：状態が trial の人（期限内・期限切れのどちらも）に、操作する人が日数 N（1以上の整数）を指定する。trial_expires_at は「延長を記録した時刻＋N日」になる。元の期限に足すのではない。状態は trial のまま。PO の画面と Claude の経路の両方から同じサービス関数で行い、変更前後の期限・N・実行者・日時を記録する。
   - どちらの経路でも、変更前後の状態・実行者（PO／Claude）・日時を記録に残す。保存先は新しい表 public.viewer_status_changes にする。【事実】既存の tenant の audit_logs は tenant_id と user_id が必須で、閲覧者には使えない（backend/app/services/audit.py:277-）。auth_events は「誰が」の列が無い（migrations/001_create_auth_events.sql:6-16）。public.audit_log（migrations/20260921_110000_pipeline_tables_public.sql:404-413）は record_id が UUID 型で、閲覧者の id（BIGSERIAL）を入れられない。また、この表は TCG の商品の編集の履歴で、書き手は商品詳細の処理（backend/tests/test_tcg_product_detail_pg.py:194 で確認される経路）なので、閲覧者の状態の履歴を混ぜない。
     - 列：id、viewer_id（viewer_accounts への FK）、action（activate・suspend・unsuspend・extend の4つ）、from_status、to_status、from_expires_at、to_expires_at、extend_days（extend のときだけ）、actor（po か claude の2値）、actor_user_id（PO の画面からのときの users.id。ADR-1008 に従い users を指す。Claude の経路では NULL）、created_at。
     - 停止の解除（unsuspend）は、その閲覧者の最後の suspend の行の from_status に戻す。viewer_accounts に「停止前の状態」の列は足さない（同じ事実を2か所に持たないため）。suspend の行が無いのに解除しようとしたら 409 にする。
     - 状態と期限の正本は viewer_accounts。この表は「いつ・誰が・何を変えたか」の履歴だけを持つ。保存期間は Q7 で決める。
   - 生の調査記録：/tmp/CC報告ファイル/viewer_ssh_recon.txt
+  - 管理 API と画面（段4。審査 r6 N-8）：router は新しいファイル backend/app/routers/super_admin_viewers.py にし、前例 super_admin_phase_switch.py（:60-64 の `/super-admin/...` の形、main.py:639 の prefix "/api/v1"）にならう。すべて require_super_admin。入出力は JSON。
+
+    | method とパス | 入力 | 出力 | エラー |
+    |---|---|---|---|
+    | GET /api/v1/super-admin/viewers | なし | 閲覧者の一覧（id・email・line_name・inventory_issue・状態・trial_expires_at・作成日時・目印①②） | 403 |
+    | GET /api/v1/super-admin/viewers/{id}/logins | なし | ログイン記録（日時・event_type・IP・端末。新しい順） | 403・404 |
+    | POST /api/v1/super-admin/viewers/{id}/activate | なし | 変更後の閲覧者 | 403・404・409（trial 以外） |
+    | POST /api/v1/super-admin/viewers/{id}/suspend | なし | 同上 | 403・404・409（すでに suspended） |
+    | POST /api/v1/super-admin/viewers/{id}/unsuspend | なし | 同上 | 403・404・409（suspended でない、または suspend の行が無い） |
+    | POST /api/v1/super-admin/viewers/{id}/extend | {"days": N} | 同上 | 403・404・409（trial 以外）・422（N が1未満か整数でない） |
+
+    - 4つの変更の API は、1つのサービス関数（backend/app/services/viewer_admin.py。Claude の専用スクリプトもこれを呼ぶ）を呼び、同じトランザクションで viewer_status_changes に1行書く。
+    - 画面は pages/super-admin/ 配下に1ページ。部品：一覧は DataTable、状態は Badge、操作は Button、延長の日数は TextField type="number"、確認は Modal、ログイン記録は Drawer。すべて既存の金型で足りる。文言は本体の ja.json・en.json（社員の画面なので viewer の辞書ではない）。
 - Q4. GAS の在庫一覧をいつ止めるか（移行の期間）。
 - Q5.【決定 2026-10-15 PO「Y」】メールの確認が済んだ時点で自動的にトライアルを始め、14日はその時刻から数える。人の承認は挟まない。verified は今回使わない（5値は残す）。
 - Q6.【決定 2026-10-15 PO「Y」】別のメールでの申込み直しは自動では止めない。気付いたら PO か Claude が停止する。判断の材料として、下のログイン記録と、申込一覧で同じ LINE 名・同じ IP の行に目印を出す。
 - ログイン記録（PO 決定 2026-10-15、原文「ログインのログを取る形でいつ誰がどのIPからなどが特定できるのであれば1つのアカウントから複数人がログインしていないか、二重登録で回避していないかなど判断できる」）：
   - 【事実】既存の public.auth_events（migrations/001_create_auth_events.sql:6-16）は、いつ・IP（client_ip VARCHAR(45)）・端末（user_agent VARCHAR(500)）を持つが、「誰が」の列が無い。また AuditMiddleware が書くのは /api/v1/auth/ 配下と 401/403 だけ（backend/app/middleware/audit.py:34・:37）。保存は90日で、毎日自動で消す（backend/app/tasks/maintenance.py:30、backend/app/celery_app.py:96-99）。tenant の audit_logs は tenant_id と user_id が必須なので、閲覧者には使えない（backend/app/services/audit.py:277-）。
   - 決定：新しい表 public.viewer_login_events に記録する。列は id、viewer_id（viewer_accounts への FK）、event_type、client_ip、user_agent、created_at。client_ip と user_agent の名前と型、保存90日・毎日自動で消すことは、auth_events にそろえる（消す処理は maintenance.py の既存の型にならう）。auth_events には列を足さない（中間処理の全リクエスト記録と、閲覧者の本人の記録とを混ぜないため）。
-  - event_type は4つ：login_requested（リンクを要求した）、session_created（ログインできた）、session_failed（トークンか email が合わなかった。viewer_id が分かる場合だけ）、signup（申込）。在庫の表示（60秒ごとの取得）は記録しない（行が増えすぎるため。12時間のログインごとに1行で、共有は判断できる）。
+  - event_type は4つ：login_requested（リンクを要求した）、session_created（ログインできた）、session_failed（トークンか email が合わなかった。viewer_id が分かる場合だけ）、signup（申込）。viewer_id は NOT NULL にする。閲覧者の行が無いとき（未登録の email への login、トークンが無効で誰のものか分からない session）は記録しない（審査 r6 N-7。その失敗は D1-8 の IP ごとの回数制限だけで数える）。在庫の表示（60秒ごとの取得）は記録しない（行が増えすぎるため。12時間のログインごとに1行で、共有は判断できる）。
   - IP の取り方は、本設計の回数制限と同じ1つの関数を使う（X-Real-IP）。【事実】既存の _get_client_ip は X-Forwarded-For の先頭を使っている（backend/app/auth/dependencies.py:67-72）。閲覧者ではこれを使わない。理由は D1 の回数制限と同じ（なりすまされない値を使うため）。
   - PO の画面：閲覧者ごとのログイン履歴（日時・IP・端末）を出す。目印を2つ出す。①同じ閲覧者が24時間のうちに3つ以上の別 IP からログインした。②別の閲覧者どうしで同じ IP からログインか申込がある。目印は判断の材料で、自動の停止はしない。
 
 - Q7. 閲覧者の個人情報を保存する期間と、削除の方法。LP のプライバシーポリシーに追記するか。
+- Q11.（審査 r6 B-1）再解析・抽出の途中（保留）の間、閲覧ページの表をどうするか。
+  - 案 y：GAS と同じく前回の表のまま止める（D3 の今の案）。未確定の行を出さない（安全装置 #8 の目的）。そのかわり、保留が続くと「最終更新」が1分より古くなる。KGI2 に「保留の間を除く」を足し、受入条件に「保留でないときは updated_at が60秒以内（本番で curl）」を足す。
+  - 案 n：アプリの在庫表と同じく、保留中も新しい行を出す（r5 の形）。最終更新は常に1分以内になるが、再解析の途中の行（単位が未確定のもの）が見える。GAS とは見え方がずれる。
+  - 推奨は y（今の GAS の利用者の見え方を変えないため）。
 - Q8.【決定 2026-10-15 PO「Y」】置き場所は app.salesanchor.jp/viewer/ にする。
 - Q9.【決定 2026-10-15 PO「Y」】PO から一覧（22件、メールの重複0件・形式不正0件）を受け取った。個人情報なので、リポジトリと PR には載せず、リポジトリ外の ~/CC報告ファイル-keep/viewer-initial-accounts/initial_active_list.tsv（権限600、項目は申込日時・LINE 名・メールの3つだけ）に置く。登録は段4の公開前に、Q3 の Claude の経路（無制限鍵＋専用スクリプト。migration ではデータを入れない）で行う。登録の前に一覧を PO に見せる。 【訂正 2026-10-15 PO】原文「〇〇さんだけは本契約」（個人名のため伏せた）。active で登録するのは一覧のうち1人（2026/09/28 申込の行）だけ。残り21人（PO「Y」2026-10-15）：状態を trial にし、trial_expires_at を一覧の申込日時（JST）＋14日にして登録する。これで公開の時点では全員が期限切れになり、在庫表は見られない。PO が延長を決めた人から、延長の機能で「記録した時刻＋N日」まで見られるようになる。申込のやり直しは要らない。
   - 22人とも email_verified_at は NULL のままにする（新しい経路でメール確認をしていないため）。ログイン用リンクを送るかどうかは状態と期限だけで決め、email_verified_at は見ない（D1 の送る相手の条件と同じ）。
   - 登録用の専用スクリプトは、一覧ファイルを読んで1行ずつ登録する。登録済みの email は飛ばして、件数（登録・飛ばした・失敗）を出す。実行の前に、対象一覧を PO に見せる。
-- Q10. GAS の画面のうち、金型が無い3つ（24時間以内のスイッチ、コンディション・提供者の複数選択、PC で表を枠に収める倍率合わせ）をどうするか。推奨は「スイッチと複数選択は金型（Checkbox・MultiSelect）を新しく登録して再現する。倍率合わせは作らず、DataTable の横スクロールで代える」。金型の登録には PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。PO の 10/14 の発言「原則同じ変更を入れる、ただしスプレッドシートとGASの処理を考えて全部は実装しなくても良い」に照らして、再現しない機能は PO に確認する。
+- Q10. GAS の画面のうち、金型が無い4つ（24時間以内のスイッチ、コンディション・提供者の複数選択、PC で表を枠に収める倍率合わせ、スマホで行を縦のカードにする表示）をどうするか。推奨は「スイッチと複数選択は金型（Checkbox・MultiSelect）を新しく登録して再現する。倍率合わせは作らず、DataTable の横スクロールで代える。スマホの縦カードは DataTable の金型に表示の型として足す」。金型の登録には PO の許可が要る（docs/CC_UI_GOVERNANCE.md:11-13）。PO の 10/14 の発言「原則同じ変更を入れる、ただしスプレッドシートとGASの処理を考えて全部は実装しなくても良い」に照らして、再現しない機能は PO に確認する。
 
 ## 別件（本設計の外）
 
