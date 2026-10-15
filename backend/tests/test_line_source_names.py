@@ -10,6 +10,14 @@ from app.services import line_source_names as svc
 from app.services.tcg_line_import_svc import resolve_suppliers
 
 
+@pytest.fixture(autouse=True)
+def _no_operator_context_sql():
+    """モック DB は実行回数・順序を検証するため、ADR-1018 段階②b の operator 文脈 SQL は外す。
+    文脈そのものは tests/test_suppliers_rls.py（実 PostgreSQL）で検証する。"""
+    with patch("app.services.line_source_names.set_operator_context", new_callable=AsyncMock), patch("app.services.line_source_names.reset_operator_context", new_callable=AsyncMock):
+        yield
+
+
 def message(name='Example Full', body=None):
     return {'display_name': name, 'body': body or 'inventory item 100 yen\n' * 10,
             'timestamp': '2026-09-12 15:30:00', 'is_system_event': False}
