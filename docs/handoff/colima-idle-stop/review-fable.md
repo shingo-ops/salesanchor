@@ -9,3 +9,8 @@
 | 設計3 | design v2.1 | APPROVE | 残る LOW は Generator 申し送り（引用符・ロック pid の書き込み位置・.err 文言の区別を手順書に1行） |
 | コード1 | commit 1b9963199 | REVISE | MEDIUM-1 試験 T8（1799 秒）が秒境界で稀に失敗→1790 秒に変更（本体は変更なし）。他は設計と全項目一致 |
 | コード2 | commit d08d4fdc3 | APPROVE | T8 を 1790 秒に変更。本体・plist・手順書は差分なし。/bin/bash 3.2 で5回＋10回連続 FAIL=0。残る指摘なし |
+
+## 設計仕様書（docs/specs/colima-idle-stop/）の審査（2026-10-15）
+Fable が利用上限で停止したため、審査は Opus（architect）で実施。
+- 1回目: REVISE（MEDIUM-1 K3/K5 の測り方の前提不足、MEDIUM-2 30分/60分の関係の説明不足、LOW 5件）。記録: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-spec1.md
+- 2回目: APPROVE（条件 LOW-A 索引の件数 5/6→6/7 を反映済み。任意 LOW-B・LOW-C も反映）。記録: /tmp/CC報告ファイル/ac-heavy/docker-idle/review-spec2.md
