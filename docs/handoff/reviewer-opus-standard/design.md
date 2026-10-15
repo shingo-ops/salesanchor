@@ -16,8 +16,9 @@ PO 決定（2026-10-15）「上限に達した場合の代替え案としてOPUS
 | 規則として Fable を審査担当に定める行が0 | `grep -rn -i fable AGENTS.md docs/STANDARD-WORKFLOW.md docs/ai-agents/design-partner.md .github/PULL_REQUEST_TEMPLATE.md docs/adr/ADR-1011-permission-self-maintenance.md` が0件、ADR-1015 は 51・56 行（経緯）と備考のみ |
 | ADR 索引が最新 | `node scripts/generate-adr-index.js` 後に差分なし |
 
-## 外部事例
-不要（社内の担当割り当ての変更で、外部の前例が判断材料にならない）。
+## 外部・過去事例の参照と我々への応用
+- 外部事例は不要（社内の担当割り当ての変更で、外部の前例が判断材料にならない）。
+- 過去事例: 2026-10-12 に審査担当を Fable 恒久とした変更（docs/handoff/agents-model-fable/）。同じく agent 定義の frontmatter の model を変える方法を、逆向きに適用した。
 
 ## 切り戻し
 本 PR の merge commit を revert する。
