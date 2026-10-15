@@ -89,7 +89,7 @@
 3. 危険な変更（migrations/・deploy.yml・本番 scripts 等）を含む場合、GO 記録がある。
 4. 人が実際に動作確認を行い、不具合がないと判断している。確認内容（何を・どう確認し、問題がなかったか）を docs/ai-agents/evidence-registry.md に記録している。
 
-- **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / `backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` / **PR-C の外部API検出で見つかる変更**）は、**本番に出す前に Shingo の GO 記録が必須**。現行フローでは、release ブランチで GO を満たし、release PR で main へ昇格する。
+- **ユーザーに影響する変更**（現状の実体: `frontend/src/` / `backend/app/routers/` / `backend/app/services/` / `backend/app/auth/` / `backend/app/tasks/` / `backend/app/discord_gateway/` / **PR-C の外部API検出で見つかる変更**）は、**本番に出す前に GO 記録が必須**（GO 権限は PO。ADR-1003 により、例外を除き Claude Opus 設計担当へ常時委譲）。現行フローでは、release ブランチで GO を満たし、release PR で main へ昇格する。
 - **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001（QA・TCG 動作確認）で行い、tenant_004（HIGH LIFE JPN 実データ）には絶対に触れない。tenant_006 は Meta App Review 撮影専用テナント（QA 用途禁止）。TCG 機能の QA は TCG_SCHEMA=tenant_001 を指定して行う。ローンチ後は別サーバーの dev 環境で事前確認に移行する。
 
 次は完了と認めない。
@@ -132,14 +132,14 @@ tasks/todo.md・.claude-pipeline/active-work.md の「完了（DONE）」移動�
 **黙って素通り（自動スキップ）は、純粋な書類・メタデータのみ**（変更ファイルのパスで判定。リストに無いものは"要検査"側に倒す＝安全側既定）。それ以外（実コードに触れる変更）は、本検査か下記の特例による。
 
 - **低リスクのコード**：自己申告の**自律クラフト**（バグ修正・CI修復・リファクタ）で軽量化可。**記録必須・無申告の素通り不可・governance監査**。
-- **危ない変更**（DBマイグレーション・`deploy.yml`・本番スクリプト）：**自己申告は不可**。特例は**認可された人間の承認**でのみ開く。
+- **危ない変更**（DBマイグレーション・`deploy.yml`・本番スクリプト）：**自己申告は不可**。特例は**認可された承認（PO、または ADR-1003 に基づく Opus の委任 GO。例外は下記のとおり PO 本人の GO）**でのみ開く。
   - **些細**：承認 → 軽い扱い（記録）。
   - **緊急**：承認 → 先行マージ＋**宿題を期限内に後追い提出**（"宿題待ち"として記録、期限超過は自動警告・エスカレーション）。
-  - **main へのマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は、PO の GO が出るまで release ブランチで待機し main にマージしない。main は出荷口。GO 待ちの作業は release ブランチが待合室。
+  - **main へのマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は、GO（PO、または ADR-1003 に基づく Opus の委任 GO）が出るまで release ブランチで待機し main にマージしない。main は出荷口。GO 待ちの作業は release ブランチが待合室。
 
-**承認役＝認可された人間（役割）。現状：PO（Shingo）＋ 開発パートナー。** 承認者は記録される。承認役の増減は PR＋承認で管理（属人化させない）。
+**承認役＝認可された役割。現状：PO（Shingo）＋ Claude Opus 設計担当。GO は ADR-1003 により例外を除き Claude Opus 設計担当へ委任（GO発行者欄は `POの委任に基づくClaude Opus発行`）。PO 本人の GO が必須の例外: DROP TABLE/COLUMN を含む migration・大量 DELETE・secrets 変更・Ruleset/Branch Protection 変更・workflow-lint.yml の変更・外部 GUI 操作・main/develop への force push。** 承認者は記録される。承認役の増減は PR＋承認で管理（属人化させない）。
 
-**GO 記録の軽量ルール（2026-06-12 確定）**: Shingo が GO を出した時点で、そのPRに `GO: Shingo YYYY-MM-DD` のコメントを残す。どのセッションから見ても承認の所在が一目で分かるようにする。別セッションで承認した場合は design.md または handoff に同形式で事後記録する。
+**GO 記録の軽量ルール（2026-06-12 確定）**: GO を出した時点で、そのPRにコメントを残す。書式は PO 本人の GO が `GO: Shingo YYYY-MM-DD`、委任の GO が `GO: POの委任に基づくClaude Opus発行 YYYY-MM-DD`。委任の GO を Shingo 名義で書かない。どのセッションから見ても承認の所在が一目で分かるようにする。別セッションで承認した場合は design.md または handoff に同形式で事後記録する。
 
 ※パスの具体リスト（書類側／危ない側）と検査の実装は KPI2 設計に置く。
 
