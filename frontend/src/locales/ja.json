@@ -2100,6 +2100,17 @@
     "noChannels": "通知チャンネルが設定されていません",
     "subtitle": "Webhook通知チャネルを設定・管理します。"
   },
+  "notifications": {
+    "eventTypesLabel": "この送信先に送る通知",
+    "eventTypesEmpty": "（未選択）",
+    "eventTypesColumn": "通知の種類",
+    "editChannel": "送信先を編集",
+    "eventType": {
+      "leadAssigned": "商談の担当アサイン",
+      "metaMessageReceived": "Meta の新着メッセージ",
+      "tcgDistributionError": "TCG在庫配信エラー"
+    }
+  },
   "erp": {
     "subtitle": "在庫・販売データを外部システムと同期します。",
     "title": "データ管理",

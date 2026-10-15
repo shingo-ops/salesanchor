@@ -2100,6 +2100,17 @@
     "noChannels": "No notification channels configured",
     "subtitle": "Configure and manage Webhook notification channels."
   },
+  "notifications": {
+    "eventTypesLabel": "Notifications sent to this destination",
+    "eventTypesEmpty": "(none selected)",
+    "eventTypesColumn": "Notification types",
+    "editChannel": "Edit destination",
+    "eventType": {
+      "leadAssigned": "Deal assignment",
+      "metaMessageReceived": "New Meta message",
+      "tcgDistributionError": "TCG distribution error"
+    }
+  },
   "erp": {
     "subtitle": "Sync inventory and sales data with external systems.",
     "title": "Data Management",
