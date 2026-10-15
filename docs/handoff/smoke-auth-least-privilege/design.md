@@ -57,7 +57,11 @@ owner／admin ロールの判定は入れない。理由：参照先の `user_ro
 | env 空で経路が不活性 | pytest `test_smoke_disabled_when_env_empty_falls_through_to_firebase` が緑 |
 | 不一致トークンはバイパスしない | pytest `test_smoke_mismatched_token_falls_through_to_firebase` が緑 |
 
-## 5. 外部事例
+## 5. 外部・過去事例の参照と我々への応用
+
+- 参照：下記。応用：長寿命トークンを最小権限に縛り、恒久策は短命トークンへ。
+
+
 
 - OWASP ASVS V2（サービス認証）・Cloud の最小権限原則：サービス用資格情報には業務に必要な最小の権限だけを与え、特権アカウントとの兼用を避ける。
 - GitHub Actions／GCP の短命トークン（OIDC）：長寿命の共有トークンより、短命・スコープ付きが推奨される。恒久策として別便で自社 JWT（ADR-1013 整合）に移す。
@@ -73,6 +77,11 @@ owner／admin ロールの判定は入れない。理由：参照先の `user_ro
 ## 7. 触らない範囲
 
 `.github/workflows/deploy.yml`・migrations・frontend・既存の Firebase／自社トークン経路。
+
+## 維持の仕組み
+
+- 守り手: backend/tests/test_smoke_auth_least_privilege.py（CI の pytest で super admin 拒否・非ASCII 401 を毎回検証）
+- トークンのローテーションは運用（四半期目安）。
 
 ## 8. 計画・継続
 
