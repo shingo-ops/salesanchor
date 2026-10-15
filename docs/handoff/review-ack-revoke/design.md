@@ -124,6 +124,7 @@
 
 - props: `ackedView?: boolean` を足す（既定は false）。「確認済み」タブから開いたときだけ true を渡す。item の型は変えない。
   - 理由（審査 R5）: 一部の理由だけ確認済みの件は、要確認タブにも残る。要確認タブで開いたときに「確認済みです」と出すと、残っている理由と食い違う。
+- 状態: `revoked`（boolean）は、取り消しが成功したときだけ true、確定が成功したときだけ false に戻す（行の選択・askKeep では戻さない）。(b)「確認済みです」の表示条件は `ackedView && !ackedNotice && !revoked`。お知らせ revokedNotice は行の選択で消えるため、これだけだと取り消し後に(b)が復活する。
 - 状態: `revokedNotice`（boolean）、`revokeError`（boolean）、`revokeAsk`（boolean）を足す。
   - 次の3つのときに、revokedNotice と revokeError を false に戻す。
     - 「このままで良い」を押したとき（askKeep）。
@@ -285,3 +286,4 @@
   3. §3-3: v と codes の検査は、2つの bool_or に同じ文で書いてよい。ただし、最新行の副問い合わせは1本にする。
   4. §6: `_GOLDEN` の差分のファイルを /tmp/CC報告ファイル/review-ack-revoke/ に保存し、報告に書く。
 - 実装メモ: 共通の検査関数名は item_rejection にした。確認済みタブが空のときは needsReview.ackedEmpty を出す（Opus 判断 2026-10-15）
+- 実装メモ: コード審査 REVISE の M3 を受けて revoked を追加。M2（同じタブの再押下は何もしない）・O3（取り消し中は「このままで良い」を無効化）・M1（openapi.json 再生成）も反映。

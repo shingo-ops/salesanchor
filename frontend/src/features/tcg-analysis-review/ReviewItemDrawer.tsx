@@ -50,6 +50,8 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const [ackPending, setAckPending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [revokedNotice, setRevokedNotice] = useState(false);
+  // 取り消しが成功した後は true（お知らせは行の選択で消えるが、取り消し済みは変わらないので別に持つ）
+  const [revoked, setRevoked] = useState(false);
   const [revokeError, setRevokeError] = useState(false);
   const [revokeAsk, setRevokeAsk] = useState(false);
   const [revokePending, setRevokePending] = useState(false);
@@ -91,6 +93,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
     }
     setAckedCodes([...ackedCodes, ...keepCodes]);
     setAckedNotice(true);
+    setRevoked(false);
     setRevokedNotice(false);
     setRevokeError(false);
     setAckPending(false);
@@ -116,6 +119,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
     setAckedNotice(false);
     setAckedCodes([]);
     setRevokedNotice(true);
+    setRevoked(true);
     setRevokePending(false);
     try {
       await onRefresh();
@@ -165,7 +169,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             {details.length > 0 && <p>{t("reviewItem.sourceLine", { source: reviewSourceLabel(t, details) ?? "—" })}</p>}
             {canKeep && (
               <div>
-                <Button variant="secondary" size="sm" loading={ackPending} disabled={ackPending} onClick={askKeep}>
+                <Button variant="secondary" size="sm" loading={ackPending} disabled={ackPending || revokePending} onClick={askKeep}>
                   {t("reviewItem.ack")}
                 </Button>
               </div>
@@ -173,7 +177,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             {ackError && <Callout variant="warning" title={ackError} />}
             {revokeError && <Callout variant="warning" title={t("reviewItem.revokeFailed")} />}
             {ackedNotice && <Callout variant="info" title={t("reviewItem.acked")}>{revokeButton}</Callout>}
-            {ackedView && !ackedNotice && !revokedNotice && (
+            {ackedView && !ackedNotice && !revoked && (
               <Callout variant="info" title={t("reviewItem.ackedState")}>{revokeButton}</Callout>
             )}
             {revokedNotice && <Callout variant="info" title={t("reviewItem.revoked")} />}

@@ -108,6 +108,15 @@ describe("acked tab", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("keeps the rows when the already-open tab is pressed again", async () => {
+    view();
+    await screen.findByText("Card Need");
+    const before = listCalls().length;
+    fireEvent.click(screen.getByRole("tab", { name: "Production review" }));
+    expect(screen.getByText("Card Need")).toBeTruthy();
+    expect(listCalls().length).toBe(before);
+  });
+
   it("reloads the acked tab when the realtime signal arrives", async () => {
     view();
     fireEvent.click(await screen.findByRole("tab", { name: "Checked" }));

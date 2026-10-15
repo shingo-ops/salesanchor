@@ -421,6 +421,22 @@ describe("ReviewItemDrawer revoke", () => {
     expect(screen.queryByText("This item is marked as checked")).toBeNull();
   });
 
+  it("after revoking in the acked view, selecting a row does not bring the checked notice back", async () => {
+    vi.mocked(postReviewAckRevoke).mockResolvedValue({});
+    const item: ReviewDrawerItem = {
+      ...ackable(),
+      system: { product_id: "PM-00001", product_title: "Title A", work_name: "Work A", condition: "Box", pid_basis: "MANUAL" },
+      review_issues: ["PRODUCT_ID_UNRESOLVED"],
+    };
+    render(<ReviewItemDrawer item={item} onClose={() => undefined} onRefresh={async () => undefined} ackedView />);
+    fireEvent.click(screen.getByRole("button", { name: 'Undo "checked"' }));
+    confirmUndo();
+    await screen.findByText("Undone. Re-running the analysis");
+    fireEvent.click(rowOf("Product ID"));
+    expect(rowOf("Product ID").className).toContain("comp-table__row--selected");
+    expect(screen.queryByText("This item is marked as checked")).toBeNull();
+  });
+
   it("Esc while the revoke popup is open closes only the popup, not the drawer", () => {
     const onClose = vi.fn();
     render(<ReviewItemDrawer item={ackable()} onClose={onClose} onRefresh={async () => undefined} ackedView />);

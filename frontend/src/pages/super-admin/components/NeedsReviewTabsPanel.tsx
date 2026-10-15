@@ -186,6 +186,7 @@ export default function NeedsReviewTabsPanel() {
 
   // タブを替えたら、前のタブの行・ページ・ドロワーを持ち越さない
   const changeTab = (tab: TabKey) => {
+    if (tab === activeTab) return;
     setActiveTab(tab);
     setOffset(0);
     setDrawerItemId(null);
