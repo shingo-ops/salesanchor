@@ -5,7 +5,6 @@ import asyncio
 import time
 
 import httpx
-import pytest
 from fastapi import Depends, FastAPI, HTTPException, Request
 
 from app.middleware import realtime as mw
