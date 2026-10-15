@@ -1,0 +1,28 @@
+## HEAD (no branch)
+0c7852fd9 Merge pull request #4280 from shingo-ops/release/review-ack-confirm
+75cfd2513 Merge branch 'main' into release/review-ack-confirm
+c1fc79f12 Merge pull request #4279 from shingo-ops/release/ay2x-dist-form-invalid
+HEAD
+0	29
+docs/handoff/disk-janitor/design.md
+docs/handoff/disk-janitor/evidence/after.txt
+docs/handoff/disk-janitor/evidence/before.txt
+docs/handoff/disk-janitor/evidence/candidates-exist-after.txt
+docs/handoff/disk-janitor/evidence/candidates-r1-r3.txt
+docs/handoff/disk-janitor/evidence/d1-after2.txt
+docs/handoff/disk-janitor/evidence/d1-before2.txt
+docs/handoff/disk-janitor/evidence/d3-classify.txt
+docs/handoff/disk-janitor/evidence/d3-plist-verify.txt
+docs/handoff/disk-janitor/evidence/d3-test-after.txt
+docs/handoff/disk-janitor/evidence/d3-test-before.txt
+docs/handoff/disk-janitor/evidence/dry-run.txt
+docs/handoff/disk-janitor/evidence/protection-check.txt
+docs/handoff/disk-janitor/evidence/sa-main-develop-worktrees.txt
+docs/handoff/disk-janitor/evidence/syntax-shellcheck.txt
+docs/handoff/disk-janitor/evidence/test-disk-janitor.txt
+docs/handoff/disk-janitor/evidence/test-reaper-safety.txt
+docs/handoff/disk-janitor/recon.md
+ops/launchd/jp.salesanchor.disk-janitor.plist
+scripts/disk-janitor.sh
+scripts/tests/test-disk-janitor.sh
+gitdir: /Users/tanizawashingo/salesanchor/.git/worktrees/-salesanchor-tools

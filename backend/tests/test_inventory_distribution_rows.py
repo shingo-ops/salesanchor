@@ -220,3 +220,67 @@ def test_distribution_sql_has_no_double_underscore_alias() -> None:
     for merge in (False, True):
         head, final = svc.distribution_rows_parts(**_COND, merge_same_post=merge)
         assert not re.search(r"\bAS\s+__", head + final)
+
+
+# --- 便3（検索と提供者）: PostgreSQL 不要の試験 -----------------------------------------------------------------
+# 共通ベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
+# ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
+
+_NONE_FILTERS = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+                               "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
+                               "price_min", "price_max"))
+
+
+def test_bin3_normalize_search_text_matches_the_shared_vectors() -> None:
+    import json
+    import pathlib
+
+    from app.routers.inventory_offers import normalize_search_text
+
+    path = pathlib.Path(__file__).resolve().parents[2] / "frontend/src/features/inventory/searchNormalize.vectors.json"
+    vectors = json.loads(path.read_text())
+    assert len(vectors) >= 10
+    for v in vectors:
+        assert normalize_search_text(v["input"]) == v["expected"], v
+
+
+def test_bin3_kana_tables_are_86_chars_each() -> None:
+    from app.routers.inventory_offers import _KANA_FROM, _KANA_TO
+
+    assert len(_KANA_FROM) == len(_KANA_TO) == 86
+    assert _KANA_FROM[0] == "ぁ" and _KANA_TO[0] == "ァ" and _KANA_FROM[-1] == "ゖ" and _KANA_TO[-1] == "ヶ"
+
+
+def test_bin3_search_builds_one_strpos_per_term_and_caps_terms() -> None:
+    from app.routers.inventory_offers import _SEARCH_MAX_TERMS, _build_view_filters
+
+    conds, params = _build_view_filters(**{**_NONE_FILTERS, "q": "ぽけもん ＡＢＣ"})
+    assert len(conds) == 2 and all(c.startswith("strpos(") and "CAST(:qt" in c for c in conds)
+    assert (params["qt0"], params["qt1"]) == ("ポケモン", "abc")
+    assert "provider" not in conds[0] and "product_id" not in conds[0] and "category" not in conds[0]
+    assert "d.search_keywords" in conds[0] and "d.mark" in conds[0]
+    many, many_params = _build_view_filters(**{**_NONE_FILTERS, "q": " ".join(f"w{i}" for i in range(30))})
+    assert len(many) == _SEARCH_MAX_TERMS == 10 and f"qt{_SEARCH_MAX_TERMS}" not in many_params
+    assert _build_view_filters(**{**_NONE_FILTERS, "q": "   "}) == ([], {})
+
+
+def test_bin3_supplier_ids_filter_takes_integers_only() -> None:
+    from app.routers.inventory_offers import _build_view_filters
+
+    assert _build_view_filters(**_NONE_FILTERS) == ([], {})  # supplier_ids は既定値 None（既存の呼び出しは変わらない）
+    conds, params = _build_view_filters(**_NONE_FILTERS, supplier_ids="1, x ,2")
+    assert conds == ["d.supplier_id IN (:sid0, :sid1)"] and params == {"sid0": 1, "sid1": 2}
+    assert _build_view_filters(**_NONE_FILTERS, supplier_ids="x,y") == ([], {})
+    assert _build_view_filters(**_NONE_FILTERS, supplier_ids="") == ([], {})
+    conds, params = _build_view_filters(**{**_NONE_FILTERS, "hide_supplier_ids": "3"}, supplier_ids="1")
+    assert "d.supplier_id IN (:sid0)" in conds and "d.supplier_id NOT IN (:hsid0)" in conds
+
+
+def test_bin3_endpoint_has_supplier_ids_query() -> None:
+    import inspect
+
+    from app.routers import inventory_offers as io
+
+    p = inspect.signature(io.list_inventory_view).parameters["supplier_ids"]
+    assert p.default.default is None
+    assert any(getattr(m, "max_length", None) == 2000 for m in p.default.metadata)

@@ -6,6 +6,8 @@
 #   R2 使っていない作業用コピーの node_modules（package-lock.json あり・14日更新なし・最終コミット14日より前・使用中でない）
 #   R3 agent-console の旧版              （current・その1つ前・current より新しい版・使用中の版は残す）
 #   R4 他リポジトリの作業用コピー        （reaper-worktree.sh を REAPER_BASE_BRANCH 付きで呼ぶ。安全条件は reaper のまま）
+#   R5 /tmp/CC報告ファイルの .md 以外    （7日更新なし。HDD への写しが2日以内に成功しているときだけ。docs/handoff/claude-archive/design.md §5）
+#   R6 セッションの作業メモ              （claude-501 の <slug>/<uuid>/scratchpad の中と tasks/b*.output。同じ前提。images/ は触らない）
 #
 # 使い方:
 #   bash scripts/disk-janitor.sh            # dry-run
@@ -28,6 +30,12 @@ dj_config() {
   : "${DJ_CURRENT_LINK:=${DJ_ROOT_VERSIONS}/../current}"
   : "${DJ_NPM_CACHE_KEEP:=${home_dir}/.npm-shared-cache}"
   : "${DJ_STALE_DAYS:=14}"
+  # R5・R6 専用の根（DJ_ROOTS には入れない＝R1 の走査を広げない）
+  : "${DJ_ROOT_TMP_CC:=/private/tmp/CC報告ファイル}"
+  : "${DJ_ROOT_CLAUDE_TMP:=/private/tmp/claude-501}"
+  : "${DJ_CA_LAST_OK:=${home_dir}/Library/Logs/claude-archive.last-ok}"
+  : "${DJ_CA_FRESH_SEC:=172800}"       # 2日。last-ok がこれより古い／無いと R5・R6 を見送る
+  : "${DJ_TMP_STALE_DAYS:=7}"          # R5・R6 の古さ（PO 決定: 7日動いていない物は終わった物）
   : "${DJ_LOG_FILE:=}"                 # 空なら標準出力のまま。LaunchAgent の plist が指定する
   : "${DJ_LOG_MAX_BYTES:=1048576}"
   : "${DJ_LOCK_DIR:=/tmp/disk-janitor.lock.d}"
@@ -158,6 +166,79 @@ dj_act() {
   if [ "${DJ_RULE_LISTED}" -lt "${DJ_LIST_MAX}" ]; then
     DJ_RULE_LISTED=$(( DJ_RULE_LISTED + 1 ))
     echo "  [${rule}] ${p} ($(dj_human "${kb}"))"
+  fi
+}
+
+# ── R5・R6 用: ファイル専用のガードと処理（dj_guard・dj_act は変えない）─────────────
+# 削除の直前ガード（ファイル版）。通れば 0。通らなければ 1 と DJ_GUARD_REASON。
+#   dj_guard_file <種類 f|dangling> <path> <名前の正規表現(ERE)> <許可する根>...
+#   f        … 通常ファイルで、シンボリックリンクでない
+#   dangling … 指し先が無くなったシンボリックリンク（リンク自身だけを対象にする。指し先はたどらない）
+#   どちらも: 絶対パス・. や .. なし・根の下・親ディレクトリが物理パスと一致・名前一致・mtime が DJ_TMP_STALE_DAYS より古い
+dj_guard_file() {
+  local kind="${1:-}" p="${2:-}" namepat="${3:-}" r
+  shift 3 2>/dev/null || { DJ_GUARD_REASON="引数不足"; return 1; }
+  DJ_GUARD_REASON=""
+  case "${p}" in
+    "") DJ_GUARD_REASON="空のパス"; return 1 ;;
+    /*) ;;
+    *) DJ_GUARD_REASON="絶対パスでない"; return 1 ;;
+  esac
+  case "/${p}/" in */../*|*/./*) DJ_GUARD_REASON="パスに . または .. を含む"; return 1 ;; esac
+  case "${p}" in */) DJ_GUARD_REASON="末尾が /"; return 1 ;; esac
+  local ok=0
+  for r in "$@"; do
+    [ -n "${r}" ] || continue
+    [ "${p}" = "${r}" ] && { DJ_GUARD_REASON="根そのもの"; return 1; }
+    dj_under "${p}" "${r}" && ok=1
+  done
+  [ "${ok}" -eq 1 ] || { DJ_GUARD_REASON="根の下でない"; return 1; }
+  case "${kind}" in
+    f)
+      [ -L "${p}" ] && { DJ_GUARD_REASON="シンボリックリンク"; return 1; }
+      [ -f "${p}" ] || { DJ_GUARD_REASON="通常ファイルでない・存在しない"; return 1; }
+      ;;
+    dangling)
+      [ -L "${p}" ] || { DJ_GUARD_REASON="シンボリックリンクでない"; return 1; }
+      [ ! -e "${p}" ] || { DJ_GUARD_REASON="指し先がある"; return 1; }
+      ;;
+    *) DJ_GUARD_REASON="種類が不明"; return 1 ;;
+  esac
+  local parent phys
+  parent="${p%/*}"
+  phys="$(dj_canon "${parent}")" || { DJ_GUARD_REASON="親ディレクトリの実体パスを求められない"; return 1; }
+  [ "${phys}" = "${parent}" ] || { DJ_GUARD_REASON="途中にシンボリックリンクがある"; return 1; }
+  if ! printf '%s\n' "${p##*/}" | grep -Eq "${namepat}"; then
+    DJ_GUARD_REASON="名前が規則と一致しない"; return 1
+  fi
+  if [ -z "$(find -P "${p}" -maxdepth 0 -mtime "+${DJ_TMP_STALE_DAYS}" -print 2>/dev/null)" ]; then
+    DJ_GUARD_REASON="${DJ_TMP_STALE_DAYS}日以内に更新されている"; return 1
+  fi
+  return 0
+}
+
+# 1件の処理（ファイル版）。ガード → dry-run なら記録だけ／execute なら rm -f -- で消し、無くなったことを確かめる。
+#   dj_act_file <規則> <種類 f|dangling> <path> <名前ERE> <根>...
+dj_act_file() {
+  local rule="$1" kind="$2" p="$3" namepat="$4"
+  shift 4
+  if ! dj_guard_file "${kind}" "${p}" "${namepat}" "$@"; then
+    dj_skip "${p}" "ガード: ${DJ_GUARD_REASON}"
+    return 0
+  fi
+  local bytes=0
+  if [ "${kind}" = "f" ]; then bytes="$(stat -f %z "${p}" 2>/dev/null || echo 0)"; fi
+  if [ "${EXECUTE}" -eq 1 ]; then
+    if ! rm -f -- "${p}" 2>/dev/null || [ -e "${p}" ] || [ -L "${p}" ]; then
+      dj_skip "${p}" "削除に失敗"
+      return 0
+    fi
+  fi
+  DJ_RULE_COUNT=$(( DJ_RULE_COUNT + 1 ))
+  DJ_RULE_KB=$(( DJ_RULE_KB + (bytes + 1023) / 1024 ))
+  if [ "${DJ_RULE_LISTED}" -lt "${DJ_LIST_MAX}" ]; then
+    DJ_RULE_LISTED=$(( DJ_RULE_LISTED + 1 ))
+    echo "  [${rule}] ${p} ($(dj_human $(( (bytes + 1023) / 1024 ))))"
   fi
 }
 
@@ -332,6 +413,58 @@ dj_rule_r4() {
   dj_rule_end R4
 }
 
+# ── R5・R6 の前提: HDD への写しが最近成功している ─────────────────────────────
+dj_ca_fresh() { # last-ok があり、現在 − その値 ≤ DJ_CA_FRESH_SEC なら 0
+  local last now
+  [ -f "${DJ_CA_LAST_OK}" ] || return 1
+  last="$(tr -dc '0-9' <"${DJ_CA_LAST_OK}" 2>/dev/null)"
+  [ -n "${last}" ] || return 1
+  now="$(date +%s)"
+  [ $(( now - last )) -le "${DJ_CA_FRESH_SEC}" ]
+}
+
+# ── R5 /tmp/CC報告ファイルの .md 以外（7日更新なし）──────────────────────────────
+dj_rule_r5() {
+  dj_rule_begin "R5 /tmp/CC報告ファイルの .md 以外"
+  if ! dj_ca_fresh; then
+    echo "  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）"; dj_rule_end R5; return 0
+  fi
+  local root f
+  root="$(dj_canon "${DJ_ROOT_TMP_CC}")" || { echo "  [規則ごと飛ばす] 根が無い: ${DJ_ROOT_TMP_CC}"; dj_rule_end R5; return 0; }
+  while IFS= read -r -d '' f; do
+    case "${f}" in *.md) dj_skip "${f}" ".md は残す"; continue ;; esac
+    dj_act_file R5 f "${f}" '.' "${root}"
+  done < <(find -P "${root}" -type f ! -name '*.md' -mtime "+${DJ_TMP_STALE_DAYS}" -print0 2>/dev/null)
+  dj_rule_end R5
+}
+
+# ── R6 セッションの作業メモ（scratchpad の中・tasks/b*.output・宙に浮いた a*.output）────
+dj_rule_r6() {
+  dj_rule_begin "R6 セッションの作業メモ"
+  if ! dj_ca_fresh; then
+    echo "  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）"; dj_rule_end R6; return 0
+  fi
+  local root sp td f
+  root="$(dj_canon "${DJ_ROOT_CLAUDE_TMP}")" || { echo "  [規則ごと飛ばす] 根が無い: ${DJ_ROOT_CLAUDE_TMP}"; dj_rule_end R6; return 0; }
+  # <slug>/<uuid>/scratchpad の中の全ファイル（中の images/ も消す）。<slug>/<uuid>/images/ は根に含めないので触れない
+  while IFS= read -r -d '' sp; do
+    while IFS= read -r -d '' f; do
+      dj_act_file R6 f "${f}" '.' "${sp}"
+    done < <(find -P "${sp}" -type f -mtime "+${DJ_TMP_STALE_DAYS}" -print0 2>/dev/null)
+  done < <(find -P "${root}" -mindepth 3 -maxdepth 3 -type d -name scratchpad -print0 2>/dev/null)
+  # <slug>/<uuid>/tasks/b*.output（通常ファイル）と、指し先が無くなった a*.output（リンク自身だけ）
+  while IFS= read -r -d '' td; do
+    while IFS= read -r -d '' f; do
+      dj_act_file R6 f "${f}" '^b[^/]*\.output$' "${td}"
+    done < <(find -P "${td}" -mindepth 1 -maxdepth 1 -type f -name 'b*.output' -mtime "+${DJ_TMP_STALE_DAYS}" -print0 2>/dev/null)
+    while IFS= read -r -d '' f; do
+      [ -L "${f}" ] && [ ! -e "${f}" ] || continue
+      dj_act_file R6 dangling "${f}" '^a[^/]*\.output$' "${td}"
+    done < <(find -P "${td}" -mindepth 1 -maxdepth 1 -type l -name 'a*.output' -mtime "+${DJ_TMP_STALE_DAYS}" -print0 2>/dev/null)
+  done < <(find -P "${root}" -mindepth 3 -maxdepth 3 -type d -name tasks -print0 2>/dev/null)
+  dj_rule_end R6
+}
+
 # ── ログ（1MB 超で .1 に1世代だけ退避）───────────────────────────────────────
 dj_setup_log() {
   [ -n "${DJ_LOG_FILE}" ] || return 0
@@ -392,6 +525,8 @@ dj_main() {
   dj_rule_r2
   dj_rule_r3
   dj_rule_r4
+  dj_rule_r5
+  dj_rule_r6
 
   echo ""
   echo "--- df（終了）---"; df -h "${DJ_DF_PATH}"

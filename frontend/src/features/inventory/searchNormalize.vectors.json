@@ -1,0 +1,54 @@
+[
+  {
+    "input": "ぽけもん",
+    "expected": "ポケモン"
+  },
+  {
+    "input": "ポケモン",
+    "expected": "ポケモン"
+  },
+  {
+    "input": "ＡＢＣ",
+    "expected": "abc"
+  },
+  {
+    "input": "abc",
+    "expected": "abc"
+  },
+  {
+    "input": "ﾎﾟｹﾓﾝ",
+    "expected": "ポケモン"
+  },
+  {
+    "input": "  ピカチュウ  ex ",
+    "expected": "  ピカチュウ  ex "
+  },
+  {
+    "input": "ひらがな　カタカナ",
+    "expected": "ヒラガナ カタカナ"
+  },
+  {
+    "input": "Ｐｏｋéｍｏｎ ＴＣＧ",
+    "expected": "pokémon tcg"
+  },
+  {
+    "input": "１２３ ４５６",
+    "expected": "123 456"
+  },
+  {
+    "input": "ゔぁ",
+    "expected": "ヴァ"
+  },
+  {
+    "input": "ー",
+    "expected": "ー"
+  },
+  {
+    "input": "",
+    "expected": ""
+  },
+  {
+    "input": "   ",
+    "expected": "   "
+  }
+]

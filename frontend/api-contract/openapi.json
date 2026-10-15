@@ -42842,7 +42842,7 @@
         "operationId": "list_inventory_view_api_v1_inventory_get",
         "parameters": [
           {
-            "description": "商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致",
+            "description": "日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）",
             "in": "query",
             "name": "q",
             "required": false,
@@ -42856,7 +42856,7 @@
                   "type": "null"
                 }
               ],
-              "description": "商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致",
+              "description": "日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）",
               "title": "Q"
             }
           },
@@ -42934,6 +42934,25 @@
               ],
               "description": "非表示にする仕入元IDのCSV（ユーザー別フィルタ用）",
               "title": "Hide Supplier Ids"
+            }
+          },
+          {
+            "description": "表示する仕入元IDのCSV（選んだ仕入元だけ）",
+            "in": "query",
+            "name": "supplier_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "表示する仕入元IDのCSV（選んだ仕入元だけ）",
+              "title": "Supplier Ids"
             }
           },
           {

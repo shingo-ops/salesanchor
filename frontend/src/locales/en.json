@@ -1456,7 +1456,14 @@
     "view": {
       "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier",
-      "freshOnly": "Last {{hours}} h"
+      "freshOnly": "Last {{hours}} h",
+      "searchNameCode": "Search by name or code"
+    },
+    "supplierFilter": {
+      "label": "Supplier",
+      "clear": "Clear selection",
+      "all": "All",
+      "count": "{{count}} selected"
     },
     "expiryWarning": "Showing offers within {{hours}} hours of the LINE post.",
     "filter": {
@@ -1552,7 +1559,6 @@
     "filterPanel": {
       "button": "Advanced filters",
       "enable": "Enable filter (apply my saved view)",
-      "suppliers": "Show / hide suppliers",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter).",
