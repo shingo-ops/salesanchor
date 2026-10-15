@@ -376,6 +376,7 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
     5. 設定はテナントごとに1組（カテゴリ・ボタン部屋・staff ロール）。send_modal を使うコードは無い（git grep 0件）。
   - 【PO 決定 2026-10-16「y」】トライアル申込者はアプリの見込み客（tenant の leads）に入れない。お客さんから見た動き（ボタン→自分専用の部屋）は顧客用チケットと同じにし、部屋を作る部品は使い回すが、処理はトライアル専用に分ける（ボタンの名前は ticket_open で始めない。申込者の記録は viewer_accounts などの閲覧ページ用の表だけ）。顧客用チケットの動きは変えない。
   - 【PO 質問 2026-10-16】原文「ツールの顧客管理も出来るように出来る？」。回答：管理画面（super admin の ViewerAccountsPage。下の Q3 の「管理 API と画面」）で、一覧・状態の切り替え・停止と解除・期限の延長・ログイン記録を扱う設計が既にある。Discord 案に合わせて、一覧に Discord の利用者 ID と、その人のチケット部屋への移動を足す（列の追加は D1 の書き直しで扱う）。
+  - 【PO 決定 2026-10-16】原文「saas管理者y」。管理画面は SaaS 管理者（super admin）専用でこの内容でよい。置き場所【事実 origin/main】：SaaS 管理者メニューは frontend/src/components/DesktopShell.tsx:192-196 の saasAdminItems（今は LINE解析・買取相場・為替レートの3つ、isSuperAdmin のときだけ出る）。画面のルートは frontend/src/App.tsx:293-301 の /super-admin/* の並び（例 /super-admin/fx-rate → FxRatePage）。新しい画面は /super-admin/viewers に ViewerAccountsPage を置き、saasAdminItems の最後に「閲覧者管理」（labelKey nav.superAdminViewers、ja/en 両方）を足す。スマホの殻（ADR-137）にも SaaS 管理者メニューがあるかは段4のカードの前に確かめる【未確認】。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
