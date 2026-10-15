@@ -5,7 +5,7 @@
 - 設計: docs/handoff/remaining-n-price-inherit/design.md（3章が変更の正本。変えてはいけない）
 - 事実確認: docs/handoff/remaining-n-price-inherit/recon.md（file:line は実測 HEAD 803d7c58a で確認済み）
 - 対象ADR: ADR-158（部分更新の趣旨。Proposed）・ADR-1014・ADR-1015
-- 状態: **このカードは実行しない。** PO が承認したのは設計だけで、実装は未承認。PO の「GO #実装PR番号」（番号必須）を Opus が受け取り、このカードの §0 の「GO の記録」欄に原文が書かれてから始める
+- 状態: 実行してよい（§0 の GO の記録を参照）
 - 危険便: いいえ（`migrations/`・`deploy.yml`・`scripts/` を触らない）
 - 担当: 実装 Sonnet／コード審査・GO 記録・マージ・反映確認 Opus
 
@@ -22,7 +22,7 @@
 | 7 | 停止条件・報告3点・受領確認・終端合図 | ○（§7・§10） |
 | 8 | 社外秘（仕入元の ID・名前・投稿原文）を試験にも本文にも入れない | ○（§8） |
 
-GO の記録（Opus が記入）: 未記入（PO の GO がまだ無い）
+GO の記録（Opus が記入）: POの委任に基づくClaude Opus発行（2026-10-15 22時台 JST）。根拠: PO の実装承認「確立したなら進める」（証拠の確立を条件とする承認）と、96時間の許容への PO 原文「y」。設計 3章・7章の未確認は本番読み取りと実物照合で埋めた（design.md 7章）。実装 PR の番号は起票後に PR 本文の `### GO記録` に書く
 
 ## 0-2. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
 

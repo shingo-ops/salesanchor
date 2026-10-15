@@ -124,7 +124,7 @@
 | 人が価格を消した行に価格が付く | item_corrections の最新行が空なら引き継がない |
 | ダッシュボードの price_ok が増える | 期待どおり（受け入れ基準に入れる） |
 | 既に消えている組 | 再解析で直る。再解析は別途 PO の y が要る |
-| max_age_hours=48 のとき、引き継いだ価格の元投稿は最大96時間前になりうる | 設計で許容する。PO が運用を見て見直す【未確認: 本番の件数】 |
+| max_age_hours=48 のとき、引き継いだ価格の元投稿は最大96時間前になりうる | PO が許容（2026-10-15 22時台、PO 原文「y」）。根拠: 本番30日の実測で前の価格の古さは 0.38〜6.38 時間、7件中6件は 5.58〜20.15 時間後に新しい価格の投稿で置き換わり、表示される価格の古さの最大は約49時間。表示される行は received_at の最新投稿で価格の有無を見ない（`backend/app/services/tcg_analyzer_svc.py:1932-1972`）ので、新しい価格の投稿が来れば置き換わる |
 
 確定（recon4〜6）: 本番の max_age_hours は 48（tcg_distribution_settings、2026-09-27 更新）。配信はこれを新しい行の line_posted_at から NOW() までで測る（`backend/app/services/tcg_distribution_svc.py:224`）。投稿時刻の逆転 0 件。supplier_channels の NOT NULL 列は channel・is_active・supplier_id（`migrations/20260921_110000_pipeline_tables_public.sql:11-17`）。frontend は price_basis を使っていない（0件）。
 
