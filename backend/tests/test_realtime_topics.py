@@ -4,13 +4,16 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from app.main import app
 from app.realtime.topics import NO_SIGNAL_ROUTES, SCOPE_GLOBAL, WRITE_ROUTE_TOPICS
 
 _WRITE = {"POST", "PUT", "PATCH", "DELETE"}
 
 
 def _write_routes():
+    # 遅延 import: 収集時に app.main を読むと、全権限モック(conftest bypass_permissions)の前に
+    # inventory_search が本物の load_user_permissions を束縛し、他の試験が 403 になる
+    from app.main import app
+
     out = {}
     for r in app.routes:
         methods = getattr(r, "methods", None)
