@@ -40,6 +40,10 @@ mjw_config() {
   : "${MJW_REPEAT_SECONDS:=86400}"
   : "${MJW_LAUNCHCTL:=launchctl}"
   : "${MJW_CURL:=curl}"
+  : "${MJW_DISK_PATH:=/System/Volumes/Data}"
+  : "${MJW_DISK_LOW_GIB:=20}"
+  : "${MJW_DISK_OK_GIB:=25}"
+  : "${MJW_DF:=df}"
 }
 
 DRY_RUN=0
@@ -171,6 +175,7 @@ mjw_judged() {
     colima-stale) [ "${AWAKE}" -eq 1 ] ;;
     # dj-stale は、起きていた回・起動が直近 04:00 より前・04:00+猶予以降、の 3 つが揃う回だけ判定する
     dj-stale) [ "${AWAKE}" -eq 1 ] && [ "${BOOT_SEC}" -lt "${LAST04}" ] && [ "${NOW}" -ge $(( LAST04 + MJW_DJ_GRACE )) ] ;;
+    disk-low) [ -n "${DISK_GIB}" ] ;;
     *) return 0 ;;
   esac
 }
@@ -185,6 +190,7 @@ mjw_text() { # 名前 → 固定文
     dj-lock-stale) printf '毎日の自動片付けの使用中の印（/tmp/disk-janitor.lock.d）が 2 時間以上残っています。自動片付けと Docker の自動停止が動けません' ;;
     colima-stopfail) printf 'Docker の自動停止が、停止に失敗しました' ;;
     colima-judge-fail) printf 'Docker の自動停止が、2 回続けて判定に失敗しました' ;;
+    disk-low) printf '空き容量が少なくなっています（いま %s GiB。%s GiB を切ると知らせます）' "${DISK_GIB:-?}" "${MJW_DISK_LOW_GIB}" ;;
     dj-err) printf '毎日の自動片付けが、道具の更新に失敗して実行しませんでした' ;;
     *) printf '%s' "$1" ;;
   esac
@@ -291,10 +297,18 @@ mjw_dj_parse() {
   if [ -n "${el}" ]; then DJ_END_LN="${el%%:*}"; fi
 }
 
+mjw_disk_parse() { # DISK_GIB に空き GiB（整数・切り捨て）。読めなければ空
+  local kb
+  DISK_GIB=""
+  kb="$("${MJW_DF}" -k "${MJW_DISK_PATH}" 2>/dev/null | awk 'NR==2{print $4}')"
+  case "${kb}" in ''|*[!0-9]*) return 0 ;; esac
+  DISK_GIB=$(( kb / 1048576 ))
+}
+
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 mjw_detect_states() {
   DETECTED=""
-  local l mt
+  local l mt lim
   # unloaded:*
   if [ "${JUST_BOOTED}" -eq 0 ]; then
     for l in ${MJW_LABELS}; do
@@ -329,6 +343,12 @@ mjw_detect_states() {
   if [ -d "${MJW_DJ_LOCK}" ]; then
     mt="$(mjw_num "$(stat -f %m "${MJW_DJ_LOCK}" 2>/dev/null)")"
     if [ $(( NOW - mt )) -gt "${MJW_DJ_UNFINISHED}" ]; then list_add DETECTED dj-lock-stale; fi
+  fi
+  # disk-low（知らせ済みなら 25GiB 以上に戻るまで続いている扱い）
+  mjw_disk_parse
+  if [ -n "${DISK_GIB}" ]; then
+    if [ -n "$(prob_time disk-low)" ]; then lim="${MJW_DISK_OK_GIB}"; else lim="${MJW_DISK_LOW_GIB}"; fi
+    if [ "${DISK_GIB}" -lt "${lim}" ]; then list_add DETECTED disk-low; fi
   fi
 }
 

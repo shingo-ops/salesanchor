@@ -1,5 +1,5 @@
 #!/bin/bash
-# test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉔）
+# test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉙）
 #
 # すべて mktemp -d で作った一時ディレクトリの中だけで動く。偽の launchctl / curl を使い、
 # MJW_ 環境変数（状態・ログ・ロック・通知先・時刻）も一時領域へ向ける。HOME も一時領域に向ける。
@@ -55,7 +55,13 @@ printf '%s\n' "$@" > "${FAKE}/curl.args.${n}"
 cat > "${FAKE}/curl.stdin.${n}"
 exit "$(cat "${FAKE}/curl.rc" 2>/dev/null || echo 0)"
 EOS
-chmod +x "${BIN}/launchctl" "${BIN}/curl"
+cat > "${BIN}/df" <<'EOS'
+#!/bin/bash
+# 偽 df: 1 行目ヘッダ、2 行目の 4 列目に DF_KB（空なら数字でない出力）
+echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
+echo "/dev/fake 1000000000 1000 ${DF_KB:-} 1% /System/Volumes/Data"
+EOS
+chmod +x "${BIN}/launchctl" "${BIN}/curl" "${BIN}/df"
 
 FAKE_URL='https://discord.com/api/webhooks/TESTID/TESTTOKEN-not-real'
 
@@ -102,6 +108,8 @@ setup() { # setup [now]
   export MJW_LOCK_DIR="${D}/lock"
   export MJW_LAUNCHCTL="${BIN}/launchctl"
   export MJW_CURL="${BIN}/curl"
+  export MJW_DF="${BIN}/df"
+  export DF_KB=52428800
   export MJW_NOW="${NOW}"
   export MJW_BOOT_SEC="${BOOT}"
   colima_line $(( NOW - 60 )) idle -
@@ -577,6 +585,41 @@ setup
 echo "jp.salesanchor.colima-idle-stop" > "${D}/fake/absent"
 run_mjw
 grep -qx -- '--max-time' "${D}/fake/curl.args.1" && grep -qx -- '20' "${D}/fake/curl.args.1" && ok "㉙-1 curl に --max-time 20" || ng "㉙-1 curl に --max-time 20"
+
+# ── 空き容量（disk-low）。設計 design-disk-low.md §4 の ㉕〜㉙（既存の ㉕〜㉙ と区別するため D を付ける）──
+setup
+export DF_KB=$(( 19 * 1048576 ))
+run_mjw
+eq "D㉕-1 19GiB: 送信 1 回" "$(ncalls)" "1"
+sentmsg 1 | grep -q '空き容量が少なくなっています（いま 19 GiB' && ok "D㉕-2 本文" || ng "D㉕-2 本文"
+has_prob "disk-low" && ok "D㉕-3 problems=disk-low" || ng "D㉕-3 problems=disk-low"
+set_now $(( NOW + 1800 ))
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "D㉖ 直後（24h 未満）: 送信 0 回増" "$(ncalls)" "1"
+export DF_KB=$(( 22 * 1048576 ))
+set_now $(( NOW + 1800 ))
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "D㉗-1 知らせ済みで 22GiB: 送らない" "$(ncalls)" "1"
+has_prob "disk-low" && ok "D㉗-2 problems に残る" || ng "D㉗-2 problems に残る"
+export DF_KB=$(( 26 * 1048576 ))
+set_now $(( NOW + 1800 ))
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "D㉘-1 26GiB: 直りました 1 通" "$(ncalls)" "2"
+sentmsg 2 | grep -q '直りました' && ok "D㉘-2 復旧文" || ng "D㉘-2 復旧文"
+has_prob "disk-low" && ng "D㉘-3 problems から消える" || ok "D㉘-3 problems から消える"
+setup
+export DF_KB=$(( 19 * 1048576 ))
+run_mjw
+export DF_KB=""
+set_now $(( NOW + 1800 ))
+colima_line $(( NOW - 60 )) idle -
+run_mjw
+eq "D㉙-1 df が読めない: 送らない" "$(ncalls)" "1"
+has_prob "disk-low" && ok "D㉙-2 problems に残る" || ng "D㉙-2 problems に残る"
+export DF_KB=52428800
 
 echo "----"
 echo "PASS=${PASS} FAIL=${FAIL}"
