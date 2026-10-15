@@ -49,6 +49,13 @@ export function postReviewAck(item: ReviewActionTarget, codes: string[]) {
   });
 }
 
+/** 確認済み（review_ack）を取り消す。記録は消さず、空の確認済みを1行足す（サーバー側） */
+export function postReviewAckRevoke(item: ReviewActionTarget) {
+  return api.post(`/tcg/items/${item.extraction_item_id}/review-ack/revoke`, {
+    source_message_id: item.source_message_id,
+  });
+}
+
 /** 有効な商品を名前の部分一致で探す（最大10件はサーバー側） */
 export async function searchProductCandidates(query: string): Promise<ProductCandidate[]> {
   const params = new URLSearchParams({ query });
