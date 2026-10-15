@@ -19,6 +19,7 @@ import { HeaderButton } from "../../components/HeaderButton";
 import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Unit {
   id: number;
@@ -296,14 +297,11 @@ export default function UnitsPage() {
                 onChange={e => setCreateForm({ ...createForm, kubun: e.target.value })}
               />
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <input
-                type="checkbox"
-                checked={createForm.is_active}
-                onChange={e => setCreateForm({ ...createForm, is_active: e.target.checked })}
-              />
-              {t(`${f}.isActive`)}
-            </label>
+            <Checkbox
+              label={t(`${f}.isActive`)}
+              checked={createForm.is_active}
+              onChange={e => setCreateForm({ ...createForm, is_active: e.target.checked })}
+            />
           </div>
           <div className="form-actions">
             <HeaderButton variant="secondary" onClick={() => setShowCreate(false)}>
@@ -348,14 +346,11 @@ export default function UnitsPage() {
                 onChange={e => setEditForm({ ...editForm, kubun: e.target.value })}
               />
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <input
-                type="checkbox"
-                checked={editForm.is_active}
-                onChange={e => setEditForm({ ...editForm, is_active: e.target.checked })}
-              />
-              {t(`${f}.isActive`)}
-            </label>
+            <Checkbox
+              label={t(`${f}.isActive`)}
+              checked={editForm.is_active}
+              onChange={e => setEditForm({ ...editForm, is_active: e.target.checked })}
+            />
           </div>
           <div className="form-actions">
             <HeaderButton variant="secondary" onClick={() => setShowEdit(false)}>

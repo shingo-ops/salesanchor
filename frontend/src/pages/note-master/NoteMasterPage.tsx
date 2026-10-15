@@ -21,6 +21,7 @@ import { HeaderButton } from "../../components/HeaderButton";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { Button } from "../../components/Button";
+import { Checkbox } from "../../components/Checkbox";
 
 interface TcgNoteMaster {
   id: number;
@@ -310,14 +311,11 @@ export default function NoteMasterPage() {
             required
           />
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-          <input
-            type="checkbox"
-            checked={formState.enabled}
-            onChange={e => setFormState({ ...formState, enabled: e.target.checked })}
-          />
-          {t(`${f}.enabled`)}
-        </label>
+        <Checkbox
+          label={t(`${f}.enabled`)}
+          checked={formState.enabled}
+          onChange={e => setFormState({ ...formState, enabled: e.target.checked })}
+        />
         <div className="form-group" style={{ gridColumn: "1 / -1" }}>
           <TextField
             label={t(`${f}.searchKeywords`)}
