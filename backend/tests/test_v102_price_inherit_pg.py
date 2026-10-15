@@ -221,7 +221,7 @@ def test_does_not_inherit_when_condition_id_is_null(pg, v102, ids):
     result_id = _qty_only(pg, job, ids)
 
     row = SimpleNamespace(id=_item_id(pg, result_id), raw_price=None)
-    values = _values(ids.p1, ids.box, condition_id=None)
+    values = {**_values(ids.p1, ids.box), "condition_id": None}
     with Session(pg[1]) as session:
         assert svc._inherit_price(session, job, row, values) == values
 
