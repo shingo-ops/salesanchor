@@ -87,6 +87,11 @@ thresholds:
   # scripts/backup.sh・scripts/backup_to_s3.sh が prod1 の textfile に書く *_last_success_timestamp を使用
   backup_stale_sec:         93600  # BackupLocalStale / BackupS3Stale: time() - 成功時刻 > 93600（26h）
 
+  # 監視設定のずれ（alert_rules.yml: config_drift_alerts）
+  # .github/workflows/monitoring-config-drift.yml が prod2 の pushgateway に送る値を使用
+  config_drift_files:          0  # MonitoringConfigDrift: monitoring_config_drift_files > 0
+  config_check_stale_sec: 180000  # MonitoringConfigCheckStale: time() - 送った時刻 > 180000（50h）
+
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     20    # BruteForceAttempt: > 20
   auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
@@ -113,3 +118,5 @@ for_durations:
   celery_queue:      "10m"  # CeleryQueueBacklog
   backup_stale:      "10m"  # BackupLocalStale / BackupS3Stale
   backup_absent:     "30h"  # BackupTimestampAbsent
+  config_drift:       "5m"  # MonitoringConfigDrift
+  config_check_stale: "1h"  # MonitoringConfigCheckStale
