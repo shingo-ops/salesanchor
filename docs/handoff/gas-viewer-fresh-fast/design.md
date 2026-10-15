@@ -367,7 +367,13 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
   - 【事実 2026-10-16】新しく入った人（@everyone）に、アラートのカテゴリと子4つ・テキスト「一般」・ボイス「一般」が見えていた（/tmp/CC報告ファイル/viewer_discord/visibility.txt）。PO「y」で、役割のなかった人間2人に PO が画面で Sales Anchor Staff を付け、対象7つを「ボット・Staff・SA Bug Intake は許可 → 最後に @everyone を拒否」の順で設定した。変更後に @everyone に見えるのは中身が空のカテゴリ2つだけ（redo_visibility_after.txt）。Staff・2つのボットは7つとも見える（redo_roles_after.txt）。戻し方は restore_overwrites.py（未実行）。1回目は @everyone を先に拒否してボットが自分を締め出し、テキスト「一般」が一時的に所有者以外に見えなくなった（PO が画面で戻した。visibility_restored.txt は最初と差分なし）。教訓：上書きはボット自身の許可を先に入れる。
   - 【事実・調査】Discord 公式資料に、サーバー全体のメンバー一覧を一般の人から隠す設定は見つからなかった。公式にある対策は見せるチャンネルを絞ることだけ。全員が見る部屋で互いが一覧に出るかは公式に明記が無く【未確認】（memberlist_research.md）。
 - 【PO 決定 2026-10-16】原文「全体用のカテゴリとチケットチャンネルはカテゴリを分ける、全体用としては全員が投稿できるチャンネル、障害の発生と復旧報告用のチャンネルを設置、チケットチャンネルは個別のDM用の部屋として使う」。お客さんに見せるのは「全体用」カテゴリ（全員が投稿できる部屋＋障害の発生と復旧の報告の部屋）と、その人のチケット部屋だけ。チケット部屋は本人とスタッフだけの個別の連絡部屋として使う。全体用の部屋ではお客さんどうしが見えることを前提とする。
-  - 【PO 決定 2026-10-16「y」】全体用カテゴリに、チケットのボタンだけを置く「受付」部屋（お客さんは読むだけ）を作る。原文の追記「トレカ販売用に顧客用に作ったチケットと同じ仕組みを」：既存のチケットの仕組み（client.py・ticket_channel_creator.py）を使う。障害報告の部屋はスタッフとボットだけが書く（お知らせの部屋のため Opus が既定とした）。既存の仕組みを運用サーバーで使うときに合わない点は調査中（/tmp/CC報告ファイル/viewer_ticket_recon/）。
+  - 【PO 決定 2026-10-16「y」】全体用カテゴリに、チケットのボタンだけを置く「受付」部屋（お客さんは読むだけ）を作る。原文の追記「トレカ販売用に顧客用に作ったチケットと同じ仕組みを」：既存のチケットの仕組み（client.py・ticket_channel_creator.py）を使う。障害報告の部屋はスタッフとボットだけが書く（お知らせの部屋のため Opus が既定とした）。既存の仕組みを運用サーバーで使うときに合わない点は下に記録（/tmp/CC報告ファイル/viewer_ticket_recon/）。
+  - 【事実 2026-10-16 Sonnet 調査・origin/main と本番 DB の読み取り（READ ONLY）。生出力 /tmp/CC報告ファイル/viewer_ticket_recon/】既存の仕組みのまま運用サーバーで使うと合わない点：
+    1. 運用サーバー（末尾 1187）は public.tenant_discord_config に未登録（本番3行：tenant 1・4・6）。運用用のテナントも無い。gateway は DB の登録だけで guild を判定する（backend/app/discord_gateway/client.py:94-121）。
+    2. 1 guild = 1 テナント（UNIQUE(guild_id)、migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql）。既存テナントに付け替えると元のサーバーのチケットが止まる。
+    3. チケットを作ると、そのテナントの leads に必ず1行入る（backend/app/discord_gateway/ticket_channel_creator.py:570-622）。止める分岐は無い。部屋での本人の発言も meta_messages に保存され翻訳に回る（ticket_channel_writer.py:217,298）。申込コードのやり取りもそこに残る。
+    4. ボタンの文面と custom_id「ticket_open」は固定（bot_texts.py:26-29,65-78）。押下は startswith("ticket_open") で受ける（client.py:216-220）ので、新しいボタンの名前は ticket_open で始めない。
+    5. 設定はテナントごとに1組（カテゴリ・ボタン部屋・staff ロール）。send_modal を使うコードは無い（git grep 0件）。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
