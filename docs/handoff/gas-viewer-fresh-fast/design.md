@@ -374,6 +374,8 @@ Discord 案（検討中・未決。2026-10-16 PO 提案「トライアルの申�
     3. チケットを作ると、そのテナントの leads に必ず1行入る（backend/app/discord_gateway/ticket_channel_creator.py:570-622）。止める分岐は無い。部屋での本人の発言も meta_messages に保存され翻訳に回る（ticket_channel_writer.py:217,298）。申込コードのやり取りもそこに残る。
     4. ボタンの文面と custom_id「ticket_open」は固定（bot_texts.py:26-29,65-78）。押下は startswith("ticket_open") で受ける（client.py:216-220）ので、新しいボタンの名前は ticket_open で始めない。
     5. 設定はテナントごとに1組（カテゴリ・ボタン部屋・staff ロール）。send_modal を使うコードは無い（git grep 0件）。
+  - 【PO 決定 2026-10-16「y」】トライアル申込者はアプリの見込み客（tenant の leads）に入れない。お客さんから見た動き（ボタン→自分専用の部屋）は顧客用チケットと同じにし、部屋を作る部品は使い回すが、処理はトライアル専用に分ける（ボタンの名前は ticket_open で始めない。申込者の記録は viewer_accounts などの閲覧ページ用の表だけ）。顧客用チケットの動きは変えない。
+  - 【PO 質問 2026-10-16】原文「ツールの顧客管理も出来るように出来る？」。回答：管理画面（super admin の ViewerAccountsPage。下の Q3 の「管理 API と画面」）で、一覧・状態の切り替え・停止と解除・期限の延長・ログイン記録を扱う設計が既にある。Discord 案に合わせて、一覧に Discord の利用者 ID と、その人のチケット部屋への移動を足す（列の追加は D1 の書き直しで扱う）。
 
 計画票0の結果（2026-10-15、Sonnet 調査・Opus が生出力を再確認。生出力は /tmp/CC報告ファイル/viewer_step0/）
 - ① SMTP：【事実】本番 backend の SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM は全部未設定（env_check.txt）。今のままではメールを送れない。deploy.yml:323-327 は GitHub の秘密設定 SMTP_HOST・SMTP_PORT・SMTP_USER・SMTP_PASSWORD・MAIL_FROM を本番の .env に書く作りだが、その5つは GitHub に登録されていない（gh secret list に SMTP・MAIL_FROM の名前が無い。2026-10-15）。段2の本番利用と段4の公開は、PO と方式を決めて送れることを確かめるまで止める。
