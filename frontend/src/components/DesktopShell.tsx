@@ -34,6 +34,7 @@ import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
+import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
 import { listConversations } from "../lib/messages";
 import ConfirmModal from "./ConfirmModal";
 import { ICON } from "../constants/iconSizes";
@@ -198,6 +199,7 @@ export default function DesktopShell() {
   const moreItems: NavItem[] = [];
 
   return (
+    <RealtimeProvider>
     <div className="app-shell">
       {/* ============ Sidebar ============ */}
       <aside
@@ -486,5 +488,6 @@ export default function DesktopShell() {
         onCancel={() => setShowLogoutConfirm(false)}
       />
     </div>
+    </RealtimeProvider>
   );
 }

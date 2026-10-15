@@ -39,6 +39,7 @@ import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
+import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
 import { listConversations } from "../lib/messages";
 import {
   NAV_ICONS,
@@ -188,6 +189,7 @@ export default function MobileShell() {
   // ── レンダリング ──
 
   return (
+    <RealtimeProvider>
     <div className="mobile-shell">
       {/* ============ Outlet ============ */}
       <main className="mobile-content">
@@ -327,5 +329,6 @@ export default function MobileShell() {
         onCancel={() => setShowLogoutConfirm(false)}
       />
     </div>
+    </RealtimeProvider>
   );
 }
