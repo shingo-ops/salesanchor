@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.mac-jobs-watch.plist — 30 分ごと＋ログイン時の Mac 自動お手入れの見張り（docs/handoff/mac-jobs-watch/design.md）
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+  Docker 自動停止と毎日の自動片付けが止まった・失敗したら Discord で知らせる。
+  読み取りだけで動く（fetch・checkout はしない）。道具のコピーの更新は disk-janitor が毎日 04:00 に行う。
+  通知先は ~/.config/sa-ops-intake/watchdog-webhook（読むだけ）。
+
+  配置コマンド（手順の正本: docs/ops/runner-commands.md）:
+    cp ops/launchd/jp.salesanchor.mac-jobs-watch.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.mac-jobs-watch.plist
+
+  動作確認:
+    launchctl print gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+    tail ~/Library/Logs/mac-jobs-watch.log
+
+  すぐ1回動かす:
+    launchctl kickstart -k gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+
+  停止:
+    launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.mac-jobs-watch</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; if [ -d /tmp/disk-janitor.lock.d ] &amp;&amp; [ -z "$(find /tmp/disk-janitor.lock.d -maxdepth 0 -mmin +120)" ]; then echo "mac-jobs-watch: disk-janitor 実行中のため今回は見送り"; exit 0; fi; if test -z "$(git -C "$T" --no-optional-locks status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" merge-base --is-ancestor HEAD origin/main &amp;&amp; cd "$T"; then bash scripts/mac-jobs-watch.sh; else echo "mac-jobs-watch: 道具のコピーが確認できないため実行しない" &gt;&amp;2; exit 1; fi</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/.salesanchor-tools</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/tanizawashingo/.npm-global/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <!-- 30 分ごと＋ログイン時（KeepAlive=false = デーモン化しない） -->
+  <key>StartInterval</key>
+  <integer>1800</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/mac-jobs-watch.out</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/mac-jobs-watch.err</string>
+</dict>
+</plist>

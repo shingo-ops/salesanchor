@@ -17,6 +17,7 @@ TOPIC_TCG_REVIEW = "tcg.review"
 # {(method, route_path): (topic, scope)}
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
 }
 
 _PENDING = "段階2で画面に当てるときに決める"

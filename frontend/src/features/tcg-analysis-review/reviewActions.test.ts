@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
-import { postProductCorrection, postReviewAck, searchProductOptions } from "./reviewActions";
+import { postProductCorrection, postReviewAck, postReviewAckRevoke, searchProductOptions } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 
@@ -31,6 +31,12 @@ describe("reviewActions", () => {
     vi.mocked(api.post).mockResolvedValue({ ok: true, saved: 2 });
     await postReviewAck({ ...item, extraction_item_id: "item-1" }, ["a", "b"]);
     expect(api.post).toHaveBeenCalledWith("/tcg/items/item-1/review-ack", { source_message_id: "msg-1", codes: ["a", "b"] });
+  });
+
+  it("posts review-ack revoke with only the source message id", async () => {
+    vi.mocked(api.post).mockResolvedValue({ ok: true, saved: 1 });
+    await postReviewAckRevoke({ ...item, extraction_item_id: "item-1" });
+    expect(api.post).toHaveBeenCalledWith("/tcg/items/item-1/review-ack/revoke", { source_message_id: "msg-1" });
   });
 
   it("maps search candidates to name labels with product_uuid values", async () => {
