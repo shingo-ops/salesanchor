@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 17 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 20 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -202,3 +202,28 @@
 - 最初に見るもの：待ち行列の長さの推移（`celery_queue_length`）と、worker が処理中のタスク（長いタスク `tcg.extract_source_message` 等が並んでいないか）。
 - 直し方：長いタスクが詰まっていれば Opus に報告する。worker の再起動は処理中のタスクを止めるので、Opus の判断を待つ。
 - 止め方：`amtool silence add alertname=CeleryQueueBacklog --duration=PERIOD --comment=REASON`
+
+## BackupLocalStale
+
+- 札：ticket
+- 何が起きているか：毎日 3:00 の `scripts/backup.sh`（DB バックアップ）が 26 時間以上成功していない状態が 10 分続いた。デプロイの Pre-deploy DB backup の成功でも時刻は進む。利用者に今の影響は無い。翌営業日までに復旧する。
+- 閾値の根拠：cron は毎日 1 回、所要は最大 81 秒。1 日 1 回の成功なら差は最大で約 24 時間 2 分で、26 時間には届かない。1 回抜けると、約 2 時間後に鳴る。
+- 最初に見るもの：prod1 の `/home/ubuntu/backups/postgres/backup.log` の末尾（成功の行と `TEXTFILE ... FAIL` の行）、`/home/ubuntu/backups/cron.log`（失敗の出力先）、ubuntu の crontab。
+- 直し方：失敗の原因（postgres のコンテナ・ディスクの空き）を切り分けて Opus に報告する。手動で 1 回実行してよい（`bash /home/ubuntu/salesanchor/scripts/backup.sh`）。
+- 止め方：`amtool silence add alertname=BackupLocalStale --duration=PERIOD --comment=REASON`
+
+## BackupS3Stale
+
+- 札：ticket
+- 何が起きているか：毎日 3:30 の `scripts/backup_to_s3.sh`（S3 への写し）が 26 時間以上成功していない状態が 10 分続いた。毎月 1 日は Glacier への月次の保存の失敗でも成功時刻が書かれない。利用者に今の影響は無い。翌営業日までに復旧する。
+- 最初に見るもの：`/home/ubuntu/backups/s3_backup.log` の末尾（`ERROR`・`WARN: TEXTFILE` の行）、Discord の ops チャンネルの「S3バックアップ失敗」の通知。
+- 直し方：AWS の認証・S3 の応答・ローカルのバックアップの有無を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=BackupS3Stale --duration=PERIOD --comment=REASON`
+
+## BackupTimestampAbsent
+
+- 札：ticket
+- 何が起きているか：バックアップの成功時刻（`backup_local.prom` か `backup_s3.prom`）のどちらかが 30 時間取れていない。textfile の断線かファイルの消失の疑い。利用者に今の影響は無い。翌営業日までに復旧する。
+- 最初に見るもの：prod1 の `/home/ubuntu/node_exporter_textfile/` に `backup_local.prom` と `backup_s3.prom` があるか、`node_textfile_scrape_error{instance="app-vps"}`、`backup.log` の `TEXTFILE ... FAIL` の行。
+- 直し方：断線の箇所を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=BackupTimestampAbsent --duration=PERIOD --comment=REASON`

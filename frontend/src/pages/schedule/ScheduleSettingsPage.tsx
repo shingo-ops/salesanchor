@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { Toggle } from "../../components/Toggle";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -162,14 +163,11 @@ export default function ScheduleSettingsPage() {
                           value={selfOwner.color}
                           onChange={(event) => updateOwner(selfOwner.staffId, { color: event.target.value })}
                         />
-                        <label className="toggle-switch" aria-label={t("schedule.settingsCalendarVisible")}>
-                          <input
-                            type="checkbox"
-                            checked={selfOwner.visible}
-                            onChange={(event) => updateOwner(selfOwner.staffId, { visible: event.target.checked })}
-                          />
-                          <span className="toggle-switch-slider" />
-                        </label>
+                        <Toggle
+                          checked={selfOwner.visible}
+                          aria-label={t("schedule.settingsCalendarVisible")}
+                          onCheckedChange={(next) => updateOwner(selfOwner.staffId, { visible: next })}
+                        />
                         <SelectControl
                           size="sm"
                           fullWidth
@@ -219,14 +217,11 @@ export default function ScheduleSettingsPage() {
                             value={owner.color}
                             onChange={(event) => updateOwner(owner.staffId, { color: event.target.value })}
                           />
-                          <label className="toggle-switch" aria-label={t("schedule.settingsCalendarVisible")}>
-                            <input
-                              type="checkbox"
-                              checked={owner.visible}
-                              onChange={(event) => updateOwner(owner.staffId, { visible: event.target.checked })}
-                            />
-                            <span className="toggle-switch-slider" />
-                          </label>
+                          <Toggle
+                            checked={owner.visible}
+                            aria-label={t("schedule.settingsCalendarVisible")}
+                            onCheckedChange={(next) => updateOwner(owner.staffId, { visible: next })}
+                          />
                           <SelectControl
                             size="sm"
                             fullWidth

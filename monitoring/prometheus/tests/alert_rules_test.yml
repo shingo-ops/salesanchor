@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 17 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 20 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -394,3 +394,118 @@ tests:
       - eval_time: 15m
         alertname: CeleryQueueBacklog
         exp_alerts: []
+
+  # --- backup_alerts（便6）。time() は 0 から始まるので、最終成功時刻を負の値にして古い状態を作る ---
+  - name: BackupLocalStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'backup_local_last_success_timestamp{instance="app-vps"}'
+        values: '-100000+0x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BackupLocalStale
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: BackupLocalStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "DB バックアップが 26 時間以上成功していません"
+              description: "scripts/backup.sh の最終成功から 1d 4h 1m 40s たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuplocalstale"
+
+  - name: BackupLocalFresh
+    interval: 1m
+    input_series:
+      - series: 'backup_local_last_success_timestamp{instance="app-vps"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: BackupLocalStale
+        exp_alerts: []
+
+  - name: BackupS3StaleFiring
+    interval: 1m
+    input_series:
+      - series: 'backup_s3_last_success_timestamp{instance="app-vps"}'
+        values: '-100000+0x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: BackupS3Stale
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: BackupS3Stale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "S3 へのバックアップの写しが 26 時間以上成功していません"
+              description: "scripts/backup_to_s3.sh の最終成功から 1d 4h 1m 40s たちました（閾値: 26 時間）。翌営業日までに復旧してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backups3stale"
+
+  - name: BackupS3Fresh
+    interval: 1m
+    input_series:
+      - series: 'backup_s3_last_success_timestamp{instance="app-vps"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: BackupS3Stale
+        exp_alerts: []
+
+  # absent() は系列を与えない形で鳴る（無関係の系列だけ置く）
+  - name: BackupTimestampAbsentBoth
+    interval: 1m
+    input_series:
+      - series: 'up{job="dummy", instance="x"}'
+        values: '1x1900'
+    alert_rule_test:
+      - eval_time: 29h
+        alertname: BackupTimestampAbsent
+        exp_alerts: []
+      - eval_time: 31h
+        alertname: BackupTimestampAbsent
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "バックアップの成功時刻が取れていません(app-vps)"
+              description: "backup_local.prom か backup_s3.prom の時刻が 30 時間取れていません。textfile の置き場と 2 つのファイルの有無を確認してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuptimestampabsent"
+
+  - name: BackupTimestampBothPresent
+    interval: 1m
+    input_series:
+      - series: 'backup_local_last_success_timestamp{instance="app-vps"}'
+        values: '0+60x1900'
+      - series: 'backup_s3_last_success_timestamp{instance="app-vps"}'
+        values: '0+60x1900'
+    alert_rule_test:
+      - eval_time: 31h
+        alertname: BackupTimestampAbsent
+        exp_alerts: []
+
+  - name: BackupTimestampLocalOnly
+    interval: 1m
+    input_series:
+      - series: 'backup_local_last_success_timestamp{instance="app-vps"}'
+        values: '0+60x1900'
+    alert_rule_test:
+      - eval_time: 31h
+        alertname: BackupTimestampAbsent
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "バックアップの成功時刻が取れていません(app-vps)"
+              description: "backup_local.prom か backup_s3.prom の時刻が 30 時間取れていません。textfile の置き場と 2 つのファイルの有無を確認してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backuptimestampabsent"

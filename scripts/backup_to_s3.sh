@@ -156,4 +156,23 @@ if [ "$(date +%d)" = "01" ]; then
   fi
 fi
 
+# 6. 成功時刻を node-exporter の textfile に書く（ADR-1012 段階1 便6。見張り BackupS3Stale が読む）
+# 書き方は scripts/f2-cleanup.sh の write_blackboard と同じ。書けなくても成功のまま終える
+# （|| の左側の関数の中では set -e と ERR の trap が効かないので、偽の Discord 失敗通知を出さない）
+TEXTFILE_DIR="${BACKUP_TEXTFILE_DIR:-/home/ubuntu/node_exporter_textfile}"
+write_success_timestamp() {
+  local tmp
+  mkdir -p "${TEXTFILE_DIR}" 2>/dev/null || { echo "  WARN: TEXTFILE mkdir FAIL"; return 0; }
+  tmp=$(mktemp "${TEXTFILE_DIR}/.backup_s3.XXXXXX") || { echo "  WARN: TEXTFILE mktemp FAIL"; return 0; }
+  # shellcheck disable=SC2015  # && の連鎖のどこかが失敗したら右の後始末だけを動かす（意図どおり）
+  {
+    echo "# HELP backup_s3_last_success_timestamp scripts/backup_to_s3.sh last success unix time"
+    echo "# TYPE backup_s3_last_success_timestamp gauge"
+    echo "backup_s3_last_success_timestamp $(date +%s)"
+  } > "${tmp}" && chmod 644 "${tmp}" && mv "${tmp}" "${TEXTFILE_DIR}/backup_s3.prom" \
+    || { rm -f "${tmp}"; echo "  WARN: TEXTFILE write FAIL"; }
+  return 0
+}
+write_success_timestamp || true
+
 echo "=== S3バックアップ転送完了: $(date) ==="
