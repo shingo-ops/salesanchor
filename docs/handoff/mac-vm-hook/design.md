@@ -20,9 +20,9 @@
 
 ## 2. 対象と対象外
 - 対象（すべてリポジトリ外。py312-guard と同じ置き方）:
-  - 新規 `~/.claude/scripts/mac-vm-guard.py`（PreToolUse Bash フック、標準ライブラリのみ）
-  - 新規 `~/.claude/scripts/tests/test_mac_vm_guard.py`（H1〜H5 の試験。券は一時 HOME で作る）
-  - 変更 `~/.claude/settings.json` の PreToolUse Bash に1件追加（python-version-guard の直後）
+  - 新規 ~/.claude/scripts/mac-vm-guard.py（PreToolUse Bash フック、標準ライブラリのみ）
+  - 新規 ~/.claude/scripts/tests/test_mac_vm_guard.py（H1〜H5 の試験。券は一時 HOME で作る）
+  - 変更 ~/.claude/settings.json の PreToolUse Bash に1件追加（python-version-guard の直後）
 - 対象（リポジトリ内・文書のみ）: docs/ops/runner-commands.md §10 に「AI は見張りで止まる・例外は許可券 "mac vm"」を2行追記。docs/specs/vm-test-on-gha/README.md に段階2の行。本 design.md・card.md・results.md。
 - 対象外: 人が自分のターミナルで直接打つ命令（フックは AI の命令にだけ効く）／ Codex（Claude Code のフックは効かない。Codex 運用は現在カード実行のみで本件の観測事例なし）／ `default` の CPU・メモリ設定の変更／ 既存の `sa-private-ci` の起動（`--profile sa-private-ci` も止める対象。必要なら許可券）。
 
@@ -40,7 +40,7 @@
 `🚫 BLOCKED [mac-vm-guard]: この Mac で試験用の仮想マシンは作れません（メモリ 8GB のため）。GitHub の試験場を使ってください: gh workflow run sandbox-test.yml --ref <ブランチ> -f test=<名前>（規則: docs/ops/runner-commands.md §10）。Mac 実機でしか試せない場合は PO に許可券 "mac vm" を依頼してください。`
 
 ## 5. 例外（許可券）
-`~/.claude/permits/danger-permit-*.json` のうち `op == "mac vm"`・`created_by == "manual"`・`expires_at` 未到来のものが1つあれば、それを削除して通す（1回限り）。発行は既存の scripts/permit-danger.sh（変更なし）。AI による券の作成は既存 agent-danger-hook.sh の「permits 自己発行ブロック」で止まる（同ファイル :156-170）。
+許可券置き場（リポジトリ外）の danger-permit-*.json のうち `op == "mac vm"`・`created_by == "manual"`・`expires_at` 未到来のものが1つあれば、それを削除して通す（1回限り）。発行は既存の scripts/permit-danger.sh（変更なし）。AI による券の作成は既存 agent-danger-hook.sh の「permits 自己発行ブロック」で止まる（同ファイル :156-170）。
 
 ## 6. 失敗時の扱い
 内部エラー（JSON が読めない等）は通す（fail-open、py312-guard と同じ）。理由: 見張りの不具合で全 Bash が止まる被害の方が大きい。拒否・券消費・内部エラーは agent-events.jsonl に1行記録する（H6 の観測源）。
@@ -50,7 +50,7 @@
 - B 不採用: `colima` を包む同名スクリプトを PATH の前に置く。人の命令も止められるが、絶対パス `/opt/homebrew/bin/colima` で素通りし、Homebrew 更新・colima-idle-stop と干渉する恐れがある。
 - C 不採用: colima 自体を削除。開発用 DB（default）が使えなくなる。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 Claude Code 公式の hooks 仕様（PreToolUse・exit 2 で拒否し標準エラーを AI に返す）に従う。確認は実装時に Context7 か公式資料で行い results.md に出典を残す。同種の運用は本リポジトリ内の py312-guard（K1〜K7 合格、docs/handoff/py312-guard/results.md）が実績。社外の数値事例は本件の成否の根拠にならないため使わない。
 
 ## 9. Opus 自己審査（同一 AI による審査）
@@ -60,6 +60,7 @@ Claude Code 公式の hooks 仕様（PreToolUse・exit 2 で拒否し標準エ�
 - 判定: APPROVE（KGI の PO 承認後に実装可）。
 
 ## 10. 維持の仕組み
-- 見張りは `~/.claude/scripts/`（他の見張りと同じ場所）。試験は `python3 ~/.claude/scripts/tests/test_mac_vm_guard.py` で再実行できる。
-- 戻し方: settings.json の1件を消す（または `mac-vm-guard.py` を退避）。
+- 守り手: PreToolUse フック mac-vm-guard（全 AI セッション・担当に自動適用）と CI の no-mac-vm-guard。点検は Opus（H6・K5）。
+- 見張りは ~/.claude/scripts/（他の見張りと同じ場所。リポジトリ外）。試験は `python3 ~/.claude/scripts/tests/test_mac_vm_guard.py` で再実行できる。
+- 戻し方: settings.json の1件を消す（または mac-vm-guard.py を退避）。
 - K5（2026-10-31 `colima list`）で段階1・2をまとめて効果測定する。
