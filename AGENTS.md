@@ -123,6 +123,8 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 
 > **重要**: `make test`（pytest）は Docker が必須。Docker なし環境では `make lint-ci` のみ実行すること。
 
+> 仮想マシンが要る試験は Mac で作らず docs/ops/runner-commands.md の該当節（§10）に従う。
+
 ---
 
 ## ブランチ運用ルール
