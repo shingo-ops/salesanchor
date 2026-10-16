@@ -18,4 +18,11 @@
 H6（7日観測）は未実施。AI が券ファイルを作る操作の既存見張りでの拒否の試験は未実施（実装中に券置き場を ls した命令が既存の permits-guard に止められたことを1回観測）。
 
 ## hooks 仕様の出典
-Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかった。公式資料での確認は未実施で、仕様の出典は未確認。代わりの根拠は実機の観測: PreToolUse フックの exit 2 と標準エラー出力でコマンドが実行されず、メッセージが AI に返った（h1_log.txt）。
+Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかった。代替として Opus が公式資料を直接確認した（2026-10-17、https://code.claude.com/docs/en/hooks）:
+- 「Exit with code 2 to block the action. … a `PreToolUse` hook blocks the tool call」「The message that comes with the block is your hook's stderr.」
+- 「Hooks from settings files … also run inside subagents. When a subagent calls a tool, tool events such as `PreToolUse` … fire the same configured hooks」→ Sonnet 等の担当にも効く。
+- exit 0 以外・2 以外は非ブロッキング（本見張りの fail-open は exit 0 で意図どおり）。
+
+既知の限界（Opus コード審査）: `$( … )`・バッククォート内、`nohup`/`exec`/`command` 前置、別行の `export COLIMA_PROFILE=x` は判定しない。AI の通常の書き方では起きにくく、H6 の観測と K5（10/31 `colima list`）で取りこぼしを検出する。
+
+補足の根拠として実機も観測した: PreToolUse フックの exit 2 と標準エラー出力でコマンドが実行されず、メッセージが AI に返った（h1_log.txt）。
