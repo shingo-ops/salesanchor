@@ -8,7 +8,8 @@
 #
 # 1回（N）ごとに: --execute の後で --repair を流す。
 #   execute の終了コード 3 または 2 ならそこで止める（上限・確かめの失敗）。
-#   0 なら続けて repair。repair も 0 なら抜ける。
+#   0 または 4（失敗が残った）なら続けて repair。execute も repair も 0 なら抜ける。4 なら次の回へ。
+#   最大回数に達して 4 が出ていたら 4 で終える。
 #   137 等（コンテナが消された）は、次の回へ進む。
 # コンテナ名は reextract-v6-YYYYMMDD-N。デプロイが消す名前（astro-webapp-celery-worker*）から外してある。
 # 名前がぶつかったら、前の回のコンテナを docker rm してから進む。
@@ -51,6 +52,7 @@ if ! "$DOCKER_BIN" compose run --rm --no-deps -T --name "$check_name" -v "${WORK
   exit 2
 fi
 
+residual=0   # 1 = 失敗が残った回があった（終了コード 4）
 for round in $(seq 1 "$MAX_ROUNDS"); do
   log "round ${round}: execute"
   run_tool "$round" --execute "$@"
@@ -59,9 +61,10 @@ for round in $(seq 1 "$MAX_ROUNDS"); do
   if [ "$rc" -eq 3 ] || [ "$rc" -eq 2 ]; then
     exit "$rc"
   fi
-  if [ "$rc" -ne 0 ]; then
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 4 ]; then
     continue   # 137 等。次の回で、残りから続ける
   fi
+  exec_rc="$rc"
 
   log "round ${round}: repair"
   run_tool "$round" --repair --ids-file /work/order.txt
@@ -70,11 +73,18 @@ for round in $(seq 1 "$MAX_ROUNDS"); do
   if [ "$rc" -eq 3 ] || [ "$rc" -eq 2 ]; then
     exit "$rc"
   fi
-  if [ "$rc" -eq 0 ]; then
+  if [ "$rc" -eq 0 ] && [ "$exec_rc" -eq 0 ]; then
     log "完了"
     exit 0
   fi
+  if [ "$rc" -eq 4 ] || [ "$exec_rc" -eq 4 ]; then
+    residual=1   # 失敗が残った。次の回で、残りをもう一度やる
+  fi
 done
 
+if [ "$residual" -eq 1 ]; then
+  log "最大 ${MAX_ROUNDS} 回に達しましたが、失敗した件が残っています。控え(/work/records.jsonl)を確認してください。"
+  exit 4
+fi
 log "最大 ${MAX_ROUNDS} 回に達しました。控え(/work/records.jsonl)を確認してください。"
 exit 1

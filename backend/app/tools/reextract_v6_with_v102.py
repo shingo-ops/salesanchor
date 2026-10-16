@@ -19,14 +19,13 @@
   extraction_items.csv   : SELECT * FROM public.extraction_items WHERE extraction_job_id = ANY(対象)
   analysis_results.csv   : SELECT ar.* FROM public.analysis_results ar JOIN public.extraction_items ei
                            ON ei.id = ar.extraction_item_id WHERE ei.extraction_job_id = ANY(対象)
-  いずれも TO '<file>' WITH (FORMAT csv, HEADER true, NULL '\\N')
+  いずれも TO '<file>' WITH (FORMAT csv, HEADER true, FORCE_QUOTE *)
 
 終了コード: 0 = 済んだ / 2 = 始める前の確かめに失敗・引数の誤り / 3 = 上限（費用・連続の失敗）で止まった。
 """
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import logging
 import os
@@ -54,10 +53,12 @@ TARGET_STATUSES = ("done", "empty", "error")
 EXIT_OK = 0
 EXIT_CONFIG = 2
 EXIT_LIMIT = 3
+EXIT_RESIDUAL = 4  # 最後まで回ったが、失敗した件が残っている（ループは次の回へ進む）
+EXIT_ROLLBACK_ERROR = 1  # --rollback-from --execute で失敗した job がある
+RESIDUAL_CATEGORIES = frozenset({"gemini_error", "analysis_error", "unreadable", "repair_exhausted", "pairs_error"})
 REPAIR_MAX_PER_JOB = 2  # unreadable の再抽出は1件あたりここまで
 ALARM_MARGIN_SEC = 30  # 予備の時間切れ = timeout-sec + これ（300 秒なら 330 秒）
 FAILURE_CATEGORIES = frozenset({"unreadable", "gemini_error", "analysis_error", "pairs_error"})
-NULL_TOKEN = "\\N"  # 控え CSV の NULL
 
 
 class GeminiTimeout(BaseException):
@@ -175,6 +176,14 @@ def append_record(out_dir: Path, record: dict) -> None:
     print(line, flush=True)
 
 
+def append_line_durable(path: Path, line: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
 def read_ids_file(path: Path) -> list[str]:
     return [ln.strip() for ln in path.read_text(encoding="utf-8").splitlines() if ln.strip()]
 
@@ -271,12 +280,13 @@ def dry_run(out_dir: Path, only_job: str | None) -> int:
     started = (out_dir / "started_at.txt").exists()
     order_name = "order.dryrun.txt" if started else "order.txt"  # 実行中の order.txt（費用の集計に使う）を上書きしない
     write_text_durable(out_dir / order_name, "".join(f"{j}\n" for j, _ in targets))
-    write_text_durable(out_dir / "excluded.tsv", "".join(f"{j}\t{r}\n" for j, r in excluded))
+    excluded_name = "excluded.dryrun.tsv" if (out_dir / "excluded.tsv").exists() else "excluded.tsv"  # 最初の一覧を守る
+    write_text_durable(out_dir / excluded_name, "".join(f"{j}\t{r}\n" for j, r in excluded))
     print(f"対象 {len(targets)} 件 / 除外 {len(excluded)} 件 {dict(Counter(r for _, r in excluded))}")
     print("最初の10件:")
     for job_id, _ in targets[:10]:
         print(f"  {job_id}")
-    print(f"書いた: {out_dir / order_name}, {out_dir / 'excluded.tsv'}")
+    print(f"書いた: {out_dir / order_name}, {out_dir / excluded_name}")
     return EXIT_OK
 
 
@@ -410,6 +420,9 @@ def process_job(job_id: str, out_dir: Path, timeout_sec: int) -> tuple[str, str]
         return "skip_not_v6", ""
     if state["corrections"]:
         return "skip_corrections", ""
+    rolled = out_dir / "rolled_back.txt"
+    if rolled.exists() and job_id in read_ids_file(rolled):
+        return "skip_rolled_back", "--rollback-from で v6 に戻した job"
     with new_session() as session:
         ctx = extraction.load_extraction_context(session, job_id)
         if ctx is None:
@@ -488,18 +501,20 @@ def execute(out_dir: Path, *, only_job: str | None, limit: int | None, max_cost:
         targets, excluded = classify_v6_jobs(session, with_prefilter=False, only_job=only_job)
         session.rollback()
     out_dir.mkdir(parents=True, exist_ok=True)
-    if not (out_dir / "order.txt").exists():
+    narrowed = only_job is not None or limit is not None
+    if not narrowed and not (out_dir / "order.txt").exists():  # 全件の実行だけが一覧を作る
         write_text_durable(out_dir / "order.txt", "".join(f"{j}\n" for j, _ in targets))
         write_text_durable(out_dir / "excluded.tsv", "".join(f"{j}\t{r}\n" for j, r in excluded))
     budget = _Budget(out_dir, max_cost, stop_after_errors)
-    if only_job is not None and only_job not in budget.job_ids:
-        budget.job_ids.append(only_job)
     counter: Counter = Counter()
     exit_code = EXIT_OK
     processed = 0
     for job_id, _smid in targets:
         if limit is not None and processed >= limit:
             break
+        if job_id not in budget.job_ids:  # 絞った実行でも order.txt は上書きせず、末尾に足す（費用と --repair の範囲に入る）
+            append_line_durable(out_dir / "order.txt", job_id)
+            budget.job_ids.append(job_id)
         _total, reason = budget.check_cost()
         if reason:
             print(f"止めます: {reason}", file=sys.stderr)
@@ -520,6 +535,8 @@ def execute(out_dir: Path, *, only_job: str | None, limit: int | None, max_cost:
     summarize(counter)
     if processed >= 1:
         extraction._publish_review_changed()  # D5: 要確認画面へ1回通知
+    if exit_code == EXIT_OK and RESIDUAL_CATEGORIES & set(counter):
+        return EXIT_RESIDUAL
     return exit_code
 
 
@@ -550,7 +567,12 @@ def repair_job(job_id: str, out_dir: Path, counts: dict, timeout_sec: int) -> tu
             return failure, note
         category, note2 = finish_after_extraction(job_id, pairs)
         return category, "; ".join(x for x in (f"repair#{counts[job_id]}", note, note2) if x)
-    need_analysis = (state["items"] > 0 and state["results"] == 0) or svc.REASON_EXTRACT_EXCEPTION in state["reasons"]
+    # 空の応答（items 0・unreadable でない）は、抽出が review_reasons を NULL にする（line_analysis_v102_svc.py:513）。
+    # 解析が走ると no_items 等が書かれる（同 :976）ので、NULL のままなら解析前で止まった件
+    empty_unanalyzed = state["status"] == "empty" and state["items"] == 0 and all(not r for r in state["reasons"])
+    need_analysis = (
+        (state["items"] > 0 and state["results"] == 0) or svc.REASON_EXTRACT_EXCEPTION in state["reasons"] or empty_unanalyzed
+    )
     return finish_after_extraction(job_id, pairs, run_analysis=need_analysis)
 
 
@@ -594,6 +616,8 @@ def repair(out_dir: Path, ids_file: Path, *, max_cost: Decimal, stop_after_error
         print(f"再抽出が上限の件（--rollback-from --job-id で v6 に戻す候補）: {len(exhausted)} 件")
     if changed:
         extraction._publish_review_changed()
+    if exit_code == EXIT_OK and RESIDUAL_CATEGORIES & set(counter):
+        return EXIT_RESIDUAL
     return exit_code
 
 
@@ -602,12 +626,59 @@ def repair(out_dir: Path, ids_file: Path, *, max_cost: Decimal, stop_after_error
 # ---------------------------------------------------------------------------
 
 
+def _parse_csv(text_: str) -> list[list[str | None]]:
+    """COPY ... (FORMAT csv, FORCE_QUOTE *) の出力を読む。引用符なしの空 = NULL、引用符つきの空 = 空文字（`\\N` も普通の文字列）。"""
+    rows: list[list[str | None]] = []
+    row: list[str | None] = []
+    buf: list[str] = []
+    quoted = False  # このフィールドが引用符で始まったか
+    in_quotes = False
+    i, n = 0, len(text_)
+
+    def end_field() -> None:
+        value = "".join(buf)
+        row.append(value if (quoted or value != "") else None)
+        buf.clear()
+
+    while i < n:
+        ch = text_[i]
+        if in_quotes:
+            if ch == '"':
+                if i + 1 < n and text_[i + 1] == '"':
+                    buf.append('"')
+                    i += 1
+                else:
+                    in_quotes = False
+            else:
+                buf.append(ch)
+        elif ch == '"' and not buf and not quoted:
+            in_quotes = quoted = True
+        elif ch == ",":
+            end_field()
+            quoted = False
+        elif ch in "\r\n":
+            if ch == "\r" and i + 1 < n and text_[i + 1] == "\n":
+                i += 1
+            end_field()
+            quoted = False
+            rows.append(row)
+            row = []
+        else:
+            buf.append(ch)
+        i += 1
+    if buf or quoted or row:
+        end_field()
+        rows.append(row)
+    return rows
+
+
 def _read_csv(path: Path) -> tuple[list[str], list[dict[str, str | None]]]:
-    csv.field_size_limit(sys.maxsize)
     with open(path, encoding="utf-8", newline="") as fh:
-        reader = csv.DictReader(fh)
-        header = list(reader.fieldnames or [])
-        rows = [{k: (None if v == NULL_TOKEN else v) for k, v in row.items()} for row in reader]
+        parsed = _parse_csv(fh.read())
+    if not parsed:
+        return [], []
+    header = [h or "" for h in parsed[0]]
+    rows = [dict(zip(header, r, strict=True)) for r in parsed[1:] if r != [None]]
     return header, rows
 
 
@@ -701,11 +772,13 @@ def rollback(out_dir: Path, backup_dir: Path, *, only_job: str | None, execute_w
             results_by_job.get(job_id, []), results_header, execute_writes=execute_writes,
         )
         append_record(out_dir, record_of("rollback", job_id, category, note, time.monotonic() - started, None))
+        if category == "rolled_back":
+            append_line_durable(out_dir / "rolled_back.txt", job_id)  # 次の --execute が、この job をやり直さないように
         counter[category] += 1
     summarize(counter)
     if counter.get("rolled_back"):
         extraction._publish_review_changed()
-    return EXIT_OK
+    return EXIT_ROLLBACK_ERROR if counter.get("rollback_error") else EXIT_OK
 
 
 # ---------------------------------------------------------------------------

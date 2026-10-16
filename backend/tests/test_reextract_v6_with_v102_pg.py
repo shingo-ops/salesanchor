@@ -172,7 +172,7 @@ def test_prefilter_hit_is_skipped_and_stays_v6(pg, env):
     _s, hit = make_v6(pg, raw="除外ワード 在庫なし")
     _s, ok = make_v6(pg)
     assert run_execute(env) == tool.EXIT_OK
-    assert categories(env) == {ok: "done"} | {hit: "skip_prefilter"} or categories(env)[hit] == "skip_prefilter"
+    assert categories(env) == {ok: "done", hit: "skip_prefilter"}
     assert job_row(pg, hit)[0] == V6 and env.calls == 1
     assert job_row(pg, ok)[0].startswith("v102:")
 
@@ -215,7 +215,7 @@ def test_gemini_exception_is_gemini_error_and_keeps_v6_items(pg, env, monkeypatc
         raise RuntimeError("Gemini v8 API 呼び出し失敗: 架空")
 
     monkeypatch.setattr(svc, "call_gemini_raw_copy_v8", boom)
-    assert run_execute(env) == tool.EXIT_OK
+    assert run_execute(env) == tool.EXIT_RESIDUAL
     assert categories(env) == {job: "gemini_error"}
     assert job_row(pg, job)[0] == V6 and item_ids(pg, job) == before
 
@@ -223,7 +223,7 @@ def test_gemini_exception_is_gemini_error_and_keeps_v6_items(pg, env, monkeypatc
 def test_unreadable_response_is_unreadable_and_counts_as_a_failure(pg, env):
     env.response = "これは JSON ではない"
     _s, job = make_v6(pg)
-    assert run_execute(env) == tool.EXIT_OK
+    assert run_execute(env) == tool.EXIT_RESIDUAL
     assert categories(env) == {job: "unreadable"}
     assert job_row(pg, job)[2] == "response_unreadable"
     assert "unreadable" in tool.FAILURE_CATEGORIES
@@ -236,7 +236,7 @@ def test_analysis_pipeline_failure_is_analysis_error(pg, env, monkeypatch):
         raise ValueError("架空の解析の失敗")
 
     monkeypatch.setattr(svc, "run_v102_pipeline", boom)
-    assert run_execute(env) == tool.EXIT_OK
+    assert run_execute(env) == tool.EXIT_RESIDUAL
     assert categories(env) == {job: "analysis_error"}
     assert job_row(pg, job)[2] == svc.REASON_EXTRACT_EXCEPTION
 
@@ -364,7 +364,7 @@ def test_a_success_resets_the_consecutive_failure_count(pg, env, monkeypatch):
         return real(*a, **k)
 
     monkeypatch.setattr(svc, "call_gemini_raw_copy_v8", flaky)
-    assert run_execute(env, stop_after_errors=2) == tool.EXIT_OK
+    assert run_execute(env, stop_after_errors=2) == tool.EXIT_RESIDUAL  # 最後まで回ったが、失敗が残っている
     assert len(records(env)) == 4
 
 
@@ -495,8 +495,17 @@ def dump_csv(pg_fixture, directory: Path, job_ids: list[str]) -> None:
     with pg_fixture[0].cursor() as cur:
         for name, query in queries.items():
             buffer = io.StringIO()
-            cur.copy_expert(f"COPY ({query}) TO STDOUT WITH (FORMAT csv, HEADER true, NULL '\\N')", buffer)
+            cur.copy_expert(f"COPY ({query}) TO STDOUT WITH (FORMAT csv, HEADER true, FORCE_QUOTE *)", buffer)
             (directory / f"{name}.csv").write_text(buffer.getvalue(), encoding="utf-8")
+
+
+def write_backup_csv(path: Path, header: list[str], rows: list[dict]) -> None:
+    """FORCE_QUOTE * と同じ形で書く（NULL だけ引用符なしの空）。"""
+    def cell(v):
+        return "" if v is None else '"' + v.replace('"', '""') + '"'
+
+    lines = [",".join(header)] + [",".join(cell(r[h]) for h in header) for r in rows]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def snapshot(pg_fixture, job_id: str) -> dict:
@@ -542,19 +551,10 @@ def test_rollback_skips_a_job_with_item_corrections_and_isolates_a_failing_job(p
     path = backup / "analysis_results.csv"
     header, rows = tool._read_csv(path)
     broken_items = {r["id"] for r in tool._read_csv(backup / "extraction_items.csv")[1] if r["extraction_job_id"] == broken}
-    lines = path.read_text(encoding="utf-8").splitlines()
-    out = [lines[0]]
-    column = header.index("product_id")
-    import csv as _csv
-    for raw, row in zip(lines[1:], rows, strict=True):
+    for row in rows:
         if row["extraction_item_id"] in broken_items:
-            cells = next(_csv.reader([raw]))
-            cells[column] = "999999999"
-            buf = io.StringIO()
-            _csv.writer(buf, lineterminator="").writerow(cells)
-            raw = buf.getvalue()
-        out.append(raw)
-    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+            row["product_id"] = "999999999"
+    write_backup_csv(path, header, rows)
     before_broken = snapshot(pg, broken)
     tool.rollback(env.out_dir, backup, only_job=None, execute_writes=True)
     result = categories(env, "rollback")
@@ -630,3 +630,110 @@ def test_help_runs():
     result = subprocess.run(["python3", "-m", "app.tools.reextract_v6_with_v102", "--help"], capture_output=True, text=True,
                             cwd=Path(__file__).resolve().parents[1], timeout=120)
     assert result.returncode == 0 and "--rollback-from" in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# レビュー指摘（M1・m1〜m6）
+# ---------------------------------------------------------------------------
+
+
+def test_rolled_back_job_is_skipped_by_the_next_execute(pg, env, tmp_path):
+    env.response = "これは JSON ではない"
+    _s, job = make_v6(pg, pair=pair_ids(pg))
+    backup = tmp_path / "backups"
+    dump_csv(pg, backup, [job])
+    run_execute(env)
+    for _ in range(tool.REPAIR_MAX_PER_JOB):
+        tool.repair(env.out_dir, env.out_dir / "order.txt", max_cost=Decimal("11"), stop_after_errors=50, timeout_sec=300)
+    assert env.calls == 1 + tool.REPAIR_MAX_PER_JOB
+    assert tool.rollback(env.out_dir, backup, only_job=job, execute_writes=True) == tool.EXIT_OK
+    assert (env.out_dir / "rolled_back.txt").read_text().split() == [job] and job_row(pg, job)[0] == V6
+    calls = env.calls
+    assert run_execute(env) == tool.EXIT_OK  # 戻した job は飛ばす。Gemini を呼ばず、v6 のまま
+    assert env.calls == calls and job_row(pg, job)[0] == V6
+    assert records(env)[-1]["category"] == "skip_rolled_back"
+
+
+def test_narrowed_runs_keep_order_txt_and_append_processed_jobs(pg, env):
+    _s, first = make_v6(pg, days_ago=3)
+    _s, second = make_v6(pg, days_ago=2)
+    _s, third = make_v6(pg, days_ago=1)
+    assert run_execute(env, only_job=second) == tool.EXIT_OK  # 絞った実行が最初でも、全件の一覧は作らない
+    assert (env.out_dir / "order.txt").read_text().split() == [second]
+    assert run_execute(env, limit=1) == tool.EXIT_OK  # first を処理（second は v102 なので対象外）
+    assert (env.out_dir / "order.txt").read_text().split() == [second, first]
+    assert run_execute(env) == tool.EXIT_OK
+    assert (env.out_dir / "order.txt").read_text().split() == [second, first, third]
+    assert not (env.out_dir / "excluded.tsv").exists()  # 絞った実行は除外一覧も書かない
+    since = tool.ensure_started_at(env.out_dir)
+    with Session(pg[1]) as session:  # 費用の集計は 3 件すべてを数える
+        assert tool.total_cost(session, [first, second, third], since)[0] == Decimal("0.0003")
+
+
+def test_exit_4_when_failures_remain_in_execute_and_repair(pg, env, monkeypatch):
+    _s, job = make_v6(pg)
+    env.response = "これは JSON ではない"
+    assert run_execute(env) == tool.EXIT_RESIDUAL
+    ids = env.out_dir / "order.txt"
+    for _ in range(tool.REPAIR_MAX_PER_JOB):
+        assert tool.repair(env.out_dir, ids, max_cost=Decimal("11"), stop_after_errors=50, timeout_sec=300) == tool.EXIT_RESIDUAL
+    assert tool.repair(env.out_dir, ids, max_cost=Decimal("11"), stop_after_errors=50, timeout_sec=300) == tool.EXIT_RESIDUAL  # repair_exhausted
+    env.response = RESPONSE
+    _s, ok = make_v6(pg)
+    assert run_execute(env) == tool.EXIT_OK  # 失敗が無ければ 0
+    assert categories(env)[ok] == "done" and job_row(pg, job)[0].startswith("v102:")
+
+
+def test_repair_analyzes_an_empty_job_stopped_before_the_analysis(pg, env, monkeypatch):
+    env.response = json.dumps({"items": []})
+    _s, job = make_v6(pg)
+    real = svc.run_v102_analysis
+    monkeypatch.setattr(svc, "run_v102_analysis", lambda *_a, **_k: (_ for _ in ()).throw(ValueError("止まった")))
+    run_execute(env)
+    assert job_row(pg, job)[1] == "empty"
+    monkeypatch.setattr(svc, "run_v102_analysis", real)
+    one(pg, f"UPDATE {SCHEMA}.extraction_jobs SET review_reasons = NULL WHERE id=%s RETURNING 1", (job,))  # 解析前の姿
+    assert tool.repair(env.out_dir, env.out_dir / "order.txt", max_cost=Decimal("11"), stop_after_errors=5, timeout_sec=300) == tool.EXIT_OK
+    assert job_row(pg, job)[2] == "no_items" and categories(env, "repair") == {job: "empty"}
+
+
+def test_rollback_error_gives_exit_1(pg, env, tmp_path):
+    _s, job = make_v6(pg, pair=pair_ids(pg))
+    backup = tmp_path / "backups"
+    dump_csv(pg, backup, [job])
+    run_execute(env)
+    header, rows = tool._read_csv(backup / "analysis_results.csv")
+    rows[0]["product_id"] = "999999999"
+    write_backup_csv(backup / "analysis_results.csv", header, rows)
+    assert tool.rollback(env.out_dir, backup, only_job=None, execute_writes=True) == tool.EXIT_ROLLBACK_ERROR
+    assert not (env.out_dir / "rolled_back.txt").exists()
+
+
+def test_later_dry_run_does_not_overwrite_the_first_lists(pg, env):
+    make_v6(pg, status="filtered")
+    make_v6(pg)
+    assert tool.dry_run(env.out_dir, None) == tool.EXIT_OK
+    first = (env.out_dir / "excluded.tsv").read_text()
+    assert first and not (env.out_dir / "excluded.dryrun.tsv").exists()
+    make_v6(pg, status="filtered")
+    assert tool.dry_run(env.out_dir, None) == tool.EXIT_OK
+    assert (env.out_dir / "excluded.tsv").read_text() == first and (env.out_dir / "excluded.dryrun.tsv").exists()
+
+
+def test_csv_distinguishes_null_empty_and_backslash_n(pg, tmp_path):
+    path = tmp_path / "t.csv"
+    with pg[0].cursor() as cur:
+        buffer = io.StringIO()
+        cur.copy_expert(
+            "COPY (SELECT NULL::text AS a, ''::text AS b, '\\N'::text AS c, E'x\n\"y\",z'::text AS d, 'ok'::text AS e) "
+            "TO STDOUT WITH (FORMAT csv, HEADER true, FORCE_QUOTE *)", buffer)
+    path.write_text(buffer.getvalue(), encoding="utf-8")
+    header, rows = tool._read_csv(path)
+    assert header == ["a", "b", "c", "d", "e"]
+    assert rows == [{"a": None, "b": "", "c": "\\N", "d": 'x\n"y",z', "e": "ok"}]
+
+
+def test_loop_continues_on_exit_4_and_ends_with_4_at_the_max_rounds(tmp_path):
+    # check 0, (execute 4, repair 0) x 3 回 -> 最大回数で 4
+    code, calls = run_loop(tmp_path, [0, 4, 0, 4, 0, 4, 0])
+    assert code == 4 and sum("--execute" in c for c in calls) == 3
