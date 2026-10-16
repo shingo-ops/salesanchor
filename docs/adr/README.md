@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-16 / ADR 総数: 179 件
+最終更新: 2026-10-16 / ADR 総数: 180 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -198,6 +198,7 @@
 | [ADR-1017](./ADR-1017-smoke-auth-least-privilege.md) | ADR-1017: smoke 認証経路は最小権限の専用ユーザーだけを許可し、全権ユーザーはコードで拒否する | Proposed | — | — |
 | [ADR-1018](./ADR-1018-public-sensitive-tables-rls-staged.md) | ADR-1018: public の機微 11 表への RLS は段階導入し、表ごとに型を決める | Accepted | — | — |
 | [ADR-1019](./ADR-1019-inventory-viewer-separate-accounts.md) | ADR-1019: 在庫の閲覧専用ページは、アプリと交わらない閲覧専用アカウントで開く | Accepted | — | — |
+| [ADR-1020](./ADR-1020-shared-product-required-fields.md) | ADR-1020: 共用商品の登録では9項目を必須にし、空にするのは「調べたが無い」と記録したときだけにする | Accepted | — | — |
 
 ## ステータス凡例
 
