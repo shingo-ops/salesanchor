@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from datetime import datetime, timezone
 
 from celery import shared_task
@@ -27,6 +28,8 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = "viewer:inventory:v1"
 LOCK_KEY = "viewer:inventory:lock"
 FAIL_KEY = "viewer:inventory:fail_count"
+UPDATED_TS_KEY = "viewer:inventory:updated_ts"  # 最後に作り置きを書けた時刻（UNIX 秒）。/metrics が読む
+LAST_HOLD_TS_KEY = "viewer:inventory:last_hold_ts"  # 配信の保留を最後に確かめた時刻（UNIX 秒）。/metrics が読む
 CACHE_TTL_SECONDS = 86400
 LOCK_TTL_SECONDS = 55
 NOTIFY_AT_FAILURE = 3
@@ -74,6 +77,10 @@ async def refresh_once(db, redis_client) -> str:
     try:
         result = await build_distribution_rows(db)
         if result.kind == "hold":
+            try:
+                await redis_client.set(LAST_HOLD_TS_KEY, str(int(time.time())), ex=CACHE_TTL_SECONDS)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[viewer-cache] 保留の時刻を書けませんでした: %s", exc)
             return "hold"
         if result.kind == "ok":
             payload = {
@@ -82,6 +89,7 @@ async def refresh_once(db, redis_client) -> str:
                 "rows": to_cache_rows(result.rows),
             }
             await redis_client.set(CACHE_KEY, json.dumps(payload, ensure_ascii=False), ex=CACHE_TTL_SECONDS)
+            await redis_client.set(UPDATED_TS_KEY, str(int(time.time())), ex=CACHE_TTL_SECONDS)
             await redis_client.set(FAIL_KEY, 0)
             return "ok"
         reason = result.message  # unset・error

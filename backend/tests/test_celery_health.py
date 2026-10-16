@@ -121,3 +121,57 @@ def test_task_failure_signal_records_by_task_name():
     with patch("app.celery_app.record_task_failure") as rec:
         task_failure.send(sender=fake)
     rec.assert_called_once_with("some.task")
+
+
+# --- 閲覧ページの作り置きの時刻（段2b）---
+
+
+class _TsRedis:
+    def __init__(self, values):
+        self.values = values
+
+    async def get(self, key):
+        return self.values.get(key)
+
+
+async def _get_metrics_with_redis(redis_client):
+    app = FastAPI()
+    register_metrics(app)
+    transport = ASGITransport(app=app)
+    with (
+        patch("app.metrics.read_celery_health", AsyncMock(return_value=None)),
+        patch("app.metrics.get_redis", return_value=redis_client),
+    ):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.get("/metrics")
+
+
+@pytest.mark.asyncio
+async def test_metrics_exports_viewer_inventory_gauges():
+    response = await _get_metrics_with_redis(
+        _TsRedis({"viewer:inventory:updated_ts": "1700000000", "viewer:inventory:last_hold_ts": "1700000100"})
+    )
+    assert response.status_code == 200
+    assert "viewer_inventory_updated_timestamp_seconds 1.7e+09" in response.text
+    assert "viewer_inventory_last_hold_timestamp_seconds 1.7000001e+09" in response.text
+
+
+@pytest.mark.asyncio
+async def test_metrics_viewer_gauges_zero_when_keys_missing_or_not_numeric():
+    response = await _get_metrics_with_redis(_TsRedis({"viewer:inventory:last_hold_ts": "abc"}))
+    assert response.status_code == 200
+    assert "viewer_inventory_updated_timestamp_seconds 0.0" in response.text
+    assert "viewer_inventory_last_hold_timestamp_seconds 0.0" in response.text
+
+
+@pytest.mark.asyncio
+async def test_metrics_viewer_gauges_zero_when_redis_none_or_raises():
+    class _Boom:
+        async def get(self, key):
+            raise RuntimeError("down")
+
+    for client_obj in (None, _Boom()):
+        response = await _get_metrics_with_redis(client_obj)
+        assert response.status_code == 200
+        assert "viewer_inventory_updated_timestamp_seconds 0.0" in response.text
+        assert "viewer_inventory_last_hold_timestamp_seconds 0.0" in response.text

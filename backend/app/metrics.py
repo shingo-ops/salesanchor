@@ -1,8 +1,10 @@
+import asyncio
 import time
 
 from fastapi import FastAPI, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
+from app.cache import get_redis
 from app.celery_health import read_celery_health
 
 REQUEST_COUNT = Counter(
@@ -44,6 +46,39 @@ CELERY_QUEUE_LENGTH = Gauge(
     "Current length of the default celery queue",
 )
 
+VIEWER_INVENTORY_UPDATED_TS = Gauge(
+    "viewer_inventory_updated_timestamp_seconds",
+    "閲覧ページの在庫の作り置きを最後に書けた時刻（UNIX 秒）",
+)
+
+VIEWER_INVENTORY_LAST_HOLD_TS = Gauge(
+    "viewer_inventory_last_hold_timestamp_seconds",
+    "閲覧ページの作り置きで、配信の保留を最後に確かめた時刻（UNIX 秒）",
+)
+
+_VIEWER_TS_READ_TIMEOUT_SEC = 1.0
+
+
+async def _read_ts(redis_client, key: str) -> float:
+    """Redis の時刻キーを数として読む。無い・数でない・例外は 0（「ずっと前」と同じ扱い）。"""
+    try:
+        raw = await asyncio.wait_for(redis_client.get(key), _VIEWER_TS_READ_TIMEOUT_SEC)
+        return float(raw) if raw else 0.0
+    except Exception:
+        return 0.0
+
+
+async def _update_viewer_inventory_gauges() -> None:
+    from app.tasks.viewer_inventory_cache import LAST_HOLD_TS_KEY, UPDATED_TS_KEY  # noqa: PLC0415
+
+    redis_client = get_redis()
+    if redis_client is None:
+        VIEWER_INVENTORY_UPDATED_TS.set(0)
+        VIEWER_INVENTORY_LAST_HOLD_TS.set(0)
+        return
+    VIEWER_INVENTORY_UPDATED_TS.set(await _read_ts(redis_client, UPDATED_TS_KEY))
+    VIEWER_INVENTORY_LAST_HOLD_TS.set(await _read_ts(redis_client, LAST_HOLD_TS_KEY))
+
 
 def _handler_name(request: Request) -> str:
     route = request.scope.get("route")
@@ -82,4 +117,9 @@ def register_metrics(app: FastAPI) -> None:
             for task_name, count in failures.items():
                 CELERY_TASK_FAILURES.labels(task_name).set(count)
             CELERY_QUEUE_LENGTH.set(queue_len)
+        try:
+            await _update_viewer_inventory_gauges()
+        except Exception:
+            VIEWER_INVENTORY_UPDATED_TS.set(0)
+            VIEWER_INVENTORY_LAST_HOLD_TS.set(0)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
