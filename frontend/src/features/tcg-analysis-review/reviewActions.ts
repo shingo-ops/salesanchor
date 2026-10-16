@@ -8,6 +8,7 @@
  *   - 検索キーワード: POST /tcg/products/{id}/search-keywords
  */
 import { api } from "../../lib/api";
+import type { BlankCode, FormatOption } from "../tcg-product-import/productDetailModel";
 
 /** 保存に必要な、件の最小の形（AnalysisReviewItem・一覧の行のどちらも満たす） */
 export interface ReviewActionTarget {
@@ -73,9 +74,12 @@ export async function searchProductOptions(query: string): Promise<ProductOption
 
 export type LookupOption = { id: string; name: string };
 
+export type RegistrationLookupKey = "product_kind_id" | "work_id" | "manufacturer_id" | "product_category_id";
+
 export type RegistrationForm = {
   item: { extraction_item_id: string; source_message_id: string; raw_name: string };
-  lookups: Record<string, LookupOption[]>;
+  /** ADR-1020: 細分類は紐づくゲーム（game_ids）付き */
+  lookups: Record<RegistrationLookupKey, LookupOption[]> & { product_format_id: FormatOption[] };
 };
 
 export type RegistrationValues = {
@@ -89,6 +93,10 @@ export type RegistrationValues = {
   release_date: string;
   search_keywords: string;
   exclude_keywords: string;
+  /** ADR-1020: 細分類（未選択は ""） */
+  product_format_id: string;
+  /** ADR-1020: 「調べたが存在しない」の印 */
+  blank_confirmations: BlankCode[];
 };
 
 export type DupCandidate = { product_id: string; japanese_title: string };
@@ -106,23 +114,24 @@ export function fetchRegistrationForm(item: ReviewActionTarget) {
   return api.get<RegistrationForm>(`/tcg/products/registration-form?${params.toString()}`);
 }
 
-/** 似た商品がないか確認する */
-export function checkProductDuplicates(item: ReviewActionTarget, values: RegistrationValues) {
-  return api.post<{ candidates: DupCandidate[] }>("/tcg/products/check-duplicates", {
+/** 登録・確認で送る body。細分類は未選択なら null、選んでいれば数にする（ADR-1020） */
+export function registrationBody(item: ReviewActionTarget, values: RegistrationValues) {
+  return {
     extraction_item_id: item.extraction_item_id,
     source_message_id: item.source_message_id,
     ...values,
-  });
+    product_format_id: values.product_format_id ? Number(values.product_format_id) : null,
+  };
+}
+
+/** 似た商品がないか確認する */
+export function checkProductDuplicates(item: ReviewActionTarget, values: RegistrationValues) {
+  return api.post<{ candidates: DupCandidate[] }>("/tcg/products/check-duplicates", registrationBody(item, values));
 }
 
 /** 商品マスタに登録する。force=true は「似た商品を確認済みで新規登録」 */
 export function createProduct(item: ReviewActionTarget, values: RegistrationValues, force: boolean) {
-  return api.post<CreateProductResult>("/tcg/products", {
-    extraction_item_id: item.extraction_item_id,
-    source_message_id: item.source_message_id,
-    ...values,
-    force,
-  });
+  return api.post<CreateProductResult>("/tcg/products", { ...registrationBody(item, values), force });
 }
 
 /** 商品に検索キーワードを1つ足す（productId は整数文字列） */

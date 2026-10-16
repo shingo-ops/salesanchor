@@ -30,6 +30,10 @@ const form = {
     work_id: [{ id: "w1", name: "Pokemon" }],
     manufacturer_id: [{ id: "m1", name: "Nintendo" }],
     product_category_id: [{ id: "c1", name: "Booster" }],
+    product_format_id: [
+      { id: "7", name: "Box Set", is_active: true, game_ids: ["w1"] },
+      { id: "8", name: "Pack Set", is_active: true, game_ids: ["w9"] },
+    ],
   },
 };
 
@@ -82,7 +86,7 @@ describe("ProductMasterDrawer registration (ja)", () => {
     renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
     await screen.findByText("登録内容確認");
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".pmd-field input:not([type=checkbox])"));
-    expect(inputs.length).toBe(8);
+    expect(inputs.length).toBe(9);
     for (const input of inputs) expect(input.className).toContain("comp-field__input");
     const textareas = Array.from(document.querySelectorAll<HTMLTextAreaElement>(".pmd-field textarea"));
     expect(textareas.length).toBe(2);
@@ -116,8 +120,24 @@ describe("ProductMasterDrawer registration (ja)", () => {
     expect(await screen.findByText("既存商品の可能性があります（確認してください）")).toBeTruthy();
     expect(screen.getByText("重複候補を確認しました（新規商品です）")).toBeTruthy();
     expect((screen.getByRole("button", { name: "商品マスタに登録" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "重複候補を確認しました（新規商品です）" }));
     expect((screen.getByRole("button", { name: "商品マスタに登録" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+  it("offers only the formats of the chosen work and sends the format and blank marks", async () => {
+    renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("登録内容確認");
+    await fillLookups();
+    const options = Array.from(document.querySelectorAll<HTMLOptionElement>("#lookup-product_format_id option")).map((o) => o.value);
+    expect(options).toEqual(["Box Set"]);
+    fireEvent.change(lookupInputs()[4], { target: { value: "Box Set" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "英語タイトル：調べたが存在しない" }));
+    fireEvent.click(screen.getByRole("button", { name: "商品マスタに登録" }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/tcg/products",
+        expect.objectContaining({ product_format_id: 7, blank_confirmations: ["name_en"], force: false }),
+      ),
+    );
   });
 });
 
