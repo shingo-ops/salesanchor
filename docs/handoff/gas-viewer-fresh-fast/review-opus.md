@@ -29,3 +29,22 @@
 
 ### 未解決
 - 本番反映後に確かめる: nginx の再作成と稼働、3本の API が Origin 無しで 403、beat に purge-viewer-accounts が登録されていること、②⑥の画面（Evaluator）。
+
+## 段4a-2（管理 API・画面・専用スクリプト）の審査（2026-10-17 Opus。commit efa8936a3）
+判定: APPROVE（PG を使うテスト 10 本は手元で未実行。CI の使い捨て DB で初めて走るので、CI 緑を条件にする）
+
+### 確かめたこと（実物を読んだ）
+- backend/app/services/viewer_admin.py: 4つの操作の遷移が design.md:535-538・:523・:526 と一致する。延長は記録時刻＋N日。解除は最新の suspend 行の from_status へ戻り、行が無いと conflict（409）。どの操作も同じトランザクションで viewer_status_changes に1行を書く。purge の前提である action='suspend' の行は停止のたびに入る。
+- 目印①②の SQL は design.md の 4a-2 の細部の定義どおり（login_succeeded だけ・NULL の IP を除く・(t−24h, t]）。
+- backend/app/routers/super_admin_viewers.py: 6本すべてが require_super_admin。POST の actor は po、actor_user_id は users.id。commit はルータ側で、失敗したら rollback。detail は短いコードだけ。
+- 専用スクリプト 2本は stdin の JSON だけを受ける。入力値・traceback を出さない。登録はメール・名前を出力しない。status_changes には書かない。
+- 画面: 金型（PageLayout・DataTable・Badge・Button・Modal・Drawer・TextField・EmptyState）だけを使う。文言はすべて t()。色の直値は無い。
+- realtime の4キーはパス変数名 {viewer_id} が実装と一致する。openapi の差分は新しい6ルートと5スキーマだけ（担当の報告。Opus は diffstat の 468 行追加・削除 0 を確認）。
+
+### 指摘（直さずに進める軽微なもの）
+- list_viewers の now 引数は使われていない（目印は DB の interval で計算する）。害は無い。
+- 画面のログイン記録の rowKey は「日時｜種類｜IP」で、全く同じ行が2つあるとキーが重なる。表示の警告だけで、データには影響しない。
+
+### 未解決
+- 本番反映後に確かめる: GET が super admin 以外で 403、画面（Evaluator）。
+- 登録用スクリプトの本番実行（Q9 の22人）は PO 本人の GO と permit-danger が要る。対象の一覧を先に PO に見せる。

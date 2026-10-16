@@ -477,6 +477,15 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
   - 4a-2（管理）：Q3 の管理 API（super_admin_viewers.py）・services/viewer_admin.py・Claude の経路の専用スクリプト（状態の変更・延長・Q9 の登録）・SaaS 管理の画面（/super-admin/viewers）。
   - 4b（申込）：signup（D5）と画面の ⑤。公開（申込の入口を見せること）は 4c と一緒にする（4c が無いと pending のまま進めないため）。
   - 4c（Discord の受付、D6）：最初に D6 の【未確認】2つを確かめてからカードを書く。
+- 4a-2 の細部（2026-10-16 Opus の判断。設計の範囲内。調査は origin/main 9c2b9c041 基準）：
+  - 一覧の Discord の部屋の URL は 4a-2 では返さない。viewer_discord_config の表が 4c まで無いため（migrations/20261016_150000_add_viewer_accounts.sql:3）。4a-2 は discord_user_id と discord_channel_id を返し、URL は 4c で足す。
+  - 目印①：同じ閲覧者の login_succeeded のどれかの時点 t について、(t−24時間, t] の login_succeeded の client_ip（NULL を除く）が3種類以上。目印②：その閲覧者の login_succeeded の client_ip と同じ値が、別の閲覧者の login_succeeded にある。どちらも保存中（90日）の行だけで判定する。
+  - Claude の経路の専用スクリプトは2本。backend/app/viewer_admin_cli.py は stdin の JSON {action, email, days?} を受け、PO の画面と同じ services/viewer_admin.py の関数を actor=claude・actor_user_id=NULL で呼ぶ。backend/app/viewer_register_cli.py は stdin の JSON {rows:[{applied_at, line_name, email, status}]} を受ける（前例 backend/app/line_device_admin.py）。SQL やコマンドは受け取らない。
+  - 登録（Q9）：trial の人の期限は applied_at（タイムゾーン無しは JST）＋14日、active の人は NULL。登録では viewer_status_changes に行を書かない（action の許可値に登録が無く、状態の変更ではないため）。
+  - 延長は「記録した時刻＋N日」（:523 のとおり）。N は 1〜365 の整数。
+  - 「最後の suspend」を引く索引は足さない（閲覧者は数十人の規模）。
+  - require_super_admin の定義は今は backend/app/auth/dependencies.py:516（:519 の「:495」は古い）。
+  - 画面の受入（vitest）：super admin でなければ拒否の文言、状態の Badge、目印の Badge は条件の行だけ、状態ごとの操作ボタンの出し分け、確認の Modal から POST、延長 0 は送れず 7 は送れる、409 の文言、ログイン記録の Drawer に日時・IP・端末。本番では Evaluator が画面で確かめる。
 - password-reset/request の回数：アプリ（auth.py:391）は4回目から 429 を返すが、閲覧者は D1 のとおり4回目からはメールを送らずに同じ 200 を返す。数えるキーは閲覧者専用の `viewer_pw_reset_req:<正規化した email の sha256>` にし、アプリの `pw_reset_req:` と同じ枠に混ぜない（D1-3 の「アプリのユーザーと同じ枠に混ざらない」と同じ理由）。
 - Q7 の消す仕組み（PO 決定 Q7 の「段4のカードの前に設計して審査する」への答え）：
   - 方式：毎日の Celery タスク（backend/app/tasks/maintenance.py に足す。beat は celery_app.py の purge-auth-events（:99、毎日5:30）の後ろに、毎日5:45 で足す）。専用スクリプトにしない理由：人が実行を忘れると、ポリシーに書いた90日を守れないため。

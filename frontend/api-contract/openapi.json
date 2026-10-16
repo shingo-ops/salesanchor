@@ -9504,6 +9504,22 @@
         "title": "ExportStatusResponse",
         "type": "object"
       },
+      "ExtendRequest": {
+        "properties": {
+          "days": {
+            "description": "延長する日数（1〜365）",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "title": "ExtendRequest",
+        "type": "object"
+      },
       "ExtractionByStatus": {
         "properties": {
           "done": {
@@ -35394,6 +35410,187 @@
           "value"
         ],
         "title": "ValueOverrideRequest",
+        "type": "object"
+      },
+      "ViewerAdminItem": {
+        "description": "管理画面の閲覧者1行。",
+        "properties": {
+          "created_at": {
+            "description": "登録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discord_channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋 ID",
+            "title": "Discord Channel Id"
+          },
+          "discord_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord の利用者 ID",
+            "title": "Discord User Id"
+          },
+          "email": {
+            "description": "メールアドレス（小文字）",
+            "title": "Email",
+            "type": "string"
+          },
+          "flag_many_ips": {
+            "description": "目印: 24時間以内に3種類以上の IP からログイン",
+            "title": "Flag Many Ips",
+            "type": "boolean"
+          },
+          "flag_shared_ip": {
+            "description": "目印: 別の閲覧者と同じ IP からログイン",
+            "title": "Flag Shared Ip",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "閲覧者 viewer_accounts.id",
+            "title": "Id",
+            "type": "integer"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名",
+            "title": "Line Name",
+            "type": "string"
+          },
+          "status": {
+            "description": "pending／verified／trial／active／suspended",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "お試しの期限",
+            "title": "Trial Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "line_name",
+          "status",
+          "created_at",
+          "flag_many_ips",
+          "flag_shared_ip"
+        ],
+        "title": "ViewerAdminItem",
+        "type": "object"
+      },
+      "ViewerAdminListResponse": {
+        "properties": {
+          "items": {
+            "description": "閲覧者の一覧（登録が新しい順）",
+            "items": {
+              "$ref": "#/components/schemas/ViewerAdminItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerAdminListResponse",
+        "type": "object"
+      },
+      "ViewerLoginItem": {
+        "description": "ログイン記録1行。",
+        "properties": {
+          "client_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "クライアント IP",
+            "title": "Client Ip"
+          },
+          "created_at": {
+            "description": "記録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "description": "記録の種類",
+            "title": "Event Type",
+            "type": "string"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User-Agent",
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "created_at",
+          "event_type"
+        ],
+        "title": "ViewerLoginItem",
+        "type": "object"
+      },
+      "ViewerLoginListResponse": {
+        "properties": {
+          "items": {
+            "description": "ログイン記録（新しい順・最大500行）",
+            "items": {
+              "$ref": "#/components/schemas/ViewerLoginItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerLoginListResponse",
         "type": "object"
       },
       "ViewerLoginRequest": {
@@ -61926,6 +62123,277 @@
         "summary": "Create Unit Alias",
         "tags": [
           "super-admin-units"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers": {
+      "get": {
+        "operationId": "list_viewers_endpoint_api_v1_super_admin_viewers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Viewers Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/activate": {
+      "post": {
+        "operationId": "activate_endpoint_api_v1_super_admin_viewers__viewer_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Activate Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/extend": {
+      "post": {
+        "operationId": "extend_endpoint_api_v1_super_admin_viewers__viewer_id__extend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Extend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/logins": {
+      "get": {
+        "operationId": "list_logins_endpoint_api_v1_super_admin_viewers__viewer_id__logins_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerLoginListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Logins Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/suspend": {
+      "post": {
+        "operationId": "suspend_endpoint_api_v1_super_admin_viewers__viewer_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suspend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/unsuspend": {
+      "post": {
+        "operationId": "unsuspend_endpoint_api_v1_super_admin_viewers__viewer_id__unsuspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsuspend Endpoint",
+        "tags": [
+          "super-admin"
         ]
       }
     },
