@@ -16,6 +16,13 @@ export default defineConfig({
     // iOS < 16.4 (Safari < 16.4) は Level 4 range 構文に非対応 → 全 @media が無視される。
     // safari14 をターゲットに含めることで従来の max-width: 形式を維持する。
     cssTarget: ['chrome87', 'safari14', 'firefox78', 'edge88'],
+    // 閲覧ページ(/viewer/)は本体と別の入口。manifest はここに書かない（CI のビルドでだけ --manifest を付ける）。
+    rolldownOptions: {
+      input: {
+        main: path.resolve(dirname, 'index.html'),
+        viewer: path.resolve(dirname, 'viewer/index.html'),
+      },
+    },
   },
   server: {
     host: true,

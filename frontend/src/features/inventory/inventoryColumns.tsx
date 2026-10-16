@@ -104,7 +104,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
             {it.offer_type === null ? (
               (it.status ?? "-")
             ) : it.offer_type === "pre_order" ? (
-              <span className="badge badge-negotiating">{t("inventory.offerType.pre_order")}</span>
+              <Badge variant="info" appearance="soft">{t("inventory.offerType.pre_order")}</Badge>
             ) : (
               t("inventory.offerType.in_stock")
             )}

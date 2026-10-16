@@ -214,7 +214,7 @@ mode: handoff
   - 24時間以内の時間数：【事実】アプリの値は定数 FRESH_WINDOW_HOURS = 24（backend/app/services/tcg_distribution_svc.py:212-213）で、在庫 API が応答に入れて（inventory_offers.py:360・:423）、絞り込みにも使う（:261-263）。閲覧ページも同じ定数を使い、別の数字を書かない：作り置きの JSON に `fresh_window_hours` として同じ定数を入れる（審査 r9 N-r9-2 で計画票0 ⑤を解決）。手元の絞り込みは、posted_at（タイムゾーン無しの日本時間の文字列 'YYYY-MM-DD HH:MM:SS'、svc:288-289）を +09:00 として読み、今の時刻から fresh_window_hours 時間以内の行だけを出す。posted_at が空の行は、オンのときは出さない（アプリの posted_ts >= の比較で NULL が落ちるのと同じ）。「今の時刻」は閲覧者の端末の時計になる（アプリはサーバーの時計。端末の時計がずれていれば、境目の行の出る・出ないが変わる。審査 r10 N-r10-7）。
   - 投稿日時の表示を「MM-DD HH:mm」にする（GAS と同じ）。Sold out の行は D3 のとおり作り置きの時点で入っていないので、ページでは除かない。
   - スマホ（767px 以下）の操作の配置は、アプリの在庫表と同じにする（提供者の MultiSelect はツールバーに出さず、絞り込みの Drawer に入れる。InventoryPage.tsx:476-485 の isMobile と同じ）。
-  - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは PO の回答が無いので、決まるまで作らない。
+  - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは付けない（PO 決定待ちの節の「1 更新ボタン」の決定。2026-10-15 PO「y」）。
   - ログイン・申込・パスワードの画面（審査 r6 B-6。r13 で直した）：
 
     | 画面の部品 | 使う金型 |
@@ -467,6 +467,7 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 - login の email ごとの回数制限は、Redis が使えないときは通す（既存の check_auth_rate_limit と同じ fail-open）。login に成功したら email ごとの数を消す。
 - 作り置きの通知の文言は「[viewer-cache] 3回続けて失敗しました: 理由」。経路は既存の send_discord_notification(tenant_id=4, event_type="tcg_distribution_error")。
 - 見張りの経路（段2b）：作り置きのタスクが Redis に最後に書けた時刻と最後に保留を確かめた時刻を置き、backend の /metrics が読んで Prometheus に出し、monitoring/prometheus/alert_rules.yml に規則を足す（ADR-1012 の CeleryHeartbeatStale と同じ経路）。保留中かどうかは、件数ではなく「最後に保留を確かめた時刻が2分以内か」で見分け、規則を2本（故障・保留中）に分ける。
+- 段3は ①ログイン・③在庫表・④案内 の画面まで。②⑤⑥ の画面は段4で API と同じ PR に入れる（Opus 2026-10-16。理由：API が段4でできる・閲覧者の登録は段4）。
 
 ## 維持の仕組み
 
