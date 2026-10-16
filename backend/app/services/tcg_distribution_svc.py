@@ -254,7 +254,7 @@ _GAS_COLUMNS = (
 )
 
 
-def _distribution_final_select(source: str, *, price: str, qty: str, merged_count: str, sort_ord: str) -> str:
+def _distribution_final_select(source: str, *, price: str, qty: str, merged_count: str, sort_ord: str, item_keys: str) -> str:
     """最終 SELECT。GAS 14列は今までと同じ式・同じ書式。price/qty は集約後の列名を受ける。"""
     return f"""SELECT
             posted_at, mark, japanese_title, english_title, condition,
@@ -262,13 +262,14 @@ def _distribution_final_select(source: str, *, price: str, qty: str, merged_coun
             COALESCE(ROUND({qty})::bigint::text, '') AS quantity,
             note_ja, status, release_date, series, provider, search_keywords, ship_ja,
             posted_ts, row_key, product_id, supplier_id, unit_canonical,
-            {price} AS price_num, {qty} AS qty_num, {merged_count} AS merged_count, {sort_ord} AS sort_ord
+            {price} AS price_num, {qty} AS qty_num, {merged_count} AS merged_count, {sort_ord} AS sort_ord,
+            {item_keys} AS extraction_item_ids
         FROM {source}"""
 
 
 def distribution_final_select_plain() -> str:
     """まとめなし（merge_same_post=False）の最終 SELECT。在庫表の絞り込み候補（facets）が使う。"""
-    return _distribution_final_select("dist_base", price="price_num", qty="qty_num", merged_count="1", sort_ord="sort_ord")
+    return _distribution_final_select("dist_base", price="price_num", qty="qty_num", merged_count="1", sort_ord="sort_ord", item_keys="ARRAY[item_key]")
 
 
 def distribution_rows_parts(
@@ -306,6 +307,7 @@ def distribution_rows_parts(
             ), '')                                                  AS search_keywords,
             COALESCE(ar.ship_ja, '')                                AS ship_ja,
             ar.id::text                                             AS row_key,
+            ei.id::text                                             AS item_key,
             ar.product_id                                           AS product_id,
             sc.supplier_id                                          AS supplier_id,
             COALESCE(ar.unit_canonical, '')                         AS unit_canonical,
@@ -363,11 +365,13 @@ def distribution_rows_parts(
                SUM(qty_num)   OVER (PARTITION BY ekey) AS qty_agg,
                MAX(price_num) OVER (PARTITION BY ekey) AS price_agg,
                COUNT(*)       OVER (PARTITION BY ekey) AS group_n,
-               MIN(sort_ord)  OVER (PARTITION BY ekey) AS sort_min
+               MIN(sort_ord)  OVER (PARTITION BY ekey) AS sort_min,
+               array_agg(item_key) OVER (PARTITION BY ekey ORDER BY sort_ord
+                   ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS item_keys_agg
         FROM dist_keyed k
     ),
     dist_merged AS (SELECT * FROM dist_agg WHERE rn = 1)"""
-    final = _distribution_final_select("dist_merged", price="price_agg", qty="qty_agg", merged_count="group_n", sort_ord="sort_min")
+    final = _distribution_final_select("dist_merged", price="price_agg", qty="qty_agg", merged_count="group_n", sort_ord="sort_min", item_keys="item_keys_agg")
     return head, final
 
 

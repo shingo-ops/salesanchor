@@ -1453,6 +1453,12 @@
     "subtitle": "Manage deal stages and probabilities."
   },
   "inventory": {
+    "rowDrawer": {
+      "title": "Analysis details",
+      "loadError": "Failed to load the analysis result",
+      "notFound": "No analysis result for this row. Reload the inventory table",
+      "itemTab": "Item {{n}}"
+    },
     "view": {
       "subtitle": "Shows suppliers' current offers.",
       "searchPlaceholder": "Search by TCG series, mark, title, or supplier",
