@@ -1,20 +1,23 @@
 /**
- * 在庫表の行から開く解析パネル（見るだけ）。super admin 専用。
+ * 在庫表の行から開く解析パネル。super admin 専用。
  * 行の元になった extraction_items.id（まとめた行は組の全件）を /tcg/analysis-results へ ID 指定で渡し、
- * 要確認パネルと同じ ReviewItemDrawer（viewOnly）で 原文・Gemini 抽出・システム解析 を表示する。
+ * 要確認パネルと同じ ReviewItemDrawerで 原文・Gemini 抽出・システム解析 を表示する。
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Callout } from "../../components/Callout";
 import { Drawer } from "../../components/Drawer";
 import { Tabs } from "../../components/Tabs";
+import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { api, ApiError } from "../../lib/api";
+import { TOPICS } from "../../lib/realtime/topics";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "../tcg-analysis-review/ReviewItemDrawer";
 import type { InventoryRow } from "./inventoryColumns";
 
 interface Props {
   row: InventoryRow;
   onClose: () => void;
+  onChanged: () => void;
 }
 
 interface AnalysisResultsResponse {
@@ -23,7 +26,9 @@ interface AnalysisResultsResponse {
 
 type LoadState = "loading" | "ready" | "forbidden" | "error";
 
-export function InventoryRowDrawer({ row, onClose }: Props) {
+const REVIEW_TOPICS = [TOPICS.tcgReview] as const;
+
+export function InventoryRowDrawer({ row, onClose, onChanged }: Props) {
   const { t } = useTranslation();
   const [items, setItems] = useState<ReviewDrawerItem[]>([]);
   const [state, setState] = useState<LoadState>("loading");
@@ -46,6 +51,15 @@ export function InventoryRowDrawer({ row, onClose }: Props) {
     void load();
   }, [load]);
 
+  const refresh = useCallback(async (): Promise<void> => {
+    await load();
+    onChanged();
+  }, [load, onChanged]);
+
+  useRealtimeRefresh(REVIEW_TOPICS, () => {
+    void refresh();
+  });
+
   if (state === "ready" && items.length > 0) {
     const current = items.find((it) => it.extraction_item_id === activeKey) ?? items[0];
     const tabs =
@@ -57,7 +71,15 @@ export function InventoryRowDrawer({ row, onClose }: Props) {
           variant="pill"
         />
       ) : undefined;
-    return <ReviewItemDrawer item={current} viewOnly onClose={onClose} onRefresh={load} headerSlot={tabs} />;
+    return (
+      <ReviewItemDrawer
+        key={current.extraction_item_id}
+        item={current}
+        onClose={onClose}
+        onRefresh={refresh}
+        headerSlot={tabs}
+      />
+    );
   }
 
   return (
