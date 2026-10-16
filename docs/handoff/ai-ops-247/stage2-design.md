@@ -51,7 +51,7 @@
 
 ### 便A 障害記録の表
 
-表は 3 つ。すべて public・RLS は T9 の型を「読みも運用者だけ」に広げたもの（`FOR ALL USING (is_operator) WITH CHECK (is_operator)`）。テナントの業務データには触れない。tenant_004 の表は読まない（親設計 :230）。
+表は 3 つ。すべて public・RLS は T9 の型を「読みも運用者だけ」に広げたもの（運用者の旗が立っているときだけ SELECT・INSERT・UPDATE を許す。DELETE のポリシーは作らず、アプリのロールから DELETE の権限も外す＝記録は消せない。2026-10-16 便A カード作成時に FOR ALL から絞った）。テナントの業務データには触れない。tenant_004 の表は読まない（親設計 :230）。
 
 `public.ops_incidents`（1 件の障害＝1 行）
 
@@ -93,7 +93,7 @@
 | actor | TEXT NOT NULL CHECK (alertmanager/ops_token/super_admin) | 誰が書いたか |
 | detail | JSONB NOT NULL | 中身（8KB まで） |
 
-追記だけにする手段：RLS で UPDATE・DELETE のポリシーを作らない（INSERT と SELECT だけ）。
+追記だけにする手段：RLS で UPDATE・DELETE のポリシーを作らない（INSERT と SELECT だけ）。アプリのロールから UPDATE・DELETE の権限も外す。
 
 `public.ops_control`（全停止スイッチ。1 行だけ）
 
@@ -105,9 +105,9 @@
 | changed_by | TEXT NOT NULL | ops_token／super_admin の利用者 ID |
 | reason | TEXT | |
 
-初めの 1 行（`id=1, halt_all=false, changed_by='migration'`）は migration で `INSERT ... ON CONFLICT DO NOTHING` する。これは表の仕組みの行で、業務データではない（メモリ shared_master_ssot_policy の「migration でデータ禁止」は業務マスタの値の話。スイッチの初期行は表の定義の一部として扱う。【Opus 判断】）。
+初めの 1 行は migration で入れない（ADR-155「migration は構造の変更だけ」。2026-10-16 便A カード作成時に変更）。行が無いときは「止めていない（halt_all=false）」として扱い、便B の B5 が最初に ON にするときに 1 行を作る（`INSERT ... ON CONFLICT (id) DO UPDATE`）。
 
-便A の測り方：反映後に、`salesanchor_app` の接続で `app.is_operator` を立てずに SELECT すると 0 行、立てると ops_control の 1 行が読めること（PO 実行の読み取り）。
+便A の測り方：反映後に、3 表があり、RLS が ENABLE・FORCE で、ポリシーが表ごとに決めた数だけあり、`salesanchor_app` に DELETE の権限が無いこと（PO 実行の読み取り。カード §8）。
 
 ### 便B 保守 API
 
@@ -199,7 +199,7 @@ receivers:
 
 | 基準 | 検証方法 |
 |---|---|
-| 便A: 3 表が本番にあり、アプリの接続で operator を立てないと 0 行・立てると ops_control の 1 行（halt_all=false）が読める | PO 実行の読み取り（`SET ROLE salesanchor_app` での SELECT）の生出力 |
+| 便A: 3 表が本番にあり、RLS が ENABLE・FORCE、ポリシーが ops_incidents 3・ops_incident_events 2・ops_control 3、`salesanchor_app` は 3 表とも DELETE なし・ops_incident_events は UPDATE もなし | PO 実行の読み取り（pg_class・pg_policies・has_table_privilege）の生出力。運用者の旗の有無で行が見える・見えないことは CI の pytest（便A カード §5）で確かめる |
 | 便B: pytest で、同じ通知 2 回 = 1 行で notify_count 2・resolved で resolved_at・同じ fingerprint の再発で recurrence_of・鍵の取り違えと空の鍵で 401・上限超えで 413 | CI の pytest（PG の RLS のテストの段を含む） |
 | 便B: 反映後、Mac から受け口は 403、保守の鍵で一覧が 200 | Opus が Mac から curl（鍵の値は出さない） |
 | 便C: Alertmanager の通知 1 件が障害記録 1 件になり、繰り返しは同じ記録にまとまる（親設計 design.md:185） | prod2 の擬似アラート（amtool）1 件を 2 回送り、resolved を 1 回送る。Discord に届いた投稿と、保守の鍵での B3 の応答の生出力 |
@@ -209,7 +209,7 @@ receivers:
 
 ## 7. 未解決事項
 
-- V1: 便A の PO 実行の確認で `SET ROLE salesanchor_app` が使えるか（jarvis から切り替えられるかは未確認）。使えなければ、アプリのコンテナの中から読む形に変える（便A のカードで実物を見て決める）
+- V1: （解決 2026-10-16）便A の本番確認は SET ROLE を使わず、カタログ（pg_policies・has_table_privilege）を読む形にした。旗の有無での見え方は CI の pytest で確かめる
 - V2: 保守の鍵を AI（段階4 のクラウドの routines）に渡す方法。段階4 の設計で決める。段階2 では Mac の `~/.claude-access.env` にだけ置く
 - V3: Alertmanager の webhook の失敗を見張るルールを足すか。便C の反映後 7 日の失敗の数を見て決める
 - V4: 障害記録を見る画面（月次成績表）は親設計 §5 段階6 の範囲。段階2 では API だけを作る
