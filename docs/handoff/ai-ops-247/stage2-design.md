@@ -47,7 +47,7 @@
   - 受け口の鍵（`OPS_INGEST_TOKEN`）：Alertmanager だけが持つ。受け口の POST 1 本にだけ効く
   - 保守の鍵（`OPS_API_TOKEN`）：AI と応急処置係が持つ。読む・注記する・止める（ON）にだけ効く
 - 作るのは PO の `!` スクリプト 1 回（secrets の変更は PO の操作。CLAUDE.md の不可逆操作の一覧）。スクリプトは鍵を作り、`gh secret set` に 2 本を登録し、受け口の鍵を prod2 の `secrets/ops-ingest-token` に置き、保守の鍵を Mac の `~/.claude-access.env` に足す。鍵の値は画面に出さない
-- 置くのは便B の反映の前（env が空なら API は全部拒否＝§2 便B の B6）
+- 置く時期：保守の鍵は便B の反映の前、受け口の鍵は便C で作って置く（2026-10-16 便B カード D1・便C カード D1 で改めた。env が空の口は全部拒否＝§2 便B の B6）
 
 ### 便A 障害記録の表
 
