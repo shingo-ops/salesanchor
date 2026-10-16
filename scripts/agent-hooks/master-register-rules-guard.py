@@ -67,7 +67,8 @@ def pre_tool_use(data):
         return
     if tool == "Bash":
         words = text.split()
-        if words and words[0] in READ_ONLY_CMDS:
+        writes = (">" in text) or ("<<" in text) or ("tee" in text.split())
+        if words and words[0] in READ_ONLY_CMDS and not writes:
             return
     try:
         raw = load_rules()
