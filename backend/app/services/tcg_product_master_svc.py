@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 import re
+from datetime import date
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -553,7 +554,7 @@ async def create_product(
     sr = series_row.fetchone()
     category_class = sr.name_ja if sr else ""
 
-    rd = release_date if release_date else None
+    rd = date.fromisoformat(release_date.strip()) if release_date and release_date.strip() else None
 
     product_kind_id_int = int(product_kind_id) if product_kind_id else None
 

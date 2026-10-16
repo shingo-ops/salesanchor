@@ -103,6 +103,44 @@ def test_find_cleared_fields_mark_keeps_blank():
 
 
 @pytest.mark.asyncio
+async def test_create_product_binds_release_date_as_date(monkeypatch):
+    import datetime
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.services import tcg_product_master_svc as master
+
+    def result(row):
+        return SimpleNamespace(fetchone=MagicMock(return_value=row))
+
+    calls = []
+
+    async def execute(query, params=None):
+        calls.append(params)
+        if "INSERT INTO public.products" in str(query):
+            return result(SimpleNamespace(id="77", int_id=77))
+        if "SELECT id FROM public.products" in str(query):  # 書込後の確認
+            return result(SimpleNamespace(id=77))
+        return result(None)
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), commit=AsyncMock())
+    monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
+    monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0100"))
+    monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(master, "_validate_product_format", AsyncMock())
+
+    await master.create_product(
+        db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
+        manufacturer_id="m", product_category_id="c", japanese_title="商品",
+        release_date=" 2026-01-01 ", search_keywords="a", exclude_keywords="b", mark="SV1",
+        english_title="Product", product_format_id=5,
+    )
+
+    bound = [p for p in calls if p and "release_date" in p]
+    assert bound and bound[0]["release_date"] == datetime.date(2026, 1, 1)
+
+
+@pytest.mark.asyncio
 async def test_create_product_rejects_missing_before_db():
     from unittest.mock import AsyncMock
 
