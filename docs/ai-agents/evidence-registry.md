@@ -3467,3 +3467,28 @@ tradeoff: 認証付き API 呼び出しと実画面での目視は未実施（�
 decision: 見るだけの便を本番反映。パネルから直す機能は design.md §9 を材料に PO の y/n 待ち。
 follow_up: PO が本番の在庫表で行をクリックしスライドが出るかを目視（KGI の○×）。応答時間は後日 Prometheus で再比較。
 ```
+
+```text
+id: EV-20261016-INVENTORY-DRAWER-GEMINI-FIX-DEPLOY
+date: 2026-10-16
+agent: Claude Code (Opus 設計・審査・GO / Sonnet 実装)
+task: 在庫表・要確認スライド便2（v102 行の Gemini 列 商品名/単位/状態/メモを「—」、システム最終結果の商品名を商品マスタ名、Gemini の要約欄）の本番反映記録
+scope: frontend ItemComparison / ReviewItemDrawer、backend GET /tcg/analysis-results に thought_summaries（extraction_attempts の最新 completed を LATERAL で読む）。DB 変更なし。設計 docs/handoff/inventory-row-drawer/design.md §12
+evidence:
+  - type: command
+    reference: PR #4370 / merge 96e415ccc81822084260468661106ee0240c29b3 / Deploy 38854204915（success 2026-10-16T05:13:00Z）、台帳PR #4373
+    summary: 必須CI 42 pass・失敗0（PG 実体テスト C1/C2 含む）で merge（2026-10-16T05:08:12Z）。backend コンテナ内 tcg_analysis_review_svc.py :50,:292,:296,:364 と router :93 に thought_summaries、frontend index-k8dIHYmt.js に geminiSummaryTitle を確認。
+  - type: command
+    reference: 本番 backend コンテナ内で fetch_analysis_results(extraction_item_ids=[612144ce-8c3c-4c49-b3a0-9b892733252d]) と psql の直接 SELECT を比較
+    summary: 要約の md5 0dce18b89825d21b73a6a198aafa8344・3013 字で一致（C4 合格）。同行は is_v102=True・product_title 空（マスタ未紐付け）。
+  - type: command
+    reference: 本番 EXPLAIN ANALYZE（extraction_jobs 2894 行 × LATERAL）
+    summary: ix_pub_extraction_attempts_job_started を使用、1行あたり約0.009ms・全体30.5ms。
+  - type: external
+    reference: GO #4370（POの委任に基づくClaude Opus発行。PO 2026-10-16 の決定「行番号と数量と単価以外は"-"…要約もスライドに…」と「合意」・一任発言が根拠。PO 本人の GO 発言ではない）
+    summary: PR本文に GO記録、確認済みコメントと GO コメントを付与。番号の若い #4366 のマージを待ってから update-branch。
+confidence: high
+tradeoff: 実画面での目視は未実施（エージェントに super admin のログイン手段なし）。表示はCIのテスト（A1〜A3・B1〜B2・C3）とコンテナ内コード・サービス関数の実呼び出しで確認。
+decision: 便2を本番反映。パネルから直す機能（design.md §9）は PO の y/n 待ちのまま。
+follow_up: PO が本番のスライドで Gemini 列「—」・商品名＝マスタ名・要約欄を目視（G3）。
+```
