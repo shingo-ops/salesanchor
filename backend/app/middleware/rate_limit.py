@@ -19,6 +19,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.client_ip import get_client_ip
+
 logger = logging.getLogger(__name__)
 
 # 認証済みユーザー: 300回/分
@@ -48,13 +50,6 @@ def _decode_jwt_email(auth_header: str | None) -> str | None:
         return payload.get("email")
     except Exception:
         return None
-
-
-def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 async def _check_rate_limit(identifier: str, limit: int, window_sec: int) -> bool:
@@ -101,7 +96,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
         else:
             # 未認証: IP単位で 60回/分
-            client_ip = _get_client_ip(request)
+            client_ip = get_client_ip(request)
             exceeded = await _check_rate_limit(
                 f"ip:{client_ip}", UNAUTHED_RATE_LIMIT, UNAUTHED_WINDOW_SEC
             )

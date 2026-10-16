@@ -586,6 +586,37 @@ class TestMatchProductShortBoundary:
             assert result.status == "matched"
             assert result.boundary_dropped == ()
 
+    _PRICE_BLOCKS = (
+        "@151,000円", "＠151，000円", "1,151", "¥151", "￥151", "$151", "151円", "151.5", "0.151",
+    )
+
+    def test_digits_code_does_not_hit_price_shape(self):
+        product = _product(id_=3, product_code="151")
+        for block in self._PRICE_BLOCKS:
+            result = match_product(block, [product])
+            assert result.status == "unmatched", block
+            assert result.boundary_dropped == (3,), block
+
+    def test_digits_code_hits_separated_number_beside_price(self):
+        product = _product(id_=3, product_code="151")
+        for block in ("151 カートン @151,000円", "SV2a 151", "151/2BOX"):
+            result = match_product(block, [product])
+            assert result.status == "matched", block
+            assert result.boundary_dropped == (), block
+
+    def test_digits_keyword_token_does_not_hit_price_shape(self):
+        product = _product(id_=3, search_keywords=("151",))
+        for block in self._PRICE_BLOCKS:
+            result = match_product(block, [product])
+            assert result.status == "unmatched", block
+            assert result.boundary_dropped == (3,), block
+
+    def test_alnum_code_is_not_affected_by_price_guard(self):
+        product = _product(id_=2, product_code="sv2a")
+        result = match_product("¥sv2a", [product])
+        assert result.status == "matched"
+        assert result.boundary_dropped == ()
+
     def test_long_alnum_code_keeps_substring_match(self):
         product = _product(id_=2, product_code="ONP01")
         result = match_product("ONP01BOX 新品", [product])
