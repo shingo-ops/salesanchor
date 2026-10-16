@@ -22,6 +22,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import UnitCreate, UnitResponse, UnitUpdate
 
 _BOOL_TRUE = {"true", "1", "yes"}
@@ -336,6 +337,7 @@ async def import_units_commit(
         await reset_tenant_context(db, tenant_id)  # ADR-072
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"UNIT_IMPORT_COMMIT_ERROR: {exc}") from exc
+        log_hidden_error("units.import_units_commit", exc)
+        raise HTTPException(status_code=500, detail="UNIT_IMPORT_COMMIT_ERROR") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
