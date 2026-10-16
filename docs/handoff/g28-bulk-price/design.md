@@ -4,7 +4,7 @@ recon: docs/handoff/g28-bulk-price/recon.md（§番号で参照）。ADR: docs/a
 PO 承認: 2026-10-16「バルク商品の状態として新しく『バルク』を作り配信に出す」y、KGI と実装開始 y。
 
 ## ADR-1015 の区分
-**A（PO の判断を待つ区分）**。理由: .sql を含む、ADR を触る、新機能（今は無い状態を作る）。PO 承認は上記のとおり 10/16 に出ている。マージは PO、危険パス（migrations 等）は触らない。
+**A（PO の判断を待つ区分）**。理由: .sql を含む、ADR を触る、新機能（今は無い状態を作る）。PO 承認は上記のとおり 10/16 に出ている。マージは PO の常時委譲により Opus、危険パス（migrations 等）は触らない。
 
 ## 目的と KGI
 |基準|検証方法|
@@ -25,10 +25,14 @@ PO 承認: 2026-10-16「バルク商品の状態として新しく『バルク�
 ## 触らない範囲
 価格・数量・note・price_basis（便2）／配信 SQL／frontend／GAS／migrations（マスタはデータ SQL）／v9 の行。
 
-## 外部事例
-不要。社内の状態マスタに1行足す変更で、外部に比べる対象が無い（前例は社内の CN0012 Error、docs/handoff/v102-prod-switch/data/conditions/）。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 不要。社内の状態マスタに1行足す変更で、外部に比べる対象が無い。
+- 過去事例: 状態「Error」(CN0012) の新設（docs/handoff/v102-prod-switch/card-ER.md、data/conditions/）→ 名前を code でマスタから引く流儀、DRY-RUN→COMMIT→verify のデータ SQL、migration でデータを入れない（ADR-1007）を同じ形で踏襲する。
+- 過去事例: 箱系・セット系の既定（PRODUCT_KUBUNS_DEFAULTING_TO_BOX、docs/handoff/condition-box-by-product-category/）→ 商品区分で状態の既定を分ける前例。今回は箱扱いにせず（バラのカードを Sealed box にしないため）別の状態を返す。
 
 ## 維持の仕組み
+- 守り手: .github/workflows/backend-ci.yml（下の単体テスト (a)〜(d) と並び順テストを PR ごとに実行）
+- 守り手: Opus（便2 着手前の再測定と、配信の期間条件を変える PR の審査で v9 バルク行を再確認）
 - 単体テスト: (a) バルク系で状態語なし → Bulk / R6、(b) バルク系で PSA 等 → 従来どおり、(c) シングル系・箱系・セット系・商品なし → 従来どおり、(d) Bulk のマスタ行が search_kw 空の KEYWORD でどの block にも当たらない。CI で毎回走る。
 - 注意（REVIEW_V3）: 配信の48時間条件（max_age_hours）を外す・延ばすときは v9 のバルク行を再確認する（v9 の FLAG_SINGLE 59・Sealed box 35 が候補に戻る）。
 
