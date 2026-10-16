@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 # --- 区分の値（マスタの値。比較に使うので、ここ1か所にまとめる） -------------------------------
 # public.tcg_product_categories.kubun_type（商品の分類）の値
 PRODUCT_KUBUN_BOX = "箱系"
+PRODUCT_KUBUN_BULK = "バルク系"  # 状態語が無いとき、状態を Bulk（配信可）にする（ADR-1021）
 PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
 PRODUCT_KUBUN_UNKNOWN = "不明"
@@ -77,6 +78,9 @@ FLAG_SINGLE_CANONICAL = "FLAG_SINGLE"  # resolve_condition_v2 が返す単品の
 CONDITION_UNKNOWN = "不明"
 # 状態を決められなかった件に付ける状態「Error」の code（名前は masters から code で引く。effect='EXCLUDE' = 配信しない）
 CONDITION_ERROR_CODE = "CN0012"
+# バルク系で状態語が無いときの状態「Bulk」の code（名前は masters から code で引く。effect='OUTPUT' = 配信する）
+CONDITION_BULK_CODE = "CN0014"
+BASIS_BULK_DEFAULT = "R6:バルク既定"  # R4 で始めない（買取換算の候補に入れないため。v102_buyback_unit_svc.is_candidate）
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（旧試運転の要確認と同じ判定・同じ意味）
@@ -548,6 +552,11 @@ def _error_condition(cond_entries: list[dict]) -> str | None:
     return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_ERROR_CODE), None)
 
 
+def _bulk_condition(cond_entries: list[dict]) -> str | None:
+    """状態「Bulk」の名前（masters の code で引く）。行が無ければ None。"""
+    return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_BULK_CODE), None)
+
+
 def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict]) -> tuple[str | None, list[dict]]:
     """最終フォールバック（FLAG_SINGLE かつ basis が単位不明）なら状態を Error にして理由 condition_unknown を付ける。
 
@@ -569,6 +578,13 @@ def _resolve_condition(
         cond, undecided = _undecided_condition(cond, basis, cond_entries)
         return cond, basis, [*reviews, *undecided]
     cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block)
+    # バルク系で状態語が無い（FLAG_SINGLE かつ単位不明の既定）なら Bulk。語で決まった行（R1:PSA 等）は変えない
+    bulk = _bulk_condition(cond_entries)
+    if (
+        product_kubun == PRODUCT_KUBUN_BULK and bulk is not None
+        and cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis
+    ):
+        return bulk, BASIS_BULK_DEFAULT, []
     cond, undecided = _undecided_condition(cond, basis, cond_entries)
     return cond, basis, undecided
 
