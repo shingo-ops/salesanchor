@@ -16,23 +16,37 @@
 import React, { useEffect, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '../../components/Button';
+import { Callout } from '../../components/Callout';
 import { Checkbox } from '../../components/Checkbox';
 import { TextFieldControl } from '../../components/TextField';
 import { TextareaControl } from '../../components/Textarea';
 import { X } from '../../constants/icons';
 import { api } from '../../lib/api';
 import {
+  checkProductDuplicates,
+  createProduct,
+  fetchRegistrationForm,
   postProductCorrection,
   type DupCandidate,
   type LookupOption,
   type RegistrationForm,
   type RegistrationValues,
 } from './reviewActions';
+import {
+  blankCodeOf,
+  blankConfirmable,
+  formatAfterWorkChange,
+  formatOptionsFor,
+  missingFields,
+  type BlankCode,
+} from '../tcg-product-import/productDetailModel';
 import type { AnalysisReviewItem } from './ItemComparison';
 
 // ── 型定義 ──────────────────────────────────────────────────────────────────
 
 type SearchCandidate = { product_id: string; japanese_title: string; search_keywords: string };
+
+type TextKey = Exclude<keyof RegistrationValues, 'blank_confirmations'>;
 
 // ── 共通 UI 部品 ─────────────────────────────────────────────────────────────
 
@@ -44,10 +58,10 @@ function SearchSelect({
   onChange,
 }: {
   label: string;
-  lookupKey: keyof RegistrationValues;
+  lookupKey: TextKey;
   options: LookupOption[];
   value: string;
-  onChange: (key: keyof RegistrationValues, value: string) => void;
+  onChange: (key: TextKey, value: string) => void;
 }) {
   const { t } = useTranslation();
   const selected = options.find((o) => o.id === value);
@@ -91,6 +105,8 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
     release_date: '',
     search_keywords: '',
     exclude_keywords: '',
+    product_format_id: '',
+    blank_confirmations: [],
   });
   const [candidates, setCandidates] = useState<DupCandidate[]>([]);
   const [confirmed, setConfirmed] = useState(false);
@@ -98,18 +114,33 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
   const [error, setError] = useState('');
   const [issuedProductId, setIssuedProductId] = useState('');
 
-  const setValue = (key: keyof RegistrationValues, value: string) => {
-    setValues((c) => ({ ...c, [key]: value }));
+  const formats = form?.lookups.product_format_id ?? [];
+  const setValue = (key: TextKey, value: string) => {
+    setValues((c) => {
+      const next = { ...c, [key]: value };
+      // ADR-1020: 値を入れたら、その項目の「調べたが存在しない」を外す。作品を変えたら紐づかない細分類を空に戻す
+      const code = blankCodeOf(key);
+      if (code && value.trim()) next.blank_confirmations = c.blank_confirmations.filter((x) => x !== code);
+      if (key === 'work_id') next.product_format_id = formatAfterWorkChange(formats, value, c.product_format_id);
+      return next;
+    });
+    setCandidates([]);
+    setConfirmed(false);
+  };
+
+  const toggleBlank = (code: BlankCode, checked: boolean) => {
+    setValues((c) => ({
+      ...c,
+      blank_confirmations: checked
+        ? [...c.blank_confirmations.filter((x) => x !== code), code]
+        : c.blank_confirmations.filter((x) => x !== code),
+    }));
     setCandidates([]);
     setConfirmed(false);
   };
 
   useEffect(() => {
-    const params = new URLSearchParams({
-      extraction_item_id: item.extraction_item_id,
-      source_message_id: item.source_message_id,
-    });
-    api.get<RegistrationForm>(`/tcg/products/registration-form?${params.toString()}`)
+    fetchRegistrationForm(item)
       .then((result) => {
         setForm(result);
         setValues((c) => ({ ...c, japanese_title: result.item.raw_name || c.japanese_title }));
@@ -130,11 +161,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
     if (!required) return;
     setStatus('checking');
     setError('');
-    api.post<{ candidates: DupCandidate[] }>('/tcg/products/check-duplicates', {
-      extraction_item_id: item.extraction_item_id,
-      source_message_id: item.source_message_id,
-      ...values,
-    })
+    checkProductDuplicates(item, values)
       .then((result) => { setCandidates(result.candidates); setStatus('ready'); })
       .catch((reason: unknown) => { setError(String((reason as Error)?.message || reason)); setStatus('error'); });
   };
@@ -143,15 +170,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
     if (!required || (candidates.length && !confirmed)) return;
     setStatus('saving');
     setError('');
-    api.post<{ ok: boolean; product_id?: string; code?: string; candidates?: DupCandidate[] }>(
-      '/tcg/products',
-      {
-        extraction_item_id: item.extraction_item_id,
-        source_message_id: item.source_message_id,
-        ...values,
-        force: confirmed,
-      }
-    )
+    createProduct(item, values, confirmed)
       .then((result) => {
         if (!result.ok) {
           setCandidates(result.candidates || []);
@@ -165,8 +184,14 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
       .catch((reason: unknown) => { setError(String((reason as Error)?.message || reason)); setStatus('error'); });
   };
 
-  const optionName = (key: string) =>
-    form?.lookups[key]?.find((o) => o.id === values[key as keyof RegistrationValues])?.name || t('tcgAnalysisReview.productMasterDrawer.unselected');
+  const optionName = (key: 'product_kind_id' | 'work_id' | 'manufacturer_id' | 'product_category_id' | 'product_format_id') => {
+    const list: LookupOption[] = form?.lookups[key] ?? [];
+    return list.find((o) => o.id === values[key])?.name || t('tcgAnalysisReview.productMasterDrawer.unselected');
+  };
+  const missingNow = missingFields(values);
+  const blankLabels: Record<BlankCode, string> = {
+    name_en: 'fieldEnglishTitle', mark: 'fieldMark', release_date: 'fieldReleaseDate', exclude_keywords: 'fieldExcludeKeywords',
+  };
 
   if (status === 'saved') {
     return (
@@ -190,6 +215,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
             <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldWork')} lookupKey="work_id" options={form?.lookups.work_id || []} value={values.work_id} onChange={setValue} />
             <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')} lookupKey="manufacturer_id" options={form?.lookups.manufacturer_id || []} value={values.manufacturer_id} onChange={setValue} />
             <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldCategory')} lookupKey="product_category_id" options={form?.lookups.product_category_id || []} value={values.product_category_id} onChange={setValue} />
+            <SearchSelect key={`format-${values.work_id}`} label={t('tcgAnalysisReview.productMasterDrawer.fieldFormat')} lookupKey="product_format_id" options={formatOptionsFor(formats, values.work_id)} value={values.product_format_id} onChange={setValue} />
             <label className="pmd-field">
               {t('tcgAnalysisReview.productMasterDrawer.fieldMark')}
               <TextFieldControl size="sm" value={values.mark} onChange={(e) => setValue('mark', e.target.value)} />
@@ -214,6 +240,16 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
               {t('tcgAnalysisReview.productMasterDrawer.fieldExcludeKeywords')}
               <TextareaControl size="sm" value={values.exclude_keywords} onChange={(e) => setValue('exclude_keywords', e.target.value)} />
             </label>
+            {blankConfirmable.map(([code, field]) => (
+              <Checkbox
+                key={code}
+                size="sm"
+                label={t('productDetail.notFound', { field: t(`tcgAnalysisReview.productMasterDrawer.${blankLabels[code]}`) })}
+                checked={values.blank_confirmations.includes(code)}
+                disabled={Boolean(values[field].trim())}
+                onChange={(e) => toggleBlank(code, e.target.checked)}
+              />
+            ))}
           </div>
           <section className="pmd-result">
             <h4>{t('tcgAnalysisReview.productMasterDrawer.confirmHeading')}</h4>
@@ -221,10 +257,19 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldWork')}: {optionName('work_id')}</p>
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')}: {optionName('manufacturer_id')}</p>
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldCategory')}: {optionName('product_category_id')}</p>
+            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldFormat')}: {optionName('product_format_id')}</p>
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldMark')}: {values.mark || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldJapaneseTitle')}: {values.japanese_title || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
             <p>{t('tcgAnalysisReview.productMasterDrawer.fieldEnglishTitle')}: {values.english_title || t('tcgAnalysisReview.productMasterDrawer.emptyValue')}</p>
           </section>
+          {missingNow.length > 0 && (
+            <Callout
+              variant="info"
+              title={t('reviewItem.wizard.register.missingFields', {
+                fields: missingNow.map((field) => t(`productDetail.${field}`)).join(t('reviewItem.wizard.register.listSeparator')),
+              })}
+            />
+          )}
           {candidates.length > 0 && (
             <section className="pmd-warning">
               <strong>{t('tcgAnalysisReview.productMasterDrawer.duplicateWarning')}</strong>

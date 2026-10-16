@@ -45,6 +45,22 @@ class LookupOption(BaseModel):
     name: str
 
 
+class FormatLookupOption(BaseModel):
+    """ADR-1020: 細分類の選択肢。紐づくゲーム（作品）の id を落とさない"""
+    id: str
+    name: str
+    is_active: bool
+    game_ids: list[str]
+
+
+class RegistrationLookups(BaseModel):
+    product_kind_id: list[LookupOption]
+    work_id: list[LookupOption]
+    manufacturer_id: list[LookupOption]
+    product_category_id: list[LookupOption]
+    product_format_id: list[FormatLookupOption]
+
+
 class RegistrationFormItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
@@ -55,7 +71,7 @@ class RegistrationFormItem(BaseModel):
 
 class RegistrationFormResponse(BaseModel):
     item: RegistrationFormItem
-    lookups: dict[str, list[LookupOption]]
+    lookups: RegistrationLookups
 
 
 class ProductCandidate(BaseModel):

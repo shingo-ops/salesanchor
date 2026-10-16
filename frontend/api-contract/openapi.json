@@ -10102,6 +10102,38 @@
         "title": "ForecastResponse",
         "type": "object"
       },
+      "FormatLookupOption": {
+        "description": "ADR-1020: 細分類の選択肢。紐づくゲーム（作品）の id を落とさない",
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Game Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_active",
+          "game_ids"
+        ],
+        "title": "FormatLookupOption",
+        "type": "object"
+      },
       "FunnelActive": {
         "properties": {
           "amount": {
@@ -27735,14 +27767,7 @@
             "$ref": "#/components/schemas/RegistrationFormItem"
           },
           "lookups": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/LookupOption"
-              },
-              "type": "array"
-            },
-            "title": "Lookups",
-            "type": "object"
+            "$ref": "#/components/schemas/RegistrationLookups"
           }
         },
         "required": [
@@ -27750,6 +27775,54 @@
           "lookups"
         ],
         "title": "RegistrationFormResponse",
+        "type": "object"
+      },
+      "RegistrationLookups": {
+        "properties": {
+          "manufacturer_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Manufacturer Id",
+            "type": "array"
+          },
+          "product_category_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Product Category Id",
+            "type": "array"
+          },
+          "product_format_id": {
+            "items": {
+              "$ref": "#/components/schemas/FormatLookupOption"
+            },
+            "title": "Product Format Id",
+            "type": "array"
+          },
+          "product_kind_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Product Kind Id",
+            "type": "array"
+          },
+          "work_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Work Id",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_kind_id",
+          "work_id",
+          "manufacturer_id",
+          "product_category_id",
+          "product_format_id"
+        ],
+        "title": "RegistrationLookups",
         "type": "object"
       },
       "RematchResponse": {
