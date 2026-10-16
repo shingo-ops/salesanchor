@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
+import { RadioControl } from "../../components/RadioControl";
 import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
@@ -467,8 +468,7 @@ export default function RolesPage() {
                       style={{ background: roleForm.color }}
                       title={t("roles.currentColorTitle", { color: roleForm.color })}
                     >
-                      <input
-                        type="radio"
+                      <RadioControl
                         name="role-color"
                         value={roleForm.color}
                         checked
@@ -483,8 +483,7 @@ export default function RolesPage() {
                       style={{ background: c }}
                       title={c}
                     >
-                      <input
-                        type="radio"
+                      <RadioControl
                         name="role-color"
                         value={c}
                         checked={roleForm.color === c}

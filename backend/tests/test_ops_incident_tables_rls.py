@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 
+from tests.ops_control_lock import ops_control_lock
 from tests.rls_bootstrap import _apply_migration, public_bootstrap_lock
 
 ADMIN_PG_URL = (
@@ -245,22 +246,23 @@ async def test_ops_control_allows_only_id_1():
     from sqlalchemy.exc import DBAPIError
 
     admin_engine, app_engine = await _setup()
-    try:
-        async with app_engine.connect() as conn:
-            trans = await conn.begin()
-            try:
-                await _set_operator(conn)
-                await conn.execute(
-                    text("INSERT INTO public.ops_control (id, changed_by) VALUES (1, 'test')")
-                )
-                with pytest.raises(DBAPIError) as exc_info:
+    async with ops_control_lock(admin_engine):
+        try:
+            async with app_engine.connect() as conn:
+                trans = await conn.begin()
+                try:
+                    await _set_operator(conn)
                     await conn.execute(
-                        text("INSERT INTO public.ops_control (id, changed_by) VALUES (2, 'test')")
+                        text("INSERT INTO public.ops_control (id, changed_by) VALUES (1, 'test')")
                     )
-                assert _sqlstate(exc_info) == "23514"
-            finally:
-                await trans.rollback()
-    finally:
-        await _cleanup(admin_engine, control=True)
-        await admin_engine.dispose()
-        await app_engine.dispose()
+                    with pytest.raises(DBAPIError) as exc_info:
+                        await conn.execute(
+                            text("INSERT INTO public.ops_control (id, changed_by) VALUES (2, 'test')")
+                        )
+                    assert _sqlstate(exc_info) == "23514"
+                finally:
+                    await trans.rollback()
+        finally:
+            await _cleanup(admin_engine, control=True)
+    await admin_engine.dispose()
+    await app_engine.dispose()

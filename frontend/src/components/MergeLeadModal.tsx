@@ -21,6 +21,7 @@ import { api } from "../lib/api";
 import { getStatusPresentation } from "../utils/statusPresentation";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { RadioControl } from "./RadioControl";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
 
@@ -207,8 +208,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
                         }}
                       >
                         <td>
-                          <input
-                            type="radio"
+                          <RadioControl
                             name="master-candidate"
                             checked={c.id === selectedId}
                             onChange={() => {
