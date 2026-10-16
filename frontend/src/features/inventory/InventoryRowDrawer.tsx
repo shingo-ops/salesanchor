@@ -147,8 +147,7 @@ function RawTextPane({ row, onClose, modeTabs }: PaneProps) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) setState("forbidden");
-        else if (error instanceof ApiError && error.status === 404) setState("notFound");
+        if (error instanceof ApiError && error.status === 404) setState("notFound");
         else setState("error");
       });
     return () => {
@@ -173,7 +172,6 @@ function RawTextPane({ row, onClose, modeTabs }: PaneProps) {
         {modeTabs}
         {itemTabs}
         {state === "loading" && <p role="status">{t("common.loading")}</p>}
-        {state === "forbidden" && <Callout variant="warning" title={t("superAdmin.supplierQuality.superAdminOnly")} />}
         {state === "notFound" && <Callout variant="info" title={t("inventory.rowDrawer.notFound")} />}
         {state === "error" && <Callout variant="warning" title={t("inventory.rowDrawer.loadError")} />}
         {state === "ready" && current && (

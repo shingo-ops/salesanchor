@@ -202,13 +202,16 @@ describe("InventoryRowDrawer", () => {
     expect(await screen.findByText("raw-b")).toBeTruthy();
   });
 
-  it("T6: the original text view maps 403, 404 and other errors to the existing texts", async () => {
+  it("T6b: a non super admin getting 403 sees the common load error, not the super admin only text", async () => {
     const { ApiError } = await import("../../lib/api");
     mock.get.mockRejectedValue(new ApiError("x", 403, null));
-    const first = render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
-    expect(await screen.findByText("This page is restricted to super_admin.")).toBeTruthy();
-    first.unmount();
+    render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
+    expect(await screen.findByText("Failed to load the analysis result")).toBeTruthy();
+    expect(screen.queryByText("This page is restricted to super_admin.")).toBeNull();
+  });
 
+  it("T6: the original text view maps 404 and other errors to the existing texts", async () => {
+    const { ApiError } = await import("../../lib/api");
     mock.get.mockRejectedValue(new ApiError("x", 404, null));
     const second = render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
     expect(await screen.findByText(/No analysis result for this row/)).toBeTruthy();
