@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_code_collision_svc import find_code_collisions
+from app.services.tcg_product_master_svc import _validate_product_format, save_blank_confirmations
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -182,6 +183,23 @@ async def update_product_detail(
             "product_category_id=:product_category_id,category_class=:category_class "
             "WHERE id=:pid"
         ), params)
+        # ADR-1020 便1: 細分類（来たときだけ・D5）と印（D4）
+        if "product_format_id" in values:
+            try:
+                await _validate_product_format(db, values["product_format_id"])
+            except ValueError:
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            await db.execute(text(
+                "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
+            ), {"fid": values["product_format_id"], "pid": product["id"]})
+        await save_blank_confirmations(
+            db,
+            product_id=product["id"],
+            values={"name_en": params["english_title"], "mark": params["mark"],
+                    "release_date": params["release_date"], "exclude_keywords": values["exclude_keywords"]},
+            confirmations=set(values["blank_confirmations"]) if values.get("blank_confirmations") is not None else None,
+            actor=actor,
+        )
         for field, table in WORD_TABLES.items():
             words = values[field]
             if words == [row["keyword"] for row in before[field]]:
