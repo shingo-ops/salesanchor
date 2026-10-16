@@ -24,6 +24,7 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
   - 便B（tenants）: 本番反映済み（PR #4379、2026-10-16 15:21 JST マージ）。本番で t/t・ポリシー 4 本（読取は全行可、作成・変更・削除は運営文脈のときだけ）、5 行・有効 5・md5 が適用前と一致、反映後の backend・Celery ログの 42501・row-level security・5xx 0 件、/api/health 200 を確認（15:27）。本番での運営画面からの会社作成・停止・削除は未観測（CI の実 PostgreSQL 試験 9 件で確認）。設計 [../../handoff/s1-rls-stage3b/design.md](../../handoff/s1-rls-stage3b/design.md)
   - 便C（users）: 本番反映済み（PR #4381、2026-10-16 15:54 JST マージ）。本番で t/t・ポリシー 4 本（読取は全行可、作成・変更・削除は自社の会社文脈か運営文脈のときだけ）、15 行・md5 が適用前と一致、反映後の backend・Celery ログの 42501・row-level security・5xx 0 件、/api/health 200 を確認（15:59）。ログイン・パスワード再設定・言語/テーマ変更・登録は users の書込直前だけ会社文脈を張る。本番でのログイン成功は未観測（CI とローカルの実 PostgreSQL 試験 13 件で確認）。設計 [../../handoff/s1-rls-stage3c/design.md](../../handoff/s1-rls-stage3c/design.md)
   - 段階③の対象表はすべて反映済み
+- KGI の判定（2026-10-16 17:30 JST）: KGI-1 ○・KGI-3 ○。KGI-2 は観測できた範囲で失敗 0 だが、本番のログイン成功と画面の目視が未観測のため保留（[kgi.md](kgi.md)）。ADR-1018 は Accepted
 
 ## 子文書
 

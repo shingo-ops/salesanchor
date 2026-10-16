@@ -134,7 +134,7 @@ class TestRealRedisLockout:
                     "/api/v1/companies",
                     headers={
                         "Authorization": f"Bearer {token}",
-                        "X-Forwarded-For": ip,
+                        "X-Real-IP": ip,
                     },
                 )
         return resp.status_code

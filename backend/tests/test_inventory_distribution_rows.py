@@ -186,11 +186,12 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # review-ack-revoke 便で cr_review_ack を bool_or の集計にし review_acked 列を足して再生成した（差分は golden-diff: 同じ cr_review_ack の形変更が4通りに出るだけ）。
 # inventory-row-drawer 便で、行の元 ID の列（item_key・item_keys_agg・extraction_item_ids の3か所だけ）を足して再生成した。
 # review-excluded-ack 便で cr_review_ack LATERAL（excluded の確認済み除外）を足して再生成した。差は4点のみ（distribution_sql_after_merge.diff）。
+# g28 便1（バルク状態）で RESULT_CONDITION_ORDER に Bulk を足して再生成した。差は Bulk の WHEN 句1つのみ（golden_diff.txt）。
 _GOLDEN = {
-    (False, False): (24693, "96e317a71e3b1b068472e9a566973423eee9f15cb47e5f88c799f173867b9b02"),
-    (False, True): (25844, "6d5bbebbfb9c2cde076085c147594c187a8ce863b81ab4d513ffc11280b17c86"),
-    (True, False): (24727, "ed61416b1a8d250f71e582ae332e532894743cb2bd7cfc5a4a4104bcbc698fc4"),
-    (True, True): (25878, "b5c3c5a583505c2da8b796b2f70a953ee94a5cca5e49c0fad7f2a777567076a4"),
+    (False, False): (24712, "d4dbfff66b8cfc16c363e913b1c8e9a69e906fa06668e11aacaf1768e14433cd"),
+    (False, True): (25863, "e6f7781645f5036f4d5d5ec558a2b9b1656884d860ffa9c4e99c84861eac6728"),
+    (True, False): (24746, "7601285b8dbcce2820b718f71eaa9e90e54a8618e351fb11d73df1419cfefd5b"),
+    (True, True): (25897, "138edb09eb6e31580fab1f96d83e9d27fdeed50c21c093ded4304c9147da6641"),
 }
 
 
