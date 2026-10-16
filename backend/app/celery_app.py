@@ -194,3 +194,10 @@ from app.celery_health import record_task_failure  # noqa: E402
 @task_failure.connect
 def _count_task_failure(sender=None, **kwargs):
     record_task_failure(getattr(sender, "name", None) or "unknown")
+
+
+# ADR-1012 段階3 便D: コンテナの健康診断が読む印を worker が 30 秒ごとに更新する
+# （beat は docker-compose.yml の -S app.celery_alive:AliveScheduler で更新する）
+from app.celery_alive import WorkerAliveStep  # noqa: E402
+
+celery_app.steps["worker"].add(WorkerAliveStep)

@@ -388,6 +388,18 @@ backend/tests/test_discord_gateway_alive.py に次の 2 つを書く（`pytest.m
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+実行結果（担当 Sonnet・2026-10-16・生出力は /tmp/CC報告ファイル/ai-ops-stage3/bin-d-impl/）:
+
+- §5-1: 手元に celery 等を入れた python 3.12 の環境が無いため pytest は未実行・CI で実行。`python3.12 -m py_compile` で §3 の python 6 ファイルが通ることだけ確認（compile=0）
+- §5-2: `git diff origin/main --stat` は §3 の 7 ファイル（カードを除く）。compose から消えた行は beat の command の旧行 1 行だけ（5-2-stat.txt・5-2-minus.txt）
+- §5-3: 4 サービス名あり。`docker-compose config` の出力では test の中の `$$` はそのまま `$$` で表示された（5-3-test.txt）
+- §5-4: 起動は .env が無く DATABASE_URL が空で 3 サービスとも異常終了を繰り返した（5-4-logs.txt）。§6 に従い postgres を足して 1 回だけ試し直し（シェルの環境変数で試験用の値を渡した）。discord-gateway は healthy（Health.Log 全て ExitCode 0・所要 1 秒未満）、STOP から unhealthy まで 170 秒、CONT から healthy まで 27 秒（5-4-gw-stop.txt）。celery-beat・celery-worker は再試行後も SQLAlchemy URL が空の例外で起動せず、healthy 確認・STOP 試験・VmHWM は未実施（5-4-beat-log-full.txt）
+- §5-5: alpine:3.24 の wget は `-T SEC` あり。通る試験は `HTTP/1.1 403 Filtered`・wget rc=1。tinyproxy ログ: `Proxying refused on filtered domain "tinyproxy.stats"`（5-5-tp-logs.txt）。固まりの試験・外へ出ない試験は未実施。§6 に従い §4-5(d) は変えず NEEDS_DECISION
+- §5-6: 片付け済み。`colima list` に ai-ops-bin-d なし、`docker context` は default（5-6-final.txt）
+
+判断を要した点:
+- ブランチ名は new-worktree.sh の部分一致の不具合を避けるため Opus の指示で変更（release/ai-ops-stage3-bin-d → release/ai-ops-healthcheck-bin-d）
+- 手元に `docker compose` プラグインが無く、`docker-compose`（v5.5.1）で代用した
+- §5-4 の試し直しで、カードに無い試験用の環境変数（DATABASE_URL・POSTGRES_*・GCP_PROJECT_ID の仮の値）をシェルから渡した（ファイルには書いていない）
 
 END OF CARD
