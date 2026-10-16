@@ -130,14 +130,14 @@ def pg(monkeypatch):
         connection.close()
 
 
-def seed(pg, *, name="Test Booster 空箱", state="", memo="", reasons="empty_box", **overrides):
+def seed(pg, *, name="Test Booster 空箱", state="", memo="", reasons="empty_box", prompt_version=None, channel_id=None, **overrides):
     smid, job, eid = str(uuid4()), str(uuid4()), str(uuid4())
     raw = name + state + memo
     with pg["connection"].cursor() as cursor:
         cursor.execute("""INSERT INTO public.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
-            SELECT %s,id,%s,%s,true,now(),now() FROM public.supplier_channels LIMIT 1""",
-            (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
-        cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')", (job,smid))
+            SELECT %s,id,%s,%s,true,now(),now() FROM public.supplier_channels WHERE (%s::uuid IS NULL OR id=%s::uuid) ORDER BY id LIMIT 1""",
+            (smid, raw, hashlib.sha256(raw.encode()).hexdigest(), channel_id, channel_id))
+        cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status,prompt_version) VALUES (%s,%s,'done',%s)", (job,smid,prompt_version))
         cursor.execute("""INSERT INTO public.extraction_items(id,extraction_job_id,line_start,line_end,raw_product_name,
             raw_quantity,raw_price,raw_unit,raw_state,raw_memo) VALUES (%s,%s,1,1,%s,'1','10','Box',%s,%s)""", (eid,job,name,state,memo))
         values = {"product_id":pg["product"],"pid_resolved":True,"pid_basis":"EXACT","unit_id":pg["unit"],
@@ -323,7 +323,7 @@ def test_ambiguous_requires_correction_and_preserves_selected_on_reanalysis(pg):
 
 
 def test_review_tabs_count_paging_and_preview(pg):
-    a,b=seed(pg),seed(pg)
+    a,b=seed(pg,prompt_version='v102:test'),seed(pg,prompt_version='v102:test')
     set_max_age_hours(pg,48)
     save(pg,a)
     async def run():
@@ -705,3 +705,41 @@ def test_sold_out_row_is_excluded_from_preview_count_and_output_rows(pg):
 
     preview, rows = asyncio.run(run())
     assert preview["output_count"] == len(rows) == 1
+
+
+def test_needs_review_tab_hides_old_prompt_versions_only(pg):
+    """旧解析版（v102 以外）の行は要確認タブに出ない。全件・他タブ+review_only では出る/出ない。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.suppliers(name,supplier_type) VALUES ('OldVersionSupplier','corporate') RETURNING id")
+        cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id", (cursor.fetchone()[0],))
+        old_channel = str(cursor.fetchone()[0])
+        cursor.execute("SELECT id FROM public.supplier_channels WHERE id<>%s::uuid LIMIT 1", (old_channel,))
+        new_channel = str(cursor.fetchone()[0])
+    new = seed(pg, name="Test Booster 新版", channel_id=new_channel, prompt_version="v102:test")
+    old = seed(pg, name="Test Booster 旧版", prompt_version="raw-extraction-v5-product-p1", channel_id=old_channel)
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                tabs = {}
+                for key, kwargs in {
+                    "needs": {"status_tab": "NEEDS_REVIEW"},
+                    "all": {"status_tab": "ALL"},
+                    "all_review_only": {"status_tab": "ALL", "review_only": True},
+                    "unreg_review_only": {"status_tab": "PRODUCT_ID_UNRESOLVED", "review_only": True},
+                }.items():
+                    tabs[key] = await review.fetch_analysis_results(db, limit=50, **kwargs)
+                by_id = await review.fetch_analysis_results(db, status_tab="ALL", extraction_item_ids=[old["eid"]], limit=50)
+                return tabs, by_id
+        finally:
+            await engine.dispose()
+
+    tabs, by_id = asyncio.run(run())
+    ids = lambda r: {i["extraction_item_id"] for i in r["items"]}  # noqa: E731
+    assert ids(tabs["needs"]) == {new["eid"]} and tabs["needs"]["total"] == 1  # (a)
+    assert ids(tabs["all"]) == {new["eid"], old["eid"]} and tabs["all"]["total"] == 2  # (b)
+    assert ids(tabs["all_review_only"]) == {new["eid"]} and tabs["all_review_only"]["total"] == 1  # (c)
+    assert old["eid"] not in ids(tabs["unreg_review_only"])  # (c)
+    assert "OldVersionSupplier" not in tabs["needs"]["providers"] and "OldVersionSupplier" in tabs["all"]["providers"]  # (d)
+    assert ids(by_id) == {old["eid"]}  # ID 指定は不変（旧版も出る）
