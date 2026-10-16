@@ -344,6 +344,25 @@ launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch
 
 ---
 
+## 10. 仮想マシンが要る試験（GitHub で行う）
+
+この節が規則の正本（1 か所）。設計: [docs/handoff/vm-test-on-gha/design.md](../handoff/vm-test-on-gha/design.md)
+
+規則: Mac で一時的な仮想マシン（colima profile の新規作成・limactl）を作らない。Docker が要る試験は sandbox-test で行う。
+
+手順:
+1. `tests/sandbox/<名前>.sh` を書いて push する（名前は英小文字・数字・ハイフン。置き方は tests/sandbox/README.md）
+2. `gh workflow run sandbox-test.yml --ref <ブランチ> -f test=<名前>`
+3. `gh run watch` で結果を見る
+
+禁止: secrets・本番データ・本番への接続を使わない。公開リポジトリのためログは公開される。
+
+例外: Mac 実機でしか試せないものは、その行に `vm-guard-allow: 理由` を付け、PR に理由を書く（no-mac-vm-guard が通す）。
+
+開発用 DB（colima の profile default）は従来どおり使う。colima-idle-stop が自動停止する。
+
+---
+
 ## 関連 doc
 
 - [`self-hosted-runner-credential-trap.md`](./self-hosted-runner-credential-trap.md) — 2026-05-07 の事故と PIPELINE_PAT 導入の経緯
