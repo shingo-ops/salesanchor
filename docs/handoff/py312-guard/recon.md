@@ -10,7 +10,7 @@
 - P5 3.14 による過去の食い違い: `docs/handoff/review-edit-all-fields/review-opus.md:11-12`（3.14 で出した openapi.json を 3.12.8 で出し直し）
 - P6 先例の正しい形: `/usr/local/bin/python3.12 -m venv`（`docs/handoff/tcg-product-import/card-product-csv-atomic-impl.md:47` ほか 2 件）
 - P7 版を機械的に止める仕組みは無い（4_grep.txt の範囲。60 行より後は未確認）
-- P8 既存の Bash 見張りは `~/.claude/settings.json` の PreToolUse に 26 件。拒否の型は stdin の JSON を読み、`_hook_blocked_log` で `~/.claude/logs/agent-events.jsonl` に 1 行残し、標準エラーに理由を出して `exit 2`（`~/.claude/scripts/worktree-only-guard.sh:21-23`）。Python で書いた見張りの先例: `launch_guard_for_sim.py`・`master-register-rules-guard.py`（2_pretooluse.txt）
+- P8 既存の Bash 見張りは `/Users/tanizawashingo/.claude/settings.json` の PreToolUse に 26 件。拒否の型は stdin の JSON を読み、`_hook_blocked_log` で `/Users/tanizawashingo/.claude/logs/agent-events.jsonl` に 1 行残し、標準エラーに理由を出して `exit 2`（`/Users/tanizawashingo/.claude/scripts/worktree-only-guard.sh:21-23`）。Python で書いた見張りの先例: `/Users/tanizawashingo/.claude/scripts/launch_guard_for_sim.py`・`/Users/tanizawashingo/.claude/scripts/master-register-rules-guard.py`（2_pretooluse.txt）
 
 ## 推測しないこと
 - 3.12 の部品が全部できあいで入るか（手作りの組み立てが 0 になるか）は測っていない。設計の K で実測する

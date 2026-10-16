@@ -1,6 +1,6 @@
 # 結果: py312-guard（2026-10-16）
 
-状態: 実装済み・導入済み（`~/.claude/settings.json` に 1 本追加。控え `~/.claude/settings.json.bak-py312-guard-20261016171002`）。AGENTS.md 追記 4f0ec4266。
+状態: 実装済み・導入済み（`/Users/tanizawashingo/.claude/settings.json` に 1 本追加。控え `/Users/tanizawashingo/.claude/settings.json.bak-py312-guard-20261016171002`）。AGENTS.md 追記 4f0ec4266。
 
 | # | 結果 | 根拠 |
 |---|---|---|
