@@ -4029,6 +4029,11 @@
     "deleteAction": "Delete",
     "deleteInUse": "This product is referenced by inventory and cannot be deleted.",
     "deleteError": "Failed to delete the product.",
+    "product_format_id": "Format",
+    "formatNeedsWork": "Choose a work first",
+    "notFound": "{{field}}: checked, none exists",
+    "requiredMissing": "Not entered yet (required for registration).",
+    "requiredMissingConfirmable": "Not entered yet. Enter a value, or tick \"checked, none exists\" below if there is none.",
     "create": "Create"
   },
   "soldOut": {
