@@ -2,6 +2,9 @@
 
 状態: 設計案作成済み → 下の審査で APPROVE。PO 依頼「旧解析版は要確認には出さないようにしてくれ」(2026-10-16)。
 
+**対象ADR**: ADR-158
+**recon**: docs/handoff/review-hide-old-versions/recon.md
+
 ## 目的・KGI（○×で判定）
 - K1 反映後、要確認タブ（status_tab=NEEDS_REVIEW）の行のうち prompt_version が `v102:` で始まらない行 = 0。
 - K2 反映後、要確認タブの v102 行の件数 = 反映前の基準値（同時刻比較が無理なので、反映直前と直後に測り、差は新着投稿で説明できること）。
