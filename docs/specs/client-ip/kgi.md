@@ -14,10 +14,12 @@ backend は接続元 IP を決める同じ関数を 4 か所に写して持ち�
 
 | ID | 目標（○×で判定） | 判定方法 | 現在値（2026-10-16） |
 |---|---|---|---|
-| K1 | 接続元 IP を決める関数が backend に 1 つだけ（写し 0）で、X-Forwarded-For を読む箇所が 0 | `git grep -niE "headers\.get\(\s*[\"']x-forwarded-for" backend/app` が 0 件、`git grep -nE "def (_?get_client_ip|_get_client_ip_from_request|_client_ip)\(" backend/app` が 1 件 | 読む箇所 4・関数 5（4 写し＋viewer.py の 1） |
+| K1 | 接続元 IP を決める関数が backend に 1 つだけ（写し 0）で、X-Forwarded-For を読む箇所が 0 | `git grep -niE "headers\.get\(\s*[\"']x-forwarded-for" backend/app` が 0 件、`git grep -nE "def (_?get_client_ip\|_get_client_ip_from_request\|_client_ip)\(" backend/app` が 1 件 | 読む箇所 4・関数 5（4 写し＋viewer.py の 1） |
 | K2 | X-Forwarded-For に偽の値を付けてログインに失敗し続けると、偽の値を毎回変えても回数制限で止まる | CI の試験が緑（偽の値を毎回変えて 10 回失敗→11 回目が 429） | 試験なし（今のコードでは止まらない） |
 | K3 | 本番で偽の X-Forwarded-For を付けた要求 1 件の、監査記録に残る IP が本当の接続元（偽の値ではない） | 本番 DB `public.auth_events` の client_ip を、同じ要求の nginx 記録の接続元と照合 | 反映前に同じ手順で測る（偽の値が残ることを確認） |
 | K4 | 反映後、401・429 が反映前より増えない | 反映前後の nginx 記録の 401・429 件数（1 時間あたり） | 基準: 2026-10-16 04:58Z〜08:11Z の nginx 記録 3591 行で 401 が 41・429 が 0 |
+
+（表の中の `\|` は表の区切りと区別するための書き方。実際に打つときは `|` にする。）
 
 ## 運用方針
 
