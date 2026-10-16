@@ -47,6 +47,7 @@ from app.services.tcg_product_detail_svc import (
     update_product_detail,
 )
 from app.services.tcg_product_import_svc import commit_import, preview
+from app.services.tcg_product_master_svc import fetch_product_format_options
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -363,6 +364,8 @@ async def get_product_lookups(
             )
         )
         lookups[key] = [{"id": r.id, "name": r.name} for r in rows.fetchall()]
+    # ADR-1020 便2a: 細分類（紐づくゲーム付き）
+    lookups["product_format_id"] = await fetch_product_format_options(db)
     return {"lookups": lookups}
 
 
