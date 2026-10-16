@@ -103,13 +103,15 @@ backend/tests/test_client_ip.py（DB 不要。Redis は backend/tests/test_viewe
 
 PR を Revert して再デプロイ。DB・設定の変更は無い。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
 - uvicorn 0.34.0 の既定（本番コンテナで実物を確認。recon §3）: proxy_headers は既定で有効、信頼する送り元は既定で 127.0.0.1 だけ。nginx（172.20.0.2）からの要求では X-Forwarded-For を書き換えない。＝アプリ側で X-Forwarded-For を読むと利用者の値をそのまま信用することになる。
+- 社内の過去事例: backend/app/routers/viewer.py の閲覧者ログイン（ADR-1019）は既に X-Real-IP だけを読み、backend/tests/test_viewer_api.py:405-409 で X-Forwarded-For を無視することを試験している。本件はこの方式を全体の正本にする。
 - 数値を伴う外部の導入事例は使わない（本件は社内の実測で再現と判定ができるため）。
 
 ## 維持の仕組み
 
+- 守り手: backend/tests/test_client_ip.py と backend/tests/test_security_hardening.py の T7（CI の Backend Tests で毎回、X-Forwarded-For を読まないこと・回数制限をすり抜けられないことを検証）。
 - 正本は backend/app/client_ip.py の 1 関数。新しく接続元 IP が要る箇所はこれを import する（docs/specs/client-ip/kgi.md の運用方針）。
 - K1 の 2 つの grep を受入条件として残す。写しが増えたら次の監査で検出する。
 - T1〜T7 が CI の Backend Tests で毎回走る。
