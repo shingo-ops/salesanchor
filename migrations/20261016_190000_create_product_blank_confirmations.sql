@@ -21,14 +21,12 @@ ALTER TABLE public.product_blank_confirmations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_blank_confirmations FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS product_blank_confirmations_read ON public.product_blank_confirmations;
-CREATE POLICY product_blank_confirmations_read
-    ON public.product_blank_confirmations
+CREATE POLICY product_blank_confirmations_read ON public.product_blank_confirmations
     FOR SELECT
     USING (true);
 
 DROP POLICY IF EXISTS product_blank_confirmations_write ON public.product_blank_confirmations;
-CREATE POLICY product_blank_confirmations_write
-    ON public.product_blank_confirmations
+CREATE POLICY product_blank_confirmations_write ON public.product_blank_confirmations
     FOR ALL
     USING (current_setting('app.is_operator', true) = 'true')
     WITH CHECK (current_setting('app.is_operator', true) = 'true');
