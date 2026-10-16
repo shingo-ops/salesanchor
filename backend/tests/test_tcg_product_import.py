@@ -395,6 +395,8 @@ async def test_load_lookup_maps_never_queries_tcg_major_categories():
             rows = [("TCG", 10)]
         elif "public.tcg_product_categories" in sql:
             rows = [("PC_BOX", 20)]
+        elif "public.product_formats" in sql:
+            rows = [("PF001", 30)]
         elif "tcg_manufacturers" in sql:
             rows = [("MK002", "uuid-mk")]
         else:
