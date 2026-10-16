@@ -241,7 +241,7 @@ async def test_atomic_row_commit_and_counter_order(atomic_service):
         assert kwargs == {"commit": False}
     importer.record_row.side_effect = receipt
     result = await importer.commit_import(db, b"", "rows.csv", "test")
-    master.create_product.assert_awaited_once_with(db, force=True, commit=False)
+    master.create_product.assert_awaited_once_with(db, force=True, commit=False, actor="test")
     db.commit.assert_awaited_once()
     db.rollback.assert_not_awaited()
     assert (result["created"], result["skipped"]) == (1, 0)

@@ -953,3 +953,6 @@ run_sql migrations/20261016_160000_add_paypal_regtoken_write_rls.sql
 run_sql migrations/20261016_170000_add_tenants_write_rls.sql
 
 run_sql migrations/20261016_180000_add_users_write_rls.sql
+
+# ADR-1020 便1: 共用商品の「調べたが無い」の記録の表（空・構造のみ・冪等）
+run_sql migrations/20261016_190000_create_product_blank_confirmations.sql

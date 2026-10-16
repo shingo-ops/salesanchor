@@ -75,11 +75,13 @@ _REANALYZE_DATA = {
 
 @pytest.fixture
 def super_admin_override():
-    from app.main import app
+    from types import SimpleNamespace
+
     from app.auth.dependencies import require_super_admin
+    from app.main import app
 
     async def _bypass():
-        return {"id": 1, "is_super_admin": True}
+        return SimpleNamespace(id=1, email=None, is_super_admin=True)
 
     app.dependency_overrides[require_super_admin] = _bypass
     yield
