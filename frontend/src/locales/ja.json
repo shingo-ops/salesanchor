@@ -1453,6 +1453,12 @@
     "subtitle": "商談のステージと確度を管理します。"
   },
   "inventory": {
+    "rowDrawer": {
+      "title": "解析の詳細",
+      "loadError": "解析結果を読み込めませんでした",
+      "notFound": "この行の解析結果が見つかりません。在庫表を再読み込みしてください",
+      "itemTab": "{{n}}件目"
+    },
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
       "searchPlaceholder": "TCGシリーズ・型番・タイトル・仕入元で検索",
