@@ -27,6 +27,7 @@ from app.tasks import tcg_extraction as extraction
 from tests.test_line_analysis_v102_pg import RAW, RESPONSE, SCHEMA, make_job, one
 from tests.test_line_analysis_v102_pg import pg as pg  # noqa: F401  fixture
 from tests.test_line_analysis_v102_pg import v102 as v102  # noqa: F401  fixture
+from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import prohibit_live_gemini as prohibit_live_gemini  # noqa: F401  autouse fixture
 
 V6 = tool.V6_PROMPT_VERSION
@@ -43,7 +44,7 @@ def env(pg, v102, monkeypatch, tmp_path):  # noqa: F811
         # 試験用のスキーマ構築は analysis_results の FK を全部外す。本番と同じ ON DELETE CASCADE を戻す
         cur.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD CONSTRAINT fk_ar_items_test FOREIGN KEY (extraction_item_id) "
                     f"REFERENCES {SCHEMA}.extraction_items (id) ON DELETE CASCADE")
-        cur.execute("CREATE TABLE public.knowledge_rules (id serial PRIMARY KEY, category text, pattern_type text, pattern text, is_active boolean DEFAULT TRUE)")
+        cur.execute((MIGRATIONS / "058_create_knowledge_rules.sql").read_text(encoding="utf-8"))  # 本番の定義をそのまま使う
     one(pg, "INSERT INTO public.knowledge_rules (category, pattern_type, pattern) VALUES ('message_exclude', 'substring', '除外ワード') RETURNING 1")
     state = v102
     state.published = 0
