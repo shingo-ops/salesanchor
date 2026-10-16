@@ -150,7 +150,7 @@ _BASE_FROM = _base_from()
 - `_build_where` に `extraction_item_ids` を渡す。
 - それ以外（行の組み立て :271 以降）は変えない。
 
-理由: 在庫表の行は、非アクティブな投稿からも作られる（`tcg_distribution_svc.py:285` が `include_inactive=True`）。ID を指定したときは、在庫表と同じ範囲で引けるようにする。ID を指定しないときの挙動は変えない。
+理由: 在庫表の行は、非アクティブな投稿からも作られる（`backend/app/services/tcg_distribution_svc.py:285` が `include_inactive=True`）。ID を指定したときは、在庫表と同じ範囲で引けるようにする。ID を指定しないときの挙動は変えない。
 
 ファイル: `backend/app/routers/tcg_analysis_review.py`（:121-150）
 - クエリ引数に `extraction_item_ids: list[UUID] | None = Query(default=None, description="extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）")` を足す。
@@ -166,7 +166,7 @@ _BASE_FROM = _base_from()
 
 金型: `Drawer`・`Tabs`・`DataTable` は既存のものを使う（recon §5）。
 
-新しい UI 部品は作らない。色・余白の直値、生の input・select・自作タブは使わない。読み込み中・エラーの表示は、`NeedsReviewTabsPanel.tsx` が使っている部品と文言キーの使い方に合わせる（実装時に同ファイルの読み込み中・エラー表示の行を読み、同じ部品を使う。該当する金型が無ければ停止）。
+新しい UI 部品は作らない。色・余白の直値、生の input・select・自作タブは使わない。読み込み中・エラーの表示は、`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx` が使っている部品と文言キーの使い方に合わせる（実装時に同ファイルの読み込み中・エラー表示の行を読み、同じ部品を使う。該当する金型が無ければ停止）。
 
 (a) `frontend/src/features/inventory/inventoryColumns.tsx:12-35` `InventoryRow` に `extraction_item_ids: string[];` を足す。
 
@@ -185,10 +185,10 @@ _BASE_FROM = _base_from()
 - props は `{ row: InventoryRow; onClose: () => void }`。
 - 取得: `GET /tcg/analysis-results?extraction_item_ids=<id1>&extraction_item_ids=<id2>…`
   - 配列は `URLSearchParams` に1件ずつ append して作る（`[]` 付きの書式にしない）。
-  - API 呼び出しは、`NeedsReviewTabsPanel.tsx:96-102` と同じクライアントを使う。
+  - API 呼び出しは、`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:96-102` と同じクライアントを使う。
 - 状態ごとの表示:
   - 読み込み中: `<Drawer open size="wide" title={t("inventory.rowDrawer.title")} onClose={onClose}>` の中に、読み込み中の表示。
-  - 401/403: 同じ Drawer に、要確認パネルと同じ super admin 限定の文言キー（`NeedsReviewTabsPanel.tsx:109-111` が使うキー）を出す。
+  - 401/403: 同じ Drawer に、要確認パネルと同じ super admin 限定の文言キー（`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:109-111` が使うキー）を出す。
   - その他のエラー: `t("inventory.rowDrawer.loadError")`。
   - 0件: `t("inventory.rowDrawer.notFound")`。
 - 1件以上: `<ReviewItemDrawer item={items[active]} viewOnly onClose={onClose} onRefresh={refetch} headerSlot={tabs} />`
@@ -202,7 +202,7 @@ _BASE_FROM = _base_from()
 - DataTable の直後に `{drawerRow && <InventoryRowDrawer row={drawerRow} onClose={() => setDrawerRow(null)} />}` を足す。
 - ヘッダコメント（:4「public.inventory を表示」）は古いので、「LINE 解析の配信行を表示（ADR-1014）。super admin は行クリックで解析パネル」に直す。
 
-(e) i18n: `frontend/src/locales/ja.json` / `en.json` に同じキーを足す（ADR-027）。
+(e) i18n: `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` に同じキーを足す（ADR-027）。
 
 | キー | ja | en |
 |---|---|---|
@@ -229,16 +229,16 @@ _BASE_FROM = _base_from()
 | B1 まとめなしの行の `extraction_item_ids` が、その行の ei.id 1件 | `backend/tests/test_inventory_distribution_rows_pg.py` に追加（pg 実体） |
 | B2 まとめた行の `extraction_item_ids` が、組の全 ei.id（件数＝merged_count、並びは sort_ord 順） | 同上 |
 | B3 `_base_from()` の出力が、変更前の `_BASE_FROM` と文字単位で同じ | `backend/tests/test_tcg_analysis_review.py` に追加（変更前の文字列を固定） |
-| B4 GAS 出力（fetch_output_rows）が変更前と同じ | 既存 `test_inventory_distribution_rows_pg.py` の GAS 同一性テストが緑。`test_distribution_rows_sql_is_pinned` は、固定値を新しい SQL に更新する（差分は §4-1 の3か所だけであることを PR で示す） |
-| B5 ID 指定で、非アクティブな投稿の行も1件取れる。ID を指定しないときは、今までどおり非アクティブを除く | `test_tcg_analysis_review.py` に追加（pg 実体。無ければ同ファイルの既存方式） |
+| B4 GAS 出力（fetch_output_rows）が変更前と同じ | 既存 `backend/tests/test_inventory_distribution_rows_pg.py` の GAS 同一性テストが緑。`test_distribution_rows_sql_is_pinned` は、固定値を新しい SQL に更新する（差分は §4-1 の3か所だけであることを PR で示す） |
+| B5 ID 指定で、非アクティブな投稿の行も1件取れる。ID を指定しないときは、今までどおり非アクティブを除く | `backend/tests/test_tcg_analysis_review.py` に追加（pg 実体。無ければ同ファイルの既存方式） |
 | B6 ID 指定で、super admin 以外は 403。UUID でない値は 422。51件は 422 | 同上 |
 | F1 super admin が行をクリックすると、パネルが開き、原文・Gemini・システムの3つが出る | 新規 `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx` |
 | F2 super admin 以外は、行をクリックしてもパネルが開かない（API を呼ばない） | 同上 |
 | F3 チェック欄のクリックでは、パネルが開かない | 同上 |
 | F4 まとめた行（ID 2件）は、タブ2つで切り替えられる | 新規 `frontend/src/features/inventory/InventoryRowDrawer.test.tsx` |
-| F5 viewOnly では、「確認済み」・取消・修正ウィザードが出ない | `ReviewItemDrawer.test.tsx` に追加 |
-| F6 viewOnly 無しでは、今までの表示・操作のまま | 既存 `ReviewItemDrawer.test.tsx`・`NeedsReviewTabsPanel*.test.tsx` が全部緑 |
-| F7 i18n・UI ガバナンス違反が0件 | `frontend-check.yml`・`ui-governance-gate.yml` が緑、`npm run lint` |
+| F5 viewOnly では、「確認済み」・取消・修正ウィザードが出ない | `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx` に追加 |
+| F6 viewOnly 無しでは、今までの表示・操作のまま | 既存 `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`・`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.acked.test.tsx`, `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`, `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.test.tsx` が全部緑 |
+| F7 i18n・UI ガバナンス違反が0件 | `.github/workflows/frontend-check.yml`・`.github/workflows/ui-governance-gate.yml` が緑、`npm run lint` |
 | P1 本番で、super admin が在庫表の行をクリックすると3つが出る | 本番反映後、Evaluator（Sonnet）が tenant_001 で確認し、`docs/ai-agents/evidence-registry.md` に記録。ログインできない場合は、本番 API を super admin トークンで叩いた結果で代える。代えた事実を明記する |
 
 ## 7. リスクと対処
@@ -288,7 +288,7 @@ _BASE_FROM = _base_from()
 - 改訂 r2（2026-10-16、実装中の停止を受けて）:
   - 初版の `_base_from` は、`is_active = TRUE` を f-string の外に出していた。
   - そのため、既存の守りテスト `backend/tests/test_tcg_is_active_filter.py:48-79` が落ちた。このテストは、source_messages を参照する SQL に `is_active = TRUE` か `is_current = TRUE` があることを確かめる。
-  - 守りテストは変えない。条件式を f-string の中に置き、ID 指定のときは `ar.is_current = TRUE` で絞る形にした。これは配信行（`tcg_distribution_svc.py:334`）と同じ絞り方で、ADR-158 の型にあたる。
+  - 守りテストは変えない。条件式を f-string の中に置き、ID 指定のときは `ar.is_current = TRUE` で絞る形にした。これは配信行（`backend/app/services/tcg_distribution_svc.py:334`）と同じ絞り方で、ADR-158 の型にあたる。
   - 在庫表の行はすべて is_current なので、取りこぼしは出ない。
   - `_BASE_FROM` の使用は、count・providers・items の内側と外側の4か所。4か所すべてを `base_from` に置き換える。
   - B6 の「super admin 以外は 403」は、認証なしの確認で代えない。`backend/tests/test_inventory_offers_rbac.py` 等の、既存の非 super admin ユーザーの差し替え方式で確認する。

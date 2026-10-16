@@ -36,7 +36,7 @@
   - 原文: `item.raw_text` を ShadowSourcePane に渡す（:191）
   - Gemini 抽出・システム解析: ItemComparison（:195、`readOnly={true}` 固定）
   - 操作:
-    - 「確認済みにする」（:170-176。`canKeep`＝`ackableReasonCodes(...)`、`ReviewFixWizard.tsx:26-31`、v102 だけ）
+    - 「確認済みにする」（:170-176。`canKeep`＝`ackableReasonCodes(...)`、`frontend/src/features/tcg-analysis-review/ReviewFixWizard.tsx:26-31`、v102 だけ）
     - 取消（:179-180）
     - ReviewFixWizard（:201-211。比較表の行を押すと `selectRow` :64-73 で scope が入る）
   - 押せる行: `frontend/src/features/tcg-analysis-review/reviewFixRows.ts:25-45`
@@ -94,7 +94,7 @@
     - **まとめた他の行の ID は捨てられる**
     - まとめは1投稿の中だけ（gkey に ej.id）
   - 最終 SELECT: `_distribution_final_select`（:257-266）
-- GAS 配信: `fetch_output_rows`（`tcg_distribution_svc.py:390-412`）は `merge_same_post=False` の SQL を包む。`_GAS_COLUMNS`（:251-254、固定14列）だけを取り出す。**列を足しても GAS の出力は変わらない。**
+- GAS 配信: `fetch_output_rows`（`backend/app/services/tcg_distribution_svc.py:390-412`）は `merge_same_post=False` の SQL を包む。`_GAS_COLUMNS`（:251-254、固定14列）だけを取り出す。**列を足しても GAS の出力は変わらない。**
 - SQL 固定テスト: `backend/tests/test_inventory_distribution_rows.py:197` `test_distribution_rows_sql_is_pinned`。pg の同一性テスト: `backend/tests/test_inventory_distribution_rows_pg.py`。
 - 在庫表の行は全部 analysis_results 由来。手入力・GAS 由来の行が混ざる経路は無い。
 - 在庫表の行は needs_review=FALSE なので、要確認一覧（`status_tab=NEEDS_REVIEW`）には出ない。在庫表の行は非アクティブな投稿由来もありうる（要確認一覧は is_active=TRUE だけ）。非アクティブ由来の件数は未確認。設計は件数に依存しない形にする（design.md §4-1）。
@@ -114,15 +114,15 @@
 
 ## 6. 並行作業
 
-- open PR で対象ファイルを触るもの: #2692（`inventory_offers.py`、2026-06-29 から更新なし）だけ。
+- open PR で対象ファイルを触るもの: #2692（`backend/app/routers/inventory_offers.py`、2026-06-29 から更新なし）だけ。
 - #4358（閲覧ページ段1）は対象ファイルを触らない。
 - active-work.d に対象ファイルを触る進行中の作業は無い（192件を grep）。
 
 ## 7. テストと実行コマンド
 
 - 関係する既存テスト:
-  - フロント: `ReviewItemDrawer.test.tsx`、`NeedsReviewTabsPanel*.test.tsx`、`InventoryPage.*.test.tsx`
-  - バックエンド: `test_inventory_distribution_rows.py`、`test_inventory_distribution_rows_pg.py`、`test_inventory_list_view.py`、`test_inventory_offers_rbac.py`、`test_tcg_analysis_review.py`
+  - フロント: `frontend/src/features/tcg-analysis-review/ReviewItemDrawer.test.tsx`、`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.acked.test.tsx`, `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.drawer.test.tsx`, `frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.test.tsx`、`frontend/src/pages/inventory/InventoryPage.noechopatch.test.tsx`, `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx`, `frontend/src/pages/inventory/InventoryPage.settings.test.tsx`, `frontend/src/pages/inventory/InventoryPage.singlefetch.test.tsx`, `frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx`
+  - バックエンド: `backend/tests/test_inventory_distribution_rows.py`、`backend/tests/test_inventory_distribution_rows_pg.py`、`backend/tests/test_inventory_list_view.py`、`backend/tests/test_inventory_offers_rbac.py`、`backend/tests/test_tcg_analysis_review.py`
 - コマンド:
   - フロント `npm run build` / `npm run lint` / `npm run test:unit`（`frontend/package.json`）
   - バックエンド `pytest -q --tb=short`（`backend/Makefile:29-31`）/ `make lint`
