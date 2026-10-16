@@ -49,6 +49,7 @@ from app.services.tcg_work_reference import (
     validate_product_id,
     validate_work_id,
 )
+from app.services.v102_human_decisions_svc import apply_value_overrides, load_v102_decisions, v102_analysis_lock_key
 
 logger = logging.getLogger(__name__)
 
@@ -1437,6 +1438,12 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             _raw = {str(i): validate_work_id(value, reference) for i, value in decisions_v4}
             work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
 
+    # 人が直した値の保存と順番にする（保存側 save_value_override と同じ鍵。v102 の解析と同じ。取引内に1回だけ取り、途中の commit まで持つ）
+    session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": v102_analysis_lock_key(str(extraction_job_id))},
+    )
+
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
         text(
@@ -1467,6 +1474,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     now = datetime.now(timezone.utc)
     stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0,
              "skipped_product_corrections": 0}
+    human_decisions = load_v102_decisions(session, [str(row[0]) for row in rows])  # 人が直した値（数量・単価・単位・メモ・販売状況）
 
     for row in rows:
         (
@@ -1688,6 +1696,21 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             review_reasons.append("empty_box_master_unavailable")
         elif empty_class != "none":
             review_reasons.append("empty_box" if empty_class == "positive" else "empty_box_ambiguous")
+        # 人が直した値を重ねる。review_reasons・needs_review・stats は重ねる前の値のまま（v102 と同じ）
+        human = human_decisions.get(str(item_id))
+        if human is not None and not human.values.is_empty:
+            merged = apply_value_overrides(
+                {
+                    "quantity_normalized": quantity_normalized, "price_normalized": price_normalized,
+                    "unit_id": unit_uuid, "unit_canonical": unit_canonical, "unit_resolved": unit_resolved,
+                    "note_ja": note_ja, "status": status_val, "exclusion": exclusion_val,
+                },
+                human.values, unit_canonical_to_uuid, status_entries,
+            )
+            quantity_normalized, price_normalized = merged["quantity_normalized"], merged["price_normalized"]
+            unit_uuid = str(merged["unit_id"]) if merged["unit_id"] is not None else None
+            unit_canonical, unit_resolved = merged["unit_canonical"], merged["unit_resolved"]
+            note_ja, status_val, exclusion_val = merged["note_ja"], merged["status"], merged["exclusion"]
         # Check the saved chosen condition against new values before the UPSERT.
         effective = reanalysis_condition(session, str(item_id), {
             "product_id": product_uuid, "pid_resolved": pid_resolved, "unit_id": unit_uuid, "unit_canonical": unit_canonical,
