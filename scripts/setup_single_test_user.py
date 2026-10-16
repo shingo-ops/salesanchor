@@ -472,6 +472,8 @@ async def _run_create() -> None:
 
         try:
             async with engine.begin() as conn:
+                # ADR-1018 段階③便C: public.users への書込は運営文脈のときだけ通る
+                await conn.execute(text("SET app.is_operator = 'true'"))
                 if db_existing:
                     user_id, _ = db_existing
                     logger.warning(
