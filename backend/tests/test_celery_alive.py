@@ -41,11 +41,12 @@ def test_alive_scheduler_tick_returns_parent_value_and_touches(tmp_path):
 def test_worker_alive_step_start_and_stop():
     worker = MagicMock()
     step = WorkerAliveStep(worker)
-    with patch("app.celery_alive.touch_alive"):
+    with patch("app.celery_alive.touch_alive") as touch_mock:
         step.start(worker)
     worker.timer.call_repeatedly.assert_called_once_with(
-        30.0, touch_alive, (WORKER_ALIVE_PATH,), priority=10,
+        30.0, touch_mock, (WORKER_ALIVE_PATH,), priority=10,
     )
+    touch_mock.assert_called_once_with(WORKER_ALIVE_PATH)
     assert TOUCH_INTERVAL_SECONDS == 30.0
     tref = worker.timer.call_repeatedly.return_value
     step.stop(worker)
