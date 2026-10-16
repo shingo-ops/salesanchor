@@ -2,7 +2,7 @@
 
 > この文書は、super admin が在庫表の行をクリックすると、要確認ページと同じ右から出るパネルで「原文・Gemini抽出・システム解析」が見られるようにする設計です。
 > 親（あるべき姿）: [../../specs/inventory-management/README.md](../../specs/inventory-management/README.md)（開発区分＝既存の延長）
-> 現状の証拠: [recon.md](recon.md)
+> 現状の証拠: [recon.md](recon.md)（docs/handoff/inventory-row-drawer/recon.md）
 > 関連 ADR: ADR-1014（在庫表＝配信行・行の定義は1か所）、ADR-027（i18n）、ADR-144（UI ガバナンス）
 
 ## 1. 目的と KGI
