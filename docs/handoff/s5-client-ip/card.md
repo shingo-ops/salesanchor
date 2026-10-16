@@ -30,6 +30,8 @@
 
 削除後に使われなくなった import（例: `Request` が他で使われていない場合）だけを消す。他の行は触らない。
 
+（追補 2026-10-16: backend/tests/test_real_redis_lockout.py:137 も `"X-Forwarded-For"` → `"X-Real-IP"`。CI で走る試験だった。）
+
 ## 新しい試験
 
 backend/tests/test_client_ip.py（DB 不要。FakeRedis は backend/tests/test_viewer_api.py:66 と同じ形をこのファイル内に置き、monkeypatch で `app.cache._redis` に差す）:
@@ -51,7 +53,7 @@ backend/tests/test_security_hardening.py に追加:
 
 ## 触らない
 
-nginx/nginx.conf、backend/app/routers/line_import_devices.py、backend/app/cache.py、backend/tests/test_real_redis_lockout.py、migrations/、.github/、frontend/、docs/（このカード以外の文書も）。
+nginx/nginx.conf、backend/app/routers/line_import_devices.py、backend/app/cache.py、migrations/、.github/、frontend/、docs/（このカード以外の文書も）。
 
 ## 想定分岐（迷ったら止めて報告）
 

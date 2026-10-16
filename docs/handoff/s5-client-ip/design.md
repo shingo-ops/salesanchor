@@ -56,8 +56,9 @@ def get_client_ip(request: HTTPConnection) -> str:
 | backend/app/routers/viewer.py | :53-60 の `_client_ip` を消し、同じ import を足し、:132 を `get_client_ip(request)` にする |
 | backend/tests/test_security_hardening.py | :555・:584・:613 の `"X-Forwarded-For"` を `"X-Real-IP"` に替える（同じ値）。session_guard の試験を 1 件足す（§5 T7） |
 | backend/tests/test_client_ip.py | 新規（§5 T1〜T6） |
+| backend/tests/test_real_redis_lockout.py | :137 の `"X-Forwarded-For"` を `"X-Real-IP"` に替える（CI で実 Redis を使って走るため。初版の設計で漏れ、CI 失敗で判明） |
 
-触らない: nginx/nginx.conf、backend/app/routers/line_import_devices.py、backend/app/cache.py（回数制限の本体）、backend/tests/test_real_redis_lockout.py（手動実行用）、migrations、deploy.yml、frontend。
+触らない: nginx/nginx.conf、backend/app/routers/line_import_devices.py、backend/app/cache.py（回数制限の本体）、migrations、deploy.yml、frontend。
 
 ## 4. 対象外とその理由
 

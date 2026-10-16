@@ -41,7 +41,7 @@
 ## 4. 試験
 
 【事実】
-- X-Forwarded-For を送る: backend/tests/test_security_hardening.py:555,:584,:613（session_guard）、backend/tests/test_real_redis_lockout.py:137（手動実行用）。
+- X-Forwarded-For を送る: backend/tests/test_security_hardening.py:555,:584,:613（session_guard）、backend/tests/test_real_redis_lockout.py:137（当初「手動実行用」と書いたが誤り。CI の pytest-run-internal で実 Redis を使って走る。2026-10-16 CI 失敗で判明し X-Real-IP へ修正）。
 - X-Real-IP を送る: backend/tests/test_viewer_api.py:140,:288,:405-409（XFF を無視する試験あり）。
 - 関数名に依存する patch: backend/tests/test_event_loop_nonblocking.py:171、backend/tests/test_smoke_auth_least_privilege.py:31（`app.auth.dependencies._get_client_ip`）。
 - X-Forwarded-For を毎回変えてログイン失敗を回す試験は無い。

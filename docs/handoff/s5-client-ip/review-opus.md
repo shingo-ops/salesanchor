@@ -20,7 +20,12 @@
 | 受入条件の検証可能性 | ○ K1 は grep 件数、K2 は CI 試験（変更前に赤を確認）、K3 は本番 DB と nginx 記録の照合、K4 は件数比較 | design §6 |
 | 実装範囲の明確さ | ○ 触るファイル 8 つ・触らないファイルを明記。カードに変更前後を書く | design §3、card.md |
 | 戻し方 | ○ Revert のみ。DB・設定の変更なし | design §8 |
-| 危険パス | 該当なし（migrations/・deploy.yml・本番 scripts/ を含まない）。GO 記録不要 | design §3 |
+| 危険パス | migrations/・deploy.yml・本番 scripts/ は含まない。ただし backend/app/auth・backend/app/routers を含むため process-artifacts gate が GO 記録を求める（初版で「不要」と誤記。CI で判明し PR 本文に委任 GO を記載） | design §3 |
+
+## 審査の見落とし（2026-10-16 追記）
+
+- backend/tests/test_real_redis_lockout.py を「手動実行用」と recon の記述のまま受け入れ、CI で走るかを確かめなかった。CI の失敗で判明し、:137 を X-Real-IP に修正。
+- GO 記録の要否を危険パス 3 種だけで判定し、gate の対象（backend/app/auth・routers 等）を確かめなかった。
 
 ## 未解決事項
 
