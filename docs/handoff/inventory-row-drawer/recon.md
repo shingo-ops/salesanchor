@@ -126,3 +126,39 @@
 - コマンド:
   - フロント `npm run build` / `npm run lint` / `npm run test:unit`（`frontend/package.json`）
   - バックエンド `pytest -q --tb=short`（`backend/Makefile:29-31`）/ `make lint`
+
+---
+
+## 便2 追補 recon（2026-10-16・Gemini 列「—」・システム商品名・Gemini 要約）
+
+PO 指摘（2026-10-16、便1 本番反映後の画面確認）: 「商品名が未解決になっているのだがこれはなぜ？」→ PO 決定「geminiは原文を抽出するだけなので行番号と数量と単価以外は"-"と表示するのが正解でシステムが未解決になっているのは修正したい。それとgeminiの要約もスライドページ内に表示することは出来る？見える化したい」→ 進め方に「合意」。
+
+基準: origin/main 539b0fe41。本番 DB は 2026-10-16 に SELECT のみで確認（生出力 /tmp/CC報告ファイル/inv-drawer-name-db*.txt, inv-drawer-summary-db2.txt, inv-drawer-fix-db.txt）。
+
+### R2-1 なぜ「未解決」か（事実）
+- 本番の既定エンジンは v102（docker-compose.yml:226 `LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}`、2026-10-10 537cb910c 便E で既定切替）。
+- v102 の extraction_items INSERT は id, extraction_job_id, line_start, line_end, raw_price, raw_quantity, source_lines, gemini_index, created_at のみ（backend/app/services/line_analysis_v102_svc.py:497-510）。raw_product_name / raw_unit / raw_state / raw_memo は書かない。設計上も「v102 の件の名前は Gemini の出力ではないので入れない」（docs/handoff/v102-prod-switch/design.md:72）。
+- 本番 DB: raw_product_name が空の件数は 10/9 まで 1日0〜3件、10/10 から全件（10/10 1336/1336 … 10/16 433/433）。例 extraction_items 4b3ba85d-…（L11-12「◎30th CELEBRATIONカードセット 9種セット / 23,000@20」）は raw_quantity=20・raw_price=23,000 以外は空文字。analysis_results.product_id=440301、products.name「MEGA 30th CELEBRATION カードセット（9種セット）」。
+- API: backend/app/services/tcg_analysis_review_svc.py:240,308 `gemini.name = ei.raw_product_name or ""`、:309-314 unit/state/memo も同様。:252,320 で `system.product_title = p.name`（商品マスタ名）を既に返している。:268 `is_v102 = starts_with(ej.prompt_version, :v102_prefix)` を返している。
+- 表示: frontend/src/features/tcg-analysis-review/ItemComparison.tsx:56-57 Gemini 列は `rawValue(item.gemini[key]) || unresolved`。:39 systemCell は name を `item.gemini.name || unresolved`、採用元 geminiExtracted。system.product_title は ItemComparison.tsx で一度も参照されていない（`git log -S product_title -- ItemComparison.tsx` 0件）。この判定の起源は 4b5d526c9（2026-09-02、v6 時代）で、v102 切替時に見直した記録は見つからない。
+- 在庫表タイトルは tcg_distribution_svc.py:293 `COALESCE(p.name,'')`（同じ商品マスタ）。在庫表の名前とスライドの「未解決」が食い違う理由はここ。
+- 比較表は要確認ページ（ReviewItemDrawer.tsx:199）・仕入元詳細（SupplierDetailView.tsx:116）・在庫表スライドで共用。要確認ページの 10/10 以降の行も同じ症状。
+
+### R2-2 i18n キー（事実）
+- `tcgAnalysisReview.notApplicable` = "—"（frontend/src/locales/ja.json:4694, en.json:4694）。ItemComparison.tsx:52 で `na` として作品・商品ID・販売状況の Gemini 列に使用中。
+- `tcgAnalysisReview.unresolved` :4686、`tcgAnalysisReview.systemConfirmed` :4701「System確定」、`tcgAnalysisReview.geminiExtracted` :4700。
+- 既存テスト frontend/src/features/tcg-analysis-review/ItemComparison.test.tsx:38-44, :49, :64-66 が現行の判定を固定している。
+
+### R2-3 Gemini の要約（事実）
+- 保存先は public.extraction_attempts.thought_summaries（jsonb 配列。migrations/20261012_200000_add_extraction_attempts_thought_summaries.sql:2）。書き込みは backend/app/services/tcg_extraction_record_svc.py:133-170。
+- 本番: 記録ありの試行は 10/12 29/78、10/13 以降は全件（10/16 33/33）。配列要素数は最大1、文字数は平均 2541・最大 4126。英語。1つの抽出ジョブ（＝投稿）に1つ。completed の試行が2件以上あるジョブは 228。
+- 索引 ix_pub_extraction_attempts_job_started (extraction_job_id, started_at DESC, id DESC) が本番にある。
+- 画面で表示している部品は無い（frontend で `thought_summar|thoughtSummar` 0件）。読み出しは super admin 専用の診断 API の個別取得（tcg_extraction_record_svc.py:273-295、routers/tcg_diagnostics.py:113-129）だけ。
+- 「ジョブの最新の試行」を選ぶ既存 SQL の型: backend/app/routers/tcg_analysis_dashboard.py:1089-1094 の LEFT JOIN LATERAL（failed 版）。
+- analysis-results の応答型 AnalysisResultItem（backend/app/routers/tcg_analysis_review.py:81-93）。未定義キーは response_model で落ちるため、足すなら型にも足す必要がある。
+- 要確認ページの1ページは20件（NeedsReviewTabsPanel.tsx:25 PAGE_SIZE）、API の上限は 500（tcg_analysis_review.py:126）。
+
+### R2-4 部品（事実）
+- frontend/src/components/ に折りたたみ（Accordion/Disclosure/Details）と長文表示の金型は無い。
+- ReviewItemDrawer.tsx の構成: 理由ブロック :155-191 → TwoColumn（原文 | 比較）:192-206 → 修正ウィザード :207-217。原文・比較の見出しは同ファイルの既存見出しの型を使っている。
+- 原文の折り返し表示の既存 CSS: frontend/src/features/tcg-analysis-review/source-raw-pane.css:56（white-space: pre-wrap）。

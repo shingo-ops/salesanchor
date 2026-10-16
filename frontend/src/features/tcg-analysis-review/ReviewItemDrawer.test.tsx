@@ -518,3 +518,26 @@ describe("ReviewItemDrawer viewOnly (inventory row panel)", () => {
     expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
   });
 });
+
+describe("ReviewItemDrawer Gemini summary", () => {
+  it("C3: shows the summary text (multiple items joined by a blank line)", () => {
+    const { container } = renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: ["first part", "second part"] });
+
+    expect(screen.getByText("Gemini summary")).toBeTruthy();
+    expect(container.ownerDocument.querySelector(".review-item-summary__body")?.textContent).toBe("first part\n\nsecond part");
+    expect(screen.queryByText("No summary recorded")).toBeNull();
+  });
+
+  it("C3: shows the empty message when null or empty", () => {
+    renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: null });
+    expect(screen.getByText("No summary recorded")).toBeTruthy();
+    cleanup();
+    renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: [] });
+    expect(screen.getByText("No summary recorded")).toBeTruthy();
+  });
+
+  it("C3: also shown in viewOnly", () => {
+    render(<ReviewItemDrawer item={{ ...makeItem("pid_unresolved"), thought_summaries: ["abc"] }} viewOnly onClose={() => undefined} onRefresh={async () => undefined} />);
+    expect(screen.getByText("abc")).toBeTruthy();
+  });
+});

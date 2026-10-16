@@ -306,3 +306,71 @@ _BASE_FROM = _base_from()
   - ID 指定 API の権限（B6）
   - 見るだけモードで操作が出ないこと（F5）
   - 要確認パネルの既存動作（F6）
+
+---
+
+## 12. 便2（Gemini 列の「—」表示・システム商品名・Gemini の要約）
+
+根拠: recon.md「便2 追補 recon」R2-1〜R2-4。PO 決定（2026-10-16）:「geminiは原文を抽出するだけなので行番号と数量と単価以外は"-"と表示するのが正解でシステムが未解決になっているのは修正したい。それとgeminiの要約もスライドページ内に表示することは出来る？見える化したい」→「合意」。
+
+### 12-1 目的と KGI
+- K2-1: v102 の行の比較表で、Gemini 列の商品名・単位・状態・メモが「—」になる（「未解決」0件）。行番号・数量・単価の Gemini 列は今と同じ値。
+- K2-2: 比較表の「システム最終結果」の商品名が商品マスタ名（system.product_title）になる。採用元は「System確定」。マスタ未紐付けの行だけ「未解決」。
+- K2-3: スライドに「Geminiの要約」欄が出て、その投稿の最新の完了試行の要約（英語原文）が読める。記録が無い投稿は「要約の記録はありません」。
+
+### 12-2 対象と対象外
+- 対象: ItemComparison.tsx（readOnly と編集側の両方）、ReviewItemDrawer.tsx（要約欄）、feature の CSS、ja/en.json（新キー2つ）、tcg_analysis_review_svc.py（items_sql に LATERAL・応答に thought_summaries）、routers/tcg_analysis_review.py（AnalysisResultItem に任意フィールド）、openapi.json 再生成、テスト。
+- 対象外: v6 の行の表示（値があるので今のまま）、要約の翻訳、「要確認の商品」「理由はありません」見出し（ReviewItemDrawer.tsx:151,157）、manual_values の応答落ち疑い、直す機能（§9・PO 未回答）、DB 変更（migration なし）。
+
+### 12-3 変更前 → 変更後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| Gemini 列 商品名/単位/状態/メモ（v102 行） | 未解決 | — |
+| Gemini 列 行番号/数量/単価 | 値 | 値（不変） |
+| Gemini 列（v6 行） | 値 or 未解決 | 不変 |
+| システム最終結果 商品名 | gemini.name or 未解決／採用元 Gemini抽出値を採用 | system.product_title or 未解決／採用元 System確定 |
+| スライド下部 | なし | 「Geminiの要約」見出し＋本文（pre-wrap・高さ上限でスクロール）／記録なし文言 |
+
+### 12-4 技術設計
+- (A) ItemComparison.tsx:56-57 の Gemini 列: `item.is_v102 && ["name","unit","state","memo"] に該当` のとき既存 `na`（:52 `tcgAnalysisReview.notApplicable`）を出す。:103 付近の編集側にも同じ判定を当てる。判定は1つの関数にまとめ、両方から呼ぶ（判定の分散禁止）。
+- (B) ItemComparison.tsx:38-39 systemCell の name: 値 `item.system.product_title || unresolved`、採用元 `tcgAnalysisReview.systemConfirmed`。v6/v102 を問わない（システムの最終結果は商品マスタが正本。在庫表タイトル tcg_distribution_svc.py:293 と同じ出どころ＝SSOT）。数量・単価は不変。
+- (C) バックエンド: tcg_analysis_review_svc.py の items_sql に
+  `LEFT JOIN LATERAL (SELECT ea.thought_summaries FROM extraction_attempts ea WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed' ORDER BY ea.started_at DESC, ea.id DESC LIMIT 1) eat ON TRUE`
+  を足し、SELECT に `eat.thought_summaries` を加える。応答 dict に `"thought_summaries": list[str] | None` を足す。router の AnalysisResultItem に `thought_summaries: list[str] | None = None` を足す。スキーマ修飾は同ファイルの既存 FROM 句と同じ書き方に合わせる（実装時に実物確認、合わなければ停止）。
+- (C) フロント: ReviewItemDrawer.tsx の TwoColumn（:192-206）の直後に要約欄。見出しは原文・比較の見出しと同じ既存要素・クラスを使う。本文は `<p>` か `<div>` に feature CSS のクラス（white-space: pre-wrap、max-height と overflow-y: auto、色・余白・文字サイズはデザイントークン変数のみ）。要素が複数なら空行区切りで連結。新 i18n キー `tcgAnalysisReview.geminiSummaryTitle`（Geminiの要約 / Gemini summary）、`tcgAnalysisReview.geminiSummaryEmpty`（要約の記録はありません / No summary recorded）。型 AnalysisReviewItem に `thought_summaries?: string[] | null`。
+- 要確認ページも同じ部品なので同じ改善が入る（意図どおり。PO の指摘は共用部品の不具合）。
+
+### 12-5 代替案
+- 名前を v102 の Gemini に出させる → 書き写し方式（v102 設計 design.md:72）に反するので不採用。
+- 要約を別 API で個別取得 → 往復が増え、読み方が2か所になる。既存 API に1列足す方が SSOT。
+- 折りたたみ部品を新設 → 金型が無く、新設は範囲外。高さ上限＋スクロールで足りる。
+
+### 12-6 受け入れ基準と検証方法
+| 基準 | 検証方法 |
+|---|---|
+| A1 v102 行の Gemini 商品名/単位/状態/メモが「—」 | vitest（is_v102=true の行） |
+| A2 v102 行の行番号/数量/単価は値のまま | vitest |
+| A3 v6 行の Gemini 列は従来どおり | vitest（既存期待値維持） |
+| B1 システム商品名=product_title・採用元 System確定 | vitest |
+| B2 product_title 空なら「未解決」 | vitest |
+| C1 API が最新 completed 試行の thought_summaries を返す（failed・古い completed は選ばない） | pytest（PostgreSQL） |
+| C2 試行が無いジョブは null | pytest |
+| C3 要約欄に本文が出る／記録なし文言が出る | vitest |
+| C4 本番で、ある行の API 値と SQL 直接の値が一致 | 本番 SELECT と比較（証跡ファイル） |
+| G1 i18n ja/en 同一キー・ハードコード日本語 0 | frontend lint・check |
+| G2 色直値・生要素 0 | UI governance gate・Lint & Dark Mode Check |
+| G3 PO 画面確認 | PO 目視 |
+
+### 12-7 リスクと対処
+- 応答の重さ: 要約は最大約4KB×20件/ページ。上限500件でも約2MB。許容。
+- LATERAL の遅さ: 索引 ix_pub_extraction_attempts_job_started が並びと一致。本番で EXPLAIN（読み取り）を確認する。
+- 既存テストの期待値変更: ItemComparison.test.tsx :40,:49,:64-66 を is_v102 の条件で書き換え、v6 側の期待は残す。
+- 戻し方: PR を revert（DB 変更なし）。
+
+### 12-8 外部事例
+- 該当なし。理由: 社内の表示条件と既存列の追加であり、外部の数値事例が判断を左右しない。
+
+### 12-9 審査記録（Architect・同一 AI による自己審査）
+- 判定: APPROVE（2026-10-16、Opus）
+- 確認: 正本は商品マスタ（名前）・extraction_attempts（要約）のまま、新しい保存先なし。migration なし。判定関数は1か所。i18n キーは既存1・新規2。権限境界は不変（API の既存権限のまま）。受け入れ基準すべてに検証方法あり。
+- 未解決（実装時に事実確定、合わなければ停止）: items_sql のスキーマ修飾の書き方、見出しの既存クラス名、編集側 :103 の正確な位置。
