@@ -44,7 +44,7 @@ O="$(mk PreToolUse Write content "# rules-ack: 00000000
 create_product(x)" /tmp/a.py | python3 "$G")"
 echo "$O" | grep -q '"permissionDecision": "deny"'; check "T5 古い印はdeny" $?
 # T6
-O="$(mk PreToolUse Bash command 'grep -rn create_product backend' | python3 "$G")"
+O="$(mk PreToolUse Bash command 'grep -rn "create_product(" backend' | python3 "$G")"
 [ -z "$O" ]; check "T6 grepは素通り" $?
 # T7
 O="$(mk PreToolUse Bash command "cat > /tmp/x.py <<'EOF'
@@ -52,6 +52,6 @@ create_product(x)
 EOF" | python3 "$G")"
 echo "$O" | grep -q '"permissionDecision": "deny"'; check "T7 cat heredoc書き込みはdeny" $?
 # T8 (許容する副作用: リダイレクト付きgrepもdeny)
-O="$(mk PreToolUse Bash command 'grep -rn create_product backend > /tmp/out.txt' | python3 "$G")"
+O="$(mk PreToolUse Bash command 'grep -rn "create_product(" backend > /tmp/out.txt' | python3 "$G")"
 echo "$O" | grep -q '"permissionDecision": "deny"'; check "T8 grep+リダイレクトもdeny(許容する副作用)" $?
 exit $FAIL
