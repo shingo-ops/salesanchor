@@ -374,3 +374,75 @@ _BASE_FROM = _base_from()
 - 判定: APPROVE（2026-10-16、Opus）
 - 確認: 正本は商品マスタ（名前）・extraction_attempts（要約）のまま、新しい保存先なし。migration なし。判定関数は1か所。i18n キーは既存1・新規2。権限境界は不変（API の既存権限のまま）。受け入れ基準すべてに検証方法あり。
 - 未解決（実装時に事実確定、合わなければ停止）: items_sql のスキーマ修飾の書き方、見出しの既存クラス名、編集側 :103 の正確な位置。
+
+## 13. 便3（在庫表のスライドで直す・直したら DB・シート・閲覧ページへ反映）
+
+根拠: recon.md「便3 追補 recon」R3-1〜R3-7。PO 決定（2026-10-16）: 質問「スライドから直したら、DB・シート・閲覧ページも更新されるようにしますか？（y/n）」に「y」。
+
+### 13-1 目的と KGI（○×で判定）
+- K3-1: super admin が PC の在庫表で行を押すと、スライドの比較表の行を押して直せる（要確認ページと同じ修正ウィザード）。
+- K3-2: 直すと、正本 analysis_results が直る（新しい保存場所は作らない）。
+- K3-3: 直したあと、在庫表の一覧が自動で取り直され、直した値で表示される（行が在庫の条件から外れたら一覧から消える）。
+- K3-4: 直したあと、シート配信が予約される（v102・v6 とも。本番 TCG_AUTO_DISTRIBUTE=1）。解析中は既存の保留ルールに従う。
+- K3-5: 閲覧ページは既存の1分ごとの作り直しで反映される（新しい仕組みは足さない）。
+- K3-6: super admin 以外・スマホでは今と同じ（スライドは開かない）。
+
+### 13-2 対象と対象外
+- 対象（フロント）: frontend/src/features/inventory/InventoryRowDrawer.tsx、frontend/src/pages/inventory/InventoryPage.tsx（:622 の1行）、テスト（InventoryRowDrawer.test.tsx、InventoryPage.rowdrawer.test.tsx）。
+- 対象（バックエンド）: backend/app/routers/item_corrections.py（v6 の商品付け替え・状態の修正のあとに配信予約を積む）、backend/tests の該当テスト。
+- 対象外: ReviewItemDrawer・ReviewFixWizard・各フォームの中身（そのまま再利用）、realtime の対応表 topics.py（変更しない）、DB 変更（migration なし）、閲覧ページの仕組み、スマホ、super admin 以外への開放、在庫表の一覧で直接編集すること、「このままで良い（確認済み）」の扱いの変更。
+
+### 13-3 変更前 → 変更後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| 在庫表のスライド | 見るだけ（viewOnly） | 比較表の行を押すと修正ウィザードが出る |
+| 直したあとの在庫表 | 自分で絞り込みを変えるまで古いまま | スライドの中身と一覧を自動で取り直す。v102 の再解析が終わった合図（tcg.review）でも、スライドを開いている間は取り直す |
+| v6 の行の商品・状態の修正 | シート配信の予約なし（次に誰かが配信を起こすまで出ない） | 値の修正（item_corrections.py:288-290）と同じく配信を予約する |
+| タブ（1行に複数の抽出）切替 | 内部の選択状態が持ち越される | タブごとに作り直す（key に extraction_item_id） |
+
+### 13-4 技術設計
+- (F1) InventoryRowDrawer.tsx: `viewOnly` を外す。Props に `onChanged: () => void` を足す。`refresh = async () => { await load(); onChanged(); }` を ReviewItemDrawer の onRefresh に渡す。`<ReviewItemDrawer key={current.extraction_item_id} ...>`。
+- (F2) InventoryRowDrawer.tsx: `useRealtimeRefresh([TOPICS.tcgReview], () => { void refresh(); })`。スライドは super admin のときだけ描かれるので、購読も super admin だけ（フック側の変更なし。合図 tcg.review は global で super admin にしか届かない: hub.py:32-41）。
+- (F3) InventoryPage.tsx:622: `<InventoryRowDrawer row={drawerRow} onClose={...} onChanged={() => { void load(); }} />`。load は既存の一覧取得（:195-243、古い応答を捨てる連番つき）をそのまま使う。新しい state は足さない。
+- (B1) item_corrections.py: 商品付け替え（:180-181）と状態（:159-160 → :124-131）で、`saved > 0` かつ v102 でないとき `await run_in_threadpool(schedule_distribution)` を呼ぶ。書き方は :288-290 と同じ。v102 は今どおり再解析→再解析の最後で配信予約（二重予約は Redis nx で1回に畳まれる: tcg_extraction.py:670-693）。
+- 正本: analysis_results（直す API が同じ取引で UPDATE）。在庫表・シート・閲覧ページはすべて analysis_results から作る（ADR-1014）。写し・新しい保存場所なし（SSOT）。
+- 部品: 既存の ReviewItemDrawer・ReviewFixWizard・Tabs をそのまま使う。新しい UI 部品・文言・色なし（i18n キー追加なし）。
+- B1 は要確認ページの v6 の修正にも効く（同じ API）。シートに出ないという同じ欠けが直るだけで、画面の動きは変わらない。
+
+### 13-5 代替案と選んだ理由
+- 在庫表のページ全体で合図を購読 → 再接続通知が super admin 以外にも届き、一覧の取り直しが増える（useRealtimeRefresh.ts:46-48、enabled 引数なし）。スライド内での購読なら super admin だけ。不採用。
+- v6 の修正で再解析も積む → v6 の再解析は別の仕組みで、今回の依頼（反映）には配信予約で足りる。値の修正の v6 経路（:288-290）と同じ扱いにそろえる。
+- 定期配信を beat に足す → 全体の負荷と挙動が変わる。範囲外。
+
+### 13-6 受け入れ基準と検証方法
+| 基準 | 検証方法 |
+|---|---|
+| E1 在庫表のスライドで比較表の行を押すと修正ウィザードが出る（viewOnly でない） | vitest（InventoryRowDrawer.test.tsx） |
+| E2 修正のあと onRefresh で、スライドの再取得と onChanged が両方呼ばれる | vitest |
+| E3 tcg.review の合図でスライドが取り直される | vitest（useRealtimeRefresh を差し替え） |
+| E4 タブ切替で ReviewItemDrawer が作り直される（選択状態が残らない） | vitest |
+| E5 InventoryPage が onChanged で一覧を取り直す | vitest（InventoryPage.rowdrawer.test.tsx） |
+| E6 super admin 以外・スマホではスライドが開かない（既存テスト維持） | vitest 既存 |
+| B1 v6 の商品付け替え（saved>0）で schedule_distribution が1回、再解析は0回 | pytest（test_v102_value_overrides.py:264 と同じ型） |
+| B2 v6 の状態の修正（saved>0）で schedule_distribution が1回 | pytest |
+| B3 v102 の付け替えは今どおり再解析だけ（router から schedule_distribution を直接呼ばない） | pytest |
+| B4 saved=0 なら配信予約なし | pytest |
+| P1 本番: 新しい bundle に InventoryRowDrawer の viewOnly 指定が無い・backend に B1 の行がある | 本番のファイルを grep（証跡） |
+| P2 本番で直したあと配信が走る | Opus は本番データを試しに直さない（実データを変えるため）。代わりに既存の要確認ページ経路の配信ログ（scheduled_distribution）を観測できたときに記録。PO が実際に直したときの確認を G3 とする |
+| G1 i18n・UI ガバナンス・lint・build | CI |
+| G3 PO 画面確認（直して一覧とシートが変わる） | PO 目視 |
+
+### 13-7 リスクと対処
+- 誤操作で在庫のデータを直してしまう: 書き込みは super admin だけ（既存の権限）。修正は item_corrections に履歴が残り、要確認ページと同じ手順で直し直せる。
+- 直した行が在庫の条件から外れて一覧から消える（例: 販売状況を Sold out）: スライドは ID で取り直すので開いたまま中身は見える。一覧からは消えるのが正しい動き（ADR-1014）。
+- 配信の二重予約: Redis nx で60秒に1回へ畳まれる（既存テスト test_v102_human_decisions.py:46-76）。
+- v102 の再解析中は配信が保留（既存の安全装置）。再解析後に予約されるので最終的に出る。
+- 戻し方: PR を revert（DB 変更なし・設定変更なし）。
+
+### 13-8 外部事例
+- 該当なし。理由: 既存の修正部品と既存の配信予約を在庫表から呼べるようにする社内の配線変更で、外部の数値事例が判断を左右しない。
+
+### 13-9 審査記録（Architect・同一 AI による自己審査）
+- 判定: APPROVE（2026-10-16、Opus）
+- 確認: 正本は analysis_results のまま、新しい保存場所・写しなし。migration なし。新しい UI 部品・文言なし。権限境界は不変（書き込み API は既存の require_super_admin、スライドは super admin・PC のみ）。v6 の配信予約は既存の v6 値修正（:288-290）と同じ書き方。受け入れ基準すべてに検証方法あり。
+- 未解決（実装時に事実確定、合わなければ停止）: InventoryRowDrawer.test.tsx・InventoryPage.rowdrawer.test.tsx の既存の viewOnly 前提の期待値（変える場合は理由を残す）、router の状態の経路で v6 判定に使う既存関数（:124-131 の v102_job_id_of_item の戻り値で判定する）。
