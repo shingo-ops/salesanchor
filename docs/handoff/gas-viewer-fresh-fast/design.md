@@ -460,7 +460,7 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 
 ## 維持の仕組み
 
-- 守り手: backend/tests/test_viewer_isolation.py（全 APIRoute を自動で列挙し、VIEWER_ROUTE_ALLOWLIST 以外が閲覧者のトークンで 401 になることを CI で確かめる。段1 で作成）
+- 守り手: backend/tests/test_viewer_isolation.py（全 APIRoute を自動で列挙し、VIEWER_ROUTE_ALLOWLIST 以外が閲覧者のトークンで 401 になることを CI で確かめる。段1 で作成）。トークンを見ない公開ルートは、テストの固定一覧 _PUBLIC_NO_AUTH_ROUTES で例外にしている。一覧に無いルートが 401 以外なら失敗する
 - 在庫の行の定義は、ADR-1014 の1か所のまま変えない。
 - 対象：閲覧者のトークンでアプリの API に入れてしまうこと（在庫表以外が見えること）。作り置きの在庫が、配信の正本（distribution_rows_sql）とずれること。
 

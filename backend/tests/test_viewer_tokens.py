@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -12,8 +13,10 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.auth import self_tokens, viewer_dependencies, viewer_tokens
+from tests.rls_bootstrap import _ensure_public_users
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
@@ -44,6 +47,24 @@ def test_token_shape():
 def test_empty_secret_fails_create_and_decode(monkeypatch):
     token, _ = viewer_tokens.create_viewer_access_token(1)
     monkeypatch.setenv("AUTH_VIEWER_JWT_SECRET", "")
+    with pytest.raises(JWTError):
+        viewer_tokens.create_viewer_access_token(1)
+    with pytest.raises(JWTError):
+        viewer_tokens.decode_viewer_token(token)
+
+
+def test_short_secret_fails_create_and_decode(monkeypatch):
+    token, _ = viewer_tokens.create_viewer_access_token(1)
+    monkeypatch.setenv("AUTH_VIEWER_JWT_SECRET", "s" * 31)
+    with pytest.raises(JWTError):
+        viewer_tokens.create_viewer_access_token(1)
+    with pytest.raises(JWTError):
+        viewer_tokens.decode_viewer_token(token)
+
+
+def test_same_secret_as_app_fails_create_and_decode(monkeypatch):
+    token, _ = viewer_tokens.create_viewer_access_token(1)
+    monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     with pytest.raises(JWTError):
         viewer_tokens.create_viewer_access_token(1)
     with pytest.raises(JWTError):
@@ -166,10 +187,19 @@ def test_viewer_tables_on_postgresql(request):
 
     if os.getenv("GITHUB_ACTIONS") != "true" or not os.getenv("RLS_ADMIN_DATABASE_URL"):
         pytest.skip("PostgreSQL fixture is CI-only (GITHUB_ACTIONS=true and RLS_ADMIN_DATABASE_URL)")
-    conn, _, _ = request.getfixturevalue("pg")
+    conn, _, async_url = request.getfixturevalue("pg")
     cur = conn.cursor()
-    # actor_user_id の FK 先。無ければ作る（tests/rls_bootstrap.py:131 と同じ CREATE TABLE IF NOT EXISTS）
-    cur.execute("CREATE TABLE IF NOT EXISTS public.users (id SERIAL PRIMARY KEY)")
+
+    # actor_user_id の FK 先 public.users は、既存の部品 tests/rls_bootstrap.py の _ensure_public_users で用意する
+    async def _prepare_users():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            async with engine.begin() as aconn:
+                await _ensure_public_users(aconn)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_prepare_users())
     text_sql = (MIGRATIONS / MIGRATION_NAME).read_text()
     cur.execute(text_sql)
     cur.execute(text_sql)  # 2回目もエラーにならない（冪等）

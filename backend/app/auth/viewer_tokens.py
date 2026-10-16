@@ -15,16 +15,25 @@ from jose import JWTError, jwt
 VIEWER_ISSUER = "salesanchor-viewer"
 VIEWER_TOKEN_TTL_SECONDS = 12 * 3600
 _ALGORITHM = "HS256"  # self_tokens.py と同じ
+MIN_SECRET_LENGTH = 32  # self_tokens.py と同じ値
 
 
 def _secret() -> str:
     return os.getenv("AUTH_VIEWER_JWT_SECRET", "")
 
 
-def create_viewer_access_token(viewer_id: int) -> tuple[str, datetime]:
+def _checked_secret() -> str:
+    """鍵を読み、未設定・短すぎる・アプリの鍵と同じ、のどれかなら失敗する。"""
     secret = _secret()
-    if not secret:
-        raise JWTError("AUTH_VIEWER_JWT_SECRET is not set")
+    if len(secret) < MIN_SECRET_LENGTH:
+        raise JWTError(f"AUTH_VIEWER_JWT_SECRET must be at least {MIN_SECRET_LENGTH} characters")
+    if secret == os.getenv("AUTH_JWT_SECRET", ""):
+        raise JWTError("AUTH_VIEWER_JWT_SECRET must differ from AUTH_JWT_SECRET")
+    return secret
+
+
+def create_viewer_access_token(viewer_id: int) -> tuple[str, datetime]:
+    secret = _checked_secret()
     iat = int(time.time())
     exp = iat + VIEWER_TOKEN_TTL_SECONDS
     claims = {
@@ -38,9 +47,7 @@ def create_viewer_access_token(viewer_id: int) -> tuple[str, datetime]:
 
 
 def decode_viewer_token(token: str) -> dict:
-    secret = _secret()
-    if not secret:
-        raise JWTError("AUTH_VIEWER_JWT_SECRET is not set")
+    secret = _checked_secret()
     return jwt.decode(
         token,
         secret,
