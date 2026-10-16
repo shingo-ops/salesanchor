@@ -269,6 +269,72 @@ def test_value_override_v6_saves_and_schedules_distribution_once_without_reanaly
     assert env.enqueued == [] and env.scheduled == [1]
 
 
+@pytest.fixture
+def corr_env(monkeypatch):
+    """商品付け替え・状態の修正（/corrections）の呼び出し先を差し替える。"""
+    state = SimpleNamespace(job_id=None, saved=1, enqueued=[], scheduled=[])
+
+    async def job_of(_db, _item):
+        return state.job_id
+
+    async def save_corrections(_db, **_kwargs):
+        return {"saved": state.saved}
+
+    async def save_condition_review(_db, **_kwargs):
+        return {"saved": state.saved}
+
+    monkeypatch.setattr(router, "v102_job_id_of_item", job_of)
+    monkeypatch.setattr(router, "save_corrections", save_corrections)
+    monkeypatch.setattr(router, "save_condition_review", save_condition_review)
+    monkeypatch.setattr(router, "enqueue_v102_reanalyze", state.enqueued.append)
+    monkeypatch.setattr(router, "schedule_distribution", lambda: state.scheduled.append(1) or True)
+    return state
+
+
+def _correct(condition: bool = False):
+    if condition:
+        review = router.ConditionReviewRequest(
+            request_id=uuid4(), expected_review_version="a" * 64, decision="correct", condition_id="5"
+        )
+        body_ = router.SaveCorrectionsRequest(source_message_id=SOURCE, condition_review=review)
+    else:
+        fields = [router.CorrectionField(field_name="product_id", system_value="1", human_value="2")]
+        body_ = router.SaveCorrectionsRequest(source_message_id=SOURCE, fields=fields)
+    user = SimpleNamespace(email="admin@example.com")
+    return asyncio.run(router.save_item_corrections(str(uuid4()), body_, db=MagicMock(), current_user=user))
+
+
+def test_product_reassign_v6_saved_schedules_distribution_once_without_reanalysis(corr_env):
+    result = _correct()
+    assert result.saved == 1
+    assert corr_env.scheduled == [1] and corr_env.enqueued == []
+
+
+def test_condition_review_v6_saved_schedules_distribution_once(corr_env):
+    result = _correct(condition=True)
+    assert result.saved == 1
+    assert corr_env.scheduled == [1] and corr_env.enqueued == []
+
+
+@pytest.mark.parametrize("condition", [False, True])
+def test_v102_corrections_reanalyze_only_and_router_does_not_schedule_distribution(corr_env, monkeypatch, condition):
+    corr_env.job_id = "job-1"
+
+    async def no_invalid(_db, _values):
+        return []
+
+    monkeypatch.setattr(router, "invalid_product_values", no_invalid)
+    _correct(condition)
+    assert corr_env.enqueued == ["job-1"] and corr_env.scheduled == []
+
+
+@pytest.mark.parametrize("condition", [False, True])
+def test_corrections_saved_zero_schedules_nothing(corr_env, condition):
+    corr_env.saved = 0
+    _correct(condition)
+    assert corr_env.scheduled == [] and corr_env.enqueued == []
+
+
 def test_value_override_v6_rejects_source_mismatch_and_missing_without_scheduling(env):
     env.job = JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE)
     with pytest.raises(HTTPException) as caught:

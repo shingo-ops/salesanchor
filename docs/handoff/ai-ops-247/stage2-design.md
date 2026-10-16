@@ -152,7 +152,7 @@ receivers:
         send_resolved: true
   - name: ops-api
     webhook_configs:
-      - url: https://49.212.137.46/api/v1/ops/alertmanager
+      - url: https://49.212.137.46/api/v1/ops/alertmanager   # → card-stage2-bin-c.md §14 で変更
         send_resolved: true
         max_alerts: 100
         timeout: 10s
@@ -161,7 +161,7 @@ receivers:
             type: Bearer
             credentials_file: /etc/alertmanager/secrets/ops-ingest-token
           tls_config:
-            server_name: api.salesanchor.jp
+            server_name: api.salesanchor.jp   # → card-stage2-bin-c.md §14 で変更
 ```
 
 - IP 直と `server_name` は T4 の Prometheus と同じ形（名前で引くと Cloudflare など途中の経路で送り元の IP が変わり、nginx の IP 制限に当たるおそれがあるため）

@@ -59,12 +59,23 @@ def _needs_boundary(normalized: str) -> bool:
     return len(normalized) <= _SHORT_VALUE_MAX_LEN or normalized.isdigit()
 
 
+# 数字だけの値は、金額の一部（1,151 / @151 / ¥151 / 151,000 / 151円）では境界ありとしない
+_PRICE_LEFT_GUARD = r"(?<![0-9][,.])(?<![@¥$])"
+_PRICE_RIGHT_GUARD = r"(?![,.][0-9])(?!円)"
+
+
 def has_word_boundary(folded_text: str, value: str) -> bool:
-    """fold_for_match 済みの文字列の中に、前後が英字・数字でない（または端の）value があるか。"""
+    """fold_for_match 済みの文字列の中に、前後が英字・数字でない（または端の）value があるか。
+
+    value が数字だけのときは、金額の一部になっている出現も除く。
+    """
     needle = fold_for_match(value).strip()
     if not needle:
         return False
-    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", folded_text) is not None
+    left, right = r"(?<![a-z0-9])", r"(?![a-z0-9])"
+    if needle.isdigit():
+        left, right = left + _PRICE_LEFT_GUARD, right + _PRICE_RIGHT_GUARD
+    return re.search(left + re.escape(needle) + right, folded_text) is not None
 
 
 def has_left_word_boundary(folded_text: str, value: str) -> bool:

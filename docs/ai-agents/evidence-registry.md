@@ -3492,3 +3492,31 @@ tradeoff: 実画面での目視は未実施（エージェントに super admin 
 decision: 便2を本番反映。パネルから直す機能（design.md §9）は PO の y/n 待ちのまま。
 follow_up: PO が本番のスライドで Gemini 列「—」・商品名＝マスタ名・要約欄を目視（G3）。
 ```
+
+```text
+id: EV-20261016-INVENTORY-DRAWER-EDIT-DEPLOY
+date: 2026-10-16
+agent: Claude Code (Opus 設計・審査・GO / Sonnet 調査・実装)
+task: 在庫表スライド便3（在庫表のスライドで直す・直したら DB・シート・閲覧ページへ反映）の本番反映記録
+scope: frontend InventoryRowDrawer（viewOnly 解除・onRefresh でスライドと一覧を取り直す・tcg.review 購読・タブごとに作り直し）/ InventoryPage、backend item_corrections.py（v6 の商品付け替え・状態修正のあとにシート配信を予約）。DB 変更なし。設計 docs/handoff/inventory-row-drawer/design.md §13、recon「便3 追補 recon」
+evidence:
+  - type: command
+    reference: PR #4389 / merge 394b1f1ebd3d42e122f0e88dedb82de5f46939b9（2026-10-16T09:52:29Z）/ Deploy 38883437812（success 2026-10-16T09:57:26Z）
+    summary: 必須CI 全合格（process-artifacts gate・guard-authoring/evaluation 含む、head 42bfd857）。backend コンテナ再起動 09:54:33Z・frontend 09:55:02Z。
+  - type: command
+    reference: 本番 backend コンテナ /app/app/routers/item_corrections.py:124,162,186、celery-worker 同ファイル _after_condition_review_saved 2件
+    summary: v6 の修正後に配信予約を積むコードが反映済み（P1）。
+  - type: command
+    reference: 本番 frontend main-Bi5UPq-D.js の InventoryRowDrawer 部分（/tmp/CC報告ファイル/inv-edit-p1-bundle.txt）
+    summary: ReviewItemDrawer へ viewOnly を渡していない・onRefresh はスライド再取得＋onChanged・key=extraction_item_id・tcg.review 購読を確認（P1）。
+  - type: command
+    reference: 本番 printenv TCG_AUTO_DISTRIBUTE（backend=1・celery-worker=1、2026-10-16 読み取り）
+    summary: 直したあとの配信予約が実際に配信まで進む設定であることを確認。
+  - type: external
+    reference: GO #4389（POの委任に基づくClaude Opus発行。PO 2026-10-16 の回答「y」と一任発言が根拠。PO 本人の GO 発言ではない）
+    summary: PR本文に GO記録、確認済みコメントと GO コメントを付与。若い番号の #4383/#4384/#4387 は BEHIND、#4386 は BLOCKED でマージ可能状態でないことを確認してからマージ。
+confidence: high
+tradeoff: 本番データを試しに直す確認はしていない（実データを変えるため、設計 §13-6 P2）。実画面の操作は未実施（エージェントに super admin のログイン手段なし）。動作はCIのテスト（E1〜E5・B1〜B4）とコンテナ内コードで確認。
+decision: 便3を本番反映。
+follow_up: PO が本番の在庫表で行を開いて直し、一覧・シート・閲覧ページが変わるかを目視（G3）。
+```

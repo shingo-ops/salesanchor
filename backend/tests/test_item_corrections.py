@@ -188,7 +188,7 @@ async def test_condition_review_accepts_integer_string(super_admin_override):
 
     save = AsyncMock(return_value={"saved": 1})
     with patch("app.routers.item_corrections.save_condition_review", new=save), patch(
-        "app.routers.item_corrections._enqueue_reanalyze_if_v102", new=AsyncMock()
+        "app.routers.item_corrections._after_condition_review_saved", new=AsyncMock()
     ):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             r = await client.post(
