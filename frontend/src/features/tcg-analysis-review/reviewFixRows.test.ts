@@ -18,6 +18,11 @@ describe("fixRowsOf", () => {
       productId: { scope: "product", value: null },
       work: { scope: "product", value: null },
       name: { scope: "product", value: null },
+      quantity: { scope: "value", value: null },
+      price: { scope: "value", value: null },
+      unit: { scope: "value", value: null },
+      memo: { scope: "value", value: null },
+      saleStatus: { scope: "value", value: null },
     });
   });
 
@@ -54,9 +59,10 @@ describe("fixRowsOf", () => {
     expect(rows.state?.value).toBe("EMPTY-BOX-LABEL");
   });
 
-  it("v6 item: other rows are not listed (not fixable); name follows the product scope", () => {
+  it("v6 item: the source position row is not listed (not fixable); the value rows are fixable; name follows the product scope", () => {
     const rows = fixRowsOf(makeItem({}, review()), t);
-    for (const key of ["quantity", "price", "unit", "memo", "sourcePosition", "saleStatus"]) expect(rows[key]).toBeUndefined();
+    expect(rows.sourcePosition).toBeUndefined();
+    for (const key of ["quantity", "price", "unit", "memo", "saleStatus"]) expect(rows[key].scope).toBe("value");
     expect(rows.name).toEqual({ scope: "product", value: null });
   });
 
@@ -70,6 +76,15 @@ describe("fixRowsOf", () => {
     expect(rows.work.scope).toBe("product");
     expect(rows.state.scope).toBe("condition");
     for (const key of ["quantity", "price", "unit", "memo", "saleStatus"]) expect(rows[key]).toEqual({ scope: "value", value: null });
+  });
+
+  it("V1: a v6 item lists name, productId, work (product) and the five value rows; state only for non-empty-box condition reviews", () => {
+    const base = { ...makeItem({ pid_basis: "MANUAL", product_id: "PM-1", product_title: "Title", work_name: "Work" }, null), is_v102: false, manual_values: { quantity: "5" } };
+    const rows = fixRowsOf(base, t);
+    expect(Object.keys(rows).sort()).toEqual(["memo", "name", "price", "productId", "quantity", "saleStatus", "unit", "work"]);
+    for (const key of ["name", "productId", "work"]) expect(rows[key].scope).toBe("product");
+    expect(rows.quantity).toEqual({ scope: "value", value: "5" });
+    for (const key of ["price", "unit", "memo", "saleStatus"]) expect(rows[key]).toEqual({ scope: "value", value: null });
   });
 
   it("K3: the Fix column shows manual_values for the value rows (memo = note, saleStatus = status)", () => {

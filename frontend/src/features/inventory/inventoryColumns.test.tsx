@@ -8,7 +8,7 @@ const row: InventoryRow = {
   id: "r1", product_id: 2, product_name: "Card", name_en: "En", category: "x", mark: null,
   condition: "sealed", unit: null, offer_type: "in_stock", status: "in_stock", note_ja: null, ship_ja: null,
   merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: "S",
-  unit_price: 10, quantity: 1, tcg_type: null, offered_at: "", release_date: null,
+  unit_price: 10, quantity: 1, tcg_type: null, offered_at: "", release_date: null, extraction_item_ids: [],
 };
 
 afterEach(() => cleanup());

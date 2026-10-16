@@ -84,7 +84,7 @@ export function ReviewValueFixForm({ item, rowKey, onRefresh }: Props) {
       return;
     }
     // 保存は成功済み。一覧の読み直しの失敗は「保存失敗」として出さない
-    setNotice({ variant: "info", title: t("reviewItem.valueFix.saved") });
+    setNotice({ variant: "info", title: t(item.is_v102 === true ? "reviewItem.valueFix.saved" : "reviewItem.valueFix.savedNoReanalyze") });
     try {
       await onRefresh();
     } catch {

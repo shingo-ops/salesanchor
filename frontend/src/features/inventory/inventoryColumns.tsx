@@ -23,6 +23,8 @@ export interface InventoryRow {
   note_ja: string | null;
   ship_ja: string | null;
   merged_count: number;
+  /** 行の元になった extraction_items.id（まとめた行は組の全件）。解析パネル用 */
+  extraction_item_ids: string[];
   posted_at: string | null;
   ship_timing: string | null;
   supplier_id: number;

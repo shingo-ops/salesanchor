@@ -49,17 +49,21 @@ def _manual_values(decision: Decisions | None) -> dict[str, str]:
 # 共通 FROM 句（全クエリで再利用）
 # ---------------------------------------------------------------------------
 
-_BASE_FROM = f"""
+def _base_from(*, include_inactive: bool = False) -> str:
+    return f"""
     FROM {TCG_SCHEMA}.analysis_results ar
     JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
     JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-    JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
+    JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND {"ar.is_current = TRUE" if include_inactive else "sm.is_active = TRUE"}
     JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
     LEFT JOIN public.type_master ws ON ws.id = p.work_id
     {review_joins(schema=TCG_SCHEMA)}
 """
+
+
+_BASE_FROM = _base_from()
 
 # ---------------------------------------------------------------------------
 # WHERE 句ビルダー
@@ -75,10 +79,15 @@ def _build_where(
     unregistered_only: bool,
     unresolved_unit_only: bool,
     work_id: str | None = None,
+    extraction_item_ids: list[str] | None = None,
 ) -> tuple[str, dict]:
     """フィルタ条件を WHERE 句と bind パラメータに変換する。"""
     conditions: list[str] = []
     params: dict = {}
+
+    if extraction_item_ids is not None:
+        conditions.append("ei.id = ANY(CAST(:item_ids AS uuid[]))")
+        params["item_ids"] = extraction_item_ids
 
     if query:
         conditions.append(
@@ -175,6 +184,7 @@ async def fetch_analysis_results(
     unresolved_unit_only: bool = False,
     strip_raw_text: bool = False,
     work_id: str | None = None,
+    extraction_item_ids: list[str] | None = None,
 ) -> dict:
     """
     解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
@@ -190,16 +200,21 @@ async def fetch_analysis_results(
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
         work_id=work_id,
+        extraction_item_ids=extraction_item_ids,
     )
+    # ID 指定時は在庫表と同じ範囲（非アクティブな投稿も含む）で引く
+    inactive = extraction_item_ids is not None
+    src = source_cte(schema=TCG_SCHEMA, include_inactive=inactive)
+    base_from = _base_from(include_inactive=inactive)
 
     # 総件数
-    count_sql = f"{source_cte(schema=TCG_SCHEMA)} SELECT COUNT(*) {_BASE_FROM} {where}"
+    count_sql = f"{src} SELECT COUNT(*) {base_from} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
 
     # 提供者一覧（フィルタ後の全仕入元）
-    prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    prov_sql = f"""{src}
         SELECT DISTINCT COALESCE(ps.name, '不明') AS name
-        {_BASE_FROM}
+        {base_from}
         {where}
         ORDER BY name
     """
@@ -207,10 +222,10 @@ async def fetch_analysis_results(
     providers = [r[0] for r in provider_rows]
 
     # アイテム一覧
-    items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    items_sql = f"""{src}
         , result_order_page AS MATERIALIZED (
             SELECT ei.id
-            {_BASE_FROM}
+            {base_from}
             {where}
             ORDER BY {result_order_sql()}
             LIMIT :limit OFFSET :offset
@@ -260,7 +275,7 @@ async def fetch_analysis_results(
                  LIMIT 1),
                 FALSE
             )                                    AS product_confirmed
-        {_BASE_FROM}
+        {base_from}
         JOIN result_order_page ON result_order_page.id = ei.id
         {where}
         ORDER BY {result_order_sql()}

@@ -182,6 +182,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 ship_ja=row.get("ship_ja") or None,
                 status=status_value,
                 merged_count=int(row.get("merged_count") or 1),
+                extraction_item_ids=[str(v) for v in (row.get("extraction_item_ids") or [])],
             )
         )
     return projected
