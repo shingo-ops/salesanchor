@@ -15,7 +15,9 @@
 | 内部エラー | 壊れた JSON 等の入力は exit 0 | unittest.txt |
 | 試験 | `/usr/local/bin/python3 ~/.claude/scripts/tests/test_mac_vm_guard.py`: 8 テスト（サブケース含む）OK | unittest.txt |
 
-H6（7日観測）は未実施。AI が券ファイルを作る操作の既存見張りでの拒否の試験は未実施（実装中に券置き場を ls した命令が既存の permits-guard に止められたことを1回観測）。
+H5 実地（Opus 2026-10-17 00:43 JST）: PO が `! bash scripts/permit-danger.sh "mac vm"` で券を発行 → `colima start -p h5probe --help` 1回目は通り（rc=0、使い方の表示のみ）、ログ `hook_permit_consumed`。2回目は `hook_blocked` で拒否。前後の `colima list` は default・sa-private-ci のみ（h5_first.txt / h5_list_after.txt / h5_log.txt）。→ H1〜H5 ○。
+
+H6（7日観測）は agent-console 予約（2026-10-24 09:00）で確認する。AI が券ファイルを作る操作の既存見張りでの拒否の試験は未実施（実装中に券置き場を ls した命令が既存の permits-guard に止められたことを1回観測）。
 
 ## hooks 仕様の出典
 Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかった。代替として Opus が公式資料を直接確認した（2026-10-17、https://code.claude.com/docs/en/hooks）:
