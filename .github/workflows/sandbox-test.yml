@@ -1,0 +1,39 @@
+name: Sandbox test (manual)
+# 仮想マシン（Docker）が要る試験を GitHub 上で行う手動の試験場。規則: docs/ops/runner-commands.md「仮想マシンが要る試験」
+# 公開リポジトリのためログは公開される。secrets・本番データは使わない。
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: tests/sandbox/<test>.sh の <test>（英小文字・数字・ハイフン）
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: sandbox-test-${{ github.ref }}-${{ inputs.test }}
+  cancel-in-progress: false
+jobs:
+  run:
+    if: github.actor == 'shingo-cc' || github.actor == 'shingo-ops'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Validate test name
+        env:
+          TEST_NAME: ${{ inputs.test }}
+        run: |
+          [[ "$TEST_NAME" =~ ^[a-z0-9-]{1,64}$ ]] || { echo "invalid test name"; exit 1; }
+          test -f "tests/sandbox/${TEST_NAME}.sh" || { echo "tests/sandbox/${TEST_NAME}.sh not found"; exit 1; }
+      - name: Disk before
+        run: df -h /
+      - name: Run
+        env:
+          TEST_NAME: ${{ inputs.test }}
+        run: bash "tests/sandbox/${TEST_NAME}.sh"
+      - name: Disk after
+        if: always()
+        run: df -h /
