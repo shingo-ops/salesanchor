@@ -4029,6 +4029,11 @@
     "deleteAction": "削除",
     "deleteInUse": "この商品は在庫に使用されているため削除できません。",
     "deleteError": "商品の削除に失敗しました。",
+    "product_format_id": "細分類",
+    "formatNeedsWork": "先に作品を選んでください",
+    "notFound": "{{field}}：調べたが存在しない",
+    "requiredMissing": "未入力です（登録に必要な項目です）。",
+    "requiredMissingConfirmable": "未入力です。入力するか、存在しないときは下の「調べたが存在しない」に印を付けてください。",
     "create": "作成"
   },
   "soldOut": {
