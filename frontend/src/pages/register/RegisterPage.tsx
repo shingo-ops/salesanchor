@@ -16,6 +16,7 @@ import { COUNTRIES } from "../../constants/countries";
 import { CountryCombobox } from "./CountryCombobox";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { Radio } from "../../components/Radio";
 
 interface TokenInfo {
   valid: boolean;
@@ -453,26 +454,24 @@ export default function RegisterPage() {
               <p style={{ fontWeight: "var(--font-weight-bold)", marginBottom: "var(--spacing-2)" }}>
                 {t("registration.shippingQuestion")} {requiredMark}
               </p>
-              <label style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", cursor: "pointer" }}>
-                <input
-                  type="radio"
+              <div>
+                <Radio
                   name="shipping_choice"
                   value="proceed"
                   checked={shippingChoice === "proceed"}
                   onChange={() => setShippingChoice("proceed")}
+                  label={t("registration.proceedToRegister")}
                 />
-                {t("registration.proceedToRegister")}
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: "var(--spacing-2)", cursor: "pointer", marginTop: "var(--spacing-1)" }}>
-                <input
-                  type="radio"
+              </div>
+              <div>
+                <Radio
                   name="shipping_choice"
                   value="same"
                   checked={shippingChoice === "same"}
                   onChange={() => setShippingChoice("same")}
+                  label={t("registration.shipToSameAddress")}
                 />
-                {t("registration.shipToSameAddress")}
-              </label>
+              </div>
             </div>
           </div>
         </fieldset>

@@ -18,7 +18,9 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
 - 段階①（permissions）: 本番反映済み（PR #4332、2026-10-15 23:39 JST マージ）。本番で RLS t/t・ポリシー 2 本・123 行不変、アプリ接続役の書込拒否を確認（2026-10-16 01:15）。ロール管理画面の目視は未実施
 - 段階②a（Google カレンダー・Drive 接続設定の 2 表）: 本番反映済み（PR #4347、2026-10-16 02:35 JST マージ）。本番で 2 表 t/t・ポリシー各 1 本・行不変、アプリ接続役で他社文脈 0 行・UPDATE 0 を確認（02:41）。Google 接続の実機確認は未実施
 - 段階②b（suppliers）: 本番反映済み（PR #4349、2026-10-16 06:01 JST マージ）。本番で t/t・ポリシー 4 本・288 行と max(id) 不変、アプリ接続役で文脈なし・他社文脈の共通行 UPDATE 0、運営文脈のみ UPDATE 1 を確認（06:07、ROLLBACK 済み）。反映後の端末取込は未観測
-- 段階③: 設計草案のみ（PO 未承認・実装不可）。[../../handoff/s1-rls-stage3/design-draft.md](../../handoff/s1-rls-stage3/design-draft.md)。方針を PO と決めてから
+- 段階③: 方針は案 C（書込・削除だけ DB で止め、読取は全行可のまま）— PO 2026-10-16「y」。草案 [../../handoff/s1-rls-stage3/design-draft.md](../../handoff/s1-rls-stage3/design-draft.md)
+  - 便A（tenant_paypal_config・registration_tokens）: 本番反映済み（PR #4354、2026-10-16 12:41 JST マージ）。本番で 2 表 t/t・ポリシー各 4 本、行数と md5 が適用前と一致、反映後 30 分の 42501・5xx 0 件を確認（12:46）。本番でのアプリ接続役による書込拒否の実測は未実施（CI の実 PostgreSQL 試験で確認）。反映後の招待リンク使用・PayPal 接続保存は未観測。設計 [../../handoff/s1-rls-stage3a/design.md](../../handoff/s1-rls-stage3a/design.md)
+  - 残り: users・tenants（Celery と運営画面の会社をまたぐ書込の recon が先）、認証トークン 3 表（RLS を付けるか PO 回答待ち）
 
 ## 子文書
 
