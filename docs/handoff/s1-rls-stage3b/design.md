@@ -132,6 +132,6 @@ public.users（便C：ログイン・パスワード再設定・言語/テーマ
 
 ## 維持の仕組み
 
-- 守り手（新設）: backend/tests/test_tenants_rls.py（CI で毎回、会社文脈から書けない・運営文脈で書ける・運営 3 ルートが動く・連鎖削除を検証）。
+- 守り手: backend/tests/test_tenants_rls.py（CI で毎回、会社文脈から書けない・運営文脈で書ける・運営 3 ルートが動く・連鎖削除を検証）。
 - migration は冪等で毎デプロイ再実行されるため、手作業で RLS を外しても次のデプロイで戻る。
 - 状態は docs/specs/tenant-rls/README.md の段階③欄で管理する。

@@ -9,7 +9,7 @@ mode: handoff
 **調査**: Sonnet（読取のみ）。Opus が要所（auth.py:255-300・:85-120・:440-460、staff.py:300-335、super_admin_tenants.py:50-70・:150-170、admin.py:40-70）を原文で再確認済み（/tmp/CC報告ファイル/s1-stage3b/opus-verify.txt）
 **見た場所**: `git archive origin/main` で取り出した backend/app・scripts・migrations・backend/tests 等（作業ツリーは origin/main と大きく違うため見ていない）。取出し先 `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/3b391005-0a9a-425b-b1da-8f3ba95cd1bf/scratchpad/om`、`.../om2`
 **生出力**: `/tmp/CC報告ファイル/s1-stage3b/`（w_sql.txt＝SQL 直書きの書込一覧、w_sql_other.txt＝backend 配下の補助スクリプト等・0 件、w_tests.txt＝試験、m_ddl.txt・m_fk.txt＝表定義と外部キー、orm_ctor.txt＝ORM 生成、app_words.txt＝語の全出現）。g_*.txt は途中の旧基準（e882207ca）の粗い grep で、結論には使っていない
-**手法メモ**: 書込は `find_writes.py`（スクラッチ）で複数行にまたがる SQL も拾った。動的な表名（`{table}` 展開）は §3-N に別掲
+**手法メモ**: 書込は 作業用の検索スクリプト find_writes.py（scratchpad。リポジトリ外）で複数行にまたがる SQL も拾った。動的な表名（`{table}` 展開）は §3-N に別掲
 
 ## 0. 既存 ADR・仕様
 
@@ -99,15 +99,15 @@ mode: handoff
 
 | # | 書込 file:line | 呼出元 | 書込時の会社文脈 |
 |---|---|---|---|
-| S1 | scripts/setup_tenant.py:136 INSERT tenants（`engine.begin()` :122） | 運用スクリプト `setup_tenant.py`（DATABASE_URL の接続） | **文脈なし・新しい会社の作成**。SET app.tenant_id の呼出 0 件（scripts/setup_tenant.py 内） |
-| S2 | scripts/setup_review_tenant.py:150 INSERT tenants | 運用スクリプト `setup_review_tenant.py` | **文脈なし・新しい会社の作成**（文脈を張るのは :207-208 ＝ロール取得時のみ） |
+| S1 | scripts/setup_tenant.py:136 INSERT tenants（`engine.begin()` :122） | 運用スクリプト scripts/setup_tenant.py（DATABASE_URL の接続） | **文脈なし・新しい会社の作成**。SET app.tenant_id の呼出 0 件（scripts/setup_tenant.py 内） |
+| S2 | scripts/setup_review_tenant.py:150 INSERT tenants | 運用スクリプト scripts/setup_review_tenant.py | **文脈なし・新しい会社の作成**（文脈を張るのは :207-208 ＝ロール取得時のみ） |
 | S3 | scripts/setup_review_tenant.py:310（users.tenant_id の付け替え UPDATE）／:323（is_active）／:330（INSERT users） | 同上（_setup_user :287） | **文脈なし・会社をまたぐ**（:310 は他社の行を新しい会社へ移す）。文脈を張るのは :207-208（書込より後の _resolve_role_id）。同一トランザクション `engine.begin()` :292 |
-| S4 | scripts/setup_test_users.py:130 INSERT tenants | 運用スクリプト `setup_test_users.py` | **文脈なし・新しい会社の作成** |
+| S4 | scripts/setup_test_users.py:130 INSERT tenants | 運用スクリプト scripts/setup_test_users.py | **文脈なし・新しい会社の作成** |
 | S5 | scripts/setup_test_users.py:210（is_active）／:217（INSERT users） | 同上（register_user :187） | 文脈なし（書込の後の :236-237 で張る）。【事実】:200-206 のコメントどおり他社の行は UPDATE しない設計 |
 | S6 | scripts/setup_single_test_user.py:201（INSERT users）／:483（is_active UPDATE） | 同名スクリプト（作成モード _run_create :379） | **不確実**。文脈を張る :171-172 は _resolve_role_id の接続。書込は別の `engine.begin()`（:474）で、同じ接続を使い回すかは接続プール次第。書込の後に :496-497 で張り直し |
 | S7 | scripts/setup_single_test_user.py:368 削除（users） | 同スクリプト削除モード（_delete_user_record :352） | あり（:360-361 の SET が :368 の前）。対象は引数の会社の利用者 |
-| S8 | scripts/qa/seed-tenant.sql:92 削除／:99 INSERT users（tenant 6 固定）／:299 UPDATE tenants（id=6 固定） | QA スモーク用 `reset-tenant.sh` が psql で投入 | あり（:66-67 `set_config('app.tenant_id','6',false)`）。ただし【事実】:99 は列 `password_hash` を指定するが、この列は migrations/20260612_150000_drop_password_hash.sql:9 で削除済み＝このスクリプトは現状 INSERT で失敗しうる（RLS とは別件。【未確認】実行の有無） |
-| S9 | scripts/qa/cleanup-smoke-data.sh:107 削除（users の qa- メール） | `cleanup-smoke-data.sh`（psql） | あり（:79-80 の `set_config('app.tenant_id','6',false)`。BEGIN :78 の中） |
+| S8 | scripts/qa/seed-tenant.sql:92 削除／:99 INSERT users（tenant 6 固定）／:299 UPDATE tenants（id=6 固定） | QA スモーク用 scripts/qa/reset-tenant.sh が psql で投入 | あり（:66-67 `set_config('app.tenant_id','6',false)`）。ただし【事実】:99 は列 `password_hash` を指定するが、この列は migrations/20260612_150000_drop_password_hash.sql:9 で削除済み＝このスクリプトは現状 INSERT で失敗しうる（RLS とは別件。【未確認】実行の有無） |
+| S9 | scripts/qa/cleanup-smoke-data.sh:107 削除（users の qa- メール） | scripts/qa/cleanup-smoke-data.sh（psql） | あり（:79-80 の `set_config('app.tenant_id','6',false)`。BEGIN :78 の中） |
 
 - 【事実】scripts の DB 接続は DATABASE_URL（アプリと同じ環境変数。例 setup_tenant.py:438）。【事実】本番では salesanchor_app（§1）。②b の migration は FORCE（migrations/20261016_020000_add_suppliers_rls.sql）。
 - 【事実】migrations 内の users への値書込は migrations/054_add_users_theme.sql:10 の 1 件のみ（migration は jarvis＝rolbypassrls=t で流れる。§1）。
