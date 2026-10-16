@@ -2044,6 +2044,7 @@
     "discardAndSwitch": "破棄して切り替えますか？",
     "customPriority": "カスタム (P{{priority}})",
     "currentColorTitle": "現在の色（{{color}}）",
+    "currentColorBadge": "現在",
     "deleteConfirmNote": "このロールを持つユーザーは自動的に剥奪されます。",
     "priority_1000": "第1順位（最上位）",
     "priority_900": "第2順位",
