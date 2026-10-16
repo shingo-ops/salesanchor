@@ -39,9 +39,9 @@
 | 便 | 目的 | 触る場所 | 危険便 |
 |---|---|---|---|
 | D | 4 サービスに健康診断（healthcheck）を付ける。処置はしない | `docker-compose.yml`・discord-gateway の生存の印を書くコード（`backend/app/discord_gateway/`） | いいえ |
-| E | コンテナの状態を見張りに載せる（記録まで。処置はしない） | `scripts/ops/`（新設）・`monitoring/prometheus/alert_rules.yml`・`docs/runbooks/alerts.md`・prod1 の crontab（PO の `!`）・prod2 の見張り（PO の `!`） | はい（`scripts/`） |
+| E | コンテナの状態を見張りに載せる（記録まで。処置はしない） | scripts/ops/（新設）・`monitoring/prometheus/alert_rules.yml`・`docs/runbooks/alerts.md`・prod1 の crontab（PO の `!`）・prod2 の見張り（PO の `!`） | はい（`scripts/`） |
 | F | 保守 API に「札 auto で未処置の一覧」と「直近の処置の数」の口を足す | `backend/app/routers/ops.py`・試験 | いいえ |
-| G | 応急処置係（再起動とブレーキ） | `scripts/ops/`・処置の一覧（`scripts/ops/first_aid_actions.json`）・`monitoring/prometheus/alert_rules.yml`・`docs/runbooks/alerts.md`・prod1 の crontab（PO の `!`） | はい（`scripts/`） |
+| G | 応急処置係（再起動とブレーキ） | scripts/ops/（新設）・処置の一覧（新設の scripts/ops/first_aid_actions.json）・`monitoring/prometheus/alert_rules.yml`・`docs/runbooks/alerts.md`・prod1 の crontab（PO の `!`） | はい（`scripts/`） |
 | H | deploy の migration 失敗を見張りに載せる（障害記録と page） | `.github/workflows/deploy.yml`・`monitoring/prometheus/alert_rules.yml`・`docs/runbooks/alerts.md` | はい（deploy.yml） |
 
 順番の理由：健康診断が無いと「不健康」という症状が生まれない（D → E）。症状が障害記録に載らないと応急処置係が読む物が無い（E → G）。応急処置係は F の口で「未処置」と「回数」を読む（F → G）。H は D〜G と独立しているので、G の後に行う（同時に 2 つ変えない）。
@@ -76,7 +76,7 @@
 
 ### 便E コンテナの状態を見張りに載せる
 
-- 状態書き係 `scripts/ops/container_state.py`（python3 の標準ライブラリだけ。F15）。prod1 の ubuntu の cron で毎分 1 回、`docker inspect` で 4 サービス（＋参考に backend）の状態を読み、textfile に次の 3 つを書く（F8 の f2-cleanup と同じ mktemp→mv の形）:
+- 状態書き係 新設の scripts/ops/container_state.py（python3 の標準ライブラリだけ。F15）。prod1 の ubuntu の cron で毎分 1 回、`docker inspect` で 4 サービス（＋参考に backend）の状態を読み、textfile に次の 3 つを書く（F8 の f2-cleanup と同じ mktemp→mv の形）:
   - `salesanchor_container_unhealthy{service="..."}`（1 = unhealthy、0 = それ以外）
   - `salesanchor_container_running{service="..."}`（1 = 動いている）
   - `salesanchor_container_state_last_run_timestamp_seconds`（書いた時刻）
@@ -98,12 +98,12 @@
 
 ### 便G 応急処置係
 
-- `scripts/ops/first_aid.py`（python3 の標準ライブラリだけ）。prod1 の ubuntu の cron で毎分 1 回、`flock -n` で二重起動を防ぐ（F19 の穴を塞ぐ）
+- 新設の scripts/ops/first_aid.py（python3 の標準ライブラリだけ）。prod1 の ubuntu の cron で毎分 1 回、`flock -n` で二重起動を防ぐ（F19 の穴を塞ぐ）
 - 保守 API へは `https://api.salesanchor.jp` を prod1 自身の 443 へ向けて呼ぶ（ホスト名は保ち、行き先を prod1 に固定する。届くかは便G のカードの前に PO の `!` で確かめる。§7 V2）。鍵は prod1 の `.env` の OPS_API_TOKEN を読む（F13。新しい鍵は作らない・画面にもログにも出さない）
 - 1 回の流れ:
   1. `GET /control`。halt_all が true なら何もせず終わる（処置 0 件）。保守 API に届かないときも何もしない（親設計 :116）
   2. B7 で「auto で未処置」を読む
-  3. 1 件ごとに、alertname と labels.service を処置の一覧（`scripts/ops/first_aid_actions.json`）と照らす。一覧に無ければ何もしない
+  3. 1 件ごとに、alertname と labels.service を処置の一覧（新設の scripts/ops/first_aid_actions.json）と照らす。一覧に無ければ何もしない
   4. 回数の上限：B8 で同じ service の直近 1 時間の処置を数え、3 回以上なら処置せず `first_aid_result=escalated` を書き、textfile に `salesanchor_first_aid_escalated_timestamp_seconds{service}` を書く（→ 見張り FirstAidEscalated・札 page が Discord と障害記録に上げる）
   5. 起動から 5 分以内のコンテナには処置しない（deploy の作り直し・起動直後と取り合わない。F18）。次の回にもう一度見る
   6. 先に `first_aid_started_at` を書く（同じ障害に 2 回処置しないための札）→ 前の状態（Health・StartedAt・RestartCount）を記録 → `docker compose restart <service>` → 最長 3 分、健康になるのを待つ → 後の状態を記録 → `first_aid_done_at` と `first_aid_result`（recovered/not_recovered）を書く。not_recovered は textfile の escalated にも書いて page に上げる
@@ -166,7 +166,7 @@
 - V1: 便D の健康診断の方式（§2 便D の候補）。celery の signal など公式の仕様に依存するので、便D のカードの前に公式文書（Context7 か公式サイト）と手元の実測で決める。決まるまで便D のカードを出さない
 - V2: prod1 のホストから `api.salesanchor.jp` を prod1 自身に向けて呼べるか（ヘアピン）・ubuntu の cron から docker を操作できるか・prod1 の python3 の版。便E のカードの前に PO の `!`（読み取りだけ）で確かめる
 - V3: （段階2 から）Alertmanager の webhook の失敗の見張り。10/23 に失敗の数を見て決める
-- V4: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `prometheus.yml` を読んで確かめる
+- V4: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる
 - V5: 処置の一覧に CeleryHeartbeatStale（beat か worker か区別できない・F6）を足すか。便G の後、ContainerUnhealthy の実績を見て決める
 
 ## 8. 戻し方
@@ -202,5 +202,5 @@
 ## 維持の仕組み
 
 - 守り手：CI の pytest（便F の絞り込み）・`monitoring/scripts/check_alert_rules.py`（札と手順書リンクの欠け）・`promtool test rules`（便H の見張り）・便7 の毎日の照合（alert_rules.yml の本番と repo のずれ）・FirstAidStale と ContainerStateStale（係そのものの見張り）
-- 担当：処置の一覧（`scripts/ops/first_aid_actions.json`）は ADR-1012 のテーマとして Opus が設計し、足すのは便ごとのカード → PR → 審査 → GO → 反映の順。本番で一覧を手で書き換えない
+- 担当：処置の一覧（新設の scripts/ops/first_aid_actions.json）は ADR-1012 のテーマとして Opus が設計し、足すのは便ごとのカード → PR → 審査 → GO → 反映の順。本番で一覧を手で書き換えない
 - 見直し：便G の後 30 日の障害記録で、成功率・escalated の数・誤判定の数を見て、一覧と上限を見直す（V5 もここで判断）
