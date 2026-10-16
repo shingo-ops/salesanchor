@@ -112,6 +112,8 @@
 - 新規: `backend/tests/test_product_blank_confirmations_pg.py`
 - 変更: `backend/tests/test_tcg_product_import.py`（呼び出しの期待値に `actor` を足すだけ。Opus 追記 10/16）
 - 変更: `backend/tests/test_tcg_product_master.py`（差し替え関数 `_bypass` の戻り値を `email`・`id` を持つ形にするだけ。Opus 追記 10/16）
+- 変更: `backend/tests/test_tcg_work_matching_integration.py`（`pg` の準備の migration 一覧に便1の migration を足すだけ。Opus 追記 10/16）
+- 変更: `backend/tests/fixtures/public_products_test.sql`（products の試験用の定義に `product_format_id INTEGER` 列を足すだけ。本番には 20260920_130000 で既にある列。Opus 追記 10/16）
 - 変更: `frontend/api-contract/openapi.json`（再生成のみ）
 - 変更: `docs/handoff/master-register-required-fields/card-bin1.md`（このカード。§13 報告欄の追記のみ）
 
