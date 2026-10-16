@@ -195,6 +195,8 @@ async def register_user(engine, tenant_id: int, firebase_uid: str, user_data: di
     schema_name = f"tenant_{tenant_id:03d}"
 
     async with engine.begin() as conn:
+        # ADR-1018 段階③便C: public.users への書込は運営文脈のときだけ通る
+        await conn.execute(text("SET app.is_operator = 'true'"))
         existing = await conn.execute(
             text("SELECT id, tenant_id FROM public.users WHERE email = :email"),
             {"email": user_data["email"]},

@@ -20,10 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import (
+    clear_tenant_context,
     get_current_tenant,
     get_current_user,
     require_permission,
     reset_tenant_context,
+    set_tenant_context,
 )
 from app.cache import invalidate_user_permissions
 from app.database import get_db
@@ -304,10 +306,12 @@ async def update_my_locale(
     locale = payload.get("locale", "ja")
     if locale not in ("ja", "en"):
         raise HTTPException(status_code=400, detail="locale は 'ja' または 'en' のみ有効です")
+    await set_tenant_context(db, current_user.tenant_id)
     await db.execute(
         text("UPDATE public.users SET locale = :locale WHERE id = :uid"),
         {"locale": locale, "uid": current_user.id},
     )
+    await clear_tenant_context(db)
     await db.commit()
     return {"locale": locale}
 
@@ -325,10 +329,12 @@ async def update_my_theme(
     theme = payload.get("theme", "light")
     if theme not in ("light", "dark"):
         raise HTTPException(status_code=400, detail="theme は 'light' または 'dark' のみ有効です")
+    await set_tenant_context(db, current_user.tenant_id)
     await db.execute(
         text("UPDATE public.users SET theme = :theme WHERE id = :uid"),
         {"theme": theme, "uid": current_user.id},
     )
+    await clear_tenant_context(db)
     await db.commit()
     return {"theme": theme}
 

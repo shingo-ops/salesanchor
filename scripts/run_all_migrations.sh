@@ -951,3 +951,5 @@ run_sql migrations/20261016_100000_create_ops_incident_tables.sql
 run_sql migrations/20261016_160000_add_paypal_regtoken_write_rls.sql
 
 run_sql migrations/20261016_170000_add_tenants_write_rls.sql
+
+run_sql migrations/20261016_180000_add_users_write_rls.sql
