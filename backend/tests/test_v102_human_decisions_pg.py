@@ -276,7 +276,7 @@ def view_of(pg_fixture, item_id: str) -> dict:
 
 
 def in_needs_review_tab(pg_fixture, item_id: str) -> bool:
-    where, _params = review_svc._build_where(
+    where, params = review_svc._build_where(
         query=None, provider=None, status_tab="NEEDS_REVIEW", review_only=False, unregistered_only=False,
         unresolved_unit_only=False,
     )
@@ -287,7 +287,7 @@ def in_needs_review_tab(pg_fixture, item_id: str) -> bool:
         JOIN {SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         {condition_svc.review_joins(schema=SCHEMA)} WHERE ei.id = CAST(:eid AS uuid)"""
     with Session(pg_fixture[1]) as session:
-        return bool(session.execute(text(sql), {"eid": item_id}).scalar_one())
+        return bool(session.execute(text(sql), {**params, "eid": item_id}).scalar_one())
 
 
 def test_excluded_item_leaves_needs_review_after_ack_but_stays_in_all_and_out_of_distribution(pg, pf):
@@ -434,7 +434,7 @@ def test_k1_multi_fixing_the_middle_item_affects_only_that_item(pg, pf):
 
 
 def in_tab(pg_fixture, item_id: str, tab: str) -> bool:
-    where, _params = review_svc._build_where(
+    where, params = review_svc._build_where(
         query=None, provider=None, status_tab=tab, review_only=False, unregistered_only=False, unresolved_unit_only=False,
     )
     sql = f"""{condition_svc.source_cte(schema=SCHEMA, item_only=True)} SELECT ({where.removeprefix("WHERE ")}) AS hit
@@ -444,7 +444,7 @@ def in_tab(pg_fixture, item_id: str, tab: str) -> bool:
         JOIN {SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         {condition_svc.review_joins(schema=SCHEMA)} WHERE ei.id = CAST(:eid AS uuid)"""
     with Session(pg_fixture[1]) as session:
-        return bool(session.execute(text(sql), {"eid": item_id}).scalar_one())
+        return bool(session.execute(text(sql), {**params, "eid": item_id}).scalar_one())
 
 
 def _revoke(pg_fixture, source_id: str, item_id: str) -> int:
