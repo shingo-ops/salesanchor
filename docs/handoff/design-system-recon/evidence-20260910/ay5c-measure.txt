@@ -1,0 +1,10 @@
+chromium 147.0.7727.15
+light before-ja: content="現在" dataAttr=null fontSize=11.2px color=rgb(113, 128, 150) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -11.2031, 0) whiteSpace=nowrap
+light after-ja: content="現在" dataAttr=現在 fontSize=11.2px color=rgb(113, 128, 150) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -11.2031, 0) whiteSpace=nowrap
+light after-en: content="Current" dataAttr=Current fontSize=11.2px color=rgb(113, 128, 150) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -20.7578, 0) whiteSpace=nowrap
+dark before-ja: content="現在" dataAttr=null fontSize=11.2px color=rgb(148, 163, 184) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -11.2031, 0) whiteSpace=nowrap
+dark after-ja: content="現在" dataAttr=現在 fontSize=11.2px color=rgb(148, 163, 184) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -11.2031, 0) whiteSpace=nowrap
+dark after-en: content="Current" dataAttr=Current fontSize=11.2px color=rgb(148, 163, 184) bottom=-14px left=14px transform=matrix(1, 0, 0, 1, -20.7578, 0) whiteSpace=nowrap
+判定 light: 前ja と 後ja の差=0 / 後ja content="現在" / 後en content="Current" (期待 "Current": OK) / 後en の位置系 前ja との差: transform
+判定 dark: 前ja と 後ja の差=0 / 後ja content="現在" / 後en content="Current" (期待 "Current": OK) / 後en の位置系 前ja との差: transform
+前ja と 後ja の差の合計=0
