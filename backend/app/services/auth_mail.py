@@ -1,4 +1,4 @@
-"""ログイン関連のメール（ADR-1013 便3）。いまはパスワード再設定メールだけ。
+"""ログイン関連のメール（ADR-1013 便3・ADR-1019 段4a-1）。パスワード再設定メール（アプリ用・閲覧ページ用）。
 
 BackgroundTasks から呼ぶ同期関数。DB には触らない。
 ログ・例外文に reset_url・鍵・宛先の全文を出さない。
@@ -38,6 +38,30 @@ Sales Anchor
 """
 
 
+VIEWER_RESET_SUBJECT = "【Sales Anchor】在庫閲覧ページのパスワード再発行 / Inventory viewer password reset"
+
+_VIEWER_RESET_BODY = """Sales Anchor 在庫閲覧ページのパスワード再発行の申請を受け付けました。
+下のリンクから 30 分以内に新しいパスワードを設定してください。
+
+{reset_url}
+
+このリンクは 1 回だけ使えます。
+心当たりがない場合は、このメールを破棄してください。パスワードは変わりません。
+
+---------------------------------------------
+We received a request to reset your Sales Anchor inventory viewer password.
+Please set a new password within 30 minutes using the link below.
+
+{reset_url}
+
+This link can be used only once.
+If you did not request this, please ignore this email. Your password will not change.
+---------------------------------------------
+
+Sales Anchor
+"""
+
+
 def _mask_addr(addr: str) -> str:
     """`@` の前を伏せる（例 t***@gmail.com）。"""
     local, sep, domain = addr.partition("@")
@@ -46,8 +70,8 @@ def _mask_addr(addr: str) -> str:
     return f"{local[:1]}***@{domain}"
 
 
-def send_password_reset_email(to_addr: str, reset_url: str) -> None:
-    """BackgroundTasks から呼ぶ同期関数。例外は外に出さずログに残す（応答はもう返っている）。"""
+def _send_reset_mail(to_addr: str, reset_url: str, subject: str, body: str) -> None:
+    """再設定メールの送信部（アプリ用・閲覧ページ用で共通）。例外は外に出さずログに残す。"""
     settings = smtp_settings()
     if settings is None:
         logger.info("[auth_mail] SMTP not configured, skipping password reset mail")
@@ -56,8 +80,8 @@ def send_password_reset_email(to_addr: str, reset_url: str) -> None:
         msg = MIMEMultipart("alternative")
         msg["From"] = settings.mail_from
         msg["To"] = to_addr
-        msg["Subject"] = RESET_SUBJECT
-        msg.attach(MIMEText(_RESET_BODY.format(reset_url=reset_url), "plain", "utf-8"))
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body.format(reset_url=reset_url), "plain", "utf-8"))
 
         with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
             smtp.starttls()
@@ -67,3 +91,13 @@ def send_password_reset_email(to_addr: str, reset_url: str) -> None:
     except Exception as e:  # noqa: BLE001
         # 例外文に宛先・URL・パスワードが入り得るため、型名だけを残す
         logger.error("[auth_mail] password reset mail failed (to=%s): %s", _mask_addr(to_addr), type(e).__name__)
+
+
+def send_password_reset_email(to_addr: str, reset_url: str) -> None:
+    """BackgroundTasks から呼ぶ同期関数。例外は外に出さずログに残す（応答はもう返っている）。"""
+    _send_reset_mail(to_addr, reset_url, RESET_SUBJECT, _RESET_BODY)
+
+
+def send_viewer_password_reset_email(to_addr: str, reset_url: str) -> None:
+    """閲覧ページ用の再発行メール（ADR-1019）。BackgroundTasks から呼ぶ。"""
+    _send_reset_mail(to_addr, reset_url, VIEWER_RESET_SUBJECT, _VIEWER_RESET_BODY)
