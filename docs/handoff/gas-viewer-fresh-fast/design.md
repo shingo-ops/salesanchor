@@ -10,12 +10,12 @@ mode: handoff
 
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 
-**対象ADR**: ADR-1019（草案・Proposed。`docs/adr/ADR-1019-inventory-viewer-separate-accounts.md`）  
+**対象ADR**: ADR-1019（Accepted 2026-10-16。`docs/adr/ADR-1019-inventory-viewer-separate-accounts.md`）  
 **recon**: docs/handoff/gas-viewer-fresh-fast/recon.md ／ docs/handoff/gas-viewer-fresh-fast/security-recon.md  
 **審査**: r1 REVISE（Blocking 2、Non-blocking 11。/tmp/CC報告ファイル/viewer_design_review.txt）→ r2 REVISE（Blocking 1、Non-blocking 9。/tmp/CC報告ファイル/viewer_design_review_r2.txt）→ r3 REVISE（Blocking 1、Non-blocking 7。/tmp/CC報告ファイル/viewer_design_review_r3.txt）→ r4 で全件に対応し、PO 決定 Q2a（メールのリンクでログイン）を反映 → r4 REVISE（Blocking 1、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r4.txt）→ r5 で全件に対応 → r5 APPROVE（Blocking 0、Non-blocking 6。/tmp/CC報告ファイル/viewer_design_review_r5.txt）→ 本版で N-34〜N-39 を反映した（KPI の重複の指摘は、実物に重複が無いため対応なし）→ r5 の後に、PO 決定（Q2b〜Q9、期限の延長、ログイン記録）、外部事例、ルール点検（/tmp/CC報告ファイル/viewer_rules_check.md）への対応を足した → r6 REVISE（Blocking 7、Non-blocking 14。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r6.txt）→ 本版で B-2〜B-6 と N-1〜N-14 に対応した。B-1 は Q11、B-7 は履歴の名前の扱いとして PO 決定待ち → r7 REVISE（Blocking 1、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r7.txt）→ 本版で B-1・N-1〜N-9 に対応し、PR #4293 で委任を PR の GO に絞ったことに合わせて操作の GO を PO 本人に直した（Q12 を追加）→ r8 APPROVE（Blocking 0、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_design_review_r8.txt）→ r8-N-1〜N-9 に対応した → r9 REVISE（Q14 で D4 をアプリと同じ部品に書き直した版。Blocking 3、Non-blocking 10。要点は review-fable.md の r9）→ 本版で B-r9-1〜3・N-r9-1〜10 に対応した → r10 REVISE（Blocking 1、Non-blocking 8。審査は Opus。/tmp/CC報告ファイル/viewer_r9/review_r10.txt）→ 本版で B-r10-1・N-r10-1〜8 に対応した → r11 REVISE（Blocking 1、Non-blocking 7。審査は Opus。/tmp/CC報告ファイル/viewer_r9/review_r11.txt）→ 本版で B-r11-1・N-r11-1〜7 に対応した → r12 APPROVE（Blocking 0、Non-blocking 3。審査は Opus。/tmp/CC報告ファイル/viewer_r9/review_r12.txt）→ N-r12-1〜3 を反映した → r13（PO 決定 2026-10-16 で D1 を email＋パスワードに、D5 を申込コードに書き直し、D6 を追加）→ r13 REVISE（Blocking 2、Non-blocking 9。審査は Opus。/tmp/CC報告ファイル/viewer_r13_review/）→ r14 で全件に対応 → r14 APPROVE（Blocking 0、Non-blocking 7。審査は Opus。/tmp/CC報告ファイル/viewer_r14_review/review_r14.txt）→ N-r14-1〜7 を反映した。PO の承認（ADR-1019 は Proposed のまま）と §PO 決定待ち が残る  
 **日付**: 2026-10-15  
 **担当**: Planner（Claude Opus）  
-**状態**: 設計案（草案）。PO 決定待ちの項目が残っている。段ごとの着手の可否は §PO 決定待ち の各項に従う（審査 r8-N-6）。
+**状態**: PO 承認済み（2026-10-16 チャット「y」：設計を承認し実装に進む）。PO 決定待ちの項目は残っている。段ごとの着手の可否は §PO 決定待ち の各項に従う（審査 r8-N-6）。
 
 ---
 

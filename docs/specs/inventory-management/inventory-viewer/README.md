@@ -6,7 +6,7 @@
 - 親: [在庫管理](../README.md)（索引 [docs/specs/README.md](../../README.md)）
 - あるべき姿（PO の言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGI と運用: [kgi.md](./kgi.md)
-- ステータス: あるべき姿・KGI は PO の発言（2026-10-14〜15）から作成。設計は草案（r5 APPROVE の後に追加あり・r6 審査待ち）。実装未着手。
+- ステータス: あるべき姿・KGI は PO の発言（2026-10-14〜15）から作成。設計は r14 APPROVE、PO 承認済み（2026-10-16「y」）。実装は段1から着手する。
 
 ## 子文書
 
