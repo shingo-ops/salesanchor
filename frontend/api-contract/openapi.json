@@ -7757,6 +7757,19 @@
       },
       "CreateProductBody": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7783,6 +7796,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "title": "Product Kind Id",
@@ -7821,6 +7845,19 @@
       },
       "CreateProductRequest": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7856,6 +7893,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "default": "",
@@ -23843,6 +23891,26 @@
       "ProductDetailUpdate": {
         "additionalProperties": false,
         "properties": {
+          "blank_confirmations": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "name_en",
+                    "mark",
+                    "release_date",
+                    "exclude_keywords"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blank Confirmations"
+          },
           "english_title": {
             "maxLength": 5000,
             "title": "English Title",
@@ -23891,6 +23959,17 @@
               }
             ],
             "title": "Product Category Id"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "anyOf": [
