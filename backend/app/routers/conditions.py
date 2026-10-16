@@ -27,6 +27,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.condition import (
     ConditionAliasCreate,
     ConditionAliasResponse,
@@ -504,7 +505,8 @@ async def import_conditions_commit(
         await reset_tenant_context(db, tenant_id)  # ADR-072
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"CONDITION_IMPORT_COMMIT_ERROR: {exc}") from exc
+        log_hidden_error("conditions.import_conditions_commit", exc)
+        raise HTTPException(status_code=500, detail="CONDITION_IMPORT_COMMIT_ERROR") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
 
@@ -579,7 +581,8 @@ async def create_condition_alias(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"重複または FK 違反: {exc.orig}")
+        log_hidden_error("conditions.create_condition_alias", exc)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="重複または FK 違反")
     row = result.mappings().first()
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072

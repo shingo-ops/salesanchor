@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable)
 
 
+def log_hidden_error(where: str, exc: BaseException) -> None:
+    """応答に出さない例外の中身を backend のログにだけ残す（docs/specs/db-error-detail/）。
+
+    応答の detail には例外の文字列を入れない。SQL 文・入力値・制約名が含まれるため。
+    """
+    logger.error("%s: %s", where, exc, exc_info=exc)
+
+
 def handle_db_exceptions(func: F) -> F:
     """SQLAlchemy例外をHTTPエラーに変換するデコレーター。
 
