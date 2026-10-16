@@ -5,17 +5,17 @@
 
 ## 1. 既存 ADR・設計の検索結果
 - `git grep -i "数字境界\|word boundary\|has_word_boundary" docs/adr/` の結果、関係するのは ADR-154 の1か所だけ。
-  - `docs/adr/ADR-154*.md:90`「…数字境界…の未確定契約を維持する」。境界の決まりを守るとだけ書いてあり、今回の変更と食い違わない。
+  - `docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:90`「…数字境界…の未確定契約を維持する」。境界の決まりを守るとだけ書いてあり、今回の変更と食い違わない。
 - 既存の設計: `docs/handoff/line-match-short-boundary/design.md`（PR-3b）
   - `docs/handoff/line-match-short-boundary/design.md:8`「数字だけ」の値は前後が英字・数字でないときだけ一致。
   - `docs/handoff/line-match-short-boundary/design.md:9` 除外ワードは変えない。
   - `docs/handoff/line-match-short-boundary/design.md:16` 受け入れ基準「「151」が金額に当たらない」。ただし `,` や `@` は英数字ではないため、「@151,000円」の形では満たされていない（下記 3.）。
 
 ## 2. 対象コード（実物）
-- `/Users/tanizawashingo/worktrees/salesanchor/release-line-match-price-digit-boundary/backend/app/services/extraction_judgement_svc.py:57-59` `_needs_boundary`：2文字以下、または数字だけの値は境界を条件にする。
-- `.../backend/app/services/extraction_judgement_svc.py:62-67` `has_word_boundary`：正規表現 `(?<![a-z0-9])` + needle + `(?![a-z0-9])`。
-- `.../backend/app/services/extraction_judgement_svc.py:70-75` `has_left_word_boundary`：除外ワード用（今回触らない）。呼び出しは同ファイル `:318`。
-- `.../backend/app/services/extraction_judgement_svc.py:201-215` `_value_hits`：`has_word_boundary` を呼ぶ唯一の場所（`:214`）。品番・記号と検索ワードの各トークンの両方がここを通る。
+- `backend/app/services/extraction_judgement_svc.py:57-59` `_needs_boundary`：2文字以下、または数字だけの値は境界を条件にする。
+- `backend/app/services/extraction_judgement_svc.py:62-67` `has_word_boundary`：正規表現 `(?<![a-z0-9])` + needle + `(?![a-z0-9])`。
+- `backend/app/services/extraction_judgement_svc.py:70-75` `has_left_word_boundary`：除外ワード用（今回触らない）。呼び出しは同ファイル `:318`。
+- `backend/app/services/extraction_judgement_svc.py:201-215` `_value_hits`：`has_word_boundary` を呼ぶ唯一の場所（`:214`）。品番・記号と検索ワードの各トークンの両方がここを通る。
 - `match_text_g2` を呼ぶ5か所（すべて上の関数を共有）:
   - `backend/app/services/gemini_raw_copy_v102_product_first.py:647-648`
   - `backend/app/services/gemini_raw_copy_v102_followup.py:48`

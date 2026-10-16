@@ -91,5 +91,5 @@ def has_word_boundary(folded_text: str, value: str) -> bool:
 
 ## 11. 審査（Opus・同一AIによる自己審査）
 - 判定: APPROVE
-- 根拠: 既存設計 `line-match-short-boundary/design.md:16` の意図と一致し、ADR-154:90 と食い違わない。変更は共有関数1か所で、全5経路に同じく効く。試算で変化は狙いの1行。
+- 根拠: 既存設計 `docs/handoff/line-match-short-boundary/design.md:16` の意図と一致し、`docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:90` と食い違わない。変更は共有関数1か所で、全5経路に同じく効く。試算で変化は狙いの1行。
 - 未解決: なし（「151円」型の品番は弊害欄の対処で足りる）。
