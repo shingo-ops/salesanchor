@@ -552,7 +552,7 @@ class TestSessionGuardMiddleware:
                     "/api/test",
                     headers={
                         "Authorization": f"Bearer {token}",
-                        "X-Forwarded-For": "10.0.0.99",
+                        "X-Real-IP": "10.0.0.99",
                     },
                 )
 
@@ -581,7 +581,7 @@ class TestSessionGuardMiddleware:
                     "/api/test",
                     headers={
                         "Authorization": f"Bearer {token}",
-                        "X-Forwarded-For": "203.0.113.1",
+                        "X-Real-IP": "203.0.113.1",
                     },
                 )
 
@@ -610,13 +610,42 @@ class TestSessionGuardMiddleware:
                     "/api/test",
                     headers={
                         "Authorization": f"Bearer {token}",
-                        "X-Forwarded-For": "185.0.0.1",  # 別プレフィックス（185）
+                        "X-Real-IP": "185.0.0.1",  # 別プレフィックス（185）
                     },
                 )
 
         assert resp.status_code == 401
         body = resp.json()
         assert body.get("code") == "SESSION_COMPROMISED"
+
+    async def test_xff_change_alone_does_not_trigger_session_compromised(self):
+        """T7(S5): X-Real-IP は同じで X-Forwarded-For だけが別プレフィックスに変わっても 401 にならない。"""
+        stored_data = json.dumps({
+            "ip": "10.0.0.1",
+            "prefix": "10",
+            "ts": int(time.time()) - 60,  # 1分前（5分以内）
+        })
+
+        mock_redis = AsyncMock()
+        mock_redis.get = AsyncMock(return_value=stored_data)
+        mock_redis.setex = AsyncMock()
+
+        app = self._make_app()
+        token = _make_jwt()
+
+        with patch("app.cache._redis", mock_redis):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.get(
+                    "/api/test",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "X-Real-IP": "10.0.0.1",
+                        "X-Forwarded-For": "185.0.0.1",  # 別プレフィックス（読まれない）
+                    },
+                )
+
+        assert resp.status_code == 200
 
     async def test_session_guard_redis_down_fail_open(self):
         """Redis未接続時は fail-open（通過許可）とする。"""
