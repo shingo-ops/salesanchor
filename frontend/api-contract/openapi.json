@@ -634,6 +634,20 @@
           },
           "system": {
             "$ref": "#/components/schemas/SystemFields"
+          },
+          "thought_summaries": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thought Summaries"
           }
         },
         "required": [

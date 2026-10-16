@@ -4699,6 +4699,8 @@
     "noCorrection": "No correction",
     "geminiExtracted": "Using Gemini extracted value",
     "systemConfirmed": "System confirmed",
+    "geminiSummaryTitle": "Gemini summary",
+    "geminiSummaryEmpty": "No summary recorded",
     "saving": "Saving…",
     "saveCorrected": "Save corrections",
     "saveMemo": "Save memo",

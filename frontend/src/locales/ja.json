@@ -4699,6 +4699,8 @@
     "noCorrection": "修正なし",
     "geminiExtracted": "Gemini抽出値を採用",
     "systemConfirmed": "System確定",
+    "geminiSummaryTitle": "Geminiの要約",
+    "geminiSummaryEmpty": "要約の記録はありません",
     "saving": "保存中…",
     "saveCorrected": "修正内容を保存",
     "saveMemo": "メモを保存",
