@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "./ReviewItemDrawer";
+import { api } from "../../lib/api";
 import { postReviewAck, postReviewAckRevoke } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({
@@ -20,7 +21,7 @@ vi.mock("./reviewActions", () => ({
 }));
 vi.mock("./ConditionReviewPanel", async () => ({
   ...(await vi.importActual<typeof import("./ConditionReviewPanel")>("./ConditionReviewPanel")),
-  ConditionReviewPanel: () => <div data-testid="condition-panel" />,
+  ConditionReviewPanel: (props: { fromWizard?: boolean }) => <div data-testid="condition-panel" data-from-wizard={String(Boolean(props.fromWizard))} />,
 }));
 
 const suspect = { gap_lines: [14, 15], candidates: [{ product_id: "1001", name: "Product A" }] };
@@ -179,7 +180,7 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
   });
 
   it("a row that cannot be fixed does nothing when clicked, and is marked static", () => {
-    renderDrawer(item());
+    renderDrawer(item({ is_v102: false }));
 
     fireEvent.click(rowOf("Quantity"));
     fireEvent.click(rowOf("Condition"));
@@ -187,6 +188,38 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
     expect(document.querySelector(".review-item-fix")).toBeNull();
     expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
     expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
+  });
+
+  it("K2: name, product id and series rows all open the product choice, with no id input", () => {
+    renderDrawer(item({ review_issues: [] }));
+
+    for (const label of ["Product name", "Product ID", "Series"]) {
+      fireEvent.click(rowOf(label));
+      expect(screen.getByText("Product").tagName).toBe("LABEL");
+      expect(screen.queryByLabelText(/product id/i)).toBeNull();
+    }
+  });
+
+  it("R1: for a v102 item that is not empty-box related, the state row opens the panel only inside the wizard", () => {
+    const cr = { condition_id: "1", review_version: "v", needs_review: true, review_reasons: "pid_unresolved", confirmed: false, classification: "none" };
+    renderDrawer(item({ condition_review: cr }));
+
+    expect(screen.queryByTestId("condition-panel")).toBeNull();
+    fireEvent.click(rowOf("Condition"));
+
+    expect(screen.getByTestId("condition-panel").getAttribute("data-from-wizard")).toBe("true");
+  });
+
+  it("R8: switching from the quantity row to the price row resets the input to the price value", () => {
+    vi.mocked(api.get).mockResolvedValue({ units: [], statuses: [] });
+    renderDrawer(item({ system: { quantity: "3", price: "1200" } }));
+
+    fireEvent.click(rowOf("Quantity"));
+    expect((screen.getByLabelText("Quantity", { selector: "input" }) as HTMLInputElement).value).toBe("3");
+    fireEvent.change(screen.getByLabelText("Quantity", { selector: "input" }), { target: { value: "99" } });
+    fireEvent.click(rowOf("Unit price"));
+
+    expect((screen.getByLabelText("Unit price", { selector: "input" }) as HTMLInputElement).value).toBe("1200");
   });
 
   it("selecting the same row again keeps the selection", () => {

@@ -823,7 +823,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
 
-Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c）。
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c。AY-4c-2b で実装済み）。
 
 #### ボタンの操作契約
 
@@ -4204,3 +4204,43 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 3 か所（全選択・表の行選択・スマホのカード行）を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
 - 実測（origin/main の DataTable.tsx＋build CSS と作業ツリーの同じもの、390/1280 × ライト/ダーク × 未選択/選択/一部選択）: 差は accent-color の auto → --accent の値だけ。数値は docs/handoff/design-system-recon/evidence-20260910/ay4a-acceptance.md。
 - 残り: AY-4b（super-admin 専用 20 件と未使用 4 件）、AY-4c（一般画面 33 件・.form-group input[type=checkbox] と .form-row input:focus の撤去・Inbox の sm・予定のデータ色 dataColor）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4b super-admin 専用のチェック欄 24 件を金型へ（2026-10-15）
+
+- 目的: super-admin 専用 20 件と、どの画面からも使われていない 4 件の生チェック欄を、金型 Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」。金型は役割で分ける。文字と並ぶ欄は label 型 Checkbox（frontend/src/components/Checkbox.tsx）、表の中などの単独の欄は CheckboxControl（frontend/src/components/CheckboxControl.tsx）。色は --accent。画面の前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4b-checkbox/design.md（recon.md 併置）。設計審査 r2 条件付き APPROVE（指摘反映済み）。
+- 変更: 24 件（20 ファイル）。Checkbox 22 件、CheckboxControl 2 件（KnowledgeAliasesTab の表の行選択・別名選択）。ExtractionPromptConfigTab は下の TextareaControl との余白を保つため Checkbox を div（marginBottom のトークン参照）で包む。金型が無いことを理由にした ui-allow 2 件（SupplierDetailDrawer の #3564、UnitIgnorePhrasesPanel の #4032）を削除。表の例外の ui-allow 2 件は残す。金型 Checkbox.tsx・CheckboxControl.tsx の中身は変更なし。
+- 削除した規則: frontend/src/features/tcg-distribution/distribution.css の `.dist-checkbox-row`、frontend/src/pages/integrations/FedexLabelValidationTab.css の `.lv-check-label`（見出しコメント含む）。`pmd-confirm-check` は規則の無い class で、class 名のみ消えた。新しい class は作らない。
+- 実測: origin/main の build CSS と作業ツリーの build CSS を各 1 本のまま、型ごとの実物の親を再現して 390/1280 × ライト/ダーク × 未チェック/チェックを測定。表と画像は docs/handoff/design-system-recon/evidence-20260910/ay4b-measure-compare.txt と ay4b-*.png。
+- 残り: AY-4c（一般画面 33 件、.form-group input[type=checkbox] の撤去を含む）。
+
+#### AY-4c-1 一般画面のチェック欄 24 件を金型へ（2026-10-16）
+
+- 目的: 一般画面の生チェック欄 33 件のうち、金型の props でそのまま受けられる 24 件を Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」（AY-4b と同じ。文字と並ぶ欄は Checkbox、表の中などの単独の欄は CheckboxControl）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 24 件（16 ファイル）。Checkbox 19 件、CheckboxControl 5 件（InventoryVisibilityPage・ConditionsPage・ProductsPage の表のセル、Inbox の一括選択 2 件）。ConditionsPage・StatusMasterPage の全幅の欄は gridColumn だけを持つ div で包む。RolesPage の一括 2 件は title を持つ span で包む。
+- 削除した規則: frontend/src/pages-layout.css の `.chk-label`（と `.chk-label input[type="checkbox"]`）、frontend/src/pages/inbox/InboxPage.css の `.inbox-bulk-check-all`。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c-measure-compare.txt と ay4c-*.png（AY-4b と同じ作り方）。
+- 残り（AY-4c-2）: 9 件（MultiSelect、ContactEditPage・StaffEditPage・StaffPage の `.form-group label`、InboxProfileModal、SalesFormMultiSelect、RolesPage の permission-item、schedule の 2 件）。frontend/src/components.css:19・:33 の checkbox 行。frontend/src/company-forms.css:100・:135 のコメントと `.form-row input:focus`（checkbox 以外の input にも当たるため本便では残す）。予定の色（dataColor は frontend/src に実在しない。金型に色の口を足すかは PO 判断）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4c-2a 口を足さずに移せるチェック欄 7 件を金型へ（2026-10-16）
+
+- 目的: 残り 9 件のうち、金型に口を足さずに載せかえられる 7 件を CheckboxControl / Checkbox に載せかえ、`.form-group` の古い checkbox 規則を外す。
+- PO 決定: 2026-10-15「y」（AY-4b・AY-4c-1 と同じ）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c2-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 7 件（7 ファイル）。CheckboxControl 3 件（MultiSelect、SalesFormMultiSelect、RolesPage の権限カード。外側の label はそのまま）、Checkbox 4 件（ContactEditPage・StaffEditPage・StaffPage の `.form-group` 内、InboxProfileModal の右パネル）。副作用の手当てとして NotificationsPage の既存 Checkbox 2 か所を class なしの div で包んだ。
+- 削除・変更した規則: frontend/src/components.css の `.form-group input[type="checkbox"]`（通常・:focus の 2 行）を削除、`.form-group label` を `.form-group label:where(:not(.comp-checkbox))` に変更（詳細度 0,1,1 のまま）。frontend/src/components/MultiSelect.css の `.comp-multiselect__check`、frontend/src/pages/inbox/InboxPage.css の `.sales-form-option input[type="checkbox"]` を削除。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2-measure-compare.txt と ay4c2-*.png。`.form-group` 内の金型の全数は ay4c2-formgroup-ancestors.txt。
+- 残り（AY-4c-2b、PO 判断済み・下に記録）: 2 件（schedule/SchedulePageImpl.tsx の担当者別データ色のチェック欄）。次の残件は AY-4c-2b の記録に引き継ぐ。
+
+#### AY-4c-2b 予定表のカレンダーのチェック欄 2 件を、カレンダーの色のまま金型へ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（カレンダーの色のまま、CheckboxControl に dataColor の口を足す）。
+- 設計: docs/handoff/ay4c2b-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: CheckboxControl に `dataColor?: string` を追加（未指定なら style 属性なし・--accent）。SchedulePageImpl.tsx の 2 件を CheckboxControl に載せかえ。schedule.css の `.schedule-calendar-checkbox` を行内の配置だけの `.schedule-calendar-item > input[type="checkbox"]` に置き換え。
+- 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、:874）。
+- 結果: アプリの生 checkbox は金型・Checkbox・Toggle 以外で 0 件。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2b-measure-compare.txt と ay4c2b-*.png。想定外の差 0。disabled の自分の行の cursor が pointer から not-allowed に変わるのみ（金型の形）。
+- 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断。

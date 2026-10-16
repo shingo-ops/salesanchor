@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
+import { Checkbox } from "../../../components/Checkbox";
 import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
@@ -297,14 +298,11 @@ export function NoteMasterPanel() {
                 required
               />
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <input
-                type="checkbox"
-                checked={form.enabled}
-                onChange={e => setForm({ ...form, enabled: e.target.checked })}
-              />
-              {t(`${f}.enabled`)}
-            </label>
+            <Checkbox
+              label={t(`${f}.enabled`)}
+              checked={form.enabled}
+              onChange={e => setForm({ ...form, enabled: e.target.checked })}
+            />
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <TextField
                 label={t(`${f}.searchKeywords`)}

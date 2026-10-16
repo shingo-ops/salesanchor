@@ -37,7 +37,11 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import (
+    require_super_admin,
+    reset_operator_context,
+    set_operator_context,
+)
 from app.database import get_db
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
@@ -410,6 +414,19 @@ async def resolve_supplier(
 
     どちらも import_jobs.unresolved_names から該当名を除く。
     """
+    # ADR-1018 段階②b: 共通仕入先（tenant_id 空行）への書込は運営文脈のみ。
+    # 本体が書込前に operator 文脈を張るため、finally で必ず戻す（本体は _resolve_supplier_impl）。
+    try:
+        return await _resolve_supplier_impl(import_job_id, body, db)
+    finally:
+        await reset_operator_context(db)
+
+
+async def _resolve_supplier_impl(
+    import_job_id: str,
+    body: ResolveRequest,
+    db: AsyncSession,
+):
     # ジョブ取得
     job_row = await db.execute(
         text(
@@ -437,6 +454,9 @@ async def resolve_supplier(
     if body.display_name not in current_names:
         # 既に解決済み（二重クリック・二重 mount 等）: 冪等に現状を返す
         return ResolveResponse(success=True, remaining_unresolved=current_names)
+
+    # 共通行（tenant_id 空）への書込は運営文脈のみ（ADR-1018 段階②b）
+    await set_operator_context(db)
 
     if body.action == "assign":
         if not body.supplier_code:

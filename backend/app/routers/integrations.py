@@ -125,6 +125,7 @@ async def connect_callback(
     from app.services.encryption import encrypt
 
     try:
+        await set_tenant_context(db, result["tenant_id"])
         await db.execute(
             text(
                 """

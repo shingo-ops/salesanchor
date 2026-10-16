@@ -21,6 +21,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+from celery import shared_task
+
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -136,23 +138,27 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
     result = await db.execute(text("""
-        SELECT
-            p.id::text AS product_id,
-            p.name AS product_name,
-            'search' AS keyword_type,
-            k.keyword
-        FROM public.product_search_keywords k
-        JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.id, k.keyword
-        UNION ALL
-        SELECT
-            p.id::text AS product_id,
-            p.name AS product_name,
-            'exclude',
-            k.keyword
-        FROM public.product_exclude_keywords k
-        JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.id, k.keyword
+        SELECT product_id, product_name, keyword_type, keyword
+        FROM (
+            SELECT
+                p.id AS sort_id,
+                p.id::text AS product_id,
+                p.name AS product_name,
+                'search' AS keyword_type,
+                k.keyword
+            FROM public.product_search_keywords k
+            JOIN public.products p ON p.id = k.product_id
+            UNION ALL
+            SELECT
+                p.id AS sort_id,
+                p.id::text AS product_id,
+                p.name AS product_name,
+                'exclude' AS keyword_type,
+                k.keyword
+            FROM public.product_exclude_keywords k
+            JOIN public.products p ON p.id = k.product_id
+        ) u
+        ORDER BY u.keyword_type DESC, u.sort_id, u.keyword
     """))
     rows = result.fetchall()
     headers = ["product_id", "product_name", "keyword_type", "keyword"]
@@ -168,11 +174,11 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
             ps.supplier_code AS code,
             ps.name,
             NULL AS contact_name,
-            sc.channel_type,
-            sc.channel_identifier
+            sc.channel AS channel_type,
+            sc.external_id AS channel_identifier
         FROM public.suppliers ps
         LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
-        ORDER BY ps.supplier_code, sc.channel_type
+        ORDER BY ps.supplier_code, sc.channel
     """))
     rows = result.fetchall()
     headers = ["code", "name", "contact_name", "channel_type", "channel_identifier"]
@@ -292,6 +298,7 @@ async def _write_mirror_async() -> dict[str, int]:
 # Celery タスク
 # ──────────────────────────────────────────────────────────────────────────────
 
+@shared_task(name="app.tasks.tcg_mirror.run_tcg_mirror_write")
 def run_tcg_mirror_write() -> None:
     """
     Celery タスクのエントリポイント。
@@ -299,6 +306,8 @@ def run_tcg_mirror_write() -> None:
     シート自動作成は一切行わない。
     """
     import asyncio
+
+    from app.database import engine
 
     key_file = os.getenv("TCG_SHEETS_SA_KEY_FILE", "").strip()
     if not key_file:
@@ -309,16 +318,21 @@ def run_tcg_mirror_write() -> None:
 
     logger.info("[tcg_mirror] 書き出し開始: spreadsheetId=%s", MIRROR_SPREADSHEET_ID)
     try:
-        stats = asyncio.run(_write_mirror_async())
-        logger.info(
-            "[tcg_mirror] 書き出し完了: products=%d keywords=%d suppliers=%d "
-            "supplier_summary=%d db_structure=%d",
-            stats["products"],
-            stats["keywords"],
-            stats["suppliers"],
-            stats["supplier_summary"],
-            stats["db_structure"],
-        )
-    except Exception as exc:
-        logger.error("[tcg_mirror] 書き出し失敗: %s", exc, exc_info=True)
-        raise
+        try:
+            stats = asyncio.run(_write_mirror_async())
+            logger.info(
+                "[tcg_mirror] 書き出し完了: products=%d keywords=%d suppliers=%d "
+                "supplier_summary=%d db_structure=%d",
+                stats["products"],
+                stats["keywords"],
+                stats["suppliers"],
+                stats["supplier_summary"],
+                stats["db_structure"],
+            )
+        except Exception as exc:
+            logger.error("[tcg_mirror] 書き出し失敗: %s", exc, exc_info=True)
+            raise
+    finally:
+        # 共用 engine の接続を捨てる（Celery worker の
+        # "Future attached to a different loop" を避ける。translation.py と同じ）。
+        asyncio.run(engine.dispose())

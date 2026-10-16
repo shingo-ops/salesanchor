@@ -3815,6 +3815,7 @@
     "reassigned": "Reassigned",
     "reassignFailed": "Failed to reassign",
     "conditionLabel": "Condition",
+    "valueFix": {"title": "Fix {{field}}", "quantity": "Quantity", "price": "Unit price", "unit": "Unit", "memo": "Memo", "saleStatus": "Sale status", "save": "Save this value", "saving": "Saving", "saved": "Saved. Re-analysis is running", "invalid": "This value cannot be used. Please check it", "changed": "This item cannot be fixed. Please reopen the screen", "saveFailed": "Could not save. Please try again", "loadFailed": "Could not load the choices"},
     "wizard": {
       "question": "What do you want to fix?",
       "choice": {
@@ -3823,7 +3824,9 @@
         "register": "Register as a new product",
         "registerDesc": "Add to the product master and reassign this row",
         "condition": "Fix the condition",
-        "conditionDesc": "Confirm or correct the condition"
+        "conditionDesc": "Confirm or correct the condition",
+        "value": "Fix a value",
+        "valueDesc": "Fix quantity, price, unit, memo or sale status"
       },
       "selected": "Fixing: {{choice}}",
       "back": "Back",

@@ -30,6 +30,7 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260920_020000_supplier_line_name_unique.sql",
     "20260921_060000_create_product_kinds.sql",
     "20260921_070000_rename_tcg_type_master_to_type_master.sql",
+    "20261015_130000_add_permissions_rls.sql",
 ]
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",

@@ -156,13 +156,6 @@
   background: var(--bg-subtle);
   flex-shrink: 0;
 }
-.inbox-bulk-check-all {
-  width: var(--size-checkbox-sm);
-  height: var(--size-checkbox-sm);
-  cursor: pointer;
-  flex-shrink: 0;
-  accent-color: var(--accent);
-}
 .inbox-bulk-count {
   font-size: var(--font-sm);
   color: var(--text-secondary);
@@ -1864,11 +1857,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .sales-form-option--checked {
   color: var(--accent);
   font-weight: 500;
-}
-
-.sales-form-option input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
 }
 
 .sales-form-option-label {

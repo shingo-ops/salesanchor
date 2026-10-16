@@ -17,6 +17,7 @@ import { api } from "../../lib/api";
 import { hasEnglishNames } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface StaffUIPreferences {
   dark_mode: boolean;
@@ -208,14 +209,11 @@ export default function StaffEditPage() {
             };
             return (Object.entries(labels) as Array<[keyof StaffUIPreferences, string]>).map(([k, label]) => (
               <div className="form-group" key={k}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={form.ui_preferences[k]}
-                    onChange={(e) => setForm({ ...form, ui_preferences: { ...form.ui_preferences, [k]: e.target.checked } })}
-                  />
-                  {" "}{label}
-                </label>
+                <Checkbox
+                  label={label}
+                  checked={form.ui_preferences[k]}
+                  onChange={(e) => setForm({ ...form, ui_preferences: { ...form.ui_preferences, [k]: e.target.checked } })}
+                />
               </div>
             ));
           })()}

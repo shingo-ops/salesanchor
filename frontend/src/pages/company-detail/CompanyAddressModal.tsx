@@ -11,6 +11,7 @@ import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Props {
   isOpen: boolean;
@@ -143,11 +144,12 @@ export function CompanyAddressModal({
               onChange={(e) => setAddrForm({ ...addrForm, country_code: e.target.value.toUpperCase() })} />
           </div>
           <div className="form-row">
-            <label>
-              <input type="checkbox" disabled={!canEdit || addrSubmitting} checked={addrForm.is_default}
-                onChange={(e) => setAddrForm({ ...addrForm, is_default: e.target.checked })} />
-              {" "}{t("companies.setAsDefault")}
-            </label>
+            <Checkbox
+              label={t("companies.setAsDefault")}
+              disabled={!canEdit || addrSubmitting}
+              checked={addrForm.is_default}
+              onChange={(e) => setAddrForm({ ...addrForm, is_default: e.target.checked })}
+            />
           </div>
           <div className="form-actions">
             <Button type="button" variant="secondary" onClick={onClose} disabled={addrSubmitting}>{t("common.cancel")}</Button>

@@ -4,6 +4,7 @@
  * ネイティブ checkbox 1つを返す（div/label を増やさない）。
  * native 属性・イベント（checked/onChange/disabled/id/name/value/aria-* /data-*）はそのまま同じ要素へ渡す。
  * className・style・type・role・size(native) は受けない（見た目はこの部品が決める）。
+ * データ由来の色だけ dataColor で受け、accent-color に使う。
  * indeterminate は prop で受け、DOM プロパティへ反映する。
  */
 import { forwardRef, useCallback, useLayoutEffect, useRef, type InputHTMLAttributes } from "react";
@@ -13,10 +14,12 @@ export interface CheckboxControlProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "className" | "style" | "size" | "role"> {
   size?: "md" | "sm";
   indeterminate?: boolean;
+  /** データ由来の色（例: カレンダーの持ち主の色）だけを渡す。通常 UI の色は渡さない（design.md:826）。未指定なら --accent。 */
+  dataColor?: string;
 }
 
 export const CheckboxControl = forwardRef<HTMLInputElement, CheckboxControlProps>(function CheckboxControl(
-  { size = "md", indeterminate, ...rest },
+  { size = "md", indeterminate, dataColor, ...rest },
   ref,
 ) {
   const innerRef = useRef<HTMLInputElement | null>(null);
@@ -36,7 +39,8 @@ export const CheckboxControl = forwardRef<HTMLInputElement, CheckboxControlProps
     <input
       ref={setRef}
       type="checkbox"
-      className={`comp-checkbox${size === "sm" ? " comp-checkbox--sm" : ""}`}
+      className={`comp-checkbox-control${size === "sm" ? " comp-checkbox-control--sm" : ""}`}
+      style={dataColor ? { accentColor: dataColor } : undefined}
       {...rest}
     />
   );

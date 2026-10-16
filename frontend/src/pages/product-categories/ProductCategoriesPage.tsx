@@ -19,6 +19,7 @@ import { HeaderButton } from "../../components/HeaderButton";
 import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Checkbox } from "../../components/Checkbox";
 
 interface ProductCategoryEntry {
   id: number;
@@ -220,14 +221,11 @@ export default function ProductCategoriesPage() {
           onChange={e => setForm({ ...form, kubun_type: e.target.value })}
         />
       </div>
-      <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-        <input
-          type="checkbox"
-          checked={form.is_active}
-          onChange={e => setForm({ ...form, is_active: e.target.checked })}
-        />
-        {t(`${f}.isActive`)}
-      </label>
+      <Checkbox
+        label={t(`${f}.isActive`)}
+        checked={form.is_active}
+        onChange={e => setForm({ ...form, is_active: e.target.checked })}
+      />
     </div>
   );
 

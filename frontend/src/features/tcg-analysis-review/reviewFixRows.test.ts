@@ -17,6 +17,7 @@ describe("fixRowsOf", () => {
     expect(fixRowsOf(makeItem({ product_id: "PM-1", pid_basis: "EXACT" }), t)).toEqual({
       productId: { scope: "product", value: null },
       work: { scope: "product", value: null },
+      name: { scope: "product", value: null },
     });
   });
 
@@ -53,8 +54,38 @@ describe("fixRowsOf", () => {
     expect(rows.state?.value).toBe("EMPTY-BOX-LABEL");
   });
 
-  it("other rows are not listed (not fixable)", () => {
+  it("v6 item: other rows are not listed (not fixable); name follows the product scope", () => {
     const rows = fixRowsOf(makeItem({}, review()), t);
-    for (const key of ["name", "quantity", "price", "unit", "memo", "sourcePosition", "saleStatus"]) expect(rows[key]).toBeUndefined();
+    for (const key of ["quantity", "price", "unit", "memo", "sourcePosition", "saleStatus"]) expect(rows[key]).toBeUndefined();
+    expect(rows.name).toEqual({ scope: "product", value: null });
+  });
+
+  // K1: v102 の件は9行すべてが押せる
+  it("K1: a v102 item lists the nine fixable rows with their scopes", () => {
+    const item = { ...makeItem({ pid_basis: "MANUAL", product_id: "PM-1", product_title: "Title", work_name: "Work" }, review({ classification: "none", review_reasons: "pid_unresolved" })), is_v102: true };
+    const rows = fixRowsOf(item, t);
+    expect(Object.keys(rows).sort()).toEqual(["memo", "name", "price", "productId", "quantity", "saleStatus", "state", "unit", "work"]);
+    expect(rows.name).toEqual({ scope: "product", value: "Title" });
+    expect(rows.productId.scope).toBe("product");
+    expect(rows.work.scope).toBe("product");
+    expect(rows.state.scope).toBe("condition");
+    for (const key of ["quantity", "price", "unit", "memo", "saleStatus"]) expect(rows[key]).toEqual({ scope: "value", value: null });
+  });
+
+  it("K3: the Fix column shows manual_values for the value rows (memo = note, saleStatus = status)", () => {
+    const item = { ...makeItem({}, null), is_v102: true, manual_values: { quantity: "3", price: "1000", unit: "BOX", note: "memo!", status: "Sold out" } };
+    const rows = fixRowsOf(item, t);
+    expect(rows.quantity.value).toBe("3");
+    expect(rows.price.value).toBe("1000");
+    expect(rows.unit.value).toBe("BOX");
+    expect(rows.memo.value).toBe("memo!");
+    expect(rows.saleStatus.value).toBe("Sold out");
+    expect(rows.state).toBeUndefined();
+  });
+
+  it("R1: state is fixable for a v102 item with a condition review that is not empty-box related", () => {
+    const item = { ...makeItem({ condition: "New" }, review({ classification: "none", review_reasons: "pid_unresolved" })), is_v102: true };
+    expect(fixRowsOf(item, t).state).toEqual({ scope: "condition", value: null });
+    expect(fixRowsOf({ ...item, is_v102: false }, t).state).toBeUndefined();
   });
 });

@@ -128,12 +128,13 @@ export default function NotificationsPage() {
           <div className="form-group">
             <label>{t("notifications.eventTypesLabel")}</label>
             {eventTypes.map((et) => (
-              <Checkbox
-                key={et.code}
-                label={eventTypeLabel(et.code)}
-                checked={form.event_types.includes(et.code)}
-                onChange={() => setForm({ ...form, event_types: toggleEventType(form.event_types, et.code) })}
-              />
+              <div key={et.code}>
+                <Checkbox
+                  label={eventTypeLabel(et.code)}
+                  checked={form.event_types.includes(et.code)}
+                  onChange={() => setForm({ ...form, event_types: toggleEventType(form.event_types, et.code) })}
+                />
+              </div>
             ))}
           </div>
           <div className="form-actions">
@@ -154,12 +155,13 @@ export default function NotificationsPage() {
           <div className="form-group">
             <label>{t("notifications.eventTypesLabel")}</label>
             {eventTypes.map((et) => (
-              <Checkbox
-                key={et.code}
-                label={eventTypeLabel(et.code)}
-                checked={editForm.event_types.includes(et.code)}
-                onChange={() => setEditForm({ ...editForm, event_types: toggleEventType(editForm.event_types, et.code) })}
-              />
+              <div key={et.code}>
+                <Checkbox
+                  label={eventTypeLabel(et.code)}
+                  checked={editForm.event_types.includes(et.code)}
+                  onChange={() => setEditForm({ ...editForm, event_types: toggleEventType(editForm.event_types, et.code) })}
+                />
+              </div>
             ))}
           </div>
           <div className="form-actions">

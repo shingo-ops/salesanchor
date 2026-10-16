@@ -427,17 +427,6 @@
   font-weight: var(--font-weight-semi);
 }
 
-/* ── チェックラベル ── */
-.lv-check-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  margin-top: var(--space-2);
-}
-
 /* ── ラベル一覧 ── */
 .lv-label-list {
   margin-top: var(--space-3);
