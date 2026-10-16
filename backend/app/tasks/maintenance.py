@@ -29,6 +29,11 @@ AUDIT_LOG_RETENTION_DAYS = int(os.getenv("AUDIT_LOG_RETENTION_DAYS", "90"))
 DATA_ACCESS_RETENTION_DAYS = int(os.getenv("DATA_ACCESS_RETENTION_DAYS", "60"))
 AUTH_EVENT_RETENTION_DAYS = int(os.getenv("AUTH_EVENT_RETENTION_DAYS", "90"))
 
+# 閲覧専用ページ（ADR-1019 Q7）。環境変数にしない（プライバシーポリシーの記載と揃えるため）
+VIEWER_RETENTION_DAYS = 90  # 期限切れ trial・停止 suspended を消すまで
+VIEWER_PENDING_DAYS = 7  # 申込のまま確認されない pending を消すまで
+VIEWER_LOGIN_EVENT_RETENTION_DAYS = 90
+
 # バッチ削除サイズ（1トランザクションあたりの最大削除件数）
 # 5000件 × ~10ms/commit ≒ 50ms ロック → 並行INSERTへの影響を最小化
 _BATCH_SIZE = int(os.getenv("RETENTION_BATCH_SIZE", "5000"))
@@ -182,6 +187,62 @@ def purge_auth_events():
     deleted = _delete_in_batches("public.auth_events", interval)
     logger.info("auth_events: 合計 %d件 削除（保持期間 %d日）", deleted, AUTH_EVENT_RETENTION_DAYS)
     return {"deleted": deleted}
+
+
+@shared_task(
+    name="app.tasks.maintenance.purge_viewer_accounts",
+    max_retries=3,
+    default_retry_delay=60,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def purge_viewer_accounts():
+    """閲覧専用アカウントの毎日の掃除（ADR-1019 Q7）。public の表なのでテナント文脈は使わない。
+
+    1. 期限切れから 90 日たった trial  2. 停止（suspend 記録）から 90 日たった suspended
+    3. 7 日たった pending  4. 90 日より古いログイン記録
+    アカウントを消すと、ログイン記録・状態履歴・鍵は CASCADE で一緒に消える。
+    件数だけログに出す（email は出さない）。
+    """
+    engine = _get_sync_engine()
+    Session = sessionmaker(engine)
+    with Session() as session:
+        trial_expired = session.execute(
+            text(f"""
+                DELETE FROM public.viewer_accounts
+                WHERE status = 'trial' AND trial_expires_at < NOW() - INTERVAL '{VIEWER_RETENTION_DAYS} days'
+            """)
+        ).rowcount
+        suspended = session.execute(
+            text(f"""
+                DELETE FROM public.viewer_accounts a
+                WHERE a.status = 'suspended'
+                  AND (
+                      SELECT max(c.created_at) FROM public.viewer_status_changes c
+                      WHERE c.viewer_id = a.id AND c.action = 'suspend'
+                  ) < NOW() - INTERVAL '{VIEWER_RETENTION_DAYS} days'
+            """)
+        ).rowcount
+        pending = session.execute(
+            text(f"""
+                DELETE FROM public.viewer_accounts
+                WHERE status = 'pending' AND created_at < NOW() - INTERVAL '{VIEWER_PENDING_DAYS} days'
+            """)
+        ).rowcount
+        session.commit()
+    login_events = _delete_in_batches(
+        "public.viewer_login_events", f"{VIEWER_LOGIN_EVENT_RETENTION_DAYS} days"
+    )
+    result = {
+        "trial_expired": max(trial_expired, 0),
+        "suspended": max(suspended, 0),
+        "pending": max(pending, 0),
+        "login_events": login_events,
+    }
+    logger.info("viewer_accounts 掃除: %s", result)
+    return result
 
 
 @shared_task(

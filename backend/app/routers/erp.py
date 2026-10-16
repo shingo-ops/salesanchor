@@ -32,6 +32,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.services.audit import record_audit_log
 
 logger = logging.getLogger(__name__)
@@ -151,4 +152,5 @@ async def export_invoices_for_erp(
             await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
         except Exception:
             logger.exception("erp_sync_logs の失敗ステータス更新に失敗 log_id=%s", log_id)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ERP エクスポート失敗: {e}")
+        log_hidden_error("erp.export_invoices_for_erp", e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="ERP エクスポート失敗")

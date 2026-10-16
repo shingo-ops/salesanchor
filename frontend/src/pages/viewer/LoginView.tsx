@@ -34,9 +34,11 @@ interface LoginViewProps {
   onLoggedIn: (res: ViewerLoginResponse) => void;
   /** 503（準備中）のとき ④ へ */
   onPreparing: () => void;
+  /** 「パスワードを忘れた」→ 再発行画面へ */
+  onForgot: () => void;
 }
 
-export function LoginView({ onLoggedIn, onPreparing }: LoginViewProps) {
+export function LoginView({ onLoggedIn, onPreparing, onForgot }: LoginViewProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -88,6 +90,9 @@ export function LoginView({ onLoggedIn, onPreparing }: LoginViewProps) {
       )}
       <Button type="submit" fullWidth loading={busy} disabled={busy}>
         {busy ? t("viewer.login.submitting") : t("viewer.login.submit")}
+      </Button>
+      <Button type="button" variant="secondary" fullWidth onClick={onForgot} data-testid="viewer-login-forgot">
+        {t("viewer.login.forgot")}
       </Button>
     </form>
   );

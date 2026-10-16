@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     UnitAliasCreate,
     UnitAliasResponse,
@@ -159,9 +160,10 @@ async def create_unit(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_units.create_unit", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
+            detail="重複または制約違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -194,7 +196,8 @@ async def update_unit(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"制約違反: {exc.orig}")
+        log_hidden_error("super_admin_units.update_unit", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="単位が見つかりません")
@@ -273,9 +276,10 @@ async def create_unit_alias(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_units.create_unit_alias", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または FK 違反: {exc.orig}",
+            detail="重複または FK 違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -420,6 +424,7 @@ async def import_units_commit(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"UNIT_IMPORT_COMMIT_ERROR: {exc}") from exc
+        log_hidden_error("super_admin_units.import_units_commit", exc)
+        raise HTTPException(status_code=500, detail="UNIT_IMPORT_COMMIT_ERROR") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}

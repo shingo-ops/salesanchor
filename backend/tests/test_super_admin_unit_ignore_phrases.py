@@ -117,6 +117,11 @@ async def test_create_and_duplicate_returns_409(pg_client):
 
     dup = await c.post(BASE, json={"phrase": phrase})
     assert dup.status_code == 409, dup.text
+    # S3: 応答に入力値・SQL 文・DB の詳細（DETAIL）を出さない
+    assert phrase not in dup.text
+    assert "[SQL" not in dup.text
+    assert "DETAIL" not in dup.text
+    assert dup.json()["detail"] == "重複または制約違反"
 
 
 @requires_pg

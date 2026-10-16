@@ -6,7 +6,7 @@
 - 前段: docs/handoff/ai-ops-247/stage2-design.md（段階2 は便A〜C の本番反映で完了。card-stage2-bin-c.md §15）
 - KGI: docs/specs/ai-ops-247/kgi.md:22（KGI 3「一覧に載った症状は 5 分以内に機械が処置を終える。成功 95% 以上・悪化 0 件」）
 - 対象ADR: ADR-1012（本テーマ・Proposed）、ADR-135（main マージ＝本番投入可）、ADR-136（危険 PR の GO）、ADR-1003（GO 委任）、ADR-079（cadvisor 無効化）
-- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO の y/n 待ち。実装未着手
+- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO 承認 y（2026-10-16）。V1 は便D のカード（card-stage3-bin-d.md §2-2）で解決。実装未着手
 - 事実の生出力: /tmp/CC報告ファイル/ai-ops-stage3/recon_raw.md（Q1〜Q9）・recon_raw2.md（Q10〜Q16）。2026-10-16 取得・origin/main 057e12b16 基準。本番は読んでいない
 
 ## 1. 前提の事実（2026-10-16・origin/main 057e12b16 基準）
@@ -164,6 +164,7 @@
 ## 7. 未解決事項
 
 - V1: 便D の健康診断の方式（§2 便D の候補）。celery の signal など公式の仕様に依存するので、便D のカードの前に公式文書（Context7 か公式サイト）と手元の実測で決める。決まるまで便D のカードを出さない
+  - 解決（2026-10-16・Opus 技術判断）：worker は bootstep の timer、beat は Scheduler の子クラスの tick、gateway は asyncio の定期処理で、/tmp の印のファイルを触る。健康診断は印の古さを sh・date・stat で見る。gemini-egress は待ち受けの口ではなく、トンネルの先の tinyproxy の統計ページまで busybox wget で通す（口が開いていても固まりは見えないため）。根拠と細部は card-stage3-bin-d.md §2
 - V2: prod1 のホストから `api.salesanchor.jp` を prod1 自身に向けて呼べるか（ヘアピン）・ubuntu の cron から docker を操作できるか・prod1 の python3 の版。便E のカードの前に PO の `!`（読み取りだけ）で確かめる
 - V3: （段階2 から）Alertmanager の webhook の失敗の見張り。10/23 に失敗の数を見て決める
 - V4: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる

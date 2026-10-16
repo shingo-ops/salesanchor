@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.routers._utils import log_hidden_error
 from app.schemas.payment_fee_setting import (
     PaymentFeeSettingCreate,
     PaymentFeeSettingResponse,
@@ -102,9 +103,10 @@ async def create_payment_fee_setting(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_payment_fee_settings.create_payment_fee_setting", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
+            detail="重複または制約違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -137,7 +139,8 @@ async def update_payment_fee_setting(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"制約違反: {exc.orig}")
+        log_hidden_error("super_admin_payment_fee_settings.update_payment_fee_setting", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="決済手数料設定が見つかりません")

@@ -1,6 +1,7 @@
 """閲覧専用ページの API（ADR-1019 段2・設計 D1/D2）。
 
-POST /login・POST /logout・GET /inventory の3本。signup・password・password-reset は段4。
+POST /login・POST /logout・GET /inventory・POST /password・POST /password-reset/request・
+POST /password-reset/confirm の6本。signup は段4b。
 アプリの get_current_user とは別の経路で、Redis の jwt: 名前空間（キャッシュ関数）は使わない。
 """
 
@@ -9,16 +10,19 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import secrets
 import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.passwords import verify_password
+from app.auth import self_tokens
+from app.auth.password_policy import check_password
+from app.auth.passwords import hash_password, verify_password
 from app.auth.viewer_dependencies import (
     get_current_viewer,
     require_viewer_password_ok,
@@ -29,14 +33,17 @@ from app.auth.viewer_tokens import create_viewer_access_token, decode_viewer_tok
 from app.cache import (
     AUTH_FAIL_LOCKOUT_TTL,
     AUTH_FAIL_MAX,
+    PASSWORD_RESET_REQUEST_MAX,
     blacklist_token,
     check_auth_rate_limit,
+    count_viewer_password_reset_request,
     get_redis,
     record_auth_failure,
 )
 from app.client_ip import get_client_ip
 from app.database import get_db
-from app.routers.auth import _require_app_origin
+from app.routers.auth import PASSWORD_RESET_TTL, _require_app_origin
+from app.services.auth_mail import send_viewer_password_reset_email
 from app.tasks.viewer_inventory_cache import CACHE_KEY
 
 router = APIRouter()
@@ -44,11 +51,29 @@ logger = logging.getLogger(__name__)
 
 TOO_MANY = "viewer_too_many_attempts"
 INVALID_CREDENTIALS = "viewer_invalid_credentials"
+INVALID_CURRENT_PASSWORD = "viewer_invalid_current_password"
+RESET_INVALID_OR_EXPIRED = "viewer_reset_invalid_or_expired"
+# 再発行メールを送ってよい状態（pending・verified・suspended には送らない）
+_RESET_MAIL_STATUSES = ("trial", "active")
 
 
 class ViewerLoginRequest(BaseModel):
     email: str = Field(max_length=320, description="ログインに使うメールアドレス")
     password: str = Field(max_length=256, description="パスワード")
+
+
+class ViewerPasswordChangeRequest(BaseModel):
+    current_password: str = Field(max_length=256, description="今のパスワード")
+    new_password: str = Field(max_length=256, description="新しいパスワード（15〜64 文字）")
+
+
+class ViewerPasswordResetRequest(BaseModel):
+    email: str = Field(max_length=320, description="再発行したいメールアドレス")
+
+
+class ViewerPasswordResetConfirmRequest(BaseModel):
+    token: str = Field(max_length=256, description="再発行メールのリンクに入っている鍵")
+    new_password: str = Field(max_length=256, description="新しいパスワード（15〜64 文字）")
 
 
 def _normalize_or_none(raw: str) -> str | None:
@@ -206,3 +231,154 @@ async def viewer_inventory(viewer: dict = Depends(require_viewer_password_ok)):
     if not value:
         raise HTTPException(status_code=503, detail="viewer_inventory_not_ready")
     return Response(content=value, media_type="application/json", headers={"Cache-Control": "no-store"})
+
+
+_SET_PASSWORD_SQL = (
+    "UPDATE public.viewer_accounts SET password_argon2_hash = :h, password_must_change = false, "
+    "password_changed_at = :now, updated_at = :now WHERE id = :id"
+)
+
+
+@router.post("/password")
+async def viewer_change_password(
+    data: ViewerPasswordChangeRequest,
+    request: Request,
+    viewer: dict = Depends(get_current_viewer),
+    db: AsyncSession = Depends(get_db),
+):
+    """パスワードの変更。must_change の人も呼べる（require_viewer_password_ok ではなく get_current_viewer）。
+
+    変更後、それより前に出したトークンは使えなくなるので、新しいトークンを返す。
+    """
+    ip = get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+
+    row = (
+        await db.execute(
+            text("SELECT password_argon2_hash FROM public.viewer_accounts WHERE id = :id"),
+            {"id": viewer["id"]},
+        )
+    ).first()
+    stored = row.password_argon2_hash if row is not None else None
+    current_ok = await asyncio.to_thread(verify_password, stored, data.current_password)
+    if not current_ok:
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=401, detail=INVALID_CURRENT_PASSWORD)
+
+    reason = check_password(data.new_password)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=reason)
+    if data.new_password == data.current_password:
+        raise HTTPException(status_code=422, detail="password_same_as_current")
+
+    new_hash = await asyncio.to_thread(hash_password, data.new_password)
+    now = datetime.now(timezone.utc)  # トークンを作る前に取る（iat は秒の整数で、これの切り捨て以上になる）
+    await db.execute(text(_SET_PASSWORD_SQL), {"h": new_hash, "now": now, "id": viewer["id"]})
+    await _record_event(db, viewer["id"], "password_changed", ip, request.headers.get("user-agent"))
+    await db.commit()
+    token, exp = create_viewer_access_token(viewer["id"])
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_at": exp.isoformat(),
+        "must_change_password": False,
+    }
+
+
+@router.post("/password-reset/request")
+async def viewer_password_reset_request(
+    data: ViewerPasswordResetRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """再発行メールの申請。登録の有無・状態を応答に出さない（常に 200）。"""
+    _require_app_origin(request)
+    accepted = {"status": "accepted"}
+    email = _normalize_or_none(data.email)
+    if email is None:
+        return accepted
+    if await count_viewer_password_reset_request(email) > PASSWORD_RESET_REQUEST_MAX:
+        return accepted  # 429 にしない（回数を超えたことも知らせない）
+
+    row = (
+        await db.execute(
+            text(
+                "SELECT id, email, status, trial_expires_at FROM public.viewer_accounts "
+                "WHERE lower(email) = :email"
+            ),
+            {"email": email},
+        )
+    ).first()
+    if row is None or row.status not in _RESET_MAIL_STATUSES:
+        return accepted
+
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        text("DELETE FROM public.viewer_login_tokens WHERE viewer_account_id = :id AND purpose = 'password_reset'"),
+        {"id": row.id},
+    )
+    raw = secrets.token_urlsafe(32)
+    await db.execute(
+        text(
+            "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
+            "VALUES (:id, :h, 'password_reset', :exp)"
+        ),
+        {"id": row.id, "h": hashlib.sha256(raw.encode()).digest(), "exp": now + PASSWORD_RESET_TTL},
+    )
+    await _record_event(
+        db, row.id, "password_reset_requested", get_client_ip(request), request.headers.get("user-agent")
+    )
+    await db.commit()
+    reset_url = f"{self_tokens.rp_origin()}/viewer/#reset={raw}"
+    background_tasks.add_task(send_viewer_password_reset_email, row.email, reset_url)
+    return accepted
+
+
+@router.post("/password-reset/confirm")
+async def viewer_password_reset_confirm(
+    data: ViewerPasswordResetConfirmRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。12 時間トークンは返さない（ログインし直す）。"""
+    _require_app_origin(request)
+    ip = get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+
+    reason = check_password(data.new_password)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=reason)  # 鍵はまだ消費しない
+
+    now = datetime.now(timezone.utc)
+    token_row = (
+        await db.execute(
+            text(
+                "DELETE FROM public.viewer_login_tokens "
+                "WHERE token_sha256 = :h AND purpose = 'password_reset' AND expires_at > :now "
+                "RETURNING viewer_account_id"
+            ),
+            {"h": hashlib.sha256(data.token.encode()).digest(), "now": now},
+        )
+    ).first()
+    if token_row is None:
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=400, detail=RESET_INVALID_OR_EXPIRED)
+
+    account = (
+        await db.execute(
+            text("SELECT id, status FROM public.viewer_accounts WHERE id = :id"),
+            {"id": token_row.viewer_account_id},
+        )
+    ).first()
+    if account is None or account.status not in _RESET_MAIL_STATUSES:
+        await db.commit()  # 鍵は消費済みのまま
+        raise HTTPException(status_code=400, detail=RESET_INVALID_OR_EXPIRED)
+
+    new_hash = await asyncio.to_thread(hash_password, data.new_password)
+    await db.execute(text(_SET_PASSWORD_SQL), {"h": new_hash, "now": now, "id": account.id})
+    await _record_event(db, account.id, "password_reset_done", ip, request.headers.get("user-agent"))
+    await db.commit()
+    return {"status": "password_updated"}

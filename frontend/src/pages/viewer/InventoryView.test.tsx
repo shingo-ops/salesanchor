@@ -29,7 +29,7 @@ afterEach(() => cleanup());
 
 describe("InventoryView", () => {
   it("passes the designed props to DataTable: sticky, fit, cards, 50 per page, default sort release_date desc", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} />);
+    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const p = captured.props!;
     expect(p.stickyHeader).toBe(true);
     expect(p.fitToWidth).toBe(true);
@@ -43,13 +43,13 @@ describe("InventoryView", () => {
   });
 
   it("shows the last updated time as HH:MM (JST) and has no refresh button", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} />);
+    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     expect(screen.getByTestId("viewer-updated").textContent).toContain("12:05");
     expect(screen.queryByTestId("viewer-refresh")).toBeNull();
   });
 
   it("sort pull-down has exactly 3 options", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} />);
+    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value).filter((v) => v !== "");
     expect(values).toEqual(["unit_price:asc", "quantity:desc", "offered_at:desc"]);
@@ -59,7 +59,7 @@ describe("InventoryView", () => {
   });
 
   it("24 hours button is pressed by default and toggles", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} />);
+    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const btn = screen.getByTestId("viewer-fresh-toggle");
     expect(btn.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(btn);

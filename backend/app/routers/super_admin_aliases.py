@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     SupplierAliasCreate,
     SupplierAliasResponse,
@@ -127,9 +128,10 @@ async def create_alias(
     except IntegrityError as exc:
         await db.rollback()
         # AC2.6 / spec F1 AC1.2: UNIQUE 違反は 409
+        log_hidden_error("super_admin_aliases.create_alias", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または FK 違反: {exc.orig}",
+            detail="重複または FK 違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -162,7 +164,8 @@ async def update_alias(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"重複または FK 違反: {exc.orig}")
+        log_hidden_error("super_admin_aliases.update_alias", exc)
+        raise HTTPException(status_code=409, detail="重複または FK 違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="aliasが見つかりません")
