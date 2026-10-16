@@ -2,7 +2,7 @@
 
 > この文書は何か: 商品マスタに商品を登録するとき、決まった項目の入れ忘れをシステムで止めるための設計（素人向け: 「空欄のまま登録できないようにする仕組み」の作り方）。
 > 親（設計仕様書）: [docs/specs/product-master/README.md](../../specs/product-master/README.md)
-> 現在地: [recon.md](./recon.md)（実測 origin/main b7e3f28d3）、追加調査 /tmp/CC報告ファイル/master-required-fields/add/（origin/main 539b0fe41）
+> 現在地: [docs/handoff/master-register-required-fields/recon.md](./recon.md)（実測 origin/main b7e3f28d3）、追加調査 /tmp/CC報告ファイル/master-required-fields/add/（origin/main 539b0fe41）
 > 状態: 設計案作成済み・Opus 自己審査済み（同一 AI の審査であり独立レビューではない）・KGI と3便は PO 承認済み（2026-10-16）・実装未着手
 
 ## 0. PO の言葉（原文）
