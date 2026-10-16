@@ -36,7 +36,7 @@ export function availableFixChoices(item: ReviewDrawerItem): FixChoice[] {
   const choices: FixChoice[] = ["reassign"];
   if (UNREGISTERED_ISSUES.some((issue) => issues.includes(issue))) choices.push("register");
   if (isConditionFixable(item)) choices.push("condition");
-  if (item.is_v102 === true) choices.push("value");
+  choices.push("value");
   return choices;
 }
 

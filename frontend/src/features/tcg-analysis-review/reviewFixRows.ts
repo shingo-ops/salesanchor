@@ -34,15 +34,13 @@ export function fixRowsOf(item: AnalysisReviewItem, t: Translate): Record<string
     name: { scope: "product", value: productDecided ? productName : null },
   };
   if (isConditionFixable(item)) rows.state = { scope: "condition", value: conditionDecided ? conditionName : null };
-  if (item.is_v102 === true) {
-    const manual = item.manual_values ?? {};
-    const valueRow = (value: string | undefined): FixRow => ({ scope: "value", value: value ?? null });
-    rows.quantity = valueRow(manual.quantity);
-    rows.price = valueRow(manual.price);
-    rows.unit = valueRow(manual.unit);
-    rows.memo = valueRow(manual.note);
-    rows.saleStatus = valueRow(manual.status);
-  }
+  const manual = item.manual_values ?? {};
+  const valueRow = (value: string | undefined): FixRow => ({ scope: "value", value: value ?? null });
+  rows.quantity = valueRow(manual.quantity);
+  rows.price = valueRow(manual.price);
+  rows.unit = valueRow(manual.unit);
+  rows.memo = valueRow(manual.note);
+  rows.saleStatus = valueRow(manual.status);
   return rows;
 }
 
