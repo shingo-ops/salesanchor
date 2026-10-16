@@ -239,12 +239,9 @@
   white-space: nowrap;
 }
 
-.schedule-calendar-checkbox {
-  width: var(--size-checkbox);
-  height: var(--size-checkbox);
+.schedule-calendar-item > input[type="checkbox"] {
   margin: 0;
   flex: none;
-  cursor: pointer;
 }
 
 .schedule-calendar-empty {

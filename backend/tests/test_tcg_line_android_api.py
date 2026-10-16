@@ -13,6 +13,14 @@ from app.routers import tcg_line_import as routes
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import import_line_export, sha256_text
 
+
+@pytest.fixture(autouse=True)
+def _no_operator_context_sql():
+    """モック DB は実行回数・順序を検証するため、ADR-1018 段階②b の operator 文脈 SQL は外す。
+    文脈そのものは tests/test_suppliers_rls.py（実 PostgreSQL）で検証する。"""
+    with patch("app.services.tcg_line_import_svc.reset_operator_context", new_callable=AsyncMock), patch("app.services.tcg_line_import_svc.set_operator_context", new_callable=AsyncMock):
+        yield
+
 EXPORT = '2026/9/12(土)\n12:00\t姓 名\t商品A\n\n末尾\n'
 RESULT = dict(status='imported', review_status='pending_review', message_count=1,
               provider_count=0, unresolved_count=1, unresolved_display_names=['姓 名'],

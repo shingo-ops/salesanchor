@@ -74,3 +74,13 @@ export const WithLabel: Story = {
     </label>
   ),
 }
+
+export const DataColor: Story = {
+  name: 'dataColor',
+  render: () => (
+    <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+      <CheckboxControl dataColor="rgb(26, 115, 232)" checked onChange={() => {}} aria-label="Data color blue" />
+      <CheckboxControl dataColor="rgb(232, 113, 10)" checked onChange={() => {}} aria-label="Data color orange" />
+    </div>
+  ),
+}
