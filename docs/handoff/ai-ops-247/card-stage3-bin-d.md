@@ -83,7 +83,7 @@
 | D2 | worker は bootstep を足し、worker の timer で 30 秒ごとに印を更新する（F6 の型）。120 秒古ければ不健康 | 公式の拡張の型。`-E` を足すと全タスクのイベントが流れ、負荷が増える |
 | D3 | beat は `PersistentScheduler` の子クラスにし、予定の確認（tick）のたびに印を更新する。150 秒古ければ不健康 | 60 秒ごとの予定がある（F8）ので tick は 60 秒以内に回る。予定表のファイルの時刻は 3 分ごとにしか変わらない |
 | D4 | gateway は asyncio の定期処理で 30 秒ごとに印を更新する。token が無くて待っている間も更新する。120 秒古ければ不健康 | 見るのはプロセスとイベントループが回っていることまで。Discord との接続は既存の見張り（Loki の DiscordGatewayReconnectFailure）に任せる |
-| D5 | gemini-egress は、待ち受けの口が開いているかではなく、トンネルの先の tinyproxy の統計ページ（`http://tinyproxy.stats/`）まで busybox の wget で通るかを見る。60 秒ごと | ssh が固まっても、口への接続はカーネルが受けてしまうので、口の確認では固まりが見えない（bin-d-recon.md R5）。統計ページは外へ出ないので Google には要求が飛ばない。prod2 の tinyproxy が落ちていても不健康になる（中継の経路として正しい） |
+| D5 | gemini-egress は、待ち受けの口が開いているかではなく、トンネルの先の tinyproxy が `http://tinyproxy.stats/` への要求に `403 Filtered` と答えるかを busybox の wget と grep で見る。「403 Filtered が返れば生きている」とみなす。60 秒ごと（Opus 決定・手元の試験で統計ページは 403 Filtered になったため） | ssh が固まっても、口への接続はカーネルが受けてしまうので、口の確認では固まりが見えない（bin-d-recon.md R5）。403 Filtered は tinyproxy 自身が返す答えなので、トンネルも tinyproxy も固まっていないことが分かる。要求はフィルタで拒否されるので Google には飛ばない。StatHost を見る方式は prod2 の設定変更が要るので採らない。prod2 の tinyproxy が落ちていても不健康になる（中継の経路として正しい） |
 | D6 | 印のファイルが書けなくても本体の処理は止めない（警告のログだけ） | 健康診断のために本体を壊さない |
 | D7 | 不健康になっても Docker は何もしない（`restart: unless-stopped` は止まったときだけ再起動する）。この便で利用者に見える変化は無い | 記録は便E、処置は便G。便D の後 24 時間、誤判定 0 を確かめてから進む（設計 §5） |
 
@@ -274,9 +274,9 @@ async def _main_async() -> int:
 (d) gemini-egress：目印 `    restart: unless-stopped`（:381・gemini-egress のブロックの中）の直後:
 
 ```yaml
-    # ADR-1012 段階3 便D: トンネルの先の tinyproxy の統計ページまで通るか（外へは出ない）。口が開いているだけでは固まりが見えない
+    # ADR-1012 段階3 便D: トンネルの先の tinyproxy が 403 Filtered を返すか（tinyproxy 自身の答えなので外へは出ない）。口が開いているだけでは固まりが見えない
     healthcheck:
-      test: ["CMD-SHELL", "http_proxy=http://127.0.0.1:18888 wget -q -T 10 -O /dev/null http://tinyproxy.stats/ || exit 1"]
+      test: ["CMD-SHELL", "http_proxy=http://127.0.0.1:18888 wget -q -T 10 -O /dev/null http://tinyproxy.stats/ 2>&1 | grep -q '403 Filtered' || exit 1"]
       interval: 60s
       timeout: 15s
       retries: 3
@@ -317,8 +317,9 @@ backend/tests/test_discord_gateway_alive.py に次の 2 つを書く（`pytest.m
 - `docker run --rm alpine:3.24 wget --help 2>&1 | head -30`（`-T` の有無を記録）
 - `docker build -t bind-tinyproxy monitoring/prod2/gemini-egress/tinyproxy`
 - `docker run -d --name bind-tp -v "$PWD/monitoring/prod2/gemini-egress/tinyproxy/tinyproxy.conf:/etc/tinyproxy/tinyproxy.conf:ro" -v "$PWD/monitoring/prod2/gemini-egress/tinyproxy/filter:/etc/tinyproxy/filter:ro" bind-tinyproxy tinyproxy -d -c /etc/tinyproxy/tinyproxy.conf`
-- 通る試験：`docker run --rm --network container:bind-tp alpine:3.24 sh -c 'http_proxy=http://127.0.0.1:8888 wget -q -T 10 -O - http://tinyproxy.stats/ | head -5; echo rc=$?'` で統計ページの HTML が出て、`http_proxy=http://127.0.0.1:8888 wget -q -T 10 -O /dev/null http://tinyproxy.stats/; echo rc=$?` が `rc=0`
-- 固まりの試験：`docker pause bind-tp` の後に同じ `-O /dev/null` のコマンドが 15 秒以内に `rc=0` 以外で終わる（`time` を付けて所要時間も記録）→ `docker unpause bind-tp`
+- 通る試験（a）：`docker run --rm --network container:bind-tp alpine:3.24 sh -c 'http_proxy=http://127.0.0.1:8888 wget -q -T 10 -O /dev/null http://tinyproxy.stats/ 2>&1 | grep -q "403 Filtered"; echo rc=$?'` が `rc=0`
+- 固まりの試験（b）：`docker pause bind-tp` の後に同じコマンドが 10 秒前後で `rc=1` になる（`time` を付けて所要秒数を記録）→ `docker unpause bind-tp`
+- 口が無い試験（c）：同じコマンドで `127.0.0.1:8888` を存在しないポート（例 `127.0.0.1:9`）に向けると `rc=1`
 - 外へ出ない試験：`docker logs bind-tp 2>&1 | tail -20` に、generativelanguage など外への接続の行が無い
 
 5-6. 片付け（成否に関わらず必ず行う）：`docker compose -p bind-test down -v`、`docker rm -f bind-tp`、`colima stop --profile ai-ops-bin-d`、`colima delete --profile ai-ops-bin-d --force`、`docker context use default`。最後に `colima list` と `docker context ls` の出力を貼る（`ai-ops-bin-d` が無いこと）
@@ -329,7 +330,7 @@ backend/tests/test_discord_gateway_alive.py に次の 2 つを書く（`pytest.m
 
 - §4 の目印の行が見つからない（ほかの PR が先に変えた）→ `git show origin/main:docker-compose.yml | grep -n "restart: unless-stopped"` のように origin/main で探し直し、同じ意味の位置に足す。決められなければ NEEDS_DECISION: で grep の出力を貼る
 - §5-5 で `wget --help` に `-T` が無い → §4-5(d) の test から ` -T 10` を消し（healthcheck の timeout 15s が代わりに切る）、§5-5 の試験も `-T 10` なしで行う。判断を要した点に書く
-- §5-5 の通る試験で統計ページが出ない（403・Filtered・rc が 0 以外）→ §4-5(d) は入れたまま変えず、`docker logs bind-tp 2>&1 | tail -20` と wget の出力を貼って NEEDS_DECISION:（Opus が gemini-egress の診断の方式を決め直す）
+- §5-5 の通る試験（a）が rc=0 にならない → `docker logs bind-tp 2>&1 | tail -20` と wget の出力を貼って NEEDS_DECISION:
 - §5-4 で起動しない・90 秒で healthy にならない → `docker compose -p bind-test logs --tail 40`（起動しないサービス名を付ける） を貼る。原因が「`.env` が無い・DB が無い」なら、`docker compose -p bind-test up -d --no-deps postgres` を足して 1 回だけ試し直す。それでも駄目なら BLOCKED:（勝手に compose や本体のコードを足して直さない）
 - §5-4 で 240 秒を超える、または戻らない → 時刻の記録と `docker inspect -f '{{json .State.Health}}'`（該当のコンテナ名を付け、`| head -c 3000`） を貼って BLOCKED:
 - colima が起動しない・ディスクが足りない → `colima start` の出力の最後 20 行と `df -h /` を貼り、§5-4・§5-5 を「未実行」として残りを進める（PR は作る。Opus が測り方を決め直す）
@@ -354,11 +355,12 @@ backend/tests/test_discord_gateway_alive.py に次の 2 つを書く（`pytest.m
 2. deploy.yml（main への push で起動）の成功を Actions の記録で確かめる（4 サービスは `up -d --no-deps` で作り直される・F9）
 3. 反映の 1 時間後と 24 時間後に、PO の `!` で読み取りだけのスクリプトを実行してもらう。中身：4 サービスの `docker inspect` の `State.Health.Status`・`FailingStreak`・`RestartCount`・`StartedAt`、`Health.Log` の終了コードの数、`docker events`（`--since` に反映の時刻、`--until` に今、`--filter event=health_status`） の行のうち unhealthy の数
 4. gemini-egress が本番で unhealthy なら、Gemini は直接接続なので利用者への影響は無い（F3）。prod2 の tinyproxy の状態を PO の `!` で読み、原因を記録してから便E に進むかを決める
-5. 生出力は /tmp/CC報告ファイル/ai-ops-stage3/bin-d-deploy/ に置く
+5. 反映の 24 時間後に、prod2 の tinyproxy のログの大きさを 1 回読む（1 分に 1 行増える。§9）
+6. 生出力は /tmp/CC報告ファイル/ai-ops-stage3/bin-d-deploy/ に置く
 
 ## 9. 弊害と戻し方
 
-- 弊害：prod2 の tinyproxy のログに 1 分 1 件の統計ページの要求が増える（1 日 1,440 件）。`docker-compose.yml` の gemini-egress は `max-size` でログを抑えているが、prod2 側の tinyproxy の compose にログの上限は無い（`monitoring/prod2/gemini-egress/docker-compose.yml:1-9`）。便D の 24 時間後に prod2 のログの大きさを 1 回読む
+- 弊害：prod2 の tinyproxy のログに 1 分 1 件の要求（403 Filtered の拒否）が増える（1 日 1,440 件）。`docker-compose.yml` の gemini-egress は `max-size` でログを抑えているが、prod2 側の tinyproxy の compose にログの上限は無い（`monitoring/prod2/gemini-egress/docker-compose.yml:1-9`）。便D の 24 時間後に prod2 のログの大きさを 1 回読む
 - 弊害：beat の scheduler の指定が変わる。`AliveScheduler` は `PersistentScheduler` の子で tick の後に印を書くだけなので、予定表の扱いは変わらない（§4-2・§5-1 の試験 3）
 - 戻し方：この PR の revert を main にマージ → 次の deploy で healthcheck と scheduler の指定が外れる。本番のデータには何も残らない（印は tmpfs）
 
@@ -391,15 +393,22 @@ backend/tests/test_discord_gateway_alive.py に次の 2 つを書く（`pytest.m
 実行結果（担当 Sonnet・2026-10-16・生出力は /tmp/CC報告ファイル/ai-ops-stage3/bin-d-impl/）:
 
 - §5-1: 手元に celery 等を入れた python 3.12 の環境が無いため pytest は未実行・CI で実行。`python3.12 -m py_compile` で §3 の python 6 ファイルが通ることだけ確認（compile=0）
-- §5-2: `git diff origin/main --stat` は §3 の 7 ファイル（カードを除く）。compose から消えた行は beat の command の旧行 1 行だけ（5-2-stat.txt・5-2-minus.txt）
-- §5-3: 4 サービス名あり。`docker-compose config` の出力では test の中の `$$` はそのまま `$$` で表示された（5-3-test.txt）
-- §5-4: 起動は .env が無く DATABASE_URL が空で 3 サービスとも異常終了を繰り返した（5-4-logs.txt）。§6 に従い postgres を足して 1 回だけ試し直し（シェルの環境変数で試験用の値を渡した）。discord-gateway は healthy（Health.Log 全て ExitCode 0・所要 1 秒未満）、STOP から unhealthy まで 170 秒、CONT から healthy まで 27 秒（5-4-gw-stop.txt）。celery-beat・celery-worker は再試行後も SQLAlchemy URL が空の例外で起動せず、healthy 確認・STOP 試験・VmHWM は未実施（5-4-beat-log-full.txt）
-- §5-5: alpine:3.24 の wget は `-T SEC` あり。通る試験は `HTTP/1.1 403 Filtered`・wget rc=1。tinyproxy ログ: `Proxying refused on filtered domain "tinyproxy.stats"`（5-5-tp-logs.txt）。固まりの試験・外へ出ない試験は未実施。§6 に従い §4-5(d) は変えず NEEDS_DECISION
-- §5-6: 片付け済み。`colima list` に ai-ops-bin-d なし、`docker context` は default（5-6-final.txt）
+- §5-2: `git diff origin/main --stat` は §3 のファイルだけ。`git diff origin/main -- docker-compose.yml | grep "^-[^-]"` の出力は beat の command の旧行 1 行だけ
+- §5-3: 4 サービス名あり。`docker-compose config` の出力では test の中の `$$` は `$$` のまま表示された（5-3-test.txt）
+- §5-4（colima 専用 profile・試験用の仮の値は /tmp の test.env から `--env-file` で渡しリポジトリには入れていない）:
+  - 起動しなかった原因: compose が `ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL:-}` で空文字を渡し、`backend/app/database.py:66` の `os.getenv("ADMIN_DATABASE_URL", DATABASE_URL)` が空文字を返して `create_async_engine("")` が失敗（worker・beat のみ。gateway は影響なし）。次に redis に `--requirepass` があり、CELERY_BROKER_URL に password が無いと `Authentication required` で接続できず、worker の timer も beat の tick も止まって unhealthy のまま戻らない（r2-5-4-stop-invalid-redis-auth.txt）。postgres は初回起動で healthy まで約 20 秒かかる
+  - test.env に ADMIN_DATABASE_URL と redis の URL（password あり）を足して再作成: 起動から 40 秒以内に 3 つとも healthy（r2-5-4-healthy.txt・RestartCount 0）
+  - 固まりの試験（3 つ同時 STOP）: unhealthy まで gateway 184 秒・worker 191 秒・beat 192 秒（240 秒以内）。CONT 後 healthy まで gateway 21 秒・worker 28 秒・beat 28 秒（180 秒以内）（r2-5-4-stop.txt）
+  - beat の Health.Log: 所要は全て 1.1 秒以内（r2-5-4-beat-healthlog.txt）。VmHWM は 1548 kB（r2-5-4-vmhwm.txt）
+- §5-5（Opus 決定で gemini-egress の診断を「403 Filtered が返れば生きている」に変更）: (a) 通る: rc=0。(b) docker pause: rc=1・docker run 込みで 18 秒（(a) が 7 秒なので待ちは約 10 秒）。(c) 存在しないポート 9: rc=1。tinyproxy のログに generativelanguage の行は 0 件（r2-5-5-*.txt）
+- §5-6: 片付け済み。`colima list` に ai-ops-bin-d なし、`docker context` は default（r2-5-6-final.txt）
+
+Opus 決定:
+- gemini-egress の診断は、tinyproxy が 403 Filtered を返したら生きているとみなす方式に変更（理由: 403 Filtered は tinyproxy 自身の答えで、トンネルと tinyproxy が固まっていないことが分かる。統計ページ StatHost を見る方式は prod2 の設定変更が要るので採らない）。§4-5(d)・D5・§5-5・§6・§8 を書き換えた
 
 判断を要した点:
 - ブランチ名は new-worktree.sh の部分一致の不具合を避けるため Opus の指示で変更（release/ai-ops-stage3-bin-d → release/ai-ops-healthcheck-bin-d）
 - 手元に `docker compose` プラグインが無く、`docker-compose`（v5.5.1）で代用した
-- §5-4 の試し直しで、カードに無い試験用の環境変数（DATABASE_URL・POSTGRES_*・GCP_PROJECT_ID の仮の値）をシェルから渡した（ファイルには書いていない）
+- 試験用の環境変数（DATABASE_URL・ADMIN_DATABASE_URL・POSTGRES_*・GCP_PROJECT_ID・redis の URL）の仮の値を /tmp の test.env に置き `--env-file` で渡した（本物の secrets は使っていない）
 
 END OF CARD
