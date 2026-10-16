@@ -354,3 +354,10 @@ def test_existing_twelve_columns_unchanged(pg):
     assert row[1:4] == ["TM", "Keyword title", "Test Title"]
     assert row[4:7] == ["Sealed box", "1000", "3"]
     assert row[9] == "2026-01-02"
+
+
+def test_bulk_is_ranked_after_pack_states_and_before_unlisted_values():
+    from app.services.tcg_result_order import RESULT_CONDITION_ORDER, result_order_sql
+
+    assert RESULT_CONDITION_ORDER[-1] == "Bulk" and RESULT_CONDITION_ORDER.index("Searched pack") < RESULT_CONDITION_ORDER.index("Bulk")
+    assert f"WHEN 'Bulk' THEN {len(RESULT_CONDITION_ORDER) - 1}" in result_order_sql()
