@@ -1,6 +1,6 @@
 # 設計 — S3 例外の中身（SQL 文・入力値）を応答に出さない（db-error-detail）
 
-**日付**: 2026-10-16　**根拠**: [recon.md](recon.md)（docs/handoff/s3-db-error-detail/recon.md）　**仕様書**: [docs/specs/db-error-detail/README.md](../../specs/db-error-detail/README.md)、KGI [docs/specs/db-error-detail/kgi.md](../../specs/db-error-detail/kgi.md)
+**日付**: 2026-10-16　**根拠**: [recon.md](recon.md)（docs/handoff/s3-db-error-detail/recon.md）　**仕様書**: [docs/specs/db-error-detail/README.md](../../specs/db-error-detail/README.md)、KGI [docs/specs/db-error-detail/kgi.md](../../specs/db-error-detail/kgi.md)　**ADR**: 例外の応答内容を定めた ADR は無い（recon 冒頭）。GO は ADR-1003 の委任に基づく
 
 ## 1. 目的（利用者に見える変化）
 
