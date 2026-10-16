@@ -209,13 +209,15 @@ ORDER BY sm.line_posted_at ASC, ej.id
 | 窓なしで読む画面（要確認タブ・相場点検・line_import_admin）は、is_current の変化をすぐ映す | M3 の付け直しで、組が消えないようにする。窓内は K5 で守る |
 | 要確認の件数が増減する | 狙いどおり。前後の数を報告する |
 | 人の直しと同時に動くと、直しが消える | item_corrections がある投稿は、処理の直前にも除く。付け直しの直前にも読み直す |
+| Gemini の呼び出し中（最大300秒）に人がその投稿を直すと、直しが DELETE の後に孤立する（コード審査 m7。既存ファイルを変えない方針では塞げない） | 対象は過去の投稿（10/9 以前）なので、人が触る見込みは小さい。実行の後に「控えの job の投稿で、実行開始より後に作られた item_corrections」を数え、1件以上なら一覧にして PO に報告する |
 | デプロイで、別コンテナが消され得る | 名前を外す（D6）。消されても、繰り返しと --repair で続ける。K7 で取り残しを 0 にする |
 | 応答が読めないと、v6 の件が消える | unreadable と数え、連続5回で止める。--repair でもう一度抽出する。K4 で 0 にする |
 | 古い items が消える | 実行前に控えを取る（§5） |
 
 ## 5. 控えと戻し方
 - 控え（実行前。ホストの /home/ubuntu/reextract-v6/backups/。コンテナからは /work/backups/ で読める）
-  - `\copy` で、v6 対象の job の extraction_jobs（全列）・extraction_items・analysis_results を CSV にする。
+  - `\copy (...) TO ... WITH (FORMAT csv, HEADER true, FORCE_QUOTE *)` で、v6 対象の job の extraction_jobs（全列）・extraction_items・analysis_results を CSV にする。`NULL '\N'` は使わない（道具の読み取りは「引用符なしの空＝NULL」で区別する。コード審査 r2-m3）。
+  - 最初に全件の dry-run を流してから、絞った実行に進む（コード審査 r2-m4。excluded.tsv は全件の実行でしか書かれない）。
   - dry-run の「処理順の job id 一覧」と「除外の一覧」。
   - D4-3 の組の控え（pairs/）。
 - 戻しは `--rollback-from /work/backups [--job-id <uuid>] --execute`。job ごとに、1つの取引で次を行う。

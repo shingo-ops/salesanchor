@@ -114,3 +114,47 @@
 ## APPROVE の条件
 - M1 を直し、試験を1本足す。
 - m1〜m8 は任意。直さない m2・m7 は、本番手順（ループの後の K4・K7、実行中の直しを控える旨）を PO 報告に入れること。
+
+---
+
+## r2（直しのコミット 6cc4a99c3。差分は 62aa26bca から）
+
+- 読んだもの: `git diff 62aa26bca 6cc4a99c3`（控え: /tmp/CC報告ファイル/v6-to-v102/code-review/r2_diff.txt）、試験の結果 /tmp/CC報告ファイル/v6-to-v102/impl/pytest2.txt（`39 passed, 2 warnings in 36.77s`）
+- 判定: **APPROVE**（下の r2-m1 は push 前に必ず行う。r2-m2〜m4 は任意）
+
+### r1 の指摘の直り具合
+| 指摘 | 結果 | 根拠 |
+|---|---|---|
+| M1 戻した job のやり直し | 直った。rollback が成功した job を rolled_back.txt に fsync して追記し（reextract_v6_with_v102.py:775-776）、process_job が skip_not_v6 の確認の後でその job を `skip_rolled_back` にして飛ばす（:423-425）。区分が記録に残るので K1 にも入る | 試験 test_rolled_back_job_is_skipped_by_the_next_execute（Gemini の呼び出し回数が増えず、v6 のまま） |
+| m1 order.txt と費用の範囲 | 直った。order.txt を作るのは絞らない実行だけ（:504-507）。どの実行でも、処理する job を処理の前に order.txt に足し、budget.job_ids にも足す（:515-517）。--limit で止まる件は足さない（:513-514 の後） | test_narrowed_runs_keep_order_txt_and_append_processed_jobs（費用の集計が3件すべてを数える） |
+| m2 終了コード 4 とループ | 直った。下の「終了コード 4 とループの抜け方」を参照 | test_exit_4_when_failures_remain_in_execute_and_repair / test_loop_continues_on_exit_4_and_ends_with_4_at_the_max_rounds |
+| m3 空の応答で解析前に止まった件 | 直った。判定の根拠も正しい。下を参照 | test_repair_analyzes_an_empty_job_stopped_before_the_analysis |
+| m4 戻しの失敗の終了コード | 直った。rollback_error が1件以上なら 1（:781）。失敗した job は rolled_back.txt に入らない | test_rollback_error_gives_exit_1 |
+| m5 excluded.tsv の上書き | 直った。excluded.tsv があれば excluded.dryrun.tsv に書く（:283-284） | test_later_dry_run_does_not_overwrite_the_first_lists |
+| m6 CSV の `\N` | 直った。下の「CSV の往復」を参照 | test_csv_distinguishes_null_empty_and_backslash_n |
+| m7 直しの孤立 | 設計に注記された（design.md:212。実行の後で、開始より後に作られた item_corrections を数えて PO に報告する）。**ただし design.md の変更は未コミット**（r2-m1） | `git status`: ` M docs/handoff/reextract-v6-with-v102/design.md` |
+| m8 試験の弱い主張 | 直った（tests/test_reextract_v6_with_v102_pg.py:175 が辞書の完全一致になった） | — |
+
+### 終了コード 4 とループの抜け方
+- 【事実】execute と repair は、上限で止まらずに最後まで回り、その回の区分に gemini_error・analysis_error・unreadable・repair_exhausted・pairs_error のどれかがあれば 4 を返す（:56-58, :538-539, :619-620）。skip_* と rolled_back は入らない。
+- 【事実】ループは、execute が 0 か 4 のときに repair へ進み、execute も repair も 0 のときだけ「完了」で 0 を返す（reextract-v6-loop.sh:61-79）。どちらかが 4 なら次の回へ進み、最大回数に達したら 4 で終わる（:80-88。residual は :55）。3・2 は今までどおりすぐ止まる。137 等は repair を飛ばして次の回へ進む（今までどおり）。
+- 回の進み方（確認）: unreadable の件は v102 になるので、次の回の execute は選ばない。repair が回ごとに1回ずつ再抽出し、2回で repair_exhausted になる。その後は Gemini を呼ばずに 4 を返し続けるので、ループは最大回数まで回って 4 で終わる（費用は増えない）。その件を rollback すると、repair は v102 の件しか見ないので（:538-539 付近）残りに数えず、execute は skip_rolled_back にする。gemini_error の件は v6 のままなので、回ごとの execute がやり直す（費用の上限の内）。
+- 【事実】EXIT_ROLLBACK_ERROR=1 はループの「最大回数で 1」と同じ値だが、ループは rollback を呼ばないので混ざらない。
+
+### m3 の判定の根拠
+- 【事実】run_v102_extraction は、応答が読めたとき review_reasons を NULL にして commit する（line_analysis_v102_svc.py:513-514, :516-527）。
+- 【事実】run_v102_analysis は、items 0 でも（unreadable のときを除き。:1286-1287）パイプラインを通す。_post_review_reasons は件数 0 なら必ず `no_items` を付け（gemini_raw_copy_v101.py:1322-1324）、それを _job_review_reasons 経由で review_reasons に書く（line_analysis_v102_svc.py:770-771, :976）。例外のときは extract_exception を書く（:1302-1306）。
+- 【事実】本番の流れも、items 0 のときに解析を走らせる（tcg_extraction.py:446）。
+- よって、「v102・status=empty・items 0・review_reasons が NULL」なのは、解析が走っていない件だけ。判定（reextract_v6_with_v102.py:572）は正しい。repair は v102 の件しか見ないので、v6 の empty（NULL）が拾われることもない。コードのコメントには、no_items の出どころとして gemini_raw_copy_v101.py:1324 も書くとよい（任意）。
+
+### CSV の往復
+- 【事実】自前のパーサ（reextract_v6_with_v102.py:629-672）は「引用符なしの空 = NULL」「引用符つき = その文字列（空も `\N` も文字列）」と読む。`""` のエスケープと、引用符の中の改行（\n・\r\n）にも対応する。列数が合わない行は `zip(strict=True)` で例外になり、黙って進まない。
+- 【事実】PostgreSQL の COPY の CSV は、NULL を引用符なしの空で出す（NULL の既定は空）。FORCE_QUOTE * なら、NULL でない値はすべて引用符で囲まれる。試験は、本物の COPY（FORCE_QUOTE *）の出力で NULL・空・`\N`・改行と引用符を含む値を往復させて一致を見ている（tests/…_pg.py:723-733）。rollback の往復の試験（dump_csv も FORCE_QUOTE *）も通っている。
+- 【事実】FORCE_QUOTE を付けない既定の CSV でも、PostgreSQL は空の文字列を `""` と引用して NULL と区別するので、このパーサで正しく読める。逆に `NULL '\N'` を付けて控えを取ると、NULL が文字列 `\N` として戻る（r2-m3）。
+
+### 残りの指摘（いずれも軽微）
+- **r2-m1（push 前に必ず）**: m7 の注記を入れた design.md が未コミット（`git status` で ` M`）。コミットに入れること。
+- r2-m2: 道具の冒頭の説明の終了コードの行（reextract_v6_with_v102.py:24）に、4（失敗が残った）と 1（戻しの失敗）が書かれていない。`--help` と本番手順を読む人のために足す。
+- r2-m3: 控えの取り方を書いた design.md:219 は「`\copy` で CSV にする」だけで、オプションを指定していない。道具の説明（:22）と同じ `(FORMAT csv, HEADER true, FORCE_QUOTE *)` を design §5 か本番手順に書くこと。特に `NULL '\N'` は使わないこと（NULL が文字列 `\N` として戻り、NOT NULL でない列で値が化ける）。
+- r2-m4: 絞った実行の後に全件の --execute を流すと、order.txt が既にあるので excluded.tsv が書かれない（:504-507。試験もそれを確かめている: tests/…_pg.py:667）。design §6 の順（最初に全件の dry-run）を守れば dry-run の excluded.tsv があるので問題は出ない。気になるなら、excluded.tsv が無いときだけ execute でも書く。
+- 新しい穴: 上のほかには見つからなかった。append_line_durable は1件ごとに fsync するが、件数は数千なので所要は問題にならない（見積もり）。

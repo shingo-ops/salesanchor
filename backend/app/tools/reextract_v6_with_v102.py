@@ -14,14 +14,15 @@
   order.txt / excluded.tsv / records.jsonl / started_at.txt / repair_counts.json / pairs/<job_id>.json
   pairs/ はここ1か所だけ（--repair もここを読む。--rollback-from は v102 の組をその場で読むので pairs/ は使わない）。
 
-控え（DIR）の CSV は psql の \\copy で作る。NULL は \\N とする（空文字列と区別するため）。
+控え（DIR）の CSV は psql の \\copy で作る。FORCE_QUOTE * で書き、NULL だけ引用符なしの空にする（空文字列・`\\N` と区別するため）。
   extraction_jobs.csv    : SELECT * FROM public.extraction_jobs  WHERE id = ANY(対象)
   extraction_items.csv   : SELECT * FROM public.extraction_items WHERE extraction_job_id = ANY(対象)
   analysis_results.csv   : SELECT ar.* FROM public.analysis_results ar JOIN public.extraction_items ei
                            ON ei.id = ar.extraction_item_id WHERE ei.extraction_job_id = ANY(対象)
   いずれも TO '<file>' WITH (FORMAT csv, HEADER true, FORCE_QUOTE *)
 
-終了コード: 0 = 済んだ / 2 = 始める前の確かめに失敗・引数の誤り / 3 = 上限（費用・連続の失敗）で止まった。
+終了コード: 0 = 済んだ / 1 = --rollback-from で rollback_error の job がある / 2 = 始める前の確かめに失敗・引数の誤り /
+  3 = 上限（費用・連続の失敗）で止まった / 4 = 最後まで回ったが失敗（gemini_error 等）が残っている。
 """
 from __future__ import annotations
 
