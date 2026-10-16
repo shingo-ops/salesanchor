@@ -467,6 +467,7 @@ export default function RolesPage() {
                       className="color-swatch selected color-swatch-legacy"
                       style={{ background: roleForm.color }}
                       title={t("roles.currentColorTitle", { color: roleForm.color })}
+                      data-current-label={t("roles.currentColorBadge")}
                     >
                       <RadioControl
                         name="role-color"

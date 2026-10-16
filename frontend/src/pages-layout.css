@@ -328,7 +328,7 @@
   position: relative;
 }
 .color-swatch-legacy::after {
-  content: "現在";
+  content: attr(data-current-label);
   position: absolute;
   bottom: -14px;
   left: 50%;
