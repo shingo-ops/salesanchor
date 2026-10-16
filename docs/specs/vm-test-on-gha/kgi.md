@@ -4,7 +4,7 @@
 
 親: [README.md](./README.md)
 
-状態: 案（PO 承認待ち）。正本は [design.md §1・§5](../../handoff/vm-test-on-gha/design.md)。食い違えば design.md を直してから本表を合わせる。
+状態: PO 承認済み（2026-10-16 チャット「y」）。正本は [design.md §1・§5](../../handoff/vm-test-on-gha/design.md)。食い違えば design.md を直してから本表を合わせる。
 
 | # | 合格条件 | 測り方 | 合格ライン | 結果 |
 |---|---|---|---|---|

@@ -75,7 +75,7 @@
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
 | Docker（Colima）使い終わり自動停止（colima-idle-stop。PO の Mac で使っていない試験用 DB の入れ物を自動で止めてメモリを空ける） | [colima-idle-stop/README.md](colima-idle-stop/README.md) | あるべき姿=PO発言転記・実装済み（#4294）・KGI 7/7 合格 2026-10-15 |
 | Mac の自動お手入れの見張り（mac-jobs-watch。Docker 自動停止と毎日の自動片付けが止まったり失敗したりしたら Discord で知らせる） | [mac-jobs-watch/README.md](mac-jobs-watch/README.md) | あるべき姿=PO発言転記・設置済み K1〜K5 合格（2026-10-15 #4315）・K6 観測待ち |
-| 仮想マシンが要る試験を GitHub で行う（vm-test-on-gha。PO の Mac で試験用の仮想マシンを作らず、GitHub のコンピュータで試す） | [vm-test-on-gha/README.md](vm-test-on-gha/README.md) | あるべき姿=PO発言転記・KGI 案（PO 承認待ち）・設計案作成済み・実装未着手 |
+| 仮想マシンが要る試験を GitHub で行う（vm-test-on-gha。PO の Mac で試験用の仮想マシンを作らず、GitHub のコンピュータで試す） | [vm-test-on-gha/README.md](vm-test-on-gha/README.md) | あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・設計審査済み・実装中 |
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |

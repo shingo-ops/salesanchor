@@ -4,7 +4,7 @@
 
 親: [docs/specs/vm-test-on-gha/README.md](../../specs/vm-test-on-gha/README.md)／recon: [recon.md](./recon.md)
 区分（ADR-1015）: **A**（scripts/ と正本文書 AGENTS.md を触る）。PR は Draft・GO 記録必須（ADR-136。GO は ADR-1003 により POの委任に基づくClaude Opus発行で可。workflow-lint.yml は触らない）。
-版: v1（2026-10-16）。状態: 設計案作成済み・Opus 自己審査 APPROVE（§10）・KGI は PO 承認待ち。
+版: v1（2026-10-16）。状態: 設計案作成済み・Opus 自己審査 APPROVE（§10）・KGI PO 承認済み（2026-10-16「y」）。
 
 ## 1. 目的と成功条件
 - 目的: 8GB の Mac で一時的な仮想マシン（4GB 等）を作らないようにして、開発中の重さを減らす。試験の質は落とさない。
