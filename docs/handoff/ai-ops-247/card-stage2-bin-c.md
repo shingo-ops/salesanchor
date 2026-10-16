@@ -113,7 +113,7 @@ receivers:
         send_resolved: true
   - name: ops-api
     webhook_configs:
-      - url: https://49.212.137.46/api/v1/ops/alertmanager
+      - url: https://49.212.137.46/api/v1/ops/alertmanager   # → §14 で変更
         send_resolved: true
         max_alerts: 100
         timeout: 10s
@@ -122,7 +122,7 @@ receivers:
             type: Bearer
             credentials_file: /etc/alertmanager/secrets/ops-ingest-token
           tls_config:
-            server_name: api.salesanchor.jp
+            server_name: api.salesanchor.jp   # → §14 で変更
 ```
 
 ### 4-2. `docker-compose.monitoring.yml`
@@ -229,3 +229,12 @@ receivers:
 - 判断を要した点: 設計 stage2-design.md:50 の修正（D1）はカード §3 の 4 ファイルに含まれないため触っていない
 
 END OF CARD
+
+## 14. 追補（421 対策・2026-10-16）
+
+- 原因: webhook の URL が IP（`https://49.212.137.46/...`）で、Host ヘッダは IP、TLS の SNI は `server_name` のホスト名（`api.salesanchor.jp`）と食い違った。nginx が 421 Misdirected Request を返した（記録: /tmp/CC報告ファイル/ai-ops-stage2-bin-c/finding_421.md）
+- 変更:
+  - `monitoring/alertmanager/alertmanager.yml`: URL を `https://api.salesanchor.jp/api/v1/ops/alertmanager` に変更。`tls_config` と `server_name` を削除（`http_config.authorization` は据え置き）
+  - `docker-compose.monitoring.yml`: alertmanager に `extra_hosts: ["api.salesanchor.jp:49.212.137.46"]` を追加
+- 経路は変わらない: ホスト名は extra_hosts で 49.212.137.46 に固定されるので、従来どおり IP 直で prod1 に届き、Cloudflare は通らない（Host と SNI は共にホスト名で揃う）
+- 担当の実行結果: /tmp/CC報告ファイル/ai-ops-stage2-bin-c/fix421/ （diff.txt・yaml_check.txt・grep.txt）
