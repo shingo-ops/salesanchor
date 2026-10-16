@@ -15,7 +15,7 @@ GAS の基準: 本番 GAS を clasp pull した index.html（以下 H）。生�
 | docs/adr/ADR-144-ui-component-governance.md | 金型を先に確認・生 input/select/自作タブ禁止・例外は ui-allow |
 | docs/adr/ADR-027-ui-internationalization.md | 文言は t() のみ・ja/en 同一キー |
 | docs/adr/ADR-087-hub-shell-layout-standard.md / ADR-140-mobile-nav-bottom-tabs.md | PC とスマホの外枠。スマホ判定は useIsMobile（767px 以下） |
-| ADR-1017（Draft PR #4283 側） | 閲覧専用ページ。本件の部品を共用する予定 |
+| ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え）（Draft PR #4283 側） | 閲覧専用ページ。本件の部品を共用する予定 |
 
 ## 1. GAS の動き（本番）
 
