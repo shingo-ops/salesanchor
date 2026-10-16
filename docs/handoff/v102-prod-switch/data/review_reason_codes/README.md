@@ -70,3 +70,6 @@ gemini_gap_suspect（system・extraction）。unit_price_mismatch の追加（up
 | dryrun | INSERTED|1・CHECK_OK 1・ROWS_OK 37・ROLLBACK・DRYRUN_OK |
 | commit | INSERTED|1・CHECK_OK 1・ROWS_OK 37・COMMIT・COMMIT_DONE |
 | verify | gemini_gap_suspect|system|extraction・ROWS|37・VERIFY_DONE |
+
+## 追加: bulk_price_basis_unknown（g28 便2）
+bulk_price_basis_unknown（system・analysis）。gemini_gap_suspect の追加（gs_*）の verify 成功（ROWS|37）の後に、便2 のコードのマージ前にだけ、bp_dryrun（INSERTED|1・CHECK_OK 1・ROWS_OK 38・DRYRUN_OK）→ bp_commit（INSERTED|1・CHECK_OK 1・ROWS_OK 38・COMMIT_DONE）→ bp_verify（bulk_price_basis_unknown|system|analysis・ROWS|38・VERIFY_DONE）。戻し方 bp_rollback.sql（この1コードだけ戻す）。値は seed_20261016_bulk_price_basis_unknown.sql が正本。設計 docs/handoff/g28-bulk-price/design.md 便2。実施の記録は Opus が PR に書く。

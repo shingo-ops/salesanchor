@@ -1,0 +1,20 @@
+name: no-mac-vm-guard
+# 新しく足した行に「Mac で一時的な仮想マシンを作る命令」があれば止める。規則: docs/ops/runner-commands.md「仮想マシンが要る試験」
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run guard
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/ci/no-mac-vm-guard.sh "origin/${BASE_REF}"

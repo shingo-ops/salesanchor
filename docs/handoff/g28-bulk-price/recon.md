@@ -33,3 +33,32 @@
 
 ## 5. 未確認
 本番 GAS の実体、Piece にしたときの単価チェックの誤検知（便2）、note の英語列（便2）。
+
+---
+
+# 便2 recon（価格を1枚単価に。origin/main 057e12b16 基準）
+
+設計: DESIGN_BIN2（リポジトリ外）の内容は design.md「便2」に転記。調査事実の元: bin2_recon/FACTS.md（リポジトリ外）。原文の投稿文・仕入元名は社外秘のためここに書かない。
+
+## 便2-1. コードの現在地（worktree の変更前の状態）
+- backend/app/services/line_analysis_v102_svc.py:665-699 `_analysis_values`（変更前）。note_ja は常に None、price_basis は item の値、換算なし。
+- backend/app/services/line_analysis_v102_svc.py:934-978 `_write_results`（変更前）。:952 `_analysis_values`、:954-957 人の手直し（apply_value_overrides）、:966 `_inherit_price`。
+- backend/app/services/line_analysis_v102_svc.py:1119-1160 `_inherit_price`（変更前）。バルク系を除く条件が無い。
+- backend/app/services/v102_human_decisions_svc.py:524-551 `apply_value_overrides`。quantity / price / unit / note / status を上書きし、review_reasons・needs_review は変えない。
+- backend/app/services/review_reason_codes_svc.py:17 `NON_ACKABLE_REASON_CODES`（変更前は condition_unknown のみ）。
+- backend/tests/test_review_reason_codes_consistency.py:38-58 `_code_side_constants`、:16・:26 が docs/handoff/v102-prod-switch/data/review_reason_codes/seed_*.sql だけを読む。
+- backend/app/services/tcg_distribution_svc.py:346-354 配信の出さない条件（needs_review・unit_resolved・price）。:356-386 同じ投稿・商品・単位・備考の行のまとめ（変更しない）。
+
+## 便2-2. 原文ブロックの取り方（カード §0 の点検の答え）
+- 【事実】run_v102_analysis（backend/app/services/line_analysis_v102_svc.py:1272 付近）は `load_extraction_context` で `ctx.raw_text`（source_messages.raw_text）を既に持っている。件の行の `source_lines` は同関数の extraction_items の SELECT（:1317 付近）に既にある。
+- 【事実】v102 は件の保存時に line_start = min(lines)、line_end = max(lines) を書く（`_item_rows`、:410 付近）。source_lines が無い件は line_start / line_end も無い。
+- 【結論】追加の DB 問い合わせは不要。SELECT の列に line_start・line_end を足し、`_write_results` に引数 raw_text を足して ctx.raw_text を渡す（job 単位で追加の読み取り 0 回）。行は 1 始まり（retest の q.sql の `WITH ORDINALITY` と同じ取り方）。
+- 【事実】_write_results の呼び出しは run_v102_analysis の1か所のみ（既存の試験は位置引数で呼ぶ。raw_text は既定 None＝原文なし＝バルク系は review）。
+
+## 便2-3. 本番の事実（読み取りのみ・2026-10-16）
+- 【事実】retest_v102 の34行（バルク系の v102 現行行）の extraction_item のうち、人の手直し（override_quantity / override_price / override_unit / override_note / v102_price / v102_quantity）がある件数 = 0（生出力 bin2_impl/overrides.txt）。
+- 【事実】note_en の列は analysis_results に無い（FACTS §3）。
+
+## 便2-4. 既存 ADR の検索
+- `git grep -il '1枚単価\|セット単位\|price_basis\|v102_unit_price\|バルク' -- docs/adr` → ADR-1021 のみ（README は索引）。本件は ADR-1021 に追記する。
+- docs/adr/FEATURE-INDEX.md に該当項目なし。
