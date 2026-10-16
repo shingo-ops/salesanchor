@@ -126,3 +126,15 @@ required check 登録済。本 ADR では追加実装しない。
 旧AC-5（既存件数を赤化しない）は、全対象の未移行0で合格へ置換する。旧AC-6の22ケース中ui-allow免除/table非検出の期待を更新し、最終契約C01〜C27を実行する。既存入力失敗の再現はexit2で拒否される対照へ継承する。UI移行が先、CIは最後。未移行を登録して緑にする切替は禁止。
 
 維持するもの: 共通部品の利用、i18n、既存の業務動作、既存必須チェック、PRレビュー。CIで任意JSの意味や全ての独自divの見た目まで保証するとは主張しない。対応表とコードレビューで補う。
+
+## 2026-10-16 追記: 生チェック欄を種別に追加（AY-4d）
+
+- PO 決定: 2026-10-16「y」。CI ゲート（§2）の検出種別に `checkbox`（生 `<input type="checkbox">`）を 1 つ足した。本文（Accepted）の仕組みはそのまま、種別が 3 から 4 になっただけで、改訂案（全件検査）への切替ではない。
+- 判定: `<input>` タグの type が `"checkbox"` / `'checkbox'` / `{"checkbox"}` / `{'checkbox'}` のとき数える。`type={kind}` のような動的な値は判定できないので数えない。ui-allow（理由と番号）で除外できる。
+- 対象: §2 と同じ `frontend/src/pages/**/*.tsx`（stories・design-system・design-preview 除く）の PR 変更ファイル。BASE と HEAD の件数を比べ、増えたら赤。features/・components/ は検査しない（今は金型本体 3 ファイル以外 0 件）。生 radio は対象外。
+- 試験: scripts/tests/test-ui-governance.js は 22 件から 31 件（T21〜T29）。改訂案 :126 付近の「22ケース」は 31 件になった。全件検査へ切り替えるときは 31 件と checkbox 種別を引き継ぐ。
+- 既存の動き: 波括弧付き `type={"checkbox"}` は、もともと input 種別（text/search/省略）でも数えられる（type 属性の正規表現が波括弧を見ないため）。checkbox 種別を足したので、この形を書くと違反が 2 行出る。止める側に倒れるので直さず、T29 で今の動きを固定した。
+- 既知の穴（正規表現のため）: 誤検知は JSX コメント・文字列の中・`data-type="checkbox"`。取りこぼしは、type より前の文字列属性に `>` がある場合、テンプレートリテラル（後者は input 種別が赤にする）。今の pages/ の全 .tsx ではどちらも 0 件。
+- 検出対象の列挙が checkbox を含まないまま古くなる箇所（今回は触らない）: .github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119。
+- 必須チェックの事実: 関所（ジョブ名 UI governance gate）は main のルールセット（id 15777895）の必須チェックに登録済み。本文 :103 の「（非必須）」と .github/workflows/ui-governance-gate.yml:6 のコメントは古い記載である。
+- 設計: docs/handoff/ay4d-checkbox-guard/design.md。
