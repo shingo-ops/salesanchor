@@ -15,7 +15,7 @@ DB の失敗（重複・制約違反・取り込みの確定失敗など）の�
 
 - あるべき姿: [ideal-state.md](ideal-state.md)（PO の言葉の転記）
 - KGI: [kgi.md](kgi.md)（PO 承認済み 2026-10-16）
-- 実装: 未着手
+- 実装: 本番反映済み（PR #4399、2026-10-16 13:15Z マージ・deploy 成功。KGI 判定は [kgi.md](kgi.md)）
 
 ## 子文書
 

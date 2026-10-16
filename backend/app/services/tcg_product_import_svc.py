@@ -521,7 +521,7 @@ async def commit_import(
             continue
         payload = build_payload(row, lookups)
         try:
-            outcome = await create_product(db, force=True, commit=False, **payload)
+            outcome = await create_product(db, force=True, commit=False, actor=executed_by, **payload)
         except ValueError as error:
             # Only a creation ValueError may become a rejected row. Rollback
             # must succeed before its error receipt starts another transaction.
