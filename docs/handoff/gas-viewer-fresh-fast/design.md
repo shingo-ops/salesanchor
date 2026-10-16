@@ -458,6 +458,16 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
   - 短い作り置き・NGINX の公式ブログ（2015-12）：WordPress で、作り置きが無いときは毎秒5.53件しか返せなかった。1秒だけ作り置きすると毎秒2,185件になった。期限が切れた瞬間にリクエストが元に集中することへの対策も要る、と書いている。Facebook の論文（NSDI 2013）では、作り直しを10秒に1回に絞ることで、DB への問い合わせのピークが毎秒17,000件から1,300件に下がった。応用：D3 は閲覧者のリクエストでは作り直さず、1分ごとのタスクが1本で作る。期限が切れたときの集中は構造上起きない。
   - 適用の限界：上の事例は、どれも本件より大きな規模か、個人向けのサービス。メールのリンクの成功率・離脱率、60秒の作り置きの効果、GAS からの移行前後の速度について、数値を出した一次の事例は見つからなかった。本件の成否は、受入条件の表と、段0〜2 の実測で判定する。
 
+## 段2の実施の決め事（2026-10-16。Opus の判断と PO の決定）
+
+- PO 決定（2026-10-16 チャット「y」）：段2で、本番に閲覧者専用の鍵 AUTH_VIEWER_JWT_SECRET（新しく作るランダムな文字列）を足す。経路は GitHub の秘密設定 → deploy.yml の .env 書き込み → docker-compose.yml の backend の environment。値はチャット・リポジトリ・ログに出さない。
+- 段2は2つの PR に分ける。段2a：作り置き（D3）と閲覧 API の login・logout・inventory の3本（D2）と鍵の配線。段2b：作り置きが止まったことの見張り（§継続の「updated_at から10分」）。
+- signup・password（変更）・password-reset/request・password-reset/confirm の4本は段4で作る（計画票の段4が申込とパスワードの変更・再発行を含むため）。
+- 外側の nginx の完全一致の3ブロック（D1 の 8）は段4で入れる。閲覧者の行ができるのは段4からなので、段2では nginx の作り直しをしない。段2の間の login は、アプリの回数制限（IP ごと・email ごと）だけで守る。
+- login の email ごとの回数制限は、Redis が使えないときは通す（既存の check_auth_rate_limit と同じ fail-open）。login に成功したら email ごとの数を消す。
+- 作り置きの通知の文言は「[viewer-cache] 3回続けて失敗しました: 理由」。経路は既存の send_discord_notification(tenant_id=4, event_type="tcg_distribution_error")。
+- 見張りの経路（段2b）：作り置きのタスクが Redis に最後に書けた時刻と最後に保留を確かめた時刻を置き、backend の /metrics が読んで Prometheus に出し、monitoring/prometheus/alert_rules.yml に規則を足す（ADR-1012 の CeleryHeartbeatStale と同じ経路）。保留中かどうかは、件数ではなく「最後に保留を確かめた時刻が2分以内か」で見分け、規則を2本（故障・保留中）に分ける。
+
 ## 維持の仕組み
 
 - 守り手: backend/tests/test_viewer_isolation.py（全 APIRoute を自動で列挙し、VIEWER_ROUTE_ALLOWLIST 以外が閲覧者のトークンで 401 になることを CI で確かめる。段1 で作成）。トークンを見ない公開ルートは、テストの固定一覧 _PUBLIC_NO_AUTH_ROUTES で例外にしている。一覧に無いルートが 401 以外なら失敗する

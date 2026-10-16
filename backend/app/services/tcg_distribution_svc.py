@@ -25,8 +25,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -252,6 +253,16 @@ _GAS_COLUMNS = (
     "posted_at", "mark", "japanese_title", "english_title", "condition", "unit_price", "quantity",
     "note_ja", "status", "release_date", "series", "provider", "search_keywords", "ship_ja",
 )
+
+
+# 区分（offer_type）と LINE 解析の status の対応。1つの定数で持ち、絞り込みは逆引きに使う。
+OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pre-order"}
+_STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
+
+
+def status_to_offer_type(status_value: str | None) -> str | None:
+    """LINE 解析の status を区分に写す。対応に無い status は None。"""
+    return _STATUS_TO_OFFER_TYPE.get(status_value or "")
 
 
 def _distribution_final_select(source: str, *, price: str, qty: str, merged_count: str, sort_ord: str) -> str:
@@ -840,24 +851,21 @@ async def _export_review_tab(
     return None
 
 
-async def run_distribution(
-    db: AsyncSession,
-    target_id: str | None = None,
-) -> dict:
-    """
-    全アクティブ配信先（または特定 target_id）へ配信を実行する。
+@dataclass(frozen=True)
+class DistributionRowsResult:
+    """build_distribution_rows の結果。kind: ok＝rows あり／hold＝再解析・抽出が未完了／unset＝max_age_hours 未設定／error＝取得失敗。"""
 
-    手順:
-      0. 再解析完了チェック（安全装置 #8）
-      1. 設定ロード
-      2. 出力データ取得（確定フィルター）
-      3. 配信先取得
-      4. 各配信先へ thread executor で書き込み（安全装置 #1〜#5）
-      5. 結果を DB に記録（安全装置 #7）
-      6. 失敗があれば Discord 通知（安全装置 #6）
-    """
-    started_at = datetime.now(timezone.utc)
+    kind: Literal["ok", "hold", "unset", "error"]
+    rows: list
+    message: str
 
+
+async def build_distribution_rows(db: AsyncSession) -> DistributionRowsResult:
+    """配信行を作る手順 0（#8）・0-b（#8b）・1（設定）・2（出力データ取得）。ログは出さない（呼び出し側が決める）。
+
+    analysis_runs・extraction_jobs・load_distribution_settings の例外は捕まえない。
+    fetch_output_rows の例外だけ kind="error" にして返す。
+    """
     # 0. 再解析完了チェック（安全装置 #8）
     # analysis_runs に completed_at IS NULL の行があれば配信を中止する。
     # 再解析中に配信すると、unit_resolved が未確定の行が含まれる可能性がある。
@@ -878,14 +886,7 @@ async def run_distribution(
             f"安全装置 #8: 再解析未完了の runs が {len(pending_rows)} 件あります。"
             f" 完了を待ってから配信を実行してください。未完了: {details}"
         )
-        logger.warning("[dist] %s", msg)
-        return {
-            "run_id": None,
-            "started_at": started_at.isoformat(),
-            "output_count": 0,
-            "results": [],
-            "errors": [{"target_id": None, "error": msg}],
-        }
+        return DistributionRowsResult(kind="hold", rows=[], message=msg)
 
     # 0-b. 抽出・解析の未完了チェック（安全装置 #8b）
     # extraction_jobs に未完了のジョブが残っている間は配信しない。
@@ -906,41 +907,55 @@ async def run_distribution(
             f"安全装置 #8b: 未完了の extraction_jobs が {total_unfinished} 件あります。"
             f" 完了を待ってから配信を実行してください。内訳: {breakdown}"
         )
-        logger.warning("[dist] %s", msg)
-        return {
-            "run_id": None,
-            "started_at": started_at.isoformat(),
-            "output_count": 0,
-            "results": [],
-            "errors": [{"target_id": None, "error": msg}],
-        }
+        return DistributionRowsResult(kind="hold", rows=[], message=msg)
 
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
     max_age_hours = _max_age_hours(settings)
     if max_age_hours is None:
-        logger.error("[dist] %s", MAX_AGE_UNSET_MESSAGE)
-        return {
-            "run_id": None,
-            "started_at": started_at.isoformat(),
-            "output_count": 0,
-            "results": [],
-            "errors": [{"target_id": None, "error": MAX_AGE_UNSET_MESSAGE}],
-        }
+        return DistributionRowsResult(kind="unset", rows=[], message=MAX_AGE_UNSET_MESSAGE)
 
     # 2. 出力データ取得
     try:
         rows = await fetch_output_rows(db, include_flag_single=include_flag_single, max_age_hours=max_age_hours)
     except Exception as exc:
-        logger.error("[dist] 出力データ取得エラー: %s", exc)
+        return DistributionRowsResult(kind="error", rows=[], message=f"出力データ取得失敗: {exc}")
+    return DistributionRowsResult(kind="ok", rows=rows, message="")
+
+
+async def run_distribution(
+    db: AsyncSession,
+    target_id: str | None = None,
+) -> dict:
+    """
+    全アクティブ配信先（または特定 target_id）へ配信を実行する。
+
+    手順:
+      0. 再解析完了チェック（安全装置 #8）
+      1. 設定ロード
+      2. 出力データ取得（確定フィルター）
+      3. 配信先取得
+      4. 各配信先へ thread executor で書き込み（安全装置 #1〜#5）
+      5. 結果を DB に記録（安全装置 #7）
+      6. 失敗があれば Discord 通知（安全装置 #6）
+    """
+    started_at = datetime.now(timezone.utc)
+
+    result = await build_distribution_rows(db)
+    if result.kind != "ok":
+        if result.kind == "hold":
+            logger.warning("[dist] %s", result.message)
+        else:  # unset・error
+            logger.error("[dist] %s", result.message)
         return {
             "run_id": None,
             "started_at": started_at.isoformat(),
             "output_count": 0,
             "results": [],
-            "errors": [{"target_id": None, "error": f"出力データ取得失敗: {exc}"}],
+            "errors": [{"target_id": None, "error": result.message}],
         }
+    rows = result.rows
 
     output_count = len(rows)
 

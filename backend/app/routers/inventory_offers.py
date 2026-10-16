@@ -40,12 +40,15 @@ from app.services.inventory_axes import (
     resolve_condition_view,
 )
 from app.services.tcg_distribution_svc import (
+    _STATUS_TO_OFFER_TYPE,  # noqa: F401  テストが io._STATUS_TO_OFFER_TYPE として読めるように残す
     FRESH_WINDOW_HOURS,
+    OFFER_TYPE_TO_STATUS,
     _age_window,
     _max_age_hours,
     distribution_final_select_plain,
     distribution_rows_parts,
     load_distribution_settings,
+    status_to_offer_type,
 )
 
 router = APIRouter()
@@ -100,19 +103,10 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 # 各クライアントの営業担当ロール以上（products.view）が閲覧。読み取り専用。
 # ---------------------------------------------------------------------------
 
-# 区分（offer_type）と LINE 解析の status の対応。1つの定数で持ち、絞り込みは逆引きに使う。
-OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pre-order"}
-_STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
-
 
 def round_half_up(value: object) -> int:
     """SQL の ROUND(numeric) と同じ丸め（0.5 は0から遠い側）。Python の round は銀行丸めなので使わない。"""
     return int(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
-
-
-def status_to_offer_type(status_value: str | None) -> str | None:
-    """LINE 解析の status を区分に写す。対応に無い status は None。"""
-    return _STATUS_TO_OFFER_TYPE.get(status_value or "")
 
 
 # 在庫表の全列ソート用ホワイトリスト（sort キー → 配信行の列。SQLi 防止）。d は distribution_rows_sql の副問い合わせ。

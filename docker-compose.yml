@@ -131,6 +131,8 @@ services:
       - MAIL_FROM=${MAIL_FROM:-}
       - CONTACT_NOTIFY_EMAIL=${CONTACT_NOTIFY_EMAIL:-}
       - AUTH_PASSWORD_RESET_ALLOWLIST=${AUTH_PASSWORD_RESET_ALLOWLIST:-}
+      # ADR-1019 段2: 閲覧者のトークンの鍵。この行が無いと .env に値があっても os.getenv が空になる。
+      - AUTH_VIEWER_JWT_SECRET=${AUTH_VIEWER_JWT_SECRET:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
