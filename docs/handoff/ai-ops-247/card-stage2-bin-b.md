@@ -400,5 +400,9 @@ async def ops_control_lock(admin_engine):
 - §5-4 差分: 8 ファイル（本カードを含めて 9）、既存行の削除 0、deploy.yml の追加 4 行。生出力 impl/diff_stat.txt
 - §5-5 `_ANNOTATABLE_COLUMNS`: 定義 backend/app/routers/ops.py:43、使用 :358。生出力 impl/annotatable.txt
 - 判断を要した点: 手元の一時 PostgreSQL は、フックに止められたため作らず、Opus の指示で skip の扱いとした
+- 追補（Opus 指示 2026-10-16）: 次の 3 点
+  - 【1】旗の残り: ops.py に `_clear_operator`（rollback → reset_operator_context → commit）を足し、finally の 6 か所を置き換えた。`grep -c "_clear_operator"` は 7、`grep -n "reset_operator_context(db)"` は `_clear_operator` の中の 1 か所（ops.py:60）。ruff 0 件。実 PostgreSQL での試験は CI の pytest-run-internal で確認する
+  - 【2】即時反映の表: backend/app/realtime/topics.py の NO_SIGNAL_ROUTES に ops の 4 口を追記。手元の tests/test_realtime_topics.py は 4 passed
+  - 【3】API の形: openapi.json を再生成（830 行の追加）。frontend/src/api/generated/schema.d.ts は git 管理外（ignore）のため、型ファイルの差分は無い
 
 END OF CARD

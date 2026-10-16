@@ -54,6 +54,13 @@ _ANNOTATABLE_COLUMNS = (
 )
 
 
+async def _clear_operator(db: AsyncSession) -> None:
+    # SET は巻き戻しで元に戻るため、戻した値を commit で確定させる（接続に 'true' を残さない）
+    await db.rollback()
+    await reset_operator_context(db)
+    await db.commit()
+
+
 def _unauthorized() -> HTTPException:
     return HTTPException(
         status_code=401,
@@ -256,7 +263,7 @@ async def ingest_alertmanager(request: Request, db: AsyncSession = Depends(get_d
             )
         await db.commit()
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     return {"received": len(payload.alerts), "created": created, "updated": updated}
 
 
@@ -287,7 +294,7 @@ async def list_incidents(
         )
         items = [dict(r) for r in result.mappings().all()]
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     return {"items": items}
 
 
@@ -315,7 +322,7 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)):
         incident = dict(inc)
         event_list = [dict(e) for e in events]
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     return {"incident": incident, "events": event_list}
 
 
@@ -392,7 +399,7 @@ async def annotate_incident(
         )
         await db.commit()
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     return {"incident_id": str(incident_id), "updated_fields": sorted(columns)}
 
 
@@ -439,7 +446,7 @@ async def _set_control(
         await db.commit()
         result = dict(row)
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     logger.warning("[ops] halt_all=%s by=%s reason=%s", halt_all, changed_by, reason)
     return result
 
@@ -458,7 +465,7 @@ async def get_control(db: AsyncSession = Depends(get_db)):
         ).mappings().first()
         result = dict(row) if row is not None else None
     finally:
-        await reset_operator_context(db)
+        await _clear_operator(db)
     if result is None:
         return {"halt_all": False, "changed_at": None, "changed_by": None, "reason": None}
     return result
