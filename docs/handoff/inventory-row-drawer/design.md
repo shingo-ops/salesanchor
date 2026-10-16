@@ -516,3 +516,18 @@ _BASE_FROM = _base_from()
 - 根拠: 門（products.view）は GET /inventory と同一（R4-2）。行の判定は dist_base の再利用で写しなし（R4-4・ADR-1014）。返す項目は限定（gemini 等を出さない）。既存 super admin 挙動は既定タブで不変。部品はすべて金型（ADR-144）、文言は i18n（ADR-027）。migration なし・revert で戻せる。
 - ADR-072: 新 API は読み取りだけ（commit なし）なので reset_tenant_context は不要。テナント文脈は require_permission 内の get_current_tenant が設定する（recon R4-2）。
 - 未解決: 在庫表そのもののテナント分け（既存課題・今回範囲外）。G3 は PO 目視待ち。
+
+### 14-10 本番反映記録（2026-10-17）
+- PR #4408 merge 449a7716（2026-10-17 00:51 JST）。GO #4408（POの委任に基づくClaude Opus発行）。
+- deploy run 38927277793:
+  - 1回目は失敗した。毎回再実行される既存の移行 20261002_170000 の実行中に、deadlock detected が出た。
+    - 今回の変更とは無関係。直前の成功 deploy 38926080645 でも、同じ移行が同じ出力で流れている。
+    - ログ: /tmp/CC報告ファイル/deploy-38927277793-failed.txt、deploy-38926080645.txt
+  - 失敗したジョブを再実行し、attempt 2 で success（01:03 JST）。migrations・smoke・Verify もすべて success。
+- P1: 結果は ○。生出力は /tmp/CC報告ファイル/p1-rawtext-2.txt。
+  - GET /api/v1/inventory/raw-texts を未認証で呼ぶと 401。存在しないパスは 404 なので、新しいルートがあることの確認になる。
+  - 本番 backend コンテナの inventory_offers.py:425 に "/inventory/raw-texts" がある。
+  - 本番 bundle main-qobx13al.js に tabRawText が含まれる。
+- B2: 実 PG テスト test_inventory_raw_texts_pg.py は CI で実行され、合格した（Backend Tests run 38923534625: 6350 passed、失敗 0。skip 条件は GITHUB_ACTIONS 以外のみ）。
+- 本番 DB での直接確認はしていない。本番 DB に読みに行く操作が安全確認フックに2回止められたので、言い換えずに中止した。
+- 残り: G3（PO がスタッフのアカウントで原文スライドを目視）。
