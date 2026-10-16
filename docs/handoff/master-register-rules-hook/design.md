@@ -62,8 +62,8 @@
    - そのほかのイベント・対象外は何も出さず exit 0。例外が起きたら、PreToolUse は deny、UserPromptSubmit は exit 0。
 3. 新規 `scripts/agent-hooks/test_master_register_rules_guard.sh`（§6 の T1〜T6 を、入力 JSON を流して判定）
 4. リポジトリ外（PR 後の取り付け。Sonnet が実行、手順と前後の差分を記録）:
-   - `~/.claude/scripts/master-register-rules-guard.py` へ写す。
-   - `~/.claude/settings.json` の hooks に足す（既存の項目は変えない。書き換え前に `~/.claude/settings.json.bak-20261016-rules` を作る）。
+   - ホームの .claude/scripts フォルダへ master-register-rules-guard.py を写す（取り付け時に作るファイル）。
+   - ホームの .claude/settings.json の hooks に足す（既存の項目は変えない。書き換え前に同じフォルダへ settings.json.bak-20261016-rules という控えを作る）。
      - PreToolUse matcher `Write|Edit|Bash`
      - UserPromptSubmit
    - **取り付けは PR マージ後**（origin/main に文書が無い間は、全部の登録台本が止まるため）。
@@ -91,8 +91,11 @@
 | T6 Bash `grep -rn create_product backend` → 素通り | 試験スクリプト |
 | T7 取り付け後、実機（このセッションのサブエージェント）で /tmp/CC報告ファイル/ に `create_product(` を含むファイルを書かせると止まる | 実機。生出力を保存 |
 
-## 7. 外部事例
-- 該当なし: 自社の AI 運用の手順を守らせる内部の仕組みであり、効果の数値がそろった外部事例は見つけていない。根拠は公式のフック仕様（§2）と、社内で既に使っている同種のガード（~/.claude/scripts/ の worktree-only-guard.sh・pr-body-guard.sh など。ツール呼び出しを止める方式）。
+## 7. 外部・過去事例の参照と我々への応用
+- 外部事例: 該当なし。自社の AI 運用の手順を守らせる内部の仕組みで、効果の数値がそろった外部事例は見つけていない。数値の無い事例を成功の根拠には使わない。
+- 公式資料: Claude Code フック仕様（https://code.claude.com/docs/en/hooks 、2026-10-16 取得）。応用: deny の理由欄が AI に示される仕様を使い、止めると同時に全文を渡す（§3 案B）。
+- 社内の過去事例: ホームの scripts フォルダにある worktree-only-guard.sh・pr-body-guard.sh（ツール呼び出しの直前に中身を見て止める方式）。応用: 同じ置き場所・同じ止め方にそろえ、新しい仕組みを増やさない（§3 案D）。
+- 社内の過去事例: 2026-10-16 の13品登録で英語名が13品とも空だった（親テーマ design.md §9）。応用: ルールを読ませる対象を「台本を書く瞬間」に置いた。
 
 ## 8. 自己審査（Architect 役・同一 AI）
 - 判定: **APPROVE**（実装可）
