@@ -11,7 +11,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_code_collision_svc import find_code_collisions
-from app.services.tcg_product_master_svc import _validate_product_format, save_blank_confirmations
+from app.services.tcg_product_master_svc import (
+    _validate_product_format,
+    fetch_product_format_options,
+    format_matches_game,
+    save_blank_confirmations,
+)
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -51,7 +56,9 @@ async def _snapshot(db: AsyncSession, product_id: int) -> dict[str, Any]:
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
         "FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
+        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords, "
+        "COALESCE((SELECT json_agg(c.field_code ORDER BY c.field_code) "
+        "FROM public.product_blank_confirmations c WHERE c.product_id=p.id), '[]'::json) AS blank_confirmations "
         "FROM public.products p WHERE p.id=:pid"
     ), {"pid": product_id})
     row = result.mappings().one_or_none()
@@ -78,6 +85,8 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
         product["code"] = product.pop("product_code")
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
+    # ADR-1020 便2a: 「調べたが無い」の印（項目名の配列）
+    product["blank_confirmations"] = list(snapshot.get("blank_confirmations") or [])
     lookups = {}
     # work_id → public.type_master (INTEGER, SSOT)
     work_rows = await db.execute(text(
@@ -104,6 +113,8 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
             f"WHERE is_active=TRUE OR id=:selected ORDER BY {name_col},id"
         ), {"selected": product[field]})
         lookups[field] = [dict(row) for row in rows.mappings()]
+    # ADR-1020 便2a: 細分類（紐づくゲーム付き）
+    lookups["product_format_id"] = await fetch_product_format_options(db, selected=product.get("product_format_id"))
     return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
 
 
@@ -192,6 +203,14 @@ async def update_product_detail(
             await db.execute(text(
                 "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
             ), {"fid": values["product_format_id"], "pid": product["id"]})
+        # ADR-1020 便2a: 細分類とゲームの照合（細分類か作品が変わったときだけ・D2）
+        final_format_id = values["product_format_id"] if "product_format_id" in values else product.get("product_format_id")
+        format_changed = "product_format_id" in values and values["product_format_id"] != product.get("product_format_id")
+        work_changed = params["work_id"] != product.get("work_id")
+        if (final_format_id is not None and params["work_id"] is not None
+                and (format_changed or work_changed)
+                and not await format_matches_game(db, final_format_id, params["work_id"])):
+            raise ProductDetailError(422, "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH")
         await save_blank_confirmations(
             db,
             product_id=product["id"],

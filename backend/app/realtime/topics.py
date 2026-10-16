@@ -286,6 +286,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/super-admin/product-formats"): _PENDING,
     ("DELETE", "/api/v1/super-admin/product-formats/{format_id}"): _PENDING,
     ("PATCH", "/api/v1/super-admin/product-formats/{format_id}"): _PENDING,
+    ("PUT", "/api/v1/super-admin/product-formats/{format_id}/games"): _PENDING,
     ("POST", "/api/v1/super-admin/product-kinds"): _PENDING,
     ("DELETE", "/api/v1/super-admin/product-kinds/{kind_id}"): _PENDING,
     ("PATCH", "/api/v1/super-admin/product-kinds/{kind_id}"): _PENDING,

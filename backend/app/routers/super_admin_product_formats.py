@@ -5,6 +5,7 @@ API:
   GET    /api/v1/super-admin/product-formats                — 一覧（is_active フィルタ・ソート対応）
   POST   /api/v1/super-admin/product-formats                — 新規作成
   PATCH  /api/v1/super-admin/product-formats/{format_id}   — 更新
+  PUT    /api/v1/super-admin/product-formats/{format_id}/games — 使えるゲームの置き換え
   DELETE /api/v1/super-admin/product-formats/{format_id}   — soft delete (is_active=FALSE)
 """
 from __future__ import annotations
@@ -19,6 +20,7 @@ from app.database import get_db
 from app.routers._utils import log_hidden_error
 from app.schemas.product_format import (
     ProductFormatCreate,
+    ProductFormatGamesUpdate,
     ProductFormatResponse,
     ProductFormatUpdate,
 )
@@ -27,6 +29,20 @@ router = APIRouter()
 
 _COLS = "id, code, name, name_en, display_order, is_active, line_id, type_master_id, created_at, updated_at"
 _UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id", "type_master_id"}
+
+
+async def _game_ids_for(db: AsyncSession, format_ids: list[int]) -> dict[int, list[int]]:
+    """ADR-1020 便2a: 細分類ごとの使えるゲーム（product_format_game_links）。"""
+    if not format_ids:
+        return {}
+    result = await db.execute(
+        text(
+            "SELECT format_id, array_agg(type_master_id ORDER BY type_master_id) AS game_ids "
+            "FROM public.product_format_game_links WHERE format_id = ANY(:ids) GROUP BY format_id"
+        ),
+        {"ids": format_ids},
+    )
+    return {row["format_id"]: list(row["game_ids"]) for row in result.mappings().all()}
 
 
 @router.get(
@@ -55,7 +71,9 @@ async def list_product_formats(
         ),
         params,
     )
-    return [ProductFormatResponse(**dict(row)) for row in result.mappings().all()]
+    rows = [dict(row) for row in result.mappings().all()]
+    games = await _game_ids_for(db, [row["id"] for row in rows])
+    return [ProductFormatResponse(**row, game_ids=games.get(row["id"], [])) for row in rows]
 
 
 @router.post(
@@ -122,7 +140,67 @@ async def update_product_format(
     if not row:
         raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
     await db.commit()
-    return ProductFormatResponse(**dict(row))
+    games = await _game_ids_for(db, [row["id"]])
+    return ProductFormatResponse(**dict(row), game_ids=games.get(row["id"], []))
+
+
+@router.put(
+    "/super-admin/product-formats/{format_id}/games",
+    response_model=ProductFormatResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def replace_product_format_games(
+    format_id: int,
+    data: ProductFormatGamesUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """ADR-1020 便2a: 使えるゲームを送った一覧に置き換える。外す組を商品が使っていれば 409。"""
+    wanted = sorted(set(data.game_ids))
+    fmt = (await db.execute(
+        text(f"SELECT {_COLS} FROM public.product_formats WHERE id = :id FOR UPDATE"),
+        {"id": format_id},
+    )).mappings().first()
+    if not fmt:
+        raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
+    if wanted:
+        found = (await db.execute(
+            text("SELECT count(*) FROM public.type_master WHERE id = ANY(:ids) AND is_active = TRUE"),
+            {"ids": wanted},
+        )).scalar_one()
+        if found != len(wanted):
+            raise HTTPException(status_code=422, detail="PRODUCT_FORMAT_GAME_UNKNOWN")
+    in_use = (await db.execute(
+        text(
+            "SELECT 1 FROM public.products WHERE product_format_id = :id "
+            "AND work_id IS NOT NULL AND NOT (work_id = ANY(:ids)) LIMIT 1"
+        ),
+        {"id": format_id, "ids": wanted},
+    )).first()
+    if in_use:
+        raise HTTPException(status_code=409, detail="PRODUCT_FORMAT_GAME_IN_USE")
+    try:
+        await db.execute(
+            text(
+                "DELETE FROM public.product_format_game_links "
+                "WHERE format_id = :id AND NOT (type_master_id = ANY(:ids))"
+            ),
+            {"id": format_id, "ids": wanted},
+        )
+        for game_id in wanted:
+            await db.execute(
+                text(
+                    "INSERT INTO public.product_format_game_links (format_id, type_master_id) "
+                    "VALUES (:id, :gid) ON CONFLICT (format_id, type_master_id) DO NOTHING"
+                ),
+                {"id": format_id, "gid": game_id},
+            )
+    except IntegrityError as exc:
+        await db.rollback()
+        log_hidden_error("super_admin_product_formats.replace_product_format_games", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
+    await db.commit()
+    games = await _game_ids_for(db, [format_id])
+    return ProductFormatResponse(**dict(fmt), game_ids=games.get(format_id, []))
 
 
 @router.delete(

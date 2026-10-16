@@ -24174,6 +24174,25 @@
         "title": "ProductFormatCreate",
         "type": "object"
       },
+      "ProductFormatGamesUpdate": {
+        "additionalProperties": false,
+        "description": "ADR-1020 便2a: 使えるゲーム（type_master.id）を丸ごと置き換える。",
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "title": "Game Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "game_ids"
+        ],
+        "title": "ProductFormatGamesUpdate",
+        "type": "object"
+      },
       "ProductFormatResponse": {
         "properties": {
           "code": {
@@ -24192,6 +24211,13 @@
             "minimum": 0.0,
             "title": "Display Order",
             "type": "integer"
+          },
+          "game_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Game Ids",
+            "type": "array"
           },
           "id": {
             "title": "Id",
@@ -58409,6 +58435,64 @@
           }
         ],
         "summary": "Update Product Format",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/product-formats/{format_id}/games": {
+      "put": {
+        "description": "ADR-1020 便2a: 使えるゲームを送った一覧に置き換える。外す組を商品が使っていれば 409。",
+        "operationId": "replace_product_format_games_api_v1_super_admin_product_formats__format_id__games_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "format_id",
+            "required": true,
+            "schema": {
+              "title": "Format Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductFormatGamesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFormatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Product Format Games",
         "tags": [
           "super-admin"
         ]
