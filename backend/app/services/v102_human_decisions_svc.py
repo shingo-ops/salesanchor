@@ -443,6 +443,15 @@ def review_ack_rejection(
     return item_rejection(found, source_message_id)
 
 
+def item_basic_rejection(found: JobOfItem | None, source_message_id: str) -> DecisionRejected | None:
+    """v102 かどうかを問わない共通の検査。件なし(404)→source_message_id 不一致(422)。"""
+    if found is None:
+        return DecisionRejected(404, "Item not found")
+    if source_message_id != found.source_message_id:
+        return DecisionRejected(422, "source_message_id does not match the item's post")
+    return None
+
+
 def item_rejection(found: JobOfItem | None, source_message_id: str) -> DecisionRejected | None:
     """review-ack の確定と取り消しに共通の検査。件なし(404)→v102 でない(409)→source_message_id 不一致(422)。"""
     from app.services.line_analysis_v102_svc import is_v102_prompt_version  # noqa: PLC0415  循環 import を避ける
@@ -451,14 +460,17 @@ def item_rejection(found: JobOfItem | None, source_message_id: str) -> DecisionR
         return DecisionRejected(404, "Item not found")
     if not is_v102_prompt_version(found.prompt_version):
         return DecisionRejected(409, "review-ack is only for v102 items")
-    if source_message_id != found.source_message_id:
-        return DecisionRejected(422, "source_message_id does not match the item's post")
-    return None
+    return item_basic_rejection(found, source_message_id)
 
 
 # ---------------------------------------------------------------------------
 # 比較表から直した値（数量・単価・単位・メモ・販売状況）。検査・選択肢・重ね方・保存の唯一の置き場所
 # ---------------------------------------------------------------------------
+
+def v102_analysis_lock_key(job_id: str) -> str:
+    """システム段(run_v102_analysis・v6 の analyze_extraction_job)と保存が共有する advisory lock の鍵。"""
+    return f"v102_analysis:{job_id}"
+
 
 _LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"
 _CURRENT_VALUES_SQL = """
@@ -564,7 +576,7 @@ async def save_value_override(
 ) -> int:
     """直した値を item_corrections に1行追記し、同じ取引で analysis_results の該当列を直す。保存した行数（1）。
 
-    断るとき（件なし 404・v102 でない 409・source 不一致 422・値が不正 422）は rollback して何も書かず DecisionRejected を送出する。
+    断るとき（件なし 404・source 不一致 422・値が不正 422）は rollback して何も書かず DecisionRejected を送出する。
     """
     from app.services.tcg_analyzer_svc import (  # noqa: PLC0415  循環 import を避ける
         load_status_master,
@@ -573,12 +585,12 @@ async def save_value_override(
 
     schema = TCG_SCHEMA
     found = await find_job_of_item(db, extraction_item_id)
-    rejected = item_rejection(found, source_message_id) if found is not None else DecisionRejected(404, "Item not found")
+    rejected = item_basic_rejection(found, source_message_id)
     if rejected is not None:
         await db.rollback()
         raise rejected
     # 走行中の再解析と順番にする（run_v102_analysis と同じ鍵）
-    await db.execute(text(_LOCK_SQL), {"key": f"v102_analysis:{found.job_id}"})
+    await db.execute(text(_LOCK_SQL), {"key": v102_analysis_lock_key(found.job_id)})
     # マスタは INSERT の前に読む（load_status_master は例外時に rollback するため）
     unit_ids = await db.run_sync(load_unit_canonical_ids)
     status_entries = await db.run_sync(load_status_master)

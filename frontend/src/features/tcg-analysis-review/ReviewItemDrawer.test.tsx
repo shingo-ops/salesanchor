@@ -182,11 +182,11 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
   it("a row that cannot be fixed does nothing when clicked, and is marked static", () => {
     renderDrawer(item({ is_v102: false }));
 
-    fireEvent.click(rowOf("Quantity"));
     fireEvent.click(rowOf("Condition"));
 
     expect(document.querySelector(".review-item-fix")).toBeNull();
-    expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
+    expect(rowOf("Condition").className).toContain("item-comparison__row--static");
+    expect(rowOf("Quantity").className).not.toContain("item-comparison__row--static");
     expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
   });
 

@@ -3815,7 +3815,7 @@
     "reassigned": "付け替えました",
     "reassignFailed": "付け替えに失敗しました",
     "conditionLabel": "状態",
-    "valueFix": {"title": "{{field}}を直します", "quantity": "数量", "price": "単価", "unit": "単位", "memo": "メモ", "saleStatus": "販売状況", "save": "この値に直す", "saving": "保存中", "saved": "直しました。解析をやり直しています", "invalid": "この値は使えません。内容を確かめてください", "changed": "この件は直せません。画面を開き直してください", "saveFailed": "保存できませんでした。もう一度お試しください", "loadFailed": "選択肢を読み込めませんでした"},
+    "valueFix": {"title": "{{field}}を直します", "quantity": "数量", "price": "単価", "unit": "単位", "memo": "メモ", "saleStatus": "販売状況", "save": "この値に直す", "saving": "保存中", "saved": "直しました。解析をやり直しています", "savedNoReanalyze": "直しました", "invalid": "この値は使えません。内容を確かめてください", "changed": "この件は直せません。画面を開き直してください", "saveFailed": "保存できませんでした。もう一度お試しください", "loadFailed": "選択肢を読み込めませんでした"},
     "wizard": {
       "question": "何を直しますか？",
       "choice": {
