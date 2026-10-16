@@ -626,7 +626,7 @@ jobs:
           );
 
           -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
-          --   20261016_100000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          --   20261016_160000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
           CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
               id                       SERIAL PRIMARY KEY,
               tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -1604,7 +1604,7 @@ jobs:
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
           -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
-          --   20261016_100000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          --   20261016_160000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
           CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
               id                       SERIAL PRIMARY KEY,
               tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,

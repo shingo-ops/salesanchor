@@ -20,7 +20,7 @@ mode: handoff
 
 ### 2-1. migration（新規 1 本）
 
-`migrations/20261016_100000_add_paypal_regtoken_write_rls.sql`（冪等。run_all_migrations.sh 末尾に登録）
+`migrations/20261016_160000_add_paypal_regtoken_write_rls.sql`（冪等。run_all_migrations.sh 末尾に登録）
 
 各表に ENABLE / FORCE と 4 ポリシー。両表とも tenant_id は NOT NULL のため、②b の CASE（共通行）は不要。
 

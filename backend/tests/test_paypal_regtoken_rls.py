@@ -36,7 +36,7 @@ _MIGRATIONS = (
     "20260610_071110_add_paypal_config.sql",
     "20260611_150000_add_paypal_webhook_id.sql",
     "20260604_080000_create_registration_tokens.sql",
-    "20261016_100000_add_paypal_regtoken_write_rls.sql",
+    "20261016_160000_add_paypal_regtoken_write_rls.sql",
 )
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
