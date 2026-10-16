@@ -60,7 +60,7 @@
 | id | UUID PK | |
 | fingerprint | TEXT NOT NULL | Alertmanager の alert の fingerprint |
 | starts_at | TIMESTAMPTZ NOT NULL | alert の startsAt |
-| UNIQUE (fingerprint, starts_at) | | 同じ通知の繰り返しを 1 行にまとめる（KGI 2「繰り返しは 1 件」） |
+| UNIQUE (fingerprint, starts_at) | 一意制約 | 同じ通知の繰り返しを 1 行にまとめる（KGI 2「繰り返しは 1 件」） |
 | alertname | TEXT NOT NULL | labels.alertname |
 | severity | TEXT | labels.severity（札 page/auto/ticket） |
 | labels | JSONB NOT NULL | alert の labels（4KB まで。超えたら受け口で切って `truncated` を立てる） |

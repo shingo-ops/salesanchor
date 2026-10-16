@@ -219,6 +219,13 @@ receivers:
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+担当 Sonnet の実行結果（2026-10-16）:
+- 作業場所: release/ai-ops-stage2-bin-c（初回は -card 作業場所との部分一致で作成されず、Opus が外した後に再実行して作成）
+- preflight: PREFLIGHT OK
+- 5-1: ok
+- 5-2: 3 files changed, 24 insertions(+)（変更 3 ファイル＋このカード＝4 ファイル）。削除の行 0
+- 5-3: 2行目 receiver: discord-server-alerts／8行目 receiver: discord-server-alerts／9行目 continue: true／10行目 receiver: ops-api／12行目 name: discord-server-alerts／16行目 name: ops-api の 6 行
+- 5-4: 手元では未実行（docker daemon が動いていない・docker info 終了コード 1）。CI の監視スタック整合性チェックで実行
+- 判断を要した点: 設計 stage2-design.md:50 の修正（D1）はカード §3 の 4 ファイルに含まれないため触っていない
 
 END OF CARD
