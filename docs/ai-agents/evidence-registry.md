@@ -3446,3 +3446,24 @@ tradeoff: 外観の同等性は静的解析と単体ページでの実測であ�
 decision: カルテ9・ヘッダー2・タブバー2は SelectControl の種類として登録し現行外観を保持、一般55は標準へ統一、商品編集9と報酬1は保留。AW-1 は同一AI自己審査 APPROVE、AW-2 は REVISE。
 follow_up: AW-1 の PO 実装承認とカード。header の Arial 書体・karte の暗い表示未対応を現行どおり写すかを PO に確認。
 ```
+
+```text
+id: EV-20261016-INVENTORY-ROW-DRAWER-DEPLOY
+date: 2026-10-16
+agent: Claude Code (Opus 設計・審査・GO / Sonnet 調査・実装)
+task: 在庫表の行クリックで原文・Gemini抽出・システム解析結果を見るスライド（super admin・PC・見るだけ）の本番反映記録
+scope: backend の配信行 extraction_item_ids と GET /tcg/analysis-results の extraction_item_ids 指定、frontend の InventoryRowDrawer。DB 変更なし。設計 docs/handoff/inventory-row-drawer/design.md
+evidence:
+  - type: command
+    reference: PR #4359 / merge 3279b1974be43f60f79f05b5a6b48eed641a67cf / Deploy 38840242591、続く台帳PR #4362 merge b6435490b65fb54346890cb7c022120886a146b3 の Deploy も success
+    summary: 必須CI 失敗0で merge（2026-10-16T02:24:09Z）。本番 /home/ubuntu/salesanchor の HEAD は b6435490（3279b197 を含む）。backend コンテナ内で extraction_item_ids が tcg_distribution_svc.py 1件・tcg_analysis_review.py 6件・schemas/inventory_offers.py 1件、frontend の index-Buk_ZZBY.js に extraction_item_ids を確認。/api/health 200。
+  - type: command
+    reference: Prometheus（datasource PBFA97CFB590B2093）handler=/api/v1/inventory status=200
+    summary: 反映前基準は24時間3件・中央値0.876秒・p95 2.276秒。反映直後101秒は0件で比較不能（backend 再起動 02:29:13Z）。
+  - type: external
+    reference: GO #4359（POの委任に基づくClaude Opus発行。PO 2026-10-16 の一任発言が根拠。PO 本人の GO 発言ではない）
+    summary: PR本文に GO記録 を転記し、確認済みコメントと GO コメントを付与。
+tradeoff: 認証付き API 呼び出しと実画面での目視は未実施（エージェントに super admin の認証手段なし）。機能の動作はCIのテスト（B1〜B6・F1〜F7）とコンテナ内コードの存在で確認。
+decision: 見るだけの便を本番反映。パネルから直す機能は design.md §9 を材料に PO の y/n 待ち。
+follow_up: PO が本番の在庫表で行をクリックしスライドが出るかを目視（KGI の○×）。応答時間は後日 Prometheus で再比較。
+```

@@ -559,6 +559,7 @@ async def save_paypal_credentials(
             payload.environment, payload.client_id, payload.client_secret, webhook_url,
         )
         if reg.get("ok") and reg.get("webhook_id"):
+            await reset_tenant_context(db, tenant_id)  # ADR-072: save_credentials の commit 後に文脈を張り直す
             await paypal_payments.save_webhook_id(db, tenant_id, reg["webhook_id"])
         else:
             logger.warning("[paypal] webhook 自動登録できず（接続は継続）: %s", reg.get("message"))

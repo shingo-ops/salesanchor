@@ -135,6 +135,7 @@ from app.routers import (
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
     units,  # 単位マスタ テナント用
+    viewer,  # ADR-1019 段2: 閲覧専用ページ API
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
@@ -235,6 +236,8 @@ register_metrics(app)
 app.include_router(health.router, prefix="/api", tags=["health"])
 # /api/v1/auth にバージョン管理を適用
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+# ADR-1019 段2: 閲覧専用ページの API（login・logout・inventory。閲覧者のトークンだけを見る）
+app.include_router(viewer.router, prefix="/api/v1/viewer", tags=["viewer"])
 # Meta Webhook（認証不要 - Metaのサーバーからアクセスされる）
 app.include_router(webhook.router, prefix="/api/v1", tags=["webhook"])
 # Meta Data Deletion Callback + Status API（認証不要 - 公開エンドポイント）
