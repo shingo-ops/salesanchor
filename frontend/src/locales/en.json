@@ -3936,6 +3936,7 @@
     "item_mapping_mismatch": "Item mapping mismatch",
     "unit_price_mismatch": "Unit and price do not match the market",
     "gemini_gap_suspect": "Possible Gemini omission (gap lines may hold the product name)",
+    "bulk_price_basis_unknown": "Bulk per-card price unknown (cannot tell set price from per-card price in the post)",
     "excluded": "Excluded",
     "item_shape_invalid": "Gemini output has an invalid shape",
     "price_not_in_lines": "Price not found in the source lines",
