@@ -35061,6 +35061,28 @@
         "title": "ValueOverrideRequest",
         "type": "object"
       },
+      "ViewerLoginRequest": {
+        "properties": {
+          "email": {
+            "description": "ログインに使うメールアドレス",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "パスワード",
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "ViewerLoginRequest",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -66800,6 +66822,96 @@
         "summary": "Set User Roles",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/viewer/inventory": {
+      "get": {
+        "description": "作り置きの在庫の JSON をそのまま返す（読み直して組み立てない）。",
+        "operationId": "viewer_inventory_api_v1_viewer_inventory_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Inventory",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/login": {
+      "post": {
+        "description": "閲覧者のログイン。失敗の理由は区別せず 1 種類の文言で返す（停止中・期限切れは正しいパスワードのときだけ別）。",
+        "operationId": "viewer_login_api_v1_viewer_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Login",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/logout": {
+      "post": {
+        "description": "ログアウト。パスワード変更前の人もできる（require_viewer_password_ok ではなく get_current_viewer）。",
+        "operationId": "viewer_logout_api_v1_viewer_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Logout",
+        "tags": [
+          "viewer"
         ]
       }
     },
