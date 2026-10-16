@@ -25,7 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tcg_analyzer_svc as analyzer
-from app.services.extraction_judgement_svc import order_from_pattern
+from app.services.extraction_judgement_svc import build_cond_terms, order_from_pattern
 from app.services.gemini_extraction_svc import _GEMINI_MODEL, _classify_error, _safe_error_message
 from app.services.gemini_raw_copy_v8 import build_prompt_v8, call_gemini_raw_copy_v8
 from app.services.gemini_raw_copy_v101 import (
@@ -40,7 +40,7 @@ from app.services.gemini_raw_copy_v101 import (
 )
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
-from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
+from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters, with_cond_terms
 from app.services.gemini_raw_copy_v102_soldout_ref import (
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
     SoldItem,
@@ -200,7 +200,8 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
     masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
-        "product_first": load_product_first_masters(session),
+        # 除外ワードの判定に使う状態の合図の語は cond_entries から一度だけ作る（新しい表・設定値は持たない）
+        "product_first": with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
         _SHIP_ENTRIES_KEY: analyzer.load_ship_master(session),
         _SHIP_DROP_KEY: analyzer.load_ship_drop_master(session),
     }
