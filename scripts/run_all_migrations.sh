@@ -941,3 +941,6 @@ run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
 run_sql migrations/20261015_130000_add_permissions_rls.sql
 run_sql migrations/20261016_010000_add_google_config_rls.sql
 run_sql migrations/20261016_020000_add_suppliers_rls.sql
+
+# 閲覧専用アカウントの表4つ（構造のみ・冪等。ADR-1019 段1）
+run_sql migrations/20261016_150000_add_viewer_accounts.sql
