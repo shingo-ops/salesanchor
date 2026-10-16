@@ -11942,6 +11942,63 @@
         "title": "InventoryOfferUpdate",
         "type": "object"
       },
+      "InventoryRawTextItem": {
+        "description": "在庫表スライドの原文タブ用。返す項目はこの4つだけ（gemini・system・要約・送信者は出さない）。",
+        "properties": {
+          "extraction_item_id": {
+            "title": "Extraction Item Id",
+            "type": "string"
+          },
+          "line_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line End"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "raw_text": {
+            "title": "Raw Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extraction_item_id",
+          "raw_text"
+        ],
+        "title": "InventoryRawTextItem",
+        "type": "object"
+      },
+      "InventoryRawTextsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryRawTextItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InventoryRawTextsResponse",
+        "type": "object"
+      },
       "InventoryRow": {
         "description": "在庫表ビューの 1 明細行（商品×仕入元×状態）。読み取り専用。\n\nadmin 専用フィールド（notes/source/status）は含めない。最終ユーザー（各クライアントの\n営業担当ロール以上）が閲覧 + 見積/請求/発注作成するための列のみ。\ncondition は migration 089 の 16 値だが、旧データ混入時も 500 にしないため str で受ける\n（inventory_offers 500 の教訓）。",
         "properties": {
@@ -43905,6 +43962,61 @@
         "summary": "テナント向け在庫集計 (series x condition ピボット)",
         "tags": [
           "inventory-aggregated"
+        ]
+      }
+    },
+    "/api/v1/inventory/raw-texts": {
+      "get": {
+        "description": "在庫表スライドの原文タブ。配信行（dist_base）に入る extraction_item だけの原文を返す。\n\n行の定義は distribution_rows_parts の1か所だけ（ここに配信の WHERE は書かない。ADR-1014）。\n配信行に無い ID・該当 0 件は 404。返す項目は extraction_item_id・raw_text・line_start・line_end のみ。",
+        "operationId": "list_inventory_raw_texts_api_v1_inventory_raw_texts_get",
+        "parameters": [
+          {
+            "description": "extraction_items.id（1〜50件）",
+            "in": "query",
+            "name": "extraction_item_ids",
+            "required": true,
+            "schema": {
+              "description": "extraction_items.id（1〜50件）",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 50,
+              "minItems": 1,
+              "title": "Extraction Item Ids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryRawTextsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Inventory Raw Texts",
+        "tags": [
+          "super-admin"
         ]
       }
     },

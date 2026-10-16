@@ -1458,7 +1458,9 @@
       "title": "Analysis details",
       "loadError": "Failed to load the analysis result",
       "notFound": "No analysis result for this row. Reload the inventory table",
-      "itemTab": "Item {{n}}"
+      "itemTab": "Item {{n}}",
+      "tabAnalysis": "Analysis",
+      "tabRawText": "Original text"
     },
     "view": {
       "subtitle": "Shows suppliers' current offers.",

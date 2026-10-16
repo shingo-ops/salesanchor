@@ -1458,7 +1458,9 @@
       "title": "解析の詳細",
       "loadError": "解析結果を読み込めませんでした",
       "notFound": "この行の解析結果が見つかりません。在庫表を再読み込みしてください",
-      "itemTab": "{{n}}件目"
+      "itemTab": "{{n}}件目",
+      "tabAnalysis": "解析",
+      "tabRawText": "原文"
     },
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",
