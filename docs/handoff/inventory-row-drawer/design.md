@@ -457,7 +457,7 @@ _BASE_FROM = _base_from()
 - PC のみ（スマホでは開かない＝今と同じ）。
 
 ### 14-2 対象 / 対象外
-- 対象: backend/app/routers/inventory_offers.py（新 API 1本）、backend/app/schemas/inventory_offers.py（応答の型）、backend/tests/（新テスト）、frontend/src/pages/inventory/InventoryPage.tsx（入口の門）、frontend/src/pages/inventory/InventoryRowDrawer.tsx（タブと原文表示）、同テスト2本、frontend/src/locales/ja.json・en.json。
+- 対象: backend/app/routers/inventory_offers.py（新 API 1本）、backend/app/schemas/inventory_offers.py（応答の型）、backend/tests/（新テスト）、frontend/src/pages/inventory/InventoryPage.tsx（入口の門）、frontend/src/features/inventory/InventoryRowDrawer.tsx（タブと原文表示）、同テスト（features/inventory/InventoryRowDrawer.test.tsx・pages/inventory/InventoryPage.rowdrawer.test.tsx）、backend/tests/test_inventory_raw_texts.py・test_inventory_raw_texts_pg.py（B2 実PG）、frontend/src/locales/ja.json・en.json。
 - 対象外: DB・migration（なし）、/tcg/analysis-results と書き込み API の権限（super admin のまま）、配信行の定義 distribution_rows_parts 本体（使い回すだけで変えない）、在庫表そのもののテナント分け（R4-4。既存の範囲外課題）、スマホ表示。
 
 ### 14-3 変更前 → 変更後
