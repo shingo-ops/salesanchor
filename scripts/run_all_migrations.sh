@@ -941,3 +941,6 @@ run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
 run_sql migrations/20261015_130000_add_permissions_rls.sql
 run_sql migrations/20261016_010000_add_google_config_rls.sql
 run_sql migrations/20261016_020000_add_suppliers_rls.sql
+
+# ADR-1012 段階2 便A: 障害記録の表 3 つ（空・RLS は運用者だけ・記録は消せない）
+run_sql migrations/20261016_100000_create_ops_incident_tables.sql

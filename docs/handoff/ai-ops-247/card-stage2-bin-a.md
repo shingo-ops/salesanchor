@@ -303,6 +303,10 @@ run_sql migrations/20261016_100000_create_ops_incident_tables.sql
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+- 5-1: 値の書き込みの grep は 0 行。`python3 scripts/check-migration-value-writes.py repo` は終了コード 0
+- 5-2: 手元では 7 skipped（実 PostgreSQL 環境なし）。CI の pytest-run-internal で実行
+- 5-3: `CREATE POLICY ops_` は 8 行・名前は §5-3 のとおり
+- 5-4: 変更は 4 ファイル（§3）
+- 生出力: /tmp/CC報告ファイル/ai-ops-stage2-bin-a/impl/
 
 END OF CARD
