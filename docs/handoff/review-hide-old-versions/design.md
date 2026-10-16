@@ -42,11 +42,12 @@
 | 既存テスト不変 | backend の該当テスト（test_tcg_analysis_review.py・test_tcg_condition_review.py・test_v102_human_decisions_pg.py・test_tcg_result_order.py・test_tcg_review_csv_svc.py・test_tcg_review_sheet_svc.py・test_tcg_is_active_filter.py）緑 |
 | K1/K2 | 本番 backend コンテナで fetch_analysis_results(status_tab="NEEDS_REVIEW", limit 大) を読み取りで呼び、is_v102 別の件数を反映前後で記録 |
 
-## 外部事例
-不要（既存の一覧の絞り込み条件を1つ足すだけで、手法の選択を伴わない）。
+## 外部・過去事例の参照と我々への応用
+該当なし：不要（既存の一覧の絞り込み条件を1つ足すだけで、手法の選択を伴わない）。
 
 ## 維持の仕組み
 新規 PG テストが、旧版の行が要確認に戻ることを CI で止める。
+守り手: backend/tests/test_tcg_condition_review.py
 
 ## 審査（Opus 自己審査・独立レビューではない）
 APPROVE。根拠: 変更点は1関数・既存定数を使用・全クエリへの引数渡しを受入テストで確認。未解決: ダッシュボードの要確認件数（ar.needs_review 列）は旧版を含み続ける＝画面の数字と一覧の数がずれ得る（今もずれている。別件）。
