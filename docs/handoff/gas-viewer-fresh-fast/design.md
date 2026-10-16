@@ -214,7 +214,7 @@ mode: handoff
   - 24時間以内の時間数：【事実】アプリの値は定数 FRESH_WINDOW_HOURS = 24（backend/app/services/tcg_distribution_svc.py:212-213）で、在庫 API が応答に入れて（inventory_offers.py:360・:423）、絞り込みにも使う（:261-263）。閲覧ページも同じ定数を使い、別の数字を書かない：作り置きの JSON に `fresh_window_hours` として同じ定数を入れる（審査 r9 N-r9-2 で計画票0 ⑤を解決）。手元の絞り込みは、posted_at（タイムゾーン無しの日本時間の文字列 'YYYY-MM-DD HH:MM:SS'、svc:288-289）を +09:00 として読み、今の時刻から fresh_window_hours 時間以内の行だけを出す。posted_at が空の行は、オンのときは出さない（アプリの posted_ts >= の比較で NULL が落ちるのと同じ）。「今の時刻」は閲覧者の端末の時計になる（アプリはサーバーの時計。端末の時計がずれていれば、境目の行の出る・出ないが変わる。審査 r10 N-r10-7）。
   - 投稿日時の表示を「MM-DD HH:mm」にする（GAS と同じ）。Sold out の行は D3 のとおり作り置きの時点で入っていないので、ページでは除かない。
   - スマホ（767px 以下）の操作の配置は、アプリの在庫表と同じにする（提供者の MultiSelect はツールバーに出さず、絞り込みの Drawer に入れる。InventoryPage.tsx:476-485 の isMobile と同じ）。
-  - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは PO の回答が無いので、決まるまで作らない。
+  - アプリと意図して変えるのは2点：言語の切り替え（ja/en。GAS は日本語だけ、B67）と、最終更新の時刻の表示（B71）。「更新」ボタンは付けない（PO 決定待ちの節の「1 更新ボタン」の決定。2026-10-15 PO「y」）。
   - ログイン・申込・パスワードの画面（審査 r6 B-6。r13 で直した）：
 
     | 画面の部品 | 使う金型 |
@@ -467,6 +467,28 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 - login の email ごとの回数制限は、Redis が使えないときは通す（既存の check_auth_rate_limit と同じ fail-open）。login に成功したら email ごとの数を消す。
 - 作り置きの通知の文言は「[viewer-cache] 3回続けて失敗しました: 理由」。経路は既存の send_discord_notification(tenant_id=4, event_type="tcg_distribution_error")。
 - 見張りの経路（段2b）：作り置きのタスクが Redis に最後に書けた時刻と最後に保留を確かめた時刻を置き、backend の /metrics が読んで Prometheus に出し、monitoring/prometheus/alert_rules.yml に規則を足す（ADR-1012 の CeleryHeartbeatStale と同じ経路）。保留中かどうかは、件数ではなく「最後に保留を確かめた時刻が2分以内か」で見分け、規則を2本（故障・保留中）に分ける。
+- 段3は ①ログイン・③在庫表・④案内 の画面まで。②⑤⑥ の画面は段4で API と同じ PR に入れる（Opus 2026-10-16。理由：API が段4でできる・閲覧者の登録は段4）。
+
+## 段4の実施の決め事（2026-10-16。Opus の判断と PO の決定）
+
+- SMTP：【事実】PO が本番から送ったテストメールの受信箱への到着を確かめた（2026-10-16 チャット「y」）。§PO 決定待ち の SMTP の門はこれで外れた。
+- 段4は4つの PR に分ける（1つの PR に1つの働き。gateway と管理の画面を混ぜない）。
+  - 4a-1（パスワード）：POST password・password-reset/request・password-reset/confirm の3本（D1・D2）、画面の ②（変更）と ⑥（再発行）、外側の nginx の完全一致の3ブロック（D1 の 8）、毎日の掃除（下の Q7 の仕組みと、pending の7日・viewer_login_events の90日）、privacy.astro の保存期間の表の1行。
+  - 4a-2（管理）：Q3 の管理 API（super_admin_viewers.py）・services/viewer_admin.py・Claude の経路の専用スクリプト（状態の変更・延長・Q9 の登録）・SaaS 管理の画面（/super-admin/viewers）。
+  - 4b（申込）：signup（D5）と画面の ⑤。公開（申込の入口を見せること）は 4c と一緒にする（4c が無いと pending のまま進めないため）。
+  - 4c（Discord の受付、D6）：最初に D6 の【未確認】2つを確かめてからカードを書く。
+- password-reset/request の回数：アプリ（auth.py:391）は4回目から 429 を返すが、閲覧者は D1 のとおり4回目からはメールを送らずに同じ 200 を返す。数えるキーは閲覧者専用の `viewer_pw_reset_req:<正規化した email の sha256>` にし、アプリの `pw_reset_req:` と同じ枠に混ぜない（D1-3 の「アプリのユーザーと同じ枠に混ざらない」と同じ理由）。
+- Q7 の消す仕組み（PO 決定 Q7 の「段4のカードの前に設計して審査する」への答え）：
+  - 方式：毎日の Celery タスク（backend/app/tasks/maintenance.py に足す。beat は celery_app.py の purge-auth-events（:99、毎日5:30）の後ろに、毎日5:45 で足す）。専用スクリプトにしない理由：人が実行を忘れると、ポリシーに書いた90日を守れないため。
+  - 消す対象は次の2つだけ（どちらも viewer_accounts の行を DELETE する）。
+    1. 状態が trial で、trial_expires_at が「今−90日」より前の行（期限が切れ、延長が無いまま90日たった人）。
+    2. 状態が suspended で、viewer_status_changes の action = 'suspend' の最新の created_at が「今−90日」より前の行（停止して90日たった人。本契約の終了は停止で表すため）。suspend の記録が1件も無い suspended の行は消さない（いつ止めたか分からないものは、安全側で残す）。
+  - active・pending・verified はこのタスクでは消さない（pending は下の7日の掃除で消す）。
+  - 関連の記録（viewer_login_tokens・viewer_login_events・viewer_status_changes）は、FK の ON DELETE CASCADE（migrations/20261016_150000_add_viewer_accounts.sql）で一緒に消える。タスクで別に消さない。
+  - 同じタスクで、①申込コードを照合しないまま7日たった pending の行（D5）、②作られて90日たった viewer_login_events の行（ログイン記録）も消す。消した件数は種類ごとにログに出す（個人の email は出さない）。
+  - 4c の後は、消した人の Discord の部屋（discord_channel_id）が Discord に残る。部屋の片付けは 4c のカードで扱う（4a-1 では Discord に触らない）。
+  - 【事実】Q9 の22人の申込日時の最も古い値は 2026/09/06。登録の後は active なので、このタスクで登録直後に消える人はいない。
+- privacy.astro（英語のページだけ。日本語のページは無い：find lp/src/pages -name '*priv*' で privacy.astro の1件）の §6.3 の表（:203-216）に1行を足す：`Inventory Viewer Account` ／ `During the trial or contract period; deleted 90 days after the trial expires without extension or after suspension. Login records: 90 days`。
 
 ## 維持の仕組み
 
@@ -541,7 +563,7 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 
 - Q7.【決定 2026-10-15 PO「y」】今のプライバシーポリシーと同じルールにする（lp/src/pages/privacy.astro:209「During account active period」・:219「契約終了後90日以内に削除」）。trial の期限が切れて延長が無いまま90日たった人、または本契約（active）が終わって90日たった人の閲覧者の行と関連の記録を消す。privacy.astro:206-214 の保存期間の表に閲覧者の1行を足す（段4）。消す仕組み（定期実行か専用スクリプトか）と、viewer_status_changes など関連の表の扱いは、段4のカードの前に設計して審査する。以下は質問の原文。LP のプライバシーポリシーに追記するか。**段4の公開と22人の登録の前提。決まるまで段4の公開をしない。**
 - B-7.【決定 2026-10-15 PO「y」】履歴を書き直す。名字を含む作業記録を除いて1つのコミットにまとめ直した PR #4338 に置き換え、#4283 は閉じて古いブランチを消した。以下は質問の原文。（審査 r6）：コミット bf255ae8b・af1d155f7 の追加行に、個人の姓が残っている（push 済み）。merge commit でマージすると main の履歴に残る。履歴を書き直して push し直すか、このまま入れるかは PO 決定待ち。**決まるまで PR #4283 を main にマージしない。** 段1以降の実装カードは、B-7 が決まって #4283（design.md・ADR-1019）が main に入った後に出す（作業ブランチは origin/main から作るため。審査 r8-N-9）。
-- SMTP（計画票 0 の①）：r13 でログインはパスワードになり、メールはパスワードの再発行だけに使う。2026-10-16 に5項目を登録し、本番からのテスト送信は SENT。**PO の受信箱での到着の目視が済むまで、段4の公開をしない**（再発行ができないと、パスワードを忘れた人が入れないため）。
+- SMTP（計画票 0 の①）：r13 でログインはパスワードになり、メールはパスワードの再発行だけに使う。2026-10-16 に5項目を登録し、本番からのテスト送信は SENT。**PO の受信箱での到着の目視が済むまで、段4の公開をしない**（再発行ができないと、パスワードを忘れた人が入れないため）。【決定 2026-10-16 PO「y」】受信箱への到着を確認した（§段4の実施の決め事）。
 - Q12. Claude の経路（無制限鍵）での閲覧者の操作の GO を、Opus に委任するか。委任するなら、ADR-1003 の改訂か新しい ADR と CLAUDE.md:30 の改訂が要る（別の PR）。委任しないなら、操作は毎回 PO 本人の GO か、PO の画面から PO が行う。
 - ~~Q11~~ → **決定済み：y**（PO「Y」、2026-10-15。保留中は前回の表のまま止める。KGI2 に「保留の間を除く」を足す）。元の問い：（審査 r6 B-1）再解析・抽出の途中（保留）の間、閲覧ページの表をどうするか。
   - 案 y：GAS と同じく前回の表のまま止める（D3 の今の案）。未確定の行を出さない（安全装置 #8 の目的）。そのかわり、保留が続くと「最終更新」が1分より古くなる。KGI2 に「保留の間を除く」を足し、受入条件に「保留でないときは updated_at が60秒以内（本番で curl）」を足す。

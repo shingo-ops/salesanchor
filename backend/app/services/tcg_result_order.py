@@ -14,6 +14,9 @@ RESULT_CONDITION_ORDER = (
     "Opened box",
     "Unsearched pack",
     "Searched pack",
+    # Bulk (ADR-1021) has no box/pack rank. It is listed last so it sorts right after the listed states and
+    # ahead of unlisted values (FLAG_SINGLE, Error ...), instead of depending on the unlisted fallback rank.
+    "Bulk",
 )
 
 

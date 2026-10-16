@@ -634,6 +634,20 @@
           },
           "system": {
             "$ref": "#/components/schemas/SystemFields"
+          },
+          "thought_summaries": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thought Summaries"
           }
         },
         "required": [
@@ -7743,6 +7757,19 @@
       },
       "CreateProductBody": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7769,6 +7796,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "title": "Product Kind Id",
@@ -7807,6 +7845,19 @@
       },
       "CreateProductRequest": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7842,6 +7893,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "default": "",
@@ -16686,6 +16748,191 @@
         "title": "NotificationEventType",
         "type": "string"
       },
+      "OpsControlChange": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "OpsControlChange",
+        "type": "object"
+      },
+      "OpsIncidentAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "$ref": "#/components/schemas/OpsIncidentFields",
+            "default": {}
+          },
+          "kind": {
+            "enum": [
+              "annotated",
+              "first_aid",
+              "ai"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "OpsIncidentAnnotation",
+        "type": "object"
+      },
+      "OpsIncidentFields": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Started At"
+          },
+          "detection_path": {
+            "anyOf": [
+              {
+                "enum": [
+                  "alert",
+                  "human",
+                  "ai"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detection Path"
+          },
+          "first_aid_done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Done At"
+          },
+          "first_aid_result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "recovered",
+                  "not_recovered",
+                  "escalated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Result"
+          },
+          "first_aid_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Started At"
+          },
+          "fix_pr": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Pr"
+          },
+          "human_noticed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Noticed At"
+          },
+          "needs_action": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Action"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "root_cause": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause"
+          }
+        },
+        "title": "OpsIncidentFields",
+        "type": "object"
+      },
       "OrderCommissionAssignmentRequest": {
         "description": "`POST /orders/{id}/commissions/assign` リクエスト。\n\nrole と staff_id を 1 ペア指定して UPSERT する。\nstaff_id=None で「担当解除（行は残し staff_id を NULL に戻す）」も可能。",
         "properties": {
@@ -23644,6 +23891,26 @@
       "ProductDetailUpdate": {
         "additionalProperties": false,
         "properties": {
+          "blank_confirmations": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "name_en",
+                    "mark",
+                    "release_date",
+                    "exclude_keywords"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blank Confirmations"
+          },
           "english_title": {
             "maxLength": 5000,
             "title": "English Title",
@@ -23692,6 +23959,17 @@
               }
             ],
             "title": "Product Category Id"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "anyOf": [
@@ -35081,6 +35359,65 @@
           "password"
         ],
         "title": "ViewerLoginRequest",
+        "type": "object"
+      },
+      "ViewerPasswordChangeRequest": {
+        "properties": {
+          "current_password": {
+            "description": "今のパスワード",
+            "maxLength": 256,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ViewerPasswordChangeRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetConfirmRequest": {
+        "properties": {
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "description": "再発行メールのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ViewerPasswordResetConfirmRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetRequest": {
+        "properties": {
+          "email": {
+            "description": "再発行したいメールアドレス",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ViewerPasswordResetRequest",
         "type": "object"
       },
       "VoidRequest": {
@@ -46727,6 +47064,329 @@
         "summary": "List Event Types",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/ops/alertmanager": {
+      "post": {
+        "operationId": "ingest_alertmanager_api_v1_ops_alertmanager_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ingest Alertmanager",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control": {
+      "get": {
+        "operationId": "get_control_api_v1_ops_control_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Control",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control/halt": {
+      "post": {
+        "operationId": "halt_all_api_v1_ops_control_halt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsControlChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Halt All",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control/resume": {
+      "post": {
+        "operationId": "resume_all_api_v1_ops_control_resume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsControlChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resume All",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents": {
+      "get": {
+        "operationId": "list_incidents_api_v1_ops_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "firing",
+                    "resolved"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Incidents",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}": {
+      "get": {
+        "operationId": "get_incident_api_v1_ops_incidents__incident_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/events": {
+      "post": {
+        "operationId": "annotate_incident_api_v1_ops_incidents__incident_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsIncidentAnnotation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Annotate Incident",
+        "tags": [
+          "ops"
         ]
       }
     },
@@ -66910,6 +67570,131 @@
           }
         ],
         "summary": "Viewer Logout",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password": {
+      "post": {
+        "description": "パスワードの変更。must_change の人も呼べる（require_viewer_password_ok ではなく get_current_viewer）。\n\n変更後、それより前に出したトークンは使えなくなるので、新しいトークンを返す。",
+        "operationId": "viewer_change_password_api_v1_viewer_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Change Password",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/confirm": {
+      "post": {
+        "description": "新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。12 時間トークンは返さない（ログインし直す）。",
+        "operationId": "viewer_password_reset_confirm_api_v1_viewer_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Confirm",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/request": {
+      "post": {
+        "description": "再発行メールの申請。登録の有無・状態を応答に出さない（常に 200）。",
+        "operationId": "viewer_password_reset_request_api_v1_viewer_password_reset_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Request",
         "tags": [
           "viewer"
         ]

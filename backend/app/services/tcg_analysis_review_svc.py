@@ -8,6 +8,8 @@ DB 書き込みは行わない（読み取り専用）。
 """
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +45,18 @@ def _manual_values(decision: Decisions | None) -> dict[str, str]:
         "unit": v.unit, "note": v.note, "status": v.status,
     }
     return {key: value for key, value in candidates.items() if value is not None}
+
+
+def _thought_summaries(stored: object) -> list[str] | None:
+    """extraction_attempts.thought_summaries（JSONB）→ list[str] | None。JSONB が文字列で返る場合（asyncpg + text()）はここで読む。"""
+    if isinstance(stored, str):
+        try:
+            stored = json.loads(stored)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(stored, list):
+        return None
+    return [x for x in stored if isinstance(x, str)]
 
 
 # ---------------------------------------------------------------------------
@@ -274,9 +288,17 @@ async def fetch_analysis_results(
                  ORDER BY ic.corrected_at DESC
                  LIMIT 1),
                 FALSE
-            )                                    AS product_confirmed
+            )                                    AS product_confirmed,
+            eat.thought_summaries
         {base_from}
         JOIN result_order_page ON result_order_page.id = ei.id
+        LEFT JOIN LATERAL (
+            SELECT ea.thought_summaries
+            FROM {TCG_SCHEMA}.extraction_attempts ea
+            WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed'
+            ORDER BY ea.started_at DESC, ea.id DESC
+            LIMIT 1
+        ) eat ON TRUE
         {where}
         ORDER BY {result_order_sql()}
     """
@@ -339,6 +361,7 @@ async def fetch_analysis_results(
                 },
                 "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
                 "is_v102": bool(row.is_v102),
+                "thought_summaries": _thought_summaries(row.thought_summaries),
                 "gap_suspect": suspects.get(row.extraction_item_id),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,

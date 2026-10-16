@@ -1,0 +1,136 @@
+{
+  "common": {
+    "close": "閉じる"
+  },
+  "suppliers": {
+    "openFullPage": "フルページで開く"
+  },
+  "viewer": {
+    "title": "在庫一覧",
+    "loading": "読み込み中…",
+    "lastUpdated": "最終更新 {{time}}",
+    "logout": "ログアウト",
+    "language": {
+      "label": "言語",
+      "ja": "日本語",
+      "en": "English"
+    },
+    "tabAll": "全て",
+    "tabSelect": "シリーズ",
+    "prev": "前へ",
+    "next": "次へ",
+    "pageOf": "{{page}} / {{total}} ページ（全 {{count}} 件）",
+    "noResults": "条件に合う商品がありません",
+    "search": {
+      "placeholder": "商品名・型番・キーワードで検索"
+    },
+    "freshOnly": "{{hours}}時間以内",
+    "sort": {
+      "placeholder": "並べ替え",
+      "priceAsc": "価格が安い順",
+      "stockDesc": "在庫が多い順",
+      "postedDesc": "投稿が新しい順"
+    },
+    "filter": {
+      "button": "絞り込み",
+      "title": "絞り込み",
+      "provider": "提供者",
+      "condition": "コンディション",
+      "clear": "選択をクリア",
+      "all": "すべて",
+      "count": "{{count}}件",
+      "priceRange": "価格の範囲",
+      "quantityRange": "数量の範囲",
+      "min": "下限",
+      "max": "上限"
+    },
+    "col": {
+      "mark": "型番",
+      "title": "商品名",
+      "condition": "コンディション",
+      "offerType": "区分",
+      "quantity": "数量",
+      "unitPrice": "単価",
+      "supplier": "提供者",
+      "note": "備考",
+      "ship": "発送",
+      "releaseDate": "発売日"
+    },
+    "offerType": {
+      "in_stock": "在庫",
+      "pre_order": "予約"
+    },
+    "login": {
+      "title": "ログイン",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "submit": "ログイン",
+      "submitting": "ログイン中…",
+      "forgot": "パスワードを忘れた"
+    },
+    "changePassword": "パスワードを変更",
+    "passwordChange": {
+      "title": "パスワードの変更",
+      "forced": "初回はパスワードの変更が必要です。",
+      "current": "今のパスワード",
+      "new": "新しいパスワード",
+      "confirm": "新しいパスワード（確認）",
+      "hint": "15〜64文字で入力してください。",
+      "submit": "変更する",
+      "submitting": "変更中…",
+      "back": "戻る",
+      "mismatch": "新しいパスワードと確認用が一致しません。"
+    },
+    "reset": {
+      "title": "パスワードの再発行",
+      "emailHelp": "登録したメールアドレスを入力してください。",
+      "send": "メールを送る",
+      "sending": "送信中…",
+      "sentTitle": "メールを送りました",
+      "sentDescription": "登録があれば、30分有効のメールを送りました。メールのリンクから新しいパスワードを設定してください。",
+      "newTitle": "新しいパスワードの設定",
+      "submit": "設定する",
+      "submitting": "設定中…",
+      "doneTitle": "パスワードを変更しました",
+      "doneDescription": "新しいパスワードでログインしてください。",
+      "toLogin": "ログインへ",
+      "invalidTitle": "リンクが使えません",
+      "invalidDescription": "リンクの期限が切れているか、すでに使われています。もう一度メールを送ってください。",
+      "again": "もう一度メールを送る",
+      "backToLogin": "ログインに戻る"
+    },
+    "error": {
+      "forbidden_origin": "このページからはログインできません。",
+      "viewer_too_many_attempts": "試行回数が多すぎます。しばらく待ってからやり直してください。",
+      "viewer_invalid_credentials": "メールアドレスまたはパスワードが違います。",
+      "viewer_suspended": "このアカウントは停止中です。",
+      "viewer_trial_expired": "お試し期間が終了しています。",
+      "viewer_invalid_current_password": "今のパスワードが違います。",
+      "password_too_short": "パスワードは15文字以上にしてください。",
+      "password_too_long": "パスワードは64文字以内にしてください。",
+      "password_too_common": "よく使われるパスワードは使えません。別のものにしてください。",
+      "password_same_as_current": "今のパスワードと同じです。別のものにしてください。",
+      "viewer_reset_invalid_or_expired": "リンクの期限が切れているか、すでに使われています。",
+      "validation": "メールアドレスとパスワードを正しく入力してください。",
+      "generic": "ログインできませんでした。時間をおいてやり直してください。"
+    },
+    "notice": {
+      "preparing": {
+        "title": "準備中です",
+        "description": "在庫一覧の準備ができ次第ご利用いただけます。しばらくお待ちください。"
+      },
+      "suspended": {
+        "title": "停止中です",
+        "description": "このアカウントは現在停止されています。"
+      },
+      "expired": {
+        "title": "お試し期間が終了しました",
+        "description": "ご利用期間が終了しています。"
+      },
+      "error": {
+        "title": "読み込めませんでした",
+        "description": "時間をおいてやり直してください。"
+      }
+    }
+  }
+}

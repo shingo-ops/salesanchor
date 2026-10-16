@@ -90,6 +90,7 @@ class AnalysisResultItem(BaseModel):
     condition_review: ConditionReviewFields | None = None
     review_reason_details: list[ReviewReasonDetail] = []
     is_v102: bool = False
+    thought_summaries: list[str] | None = None
     gap_suspect: GapSuspect | None = None
 
 

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     DexImportApplyRequest,
     DexImportApplyResponse,
@@ -112,7 +113,8 @@ async def create_dex(
         result = await db.execute(text(sql), validated)
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"重複: {exc.orig}")
+        log_hidden_error("super_admin_dex.create_dex", exc)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="重複")
     row = result.mappings().first()
     await db.commit()
     if dex_kind == "pokemon":

@@ -1,0 +1,136 @@
+{
+  "common": {
+    "close": "Close"
+  },
+  "suppliers": {
+    "openFullPage": "Open full page"
+  },
+  "viewer": {
+    "title": "Inventory",
+    "loading": "Loading…",
+    "lastUpdated": "Last updated {{time}}",
+    "logout": "Log out",
+    "language": {
+      "label": "Language",
+      "ja": "日本語",
+      "en": "English"
+    },
+    "tabAll": "All",
+    "tabSelect": "Series",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{total}} ({{count}} items)",
+    "noResults": "No items match your conditions",
+    "search": {
+      "placeholder": "Search by name, model number or keyword"
+    },
+    "freshOnly": "Last {{hours}} h",
+    "sort": {
+      "placeholder": "Sort",
+      "priceAsc": "Price: low to high",
+      "stockDesc": "Stock: high to low",
+      "postedDesc": "Newest posts"
+    },
+    "filter": {
+      "button": "Filters",
+      "title": "Filters",
+      "provider": "Supplier",
+      "condition": "Condition",
+      "clear": "Clear selection",
+      "all": "All",
+      "count": "{{count}} selected",
+      "priceRange": "Price range",
+      "quantityRange": "Quantity range",
+      "min": "Min",
+      "max": "Max"
+    },
+    "col": {
+      "mark": "Model No.",
+      "title": "Product",
+      "condition": "Condition",
+      "offerType": "Type",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "supplier": "Supplier",
+      "note": "Note",
+      "ship": "Shipping",
+      "releaseDate": "Release date"
+    },
+    "offerType": {
+      "in_stock": "In stock",
+      "pre_order": "Pre-order"
+    },
+    "login": {
+      "title": "Log in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "forgot": "Forgot your password?"
+    },
+    "changePassword": "Change password",
+    "passwordChange": {
+      "title": "Change password",
+      "forced": "You need to change your password the first time.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "New password (confirm)",
+      "hint": "Use 15 to 64 characters.",
+      "submit": "Change",
+      "submitting": "Changing…",
+      "back": "Back",
+      "mismatch": "The new password and the confirmation do not match."
+    },
+    "reset": {
+      "title": "Reset password",
+      "emailHelp": "Enter the email address you registered with.",
+      "send": "Send email",
+      "sending": "Sending…",
+      "sentTitle": "Email sent",
+      "sentDescription": "If the address is registered, we sent an email that is valid for 30 minutes. Set a new password from the link in the email.",
+      "newTitle": "Set a new password",
+      "submit": "Set password",
+      "submitting": "Setting…",
+      "doneTitle": "Your password has been changed",
+      "doneDescription": "Please log in with your new password.",
+      "toLogin": "Go to log in",
+      "invalidTitle": "This link cannot be used",
+      "invalidDescription": "The link has expired or has already been used. Please send the email again.",
+      "again": "Send the email again",
+      "backToLogin": "Back to log in"
+    },
+    "error": {
+      "forbidden_origin": "You cannot log in from this page.",
+      "viewer_too_many_attempts": "Too many attempts. Please wait a while and try again.",
+      "viewer_invalid_credentials": "The email or password is incorrect.",
+      "viewer_suspended": "This account is suspended.",
+      "viewer_trial_expired": "Your trial period has ended.",
+      "viewer_invalid_current_password": "The current password is incorrect.",
+      "password_too_short": "The password must be at least 15 characters.",
+      "password_too_long": "The password must be 64 characters or fewer.",
+      "password_too_common": "That password is too common. Please choose another.",
+      "password_same_as_current": "That is the same as your current password. Please choose another.",
+      "viewer_reset_invalid_or_expired": "The link has expired or has already been used.",
+      "validation": "Please enter a valid email and password.",
+      "generic": "Could not log in. Please try again later."
+    },
+    "notice": {
+      "preparing": {
+        "title": "Getting ready",
+        "description": "The inventory list will be available as soon as it is ready. Please wait a moment."
+      },
+      "suspended": {
+        "title": "Account suspended",
+        "description": "This account is currently suspended."
+      },
+      "expired": {
+        "title": "Trial period ended",
+        "description": "Your usage period has ended."
+      },
+      "error": {
+        "title": "Could not load",
+        "description": "Please try again later."
+      }
+    }
+  }
+}

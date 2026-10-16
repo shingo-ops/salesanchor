@@ -1,0 +1,90 @@
+{
+ "chromium": "147.0.7727.15",
+ "results": [
+  {
+   "vw": 1280,
+   "theme": "light",
+   "side": "before",
+   "lang": "ja",
+   "content": "\"現在\"",
+   "fontSize": "11.2px",
+   "color": "rgb(113, 128, 150)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -11.2031, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": null
+  },
+  {
+   "vw": 1280,
+   "theme": "light",
+   "side": "after",
+   "lang": "ja",
+   "content": "\"現在\"",
+   "fontSize": "11.2px",
+   "color": "rgb(113, 128, 150)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -11.2031, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": "現在"
+  },
+  {
+   "vw": 1280,
+   "theme": "light",
+   "side": "after",
+   "lang": "en",
+   "content": "\"Current\"",
+   "fontSize": "11.2px",
+   "color": "rgb(113, 128, 150)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -20.7578, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": "Current"
+  },
+  {
+   "vw": 1280,
+   "theme": "dark",
+   "side": "before",
+   "lang": "ja",
+   "content": "\"現在\"",
+   "fontSize": "11.2px",
+   "color": "rgb(148, 163, 184)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -11.2031, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": null
+  },
+  {
+   "vw": 1280,
+   "theme": "dark",
+   "side": "after",
+   "lang": "ja",
+   "content": "\"現在\"",
+   "fontSize": "11.2px",
+   "color": "rgb(148, 163, 184)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -11.2031, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": "現在"
+  },
+  {
+   "vw": 1280,
+   "theme": "dark",
+   "side": "after",
+   "lang": "en",
+   "content": "\"Current\"",
+   "fontSize": "11.2px",
+   "color": "rgb(148, 163, 184)",
+   "bottom": "-14px",
+   "left": "14px",
+   "transform": "matrix(1, 0, 0, 1, -20.7578, 0)",
+   "whiteSpace": "nowrap",
+   "dataAttr": "Current"
+  }
+ ],
+ "diffTotal": 0
+}

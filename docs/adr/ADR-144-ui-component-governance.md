@@ -138,3 +138,11 @@ required check 登録済。本 ADR では追加実装しない。
 - 検出対象の列挙が checkbox を含まないまま古くなる箇所（今回は触らない）: .github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119。
 - 必須チェックの事実: 関所（ジョブ名 UI governance gate）は main のルールセット（id 15777895）の必須チェックに登録済み。本文 :103 の「（非必須）」と .github/workflows/ui-governance-gate.yml:6 のコメントは古い記載である。
 - 設計: docs/handoff/ay4d-checkbox-guard/design.md。
+
+## 2026-10-16 追記: 生ラジオを種別に追加（AY-5b）
+
+- PO 決定: 2026-10-16「y」。CI ゲート（§2）の検出種別に `radio`（生 `<input type="radio">`）を足した。種別は 4 から 5 になった。仕組みは AY-4d 追記と同じで、改訂案（全件検査）への切替ではない。AY-4d 追記の「生 radio は対象外」はこの節で置き換える。
+- 判定・対象・既知の穴は AY-4d 追記の checkbox と同じ（type の値が radio であることだけが違う）。今の pages/ の生ラジオは 0 件（AY-5 #4365 で載せかえ済み）。
+- 試験: scripts/tests/test-ui-governance.js は 31 件から 39 件（T30〜T37）。
+- 種別の列挙が古い 3 か所（AY-4d 追記に記載）は radio も含まないまま。今回も触らない。
+- 設計: docs/handoff/ay5b-radio-guard/design.md。
