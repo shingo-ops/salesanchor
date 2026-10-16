@@ -84,6 +84,13 @@ _BASE_FROM = _base_from()
 # ---------------------------------------------------------------------------
 
 
+# 要確認の定義（1か所）。旧解析版（v102 以外）の行は要確認に出さない。
+_NEEDS_REVIEW_COND = (
+    "((NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
+    " AND COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE))"
+)
+
+
 def _build_where(
     *,
     query: str | None,
@@ -117,9 +124,8 @@ def _build_where(
 
     # status_tab による絞り込み（review_only より優先）
     if status_tab == "NEEDS_REVIEW":
-        conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
-        )
+        conditions.append(_NEEDS_REVIEW_COND)
+        params["v102_prefix"] = V102_PROMPT_VERSION_PREFIX
     elif status_tab == "ACKED":
         conditions.append("cr.review_acked")
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
@@ -136,9 +142,8 @@ def _build_where(
 
     # チェックボックスフィルタ（タブ絞り込みに追加）
     if review_only and status_tab not in ("NEEDS_REVIEW",):
-        conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
-        )
+        conditions.append(_NEEDS_REVIEW_COND)
+        params["v102_prefix"] = V102_PROMPT_VERSION_PREFIX
     if unregistered_only:
         conditions.append("ar.pid_basis = 'NONE'")
     if unresolved_unit_only:
