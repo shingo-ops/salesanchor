@@ -692,7 +692,7 @@ async def rematch_products(
         logger.exception("buyback_prices.rematch: エラー")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"再マッチング中にエラーが発生しました: {exc}",
+            detail="再マッチング中にエラーが発生しました",
         ) from exc
 
     return RematchResponse(**stats)

@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     CentralSupplierCreate,
     CentralSupplierResponse,
@@ -164,9 +165,10 @@ async def create_supplier(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.create_supplier", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
+            detail="重複または制約違反",
         )
     row = result.mappings().first()
     new_id = row["id"]
@@ -211,7 +213,8 @@ async def update_supplier(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"制約違反: {exc.orig}")
+        log_hidden_error("super_admin_suppliers.update_supplier", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="仕入元が見つかりません")
@@ -539,9 +542,10 @@ async def import_suppliers_commit(
         await db.commit()
     except Exception as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.import_suppliers_commit", exc)
         raise HTTPException(
             status_code=500,
-            detail=f"SUPPLIER_IMPORT_COMMIT_ERROR: {exc}",
+            detail="SUPPLIER_IMPORT_COMMIT_ERROR",
         ) from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
@@ -596,9 +600,10 @@ async def create_routing(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.create_routing", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または FK 違反: {exc.orig}",
+            detail="重複または FK 違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -789,7 +794,8 @@ async def update_supplier_extraction_rules(
         )
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"更新エラー: {exc}") from exc
+        log_hidden_error("super_admin_suppliers.update_supplier_extraction_rules", exc)
+        raise HTTPException(status_code=500, detail="更新エラー") from exc
 
     row = result.mappings().first()
     if not row:
