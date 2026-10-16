@@ -9,7 +9,7 @@ create_product をそのまま使い、本サービスでは新しい登録処�
   preview : 検査だけを行い、書き込みを一切しない
   commit  : 同じ検査をやり直し、止める判定の無い行だけを登録する
 
-CSV の列（12列・見出し行あり。旧10列の見出しも受け付け、無い2列は空として扱う）:
+CSV の列（12列・見出し行あり）:
   mark / japanese_title / english_title / release_date /
   search_keywords / exclude_keywords /
   division_code / work_code / manufacturer_code / product_category_code /
@@ -60,15 +60,25 @@ CSV_COLUMNS: list[str] = [
     "blank_confirmed",
 ]
 
-# ADR-1020 便2c: 便2の間は旧10列の見出しも受け付ける（無い2列は空として扱う）
-LEGACY_CSV_COLUMNS: list[str] = CSV_COLUMNS[:10]
-
 # ADR-1020: blank_confirmed に書く CSV の列名 → 印の項目名（tcg_product_master_svc.BLANK_CONFIRMABLE_FIELDS）
 BLANK_CONFIRMED_COLUMNS: dict[str, str] = {
     "english_title": "name_en",
     "mark": "mark",
     "release_date": "release_date",
     "exclude_keywords": "exclude_keywords",
+}
+
+# ADR-1020 便3: 必須9項目の名前 → CSV の列名（止める理由に列名で出す。往復も使う）
+REQUIRED_FIELD_CSV_COLUMNS: dict[str, str] = {
+    "name": "japanese_title",
+    "name_en": "english_title",
+    "mark": "mark",
+    "release_date": "release_date",
+    "search_keywords": "search_keywords",
+    "exclude_keywords": "exclude_keywords",
+    "work_id": "work_code",
+    "product_format_id": "product_format_code",
+    "product_category_id": "product_category_code",
 }
 
 # 空でも止めないコード列（便2では任意。check_codes が読み飛ばす）
@@ -184,11 +194,7 @@ def parse_rows(raw: bytes) -> tuple[list[dict[str, str]], list[str]]:
         return [], ["CSV_EMPTY"]
 
     header = [h.strip() for h in records[0]]
-    if header == CSV_COLUMNS:
-        columns = CSV_COLUMNS
-    elif header == LEGACY_CSV_COLUMNS:
-        columns = LEGACY_CSV_COLUMNS
-    else:
+    if header != CSV_COLUMNS:
         file_errors.append("CSV_HEADER_MISMATCH")
         return [], file_errors
 
@@ -196,11 +202,10 @@ def parse_rows(raw: bytes) -> tuple[list[dict[str, str]], list[str]]:
     for i, rec in enumerate(records[1:], start=1):
         if not any((c or "").strip() for c in rec):
             continue
-        if len(rec) != len(columns):
+        if len(rec) != len(CSV_COLUMNS):
             file_errors.append("CSV_COLUMN_COUNT_MISMATCH_ROW_" + str(i))
             continue
-        row = {column: "" for column in CSV_COLUMNS}
-        row.update({columns[j]: (rec[j] or "").strip() for j in range(len(columns))})
+        row = {CSV_COLUMNS[j]: (rec[j] or "").strip() for j in range(len(CSV_COLUMNS))}
         row["row_no"] = str(i)
         rows.append(row)
 
@@ -460,6 +465,12 @@ async def preview(db: AsyncSession, raw: bytes, filename: str) -> dict[str, Any]
         )
         if not checked["blocking"]:
             payload = build_payload(row, lookups)
+            # ADR-1020 便3: 足りない項目を列名で止める（create_product と同じ判定）
+            from app.services.tcg_product_master_svc import missing_for_create
+
+            checked["blocking"].extend(
+                "REQUIRED_FIELD_MISSING_" + REQUIRED_FIELD_CSV_COLUMNS[f] for f in missing_for_create(payload)
+            )
             format_id = payload.get("product_format_id")
             work_id = payload.get("work_id")
             if format_id is not None and work_id:

@@ -17,10 +17,15 @@ from app.services.tcg_product_import_svc import (
     CSV_COLUMNS,
     LOOKUP_ARGS,
     LOOKUP_TABLES,
+    REQUIRED_FIELD_CSV_COLUMNS,
     format_blank_confirmed,
     parse_blank_confirmed,
 )
-from app.services.tcg_product_master_svc import format_matches_game, save_blank_confirmations
+from app.services.tcg_product_master_svc import (
+    find_cleared_fields,
+    format_matches_game,
+    save_blank_confirmations,
+)
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -329,6 +334,39 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                     db, int(final_format), int(final_work)
                 ):
                     errors.append("PRODUCT_FORMAT_GAME_MISMATCH")
+            # ADR-1020 便3: 値か印のあった項目を、印なしの空にする更新だけ止める
+            product = snapshot["product"]
+            if product.get("tenant_id") is None:
+                before_marks = list(snapshot.get("blank_confirmed") or [])
+                cleared = find_cleared_fields(
+                    {
+                        "name": product.get("name"), "name_en": product.get("name_en"),
+                        "mark": product.get("mark"), "release_date": product.get("release_date"),
+                        "search_keywords": [w["keyword"] for w in snapshot["search_keywords"]],
+                        "exclude_keywords": [w["keyword"] for w in snapshot["exclude_keywords"]],
+                        "work_id": product.get("work_id"),
+                        "product_format_id": product.get("product_format_id"),
+                        "product_category_id": product.get("product_category_id"),
+                    },
+                    before_marks,
+                    {
+                        "name": row["japanese_title"], "name_en": row["english_title"],
+                        "mark": row["mark"], "release_date": row["release_date"],
+                        "search_keywords": plan["words"].get(
+                            "search_keywords", [w["keyword"] for w in snapshot["search_keywords"]]
+                        ),
+                        "exclude_keywords": plan["words"].get(
+                            "exclude_keywords", [w["keyword"] for w in snapshot["exclude_keywords"]]
+                        ),
+                        "work_id": plan["sets"].get("work_id", product.get("work_id")),
+                        "product_format_id": plan["sets"].get("product_format_id", product.get("product_format_id")),
+                        "product_category_id": plan["sets"].get(
+                            "product_category_id", product.get("product_category_id")
+                        ),
+                    },
+                    plan["marks"] if plan["marks"] is not None else before_marks,
+                )
+                errors.extend("REQUIRED_FIELD_CLEARED_" + REQUIRED_FIELD_CSV_COLUMNS[f] for f in cleared)
             # ADR-1020 便2c: 確定のとき印を直すための、更新後の4項目
             plan["blank_values"] = {
                 "name_en": row["english_title"],

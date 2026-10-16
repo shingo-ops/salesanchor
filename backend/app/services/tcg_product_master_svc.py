@@ -74,6 +74,33 @@ def check_required_fields(values: dict[str, Any], blank_confirmations: set[str] 
     return missing
 
 
+def missing_for_create(args: dict[str, Any]) -> list[str]:
+    """ADR-1020 便3: create_product の引数（名前は create_product と同じ）から、足りない項目名を返す。"""
+    values = {
+        "name": args.get("japanese_title"),
+        "name_en": args.get("english_title"),
+        "mark": args.get("mark"),
+        "release_date": args.get("release_date"),
+        "search_keywords": args.get("search_keywords"),
+        "exclude_keywords": args.get("exclude_keywords"),
+        "work_id": args.get("work_id"),
+        "product_format_id": args.get("product_format_id"),
+        "product_category_id": args.get("product_category_id"),
+    }
+    return check_required_fields(values, set(args.get("blank_confirmations") or []))
+
+
+def find_cleared_fields(
+    before: dict[str, Any], before_marks: Any, after: dict[str, Any], after_marks: Any,
+) -> list[str]:
+    """ADR-1020 便3: 前は足りていた（値か印があった）のに、後で足りなくなった項目名を返す。
+
+    前も後も足りない項目（古い空欄）は返さない。before / after のキーは REQUIRED_FIELDS の名前。
+    """
+    was_missing = set(check_required_fields(before, set(before_marks or [])))
+    return [f for f in check_required_fields(after, set(after_marks or [])) if f not in was_missing]
+
+
 async def format_matches_game(db: AsyncSession, product_format_id: int, work_id: int) -> bool:
     """ADR-1020 便2a: 細分類がそのゲーム（作品）に紐づいているか。"""
     row = (await db.execute(
@@ -483,6 +510,16 @@ async def create_product(
     commit=False: caller owns commit/rollback, including the post-write check.
     force=True: GAS ソフトブロック準拠。重複候補があっても登録を続行する。
     """
+    # ADR-1020 便3: 足りない項目があれば DB を読む前に止める（全入口がここを通る）
+    missing = missing_for_create({
+        "japanese_title": japanese_title, "english_title": english_title, "mark": mark,
+        "release_date": release_date, "search_keywords": search_keywords,
+        "exclude_keywords": exclude_keywords, "work_id": work_id,
+        "product_format_id": product_format_id, "product_category_id": product_category_id,
+        "blank_confirmations": blank_confirmations,
+    })
+    if missing:
+        raise ValueError("REQUIRED_FIELDS_MISSING:" + ",".join(missing))
     try:
         _work_id_int: int | None = int(work_id) if str(work_id).strip() else None
     except (TypeError, ValueError):
@@ -555,7 +592,7 @@ async def create_product(
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
     product_id_int = new_row.int_id  # integer for keyword FK references and post-write gate
 
-    # ADR-1020 便1: 印の保存（来たときだけ・D3）と、足りない項目のログ（止めない・D7）
+    # ADR-1020 便1: 印の保存（来たときだけ・D3）
     confirmed = set(blank_confirmations or [])
     filled_values = {
         "name": japanese_title, "name_en": english_title, "mark": mark,
@@ -567,9 +604,6 @@ async def create_product(
         await save_blank_confirmations(
             db, product_id=product_id_int, values=filled_values, confirmations=confirmed, actor=actor,
         )
-    missing = check_required_fields(filled_values, confirmed)
-    if missing:
-        logger.info("[ADR-1020] product %s registered without required fields: %s", pm_code, ",".join(missing))
 
     # search_keywords INSERT
     if search_keywords.strip():
