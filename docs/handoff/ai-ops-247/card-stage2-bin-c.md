@@ -238,3 +238,13 @@ END OF CARD
   - `docker-compose.monitoring.yml`: alertmanager に `extra_hosts: ["api.salesanchor.jp:49.212.137.46"]` を追加
 - 経路は変わらない: ホスト名は extra_hosts で 49.212.137.46 に固定されるので、従来どおり IP 直で prod1 に届き、Cloudflare は通らない（Host と SNI は共にホスト名で揃う）
 - 担当の実行結果: /tmp/CC報告ファイル/ai-ops-stage2-bin-c/fix421/ （diff.txt・yaml_check.txt・grep.txt）
+
+## 15. 本番の結果と段階2 の完了（Opus 記録・2026-10-16）
+
+- 反映: #4377（merge b4f00fa67・07:43:29Z）と 421 対策 #4384（merge 057e12b16・11:32:50Z）。prod2 の配置は PO の `!` スクリプト（2 回目 11:34:12Z）。控え `*.bak-binc` は便C 前の形を保持
+- 試験（生出力: /tmp/CC報告ファイル/ai-ops-stage2-bin-c/deploy/switch_result.txt・incident_test_final.json・annotate.txt）:
+  - 受け口の事前確認 HTTP 200・received 0、Alertmanager の ready 200、silence の数 0 → 0
+  - 擬似アラート OpsPipelineTest（start 11:34:26Z）→ 障害記録 1 行・`notify_count` 2・`resolved_at` 11:35:41Z・出来事は notified と resolved の 2 件
+  - 保守の鍵での注記（annotated）HTTP 200
+  - Discord の #サーバー監視アラート に FIRING と RESOLVED が届いた（PO 目視「y,サーバー監視アラートの方に届いた」）
+- 判定: §7 の受け入れ基準と stage2-design.md §6 の便C の 2 行は ○。段階2（便A〜C）は完了。残りは V3（10/23 に webhook の失敗の数を見る）。次は段階3（stage3-design.md）
