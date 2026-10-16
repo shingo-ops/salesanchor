@@ -1,0 +1,3 @@
+/* RadioControl — ラジオボタン金型（design.md §AY-5）。寸法はチェック欄と同じ --size-checkbox を使う（新しいトークンは足さない・ADR-067）。 */
+.comp-radio-control { width: var(--size-checkbox); height: var(--size-checkbox); cursor: pointer; accent-color: var(--accent); }
+.comp-radio-control:disabled { cursor: not-allowed; }
