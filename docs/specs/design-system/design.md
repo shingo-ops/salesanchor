@@ -4263,3 +4263,11 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 前後実測の結果: 指標 3248（同じ 2180・想定内の差 1068・想定外の差 0）。比較: docs/handoff/design-system-recon/evidence-20260910/ay5-measure-compare.txt（前後の画像 ay5-*.png・横並び ay5-side-*.png も同じ場所）。R3・R4（色見本）は幅・高さ・位置・opacity・cursor の差 0、差は accent-color だけ。R1 の今（前）の gap は normal・marginTop は 0px（`--spacing-*` が未定義のため）。
 - 対象外: ChoiceCardGroup.tsx（すでに金型の中）、check-ui-governance への radio 種別の追加（AY-5b として別に提案）、寸法 sm・dataColor の口。
 - 残件: ①RegisterPage.tsx の未定義トークン `--spacing-*`（R1・R2 以外の 22 か所） ②pages-layout.css の `.color-swatch-legacy::after` の直書き「現在」（ADR-027） ③R1・R2 の質問文の fieldset/legend 化と R5〜R7 の aria-label ④Radio を .form-group の中に置くと components.css:11・:19 の規則で崩れる件（今回の使い手は .form-group の外） ⑤AY-5b（自動チェックに radio 種別を足す）。
+
+#### AY-5b 生ラジオの見張り（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（自動チェックに、金型を使わない生ラジオを止める項目を足す）。
+- 設計: docs/handoff/ay5b-radio-guard/design.md（recon.md 併置）。
+- 変更: scripts/check-ui-governance.js に種別 `radio` を追加（type が radio の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T30〜T37 を追加し、試験は 31 件から 39 件。docs/CC_UI_GOVERNANCE.md の禁止表に生ラジオの行を追加。ADR-144 に追記節を追加。
+- 範囲: 今と同じ `frontend/src/pages/` の .tsx（PR の変更ファイル）。features/・components/ は検査しない。今の pages/ の生ラジオは 0 件。
+- 効果: pages/ の .tsx に生の `<input type="radio">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
