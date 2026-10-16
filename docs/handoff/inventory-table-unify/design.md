@@ -2,7 +2,7 @@
 
 状態: 設計審査済み r3 APPROVE（Opus 作成・Opus Architect 審査。同一 AI の自己審査）。
 根拠: [recon.md](recon.md)。審査 r1 の全文: /tmp/CC報告ファイル/app_inventory_recon_20261015/review_design_r1.txt
-recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1017。
+recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え）。
 
 ## PO の決定と許可の出所（審査 r1 B-10）
 
@@ -27,7 +27,7 @@ recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR�
 ## 対象と対象外
 
 - 対象: 在庫表（/inventory）の画面、在庫表 API の q と提供者の絞り込み、共通の金型（DataTable の追加機能・MultiSelect の新設）。
-- 対象外: 閲覧専用ページの実装（ADR-1017・PR #4283 側。その設計の書き直しは別に行う）、更新ボタン、英語名が空の 33 商品の登録、DB の列（hidden_supplier_ids は残す）、/inventory/search（別 API）、GAS 側、見積・請求の画面（inventory.view.searchPlaceholder を使う QuoteCreatePage.tsx:262・InvoiceCreatePage.tsx:413 は触らない）。
+- 対象外: 閲覧専用ページの実装（ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え）・PR #4283 側。その設計の書き直しは別に行う）、更新ボタン、英語名が空の 33 商品の登録、DB の列（hidden_supplier_ids は残す）、/inventory/search（別 API）、GAS 側、見積・請求の画面（inventory.view.searchPlaceholder を使う QuoteCreatePage.tsx:262・InvoiceCreatePage.tsx:413 は触らない）。
 
 ## 便の分け方（1便1テーマ）
 
@@ -258,7 +258,7 @@ recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR�
 ## 維持の仕組み
 
 - 守り手: .github/workflows/frontend-check.yml（check:all・tsc・新トークン検査・Storybook ビルド。e2e は .github/workflows/e2e.yml）
-- 金型にしたので、閲覧ページ（ADR-1017）も同じ部品を使う → 片方だけ直る事故を防ぐ。
+- 金型にしたので、閲覧ページ（ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え））も同じ部品を使う → 片方だけ直る事故を防ぐ。
 - 正規化は共通テストベクタで Python と JS を照合（ベクタを変えるときは両方のテストを同じ PR で触る）。
 - アプリ在庫表を変えるときは GAS 在庫一覧にも揃える方針（メモ app_inventory_gas_parity）。
 

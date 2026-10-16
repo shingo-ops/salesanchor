@@ -19,6 +19,7 @@
 | [C: 共用在庫の推移](./market-history/README.md) | 価格・数量の変動を市場履歴として蓄積 | あるべき姿・KGI完成（KGI-C1〜C2） |
 | [提供元フィード翻訳（feed-translation）](./feed-translation/README.md) | 仕入先メッセージの解析・整形・免許制承認をへてA・Cへ配信（旧称テーマD） | あるべき姿・KGI完成（KGI 15項目・免許制） |
 | [在庫解析（inventory-analytics）](./inventory-analytics/README.md) | feed-translationの下流。配信済みデータの変化検知・傾向集計・提案 | あるべき姿・KGI・To-Be完成（2026-07-15） |
+| [在庫の閲覧専用ページ（inventory-viewer）](./inventory-viewer/README.md) | お客さんが自社サーバーで在庫表だけを見る。GAS 在庫一覧の置き換え | あるべき姿・KGI 作成（2026-10-15）・設計 PO 承認済（2026-10-16）・実装着手 |
 
 ## 既存資料との関係
 
