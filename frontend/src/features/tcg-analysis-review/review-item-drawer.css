@@ -74,3 +74,19 @@
 .review-item-reasons__text {
   color: var(--danger-text);
 }
+
+/* Gemini の要約（英語原文）。改行を保ち、高さ上限を超えたらスクロール */
+.review-item-summary {
+  padding-inline: var(--space-3);
+}
+
+.review-item-summary__body {
+  white-space: pre-wrap;
+  --review-summary-max-h: 320px; /* component-local token: 要約の表示高さ（それ以上はスクロール） */
+  max-height: var(--review-summary-max-h);
+  overflow-y: auto;
+  padding: var(--space-3);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  font-size: var(--font-size-sm);
+}

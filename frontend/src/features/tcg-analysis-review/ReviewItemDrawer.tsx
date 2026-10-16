@@ -46,6 +46,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const { t } = useTranslation();
   const details = item.review_reason_details ?? [];
   const gapSuspect = gapSuspectOf(item);
+  const summaryText = (item.thought_summaries ?? []).filter(Boolean).join("\n\n");
   const [scope, setScope] = useState<FixScope | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [ackedCodes, setAckedCodes] = useState<string[]>([]);
@@ -204,6 +205,12 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             fixColumn={viewOnly ? undefined : { selectedRowKey, onRowSelect: selectRow, fixableRowKeys }}
           />
         </TwoColumn>
+        <section className="review-item-summary">
+          <div className="review-item-pane-head">
+            <h3>{t("tcgAnalysisReview.geminiSummaryTitle")}</h3>
+          </div>
+          {summaryText ? <p className="review-item-summary__body">{summaryText}</p> : <p>{t("tcgAnalysisReview.geminiSummaryEmpty")}</p>}
+        </section>
         {scope !== null && (
           <section className="review-item-fix">
             <ReviewFixWizard
