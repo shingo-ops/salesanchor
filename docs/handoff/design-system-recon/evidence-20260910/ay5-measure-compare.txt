@@ -1,11 +1,12 @@
 chromium 147.0.7727.15
 比較した組: 32（場面 R1・R3/R4・R5 × 幅2 × テーマ2 × 状態）
-指標の総数（前後を突き合わせた数）: 3248  同じ指標: 2180  想定内の差: 996  想定外の差(×): 72
+指標の総数（前後を突き合わせた数）: 3248  同じ指標: 2180  想定内の差: 1068  想定外の差(×): 0
 
 === 想定内の差（指標ごと。件数と最初の1例）===
 [r1] accentColor x24: accent-color（auto → --accent）  例 (390, 'dark', 'r1', 'checked') i1_accentColor: auto -> rgb(91, 141, 217)
 [r1] cssHeight x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_cssHeight: 13px -> 14.6562px
 [r1] cssWidth x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_cssWidth: 13px -> 14.6562px
+[r1] cursor x24: input の cursor（default → pointer）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r1', 'checked') i1_cursor: default -> pointer
 [r1] gapInputToText x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_gapInputToText: 0 -> 8
 [r1] h x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_h: 13 -> 14.66
 [r1] inputCenterY x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_inputCenterY: 63.98 -> 61.86
@@ -43,82 +44,13 @@ chromium 147.0.7727.15
 [r5] cssWidth x24: width（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_cssWidth: 13px -> 16px
 [r5] cursor x24: cursor（標準 → pointer）  例 (390, 'dark', 'r5', 'checked') i1_cursor: default -> pointer
 [r5] h x24: height（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_h: 13 -> 16
+[r5] parentW x24: td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r5', 'checked') i1_parentW: 45 -> 48
+[r5] tdW x24: td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r5', 'checked') i1_tdW: 45 -> 48
 [r5] top x24: 行の高さ（丸の大きさに伴う）  例 (390, 'dark', 'r5', 'checked') i1_top: 159.69 -> 156.69
 [r5] w x24: width（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_w: 13 -> 16
 
-=== 想定外の差（全件・72 件）===
-(390, 'dark', 'r1', 'checked') i1_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r1', 'checked') i2_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r1', 'focus') i1_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r1', 'focus') i2_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r1', 'unchecked') i1_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r1', 'unchecked') i2_cursor: default -> pointer  ×（想定外）
-(390, 'dark', 'r5', 'checked') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'checked') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'checked') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'checked') i2_tdW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'focus') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'focus') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'focus') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'focus') i2_tdW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'unchecked') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'unchecked') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'unchecked') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'dark', 'r5', 'unchecked') i2_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r1', 'checked') i1_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r1', 'checked') i2_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r1', 'focus') i1_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r1', 'focus') i2_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r1', 'unchecked') i1_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r1', 'unchecked') i2_cursor: default -> pointer  ×（想定外）
-(390, 'light', 'r5', 'checked') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'checked') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'checked') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'checked') i2_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'focus') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'focus') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'focus') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'focus') i2_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'unchecked') i1_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'unchecked') i1_tdW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'unchecked') i2_parentW: 45 -> 48  ×（想定外）
-(390, 'light', 'r5', 'unchecked') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r1', 'checked') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r1', 'checked') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r1', 'focus') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r1', 'focus') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r1', 'unchecked') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r1', 'unchecked') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'dark', 'r5', 'checked') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'checked') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'checked') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'checked') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'focus') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'focus') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'focus') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'focus') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'unchecked') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'unchecked') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'unchecked') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'dark', 'r5', 'unchecked') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r1', 'checked') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r1', 'checked') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r1', 'focus') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r1', 'focus') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r1', 'unchecked') i1_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r1', 'unchecked') i2_cursor: default -> pointer  ×（想定外）
-(1280, 'light', 'r5', 'checked') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'checked') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'checked') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'checked') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'focus') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'focus') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'focus') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'focus') i2_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'unchecked') i1_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'unchecked') i1_tdW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'unchecked') i2_parentW: 45 -> 48  ×（想定外）
-(1280, 'light', 'r5', 'unchecked') i2_tdW: 45 -> 48  ×（想定外）
+=== 想定外の差（全件・0 件）===
+なし
 
 === R1 の今（前）の gap・marginTop の computed 値 ===
 (390, 'dark', 'r1', 'checked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59

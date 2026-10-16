@@ -23,6 +23,7 @@ EXP = {
     "left": R1_POS, "top": R1_POS, "parentLeft": R1_POS, "parentTop": R1_POS, "parentH": R1_POS, "rootH": R1_POS, "rootTop": R1_POS, "rootLeft": R1_POS,
     "textLeft": R1_POS, "textTop": R1_POS, "textW": R1_POS, "textH": R1_POS, "gapInputToText": R1_POS, "inputCenterY": R1_POS, "textCenterY": R1_POS,
     "rowTopDiff": R1_POS, "rowGapBetween": R1_POS, "inputTopDiff": R1_POS, "sampleH": R1_POS,
+    "cursor": "input の cursor（default → pointer）（設計 §5 実測 r1 の追記）",
   },
   "r34": {"accentColor": "accent-color（auto → --accent。欄が透明なので見た目は変わらない）"},
   "r5": {
@@ -31,6 +32,7 @@ EXP = {
     "top": "行の高さ（丸の大きさに伴う）", "parentH": "行の高さ（丸の大きさに伴う）", "parentTop": "行の高さ（丸の大きさに伴う）",
     "trH": "行の高さ（丸の大きさに伴う）", "trTop": "行の高さ（丸の大きさに伴う）", "tdH": "行の高さ（丸の大きさに伴う）",
     "rowTopDiff": "行の高さ（丸の大きさに伴う）", "sampleH": "行の高さ（丸の大きさに伴う）",
+    "tdW": "td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）", "parentW": "td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）",
   },
 }
 # 値の確認（想定内でも値が設計と違えば ×）
@@ -42,6 +44,8 @@ def val_ok(scene, name, bv, av, side_after):
     if name in ("labelColumnGap", "labelRowGap", "rootColumnGap", "rootRowGap"): return av == "8px"
     if scene == "r5" and name in ("cssWidth", "cssHeight"): return av == "16px"
     if scene == "r5" and name == "cursor": return av == "pointer"
+    if name == "cursor": return (bv, av) == ("default", "pointer")
+    if scene == "r5" and name in ("tdW", "parentW"): return (bv, av) == (45, 48)
     return True
 
 print("chromium", d["chromium"])

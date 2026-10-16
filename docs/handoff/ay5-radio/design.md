@@ -184,6 +184,10 @@ RadioControl.displayName = "RadioControl";
   - R1・R2: 丸の大きさ（ブラウザ標準 → 1.1em）・accent-color（auto → --accent）・label の display（flex → inline-flex）と幅（行いっぱい → 中身の幅＝押せる範囲）・gap（今の値 → --space-2）・font-size（継承 → --font-sm）・font-weight（継承 → medium）・align-items（center → flex-start）と、それに伴う文字と丸の位置・行の高さ・2 行の縦の間隔。margin は index.css:411 の `* { margin: 0 }` で前後とも 0（差にならない）。
   - R3・R4: accent-color（auto → --accent。欄が透明なので見た目は変わらない）だけ。幅・高さ・位置・opacity・cursor は差 0。
   - R5〜R7: width・height（標準 → 16px）・accent-color（標準 → --accent）・cursor（標準 → pointer）と、それに伴う行の高さ。
+- 実測 r1 の追記（2026-10-16 Opus 判定）: 初回の実測で上の一覧に無い差が 72 件出た（evidence-20260910/ay5-measure-compare.txt、コミット 34d6b7bae）。中身は次の 2 種類で、どちらも金型の形から直接出る差で、一覧に書き漏らしたもの（設計の書き漏れ。動きや配置の崩れではない）。想定内に加えて分類し直す。
+  - R1・R2 の input の cursor（default → pointer）24 件: 今は label に cursor pointer があるが、input にはブラウザの既定 default が当たっていた。金型 .comp-radio__input の cursor pointer（Checkbox と同じ）による。
+  - R5〜R7 の丸の列の幅（td・親の幅 45 → 48px）48 件: 丸が 13px → 16px になったぶん。行の高さ（49.69px）は前後で同じ。
+- R1 の今の computed 値: gap は normal（--spacing-2 未定義）、marginTop は 0px（--spacing-1 未定義）。2 行の縦の間隔は前後とも 25.59px。
 - 画像は ay5-{before,after}-*.png。PO にはこの画像と想定外 0 件の結果を見せてからマージする。
 
 ## 6. 代替案

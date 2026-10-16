@@ -4254,13 +4254,12 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 対象外: 生 radio（pages/ に 4 件 → AY-5 で 0 件）、features/・components/ の検査（今は金型本体以外 0 件。書いても止まらない）、動的な type。
 - 残り: features/ の検査は ADR-144 改訂案の全件検査への切替で扱う。company-forms.css の focus 規則の撤去は見た目の前後実測の便で判断する。checkbox を含まないまま古くなる列挙 3 か所（.github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119）は CI 設定・全員向け規則文のため今回は触っていない。
 
-
 #### AY-5 Radio・RadioControl 金型と生ラジオ 7 件の載せかえ（2026-10-16）
 
 - PO 決定: 2026-10-16「y」（ラジオボタンの金型をチェック欄の金型と同じ形で作り、7 件を載せかえる）。前提: 2026-10-02 の新規金型登録許可（:1953）、2026-10-15 の色は全部 --accent（:4202）。
 - 設計: docs/handoff/ay5-radio/design.md（recon.md 併置）。設計審査合格。
 - 変更: frontend/src/components/Radio.tsx・Radio.css（文字と並ぶ欄。Checkbox と同じ形で border・background・box-shadow は持たない）と RadioControl.tsx・RadioControl.css（単独の欄。寸法は --size-checkbox、選択色は --accent）を新設。RegisterPage.tsx の 2 件（R1・R2）を Radio、RolesPage.tsx の 2 件（R3・R4）と MergeCompanyModal・MergeContactModal・MergeLeadModal の 3 件（R5〜R7）を RadioControl に載せかえ。試験 Radio.test.tsx・RadioControl.test.tsx、stories 2 本を追加。
 - 使い分け: 文字と並ぶ欄は Radio、表の中・色見本など単独の欄は RadioControl（チェック欄と同じ決め方）。
-- 前後実測の結果: （実測後に記入）
+- 前後実測の結果: 指標 3248（同じ 2180・想定内の差 1068・想定外の差 0）。比較: docs/handoff/design-system-recon/evidence-20260910/ay5-measure-compare.txt（前後の画像 ay5-*.png・横並び ay5-side-*.png も同じ場所）。R3・R4（色見本）は幅・高さ・位置・opacity・cursor の差 0、差は accent-color だけ。R1 の今（前）の gap は normal・marginTop は 0px（`--spacing-*` が未定義のため）。
 - 対象外: ChoiceCardGroup.tsx（すでに金型の中）、check-ui-governance への radio 種別の追加（AY-5b として別に提案）、寸法 sm・dataColor の口。
 - 残件: ①RegisterPage.tsx の未定義トークン `--spacing-*`（R1・R2 以外の 22 か所） ②pages-layout.css の `.color-swatch-legacy::after` の直書き「現在」（ADR-027） ③R1・R2 の質問文の fieldset/legend 化と R5〜R7 の aria-label ④Radio を .form-group の中に置くと components.css:11・:19 の規則で崩れる件（今回の使い手は .form-group の外） ⑤AY-5b（自動チェックに radio 種別を足す）。
