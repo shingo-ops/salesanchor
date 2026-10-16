@@ -13,6 +13,7 @@ export function importMessage(code: string, t: TFunction, names: Record<string, 
     ROUNDTRIP_ALREADY_IMPORTED: "duplicateFile", ROUNDTRIP_STALE: "stale",
     ROUNDTRIP_UNKNOWN_CODE: "unknownCode", ROUNDTRIP_DUPLICATE_CODE: "duplicateCode",
     ROUNDTRIP_KEYWORDS_INVALID: "invalidWords", ROUNDTRIP_VALIDATION: "updateInvalid",
+    PRODUCT_FORMAT_GAME_MISMATCH: "formatGameMismatch",
   };
   if (exact[code]) return t(`productCsv.messages.${exact[code]}`);
   const prefixes: [string, string][] = [
@@ -22,11 +23,12 @@ export function importMessage(code: string, t: TFunction, names: Record<string, 
     ["SHORT_KEYWORD_", "shortKeyword"],
     ["KEYWORD_ALSO_HITS_", "keywordShared"],
     ["DUPLICATE_CANDIDATE_", "duplicateCandidate"],
+    ["BLANK_CONFIRMED_INVALID_", "blankConfirmedInvalid"],
   ];
   for (const [prefix, key] of prefixes) {
     if (code.startsWith(prefix)) return t(`productCsv.messages.${key}`, { value: names[code.slice(prefix.length)] ?? code.slice(prefix.length) });
   }
-  for (const field of ["DIVISION_CODE", "WORK_CODE", "MANUFACTURER_CODE", "PRODUCT_CATEGORY_CODE"]) {
+  for (const field of ["DIVISION_CODE", "WORK_CODE", "MANUFACTURER_CODE", "PRODUCT_CATEGORY_CODE", "PRODUCT_FORMAT_CODE"]) {
     if (code === `MISSING_${field}` || code.startsWith(`UNKNOWN_${field}_`)) {
       return t("productCsv.messages.referenceCode", { field: t(`productCsv.fields.${field}`) });
     }

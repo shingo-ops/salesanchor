@@ -128,7 +128,7 @@ describe("blank CSV template", () => {
     const declaration = service.match(/^CSV_COLUMNS:\s*list\[str\]\s*=\s*\[([\s\S]*?)^\]/m);
     expect(declaration).not.toBeNull();
     const columns = Array.from(declaration![1].matchAll(/["']([^"']+)["']/g), match => match[1]);
-    expect(columns).toHaveLength(10);
+    expect(columns).toHaveLength(12);
     expect(Array.from(bytes.subarray(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     expect(bytes.subarray(3).toString("utf8")).toBe(columns.join(",") + "\r\n");
     expect(bytes.subarray(3).toString("utf8").split("\r\n")).toHaveLength(2);
