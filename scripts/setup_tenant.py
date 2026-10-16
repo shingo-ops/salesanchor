@@ -131,6 +131,8 @@ async def _ensure_tenant(engine, tenant_code: str, tenant_name: str) -> tuple[in
             logger.info("テナント '%s' は既存 (id=%d, schema=%s)", tenant_code, tenant_id, schema_name)
             return tenant_id, schema_name
 
+        # ADR-1018 段階③便B: public.tenants への書込は運営文脈のときだけ通る
+        await conn.execute(text("SET app.is_operator = 'true'"))
         row = (await conn.execute(
             text("""
                 INSERT INTO public.tenants (tenant_name, tenant_code, is_active)
