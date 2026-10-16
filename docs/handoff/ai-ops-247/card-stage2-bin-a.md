@@ -74,6 +74,7 @@
 - 変更: `scripts/run_all_migrations.sh`（末尾に 2 行の追記のみ）
 - 新規: `backend/tests/test_ops_incident_tables_rls.py`
 - 変更: `docs/handoff/ai-ops-247/card-stage2-bin-a.md`（このカード。§13 報告欄の追記のみ）
+- 変更: `.github/workflows/migration-guard.yml`（追補 §4-4。PUBLIC_TABLES の値の末尾に 3 語を足すだけ）
 
 ## 4. 作り方
 
@@ -236,6 +237,13 @@ run_sql migrations/20261016_100000_create_ops_incident_tables.sql
 | 6 | `test_duplicate_fingerprint_starts_at_rejected` | 旗ありで同じ (fingerprint, starts_at) を 2 回 INSERT → 2 回目が `23505` |
 | 7 | `test_ops_control_allows_only_id_1` | 旗ありで ops_control に id=1 の INSERT は通り、id=2 の INSERT は `23514` |
 
+### 4-4. 追補（2026-10-16 Opus）：public の許可表に 3 表を足す
+
+- 理由：PR #4357 の CI「models.py に新 Column → deploy.yml にマイグレーション追記必須」が、`REFERENCES public.ops_incidents — public スキーマに存在しません` で落ちた（migration-guard のチェック4。public に新しい表を足したら PUBLIC_TABLES を更新する決まり）。カード発行時の書き漏れ
+- やること：`.github/workflows/migration-guard.yml` の `PUBLIC_TABLES="...` の行（いまは 224 行目）で、最後の語 `payment_fee_settings` の直後（閉じの `"` の前）に ` ops_incidents ops_incident_events ops_control` を足す。ほかの行・ほかの語は変えない
+- 前例：同じ行の末尾の `llm_usage_events`・`payment_fee_settings` は、表を作った PR で足されている
+- 確かめ方：`git diff origin/main -- .github/workflows/migration-guard.yml` が 1 行の削除と 1 行の追加だけで、追加の行の末尾が `payment_fee_settings ops_incidents ops_incident_events ops_control"` であること
+
 ## 5. 確かめ方（担当が実行し、出力を報告に貼る）
 
 5-1. 値の書き込みが無いこと：作業場所で `grep -nEi "^\s*(INSERT|UPDATE|DELETE)\b" migrations/20261016_100000_create_ops_incident_tables.sql` の出力が 0 行。あわせて `python3 scripts/check-migration-value-writes.py repo` の終了コードが 0。
@@ -244,7 +252,7 @@ run_sql migrations/20261016_100000_create_ops_incident_tables.sql
 
 5-3. 名前の対：`grep -nE "CREATE POLICY ops_" migrations/20261016_100000_create_ops_incident_tables.sql` の出力が 8 行で、名前が ops_incidents_operator_select・ops_incidents_operator_insert・ops_incidents_operator_update・ops_incident_events_operator_select・ops_incident_events_operator_insert・ops_control_operator_select・ops_control_operator_insert・ops_control_operator_update の 8 つであること。
 
-5-4. `git diff origin/main --stat` が 4 ファイル（§3）であること。
+5-4. `git diff origin/main --stat` が 5 ファイル（§3）であること。
 
 5-5. PR の CI の結果は担当が待たない。PR を作ったら URL を報告して終える（CI は Opus が見る）。
 
@@ -262,7 +270,7 @@ run_sql migrations/20261016_100000_create_ops_incident_tables.sql
 | migration に値の書き込みが 0 行 | §5-1 |
 | ポリシーが 8 つ、名前が決めたとおり | §5-3 |
 | 旗なしでは書けず・見えず、旗ありでも消せず、出来事は直せない | CI の pytest（§4-3 の 7 本が passed） |
-| 触ったファイルが 4 つ | §5-4 |
+| 触ったファイルが 5 つ | §5-4 |
 | 反映後、本番に 3 表があり、RLS・ポリシー・権限が §4-1 のとおり | §8（Opus が PO の `!` で読む） |
 
 ## 8. 本番での確認（マージ・deploy の後。Opus が行う。担当はしない）
