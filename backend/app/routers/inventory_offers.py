@@ -34,6 +34,7 @@ from app.schemas.inventory_offers import (
     InventoryRow,
     InventorySupplierFacet,
 )
+from app.services import tcg_distribution_svc as _distribution
 from app.services.inventory_axes import (
     build_condition_filter_clause,
     log_axis_isolation,
@@ -446,11 +447,11 @@ async def list_inventory_raw_texts(
     sql = (
         head
         + ",\n    raw_ok AS (SELECT DISTINCT item_key FROM dist_base WHERE item_key = ANY(:raw_item_ids))\n"
-        + """SELECT ei.id::text AS extraction_item_id, sm.raw_text, ei.line_start, ei.line_end
+        + f"""SELECT ei.id::text AS extraction_item_id, sm.raw_text, ei.line_start, ei.line_end
         FROM raw_ok
-        JOIN public.extraction_items ei ON ei.id::text = raw_ok.item_key
-        JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
-        JOIN public.source_messages sm ON sm.id = ej.source_message_id"""
+        JOIN {_distribution.TCG_SCHEMA}.extraction_items ei ON ei.id::text = raw_ok.item_key
+        JOIN {_distribution.TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {_distribution.TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"""
     )
     result = await db.execute(text(sql), {**age_params, "raw_item_ids": list(extraction_item_ids)})
     rows = [dict(r) for r in result.mappings().all()]
