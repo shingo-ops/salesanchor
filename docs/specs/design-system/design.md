@@ -4243,4 +4243,14 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、:874）。
 - 結果: アプリの生 checkbox は金型・Checkbox・Toggle 以外で 0 件。
 - 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2b-measure-compare.txt と ay4c2b-*.png。想定外の差 0。disabled の自分の行の cursor が pointer から not-allowed に変わるのみ（金型の形）。
-- 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断。
+- 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し → コメントを今の事実に直した（AY-4d）。規則の撤去は別判断 ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断 → AY-4d で済。
+
+#### AY-4d 生チェック欄を UI governance gate の種別に追加（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（自動チェックに、金型を使わない生チェック欄を止める項目を足す）。
+- 設計: docs/handoff/ay4d-checkbox-guard/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: scripts/check-ui-governance.js に種別 `checkbox` を追加（type が checkbox の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T21〜T29 を追加し、試験は 22 件から 31 件。docs/CC_UI_GOVERNANCE.md の禁止表に 1 行追加。ADR-144 に追記節。frontend/src/company-forms.css:100・:135 はコメントだけ直した（規則は触っていない）。
+- 効果: `frontend/src/pages/` の .tsx に生の `<input type="checkbox">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
+- 対象外: 生 radio（pages/ に 4 件）、features/・components/ の検査（今は金型本体以外 0 件。書いても止まらない）、動的な type。
+- 残り: features/ の検査は ADR-144 改訂案の全件検査への切替で扱う。company-forms.css の focus 規則の撤去は見た目の前後実測の便で判断する。checkbox を含まないまま古くなる列挙 3 か所（.github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119）は CI 設定・全員向け規則文のため今回は触っていない。
+
