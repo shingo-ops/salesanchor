@@ -215,6 +215,31 @@ groups:
           description: "待ち行列が {{ $value | humanize }} 件です（閾値: 100 件・10 分継続）。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"
 
+      # 閲覧ページの在庫の作り置き（ADR-1019 段2b）が止まっている。保留（配信を止めている最中）かどうかで 2 本に分ける
+      # tokens.yml: viewer_inventory_stale_sec=600 / viewer_inventory_hold_recent_sec=120
+      # backend/app/metrics.py が Redis（db0）から読んで出す viewer_inventory_*_timestamp_seconds を使用
+      - alert: ViewerInventoryStale
+        expr: (time() - viewer_inventory_updated_timestamp_seconds{job="backend"}) > 600 and (time() - viewer_inventory_last_hold_timestamp_seconds{job="backend"}) > 120
+        for: 2m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+          description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+
+      - alert: ViewerInventoryStaleOnHold
+        expr: (time() - viewer_inventory_updated_timestamp_seconds{job="backend"}) > 600 and (time() - viewer_inventory_last_hold_timestamp_seconds{job="backend"}) <= 120
+        for: 2m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "閲覧ページの在庫の作り置きが10分以上止まっている（配信の保留中）"
+          description: "解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystaleonhold"
+
   - name: backup_alerts
     rules:
       # DB バックアップ（scripts/backup.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）

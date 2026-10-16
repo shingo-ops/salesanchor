@@ -40,6 +40,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
+    ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/logout"): "閲覧ページ ADR-1019: 閲覧者のログアウトは画面更新の通知対象外",
     ("POST", "/api/v1/auth/password-reset/confirm"): _PENDING,
     ("POST", "/api/v1/auth/password-reset/request"): _PENDING,
     ("POST", "/api/v1/auth/refresh"): _PENDING,

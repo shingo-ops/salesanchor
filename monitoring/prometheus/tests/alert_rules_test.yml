@@ -335,6 +335,98 @@ tests:
         alertname: CeleryHeartbeatStale
         exp_alerts: []
 
+  # time() は 0 から始まる。更新時刻を古いまま（60）にして 600 秒超の遅れを作る（for 2m を足して 20m には鳴っている）
+  # ViewerInventoryStaleFires: 更新が古く保留も古い → ViewerInventoryStale だけ鳴る
+  - name: ViewerInventoryStaleFires
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+              description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
+  # ViewerInventoryStaleOnHoldFires: 更新が古く保留が新しい → ViewerInventoryStaleOnHold だけ鳴る
+  - name: ViewerInventoryStaleOnHoldFires
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '0+60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上止まっている（配信の保留中）"
+              description: "解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystaleonhold"
+
+  # ViewerInventoryFresh: 更新が新しい → どちらも鳴らない
+  - name: ViewerInventoryFresh
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '0+60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
+  # ViewerInventoryKeyMissing: キー無し（0）で保留も 0 → ViewerInventoryStale が鳴る
+  - name: ViewerInventoryKeyMissing
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '0x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+              description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
   - name: CeleryTaskFailuresHigh
     interval: 1m
     input_series:

@@ -286,6 +286,7 @@ jobs:
               -e '/^MAIL_FROM=/d' \
               -e '/^CONTACT_NOTIFY_EMAIL=/d' \
               -e '/^AUTH_PASSWORD_RESET_ALLOWLIST=/d' \
+              -e '/^AUTH_VIEWER_JWT_SECRET=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             rm -f .env.bak
@@ -296,6 +297,7 @@ jobs:
             #   secret 未設定でも空値で append される（後段 LLM サービスは空判定して
             #   parsed_rule_only に graceful degrade、AC4.5）。
             # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
+            # ADR-1019 段2: 閲覧者のトークンの鍵（viewer_tokens.py が読む）。アプリの鍵 AUTH_JWT_SECRET とは別の値
             cat >> .env <<'ENV_EOF'
             META_VERIFY_TOKEN=${{ secrets.META_VERIFY_TOKEN }}
             META_APP_SECRET=${{ secrets.META_APP_SECRET }}
@@ -327,6 +329,7 @@ jobs:
             MAIL_FROM=${{ secrets.MAIL_FROM }}
             CONTACT_NOTIFY_EMAIL=${{ secrets.CONTACT_NOTIFY_EMAIL }}
             AUTH_PASSWORD_RESET_ALLOWLIST=${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}
+            AUTH_VIEWER_JWT_SECRET=${{ secrets.AUTH_VIEWER_JWT_SECRET }}
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
 
