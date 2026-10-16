@@ -129,11 +129,21 @@ async def list_analysis_results(
     unresolved_unit_only: bool = Query(default=False),
     strip_raw_text: bool = Query(default=False, description="raw_text を省略（SupplierDetailPage 用）"),
     work_id: str | None = Query(default=None, description="作品IDで絞り込み"),
+    extraction_item_ids: list[UUID] | None = Query(
+        default=None,
+        description="extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
+    ),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> AnalysisResultsResponse:
     if status_tab not in _STATUS_TABS:
         status_tab = "ALL"
+    if extraction_item_ids:
+        if len(extraction_item_ids) > 50:
+            raise HTTPException(status_code=422, detail="extraction_item_ids は50件まで")
+        status_tab = "ALL"
+        offset = 0
+        limit = len(extraction_item_ids)
 
     data = await fetch_analysis_results(
         db,
@@ -147,6 +157,7 @@ async def list_analysis_results(
         unresolved_unit_only=unresolved_unit_only,
         strip_raw_text=strip_raw_text,
         work_id=work_id,
+        extraction_item_ids=[str(v) for v in extraction_item_ids] if extraction_item_ids else None,
     )
     return AnalysisResultsResponse(
         items=data["items"],

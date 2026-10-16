@@ -166,6 +166,86 @@ def test_t2_ranks_of_the_same_post_become_one_row(pg, ids):
     assert len(_rows(pg, merge=False)) == 2
 
 
+def _item_id_of(pg_fixture, result_id: str) -> str:
+    with Session(pg_fixture[1]) as session:
+        return str(session.execute(
+            text(f"SELECT extraction_item_id::text FROM {SCHEMA}.analysis_results WHERE id = :i"), {"i": result_id},
+        ).scalar_one())
+
+
+def test_b1_unmerged_row_has_its_own_extraction_item_id(pg, ids):
+    job = _add_job(pg)
+    only = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:甲")
+    for merge in (True, False):
+        rows = _rows(pg, merge=merge)
+        assert len(rows) == 1
+        assert rows[0]["extraction_item_ids"] == [_item_id_of(pg, only)]
+
+
+def test_b2_merged_row_lists_every_extraction_item_id_in_sort_order(pg, ids):
+    job = _add_job(pg)
+    first = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:甲", price=1000, qty=3)
+    second = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:乙", price=1200, qty=4)
+    merged = _rows(pg, merge=True)
+    assert len(merged) == 1 and merged[0]["merged_count"] == 2
+    plain = _rows(pg, merge=False)  # sort_ord 順の1行ずつ
+    expected = [_item_id_of(pg, r["row_key"]) for r in plain]
+    assert sorted(expected) == sorted([_item_id_of(pg, first), _item_id_of(pg, second)])
+    assert merged[0]["extraction_item_ids"] == expected
+    assert len(merged[0]["extraction_item_ids"]) == merged[0]["merged_count"]
+
+
+def test_b5_item_id_lookup_includes_inactive_posts_with_current_rows_but_the_plain_list_does_not(pg, ids, monkeypatch):
+    from app.services import tcg_analysis_review_svc as review
+
+    monkeypatch.setattr(review, "TCG_SCHEMA", SCHEMA)
+    monkeypatch.setattr(review, "_BASE_FROM", review._base_from())
+
+    async def _no_reason_codes(_db):  # 理由コード表は検証対象外（この pg には表が無い）
+        return {}
+
+    monkeypatch.setattr(review, "load_review_reason_codes", _no_reason_codes)
+
+    job = _add_job(pg)
+    result_id = _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
+    item_id = _item_id_of(pg, result_id)
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"UPDATE {SCHEMA}.source_messages SET is_active = false "
+            f"WHERE id = (SELECT source_message_id FROM {SCHEMA}.extraction_jobs WHERE id = %s)", (job,),
+        )
+
+    async def _fetch(**kwargs) -> dict:
+        engine = create_async_engine(pg[2])
+        try:
+            async with AsyncSession(engine) as db:
+                return await review.fetch_analysis_results(db, **kwargs)
+        finally:
+            await engine.dispose()
+
+    # fetch_analysis_results は public.supplier_channels を固定で JOIN する（tcg_analysis_review_svc.py:58）。
+    # _add_job は tenant_901 側の仕入元を使うので、同じ id の行を public にも用意し、終わりに消す。
+    # 列は両表とも id/channel/external_id/is_active/supplier_id で同一（NOT NULL は channel・is_active・supplier_id）。
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"""INSERT INTO public.supplier_channels (id, channel, is_active, supplier_id)
+                SELECT sc.id, sc.channel, sc.is_active, sc.supplier_id FROM {SCHEMA}.supplier_channels sc
+                WHERE sc.id = (SELECT sm.supplier_channel_id FROM {SCHEMA}.source_messages sm
+                               JOIN {SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id WHERE ej.id = %s)
+                ON CONFLICT (id) DO NOTHING RETURNING id""", (job,),
+        )
+        seeded = [r[0] for r in cur.fetchall()]
+    try:
+        by_id = asyncio.run(_fetch(extraction_item_ids=[item_id], limit=1))
+        assert [i["extraction_item_id"] for i in by_id["items"]] == [item_id]
+        plain = asyncio.run(_fetch(limit=500))
+        assert item_id not in [i["extraction_item_id"] for i in plain["items"]]
+    finally:
+        with pg[0].cursor() as cur:
+            for channel_id in seeded:
+                cur.execute("DELETE FROM public.supplier_channels WHERE id = %s", (channel_id,))
+
+
 # --- T3 ------------------------------------------------------------------------------------------
 
 
