@@ -1,6 +1,6 @@
 # 設計 — S6 一覧の全件取得・CSV 出力（GET）を記録し、閲覧の大量取得を検知する（get-access-audit）
 
-**日付**: 2026-10-17　**根拠**: [recon.md](recon.md)　**仕様書**: [docs/specs/get-access-audit/README.md](../../specs/get-access-audit/README.md)、KGI [kgi.md](../../specs/get-access-audit/kgi.md)　**ADR**: data_access_events を定めた ADR は無い（recon 冒頭）。GO は ADR-1003 の委任に基づく
+**日付**: 2026-10-17　**根拠**: [docs/handoff/s6-get-access-audit/recon.md](recon.md)　**仕様書**: [docs/specs/get-access-audit/README.md](../../specs/get-access-audit/README.md)、KGI [kgi.md](../../specs/get-access-audit/kgi.md)　**ADR**: data_access_events を定めた ADR は無い（recon 冒頭）。GO は ADR-1003 の委任に基づく
 
 ## 1. 目的（利用者に見える変化）
 
