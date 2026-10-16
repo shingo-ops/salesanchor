@@ -79,3 +79,30 @@ export function fetchInventory(token: string): Promise<ViewerInventoryResponse> 
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+/** パスワード変更。成功すると新しいトークンが返る（古いトークンは使えなくなる）。 */
+export function changePassword(token: string, current: string, next: string): Promise<ViewerLoginResponse> {
+  return request<ViewerLoginResponse>("/password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ current_password: current, new_password: next }),
+  });
+}
+
+/** 再発行メールの申請。登録の有無にかかわらず {status:"accepted"}。 */
+export function requestPasswordReset(email: string): Promise<{ status: string }> {
+  return request<{ status: string }>("/password-reset/request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
+/** 再発行の確定。成功しても自動ログインはしない。 */
+export function confirmPasswordReset(token: string, newPassword: string): Promise<{ status: string }> {
+  return request<{ status: string }>("/password-reset/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword }),
+  });
+}

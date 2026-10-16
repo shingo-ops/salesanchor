@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     manufacturer_id      UUID,
     product_category_id  UUID,
     category_class       TEXT,
+    product_format_id    INTEGER,
     required_output_value VARCHAR(255),
     is_active            BOOLEAN DEFAULT true,
     is_archived          BOOLEAN NOT NULL DEFAULT FALSE,

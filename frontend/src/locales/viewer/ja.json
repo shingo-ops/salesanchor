@@ -65,7 +65,39 @@
       "email": "メールアドレス",
       "password": "パスワード",
       "submit": "ログイン",
-      "submitting": "ログイン中…"
+      "submitting": "ログイン中…",
+      "forgot": "パスワードを忘れた"
+    },
+    "changePassword": "パスワードを変更",
+    "passwordChange": {
+      "title": "パスワードの変更",
+      "forced": "初回はパスワードの変更が必要です。",
+      "current": "今のパスワード",
+      "new": "新しいパスワード",
+      "confirm": "新しいパスワード（確認）",
+      "hint": "15〜64文字で入力してください。",
+      "submit": "変更する",
+      "submitting": "変更中…",
+      "back": "戻る",
+      "mismatch": "新しいパスワードと確認用が一致しません。"
+    },
+    "reset": {
+      "title": "パスワードの再発行",
+      "emailHelp": "登録したメールアドレスを入力してください。",
+      "send": "メールを送る",
+      "sending": "送信中…",
+      "sentTitle": "メールを送りました",
+      "sentDescription": "登録があれば、30分有効のメールを送りました。メールのリンクから新しいパスワードを設定してください。",
+      "newTitle": "新しいパスワードの設定",
+      "submit": "設定する",
+      "submitting": "設定中…",
+      "doneTitle": "パスワードを変更しました",
+      "doneDescription": "新しいパスワードでログインしてください。",
+      "toLogin": "ログインへ",
+      "invalidTitle": "リンクが使えません",
+      "invalidDescription": "リンクの期限が切れているか、すでに使われています。もう一度メールを送ってください。",
+      "again": "もう一度メールを送る",
+      "backToLogin": "ログインに戻る"
     },
     "error": {
       "forbidden_origin": "このページからはログインできません。",
@@ -73,6 +105,12 @@
       "viewer_invalid_credentials": "メールアドレスまたはパスワードが違います。",
       "viewer_suspended": "このアカウントは停止中です。",
       "viewer_trial_expired": "お試し期間が終了しています。",
+      "viewer_invalid_current_password": "今のパスワードが違います。",
+      "password_too_short": "パスワードは15文字以上にしてください。",
+      "password_too_long": "パスワードは64文字以内にしてください。",
+      "password_too_common": "よく使われるパスワードは使えません。別のものにしてください。",
+      "password_same_as_current": "今のパスワードと同じです。別のものにしてください。",
+      "viewer_reset_invalid_or_expired": "リンクの期限が切れているか、すでに使われています。",
       "validation": "メールアドレスとパスワードを正しく入力してください。",
       "generic": "ログインできませんでした。時間をおいてやり直してください。"
     },
@@ -88,10 +126,6 @@
       "expired": {
         "title": "お試し期間が終了しました",
         "description": "ご利用期間が終了しています。"
-      },
-      "passwordChange": {
-        "title": "パスワードの変更が必要です",
-        "description": "パスワードを変更してからご利用ください。"
       },
       "error": {
         "title": "読み込めませんでした",
