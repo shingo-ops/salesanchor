@@ -70,6 +70,7 @@ from app.routers import (
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
     note_master,  # 備考マスタ テナント用
     notifications,
+    ops,  # ADR-1012 段階2 便B: 保守 API
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
     order_purchase_details,  # ADR-021 Phase 4 / Sprint 4: 仕入情報 MVP
@@ -760,6 +761,9 @@ app.include_router(
 app.include_router(
     super_admin_db_schema.router, prefix="/api/v1", tags=["super-admin"],
 )
+
+# ADR-1012 段階2 便B: 保守 API（鍵か super admin のログイン。テナント文脈なし）
+app.include_router(ops.router, prefix="/api/v1")
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

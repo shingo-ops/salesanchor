@@ -393,6 +393,12 @@ async def ops_control_lock(admin_engine):
 
 ## 13. 報告欄（担当が追記）
 
-- （未記入）
+- 本報告はカード 段階2 便B の実行結果である
+- §5-1 ruff: 0 件（All checks passed!）。生出力 /tmp/CC報告ファイル/ai-ops-stage2-bin-b/impl/ruff.txt
+- §5-2 試験名: 12 本、カード §4-10 の表の名前・順と一致。生出力 impl/test_names.txt
+- §5-3 pytest: 手元では 19 skipped（RLS_* 環境変数なし）。実 PostgreSQL での試験は CI の pytest-run-internal に任せる。生出力 impl/pytest.txt（カバレッジ下限 60% の判定で終了コード 1）
+- §5-4 差分: 8 ファイル（本カードを含めて 9）、既存行の削除 0、deploy.yml の追加 4 行。生出力 impl/diff_stat.txt
+- §5-5 `_ANNOTATABLE_COLUMNS`: 定義 backend/app/routers/ops.py:43、使用 :358。生出力 impl/annotatable.txt
+- 判断を要した点: 手元の一時 PostgreSQL は、フックに止められたため作らず、Opus の指示で skip の扱いとした
 
 END OF CARD
