@@ -947,3 +947,5 @@ run_sql migrations/20261016_150000_add_viewer_accounts.sql
 
 # ADR-1012 段階2 便A: 障害記録の表 3 つ（空・RLS は運用者だけ・記録は消せない）
 run_sql migrations/20261016_100000_create_ops_incident_tables.sql
+
+run_sql migrations/20261016_160000_add_paypal_regtoken_write_rls.sql
