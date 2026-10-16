@@ -111,3 +111,11 @@ migration は DB の形（表・列・索引・制約）の変更だけに使い
 - [ ] 値を書く migration の追加と、既存の migration の書き換えが CI で止まる。
 - [ ] 記録の表が入り、デプロイで流れるのが未実行の migration だけになる（段5）。
 - [ ] 段ごとに pytest が全部通る。デプロイが成功し、smoke の試験が通る。
+
+## 追記: 決定2の適用例 20260919_015000（2026-10-17）
+
+- 対象: migrations/20260919_015000_fix_view_to_table_rename.sql。値は書かないが、全件実行のたびに 20260922_080000 と往復 RENAME する（0919 が旧名 VIEW を落として line_* を元名へ戻し、約85ファイル後の 0922 が再び line_* へ RENAME して VIEW を貼り直す）。
+- 実測（本番 Deploy のログ）: line_units 等 4表が 15:51:49→15:51:53 と 16:03:07→16:03:12 の約4〜5秒、存在しなかった。postgres ログに `relation "public.line_conditions" does not exist` が出た。
+- 適用: 本文を RAISE NOTICE 1行だけにし、冒頭コメントに無効化の理由を書いた。本番は既に 0922 以降の形（line_* が実表・旧名が VIEW）なので形は変わらない。0922_080000・0919_020000・0925_* は触らない。
+- 戻し方: この変更の revert。
+- 根拠: docs/handoff/fix-0919-rename-roundtrip/recon.md、design.md。
