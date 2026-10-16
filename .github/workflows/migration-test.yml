@@ -625,6 +625,20 @@ jobs:
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
 
+          -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
+          --   20261016_100000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
+              id                       SERIAL PRIMARY KEY,
+              tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+              client_id_encrypted      TEXT    NOT NULL,
+              client_secret_encrypted  TEXT    NOT NULL,
+              environment              TEXT    NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+              updated_by_user_id       INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              webhook_id               TEXT
+          );
+
           -- public.current_tenant_id(): migration 014 で本番作成済み。
           --   RLS ポリシー（lead_attachments 等）が参照するため、ここで作成する。
           CREATE OR REPLACE FUNCTION public.current_tenant_id()
@@ -1588,6 +1602,19 @@ jobs:
               used_at      TIMESTAMPTZ,
               created_by   INTEGER     NOT NULL,
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
+          --   20261016_100000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
+              id                       SERIAL PRIMARY KEY,
+              tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+              client_id_encrypted      TEXT    NOT NULL,
+              client_secret_encrypted  TEXT    NOT NULL,
+              environment              TEXT    NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+              updated_by_user_id       INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              webhook_id               TEXT
           );
           -- public.tcg_distribution_settings: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20260927_120000_add_max_age_hours_setting.sql が INSERT INTO public.tcg_distribution_settings
