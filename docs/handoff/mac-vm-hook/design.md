@@ -3,7 +3,7 @@
 この文書は何か(専門用語なしの1行): Claude が Mac で試験用の仮想マシンを作ろうとしたら、命令が動く前に止めて GitHub の試験場へ案内する見張りの設計。
 
 親テーマ: [docs/specs/vm-test-on-gha/README.md](../../specs/vm-test-on-gha/README.md)（段階2）。段階1の設計: [../vm-test-on-gha/design.md](../vm-test-on-gha/design.md)
-状態: 設計案作成済み・Opus 自己審査済み（§9）。KGI は PO 承認待ち。実装未着手。
+状態: 設計案作成済み・Opus 自己審査済み（§9）。KGI H1〜H6 は PO 承認済み（2026-10-17 チャット「y」）。実装は Sonnet に委任。
 
 ## 0. PO の願い（2026-10-17 チャット原文）
 「hookで強制的に使えないようにしたい、出来る？検査をする場所はhookでgit hubと教えてローカルで通そうとしても技術的に防止させる」→ 設計着手に「y」。
