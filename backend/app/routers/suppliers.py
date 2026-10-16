@@ -24,6 +24,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.supplier import SupplierCreate, SupplierResponse, SupplierUpdate
 from app.services.audit import record_audit_log
 
@@ -495,9 +496,10 @@ async def import_tenant_suppliers_commit(
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
     except Exception as exc:
         await db.rollback()
+        log_hidden_error("suppliers.import_tenant_suppliers_commit", exc)
         raise HTTPException(
             status_code=500,
-            detail=f"SUPPLIER_IMPORT_COMMIT_ERROR: {exc}",
+            detail="SUPPLIER_IMPORT_COMMIT_ERROR",
         ) from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}

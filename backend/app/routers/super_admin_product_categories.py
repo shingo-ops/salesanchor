@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.product_category import (
     ProductCategoryCreate,
     ProductCategoryResponse,
@@ -148,9 +149,10 @@ async def create_product_category(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_product_categories.create_product_category", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
+            detail="重複または制約違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -277,7 +279,8 @@ async def import_product_categories_commit(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"PRODUCT_CATEGORIES_IMPORT_COMMIT_ERROR: {exc}") from exc
+        log_hidden_error("super_admin_product_categories.import_product_categories_commit", exc)
+        raise HTTPException(status_code=500, detail="PRODUCT_CATEGORIES_IMPORT_COMMIT_ERROR") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
 
@@ -308,7 +311,8 @@ async def update_product_category(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"制約違反: {exc.orig}")
+        log_hidden_error("super_admin_product_categories.update_product_category", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="商品カテゴリが見つかりません")
