@@ -133,6 +133,9 @@ services:
       - AUTH_PASSWORD_RESET_ALLOWLIST=${AUTH_PASSWORD_RESET_ALLOWLIST:-}
       # ADR-1019 段2: 閲覧者のトークンの鍵。この行が無いと .env に値があっても os.getenv が空になる。
       - AUTH_VIEWER_JWT_SECRET=${AUTH_VIEWER_JWT_SECRET:-}
+      # ADR-1012 段階2 便B: 保守 API の鍵（空なら口は全部 401）
+      - OPS_API_TOKEN=${OPS_API_TOKEN:-}
+      - OPS_INGEST_TOKEN=${OPS_INGEST_TOKEN:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
