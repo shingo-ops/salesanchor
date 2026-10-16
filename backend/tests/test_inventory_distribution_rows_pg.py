@@ -223,10 +223,27 @@ def test_b5_item_id_lookup_includes_inactive_posts_with_current_rows_but_the_pla
         finally:
             await engine.dispose()
 
-    by_id = asyncio.run(_fetch(extraction_item_ids=[item_id], limit=1))
-    assert [i["extraction_item_id"] for i in by_id["items"]] == [item_id]
-    plain = asyncio.run(_fetch(limit=500))
-    assert item_id not in [i["extraction_item_id"] for i in plain["items"]]
+    # fetch_analysis_results は public.supplier_channels を固定で JOIN する（tcg_analysis_review_svc.py:58）。
+    # _add_job は tenant_901 側の仕入元を使うので、同じ id の行を public にも用意し、終わりに消す。
+    # 列は両表とも id/channel/external_id/is_active/supplier_id で同一（NOT NULL は channel・is_active・supplier_id）。
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"""INSERT INTO public.supplier_channels (id, channel, is_active, supplier_id)
+                SELECT sc.id, sc.channel, sc.is_active, sc.supplier_id FROM {SCHEMA}.supplier_channels sc
+                WHERE sc.id = (SELECT sm.supplier_channel_id FROM {SCHEMA}.source_messages sm
+                               JOIN {SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id WHERE ej.id = %s)
+                ON CONFLICT (id) DO NOTHING RETURNING id""", (job,),
+        )
+        seeded = [r[0] for r in cur.fetchall()]
+    try:
+        by_id = asyncio.run(_fetch(extraction_item_ids=[item_id], limit=1))
+        assert [i["extraction_item_id"] for i in by_id["items"]] == [item_id]
+        plain = asyncio.run(_fetch(limit=500))
+        assert item_id not in [i["extraction_item_id"] for i in plain["items"]]
+    finally:
+        with pg[0].cursor() as cur:
+            for channel_id in seeded:
+                cur.execute("DELETE FROM public.supplier_channels WHERE id = %s", (channel_id,))
 
 
 # --- T3 ------------------------------------------------------------------------------------------
