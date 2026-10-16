@@ -141,11 +141,12 @@ function countCheckbox(content) {
 | K5 CI の UI governance gate が緑 | PR の checks |
 | K6 文書の記載 | CC_UI_GOVERNANCE.md の表に1行、ADR-144 追記節、design.md §AY-4d がある。`node scripts/generate-adr-index.js` 実行後に `git diff --exit-code docs/adr/README.md` が 0、または差分をコミット済み |
 
-## 8. 維持する担当・仕組み
+## 8. 維持の仕組み
 
 - 守り手: /Users/tanizawashingo/salesanchor/scripts/check-ui-governance.js（必須チェック UI governance gate）と /Users/tanizawashingo/salesanchor/scripts/tests/test-ui-governance.js（同じジョブで毎回走る）。
 - 将来 ADR-144 改訂案の全件検査に切り替えるときは、checkbox の種別も引き継ぐ（追記節に書く）。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
-- 不要。既存の自社の関所に同じ形の種別を1つ足すだけで、新しい技術の選択が無い。
+- 外部事例: 不要。既存の自社の関所に同じ形の種別を1つ足すだけで、新しい技術の選択が無い。
+- 過去事例: ADR-144 の生 select・生 input の検出（scripts/check-ui-governance.js:153-232）。同じ抽出関数 extractInputTags と ui-allow の判定をそのまま使い、種別だけを足す。

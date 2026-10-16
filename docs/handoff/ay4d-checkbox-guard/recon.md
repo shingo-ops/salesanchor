@@ -6,7 +6,7 @@
 ## 既存 ADR 検索
 
 - `git grep -n -i "ui-governance\|check-ui-governance" docs/adr/` は ADR-144 のみ当たる。docs/adr/FEATURE-INDEX.md は governance・ADR-144・金型で 0 件。
-- docs/adr/ADR-144-ui-component-governance.md:41-50 「2. CI ゲート」: 対象は PR の変更ファイル中 `frontend/src/pages/**/*.tsx`、除外は stories・design-system・design-preview、BASE と HEAD の種別ごと件数を比べ、増えたら赤。例外口は ui-allow（理由と番号の両方）。
+- docs/adr/ADR-144-ui-component-governance.md:41-50 「2. CI ゲート」: 対象は PR の変更ファイル中の frontend/src/pages/ 配下の .tsx、除外は stories・design-system・design-preview、BASE と HEAD の種別ごと件数を比べ、増えたら赤。例外口は ui-allow（理由と番号の両方）。
 - docs/adr/ADR-144-ui-component-governance.md:108 に「2026-09-10 改訂案: 画面統一完了後の全件検査」（:110 状態 Proposed）。本文に「既存Accepted本文の運用はCI切替まで維持」とある。今回は Accepted 本文の仕組みに種別を1つ足すだけで、改訂案の全件検査への切替はしない。
 
 ## 現在地
