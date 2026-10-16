@@ -29,7 +29,7 @@
 - 動的 type: frontend/src/features/tcg-analysis-review/ItemComparison.tsx:45 の input type={kind} は number/text 系だけで radio にならない。
 - R1・R2 の質問文は p（fieldset/legend ではない）。ja: 「配送先住所を登録しますか？」（60-i18n-values.txt）。
 - R3・R4 は div.color-picker[role=radiogroup][aria-label=t("roles.color")] の中（RolesPage.tsx:462）。input に名前は無く、label の title だけ。
-- R5〜R7 の呼び出し元: frontend/src/pages/companies/CompanyDetailPage.tsx:255 ほか 63-used-by.txt。
+- R5〜R7 の呼び出し元: frontend/src/pages/company-detail/CompanyDetailPage.tsx:255・frontend/src/pages/company-detail/CompanyContactsTab.tsx:241・frontend/src/pages/leads/LeadsPage.tsx:550（63-used-by.txt）。
 
 ## 3. 生ラジオに当たる CSS（07-css-radio-rules.txt）
 
