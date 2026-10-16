@@ -9,12 +9,17 @@ from collections.abc import Iterable
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.line_analysis_v102_svc import REASON_CONDITION_UNKNOWN, REASON_SEPARATOR
+from app.services.line_analysis_v102_svc import (
+    REASON_BULK_PRICE_BASIS_UNKNOWN,
+    REASON_CONDITION_UNKNOWN,
+    REASON_SEPARATOR,
+)
 
 ReasonTable = dict[str, tuple[str, str]]
 
 # 「このままで良い」(review-ack) で外せない理由。状態は人が選んで直す（Error のまま通さない。PO 2026-10-11）。唯一の置き場所
-NON_ACKABLE_REASON_CODES = frozenset({REASON_CONDITION_UNKNOWN})
+# バルクの1枚の値段が決まらない行も外せない（人が価格を直したときだけ外れる。便2）
+NON_ACKABLE_REASON_CODES = frozenset({REASON_CONDITION_UNKNOWN, REASON_BULK_PRICE_BASIS_UNKNOWN})
 
 _LOAD_SQL = "SELECT code, source, fix_stage FROM public.review_reason_codes"
 
