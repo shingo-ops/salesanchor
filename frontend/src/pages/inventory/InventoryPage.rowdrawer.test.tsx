@@ -76,15 +76,47 @@ describe('InventoryPage row drawer', () => {
     expect(analysisCalls()).toEqual(['/tcg/analysis-results?extraction_item_ids=item-1']);
   });
 
-  it('F2: a non super admin click does not open the panel and calls no analysis API', async () => {
+  it('F2: a non super admin click on PC opens the original text only and calls no analysis API', async () => {
     await setup(false);
+    mock.get.mockImplementation(async (url: string) => {
+      if (url === '/me/permissions') return { permissions: [], is_super_admin: false };
+      if (url === '/products/tcg-types') return [];
+      if (url === '/me/inventory-filters') return { enabled: false };
+      if (url.startsWith('/inventory?')) return { items: [row], total: 1, page: 1, per_page: 50, window_hours: 18, fresh_window_hours: 24 };
+      if (url.startsWith('/inventory/raw-texts')) return { items: [{ extraction_item_id: 'item-1', raw_text: 'staff raw text', line_start: 1, line_end: 1 }] };
+      throw new Error(`Unexpected GET ${url}`);
+    });
     renderPage();
     const rowEl = await screen.findByTestId('inventory-row-r1');
+    await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/me/permissions'));
     await new Promise((r) => setTimeout(r, 30));
     fireEvent.click(rowEl);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(screen.queryByText('Analysis details')).toBeNull();
+    expect(await screen.findByText('staff raw text')).toBeTruthy();
+    expect(mock.get).toHaveBeenCalledWith('/inventory/raw-texts?extraction_item_ids=item-1');
+    expect(screen.queryByRole('tab')).toBeNull();
     expect(analysisCalls()).toHaveLength(0);
+  });
+
+  it('F2b: on mobile the panel does not open for anyone', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true, media: query, onchange: null,
+      addEventListener: () => undefined, removeEventListener: () => undefined,
+      addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    try {
+      await setup(false);
+      renderPage();
+      const rowEl = await screen.findByTestId('inventory-row-r1');
+      await new Promise((r) => setTimeout(r, 30));
+      fireEvent.click(rowEl);
+      await new Promise((r) => setTimeout(r, 30));
+      const rawCalls = mock.get.mock.calls.filter(([u]) => String(u).startsWith('/inventory/raw-texts'));
+      expect(rawCalls).toHaveLength(0);
+      expect(analysisCalls()).toHaveLength(0);
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it('F3: clicking the row checkbox selects the row but does not open the panel', async () => {

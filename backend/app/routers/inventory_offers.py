@@ -30,6 +30,7 @@ from app.schemas.inventory_offers import (
     InventoryOfferListResponse,
     InventoryOfferResponse,
     InventoryOfferUpdate,
+    InventoryRawTextsResponse,
     InventoryRow,
     InventorySupplierFacet,
 )
@@ -417,6 +418,51 @@ async def list_inventory_view(
         window_hours=max_age_hours,
         fresh_window_hours=FRESH_WINDOW_HOURS,
     )
+
+
+@router.get(
+    "/inventory/raw-texts",
+    response_model=InventoryRawTextsResponse,
+    dependencies=[Depends(require_permission("products.view"))],
+)
+async def list_inventory_raw_texts(
+    extraction_item_ids: list[str] = Query(min_length=1, max_length=50, description="extraction_items.id（1〜50件）"),
+    db: AsyncSession = Depends(get_db),
+):
+    """在庫表スライドの原文タブ。配信行（dist_base）に入る extraction_item だけの原文を返す。
+
+    行の定義は distribution_rows_parts の1か所だけ（ここに配信の WHERE は書かない。ADR-1014）。
+    配信行に無い ID・該当 0 件は 404。返す項目は extraction_item_id・raw_text・line_start・line_end のみ。
+    """
+    settings = await load_distribution_settings(db)
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
+    age_condition, age_params = _age_window(max_age_hours)
+    head, _final = distribution_rows_parts(
+        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=False,
+    )
+    sql = (
+        head
+        + ",\n    raw_ok AS (SELECT DISTINCT item_key FROM dist_base WHERE item_key = ANY(:raw_item_ids))\n"
+        + """SELECT ei.id::text AS extraction_item_id, sm.raw_text, ei.line_start, ei.line_end
+        FROM raw_ok
+        JOIN public.extraction_items ei ON ei.id::text = raw_ok.item_key
+        JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN public.source_messages sm ON sm.id = ej.source_message_id"""
+    )
+    result = await db.execute(text(sql), {**age_params, "raw_item_ids": list(extraction_item_ids)})
+    rows = [dict(r) for r in result.mappings().all()]
+    if not rows:
+        raise HTTPException(status_code=404, detail="not_found")
+    return InventoryRawTextsResponse(items=[
+        {
+            "extraction_item_id": r["extraction_item_id"], "raw_text": r["raw_text"] or "",
+            "line_start": r["line_start"], "line_end": r["line_end"],
+        }
+        for r in rows
+    ])
 
 
 @router.get(
