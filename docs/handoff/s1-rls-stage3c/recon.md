@@ -14,7 +14,7 @@ mode: handoff
 - 新規 backend/app/tools/reextract_v6_with_v102.py と scripts/ops/reextract-v6-loop.sh: users への書込 0 件（g-multiline.txt に出ない）。
 - U1〜U7・S3〜S9 の行番号は前回版と同一（auth.py:96/266/275/285/293/456、staff.py:98/308/329、scripts 各行を origin/main で再確認）。
 
-【事実】ログイン自社化(ADR-1013)で増えた users 書込: auth.py の 266/275/285/293/456 のみ（前回 U2〜U4 に既出）。パスキー: backend/app と routers に passkey/webauthn のコードは 0 件（言及は auth/self_tokens.py:63 の docstring のみ）。表 public.webauthn_credentials は migrations/20261013_160000_add_self_hosted_auth_tables.sql:16 に定義だけあり、users への書込を伴うコードは無い。メール認証(email_verified)は users に書く app コード 0 件（scripts の `email_verified=False` は Firebase 引数。setup_review_tenant.py:119、setup_single_test_user.py:125、setup_test_users.py:109）。
+【事実】ログイン自社化(ADR-1013)で増えた users 書込: auth.py の 266/275/285/293/456 のみ（前回 U2〜U4 に既出）。パスキー: backend/app と routers に passkey/webauthn のコードは 0 件（言及は backend/app/auth/self_tokens.py:63 の docstring のみ）。表 public.webauthn_credentials は migrations/20261013_160000_add_self_hosted_auth_tables.sql:16 に定義だけあり、users への書込を伴うコードは無い。メール認証(email_verified)は users に書く app コード 0 件（scripts の `email_verified=False` は Firebase 引数。setup_review_tenant.py:119、setup_single_test_user.py:125、setup_test_users.py:109）。
 【事実】ORM: `User(` 生成は auth.py:89 の1か所のみ。User への属性代入・session.delete・merge・bulk 系・update(User)/delete(User) は backend/app と scripts で 0 件（g-attr.txt、g-orm.txt。`from app.models import User` は型注釈のみ）。
 【事実】書込動詞を含む検索(複数行 SQL 含む、g-multiline.txt)で backend/app・scripts・.github・backend/tests 以外に users 書込はなし。Celery(backend/app/tasks) に users 書込 0 件。
 
@@ -107,7 +107,7 @@ users が親（users を参照する側）— 先頭は migrations/ と backend/
 | tenant_paypal_config.updated_by_user_id | migrations/20260610_071110_add_paypal_config.sql:21 | SET NULL |
 | tenant_deletion_audit.actor_id | migrations/20260614_040137_add_tenant_deletion_audit.sql:10 | SET NULL |
 | line_import_devices.owner_user_id | migrations/20260912_160000_line_import_devices.sql:11 | CASCADE |
-| companies.sales_rep_id（各会社スキーマ） | migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql:42 / services/tenant.py:661 | SET NULL |
+| companies.sales_rep_id（各会社スキーマ） | migrations/20261013_100000_repoint_companies_sales_rep_to_users.sql:42 / backend/app/services/tenant.py:661 | SET NULL |
 | 各会社スキーマ6列: bots.owner_staff_id=NO ACTION, order_commissions.staff_id=SET NULL, calendar_owner_settings.staff_id=CASCADE, tenant_meta_config.connected_by_staff_id=SET NULL, meta_messages.sent_by_staff_id/seen_by_staff_id=SET NULL | migrations/20261013_110000_repoint_person_columns_to_users.sql:19-24（FK作成 :58） | 列ごと（左記） |
 | 新規会社スキーマ側の同等定義 | backend/app/services/tenant.py:678 owner_staff_id NO ACTION、:1087 connected_by_staff_id SET NULL、:1128 user_id CASCADE、:1140 created_by SET NULL | 左記 |
 | public.webauthn_credentials.user_id／password_reset_tokens.user_id／auth_refresh_tokens.user_id | migrations/20261013_160000_add_self_hosted_auth_tables.sql:18 / :49 / :70 | CASCADE（3表。:16 webauthn_credentials 他の表名は同ファイル CREATE 行） |

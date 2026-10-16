@@ -5,7 +5,7 @@ mode: handoff
 
 > この文書は何か：利用者の一覧表（public.users）を、その利用者の会社の文脈か運営（super admin）の文脈のときだけ作成・変更・削除できるように、データベース自身で止めるための設計書です。読取はこれまでどおり全行可のままです（ログイン前に「このメールは誰か」を引くため）。
 
-**日付**: 2026-10-16　**根拠**: [recon.md](recon.md)（§3 アプリ 8 経路・§4 scripts 11 文・§9 Q1〜Q9・§10 本番）、ADR-1018 段階③、ADR-072、ADR-131、ADR-1013
+**日付**: 2026-10-16　**根拠**: [recon.md](recon.md)（docs/handoff/s1-rls-stage3c/recon.md）（§3 アプリ 8 経路・§4 scripts 11 文・§9 Q1〜Q9・§10 本番）、ADR-1018 段階③、ADR-072、ADR-131、ADR-1013
 **PO 決定**: 段階③は案 C（書込だけ RLS）— 2026-10-16 PO「y」。tenants・users の順で進める — 同日 PO「y」。設計〜本番確認までの一任 — 同日（原文は docs/specs/tenant-rls/ideal-state.md）
 **状態**: 設計案作成済み → 審査は [review-opus.md](review-opus.md)
 

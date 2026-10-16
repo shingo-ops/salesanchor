@@ -40,6 +40,7 @@ from app.cache import (
     get_redis,
     record_auth_failure,
 )
+from app.client_ip import get_client_ip
 from app.database import get_db
 from app.routers.auth import PASSWORD_RESET_TTL, _require_app_origin
 from app.services.auth_mail import send_viewer_password_reset_email
@@ -73,16 +74,6 @@ class ViewerPasswordResetRequest(BaseModel):
 class ViewerPasswordResetConfirmRequest(BaseModel):
     token: str = Field(max_length=256, description="再発行メールのリンクに入っている鍵")
     new_password: str = Field(max_length=256, description="新しいパスワード（15〜64 文字）")
-
-
-def _client_ip(request: Request) -> str:
-    """X-Real-IP の値。X-Forwarded-For は読まない（偽装できるため）。"""
-    real = (request.headers.get("x-real-ip") or "").strip()
-    if real:
-        return real
-    if request.client and request.client.host:
-        return request.client.host
-    return "unknown"
 
 
 def _normalize_or_none(raw: str) -> str | None:
@@ -154,7 +145,7 @@ async def viewer_login(
 ):
     """閲覧者のログイン。失敗の理由は区別せず 1 種類の文言で返す（停止中・期限切れは正しいパスワードのときだけ別）。"""
     _require_app_origin(request)
-    ip = _client_ip(request)
+    ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent")
     if await check_auth_rate_limit(ip):
         raise HTTPException(status_code=429, detail=TOO_MANY)
@@ -259,7 +250,7 @@ async def viewer_change_password(
 
     変更後、それより前に出したトークンは使えなくなるので、新しいトークンを返す。
     """
-    ip = _client_ip(request)
+    ip = get_client_ip(request)
     if await check_auth_rate_limit(ip):
         raise HTTPException(status_code=429, detail=TOO_MANY)
 
@@ -337,7 +328,7 @@ async def viewer_password_reset_request(
         {"id": row.id, "h": hashlib.sha256(raw.encode()).digest(), "exp": now + PASSWORD_RESET_TTL},
     )
     await _record_event(
-        db, row.id, "password_reset_requested", _client_ip(request), request.headers.get("user-agent")
+        db, row.id, "password_reset_requested", get_client_ip(request), request.headers.get("user-agent")
     )
     await db.commit()
     reset_url = f"{self_tokens.rp_origin()}/viewer/#reset={raw}"
@@ -353,7 +344,7 @@ async def viewer_password_reset_confirm(
 ):
     """新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。12 時間トークンは返さない（ログインし直す）。"""
     _require_app_origin(request)
-    ip = _client_ip(request)
+    ip = get_client_ip(request)
     if await check_auth_rate_limit(ip):
         raise HTTPException(status_code=429, detail=TOO_MANY)
 
