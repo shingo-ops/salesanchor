@@ -1,6 +1,6 @@
 # 設計: 手元の Python 部品入れを 3.12 に揃える見張り（py312-guard）
 
-状態: 設計案（Opus 作成・自己審査済み）。PO 方針「手元でも 3.12 を使う決まりを見張りで守らせる設計に進める」（2026-10-16 チャット「y」）。実装承認 2026-10-16 チャット「y」。根拠 [recon.md](recon.md)。関連 ADR: ADR-040（Claude Code 運用ガードレール。本件はその見張りの 1 本を足す）。
+状態: 設計案（Opus 作成・自己審査済み）。PO 方針「手元でも 3.12 を使う決まりを見張りで守らせる設計に進める」（2026-10-16 チャット「y」）。実装承認 2026-10-16 チャット「y」。根拠 [recon.md](recon.md)（docs/handoff/py312-guard/recon.md）。関連 ADR: ADR-040（Claude Code 運用ガードレール。本件はその見張りの 1 本を足す）。
 
 ## 0. 目的
 Sales Anchor の作業で、本番（3.12、recon P4）と違う版の Python で venv を作ったり部品を入れたりする命令を、打った時点で止める。今日のような「3.14 で部品を手作りして Mac が重くなる」（P1）と「手元と本番で結果が違う」（P5）をなくす。水準は A（うっかり防止）。
@@ -23,12 +23,12 @@ Sales Anchor の作業で、本番（3.12、recon P4）と違う版の Python �
 | K2 | 次を通す（終了 0・無出力）: `/usr/local/bin/python3.12 -m venv /tmp/a`、`python3.12 -m venv /tmp/a`、`<3.12 の venv>/bin/pip install x`、`<pyvenv.cfg の無い場所>/bin/pip install x`、`uv venv --python 3.12 /tmp/a`、`docker compose exec -T backend pip install x`、`python3 --version`、`python3 script.py`、`grep -n "pip install" docs/x.md`、`git log` | 単体試験 |
 | K3 | 対象は Sales Anchor の作業場所だけ: 入力の `cwd` が `/Users/tanizawashingo/salesanchor` か `/Users/tanizawashingo/worktrees/salesanchor/` の下、または命令に `cd <その下>` を含むとき。それ以外の場所では K1 の形も通す | 単体試験（cwd を変えて 2 本） |
 | K4 | 入力が読めない・pyvenv.cfg が読めないときは通す（fail-open） | 単体試験 |
-| K5 | 拒否文言は 1 行・120 字以内で、正しい形 `/usr/local/bin/python3.12 -m venv <場所>` を含む。拒否は `/Users/tanizawashingo/.claude/logs/agent-events.jsonl` に hook_blocked で 1 行残る（既存の型 recon P8） | 単体試験＋実機で 1 行を確認 |
+| K5 | 拒否文言は 1 行・120 字以内で、正しい形 `/usr/local/bin/python3.12 -m venv <場所>` を含む。拒否は /Users/tanizawashingo/.claude/logs/agent-events.jsonl に hook_blocked で 1 行残る（既存の型 recon P8） | 単体試験＋実機で 1 行を確認 |
 | K6 | 実機: 導入後、Opus 本体から Sales Anchor の作業場所で `python3 -m venv /tmp/py312-guard-probe` を打つと拒否され、venv が作られない。`/usr/local/bin/python3.12 -m venv /tmp/py312-guard-probe312` は通る | 実機 1 回 |
 | K7 | 実機の効果: 3.12 の venv に `pip install -r requirements.txt -r requirements-dev.txt` を入れる間、rustc の数を 5 秒ごとに数え、最大値を記録する（0 を期待。0 でなければ記録して PO に報告し、順番待ちの案へ進むかを判断する） | 実機 1 回（Sonnet。生出力保存） |
 
 ## 3. 方式
-新しい PreToolUse hook `/Users/tanizawashingo/.claude/scripts/python-version-guard.py`（matcher `Bash`、同期、timeout 5）。`/Users/tanizawashingo/.claude/settings.json` の PreToolUse に 1 本足す（既存 26 件はそのまま）。
+新しい PreToolUse hook /Users/tanizawashingo/.claude/scripts/python-version-guard.py（matcher `Bash`、同期、timeout 5）。/Users/tanizawashingo/.claude/settings.json の PreToolUse に 1 本足す（既存 26 件はそのまま）。
 
 判定（`tool_input.command` に対して）:
 1. 対象の場所か（K3）。違えば通す
@@ -42,11 +42,11 @@ Sales Anchor の作業で、本番（3.12、recon P4）と違う版の Python �
 4. `python3.12`・`/usr/local/bin/python3.12`・`…/Versions/3.12/bin/python3` は通す
 5. 拒否時: `_hook_blocked_log` と同じ形式の 1 行を agent-events.jsonl に足し、標準エラーに `本番は Python 3.12 です。/usr/local/bin/python3.12 -m venv <場所> で作り、その venv の pip を使ってください（py312-guard）` を出して終了 2
 
-試験: `/Users/tanizawashingo/.claude/scripts/tests/test_python_version_guard.py`（判定関数を import して K1〜K5）。
+試験: /Users/tanizawashingo/.claude/scripts/tests/test_python_version_guard.py（判定関数を import して K1〜K5）。
 
 ## 4. 影響範囲
-- 新規: `/Users/tanizawashingo/.claude/scripts/python-version-guard.py`、その試験
-- 変更: `/Users/tanizawashingo/.claude/settings.json`（PreToolUse に 1 本。変更前に控え `settings.json.bak-py312-guard-<日時>` を作る）
+- 新規: /Users/tanizawashingo/.claude/scripts/python-version-guard.py、その試験
+- 変更: /Users/tanizawashingo/.claude/settings.json（PreToolUse に 1 本。変更前に控え `settings.json.bak-py312-guard-<日時>` を作る）
 - 文書: `AGENTS.md` の Python 3.12 の行に「手元の venv は `/usr/local/bin/python3.12 -m venv`。違う版は見張りが止める」を 1 行（AGENTS.md 自動更新ルールの「新規必須チェック追加」に該当）
 - 触らない: Mac の PATH（ほかの仕事が 3.14 を使う可能性があるため）、本番、CI、既存の hook
 
@@ -64,12 +64,13 @@ Sales Anchor の作業で、本番（3.12、recon P4）と違う版の Python �
 - R3 hook の起動の重さ: 全 Bash で起動する。判定は文字列処理と pyvenv.cfg 1 回読みだけ。起動は `/usr/local/bin/python3`（既存の launch_guard_for_sim.py と同じ）
 
 ## 維持の仕組み
-- 単体試験は `/Users/tanizawashingo/.claude/scripts/tests/` で手元実行（リポジトリ外のため CI には乗らない。recon P8 の既存 hook と同じ扱い）
+守り手: 人手で守る（見張り本体と試験はリポジトリ外の /Users/tanizawashingo/.claude/scripts/ にあり CI に乗らないため。拒否は agent-events.jsonl に残り件数を数えられる）
+- 単体試験は /Users/tanizawashingo/.claude/scripts/tests/ で手元実行（リポジトリ外のため CI には乗らない。recon P8 の既存 hook と同じ扱い）
 - 拒否の記録は agent-events.jsonl に残り、件数を後から数えられる
 - 担当: Sales Anchor 開発基盤（Opus 設計・Sonnet 実装）
 
 ## 8. 戻し方
-`/Users/tanizawashingo/.claude/settings.json` から本 hook の 1 本を外す（控えから戻すこともできる）。ファイルは残してよい。
+/Users/tanizawashingo/.claude/settings.json から本 hook の 1 本を外す（控えから戻すこともできる）。ファイルは残してよい。
 
 ## 外部・過去事例の参照と我々への応用
 不要。手元の道具の決まりを機械で守らせる種類で、既存の見張り（recon P8）と同じ型。版の事実は公式の予定表（devguide.python.org/versions、2026-10-16 取得: 3.12 security・2028-10 終了）。
