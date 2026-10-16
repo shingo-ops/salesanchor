@@ -43,4 +43,15 @@ describe("buildInventoryColumns", () => {
     render(<div data-testid="cell">{cell}</div>);
     expect(screen.getByTestId("cell").querySelector(`.${cls}`)?.textContent).toBe(cond);
   });
+  it("renders Pre-order as Badge (info, soft) without the legacy badge-negotiating class", () => {
+    const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
+    const cell = cols.find((c) => c.key === "offer_type")!.renderCell!(
+      { ...row, offer_type: "pre_order", status: "pre_order" },
+      "r1",
+    );
+    render(<div data-testid="cell">{cell}</div>);
+    const root = screen.getByTestId("cell");
+    expect(root.querySelector(".comp-badge--info.comp-badge--soft")?.textContent).toBe("inventory.offerType.pre_order");
+    expect(root.querySelector(".badge-negotiating")).toBeNull();
+  });
 });

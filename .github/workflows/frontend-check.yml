@@ -30,6 +30,12 @@ jobs:
         run: npm run generate:api-types
         working-directory: frontend
 
+      - name: Viewer bundle check (閲覧ページの JS 300KB 以下・本体の辞書が混ざらない)
+        run: |
+          npx vite build --manifest
+          node scripts/check-viewer-bundle.js
+        working-directory: frontend
+
       - name: Verify check:all uses concurrently (退行防止)
         run: npm run check:concurrently
         working-directory: frontend
