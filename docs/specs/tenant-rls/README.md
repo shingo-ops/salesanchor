@@ -22,7 +22,8 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
   - 便A（tenant_paypal_config・registration_tokens）: 本番反映済み（PR #4354、2026-10-16 12:41 JST マージ）。本番で 2 表 t/t・ポリシー各 4 本、行数と md5 が適用前と一致、反映後 30 分の 42501・5xx 0 件を確認（12:46）。本番でのアプリ接続役による書込拒否の実測は未実施（CI の実 PostgreSQL 試験で確認）。反映後の招待リンク使用・PayPal 接続保存は未観測。設計 [../../handoff/s1-rls-stage3a/design.md](../../handoff/s1-rls-stage3a/design.md)
   - 認証トークン 3 表（webauthn_credentials・password_reset_tokens・auth_refresh_tokens）: RLS を付けない — PO 2026-10-16「y」
   - 便B（tenants）: 本番反映済み（PR #4379、2026-10-16 15:21 JST マージ）。本番で t/t・ポリシー 4 本（読取は全行可、作成・変更・削除は運営文脈のときだけ）、5 行・有効 5・md5 が適用前と一致、反映後の backend・Celery ログの 42501・row-level security・5xx 0 件、/api/health 200 を確認（15:27）。本番での運営画面からの会社作成・停止・削除は未観測（CI の実 PostgreSQL 試験 9 件で確認）。設計 [../../handoff/s1-rls-stage3b/design.md](../../handoff/s1-rls-stage3b/design.md)
-  - 残り: 便C（users）。ログイン・パスワード再設定・言語/テーマ変更が会社文脈なしで users に書くため、設計が先
+  - 便C（users）: 本番反映済み（PR #4381、2026-10-16 15:54 JST マージ）。本番で t/t・ポリシー 4 本（読取は全行可、作成・変更・削除は自社の会社文脈か運営文脈のときだけ）、15 行・md5 が適用前と一致、反映後の backend・Celery ログの 42501・row-level security・5xx 0 件、/api/health 200 を確認（15:59）。ログイン・パスワード再設定・言語/テーマ変更・登録は users の書込直前だけ会社文脈を張る。本番でのログイン成功は未観測（CI とローカルの実 PostgreSQL 試験 13 件で確認）。設計 [../../handoff/s1-rls-stage3c/design.md](../../handoff/s1-rls-stage3c/design.md)
+  - 段階③の対象表はすべて反映済み
 
 ## 子文書
 
@@ -40,6 +41,10 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
 - 段階③便B 設計: [../../handoff/s1-rls-stage3b/design.md](../../handoff/s1-rls-stage3b/design.md)
 - 段階③便B 審査: [../../handoff/s1-rls-stage3b/review-opus.md](../../handoff/s1-rls-stage3b/review-opus.md)
 - 段階③便B 実装カード: [../../handoff/s1-rls-stage3b/card.md](../../handoff/s1-rls-stage3b/card.md)
+- 段階③便C recon: [../../handoff/s1-rls-stage3c/recon.md](../../handoff/s1-rls-stage3c/recon.md)
+- 段階③便C 設計: [../../handoff/s1-rls-stage3c/design.md](../../handoff/s1-rls-stage3c/design.md)
+- 段階③便C 審査: [../../handoff/s1-rls-stage3c/review-opus.md](../../handoff/s1-rls-stage3c/review-opus.md)
+- 段階③便C 実装カード: [../../handoff/s1-rls-stage3c/card.md](../../handoff/s1-rls-stage3c/card.md)
 
 ## 関連 ADR
 
