@@ -22,7 +22,6 @@ from app.services.tcg_unit_recovery_svc import (
     unit_recovery_norm,
 )
 
-
 # ---------------------------------------------------------------------------
 # unit_recovery_norm (NFKC + trim)
 # ---------------------------------------------------------------------------
@@ -345,10 +344,11 @@ class TestSafetyLimits:
 
 @pytest.mark.parametrize("basis", ["EMPTY_BOX:explicit", "MANUAL_CONDITION_REVIEW"])
 def test_e5_does_not_overwrite_empty_or_manual_condition(basis, request):
-    from tests.test_tcg_condition_review import seed
-    from app.services.tcg_unit_recovery_svc import apply_unit_recovery_for_job
-    from sqlalchemy.orm import Session
     from sqlalchemy import text
+    from sqlalchemy.orm import Session
+
+    from app.services.tcg_unit_recovery_svc import apply_unit_recovery_for_job
+    from tests.test_tcg_condition_review import seed
     pg = request.getfixturevalue("empty_review_pg")
     item = seed(pg, name="Test Booster 空箱 Box", condition_basis=basis, unit_resolved=False, unit_id=None, unit_canonical="")
     with pg["connection"].cursor() as cursor:
@@ -373,3 +373,39 @@ def empty_review_pg(request, monkeypatch):
         next(generator)
     except StopIteration:
         pass
+
+
+# --- 人が単位を直した行（unit_resolved = TRUE）を E3a / E4 が書き換えない（便2 D6） ---------------------------
+
+
+def test_e4_update_skips_human_resolved_rows_and_counts_only_written_rows():
+    from types import SimpleNamespace  # noqa: PLC0415
+
+    from app.services.tcg_unit_recovery_svc import apply_unit_from_condition_for_job  # noqa: PLC0415
+
+    updates: list[tuple[str, dict]] = []
+
+    class FakeSession:
+        def execute(self, statement, params=None):
+            sql_text = str(statement)
+            if sql_text.lstrip().startswith("UPDATE"):
+                updates.append((sql_text, params))
+                return SimpleNamespace(rowcount=1 if params["ar_id"] == "ar-1" else 0)  # ar-2 は人が単位を直した行
+            if "FROM public.conditions" in sql_text:
+                return SimpleNamespace(fetchall=lambda: [("C1", "K1")])
+            if "FROM public.units" in sql_text:
+                return SimpleNamespace(fetchall=lambda: [("K1", 7, "BOX")])
+            return SimpleNamespace(fetchall=lambda: [("ar-1", "C1"), ("ar-2", "C1")])
+
+    result = apply_unit_from_condition_for_job(FakeSession(), "job-1", "t")
+    assert result["resolved"] == 1
+    assert len(updates) == 2 and all("AND unit_resolved = FALSE" in sql_text for sql_text, _ in updates)
+
+
+def test_e3a_update_sql_is_guarded_by_unit_resolved_false():
+    import inspect  # noqa: PLC0415
+
+    import app.services.tcg_unit_recovery_svc as module  # noqa: PLC0415
+
+    source = inspect.getsource(module.apply_unit_recovery_for_job)
+    assert "WHERE id = :ar_id AND unit_resolved = FALSE" in source and "applied_updates" in source

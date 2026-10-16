@@ -243,6 +243,8 @@ def env(monkeypatch):
     monkeypatch.setattr(router, "find_job_of_item", find)
     monkeypatch.setattr(router, "save_value_override", save)
     monkeypatch.setattr(router, "enqueue_v102_reanalyze", state.enqueued.append)
+    state.scheduled = []
+    monkeypatch.setattr(router, "schedule_distribution", lambda: state.scheduled.append(1) or True)
     return state
 
 
@@ -256,14 +258,32 @@ def test_value_override_success_saves_one_and_enqueues_once(env):
     result = _call()
     assert (result.ok, result.saved) == (True, 1)
     assert len(env.saved) == 1 and env.saved[0]["field"] == "price" and env.saved[0]["value"] == "1200"
-    assert env.enqueued == ["job-1"]
+    assert env.enqueued == ["job-1"] and env.scheduled == []
+
+
+def test_value_override_v6_saves_and_schedules_distribution_once_without_reanalysis(env):
+    env.job = JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE)
+    result = _call(field="status", value="Sold out")
+    assert (result.ok, result.saved) == (True, 1)
+    assert len(env.saved) == 1 and env.saved[0]["field"] == "status"
+    assert env.enqueued == [] and env.scheduled == [1]
+
+
+def test_value_override_v6_rejects_source_mismatch_and_missing_without_scheduling(env):
+    env.job = JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE)
+    with pytest.raises(HTTPException) as caught:
+        _call(source=OTHER_SOURCE)
+    assert caught.value.status_code == 422 and env.saved == [] and env.scheduled == []
+    env.job = None
+    with pytest.raises(HTTPException) as caught:
+        _call()
+    assert caught.value.status_code == 404 and env.scheduled == []
 
 
 @pytest.mark.parametrize(
     ("job", "source", "status"),
     [
         (None, SOURCE, 404),
-        (JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE), SOURCE, 409),
         (JobOfItem("job-1", "v102:raw_copy_v101_f_ct:abc", SOURCE), OTHER_SOURCE, 422),
     ],
 )
@@ -273,6 +293,22 @@ def test_value_override_rejections_write_nothing(env, job, source, status):
         _call(source=source)
     assert caught.value.status_code == status
     assert env.saved == [] and env.enqueued == []
+
+
+def test_lock_key_has_one_source_and_unchanged_string():
+    import app.services.v102_transcription_svc as transcription  # noqa: PLC0415
+
+    assert transcription.v102_analysis_lock_key is ds.v102_analysis_lock_key
+    assert ds.v102_analysis_lock_key("J1") == "v102_analysis:J1"
+
+
+def test_item_basic_rejection_does_not_check_version_but_item_rejection_does():
+    v6 = JobOfItem("job-1", "raw-extraction-v6-rawcode-p1", SOURCE)
+    assert ds.item_basic_rejection(v6, SOURCE) is None
+    assert ds.item_basic_rejection(None, SOURCE).status == 404
+    assert ds.item_basic_rejection(v6, OTHER_SOURCE).status == 422
+    assert ds.item_rejection(v6, SOURCE).status == 409
+    assert ds.item_rejection(v6, OTHER_SOURCE).status == 409
 
 
 def test_value_override_service_rejection_becomes_422_and_enqueues_nothing(env):

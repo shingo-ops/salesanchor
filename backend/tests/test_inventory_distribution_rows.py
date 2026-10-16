@@ -184,12 +184,13 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # 期待値は distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の長さと SHA-256。
 # 便1（2026-10-14）で Sold out の条件（_sold_out_filter）を足した版に更新した。
 # review-ack-revoke 便で cr_review_ack を bool_or の集計にし review_acked 列を足して再生成した（差分は golden-diff: 同じ cr_review_ack の形変更が4通りに出るだけ）。
+# inventory-row-drawer 便で、行の元 ID の列（item_key・item_keys_agg・extraction_item_ids の3か所だけ）を足して再生成した。
 # review-excluded-ack 便で cr_review_ack LATERAL（excluded の確認済み除外）を足して再生成した。差は4点のみ（distribution_sql_after_merge.diff）。
 _GOLDEN = {
-    (False, False): (24560, "5712d7c49792ecef5dec44e6295a5037265123e60870671eb60290ce811e5cd8"),
-    (False, True): (25541, "fedb49783d3e0c10860c475d330bc820bafc486b21ad3ed56630ae5aad300fd1"),
-    (True, False): (24594, "59fec0b070891507a971234b913f52e6efe509095c6c7d6c4773ada8122254a5"),
-    (True, True): (25575, "707cdd098a0a2e2bb6911151c93bc2c79b86f570c773053c992209348c64e2bd"),
+    (False, False): (24693, "96e317a71e3b1b068472e9a566973423eee9f15cb47e5f88c799f173867b9b02"),
+    (False, True): (25844, "6d5bbebbfb9c2cde076085c147594c187a8ce863b81ab4d513ffc11280b17c86"),
+    (True, False): (24727, "ed61416b1a8d250f71e582ae332e532894743cb2bd7cfc5a4a4104bcbc698fc4"),
+    (True, True): (25878, "b5c3c5a583505c2da8b796b2f70a953ee94a5cca5e49c0fad7f2a777567076a4"),
 }
 
 

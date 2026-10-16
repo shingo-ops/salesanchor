@@ -942,5 +942,8 @@ run_sql migrations/20261015_130000_add_permissions_rls.sql
 run_sql migrations/20261016_010000_add_google_config_rls.sql
 run_sql migrations/20261016_020000_add_suppliers_rls.sql
 
+# 閲覧専用アカウントの表4つ（構造のみ・冪等。ADR-1019 段1）
+run_sql migrations/20261016_150000_add_viewer_accounts.sql
+
 # ADR-1012 段階2 便A: 障害記録の表 3 つ（空・RLS は運用者だけ・記録は消せない）
 run_sql migrations/20261016_100000_create_ops_incident_tables.sql

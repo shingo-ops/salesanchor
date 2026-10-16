@@ -1,7 +1,7 @@
 /**
  * /inventory — 在庫表（最終ユーザー向けビュー / ADR-093）。
  *
- * public.inventory の status='in_stock' かつ未失効のオファーを明細行で表示する読み取り専用画面。
+ * LINE 解析の配信行を表示（ADR-1014）。super admin は行クリックで解析パネル（原文・Gemini 抽出・システム解析）。
  * 列: 型番 / タイトル(日上・英下) / 状態 / 形態 / 在庫・予約 / 数量 / 単価 / 仕入元(掲載時刻)。
  * - 全列で昇順/降順ソート（バックエンド）。左端「リセット」でデフォルト(タイトル昇順)に戻る。
  * - カテゴリー絞り込み（プルダウン）＋検索（Enter で即時）＋提供者（選んだ仕入元だけ・保存しない）＋ユーザー別フィルタ（カテゴリー/列の取捨・永続化）。
@@ -26,6 +26,8 @@ import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
 import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
+import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
+import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 
 interface SupplierFacet {
   id: number;
@@ -132,6 +134,8 @@ export default function InventoryPage() {
   // 提供者（選んだ仕入元だけ表示。保存しない＝開くたびに空＝全員）
   const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
   const isMobile = useIsMobile();
+  const { isSuperAdmin } = useSuperAdmin();
+  const [drawerRow, setDrawerRow] = useState<InventoryRow | null>(null);
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [supplierFacet, setSupplierFacet] = useState<SupplierFacet[]>([]);
@@ -596,6 +600,7 @@ export default function InventoryPage() {
         rowKey={(it) => it.id}
         rowTestId={(it) => `inventory-row-${it.id}`}
         selectable
+        onRowClick={isSuperAdmin && !isMobile ? (row) => setDrawerRow(row) : undefined}
         selectedKeys={selectedIds}
         onSelectChange={setSelectedIds}
         sortKey={sortField}
@@ -614,6 +619,7 @@ export default function InventoryPage() {
         mobileCards
         emptyState={t("inventory.noResults")}
       />
+      {drawerRow && <InventoryRowDrawer row={drawerRow} onClose={() => setDrawerRow(null)} />}
     </PageLayout>
   );
 }

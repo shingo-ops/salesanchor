@@ -211,3 +211,132 @@ async def test_with_candidate_names_skips_query_without_candidates():
 
     assert out == {"i1": {"gap_lines": [3], "candidates": []}}
     db.execute.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# 在庫表の解析パネル用: extraction_item_ids 指定（inventory-row-drawer 便）
+# ---------------------------------------------------------------------------
+
+# B3: include_inactive=False の出力が、変更前の _BASE_FROM（review_joins を含む全文）と1文字も変わらないこと。
+
+
+async def test_base_from_default_is_identical_to_the_previous_constant():
+    from app.services import tcg_analysis_review_svc as svc
+    from app.services.tcg_condition_review_svc import review_joins
+
+    schema = svc.TCG_SCHEMA
+    previous = f"""
+    FROM {schema}.analysis_results ar
+    JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+    JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+    JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
+    JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+    LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
+    LEFT JOIN public.products p ON p.id = ar.product_id
+    LEFT JOIN public.type_master ws ON ws.id = p.work_id
+    {review_joins(schema=schema)}
+"""
+    assert svc._base_from() == previous
+    assert svc._BASE_FROM == previous
+    inactive_ok = svc._base_from(include_inactive=True)
+    assert "sm.is_active" not in inactive_ok and "ar.is_current = TRUE" in inactive_ok
+
+
+async def test_build_where_puts_item_ids_condition_first():
+    from app.services import tcg_analysis_review_svc as svc
+
+    where, params = svc._build_where(
+        query="x", provider=None, status_tab="ALL", review_only=False, unregistered_only=False,
+        unresolved_unit_only=False, extraction_item_ids=["a"],
+    )
+    assert where.startswith("WHERE ei.id = ANY(CAST(:item_ids AS uuid[]))")
+    assert params["item_ids"] == ["a"]
+
+
+async def test_item_ids_are_passed_to_the_service_with_all_tab_and_matching_limit(fake_super_admin_override):
+    from app.main import app
+
+    ids = ["aaaaaaaa-0000-0000-0000-000000000001", "aaaaaaaa-0000-0000-0000-000000000002"]
+    mock = AsyncMock(return_value=_DUMMY_FETCH_RESULT)
+    with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=mock):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(
+                "/api/v1/tcg/analysis-results?status_tab=NEEDS_REVIEW&offset=5&limit=10"
+                f"&extraction_item_ids={ids[0]}&extraction_item_ids={ids[1]}"
+            )
+    assert resp.status_code == 200, resp.text
+    kwargs = mock.await_args.kwargs
+    assert kwargs["extraction_item_ids"] == ids
+    assert (kwargs["status_tab"], kwargs["offset"], kwargs["limit"]) == ("ALL", 0, 2)
+
+
+async def test_item_ids_not_given_keeps_the_previous_call(fake_super_admin_override):
+    from app.main import app
+
+    mock = AsyncMock(return_value=_DUMMY_FETCH_RESULT)
+    with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=mock):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/api/v1/tcg/analysis-results?status_tab=NEEDS_REVIEW&offset=5&limit=10")
+    assert resp.status_code == 200, resp.text
+    kwargs = mock.await_args.kwargs
+    assert kwargs["extraction_item_ids"] is None
+    assert (kwargs["status_tab"], kwargs["offset"], kwargs["limit"]) == ("NEEDS_REVIEW", 5, 10)
+
+
+async def test_item_ids_with_non_uuid_value_is_422(fake_super_admin_override):
+    from app.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/v1/tcg/analysis-results?extraction_item_ids=not-a-uuid")
+    assert resp.status_code == 422, resp.text
+
+
+async def test_item_ids_over_50_is_422(fake_super_admin_override):
+    from uuid import uuid4
+
+    from app.main import app
+
+    query = "&".join(f"extraction_item_ids={uuid4()}" for _ in range(51))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/tcg/analysis-results?{query}")
+    assert resp.status_code == 422, resp.text
+
+
+async def test_item_ids_50_is_accepted(fake_super_admin_override):
+    from uuid import uuid4
+
+    from app.main import app
+
+    query = "&".join(f"extraction_item_ids={uuid4()}" for _ in range(50))
+    with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=AsyncMock(return_value=_DUMMY_FETCH_RESULT)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/tcg/analysis-results?{query}")
+    assert resp.status_code == 200, resp.text
+
+
+async def test_item_ids_non_super_admin_is_forbidden():
+    """is_super_admin=false の tenant admin は 403（test_inventory_offers_rbac.py と同じ差し替え方式）。"""
+    from app.auth.dependencies import get_current_user
+    from app.main import app
+    from app.models import User
+
+    async def _fake() -> User:
+        u = User()
+        u.id = 100
+        u.is_super_admin = False
+        u.role = "admin"
+        u.tenant_id = 6
+        return u
+
+    mock = AsyncMock(return_value=_DUMMY_FETCH_RESULT)
+    app.dependency_overrides[get_current_user] = _fake
+    try:
+        with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=mock):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                resp = await client.get(
+                    "/api/v1/tcg/analysis-results?extraction_item_ids=aaaaaaaa-0000-0000-0000-000000000001"
+                )
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+    assert resp.status_code == 403, resp.text
+    mock.assert_not_awaited()

@@ -22,6 +22,7 @@ CC（Claude Code）が UI 部品を新設・修正するたびに参照するこ
 |------|------|
 | 生 `<select>` | `<Select>` 金型を使うこと |
 | 生 `<input type="text"\|"search"\|省略>` | `<TextField>` / `SearchBar` 等を使うこと |
+| 生 `<input type="checkbox">` | `<Checkbox>`（文字と並ぶ欄）/ `<CheckboxControl>`（表の中など単独の欄）を使うこと |
 | 自作タブ（className に `tab` 語を含む div/nav 等） | `<Tabs>` / `OverflowTabs` を使うこと |
 | 色直値（`#xxx` / `rgba()`）のインラインスタイル | CSS 変数 `var(--color-*)` を使うこと（ADR-067）|
 | 生 px 数値のインラインスタイル（例 `width: 24`）| デザイントークン `var(--size-*)` を使うこと（ADR-067）|

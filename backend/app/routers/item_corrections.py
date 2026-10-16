@@ -18,11 +18,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
 from app.services.item_corrections_svc import save_corrections
+from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import load_review_reason_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
@@ -32,6 +34,7 @@ from app.services.v102_human_decisions_svc import (
     DecisionRejected,
     find_job_of_item,
     invalid_product_values,
+    item_basic_rejection,
     item_rejection,
     normalize_ack_codes,
     override_options,
@@ -42,7 +45,7 @@ from app.services.v102_human_decisions_svc import (
     save_value_override,
     v102_job_id_of_item,
 )
-from app.tasks.tcg_extraction import enqueue_v102_reanalyze
+from app.tasks.tcg_extraction import enqueue_v102_reanalyze, schedule_distribution
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +273,7 @@ async def save_item_value_override(
     current_user: User = Depends(require_super_admin),
 ) -> ReviewAckResponse:
     found = await find_job_of_item(db, extraction_item_id)
-    rejected = item_rejection(found, str(body.source_message_id))
+    rejected = item_basic_rejection(found, str(body.source_message_id))
     if rejected is not None:
         raise HTTPException(rejected.status, rejected.message)
     try:
@@ -280,7 +283,11 @@ async def save_item_value_override(
         )
     except DecisionRejected as exc:
         raise HTTPException(exc.status, exc.message) from exc
-    enqueue_v102_reanalyze(found.job_id)
+    if is_v102_prompt_version(found.prompt_version):
+        enqueue_v102_reanalyze(found.job_id)
+    else:
+        # v6 は即時 UPDATE で ar が直っている。次の配信で Sold out を外すため配信の予約だけ積む（同期の Redis 待ちで event loop を止めない）
+        await run_in_threadpool(schedule_distribution)
     return ReviewAckResponse(ok=True, saved=saved)
 
 

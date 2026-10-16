@@ -16,8 +16,8 @@ const item: AnalysisReviewItem = {
 };
 const options = { units: ["BOX", "CASE"], statuses: ["In Stock", "Sold out"] };
 
-const renderForm = (rowKey: ValueRowKey, onRefresh = vi.fn().mockResolvedValue(undefined)) => {
-  render(<ReviewValueFixForm item={item} rowKey={rowKey} onRefresh={onRefresh} />);
+const renderForm = (rowKey: ValueRowKey, onRefresh = vi.fn().mockResolvedValue(undefined), over: Partial<AnalysisReviewItem> = {}) => {
+  render(<ReviewValueFixForm item={{ ...item, ...over }} rowKey={rowKey} onRefresh={onRefresh} />);
   return { onRefresh };
 };
 
@@ -43,6 +43,17 @@ describe("ReviewValueFixForm (K3)", () => {
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledWith("/tcg/items/item-1/value-override", { source_message_id: "msg-1", field: "quantity", value: "7" });
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it("V6d: after saving, v102 says re-analysis is running and v6 just says saved", async () => {
+    for (const [isV102, text] of [[true, "Saved. Re-analysis is running"], [false, "Saved"]] as const) {
+      const { onRefresh } = renderForm("quantity", undefined, { is_v102: isV102 });
+      fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "7" } });
+      fireEvent.click(screen.getByRole("button", { name: "Save this value" }));
+      await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
+      expect(screen.getByText(text)).toBeTruthy();
+      cleanup();
+    }
   });
 
   it("price posts field=price", async () => {

@@ -182,11 +182,11 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
   it("a row that cannot be fixed does nothing when clicked, and is marked static", () => {
     renderDrawer(item({ is_v102: false }));
 
-    fireEvent.click(rowOf("Quantity"));
     fireEvent.click(rowOf("Condition"));
 
     expect(document.querySelector(".review-item-fix")).toBeNull();
-    expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
+    expect(rowOf("Condition").className).toContain("item-comparison__row--static");
+    expect(rowOf("Quantity").className).not.toContain("item-comparison__row--static");
     expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
   });
 
@@ -477,5 +477,44 @@ describe("ReviewItemDrawer revoke", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: 'Undo "checked"?' })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("ReviewItemDrawer viewOnly (inventory row panel)", () => {
+  const ackableItem: ReviewDrawerItem = {
+    ...makeItem("pid_unresolved", false),
+    system: { product_id: "PM-00001", product_title: "Title A", work_name: "Work A", condition: "Box", pid_basis: "MANUAL" },
+    review_issues: ["PRODUCT_ID_UNRESOLVED"],
+    review_reason_details: [{ code: "product_not_in_master", source: "system" as const, fix_stage: "analysis" as const, ackable: true }],
+  };
+
+  it("F5: shows no Keep as is button, no Fix column, and rows do not open the fix wizard", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Fix" })).toBeNull();
+    fireEvent.click(rowOf("Product ID"));
+    expect(document.querySelector(".review-item-fix")).toBeNull();
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+  });
+
+  it("F5: hides the undo button even when opened as an acknowledged item", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly ackedView onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.queryByRole("button", { name: /Undo/ })).toBeNull();
+  });
+
+  it("F5: still shows the reasons and renders headerSlot first", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly headerSlot={<div data-testid="slot" />} onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.getByText("Not in the product master")).toBeTruthy();
+    expect(screen.getByTestId("slot")).toBeTruthy();
+  });
+
+  it("F6: without viewOnly the Keep as is button and the Fix column are still there", () => {
+    renderDrawer(ackableItem);
+
+    expect(screen.getByRole("button", { name: "Keep as is" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
   });
 });

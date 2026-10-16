@@ -11882,6 +11882,14 @@
             "title": "Condition",
             "type": "string"
           },
+          "extraction_item_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Extraction Item Ids",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -62298,6 +62306,28 @@
               ],
               "description": "作品IDで絞り込み",
               "title": "Work Id"
+            }
+          },
+          {
+            "description": "extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
+            "in": "query",
+            "name": "extraction_item_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
+              "title": "Extraction Item Ids"
             }
           }
         ],
