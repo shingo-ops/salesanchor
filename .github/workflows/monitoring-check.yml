@@ -73,6 +73,13 @@ jobs:
           # docker-compose.monitoring.yml:177 と同じ版
           docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 check-config /a/alertmanager.yml
 
+      - name: Alertmanager 送り先の試験（amtool routes test）
+        if: steps.changes.outputs.relevant == 'true'
+        run: |
+          # どの通知も Discord と保守 API の両方に届くこと（ADR-1012 段階2 便C）
+          docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-server-alerts,ops-api alertname=CiRoutesTest
+          docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-server-alerts,ops-api alertname=CiRoutesTest severity=critical job=node
+
       - name: Loki ルール構文検査（lokitool）
         if: steps.changes.outputs.relevant == 'true'
         run: |
