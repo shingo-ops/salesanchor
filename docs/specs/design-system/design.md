@@ -4251,6 +4251,16 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 設計: docs/handoff/ay4d-checkbox-guard/design.md（recon.md 併置）。設計審査 r2 APPROVE。
 - 変更: scripts/check-ui-governance.js に種別 `checkbox` を追加（type が checkbox の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T21〜T29 を追加し、試験は 22 件から 31 件。docs/CC_UI_GOVERNANCE.md の禁止表に 1 行追加。ADR-144 に追記節。frontend/src/company-forms.css:100・:135 はコメントだけ直した（規則は触っていない）。
 - 効果: `frontend/src/pages/` の .tsx に生の `<input type="checkbox">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
-- 対象外: 生 radio（pages/ に 4 件）、features/・components/ の検査（今は金型本体以外 0 件。書いても止まらない）、動的な type。
+- 対象外: 生 radio（pages/ に 4 件 → AY-5 で 0 件）、features/・components/ の検査（今は金型本体以外 0 件。書いても止まらない）、動的な type。
 - 残り: features/ の検査は ADR-144 改訂案の全件検査への切替で扱う。company-forms.css の focus 規則の撤去は見た目の前後実測の便で判断する。checkbox を含まないまま古くなる列挙 3 か所（.github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119）は CI 設定・全員向け規則文のため今回は触っていない。
 
+
+#### AY-5 Radio・RadioControl 金型と生ラジオ 7 件の載せかえ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（ラジオボタンの金型をチェック欄の金型と同じ形で作り、7 件を載せかえる）。前提: 2026-10-02 の新規金型登録許可（:1953）、2026-10-15 の色は全部 --accent（:4202）。
+- 設計: docs/handoff/ay5-radio/design.md（recon.md 併置）。設計審査合格。
+- 変更: frontend/src/components/Radio.tsx・Radio.css（文字と並ぶ欄。Checkbox と同じ形で border・background・box-shadow は持たない）と RadioControl.tsx・RadioControl.css（単独の欄。寸法は --size-checkbox、選択色は --accent）を新設。RegisterPage.tsx の 2 件（R1・R2）を Radio、RolesPage.tsx の 2 件（R3・R4）と MergeCompanyModal・MergeContactModal・MergeLeadModal の 3 件（R5〜R7）を RadioControl に載せかえ。試験 Radio.test.tsx・RadioControl.test.tsx、stories 2 本を追加。
+- 使い分け: 文字と並ぶ欄は Radio、表の中・色見本など単独の欄は RadioControl（チェック欄と同じ決め方）。
+- 前後実測の結果: （実測後に記入）
+- 対象外: ChoiceCardGroup.tsx（すでに金型の中）、check-ui-governance への radio 種別の追加（AY-5b として別に提案）、寸法 sm・dataColor の口。
+- 残件: ①RegisterPage.tsx の未定義トークン `--spacing-*`（R1・R2 以外の 22 か所） ②pages-layout.css の `.color-swatch-legacy::after` の直書き「現在」（ADR-027） ③R1・R2 の質問文の fieldset/legend 化と R5〜R7 の aria-label ④Radio を .form-group の中に置くと components.css:11・:19 の規則で崩れる件（今回の使い手は .form-group の外） ⑤AY-5b（自動チェックに radio 種別を足す）。

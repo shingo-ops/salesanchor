@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
 
@@ -217,8 +218,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
                         }}
                       >
                         <td>
-                          <input
-                            type="radio"
+                          <RadioControl
                             name="master-candidate"
                             checked={c.id === selectedId}
                             onChange={() => {
