@@ -203,6 +203,24 @@
 - 直し方：長いタスクが詰まっていれば Opus に報告する。worker の再起動は処理中のタスクを止めるので、Opus の判断を待つ。
 - 止め方：`amtool silence add alertname=CeleryQueueBacklog --duration=PERIOD --comment=REASON`
 
+## ViewerInventoryStale
+
+- 札：ticket
+- 何が起きているか：閲覧ページの在庫の作り置き（1 分ごとのタスク）が 10 分以上書けておらず、配信の保留でもない状態が 2 分続いた。作り置きのタスクの失敗が続いている可能性がある。worker の停止は CeleryHeartbeatStale が別に知らせる。指標は backend の `/metrics` が Redis（db0）から読んで出す（キーが無いときは 0 で、この見張りは鳴る）。
+- 最初に見るもの：`docker logs --since 15m <worker> | grep viewer-cache`、Redis の `viewer:inventory:fail_count`（3 に達すると Discord にも知らせる）、配信の保留の理由は `[dist]` のログ。
+- 閲覧者への影響：前回の在庫が出続ける。作り置きは 24 時間で消えるので、それまでに直らないと閲覧 API は 503 になる。
+- 直し方：戻し方は無し。タスクが次に成功すれば自然に消える。失敗の原因（ログの例外）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ViewerInventoryStale --duration=PERIOD --comment=REASON`
+
+## ViewerInventoryStaleOnHold
+
+- 札：ticket
+- 何が起きているか：閲覧ページの在庫の作り置きが 10 分以上書けておらず、直近 2 分以内に配信の保留を確かめている状態が 2 分続いた。解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）。
+- 最初に見るもの：配信の保留の理由（`[dist]` のログ）、`docker logs --since 15m <worker> | grep viewer-cache`、Redis の `viewer:inventory:fail_count`。
+- 閲覧者への影響：前回の在庫が出続ける。作り置きは 24 時間で消えるので、保留が長く続くと閲覧 API は 503 になる。
+- 直し方：戻し方は無し。保留が解ければ次の 1 分で作り置きが書かれ、自然に消える。長く続くときは保留の原因を Opus に報告する。
+- 止め方：`amtool silence add alertname=ViewerInventoryStaleOnHold --duration=PERIOD --comment=REASON`
+
 ## BackupLocalStale
 
 - 札：ticket
