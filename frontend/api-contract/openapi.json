@@ -35361,6 +35361,65 @@
         "title": "ViewerLoginRequest",
         "type": "object"
       },
+      "ViewerPasswordChangeRequest": {
+        "properties": {
+          "current_password": {
+            "description": "今のパスワード",
+            "maxLength": 256,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ViewerPasswordChangeRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetConfirmRequest": {
+        "properties": {
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "description": "再発行メールのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ViewerPasswordResetConfirmRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetRequest": {
+        "properties": {
+          "email": {
+            "description": "再発行したいメールアドレス",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ViewerPasswordResetRequest",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -67511,6 +67570,131 @@
           }
         ],
         "summary": "Viewer Logout",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password": {
+      "post": {
+        "description": "パスワードの変更。must_change の人も呼べる（require_viewer_password_ok ではなく get_current_viewer）。\n\n変更後、それより前に出したトークンは使えなくなるので、新しいトークンを返す。",
+        "operationId": "viewer_change_password_api_v1_viewer_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Change Password",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/confirm": {
+      "post": {
+        "description": "新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。12 時間トークンは返さない（ログインし直す）。",
+        "operationId": "viewer_password_reset_confirm_api_v1_viewer_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Confirm",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/request": {
+      "post": {
+        "description": "再発行メールの申請。登録の有無・状態を応答に出さない（常に 200）。",
+        "operationId": "viewer_password_reset_request_api_v1_viewer_password_reset_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Request",
         "tags": [
           "viewer"
         ]

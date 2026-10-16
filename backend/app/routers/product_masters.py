@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.routers._utils import log_hidden_error
 from app.schemas.product_masters import (
     VALID_ATTRIBUTES,
     ProductAttributeMasterCreate,
@@ -91,9 +92,10 @@ async def create_attribute_master(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("product_masters.create_attribute_master", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"同じ区分・表示名のマスタが既に存在します: {exc.orig}",
+            detail="同じ区分・表示名のマスタが既に存在します",
         )
     row = result.mappings().first()
     await db.commit()
@@ -126,9 +128,10 @@ async def update_attribute_master(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("product_masters.update_attribute_master", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"同じ区分・表示名のマスタが既に存在します: {exc.orig}",
+            detail="同じ区分・表示名のマスタが既に存在します",
         )
     row = result.mappings().first()
     if not row:

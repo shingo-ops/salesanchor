@@ -100,6 +100,11 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.maintenance.purge_auth_events",
         "schedule": crontab(hour=5, minute=30),
     },
+    # 閲覧専用ページの掃除（期限切れ trial／停止／pending／ログイン記録・毎日 AM5:45・ADR-1019 Q7）
+    "purge-viewer-accounts": {
+        "task": "app.tasks.maintenance.purge_viewer_accounts",
+        "schedule": crontab(hour=5, minute=45),
+    },
     # 仕入元オファー (public.inventory) の時間失効: expires_at を過ぎた行を 30分ごとに削除
     # QA 2026-05-30: F6 承認時に expires_at=offered_at+18h を付与する時間失効モデル。
     # 30分粒度なので実際の寿命は 18h〜18.5h。在庫数 (stock_quantity) は触らない。

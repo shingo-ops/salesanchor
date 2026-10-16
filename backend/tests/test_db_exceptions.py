@@ -86,3 +86,21 @@ class TestHandleDbExceptions:
 
         with pytest.raises(RuntimeError):
             await endpoint_with_runtime_error()
+
+
+class TestLogHiddenError:
+    """log_hidden_error: 応答に出さない例外の中身をログにだけ残す (S3)。"""
+
+    def test_logs_where_and_message_at_error_level(self, caplog):
+        import logging
+
+        from app.routers._utils import log_hidden_error
+
+        with caplog.at_level(logging.ERROR, logger="app.routers._utils"):
+            log_hidden_error("x.y", ValueError("secret"))
+
+        records = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert records, "ERROR ログが残っていない"
+        text = caplog.text
+        assert "x.y" in text
+        assert "secret" in text
