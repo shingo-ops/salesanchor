@@ -341,6 +341,22 @@ async def count_password_reset_request(email_lower: str) -> int:
         return 0
 
 
+async def count_viewer_password_reset_request(email_lower: str) -> int:
+    """閲覧者の再発行申請を email（小文字）のハッシュ単位で数え、今回を含む回数を返す。アプリ側とは別のキー。Redis 不通時は 0（通す）。"""
+    r = get_redis()
+    if not r:
+        return 0
+    try:
+        key = f"viewer_pw_reset_req:{hashlib.sha256(email_lower.encode()).hexdigest()}"
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, PASSWORD_RESET_REQUEST_WINDOW)
+        return int(count)
+    except Exception:
+        logger.warning("閲覧者の再発行申請の回数記録に失敗: fail-openとして通過")
+        return 0
+
+
 async def is_token_blacklisted(token: str) -> bool:
     """
     トークンがブラックリストに含まれているか確認する。
