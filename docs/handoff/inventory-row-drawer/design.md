@@ -514,4 +514,5 @@ _BASE_FROM = _base_from()
 ### 14-9 設計審査（Opus・同一AIの自己審査）
 - 判定: APPROVE。
 - 根拠: 門（products.view）は GET /inventory と同一（R4-2）。行の判定は dist_base の再利用で写しなし（R4-4・ADR-1014）。返す項目は限定（gemini 等を出さない）。既存 super admin 挙動は既定タブで不変。部品はすべて金型（ADR-144）、文言は i18n（ADR-027）。migration なし・revert で戻せる。
+- ADR-072: 新 API は読み取りだけ（commit なし）なので reset_tenant_context は不要。テナント文脈は require_permission 内の get_current_tenant が設定する（recon R4-2）。
 - 未解決: 在庫表そのもののテナント分け（既存課題・今回範囲外）。G3 は PO 目視待ち。
