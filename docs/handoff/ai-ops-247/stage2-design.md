@@ -19,7 +19,7 @@
 | T4 | prod2 の Prometheus は、prod1 の 443 番に IP 直で繋ぎ（`49.212.137.46:443`）、`server_name` で名前を渡して `/metrics` を取っている。prod1 の nginx は `/metrics` を prod2 の IP（`49.212.160.98`）だけに許している。BackendHighLatency が 30 日で 447 回鳴った（段階1 S18）ので、この経路は実際に通っている | `monitoring/prometheus/prometheus.yml:34-45`・`nginx/nginx.conf:246-256`・stage1-design.md §1 S18 |
 | T5 | Alertmanager の webhook の公式仕様：`url`／`url_file`・`send_resolved`・`max_alerts`・`timeout`・`http_config`。`http_config.authorization` は `type`（既定 Bearer）と `credentials_file`。`http_config.tls_config.server_name` が使える。送る中身は `version "4"`・`groupKey`・`truncatedAlerts`・`status`・`receiver`・`groupLabels`・`commonLabels`・`commonAnnotations`・`externalURL`・`alerts[]`（各 `status`・`labels`・`annotations`・`startsAt`・`endsAt`・`generatorURL`・`fingerprint`）。route の `continue: true` は、後ろの兄弟の照合を続ける | prometheus.io/docs/alerting/latest/configuration（2026-10-16 に WebFetch で直接確認。Context7 は月の上限で使えず） |
 | T6 | webhook を受け取るコードは backend に無い。障害の記録の表も、全体を止めるスイッチの表も無い | raw2/a_ls_backend.txt・raw2/a1_public_tables.txt |
-| T7 | migration は生 SQL で `migrations/YYYYMMDD_HHMMSS_*.sql` に置き、`scripts/run_all_migrations.sh` に 1 行ずつ登録する。冪等（`IF NOT EXISTS`・`DROP POLICY IF EXISTS`）が必須 | `scripts/run_all_migrations.sh`（末尾 :936 以降）・raw2/a4_conventions.txt |
+| T7 | migration は生 SQL で migrations/YYYYMMDD_HHMMSS_*.sql（日時＋名前の形） に置き、`scripts/run_all_migrations.sh` に 1 行ずつ登録する。冪等（`IF NOT EXISTS`・`DROP POLICY IF EXISTS`）が必須 | `scripts/run_all_migrations.sh`（末尾 :936 以降）・raw2/a4_conventions.txt |
 | T8 | public の表の前例は UUID の主キー・`TIMESTAMPTZ`・`CHECK` で値を縛る形 | `migrations/20260930_150000_create_llm_usage_events.sql:26-53` |
 | T9 | 「アプリの接続から読み書きを運用者だけに絞る」RLS の前例。`ENABLE`＋`FORCE`、ポリシーの条件は `current_setting('app.is_operator', true) = 'true'` | `migrations/20261015_130000_add_permissions_rls.sql:1-13`・`docs/adr/ADR-1018-public-sensitive-tables-rls-staged.md:23` |
 | T10 | `app.is_operator` を立てる関数・戻す関数がある。本番のアプリの DB ロール `salesanchor_app` は RLS を飛ばせない（`rolbypassrls=f`） | `backend/app/auth/dependencies.py:489`（`set_operator_context`）・同 :504 付近（`reset_operator_context`）・/tmp/CC報告ファイル/celery-unregistered-tasks-fix/k2/explain/result.txt Q6 |
@@ -111,7 +111,7 @@
 
 ### 便B 保守 API
 
-ルーター `backend/app/routers/ops.py` を新設し、`/api/v1/ops` に付ける（T17）。DB への読み書きの前に `set_operator_context`、commit の後に `reset_operator_context` を呼ぶ（T10）。
+ルーター backend/app/routers/ops.py（新設） を新設し、`/api/v1/ops` に付ける（T17）。DB への読み書きの前に `set_operator_context`、commit の後に `reset_operator_context` を呼ぶ（T10）。
 
 | # | 口 | 鍵 | 動き |
 |---|---|---|---|
