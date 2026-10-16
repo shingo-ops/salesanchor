@@ -15,7 +15,7 @@
 
 - あるべき姿: [ideal-state.md](ideal-state.md)（PO の言葉の転記）
 - KGI: [kgi.md](kgi.md)（PO 承認済み 2026-10-16）
-- 実装: 未着手
+- 実装: PR #4390 マージ・本番反映済み 2026-10-16 19:14 JST。KGI K1〜K4 すべて ○（[kgi.md](kgi.md)）
 
 ## 子文書
 
