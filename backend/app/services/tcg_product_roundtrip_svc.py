@@ -13,7 +13,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_code_collision_svc import find_code_collisions
-from app.services.tcg_product_import_svc import CSV_COLUMNS, LOOKUP_ARGS, LOOKUP_TABLES
+from app.services.tcg_product_import_svc import (
+    CSV_COLUMNS,
+    LOOKUP_ARGS,
+    LOOKUP_TABLES,
+    format_blank_confirmed,
+    parse_blank_confirmed,
+)
+from app.services.tcg_product_master_svc import format_matches_game, save_blank_confirmations
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -99,13 +106,19 @@ def is_update(raw: bytes) -> bool:
 
 
 def revision(snapshot: dict) -> str:
+    # ADR-1020 便2c: 印も指紋に入れる（v2）。v1 で書き出したファイルは見出しも合わないため戻せない
     canonical = json.dumps(
-        {"schema": TCG_SCHEMA, "product": snapshot["product"], **{key: snapshot[key] for key in WORDS}},
+        {
+            "schema": TCG_SCHEMA,
+            "product": snapshot["product"],
+            **{key: snapshot[key] for key in WORDS},
+            "blank_confirmed": sorted(snapshot.get("blank_confirmed") or []),
+        },
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
     )
-    return "v1:" + hashlib.sha256(canonical.encode()).hexdigest()
+    return "v2:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
 async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = None) -> list[dict]:
@@ -115,6 +128,9 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     # work_code → public.type_master (SSOT, INTEGER PK)
     joins.append("LEFT JOIN public.type_master work ON work.id=p.work_id")
     references.append("'work_code', work.code")
+    # ADR-1020 便2c: 細分類のコード
+    joins.append("LEFT JOIN public.product_formats fmt ON fmt.id=p.product_format_id")
+    references.append("'product_format_code', fmt.code")
     for field, table in _ROUNDTRIP_LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
         # Phase 3 SSOT: tcg_product_categories + division_code moved to public (INTEGER PK).
@@ -127,6 +143,11 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
             f"FROM public.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
         )
+    # ADR-1020 便2c: 「調べたが存在しない」の印
+    keyword_sql.append(
+        "COALESCE((SELECT jsonb_agg(c.field_code ORDER BY c.field_code) "
+        "FROM public.product_blank_confirmations c WHERE c.product_id=p.id),'[]'::jsonb) AS blank_confirmed"
+    )
     work_id_int = int(work_id) if work_id else None
     result = await db.execute(
         text(
@@ -149,20 +170,21 @@ _PRODUCT_FIELD_MAP = {
 }
 
 
-_ALL_REF_COLUMNS = {"work_code", *LOOKUP_TABLES}
+_ALL_REF_COLUMNS = {"work_code", "product_format_code", *LOOKUP_TABLES}
 
 
 def values(snapshot: dict) -> dict[str, str]:
     product = snapshot["product"]
     result = {}
     for field in CSV_COLUMNS:
-        if field in WORDS or field in _ALL_REF_COLUMNS:
+        if field in WORDS or field in _ALL_REF_COLUMNS or field == "blank_confirmed":
             continue
         # CSV フィールド名と public.products カラム名が異なる場合はマップする
         product_field = _PRODUCT_FIELD_MAP.get(field, field)
         result[field] = str(product.get(product_field) or "")
     result.update({key: str(snapshot["refs"].get(key) or "") for key in _ALL_REF_COLUMNS})
     result.update({key: encode_words([word["keyword"] for word in snapshot[key]]) for key in WORDS})
+    result["blank_confirmed"] = format_blank_confirmed(snapshot.get("blank_confirmed") or [])
     return {"product_id": str(product["id"]), "revision": revision(snapshot), **result}
 
 
@@ -209,6 +231,9 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
         schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
         result = await db.execute(text(f"SELECT to_jsonb(r) FROM {schema_prefix}.{table} r WHERE r.is_active=TRUE"))
         references[field] = {row[0]["code"]: row[0] for row in result.fetchall()}
+    # ADR-1020 便2c: 細分類のコード → 行（有効なものだけ）
+    format_result = await db.execute(text("SELECT to_jsonb(r) FROM public.product_formats r WHERE r.is_active=TRUE"))
+    formats = {row[0]["code"]: row[0] for row in format_result.fetchall()}
     plans = []
     seen = set()
     for number, record in enumerate(records[1:], 1):
@@ -234,7 +259,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
             errors.append("ROUNDTRIP_DUPLICATE_CODE")
         seen.add(code)
         snapshot = current.get(code)
-        plan: dict[str, Any] = {"row": item, "sets": {}, "words": {}}
+        plan: dict[str, Any] = {"row": item, "sets": {}, "words": {}, "marks": None}
         if snapshot is None:
             errors.append("ROUNDTRIP_UNKNOWN_CODE")
         elif row["revision"] != revision(snapshot):
@@ -247,7 +272,22 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                     continue
                 before: str | list[str] = old[field]
                 after: str | list[str] = row[field]
-                if field in WORDS:
+                if field == "blank_confirmed":
+                    marks, invalid = parse_blank_confirmed(row[field])
+                    if invalid:
+                        errors.extend("BLANK_CONFIRMED_INVALID_" + name for name in invalid)
+                        continue
+                    if format_blank_confirmed(marks) == old[field]:
+                        continue
+                    plan["marks"] = set(marks)
+                elif field == "product_format_code":
+                    if not row[field]:
+                        plan["sets"]["product_format_id"] = None
+                    elif row[field] not in formats:
+                        errors.append(f"UNKNOWN_PRODUCT_FORMAT_CODE_{row[field]}")
+                    else:
+                        plan["sets"]["product_format_id"] = formats[row[field]]["id"]
+                elif field in WORDS:
                     before = [w["keyword"] for w in snapshot[field]]
                     try:
                         after = decode_words(row[field])
@@ -282,6 +322,22 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                         except ValueError:
                             errors.append("RELEASE_DATE_FORMAT")
                 item["changes"].append({"field": field, "before": before, "after": after})
+            if not errors and ("product_format_id" in plan["sets"] or "work_id" in plan["sets"]):
+                final_format = plan["sets"].get("product_format_id", snapshot["product"].get("product_format_id"))
+                final_work = plan["sets"].get("work_id", snapshot["product"].get("work_id"))
+                if final_format is not None and final_work is not None and not await format_matches_game(
+                    db, int(final_format), int(final_work)
+                ):
+                    errors.append("PRODUCT_FORMAT_GAME_MISMATCH")
+            # ADR-1020 便2c: 確定のとき印を直すための、更新後の4項目
+            plan["blank_values"] = {
+                "name_en": row["english_title"],
+                "mark": row["mark"],
+                "release_date": row["release_date"],
+                "exclude_keywords": plan["words"].get(
+                    "exclude_keywords", [w["keyword"] for w in snapshot["exclude_keywords"]]
+                ),
+            }
             if item["changes"]:
                 item["action"] = "updated"
             if any(change["field"] == "mark" for change in item["changes"]):
@@ -324,7 +380,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         await db.execute(
             text(
                 "LOCK TABLE public.products, "
-                "public.product_search_keywords, public.product_exclude_keywords "
+                "public.product_search_keywords, public.product_exclude_keywords, public.product_blank_confirmations "
                 "IN SHARE ROW EXCLUSIVE MODE"
             )
         )
@@ -333,6 +389,8 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 f"LOCK TABLE {', '.join(('public' if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA) + '.' + table for field, table in _ROUNDTRIP_LOOKUP_TABLES.items())} IN SHARE MODE"
             )
         )
+        # ADR-1020 便2c: 細分類と作品の照合に使う表
+        await db.execute(text("LOCK TABLE public.product_formats, public.product_format_game_links IN SHARE MODE"))
         prior = await db.execute(
             text(f"SELECT id FROM {TCG_SCHEMA}.tcg_product_import_jobs WHERE raw_sha256=:digest"),
             {"digest": confirmed_digest},
@@ -364,7 +422,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 for field in plan["sets"]:
                     cast = (
                         f"CAST(:{field} AS INTEGER)"
-                        if field in ("work_id", "product_category_id", "product_kind_id")
+                        if field in ("work_id", "product_category_id", "product_kind_id", "product_format_id")
                         else f"CAST(:{field} AS uuid)"
                         if field in LOOKUP_ARGS.values()
                         else f"CAST(:{field} AS date)"
@@ -381,6 +439,15 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 )
             for field, words in plan["words"].items():
                 await replace_words(db, plan["id"], WORDS[field], words)
+            if plan["row"]["changes"]:
+                await db.execute(text("SET LOCAL app.is_operator = 'true'"))
+                await save_blank_confirmations(
+                    db,
+                    product_id=plan["id"],
+                    values=plan["blank_values"],
+                    confirmations=plan["marks"],
+                    actor=executed_by,
+                )
             row = plan["row"]
             await db.execute(
                 text(
