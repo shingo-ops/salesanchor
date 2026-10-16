@@ -201,6 +201,11 @@ def test_b5_item_id_lookup_includes_inactive_posts_with_current_rows_but_the_pla
     monkeypatch.setattr(review, "TCG_SCHEMA", SCHEMA)
     monkeypatch.setattr(review, "_BASE_FROM", review._base_from())
 
+    async def _no_reason_codes(_db):  # 理由コード表は検証対象外（この pg には表が無い）
+        return {}
+
+    monkeypatch.setattr(review, "load_review_reason_codes", _no_reason_codes)
+
     job = _add_job(pg)
     result_id = _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
     item_id = _item_id_of(pg, result_id)
