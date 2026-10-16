@@ -1,0 +1,70 @@
+chromium 147.0.7727.15
+比較した組: 32（場面 R1・R3/R4・R5 × 幅2 × テーマ2 × 状態）
+指標の総数（前後を突き合わせた数）: 3248  同じ指標: 2180  想定内の差: 1068  想定外の差(×): 0
+
+=== 想定内の差（指標ごと。件数と最初の1例）===
+[r1] accentColor x24: accent-color（auto → --accent）  例 (390, 'dark', 'r1', 'checked') i1_accentColor: auto -> rgb(91, 141, 217)
+[r1] cssHeight x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_cssHeight: 13px -> 14.6562px
+[r1] cssWidth x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_cssWidth: 13px -> 14.6562px
+[r1] cursor x24: input の cursor（default → pointer）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r1', 'checked') i1_cursor: default -> pointer
+[r1] gapInputToText x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_gapInputToText: 0 -> 8
+[r1] h x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_h: 13 -> 14.66
+[r1] inputCenterY x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_inputCenterY: 63.98 -> 61.86
+[r1] labelAlignItems x24: align-items（center → flex-start）  例 (390, 'dark', 'r1', 'checked') i1_labelAlignItems: center -> flex-start
+[r1] labelColumnGap x24: gap（今の値 → --space-2）  例 (390, 'dark', 'r1', 'checked') i1_labelColumnGap: normal -> 8px
+[r1] labelFontSize x24: font-size（継承 → --font-sm）  例 (390, 'dark', 'r1', 'checked') i1_labelFontSize: 16px -> 13.6px
+[r1] labelLineHeight x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_labelLineHeight: 25.6px -> 20.4px
+[r1] labelRowGap x24: gap（今の値 → --space-2）  例 (390, 'dark', 'r1', 'checked') i1_labelRowGap: normal -> 8px
+[r1] parentDisplay x24: label の display（flex → inline-flex）  例 (390, 'dark', 'r1', 'checked') i1_parentDisplay: flex -> inline-flex
+[r1] parentH x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_parentH: 25.59 -> 20.39
+[r1] parentTop x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_parentTop: 51.19 -> 54.53
+[r1] parentW x24: label の幅（行いっぱい → 中身の幅）  例 (390, 'dark', 'r1', 'checked') i1_parentW: 390 -> 148.23
+[r1] rootAlignItems x24: align-items（center → flex-start）  例 (390, 'dark', 'r1', 'checked') i1_rootAlignItems: center -> flex-start
+[r1] rootColumnGap x24: gap（今の値 → --space-2）  例 (390, 'dark', 'r1', 'checked') i1_rootColumnGap: normal -> 8px
+[r1] rootDisplay x24: label の display（flex → inline-flex）  例 (390, 'dark', 'r1', 'checked') i1_rootDisplay: flex -> inline-flex
+[r1] rootFontSize x24: font-size（継承 → --font-sm）  例 (390, 'dark', 'r1', 'checked') i1_rootFontSize: 16px -> 13.6px
+[r1] rootH x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_rootH: 25.59 -> 20.39
+[r1] rootLineHeight x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_rootLineHeight: 25.6px -> 20.4px
+[r1] rootRowGap x24: gap（今の値 → --space-2）  例 (390, 'dark', 'r1', 'checked') i1_rootRowGap: normal -> 8px
+[r1] rootTop x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_rootTop: 51.19 -> 54.53
+[r1] rootW x24: label の幅（行いっぱい → 中身の幅）  例 (390, 'dark', 'r1', 'checked') i1_rootW: 390 -> 148.23
+[r1] rowGapBetween x12: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') rowGapBetween: 0 -> 5.2
+[r1] textCenterY x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_textCenterY: 63.19 -> 64.53
+[r1] textFontSize x24: font-size（継承 → --font-sm）  例 (390, 'dark', 'r1', 'checked') i1_textFontSize: 16px -> 13.6px
+[r1] textFontWeight x24: font-weight（継承 → medium）  例 (390, 'dark', 'r1', 'checked') i1_textFontWeight: 400 -> 500
+[r1] textH x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_textH: 18 -> 16
+[r1] textLeft x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_textLeft: 13 -> 22.66
+[r1] textTop x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_textTop: 54.19 -> 56.53
+[r1] textW x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_textW: 147.75 -> 125.58
+[r1] top x24: 丸・文字の位置、行の高さ、2 行の縦の間隔（display・gap・font-size・align-items・line-height の変更に伴う）  例 (390, 'dark', 'r1', 'checked') i1_top: 57.48 -> 54.53
+[r1] w x24: 丸の大きさ（ブラウザ標準 → 1.1em）  例 (390, 'dark', 'r1', 'checked') i1_w: 13 -> 14.66
+[r34] accentColor x24: accent-color（auto → --accent。欄が透明なので見た目は変わらない）  例 (390, 'dark', 'r34', 'checked') i1_accentColor: auto -> rgb(91, 141, 217)
+[r5] accentColor x24: accent-color（標準 → --accent）  例 (390, 'dark', 'r5', 'checked') i1_accentColor: auto -> rgb(91, 141, 217)
+[r5] cssHeight x24: height（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_cssHeight: 13px -> 16px
+[r5] cssWidth x24: width（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_cssWidth: 13px -> 16px
+[r5] cursor x24: cursor（標準 → pointer）  例 (390, 'dark', 'r5', 'checked') i1_cursor: default -> pointer
+[r5] h x24: height（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_h: 13 -> 16
+[r5] parentW x24: td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r5', 'checked') i1_parentW: 45 -> 48
+[r5] tdW x24: td の幅（丸が大きくなったぶん）（設計 §5 実測 r1 の追記）  例 (390, 'dark', 'r5', 'checked') i1_tdW: 45 -> 48
+[r5] top x24: 行の高さ（丸の大きさに伴う）  例 (390, 'dark', 'r5', 'checked') i1_top: 159.69 -> 156.69
+[r5] w x24: width（標準 → 16px）  例 (390, 'dark', 'r5', 'checked') i1_w: 13 -> 16
+
+=== 想定外の差（全件・0 件）===
+なし
+
+=== R1 の今（前）の gap・marginTop の computed 値 ===
+(390, 'dark', 'r1', 'checked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(390, 'dark', 'r1', 'focus') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(390, 'dark', 'r1', 'unchecked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(390, 'light', 'r1', 'checked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(390, 'light', 'r1', 'focus') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(390, 'light', 'r1', 'unchecked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'dark', 'r1', 'checked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'dark', 'r1', 'focus') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'dark', 'r1', 'unchecked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'light', 'r1', 'checked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'light', 'r1', 'focus') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+(1280, 'light', 'r1', 'unchecked') label1 columnGap/rowGap: normal normal  label1 marginTop: 0px  label2 columnGap/rowGap: normal normal  label2 marginTop: 0px  2行の縦の間隔(前): 25.59 (後): 25.59
+
+=== R3・R4 の幅・高さ・位置・opacity・cursor の前後差 ===
+差のある組・指標: 0 []

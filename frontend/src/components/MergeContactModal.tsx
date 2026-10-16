@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
+import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
 import { getStatusPresentation } from "../utils/statusPresentation";
@@ -215,9 +216,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
                         }}
                       >
                         <td>
-                          {/* radio は TextField 対象外のため残置 */}
-                          <input
-                            type="radio"
+                          <RadioControl
                             name="master-candidate"
                             checked={c.id === selectedId}
                             onChange={() => {

@@ -39,6 +39,7 @@ celery_app = Celery(
         "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
         "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
         "app.tasks.ai_ops_heartbeat",  # ADR-1012 段階1 便5: celery の止まりの見張り
+        "app.tasks.viewer_inventory_cache",  # ADR-1019 段2: 閲覧ページの在庫の作り置き
     ],
 )
 
@@ -176,6 +177,11 @@ celery_app.conf.beat_schedule = {
     "ai-ops-celery-heartbeat": {
         "task": "app.tasks.ai_ops_heartbeat.celery_heartbeat",
         "schedule": 60.0,  # 1分
+    },
+    # ADR-1019 段2: 閲覧ページの在庫の作り置き（1分ごと）
+    "refresh-viewer-inventory": {
+        "task": "app.tasks.viewer_inventory_cache.refresh_viewer_inventory",
+        "schedule": 60.0,
     },
 }
 
