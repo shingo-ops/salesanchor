@@ -4263,3 +4263,19 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 前後実測の結果: 指標 3248（同じ 2180・想定内の差 1068・想定外の差 0）。比較: docs/handoff/design-system-recon/evidence-20260910/ay5-measure-compare.txt（前後の画像 ay5-*.png・横並び ay5-side-*.png も同じ場所）。R3・R4（色見本）は幅・高さ・位置・opacity・cursor の差 0、差は accent-color だけ。R1 の今（前）の gap は normal・marginTop は 0px（`--spacing-*` が未定義のため）。
 - 対象外: ChoiceCardGroup.tsx（すでに金型の中）、check-ui-governance への radio 種別の追加（AY-5b として別に提案）、寸法 sm・dataColor の口。
 - 残件: ①RegisterPage.tsx の未定義トークン `--spacing-*`（R1・R2 以外の 22 か所） ②pages-layout.css の `.color-swatch-legacy::after` の直書き「現在」（ADR-027） ③R1・R2 の質問文の fieldset/legend 化と R5〜R7 の aria-label ④Radio を .form-group の中に置くと components.css:11・:19 の規則で崩れる件（今回の使い手は .form-group の外） ⑤AY-5b（自動チェックに radio 種別を足す）。
+
+#### AY-5b 生ラジオの見張り（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（自動チェックに、金型を使わない生ラジオを止める項目を足す）。
+- 設計: docs/handoff/ay5b-radio-guard/design.md（recon.md 併置）。
+- 変更: scripts/check-ui-governance.js に種別 `radio` を追加（type が radio の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T30〜T37 を追加し、試験は 31 件から 39 件。docs/CC_UI_GOVERNANCE.md の禁止表に生ラジオの行を追加。ADR-144 に追記節を追加。
+- 範囲: 今と同じ `frontend/src/pages/` の .tsx（PR の変更ファイル）。features/・components/ は検査しない。今の pages/ の生ラジオは 0 件。
+- 効果: pages/ の .tsx に生の `<input type="radio">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
+
+#### AY-5c 色見本の「現在」を翻訳キーへ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（ロール編集の色見本の下の「現在」を、CSS 直書きから翻訳キー経由にする。ADR-027）。AY-5 の残件②の対応。
+- 設計: docs/handoff/ay5c-swatch-current-i18n/design.md（recon.md 併置）。
+- 変更: frontend/src/locales/ja.json・en.json の roles に `currentColorBadge`（ja「現在」・en「Current」）を追加。RolesPage.tsx の `.color-swatch-legacy` の label に `data-current-label={t("roles.currentColorBadge")}` を追加。pages-layout.css の `.color-swatch-legacy::after` を `content: attr(data-current-label);` に変更（前例: components.css の `content: attr(data-tooltip);`）。::after の位置・大きさ・色は変更なし。
+- 確認結果（1280 幅・ライト／ダーク、前は origin/main の build CSS、後は作業ツリーの build CSS）: 前 ja と 後 ja の ::after（content・font-size・color・bottom・left・transform・white-space）の差は 0（ライト 0・ダーク 0）。後 en の content は "Current"（ライト・ダークとも）。後 en で前 ja と違うのは transform の水平移動量だけ（-11.2031px から -20.7578px。文字幅が変わるため。中央寄せの宣言は同じ）。CSS の content に日本語は 0 件（git grep）。
+- 証跡: docs/handoff/design-system-recon/evidence-20260910/ay5c-measure.cjs・ay5c-render.tsx・ay5c-measure.json・ay5c-measure.txt。

@@ -126,3 +126,89 @@
 - コマンド:
   - フロント `npm run build` / `npm run lint` / `npm run test:unit`（`frontend/package.json`）
   - バックエンド `pytest -q --tb=short`（`backend/Makefile:29-31`）/ `make lint`
+
+---
+
+## 便2 追補 recon（2026-10-16・Gemini 列「—」・システム商品名・Gemini 要約）
+
+PO 指摘（2026-10-16、便1 本番反映後の画面確認）: 「商品名が未解決になっているのだがこれはなぜ？」→ PO 決定「geminiは原文を抽出するだけなので行番号と数量と単価以外は"-"と表示するのが正解でシステムが未解決になっているのは修正したい。それとgeminiの要約もスライドページ内に表示することは出来る？見える化したい」→ 進め方に「合意」。
+
+基準: origin/main 539b0fe41。本番 DB は 2026-10-16 に SELECT のみで確認（生出力 /tmp/CC報告ファイル/inv-drawer-name-db*.txt, inv-drawer-summary-db2.txt, inv-drawer-fix-db.txt）。
+
+### R2-1 なぜ「未解決」か（事実）
+- 本番の既定エンジンは v102（docker-compose.yml:226 `LINE_ANALYSIS_ENGINE=${LINE_ANALYSIS_ENGINE:-v102}`、2026-10-10 537cb910c 便E で既定切替）。
+- v102 の extraction_items INSERT は id, extraction_job_id, line_start, line_end, raw_price, raw_quantity, source_lines, gemini_index, created_at のみ（backend/app/services/line_analysis_v102_svc.py:497-510）。raw_product_name / raw_unit / raw_state / raw_memo は書かない。設計上も「v102 の件の名前は Gemini の出力ではないので入れない」（docs/handoff/v102-prod-switch/design.md:72）。
+- 本番 DB: raw_product_name が空の件数は 10/9 まで 1日0〜3件、10/10 から全件（10/10 1336/1336 … 10/16 433/433）。例 extraction_items 4b3ba85d-…（L11-12「◎30th CELEBRATIONカードセット 9種セット / 23,000@20」）は raw_quantity=20・raw_price=23,000 以外は空文字。analysis_results.product_id=440301、products.name「MEGA 30th CELEBRATION カードセット（9種セット）」。
+- API: backend/app/services/tcg_analysis_review_svc.py:240,308 `gemini.name = ei.raw_product_name or ""`、:309-314 unit/state/memo も同様。:252,320 で `system.product_title = p.name`（商品マスタ名）を既に返している。:268 `is_v102 = starts_with(ej.prompt_version, :v102_prefix)` を返している。
+- 表示: frontend/src/features/tcg-analysis-review/ItemComparison.tsx:56-57 Gemini 列は `rawValue(item.gemini[key]) || unresolved`。:39 systemCell は name を `item.gemini.name || unresolved`、採用元 geminiExtracted。system.product_title は ItemComparison.tsx で一度も参照されていない（`git log -S product_title -- ItemComparison.tsx` 0件）。この判定の起源は 4b5d526c9（2026-09-02、v6 時代）で、v102 切替時に見直した記録は見つからない。
+- 在庫表タイトルは tcg_distribution_svc.py:293 `COALESCE(p.name,'')`（同じ商品マスタ）。在庫表の名前とスライドの「未解決」が食い違う理由はここ。
+- 比較表は要確認ページ（ReviewItemDrawer.tsx:199）・仕入元詳細（SupplierDetailView.tsx:116）・在庫表スライドで共用。要確認ページの 10/10 以降の行も同じ症状。
+
+### R2-2 i18n キー（事実）
+- `tcgAnalysisReview.notApplicable` = "—"（frontend/src/locales/ja.json:4694, en.json:4694）。ItemComparison.tsx:52 で `na` として作品・商品ID・販売状況の Gemini 列に使用中。
+- `tcgAnalysisReview.unresolved` :4686、`tcgAnalysisReview.systemConfirmed` :4701「System確定」、`tcgAnalysisReview.geminiExtracted` :4700。
+- 既存テスト frontend/src/features/tcg-analysis-review/ItemComparison.test.tsx:38-44, :49, :64-66 が現行の判定を固定している。
+
+### R2-3 Gemini の要約（事実）
+- 保存先は public.extraction_attempts.thought_summaries（jsonb 配列。migrations/20261012_200000_add_extraction_attempts_thought_summaries.sql:2）。書き込みは backend/app/services/tcg_extraction_record_svc.py:133-170。
+- 本番: 記録ありの試行は 10/12 29/78、10/13 以降は全件（10/16 33/33）。配列要素数は最大1、文字数は平均 2541・最大 4126。英語。1つの抽出ジョブ（＝投稿）に1つ。completed の試行が2件以上あるジョブは 228。
+- 索引 ix_pub_extraction_attempts_job_started (extraction_job_id, started_at DESC, id DESC) が本番にある。
+- 画面で表示している部品は無い（frontend で `thought_summar|thoughtSummar` 0件）。読み出しは super admin 専用の診断 API の個別取得（tcg_extraction_record_svc.py:273-295、routers/tcg_diagnostics.py:113-129）だけ。
+- 「ジョブの最新の試行」を選ぶ既存 SQL の型: backend/app/routers/tcg_analysis_dashboard.py:1089-1094 の LEFT JOIN LATERAL（failed 版）。
+- analysis-results の応答型 AnalysisResultItem（backend/app/routers/tcg_analysis_review.py:81-93）。未定義キーは response_model で落ちるため、足すなら型にも足す必要がある。
+- 要確認ページの1ページは20件（NeedsReviewTabsPanel.tsx:25 PAGE_SIZE）、API の上限は 500（tcg_analysis_review.py:126）。
+
+### R2-4 部品（事実）
+- frontend/src/components/ に折りたたみ（Accordion/Disclosure/Details）と長文表示の金型は無い。
+- ReviewItemDrawer.tsx の構成: 理由ブロック :155-191 → TwoColumn（原文 | 比較）:192-206 → 修正ウィザード :207-217。原文・比較の見出しは同ファイルの既存見出しの型を使っている。
+- 原文の折り返し表示の既存 CSS: frontend/src/features/tcg-analysis-review/source-raw-pane.css:56（white-space: pre-wrap）。
+
+## 便3 追補 recon（2026-10-16・スライドで直す機能）
+
+PO 決定（2026-10-16）: 質問「スライドから直したら、DB・シート・閲覧ページも更新されるようにしますか？（y/n）」に「y」。
+調査: Sonnet（読み取りのみ）＋本番の読み取り2件（Opus）。生出力: /tmp/CC報告ファイル/inv-edit-recon-*.txt、inv-edit-recon2-*.txt、inv-edit-recon3-*.txt、inv-edit-env.txt、inv-edit-engine-count.txt。
+
+### R3-1 直す操作と書き込み先（正本は analysis_results）
+| 操作 | API | 書き込み |
+|---|---|---|
+| 商品の付け替え | POST /tcg/items/{id}/corrections（field_name=product_id） | item_corrections に INSERT＋同じ取引で public.analysis_results の product_id・pid_basis='MANUAL'・pid_resolved を UPDATE（backend/app/services/item_corrections_svc.py:59-73） |
+| 状態 | 同上（condition_review） | item_corrections INSERT（backend/app/services/tcg_condition_review_svc.py:373-376）＋ analysis_results の condition_* を UPDATE（:378-388） |
+| 数量・単価・単位・メモ・販売状況 | POST /tcg/items/{id}/value-override | item_corrections INSERT＋ analysis_results UPDATE（backend/app/services/v102_human_decisions_svc.py:480-487） |
+| 商品マスタ登録・検索ワード追加 | POST /tcg/products、/tcg/products/{id}/search-keywords | public.products 等（analysis_results は書かず、画面がそのあと付け替えを呼ぶ: frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:205,259） |
+- 権限: 書き込み API はすべて `require_super_admin`（backend/app/routers/item_corrections.py:148,199,231,273,301）。在庫表のスライドは super admin かつ PC のときだけ開く（frontend/src/pages/inventory/InventoryPage.tsx:603）。
+- 無効なソース由来・is_current=FALSE・v6 の行を拒否する条件は無い（review-ack だけ v6 を 409: v102_human_decisions_svc.py:455-466）。拒否は item 無し 404 と source_message_id 不一致 422（:446-452）。
+
+### R3-2 再解析で人の修正は消えない
+- run_v102_analysis は item_corrections を読んで反映する（backend/app/services/line_analysis_v102_svc.py:1293 → v102_human_decisions_svc.py:231、商品 :808-809、状態 :810-818、値 :954-956）。v6 の解析も値の修正を読む（backend/app/services/tcg_analyzer_svc.py:1477）。
+- 固定テスト: backend/tests/test_v102_human_decisions_pg.py:116,143,195、backend/tests/test_v102_value_overrides_pg.py:93。
+
+### R3-3 直したあとに続いて起きること（コード上）
+| 経路 | v102 の行 | v6 の行 |
+|---|---|---|
+| 商品付け替え | 再解析を積む（item_corrections.py:180-181）→ 再解析後に tcg.review の合図（backend/app/tasks/tcg_extraction.py:696-703）とシート配信の予約（:670-693） | analysis_results の UPDATE だけ。**配信予約も合図も無い**（item_corrections.py:180-181 は v102 だけ） |
+| 状態 | 同上（item_corrections.py:159-160 → :124-131） | **同上（配信予約なし）** |
+| 値5項目 | 再解析→合図・配信予約。middleware も合図（backend/app/realtime/topics.py:15-22） | 配信予約を直接呼ぶ（item_corrections.py:288-290）。middleware が合図 |
+- 定期的なシート配信は無い（backend/app/celery_app.py の beat に配信タスクなし）。したがって v6 の商品・状態の修正は、次に別の投稿の抽出や修正が配信を予約するまでシートに出ない。
+- 本番の TCG_AUTO_DISTRIBUTE: backend と celery-worker の両方で `1`（2026-10-16 読み取り、/tmp/CC報告ファイル/inv-edit-env.txt）。
+- 配信予約は60秒後に1回（Redis キー nx・TTL 600秒）。解析中（analysis_runs 未完了など）は保留（backend/app/services/tcg_distribution_svc.py:867-927）。
+
+### R3-4 在庫表・閲覧ページの出どころ
+- アプリ在庫表 GET /inventory は、読むたびに analysis_results を直接読む（backend/app/routers/inventory_offers.py:314-424、tcg_distribution_svc.py:274〜）。写しは無い。画面の再読み込みは検索・絞り込みの変更時だけで、合図の購読も定期取得も無い（InventoryPage.tsx:195-247）。
+- 閲覧ページ（ADR-1019）は1分ごとに build_distribution_rows の結果を Redis に置き、それを返す（backend/app/tasks/viewer_inventory_cache.py:72-99、backend/app/celery_app.py:181-185、backend/app/routers/viewer.py:205-218）。analysis_results が直れば最大約1分で変わる。
+- 合図 tcg.review は global 範囲で、super admin の接続だけに届く（backend/app/realtime/hub.py:32-41）。購読フック useRealtimeRefresh(topics, reload)（frontend/src/hooks/useRealtimeRefresh.ts:15）は自分が出した合図を無視し、1.5秒まとめて1回 reload する。
+
+### R3-5 スライド部品の現状
+- InventoryRowDrawer は ReviewItemDrawer に item・viewOnly・onClose・onRefresh={load}・headerSlot を渡す。load は ID 指定でスライドの中身だけ取り直し、在庫表の一覧は取り直さない（frontend/src/features/inventory/InventoryRowDrawer.tsx）。InventoryPage から InventoryRowDrawer への props は row・onClose だけ（InventoryPage.tsx:622）。
+- ReviewItemDrawer に key が無く、タブを切り替えても内部の state（選んだ行 scope など、ReviewItemDrawer.tsx:50-62）が持ち越される。
+- viewOnly を外すと、理由が空の行でも比較表の行クリックで修正ウィザードが出る（ReviewItemDrawer.tsx:70,205,214-223、reviewFixRows.ts）。商品行は「付け替え」（未登録系の理由があれば「マスタ登録」も）、値の行は「値の修正」、状態は isConditionFixable のときだけ（ReviewFixWizard.tsx:37-62）。
+- 直したあと onRefresh が呼ばれる: ReviewProductFixForm.tsx:81、ReviewRegisterProductForm.tsx:175、ConditionReviewPanel.tsx:74、ReviewValueFixForm.tsx:89。
+
+### R3-6 本番の在庫表の行（まとめ前・簡略条件）
+| 由来 | 行 | 投稿 | うち無効なソース由来 |
+|---|---|---|---|
+| v102 | 1861 | 348 | 1019 |
+| v6 | 1619 | 450 | 1405 |
+（/tmp/CC報告ファイル/inv-edit-engine-count.txt。条件は distribution_rows_sql の簡略版。状態の除外・投稿の古さ・まとめを省いたため、画面の件数とは一致しない。v6 の行が現に多数あることの確認に使う）
+
+### R3-7 既存 ADR
+- ADR-1014（在庫表＝配信行）、ADR-154（配信は needs_review=false）、ADR-158（is_current）、ADR-1016（即時反映の合図）、ADR-1019（閲覧ページ・写しを作らない）。「在庫表のスライドで直したら配信される」を決めた ADR は無い（git grep -i docs/adr distribution|配信|item_corrections|human_decision、FEATURE-INDEX.md）。

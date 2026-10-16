@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-16 / ADR 総数: 180 件
+最終更新: 2026-10-16 / ADR 総数: 181 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -199,6 +199,7 @@
 | [ADR-1018](./ADR-1018-public-sensitive-tables-rls-staged.md) | ADR-1018: public の機微 11 表への RLS は段階導入し、表ごとに型を決める | Accepted | — | — |
 | [ADR-1019](./ADR-1019-inventory-viewer-separate-accounts.md) | ADR-1019: 在庫の閲覧専用ページは、アプリと交わらない閲覧専用アカウントで開く | Accepted | — | — |
 | [ADR-1020](./ADR-1020-shared-product-required-fields.md) | ADR-1020: 共用商品の登録では9項目を必須にし、空にするのは「調べたが無い」と記録したときだけにする | Accepted | — | — |
+| [ADR-1021](./ADR-1021-bulk-condition-state.md) | ADR-1021: バルク系の商品で状態語が無いときは状態「Bulk」（配信可）にする。価格は1枚単価にそろえ、セット情報は備考に出す（価格は便2） | Accepted | — | — |
 
 ## ステータス凡例
 

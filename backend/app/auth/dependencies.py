@@ -27,6 +27,7 @@ from app.cache import (
     is_token_blacklisted,
     record_auth_failure,
 )
+from app.client_ip import get_client_ip as _get_client_ip
 from app.database import get_db
 from app.models import Tenant, User
 
@@ -65,14 +66,6 @@ def _init_firebase():
         else:
             firebase_admin.initialize_app()
         _firebase_initialized = True
-
-
-def _get_client_ip(request: Request) -> str:
-    """クライアントIPをリバースプロキシ対応で取得する。"""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 _INVALID_TOKEN_DETAIL = "無効な認証トークンです"

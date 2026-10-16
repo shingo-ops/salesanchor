@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -91,8 +92,46 @@ async def test_hold_touches_neither_cache_nor_fail_count():
     redis = FakeRedis()
     with _patch_build(result=_built("hold", message="m")):
         assert await vic.refresh_once(AsyncMock(), redis) == "hold"
-    assert redis.set_calls == [vic.LOCK_KEY]
+    assert redis.set_calls == [vic.LOCK_KEY, vic.LAST_HOLD_TS_KEY]  # 保留の時刻だけは書く（段2b）
     assert vic.CACHE_KEY not in redis.store and vic.FAIL_KEY not in redis.store
+
+
+async def test_ok_writes_updated_ts_with_ttl():
+    redis = FakeRedis()
+    with _patch_build(result=_built("ok", [_row(1)])):
+        assert await vic.refresh_once(AsyncMock(), redis) == "ok"
+    assert abs(int(redis.store[vic.UPDATED_TS_KEY]) - time.time()) <= 5
+    assert redis.ttls[vic.UPDATED_TS_KEY] == 86400
+    assert vic.LAST_HOLD_TS_KEY not in redis.store
+
+
+async def test_hold_writes_only_last_hold_ts_with_ttl():
+    redis = FakeRedis()
+    with _patch_build(result=_built("hold", message="m")):
+        assert await vic.refresh_once(AsyncMock(), redis) == "hold"
+    assert abs(int(redis.store[vic.LAST_HOLD_TS_KEY]) - time.time()) <= 5
+    assert redis.ttls[vic.LAST_HOLD_TS_KEY] == 86400
+    assert set(redis.store) == {vic.LOCK_KEY, vic.LAST_HOLD_TS_KEY}
+
+
+async def test_unset_error_locked_write_neither_ts_key(notify):
+    redis = FakeRedis()
+    assert await _refresh(redis, result=_built("unset", message="m")) == "failed"
+    assert await _refresh(redis, result=_built("error", message="m")) == "failed"
+    assert await _refresh(redis, exc=RuntimeError("boom")) == "failed"
+    redis.store[vic.LOCK_KEY] = "1"
+    with _patch_build(result=_built("ok", [_row(1)])):
+        assert await vic.refresh_once(AsyncMock(), redis) == "locked"
+    assert vic.UPDATED_TS_KEY not in redis.store and vic.LAST_HOLD_TS_KEY not in redis.store
+
+
+async def test_hold_ts_set_exception_still_returns_hold_and_not_counted(notify):
+    redis = FakeRedis()
+    redis.fail_set_for = {vic.LAST_HOLD_TS_KEY}
+    with _patch_build(result=_built("hold", message="m")):
+        assert await vic.refresh_once(AsyncMock(), redis) == "hold"
+    assert vic.FAIL_KEY not in redis.store
+    notify.assert_not_awaited()
 
 
 async def test_unset_keeps_cache_and_counts_failure(notify):

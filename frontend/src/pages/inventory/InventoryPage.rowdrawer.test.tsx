@@ -14,6 +14,13 @@ vi.mock('../../lib/api', () => ({
   },
 }));
 
+vi.mock('../../features/tcg-analysis-review/ConditionReviewPanel', async () => ({
+  ...(await vi.importActual<typeof import('../../features/tcg-analysis-review/ConditionReviewPanel')>('../../features/tcg-analysis-review/ConditionReviewPanel')),
+  ConditionReviewPanel: (props: { onRefresh: () => Promise<void> }) => (
+    <button type="button" data-testid="condition-panel" onClick={() => void props.onRefresh()}>refresh</button>
+  ),
+}));
+
 const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: 'cat', mark: null,
   condition: 'sealed', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
@@ -27,6 +34,7 @@ const analysis = {
     extraction_item_id: 'item-1', source_message_id: 'msg-1', provider: 'S', raw_text: 'original line text',
     gemini: { name: 'gemini-name' }, system: { work_name: 'system-title' },
     review_reason_details: [], review_issues: [],
+    condition_review: { condition_id: '1', review_version: 'v', needs_review: true, review_reasons: 'condition_unknown', confirmed: false, classification: 'none' },
   }],
 };
 
@@ -89,5 +97,20 @@ describe('InventoryPage row drawer', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(analysisCalls()).toHaveLength(0);
     expect(screen.queryByText('Analysis details')).toBeNull();
+  });
+
+  it('E5: a saved fix in the panel reloads /inventory (onChanged)', async () => {
+    await setup(true);
+    renderPage();
+    const rowEl = await screen.findByTestId('inventory-row-r1');
+    await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/me/permissions'));
+    await new Promise((r) => setTimeout(r, 30));
+    fireEvent.click(rowEl);
+    await screen.findByText('original line text');
+    const inventoryCalls = () => mock.get.mock.calls.filter(([u]) => String(u).startsWith('/inventory?')).length;
+    const before = inventoryCalls();
+    fireEvent.click(screen.getByRole('row', { name: /^Condition/ }));
+    fireEvent.click(screen.getByTestId('condition-panel'));
+    await waitFor(() => expect(inventoryCalls()).toBe(before + 1));
   });
 });

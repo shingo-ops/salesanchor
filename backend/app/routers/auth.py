@@ -13,7 +13,12 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import self_tokens
-from app.auth.dependencies import _get_client_ip, require_super_admin, set_tenant_context
+from app.auth.dependencies import (
+    _get_client_ip,
+    clear_tenant_context,
+    require_super_admin,
+    set_tenant_context,
+)
 from app.auth.password_policy import check_password
 from app.auth.passwords import hash_password, needs_rehash, verify_password
 from app.auth.schemas import UserRegister, UserResponse
@@ -86,6 +91,7 @@ async def register_user(
         )
 
     # ユーザー作成（認証は Firebase が担当、DB にパスワードは保存しない）
+    await set_tenant_context(db, tenant.id)
     user = User(
         tenant_id=tenant.id,
         username=data.username,
@@ -95,6 +101,7 @@ async def register_user(
     )
     db.add(user)
     await db.flush()
+    await clear_tenant_context(db)
 
     # 監査ログ記録（パスワード等の機密情報は記録しない）
     await record_audit_log(
@@ -247,7 +254,7 @@ async def self_login(
     user_row = (
         await db.execute(
             text(
-                "SELECT id, email, is_active, password_argon2_hash, failed_login_count, locked_until "
+                "SELECT id, email, tenant_id, is_active, password_argon2_hash, failed_login_count, locked_until "
                 "FROM public.users WHERE lower(email) = :email"
             ),
             {"email": email},
@@ -260,6 +267,7 @@ async def self_login(
         raise _invalid_credentials()
 
     if not await asyncio.to_thread(verify_password, user_row.password_argon2_hash, data.password):
+        await set_tenant_context(db, user_row.tenant_id)
         counted = (
             await db.execute(
                 text(
@@ -276,10 +284,12 @@ async def self_login(
                 ),
                 {"until": now + self_tokens.LOGIN_LOCK_DURATION, "id": user_row.id},
             )
+        await clear_tenant_context(db)
         await db.commit()
         await record_auth_failure(ip)
         raise _invalid_credentials()
 
+    await set_tenant_context(db, user_row.tenant_id)
     await db.execute(
         text(
             "UPDATE public.users SET failed_login_count = 0, locked_until = NULL, last_login = :now "
@@ -293,6 +303,7 @@ async def self_login(
             text("UPDATE public.users SET password_argon2_hash = :h WHERE id = :id"),
             {"h": new_hash, "id": user_row.id},
         )
+    await clear_tenant_context(db)
     raw, expires_at = await self_tokens.issue_refresh_token(
         db, user_row.id, request.headers.get("user-agent")
     )
@@ -451,6 +462,7 @@ async def password_reset_confirm(
         raise HTTPException(status_code=400, detail=INVALID_OR_EXPIRED_TOKEN)
 
     new_hash = await asyncio.to_thread(hash_password, data.new_password)
+    await set_tenant_context(db, user_row.tenant_id)
     await db.execute(
         text(
             "UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :now, "
@@ -458,6 +470,7 @@ async def password_reset_confirm(
         ),
         {"h": new_hash, "now": now, "uid": user_row.id},
     )
+    await clear_tenant_context(db)
     await db.execute(
         text(
             "UPDATE public.auth_refresh_tokens SET revoked_at = :now "

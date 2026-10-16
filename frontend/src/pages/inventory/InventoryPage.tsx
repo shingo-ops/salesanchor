@@ -619,7 +619,7 @@ export default function InventoryPage() {
         mobileCards
         emptyState={t("inventory.noResults")}
       />
-      {drawerRow && <InventoryRowDrawer row={drawerRow} onClose={() => setDrawerRow(null)} />}
+      {drawerRow && <InventoryRowDrawer row={drawerRow} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
     </PageLayout>
   );
 }
