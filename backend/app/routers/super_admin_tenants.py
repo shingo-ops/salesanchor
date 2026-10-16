@@ -19,7 +19,11 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import (
+    require_super_admin,
+    reset_operator_context,
+    set_operator_context,
+)
 from app.cache import invalidate_tenant_cache
 from app.database import get_admin_db, get_db
 
@@ -41,6 +45,9 @@ async def delete_tenant_logical(
     """テナントを論理削除する（is_active=False）。可逆操作。"""
     # SELECT〜UPDATE〜audit INSERT を同一トランザクション内に収める（TOCTOU 防止）
     async with db.begin():
+        # ADR-1018 段階③便B: public.tenants への書込は運営文脈のときだけ通る
+        # （失敗時はロールバックで SET も戻る。成功時はブロック末尾で reset）
+        await set_operator_context(db)
         row = (
             await db.execute(
                 text(
@@ -83,6 +90,7 @@ async def delete_tenant_logical(
                 "actor_email": current_user.email,
             },
         )
+        await reset_operator_context(db)
     # get_current_tenant を使わない設計のため reset_tenant_context() 不要
     # get_db finally 句が context をクリアする
 
@@ -163,10 +171,14 @@ async def delete_tenant_physical(
 
         # 6. public.tenants DELETE（CASCADE → public.users 連鎖削除）
         async with db.begin():
+            # ADR-1018 段階③便B: 運営文脈のときだけ削除できる
+            # （失敗時はロールバックで SET も戻る。成功時はブロック末尾で reset）
+            await set_operator_context(db)
             await db.execute(
                 text("DELETE FROM public.tenants WHERE id = :id"),
                 {"id": tenant_id},
             )
+            await reset_operator_context(db)
 
         # 7. Redis キャッシュを削除（DROP 成功後。テナント行削除前でも後でも可）
         await invalidate_tenant_cache(tenant_id)

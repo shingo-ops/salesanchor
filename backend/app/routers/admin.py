@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import (
+    require_super_admin,
+    reset_operator_context,
+    set_operator_context,
+)
 from app.database import get_admin_db, get_db
 from app.models import Tenant, User
 from app.schemas.tenant import TenantCreate, TenantResponse
@@ -56,6 +60,8 @@ async def register_tenant(
     # create_tenant_schema が途中で失敗した場合は except で明示ロールバックし、
     # tenant レコードが残らないよう保証する。
     try:
+        # ADR-1018 段階③便B: public.tenants への書込は運営文脈のときだけ通る
+        await set_operator_context(db)
         tenant = Tenant(
             tenant_name=data.tenant_name,
             tenant_code=data.tenant_code,
@@ -85,6 +91,8 @@ async def register_tenant(
     except Exception:
         await db.rollback()
         raise
+    finally:
+        await reset_operator_context(db)
 
     return TenantResponse(
         id=tenant.id,

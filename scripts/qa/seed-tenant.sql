@@ -65,6 +65,8 @@ $assert_tenant$;
 -- ---------------------------------------------------------------------------
 SET search_path = tenant_006, public;
 SELECT set_config('app.tenant_id', '6', false);
+-- ADR-1018 段階③便B: public.tenants への書込（節 11）は運営文脈のときだけ通る
+SELECT set_config('app.is_operator', 'true', false);
 
 -- ---------------------------------------------------------------------------
 -- 2. TRUNCATE seed 対象テーブル (FK 依存順)
