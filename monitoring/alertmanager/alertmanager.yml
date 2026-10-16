@@ -15,7 +15,7 @@ receivers:
         send_resolved: true
   - name: ops-api
     webhook_configs:
-      - url: https://49.212.137.46/api/v1/ops/alertmanager
+      - url: https://api.salesanchor.jp/api/v1/ops/alertmanager
         send_resolved: true
         max_alerts: 100
         timeout: 10s
@@ -23,5 +23,3 @@ receivers:
           authorization:
             type: Bearer
             credentials_file: /etc/alertmanager/secrets/ops-ingest-token
-          tls_config:
-            server_name: api.salesanchor.jp
