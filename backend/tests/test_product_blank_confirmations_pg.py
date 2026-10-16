@@ -45,8 +45,8 @@ async def _make_product(admin_engine) -> int:
     async with admin_engine.begin() as conn:
         row = await conn.execute(
             text(
-                "INSERT INTO public.products (product_code, name, category_class, is_active) "
-                "VALUES (:code, 'blank-test', 'Box', true) RETURNING id"
+                "INSERT INTO public.products (product_code, name) "
+                "VALUES (:code, 'blank-test') RETURNING id"
             ),
             {"code": code},
         )
