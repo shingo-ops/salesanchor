@@ -29,6 +29,8 @@ deploy.yml が .env に書く SMTP_PASSWORD の `$` が docker compose に変数
 ## 維持の仕組み
 他の secrets に `$` が入っても同じ形（単一引用符）で守れる。ただし今回は SMTP_PASSWORD の1行のみ。他 secrets への横展開は別便とする。
 
+守り手: deploy.yml を変える PR の審査役（Opus）。次回 deploy ログの "variable is not set" 警告0件で確認する。
+
 ## 外部・過去事例の参照と我々への応用
 - docker compose 公式: "Single-quoted (') values are used literally."（出典 https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/ ）
 - 応用: .env 書き出し時に単一引用符で囲めば `$` がリテラル扱いとなる。ローカル検証で X='ab$scd' が保持され、引用符なしの Y は切り詰められることを確認（/tmp/CC報告ファイル/smtp_fix/verify.txt）。
