@@ -234,21 +234,35 @@ def create_soldout_extra_targets(cursor, schema):
     cursor.execute((MIGRATIONS / SOLDOUT_EXTRA_TARGETS).read_text(encoding="utf-8").replace("public.analysis_", f"{schema}.analysis_"))
 
 
+def _has_columns(cursor, table_schema, table_name, columns):
+    """information_schema.columns で全部の列が既にあるかを見る（ALTER を流さず AccessExclusiveLock を避けるため）。"""
+    cursor.execute(
+        "SELECT count(DISTINCT column_name) FROM information_schema.columns WHERE table_schema = %s AND table_name = %s AND column_name = ANY(%s)",
+        (table_schema, table_name, list(columns)),
+    )
+    return cursor.fetchone()[0] == len(columns)
+
+
 def apply_bundle_sale_columns(cursor, schema):
     """ADR-1027 便1 の列を試験 DB に足す。何回呼んでもよい。
 
     analysis_results.bundle_size（public と schema の両方。本番の migration をそのまま）と、配信が読む line_units.name_ja/name_en。
     試験 DB では public.units が実表で line_units が無い（本番は line_units が実表・units が VIEW）。
     無い／VIEW（前回の呼び出しが作った）: units に列を足し、無ければ同名の VIEW を作る。実表: 本番の migration をそのまま当てる。
+    並列試験で毎回 AccessExclusiveLock を取らないよう、列が既にあれば ALTER を流さない（CI のデッドロック対策）。
     """
-    cursor.execute((MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text())
-    cursor.execute(f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer")
+    if not _has_columns(cursor, "public", "analysis_results", ["bundle_size"]):
+        cursor.execute((MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text())
+    if not _has_columns(cursor, schema, "analysis_results", ["bundle_size"]):
+        cursor.execute(f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer")
     cursor.execute("SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'line_units'")
     kind = cursor.fetchone()
     if kind is not None and kind[0] == "r":
-        cursor.execute((MIGRATIONS / "20261017_220100_add_line_units_display_names.sql").read_text())
+        if not _has_columns(cursor, "public", "line_units", ["name_ja", "name_en"]):
+            cursor.execute((MIGRATIONS / "20261017_220100_add_line_units_display_names.sql").read_text())
     else:
-        cursor.execute("ALTER TABLE public.units ADD COLUMN IF NOT EXISTS name_ja text, ADD COLUMN IF NOT EXISTS name_en text")
+        if not _has_columns(cursor, "public", "units", ["name_ja", "name_en"]):
+            cursor.execute("ALTER TABLE public.units ADD COLUMN IF NOT EXISTS name_ja text, ADD COLUMN IF NOT EXISTS name_en text")
         if kind is None:
             cursor.execute("CREATE VIEW public.line_units AS SELECT * FROM public.units")
 
