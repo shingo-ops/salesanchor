@@ -15,6 +15,7 @@ import { buildViewerColumns } from "./viewerColumns";
 import {
   DEFAULT_SORT_DIR,
   DEFAULT_SORT_KEY,
+  SORT_MENU_VALUES,
   PER_PAGE,
   TAB_ALL,
   distinctValues,
@@ -197,7 +198,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
             aria-label={t("viewer.sort.placeholder")}
             placeholder={t("viewer.sort.placeholder")}
             data-testid="viewer-sort-menu"
-            value={["unit_price:asc", "quantity:desc", "offered_at:desc"].includes(sortMenuValue) ? sortMenuValue : ""}
+            value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
             onChange={(e) => {
               const [k, d] = e.target.value.split(":");
               if (!k) return;
@@ -206,6 +207,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
               setPage(1);
             }}
             options={[
+              { value: "release_date:asc", label: t("viewer.sort.releaseAsc") },
               { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
               { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
               { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },

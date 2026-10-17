@@ -55,15 +55,23 @@ def test_fresh_window_is_24_hours_and_fresh_filter_is_bound() -> None:
     assert params == {"fresh_hours": 24}
 
 
-def test_view_sql_order_by_is_english_title_first() -> None:
-    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql
+def test_view_sql_order_by_groups_by_release_date_first() -> None:
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_order_by
 
+    group_asc = "NULLIF(d.release_date, '') ASC NULLS LAST, d.english_title ASC, d.japanese_title ASC NULLS LAST, d.product_id ASC"
+    group_desc = group_asc.replace("ASC NULLS LAST, d.english_title", "DESC NULLS LAST, d.english_title", 1)
+    rel = _SORT_COLUMNS["release_date"]
+    price = _SORT_COLUMNS["unit_price"]
+    assert _build_view_order_by(sort_col=rel, order_dir="ASC") == f"ORDER BY {group_asc}, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=rel, order_dir="DESC") == f"ORDER BY {group_desc}, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_asc}, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=_SORT_COLUMNS["name"], order_dir="DESC") == (
+        "ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC"
+    )
     head, final = svc.distribution_rows_parts(**_COND, merge_same_post=False)
     kw = {"head": head, "final_main": final, "merge": False, "where": ""}
-    other = _build_inventory_view_sql(**kw, sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC")
-    assert other.count("ORDER BY d.english_title ASC, NULLIF(d.release_date, '') DESC NULLS LAST, d.sort_ord ASC") == 2
-    name = _build_inventory_view_sql(**kw, sort_col=_SORT_COLUMNS["name"], order_dir="DESC")
-    assert name.count("ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC") == 2
+    sql = _build_inventory_view_sql(**kw, sort_col=rel, order_dir="ASC")
+    assert sql.count(f"ORDER BY {group_asc}, d.sort_ord ASC") == 2
 
 
 def test_inventory_endpoint_defaults_merge_off_and_fresh_off() -> None:
