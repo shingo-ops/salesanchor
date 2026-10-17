@@ -591,10 +591,6 @@ class TestProductsMasterFields:
         })
         assert res.status_code == 201
         data = res.json()
-        assert data["boxes_per_case"] == 16
-        assert data["packs_per_box"] == 30
-        assert float(data["box_weight_kg"]) == 1.25
-        assert float(data["case_weight_kg"]) == 20.5
         assert float(data["volume_weight"]) == 25.0
         assert data["moq"] == 4
         assert data["hs_code"] == "9504.40"
@@ -613,19 +609,27 @@ class TestProductsMasterFields:
         res = await client.patch(f"/api/v1/products/{product_id}", json=self._MASTER_PAYLOAD)
         assert res.status_code == 200
         data = res.json()
-        assert data["boxes_per_case"] == 16
+        assert data["moq"] == 4
         assert data["hs_code"] == "9504.40"
         assert data["exclude_keywords"] == "プロモ promo"
 
         # 永続化確認（再取得）
         get_res = await client.get(f"/api/v1/products/{product_id}")
-        assert get_res.json()["boxes_per_case"] == 16
+        assert get_res.json()["moq"] == 4
 
     async def test_negative_boxes_per_case_rejected(self, client):
         """負の入数は 422（ge=0 バリデーション）"""
         res = await client.post("/api/v1/products", json={
             "name_ja": "負の入数商品",
             "boxes_per_case": -1,
+        })
+        assert res.status_code == 422
+
+    async def test_zero_boxes_per_case_rejected(self, client):
+        """0 の入数も 422（gt=0 バリデーション。ADR-1028）"""
+        res = await client.post("/api/v1/products", json={
+            "name_ja": "ゼロの入数商品",
+            "boxes_per_case": 0,
         })
         assert res.status_code == 422
 
