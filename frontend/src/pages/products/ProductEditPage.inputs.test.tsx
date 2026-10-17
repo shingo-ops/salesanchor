@@ -7,7 +7,7 @@ import ProductEditPage from './ProductEditPage';
 import en from '../../locales/en.json';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
-vi.mock('../../lib/api', () => ({ api: mock }));
+vi.mock('../../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/api')>()), api: mock }));
 
 beforeEach(async () => {
   vi.resetAllMocks();
