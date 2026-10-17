@@ -122,6 +122,7 @@ stdin の JSON の `tool_name` で分ける。
 - `xargs` の後ろに来た `gh pr merge`・`gh-pr-merge-safe.sh`・`check-pr-merge-ready.py` は、番号が後から足されうるので常に止める（第7版）。
 - `gh api` と `curl` の merge は、パス `repos/<owner>/<repo>/pulls/<N>/merge` から owner/repo も取り、`gh pr view N --repo owner/repo` で照合する。owner/repo が取れなければ止める（第7版）。
 - `--repo`・`-R`・`--match-head-commit` が同じ区切りに 2 回以上あれば止める（第7版）。
+- `gh pr merge` で URL の owner/repo と `--repo`・`-R` の値が両方あり、大文字小文字を無視して一致しなければ止める（gh がどちらを使うか未確認のため。第7版）。
 - (a) の文字検査は、連続する `/` を 1 本にしてから照合する（`//` でのすり抜けを塞ぐ。実装中に見つけて追加）。
 - merge の位置引数が 2 個以上なら、`--disable-auto` があっても止める（gh の位置引数は 1 個まで）。
 - (a) の試験台本の例外は、区切りの語が `scripts/agent-hooks/review-gate/test_review_gate.sh` と完全に一致するときだけ（末尾一致はしない）。
@@ -196,7 +197,7 @@ stdin の JSON の `tool_name` で分ける。
 | R6（第6版） | `cd ~/.claude/review-gate && ls`・`pushd ~/.claude/review-gate; echo x > records/a.json`・語が `x/scripts/agent-hooks/review-gate/test_review_gate.sh` の区切りで置き場に書く形 → すべて exit 2 |
 | 誤止めなし（第6版） | `gh pr view 1 --json mergeable \| python3 -c "import json,sys;print(json.load(sys.stdin)['mergeable'])"`・`gh pr view 1 --json mergeable,mergeStateStatus`・`git merge origin/main`・`git log --merges` → すべて exit 0 |
 | R1（第7版） | 記録は o/r の PR 1 だけで次がすべて exit 2: `bash <<< "gh pr merge 2 --merge"`・`python3 <<< "import os;os.system('gh pr merge 2')"`・`source /dev/stdin <<< "gh pr merge 2"`・`.pr-number`=1 の作業場所で `echo 2 \| xargs gh pr merge --merge`・`gh api -X PUT repos/o/r2/pulls/1/merge`・`curl -X PUT https://api.github.com/repos/o/r2/pulls/1/merge`・`gh pr merge 1 --repo o/r --repo o/r2`・`gh pr merge 1 --merge --match-head-commit <記録sha> --match-head-commit <別sha>`・`dash -c "gh pr merge 2"`・`ksh -c "gh pr merge 2"`・`osascript -e 'do shell script "gh pr merge 2"'` |
-| R2（第7版） | 記録ありで `gh api -X PUT repos/o/r/pulls/1/merge` → exit 0 |
+| R2（第7版） | 記録ありで `gh api -X PUT repos/o/r/pulls/1/merge`・`gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r` → exit 0。`--repo o/r2` との不一致 → exit 2 |
 | 往復 | 一時 settings.json・reviewer.md に install→rollback → 導入前と cmp で一致（導入前から空の hooks 項目がある形も含む） |
 | R7 | agent-hooks-test.yml が この PR で走り緑（PR のチェック欄で確認） |
 | 誤止めなし | `ls`・`grep -n x scripts/dev/check-pr-merge-ready.py`・`git diff -- scripts/gh-pr-merge-safe.sh`・`gh pr create --body "gh pr merge 1"`・`git commit -m "gh-pr-merge-safe.sh"`・`gh pr merge 1 --disable-auto`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh`・ヒアドキュメントの本文に閉じない引用符（`don't merge yet`）がある `gh pr create`（本文はヒアドキュメントで渡す形）・`git commit -m "$(cat <<'EOF'` で始まり本文に `1)`・バッククォート 3 個の並び・閉じない引用符を含むコミット・`grep -rn "gh pr merge" docs` → すべて exit 0 |
