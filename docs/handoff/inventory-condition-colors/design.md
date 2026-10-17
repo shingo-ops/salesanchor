@@ -25,7 +25,7 @@ trim・小文字化して完全一致（既存の判定方法を維持）。
 | danger（薄い赤） | opened box / opened case / searched box / searched pack / ar confirmed pack | 24 |
 | neutral（灰） | 上記以外（Bulk・空など） | 10 |
 
-- 値の集合は ADR-1023「What」4 の12値（正本は DB public.line_conditions）。旧値 "sealed"/"damaged" の割り当ては本番 0 件のため削除する
+- 値の集合は ADR-1023「What」4 の11値（正本は DB public.line_conditions）。旧値 "sealed"/"damaged" の割り当ては本番 0 件のため削除する
 - ファイル冒頭コメントの「GAS 在庫一覧 H:1591-1605 と同じ規則」は事実でなくなるため、ADR-1023 の値と本設計への参照に書き換える
 
 ### 2. Badge に purple を足す（金型の拡張）
@@ -52,16 +52,18 @@ trim・小文字化して完全一致（既存の判定方法を維持）。
 ## 受入条件
 | 基準 | 検証方法 |
 |---|---|
-| 12値と Bulk・空・null がそれぞれ上表の variant になる | conditionBadge.test.ts を全値の it.each に更新して vitest pass |
+| ADR-1023 の11値と Bulk・空・null がそれぞれ上表の variant になる | conditionBadge.test.ts を全値の it.each に更新して vitest pass |
 | 在庫表・閲覧ページのセルが新しいクラス（comp-badge--info 等）で描かれる | viewerColumns.cells.test.tsx 等の期待値更新後 vitest pass |
 | purple soft の文字コントラストが 4.5:1 以上 | recon の計算値（ライト 6.28・ダーク 7.39） |
 | hex・新トークンの増加なし | check-design-token-ratchet.sh / check-new-tokens.js / check-dark-parity.js pass |
 | i18n・lint・型 | check-i18n-missing-keys.js / eslint / tsc（既存エラー件数が増えない） |
 | 本番反映 | デプロイ success と配信物に comp-badge--purple が含まれること。画面の見え方は PO 目視 |
 
-## 外部事例
-- 視覚探索の pop-out（Treisman & Gelade 1980）と色覚多様性への配慮（文字を必ず併記・WCAG 1.4.1）を配色の考え方に用いた。出典の書誌は原典照合未実施。数値で効果を主張する事例は用いない
+## 外部・過去事例の参照と我々への応用
+- 過去事例: 在庫表の「ステータス」列（#4480）は既存トークンだけで青・オレンジの文字色を付けた → 我々への応用: 今回も新トークンを作らず、既存の Badge 金型と既存の紫トークンで色を付ける
+- 外部事例: 視覚探索の pop-out（Treisman & Gelade 1980）と色覚多様性への配慮（文字を必ず併記・WCAG 1.4.1）を配色の考え方に用いた → 我々への応用: 状態の文字は常に表示し、色だけで情報を伝えない。出典の書誌は原典照合未実施。数値で効果を主張する事例は用いない
 
 ## 維持の仕組み
+- 守り手: frontend/src/features/inventory/conditionBadge.test.ts（vitest・CI）が全値と色の対応のずれを止める。hex 直書きは CI の design-token-ratchet と ADR-067 チェックが止める
 - 状態の値と色の対応は conditionBadge.ts 1か所（在庫表・閲覧ページの両方が呼ぶ）。試験が全値の対応を固定する
 - 状態の値が ADR-1023 で増減したら、本ファイルの表と conditionBadge.ts と試験を同じ PR で直す
