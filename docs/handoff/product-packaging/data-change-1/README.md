@@ -98,9 +98,9 @@ COMMIT;
 | 項目 | 内容 |
 |---|---|
 | 事前確認 | 下記（2026-10-18 実測。K5 の基準＝既存 3 行の値） |
-| DRY-RUN | |
-| 実施日時・COMMIT | |
-| 事後確認（K3・K4・K5） | |
+| DRY-RUN | 2026-10-17T16:15:03Z・rc=0・ROLLBACK・DRYRUN_OK（SQL の shasum は下記）。試し実行後の読み取りで PACKAGINGS 0・CARD 0（残らず） |
+| 実施日時・COMMIT | 2026-10-17T16:18:06Z・rc=0・COMMIT_DONE。流した人: Claude Opus（PO 本人が出した使い捨ての許可 "psql write" のもと。試し実行用 16:14:47Z 発行・本実行用 16:17:56Z 発行） |
+| 事後確認（K3・K4・K5） | K3○（CASE 146・BOX 176・計 322）／K4○（0\|0\|0\|0）／K5○（既存 3 行は事前確認と同じ。CARD が 1 行・display_order 40・value NULL。CARD の id が 5 なのは試し実行で連番が 1 つ進んだため）。下記 |
 
 事前確認の出力（`00_precheck_read.sql` を読み取りの道で流した生出力。AUDIT 行は省略）:
 
@@ -117,4 +117,93 @@ LE0_packs_per_box	0
 LE0_box_weight_kg	0
 PACKAGINGS	0
 CARD_EXISTS	0
+```
+
+試し実行の出力（`01_dryrun.out` 全文）:
+
+```
+BEGIN
+SET
+INSERT 0 1
+INSERT 0 146
+INSERT 0 176
+DO
+     k     | count 
+-----------+-------
+ CARD      |     1
+ CASE_ROWS |   146
+ BOX_ROWS  |   176
+ ALL_ROWS  |   322
+(4 rows)
+
+ROLLBACK
+ ?column?  
+-----------
+ DRYRUN_OK
+(1 row)
+
+rc=0
+2026-10-17T16:15:03Z
+```
+
+試し実行後の読み取り（`01_dryrun_after.out` の結果行と AUDIT 行の ts・result。どちらも 0 ＝ ROLLBACK で残っていない）:
+
+```
+?column?	count
+PACKAGINGS	0
+CARD	0
+AUDIT ts=2026-10-17T16:15:10Z result=ok
+```
+
+SQL の shasum（`01_dryrun.sha`。2 行とも一致＝コミットの中身と同じ）:
+
+```
+2a17f306e4be6c32de2e05ca5ce2513f0693d95f  -
+2a17f306e4be6c32de2e05ca5ce2513f0693d95f  -
+```
+
+本実行の出力（`01_apply.out` 全文）:
+
+```
+BEGIN
+SET
+INSERT 0 1
+INSERT 0 146
+INSERT 0 176
+DO
+  ?column?   
+-------------
+ COMMIT_NEXT
+(1 row)
+
+COMMIT
+  ?column?   
+-------------
+ COMMIT_DONE
+(1 row)
+
+rc=0
+2026-10-17T16:18:06Z
+```
+
+本実行の SQL の shasum（`01_apply.sha`。2 行とも一致）:
+
+```
+7eda0e1b4b225cde0a1c8ed2bd151f1b2f9095e6  -
+7eda0e1b4b225cde0a1c8ed2bd151f1b2f9095e6  -
+```
+
+事後確認の出力（`02_verify.out` の結果行と AUDIT 行の ts・result）:
+
+```
+k	v
+K3	CASE|146
+K3	BOX|176
+K3_TOTAL	322
+K4	0|0|0|0
+K5	1 | CASE | ケース | Case | <NULL> | 10 | true
+K5	2 | BOX | ボックス | Box | <NULL> | 20 | true
+K5	3 | PACK | パック | Pack | <NULL> | 30 | true
+K5	5 | CARD | カード | Card | <NULL> | 40 | true
+AUDIT ts=2026-10-17T16:18:15Z result=ok
 ```
