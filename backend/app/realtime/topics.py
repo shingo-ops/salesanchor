@@ -45,6 +45,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/viewer/password"): "閲覧ページ ADR-1019: 閲覧者のパスワード変更は画面更新の通知対象外",
     ("POST", "/api/v1/viewer/password-reset/request"): "閲覧ページ ADR-1019: 閲覧者のパスワード再発行の申請は画面更新の通知対象外",
     ("POST", "/api/v1/viewer/password-reset/confirm"): "閲覧ページ ADR-1019: 閲覧者のパスワード再発行の確定は画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/signup"): "閲覧ページ ADR-1019: 閲覧者の申込は画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/activate"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/suspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/unsuspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",

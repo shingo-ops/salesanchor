@@ -36,9 +36,11 @@ interface LoginViewProps {
   onPreparing: () => void;
   /** 「パスワードを忘れた」→ 再発行画面へ */
   onForgot: () => void;
+  /** 「申込」→ 申込画面へ */
+  onSignup: () => void;
 }
 
-export function LoginView({ onLoggedIn, onPreparing, onForgot }: LoginViewProps) {
+export function LoginView({ onLoggedIn, onPreparing, onForgot, onSignup }: LoginViewProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -93,6 +95,9 @@ export function LoginView({ onLoggedIn, onPreparing, onForgot }: LoginViewProps)
       </Button>
       <Button type="button" variant="secondary" fullWidth onClick={onForgot} data-testid="viewer-login-forgot">
         {t("viewer.login.forgot")}
+      </Button>
+      <Button type="button" variant="secondary" fullWidth onClick={onSignup} data-testid="viewer-login-signup">
+        {t("viewer.login.signup")}
       </Button>
     </form>
   );

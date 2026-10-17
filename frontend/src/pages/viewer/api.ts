@@ -2,7 +2,7 @@
  * 閲覧 API の呼び出し（fetch）。アプリ本体の api（axios 等）は読み込まない。
  * トークンは localStorage `viewer_access_token`（読み書きは try/catch。使えなくても画面は動く）。
  */
-import type { ViewerInventoryResponse, ViewerLoginResponse } from "./types";
+import type { ViewerInventoryResponse, ViewerLoginResponse, ViewerSignupResponse } from "./types";
 
 export const TOKEN_KEY = "viewer_access_token";
 const API_BASE = "/api/v1/viewer";
@@ -104,5 +104,19 @@ export function confirmPasswordReset(token: string, newPassword: string): Promis
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, new_password: newPassword }),
+  });
+}
+
+/** 申込。成功すると申込コードと招待リンク（作れなければ null）が返る。 */
+export function signup(body: {
+  email: string;
+  line_name: string;
+  inventory_issue: string;
+  website: string;
+}): Promise<ViewerSignupResponse> {
+  return request<ViewerSignupResponse>("/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }
