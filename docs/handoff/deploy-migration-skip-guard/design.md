@@ -1,6 +1,6 @@
 # design: 前回デプロイが最後まで成功していなければ、DB 更新を必ず実行する（P6）
 
-状態: 設計案作成済み・設計審査済み（Opus 自己審査）・PO 承認待ち・実装未着手
+状態: 設計案作成済み・設計審査済み（Opus 自己審査）・PO 承認済み（2026-10-17 チャット「y」）・Sonnet 実装委任
 参照: recon.md（同フォルダ）、ADR-082:48、ADR-092:33-39、ADR-115、ADR-1005
 
 ## 1. 目的（POの言葉）
@@ -62,7 +62,7 @@
 |基準|検証方法|
 |---|---|
 | K1 通常時: 直前の run が成功のあとの docs だけの push で、gate が「差分どおり」・migrations が skipped | 実装マージ後の次の docs PR の deploy ログで gate の出力と段の結果を見る |
-| K2 前回不成功時: 直前の run が失敗/cancelled のあとの run で、gate が「全部実行」・バックアップ/migrations/smoke が success | sandbox 不可のため、実装 PR 内で gate の段だけを同じ shell で再現する試験（before＝一致/不一致/空/API失敗 の4通り）を CI 上で回し、出力4行を確認。本番では次に失敗が起きた直後の run のログで確認 |
+| K2 前回不成功時: 直前の run が失敗/cancelled のあとの run で、gate が「全部実行」・バックアップ/migrations/smoke が success | gate の run 部分をそのまま bash で4通り（一致／不一致／API が空を返す／gh が失敗）実行し、出力と GITHUB_OUTPUT の中身を記録（実装 PR の証跡）。本番では次に失敗が起きた直後の run のログで確認 |
 | K3 API が読める | 実装マージ直後の deploy ログで gate の「前回デプロイは成功（xxxxxxx）」に7桁の SHA が出る（空なら PAT 権限を PO に確認） |
 | K4 置き換え漏れ0 | `grep -c "steps.changes.outputs" .github/workflows/deploy.yml` が gate の env 3行だけ（=3）|
 | K5 所要時間が増えない | K1 の run の総時間が直近の docs だけの run（中央値）±60秒以内 |
