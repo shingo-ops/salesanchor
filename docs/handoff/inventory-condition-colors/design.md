@@ -113,3 +113,37 @@ trim・小文字化して完全一致（既存の判定方法を維持）。
 
 ### 維持の仕組み（追補1）
 - 守り手: 上記3つの試験（vitest・CI）が状態列のクラスを固定する。値と色の対応は conditionBadge.test.ts が固定する
+
+
+---
+
+## 追補2（2026-10-18）: Case だけを緑にする
+
+### PO の言葉
+- 「Caseは緑に出来る？」→ Opus「Case だけ緑の文字（既存の色を使う）にしてよいか。Sealed box・Unsearched pack は青のまま」→ PO「y」（2026-10-18）
+
+### 変更前（#4490 マージ後の origin/main）
+- frontend/src/features/inventory/conditionBadge.ts で `case "case"` は Sealed box・Unsearched pack と同じ `"info"`（青）を返す
+- frontend/src/features/inventory/inventoryColumns.css に `.inventory-cell__condition--success` の規則は無い
+
+### 変更後
+- conditionBadge.ts: `"case"` だけを `"success"` を返す分岐へ移す（"sealed box"・"unsearched pack" は `"info"` のまま。"damaged case"・"opened case" は変えない）
+- inventoryColumns.css に1規則を足す（既存トークン参照・新トークンなし・hex なし）
+  - `.inventory-cell__condition--success { color: var(--success-text); }`
+  - --success-text はライト #22543d（frontend/src/index.css:57）、ダーク #bbf7d0（同:250）で定義済み
+- 'success' は Badge の既存 variant 名（BadgeVariant）にあるため、関数の戻り値の型は変わらない
+
+### 触らない範囲
+- Case 以外の値の色、ステータス列、トークン値、Badge 金型、API・DB、GAS 在庫一覧
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| Case が success、Sealed box・Unsearched pack が info のまま、他の値は不変 | conditionBadge.test.ts の対応表更新後 vitest pass |
+| 在庫表・閲覧ページで Case の span が inventory-cell__condition--success になる | 状態列の試験（Case を使うものがあれば期待値更新）vitest pass |
+| hex・新トークンの増加なし | check-design-token-ratchet.sh / check-dark-parity.js / check-ui-governance.js pass |
+| 型・lint | tsc（既存4件から増えない）・eslint・stylelint pass |
+| 本番反映 | デプロイ success と配信物 CSS に inventory-cell__condition--success が含まれること。見え方は PO 目視 |
+
+### 維持の仕組み（追補2）
+- 守り手: conditionBadge.test.ts が値と色の対応を固定し、CI（vitest）で毎回確かめる
