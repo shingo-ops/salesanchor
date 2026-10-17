@@ -1,5 +1,5 @@
 /**
- * 在庫の「状態」文字列 → Badge の variant。
+ * 在庫の「状態」文字列 → 状態の色の種類（文字色のクラス名にも使う）。
  * 値の集合は ADR-1023「What」4 の12値（正本は DB public.line_conditions）。
  * 割り当ては docs/handoff/inventory-condition-colors/design.md の表（PO 決定 2026-10-17）。
  * trim・小文字化したうえで完全一致（部分一致はしない）。

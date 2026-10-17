@@ -6,7 +6,6 @@
  * アプリの unit（形態）の列は閲覧の行に無いので持たない。
  */
 import type { TFunction } from "i18next";
-import { Badge } from "../../components/Badge";
 import type { DataTableColumn } from "../../components/DataTable";
 import { conditionBadgeVariant } from "../../features/inventory/conditionBadge";
 import "../../features/inventory/inventoryColumns.css";
@@ -66,8 +65,8 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       sortable: true,
       mobileOrder: 2,
       renderCell: (it) => (
-        <span className="inventory-cell__nowrap">
-          <Badge variant={conditionBadgeVariant(it.condition)}>{it.condition}</Badge>
+        <span className={`inventory-cell__nowrap inventory-cell__condition--${conditionBadgeVariant(it.condition)}`}>
+          {it.condition}
         </span>
       ),
     },

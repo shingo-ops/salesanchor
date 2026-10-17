@@ -27,3 +27,19 @@
 .inventory-cell__offer--preorder {
   color: var(--offer-preorder-text);
 }
+
+.inventory-cell__condition--info {
+  color: var(--info-text);
+}
+
+.inventory-cell__condition--warning {
+  color: var(--warning-text);
+}
+
+.inventory-cell__condition--purple {
+  color: var(--purple-text);
+}
+
+.inventory-cell__condition--danger {
+  color: var(--danger-text);
+}

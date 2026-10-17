@@ -4,7 +4,6 @@
  * 隠せる列は hidden_columns の id（colVisible に渡す）で絞る。
  */
 import type { TFunction } from "i18next";
-import { Badge } from "../../components/Badge";
 import type { DataTableColumn } from "../../components/DataTable";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
@@ -110,8 +109,8 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         sortable: true,
         mobileOrder: 2,
         renderCell: (it) => (
-          <span className="inventory-cell__nowrap">
-            <Badge variant={conditionBadgeVariant(it.condition)}>{it.condition}</Badge>
+          <span className={`inventory-cell__nowrap inventory-cell__condition--${conditionBadgeVariant(it.condition)}`}>
+            {it.condition}
           </span>
         ),
       },

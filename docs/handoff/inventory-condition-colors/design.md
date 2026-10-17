@@ -67,3 +67,49 @@ trim・小文字化して完全一致（既存の判定方法を維持）。
 - 守り手: frontend/src/features/inventory/conditionBadge.test.ts（vitest・CI）が全値と色の対応のずれを止める。hex 直書きは CI の design-token-ratchet と ADR-067 チェックが止める
 - 状態の値と色の対応は conditionBadge.ts 1か所（在庫表・閲覧ページの両方が呼ぶ）。試験が全値の対応を固定する
 - 状態の値が ADR-1023 で増減したら、本ファイルの表と conditionBadge.ts と試験を同じ PR で直す
+
+---
+
+## 追補1（2026-10-17）: バッジをやめて文字色にする
+
+### PO の言葉
+- 「バッジの色ではなく文字に色を付けられる？ばっじなしで」
+- Opus の確認「傷あり（Damaged）はライトでは茶色、ダークでは黄色で文字色にしてよいか」→ PO「y」（2026-10-17）
+
+### 変更前（#4485 マージ後の origin/main 4a6d72e53）
+- frontend/src/features/inventory/inventoryColumns.tsx:114 と frontend/src/pages/viewer/viewerColumns.tsx:70 は `<span className="inventory-cell__nowrap"><Badge variant={conditionBadgeVariant(it.condition)}>` で状態を札で描く
+- 隣のステータス列は文字色だけ（inventoryColumns.tsx:63-69、viewerColumns.tsx:39-41、inventoryColumns.css:23-29）
+
+### 変更後
+- 状態列は Badge を使わず、文字だけを色付きで描く: `<span className={"inventory-cell__nowrap inventory-cell__condition--" + conditionBadgeVariant(it.condition)}>{状態}</span>`（在庫表・閲覧ページとも）
+- frontend/src/features/inventory/inventoryColumns.css に文字色のクラスを足す（既存トークンを参照・新トークンなし・hex なし）
+  - `.inventory-cell__condition--info    { color: var(--info-text); }`（青: Sealed box / Case / Unsearched pack）
+  - `.inventory-cell__condition--warning { color: var(--warning-text); }`（ライト茶 #744210・ダーク黄 #fde68a: Damaged sealed box / Damaged case）
+  - `.inventory-cell__condition--purple  { color: var(--purple-text); }`（紫: No shrink box）
+  - `.inventory-cell__condition--danger  { color: var(--danger-text); }`（赤: Opened* / Searched* / AR confirmed pack）
+  - neutral はクラスに規則を書かず、普通の文字色のまま（Bulk など）
+- 値と色の対応の正本は conditionBadge.ts のまま（関数名・表は変えない。冒頭コメントだけ「Badge の variant」から「状態の色の種類（文字色のクラス名にも使う）」に直す）
+- Badge 金型の purple variant（#4485 で追加）は残す。状態列では使わなくなるが、金型の6種目として stories・design-preview に載っており、削除は別判断
+
+### 読みやすさ（WCAG コントラスト比・通常行の背景に対して。生出力 /tmp/CC報告ファイル/condition-text-color/4-5-contrast.txt）
+| 色 | ライト（#ffffff） | ダーク（#1e293b） |
+|---|---|---|
+| 青 --info-text | 5.42 | 8.11 |
+| 茶/黄 --warning-text | 8.30 | 11.75 |
+| 紫 --purple-text | 8.40 | 8.28 |
+| 赤 --danger-text | 7.53 | 10.11 |
+- 既知の弱点（事実として記録・今回は変えない）: ライトの青はマウスを乗せた行 4.40・選択行 4.01（ステータス列の在庫の青と同じ値）
+
+### 触らない範囲
+- 色の割り当て（どの値が何色か）、ステータス列、トークン値、API・DB、GAS 在庫一覧
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| 状態列に Badge（comp-badge）が描かれず、値ごとに inventory-cell__condition--{info,warning,purple,danger,neutral} の span になる | inventoryColumns.test.tsx・viewerColumns.cells.test.tsx・InventoryPage.tablelayout.test.tsx の期待値更新後 vitest pass |
+| hex・新トークンの増加なし | check-design-token-ratchet.sh / check-dark-parity.js pass |
+| 型・lint | tsc（既存4件から増えない）・eslint・stylelint pass |
+| 本番反映 | デプロイ success と配信物に inventory-cell__condition--warning の CSS が含まれること。見え方は PO 目視 |
+
+### 維持の仕組み（追補1）
+- 守り手: 上記3つの試験（vitest・CI）が状態列のクラスを固定する。値と色の対応は conditionBadge.test.ts が固定する
