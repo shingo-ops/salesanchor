@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-17 / ADR 総数: 188 件
+最終更新: 2026-10-17 / ADR 総数: 189 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -207,6 +207,7 @@
 | [ADR-1026](./ADR-1026-drop-products-type-master-id.md) | ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く | Proposed | — | — |
 | [ADR-1027](./ADR-1027-bundle-sale-reading.md) | ADR-1027: まとめ売り（N単位セット）は値段を割らずに保存し、商品名の欄に「N＋単位＋セット」を表示の時に付ける（ADR-1021 便2 の置き換え） | Proposed | — | — |
 | [ADR-1028](./ADR-1028-product-packaging-table.md) | ADR-1028: 商品の入数・重さを「商品の荷姿」の表 1 つで持つ | Proposed | — | — |
+| [ADR-1029](./ADR-1029-review-gate-hook.md) | ADR-1029: AI のマージは、その PR の今の HEAD に Opus 審査役の APPROVE 記録が無ければフックで止める | Proposed | — | — |
 
 ## ステータス凡例
 

@@ -1,0 +1,24 @@
+name: Agent Hooks Test
+
+# scripts/agent-hooks/review-gate/ (ADR-1029) の受入試験。docs/handoff/review-gate-hook/design.md §5-1・§8。
+# 偽の gh・一時ディレクトリだけを使う。本物の ~/.claude には触れない。
+# ※ 必須チェック（Branch Protection）には登録しない。
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/agent-hooks/**'
+      - '.github/workflows/agent-hooks-test.yml'
+      - '.claude/agents/reviewer.md'
+
+jobs:
+  review-gate:
+    name: review-gate hook test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run review-gate tests
+        run: bash scripts/agent-hooks/review-gate/test_review_gate.sh
