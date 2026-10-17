@@ -34,9 +34,11 @@ describe("buildInventoryColumns", () => {
   });
 
   it.each([
-    ["sealed", "comp-badge--success"],
-    ["damaged", "comp-badge--danger"],
-    ["case", "comp-badge--info"],
+    ["Sealed box", "comp-badge--info"],
+    ["Damaged sealed box", "comp-badge--warning"],
+    ["No shrink box", "comp-badge--purple"],
+    ["Opened box", "comp-badge--danger"],
+    ["Case", "comp-badge--info"],
     ["New", "comp-badge--neutral"],
   ])("renders condition %s as Badge", (cond, cls) => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
