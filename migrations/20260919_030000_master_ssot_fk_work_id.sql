@@ -22,6 +22,7 @@ BEGIN
         SELECT 1 FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public' AND c.relname = 'tcg_type' || '_master'
+              AND c.relkind IN ('r', 'p')
     ) INTO _ref_exists;
 
     IF _ref_exists AND NOT EXISTS (
