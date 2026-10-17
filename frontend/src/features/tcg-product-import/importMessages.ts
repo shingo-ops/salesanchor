@@ -24,6 +24,8 @@ export function importMessage(code: string, t: TFunction, names: Record<string, 
     ["KEYWORD_ALSO_HITS_", "keywordShared"],
     ["DUPLICATE_CANDIDATE_", "duplicateCandidate"],
     ["BLANK_CONFIRMED_INVALID_", "blankConfirmedInvalid"],
+    ["REQUIRED_FIELD_MISSING_", "requiredFieldMissing"],
+    ["REQUIRED_FIELD_CLEARED_", "requiredFieldCleared"],
   ];
   for (const [prefix, key] of prefixes) {
     if (code.startsWith(prefix)) return t(`productCsv.messages.${key}`, { value: names[code.slice(prefix.length)] ?? code.slice(prefix.length) });

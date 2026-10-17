@@ -81,6 +81,8 @@ def test_large_cell_limit_and_failure_restore():
 async def test_date_binding_uses_python_date_while_preview_stays_iso(monkeypatch, value):
     snap = snapshot()
     snap["product"]["release_date"] = "2026-01-01"
+    # ADR-1020 便3: 発売日を空にするには「調べたが無い」の印が要る（この試験が見るのは日付の束縛）
+    snap["blank_confirmed"] = ["release_date"]
     monkeypatch.setattr(svc, "snapshots", AsyncMock(return_value=[snap]))
     db = AsyncMock()
     db.execute.return_value.fetchall = lambda: []
@@ -262,3 +264,19 @@ async def test_update_plans_format_and_marks(monkeypatch):
     assert "UNKNOWN_PRODUCT_FORMAT_CODE_x" in checked["rows"][0]["blocking"]
     checked, _ = await svc.inspect_update(db, file_for(snap, blank_confirmed="x"), "x.csv")
     assert "BLANK_CONFIRMED_INVALID_x" in checked["rows"][0]["blocking"]
+
+
+@pytest.mark.asyncio
+async def test_update_blocks_clearing_required_field(monkeypatch):
+    """ADR-1020 便3: 値のあった除外ワードを、印なしで空にする更新は止める。印があれば止めない。"""
+    snap = snapshot()
+    snap["exclude_keywords"] = [{"id": "b", "product_id": "p", "keyword": "EX", "position": 1}]
+    monkeypatch.setattr(svc, "snapshots", AsyncMock(return_value=[snap]))
+    db = AsyncMock()
+    db.execute.return_value.fetchall = lambda: []
+    checked, _ = await svc.inspect_update(db, file_for(snap, exclude_keywords=""), "x.csv")
+    assert "REQUIRED_FIELD_CLEARED_exclude_keywords" in checked["rows"][0]["blocking"]
+    checked, _ = await svc.inspect_update(
+        db, file_for(snap, exclude_keywords="", blank_confirmed="exclude_keywords"), "x.csv"
+    )
+    assert not any(b.startswith("REQUIRED_FIELD_CLEARED_") for b in checked["rows"][0]["blocking"])
