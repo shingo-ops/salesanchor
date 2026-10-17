@@ -23715,7 +23715,7 @@
           "box_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -23730,7 +23730,7 @@
           "boxes_per_case": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -23754,7 +23754,7 @@
           "case_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -23936,7 +23936,7 @@
           "packs_per_box": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -25142,6 +25142,108 @@
         "title": "ProductListResponse",
         "type": "object"
       },
+      "ProductPackagingOut": {
+        "description": "ADR-1028: 荷姿の表の1行（単位ごとの入数・重さと出典）。",
+        "properties": {
+          "contained_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Count"
+          },
+          "contained_unit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Unit Code"
+          },
+          "count_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Source"
+          },
+          "count_source_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Count Source Urls",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "weight_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Source"
+          },
+          "weight_source_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Weight Source Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unit_code",
+          "updated_at"
+        ],
+        "title": "ProductPackagingOut",
+        "type": "object"
+      },
       "ProductResponse": {
         "properties": {
           "archived_at": {
@@ -25372,6 +25474,14 @@
             ],
             "title": "Notes"
           },
+          "packagings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProductPackagingOut"
+            },
+            "title": "Packagings",
+            "type": "array"
+          },
           "packs_per_box": {
             "anyOf": [
               {
@@ -25599,7 +25709,7 @@
           "box_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -25614,7 +25724,7 @@
           "boxes_per_case": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -25638,7 +25748,7 @@
           "case_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -25845,7 +25955,7 @@
           "packs_per_box": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
