@@ -6,7 +6,7 @@
 - 前段: docs/handoff/ai-ops-247/stage2-design.md（段階2 は便A〜C の本番反映で完了。card-stage2-bin-c.md §15）
 - KGI: docs/specs/ai-ops-247/kgi.md:22（KGI 3「一覧に載った症状は 5 分以内に機械が処置を終える。成功 95% 以上・悪化 0 件」）
 - 対象ADR: ADR-1012（本テーマ・Proposed）、ADR-135（main マージ＝本番投入可）、ADR-136（危険 PR の GO）、ADR-1003（GO 委任）、ADR-079（cadvisor 無効化）
-- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO 承認 y（2026-10-16）。V1 は便D のカード（card-stage3-bin-d.md §2-2）で解決。実装未着手
+- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO 承認 y（2026-10-16）。V1 は便D のカード（card-stage3-bin-d.md §2-2）で解決。便D は本番反映済み（PR #4404・2026-10-16）。V2・V4 は便E のカード（card-stage3-bin-e.md §2-1）で解決
 - 事実の生出力: /tmp/CC報告ファイル/ai-ops-stage3/recon_raw.md（Q1〜Q9）・recon_raw2.md（Q10〜Q16）。2026-10-16 取得・origin/main 057e12b16 基準。本番は読んでいない
 
 ## 1. 前提の事実（2026-10-16・origin/main 057e12b16 基準）
@@ -81,7 +81,7 @@
   - `salesanchor_container_running{service="..."}`（1 = 動いている）
   - `salesanchor_container_state_last_run_timestamp_seconds`（書いた時刻）
 - 見張りを 2 本足す（`monitoring/prometheus/alert_rules.yml`）:
-  - `ContainerUnhealthy`：`salesanchor_container_unhealthy == 1`、for 1m、札 **auto**、手順書リンクあり
+  - `ContainerUnhealthy`：`salesanchor_container_unhealthy == 1`、for 1m、札 **auto**、手順書リンクあり（便E では処置が無いので札 page で入れ、処置の付く便G で auto に変える。card-stage3-bin-e.md §2-2 E1・2026-10-17 Opus 技術判断）
   - `ContainerStateStale`：状態書き係が 5 分書いていない（`time() - ... > 300` か absent）、for 2m、札 page
 - cron の 1 行は PO の `!` スクリプトで足す（F20）。ログは異常のときだけ書く（毎分の記録でディスクを使わない）
 - 便E の測り方：手元で celery-beat を `kill -STOP` → ContainerUnhealthy が鳴り、障害記録に 1 行・Discord に 1 件。本番は反映後に `salesanchor_container_unhealthy` が 4 サービスぶん 0 で読めること（Prometheus の問い合わせ）と ContainerStateStale が鳴っていないこと
@@ -135,7 +135,7 @@
 
 | 弊害 | 起きること | 対処 |
 |---|---|---|
-| 健康診断の誤判定 | 健康なのに unhealthy → 不要な再起動 | 便D の後 24 時間、処置なしで誤判定 0 を確かめてから便E・G に進む。回数の上限 1 時間 3 回 |
+| 健康診断の誤判定 | 健康なのに unhealthy → 不要な再起動 | 便D の後 24 時間、処置なしで誤判定 0 を確かめてから便G に進む（観測は prod2 の見張りで行うため便E の状態書き係の値を使う。監視の役は prod2 に置く・2026-10-17 PO 指示）。回数の上限 1 時間 3 回 |
 | 再起動の繰り返し（AWS 2025-10 の型） | 直らない原因で何度も再起動 | 1 時間 3 回で止めて page。全停止スイッチを毎回確認 |
 | deploy との取り合い | deploy の作り直しの最中に再起動 | 起動から 5 分以内は処置しない。同じ障害は `first_aid_started_at` で 1 回だけ |
 | 応急処置係が落ちる | 処置されないまま | FirstAidStale（page）。Discord の通知は Alertmanager から別に届くので人の目には残る |
@@ -165,9 +165,9 @@
 
 - V1: 便D の健康診断の方式（§2 便D の候補）。celery の signal など公式の仕様に依存するので、便D のカードの前に公式文書（Context7 か公式サイト）と手元の実測で決める。決まるまで便D のカードを出さない
   - 解決（2026-10-16・Opus 技術判断）：worker は bootstep の timer、beat は Scheduler の子クラスの tick、gateway は asyncio の定期処理で、/tmp の印のファイルを触る。健康診断は印の古さを sh・date・stat で見る。gemini-egress は待ち受けの口ではなく、トンネルの先の tinyproxy の統計ページまで busybox wget で通す（口が開いていても固まりは見えないため）。根拠と細部は card-stage3-bin-d.md §2
-- V2: prod1 のホストから `api.salesanchor.jp` を prod1 自身に向けて呼べるか（ヘアピン）・ubuntu の cron から docker を操作できるか・prod1 の python3 の版。便E のカードの前に PO の `!`（読み取りだけ）で確かめる
+- V2（解決 2026-10-17：PO の `!` で全項目合格。card-stage3-bin-e.md §2-1 F2）: prod1 のホストから `api.salesanchor.jp` を prod1 自身に向けて呼べるか（ヘアピン）・ubuntu の cron から docker を操作できるか・prod1 の python3 の版。便E のカードの前に PO の `!`（読み取りだけ）で確かめる
 - V3: （段階2 から）Alertmanager の webhook の失敗の見張り。10/23 に失敗の数を見て決める
-- V4: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる
+- V4（解決 2026-10-17：global の 15 秒。card-stage3-bin-e.md §2-1 F7）: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる
 - V5: 処置の一覧に CeleryHeartbeatStale（beat か worker か区別できない・F6）を足すか。便G の後、ContainerUnhealthy の実績を見て決める
 
 ## 8. 戻し方
