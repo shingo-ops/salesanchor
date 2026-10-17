@@ -201,3 +201,37 @@ async def test_save_without_set_clears_only_filled():
         await _drop_product(admin_engine, pid)
         await admin_engine.dispose()
         await app_engine.dispose()
+
+
+async def test_count_sql_name_en_respects_marks():
+    """便4c: 週次通知の件数SQLは、印のある name_en 空欄を数えない（同ファイル内で直列実行しデッドロックを避ける）。"""
+    from sqlalchemy import text
+
+    from app.tasks.master_required_fields_monitor import _COUNT_SQL, _SINCE
+
+    admin_engine, app_engine = await _setup()
+    # _COUNT_SQL が読む products.product_format_id（細分類）を足す本番 migration（冪等・bootstrap 時のみ）
+    async with public_bootstrap_lock(admin_engine):
+        await _apply_migration(admin_engine, "20260920_130000_create_product_classification.sql")
+    try:
+        async with admin_engine.connect() as conn:
+            transaction = await conn.begin()
+            try:
+                baseline = (await conn.execute(_COUNT_SQL, {"since": _SINCE})).mappings().one()["name_en"]
+                ids: list[int] = []
+                for _ in range(2):
+                    row = await conn.execute(
+                        text("INSERT INTO public.products (product_code, name, name_en) "
+                             "VALUES (:c, 'cnt-test', '') RETURNING id"),
+                        {"c": "TEST-CNT-" + uuid.uuid4().hex[:8]},
+                    )
+                    ids.append(row.scalar_one())
+                await conn.execute(text(_INSERT_SQL), {"pid": ids[1], "field": "name_en"})
+                after = (await conn.execute(_COUNT_SQL, {"since": _SINCE})).mappings().one()["name_en"]
+                # 2行作り、1行には印があるので、増えるのは印なしの1行だけ
+                assert after - baseline == 1
+            finally:
+                await transaction.rollback()
+    finally:
+        await admin_engine.dispose()
+        await app_engine.dispose()

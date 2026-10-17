@@ -1,9 +1,6 @@
 """ADR-1020 便4c: 共用商品の必須項目の週次件数通知の単体テスト。"""
 from __future__ import annotations
 
-import os
-import uuid
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -68,55 +65,3 @@ def test_beat_schedule_registered_monday_9():
     sched = entry["schedule"]
     assert isinstance(sched, crontab)
     assert sched._orig_hour == 9 and sched._orig_minute == 0 and str(sched._orig_day_of_week) == "1"
-
-
-_ADMIN = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
-_APP = os.getenv("RLS_TEST_DATABASE_URL")
-
-
-@pytest.mark.skipif(
-    not _ADMIN or not _APP,
-    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL 未設定)。",
-)
-@pytest.mark.asyncio
-async def test_count_sql_name_en_respects_marks():
-    from sqlalchemy import text
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    from app.tasks.master_required_fields_monitor import _COUNT_SQL, _SINCE
-
-    # 他の PG 試験（商品一覧）と同じ準備: ロールバックされるトランザクション内で本番 migration から表を作る
-    from tests.test_tcg_product_list_pg import _exec_multi_stmt, create_product_schema
-
-    engine = create_async_engine(_ADMIN, echo=False)
-    try:
-        async with engine.connect() as conn:
-            transaction = await conn.begin()
-            try:
-                await create_product_schema(conn, "mrf_monitor_test_" + uuid.uuid4().hex)
-                # products.product_format_id（細分類）を足す本番 migration（_COUNT_SQL が読む）
-                migrations = Path(__file__).resolve().parents[2] / "migrations"
-                await _exec_multi_stmt(
-                    conn, (migrations / "20260920_130000_create_product_classification.sql").read_text()
-                )
-                baseline = (await conn.execute(_COUNT_SQL, {"since": _SINCE})).mappings().one()["name_en"]
-                ids: list[int] = []
-                for _ in range(2):
-                    row = await conn.execute(
-                        text("INSERT INTO public.products (product_code, name, name_en) "
-                             "VALUES (:c, 'cnt-test', '') RETURNING id"),
-                        {"c": "TEST-CNT-" + uuid.uuid4().hex[:8]},
-                    )
-                    ids.append(row.scalar_one())
-                await conn.execute(
-                    text("INSERT INTO public.product_blank_confirmations (product_id, field_code, confirmed_by) "
-                         "VALUES (:pid, 'name_en', 'test')"),
-                    {"pid": ids[1]},
-                )
-                after = (await conn.execute(_COUNT_SQL, {"since": _SINCE})).mappings().one()["name_en"]
-                # 2行作り、1行には印があるので、増えるのは印なしの1行だけ
-                assert after - baseline == 1
-            finally:
-                await transaction.rollback()
-    finally:
-        await engine.dispose()
