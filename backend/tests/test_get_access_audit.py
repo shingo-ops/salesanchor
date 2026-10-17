@@ -92,6 +92,14 @@ def _app() -> FastAPI:
     async def companies():
         return {"ok": True}
 
+    @app.get("/api/v1/auth-fail-401")
+    async def auth_fail_401():
+        return JSONResponse({"detail": "unauthorized"}, status_code=401)
+
+    @app.get("/api/v1/auth-fail-403")
+    async def auth_fail_403():
+        return JSONResponse({"detail": "forbidden"}, status_code=403)
+
     return app
 
 
@@ -202,3 +210,19 @@ async def test_t4_bulk_read_alert_recorded():
     assert status == 200
     assert len(captured) == 1, captured
     assert captured[0]["event_type"] == "bulk_read_alert"
+
+
+# T6: ログインに失敗した閲覧（401・403）は回数に数えない
+@pytest.mark.parametrize("path,expected", [("/api/v1/auth-fail-401", 401), ("/api/v1/auth-fail-403", 403)])
+async def test_t6_auth_failure_get_not_counted(path, expected):
+    r = AsyncMock()
+    r.incr = AsyncMock(return_value=501)
+    r.expire = AsyncMock()
+    captured: list = []
+    status = await _get(path, captured, r)
+    assert status == expected
+    r.incr.assert_not_called()
+    # 既存の auth_failure 記録は残る。bulk_read_alert と data_export は入らない
+    assert not [
+        p for p in captured if p and p.get("event_type") in ("bulk_read_alert", "data_export")
+    ]
