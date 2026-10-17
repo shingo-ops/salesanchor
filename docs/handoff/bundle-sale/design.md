@@ -1,6 +1,6 @@
 ---
 mode: handoff
-adr: ADR-1026
+adr: ADR-1027
 status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17・実装未着手）
 ---
 
@@ -9,7 +9,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 この文書は何か: 「40パックセット/¥24,000 残り15」のようなまとめ売りの行を、全商品で同じ形で保存し、在庫表・在庫一覧(GAS)・閲覧ページの商品名の欄に「商品名 40パックセット」と出すための作り方。
 親（あるべき姿＋KGI）: [../../specs/bundle-sale/README.md](../../specs/bundle-sale/README.md)／[ideal-state.md](../../specs/bundle-sale/ideal-state.md)／[kgi.md](../../specs/bundle-sale/kgi.md)
 現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
-決定の記録: [ADR-1026 案](../../adr/ADR-1026-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
+決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
 状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・実装未着手。
 
@@ -112,7 +112,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 
 | 便 | 中身 | 危険なパス | 実装 |
 |---|---|---|---|
-| 便1 | migration 2 本（analysis_results.bundle_size、line_units.name_ja/name_en）＋scripts/run_all_migrations.sh 登録＋読み取り（5-2・5-3）＋配信（5-4）＋理由ラベル＋テスト＋scripts/dev/bundle_replay.py＋ADR-1021 と docs/handoff/g28-bulk-price/design.md の便2 に「ADR-1026 で置き換え」の注記（ADR 索引の作り直し） | migrations/ を含む → GO 記録 | Sonnet |
+| 便1 | migration 2 本（analysis_results.bundle_size、line_units.name_ja/name_en）＋scripts/run_all_migrations.sh 登録＋読み取り（5-2・5-3）＋配信（5-4）＋理由ラベル＋テスト＋scripts/dev/bundle_replay.py＋ADR-1021 と docs/handoff/g28-bulk-price/design.md の便2 に「ADR-1027 で置き換え」の注記（ADR 索引の作り直し） | migrations/ を含む → GO 記録 | Sonnet |
 | 便2 | 記録した SQL（単位の呼び名・理由コード）を本番で DRY-RUN → COMMIT → verify | 本番データ（PO 委任の範囲） | Opus の指示で Sonnet |
 | 便3 | 当たりのある 92 job（b8f6e15a を含む）の再解析、K1〜K6 の照合と付随の確認。始める前に、換算済み 13 行に人の直し（apply_value_overrides の元）があるかを読み取りの道で数え、あれば止めて一覧を出す | 本番の再解析 | Opus の指示で Sonnet |
 | 便4（後日） | 比較・レビュー画面に bundle_size を出す・人が直せるようにする・単位マスタの管理画面に呼び名の欄 | フロント | 別設計 |
@@ -148,7 +148,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 - 守り手1（CI・毎回）: backend の pytest に A2・A3 のテスト。規則を変えると赤になる。
 - 守り手2（マスタが正本）: 単位の語は別名マスタから作るので、新しい単位・別名を登録すれば読み取りにも自動で効く。コードに単位の語の表を持たない（持つとテストで見つけるため、v102_bundle_svc に単位語の直書きが無いことを確かめるテストを置く）。
 - 守り手3（人の目・毎日）: 決まらない行は理由 bundle_unverified で要確認の欄に出る（今の要確認の仕組み）。
-- 守り手4（再現の台本）: scripts/dev/bundle_replay.py。規則を変える便は、PR 前にこれで本番の全行に当て直し、結果の数を PR 本文に書く（ADR-1026 の決まり）。
+- 守り手4（再現の台本）: scripts/dev/bundle_replay.py。規則を変える便は、PR 前にこれで本番の全行に当て直し、結果の数を PR 本文に書く（ADR-1027 の決まり）。
 - 守り手5（理由コードの整合・毎回）: 既存の test_review_reason_codes_consistency.py と test_review_reason_labels_ja_sync.py が、bundle_unverified の定数・SQL・ja/en・ラベル JSON のずれを赤にする。
 - 未確立（正直な明記）: 「新しい書き方のまとめ売りが増えた」ことを自動で知らせる仕組みは無い。bundle_replay.py は「N＋別名に無い語＋まとめの語」の当たりの語を数えて出す（設計時は 135 行・全て品名の説明）ので、規則を変える便と週次の点検ではこの欄の新しい語を人が見る。拾えない形（B3・入り・×N）は人が要確認で見る。bundle_replay.py は本番データが要るため CI では走らない。
 
@@ -157,7 +157,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 逆参照: `git grep -n "V102:bulk\|_apply_bulk_price\|convert_bulk_price\|bulk_price_basis_unknown\|japanese_title\|gkey" origin/main`（recon.md に結果）。
 
 1. 人: PO・利用者（GAS・閲覧ページ）に、バルクの値段の桁と商品名の欄の変化が見える。GAS の列は増えない。
-2. エージェント: ADR-1021 便2 を読んで ÷N を前提にする担当が出る → ADR-1021 に「便2 は ADR-1026 で置き換え」の注記を足す。docs/handoff/g28-bulk-price/design.md の便2 にも同じ注記。
+2. エージェント: ADR-1021 便2 を読んで ÷N を前提にする担当が出る → ADR-1021 に「便2 は ADR-1027 で置き換え」の注記を足す。docs/handoff/g28-bulk-price/design.md の便2 にも同じ注記。
 3. 機械: CI（pytest・i18n・ADR 索引）。scripts/run_all_migrations.sh への登録。process-artifacts gate（migrations/ を含むため GO 記録）。
 4. データ: analysis_results と line_units に列が足される（NULL 許可・既存行は NULL）。review_reason_codes に 1 行。テナント: public のみ。tenant_004 には触れない。
 5. 本番: deploy で migration が走る（ADR-SA の手順のまま）。再解析は当たりのある 92 job（b8f6e15a を含む）。監視は変えない。

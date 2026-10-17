@@ -1,6 +1,6 @@
 # 実装カード 便1: まとめの数の列・読み取り・配信の商品名・理由コード・再現の台本
 
-> 親: [design.md](./design.md) §5-1〜§5-5・§8・§9／ADR: [ADR-1026](../../adr/ADR-1026-bundle-sale-reading.md)／KGI: [kgi.md](../../specs/bundle-sale/kgi.md)（K1〜K6 は便3 で照合。便1 は A1〜A4）
+> 親: [design.md](./design.md) §5-1〜§5-5・§8・§9／ADR: [ADR-1027](../../adr/ADR-1027-bundle-sale-reading.md)／KGI: [kgi.md](../../specs/bundle-sale/kgi.md)（K1〜K6 は便3 で照合。便1 は A1〜A4）
 > 区分: ADR-1015 の A。`migrations/` と `scripts/run_all_migrations.sh` を含むため、マージ前に ADR-136 の GO 手順が要る（GO は Opus に委任）。
 > 状態: カード作成済み。実装の承認は PO の「y」（2026-10-17、y の意味「設計を保存し、Sonnet に作らせ、本番反映と照合まで進めます」）。
 
@@ -32,7 +32,7 @@
 ## 項目 1: migration 2 本（構造だけ・冪等・値の操作なし ADR-1007）
 
 ### 変更
-- 新規 `migrations/20261017_HHMMSS_add_analysis_results_bundle_size.sql`: `ALTER TABLE public.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer NULL;` ＋ `COMMENT ON COLUMN`（「まとめ売りのまとめの数。NULL=まとめ売りでない。ADR-1026」）。CHECK は付けない（2 以上はコードで守る）。
+- 新規 `migrations/20261017_HHMMSS_add_analysis_results_bundle_size.sql`: `ALTER TABLE public.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer NULL;` ＋ `COMMENT ON COLUMN`（「まとめ売りのまとめの数。NULL=まとめ売りでない。ADR-1027」）。CHECK は付けない（2 以上はコードで守る）。
 - 新規 `migrations/20261017_HHMMSS_add_line_units_display_names.sql`: `ALTER TABLE public.line_units ADD COLUMN IF NOT EXISTS name_ja text NULL, ADD COLUMN IF NOT EXISTS name_en text NULL;` ＋ COMMENT。
 - `scripts/run_all_migrations.sh` の末尾に 2 行 `run_sql`。deploy.yml には書かない（deploy.yml:223）。
 - 実物点検 6 で挙げたテストの migration 読み込みに 2 本を足す。
@@ -96,7 +96,7 @@
 
 ## 項目 9: 文書の注記
 
-- `docs/adr/ADR-1021-bulk-condition-state.md` の便2 の決まり（:27-38 付近）に「set の換算は ADR-1026 で置き換え（piece・review はそのまま）」を 1 行。`docs/handoff/g28-bulk-price/design.md` の便2 にも同じ 1 行。`node scripts/generate-adr-index.js` で索引を作り直す（ステータス欄に「承認」の字を書かない。generate-adr-index.js:59）。
+- `docs/adr/ADR-1021-bulk-condition-state.md` の便2 の決まり（:27-38 付近）に「set の換算は ADR-1027 で置き換え（piece・review はそのまま）」を 1 行。`docs/handoff/g28-bulk-price/design.md` の便2 にも同じ 1 行。`node scripts/generate-adr-index.js` で索引を作り直す（ステータス欄に「承認」の字を書かない。generate-adr-index.js:59）。
 
 ## 止まる条件
 - 実物点検の結果がこのカードの前提（file:line の中身）と違う。
@@ -117,7 +117,7 @@
 migrations/20261017_HHMMSS_add_analysis_results_bundle_size.sql、migrations/20261017_HHMMSS_add_line_units_display_names.sql、scripts/run_all_migrations.sh、backend/app/services/v102_bundle_svc.py、backend/app/services/line_analysis_v102_svc.py、backend/app/services/v102_bulk_price_svc.py（set を返す形を変える場合のみ）、backend/app/services/v102_unit_price_check_svc.py、backend/app/services/v102_buyback_unit_svc.py、backend/app/services/tcg_distribution_svc.py、backend/app/data/review_reason_labels_ja.json、frontend/src/locales/ja.json、frontend/src/locales/en.json、docs/handoff/v102-prod-switch/data/review_reason_codes/seed_20261017_bundle_unverified.sql・bu_dryrun.sql・bu_commit.sql・bu_verify.sql・bu_rollback.sql、docs/handoff/bundle-sale/data/units_display_{dry_run,commit,verify,rollback}.sql、scripts/dev/bundle_replay.py、backend/tests/test_v102_bundle.py、backend/tests/test_v102_bulk_price.py、backend/tests/test_v102_unit_price_check.py、backend/tests/test_v102_price_inherit_pg.py、backend/tests/test_v102_buyback_unit.py、実物点検 6 で挙げた migration を読むテスト、docs/adr/ADR-1021-bulk-condition-state.md、docs/handoff/g28-bulk-price/design.md、docs/adr/README.md
 
 ## 戻し方
-PR を revert する。列は NULL 許可で足すだけなので残しても読む処理が無くなるだけ（ADR-1026 の戻し方）。本番で再解析した後なら reanalyze_v102_job でやり直す（Gemini は呼ばない）。
+PR を revert する。列は NULL 許可で足すだけなので残しても読む処理が無くなるだけ（ADR-1027 の戻し方）。本番で再解析した後なら reanalyze_v102_job でやり直す（Gemini は呼ばない）。
 
 ## カードチェック（Opus・2026-10-17）
 - 設計 §5-1〜§5-5 の全項目がカードの項目 1〜9 に対応する（§5-4 の表示＝項目 4、§5-5＝項目 5、便1 の注記＝項目 9、守り手4＝項目 7）。

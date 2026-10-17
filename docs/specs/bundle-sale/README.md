@@ -12,4 +12,4 @@
 - 対象外: 「100枚 / 50セット @24,000」型（まとめ語が無い）、「150枚入」「カートン(20BOX入り)」、在庫数の「×N」。今の保存のまま人が見る。比較・レビュー画面での表示と人による直しは便4（別設計）。
 
 ## 状態
-あるべき姿 2026-10-17・KGI K1〜K6（PO 合意 2026-10-17）・recon・design（設計審査 APPROVE）・ADR-1026（Proposed）・便1 の実装カード [card-bin1.md](../../handoff/bundle-sale/card-bin1.md)・実装未着手。
+あるべき姿 2026-10-17・KGI K1〜K6（PO 合意 2026-10-17）・recon・design（設計審査 APPROVE）・ADR-1027（Proposed）・便1 の実装カード [card-bin1.md](../../handoff/bundle-sale/card-bin1.md)・実装未着手。
