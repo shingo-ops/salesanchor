@@ -45,11 +45,12 @@
 - **同じ担当者への再保存ではリセットされない**（`leads.py:575-578`）／担当を外す（NULL）遷移も試験済み
 - `leads.assigned_to` を書く経路の全数確認でリセット漏れなし（作成時の INSERT は NULL＝バッジが出る、が正しい）
 - `assignment_opened_at` への書き込みは**2箇所だけ**（担当変更リセット・`opened=True`）。`_UPDATABLE_COLUMNS` に無いので API から直接書けない
-- マイグレーション4観点（2回目以降・新規テナント・`leads` 表が無いスキーマ・担当なしの行）すべて安全。新規テナント定義 `backend/app/services/tenant.py:379` と同期済み
+- マイグレーション5観点（初回・2回目以降・`leads` 表が無いスキーマ・`assigned_to` が無いスキーマ・担当なしの行）すべて安全。新規テナント定義 `backend/app/services/tenant.py:377` と同期済み
 - ADR-072（テナント文脈）・ADR-1016（書き込みルート台帳）・ADR-155（マイグレーションでの値の書き込み）に抵触なし
 - 既存の `mark-read` 呼び出し（body なし）は壊れない
 
 ### 設計担当が別途確認した安全性（PR-A を単独で先に出してよい根拠）
 
-- `leads` に対する **VIEW も TRIGGER も無い**。RLS ポリシーは `migrations/003_add_phase1_tenant_tables.sql:191` のテナント分離1本のみで、列の追加に反応しない
+- **訂正（2026-10-17・再審査の指摘1）**: 当初ここに「`leads` に VIEW も TRIGGER も無い」と書いたが**事実誤り**だった。`leads` を参照する VIEW は `migrations/20260612_120000_fix_company_stats_ssot.sql:44-70` の `v_company_stats` が**1本実在する**（`LEFT JOIN %I.leads l`）。ただし①列を明示しており `SELECT *` ではない ②同ファイル `:42` が `DROP VIEW IF EXISTS %I.v_company_stats CASCADE` してから作り直す、ため**列の追加に反応しない**。したがって結論（PR-A 単独投入は安全）は変わらない。**将来 `SELECT * FROM leads` の VIEW を足すと、この安全論は崩れる**（`CREATE OR REPLACE VIEW` は列の位置が変わると失敗する）。
+- `leads` 上の **TRIGGER は0件**（`migrations/` の `CREATE TRIGGER` 全件を走査）。`ai_ro` の読み取り専用ビュー（ADR-1024）は `scripts/run_all_migrations.sh` が実行の先頭で全削除し EXIT trap で最後に作り直すため、依存が `ALTER` を止めることはない。RLS ポリシーは `migrations/003_add_phase1_tenant_tables.sql:190-193` のテナント分離1本のみで、列の追加に反応しない
 - 追加列は **NULL 許容**（`NOT NULL` ではない）。旧コードは列名を明示して SELECT するため、列が増えても動作に影響しない
