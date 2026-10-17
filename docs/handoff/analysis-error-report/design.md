@@ -128,7 +128,7 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 | 5 | playbook.md・試験 2 件（G4）・負荷の測定（G6） | — |
 - PO の作業（AI ではできない）: Discord に誤り報告チャンネルと webhook を作る／bot をそのチャンネルに入れる／GitHub Secret に webhook と ERROR_REPORT_AGENT_TOKEN を登録する（secrets の変更は PO 本人・ADR-1003 例外）。
 
-## 10. 未決（自己審査 REVISE の理由）
+## 10. 未決（すべて解決または PO 決定で受容）
 - U1 解決（PO 2026-10-17「y」）: 数量・価格は数字で入力し完全一致で照合。メモはメモ語マスタから複数選び、語の集合で照合（PO 2026-10-17「y」。根拠: 本番の現行行でメモが入る 821 行のうち 661 行がマスタの語だけ・残り 160 行のうち 121 行は発送日の文＝今は ship_ja 欄。v102 の新しい行はメモ原則なし line_analysis_v102_svc.py:701。調査 /tmp/CC報告ファイル/memo-format-recon.md）。
 - U2 解決（PO 2026-10-17「y」）: O6・O7 は PO の y なしで自動セッションに任せる。
 - U3 解決: 数字は TextField type="number"、メモは MultiSelect、商品は AsyncCombobox（/tmp/CC報告ファイル/autofix-u346.md）。
@@ -136,13 +136,13 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 - U5 PO 決定で受容: 案F 不採用の記録は外す（PO 2026-10-17）。規約 §3-7 の今の原文は未確認のまま（設計の可否の前提にしない＝PO の判断事項として記録）。
 - U6 解決: 稼働中は v0.42.3（pid 8851、/tmp/CC報告ファイル/autofix-u346.md）。
 
+## 11. 外部事例
+該当なし。理由: 社内に既にある部品（Discord webhook・agent-console の launchAndSend・再解析の Celery タスク）の組み合わせで、新しい技術を入れない。この案の調査では外部閲覧をしない（PO 2026-10-17）。
+
 ## 12. 自己審査（同一 AI による審査・独立した第二者レビューではない）
 - 判定: APPROVE（2026-10-17）。
 - 根拠: KGI G1〜G6 は PO 承認済み。§10 の U1〜U4・U6 は事実で解決、U2 は PO 決定、U5 は PO 決定で受容。各受け入れ基準に検証方法がある（§8）。正本は表 1 か所（§4-1）で、Discord とセッションは写し。画面は既存の金型だけ（§4-3）。
 - 実装カードで固定すること: 新しい表の RLS・権限の型（pipeline の public 表の今の形の file:line）、Discord 通知の送り先 secret 名、専用の鍵の検査の書き方（ops.py の require_ops_reader と同じ型）。
-
-## 11. 外部事例
-該当なし。理由: 社内に既にある部品（Discord webhook・agent-console の launchAndSend・再解析の Celery タスク）の組み合わせで、新しい技術を入れない。この案の調査では外部閲覧をしない（PO 2026-10-17）。
 
 ## 維持の仕組み
 - 守り手: .github/workflows/process-artifacts-gate.yml（migrations・新 API の PR は A 区分として GO 記録を検査）
