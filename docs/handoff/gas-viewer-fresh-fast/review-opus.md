@@ -72,3 +72,45 @@
 
 ### 未解決
 - PO の Discord の設定作業（ボットのロールに「招待を作成」を付ける）。手順は 4c のカードと一緒に渡す。
+
+## r16（2026-10-17。段4c のカード：Discord の受付。審査は Opus、同一 AI の自己審査。カード /tmp/CC報告ファイル/viewer_stage4/card_4c.md）
+
+### 照合した根拠
+- D6 の【未確認】2つ：gateway の DB のロールは salesanchor_app（recon_d6/ssh_gw_dburl_masked.txt）。discord.py 2.4.0 の state.py:797・interactions.py:1049-1050・ui/modal.py:140-150（recon_d6/pkg/）。どちらも事実になり、D6 に記録した。
+- on_interaction（backend/app/discord_gateway/client.py:210-）は :216 で component 以外を落とすので、viewer_trial_ の分岐は :216 より前に置く。顧客用の :219 以降は変えない。
+- 部屋の作成の範囲（ticket_channel_creator.py:473-480・:510-564）。カテゴリの取得が leads の確認（:482-508）より前にあるため、部品を2つに分けて呼ぶ位置を変えない（4c の細部に記録）。
+- celery-worker に DISCORD_BOT_TOKEN が無い（docker-compose.yml:212-300）。部屋の片付けは gateway に置いた。
+- deploy.yml は migration（:526-540）を入れ物の作り直しの後に流す。
+
+### 確かめた点
+- SSOT：設定は1行だけの表。申込コードの正規化は1か所（viewer_signup_code.py）。招待リンク・部屋の URL は DB に保存しない（URL は guild_id と channel_id から作る）。
+- 顧客用チケットを変えない：既存のテスト2ファイルを1字も変えずに通すことを受入にした。ログと reason の文字列も今のまま。
+- 個人情報：部屋の名前は trial-<id>。ログに email・コード・パスワード・表示名を出さない。
+- 総当たり：Discord ID ごとに1時間5回。Redis が使えなければ照合しない。
+
+### Non-blocking
+- N-r16-1：deploy の順（入れ物の作り直し → migration）のため、反映の数分は一覧の SQL が新しい表を引けず 500 になりうる（使うのは PO だけ）。ボタンはまだ置かないので受付への影響は無い。反映後に一覧が 200 になることを本番で確かめる。
+- N-r16-2：片付けは「受付のカテゴリの中の trial-<数字> で、行が無いもの」を消す。PO の手順書で、受付のカテゴリをトライアル専用にすることを書く。
+
+### 判定
+APPROVE（Blocking 0、Non-blocking 2）。
+
+### 未解決
+- PO の Discord の設定作業（ボットのロールの権限、受付の部屋の上書き、4つの ID、set-config と post-button の GO）。
+
+## r17（2026-10-17。段4c の実装のコード審査：commit 66104ef55。審査は Opus、同一 AI の自己審査。生出力 /tmp/CC報告ファイル/viewer_stage4/impl_4c/）
+
+### 照合した範囲
+- client.py：init_redis（setup_hook）・close_redis（close）・片付けの loop（on_ready）・on_interaction の先頭の viewer_trial_ 分岐。分岐は例外を握って return し、顧客用の処理に流れない。
+- ticket_channel_creator.py：部品の呼び出しの位置は変わらない。_bot_permission_overwrites の名前は残る。private_channel.py のログの文字列は "[ticket] ..." のまま。
+- migration：1行だけの表（CHECK id=1）、GRANT は salesanchor_app、run_all_migrations.sh に登録。
+- viewer_trial.py の全文：DELETE…RETURNING で消費 → FOR UPDATE で pending を確かめる → 部屋 → UPDATE → 記録 → commit。IntegrityError のときは部屋を消す。
+- viewer_discord_cli.py：action は3つだけ。ID は数字1〜32文字。トークンと traceback を出さない。DISCORD_BOT_TOKEN は backend の入れ物にある（docker-compose.yml:109）。
+- 画面：ButtonLink（金型）・i18n の ja/en は同じキー。部屋の URL がある行だけにリンクを出す。
+
+### 検証（手元）
+- pytest：41 passed / 17 skipped / 1 failed。落ちた1件（test_non_super_admin_gets_403_on_all_six_routes）は、手元の venv に greenlet が無いため（環境の問題）。CI で確かめる。
+- tsc の error 5件は今回触っていないファイル（generated schema・@xyflow）。CI で確かめる。
+
+### 判定
+APPROVE（Blocking 0）。マージの条件は CI が全部緑であること。

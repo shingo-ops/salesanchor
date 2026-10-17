@@ -113,6 +113,7 @@ def _prepare(conn, async_url):
     asyncio.run(_run())
     cur = conn.cursor()
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
+    cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
     return cur
 
 
