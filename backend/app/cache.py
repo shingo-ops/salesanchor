@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import redis.asyncio as redis
 
@@ -20,13 +21,31 @@ PERMISSIONS_CACHE_TTL = 300
 _redis: Optional[redis.Redis] = None
 
 
+def _mask_url(url: str) -> str:
+    """接続先URLのパスワード部分を *** に置き換える（ログ出力用）。"""
+    try:
+        parts = urlsplit(url)
+        if parts.password is None:
+            return url
+        host = parts.hostname or ""
+        if ":" in host:
+            host = f"[{host}]"
+        if parts.port is not None:
+            host = f"{host}:{parts.port}"
+        user = parts.username or ""
+        netloc = f"{user}:***@{host}"
+        return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    except Exception:
+        return "<redacted>"
+
+
 async def init_redis() -> None:
     """Redis接続を初期化する。"""
     global _redis
     try:
         _redis = redis.from_url(REDIS_URL, decode_responses=True)
         await _redis.ping()
-        logger.info("Redis接続成功: %s", REDIS_URL)
+        logger.info("Redis接続成功: %s", _mask_url(REDIS_URL))
     except Exception:
         logger.critical("Redis接続失敗: ブラックリスト検証が無効になります")
         _redis = None

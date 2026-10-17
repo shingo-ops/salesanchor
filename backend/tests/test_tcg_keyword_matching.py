@@ -4120,3 +4120,124 @@ def test_product_all_terms_only_changes_positive_name_search():
     assert actual[2] is False and set(actual[3]) == {"A", "B"}
     assert search == {"A": ["30th FUTURISTIC"]}
     assert match_one_kw("30th FUTURISTIC", normalize_en(name)) is False
+
+
+# ---------------------------------------------------------------------------
+# resolve_condition_v2: 状態の価値順（prefer_lowest_value・ADR-1023）
+# ---------------------------------------------------------------------------
+
+
+def _vr_entry(code, canonical, priority, app_kubun, search_kw, exclude_kw, group, rank):
+    return {
+        "cond_id": f"vr-{code}", "code": code, "canonical": canonical, "priority": priority,
+        "app_kubun": app_kubun, "search_kw": search_kw, "exclude_kw": exclude_kw,
+        "match_type": "KEYWORD", "effect": "OUTPUT", "value_group": group, "value_rank": rank,
+    }
+
+
+# load_condition_entries と同じ並び（priority 昇順 → app_kubun 長い順 → code）
+_VALUE_RANK_ENTRIES = [
+    _vr_entry("CN0002", "Damaged case", 2, "箱系大", "潰れ,美品", "", "case", 2),
+    _vr_entry("CN0004", "Damaged sealed box", 2, "箱系", "潰れ,美品", "", "box", 2),
+    _vr_entry("CN20261008072213", "Searched box", 2, "箱系", "サーチ済み", "", "box", 5),
+    _vr_entry("CN0005", "No shrink box", 3, "", "シュリンク無し,シュリなし", "", "box", 3),
+    _vr_entry("CN0006", "Opened box", 3, "", "ペリなし", "", "box", 4),
+    _vr_entry("CN0001", "Case", 4, "箱系大", "通常品", "", "case", 1),
+    _vr_entry("CN0003", "Sealed box", 4, "箱系", "シュリンク付き,新品", "美品", "box", 1),
+]
+
+
+class TestResolveConditionValueRank:
+    """prefer_lowest_value=True で、当たった行のうち価値の低い（value_rank が大きい）状態を採る。"""
+
+    def test_lowest_value_box_wins_over_damaged(self):
+        entries = _VALUE_RANK_ENTRIES
+        assert resolve_condition_v2(
+            "シュリンク無し美品", "", "箱系", entries, {}, prefer_lowest_value=True
+        ) == ("No shrink box", "vr-CN0005", "R3:シュリンク無し")
+        # 既定（False）は今までどおり並びで最初に当たった行
+        assert resolve_condition_v2(
+            "シュリンク無し美品", "", "箱系", entries, {}
+        ) == ("Damaged sealed box", "vr-CN0004", "R2:美品")
+
+    def test_opened_box_wins_over_no_shrink(self):
+        canonical, _cid, _basis = resolve_condition_v2(
+            "シュリなし ペリなし", "", "箱系", _VALUE_RANK_ENTRIES, {}, prefer_lowest_value=True
+        )
+        assert canonical == "Opened box"
+
+    def test_only_damaged_hits_gives_damaged(self):
+        canonical, _cid, _basis = resolve_condition_v2(
+            "シュリンク付き美品", "", "箱系", _VALUE_RANK_ENTRIES, {}, prefer_lowest_value=True
+        )
+        assert canonical == "Damaged sealed box"
+
+    def test_single_hit_is_unchanged(self):
+        canonical, _cid, _basis = resolve_condition_v2(
+            "美品", "", "箱系", _VALUE_RANK_ENTRIES, {}, prefer_lowest_value=True
+        )
+        assert canonical == "Damaged sealed box"
+
+    def test_searched_box_is_lowest(self):
+        canonical, _cid, _basis = resolve_condition_v2(
+            "サーチ済み 潰れ", "", "箱系", _VALUE_RANK_ENTRIES, {}, prefer_lowest_value=True
+        )
+        assert canonical == "Searched box"
+
+    def test_cross_group_keeps_first_hit(self):
+        # 箱系大: Damaged case（case）と No shrink box（box）が当たる → 群またぎは今と同じ最初の行
+        assert resolve_condition_v2(
+            "潰れ シュリンク無し", "", "箱系大", _VALUE_RANK_ENTRIES, {}, prefer_lowest_value=True
+        )[0] == "Damaged case"
+
+    @pytest.mark.parametrize(
+        "raw_state,kubun",
+        [("美品", "箱系"), ("通常品", "箱系大"), ("SR シュリンク無し", "箱系")],
+    )
+    def test_entries_without_value_columns_are_unchanged(self, raw_state, kubun):
+        # value 列が無い entries（既存の _COND_ENTRIES）では True と False の結果が同じ
+        assert resolve_condition_v2(
+            raw_state, "", kubun, _COND_ENTRIES, _COND_UUID_MAP, prefer_lowest_value=True
+        ) == resolve_condition_v2(raw_state, "", kubun, _COND_ENTRIES, _COND_UUID_MAP)
+
+
+class TestLoadConditionEntriesValueRank:
+    """load_condition_entries: value_rank の列の有無で 2 経路。"""
+
+    @staticmethod
+    def _session(has_column):
+        info_result = MagicMock()
+        info_result.first.return_value = (1,) if has_column else None
+        main_result = MagicMock()
+        if has_column:
+            main_result.fetchall.return_value = [
+                ("id-1", "CN0005", "No shrink box", 3, None, "シュリンク無し", None, "KEYWORD", "OUTPUT", "box", 3),
+            ]
+        else:
+            main_result.fetchall.return_value = [
+                ("id-1", "CN0005", "No shrink box", 3, None, "シュリンク無し", None, "KEYWORD", "OUTPUT"),
+            ]
+        session = MagicMock()
+        session.execute.side_effect = [info_result, main_result]
+        return session
+
+    def test_with_column_returns_value_group_and_rank(self):
+        from app.services.tcg_analyzer_svc import load_condition_entries
+
+        session = self._session(True)
+        (entry,) = load_condition_entries(session)
+        assert entry["value_group"] == "box" and entry["value_rank"] == 3
+        main_sql = str(session.execute.call_args_list[1].args[0])
+        assert "c.value_group, c.value_rank" in main_sql
+        session.rollback.assert_not_called()
+
+    def test_without_column_returns_none(self):
+        from app.services.tcg_analyzer_svc import load_condition_entries
+
+        session = self._session(False)
+        (entry,) = load_condition_entries(session)
+        assert entry["value_group"] is None and entry["value_rank"] is None
+        assert entry["match_type"] == "KEYWORD" and entry["code"] == "CN0005"
+        main_sql = str(session.execute.call_args_list[1].args[0])
+        assert "value_rank" not in main_sql
+        session.rollback.assert_not_called()
