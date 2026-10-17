@@ -47,6 +47,8 @@ PO 承認: 2026-10-16「バルク商品の状態として新しく『バルク�
 # design: バルク系の価格を1枚単価に（便2）
 
 recon: docs/handoff/g28-bulk-price/recon.md「便2」。ADR: docs/adr/ADR-1021-bulk-condition-state.md「便2 価格の決まり」。関連 ADR: ADR-1007・ADR-1015・ADR-027・ADR-144。
+
+> 追記（ADR-1027）: set の換算は ADR-1027 で置き換え（piece・review はそのまま）。
 PO 承認: 2026-10-16 KGI（価格は1枚の値段・まとめ売りは備考「N枚セット単位（1セットX円）」・決まらない行は配信しない・バルク以外は変えない・2回に分けて反映）と、PRマージ・デプロイまでの完走。
 
 ## ADR-1015 の区分

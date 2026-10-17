@@ -32,6 +32,7 @@ from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
     _rewire_keyword_fks,
+    apply_bundle_sale_columns,
     create_soldout_extra_targets,
     provision,
 )
@@ -96,6 +97,7 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20261013_140000_add_analysis_results_ship_ja_ship_en.sql").read_text())
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
+            apply_bundle_sale_columns(cursor, SCHEMA)  # ADR-1027 便1: 配信の SELECT が bundle_size と line_units を読む
             # この試験は TCG_SCHEMA を差し替えず public の analysis_results を使うので、public にも作る（migration の本来の置き場）
             create_soldout_extra_targets(cursor, "public")
             # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).

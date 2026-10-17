@@ -60,8 +60,9 @@ from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は�
     condition_effect_sql,
 )
 from app.services.tcg_extraction_record_svc import RecordError
-from app.services.v102_bulk_price_svc import DECISION_PIECE, DECISION_SET
+from app.services.v102_bulk_price_svc import DECISION_PIECE
 from app.services.v102_bulk_price_svc import convert as convert_bulk_price
+from app.services.v102_bundle_svc import KIND_DECIDED, detect_bundle, split_unit_words
 from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
@@ -105,6 +106,7 @@ REASON_EXTRACT_EXCEPTION = "extract_exception"
 REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
 REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
 REASON_GEMINI_GAP_SUSPECT = "gemini_gap_suspect"  # 件の間の行を Gemini が使わず、商品が決まらなかった（段2a。段1の記録の gap_name の件）
+REASON_BUNDLE_UNVERIFIED = "bundle_unverified"  # まとめ売りらしいが、まとめの数が本文で決まらない（ADR-1027。値は Gemini の読みのまま。人の「このままで良い」で外せる）
 REASON_BULK_PRICE_BASIS_UNKNOWN = "bulk_price_basis_unknown"  # バルク系で、価格が1枚の値段かセットの値段か原文から決まらない（便2。配信しない）
 MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
@@ -703,6 +705,7 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
         "needs_review": reasons is not None, "review_reasons": reasons,
         "work_id": work_ids.get(product_id) if matched else None,
         "price_basis": f"V102:{item['price_basis']}"[:_PRICE_BASIS_MAX] if item.get("price_basis") else None,
+        "bundle_size": None,  # まとめ売りと決まった行だけ _apply_bundle が入れる（ADR-1027）
     }
 
 
@@ -711,12 +714,12 @@ _UPSERT_SQL = """
         id, extraction_item_id, product_id, pid_resolved, pid_basis, unit_id, unit_canonical, unit_resolved,
         condition_id, condition_canonical, condition_basis, quantity_normalized, price_normalized, note_ja,
         status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
-        price_basis, ship_ja, ship_en
+        price_basis, ship_ja, ship_en, bundle_size
     ) VALUES (
         :id, :extraction_item_id, :product_id, :pid_resolved, :pid_basis, :unit_id, :unit_canonical, :unit_resolved,
         :condition_id, :condition_canonical, :condition_basis, :quantity_normalized, :price_normalized, :note_ja,
         :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
-        :price_basis, :ship_ja, :ship_en
+        :price_basis, :ship_ja, :ship_en, :bundle_size
     )
     ON CONFLICT (extraction_item_id) DO UPDATE SET
         product_id = EXCLUDED.product_id, pid_resolved = EXCLUDED.pid_resolved, pid_basis = EXCLUDED.pid_basis,
@@ -727,7 +730,7 @@ _UPSERT_SQL = """
         exclusion = EXCLUDED.exclusion, needs_review = EXCLUDED.needs_review, review_reasons = EXCLUDED.review_reasons,
         engine_version = EXCLUDED.engine_version, computed_at = EXCLUDED.computed_at, updated_at = EXCLUDED.updated_at,
         work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis,
-        ship_ja = EXCLUDED.ship_ja, ship_en = EXCLUDED.ship_en
+        ship_ja = EXCLUDED.ship_ja, ship_en = EXCLUDED.ship_en, bundle_size = EXCLUDED.bundle_size
     RETURNING id
 """
 
@@ -916,6 +919,7 @@ def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values
         Candidate(key=index, product_id=int(v["product_id"]), unit=str(v["unit_canonical"]), price=Decimal(str(v["price_normalized"])))
         for index, v in enumerate(base_values)
         if v["pid_resolved"] and v["product_id"] is not None and v["unit_canonical"] and v["price_normalized"] is not None
+        and v.get("bundle_size") is None  # まとめの値段と1個の値段を混ぜない（ADR-1027）
     ]
     if not candidates:
         return frozenset()
@@ -932,7 +936,6 @@ def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values
 
 _PIECE_UNIT = "Piece"
 _PRICE_BASIS_BULK_PIECE = "V102:bulk:piece"
-_PRICE_BASIS_BULK_SET = "V102:bulk:set:"
 
 
 def _source_block(raw_text: str | None, row: object) -> str:
@@ -953,24 +956,35 @@ def _bulk_review(values: dict) -> dict:
     return {**values, "review_reasons": reasons, "needs_review": True}
 
 
-def _apply_bulk_price(values: dict, item: dict, block: str, unit_ids: dict) -> dict:
-    """バルク系の価格を1枚の値段にそろえる（便2。規則は v102_bulk_price_svc）。バルク系以外・商品が決まらない行は values をそのまま返す。
+def _apply_bundle(values: dict, block: str, unit_words: dict[str, str], set_words: frozenset[str], unit_ids: dict) -> dict:
+    """まとめ売り（N単位セット）を読む（ADR-1027。規則は v102_bundle_svc）。全ての行に当てる。
 
-    set は単価・数量を換算して備考に「N枚セット単位…」、piece は価格・数量そのまま、決まらない行は理由を足して要確認にする。
+    決まった: bundle_size=N、単位を中身の単位にそろえる。値段・数量は Gemini の読みのまま（割らない・掛けない）。
+    決まらない: 値は変えず、理由 bundle_unverified で要確認にする。当たりなしは values をそのまま返す。
     """
-    if item.get("product_category") != PRODUCT_KUBUN_BULK or not values["pid_resolved"]:
+    result = detect_bundle(block, unit_words, set_words, values["price_normalized"], values["quantity_normalized"])
+    if result is None:
+        return values
+    unit_id = unit_ids.get(result.unit) if result.kind == KIND_DECIDED and result.unit else None
+    if result.kind != KIND_DECIDED or unit_id is None:  # 中身の単位の id が引けないときも決めない（id を作らない）
+        reasons = _join_unique([*_split_reasons(values["review_reasons"]), REASON_BUNDLE_UNVERIFIED])
+        return {**values, "review_reasons": reasons, "needs_review": True}
+    return {**values, "bundle_size": result.n, "unit_canonical": result.unit, "unit_id": int(unit_id), "unit_resolved": True}
+
+
+def _apply_bulk_price(values: dict, item: dict, block: str, unit_ids: dict) -> dict:
+    """バルク系の価格を1枚の値段にそろえる（便2。規則は v102_bulk_price_svc）。バルク系以外・商品が決まらない行・まとめ売りと決まった行は values をそのまま返す。
+
+    piece は価格・数量そのまま（単位 Piece）、決まらない行と set は理由を足して要確認にする（set の換算は ADR-1027 で置き換え）。
+    """
+    if item.get("product_category") != PRODUCT_KUBUN_BULK or not values["pid_resolved"] or values.get("bundle_size") is not None:
         return values
     result = convert_bulk_price(block, _as_float(values["price_normalized"]), _as_float(values["quantity_normalized"]))
     piece_id = unit_ids.get(_PIECE_UNIT)
-    if result.decision not in (DECISION_PIECE, DECISION_SET) or piece_id is None:
-        return _bulk_review(values)  # Piece の id が引けないときも決めない（id を作らない）
+    if result.decision != DECISION_PIECE or piece_id is None:
+        return _bulk_review(values)  # set（R' で決まらなかったセットの印は割って保存しない）と Piece の id が引けないときも決めない
     unit = {"unit_canonical": _PIECE_UNIT, "unit_id": int(piece_id), "unit_resolved": True}
-    if result.decision == DECISION_PIECE:
-        return {**values, **unit, "price_basis": _PRICE_BASIS_BULK_PIECE}
-    return {
-        **values, **unit, "price_normalized": result.unit_price, "quantity_normalized": result.quantity,
-        "note_ja": result.note, "price_basis": f"{_PRICE_BASIS_BULK_SET}{result.n}",
-    }
+    return {**values, **unit, "price_basis": _PRICE_BASIS_BULK_PIECE}
 
 
 def _without_bulk_reason_if_human_priced(values: dict, decision: Decisions | None) -> dict:
@@ -1011,9 +1025,12 @@ def _write_results(
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
-    base_values = [  # 便2：バルク系の価格を1枚の値段に（原文ブロックは投稿の raw_text から。追加の問い合わせなし）
-        _apply_bulk_price(values, item, _source_block(raw_text, row) if item.get("product_category") == PRODUCT_KUBUN_BULK else "", unit_ids)
-        for values, (item, row) in zip(base_values, pairs)
+    unit_words, set_words = split_unit_words({a: info[0] for a, info in (masters.get("unit_alias_to_info") or {}).items()})
+    blocks = [_source_block(raw_text, row) for _item, row in pairs]  # 原文ブロックは投稿の raw_text から。追加の問い合わせなし
+    base_values = [_apply_bundle(values, block, unit_words, set_words, unit_ids) for values, block in zip(base_values, blocks)]  # ADR-1027：全ての行
+    base_values = [  # 便2：バルク系の価格を1枚の値段に（まとめ売りと決まった行は通らない）
+        _apply_bulk_price(values, item, block if item.get("product_category") == PRODUCT_KUBUN_BULK else "", unit_ids)
+        for values, (item, _row), block in zip(base_values, pairs, blocks)
     ]
     status_entries = masters["status_entries"]  # load_status_master を呼び直さない（例外時に rollback するため）
     base_values = [  # 人が直した値（数量・単価・単位・メモ・販売状況）。買取単位・単位と価格の確認は、この人の値で判定する
@@ -1166,6 +1183,7 @@ _INHERIT_PRICE_SQL = """
     WHERE sm.supplier_channel_id = :channel
       AND ar.product_id = :product_id AND ar.condition_id = :condition_id
       AND ar.price_normalized IS NOT NULL
+      AND ar.bundle_size IS NULL
       AND ar.status IS DISTINCT FROM :sold_out
       AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE :inherit_like)
       AND sm.line_posted_at < :posted_at
@@ -1189,6 +1207,7 @@ def _inherit_price(session: Session, extraction_job_id: str, row, values: dict, 
     """
     if (
         is_bulk
+        or values.get("bundle_size") is not None  # まとめ売りの行には引き継がない（ADR-1027）
         or values["price_normalized"] is not None
         or values["quantity_normalized"] is None
         or values["product_id"] is None
