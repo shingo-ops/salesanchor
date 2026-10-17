@@ -34,17 +34,18 @@ describe("buildInventoryColumns", () => {
   });
 
   it.each([
-    ["Sealed box", "comp-badge--info"],
-    ["Damaged sealed box", "comp-badge--warning"],
-    ["No shrink box", "comp-badge--purple"],
-    ["Opened box", "comp-badge--danger"],
-    ["Case", "comp-badge--info"],
-    ["New", "comp-badge--neutral"],
-  ])("renders condition %s as Badge", (cond, cls) => {
+    ["Sealed box", "inventory-cell__condition--info"],
+    ["Damaged sealed box", "inventory-cell__condition--warning"],
+    ["No shrink box", "inventory-cell__condition--purple"],
+    ["Opened box", "inventory-cell__condition--danger"],
+    ["Case", "inventory-cell__condition--info"],
+    ["New", "inventory-cell__condition--neutral"],
+  ])("renders condition %s as colored text without Badge", (cond, cls) => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
     const cell = cols.find((c) => c.key === "condition")!.renderCell!({ ...row, condition: cond }, "r1");
     render(<div data-testid="cell">{cell}</div>);
     expect(screen.getByTestId("cell").querySelector(`.${cls}`)?.textContent).toBe(cond);
+    expect(screen.getByTestId("cell").querySelector(".comp-badge")).toBeNull();
   });
   it("has no unit column and keeps offer_type always visible", () => {
     const cols = buildInventoryColumns({ t, colVisible: () => false, fmtOfferedAt: () => "-" });
