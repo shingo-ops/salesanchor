@@ -572,12 +572,12 @@ def _resolve_condition(
 ) -> tuple[str | None, str, list[dict]]:
     """(状態, basis, 要確認の理由の一覧 [{"kind": ..., ...}])。"""
     if product_kubun in PRODUCT_KUBUNS_DEFAULTING_TO_BOX and unit_kubun in BOX_RECHECK_UNIT_KUBUNS:
-        cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block)
+        cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True)
         codes = _other_kubun_hits(block, UNIT_KUBUN_BOX, cond_entries)
         reviews = [{"kind": REVIEW_MULTIPLE_CANDIDATES, "codes": codes}] if codes else []
         cond, undecided = _undecided_condition(cond, basis, cond_entries)
         return cond, basis, [*reviews, *undecided]
-    cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block)
+    cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True)
     # バルク系で状態語が無い（FLAG_SINGLE かつ単位不明の既定）なら Bulk。語で決まった行（R1:PSA 等）は変えない
     bulk = _bulk_condition(cond_entries)
     if (

@@ -660,14 +660,30 @@ def load_condition_entries(session: Session) -> list[dict]:
 
     注意: migration 適用前の環境（CI テスト DB 等）で match_type / effect カラムが
     存在しない場合は fallback クエリに切り替えてデフォルト値を補完する。
+    value_group / value_rank（状態の価値順・ADR-1023）の列は information_schema で
+    有無を先に調べ、無い環境では読まずに None を返す（アプリが migration より先に出ても動く）。
     """
-    try:
+    has_value_rank = bool(
+        session.execute(
+            text(
+                """
+                SELECT 1 FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'conditions'
+                  AND column_name = 'value_rank'
+                LIMIT 1
+                """
+            )
+        ).first()
+    )
+    if has_value_rank:
         rows = session.execute(
             text(
                 """
                 SELECT c.id, c.code, c.canonical, c.priority,
                        c.app_kubun, c.search_kw, c.exclude_kw,
-                       c.match_type, c.effect
+                       c.match_type, c.effect,
+                       c.value_group, c.value_rank
                 FROM public.conditions c
                 WHERE c.is_active = TRUE
                   AND c.priority IS NOT NULL
@@ -679,24 +695,43 @@ def load_condition_entries(session: Session) -> list[dict]:
             )
         ).fetchall()
         has_match_type = True
-    except Exception:
-        session.rollback()
-        rows = session.execute(
-            text(
-                """
-                SELECT c.id, c.code, c.canonical, c.priority,
-                       c.app_kubun, c.search_kw, c.exclude_kw
-                FROM public.conditions c
-                WHERE c.is_active = TRUE
-                  AND c.priority IS NOT NULL
-                  AND c.priority > 0
-                ORDER BY c.priority ASC,
-                         length(COALESCE(c.app_kubun, '')) DESC,
-                         c.code ASC
-                """
-            )
-        ).fetchall()
-        has_match_type = False
+    else:
+        try:
+            rows = session.execute(
+                text(
+                    """
+                    SELECT c.id, c.code, c.canonical, c.priority,
+                           c.app_kubun, c.search_kw, c.exclude_kw,
+                           c.match_type, c.effect
+                    FROM public.conditions c
+                    WHERE c.is_active = TRUE
+                      AND c.priority IS NOT NULL
+                      AND c.priority > 0
+                    ORDER BY c.priority ASC,
+                             length(COALESCE(c.app_kubun, '')) DESC,
+                             c.code ASC
+                    """
+                )
+            ).fetchall()
+            has_match_type = True
+        except Exception:
+            session.rollback()
+            rows = session.execute(
+                text(
+                    """
+                    SELECT c.id, c.code, c.canonical, c.priority,
+                           c.app_kubun, c.search_kw, c.exclude_kw
+                    FROM public.conditions c
+                    WHERE c.is_active = TRUE
+                      AND c.priority IS NOT NULL
+                      AND c.priority > 0
+                    ORDER BY c.priority ASC,
+                             length(COALESCE(c.app_kubun, '')) DESC,
+                             c.code ASC
+                    """
+                )
+            ).fetchall()
+            has_match_type = False
 
     if has_match_type:
         return [
@@ -710,6 +745,8 @@ def load_condition_entries(session: Session) -> list[dict]:
                 "exclude_kw": r[6] or "",
                 "match_type": r[7] if r[7] is not None else "KEYWORD",
                 "effect": r[8] if r[8] is not None else "OUTPUT",
+                "value_group": r[9] if has_value_rank else None,
+                "value_rank": r[10] if has_value_rank else None,
             }
             for r in rows
         ]
@@ -725,6 +762,8 @@ def load_condition_entries(session: Session) -> list[dict]:
                 "exclude_kw": r[6] or "",
                 "match_type": "KEYWORD",
                 "effect": "OUTPUT",
+                "value_group": None,
+                "value_rank": None,
             }
             for r in rows
         ]
@@ -806,6 +845,27 @@ def _entry_hit(e: dict, text_combined: str) -> tuple[bool, Optional[str]]:
     return match_keyword(text_combined, s_kws, x_kws)
 
 
+def _pick_lowest_value(hits: list[tuple[dict, Optional[str]]]) -> tuple[dict, Optional[str]]:
+    """当たった行 (entry, matched_kw) の並びから採る 1 行を決める（ADR-1023）。
+
+    - 1 つだけ → それ。
+    - 全ての value_group が同じ（None でない）で value_rank も全てある → value_rank が最大（価値が低い）行。
+      同じ値なら hits の先のもの。
+    - それ以外（None を含む・群が違う）→ hits[0]（従来どおり最初に当たった行）。
+    """
+    if len(hits) == 1:
+        return hits[0]
+    groups = {h[0].get("value_group") for h in hits}
+    ranks = [h[0].get("value_rank") for h in hits]
+    if len(groups) == 1 and None not in groups and all(r is not None for r in ranks):
+        best = hits[0]
+        for h in hits[1:]:
+            if h[0]["value_rank"] > best[0]["value_rank"]:
+                best = h
+        return best
+    return hits[0]
+
+
 def resolve_condition_v2(
     raw_state: str,
     raw_product_name: str,
@@ -815,6 +875,7 @@ def resolve_condition_v2(
     *,
     raw_memo: str = "",
     product_kubun_type: str = "",
+    prefer_lowest_value: bool = False,
 ) -> tuple[Optional[str], Optional[str], str]:
     """
     (canonical, cond_id, basis) を返す。
@@ -829,6 +890,11 @@ def resolve_condition_v2(
     R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
     R4c(code):       商品分類既定（照合済み商品が箱系 × 単位が 条件つき/複合/数量専用 → Sealed box）。
                      product_kubun_type は pid_resolved のときだけ呼び出し側が渡す（省略時は従来どおり）
+
+    prefer_lowest_value=True（v102 の状態判定だけが渡す。ADR-1023）のとき、主ループで複数の行が当たったら、
+    当たった行の value_group が全て同じ（None でない）で value_rank も全てあるときに限り、value_rank が
+    最大（価値が低い）の行を採る。None を含む・群が違うときは従来どおり並びで最初に当たった行。
+    False（既定）は従来どおり最初に当たった行を即返す。
     """
     empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
     if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
@@ -850,15 +916,22 @@ def resolve_condition_v2(
                 break
 
     # --- Main loop (priority ASC, app_kubun 長 DESC — load_condition_entries でソート済み) ---
+    hits: list[tuple[dict, Optional[str]]] = []  # (entry, matched_kw) — 並び順のまま
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
         hit, matched_kw = _entry_hit(e, text_combined)
         if not hit:
             continue
+        if not prefer_lowest_value:
+            hits = [(e, matched_kw)]
+            break
+        hits.append((e, matched_kw))
+    if hits:
+        chosen, matched_kw = _pick_lowest_value(hits)
         prefix = f"{flag_note}," if flag_note else ""
-        basis = f"{prefix}R{e['priority']}:{matched_kw}"
-        return (e["canonical"], e["cond_id"], basis)
+        basis = f"{prefix}R{chosen['priority']}:{matched_kw}"
+        return (chosen["canonical"], chosen["cond_id"], basis)
 
     # --- R4 code fallback: kubun のみで分岐 ---
     b4_prefix = f"{flag_note}," if flag_note else ""
@@ -901,7 +974,7 @@ def resolve_condition_v2(
         # flag_note は内側の呼び出しが自分で付けるので、ここでは付けない。
         canonical, cid, inner_basis = resolve_condition_v2(
             raw_state, raw_product_name, "箱系", cond_entries, cond_canonical_to_uuid,
-            raw_memo=raw_memo,
+            raw_memo=raw_memo, prefer_lowest_value=prefer_lowest_value,
         )
         return (canonical, cid, "R4c:商品分類既定>" + inner_basis)
 
