@@ -84,3 +84,15 @@
 - 触る範囲の追加: 上記の試験5ファイル（既存4＋新規1）。製品コードと migrations の範囲は変えない
 - 値: helper は列を足したあと、本番と同じ11状態の値（recon の表）を canonical で UPDATE する（試験 DB に該当行がある場合だけ当たる。行を新たに作らない）。試験がその後に状態の行を自分で INSERT する場合は、その行は値なし（順位なし）になる。試験 DB を本番の値に揃えることで、既存の8状態の順（:67）を変えずに済む見込み。期待が変わる試験は担当が全走査して一覧で報告し、5ファイルを超えて期待を直す必要が出たら停止して Opus へ
 - 状態マスタに値が無い場合の扱い（Bulk→文字順）は test_tcg_result_order.py の中で値を NULL に戻して確かめる
+
+## 追補2（2026-10-18・CI 失敗の修正による）
+- 事実（担当調査 /tmp/CC報告ファイル/inventory-value-order/fix1/）: CI run 39055281510 の pytest-run-internal が 15分の上限でキャンセルされた。原因として確定したもの3つ
+  - 試験 DB の public.conditions に match_type / effect 列が無く、value_rank 列があると backend/app/services/tcg_analyzer_svc.py:663-697 が両列も読む版へ分岐して失敗した（本番は両列あり）
+  - 新規試験2件の期待値に、配信に出ない Empty box が含まれていた
+  - 行ごとの相関副問い合わせで、4097行の試験の EXPLAIN ANALYZE 合計が変更前の約2.2倍（ローカル 10510 ms → 22962 ms）になり、設計の停止条件（2倍）を超えた
+- 決定:
+  - helper に match_type TEXT NOT NULL DEFAULT 'KEYWORD'、effect TEXT NOT NULL DEFAULT 'OUTPUT' を足す（migrations/20260925_010000_conditions_add_match_type.sql と同じ型・既定値）
+  - result_order_sql の状態の位置は、public.conditions を jsonb_object_agg(canonical, 位置 ORDER BY lc.id DESC) で1回だけ集計し（InitPlan）、行側は ->> cr.canonical で引く。canonical が重複したら id の小さい方が勝つ（旧案の ORDER BY lc.id LIMIT 1 と同じ規則）。並びの意味は変えない
+  - 試験の期待値から Empty box を除く
+- 処理時間（同じローカル機・単発）: 変更前 10510 ms / 旧案 22962 ms / 本案 12427 ms（約1.18倍で停止条件内）。CI での値は CI 完了後に記録する
+- 範囲: 触るファイルは既存の11ファイルの中だけ。migrations・他の製品コード・CI 設定は変えない
