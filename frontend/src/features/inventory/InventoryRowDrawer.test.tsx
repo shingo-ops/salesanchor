@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { InventoryRowDrawer } from "./InventoryRowDrawer";
 import type { InventoryRow } from "./inventoryColumns";
+import { fmtOfferedAt } from "./inventoryFormat";
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), realtime: vi.fn() }));
 vi.mock("../../hooks/useRealtimeRefresh", () => ({
@@ -230,5 +231,34 @@ describe("InventoryRowDrawer", () => {
     mock.get.mockRejectedValue(new Error("boom"));
     render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
     expect(await screen.findByText("Failed to load the analysis result")).toBeTruthy();
+  });
+
+  describe("raw text slide header", () => {
+    const rawItem = { extraction_item_id: "a", raw_text: "raw body", line_start: 1, line_end: 1 };
+    const renderRaw = (r: InventoryRow) => {
+      mock.get.mockResolvedValue({ items: [rawItem] });
+      render(<InventoryRowDrawer row={r} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
+    };
+
+    it("J1: heading is '<supplier> <offered_at>' as in the supplier column", async () => {
+      const r = { ...row(["a"]), supplier_name: "Shop A", offered_at: "2026-10-17T09:05:00" };
+      renderRaw(r);
+      expect(await screen.findByText("raw body")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: `Shop A ${fmtOfferedAt(r.offered_at)}` })).toBeTruthy();
+    });
+
+    it("falls back to #supplier_id when supplier_name is null", async () => {
+      const r = { ...row(["a"]), supplier_name: null, supplier_id: 42, offered_at: "2026-10-17T09:05:00" };
+      renderRaw(r);
+      expect(await screen.findByText("raw body")).toBeTruthy();
+      expect(screen.getByRole("heading", { name: `#42 ${fmtOfferedAt(r.offered_at)}` })).toBeTruthy();
+    });
+
+    it("J2: does not show the block range legend", async () => {
+      renderRaw({ ...row(["a"]), offered_at: "2026-10-17T09:05:00" });
+      expect(await screen.findByText("raw body")).toBeTruthy();
+      expect(screen.queryByText("Block range")).toBeNull();
+      expect(document.querySelector(".shadow-source-legend")).toBeNull();
+    });
   });
 });
