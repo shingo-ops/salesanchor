@@ -3,7 +3,7 @@
 > この文書は何か: 誤り報告ボタンから、AI の自動セッション、修正、再解析、正解との機械照合、Discord への記録までの作り方の設計案。
 > 親: [docs/specs/analysis-error-report/README.md](../../specs/analysis-error-report/README.md)／あるべき姿: [ideal-state.md](../../specs/analysis-error-report/ideal-state.md)／KGI: [kgi.md](../../specs/analysis-error-report/kgi.md)／現状: [recon.md](./recon.md)
 
-状態: 設計案作成済み・自己審査 REVISE（§10 の未決が残る）・KGI は PO 承認済み（2026-10-17「y」）・実装未着手。区分: ADR-1015 の A（新機能・migrations・新 API・agent-console の新しい口）。
+状態: 設計案作成済み・自己審査 APPROVE（§12）・KGI は PO 承認済み（2026-10-17「y」）・実装未着手。区分: ADR-1015 の A（新機能・migrations・新 API・agent-console の新しい口）。
 
 ## 1. 目的
 super admin が見つけた解析の誤りを、ボタンで「何が間違っているか」と「正解」の形で報告する。報告から AI が自動で原因を調べ、委任範囲で直し、再解析の結果を正解と機械で照合し、Discord に残す（あるべき姿 §1）。
@@ -46,7 +46,7 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 | POST /tcg/items/{extraction_item_id}/error-reports | super admin（require_super_admin） | 報告を保存して Discord に通知。応答に report_code |
 | GET /ops/error-reports/{report_code} | 新しい専用の鍵（ERROR_REPORT_AGENT_TOKEN） | 自動セッションが報告と行の今の値を読む |
 | POST /ops/error-reports/{report_code}/events | 同上 | 原因・対策・変更を記録（kind は cause / action だけ） |
-| POST /ops/error-reports/{report_code}/reanalyze | 同上 | その報告のジョブ 1 件だけ再解析を積む（tcg.v102_reanalyze_after_correction）。終わったら照合を自動で走らせる |
+| POST /ops/error-reports/{report_code}/reanalyze | 同上 | その報告のジョブ 1 件だけ再解析する新しい Celery タスクを積む。タスクの中で reanalyze_v102_job を呼び、続けて照合を直接呼ぶ（既存の型: tcg_extraction.py:734-760 は続きを関数内で直接呼ぶ。chain/link の前例は無い） |
 - 照合: 再解析後の analysis_results の値と analysis_error_report_fields.expected_value を項目ごとに比べる。全部一致で resolved、1 つでも違えば unresolved。結果は events（verified）に保存し、Discord に項目ごとの○×を書く。
 - 鍵は読む・記録する・その報告の 1 ジョブを再解析する、だけに使える。マスタ書き込みには使えない。
 
@@ -59,12 +59,14 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
   | 商品 | AsyncCombobox で検索して選ぶ。「マスタに無い」チェックも置く | GET /tcg/products/search |
   | 単位・販売状態 | Select | GET /tcg/review/value-options |
   | 状態 | Select | GET /tcg/conditions/review-options |
-  | 数量・価格 | 数字の入力欄（PO 2026-10-17「y」） | 正本の候補なし。照合は完全一致 |
-  | メモ | MultiSelect でメモ語マスタから複数選ぶ（PO 2026-10-17「y」。文字入力の決定を置き換え） | public.tcg_note_master.label_ja（15 種類・tcg_analyzer_svc.py:1193-1197）。照合は選んだ語の集合が一致するか。候補を返す API の有無は【未確認】→便 3 の recon で固定 |
+  | 数量・価格 | TextField type="number"（前例 ReviewValueFixForm.tsx:102・PO 2026-10-17「y」） | 正本の候補なし。照合は完全一致 |
+  | メモ | MultiSelect でメモ語マスタから複数選ぶ（PO 2026-10-17「y」。文字入力の決定を置き換え） | public.tcg_note_master.label_ja（15 種類・tcg_analyzer_svc.py:1193-1197）。照合は選んだ語の集合が一致するか。候補は super admin 用の GET（backend/app/routers/super_admin_note_master.py:123-）から enabled=true の共有行（tenant_id IS NULL）だけを使う。候補専用 API は無い（調査 /tmp/CC報告ファイル/autofix-u346.md） |
 - 枠: Modal。段階式の金型は無いので、ReviewFixWizard.tsx と同じ組み方（feature 内）にする。文言は全部 t("key")、ja/en 同じキー（ADR-027）。
 
 ### 4-4 agent-console（別リポジトリ・版上げとタグ）
-- 誤り報告チャンネルを 30 秒ごとに Discord の REST で読む。鍵は bot トークン（Mac の鍵ファイルだけに置く）。
+- 誤り報告チャンネルを 30 秒ごとに Discord の REST（GET /channels/{id}/messages?after=<最後の ID>&limit=100）で読む。bot に要る権限は VIEW_CHANNEL と READ_MESSAGE_HISTORY だけ。鍵は bot トークン（Mac の鍵ファイルだけに置く）。429 と X-RateLimit-* ヘッダに従って待つ（公式 https://docs.discord.com/developers/topics/rate-limits：全体の上限 50 回/秒。30 秒に 1 回はその内）。
+- 拾う判定はメッセージの webhook_id が決めた webhook と一致すること（公式 https://docs.discord.com/developers/resources/message）。
+- 作る場所: 稼働中の v0.42.3（~/Library/Application Support/agent-console/current → versions/v0.42.3、HEAD 525358a54）を土台にする。
 - 拾うのは、決めた webhook の投稿で、本文が `ER-` ＋ 6 桁に合うものだけ。他の文は読まない。
 - 最後に処理した投稿の ID を保存する。起動時と眠りから戻った後はそれより後を読む（G2b）。
 - 同じ report_code のセッションがあれば開かない。同時に開くのは 1 つ、1 時間に 6 つまで。止めるスイッチ（画面と設定ファイル）を入れている間は開かない。
@@ -129,10 +131,15 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 ## 10. 未決（自己審査 REVISE の理由）
 - U1 解決（PO 2026-10-17「y」）: 数量・価格は数字で入力し完全一致で照合。メモはメモ語マスタから複数選び、語の集合で照合（PO 2026-10-17「y」。根拠: 本番の現行行でメモが入る 821 行のうち 661 行がマスタの語だけ・残り 160 行のうち 121 行は発送日の文＝今は ship_ja 欄。v102 の新しい行はメモ原則なし line_analysis_v102_svc.py:701。調査 /tmp/CC報告ファイル/memo-format-recon.md）。
 - U2 解決（PO 2026-10-17「y」）: O6・O7 は PO の y なしで自動セッションに任せる。
-- U3 入力欄の金型の名前と場所（実装カードの前に recon で固定）。
-- U4 Discord の REST の呼び出し制限の数値（Context7 か公式文書で確認してから便 4）。
-- U5 規約 §3-7 の今の原文（PO の決定で記録は外すが、原文は未確認のまま残る）。
-- U6 稼働中の agent-console が main か v0.42.3 か（便 4 の前に確認）。
+- U3 解決: 数字は TextField type="number"、メモは MultiSelect、商品は AsyncCombobox（/tmp/CC報告ファイル/autofix-u346.md）。
+- U4 解決: 公式の全体上限 50 回/秒の内。ルート個別の数値は公式に記載なし → 429 とヘッダに従う作りで対処（Context7 は月間上限で使えず、公式を直接確認）。
+- U5 PO 決定で受容: 案F 不採用の記録は外す（PO 2026-10-17）。規約 §3-7 の今の原文は未確認のまま（設計の可否の前提にしない＝PO の判断事項として記録）。
+- U6 解決: 稼働中は v0.42.3（pid 8851、/tmp/CC報告ファイル/autofix-u346.md）。
+
+## 12. 自己審査（同一 AI による審査・独立した第二者レビューではない）
+- 判定: APPROVE（2026-10-17）。
+- 根拠: KGI G1〜G6 は PO 承認済み。§10 の U1〜U4・U6 は事実で解決、U2 は PO 決定、U5 は PO 決定で受容。各受け入れ基準に検証方法がある（§8）。正本は表 1 か所（§4-1）で、Discord とセッションは写し。画面は既存の金型だけ（§4-3）。
+- 実装カードで固定すること: 新しい表の RLS・権限の型（pipeline の public 表の今の形の file:line）、Discord 通知の送り先 secret 名、専用の鍵の検査の書き方（ops.py の require_ops_reader と同じ型）。
 
 ## 11. 外部事例
 該当なし。理由: 社内に既にある部品（Discord webhook・agent-console の launchAndSend・再解析の Celery タスク）の組み合わせで、新しい技術を入れない。この案の調査では外部閲覧をしない（PO 2026-10-17）。
