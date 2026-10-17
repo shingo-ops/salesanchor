@@ -1,7 +1,7 @@
 ---
 mode: handoff
 adr: ADR-1027
-status: 便3 再解析 93 job 済（2026-10-17、実行者 PO）・K1 は PO 目視待ち・K2 の値段は本文と未照合
+status: 便3 再解析 93 job 済（2026-10-17、実行者 PO）・K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合
 ---
 
 # bin3-record — まとめ売り 便3（再解析と照合）の記録
@@ -102,7 +102,7 @@ sys.exit(1 if ng else 0)
 
 | # | 基準 | 観測値 | 判定 |
 |---|---|---|---|
-| K1 | 4周年40パックセット行が 3 画面で「商品名 40パックセット／Pack／24,000円／15」 | DB: item 8d9eea15 は bundle_size=40・unit=Pack・数量 15・値段 24000・needs_review=False。配信式で商品名=「4周年!四皇トレジャーゲット キャンペーンパック 40パックセット」。画面は未確認 | DB 側は一致（「…キャンペーンパック 40パックセット」・24000・15）。画面は PO 目視待ち |
+| K1 | 4周年40パックセット行が 3 画面で「商品名 40パックセット／Pack／24,000円／15」 | DB: item 8d9eea15 は bundle_size=40・unit=Pack・数量 15・値段 24000・needs_review=False。配信式で商品名=「4周年!四皇トレジャーゲット キャンペーンパック 40パックセット」。画面は 3 画面（在庫表・閲覧ページ・GAS在庫一覧）で PO が目視 | ○（根拠: PO チャット回答 y（2026-10-18）。DB 側も一致: 「…キャンペーンパック 40パックセット」・24000・15） |
 | K2 | 決まる行が bundle_size=本文の数・値段=本文のまとめ値段・単位=中身の単位 | replay の decided は 145 行。after で bundle_size が入った行は 144 行。145 行すべてで bundle_size と単位が replay と一致（144 行は現行行、1 行 ddf2bfa8 は bundle_size=100 で入ったが 5 の規則で現行から外れた）。decided 以外で bundle_size が付いた行 0。値段は replay に本文値が無く、本文との直接照合はしていない（13 行は K5 で一致、ほかは before と同じ値） | まとめの数・単位 ○（145/145）／値段は本文と未照合 |
 | K3 | 誤り 3 種（154c8ea1・dbe5702e・64255758）にまとめの数が付かない | 3 item とも bundle_size 空、replay 判定 none。注記: 3 件とも 93 job の外の行で、今回は再解析していない（最新計算 10/16〜10/17 10:44） | ○（再解析で確かめた形ではない） |
 | K4 | 決まらない 5 種に要確認の印、配信に出ない | 5 種とも needs_review=True・review_reasons に bundle_unverified（5/5）。配信条件（check/k4_dist_cond.tsv）では pid_resolved=False が 4 件（3a81d9cf・75100be0・7a3a3150・a98fe6ba）、exclusion=excluded が 2 件（6943d3a1・a98fe6ba）で、a98fe6ba は両方。5 件とも少なくとも一方で外れる。配信 SQL を実際に流した出力は未取得 | ○ |
