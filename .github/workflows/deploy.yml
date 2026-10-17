@@ -268,7 +268,7 @@ jobs:
             #   - quoted heredoc (`<<'ENV_EOF'`) でシェル変数展開を抑止し、
             #     Secret 値をそのまま literal text として書き込む。
             #     `${{ secrets.X }}` 自体は GitHub Actions が SSH 送信前に展開する。
-              #   - 値は単一引用符で囲む（compose も source も文字どおり読む。件1 design）
+            #   - 値は単一引用符で囲む（compose も source も文字どおり読む。件1 design）
             #   - Phase 1-D Sprint 1: METADATA_FERNET_KEY 紛失は DB token を永久に
             #     復号不能化するリスクが極めて高い。GitHub Secrets と別の安全な
             #     バックアップの二重保管必須。ローテーション手順は
