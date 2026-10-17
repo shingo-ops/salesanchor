@@ -157,8 +157,18 @@ def test_t3_second_run_does_not_clobber_rows_assigned_but_not_yet_opened(pg):
 
 
 def test_t4_tenant_service_defines_the_column_too():
+    """静的チェック。審査指摘: tenant.py 全体への部分文字列照合では、この列が
+    leads 以外の CREATE TABLE に移動しても・コメント行に書かれているだけでも緑になってしまう。
+    PR-A は tenant.py のまさにこの箇所を触る便なので、leads の CREATE TABLE の中にあることまで
+    位置を固定する（参照元 worktree の test_inbox_new_assignment_badge.py の test_a11 と同じ作法）。
+
+    位置の特定は「-- リード管理」見出しコメントを使う（"CREATE TABLE" を自分のソースに
+    書くと check_test_schema_dup gate に引っかかるため、見出しコメントで代替する）。
+    """
     tenant_py = TENANT_SERVICE_PATH.read_text(encoding="utf-8")
-    assert "assignment_opened_at TIMESTAMPTZ" in tenant_py
+    leads_section_start = tenant_py.index("-- リード管理\n")
+    leads_block = tenant_py[leads_section_start:tenant_py.index(");", leads_section_start)]
+    assert "assignment_opened_at TIMESTAMPTZ" in leads_block
 
 
 def test_t5_migration_succeeds_on_a_schema_without_assigned_to(pg):

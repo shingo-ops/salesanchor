@@ -422,20 +422,24 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 
 ## 維持の仕組み
 
-守り手: `backend/tests/test_inbox_new_assignment_badge.py`
+守り手: PR-A は `backend/tests/test_leads_assignment_opened_at_pg.py`（T1〜T5）、
+PR-B は `backend/tests/test_inbox_new_assignment_badge.py`（A3〜A10 等。PR-A の時点では
+未着手のため PR-A のツリーには存在しない。`git cat-file -e HEAD:backend/tests/test_inbox_new_assignment_badge.py`
+は PR-A では `does not exist in 'HEAD'` になる＝想定どおり）。
 
-| 守るもの | 関所 | 壊れたときの症状 |
-|---|---|---|
-| 担当変更でバッジが復活する | `backend/tests/test_inbox_new_assignment_badge.py`（A3・A4） | リセット処理を外すと赤 |
-| **開いたときだけ消える**（一括既読で消えない） | 同上（A5・A6） | `opened` の判定を外すと赤 |
-| 他人のバッジを消せない | 同上（A5） | `assigned_to = :me` 条件を外すと赤 |
-| **他人の担当者 ID を返さない** | 同上（A9） | 応答に `assigned_to` を足すと赤 |
-| マイグレーションが冪等 | `backend/tests/test_leads_assignment_opened_at_pg.py`（T3）／参照元の同上（A2） | `information_schema.columns` での列有無チェックや `CONTINUE` を外すと赤（審査 D4） |
-| **新テナントにも列がある**（2 箇所同期） | 同上（A11） | `backend/app/services/tenant.py` への追加を忘れると赤 |
-| 既存の `mark-read` 呼び出しが壊れない | 既存の受信箱テスト | 必須フィールドにすると赤 |
-| i18n キーが ja/en 揃う | `frontend/scripts/check-i18n-missing-keys.js` | 片方だけ足すと赤 |
-| API の形と台帳が一致 | CI「API contract is up to date」 | `frontend/api-contract/openapi.json` の更新忘れで赤 |
-| マイグレーションのファイル名形式 | `.github/workflows/migration-guard.yml` | 命名規則を外すと赤 |
+| 守るもの | 関所 | 壊れたときの症状 | 担当PR |
+|---|---|---|---|
+| 担当変更でバッジが復活する | `backend/tests/test_inbox_new_assignment_badge.py`（A3・A4） | リセット処理を外すと赤 | PR-B |
+| **開いたときだけ消える**（一括既読で消えない） | 同上（A5・A6） | `opened` の判定を外すと赤 | PR-B |
+| 他人のバッジを消せない | 同上（A5） | `assigned_to = :me` 条件を外すと赤 | PR-B |
+| **他人の担当者 ID を返さない** | 同上（A9） | 応答に `assigned_to` を足すと赤 | PR-B |
+| マイグレーションが冪等 | `backend/tests/test_leads_assignment_opened_at_pg.py`（T3） | `information_schema.columns` での列有無チェックや `CONTINUE` を外すと赤（審査 D4） | **PR-A** |
+| `leads` 表はあるが `assigned_to` が無いスキーマでも落ちない | 同上（T5） | 埋め直し UPDATE の前に `assigned_to` の有無を確認する分岐を外すと赤（CI で実発生・2026-10-17） | **PR-A** |
+| **新テナントにも列がある**（2 箇所同期） | `backend/tests/test_leads_assignment_opened_at_pg.py`（T4）／CI「テナントスキーマ整合性チェック（実行）」（`.github/workflows/schema-check.yml:48` のジョブ。`scripts/db/sync_tenant_schema.py --dry-run`〔`.github/workflows/schema-check.yml:217`〕が `information_schema.columns`〔`scripts/db/sync_tenant_schema.py:98`〕を読んで列レベルで突き合わせる） | `backend/app/services/tenant.py` の `leads` CREATE TABLE への追加を忘れると赤 | **PR-A** |
+| 既存の `mark-read` 呼び出しが壊れない | 既存の受信箱テスト | 必須フィールドにすると赤 | PR-B |
+| i18n キーが ja/en 揃う | `frontend/scripts/check-i18n-missing-keys.js` | 片方だけ足すと赤 | PR-B |
+| API の形と台帳が一致 | CI「API contract is up to date」 | `frontend/api-contract/openapi.json` の更新忘れで赤 | PR-B |
+| マイグレーションのファイル名形式 | `.github/workflows/migration-guard.yml` | 命名規則を外すと赤 | **PR-A**（本便の `migrations/20261015_090000_...` にも適用） |
 
 **人手に残る部分**: 実機での往復確認（A15〜A19）。特に「導入直後にバッジが大量発生しないこと」は
 本番データの件数に依存するため自動化していない。
