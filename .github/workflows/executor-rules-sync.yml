@@ -1,0 +1,30 @@
+name: Executor Rules Sync Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check:
+    name: executor-rules AGENTS.md is in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check if executor-behavior.md or AGENTS.md changed
+        id: changed
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep -qE '^docs/rules/executor-behavior\.md$|^AGENTS\.md$|^scripts/sync-executor-rules\.sh$' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check AGENTS.md is in sync with executor-behavior.md
+        if: steps.changed.outputs.changed == 'true'
+        run: bash scripts/check-executor-sync.sh
+
+      - name: No relevant files changed — skip
+        if: steps.changed.outputs.changed == 'false'
+        run: echo "✅ executor-rules 関連ファイルの変更なし — チェックをスキップ"

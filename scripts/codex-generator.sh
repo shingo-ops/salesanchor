@@ -135,6 +135,18 @@ fi
 
 # Codex 起動（salesanchor ルートから）
 cd "$REPO_ROOT"
+
+# 共通実行ルール (SSOT: docs/rules/executor-behavior.md) をプロンプト先頭に注入
+SHARED_RULES_FILE="$REPO_ROOT/docs/rules/executor-behavior.md"
+if [[ -f "$SHARED_RULES_FILE" ]]; then
+  SHARED_RULES="$(cat "$SHARED_RULES_FILE")"
+  FULL_PROMPT="${SHARED_RULES}
+
+---
+
+${FULL_PROMPT}"
+fi
+
 if [[ "$EXEC_MODE" == "1" ]]; then
   printf '%s\n' "$FULL_PROMPT" | "$CODEX_BIN" exec --sandbox workspace-write --cd "$REPO_ROOT" -
 else
