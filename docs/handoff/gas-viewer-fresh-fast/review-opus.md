@@ -97,3 +97,20 @@ APPROVE（Blocking 0、Non-blocking 2）。
 
 ### 未解決
 - PO の Discord の設定作業（ボットのロールの権限、受付の部屋の上書き、4つの ID、set-config と post-button の GO）。
+
+## r17（2026-10-17。段4c の実装のコード審査：commit 66104ef55。審査は Opus、同一 AI の自己審査。生出力 /tmp/CC報告ファイル/viewer_stage4/impl_4c/）
+
+### 照合した範囲
+- client.py：init_redis（setup_hook）・close_redis（close）・片付けの loop（on_ready）・on_interaction の先頭の viewer_trial_ 分岐。分岐は例外を握って return し、顧客用の処理に流れない。
+- ticket_channel_creator.py：部品の呼び出しの位置は変わらない。_bot_permission_overwrites の名前は残る。private_channel.py のログの文字列は "[ticket] ..." のまま。
+- migration：1行だけの表（CHECK id=1）、GRANT は salesanchor_app、run_all_migrations.sh に登録。
+- viewer_trial.py の全文：DELETE…RETURNING で消費 → FOR UPDATE で pending を確かめる → 部屋 → UPDATE → 記録 → commit。IntegrityError のときは部屋を消す。
+- viewer_discord_cli.py：action は3つだけ。ID は数字1〜32文字。トークンと traceback を出さない。DISCORD_BOT_TOKEN は backend の入れ物にある（docker-compose.yml:109）。
+- 画面：ButtonLink（金型）・i18n の ja/en は同じキー。部屋の URL がある行だけにリンクを出す。
+
+### 検証（手元）
+- pytest：41 passed / 17 skipped / 1 failed。落ちた1件（test_non_super_admin_gets_403_on_all_six_routes）は、手元の venv に greenlet が無いため（環境の問題）。CI で確かめる。
+- tsc の error 5件は今回触っていないファイル（generated schema・@xyflow）。CI で確かめる。
+
+### 判定
+APPROVE（Blocking 0）。マージの条件は CI が全部緑であること。
