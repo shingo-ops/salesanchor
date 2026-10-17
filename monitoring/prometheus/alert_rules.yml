@@ -333,3 +333,15 @@ groups:
           summary: "コンテナの状態書き係が 5 分以上動いていません"
           description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+      # 動いているのに健康診断（healthcheck）が無い。この間 ContainerUnhealthy は鳴らない（ADR-1012 段階3 定着便 T1）
+      - alert: ContainerHealthcheckMissing
+        expr: salesanchor_container_healthcheck_missing{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "コンテナ {{ $labels.service }} に健康診断がありません"
+          description: "prod1 の {{ $labels.service }} は動いていますが、健康診断（healthcheck）がありません。固まっても ContainerUnhealthy が鳴りません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerhealthcheckmissing"

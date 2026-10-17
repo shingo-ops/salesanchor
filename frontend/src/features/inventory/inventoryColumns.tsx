@@ -7,6 +7,7 @@ import type { TFunction } from "i18next";
 import { Badge } from "../../components/Badge";
 import type { DataTableColumn } from "../../components/DataTable";
 import { conditionBadgeVariant } from "./conditionBadge";
+import { supplierLabel } from "./inventoryFormat";
 import "./inventoryColumns.css";
 
 export interface InventoryRow {
@@ -157,7 +158,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 7,
         renderCell: (it) => (
           <>
-            <div>{it.supplier_name ?? `#${it.supplier_id}`}</div>
+            <div>{supplierLabel(it)}</div>
             <div className="inventory-cell__sub">{fmtOfferedAt(it.offered_at)}</div>
           </>
         ),

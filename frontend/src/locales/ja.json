@@ -1465,7 +1465,8 @@
       "notFound": "この行の解析結果が見つかりません。在庫表を再読み込みしてください",
       "itemTab": "{{n}}件目",
       "tabAnalysis": "解析",
-      "tabRawText": "原文"
+      "tabRawText": "原文",
+      "rawTextTitle": "{{supplier}}　{{postedAt}}"
     },
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",

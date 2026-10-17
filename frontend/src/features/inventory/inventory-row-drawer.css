@@ -1,0 +1,17 @@
+/* 在庫表スライドの原文タブ: 原文の枠を Drawer 本体の下端（本体の下余白 --space-5 を残す）まで伸ばす。
+   既定の 320px 上限（shadow-source-pane.css）はこの画面でだけ外す。前例: review-item-drawer.css */
+.inventory-rawtext-pane {
+  height: 100%;
+  min-height: 0;
+}
+
+.inventory-rawtext-pane > .shadow-source-pane {
+  flex: 1;
+  min-height: 0;
+}
+
+.inventory-rawtext-pane .shadow-source-lines {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}

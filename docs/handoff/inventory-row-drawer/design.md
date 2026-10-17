@@ -531,3 +531,71 @@ _BASE_FROM = _base_from()
 - B2: 実 PG テスト test_inventory_raw_texts_pg.py は CI で実行され、合格した（Backend Tests run 38923534625: 6350 passed、失敗 0。skip 条件は GITHUB_ACTIONS 以外のみ）。
 - 本番 DB での直接確認はしていない。本番 DB に読みに行く操作が安全確認フックに2回止められたので、言い換えずに中止した。
 - 残り: G3（PO がスタッフのアカウントで原文スライドを目視）。
+
+## 15. 便5 原文枠を下まで伸ばす（2026-10-17）
+
+### PO依頼原文（2026-10-17）
+「原文ページだが余白があるので下までカードの高さを伸ばせるか？下に多少の余白は欲しいが余白が大きいのでもっと表示幅を増やしたい」
+
+### 事実（recon.md「便5 追補」参照）
+- frontend/src/features/tcg-analysis-review/shadow-source-pane.css:35-41 原文枠は max-height 320px 固定、:3-10 親は flex column。
+- 前例: frontend/src/features/tcg-analysis-review/review-item-drawer.css:19-29 が `max-height:none; flex:1; min-height:0` で上書き。
+- frontend/src/components/Drawer.css:25-41 パネルは height:100dvh・flex column、:85-89 本体は flex:1・overflow-y:auto・padding var(--space-5) var(--space-6)。
+- frontend/src/components/Stack.tsx:13-21 は className を受けて結合する。
+
+### 対象ADR
+ADR-1014, ADR-067（色・寸法はトークン、px直値なし）, ADR-144（UI金型。新部品なし・既存クラス上書きのみ）
+
+### 変更
+- frontend/src/features/inventory/InventoryRowDrawer.tsx RawTextPane の Stack に className="inventory-rawtext-pane" を付け、frontend/src/features/inventory/inventory-row-drawer.css（新規）で height:100% と、原文枠の max-height 解除・flex:1 を指定する（この画面だけ）。
+- frontend/src/features/inventory/InventoryRowDrawer.test.tsx に T7 を1件追加。
+
+### 触らない範囲
+ShadowSourcePane.tsx/.css、review-item-drawer.css、Drawer.*、Stack.*、AnalysisPane、API、i18n。
+
+### 受入基準
+|基準|検証方法|
+|---|---|
+|H1 原文タブで枠の下端と画面下端の差が 40px 以下（変更前は約 950px・1440x1570 のスクショ）|本番で Playwright の getBoundingClientRect で測る|
+|H2 要確認ページの原文枠は変化なし|git diff --name-only に review 系を含まないことを確認|
+|H3 vitest・lint・型チェック合格|CI|
+
+- 外部事例: 不要（既存前例 review-item-drawer.css の同型適用のため）。
+- 戻し方: PR を Revert。
+
+## 16. 便6 原文スライドの見出しと凡例（2026-10-17）
+### PO依頼原文（2026-10-17）
+「原文のテーブルのヘッダーだが"ブロックの範囲"は不要、スライドページのヘッダーの"原文"だが仕入元名+投稿日時に出来る？」。本番反映までの一任あり。
+
+### 対象ADR
+ADR-1014, ADR-027, ADR-067, ADR-144
+
+### 事実（recon.md「便6 追補」参照）
+- frontend/src/features/tcg-analysis-review/ShadowSourcePane.tsx:18-22,43-54 凡例は常に描画。
+- frontend/src/features/inventory/InventoryRowDrawer.tsx RawTextPane の title は tabRawText（:171付近）、タブ label も同キー（:204付近）。
+- frontend/src/features/inventory/inventoryColumns.tsx:160-161 提供者列。frontend/src/pages/inventory/InventoryPage.tsx:172-178 fmtOfferedAt。
+- frontend/src/components/Drawer.tsx:25 title は string。
+
+### 変更
+- ShadowSourcePane に showLegend?: boolean（既定 true）を追加。false で凡例を出さない（ハイライトは残る）。
+- frontend/src/features/inventory/inventoryFormat.ts（新規）に fmtOfferedAt（InventoryPage から移動・中身不変）と supplierLabel を置き、InventoryPage.tsx・inventoryColumns.tsx・InventoryRowDrawer.tsx が共用（表示ロジックの SSOT）。
+- RawTextPane の Drawer title を t("inventory.rowDrawer.rawTextTitle", {supplier, postedAt}) にし、showLegend={false} を渡す。ja/en に rawTextTitle を追加。モード切替タブの「原文」は不変。
+- テスト: ShadowSourcePane.test.tsx、InventoryRowDrawer.test.tsx、inventoryFormat.test.ts。
+
+### 触らない範囲
+API・backend・DB・Drawer・Stack・ReviewItemDrawer・V102PostEditModal・CSS。
+
+### データの出どころ
+API 追加なし。行（InventoryRow）の supplier_name / offered_at をそのまま使う。dist_base が唯一の正本。
+
+### 受入基準
+|基準|検証方法|
+|---|---|
+|J1 原文スライドの見出しが「仕入元名　YYYY-MM-DD HH:mm」で在庫表の提供者列と同じ文字|vitest＋本番目視|
+|J2 原文スライドに「ブロックの範囲」が出ない|vitest＋本番 bundle|
+|J3 要確認ページの凡例は不変|ShadowSourcePane 既定 true・既存テスト合格|
+|J4 在庫表の提供者列の表示は不変|既存テスト合格|
+|J5 CI 合格|CI|
+
+- 外部事例: 不要（既存部品・既存値の再利用のため）。
+- 戻し方: PR を Revert。
