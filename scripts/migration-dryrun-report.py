@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""全件ドライランの対象（登録された全ファイル − 除外一覧）を決め、報告する。強制はしない。
+"""全件ドライランの対象（登録された全ファイル − 除外一覧）を決め、流す。1本でも落ちたら終了コード 1。
 
 使い方:
   python3 scripts/migration-dryrun-report.py set
       対象のファイルを 1 行ずつ出す。除外一覧が不正（登録されていない・無い・重複）なら失敗する。
   python3 scripts/migration-dryrun-report.py run --db NAME [--rounds 2] [--psql CMD ...]
-      対象を登録順に psql で流す。落ちても続け、結果を表にして出す。終了コードは常に 0（報告のみ）。
+      対象を登録順に psql で流す。落ちても続け、結果を表にして出す。1周でも失敗があれば終了コード 1（ADR-1007 決定5。強制）。
       GITHUB_STEP_SUMMARY があれば、そこにも書く。
 
 除外一覧: scripts/migration-guard/dryrun-exclusions.tsv（file / reason / fix_ref）。
@@ -68,8 +68,9 @@ def run_file(psql: list[str], db: str, path: str) -> tuple[bool, str]:
 def run_report(db: str, rounds: int, psql: list[str]) -> int:
     files, exclusions = dryrun_set()
     registered = len(registered_files())
-    print(f"全件ドライラン（報告のみ）: 登録 {registered} ファイル − 除外 {len(exclusions)} = 対象 {len(files)} ファイル")
-    summary = [f"### 全件ドライラン（報告のみ・強制しない）", f"登録 {registered} − 除外 {len(exclusions)} = 対象 {len(files)}", ""]
+    print(f"全件ドライラン: 登録 {registered} ファイル − 除外 {len(exclusions)} = 対象 {len(files)} ファイル")
+    any_failed = False
+    summary = [f"### 全件ドライラン（失敗したら止める）", f"登録 {registered} − 除外 {len(exclusions)} = 対象 {len(files)}", ""]
     for number in range(1, rounds + 1):
         failed: list[tuple[str, str]] = []
         for index, path in enumerate(files, 1):
@@ -77,6 +78,8 @@ def run_report(db: str, rounds: int, psql: list[str]) -> int:
             print(f"{'✅' if ok else '❌'} [{number}周目 {index}/{len(files)}] {path}" + ("" if ok else f"  {detail}"))
             if not ok:
                 failed.append((path, detail))
+        if failed:
+            any_failed = True
         line = f"{number}周目: 成功 {len(files) - len(failed)} / 失敗 {len(failed)}"
         print(line)
         summary.append(f"**{line}**")
@@ -86,7 +89,7 @@ def run_report(db: str, rounds: int, psql: list[str]) -> int:
     if target:
         with open(target, "a", encoding="utf-8") as handle:
             handle.write("\n".join(summary) + "\n")
-    return 0  # 報告のみ
+    return 1 if any_failed else 0
 
 
 def main() -> int:
