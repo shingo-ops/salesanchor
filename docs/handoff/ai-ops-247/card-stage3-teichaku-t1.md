@@ -527,6 +527,11 @@ ContainerStateStale の `runbook_url` の行（最終行）の後に、空行 1 
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード 段階3 定着便 T1 の実行結果である。
+
+- 試験: test_container_state 13 件 OK／test_check_app_healthchecks 11 件 OK（pyyaml あり・skipped なし）／check_app_healthchecks.py は OK healthcheck 4 サービス／check_alert_rules.py は Prometheus 27 rules／py_compile rc=0
+- python3 は 3.14.3（手元）。promtool は手元に無く未実行（CI で実行）
+- 生出力: /tmp/CC報告ファイル/ai-ops-stage3/teichaku-t1-impl/
+- 判断を要した点: new-worktree.sh 作成後に origin/main が進み（#4409 マージ）、§5-3 の差分比較は origin/main ではなく作業場所の起点 64fedf14e（HEAD）に対して行った
 
 END OF CARD

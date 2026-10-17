@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 26 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 27 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -279,3 +279,12 @@
 - 最初に見るもの：prod1 の `crontab -l` に container_state の行があるか → `/tmp/container-state.log` の最後の行（失敗のときだけ書かれる）→ `/home/ubuntu/node_exporter_textfile/container_state.prom` の時刻。
 - 直し方：ログの原因（docker が読めない・書けない）を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=ContainerStateStale --duration=PERIOD --comment=REASON`
+
+## ContainerHealthcheckMissing
+
+- 札：ticket
+- 何が起きているか：prod1 の celery-worker・celery-beat・discord-gateway・gemini-egress のどれかが動いているのに、健康診断（docker-compose.yml の healthcheck）が無い状態が 10 分続いた。定義が消えた・無効にされた、または古い定義のまま作り直された。この間はそのコンテナが固まっても ContainerUnhealthy が鳴らない。値は prod1 の `scripts/ops/container_state.py` が毎分 textfile に書く。
+- 影響：今の利用者への影響は無い。翌営業日までに直す。
+- 最初に見るもの：main の docker-compose.yml の該当サービスの healthcheck（CI の `monitoring/scripts/check_app_healthchecks.py` が通っているか）→ prod1 で `docker inspect -f '{{json .Config.Healthcheck}}'`（該当のコンテナ）。
+- 直し方：main に定義があれば、次の deploy で作り直されて戻る。main から消えていれば、消した変更を戻す PR を出して Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerHealthcheckMissing --duration=PERIOD --comment=REASON`
