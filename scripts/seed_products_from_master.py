@@ -157,8 +157,7 @@ async def _seed(rows: Iterable[ProductRow], dry_run: bool) -> None:
         if any(v is not None for v in (r.boxes_per_case, r.packs_per_box, r.box_weight_kg, r.case_weight_kg))
     )
     if dry_run:
-        if with_packaging:
-            logger.info("ADR-1028: 入数・重さは書かない。値がある行 %d 件（--apply は終了コード 3 で止まる）", with_packaging)
+        logger.info("ADR-1028: 入数・重さは書かない。値がある行 %d 件（0 でなければ --apply は終了コード 3 で止まる）", with_packaging)
         logger.info("dry-run: %d 行を投入予定 (DB 変更なし)", len(rows_list))
         for r in rows_list[:5]:
             logger.info("  sample: %s | %s | %s | %s", r.product_code, r.name, r.category, r.release_date)

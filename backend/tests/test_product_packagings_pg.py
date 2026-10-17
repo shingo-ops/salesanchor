@@ -31,28 +31,17 @@ _ROUTE_COLUMNS = (
     "product_kind VARCHAR(50)", "set_type VARCHAR(50)", "display_order INTEGER",
 )
 
-# design §3-4（.github/workflows/migration-test.yml）の最小定義と同じ
-_QUANTITY_UNITS_DDL = """
-CREATE TABLE IF NOT EXISTS public.quantity_units (
-    id            SERIAL PRIMARY KEY,
-    code          VARCHAR(50)  NOT NULL UNIQUE,
-    name          VARCHAR(100) NOT NULL,
-    name_en       VARCHAR(100),
-    value         INTEGER,
-    display_order INTEGER      NOT NULL DEFAULT 100,
-    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-)
-"""
-
 
 @pytest_asyncio.fixture
 async def client_factory(product_db, monkeypatch):
     db, _ = product_db
     for column in _ROUTE_COLUMNS:
         await db.execute(text(f"ALTER TABLE public.products ADD COLUMN IF NOT EXISTS {column}"))
-    await db.execute(text(_QUANTITY_UNITS_DDL))
+    # 数える単位の表は本番 migration で作る。本番は value が空のまま（20260922_060000 が NOT NULL を外す）なので、同じ 2 本を流す。
+    # 外側の transaction の中で流すので BEGIN/COMMIT は除く
+    for name in ("20260921_140000_product_classification_masters.sql", "20260922_060000_product_unit_condition_infra.sql"):
+        sql = (MIGRATIONS / name).read_text().replace("BEGIN;", "").replace("COMMIT;", "")
+        await fixtures._exec_multi_stmt(await db.connection(), sql)
     await db.execute(text(
         "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
         "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
@@ -178,6 +167,7 @@ async def test_t3_same_values_leave_rows_untouched(client_factory):
         })
     assert response.status_code == 200, response.text
     assert await _rows(db, pid) == before
+    # updated_at ではなく updated_by で比べる: 同じ transaction 内では NOW() が同じ値になり、updated_at では更新の有無を見分けられない
     assert all(r["updated_by"] == "seed" for r in before.values())
 
 
@@ -211,6 +201,9 @@ async def test_t5_post_writes_table_not_old_columns(client_factory):
     rows = await _rows(db, body["id"])
     assert set(rows) == {"CASE", "BOX"}
     assert rows["CASE"]["count_source"] == "legacy" and rows["BOX"]["weight_source"] == "legacy"
+    assert rows["CASE"]["count_source_urls"] == [] and rows["CASE"]["weight_source_urls"] == []
+    assert rows["BOX"]["count_source_urls"] == [] and rows["BOX"]["weight_source_urls"] == []
+    assert rows["CASE"]["contained"] == "BOX" and rows["BOX"]["contained"] == "PACK"
     old = (await db.execute(
         text("SELECT boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg FROM public.products WHERE id = :i"),
         {"i": body["id"]},

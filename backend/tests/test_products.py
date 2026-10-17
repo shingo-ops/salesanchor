@@ -618,7 +618,7 @@ class TestProductsMasterFields:
         assert get_res.json()["moq"] == 4
 
     async def test_negative_boxes_per_case_rejected(self, client):
-        """負の入数は 422（ge=0 バリデーション）"""
+        """負の入数は 422（gt=0 バリデーション。ADR-1028）"""
         res = await client.post("/api/v1/products", json={
             "name_ja": "負の入数商品",
             "boxes_per_case": -1,

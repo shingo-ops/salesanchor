@@ -139,13 +139,10 @@ def _select_columns(ctx: dict[str, str]) -> str:
     if ctx["dialect"] == "postgresql":
         legacy4 = ", ".join(
             f"{legacy_field_sql(f, ctx['ref'] + '.id')} AS {f}"
-            for f in ("boxes_per_case", "packs_per_box", "box_weight_kg", "case_weight_kg")
+            for f in LEGACY_FIELDS
         )
     else:
-        legacy4 = (
-            "NULL AS boxes_per_case, NULL AS packs_per_box, "
-            "NULL AS box_weight_kg, NULL AS case_weight_kg"
-        )
+        legacy4 = ", ".join(f"NULL AS {f}" for f in LEGACY_FIELDS)
     return (
         f"id, product_code, {ctx['name']} AS name_ja, name_en, category, mark, "
         f"status, unit_price, {ctx['qty']} AS quantity, weight, "
