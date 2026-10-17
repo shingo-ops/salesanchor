@@ -18,3 +18,4 @@
 - [あるべき姿](./ideal-state.md)
 - [KGI](./kgi.md)
 - 設計: [docs/handoff/vm-test-on-gha/design.md](../../handoff/vm-test-on-gha/design.md)（recon も同じフォルダ）
+- 段階2（AI の命令を実行前に止める見張り）: [docs/handoff/mac-vm-hook/design.md](../../handoff/mac-vm-hook/design.md)・結果 [results.md](../../handoff/mac-vm-hook/results.md)
