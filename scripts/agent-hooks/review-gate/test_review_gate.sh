@@ -225,20 +225,58 @@ expect "B11 python3 -c に merge が無ければ通す" 0 "python3 -c 'print(1)'
 expect "B7 GH_REPO= 付きのマージ" 2 'GH_REPO=o/r2 gh pr merge 1 --merge'
 expect "誤止めなし git merge origin/main" 0 'git merge origin/main'
 
+# ---------------------------------------------------------------- 第6版 (再審査 review-4503-r2)
+clear_records; mk_rec 1 "$SHA1"
+expect "R1(6) bash -euo pipefail -c" 2 'bash -euo pipefail -c "gh pr merge 2 --merge"'
+expect "R1(6) bash -eo pipefail -c" 2 'bash -eo pipefail -c "gh pr merge 2 --merge"'
+expect "R1(6) --disable-auto=false は数えない" 2 'gh pr merge 2 --merge --disable-auto=false'
+expect "R1(6) gh pr merge 2 -R o/r --disable-auto x" 2 'gh pr merge 2 -R o/r --disable-auto x'
+expect "R1(6) gh pr merge release/x --merge" 2 'gh pr merge release/x --merge'
+expect "R1(6) URL o/r2" 2 'gh pr merge https://github.com/o/r2/pull/1'
+expect "R1(6) GH_REPO=o/r2 gh pr merge 1" 2 'GH_REPO=o/r2 gh pr merge 1 --merge'
+expect "R1(6) export GH_REPO=o/r2; gh pr merge 1" 2 'export GH_REPO=o/r2; gh pr merge 1 --merge'
+expect "R1(6) GH_HOST=x gh pr merge 1" 2 'GH_HOST=x gh pr merge 1 --merge'
+expect "R1(6) gh pr merge -Ro/r2 1" 2 'gh pr merge -Ro/r2 1 --merge'
+expect "R1(6) gh -Ro/r2 pr merge 1" 2 'gh -Ro/r2 pr merge 1 --merge'
+expect "R1(6) gh pr merge 1 --repo=o/r2" 2 'gh pr merge 1 --merge --repo=o/r2'
+expect "R1(6) bash -c \$'gh pr merge 2'" 2 "bash -c \$'gh pr merge 2 --merge'"
+expect "R1(6) python3 -c os.system" 2 "python3 -c \"import os;os.system('gh pr merge 2')\""
+expect "R1(6) perl -e system" 2 "perl -e 'system(\"gh pr merge 2\")'"
+expect "R1(6) python3 ヒアドキュメントの os.system" 2 $'python3 <<EOF\nimport os; os.system("gh pr merge 2 --merge")\nEOF'
+expect "R1(6) python3 - ヒアドキュメント (引用つき)" 2 $'python3 - <<\'EOF\'\nimport subprocess\nsubprocess.run(["gh","pr","merge","2"])\nEOF'
+expect "R1(6) popd; gh pr merge 1" 2 'pushd /tmp; popd; gh pr merge 1 --merge'
+expect "R1(6) cd - の後のマージ" 2 'cd /tmp && cd - && gh pr merge 1 --merge'
+expect "R6(6) cd <置き場> && ls" 2 "cd $GD && ls"
+expect "R6(6) pushd <置き場>; echo > records/a.json" 2 "pushd $GD; echo x > records/a.json"
+expect "R6(6) 別の場所の同名台本の区切りで置き場に書く" 2 "bash x/scripts/agent-hooks/review-gate/test_review_gate.sh > $GD/records/a.json"
+expect "誤止めなし(6) mergeable を python -c で読む" 0 "gh pr view 1 --json mergeable | python3 -c \"import json,sys;print(json.load(sys.stdin)['mergeable'])\""
+expect "誤止めなし(6) --json mergeable,mergeStateStatus" 0 'gh pr view 1 --json mergeable,mergeStateStatus'
+expect "誤止めなし(6) git log --merges" 0 'git log --merges --oneline'
+expect "誤止めなし(6) python3 -c merged" 0 'python3 -c "print(\"merged\")"'
+expect "誤止めなし(6) pushd /tmp; ls; popd" 0 'pushd /tmp; ls; popd'
+
 # ---------------------------------------------------------------- install -> rollback で元に戻る
-if [ -z "${REVIEW_GATE_SKIP_ROUNDTRIP:-}" ] && [ -f "$SELF_DIR/install.sh" ] && [ -f "$SELF_DIR/rollback.sh" ]; then
-  CD="$T/claude"; mkdir -p "$CD/agents"
-  printf '%s\n' '{"model":"opus","hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo stop"}]}]}}' > "$CD/settings.json"
+roundtrip() { # NAME SETTINGS_JSON
+  local name="$1" CD="$T/claude-$RANDOM"
+  mkdir -p "$CD/agents"
+  printf '%s\n' "$2" > "$CD/settings.json"
   python3 -B -c 'import json,sys;p=sys.argv[1];d=json.load(open(p));open(p,"w").write(json.dumps(d,ensure_ascii=False,indent=2)+"\n")' "$CD/settings.json"
   printf '# reviewer\nline2\n' > "$CD/agents/reviewer.md"
-  cp "$CD/settings.json" "$T/settings.orig"; cp "$CD/agents/reviewer.md" "$T/reviewer.orig"
-  CLAUDE_DIR="$CD" bash "$SELF_DIR/install.sh" > "$T/inst.out" 2>&1; irc=$?
-  CLAUDE_DIR="$CD" bash "$SELF_DIR/rollback.sh" > "$T/roll.out" 2>&1; rrc=$?
-  if [ "$irc" = 0 ] && [ "$rrc" = 0 ] && cmp -s "$CD/settings.json" "$T/settings.orig" && cmp -s "$CD/agents/reviewer.md" "$T/reviewer.orig"; then
-    ok "install -> rollback で settings.json と reviewer.md が導入前と完全一致"
+  cp "$CD/settings.json" "$CD/settings.orig"; cp "$CD/agents/reviewer.md" "$CD/reviewer.orig"
+  CLAUDE_DIR="$CD" bash "$SELF_DIR/install.sh" > "$CD/inst.out" 2>&1; local irc=$?
+  CLAUDE_DIR="$CD" bash "$SELF_DIR/rollback.sh" > "$CD/roll.out" 2>&1; local rrc=$?
+  if [ "$irc" = 0 ] && [ "$rrc" = 0 ] && cmp -s "$CD/settings.json" "$CD/settings.orig" && cmp -s "$CD/agents/reviewer.md" "$CD/reviewer.orig"; then
+    ok "$name"
   else
-    ng "install -> rollback の往復" "install rc=$irc rollback rc=$rrc $(diff "$T/reviewer.orig" "$CD/agents/reviewer.md" 2>&1 | head -c 200)"
+    ng "$name" "install rc=$irc rollback rc=$rrc $(diff "$CD/settings.orig" "$CD/settings.json" 2>&1 | head -c 200)"
   fi
+}
+if [ -z "${REVIEW_GATE_SKIP_ROUNDTRIP:-}" ] && [ -f "$SELF_DIR/install.sh" ] && [ -f "$SELF_DIR/rollback.sh" ]; then
+  roundtrip "install -> rollback で settings.json と reviewer.md が導入前と完全一致" \
+    '{"model":"opus","hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo stop"}]}]}}'
+  roundtrip "往復: 導入前から空の hooks 項目 (PostToolUse: []) がある形でも完全一致" \
+    '{"model":"opus","hooks":{"PostToolUse":[],"Stop":[{"hooks":[{"type":"command","command":"echo stop"}]}]}}'
+  roundtrip "往復: hooks キーが無かった形でも完全一致" '{"model":"opus"}'
 fi
 
 echo "----------------------------------------"

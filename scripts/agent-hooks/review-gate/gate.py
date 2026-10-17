@@ -35,6 +35,7 @@ HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2
 SHELL_VALUE_OPTS = {"-o", "-O", "+o", "+O", "--rcfile", "--init-file"}
 OTHER_INTERP = {"perl", "ruby", "node", "php"}
 ANSI_C_SHELL_RE = re.compile(r"\b(?:bash|sh|zsh)\b[^\n;|&]*\s-[A-Za-z]*c[A-Za-z]*\s+\$[\"']")
+MERGE_WORD_RE = re.compile(r"(?<![A-Za-z_])merge(?![A-Za-z_])|mergePullRequest|enablePullRequestAutoMerge")
 URL_RE = re.compile(r"https?://([^/]+)/([^/]+)/([^/]+)/pull/(\d+)")
 SEP_CHARS = set(";&|\n")
 PUNCT_CHARS = set(";&|()<>\n")
@@ -183,6 +184,8 @@ def find_gh_sub(toks, sub):
 
 def flag_value(toks, names):
     for k, t in enumerate(toks):
+        if "-R" in names and len(t) > 2 and t.startswith("-R") and not t.startswith("--"):
+            return t[2:]
         if t in names and k + 1 < len(toks):
             return toks[k + 1]
         for n in names:
@@ -200,7 +203,7 @@ def parse_merge(toks, j):
         if is_punct(t):
             break
         if t.startswith("-"):
-            flags.add(t.split("=", 1)[0] if t.startswith("--") else t)
+            flags.add(t)
             k += 2 if (t in VALUE_FLAGS and "=" not in t) else 1
             continue
         pos.append(t)
@@ -256,6 +259,14 @@ def check_segment(toks, sep, wd, depth, ctx, top):
             k = idx + 1
             while k < len(toks):
                 a = toks[k]
+                if re.fullmatch(r"-[A-Za-z]+", a) and re.search(r"[oO]", a):
+                    # -euo / -co のように o/O を含むまとまりは、その数だけ次の語を値として飛ばす
+                    nval = len(re.findall(r"[oO]", a))
+                    if "c" in a and k + 1 + nval < len(toks):
+                        analyze(toks[k + 1 + nval], wd, depth + 1, ctx, False, False)
+                        break
+                    k += 1 + nval
+                    continue
                 if re.fullmatch(r"-[A-Za-z]*c[A-Za-z]*", a) and k + 1 < len(toks):
                     analyze(toks[k + 1], wd, depth + 1, ctx, False, False)
                     break
@@ -269,7 +280,7 @@ def check_segment(toks, sep, wd, depth, ctx, top):
     for idx, t in enumerate(toks):
         if base(t) in PYTHONS or base(t) in OTHER_INTERP:
             for k in range(idx + 1, len(toks) - 1):
-                if re.fullmatch(r"-[A-Za-z]*[ceE][A-Za-z]*", toks[k]) and "merge" in toks[k + 1]:
+                if re.fullmatch(r"-[A-Za-z]*[ceE][A-Za-z]*", toks[k]) and MERGE_WORD_RE.search(toks[k + 1]):
                     raise Block("%s の -c/-e の本文に merge を含むため止めます" % base(t))
     # 入れ子 4: 標準入力から読む bash
     if fw in SHELLS:
@@ -284,10 +295,10 @@ def check_segment(toks, sep, wd, depth, ctx, top):
     # 1. gh pr merge
     m = find_gh_sub(toks, "merge")
     mflags, mpos = parse_merge(toks, m) if m is not None else (set(), [])
-    if m is not None and "--disable-auto" not in mflags:
-        if any(t.startswith("GH_REPO=") for t in toks):
-            raise Block("マージ操作に GH_REPO= の代入があるため止めます")
+    if m is not None and ("--disable-auto" not in mflags or len(mpos) > 1):
         n, url_repo, _state = pr_from_merge(mpos, wd)
+        if len(mpos) > 1:
+            n = None
         if url_repo:
             repo = url_repo
         ctx.add(n, repo, wd, "gh pr merge", "--auto" in toks,
@@ -355,30 +366,45 @@ def analyze(text, wd, depth, ctx, top, lenient):
     if cur:
         segs.append((sep, cur))
     seg_wd = wd
+    wd_unknown = False
     for sep, st in segs:
         i0 = first_word_index(st)
         exempt = len(st) >= 2 and st[0] == "bash" and st[1] == TEST_SCRIPT
         if top and not exempt:
-            joined = " ".join(st)
+            joined = re.sub(r"/+", "/", " ".join(st))
             for w in guard_words():
                 if w in joined:
                     raise Block("review-gate の記録・台本には触れません（%s）" % w)
-        if i0 < len(st) and st[i0] == "cd" and i0 + 1 < len(st):
-            if under_gate_dir(st[i0 + 1], seg_wd):
-                raise Block("review-gate の記録の置き場へ cd した後のコマンドは止めます")
-            seg_wd = os.path.abspath(os.path.join(seg_wd, os.path.expanduser(st[i0 + 1])))
+        word = st[i0] if i0 < len(st) else ""
+        if word in ("cd", "pushd") and i0 + 1 < len(st):
+            dest = st[i0 + 1]
+            if dest == "-":
+                wd_unknown = True
+                continue
+            if under_gate_dir(dest, seg_wd):
+                raise Block("review-gate の記録の置き場へ %s した後のコマンドは止めます" % word)
+            seg_wd = os.path.abspath(os.path.join(seg_wd, os.path.expanduser(dest)))
             continue
+        if word == "popd":
+            wd_unknown = True
+            continue
+        before = len(ctx.checks)
         check_segment(st, sep, seg_wd, depth, ctx, top)
+        if wd_unknown and len(ctx.checks) > before:
+            raise Block("popd / cd - の後は作業場所が分からないため、マージ操作は止めます")
     for b in bodies:
         rfw = recv_first_word(b["recv"])
         if top:
             for w in guard_words():
-                if w in b["body"]:
+                if w in re.sub(r"/+", "/", b["body"]):
                     raise Block("review-gate の記録・台本には触れません（%s）" % w)
         if rfw in SHELLS:
             analyze(b["body"], seg_wd, depth + 1, ctx, False, False)
-        elif rfw in PYTHONS:
-            analyze(b["body"], seg_wd, depth + 1, ctx, False, True)
+        elif rfw in PYTHONS or rfw in OTHER_INTERP:
+            if MERGE_WORD_RE.search(b["body"]):
+                raise Block("%s に渡す本文に merge を含むため止めます" % rfw)
+            if rfw in PYTHONS:
+                analyze(b["body"], seg_wd, depth + 1, ctx, False, True)
     for inner in extract_subst(s2):
         analyze(inner, seg_wd, depth + 1, ctx, False, False)
 
@@ -408,6 +434,9 @@ def gh_view(n, repo, wd):
 
 def resolve(ctx):
     seen = {}
+    if ctx.checks and re.search(r"(?<![A-Za-z0-9_])GH_(?:REPO|HOST)=", ctx.full):
+        deny("review-gate: GH_REPO / GH_HOST の代入があるため止めます"
+             "（gh の照合先が変わるので APPROVE 記録と照合できません）。", kind="GH_REPO")
     for c in ctx.checks:
         if c["n"] is None:
             deny("review-gate: PR 番号が取れないため止めます。PR 番号を明示してください"

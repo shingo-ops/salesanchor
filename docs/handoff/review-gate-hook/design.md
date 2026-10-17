@@ -89,7 +89,7 @@ stdin の JSON の `tool_name` で分ける。
   3. ヒアドキュメントを受ける区切りの先頭が `bash`・`sh`・`zsh`・`python`・`python3` なら、その本文。
   4. 区切りの先頭が `bash`・`sh`・`zsh` で `-c` もスクリプトファイルの引数も無い（標準入力から読む）とき、またはパイプの後ろの区切りがそれのとき: 中身が分からないので、コマンドの全文に `merge` を含めば止める。
 - 関所にかける形（shlex の語で判定する。引用の中は 1 語になるので、文字を含むだけの `grep -rn "gh pr merge"`・`git commit -m "..."`・`gh pr create --body "..."` は当たらない。`timeout`・`xargs`・`sudo`・`caffeinate` などの前置きがあっても当たるよう、先頭の語には頼らない）:
-  1. 区切りの中のどこかに、basename が `gh` の語・`pr`・`merge` の 3 語がこの順に続く。同じ区切りに `--disable-auto` があれば通す。
+  1. 区切りの中のどこかに、basename が `gh` の語・`pr`・`merge` の 3 語がこの順に続く。同じ区切りに、旗の値の位置ではない値なしの `--disable-auto`（`--disable-auto=…` は数えない）があれば通す。
   2. 区切りの中に basename が `scripts/gh-pr-merge-safe.sh` の語がある。
   3. 区切りの中に basename が `scripts/dev/check-pr-merge-ready.py` の語がある。
   4. 区切りの中に basename が `gh` の語・`api` が続き、区切りの語に `/merge`・`mergePullRequest`・`enablePullRequestAutoMerge` のどれかを含む。
@@ -109,6 +109,16 @@ stdin の JSON の `tool_name` で分ける。
 - 判定は `$REVIEW_GATE_DIR/log.jsonl` に 1 行足す（K-a・K-b の数え元）。当たらない Bash は正規表現の前段（`merge|review-gate|REVIEW_GATE` を含まない）で即 exit 0。
 - Sonnet の Bash にも同じフックがかかる（recon.md §1）。
 
+**(d) 第6版の追加（コード審査 review-4503.md・review-4503-r2.md の指摘。どれも止める側に倒す）**
+- bash の値つき旗: `-o`・`-O`・`+o`・`+O`・`--rcfile`・`--init-file` と、`o` か `O` を含む短い旗のまとまり（`-euo` 等）は次の語を値として飛ばしてから `-c` を探す。
+- `bash -c $'…'`・`$"…"`（中身を確かめられない引用）で全文に merge を含めば止める。
+- `python`・`python3`・`perl`・`ruby`・`node`・`php` の `-c`・`-e`・`-E` の本文、およびこれらにヒアドキュメントで渡す本文に、単語としての `merge`（前後が英字・`_` でない。`mergeable`・`merged` は当たらない）か `mergePullRequest`・`enablePullRequestAutoMerge` を含めば止める。
+- `GH_REPO`・`GH_HOST` の代入（`VAR=値` の前置き・`export`・独立した代入のどれでも）が command のどこかにあり、関所にかける区切りがあれば止める（gh の照合先が変わるため）。
+- `-R<値>`・`--repo=<値>` のくっついた形も読む。PR を URL で渡したら、その URL の owner/repo で `gh pr view N --repo owner/repo` を行い、記録の名前は返った url の owner/repo を使う。
+- 番号でも URL でもない位置引数（ブランチ名等）が merge の後ろにあれば、番号なしとして止める。位置引数が無いときだけ `.pr-number` を使う。
+- 作業場所の追跡: `cd` と `pushd` を追う。行き先が `$REVIEW_GATE_DIR` の下ならその区切りで止める。`popd` の後は作業場所が分からないものとし、その後に関所にかける区切りがあれば止める。
+- (a) の試験台本の例外は、区切りの語が `scripts/agent-hooks/review-gate/test_review_gate.sh` と完全に一致するときだけ（末尾一致はしない）。
+
 ### 5-4. 審査役の最後の行の決まり（reviewer-verdict-rule.md の中身）
 
 「審査結果を SubagentHandback で返すとき、message の最後の行を必ず `VERDICT: <APPROVE|REQUEST_CHANGES|REJECT> on <40桁のHEAD sha> PR #<番号>` にする。sha は審査の直前に `gh pr view <番号> --json headRefOid -q .headRefOid` で取る。この行が無い・sha が違うと、マージの関所（ADR-1029）を通らない。」
@@ -122,7 +132,8 @@ stdin の JSON の `tool_name` で分ける。
   4. python3 で hooks に 2 件を足す（既にあれば足さない＝何度流しても同じ）: PreToolUse matcher `Bash|Write|Edit|MultiEdit|NotebookEdit|Agent` → `python3 ~/.claude/scripts/review-gate/gate.py`、PostToolUse matcher `SubagentHandback` → `python3 ~/.claude/scripts/review-gate/record.py`。JSON として読めるか確認。
   5. 関所は全リポジトリにかかるため、~/.claude/agents/reviewer.md を `.bak-review-gate-<UTC時刻>` に写してから、末尾に印 `<!-- review-gate:ADR-1029 -->` つきで reviewer-verdict-rule.md の中身を足す（印があれば足さない）。
   6. 写した先の gate.py・record.py に対して test_review_gate.sh を流し、全部 PASS で `INSTALL_OK`。
-- rollback.sh: settings.json を .bak に写してから上の 2 件だけを外し、~/.claude/agents/reviewer.md の印の節だけを外す（他の変更を巻き戻さないため、.bak の丸ごと戻しはしない）。`ROLLBACK_OK`。
+- rollback.sh: settings.json を .bak に写してから上の 2 件だけを外し、~/.claude/agents/reviewer.md の印の節だけを外す（他の変更を巻き戻さないため、.bak の丸ごと戻しはしない）。外した結果空になった hooks の項目（`PreToolUse` 等）は、install 時の .bak に無かった項目だけを消す。`ROLLBACK_OK`。
+- 往復試験: 一時の settings.json・reviewer.md に install→rollback を流し、導入前と完全一致（cmp）すること。install から呼ぶ試験では `REVIEW_GATE_SKIP_ROUNDTRIP=1` で往復試験を飛ばす（再帰防止）。
 
 ## 6. 弊害と対処
 
@@ -173,6 +184,10 @@ stdin の JSON の `tool_name` で分ける。
 | R5 | Agent `subagent_type: reviewer, model: sonnet` → exit 2。`model: opus` と未指定 → exit 0 |
 | R6 | Bash `echo x > ~/.claude/review-gate/records/a.json`・`cd ~/.claude && echo x > review-gate/records/a.json`・`python3 ~/.claude/scripts/review-gate/record.py < x.json`・`python3 scripts/agent-hooks/review-gate/record.py < x.json`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh && python3 ~/.claude/scripts/review-gate/record.py < x.json` → すべて exit 2 |
 | R6 | Write・Edit・MultiEdit（file_path）と NotebookEdit（notebook_path）が `$REVIEW_GATE_DIR` の下 → すべて exit 2 |
+| R1（第6版） | 記録は PR 1 だけで次がすべて exit 2: `bash -o pipefail -c "gh pr merge 2 --merge"`・`bash -euo pipefail -c "…2…"`・`gh pr merge 2 --merge --disable-auto=false`・`gh pr merge 2 -R o/r --disable-auto x`（値の位置）・`gh pr merge release/x --merge`・`gh pr merge https://github.com/o/r2/pull/1`・`GH_REPO=o/r2 gh pr merge 1`・`export GH_REPO=o/r2; gh pr merge 1`・`gh pr merge -Ro/r2 1`・`gh -Ro/r2 pr merge 1`・`bash -c $'gh pr merge 2'`・`python3 -c "import os;os.system('gh pr merge 2')"`・`perl -e 'system("gh pr merge 2")'`・`python3` にヒアドキュメントで os.system のマージを渡す形・`popd; gh pr merge 1` |
+| R6（第6版） | `cd ~/.claude/review-gate && ls`・`pushd ~/.claude/review-gate; echo x > records/a.json`・語が `x/scripts/agent-hooks/review-gate/test_review_gate.sh` の区切りで置き場に書く形 → すべて exit 2 |
+| 誤止めなし（第6版） | `gh pr view 1 --json mergeable \| python3 -c "import json,sys;print(json.load(sys.stdin)['mergeable'])"`・`gh pr view 1 --json mergeable,mergeStateStatus`・`git merge origin/main`・`git log --merges` → すべて exit 0 |
+| 往復 | 一時 settings.json・reviewer.md に install→rollback → 導入前と cmp で一致（導入前から空の hooks 項目がある形も含む） |
 | R7 | agent-hooks-test.yml が この PR で走り緑（PR のチェック欄で確認） |
 | 誤止めなし | `ls`・`grep -n x scripts/dev/check-pr-merge-ready.py`・`git diff -- scripts/gh-pr-merge-safe.sh`・`gh pr create --body "gh pr merge 1"`・`git commit -m "gh-pr-merge-safe.sh"`・`gh pr merge 1 --disable-auto`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh`・ヒアドキュメントの本文に閉じない引用符（`don't merge yet`）がある `gh pr create`（本文はヒアドキュメントで渡す形）・`git commit -m "$(cat <<'EOF'` で始まり本文に `1)`・バッククォート 3 個の並び・閉じない引用符を含むコミット・`grep -rn "gh pr merge" docs` → すべて exit 0 |
 

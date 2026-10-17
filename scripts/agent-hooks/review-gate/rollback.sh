@@ -14,9 +14,15 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 if [ -f "$SETTINGS" ]; then
   cp "$SETTINGS" "$SETTINGS.bak-review-gate-rollback-$STAMP"
   SETTINGS="$SETTINGS" DEST="$DEST" python3 - <<'PY'
-import json, os
+import glob, json, os
 p = os.environ["SETTINGS"]
 dest = os.environ["DEST"]
+# 導入前の姿 = いちばん古い install 時の .bak。無ければ空の項目は消さない
+baks = sorted(glob.glob(p + ".bak-review-gate-[0-9]*"))
+orig = None
+if baks:
+    with open(baks[0], encoding="utf-8") as f:
+        orig = json.load(f)
 targets = {"python3 %s/gate.py" % dest, "python3 %s/record.py" % dest}
 with open(p, encoding="utf-8") as f:
     d = json.load(f)
@@ -31,11 +37,11 @@ for event in list(hooks):
             new.append(e)
         elif not e.get("hooks"):
             new.append(e)
-    if new:
+    if new or orig is None or event in (orig.get("hooks") or {}):
         hooks[event] = new
     else:
         del hooks[event]
-if not hooks:
+if not hooks and orig is not None and "hooks" not in orig:
     d.pop("hooks", None)
 tmp = p + ".tmp-review-gate"
 with open(tmp, "w", encoding="utf-8") as f:
