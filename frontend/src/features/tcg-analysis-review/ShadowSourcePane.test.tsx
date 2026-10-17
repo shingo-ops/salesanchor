@@ -46,3 +46,9 @@ it("shows both legend items when both ranges are given", () => {
   render(<ShadowSourcePane rawText={RAW} blockRange={{ start: 1, end: 2 }} headingRange={{ start: 3, end: 3 }} />);
   expect(document.querySelectorAll(".shadow-source-legend-item").length).toBe(2);
 });
+
+it("hides the legend but keeps the block highlight when showLegend is false", () => {
+  render(<ShadowSourcePane rawText={RAW} blockRange={{ start: 3, end: 4 }} showLegend={false} />);
+  expect(document.querySelector(".shadow-source-legend")).toBeNull();
+  expect([attr(1), attr(2), attr(3), attr(4)]).toEqual([null, null, "block", "block"]);
+});

@@ -1465,7 +1465,8 @@
       "notFound": "No analysis result for this row. Reload the inventory table",
       "itemTab": "Item {{n}}",
       "tabAnalysis": "Analysis",
-      "tabRawText": "Original text"
+      "tabRawText": "Original text",
+      "rawTextTitle": "{{supplier}} {{postedAt}}"
     },
     "view": {
       "subtitle": "Shows suppliers' current offers.",
