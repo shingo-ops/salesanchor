@@ -103,7 +103,8 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     assert reviewed["total"] == imported["total"] == len(output) == len(expected) == 96
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
-    assert [r[7] for r in output] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]
     assert all(len(r) == 14 for r in output)
     assert all("sort_ordinal" not in r for r in imported["items"])
     assert Counter(r["extraction_item_id"] for r in reviewed["items"]) == Counter(e["eid"] for e in entries)
@@ -370,7 +371,7 @@ def test_order_sql_uses_condition_master_and_group_order():
     assert "FROM public.conditions lc" in sql and "lc.value_group" in sql and "lc.value_rank" in sql
     assert "WHEN 'case' THEN 0 WHEN 'box' THEN 1 WHEN 'pack' THEN 2" in sql
     assert "CASE WHEN cr.canonical = 'Bulk' THEN 0 ELSE 1 END" in sql
-    assert "ORDER BY lc.id LIMIT 1" in sql
+    assert "jsonb_object_agg(" in sql and "ORDER BY lc.id DESC" in sql and "->> cr.canonical" in sql
 
 
 RANKED_STATES = (
@@ -396,7 +397,8 @@ def test_order_follows_condition_master_value_rank_then_bulk_then_text(pg):
     expected = [*RANKED_STATES, "Bulk", "Empty box", "Zeta"]
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
-    assert [r[7] for r in output] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]
 
 
 def test_order_without_master_values_is_bulk_then_text(pg):
@@ -409,4 +411,5 @@ def test_order_without_master_values_is_bulk_then_text(pg):
     expected = ["Bulk", *others]
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
-    assert [r[7] for r in output] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]

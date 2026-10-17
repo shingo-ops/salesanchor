@@ -20,14 +20,18 @@ def result_order_sql() -> str:
     group_case = " ".join(
         f"WHEN '{group}' THEN {index}" for index, group in enumerate(VALUE_GROUP_ORDER)
     )
-    # canonical が重複しても行が増えないよう ORDER BY lc.id LIMIT 1（本番は重複なし）。
+    # 状態マスタ全体を 1 つの jsonb（canonical -> 位置）にまとめる。cr を参照しない副問い合わせなので
+    # PostgreSQL が 1 回だけ評価し（InitPlan）、行ごとに public.conditions を引かない（行ごとに引くと
+    # 4,097 行の一覧で処理時間が約 2 倍になった）。canonical が重複したら id が小さい方が勝つ
+    # （jsonb_object_agg は後の値が勝つので ORDER BY lc.id DESC。本番は重複なし）。
     condition_rank = (
-        "COALESCE(("
-        f"SELECT (CASE lc.value_group {group_case} END) * {_GROUP_STRIDE} + lc.value_rank "
+        "COALESCE(((SELECT jsonb_object_agg("
+        f"lc.canonical, (CASE lc.value_group {group_case} END) * {_GROUP_STRIDE} + lc.value_rank "
+        "ORDER BY lc.id DESC) "
         "FROM public.conditions lc "
-        "WHERE lc.canonical = cr.canonical AND lc.value_group IS NOT NULL AND lc.value_rank IS NOT NULL "
-        "ORDER BY lc.id LIMIT 1"
-        f"), {_UNRANKED_BASE} + CASE WHEN cr.canonical = '{UNRANKED_FIRST}' THEN 0 ELSE 1 END)"
+        "WHERE lc.canonical IS NOT NULL AND lc.value_group IS NOT NULL AND lc.value_rank IS NOT NULL"
+        ") ->> cr.canonical)::integer, "
+        f"{_UNRANKED_BASE} + CASE WHEN cr.canonical = '{UNRANKED_FIRST}' THEN 0 ELSE 1 END)"
     )
     return (
         "p.release_date DESC NULLS LAST, "

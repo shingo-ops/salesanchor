@@ -188,12 +188,12 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # review-excluded-ack 便で cr_review_ack LATERAL（excluded の確認済み除外）を足して再生成した。差は4点のみ（distribution_sql_after_merge.diff）。
 # bundle-sale 便1（ADR-1027）で商品名を bundle_title_sql の2列にし、line_units の JOIN と gkey の bundle_size を足して再生成した。
 # g28 便1（バルク状態）で RESULT_CONDITION_ORDER に Bulk を足して再生成した。差は Bulk の WHEN 句1つのみ（golden_diff.txt）。
-# result-order-condition-value 便（2026-10-18）で、状態の並びを固定の表（RESULT_CONDITION_ORDER）から状態マスタ（public.conditions の value_group / value_rank・ADR-1023）の副問い合わせに替えて再生成した。差は ORDER BY の状態の部分1か所のみ（4通りとも +63 文字）。
+# result-order-condition-value 便（2026-10-18）で、状態の並びを固定の表（RESULT_CONDITION_ORDER）から状態マスタ（public.conditions の value_group / value_rank・ADR-1023）の副問い合わせに替えて再生成した。差は ORDER BY の状態の部分1か所のみ（4通りとも同じ差）。CI で全体が約2倍遅くなったため、行ごとの副問い合わせを InitPlan（1回だけ評価する jsonb）に替えて再生成した。
 _GOLDEN = {
-    (False, False): (25233, "0b2fe5bc86840f5c4938887dedc1af7bfe08089097866dd39245fc3df8f07dc1"),
-    (False, True): (26384, "60b959bfdc96347d8c3b48e4d9895e6d6c8e0811f1aea377a527e7a23298cc80"),
-    (True, False): (25267, "56211e354183b4793c16f6cc7a0c4122a1f2edd3749cd0694824c3186001dfe7"),
-    (True, True): (26418, "a8ae7d38f9547def5b47f985617dda645a09a115fb6ce91899a102bc5ca13af2"),
+    (False, False): (25287, "2c56bcc55f7b22ea6d6ad972d96fd0a262114313e4547327f4ac0df6aebae8c1"),
+    (False, True): (26438, "8522e964c651fd7544d4caf4ea1df5f3cb59635634e632578a7d751c3ba5fbfb"),
+    (True, False): (25321, "013d67c1e4324dc3d036b23bd7a85f42200b6786daf8a89f426281745e326124"),
+    (True, True): (26472, "cf77f10b54846e9492f7714a16b1bcf3607e6f1faaf788a8713105d064962f19"),
 }
 
 

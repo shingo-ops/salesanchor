@@ -2,7 +2,8 @@
 
 本番は migrations/20261017_120000_line_conditions_value_rank.sql で public.line_conditions に列を足す
 （public.conditions はその view）。試験 DB には line_conditions が無く、public.conditions は
-20260919_020000_master_ssot_public_tables.sql の TABLE なので、同じ型・制約で列を足し、
+20260919_020000_master_ssot_public_tables.sql の TABLE なので、同じ型・制約で列を足し（tcg_analyzer_svc.py の状態マスタ読み込みは value_rank 列があると match_type / effect も読むので、
+本番にある match_type / effect［20260925_010000_conditions_add_match_type.sql と同じ型・既定値］も一緒に足す）、
 本番と同じ 11 状態の値（ADR-1023 §4）を canonical で UPDATE する（行は新たに作らない）。
 result_order_sql（状態マスタの value_group / value_rank を引く）を通る実 PG 試験の fixture から呼ぶ。
 """
@@ -21,6 +22,8 @@ _VALUES_SQL = ", ".join(f"('{c}','{g}',{r})" for c, (g, r) in CONDITION_VALUES.i
 # 1 文ずつ実行できる形（asyncpg の exec_driver_sql は複数文を受けないため）
 CONDITION_VALUE_STATEMENTS: tuple[str, ...] = (
     "ALTER TABLE public.conditions "
+    "ADD COLUMN IF NOT EXISTS match_type TEXT NOT NULL DEFAULT 'KEYWORD', "
+    "ADD COLUMN IF NOT EXISTS effect TEXT NOT NULL DEFAULT 'OUTPUT', "
     "ADD COLUMN IF NOT EXISTS value_group TEXT "
     "CONSTRAINT conditions_value_group_check CHECK (value_group IS NULL OR value_group IN ('box','case','pack')), "
     "ADD COLUMN IF NOT EXISTS value_rank INTEGER "
