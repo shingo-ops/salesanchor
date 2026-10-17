@@ -21,7 +21,6 @@ migrations/20260603_030000_seed_dragonball_products.sql	初期タイムスタン
 migrations/20260603_040000_add_products_set_type.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
 migrations/20260703_030000_order_items_ben2.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260916_120000_phase_c_drop_tcg_uuid.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
-migrations/20260919_010000_master_ssot_work_id_recast.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260920_130000_create_product_classification.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260921_120000_add_products_product_kind_id.sql	空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
