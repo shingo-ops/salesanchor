@@ -1,6 +1,6 @@
 # Phase 3 設計 — postgres healthcheck の DB 名指定
 
-**対象ADR**: 該当なし（設定漏れ修正）
+**対象ADR**: ADR-1012
 **recon**: docs/handoff/postgres-healthcheck-dbname/recon.md
 **日付**: 2026-10-17
 **担当**: Sonnet
@@ -35,3 +35,7 @@
 ## 継続
 
 - 完了後の監視: 反映後10分の postgres ログ（K1）と Health.Status（K2）
+
+## 維持の仕組み
+
+- 反映後10分の postgres ログ（K1）と Health.Status（K2）を PO/Opus が観測。healthcheck は compose に常設され、再発すれば同じログで検知できる。

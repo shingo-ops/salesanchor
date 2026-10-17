@@ -2,7 +2,7 @@
 
 **仕事名**: postgres-healthcheck-dbname
 **日付**: 2026-10-17
-**対象ADR**: 該当なし（設定漏れ修正）
+**対象ADR**: ADR-1012
 **担当**: Sonnet（PO 承認済み 2026-10-17）
 
 ## file:line 引用表
