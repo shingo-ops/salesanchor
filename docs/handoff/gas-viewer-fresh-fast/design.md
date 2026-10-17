@@ -502,6 +502,11 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
   - 専用スクリプト viewer_discord_cli に、読み取りだけの list-candidates（ボットが入っているサーバー、カテゴリ、テキストの部屋、ロールの id と名前）を足す。PO が set-config の4つの ID を Discord の画面で探さずに済むようにするため。出力はファイルに置き、チャットには選んだ4つだけを出す。実行は Q12=n のとおり、毎回 PO 本人の GO を受けてから。
   - 一覧の部屋の URL は `https://discord.com/channels/<guild_id>/<discord_channel_id>`（前例 frontend/src/pages/inbox/InboxKartePanel.tsx:465）。guild_id は viewer_discord_config の1行から一覧の SQL で引き、応答には discord_channel_url だけを出す。画面は ButtonLink（frontend/src/components/ButtonLink.tsx の href 形）で別のタブに開く。
   - 4c の公開前の PO の作業（Discord の設定）：①運用サーバーのボットのロールに「チャンネルの管理」と「招待を作成」があるか確かめ、無ければ付ける ②受付の部屋に、ボットの「招待を作成」「メッセージを送信」を拒否する上書きが無いか確かめる ③list-candidates の結果から4つの ID を選ぶのを PO が確かめる ④set-config と post-button の GO。
+- 4b の細部（2026-10-17 Opus の判断。設計の範囲内。調査は origin/main 78f2b9af0 基準。カードは /tmp/CC報告ファイル/viewer_stage4/card_4b.md、審査は review-opus.md r18）：
+  - 回数制限は IP（1時間10回）→ email（1時間3回）の順に数える（backend/app/cache.py の count_viewer_signup。キーは viewer_signup_ip: と viewer_signup_email: に sha256）。Redis が使えないときは申込は通すが、招待は作らない（D5 の「回数制限を通った申込でだけ作る」を、数えられないときにも守るため）。
+  - pending の再申込では、申込コードだけを差し替え、line_name・inventory_issue は書き換えない。
+  - 招待は DB の commit の後に作る（backend/app/services/viewer_invite.py）。Discord を待つ間、トランザクションを開いたままにしない。
+  - 招待リンクは Button ＋ window.open で開き、URL の文字も画面に出す。ButtonLink は react-router-dom を引き込み、viewer の JS が 338.3KB になって 300KB の上限を超えたため使わない（main 290.0KB、変更後 296.0KB）。
 - 4a-2 の細部（2026-10-16 Opus の判断。設計の範囲内。調査は origin/main 9c2b9c041 基準）：
   - 一覧の Discord の部屋の URL は 4a-2 では返さない。viewer_discord_config の表が 4c まで無いため（migrations/20261016_150000_add_viewer_accounts.sql:3）。4a-2 は discord_user_id と discord_channel_id を返し、URL は 4c で足す。
   - 目印①：同じ閲覧者の login_succeeded のどれかの時点 t について、(t−24時間, t] の login_succeeded の client_ip（NULL を除く）が3種類以上。目印②：その閲覧者の login_succeeded の client_ip と同じ値が、別の閲覧者の login_succeeded にある。どちらも保存中（90日）の行だけで判定する。
