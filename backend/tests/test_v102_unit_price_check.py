@@ -100,6 +100,11 @@ def test_find_mismatches_returns_flagged_keys_with_one_market_query():
     assert len(market_calls) == 1 and market_calls[0][1]["smid"] == "sm-1" and market_calls[0][1]["pids"] == [1]
 
 
+def test_market_sql_excludes_bundle_rows():
+    """まとめ売り行（bundle_size あり）は1単位の相場に入れない（ADR-1027）。"""
+    assert "ar.bundle_size IS NULL" in check._MARKET_SQL
+
+
 def test_market_sql_keeps_the_agreed_conditions():
     sql = check._MARKET_SQL
     for needle in ("ar.engine_version LIKE", "ar.is_current IS TRUE", "ar.price_normalized IS NOT NULL",

@@ -60,6 +60,7 @@
 .comp-badge--soft.comp-badge--success { background: var(--success-bg); color: var(--success-text); }
 .comp-badge--soft.comp-badge--warning { background: var(--warning-bg); color: var(--warning-text); }
 .comp-badge--soft.comp-badge--danger  { background: var(--danger-bg);  color: var(--danger-text); }
+.comp-badge--soft.comp-badge--purple  { background: var(--purple-bg);  color: var(--purple-text); }
 
 /* ── 4. solid バリアント (0,2,0) ── */
 .comp-badge--solid.comp-badge--neutral { background: var(--neutral);                   color: var(--on-solid); }
@@ -67,3 +68,5 @@
 .comp-badge--solid.comp-badge--success { background: var(--comp-badge-success-solid);  color: var(--on-solid); }
 .comp-badge--solid.comp-badge--warning { background: var(--warning);                   color: var(--on-solid); }
 .comp-badge--solid.comp-badge--danger  { background: var(--comp-badge-danger-solid);   color: var(--on-solid); }
+/* purple: 塗り用の紫トークンが無いため新設せず soft と同じ組を使う（現在 solid purple の利用者なし） */
+.comp-badge--solid.comp-badge--purple  { background: var(--purple-bg);                 color: var(--purple-text); }

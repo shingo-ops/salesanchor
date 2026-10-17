@@ -258,3 +258,11 @@ def test_write_results_skips_the_decision_when_the_buyback_query_fails(caplog):
         row = _write(session, [_v102_item()])[0]
     assert (row["condition_canonical"], row["unit_canonical"]) == ("FLAG_SINGLE", None)
     assert "rollback" in session.savepoints
+
+
+def test_bundle_rows_are_not_buyback_candidates():
+    """まとめ売り行（bundle_size あり）は買取価格との比で単位を決めない（ADR-1027）。"""
+    bundled = _values(bundle_size=40)
+    plain = _values(bundle_size=None)
+    assert bb.is_candidate(_item(), bundled) is False
+    assert bb.is_candidate(_item(), plain) is True
