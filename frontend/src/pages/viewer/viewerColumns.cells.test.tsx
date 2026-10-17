@@ -20,16 +20,18 @@ const cell = (key: string, row: ViewerTableRow) => render(<div>{cols.find((c) =>
 afterEach(() => cleanup());
 
 describe("viewer offer type cell (4 cases)", () => {
-  it("in stock: plain text, no badge", () => {
+  it("in stock: blue text class, no badge", () => {
     const { container } = cell("offer_type", base);
     expect(container.textContent).toBe(dict.viewer.offerType.in_stock);
+    expect(container.querySelector(".inventory-cell__offer--instock")).not.toBeNull();
     expect(container.querySelector(".comp-badge")).toBeNull();
   });
-  it("pre-order: info soft badge", () => {
+  it("pre-order: orange text class, no badge", () => {
     const { container } = cell("offer_type", { ...base, status: "Pre-order", offer_type: "pre_order" });
-    const badge = container.querySelector(".comp-badge--info");
-    expect(badge).not.toBeNull();
-    expect(badge?.textContent).toBe(dict.viewer.offerType.pre_order);
+    const el = container.querySelector(".inventory-cell__offer--preorder");
+    expect(el).not.toBeNull();
+    expect(el?.textContent).toBe(dict.viewer.offerType.pre_order);
+    expect(container.querySelector(".comp-badge")).toBeNull();
     expect(container.querySelector(".badge-negotiating")).toBeNull();
   });
   it("other status: status text", () => {
