@@ -73,40 +73,55 @@ PACKAGING_MIGRATIONS = (
 )
 
 
+async def _packagings_ready(admin_engine) -> bool:
+    """荷姿の表と、単位 PACK/BOX/CASE の 3 件が揃っているか（lock は取らない）。"""
+    async with admin_engine.connect() as conn:
+        if not await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL")):
+            return False
+        units = await conn.scalar(
+            text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE')")
+        )
+        return units == 3
+
+
 async def ensure_product_packagings(admin_engine) -> None:
     """荷姿の表を、試験の DB に一度だけ・確定（commit）させて作る。
 
     各試験の巻き戻す transaction の中で DDL を流すと、終わるまで products などの表ロックを持ち続け、
     ほかの worker と取る順が逆になって deadlock する。そのため transaction の外の別接続で流して確定させる。
-    public_bootstrap_lock で直列にし、すでにあれば何もしない。この関数は public_bootstrap_lock の外から呼ぶこと
-    （同じ lock を別接続で取るので、中から呼ぶと自分で自分を待つ）。
+
+    流れ:
+      1. lock を取らずに確かめる。揃っていれば何もしない。
+      2. public.products が無ければ、本番形の products を bootstrap_public_products で作る
+         （試験用の少列版 products を共有 DB に確定させない。062 の jan_code の index が壊れるため）。
+      3. public_bootstrap_lock の中でもう一度確かめ、揃っていなければ products を先に押さえてから migration を流す。
+         lock_timeout を付けて、待ち続けず失敗にする。
+    bootstrap_public_products は自分で public_bootstrap_lock を取るので、この関数は lock の外から呼ぶこと。
     """
+    if await _packagings_ready(admin_engine):
+        return
+    async with admin_engine.connect() as conn:
+        products_exists = await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL"))
+    if not products_exists:
+        await bootstrap_public_products(admin_engine)
     async with public_bootstrap_lock(admin_engine):
-        async with admin_engine.connect() as conn:
-            table_ready = await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL"))
-            units_ready = table_ready and await conn.scalar(
-                text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE')")
-            ) == 3
-        if units_ready:
+        if await _packagings_ready(admin_engine):
             return
         async with admin_engine.begin() as conn:
             raw = await conn.get_raw_connection()
-            # ロックの順を test_tcg_distribution_pg.py（products → product_kinds）に揃える。
-            # products を最初に押さえる（逆順だと deadlock を再現済み）
-            if await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL")):
-                await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
-            else:
-                products_sql = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text("utf-8")
-                await raw.driver_connection.execute(products_sql)
-                await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
+            await conn.execute(text("SET LOCAL lock_timeout = '60s'"))
+            # ロックの順を test_tcg_distribution_pg.py（products → product_kinds）に揃える
+            await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
             for name in PACKAGING_MIGRATIONS:
                 # この transaction の中で流すので BEGIN/COMMIT は除く
                 sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
                 await raw.driver_connection.execute(sql)
-            await conn.execute(text(
-                "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
-                "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
-            ))
+            await conn.execute(
+                text(
+                    "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
+                    "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
+                )
+            )
 
 
 async def _apply_migration(admin_engine, filename: str) -> None:
