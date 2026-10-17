@@ -118,3 +118,28 @@ def test_apply_bundle_decided_sets_unit():
     out = line_svc._apply_bundle(_values(), "40パックセット 5セット", WORDS, SET_WORDS, {"Pack": 14})
     assert (out["bundle_size"], out["unit_canonical"], out["unit_id"]) == (40, "Pack", 14)
     assert out["price_normalized"] == 26000 and out["quantity_normalized"] == 5
+
+
+def test_gkey_includes_bundle_size_so_bundle_and_plain_rows_do_not_merge():
+    """配信の同一投稿まとめの鍵 gkey に bundle_size が入る（有る行と無い行で鍵が違う）。"""
+    sql = dist.distribution_rows_sql(include_flag_single=False, age_condition=" AND x = :y", merge_same_post=True)
+    head = sql[: sql.index("AS gkey")]
+    gkey_expr = head[head.rindex("concat_ws(") :]
+    assert "COALESCE(ar.bundle_size::text, '')" in gkey_expr
+    assert "COALESCE(ar.ship_ja, '')" in gkey_expr  # 既存の鍵の部品と同じ式の中にある
+
+
+def test_word_not_in_alias_master_is_not_a_unit_word():
+    """別名マスタに無い語（例「9種セット」の「種」）は単位の語にならず、当たらない側になる。"""
+    assert "種" not in WORDS
+    assert _d("ABC 9種セット 5セット 26000円") is None
+    assert _d("ABC 9種セット 5セット", price=None) is None
+
+
+def test_line_units_migration_adds_both_display_name_columns():
+    """試験 DB には line_units が無く本番の migration を当てられない（migrate() は public.units のみ作る）ため、SQL の中身を直接確かめる。"""
+    path = Path(__file__).resolve().parents[2] / "migrations" / "20261017_220100_add_line_units_display_names.sql"
+    sql = path.read_text(encoding="utf-8")
+    assert "ALTER TABLE public.line_units" in sql
+    assert "ADD COLUMN IF NOT EXISTS name_ja text" in sql
+    assert "ADD COLUMN IF NOT EXISTS name_en text" in sql
