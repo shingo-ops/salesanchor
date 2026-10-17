@@ -130,11 +130,11 @@ async def _status_of(token: str, row, **kw) -> int:
 
 
 async def test_iat_comparison_with_password_changed_at_fractional():
-    changed = datetime(2026, 10, 16, 10, 0, 0, 700000, tzinfo=timezone.utc)
+    changed = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=700000)
     base = int(changed.replace(microsecond=0).timestamp())
     row = _row(password_changed_at=changed)
-    assert await _status_of(_token_at(base), row) == 200  # 10:00:00
-    assert await _status_of(_token_at(base - 1), row) == 401  # 09:59:59
+    assert await _status_of(_token_at(base), row) == 200  # 同じ秒
+    assert await _status_of(_token_at(base - 1), row) == 401  # 1 秒前
 
 
 async def test_statuses():
