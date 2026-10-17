@@ -531,6 +531,8 @@ echo "ALL OK"
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+- 実装担当（Sonnet）の報告（2026-10-17）。試験 8 件 OK・check_alert_rules.py OK（Prometheus 26 本）。
+- 判断を要した点（事実）：origin/main の alert_rules.yml は便E 前で 24 本（`grep -c '^ *- alert:'`）だったが、手順書と試験の冒頭は 22 本のままだった。カードの「24」ではなく、検査の出力（26 本）に合わせて 26 に書いた。
+- GitHub の試験場の run と PR の URL は PR 本文と担当の完了報告に記載。
 
 END OF CARD
