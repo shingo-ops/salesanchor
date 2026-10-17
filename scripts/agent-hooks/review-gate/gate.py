@@ -24,7 +24,7 @@ PYTHONS = {"python", "python3"}
 SKIP_FIRST = {"(", "{", "!", "then", "do", "else", "elif", "env", "command", "exec", "time", "nohup"}
 READONLY = {"grep", "rg", "cat", "head", "tail", "sed", "awk", "less", "wc", "ls", "git",
             "diff", "stat", "file", "shellcheck"}
-VALUE_FLAGS = {"--repo", "-R", "--match-head-commit", "--subject", "-t", "--body", "-b",
+VALUE_FLAGS = {"--repo", "-R", "--match-head-commit", "-H", "--subject", "-t", "--body", "-b",
                "--body-file", "-F", "--author-email", "-A"}
 MSG_FLAGS = {"-m", "--message", "--body", "-b", "--title", "-t", "--subject"}
 GUARD_WORDS = [".claude/review-gate", "review-gate/records", "review-gate/log",
@@ -32,6 +32,10 @@ GUARD_WORDS = [".claude/review-gate", "review-gate/records", "review-gate/log",
                "REVIEW_GATE_DIR", "REVIEW_GATE_GH"]
 TEST_SCRIPT = "scripts/agent-hooks/review-gate/test_review_gate.sh"
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
+SHELL_VALUE_OPTS = {"-o", "-O", "+o", "+O", "--rcfile", "--init-file"}
+OTHER_INTERP = {"perl", "ruby", "node", "php"}
+ANSI_C_SHELL_RE = re.compile(r"\b(?:bash|sh|zsh)\b[^\n;|&]*\s-[A-Za-z]*c[A-Za-z]*\s+\$[\"']")
+URL_RE = re.compile(r"https?://([^/]+)/([^/]+)/([^/]+)/pull/(\d+)")
 SEP_CHARS = set(";&|\n")
 PUNCT_CHARS = set(";&|()<>\n")
 MAX_DEPTH = 5
@@ -187,18 +191,37 @@ def flag_value(toks, names):
     return None
 
 
-def pr_from_merge(toks, j):
+def parse_merge(toks, j):
+    """gh pr merge の後ろを旗と位置引数に分ける。値を取る旗の値は旗に数えない。"""
+    flags, pos = set(), []
     k = j + 1
     while k < len(toks):
         t = toks[k]
         if is_punct(t):
-            return None
+            break
         if t.startswith("-"):
+            flags.add(t.split("=", 1)[0] if t.startswith("--") else t)
             k += 2 if (t in VALUE_FLAGS and "=" not in t) else 1
             continue
-        m = re.fullmatch(r"#?(\d+)", t) or re.search(r"/pull/(\d+)", t)
-        return int(m.group(1)) if m else None
-    return None
+        pos.append(t)
+        k += 1
+    return flags, pos
+
+
+def pr_from_merge(pos, wd):
+    """(番号, repo, 位置引数の状態)。状態: none=無い / ok / bad=番号でも URL でもない。"""
+    if not pos:
+        return pr_from_file(wd), None, "none"
+    t = pos[0]
+    m = re.fullmatch(r"#?(\d+)", t)
+    if m:
+        return int(m.group(1)), None, "ok"
+    m = URL_RE.match(t)
+    if m:
+        host, owner, name, n = m.groups()
+        repo = "%s/%s" % (owner, name) if host.lower() == "github.com" else "%s/%s/%s" % (host, owner, name)
+        return int(n), repo, "ok"
+    return None, None, "bad"
 
 
 def pr_from_file(wd):
@@ -230,13 +253,24 @@ def check_segment(toks, sep, wd, depth, ctx, top):
     # 入れ子 1: bash -c <文>
     for idx, t in enumerate(toks):
         if base(t) in SHELLS:
-            for k in range(idx + 1, len(toks)):
+            k = idx + 1
+            while k < len(toks):
                 a = toks[k]
                 if re.fullmatch(r"-[A-Za-z]*c[A-Za-z]*", a) and k + 1 < len(toks):
                     analyze(toks[k + 1], wd, depth + 1, ctx, False, False)
                     break
-                if not a.startswith("-"):
+                if a in SHELL_VALUE_OPTS:
+                    k += 2
+                    continue
+                if not (a.startswith("-") or a.startswith("+")):
                     break
+                k += 1
+    # 入れ子 5: python -c / perl -e 等の本文に merge があれば止める
+    for idx, t in enumerate(toks):
+        if base(t) in PYTHONS or base(t) in OTHER_INTERP:
+            for k in range(idx + 1, len(toks) - 1):
+                if re.fullmatch(r"-[A-Za-z]*[ceE][A-Za-z]*", toks[k]) and "merge" in toks[k + 1]:
+                    raise Block("%s の -c/-e の本文に merge を含むため止めます" % base(t))
     # 入れ子 4: 標準入力から読む bash
     if fw in SHELLS:
         args = toks[i0 + 1:]
@@ -249,8 +283,13 @@ def check_segment(toks, sep, wd, depth, ctx, top):
     repo = flag_value(toks, ("-R", "--repo"))
     # 1. gh pr merge
     m = find_gh_sub(toks, "merge")
-    if m is not None and "--disable-auto" not in toks:
-        n = pr_from_merge(toks, m) or pr_from_file(wd)
+    mflags, mpos = parse_merge(toks, m) if m is not None else (set(), [])
+    if m is not None and "--disable-auto" not in mflags:
+        if any(t.startswith("GH_REPO=") for t in toks):
+            raise Block("マージ操作に GH_REPO= の代入があるため止めます")
+        n, url_repo, _state = pr_from_merge(mpos, wd)
+        if url_repo:
+            repo = url_repo
         ctx.add(n, repo, wd, "gh pr merge", "--auto" in toks,
                 flag_value(toks, ("--match-head-commit",)))
     # 2. gh-pr-merge-safe.sh / 3. check-pr-merge-ready.py
@@ -292,6 +331,8 @@ def recv_first_word(recv):
 def analyze(text, wd, depth, ctx, top, lenient):
     if depth > MAX_DEPTH:
         raise Block("入れ子が深すぎます")
+    if "merge" in text and ANSI_C_SHELL_RE.search(text):
+        raise Block("shell -c に $'...' / $\"...\" 形式の引用があり中身を読めないため止めます")
     stripped, bodies = strip_heredocs(text, True)
     s2, _ = strip_heredocs(text, False)
     try:
@@ -316,13 +357,15 @@ def analyze(text, wd, depth, ctx, top, lenient):
     seg_wd = wd
     for sep, st in segs:
         i0 = first_word_index(st)
-        exempt = len(st) >= 2 and st[0] == "bash" and st[1].endswith(TEST_SCRIPT)
+        exempt = len(st) >= 2 and st[0] == "bash" and st[1] == TEST_SCRIPT
         if top and not exempt:
             joined = " ".join(st)
             for w in guard_words():
                 if w in joined:
                     raise Block("review-gate の記録・台本には触れません（%s）" % w)
         if i0 < len(st) and st[i0] == "cd" and i0 + 1 < len(st):
+            if under_gate_dir(st[i0 + 1], seg_wd):
+                raise Block("review-gate の記録の置き場へ cd した後のコマンドは止めます")
             seg_wd = os.path.abspath(os.path.join(seg_wd, os.path.expanduser(st[i0 + 1])))
             continue
         check_segment(st, sep, seg_wd, depth, ctx, top)

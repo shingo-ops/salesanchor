@@ -74,7 +74,7 @@ else
 fi
 
 # 6. 写した先の台本で試験を流す
-if bash "$SRC/test_review_gate.sh" "$DEST"; then
+if REVIEW_GATE_SKIP_ROUNDTRIP=1 bash "$SRC/test_review_gate.sh" "$DEST"; then
   echo "INSTALL_OK"
 else
   echo "INSTALL_FAILED: 試験が通りません。rollback.sh で外してください" >&2

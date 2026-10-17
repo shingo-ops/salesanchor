@@ -15,7 +15,7 @@
 
 1. 審査役（subagent_type `reviewer`、model opus）は、報告の最後の行を `VERDICT: <APPROVE|REQUEST_CHANGES|REJECT> on <40桁のHEAD sha> PR #<番号>` にする。
 2. PostToolUse のフック（SubagentHandback に当てる）が、審査役の報告（`tool_input.message`）からこの行を読み、meta.json の model が opus で、sha がその PR の今の HEAD と同じで、判定が APPROVE のときだけ `~/.claude/review-gate/records/` に記録する。
-3. PreToolUse のフックが、AI の Bash のマージ操作（区切りごとの先頭のコマンドが `gh pr merge`・`gh-pr-merge-safe.sh`（番号は `.pr-number` から読む）・`check-pr-merge-ready.py`・`gh api` の merge・`curl` の `api.github.com` の merge）を見つけたら、その PR の今の HEAD の記録が無ければ止める。番号が取れない・gh が失敗した・command が読めないときも止める。`--auto` は `--match-head-commit` が記録の HEAD と同じときだけ通す。
+3. PreToolUse のフックが、AI の Bash のマージ操作（先頭の語には頼らず、区切りの中に `gh pr merge`・`gh-pr-merge-safe.sh`（番号は `.pr-number` から読む）・`check-pr-merge-ready.py`・`gh api` の merge・`curl` の `api.github.com` の merge）を見つけたら、その PR の今の HEAD の記録が無ければ止める。番号が取れない・gh が失敗した・command が読めないときも止める。`--auto` は `--match-head-commit` が記録の HEAD と同じときだけ通す。
 4. 同じフックが、記録の置き場と記録台本への Bash・Write/Edit を止め、審査役を opus 以外の model で起動するのを止める。
 5. 関所はユーザー設定なので全リポジトリにかかる。そのため ~/.claude/agents/reviewer.md にも同じ決まりを足す。
 6. フックの台本と試験はリポジトリ（scripts/agent-hooks/review-gate/）に置き、`scripts/agent-hooks/**` が変わる PR では CI で試験を流す。
@@ -30,6 +30,8 @@
 
 - GitHub の画面からのマージ、Actions の自動マージ（.github/workflows/ledger-auto-done-main.yml）はフックの外。
 - Bash の難読化（変数で組み立てる・eval 等）は見つけられない。試験台本 test_review_gate.sh をリポジトリ側で書き換えて、例外の実行から本物の置き場へ書かせる道も同じ扱いで止めない。
+- `gh` の別名（gh alias）経由のマージは見つけられない（今の別名は `co: pr checkout` の 1 件だけ・recon.md §3）。台本ファイルを作ってから実行する形（中に merge を書いた .sh を後で `bash x.sh`）も見つけられない。
+- 止める側に倒したもの: `bash -c $'…'`、`python3 -c`・`perl -e` の本文に merge を含むもの、マージの区切りに `GH_REPO=` を付けたものは、中身を確かめられないので止める。
 - Branch Protection・Ruleset は変えない（PO 指定の対象外）。
 - ~/.claude/settings.json・~/.claude/scripts/ の書き換え、~/.claude/projects 下への偽の会話記録・meta.json の作成は、このフックでは止めない（ADR-1011 の自己変更の決まりに依る）。
 - 審査役（opus）に中身を見ずに APPROVE を書かせる指示は止められない（審査役の起動指示の質に依る）。

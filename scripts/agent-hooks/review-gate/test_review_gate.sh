@@ -38,7 +38,9 @@ cat > "$REVIEW_GATE_GH" <<'EOF'
 # 偽 gh: pr view だけ答える。head は $FAKE_HEAD_FILE。$FAKE_GH_FAIL があれば失敗する。
 [ -n "${FAKE_GH_FAIL:-}" ] && exit 1
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
-  printf '{"headRefOid":"%s","url":"https://github.com/o/r/pull/%s"}\n' "$(cat "$FAKE_HEAD_FILE")" "$3"
+  repo="o/r"; prev=""
+  for a in "$@"; do [ "$prev" = "--repo" ] && repo="$a"; prev="$a"; done
+  printf '{"headRefOid":"%s","url":"https://github.com/%s/pull/%s"}\n' "$(cat "$FAKE_HEAD_FILE")" "$repo" "$3"
   exit 0
 fi
 exit 1
@@ -145,7 +147,7 @@ expect_rec() { # NAME WANT_COUNT MESSAGE AGENT_TYPE AGENT_ID TRANSCRIPT
 M_OK=$'審査しました。\nVERDICT: APPROVE on '"$SHA1"$' PR #1'
 expect_rec "R4 APPROVE・opus・sha 一致 -> 記録 1 件" 1 "$M_OK" reviewer xxx "$MAIN_T"
 [ -f "$GD/records/o__r-1-$SHA1.json" ] && ok "R4 記録ファイル名 o__r-1-<sha>.json" || ng "R4 記録ファイル名" "無い"
-perm="$(stat -f %Lp "$GD/records/o__r-1-$SHA1.json" 2>/dev/null || stat -c %a "$GD/records/o__r-1-$SHA1.json")"
+perm="$(python3 -B -c 'import os,sys;print(format(os.stat(sys.argv[1]).st_mode&0o777,"o"))' "$GD/records/o__r-1-$SHA1.json")"
 [ "$perm" = "600" ] && ok "R4 記録ファイルの権限 600" || ng "R4 記録ファイルの権限" "$perm"
 expect_rec "R4 transcript が自分の形 + id=xxx" 1 "$M_OK" reviewer xxx "$OWN_T"
 expect_rec "R4 transcript が本流の形 + id=agent-xxx" 1 "$M_OK" reviewer agent-xxx "$MAIN_T"
@@ -201,6 +203,43 @@ expect "誤止めなし gh pr create --body-file - <<'EOF' (本文に don't merg
 expect "誤止めなし git commit -m \"\$(cat <<'EOF'\" (本文に 1) とバッククォート 3 個と閉じない引用符)" 0 \
   $'git commit -m "$(cat <<\'EOF\'\nfeat: gh pr merge の話 1) ``` don\'t\n\nCo-Authored-By: x\nEOF\n)"'
 expect "誤止めなし grep -rn \"gh pr merge\" docs" 0 'grep -rn "gh pr merge" docs'
+
+# ---------------------------------------------------------------- 審査指摘 (PR #4503) の抜け道
+clear_records; mk_rec 1 "$SHA1"
+expect "B2 bash -o pipefail -c \"gh pr merge 2\"" 2 'bash -o pipefail -c "gh pr merge 2 --merge"'
+expect "B2 bash -eu -o pipefail -c" 2 'bash -eu -o pipefail -c "gh pr merge 2 --merge"'
+expect "B5 .pr-number=1 でもブランチ名の位置引数は止める" 2 'gh pr merge release/other --merge' "$GITWT"
+expect "B5 位置引数なしは .pr-number (記録あり) で通る" 0 'gh pr merge --merge' "$GITWT"
+expect "B6 別リポジトリの URL は o/r2 で見る (記録なし)" 2 'gh pr merge https://github.com/o/r2/pull/1 --merge'
+expect "B6 同じリポジトリの URL (記録あり)" 0 'gh pr merge https://github.com/o/r/pull/1 --merge'
+expect "B1 --body --disable-auto は旗に数えない" 2 'gh pr merge 2 --merge --body --disable-auto'
+expect "B1 -t --disable-auto は旗に数えない" 2 'gh pr merge 2 --merge -t --disable-auto'
+expect "B1 本物の --disable-auto は通る" 0 'gh pr merge 2 --disable-auto'
+expect "B9 cd <置き場> して相対パスで書く" 2 "cd $GD && echo x > records/o.json"
+expect "B9 cd ~/.claude; cd review-gate" 2 "cd $T; cd gate; echo x > records/o.json"
+expect "B10 別の場所の同名ファイルは例外にしない" 2 "bash /tmp/x/scripts/agent-hooks/review-gate/test_review_gate.sh /tmp/y/review-gate/records"
+expect "B3 bash -c \$'gh pr merge 2'" 2 "bash -c \$'gh pr merge 2 --merge'"
+expect "B11 python3 -c に merge" 2 "python3 -c 'import subprocess;subprocess.run([\"gh\",\"pr\",\"merge\",\"2\"])'"
+expect "B22 perl -e に merge" 2 "perl -e 'system(\"gh pr merge 2 --merge\")'"
+expect "B11 python3 -c に merge が無ければ通す" 0 "python3 -c 'print(1)'"
+expect "B7 GH_REPO= 付きのマージ" 2 'GH_REPO=o/r2 gh pr merge 1 --merge'
+expect "誤止めなし git merge origin/main" 0 'git merge origin/main'
+
+# ---------------------------------------------------------------- install -> rollback で元に戻る
+if [ -z "${REVIEW_GATE_SKIP_ROUNDTRIP:-}" ] && [ -f "$SELF_DIR/install.sh" ] && [ -f "$SELF_DIR/rollback.sh" ]; then
+  CD="$T/claude"; mkdir -p "$CD/agents"
+  printf '%s\n' '{"model":"opus","hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo stop"}]}]}}' > "$CD/settings.json"
+  python3 -B -c 'import json,sys;p=sys.argv[1];d=json.load(open(p));open(p,"w").write(json.dumps(d,ensure_ascii=False,indent=2)+"\n")' "$CD/settings.json"
+  printf '# reviewer\nline2\n' > "$CD/agents/reviewer.md"
+  cp "$CD/settings.json" "$T/settings.orig"; cp "$CD/agents/reviewer.md" "$T/reviewer.orig"
+  CLAUDE_DIR="$CD" bash "$SELF_DIR/install.sh" > "$T/inst.out" 2>&1; irc=$?
+  CLAUDE_DIR="$CD" bash "$SELF_DIR/rollback.sh" > "$T/roll.out" 2>&1; rrc=$?
+  if [ "$irc" = 0 ] && [ "$rrc" = 0 ] && cmp -s "$CD/settings.json" "$T/settings.orig" && cmp -s "$CD/agents/reviewer.md" "$T/reviewer.orig"; then
+    ok "install -> rollback で settings.json と reviewer.md が導入前と完全一致"
+  else
+    ng "install -> rollback の往復" "install rc=$irc rollback rc=$rrc $(diff "$T/reviewer.orig" "$CD/agents/reviewer.md" 2>&1 | head -c 200)"
+  fi
+fi
 
 echo "----------------------------------------"
 echo "PASS $PASS / FAIL $FAIL"

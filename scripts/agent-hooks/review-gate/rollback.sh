@@ -31,7 +31,12 @@ for event in list(hooks):
             new.append(e)
         elif not e.get("hooks"):
             new.append(e)
-    hooks[event] = new
+    if new:
+        hooks[event] = new
+    else:
+        del hooks[event]
+if not hooks:
+    d.pop("hooks", None)
 tmp = p + ".tmp-review-gate"
 with open(tmp, "w", encoding="utf-8") as f:
     json.dump(d, f, ensure_ascii=False, indent=2)
@@ -48,7 +53,7 @@ if [ -f "$AGENT" ] && grep -qF '<!-- review-gate:ADR-1029 -->' "$AGENT"; then
 import os, re
 p = os.environ["AGENT"]
 s = open(p, encoding="utf-8").read()
-s = re.sub(r"\n?<!-- review-gate:ADR-1029 -->\n.*?<!-- /review-gate:ADR-1029 -->\n?", "\n", s, flags=re.S)
+s = re.sub(r"\n?<!-- review-gate:ADR-1029 -->\n.*?<!-- /review-gate:ADR-1029 -->\n?", "", s, flags=re.S)
 open(p, "w", encoding="utf-8").write(s)
 PY
 fi
