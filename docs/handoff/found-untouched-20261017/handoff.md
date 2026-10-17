@@ -16,6 +16,7 @@
 ## 3. 試し実行の除外27行を実測で確かめる
 - 事実: scripts/migration-guard/dryrun-exclusions.tsv にはデータ行が27行ある（コメント行を除く）。
 - やること: #4466 と同じ方法で1本ずつ外して実測する。戻せるものは除外から外し、戻せないものは実測の ERROR を reason に書く（tsv:2-3 の規則）。
+- 便: docs/handoff/dryrun-exclusions-remeasure/design.md
 
 ## 4. 20260919_030000 で、表がビューのとき外部キーが作られない
 - 事実: 存在の確認が relkind を見ていない（VIEW でも真になる）。表がビューになっている環境では ALTER が飛ばされ、外部キーが作られない（side4/REPORT.md「P5」の欠陥②、design.md:60）。
