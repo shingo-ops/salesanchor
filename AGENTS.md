@@ -135,6 +135,7 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 - 完了後 `gh pr create --base main` で PR 作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
 - `release/*` → `main` は PR 経由（直 push 禁止・Branch Protection で強制）
   - マージ方法は必ず "Create a merge commit"（squash 禁止 — back-merge が永続発生するため）
+- マージ前は reviewer(opus) の `VERDICT: APPROVE on <sha> PR #<N>` 行つき報告が必須（ADR-1029 のフックで強制）
 
 ### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 

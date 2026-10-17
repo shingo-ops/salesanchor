@@ -51,7 +51,7 @@ interface InventoryListResponse {
 const PER_PAGE = 50;
 
 // 並び替えプルダウンの値（`${sort}:${order}`）。
-const SORT_MENU_VALUES = ["release_date:asc", "unit_price:asc", "quantity:desc", "offered_at:desc"];
+const SORT_MENU_VALUES = ["release_date:desc", "unit_price:asc", "quantity:desc", "offered_at:desc"];
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -109,7 +109,7 @@ export default function InventoryPage() {
   const [debouncedQ, setDebouncedQ] = useState("");
   const [category, setCategory] = useState("");
   const [sortField, setSortField] = useState("release_date");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -329,7 +329,7 @@ export default function InventoryPage() {
     setDebouncedQ("");
     setCategory("");
     setSortField("release_date");
-    setSortDir("asc");
+    setSortDir("desc");
     setPage(1);
   };
   // Enter は 250ms の待ちを飛ばしてすぐ検索する（検索ボタンは無い）
@@ -451,7 +451,7 @@ export default function InventoryPage() {
                   setPage(1);
                 }}
                 options={[
-                  { value: "release_date:asc", label: t("inventory.sortMenu.releaseAsc") },
+                  { value: "release_date:desc", label: t("inventory.sortMenu.releaseDesc") },
                   { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
                   { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
                   { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
