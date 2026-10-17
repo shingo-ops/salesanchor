@@ -23,4 +23,4 @@
 | K17 | フック免除が完全一致のみ | 免除は入れていない。現在のフックは reader の呼び方に当たらない（`~/.claude/scripts/agent-danger-hook.sh:99-101,113`。リポジトリ外） | 免除そのものが不要 | bin4/recon-hooks.md, k1.rc |
 | K18 | 負荷の上限 | 行数、60 秒、同時 3 本、大きな結果 | ○ 5000 行で打ち切り。60 秒で 57014（QueryCanceled、60525 ms）。同時 3 本は 1 本が OperationalError、2 本は rc=0。150 万行の結果でも 200 行で打ち切り、落ちない | bin4/K18a.err, K18b.err, K18c1.err, K18c1.rc, K18c2.rc, K18c3.rc, bin3b/ktest/t10.out, t10.err |
 
-未測: K14 の `sshd -T`（sudo が要るため PO 実行分）。bin5 で K3・K8・K9・K11・K13・K14 を測定。K3 は ×、K11 は △。
+未測: K14 の `sshd -T`（sudo が要るため PO 実行分）。bin5 で K3・K8・K9・K11・K13・K14 を測定。K3 は ×（便K3-2 で ○ に更新）、K11 は △。
