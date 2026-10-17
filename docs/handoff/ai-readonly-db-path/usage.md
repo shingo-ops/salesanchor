@@ -20,6 +20,9 @@ printf '%s\n' "<SQL>" | ssh -F /dev/null -i ~/.ssh/salesanchor-reader -o Identit
 ## 3. 出力の形と終了コード
 - 標準出力は、1 行目が列名、2 行目以降が値（タブ区切り）。
 - 標準エラーに `AUDIT ts=… sha=… rows=… ms=… result=… sql=…` が 1 行出る（呼び出しの記録）。
+- 同じ行が `/dev/log` にも送られ、ホストの auth.log 経由で Loki に残る。見方: `{job="sshd"} |= "ai-reader-audit:"`。
+- auth.log の AUDIT 行は足すことはできても消すことはできない。正本の記録は DB の `log_statement`。
+- 台本の標準出力（結果表）は、ホストにも監視にも残らない（logging none）。
 
 | 値 | 意味 |
 |---|---|
@@ -27,6 +30,8 @@ printf '%s\n' "<SQL>" | ssh -F /dev/null -i ~/.ssh/salesanchor-reader -o Identit
 | 2 | 台本が拒否した（SELECT/WITH/SHOW/EXPLAIN 以外、複文、`SET` など） |
 | 3 | 環境変数（`AI_READER_DATABASE_URL`）が無い |
 | 4 | DB エラー |
+| 5 | AUDIT の送り口（/dev/log）を開けない・送れない・2 秒で送れない（結果は出さない） |
+| 1 | 標準出力の書き込みに失敗した（AUDIT は ok で記録済み。Python の既定の終了コード） |
 
 制限: 60 秒で打ち切り（57014）。同時 3 本を流した実測では 1 本が失敗した（同時は 2 本までにする）。行数は 5000 で打ち切る。
 
