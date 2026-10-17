@@ -1,6 +1,13 @@
 -- ============================================================================
 -- Migration 20260919_015000: VIEW → TABLE 解消
 --
+-- 【無効化済み】(ADR-1007 決定2 の適用例 / 2026-10-17)
+--   無効化の理由: 毎回の全件実行で 20260922_080000 と往復RENAMEし、4表
+--   (line_units / line_unit_aliases / line_conditions / line_condition_aliases) が
+--   数秒消えるため。本番は既に20260922以降の形（line_* が実表・旧名が VIEW）。
+--   ADR-1007 追記参照。元の内容は git history で参照可能。
+--   以下の「背景」「変更内容」「冪等性」は無効化前の記録。
+--
 -- 背景:
 --   本番DBに手動SSH操作で作成された4つのVIEWが存在し、
 --   後続マイグレーション (20260919_020000 等) が同名のTABLEに対する
@@ -25,41 +32,6 @@
 -- 作成日: 2026-09-22
 -- ============================================================================
 
-DO $$
-BEGIN
-    -- units: VIEW → TABLE
-    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'v') THEN
-        DROP VIEW public.units CASCADE;
-        ALTER TABLE public.line_units RENAME TO units;
-        RAISE NOTICE 'Renamed line_units → units (VIEW dropped)';
-    ELSE
-        RAISE NOTICE 'public.units is not a VIEW — skipping';
-    END IF;
-
-    -- unit_aliases: VIEW → TABLE
-    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'unit_aliases' AND c.relkind = 'v') THEN
-        DROP VIEW public.unit_aliases CASCADE;
-        ALTER TABLE public.line_unit_aliases RENAME TO unit_aliases;
-        RAISE NOTICE 'Renamed line_unit_aliases → unit_aliases (VIEW dropped)';
-    ELSE
-        RAISE NOTICE 'public.unit_aliases is not a VIEW — skipping';
-    END IF;
-
-    -- conditions: VIEW → TABLE
-    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'v') THEN
-        DROP VIEW public.conditions CASCADE;
-        ALTER TABLE public.line_conditions RENAME TO conditions;
-        RAISE NOTICE 'Renamed line_conditions → conditions (VIEW dropped)';
-    ELSE
-        RAISE NOTICE 'public.conditions is not a VIEW — skipping';
-    END IF;
-
-    -- condition_aliases: VIEW → TABLE
-    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'condition_aliases' AND c.relkind = 'v') THEN
-        DROP VIEW public.condition_aliases CASCADE;
-        ALTER TABLE public.line_condition_aliases RENAME TO condition_aliases;
-        RAISE NOTICE 'Renamed line_condition_aliases → condition_aliases (VIEW dropped)';
-    ELSE
-        RAISE NOTICE 'public.condition_aliases is not a VIEW — skipping';
-    END IF;
-END $$;
+-- NEUTRALIZED (ADR-1007 decision 2, 2026-10-17):
+-- VIEW の DROP と line_* → 元名 RENAME を外した。元の内容は git history で参照可能。
+DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: 20260919_015000 view-to-table rename removed (round-trip with 20260922_080000)'; END $$;
