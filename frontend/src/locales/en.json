@@ -4043,6 +4043,8 @@
     "notFound": "{{field}}: checked, none exists",
     "requiredMissing": "Not entered yet (required for registration).",
     "requiredMissingConfirmable": "Not entered yet. Enter a value, or tick \"checked, none exists\" below if there is none.",
+    "requiredFieldsMissing": "Cannot register because required fields are empty: {{fields}}. Enter them. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
+    "requiredFieldsCleared": "{{fields}} cannot be left empty. Enter a value. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
     "create": "Create"
   },
   "soldOut": {

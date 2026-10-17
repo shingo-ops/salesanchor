@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import type { AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
 
@@ -244,5 +244,21 @@ describe("ProductMasterDrawer assign mode", () => {
     await i18n.changeLanguage("en");
     const { container } = renderDrawer([]);
     expect(visibleStrings(container)).not.toMatch(JAPANESE);
+  });
+});
+
+describe("ProductMasterDrawer required fields error (ADR-1020)", () => {
+  it("shows field names instead of the REQUIRED_FIELDS_MISSING code when registration is blocked", async () => {
+    await i18n.changeLanguage("en");
+    vi.mocked(api.post).mockImplementation((async (path: string) => {
+      if (path === "/tcg/products") throw Object.assign(new ApiError("REQUIRED_FIELDS_MISSING:name_en", 422, null), { status: 422 });
+      return { candidates: [] };
+    }) as typeof api.post);
+    const { container } = renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("Review entry");
+    await fillLookups();
+    fireEvent.click(screen.getByRole("button", { name: "Register in product master" }));
+    await waitFor(() => expect(container.textContent).toContain("Cannot register because required fields are empty: English name"));
+    expect(container.textContent).not.toContain("REQUIRED_FIELDS_MISSING");
   });
 });

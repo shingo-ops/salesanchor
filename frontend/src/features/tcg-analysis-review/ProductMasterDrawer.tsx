@@ -38,6 +38,7 @@ import {
   formatAfterWorkChange,
   formatOptionsFor,
   missingFields,
+  requiredFieldsMessage,
   type BlankCode,
 } from '../tcg-product-import/productDetailModel';
 import type { AnalysisReviewItem } from './ItemComparison';
@@ -181,7 +182,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
         setIssuedProductId(result.product_id || '');
         setStatus('saved');
       })
-      .catch((reason: unknown) => { setError(String((reason as Error)?.message || reason)); setStatus('error'); });
+      .catch((reason: unknown) => { setError(requiredFieldsMessage(reason, t) ?? String((reason as Error)?.message || reason)); setStatus('error'); });
   };
 
   const optionName = (key: 'product_kind_id' | 'work_id' | 'manufacturer_id' | 'product_category_id' | 'product_format_id') => {

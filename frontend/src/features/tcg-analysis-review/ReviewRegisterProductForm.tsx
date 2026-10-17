@@ -31,6 +31,7 @@ import {
   formatAfterWorkChange,
   formatOptionsFor,
   missingFields,
+  requiredFieldsMessage,
   type BlankCode,
 } from "../tcg-product-import/productDetailModel";
 import "./review-fix-wizard.css";
@@ -258,7 +259,7 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
         }
         productId = result.product_id;
       } catch (error: unknown) {
-        setErrorNotice(t("reviewItem.wizard.register.failed", { reason: reasonOf(error) }));
+        setErrorNotice(requiredFieldsMessage(error, t) ?? t("reviewItem.wizard.register.failed", { reason: reasonOf(error) }));
         return;
       }
       setRegisteredProductId(productId);

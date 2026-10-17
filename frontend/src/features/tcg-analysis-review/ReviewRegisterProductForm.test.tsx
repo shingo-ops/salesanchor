@@ -282,3 +282,17 @@ describe("ReviewRegisterProductForm", () => {
     expect(after.disabled).toBe(true);
   });
 });
+
+describe("ReviewRegisterProductForm required fields error (ADR-1020)", () => {
+  it("shows field names instead of the REQUIRED_FIELDS_MISSING code when registration is blocked", async () => {
+    vi.mocked(checkProductDuplicates).mockResolvedValue({ candidates: [] });
+    vi.mocked(createProduct).mockRejectedValue(Object.assign(new ApiError("REQUIRED_FIELDS_MISSING:exclude_keywords", 422, null), { status: 422 }));
+    await renderForm();
+    await fillRequired();
+    click("Check for similar products");
+    fireEvent.click(await screen.findByRole("button", { name: "Register and reassign" }));
+    const text = await screen.findByText(/Cannot register because required fields are empty/);
+    expect(text.textContent).toContain("Exclusion keywords");
+    expect(document.body.textContent).not.toContain("REQUIRED_FIELDS_MISSING");
+  });
+});
