@@ -75,6 +75,36 @@ preflight_registered_files() {
 
 preflight_registered_files
 
+# ADR-1024: ai_ro ビューを一覧の先頭で外す。ビューが依存していると、後続 migration の
+# DROP / ALTER（列削除・型変更・表の作り直し）が止まるため。作成は下の EXIT trap が最後に行う。
+run_sql migrations/20261017_125900_drop_ai_ro_views.sql
+
+# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトが正常終了（rc=0）したときだけ、
+# 常に最後に流す。将来の migration が末尾に追記されても、作成は常に最後になる。
+# 途中で失敗した場合はビューを外したままにする（fail-closed）。
+# 作成に失敗したら exit 1。（TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
+AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
+_ai_ro_create_on_exit() {
+  local rc=$?
+  trap - EXIT
+  if [ "${rc}" -ne 0 ]; then
+    echo ">>> [final] skip ai_ro views (script failed rc=${rc}; views stay dropped)"
+    exit "${rc}"
+  fi
+  echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
+  if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
+    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
+  fi
+  # ビューは AI が読むための補助。作成に失敗しても本体のデプロイは止めず、「読めない」側に倒す
+  if ! docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+    echo "⚠️ ai_ro views の作成に失敗（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
+  fi
+  exit 0
+}
+trap _ai_ro_create_on_exit EXIT
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -961,3 +991,5 @@ run_sql migrations/20261016_190000_create_product_blank_confirmations.sql
 run_sql migrations/20261017_100000_add_viewer_discord_config.sql
 # ADR-1023: 状態マスタの価値順の列（構造のみ。値は docs/handoff/condition-value-rank/data/ の SQL で入れる）
 run_sql migrations/20261017_120000_line_conditions_value_rank.sql
+# ADR-1024: AI 用の読み取り専用ユーザー ai_reader（パスワードなし。ログインは便3bまで不可）
+run_sql migrations/20261017_130000_create_ai_reader_role.sql
