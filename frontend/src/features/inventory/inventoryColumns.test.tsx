@@ -38,7 +38,7 @@ describe("buildInventoryColumns", () => {
     ["Damaged sealed box", "inventory-cell__condition--warning"],
     ["No shrink box", "inventory-cell__condition--purple"],
     ["Opened box", "inventory-cell__condition--danger"],
-    ["Case", "inventory-cell__condition--info"],
+    ["Case", "inventory-cell__condition--success"],
     ["New", "inventory-cell__condition--neutral"],
   ])("renders condition %s as colored text without Badge", (cond, cls) => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
