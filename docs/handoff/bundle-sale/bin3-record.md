@@ -1,7 +1,7 @@
 ---
 mode: handoff
 adr: ADR-1027
-status: 便3 再解析 93 job 済（2026-10-17、実行者 PO）・K1 は PO 目視待ち
+status: 便3 再解析 93 job 済（2026-10-17、実行者 PO）・K1 は PO 目視待ち・K2 の値段は本文と未照合
 ---
 
 # bin3-record — まとめ売り 便3（再解析と照合）の記録
