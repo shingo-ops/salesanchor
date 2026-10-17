@@ -959,3 +959,5 @@ run_sql migrations/20261016_190000_create_product_blank_confirmations.sql
 
 # ADR-1019 段4c: 閲覧者の Discord 受付の設定の表（空・構造のみ・冪等）
 run_sql migrations/20261017_100000_add_viewer_discord_config.sql
+# ADR-1023: 状態マスタの価値順の列（構造のみ。値は docs/handoff/condition-value-rank/data/ の SQL で入れる）
+run_sql migrations/20261017_120000_line_conditions_value_rank.sql
