@@ -23,6 +23,7 @@ from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.condition_value_columns import apply_condition_value_columns
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -75,6 +76,7 @@ async def pg(monkeypatch):
             # Master SSOT Phase 3: public schema tables for 9 master tables (public.conditions etc.)
             migrations_dir = Path(__file__).resolve().parents[2] / "migrations"
             c.execute((migrations_dir / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            apply_condition_value_columns(c)  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
             # Sprint 1 migration: copy tenant_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             for s in (SCHEMA, "tenant_872"):
