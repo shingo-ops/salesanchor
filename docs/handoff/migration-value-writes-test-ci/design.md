@@ -43,7 +43,7 @@
 - scripts/ を触るため危険変更（scripts/check-process-artifacts.js:117）。DB・本番データ・migrations/ は触らないため、バックアップは不要（本番へ書くものが無い）。
 - GO は POの委任に基づくClaude Opus発行（PO 2026-10-17 チャット原文:「PRマージ、デプロイまで完走させてくれ」）。PR 本文に GO 記録を残す。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 - 不要。理由: 既存 job へ試験 step を足す作業で、同リポジトリ内の前例（migration-guard.yml:433 チェック7b、deploy-script-test.yml:38-41）が直接の根拠になるため。
 
 ## 維持の仕組み
