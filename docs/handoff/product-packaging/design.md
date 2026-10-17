@@ -217,7 +217,7 @@ FROM r;
   - 保存は新しい表へ書く。古い4列には書かない。updated_at はトリガが入れ、updated_by は保存した人を入れる。
   - backend/app/schemas/product.py:68-71・:116-119 は入数・重さが `ge=0`（0 を許す）。新しい表は 0 を拒むので、便3 で `gt=0` に変え、0 を送ると 422 になるようにする（DB エラーの 500 にしない）。
   - 読む所: recon.md §3 の backend とスクリプトの全行。テストも同じ便で直す。
-- **便4（画面）**: 商品の編集画面に荷姿の欄（単位ごとの入数・重さ・出典の種類・URL）を出す。入力欄は components/ の金型を使い、文字は t("key") 経由（ADR-027・ADR-144）。販売サイトの URL は同じものを2つ入れられないようにする（DB の制約では同じ URL の重複を止められないため。便3 の API でも重複を 422 で拒む）。見積・請求の重さは便3の応答で今のまま動く。
+- **便4（画面）**: 商品の編集画面に荷姿の欄（単位ごとの入数・重さ・出典の種類・URL）を出す。入力欄は components/ の金型を使い、文字は t("key") 経由（ADR-027・ADR-144）。販売サイトの URL は同じものを2つ入れられないようにする（DB の制約では同じ URL の重複を止められないため。出典つきの入力を受ける API も便4 で足し、そこで重複を 422 で拒む。§11-2）。見積・請求の重さは便3の応答で今のまま動く。
 - **便5（削除・PO 本人 GO）**: 4列・quantity_unit_id・weight_class_id を products から、product_quantity_units を表ごと、quantity_units から value を消す。消す前に値を CSV に退避する。参照の確認をしている backend/app/routers/super_admin_quantity_units.py:170 と backend/app/routers/super_admin_weight_classes.py:140 も同じ便で直す。列を足している migration の ADD 文を同じ PR で消す（ADR-1026 と同じ。列番号の上限のため）。
 - **便6（値の追加）**: 外部の出典（recon.md §5）で集めた値を、商品ごとの候補一覧にして PO に見せ、y を受けてから画面か1回だけのデータ変更で入れる。
 
@@ -270,3 +270,277 @@ FROM r;
 - 想定分岐: run_all_migrations.sh の末尾が §3-2 の想定と違う／protected-tables.txt に product_blank_confirmations の行が無い／migration-test.yml に product_lines の最小定義が無い・前提に public.products が無い／点検が失敗した → 直さずに止めて報告。
 - commit は1つ（`feat: 商品の荷姿の表を作る（ADR-1028 便1）`）。push まで。PR は作らない（Opus が作る）。
 - 報告: DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
+
+## 11. 実装カード（便3・Sonnet）
+PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マージ→本番まで）。現在地の生出力は /tmp/CC報告ファイル/product-packaging/bin3/（recon/・recon/extra/・recon/prod/）、カード審査の記録は同 review-card/。行番号は origin/main 833a28713 時点（backend は 88391573c から差分なし）。
+
+### 11-1. 着手前に分かった事実（本番・読み取りの道）
+- 照合のやり直し（2026-10-17T16:28Z、data-change-1/02_verify_read.sql）: K3 CASE 146・BOX 176・計 322／K4 0|0|0|0／K5 4 行で便2 直後と同じ（recheck_k3k5.out）。
+- 本番の products は 1424 行すべて共用（tenant_id NULL）。テナントの商品は 0 行。古い4列に値がある商品 176、表の行が付いたテナント商品 0（recon/prod/q1.out）。
+- 商品 API（POST/PATCH /products）で作った・直した記録は各テナントの audit_logs に 0 件（record_audit_log は tenant_NNN.audit_logs に書く: backend/app/services/audit.py:303。recon/prod/q4.out）。アプリは salesanchor_app で接続し RLS が効く（docs/adr/ADR-1018-public-sensitive-tables-rls-staged.md:16）。共用行の書き込みは app.is_operator='true' のときだけ許され（migrations/20260626_130000_force_rls_public_products.sql:15-38）、商品 API はそれを張らない（products.py に is_operator 0 件、backend/app/auth/dependencies.py:307-309 が毎回 '' にする）。今は共用行の PATCH が UPDATE 0 行→:534 の `ProductResponse(**None)` で 500 になる（審査の試行 A）。
+- 新しい表の書き込みも app.is_operator='true' のときだけ（migrations/20261018_100000_create_product_packagings.sql:69-81）。許されないと UPDATE・DELETE は黙って 0 行、INSERT はエラー（審査の試行 D・E）。**便3 は「誰が書けるか」を変えない**（is_operator を新しく張らない）。商品の行を書けたときだけ表を書く。
+- リポジトリ外の在庫一覧 GAS 4 フォルダは4列を読まない（recon/gas_grep.out 0 件）。§7 の「GAS の参照」は解消。
+
+### 11-2. 決めたこと（設計判断）
+- 応答の4項目（boxes_per_case・packs_per_box・box_weight_kg・case_weight_kg）は名前と型を変えず、新しい表から組み立てる。対応は便2（data-change-1/01_apply.sql）と同じ: boxes_per_case＝CASE 行の contained_count（中の単位が BOX のとき）／case_weight_kg＝CASE 行の weight_kg／packs_per_box＝BOX 行の contained_count（中の単位が PACK のとき）／box_weight_kg＝BOX 行の weight_kg。
+- この対応は新しいファイル backend/app/services/product_packagings.py の1か所だけに書き、商品 API と在庫検索の両方がそこを使う（SSOT）。
+- 書き込みの決まり（古い4項目で送られたとき）:
+  - 「今の値」は `legacy_field_sql` と同じ決まりで表から組み立てた値（例: CASE 行の中の単位が BOX でなければ boxes_per_case の今の値は NULL）。
+  - 送られた値が今の値と同じ → その値に触らない（出典・URL・updated_at を保つ）。
+  - 違う値（NULL でない）→ 値を入れ、出典を `legacy`（ADR-1028:19「出典が残っていない」）、その URL を `'{}'` にする。入数なら contained_unit_id も対応の中の単位（BOX／PACK）に入れる（UPDATE でも INSERT でも）。
+  - NULL → その値・出典を NULL、URL を `'{}'`、入数なら contained_unit_id も NULL。入数も重さも NULL になった行は DELETE（表の not_empty 制約）。
+  - UPDATE・DELETE は1行に当たったことを確かめ、0 行なら RuntimeError（RLS で黙って0行になるのを見逃さない）。
+- 出典つきの入力・販売サイトの URL の重複を 422 で拒むことは便4（画面に出典の欄が付く便）で API に足す（§5 の便4 を直した）。
+- updated_by は `user:<ユーザーid>`。
+- 古い4列には書かない・読まない（列は便5 まで残る）。
+- SQLite（pytest の簡易表）には新しい表を作らない。SQLite では4項目を NULL・packagings を空で返し、表の書き込みは飛ばす（前例: backend/app/routers/me_inventory_filters.py:91,130）。4項目の試験は PostgreSQL の試験へ移す。
+- テナントの商品（tenant_id が NULL でない行。本番 0 行）に PostgreSQL で4項目を送ったら 422 `PACKAGING_SHARED_ONLY`（表の RLS がテナントを持たないため。何も書かない）。
+- 共用行で products の UPDATE が 0 行（今の 500 の場合）は、audit_log と commit の前にすぐ `raise HTTPException(403, "PRODUCT_NOT_WRITABLE")`。rollback は get_db（backend/app/database.py:46-61）の except が行うので、route では呼ばない（同じ PATCH の 422 と同じ形）。
+- 応答に `packagings`（単位ごとの行と出典）を足す（§5）。GET 一覧・詳細・POST・PATCH のすべての応答で詰める。
+- scripts/seed_products_from_master.py（手で流す取り込み）は古い4列に書かなくする（§5・§2 のとおり便3 の対象）。表への取り込みは便6 の手順で行うので、`--apply` で CSV の4項目のどれかに値がある行が1つでもあれば、何も書かずに終了コード 3 で止める。
+
+### 11-3. 触るファイルと変更
+1. **新規 backend/app/services/product_packagings.py**
+   - 定数 `LEGACY_FIELDS = {"boxes_per_case": ("CASE", "count", "BOX"), "case_weight_kg": ("CASE", "weight", None), "packs_per_box": ("BOX", "count", "PACK"), "box_weight_kg": ("BOX", "weight", None)}`。
+   - `legacy_field_sql(field: str, product_id_expr: str) -> str`: 1項目ぶんのスカラー副問い合わせ。入数の例（boxes_per_case）:
+     `(SELECT pk.contained_count FROM public.product_packagings pk JOIN public.quantity_units u ON u.id = pk.unit_id JOIN public.quantity_units cu ON cu.id = pk.contained_unit_id WHERE pk.product_id = {product_id_expr} AND u.code = 'CASE' AND cu.code = 'BOX')`。重さは cu の JOIN なしで `pk.weight_kg`。
+   - `async def load_packagings(db, product_ids: list[int]) -> dict[int, list[dict]]`: `WHERE pk.product_id = ANY(:ids)` の1回の SELECT。unit_code・contained_unit_code・contained_count・count_source・count_source_urls・weight_kg・weight_source・weight_source_urls・note・updated_at を返す（並びは quantity_units.display_order, quantity_units.id）。
+   - `async def save_legacy_fields(db, product_id: int, fields: dict, updated_by: str) -> None`: fields は4項目のうち送られたものだけ。最初に `SELECT code, id FROM public.quantity_units WHERE code IN ('CASE','BOX','PACK')` で id を引き、3つ揃わなければ RuntimeError（id の定数は書かない）。単位（CASE・BOX）ごとに今の行を `SELECT ... FOR UPDATE` で読み、11-2 の決まりで UPDATE／INSERT／DELETE（変わる値が無ければ何もしない）。
+2. **backend/app/routers/products.py**
+   - :66 の `_UPDATABLE_COLUMNS` から4項目を外す（:66-67 の残りは残す）。
+   - :129-146 `_select_columns(ctx)`: :139 の4列を、PostgreSQL では `legacy_field_sql(<項目>, f"{ctx['ref']}.id")` の4式 `AS boxes_per_case` 等に、SQLite では `NULL AS boxes_per_case` 等にする（`_products_ctx` :95-98 の戻り値に方言の項目を足して判定する）。
+   - GET 一覧（:251-255）・詳細（:347-354）: PostgreSQL では `load_packagings` で `packagings` を詰める（SQLite は空）。
+   - POST（:398-448）: INSERT 列と値から4項目（:407・:418）を外す。INSERT の後、PostgreSQL では4項目のうち None でないものを `save_legacy_fields` に渡す。再取得（:433-437）の後に packagings を詰める。audit_log の new_data（:442）はそのまま。
+   - PATCH（:456-534）:
+     - :472 の `model_dump(exclude_unset=True)` の直後、:473 の絞り込みの前に4項目を `packaging_fields` へ取り出す。
+     - :474 の 400 は、update_data と packaging_fields の両方が空のときだけ。
+     - PostgreSQL で packaging_fields があり、商品が tenant_id NOT NULL なら 422 `PACKAGING_SHARED_ONLY`（11-2）。
+     - SET 句は項目のリストを `", ".join` で組み、リストが空なら `updated_at = NOW()` だけにする（先頭のカンマを作らない。archived_at の追加は is_archived があるときだけなので空のときは起きない）。products の UPDATE は必ず流す（RLS の判定を今と同じにするため）。
+     - RETURNING の行が無ければ 11-2 の 403。
+     - 行があり packaging_fields があれば、PostgreSQL で `save_legacy_fields` を呼び、`SELECT {_select_columns(ctx)} ... WHERE id = :id` で取り直す。
+     - packagings を詰めて返す。
+     - audit_log の new_data には4項目も入れる（今と同じ中身）。
+   - DELETE は触らない（表は ON DELETE CASCADE）。
+3. **backend/app/schemas/product.py**
+   - :68-71 と :116-119 の4項目の `ge=0` を `gt=0` にする（0 は 422。型・桁は変えない）。
+   - 新しい `ProductPackagingOut`（load_packagings の10項目。urls は `list[str]`）を足し、`ProductResponse`（:171-176 付近）に `packagings: list[ProductPackagingOut] = []` を足す。4項目の定義は変えない。
+4. **backend/app/services/inventory_search.py:343-344**（`build_search_sql` :163 の f-string の中）: `p.box_weight_kg, p.case_weight_kg` を `{legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg, {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg` にする（波かっこで埋め込む）。:101-104・:437-442 と router・schema は変えない。
+5. **scripts/seed_products_from_master.py**: :179-205 の INSERT 列・ON CONFLICT の SET・値から4項目を外す。`--apply` で4項目（:138-141 で読む値）のどれかに値がある行があれば、DB につなぐ前（create_async_engine より前）に件数を数え、標準エラーに `ADR-1028: 入数・重さは書かない` で始まる1行と件数を出して、何も書かずに終了コード 3（argparse の使い方の誤りの 2 と分ける）。`--dry-run` はその件数を表示する。:17-20 の見出しの対応表と :70-73 の dataclass は残す（読みはする）。:27-28 の説明に1行「入数・重さは書かない（ADR-1028）」を足す。
+6. **frontend/api-contract/openapi.json**: schema が変わるので必ず作り直す。`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`（.github/workflows/api-contract-check.yml:31-55 の検査と同じ）。手で書かない。
+7. **テスト**
+   - 新規 backend/tests/test_product_packagings_pg.py。test_tcg_product_list_pg.py の product_db を借り、test_products_required_fields_pg.py:20-58 の client_factory（`_ROUTE_COLUMNS`・audit の no-op を含む）と同じ形で使う。試験の中で、quantity_units を design §3-4（.github/workflows/migration-test.yml の最小定義）と同じ DDL で作って CASE・BOX・PACK を入れ、migrations/20261018_100000_create_product_packagings.sql を流す（create_product_schema 本体は変えない）。確かめること:
+     - T1 古い4列が NULL・表に CASE（BOX×12・6.5kg・official・URL1つ）と BOX（PACK×20・0.236kg・legacy）があるとき、GET 詳細と GET 一覧が 12・6.5・20・0.236 を返し、packagings が2行。
+     - T2 PATCH boxes_per_case=10 → CASE 行の contained_count 10・count_source legacy・count_source_urls 空・contained_unit が BOX、重さとその出典（official・URL）は変わらない。products.boxes_per_case は変わらない。
+     - T3 PATCH で4項目を今と同じ値で送る → 表の行の updated_at・出典が変わらない。
+     - T4 PATCH box_weight_kg=null → BOX 行の weight_kg・weight_source が NULL・URL 空、入数は残る。続けて packs_per_box=null → BOX 行が消える。
+     - T5 POST で4項目を入れる → CASE・BOX の2行（出典 legacy）、古い4列は NULL、応答の packagings 2行。9項目の検査は `monkeypatch.setattr("app.routers.products.check_required_fields", lambda *a, **k: [])` で外す。
+     - T6 PATCH boxes_per_case=0 → 422。
+     - T7 CASE 行の中の単位が PACK のとき、boxes_per_case は NULL で返り、boxes_per_case=8 を送ると中の単位が BOX・8 になる。
+     - T8 テナントの商品に4項目を送る → 422 PACKAGING_SHARED_ONLY、表は変わらない。
+     - T9 試験の中で ① migrations/20260626_130000_force_rls_public_products.sql を流して products に RLS を付ける ② `SET LOCAL ROLE salesanchor_app`（is_operator は未設定）③ 共用の商品に PATCH → 403 PRODUCT_NOT_WRITABLE ④ `RESET ROLE` の後、products・表とも変わらないことを確かめる。CI では salesanchor_app が有り、jarvis が作る表に権限が自動で付く（.github/workflows/test.yml:187-205）。ロールが無い環境（ローカル）だけ skip にして理由を書く。
+   - 新規の DB を使わない試験（backend/tests/test_product_packagings_sql.py）: `legacy_field_sql` の4式の文字列と、`build_search_sql(...)` の戻りの SQL に `legacy_field_sql("box_weight_kg", "p.id")` と `legacy_field_sql("case_weight_kg", "p.id")` がそのまま入っていること、`p.box_weight_kg` が入っていないこと。
+   - backend/tests/test_products.py: :594-597 の4項目の表明を外す。:608-622 の更新試験の boxes_per_case（:616・:622）を `_UPDATABLE_COLUMNS` に残る数値の moq に置き換える。:624-630（-1 → 422）は残し、0 → 422 を1つ足す。
+   - backend/tests/conftest.py:816-819 は触らない（便5 で消す）。
+
+### 11-4. 触らない範囲
+frontend/src の全ファイル（項目名は変えない）、migrations/（新しい migration は作らない）、backend/tests/conftest.py、backend/tests/test_tcg_product_list_pg.py、test_products_required_fields_pg.py、quantity_units・weight_classes の管理画面、products.moq・weight・volume_weight。
+
+#### 11-4a. 実装中に外れた所（2026-10-18 Opus 判断・審査で必要最小限と確認）
+- 外れた所1: 試験の共有部品を触った（backend/tests/rls_bootstrap.py・test_tcg_product_list_pg.py・test_products_tcg_type_fk.py）。理由: 便3 後、PG の商品 API は load_packagings を通るため、product_db を借りる試験（test_products_required_fields_pg.py:14・test_tcg_product_detail_pg.py:24・test_product_packagings_pg.py:16）と test_products_tcg_type_fk の PATCH が、荷姿の表が無いと失敗した（CI fc7f3eed3 より前の実行で5件）。
+- 外れた所2: §11-3-7 の「試験の中で最小 DDL で作る」をやめ、本番の migration 3本（20260921_140000・20260922_060000・20261018_100000）を、巻き戻す transaction の外で一度だけ確定で流す（rls_bootstrap.py の ensure_product_packagings、public_bootstrap_lock で直列化）。理由: (a) 試験の中で DDL を流すと rollback まで表のロックを持ち、並列 worker 間で deadlock した（CI fc7f3eed3 の T5、記録 /tmp/CC報告ファイル/product-packaging/bin3/impl/deadlock2_recon.out）(b) 文字列の DDL は test-schema-dup の関所で止まる。
+- 外れた所3: ensure の先頭で public.products に ACCESS EXCLUSIVE を取り、test_tcg_distribution_pg（products → product_kinds の順）とロックの順を揃える。理由: 逆の順だと使い捨て PG で deadlock を再現し、先に取ると解消した（審査記録 /tmp/CC報告ファイル/product-packaging/bin3/review/ の repro1〜3）。
+- T9 は試験の中で force_rls を流すまま。同じ transaction が先に products を ALTER しており、新しいロック順を増やさない（審査の判断）。
+
+### 11-5. 点検（生出力を /tmp/CC報告ファイル/product-packaging/bin3/impl/ へ）
+- `cd backend && pytest -q tests/test_products.py tests/test_product_packagings_pg.py tests/test_product_packagings_sql.py tests/test_products_required_fields_pg.py`（PG の試験はローカルに PostgreSQL 16 と RLS_ADMIN_DATABASE_URL が無ければ skip。skip なら「未実施・CI で確認」と書く）
+- `cd backend && pytest -q`（全体）と `make lint`（backend/CLAUDE.md:69）
+- openapi を作り直した後 `git diff --stat frontend/api-contract`
+- `git grep -n -E "packs_per_box|boxes_per_case|box_weight_kg|case_weight_kg" -- backend frontend/src scripts` の結果を impl/k9_names.out に保存（便5 の K9 の元。Opus が 11-8 に一覧として写す）
+- `git diff origin/main...HEAD --name-only` が 11-3 のファイルと design.md だけ
+
+### 11-6. 想定分岐（当てはまったら直さずに止めて報告）
+- 行番号が 11-3 とずれていて、同じ中身の行が見つからない
+- `_select_columns` を products.py 以外が使っている
+- 20261018_100000 の migration が §3-4 の最小の quantity_units では流れない
+- openapi の生成で ProductCreate・ProductUpdate・ProductResponse・ProductPackagingOut 以外の schema が変わる
+- pytest の失敗が便3 の変更と関係ない所で出る
+
+### 11-7. 受入条件（§6 の K6・K7 の測り方をここで固める）
+| 基準 | 検証方法 |
+|---|---|
+| B1 CI がすべて緑。"pytest (SQLite + PostgreSQL RLS)" で T1〜T9 が skip でなく pass | `gh pr checks` と CI の pytest の記録 |
+| B2（K6）本番反映後、4項目の値が便3 前と全商品で同じ | 本番の読み取りの道で、`legacy_field_sql` と同じ式で組み立てた4値と古い4列を全 1424 商品で突き合わせて不一致 0。商品 API を AI が本番で呼ぶ鍵は無いので、API が同じ式を使うことは T1 と test_product_packagings_sql.py で確かめる |
+| B3（K7）在庫検索の重さが同じ | test_product_packagings_sql.py（build_search_sql が同じ式を使う）と B2、frontend の quoteDraft.test.ts（変更なし）が CI で pass |
+| B4 デプロイが成功し、本番の /health が 200 | `gh run view`・curl |
+| B6 §11-8 に4項目名の残る所の一覧（impl/k9_names.out の写し）が入っている（K9 の元） | PR のマージ前に design.md を読む |
+| B5 PO の目視: 商品の編集画面で入数・重さが今と同じに出る | PO が見る。見るまでは「未観測」と記録する（便3 のマージ・本番反映は止めない） |
+
+ブランチ: release/product-packaging-readers（このカードと同じ PR）。最初に `./scripts/dev/executor-preflight.sh || exit 1`。commit は実装1つ（`feat: 入数と重さを荷姿の表から読み書きする（ADR-1028 便3）`）。push まで。PR は Opus が作る。報告は DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
+
+### 11-8. 4項目名が残る所（便3 後・K9 の元）
+fa7f84b68 時点の `git grep -n -E "packs_per_box|boxes_per_case|box_weight_kg|case_weight_kg" -- backend frontend/src scripts` の結果（全 134 行・21 ファイル）。便5 の K9 はこの一覧を起点に、古い列を直接読む所が 0 になったかを見る。
+
+| ファイル | 行数 |
+|---|---|
+| `backend/app/routers/inventory_search.py` | 2 |
+| `backend/app/routers/products.py` | 3 |
+| `backend/app/schemas/inventory_search.py` | 2 |
+| `backend/app/schemas/product.py` | 12 |
+| `backend/app/services/inventory_search.py` | 9 |
+| `backend/app/services/product_packagings.py` | 5 |
+| `backend/tests/conftest.py` | 4 |
+| `backend/tests/test_product_packagings_pg.py` | 21 |
+| `backend/tests/test_product_packagings_sql.py` | 8 |
+| `backend/tests/test_products.py` | 8 |
+| `backend/tests/test_products_required_fields_pg.py` | 1 |
+| `frontend/src/components/CommerceSubmitButtonMigration.test.tsx` | 2 |
+| `frontend/src/components/InventorySearchBar.tsx` | 2 |
+| `frontend/src/pages/invoice-create/InvoiceCreatePage.tsx` | 3 |
+| `frontend/src/pages/products/ProductEditPage.tsx` | 12 |
+| `frontend/src/pages/products/ProductsPage.tsx` | 4 |
+| `frontend/src/pages/products/products.types.ts` | 9 |
+| `frontend/src/pages/quote-create/QuoteCreatePage.tsx` | 3 |
+| `frontend/src/pages/quote-create/quoteDraft.test.ts` | 4 |
+| `frontend/src/pages/quote-create/quoteDraft.ts` | 7 |
+| `scripts/seed_products_from_master.py` | 13 |
+
+<details><summary>全行</summary>
+
+```
+backend/app/routers/inventory_search.py:122:            box_weight_kg=c.box_weight_kg,
+backend/app/routers/inventory_search.py:123:            case_weight_kg=c.case_weight_kg,
+backend/app/routers/products.py:142:            for f in ("boxes_per_case", "packs_per_box", "box_weight_kg", "case_weight_kg")
+backend/app/routers/products.py:146:            "NULL AS boxes_per_case, NULL AS packs_per_box, "
+backend/app/routers/products.py:147:            "NULL AS box_weight_kg, NULL AS case_weight_kg"
+backend/app/schemas/inventory_search.py:62:    box_weight_kg: float | None = Field(default=None, description="Box 単体重量 (kg)。")
+backend/app/schemas/inventory_search.py:63:    case_weight_kg: float | None = Field(default=None, description="Case 重量 (kg)。")
+backend/app/schemas/product.py:116:    boxes_per_case: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:117:    packs_per_box: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:118:    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:119:    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:186:    boxes_per_case: int | None = None
+backend/app/schemas/product.py:187:    packs_per_box: int | None = None
+backend/app/schemas/product.py:188:    box_weight_kg: Decimal | None = None
+backend/app/schemas/product.py:189:    case_weight_kg: Decimal | None = None
+backend/app/schemas/product.py:68:    boxes_per_case: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:69:    packs_per_box: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:70:    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:71:    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/services/inventory_search.py:102:    # box_weight_kg・case_weight_kg=形態別重量
+backend/app/services/inventory_search.py:104:    box_weight_kg: float | None = None
+backend/app/services/inventory_search.py:105:    case_weight_kg: float | None = None
+backend/app/services/inventory_search.py:344:    {legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg,
+backend/app/services/inventory_search.py:345:    {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg,
+backend/app/services/inventory_search.py:438:                box_weight_kg=(
+backend/app/services/inventory_search.py:439:                    float(r["box_weight_kg"]) if r.get("box_weight_kg") is not None else None
+backend/app/services/inventory_search.py:441:                case_weight_kg=(
+backend/app/services/inventory_search.py:442:                    float(r["case_weight_kg"]) if r.get("case_weight_kg") is not None else None
+backend/app/services/product_packagings.py:16:    "boxes_per_case": ("CASE", "count", "BOX"),
+backend/app/services/product_packagings.py:17:    "case_weight_kg": ("CASE", "weight", None),
+backend/app/services/product_packagings.py:18:    "packs_per_box": ("BOX", "count", "PACK"),
+backend/app/services/product_packagings.py:19:    "box_weight_kg": ("BOX", "weight", None),
+backend/app/services/product_packagings.py:3:応答の4項目（boxes_per_case・packs_per_box・box_weight_kg・case_weight_kg）は、
+backend/tests/conftest.py:816:                boxes_per_case INTEGER,
+backend/tests/conftest.py:817:                packs_per_box INTEGER,
+backend/tests/conftest.py:818:                box_weight_kg NUMERIC(8, 3),
+backend/tests/conftest.py:819:                case_weight_kg NUMERIC(8, 3),
+backend/tests/test_product_packagings_pg.py:146:        assert body["boxes_per_case"] == 12
+backend/tests/test_product_packagings_pg.py:147:        assert float(body["case_weight_kg"]) == 6.5
+backend/tests/test_product_packagings_pg.py:148:        assert body["packs_per_box"] == 20
+backend/tests/test_product_packagings_pg.py:149:        assert float(body["box_weight_kg"]) == 0.236
+backend/tests/test_product_packagings_pg.py:158:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 10})
+backend/tests/test_product_packagings_pg.py:160:    assert response.json()["boxes_per_case"] == 10
+backend/tests/test_product_packagings_pg.py:166:    old = (await db.execute(text("SELECT boxes_per_case FROM public.products WHERE id = :i"), {"i": pid})).scalar_one()
+backend/tests/test_product_packagings_pg.py:177:            "boxes_per_case": 12, "case_weight_kg": "6.500", "packs_per_box": 20, "box_weight_kg": "0.236",
+backend/tests/test_product_packagings_pg.py:189:        r1 = await client.patch(f"/api/v1/products/{pid}", json={"box_weight_kg": None})
+backend/tests/test_product_packagings_pg.py:194:        r2 = await client.patch(f"/api/v1/products/{pid}", json={"packs_per_box": None})
+backend/tests/test_product_packagings_pg.py:204:            "name_ja": "T5 商品", "boxes_per_case": 12, "packs_per_box": 20,
+backend/tests/test_product_packagings_pg.py:205:            "box_weight_kg": "0.236", "case_weight_kg": "6.500",
+backend/tests/test_product_packagings_pg.py:209:    assert body["boxes_per_case"] == 12 and body["packs_per_box"] == 20
+backend/tests/test_product_packagings_pg.py:215:        text("SELECT boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg FROM public.products WHERE id = :i"),
+backend/tests/test_product_packagings_pg.py:225:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 0})
+backend/tests/test_product_packagings_pg.py:229:async def test_t7_case_contained_pack_is_not_boxes_per_case(client_factory):
+backend/tests/test_product_packagings_pg.py:234:        assert (await client.get(f"/api/v1/products/{pid}")).json()["boxes_per_case"] is None
+backend/tests/test_product_packagings_pg.py:235:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 8})
+backend/tests/test_product_packagings_pg.py:245:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 5})
+backend/tests/test_product_packagings_pg.py:265:            response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 10, "moq": 3})
+backend/tests/test_product_packagings_pg.py:28:    "boxes_per_case INTEGER", "packs_per_box INTEGER", "box_weight_kg NUMERIC(8,3)", "case_weight_kg NUMERIC(8,3)",
+backend/tests/test_product_packagings_sql.py:14:    sql = legacy_field_sql("packs_per_box", "x.id")
+backend/tests/test_product_packagings_sql.py:19:    for field, unit in (("case_weight_kg", "CASE"), ("box_weight_kg", "BOX")):
+backend/tests/test_product_packagings_sql.py:27:    assert set(LEGACY_FIELDS) == {"boxes_per_case", "case_weight_kg", "packs_per_box", "box_weight_kg"}
+backend/tests/test_product_packagings_sql.py:32:    assert f'{legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg' in sql
+backend/tests/test_product_packagings_sql.py:33:    assert f'{legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg' in sql
+backend/tests/test_product_packagings_sql.py:34:    assert "p.box_weight_kg" not in sql
+backend/tests/test_product_packagings_sql.py:35:    assert "p.case_weight_kg" not in sql
+backend/tests/test_product_packagings_sql.py:7:    sql = legacy_field_sql("boxes_per_case", "p.id")
+backend/tests/test_products.py:571:        "boxes_per_case": 16,
+backend/tests/test_products.py:572:        "packs_per_box": 30,
+backend/tests/test_products.py:573:        "box_weight_kg": "1.250",
+backend/tests/test_products.py:574:        "case_weight_kg": "20.500",
+backend/tests/test_products.py:620:    async def test_negative_boxes_per_case_rejected(self, client):
+backend/tests/test_products.py:624:            "boxes_per_case": -1,
+backend/tests/test_products.py:628:    async def test_zero_boxes_per_case_rejected(self, client):
+backend/tests/test_products.py:632:            "boxes_per_case": 0,
+backend/tests/test_products_required_fields_pg.py:26:    "boxes_per_case INTEGER", "packs_per_box INTEGER", "box_weight_kg NUMERIC(8,3)", "case_weight_kg NUMERIC(8,3)",
+frontend/src/components/CommerceSubmitButtonMigration.test.tsx:26:  boxes_per_case: null, packs_per_box: null, box_weight_kg: null, case_weight_kg: null,
+frontend/src/components/CommerceSubmitButtonMigration.test.tsx:39:const nonDefaultProductPayload = { ...productPayload, name_ja: 'Product', name_en: 'Product EN', product_kind: 'Kind', tcg_type: 'pokemon', set_type: 'Set', category: 'Category', mark: 'M', status: 'discontinued', unit_price: 12.5, quantity: 7, weight: 0.75, notes: 'memo', release_date: '2026-09-28', jan_code: 'JAN-1', card_number: 'CARD-1', expansion_code: 'EXP-1', rarity: 'Rare', language: 'en', unit_price_usd: 11.5, unit_price_eur: 10.5, image_url: 'https://example.com/p.png', boxes_per_case: 24, packs_per_box: 12, box_weight_kg: 1.5, case_weight_kg: 3.5, volume_weight: 4.5, moq: 6, hs_code: 'HS', material: 'Material', item: 'Item', required_output_value: 'Required', search_keywords: 'search', exclude_keywords: 'exclude', related_series: 'Series' };
+frontend/src/components/InventorySearchBar.tsx:53:  box_weight_kg?: number | null;
+frontend/src/components/InventorySearchBar.tsx:54:  case_weight_kg?: number | null;
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:132:        box_weight_kg: c.box_weight_kg ?? null,
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:133:        case_weight_kg: c.case_weight_kg ?? null,
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:377:                          updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
+frontend/src/pages/products/ProductEditPage.tsx:149:      boxes_per_case: form.boxes_per_case ? Number(form.boxes_per_case) : null,
+frontend/src/pages/products/ProductEditPage.tsx:150:      packs_per_box: form.packs_per_box ? Number(form.packs_per_box) : null,
+frontend/src/pages/products/ProductEditPage.tsx:151:      box_weight_kg: form.box_weight_kg ? Number(form.box_weight_kg) : null,
+frontend/src/pages/products/ProductEditPage.tsx:152:      case_weight_kg: form.case_weight_kg ? Number(form.case_weight_kg) : null,
+frontend/src/pages/products/ProductEditPage.tsx:321:                <TextFieldControl variant="product-edit" type="number" min="0" value={form.boxes_per_case} onChange={(e) => setForm({ ...form, boxes_per_case: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:325:                <TextFieldControl variant="product-edit" type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:329:                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:333:                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:83:          boxes_per_case: p.boxes_per_case != null ? String(p.boxes_per_case) : "",
+frontend/src/pages/products/ProductEditPage.tsx:84:          packs_per_box: p.packs_per_box != null ? String(p.packs_per_box) : "",
+frontend/src/pages/products/ProductEditPage.tsx:85:          box_weight_kg: p.box_weight_kg != null ? String(p.box_weight_kg) : "",
+frontend/src/pages/products/ProductEditPage.tsx:86:          case_weight_kg: p.case_weight_kg != null ? String(p.case_weight_kg) : "",
+frontend/src/pages/products/ProductsPage.tsx:373:                  <td>{p.boxes_per_case ?? "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:374:                  <td>{p.packs_per_box ?? "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:391:                  <td>{p.box_weight_kg != null ? Number(p.box_weight_kg).toFixed(1) : "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:392:                  <td>{p.case_weight_kg != null ? Number(p.case_weight_kg).toFixed(1) : "-"}</td>
+frontend/src/pages/products/products.types.ts:37:  boxes_per_case: number | null;
+frontend/src/pages/products/products.types.ts:38:  packs_per_box: number | null;
+frontend/src/pages/products/products.types.ts:39:  box_weight_kg: number | null;
+frontend/src/pages/products/products.types.ts:40:  case_weight_kg: number | null;
+frontend/src/pages/products/products.types.ts:78:  boxes_per_case: string;
+frontend/src/pages/products/products.types.ts:79:  packs_per_box: string;
+frontend/src/pages/products/products.types.ts:80:  box_weight_kg: string;
+frontend/src/pages/products/products.types.ts:81:  case_weight_kg: string;
+frontend/src/pages/products/products.types.ts:99:  boxes_per_case: "", packs_per_box: "", box_weight_kg: "", case_weight_kg: "",
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:226:                        updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:84:        box_weight_kg: c.box_weight_kg ?? null,
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:85:        case_weight_kg: c.case_weight_kg ?? null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:32:        box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:33:        case_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:40:  it("returns box_weight_kg when unit is box", () => {
+frontend/src/pages/quote-create/quoteDraft.test.ts:43:  it("returns case_weight_kg when unit is case", () => {
+frontend/src/pages/quote-create/quoteDraft.ts:22:  box_weight_kg?: number | null;
+frontend/src/pages/quote-create/quoteDraft.ts:24:  case_weight_kg?: number | null;
+frontend/src/pages/quote-create/quoteDraft.ts:33: * unit=box→box_weight_kg / unit=case→case_weight_kg / それ以外→fallback(products.weight)。
+frontend/src/pages/quote-create/quoteDraft.ts:83:  box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:84:  case_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:98:    box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:99:    case_weight_kg: null,
+scripts/seed_products_from_master.py:139:                    boxes_per_case=_parse_int(raw.get("Boxes per Case", "")),
+scripts/seed_products_from_master.py:140:                    packs_per_box=_parse_int(raw.get("Packs per Box", "")),
+scripts/seed_products_from_master.py:141:                    box_weight_kg=_parse_float(raw.get("Box重量", "")),
+scripts/seed_products_from_master.py:142:                    case_weight_kg=_parse_float(raw.get("Case重量", "")),
+scripts/seed_products_from_master.py:157:        if any(v is not None for v in (r.boxes_per_case, r.packs_per_box, r.box_weight_kg, r.case_weight_kg))
+scripts/seed_products_from_master.py:17:  Boxes per Case  → boxes_per_case
+scripts/seed_products_from_master.py:18:  Packs per Box   → packs_per_box
+scripts/seed_products_from_master.py:19:  Box重量          → box_weight_kg
+scripts/seed_products_from_master.py:20:  Case重量         → case_weight_kg
+scripts/seed_products_from_master.py:71:    boxes_per_case: int | None
+scripts/seed_products_from_master.py:72:    packs_per_box: int | None
+scripts/seed_products_from_master.py:73:    box_weight_kg: float | None
+scripts/seed_products_from_master.py:74:    case_weight_kg: float | None
+```
+
+</details>

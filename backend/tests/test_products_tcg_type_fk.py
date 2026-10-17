@@ -6,10 +6,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from app.auth.dependencies import get_current_tenant, get_current_user
-from app.database import get_db
-from app.models import User
-from app.routers import products as products_router
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -17,7 +13,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.rls_bootstrap import public_bootstrap_lock, seed_type_master
+from app.auth.dependencies import get_current_tenant, get_current_user
+from app.database import get_db
+from app.models import User
+from app.routers import products as products_router
+from tests.rls_bootstrap import ensure_product_packagings, public_bootstrap_lock, seed_type_master
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -127,6 +127,8 @@ async def _bootstrap_public_products(admin_engine) -> None:
                 """)
             )
         assert fk_exists == 1, "FK migration が public.products に適用されていません"
+    # 荷姿の表（ADR-1028 便3）。public_bootstrap_lock の外で、一度だけ確定させる
+    await ensure_product_packagings(admin_engine)
 
 
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:
