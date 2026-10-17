@@ -35532,6 +35532,18 @@
             "description": "Discord のチケット部屋 ID",
             "title": "Discord Channel Id"
           },
+          "discord_channel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋を開く URL",
+            "title": "Discord Channel Url"
+          },
           "discord_user_id": {
             "anyOf": [
               {

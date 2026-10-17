@@ -46,6 +46,7 @@ class ViewerAdminItem(BaseModel):
     created_at: datetime = Field(..., description="登録した時刻")
     discord_user_id: str | None = Field(None, description="Discord の利用者 ID")
     discord_channel_id: str | None = Field(None, description="Discord のチケット部屋 ID")
+    discord_channel_url: str | None = Field(None, description="Discord のチケット部屋を開く URL")
     flag_many_ips: bool = Field(..., description="目印: 24時間以内に3種類以上の IP からログイン")
     flag_shared_ip: bool = Field(..., description="目印: 別の閲覧者と同じ IP からログイン")
 

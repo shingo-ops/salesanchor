@@ -10,6 +10,7 @@ import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { ButtonLink } from "../../components/ButtonLink";
 import { Badge, type BadgeVariant } from "../../components/Badge";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { EmptyState } from "../../components/EmptyState";
@@ -27,6 +28,7 @@ interface ViewerItem {
   created_at: string;
   discord_user_id: string | null;
   discord_channel_id: string | null;
+  discord_channel_url: string | null;
   flag_many_ips: boolean;
   flag_shared_ip: boolean;
 }
@@ -189,7 +191,22 @@ export default function ViewerAccountsPage() {
     {
       key: "discord_user_id",
       header: t(`${f}.colDiscord`),
-      renderCell: row => row.discord_user_id ?? t(`${f}.empty`),
+      renderCell: row => (
+        <>
+          {row.discord_user_id ?? t(`${f}.empty`)}
+          {row.discord_channel_url && (
+            <ButtonLink
+              href={row.discord_channel_url}
+              variant="ghost"
+              size="sm"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t(`${f}.openRoom`)}
+            </ButtonLink>
+          )}
+        </>
+      ),
     },
     {
       key: "flags",

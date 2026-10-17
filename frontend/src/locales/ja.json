@@ -2656,6 +2656,7 @@
       "colStatus": "状態",
       "colExpires": "期限",
       "colDiscord": "Discord ID",
+      "openRoom": "部屋を開く",
       "colFlags": "目印",
       "colCreated": "登録日時",
       "colActions": "操作",
