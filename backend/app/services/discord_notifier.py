@@ -65,6 +65,49 @@ async def _post_discord_webhook(url: str, content: str) -> bool:
         return False
 
 
+def _get_error_report_webhook_url() -> str | None:
+    url = os.getenv("ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK", "").strip()
+    return url or None
+
+
+async def notify_analysis_error_report(report_code: str, field_names: list[str]) -> tuple[str | None, str | None]:
+    """ADR-1025: 解析の誤り報告を Discord へ送る。本文は「報告番号と項目名」だけ（値・文面は入れない）。
+
+    戻り値は (message_id, 失敗の理由)。成功は (id, None)、未設定・失敗は (None, 理由)。例外は握る。
+    """
+    # field_name → 表示名の固定表（ここ 1 か所だけ）
+    labels = {
+        "product_id": "商品",
+        "quantity": "数量",
+        "price": "価格",
+        "unit": "単位",
+        "condition": "状態",
+        "status": "販売状態",
+        "note": "メモ",
+    }
+    url = _get_error_report_webhook_url()
+    if url is None:
+        return None, "webhook_not_configured"
+    content = f"誤り報告 {report_code} 項目: " + ", ".join(labels.get(name, name) for name in field_names)
+    wait_url = url + ("&" if "?" in url else "?") + "wait=true"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                wait_url,
+                json={"content": content[:_MAX_MESSAGE_CHARS], "username": "Sales Anchor 解析の誤り報告"},
+            )
+        if resp.status_code >= 400:
+            logger.warning("[discord_notifier] error-report webhook returned %s", resp.status_code)
+            return None, f"http_{resp.status_code}"
+        message_id = resp.json().get("id")
+        if not message_id:
+            return None, "no_message_id"
+        return str(message_id), None
+    except Exception as exc:  # noqa: BLE001 - 通知失敗で報告を消さない
+        logger.warning("[discord_notifier] error-report webhook POST failed: %s", type(exc).__name__)
+        return None, f"exception_{type(exc).__name__}"
+
+
 # Sprint 5 (F5) で追加: 連投抑止の de-bounce ウィンドウ (1 時間)。
 # migration 066 で追加した `last_hard_stop_notified_at` を参照。
 _HARD_STOP_NOTIFY_DEBOUNCE_SECONDS = 60 * 60  # 1h

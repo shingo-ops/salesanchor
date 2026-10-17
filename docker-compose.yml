@@ -103,6 +103,7 @@ services:
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
+      - ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK=${ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
