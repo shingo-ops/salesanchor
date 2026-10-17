@@ -9,6 +9,7 @@
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
 | AI 保守運用 24 時間化（ai-ops-247。報知器の感度・精度、応急処置、Mac に頼らない AI 起動〔routines〕、障害記録と月次成績表。discord-ops-intake は Mac 依存のため本テーマの予備 C） | [ai-ops-247/README.md](ai-ops-247/README.md) | あるべき姿・KGI 6件 PO承認 2026-10-13・recon・design・ADR-1012 草案・実装未着手 |
+| まとめ売り（N単位セット）の読み取り（bundle-sale。「40パックセット/¥24,000 残り15」を全商品で 商品名＋40パックセット／中身の単位／まとめ1つの値段／まとめの数 で保存・表示。ADR-1021 便2 の置き換え） | [bundle-sale/README.md](bundle-sale/README.md) | あるべき姿 2026-10-17・KGI K1〜K6 PO 合意 2026-10-17・recon・design（審査 APPROVE）・ADR-1026 Proposed・便1 カード作成・実装未着手 |
 | 解析の誤り報告から自律修正まで（analysis-error-report。在庫表の行ドロワーで誤りと正解を報告→Discord→agent-console の自動セッション→再解析と機械照合→Discord に記録） | [analysis-error-report/README.md](analysis-error-report/README.md) | あるべき姿・KGI PO承認 2026-10-17・recon・design草案・実装未着手 |
 | Discord 監視通知 → AI 保守運用（discord-ops-intake。監視 webhook を Claude Code が受けて調査・委任範囲で対応） | [discord-ops-intake/README.md](discord-ops-intake/README.md) | あるべき姿・KGI提示（KGI-3 PO修正反映）・recon・design草案 2026-10-13・実装未着手 |
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
