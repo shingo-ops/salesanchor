@@ -11,7 +11,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
 決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
-状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・実装未着手。
+状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）。
 
 ---
 
