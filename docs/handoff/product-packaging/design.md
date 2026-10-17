@@ -295,9 +295,9 @@ PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マー
 - 古い4列には書かない・読まない（列は便5 まで残る）。
 - SQLite（pytest の簡易表）には新しい表を作らない。SQLite では4項目を NULL・packagings を空で返し、表の書き込みは飛ばす（前例: backend/app/routers/me_inventory_filters.py:91,130）。4項目の試験は PostgreSQL の試験へ移す。
 - テナントの商品（tenant_id が NULL でない行。本番 0 行）に PostgreSQL で4項目を送ったら 422 `PACKAGING_SHARED_ONLY`（表の RLS がテナントを持たないため。何も書かない）。
-- 共用行で products の UPDATE が 0 行（今の 500 の場合）は、`await db.rollback()` の後 403 `PRODUCT_NOT_WRITABLE`。audit_log を書かず commit しない。
+- 共用行で products の UPDATE が 0 行（今の 500 の場合）は、audit_log と commit の前にすぐ `raise HTTPException(403, "PRODUCT_NOT_WRITABLE")`。rollback は get_db（backend/app/database.py:46-61）の except が行うので、route では呼ばない（同じ PATCH の 422 と同じ形）。
 - 応答に `packagings`（単位ごとの行と出典）を足す（§5）。GET 一覧・詳細・POST・PATCH のすべての応答で詰める。
-- scripts/seed_products_from_master.py（手で流す取り込み）は古い4列に書かなくする（§5・§2 のとおり便3 の対象）。表への取り込みは便6 の手順で行うので、`--apply` で CSV の4項目のどれかに値がある行が1つでもあれば、何も書かずに終了コード 2 で止める。
+- scripts/seed_products_from_master.py（手で流す取り込み）は古い4列に書かなくする（§5・§2 のとおり便3 の対象）。表への取り込みは便6 の手順で行うので、`--apply` で CSV の4項目のどれかに値がある行が1つでもあれば、何も書かずに終了コード 3 で止める。
 
 ### 11-3. 触るファイルと変更
 1. **新規 backend/app/services/product_packagings.py**
@@ -325,7 +325,7 @@ PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マー
    - :68-71 と :116-119 の4項目の `ge=0` を `gt=0` にする（0 は 422。型・桁は変えない）。
    - 新しい `ProductPackagingOut`（load_packagings の10項目。urls は `list[str]`）を足し、`ProductResponse`（:171-176 付近）に `packagings: list[ProductPackagingOut] = []` を足す。4項目の定義は変えない。
 4. **backend/app/services/inventory_search.py:343-344**（`build_search_sql` :163 の f-string の中）: `p.box_weight_kg, p.case_weight_kg` を `{legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg, {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg` にする（波かっこで埋め込む）。:101-104・:437-442 と router・schema は変えない。
-5. **scripts/seed_products_from_master.py**: :179-205 の INSERT 列・ON CONFLICT の SET・値から4項目を外す。`--apply` で4項目（:138-141 で読む値）のどれかに値がある行があれば、件数を出して何も書かずに終了コード 2。`--dry-run` はその件数を表示する。:17-20 の見出しの対応表と :70-73 の dataclass は残す（読みはする）。:27-28 の説明に1行「入数・重さは書かない（ADR-1028）」を足す。
+5. **scripts/seed_products_from_master.py**: :179-205 の INSERT 列・ON CONFLICT の SET・値から4項目を外す。`--apply` で4項目（:138-141 で読む値）のどれかに値がある行があれば、DB につなぐ前（create_async_engine より前）に件数を数え、標準エラーに `ADR-1028: 入数・重さは書かない` で始まる1行と件数を出して、何も書かずに終了コード 3（argparse の使い方の誤りの 2 と分ける）。`--dry-run` はその件数を表示する。:17-20 の見出しの対応表と :70-73 の dataclass は残す（読みはする）。:27-28 の説明に1行「入数・重さは書かない（ADR-1028）」を足す。
 6. **frontend/api-contract/openapi.json**: schema が変わるので必ず作り直す。`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`（.github/workflows/api-contract-check.yml:31-55 の検査と同じ）。手で書かない。
 7. **テスト**
    - 新規 backend/tests/test_product_packagings_pg.py。test_tcg_product_list_pg.py の product_db を借り、test_products_required_fields_pg.py:20-58 の client_factory（`_ROUTE_COLUMNS`・audit の no-op を含む）と同じ形で使う。試験の中で、quantity_units を design §3-4（.github/workflows/migration-test.yml の最小定義）と同じ DDL で作って CASE・BOX・PACK を入れ、migrations/20261018_100000_create_product_packagings.sql を流す（create_product_schema 本体は変えない）。確かめること:
@@ -337,7 +337,7 @@ PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マー
      - T6 PATCH boxes_per_case=0 → 422。
      - T7 CASE 行の中の単位が PACK のとき、boxes_per_case は NULL で返り、boxes_per_case=8 を送ると中の単位が BOX・8 になる。
      - T8 テナントの商品に4項目を送る → 422 PACKAGING_SHARED_ONLY、表は変わらない。
-     - T9 `SET LOCAL ROLE salesanchor_app`（is_operator は ''）で共用の商品に PATCH → 403 PRODUCT_NOT_WRITABLE、products・表とも変わらない。ロールが無い・使い捨ての schema に権限が無いときは T9 だけ skip にして理由を書く。
+     - T9 試験の中で ① migrations/20260626_130000_force_rls_public_products.sql を流して products に RLS を付ける ② `SET LOCAL ROLE salesanchor_app`（is_operator は未設定）③ 共用の商品に PATCH → 403 PRODUCT_NOT_WRITABLE ④ `RESET ROLE` の後、products・表とも変わらないことを確かめる。CI では salesanchor_app が有り、jarvis が作る表に権限が自動で付く（.github/workflows/test.yml:187-205）。ロールが無い環境（ローカル）だけ skip にして理由を書く。
    - 新規の DB を使わない試験（backend/tests/test_product_packagings_sql.py）: `legacy_field_sql` の4式の文字列と、`build_search_sql(...)` の戻りの SQL に `legacy_field_sql("box_weight_kg", "p.id")` と `legacy_field_sql("case_weight_kg", "p.id")` がそのまま入っていること、`p.box_weight_kg` が入っていないこと。
    - backend/tests/test_products.py: :594-597 の4項目の表明を外す。:608-622 の更新試験の boxes_per_case（:616・:622）を `_UPDATABLE_COLUMNS` に残る数値の moq に置き換える。:624-630（-1 → 422）は残し、0 → 422 を1つ足す。
    - backend/tests/conftest.py:816-819 は触らない（便5 で消す）。
@@ -362,10 +362,14 @@ frontend/src の全ファイル（項目名は変えない）、migrations/（�
 ### 11-7. 受入条件（§6 の K6・K7 の測り方をここで固める）
 | 基準 | 検証方法 |
 |---|---|
-| B1 CI がすべて緑。"pytest (SQLite + PostgreSQL RLS)" で T1〜T8 が skip でなく pass | `gh pr checks` と CI の pytest の記録 |
+| B1 CI がすべて緑。"pytest (SQLite + PostgreSQL RLS)" で T1〜T9 が skip でなく pass | `gh pr checks` と CI の pytest の記録 |
 | B2（K6）本番反映後、4項目の値が便3 前と全商品で同じ | 本番の読み取りの道で、`legacy_field_sql` と同じ式で組み立てた4値と古い4列を全 1424 商品で突き合わせて不一致 0。商品 API を AI が本番で呼ぶ鍵は無いので、API が同じ式を使うことは T1 と test_product_packagings_sql.py で確かめる |
 | B3（K7）在庫検索の重さが同じ | test_product_packagings_sql.py（build_search_sql が同じ式を使う）と B2、frontend の quoteDraft.test.ts（変更なし）が CI で pass |
 | B4 デプロイが成功し、本番の /health が 200 | `gh run view`・curl |
+| B6 §11-8 に4項目名の残る所の一覧（impl/k9_names.out の写し）が入っている（K9 の元） | PR のマージ前に design.md を読む |
 | B5 PO の目視: 商品の編集画面で入数・重さが今と同じに出る | PO が見る。見るまでは「未観測」と記録する（便3 のマージ・本番反映は止めない） |
 
 ブランチ: release/product-packaging-readers（このカードと同じ PR）。最初に `./scripts/dev/executor-preflight.sh || exit 1`。commit は実装1つ（`feat: 入数と重さを荷姿の表から読み書きする（ADR-1028 便3）`）。push まで。PR は Opus が作る。報告は DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
+
+### 11-8. 4項目名が残る所（便3 後・K9 の元）
+実装の後に impl/k9_names.out を写す（Opus）。
