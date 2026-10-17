@@ -388,6 +388,10 @@
   --cal-release:         #0d9488;  --cal-release-tint:  #e0f1ef;  --cal-release-text:  #0b6e66;
   --cal-holiday:         #64748b;  --cal-holiday-tint:  #eef1f4;  --cal-holiday-text:  #475569;
 
+  /* ---- 在庫表・閲覧ページの「在庫・予約」文字色（在庫=青 / 予約=オレンジ）。地色に 4.5:1 以上 ---- */
+  --offer-instock-text:  var(--info-text);
+  --offer-preorder-text: #b45309;  /* amber-700: 白地 5.02:1 */
+
   /* ---- Chart categorical series palette (ADR-067 新規トークン追加手順) ----
      使いみち別グラフ等、カレンダー以外のドメインでカテゴリカルな塗り分けが
      必要な箇所はこちらを参照する（--cal-* を他ドメインから直接参照しない）。
@@ -579,6 +583,10 @@
   --cal-billing:   #e0a35a; --cal-billing-tint:  #3a2a10; --cal-billing-text:  #f1c48e;
   --cal-release:   #2dd4bf; --cal-release-tint:  #0c322d; --cal-release-text:  #8de6da;
   --cal-holiday:   #94a3b8; --cal-holiday-tint:  #1f2a3a; --cal-holiday-text:  #c2cdda;
+
+  /* 在庫・予約の文字色（ダーク） */
+  --offer-instock-text:  var(--info-text);
+  --offer-preorder-text: #fb923c;  /* orange-400: --bg-surface 6.46:1 */
 
   /* ---- Chart categorical series palette（ダーク・--cal-* のエイリアス） ---- */
   --chart-series-1: var(--cal-personal);

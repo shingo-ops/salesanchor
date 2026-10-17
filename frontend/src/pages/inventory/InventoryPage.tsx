@@ -8,7 +8,7 @@
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
@@ -95,21 +95,12 @@ const buildFilterPayload = (v: FilterPayloadInput) => ({
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
-  "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
+  "mark", "condition", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // 見積作成からの往復（在庫表から）: 戻り先・編集中ドラフト・事前選択（在庫行 ID）。
-  const quoteReturn = location.state as {
-    fromQuote?: boolean;
-    returnTo?: string;
-    draft?: unknown;
-    preselectedInventoryIds?: string[];
-  } | null;
 
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -120,10 +111,6 @@ export default function InventoryPage() {
   const [sortField, setSortField] = useState("release_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
-  // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -592,10 +579,7 @@ export default function InventoryPage() {
         data={items}
         rowKey={(it) => it.id}
         rowTestId={(it) => `inventory-row-${it.id}`}
-        selectable
         onRowClick={!isMobile ? (row) => setDrawerRow(row) : undefined}
-        selectedKeys={selectedIds}
-        onSelectChange={setSelectedIds}
         sortKey={sortField}
         sortDir={sortDir}
         onSort={(key, dir) => { setSortField(key); setSortDir(dir); setPage(1); }}

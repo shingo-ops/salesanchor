@@ -17,19 +17,20 @@ describe("buildInventoryColumns", () => {
   it("has the designed column order and no category column", () => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
     expect(cols.map((c) => c.key)).toEqual([
-      "mark", "name", "condition", "unit", "offer_type", "quantity", "unit_price", "supplier", "note", "ship", "release_date",
+      "offer_type", "mark", "name", "condition", "unit_price", "quantity", "note", "ship", "supplier", "release_date",
     ]);
     expect(cols.map((c) => c.key)).not.toContain("category");
-    expect(cols.find((c) => c.key === "name")?.stickyLeft).toBe(true);
+    expect(cols.find((c) => c.key === "offer_type")?.stickyLeft).toBe(true);
+    expect(cols.find((c) => c.key === "name")?.stickyLeft).toBeFalsy();
     expect(cols.find((c) => c.key === "quantity")?.align).toBe("right");
     expect(cols.find((c) => c.key === "unit_price")?.align).toBe("right");
     expect(cols.filter((c) => c.sortable).map((c) => c.key)).not.toContain("note");
   });
 
   it("hides columns by hidden id but always keeps name and release_date", () => {
-    const hidden = new Set(["mark", "offerType", "unitPrice"]);
+    const hidden = new Set(["mark", "unitPrice"]);
     const cols = buildInventoryColumns({ t, colVisible: (c) => !hidden.has(c), fmtOfferedAt: () => "-" });
-    expect(cols.map((c) => c.key)).toEqual(["name", "condition", "unit", "quantity", "supplier", "note", "ship", "release_date"]);
+    expect(cols.map((c) => c.key)).toEqual(["offer_type", "name", "condition", "quantity", "note", "ship", "supplier", "release_date"]);
   });
 
   it.each([
@@ -43,15 +44,28 @@ describe("buildInventoryColumns", () => {
     render(<div data-testid="cell">{cell}</div>);
     expect(screen.getByTestId("cell").querySelector(`.${cls}`)?.textContent).toBe(cond);
   });
-  it("renders Pre-order as Badge (info, soft) without the legacy badge-negotiating class", () => {
+  it("has no unit column and keeps offer_type always visible", () => {
+    const cols = buildInventoryColumns({ t, colVisible: () => false, fmtOfferedAt: () => "-" });
+    expect(cols.map((c) => c.key)).not.toContain("unit");
+    expect(cols.map((c) => c.key)).toContain("offer_type");
+  });
+
+  it("renders offer type as colored text (no badge): in stock blue, pre-order orange, other status plain", () => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
-    const cell = cols.find((c) => c.key === "offer_type")!.renderCell!(
-      { ...row, offer_type: "pre_order", status: "pre_order" },
-      "r1",
-    );
-    render(<div data-testid="cell">{cell}</div>);
-    const root = screen.getByTestId("cell");
-    expect(root.querySelector(".comp-badge--info.comp-badge--soft")?.textContent).toBe("inventory.offerType.pre_order");
-    expect(root.querySelector(".badge-negotiating")).toBeNull();
+    const render1 = (r: InventoryRow) => {
+      cleanup();
+      render(<div data-testid="cell">{cols.find((c) => c.key === "offer_type")!.renderCell!(r, "r1")}</div>);
+      return screen.getByTestId("cell");
+    };
+    const inStock = render1({ ...row, offer_type: "in_stock" });
+    expect(inStock.querySelector(".inventory-cell__offer--instock")?.textContent).toBe("inventory.offerType.in_stock");
+    expect(inStock.querySelector(".comp-badge")).toBeNull();
+    const pre = render1({ ...row, offer_type: "pre_order", status: "pre_order", ship_timing: "on_release" });
+    expect(pre.querySelector(".inventory-cell__offer--preorder")?.textContent).toBe("inventory.offerType.pre_order");
+    expect(pre.querySelector(".comp-badge")).toBeNull();
+    expect(pre.querySelector(".inventory-cell__sub")?.textContent).toBe("inventory.shipTiming.on_release");
+    const other = render1({ ...row, offer_type: null, status: "sold_out" });
+    expect(other.textContent).toBe("sold_out");
+    expect(other.querySelector(".inventory-cell__offer--instock, .inventory-cell__offer--preorder")).toBeNull();
   });
 });

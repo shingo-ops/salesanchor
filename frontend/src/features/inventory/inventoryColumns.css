@@ -8,3 +8,22 @@
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
+
+/* PC 幅（768px 以上）は折り返さない。はみ出す分は DataTable の fitToWidth が表ごと縮めて収める。
+   767px 以下（カード表示）は上の折り返しのまま。 */
+@media (min-width: 768px) { /* = --breakpoint-mobile-max の次 */
+  .inventory-cell__title,
+  .inventory-cell__sub,
+  .inventory-cell__nowrap {
+    white-space: nowrap;
+  }
+}
+
+/* 在庫・予約の文字色（トークン参照。ライト／ダークは index.css 側で定義） */
+.inventory-cell__offer--instock {
+  color: var(--offer-instock-text);
+}
+
+.inventory-cell__offer--preorder {
+  color: var(--offer-preorder-text);
+}
