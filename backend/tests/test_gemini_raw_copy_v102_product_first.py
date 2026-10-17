@@ -508,3 +508,20 @@ def test_bulk_master_row_values_never_match_any_block():
         for kubun in ("", "枚系", "単位不明", "箱系", "箱系大", "パック系", "条件つき", "単品系"):
             cond, _cid, _basis = resolve_condition_v2(block, "", kubun, _BULK_COND, {}, raw_memo=block)
             assert cond != "Bulk"
+
+
+# --- 状態の価値順（ADR-1023）-----------------------------------------------------------------
+
+
+def test_resolve_condition_picks_lowest_value_state_when_several_words_hit():
+    """「美品」（傷あり）と「シュリンク無し」の両方に当たるとき、v102 は価値の低い No shrink box を採る。"""
+    def vr(code, canonical, priority, app_kubun, kw, group, rank):
+        return {**_cond(code, canonical, priority, app_kubun, kw), "value_group": group, "value_rank": rank}
+
+    entries = [
+        vr("CN0004", "Damaged sealed box", 2, "箱系", "潰れ,美品", "box", 2),
+        vr("CN0005", "No shrink box", 3, "", "シュリンク無し", "box", 3),
+        vr("CN0003", "Sealed box", 4, "箱系", "シュリンク付き", "box", 1),
+    ]
+    cond, basis, reviews = pf._resolve_condition("シュリンク無し美品", "箱系", "箱系", entries, {})
+    assert cond == "No shrink box" and basis == "R3:シュリンク無し"
