@@ -56,14 +56,14 @@ AI（Opus でも Sonnet でも）が PR をマージしようとしたとき、�
 2. model の確認:
    - `id` = `agent_id` の頭に `agent-` があれば外したもの。
    - meta.json の場所は transcript_path の形で 2 通り（サブエージェントの中の PostToolUse で transcript_path がどちらを指すかは未確認のため）:
-     - transcript_path のファイル名が `agent-*.jsonl` で親ディレクトリが `subagents`: 同じディレクトリの `agent-<id>.meta.json`。
-     - それ以外（本流の記録）: transcript_path の `.jsonl` を除いたディレクトリ + `/subagents/agent-<id>.meta.json`。
+     - transcript_path のファイル名が `agent-*.jsonl` で親ディレクトリが `subagents`: 同じディレクトリの agent-<id>.meta.json。
+     - それ以外（本流の記録）: transcript_path の `.jsonl` を除いたディレクトリ + /subagents/agent-<id>.meta.json。
    - `agentType == "reviewer"` かつ `model` に `opus` を含むこと。見つからない・違う → 記録しない。
    - meta.json と同じディレクトリの `agent-<id>.jsonl`（`<id>` は上で `agent-` を外したもの）があれば、その中の assistant の `message.model` が全部 `claude-opus` で始まること（1 件でも違えば記録しない。ファイルが無い・assistant 0 件は遅れのため可）。
 3. `tool_input.message` の中で、正規表現 `^VERDICT: (APPROVE|REQUEST_CHANGES|REJECT) on ([0-9a-f]{40}) PR #(\d+)\s*$`（複数行モード）に当たる最後の 1 件を取る。無ければ記録しない。
 4. `APPROVE` 以外なら記録しない（R4）。
 5. `gh pr view <N> --json headRefOid,url` を `cwd` で実行し、headRefOid が VERDICT の sha と完全一致するときだけ記録する。`owner/repo` は常に url（`https://github.com/<owner>/<repo>/pull/<N>`）から作る。
-6. 記録先: `$REVIEW_GATE_DIR/records/<owner>__<repo>-<N>-<sha>.json`。中身: pr・repo・head・verdict・agent_id・meta_model・recorded_at（UTC ISO8601）。ディレクトリ 700、ファイル 600。
+6. 記録先: $REVIEW_GATE_DIR/records/<owner>__<repo>-<N>-<sha>.json。中身: pr・repo・head・verdict・agent_id・meta_model・recorded_at（UTC ISO8601）。ディレクトリ 700、ファイル 600。
 7. 結果（記録した／しなかった理由）を `$REVIEW_GATE_DIR/log.jsonl` に 1 行足す。審査役の報告を妨げないため、常に exit 0。
 
 ### 5-3. gate.py（関所）
@@ -72,9 +72,9 @@ stdin の JSON の `tool_name` で分ける。
 
 **(a) 記録の置き場と記録台本を守る（R6）**
 - Write/Edit/MultiEdit: `tool_input.file_path`、NotebookEdit: `tool_input.notebook_path` を `~` 展開・絶対化（`cwd` 基準）して、`$REVIEW_GATE_DIR` の下なら止める。
-- Bash: 5-3(c) の区切りごとに、次のどれかを含めば止める（読むだけでも止める。ヒアドキュメントの本文も対象）: `.claude/review-gate`・`review-gate/records`・`review-gate/log`・`review-gate/record.py`・`.claude/scripts/review-gate`・`REVIEW_GATE_DIR`・`REVIEW_GATE_GH`・`$REVIEW_GATE_DIR` の実パス。
+- Bash: 5-3(c) の区切りごとに、次のどれかを含めば止める（読むだけでも止める。ヒアドキュメントの本文も対象）: `.claude/review-gate`・`review-gate/records`・`review-gate/log`・review-gate/record.py・`.claude/scripts/review-gate`・`REVIEW_GATE_DIR`・`REVIEW_GATE_GH`・`$REVIEW_GATE_DIR` の実パス。
 - 例外: 区切りの先頭が `bash scripts/agent-hooks/review-gate/test_review_gate.sh` の区切りだけは通す（例外はその区切りにだけ効く。同じ command の他の区切りは検査する）。試験は自分の一時ディレクトリを使う。
-- 記録台本 record.py を AI が直接呼んで偽の記録を作る道は、これで塞ぐ（`scripts/agent-hooks/review-gate/record.py` は `review-gate/record.py` を含む）。
+- 記録台本 record.py を AI が直接呼んで偽の記録を作る道は、これで塞ぐ（`scripts/agent-hooks/review-gate/record.py` は review-gate/record.py を含む）。
 
 **(b) 審査役の model（R5）**
 - Agent: `subagent_type == "reviewer"` で、`model` が指定されていて `opus` を含まなければ止める。未指定は reviewer.md の `model: opus` が使われるので通す。
@@ -90,19 +90,19 @@ stdin の JSON の `tool_name` で分ける。
   4. 区切りの先頭が `bash`・`sh`・`zsh` で `-c` もスクリプトファイルの引数も無い（標準入力から読む）とき、またはパイプの後ろの区切りがそれのとき: 中身が分からないので、コマンドの全文に `merge` を含めば止める。
 - 関所にかける形（shlex の語で判定する。引用の中は 1 語になるので、文字を含むだけの `grep -rn "gh pr merge"`・`git commit -m "..."`・`gh pr create --body "..."` は当たらない。`timeout`・`xargs`・`sudo`・`caffeinate` などの前置きがあっても当たるよう、先頭の語には頼らない）:
   1. 区切りの中のどこかに、basename が `gh` の語・`pr`・`merge` の 3 語がこの順に続く。同じ区切りに `--disable-auto` があれば通す。
-  2. 区切りの中に basename が `gh-pr-merge-safe.sh` の語がある。
-  3. 区切りの中に basename が `check-pr-merge-ready.py` の語がある。
+  2. 区切りの中に basename が `scripts/gh-pr-merge-safe.sh` の語がある。
+  3. 区切りの中に basename が `scripts/dev/check-pr-merge-ready.py` の語がある。
   4. 区切りの中に basename が `gh` の語・`api` が続き、区切りの語に `/merge`・`mergePullRequest`・`enablePullRequestAutoMerge` のどれかを含む。
   5. 区切りの中に basename が `curl` の語があり、区切りの語に `api.github.com` と `/merge` を含む。
   - 2・3 の例外: 区切りの先頭の語（5-3(c) の飛ばし一覧を飛ばした後）が、読むだけの道具 `grep`・`rg`・`cat`・`head`・`tail`・`sed`・`awk`・`less`・`wc`・`ls`・`git`・`diff`・`stat`・`file`・`shellcheck` のときは当てない。それ以外（`bash`・`python3`・`timeout`・直接実行など）は当てる。
 - PR 番号:
   - 形1: `merge` の後ろで、`-` で始まらず値を取る旗（`--repo/-R`・`--match-head-commit`・`--subject/-t`・`--body/-b`・`--body-file/-F`・`--author-email/-A`）の値でもない最初の語が `#?\d+`。URL `.../pull/<N>` 形も可。
   - 形2: 作業場所で `git rev-parse --show-toplevel` を取り、その直下の `.pr-number` の中身（空白を除いて数字だけ）。
-  - 形3: `check-pr-merge-ready.py` の後ろの最初の語が `\d+`。
+  - 形3: `scripts/dev/check-pr-merge-ready.py` の後ろの最初の語が `\d+`。
   - 形4・5: `pulls/(\d+)/merge`。GraphQL（番号が取れない）は止める。
   - 番号が取れなければ止める（「PR 番号を明示してください」）。
 - HEAD の確認: `gh pr view <N> --json headRefOid,url`（`--repo/-R` があれば渡す）を作業場所で実行。失敗したら止める（fail closed）。`owner/repo` は url から作る。
-- `records/<owner>__<repo>-<N>-<headRefOid>.json` があり、verdict が APPROVE で head が一致すれば、その区切りは通す。1 つの command に関所の区切りが複数あれば、全部が通るときだけ通す。
+- records/<owner>__<repo>-<N>-<headRefOid>.json があり、verdict が APPROVE で head が一致すれば、その区切りは通す。1 つの command に関所の区切りが複数あれば、全部が通るときだけ通す。
 - `gh pr merge` に `--auto` があるときは、さらに `--match-head-commit <40桁>` があり記録の head と一致する場合だけ通す（予約後に HEAD が変わったまま自動マージされる恐れを塞ぐ。GitHub 側の予約解除条件は未確認のため止める側に倒す）。
 - 止めるときの文:
   `review-gate: PR #<N> の今の HEAD <sha の先頭 9 桁> に Opus 審査役の APPROVE がありません。Opus の審査役（subagent_type: reviewer）を起動し、報告の最後の行に「VERDICT: APPROVE on <40桁sha> PR #<N>」を書かせてください。`
@@ -118,9 +118,9 @@ stdin の JSON の `tool_name` で分ける。
 - install.sh:
   1. record.py・gate.py を `~/.claude/scripts/review-gate/` へ写し chmod 555。
   2. `~/.claude/review-gate/records` を 700 で作る。
-  3. `~/.claude/settings.json` を `settings.json.bak-review-gate-<UTC時刻>` に写す。
+  3. ~/.claude/settings.json を `settings.json.bak-review-gate-<UTC時刻>` に写す。
   4. python3 で hooks に 2 件を足す（既にあれば足さない＝何度流しても同じ）: PreToolUse matcher `Bash|Write|Edit|MultiEdit|NotebookEdit|Agent` → `python3 ~/.claude/scripts/review-gate/gate.py`、PostToolUse matcher `SubagentHandback` → `python3 ~/.claude/scripts/review-gate/record.py`。JSON として読めるか確認。
-  5. 関所は全リポジトリにかかるため、`~/.claude/agents/reviewer.md` を `.bak-review-gate-<UTC時刻>` に写してから、末尾に印 `<!-- review-gate:ADR-1029 -->` つきで reviewer-verdict-rule.md の中身を足す（印があれば足さない）。
+  5. 関所は全リポジトリにかかるため、~/.claude/agents/reviewer.md を `.bak-review-gate-<UTC時刻>` に写してから、末尾に印 `<!-- review-gate:ADR-1029 -->` つきで reviewer-verdict-rule.md の中身を足す（印があれば足さない）。
   6. 写した先の gate.py・record.py に対して test_review_gate.sh を流し、全部 PASS で `INSTALL_OK`。
 - rollback.sh: settings.json を .bak に写してから上の 2 件だけを外し、~/.claude/agents/reviewer.md の印の節だけを外す（他の変更を巻き戻さないため、.bak の丸ごと戻しはしない）。`ROLLBACK_OK`。
 
@@ -140,7 +140,7 @@ stdin の JSON の `tool_name` で分ける。
 | PO の `!` 実行（install.sh・rollback.sh）が関所にかかるか | 【未確認】。かかって止まった場合は、PO にターミナルで直接 `bash <パス>` を実行してもらう |
 | 毎回の Bash で python3 が起動する | 前段の文字検査で当たらなければ即 exit 0 |
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 - 該当事例を使わない。理由: 「Claude Code のサブエージェント審査結果を記録してマージを止める」直接の公開事例は確認できていない。仕組みは公式の hooks 仕様（recon.md §1）だけに依る。
 
@@ -169,7 +169,7 @@ stdin の JSON の `tool_name` で分ける。
 | R3 | 記録ありで `gh pr merge 1 --auto --merge`（--match-head-commit なし）→ exit 2、記録の head と同じ `--match-head-commit` つき → exit 0 |
 | R4 | VERDICT が REQUEST_CHANGES・REJECT の入力で record.py → 記録 0 件・その後の gate exit 2 |
 | R4 | meta.json の model が sonnet → 記録 0 件。VERDICT の sha が HEAD と違う → 記録 0 件。agent_type が reviewer 以外 → 記録 0 件 |
-| R4 | VERDICT APPROVE・meta opus・sha 一致 → 記録 1 件（ファイル名 `o__r-1-<sha>.json`）。transcript_path が本流の形（`<s>.jsonl`）と自分の形（`<s>/subagents/agent-<id>.jsonl`）の両方、agent_id が `xxx` と `agent-xxx` の両方で、それぞれ記録 1 件 |
+| R4 | VERDICT APPROVE・meta opus・sha 一致 → 記録 1 件（ファイル名 o__r-1-<sha>.json）。transcript_path が本流の形（`<s>.jsonl`）と自分の形（`<s>/subagents/agent-<id>.jsonl`）の両方、agent_id が `xxx` と `agent-xxx` の両方で、それぞれ記録 1 件 |
 | R5 | Agent `subagent_type: reviewer, model: sonnet` → exit 2。`model: opus` と未指定 → exit 0 |
 | R6 | Bash `echo x > ~/.claude/review-gate/records/a.json`・`cd ~/.claude && echo x > review-gate/records/a.json`・`python3 ~/.claude/scripts/review-gate/record.py < x.json`・`python3 scripts/agent-hooks/review-gate/record.py < x.json`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh && python3 ~/.claude/scripts/review-gate/record.py < x.json` → すべて exit 2 |
 | R6 | Write・Edit・MultiEdit（file_path）と NotebookEdit（notebook_path）が `$REVIEW_GATE_DIR` の下 → すべて exit 2 |
@@ -177,6 +177,8 @@ stdin の JSON の `tool_name` で分ける。
 | 誤止めなし | `ls`・`grep -n x scripts/dev/check-pr-merge-ready.py`・`git diff -- scripts/gh-pr-merge-safe.sh`・`gh pr create --body "gh pr merge 1"`・`git commit -m "gh-pr-merge-safe.sh"`・`gh pr merge 1 --disable-auto`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh`・ヒアドキュメントの本文に閉じない引用符（`don't merge yet`）がある `gh pr create`（本文はヒアドキュメントで渡す形）・`git commit -m "$(cat <<'EOF'` で始まり本文に `1)`・バッククォート 3 個の並び・閉じない引用符を含むコミット・`grep -rn "gh pr merge" docs` → すべて exit 0 |
 
 ## 9. 維持の仕組み
+
+- 守り手: Opus（設計・審査の起動）、CI agent-hooks-test.yml（試験）、PO（install.sh の `!` 実行）
 
 - フックを変えるときは scripts/agent-hooks/review-gate/ を PR で直し、CI の試験が緑になってから PO が install.sh を `!` で流す（ADR-1011:39）。
 - AGENTS.md に「マージ前は reviewer(opus) の VERDICT 行つき APPROVE が必須（ADR-1029 のフックで強制）」の 1 行を足す。
