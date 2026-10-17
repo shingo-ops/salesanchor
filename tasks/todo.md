@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 共用商品の必須9項目の定着（ADR-1020 便4） | Opus設計/Sonnet実装 | 便1〜3b本番反映済。定着点検で抜け道1・欠け5（X1〜X6）。便4a POST/PATCH /products の検査・4b 文書・4c 週次Discord通知・4d 画面試験を必須の集約へ を順に反映中 | 各便の本番反映を確認。4c の初回通知（月曜09:00）で V1 の件数を確認 | docs/handoff/master-register-required-fields/design.md / ADR-1020 / PR #4440 | 2026-10-17 |
 | PR作成前検査とマージ前GO検査の分離 | Agent | PR #3824はPO GOを記録してマージ済み。Deploy36390769039成功、API正常。自動worktree回収・台帳DONEを確認 | 限定修正は完了。代理GO制度とreaper残存lock対策は別範囲 | EV-20260928-PR-LIFECYCLE-GATES / docs/handoff/go-record-transcription/pr-lifecycle-design.md / PR #3824 | 2026-09-28 |
 | 解析結果・配信の共通並び順 | Agent | GO #3501受領済み。Deploy34914789016復旧成功確認。現行商品構造への統合補正中 | 最新main統合後に順序・値保持・負荷試験と必須CIを再検証し反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-15 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
