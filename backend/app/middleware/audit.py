@@ -301,7 +301,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
             user_email = _decode_jwt_email(request.headers.get("Authorization"))
             path = request.url.path
 
-            if await _count_read_and_check(user_email):
+            if status_code not in _AUTH_FAILURE_CODES and await _count_read_and_check(user_email):
                 logger.warning(
                     "大量閲覧検知: user=%s ip=%s path=%s",
                     user_email,

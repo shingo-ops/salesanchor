@@ -14,6 +14,7 @@ from app.services.tcg_product_code_collision_svc import find_code_collisions
 from app.services.tcg_product_master_svc import (
     _validate_product_format,
     fetch_product_format_options,
+    find_cleared_fields,
     format_matches_game,
     save_blank_confirmations,
 )
@@ -184,6 +185,39 @@ async def update_product_detail(
             ), {"id": selected})).one_or_none()
             if row is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+        # ADR-1020 便3: 値か印のあった項目を、印なしの空にする保存だけ止める（古い空欄は止めない）
+        if product.get("tenant_id") is None:
+            before_marks = list(before.get("blank_confirmations") or [])
+            after_marks = (
+                values["blank_confirmations"] if values.get("blank_confirmations") is not None else before_marks
+            )
+            cleared = find_cleared_fields(
+                {
+                    "name": product.get("name"), "name_en": product.get("name_en"),
+                    "mark": product.get("mark"), "release_date": product.get("release_date"),
+                    "search_keywords": [row["keyword"] for row in before["search_keywords"]],
+                    "exclude_keywords": [row["keyword"] for row in before["exclude_keywords"]],
+                    "work_id": product.get("work_id"),
+                    "product_format_id": product.get("product_format_id"),
+                    "product_category_id": product.get("product_category_id"),
+                },
+                before_marks,
+                {
+                    "name": values.get("japanese_title"), "name_en": params["english_title"],
+                    "mark": params["mark"], "release_date": params["release_date"],
+                    "search_keywords": values["search_keywords"],
+                    "exclude_keywords": values["exclude_keywords"],
+                    "work_id": params["work_id"],
+                    "product_format_id": (
+                        values["product_format_id"] if "product_format_id" in values
+                        else product.get("product_format_id")
+                    ),
+                    "product_category_id": values.get("product_category_id"),
+                },
+                after_marks,
+            )
+            if cleared:
+                raise ProductDetailError(422, "REQUIRED_FIELDS_CLEARED:" + ",".join(cleared))
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
         await db.execute(text(
             "UPDATE public.products SET "
