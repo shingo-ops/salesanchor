@@ -264,7 +264,7 @@ mode: handoff
     - 登録済みの email で捨てのコードを返すときも、招待リンクは同じように作って返す（応答の形と中身から登録済みかどうかが分からないようにする。招待は1回・7日で無効になるので、余分に作っても害は小さい）。honeypot のときは作らず、null を返す（ボットに入口を渡さない）。
     - 招待リンクは DB に保存しない（正本は Discord。SSOT）。期限は申込コードと同じ7日。
     - 作り過ぎの歯止め：上の回数制限（同じ email は1時間に3回、同じ IP は1時間に10回）を通った申込でだけ作る。
-    - 権限：ボットの「招待を作成」（CREATE_INSTANT_INVITE）は、運用サーバー「Sales Anchor」のボットのロールにだけ、PO が Discord の設定で付ける（1回だけの人手の作業。`docs/adr/ADR-091-discord-bot-scope-definition.md` の権限定義に追記した）。テナント向けのボット招待の権限の数字 805432406（`backend/app/routers/discord_oauth.py`:72）には足さない（ほかのテナントのサーバーで使わない権限を求めないため）。
+    - 権限：ボットの「招待を作成」（CREATE_INSTANT_INVITE）は、ボット招待の権限の数字に含める（805432406 → 805432407、`backend/app/routers/discord_oauth.py`:72。`docs/adr/ADR-091-discord-bot-scope-definition.md` の必須の表）。PO 決定 2026-10-17（原文「再招待するので、今後のTCGのトレカ営業でも使いたい機能なので根本から設定を修正したい」→「y」）。初めは運用サーバーのロールにだけ付ける案だった。すでに入っているボットはサーバーのロールで権限が決まる（docs.discord.com/developers/topics/permissions）ので、運用サーバーは PO が新しい数字で再招待し、ボットのロールに「招待を作成」が付いたかを確かめる。
     - 実装の順：4b はこの表を使うので、4c の viewer_discord_config の migration の後に作る（公開は今までどおり 4b と 4c を一緒にする）。
   - すでに登録されている email で申し込まれたとき：行が pending なら、古い申込コードを消して新しいコードを作り、画面に出す（コードを控え損ねた人がやり直せるようにする。email ごとの回数制限の内側で）。trial・active・suspended・verified なら、DB に保存しない同じ形の捨てのコードを返す（応答の形から、登録済みかどうかが外から分からないようにする。審査 N-19）。画面には常に「すでにお申込み済みの方は、ログイン画面の『パスワードを忘れた』から再発行してください」を添える。users.email にある email でも同じ（D1）。
   - 残るリスク（r13）：email の持ち主かどうかは確かめない（メールの確認をやめたため）。他人の email で申し込まれると、その email は本人が後から申し込めない。本人はパスワードの再発行のメールでログインでき、PO は Discord の利用者 ID・ログイン記録（下）を見て停止できる（Q6 と同じく、自動では止めない）。
@@ -424,7 +424,7 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 - 【r13 で解決】D1 は「専用 URL＋パスワード＋メールでの再発行＋申込コード」に書き直した（D1・D2・D5・D6）。
 - 申込とチケットの結び付け（2026-10-16 PO 質問「フォームを入力してもらったら専用のURLを発行してそのURLから入ってきたユーザーを紐付けられる？」への調査。未決）：
   - 【事実・Discord 公式 docs.discord.com/developers/topics/oauth2】OAuth2 の identify スコープで「/users/@me」（Discord の利用者 ID）が取れる。コードの引き換えには client_secret が要る。guilds.join スコープで、ボットがその人をサーバーに入れられる（docs.discord.com/developers/resources/guild「Add Guild Member」。ボットに CREATE_INSTANT_INVITE 権限が要る）。
-  - 【事実】今のボットの権限 805432406（backend/app/routers/discord_oauth.py:72）は CREATE_INSTANT_INVITE も MANAGE_GUILD も持たない（ビット計算）。既存の OAuth はボットをサーバーに招待する流れだけで（同ファイル:1-19）、利用者 ID を取る流れは無い。DISCORD_CLIENT_SECRET を読むコードも無い（git grep 0 件）。
+  - 【事実】今のボットの権限 805432406（backend/app/routers/discord_oauth.py:72）は CREATE_INSTANT_INVITE も MANAGE_GUILD も持たない（ビット計算）。既存の OAuth はボットをサーバーに招待する流れだけで（同ファイル:1-19）、利用者 ID を取る流れは無い。DISCORD_CLIENT_SECRET を読むコードも無い（git grep 0 件）。 （2026-10-17 以降の数字は 805432407＝CREATE_INSTANT_INVITE を含む。上の D5 の権限）
   - 案A（推奨）：フォームの送信後に、その人専用の URL（使い切り）を出す。押すと Discord の「本人確認の許可」画面になり、許可すると Discord の利用者 ID が申込に結び付く。チケットを作った人の ID と同じなら、自動で URL とパスワードを部屋に出す。要るもの：Discord 開発者画面での client_secret の発行と戻り先 URL の登録（PO の GUI 作業）。
   - 案B：その人専用の Discord 招待リンクを作り、どのリンクで入ったかを見分ける。ボットに MANAGE_GUILD が要り、ADR-091:86 で除外している権限なので ADR の変更が要る。招待の使用回数の差で見分ける方式で、確実さは案A より低い。
   - 【PO 決定 2026-10-16「y」】案D（申込コード方式）を採る。
