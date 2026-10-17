@@ -9,7 +9,7 @@ import QuoteCreatePage from '../pages/quote-create/QuoteCreatePage';
 import en from '../locales/en.json';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
-vi.mock('../lib/api', () => ({ api: mock }));
+vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: mock }));
 let instance = createInstance();
 function Location() { const location = useLocation(); return <output data-testid="location">{location.pathname}</output>; }
 function wrap(node: React.ReactNode, entries = ['/start']) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}>{node}</MemoryRouter></I18nextProvider>; }
