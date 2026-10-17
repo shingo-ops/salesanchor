@@ -247,3 +247,23 @@ def test_market_sql_ignores_inherited_rows(pg, v102, ids):
     _persist(pg, inherited, {"price_normalized": 9000, "price_basis": f"INHERIT:{own}"})
 
     assert market() == [(ids.p1, "Box", 1000.0, 1)]
+
+
+def test_bundle_rows_are_not_inherited_and_not_sources(pg, v102, ids):
+    """まとめ売り行（bundle_size あり）は価格を引き継がず、引き継ぎ元にもならない（ADR-1027）。"""
+    assert "ar.bundle_size IS NULL" in svc._INHERIT_PRICE_SQL
+    _add_row(pg, _add_job(pg, 30), ids.p1, ids.box, price=1234, qty=1)
+    job = _add_job(pg, 1)
+    result_id = _qty_only(pg, job, ids)
+    assert _inherit(pg, job, result_id, ids.p1, ids.box, bundle_size=40)["price_normalized"] is None
+
+
+def test_a_stored_bundle_row_is_not_an_inherit_source(pg, v102, ids):
+    """bundle_size の有る実際の行は、価格の引き継ぎ元にならない（ADR-1027）。"""
+    source = _add_row(pg, _add_job(pg, 30), ids.p1, ids.box, price=1234, qty=1)
+    job = _add_job(pg, 1)
+    target = _qty_only(pg, job, ids)
+    assert _inherit(pg, job, target, ids.p1, ids.box)["price_normalized"] == 1234  # まとめ売りでなければ引き継ぐ
+    with pg[0].cursor() as cur:
+        cur.execute(f"UPDATE {SCHEMA}.analysis_results SET bundle_size = 40 WHERE id = %s", (source,))
+    assert _inherit(pg, job, target, ids.p1, ids.box)["price_normalized"] is None

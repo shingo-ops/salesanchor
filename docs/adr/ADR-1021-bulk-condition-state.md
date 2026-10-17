@@ -30,6 +30,7 @@ PO 承認済みの KGI（価格は1枚の値段・まとめ売りは備考「N�
 
 1. 規則は純関数モジュール backend/app/services/v102_bulk_price_svc.py（`convert`）に置く。投稿の原文ブロック（件の source_lines の行を改行でつないだもの）から piece（価格は1枚の値段）/ set（価格は1セット N 枚の値段）/ review（決まらない）に分ける。
 2. 呼ぶのは line_analysis_v102_svc.py の `_write_results` の1か所（`_analysis_values` の直後・人の手直しの前）。対象は product_category がバルク系かつ商品が決まった行。状態（Error 等）は問わない。
+> 追記（ADR-1027）: set の換算（3）は ADR-1027 で置き換え（piece・review はそのまま）。
 3. set: 単価 = 価格 ÷ N（割り切れなければ review）、数量 = 数量 × N、単位 Piece（unit_id・unit_resolved もそろえる）、備考 note_ja =「N枚セット単位（1セットX円）」（X は3桁区切り）、price_basis = `V102:bulk:set:N`。
 4. piece: 価格・数量はそのまま、単位だけ Piece にそろえる、備考なし、price_basis = `V102:bulk:piece`。
 5. review: 値は変えず、理由 `bulk_price_basis_unknown` を足して needs_review=true。「このままで良い」では外せない（NON_ACKABLE）。人が価格か数量を直した行は、この理由だけ外れる。Piece の単位 id が引けないときも review（id を作らない）。
