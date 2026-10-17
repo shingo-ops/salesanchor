@@ -49,12 +49,14 @@
 | K6 反映後、値の SQL と再解析で対象の行だけが変わる | 本番の前後測定（data/ に記録） |
 
 ## 戻し方
-- 値: `data/value_rank_rollback.sql`（11 行を NULL に戻す）→ 今の判定に戻る。
+- 値: `docs/handoff/condition-value-rank/data/value_rank_rollback.sql`（11 行を NULL に戻す）→ 今の判定に戻る。
 - コード: PR を revert。列は残っても害が無い（NULL）。
 
 ## 維持の仕組み
+- 守り手: CI のテスト（backend/tests/test_tcg_keyword_matching.py の TestResolveConditionValueRank）と、状態マスタの値を変える担当（Opus。値の SQL は ADR-1007 の記録手順）。
 - テスト（TestResolveConditionValueRank）が規則を固定する。
 - 状態を足すときは、群と順位を決めて値を入れる（便2 で管理画面から編集できるようにする）。
 
-## 外部事例
-- 該当なし。社内の状態マスタの判定順の規則で、外部の事例が判断材料にならないため。
+## 外部・過去事例の参照と我々への応用
+- 外部: 該当なし。社内の状態マスタの判定順の規則で、外部の事例が判断材料にならないため。
+- 過去（社内）: ADR-1021（Bulk の状態）と同じく、列は migration・値は記録 SQL（ADR-1007）に分け、値が空なら今と同じ動きにして、コードの反映と値の投入を別々に測る。
