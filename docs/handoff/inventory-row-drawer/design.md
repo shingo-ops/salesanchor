@@ -562,3 +562,40 @@ ShadowSourcePane.tsx/.css、review-item-drawer.css、Drawer.*、Stack.*、Analys
 
 - 外部事例: 不要（既存前例 review-item-drawer.css の同型適用のため）。
 - 戻し方: PR を Revert。
+
+## 16. 便6 原文スライドの見出しと凡例（2026-10-17）
+### PO依頼原文（2026-10-17）
+「原文のテーブルのヘッダーだが"ブロックの範囲"は不要、スライドページのヘッダーの"原文"だが仕入元名+投稿日時に出来る？」。本番反映までの一任あり。
+
+### 対象ADR
+ADR-1014, ADR-027, ADR-067, ADR-144
+
+### 事実（recon.md「便6 追補」参照）
+- frontend/src/features/tcg-analysis-review/ShadowSourcePane.tsx:18-22,43-54 凡例は常に描画。
+- frontend/src/features/inventory/InventoryRowDrawer.tsx RawTextPane の title は tabRawText（:171付近）、タブ label も同キー（:204付近）。
+- frontend/src/features/inventory/inventoryColumns.tsx:160-161 提供者列。frontend/src/pages/inventory/InventoryPage.tsx:172-178 fmtOfferedAt。
+- frontend/src/components/Drawer.tsx:25 title は string。
+
+### 変更
+- ShadowSourcePane に showLegend?: boolean（既定 true）を追加。false で凡例を出さない（ハイライトは残る）。
+- frontend/src/features/inventory/inventoryFormat.ts（新規）に fmtOfferedAt（InventoryPage から移動・中身不変）と supplierLabel を置き、InventoryPage.tsx・inventoryColumns.tsx・InventoryRowDrawer.tsx が共用（表示ロジックの SSOT）。
+- RawTextPane の Drawer title を t("inventory.rowDrawer.rawTextTitle", {supplier, postedAt}) にし、showLegend={false} を渡す。ja/en に rawTextTitle を追加。モード切替タブの「原文」は不変。
+- テスト: ShadowSourcePane.test.tsx、InventoryRowDrawer.test.tsx、inventoryFormat.test.ts。
+
+### 触らない範囲
+API・backend・DB・Drawer・Stack・ReviewItemDrawer・V102PostEditModal・CSS。
+
+### データの出どころ
+API 追加なし。行（InventoryRow）の supplier_name / offered_at をそのまま使う。dist_base が唯一の正本。
+
+### 受入基準
+|基準|検証方法|
+|---|---|
+|J1 原文スライドの見出しが「仕入元名　YYYY-MM-DD HH:mm」で在庫表の提供者列と同じ文字|vitest＋本番目視|
+|J2 原文スライドに「ブロックの範囲」が出ない|vitest＋本番 bundle|
+|J3 要確認ページの凡例は不変|ShadowSourcePane 既定 true・既存テスト合格|
+|J4 在庫表の提供者列の表示は不変|既存テスト合格|
+|J5 CI 合格|CI|
+
+- 外部事例: 不要（既存部品・既存値の再利用のため）。
+- 戻し方: PR を Revert。
