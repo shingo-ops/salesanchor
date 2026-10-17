@@ -9287,6 +9287,71 @@
         "title": "EngineStats",
         "type": "object"
       },
+      "ErrorReportField": {
+        "properties": {
+          "expected_missing_product": {
+            "default": false,
+            "title": "Expected Missing Product",
+            "type": "boolean"
+          },
+          "expected_value": {
+            "title": "Expected Value"
+          },
+          "field_name": {
+            "enum": [
+              "product_id",
+              "quantity",
+              "price",
+              "unit",
+              "condition",
+              "status",
+              "note"
+            ],
+            "title": "Field Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_name"
+        ],
+        "title": "ErrorReportField",
+        "type": "object"
+      },
+      "ErrorReportRequest": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorReportField"
+            },
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fields"
+        ],
+        "title": "ErrorReportRequest",
+        "type": "object"
+      },
+      "ErrorReportResponse": {
+        "properties": {
+          "notified": {
+            "title": "Notified",
+            "type": "boolean"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_code",
+          "notified"
+        ],
+        "title": "ErrorReportResponse",
+        "type": "object"
+      },
       "EtdImageResponse": {
         "properties": {
           "environment": {
@@ -64696,6 +64761,63 @@
           }
         ],
         "summary": "解析レビュー手動修正保存（PARITY-03 Phase 3 Stage 3）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/items/{extraction_item_id}/error-reports": {
+      "post": {
+        "operationId": "post_error_report_api_v1_tcg_items__extraction_item_id__error_reports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "解析の誤りを報告する（ADR-1025）",
         "tags": [
           "super-admin"
         ]

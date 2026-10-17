@@ -993,3 +993,5 @@ run_sql migrations/20261017_100000_add_viewer_discord_config.sql
 run_sql migrations/20261017_120000_line_conditions_value_rank.sql
 # ADR-1024: AI 用の読み取り専用ユーザー ai_reader（パスワードなし。ログインは便3bまで不可）
 run_sql migrations/20261017_130000_create_ai_reader_role.sql
+# ADR-1025 便1: 解析の誤り報告の表3つ（空・構造のみ・冪等）
+run_sql migrations/20261017_140000_create_analysis_error_report_tables.sql

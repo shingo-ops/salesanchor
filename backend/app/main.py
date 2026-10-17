@@ -26,6 +26,7 @@ from app.middleware.session_guard import SessionGuardMiddleware
 # spec.md v1.2 F9 (Sprint 9): スプレッドシート並走 Phase 切替 admin UI
 from app.routers import (
     admin,
+    analysis_error_reports,  # ADR-1025 便1: 解析の誤り報告
     analytics,
     archives,
     auth,
@@ -690,6 +691,11 @@ app.include_router(realtime_events.router, prefix="/api/v1", tags=["realtime"])
 # PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
 app.include_router(
     item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# ADR-1025 便1: 解析の誤り報告 API（require_super_admin 限定）
+app.include_router(
+    analysis_error_reports.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # 便C1: v102 の書き写しを直す API（require_super_admin 限定）
