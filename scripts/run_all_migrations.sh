@@ -1001,3 +1001,5 @@ run_sql migrations/20261017_210000_drop_products_type_master_id.sql
 run_sql migrations/20261017_220000_add_analysis_results_bundle_size.sql
 # ADR-1027 便1: 単位マスタの呼び名の列（NULL 許可・構造のみ・冪等。値は docs/handoff/bundle-sale/data/ の SQL で入れる）
 run_sql migrations/20261017_220100_add_line_units_display_names.sql
+# ADR-1028 便1: 商品の荷姿の表（空・構造のみ・冪等）
+run_sql migrations/20261018_100000_create_product_packagings.sql

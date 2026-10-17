@@ -36,3 +36,4 @@ product_formats
 product_kinds
 supplier_aliases
 product_blank_confirmations
+product_packagings
