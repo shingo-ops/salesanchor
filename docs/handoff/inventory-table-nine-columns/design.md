@@ -158,3 +158,11 @@ Opus の設計判断:
 - 列の並び・stickyLeft・mobileHidden のアプリと閲覧ページのずれは `frontend/src/pages/viewer/viewerColumns.parity.test.tsx`（vitest・CI）が止める
 - 在庫表の見出しの順とチェック欄なしは `frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx` と `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx` が止める
 - 文字色のトークン直値の混入は CI の ADR-067 チェック、ライト／ダークの定義漏れはダークモード変数パリティ検査が止める
+
+---
+
+## 追補2（2026-10-17、CI 指摘を受けて）
+
+- CI `scripts/check-design-token-ratchet.sh` が `frontend/src/index.css` の hex 増加（171→173）で失敗した。この検査は `frontend/src/tokens.css` を対象外にしており、予定表の色（`--cal-*`）が tokens.css の `:root` と `:root.force-dark` に hex で定義されている前例がある
+- Opus の判断: `--offer-instock-text` と `--offer-preorder-text` を index.css から tokens.css の同じ並び（ライト＝Schedule category colors の直後、ダーク＝`:root.force-dark` の --cal-holiday の後）へ移す。値は変えない。index.css は origin/main と同じに戻す
+- 確認: ラチェット PASS・`npm run check:dark-parity` PASS・tsc PASS・vitest 16 files / 121 tests PASS（/tmp/CC報告ファイル/inventory-cols/fix1-*.txt）
