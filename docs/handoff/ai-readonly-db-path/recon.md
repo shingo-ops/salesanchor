@@ -81,7 +81,7 @@
 ### F11 ガバナンス
 - F11-1 CODEOWNERS には `migrations/` と `scripts/` が @shingo-ops で入っている（.github/CODEOWNERS:21, 23）。`backend/app/ops/` や ai-reader の compose 定義は入っていない（追加が要る）。
 - F11-2 CODEOWNERS 必須レビューが Branch Protection で有効かは未確認（PO が GUI で確認する。`gh api` で設定を変えない）。
-- F11-3 危険パス（`migrations/`・`deploy.yml`・本番 `scripts/`）を含む実装は PO の GO が出るまで main にマージしない（CLAUDE.md:56-57、docs/STANDARD-WORKFLOW.md §5）。
+- F11-3 危険パス（migrations・デプロイ設定・本番スクリプト）を含む実装は PO の GO が出るまで main にマージしない（CLAUDE.md:56-57、docs/STANDARD-WORKFLOW.md §5）。
 
 ## 未確認（実装担当が最初に確認。推測で埋めない）
 | # | 内容 | 確かめ方 |

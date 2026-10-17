@@ -52,7 +52,7 @@ KGI: 担当 Sonnet が、PO の `!` 実行と permit チケットなしで、本
 1. **DB**: 読み取り専用ユーザー `ai_reader`（LOGIN・NOSUPERUSER・NOCREATEDB・NOCREATEROLE・NOREPLICATION・CONNECTION LIMIT 2）。BYPASSRLS と `pg_read_all_data` は付けない。付ける権限は `ai_ro` スキーマの USAGE とビューの SELECT だけ。`ALTER ROLE` で `log_statement='all'`（利用者が戻せない設定）。`default_transaction_read_only=on`・`statement_timeout='60s'`・`idle_in_transaction_session_timeout='60s'` は事故防止として残すが、境界とは書かない（利用者が戻せる）。
 2. **ビュー専用スキーマ `ai_ro`**: 秘密列を外したビューだけを置く。ビューの持ち主は jarvis（superuser は行の制限を受けない）。`security_invoker` は付けない。新しい表はビューを作るまで読めない。`scripts/run_all_migrations.sh` の最後でビューを作り直す。拒否リストは列名の型で決め、生成テストで「当たる列が 0 本」を確かめる。
 3. **専用コンテナ `ai-reader`**: 環境変数は `AI_READER_DATABASE_URL` のみ、volumes なし、`read_only: true`、`cap_drop: [ALL]`、`no-new-privileges`、backnet のみ。固定コマンドは `docker compose -f <絶対パス> run --rm -T --no-deps ai-reader`。稼働中の backend に依存しない（blue-green の切替の影響も受けない）。
-4. **台本 `backend/app/ops/readonly_query.py`**: 標準入力の SQL を受ける（64KB まで）。クライアント側で `BEGIN READ ONLY` と `SET LOCAL statement_timeout` を自分で発行し、最後に rollback。文字列で拒否するもの: 先頭が `\`、複文、先頭語が SELECT/WITH/SHOW/EXPLAIN（ANALYZE なし）以外、`set_config(`・`SET `・`COPY`・`pg_read_file`・`pg_sleep`・`lo_` を含むもの。出力は TSV、行数の既定 200・上限 5000。結果の列名が拒否リストに当たる場合は値を `<redacted>` に置換（念のための二重目）。ログは stderr に 1 行（時刻・SQL の sha256 先頭 12 桁・先頭 500 文字・行数・所要 ms・結果）。
+4. **台本 readonly_query.py（backend の ops 配下に新規）**: 標準入力の SQL を受ける（64KB まで）。クライアント側で `BEGIN READ ONLY` と `SET LOCAL statement_timeout` を自分で発行し、最後に rollback。文字列で拒否するもの: 先頭が `\`、複文、先頭語が SELECT/WITH/SHOW/EXPLAIN（ANALYZE なし）以外、`set_config(`・`SET `・`COPY`・`pg_read_file`・`pg_sleep`・`lo_` を含むもの。出力は TSV、行数の既定 200・上限 5000。結果の列名が拒否リストに当たる場合は値を `<redacted>` に置換（念のための二重目）。ログは stderr に 1 行（時刻・SQL の sha256 先頭 12 桁・先頭 500 文字・行数・所要 ms・結果）。
 5. **SSH**: 新しい鍵 `salesanchor-reader`（ed25519、パスフレーズなし、Mac の `~/.ssh/salesanchor-reader`、権限 600）。VPS の authorized_keys の末尾に 1 行だけ追加: `restrict,command="<固定コマンド>",expiry-time="<90 日後>"`。既存の行は触らない。Mac の接続元が固定なら `from=` も付ける（未確認 U6）。
 6. **ガバナンス**: `.github/CODEOWNERS` に台本・ai-reader の compose 定義・ai_reader の migration・ビュー生成を @shingo-ops で追加。権限の境界は DB の GRANT、コードの境界は CODEOWNERS の二重にする。
 7. **フック（Mac 側・リポジトリ外・便4）**: reader 鍵のパス完全一致のコマンドだけを psql-write-guard の対象外にする。ヒアドキュメントの本文は判定に使わない。直す前の写しを残す。
@@ -106,7 +106,7 @@ ADR-1024「戻し方」に同じ。要点: authorized_keys の 1 行を消す（
 | 境界の破れ | `ai_reader` の書き込み拒否ログ（permission denied）の件数 | なし | 0 件が通常。出たら原因調査 |
 | 鍵の期限 | `expiry-time` の日付（90 日後）を週次の点検で確認 | なし | 期限の 14 日前に更新の PO 確認 |
 
-## 9. 外部事例の参照と我々への応用
+## 9. 外部・過去事例の参照と我々への応用
 
 該当事例なし。理由: 社内の VPS 1 台構成に固有の設計のため。根拠は PostgreSQL と OpenSSH の公式仕様（未確認の項目は K テストで実測）。
 
