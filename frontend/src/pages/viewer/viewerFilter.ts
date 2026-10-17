@@ -8,11 +8,11 @@ import type { ViewerRow, ViewerTableRow } from "./types";
 
 export const PER_PAGE = 50;
 export const TAB_ALL = "all";
-/** 既定の並び（アプリの InventoryPage の release_date 降順と同じ） */
+/** 既定の並び（アプリの InventoryPage の release_date 昇順と同じ。ADR-1014 改訂 2026-10-18） */
 export const DEFAULT_SORT_KEY = "release_date";
-export const DEFAULT_SORT_DIR = "desc" as const;
-/** 並べ替えプルダウンの3択（アプリの SORT_MENU_VALUES と同じ） */
-export const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"] as const;
+export const DEFAULT_SORT_DIR = "asc" as const;
+/** 並べ替えプルダウンの4択（アプリの SORT_MENU_VALUES と同じ） */
+export const SORT_MENU_VALUES = ["release_date:asc", "unit_price:asc", "quantity:desc", "offered_at:desc"] as const;
 
 export type SortDir = "asc" | "desc";
 
@@ -164,8 +164,10 @@ function columnCompare(sortKey: string, dir: SortDir): Compare | null {
 }
 
 /**
- * アプリの並びと同じ：english_title の昇順（'' は先頭）でまとめてから、選んだ列、最後に元の順。
- * 商品名（name）の見出しで並べるときだけ、english_title と japanese_title を同じ向きで並べる。
+ * アプリの並びと同じ（ADR-1014 改訂 2026-10-18）。
+ * まとまり（商品）の順: 発売日（空は末尾）→ english_title → japanese_title。発売日の向きは release_date を選んだときだけ sortDir。
+ * まとまりの中: 選んだ列、最後に元の順。商品名（name）の見出しだけは変更前のまま、
+ * english_title と japanese_title を同じ向きで並べる。
  */
 export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortDir): ViewerTableRow[] {
   const keys: Compare[] = [];
@@ -173,9 +175,13 @@ export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortD
     keys.push(plain((r) => r.english_title, compareText, sortDir));
     keys.push(plain((r) => r.japanese_title, compareText, sortDir));
   } else {
+    keys.push(nullsLast((r) => r.release_date, comparePlain, sortKey === "release_date" ? sortDir : "asc"));
     keys.push(plain((r) => r.english_title, compareText, "asc"));
-    const col = columnCompare(sortKey, sortDir);
-    if (col) keys.push(col);
+    keys.push(nullsLast((r) => r.japanese_title, compareText, "asc"));
+    if (sortKey !== "release_date") {
+      const col = columnCompare(sortKey, sortDir);
+      if (col) keys.push(col);
+    }
   }
   return [...rows].sort((a, b) => {
     for (const k of keys) {
