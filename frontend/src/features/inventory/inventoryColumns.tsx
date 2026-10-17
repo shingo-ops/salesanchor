@@ -51,7 +51,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
       hideId: null,
       col: {
         key: "offer_type",
-        header: t("inventory.col.offerType"),
+        header: t("inventory.col.status"),
         sortable: true,
         stickyLeft: true,
         mobileHidden: true,

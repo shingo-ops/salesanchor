@@ -138,6 +138,7 @@ def is_candidate(item: Mapping[str, Any], values: Mapping[str, Any]) -> bool:
     """
     return (
         bool(values["pid_resolved"]) and values["product_id"] is not None and values["price_normalized"] is not None
+        and values.get("bundle_size") is None
         and item.get("status_effect") != _EXCLUDED_EFFECT and item.get("product_category") != PRODUCT_KUBUN_SET
         and has_no_unit_and_condition_word(item)
     )

@@ -41,7 +41,7 @@ describe('InventoryPage table layout (DataTable)', () => {
     const rowEl = await screen.findByTestId('inventory-row-r1');
     const heads = Array.from(document.querySelectorAll('thead th')).map((th) => th.textContent?.trim());
     expect(heads).toEqual(
-      ['offerType', 'mark', 'title', 'condition', 'unitPrice', 'quantity', 'note', 'ship', 'supplier', 'releaseDate']
+      ['status', 'mark', 'title', 'condition', 'unitPrice', 'quantity', 'note', 'ship', 'supplier', 'releaseDate']
         .map((k) => (en as unknown as { inventory: { col: Record<string, string> } }).inventory.col[k]),
     );
     expect(heads).not.toContain(en.inventory.col.category);

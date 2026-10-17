@@ -19,7 +19,7 @@
   }
 }
 
-/* 在庫・予約の文字色（トークン参照。ライト／ダークは index.css 側で定義） */
+/* 在庫・予約の文字色（トークン参照。ライト／ダークは tokens.css 側で定義） */
 .inventory-cell__offer--instock {
   color: var(--offer-instock-text);
 }
