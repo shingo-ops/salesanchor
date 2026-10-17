@@ -16934,6 +16934,47 @@
         "title": "OpsControlChange",
         "type": "object"
       },
+      "OpsEventRequest": {
+        "properties": {
+          "actor": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cause",
+              "action"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "actor"
+        ],
+        "title": "OpsEventRequest",
+        "type": "object"
+      },
+      "OpsEventResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "OpsEventResponse",
+        "type": "object"
+      },
       "OpsIncidentAnnotation": {
         "additionalProperties": false,
         "properties": {
@@ -17101,6 +17142,151 @@
           }
         },
         "title": "OpsIncidentFields",
+        "type": "object"
+      },
+      "OpsReanalyzeResponse": {
+        "properties": {
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "title": "OpsReanalyzeResponse",
+        "type": "object"
+      },
+      "OpsReportDetail": {
+        "properties": {
+          "current_values": {
+            "title": "Current Values",
+            "type": "object"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/OpsReportEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/OpsReportField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "report": {
+            "$ref": "#/components/schemas/OpsReportHeader"
+          }
+        },
+        "required": [
+          "report",
+          "fields",
+          "current_values",
+          "prompt_version",
+          "events"
+        ],
+        "title": "OpsReportDetail",
+        "type": "object"
+      },
+      "OpsReportEvent": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "at",
+          "actor",
+          "kind",
+          "payload"
+        ],
+        "title": "OpsReportEvent",
+        "type": "object"
+      },
+      "OpsReportField": {
+        "properties": {
+          "expected_missing_product": {
+            "default": false,
+            "title": "Expected Missing Product",
+            "type": "boolean"
+          },
+          "expected_value": {
+            "title": "Expected Value"
+          },
+          "field_name": {
+            "title": "Field Name",
+            "type": "string"
+          },
+          "system_value": {
+            "title": "System Value"
+          }
+        },
+        "required": [
+          "field_name"
+        ],
+        "title": "OpsReportField",
+        "type": "object"
+      },
+      "OpsReportHeader": {
+        "properties": {
+          "extraction_item_id": {
+            "title": "Extraction Item Id",
+            "type": "string"
+          },
+          "extraction_job_id": {
+            "title": "Extraction Job Id",
+            "type": "string"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          },
+          "reported_at": {
+            "format": "date-time",
+            "title": "Reported At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_code",
+          "extraction_item_id",
+          "extraction_job_id",
+          "status",
+          "reported_at"
+        ],
+        "title": "OpsReportHeader",
         "type": "object"
       },
       "OrderCommissionAssignmentRequest": {
@@ -47731,6 +47917,157 @@
           }
         ],
         "summary": "Resume All",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/error-reports/{report_code}": {
+      "get": {
+        "operationId": "get_error_report_api_v1_ops_error_reports__report_code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告の取得（ADR-1025）",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/error-reports/{report_code}/events": {
+      "post": {
+        "operationId": "post_error_report_event_api_v1_ops_error_reports__report_code__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告に原因・対応を記録する（ADR-1025）",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/error-reports/{report_code}/reanalyze": {
+      "post": {
+        "operationId": "post_error_report_reanalyze_api_v1_ops_error_reports__report_code__reanalyze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsReanalyzeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告の行を再解析して照合する（v102 のみ・ADR-1025）",
         "tags": [
           "ops"
         ]
