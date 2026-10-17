@@ -23,7 +23,7 @@ data_export の記録は今のまま（`status_code < 400` で、すでに 401�
 
 ## 3. 試験（backend/tests/test_get_access_audit.py に足す）
 
-- T6: Redis の incr が 501 を返す状態で、401 を返す GET を送る → incr が呼ばれず、INSERT は 0 回。403 も同じ。
+- T6: Redis の incr が 501 を返す状態で、401 を返す GET を送る → incr が呼ばれず、bulk_read_alert と data_export の行は入らない（既存の auth_events への auth_failure 1 行は従来どおり入る。当初「INSERT は 0 回」と書いたのは誤りで、実装時に担当が指摘して訂正した）。403 も同じ。
 - T4（既存）: 200 の GET では従来どおり bulk_read_alert が 1 行入る（緑のまま）。
 
 変更前のコードで T6 が赤になることを先に確かめる。
@@ -35,6 +35,16 @@ data_export の記録は今のまま（`status_code < 400` で、すでに 401�
 | F1: 401・403 になった閲覧は回数に数えられない | T6 が CI で緑（変更前は赤）。反映後、本番で同じ確認アクセス（架空の email・署名なし）を 1 回送り、401 が返ること、その email の `bulk_read:` キーが 0 件であることを確かめる |
 | F2: ログイン済みの閲覧は今までどおり数えられる | T4 が緑。反映後、本番 Redis の `bulk_read:*` のキーが、利用者の閲覧があれば 1 件以上ある |
 | F3: 反映後にエラーが増えない | backend の Traceback・ERROR と nginx の 5xx が 0 件のまま |
+
+## 外部・過去事例の参照と我々への応用
+
+- 過去事例（社内）: 元の設計 docs/handoff/s6-get-access-audit/design.md の審査（review-opus.md 指摘 3）で「認証の無い GET は数えない」と決めていた。今回はその決定に実装を合わせるだけなので、新しい外部事例は使わない。
+- 応用: 署名を確かめずに読んだ値（email）は記録用に限る。数えたり警告したりする判断は、認証が通った応答（401・403 以外）に限る。
+
+## 維持の仕組み
+
+- 見張り: T6（backend/tests/test_get_access_audit.py）が CI の pytest で毎回走る。401・403 を数える形に戻すと赤になる。
+- 担当: 監査の記録を変える PR を設計する Opus。正本は docs/specs/get-access-audit/README.md。
 
 ## 5. 戻し方
 
