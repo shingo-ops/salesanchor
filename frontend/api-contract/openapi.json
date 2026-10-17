@@ -35785,6 +35785,54 @@
         "title": "ViewerPasswordResetRequest",
         "type": "object"
       },
+      "ViewerSignupRequest": {
+        "properties": {
+          "email": {
+            "description": "メールアドレス",
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名（前後の空白を除いて1〜100文字）",
+            "maxLength": 200,
+            "title": "Line Name",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ボット対策の隠し欄。人は空のまま",
+            "title": "Website"
+          }
+        },
+        "required": [
+          "email",
+          "line_name"
+        ],
+        "title": "ViewerSignupRequest",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -68444,6 +68492,46 @@
           }
         },
         "summary": "Viewer Password Reset Request",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/signup": {
+      "post": {
+        "description": "申込。pending の行と申込コード（DB には sha256 だけ）を作り、コードとその人専用の招待リンクを返す。\n\n応答の形は、新規・pending の再申込・登録済み（捨てのコード）・隠し欄ありで同じ。ログに email・コード・招待を出さない。",
+        "operationId": "viewer_signup_api_v1_viewer_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerSignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Signup",
         "tags": [
           "viewer"
         ]

@@ -45,5 +45,12 @@ export interface ViewerLoginResponse {
   must_change_password: boolean;
 }
 
+export interface ViewerSignupResponse {
+  signup_code: string;
+  /** ISO8601 */
+  expires_at: string;
+  invite_url: string | null;
+}
+
 /** ④ 案内の種類 */
 export type ViewerNoticeKind = "preparing" | "suspended" | "expired" | "error";

@@ -114,3 +114,23 @@ APPROVE（Blocking 0、Non-blocking 2）。
 
 ### 判定
 APPROVE（Blocking 0）。マージの条件は CI が全部緑であること。
+
+## r18（2026-10-17。段4b の設計の細部とコード審査：カード /tmp/CC報告ファイル/viewer_stage4/card_4b.md、commit 821fc5ca4・3cb51074e。審査は Opus、同一 AI の自己審査。生出力 /tmp/CC報告ファイル/viewer_stage4/impl_4b/）
+
+### カード（設計の範囲内の細部。Opus の判断）
+- 回数制限は IP → email の順に数える。Redis が使えないときは申込は通すが、招待は作らない（D5 の「回数制限を通った申込でだけ作る」を、数えられないときにも守るため）。
+- pending の再申込では line_name・inventory_issue を書き換えない。
+- 招待は DB の commit の後に作る。Discord を待つ間、トランザクションを開いたままにしない。
+- 招待リンクは Button ＋ window.open にし、URL の文字も出す。カードで足した ButtonLink は react-router-dom を引き込み、viewer の JS が 338.3KB（上限 300KB）になったためやめた（main 290.0KB → 変更後 296.0KB。bundle_*.txt・viewer_bundle2.txt）。D4 の部品表（EmptyState と Button）どおり。
+
+### 照合した範囲
+- viewer.py の signup：Origin → 入力の検査（422）→ 回数制限（429）→ 隠し欄 → users.email → viewer_accounts（新規 INSERT … ON CONFLICT DO NOTHING／pending は古い signup_code を消して作り直し／ほかの状態は捨てのコード）→ commit → 招待。応答の形は4つの道で同じ。ログに email・コード・招待を出さない。
+- viewer_invite.py：viewer_discord_config の id=1 を読み、max_age 604800・max_uses 1・unique true・max_retries=1。失敗はすべて None、ログは例外の種類と状態だけ。
+- discord_rest.py：max_retries の既定値は _MAX_RETRIES。既存の呼び出し元は変えない。discord_api_request_with_file は変えない。
+- 画面：金型（TextField・Textarea・Button・EmptyState）と、ui-allow 付きの隠し欄1つ。文言は viewer の辞書。ja/en は同じキー。
+
+### 検証（手元。実装担当の生出力を Opus が読んだ）
+- vitest src/pages/viewer 56 passed、check:all・tsc・check-ui-governance 合格、viewer の JS 296.0KB。pytest 118 passed（実 DB の項目は CI）。
+
+### 判定
+APPROVE（Blocking 0）。Non-blocking：pending の同時の再申込が2本重なると、コードが2つ有効になることがある（どちらも同じ人の行で、7日で消える）。マージの条件は CI が全部緑であること。
