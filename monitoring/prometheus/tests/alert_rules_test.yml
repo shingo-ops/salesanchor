@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 26 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 27 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -760,4 +760,37 @@ tests:
     alert_rule_test:
       - eval_time: 8m
         alertname: ContainerStateStale
+        exp_alerts: []
+
+  # --- 定着便 T1 ---
+  - name: ContainerHealthcheckMissingFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_healthcheck_missing{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ContainerHealthcheckMissing
+        exp_alerts:
+          - exp_labels:
+              service: celery-beat
+              instance: app-vps
+              job: node-exporter
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "コンテナ celery-beat に健康診断がありません"
+              description: "prod1 の celery-beat は動いていますが、健康診断（healthcheck）がありません。固まっても ContainerUnhealthy が鳴りません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerhealthcheckmissing"
+
+  - name: ContainerHealthcheckMissingQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_healthcheck_missing{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '0x20'
+      - series: 'salesanchor_container_healthcheck_missing{service="backend",instance="app-vps",job="node-exporter"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ContainerHealthcheckMissing
         exp_alerts: []

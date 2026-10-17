@@ -182,6 +182,16 @@ describe("InventoryRowDrawer", () => {
     expect(mock.realtime).not.toHaveBeenCalled();
   });
 
+  it("T7: the original text root has the full-height class and wraps the source pane", async () => {
+    mock.get.mockResolvedValue({ items: [rawOf("a", "tall text")] });
+    render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
+
+    await screen.findByText("tall text");
+    const root = document.querySelector(".inventory-rawtext-pane");
+    expect(root).not.toBeNull();
+    expect(root?.querySelector(".shadow-source-pane")).not.toBeNull();
+  });
+
   it("T4: a null line range shows the raw text without a highlight", async () => {
     mock.get.mockResolvedValue({ items: [rawOf("a", "plain text", null, null)] });
     render(<InventoryRowDrawer row={row(["a"])} onClose={() => undefined} onChanged={() => undefined} isSuperAdmin={false} />);
