@@ -6,10 +6,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from app.auth.dependencies import get_current_tenant, get_current_user
-from app.database import get_db
-from app.models import User
-from app.routers import products as products_router
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -17,8 +13,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.rls_bootstrap import public_bootstrap_lock, seed_type_master
-from tests.test_tcg_product_list_pg import PACKAGING_MIGRATIONS
+from app.auth.dependencies import get_current_tenant, get_current_user
+from app.database import get_db
+from app.models import User
+from app.routers import products as products_router
+from tests.rls_bootstrap import ensure_product_packagings, public_bootstrap_lock, seed_type_master
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -48,7 +47,6 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260921_060000_create_product_kinds.sql",
     "20260921_070000_rename_tcg_type_master_to_type_master.sql",
     "20261016_190000_create_product_blank_confirmations.sql",  # ADR-1020 便4a: 共用の行の PATCH が印の表を読む
-    *PACKAGING_MIGRATIONS,  # ADR-1028 便3: 商品 API が荷姿の表を読む（一覧は test_tcg_product_list_pg と同じ 3 本）
 ]
 
 
@@ -100,8 +98,7 @@ def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
 
 
 async def _apply_migration(admin_engine, filename: str) -> None:
-    # 20260922_060000 は BEGIN/COMMIT を持つ。ここは admin_engine.begin() の transaction の中なので除く
-    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
     async with admin_engine.begin() as conn:
         for stmt in _split_sql_preserving_do_blocks(sql):
             stmt = stmt.strip()
@@ -130,6 +127,8 @@ async def _bootstrap_public_products(admin_engine) -> None:
                 """)
             )
         assert fk_exists == 1, "FK migration が public.products に適用されていません"
+    # 荷姿の表（ADR-1028 便3）。public_bootstrap_lock の外で、一度だけ確定させる
+    await ensure_product_packagings(admin_engine)
 
 
 async def _build_app(app_session_factory, tenant_id: int) -> FastAPI:

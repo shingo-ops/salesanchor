@@ -65,6 +65,45 @@ async def public_bootstrap_lock(admin_engine):
                 )
 
 
+# ADR-1028 便3: 商品 API が読む荷姿の表と、その元の「数える単位」の表（本番 migration 3 本）
+PACKAGING_MIGRATIONS = (
+    "20260921_140000_product_classification_masters.sql",
+    "20260922_060000_product_unit_condition_infra.sql",  # quantity_units.value の NOT NULL を外す（本番と同じ）
+    "20261018_100000_create_product_packagings.sql",
+)
+
+
+async def ensure_product_packagings(admin_engine) -> None:
+    """荷姿の表を、試験の DB に一度だけ・確定（commit）させて作る。
+
+    各試験の巻き戻す transaction の中で DDL を流すと、終わるまで products などの表ロックを持ち続け、
+    ほかの worker と取る順が逆になって deadlock する。そのため transaction の外の別接続で流して確定させる。
+    public_bootstrap_lock で直列にし、すでにあれば何もしない。この関数は public_bootstrap_lock の外から呼ぶこと
+    （同じ lock を別接続で取るので、中から呼ぶと自分で自分を待つ）。
+    """
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.connect() as conn:
+            table_ready = await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL"))
+            units_ready = table_ready and await conn.scalar(
+                text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE')")
+            ) == 3
+        if units_ready:
+            return
+        async with admin_engine.begin() as conn:
+            raw = await conn.get_raw_connection()
+            if not await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL")):
+                products_sql = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text("utf-8")
+                await raw.driver_connection.execute(products_sql)
+            for name in PACKAGING_MIGRATIONS:
+                # この transaction の中で流すので BEGIN/COMMIT は除く
+                sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+                await raw.driver_connection.execute(sql)
+            await conn.execute(text(
+                "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
+                "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
+            ))
+
+
 async def _apply_migration(admin_engine, filename: str) -> None:
     async with admin_engine.begin() as conn:
         await _apply_migration_on_conn(conn, filename)

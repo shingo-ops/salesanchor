@@ -20,6 +20,7 @@ URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
 
 
+from tests.rls_bootstrap import ensure_product_packagings
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
@@ -37,13 +38,6 @@ async def _exec_multi_stmt(conn, sql: str) -> None:
     """
     raw = await conn.get_raw_connection()
     await raw.driver_connection.execute(sql)
-
-
-PACKAGING_MIGRATIONS = (
-    "20260921_140000_product_classification_masters.sql",
-    "20260922_060000_product_unit_condition_infra.sql",  # quantity_units.value の NOT NULL を外す（本番と同じ）
-    "20261018_100000_create_product_packagings.sql",
-)
 
 
 async def create_product_schema(conn, schema):
@@ -92,23 +86,6 @@ async def create_product_schema(conn, schema):
         "20261016_190000_create_product_blank_confirmations.sql",
     ):
         await _exec_multi_stmt(conn, (migrations / name).read_text())
-    await create_packaging_tables(conn)
-
-
-async def create_packaging_tables(conn):
-    """ADR-1028: 商品 API が読む荷姿の表と、その元の「数える単位」の表。本番 migration を public の lock の中で流す。
-
-    ほかの試験の public 作りと同時に走っても噛み合わないよう、public_bootstrap と同じ advisory lock を取る。
-    外側の transaction の中なので 20260922_060000 の BEGIN/COMMIT は除く。
-    """
-    migrations = Path(__file__).resolve().parents[2] / "migrations"
-    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
-    try:
-        for name in PACKAGING_MIGRATIONS:
-            sql = (migrations / name).read_text().replace("BEGIN;", "").replace("COMMIT;", "")
-            await _exec_multi_stmt(conn, sql)
-    finally:
-        await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
 
 
 @pytest_asyncio.fixture
@@ -119,6 +96,8 @@ async def product_db(monkeypatch):
     monkeypatch.setattr(routes, "TCG_SCHEMA", schema)
     engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
     try:
+        # 荷姿の表は transaction の外で一度だけ確定させる（巻き戻す DDL にすると表ロックを持ち続けて deadlock する）
+        await ensure_product_packagings(engine)
         async with engine.connect() as conn:
             transaction = await conn.begin()
             try:

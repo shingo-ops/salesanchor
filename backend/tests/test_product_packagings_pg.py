@@ -37,11 +37,7 @@ async def client_factory(product_db, monkeypatch):
     db, _ = product_db
     for column in _ROUTE_COLUMNS:
         await db.execute(text(f"ALTER TABLE public.products ADD COLUMN IF NOT EXISTS {column}"))
-    # 荷姿の表と単位の表は product_db の土台（create_product_schema）が本番 migration で作る。行だけここで入れる
-    await db.execute(text(
-        "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
-        "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
-    ))
+    # 荷姿の表と単位の行（PACK/BOX/CASE）は product_db が transaction の外で一度だけ確定させている（ensure_product_packagings）
 
     async def _perms(*_args, **_kwargs):
         return {"products.view", "products.create", "products.update"}
