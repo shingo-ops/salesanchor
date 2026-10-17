@@ -166,3 +166,11 @@ Opus の設計判断:
 - CI `scripts/check-design-token-ratchet.sh` が `frontend/src/index.css` の hex 増加（171→173）で失敗した。この検査は `frontend/src/tokens.css` を対象外にしており、予定表の色（`--cal-*`）が tokens.css の `:root` と `:root.force-dark` に hex で定義されている前例がある
 - Opus の判断: `--offer-instock-text` と `--offer-preorder-text` を index.css から tokens.css の同じ並び（ライト＝Schedule category colors の直後、ダーク＝`:root.force-dark` の --cal-holiday の後）へ移す。値は変えない。index.css は origin/main と同じに戻す
 - 確認: ラチェット PASS・`npm run check:dark-parity` PASS・tsc PASS・vitest 16 files / 121 tests PASS（/tmp/CC報告ファイル/inventory-cols/fix1-*.txt）
+
+---
+
+## 追補3（2026-10-17、PO 指示「在庫・予約→ヘッダー名をステータスに変更」）
+
+- 在庫表・閲覧ページの左端の列の見出しを「ステータス」（en: Status）にする。中身（在庫=青・予約=オレンジ）は変えない
+- i18n の扱い: 在庫表は新しいキー inventory.col.status を追加（inventory.col.offerType は絞り込み欄の見出し・列の表示切替でも使うため値を変えない）、閲覧ページは viewer.col.offerType が列の見出しだけで使われているため既存キーの値を変更（理由: 調査 /tmp/CC報告ファイル/inventory-status-header/recon.txt）
+- あわせて frontend/src/features/inventory/inventoryColumns.css のコメントの誤記（index.css → tokens.css）を直す（#4480 Reviewer の軽微指摘）

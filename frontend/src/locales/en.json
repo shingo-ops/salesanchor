@@ -1504,6 +1504,7 @@
       "mark": "Model",
       "title": "Title",
       "offerType": "Type",
+      "status": "Status",
       "unit": "Form",
       "condition": "Condition",
       "unitPrice": "Unit price",
