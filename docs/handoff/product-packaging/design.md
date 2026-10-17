@@ -544,3 +544,187 @@ scripts/seed_products_from_master.py:74:    case_weight_kg: float | None
 ```
 
 </details>
+
+## 12. 実装カード（便4・画面・Sonnet）
+PO 2026-10-18 チャット: 「商品マスタの編集ページを見たが重量、入数の入れる場所が無い」「便4 …作ってくれ」。対象の画面は「LINE解析」→「商品マスタ」→ 商品を押して出る詳細（TcgProductDetailDrawer）で「y」。
+現在地の生出力: /tmp/CC報告ファイル/product-packaging/bin4/recon/・recon2/。
+
+### 12-1. 着手前に分かった事実
+- 入力欄が無い: frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx（317行）と productDetailModel.ts に荷姿の項目は無く、`git log -S` でも過去に無い（recon/02_*）。在庫側の frontend/src/pages/products/ProductEditPage.tsx:320-333 には古い4項目の欄があるが、メニューからの入口は見つからない（recon/01_*・未確認）。
+- 保存 API: PUT /tcg/products/detail/{id}（backend/app/routers/tcg_product_import.py:301）。body は ProductDetailUpdate（:276-291、extra="forbid"）。処理は backend/app/services/tcg_product_detail_svc.py:126 update_product_detail（商品を FOR UPDATE → revision 照合 → :221 `SET LOCAL app.is_operator='true'` → 書く → audit_log → commit／例外で rollback）。入口は require_super_admin。
+- revision は _snapshot（同 :54-70）の JSON の sha256。荷姿は snapshot に入っていない。
+- 荷姿の正本の読み書きは backend/app/services/product_packagings.py だけ（対応表 LEGACY_FIELDS :15-20、load_packagings :44、save_legacy_fields :90）。出典・URL を受ける書き込みは未実装。
+- 単位の名簿 public.quantity_units の列は id・code・name・name_en・display_order・is_active（migrations/20260921_140000_product_classification_masters.sql:38-48）。CARD は便2 で id 5 として追加済み。
+- 金型: frontend/src/components/ に TextField（type="number"/"url" 可）・Select（options）・Textarea・Button。URL を複数入れる専用の金型は無く、このドロワーは複数の値を Textarea の改行区切りで受ける（productDetailModel.ts:49 words）。
+- 文言は productDetail.*（ja.json・en.json とも :4002-4054・51キーで一致）。
+
+### 12-2. 決めたこと（設計判断）
+
+#### 単位と画面の行
+- **画面で入れる単位は3つ。定義は backend の1か所だけにする**
+  - CASE（中は BOX）・BOX（中は PACK）・PACK（中は CARD）。
+  - product_packagings.py に `EDITABLE_UNITS = (("CASE","BOX"), ("BOX","PACK"), ("PACK","CARD"))` を足す。
+  - GET の応答に `packaging_units` を入れる。中身は code・contained_code・name・name_en・contained_name・contained_name_en で、quantity_units から読む。
+  - 画面はこれを並べる。単位の一覧と名前を frontend に直書きしない（SSOT）。
+  - 名前は、言語が en なら name_en（無ければ name）、それ以外は name を出す。
+- **画面の1行は1単位**。欄は次の8つ。
+  - 中に入る数（数値）
+  - 数の出典（選択）
+  - 数の出典 URL（改行区切り）
+  - 重さ kg（数値）
+  - 重さの出典（選択）
+  - 重さの出典 URL（改行区切り）
+  - メモ（Textarea）
+  - 最終更新（読み取り専用。updated_at）
+- **出典の選択肢は4つ**: official＝公式サイト、official_store＝公式通販、retailer＝販売サイト、measured＝実測。
+  - legacy（古い列から写した値）は、今の値の出典が legacy のときだけ選択肢に出す。表示は「古い値（出典なし）」で、選べない状態（disabled）にする。
+  - 値を変えたら、別の出典を選ばせる。
+- **URL の数は、DB の制約（§3-1）と同じ条件を API が先に確かめる**。
+  - official・official_store は1つ以上。
+  - retailer は違う URL を2つ以上。
+  - measured・legacy は0でもよい。
+  - 1つの欄に同じ URL が2回あれば 422。
+
+#### 送り方と書き込みの決まり
+- `packagings` は任意の配列で、1要素＝1単位。
+- 配列を送らなければ、荷姿に一切触らない。除外ワード追加（addExcludeWord）の経路も壊さない。
+- 送った単位は、次のどれかで扱う。
+  - 今と全部同じ（数・中の単位・出典・URL の並び・重さ・重さの出典・URL・メモ）なら書かない。updated_at も変えない。
+  - 数・重さ・メモがすべて空なら、行を消す。
+  - それ以外は INSERT か UPDATE。updated_by は `user:<ユーザーid>`（便3 と同じ。routers/products.py:463,577）。
+- UPDATE・DELETE は1行に当たったことを _expect_one（同 :84）で確かめる。
+- 送らなかった単位の行（例: 画面で扱わない単位）には触らない。
+
+#### トランザクション・競合・権限
+- **同じトランザクションで書く**。update_product_detail の中で、`SET LOCAL app.is_operator='true'` の後に書く。どこかで失敗したら、商品の他の項目と一緒に巻き戻る。
+- **revision に荷姿を入れる**。_snapshot に `packagings`（その商品の行を単位の display_order 順にした JSON）を足す。
+  - 別の人が荷姿だけを直していても 409 で止まる。
+  - audit_log の old/new にも荷姿が入る。
+- **テナントの商品**（products.tenant_id が NULL でない）に packagings を送ったら、422 `PACKAGING_SHARED_ONLY` にする（便3 と同じ符号）。
+
+#### 422 の符号
+形は ProductDetailError(422, code)（tcg_product_detail_svc.py:44）。
+
+| 符号 | 返す条件 |
+|---|---|
+| PACKAGING_UNKNOWN_UNIT | 単位が EDITABLE_UNITS に無い |
+| PACKAGING_DUPLICATE_UNIT | 同じ単位が2回ある |
+| PACKAGING_SOURCE_MISMATCH | 値があるのに出典が無い、または値が無いのに出典がある |
+| PACKAGING_URLS_REQUIRED | URL の数が足りない |
+| PACKAGING_DUPLICATE_URL | 同じ URL が2回ある |
+| PACKAGING_INVALID_URL | http:// か https:// で始まらない、空白を含む、または2048字を超える |
+| PACKAGING_LEGACY_NOT_ALLOWED | legacy を、今と違う値か新しい値に付けた |
+| PACKAGING_NOTE_WITHOUT_VALUE | メモだけがあり、数も重さも無い（表の not_empty 制約） |
+| PACKAGING_SHARED_ONLY | テナントの商品に送った |
+
+- 画面は符号を productDetail.packaging.errors.<符号> の文言に直して出す（requiredFieldsMessage と同じ作り）。
+
+#### 値の範囲
+- 入数は 1〜1000000 の整数。
+- 重さは 0 より大きく 99999.999 以下で、小数は3桁まで（NUMERIC(8,3)）。
+- メモは1000字まで（表の制約）。
+- 範囲外は pydantic で弾き、FastAPI の 422（detail が配列）にする。画面は既存どおり productDetail.invalid を出す。
+
+#### 対象外
+- **作成モード（新規の商品）では荷姿の欄を出さない**。作った後の編集で入れる。作成 API には触らない。
+- **触らない**: 古い4項目の書き込み save_legacy_fields と routers/products.py、在庫側の ProductEditPage（入口の扱いは別件）、便6（外部の値を集めて入れる）。
+
+### 12-3. 触るファイルと変更
+1. **backend/app/services/product_packagings.py**
+   - `EDITABLE_UNITS` と `SOURCES = ("official","official_store","retailer","measured")` を足す。
+   - `async def load_packaging_units(db) -> list[dict]` を足す。EDITABLE_UNITS の順に quantity_units から code・name・name_en を読んで組み、足りない code があれば RuntimeError にする。
+   - `def validate_packagings(rows, current) -> None` を足す。違反は `PackagingError(code)`（ValueError の子・このファイルに定義）で投げ、サービス側で ProductDetailError(422, code) に包む。
+   - `async def save_packagings(db, product_id, rows, updated_by) -> None` を足す。比べる「今の値」は、load_packagings と同じ形の行。
+   - 既存の関数は変えない。
+2. **backend/app/routers/tcg_product_import.py**
+   - `PackagingIn(BaseModel)`（extra="forbid"）を足す。項目は次のとおり。
+     - unit_code: str
+     - contained_count: int | None（ge=1, le=1000000）
+     - count_source: Literal[official, official_store, retailer, measured, legacy] | None
+     - count_source_urls: list[str]（max_length=10, default []）
+     - weight_kg: Decimal | None（gt=0, le=Decimal("99999.999"), decimal_places=3）
+     - weight_source: 同じ Literal | None
+     - weight_source_urls: list[str]（max_length=10, default []）
+     - note: str | None（max_length=1000）
+   - ProductDetailUpdate に `packagings: list[PackagingIn] | None = Field(default=None, max_length=10)` を足す。
+   - :315-317 の optional の扱いに "packagings" を足す。送られなければ values から外す。
+   - updated_by に使うユーザー id を、サービスへ渡す引数として足す。既存の actor はそのまま。
+3. **backend/app/services/tcg_product_detail_svc.py**
+   - _snapshot に `packagings` を足す。
+   - _response で `product["packagings"]`（その商品の行。数値と日時は JSON にできる形）と `response["packaging_units"]` を詰める。
+   - update_product_detail では、"packagings" が values にあれば、テナントの判定 → validate → :221 の後で save_packagings、の順に呼ぶ。
+4. **frontend/src/features/tcg-product-import/productDetailModel.ts**
+   - Detail に `product.packagings` と `packaging_units` を足す。
+   - Draft に `packagings: PackagingDraft[]` を足す。数・重さ・URL は文字列で持ち、URL は改行区切り。
+   - draftFrom は packaging_units の順に組む。行が無い単位は空にする。
+   - buildUpdateBody で、全単位を `packagings` として送る。数・重さは空なら null、URL は words() で分ける。
+   - 符号を文言に直す `packagingErrorMessage(err, t)` を足す。
+5. **frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx**
+   - 除外ワードの印（:296）の後ろ、読み取り専用の欄（:297）の前に、見出し「入数・重さ」と単位ごとの行を出す。対象は mode === "edit" のときだけ。
+   - 欄は TextField（type="number"）・Select・Textarea の金型だけで作る。
+   - 保存に失敗したときの表示は、requiredFieldsMessage の後に packagingErrorMessage を試す。
+   - emptyDraft に `packagings: []` を足す。
+6. **frontend/src/features/tcg-product-import/product-csv.css**
+   - 単位ごとの枠のクラス（`.product-detail__packaging` など）を足す。
+   - 値は既存のトークン（var(--space-*)・var(--role-*)・境界線の色トークン）だけを使い、色の直値は書かない。
+7. **frontend/src/locales/ja.json・en.json**
+   - productDetail.packaging.* を両方に同じキーで足す。中身は、見出し・各欄の名前・出典4種＋legacy・説明・errors.<符号>。
+8. **試験**
+   - backend/tests/test_tcg_product_detail_pg.py に次を足す。
+     - GET に packagings・packaging_units が出る。
+     - 新規・変更・同じ値（同じ値なら書かず、updated_at が変わらない）。
+     - 全部空にすると行が消える。
+     - 送らなければ触らない。
+     - 422 の各符号。
+     - テナントの商品は 422。
+     - 荷姿だけを別に直すと 409。
+     - 失敗したら商品の他の項目も巻き戻る。
+     - audit に荷姿が入る。
+   - frontend の TcgProductDetailDrawer.test.tsx・productDetailModel.test.ts に次を足す。
+     - 欄が単位の数だけ出る。
+     - legacy が disabled になる。
+     - 送る body の形。
+     - 符号の文言。
+     - 作成モードでは欄が出ない。
+9. **docs/handoff/product-packaging/design.md**（この節）
+10. **frontend/api-contract/openapi.json**
+    - 便3 と同じ方法（Python 3.12・固定版）で作り直す。
+    - 変わるのは ProductDetailUpdate と、新しい PackagingIn だけのはず。
+
+### 12-4. 触らない範囲
+- migrations/・deploy.yml・scripts/
+- 表の制約
+- routers/products.py・schemas/product.py
+- 在庫検索
+- ProductEditPage
+- 作成 API
+- quantity_units の管理画面
+- backend/tests/rls_bootstrap.py（便3 で直した共有部品。足りなければ直さずに止めて報告する）
+
+### 12-5. 点検（生出力を /tmp/CC報告ファイル/product-packaging/bin4/impl/ へ）
+- backend: 足した試験と test_tcg_product_detail_pg.py の全体を、PostgreSQL で通す。test_product_packagings_pg.py も通す。
+- frontend: `npm run check:all`・`npm run test -- tcg-product-import`・`npx tsc --noEmit`。
+- i18n: ja と en の productDetail のキー差が0。
+- 直書きの点検: 足した行に、日本語の直書き・生の `<select>`／`<input>`・色の直値が0件（`git diff` の追加行を grep する）。
+
+### 12-6. 想定分岐（当てはまったら直さずに止めて報告）
+- **見出しの金型が components/ にある**（SectionHeader など）
+  - ある → それを使う。無い → `<h3>` に、既存トークンだけを使ったクラスを付ける。
+  - どちらにしたかを報告する。この分岐だけは止めない。
+- **本番の荷姿に、中の単位が EDITABLE_UNITS と違う行がある**（例: CASE の中が PACK）
+  - 止める。画面で上書きすると値が変わるため。
+  - 着手前に recon2 の件数で確かめる。
+- **試験の PostgreSQL に CARD の行が無い**（rls_bootstrap が入れるのは PACK/BOX/CASE だけ）
+  - 試験の中で CARD を足す（試験の DB だけ）。
+  - 共有部品を直す必要が出たら止める。
+- **openapi.json の差分に、ProductDetailUpdate・PackagingIn 以外の変更が出る** → 止める。
+- **revision の計算を変えると既存の試験が落ちる** → 落ちた試験名と理由を報告して止める。
+
+### 12-7. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| U1 必須 CI がすべて緑 | `gh pr checks` で fail 0・pending 0 |
+| U2 §12-5 の点検がすべて○ | impl/ の生出力 |
+| U3 本番反映後、詳細を開くと「入数・重さ」に CASE・BOX・PACK の3行が出て、便2 で写した値が入っている | PO が super-admin の画面で目視する。API 側は、値のある1商品について、reader 鍵の道で読んだ product_packagings の値と GET 応答の形を試験で突き合わせる |
+| U4 本番反映後、商品 API の4項目（便3 の K6）が全商品で今と同じ | §11-7 の K6 SQL（ai_ro の view 版）をもう一度流し、diff_any=0 |
+| U5 本番反映後、デプロイが成功し /api/health が 200 | `gh run view`・curl |
