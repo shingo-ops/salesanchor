@@ -372,4 +372,169 @@ frontend/src の全ファイル（項目名は変えない）、migrations/（�
 ブランチ: release/product-packaging-readers（このカードと同じ PR）。最初に `./scripts/dev/executor-preflight.sh || exit 1`。commit は実装1つ（`feat: 入数と重さを荷姿の表から読み書きする（ADR-1028 便3）`）。push まで。PR は Opus が作る。報告は DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
 
 ### 11-8. 4項目名が残る所（便3 後・K9 の元）
-実装の後に impl/k9_names.out を写す（Opus）。
+fa7f84b68 時点の `git grep -n -E "packs_per_box|boxes_per_case|box_weight_kg|case_weight_kg" -- backend frontend/src scripts` の結果（全 134 行・21 ファイル）。便5 の K9 はこの一覧を起点に、古い列を直接読む所が 0 になったかを見る。
+
+| ファイル | 行数 |
+|---|---|
+| `backend/app/routers/inventory_search.py` | 2 |
+| `backend/app/routers/products.py` | 3 |
+| `backend/app/schemas/inventory_search.py` | 2 |
+| `backend/app/schemas/product.py` | 12 |
+| `backend/app/services/inventory_search.py` | 9 |
+| `backend/app/services/product_packagings.py` | 5 |
+| `backend/tests/conftest.py` | 4 |
+| `backend/tests/test_product_packagings_pg.py` | 21 |
+| `backend/tests/test_product_packagings_sql.py` | 8 |
+| `backend/tests/test_products.py` | 8 |
+| `backend/tests/test_products_required_fields_pg.py` | 1 |
+| `frontend/src/components/CommerceSubmitButtonMigration.test.tsx` | 2 |
+| `frontend/src/components/InventorySearchBar.tsx` | 2 |
+| `frontend/src/pages/invoice-create/InvoiceCreatePage.tsx` | 3 |
+| `frontend/src/pages/products/ProductEditPage.tsx` | 12 |
+| `frontend/src/pages/products/ProductsPage.tsx` | 4 |
+| `frontend/src/pages/products/products.types.ts` | 9 |
+| `frontend/src/pages/quote-create/QuoteCreatePage.tsx` | 3 |
+| `frontend/src/pages/quote-create/quoteDraft.test.ts` | 4 |
+| `frontend/src/pages/quote-create/quoteDraft.ts` | 7 |
+| `scripts/seed_products_from_master.py` | 13 |
+
+<details><summary>全行</summary>
+
+```
+backend/app/routers/inventory_search.py:122:            box_weight_kg=c.box_weight_kg,
+backend/app/routers/inventory_search.py:123:            case_weight_kg=c.case_weight_kg,
+backend/app/routers/products.py:142:            for f in ("boxes_per_case", "packs_per_box", "box_weight_kg", "case_weight_kg")
+backend/app/routers/products.py:146:            "NULL AS boxes_per_case, NULL AS packs_per_box, "
+backend/app/routers/products.py:147:            "NULL AS box_weight_kg, NULL AS case_weight_kg"
+backend/app/schemas/inventory_search.py:62:    box_weight_kg: float | None = Field(default=None, description="Box 単体重量 (kg)。")
+backend/app/schemas/inventory_search.py:63:    case_weight_kg: float | None = Field(default=None, description="Case 重量 (kg)。")
+backend/app/schemas/product.py:116:    boxes_per_case: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:117:    packs_per_box: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:118:    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:119:    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:186:    boxes_per_case: int | None = None
+backend/app/schemas/product.py:187:    packs_per_box: int | None = None
+backend/app/schemas/product.py:188:    box_weight_kg: Decimal | None = None
+backend/app/schemas/product.py:189:    case_weight_kg: Decimal | None = None
+backend/app/schemas/product.py:68:    boxes_per_case: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:69:    packs_per_box: int | None = Field(default=None, gt=0)
+backend/app/schemas/product.py:70:    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/schemas/product.py:71:    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+backend/app/services/inventory_search.py:102:    # box_weight_kg・case_weight_kg=形態別重量
+backend/app/services/inventory_search.py:104:    box_weight_kg: float | None = None
+backend/app/services/inventory_search.py:105:    case_weight_kg: float | None = None
+backend/app/services/inventory_search.py:344:    {legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg,
+backend/app/services/inventory_search.py:345:    {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg,
+backend/app/services/inventory_search.py:438:                box_weight_kg=(
+backend/app/services/inventory_search.py:439:                    float(r["box_weight_kg"]) if r.get("box_weight_kg") is not None else None
+backend/app/services/inventory_search.py:441:                case_weight_kg=(
+backend/app/services/inventory_search.py:442:                    float(r["case_weight_kg"]) if r.get("case_weight_kg") is not None else None
+backend/app/services/product_packagings.py:16:    "boxes_per_case": ("CASE", "count", "BOX"),
+backend/app/services/product_packagings.py:17:    "case_weight_kg": ("CASE", "weight", None),
+backend/app/services/product_packagings.py:18:    "packs_per_box": ("BOX", "count", "PACK"),
+backend/app/services/product_packagings.py:19:    "box_weight_kg": ("BOX", "weight", None),
+backend/app/services/product_packagings.py:3:応答の4項目（boxes_per_case・packs_per_box・box_weight_kg・case_weight_kg）は、
+backend/tests/conftest.py:816:                boxes_per_case INTEGER,
+backend/tests/conftest.py:817:                packs_per_box INTEGER,
+backend/tests/conftest.py:818:                box_weight_kg NUMERIC(8, 3),
+backend/tests/conftest.py:819:                case_weight_kg NUMERIC(8, 3),
+backend/tests/test_product_packagings_pg.py:146:        assert body["boxes_per_case"] == 12
+backend/tests/test_product_packagings_pg.py:147:        assert float(body["case_weight_kg"]) == 6.5
+backend/tests/test_product_packagings_pg.py:148:        assert body["packs_per_box"] == 20
+backend/tests/test_product_packagings_pg.py:149:        assert float(body["box_weight_kg"]) == 0.236
+backend/tests/test_product_packagings_pg.py:158:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 10})
+backend/tests/test_product_packagings_pg.py:160:    assert response.json()["boxes_per_case"] == 10
+backend/tests/test_product_packagings_pg.py:166:    old = (await db.execute(text("SELECT boxes_per_case FROM public.products WHERE id = :i"), {"i": pid})).scalar_one()
+backend/tests/test_product_packagings_pg.py:177:            "boxes_per_case": 12, "case_weight_kg": "6.500", "packs_per_box": 20, "box_weight_kg": "0.236",
+backend/tests/test_product_packagings_pg.py:189:        r1 = await client.patch(f"/api/v1/products/{pid}", json={"box_weight_kg": None})
+backend/tests/test_product_packagings_pg.py:194:        r2 = await client.patch(f"/api/v1/products/{pid}", json={"packs_per_box": None})
+backend/tests/test_product_packagings_pg.py:204:            "name_ja": "T5 商品", "boxes_per_case": 12, "packs_per_box": 20,
+backend/tests/test_product_packagings_pg.py:205:            "box_weight_kg": "0.236", "case_weight_kg": "6.500",
+backend/tests/test_product_packagings_pg.py:209:    assert body["boxes_per_case"] == 12 and body["packs_per_box"] == 20
+backend/tests/test_product_packagings_pg.py:215:        text("SELECT boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg FROM public.products WHERE id = :i"),
+backend/tests/test_product_packagings_pg.py:225:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 0})
+backend/tests/test_product_packagings_pg.py:229:async def test_t7_case_contained_pack_is_not_boxes_per_case(client_factory):
+backend/tests/test_product_packagings_pg.py:234:        assert (await client.get(f"/api/v1/products/{pid}")).json()["boxes_per_case"] is None
+backend/tests/test_product_packagings_pg.py:235:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 8})
+backend/tests/test_product_packagings_pg.py:245:        response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 5})
+backend/tests/test_product_packagings_pg.py:265:            response = await client.patch(f"/api/v1/products/{pid}", json={"boxes_per_case": 10, "moq": 3})
+backend/tests/test_product_packagings_pg.py:28:    "boxes_per_case INTEGER", "packs_per_box INTEGER", "box_weight_kg NUMERIC(8,3)", "case_weight_kg NUMERIC(8,3)",
+backend/tests/test_product_packagings_sql.py:14:    sql = legacy_field_sql("packs_per_box", "x.id")
+backend/tests/test_product_packagings_sql.py:19:    for field, unit in (("case_weight_kg", "CASE"), ("box_weight_kg", "BOX")):
+backend/tests/test_product_packagings_sql.py:27:    assert set(LEGACY_FIELDS) == {"boxes_per_case", "case_weight_kg", "packs_per_box", "box_weight_kg"}
+backend/tests/test_product_packagings_sql.py:32:    assert f'{legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg' in sql
+backend/tests/test_product_packagings_sql.py:33:    assert f'{legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg' in sql
+backend/tests/test_product_packagings_sql.py:34:    assert "p.box_weight_kg" not in sql
+backend/tests/test_product_packagings_sql.py:35:    assert "p.case_weight_kg" not in sql
+backend/tests/test_product_packagings_sql.py:7:    sql = legacy_field_sql("boxes_per_case", "p.id")
+backend/tests/test_products.py:571:        "boxes_per_case": 16,
+backend/tests/test_products.py:572:        "packs_per_box": 30,
+backend/tests/test_products.py:573:        "box_weight_kg": "1.250",
+backend/tests/test_products.py:574:        "case_weight_kg": "20.500",
+backend/tests/test_products.py:620:    async def test_negative_boxes_per_case_rejected(self, client):
+backend/tests/test_products.py:624:            "boxes_per_case": -1,
+backend/tests/test_products.py:628:    async def test_zero_boxes_per_case_rejected(self, client):
+backend/tests/test_products.py:632:            "boxes_per_case": 0,
+backend/tests/test_products_required_fields_pg.py:26:    "boxes_per_case INTEGER", "packs_per_box INTEGER", "box_weight_kg NUMERIC(8,3)", "case_weight_kg NUMERIC(8,3)",
+frontend/src/components/CommerceSubmitButtonMigration.test.tsx:26:  boxes_per_case: null, packs_per_box: null, box_weight_kg: null, case_weight_kg: null,
+frontend/src/components/CommerceSubmitButtonMigration.test.tsx:39:const nonDefaultProductPayload = { ...productPayload, name_ja: 'Product', name_en: 'Product EN', product_kind: 'Kind', tcg_type: 'pokemon', set_type: 'Set', category: 'Category', mark: 'M', status: 'discontinued', unit_price: 12.5, quantity: 7, weight: 0.75, notes: 'memo', release_date: '2026-09-28', jan_code: 'JAN-1', card_number: 'CARD-1', expansion_code: 'EXP-1', rarity: 'Rare', language: 'en', unit_price_usd: 11.5, unit_price_eur: 10.5, image_url: 'https://example.com/p.png', boxes_per_case: 24, packs_per_box: 12, box_weight_kg: 1.5, case_weight_kg: 3.5, volume_weight: 4.5, moq: 6, hs_code: 'HS', material: 'Material', item: 'Item', required_output_value: 'Required', search_keywords: 'search', exclude_keywords: 'exclude', related_series: 'Series' };
+frontend/src/components/InventorySearchBar.tsx:53:  box_weight_kg?: number | null;
+frontend/src/components/InventorySearchBar.tsx:54:  case_weight_kg?: number | null;
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:132:        box_weight_kg: c.box_weight_kg ?? null,
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:133:        case_weight_kg: c.case_weight_kg ?? null,
+frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:377:                          updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
+frontend/src/pages/products/ProductEditPage.tsx:149:      boxes_per_case: form.boxes_per_case ? Number(form.boxes_per_case) : null,
+frontend/src/pages/products/ProductEditPage.tsx:150:      packs_per_box: form.packs_per_box ? Number(form.packs_per_box) : null,
+frontend/src/pages/products/ProductEditPage.tsx:151:      box_weight_kg: form.box_weight_kg ? Number(form.box_weight_kg) : null,
+frontend/src/pages/products/ProductEditPage.tsx:152:      case_weight_kg: form.case_weight_kg ? Number(form.case_weight_kg) : null,
+frontend/src/pages/products/ProductEditPage.tsx:321:                <TextFieldControl variant="product-edit" type="number" min="0" value={form.boxes_per_case} onChange={(e) => setForm({ ...form, boxes_per_case: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:325:                <TextFieldControl variant="product-edit" type="number" min="0" value={form.packs_per_box} onChange={(e) => setForm({ ...form, packs_per_box: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:329:                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.case_weight_kg} onChange={(e) => setForm({ ...form, case_weight_kg: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:333:                <TextFieldControl variant="product-edit" type="number" min="0" step="0.001" value={form.box_weight_kg} onChange={(e) => setForm({ ...form, box_weight_kg: e.target.value })} />
+frontend/src/pages/products/ProductEditPage.tsx:83:          boxes_per_case: p.boxes_per_case != null ? String(p.boxes_per_case) : "",
+frontend/src/pages/products/ProductEditPage.tsx:84:          packs_per_box: p.packs_per_box != null ? String(p.packs_per_box) : "",
+frontend/src/pages/products/ProductEditPage.tsx:85:          box_weight_kg: p.box_weight_kg != null ? String(p.box_weight_kg) : "",
+frontend/src/pages/products/ProductEditPage.tsx:86:          case_weight_kg: p.case_weight_kg != null ? String(p.case_weight_kg) : "",
+frontend/src/pages/products/ProductsPage.tsx:373:                  <td>{p.boxes_per_case ?? "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:374:                  <td>{p.packs_per_box ?? "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:391:                  <td>{p.box_weight_kg != null ? Number(p.box_weight_kg).toFixed(1) : "-"}</td>
+frontend/src/pages/products/ProductsPage.tsx:392:                  <td>{p.case_weight_kg != null ? Number(p.case_weight_kg).toFixed(1) : "-"}</td>
+frontend/src/pages/products/products.types.ts:37:  boxes_per_case: number | null;
+frontend/src/pages/products/products.types.ts:38:  packs_per_box: number | null;
+frontend/src/pages/products/products.types.ts:39:  box_weight_kg: number | null;
+frontend/src/pages/products/products.types.ts:40:  case_weight_kg: number | null;
+frontend/src/pages/products/products.types.ts:78:  boxes_per_case: string;
+frontend/src/pages/products/products.types.ts:79:  packs_per_box: string;
+frontend/src/pages/products/products.types.ts:80:  box_weight_kg: string;
+frontend/src/pages/products/products.types.ts:81:  case_weight_kg: string;
+frontend/src/pages/products/products.types.ts:99:  boxes_per_case: "", packs_per_box: "", box_weight_kg: "", case_weight_kg: "",
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:226:                        updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:84:        box_weight_kg: c.box_weight_kg ?? null,
+frontend/src/pages/quote-create/QuoteCreatePage.tsx:85:        case_weight_kg: c.case_weight_kg ?? null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:32:        box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:33:        case_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.test.ts:40:  it("returns box_weight_kg when unit is box", () => {
+frontend/src/pages/quote-create/quoteDraft.test.ts:43:  it("returns case_weight_kg when unit is case", () => {
+frontend/src/pages/quote-create/quoteDraft.ts:22:  box_weight_kg?: number | null;
+frontend/src/pages/quote-create/quoteDraft.ts:24:  case_weight_kg?: number | null;
+frontend/src/pages/quote-create/quoteDraft.ts:33: * unit=box→box_weight_kg / unit=case→case_weight_kg / それ以外→fallback(products.weight)。
+frontend/src/pages/quote-create/quoteDraft.ts:83:  box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:84:  case_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:98:    box_weight_kg: null,
+frontend/src/pages/quote-create/quoteDraft.ts:99:    case_weight_kg: null,
+scripts/seed_products_from_master.py:139:                    boxes_per_case=_parse_int(raw.get("Boxes per Case", "")),
+scripts/seed_products_from_master.py:140:                    packs_per_box=_parse_int(raw.get("Packs per Box", "")),
+scripts/seed_products_from_master.py:141:                    box_weight_kg=_parse_float(raw.get("Box重量", "")),
+scripts/seed_products_from_master.py:142:                    case_weight_kg=_parse_float(raw.get("Case重量", "")),
+scripts/seed_products_from_master.py:157:        if any(v is not None for v in (r.boxes_per_case, r.packs_per_box, r.box_weight_kg, r.case_weight_kg))
+scripts/seed_products_from_master.py:17:  Boxes per Case  → boxes_per_case
+scripts/seed_products_from_master.py:18:  Packs per Box   → packs_per_box
+scripts/seed_products_from_master.py:19:  Box重量          → box_weight_kg
+scripts/seed_products_from_master.py:20:  Case重量         → case_weight_kg
+scripts/seed_products_from_master.py:71:    boxes_per_case: int | None
+scripts/seed_products_from_master.py:72:    packs_per_box: int | None
+scripts/seed_products_from_master.py:73:    box_weight_kg: float | None
+scripts/seed_products_from_master.py:74:    case_weight_kg: float | None
+```
+
+</details>
