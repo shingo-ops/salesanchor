@@ -27,6 +27,7 @@
     "freshOnly": "{{hours}}時間以内",
     "sort": {
       "placeholder": "並べ替え",
+      "releaseAsc": "発売日が早い順",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
       "postedDesc": "投稿が新しい順"

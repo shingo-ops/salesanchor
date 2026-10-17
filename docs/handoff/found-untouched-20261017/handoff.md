@@ -7,6 +7,7 @@
 - 未確認: deploy.yml が .env に書き出すほかの secrets に、引用符なし・二重引用符の行が残っているか。値に `$` を含むものがあるか（値は見ずに、`$` の有無と長さだけを数える）。
 - 関連: 本番 .env:931 で変数 `s` が未定義という docker compose の警告（side4/REPORT.md「P5 本番反映」観測②）。同じ原因かは未確認。
 - 注意: deploy.yml は危険パスなので、PO の「GO #番号」が要る。
+- 便: docs/handoff/deploy-secrets-dollar-quote/design.md（完了: #4498 本番反映済み、K1〜K4 ○）
 
 ## 2. test_migration_value_writes.py を CI で動かす
 - 事実: scripts/tests/test_migration_value_writes.py は、どの workflow からも呼ばれていない（docs/handoff/migration-dryrun-enforce/design.md:58）。
