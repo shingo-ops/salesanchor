@@ -11,7 +11,7 @@ vi.mock('../../lib/api', () => ({ api: mock }));
 
 const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: 'cat', mark: null,
-  condition: 'sealed', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
+  condition: 'Sealed box', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
   merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'S',
   unit_price: 10, quantity: 2, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null,
 };
@@ -45,7 +45,7 @@ describe('InventoryPage table layout (DataTable)', () => {
         .map((k) => (en as unknown as { inventory: { col: Record<string, string> } }).inventory.col[k]),
     );
     expect(heads).not.toContain(en.inventory.col.category);
-    expect(within(rowEl).getByText('sealed').className).toContain('comp-badge--success');
+    expect(within(rowEl).getByText('Sealed box').className).toContain('comp-badge--info');
   });
 
   it('sort menu has 3 options and placeholder by default; picking one sets sort and resetAll returns to release_date desc', async () => {

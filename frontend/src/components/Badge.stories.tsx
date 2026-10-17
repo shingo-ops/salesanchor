@@ -26,6 +26,7 @@ export const AllVariantsSoft: Story = {
       <Badge variant="success"  appearance="soft">success</Badge>
       <Badge variant="warning"  appearance="soft">warning</Badge>
       <Badge variant="danger"   appearance="soft">danger</Badge>
+      <Badge variant="purple"   appearance="soft">purple</Badge>
     </div>
   ),
 };
@@ -38,6 +39,7 @@ export const AllVariantsSolid: Story = {
       <Badge variant="success"  appearance="solid">success</Badge>
       <Badge variant="warning"  appearance="solid">warning</Badge>
       <Badge variant="danger"   appearance="solid">danger</Badge>
+      <Badge variant="purple"   appearance="solid">purple</Badge>
     </div>
   ),
 };
