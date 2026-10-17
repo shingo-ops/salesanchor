@@ -361,6 +361,9 @@ launchctl bootout gui/$(id -u)/jp.salesanchor.mac-jobs-watch
 
 開発用 DB（colima の profile default）は従来どおり使う。colima-idle-stop が自動停止する。
 
+AI（Claude Code）は見張り mac-vm-guard（~/.claude/scripts/mac-vm-guard.py）で、default 以外の colima profile の作成・起動と limactl start/create/clone を実行前に止められる。（vm-guard-allow: 見張りの説明文。実行する命令ではない）
+例外は PO が `! bash scripts/permit-danger.sh "mac vm"` で出す許可券だけ（1回限り・30分）。設計: [docs/handoff/mac-vm-hook/design.md](../handoff/mac-vm-hook/design.md)
+
 ---
 
 ## 関連 doc
