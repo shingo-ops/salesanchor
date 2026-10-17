@@ -21,6 +21,14 @@
 6. まとめ売りの行は、単価の確かめの相場・価格の引き継ぎ・買取単位の判定から外す。同じ行をまとめる鍵に bundle_size を入れる。
 7. ADR-1021 便2 の set の換算（値段÷N・数量×N・単位 Piece・備考「N枚セット単位」・price_basis `V102:bulk:set:N`）はやめる。便2 の piece と review はそのまま。
 
+## 現行かどうかの決め方（2026-10-18 追記）
+
+- 現行（is_current）を決めるキーは (supplier_channel_id, product_id, condition_id) のままにし、bundle_size を入れない。
+- 理由: 新しい投稿＝その仕入元の今の在庫を表すため。
+- 影響: 同じ仕入元が後で同じ商品をバラや別のまとめ数で出すと、古いまとめの行は現行から外れる。2026-10-18 時点では観測 0 件。
+- 根拠: backend/app/services/tcg_analyzer_svc.py の `_merge_supplier_products`（1951 行〜）の UPDATE（2076 行〜。組は product_id・condition_id で、同じ仕入元 sm.supplier_channel_id の中で最新の投稿を 1 つ決める。2031〜2073 行）。
+- PO 決定: 2026-10-18、チャットでの回答は「y」。
+
 ## Why
 
 - PO の指定が「値段はまとめ1つの値段・割らない」「数量はまとめの数」で、ADR-1021 便2 の決定と逆。
