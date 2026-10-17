@@ -1,8 +1,8 @@
 # 共用商品マスタ 新規登録ルール（値の決め方）
 
 > この文書は何か: 共用商品（tenant_id が無い products の行）を新しく登録するとき、項目ごとに「何を根拠に、どう値を決めるか」をまとめた1枚。AI・人とも、登録の前に必ず読む（フック scripts/agent-hooks/master-register-rules-guard.py が登録操作の前に全文を表示して止める・#4369）。
-> 親: [README.md](./README.md)／必須化の決定: [ADR-1020](../../adr/ADR-1020-shared-product-required-fields.md)（Proposed）
-> 状態: **草案**。PO の言葉と PO 判断の記録だけを規則として載せる。決まっていない項目は「未決」と書き、推測で規則を作らない。
+> 親: [README.md](./README.md)／必須化の決定: [ADR-1020](../../adr/ADR-1020-shared-product-required-fields.md)（Accepted）
+> 状態: **有効**（ADR-1020 Accepted）。PO の言葉と PO 判断の記録だけを規則として載せる。決まっていない項目は「未決」と書き、推測で規則を作らない。
 > 起案: 2026-10-16
 
 ## 1. 全項目に共通
@@ -23,7 +23,7 @@
 | 検索ワード | product_search_keywords | 商品名をもとに作る。ポケモンは型番を検索ワードに入れない（mark 欄だけ）。ワンピースで型番を入れるかは【未決】 | 認めない（1語以上） | sword-shield-catalog.md §4（PO 2026-09-04）／onepiece-catalog.md §8 |
 | 除外ワード | product_exclude_keywords | 他の商品と取り違えやすいときに付ける。例: 単品が「N種セット」を拾わないよう単品側に「種セット」。型番が他商品と重なるときは相手の名前で見分ける | 記録があれば認める | sword-shield-catalog.md §4（PO 2026-09-04）／product-code-collision-warning/design.md（excl-official） |
 | 中分類（作品） | products.work_id | 【未決】決め方の PO 判断は無い（ポケモン・ワンピースなどの作品を選ぶ。Box・Set を「中分類」と呼ばない） | 認めない | PO 2026-10-12（用語） |
-| 細分類 | products.product_format_id | 選んだゲームで使える細分類から選ぶ（ADR-1020 便2 以降。今は画面・API で入れる手段が無い） | 認めない | ADR-1020 What 5 |
+| 細分類 | products.product_format_id | 選んだゲームで使える細分類から選ぶ（商品詳細の画面・解析レビューの登録・商品 CSV で入れられる。ADR-1020 便2） | 認めない | ADR-1020 What 5 |
 | 商品区分 | products.product_category_id | 名前の語では決めず、公式のセット内容（商品の形）で決める。Set は別々の物 A と B が1つの商品になっているときだけ | 認めない | PO 2026-10-12「名前の中にセットがあるからと短絡的に考えずに…セットはAとBがセットになっている場合に付与する」 |
 
 対象外: メーカー（PO の列挙に無い。前例は「既存の同じ作品の商品に合わせる」onepiece-catalog.md §8）。
@@ -64,3 +64,9 @@
 - U1 解決済み（PO 2026-10-16）: 英語名が英語圏でも見つからないときは記録付きで空を認める
 - U2 日本語名・中分類の決め方
 - U3 ワンピースなど型番が商品名に入っているゲームで、型番を検索ワードに入れるか
+
+## 5. 仕組みで止めること（ADR-1020）
+- 共用商品を書く入口（商品詳細の画面の登録・保存、解析レビューの登録、商品 CSV の取り込み・往復 CSV、在庫の商品画面の `POST /products`・`PATCH /products/{id}`）は、9項目が足りないと保存せず 422 `REQUIRED_FIELDS_MISSING:<項目名>` を返す。値か印があった項目を空に戻す更新は 422 `REQUIRED_FIELDS_CLEARED:<項目名>` を返す。古い空欄だけでは止めない。
+- 画面はこの符号を項目名の言葉に直して出す（`requiredFieldsMessage`）。
+- 「調べたが無い」の印は `public.product_blank_confirmations`（英語名・型番・発売日・除外ワードの4つだけ）。値が入ると同じ保存の中で印を外す。
+- 在庫の商品画面の `POST /products` は中分類・細分類・商品区分を受け取らないため、共用の表へは常に 422 になる。共用商品の新規登録は商品詳細の画面（TCG 商品マスタ）か CSV で行う。
