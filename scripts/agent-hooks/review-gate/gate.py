@@ -320,6 +320,8 @@ def check_segment(toks, sep, wd, depth, ctx, top):
         if len(mpos) > 1:
             n = None
         if url_repo:
+            if repo and repo.lower() != url_repo.lower():
+                raise Block("URL の owner/repo と --repo/-R の値が一致しないため止めます")
             repo = url_repo
         ctx.add(n, repo, wd, "gh pr merge", "--auto" in toks,
                 flag_value(toks, ("--match-head-commit",)))

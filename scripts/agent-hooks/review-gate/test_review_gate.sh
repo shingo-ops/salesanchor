@@ -271,6 +271,9 @@ expect "R1(7) osascript -e" 2 "osascript -e 'do shell script \"gh pr merge 2\"'"
 expect "R2(7) 記録ありの gh api repos/o/r/pulls/1/merge" 0 'gh api -X PUT repos/o/r/pulls/1/merge'
 expect "誤止めなし(7) bash <<< echo hello" 0 'bash <<< "echo hello"'
 
+expect "R1(7) URL o/r と --repo o/r2 の不一致" 2 'gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r2'
+expect "R2(7) URL o/r と --repo o/r の一致" 0 'gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r'
+
 # ---------------------------------------------------------------- install -> rollback で元に戻る
 roundtrip() { # NAME SETTINGS_JSON
   local name="$1" CD="$T/claude-$RANDOM"
