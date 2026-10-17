@@ -62,18 +62,7 @@ jobs:
         working-directory: frontend
         continue-on-error: true
 
-      - name: Unit tests with coverage gate
-        run: |
-          # テストファイルが存在する場合のみカバレッジゲートを発動（Phase 0→1 移行保護）
-          TEST_COUNT=$(find src -name "*.test.ts" -o -name "*.test.tsx" 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$TEST_COUNT" -gt "0" ]; then
-            echo "▶ ${TEST_COUNT} test file(s) found. Running coverage gate..."
-            npm run test:coverage
-          else
-            echo "⚠️  No unit test files found. Coverage gate skipped (Phase 0)."
-            echo "    Add src/**/*.test.{ts,tsx} to activate the gate."
-          fi
-        working-directory: frontend
+      # 画面の試験は e2e.yml の unit-run（必須チェック Lint & Dark Mode Check (ADR-067) の集約）へ移した（ADR-1020 便4d）
 
   # Storybook ビルドを check ジョブと並列実行（2026-06-01）。
   # Required Check ではないため分離して並列化しても PR ブロックへの影響なし。
