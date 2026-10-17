@@ -32,6 +32,10 @@
   color: var(--info-text);
 }
 
+.inventory-cell__condition--success {
+  color: var(--success-text);
+}
+
 .inventory-cell__condition--warning {
   color: var(--warning-text);
 }

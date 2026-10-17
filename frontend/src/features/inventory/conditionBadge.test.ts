@@ -5,7 +5,7 @@ import { conditionBadgeVariant } from "./conditionBadge";
 // ADR-1023 の12値（public.line_conditions）＋ Bulk。割り当ては design.md の表。
 const CASES: ReadonlyArray<[string, BadgeVariant]> = [
   ["Sealed box", "info"],
-  ["Case", "info"],
+  ["Case", "success"],
   ["Unsearched pack", "info"],
   ["Damaged sealed box", "warning"],
   ["Damaged case", "warning"],
