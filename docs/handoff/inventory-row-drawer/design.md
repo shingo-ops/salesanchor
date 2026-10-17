@@ -446,3 +446,88 @@ _BASE_FROM = _base_from()
 - 判定: APPROVE（2026-10-16、Opus）
 - 確認: 正本は analysis_results のまま、新しい保存場所・写しなし。migration なし。新しい UI 部品・文言なし。権限境界は不変（書き込み API は既存の require_super_admin、スライドは super admin・PC のみ）。v6 の配信予約は既存の v6 値修正（:288-290）と同じ書き方。受け入れ基準すべてに検証方法あり。
 - 未解決（実装時に事実確定、合わなければ停止）: InventoryRowDrawer.test.tsx・InventoryPage.rowdrawer.test.tsx の既存の viewOnly 前提の期待値（変える場合は理由を残す）、router の状態の経路で v6 判定に使う既存関数（:124-131 の v102_job_id_of_item の戻り値で判定する）。
+
+## 14. 便4: 原文だけのタブ（2026-10-16・PO「y」）
+
+### 14-1 目的（PO の言葉）
+「在庫表のスライドページにタブを追加…クリックしたら原文だけが表示されるように…スタッフの確認用…先程作ったページはsuperadminのみ…原文だけのページはadminとadminが権限付与して在庫表が見れるユーザーは全員見れるようにしたい」
+- super admin: スライドに「解析」「原文」の2タブ（既定は解析＝今のまま）。
+- 在庫表を見られる人（products.view。recon R4-2）: 原文だけのスライド。新しい権限キーは作らない。
+- 原文は投稿全体を出し、在庫行に当たる行に色を付ける（ShadowSourcePane。recon R4-3）。送信者名は出さない（raw_text に入っていない）。
+- PC のみ（スマホでは開かない＝今と同じ）。
+
+### 14-2 対象 / 対象外
+- 対象: backend/app/routers/inventory_offers.py（新 API 1本）、backend/app/schemas/inventory_offers.py（応答の型）、backend/tests/（新テスト）、frontend/src/pages/inventory/InventoryPage.tsx（入口の門）、frontend/src/features/inventory/InventoryRowDrawer.tsx（タブと原文表示）、同テスト（features/inventory/InventoryRowDrawer.test.tsx・pages/inventory/InventoryPage.rowdrawer.test.tsx）、backend/tests/test_inventory_raw_texts.py・test_inventory_raw_texts_pg.py（B2 実PG）、frontend/src/locales/ja.json・en.json。
+- 対象外: DB・migration（なし）、/tcg/analysis-results と書き込み API の権限（super admin のまま）、配信行の定義 distribution_rows_parts 本体（使い回すだけで変えない）、在庫表そのもののテナント分け（R4-4。既存の範囲外課題）、スマホ表示。
+
+### 14-3 変更前 → 変更後
+- 入口 InventoryPage.tsx:603: `isSuperAdmin && !isMobile ? open : undefined` → `!isMobile ? open : undefined`。`<InventoryRowDrawer>` に `isSuperAdmin` を渡す。
+- 新 API: `GET /inventory/raw-texts?extraction_item_ids=<id>&extraction_item_ids=…`
+  - 門: `dependencies=[Depends(require_permission("products.view"))]`（GET /inventory と同じ）。
+  - 件数: 1〜50 件。0 件・51 件以上は 422。
+  - 守り: GET /inventory と同じ組み立て（load_distribution_settings → _max_age_hours → include_flag_single → _age_window → distribution_rows_parts）で head（dist_base）を作り、`SELECT DISTINCT item_key FROM dist_base WHERE item_key = ANY(:ids)` に入った ID だけを source_messages／extraction_items と結んで返す。WHERE の写しを作らない（ADR-1014: 定義は1か所）。max_age_hours が None なら配信行は無い扱い。
+  - 返す項目: `extraction_item_id, raw_text, line_start, line_end` だけ。gemini・system・要約・修正履歴・送信者・仕入先 ID は返さない。
+  - 該当 0 件は 404（`{"detail": "not_found"}`）。
+- InventoryRowDrawer:
+  - props に `isSuperAdmin: boolean` を足す。
+  - super admin: Drawer の headerSlot に Tabs（variant="underline"）「解析｜原文」。解析タブは今のまま（/tcg/analysis-results・ReviewItemDrawer・直す機能・tcg.review 購読）。原文タブを開いたときだけ新 API を呼ぶ。
+  - 非 super admin: タブを出さず原文だけ。/tcg/analysis-results は呼ばない・tcg.review を購読しない。
+  - 原文表示: 件ごとに `<ShadowSourcePane rawText blockRange={{start: line_start, end: line_end}} />`（line が null なら blockRange なし）。まとめ行（2件以上）は既存の件 pill タブ（inventory.rowDrawer.itemTab）で切り替える。
+  - エラー: 403→forbidden 表示（既存）、404→notFound（既存キー）、その他→loadError（既存キー）。
+- i18n 追加（ja/en 同時）: `inventory.rowDrawer.tabAnalysis`（解析 / Analysis）、`inventory.rowDrawer.tabRawText`（原文 / Original text）。
+
+### 14-4 代替案と選んだ理由
+- (a) /tcg/analysis-results の門を products.view に緩める → gemini・system・要約まで出るので不採用（スタッフは原文だけ）。
+- (b) /inventory の応答に raw_text を足す → 一覧全行に長文が乗り重い・ページ全体の応答が変わるので不採用。
+- (c) 新しい読み取り専用 API（採用）: 返す項目を絞れ、門を在庫一覧と同じにでき、行の定義を使い回せる。
+
+### 14-5 リスクと対処
+- ID 総当たりで在庫表に無い投稿を読む → dist_base の item_key に入る ID だけ返す（B2 で固定）。
+- テナント: 原文の表にテナント列が無く在庫表自体が分かれていない（R4-4）。今回は「在庫表に出ている行の原文だけ」が守りの範囲。完了報告で PO に事実として伝える。
+- super admin の既存挙動を壊す → 既定タブは解析・既存テストを維持（E1）。
+- 金型外の部品 → Tabs・Drawer・ShadowSourcePane の既存部品のみ。色直値・生要素なし（ADR-144）。
+
+### 14-6 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| E1 super admin は「解析｜原文」2タブ・既定は解析・既存の挙動維持 | vitest InventoryRowDrawer.test.tsx（既存テスト全緑＋タブ表示） |
+| E2 原文タブで GET /inventory/raw-texts を呼び、該当行を強調表示 | vitest（API 呼び出し引数・ShadowSourcePane に blockRange） |
+| E3 非 super admin は原文だけ・/tcg/analysis-results 0 回 | vitest（呼び出し回数 0・タブなし） |
+| E4 非 super admin も PC でクリックで開く・スマホは開かない | vitest InventoryPage.rowdrawer.test.tsx（F2 を書き換え） |
+| E5 まとめ行は原文でも件タブ | vitest |
+| B1 products.view 無しは 403・有りは 200 | pytest（RBAC 前例 test_inventory_offers_rbac.py の形） |
+| B2 配信行に無い ID は返さない・全部無ければ 404 | pytest（実 PG 前例 test_inventory_distribution_rows_pg.py の形、または dist_base 呼び出しを固定した単体） |
+| B3 返す項目は 4 つだけ | pytest（キー集合の一致） |
+| B4 0 件・51 件は 422 | pytest |
+| P1 本番反映（bundle に tabRawText 文言・新 API が未認証で 401） | curl 本番 |
+| G1 CI 全緑（i18n・UI ガバナンス・ADR index 等） | gh pr checks |
+| G3 PO がスタッフのアカウントで原文スライドを目視 | PO 目視（完了後に依頼） |
+
+### 14-7 外部事例
+不要。社内の既存部品（ShadowSourcePane・Tabs）と既存の権限キー（products.view）の組み合わせで、新しい技術選択が無いため。
+
+### 14-8 維持する仕組み
+- 行の定義は distribution_rows_parts の1か所（ADR-1014）。原文 API はそれを呼ぶだけなので、定義が変われば自動で追従。
+- 権限は products.view 1つ。admin のロール設定画面で付け外しすれば原文スライドの可否も変わる。
+- テスト B1〜B4・E1〜E5 が CI で毎回回る。
+
+### 14-9 設計審査（Opus・同一AIの自己審査）
+- 判定: APPROVE。
+- 根拠: 門（products.view）は GET /inventory と同一（R4-2）。行の判定は dist_base の再利用で写しなし（R4-4・ADR-1014）。返す項目は限定（gemini 等を出さない）。既存 super admin 挙動は既定タブで不変。部品はすべて金型（ADR-144）、文言は i18n（ADR-027）。migration なし・revert で戻せる。
+- ADR-072: 新 API は読み取りだけ（commit なし）なので reset_tenant_context は不要。テナント文脈は require_permission 内の get_current_tenant が設定する（recon R4-2）。
+- 未解決: 在庫表そのもののテナント分け（既存課題・今回範囲外）。G3 は PO 目視待ち。
+
+### 14-10 本番反映記録（2026-10-17）
+- PR #4408 merge 449a7716（2026-10-17 00:51 JST）。GO #4408（POの委任に基づくClaude Opus発行）。
+- deploy run 38927277793:
+  - 1回目は失敗した。毎回再実行される既存の移行 20261002_170000 の実行中に、deadlock detected が出た。
+    - 今回の変更とは無関係。直前の成功 deploy 38926080645 でも、同じ移行が同じ出力で流れている。
+    - ログ: /tmp/CC報告ファイル/deploy-38927277793-failed.txt、deploy-38926080645.txt
+  - 失敗したジョブを再実行し、attempt 2 で success（01:03 JST）。migrations・smoke・Verify もすべて success。
+- P1: 結果は ○。生出力は /tmp/CC報告ファイル/p1-rawtext-2.txt。
+  - GET /api/v1/inventory/raw-texts を未認証で呼ぶと 401。存在しないパスは 404 なので、新しいルートがあることの確認になる。
+  - 本番 backend コンテナの inventory_offers.py:425 に "/inventory/raw-texts" がある。
+  - 本番 bundle main-qobx13al.js に tabRawText が含まれる。
+- B2: 実 PG テスト test_inventory_raw_texts_pg.py は CI で実行され、合格した（Backend Tests run 38923534625: 6350 passed、失敗 0。skip 条件は GITHUB_ACTIONS 以外のみ）。
+- 本番 DB での直接確認はしていない。本番 DB に読みに行く操作が安全確認フックに2回止められたので、言い換えずに中止した。
+- 残り: G3（PO がスタッフのアカウントで原文スライドを目視）。

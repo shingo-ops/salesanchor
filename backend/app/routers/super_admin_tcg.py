@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     TcgSeriesCreate,
     TcgSeriesResponse,
@@ -91,9 +92,10 @@ async def create_series(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_tcg.create_series", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複: {exc.orig}",
+            detail="重複",
         )
     row = result.mappings().first()
     await db.commit()
@@ -191,9 +193,10 @@ async def create_type(data: TcgTypeCreate, db: AsyncSession = Depends(get_db)):
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_tcg.create_type", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"種別コードが重複しています: {exc.orig}",
+            detail="種別コードが重複しています",
         )
     row = result.mappings().first()
     await db.commit()

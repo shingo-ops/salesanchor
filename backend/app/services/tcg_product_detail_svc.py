@@ -11,6 +11,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_code_collision_svc import find_code_collisions
+from app.services.tcg_product_master_svc import (
+    _validate_product_format,
+    fetch_product_format_options,
+    find_cleared_fields,
+    format_matches_game,
+    save_blank_confirmations,
+)
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -50,7 +57,9 @@ async def _snapshot(db: AsyncSession, product_id: int) -> dict[str, Any]:
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
         "FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
+        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords, "
+        "COALESCE((SELECT json_agg(c.field_code ORDER BY c.field_code) "
+        "FROM public.product_blank_confirmations c WHERE c.product_id=p.id), '[]'::json) AS blank_confirmations "
         "FROM public.products p WHERE p.id=:pid"
     ), {"pid": product_id})
     row = result.mappings().one_or_none()
@@ -77,6 +86,8 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
         product["code"] = product.pop("product_code")
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
+    # ADR-1020 便2a: 「調べたが無い」の印（項目名の配列）
+    product["blank_confirmations"] = list(snapshot.get("blank_confirmations") or [])
     lookups = {}
     # work_id → public.type_master (INTEGER, SSOT)
     work_rows = await db.execute(text(
@@ -103,6 +114,8 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
             f"WHERE is_active=TRUE OR id=:selected ORDER BY {name_col},id"
         ), {"selected": product[field]})
         lookups[field] = [dict(row) for row in rows.mappings()]
+    # ADR-1020 便2a: 細分類（紐づくゲーム付き）
+    lookups["product_format_id"] = await fetch_product_format_options(db, selected=product.get("product_format_id"))
     return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
 
 
@@ -172,6 +185,39 @@ async def update_product_detail(
             ), {"id": selected})).one_or_none()
             if row is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+        # ADR-1020 便3: 値か印のあった項目を、印なしの空にする保存だけ止める（古い空欄は止めない）
+        if product.get("tenant_id") is None:
+            before_marks = list(before.get("blank_confirmations") or [])
+            after_marks = (
+                values["blank_confirmations"] if values.get("blank_confirmations") is not None else before_marks
+            )
+            cleared = find_cleared_fields(
+                {
+                    "name": product.get("name"), "name_en": product.get("name_en"),
+                    "mark": product.get("mark"), "release_date": product.get("release_date"),
+                    "search_keywords": [row["keyword"] for row in before["search_keywords"]],
+                    "exclude_keywords": [row["keyword"] for row in before["exclude_keywords"]],
+                    "work_id": product.get("work_id"),
+                    "product_format_id": product.get("product_format_id"),
+                    "product_category_id": product.get("product_category_id"),
+                },
+                before_marks,
+                {
+                    "name": values.get("japanese_title"), "name_en": params["english_title"],
+                    "mark": params["mark"], "release_date": params["release_date"],
+                    "search_keywords": values["search_keywords"],
+                    "exclude_keywords": values["exclude_keywords"],
+                    "work_id": params["work_id"],
+                    "product_format_id": (
+                        values["product_format_id"] if "product_format_id" in values
+                        else product.get("product_format_id")
+                    ),
+                    "product_category_id": values.get("product_category_id"),
+                },
+                after_marks,
+            )
+            if cleared:
+                raise ProductDetailError(422, "REQUIRED_FIELDS_CLEARED:" + ",".join(cleared))
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
         await db.execute(text(
             "UPDATE public.products SET "
@@ -182,6 +228,31 @@ async def update_product_detail(
             "product_category_id=:product_category_id,category_class=:category_class "
             "WHERE id=:pid"
         ), params)
+        # ADR-1020 便1: 細分類（来たときだけ・D5）と印（D4）
+        if "product_format_id" in values:
+            try:
+                await _validate_product_format(db, values["product_format_id"])
+            except ValueError:
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            await db.execute(text(
+                "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
+            ), {"fid": values["product_format_id"], "pid": product["id"]})
+        # ADR-1020 便2a: 細分類とゲームの照合（細分類か作品が変わったときだけ・D2）
+        final_format_id = values["product_format_id"] if "product_format_id" in values else product.get("product_format_id")
+        format_changed = "product_format_id" in values and values["product_format_id"] != product.get("product_format_id")
+        work_changed = params["work_id"] != product.get("work_id")
+        if (final_format_id is not None and params["work_id"] is not None
+                and (format_changed or work_changed)
+                and not await format_matches_game(db, final_format_id, params["work_id"])):
+            raise ProductDetailError(422, "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH")
+        await save_blank_confirmations(
+            db,
+            product_id=product["id"],
+            values={"name_en": params["english_title"], "mark": params["mark"],
+                    "release_date": params["release_date"], "exclude_keywords": values["exclude_keywords"]},
+            confirmations=set(values["blank_confirmations"]) if values.get("blank_confirmations") is not None else None,
+            actor=actor,
+        )
         for field, table in WORD_TABLES.items():
             words = values[field]
             if words == [row["keyword"] for row in before[field]]:

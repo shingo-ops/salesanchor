@@ -10,6 +10,7 @@ import { AsyncCombobox } from "../../components/AsyncCombobox";
 import type { AsyncComboboxOption } from "../../components/AsyncCombobox";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import { Checkbox } from "../../components/Checkbox";
 import { ChoiceCardGroup } from "../../components/ChoiceCardGroup";
 import { Stack } from "../../components/Stack";
 import { TextField } from "../../components/TextField";
@@ -26,6 +27,13 @@ import {
   type RegistrationForm,
   type RegistrationValues,
 } from "./reviewActions";
+import {
+  formatAfterWorkChange,
+  formatOptionsFor,
+  missingFields,
+  requiredFieldsMessage,
+  type BlankCode,
+} from "../tcg-product-import/productDetailModel";
 import "./review-fix-wizard.css";
 
 export type RegisterNotice = { variant: "info" | "warning"; title: string };
@@ -92,6 +100,10 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
   const [mark, setMark] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
   const [keywordsText, setKeywordsText] = useState(item.gemini.name || "");
+  // ADR-1020: 細分類・除外ワード・「調べたが存在しない」の印
+  const [format, setFormat] = useState<AsyncComboboxOption | null>(null);
+  const [excludeText, setExcludeText] = useState("");
+  const [blanks, setBlanks] = useState<BlankCode[]>([]);
   const [missing, setMissing] = useState<RequiredKey[]>([]);
   // 似た商品の確認の結果。checked=確認済み（候補0件を含む）、dup=候補（null=未確認か候補なし）
   const [checked, setChecked] = useState(false);
@@ -133,6 +145,16 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
     setDupChoice(null);
   };
 
+  /** 値を入れたら、その項目の「調べたが存在しない」を外す（ADR-1020） */
+  const clearBlankIfFilled = (code: BlankCode, value: string) => {
+    if (value.trim()) setBlanks((current) => current.filter((item) => item !== code));
+  };
+
+  const toggleBlank = (code: BlankCode, checked: boolean) => {
+    setBlanks((current) => (checked ? [...current.filter((item) => item !== code), code] : current.filter((item) => item !== code)));
+    invalidateCheck();
+  };
+
   const values = (): RegistrationValues => ({
     product_kind_id: selected.product_kind_id?.value ?? "",
     work_id: selected.work_id?.value ?? "",
@@ -143,7 +165,9 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
     english_title: englishTitle,
     release_date: releaseDate,
     search_keywords: joinKeywordLines(keywordsText),
-    exclude_keywords: "",
+    exclude_keywords: joinKeywordLines(excludeText),
+    product_format_id: format?.value ?? "",
+    blank_confirmations: blanks,
   });
 
   const missingKeys = (): RequiredKey[] => {
@@ -235,7 +259,7 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
         }
         productId = result.product_id;
       } catch (error: unknown) {
-        setErrorNotice(t("reviewItem.wizard.register.failed", { reason: reasonOf(error) }));
+        setErrorNotice(requiredFieldsMessage(error, t) ?? t("reviewItem.wizard.register.failed", { reason: reasonOf(error) }));
         return;
       }
       setRegisteredProductId(productId);
@@ -291,7 +315,18 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
     );
   }
 
-  const lookups = form?.lookups ?? {};
+  const lookups = form?.lookups;
+  const formatChoices = formatOptionsFor(lookups?.product_format_id ?? [], selected.work_id?.value ?? "");
+  const missingNow = missingFields(values());
+  const blankBox = (code: BlankCode, value: string, labelKey: string) => (
+    <Checkbox
+      size="sm"
+      label={t("productDetail.notFound", { field: t(labelKey) })}
+      checked={blanks.includes(code)}
+      disabled={busy || value.trim() !== ""}
+      onChange={(event) => toggleBlank(code, event.target.checked)}
+    />
+  );
   const requiredMessage = t("reviewItem.wizard.register.required");
   const choiceOptions = [
     ...(dup ?? []).map((candidate) => ({
@@ -307,7 +342,7 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
     <Stack gap="2" className="review-register-form">
       {SELECT_FIELDS.map(({ key, labelKey }) => {
         const fieldId = `review-register-${item.extraction_item_id}-${key}`;
-        const options = lookups[key] ?? [];
+        const options = lookups?.[key] ?? [];
         return (
           <div className="comp-field comp-field--full" key={key}>
             <label htmlFor={fieldId} className="comp-field__label">
@@ -326,6 +361,11 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
               onSelect={(option) => {
                 setSelected((current) => ({ ...current, [key]: option }));
                 setMissing((current) => current.filter((missingKey) => missingKey !== key));
+                if (key === "work_id") {
+                  setFormat((current) =>
+                    current && formatAfterWorkChange(lookups?.product_format_id ?? [], option.value, current.value) ? current : null,
+                  );
+                }
                 invalidateCheck();
               }}
               noResultsText={t("needsReview.inline.noResults")}
@@ -336,6 +376,27 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
           </div>
         );
       })}
+      <div className="comp-field comp-field--full">
+        <label htmlFor={`review-register-${item.extraction_item_id}-product_format_id`} className="comp-field__label">
+          {t("reviewItem.wizard.register.format")}
+        </label>
+        <AsyncCombobox
+          id={`review-register-${item.extraction_item_id}-product_format_id`}
+          ariaLabel={t("reviewItem.wizard.register.format")}
+          value={format?.label ?? ""}
+          disabled={busy || !selected.work_id}
+          loadOptions={(query) => filterLookup(formatChoices, query)}
+          debounceMs={searchDebounceMs}
+          onSelect={(option) => {
+            setFormat(option);
+            invalidateCheck();
+          }}
+          noResultsText={t("needsReview.inline.noResults")}
+          loadingText={t("common.loading")}
+          errorText={t("needsReview.inline.searchError")}
+        />
+        {!selected.work_id && <p className="comp-field__hint">{t("productDetail.formatNeedsWork")}</p>}
+      </div>
       <TextField
         size="sm"
         label={t("reviewItem.wizard.register.japaneseTitle")}
@@ -357,9 +418,11 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
         disabled={busy}
         onChange={(event) => {
           setEnglishTitle(event.target.value);
+          clearBlankIfFilled("name_en", event.target.value);
           invalidateCheck();
         }}
       />
+      {blankBox("name_en", englishTitle, "reviewItem.wizard.register.englishTitle")}
       <TextField
         size="sm"
         label={t("reviewItem.wizard.register.mark")}
@@ -368,9 +431,11 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
         disabled={busy}
         onChange={(event) => {
           setMark(event.target.value);
+          clearBlankIfFilled("mark", event.target.value);
           invalidateCheck();
         }}
       />
+      {blankBox("mark", mark, "reviewItem.wizard.register.mark")}
       <TextField
         size="sm"
         label={t("reviewItem.wizard.register.releaseDate")}
@@ -380,9 +445,11 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
         disabled={busy}
         onChange={(event) => {
           setReleaseDate(event.target.value);
+          clearBlankIfFilled("release_date", event.target.value);
           invalidateCheck();
         }}
       />
+      {blankBox("release_date", releaseDate, "reviewItem.wizard.register.releaseDate")}
       <Textarea
         size="sm"
         label={t("reviewItem.wizard.register.keywords")}
@@ -394,6 +461,19 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
           invalidateCheck();
         }}
       />
+      <Textarea
+        size="sm"
+        label={t("reviewItem.wizard.register.excludeKeywords")}
+        fullWidth
+        value={excludeText}
+        disabled={busy}
+        onChange={(event) => {
+          setExcludeText(event.target.value);
+          clearBlankIfFilled("exclude_keywords", event.target.value);
+          invalidateCheck();
+        }}
+      />
+      {blankBox("exclude_keywords", excludeText, "reviewItem.wizard.register.excludeKeywords")}
       {dup !== null && (
         <ChoiceCardGroup<string>
           legend={t("reviewItem.wizard.register.dupQuestion")}
@@ -401,6 +481,14 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
           options={choiceOptions}
           value={dupChoice}
           onChange={setDupChoice}
+        />
+      )}
+      {missingNow.length > 0 && (
+        <Callout
+          variant="info"
+          title={t("reviewItem.wizard.register.missingFields", {
+            fields: missingNow.map((field) => t(`productDetail.${field}`)).join(t("reviewItem.wizard.register.listSeparator")),
+          })}
         />
       )}
       {errorNotice && <Callout variant="warning" title={errorNotice} />}

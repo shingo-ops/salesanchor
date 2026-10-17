@@ -1,0 +1,465 @@
+"""閲覧者管理（API・サービス・専用スクリプト）の試験（ADR-1019 段4a-2）。
+
+非 PG: 権限（403）と入力検証（422）。
+PG（CI の使い捨て DB。pg fixture）: 状態遷移・履歴・目印・ログイン記録・CLI。SQLite・mock は使わない。
+テストデータはすべて架空。
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from app import cache
+from app.database import get_db
+from app.services import viewer_admin
+from app.services.viewer_admin import ViewerAdminError
+from tests.rls_bootstrap import _ensure_public_users
+from tests.test_tcg_work_matching_integration import MIGRATIONS
+from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
+from tests.test_viewer_api import SECRET, FakeRedis, _bearer
+
+needs_ci_pg = pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") != "true", reason="Disposable CI PostgreSQL service required"
+)
+
+ROUTES = [
+    ("GET", "/api/v1/super-admin/viewers", None),
+    ("GET", "/api/v1/super-admin/viewers/1/logins", None),
+    ("POST", "/api/v1/super-admin/viewers/1/activate", {}),
+    ("POST", "/api/v1/super-admin/viewers/1/suspend", {}),
+    ("POST", "/api/v1/super-admin/viewers/1/unsuspend", {}),
+    ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
+]
+
+
+def _make_user(*, is_super_admin: bool):
+    from app.models import User
+
+    user = User()
+    user.id = 999
+    user.tenant_id = 999
+    user.username = "testuser"
+    user.email = "test@example.com"
+    user.role = "admin"
+    user.is_active = True
+    user.is_super_admin = is_super_admin
+    return user
+
+
+@pytest.fixture
+def override_user():
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.main import app
+
+    def _apply(user):
+        app.dependency_overrides[get_current_user] = lambda: user
+        app.dependency_overrides[get_current_tenant] = lambda: 999
+
+    yield _apply
+    app.dependency_overrides.clear()
+
+
+async def _call(method, path, body):
+    from app.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        return await client.request(method, path, json=body)
+
+
+# ── 非 PG ─────────────────────────────────────────────────────
+
+
+async def test_non_super_admin_gets_403_on_all_six_routes(override_user):
+    override_user(_make_user(is_super_admin=False))
+    for method, path, body in ROUTES:
+        resp = await _call(method, path, body)
+        assert resp.status_code == 403, (method, path)
+
+
+@pytest.mark.parametrize("days", [0, -1, 1.5, "7", 366])
+async def test_extend_days_validation_422(override_user, days):
+    from app.main import app
+
+    async def _no_db():
+        yield None
+
+    override_user(_make_user(is_super_admin=True))
+    app.dependency_overrides[get_db] = _no_db
+    resp = await _call("POST", "/api/v1/super-admin/viewers/1/extend", {"days": days})
+    assert resp.status_code == 422
+
+
+# ── PG 共通 ───────────────────────────────────────────────────
+
+ACTOR_ID = 999
+
+
+def _prepare(conn, async_url):
+    async def _run():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            async with engine.begin() as aconn:
+                await _ensure_public_users(aconn)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_run())
+    cur = conn.cursor()
+    cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
+    cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
+    return cur
+
+
+def _account(cur, email, status, *, expires_in_days=None):
+    cur.execute(
+        "INSERT INTO public.viewer_accounts (email, line_name, status, trial_expires_at) "
+        "VALUES (%s, 'fake', %s, "
+        "CASE WHEN %s::int IS NULL THEN NULL ELSE NOW() + make_interval(days => %s::int) END) RETURNING id",
+        (email, status, expires_in_days, expires_in_days),
+    )
+    return cur.fetchone()[0]
+
+
+def _event(cur, vid, ip, hours_ago, event_type="login_succeeded"):
+    cur.execute(
+        "INSERT INTO public.viewer_login_events (viewer_id, event_type, client_ip, user_agent, created_at) "
+        "VALUES (%s, %s, %s, 'agent-x', NOW() - make_interval(hours => %s::int))",
+        (vid, event_type, ip, hours_ago),
+    )
+
+
+def _changes(cur, vid):
+    cur.execute(
+        "SELECT action, from_status, to_status, from_expires_at, to_expires_at, extend_days, actor, actor_user_id "
+        "FROM public.viewer_status_changes WHERE viewer_id=%s ORDER BY id",
+        (vid,),
+    )
+    return cur.fetchall()
+
+
+def _state(cur, vid):
+    cur.execute("SELECT status, trial_expires_at FROM public.viewer_accounts WHERE id=%s", (vid,))
+    return cur.fetchone()
+
+
+def _with_db(async_url, fn):
+    """AsyncSession で fn(db) を実行し commit する（失敗は rollback して再送出）。"""
+
+    async def _go():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                try:
+                    result = await fn(db)
+                    await db.commit()
+                    return result
+                except Exception:
+                    await db.rollback()
+                    raise
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_go())
+
+
+def _change(async_url, vid, action, **kw):
+    kw.setdefault("actor", "po")
+    kw.setdefault("actor_user_id", ACTOR_ID)
+    return _with_db(async_url, lambda db: viewer_admin.change_status(db, vid, action, **kw))
+
+
+def _api(async_url, method, path, body=None, *, super_admin=True):
+    """実 PG に対して API を呼ぶ。"""
+
+    async def _go():
+        from app.auth.dependencies import get_current_tenant, get_current_user
+        from app.main import app
+
+        engine = create_async_engine(async_url, echo=False)
+
+        async def _db():
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                yield session
+
+        app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[get_current_user] = lambda: _make_user(is_super_admin=super_admin)
+        app.dependency_overrides[get_current_tenant] = lambda: 999
+        try:
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+                return await http.request(method, path, json=body)
+        finally:
+            app.dependency_overrides.clear()
+            await engine.dispose()
+
+    return asyncio.run(_go())
+
+
+def _error_code(async_url, vid, action, **kw):
+    with pytest.raises(ViewerAdminError) as exc:
+        _change(async_url, vid, action, **kw)
+    return exc.value.code
+
+
+# ── PG 試験 ───────────────────────────────────────────────────
+
+
+@needs_ci_pg
+def test_activate_suspend_unsuspend_extend_write_one_row_each(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "a1@x.com", "trial", expires_in_days=5)
+    now = datetime(2026, 10, 16, 0, 0, tzinfo=timezone.utc)
+
+    _change(async_url, vid, "extend", days=10, now=now)
+    _change(async_url, vid, "suspend", now=now)
+    _change(async_url, vid, "unsuspend", now=now)
+    _change(async_url, vid, "activate", now=now)
+    rows = _changes(cur, vid)
+    assert [r[0] for r in rows] == ["extend", "suspend", "unsuspend", "activate"]
+    assert [(r[1], r[2]) for r in rows] == [
+        ("trial", "trial"), ("trial", "suspended"), ("suspended", "trial"), ("trial", "active"),
+    ]
+    assert rows[0][5] == 10 and all(r[5] is None for r in rows[1:])
+    assert rows[0][4] == now + timedelta(days=10)
+    assert all(r[6] == "po" and r[7] == ACTOR_ID for r in rows)
+    status, expires = _state(cur, vid)
+    assert status == "active" and expires == now + timedelta(days=10)
+
+
+@needs_ci_pg
+def test_unsuspend_returns_to_last_suspend_from_status(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    t = _account(cur, "t@x.com", "trial", expires_in_days=5)
+    a = _account(cur, "act@x.com", "active")
+    for vid, expected in ((t, "trial"), (a, "active")):
+        _change(async_url, vid, "suspend")
+        assert _state(cur, vid)[0] == "suspended"
+        result = _change(async_url, vid, "unsuspend")
+        assert result["status"] == expected
+        assert _state(cur, vid)[0] == expected
+
+
+@needs_ci_pg
+def test_unsuspend_without_suspend_row_is_409(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "nosus@x.com", "suspended")
+    assert _error_code(async_url, vid, "unsuspend") == "conflict"
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/unsuspend", {})
+    assert resp.status_code == 409 and resp.json()["detail"] == "viewer_status_conflict"
+    assert _changes(cur, vid) == []
+
+
+@needs_ci_pg
+def test_conflicts_are_409(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    by_status = {s: _account(cur, f"{s}@x.com", s, expires_in_days=5 if s == "trial" else None)
+                 for s in ("pending", "verified", "trial", "active", "suspended")}
+    for s in ("pending", "verified", "active", "suspended"):
+        assert _error_code(async_url, by_status[s], "activate") == "conflict", s
+    assert _error_code(async_url, by_status["suspended"], "suspend") == "conflict"
+    for s in ("active", "suspended", "pending", "verified"):
+        assert _error_code(async_url, by_status[s], "extend", days=7) == "conflict", s
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{by_status['active']}/activate", {})
+    assert resp.status_code == 409
+    for vid in by_status.values():
+        assert _changes(cur, vid) == []
+
+
+@needs_ci_pg
+def test_extend_expired_trial_sets_now_plus_7_and_inventory_200(pg, monkeypatch):  # noqa: F811
+    from app.tasks import viewer_inventory_cache as vic
+
+    monkeypatch.setenv("AUTH_VIEWER_JWT_SECRET", SECRET)
+    monkeypatch.setenv("AUTH_JWT_SECRET", "a" * 48)
+    fake = FakeRedis()
+    monkeypatch.setattr(cache, "_redis", fake)
+    fake.store[vic.CACHE_KEY] = json.dumps({"updated_at": "2026-10-16T00:00:00+00:00", "rows": []})
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+
+    fixed = datetime(2026, 10, 16, 0, 0, tzinfo=timezone.utc)
+    vid = _account(cur, "exp@x.com", "trial", expires_in_days=-3)
+    result = _change(async_url, vid, "extend", days=7, now=fixed)
+    assert result["trial_expires_at"] == fixed + timedelta(days=7)
+    assert _changes(cur, vid)[0][4] == fixed + timedelta(days=7)
+
+    # 期限切れのままだと在庫は 403。API で延長（実時刻）すると 200 になる
+    vid2 = _account(cur, "exp2@x.com", "trial", expires_in_days=-3)
+    _, auth = _bearer(vid2)
+
+    async def _get_inventory():
+        from app.main import app
+
+        engine = create_async_engine(async_url, echo=False)
+
+        async def _db():
+            async with AsyncSession(engine, expire_on_commit=False) as session:
+                yield session
+
+        app.dependency_overrides[get_db] = _db
+        try:
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+                return await http.get("/api/v1/viewer/inventory", headers=auth)
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            await engine.dispose()
+
+    assert asyncio.run(_get_inventory()).status_code == 403
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid2}/extend", {"days": 7})
+    assert resp.status_code == 200 and resp.json()["status"] == "trial"
+    assert asyncio.run(_get_inventory()).status_code == 200
+
+
+@needs_ci_pg
+def test_404_for_missing_viewer(pg):  # noqa: F811
+    conn, _, async_url = pg
+    _prepare(conn, async_url)
+    assert _error_code(async_url, 424242, "suspend") == "not_found"
+    for method, path, body in ROUTES[1:]:
+        resp = _api(async_url, method, path.replace("/1/", "/424242/"), body)
+        assert resp.status_code == 404 and resp.json()["detail"] == "viewer_not_found", path
+
+
+@needs_ci_pg
+def test_flags_many_ips_and_shared_ip(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    many = _account(cur, "many@x.com", "active")
+    spread = _account(cur, "spread@x.com", "active")
+    two = _account(cur, "two@x.com", "active")
+    failed = _account(cur, "failed@x.com", "active")
+    sh1 = _account(cur, "sh1@x.com", "active")
+    sh2 = _account(cur, "sh2@x.com", "active")
+    same = _account(cur, "same@x.com", "active")
+    for i, ip in enumerate(("10.1.0.1", "10.1.0.2", "10.1.0.3")):
+        _event(cur, many, ip, i)
+    for ip, h in (("10.2.0.1", 0), ("10.2.0.2", 25), ("10.2.0.3", 50)):
+        _event(cur, spread, ip, h)
+    _event(cur, two, "10.3.0.1", 0)
+    _event(cur, two, "10.3.0.2", 1)
+    for i, ip in enumerate(("10.4.0.1", "10.4.0.2", "10.4.0.3")):
+        _event(cur, failed, ip, i, "login_failed")
+    _event(cur, sh1, "10.9.9.9", 0)
+    _event(cur, sh2, "10.9.9.9", 5)
+    _event(cur, same, "10.8.8.8", 0)
+    _event(cur, same, "10.8.8.8", 30)
+
+    items = _with_db(async_url, lambda db: viewer_admin.list_viewers(db))
+    flags = {i["id"]: (i["flag_many_ips"], i["flag_shared_ip"]) for i in items}
+    assert flags[many] == (True, False)
+    assert flags[spread] == (False, False)
+    assert flags[two] == (False, False)
+    assert flags[failed] == (False, False)
+    assert flags[sh1] == (False, True) and flags[sh2] == (False, True)
+    assert flags[same] == (False, False)
+    # 並び: created_at 降順・id 降順
+    assert [i["id"] for i in items] == sorted((i["id"] for i in items), reverse=True)
+
+
+@needs_ci_pg
+def test_logins_listed_newest_first_with_ip_and_agent(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "log@x.com", "active")
+    _event(cur, vid, "10.5.0.1", 5)
+    _event(cur, vid, "10.5.0.2", 1)
+    resp = _api(async_url, "GET", f"/api/v1/super-admin/viewers/{vid}/logins")
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert [i["client_ip"] for i in items] == ["10.5.0.2", "10.5.0.1"]
+    assert all(i["user_agent"] == "agent-x" and i["event_type"] == "login_succeeded" for i in items)
+    listed = _api(async_url, "GET", "/api/v1/super-admin/viewers")
+    assert listed.status_code == 200 and [i["id"] for i in listed.json()["items"]] == [vid]
+
+
+@needs_ci_pg
+def test_cli_change_status_records_actor_claude(pg):  # noqa: F811
+    from app import viewer_admin_cli
+
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "cli@x.com", "trial", expires_in_days=3)
+
+    async def _go():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            factory = lambda: AsyncSession(engine, expire_on_commit=False)  # noqa: E731
+            ok = await viewer_admin_cli.run({"action": "suspend", "email": " CLI@x.com "}, session_factory=factory)
+            bad = None
+            try:
+                await viewer_admin_cli.run({"action": "drop", "email": "cli@x.com"}, session_factory=factory)
+            except ViewerAdminError as exc:
+                bad = exc.code
+            return ok, bad
+        finally:
+            await engine.dispose()
+
+    ok, bad = asyncio.run(_go())
+    assert ok["id"] == vid and ok["status"] == "suspended" and bad == "invalid_input"
+    rows = _changes(cur, vid)
+    assert len(rows) == 1 and rows[0][0] == "suspend" and rows[0][6] == "claude" and rows[0][7] is None
+
+
+@needs_ci_pg
+def test_register_cli_counts_and_is_idempotent(pg):  # noqa: F811
+    from app import viewer_register_cli
+
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    rows = [
+        {"applied_at": "2026-10-01T10:00:00", "line_name": "n1", "email": "r1@x.com", "status": "trial"},
+        {"applied_at": "2026-10-02T09:30:00+09:00", "line_name": "n2", "email": "R2@x.com", "status": "trial"},
+        {"applied_at": "2026-09-01T00:00:00", "line_name": "n3", "email": "r3@x.com", "status": "active"},
+    ]
+
+    async def _go(payload):
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            return await viewer_register_cli.run(
+                payload, session_factory=lambda: AsyncSession(engine, expire_on_commit=False)
+            )
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(_go({"rows": rows})) == {"registered": 3, "skipped": 0, "failed": 0}
+    assert asyncio.run(_go({"rows": rows})) == {"registered": 0, "skipped": 3, "failed": 0}
+    cur.execute("SELECT count(*) FROM public.viewer_accounts")
+    assert cur.fetchone()[0] == 3
+    cur.execute("SELECT email, status, trial_expires_at FROM public.viewer_accounts ORDER BY email")
+    got = {r[0]: r for r in cur.fetchall()}
+    jst = timezone(timedelta(hours=9))
+    assert got["r1@x.com"][2] == datetime(2026, 10, 1, 10, 0, tzinfo=jst) + timedelta(days=14)
+    assert got["r2@x.com"][2] == datetime(2026, 10, 2, 9, 30, tzinfo=jst) + timedelta(days=14)
+    assert got["r3@x.com"][1] == "active" and got["r3@x.com"][2] is None
+    cur.execute("SELECT count(*) FROM public.viewer_status_changes")
+    assert cur.fetchone()[0] == 0
+
+    mixed = [
+        {"applied_at": "2026-10-03T00:00:00", "line_name": "n4", "email": "r4@x.com", "status": "trial"},
+        {"applied_at": "not-a-date", "line_name": "n5", "email": "r5@x.com", "status": "trial"},
+    ]
+    assert asyncio.run(_go({"rows": mixed})) == {"registered": 1, "skipped": 0, "failed": 1}
+    cur.execute("SELECT count(*) FROM public.viewer_accounts")
+    assert cur.fetchone()[0] == 4
+
+
+@needs_ci_pg
+def test_suspend_record_feeds_purge(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "purge@x.com", "active")
+    _change(async_url, vid, "suspend")
+    cur.execute(
+        "SELECT count(*) FROM public.viewer_status_changes WHERE viewer_id=%s AND action='suspend'", (vid,)
+    )
+    assert cur.fetchone()[0] == 1

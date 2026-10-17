@@ -46,4 +46,4 @@ export interface ViewerLoginResponse {
 }
 
 /** ④ 案内の種類 */
-export type ViewerNoticeKind = "preparing" | "suspended" | "expired" | "passwordChange" | "error";
+export type ViewerNoticeKind = "preparing" | "suspended" | "expired" | "error";

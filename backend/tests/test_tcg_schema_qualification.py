@@ -196,7 +196,9 @@ def test_product_schema_removal_is_detected():
     calls = _text_calls(source)
     # 9 -> 8: load_existing_marks の SELECT (public.products の mark 一覧) を削除。
     # 型番の重なり判定は tcg_product_code_collision_svc に一本化したため。
-    assert len(calls) == 8, "review new/removed SQL calls and update inventory"
+    # 8 -> 9: ADR-1020 便2c で load_lookup_maps に細分類 (public.product_formats) の
+    # SELECT を追加（public. 付き・TCG_SCHEMA 参照は増えない）。
+    assert len(calls) == 9, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
     assert len(positions) == 4, "review changed schema reference inventory"
     for match in positions:

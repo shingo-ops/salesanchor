@@ -14,8 +14,10 @@ tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import re
+from datetime import date
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -27,12 +29,158 @@ from app.services.tcg_product_code_collision_svc import find_code_collisions
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
+logger = logging.getLogger(__name__)
+
+# ADR-1020: 共用商品の登録で入れる9項目と、「調べたが無い」の印で空を認める4項目
+REQUIRED_FIELDS: tuple[str, ...] = (
+    "name", "name_en", "mark", "release_date", "search_keywords",
+    "exclude_keywords", "work_id", "product_format_id", "product_category_id",
+)
+BLANK_CONFIRMABLE_FIELDS: tuple[str, ...] = ("name_en", "mark", "release_date", "exclude_keywords")
+
 _PM_CODE_RE = re.compile(r"^PM(\d{4})$")
 
 
 def _split_csv_words(value: str) -> list[str]:
     """カンマ区切りの語を割り、前後の空白と空を捨てる（INSERT と同じ扱い）。"""
     return [k.strip() for k in (value or "").split(",") if k.strip()]
+
+
+def _is_blank(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, tuple)):
+        return not [v for v in value if str(v).strip()]
+    return False
+
+
+def check_required_fields(values: dict[str, Any], blank_confirmations: set[str] | frozenset[str]) -> list[str]:
+    """足りない項目の名前を REQUIRED_FIELDS の順で返す（DB は触らない）。
+
+    values のキーは REQUIRED_FIELDS の名前。検索ワード・除外ワードは文字列（カンマ区切り）か語の一覧。
+    印は BLANK_CONFIRMABLE_FIELDS の項目にだけ効く。
+    """
+    missing: list[str] = []
+    for field in REQUIRED_FIELDS:
+        value = values.get(field)
+        if isinstance(value, str) and field in ("search_keywords", "exclude_keywords"):
+            value = _split_csv_words(value)
+        if not _is_blank(value):
+            continue
+        if field in BLANK_CONFIRMABLE_FIELDS and field in blank_confirmations:
+            continue
+        missing.append(field)
+    return missing
+
+
+def missing_for_create(args: dict[str, Any]) -> list[str]:
+    """ADR-1020 便3: create_product の引数（名前は create_product と同じ）から、足りない項目名を返す。"""
+    values = {
+        "name": args.get("japanese_title"),
+        "name_en": args.get("english_title"),
+        "mark": args.get("mark"),
+        "release_date": args.get("release_date"),
+        "search_keywords": args.get("search_keywords"),
+        "exclude_keywords": args.get("exclude_keywords"),
+        "work_id": args.get("work_id"),
+        "product_format_id": args.get("product_format_id"),
+        "product_category_id": args.get("product_category_id"),
+    }
+    return check_required_fields(values, set(args.get("blank_confirmations") or []))
+
+
+def find_cleared_fields(
+    before: dict[str, Any], before_marks: Any, after: dict[str, Any], after_marks: Any,
+) -> list[str]:
+    """ADR-1020 便3: 前は足りていた（値か印があった）のに、後で足りなくなった項目名を返す。
+
+    前も後も足りない項目（古い空欄）は返さない。before / after のキーは REQUIRED_FIELDS の名前。
+    """
+    was_missing = set(check_required_fields(before, set(before_marks or [])))
+    return [f for f in check_required_fields(after, set(after_marks or [])) if f not in was_missing]
+
+
+async def format_matches_game(db: AsyncSession, product_format_id: int, work_id: int) -> bool:
+    """ADR-1020 便2a: 細分類がそのゲーム（作品）に紐づいているか。"""
+    row = (await db.execute(
+        text("SELECT 1 FROM public.product_format_game_links "
+             "WHERE format_id = :fid AND type_master_id = :wid"),
+        {"fid": int(product_format_id), "wid": int(work_id)},
+    )).first()
+    return row is not None
+
+
+async def _validate_product_format(
+    db: AsyncSession, product_format_id: int | None, work_id: int | None = None,
+) -> None:
+    if product_format_id is None:
+        return
+    row = (await db.execute(
+        text("SELECT 1 FROM public.product_formats WHERE id = :id AND is_active = TRUE"),
+        {"id": int(product_format_id)},
+    )).first()
+    if row is None:
+        raise ValueError("PRODUCT_FORMAT_INVALID")
+    if work_id is not None and not await format_matches_game(db, product_format_id, work_id):
+        raise ValueError("PRODUCT_FORMAT_GAME_MISMATCH")
+
+
+async def fetch_product_format_options(db: AsyncSession, selected: int | None = None) -> list[dict[str, Any]]:
+    """ADR-1020 便2a: 細分類の選択肢。各細分類に紐づくゲーム（作品）の id を付ける。"""
+    rows = await db.execute(text(
+        "SELECT f.id::text AS id, f.name AS name, f.is_active AS is_active, "
+        "COALESCE(array_agg(l.type_master_id::text ORDER BY l.type_master_id) "
+        "FILTER (WHERE l.type_master_id IS NOT NULL), ARRAY[]::text[]) AS game_ids "
+        "FROM public.product_formats f "
+        "LEFT JOIN public.product_format_game_links l ON l.format_id = f.id "
+        "WHERE f.is_active = TRUE OR f.id = :selected "
+        "GROUP BY f.id, f.name, f.is_active, f.display_order "
+        "ORDER BY f.display_order, f.id"
+    ), {"selected": selected})
+    return [
+        {"id": r["id"], "name": r["name"], "is_active": r["is_active"], "game_ids": list(r["game_ids"])}
+        for r in rows.mappings()
+    ]
+
+
+async def save_blank_confirmations(
+    db: AsyncSession,
+    *,
+    product_id: int,
+    values: dict[str, Any],
+    confirmations: set[str] | None,
+    actor: str,
+) -> None:
+    """ADR-1020: 印を保存する。呼ぶ側が app.is_operator を立てた同じトランザクションで呼ぶ。
+
+    confirmations が None なら、値が入った項目の印だけを消す（D4）。
+    集合なら、その商品の印を「空の項目 ∩ confirmations」に置き換える（D2・D4）。
+    """
+    filled = [f for f in BLANK_CONFIRMABLE_FIELDS if not _is_blank(
+        _split_csv_words(values.get(f)) if f == "exclude_keywords" and isinstance(values.get(f), str) else values.get(f)
+    )]
+    if confirmations is None:
+        if filled:
+            await db.execute(
+                text("DELETE FROM public.product_blank_confirmations "
+                     "WHERE product_id = :pid AND field_code = ANY(:fields)"),
+                {"pid": product_id, "fields": filled},
+            )
+        return
+    keep = [f for f in BLANK_CONFIRMABLE_FIELDS if f in confirmations and f not in filled]
+    await db.execute(
+        text("DELETE FROM public.product_blank_confirmations "
+             "WHERE product_id = :pid AND NOT (field_code = ANY(:keep))"),
+        {"pid": product_id, "keep": keep},
+    )
+    for field in keep:
+        await db.execute(
+            text("INSERT INTO public.product_blank_confirmations (product_id, field_code, confirmed_by) "
+                 "VALUES (:pid, :field, :actor) ON CONFLICT (product_id, field_code) DO NOTHING"),
+            {"pid": product_id, "field": field, "actor": (actor or "unknown")[:200]},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +269,8 @@ async def fetch_registration_form(
         )
         lookups[key] = [{"id": r.id, "name": r.name} for r in rows.fetchall()]
 
+    # ADR-1020 便2a: 細分類（紐づくゲーム付き）
+    lookups["product_format_id"] = await fetch_product_format_options(db)
     return {"item": item, "lookups": lookups}
 
 
@@ -345,6 +495,9 @@ async def create_product(
     english_title: str = "",
     force: bool = False,
     commit: bool = True,
+    product_format_id: int | None = None,
+    blank_confirmations: list[str] | None = None,
+    actor: str = "",
 ) -> dict[str, Any]:
     """
     GAS: createProductMasterV2FromAnalysisReview 相当。
@@ -358,6 +511,21 @@ async def create_product(
     commit=False: caller owns commit/rollback, including the post-write check.
     force=True: GAS ソフトブロック準拠。重複候補があっても登録を続行する。
     """
+    # ADR-1020 便3: 足りない項目があれば DB を読む前に止める（全入口がここを通る）
+    missing = missing_for_create({
+        "japanese_title": japanese_title, "english_title": english_title, "mark": mark,
+        "release_date": release_date, "search_keywords": search_keywords,
+        "exclude_keywords": exclude_keywords, "work_id": work_id,
+        "product_format_id": product_format_id, "product_category_id": product_category_id,
+        "blank_confirmations": blank_confirmations,
+    })
+    if missing:
+        raise ValueError("REQUIRED_FIELDS_MISSING:" + ",".join(missing))
+    try:
+        _work_id_int: int | None = int(work_id) if str(work_id).strip() else None
+    except (TypeError, ValueError):
+        _work_id_int = None
+    await _validate_product_format(db, product_format_id, work_id=_work_id_int)
     # 重複チェック（force=True なら DUPLICATE_CANDIDATE で弾かない）
     dup_result = await check_duplicates(
         db,
@@ -386,7 +554,7 @@ async def create_product(
     sr = series_row.fetchone()
     category_class = sr.name_ja if sr else ""
 
-    rd = release_date if release_date else None
+    rd = date.fromisoformat(release_date.strip()) if release_date and release_date.strip() else None
 
     product_kind_id_int = int(product_kind_id) if product_kind_id else None
 
@@ -398,11 +566,11 @@ async def create_product(
             INSERT INTO public.products
                 (product_code, name, release_date, category_class,
                  product_kind_id, work_id, manufacturer_id, product_category_id,
-                 mark, name_en, is_active)
+                 mark, name_en, product_format_id, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
                  :product_kind_id, :work_id, :manufacturer_id, :product_category_id,
-                 :mark, :english_title, TRUE)
+                 :mark, :english_title, :product_format_id, TRUE)
             RETURNING id::text AS id, id AS int_id
             """
         ),
@@ -417,12 +585,26 @@ async def create_product(
             "product_category_id": product_category_id,
             "mark": mark.strip() or None,
             "english_title": english_title.strip() or None,
+            "product_format_id": int(product_format_id) if product_format_id is not None else None,
         },
     )
     new_row = product_row.fetchone()
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
     product_id_int = new_row.int_id  # integer for keyword FK references and post-write gate
+
+    # ADR-1020 便1: 印の保存（来たときだけ・D3）
+    confirmed = set(blank_confirmations or [])
+    filled_values = {
+        "name": japanese_title, "name_en": english_title, "mark": mark,
+        "release_date": release_date, "search_keywords": search_keywords,
+        "exclude_keywords": exclude_keywords, "work_id": work_id,
+        "product_format_id": product_format_id, "product_category_id": product_category_id,
+    }
+    if confirmed:
+        await save_blank_confirmations(
+            db, product_id=product_id_int, values=filled_values, confirmations=confirmed, actor=actor,
+        )
 
     # search_keywords INSERT
     if search_keywords.strip():

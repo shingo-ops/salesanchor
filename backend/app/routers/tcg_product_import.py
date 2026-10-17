@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import csv
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -47,6 +47,7 @@ from app.services.tcg_product_detail_svc import (
     update_product_detail,
 )
 from app.services.tcg_product_import_svc import commit_import, preview
+from app.services.tcg_product_master_svc import fetch_product_format_options
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
@@ -286,6 +287,8 @@ class ProductDetailUpdate(BaseModel):
     product_category_id: int | None
     search_keywords: list[DetailWord] = Field(max_length=1000)
     exclude_keywords: list[DetailWord] = Field(max_length=1000)
+    product_format_id: int | None = None
+    blank_confirmations: list[Literal["name_en", "mark", "release_date", "exclude_keywords"]] | None = None
 
     @field_validator("release_date")
     @classmethod
@@ -308,6 +311,9 @@ async def save_product_detail(
     user: User = Depends(require_super_admin),
 ) -> dict:
     values = payload.model_dump(mode="json", exclude={"revision"})
+    for optional in ("product_format_id", "blank_confirmations"):
+        if optional not in payload.model_fields_set:
+            values.pop(optional, None)
     try:
         return await update_product_detail(
             db, product_id, values, payload.revision, str(user.email or user.id or ""),
@@ -358,6 +364,8 @@ async def get_product_lookups(
             )
         )
         lookups[key] = [{"id": r.id, "name": r.name} for r in rows.fetchall()]
+    # ADR-1020 便2a: 細分類（紐づくゲーム付き）
+    lookups["product_format_id"] = await fetch_product_format_options(db)
     return {"lookups": lookups}
 
 
@@ -377,6 +385,8 @@ class CreateProductBody(BaseModel):
     product_category_id: str
     search_keywords: str = ""
     exclude_keywords: str = ""
+    product_format_id: int | None = None
+    blank_confirmations: list[Literal["name_en", "mark", "release_date", "exclude_keywords"]] = Field(default_factory=list)
 
 
 @router.post(
@@ -388,25 +398,31 @@ class CreateProductBody(BaseModel):
 async def create_product_standalone(
     body: CreateProductBody,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(require_super_admin),
+    user: User = Depends(require_super_admin),
 ) -> dict:
     from app.services.tcg_product_master_svc import create_product
-    result = await create_product(
-        db,
-        extraction_item_id="",
-        source_message_id="",
-        product_kind_id=body.product_kind_id,
-        work_id=body.work_id,
-        manufacturer_id=body.manufacturer_id,
-        product_category_id=body.product_category_id,
-        japanese_title=body.japanese_title,
-        release_date=body.release_date,
-        search_keywords=body.search_keywords,
-        exclude_keywords=body.exclude_keywords,
-        mark=body.mark,
-        english_title=body.english_title,
-        force=True,
-    )
+    try:
+        result = await create_product(
+            db,
+            extraction_item_id="",
+            source_message_id="",
+            product_kind_id=body.product_kind_id,
+            work_id=body.work_id,
+            manufacturer_id=body.manufacturer_id,
+            product_category_id=body.product_category_id,
+            japanese_title=body.japanese_title,
+            release_date=body.release_date,
+            search_keywords=body.search_keywords,
+            exclude_keywords=body.exclude_keywords,
+            mark=body.mark,
+            english_title=body.english_title,
+            force=True,
+            product_format_id=body.product_format_id,
+            blank_confirmations=body.blank_confirmations,
+            actor=str(user.email or user.id or ""),
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
     if not result.get("ok"):
         raise HTTPException(status_code=409, detail=result.get("code", "CREATE_FAILED"))
     return result

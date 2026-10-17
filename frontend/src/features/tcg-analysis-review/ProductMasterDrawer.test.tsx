@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import type { AnalysisReviewItem } from "./ItemComparison";
 import { ProductMasterDrawer } from "./ProductMasterDrawer";
 
@@ -30,6 +30,10 @@ const form = {
     work_id: [{ id: "w1", name: "Pokemon" }],
     manufacturer_id: [{ id: "m1", name: "Nintendo" }],
     product_category_id: [{ id: "c1", name: "Booster" }],
+    product_format_id: [
+      { id: "7", name: "Box Set", is_active: true, game_ids: ["w1"] },
+      { id: "8", name: "Pack Set", is_active: true, game_ids: ["w9"] },
+    ],
   },
 };
 
@@ -82,7 +86,7 @@ describe("ProductMasterDrawer registration (ja)", () => {
     renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
     await screen.findByText("登録内容確認");
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".pmd-field input:not([type=checkbox])"));
-    expect(inputs.length).toBe(8);
+    expect(inputs.length).toBe(9);
     for (const input of inputs) expect(input.className).toContain("comp-field__input");
     const textareas = Array.from(document.querySelectorAll<HTMLTextAreaElement>(".pmd-field textarea"));
     expect(textareas.length).toBe(2);
@@ -116,8 +120,24 @@ describe("ProductMasterDrawer registration (ja)", () => {
     expect(await screen.findByText("既存商品の可能性があります（確認してください）")).toBeTruthy();
     expect(screen.getByText("重複候補を確認しました（新規商品です）")).toBeTruthy();
     expect((screen.getByRole("button", { name: "商品マスタに登録" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "重複候補を確認しました（新規商品です）" }));
     expect((screen.getByRole("button", { name: "商品マスタに登録" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+  it("offers only the formats of the chosen work and sends the format and blank marks", async () => {
+    renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("登録内容確認");
+    await fillLookups();
+    const options = Array.from(document.querySelectorAll<HTMLOptionElement>("#lookup-product_format_id option")).map((o) => o.value);
+    expect(options).toEqual(["Box Set"]);
+    fireEvent.change(lookupInputs()[4], { target: { value: "Box Set" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "英語タイトル：調べたが存在しない" }));
+    fireEvent.click(screen.getByRole("button", { name: "商品マスタに登録" }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/tcg/products",
+        expect.objectContaining({ product_format_id: 7, blank_confirmations: ["name_en"], force: false }),
+      ),
+    );
   });
 });
 
@@ -224,5 +244,21 @@ describe("ProductMasterDrawer assign mode", () => {
     await i18n.changeLanguage("en");
     const { container } = renderDrawer([]);
     expect(visibleStrings(container)).not.toMatch(JAPANESE);
+  });
+});
+
+describe("ProductMasterDrawer required fields error (ADR-1020)", () => {
+  it("shows field names instead of the REQUIRED_FIELDS_MISSING code when registration is blocked", async () => {
+    await i18n.changeLanguage("en");
+    vi.mocked(api.post).mockImplementation((async (path: string) => {
+      if (path === "/tcg/products") throw Object.assign(new ApiError("REQUIRED_FIELDS_MISSING:name_en", 422, null), { status: 422 });
+      return { candidates: [] };
+    }) as typeof api.post);
+    const { container } = renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("Review entry");
+    await fillLookups();
+    fireEvent.click(screen.getByRole("button", { name: "Register in product master" }));
+    await waitFor(() => expect(container.textContent).toContain("Cannot register because required fields are empty: English name"));
+    expect(container.textContent).not.toContain("REQUIRED_FIELDS_MISSING");
   });
 });

@@ -43,6 +43,7 @@ Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に�
 
 - **事業**: Sales Anchor — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
 - **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
+- 手元の venv は `/usr/local/bin/python3.12 -m venv <場所>` で作る。Sales Anchor の作業場所で 3.12 以外の venv 作成・pip install は見張り（`~/.claude/scripts/python-version-guard.py`）が止める。変数経由などは防げない
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
 - **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
 - **設計判断**: `docs/adr/ADR-NNN-*.md` を参照。チャット履歴を根拠にしない
@@ -121,6 +122,8 @@ make check     # lint-ci + pytest（カバレッジ 60% 以上）
 ```
 
 > **重要**: `make test`（pytest）は Docker が必須。Docker なし環境では `make lint-ci` のみ実行すること。
+
+> 仮想マシンが要る試験は Mac で作らず docs/ops/runner-commands.md の該当節（§10）に従う。
 
 ---
 

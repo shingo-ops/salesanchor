@@ -182,6 +182,12 @@ export default function MobileShell() {
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
                 "/super-admin/supplier-extraction-rules",
               ),
+              resolveItem(
+                "viewerAccounts",
+                "nav.superAdminViewers",
+                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
+                "/super-admin/viewers",
+              ),
             ]
           : []),
       ];

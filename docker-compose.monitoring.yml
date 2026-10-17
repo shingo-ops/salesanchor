@@ -183,6 +183,9 @@ services:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
     ports:
       - "127.0.0.1:9093:9093"
+    # 保守 API へは Cloudflare を通さず prod1 に直接届ける（段階2 便C・421 対策）
+    extra_hosts:
+      - "api.salesanchor.jp:49.212.137.46"
     restart: unless-stopped
     logging:
       driver: json-file

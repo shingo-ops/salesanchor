@@ -27,9 +27,10 @@ def csv_input():
     writer = csv.writer(out)
     writer.writerow(importer.CSV_COLUMNS)
     for n in range(1, 45):
-        writer.writerow([f"ATOMIC{n:02}", f"原子商品{n:02}", "", "",
+        # ADR-1020 便3: 9項目をそろえる（英語名・発売日は値、細分類は one_piece に紐づく ATOMICFMT）
+        writer.writerow([f"ATOMIC{n:02}", f"原子商品{n:02}", f"Atomic product {n:02}", "2026-01-01",
                          f"検索語{n:02},別名{n:02}", f"除外語{n:02}",
-                         "DIV01", "one_piece", "MK002", "PC_BOX"])
+                         "DIV01", "one_piece", "MK002", "PC_BOX", "ATOMICFMT", ""])
     return out.getvalue().encode("utf-8")
 
 
@@ -49,6 +50,12 @@ def atomic_pg(pg, monkeypatch):
         work_fixture.provision(cur, "tenant_990")
         cur.execute(work_fixture._rewire_keyword_fks("tenant_990"))
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", "tenant_990"))
+        # ADR-1020 便3: CSV の細分類 ATOMICFMT を、作品 one_piece に紐づけて用意する
+        cur.execute("INSERT INTO public.product_formats (code,name) VALUES ('ATOMICFMT','原子細分類') RETURNING id")
+        fmt_id = cur.fetchone()[0]
+        cur.execute(
+            "INSERT INTO public.product_format_game_links (format_id,type_master_id) "
+            "SELECT %s,id FROM public.type_master WHERE code='one_piece'", (fmt_id,))
         cur.execute("INSERT INTO public.products (product_code,name,category_class,is_active) VALUES ('SENTINEL','unchanged','Box',true) RETURNING id")
         product_id = cur.fetchone()[0]
         for table in ("product_search_keywords", "product_exclude_keywords"):

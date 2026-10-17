@@ -1,4 +1,4 @@
-/** ④ 案内（準備中・停止中・期限切れ・パスワード変更必要・読み込み失敗） */
+/** ④ 案内（準備中・停止中・期限切れ・読み込み失敗） */
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Button } from "../../components/Button";
@@ -18,8 +18,6 @@ function noticeText(t: TFunction, kind: ViewerNoticeKind): { title: string; desc
       return { title: t("viewer.notice.suspended.title"), description: t("viewer.notice.suspended.description") };
     case "expired":
       return { title: t("viewer.notice.expired.title"), description: t("viewer.notice.expired.description") };
-    case "passwordChange":
-      return { title: t("viewer.notice.passwordChange.title"), description: t("viewer.notice.passwordChange.description") };
     default:
       return { title: t("viewer.notice.error.title"), description: t("viewer.notice.error.description") };
   }

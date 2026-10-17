@@ -207,6 +207,65 @@ async def _reenqueue_stale_pending_jobs(job_ids: list[str]) -> dict[str, int]:
         await _engine.dispose()
 
 
+# 解析段の失敗（extraction_jobs.error_message='ANALYSIS_FAILED'）を1回だけ自動でやり直す。
+# 設計: docs/handoff/analysis-failed-record/design.md。新しい列・migration なし。
+ANALYSIS_RETRY_MIN_AGE_MINUTES = 5
+MAX_ANALYSIS_RETRY_PER_RUN = 20
+
+
+def retry_analysis_failed_jobs(session) -> list[str]:
+    """解析失敗の v102 job を 'ANALYSIS_FAILED_RETRIED' に書き換えてから再解析タスクを積む（1 job 1 回だけ）。
+
+    書き換えが 1 件更新されたときだけ積む。やり直しも失敗したら RETRIED のまま残り、再び拾わない。
+    """
+    from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX  # noqa: PLC0415
+
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ej.id
+            FROM {TCG_SCHEMA}.extraction_jobs ej
+            WHERE ej.status = 'done'
+              AND ej.error_message = 'ANALYSIS_FAILED'
+              AND ej.prompt_version LIKE :prefix
+              AND ej.extracted_at < NOW() - (:min_age || ' minutes')::interval
+            ORDER BY ej.extracted_at ASC
+            LIMIT :max_retry
+            """
+        ),
+        {
+            "prefix": V102_PROMPT_VERSION_PREFIX + "%",
+            "min_age": ANALYSIS_RETRY_MIN_AGE_MINUTES,
+            "max_retry": MAX_ANALYSIS_RETRY_PER_RUN,
+        },
+    ).fetchall()
+
+    enqueued: list[str] = []
+    for row in rows:
+        job_id = str(row[0])
+        updated = session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs SET error_message = 'ANALYSIS_FAILED_RETRIED' "
+                "WHERE id = :ej AND error_message = 'ANALYSIS_FAILED'"
+            ),
+            {"ej": job_id},
+        )
+        session.commit()
+        if updated.rowcount != 1:
+            continue
+        try:
+            from app.tasks.tcg_extraction import v102_reanalyze_after_correction_task  # noqa: PLC0415
+
+            if v102_reanalyze_after_correction_task is None:
+                continue
+            v102_reanalyze_after_correction_task.delay(job_id)
+            enqueued.append(job_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[tcg_extraction_recovery] 解析やり直しの投入に失敗: ej=%s err=%s", job_id, type(exc).__name__)
+    logger.info("[tcg_extraction_recovery] 解析失敗のやり直し: 対象%d件 投入%d件", len(rows), len(enqueued))
+    return enqueued
+
+
 def _run_recovery() -> dict:
     engine = _get_sync_engine()
     try:
@@ -214,6 +273,7 @@ def _run_recovery() -> dict:
         with Session() as session:
             recovered_running_ids = recover_stale_running_jobs(session)
             stale_pending_ids = find_stale_pending_job_ids(session)
+            analysis_retry_ids = retry_analysis_failed_jobs(session)
     finally:
         engine.dispose()
 
@@ -228,6 +288,7 @@ def _run_recovery() -> dict:
         "stale_pending_ids": stale_pending_ids,
         "reenqueued": reenqueue_result.get("enqueued", 0),
         "reenqueue_skipped": reenqueue_result.get("skipped", 0),
+        "analysis_retry_count": len(analysis_retry_ids),
     }
 
     if recovered_running_ids or stale_pending_ids:
