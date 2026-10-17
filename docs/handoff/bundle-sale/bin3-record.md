@@ -22,7 +22,7 @@ status: 便3 再解析 93 job 済（2026-10-17、実行者 PO）・K1 は PO 目
 ## 3. 実行
 
 - 実行者: PO。`!` で run-bin3.sh を実行。Gemini は呼ばない（`reanalyze_v102_job` を 1 job ずつ）。
-- 結果: out-apply.txt に job の行が 93 行（すべて `ok`）、末尾 `DONE ok=93 ng=0`。時刻は 16:16:49Z〜16:30:57Z（2026-10-17）。各行の全文はここに載せない（run/out-apply.txt）。
+- 結果: out-apply.txt に job の行が 93 行（すべて `ok`）、末尾 `DONE ok=93 ng=0`。時刻は 16:16:49Z〜16:30:57Z（2026-10-17）。出典: PO の端末に出た start / done の表示を保存したもの（/tmp/CC報告ファイル/bundle-sale/bin3/run/po-terminal.txt）。out-apply.txt にはこの 2 値は無い。各行の全文はここに載せない（run/out-apply.txt）。
 - 止まる仕組み: 実行中のデプロイがあれば中止／jobs.txt が 93 行でなければ中止／末尾が `DONE ok=93 ng=0` でなければ NG で終了（`set -euo pipefail`）。
 
 ### run-bin3.sh（全文）
@@ -96,16 +96,18 @@ sys.exit(1 if ng else 0)
 
 ## 4. 照合（K1〜K6）
 
+判定の基準は kgi.md。check/summary.md は check6 の調べの前の中間の判定（K2 ×・K6 保留）で、check6 で規則による外れと分かったため、この記録で判定し直した。
+
 取得: run/fetch-after.sh → check/after.tsv（861 行・93 job）。before.tsv は 867 行。照合の全体: /tmp/CC報告ファイル/bundle-sale/bin3/check/summary.md（生出力は同フォルダ）。
 
 | # | 基準 | 観測値 | 判定 |
 |---|---|---|---|
 | K1 | 4周年40パックセット行が 3 画面で「商品名 40パックセット／Pack／24,000円／15」 | DB: item 8d9eea15 は bundle_size=40・unit=Pack・数量 15・値段 24000・needs_review=False。配信式で商品名=「4周年!四皇トレジャーゲット キャンペーンパック 40パックセット」。画面は未確認 | DB 側は一致（「…キャンペーンパック 40パックセット」・24000・15）。画面は PO 目視待ち |
-| K2 | 決まる行が bundle_size=本文の数・単位=中身の単位 | replay の decided は 145 行。after で bundle_size が入った行は 144 行。145 行すべてで bundle_size と単位が replay と一致（144 行は現行行、1 行 ddf2bfa8 は bundle_size=100 で入ったが 5 の規則で現行から外れた）。decided 以外で bundle_size が付いた行 0 | ○ |
+| K2 | 決まる行が bundle_size=本文の数・値段=本文のまとめ値段・単位=中身の単位 | replay の decided は 145 行。after で bundle_size が入った行は 144 行。145 行すべてで bundle_size と単位が replay と一致（144 行は現行行、1 行 ddf2bfa8 は bundle_size=100 で入ったが 5 の規則で現行から外れた）。decided 以外で bundle_size が付いた行 0。値段は replay に本文値が無く、本文との直接照合はしていない（13 行は K5 で一致、ほかは before と同じ値） | まとめの数・単位 ○（145/145）／値段は本文と未照合 |
 | K3 | 誤り 3 種（154c8ea1・dbe5702e・64255758）にまとめの数が付かない | 3 item とも bundle_size 空、replay 判定 none。注記: 3 件とも 93 job の外の行で、今回は再解析していない（最新計算 10/16〜10/17 10:44） | ○（再解析で確かめた形ではない） |
-| K4 | 決まらない 5 種に要確認の印、配信に出ない | 5 種とも needs_review=True・review_reasons に bundle_unverified（5/5）。配信条件では pid_resolved=False が 3、exclusion=excluded が 2 で外れる。配信 SQL を実際に流した出力は未取得 | ○ |
+| K4 | 決まらない 5 種に要確認の印、配信に出ない | 5 種とも needs_review=True・review_reasons に bundle_unverified（5/5）。配信条件（check/k4_dist_cond.tsv）では pid_resolved=False が 4 件（3a81d9cf・75100be0・7a3a3150・a98fe6ba）、exclusion=excluded が 2 件（6943d3a1・a98fe6ba）で、a98fe6ba は両方。5 件とも少なくとも一方で外れる。配信 SQL を実際に流した出力は未取得 | ○ |
 | K5 | ÷N されていた 13 行が本文どおりに戻る | 13/13 行が V102:bulk:set:100(1000) の price_basis から変化。例 cd0d1216: 380円/1300 → 38000円/13。13 行すべて bundle_size 入り・decided | ○ |
-| K6 | まとめ売りでない行の単位・値段・数量が変わらない | まとめでない 717 行で unit・値段・数量の変化 0 | ○ |
+| K6 | まとめ売りでない行の単位・値段・数量が変わらない | まとめでない 717 行で unit・値段・数量の変化 0。現行から外れた非対象 5 行も単位・値段・数量は before と同じ（before.tsv・check6/six.tsv） | ○ |
 
 ### 列ごとの差（両方にある 861 行）
 
@@ -134,16 +136,20 @@ before にあって after に現行行が無い item は 6（5 に記す）。af
 
 規則: `backend/app/services/tcg_analyzer_svc.py` の `_merge_supplier_products`（:1951-2100、UPDATE は :2076-2081）。キーは (supplier_channel_id, product_id, condition_id)。同じ仕入元・同じ商品・同じ状態の中で、received_at が最も新しい投稿（同順は computed_at の最大、次に job_id）の行が is_current=TRUE になり、ほかの投稿の行は FALSE になる。
 
-再解析前はこの 6 行の product_id が空で、この規則の対象外だった。再解析で product_id が付き、規則の対象に入って、より新しい投稿に負けた。
+再解析前（根拠: before.tsv）、fea86f11・dba96a1d・c0207d4f・ddf2bfa8 の 4 行は product_id が空で、この規則の対象外だった。b6299b96・b4ebf4e9 の 2 行は product_id 440301 で現行だったが、再解析で 466088 に変わった。6 行とも、同じ仕入元の新しい投稿の行に負けた。
+
+同じ仕入元かの確認: 勝った側の job（3b770f96・38d43356・8dcbfc9c・5f886d8c）と負けた側の job（b8f6e15a・031eebc3・38e82e4d・5f886d8c）の supplier_channel_id を reader の道で取り直した（check6/channels.sql・check6/channels.tsv）。組ごとに同じ仕入元だった: b8f6e15a と 3b770f96 は 792c36ef、031eebc3・5f886d8c・38d43356 は cac4a471、38e82e4d と 8dcbfc9c は bf8ee742。
 
 | 外れた item | job | 商品 | 状態 | 受信 | 勝った相手の item | 相手の job | 相手の受信 |
 |---|---|---|---|---|---|---|---|
-| b6299b96 | b8f6e15a | 466088 | 14 | 2026-10-17 03:29Z | a91906e3 | 3b770f96 | 2026-10-17 06:14Z |
-| b4ebf4e9 | b8f6e15a | 466088 | 14 | 2026-10-17 03:29Z | 48580e77 | 3b770f96 | 2026-10-17 06:14Z |
+| b6299b96 | b8f6e15a | 466088 | 14 | 2026-10-17 03:29Z | job 3b770f96 の 2 行（a91906e3・48580e77）が現行 | 3b770f96 | 2026-10-17 06:14Z |
+| b4ebf4e9 | b8f6e15a | 466088 | 14 | 2026-10-17 03:29Z | 同上 | 3b770f96 | 2026-10-17 06:14Z |
 | fea86f11 | 031eebc3 | 466068 | 12 | 2026-10-10 04:11Z | 05633643 | 5f886d8c | 2026-10-11 00:47Z |
 | dba96a1d | 5f886d8c | 466063 | 14 | 2026-10-11 00:47Z | dfd1b1cb | 38d43356 | 2026-10-17 13:40Z |
 | c0207d4f | 031eebc3 | 466063 | 14 | 2026-10-10 04:11Z | dfd1b1cb | 38d43356 | 2026-10-17 13:40Z |
 | ddf2bfa8 | 38e82e4d | 200 | 46 | 2026-10-12 11:40Z | 7eb5c5dc | 8dcbfc9c | 2026-10-16 07:03Z |
+
+勝ち負けは job 単位で決まり、item 同士の対応はない（tcg_analyzer_svc.py :2064-2072）。
 
 - ddf2bfa8 は K2 の 145 行のうちの 1 行（bundle_size=100、数量 1、値段 24000）。相手 7eb5c5dc も bundle_size=100（数量 1、値段 24500）。
 - 6 件とも ar は 1 件のみで is_current=False（check/missing6_ar.tsv）。内訳は check6/six.tsv・rivals.tsv。
