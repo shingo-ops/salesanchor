@@ -46,6 +46,7 @@ router = APIRouter()
 _DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1499458730171961535")
 
 # Bot permissions integer (confirmed from Developer Portal 2026-06-16).
+# 2026-10-17: +Create Instant Invite (bit 0). 805432406 -> 805432407 (PO decision, ADR-091).
 # See docs/adr/ADR-091-discord-bot-scope-definition.md for full intent.
 #
 # Current required permissions:
@@ -56,6 +57,7 @@ _DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1499458730171961535")
 #   - Read Message History  — inspect existing channels during setup and operations
 #   - Kick Members          — remove customers from Discord server via app (discord_remove.py)
 #   - Ban Members           — ban abusive / spam customers via app
+#   - Create Instant Invite — create 7-day single-use invites for viewer signups (ADR-1019 stage 4b)
 #
 # Approved future permissions (no API calls yet; require separate ADR before implementation):
 #   - Manage Webhooks       — planned: staff configures webhooks from app
@@ -69,7 +71,7 @@ _DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1499458730171961535")
 #   - Manage Guild          — outside bot's operational scope
 #   - Thread permissions    — ADR-091: thread features are not used
 #   - Voice permissions     — outside bot's operational scope
-_DISCORD_PERMISSIONS = "805432406"
+_DISCORD_PERMISSIONS = "805432407"
 _DISCORD_CALLBACK_URL = os.getenv(
     "DISCORD_CALLBACK_URL",
     "https://api.salesanchor.jp/api/v1/discord/oauth/callback",
