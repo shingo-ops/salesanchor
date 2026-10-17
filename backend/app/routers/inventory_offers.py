@@ -261,6 +261,24 @@ def _build_view_filters(
     return conditions, params
 
 
+def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
+    """GET /inventory の ORDER BY（ADR-1014 改訂 2026-10-18）。sort_col / order_dir は信頼できる断片のみ。
+
+    まとまり（商品）の順: 発売日（空欄は末尾）→ 英語名 → 日本語名 → product_id。発売日の向きは release_date を選んだときだけ order_dir。
+    まとまりの中: 選んだ列（release_date なら sort_ord のみ）。タイトル列（name）は変更前の式のまま。
+    """
+    if sort_col == _SORT_COLUMNS["name"]:
+        return f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
+    group_dir = order_dir if sort_col == _SORT_COLUMNS["release_date"] else "ASC"
+    group = (
+        f"NULLIF(d.release_date, '') {group_dir} NULLS LAST, d.english_title ASC, "
+        "d.japanese_title ASC NULLS LAST, d.product_id ASC"
+    )
+    if sort_col == _SORT_COLUMNS["release_date"]:
+        return f"ORDER BY {group}, d.sort_ord ASC"
+    return f"ORDER BY {group}, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+
+
 def _build_inventory_view_sql(
     *, head: str, final_main: str, merge: bool, where: str, sort_col: str, order_dir: str,
 ) -> str:
@@ -270,11 +288,7 @@ def _build_inventory_view_sql(
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
     列並び（3枝共通）: __kind, __total, <配信行+tcg_type+category の全列>, __ord, __f_* の5列。
     """
-    # GAS 方式: 英語タイトルでまとめてから並べる。タイトル列そのものを並べるときは英語タイトルの昇降を切り替える。
-    if sort_col == _SORT_COLUMNS["name"]:
-        order_by = f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
-    else:
-        order_by = f"ORDER BY d.english_title ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+    order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
     join = "LEFT JOIN public.products pp ON pp.id = x.product_id"
     ctes = [f"rows_main AS ({final_main})"]
     if merge:

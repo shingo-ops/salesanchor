@@ -1,3 +1,4 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 検索の正規化ベクタ・日本語タイトルの並びを検証する（ADR-027・precedent: ProductMasterDrawer.test.tsx） */
 import { describe, expect, it } from "vitest";
 import vectors from "../../features/inventory/searchNormalize.vectors.json";
 import { filterRows, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
@@ -57,37 +58,55 @@ describe("filters", () => {
   });
 });
 
-describe("sort (design L365)", () => {
+describe("sort (ADR-1014 改訂 2026-10-18)", () => {
+  // 商品A(2026-01-01) の2行（価格 900/100）、商品B(2026-03-01) 1行、発売日が空の商品C 1行
   const rows = withIndex([
-    mk({ english_title: "item 2", release_date: "2026-01-01" }), // 0
-    mk({ english_title: "item 10", release_date: "2026-03-01" }), // 1
-    mk({ english_title: "", release_date: "2026-02-01", japanese_title: "あ" }), // 2
-    mk({ english_title: "item 2", release_date: "" }), // 3
-    mk({ english_title: "item 2", release_date: "2026-05-01" }), // 4
-    mk({ english_title: "", release_date: "", japanese_title: "い" }), // 5
+    mk({ english_title: "B item", release_date: "2026-03-01", unit_price: "50" }), // 0
+    mk({ english_title: "A item", release_date: "2026-01-01", unit_price: "900" }), // 1
+    mk({ english_title: "C item", release_date: "", unit_price: "10" }), // 2
+    mk({ english_title: "A item", release_date: "2026-01-01", unit_price: "100" }), // 3
   ]);
-  it("default: english_title asc ('' first), then release_date desc (empty last), then original order", () => {
-    // 'item 10' < 'item 2'（numeric なし）。'' が先頭
-    expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([2, 5, 1, 4, 0, 3]);
+  it("default (release_date asc): groups by release date oldest first, empty last, original order inside", () => {
+    expect(sortRows(rows, "release_date", "asc").map((r) => r.idx)).toEqual([1, 3, 0, 2]);
   });
-  it("pull-down price asc applies only inside the same english_title", () => {
+  it("price asc keeps the group order and sorts only inside a group", () => {
+    expect(sortRows(rows, "unit_price", "asc").map((r) => r.idx)).toEqual([3, 1, 0, 2]);
+  });
+  it("release_date desc: newest group first, empty still last", () => {
+    expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([0, 1, 3, 2]);
+  });
+  it("same release date: groups are split by english_title", () => {
     const rs = withIndex([
-      mk({ english_title: "b", unit_price: "5" }),
-      mk({ english_title: "a", unit_price: "9" }),
-      mk({ english_title: "a", unit_price: "" }),
-      mk({ english_title: "a", unit_price: "2" }),
+      mk({ english_title: "b", release_date: "2026-01-01" }),
+      mk({ english_title: "a", release_date: "2026-01-01" }),
+      mk({ english_title: "b", release_date: "2026-01-01" }),
     ]);
-    expect(sortRows(rs, "unit_price", "asc").map((r) => r.idx)).toEqual([3, 1, 2, 0]);
+    expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0, 2]);
+  });
+  it("same release date and english_title: empty japanese_title comes first (same as backend)", () => {
+    const rs = withIndex([
+      mk({ english_title: "x", japanese_title: "あ", release_date: "2026-01-01" }),
+      mk({ english_title: "x", japanese_title: "", release_date: "2026-01-01" }),
+    ]);
+    expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0]);
   });
   it("name header desc: english_title desc and japanese_title desc, '' english last", () => {
-    const out = sortRows(rows, "name", "desc");
+    const nameRows = withIndex([
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "item 10" }),
+      mk({ english_title: "", japanese_title: "あ" }),
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "", japanese_title: "い" }),
+    ]);
+    const out = sortRows(nameRows, "name", "desc");
     // english_title '' の行は末尾（降順）、'item 2' が 'item 10' より前
     expect(out.slice(-2).map((r) => r.english_title)).toEqual(["", ""]);
     expect(out.slice(-2).map((r) => r.japanese_title)).toEqual(["い", "あ"]);
     expect(out.map((r) => r.english_title).slice(0, 4)).toEqual(["item 2", "item 2", "item 2", "item 10"]);
   });
   it("'item 10' sorts before 'item 2' (no numeric collation)", () => {
-    const out = sortRows(withIndex([mk({ english_title: "item 2" }), mk({ english_title: "item 10" })]), "release_date", "desc");
+    const out = sortRows(withIndex([mk({ english_title: "item 2" }), mk({ english_title: "item 10" })]), "release_date", "asc");
     expect(out.map((r) => r.english_title)).toEqual(["item 10", "item 2"]);
   });
 });

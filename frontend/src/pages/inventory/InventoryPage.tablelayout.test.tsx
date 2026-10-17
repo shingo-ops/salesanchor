@@ -48,12 +48,12 @@ describe('InventoryPage table layout (DataTable)', () => {
     expect(within(rowEl).getByText('Sealed box').className).toContain('inventory-cell__condition--info');
   });
 
-  it('sort menu has 3 options and placeholder by default; picking one sets sort and resetAll returns to release_date desc', async () => {
+  it('sort menu has 4 options and defaults to release_date:asc; picking one sets sort and resetAll returns to release_date asc', async () => {
     renderPage();
     await screen.findByTestId('inventory-row-r1');
     const menu = screen.getByTestId('inventory-sort-menu') as HTMLSelectElement;
-    expect(menu.value).toBe('');
-    expect(Array.from(menu.options).map((o) => o.value)).toEqual(['', 'unit_price:asc', 'quantity:desc', 'offered_at:desc']);
+    expect(menu.value).toBe('release_date:asc');
+    expect(Array.from(menu.options).map((o) => o.value)).toEqual(['', 'release_date:asc', 'unit_price:asc', 'quantity:desc', 'offered_at:desc']);
     expect(menu.options[0].textContent).toBe('Sort');
     fireEvent.change(menu, { target: { value: 'unit_price:asc' } });
     await waitFor(() =>
@@ -61,10 +61,10 @@ describe('InventoryPage table layout (DataTable)', () => {
     );
     expect((screen.getByTestId('inventory-sort-menu') as HTMLSelectElement).value).toBe('unit_price:asc');
     fireEvent.click(screen.getByTestId('inventory-reset-sort'));
-    await waitFor(() => expect((screen.getByTestId('inventory-sort-menu') as HTMLSelectElement).value).toBe(''));
+    await waitFor(() => expect((screen.getByTestId('inventory-sort-menu') as HTMLSelectElement).value).toBe('release_date:asc'));
     const invCalls = mock.get.mock.calls.filter(([u]) => String(u).startsWith('/inventory?'));
     const last = String(invCalls[invCalls.length - 1][0]);
     expect(last).toContain('sort=release_date');
-    expect(last).toContain('order=desc');
+    expect(last).toContain('order=asc');
   });
 });
