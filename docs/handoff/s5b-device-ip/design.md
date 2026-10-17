@@ -76,7 +76,7 @@ D2 の確認でできる 1 行は、承認されていない仮の登録で、�
 
 - 見張り: T1（CI の pytest で毎回走る）。
 - 正本: 接続元の決め方は backend/app/client_ip.py の 1 つだけ。docs/specs/client-ip/README.md の対象に、端末登録を加える。
-- 担当: 接続元 IP を使う PR を設計する Opus。
+- 守り手: 接続元 IP を使う PR を設計する Opus（T1 が赤になった PR は、マージしない）。
 
 ## 7. 戻し方
 
