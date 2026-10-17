@@ -115,6 +115,7 @@ ADR-1024「戻し方」に同じ。要点: authorized_keys の 1 行を消す（
 - 便3a（リポジトリ・PR・危険パス `migrations/` を含む）: 実装カード [card-bin3a.md](card-bin3a.md)。ADR-136 の GO 手順（CLAUDE.md:57）と、PO の実装承認が別に要る。
 - 便3b（PO `!` 実行。台本は Sonnet が作り、Opus が全文を読む）: `ai_reader` にパスワード → `.env` に `AI_READER_DATABASE_URL`（secrets 変更なので PO 確認。値は画面に出さない）→ 専用コンテナの起動確認 → Mac で reader 鍵を作る → authorized_keys に 1 行追加。
 - 便4（Mac 側）: フック修正 → 文書・メモの統一 → K1〜K18 を測る。
+  - 便4 結果（2026-10-17）: フック免除は不要（K17）。現在のフックは reader の呼び方に当たらない（`scripts/agent-danger-hook.sh:99-101,113`）。K 試験の結果は [k-results.md](k-results.md)、担当向けの使い方は [usage.md](usage.md)。
 - 未決 1: 設計仕様書（あるべき姿）を作るか対象外とするか（STANDARD-WORKFLOW §1.5）。PO 判断。
 - 未決 2: Mac の接続元が固定か（`from=` を付けるか。U6）。
 - 未決 3: Branch Protection の CODEOWNERS 必須が有効か（U14）。PO が GUI で確認。
