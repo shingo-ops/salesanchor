@@ -63,6 +63,8 @@ Step 3c の rm -f の直前に、「判定スクリプト」を観測モード�
 
 discord-gateway は、変わっていれば今と同じく「先に消してから起動」する。二重起動を防ぐ今の安全策を、そのまま残す形になる。compose の作り直しの順番に頼らないので、U6 が分からないままでも安全側に倒れる。
 
+段階2（--apply）の着手条件: app-services-plan.sh の重複判定（:21 の docker ps）に `--filter label=com.docker.compose.oneoff=False` を加え、一時コンテナ（docker compose run 由来）を重複に数えないこと。scripts/tests/test_app_services_plan.py に一時コンテナが混ざる場合のテストを1本足すこと。理由: 現状は表示のみのため実害なしだが、--apply が重複を消す動作になると一時コンテナを誤って消す恐れがある（2026-10-17 調査）。
+
 ### 選ばなかった案
 | 案 | 選ばなかった理由 |
 |---|---|
