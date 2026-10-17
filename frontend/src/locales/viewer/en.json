@@ -48,7 +48,7 @@
       "mark": "Model No.",
       "title": "Product",
       "condition": "Condition",
-      "offerType": "Type",
+      "offerType": "Status",
       "quantity": "Qty",
       "unitPrice": "Unit price",
       "supplier": "Supplier",
