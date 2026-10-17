@@ -70,6 +70,26 @@ it("lists viewers with status badges and flag badges only on flagged rows", asyn
   expect(within(row("s2@example.com")).getByText("d-222")).toBeTruthy();
 });
 
+it("shows the open room link only on rows that have a discord_channel_url", async () => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") {
+      return {
+        items: [
+          v({ id: 1, discord_user_id: "d-111", discord_channel_id: "555", discord_channel_url: "https://discord.com/channels/10/555" }),
+          v({ id: 2, email: "s2@example.com", discord_user_id: "d-222", discord_channel_url: null }),
+        ],
+      };
+    }
+    return { items: [] };
+  });
+  renderPage();
+  await screen.findByText("t1@example.com");
+  const link = within(row("t1@example.com")).getByRole("link", { name: "Open room" });
+  expect(link.getAttribute("href")).toBe("https://discord.com/channels/10/555");
+  expect(link.getAttribute("target")).toBe("_blank");
+  expect(within(row("s2@example.com")).queryByRole("link", { name: "Open room" })).toBeNull();
+});
+
 it("shows activate/extend/suspend on trial rows and only unsuspend on suspended rows", async () => {
   renderPage();
   await screen.findByText("t1@example.com");

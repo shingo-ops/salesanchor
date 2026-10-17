@@ -2656,6 +2656,7 @@
       "colStatus": "Status",
       "colExpires": "Expires",
       "colDiscord": "Discord ID",
+      "openRoom": "Open room",
       "colFlags": "Flags",
       "colCreated": "Registered",
       "colActions": "Actions",
