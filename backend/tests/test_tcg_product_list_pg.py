@@ -39,6 +39,13 @@ async def _exec_multi_stmt(conn, sql: str) -> None:
     await raw.driver_connection.execute(sql)
 
 
+PACKAGING_MIGRATIONS = (
+    "20260921_140000_product_classification_masters.sql",
+    "20260922_060000_product_unit_condition_infra.sql",  # quantity_units.value の NOT NULL を外す（本番と同じ）
+    "20261018_100000_create_product_packagings.sql",
+)
+
+
 async def create_product_schema(conn, schema):
     """Build every disposable schema from the same production migrations."""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
@@ -85,6 +92,23 @@ async def create_product_schema(conn, schema):
         "20261016_190000_create_product_blank_confirmations.sql",
     ):
         await _exec_multi_stmt(conn, (migrations / name).read_text())
+    await create_packaging_tables(conn)
+
+
+async def create_packaging_tables(conn):
+    """ADR-1028: 商品 API が読む荷姿の表と、その元の「数える単位」の表。本番 migration を public の lock の中で流す。
+
+    ほかの試験の public 作りと同時に走っても噛み合わないよう、public_bootstrap と同じ advisory lock を取る。
+    外側の transaction の中なので 20260922_060000 の BEGIN/COMMIT は除く。
+    """
+    migrations = Path(__file__).resolve().parents[2] / "migrations"
+    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+    try:
+        for name in PACKAGING_MIGRATIONS:
+            sql = (migrations / name).read_text().replace("BEGIN;", "").replace("COMMIT;", "")
+            await _exec_multi_stmt(conn, sql)
+    finally:
+        await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
 
 
 @pytest_asyncio.fixture

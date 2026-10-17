@@ -37,18 +37,11 @@ async def client_factory(product_db, monkeypatch):
     db, _ = product_db
     for column in _ROUTE_COLUMNS:
         await db.execute(text(f"ALTER TABLE public.products ADD COLUMN IF NOT EXISTS {column}"))
-    # 数える単位の表は本番 migration で作る。本番は value が空のまま（20260922_060000 が NOT NULL を外す）なので、同じ 2 本を流す。
-    # 外側の transaction の中で流すので BEGIN/COMMIT は除く
-    for name in ("20260921_140000_product_classification_masters.sql", "20260922_060000_product_unit_condition_infra.sql"):
-        sql = (MIGRATIONS / name).read_text().replace("BEGIN;", "").replace("COMMIT;", "")
-        await fixtures._exec_multi_stmt(await db.connection(), sql)
+    # 荷姿の表と単位の表は product_db の土台（create_product_schema）が本番 migration で作る。行だけここで入れる
     await db.execute(text(
         "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
         "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
     ))
-    await fixtures._exec_multi_stmt(
-        await db.connection(), (MIGRATIONS / "20261018_100000_create_product_packagings.sql").read_text()
-    )
 
     async def _perms(*_args, **_kwargs):
         return {"products.view", "products.create", "products.update"}

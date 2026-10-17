@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from tests.rls_bootstrap import public_bootstrap_lock, seed_type_master
+from tests.test_tcg_product_list_pg import PACKAGING_MIGRATIONS
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -47,6 +48,7 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260921_060000_create_product_kinds.sql",
     "20260921_070000_rename_tcg_type_master_to_type_master.sql",
     "20261016_190000_create_product_blank_confirmations.sql",  # ADR-1020 便4a: 共用の行の PATCH が印の表を読む
+    *PACKAGING_MIGRATIONS,  # ADR-1028 便3: 商品 API が荷姿の表を読む（一覧は test_tcg_product_list_pg と同じ 3 本）
 ]
 
 
@@ -98,7 +100,8 @@ def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
 
 
 async def _apply_migration(admin_engine, filename: str) -> None:
-    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+    # 20260922_060000 は BEGIN/COMMIT を持つ。ここは admin_engine.begin() の transaction の中なので除く
+    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
     async with admin_engine.begin() as conn:
         for stmt in _split_sql_preserving_do_blocks(sql):
             stmt = stmt.strip()
