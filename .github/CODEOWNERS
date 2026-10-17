@@ -21,3 +21,10 @@ frontend/src/pages/schedule.css            @shingo-ops
 migrations/                                @shingo-ops
 .github/workflows/                         @shingo-ops
 scripts/                                   @shingo-ops
+
+# ADR-1024: AI 用の読み取り専用の道。台本・compose 定義は PO の必須レビュー
+backend/app/ops/                           @shingo-ops
+docker-compose.ai-reader.yml               @shingo-ops
+migrations/*ai_reader*                     @shingo-ops
+migrations/*ai_ro*                         @shingo-ops
+backend/tests/ops/                         @shingo-ops
