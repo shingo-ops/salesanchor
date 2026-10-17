@@ -47,7 +47,7 @@ ALTER TABLE public.products DROP COLUMN IF EXISTS type_master_id;
 ```
 
 ### 3-3. scripts/run_all_migrations.sh
-末尾（`20261017_140000_create_analysis_error_report_tables.sql` の行の後）に追加:
+末尾（`migrations/20261017_140000_create_analysis_error_report_tables.sql` の行の後）に追加:
 ```bash
 # ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
 run_sql migrations/20261017_210000_drop_products_type_master_id.sql
@@ -81,11 +81,12 @@ run_sql migrations/20261017_210000_drop_products_type_master_id.sql
 | K6 画面と API が動く | 本番 /health 200、未ログインの商品 API が 401（500 でない）、backend ログに type_master_id のエラーが 0 件（デプロイ後 10 分） |
 | K7 次のデプロイも成功する（ADD が戻っていない） | この PR の後の最初の main デプロイの結果 success（観測は後日） |
 
-## 6. 維持する仕組み
+## 6. 維持の仕組み
+- 守り手: CI migration-guard Check 10（同じ列の ADD→DROP を止める）と、20260922_010000 の「ADD を戻さない」コメント
 - 3-1 のコメントで「ADD を戻さない」を残す。CI Check 10 が同じ列の ADD→DROP を止める。
 - products の列番号の上限は products-column-churn の記録と同じ扱い。
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 不要。判断は自分の DB の参照 0 件と列番号上限の実測で決まる（recon.md「外部事例」）。
 
 ## 8. 実装カード（Sonnet）
