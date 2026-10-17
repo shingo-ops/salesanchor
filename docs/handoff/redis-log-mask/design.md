@@ -1,6 +1,6 @@
 # design: Redis の接続ログでパスワードを伏せる（2026-10-17。PO「y」）
 
-- 参照: recon.md（同じフォルダ）、ADR-075（秘密は GitHub Secrets だけに置く）・S3 の考え方（秘密を外へ出さない）
+- 参照: docs/handoff/redis-log-mask/recon.md、ADR-075（秘密は GitHub Secrets だけに置く）・S3 の考え方（秘密を外へ出さない）
 - 目的: ログにパスワードを出さない。ホスト・ポート・DB 番号は残す（障害の調べに使う）
 - 変更: backend/app/cache.py に `_mask_url` を足し、:29 で使う。分けられない値は `<redacted>`
 - 触らない: Redis のパスワード自体（変えない）、他の logger
@@ -19,4 +19,4 @@
 - 外部事例: 使わない（数字で効果を示す事例は不要。1行のログの伏せ字で、効果は本番ログの grep で直接確かめる）。
 
 ## 維持の仕組み
-- backend/tests/test_cache_mask_url.py が CI で毎回走り、ログにパスワードが出ると落ちる。
+- 守り手: backend/tests/test_cache_mask_url.py（CI の pytest で毎回走り、ログにパスワードが出ると落ちる）
