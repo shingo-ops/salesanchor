@@ -66,7 +66,8 @@
       "password": "パスワード",
       "submit": "ログイン",
       "submitting": "ログイン中…",
-      "forgot": "パスワードを忘れた"
+      "forgot": "パスワードを忘れた",
+      "signup": "申込"
     },
     "changePassword": "パスワードを変更",
     "passwordChange": {
@@ -98,6 +99,22 @@
       "invalidDescription": "リンクの期限が切れているか、すでに使われています。もう一度メールを送ってください。",
       "again": "もう一度メールを送る",
       "backToLogin": "ログインに戻る"
+    },
+    "signup": {
+      "title": "利用の申込",
+      "lineName": "LINE の表示名",
+      "inventoryIssue": "在庫関連のお困りごと（任意）",
+      "inventoryIssueHelp": "1000文字まで",
+      "submit": "申し込む",
+      "submitting": "送信中…",
+      "backToLogin": "ログインへ戻る",
+      "doneTitle": "お申込みを受け付けました",
+      "doneDescription": "Discord の受付の部屋でボタンを押し、このコードを入れてください",
+      "expires": "有効期限 {{time}}",
+      "onlyHere": "コードと招待リンクはこの画面でしか見られません",
+      "openInvite": "Discord に参加する",
+      "inviteFailed": "招待リンクを作れませんでした。時間をおいて、同じメールでもう一度申し込んでください",
+      "alreadyApplied": "すでにお申込み済みの方は、ログイン画面の「パスワードを忘れた」から再発行してください"
     },
     "error": {
       "forbidden_origin": "このページからはログインできません。",

@@ -1,7 +1,7 @@
 """閲覧専用ページの API（ADR-1019 段2・設計 D1/D2）。
 
 POST /login・POST /logout・GET /inventory・POST /password・POST /password-reset/request・
-POST /password-reset/confirm の6本。signup は段4b。
+POST /password-reset/confirm・POST /signup の7本。
 アプリの get_current_user とは別の経路で、Redis の jwt: 名前空間（キャッシュ関数）は使わない。
 """
 
@@ -12,7 +12,7 @@ import hashlib
 import logging
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials
@@ -29,14 +29,18 @@ from app.auth.viewer_dependencies import (
     viewer_security,
 )
 from app.auth.viewer_email import normalize_viewer_email
+from app.auth.viewer_signup_code import format_signup_code, generate_signup_code, signup_code_sha256
 from app.auth.viewer_tokens import create_viewer_access_token, decode_viewer_token
 from app.cache import (
     AUTH_FAIL_LOCKOUT_TTL,
     AUTH_FAIL_MAX,
     PASSWORD_RESET_REQUEST_MAX,
+    VIEWER_SIGNUP_EMAIL_MAX,
+    VIEWER_SIGNUP_IP_MAX,
     blacklist_token,
     check_auth_rate_limit,
     count_viewer_password_reset_request,
+    count_viewer_signup,
     get_redis,
     record_auth_failure,
 )
@@ -44,6 +48,7 @@ from app.client_ip import get_client_ip
 from app.database import get_db
 from app.routers.auth import PASSWORD_RESET_TTL, _require_app_origin
 from app.services.auth_mail import send_viewer_password_reset_email
+from app.services.viewer_invite import create_viewer_invite
 from app.tasks.viewer_inventory_cache import CACHE_KEY
 
 router = APIRouter()
@@ -74,6 +79,13 @@ class ViewerPasswordResetRequest(BaseModel):
 class ViewerPasswordResetConfirmRequest(BaseModel):
     token: str = Field(max_length=256, description="再発行メールのリンクに入っている鍵")
     new_password: str = Field(max_length=256, description="新しいパスワード（15〜64 文字）")
+
+
+class ViewerSignupRequest(BaseModel):
+    email: str = Field(max_length=254, description="メールアドレス")
+    line_name: str = Field(max_length=200, description="LINE の表示名（前後の空白を除いて1〜100文字）")
+    inventory_issue: str | None = Field(default=None, max_length=1000, description="在庫関連の課題（任意）")
+    website: str | None = Field(default=None, max_length=200, description="ボット対策の隠し欄。人は空のまま")
 
 
 def _normalize_or_none(raw: str) -> str | None:
@@ -382,3 +394,94 @@ async def viewer_password_reset_confirm(
     await _record_event(db, account.id, "password_reset_done", ip, request.headers.get("user-agent"))
     await db.commit()
     return {"status": "password_updated"}
+
+
+SIGNUP_CODE_TTL = timedelta(days=7)
+_SIGNUP_INVALID = "viewer_signup_invalid"
+
+
+def _signup_response(code: str, expires_at: datetime, invite_url: str | None) -> dict:
+    return {"signup_code": format_signup_code(code), "expires_at": expires_at.isoformat(), "invite_url": invite_url}
+
+
+async def _find_viewer(db: AsyncSession, email: str):
+    return (
+        await db.execute(
+            text("SELECT id, status FROM public.viewer_accounts WHERE lower(email) = :email"),
+            {"email": email},
+        )
+    ).first()
+
+
+@router.post("/signup")
+async def viewer_signup(
+    data: ViewerSignupRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """申込。pending の行と申込コード（DB には sha256 だけ）を作り、コードとその人専用の招待リンクを返す。
+
+    応答の形は、新規・pending の再申込・登録済み（捨てのコード）・隠し欄ありで同じ。ログに email・コード・招待を出さない。
+    """
+    _require_app_origin(request)
+    email = _normalize_or_none(data.email)
+    line_name = data.line_name.strip()
+    if email is None or not 1 <= len(line_name) <= 100:
+        raise HTTPException(status_code=422, detail=_SIGNUP_INVALID)
+    issue = (data.inventory_issue or "").strip() or None
+
+    ip = get_client_ip(request)
+    n_ip = await count_viewer_signup("ip", ip)
+    if n_ip is not None and n_ip > VIEWER_SIGNUP_IP_MAX:
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+    n_mail = await count_viewer_signup("email", email)
+    if n_mail is not None and n_mail > VIEWER_SIGNUP_EMAIL_MAX:
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+    limits_ok = n_ip is not None and n_mail is not None  # 数えられないときは申込は通すが、招待は作らない
+
+    code = generate_signup_code()
+    expires_at = datetime.now(timezone.utc) + SIGNUP_CODE_TTL
+
+    if (data.website or "").strip():
+        return _signup_response(code, expires_at, None)  # ボットに入口を渡さない（行も招待も作らない）
+
+    user_exists = (
+        await db.execute(text("SELECT 1 FROM public.users WHERE lower(email) = :email"), {"email": email})
+    ).first()
+    if user_exists is None:
+        row = await _find_viewer(db, email)
+        viewer_id: int | None = None
+        if row is None:
+            inserted = (
+                await db.execute(
+                    text(
+                        "INSERT INTO public.viewer_accounts (email, line_name, inventory_issue, status) "
+                        "VALUES (:email, :line_name, :issue, 'pending') ON CONFLICT DO NOTHING RETURNING id"
+                    ),
+                    {"email": email, "line_name": line_name, "issue": issue},
+                )
+            ).first()
+            if inserted is not None:
+                viewer_id = inserted.id
+            else:  # 同時の申込に先を越された
+                row = await _find_viewer(db, email)
+        if viewer_id is None and row is not None and row.status == "pending":
+            viewer_id = row.id
+            await db.execute(
+                text("DELETE FROM public.viewer_login_tokens WHERE viewer_account_id = :id AND purpose = 'signup_code'"),
+                {"id": viewer_id},
+            )
+        if viewer_id is not None:
+            await db.execute(
+                text(
+                    "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
+                    "VALUES (:id, :h, 'signup_code', :exp)"
+                ),
+                {"id": viewer_id, "h": signup_code_sha256(code), "exp": expires_at},
+            )
+            await _record_event(db, viewer_id, "signup", ip, request.headers.get("user-agent"))
+            await db.commit()
+        # それ以外（pending 以外の状態）は捨てのコード。DB は書かない
+
+    invite_url = await create_viewer_invite(db) if limits_ok else None  # commit の後（Discord を待つ間 DB を開けない）
+    return _signup_response(code, expires_at, invite_url)

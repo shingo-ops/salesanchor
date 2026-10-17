@@ -60,3 +60,31 @@
 .viewer-center {
   padding: var(--space-12) var(--space-4);
 }
+.viewer-signup__trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+.viewer-signup__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 24rem;
+  margin: 0 auto;
+}
+.viewer-signup__code {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-xl);
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  user-select: all;
+}
+.viewer-signup__note {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
