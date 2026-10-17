@@ -46,3 +46,12 @@ PO 決定（2026-10-18）。上の 2026-10-14 改訂の「並び替えの第1キ
 - 既定の向きを asc にした（在庫表 `InventoryPage.tsx`、閲覧ページ `viewerFilter.ts` の `DEFAULT_SORT_DIR`）。並び替えプルダウンの先頭に `release_date:asc`「発売日が早い順」を追加し、既定のとき空表示にならないようにした。
 - 実装: `backend/app/routers/inventory_offers.py` の `_build_view_order_by`、`frontend/src/pages/viewer/viewerFilter.ts` の `sortRows`。配信行の定義・GAS 出力14列・API 応答形は変えない。
 - 守り: backend の ORDER BY 単体試験と viewerFilter の `sortRows` 試験。
+
+## 改訂 2026-10-18（2）（既定の向きを発売日の新しい順に改める）
+
+PO 決定（2026-10-18）「発売日の新しい順にしてほしい、いまは古い順になっている」。上の「改訂 2026-10-18」の既定の向き（asc）を desc に改める（前の改訂節の本文は書き換えない）。
+
+- 既定の向きを desc にした（在庫表 `InventoryPage.tsx` の既定・リセット、閲覧ページ `viewerFilter.ts` の `DEFAULT_SORT_DIR`、API `inventory_offers.py` の `order` 既定）。
+- プルダウンの先頭は `release_date:desc`「発売日が新しい順」。旧 `releaseAsc` キーは ja/en とも削除。
+- 変えないもの: 同じ発売日の中（english_title → japanese_title → product_id）、同じ商品の中の価値順（ADR-1023）、発売日が空の商品は末尾、`_build_view_order_by` の組み立て。
+- 守り: InventoryPage.tablelayout.test.tsx・viewerFilter.test.ts・InventoryView.test.tsx が既定の向き desc を固定する。

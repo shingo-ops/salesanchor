@@ -1,7 +1,7 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 検索の正規化ベクタ・日本語タイトルの並びを検証する（ADR-027・precedent: ProductMasterDrawer.test.tsx） */
 import { describe, expect, it } from "vitest";
 import vectors from "../../features/inventory/searchNormalize.vectors.json";
-import { filterRows, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
+import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
 import type { ViewerFilters } from "./viewerFilter";
 import type { ViewerRow } from "./types";
 
@@ -66,7 +66,10 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
     mk({ english_title: "C item", release_date: "", unit_price: "10" }), // 2
     mk({ english_title: "A item", release_date: "2026-01-01", unit_price: "100" }), // 3
   ]);
-  it("default (release_date asc): groups by release date oldest first, empty last, original order inside", () => {
+  it("default (release_date desc): groups by release date newest first, empty last, original order inside", () => {
+    expect(sortRows(rows, DEFAULT_SORT_KEY, DEFAULT_SORT_DIR).map((r) => r.idx)).toEqual([0, 1, 3, 2]);
+  });
+  it("release_date asc: groups by release date oldest first, empty last", () => {
     expect(sortRows(rows, "release_date", "asc").map((r) => r.idx)).toEqual([1, 3, 0, 2]);
   });
   it("price asc keeps the group order and sorts only inside a group", () => {
