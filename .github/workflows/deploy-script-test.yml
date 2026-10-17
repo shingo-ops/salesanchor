@@ -9,11 +9,15 @@ on:
     paths:
       - 'scripts/deploy/**'
       - 'scripts/tests/test_app_services_plan.py'
+      - 'scripts/ops/container_state.py'
+      - 'scripts/tests/test_container_state.py'
       - '.github/workflows/deploy-script-test.yml'
   push:
     paths:
       - 'scripts/deploy/**'
       - 'scripts/tests/test_app_services_plan.py'
+      - 'scripts/ops/container_state.py'
+      - 'scripts/tests/test_container_state.py'
       - '.github/workflows/deploy-script-test.yml'
 
 jobs:
@@ -32,3 +36,6 @@ jobs:
 
       - name: Run app-services-plan tests
         run: python3 scripts/tests/test_app_services_plan.py
+
+      - name: Run container_state tests
+        run: python3 scripts/tests/test_container_state.py
