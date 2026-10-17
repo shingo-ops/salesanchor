@@ -6,7 +6,7 @@
 - 前段: docs/handoff/ai-ops-247/stage2-design.md（段階2 は便A〜C の本番反映で完了。card-stage2-bin-c.md §15）
 - KGI: docs/specs/ai-ops-247/kgi.md:22（KGI 3「一覧に載った症状は 5 分以内に機械が処置を終える。成功 95% 以上・悪化 0 件」）
 - 対象ADR: ADR-1012（本テーマ・Proposed）、ADR-135（main マージ＝本番投入可）、ADR-136（危険 PR の GO）、ADR-1003（GO 委任）、ADR-079（cadvisor 無効化）
-- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO 承認 y（2026-10-16）。V1 は便D のカード（card-stage3-bin-d.md §2-2）で解決。便D は本番反映済み（PR #4404・2026-10-16）。V2・V4 は便E のカード（card-stage3-bin-e.md §2-1）で解決
+- 状態: 設計案作成済み・Opus 自己審査 APPROVE（§9）。段階3 の着手は PO の「次を進める」（2026-10-16）。便の分け方（§2）は PO 承認 y（2026-10-16）。V1 は便D のカード（card-stage3-bin-d.md §2-2）で解決。便D は本番反映済み（PR #4404・2026-10-16）。V2・V4 は便E のカード（card-stage3-bin-e.md §2-1）で解決。便E は本番反映済み（PR #4429・2026-10-17）。定着便（§11）は PO 承認 y（2026-10-17）・T1 のカードは card-stage3-teichaku-t1.md
 - 事実の生出力: /tmp/CC報告ファイル/ai-ops-stage3/recon_raw.md（Q1〜Q9）・recon_raw2.md（Q10〜Q16）。2026-10-16 取得・origin/main 057e12b16 基準。本番は読んでいない
 
 ## 1. 前提の事実（2026-10-16・origin/main 057e12b16 基準）
@@ -168,6 +168,8 @@
 - V2（解決 2026-10-17：PO の `!` で全項目合格。card-stage3-bin-e.md §2-1 F2）: prod1 のホストから `api.salesanchor.jp` を prod1 自身に向けて呼べるか（ヘアピン）・ubuntu の cron から docker を操作できるか・prod1 の python3 の版。便E のカードの前に PO の `!`（読み取りだけ）で確かめる
 - V3: （段階2 から）Alertmanager の webhook の失敗の見張り。10/23 に失敗の数を見て決める
 - V4（解決 2026-10-17：global の 15 秒。card-stage3-bin-e.md §2-1 F7）: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる
+- V6（定着便 T3 で追加・担当 Opus）: 便D の 24 時間の誤判定確認。2026-10-18 02:40Z 以降に prod2 の Prometheus へ `max_over_time(salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"}[24h])` を問い合わせ、4 サービスとも 0 なら○。**便G のカードは V6 が○になるまで出さない**（§5 の「誤判定 0 を確かめてから便G」を条件として固定）。0 でなければ該当サービスの健康診断の閾値を見直す
+- V7（定着便 T2）: prod2 の runner の利用者 ubuntu が `/opt/salesanchor-monitoring` に書けるか・Prometheus のコンテナに docker exec できるか。T2 のカードを出す前に確かめる
 - V5: 処置の一覧に CeleryHeartbeatStale（beat か worker か区別できない・F6）を足すか。便G の後、ContainerUnhealthy の実績を見て決める
 
 ## 8. 戻し方
@@ -200,8 +202,119 @@
 - 過去事例（社内）：f2-cleanup の textfile と見張り（F8）→ 応用：同じ置き方で状態と上げ方を作る。f2-cleanup に二重起動の防止が無い点（F19）は、応急処置係では flock で塞ぐ
 - 限界：小さな 1 人運用のサービスで自動再起動の成功率を測った外部の数字は見つけていない。成否は §6 の実測（手元 20 回・本番 1 回）だけで判定する
 
+## 11. 定着便（便D・E を続けて守る仕組み）
+
+> 状態：設計案作成済み・Opus 自己審査 APPROVE（§11-6）。PO の着手承認 y（2026-10-17、点検結果 /tmp/CC報告ファイル/ai-ops-stage3/governance-e/evidence.md を受けて）。必須チェックへの追加（T2-b）だけは、その時点で PO に y/n を取り直す（CLAUDE.md の不可逆操作一覧）。
+
+### 11-1. 目的
+
+便D・E は本番で動いている（PR #4429・2026-10-17 02:39Z 反映）。点検（evidence.md §2）で、仕組みが**壊れても気づかない／戻し方が作業カードにしか無い**所が 6 つ見つかった。これを埋め、人が替わっても・時間がたっても同じ守りが働くようにする。
+
+### 11-2. 現物の事実（recon: /tmp/CC報告ファイル/ai-ops-stage3/teichaku-recon/recon.md・origin/main 78f2b9af0）
+
+| # | 事実 | 出典 |
+|---|---|---|
+| T-F1 | 状態書き係は Health が無いコンテナを unhealthy=0 と書く。「healthcheck が無い」を表す値は無い | `scripts/ops/container_state.py:48-52`（recon R10） |
+| T-F2 | monitoring-check.yml は paths 無しで常に起動し、中で関係ファイルかを判定する（:30）。ジョブ名「監視スタック整合性チェック」(:15)。Python 3.12・pyyaml を用意（:37-45） | recon R1 |
+| T-F3 | deploy-script-test.yml は paths 方式（:7-21）で、:5 に「必須には登録しない」。paths で起動しない workflow を必須にすると pending で止まる | recon R2・`docs/BRANCH_PROTECTION_SETUP.md:75`（recon R3） |
+| T-F4 | main の必須チェックはルールセット 15777895 の 15 件で、上の 2 つは入っていない | evidence.md §2 #2（Opus 再確認） |
+| T-F5 | prod2 の self-hosted runner は salesanchor-vps・利用者 ubuntu。公開リポジトリなので pull_request・push では動かさない。既存は schedule＋workflow_dispatch・checkout ref main・persist-credentials false | `.github/workflows/monitoring-config-drift.yml:4-9,28-29`・`docs/handoff/ai-ops-247/card-stage1-bin7.md:67`（recon R4） |
+| T-F6 | ref を main に限る既存の書き方は `github.ref == 'refs/heads/main'` | `.github/workflows/ledger-auto-done-main.yml:161` ほか（recon R4） |
+| T-F7 | alert_rules.yml は deploy.yml では prod2 に配られず、置き方は作業カードと移行手順にしか無い。reload はコンテナ内から `wget -q -O- --post-data= http://localhost:9090/-/reload`（`--web.enable-lifecycle` あり） | `docs/handoff/monitoring-vps-migration.md:453-461`・`card-stage1-bin7.md:311`・`docker-compose.monitoring.yml:9`（recon R6） |
+| T-F8 | prod1 の cron の台帳は無い。既知の行は backup.sh 03:00・backup_to_s3.sh 03:30・f2-cleanup.sh 日曜 04:00・便E の毎分の行。root の crontab は未確認 | `card-stage1-bin6.md:62,73`・`card-stage3-bin-e.md:496`（recon R9） |
+| T-F9 | ideal-state.md の見出しは 3 つ（:1・:7・:17）で段階3 の節は無い。ADR-1012 に「段階3」の語は 0 件・Proposed | recon R8 |
+| T-F10 | 定期の見直しの置き場：成績表の項目は `design.md:144,229` にだけあり、agent-console の定期実行の定義はリポジトリに無い | recon R7 |
+
+### 11-3. 便割り（1 便ずつ反映して測る）
+
+| 便 | 埋める不足（evidence.md §2） | 触る場所 | 危険便 |
+|---|---|---|---|
+| T1 | #1 healthcheck を消す変更を止める・消えたら鳴らす | 新設 `monitoring/scripts/check_app_healthchecks.py`・`.github/workflows/monitoring-check.yml`・`scripts/ops/container_state.py`・`scripts/tests/test_container_state.py`・`monitoring/prometheus/alert_rules.yml`・`monitoring/prometheus/tests/alert_rules_test.yml`・`docs/runbooks/alerts.md`・prod2 の見張り（配置） | はい（`scripts/`） |
+| T2 | #3 prod2 への配置を手順書と workflow に常設／#2 必須チェック | 新設 `.github/workflows/monitoring-config-apply.yml`・新設 `docs/runbooks/monitoring-config-apply.md`・`docs/runbooks/alerts.md` 冒頭。必須チェックは別操作（T2-b） | workflow 新設（PO 確認は T2-b のみ） |
+| T3 | #4 cron 台帳／#5 あるべき姿／#6 24 時間確認と定期見直し | 新設 `docs/runbooks/prod1-cron.md`・`docs/specs/ai-ops-247/ideal-state.md`・本文書 §7・`docs/handoff/ai-ops-247/design.md` の成績表の項目 | いいえ（書類のみ。現物の crontab の読み取りに PO の `!` 1 回） |
+
+順番の理由：T1 は「壊れても黙る」穴（×）で最も危ない。T2 は T1 で足す見張りを手で置く作業を最後にするため、T1 の配置は従来の PO の `!` で行い、T2 以降は workflow で置く。T3 は書類で、T1・T2 の結果（本数・手順の名前）を書き込むので最後。
+
+### 11-4. 各便の中身
+
+#### T1 healthcheck の欠けを止めて鳴らす
+
+- **防ぐ（CI）**：`check_app_healthchecks.py` が `docker-compose.yml` を pyyaml で読み、celery-worker・celery-beat・discord-gateway・gemini-egress の 4 つについて、①`healthcheck` があり ②`test` が空でなく `["NONE"]` でない ③`disable: true` でない、を確かめる。1 つでも欠ければ欠けたサービス名を出して exit 1。対象の 4 つは `container_state.py:18` の SERVICES から backend を除いたものと一致させ、ずれたら落ちる試験を置く（二重定義の放置を防ぐ）。
+- monitoring-check.yml で実行する。:30 の判定の正規表現に `scripts/ops/container_state\.py` と `scripts/tests/test_container_state\.py` を足し、`python -m unittest scripts.tests.test_container_state` も実行する（paths 方式の deploy-script-test.yml は今のまま残す。T-F3 の理由で必須にできないため、常時起動の側で同じ試験を走らせる）。
+- 壊した写しで落ちることを CI の中で試す（healthcheck を消した一時ファイル・test を `["NONE"]` にした一時ファイルで exit 1 を確かめる）。
+- **鳴らす（本番）**：`container_state.py` に `salesanchor_container_healthcheck_missing{service}` を足す。動いているのに `State.Health` が無ければ 1、ほかは 0。既存の 3 つの指標は変えない。
+- 見張り `ContainerHealthcheckMissing`：`salesanchor_container_healthcheck_missing == 1`、for 10m、severity warning、札 ticket（直ちに人を起こすほどではないが、放置すると ContainerUnhealthy が黙る）。手順書の節を足し、試験を 2 件（鳴る・鳴らない）足す。見張りの本数の表記を 26 → 27。
+- T1 の測り方：CI 緑（壊した写しで落ちる試験を含む）。本番は反映後に `salesanchor_container_healthcheck_missing` が 4 サービスぶん 0 で読め、ContainerHealthcheckMissing が鳴っていないこと（Grafana の読み取りトークンで Opus が照会）。
+
+#### T2 prod2 への配置を常設する
+
+- **T2-a** 新設 `monitoring-config-apply.yml`：
+  - on は `workflow_dispatch` だけ。job に `if: github.ref == 'refs/heads/main'`（T-F6）。runs-on は salesanchor-vps（T-F5）。checkout は ref main・persist-credentials false。secrets は使わない。
+  - 処理：promtool（v3.11.3。prod2 の Prometheus と同じ版）で `check rules`・`test rules` → 置き場の控え（`/opt/salesanchor-monitoring/backups/apply/<UTC時刻>/`）→ `install -m 0644` で alert_rules.yml を置く → コンテナの中で reload（T-F7）→ `check_config_drift.sh` で alert_rules.yml のずれ 0 を確かめる。どこかで失敗したら控えから戻して reload し、失敗で終わる。
+  - 対象は初版では alert_rules.yml だけ（ほかの 5 本は置き方が違い・頻度も低い。足すのは別カード）。
+  - 手順書 `docs/runbooks/monitoring-config-apply.md`：いつ使うか（alert_rules.yml を変える PR のマージ後に必ず）・起動の仕方（`gh workflow run monitoring-config-apply.yml --ref main`）・確かめ方（ずれ 0 と `/api/v1/rules` に見張りが載ったこと）・戻し方。`alerts.md` の冒頭から指す。
+  - 動かす前に V7（runner の ubuntu が置き場に書けるか・コンテナに docker exec できるか）を確かめる。確かめ方は T2 のカードで決める（workflow の dry-run 段で読み取りだけ先に走らせる形を第一案）。
+- **T2-b** 必須チェックへの追加：「監視スタック整合性チェック」をルールセット 15777895 に足す。常時起動（T-F2）なので pending で止まらない。**操作の前に PO の y/n を取る**。deploy-script-test は足さない（T-F3。同じ試験を T1 で monitoring-check 側でも走らせるので守りは欠けない）。
+- T2 の測り方：T1 の見張りを T2-a で置き、①workflow が成功 ②`/api/v1/rules` に ContainerHealthcheckMissing が載る ③翌日の monitoring-config-drift でずれ 0。T2-b は PR 1 本で「監視スタック整合性チェック」が Required と表示されること。
+
+#### T3 書類で続ける
+
+- `docs/runbooks/prod1-cron.md`：prod1 の ubuntu と root の crontab の全行を、行・目的・見張り（止まったら何が鳴るか）・戻し方の表にする。現物は PO の `!` で 1 回読む（読み取りだけ・T-F8 の root 未確認を閉じる）。cron を足す・消すカードは、この台帳の更新を同じ PR に含めることを手順書の冒頭に書く。
+- `ideal-state.md` に段階3 の節：コンテナの健康診断・状態書き係・見張り 3 本（Unhealthy・StateStale・HealthcheckMissing）・処置は便G から、を利用者の目線で書く（T-F9）。
+- 本文書 §7 に V6（24 時間の誤判定確認：2026-10-18 02:40Z 以降に `max_over_time(salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"}[24h])` が全部 0。担当 Opus）を足し、便G の着手条件を「V6 が○」にする（§5 の「誤判定 0 を確かめてから便G」を条件として固定する）。
+- `design.md` の成績表の項目（:144）に「ContainerUnhealthy の発火数・誤判定数（処置不要だったもの）・ContainerHealthcheckMissing の発火数」を足す。月 1 回の見直しはその成績表で行う（定期実行の定義はリポジトリに無いので、仕組みの正本は成績表の項目の方に置く。T-F10）。
+- ADR-1012 の Accepted への変更は段階3（便G）の完了時に PO の判断を仰ぐ。T3 では変えない。
+
+### 11-5. 受け入れ基準（定着便）
+
+| 基準 | 検証方法 |
+|---|---|
+| #1 docker-compose.yml の 4 サービスのどれかの healthcheck を消す・`["NONE"]`・`disable: true` にすると、monitoring-check が落ちる | CI の壊した写しの試験の結果（ログに exit 1 とサービス名） |
+| #1 本番で healthcheck が無いまま動くコンテナがあると、10 分で ContainerHealthcheckMissing が鳴る | promtool の単体試験（鳴る・鳴らない 2 件）＋本番で 4 サービスぶん 0 が読める照会結果 |
+| #1 状態書き係の試験が、常時起動の monitoring-check でも実行される | monitoring-check のログに `Ran N tests … OK`（N ≧ 9） |
+| #2 「監視スタック整合性チェック」が main の必須に入る（PO y のとき） | `gh api` のルールセット読み取りで 16 件・名前が含まれる |
+| #3 alert_rules.yml を変えた後の配置が、手順書 1 本と workflow 1 本で完結する（作業カードを見ずに置ける） | T1 の見張りを T2-a で置いた run の成功＋`/api/v1/rules` に載る＋翌日の drift 0 |
+| #4 prod1 の全 cron 行（ubuntu・root）が台帳にあり、便E の行を含む | 台帳の行数と PO の `!` の読み取り結果の行数が一致 |
+| #5 ideal-state.md に段階3 の節がある | 見出しの存在（grep） |
+| #6 V6 が §7 にあり、便G の着手条件になっている／成績表の項目に 3 つの数が入っている | 本文書と design.md の該当行 |
+
+### 11-6. 代替案と選んだ理由
+
+| 論点 | 採った案 | 採らなかった案と理由 |
+|---|---|---|
+| healthcheck の欠けを防ぐ場所 | monitoring-check（常時起動）に検査を足す | deploy-script-test に足す：paths 方式で必須にできない（T-F3）。新しい workflow：常時起動の検査が増え、必須の管理が増える |
+| 欠けを本番で知る方法 | 状態書き係に指標を 1 つ足す | ContainerUnhealthy の式に absent を混ぜる：「不健康」と「診断が無い」が同じ警報になり、手順書で対処を分けられない |
+| 見張りの札 | warning・ticket・for 10m | page：診断が無いだけで今は動いているので、夜に人を起こす理由が無い（Google SRE 第 6 章の考え方・§10） |
+| prod2 への配置 | prod2 の runner で workflow_dispatch・main のみ | deploy.yml に足す：prod1 向けの危険 PR の範囲が広がり、監視の役を prod2 に置く原則（PO 2026-10-17）とも合わない。PO の `!` のまま：手順が人の記憶とカードに残り続ける（#3 が埋まらない） |
+| 必須にする検査 | 監視スタック整合性チェックだけ | deploy-script-test を常時起動に作り直して必須に：作り直しの範囲が広く、T1 で同じ試験を monitoring-check でも走らせれば守りは足りる |
+| 定期見直しの置き場 | 成績表の項目（design.md）と §7 の V6 | agent-console の定期実行に直接書く：定義がリポジトリに無く（T-F10）、正本にならない |
+
+### 11-7. 弊害と戻し方
+
+| 弊害 | 起きること | 対処・戻し方 |
+|---|---|---|
+| 検査の誤り | 正しい docker-compose.yml の PR が落ちる | 壊した写しと正しい写しの両方で CI を試す。誤りなら T1 の PR を revert（monitoring-check の 1 行も戻る） |
+| 必須化で PR が止まる | monitoring-check が壊れると全 PR がマージできない | 常時起動で関係ない PR はすぐ success になる（T-F2）。戻すのはルールセットから外す操作（PO 確認） |
+| workflow の誤配置 | 間違った alert_rules.yml を置く | main のみ・promtool 検査の後にだけ置く・失敗時は控えから自動で戻す。手で戻すときは控えから install して reload |
+| runner の乗っ取り | 公開リポジトリの PR から prod2 で任意のコードが動く | pull_request・push では起動しない・main のみ・secrets なし（T-F5 の既存の型を守る） |
+| 指標の追加でずれ | 状態書き係の出力が増え、既存の見張りが変わる | 既存 3 指標は変えない（試験 8 件をそのまま通す）。戻すのは T1 の revert と prod2 の再配置 |
+
+### 11-8. 自己審査（Opus。同一 AI による審査で、独立した第二者レビューではない）
+
+判定：APPROVE（T1 は実装に渡せる。T2-a は V7 をカードで閉じてから。T2-b は PO の y/n の後。T3 は PO の `!` の読み取り 1 回の後）
+
+| 観点 | 結果 | 根拠 |
+|---|---|---|
+| 6 つの不足と 1 対 1 で対応 | ○ | §11-3 の表・§11-5 の基準が #1〜#6 を全部持つ |
+| 事実に根拠がある | ○ | T-F1〜T-F10 に file:line（recon.md の生出力） |
+| ○×で判定できる | ○ | §11-5 は CI の結果・件数・照会結果・見出しの有無 |
+| 範囲が明確 | ○ | 便ごとの触る場所。T2-a の対象は alert_rules.yml だけ |
+| 未確認に依存する合格が無い | ○ | V7（runner の権限）と root の crontab は、それぞれ T2・T3 のカードを出す前に閉じる |
+| 不可逆操作の扱い | ○ | ルールセット変更は T2-b として分け、PO の y/n を取る |
+| 外部の仕様 | ○（一部未確認） | compose の healthcheck の `test: ["NONE"]`・`disable: true` の意味は T1 のカードで公式文書（Context7 か docs.docker.com）を確かめて書く |
+
 ## 維持の仕組み
 
-- 守り手：CI の pytest（便F の絞り込み）・`monitoring/scripts/check_alert_rules.py`（札と手順書リンクの欠け）・`promtool test rules`（便H の見張り）・便7 の毎日の照合（alert_rules.yml の本番と repo のずれ）・FirstAidStale と ContainerStateStale（係そのものの見張り）
+- 守り手：CI の pytest（便F の絞り込み）・`monitoring/scripts/check_alert_rules.py`（札と手順書リンクの欠け）・`promtool test rules`（便H の見張り）・便7 の毎日の照合（alert_rules.yml の本番と repo のずれ）・FirstAidStale と ContainerStateStale（係そのものの見張り）・`monitoring/scripts/check_app_healthchecks.py`（4 サービスの healthcheck の欠け。定着便 T1）・ContainerHealthcheckMissing（本番で診断が無いまま動くコンテナ。定着便 T1）・`monitoring-config-apply.yml`（prod2 への配置の常設手順。定着便 T2）・`docs/runbooks/prod1-cron.md`（cron の台帳。定着便 T3）
 - 担当：処置の一覧（新設の scripts/ops/first_aid_actions.json）は ADR-1012 のテーマとして Opus が設計し、足すのは便ごとのカード → PR → 審査 → GO → 反映の順。本番で一覧を手で書き換えない
 - 見直し：便G の後 30 日の障害記録で、成功率・escalated の数・誤判定の数を見て、一覧と上限を見直す（V5 もここで判断）
