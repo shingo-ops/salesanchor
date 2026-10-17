@@ -1504,6 +1504,7 @@
       "mark": "型番",
       "title": "タイトル",
       "offerType": "在庫・予約",
+      "status": "ステータス",
       "unit": "形態",
       "condition": "状態",
       "unitPrice": "単価",
