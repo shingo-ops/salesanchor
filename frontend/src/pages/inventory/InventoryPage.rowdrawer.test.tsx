@@ -119,16 +119,13 @@ describe('InventoryPage row drawer', () => {
     }
   });
 
-  it('F3: clicking the row checkbox selects the row but does not open the panel', async () => {
+  it('F3: there is no row-select checkbox column', async () => {
     await setup(true);
     renderPage();
     await screen.findByTestId('inventory-row-r1');
-    await new Promise((r) => setTimeout(r, 30));
-    const checkbox = screen.getAllByRole('checkbox', { name: /select row r1/i })[0];
-    fireEvent.click(checkbox);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(analysisCalls()).toHaveLength(0);
-    expect(screen.queryByText('Analysis details')).toBeNull();
+    expect(screen.queryAllByRole('checkbox', { name: /select row r1/i })).toHaveLength(0);
+    expect(screen.queryAllByRole('checkbox', { name: /select all/i })).toHaveLength(0);
+    expect(document.querySelector('.comp-table__th--check')).toBeNull();
   });
 
   it('E5: a saved fix in the panel reloads /inventory (onChanged)', async () => {
