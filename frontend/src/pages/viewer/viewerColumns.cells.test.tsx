@@ -45,7 +45,7 @@ describe("viewer offer type cell (4 cases)", () => {
 });
 
 describe("viewer condition cell", () => {
-  it.each(["sealed", "damaged", "case", "New"])("uses conditionBadgeVariant for %s", (cond) => {
+  it.each(["Sealed box", "Damaged sealed box", "No shrink box", "Opened box", "Case", "Bulk"])("uses conditionBadgeVariant for %s", (cond) => {
     const { container } = cell("condition", { ...base, condition: cond });
     expect(container.querySelector(`.comp-badge--${conditionBadgeVariant(cond)}`)?.textContent).toBe(cond);
   });

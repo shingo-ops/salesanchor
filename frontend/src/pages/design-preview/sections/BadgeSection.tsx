@@ -1,6 +1,6 @@
 /**
  * §8 バッジ・ステータス (Badge)
- * variant 5 × appearance 2 × size 2。ドット付き・アイコン付きの例も確認できる。
+ * variant 6 × appearance 2 × size 2。ドット付き・アイコン付きの例も確認できる。
  */
 import { Badge } from "../../../components/Badge";
 import { X, PAGE_ICONS } from "../../../constants/icons";
@@ -11,11 +11,11 @@ export function BadgeSection() {
     <section className="dp-section">
       <SectionHeader
         title="8. バッジ・ステータス (Badge)"
-        desc="variant 5 × appearance 2 × size 2。ドット付きの例も確認できる。"
+        desc="variant 6 × appearance 2 × size 2。ドット付きの例も確認できる。"
       />
 
       {/* variant × appearance */}
-      {(["neutral", "info", "success", "warning", "danger"] as const).map((variant) => (
+      {(["neutral", "info", "success", "warning", "danger", "purple"] as const).map((variant) => (
         <div key={variant} className="dp-row">
           <span className="dp-row-label">{variant}</span>
           <div className="dp-row-items">
