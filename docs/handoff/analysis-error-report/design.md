@@ -3,7 +3,7 @@
 > この文書は何か: 誤り報告ボタンから、AI の自動セッション、修正、再解析、正解との機械照合、Discord への記録までの作り方の設計案。
 > 親: [docs/specs/analysis-error-report/README.md](../../specs/analysis-error-report/README.md)／あるべき姿: [ideal-state.md](../../specs/analysis-error-report/ideal-state.md)／KGI: [kgi.md](../../specs/analysis-error-report/kgi.md)／現状: [recon.md](./recon.md)
 
-状態: 設計案作成済み・自己審査 REVISE（§10 の未決が残る）・KGI は PO 承認待ち・実装未着手。区分: ADR-1015 の A（新機能・migrations・新 API・agent-console の新しい口）。
+状態: 設計案作成済み・自己審査 REVISE（§10 の未決が残る）・KGI は PO 承認済み（2026-10-17「y」）・実装未着手。区分: ADR-1015 の A（新機能・migrations・新 API・agent-console の新しい口）。
 
 ## 1. 目的
 super admin が見つけた解析の誤りを、ボタンで「何が間違っているか」と「正解」の形で報告する。報告から AI が自動で原因を調べ、委任範囲で直し、再解析の結果を正解と機械で照合し、Discord に残す（あるべき姿 §1）。
