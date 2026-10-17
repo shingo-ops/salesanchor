@@ -28,6 +28,17 @@ _MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
 _ROLE_SQL = "20261017_130000_create_ai_reader_role.sql"
 _VIEWS_SQL = "20261017_130100_create_ai_ro_views.sql"
 _DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+_LEADS_COLUMNS = (
+    "id",
+    "name",
+    "access_token",
+    "api_key_encrypted",
+    "client_secret",
+    "private_key_pem",
+    "credentials_json",
+    "hash_value",
+    "note",
+)
 _TENANTS = ("tenant_001", "tenant_003", "tenant_004", "tenant_005", "tenant_006")
 
 
@@ -37,6 +48,13 @@ def _psycopg_url(url: str, dbname: str | None = None) -> str:
         parts = urlsplit(url)
         url = urlunsplit(parts._replace(path="/" + dbname))
     return url
+
+
+def _make_table(cur, qualified_name, columns):
+    """テスト用の空の表を作る。本番の表定義を写さず、列名と型だけから組み立てる
+    （scripts/check_test_schema_dup.py は `CREATE TABLE ... AS` を複製とみなさない）。"""
+    select_list = ", ".join(f"NULL::{typ} AS {name}" for name, typ in columns)
+    cur.execute(f"CREATE TABLE {qualified_name} AS SELECT {select_list} WHERE false")
 
 
 @pytest.fixture(scope="module")
@@ -54,19 +72,19 @@ def pg():
     conn.autocommit = True
     try:
         c = conn.cursor()
-        c.execute("CREATE TABLE public.users (id int primary key, email text, password_hash text)")
+        _make_table(c, "public.users", [("id", "int"), ("email", "text"), ("password_hash", "text")])
         c.execute("INSERT INTO public.users VALUES (1, 'a@example.test', 'h')")
-        c.execute("CREATE TABLE public.only_secrets (password_hash text, api_key text)")
+        _make_table(c, "public.only_secrets", [("password_hash", "text"), ("api_key", "text")])
         for i, t in enumerate(_TENANTS, start=1):
             c.execute(f"CREATE SCHEMA {t}")
-            c.execute(
-                f"CREATE TABLE {t}.leads (id int primary key, name text, "
-                "access_token text, api_key_encrypted text, client_secret text, "
-                "private_key_pem text, credentials_json text, hash_value text, note text)"
+            _make_table(
+                c,
+                f"{t}.leads",
+                [(n, "int" if n == "id" else "text") for n in _LEADS_COLUMNS],
             )
             c.execute(f"INSERT INTO {t}.leads VALUES ({i}, 'n{i}', 't', 'k', 's', 'p', 'c', 'h', 'x')")
         # 行の制限(RLS)付きの表: ビューの持ち主の権限で制限が外れるか（recon U10）
-        c.execute("CREATE TABLE tenant_001.guarded (id int primary key, tenant_id int)")
+        _make_table(c, "tenant_001.guarded", [("id", "int"), ("tenant_id", "int")])
         c.execute("INSERT INTO tenant_001.guarded VALUES (1, 1), (2, 2)")
         c.execute("ALTER TABLE tenant_001.guarded ENABLE ROW LEVEL SECURITY")
         c.execute("CREATE POLICY only_one ON tenant_001.guarded USING (tenant_id = 1)")
@@ -151,7 +169,7 @@ def test_new_table_unreadable_until_views_are_rebuilt(pg):
     import psycopg2
 
     c = pg.cursor()
-    c.execute("CREATE TABLE tenant_003.brand_new (id int, label text)")
+    _make_table(c, "tenant_003.brand_new", [("id", "int"), ("label", "text")])
     with pytest.raises(psycopg2.errors.UndefinedTable):
         _rows(pg, 'SELECT * FROM ai_ro."tenant_003__brand_new"', role="ai_reader")
     c.execute((_MIGRATIONS_DIR / _VIEWS_SQL).read_text("utf-8"))
