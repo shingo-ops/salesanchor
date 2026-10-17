@@ -93,12 +93,13 @@ _ai_ro_create_on_exit() {
   fi
   echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
   if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
-    echo "❌ ${AI_RO_CREATE_SQL} が見つかりません"
-    exit 1
+    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
   fi
+  # ビューは AI が読むための補助。作成に失敗しても本体のデプロイは止めず、「読めない」側に倒す
   if ! docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
-    echo "❌ ai_ro views の作成に失敗しました"
-    exit 1
+    echo "⚠️ ai_ro views の作成に失敗（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
   fi
   exit 0
 }

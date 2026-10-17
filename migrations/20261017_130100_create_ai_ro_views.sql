@@ -16,6 +16,10 @@ DECLARE
   n_excluded integer := 0;
   n_kept integer;
   n_ex integer;
+  n_failed integer := 0;
+  failed_list text := '';
+  vname text;
+  prefix text;
   deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential';
 BEGIN
   FOR t IN
@@ -43,14 +47,31 @@ BEGIN
       CONTINUE;
     END IF;
 
-    EXECUTE format(
-      'CREATE VIEW ai_ro.%I AS SELECT %s FROM %I.%I',
-      t.sch || '__' || t.rel, cols, t.sch, t.rel
-    );
-    n_views := n_views + 1;
+    -- ビュー名: 63 バイト以下はそのまま。超える場合は、先頭 54 バイト以内 + '_' + md5 先頭 8 桁
+    -- （一意で決定的。PostgreSQL による名前の切り詰めで別の表と衝突するのを防ぐ）
+    vname := t.sch || '__' || t.rel;
+    IF octet_length(vname) > 63 THEN
+      prefix := vname;
+      WHILE octet_length(prefix) > 54 LOOP
+        prefix := left(prefix, char_length(prefix) - 1);
+      END LOOP;
+      vname := prefix || '_' || left(md5(t.sch || '.' || t.rel), 8);
+    END IF;
+
+    -- ビューは AI が読むための補助。1 本の失敗でデプロイ全体を止めず、その表だけ「読めない」側に倒す
+    BEGIN
+      EXECUTE format(
+        'CREATE VIEW ai_ro.%I AS SELECT %s FROM %I.%I',
+        vname, cols, t.sch, t.rel
+      );
+      n_views := n_views + 1;
+    EXCEPTION WHEN others THEN
+      n_failed := n_failed + 1;
+      failed_list := failed_list || ' ' || t.sch || '.' || t.rel;
+    END;
   END LOOP;
 
-  RAISE NOTICE 'ai_ro views created: %, columns excluded: %', n_views, n_excluded;
+  RAISE NOTICE 'ai_ro views created: %, columns excluded: %, failed: % [%]', n_views, n_excluded, n_failed, failed_list;
 END
 $$;
 

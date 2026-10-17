@@ -186,3 +186,50 @@ def test_ai_reader_role_migration_is_idempotent(pg):
     )
     joined = " ".join(x[0] for x in cfg)
     assert "log_statement=all" in joined
+
+
+def _rebuild_views(conn):
+    c = conn.cursor()
+    c.execute((_MIGRATIONS_DIR / _VIEWS_SQL).read_text("utf-8"))
+
+
+def test_long_table_names_get_unique_short_views(pg):
+    """F5: ビュー名が 63 バイトを超える 2 表（長い共通の先頭）も、別々の短い名前で両方作られる。"""
+    long_prefix = "very_long_common_prefix_" + "x" * 24
+    # 表名自体は 63 バイト以内、ビュー名（スキーマ名 + "__" + 表名）は 63 バイト超になる長さ
+    t1, t2 = long_prefix + "_alpha", long_prefix + "_beta"
+    c = pg.cursor()
+    _make_table(c, f"tenant_004.{t1}", [("id", "int"), ("label", "text")])
+    _make_table(c, f"tenant_004.{t2}", [("id", "int"), ("label", "text")])
+    _rebuild_views(pg)
+    names = [
+        r[0]
+        for r in _rows(
+            pg, "SELECT viewname FROM pg_views WHERE schemaname = 'ai_ro' AND viewname LIKE 'tenant_004__very_long%'"
+        )
+    ]
+    assert len(names) == 2 and len(set(names)) == 2
+    assert all(len(n.encode("utf-8")) <= 63 for n in names)
+    for n in names:
+        assert _rows(pg, f'SELECT * FROM ai_ro."{n}"', role="ai_reader") == []
+    # 63 バイト以下の名前は変わらない
+    assert "tenant_004__leads" in {r[0] for r in _rows(pg, "SELECT viewname FROM pg_views WHERE schemaname = 'ai_ro'")}
+
+
+def test_one_uncreatable_table_does_not_stop_other_views(pg):
+    """F5: 名前が衝突して作れない表が 1 つあっても、他のビューは作られ、全体は成功する。"""
+    c = pg.cursor()
+    c.execute("CREATE SCHEMA tenant_009")
+    c.execute("CREATE SCHEMA tenant_009__a")
+    # どちらも ai_ro.tenant_009__a__b になる → 後から作る方が失敗する
+    _make_table(c, "tenant_009.a__b", [("id", "int")])
+    _make_table(c, "tenant_009__a.b", [("id", "int")])
+    _make_table(c, "tenant_009.after_collision", [("id", "int")])
+    _rebuild_views(pg)  # 例外にならない（COMMIT まで通る）
+    views = {r[0] for r in _rows(pg, "SELECT viewname FROM pg_views WHERE schemaname = 'ai_ro'")}
+    assert "tenant_009__a__b" in views
+    assert "tenant_009__after_collision" in views
+    assert "public__users" in views
+    assert "tenant_001__leads" in views
+    # ai_reader は作れた分を読める
+    assert _rows(pg, "SELECT * FROM ai_ro.tenant_009__after_collision", role="ai_reader") == []
