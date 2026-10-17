@@ -9,7 +9,7 @@
 - backend/CLAUDE.md の additive-only 規則は、制約の追加を許している。
 
 ## 事実
-1. 引継ぎ書の前提「存在確認が relkind を見ていない」は、すでに直っている。commit 0e3dd5b5d（#4446 P5）で migrations/20260919_030000_master_ssot_fk_work_id.sql:25 に `AND c.relkind IN ('r', 'p')` が入った（`git log -- <file>`、本文 :21-26）。
+1. 引継ぎ書の前提「存在確認が relkind を見ていない」は、すでに直っている。commit 0e3dd5b5d（#4446 P5）で migrations/20260919_030000_master_ssot_fk_work_id.sql:26 に `AND c.relkind IN ('r', 'p')` が入った（`git log -- <file>`、本文 :22-27）。
 2. 実行の順番（scripts/run_all_migrations.sh の行番号）は次のとおり。
    - :222 で 085_create_tcg_type_master.sql が表を作る。
    - :718 で 20260919_010000 が products.work_id INTEGER を足す（ファイルの :107）。
