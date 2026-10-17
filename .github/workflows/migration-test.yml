@@ -1256,6 +1256,7 @@ jobs:
               tenant_id       INTEGER      NOT NULL,
               full_name       VARCHAR(255),
               customer_name   VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
+              company_name    VARCHAR(255),
               source          VARCHAR(50),   -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
               status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
               discord_user_id VARCHAR(64),
@@ -1441,6 +1442,7 @@ jobs:
               tenant_id       INTEGER      NOT NULL,
               full_name       VARCHAR(255),
               customer_name   VARCHAR(255),
+              company_name    VARCHAR(255),
               source          VARCHAR(50),
               status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
               discord_user_id VARCHAR(64),

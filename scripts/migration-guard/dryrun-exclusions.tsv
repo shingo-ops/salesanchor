@@ -5,7 +5,6 @@
 # 規則: 一覧のファイルは scripts/run_all_migrations.sh に登録されていること。直す（baseline に表を足す等）か、
 #       通ることが分かったファイルは、同じ PR でこの行を消す。
 migrations/20260601_140000_drop_customers_tables.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
-migrations/20260602_000000_add_products_central_columns.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
 migrations/20260602_020000_add_products_tcg_type.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）。かつ 空の DB で public.products が無いため落ちると見込まれる（静的な参照の解析で見込み。未実行）。作成元（056 / 058 / 062）が scripts/run_all_migrations.sh に登録されていない	ADR-1007 段2 のカード §3（baseline に表を足すか、作成元を登録する）
 migrations/20260602_030000_add_products_unit.sql	初期タイムスタンプ（20260601-20260603）は Python migration 依存のため除外（migration-test.yml の既存コメント）	既存の除外を引き継ぎ
