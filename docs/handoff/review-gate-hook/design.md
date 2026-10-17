@@ -117,6 +117,8 @@ stdin の JSON の `tool_name` で分ける。
 - `-R<値>`・`--repo=<値>` のくっついた形も読む。PR を URL で渡したら、その URL の owner/repo で `gh pr view N --repo owner/repo` を行い、記録の名前は返った url の owner/repo を使う。
 - 番号でも URL でもない位置引数（ブランチ名等）が merge の後ろにあれば、番号なしとして止める。位置引数が無いときだけ `.pr-number` を使う。
 - 作業場所の追跡: `cd` と `pushd` を追う。行き先が `$REVIEW_GATE_DIR` の下ならその区切りで止める。`popd` の後は作業場所が分からないものとし、その後に関所にかける区切りがあれば止める。
+- (a) の文字検査は、連続する `/` を 1 本にしてから照合する（`//` でのすり抜けを塞ぐ。実装中に見つけて追加）。
+- merge の位置引数が 2 個以上なら、`--disable-auto` があっても止める（gh の位置引数は 1 個まで）。
 - (a) の試験台本の例外は、区切りの語が `scripts/agent-hooks/review-gate/test_review_gate.sh` と完全に一致するときだけ（末尾一致はしない）。
 
 ### 5-4. 審査役の最後の行の決まり（reviewer-verdict-rule.md の中身）

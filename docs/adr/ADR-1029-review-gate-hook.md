@@ -31,6 +31,7 @@
 - GitHub の画面からのマージ、Actions の自動マージ（.github/workflows/ledger-auto-done-main.yml）はフックの外。
 - Bash の難読化（変数で組み立てる・eval 等）は見つけられない。試験台本 test_review_gate.sh をリポジトリ側で書き換えて、例外の実行から本物の置き場へ書かせる道も同じ扱いで止めない。
 - `gh` の別名（gh alias）経由のマージは見つけられない（今の別名は `co: pr checkout` の 1 件だけ・recon.md §3）。台本ファイルを作ってから実行する形（中に merge を書いた .sh を後で `bash x.sh`）も見つけられない。
+- glob（`cd …/review-gat*` 等）で置き場へ移る形は、難読化と同じ扱いで見つけられない。
 - 止める側に倒したもの: `bash -c $'…'`、`python`・`perl` 等の `-c`/`-e` の本文やヒアドキュメントに単語としての merge を含むもの、`GH_REPO`・`GH_HOST` の代入がある command のマージ、`popd` 後のマージは、中身や照合先を確かめられないので止める（design.md §5-3(d)）。
 - Branch Protection・Ruleset は変えない（PO 指定の対象外）。
 - ~/.claude/settings.json・~/.claude/scripts/ の書き換え、~/.claude/projects 下への偽の会話記録・meta.json の作成は、このフックでは止めない（ADR-1011 の自己変更の決まりに依る）。
