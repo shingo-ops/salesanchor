@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | K1 | 許可なしで本番 DB を SELECT できる | 担当 Sonnet が reader 鍵で `SELECT count(*) FROM ai_ro.public__users` を実行 | ○ フックに止められず。初回は 07:05:52Z にデプロイ中で 42P01（UndefinedTable）、再実行（07:12:30Z）で count=13 | bin4/k1.err, k1.rc, k1-retry.out, k1-retry.err, deploy-39012243576.log |
 | K2 | 書き込みが失敗する | INSERT を台本で試験。権限は public.users の直読みで試験 | ○ INSERT は台本で拒否（`result=rejected`）。public.users の直読みは 42501。pg_authid・nextval も 42501 | bin4/K4ins.err, K6b.err, bin3b/ktest/t2.err, t3.err, t4.err |
-| K3 | サーバー側の記録（Loki） | Grafana の Loki datasource の query_range を読み取りで照会（bin5） | × DB 側の記録（log_statement=all の LOG 行）は Loki で追える（○）。台本の AUDIT 行は試験の 23 種のうち 1 種のみ Loki にあり、取り込みは不十分（×）。改訂済み（便 K3-1）。本番測定は便 K3-2 で追記 | bin5/k3-g.out, k3-j.txt |
+| K3 | サーバー側の記録（Loki） | Grafana の Loki datasource の query_range を読み取りで照会（bin5） | ○ 便K3-2（2026-10-17 11:28Z、#4467 反映後）: G1 5 本の sha が {job="sshd"} に各 1 行・G2 結果値 0 件・G3 基準値と同一・rc=5 は 0 件。改訂前の × は台本 AUDIT が 23 種中 1 種のみ | bin9/prod/k3-2-result.md, g1.txt, g2.txt, g3.txt |
 | K4 | 既存の authorized_keys 行が不変 | 先頭 5 行を元バックアップと比較 | ○ 先頭5行が元バックアップと一致=はい | bin3b/fix-commit-20261017-155948.out |
 | K5 | 調査メモを書いてもフックに止められない | ssh/psql/`</INSERT` を本文に含む md を Write | ○ 止まらない | bin4/k5-test.md |
 | K6 | 秘密列が読めない | ai_ro の秘密列数。`password_argon2_hash` の直読み | ○ 秘密列 0 本。直読みは 42501 | bin4/K6.err, ktest.md, bin3b/ktest/t5.out, t5.err |
