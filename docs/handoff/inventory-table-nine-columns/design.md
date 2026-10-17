@@ -30,7 +30,7 @@
 1. `frontend/src/features/inventory/inventoryColumns.tsx`
    - `unit` と `offer_type` の列定義を配列から削除する（型 InventoryRow の項目は残す）
    - 並びを mark → name → condition → unit_price → quantity → note → ship → supplier → release_date にする
-   - 使われなくなった import・i18n 参照があれば消す。`ja.json`/`en.json` のキーは消さない（形態は絞り込みで使う）
+   - 使われなくなった import・i18n 参照があれば消す。`frontend/src/locales/ja.json`/`frontend/src/locales/en.json` のキーは消さない（形態は絞り込みで使う）
 2. `frontend/src/features/inventory/inventoryColumns.css`
    - `.inventory-cell__title` と `.inventory-cell__sub` の `overflow-wrap: anywhere` を、PC 幅（既存の breakpoint の書き方に合わせる。768px 以上）で `white-space: nowrap` にする。767px 以下は今の折り返しを残す
    - タイトル以外の列のセルも PC 幅で折り返さないこと。DataTable に列ごとの className 等の口があればそれを使い、無ければ inventoryColumns.tsx の renderCell が返す要素にこの CSS のクラスを付けて nowrap にする。色・寸法の直値は書かない（ADR-067/144）
@@ -66,8 +66,8 @@
 
 | 基準 | 検証方法 |
 |------|---------|
-| PC 幅の見出しが 型番・タイトル・状態・単価・数量・備考・発送・仕入元・発売日 の9つでこの順 | `InventoryPage.tablelayout.test.tsx`（vitest）と after-1440.png の目視 |
-| 左端のチェック欄が無い | `InventoryPage.rowdrawer.test.tsx` の新しい試験 |
+| PC 幅の見出しが 型番・タイトル・状態・単価・数量・備考・発送・仕入元・発売日 の9つでこの順 | `frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx`（vitest）と after-1440.png の目視 |
+| 左端のチェック欄が無い | `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx` の新しい試験 |
 | 長い商品名でも各行が日本語名1行＋英語名1行で、他のセルも折り返さない | after-1440.png の目視（PO）。Playwright で各 td の高さが行高の範囲にあることを確認 |
 | 横スクロールが出ず表が枠に収まる | Playwright で表ラッパーの scrollWidth <= clientWidth |
 | 767px 以下のカード表示が変わらない | 既存の vitest / e2e が通る |
@@ -124,7 +124,7 @@ PO の回答（原文）:
 調査結果（/tmp/CC報告ファイル/inventory-cols/ と Sonnet 報告）:
 - 青の文字色トークンは既存 `--info-text`（`frontend/src/index.css:110`、ダーク :299）
 - オレンジの文字色トークンは無い。`--warning`（#d97706）は solid 用で文字色用と書かれていない。白地とのコントラストは WCAG AA（4.5:1）に届かない値（Tailwind amber-600 相当で約 3.2:1）
-- 閲覧ページの列は `frontend/src/pages/viewer/viewerColumns.tsx` の別実装。`viewerColumns.parity.test.tsx` がアプリとのずれを縛る
+- 閲覧ページの列は `frontend/src/pages/viewer/viewerColumns.tsx` の別実装。`frontend/src/pages/viewer/viewerColumns.parity.test.tsx` がアプリとのずれを縛る
 
 Opus の設計判断:
 1. 列の並び（在庫表・閲覧ページ共通）: 在庫・予約 → 型番 → タイトル → 状態 → 単価 → 数量 → 備考 → 発送 → 仕入元 → 発売日（10列）。形態とチェック欄は無し
@@ -136,17 +136,25 @@ Opus の設計判断:
 3. 固定列（stickyLeft）は左端の在庫・予約に付け替え、タイトルから外す（2列目の固定による重なりを避ける。金型は変えない）
 4. スマホのカード表示は今のまま（在庫・予約は mobileHidden のまま）
 5. 閲覧ページも同じ10列・同じ順・全部1行（PC 幅）・同じ色。見出しの i18n は閲覧ページの既存キー（`viewer.col.offerType`）のまま
-6. parity 試験は「アプリと閲覧ページが同じ10列・同じ順」を確かめる形に直す。`viewerColumns.cells.test.tsx` の在庫・予約セルの試験を新しい表示（Badge なし・色クラス）に合わせる
+6. parity 試験は「アプリと閲覧ページが同じ10列・同じ順」を確かめる形に直す。`frontend/src/pages/viewer/viewerColumns.cells.test.tsx` の在庫・予約セルの試験を新しい表示（Badge なし・色クラス）に合わせる
 
 受け入れ基準（追加分）:
 
 | 基準 | 検証方法 |
 |------|---------|
 | 在庫表・閲覧ページとも左端が在庫・予約で、10列がこの順 | vitest（tablelayout・parity）と試し撮り |
-| 在庫は青、予約はオレンジの文字で、どちらもトークン参照 | CI の ADR-067 チェック、`viewerColumns.cells.test.tsx`、試し撮りの目視 |
+| 在庫は青、予約はオレンジの文字で、どちらもトークン参照 | CI の ADR-067 チェック、`frontend/src/pages/viewer/viewerColumns.cells.test.tsx`、試し撮りの目視 |
 | 予約のオレンジが白地で 4.5:1 以上 | 報告に値とコントラスト比の計算を残す |
 | 閲覧ページも全部1行で枠に収まる | 試し撮り（閲覧ページ 1440px） |
 
 ### 追補1 実装メモ（Sonnet）
 - 在庫・予約の列は常時表示（hideId なし）。保存済み hidden_columns の offerType は無視される
 - `--offer-preorder-text` ライト #b45309（白地 5.02:1）／ダーク #fb923c（--bg-surface 6.46:1）。計算は /tmp/CC報告ファイル/inventory-cols/contrast.txt
+
+---
+
+## 維持の仕組み
+
+- 列の並び・stickyLeft・mobileHidden のアプリと閲覧ページのずれは `frontend/src/pages/viewer/viewerColumns.parity.test.tsx`（vitest・CI）が止める
+- 在庫表の見出しの順とチェック欄なしは `frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx` と `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx` が止める
+- 文字色のトークン直値の混入は CI の ADR-067 チェック、ライト／ダークの定義漏れはダークモード変数パリティ検査が止める
