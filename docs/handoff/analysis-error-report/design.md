@@ -60,7 +60,7 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
   | 単位・販売状態 | Select | GET /tcg/review/value-options |
   | 状態 | Select | GET /tcg/conditions/review-options |
   | 数量・価格 | 数字の入力欄（PO 2026-10-17「y」） | 正本の候補なし。照合は完全一致 |
-  | メモ | 文字の入力欄（PO 2026-10-17「y」） | 正本の候補なし。照合は完全一致 |
+  | メモ | MultiSelect でメモ語マスタから複数選ぶ（PO 2026-10-17「y」。文字入力の決定を置き換え） | public.tcg_note_master.label_ja（15 種類・tcg_analyzer_svc.py:1193-1197）。照合は選んだ語の集合が一致するか。候補を返す API の有無は【未確認】→便 3 の recon で固定 |
 - 枠: Modal。段階式の金型は無いので、ReviewFixWizard.tsx と同じ組み方（feature 内）にする。文言は全部 t("key")、ja/en 同じキー（ADR-027）。
 
 ### 4-4 agent-console（別リポジトリ・版上げとタグ）
@@ -127,7 +127,7 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 - PO の作業（AI ではできない）: Discord に誤り報告チャンネルと webhook を作る／bot をそのチャンネルに入れる／GitHub Secret に webhook と ERROR_REPORT_AGENT_TOKEN を登録する（secrets の変更は PO 本人・ADR-1003 例外）。
 
 ## 10. 未決（自己審査 REVISE の理由）
-- U1 解決（PO 2026-10-17「y」）: 数量・価格は数字、メモは文字で入力。照合は完全一致。
+- U1 解決（PO 2026-10-17「y」）: 数量・価格は数字で入力し完全一致で照合。メモはメモ語マスタから複数選び、語の集合で照合（PO 2026-10-17「y」。根拠: 本番の現行行でメモが入る 821 行のうち 661 行がマスタの語だけ・残り 160 行のうち 121 行は発送日の文＝今は ship_ja 欄。v102 の新しい行はメモ原則なし line_analysis_v102_svc.py:701。調査 /tmp/CC報告ファイル/memo-format-recon.md）。
 - U2 O6・O7 を自動セッションに任せてよいか（PO の一括承認）。
 - U3 入力欄の金型の名前と場所（実装カードの前に recon で固定）。
 - U4 Discord の REST の呼び出し制限の数値（Context7 か公式文書で確認してから便 4）。
