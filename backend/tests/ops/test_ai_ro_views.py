@@ -1,0 +1,170 @@
+"""ADR-1024 便3a: ai_ro ビュー生成と ai_reader の権限のテスト（実 PostgreSQL が必要）。
+
+使い捨て DB を作り、migration 2 本（ai_reader ロール・ai_ro ビュー）を本物のファイルで適用して確かめる。
+K6（秘密列が 0 本・public.users は直接読めない）/ K8（全スキーマの代表ビュー・行制限の扱い）/
+K9（新しい表はビュー生成前は読めない）。
+ai_reader はクラスタ共通のロールなので、このテストが作った場合だけ最後に消す。
+パスワードは設定しない（SET ROLE で確かめる。ログインはしない）。
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import uuid
+from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
+
+import pytest
+
+ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
+
+pytestmark = pytest.mark.skipif(
+    not ADMIN_PG_URL,
+    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。",
+)
+
+_MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
+_ROLE_SQL = "20261017_130000_create_ai_reader_role.sql"
+_VIEWS_SQL = "20261017_130100_create_ai_ro_views.sql"
+_DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+_TENANTS = ("tenant_001", "tenant_003", "tenant_004", "tenant_005", "tenant_006")
+
+
+def _psycopg_url(url: str, dbname: str | None = None) -> str:
+    url = url.replace("postgresql+asyncpg://", "postgresql://")
+    if dbname:
+        parts = urlsplit(url)
+        url = urlunsplit(parts._replace(path="/" + dbname))
+    return url
+
+
+@pytest.fixture(scope="module")
+def pg():
+    import psycopg2
+
+    control = psycopg2.connect(_psycopg_url(ADMIN_PG_URL))
+    control.autocommit = True
+    cur = control.cursor()
+    cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'ai_reader'")
+    role_existed = cur.fetchone() is not None
+    name = "ai_ro_" + uuid.uuid4().hex[:12]
+    cur.execute(f'CREATE DATABASE "{name}"')
+    conn = psycopg2.connect(_psycopg_url(ADMIN_PG_URL, name))
+    conn.autocommit = True
+    try:
+        c = conn.cursor()
+        c.execute("CREATE TABLE public.users (id int primary key, email text, password_hash text)")
+        c.execute("INSERT INTO public.users VALUES (1, 'a@example.test', 'h')")
+        c.execute("CREATE TABLE public.only_secrets (password_hash text, api_key text)")
+        for i, t in enumerate(_TENANTS, start=1):
+            c.execute(f"CREATE SCHEMA {t}")
+            c.execute(
+                f"CREATE TABLE {t}.leads (id int primary key, name text, "
+                "access_token text, api_key_encrypted text, client_secret text, "
+                "private_key_pem text, credentials_json text, hash_value text, note text)"
+            )
+            c.execute(f"INSERT INTO {t}.leads VALUES ({i}, 'n{i}', 't', 'k', 's', 'p', 'c', 'h', 'x')")
+        # 行の制限(RLS)付きの表: ビューの持ち主の権限で制限が外れるか（recon U10）
+        c.execute("CREATE TABLE tenant_001.guarded (id int primary key, tenant_id int)")
+        c.execute("INSERT INTO tenant_001.guarded VALUES (1, 1), (2, 2)")
+        c.execute("ALTER TABLE tenant_001.guarded ENABLE ROW LEVEL SECURITY")
+        c.execute("CREATE POLICY only_one ON tenant_001.guarded USING (tenant_id = 1)")
+        for fname in (_ROLE_SQL, _VIEWS_SQL):
+            c.execute((_MIGRATIONS_DIR / fname).read_text("utf-8"))
+        yield conn
+    finally:
+        conn.close()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+        if not role_existed:
+            cur.execute("DROP ROLE IF EXISTS ai_reader")
+        control.close()
+
+
+def _rows(conn, sql, role=None):
+    c = conn.cursor()
+    try:
+        if role:
+            c.execute(f"SET ROLE {role}")
+        c.execute(sql)
+        return c.fetchall()
+    finally:
+        c.execute("RESET ROLE")
+
+
+def test_no_denied_column_remains_in_ai_ro(pg):
+    """K6: 拒否リストに当たる列が ai_ro に 0 本。"""
+    names = [
+        r[0]
+        for r in _rows(
+            pg,
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'ai_ro'"
+            " UNION SELECT a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid"
+            " JOIN pg_namespace n ON n.oid = c.relnamespace"
+            " WHERE n.nspname = 'ai_ro' AND a.attnum > 0 AND NOT a.attisdropped",
+        )
+    ]
+    assert names, "ai_ro に列が 1 本も無い"
+    assert [n for n in names if _DENY_RE.search(n.lower())] == []
+
+
+def test_representative_view_for_public_and_every_tenant(pg):
+    """K8: public と各テナントの代表が 1 本ずつある。表がすべて秘密列の表は作らない。"""
+    views = {r[0] for r in _rows(pg, "SELECT viewname FROM pg_views WHERE schemaname = 'ai_ro'")}
+    assert "public__users" in views
+    for t in _TENANTS:
+        assert f"{t}__leads" in views
+    assert "public__only_secrets" not in views
+
+
+def test_views_owned_by_executing_user_and_no_extra_grants(pg):
+    owner = _rows(pg, "SELECT DISTINCT viewowner FROM pg_views WHERE schemaname = 'ai_ro'")
+    me = _rows(pg, "SELECT current_user")[0][0]
+    assert owner == [(me,)]
+    attrs = _rows(
+        pg,
+        "SELECT rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolreplication, rolconnlimit,"
+        " rolpassword IS NULL FROM pg_authid WHERE rolname = 'ai_reader'",
+    )
+    assert attrs == [(False, False, False, False, False, 2, True)]
+    assert _rows(pg, "SELECT pg_has_role('ai_reader', 'pg_read_all_data', 'MEMBER')") == [(False,)]
+
+
+def test_ai_reader_cannot_read_public_users_directly(pg):
+    """K6: public.users は直接読めない。ビュー経由は読める（秘密列なし）。"""
+    import psycopg2
+
+    with pytest.raises(psycopg2.errors.InsufficientPrivilege):
+        _rows(pg, "SELECT * FROM public.users", role="ai_reader")
+    rows = _rows(pg, "SELECT * FROM ai_ro.public__users", role="ai_reader")
+    assert rows == [(1, "a@example.test")]
+
+
+def test_view_owner_lifts_row_level_restriction(pg):
+    """recon U10: ビューの持ち主の権限で行の制限が外れる（全行が見える）ことを実機で確認。"""
+    rows = _rows(pg, "SELECT id FROM ai_ro.tenant_001__guarded ORDER BY id", role="ai_reader")
+    assert rows == [(1,), (2,)]
+
+
+def test_new_table_unreadable_until_views_are_rebuilt(pg):
+    """K9: 新しい表はビュー生成の前は ai_reader で読めない。作り直すと読める。"""
+    import psycopg2
+
+    c = pg.cursor()
+    c.execute("CREATE TABLE tenant_003.brand_new (id int, label text)")
+    with pytest.raises(psycopg2.errors.UndefinedTable):
+        _rows(pg, 'SELECT * FROM ai_ro."tenant_003__brand_new"', role="ai_reader")
+    c.execute((_MIGRATIONS_DIR / _VIEWS_SQL).read_text("utf-8"))
+    assert _rows(pg, 'SELECT * FROM ai_ro."tenant_003__brand_new"', role="ai_reader") == []
+
+
+def test_ai_reader_role_migration_is_idempotent(pg):
+    c = pg.cursor()
+    c.execute((_MIGRATIONS_DIR / _ROLE_SQL).read_text("utf-8"))
+    c.execute((_MIGRATIONS_DIR / _ROLE_SQL).read_text("utf-8"))
+    cfg = _rows(
+        pg,
+        "SELECT unnest(rolconfig) FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole WHERE r.rolname = 'ai_reader' AND s.setdatabase = 0",
+    )
+    joined = " ".join(x[0] for x in cfg)
+    assert "log_statement=all" in joined
