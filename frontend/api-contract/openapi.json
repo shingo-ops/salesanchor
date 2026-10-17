@@ -44365,7 +44365,7 @@
             "name": "order",
             "required": false,
             "schema": {
-              "default": "asc",
+              "default": "desc",
               "pattern": "^(asc|desc)$",
               "title": "Order",
               "type": "string"
