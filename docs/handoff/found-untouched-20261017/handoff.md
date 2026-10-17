@@ -11,6 +11,7 @@
 ## 2. test_migration_value_writes.py を CI で動かす
 - 事実: scripts/tests/test_migration_value_writes.py は、どの workflow からも呼ばれていない（docs/handoff/migration-dryrun-enforce/design.md:58）。
 - 先に直すもの: test_protected_tables_include_the_four_added_masters が 28 != 27 で失敗している（#4476 より前の main の時点から）。
+- 便: docs/handoff/migration-value-writes-test-ci/design.md
 
 ## 3. 試し実行の除外27行を実測で確かめる
 - 事実: scripts/migration-guard/dryrun-exclusions.tsv にはデータ行が27行ある（コメント行を除く）。
