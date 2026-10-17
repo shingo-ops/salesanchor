@@ -52,7 +52,7 @@
 - 【事実】_UPSERT_SQL の挿入列は25（`backend/app/services/line_analysis_v102_svc.py`:709-732: id から ship_en まで）。列幅の定数は :119-125（_PRICE_BASIS_MAX=100、_NUMERIC_LIMIT=10^12）。
 - 【事実】まとめの数を入れる専用の数値列は無い。今の保持先は price_basis（「V102:bulk:set:N」）と note_ja（自由文）だけ。
 - 列を足す手順（price_basis の前例に沿った実測。1列1migrationで行われている）:
-  1. `migrations/YYYYMMDD_HHMMSS_<説明>.sql` を作る。中身は「構造のみ・値の操作なし（ADR-1007）・冪等」の ALTER TABLE ... ADD COLUMN IF NOT EXISTS ＋ COMMENT（前例 `migrations/20261011_150000_add_analysis_results_price_basis.sql`:1-4）。命名規則: `backend/CLAUDE.md`:50、additive-only: :49。
+  1. migrations/ に「YYYYMMDD_HHMMSS_説明.sql」の名前で作る。中身は「構造のみ・値の操作なし（ADR-1007）・冪等」の ALTER TABLE ... ADD COLUMN IF NOT EXISTS ＋ COMMENT（前例 `migrations/20261011_150000_add_analysis_results_price_basis.sql`:1-4）。命名規則: `backend/CLAUDE.md`:50、additive-only: :49。
   2. `scripts/run_all_migrations.sh` に run_sql を1行足す（前例 :932-933 と :957。直近の登録 :997）。migration の唯一の実行経路は `.github/workflows/deploy.yml`:222-224（新 migration は run_all_migrations.sh に追記）。登録の検査: `.github/workflows/migration-guard.yml`:119-132（deploy.yml か run_all_migrations.sh のどちらかにあれば可）。
   3. `backend/app/services/line_analysis_v102_svc.py`:709-732 の _UPSERT_SQL（INSERT 列・VALUES・ON CONFLICT の3か所）と、値を作る _analysis_values（:672-706）に列を足す。
   4. テストが migration を読み込む箇所に足す（前例 `backend/tests/test_line_analysis_v102_pg.py`:44-45。ship_ja は `backend/tests/test_tcg_condition_review.py`:96 と `backend/tests/test_tcg_work_matching_integration.py`:334）。

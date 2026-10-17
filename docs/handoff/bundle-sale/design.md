@@ -145,6 +145,8 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 
 ## 9. 維持の仕組み
 
+守り手: backend/tests/test_review_reason_codes_consistency.py（既存・CI で毎回。理由コード bundle_unverified の 4 点のずれを赤にする）。便1 で backend/tests/test_v102_bundle.py と scripts/dev/bundle_replay.py が加わる（下の守り手1〜5）。
+
 - 守り手1（CI・毎回）: backend の pytest に A2・A3 のテスト。規則を変えると赤になる。
 - 守り手2（マスタが正本）: 単位の語は別名マスタから作るので、新しい単位・別名を登録すれば読み取りにも自動で効く。コードに単位の語の表を持たない（持つとテストで見つけるため、v102_bundle_svc に単位語の直書きが無いことを確かめるテストを置く）。
 - 守り手3（人の目・毎日）: 決まらない行は理由 bundle_unverified で要確認の欄に出る（今の要確認の仕組み）。
