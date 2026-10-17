@@ -109,6 +109,10 @@
   --info-bg: #bee3f8;
   --info-text: #2b6cb0;
 
+  /* 在庫表・閲覧ページの「在庫・予約」文字色（在庫=青 / 予約=オレンジ）。白地 4.5:1 以上 */
+  --offer-instock-text: var(--info-text);
+  --offer-preorder-text: #b45309;   /* amber-700: 白地 5.02:1 */
+
   /* neutral / semantic solid トークン（Task 3C — Badge 金型用） */
   --neutral-bg:   #e2e8f0;   /* soft neutral 背景 */
   --neutral-text: #4a5568;   /* soft neutral 文字 */
@@ -297,6 +301,10 @@
   /* info バッジ（ダーク） */
   --info-bg: #1e3a5f;
   --info-text: #93c5fd;
+
+  /* 在庫・予約の文字色（ダーク）。各ダーク地 4.5:1 以上 */
+  --offer-instock-text: var(--info-text);
+  --offer-preorder-text: #fb923c;   /* orange-400: --bg-surface 6.46:1 */
 
   /* neutral / semantic solid トークン（Task 3C — Badge 金型用 ダーク） */
   --neutral-bg:   #334155;   /* slate-700 */
