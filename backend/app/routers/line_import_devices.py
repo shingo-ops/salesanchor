@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
+from app.client_ip import get_client_ip
 from app.database import get_db
 from app.routers.tcg_line_import import ImportResultResponse, upload_android_line_export
 from app.services import line_import_devices as service
@@ -32,8 +33,8 @@ def no_store(response: Response):
 @router.post('/start')
 async def start(data: StartRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
     no_store(response)
-    # Use the socket peer for a conservative limit; do not trust arbitrary XFF.
-    return await service.start(db, data.token_hash, data.name, request.client.host if request.client else 'unknown')
+    # 接続元は共通の関数で決める（docs/specs/client-ip/README.md。X-Forwarded-For は読まない）
+    return await service.start(db, data.token_hash, data.name, get_client_ip(request))
 
 
 @router.get('/status')
