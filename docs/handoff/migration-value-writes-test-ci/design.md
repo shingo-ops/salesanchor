@@ -8,7 +8,7 @@
 |---|---|---|
 | K1 | この PR の CI で、必須チェック「models.py に新 Column → deploy.yml にマイグレーション追記必須」の job に新しい step「migration 値書き込み検査の試験」があり、ログに `Ran 25 tests` と `OK` が出る | `gh run view --log` の該当 step |
 | K2 | ローカルで試験が 25 件すべて通る（失敗 0） | `python3 scripts/tests/test_migration_value_writes.py` の終了コード 0 |
-| K3 | 試験が落ちたら job が赤になる（step に `continue-on-error` が無く、試験が失敗時に非0で終わる） | ローカルで一覧から1行消した状態で実行し終了コード≠0 → 戻す／yml に continue-on-error が無いこと |
+| K3 | 試験が落ちたら job が赤になる（step に `continue-on-error` が無く、試験が失敗時に非0で終わる） | ローカルで一覧から4表の1つ（supplier_aliases）の行を消した状態で実行し終了コード≠0 → 戻す／yml に continue-on-error が無いこと（訂正 2026-10-17: 当初は「任意の1行」と書いたが、数を持たない設計なので4表以外の行を消しても落ちない。実測は /tmp/CC報告ファイル/kenn2/impl/k3.txt・k3b.txt） |
 | K4 | 表の数の正本が一覧1か所だけになる（試験に数の直書きが無い） | `grep -n "assertEqual(len(names)" scripts/tests/test_migration_value_writes.py` が0件 |
 | K5 | main マージ後、main への push で動く workflow がすべて成功（または変更と無関係な既存失敗だけ） | `gh run list --branch main --commit <merge sha>` |
 
