@@ -1,4 +1,4 @@
-"""閲覧者の Discord 受付の文面（SSOT・英語）。bot_texts.py（顧客用チケット）とは別。
+"""閲覧者の Discord 受付の文面（SSOT・日本語。PO 決定 2026-10-17）。bot_texts.py（顧客用チケット・英語既定）とは別。
 
 利用箇所:
   - discord_gateway/client.py（custom_id の接頭辞の判定）
@@ -13,31 +13,31 @@ CODE_MODAL_CUSTOM_ID = "viewer_trial_code"
 CODE_INPUT_CUSTOM_ID = "viewer_trial_code_input"
 
 RECEPTION_MESSAGE = (
-    "Start your free trial of the inventory viewer. "
-    "Press the button below and enter the signup code shown after you applied."
+    "在庫一覧のお試しを始められます。"
+    "下のボタンを押して、お申込みのあとに画面に出たコードを入れてください。"
 )
-OPEN_BUTTON_LABEL = "Enter signup code"
-CODE_MODAL_TITLE = "Signup code"
-CODE_INPUT_LABEL = "Signup code (e.g. ABCD-EFGH-JKMN-PQRS)"
+OPEN_BUTTON_LABEL = "申込コードを入れる"
+CODE_MODAL_TITLE = "申込コード"
+CODE_INPUT_LABEL = "申込コード（例：ABCD-EFGH-JKMN-PQRS）"
 
-WRONG_SERVER = "This button can't be used on this server."
-CODE_INVALID = "The code is wrong or has expired. Please check it and try again."
-TOO_MANY_ATTEMPTS = "Too many attempts. Please wait an hour and try again."
-TRY_LATER = "Something went wrong. Please wait a while and try again."
-DISCORD_ALREADY_LINKED = "This Discord account is already linked to another signup."
-YOUR_ROOM = "Your private channel: <#{channel_id}>"
+WRONG_SERVER = "このボタンは、このサーバーでは使えません。"
+CODE_INVALID = "コードが違うか、期限が切れています。確かめてから、もう一度入れてください。"
+TOO_MANY_ATTEMPTS = "試した回数が多すぎます。1時間ほど待ってから、もう一度お試しください。"
+TRY_LATER = "うまくいきませんでした。しばらく待ってから、もう一度お試しください。"
+DISCORD_ALREADY_LINKED = "この Discord アカウントは、別のお申込みですでに使われています。"
+YOUR_ROOM = "あなた専用の部屋：<#{channel_id}>"
 ROOM_WELCOME = (
-    "Welcome! Your trial of the inventory viewer has started.\n"
+    "ようこそ。在庫一覧のお試しが始まりました。\n"
     "URL: https://app.salesanchor.jp/viewer/\n"
-    "Email: {email}\n"
-    "Initial password: {password}\n"
-    "Please change your password at your first login."
+    "メールアドレス: {email}\n"
+    "初期パスワード: {password}\n"
+    "最初のログインのときに、パスワードを変えてください。"
 )
 ROOM_RECREATED = (
-    "Your channel was recreated.\n"
+    "部屋を作り直しました。\n"
     "URL: https://app.salesanchor.jp/viewer/\n"
-    "Email: {email}\n"
-    "If you have forgotten your password, use “Forgot password” on the login page."
+    "メールアドレス: {email}\n"
+    "パスワードを忘れたときは、ログイン画面の「パスワードを忘れた」から再発行してください。"
 )
 
 
