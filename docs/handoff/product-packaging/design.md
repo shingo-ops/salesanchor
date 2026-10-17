@@ -345,6 +345,12 @@ PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マー
 ### 11-4. 触らない範囲
 frontend/src の全ファイル（項目名は変えない）、migrations/（新しい migration は作らない）、backend/tests/conftest.py、backend/tests/test_tcg_product_list_pg.py、test_products_required_fields_pg.py、quantity_units・weight_classes の管理画面、products.moq・weight・volume_weight。
 
+#### 11-4a. 実装中に外れた所（2026-10-18 Opus 判断・審査で必要最小限と確認）
+- 外れた所1: 試験の共有部品を触った（backend/tests/rls_bootstrap.py・test_tcg_product_list_pg.py・test_products_tcg_type_fk.py）。理由: 便3 後、PG の商品 API は load_packagings を通るため、product_db を借りる試験（test_products_required_fields_pg.py:14・test_tcg_product_detail_pg.py:24・test_product_packagings_pg.py:16）と test_products_tcg_type_fk の PATCH が、荷姿の表が無いと失敗した（CI fc7f3eed3 より前の実行で5件）。
+- 外れた所2: §11-3-7 の「試験の中で最小 DDL で作る」をやめ、本番の migration 3本（20260921_140000・20260922_060000・20261018_100000）を、巻き戻す transaction の外で一度だけ確定で流す（rls_bootstrap.py の ensure_product_packagings、public_bootstrap_lock で直列化）。理由: (a) 試験の中で DDL を流すと rollback まで表のロックを持ち、並列 worker 間で deadlock した（CI fc7f3eed3 の T5、記録 /tmp/CC報告ファイル/product-packaging/bin3/impl/deadlock2_recon.out）(b) 文字列の DDL は test-schema-dup の関所で止まる。
+- 外れた所3: ensure の先頭で public.products に ACCESS EXCLUSIVE を取り、test_tcg_distribution_pg（products → product_kinds の順）とロックの順を揃える。理由: 逆の順だと使い捨て PG で deadlock を再現し、先に取ると解消した（審査記録 /tmp/CC報告ファイル/product-packaging/bin3/review/ の repro1〜3）。
+- T9 は試験の中で force_rls を流すまま。同じ transaction が先に products を ALTER しており、新しいロック順を増やさない（審査の判断）。
+
 ### 11-5. 点検（生出力を /tmp/CC報告ファイル/product-packaging/bin3/impl/ へ）
 - `cd backend && pytest -q tests/test_products.py tests/test_product_packagings_pg.py tests/test_product_packagings_sql.py tests/test_products_required_fields_pg.py`（PG の試験はローカルに PostgreSQL 16 と RLS_ADMIN_DATABASE_URL が無ければ skip。skip なら「未実施・CI で確認」と書く）
 - `cd backend && pytest -q`（全体）と `make lint`（backend/CLAUDE.md:69）

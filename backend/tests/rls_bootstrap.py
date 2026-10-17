@@ -91,9 +91,14 @@ async def ensure_product_packagings(admin_engine) -> None:
             return
         async with admin_engine.begin() as conn:
             raw = await conn.get_raw_connection()
-            if not await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL")):
+            # ロックの順を test_tcg_distribution_pg.py（products → product_kinds）に揃える。
+            # products を最初に押さえる（逆順だと deadlock を再現済み）
+            if await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL")):
+                await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
+            else:
                 products_sql = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text("utf-8")
                 await raw.driver_connection.execute(products_sql)
+                await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
             for name in PACKAGING_MIGRATIONS:
                 # この transaction の中で流すので BEGIN/COMMIT は除く
                 sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
