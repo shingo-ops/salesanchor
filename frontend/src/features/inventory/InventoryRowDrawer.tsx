@@ -16,6 +16,7 @@ import { TOPICS } from "../../lib/realtime/topics";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "../tcg-analysis-review/ReviewItemDrawer";
 import { ShadowSourcePane } from "../tcg-analysis-review/ShadowSourcePane";
 import type { InventoryRow } from "./inventoryColumns";
+import "./inventory-row-drawer.css";
 
 interface Props {
   row: InventoryRow;
@@ -168,7 +169,7 @@ function RawTextPane({ row, onClose, modeTabs }: PaneProps) {
 
   return (
     <Drawer open size="wide" title={t("inventory.rowDrawer.tabRawText")} onClose={onClose}>
-      <Stack gap="4">
+      <Stack gap="4" className="inventory-rawtext-pane">
         {modeTabs}
         {itemTabs}
         {state === "loading" && <p role="status">{t("common.loading")}</p>}
