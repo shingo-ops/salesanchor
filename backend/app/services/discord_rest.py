@@ -38,6 +38,7 @@ async def discord_api_request(
     bot_token: str,
     json: dict[str, Any] | None = None,
     expected_statuses: tuple[int, ...] = (200, 201, 204),
+    max_retries: int = _MAX_RETRIES,
 ) -> dict[str, Any] | None:
     """Discord REST API を呼び出す共通関数。
 
@@ -69,9 +70,9 @@ async def discord_api_request(
         except httpx.RequestError as exc:
             logger.warning(
                 "[discord_rest] network error method=%s path=%s attempt=%d/%d: %s",
-                method, path, attempt, _MAX_RETRIES, exc,
+                method, path, attempt, max_retries, exc,
             )
-            if attempt >= _MAX_RETRIES:
+            if attempt >= max_retries:
                 raise DiscordAPIError(
                     f"Discord API ネットワークエラー: {exc}"
                 ) from exc
@@ -98,11 +99,11 @@ async def discord_api_request(
                 retry_after = 1.0
             logger.warning(
                 "[discord_rest] rate limited method=%s path=%s retry_after=%.1fs attempt=%d/%d",
-                method, path, retry_after, attempt, _MAX_RETRIES,
+                method, path, retry_after, attempt, max_retries,
             )
-            if attempt >= _MAX_RETRIES:
+            if attempt >= max_retries:
                 raise DiscordAPIError(
-                    f"Discord API レートリミット: {_MAX_RETRIES}回リトライ後も超過",
+                    f"Discord API レートリミット: {max_retries}回リトライ後も超過",
                     status_code=429,
                 )
             await asyncio.sleep(retry_after)
@@ -113,9 +114,9 @@ async def discord_api_request(
             body = response.text[:200]
             logger.warning(
                 "[discord_rest] server error method=%s path=%s status=%d attempt=%d/%d body=%s",
-                method, path, http_status, attempt, _MAX_RETRIES, body,
+                method, path, http_status, attempt, max_retries, body,
             )
-            if attempt >= _MAX_RETRIES:
+            if attempt >= max_retries:
                 raise DiscordAPIError(
                     f"Discord API サーバーエラー: HTTP {http_status}",
                     status_code=http_status,
