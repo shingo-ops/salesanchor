@@ -48,3 +48,27 @@
 ### 未解決
 - 本番反映後に確かめる: GET が super admin 以外で 403、画面（Evaluator）。
 - 登録用スクリプトの本番実行（Q9 の22人）は PO 本人の GO と permit-danger が要る。対象の一覧を先に PO に見せる。
+
+## r15（2026-10-17。申込の招待リンクをボットが作る：PO 決定 Q16。審査は Opus、同一 AI の自己審査）
+
+### 判定：APPROVE（Blocking 0、Non-blocking 2）
+
+### 照合した根拠
+- Discord 公式 Create Channel Invite（docs.discord.com/developers/resources/channel、2026-10-17 WebFetch）：max_age 0〜604800、max_uses 0〜100、unique、CREATE_INSTANT_INVITE が要る。Context7 は上限のため使えず、公式を直接確認した。
+- 権限の数字 805432406（backend/app/routers/discord_oauth.py:72）は bit0（CREATE_INSTANT_INVITE）を持たない（偶数）。
+- ADR-091 の権限表に CREATE_INSTANT_INVITE の記載は無かった（:56-89）。Manage Guild の除外は :86（design.md の「:69」は誤り→直した）。
+- discord_api_request（backend/app/services/discord_rest.py:34）はやり直し最大5回（:20-23）。申込では max_retries=1 にし、既定値で既存の呼び出し元を変えない。
+- backend に DISCORD_BOT_TOKEN が渡っている（docker-compose.yml:109）。招待を作る既存のコードは無い（create_invite・.invites の grep 0件）。
+
+### 確かめた点
+- 応答の形の秘匿（N-19）：登録済みの email でも招待を作るので、invite_url の有無で登録済みかどうかは分からない。honeypot だけ null（ボット向けの差は許容）。
+- SSOT：招待リンクは DB に保存しない。
+- 最小権限：テナント向けの権限の数字は変えず、運用サーバーのロールにだけ付ける。
+- 順番：viewer_discord_config は 4c で作るので、4c を先にする。
+
+### Non-blocking
+- N-r15-1：Discord の招待作成そのものの呼び出し制限の値は公式に数字が無い。作れないときは null と再申込の案内で受ける（受入条件で 429 を確かめる）。
+- N-r15-2：受付の部屋にチャンネル単位で「招待を作成」を拒否する上書きがあると作れない。PO の手順書に「受付の部屋の権限の上書きを確かめる」を入れる。
+
+### 未解決
+- PO の Discord の設定作業（ボットのロールに「招待を作成」を付ける）。手順は 4c のカードと一緒に渡す。
