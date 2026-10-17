@@ -23,6 +23,7 @@
 - 事実: 存在の確認が relkind を見ていない（VIEW でも真になる）。表がビューになっている環境では ALTER が飛ばされ、外部キーが作られない（side4/REPORT.md「P5」の欠陥②、design.md:60）。
 - 今の本番には影響なし（素通りしている）。新しい環境を空から作るときに効いてくる。
 - 注意: migrations/ を触るので危険パスになる。PO の「GO #番号」が要る。
+- 便: docs/handoff/migration-fk-view-relkind/design.md（完了: 変更不要。relkind は #4446 で修正済み、空から作る環境でも本番でも外部キーあり）
 
 ## 根拠の置き場所
 - ~/CC報告ファイル-keep/accuracy-20261014/g28-bulk-price/post/side4/REPORT.md
