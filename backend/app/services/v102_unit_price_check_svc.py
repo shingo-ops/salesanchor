@@ -61,6 +61,7 @@ _MARKET_SQL = """
     JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
     WHERE ar.product_id = ANY(:pids) AND ar.engine_version LIKE :engine AND ar.is_current IS TRUE
       AND ar.price_normalized IS NOT NULL AND ar.unit_canonical IS NOT NULL
+      AND ar.bundle_size IS NULL
       AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE 'INHERIT:%')
       AND ej.source_message_id != CAST(:smid AS uuid)
       AND md5(sm.raw_text) != COALESCE((SELECT md5(raw_text) FROM {schema}.source_messages WHERE id = CAST(:smid AS uuid)), '')
