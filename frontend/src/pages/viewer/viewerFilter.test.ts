@@ -83,6 +83,13 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
     ]);
     expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0, 2]);
   });
+  it("same release date and english_title: empty japanese_title comes first (same as backend)", () => {
+    const rs = withIndex([
+      mk({ english_title: "x", japanese_title: "あ", release_date: "2026-01-01" }),
+      mk({ english_title: "x", japanese_title: "", release_date: "2026-01-01" }),
+    ]);
+    expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0]);
+  });
   it("name header desc: english_title desc and japanese_title desc, '' english last", () => {
     const nameRows = withIndex([
       mk({ english_title: "item 2" }),

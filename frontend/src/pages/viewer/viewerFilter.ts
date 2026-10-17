@@ -177,7 +177,7 @@ export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortD
   } else {
     keys.push(nullsLast((r) => r.release_date, comparePlain, sortKey === "release_date" ? sortDir : "asc"));
     keys.push(plain((r) => r.english_title, compareText, "asc"));
-    keys.push(nullsLast((r) => r.japanese_title, compareText, "asc"));
+    keys.push(plain((r) => r.japanese_title, compareText, "asc"));
     if (sortKey !== "release_date") {
       const col = columnCompare(sortKey, sortDir);
       if (col) keys.push(col);
