@@ -277,11 +277,11 @@ async def test_token_issued_before_password_change_gets_401(redis):
 
 
 async def test_iat_floor_comparison_boundaries(redis):
-    """password_changed_at が 10:00:00.700 のとき iat 10:00:00 は通り、09:59:59 は 401。"""
+    """password_changed_at が XX:XX:XX.700 のとき、同じ秒の iat は通り、1 秒前は 401。"""
     redis.store[vic.CACHE_KEY] = "{}"
     db = StatefulDb()
     acct = db.add()
-    base = datetime(2026, 10, 16, 10, 0, 0, 700000, tzinfo=timezone.utc)
+    base = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=700000)
     acct.password_changed_at = base
     iat_ok = int(base.replace(microsecond=0).timestamp())
     async with _Client(db) as http:
