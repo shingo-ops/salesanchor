@@ -1,0 +1,88 @@
+{
+  entries: [
+    {
+      unitId: 'UN0001',
+      canonical: 'Case',
+      aliases: [Array],
+      kubun: '箱系大'
+    },
+    {
+      kubun: '箱系',
+      aliases: [Array],
+      unitId: 'UN0002',
+      canonical: 'Box'
+    },
+    {
+      kubun: 'パック系',
+      unitId: 'UN0003',
+      canonical: 'Pack',
+      aliases: [Array]
+    },
+    {
+      aliases: [Array],
+      kubun: '単品系',
+      unitId: 'UN0004',
+      canonical: 'Piece'
+    },
+    {
+      kubun: '複合',
+      unitId: 'UN0005',
+      aliases: [Array],
+      canonical: 'Set'
+    },
+    { kubun: '除外', unitId: 'UN0006', aliases: [Array], canonical: '本' },
+    {
+      unitId: 'UN0007',
+      canonical: '点',
+      kubun: '数量専用',
+      aliases: [Array]
+    },
+    {
+      unitId: 'UN0008',
+      canonical: '個',
+      aliases: [Array],
+      kubun: '条件つき'
+    }
+  ],
+  aliasMap: {
+    Piece: { kubun: '単品系', unitId: 'UN0004', canonical: 'Piece' },
+    CARTON: { unitId: 'UN0001', kubun: '箱系大', canonical: 'Case' },
+    box: { canonical: 'Box', kubun: '箱系', unitId: 'UN0002' },
+    CT: { kubun: '箱系大', unitId: 'UN0001', canonical: 'Case' },
+    'カートン': { unitId: 'UN0001', kubun: '箱系大', canonical: 'Case' },
+    'ﾎﾞｯｸｽ': { kubun: '箱系', canonical: 'Box', unitId: 'UN0002' },
+    'ボックス': { canonical: 'Box', kubun: '箱系', unitId: 'UN0002' },
+    'パック': { unitId: 'UN0003', canonical: 'Pack', kubun: 'パック系' },
+    set: { canonical: 'Set', kubun: '複合', unitId: 'UN0005' },
+    'ケース': { canonical: 'Case', kubun: '箱系大', unitId: 'UN0001' },
+    ct: { canonical: 'Case', unitId: 'UN0001', kubun: '箱系大' },
+    pack: { kubun: 'パック系', canonical: 'Pack', unitId: 'UN0003' },
+    '個': { canonical: '個', kubun: '条件つき', unitId: 'UN0008' },
+    '箱': { canonical: 'Box', unitId: 'UN0002', kubun: '箱系' },
+    'セット': { unitId: 'UN0005', canonical: 'Set', kubun: '複合' },
+    '本': { unitId: 'UN0006', kubun: '除外', canonical: '本' },
+    SET: { canonical: 'Set', kubun: '複合', unitId: 'UN0005' },
+    'ｾｯﾄ': { unitId: 'UN0005', kubun: '複合', canonical: 'Set' },
+    Case: { kubun: '箱系大', unitId: 'UN0001', canonical: 'Case' },
+    CASE: { unitId: 'UN0001', canonical: 'Case', kubun: '箱系大' },
+    case: { canonical: 'Case', kubun: '箱系大', unitId: 'UN0001' },
+    Carton: { kubun: '箱系大', unitId: 'UN0001', canonical: 'Case' },
+    PCS: { kubun: '単品系', canonical: 'Piece', unitId: 'UN0004' },
+    'ｶートン': { unitId: 'UN0001', kubun: '箱系大', canonical: 'Case' },
+    Pack: { kubun: 'パック系', canonical: 'Pack', unitId: 'UN0003' },
+    PIECE: { unitId: 'UN0004', canonical: 'Piece', kubun: '単品系' },
+    pcs: { unitId: 'UN0004', canonical: 'Piece', kubun: '単品系' },
+    BOX: { canonical: 'Box', kubun: '箱系', unitId: 'UN0002' },
+    '点': { unitId: 'UN0007', canonical: '点', kubun: '数量専用' },
+    '枚': { kubun: '単品系', unitId: 'UN0004', canonical: 'Piece' },
+    'ﾊﾟｯｸ': { kubun: 'パック系', canonical: 'Pack', unitId: 'UN0003' },
+    Ct: { kubun: '箱系大', unitId: 'UN0001', canonical: 'Case' },
+    Pcs: { canonical: 'Piece', kubun: '単品系', unitId: 'UN0004' },
+    Box: { kubun: '箱系', unitId: 'UN0002', canonical: 'Box' },
+    'ｹース': { canonical: 'Case', kubun: '箱系大', unitId: 'UN0001' },
+    PACK: { canonical: 'Pack', unitId: 'UN0003', kubun: 'パック系' },
+    carton: { kubun: '箱系大', canonical: 'Case', unitId: 'UN0001' },
+    piece: { canonical: 'Piece', kubun: '単品系', unitId: 'UN0004' },
+    Set: { canonical: 'Set', kubun: '複合', unitId: 'UN0005' }
+  }
+}

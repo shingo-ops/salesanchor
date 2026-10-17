@@ -1,0 +1,189 @@
+{
+  canonicals: {
+    Case: true,
+    'Sealed box': true,
+    'Opened box': true,
+    'Damaged sealed box': true,
+    'No shrink box': true,
+    'Opened case': true,
+    'Damaged case': true,
+    'Searched pack': true,
+    'Unsearched pack': true,
+    FLAG_SINGLE: true
+  },
+  entries: [
+    {
+      condId: 'CN0001',
+      canonical: 'Case',
+      aliases: [Array],
+      valueOrder: 1
+    },
+    {
+      condId: 'CN0002',
+      valueOrder: 2,
+      canonical: 'Damaged case',
+      aliases: [Array]
+    },
+    {
+      canonical: 'Opened case',
+      condId: 'CN0009',
+      valueOrder: 3,
+      aliases: [Array]
+    },
+    {
+      aliases: [Array],
+      condId: 'CN0003',
+      canonical: 'Sealed box',
+      valueOrder: 4
+    },
+    {
+      valueOrder: 5,
+      aliases: [Array],
+      condId: 'CN0004',
+      canonical: 'Damaged sealed box'
+    },
+    {
+      valueOrder: 6,
+      aliases: [Array],
+      canonical: 'No shrink box',
+      condId: 'CN0005'
+    },
+    {
+      canonical: 'Opened box',
+      condId: 'CN0006',
+      aliases: [Array],
+      valueOrder: 7
+    },
+    {
+      condId: 'CN0007',
+      valueOrder: 8,
+      canonical: 'Unsearched pack',
+      aliases: [Array]
+    },
+    {
+      aliases: [Array],
+      canonical: 'Searched pack',
+      valueOrder: 9,
+      condId: 'CN0010'
+    },
+    {
+      condId: 'CN0008',
+      valueOrder: 0,
+      aliases: [Array],
+      canonical: 'FLAG_SINGLE'
+    }
+  ],
+  aliasMap: {
+    'damaged case': { canonical: 'Damaged case', valueOrder: 2, condId: 'CN0002' },
+    '新品未開封': { valueOrder: 4, condId: 'CN0003', canonical: 'Sealed box' },
+    'searched pack': { condId: 'CN0010', canonical: 'Searched pack', valueOrder: 9 },
+    'ペリ無': { valueOrder: 7, condId: 'CN0006', canonical: 'Opened box' },
+    case: { condId: 'CN0001', valueOrder: 1, canonical: 'Case' },
+    damagedcase: { condId: 'CN0002', valueOrder: 2, canonical: 'Damaged case' },
+    flag_single: { condId: 'CN0008', canonical: 'FLAG_SINGLE', valueOrder: 0 },
+    damagedsealedbox: {
+      valueOrder: 5,
+      canonical: 'Damaged sealed box',
+      condId: 'CN0004'
+    },
+    'opened box': { condId: 'CN0006', canonical: 'Opened box', valueOrder: 7 },
+    'ペリなし': { condId: 'CN0006', valueOrder: 7, canonical: 'Opened box' },
+    single: { canonical: 'FLAG_SINGLE', condId: 'CN0008', valueOrder: 0 },
+    sealedbox: { condId: 'CN0003', canonical: 'Sealed box', valueOrder: 4 },
+    '未開封': { valueOrder: 4, condId: 'CN0003', canonical: 'Sealed box' },
+    'no shrink box': { canonical: 'No shrink box', condId: 'CN0005', valueOrder: 6 },
+    noshrinkbox: { condId: 'CN0005', valueOrder: 6, canonical: 'No shrink box' },
+    unopened: { canonical: 'Sealed box', condId: 'CN0003', valueOrder: 4 },
+    'ペリ無し': { valueOrder: 7, condId: 'CN0006', canonical: 'Opened box' },
+    'sealed box': { canonical: 'Sealed box', condId: 'CN0003', valueOrder: 4 },
+    'unsearched pack': { valueOrder: 8, condId: 'CN0007', canonical: 'Unsearched pack' },
+    'damaged sealed box': {
+      condId: 'CN0004',
+      valueOrder: 5,
+      canonical: 'Damaged sealed box'
+    },
+    'opened case': { canonical: 'Opened case', valueOrder: 3, condId: 'CN0009' }
+  },
+  condEntries: [
+    {
+      searchKw: '通常品,[通常品]',
+      canonical: 'Case',
+      priority: 4,
+      condId: 'CN0001',
+      appKubun: '箱系大',
+      excludeKw: '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B'
+    },
+    {
+      canonical: 'Damaged case',
+      appKubun: '箱系大',
+      priority: 2,
+      condId: 'CN0002',
+      searchKw: '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B',
+      excludeKw: ''
+    },
+    {
+      condId: 'CN0009',
+      canonical: 'Opened case',
+      appKubun: '箱系大',
+      priority: 2,
+      excludeKw: '',
+      searchKw: 'カートンテープカット,テープカット済,テープカット,テープ切'
+    },
+    {
+      condId: 'CN0003',
+      canonical: 'Sealed box',
+      appKubun: '箱系',
+      priority: 4,
+      excludeKw: '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B',
+      searchKw: '通常品,[通常品],未開封,新品未開封,新品,シュリンク付き,シュリ付,シュリ付き,シュリンクあり,シュリ有り,シュリ有'
+    },
+    {
+      canonical: 'Damaged sealed box',
+      priority: 2,
+      searchKw: '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B',
+      condId: 'CN0004',
+      excludeKw: '',
+      appKubun: '箱系'
+    },
+    {
+      appKubun: '',
+      condId: 'CN0005',
+      canonical: 'No shrink box',
+      searchKw: 'シュリなし,シュリ無し,シュリ無,シュリンクなし,シュリンク無し,シュリンク無,no shrink',
+      excludeKw: '',
+      priority: 3
+    },
+    {
+      priority: 3,
+      condId: 'CN0006',
+      searchKw: 'ペリ無,ペリなし,ペリ無し,ぺりぺり無し,ぺりぺり無,検品のため一度開封済み,確認のため開封済み',
+      excludeKw: '',
+      canonical: 'Opened box',
+      appKubun: ''
+    },
+    {
+      canonical: 'Unsearched pack',
+      appKubun: '',
+      condId: 'CN0007',
+      searchKw: '未サーチ,サーチなし,サーチ痕なし,サーチ痕無し,サーチ無し',
+      excludeKw: '[サーチ済み]',
+      priority: 3
+    },
+    {
+      excludeKw: '未サーチ,サーチ痕なし',
+      appKubun: 'パック系',
+      condId: 'CN0010',
+      searchKw: 'サーチ済,サーチ済み',
+      priority: 2,
+      canonical: 'Searched pack'
+    },
+    {
+      canonical: 'FLAG_SINGLE',
+      priority: 1,
+      searchKw: 'PSA,BGS,CGC,ARS,鑑定,SAR,SR,UR,CHR,プロモ,連番,単品,枚',
+      condId: 'CN0008',
+      excludeKw: '',
+      appKubun: '枚系,単位不明'
+    }
+  ]
+}
