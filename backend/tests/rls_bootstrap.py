@@ -65,8 +65,9 @@ async def public_bootstrap_lock(admin_engine):
                 )
 
 
-# ADR-1028 便3: 商品 API が読む荷姿の表と、その元の「数える単位」の表（本番 migration 3 本）
+# ADR-1028 便3: 商品 API が読む荷姿の表・その元の「数える単位」の表・products の細分類列（本番 migration 4 本）
 PACKAGING_MIGRATIONS = (
+    "20260920_130000_create_product_classification.sql",  # products.product_format_id を足す（詳細 API が読む）
     "20260921_140000_product_classification_masters.sql",
     "20260922_060000_product_unit_condition_infra.sql",  # quantity_units.value の NOT NULL を外す（本番と同じ）
     "20261018_100000_create_product_packagings.sql",
@@ -74,9 +75,17 @@ PACKAGING_MIGRATIONS = (
 
 
 async def _packagings_ready(admin_engine) -> bool:
-    """荷姿の表と、単位 PACK/BOX/CASE の 3 件が揃っているか（lock は取らない）。"""
+    """荷姿の表・単位 PACK/BOX/CASE の 3 件・products.product_format_id が揃っているか（lock は取らない）。"""
     async with admin_engine.connect() as conn:
         if not await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL")):
+            return False
+        has_format_id = await conn.scalar(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_format_id')"
+            )
+        )
+        if not has_format_id:
             return False
         units = await conn.scalar(
             text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE')")
@@ -85,7 +94,7 @@ async def _packagings_ready(admin_engine) -> bool:
 
 
 async def ensure_product_packagings(admin_engine) -> None:
-    """荷姿の表を、試験の DB に一度だけ・確定（commit）させて作る。
+    """荷姿の表と products.product_format_id を、試験の DB に一度だけ・確定（commit）させて作る。
 
     各試験の巻き戻す transaction の中で DDL を流すと、終わるまで products などの表ロックを持ち続け、
     ほかの worker と取る順が逆になって deadlock する。そのため transaction の外の別接続で流して確定させる。
@@ -95,6 +104,7 @@ async def ensure_product_packagings(admin_engine) -> None:
       2. public.products が無ければ、本番形の products を bootstrap_public_products で作る
          （試験用の少列版 products を共有 DB に確定させない。062 の jan_code の index が壊れるため）。
       3. public_bootstrap_lock の中でもう一度確かめ、揃っていなければ products を先に押さえてから migration を流す。
+         先頭は 20260920_130000（products.product_format_id）。本番形 products には無く、試験用の少列版にだけ有るため足す。
          lock_timeout を付けて、待ち続けず失敗にする。
     bootstrap_public_products は自分で public_bootstrap_lock を取るので、この関数は lock の外から呼ぶこと。
     """
