@@ -77,5 +77,33 @@ class MainTest(unittest.TestCase):
             self.assertEqual(rc, 1)
 
 
+class HealthcheckMissingTest(unittest.TestCase):
+    def test_none_running(self):
+        self.assertEqual(cs.healthcheck_missing([]), 0)
+
+    def test_running_with_health(self):
+        self.assertEqual(cs.healthcheck_missing([{"Running": True, "Health": {"Status": "starting"}}]), 0)
+
+    def test_running_without_health(self):
+        self.assertEqual(cs.healthcheck_missing([{"Running": True}]), 1)
+
+    def test_stopped_without_health_not_counted(self):
+        self.assertEqual(cs.healthcheck_missing([{"Running": False}, {"Running": True, "Health": {"Status": "healthy"}}]), 0)
+
+    def test_main_writes_missing_line(self):
+        def fake(args):
+            if args[0] == "ps":
+                return "abc\n"
+            return json.dumps([{"State": {"Running": True}}])
+
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.object(cs, "TEXTFILE_DIR", d), mock.patch.object(cs, "run_docker", side_effect=fake):
+                self.assertEqual(cs.main(), 0)
+            with open(os.path.join(d, "container_state.prom")) as f:
+                lines = f.read().splitlines()
+            self.assertIn('salesanchor_container_healthcheck_missing{service="celery-beat"} 1', lines)
+            self.assertIn('salesanchor_container_unhealthy{service="celery-beat"} 0', lines)
+
+
 if __name__ == "__main__":
     unittest.main()

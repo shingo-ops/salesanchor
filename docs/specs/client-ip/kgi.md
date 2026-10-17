@@ -23,5 +23,15 @@ backend は接続元 IP を決める同じ関数を 4 か所に写して持ち�
 
 ## 運用方針
 
-- 対象は backend の接続元 IP の決め方だけ。nginx の設定・WAF（前段の防御サービス）・端末登録（line_import_devices.py）の IP の扱いは変えない（[design.md](../../handoff/s5-client-ip/design.md) の対象外）。
+- 対象は backend の接続元 IP の決め方だけ。nginx の設定・WAF（前段の防御サービス）は変えない。端末登録（line_import_devices.py）は追補 S5b で同じ関数に寄せた。
 - 新しい場所で接続元 IP が要るときは、この 1 つの関数を使う（写しを作らない）。
+
+## 追補 S5b — 端末登録の接続元（2026-10-17、PO「y」）
+
+端末登録 `POST /api/v1/tcg/line-devices/start` は `request.client.host`（本番では nginx の内部の住所 172.20.0.2）で回数制限と記録をしていたため、全員が同じ 1 つの接続元として数えられていた（[recon](../../handoff/s5b-device-ip/recon.md)）。PR #4437 で `get_client_ip` に寄せた（[設計](../../handoff/s5b-device-ip/design.md)）。
+
+| ID | 目標（○×で判定） | 判定方法 | 現在値（2026-10-17 反映後） | 判定 |
+|---|---|---|---|---|
+| D1 | 端末登録は X-Real-IP の接続元を使い、X-Forwarded-For を使わない | CI の試験 T1・T2 が緑 | backend/tests/test_line_import_devices.py の 2 本を含む pytest-run-internal が最終 HEAD 5be1251e9 で pass。変更前の赤は未観測（試験だけの状態の CI は試験側の誤りで別の理由で落ち、その後の積み直しは自動判定に止められたため） | ○ |
+| D2 | 本番で新しい登録の created_ip_hash が本当の接続元のハッシュになる | 偽の X-Forwarded-For と X-Real-IP を付けた /start 1 件の created_ip_hash を、nginx 記録の接続元の sha256 と照合 | 2026-10-17 04:38:02Z: nginx の接続元 49.128.148.145 の sha256（先頭 dc3d8b7acbc4）と一致。172.20.0.2（5b69f20f75ab）・198.51.100.9・198.51.100.10 のいずれとも不一致。この行は承認されていない仮の登録で、10 分で失効し、既存の掃除処理で消える | ○ |
+| D3 | 反映後にエラーが増えない | backend の Traceback・ERROR、nginx の 5xx 件数 | 反映前 03:30Z: 0・0。反映後 04:39Z: 0・0。取り込みスクリプトの /import は反映後も 200 | ○ |
