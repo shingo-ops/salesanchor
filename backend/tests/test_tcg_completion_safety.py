@@ -160,7 +160,11 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
                     # product_category_id / product_kind_id are INTEGER after Phase 3A/3B.
                     # manufacturer_id remains UUID (str). work_id is converted inside create_product.
                     refs[key] = int(raw_id) if key in ('product_category_id', 'product_kind_id') else str(raw_id)
-                args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date=None,search_keywords='架空の登録検証デッキ',exclude_keywords='',**refs)
+                # ADR-1020 便3: 細分類は作品 one_piece に紐づく試験用の行を作って渡す
+                fmt_id = (await session.execute(text("INSERT INTO public.product_formats (code,name) VALUES ('SAFETYFMT','安全試験細分類') RETURNING id"))).scalar_one()
+                await session.execute(text("INSERT INTO public.product_format_game_links (format_id,type_master_id) SELECT :f,id FROM public.type_master WHERE code='one_piece'"),{'f':fmt_id})
+                refs['product_format_id'] = int(fmt_id)
+                args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date='2026-01-01',search_keywords='架空の登録検証デッキ',exclude_keywords='',english_title='Fictional registration deck',mark='ZZSAFE01',blank_confirmations=['exclude_keywords'],**refs)
                 first = await master.create_product(session, **args)
                 second = await master.create_product(session, **args)
                 assert first['ok'] and not second['ok'] and second['code']=='DUPLICATE_CANDIDATE'

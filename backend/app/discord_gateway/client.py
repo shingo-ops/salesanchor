@@ -22,10 +22,13 @@ from typing import Any, Callable
 import discord
 from sqlalchemy import text
 
+from app.cache import close_redis, init_redis
 from app.discord_gateway import (
     bot_texts,
     ticket_channel_creator,
     ticket_channel_writer,
+    viewer_bot_texts,
+    viewer_trial,
 )
 from app.discord_gateway.config import SingleBotConfig
 from app.discord_gateway.reaction_writer import ReactionWriter
@@ -73,6 +76,7 @@ class JarvisDiscordClient(discord.Client):
         self._db_factory_override = db_factory
         self._resumed_completed: set[str] = set()
         self._reconcile_task: asyncio.Task[None] | None = None
+        self._viewer_sweep_task: asyncio.Task[None] | None = None
 
         # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
         raw_url = database_url or os.environ.get(
@@ -125,12 +129,16 @@ class JarvisDiscordClient(discord.Client):
     async def setup_hook(self) -> None:
         """discord.py が接続前に呼ぶライフサイクルフック。asyncpg pool を初期化する。"""
         await self.reaction_writer.initialize()
+        await init_redis()
 
     async def close(self) -> None:
         """クライアント終了時に asyncpg pool をクローズする。"""
         if self._reconcile_task is not None and not self._reconcile_task.done():
             self._reconcile_task.cancel()
+        if self._viewer_sweep_task is not None and not self._viewer_sweep_task.done():
+            self._viewer_sweep_task.cancel()
         await self.reaction_writer.close()
+        await close_redis()
         await super().close()
 
     # --- event handlers --------------------------------------------------
@@ -147,6 +155,24 @@ class JarvisDiscordClient(discord.Client):
         # READY 処理を塞がないよう、起動時点検は別タスクで1回だけ走らせる
         if self._reconcile_task is None:
             self._reconcile_task = asyncio.create_task(self._reconcile_ticket_channels())
+        if self._viewer_sweep_task is None:
+            self._viewer_sweep_task = asyncio.create_task(self._viewer_room_sweep_loop())
+
+    async def _viewer_room_sweep_loop(self) -> None:
+        """消された閲覧者の部屋を、起動時に1回・その後24時間ごとに片付ける（失敗は警告のみ）。"""
+        while True:
+            try:
+                db_factory = self._db_factory()
+                config = await viewer_trial.load_config(db_factory)
+                if config is not None:
+                    guild = self.get_guild(int(config.guild_id))
+                    if guild is not None:
+                        await viewer_trial.sweep_orphan_rooms(guild, db_factory, config)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[viewer-trial] sweep loop failed: %s", exc)
+            await asyncio.sleep(86400)
 
     async def _reconcile_ticket_channels(self) -> None:
         """Gateway 停止中に削除されたチケットチャンネルを復旧する（失敗は警告のみ）。"""
@@ -213,6 +239,15 @@ class JarvisDiscordClient(discord.Client):
         B方式: guild_id → _resolve_tenant_id() でテナントを動的に解決する。
         custom_id が "ticket_open" で始まるボタン操作のみ処理する。
         """
+        custom_id: str = (interaction.data or {}).get("custom_id", "")  # type: ignore[arg-type]
+        if custom_id.startswith(viewer_bot_texts.VIEWER_CUSTOM_ID_PREFIX):
+            try:
+                await viewer_trial.handle_interaction(interaction, self._db_factory())
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                logger.warning("[viewer-trial] handler failed", exc_info=True)
+            return
         if interaction.type != discord.InteractionType.component:
             return
         custom_id: str = (interaction.data or {}).get("custom_id", "")  # type: ignore[arg-type]

@@ -2,7 +2,7 @@
   "productCsv": {
     "downloadTemplate": "Download blank sample CSV",
     "templateIntro": "This CSV contains only column headings. Enter products from row 2, keep the heading order, and save as UTF-8 CSV.",
-    "templateRequired": "The Japanese title and all four classification codes are required. Use existing classification codes.",
+    "templateRequired": "Japanese title, English title, model number, release date, search keywords, exclusion keywords, series, format and product category are required (English title, model number, release date and exclusion keywords may be left empty if you checked and they do not exist and you list the column name in blank_confirmed). Division and manufacturer codes are also needed. Use existing classification codes.",
     "templateOptional": "Enter the release date as YYYY-MM-DD, or leave it blank if unknown. Separate multiple search or exclusion keywords with commas within one cell. For the format, enter its code in product_format_code. If you checked and the English name, model number, release date or exclusion keywords do not exist, list those column names (english_title, mark, release_date, exclude_keywords) in blank_confirmed, separated by commas.",
     "allWorks": "All",
     "id": "Product ID",
@@ -43,7 +43,7 @@
     "receipt": "Import reference: {{id}}",
     "drop": "Drop one CSV file here, or choose a file below.",
     "file": "CSV file",
-    "format": "UTF-8 CSV with 12 columns (the former 10 columns are also accepted), up to 2 MB.",
+    "format": "UTF-8 CSV with 12 columns, up to 2 MB.",
     "oneFile": "Choose only one file.",
     "fields": {
       "DIVISION_CODE": "Division",
@@ -72,6 +72,8 @@
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
       "formatGameMismatch": "The format is not linked to this work. Check the games allowed for the format in the format master.",
       "blankConfirmedInvalid": "blank_confirmed has a column name that cannot be used: {{value}}",
+      "requiredFieldMissing": "{{value}} is empty. Enter a value, or if you checked and it does not exist, put this column name in blank_confirmed (english_title, mark, release_date or exclude_keywords only).",
+      "requiredFieldCleared": "{{value}} cannot be emptied. Enter a value, or if you checked and it does not exist, put this column name in blank_confirmed (english_title, mark, release_date or exclude_keywords only).",
       "referenceCode": "Check the {{field}} code against the registered master.",
       "unknown": "The file could not be validated. Ask an administrator to check it.",
       "stale": "The product changed after export. Export it again.",
@@ -2654,6 +2656,7 @@
       "colStatus": "Status",
       "colExpires": "Expires",
       "colDiscord": "Discord ID",
+      "openRoom": "Open room",
       "colFlags": "Flags",
       "colCreated": "Registered",
       "colActions": "Actions",
@@ -4041,6 +4044,8 @@
     "notFound": "{{field}}: checked, none exists",
     "requiredMissing": "Not entered yet (required for registration).",
     "requiredMissingConfirmable": "Not entered yet. Enter a value, or tick \"checked, none exists\" below if there is none.",
+    "requiredFieldsMissing": "Cannot register because required fields are empty: {{fields}}. Enter them. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
+    "requiredFieldsCleared": "{{fields}} cannot be left empty. Enter a value. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
     "create": "Create"
   },
   "soldOut": {

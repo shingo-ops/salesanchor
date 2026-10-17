@@ -56,6 +56,15 @@ discord-gateway を含めることで、デプロイ時の gateway 重複起動�
 （→ Bot Token 自動リセット、別途 #1402 で対処）も防ぐ。本 ADR の PR では
 重複・先祖返りを避けるため pre-cleanup には手を加えず、**1 の concurrency 追加のみ**を行う。
 
+### 決定の補足: 消す対象は oneoff=False のみ
+
+pre-cleanup（`docker ps -a --filter "name=..."` → `docker rm -f`）は、名前の部分一致だけでは
+`docker compose run` の一時コンテナ（`astro-webapp-<svc>-run-<hash>`、label
+`com.docker.compose.oneoff=True`）も消してしまう。消す対象は
+`--filter "label=com.docker.compose.oneoff=False"` を併用した常駐コンテナと残留コンテナだけとし、
+一時コンテナは消さない（通常デプロイの 2 か所とロールバックの 1 か所）。
+根拠: `docs/handoff/deploy-keep-oneoff/recon.md`、`docs/handoff/deploy-keep-oneoff/design.md`。
+
 ## Consequences（影響）
 
 - 連続リリース時は後続デプロイがキュー待ちになる（通常数分以内）。

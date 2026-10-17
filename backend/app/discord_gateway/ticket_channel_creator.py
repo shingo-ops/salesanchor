@@ -26,7 +26,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
-from app.discord_gateway import bot_texts
+from app.discord_gateway import bot_texts, private_channel
+from app.discord_gateway.private_channel import (  # noqa: F401  切り出し前と同じ名前を残す
+    _bot_permission_overwrites,
+)
 from app.services.discord_guild_identity import build_guild_identity
 from app.services.discord_webhook_sender import try_send_as_identity
 
@@ -143,25 +146,6 @@ async def _update_lead_channel_id(
         """),
         {"ch_id": channel_id, "uid": discord_user_id},
     )
-
-
-def _bot_permission_overwrites(guild: discord.Guild) -> dict[Any, discord.PermissionOverwrite]:
-    """gateway bot に必要な可視性を付与する。
-
-    welcome メッセージ送信と受信箱への後続投稿を安定させるため、
-    read_message_history / send_messages も付与する。
-    """
-    bot_member = getattr(guild, "me", None)
-    if bot_member is None:
-        logger.warning("[ticket] guild.me unavailable; bot overwrite skipped")
-        return {}
-    return {
-        bot_member: discord.PermissionOverwrite(
-            view_channel=True,
-            read_message_history=True,
-            send_messages=True,
-        ),
-    }
 
 
 def _channel_name_for(member: discord.Member) -> str:
@@ -470,13 +454,8 @@ async def get_or_create_ticket_channel(
     staff_role_id = config.get("staff_role_id")
     welcome_template = config.get("welcome_template") or _DEFAULT_WELCOME
 
-    category = guild.get_channel(category_id)
-    if not isinstance(category, discord.CategoryChannel):
-        logger.error(
-            "[ticket] category not found or not a CategoryChannel: %s tenant=%d",
-            category_id,
-            tenant_id,
-        )
+    category = private_channel.resolve_category(guild, category_id, f"tenant={tenant_id}")
+    if category is None:
         return None
 
     discord_user_id = str(member.id)
@@ -507,61 +486,18 @@ async def get_or_create_ticket_channel(
             discord_user_id,
         )
 
-    # 権限設定
-    overwrites: dict[Any, discord.PermissionOverwrite] = {
-        guild.default_role: discord.PermissionOverwrite(view_channel=False),
-        member: discord.PermissionOverwrite(
-            view_channel=True,
-            send_messages=True,
-            read_message_history=True,
-        ),
-    }
-    overwrites.update(_bot_permission_overwrites(guild))
-    if staff_role_id:
-        staff_role = guild.get_role(int(staff_role_id))
-        if staff_role:
-            overwrites[staff_role] = discord.PermissionOverwrite(
-                view_channel=True,
-                send_messages=True,
-                read_message_history=True,
-            )
-        else:
-            logger.warning(
-                "[ticket] staff_role_id=%s not found in guild tenant=%d",
-                staff_role_id,
-                tenant_id,
-            )
-
     channel_name = _channel_name_for(member)
-    try:
-        new_channel = await guild.create_text_channel(
-            name=channel_name,
-            category=category,
-            overwrites=overwrites,
-            reason=f"SalesAnchor ticket for {member.display_name}",
-        )
-    except discord.Forbidden:
-        logger.error(
-            "[ticket] Forbidden: cannot create channel in category=%s tenant=%d",
-            category_id,
-            tenant_id,
-        )
-        return None
-    except discord.HTTPException as exc:
-        logger.error(
-            "[ticket] HTTPException creating channel tenant=%d: %s",
-            tenant_id,
-            exc,
-        )
-        return None
-
-    logger.info(
-        "[ticket] created channel=%s (%s) for user=%s tenant=%d",
-        new_channel.id,
+    new_channel = await private_channel.create_private_text_channel(
+        guild,
+        category,
+        member,
+        staff_role_id,
         channel_name,
-        discord_user_id,
-        tenant_id,
+        reason=f"SalesAnchor ticket for {member.display_name}",
+        log_context=f"tenant={tenant_id}",
     )
+    if new_channel is None:
+        return None
 
     # ウェルカムメッセージ送信
     await _send_welcome(new_channel, guild, welcome_template, tenant_id, db_factory)

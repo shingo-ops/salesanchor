@@ -11,7 +11,7 @@ import { api, ApiError } from "../../lib/api";
 import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
 import {
   addExcludeWord, blankCodeOf, buildUpdateBody, classificationFields, draftFrom, formatAfterWorkChange,
-  formatOptionsFor, missingFields, words,
+  formatOptionsFor, missingFields, requiredFieldsMessage, words,
   type AddWordResult, type BlankCode, type Classification, type Detail, type Draft, type FormatOption,
   type RequiredDraftField,
 } from "./productDetailModel";
@@ -38,6 +38,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
   const [error, setError] = useState("");
+  const [requiredError, setRequiredError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [collisions, setCollisions] = useState<CodeCollision[]>([]);
   const [createdId, setCreatedId] = useState<number | null>(null);
@@ -141,7 +142,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveEdit() {
     if (!draft || !detail || productId === null || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
+    inFlight.current = true; setSaving(true); setError(""); setRequiredError(null); setSaved(false); setCollisions([]);
     try {
       const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, buildUpdateBody(draft, initial, detail));
       if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
@@ -150,6 +151,13 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setCollisions(result.code_collisions ?? []);
       onSaved();
     } catch (err) {
+      const required = requiredFieldsMessage(err, t);
+      if (required) {
+        setBlocked(false);
+        setError("");
+        setRequiredError(required);
+        return;
+      }
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
       setError(err instanceof ApiError && err.status === 409 ? "productDetail.conflict" :
@@ -159,7 +167,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveCreate() {
     if (!draft || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
+    inFlight.current = true; setSaving(true); setError(""); setRequiredError(null); setSaved(false); setCollisions([]);
     try {
       const created = await api.post<{ product_id?: string | null; code_collisions?: CodeCollision[] }>("/tcg/products/create", {
         japanese_title: draft.japanese_title,
@@ -183,6 +191,13 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setCollisions(found); setCreatedId(created?.product_id ? Number(created.product_id) : null);
       setInitial(draft); setBlocked(true);
     } catch (err) {
+      const required = requiredFieldsMessage(err, t);
+      if (required) {
+        setBlocked(false);
+        setError("");
+        setRequiredError(required);
+        return;
+      }
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
       setError(invalid ? "productDetail.invalid" : "productDetail.saveError");
@@ -243,6 +258,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     </div> : <>
       {loading && <p role="status">{t("common.loading")}</p>}
       {error && <p role="alert">{t(error)}</p>}
+      {requiredError && <p role="alert">{requiredError}</p>}
       {mode === "edit" && !loading && (blocked || (!detail && error)) && <Button type="button" variant="secondary" onClick={() => {
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}

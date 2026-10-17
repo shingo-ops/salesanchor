@@ -39,6 +39,7 @@ def _now(now: datetime | None) -> datetime:
 _LIST_SQL = """
 SELECT v.id, v.email, v.line_name, v.inventory_issue, v.status, v.trial_expires_at,
        v.created_at, v.discord_user_id, v.discord_channel_id,
+       (SELECT c.guild_id FROM public.viewer_discord_config c WHERE c.id = 1) AS discord_guild_id,
        EXISTS (
          SELECT 1 FROM public.viewer_login_events e1
          WHERE e1.viewer_id = v.id AND e1.event_type = 'login_succeeded'
@@ -68,6 +69,11 @@ def _item(row) -> dict:
     d = dict(row)
     d["flag_many_ips"] = bool(d["flag_many_ips"])
     d["flag_shared_ip"] = bool(d["flag_shared_ip"])
+    guild = d.pop("discord_guild_id", None)
+    channel = d.get("discord_channel_id")
+    d["discord_channel_url"] = (
+        f"https://discord.com/channels/{guild}/{channel}" if guild and channel else None
+    )
     return d
 
 

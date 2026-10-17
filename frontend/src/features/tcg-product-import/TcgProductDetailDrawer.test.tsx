@@ -207,3 +207,28 @@ describe("ADR-1020 format and blank confirmations", () => {
     expect(body.product_format_id).toBe(7);
   });
 });
+
+describe("TcgProductDetailDrawer required fields error (ADR-1020)", () => {
+  it("create: shows the missing field name, not the generic invalid message", async () => {
+    vi.mocked(api.post).mockRejectedValueOnce(new ApiError("REQUIRED_FIELDS_MISSING:mark", 422, null));
+    render(<TcgProductDetailDrawer productId={null} open mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    const title = await screen.findByLabelText(/Japanese name/);
+    fireEvent.change(title, { target: { value: "Fixture" } });
+    fireEvent.submit(title.closest("form") as HTMLFormElement);
+    const alert = await screen.findByText(/Cannot register because required fields are empty/);
+    expect(alert.getAttribute("role")).toBe("alert");
+    expect(alert.textContent).toContain("Model number");
+    expect(screen.queryByText(i18n.t("productDetail.invalid"))).toBeNull();
+  });
+  it("edit: shows the field that cannot be emptied", async () => {
+    routeGet(detailOf("42", []));
+    vi.mocked(api.put).mockRejectedValue(new ApiError("REQUIRED_FIELDS_CLEARED:release_date", 422, null));
+    render(<TcgProductDetailDrawer productId={42} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const mark = await screen.findByRole("textbox", { name: "Model number" });
+    fireEvent.change(mark, { target: { value: "ST02" } });
+    fireEvent.submit(mark.closest("form") as HTMLFormElement);
+    const alert = await screen.findByText(/cannot be left empty/);
+    expect(alert.getAttribute("role")).toBe("alert");
+    expect(alert.textContent).toContain("Release date");
+  });
+});
