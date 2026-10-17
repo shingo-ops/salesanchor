@@ -25,6 +25,7 @@ import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
 import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
+import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -169,17 +170,9 @@ export default function InventoryPage() {
     [filterEnabled, hiddenColumns],
   );
 
-  // 掲載時間: YYYY-MM-DD HH:mm（○時○分まで表示）
-  const fmtOfferedAt = useCallback((iso: string): string => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "-";
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  }, []);
-
   const columns = useMemo(
     () => buildInventoryColumns({ t, colVisible, fmtOfferedAt }),
-    [t, colVisible, fmtOfferedAt],
+    [t, colVisible],
   );
 
   useEffect(() => {
