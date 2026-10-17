@@ -543,6 +543,9 @@ _BASE_FROM = _base_from()
 - frontend/src/components/Drawer.css:25-41 パネルは height:100dvh・flex column、:85-89 本体は flex:1・overflow-y:auto・padding var(--space-5) var(--space-6)。
 - frontend/src/components/Stack.tsx:13-21 は className を受けて結合する。
 
+### 対象ADR
+ADR-1014, ADR-067（色・寸法はトークン、px直値なし）, ADR-144（UI金型。新部品なし・既存クラス上書きのみ）
+
 ### 変更
 - frontend/src/features/inventory/InventoryRowDrawer.tsx RawTextPane の Stack に className="inventory-rawtext-pane" を付け、frontend/src/features/inventory/inventory-row-drawer.css（新規）で height:100% と、原文枠の max-height 解除・flex:1 を指定する（この画面だけ）。
 - frontend/src/features/inventory/InventoryRowDrawer.test.tsx に T7 を1件追加。
