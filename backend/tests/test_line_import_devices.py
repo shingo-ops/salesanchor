@@ -110,3 +110,19 @@ async def test_pending_key_cannot_authenticate():
         with pytest.raises(HTTPException) as error:
             await svc.authenticate(MagicMock(), TOKEN)
     assert error.value.status_code == 401
+
+
+def test_start_uses_real_ip_not_forwarded_for(client):
+    cli, _ = client
+    with patch.object(svc, 'start', new_callable=AsyncMock) as start:
+        cli.post('/api/v1/tcg/line-devices/start',
+                 headers={'X-Real-IP': '203.0.113.7', 'X-Forwarded-For': '198.51.100.9'},
+                 json={'token_hash': 'a' * 64, 'name': 'Termux'})
+    assert start.await_args.args[3] == '203.0.113.7'
+
+
+def test_start_falls_back_to_socket_peer_without_headers(client):
+    cli, _ = client
+    with patch.object(svc, 'start', new_callable=AsyncMock) as start:
+        cli.post('/api/v1/tcg/line-devices/start', json={'token_hash': 'a' * 64, 'name': 'Termux'})
+    assert start.await_args.args[3] == 'testclient'
