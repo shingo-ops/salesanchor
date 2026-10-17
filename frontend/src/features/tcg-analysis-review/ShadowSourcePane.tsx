@@ -19,6 +19,8 @@ interface Props {
   rawText: string;
   blockRange?: LineRange | null;
   headingRange?: LineRange | null;
+  /** false で凡例を出さない（在庫表の原文スライド用）。ハイライトは残る。既定 true */
+  showLegend?: boolean;
 }
 
 function inRange(line: number, range?: LineRange | null): boolean {
@@ -26,7 +28,7 @@ function inRange(line: number, range?: LineRange | null): boolean {
   return line >= range.start && line <= range.end;
 }
 
-export function ShadowSourcePane({ rawText, blockRange, headingRange }: Props) {
+export function ShadowSourcePane({ rawText, blockRange, headingRange, showLegend = true }: Props) {
   const { t } = useTranslation();
   const lines = useMemo(() => sourceRawLines(rawText), [rawText]);
   const lineElements = useRef<Record<number, HTMLDivElement | null>>({});
@@ -40,6 +42,7 @@ export function ShadowSourcePane({ rawText, blockRange, headingRange }: Props) {
 
   return (
     <section className="shadow-source-pane" aria-label={t("shadowAccuracy.source.title")}>
+      {showLegend && (
       <div className="shadow-source-legend">
         {blockRange != null && (
           <span className="shadow-source-legend-item shadow-source-legend-item--block">
@@ -52,6 +55,7 @@ export function ShadowSourcePane({ rawText, blockRange, headingRange }: Props) {
           </span>
         )}
       </div>
+      )}
       <div className="shadow-source-lines">
         {lines.map((line) => {
           const isBlock = inRange(line.number, blockRange);

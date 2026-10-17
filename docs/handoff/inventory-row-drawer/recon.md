@@ -247,3 +247,18 @@ PO 決定（2026-10-16）: 質問「この理解で設計に進めてよいで�
 - i18n: inventory.rowDrawer.{title, loadError, notFound, itemTab}（frontend/src/locales/ja.json:1456-1461）、reviewItem.sourceHeading（:3798）。
 - テスト: frontend は `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit <path>`、backend は `cd backend && pytest -q --tb=short <path>`。RBAC の前例 backend/tests/test_inventory_offers_rbac.py、実 PG の前例 backend/tests/test_inventory_distribution_rows_pg.py。
 - ADR: ADR-1014（在庫表＝配信行・定義は1か所）、ADR-027、ADR-144、ADR-072（新規 router の tenant 文脈）。在庫表スライドの権限を決めた ADR は無い（docs/adr/FEATURE-INDEX.md・git grep）。
+
+## 便5 追補（2026-10-17）原文枠の高さ（事実）
+- frontend/src/features/tcg-analysis-review/shadow-source-pane.css:35-41 `.shadow-source-lines { --shadow-source-max-h: 320px; max-height: var(--shadow-source-max-h); overflow-y:auto; ... }`、:3-10 `.shadow-source-pane` は display:flex; flex-direction:column。
+- 前例: frontend/src/features/tcg-analysis-review/review-item-drawer.css:19-29 が親配下で `.shadow-source-lines { flex:1; min-height:0; max-height:none; }` と上書き。
+- frontend/src/components/Drawer.css:25-41 パネルは height:100dvh・flex column、:85-89 `.comp-drawer-body { flex:1; overflow-y:auto; padding: var(--space-5) var(--space-6) }`（block）。
+- frontend/src/components/Stack.tsx:13-21 は className を受けて結合する。InventoryRowDrawer.tsx の RawTextPane は `<Drawer><Stack gap="4">{modeTabs}{itemTabs}{状態表示}{ShadowSourcePane}</Stack></Drawer>`。
+
+## 便6 追補（2026-10-17）原文スライドの見出しと凡例（事実）
+- 詳細調査: /tmp/CC報告ファイル/rawtext-header-recon.md
+- frontend/src/features/tcg-analysis-review/ShadowSourcePane.tsx:18-22 Props は rawText/blockRange?/headingRange?。:43-54 で div.shadow-source-legend を常に描画。呼び出し元は frontend/src/features/inventory/InventoryRowDrawer.tsx・frontend/src/features/tcg-analysis-review/ReviewItemDrawer.tsx・frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx の3か所。
+- frontend/src/features/inventory/InventoryRowDrawer.tsx:171 付近 RawTextPane の Drawer title は t("inventory.rowDrawer.tabRawText")。:204 付近のモード切替タブも同キー。
+- frontend/src/features/inventory/inventoryColumns.tsx:12-35 InventoryRow に supplier_id/supplier_name/offered_at/posted_at。:151-163 提供者列は仕入元名（:160）と fmtOfferedAt(it.offered_at)（:161）。
+- frontend/src/pages/inventory/InventoryPage.tsx:172-178 に fmtOfferedAt がローカル定義（YYYY-MM-DD HH:mm・無効は "-"）。
+- frontend/src/components/Drawer.tsx:25 title は string。
+- 出どころ: distribution_rows_parts の dist_base（provider=public.suppliers.name、posted_ts=source_messages.line_posted_at）（backend/app/services/tcg_distribution_svc.py:300-313）。まとめ行は同一投稿内のみ（:326-328）なので1行で仕入元・投稿日時は1つ。

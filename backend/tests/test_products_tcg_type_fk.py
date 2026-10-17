@@ -46,6 +46,7 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260623_060000_add_products_tcg_type_fk.sql",
     "20260921_060000_create_product_kinds.sql",
     "20260921_070000_rename_tcg_type_master_to_type_master.sql",
+    "20261016_190000_create_product_blank_confirmations.sql",  # ADR-1020 便4a: 共用の行の PATCH が印の表を読む
 ]
 
 
@@ -179,7 +180,14 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
                 patch("app.routers.products.record_audit_log", new=AsyncMock(return_value=None))
             )
             transport = ASGITransport(app=app)
+            async with admin_engine.begin() as conn:
+                product_id = (await conn.execute(
+                    text("INSERT INTO public.products (name, stock_quantity) VALUES (:name, 0) RETURNING id"),
+                    {"name": "PG 更新対象商品"},
+                )).scalar_one()
+            created_ids.append(product_id)
             async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                # ADR-1020 便4a: PG の POST は共用の表に作るため9項目不足で 422（tcg_type の検査は先に通る）
                 valid_create = await ac.post(
                     "/api/v1/products",
                     json={
@@ -187,10 +195,10 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
                         "tcg_type": "pokemon_booster_box",
                     },
                 )
-                assert valid_create.status_code == 201, valid_create.text
-                created_ids.append(valid_create.json()["id"])
-                assert valid_create.json()["tcg_type"] == "pokemon_booster_box"
+                assert valid_create.status_code == 422, valid_create.text
+                assert valid_create.json()["detail"].startswith("REQUIRED_FIELDS_MISSING:")
 
+                # ADR-1020 便4a: PG の POST は共用の表に作るため9項目不足で 422（tcg_type の検査は先に通る）
                 null_create = await ac.post(
                     "/api/v1/products",
                     json={
@@ -198,9 +206,8 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
                         "tcg_type": None,
                     },
                 )
-                assert null_create.status_code == 201, null_create.text
-                created_ids.append(null_create.json()["id"])
-                assert null_create.json()["tcg_type"] is None
+                assert null_create.status_code == 422, null_create.text
+                assert null_create.json()["detail"].startswith("REQUIRED_FIELDS_MISSING:")
 
                 invalid_create = await ac.post(
                     "/api/v1/products",
@@ -211,14 +218,6 @@ async def test_products_tcg_type_validation_and_fk_enforcement_under_tenant_006(
                 )
                 assert invalid_create.status_code == 400, invalid_create.text
                 assert "tcg_type" in invalid_create.json()["detail"]
-
-                update_target = await ac.post(
-                    "/api/v1/products",
-                    json={"name_ja": "PG 更新対象商品"},
-                )
-                assert update_target.status_code == 201, update_target.text
-                product_id = update_target.json()["id"]
-                created_ids.append(product_id)
 
                 patch_ok = await ac.patch(
                     f"/api/v1/products/{product_id}",

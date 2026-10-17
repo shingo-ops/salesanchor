@@ -140,3 +140,9 @@
 - 守り手: backend の単体試験（V2〜V4。CI の backend テストで毎回走る）
 - 対象: 4つの入口が同じ検査関数を通ること。新しい入口を足したときに検査を通さないと、入れ忘れが再発する → ADR に「共用商品を書く入口は必ず check_required_fields を通す」と書く
 - 毎週月曜 09:00（日本時間）、本番の Celery の作業 report-master-required-fields-weekly（backend/app/tasks/master_required_fields_monitor.py）が、便3反映後に作られた共用商品の「空かつ印なし」の件数（9項目ごと）と「調べたが無い」の印の件数を管理者用 Discord に送る。0 件でも毎週送る。届かない週は作業が止まっている。⚠️ が出たら Opus が該当の商品を調べて PO に候補表を出す（ADR-1020 便4c）
+- 人手で守るもの: 確認済みの印の乱用。月に1回、印の件数を数えて PO に見せる（理由: 印が正しいかは機械では判定できない）
+
+## 便4a 在庫の商品画面の口（2026-10-17 追記）
+- 定着点検（Opus・2026-10-17）で、`backend/app/routers/products.py:379` の `POST /products` を「テナント商品」として対象外にしていたのは読み違いと分かった。PostgreSQL では `public.products` に tenant_id NULL で作る（:94-96・:375）。
+- 本番では work_id の NOT NULL で INSERT が失敗しており、行は作られていない（直近720時間の呼び出し0件）。ただし理由が画面に出ず、口を直せば入れ忘れの行を作れる状態だった。
+- 対処: POST は PostgreSQL では常に9項目を検査して 422（中分類・細分類・商品区分を受け取れないため）。PATCH は共用の行で4項目を空に戻す更新を 422。画面は requiredFieldsMessage で言葉を出す。
