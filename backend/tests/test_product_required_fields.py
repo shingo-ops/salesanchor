@@ -53,3 +53,108 @@ def test_detail_update_omits_unsent_optional_fields():
     )
     assert "product_format_id" not in payload.model_fields_set
     assert "blank_confirmations" not in payload.model_fields_set
+
+
+# ---------------------------------------------------------------------------
+# ADR-1020 便3: 新規登録と「空に戻す」更新を止める
+# ---------------------------------------------------------------------------
+
+
+def _create_args(**changes) -> dict:
+    args = {
+        "japanese_title": "商品", "english_title": "Product", "mark": "SV1", "release_date": "2026-01-01",
+        "search_keywords": "a,b", "exclude_keywords": "c", "work_id": 1, "product_format_id": 2,
+        "product_category_id": 3, "blank_confirmations": [],
+    }
+    args.update(changes)
+    return args
+
+
+def test_missing_for_create_lists_all_missing_in_order():
+    from app.services.tcg_product_master_svc import missing_for_create
+
+    assert missing_for_create({}) == list(REQUIRED_FIELDS)
+
+
+def test_missing_for_create_accepts_blank_confirmations():
+    from app.services.tcg_product_master_svc import missing_for_create
+
+    args = _create_args(
+        english_title="", mark="", release_date=None, exclude_keywords="",
+        blank_confirmations=["name_en", "mark", "release_date", "exclude_keywords"],
+    )
+    assert missing_for_create(args) == []
+
+
+def test_find_cleared_fields_only_newly_missing():
+    from app.services.tcg_product_master_svc import find_cleared_fields
+
+    before = {**_all_filled(), "mark": "SV1", "name_en": ""}
+    after = {**_all_filled(), "mark": "", "name_en": ""}
+    assert find_cleared_fields(before, [], after, []) == ["mark"]
+
+
+def test_find_cleared_fields_mark_keeps_blank():
+    from app.services.tcg_product_master_svc import find_cleared_fields
+
+    before = _all_filled()
+    after = {**_all_filled(), "exclude_keywords": []}
+    assert find_cleared_fields(before, [], after, ["exclude_keywords"]) == []
+
+
+@pytest.mark.asyncio
+async def test_create_product_binds_release_date_as_date(monkeypatch):
+    import datetime
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.services import tcg_product_master_svc as master
+
+    def result(row):
+        return SimpleNamespace(fetchone=MagicMock(return_value=row))
+
+    calls = []
+
+    async def execute(query, params=None):
+        calls.append(params)
+        if "INSERT INTO public.products" in str(query):
+            return result(SimpleNamespace(id="77", int_id=77))
+        if "SELECT id FROM public.products" in str(query):  # 書込後の確認
+            return result(SimpleNamespace(id=77))
+        return result(None)
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), commit=AsyncMock())
+    monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
+    monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0100"))
+    monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(master, "_validate_product_format", AsyncMock())
+
+    await master.create_product(
+        db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
+        manufacturer_id="m", product_category_id="c", japanese_title="商品",
+        release_date=" 2026-01-01 ", search_keywords="a", exclude_keywords="b", mark="SV1",
+        english_title="Product", product_format_id=5,
+    )
+
+    bound = [p for p in calls if p and "release_date" in p]
+    assert bound and bound[0]["release_date"] == datetime.date(2026, 1, 1)
+
+
+@pytest.mark.asyncio
+async def test_create_product_rejects_missing_before_db():
+    from unittest.mock import AsyncMock
+
+    from app.services import tcg_product_master_svc as master
+
+    db = AsyncMock()
+    with pytest.raises(ValueError) as error:
+        await master.create_product(
+            db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
+            manufacturer_id="m", product_category_id="c", japanese_title="商品",
+            release_date="2026-01-01", search_keywords="a", exclude_keywords="b", mark="SV1",
+            english_title="", product_format_id=None,
+        )
+    message = str(error.value)
+    assert message.startswith("REQUIRED_FIELDS_MISSING:name_en,")
+    assert "product_format_id" in message
+    db.execute.assert_not_called()
