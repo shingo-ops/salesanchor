@@ -117,6 +117,11 @@ stdin の JSON の `tool_name` で分ける。
 - `-R<値>`・`--repo=<値>` のくっついた形も読む。PR を URL で渡したら、その URL の owner/repo で `gh pr view N --repo owner/repo` を行い、記録の名前は返った url の owner/repo を使う。
 - 番号でも URL でもない位置引数（ブランチ名等）が merge の後ろにあれば、番号なしとして止める。位置引数が無いときだけ `.pr-number` を使う。
 - 作業場所の追跡: `cd` と `pushd` を追う。行き先が `$REVIEW_GATE_DIR` の下ならその区切りで止める。`popd` の後は作業場所が分からないものとし、その後に関所にかける区切りがあれば止める。
+- here-string（`<<<`）: 受け手が shell（`bash`・`sh`・`zsh`・`dash`・`ksh`・`source`・`.`）か `python`・`python3`・`perl`・`ruby`・`node`・`php` で、渡す文字列に単語としての `merge` を含めば止める（第7版。コード審査 review-4503-r3.md）。
+- shell の一覧に `dash`・`ksh` を足し、`osascript -e` も `-c`・`-e` の本文と同じに扱う（第7版）。
+- `xargs` の後ろに来た `gh pr merge`・`gh-pr-merge-safe.sh`・`check-pr-merge-ready.py` は、番号が後から足されうるので常に止める（第7版）。
+- `gh api` と `curl` の merge は、パス `repos/<owner>/<repo>/pulls/<N>/merge` から owner/repo も取り、`gh pr view N --repo owner/repo` で照合する。owner/repo が取れなければ止める（第7版）。
+- `--repo`・`-R`・`--match-head-commit` が同じ区切りに 2 回以上あれば止める（第7版）。
 - (a) の文字検査は、連続する `/` を 1 本にしてから照合する（`//` でのすり抜けを塞ぐ。実装中に見つけて追加）。
 - merge の位置引数が 2 個以上なら、`--disable-auto` があっても止める（gh の位置引数は 1 個まで）。
 - (a) の試験台本の例外は、区切りの語が `scripts/agent-hooks/review-gate/test_review_gate.sh` と完全に一致するときだけ（末尾一致はしない）。
@@ -151,6 +156,7 @@ stdin の JSON の `tool_name` で分ける。
 | 導入後、AI の Bash で `git add scripts/agent-hooks/review-gate/record.py` のように記録台本の名前を書くと止まる | 台本を直すときは Write/Edit（リポジトリ側は守りの外）と `git add scripts/agent-hooks` のようにディレクトリ単位で行う。CLAUDE 側の手順として design 本書に残す |
 | 導入後、台本名を `--body "..."`・ヒアドキュメント・`git commit -m` の文字列や `chmod +x`・`bash -n` に書くと止まる | 台本を直す PR の本文は `--body-file <パス>` で渡す。誤止めは K-b で数える（architect 第5回、/tmp/CC報告ファイル/review-gate-hook/arch-review-5.md） |
 | PO の `!` 実行（install.sh・rollback.sh）が関所にかかるか | 【未確認】。かかって止まった場合は、PO にターミナルで直接 `bash <パス>` を実行してもらう |
+| `python3 -c`・`node -e` の本文に単語としての merge（`"merge" in title`・`merge-base`）があると止まる | gh の JSON は `--jq`・`-q` か jq で読む。git は `python3 -c` の外で叩く |
 | 毎回の Bash で python3 が起動する | 前段の文字検査で当たらなければ即 exit 0 |
 
 ## 7. 外部・過去事例の参照と我々への応用
@@ -189,6 +195,8 @@ stdin の JSON の `tool_name` で分ける。
 | R1（第6版） | 記録は PR 1 だけで次がすべて exit 2: `bash -o pipefail -c "gh pr merge 2 --merge"`・`bash -euo pipefail -c "…2…"`・`gh pr merge 2 --merge --disable-auto=false`・`gh pr merge 2 -R o/r --disable-auto x`（値の位置）・`gh pr merge release/x --merge`・`gh pr merge https://github.com/o/r2/pull/1`・`GH_REPO=o/r2 gh pr merge 1`・`export GH_REPO=o/r2; gh pr merge 1`・`gh pr merge -Ro/r2 1`・`gh -Ro/r2 pr merge 1`・`bash -c $'gh pr merge 2'`・`python3 -c "import os;os.system('gh pr merge 2')"`・`perl -e 'system("gh pr merge 2")'`・`python3` にヒアドキュメントで os.system のマージを渡す形・`popd; gh pr merge 1` |
 | R6（第6版） | `cd ~/.claude/review-gate && ls`・`pushd ~/.claude/review-gate; echo x > records/a.json`・語が `x/scripts/agent-hooks/review-gate/test_review_gate.sh` の区切りで置き場に書く形 → すべて exit 2 |
 | 誤止めなし（第6版） | `gh pr view 1 --json mergeable \| python3 -c "import json,sys;print(json.load(sys.stdin)['mergeable'])"`・`gh pr view 1 --json mergeable,mergeStateStatus`・`git merge origin/main`・`git log --merges` → すべて exit 0 |
+| R1（第7版） | 記録は o/r の PR 1 だけで次がすべて exit 2: `bash <<< "gh pr merge 2 --merge"`・`python3 <<< "import os;os.system('gh pr merge 2')"`・`source /dev/stdin <<< "gh pr merge 2"`・`.pr-number`=1 の作業場所で `echo 2 \| xargs gh pr merge --merge`・`gh api -X PUT repos/o/r2/pulls/1/merge`・`curl -X PUT https://api.github.com/repos/o/r2/pulls/1/merge`・`gh pr merge 1 --repo o/r --repo o/r2`・`gh pr merge 1 --merge --match-head-commit <記録sha> --match-head-commit <別sha>`・`dash -c "gh pr merge 2"`・`ksh -c "gh pr merge 2"`・`osascript -e 'do shell script "gh pr merge 2"'` |
+| R2（第7版） | 記録ありで `gh api -X PUT repos/o/r/pulls/1/merge` → exit 0 |
 | 往復 | 一時 settings.json・reviewer.md に install→rollback → 導入前と cmp で一致（導入前から空の hooks 項目がある形も含む） |
 | R7 | agent-hooks-test.yml が この PR で走り緑（PR のチェック欄で確認） |
 | 誤止めなし | `ls`・`grep -n x scripts/dev/check-pr-merge-ready.py`・`git diff -- scripts/gh-pr-merge-safe.sh`・`gh pr create --body "gh pr merge 1"`・`git commit -m "gh-pr-merge-safe.sh"`・`gh pr merge 1 --disable-auto`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh`・ヒアドキュメントの本文に閉じない引用符（`don't merge yet`）がある `gh pr create`（本文はヒアドキュメントで渡す形）・`git commit -m "$(cat <<'EOF'` で始まり本文に `1)`・バッククォート 3 個の並び・閉じない引用符を含むコミット・`grep -rn "gh pr merge" docs` → すべて exit 0 |

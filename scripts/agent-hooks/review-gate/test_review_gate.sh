@@ -255,6 +255,22 @@ expect "誤止めなし(6) git log --merges" 0 'git log --merges --oneline'
 expect "誤止めなし(6) python3 -c merged" 0 'python3 -c "print(\"merged\")"'
 expect "誤止めなし(6) pushd /tmp; ls; popd" 0 'pushd /tmp; ls; popd'
 
+# ---------------------------------------------------------------- 第7版 (3回目の審査 review-4503-r3)
+clear_records; mk_rec 1 "$SHA1"
+expect "R1(7) bash <<< gh pr merge 2" 2 'bash <<< "gh pr merge 2 --merge"'
+expect "R1(7) python3 <<< os.system" 2 "python3 <<< \"import os;os.system('gh pr merge 2')\""
+expect "R1(7) source /dev/stdin <<< gh pr merge" 2 'source /dev/stdin <<< "gh pr merge 2"'
+expect "R1(7) xargs gh pr merge (.pr-number=1)" 2 'echo 2 | xargs gh pr merge --merge' "$GITWT"
+expect "R1(7) gh api repos/o/r2/pulls/1/merge" 2 'gh api -X PUT repos/o/r2/pulls/1/merge'
+expect "R1(7) curl repos/o/r2/pulls/1/merge" 2 'curl -X PUT https://api.github.com/repos/o/r2/pulls/1/merge'
+expect "R1(7) --repo 2 回" 2 'gh pr merge 1 --repo o/r --repo o/r2'
+expect "R1(7) --match-head-commit 2 回" 2 "gh pr merge 1 --merge --match-head-commit $SHA1 --match-head-commit $SHA2"
+expect "R1(7) dash -c" 2 'dash -c "gh pr merge 2"'
+expect "R1(7) ksh -c" 2 'ksh -c "gh pr merge 2"'
+expect "R1(7) osascript -e" 2 "osascript -e 'do shell script \"gh pr merge 2\"'"
+expect "R2(7) 記録ありの gh api repos/o/r/pulls/1/merge" 0 'gh api -X PUT repos/o/r/pulls/1/merge'
+expect "誤止めなし(7) bash <<< echo hello" 0 'bash <<< "echo hello"'
+
 # ---------------------------------------------------------------- install -> rollback で元に戻る
 roundtrip() { # NAME SETTINGS_JSON
   local name="$1" CD="$T/claude-$RANDOM"

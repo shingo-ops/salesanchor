@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 PREFILTER = re.compile(r"merge|review-gate|REVIEW_GATE")
-SHELLS = {"bash", "sh", "zsh"}
+SHELLS = {"bash", "sh", "zsh", "dash", "ksh"}
 PYTHONS = {"python", "python3"}
 SKIP_FIRST = {"(", "{", "!", "then", "do", "else", "elif", "env", "command", "exec", "time", "nohup"}
 READONLY = {"grep", "rg", "cat", "head", "tail", "sed", "awk", "less", "wc", "ls", "git",
@@ -33,8 +33,11 @@ GUARD_WORDS = [".claude/review-gate", "review-gate/records", "review-gate/log",
 TEST_SCRIPT = "scripts/agent-hooks/review-gate/test_review_gate.sh"
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 SHELL_VALUE_OPTS = {"-o", "-O", "+o", "+O", "--rcfile", "--init-file"}
-OTHER_INTERP = {"perl", "ruby", "node", "php"}
-ANSI_C_SHELL_RE = re.compile(r"\b(?:bash|sh|zsh)\b[^\n;|&]*\s-[A-Za-z]*c[A-Za-z]*\s+\$[\"']")
+OTHER_INTERP = {"perl", "ruby", "node", "php", "osascript"}
+HERESTRING_RECV = SHELLS | PYTHONS | {"perl", "ruby", "node", "php", "source", "."}
+API_MERGE_RE = re.compile(r"repos/([^/\s]+)/([^/\s]+)/pulls/(\d+)/merge")
+RUNNER_SCRIPTS = {"gh-pr-merge-safe.sh", "check-pr-merge-ready.py"}
+ANSI_C_SHELL_RE = re.compile(r"\b(?:bash|sh|zsh|dash|ksh)\b[^\n;|&]*\s-[A-Za-z]*c[A-Za-z]*\s+\$[\"']")
 MERGE_WORD_RE = re.compile(r"(?<![A-Za-z_])merge(?![A-Za-z_])|mergePullRequest|enablePullRequestAutoMerge")
 URL_RE = re.compile(r"https?://([^/]+)/([^/]+)/([^/]+)/pull/(\d+)")
 SEP_CHARS = set(";&|\n")
@@ -290,11 +293,28 @@ def check_segment(toks, sep, wd, depth, ctx, top):
         piped = sep in ("|", "|&")
         if not has_c and "<<" not in toks and (not file_arg or piped) and "merge" in ctx.full:
             raise Block("標準入力から読む shell は中身が分からないため止めます")
+    # 入れ子 6: here-string (<<<) を shell / python / perl 等に渡す
+    if fw in HERESTRING_RECV and "<<<" in toks:
+        hk = toks.index("<<<")
+        if hk + 1 < len(toks) and MERGE_WORD_RE.search(toks[hk + 1]):
+            raise Block("%s に here-string で渡す文字列に merge を含むため止めます" % fw)
     msg_idx = {k + 1 for k, t in enumerate(toks) if t in MSG_FLAGS}
+    # 入れ子 7: xargs の後ろの merge 系は番号が後から足されうるので常に止める
+    for xk, xt in enumerate(toks):
+        if base(xt) == "xargs":
+            rest = toks[xk + 1:]
+            if find_gh_sub(rest, "merge") is not None or any(base(r) in RUNNER_SCRIPTS for r in rest):
+                raise Block("xargs の後ろの merge 操作は PR 番号が分からないため止めます")
     repo = flag_value(toks, ("-R", "--repo"))
     # 1. gh pr merge
     m = find_gh_sub(toks, "merge")
     mflags, mpos = parse_merge(toks, m) if m is not None else (set(), [])
+    if m is not None:
+        nrepo = sum(1 for t in toks if t in ("--repo", "-R") or t.startswith("--repo=")
+                    or (t.startswith("-R") and len(t) > 2 and not t.startswith("--")))
+        nhead = sum(1 for t in toks if t == "--match-head-commit" or t.startswith("--match-head-commit="))
+        if nrepo > 1 or nhead > 1:
+            raise Block("--repo / -R / --match-head-commit が 2 回以上あるため止めます")
     if m is not None and ("--disable-auto" not in mflags or len(mpos) > 1):
         n, url_repo, _state = pr_from_merge(mpos, wd)
         if len(mpos) > 1:
@@ -318,15 +338,15 @@ def check_segment(toks, sep, wd, depth, ctx, top):
     if find_gh_sub(toks, "api") is not None and any(
             ("/merge" in t or "mergePullRequest" in t or "enablePullRequestAutoMerge" in t)
             for t in toks):
-        mm = next((re.search(r"pulls/(\d+)/merge", t) for t in toks
-                   if re.search(r"pulls/(\d+)/merge", t)), None)
-        ctx.add(int(mm.group(1)) if mm else None, None, wd, "gh api merge")
+        mm = next((API_MERGE_RE.search(t) for t in toks if API_MERGE_RE.search(t)), None)
+        ctx.add(int(mm.group(3)) if mm else None,
+                "%s/%s" % (mm.group(1), mm.group(2)) if mm else None, wd, "gh api merge")
     # 5. curl で api.github.com の merge
     if any(base(t) == "curl" for t in toks) and any("api.github.com" in t for t in toks) \
             and any("/merge" in t for t in toks):
-        mm = next((re.search(r"pulls/(\d+)/merge", t) for t in toks
-                   if re.search(r"pulls/(\d+)/merge", t)), None)
-        ctx.add(int(mm.group(1)) if mm else None, None, wd, "curl merge")
+        mm = next((API_MERGE_RE.search(t) for t in toks if API_MERGE_RE.search(t)), None)
+        ctx.add(int(mm.group(3)) if mm else None,
+                "%s/%s" % (mm.group(1), mm.group(2)) if mm else None, wd, "curl merge")
 
 
 def recv_first_word(recv):
