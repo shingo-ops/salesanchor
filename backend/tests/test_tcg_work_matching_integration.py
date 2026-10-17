@@ -234,6 +234,25 @@ def create_soldout_extra_targets(cursor, schema):
     cursor.execute((MIGRATIONS / SOLDOUT_EXTRA_TARGETS).read_text(encoding="utf-8").replace("public.analysis_", f"{schema}.analysis_"))
 
 
+def apply_bundle_sale_columns(cursor, schema):
+    """ADR-1027 便1 の列を試験 DB に足す。何回呼んでもよい。
+
+    analysis_results.bundle_size（public と schema の両方。本番の migration をそのまま）と、配信が読む line_units.name_ja/name_en。
+    試験 DB では public.units が実表で line_units が無い（本番は line_units が実表・units が VIEW）。
+    無い／VIEW（前回の呼び出しが作った）: units に列を足し、無ければ同名の VIEW を作る。実表: 本番の migration をそのまま当てる。
+    """
+    cursor.execute((MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text())
+    cursor.execute(f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer")
+    cursor.execute("SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'line_units'")
+    kind = cursor.fetchone()
+    if kind is not None and kind[0] == "r":
+        cursor.execute((MIGRATIONS / "20261017_220100_add_line_units_display_names.sql").read_text())
+    else:
+        cursor.execute("ALTER TABLE public.units ADD COLUMN IF NOT EXISTS name_ja text, ADD COLUMN IF NOT EXISTS name_en text")
+        if kind is None:
+            cursor.execute("CREATE VIEW public.line_units AS SELECT * FROM public.units")
+
+
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
@@ -340,17 +359,7 @@ def migrate(cursor):
     # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
-    # ADR-1027 便1: まとめ売りの列 bundle_size（本番の migration をそのまま）と、配信が読む単位の呼び名（line_units.name_ja/name_en）。
-    cursor.execute((MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text())
-    cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer")
-    # 試験 DB では public.units が実表で line_units が無い（本番は line_units が実表・units が VIEW）。
-    # line_units が無いときは units に同じ列を足し、同名の VIEW を作る。実表があるときは本番の migration をそのまま当てる。
-    cursor.execute("SELECT to_regclass('public.line_units') IS NULL")
-    if cursor.fetchone()[0]:
-        cursor.execute("ALTER TABLE public.units ADD COLUMN IF NOT EXISTS name_ja text, ADD COLUMN IF NOT EXISTS name_en text")
-        cursor.execute("CREATE VIEW public.line_units AS SELECT * FROM public.units")
-    else:
-        cursor.execute((MIGRATIONS / "20261017_220100_add_line_units_display_names.sql").read_text())
+    apply_bundle_sale_columns(cursor, SCHEMA)  # ADR-1027 便1
 
 
 @pytest.fixture
