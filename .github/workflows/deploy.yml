@@ -308,6 +308,7 @@ jobs:
               -e '/^AUTH_VIEWER_JWT_SECRET=/d' \
               -e '/^OPS_API_TOKEN=/d' \
               -e '/^OPS_INGEST_TOKEN=/d' \
+              -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             rm -f .env.bak
@@ -354,6 +355,7 @@ jobs:
             AUTH_VIEWER_JWT_SECRET=${{ secrets.AUTH_VIEWER_JWT_SECRET }}
             OPS_API_TOKEN=${{ secrets.OPS_API_TOKEN }}
             OPS_INGEST_TOKEN=${{ secrets.OPS_INGEST_TOKEN }}
+            ERROR_REPORT_AGENT_TOKEN=${{ secrets.ERROR_REPORT_AGENT_TOKEN }}
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
 

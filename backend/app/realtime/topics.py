@@ -354,6 +354,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("DELETE", "/api/v1/tcg/distribution/targets/{target_id}"): _PENDING,
     ("PUT", "/api/v1/tcg/distribution/targets/{target_id}"): _PENDING,
     ("POST", "/api/v1/tcg/extraction-jobs/{extraction_job_id}/reanalyze"): _PENDING,
+    ("POST", "/api/v1/ops/error-reports/{report_code}/events"): "誤り報告の記録のみ。画面に出る在庫データは変えない（ADR-1025 便2）",
+    ("POST", "/api/v1/ops/error-reports/{report_code}/reanalyze"): _PENDING,
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/corrections"): _PENDING,
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/error-reports"): "誤り報告の記録のみ。画面に出る在庫データは変えない（ADR-1025 便1）",
     ("POST", "/api/v1/tcg/line-devices/approve"): _PENDING,
