@@ -124,6 +124,11 @@ PO が直接書き直すため、上記サンプルは更新していない）�
 `backend/tests/test_inbox_new_assignment_badge.py` の
 `test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys`。
 
+**追記（CI で実発生・2026-10-17）**: 埋め直し UPDATE は `assigned_to` 列があるスキーマだけで行う。
+`leads` 表があっても `assigned_to` が無いスキーマが CI の試験用 DB に実在する
+（根拠: `.github/workflows/migration-test.yml` の試験用 `tenant_001.leads` 最小定義）。
+検証: `backend/tests/test_leads_assignment_opened_at_pg.py` の T5。
+
 **実行登録**: `scripts/run_all_migrations.sh` の**末尾に追記**
 ```bash
 # 受信箱「新規」バッジの置き場（leads に 1 列。構造＋既存行の埋め直し・冪等）
