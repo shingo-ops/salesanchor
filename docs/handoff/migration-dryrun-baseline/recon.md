@@ -1,12 +1,12 @@
 # recon: 試し実行（migration-full-dryrun）の失敗と除外行
 
-> **この PR は実験用 Draft。マージしない。**
+> 実験 A〜F の結果と採用案は design.md を参照。
 
 生出力: /tmp/CC報告ファイル/dryrun_recon/{e_errors2,b_create,d_reg,c_steps,g_adr,f_dump}.txt, exclusions.tsv（CI run 39009175807 の 2周目ログ, origin/main 基準）
 
 ## 1. 事実: 2周目で ❌ になったファイル（e_errors2.txt の `❌ [2周目 n/289]` 行を全数抽出）
 
-生出力から抽出できた ❌ 行は 16 本（依頼文は 21 本。残りは e_errors2.txt に ❌ 行として現れず、DB ログの ERROR 行のみ。未確認）。
+基準の2周目失敗は 21 本（run 39009175807 ログ 6703行「2周目: 成功 268 / 失敗 21」を Opus が確認）。e_errors2.txt の抽出で ❌ 行が 16 本しか取れなかったのは抽出条件の差で、本数の正はログの集計行。
 
 1. migrations/20260920_050000_status_master_add_tenant_id.sql（e_errors2.txt:6623）
 2. migrations/20260920_060000_note_master_tenant_id.sql（:6624）
