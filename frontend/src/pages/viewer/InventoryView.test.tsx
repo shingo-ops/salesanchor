@@ -28,7 +28,7 @@ beforeEach(() => { captured.props = null; });
 afterEach(() => cleanup());
 
 describe("InventoryView", () => {
-  it("passes the designed props to DataTable: sticky, fit, cards, 50 per page, default sort release_date desc", () => {
+  it("passes the designed props to DataTable: sticky, fit, cards, 50 per page, default sort release_date asc", () => {
     render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const p = captured.props!;
     expect(p.stickyHeader).toBe(true);
@@ -36,7 +36,7 @@ describe("InventoryView", () => {
     expect(p.mobileCards).toBe(true);
     expect(p.data).toHaveLength(50);
     expect(p.sortKey).toBe("release_date");
-    expect(p.sortDir).toBe("desc");
+    expect(p.sortDir).toBe("asc");
     expect(p.hasNextPage).toBe(true);
     expect(typeof p.onPageChange).toBe("function");
     expect(p.rowKey({ idx: 7 })).toBe("7");
@@ -48,11 +48,11 @@ describe("InventoryView", () => {
     expect(screen.queryByTestId("viewer-refresh")).toBeNull();
   });
 
-  it("sort pull-down has exactly 3 options", () => {
+  it("sort pull-down has exactly 4 options", () => {
     render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value).filter((v) => v !== "");
-    expect(values).toEqual(["unit_price:asc", "quantity:desc", "offered_at:desc"]);
+    expect(values).toEqual(["release_date:asc", "unit_price:asc", "quantity:desc", "offered_at:desc"]);
     fireEvent.change(select, { target: { value: "unit_price:asc" } });
     expect(captured.props!.sortKey).toBe("unit_price");
     expect(captured.props!.sortDir).toBe("asc");

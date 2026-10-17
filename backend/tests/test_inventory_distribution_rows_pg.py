@@ -302,11 +302,10 @@ _VIEW_CASES = [
 def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
                           limit: int, offset: int):
     """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
-    # 基準の ORDER BY（便1: 英語タイトルが第1キー。タイトル列そのものを並べるときは英語タイトルの昇降を切り替える）
-    if sort_col == "d.japanese_title":
-        order_by = f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
-    else:
-        order_by = f"ORDER BY d.english_title ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+    # 基準の ORDER BY（ADR-1014 改訂 2026-10-18: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
+    from app.routers.inventory_offers import _build_view_order_by
+
+    order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
 
     def rows_sql(m: bool) -> str:
         inner_rows = distribution.distribution_rows_sql(**_ARGS, merge_same_post=m)
@@ -433,31 +432,36 @@ def test_bin1_fresh_only_excludes_rows_older_than_24_hours_and_total_follows(pg,
     assert total_fresh == len(items_fresh) == 1
 
 
-def test_bin1_sort_groups_by_english_title_then_release_date(pg, ids):
+def test_bin1_sort_groups_by_release_date_then_title(pg, ids):
     with pg[0].cursor() as cur:
-        cur.execute("UPDATE public.products SET name_en = 'Alpha', release_date = '2026-01-01' WHERE id = %s", (ids.p1,))
-        cur.execute("UPDATE public.products SET name_en = 'Beta', release_date = '2026-02-01' WHERE id = %s", (ids.p2,))
+        cur.execute("UPDATE public.products SET name_en = 'Alpha', release_date = '2026-02-01' WHERE id = %s", (ids.p1,))
+        cur.execute("UPDATE public.products SET name_en = 'Beta', release_date = '2026-01-01' WHERE id = %s", (ids.p2,))
     job = _add_job(pg)
     _add_row(pg, job, ids.p1, ids.box, basis="R2:甲", price=1)
     _add_row(pg, job, ids.p2, ids.case, basis="R2:乙", price=2, canonical="Case", unit="Case")
     _add_row(pg, job, ids.p1, ids.box, basis="R2:丙", price=3, note="N")
-    _, items = _view_items(pg, sort="release_date", order="desc")
-    assert [r["english_title"] for r in items] == ["Alpha", "Alpha", "Beta"]  # 発売日の降順でも英語タイトルが先
+    _, items = _view_items(pg, sort="release_date", order="asc")
+    assert [r["english_title"] for r in items] == ["Beta", "Alpha", "Alpha"]  # 発売日の早い商品が先
+    _, items_desc = _view_items(pg, sort="release_date", order="desc")
+    assert [r["english_title"] for r in items_desc] == ["Alpha", "Alpha", "Beta"]
+    _, by_price = _view_items(pg, sort="unit_price", order="desc")
+    assert [r["english_title"] for r in by_price] == ["Beta", "Alpha", "Alpha"]  # まとまりの順は不変
     _, by_name_desc = _view_items(pg, sort="name", order="desc")
     assert [r["english_title"] for r in by_name_desc] == ["Beta", "Alpha", "Alpha"]
     _, by_name_asc = _view_items(pg, sort="name", order="asc")
     assert [r["english_title"] for r in by_name_asc] == ["Alpha", "Alpha", "Beta"]
 
 
-def test_bin1_empty_english_title_comes_first_in_ascending_order(pg, ids):
+def test_bin1_empty_release_date_comes_last_in_both_directions(pg, ids):
     with pg[0].cursor() as cur:
-        cur.execute("UPDATE public.products SET name_en = NULL WHERE id = %s", (ids.p1,))
-        cur.execute("UPDATE public.products SET name_en = 'Beta' WHERE id = %s", (ids.p2,))
+        cur.execute("UPDATE public.products SET name_en = 'Alpha', release_date = NULL WHERE id = %s", (ids.p1,))
+        cur.execute("UPDATE public.products SET name_en = 'Beta', release_date = '2026-01-01' WHERE id = %s", (ids.p2,))
     job = _add_job(pg)
     _add_row(pg, job, ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case")
     _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
-    _, items = _view_items(pg, sort="release_date", order="desc")
-    assert [r["english_title"] for r in items] == ["", "Beta"]
+    for order in ("asc", "desc"):
+        _, items = _view_items(pg, sort="release_date", order=order)
+        assert [r["english_title"] for r in items] == ["Beta", "Alpha"]
 
 
 # --- 便3（検索と提供者）-------------------------------------------------------------------------------------------

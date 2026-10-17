@@ -36,3 +36,13 @@ ADR-093「/inventory は public.inventory を表示する」を本 ADR が置き
 - Sold out の除外を配信行の定義に入れた。`tcg_distribution_svc._sold_out_filter()` の1か所に判定を置き（`ar.` の別名が前提。status の前後の空白と大文字小文字を無視し 'sold out' / 'soldout' を除く）、dist_base と配信プレビューの件数クエリの両方が使う。
 - 並び替えの第1キーを英語タイトルにした（GAS 方式）。タイトル列を並べるときは英語タイトルの昇降を切り替える。
 - 在庫表に「24時間以内」(`fresh_only`、既定 ON、画面側のみ・保存しない)を足した。窓は `FRESH_WINDOW_HOURS = 24`。
+
+## 改訂 2026-10-18（在庫表の既定の並びを発売日の早い順・商品ごとのまとまりにする）
+
+PO 決定（2026-10-18）。上の 2026-10-14 改訂の「並び替えの第1キーを英語タイトルにした」を本改訂が上書きする（上の行は書き換えない）。ただしタイトル列（`sort=name`）の並びは 2026-10-14 のまま維持する。
+
+- まとまり（商品）の順: 発売日 ASC（空欄は末尾）→ english_title ASC → japanese_title ASC → product_id ASC（在庫表のみ。閲覧ページは product_id を持たないので題名2つまで）。発売日の向きは `sort=release_date` を選んだときだけ `order` に従い、それ以外の並び替えでは常に ASC。
+- まとまりの中の順: 既定（`release_date`）は `sort_ord`。それ以外は `{選んだ列} {向き} NULLS LAST → sort_ord`。プルダウンの並び替えはまとまりの中だけで効く（GAS 在庫一覧と同じ仕組み）。
+- 既定の向きを asc にした（在庫表 `InventoryPage.tsx`、閲覧ページ `viewerFilter.ts` の `DEFAULT_SORT_DIR`）。並び替えプルダウンの先頭に `release_date:asc`「発売日が早い順」を追加し、既定のとき空表示にならないようにした。
+- 実装: `backend/app/routers/inventory_offers.py` の `_build_view_order_by`、`frontend/src/pages/viewer/viewerFilter.ts` の `sortRows`。配信行の定義・GAS 出力14列・API 応答形は変えない。
+- 守り: backend の ORDER BY 単体試験と viewerFilter の `sortRows` 試験。
