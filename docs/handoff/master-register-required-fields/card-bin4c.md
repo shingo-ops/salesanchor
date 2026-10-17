@@ -177,7 +177,7 @@ def report_master_required_fields() -> dict:
 | 3 | `build_message` に印 [] | 3行目に「0 件」 |
 | 4 | `_run_report` を `patch("app.database.AsyncSessionLocal")`・`_post_discord` を AsyncMock で実行（sa02 の試験の書き方を写す） | `_post_discord` が1回呼ばれ、文面の1行目に「ADR-1020」 |
 | 5 | 予定表 | `celery_app.conf.beat_schedule["report-master-required-fields-weekly"]` の task 名が登録済みで、schedule が月曜 9:00 |
-| 6 | （PG がある環境だけ）既存の `backend/tests/test_product_blank_confirmations_pg.py` の準備を写し、共用の行を2つ（1つは name_en 空・印なし、1つは name_en 空・印あり）を `created_at` 現在で作り、`_COUNT_SQL` を実行 | `name_en` が 1。PG が無ければ既存と同じ形で skip |
+| 6 | （PG がある環境だけ。CI で印の試験と同時に走りデッドロックしたため、実装後に `backend/tests/test_product_blank_confirmations_pg.py` の末尾へ移した＝同じファイルは同じ作業員が順に流す）既存の `backend/tests/test_product_blank_confirmations_pg.py` の準備を写し、共用の行を2つ（1つは name_en 空・印なし、1つは name_en 空・印あり）を `created_at` 現在で作り、`_COUNT_SQL` を実行 | `name_en` が 1。PG が無ければ既存と同じ形で skip |
 
 ### 3-4. design.md の「維持の仕組み」（docs/handoff/master-register-required-fields/design.md:138-142）
 - 「月1回、印の件数を PO に見せる」の行を、次の内容に置き換える（他の行は変えない。行番号が違えば「維持の仕組み」の節の該当行を探す）:
