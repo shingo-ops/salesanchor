@@ -3,7 +3,7 @@
 - 日付: 2026-10-17 / 設計: Opus（PO「別の問題を解消する」）
 - recon: docs/handoff/analysis-failed-record/recon.md
 - 関連 ADR: ADR-1003（GO委任）。docs/handoff/extraction-job-recovery/design.md（「表・列は増やさない」を守る）。ADR-027 該当なし（UI 変更なし）
-- 対象 ADR: 該当 ADR なし（recon に検索結果を記載）
+- 対象 ADR: ADR-1003（解析失敗の記録方針を定めた ADR は無い。recon に検索結果）
 
 ## 変更
 1. `backend/app/tasks/tcg_extraction.py`
@@ -23,8 +23,13 @@
 | 既存テストが緑 | test_tcg_extraction_recovery.py, test_line_analysis_v102_svc.py ほか |
 | K4 本番反映後、救済タスクがエラーなく回り、error_message 別件数が反映前後で同じ | 本番ログ・read-only 件数（反映後に実施。未実施） |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 Dead-letter / retry-once の定石に沿う（失敗を印で残し、有限回の再試行後は人に渡す）。本件は既存列の再利用のみで外部依存なし。
 
 ## 戻し方
 PR を revert。DB に残った error_message は無害（status は不変）。
+
+## 維持の仕組み
+- 救済の定期作業（10分ごと）がログに『解析失敗のやり直し: 対象N件 投入M件』を毎回出す。
+- 再び拾わないための印 ANALYSIS_FAILED_RETRIED が残るので、件数 `GROUP BY error_message` で滞留を見張れる。
+- テスト backend/tests/test_analysis_failed_record.py が CI で回る。
