@@ -306,3 +306,30 @@ groups:
           summary: "監視設定のずれの確認が 50 時間以上動いていません"
           description: "monitoring-config-drift の workflow が 50 時間以上 pushgateway に送っていません。prod2 の runner と workflow の実行を確認してください。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigcheckstale"
+
+  - name: container_state_alerts
+    rules:
+      # 健康診断（docker-compose.yml の healthcheck・便D）が unhealthy（ADR-1012 段階3 便E）
+      # prod1 の scripts/ops/container_state.py が毎分 textfile に書く。札は処置の付く便G で auto に変える
+      - alert: ContainerUnhealthy
+        expr: salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "コンテナ {{ $labels.service }} が不健康です"
+          description: "prod1 の {{ $labels.service }} の健康診断が unhealthy です。固まっている可能性があります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerunhealthy"
+
+      # 状態書き係が 5 分書いていない（cron の停止・docker が読めない・ファイルが無い）
+      - alert: ContainerStateStale
+        expr: (time() - salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps"}) > 300 or absent(salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps"})
+        for: 2m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "コンテナの状態書き係が 5 分以上動いていません"
+          description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
