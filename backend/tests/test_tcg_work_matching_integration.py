@@ -770,6 +770,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # 発送日の専用列（v102）: tenant_004 の analysis_results・extraction_items にも列が要る（_merge_supplier_products が読む）。
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
+        apply_bundle_sale_columns(cursor, "tenant_004")  # ADR-1027 便1: 配信の SELECT が bundle_size と line_units を読む
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
