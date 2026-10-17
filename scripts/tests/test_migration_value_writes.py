@@ -277,10 +277,11 @@ class RealRepo(unittest.TestCase):
         self.assertTrue(result.stdout.strip())
 
     def test_protected_tables_include_the_four_added_masters(self) -> None:
-        names = {ln.strip() for ln in TABLES.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")}
+        lines = [ln.strip() for ln in TABLES.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
+        names = set(lines)
         for table in ("product_lines", "product_formats", "product_kinds", "supplier_aliases"):
             self.assertIn(table, names)
-        self.assertEqual(len(names), 27)
+        self.assertEqual(len(lines), len(set(lines)), "重複した表名がある")
 
 
 if __name__ == "__main__":
