@@ -55,3 +55,7 @@
 - フロントのみのデプロイ: 約 4 分 → 約 2.5 分（マイグレーション 2 ステップ skip）。
 - バックエンド / マイグレーションを含むデプロイ: 従来どおり全マイグレーション実行（所要は不変）。
 - 将来の追加最適化候補（本 ADR 非対象）: CI でイメージをビルドして VPS は pull のみにする、変更サービスのみ再ビルドする等。効果は大きいが影響範囲も大きいため別 ADR で検討。
+
+## 追記（2026-10-17・P6）前回デプロイが成功で終わっていないときは全部実行する
+
+push 直前の commit との差分だけで判定すると、前の run が失敗・cancelled のとき、その run の migration が次の run で skip される（直近1000 run で7件。docs/handoff/deploy-migration-skip-guard/recon.md）。paths-filter の直後の gate 段で、deploy.yml の main 成功 run の最新 head_sha が github.event.before と一致するときだけ差分判定を使い、違う・取れない場合は migrations・nginx・db_migrations をすべて true にする（判定不能時は安全側＝実行、の原則どおり）。

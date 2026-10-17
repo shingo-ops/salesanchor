@@ -58,6 +58,24 @@ jobs:
               - 'scripts/run_all_migrations.sh'
               - 'scripts/migrate_*.py'
 
+      - name: Check previous deploy completed
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          BEFORE: ${{ github.event.before }}
+          C_MIG: ${{ steps.changes.outputs.migrations }}
+          C_NGX: ${{ steps.changes.outputs.nginx }}
+          C_DB: ${{ steps.changes.outputs.db_migrations }}
+        run: |
+          last=$(gh api "repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""' 2>/dev/null || echo "")
+          if [ -n "$last" ] && [ "$last" = "$BEFORE" ]; then
+            echo "前回デプロイは成功（${last:0:7}）→ 差分どおり"
+            { echo "migrations=$C_MIG"; echo "nginx=$C_NGX"; echo "db_migrations=$C_DB"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::前回の成功デプロイ(${last:0:7})が push 直前(${BEFORE:0:7})と違う／取れない → 全部実行"
+            { echo "migrations=true"; echo "nginx=true"; echo "db_migrations=true"; } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
@@ -170,12 +188,12 @@ jobs:
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
       # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
       # PO承認（2026-10-03）: DBマイグレーションを含むデプロイのみ実行する
-      # （steps.changes.outputs.db_migrations が 'true' の場合のみ。
+      # （steps.gate.outputs.db_migrations が 'true' の場合のみ。
       #   `migrations` フィルタは backend/** 等も含み広すぎるため、
       #   実際に DB を変更しうるパスだけの `db_migrations` フィルタを使う）。
       # ============================================
       - name: Pre-deploy DB backup
-        if: steps.changes.outputs.db_migrations == 'true'
+        if: steps.gate.outputs.db_migrations == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -444,7 +462,7 @@ jobs:
       # 通常デプロイ（backend/frontend のみ）ではこのステップは実行されない。
       # ============================================
       - name: Recreate nginx (apply config/volume changes)
-        if: ${{ success() && steps.changes.outputs.nginx == 'true' }}
+        if: ${{ success() && steps.gate.outputs.nginx == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -525,7 +543,7 @@ jobs:
           ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
 
       - name: Run database migrations
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -546,7 +564,7 @@ jobs:
 
       # SA-19: Post-deploy smoke tests (SA-18 Phase2)
       - name: Post-deploy smoke tests (SA-19)
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -626,7 +644,7 @@ jobs:
             set -e
             cd /home/ubuntu/salesanchor
 
-            if [ "${{ steps.changes.outputs.migrations }}" != "true" ]; then
+            if [ "${{ steps.gate.outputs.migrations }}" != "true" ]; then
               echo "ℹ️  ADR-082: backend/migration 変更なし → DB マイグレーションは skip しました（フロントのみのデプロイ）。"
             fi
 

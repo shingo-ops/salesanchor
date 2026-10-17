@@ -202,7 +202,7 @@
 | [ADR-1021](./ADR-1021-bulk-condition-state.md) | ADR-1021: バルク系の商品で状態語が無いときは状態「Bulk」（配信可）にする。価格は1枚単価にそろえ、セット情報は備考に出す（価格は便2） | Accepted | — | — |
 | [ADR-1022](./ADR-1022-python-upgrade-deadline.md) | ADR-1022: Python は 3.12 のまま作り続け、2027 年 10 月までに本番ごと 3.14 へ上げる | Proposed | — | — |
 | [ADR-1023](./ADR-1023-condition-value-rank.md) | ADR-1023: 状態の価値順 — 複数の状態語が当たったら価値の低い状態を採る（v102） | Accepted | — | — |
-| [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Proposed | — | — |
+| [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Accepted | — | — |
 | [ADR-1025](./ADR-1025-analysis-error-report-autofix.md) | ADR-1025: 解析の誤り報告から自律修正まで — 報告は本番の表 1 か所、起動は agent-console が Discord の 1 チャンネルを読む | Proposed | — | — |
 
 ## ステータス凡例
