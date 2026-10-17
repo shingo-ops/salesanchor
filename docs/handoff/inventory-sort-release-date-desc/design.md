@@ -64,6 +64,11 @@
 ## 維持の仕組み
 - 守り手: InventoryPage.tablelayout.test.tsx・viewerFilter.test.ts・InventoryView.test.tsx が既定の向き desc を固定する。向きの決定は ADR-1014 の改訂節に記録する
 
+## 追補1（2026-10-18）: API の契約ファイル
+- CI「API contract is up to date」が frontend/api-contract/openapi.json の /inventory の order 既定 `"asc"` と、コードの既定 `"desc"` が食い違うとして fail（生出力 /tmp/CC報告ファイル/inventory-sort-desc/api-contract.txt）
+- 対処: openapi.json の該当1行（name "order"、title "Order" の default）を `"desc"` に直す。手元で作り直すと Python の版の違いで無関係な差分が出るため、作り直しはしない。正しさは同じ CI の検査が確かめる
+- 変更の対象に frontend/api-contract/openapi.json（1行）を加える
+
 ## ADR-1014 への追記（実装担当が行う）
 - 「改訂 2026-10-18（2）」節を足す: 既定の向きを desc（発売日の新しい順）に改める。PO「発売日の新しい順にしてほしい、いまは古い順になっている」（2026-10-18）。前の改訂節の本文は書き換えない
 - `node scripts/generate-adr-index.js` を実行する
