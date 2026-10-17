@@ -66,7 +66,8 @@
       "password": "Password",
       "submit": "Log in",
       "submitting": "Logging in…",
-      "forgot": "Forgot your password?"
+      "forgot": "Forgot your password?",
+      "signup": "Apply"
     },
     "changePassword": "Change password",
     "passwordChange": {
@@ -98,6 +99,22 @@
       "invalidDescription": "The link has expired or has already been used. Please send the email again.",
       "again": "Send the email again",
       "backToLogin": "Back to log in"
+    },
+    "signup": {
+      "title": "Apply for access",
+      "lineName": "LINE display name",
+      "inventoryIssue": "Inventory-related concerns (optional)",
+      "inventoryIssueHelp": "Up to 1000 characters",
+      "submit": "Apply",
+      "submitting": "Sending…",
+      "backToLogin": "Back to log in",
+      "doneTitle": "Your application was received",
+      "doneDescription": "Press the button in the Discord reception room and enter this code",
+      "expires": "Expires {{time}}",
+      "onlyHere": "The code and the invite link can only be seen on this screen",
+      "openInvite": "Join Discord",
+      "inviteFailed": "We could not create an invite link. Please wait a moment and apply again with the same email.",
+      "alreadyApplied": "If you have already applied, use \"Forgot your password?\" on the log in screen to reissue it."
     },
     "error": {
       "forbidden_origin": "You cannot log in from this page.",

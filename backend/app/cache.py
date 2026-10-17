@@ -376,6 +376,30 @@ async def count_viewer_password_reset_request(email_lower: str) -> int:
         return 0
 
 
+VIEWER_SIGNUP_EMAIL_MAX = 3
+VIEWER_SIGNUP_IP_MAX = 10
+VIEWER_SIGNUP_WINDOW = 3600  # 1時間
+
+
+async def count_viewer_signup(kind: str, value: str) -> int | None:
+    """閲覧者の申込を kind（"email" か "ip"）と値のハッシュ単位で数え、今回を含む回数を返す。
+
+    Redis が無い・失敗したときは None（呼び出し側が「数えられなかった」と区別できるように）。
+    """
+    r = get_redis()
+    if not r:
+        return None
+    try:
+        key = f"viewer_signup_{kind}:{hashlib.sha256(value.encode()).hexdigest()}"
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, VIEWER_SIGNUP_WINDOW)
+        return int(count)
+    except Exception:
+        logger.warning("閲覧者の申込回数の記録に失敗: kind=%s", kind)
+        return None
+
+
 async def is_token_blacklisted(token: str) -> bool:
     """
     トークンがブラックリストに含まれているか確認する。

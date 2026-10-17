@@ -42,6 +42,7 @@ from app.schemas.product import (
     ProductUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.tcg_product_master_svc import check_required_fields, find_cleared_fields
 
 router = APIRouter()
 
@@ -374,6 +375,26 @@ async def create_product(
     # tenant_id NOT NULL のため従来どおり tenant_id を入れる。
     payload["tenant_id"] = None if is_postgresql(db) else tenant_id
 
+    # ADR-1020: 共用の表（public.products）に作るときは9項目を検査する。
+    # この口は中分類・細分類・商品区分を受け取らず、検索・除外ワードの正本の表にも書かないので、それらは「無い」として渡す。
+    if is_postgresql(db):
+        missing = check_required_fields({
+            "name": payload.get("name_ja"),
+            "name_en": payload.get("name_en"),
+            "mark": payload.get("mark"),
+            "release_date": payload.get("release_date"),
+            "search_keywords": None,
+            "exclude_keywords": None,
+            "work_id": None,
+            "product_format_id": None,
+            "product_category_id": None,
+        }, set())
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="REQUIRED_FIELDS_MISSING:" + ",".join(missing),
+            )
+
     result = await db.execute(
         text(f"""
             INSERT INTO {ctx['ref']} (
@@ -458,6 +479,27 @@ async def update_product(
 
     if "tcg_type" in update_data:
         await _validate_tcg_type(db, update_data.get("tcg_type"))
+
+    # ADR-1020: 共用の行で、値か印があった項目を空にする更新は止める（古い空欄は止めない）。
+    if is_postgresql(db):
+        shared = (await db.execute(
+            text("SELECT 1 FROM public.products WHERE id = :id AND tenant_id IS NULL"),
+            {"id": product_id},
+        )).first()
+        if shared is not None:
+            marks = {r[0] for r in (await db.execute(
+                text("SELECT field_code FROM public.product_blank_confirmations WHERE product_id = :id"),
+                {"id": product_id},
+            )).all()}
+            keys = {"name": "name_ja", "name_en": "name_en", "mark": "mark", "release_date": "release_date"}
+            before = {f: old_row.get(k) for f, k in keys.items()}
+            after = {f: (update_data[k] if k in update_data else old_row.get(k)) for f, k in keys.items()}
+            cleared = find_cleared_fields(before, marks, after, marks)
+            if cleared:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="REQUIRED_FIELDS_CLEARED:" + ",".join(cleared),
+                )
 
     # 応答契約の name_ja / quantity を実列(ctx)へマッピングして SET 句を組む（param キーは据え置き）。
     _col = {"name_ja": ctx["name"], "quantity": ctx["qty"]}

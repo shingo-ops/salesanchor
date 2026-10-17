@@ -1,5 +1,5 @@
 /**
- * 閲覧ページの親。状態は ① ログイン / ② パスワード変更 / ③ 在庫表 / ④ 案内 / ⑤ 再発行。
+ * 閲覧ページの親。状態は ① ログイン / ② パスワード変更 / ③ 在庫表 / ④ 案内 / ⑤ 再発行 / ⑥ 申込。
  * トークンは localStorage。401（invalid viewer token）ならトークンを消して ① に戻る。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { LoginView } from "./LoginView";
 import { NoticeView } from "./NoticeView";
 import { PasswordChangeView } from "./PasswordChangeView";
 import { PasswordResetView } from "./PasswordResetView";
+import { SignupView } from "./SignupView";
 import { ViewerApiError, clearToken, fetchInventory, logout, readToken, writeToken } from "./api";
 import type { ViewerInventoryResponse, ViewerLoginResponse, ViewerNoticeKind } from "./types";
 
@@ -18,7 +19,8 @@ type Screen =
   | { name: "inventory"; data: ViewerInventoryResponse }
   | { name: "notice"; kind: ViewerNoticeKind }
   | { name: "passwordChange"; forced: boolean }
-  | { name: "reset"; token: string | null };
+  | { name: "reset"; token: string | null }
+  | { name: "signup" };
 
 const RESET_HASH_PREFIX = "#reset=";
 
@@ -108,8 +110,10 @@ export default function ViewerApp() {
           onLoggedIn={onLoggedIn}
           onPreparing={() => setScreen({ name: "notice", kind: "preparing" })}
           onForgot={() => setScreen({ name: "reset", token: null })}
+          onSignup={() => setScreen({ name: "signup" })}
         />
       )}
+      {screen.name === "signup" && <SignupView onToLogin={() => setScreen({ name: "login" })} />}
       {screen.name === "reset" && (
         <PasswordResetView token={screen.token} onToLogin={() => setScreen({ name: "login" })} />
       )}
