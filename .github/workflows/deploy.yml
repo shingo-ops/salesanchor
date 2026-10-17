@@ -412,10 +412,11 @@ jobs:
             bash scripts/deploy/app-services-plan.sh --observe frontend celery-worker celery-beat discord-gateway gemini-egress || true
             docker compose up -d --no-deps --dry-run frontend celery-worker celery-beat discord-gateway gemini-egress 2>&1 | sed 's/^/DRYRUN /' || true
             docker compose stop -t 60 celery-worker 2>/dev/null || true
+            # oneoff=False のみ消す（compose run の一時コンテナを消さない。docs/handoff/deploy-keep-oneoff/recon.md）
             for _svc in frontend celery-beat discord-gateway; do
-              docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+              docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
-            docker ps -a --filter "name=astro-webapp-celery-worker" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+            docker ps -a --filter "name=astro-webapp-celery-worker" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
             bash scripts/deploy/app-services-plan.sh --verify || true
             echo "Step 3d: Ensuring monitoring collectors are up..."
@@ -678,8 +679,9 @@ jobs:
 
                 if [ "${_rb_build}" = "true" ]; then
                   # コンテナ差し替え（通常デプロイと同じパターン）
+                  # oneoff=False のみ消す（compose run の一時コンテナを消さない。docs/handoff/deploy-keep-oneoff/recon.md）
                   for _svc in backend frontend celery-worker celery-beat discord-gateway; do
-                    docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                    docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
                   done
                   docker compose up -d --remove-orphans
 
