@@ -351,7 +351,7 @@ async def list_inventory_view(
         pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at|release_date)$",
         description="ソート列。全列対応（ADR-093 在庫表改修）",
     ),
-    order: str = Query(default="asc", pattern="^(asc|desc)$"),
+    order: str = Query(default="desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),

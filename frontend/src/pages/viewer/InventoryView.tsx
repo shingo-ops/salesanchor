@@ -207,7 +207,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
               setPage(1);
             }}
             options={[
-              { value: "release_date:asc", label: t("viewer.sort.releaseAsc") },
+              { value: "release_date:desc", label: t("viewer.sort.releaseDesc") },
               { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
               { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
               { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },
