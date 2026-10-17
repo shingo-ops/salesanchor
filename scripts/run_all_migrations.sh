@@ -790,7 +790,7 @@ run_sql migrations/20260921_140000_product_classification_masters.sql
 # ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
 run_sql migrations/20260922_000000_create_buyback_tables.sql
 
-# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+# ADR-156 Phase 7: 細分類→大分類FK /（商品→中分類FK は ADR-1026 で削除）
 run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
 
 # ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
@@ -995,3 +995,5 @@ run_sql migrations/20261017_120000_line_conditions_value_rank.sql
 run_sql migrations/20261017_130000_create_ai_reader_role.sql
 # ADR-1025 便1: 解析の誤り報告の表3つ（空・構造のみ・冪等）
 run_sql migrations/20261017_140000_create_analysis_error_report_tables.sql
+# ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
+run_sql migrations/20261017_210000_drop_products_type_master_id.sql
