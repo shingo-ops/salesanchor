@@ -26,7 +26,8 @@ TRY_LATER = "うまくいきませんでした。しばらく待ってから、�
 DISCORD_ALREADY_LINKED = "この Discord アカウントは、別のお申込みですでに使われています。"
 YOUR_ROOM = "あなた専用の部屋：<#{channel_id}>"
 ROOM_WELCOME = (
-    "ようこそ。在庫集計ツールのお試しが始まりました。\n"
+    "在庫集計ツールのお試しありがとうございます😊\n"
+    "下記のURLにログイン情報を入力してご利用ください。\n"
     "URL: https://app.salesanchor.jp/viewer/\n"
     "メールアドレス: {email}\n"
     "初期パスワード: {password}\n"
