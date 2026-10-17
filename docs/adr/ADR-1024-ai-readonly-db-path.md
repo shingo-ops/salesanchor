@@ -95,6 +95,14 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
 
 当初は CODEOWNERS を PO の必須レビューにしてコードの境界とする設計だった。しかし main の ruleset はレビュー必須数が 0 で、この状態では Code Owners の指定を有効にしてもレビュー要求が生まれない（ADR-135:34-46 で実測済み）。既存方針でも CODEOWNERS は責任者の明示に留め、強制には使わない。そこで K16 の時点で、台本と compose 定義を process-artifacts gate の危ない変更に入れた。PO はこの変更を PO 本人の GO 必須にしないと決めた（2026-10-17、回答「n」）。そのため委任 GO で通る。最後の守りは DB の権限（K7・K9）である。
 
+### 改訂（K3、2026-10-17）
+
+- 経緯: K3 は、台本の AUDIT 行が 23 回中 1 回しか Loki に無かった（×）。逆に、ai-reader の標準出力（結果表）が時々 Loki に入っていた（直近 24h で 14 コンテナ中 9 個）。設計: [design-k3.md](../handoff/ai-readonly-db-path/design-k3.md)。
+- Decision 3 の「volumes なし」を「`/dev/log` ソケット 1 本の bind だけ（`create_host_path: false`）。ほかのマウントは足さない」に改める。理由は、送信だけでファイルを書く道ではないこと。あわせて ai-reader は `logging: none` にし、結果表を残さない。
+- 案 C の採用: AUDIT を stderr に加えて `/dev/log` へ直接送る（/dev/log → auth.log → Loki。sshd と同じ道）。送れなければ rc=5 で結果を出さない。promtail・Loki・ホストの設定は変えない。
+- 残る危険（R8）: DB のエラー文に値が載り、postgres のログから Loki に入る道は本件の範囲外。別件とする。
+- PO 承認: 原文「y」（2026-10-17）。
+
 ## 関連 ADR
 
 - ADR-079: 監視用の読み取り鍵。今回の鍵とは別にする
