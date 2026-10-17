@@ -88,7 +88,7 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
 
 - 便3a（リポジトリ側）: #4453 を本番反映（2026-10-17、`ai_ro` ビュー 506 本）。
 - 便3b（VPS 側、PO `!` 実行）: 2026-10-17 16:00 JST 完了。`ai_reader` のパスワード設定、接続情報は VPS 上の別ファイル（600）、authorized_keys に 1 行（restrict・固定コマンド・expiry-time 20270115）。既存 5 行は不変。
-- 便4（文書）: 使い方 [usage.md](../handoff/ai-readonly-db-path/usage.md)。K 試験の結果 [k-results.md](../handoff/ai-readonly-db-path/k-results.md)。K17 はフック免除が不要。K 試験は全件測定済み。K3 は ×、K11 は △（判断と根拠は k-results.md）。
+- 便4（文書）: 使い方 [usage.md](../handoff/ai-readonly-db-path/usage.md)。K 試験の結果 [k-results.md](../handoff/ai-readonly-db-path/k-results.md)。K17 はフック免除が不要。K 試験は K14 の `sshd -T`（PO 実行分）を除いて測定済み。K3 は ×、K11 は △（判断と根拠は k-results.md）。
 - 運用上の注意: デプロイのたびに `ai_ro` が約 70 秒外れ、その間は 42P01 になる（usage.md §4）。
 
 ### 改訂（K16、2026-10-17）
