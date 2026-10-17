@@ -7,15 +7,15 @@
 ## 観測値
 | # | 観測 | 生出力 |
 |---|---|---|
-| H1 | 実機の Bash で `colima start --profile k1probe` はフックに止められ、案内文に `sandbox-test` を含む。前後の `colima list` は同一（diff 差分なし） | h1_before.txt / h1_after.txt / h1_diff.txt / h1_log.txt |
-| H2 | 試験で `limactl start/create/clone` が exit 2 | unittest.txt |
+| H1 | 実機の Bash で `colima start --profile k1probe` はフックに止められ、案内文に `sandbox-test` を含む。前後の `colima list` は同一（diff 差分なし） | h1_before.txt / h1_after.txt / h1_diff.txt / h1_log.txt |（vm-guard-allow: 見張りの説明文。実行する命令ではない）
+| H2 | 試験で `limactl start/create/clone` が exit 2 | unittest.txt |（vm-guard-allow: 見張りの説明文。実行する命令ではない）
 | H3 | 試験で default・stop・list・status・delete が exit 0。実機で `colima list`・`colima status` が通った（start/stop は実行せず） | unittest.txt / h3_list.txt / h3_status.txt |
 | H4 | echo・grep・git commit -m・ヒアドキュメント本文で拒否 0 件 | unittest.txt |
 | H5 | 一時 HOME で、有効な券は1回通って券が消え2回目は exit 2。期限切れ・op 違い・created_by が manual 以外は exit 2。券ファイルは本番の券置き場に作っていない | unittest.txt |
 | 内部エラー | 壊れた JSON 等の入力は exit 0 | unittest.txt |
 | 試験 | `/usr/local/bin/python3 ~/.claude/scripts/tests/test_mac_vm_guard.py`: 8 テスト（サブケース含む）OK | unittest.txt |
 
-H5 実地（Opus 2026-10-17 00:43 JST）: PO が `! bash scripts/permit-danger.sh "mac vm"` で券を発行 → `colima start -p h5probe --help` 1回目は通り（rc=0、使い方の表示のみ）、ログ `hook_permit_consumed`。2回目は `hook_blocked` で拒否。前後の `colima list` は default・sa-private-ci のみ（h5_first.txt / h5_list_after.txt / h5_log.txt）。→ H1〜H5 ○。
+H5 実地（Opus 2026-10-17 00:43 JST）: PO が `! bash scripts/permit-danger.sh "mac vm"` で券を発行 → `colima start -p h5probe --help` 1回目は通り（rc=0、使い方の表示のみ）、ログ `hook_permit_consumed`。2回目は `hook_blocked` で拒否。前後の `colima list` は default・sa-private-ci のみ（h5_first.txt / h5_list_after.txt / h5_log.txt）。→ H1〜H5 ○。（vm-guard-allow: 見張りの説明文。実行する命令ではない）
 
 H6（7日観測）は agent-console 予約（2026-10-24 09:00）で確認する。AI が券ファイルを作る操作の既存見張りでの拒否の試験は未実施（実装中に券置き場を ls した命令が既存の permits-guard に止められたことを1回観測）。
 

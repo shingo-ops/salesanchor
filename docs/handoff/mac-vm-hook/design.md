@@ -11,10 +11,10 @@
 ## 1. KGI（○×で判定）
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
-| H1 | AI が `colima start --profile x` を実行しようとすると止まる | Claude Code の Bash で実行させる | 実行前に拒否。案内文に `sandbox-test` が出る。前後の `colima list` が同じ |
-| H2 | `limactl start foo`／`limactl create foo` も止まる | 同上（試験スクリプト） | 拒否（exit 2） |
+| H1 | AI が `colima start --profile x` を実行しようとすると止まる | Claude Code の Bash で実行させる | 実行前に拒否。案内文に `sandbox-test` が出る。前後の `colima list` が同じ |（vm-guard-allow: 見張りの説明文。実行する命令ではない）
+| H2 | `limactl start foo`／`limactl create foo` も止まる | 同上（試験スクリプト） | 拒否（exit 2） |（vm-guard-allow: 見張りの説明文。実行する命令ではない）
 | H3 | 開発用 DB の操作は今までどおり | `colima start`（profile 指定なし・`default`）／`colima stop`／`colima list`／`colima status` | 1件も止まらない。`colima start` 後に `default` が Running |
-| H4 | 文章の中の文字列では止まらない | `echo`・`grep`・ヒアドキュメント本文・`git commit -m` に `colima start --profile x` を含める | 試験で 0 件拒否 |
+| H4 | 文章の中の文字列では止まらない | `echo`・`grep`・ヒアドキュメント本文・`git commit -m` に `colima start --profile x` を含める | 試験で 0 件拒否 |（vm-guard-allow: 見張りの説明文。実行する命令ではない）
 | H5 | 例外は PO の許可券だけで、AI は自分で通せない | PO が `! bash scripts/permit-danger.sh "mac vm"` → 1回だけ通る。2回目は止まる。AI が券ファイルを作る操作は既存見張りで止まる | 3点とも期待どおり |
 | H6 | 誤って止めることが無い | 導入後 7 日間、`~/.claude/logs/agent-events.jsonl` の `mac-vm-guard` 拒否記録を読む | 仮想マシン作成以外での拒否 0 件 |
 
