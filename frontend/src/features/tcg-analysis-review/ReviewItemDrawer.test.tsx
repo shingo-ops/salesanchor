@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { ReviewItemDrawer, type ReviewDrawerItem } from "./ReviewItemDrawer";
+import { api } from "../../lib/api";
 import { postReviewAck, postReviewAckRevoke } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({
@@ -20,7 +21,7 @@ vi.mock("./reviewActions", () => ({
 }));
 vi.mock("./ConditionReviewPanel", async () => ({
   ...(await vi.importActual<typeof import("./ConditionReviewPanel")>("./ConditionReviewPanel")),
-  ConditionReviewPanel: () => <div data-testid="condition-panel" />,
+  ConditionReviewPanel: (props: { fromWizard?: boolean }) => <div data-testid="condition-panel" data-from-wizard={String(Boolean(props.fromWizard))} />,
 }));
 
 const suspect = { gap_lines: [14, 15], candidates: [{ product_id: "1001", name: "Product A" }] };
@@ -179,14 +180,46 @@ describe("ReviewItemDrawer fix column (K2-K4)", () => {
   });
 
   it("a row that cannot be fixed does nothing when clicked, and is marked static", () => {
-    renderDrawer(item());
+    renderDrawer(item({ is_v102: false }));
 
-    fireEvent.click(rowOf("Quantity"));
     fireEvent.click(rowOf("Condition"));
 
     expect(document.querySelector(".review-item-fix")).toBeNull();
-    expect(rowOf("Quantity").className).toContain("item-comparison__row--static");
+    expect(rowOf("Condition").className).toContain("item-comparison__row--static");
+    expect(rowOf("Quantity").className).not.toContain("item-comparison__row--static");
     expect(rowOf("Product ID").className).not.toContain("item-comparison__row--static");
+  });
+
+  it("K2: name, product id and series rows all open the product choice, with no id input", () => {
+    renderDrawer(item({ review_issues: [] }));
+
+    for (const label of ["Product name", "Product ID", "Series"]) {
+      fireEvent.click(rowOf(label));
+      expect(screen.getByText("Product").tagName).toBe("LABEL");
+      expect(screen.queryByLabelText(/product id/i)).toBeNull();
+    }
+  });
+
+  it("R1: for a v102 item that is not empty-box related, the state row opens the panel only inside the wizard", () => {
+    const cr = { condition_id: "1", review_version: "v", needs_review: true, review_reasons: "pid_unresolved", confirmed: false, classification: "none" };
+    renderDrawer(item({ condition_review: cr }));
+
+    expect(screen.queryByTestId("condition-panel")).toBeNull();
+    fireEvent.click(rowOf("Condition"));
+
+    expect(screen.getByTestId("condition-panel").getAttribute("data-from-wizard")).toBe("true");
+  });
+
+  it("R8: switching from the quantity row to the price row resets the input to the price value", () => {
+    vi.mocked(api.get).mockResolvedValue({ units: [], statuses: [] });
+    renderDrawer(item({ system: { quantity: "3", price: "1200" } }));
+
+    fireEvent.click(rowOf("Quantity"));
+    expect((screen.getByLabelText("Quantity", { selector: "input" }) as HTMLInputElement).value).toBe("3");
+    fireEvent.change(screen.getByLabelText("Quantity", { selector: "input" }), { target: { value: "99" } });
+    fireEvent.click(rowOf("Unit price"));
+
+    expect((screen.getByLabelText("Unit price", { selector: "input" }) as HTMLInputElement).value).toBe("1200");
   });
 
   it("selecting the same row again keeps the selection", () => {
@@ -444,5 +477,67 @@ describe("ReviewItemDrawer revoke", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: 'Undo "checked"?' })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("ReviewItemDrawer viewOnly (inventory row panel)", () => {
+  const ackableItem: ReviewDrawerItem = {
+    ...makeItem("pid_unresolved", false),
+    system: { product_id: "PM-00001", product_title: "Title A", work_name: "Work A", condition: "Box", pid_basis: "MANUAL" },
+    review_issues: ["PRODUCT_ID_UNRESOLVED"],
+    review_reason_details: [{ code: "product_not_in_master", source: "system" as const, fix_stage: "analysis" as const, ackable: true }],
+  };
+
+  it("F5: shows no Keep as is button, no Fix column, and rows do not open the fix wizard", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Fix" })).toBeNull();
+    fireEvent.click(rowOf("Product ID"));
+    expect(document.querySelector(".review-item-fix")).toBeNull();
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+  });
+
+  it("F5: hides the undo button even when opened as an acknowledged item", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly ackedView onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.queryByRole("button", { name: /Undo/ })).toBeNull();
+  });
+
+  it("F5: still shows the reasons and renders headerSlot first", () => {
+    render(<ReviewItemDrawer item={ackableItem} viewOnly headerSlot={<div data-testid="slot" />} onClose={() => undefined} onRefresh={async () => undefined} />);
+
+    expect(screen.getByText("Not in the product master")).toBeTruthy();
+    expect(screen.getByTestId("slot")).toBeTruthy();
+  });
+
+  it("F6: without viewOnly the Keep as is button and the Fix column are still there", () => {
+    renderDrawer(ackableItem);
+
+    expect(screen.getByRole("button", { name: "Keep as is" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
+  });
+});
+
+describe("ReviewItemDrawer Gemini summary", () => {
+  it("C3: shows the summary text (multiple items joined by a blank line)", () => {
+    const { container } = renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: ["first part", "second part"] });
+
+    expect(screen.getByText("Gemini summary")).toBeTruthy();
+    expect(container.ownerDocument.querySelector(".review-item-summary__body")?.textContent).toBe("first part\n\nsecond part");
+    expect(screen.queryByText("No summary recorded")).toBeNull();
+  });
+
+  it("C3: shows the empty message when null or empty", () => {
+    renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: null });
+    expect(screen.getByText("No summary recorded")).toBeTruthy();
+    cleanup();
+    renderDrawer({ ...makeItem("pid_unresolved"), thought_summaries: [] });
+    expect(screen.getByText("No summary recorded")).toBeTruthy();
+  });
+
+  it("C3: also shown in viewOnly", () => {
+    render(<ReviewItemDrawer item={{ ...makeItem("pid_unresolved"), thought_summaries: ["abc"] }} viewOnly onClose={() => undefined} onRefresh={async () => undefined} />);
+    expect(screen.getByText("abc")).toBeTruthy();
   });
 });

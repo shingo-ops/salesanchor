@@ -15,6 +15,8 @@ const {
   countSelect,
   countInput,
   countTab,
+  countCheckbox,
+  countRadio,
   isValidUiAllow,
 } = require('../check-ui-governance');
 
@@ -206,6 +208,126 @@ assert(
 assert(
   '<Selection> コンポーネントは非検出',
   countSelect('<Selection value={x}>'),
+  0
+);
+
+// ── AY-4d: 生チェック欄 ────────────────────────────────────────────────
+// T21: 基本形
+assert(
+  'T21: 生 type="checkbox" は1件',
+  countCheckbox('<input type="checkbox" checked={x} onChange={f} />'),
+  1
+);
+
+// T22: type が別行
+assert(
+  'T22: type が別行の生チェック欄は1件',
+  countCheckbox('<input\n  type="checkbox"\n  checked={x}\n/>'),
+  1
+);
+
+// T23: 波括弧付き文字列
+assert(
+  'T23: type={"checkbox"} と type={\'checkbox\'} は2件',
+  countCheckbox('<input type={"checkbox"} />\n<input type={\'checkbox\'} />'),
+  2
+);
+
+// T24: ui-allow で除外
+assert(
+  'T24: 有効な ui-allow 付きは除外',
+  countCheckbox('{/* ui-allow: 移行のため (#123) */}\n<input type="checkbox" />'),
+  0
+);
+
+// T25: 金型は数えない
+assert(
+  'T25: <Checkbox> と <CheckboxControl> は非検出',
+  countCheckbox('<Checkbox checked={x} label="a" />\n<CheckboxControl checked={x} />'),
+  0
+);
+
+// T26: radio と role=checkbox は数えない
+assert(
+  'T26: type="radio" と role="checkbox" は非検出',
+  countCheckbox('<input type="radio" />\n<div role="checkbox" />'),
+  0
+);
+
+// T27: checkbox は既存の input 種別と重ならない
+assert(
+  'T27: type="checkbox" は countInput に数えられない',
+  countInput('<input type="checkbox" />'),
+  0
+);
+
+// T28: 動的な type は数えない
+assert(
+  'T28: type={kind} は countCheckbox に数えられない',
+  countCheckbox('<input type={kind} />'),
+  0
+);
+
+// T29: 既存の動きの固定（波括弧付きは type 省略扱いで input 種別が数える）
+assert(
+  'T29: type={"checkbox"} は countInput で1件（既存の動きを固定）',
+  countInput('<input type={"checkbox"} />'),
+  1
+);
+
+// T30: 生ラジオ
+assert(
+  'T30: 生 type="radio" は1件',
+  countRadio('<input type="radio" checked={x} onChange={f} />'),
+  1
+);
+
+// T31: type が別行
+assert(
+  'T31: type が別行の生ラジオは1件',
+  countRadio('<input\n  type="radio"\n  checked={x}\n/>'),
+  1
+);
+
+// T32: 波括弧付き文字列
+assert(
+  'T32: type={"radio"} と type={\'radio\'} は2件',
+  countRadio('<input type={"radio"} />\n<input type={\'radio\'} />'),
+  2
+);
+
+// T33: ui-allow で除外
+assert(
+  'T33: 有効な ui-allow 付きは除外',
+  countRadio('{/* ui-allow: 移行のため (#123) */}\n<input type="radio" />'),
+  0
+);
+
+// T34: 金型は数えない
+assert(
+  'T34: <Radio> と <RadioControl> と <ChoiceCardGroup> は非検出',
+  countRadio('<Radio checked={x} label="a" />\n<RadioControl checked={x} />\n<ChoiceCardGroup options={o} />'),
+  0
+);
+
+// T35: checkbox と role=radio / radiogroup は数えない
+assert(
+  'T35: type="checkbox" と role="radio" と role="radiogroup" は非検出',
+  countRadio('<input type="checkbox" />\n<div role="radio" />\n<div role="radiogroup" />'),
+  0
+);
+
+// T36: radio は既存の input 種別と重ならない
+assert(
+  'T36: type="radio" は countInput に数えられない',
+  countInput('<input type="radio" />'),
+  0
+);
+
+// T37: 動的な type は数えない
+assert(
+  'T37: type={kind} は countRadio に数えられない',
+  countRadio('<input type={kind} />'),
   0
 );
 

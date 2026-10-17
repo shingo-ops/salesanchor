@@ -938,5 +938,29 @@ run_sql migrations/20261013_160000_add_self_hosted_auth_tables.sql
 # 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
 run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
 
+run_sql migrations/20261015_130000_add_permissions_rls.sql
+run_sql migrations/20261016_010000_add_google_config_rls.sql
+run_sql migrations/20261016_020000_add_suppliers_rls.sql
+
+# 閲覧専用アカウントの表4つ（構造のみ・冪等。ADR-1019 段1）
+run_sql migrations/20261016_150000_add_viewer_accounts.sql
+
+# ADR-1012 段階2 便A: 障害記録の表 3 つ（空・RLS は運用者だけ・記録は消せない）
+run_sql migrations/20261016_100000_create_ops_incident_tables.sql
+
+run_sql migrations/20261016_160000_add_paypal_regtoken_write_rls.sql
+
+run_sql migrations/20261016_170000_add_tenants_write_rls.sql
+
+run_sql migrations/20261016_180000_add_users_write_rls.sql
+
+# ADR-1020 便1: 共用商品の「調べたが無い」の記録の表（空・構造のみ・冪等）
+run_sql migrations/20261016_190000_create_product_blank_confirmations.sql
+
+# ADR-1019 段4c: 閲覧者の Discord 受付の設定の表（空・構造のみ・冪等）
+run_sql migrations/20261017_100000_add_viewer_discord_config.sql
+# ADR-1023: 状態マスタの価値順の列（構造のみ。値は docs/handoff/condition-value-rank/data/ の SQL で入れる）
+run_sql migrations/20261017_120000_line_conditions_value_rank.sql
+
 # 受信箱「新規」バッジの置き場（leads に 1 列。構造＋既存行の埋め直し・冪等・不可逆操作なし）
 run_sql migrations/20261015_090000_add_leads_assignment_opened_at.sql

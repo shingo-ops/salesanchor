@@ -69,3 +69,6 @@ recon.md 参照。要点のみ再掲する。
 ## 外部・過去事例
 
 - 該当なし。社内の既存パターン（`backend/app/tasks/tcg_import_discard.py` の期限切れ回収タスク、`backend/app/tasks/tcg_extraction.py:610-642` の Celery→非同期サービス呼び出しパターン）を根拠にした。Celery の stale task 回収は Celery 公式ドキュメントの `task_acks_late`/`worker_prefetch_multiplier` の推奨設定（本リポジトリは既に採用済み、recon.md 参照）に沿う一般的な対処であり、外部の失敗事例調査は本件の変更規模（既存パターンの組み合わせ）に対して不要と判断した。
+
+## 追記（2026-10-17）解析失敗のやり直し
+同じ10分ごとの回収に、解析段で失敗した v102 job（status='done' かつ error_message='ANALYSIS_FAILED'）を1回だけ再解析に積む段を足した。新しい表・列は増やしていない。詳細: docs/handoff/analysis-failed-record/design.md

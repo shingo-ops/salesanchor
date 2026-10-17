@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.routers._utils import log_hidden_error
 
 router = APIRouter()
 
@@ -128,9 +129,10 @@ async def upsert_link_template(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_link_templates.upsert_link_template", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"制約違反: {exc.orig}",
+            detail="制約違反",
         )
     row = result.mappings().first()
     await db.commit()

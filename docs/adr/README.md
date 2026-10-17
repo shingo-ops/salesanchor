@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-15 / ADR 総数: 176 件
+最終更新: 2026-10-17 / ADR 総数: 184 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -195,6 +195,14 @@
 | [ADR-1014](./ADR-1014-inventory-view-shows-distribution-rows.md) | ADR-1014: 在庫表は LINE 解析の配信行を出す | Accepted | — | — |
 | [ADR-1015](./ADR-1015-autonomy-b-class-no-po-approval.md) | ADR-1015: 危険でない変更（B 区分）は KGI・設計の PO 承認なしで PR まで進める | Accepted | — | — |
 | [ADR-1016](./ADR-1016-realtime-change-signal-standard.md) | ADR-1016: 書き込みが成功したら「変わった合図」を送り、画面は表を残したまま読み直す（即時反映の標準） | Accepted | — | — |
+| [ADR-1017](./ADR-1017-smoke-auth-least-privilege.md) | ADR-1017: smoke 認証経路は最小権限の専用ユーザーだけを許可し、全権ユーザーはコードで拒否する | Proposed | — | — |
+| [ADR-1018](./ADR-1018-public-sensitive-tables-rls-staged.md) | ADR-1018: public の機微 11 表への RLS は段階導入し、表ごとに型を決める | Accepted | — | — |
+| [ADR-1019](./ADR-1019-inventory-viewer-separate-accounts.md) | ADR-1019: 在庫の閲覧専用ページは、アプリと交わらない閲覧専用アカウントで開く | Accepted | — | — |
+| [ADR-1020](./ADR-1020-shared-product-required-fields.md) | ADR-1020: 共用商品の登録では9項目を必須にし、空にするのは「調べたが無い」と記録したときだけにする | Accepted | — | — |
+| [ADR-1021](./ADR-1021-bulk-condition-state.md) | ADR-1021: バルク系の商品で状態語が無いときは状態「Bulk」（配信可）にする。価格は1枚単価にそろえ、セット情報は備考に出す（価格は便2） | Accepted | — | — |
+| [ADR-1022](./ADR-1022-python-upgrade-deadline.md) | ADR-1022: Python は 3.12 のまま作り続け、2027 年 10 月までに本番ごと 3.14 へ上げる | Proposed | — | — |
+| [ADR-1023](./ADR-1023-condition-value-rank.md) | ADR-1023: 状態の価値順 — 複数の状態語が当たったら価値の低い状態を採る（v102） | Accepted | — | — |
+| [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Proposed | — | — |
 
 ## ステータス凡例
 

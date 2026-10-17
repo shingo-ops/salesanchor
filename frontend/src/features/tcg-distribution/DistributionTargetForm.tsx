@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 import type { DistributionTarget, DistributionTargetCreate, DistributionTargetUpdate } from "./distributionApi";
 import { createTarget, updateTarget, verifySpreadsheetAccess } from "./distributionApi";
 
@@ -235,14 +236,11 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
           </div>
 
           {/* 有効フラグ */}
-          <label className="dist-checkbox-row">
-            <input
-              type="checkbox"
-              checked={values.is_active}
-              onChange={(e) => set("is_active", e.target.checked)}
-            />
-            {t("distributionTarget.form.isActive")}
-          </label>
+          <Checkbox
+            label={t("distributionTarget.form.isActive")}
+            checked={values.is_active}
+            onChange={(e) => set("is_active", e.target.checked)}
+          />
         </div>
 
         <div className="dist-drawer-footer">

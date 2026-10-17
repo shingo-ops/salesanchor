@@ -1,10 +1,10 @@
 /**
  * /inventory — 在庫表（最終ユーザー向けビュー / ADR-093）。
  *
- * public.inventory の status='in_stock' かつ未失効のオファーを明細行で表示する読み取り専用画面。
- * 列: カテゴリー / 型番 / タイトル(日上・英下) / 状態 / 形態 / 在庫・予約 / 数量 / 単価 / 仕入元(掲載時刻)。
+ * LINE 解析の配信行を表示（ADR-1014）。super admin は行クリックで解析パネル（原文・Gemini 抽出・システム解析）。
+ * 列: 型番 / タイトル(日上・英下) / 状態 / 形態 / 在庫・予約 / 数量 / 単価 / 仕入元(掲載時刻)。
  * - 全列で昇順/降順ソート（バックエンド）。左端「リセット」でデフォルト(タイトル昇順)に戻る。
- * - カテゴリー絞り込み（プルダウン）＋検索（ボタン）＋ユーザー別フィルタ（仕入元/カテゴリー/列の取捨・永続化）。
+ * - カテゴリー絞り込み（プルダウン）＋検索（Enter で即時）＋提供者（選んだ仕入元だけ・保存しない）＋ユーザー別フィルタ（カテゴリー/列の取捨・永続化）。
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,33 +19,16 @@ import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Drawer } from "../../components/Drawer";
 import { TextFieldControl } from "../../components/TextField";
+import { MultiSelect } from "../../components/MultiSelect";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
-
-interface InventoryRow {
-  id: string;
-  product_id: number;
-  product_name: string | null;
-  name_en: string | null;
-  category: string | null;
-  mark: string | null;
-  condition: string;
-  unit: string | null;
-  offer_type: string | null;
-  status: string | null;
-  note_ja: string | null;
-  ship_ja: string | null;
-  merged_count: number;
-  posted_at: string | null;
-  ship_timing: string | null;
-  supplier_id: number;
-  supplier_name: string | null;
-  unit_price: number;
-  quantity: number | null;
-  tcg_type: string | null;
-  offered_at: string;
-  release_date: string | null;
-}
+import { DataTable } from "../../components/DataTable";
+import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
+import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
+import type { InventoryRow } from "../../features/inventory/inventoryColumns";
+import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
+import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 
 interface SupplierFacet {
   id: number;
@@ -66,6 +49,9 @@ interface InventoryListResponse {
 }
 
 const PER_PAGE = 50;
+
+// 並び替えプルダウンの値（`${sort}:${order}`）。
+const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"];
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -109,7 +95,7 @@ const buildFilterPayload = (v: FilterPayloadInput) => ({
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
-  "category", "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
+  "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
 export default function InventoryPage() {
@@ -144,7 +130,13 @@ export default function InventoryPage() {
   // ユーザー別フィルタ（ポップアップ・永続化）
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filterEnabled, setFilterEnabled] = useState(false);
+  // hiddenSupplierIds は画面では使わない（旧「仕入元を除外」の保存値）。GET で受けて PATCH でそのまま返す。
   const [hiddenSupplierIds, setHiddenSupplierIds] = useState<Set<number>>(new Set());
+  // 提供者（選んだ仕入元だけ表示。保存しない＝開くたびに空＝全員）
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+  const isMobile = useIsMobile();
+  const { isSuperAdmin } = useSuperAdmin();
+  const [drawerRow, setDrawerRow] = useState<InventoryRow | null>(null);
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [supplierFacet, setSupplierFacet] = useState<SupplierFacet[]>([]);
@@ -169,27 +161,19 @@ export default function InventoryPage() {
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
   // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
-  const tcgTypeName = useMemo(() => new Map(tcgTypes.map((tt) => [tt.code, tt.name_ja])), [tcgTypes]);
-  const categoryLabel = useCallback(
-    (row: InventoryRow): string =>
-      (row.tcg_type ? tcgTypeName.get(row.tcg_type) : null) ?? row.category ?? "-",
-    [tcgTypeName],
-  );
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
   // カテゴリーは常にコード順（文字コード昇順）で左から並べる（プルダウン・詳細フィルタ共通）。
   const sortedCategories = useMemo(() => [...categoryFacet].sort(), [categoryFacet]);
-  const colVisible = (c: string) => !filterEnabled || !hiddenColumns.has(c);
-  // checkbox(1) + title(1) + 可視の取捨対象列
-  const visibleColCount = 2 + HIDEABLE_COLUMNS.filter(colVisible).length;
+  const colVisible = useCallback(
+    (c: string) => !filterEnabled || !hiddenColumns.has(c),
+    [filterEnabled, hiddenColumns],
+  );
 
-  // 掲載時間: YYYY-MM-DD HH:mm（○時○分まで表示）
-  const fmtOfferedAt = useCallback((iso: string): string => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "-";
-    const p = (n: number) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-  }, []);
+  const columns = useMemo(
+    () => buildInventoryColumns({ t, colVisible, fmtOfferedAt }),
+    [t, colVisible],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(searchQ), 250);
@@ -216,9 +200,7 @@ export default function InventoryPage() {
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
       if (activeTab !== "all") params.set("tcg_type", activeTab);
-      if (filterEnabled && hiddenSupplierIds.size > 0) {
-        params.set("hide_supplier_ids", Array.from(hiddenSupplierIds).join(","));
-      }
+      if (selectedSupplierIds.length > 0) params.set("supplier_ids", selectedSupplierIds.join(","));
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
       }
@@ -252,7 +234,7 @@ export default function InventoryPage() {
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, hiddenSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
+  }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, selectedSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
   useEffect(() => {
     if (!filtersLoaded) return;
@@ -353,34 +335,17 @@ export default function InventoryPage() {
     return () => clearTimeout(timer);
   }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, mergeSamePost]);
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  // 全列ソート: 同列クリックで asc⇔desc、別列は asc から。
-  const onSort = (field: string) => {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortField(field);
-      setSortDir("asc");
-    }
-    setPage(1);
-  };
-  // リセット: 検索語・カテゴリー絞り込み・ソートを既定（タイトル昇順）に戻す。
+  // リセット: 検索語・カテゴリー絞り込み・ソートを既定（発売日の新しい順）に戻す。
   // ユーザー別の「詳細フィルタ」（仕入元/列の取捨）は意図的な設定なので保持する。
   const resetAll = () => {
     setSearchQ("");
     setDebouncedQ("");
     setCategory("");
-    setSortField("name");
-    setSortDir("asc");
+    setSortField("release_date");
+    setSortDir("desc");
     setPage(1);
   };
+  // Enter は 250ms の待ちを飛ばしてすぐ検索する（検索ボタンは無い）
   const runSearch = () => {
     setDebouncedQ(searchQ);
     setPage(1);
@@ -390,18 +355,12 @@ export default function InventoryPage() {
     freshOnly && freshWindowHours !== undefined
       ? windowHours && windowHours > 0 ? Math.min(freshWindowHours, windowHours) : freshWindowHours
       : windowHours;
-  const sortArrow = (field: string) =>
-    sortField === field ? (sortDir === "asc" ? t("inventory.sortAsc") : t("inventory.sortDesc")) : "";
 
-  const toggleHiddenSupplier = (id: number) => {
-    setHiddenSupplierIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const onSupplierChange = (next: string[]) => {
+    setSelectedSupplierIds(next);
     setPage(1);
   };
+  const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
   const toggleHiddenCategory = (c: string) => {
     setHiddenCategories((prev) => {
       const next = new Set(prev);
@@ -418,45 +377,6 @@ export default function InventoryPage() {
       else next.add(c);
       return next;
     });
-  };
-
-  // ソート可能な見出しセル（関数で返す＝nested-component を避ける）。
-  // 全列がソート可能であることが伝わるよう、非アクティブ列にも淡い中立アイコン(↕)を出す。
-  const sortTh = (colKey: string, field: string, align?: "right") => {
-    const active = sortField === field;
-    return (
-      <th style={{ textAlign: align ?? "left" }}>
-        <button
-          type="button"
-          onClick={() => onSort(field)}
-          data-testid={`inventory-sort-${field}`}
-          aria-label={t("inventory.sortBy", { col: t(`inventory.col.${colKey}`) })}
-          title={t("inventory.sortBy", { col: t(`inventory.col.${colKey}`) })}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            font: "inherit",
-            fontWeight: "var(--font-weight-semi)",
-            color: "inherit",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "var(--space-1)",
-          }}
-        >
-          {t(`inventory.col.${colKey}`)}
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: "var(--font-xs)",
-              color: active ? "var(--accent)" : "var(--text-muted)",
-            }}
-          >
-            {active ? sortArrow(field) : t("inventory.sortNone")}
-          </span>
-        </button>
-      </th>
-    );
   };
 
   return (
@@ -505,7 +425,7 @@ export default function InventoryPage() {
               <TextFieldControl
                 type="search"
                 className="field-h-md field-w-md"
-                placeholder={t("inventory.view.searchPlaceholder")}
+                placeholder={t("inventory.view.searchNameCode")}
                 data-testid="inventory-search"
                 value={searchQ}
                 onChange={(e) => {
@@ -514,9 +434,6 @@ export default function InventoryPage() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
               />
-              <Button variant="primary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-search-btn" onClick={runSearch}>
-                {t("common.search")}
-              </Button>
               <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
                 {t("inventory.resetSort")}
               </Button>
@@ -532,6 +449,38 @@ export default function InventoryPage() {
               >
                 {freshWindowHours === undefined ? t("inventory.view.freshOnly", { hours: "" }) : t("inventory.view.freshOnly", { hours: freshWindowHours })}
               </Button>
+              <SelectControl
+                size="sm"
+                className="field-h-md"
+                data-testid="inventory-sort-menu"
+                aria-label={t("inventory.sortMenu.placeholder")}
+                placeholder={t("inventory.sortMenu.placeholder")}
+                value={SORT_MENU_VALUES.includes(`${sortField}:${sortDir}`) ? `${sortField}:${sortDir}` : ""}
+                onChange={(e) => {
+                  const [field, dir] = e.target.value.split(":");
+                  if (!field) return;
+                  setSortField(field);
+                  setSortDir(dir === "asc" ? "asc" : "desc");
+                  setPage(1);
+                }}
+                options={[
+                  { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
+                  { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
+                  { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
+                ]}
+              />
+              {!isMobile && (
+                <MultiSelect
+                  testId="inventory-supplier-filter"
+                  label={t("inventory.supplierFilter.label")}
+                  options={supplierOptions}
+                  selected={selectedSupplierIds}
+                  onChange={onSupplierChange}
+                  clearLabel={t("inventory.supplierFilter.clear")}
+                  allLabel={t("inventory.supplierFilter.all")}
+                  countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
+                />
+              )}
               <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
                 type="button"
 
@@ -555,9 +504,10 @@ export default function InventoryPage() {
           sortedCategories={sortedCategories}
           hiddenCategories={hiddenCategories}
           toggleHiddenCategory={toggleHiddenCategory}
-          supplierFacet={supplierFacet}
-          hiddenSupplierIds={hiddenSupplierIds}
-          toggleHiddenSupplier={toggleHiddenSupplier}
+          showSupplierSelect={isMobile}
+          supplierOptions={supplierOptions}
+          selectedSupplierIds={selectedSupplierIds}
+          onSupplierChange={onSupplierChange}
           hideableColumns={HIDEABLE_COLUMNS}
           hiddenColumns={hiddenColumns}
           toggleHiddenColumn={toggleHiddenColumn}
@@ -637,135 +587,32 @@ export default function InventoryPage() {
         </p>
       </div>
 
-      {/* 列を分割して表示。狭幅では横スクロール。フォントは少し大きめ。 */}
-      <div style={{ overflowX: "auto" }}>
-        <table
-          className="data-table"
-          data-testid="inventory-table"
-          aria-busy={loading}
-          style={{ width: "100%", fontSize: "var(--font-md)" }}
-        >
-          <thead>
-            <tr>
-              <th style={{ width: "var(--col-width-checkbox)", textAlign: "center" }} aria-label={t("common.select")}></th>
-              {colVisible("category") && sortTh("category", "category")}
-              {colVisible("mark") && sortTh("mark", "mark")}
-              {sortTh("title", "name")}
-              {colVisible("condition") && sortTh("condition", "condition")}
-              {colVisible("unit") && sortTh("unit", "unit")}
-              {colVisible("offerType") && sortTh("offerType", "offer_type")}
-              {colVisible("quantity") && sortTh("quantity", "quantity", "right")}
-              {colVisible("unitPrice") && sortTh("unitPrice", "unit_price", "right")}
-              {colVisible("supplier") && sortTh("supplier", "supplier")}
-              {colVisible("note") && <th style={{ textAlign: "left" }}>{t("inventory.col.note")}</th>}
-              {colVisible("ship") && <th style={{ textAlign: "left" }}>{t("inventory.col.ship")}</th>}
-              {sortTh("releaseDate", "release_date")}
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td colSpan={visibleColCount} data-testid="inventory-empty">
-                  {t("inventory.noResults")}
-                </td>
-              </tr>
-            ) : (
-              items.map((it) => (
-                <tr key={it.id} data-testid={`inventory-row-${it.id}`}>
-                  <td style={{ textAlign: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(it.id)}
-                      onChange={() => toggleSelect(it.id)}
-                      aria-label={it.product_name ?? `#${it.product_id}`}
-                      data-testid={`inventory-row-${it.id}-select`}
-                    />
-                  </td>
-                  {colVisible("category") && (
-                    <td>{it.category || it.tcg_type ? <span className="badge">{categoryLabel(it)}</span> : "-"}</td>
-                  )}
-                  {colVisible("mark") && <td>{it.mark ?? "-"}</td>}
-                  <td>
-                    <div style={{ fontWeight: "var(--font-weight-semi)" }}>{it.product_name ?? `#${it.product_id}`}</div>
-
-                    {it.name_en && (
-                      <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>{it.name_en}</div>
-                    )}
-                  </td>
-                  {colVisible("condition") && (
-                    <td>{it.condition}</td>
-                  )}
-                  {colVisible("unit") && (
-                    <td>{it.unit ?? "-"}</td>
-                  )}
-                  {colVisible("offerType") && (
-                    <td>
-                      {it.offer_type === null ? (
-                        (it.status ?? "-")
-                      ) : it.offer_type === "pre_order" ? (
-                        <span className="badge badge-negotiating">{t("inventory.offerType.pre_order")}</span>
-                      ) : (
-                        t("inventory.offerType.in_stock")
-                      )}
-                      {it.offer_type === "pre_order" && it.ship_timing && (
-                        <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
-                          {t(`inventory.shipTiming.${it.ship_timing}`, { defaultValue: it.ship_timing })}
-                        </div>
-                      )}
-                    </td>
-                  )}
-                  {colVisible("quantity") && (
-                    <td style={{ textAlign: "right" }}>
-                      {it.quantity ?? ""}
-                      {it.merged_count >= 2 && (
-                        <div data-testid={`inventory-row-${it.id}-merged`} style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
-                          {t("inventory.mergedCount", { count: it.merged_count })}
-                        </div>
-                      )}
-                    </td>
-                  )}
-                  {colVisible("unitPrice") && (
-                    <td style={{ textAlign: "right" }}>¥{it.unit_price.toLocaleString()}</td>
-                  )}
-                  {colVisible("supplier") && (
-                    <td>
-                      <div>{it.supplier_name ?? `#${it.supplier_id}`}</div>
-                      <div style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
-                        {fmtOfferedAt(it.offered_at)}
-                      </div>
-                    </td>
-                  )}
-                  {colVisible("note") && <td>{it.note_ja ?? ""}</td>}
-                  {colVisible("ship") && <td>{it.ship_ja ?? ""}</td>}
-                  <td>{it.release_date ?? "-"}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <section
-        className="inventory-pagination"
-        style={{
-          marginTop: "var(--space-4)",
-          marginBottom: "var(--space-6)",
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading} data-testid="inventory-prev" variant="secondary" size="md">
-          {t("common.previous")}
-        </Button>
-        <span data-testid="inventory-pagination-label">
-          {t("inventory.pageOf", { page, total: totalPages, count: total })}
-        </span>
-        <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading} data-testid="inventory-next" variant="secondary" size="md">
-          {t("common.next")}
-        </Button>
-      </section>
+      <DataTable
+        columns={columns}
+        data={items}
+        rowKey={(it) => it.id}
+        rowTestId={(it) => `inventory-row-${it.id}`}
+        selectable
+        onRowClick={!isMobile ? (row) => setDrawerRow(row) : undefined}
+        selectedKeys={selectedIds}
+        onSelectChange={setSelectedIds}
+        sortKey={sortField}
+        sortDir={sortDir}
+        onSort={(key, dir) => { setSortField(key); setSortDir(dir); setPage(1); }}
+        page={page}
+        hasNextPage={page < totalPages}
+        onPageChange={setPage}
+        prevPageLabel={t("common.previous")}
+        nextPageLabel={t("common.next")}
+        pageInfo={t("inventory.pageOf", { page, total: totalPages, count: total })}
+        paginationTestIds={{ prev: "inventory-prev", next: "inventory-next", label: "inventory-pagination-label" }}
+        paginationDisabled={loading}
+        stickyHeader
+        fitToWidth
+        mobileCards
+        emptyState={t("inventory.noResults")}
+      />
+      {drawerRow && <InventoryRowDrawer row={drawerRow} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
     </PageLayout>
   );
 }

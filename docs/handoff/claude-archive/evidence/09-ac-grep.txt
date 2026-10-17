@@ -1,0 +1,40 @@
+origin/main:hooks/ac-board.mjs:6:import { chmodSync, closeSync, fchmodSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeSync } from "node:fs";
+origin/main:hooks/ac-board.mjs:152:    rmSync(tmp, { force: true });
+origin/main:hooks/ac-board.mjs:225:    result = runCommand({ argv: process.argv.slice(2), env: process.env, stdinText, dataDir: path.resolve(here, "..") });
+origin/main:hooks/activity-hook.mjs:29:  return Array.from(flat).slice(0, max).join("");
+origin/main:hooks/activity-hook.mjs:75:  return { ...frame, [key]: text.slice(0, keptUnits) };
+origin/main:hooks/activity-hook.mjs:180:  return `events-${new Date(ts).toISOString().slice(0, 10).replace(/-/g, "")}.jsonl`;
+origin/main:hooks/board-guard.mjs:23:    const message = (err instanceof Error ? err.message : String(err)).replace(/\s+/g, " ").slice(0, 300);
+origin/main:server/activity-hooks.ts:4:import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+origin/main:server/activity-hooks.ts:311:function pruneBackups(dir: string): void {
+origin/main:server/activity-hooks.ts:313:  for (const old of names.slice(0, Math.max(0, names.length - BACKUPS_KEPT))) rmSync(path.join(dir, old), { force: true });
+origin/main:server/activity-hooks.ts:353:    pruneBackups(dir);
+origin/main:server/activity-hooks.ts:362:    rmSync(tmp, { force: true });
+origin/main:server/activity-setup.ts:3:import { chmodSync, copyFileSync, mkdirSync, renameSync, rmSync } from "node:fs";
+origin/main:server/activity-setup.ts:51:    rmSync(tmp, { force: true });
+origin/main:server/activity-start.ts:81:          const removed = await store.pruneOldFiles();
+origin/main:server/activity.ts:4:import { open, readdir, stat, unlink } from "node:fs/promises";
+origin/main:server/activity.ts:109:  return Array.from(flat).slice(0, INPUT_PREVIEW_CHARS).join("");
+origin/main:server/activity.ts:183:  for (const [id] of order.slice(0, map.size - keep)) map.delete(id);
+origin/main:server/activity.ts:197:  for (const [key] of oldestFirst.slice(0, map.size - keep)) map.delete(key);
+origin/main:server/activity.ts:204:export const dayFileName = (ts: number): string => `events-${new Date(ts).toISOString().slice(0, 10).replace(/-/g, "")}.jsonl`;
+origin/main:server/activity.ts:285:   * 再起動後の復元（file-viewer 設計 §3-3）。readNew と同じ now で、names（今日・昨日）に無く、日付が cutoff（pruneOldFiles と同じ式）以上の
+origin/main:server/activity.ts:400:    const dropped = oldestFirst.slice(0, state.chat.length - CHAT_KEEP);
+origin/main:server/activity.ts:467:    state.inputs = [...state.inputs, { ts, text: preview }].sort((a, b) => b.ts - a.ts).slice(0, INPUTS_KEEP);
+origin/main:server/activity.ts:515:    return { running, tasks, inputs: state.inputs.slice(0, INPUTS_MAX), lastEventAt: state.lastEventAt };
+origin/main:server/activity.ts:524:  async pruneOldFiles(): Promise<string[]> {
+origin/main:server/activity.ts:535:      await unlink(path.join(this.activityDir, name)).then(
+origin/main:server/diff-comments-format.ts:18:    if (c.lineText !== undefined && c.lineText !== "") lines.push(`該当行: ${clean(c.lineText).slice(0, LINE_TEXT_CUT)}`);
+origin/main:server/diff-comments.ts:81:  const lineText = typeof r.lineText === "string" ? r.lineText.replace(ANY_CONTROL, " ").slice(0, MAX_LINE_TEXT_CHARS) : undefined;
+origin/main:server/diff-comments.ts:130:function prune(data: Data, known: readonly KnownPlace[]): Data {
+origin/main:server/diff-comments.ts:179:    const pruned = prune(raw, scope.known);
+origin/main:server/diff-comments.ts:180:    if (Object.keys(pruned).length !== Object.keys(raw).length) await this.write(pruned);
+origin/main:server/diff-comments.ts:181:    return pruned;
+origin/main:server/uploadName.ts:28:      name = `${Array.from(m[1]).slice(0, keep).join("")}.${m[2]}`;
+origin/main:server/uploadName.ts:30:      name = chars.slice(0, MAX_NAME_CHARS).join("");
+origin/main:server/uploads.ts:2:import { chmod, lstat, mkdir, readdir, rename, rmdir, stat, unlink, writeFile } from "node:fs/promises";
+origin/main:server/uploads.ts:66:      await this.prune(path.basename(file));
+origin/main:server/uploads.ts:88:      await this.pruneFiles(files, id);
+origin/main:server/uploads.ts:94:  private async pruneFiles(files: string, justSaved: string): Promise<void> {
+origin/main:server/uploads.ts:116:        for (const n of inner) await unlink(path.join(dir, n));
+origin/main:server/uploads.ts:117:        await rmdir(dir);

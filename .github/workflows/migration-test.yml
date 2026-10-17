@@ -625,6 +625,20 @@ jobs:
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
 
+          -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
+          --   20261016_160000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
+              id                       SERIAL PRIMARY KEY,
+              tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+              client_id_encrypted      TEXT    NOT NULL,
+              client_secret_encrypted  TEXT    NOT NULL,
+              environment              TEXT    NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+              updated_by_user_id       INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              webhook_id               TEXT
+          );
+
           -- public.current_tenant_id(): migration 014 で本番作成済み。
           --   RLS ポリシー（lead_attachments 等）が参照するため、ここで作成する。
           CREATE OR REPLACE FUNCTION public.current_tenant_id()
@@ -902,6 +916,33 @@ jobs:
               created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
               updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
           );
+          -- public.tenant_google_calendar_config: migrations/076_add_google_calendar_config.sql で本番作成済み。
+          --   20261016_010000_add_google_config_rls.sql（ADR-1018 段階②a）が ALTER TABLE ... ENABLE RLS するため前提として登録する。
+          CREATE TABLE IF NOT EXISTS public.tenant_google_calendar_config (
+            id                       SERIAL PRIMARY KEY,
+            tenant_id                INTEGER NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+            access_token_encrypted   TEXT    NOT NULL,
+            refresh_token_encrypted  TEXT    NOT NULL,
+            token_expiry             TIMESTAMP WITH TIME ZONE,
+            calendar_id              TEXT    NOT NULL DEFAULT 'primary',
+            connected_by_user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            connected_at             TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
+          -- public.tenant_google_drive_config: migrations/20260606_010000_add_google_drive_config.sql で本番作成済み。
+          --   20261016_010000_add_google_config_rls.sql（ADR-1018 段階②a）が ALTER TABLE ... ENABLE RLS するため前提として登録する。
+          CREATE TABLE IF NOT EXISTS public.tenant_google_drive_config (
+            id                       SERIAL PRIMARY KEY,
+            tenant_id                INTEGER NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+            access_token_encrypted   TEXT    NOT NULL,
+            refresh_token_encrypted  TEXT    NOT NULL,
+            token_expiry             TIMESTAMP WITH TIME ZONE,
+            account_email            TEXT,
+            folder_id                TEXT,
+            connected_by_user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            connected_at             TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
@@ -915,6 +956,12 @@ jobs:
           else
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
+
+      # public.suppliers.tenant_id: migrations/20260918_030000_supplier_ssot_phase2.sql:52 で本番追加済み。
+      #   Sprint 1（056-063）の suppliers には tenant_id が無く、20261016_020000_add_suppliers_rls.sql（S1 段階②b）の前提として追加する。
+      - name: suppliers.tenant_id を最小定義で追加（本番 phase2 相当）
+        run: |
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF to_regclass('public.suppliers') IS NOT NULL THEN ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS tenant_id INTEGER; END IF; END \$\$;"
 
       # ── Step 3: PR で変更されたマイグレーションスクリプトを実行 ──────────────────
       - name: 変更されたマイグレーションを検出
@@ -1556,6 +1603,19 @@ jobs:
               created_by   INTEGER     NOT NULL,
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
+          -- S1 段階③便A: tenant_paypal_config — 20260610_071110_add_paypal_config.sql で本番作成済み。
+          --   20261016_160000_add_paypal_regtoken_write_rls.sql の前提（webhook_id は 20260611_150000 で追加）。
+          CREATE TABLE IF NOT EXISTS public.tenant_paypal_config (
+              id                       SERIAL PRIMARY KEY,
+              tenant_id                INTEGER NOT NULL UNIQUE REFERENCES public.tenants(id) ON DELETE CASCADE,
+              client_id_encrypted      TEXT    NOT NULL,
+              client_secret_encrypted  TEXT    NOT NULL,
+              environment              TEXT    NOT NULL DEFAULT 'sandbox' CHECK (environment IN ('sandbox', 'live')),
+              updated_by_user_id       INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+              created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              webhook_id               TEXT
+          );
           -- public.tcg_distribution_settings: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20260927_120000_add_max_age_hours_setting.sql が INSERT INTO public.tcg_distribution_settings
           --   を実行するため、前提として最小定義を登録する。
@@ -1577,6 +1637,12 @@ jobs:
           else
             echo "ℹ️  Sprint 1 スクリプトなし — スキップ"
           fi
+
+      # public.suppliers.tenant_id: migrations/20260918_030000_supplier_ssot_phase2.sql:52 で本番追加済み。
+      #   Sprint 1（056-063）の suppliers には tenant_id が無く、20261016_020000_add_suppliers_rls.sql（S1 段階②b）の前提として追加する。
+      - name: suppliers.tenant_id を最小定義で追加（本番 phase2 相当）
+        run: |
+          psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF to_regclass('public.suppliers') IS NOT NULL THEN ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS tenant_id INTEGER; END IF; END \$\$;"
 
       # ── 廃止列前提検出: run_all_migrations.sh に登録された Python スクリプトを静的解析 ──
       # ADR-138 §D1-3 で廃止された leads.source 列を information_schema ガードなしで
@@ -1746,8 +1812,12 @@ jobs:
         # 報告用 DB（jarvis_report）に流し、落ちたファイルを一覧にする。落ちても job は失敗させない
         # （強制への切り替えは、この報告を見てから別の PR で行う）。
         continue-on-error: true
+        # --psql の後ろに -h を置くと argparse が help と読んで何も流れない（P3）。接続先は env で渡す。
+        env:
+          PGHOST: localhost
+          PGUSER: jarvis
         run: |
-          python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql -h localhost -U jarvis
+          python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告

@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import redis.asyncio as redis
 
@@ -20,13 +21,31 @@ PERMISSIONS_CACHE_TTL = 300
 _redis: Optional[redis.Redis] = None
 
 
+def _mask_url(url: str) -> str:
+    """接続先URLのパスワード部分を *** に置き換える（ログ出力用）。"""
+    try:
+        parts = urlsplit(url)
+        if parts.password is None:
+            return url
+        host = parts.hostname or ""
+        if ":" in host:
+            host = f"[{host}]"
+        if parts.port is not None:
+            host = f"{host}:{parts.port}"
+        user = parts.username or ""
+        netloc = f"{user}:***@{host}"
+        return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    except Exception:
+        return "<redacted>"
+
+
 async def init_redis() -> None:
     """Redis接続を初期化する。"""
     global _redis
     try:
         _redis = redis.from_url(REDIS_URL, decode_responses=True)
         await _redis.ping()
-        logger.info("Redis接続成功: %s", REDIS_URL)
+        logger.info("Redis接続成功: %s", _mask_url(REDIS_URL))
     except Exception:
         logger.critical("Redis接続失敗: ブラックリスト検証が無効になります")
         _redis = None
@@ -339,6 +358,46 @@ async def count_password_reset_request(email_lower: str) -> int:
     except Exception:
         logger.warning("再設定申請の回数記録に失敗: fail-openとして通過")
         return 0
+
+
+async def count_viewer_password_reset_request(email_lower: str) -> int:
+    """閲覧者の再発行申請を email（小文字）のハッシュ単位で数え、今回を含む回数を返す。アプリ側とは別のキー。Redis 不通時は 0（通す）。"""
+    r = get_redis()
+    if not r:
+        return 0
+    try:
+        key = f"viewer_pw_reset_req:{hashlib.sha256(email_lower.encode()).hexdigest()}"
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, PASSWORD_RESET_REQUEST_WINDOW)
+        return int(count)
+    except Exception:
+        logger.warning("閲覧者の再発行申請の回数記録に失敗: fail-openとして通過")
+        return 0
+
+
+VIEWER_SIGNUP_EMAIL_MAX = 3
+VIEWER_SIGNUP_IP_MAX = 10
+VIEWER_SIGNUP_WINDOW = 3600  # 1時間
+
+
+async def count_viewer_signup(kind: str, value: str) -> int | None:
+    """閲覧者の申込を kind（"email" か "ip"）と値のハッシュ単位で数え、今回を含む回数を返す。
+
+    Redis が無い・失敗したときは None（呼び出し側が「数えられなかった」と区別できるように）。
+    """
+    r = get_redis()
+    if not r:
+        return None
+    try:
+        key = f"viewer_signup_{kind}:{hashlib.sha256(value.encode()).hexdigest()}"
+        count = await r.incr(key)
+        if count == 1:
+            await r.expire(key, VIEWER_SIGNUP_WINDOW)
+        return int(count)
+    except Exception:
+        logger.warning("閲覧者の申込回数の記録に失敗: kind=%s", kind)
+        return None
 
 
 async def is_token_blacklisted(token: str) -> bool:

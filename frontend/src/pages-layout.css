@@ -328,7 +328,7 @@
   position: relative;
 }
 .color-swatch-legacy::after {
-  content: "現在";
+  content: attr(data-current-label);
   position: absolute;
   bottom: -14px;
   left: 50%;
@@ -610,18 +610,6 @@
 .permission-group-toggles {
   display: flex;
   gap: var(--space-3);
-}
-.chk-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-.chk-label input[type="checkbox"] {
-  margin: 0;
 }
 .permission-group-body {
   padding: var(--space-3) var(--space-4);

@@ -1,0 +1,90 @@
+/* 閲覧ページのレイアウト（余白と並びだけ。色・文字は金型とトークンに任せる） */
+.viewer-shell {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+.viewer-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.viewer-header__title {
+  margin: 0;
+  font-size: var(--font-lg);
+  margin-right: auto;
+}
+.viewer-header__updated {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+.viewer-main {
+  padding: 0 var(--space-4) var(--space-6);
+}
+.viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+.viewer-filter-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.viewer-filter-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.viewer-login {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 24rem;
+  margin: var(--space-12) auto;
+  padding: 0 var(--space-4);
+}
+.viewer-login__title {
+  margin: 0;
+  font-size: var(--font-xl);
+}
+.viewer-login__error {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: var(--font-sm);
+}
+.viewer-center {
+  padding: var(--space-12) var(--space-4);
+}
+.viewer-signup__trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+.viewer-signup__result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 24rem;
+  margin: 0 auto;
+}
+.viewer-signup__code {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-xl);
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  user-select: all;
+}
+.viewer-signup__note {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}

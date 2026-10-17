@@ -823,7 +823,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 配置用の幅・最小高さ・余白・flexは元のDOM上で維持し、同値の名前付き配置tokenに移す。公開口は意味のある配置classの登録に限定し、登録CSSに色・枠・文字の宣言を禁止する。表の列幅は列の所有元へ接続し、入力ごとに列幅の写しを持たない。既存field-h-md/field-w-sm/mdの適用先が外側divかnativeかを変えない。定義のない旧classの見た目を名称から創作しない。
 
-Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。
+Checkboxのデータ由来accentColorは用途が限定されたdataColor入口へ移す。通常UIの固定色をこの入口で免除しない。Toggleは既存8件の状態式・通知許可・終日時間の処理をそのまま利用する。レール44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）、つまみ18px、端の間隔3px、ON時移動20px。操作領域44×44は未着手（§AY-3b）。CheckboxControl は §AY-4a で新設（dataColor は AY-4c。AY-4c-2b で実装済み）。
 
 #### ボタンの操作契約
 
@@ -4195,3 +4195,87 @@ Architect 審査（AY-2p）: Fable 設計審査 r1 APPROVE（MEDIUM 2・LOW 3 �
 - 契約との違い: 「id/name、翻訳済み label を受け取る」は、8 か所が外にラベル文言を持つため id と aria-label／aria-labelledby で代えた。44×44 の操作領域は未着手（行の高さが変わり、対応トークンも無いため）。
 - 実測（本番 CSS と PR の vite build CSS を各 1 本のまま、390/1280 × ライト/ダーク × OFF/ON/focus-visible × 8 か所、1536 値）: 設計 §1.1 の表にない項目（色・display・flex-shrink・input の既定値など）の差は 0。表の幅 +2px の派生として、予定設定（/schedule/settings）の操作欄の幅が +2px、390px の行の scrollWidth が +2px（旧から既にはみ出している行）。数値は docs/handoff/design-system-recon/evidence-20260910/ay3b-acceptance.md。
 - 生の切替スイッチの再発は CI では検出しない（check-ui-governance への checkbox 検出追加は別判断）。
+
+#### AY-4a チェック欄の共通部品 CheckboxControl（2026-10-15）
+
+- 目的: 画面ごとにばらばらだったチェック欄の見た目を、共通部品 CheckboxControl 1 つにまとめる土台を作る。本便は部品の新設と、一覧表（DataTable）の選択欄 3 か所（全選択・表の行選択・カード行）の置き換えだけ。
+- PO 決定: 2026-10-02 Checkbox/Toggle/Radio の新規金型登録を許可（:1953）。2026-10-15「y」チェック欄の色は全部アプリの基本色 --accent（ライト #1e3a8a・ダーク #5b8dd9）。
+- 設計: docs/handoff/ay4a-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: frontend/src/components/CheckboxControl.tsx・CheckboxControl.css（ネイティブ checkbox 1 つ。幅高さ --size-checkbox（sm は --size-checkbox-sm）、cursor、accent-color: var(--accent)、disabled は not-allowed）。props は native 属性に加え size（md/sm）と indeterminate。className・style・type・role は受けない。DataTable.tsx の 3 か所（全選択・表の行選択・スマホのカード行）を置き換え、DataTable.css の .comp-table__check を撤去（未定義の --primary 参照 1 件が消える）。
+- 実測（origin/main の DataTable.tsx＋build CSS と作業ツリーの同じもの、390/1280 × ライト/ダーク × 未選択/選択/一部選択）: 差は accent-color の auto → --accent の値だけ。数値は docs/handoff/design-system-recon/evidence-20260910/ay4a-acceptance.md。
+- 残り: AY-4b（super-admin 専用 20 件と未使用 4 件）、AY-4c（一般画面 33 件・.form-group input[type=checkbox] と .form-row input:focus の撤去・Inbox の sm・予定のデータ色 dataColor）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4b super-admin 専用のチェック欄 24 件を金型へ（2026-10-15）
+
+- 目的: super-admin 専用 20 件と、どの画面からも使われていない 4 件の生チェック欄を、金型 Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」。金型は役割で分ける。文字と並ぶ欄は label 型 Checkbox（frontend/src/components/Checkbox.tsx）、表の中などの単独の欄は CheckboxControl（frontend/src/components/CheckboxControl.tsx）。色は --accent。画面の前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4b-checkbox/design.md（recon.md 併置）。設計審査 r2 条件付き APPROVE（指摘反映済み）。
+- 変更: 24 件（20 ファイル）。Checkbox 22 件、CheckboxControl 2 件（KnowledgeAliasesTab の表の行選択・別名選択）。ExtractionPromptConfigTab は下の TextareaControl との余白を保つため Checkbox を div（marginBottom のトークン参照）で包む。金型が無いことを理由にした ui-allow 2 件（SupplierDetailDrawer の #3564、UnitIgnorePhrasesPanel の #4032）を削除。表の例外の ui-allow 2 件は残す。金型 Checkbox.tsx・CheckboxControl.tsx の中身は変更なし。
+- 削除した規則: frontend/src/features/tcg-distribution/distribution.css の `.dist-checkbox-row`、frontend/src/pages/integrations/FedexLabelValidationTab.css の `.lv-check-label`（見出しコメント含む）。`pmd-confirm-check` は規則の無い class で、class 名のみ消えた。新しい class は作らない。
+- 実測: origin/main の build CSS と作業ツリーの build CSS を各 1 本のまま、型ごとの実物の親を再現して 390/1280 × ライト/ダーク × 未チェック/チェックを測定。表と画像は docs/handoff/design-system-recon/evidence-20260910/ay4b-measure-compare.txt と ay4b-*.png。
+- 残り: AY-4c（一般画面 33 件、.form-group input[type=checkbox] の撤去を含む）。
+
+#### AY-4c-1 一般画面のチェック欄 24 件を金型へ（2026-10-16）
+
+- 目的: 一般画面の生チェック欄 33 件のうち、金型の props でそのまま受けられる 24 件を Checkbox / CheckboxControl に載せかえる。
+- PO 決定: 2026-10-15「y」（AY-4b と同じ。文字と並ぶ欄は Checkbox、表の中などの単独の欄は CheckboxControl）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 24 件（16 ファイル）。Checkbox 19 件、CheckboxControl 5 件（InventoryVisibilityPage・ConditionsPage・ProductsPage の表のセル、Inbox の一括選択 2 件）。ConditionsPage・StatusMasterPage の全幅の欄は gridColumn だけを持つ div で包む。RolesPage の一括 2 件は title を持つ span で包む。
+- 削除した規則: frontend/src/pages-layout.css の `.chk-label`（と `.chk-label input[type="checkbox"]`）、frontend/src/pages/inbox/InboxPage.css の `.inbox-bulk-check-all`。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c-measure-compare.txt と ay4c-*.png（AY-4b と同じ作り方）。
+- 残り（AY-4c-2）: 9 件（MultiSelect、ContactEditPage・StaffEditPage・StaffPage の `.form-group label`、InboxProfileModal、SalesFormMultiSelect、RolesPage の permission-item、schedule の 2 件）。frontend/src/components.css:19・:33 の checkbox 行。frontend/src/company-forms.css:100・:135 のコメントと `.form-row input:focus`（checkbox 以外の input にも当たるため本便では残す）。予定の色（dataColor は frontend/src に実在しない。金型に色の口を足すかは PO 判断）。生 checkbox の再発検出（check-ui-governance への追加）は別判断。
+
+#### AY-4c-2a 口を足さずに移せるチェック欄 7 件を金型へ（2026-10-16）
+
+- 目的: 残り 9 件のうち、金型に口を足さずに載せかえられる 7 件を CheckboxControl / Checkbox に載せかえ、`.form-group` の古い checkbox 規則を外す。
+- PO 決定: 2026-10-15「y」（AY-4b・AY-4c-1 と同じ）。前後は実測で PO に見せてからマージ。
+- 設計: docs/handoff/ay4c2-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: 7 件（7 ファイル）。CheckboxControl 3 件（MultiSelect、SalesFormMultiSelect、RolesPage の権限カード。外側の label はそのまま）、Checkbox 4 件（ContactEditPage・StaffEditPage・StaffPage の `.form-group` 内、InboxProfileModal の右パネル）。副作用の手当てとして NotificationsPage の既存 Checkbox 2 か所を class なしの div で包んだ。
+- 削除・変更した規則: frontend/src/components.css の `.form-group input[type="checkbox"]`（通常・:focus の 2 行）を削除、`.form-group label` を `.form-group label:where(:not(.comp-checkbox))` に変更（詳細度 0,1,1 のまま）。frontend/src/components/MultiSelect.css の `.comp-multiselect__check`、frontend/src/pages/inbox/InboxPage.css の `.sales-form-option input[type="checkbox"]` を削除。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2-measure-compare.txt と ay4c2-*.png。`.form-group` 内の金型の全数は ay4c2-formgroup-ancestors.txt。
+- 残り（AY-4c-2b、PO 判断済み・下に記録）: 2 件（schedule/SchedulePageImpl.tsx の担当者別データ色のチェック欄）。次の残件は AY-4c-2b の記録に引き継ぐ。
+
+#### AY-4c-2b 予定表のカレンダーのチェック欄 2 件を、カレンダーの色のまま金型へ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（カレンダーの色のまま、CheckboxControl に dataColor の口を足す）。
+- 設計: docs/handoff/ay4c2b-checkbox/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: CheckboxControl に `dataColor?: string` を追加（未指定なら style 属性なし・--accent）。SchedulePageImpl.tsx の 2 件を CheckboxControl に載せかえ。schedule.css の `.schedule-calendar-checkbox` を行内の配置だけの `.schedule-calendar-item > input[type="checkbox"]` に置き換え。
+- 守り: CheckboxControl.test.tsx に dataColor の登録制の試験（登録表 `pages/schedule/SchedulePageImpl.tsx` 2 件、値は `{owner.color}` のみ）。Storybook に DataColor story。この試験は dataColor という名前の口だけを数える。別の部品が同じ名前の口を持つ場合は登録表を部品ごとに分ける（Badge は dataBackground / dataForeground で色を受けるので対象外、:874）。
+- 結果: アプリの生 checkbox は金型・Checkbox・Toggle 以外で 0 件。
+- 実測: docs/handoff/design-system-recon/evidence-20260910/ay4c2b-measure-compare.txt と ay4c2b-*.png。想定外の差 0。disabled の自分の行の cursor が pointer から not-allowed に変わるのみ（金型の形）。
+- 残り: ①frontend/src/company-forms.css:100・:135 のコメント見直し → コメントを今の事実に直した（AY-4d）。規則の撤去は別判断 ②spread 経由の dataColor を許すかの判断 ③check-ui-governance に「金型以外の `type="checkbox"` 禁止」を足すかの判断 → AY-4d で済。
+
+#### AY-4d 生チェック欄を UI governance gate の種別に追加（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（自動チェックに、金型を使わない生チェック欄を止める項目を足す）。
+- 設計: docs/handoff/ay4d-checkbox-guard/design.md（recon.md 併置）。設計審査 r2 APPROVE。
+- 変更: scripts/check-ui-governance.js に種別 `checkbox` を追加（type が checkbox の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T21〜T29 を追加し、試験は 22 件から 31 件。docs/CC_UI_GOVERNANCE.md の禁止表に 1 行追加。ADR-144 に追記節。frontend/src/company-forms.css:100・:135 はコメントだけ直した（規則は触っていない）。
+- 効果: `frontend/src/pages/` の .tsx に生の `<input type="checkbox">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
+- 対象外: 生 radio（pages/ に 4 件 → AY-5 で 0 件）、features/・components/ の検査（今は金型本体以外 0 件。書いても止まらない）、動的な type。
+- 残り: features/ の検査は ADR-144 改訂案の全件検査への切替で扱う。company-forms.css の focus 規則の撤去は見た目の前後実測の便で判断する。checkbox を含まないまま古くなる列挙 3 か所（.github/workflows/ui-governance-gate.yml:3-4、docs/BRANCH_PROTECTION_SETUP.md:314、CLAUDE.md:119）は CI 設定・全員向け規則文のため今回は触っていない。
+
+#### AY-5 Radio・RadioControl 金型と生ラジオ 7 件の載せかえ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（ラジオボタンの金型をチェック欄の金型と同じ形で作り、7 件を載せかえる）。前提: 2026-10-02 の新規金型登録許可（:1953）、2026-10-15 の色は全部 --accent（:4202）。
+- 設計: docs/handoff/ay5-radio/design.md（recon.md 併置）。設計審査合格。
+- 変更: frontend/src/components/Radio.tsx・Radio.css（文字と並ぶ欄。Checkbox と同じ形で border・background・box-shadow は持たない）と RadioControl.tsx・RadioControl.css（単独の欄。寸法は --size-checkbox、選択色は --accent）を新設。RegisterPage.tsx の 2 件（R1・R2）を Radio、RolesPage.tsx の 2 件（R3・R4）と MergeCompanyModal・MergeContactModal・MergeLeadModal の 3 件（R5〜R7）を RadioControl に載せかえ。試験 Radio.test.tsx・RadioControl.test.tsx、stories 2 本を追加。
+- 使い分け: 文字と並ぶ欄は Radio、表の中・色見本など単独の欄は RadioControl（チェック欄と同じ決め方）。
+- 前後実測の結果: 指標 3248（同じ 2180・想定内の差 1068・想定外の差 0）。比較: docs/handoff/design-system-recon/evidence-20260910/ay5-measure-compare.txt（前後の画像 ay5-*.png・横並び ay5-side-*.png も同じ場所）。R3・R4（色見本）は幅・高さ・位置・opacity・cursor の差 0、差は accent-color だけ。R1 の今（前）の gap は normal・marginTop は 0px（`--spacing-*` が未定義のため）。
+- 対象外: ChoiceCardGroup.tsx（すでに金型の中）、check-ui-governance への radio 種別の追加（AY-5b として別に提案）、寸法 sm・dataColor の口。
+- 残件: ①RegisterPage.tsx の未定義トークン `--spacing-*`（R1・R2 以外の 22 か所） ②pages-layout.css の `.color-swatch-legacy::after` の直書き「現在」（ADR-027） ③R1・R2 の質問文の fieldset/legend 化と R5〜R7 の aria-label ④Radio を .form-group の中に置くと components.css:11・:19 の規則で崩れる件（今回の使い手は .form-group の外） ⑤AY-5b（自動チェックに radio 種別を足す）。
+
+#### AY-5b 生ラジオの見張り（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（自動チェックに、金型を使わない生ラジオを止める項目を足す）。
+- 設計: docs/handoff/ay5b-radio-guard/design.md（recon.md 併置）。
+- 変更: scripts/check-ui-governance.js に種別 `radio` を追加（type が radio の文字列・波括弧付き文字列。動的な type は数えない）。scripts/tests/test-ui-governance.js に T30〜T37 を追加し、試験は 31 件から 39 件。docs/CC_UI_GOVERNANCE.md の禁止表に生ラジオの行を追加。ADR-144 に追記節を追加。
+- 範囲: 今と同じ `frontend/src/pages/` の .tsx（PR の変更ファイル）。features/・components/ は検査しない。今の pages/ の生ラジオは 0 件。
+- 効果: pages/ の .tsx に生の `<input type="radio">` を新しく書いた PR は、必須チェック UI governance gate が赤になる。ui-allow（理由と番号）で例外にできる。
+
+#### AY-5c 色見本の「現在」を翻訳キーへ（2026-10-16）
+
+- PO 決定: 2026-10-16「y」（ロール編集の色見本の下の「現在」を、CSS 直書きから翻訳キー経由にする。ADR-027）。AY-5 の残件②の対応。
+- 設計: docs/handoff/ay5c-swatch-current-i18n/design.md（recon.md 併置）。
+- 変更: frontend/src/locales/ja.json・en.json の roles に `currentColorBadge`（ja「現在」・en「Current」）を追加。RolesPage.tsx の `.color-swatch-legacy` の label に `data-current-label={t("roles.currentColorBadge")}` を追加。pages-layout.css の `.color-swatch-legacy::after` を `content: attr(data-current-label);` に変更（前例: components.css の `content: attr(data-tooltip);`）。::after の位置・大きさ・色は変更なし。
+- 確認結果（1280 幅・ライト／ダーク、前は origin/main の build CSS、後は作業ツリーの build CSS）: 前 ja と 後 ja の ::after（content・font-size・color・bottom・left・transform・white-space）の差は 0（ライト 0・ダーク 0）。後 en の content は "Current"（ライト・ダークとも）。後 en で前 ja と違うのは transform の水平移動量だけ（-11.2031px から -20.7578px。文字幅が変わるため。中央寄せの宣言は同じ）。CSS の content に日本語は 0 件（git grep）。
+- 証跡: docs/handoff/design-system-recon/evidence-20260910/ay5c-measure.cjs・ay5c-render.tsx・ay5c-measure.json・ay5c-measure.txt。

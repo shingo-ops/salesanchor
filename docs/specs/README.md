@@ -30,6 +30,7 @@
 | 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation/inventory-analytics すべて あるべき姿・KGI・To-Be完成 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
 | ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C43合意・[詳細設計案](../handoff/tcg-import-latest-only/sold-out-rules-design.md)作成・本番DB/接続実測済・自己審査REVISE・Q24未決。実装未着手 |
+| ├ 在庫の閲覧専用ページ（inventory-viewer。お客さんが自社サーバーで在庫表だけを見る・GAS 在庫一覧の置き換え） | [inventory-management/inventory-viewer/README.md](inventory-management/inventory-viewer/README.md) | あるべき姿・KGI 作成 2026-10-15・設計 PO 承認済 2026-10-16・実装着手 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 |
 | 管理センター（management-center。全データの基盤管理＝データセンターの役割。CRM等の分析機能とは意図的に別役割） | [management-center/README.md](management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
@@ -65,13 +66,17 @@
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 |
 | 認証・権限・ロール（auth-roles。各社のロールと運営者 super admin の境界） | [auth-roles/README.md](auth-roles/README.md)（関連: ADR-023, 032, 138, 147, 1007） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-10） |
 | ログイン方式（auth-login。自社サーバーでのパスワード・パスキー・再設定メール） | [auth-login/README.md](auth-login/README.md)（関連: ADR-1013, 138, 1008） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-13） |
-| テナント管理・RLS | （仕様書未作成・関連: ADR-072, 034, 036） | 未 |
+| テナント管理・RLS（tenant-rls。会社ごとのデータを DB の RLS で他社から見えなくする） | [tenant-rls/README.md](tenant-rls/README.md)（関連: ADR-1018, 145, 072, 131, 034, 036） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-15・段階①〜③ 本番反映済み 2026-10-16・KGI-1/3 ○、KGI-2 はログイン成功と画面目視が未観測） |
+| 接続元 IP の決め方（client-ip。回数制限・監査記録・セッション保護に使う IP を、利用者が書き換えられない値から 1 つの関数で決める） | [client-ip/README.md](client-ip/README.md)（関連: ADR-127, 1013, 1019） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・本番反映済み 2026-10-16 #4390・K1〜K4 ○・追補 S5b 端末登録 #4437 本番反映 2026-10-17・D1〜D3 ○） |
+| 例外の中身を応答に出さない（db-error-detail。DB の失敗時に SQL 文・入力値を画面に出さず、ログにだけ残す） | [db-error-detail/README.md](db-error-detail/README.md) | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・本番反映済み #4399・K1〜K3 ○） |
+| 一覧の全件取得・ファイル出力の記録と閲覧の大量検知（get-access-audit。誰が全件や CSV を取ったかを記録し、10 分 500 回超の閲覧を警告） | [get-access-audit/README.md](get-access-audit/README.md) | 仕様書あり（あるべき姿=PO発言転記・KGI は 2026-10-17 一任に基づき Opus 確定・本番反映済み #4411・K1〜K4 ○・追補1 #4421 F1〜F3 ○） |
 | 権限・秘密SSOT化（secrets-permission-ssot。鍵・権限を1冊の台帳で管理し置き間違いを警報） | [secrets-permission-ssot/README.md](secrets-permission-ssot/README.md) | あるべき姿確定・KGI確定 2026-07-20 |
 | 出荷キャリア連携（接点: order_shipping_details。発送の事実は取引フロー） | （仕様書未作成・関連: ADR-103, 123, 128） | 未 |
 | 開発ループの自動ガード化（process-hardening。AIエージェントの手順ミスを機械で自動で止める/正す） | [process-hardening/README.md](process-hardening/README.md) | あるべき姿確定 2026-07-19 |
 | サーバーリソース最適化 | docs/specs/server-resource-optimization/README.md(メモリ・ディスクのゴミ排除と自動掃除) | 公開 |
 | Docker（Colima）使い終わり自動停止（colima-idle-stop。PO の Mac で使っていない試験用 DB の入れ物を自動で止めてメモリを空ける） | [colima-idle-stop/README.md](colima-idle-stop/README.md) | あるべき姿=PO発言転記・実装済み（#4294）・KGI 7/7 合格 2026-10-15 |
 | Mac の自動お手入れの見張り（mac-jobs-watch。Docker 自動停止と毎日の自動片付けが止まったり失敗したりしたら Discord で知らせる） | [mac-jobs-watch/README.md](mac-jobs-watch/README.md) | あるべき姿=PO発言転記・設置済み K1〜K5 合格（2026-10-15 #4315）・K6 観測待ち |
+| 仮想マシンが要る試験を GitHub で行う（vm-test-on-gha。PO の Mac で試験用の仮想マシンを作らず、GitHub のコンピュータで試す） | [vm-test-on-gha/README.md](vm-test-on-gha/README.md) | あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・設計審査済み・実装中 |
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 |

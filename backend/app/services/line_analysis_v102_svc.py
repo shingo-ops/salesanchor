@@ -25,7 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import tcg_analyzer_svc as analyzer
-from app.services.extraction_judgement_svc import order_from_pattern
+from app.services.extraction_judgement_svc import build_cond_terms, order_from_pattern
 from app.services.gemini_extraction_svc import _GEMINI_MODEL, _classify_error, _safe_error_message
 from app.services.gemini_raw_copy_v8 import build_prompt_v8, call_gemini_raw_copy_v8
 from app.services.gemini_raw_copy_v101 import (
@@ -40,7 +40,11 @@ from app.services.gemini_raw_copy_v101 import (
 )
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
-from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
+from app.services.gemini_raw_copy_v102_product_first import (
+    PRODUCT_KUBUN_BULK,
+    load_product_first_masters,
+    with_cond_terms,
+)
 from app.services.gemini_raw_copy_v102_soldout_ref import (
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
     SoldItem,
@@ -56,10 +60,19 @@ from app.services.tcg_condition_review_svc import (  # noqa: F401  REASON_* は�
     condition_effect_sql,
 )
 from app.services.tcg_extraction_record_svc import RecordError
+from app.services.v102_bulk_price_svc import DECISION_PIECE, DECISION_SET
+from app.services.v102_bulk_price_svc import convert as convert_bulk_price
 from app.services.v102_buyback_unit_svc import apply_buyback_units
 from app.services.v102_buyback_unit_svc import is_candidate as is_buyback_candidate
 from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
-from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
+from app.services.v102_human_decisions_svc import (
+    FIELD_V102_PRICE,
+    Decisions,
+    apply_value_overrides,
+    load_v102_decisions,
+    status_available_by_human,
+    v102_analysis_lock_key,
+)
 from app.services.v102_status_context import posted_jst_date
 from app.services.v102_unit_price_check_svc import REASON_UNIT_PRICE_MISMATCH, Candidate, find_mismatches
 
@@ -92,6 +105,7 @@ REASON_EXTRACT_EXCEPTION = "extract_exception"
 REASON_VALUE_OUT_OF_RANGE = "value_out_of_range"  # 価格・数量が NUMERIC(14,2) に入らず None にした（便G）
 REASON_ITEM_MAPPING_MISMATCH = "item_mapping_mismatch"  # この行に対応する v102 の件が無い・行番号が合わない（便G）
 REASON_GEMINI_GAP_SUSPECT = "gemini_gap_suspect"  # 件の間の行を Gemini が使わず、商品が決まらなかった（段2a。段1の記録の gap_name の件）
+REASON_BULK_PRICE_BASIS_UNKNOWN = "bulk_price_basis_unknown"  # バルク系で、価格が1枚の値段かセットの値段か原文から決まらない（便2。配信しない）
 MAPPING_MISMATCH_MATCH_STATUS = "unmapped"  # 対応が付かない行の pid_basis（V102:unmapped）
 REASON_SEPARATOR = ","
 # REASON_UNIT_PRICE_MISMATCH（単位と価格が相場と合わない・便UP）は v102_unit_price_check_svc が定義し、_write_results が付ける
@@ -193,7 +207,8 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
     masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
-        "product_first": load_product_first_masters(session),
+        # 除外ワードの判定に使う状態の合図の語は cond_entries から一度だけ作る（新しい表・設定値は持たない）
+        "product_first": with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
         _SHIP_ENTRIES_KEY: analyzer.load_ship_master(session),
         _SHIP_DROP_KEY: analyzer.load_ship_drop_master(session),
     }
@@ -838,10 +853,13 @@ def _apply_soldout_targets(
     return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
 
 
-def _extra_targets(values: dict, item: dict, decision: Decisions | None) -> list[dict]:
-    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。相手が無い件・人の判断がある件は空。"""
+def _extra_targets(values: dict, item: dict, decision: Decisions | None, status_entries: list[dict] | None = None) -> list[dict]:
+    """analysis_soldout_extra_targets に書く相手：書いた行の (商品, 状態) と違う相手。
+
+    相手が無い件・人の判断がある件・人が販売状況を在庫あり側に直した件は空（ほかの商品の is_current を落とさない）。
+    """
     targets = item.get("soldout_targets") or []
-    if not targets or _has_human_judgement(decision):
+    if not targets or _has_human_judgement(decision) or status_available_by_human(decision, status_entries or []):
         return []
     written = (values["product_id"], values["condition_id"])
     return [t for t in targets if (t["product_id"], t["condition_id"]) != written]
@@ -881,8 +899,10 @@ def _buyback_units(
         return base_values  # 対象が無ければ DB も SAVEPOINT も使わない
     try:
         with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
-            human_condition = frozenset(
-                i for i, (_item, row) in enumerate(pairs) if (d := decisions.get(str(row.id))) is not None and d.condition_id is not None
+            human_condition = frozenset(  # 状態の判断がある件と、単位か価格を人が直した件は、買取価格では決めない
+                i for i, (_item, row) in enumerate(pairs)
+                if (d := decisions.get(str(row.id))) is not None
+                and (d.condition_id is not None or d.values.unit is not None or d.values.price is not None)
             )
             return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, human_condition)
     except Exception as exc:  # noqa: BLE001
@@ -910,6 +930,60 @@ def _unit_price_mismatches(session: Session, extraction_job_id: str, base_values
         return frozenset()
 
 
+_PIECE_UNIT = "Piece"
+_PRICE_BASIS_BULK_PIECE = "V102:bulk:piece"
+_PRICE_BASIS_BULK_SET = "V102:bulk:set:"
+
+
+def _source_block(raw_text: str | None, row: object) -> str:
+    """件の原文ブロック。source_lines（無ければ line_start〜line_end）の行（1始まり）を改行でつなぐ。得られなければ空。"""
+    if not raw_text:
+        return ""
+    lines = raw_text.split("\n")
+    numbers = _stock_lines(getattr(row, "source_lines", None), getattr(row, "line_start", None), getattr(row, "line_end", None))
+    return "\n".join(lines[n - 1] for n in sorted(numbers) if 1 <= n <= len(lines))
+
+
+def _as_float(value: object) -> float | None:
+    return float(value) if value is not None else None  # type: ignore[arg-type]
+
+
+def _bulk_review(values: dict) -> dict:
+    reasons = _join_unique([*_split_reasons(values["review_reasons"]), REASON_BULK_PRICE_BASIS_UNKNOWN])
+    return {**values, "review_reasons": reasons, "needs_review": True}
+
+
+def _apply_bulk_price(values: dict, item: dict, block: str, unit_ids: dict) -> dict:
+    """バルク系の価格を1枚の値段にそろえる（便2。規則は v102_bulk_price_svc）。バルク系以外・商品が決まらない行は values をそのまま返す。
+
+    set は単価・数量を換算して備考に「N枚セット単位…」、piece は価格・数量そのまま、決まらない行は理由を足して要確認にする。
+    """
+    if item.get("product_category") != PRODUCT_KUBUN_BULK or not values["pid_resolved"]:
+        return values
+    result = convert_bulk_price(block, _as_float(values["price_normalized"]), _as_float(values["quantity_normalized"]))
+    piece_id = unit_ids.get(_PIECE_UNIT)
+    if result.decision not in (DECISION_PIECE, DECISION_SET) or piece_id is None:
+        return _bulk_review(values)  # Piece の id が引けないときも決めない（id を作らない）
+    unit = {"unit_canonical": _PIECE_UNIT, "unit_id": int(piece_id), "unit_resolved": True}
+    if result.decision == DECISION_PIECE:
+        return {**values, **unit, "price_basis": _PRICE_BASIS_BULK_PIECE}
+    return {
+        **values, **unit, "price_normalized": result.unit_price, "quantity_normalized": result.quantity,
+        "note_ja": result.note, "price_basis": f"{_PRICE_BASIS_BULK_SET}{result.n}",
+    }
+
+
+def _without_bulk_reason_if_human_priced(values: dict, decision: Decisions | None) -> dict:
+    """人が価格か数量を直した行は、価格の決まらない理由を外す（人が決めたため。ほかの理由は残す）。"""
+    if decision is None or (decision.values.price is None and decision.values.quantity is None):
+        return values
+    reasons = _split_reasons(values["review_reasons"])
+    if REASON_BULK_PRICE_BASIS_UNKNOWN not in reasons:
+        return values
+    kept = _join_unique([r for r in reasons if r != REASON_BULK_PRICE_BASIS_UNKNOWN])
+    return {**values, "review_reasons": kept, "needs_review": kept is not None}
+
+
 def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
     """理由 unit_price_mismatch を末尾に足す（元の values は変えない）。人の「このままで良い」は _apply_decisions が外す。"""
     if not is_mismatch:
@@ -920,7 +994,7 @@ def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
 
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
-    decisions: dict[str, Decisions] | None = None,
+    decisions: dict[str, Decisions] | None = None, raw_text: str | None = None,
 ) -> dict:
     decisions = decisions or {}
     v102_items = pipeline["v102_items"]
@@ -937,6 +1011,16 @@ def _write_results(
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     session.execute(text(_DELETE_EXTRA_TARGETS_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id})  # やり直しで古い相手を消す
     base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+    base_values = [  # 便2：バルク系の価格を1枚の値段に（原文ブロックは投稿の raw_text から。追加の問い合わせなし）
+        _apply_bulk_price(values, item, _source_block(raw_text, row) if item.get("product_category") == PRODUCT_KUBUN_BULK else "", unit_ids)
+        for values, (item, row) in zip(base_values, pairs)
+    ]
+    status_entries = masters["status_entries"]  # load_status_master を呼び直さない（例外時に rollback するため）
+    base_values = [  # 人が直した値（数量・単価・単位・メモ・販売状況）。買取単位・単位と価格の確認は、この人の値で判定する
+        _without_bulk_reason_if_human_priced(apply_value_overrides(values, d.values, unit_ids, status_entries), d)
+        if (d := decisions.get(str(row.id))) is not None else values
+        for values, (_item, row) in zip(base_values, pairs)
+    ]
     base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
@@ -945,12 +1029,13 @@ def _write_results(
             _apply_decisions(_with_unit_price_reason(base_values[index], index in mismatches), item, decision, canonicals),
             item, decision, canonicals, excluded_ids,
         )
+        values = _inherit_price(session, extraction_job_id, row, values, item.get("product_category") == PRODUCT_KUBUN_BULK)
         result_id = session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
              "computed_at": now, "updated_at": now},
         ).scalar_one()
-        _write_extra_targets(session, result_id, _extra_targets(values, item, decision))
+        _write_extra_targets(session, result_id, _extra_targets(values, item, decision, status_entries))
         stats["pid_resolved"] += int(values["pid_resolved"])
         stats["unit_resolved"] += int(values["unit_resolved"])
         stats["needs_review"] += int(values["needs_review"])
@@ -1069,6 +1154,82 @@ def load_soldout_ref_posts(session: Session, extraction_job_id: str) -> tuple[So
     )
 
 
+PRICE_BASIS_INHERIT_PREFIX = "INHERIT:"
+INHERIT_PRICE_MAX_GAP_SECONDS = SOLDOUT_REF_MAX_GAP_SECONDS  # 48時間。〆の参照と同じ測り方
+
+_INHERIT_PRICE_SQL = """
+    SELECT ar.id, ar.price_normalized
+    FROM {schema}.analysis_results ar
+    JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+    JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+    JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+    WHERE sm.supplier_channel_id = :channel
+      AND ar.product_id = :product_id AND ar.condition_id = :condition_id
+      AND ar.price_normalized IS NOT NULL
+      AND ar.status IS DISTINCT FROM :sold_out
+      AND (ar.price_basis IS NULL OR ar.price_basis NOT LIKE :inherit_like)
+      AND sm.line_posted_at < :posted_at
+      AND sm.line_posted_at >= :posted_at - make_interval(secs => :gap)
+      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
+                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
+    ORDER BY sm.line_posted_at DESC, ei.line_start DESC NULLS LAST, ar.id DESC
+    LIMIT 1
+"""
+_PRICE_CORRECTION_SQL = """
+    SELECT human_value FROM {schema}.item_corrections
+    WHERE extraction_item_id::text = :item_id AND field_name = :field
+    ORDER BY corrected_at DESC, id DESC LIMIT 1
+"""
+
+
+def _inherit_price(session: Session, extraction_job_id: str, row, values: dict, is_bulk: bool = False) -> dict:
+    """価格なし・数ありの件に、同じ仕入元・同じ商品×状態の前の価格（48時間以内）を引き継ぐ。失敗したら引き継がない。
+
+    バルク系は引き継がない（別サイズのセット価格が混ざる。便2）。
+    """
+    if (
+        is_bulk
+        or values["price_normalized"] is not None
+        or values["quantity_normalized"] is None
+        or values["product_id"] is None
+        or not values["pid_resolved"]
+        or values["condition_id"] is None
+        or values["status"] == STATUS_SOLD_OUT
+    ):
+        return values
+    raw_price = getattr(row, "raw_price", None)
+    if raw_price is not None and str(raw_price).strip().lower() not in ("", "none"):
+        return values  # 仕入元が価格を書いている（読めなかっただけ）。古い価格で隠さない
+    schema = analyzer.TCG_SCHEMA
+    try:
+        with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
+            correction = session.execute(
+                text(_PRICE_CORRECTION_SQL.format(schema=schema)), {"item_id": str(row.id), "field": FIELD_V102_PRICE}
+            ).first()
+            if correction is not None and (correction.human_value or "") == "":
+                return values  # 人が価格を消した
+            current = session.execute(text(_FOLLOWUP_CURRENT_SQL.format(schema=schema)), {"ej": extraction_job_id}).first()
+            if current is None or current.supplier_channel_id is None or current.line_posted_at is None:
+                return values
+            src = session.execute(
+                text(_INHERIT_PRICE_SQL.format(schema=schema)),
+                {
+                    "channel": current.supplier_channel_id, "product_id": values["product_id"], "condition_id": values["condition_id"],
+                    "sold_out": STATUS_SOLD_OUT, "inherit_like": PRICE_BASIS_INHERIT_PREFIX + "%",
+                    "posted_at": current.line_posted_at, "gap": INHERIT_PRICE_MAX_GAP_SECONDS,
+                },
+            ).first()
+            if src is None:
+                return values
+            return {
+                **values, "price_normalized": src.price_normalized,
+                "price_basis": f"{PRICE_BASIS_INHERIT_PREFIX}{src.id}"[:_PRICE_BASIS_MAX],
+            }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[inherit_price] 前の価格の引き継ぎに失敗したので、この件は価格なしのまま保存します: job=%s error=%r", extraction_job_id, exc)
+        return values
+
+
 _STOCK_ITEMS_SQL = """
     SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id,
            COALESCE(ar.condition_canonical, '') AS condition_canonical
@@ -1177,7 +1338,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
 
     schema = analyzer.TCG_SCHEMA
     # 同じ投稿のやり直しが並行して走ると、判断の読み込みと書き込みが交差する。取引の最初に投稿ごとの鍵を取り、順番に走らせる
-    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"v102_analysis:{extraction_job_id}"})
+    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": v102_analysis_lock_key(extraction_job_id)})
     ctx = load_extraction_context(session, extraction_job_id)
     if ctx is None:
         raise ValueError(f"extraction_job が見つかりません: {extraction_job_id}")
@@ -1186,7 +1347,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
     ).one()
     rows = session.execute(
         text(f"""
-            SELECT id, gemini_index, source_lines, raw_price, raw_quantity FROM {schema}.extraction_items
+            SELECT id, gemini_index, source_lines, line_start, line_end, raw_price, raw_quantity FROM {schema}.extraction_items
             WHERE extraction_job_id = :ej ORDER BY gemini_index NULLS LAST, created_at, id
         """),
         {"ej": extraction_job_id},
@@ -1207,7 +1368,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
             load_posted_date(session, extraction_job_id),
         )
         pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
-        stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions)
+        stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions, ctx.raw_text)
         session.commit()
     except Exception:  # noqa: BLE001
         session.rollback()

@@ -17,6 +17,7 @@ import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { TextField } from "./TextField";
 import { Select } from "./Select";
+import { Checkbox } from "./Checkbox";
 
 export interface ContactChannelEntry {
   id?: number;
@@ -222,15 +223,11 @@ export default function ContactChannelForm({
           )}
 
           <div className="form-row">
-            <label>
-              {/* checkbox は TextField 対象外のため残置 */}
-              <input
-                type="checkbox"
-                checked={isPrimary}
-                onChange={(e) => setIsPrimary(e.target.checked)}
-              />
-              {" "}{t("contactChannel.isPrimaryLabel")}
-            </label>
+            <Checkbox
+              label={t("contactChannel.isPrimaryLabel")}
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+            />
           </div>
         </div>
 

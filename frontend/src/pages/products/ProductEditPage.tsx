@@ -21,6 +21,7 @@ import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
+import { requiredFieldsMessage } from "../../features/tcg-product-import/productDetailModel";
 
 export default function ProductEditPage() {
   const { t } = useTranslation();
@@ -168,7 +169,7 @@ export default function ProductEditPage() {
       }
       navigate(-1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.saveError"));
+      setError(requiredFieldsMessage(e, t) ?? (e instanceof Error ? e.message : t("common.saveError")));
     } finally {
       setSaving(false);
     }

@@ -216,6 +216,7 @@ _MASTERS = {
     "cond_entries": [{"cond_id": 18, "canonical": "FLAG_SINGLE", "code": "CN0008"}],
     "cond_canonical_to_uuid": {"FLAG_SINGLE": 18},
     "ship_entries": [],
+    "status_entries": [],
 }
 
 

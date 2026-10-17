@@ -427,3 +427,101 @@ def test_shared_resolve_condition_v2_is_unchanged_by_the_error_row():
     canonical, _cid, basis = resolve_condition_v2("ほにゃらら", "", "", entries, {})
     assert canonical == "FLAG_SINGLE" and basis.endswith("単位不明")
     assert resolve_condition_v2("ほにゃらら", "", "", _COND, {}) == (canonical, _cid, basis)  # Error の行の有無で結果が変わらない
+
+
+# --- バルク系で状態語が無いとき Bulk（ADR-1021・便1） -------------------------------------------
+# マスタの Bulk 行は search_kw が空の KEYWORD 行（どの文にも当たらない）。値は docs/handoff/g28-bulk-price/data/commit.sql と同じ
+
+_BULK_ROW = {
+    "cond_id": "c-CN0014", "code": "CN0014", "canonical": "Bulk", "priority": 10,
+    "app_kubun": "", "search_kw": "", "exclude_kw": "", "match_type": "KEYWORD", "effect": "OUTPUT",
+}
+_ERROR_ROW = {**_BULK_ROW, "cond_id": "c-CN0012", "code": "CN0012", "canonical": "Error", "priority": 99, "effect": "EXCLUDE"}
+_BULK_COND = [*_COND, _BULK_ROW, _ERROR_ROW]
+_BULK_PRODUCTS = (
+    ProductEntry(id=11, product_code=None, mark=None, work_id=1, search_keywords=("バルクA",), exclude_keywords=()),
+    ProductEntry(id=12, product_code=None, mark=None, work_id=1, search_keywords=("シングルB",), exclude_keywords=()),
+    ProductEntry(id=13, product_code=None, mark=None, work_id=1, search_keywords=("箱C",), exclude_keywords=()),
+    ProductEntry(id=14, product_code=None, mark=None, work_id=1, search_keywords=("セットD",), exclude_keywords=()),
+)
+_BULK_KUBUN = {"11": "バルク系", "12": "シングル系", "13": "箱系", "14": "セット系"}
+
+
+def _bulk_row(raw, price="500円", cond_entries=None):
+    masters = ProductFirstMasters(
+        product_entries=_BULK_PRODUCTS, product_kubun=_BULK_KUBUN, condition_unit=_CONDITION_UNIT, ignore_phrases=(),
+    )
+    given = {**_MASTERS, "cond_entries": _BULK_COND if cond_entries is None else cond_entries}
+    parsed, errors = v101.parse_v101_response(
+        json.dumps({"items": [_it([1, 2], price, "3")]}, ensure_ascii=False), raw, status_entries=_STATUS
+    )
+    assert errors == []
+    (row,) = v101.extract_v101_items(parsed, raw, order=None, reassign=True, v102_fixes=True, product_first=masters, **given)[0]
+    return row
+
+
+def test_bulk_product_without_condition_word_is_bulk_r6():
+    row = _bulk_row("バルクA\n3@500円")
+    assert row["product_category"] == "バルク系"
+    assert (row["condition"], row["condition_basis"]) == ("Bulk", pf.BASIS_BULK_DEFAULT) and pf.BASIS_BULK_DEFAULT == "R6:バルク既定"
+    assert all(r["kind"] != "condition_unknown" for r in row["review"])
+
+
+def test_bulk_product_with_condition_word_is_unchanged():
+    row = _bulk_row("バルクA PSA\n3@500円")
+    assert row["condition"] == "FLAG_SINGLE" and row["condition_basis"].startswith("R1:")
+
+
+@pytest.mark.parametrize("raw,kubun", [
+    ("シングルB\n3@500円", "シングル系"), ("箱C\n3@500円", "箱系"), ("セットD\n3@500円", "セット系"),
+])
+def test_non_bulk_kubun_without_condition_word_is_unchanged(raw, kubun):
+    with_bulk = _bulk_row(raw)
+    without_bulk = _bulk_row(raw, cond_entries=[*_COND, _ERROR_ROW])  # Bulk 行が無いマスタ（今の本番）
+    assert with_bulk["product_category"] == kubun
+    assert with_bulk["condition"] != "Bulk"
+    assert (with_bulk["condition"], with_bulk["condition_basis"]) == (without_bulk["condition"], without_bulk["condition_basis"])
+
+
+def test_no_product_without_condition_word_is_unchanged_error():
+    row = _bulk_row("ほにゃらら\n3@500円")
+    assert row["product_category"] == "不明" and row["condition"] == "Error"
+    assert "condition_unknown" in [r["kind"] for r in row["review"]]
+
+
+def test_single_product_flag_single_stays_error_not_bulk():
+    row = _bulk_row("シングルB\n3@500円")
+    assert row["condition"] == "Error"
+
+
+def test_bulk_row_is_not_created_without_master_row_falls_back_to_error():
+    row = _bulk_row("バルクA\n3@500円", cond_entries=[*_COND, _ERROR_ROW])
+    assert row["condition"] == "Error"
+
+
+def test_bulk_master_row_values_never_match_any_block():
+    """search_kw が空の KEYWORD 行は、どの block にも当たらない（resolve_condition_v2 が Bulk を返さない）。"""
+    from app.services.tcg_analyzer_svc import resolve_condition_v2
+
+    assert _BULK_ROW["match_type"] == "KEYWORD" and _BULK_ROW["search_kw"] == "" and _BULK_ROW["priority"] > 0
+    for block in ("", "Bulk", "バルク", "PSA 100枚", "通常品", "未開封", "状態A-", "枚 単品 SR"):
+        for kubun in ("", "枚系", "単位不明", "箱系", "箱系大", "パック系", "条件つき", "単品系"):
+            cond, _cid, _basis = resolve_condition_v2(block, "", kubun, _BULK_COND, {}, raw_memo=block)
+            assert cond != "Bulk"
+
+
+# --- 状態の価値順（ADR-1023）-----------------------------------------------------------------
+
+
+def test_resolve_condition_picks_lowest_value_state_when_several_words_hit():
+    """「美品」（傷あり）と「シュリンク無し」の両方に当たるとき、v102 は価値の低い No shrink box を採る。"""
+    def vr(code, canonical, priority, app_kubun, kw, group, rank):
+        return {**_cond(code, canonical, priority, app_kubun, kw), "value_group": group, "value_rank": rank}
+
+    entries = [
+        vr("CN0004", "Damaged sealed box", 2, "箱系", "潰れ,美品", "box", 2),
+        vr("CN0005", "No shrink box", 3, "", "シュリンク無し", "box", 3),
+        vr("CN0003", "Sealed box", 4, "箱系", "シュリンク付き", "box", 1),
+    ]
+    cond, basis, reviews = pf._resolve_condition("シュリンク無し美品", "箱系", "箱系", entries, {})
+    assert cond == "No shrink box" and basis == "R3:シュリンク無し"

@@ -87,12 +87,14 @@ describe("production tab row drawer", () => {
 
   it("keeps the last content and shows a notice when the item leaves the list", async () => {
     vi.mocked(api.post).mockResolvedValue({ ok: true, saved: 1 });
+    const matched = { ...makeItem("v102-item", "Card V102", true), system: { product_id: "PM-00001", product_title: "Master Title Kept" } };
+    vi.mocked(api.get).mockResolvedValue(response([matched, makeItem("v6-item", "Card V6", false)]));
     view();
     await screen.findByText("Card V102");
     vi.mocked(api.get).mockResolvedValue(response([makeItem("v6-item", "Card V6", false)]));
     await ackFirstReason();
     expect(await screen.findByText("This item is no longer in the review list")).toBeTruthy();
-    expect(within(screen.getByRole("dialog")).getByRole("row", { name: /^Product name/ }).textContent).toContain("Card V102");
+    expect(within(screen.getByRole("dialog")).getByRole("row", { name: /^Product name/ }).textContent).toContain("Master Title Kept");
   });
 
   it("shows the keep-as-is button only for a v102 item and posts the reason code", async () => {

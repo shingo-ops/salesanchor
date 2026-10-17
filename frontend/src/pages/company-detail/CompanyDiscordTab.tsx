@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import type { DiscordFormState } from "./company-detail.types";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
 
 interface Props {
   discordForm: DiscordFormState;
@@ -39,15 +40,12 @@ export function CompanyDiscordTab({
       <form onSubmit={handleDiscordSubmit}>
         <div className="form-grid">
           <div className="form-row">
-            <label>
-              <input
-                type="checkbox"
-                checked={discordForm.is_joined}
-                onChange={(e) => update({ is_joined: e.target.checked })}
-                disabled={!canEdit}
-              />
-              {" "}{t("discord.isJoined")}
-            </label>
+            <Checkbox
+              label={t("discord.isJoined")}
+              checked={discordForm.is_joined}
+              onChange={(e) => update({ is_joined: e.target.checked })}
+              disabled={!canEdit}
+            />
           </div>
           <div className="form-row">
             <label>{t("discord.channelId")}</label>

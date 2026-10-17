@@ -8,6 +8,8 @@ DB 書き込みは行わない（読み取り専用）。
 """
 from __future__ import annotations
 
+import json
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +19,7 @@ from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
 from app.services.v102_gap_lines import gap_suspects_by_item
 from app.services.v102_gap_suspect_view import with_candidate_names
+from app.services.v102_human_decisions_svc import Decisions, format_decimal, load_v102_decisions
 
 TCG_SCHEMA = "public"
 
@@ -31,15 +34,41 @@ _ISSUE_MASTER_UNREGISTERED = "PRODUCT_MASTER_UNREGISTERED"
 _ISSUE_SUPPLIER_UNREGISTERED = "SUPPLIER_UNREGISTERED"
 _ISSUE_PRODUCT_CONFIRMED = "PRODUCT_CONFIRMED"
 
+def _manual_values(decision: Decisions | None) -> dict[str, str]:
+    """人が直した項目だけ（数字は format_decimal の書式。メモを空にした件は note が空文字）。"""
+    if decision is None:
+        return {}
+    v = decision.values
+    candidates = {
+        "quantity": format_decimal(v.quantity) if v.quantity is not None else None,
+        "price": format_decimal(v.price) if v.price is not None else None,
+        "unit": v.unit, "note": v.note, "status": v.status,
+    }
+    return {key: value for key, value in candidates.items() if value is not None}
+
+
+def _thought_summaries(stored: object) -> list[str] | None:
+    """extraction_attempts.thought_summaries（JSONB）→ list[str] | None。JSONB が文字列で返る場合（asyncpg + text()）はここで読む。"""
+    if isinstance(stored, str):
+        try:
+            stored = json.loads(stored)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(stored, list):
+        return None
+    return [x for x in stored if isinstance(x, str)]
+
+
 # ---------------------------------------------------------------------------
 # 共通 FROM 句（全クエリで再利用）
 # ---------------------------------------------------------------------------
 
-_BASE_FROM = f"""
+def _base_from(*, include_inactive: bool = False) -> str:
+    return f"""
     FROM {TCG_SCHEMA}.analysis_results ar
     JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
     JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-    JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
+    JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND {"ar.is_current = TRUE" if include_inactive else "sm.is_active = TRUE"}
     JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
@@ -47,9 +76,19 @@ _BASE_FROM = f"""
     {review_joins(schema=TCG_SCHEMA)}
 """
 
+
+_BASE_FROM = _base_from()
+
 # ---------------------------------------------------------------------------
 # WHERE 句ビルダー
 # ---------------------------------------------------------------------------
+
+
+# 要確認の定義（1か所）。旧解析版（v102 以外）の行は要確認に出さない。
+_NEEDS_REVIEW_COND = (
+    "((NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
+    " AND COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE))"
+)
 
 
 def _build_where(
@@ -61,10 +100,15 @@ def _build_where(
     unregistered_only: bool,
     unresolved_unit_only: bool,
     work_id: str | None = None,
+    extraction_item_ids: list[str] | None = None,
 ) -> tuple[str, dict]:
     """フィルタ条件を WHERE 句と bind パラメータに変換する。"""
     conditions: list[str] = []
     params: dict = {}
+
+    if extraction_item_ids is not None:
+        conditions.append("ei.id = ANY(CAST(:item_ids AS uuid[]))")
+        params["item_ids"] = extraction_item_ids
 
     if query:
         conditions.append(
@@ -80,9 +124,8 @@ def _build_where(
 
     # status_tab による絞り込み（review_only より優先）
     if status_tab == "NEEDS_REVIEW":
-        conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
-        )
+        conditions.append(_NEEDS_REVIEW_COND)
+        params["v102_prefix"] = V102_PROMPT_VERSION_PREFIX
     elif status_tab == "ACKED":
         conditions.append("cr.review_acked")
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
@@ -99,9 +142,8 @@ def _build_where(
 
     # チェックボックスフィルタ（タブ絞り込みに追加）
     if review_only and status_tab not in ("NEEDS_REVIEW",):
-        conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
-        )
+        conditions.append(_NEEDS_REVIEW_COND)
+        params["v102_prefix"] = V102_PROMPT_VERSION_PREFIX
     if unregistered_only:
         conditions.append("ar.pid_basis = 'NONE'")
     if unresolved_unit_only:
@@ -161,6 +203,7 @@ async def fetch_analysis_results(
     unresolved_unit_only: bool = False,
     strip_raw_text: bool = False,
     work_id: str | None = None,
+    extraction_item_ids: list[str] | None = None,
 ) -> dict:
     """
     解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
@@ -176,16 +219,21 @@ async def fetch_analysis_results(
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
         work_id=work_id,
+        extraction_item_ids=extraction_item_ids,
     )
+    # ID 指定時は在庫表と同じ範囲（非アクティブな投稿も含む）で引く
+    inactive = extraction_item_ids is not None
+    src = source_cte(schema=TCG_SCHEMA, include_inactive=inactive)
+    base_from = _base_from(include_inactive=inactive)
 
     # 総件数
-    count_sql = f"{source_cte(schema=TCG_SCHEMA)} SELECT COUNT(*) {_BASE_FROM} {where}"
+    count_sql = f"{src} SELECT COUNT(*) {base_from} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
 
     # 提供者一覧（フィルタ後の全仕入元）
-    prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    prov_sql = f"""{src}
         SELECT DISTINCT COALESCE(ps.name, '不明') AS name
-        {_BASE_FROM}
+        {base_from}
         {where}
         ORDER BY name
     """
@@ -193,10 +241,10 @@ async def fetch_analysis_results(
     providers = [r[0] for r in provider_rows]
 
     # アイテム一覧
-    items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    items_sql = f"""{src}
         , result_order_page AS MATERIALIZED (
             SELECT ei.id
-            {_BASE_FROM}
+            {base_from}
             {where}
             ORDER BY {result_order_sql()}
             LIMIT :limit OFFSET :offset
@@ -233,6 +281,8 @@ async def fetch_analysis_results(
             ar.note_ja,
             ar.status,
             ar.exclusion,
+            ar.quantity_normalized,
+            ar.price_normalized,
             (ps.id IS NOT NULL)                  AS supplier_registered,
             COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
             COALESCE(
@@ -243,9 +293,17 @@ async def fetch_analysis_results(
                  ORDER BY ic.corrected_at DESC
                  LIMIT 1),
                 FALSE
-            )                                    AS product_confirmed
-        {_BASE_FROM}
+            )                                    AS product_confirmed,
+            eat.thought_summaries
+        {base_from}
         JOIN result_order_page ON result_order_page.id = ei.id
+        LEFT JOIN LATERAL (
+            SELECT ea.thought_summaries
+            FROM {TCG_SCHEMA}.extraction_attempts ea
+            WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed'
+            ORDER BY ea.started_at DESC, ea.id DESC
+            LIMIT 1
+        ) eat ON TRUE
         {where}
         ORDER BY {result_order_sql()}
     """
@@ -258,6 +316,7 @@ async def fetch_analysis_results(
     for row in rows:
         raw_suspects.update(gap_suspects_by_item(row.system_review_detail))
     suspects = await with_candidate_names(db, {k: v for k, v in raw_suspects.items() if k in page_ids})
+    decisions = await db.run_sync(lambda sync: load_v102_decisions(sync, page_ids))  # 直した値の読み方の正本
     items = []
     for row in rows:
         span = (
@@ -296,7 +355,10 @@ async def fetch_analysis_results(
                     "status": row.status or "",
                     "note": row.note_ja or "",
                     "exclusion": row.exclusion or "",
+                    "quantity": format_decimal(row.quantity_normalized),
+                    "price": format_decimal(row.price_normalized),
                 },
+                "manual_values": _manual_values(decisions.get(row.extraction_item_id)),
                 "condition_review": {
                     "condition_id": row.condition_id, "review_version": row.review_version,
                     "needs_review": row.needs_review, "review_reasons": row.review_reasons or "",
@@ -304,6 +366,7 @@ async def fetch_analysis_results(
                 },
                 "review_reason_details": build_review_reason_details(row.review_reasons, reason_table),
                 "is_v102": bool(row.is_v102),
+                "thought_summaries": _thought_summaries(row.thought_summaries),
                 "gap_suspect": suspects.get(row.extraction_item_id),
                 "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,

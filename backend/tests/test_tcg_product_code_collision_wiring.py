@@ -27,6 +27,14 @@ COLLISION = {
     "already_excluded_by_other": [],
 }
 
+# ADR-1020 便3: 9項目がそろった create_product の引数（偽の build_payload が返す）
+FULL_PAYLOAD = {
+    "japanese_title": "新商品", "english_title": "New item", "mark": "ST-01",
+    "release_date": "2026-01-01", "search_keywords": "語1", "exclude_keywords": "除1",
+    "work_id": "1", "product_format_id": 5, "product_category_id": "c",
+    "blank_confirmations": [],
+}
+
 
 async def test_create_product_returns_code_collisions_without_blocking(monkeypatch):
     def result(row):
@@ -50,11 +58,13 @@ async def test_create_product_returns_code_collisions_without_blocking(monkeypat
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
     monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0100"))
     monkeypatch.setattr(master, "find_code_collisions", finder)
+    monkeypatch.setattr(master, "_validate_product_format", AsyncMock())  # ADR-1020 便3: 細分類の検査は別の試験で見る
 
     out = await master.create_product(
         db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
         manufacturer_id="m", product_category_id="c", japanese_title=" 新商品 ",
-        release_date=None, search_keywords="語1, 語2,", exclude_keywords="除1", mark="ST01",
+        release_date="2026-01-01", search_keywords="語1, 語2,", exclude_keywords="除1", mark="ST01",
+        english_title="New item", product_format_id=5,
     )
 
     assert out == {"ok": True, "product_id": "77", "code_collisions": [COLLISION]}
@@ -75,7 +85,8 @@ async def test_csv_new_preview_adds_one_warning_per_colliding_product(monkeypatc
     monkeypatch.setattr(importer, "parse_rows", lambda raw: ([row], []))
     monkeypatch.setattr(importer, "load_lookup_maps", AsyncMock(return_value={}))
     monkeypatch.setattr(importer, "load_keyword_owners", AsyncMock(return_value={}))
-    monkeypatch.setattr(importer, "build_payload", lambda r, lookups: {})
+    monkeypatch.setattr(importer, "build_payload", lambda r, lookups: FULL_PAYLOAD)
+    monkeypatch.setattr(master, "format_matches_game", AsyncMock(return_value=True))
     monkeypatch.setattr(importer, "validate_row_dynamic", AsyncMock(return_value=[]))
     monkeypatch.setattr(importer, "find_code_collisions", finder)
 

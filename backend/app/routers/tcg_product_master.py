@@ -12,12 +12,15 @@ PARITY-03 Phase 3: 商品マスタ登録 API。
 """
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.models import User
 from app.schemas.tcg_product_code_collision import ProductCreateResult
 from app.services.tcg_product_master_svc import (
     add_exclude_keyword,
@@ -42,6 +45,22 @@ class LookupOption(BaseModel):
     name: str
 
 
+class FormatLookupOption(BaseModel):
+    """ADR-1020: 細分類の選択肢。紐づくゲーム（作品）の id を落とさない"""
+    id: str
+    name: str
+    is_active: bool
+    game_ids: list[str]
+
+
+class RegistrationLookups(BaseModel):
+    product_kind_id: list[LookupOption]
+    work_id: list[LookupOption]
+    manufacturer_id: list[LookupOption]
+    product_category_id: list[LookupOption]
+    product_format_id: list[FormatLookupOption]
+
+
 class RegistrationFormItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
@@ -52,7 +71,7 @@ class RegistrationFormItem(BaseModel):
 
 class RegistrationFormResponse(BaseModel):
     item: RegistrationFormItem
-    lookups: dict[str, list[LookupOption]]
+    lookups: RegistrationLookups
 
 
 class ProductCandidate(BaseModel):
@@ -103,6 +122,8 @@ class CreateProductRequest(BaseModel):
     mark: str = ""
     english_title: str = ""
     force: bool = False
+    product_format_id: int | None = None
+    blank_confirmations: list[Literal["name_en", "mark", "release_date", "exclude_keywords"]] = Field(default_factory=list)
 
 
 class CreateProductOkResponse(BaseModel):
@@ -216,7 +237,7 @@ async def check_product_duplicates(
 async def create_product_master(
     body: CreateProductRequest,
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_super_admin),
+    user: User = Depends(require_super_admin),
 ) -> dict:
     if not body.japanese_title.strip():
         raise HTTPException(status_code=422, detail="PRODUCT_MASTER_V2_JAPANESE_TITLE_REQUIRED")
@@ -236,6 +257,9 @@ async def create_product_master(
             mark=body.mark,
             english_title=body.english_title,
             force=body.force,
+            product_format_id=body.product_format_id,
+            blank_confirmations=body.blank_confirmations,
+            actor=str(user.email or user.id or ""),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e

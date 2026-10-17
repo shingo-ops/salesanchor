@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 22 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 27 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -189,7 +189,7 @@
 - 札：ticket
 - 何が起きているか：同じ裏方のタスクが 1 時間に 3 回以上失敗した。指標は backend の `/metrics` が Redis から読んで出す（Redis が読めないときは前の値のまま）。Redis がメモリ一杯で記録を消すことがある（`allkeys-lru`）。
 - 最初に見るもの：Loki で `|= "raised unexpected"` とタスク名で絞ったログ。
-- 注記：2026-10-15 時点で translate_pending_messages が毎日 2〜3 回失敗している（1 時間に 1 回まで。この見張りは鳴らない）。原因は未調査。
+- 注記：2026-10-15 まで translate_pending_messages が毎日 2〜3 回失敗していた。原因は買取価格の取得（buyback.fetch_all_prices）が共用 engine を片付けず、同じ worker で次に動いた作業が "attached to a different loop" で落ちていたこと。2026-10 にまとめ翻訳を廃止し、買取価格の取得に後片付けを足した（docs/handoff/celery-unregistered-tasks/design.md）。
 - 効く範囲：1 日に 1〜2 回しか動かないタスク（sa02・為替・tcg_mirror 等）の失敗ではこの見張りは鳴らない。またタスク名の系列ができた最初の 1 件は increase に数えられない。どちらも段階1 で決めた範囲で、日次タスクの失敗の見張りは別の便で扱う。
 - 直し方：失敗の原因（ログの例外）を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=CeleryTaskFailuresHigh --duration=PERIOD --comment=REASON`
@@ -202,6 +202,24 @@
 - 最初に見るもの：待ち行列の長さの推移（`celery_queue_length`）と、worker が処理中のタスク（長いタスク `tcg.extract_source_message` 等が並んでいないか）。
 - 直し方：長いタスクが詰まっていれば Opus に報告する。worker の再起動は処理中のタスクを止めるので、Opus の判断を待つ。
 - 止め方：`amtool silence add alertname=CeleryQueueBacklog --duration=PERIOD --comment=REASON`
+
+## ViewerInventoryStale
+
+- 札：ticket
+- 何が起きているか：閲覧ページの在庫の作り置き（1 分ごとのタスク）が 10 分以上書けておらず、配信の保留でもない状態が 2 分続いた。作り置きのタスクの失敗が続いている可能性がある。worker の停止は CeleryHeartbeatStale が別に知らせる。指標は backend の `/metrics` が Redis（db0）から読んで出す（キーが無いときは 0 で、この見張りは鳴る）。
+- 最初に見るもの：`docker logs --since 15m <worker> | grep viewer-cache`、Redis の `viewer:inventory:fail_count`（3 に達すると Discord にも知らせる）、配信の保留の理由は `[dist]` のログ。
+- 閲覧者への影響：前回の在庫が出続ける。作り置きは 24 時間で消えるので、それまでに直らないと閲覧 API は 503 になる。
+- 直し方：戻し方は無し。タスクが次に成功すれば自然に消える。失敗の原因（ログの例外）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ViewerInventoryStale --duration=PERIOD --comment=REASON`
+
+## ViewerInventoryStaleOnHold
+
+- 札：ticket
+- 何が起きているか：閲覧ページの在庫の作り置きが 10 分以上書けておらず、直近 2 分以内に配信の保留を確かめている状態が 2 分続いた。解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）。
+- 最初に見るもの：配信の保留の理由（`[dist]` のログ）、`docker logs --since 15m <worker> | grep viewer-cache`、Redis の `viewer:inventory:fail_count`。
+- 閲覧者への影響：前回の在庫が出続ける。作り置きは 24 時間で消えるので、保留が長く続くと閲覧 API は 503 になる。
+- 直し方：戻し方は無し。保留が解ければ次の 1 分で作り置きが書かれ、自然に消える。長く続くときは保留の原因を Opus に報告する。
+- 止め方：`amtool silence add alertname=ViewerInventoryStaleOnHold --duration=PERIOD --comment=REASON`
 
 ## BackupLocalStale
 
@@ -242,4 +260,31 @@
 - 何が起きているか：監視設定のずれの確認が 50 時間以上 pushgateway に送っていない状態が 1 時間続いた（毎日 1 回の確認が 2 回続けて動かなかった）。利用者に今の影響は無い。翌営業日までに直す。
 - 最初に見るもの：Actions の実行の一覧（失敗か、そもそも起動していないか）、prod2 の runner のサービス（`systemctl status actions.runner.shingo-ops-salesanchor.salesanchor-vps`）、pushgateway のコンテナ。
 - 直し方：runner・workflow・pushgateway のどこで止まっているかを切り分けて Opus に報告する。
+- pushgateway を再起動・作り直した後：pushgateway は値を保存しない設定（docker-compose.monitoring.yml:133-150 に persistence の指定なし）なので、溜まっていた値が消える。再起動の後は、Actions で `monitoring-config-drift.yml` と `sop-health-reporter.yml` を手動で 1 回ずつ実行し、両方 success を確かめる（U19・2026-10-15 PO 決定）。
 - 止め方：`amtool silence add alertname=MonitoringConfigCheckStale --duration=PERIOD --comment=REASON`
+
+## ContainerUnhealthy
+
+- 札：page（処置の付く段階3 便G で auto に変える）
+- 何が起きているか：prod1 の celery-worker・celery-beat・discord-gateway・gemini-egress のどれかの健康診断（docker-compose.yml の healthcheck）が unhealthy で、その状態が 1 分続いた。健康診断は、コンテナの中の「生きている印」が 2〜2 分半更新されないと失敗する（gemini-egress は中継の先の tinyproxy が答えないと失敗する）。値は prod1 の `scripts/ops/container_state.py` が毎分 textfile に書く。
+- 影響：worker・beat は LINE 解析・翻訳・定期の集計が止まる。discord-gateway は Discord の受信が止まる。gemini-egress は緊急用の中継なので、Gemini が直接接続のままなら利用者への影響は無い。
+- 最初に見るもの：prod1 で `docker inspect -f '{{json .State.Health}}'`（該当のコンテナ）の最後の記録 → Loki の該当コンテナのログの直近。
+- 直し方：該当のコンテナを `docker compose restart`。gemini-egress は prod2 の tinyproxy の状態も見る。繰り返すときは原因を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerUnhealthy --duration=PERIOD --comment=REASON`
+
+## ContainerStateStale
+
+- 札：page
+- 何が起きているか：prod1 の状態書き係（`scripts/ops/container_state.py`、ubuntu の cron で毎分）が 5 分以上 textfile を書いていない、または値が無い状態が 2 分続いた。この間はコンテナが不健康になっても ContainerUnhealthy が鳴らない。
+- 最初に見るもの：prod1 の `crontab -l` に container_state の行があるか → `/tmp/container-state.log` の最後の行（失敗のときだけ書かれる）→ `/home/ubuntu/node_exporter_textfile/container_state.prom` の時刻。
+- 直し方：ログの原因（docker が読めない・書けない）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerStateStale --duration=PERIOD --comment=REASON`
+
+## ContainerHealthcheckMissing
+
+- 札：ticket
+- 何が起きているか：prod1 の celery-worker・celery-beat・discord-gateway・gemini-egress のどれかが動いているのに、健康診断（docker-compose.yml の healthcheck）が無い状態が 10 分続いた。定義が消えた・無効にされた、または古い定義のまま作り直された。この間はそのコンテナが固まっても ContainerUnhealthy が鳴らない。値は prod1 の `scripts/ops/container_state.py` が毎分 textfile に書く。
+- 影響：今の利用者への影響は無い。翌営業日までに直す。
+- 最初に見るもの：main の docker-compose.yml の該当サービスの healthcheck（CI の `monitoring/scripts/check_app_healthchecks.py` が通っているか）→ prod1 で `docker inspect -f '{{json .Config.Healthcheck}}'`（該当のコンテナ）。
+- 直し方：main に定義があれば、次の deploy で作り直されて戻る。main から消えていれば、消した変更を戻す PR を出して Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerHealthcheckMissing --duration=PERIOD --comment=REASON`

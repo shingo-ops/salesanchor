@@ -286,6 +286,9 @@ jobs:
               -e '/^MAIL_FROM=/d' \
               -e '/^CONTACT_NOTIFY_EMAIL=/d' \
               -e '/^AUTH_PASSWORD_RESET_ALLOWLIST=/d' \
+              -e '/^AUTH_VIEWER_JWT_SECRET=/d' \
+              -e '/^OPS_API_TOKEN=/d' \
+              -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             rm -f .env.bak
@@ -296,6 +299,7 @@ jobs:
             #   secret 未設定でも空値で append される（後段 LLM サービスは空判定して
             #   parsed_rule_only に graceful degrade、AC4.5）。
             # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
+            # ADR-1019 段2: 閲覧者のトークンの鍵（viewer_tokens.py が読む）。アプリの鍵 AUTH_JWT_SECRET とは別の値
             cat >> .env <<'ENV_EOF'
             META_VERIFY_TOKEN=${{ secrets.META_VERIFY_TOKEN }}
             META_APP_SECRET=${{ secrets.META_APP_SECRET }}
@@ -327,6 +331,9 @@ jobs:
             MAIL_FROM=${{ secrets.MAIL_FROM }}
             CONTACT_NOTIFY_EMAIL=${{ secrets.CONTACT_NOTIFY_EMAIL }}
             AUTH_PASSWORD_RESET_ALLOWLIST=${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}
+            AUTH_VIEWER_JWT_SECRET=${{ secrets.AUTH_VIEWER_JWT_SECRET }}
+            OPS_API_TOKEN=${{ secrets.OPS_API_TOKEN }}
+            OPS_INGEST_TOKEN=${{ secrets.OPS_INGEST_TOKEN }}
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
 
@@ -405,10 +412,11 @@ jobs:
             bash scripts/deploy/app-services-plan.sh --observe frontend celery-worker celery-beat discord-gateway gemini-egress || true
             docker compose up -d --no-deps --dry-run frontend celery-worker celery-beat discord-gateway gemini-egress 2>&1 | sed 's/^/DRYRUN /' || true
             docker compose stop -t 60 celery-worker 2>/dev/null || true
+            # oneoff=False のみ消す（compose run の一時コンテナを消さない。docs/handoff/deploy-keep-oneoff/recon.md）
             for _svc in frontend celery-beat discord-gateway; do
-              docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+              docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
-            docker ps -a --filter "name=astro-webapp-celery-worker" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+            docker ps -a --filter "name=astro-webapp-celery-worker" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
             bash scripts/deploy/app-services-plan.sh --verify || true
             echo "Step 3d: Ensuring monitoring collectors are up..."
@@ -671,8 +679,9 @@ jobs:
 
                 if [ "${_rb_build}" = "true" ]; then
                   # コンテナ差し替え（通常デプロイと同じパターン）
+                  # oneoff=False のみ消す（compose run の一時コンテナを消さない。docs/handoff/deploy-keep-oneoff/recon.md）
                   for _svc in backend frontend celery-worker celery-beat discord-gateway; do
-                    docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+                    docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
                   done
                   docker compose up -d --remove-orphans
 

@@ -166,6 +166,86 @@ def test_t2_ranks_of_the_same_post_become_one_row(pg, ids):
     assert len(_rows(pg, merge=False)) == 2
 
 
+def _item_id_of(pg_fixture, result_id: str) -> str:
+    with Session(pg_fixture[1]) as session:
+        return str(session.execute(
+            text(f"SELECT extraction_item_id::text FROM {SCHEMA}.analysis_results WHERE id = :i"), {"i": result_id},
+        ).scalar_one())
+
+
+def test_b1_unmerged_row_has_its_own_extraction_item_id(pg, ids):
+    job = _add_job(pg)
+    only = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:甲")
+    for merge in (True, False):
+        rows = _rows(pg, merge=merge)
+        assert len(rows) == 1
+        assert rows[0]["extraction_item_ids"] == [_item_id_of(pg, only)]
+
+
+def test_b2_merged_row_lists_every_extraction_item_id_in_sort_order(pg, ids):
+    job = _add_job(pg)
+    first = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:甲", price=1000, qty=3)
+    second = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:乙", price=1200, qty=4)
+    merged = _rows(pg, merge=True)
+    assert len(merged) == 1 and merged[0]["merged_count"] == 2
+    plain = _rows(pg, merge=False)  # sort_ord 順の1行ずつ
+    expected = [_item_id_of(pg, r["row_key"]) for r in plain]
+    assert sorted(expected) == sorted([_item_id_of(pg, first), _item_id_of(pg, second)])
+    assert merged[0]["extraction_item_ids"] == expected
+    assert len(merged[0]["extraction_item_ids"]) == merged[0]["merged_count"]
+
+
+def test_b5_item_id_lookup_includes_inactive_posts_with_current_rows_but_the_plain_list_does_not(pg, ids, monkeypatch):
+    from app.services import tcg_analysis_review_svc as review
+
+    monkeypatch.setattr(review, "TCG_SCHEMA", SCHEMA)
+    monkeypatch.setattr(review, "_BASE_FROM", review._base_from())
+
+    async def _no_reason_codes(_db):  # 理由コード表は検証対象外（この pg には表が無い）
+        return {}
+
+    monkeypatch.setattr(review, "load_review_reason_codes", _no_reason_codes)
+
+    job = _add_job(pg)
+    result_id = _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
+    item_id = _item_id_of(pg, result_id)
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"UPDATE {SCHEMA}.source_messages SET is_active = false "
+            f"WHERE id = (SELECT source_message_id FROM {SCHEMA}.extraction_jobs WHERE id = %s)", (job,),
+        )
+
+    async def _fetch(**kwargs) -> dict:
+        engine = create_async_engine(pg[2])
+        try:
+            async with AsyncSession(engine) as db:
+                return await review.fetch_analysis_results(db, **kwargs)
+        finally:
+            await engine.dispose()
+
+    # fetch_analysis_results は public.supplier_channels を固定で JOIN する（tcg_analysis_review_svc.py:58）。
+    # _add_job は tenant_901 側の仕入元を使うので、同じ id の行を public にも用意し、終わりに消す。
+    # 列は両表とも id/channel/external_id/is_active/supplier_id で同一（NOT NULL は channel・is_active・supplier_id）。
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"""INSERT INTO public.supplier_channels (id, channel, is_active, supplier_id)
+                SELECT sc.id, sc.channel, sc.is_active, sc.supplier_id FROM {SCHEMA}.supplier_channels sc
+                WHERE sc.id = (SELECT sm.supplier_channel_id FROM {SCHEMA}.source_messages sm
+                               JOIN {SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id WHERE ej.id = %s)
+                ON CONFLICT (id) DO NOTHING RETURNING id""", (job,),
+        )
+        seeded = [r[0] for r in cur.fetchall()]
+    try:
+        by_id = asyncio.run(_fetch(extraction_item_ids=[item_id], limit=1))
+        assert [i["extraction_item_id"] for i in by_id["items"]] == [item_id]
+        plain = asyncio.run(_fetch(limit=500))
+        assert item_id not in [i["extraction_item_id"] for i in plain["items"]]
+    finally:
+        with pg[0].cursor() as cur:
+            for channel_id in seeded:
+                cur.execute("DELETE FROM public.supplier_channels WHERE id = %s", (channel_id,))
+
+
 # --- T3 ------------------------------------------------------------------------------------------
 
 
@@ -378,3 +458,116 @@ def test_bin1_empty_english_title_comes_first_in_ascending_order(pg, ids):
     _add_row(pg, job, ids.p1, ids.box, basis="R2:甲")
     _, items = _view_items(pg, sort="release_date", order="desc")
     assert [r["english_title"] for r in items] == ["", "Beta"]
+
+
+# --- 便3（検索と提供者）-------------------------------------------------------------------------------------------
+# 検索の正規化ベクタは frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
+# ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
+
+
+def _set_supplier(pg_fixture, job_id: str, name: str) -> int:
+    """job の投稿を、新しく作る仕入元（name）の窓口に付け替える。仕入元 id を返す。"""
+    with pg_fixture[0].cursor() as cur:
+        cur.execute("INSERT INTO public.suppliers(name) VALUES (%s) RETURNING id", (name,))
+        supplier_id = cur.fetchone()[0]
+        cur.execute(
+            f"INSERT INTO {SCHEMA}.supplier_channels(channel, external_id, is_active, supplier_id) "
+            "VALUES ('line', %s, true, %s) RETURNING id",
+            (f"bin3-{supplier_id}", supplier_id),
+        )
+        channel_id = cur.fetchone()[0]
+        cur.execute(
+            f"UPDATE {SCHEMA}.source_messages SET supplier_channel_id = %s "
+            f"WHERE id = (SELECT source_message_id FROM {SCHEMA}.extraction_jobs WHERE id = %s)",
+            (channel_id, job_id),
+        )
+    return supplier_id
+
+
+def _search_items(pg_fixture, **overrides) -> tuple[int, list[str]]:
+    """GET /inventory と同じ絞り込みで (total, 並べた日本語名) を返す。"""
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
+
+    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    conditions, params = _build_view_filters(**{**none, **overrides})
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=False)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
+                                    sort_col=_SORT_COLUMNS["name"], order_dir="ASC")
+    total, pages = 0, []
+    with Session(pg_fixture[1]) as session:
+        for r in session.execute(text(sql), {**params, "limit": 50, "offset": 0}).mappings().all():
+            if r["__kind"] == "total":
+                total = int(r["__total"])
+            elif r["__kind"] == "page":
+                pages.append((r["__ord"], r["japanese_title"]))
+    pages.sort(key=lambda t: t[0])
+    return total, [name for _, name in pages]
+
+
+@pytest.fixture
+def searchable(pg, ids):
+    """p1 = ポケモンカード(英名 Pokemon Card・mark SV1)、p2 = ワンピース(英名 ABC Booster・検索ワード ルフィ)。仕入元は別々。"""
+    with pg[0].cursor() as cur:
+        cur.execute("UPDATE public.products SET name = 'ポケモンカード', name_en = 'Pokemon Card', mark = 'SV1' WHERE id = %s", (ids.p1,))
+        cur.execute("UPDATE public.products SET name = 'ワンピース', name_en = 'ABC Booster', mark = 'OP01' WHERE id = %s", (ids.p2,))
+        cur.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,'ルフィ',0)", (ids.p2,))
+    job1, job2 = _add_job(pg), _add_job(pg)
+    s1 = _set_supplier(pg, job1, "甲提供者")
+    s2 = _set_supplier(pg, job2, "乙提供者")
+    _add_row(pg, job1, ids.p1, ids.box, basis="R2:甲")
+    _add_row(pg, job2, ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case")
+    return SimpleNamespace(s1=s1, s2=s2)
+
+
+_BIN3_SEARCH_CASES = [
+    ("ぽけもん", ["ポケモンカード"]),   # ひらがな → カタカナ
+    ("ポケモン", ["ポケモンカード"]),
+    ("ＡＢＣ", ["ワンピース"]),          # 全角英数 → 半角小文字（英名 ABC Booster に当たる）
+    ("abc", ["ワンピース"]),
+    ("ぽけもん ｐｏｋｅｍｏｎ", ["ポケモンカード"]),  # 2語 AND（両方含む）
+    ("ぽけもん abc", []),                 # 2語 AND（片方しか含まない行は出ない）
+    ("ルフィ", ["ワンピース"]),           # 検索ワードだけに含む語で当たる
+    ("sv1", ["ポケモンカード"]),          # mark（型番）
+    ("甲提供者", []),                     # 提供者名では当たらない
+    ("   ", ["ポケモンカード", "ワンピース"]),  # 空白だけは全件
+]
+
+
+def test_bin3_search_and_supplier_filters(pg, ids, searchable):
+    """pg フィクスチャは DB を作り捨てずに残すため、CI の /dev/shm を使い切らないよう 1 関数にまとめている。"""
+    import json
+    import pathlib
+
+    from app.routers.inventory_offers import _KANA_FROM, _KANA_TO, normalize_search_text
+
+    # 検索の正規化と AND
+    for q, expected in _BIN3_SEARCH_CASES:
+        total, names = _search_items(pg, q=q)
+        assert sorted(names) == sorted(expected), q
+        assert total == len(expected), q
+
+    # Python と SQL の正規化が共有ベクタで一致する
+    vectors = json.loads((pathlib.Path(__file__).resolve().parents[2] / "frontend/src/features/inventory/searchNormalize.vectors.json").read_text())
+    with Session(pg[1]) as session:
+        for v in vectors:
+            assert normalize_search_text(v["input"]) == v["expected"]
+            sql_value = session.execute(
+                text("SELECT translate(lower(normalize(CAST(:s AS text), NFKC)), CAST(:f AS text), CAST(:t AS text))"),
+                {"s": v["input"], "f": _KANA_FROM, "t": _KANA_TO},
+            ).scalar_one()
+            assert sql_value == v["expected"], v
+
+    # 選んだ提供者だけを表示
+    both = f"{searchable.s1},{searchable.s2}"
+    assert _search_items(pg, supplier_ids=both)[0] == 2
+    assert _search_items(pg, supplier_ids=str(searchable.s1)) == (1, ["ポケモンカード"])
+    assert _search_items(pg, supplier_ids=str(searchable.s2)) == (1, ["ワンピース"])
+    assert _search_items(pg, supplier_ids="x,y")[0] == 2     # 整数が1つも無ければ絞らない
+    assert _search_items(pg, supplier_ids="")[0] == 2
+    assert _search_items(pg, supplier_ids=f"x,{searchable.s2}") == (1, ["ワンピース"])  # 整数だけ採る
+
+    # supplier_ids と hide_supplier_ids の併用
+    assert _search_items(pg, hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])
+    assert _search_items(pg, supplier_ids=f"{searchable.s1},{searchable.s2}", hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])

@@ -1,12 +1,13 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
+import { api } from "../../lib/api";
 import { availableFixChoices, choicesForScope, ReviewFixWizard, type FixChoice, type FixScope } from "./ReviewFixWizard";
 import type { ReviewDrawerItem } from "./ReviewItemDrawer";
 
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(async () => []), post: vi.fn() },
-  ApiError: class extends Error {},
+  ApiError: class extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } },
 }));
 vi.mock("./reviewActions", () => ({
   postProductCorrection: vi.fn(),
@@ -46,16 +47,19 @@ const ackable = [{ code: "product_not_in_master", source: "system" as const, fix
 
 describe("availableFixChoices", () => {
   const cases: Array<[string, Partial<ReviewDrawerItem>, FixChoice[]]> = [
-    ["a plain v6 item only reassigns", {}, ["reassign"]],
-    ["PRODUCT_ID_UNRESOLVED adds register", { review_issues: ["PRODUCT_ID_UNRESOLVED"] }, ["reassign", "register"]],
-    ["PRODUCT_MASTER_UNREGISTERED adds register", { review_issues: ["PRODUCT_MASTER_UNREGISTERED"] }, ["reassign", "register"]],
-    ["a resolved product does not offer register", { review_issues: ["UNIT_UNRESOLVED"] }, ["reassign"]],
-    ["a condition review adds condition", { condition_review: condition }, ["reassign", "condition"]],
-    ["an ackable reason does not add a choice (keep lives in the drawer)", { is_v102: true, review_reason_details: ackable }, ["reassign"]],
+    ["a plain v6 item reassigns and fixes values", {}, ["reassign", "value"]],
+    ["PRODUCT_ID_UNRESOLVED adds register", { review_issues: ["PRODUCT_ID_UNRESOLVED"] }, ["reassign", "register", "value"]],
+    ["PRODUCT_MASTER_UNREGISTERED adds register", { review_issues: ["PRODUCT_MASTER_UNREGISTERED"] }, ["reassign", "register", "value"]],
+    ["a resolved product does not offer register", { review_issues: ["UNIT_UNRESOLVED"] }, ["reassign", "value"]],
+    ["a condition review adds condition", { condition_review: condition }, ["reassign", "condition", "value"]],
+    ["a v6 item with is_v102 false also offers value", { is_v102: false }, ["reassign", "value"]],
+    ["a v102 item adds value", { is_v102: true }, ["reassign", "value"]],
+    ["a v102 item with a condition review (not empty-box) adds condition and value", { is_v102: true, condition_review: { ...condition, review_reasons: "pid_unresolved" } }, ["reassign", "condition", "value"]],
+    ["an ackable reason does not add a choice (keep lives in the drawer)", { is_v102: true, review_reason_details: ackable }, ["reassign", "value"]],
     [
       "everything at once keeps the order of the table",
       { is_v102: true, review_reason_details: ackable, review_issues: ["PRODUCT_ID_UNRESOLVED"], condition_review: condition },
-      ["reassign", "register", "condition"],
+      ["reassign", "register", "condition", "value"],
     ],
   ];
 
@@ -66,6 +70,7 @@ describe("availableFixChoices", () => {
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  vi.mocked(api.get).mockResolvedValue([]);
   await i18n.changeLanguage("en");
 });
 afterEach(cleanup);
@@ -75,6 +80,7 @@ describe("choicesForScope", () => {
   const cases: Array<[FixScope, FixChoice[]]> = [
     ["product", ["reassign", "register"]],
     ["condition", ["condition"]],
+    ["value", ["value"]],
   ];
 
   it.each(cases)("%s -> %j", (scope, expected) => {
@@ -91,8 +97,8 @@ describe("choicesForScope", () => {
 });
 
 describe("ReviewFixWizard", () => {
-  const renderWizard = (item: ReviewDrawerItem, scope: FixScope, { onRefresh = vi.fn().mockResolvedValue(undefined) } = {}) => {
-    render(<ReviewFixWizard item={item} scope={scope} onRefresh={onRefresh} />);
+  const renderWizard = (item: ReviewDrawerItem, scope: FixScope, { onRefresh = vi.fn().mockResolvedValue(undefined), rowKey = "" } = {}) => {
+    render(<ReviewFixWizard item={item} scope={scope} rowKey={rowKey} onRefresh={onRefresh} />);
     return { onRefresh };
   };
 
@@ -140,6 +146,23 @@ describe("ReviewFixWizard", () => {
     expect(screen.getByRole("group", { name: "What do you want to fix?" })).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: /Reassign to an existing product/ }));
     expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
+  });
+
+  it("K3: value scope shows the value form directly for the pressed row", async () => {
+    vi.mocked(api.get).mockResolvedValue({ units: ["BOX"], statuses: ["Sold out"] });
+    renderWizard(makeItem({ is_v102: true, system: { quantity: "4" } }), "value", { rowKey: "quantity" });
+
+    expect(screen.queryByRole("group", { name: "What do you want to fix?" })).toBeNull();
+    expect((screen.getByLabelText("Quantity") as HTMLInputElement).value).toBe("4");
+  });
+
+  it("R1: the condition scope passes fromWizard so a non empty-box item still gets the select, without the confirm button", async () => {
+    vi.mocked(api.get).mockResolvedValue([{ id: "n", code: "CN1", canonical: "Sealed box" }]);
+    renderWizard(makeItem({ is_v102: true, system: { condition: "New" }, condition_review: { ...condition, review_reasons: "pid_unresolved" } }), "condition");
+
+    await screen.findByRole("option", { name: "Sealed box" });
+    expect(screen.getByRole("button", { name: "Save selected condition" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Confirm empty box" })).toBeNull();
   });
 
   it("says there is nothing to fix when the scope has no choice", () => {

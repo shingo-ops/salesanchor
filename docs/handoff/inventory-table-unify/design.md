@@ -2,7 +2,7 @@
 
 状態: 設計審査済み r3 APPROVE（Opus 作成・Opus Architect 審査。同一 AI の自己審査）。
 根拠: [recon.md](recon.md)。審査 r1 の全文: /tmp/CC報告ファイル/app_inventory_recon_20261015/review_design_r1.txt
-recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1017。
+recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR（recon §0）: ADR-093・ADR-1014・ADR-067・ADR-144・ADR-027・ADR-087・ADR-140・ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え）。
 
 ## PO の決定と許可の出所（審査 r1 B-10）
 
@@ -27,7 +27,7 @@ recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR�
 ## 対象と対象外
 
 - 対象: 在庫表（/inventory）の画面、在庫表 API の q と提供者の絞り込み、共通の金型（DataTable の追加機能・MultiSelect の新設）。
-- 対象外: 閲覧専用ページの実装（ADR-1017・PR #4283 側。その設計の書き直しは別に行う）、更新ボタン、英語名が空の 33 商品の登録、DB の列（hidden_supplier_ids は残す）、/inventory/search（別 API）、GAS 側、見積・請求の画面（inventory.view.searchPlaceholder を使う QuoteCreatePage.tsx:262・InvoiceCreatePage.tsx:413 は触らない）。
+- 対象外: 閲覧専用ページの実装（ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え）・PR #4283 側。その設計の書き直しは別に行う）、更新ボタン、英語名が空の 33 商品の登録、DB の列（hidden_supplier_ids は残す）、/inventory/search（別 API）、GAS 側、見積・請求の画面（inventory.view.searchPlaceholder を使う QuoteCreatePage.tsx:262・InvoiceCreatePage.tsx:413 は触らない）。
 
 ## 便の分け方（1便1テーマ）
 
@@ -187,7 +187,7 @@ recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR�
 |---|---|
 | KGI 4・5・6・7・8・9・10 | vitest（列の順・category なし・Badge の variant・プルダウン3択と既定の placeholder・resetAll 後 release_date desc）。本番で PO 目視 |
 | 既存 testid のテスト | CommerceNavigationButtonMigration.test（:58-71、読込中の前へ disabled を含む）、InventoryPage.settings / noechopatch / singlefetch.test が通る |
-| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e frontend/tests-e2e/inventory-table-layout.spec.ts（新規）（e2e.yml で全 PR 実行）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
+| 横にはみ出さない・縮む・見出しが画面内（審査 r2 B-16） | 新しい e2e frontend/tests-e2e/inventory-table-layout.spec.ts（新規）（【訂正 2026-10-15】e2e.yml:207 の Playwright E2E は `if: false` で 2026-06-01 から CI 停止中。この e2e は手元で実行し、数値を PR に残す。便2 #4327 で 3/3 成功）。既存の fixtures（installAuthBypass・mockApi・commonMocks）を使い、mock を3つ置く: GET /inventory（items 5件以上。うち1件は長い商品名・長い備考で表の幅が 900px を超えるもの。total・suppliers・conditions・units も入れる）、GET /me/inventory-filters（既定値）、GET /products/tcg-types。検査: (1) 375×800: カード（`inventory-row-<id>`）が見える、thead が無い、`document.documentElement.scrollWidth <= innerWidth`。(2) 900×800: まず `.comp-table-fit__card` の `--comp-table-fit-zoom` が 1 未満であることを assert（縮小が起きていない緑を防ぐ）、次にスクロール箱の getBoundingClientRect().height ≤ (innerHeight − 18rem の px) + 1、doc の横スクロールなし。(3) 1440×900: `--comp-table-fit-zoom` が未設定。既存の horizontal-overflow.spec.ts:76-80 は行の mock が無く空の表で検査している【事実: routeMocks :31-45 に /inventory 無し】ので、この新しい e2e で置き換えて確かめる（既存の検査は消さない） |
 | 生 table・インライン style が減る | `grep -c "<table" frontend/src/pages/inventory/InventoryPage.tsx` = 0、check-page-size（800行以下）、check-ui-governance 緑 |
 
 ## 便3 検索と提供者
@@ -258,7 +258,7 @@ recon の正式パス: docs/handoff/inventory-table-unify/recon.md。関係 ADR�
 ## 維持の仕組み
 
 - 守り手: .github/workflows/frontend-check.yml（check:all・tsc・新トークン検査・Storybook ビルド。e2e は .github/workflows/e2e.yml）
-- 金型にしたので、閲覧ページ（ADR-1017）も同じ部品を使う → 片方だけ直る事故を防ぐ。
+- 金型にしたので、閲覧ページ（ADR-1019（旧番号 ADR-1017。2026-10-15 に付け替え））も同じ部品を使う → 片方だけ直る事故を防ぐ。
 - 正規化は共通テストベクタで Python と JS を照合（ベクタを変えるときは両方のテストを同じ PR で触る）。
 - アプリ在庫表を変えるときは GAS 在庫一覧にも揃える方針（メモ app_inventory_gas_parity）。
 

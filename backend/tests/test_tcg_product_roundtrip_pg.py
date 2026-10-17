@@ -128,6 +128,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     "product_category_code": "PC_BOX",
                     "search_keywords": svc.encode_words([" a,b ", '"quoted"', "\r\nword", "＝1"]),
                     "exclude_keywords": "",
+                    "blank_confirmed": "exclude_keywords",  # ADR-1020 便3: 除外ワードを空にするには印が要る
                 }
                 raw = edit(original, changes, single=True)
                 result = await submit(db, raw)

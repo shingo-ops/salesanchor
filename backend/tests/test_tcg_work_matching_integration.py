@@ -333,6 +333,10 @@ def migrate(cursor):
     # 発送日の専用列（v102）: ship_ja・ship_en と tcg_note_master.label_template_en（本番の public 固定の migration をそのまま）。
     cursor.execute((MIGRATIONS / "20261013_140000_add_analysis_results_ship_ja_ship_en.sql").read_text())
     cursor.execute((MIGRATIONS / "20261013_140100_add_tcg_note_master_label_template_en.sql").read_text())
+    # ADR-1020 便1: 詳細保存が読み書く「調べたが無い」の記録表（public.products の id を参照。products は先頭で作成済み）。
+    cursor.execute((MIGRATIONS / "20261016_190000_create_product_blank_confirmations.sql").read_text())
+    # ADR-1020 便2a: 細分類の選択肢・ゲームとの紐づけを読む表（IF NOT EXISTS の本番 migration）。
+    cursor.execute((MIGRATIONS / "20260922_030000_product_format_game_links.sql").read_text())
     # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
@@ -340,7 +344,7 @@ def migrate(cursor):
 
 @pytest.fixture
 def pg(monkeypatch):
-    assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI service required; databases retained until service shutdown"
+    assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI service required; each test database is dropped at teardown"
     configured = os.getenv("RLS_ADMIN_DATABASE_URL")
     assert configured, "PostgreSQL acceptance MUST run: RLS_ADMIN_DATABASE_URL required"
     url = make_url(configured)
@@ -370,6 +374,14 @@ def pg(monkeypatch):
     finally:
         engine.dispose()
         connection.close()
+        # 共有メモリ上の統計が DB ごとに溜まり、CI の postgres が落ちたため（#4333）、試験ごとに消す。
+        admin = psycopg2.connect(dbname=url.database, **kwargs)
+        admin.autocommit = True
+        try:
+            with admin.cursor() as cursor:
+                cursor.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(name)))
+        finally:
+            admin.close()
 
 
 def seed_products(connection):

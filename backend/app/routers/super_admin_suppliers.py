@@ -21,7 +21,9 @@ API:
 from __future__ import annotations
 
 import csv
+import functools
 import hashlib
+import inspect
 import io
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
@@ -30,9 +32,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 from app.models import User
+from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
     CentralSupplierCreate,
     CentralSupplierResponse,
@@ -50,6 +53,26 @@ from app.schemas.central_masters import (
 )
 
 router = APIRouter()
+
+
+def _operator_writes(fn):
+    """共通仕入先（public.suppliers の tenant_id 空行）への書込用（ADR-1018 段階②b）。
+
+    ハンドラの実行中だけ app.is_operator='true' を張り、どの終わり方でも finally で戻す。
+    ルートはいずれも require_super_admin 配下。
+    """
+    sig = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    async def wrapper(*args, **kwargs):
+        db = sig.bind(*args, **kwargs).arguments["db"]
+        await set_operator_context(db)
+        try:
+            return await fn(*args, **kwargs)
+        finally:
+            await reset_operator_context(db)
+
+    return wrapper
 
 _SUPPLIER_COLS = (
     "id, supplier_code, name, supplier_type, default_language, "
@@ -117,6 +140,7 @@ async def list_suppliers(
     status_code=201,
     dependencies=[Depends(require_super_admin)],
 )
+@_operator_writes
 async def create_supplier(
     data: CentralSupplierCreate,
     db: AsyncSession = Depends(get_db),
@@ -141,9 +165,10 @@ async def create_supplier(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.create_supplier", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または制約違反: {exc.orig}",
+            detail="重複または制約違反",
         )
     row = result.mappings().first()
     new_id = row["id"]
@@ -166,6 +191,7 @@ async def create_supplier(
     response_model=CentralSupplierResponse,
     dependencies=[Depends(require_super_admin)],
 )
+@_operator_writes
 async def update_supplier(
     supplier_id: int,
     data: CentralSupplierUpdate,
@@ -187,7 +213,8 @@ async def update_supplier(
         )
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(status_code=409, detail=f"制約違反: {exc.orig}")
+        log_hidden_error("super_admin_suppliers.update_supplier", exc)
+        raise HTTPException(status_code=409, detail="制約違反")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="仕入元が見つかりません")
@@ -200,6 +227,7 @@ async def update_supplier(
     status_code=204,
     dependencies=[Depends(require_super_admin)],
 )
+@_operator_writes
 async def delete_supplier(
     supplier_id: int,
     db: AsyncSession = Depends(get_db),
@@ -413,6 +441,7 @@ async def import_suppliers_preview(
     dependencies=[Depends(require_super_admin)],
     summary="中央管理仕入元マスタ CSVインポート 確定",
 )
+@_operator_writes
 async def import_suppliers_commit(
     file: UploadFile = File(...),
     digest: str = Form(..., description="Preview で受け取った SHA-256 digest"),
@@ -513,9 +542,10 @@ async def import_suppliers_commit(
         await db.commit()
     except Exception as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.import_suppliers_commit", exc)
         raise HTTPException(
             status_code=500,
-            detail=f"SUPPLIER_IMPORT_COMMIT_ERROR: {exc}",
+            detail="SUPPLIER_IMPORT_COMMIT_ERROR",
         ) from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
@@ -570,9 +600,10 @@ async def create_routing(
         )
     except IntegrityError as exc:
         await db.rollback()
+        log_hidden_error("super_admin_suppliers.create_routing", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"重複または FK 違反: {exc.orig}",
+            detail="重複または FK 違反",
         )
     row = result.mappings().first()
     await db.commit()
@@ -738,6 +769,7 @@ async def get_supplier_extraction_rules(
     dependencies=[Depends(require_super_admin)],
     summary="仕入元の抽出ルール更新",
 )
+@_operator_writes
 async def update_supplier_extraction_rules(
     supplier_id: int,
     data: SupplierExtractionRulesUpdate,
@@ -762,7 +794,8 @@ async def update_supplier_extraction_rules(
         )
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"更新エラー: {exc}") from exc
+        log_hidden_error("super_admin_suppliers.update_supplier_extraction_rules", exc)
+        raise HTTPException(status_code=500, detail="更新エラー") from exc
 
     row = result.mappings().first()
     if not row:

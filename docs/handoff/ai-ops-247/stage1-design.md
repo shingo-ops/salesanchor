@@ -191,8 +191,20 @@
 - U9: 死活確認の口 /api/health が毎回 1〜2.5 秒かかっている（便4 の事前測定・2026-10-15。14 日の 6451 件すべて）。原因は未調査。便4 は見張りの条件から外しただけで、遅さ自体は直していない。
 - U10: BackendHighLatency の札を ticket から page に上げるか。便4 の配置後 14 日の実回数を見て決める。
 - U11: 裏方の処理（celery）の既存の失敗。translate_pending_messages が毎日 2〜3 回失敗している。また worker に登録されていないタスクの受付（`Received unregistered task`）が tcg_mirror と sa02_recon で各 14 件ある（便5 の事前測定・2026-10-15）。原因は未調査。便5 は見張りを足すだけで、これらは直さない。
+  - 2026-10-15 調査済み：未登録の 2 件はデコレータの付け忘れ（作られてから一度も動いていない）。まとめ翻訳は 7 日間 processed=0。失敗は買取価格の取得の後片付け漏れに続いて起きている。PO 決定：まとめ翻訳は外す、写しシートと毎朝の突き合わせは直す。設計は `docs/handoff/celery-unregistered-tasks/design.md`（実装承認待ち）。
 - U12: 1 日 1〜2 回しか動かない celery タスクの失敗は、便5 の CeleryTaskFailuresHigh（同じタスクで 1 時間に 3 回）では鳴らない。日次タスクの失敗の見張りをどうするか。
 - U13: `buyback.fetch_all_prices` の 1 件（10-02）が、worker の受付から完了まで 3724 秒かかっている。実行時間の最長（147.57 秒）と合わない。原因は未調査（便5 の事前測定・2026-10-15）。
+  - 2026-10-15 調査済み：10-02 に deploy が 2 回続き、処理の途中で止まった作業が再配送されて 2 回動いた（この 1 件だけ）。2 店の 465 商品の価格が 1 時間違いで 2 件ずつ記録されたが、各行はその時刻の正しい価格で、知らせの二重送信もない（知らせの条件 0 件）。後始末はしない。根拠は `docs/handoff/celery-unregistered-tasks/recon.md` §6。
+- U14: 設計 §2 便6 の `BackupStale` 1 本は、実装（#4312）で 3 本に分けた。BackupLocalStale・BackupS3Stale で、どちらのバックアップが止まったかを名前で分ける。BackupTimestampAbsent は、系列が消えると Stale が鳴らないため足した（F2CleanupAbsent と同じ形）。3 本とも ticket。本文 §2 は書き換えず、この行を正とする。
+- U15: 設計 §2 便7 の「`absent()` ルール」は、実装（#4323）で MonitoringConfigCheckStale に変えた。条件は「最後に送った時刻が 180000 秒より古い or absent」。pushgateway は最後の値を持ち続けるため、absent だけでは比較が止まったことに気づけない。本文 §2 は書き換えず、この行を正とする。
+- U16: 便6・便7 で足した bash の試験（`monitoring/scripts/tests/` 配下）は、CI で毎回は走っていない。手元とカード §5 で実行しただけ。workflow の変更になるため段階1 の範囲外とした。CI で走らせるかは段階2 の前に決める。
+- U17: 便7 の比較の対象は、スクリプトに固定した 6 本だけ。ダッシュボードなどほかの監視設定のずれは見ていない（U3・U4 と合わせて決める）。
+- U18: 便7 と同じ self-hosted runner を使う既存の `.github/workflows/qa-smoke.yml` は `pull_request` を持つ。fork の PR を実行する前に承認が要る設定になっているかは未確認。PO に GitHub の画面（Settings → Actions → General の fork の PR の承認）で確かめてもらう。
+  - 解決（2026-10-15 22:18）: PO の y を受け、fork の PR の承認設定（approval_policy）を first_time_contributors から all_external_contributors に変えた。PO が `! bash ~/CC報告ファイル-keep/ai-ops-u18/po-set-fork-approval.sh` で実行し、直後の確認では旧値、少し後の確認で all_external_contributors になったことを確かめた。self-hosted runner で pull_request を受ける workflow は qa-smoke.yml（salesanchor-vps）・hook-permission-check.yml（macOS）・reaper-schedule.yml（macOS。マージ時だけ動く条件付き）の 3 本。戻し方: 同じ API に first_time_contributors を PUT する。
+- U19: pushgateway は値を保存しない設定（persistence の指定なし）。再起動すると便7 の値が消える。値が消えると absent の側で 1 時間後に MonitoringConfigCheckStale（ticket）が鳴り、次の毎日の実行まで続く。手順書に「pushgateway の再起動後は workflow を手動で 1 回動かす」を足すか、persistence を付けるかを決める（2026-10-15 便7 コード審査 低-2）。
+  - 解決（2026-10-15）: PO の y を受け、設定は変えず手順書に追記して閉じる（docs/runbooks/alerts.md の MonitoringConfigCheckStale の節）。根拠: 監視スタックを作り直す workflow は無い（docs/handoff/server-resource-optimization/design-20261001.md:130）。prod2 は 89 日間再起動なし（2026-10-15 の uptime）。直近の作り直しは 2026-10-11 の手作業 1 回。値が消えた場合は MonitoringConfigCheckStale（monitoring/prometheus/alert_rules.yml:274-276）が 1 時間後に鳴る。
+- U20: pushgateway のポートは 9091 で、機体の外向きに公開する書き方になっている。prod2 の防火壁の設定は未確認。外から送れる場合、ずれ 0 の値を送ってずれを隠せる。防火壁を確かめるか、127.0.0.1 に絞るかを決める（2026-10-15 便7 コード審査 低-4。便7 では変えていない）。
+  - 解決（2026-10-15）: 変更なしで閉じる。根拠 ①prod2:9091 への直接の到達は、さくら prod2 のパケットフィルタで「TCP 9091 / 送信元 49.212.137.46/32 のみ許可」（2026-10-15 に PO が管理画面で現在値を確認。記録 docs/runbooks/monitoring-vps-migration.md:107）。Mac から `curl -m 5 http://49.212.160.98:9091/-/healthy` は timeout。②prod1 の nginx が中継するのは `location /pushgateway/metrics/job/sop-health-reporter/` の POST/PUT だけ（nginx/nginx.conf:215-222）。GET は 403（2026-10-15 実測）。便7 の job（monitoring_config_drift）へは外から届かない。③127.0.0.1 に絞ると、prod1 nginx からの中継（nginx.conf:217）が届かず sop-health-reporter が止まる。残るリスク: 記録係 job への POST/PUT は認証なしで外から可能（docs/handoff/server-resource-optimization/design-20261001.md:186 で既知、影響は SOP 指標のみ）。ufw の現在値は未確認（制限鍵で読めない）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 

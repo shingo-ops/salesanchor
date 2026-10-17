@@ -1,9 +1,9 @@
 /**
  * 本番タブの行から開く、1件の訂正 Drawer（設計 §13-5 の 3、review-fix-column）。
  * 上から: 赤字の理由 → 原文 | 比較表（「修正」列、行を押すと選べる）→ 「直す」欄。
- * 比較表は表示だけで、値を変えられるのは「直す」欄（ReviewFixWizard）だけ。
+ * 比較表の行を押すと、その行に合わせた「直す」欄（ReviewFixWizard）が出る。値を変えられるのは「直す」欄だけ。
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
@@ -33,15 +33,20 @@ interface Props {
   removedFromList?: boolean;
   /** 「確認済み」タブから開いたとき true（確認済みである旨と取り消しボタンを出す） */
   ackedView?: boolean;
+  /** 見るだけ（在庫表から開くとき）。「確認済み」・取消・行を押して直す操作を出さない */
+  viewOnly?: boolean;
+  /** 本文の先頭に置く部品（在庫表のまとめた行の切り替えタブなど） */
+  headerSlot?: ReactNode;
 }
 
 // 原文ペインはその商品の行へ自動で送るため、行ジャンプは何もしない
 const noJump = () => undefined;
 
-export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = false, ackedView = false }: Props) {
+export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = false, ackedView = false, viewOnly = false, headerSlot }: Props) {
   const { t } = useTranslation();
   const details = item.review_reason_details ?? [];
   const gapSuspect = gapSuspectOf(item);
+  const summaryText = (item.thought_summaries ?? []).filter(Boolean).join("\n\n");
   const [scope, setScope] = useState<FixScope | null>(null);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [ackedCodes, setAckedCodes] = useState<string[]>([]);
@@ -59,9 +64,10 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   const fixRows = fixRowsOf(item, t);
   const fixableRowKeys = Object.keys(fixRows);
   const keepCodes = ackableReasonCodes(item, ackedCodes);
-  const canKeep = keepCodes.length > 0;
+  const canKeep = !viewOnly && keepCodes.length > 0;
 
   const selectRow = (rowKey: string) => {
+    if (viewOnly) return;
     const rowScope = fixRows[rowKey]?.scope;
     if (!rowScope) return;
     setAckedNotice(false);
@@ -145,6 +151,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
   return (
     <Drawer open onClose={confirmOpen || revokeAsk ? () => undefined : onClose} title={t("reviewItem.drawerTitle")} size="wide">
       <Stack gap="4">
+        {headerSlot}
         {removedFromList && <Callout variant="info" title={t("reviewItem.removedFromList")} />}
         <section className="review-item-reasons-block">
           <Stack gap="2">
@@ -177,7 +184,7 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             {ackError && <Callout variant="warning" title={ackError} />}
             {revokeError && <Callout variant="warning" title={t("reviewItem.revokeFailed")} />}
             {ackedNotice && <Callout variant="info" title={t("reviewItem.acked")}>{revokeButton}</Callout>}
-            {ackedView && !ackedNotice && !revoked && (
+            {!viewOnly && ackedView && !ackedNotice && !revoked && (
               <Callout variant="info" title={t("reviewItem.ackedState")}>{revokeButton}</Callout>
             )}
             {revokedNotice && <Callout variant="info" title={t("reviewItem.revoked")} />}
@@ -195,15 +202,22 @@ export function ReviewItemDrawer({ item, onClose, onRefresh, removedFromList = f
             readOnly={true}
             onJumpToSourceLine={noJump}
             heading={t("reviewItem.compareHeading")}
-            fixColumn={{ selectedRowKey, onRowSelect: selectRow, fixableRowKeys }}
+            fixColumn={viewOnly ? undefined : { selectedRowKey, onRowSelect: selectRow, fixableRowKeys }}
           />
         </TwoColumn>
+        <section className="review-item-summary">
+          <div className="review-item-pane-head">
+            <h3>{t("tcgAnalysisReview.geminiSummaryTitle")}</h3>
+          </div>
+          {summaryText ? <p className="review-item-summary__body">{summaryText}</p> : <p>{t("tcgAnalysisReview.geminiSummaryEmpty")}</p>}
+        </section>
         {scope !== null && (
           <section className="review-item-fix">
             <ReviewFixWizard
-              key={`${item.extraction_item_id}:${scope}`}
+              key={`${item.extraction_item_id}:${scope}:${selectedRowKey ?? ""}`}
               item={item}
               scope={scope}
+              rowKey={selectedRowKey ?? ""}
               onRefresh={onRefresh}
             />
           </section>

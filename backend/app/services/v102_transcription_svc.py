@@ -21,6 +21,7 @@ from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import ReasonTable, build_review_reason_details
 from app.services.v102_gap_lines import gap_suspects_by_item
 from app.services.v102_gap_suspect_view import with_candidate_names
+from app.services.v102_human_decisions_svc import v102_analysis_lock_key
 
 # テスト互換性のため属性を維持する（monkeypatch.setattr 対象。本番は public）
 TCG_SCHEMA = "public"
@@ -161,11 +162,6 @@ class EditResult:
 def split_raw_lines(raw_text: str | None) -> list[dict]:
     """原文の行 [{number, text}]（1 始まり・"\\n" で分け・空行も数える。text に改行は含めない）。"""
     return [{"number": n, "text": part} for n, part in enumerate((raw_text or "").split("\n"), 1)]
-
-
-def v102_analysis_lock_key(job_id: str) -> str:
-    """システム段(run_v102_analysis, line_analysis_v102_svc.py)と同じ advisory lock の鍵。"""
-    return f"v102_analysis:{job_id}"
 
 
 def _json_value(value: object) -> Any:

@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 # --- 区分の値（マスタの値。比較に使うので、ここ1か所にまとめる） -------------------------------
 # public.tcg_product_categories.kubun_type（商品の分類）の値
 PRODUCT_KUBUN_BOX = "箱系"
+PRODUCT_KUBUN_BULK = "バルク系"  # 状態語が無いとき、状態を Bulk（配信可）にする（ADR-1021）
 PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
 PRODUCT_KUBUN_UNKNOWN = "不明"
@@ -77,6 +78,9 @@ FLAG_SINGLE_CANONICAL = "FLAG_SINGLE"  # resolve_condition_v2 が返す単品の
 CONDITION_UNKNOWN = "不明"
 # 状態を決められなかった件に付ける状態「Error」の code（名前は masters から code で引く。effect='EXCLUDE' = 配信しない）
 CONDITION_ERROR_CODE = "CN0012"
+# バルク系で状態語が無いときの状態「Bulk」の code（名前は masters から code で引く。effect='OUTPUT' = 配信する）
+CONDITION_BULK_CODE = "CN0014"
+BASIS_BULK_DEFAULT = "R6:バルク既定"  # R4 で始めない（買取換算の候補に入れないため。v102_buyback_unit_svc.is_candidate）
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（旧試運転の要確認と同じ判定・同じ意味）
@@ -189,6 +193,16 @@ class G2Index:
     name_entries: tuple[ProductEntry, ...]
     base_entries: tuple[ProductEntry, ...]
     code_values: frozenset[str]
+    # 状態マスタ（public.conditions）の合図の語（正規化済み）。除外ワードの一致が、これより長い合図の語に収まるときは無視する。空なら従来どおり
+    cond_terms: tuple[str, ...] = ()
+
+
+def with_cond_terms(masters: ProductFirstMasters, cond_terms: tuple[str, ...]) -> ProductFirstMasters:
+    """masters の形G2 の索引に合図の語を持たせた複製を返す（元は変えない）。cond_terms が空なら masters をそのまま返す。"""
+    if not cond_terms:
+        return masters
+    index = masters.g2_index or build_g2_index(masters.product_entries, frozenset(), frozenset())
+    return dataclass_replace(masters, g2_index=dataclass_replace(index, cond_terms=cond_terms))
 
 
 def build_g2_index(
@@ -232,7 +246,7 @@ def _g2_hits(block: str, index: G2Index) -> dict[int, _G2Hit]:
             name_hit=name_hit,
             code_hit=False if entry.work_id in index.name_only_work_ids else (basis or code_keyword),
             any_hit=basis or bool(keywords),
-            excluded=bool(_excluded_keywords(entry, nb, folded, True)),
+            excluded=bool(_excluded_keywords(entry, nb, folded, True, index.cond_terms)),
         )
     return hits
 
@@ -258,7 +272,7 @@ def match_product_g2(block: str, index: G2Index) -> MatchResult:
     N が0：型番だけでも決めてよい中分類の商品で、型番が当たり除外ワードに当たらないもの。
     """
     candidates = _g2_candidates(_g2_hits(block, index), index)
-    base = match_product(block, index.base_entries, strict_codes=True)
+    base = match_product(block, index.base_entries, strict_codes=True, cond_terms=index.cond_terms)
     if not candidates:
         return dataclass_replace(
             base, status="unmatched", product_id=None, work_id=None, candidates=(), basis="",
@@ -538,6 +552,11 @@ def _error_condition(cond_entries: list[dict]) -> str | None:
     return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_ERROR_CODE), None)
 
 
+def _bulk_condition(cond_entries: list[dict]) -> str | None:
+    """状態「Bulk」の名前（masters の code で引く）。行が無ければ None。"""
+    return next((e["canonical"] for e in cond_entries if e["code"] == CONDITION_BULK_CODE), None)
+
+
 def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict]) -> tuple[str | None, list[dict]]:
     """最終フォールバック（FLAG_SINGLE かつ basis が単位不明）なら状態を Error にして理由 condition_unknown を付ける。
 
@@ -553,12 +572,19 @@ def _resolve_condition(
 ) -> tuple[str | None, str, list[dict]]:
     """(状態, basis, 要確認の理由の一覧 [{"kind": ..., ...}])。"""
     if product_kubun in PRODUCT_KUBUNS_DEFAULTING_TO_BOX and unit_kubun in BOX_RECHECK_UNIT_KUBUNS:
-        cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block)
+        cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True)
         codes = _other_kubun_hits(block, UNIT_KUBUN_BOX, cond_entries)
         reviews = [{"kind": REVIEW_MULTIPLE_CANDIDATES, "codes": codes}] if codes else []
         cond, undecided = _undecided_condition(cond, basis, cond_entries)
         return cond, basis, [*reviews, *undecided]
-    cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block)
+    cond, _cid, basis = resolve_condition_v2(block, "", unit_kubun, cond_entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True)
+    # バルク系で状態語が無い（FLAG_SINGLE かつ単位不明の既定）なら Bulk。語で決まった行（R1:PSA 等）は変えない
+    bulk = _bulk_condition(cond_entries)
+    if (
+        product_kubun == PRODUCT_KUBUN_BULK and bulk is not None
+        and cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis
+    ):
+        return bulk, BASIS_BULK_DEFAULT, []
     cond, undecided = _undecided_condition(cond, basis, cond_entries)
     return cond, basis, undecided
 

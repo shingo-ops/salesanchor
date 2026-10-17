@@ -70,6 +70,7 @@ from app.routers import (
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
     note_master,  # 備考マスタ テナント用
     notifications,
+    ops,  # ADR-1012 段階2 便B: 保守 API
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
     order_purchase_details,  # ADR-021 Phase 4 / Sprint 4: 仕入情報 MVP
@@ -115,6 +116,7 @@ from app.routers import (
     super_admin_tenants,
     super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
     super_admin_units,  # 単位マスタ中央 admin
+    super_admin_viewers,  # ADR-1019 段4a-2: 閲覧者管理
     super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
     tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
@@ -135,6 +137,7 @@ from app.routers import (
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
     units,  # 単位マスタ テナント用
+    viewer,  # ADR-1019 段2: 閲覧専用ページ API
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
@@ -235,6 +238,8 @@ register_metrics(app)
 app.include_router(health.router, prefix="/api", tags=["health"])
 # /api/v1/auth にバージョン管理を適用
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+# ADR-1019 段2: 閲覧専用ページの API（login・logout・inventory。閲覧者のトークンだけを見る）
+app.include_router(viewer.router, prefix="/api/v1/viewer", tags=["viewer"])
 # Meta Webhook（認証不要 - Metaのサーバーからアクセスされる）
 app.include_router(webhook.router, prefix="/api/v1", tags=["webhook"])
 # Meta Data Deletion Callback + Status API（認証不要 - 公開エンドポイント）
@@ -639,6 +644,9 @@ app.include_router(
     super_admin_phase_switch.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+# ADR-1019 段4a-2: 閲覧者管理 (require_super_admin)
+app.include_router(super_admin_viewers.router, prefix="/api/v1", tags=["super-admin"])
+
 # テナント論理削除 / 物理削除
 app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
@@ -757,6 +765,9 @@ app.include_router(
 app.include_router(
     super_admin_db_schema.router, prefix="/api/v1", tags=["super-admin"],
 )
+
+# ADR-1012 段階2 便B: 保守 API（鍵か super admin のログイン。テナント文脈なし）
+app.include_router(ops.router, prefix="/api/v1")
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 
+from app.auth.dependencies import reset_operator_context, set_operator_context
+
 TCG_SCHEMA = "public"
 MARKER = 'android-v1'
 JST = timezone(timedelta(hours=9))
@@ -79,6 +81,15 @@ def history_proof(messages, display_name, supplier_code, suppliers, sources):
 
 
 async def link_pending(db, data):
+    # ADR-1018 段階②b: 共通仕入先（tenant_id 空行）の line_name 更新は運営文脈のみ。
+    # 本体が更新直前に operator 文脈を張るため、finally で必ず戻す。
+    try:
+        return await _link_pending_impl(db, data)
+    finally:
+        await reset_operator_context(db)
+
+
+async def _link_pending_impl(db, data):
     # Caller verifies active device owner and import ownership before entering here.
     job = (await db.execute(text(f'''SELECT raw_sha256,review_status,pending_messages
         FROM {TCG_SCHEMA}.import_jobs WHERE id=:id FOR UPDATE'''),
@@ -111,6 +122,7 @@ async def link_pending(db, data):
     if len(sources) > 10000:
         raise ValueError('evidence query truncated')
     history_proof(messages, name, data['supplier_code'], suppliers, sources)
+    await set_operator_context(db)
     await db.execute(text('UPDATE public.suppliers SET line_name=:name WHERE id=:supplier_id'),
         {'name': name, 'supplier_id': target[0]['id']})
     # Re-fetch suppliers so the updated line_name is reflected in resolve_android

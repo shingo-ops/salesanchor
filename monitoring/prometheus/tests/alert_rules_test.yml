@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 22 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 27 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -335,6 +335,98 @@ tests:
         alertname: CeleryHeartbeatStale
         exp_alerts: []
 
+  # time() は 0 から始まる。更新時刻を古いまま（60）にして 600 秒超の遅れを作る（for 2m を足して 20m には鳴っている）
+  # ViewerInventoryStaleFires: 更新が古く保留も古い → ViewerInventoryStale だけ鳴る
+  - name: ViewerInventoryStaleFires
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+              description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
+  # ViewerInventoryStaleOnHoldFires: 更新が古く保留が新しい → ViewerInventoryStaleOnHold だけ鳴る
+  - name: ViewerInventoryStaleOnHoldFires
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '0+60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上止まっている（配信の保留中）"
+              description: "解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystaleonhold"
+
+  # ViewerInventoryFresh: 更新が新しい → どちらも鳴らない
+  - name: ViewerInventoryFresh
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '0+60x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '60x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
+  # ViewerInventoryKeyMissing: キー無し（0）で保留も 0 → ViewerInventoryStale が鳴る
+  - name: ViewerInventoryKeyMissing
+    interval: 1m
+    input_series:
+      - series: 'viewer_inventory_updated_timestamp_seconds{job="backend",instance="api"}'
+        values: '0x40'
+      - series: 'viewer_inventory_last_hold_timestamp_seconds{job="backend",instance="api"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ViewerInventoryStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tier: ticket
+              job: backend
+              instance: api
+            exp_annotations:
+              summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+              description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+      - eval_time: 20m
+        alertname: ViewerInventoryStaleOnHold
+        exp_alerts: []
+
   - name: CeleryTaskFailuresHigh
     interval: 1m
     input_series:
@@ -588,4 +680,117 @@ tests:
     alert_rule_test:
       - eval_time: 2h
         alertname: MonitoringConfigCheckStale
+        exp_alerts: []
+
+  # --- container_state_alerts（段階3 便E） ---
+  - name: ContainerUnhealthyFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_unhealthy{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ContainerUnhealthy
+        exp_alerts:
+          - exp_labels:
+              service: celery-beat
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナ celery-beat が不健康です"
+              description: "prod1 の celery-beat の健康診断が unhealthy です。固まっている可能性があります。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerunhealthy"
+
+  - name: ContainerUnhealthyQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_unhealthy{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '0x10'
+      - series: 'salesanchor_container_unhealthy{service="backend",instance="app-vps",job="node-exporter"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerUnhealthy
+        exp_alerts: []
+
+  - name: ContainerStateStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '-1000+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナの状態書き係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+  - name: ContainerStateStaleAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter",instance="app-vps"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナの状態書き係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+  - name: ContainerStateFresh
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '0+60x10'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: ContainerStateStale
+        exp_alerts: []
+
+  # --- 定着便 T1 ---
+  - name: ContainerHealthcheckMissingFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_healthcheck_missing{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ContainerHealthcheckMissing
+        exp_alerts:
+          - exp_labels:
+              service: celery-beat
+              instance: app-vps
+              job: node-exporter
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "コンテナ celery-beat に健康診断がありません"
+              description: "prod1 の celery-beat は動いていますが、健康診断（healthcheck）がありません。固まっても ContainerUnhealthy が鳴りません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerhealthcheckmissing"
+
+  - name: ContainerHealthcheckMissingQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_healthcheck_missing{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '0x20'
+      - series: 'salesanchor_container_healthcheck_missing{service="backend",instance="app-vps",job="node-exporter"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ContainerHealthcheckMissing
         exp_alerts: []

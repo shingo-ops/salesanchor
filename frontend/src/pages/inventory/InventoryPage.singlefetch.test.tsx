@@ -25,6 +25,7 @@ const defer = <T,>(): Deferred<T> => {
   return { promise, resolve, reject };
 };
 
+const lastCall = () => { const c = inventoryCalls(); return c[c.length - 1] ?? ''; };
 const inventoryCalls = () => mock.get.mock.calls.map(([u]) => String(u)).filter((u) => u.startsWith('/inventory?'));
 
 let instance = createInstance();
@@ -60,7 +61,8 @@ describe('InventoryPage single fetch on open', () => {
     const calls = inventoryCalls();
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain('merge_same_post=false');
-    expect(calls[0]).toContain('hide_supplier_ids=1');
+    expect(calls[0]).not.toContain('hide_supplier_ids');
+    expect(calls[0]).not.toContain('supplier_ids');
   });
 
   it('still calls /inventory once with defaults when saved filters fail', async () => {
@@ -102,5 +104,49 @@ describe('InventoryPage single fetch on open', () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(screen.queryByTestId('inventory-row-old')).toBeNull();
     expect(screen.getByTestId('inventory-row-new')).toBeTruthy();
+  });
+
+  const withSuppliers = () => {
+    mock.get.mockImplementation((url: string) => {
+      if (url === '/me/permissions') return Promise.resolve({ permissions: [] });
+      if (url === '/products/tcg-types') return Promise.resolve([]);
+      if (url === '/me/inventory-filters') return Promise.resolve({ enabled: false, merge_same_post: false, hidden_supplier_ids: [], hidden_categories: [], hidden_columns: [] });
+      if (url.startsWith('/inventory?')) {
+        return Promise.resolve({ ...listOf('r1'), suppliers: [{ id: 3, name: 'S' }, { id: 4, name: 'T' }] });
+      }
+      return Promise.reject(new Error(`Unexpected GET ${url}`));
+    });
+  };
+
+  it('sends supplier_ids when suppliers are chosen in the toolbar MultiSelect, and stops sending after clear', async () => {
+    withSuppliers();
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    expect(inventoryCalls()[0]).not.toContain('supplier_ids');
+
+    fireEvent.click(await screen.findByTestId('inventory-supplier-filter-button'));
+    fireEvent.click(await screen.findByTestId('inventory-supplier-filter-option-3'));
+    await waitFor(() => expect(lastCall()).toContain('supplier_ids=3'));
+    expect(lastCall()).toContain('page=1');
+    fireEvent.click(await screen.findByTestId('inventory-supplier-filter-option-4'));
+    await waitFor(() => expect(lastCall()).toContain('supplier_ids=3%2C4'));
+    expect(lastCall()).not.toContain('hide_supplier_ids');
+
+    fireEvent.click(await screen.findByTestId('inventory-supplier-filter-clear'));
+    await waitFor(() => expect(lastCall()).not.toContain('supplier_ids'));
+  });
+
+  it('has no search button, and Enter searches at once', async () => {
+    withSuppliers();
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    expect(screen.queryByTestId('inventory-search-btn')).toBeNull();
+    const input = screen.getByTestId('inventory-search');
+    expect(input.getAttribute('placeholder')).toBe('Search by name or code');
+    const before = inventoryCalls().length;
+    fireEvent.change(input, { target: { value: String.fromCodePoint(0x307d, 0x3051, 0x3082, 0x3093) } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(inventoryCalls().length).toBeGreaterThan(before));
+    expect(lastCall()).toContain('q=%E3%81%BD%E3%81%91%E3%82%82%E3%82%93');
   });
 });

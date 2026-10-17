@@ -19,12 +19,15 @@ import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
+import { RadioControl } from "../../components/RadioControl";
 import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { Checkbox } from "../../components/Checkbox";
+import { CheckboxControl } from "../../components/CheckboxControl";
 
 interface Role {
   id: number;
@@ -393,33 +396,30 @@ export default function RolesPage() {
                           <span>{t("roles.categoryPagePerm", { category })}</span>
                         </div>
                         <div className="permission-group-toggles">
-                          <label className="chk-label" title={t("roles.toggleAllTitle")}>
-                            <input
-                              type="checkbox"
+                          <span title={t("roles.toggleAllTitle")}>
+                            <Checkbox
+                              label={t("roles.selectAll")}
                               checked={allChecked}
                               disabled={!canEditPerms}
                               onChange={(e) => toggleCategory(category, e.target.checked)}
                             />
-                            {t("roles.selectAll")}
-                          </label>
+                          </span>
                           {MENU_VIEW_KEY[category] && (
-                            <label className="chk-label" title={t("roles.menuVisibilityTitle")}>
-                              <input
-                                type="checkbox"
+                            <span title={t("roles.menuVisibilityTitle")}>
+                              <Checkbox
+                                label={t("roles.showMenu")}
                                 checked={menuVisible}
                                 disabled={!canEditPerms}
                                 onChange={(e) => toggleMenuVisibility(category, e.target.checked)}
                               />
-                              {t("roles.showMenu")}
-                            </label>
+                            </span>
                           )}
                         </div>
                       </header>
                       <div className="permission-group-body">
                         {perms.map((p) => (
                           <label key={p.id} className="permission-item">
-                            <input
-                              type="checkbox"
+                            <CheckboxControl
                               checked={editedPermIds.has(p.id)}
                               disabled={!canEditPerms}
                               onChange={() => togglePerm(p.id)}
@@ -467,9 +467,9 @@ export default function RolesPage() {
                       className="color-swatch selected color-swatch-legacy"
                       style={{ background: roleForm.color }}
                       title={t("roles.currentColorTitle", { color: roleForm.color })}
+                      data-current-label={t("roles.currentColorBadge")}
                     >
-                      <input
-                        type="radio"
+                      <RadioControl
                         name="role-color"
                         value={roleForm.color}
                         checked
@@ -484,8 +484,7 @@ export default function RolesPage() {
                       style={{ background: c }}
                       title={c}
                     >
-                      <input
-                        type="radio"
+                      <RadioControl
                         name="role-color"
                         value={c}
                         checked={roleForm.color === c}

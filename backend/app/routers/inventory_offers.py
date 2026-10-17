@@ -14,6 +14,7 @@ AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理す
 from __future__ import annotations
 
 import logging
+import unicodedata
 from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -29,9 +30,11 @@ from app.schemas.inventory_offers import (
     InventoryOfferListResponse,
     InventoryOfferResponse,
     InventoryOfferUpdate,
+    InventoryRawTextsResponse,
     InventoryRow,
     InventorySupplierFacet,
 )
+from app.services import tcg_distribution_svc as _distribution
 from app.services.inventory_axes import (
     build_condition_filter_clause,
     log_axis_isolation,
@@ -39,12 +42,15 @@ from app.services.inventory_axes import (
     resolve_condition_view,
 )
 from app.services.tcg_distribution_svc import (
+    _STATUS_TO_OFFER_TYPE,  # noqa: F401  テストが io._STATUS_TO_OFFER_TYPE として読めるように残す
     FRESH_WINDOW_HOURS,
+    OFFER_TYPE_TO_STATUS,
     _age_window,
     _max_age_hours,
     distribution_final_select_plain,
     distribution_rows_parts,
     load_distribution_settings,
+    status_to_offer_type,
 )
 
 router = APIRouter()
@@ -99,19 +105,10 @@ async def _load_offer(db: AsyncSession, offer_id: int) -> dict | None:
 # 各クライアントの営業担当ロール以上（products.view）が閲覧。読み取り専用。
 # ---------------------------------------------------------------------------
 
-# 区分（offer_type）と LINE 解析の status の対応。1つの定数で持ち、絞り込みは逆引きに使う。
-OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pre-order"}
-_STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
-
 
 def round_half_up(value: object) -> int:
     """SQL の ROUND(numeric) と同じ丸め（0.5 は0から遠い側）。Python の round は銀行丸めなので使わない。"""
     return int(Decimal(str(value)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
-
-
-def status_to_offer_type(status_value: str | None) -> str | None:
-    """LINE 解析の status を区分に写す。対応に無い status は None。"""
-    return _STATUS_TO_OFFER_TYPE.get(status_value or "")
 
 
 # 在庫表の全列ソート用ホワイトリスト（sort キー → 配信行の列。SQLi 防止）。d は distribution_rows_sql の副問い合わせ。
@@ -128,6 +125,24 @@ _SORT_COLUMNS = {
     "offered_at": "d.posted_ts",
     "release_date": "NULLIF(d.release_date, '')",
 }
+
+
+# 検索の語数の上限（GAS の在庫一覧と同じ「空白区切りAND」。多すぎる語で SQL を膨らませない）
+_SEARCH_MAX_TERMS = 10
+# ひらがな U+3041〜U+3096 → カタカナ U+30A1〜U+30F6（86文字ずつ）。SQL の translate() に渡す。
+_KANA_FROM = "".join(chr(c) for c in range(0x3041, 0x3097))
+_KANA_TO = "".join(chr(c + 0x60) for c in range(0x3041, 0x3097))
+
+
+def normalize_search_text(s: str) -> str:
+    """検索語の正規化。NFKC → 小文字 → ひらがなをカタカナへ（GAS 在庫一覧の normalizeForSearch と同じ）。
+
+    SQL 側の translate(lower(normalize(.., NFKC)), :kana_from, :kana_to) と同じ結果になること。
+    共通テストベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（変えるときは両方のテストを触る）。
+    """
+    return unicodedata.normalize("NFKC", s).lower().translate(
+        {c: c + 0x60 for c in range(0x3041, 0x3097)}
+    )
 
 
 def _split_csv(raw: str | None) -> list[str]:
@@ -163,6 +178,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 ship_ja=row.get("ship_ja") or None,
                 status=status_value,
                 merged_count=int(row.get("merged_count") or 1),
+                extraction_item_ids=[str(v) for v in (row.get("extraction_item_ids") or [])],
             )
         )
     return projected
@@ -171,6 +187,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 def _build_view_filters(
     *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
     unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
+    supplier_ids: str | None = None,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
     conditions: list[str] = []
@@ -181,12 +198,24 @@ def _build_view_filters(
     if category:
         conditions.append("d.category = :category")
         params["category"] = category
-    if q:
-        conditions.append(
-            "(d.provider ILIKE :q OR d.japanese_title ILIKE :q OR d.english_title ILIKE :q "
-            "OR d.product_id::text ILIKE :q OR d.category ILIKE :q OR d.mark ILIKE :q)"
+    # 語ごとに「日本語名・英語名・型番(mark)・検索ワード」のどれかに含まれる、を AND（GAS と同じ正規化）
+    terms = [t for t in normalize_search_text(q or "").split() if t][:_SEARCH_MAX_TERMS]
+    if terms:
+        params["kana_from"] = _KANA_FROM
+        params["kana_to"] = _KANA_TO
+        haystack = (
+            "translate(lower(normalize(concat_ws(E'\\n', d.japanese_title, d.english_title, d.mark, "
+            "d.search_keywords), NFKC)), CAST(:kana_from AS text), CAST(:kana_to AS text))"
         )
-        params["q"] = f"%{q}%"
+        for i, term in enumerate(terms):
+            conditions.append(f"strpos({haystack}, CAST(:qt{i} AS text)) > 0")
+            params[f"qt{i}"] = term
+    # 「提供者（選んだ仕入元だけ）」。整数のみ採用、整数が1つも無ければ絞らない。
+    shown_ids = [int(tok) for tok in _split_csv(supplier_ids) if tok.lstrip("-").isdigit()]
+    if shown_ids:
+        placeholders = ", ".join(f":sid{i}" for i in range(len(shown_ids)))
+        conditions.append(f"d.supplier_id IN ({placeholders})")
+        params.update({f"sid{i}": sid for i, sid in enumerate(shown_ids)})
     # 「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）。supplier_id は public.suppliers の id。
     hidden_ids = [int(tok) for tok in _split_csv(hide_supplier_ids) if tok.lstrip("-").isdigit()]
     if hidden_ids:
@@ -285,11 +314,12 @@ def _build_inventory_view_sql(
     dependencies=[Depends(require_permission("products.view"))],
 )
 async def list_inventory_view(
-    q: str | None = Query(default=None, max_length=255, description="商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致"),
+    q: str | None = Query(default=None, max_length=255, description="日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）"),
     tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別 (public.products.tcg_type)"),
     category: str | None = Query(default=None, max_length=100, description="カテゴリー絞り込み (public.products.category)"),
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
+    supplier_ids: str | None = Query(default=None, max_length=2000, description="表示する仕入元IDのCSV（選んだ仕入元だけ）"),
     hide_categories: str | None = Query(default=None, max_length=2000, description="非表示にするカテゴリーのCSV（ユーザー別フィルタ用）"),
     # 状態/形態/区分の複数選択（CSV → IN）。未指定なら絞り込まない。
     condition: str | None = Query(default=None, max_length=2000, description="表示する状態(condition)の単一指定"),
@@ -334,6 +364,7 @@ async def list_inventory_view(
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
         qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,
+        supplier_ids=supplier_ids,
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params = {**age_params, **filter_params}
@@ -388,6 +419,51 @@ async def list_inventory_view(
         window_hours=max_age_hours,
         fresh_window_hours=FRESH_WINDOW_HOURS,
     )
+
+
+@router.get(
+    "/inventory/raw-texts",
+    response_model=InventoryRawTextsResponse,
+    dependencies=[Depends(require_permission("products.view"))],
+)
+async def list_inventory_raw_texts(
+    extraction_item_ids: list[str] = Query(min_length=1, max_length=50, description="extraction_items.id（1〜50件）"),
+    db: AsyncSession = Depends(get_db),
+):
+    """在庫表スライドの原文タブ。配信行（dist_base）に入る extraction_item だけの原文を返す。
+
+    行の定義は distribution_rows_parts の1か所だけ（ここに配信の WHERE は書かない。ADR-1014）。
+    配信行に無い ID・該当 0 件は 404。返す項目は extraction_item_id・raw_text・line_start・line_end のみ。
+    """
+    settings = await load_distribution_settings(db)
+    max_age_hours = _max_age_hours(settings)
+    if max_age_hours is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
+    age_condition, age_params = _age_window(max_age_hours)
+    head, _final = distribution_rows_parts(
+        include_flag_single=include_flag_single, age_condition=age_condition, merge_same_post=False,
+    )
+    sql = (
+        head
+        + ",\n    raw_ok AS (SELECT DISTINCT item_key FROM dist_base WHERE item_key = ANY(:raw_item_ids))\n"
+        + f"""SELECT ei.id::text AS extraction_item_id, sm.raw_text, ei.line_start, ei.line_end
+        FROM raw_ok
+        JOIN {_distribution.TCG_SCHEMA}.extraction_items ei ON ei.id::text = raw_ok.item_key
+        JOIN {_distribution.TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {_distribution.TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"""
+    )
+    result = await db.execute(text(sql), {**age_params, "raw_item_ids": list(extraction_item_ids)})
+    rows = [dict(r) for r in result.mappings().all()]
+    if not rows:
+        raise HTTPException(status_code=404, detail="not_found")
+    return InventoryRawTextsResponse(items=[
+        {
+            "extraction_item_id": r["extraction_item_id"], "raw_text": r["raw_text"] or "",
+            "line_start": r["line_start"], "line_end": r["line_end"],
+        }
+        for r in rows
+    ])
 
 
 @router.get(

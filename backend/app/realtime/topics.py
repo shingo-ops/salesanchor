@@ -18,6 +18,7 @@ TOPIC_TCG_REVIEW = "tcg.review"
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
 }
 
 _PENDING = "段階2で画面に当てるときに決める"
@@ -39,6 +40,20 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
+    ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/logout"): "閲覧ページ ADR-1019: 閲覧者のログアウトは画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/password"): "閲覧ページ ADR-1019: 閲覧者のパスワード変更は画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/password-reset/request"): "閲覧ページ ADR-1019: 閲覧者のパスワード再発行の申請は画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/password-reset/confirm"): "閲覧ページ ADR-1019: 閲覧者のパスワード再発行の確定は画面更新の通知対象外",
+    ("POST", "/api/v1/viewer/signup"): "閲覧ページ ADR-1019: 閲覧者の申込は画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/activate"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/suspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/unsuspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/extend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/ops/alertmanager"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
+    ("POST", "/api/v1/ops/control/halt"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
+    ("POST", "/api/v1/ops/control/resume"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
+    ("POST", "/api/v1/ops/incidents/{incident_id}/events"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/auth/password-reset/confirm"): _PENDING,
     ("POST", "/api/v1/auth/password-reset/request"): _PENDING,
     ("POST", "/api/v1/auth/refresh"): _PENDING,
@@ -272,6 +287,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/super-admin/product-formats"): _PENDING,
     ("DELETE", "/api/v1/super-admin/product-formats/{format_id}"): _PENDING,
     ("PATCH", "/api/v1/super-admin/product-formats/{format_id}"): _PENDING,
+    ("PUT", "/api/v1/super-admin/product-formats/{format_id}/games"): _PENDING,
     ("POST", "/api/v1/super-admin/product-kinds"): _PENDING,
     ("DELETE", "/api/v1/super-admin/product-kinds/{kind_id}"): _PENDING,
     ("PATCH", "/api/v1/super-admin/product-kinds/{kind_id}"): _PENDING,

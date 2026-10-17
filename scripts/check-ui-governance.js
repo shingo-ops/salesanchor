@@ -5,9 +5,11 @@
  * PRで追加・変更された frontend/src/pages/ 配下の .tsx ファイルに
  * 新規の「生UI部品」が増えていないかを検査する。
  *
- * 検出対象（3種）:
+ * 検出対象（5種）:
  *   - 生 <select>
  *   - 生 <input type="text"|"search"|type省略>  ← 複数行対応
+ *   - 生 <input type="checkbox">（AY-4d）
+ *   - 生 <input type="radio">（AY-5b）
  *   - 自作タブ（classNameにtabを含むがtableを含まないトークン）
  *
  * 判定方式:
@@ -232,6 +234,33 @@ function countInput(content) {
 }
 
 // ---------------------------------------------------------------------------
+// 検出ロジック: 生 <input type="checkbox">（AY-4d）
+// ---------------------------------------------------------------------------
+
+/**
+ * 抽出した <input> タグが生チェック欄かどうか判定する。
+ * type="checkbox" / type='checkbox' / type={"checkbox"} / type={'checkbox'} を対象にする。
+ * type={kind} のような動的な値は判定できないので数えない。
+ */
+function isCheckboxInput(tagStr) {
+  return /\btype\s*=\s*(?:\{\s*)?["']checkbox["']/i.test(tagStr);
+}
+
+/**
+ * コンテンツ内の生チェック欄の件数を返す（ui-allow 除外済み）。
+ */
+function countCheckbox(content) {
+  const lines = content.split('\n');
+  let count = 0;
+  for (const { tagStr, pos } of extractInputTags(content)) {
+    if (!isCheckboxInput(tagStr)) continue;
+    const lineIdx = getLineIndex(content, pos);
+    if (!hasUiAllowBefore(lines, lineIdx)) count++;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // 検出ロジック: 自作タブ
 // ---------------------------------------------------------------------------
 
@@ -279,6 +308,33 @@ function countTab(content) {
 }
 
 // ---------------------------------------------------------------------------
+// 検出ロジック: 生 <input type="radio">（AY-5b）
+// ---------------------------------------------------------------------------
+
+/**
+ * 抽出した <input> タグが生ラジオかどうか判定する。
+ * type="radio" / type='radio' / type={"radio"} / type={'radio'} を対象にする。
+ * type={kind} のような動的な値は判定できないので数えない。
+ */
+function isRadioInput(tagStr) {
+  return /\btype\s*=\s*(?:\{\s*)?["']radio["']/i.test(tagStr);
+}
+
+/**
+ * コンテンツ内の生ラジオの件数を返す（ui-allow 除外済み）。
+ */
+function countRadio(content) {
+  const lines = content.split('\n');
+  let count = 0;
+  for (const { tagStr, pos } of extractInputTags(content)) {
+    if (!isRadioInput(tagStr)) continue;
+    const lineIdx = getLineIndex(content, pos);
+    if (!hasUiAllowBefore(lines, lineIdx)) count++;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // 集計
 // ---------------------------------------------------------------------------
 
@@ -287,6 +343,8 @@ function countAll(content) {
     select: countSelect(content),
     input: countInput(content),
     tab: countTab(content),
+    checkbox: countCheckbox(content),
+    radio: countRadio(content),
   };
 }
 
@@ -327,9 +385,11 @@ function main() {
       select: '生<select>',
       input:  '生<input text/search/省略>',
       tab:    '自作タブ',
+      checkbox: '生<input type="checkbox">',
+      radio: '生<input type="radio">',
     };
 
-    for (const type of ['select', 'input', 'tab']) {
+    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio']) {
       if (headCounts[type] > baseCounts[type]) {
         violations.push({
           file: headPath,
@@ -392,6 +452,10 @@ if (require.main === module) {
     countTab,
     isValidUiAllow,
     isDetectableInput,
+    countCheckbox,
+    isCheckboxInput,
+    countRadio,
+    isRadioInput,
     extractInputTags,
     isTabToken,
   };

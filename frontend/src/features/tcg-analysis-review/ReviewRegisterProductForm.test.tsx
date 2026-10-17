@@ -29,9 +29,16 @@ const form = {
   item: { extraction_item_id: "item-1", source_message_id: "msg-1", raw_name: "Pika Box" },
   lookups: {
     product_kind_id: [{ id: "1", name: "Card" }],
-    work_id: [{ id: "2", name: "Pokemon" }],
+    work_id: [
+      { id: "2", name: "Pokemon" },
+      { id: "9", name: "Yugioh" },
+    ],
     manufacturer_id: [{ id: "3", name: "Nintendo" }],
     product_category_id: [{ id: "4", name: "Booster" }],
+    product_format_id: [
+      { id: "7", name: "Box Set", is_active: true, game_ids: ["2"] },
+      { id: "8", name: "Pack Set", is_active: true, game_ids: ["9"] },
+    ],
   },
 };
 
@@ -46,6 +53,8 @@ const BODY = {
   release_date: "",
   search_keywords: "Pika Box",
   exclude_keywords: "",
+  product_format_id: "",
+  blank_confirmations: [],
 };
 
 async function pick(label: string, typed: string, optionName: string) {
@@ -208,5 +217,82 @@ describe("ReviewRegisterProductForm", () => {
     expect(createProduct).toHaveBeenCalledOnce();
     expect(postProductCorrection).toHaveBeenCalledTimes(2);
     expect(postProductCorrection).toHaveBeenLastCalledWith(item, "42");
+  });
+
+  it("asks for the work first and offers only formats of that work", async () => {
+    await renderForm();
+    const format = screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement;
+    expect(format.disabled).toBe(true);
+    expect(screen.getByText("Choose a work first")).toBeTruthy();
+
+    await pick("Title / series", "p", "Pokemon");
+    const enabled = screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement;
+    fireEvent.focus(enabled);
+    fireEvent.change(enabled, { target: { value: "set" } });
+
+    expect(await screen.findByRole("option", { name: "Box Set" }, { timeout: 2000 })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Pack Set" })).toBeNull();
+  });
+
+  it("clears the format when the work changes to one it does not belong to", async () => {
+    await renderForm();
+    await pick("Title / series", "p", "Pokemon");
+    await pick("Format", "set", "Box Set");
+    expect((screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement).value).toBe("Box Set");
+
+    await pick("Title / series", "y", "Yugioh");
+
+    expect((screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement).value).toBe("");
+  });
+
+  it("sends the format, the exclusion keywords and the blank marks", async () => {
+    vi.mocked(checkProductDuplicates).mockResolvedValue({ candidates: [] });
+    vi.mocked(createProduct).mockResolvedValue({ ok: true, product_id: "42" });
+    vi.mocked(postProductCorrection).mockResolvedValue({ ok: true, saved: 1 });
+    await renderForm();
+    await fillRequired();
+    await pick("Format", "set", "Box Set");
+    fireEvent.change(screen.getByRole("textbox", { name: /Exclusion keywords \(one per line\)/ }), { target: { value: "a\nb" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "English name: checked, none exists" }));
+
+    click("Check for similar products");
+    fireEvent.click(await screen.findByRole("button", { name: "Register and reassign" }));
+
+    await waitFor(() => expect(createProduct).toHaveBeenCalledOnce());
+    expect(createProduct).toHaveBeenCalledWith(
+      item,
+      { ...BODY, product_format_id: "7", exclude_keywords: "a,b", blank_confirmations: ["name_en"] },
+      false,
+    );
+  });
+
+  it("lists what is still missing and drops a field once it is marked or filled", async () => {
+    await renderForm();
+    const status = screen.getByRole("status");
+    expect(status.textContent).toContain("English name");
+    expect(status.textContent).toContain("Exclusion keywords");
+
+    const mark = screen.getByRole("checkbox", { name: "English name: checked, none exists" }) as HTMLInputElement;
+    fireEvent.click(mark);
+    expect(screen.getByRole("status").textContent).not.toContain("English name");
+
+    fireEvent.change(screen.getByRole("textbox", { name: /^English name$/ }), { target: { value: "X" } });
+    const after = screen.getByRole("checkbox", { name: "English name: checked, none exists" }) as HTMLInputElement;
+    expect(after.checked).toBe(false);
+    expect(after.disabled).toBe(true);
+  });
+});
+
+describe("ReviewRegisterProductForm required fields error (ADR-1020)", () => {
+  it("shows field names instead of the REQUIRED_FIELDS_MISSING code when registration is blocked", async () => {
+    vi.mocked(checkProductDuplicates).mockResolvedValue({ candidates: [] });
+    vi.mocked(createProduct).mockRejectedValue(Object.assign(new ApiError("REQUIRED_FIELDS_MISSING:exclude_keywords", 422, null), { status: 422 }));
+    await renderForm();
+    await fillRequired();
+    click("Check for similar products");
+    fireEvent.click(await screen.findByRole("button", { name: "Register and reassign" }));
+    const text = await screen.findByText(/Cannot register because required fields are empty/);
+    expect(text.textContent).toContain("Exclusion keywords");
+    expect(document.body.textContent).not.toContain("REQUIRED_FIELDS_MISSING");
   });
 });

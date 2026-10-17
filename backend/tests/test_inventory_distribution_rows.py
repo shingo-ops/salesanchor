@@ -184,12 +184,14 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # 期待値は distribution_rows_sql を age_condition=" AND x = :y" で呼んだ出力の長さと SHA-256。
 # 便1（2026-10-14）で Sold out の条件（_sold_out_filter）を足した版に更新した。
 # review-ack-revoke 便で cr_review_ack を bool_or の集計にし review_acked 列を足して再生成した（差分は golden-diff: 同じ cr_review_ack の形変更が4通りに出るだけ）。
+# inventory-row-drawer 便で、行の元 ID の列（item_key・item_keys_agg・extraction_item_ids の3か所だけ）を足して再生成した。
 # review-excluded-ack 便で cr_review_ack LATERAL（excluded の確認済み除外）を足して再生成した。差は4点のみ（distribution_sql_after_merge.diff）。
+# g28 便1（バルク状態）で RESULT_CONDITION_ORDER に Bulk を足して再生成した。差は Bulk の WHEN 句1つのみ（golden_diff.txt）。
 _GOLDEN = {
-    (False, False): (24560, "5712d7c49792ecef5dec44e6295a5037265123e60870671eb60290ce811e5cd8"),
-    (False, True): (25541, "fedb49783d3e0c10860c475d330bc820bafc486b21ad3ed56630ae5aad300fd1"),
-    (True, False): (24594, "59fec0b070891507a971234b913f52e6efe509095c6c7d6c4773ada8122254a5"),
-    (True, True): (25575, "707cdd098a0a2e2bb6911151c93bc2c79b86f570c773053c992209348c64e2bd"),
+    (False, False): (24712, "d4dbfff66b8cfc16c363e913b1c8e9a69e906fa06668e11aacaf1768e14433cd"),
+    (False, True): (25863, "e6f7781645f5036f4d5d5ec558a2b9b1656884d860ffa9c4e99c84861eac6728"),
+    (True, False): (24746, "7601285b8dbcce2820b718f71eaa9e90e54a8618e351fb11d73df1419cfefd5b"),
+    (True, True): (25897, "138edb09eb6e31580fab1f96d83e9d27fdeed50c21c093ded4304c9147da6641"),
 }
 
 
@@ -220,3 +222,67 @@ def test_distribution_sql_has_no_double_underscore_alias() -> None:
     for merge in (False, True):
         head, final = svc.distribution_rows_parts(**_COND, merge_same_post=merge)
         assert not re.search(r"\bAS\s+__", head + final)
+
+
+# --- 便3（検索と提供者）: PostgreSQL 不要の試験 -----------------------------------------------------------------
+# 共通ベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
+# ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
+
+_NONE_FILTERS = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+                               "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
+                               "price_min", "price_max"))
+
+
+def test_bin3_normalize_search_text_matches_the_shared_vectors() -> None:
+    import json
+    import pathlib
+
+    from app.routers.inventory_offers import normalize_search_text
+
+    path = pathlib.Path(__file__).resolve().parents[2] / "frontend/src/features/inventory/searchNormalize.vectors.json"
+    vectors = json.loads(path.read_text())
+    assert len(vectors) >= 10
+    for v in vectors:
+        assert normalize_search_text(v["input"]) == v["expected"], v
+
+
+def test_bin3_kana_tables_are_86_chars_each() -> None:
+    from app.routers.inventory_offers import _KANA_FROM, _KANA_TO
+
+    assert len(_KANA_FROM) == len(_KANA_TO) == 86
+    assert _KANA_FROM[0] == "ぁ" and _KANA_TO[0] == "ァ" and _KANA_FROM[-1] == "ゖ" and _KANA_TO[-1] == "ヶ"
+
+
+def test_bin3_search_builds_one_strpos_per_term_and_caps_terms() -> None:
+    from app.routers.inventory_offers import _SEARCH_MAX_TERMS, _build_view_filters
+
+    conds, params = _build_view_filters(**{**_NONE_FILTERS, "q": "ぽけもん ＡＢＣ"})
+    assert len(conds) == 2 and all(c.startswith("strpos(") and "CAST(:qt" in c for c in conds)
+    assert (params["qt0"], params["qt1"]) == ("ポケモン", "abc")
+    assert "provider" not in conds[0] and "product_id" not in conds[0] and "category" not in conds[0]
+    assert "d.search_keywords" in conds[0] and "d.mark" in conds[0]
+    many, many_params = _build_view_filters(**{**_NONE_FILTERS, "q": " ".join(f"w{i}" for i in range(30))})
+    assert len(many) == _SEARCH_MAX_TERMS == 10 and f"qt{_SEARCH_MAX_TERMS}" not in many_params
+    assert _build_view_filters(**{**_NONE_FILTERS, "q": "   "}) == ([], {})
+
+
+def test_bin3_supplier_ids_filter_takes_integers_only() -> None:
+    from app.routers.inventory_offers import _build_view_filters
+
+    assert _build_view_filters(**_NONE_FILTERS) == ([], {})  # supplier_ids は既定値 None（既存の呼び出しは変わらない）
+    conds, params = _build_view_filters(**_NONE_FILTERS, supplier_ids="1, x ,2")
+    assert conds == ["d.supplier_id IN (:sid0, :sid1)"] and params == {"sid0": 1, "sid1": 2}
+    assert _build_view_filters(**_NONE_FILTERS, supplier_ids="x,y") == ([], {})
+    assert _build_view_filters(**_NONE_FILTERS, supplier_ids="") == ([], {})
+    conds, params = _build_view_filters(**{**_NONE_FILTERS, "hide_supplier_ids": "3"}, supplier_ids="1")
+    assert "d.supplier_id IN (:sid0)" in conds and "d.supplier_id NOT IN (:hsid0)" in conds
+
+
+def test_bin3_endpoint_has_supplier_ids_query() -> None:
+    import inspect
+
+    from app.routers import inventory_offers as io
+
+    p = inspect.signature(io.list_inventory_view).parameters["supplier_ids"]
+    assert p.default.default is None
+    assert any(getattr(m, "max_length", None) == 2000 for m in p.default.metadata)

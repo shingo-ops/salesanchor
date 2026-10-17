@@ -634,6 +634,20 @@
           },
           "system": {
             "$ref": "#/components/schemas/SystemFields"
+          },
+          "thought_summaries": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thought Summaries"
           }
         },
         "required": [
@@ -7743,6 +7757,19 @@
       },
       "CreateProductBody": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7769,6 +7796,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "title": "Product Kind Id",
@@ -7807,6 +7845,19 @@
       },
       "CreateProductRequest": {
         "properties": {
+          "blank_confirmations": {
+            "items": {
+              "enum": [
+                "name_en",
+                "mark",
+                "release_date",
+                "exclude_keywords"
+              ],
+              "type": "string"
+            },
+            "title": "Blank Confirmations",
+            "type": "array"
+          },
           "english_title": {
             "default": "",
             "title": "English Title",
@@ -7842,6 +7893,17 @@
           "product_category_id": {
             "title": "Product Category Id",
             "type": "string"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "default": "",
@@ -9442,6 +9504,22 @@
         "title": "ExportStatusResponse",
         "type": "object"
       },
+      "ExtendRequest": {
+        "properties": {
+          "days": {
+            "description": "延長する日数（1〜365）",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "title": "ExtendRequest",
+        "type": "object"
+      },
       "ExtractionByStatus": {
         "properties": {
           "done": {
@@ -10022,6 +10100,38 @@
           "period_end"
         ],
         "title": "ForecastResponse",
+        "type": "object"
+      },
+      "FormatLookupOption": {
+        "description": "ADR-1020: 細分類の選択肢。紐づくゲーム（作品）の id を落とさない",
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Game Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_active",
+          "game_ids"
+        ],
+        "title": "FormatLookupOption",
         "type": "object"
       },
       "FunnelActive": {
@@ -11864,6 +11974,63 @@
         "title": "InventoryOfferUpdate",
         "type": "object"
       },
+      "InventoryRawTextItem": {
+        "description": "在庫表スライドの原文タブ用。返す項目はこの4つだけ（gemini・system・要約・送信者は出さない）。",
+        "properties": {
+          "extraction_item_id": {
+            "title": "Extraction Item Id",
+            "type": "string"
+          },
+          "line_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line End"
+          },
+          "line_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Start"
+          },
+          "raw_text": {
+            "title": "Raw Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extraction_item_id",
+          "raw_text"
+        ],
+        "title": "InventoryRawTextItem",
+        "type": "object"
+      },
+      "InventoryRawTextsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryRawTextItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InventoryRawTextsResponse",
+        "type": "object"
+      },
       "InventoryRow": {
         "description": "在庫表ビューの 1 明細行（商品×仕入元×状態）。読み取り専用。\n\nadmin 専用フィールド（notes/source/status）は含めない。最終ユーザー（各クライアントの\n営業担当ロール以上）が閲覧 + 見積/請求/発注作成するための列のみ。\ncondition は migration 089 の 16 値だが、旧データ混入時も 500 にしないため str で受ける\n（inventory_offers 500 の教訓）。",
         "properties": {
@@ -11881,6 +12048,14 @@
           "condition": {
             "title": "Condition",
             "type": "string"
+          },
+          "extraction_item_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Extraction Item Ids",
+            "type": "array"
           },
           "id": {
             "title": "Id",
@@ -16689,6 +16864,191 @@
         ],
         "title": "NotificationEventType",
         "type": "string"
+      },
+      "OpsControlChange": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "OpsControlChange",
+        "type": "object"
+      },
+      "OpsIncidentAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "fields": {
+            "$ref": "#/components/schemas/OpsIncidentFields",
+            "default": {}
+          },
+          "kind": {
+            "enum": [
+              "annotated",
+              "first_aid",
+              "ai"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "OpsIncidentAnnotation",
+        "type": "object"
+      },
+      "OpsIncidentFields": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Started At"
+          },
+          "detection_path": {
+            "anyOf": [
+              {
+                "enum": [
+                  "alert",
+                  "human",
+                  "ai"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detection Path"
+          },
+          "first_aid_done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Done At"
+          },
+          "first_aid_result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "recovered",
+                  "not_recovered",
+                  "escalated"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Result"
+          },
+          "first_aid_started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Aid Started At"
+          },
+          "fix_pr": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Pr"
+          },
+          "human_noticed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Human Noticed At"
+          },
+          "needs_action": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Action"
+          },
+          "review_note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Note"
+          },
+          "root_cause": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Root Cause"
+          }
+        },
+        "title": "OpsIncidentFields",
+        "type": "object"
       },
       "OrderCommissionAssignmentRequest": {
         "description": "`POST /orders/{id}/commissions/assign` リクエスト。\n\nrole と staff_id を 1 ペア指定して UPSERT する。\nstaff_id=None で「担当解除（行は残し staff_id を NULL に戻す）」も可能。",
@@ -23648,6 +24008,26 @@
       "ProductDetailUpdate": {
         "additionalProperties": false,
         "properties": {
+          "blank_confirmations": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "name_en",
+                    "mark",
+                    "release_date",
+                    "exclude_keywords"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blank Confirmations"
+          },
           "english_title": {
             "maxLength": 5000,
             "title": "English Title",
@@ -23696,6 +24076,17 @@
               }
             ],
             "title": "Product Category Id"
+          },
+          "product_format_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Format Id"
           },
           "product_kind_id": {
             "anyOf": [
@@ -23827,6 +24218,25 @@
         "title": "ProductFormatCreate",
         "type": "object"
       },
+      "ProductFormatGamesUpdate": {
+        "additionalProperties": false,
+        "description": "ADR-1020 便2a: 使えるゲーム（type_master.id）を丸ごと置き換える。",
+        "properties": {
+          "game_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "title": "Game Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "game_ids"
+        ],
+        "title": "ProductFormatGamesUpdate",
+        "type": "object"
+      },
       "ProductFormatResponse": {
         "properties": {
           "code": {
@@ -23845,6 +24255,13 @@
             "minimum": 0.0,
             "title": "Display Order",
             "type": "integer"
+          },
+          "game_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Game Ids",
+            "type": "array"
           },
           "id": {
             "title": "Id",
@@ -27362,14 +27779,7 @@
             "$ref": "#/components/schemas/RegistrationFormItem"
           },
           "lookups": {
-            "additionalProperties": {
-              "items": {
-                "$ref": "#/components/schemas/LookupOption"
-              },
-              "type": "array"
-            },
-            "title": "Lookups",
-            "type": "object"
+            "$ref": "#/components/schemas/RegistrationLookups"
           }
         },
         "required": [
@@ -27377,6 +27787,54 @@
           "lookups"
         ],
         "title": "RegistrationFormResponse",
+        "type": "object"
+      },
+      "RegistrationLookups": {
+        "properties": {
+          "manufacturer_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Manufacturer Id",
+            "type": "array"
+          },
+          "product_category_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Product Category Id",
+            "type": "array"
+          },
+          "product_format_id": {
+            "items": {
+              "$ref": "#/components/schemas/FormatLookupOption"
+            },
+            "title": "Product Format Id",
+            "type": "array"
+          },
+          "product_kind_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Product Kind Id",
+            "type": "array"
+          },
+          "work_id": {
+            "items": {
+              "$ref": "#/components/schemas/LookupOption"
+            },
+            "title": "Work Id",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_kind_id",
+          "work_id",
+          "manufacturer_id",
+          "product_category_id",
+          "product_format_id"
+        ],
+        "title": "RegistrationLookups",
         "type": "object"
       },
       "RematchResponse": {
@@ -35007,6 +35465,384 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "ValueOptionsResponse": {
+        "properties": {
+          "statuses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Statuses",
+            "type": "array"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Units",
+            "type": "array"
+          }
+        },
+        "required": [
+          "units",
+          "statuses"
+        ],
+        "title": "ValueOptionsResponse",
+        "type": "object"
+      },
+      "ValueOverrideRequest": {
+        "properties": {
+          "field": {
+            "enum": [
+              "quantity",
+              "price",
+              "unit",
+              "note",
+              "status"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 2000,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id",
+          "field",
+          "value"
+        ],
+        "title": "ValueOverrideRequest",
+        "type": "object"
+      },
+      "ViewerAdminItem": {
+        "description": "管理画面の閲覧者1行。",
+        "properties": {
+          "created_at": {
+            "description": "登録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discord_channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋 ID",
+            "title": "Discord Channel Id"
+          },
+          "discord_channel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋を開く URL",
+            "title": "Discord Channel Url"
+          },
+          "discord_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord の利用者 ID",
+            "title": "Discord User Id"
+          },
+          "email": {
+            "description": "メールアドレス（小文字）",
+            "title": "Email",
+            "type": "string"
+          },
+          "flag_many_ips": {
+            "description": "目印: 24時間以内に3種類以上の IP からログイン",
+            "title": "Flag Many Ips",
+            "type": "boolean"
+          },
+          "flag_shared_ip": {
+            "description": "目印: 別の閲覧者と同じ IP からログイン",
+            "title": "Flag Shared Ip",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "閲覧者 viewer_accounts.id",
+            "title": "Id",
+            "type": "integer"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名",
+            "title": "Line Name",
+            "type": "string"
+          },
+          "status": {
+            "description": "pending／verified／trial／active／suspended",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "お試しの期限",
+            "title": "Trial Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "line_name",
+          "status",
+          "created_at",
+          "flag_many_ips",
+          "flag_shared_ip"
+        ],
+        "title": "ViewerAdminItem",
+        "type": "object"
+      },
+      "ViewerAdminListResponse": {
+        "properties": {
+          "items": {
+            "description": "閲覧者の一覧（登録が新しい順）",
+            "items": {
+              "$ref": "#/components/schemas/ViewerAdminItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerAdminListResponse",
+        "type": "object"
+      },
+      "ViewerLoginItem": {
+        "description": "ログイン記録1行。",
+        "properties": {
+          "client_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "クライアント IP",
+            "title": "Client Ip"
+          },
+          "created_at": {
+            "description": "記録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "description": "記録の種類",
+            "title": "Event Type",
+            "type": "string"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User-Agent",
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "created_at",
+          "event_type"
+        ],
+        "title": "ViewerLoginItem",
+        "type": "object"
+      },
+      "ViewerLoginListResponse": {
+        "properties": {
+          "items": {
+            "description": "ログイン記録（新しい順・最大500行）",
+            "items": {
+              "$ref": "#/components/schemas/ViewerLoginItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerLoginListResponse",
+        "type": "object"
+      },
+      "ViewerLoginRequest": {
+        "properties": {
+          "email": {
+            "description": "ログインに使うメールアドレス",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "description": "パスワード",
+            "maxLength": 256,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "ViewerLoginRequest",
+        "type": "object"
+      },
+      "ViewerPasswordChangeRequest": {
+        "properties": {
+          "current_password": {
+            "description": "今のパスワード",
+            "maxLength": 256,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "ViewerPasswordChangeRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetConfirmRequest": {
+        "properties": {
+          "new_password": {
+            "description": "新しいパスワード（15〜64 文字）",
+            "maxLength": 256,
+            "title": "New Password",
+            "type": "string"
+          },
+          "token": {
+            "description": "再発行メールのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "new_password"
+        ],
+        "title": "ViewerPasswordResetConfirmRequest",
+        "type": "object"
+      },
+      "ViewerPasswordResetRequest": {
+        "properties": {
+          "email": {
+            "description": "再発行したいメールアドレス",
+            "maxLength": 320,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "ViewerPasswordResetRequest",
+        "type": "object"
+      },
+      "ViewerSignupRequest": {
+        "properties": {
+          "email": {
+            "description": "メールアドレス",
+            "maxLength": 254,
+            "title": "Email",
+            "type": "string"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名（前後の空白を除いて1〜100文字）",
+            "maxLength": 200,
+            "title": "Line Name",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ボット対策の隠し欄。人は空のまま",
+            "title": "Website"
+          }
+        },
+        "required": [
+          "email",
+          "line_name"
+        ],
+        "title": "ViewerSignupRequest",
         "type": "object"
       },
       "VoidRequest": {
@@ -42854,7 +43690,7 @@
         "operationId": "list_inventory_view_api_v1_inventory_get",
         "parameters": [
           {
-            "description": "商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致",
+            "description": "日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）",
             "in": "query",
             "name": "q",
             "required": false,
@@ -42868,7 +43704,7 @@
                   "type": "null"
                 }
               ],
-              "description": "商品名/英名/コード/カテゴリ/マーク/仕入元の部分一致",
+              "description": "日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）",
               "title": "Q"
             }
           },
@@ -42946,6 +43782,25 @@
               ],
               "description": "非表示にする仕入元IDのCSV（ユーザー別フィルタ用）",
               "title": "Hide Supplier Ids"
+            }
+          },
+          {
+            "description": "表示する仕入元IDのCSV（選んだ仕入元だけ）",
+            "in": "query",
+            "name": "supplier_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 2000,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "表示する仕入元IDのCSV（選んだ仕入元だけ）",
+              "title": "Supplier Ids"
             }
           },
           {
@@ -43278,6 +44133,61 @@
         "summary": "テナント向け在庫集計 (series x condition ピボット)",
         "tags": [
           "inventory-aggregated"
+        ]
+      }
+    },
+    "/api/v1/inventory/raw-texts": {
+      "get": {
+        "description": "在庫表スライドの原文タブ。配信行（dist_base）に入る extraction_item だけの原文を返す。\n\n行の定義は distribution_rows_parts の1か所だけ（ここに配信の WHERE は書かない。ADR-1014）。\n配信行に無い ID・該当 0 件は 404。返す項目は extraction_item_id・raw_text・line_start・line_end のみ。",
+        "operationId": "list_inventory_raw_texts_api_v1_inventory_raw_texts_get",
+        "parameters": [
+          {
+            "description": "extraction_items.id（1〜50件）",
+            "in": "query",
+            "name": "extraction_item_ids",
+            "required": true,
+            "schema": {
+              "description": "extraction_items.id（1〜50件）",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 50,
+              "minItems": 1,
+              "title": "Extraction Item Ids",
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryRawTextsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Inventory Raw Texts",
+        "tags": [
+          "super-admin"
         ]
       }
     },
@@ -46646,6 +47556,329 @@
         "summary": "List Event Types",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/api/v1/ops/alertmanager": {
+      "post": {
+        "operationId": "ingest_alertmanager_api_v1_ops_alertmanager_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ingest Alertmanager",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control": {
+      "get": {
+        "operationId": "get_control_api_v1_ops_control_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Control",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control/halt": {
+      "post": {
+        "operationId": "halt_all_api_v1_ops_control_halt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsControlChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Halt All",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/control/resume": {
+      "post": {
+        "operationId": "resume_all_api_v1_ops_control_resume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsControlChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resume All",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents": {
+      "get": {
+        "operationId": "list_incidents_api_v1_ops_incidents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "firing",
+                    "resolved"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Incidents",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}": {
+      "get": {
+        "operationId": "get_incident_api_v1_ops_incidents__incident_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/events": {
+      "post": {
+        "operationId": "annotate_incident_api_v1_ops_incidents__incident_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsIncidentAnnotation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Annotate Incident",
+        "tags": [
+          "ops"
         ]
       }
     },
@@ -57364,6 +58597,64 @@
         ]
       }
     },
+    "/api/v1/super-admin/product-formats/{format_id}/games": {
+      "put": {
+        "description": "ADR-1020 便2a: 使えるゲームを送った一覧に置き換える。外す組を商品が使っていれば 409。",
+        "operationId": "replace_product_format_games_api_v1_super_admin_product_formats__format_id__games_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "format_id",
+            "required": true,
+            "schema": {
+              "title": "Format Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductFormatGamesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFormatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Product Format Games",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/product-kinds": {
       "get": {
         "operationId": "list_product_kinds_api_v1_super_admin_product_kinds_get",
@@ -61076,6 +62367,277 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers": {
+      "get": {
+        "operationId": "list_viewers_endpoint_api_v1_super_admin_viewers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Viewers Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/activate": {
+      "post": {
+        "operationId": "activate_endpoint_api_v1_super_admin_viewers__viewer_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Activate Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/extend": {
+      "post": {
+        "operationId": "extend_endpoint_api_v1_super_admin_viewers__viewer_id__extend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Extend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/logins": {
+      "get": {
+        "operationId": "list_logins_endpoint_api_v1_super_admin_viewers__viewer_id__logins_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerLoginListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Logins Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/suspend": {
+      "post": {
+        "operationId": "suspend_endpoint_api_v1_super_admin_viewers__viewer_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Suspend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/unsuspend": {
+      "post": {
+        "operationId": "unsuspend_endpoint_api_v1_super_admin_viewers__viewer_id__unsuspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsuspend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/weight-classes": {
       "get": {
         "operationId": "list_weight_classes_api_v1_super_admin_weight_classes_get",
@@ -62248,6 +63810,28 @@
               "description": "作品IDで絞り込み",
               "title": "Work Id"
             }
+          },
+          {
+            "description": "extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
+            "in": "query",
+            "name": "extraction_item_ids",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
+              "title": "Extraction Item Ids"
+            }
           }
         ],
         "responses": {
@@ -63250,6 +64834,63 @@
           }
         ],
         "summary": "v102 の「このままで良い」（確認済み）を取り消す",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/items/{extraction_item_id}/value-override": {
+      "post": {
+        "operationId": "save_item_value_override_api_v1_tcg_items__extraction_item_id__value_override_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValueOverrideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewAckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の件の数量・単価・単位・メモ・販売状況を人の値に直す",
         "tags": [
           "super-admin"
         ]
@@ -65035,6 +66676,32 @@
         ]
       }
     },
+    "/api/v1/tcg/review/value-options": {
+      "get": {
+        "operationId": "get_value_options_api_v1_tcg_review_value_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValueOptionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "数量・単価などを直す欄の選択肢（単位・販売状況）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/tcg/sold-out-results": {
       "get": {
         "operationId": "list_sold_out_results_api_v1_tcg_sold_out_results_get",
@@ -66636,6 +68303,261 @@
         "summary": "Set User Roles",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/viewer/inventory": {
+      "get": {
+        "description": "作り置きの在庫の JSON をそのまま返す（読み直して組み立てない）。",
+        "operationId": "viewer_inventory_api_v1_viewer_inventory_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Inventory",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/login": {
+      "post": {
+        "description": "閲覧者のログイン。失敗の理由は区別せず 1 種類の文言で返す（停止中・期限切れは正しいパスワードのときだけ別）。",
+        "operationId": "viewer_login_api_v1_viewer_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Login",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/logout": {
+      "post": {
+        "description": "ログアウト。パスワード変更前の人もできる（require_viewer_password_ok ではなく get_current_viewer）。",
+        "operationId": "viewer_logout_api_v1_viewer_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Logout",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password": {
+      "post": {
+        "description": "パスワードの変更。must_change の人も呼べる（require_viewer_password_ok ではなく get_current_viewer）。\n\n変更後、それより前に出したトークンは使えなくなるので、新しいトークンを返す。",
+        "operationId": "viewer_change_password_api_v1_viewer_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Change Password",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/confirm": {
+      "post": {
+        "description": "新しいパスワードの確定。鍵は 1 回だけ・期限内だけ使える。12 時間トークンは返さない（ログインし直す）。",
+        "operationId": "viewer_password_reset_confirm_api_v1_viewer_password_reset_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Confirm",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/password-reset/request": {
+      "post": {
+        "description": "再発行メールの申請。登録の有無・状態を応答に出さない（常に 200）。",
+        "operationId": "viewer_password_reset_request_api_v1_viewer_password_reset_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerPasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Password Reset Request",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/signup": {
+      "post": {
+        "description": "申込。pending の行と申込コード（DB には sha256 だけ）を作り、コードとその人専用の招待リンクを返す。\n\n応答の形は、新規・pending の再申込・登録済み（捨てのコード）・隠し欄ありで同じ。ログに email・コード・招待を出さない。",
+        "operationId": "viewer_signup_api_v1_viewer_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerSignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Signup",
+        "tags": [
+          "viewer"
         ]
       }
     },

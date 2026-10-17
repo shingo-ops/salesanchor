@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import secrets
 from datetime import datetime, timezone
@@ -26,8 +27,11 @@ from app.cache import (
     is_token_blacklisted,
     record_auth_failure,
 )
+from app.client_ip import get_client_ip as _get_client_ip
 from app.database import get_db
 from app.models import Tenant, User
+
+logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
@@ -62,14 +66,6 @@ def _init_firebase():
         else:
             firebase_admin.initialize_app()
         _firebase_initialized = True
-
-
-def _get_client_ip(request: Request) -> str:
-    """クライアントIPをリバースプロキシ対応で取得する。"""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
 
 
 _INVALID_TOKEN_DETAIL = "無効な認証トークンです"
@@ -113,6 +109,18 @@ async def _authenticate_self_token(token: str, client_ip: str, db: AsyncSession)
     return user
 
 
+def _is_smoke_token(token: str) -> bool:
+    """Bearer が SMOKE_SERVICE_TOKEN と一致するか。
+
+    secrets.compare_digest は非ASCII の str を渡すと TypeError になる（→ 500）ため、
+    例外はすべて「不一致」として扱う（詳細は出さない）。
+    """
+    try:
+        return secrets.compare_digest(token, _SMOKE_SERVICE_TOKEN)
+    except (TypeError, ValueError):
+        return False
+
+
 async def get_current_user(
     request: Request,
     cred: HTTPAuthorizationCredentials = Depends(security),
@@ -136,25 +144,38 @@ async def get_current_user(
     token = cred.credentials
     client_ip = _get_client_ip(request)
 
-    # サービスアカウントバイパス（CI/CD スモークテスト専用）
+    # サービスアカウントバイパス（CI/CD スモークテスト専用・ADR-1017）
     # SMOKE_SERVICE_TOKEN が設定されており Bearer トークンと一致する場合、
     # Firebase 検証・MFA チェックをスキップして SMOKE_SERVICE_EMAIL のユーザーを返す。
     # secrets.compare_digest でタイミング攻撃を防ぐ。
-    if (
-        _SMOKE_SERVICE_TOKEN
-        and _SMOKE_SERVICE_EMAIL
-        and secrets.compare_digest(token, _SMOKE_SERVICE_TOKEN)
-    ):
+    if _SMOKE_SERVICE_TOKEN and _SMOKE_SERVICE_EMAIL and _is_smoke_token(token):
         _sa_result = await db.execute(
             select(User).where(User.email == _SMOKE_SERVICE_EMAIL, User.is_active == True)
         )
         _sa_user = _sa_result.scalar_one_or_none()
-        if _sa_user:
-            return _sa_user
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="smoke service user not found",
+        if _sa_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="smoke service user not found",
+            )
+        # 構造ガード（fail-closed）: この経路は Firebase・MFA を通らないため、
+        # トークンが漏れた場合の被害は解決先ユーザーの権限で決まる。
+        # super admin（全テナント横断の権限）を指していたら、ユーザーを返さず認証失敗にする。
+        # 設定ミスや env の差し替えがあっても、smoke 経路が super admin を返すことは無い。
+        if getattr(_sa_user, "is_super_admin", False):
+            logger.warning("smoke認証を拒否: 解決先が super admin（最小権限ユーザーのみ許可）")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="smoke service user not permitted",
+            )
+        # 監査: smoke 認証の成立を記録する（トークン値は記録しない）
+        logger.info(
+            "smoke認証成立: user_id=%s tenant_id=%s ip=%s",
+            _sa_user.id,
+            _sa_user.tenant_id,
+            client_ip,
         )
+        return _sa_user
 
     # ① ブラックリスト確認（ログアウト済みトークンを拒否・免除ルートより必ず前）
     if await is_token_blacklisted(token):

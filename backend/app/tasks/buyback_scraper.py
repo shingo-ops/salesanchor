@@ -46,26 +46,34 @@ def fetch_all_buyback_prices() -> None:
     いずれかが失敗しても他方は続行する（各サービス内部でエラーハンドリング済み）。
     価格取得完了後、アラートチェックを実行して閾値超過時に Discord 通知を送る。
     """
-    logger.info("[buyback_scraper] 全店舗価格取得タスク開始")
-    asyncio.run(_fetch_all())
-    logger.info("[buyback_scraper] 全店舗価格取得タスク完了")
+    from app.database import engine
 
     try:
-        fired = asyncio.run(_run_alert_check())
-        logger.info("[buyback_scraper] アラートチェック完了: %d 件発火", fired)
-    except Exception:  # noqa: BLE001
-        logger.exception("[buyback_scraper] アラートチェックでエラー")
+        logger.info("[buyback_scraper] 全店舗価格取得タスク開始")
+        asyncio.run(_fetch_all())
+        logger.info("[buyback_scraper] 全店舗価格取得タスク完了")
 
-    try:
-        stats = asyncio.run(_run_product_matching())
-        logger.info(
-            "[buyback_scraper] 商品マッチング完了: auto=%d, pending_review=%d, unmatched=%d",
-            stats["auto"],
-            stats["pending_review"],
-            stats["unmatched"],
-        )
-    except Exception:  # noqa: BLE001
-        logger.exception("[buyback_scraper] 商品マッチングでエラー")
+        try:
+            fired = asyncio.run(_run_alert_check())
+            logger.info("[buyback_scraper] アラートチェック完了: %d 件発火", fired)
+        except Exception:  # noqa: BLE001
+            logger.exception("[buyback_scraper] アラートチェックでエラー")
+
+        try:
+            stats = asyncio.run(_run_product_matching())
+            logger.info(
+                "[buyback_scraper] 商品マッチング完了: auto=%d, pending_review=%d, unmatched=%d",
+                stats["auto"],
+                stats["pending_review"],
+                stats["unmatched"],
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception("[buyback_scraper] 商品マッチングでエラー")
+    finally:
+        # アラートチェックが共用 engine（AsyncSessionLocal）を使うため、接続を捨てる。
+        # 捨てないと、同じ worker で次に動く作業が "attached to a different loop" で落ちる
+        # （docs/handoff/celery-unregistered-tasks/recon.md §4）。
+        asyncio.run(engine.dispose())
 
 
 async def _run_alert_check() -> int:

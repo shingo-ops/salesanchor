@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
+import { Checkbox } from "../../../components/Checkbox";
 import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
@@ -265,14 +266,11 @@ export function TypeMasterPanel() {
                 onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })}
               />
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              <input
-                type="checkbox"
-                checked={form.is_active}
-                onChange={e => setForm({ ...form, is_active: e.target.checked })}
-              />
-              {t(`${f}.isActive`)}
-            </label>
+            <Checkbox
+              label={t(`${f}.isActive`)}
+              checked={form.is_active}
+              onChange={e => setForm({ ...form, is_active: e.target.checked })}
+            />
           </div>
         </form>
       </Drawer>

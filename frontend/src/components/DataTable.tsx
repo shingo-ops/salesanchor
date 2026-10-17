@@ -29,6 +29,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useFitTableZoom } from '../hooks/useFitTableZoom';
 import './DataTable.css';
 import { Button } from "./Button";
+import { CheckboxControl } from "./CheckboxControl";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
@@ -310,9 +311,7 @@ export function DataTable<T = Record<string, unknown>>({
                   } : undefined}
                 >
                   {selectable && (
-                    <input
-                      type="checkbox"
-                      className="comp-table__check"
+                    <CheckboxControl
                       checked={isSelected}
                       onChange={() => toggleRow(key)}
                       aria-label={`select row ${key}`}
@@ -345,13 +344,9 @@ export function DataTable<T = Record<string, unknown>>({
         <tr className="comp-table__head-row">
           {selectable && (
             <th className={`comp-table__th comp-table__th--check${checkStickyCls}`} aria-label="select all">
-              <input
-                type="checkbox"
-                className="comp-table__check"
+              <CheckboxControl
                 checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected;
-                }}
+                indeterminate={someSelected}
                 onChange={toggleAll}
                 aria-label="select all rows"
               />
@@ -429,9 +424,7 @@ export function DataTable<T = Record<string, unknown>>({
               >
                 {selectable && (
                   <td className={`comp-table__td comp-table__td--check${checkStickyCls}`}>
-                    <input
-                      type="checkbox"
-                      className="comp-table__check"
+                    <CheckboxControl
                       checked={isSelected}
                       onChange={() => toggleRow(key)}
                       aria-label={`select row ${key}`}

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
-import { postProductCorrection, postReviewAck, postReviewAckRevoke, searchProductOptions } from "./reviewActions";
+import type { BlankCode } from "../tcg-product-import/productDetailModel";
+import { checkProductDuplicates, createProduct, postProductCorrection, postReviewAck, postReviewAckRevoke, searchProductOptions } from "./reviewActions";
 
 vi.mock("../../lib/api", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 
@@ -46,5 +47,27 @@ describe("reviewActions", () => {
     const options = await searchProductOptions("al pha");
     expect(api.get).toHaveBeenCalledWith("/tcg/products/search?query=al+pha");
     expect(options).toEqual([{ value: "uuid-1", label: "Alpha", productId: "PM-00001" }]);
+  });
+
+  it("sends the format id as a number, or null when none is chosen", async () => {
+    vi.mocked(api.post).mockResolvedValue({ ok: true });
+    const values = {
+      product_kind_id: "1",
+      work_id: "2",
+      manufacturer_id: "3",
+      product_category_id: "4",
+      mark: "",
+      japanese_title: "Pika Box",
+      english_title: "",
+      release_date: "",
+      search_keywords: "",
+      exclude_keywords: "",
+      product_format_id: "",
+      blank_confirmations: [] as BlankCode[],
+    };
+    await createProduct(item, { ...values, product_format_id: "7" }, false);
+    expect(vi.mocked(api.post).mock.calls[0][1]).toMatchObject({ product_format_id: 7 });
+    await checkProductDuplicates(item, { ...values, product_format_id: "" });
+    expect(vi.mocked(api.post).mock.calls[1][1]).toMatchObject({ product_format_id: null });
   });
 });

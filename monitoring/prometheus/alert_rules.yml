@@ -215,6 +215,31 @@ groups:
           description: "待ち行列が {{ $value | humanize }} 件です（閾値: 100 件・10 分継続）。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#celeryqueuebacklog"
 
+      # 閲覧ページの在庫の作り置き（ADR-1019 段2b）が止まっている。保留（配信を止めている最中）かどうかで 2 本に分ける
+      # tokens.yml: viewer_inventory_stale_sec=600 / viewer_inventory_hold_recent_sec=120
+      # backend/app/metrics.py が Redis（db0）から読んで出す viewer_inventory_*_timestamp_seconds を使用
+      - alert: ViewerInventoryStale
+        expr: (time() - viewer_inventory_updated_timestamp_seconds{job="backend"}) > 600 and (time() - viewer_inventory_last_hold_timestamp_seconds{job="backend"}) > 120
+        for: 2m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "閲覧ページの在庫の作り置きが10分以上更新されていない（保留ではない）"
+          description: "作り置きのタスクの失敗が続いている可能性。worker の停止は CeleryHeartbeatStale が別に知らせる"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystale"
+
+      - alert: ViewerInventoryStaleOnHold
+        expr: (time() - viewer_inventory_updated_timestamp_seconds{job="backend"}) > 600 and (time() - viewer_inventory_last_hold_timestamp_seconds{job="backend"}) <= 120
+        for: 2m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "閲覧ページの在庫の作り置きが10分以上止まっている（配信の保留中）"
+          description: "解析の実行中などで配信が保留されている。閲覧ページは前回の在庫を出し続ける（設計 Q11）"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#viewerinventorystaleonhold"
+
   - name: backup_alerts
     rules:
       # DB バックアップ（scripts/backup.sh）の最終成功から 26 時間（tokens.yml: backup_stale_sec=93600）
@@ -281,3 +306,42 @@ groups:
           summary: "監視設定のずれの確認が 50 時間以上動いていません"
           description: "monitoring-config-drift の workflow が 50 時間以上 pushgateway に送っていません。prod2 の runner と workflow の実行を確認してください。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#monitoringconfigcheckstale"
+
+  - name: container_state_alerts
+    rules:
+      # 健康診断（docker-compose.yml の healthcheck・便D）が unhealthy（ADR-1012 段階3 便E）
+      # prod1 の scripts/ops/container_state.py が毎分 textfile に書く。札は処置の付く便G で auto に変える
+      - alert: ContainerUnhealthy
+        expr: salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "コンテナ {{ $labels.service }} が不健康です"
+          description: "prod1 の {{ $labels.service }} の健康診断が unhealthy です。固まっている可能性があります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerunhealthy"
+
+      # 状態書き係が 5 分書いていない（cron の停止・docker が読めない・ファイルが無い）
+      - alert: ContainerStateStale
+        expr: (time() - salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps"}) > 300 or absent(salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps"})
+        for: 2m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "コンテナの状態書き係が 5 分以上動いていません"
+          description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+      # 動いているのに健康診断（healthcheck）が無い。この間 ContainerUnhealthy は鳴らない（ADR-1012 段階3 定着便 T1）
+      - alert: ContainerHealthcheckMissing
+        expr: salesanchor_container_healthcheck_missing{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"} == 1
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "コンテナ {{ $labels.service }} に健康診断がありません"
+          description: "prod1 の {{ $labels.service }} は動いていますが、健康診断（healthcheck）がありません。固まっても ContainerUnhealthy が鳴りません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerhealthcheckmissing"

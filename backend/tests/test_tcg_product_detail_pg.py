@@ -65,7 +65,8 @@ async def test_detail_contains_stored_values_words_and_revision(detail_db):
     assert product["exclude_keywords"] == ["Exclude one"]
     assert len(before["revision"]) == 64
     assert before["revision"] == (await details.get_product_detail(db, pid))["revision"]
-    assert set(before["lookups"]) == {"product_kind_id", "work_id", "manufacturer_id", "product_category_id"}
+    assert set(before["lookups"]) == {"product_kind_id", "work_id", "manufacturer_id", "product_category_id",
+                                      "product_format_id"}
     await db.execute(text(
         "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
         "SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
@@ -174,7 +175,8 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
             snapshot = await details.get_product_detail(db, pid)
             values = edit_values(snapshot)
             values.update(japanese_title="Edited", english_title="English edited", mark="MODEL",
-                          release_date="2026-09-14", search_keywords=["A, B", "C"], exclude_keywords=[])
+                          release_date="2026-09-14", search_keywords=["A, B", "C"], exclude_keywords=[],
+                          blank_confirmations=["exclude_keywords"])  # ADR-1020 便3: 除外ワードを空にするには印が要る
             result = await details.update_product_detail(db, pid, values, snapshot["revision"], "ci-reviewer")
         after = observed(connection)
         product = result["product"]
@@ -274,7 +276,8 @@ async def test_failed_edit_rolls_back_product_words_and_audit(edit_pg, stage):
         async with FailingSession(engine) as db:
             snapshot = await details.get_product_detail(db, _pid_int)
             values = edit_values(snapshot)
-            values.update(japanese_title="Must roll back", search_keywords=["Replacement"], exclude_keywords=[])
+            values.update(japanese_title="Must roll back", search_keywords=["Replacement"], exclude_keywords=[],
+                          blank_confirmations=["exclude_keywords"])  # ADR-1020 便3: 除外ワードを空にするには印が要る
             with pytest.raises(asyncio.CancelledError if stage == "cancel" else RuntimeError):
                 await details.update_product_detail(db, _pid_int, values, snapshot["revision"], "test")
         assert observed(connection) == before
@@ -404,7 +407,7 @@ async def test_lost_commit_response_keeps_one_atomic_change_and_stale_retry_fail
         async with LostResponse(engine) as db:
             snapshot = await details.get_product_detail(db, _pid_int)
             values = edit_values(snapshot)
-            values.update(japanese_title="Committed", search_keywords=[], exclude_keywords=["New exclusion"])
+            values.update(japanese_title="Committed", search_keywords=["Replacement"], exclude_keywords=["New exclusion"])
             with pytest.raises(RuntimeError, match="response lost"):
                 await details.update_product_detail(db, _pid_int, values, snapshot["revision"], "test")
         after = observed(connection)
@@ -412,7 +415,7 @@ async def test_lost_commit_response_keeps_one_atomic_change_and_stale_retry_fail
         async with AsyncSession(engine) as reader:
             current = await details.get_product_detail(reader, _pid_int)
             assert current["product"]["japanese_title"] == "Committed"
-            assert current["product"]["search_keywords"] == []
+            assert current["product"]["search_keywords"] == ["Replacement"]  # ADR-1020 便3: 検索ワードは印で空にできない
             assert current["product"]["exclude_keywords"] == ["New exclusion"]
             with pytest.raises(details.ProductDetailError) as caught:
                 await details.update_product_detail(reader, _pid_int, values, snapshot["revision"], "test")
@@ -470,5 +473,37 @@ async def test_detail_and_csv_reject_each_others_stale_drafts(edit_pg, monkeypat
                     await roundtrip.commit_update(db, edited, "edit.csv", "test", digest)
             assert caught.value.status == 409
         assert observed(connection) == before
+    finally:
+        await engine.dispose()
+
+
+async def test_clearing_value_without_mark_is_rejected(edit_pg):
+    """ADR-1020 便3: 値のあった型番を印なしで空にする保存は 422。印があれば保存でき、印の表に 1 行できる。"""
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(mark="MODEL")
+            saved = await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+        async with AsyncSession(engine) as db:
+            values = edit_values(saved)
+            values.update(mark="")
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(db, pid, values, saved["revision"], "test")
+            assert caught.value.status == 422
+            assert str(caught.value) == "REQUIRED_FIELDS_CLEARED:mark"
+        with connection.cursor() as cur:
+            cur.execute("SELECT mark FROM public.products WHERE id=%s", (pid,))
+            assert cur.fetchone()[0] == "MODEL"
+        async with AsyncSession(engine) as db:
+            values = edit_values(saved)
+            values.update(mark="", blank_confirmations=["mark"])
+            await details.update_product_detail(db, pid, values, saved["revision"], "test")
+        with connection.cursor() as cur:
+            cur.execute("SELECT field_code FROM public.product_blank_confirmations WHERE product_id=%s", (pid,))
+            assert cur.fetchall() == [("mark",)]
     finally:
         await engine.dispose()

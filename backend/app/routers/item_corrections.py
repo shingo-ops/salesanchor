@@ -18,26 +18,34 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
 from app.services.item_corrections_svc import save_corrections
+from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import load_review_reason_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
     FIELD_PRODUCT_ID,
+    MAX_NOTE_LENGTH,
+    OVERRIDE_PREFIX,
+    DecisionRejected,
     find_job_of_item,
     invalid_product_values,
+    item_basic_rejection,
     item_rejection,
     normalize_ack_codes,
+    override_options,
     product_rejection,
     review_ack_rejection,
     save_review_ack,
     save_review_ack_revoke,
+    save_value_override,
     v102_job_id_of_item,
 )
-from app.tasks.tcg_extraction import enqueue_v102_reanalyze
+from app.tasks.tcg_extraction import enqueue_v102_reanalyze, schedule_distribution
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +92,8 @@ class SaveCorrectionsRequest(BaseModel):
             UUID(self.source_message_id)
         if any(field.field_name == "condition_review" for field in self.fields):
             raise ValueError("condition_review is reserved")
+        if any(field.field_name.startswith(OVERRIDE_PREFIX) for field in self.fields):
+            raise ValueError("override_ field names are reserved (use /value-override)")
         return self
 
 
@@ -111,14 +121,16 @@ class ReviewAckResponse(BaseModel):
     saved: int
 
 
-async def _enqueue_reanalyze_if_v102(db: AsyncSession, extraction_item_id: str) -> None:
-    """保存後に呼ぶ。その件の投稿が v102 のときだけやり直しを積む（v6 は積まない）。失敗しても保存は成功のまま。"""
+async def _after_condition_review_saved(db: AsyncSession, extraction_item_id: str) -> None:
+    """状態の修正の保存後に呼ぶ。v102 はやり直しを積む。v6 は配信の予約だけ積む。失敗しても保存は成功のまま。"""
     try:
         job_id = await v102_job_id_of_item(db, extraction_item_id)
         if job_id is not None:
             enqueue_v102_reanalyze(job_id)
+        else:
+            await run_in_threadpool(schedule_distribution)
     except Exception:  # noqa: BLE001
-        logger.warning("[item_corrections] v102 reanalyze trigger failed: item=%s", extraction_item_id, exc_info=True)
+        logger.warning("[item_corrections] post-save trigger failed: item=%s", extraction_item_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +159,7 @@ async def save_item_corrections(
             request=body.condition_review.model_dump(mode="json"), corrected_by=current_user.email,
         )
         if result["saved"] > 0:
-            await _enqueue_reanalyze_if_v102(db, extraction_item_id)
+            await _after_condition_review_saved(db, extraction_item_id)
         return SaveCorrectionsResponse(ok=True, **result)
     non_empty = [
         {"field_name": f.field_name, "system_value": f.system_value, "human_value": f.human_value}
@@ -167,8 +179,12 @@ async def save_item_corrections(
         fields=non_empty,
         corrected_by=current_user.email,
     )
-    if result["saved"] > 0 and v102_job_id is not None:
-        enqueue_v102_reanalyze(v102_job_id)
+    if result["saved"] > 0:
+        if v102_job_id is not None:
+            enqueue_v102_reanalyze(v102_job_id)
+        else:
+            # v6 は即時 UPDATE で直っている。配信の予約だけ積む（同期の Redis 待ちで event loop を止めない）
+            await run_in_threadpool(schedule_distribution)
     return SaveCorrectionsResponse(ok=True, saved=result["saved"])
 
 
@@ -232,3 +248,66 @@ async def revoke_item_review_ack(
         raise HTTPException(409, "No review-ack to revoke")
     enqueue_v102_reanalyze(found.job_id)
     return ReviewAckResponse(ok=True, saved=saved)
+
+
+# ---------------------------------------------------------------------------
+# POST /tcg/items/{extraction_item_id}/value-override
+# GET  /tcg/review/value-options
+# ---------------------------------------------------------------------------
+
+
+class ValueOverrideRequest(BaseModel):
+    source_message_id: UUID
+    field: Literal["quantity", "price", "unit", "note", "status"]
+    value: str = Field(max_length=MAX_NOTE_LENGTH)
+
+
+class ValueOptionsResponse(BaseModel):
+    units: list[str]
+    statuses: list[str]
+
+
+@router.post(
+    "/tcg/items/{extraction_item_id}/value-override",
+    response_model=ReviewAckResponse,
+    summary="v102 の件の数量・単価・単位・メモ・販売状況を人の値に直す",
+)
+async def save_item_value_override(
+    extraction_item_id: str,
+    body: ValueOverrideRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+) -> ReviewAckResponse:
+    found = await find_job_of_item(db, extraction_item_id)
+    rejected = item_basic_rejection(found, str(body.source_message_id))
+    if rejected is not None:
+        raise HTTPException(rejected.status, rejected.message)
+    try:
+        saved = await save_value_override(
+            db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
+            field=body.field, value=body.value, corrected_by=current_user.email,
+        )
+    except DecisionRejected as exc:
+        raise HTTPException(exc.status, exc.message) from exc
+    if is_v102_prompt_version(found.prompt_version):
+        enqueue_v102_reanalyze(found.job_id)
+    else:
+        # v6 は即時 UPDATE で ar が直っている。次の配信で Sold out を外すため配信の予約だけ積む（同期の Redis 待ちで event loop を止めない）
+        await run_in_threadpool(schedule_distribution)
+    return ReviewAckResponse(ok=True, saved=saved)
+
+
+@router.get(
+    "/tcg/review/value-options",
+    response_model=ValueOptionsResponse,
+    summary="数量・単価などを直す欄の選択肢（単位・販売状況）",
+)
+async def get_value_options(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+) -> ValueOptionsResponse:
+    from app.services.tcg_analyzer_svc import load_status_master, load_unit_canonical_ids  # noqa: PLC0415
+
+    unit_ids = await db.run_sync(load_unit_canonical_ids)
+    status_entries = await db.run_sync(load_status_master)
+    return ValueOptionsResponse(**override_options(unit_ids, status_entries))

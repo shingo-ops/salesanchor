@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
-import { ItemComparison, buildComparisonRows, systemCell, type AnalysisReviewItem } from "./ItemComparison";
+import { ItemComparison, buildComparisonRows, geminiCell, systemCell, type AnalysisReviewItem } from "./ItemComparison";
 
 const t = (key: string) => i18n.t(key);
 
@@ -44,9 +44,43 @@ describe("buildComparisonRows", () => {
   });
 });
 
+describe("geminiCell / v102 dash", () => {
+  const na = "—";
+  const v102 = () => makeItem({ is_v102: true, gemini: { name: "", quantity: "20", price: "23000", unit: "", state: "", memo: "", span: "L11-12" } });
+  it("A1: v102 row shows the dash for name/unit/state/memo", () => {
+    const rows = Object.fromEntries(buildComparisonRows(v102(), t).map((r) => [r.key, r]));
+    for (const k of ["name", "unit", "state", "memo"]) expect(rows[k].gemini).toBe(na);
+    for (const k of ["name", "unit", "state", "memo"]) expect(geminiCell(v102(), k, t)).toBe(na);
+  });
+  it("A2: v102 row keeps line / quantity / price values", () => {
+    const rows = Object.fromEntries(buildComparisonRows(v102(), t).map((r) => [r.key, r]));
+    expect(rows.quantity.gemini).toBe("20");
+    expect(rows.price.gemini).toBe("23000");
+    expect(rows.sourcePosition.gemini).toBe("L11-12");
+  });
+  it("A3: v6 row is unchanged (value, or unresolved when empty)", () => {
+    const rows = Object.fromEntries(buildComparisonRows(makeItem({ is_v102: false }), t).map((r) => [r.key, r]));
+    expect(rows.name.gemini).toBe("Box A");
+    const empty = Object.fromEntries(buildComparisonRows(makeItem({ is_v102: false, gemini: {} }), t).map((r) => [r.key, r]));
+    expect(empty.name.gemini).toBe(t("tcgAnalysisReview.unresolved"));
+  });
+  it("A1 (edit side): v102 non-readOnly view also shows the dash", () => {
+    const { container } = render(<ItemComparison item={v102()} onJumpToSourceLine={() => undefined} />);
+    const first = container.querySelectorAll(".aligned-fields .comparison-field:not(.system-field):not(.manual-field) span");
+    expect(Array.from(first).map((e) => e.textContent)).toEqual([na, "20", "23000", na, na, na]);
+  });
+});
+
 describe("systemCell source (4 cases)", () => {
-  it("gemini value adopted", () => {
-    expect(systemCell(makeItem(), "name", t)).toEqual({ value: "Box A", source: t("tcgAnalysisReview.geminiExtracted") });
+  it("name: product_title adopted as System confirmed (B1)", () => {
+    const item = makeItem({ system: { ...makeItem().system, product_title: "Master Title" } });
+    expect(systemCell(item, "name", t)).toEqual({ value: "Master Title", source: t("tcgAnalysisReview.systemConfirmed") });
+  });
+  it("name: empty product_title is unresolved even if gemini has a name (B2)", () => {
+    expect(systemCell(makeItem(), "name", t)).toEqual({ value: t("tcgAnalysisReview.unresolved"), source: t("tcgAnalysisReview.unresolved") });
+  });
+  it("price: gemini value adopted when system has none", () => {
+    expect(systemCell(makeItem(), "price", t)).toEqual({ value: "13000", source: t("tcgAnalysisReview.geminiExtracted") });
   });
   it("gemini value missing", () => {
     expect(systemCell(makeItem({ gemini: {} }), "price", t)).toEqual({ value: t("tcgAnalysisReview.unresolved"), source: t("tcgAnalysisReview.unresolved") });
@@ -54,6 +88,12 @@ describe("systemCell source (4 cases)", () => {
   it("unit confirmed only when unit_resolved is YES", () => {
     expect(systemCell(makeItem(), "unit", t).source).toBe(t("tcgAnalysisReview.systemConfirmed"));
     expect(systemCell(makeItem({ system: { unit: "BOX", unit_resolved: "NO" } }), "unit", t).source).toBe(t("tcgAnalysisReview.unresolved"));
+  });
+  it("quantity / price: the system value (ar) wins over gemini; empty falls back to gemini", () => {
+    const withSystem = makeItem({ system: { quantity: "5", price: "1000" } });
+    expect(systemCell(withSystem, "quantity", t)).toEqual({ value: "5", source: t("tcgAnalysisReview.systemConfirmed") });
+    expect(systemCell(withSystem, "price", t)).toEqual({ value: "1000", source: t("tcgAnalysisReview.systemConfirmed") });
+    expect(systemCell(makeItem({ system: { quantity: "", price: "" } }), "quantity", t)).toEqual({ value: "2", source: t("tcgAnalysisReview.geminiExtracted") });
   });
   it("memo: note present vs absent", () => {
     expect(systemCell(makeItem({ system: { note: "hello" } }), "memo", t)).toEqual({ value: "hello", source: t("tcgAnalysisReview.systemConfirmed") });
@@ -123,7 +163,8 @@ describe("ItemComparison readOnly fix column", () => {
     expect(screen.queryByRole("columnheader", { name: "Source" })).toBeNull();
     expect(screen.getByRole("columnheader", { name: "Fix" })).toBeTruthy();
     expect(lastCell(screen.getByRole("row", { name: /^Product ID/ })).textContent).toBe("Title A");
-    expect(lastCell(screen.getByRole("row", { name: /^Quantity/ })).textContent).toBe("—");
+    expect(lastCell(screen.getByRole("row", { name: /^Quantity/ })).textContent).toBe("Tap to fix");
+    expect(lastCell(screen.getByRole("row", { name: /^Condition/ })).textContent).toBe("—");
   });
 
   it("shows the tap hint for a fixable row that was not fixed by a person", () => {

@@ -250,6 +250,10 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                 class MeasuredSession:
                     consumer = ""
 
+                    async def run_sync(self, fn, *args, **kwargs):
+                        # load_v102_decisions（読み取りのみ）を同じ読み取り専用の取引で通す。計測対象の一覧クエリには含めない
+                        return await db.run_sync(fn, *args, **kwargs)
+
                     async def execute(self, statement, parameters=None):
                         estimated = (await db.execute(text("EXPLAIN (FORMAT JSON) " + str(statement)),
                                                        parameters)).scalar_one()[0]
@@ -350,3 +354,10 @@ def test_existing_twelve_columns_unchanged(pg):
     assert row[1:4] == ["TM", "Keyword title", "Test Title"]
     assert row[4:7] == ["Sealed box", "1000", "3"]
     assert row[9] == "2026-01-02"
+
+
+def test_bulk_is_ranked_after_pack_states_and_before_unlisted_values():
+    from app.services.tcg_result_order import RESULT_CONDITION_ORDER, result_order_sql
+
+    assert RESULT_CONDITION_ORDER[-1] == "Bulk" and RESULT_CONDITION_ORDER.index("Searched pack") < RESULT_CONDITION_ORDER.index("Bulk")
+    assert f"WHEN 'Bulk' THEN {len(RESULT_CONDITION_ORDER) - 1}" in result_order_sql()

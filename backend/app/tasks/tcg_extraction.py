@@ -435,6 +435,32 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
+ANALYSIS_FAILED = "ANALYSIS_FAILED"
+ANALYSIS_FAILED_RETRIED = "ANALYSIS_FAILED_RETRIED"
+
+
+def _record_analysis_failed(session, extraction_job_id) -> None:
+    """解析段の失敗を extraction_jobs.error_message に残す（status は 'done' のまま・例外の中身は書かない）。
+
+    この書き込み自体が失敗しても例外は外へ出さない（今の動きを壊さない）。
+    """
+    try:
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs SET error_message = :code "
+                "WHERE id = :ej AND status = 'done'"
+            ),
+            {"code": ANALYSIS_FAILED, "ej": extraction_job_id},
+        )
+        session.commit()
+    except Exception:  # noqa: BLE001
+        try:
+            session.rollback()
+        except Exception:  # noqa: BLE001
+            pass
+        logger.error("[tcg_extraction] ANALYSIS_FAILED の記録に失敗: ej=%s", extraction_job_id)
+
+
 def _run_v102_extraction(session, extraction_job_id, recorder) -> dict:
     """LINE_ANALYSIS_ENGINE=v102 の抽出。Gemini 段（run_v102_extraction）→ TCG_AUTO_ANALYZE=1 ならシステム段 → 自動配信。
 
@@ -451,6 +477,7 @@ def _run_v102_extraction(session, extraction_job_id, recorder) -> dict:
             except Exception:
                 session.rollback()
                 logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
+                _record_analysis_failed(session, extraction_job_id)
                 analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
             auto_distribute = os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() == "1"
             if auto_distribute and analysis_stats.get("status") != "error":
@@ -600,6 +627,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             except Exception:
                 session.rollback()
                 logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
+                _record_analysis_failed(session, extraction_job_id)
                 analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
 
             # 解析完了後に自動配信をトリガー（TCG_AUTO_DISTRIBUTE=1 のときのみ）
@@ -714,6 +742,14 @@ def reanalyze_v102_job(extraction_job_id: str) -> dict:
             logger.info("[tcg_extraction] v102 以外の投稿のためやり直しません: ej=%s", extraction_job_id)
             return {"extraction_job_id": extraction_job_id, "status": "skipped", "analysis_stats": None, "scheduled": False}
         stats = run_v102_analysis(session, extraction_job_id)
+        # 解析が通ったので、解析失敗の印（ANALYSIS_FAILED / _RETRIED）だけを消す。ほかの error_message は消さない
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs SET error_message = NULL "
+                "WHERE id = :ej AND error_message IN ('ANALYSIS_FAILED', 'ANALYSIS_FAILED_RETRIED')"
+            ),
+            {"ej": extraction_job_id},
+        )
         session.commit()
     finally:
         session.close()

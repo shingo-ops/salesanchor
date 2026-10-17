@@ -79,6 +79,12 @@ async def create_product_schema(conn, schema):
     _phase3_sql = (migrations / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text()
     _phase3_sql = _phase3_sql.replace("BEGIN;", "").replace("COMMIT;", "")
     await _exec_multi_stmt(conn, _phase3_sql)
+    # ADR-1020 便2a: 詳細の取得が読む表（細分類・紐づけ・「調べたが無い」の印）。どれも IF NOT EXISTS の本番 migration。
+    for name in (
+        "20260922_030000_product_format_game_links.sql",
+        "20261016_190000_create_product_blank_confirmations.sql",
+    ):
+        await _exec_multi_stmt(conn, (migrations / name).read_text())
 
 
 @pytest_asyncio.fixture
