@@ -40,6 +40,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.inventory_axes import resolve_condition_view
+from app.services.product_packagings import legacy_field_sql
 
 # 検索結果の matched_via 優先順位 (低数値が高優先)
 MATCHED_VIA_PRIORITY: dict[str, int] = {
@@ -340,8 +341,8 @@ SELECT
     s.name AS supplier_name,
     p.image_url,
     -- 海外顧客向け見積/請求明細用の付帯列 (public.products)
-    p.box_weight_kg,
-    p.case_weight_kg,
+    {legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg,
+    {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg,
     p.mark,
     p.tcg_type,
     r.matched_via,

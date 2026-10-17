@@ -27,6 +27,7 @@ from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.condition_value_columns import apply_condition_value_columns
 from tests.seed_data import tcg_product_categories_seed_sql, type_master_seed_sql
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -290,6 +291,7 @@ def migrate(cursor):
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    apply_condition_value_columns(cursor)  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
     # Seed public.tcg_product_categories from tenant schema so seed_products() can resolve PC_BOX
     cursor.execute(f"""
         INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active)

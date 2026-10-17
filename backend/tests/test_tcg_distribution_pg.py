@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.condition_value_columns import CONDITION_VALUE_STATEMENTS
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
@@ -80,6 +81,8 @@ async def create_schema(conn, schema, corrections=True):
     # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
     # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    for statement in CONDITION_VALUE_STATEMENTS:  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
+        await conn.exec_driver_sql(statement)
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
         "20260903_210000_tcg_distribution_settings_t004.sql",
