@@ -1,4 +1,5 @@
-import { api } from "../../lib/api";
+import type { TFunction } from "i18next";
+import { api, ApiError } from "../../lib/api";
 import type { CodeCollision } from "./CodeCollisionNotice";
 
 export const classificationFields = ["product_kind_id", "work_id", "manufacturer_id", "product_category_id"] as const;
@@ -100,4 +101,36 @@ export async function addExcludeWord(productId: number, word: string): Promise<A
   const draft: Draft = { ...base, exclude_keywords: [...detail.product.exclude_keywords, word].join("\n") };
   await api.put<Detail>(`/tcg/products/detail/${productId}`, buildUpdateBody(draft, base, detail));
   return "added";
+}
+
+// ADR-1020 便3b: バックエンドが必須9項目で止めたときの符号（REQUIRED_FIELDS_MISSING:/REQUIRED_FIELDS_CLEARED:）を、画面の言葉に直す
+const REQUIRED_FIELD_PREFIXES = [
+  ["REQUIRED_FIELDS_MISSING:", "productDetail.requiredFieldsMissing"],
+  ["REQUIRED_FIELDS_CLEARED:", "productDetail.requiredFieldsCleared"],
+] as const;
+
+// API の項目名 → 文言キー（productDetail.<key>）。載っていない名前はそのまま出す
+const REQUIRED_FIELD_LABEL_KEYS: Record<string, string> = {
+  name: "japanese_title",
+  name_en: "english_title",
+};
+
+export function requiredFieldsMessage(err: unknown, t: TFunction): string | null {
+  if (!(err instanceof ApiError) || err.status !== 422) return null;
+  const code = err.message;
+  for (const [prefix, key] of REQUIRED_FIELD_PREFIXES) {
+    if (!code.startsWith(prefix)) continue;
+    const fields = code
+      .slice(prefix.length)
+      .split(",")
+      .filter((f) => f !== "")
+      .map((f) => {
+        const label = REQUIRED_FIELD_LABEL_KEYS[f] ?? f;
+        const k = `productDetail.${label}`;
+        const text = t(k);
+        return text === k ? f : text;
+      });
+    return t(key, { fields: fields.join(t("reviewItem.wizard.register.listSeparator")) });
+  }
+  return null;
 }
