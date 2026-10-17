@@ -77,6 +77,11 @@ echo "  Image: ${BACKEND_IMAGE}"
 
 # ── Step 2: Green backend を起動（backnet のみ。frontnet の backend エイリアスは後で付与） ──
 echo "Step 2: Starting green backend (backnet only, no traffic yet)..."
+# .env のキーを名前だけで渡す（値は上の source 済みの環境から docker が読む）。
+# --env-file は引用符を外さないため使わない（docs/handoff/bg-cutover-env-by-name/design.md）。
+[ -f "${REPO_DIR}/.env" ] || { echo ".env not found" >&2; exit 1; }
+ENV_ARGS=()
+while IFS= read -r _k; do ENV_ARGS+=(--env "$_k"); done < <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
 docker run -d \
   --name "${GREEN_BACKEND}" \
   --restart unless-stopped \
@@ -89,7 +94,7 @@ docker run -d \
   --volume "${REPO_DIR}/firebase-credentials.json:/app/firebase-credentials.json:ro" \
   --volume "${REPO_DIR}/tcg-sheets-sa.json:${REPO_DIR}/tcg-sheets-sa.json:ro" \
   --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
-  --env-file "${REPO_DIR}/.env" \
+  "${ENV_ARGS[@]}" \
   --env GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json \
   --env TCG_SCHEMA="${TCG_SCHEMA:-tenant_004}" \
   --log-driver json-file \
