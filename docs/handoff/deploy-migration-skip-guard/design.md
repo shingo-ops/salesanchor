@@ -70,11 +70,11 @@
 ## 8. 戻し方
 実装 PR を revert して main にマージ（deploy.yml だけの変更なので、戻すと今の判定に戻る）。
 
-## 9. 測り方・維持
+## 維持の仕組み（9. 測り方・維持）
 - 測る: gate の warning が出た回数（全部実行の回数）と、その直前の run の結果。直近1000件では7回相当。
 - 維持: 正は GitHub の run 履歴。フィルタを足すときは paths-filter 側（:36-59）だけ直せばよく、gate は触らない。
 
-## 10. 外部事例
+## 外部・過去事例の参照と我々への応用（10）
 - 出典: GitHub Docs「Control the concurrency of workflows and jobs」（pending の run は新しい run で置き換えられ cancelled）、dorny/paths-filter README（push は直前 commit と比較）。いずれも 2026-10-17 取得。
 - 数値の事例は使わない。理由: この穴は当リポジトリの2つの部品の組み合わせで起きる型で、直接の根拠は recon 6 の実測7件で足りるため。
 
