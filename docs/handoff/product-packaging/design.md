@@ -81,8 +81,7 @@ END;
 $upd$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS trg_product_packagings_updated_at ON public.product_packagings;
-CREATE TRIGGER trg_product_packagings_updated_at
-    BEFORE UPDATE ON public.product_packagings
+CREATE TRIGGER trg_product_packagings_updated_at BEFORE UPDATE ON public.product_packagings
     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_product_packagings();
 
 COMMENT ON TABLE public.product_packagings IS
@@ -106,7 +105,7 @@ CREATE POLICY product_packagings_write ON public.product_packagings
 ```
 - RLS は前例 migrations/20261016_190000_create_product_blank_confirmations.sql と同じ形（共用商品の付属の表。読むのは誰でも、書くのは運営だけ）。
 - 重さの型は古い列と同じ NUMERIC(8,3)（migrations/082_extend_products_box_attributes.sql の先頭コメント:16-17 の列一覧と、同ファイルの ADD COLUMN 文）。写しても桁が落ちない。
-- updated_at を直すトリガは前例 migrations/20260920_130000_create_product_classification.sql:36-44（product_lines）と同じ形。
+- updated_at を直すトリガは前例 migrations/20260920_130000_create_product_classification.sql:36-44（product_lines）と同じ形。ただし `CREATE TRIGGER … BEFORE UPDATE ON public.product_packagings` は1行に書く。表の名前を含む行は1行ずつ migration-guard チェック8 に照合され（scripts/check-migration-value-writes.py:35-37,138）、`BEFORE UPDATE ON …` だけの行は落ちるため（審査で再現・2026-10-17）。
 - 出典の制約（count_source_check・weight_source_check）は「値が有る⇔出典が有る」を `=` で比べる。`IN (...)` だけだと出典が NULL のとき CHECK が NULL＝合格になり、出典なしの値が入ってしまう（審査で一時 DB で再現・2026-10-17）。
 
 ### 3-2. scripts/run_all_migrations.sh
@@ -139,7 +138,7 @@ CI「マイグレーションSQL 実行（内部）」は、変えた migration 
               updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
           );
 ```
-- 字下げは周りの行（10 文字）に合わせる。この workflow は .github/workflows/workflow-lint.yml ではないので、不可逆操作の一覧には当たらない。
+- 字下げは周りの行（10 文字）に合わせる。同じファイルの「現在登録済みのテーブル」の一覧（.github/workflows/migration-test.yml:163-178 付近）に `※ public.quantity_units は 20260921_140000 で本番作成済み（最小定義を登録）` の1行を足す。この workflow は .github/workflows/workflow-lint.yml ではないので、不可逆操作の一覧には当たらない。
 - 実装時に、この前提の中で public.products が作られていることを確かめる（作られていなければ止めて報告）。
 
 ## 4. 値を写す（便2・1回だけのデータ変更。ADR-1007）
