@@ -270,3 +270,81 @@ FROM r;
 - 想定分岐: run_all_migrations.sh の末尾が §3-2 の想定と違う／protected-tables.txt に product_blank_confirmations の行が無い／migration-test.yml に product_lines の最小定義が無い・前提に public.products が無い／点検が失敗した → 直さずに止めて報告。
 - commit は1つ（`feat: 商品の荷姿の表を作る（ADR-1028 便1）`）。push まで。PR は作らない（Opus が作る）。
 - 報告: DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
+
+## 11. 実装カード（便3・Sonnet）
+PO 2026-10-18 チャット「y」（便3 のカード→審査→実装→マージ→本番まで）。現在地の生出力は /tmp/CC報告ファイル/product-packaging/bin3/（recon/・recon/extra/・recon/prod/）。行番号は origin/main 88391573c 時点。
+
+### 11-1. 着手前に分かった事実（本番・読み取りの道）
+- 照合のやり直し（2026-10-17T16:28Z、data-change-1/02_verify_read.sql）: K3 CASE 146・BOX 176・計 322／K4 0|0|0|0／K5 4 行で便2 直後と同じ（recheck_k3k5.out）。
+- 本番の products は 1424 行すべて共用（tenant_id NULL）。テナントの商品は 0 行。古い4列に値がある商品 176、表の行が付いたテナント商品 0（recon/prod/q1.out）。
+- 商品 API（POST/PATCH /products）で作った・直した記録は各テナントの audit_logs に 0 件（record_audit_log は tenant_NNN.audit_logs に書く: backend/app/services/audit.py:303。recon/prod/q4.out）。アプリは salesanchor_app で接続し RLS が効く（docs/adr/ADR-1018-public-sensitive-tables-rls-staged.md:16）。共用行の書き込みは app.is_operator='true' のときだけ許され（migrations/20260626_130000_force_rls_public_products.sql:15-38）、商品 API はそれを張らない（products.py に is_operator 0 件）。
+- 新しい表の書き込みも app.is_operator='true' のときだけ（migrations/20261018_100000_create_product_packagings.sql:69-81）。共用の商品と同じ条件なので、**便3 は「誰が書けるか」を変えない**（is_operator を新しく張らない）。商品の行を書けたときだけ表も書ける。
+- リポジトリ外の在庫一覧 GAS 4 フォルダは4列を読まない（recon/gas_grep.out 0 件、Code.js は配信シートの13列だけ）。§7 の「GAS の参照」は解消。
+
+### 11-2. 決めたこと（設計判断）
+- 応答の4項目（boxes_per_case・packs_per_box・box_weight_kg・case_weight_kg）は名前を変えず、新しい表から組み立てる。対応は便2 と同じ: boxes_per_case＝CASE 行の contained_count（中の単位が BOX のとき）／case_weight_kg＝CASE 行の weight_kg／packs_per_box＝BOX 行の contained_count（中の単位が PACK のとき）／box_weight_kg＝BOX 行の weight_kg。
+- この対応は新しいファイル backend/app/services/product_packagings.py の1か所だけに書き、商品 API と在庫検索の両方がそこを使う（SSOT）。
+- 古い4項目で値が送られて**値が変わった**ときは、その値の出典を `legacy`（ADR-1028:19「出典が残っていない」）にし、URL を空にする。値が同じなら行に触らない（出典・updated_at を保つ）。null が送られたらその値と出典を消し、入数も重さも無くなった行は消す（表の not_empty 制約のため）。出典つきの入力は便4（画面に出典の欄が付く便）で API に足す。
+- updated_by は `user:<ユーザーid>`。
+- 古い4列には書かない・読まない（列は便5 まで残る）。
+- SQLite（pytest の簡易表）には新しい表を作らない。SQLite では4項目を NULL で返し、書き込みは飛ばす（前例: backend/app/routers/me_inventory_filters.py:91,130）。4項目の試験は PostgreSQL の試験へ移す。
+- 応答に `packagings`（単位ごとの行と出典）を足す（§5）。
+
+### 11-3. 触るファイルと変更
+1. **新規 backend/app/services/product_packagings.py**
+   - 定数 `LEGACY_FIELDS`: 上の対応を `{"boxes_per_case": ("CASE", "count", "BOX"), "case_weight_kg": ("CASE", "weight", None), "packs_per_box": ("BOX", "count", "PACK"), "box_weight_kg": ("BOX", "weight", None)}` の形で持つ。
+   - `legacy_field_sql(field: str, product_id_expr: str) -> str`: 1項目ぶんのスカラー副問い合わせを返す。例（boxes_per_case）:
+     `(SELECT pk.contained_count FROM public.product_packagings pk JOIN public.quantity_units u ON u.id = pk.unit_id JOIN public.quantity_units cu ON cu.id = pk.contained_unit_id WHERE pk.product_id = {product_id_expr} AND u.code = 'CASE' AND cu.code = 'BOX')`。重さは contained の JOIN なしで `pk.weight_kg`。
+   - `async def load_packagings(db, product_ids: list[int]) -> dict[int, list[dict]]`: `WHERE pk.product_id = ANY(:ids)` の1回の SELECT で、unit_code・contained_unit_code・contained_count・count_source・count_source_urls・weight_kg・weight_source・weight_source_urls・note・updated_at を返す（並びは quantity_units.display_order, id）。
+   - `async def save_legacy_fields(db, product_id: int, fields: dict, updated_by: str) -> None`: fields は4項目のうち送られたものだけ。単位（CASE・BOX）ごとに、今の行を `SELECT ... FOR UPDATE` で読み、11-2 の決まりで新しい値を作り、変わったときだけ UPDATE／INSERT／DELETE する。INSERT は `INSERT ... SELECT :pid, u.id, cu.id, ... FROM public.quantity_units u LEFT JOIN public.quantity_units cu ON cu.code = :ccode WHERE u.code = :code` で単位の id を引く（code→id の定数を書かない）。単位の行が無くて0行になったら RuntimeError。
+2. **backend/app/routers/products.py**
+   - :66 の `_UPDATABLE_COLUMNS` から4項目を外す（:66-67 の残りは残す）。
+   - :129-146 `_select_columns(ctx)`: :139 の4列を、PostgreSQL では `legacy_field_sql(...)` の4式 `AS boxes_per_case` 等に、SQLite では `NULL AS boxes_per_case` 等にする（ctx に方言が分かる項目を足すか、引数を足す。products の参照は `{ctx['ref']}.id`）。
+   - GET 一覧（:251-255）・詳細（:347-354）: PostgreSQL では `load_packagings` で `packagings` を詰める（SQLite は空の配列）。
+   - POST（:398-425）: INSERT 列と値から4項目（:407・:418）を外す。INSERT の後、PostgreSQL では4項目のうち None でないものを `save_legacy_fields` に渡す。その後の再取得（:433-436）はそのまま。audit_log の new_data はそのまま。
+   - PATCH（:472-534）: `data.model_dump(exclude_unset=True)` から4項目を別に取り出す。:474 の「更新するフィールドを指定してください」は、4項目も無いときだけにする。products の UPDATE は、他の項目が無くても `SET updated_at = NOW()` で必ず流す（商品の行を書けるかの RLS の判定を今と同じにするため）。UPDATE の結果の行が有り、4項目があれば PostgreSQL で `save_legacy_fields` を呼び、`SELECT {_select_columns(ctx)} ... WHERE id = :id` で取り直して返す。audit_log の new_data には4項目も入れる（今と同じ中身）。
+   - DELETE は触らない（表は ON DELETE CASCADE）。
+3. **backend/app/schemas/product.py**
+   - :68-71 と :116-119 の4項目の `ge=0` を `gt=0` にする（0 は 422。値の型・桁は変えない）。
+   - 新しい `ProductPackagingOut`（11-3-1 の10項目。urls は `list[str]`）を足し、`ProductResponse`（:171-176 付近）に `packagings: list[ProductPackagingOut] = []` を足す。4項目の定義は変えない。
+4. **backend/app/services/inventory_search.py:343-344**: `p.box_weight_kg, p.case_weight_kg` を `legacy_field_sql("box_weight_kg", "p.id") AS box_weight_kg, legacy_field_sql("case_weight_kg", "p.id") AS case_weight_kg` にする。:101-104・:437-442 と router・schema は変えない。
+5. **テスト**
+   - backend/tests/test_tcg_product_list_pg.py:83-87 の `create_product_schema` が流す migration に、quantity_units を作る migration（migrations/20260921_140000_product_classification_masters.sql。すでに入っていれば足さない）と migrations/20261018_100000_create_product_packagings.sql を足す。
+   - 新規 backend/tests/test_product_packagings_pg.py（product_db を借りる。test_products_required_fields_pg.py:14,52-53 と同じ形）。quantity_units に CASE・BOX・PACK が無ければ試験の中で入れる。確かめること:
+     - T1 古い4列が NULL・表に CASE（BOX×12・6.5kg・official・URL1つ）と BOX（PACK×20・0.236kg・legacy）があるとき、GET 詳細と GET 一覧が 12・6.5・20・0.236 を返し、packagings が2行。
+     - T2 PATCH boxes_per_case=10 → CASE 行の contained_count 10・count_source legacy・count_source_urls 空、重さとその出典（official・URL）は変わらない。products.boxes_per_case は変わらない。
+     - T3 PATCH で4項目を今と同じ値で送る → 表の行の updated_at・出典が変わらない。
+     - T4 PATCH box_weight_kg=null → BOX 行の weight_kg・weight_source が NULL、入数は残る。続けて packs_per_box=null → BOX 行が消える。
+     - T5 POST で4項目を入れる → CASE・BOX の2行（出典 legacy）。古い4列は NULL。
+     - T6 PATCH boxes_per_case=0 → 422。
+     - T7 在庫検索（search_inventory か GET /api/v1/inventory/search）が表の box_weight_kg・case_weight_kg を返す。
+   - backend/tests/test_products.py: :594-597 の4項目の表明と :608-622 の boxes_per_case の更新は SQLite では値が返らないので、4項目を除いた形に直す（:616・:622 は `_UPDATABLE_COLUMNS` に残る別の数値の項目 moq に置き換える）。:624-630（-1 → 422）は残し、0 → 422 を1つ足す。
+   - backend/tests/conftest.py:816-819 は触らない（便5 で消す）。
+6. frontend/api-contract/openapi.json が `ProductResponse` から作られていて、CI で一致を確かめているなら、決まった生成手順で作り直す（手で書かない）。
+
+### 11-4. 触らない範囲
+frontend/src の全ファイル（項目名は変えない）、migrations/（試験の一覧に足すだけ。新しい migration は作らない）、scripts/seed_products_from_master.py（手で流す1回だけのスクリプト。CI・deploy から呼ばれない: recon/extra/F_seed_refs.out。便5 で直す）、backend/tests/conftest.py、test_products_required_fields_pg.py:26、quantity_units・weight_classes の管理画面、products.moq・weight・volume_weight。
+
+### 11-5. 点検（生出力を /tmp/CC報告ファイル/product-packaging/bin3/impl/ へ）
+- `cd backend && pytest -q tests/test_products.py tests/test_product_packagings_pg.py tests/test_products_required_fields_pg.py tests/test_tcg_product_list_pg.py`（PG の試験はローカルに PostgreSQL 16 と RLS_ADMIN_DATABASE_URL が無ければ skip になる。skip なら「未実施・CI で確認」と書く）
+- `cd backend && pytest -q`（全体）と `make lint`（backend/CLAUDE.md:69）
+- `git grep -n -E "packs_per_box|boxes_per_case|box_weight_kg|case_weight_kg" -- backend/app scripts` の結果を保存（便5 の K9 の元）
+- `git diff origin/main...HEAD --name-only` が 11-3 のファイルだけ
+
+### 11-6. 想定分岐（当てはまったら直さずに止めて報告）
+- 行番号が 11-3 とずれていて、同じ中身の行が見つからない
+- `_select_columns` を products.py 以外が使っている
+- create_product_schema に足す migration が他の migration を前提にしていて流れない
+- 在庫検索を PG の試験で呼ぶのに要る表が product_db に無い（T7 だけ「未実施」で止めずに報告に書く）
+- openapi.json の生成手順が見つからない、または生成で ProductResponse 以外も変わる
+- pytest の失敗が便3 の変更と関係ない所で出る
+
+### 11-7. 受入条件（§6 の K6・K7 の測り方をここで固める）
+| 基準 | 検証方法 |
+|---|---|
+| B1 CI がすべて緑（"pytest (SQLite + PostgreSQL RLS)" で T1〜T6 が skip でなく pass） | `gh pr checks` と、CI の pytest の記録で test_product_packagings_pg の pass を見る |
+| B2（K6）本番反映後、4項目の値が便3 前と全商品で同じ | 本番の読み取りの道で、`legacy_field_sql` と同じ式で組み立てた4値と古い4列を全 1424 商品で突き合わせて不一致 0。商品 API を AI が本番で呼ぶ鍵は無いので、API が同じ式を使うことは T1 で確かめる |
+| B3（K7）在庫検索の重さが同じ | T7 と、frontend の quoteDraft.test.ts（変更なし）が CI で pass。画面の目視は PO |
+| B4 デプロイが成功し、本番の /health が 200 | `gh run view`・curl |
+
+ブランチ: release/product-packaging-readers（このカードと同じ PR）。最初に `./scripts/dev/executor-preflight.sh || exit 1`。commit は実装1つ（`feat: 入数と重さを荷姿の表から読み書きする（ADR-1028 便3）`）。push まで。PR は Opus が作る。報告は DONE/BLOCKED:/NEEDS_DECISION: で始め、HEAD・変更ファイル・点検の生出力のパス。
