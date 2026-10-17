@@ -6,7 +6,7 @@ Accepted
 
 ## Date
 
-2026-06-02（起案） / 2026-06-03（実装完了・記録更新） / 2026-06-16（権限定義追記） / 2026-09-27（Add Reactions 実装済み記録） / 2026-10-01（Manage Webhooks 実装済み記録・ADR-159 便B）
+2026-06-02（起案） / 2026-06-03（実装完了・記録更新） / 2026-06-16（権限定義追記） / 2026-09-27（Add Reactions 実装済み記録） / 2026-10-01（Manage Webhooks 実装済み記録・ADR-159 便B） / 2026-10-17（Create Instant Invite 追記・ADR-1019 段4b）
 
 ## Context
 
@@ -77,6 +77,7 @@ API 呼び出し実装は承認後に行うこと。
 | Embed Links | リンクを埋め込み | 追跡番号 URL・請求書リンク等のプレビュー表示に必要 |
 | Attach Files | ファイルを添付 | 請求書 PDF・写真共有を Bot 経由で行う構想のため |
 | Add Reactions | リアクションを付ける | アプリ側リアクションを Discord へ同期する構想のため。実装済み: discord-reaction PR #TBD (2026-09-27) |
+| Create Instant Invite | 招待を作成 | 在庫の閲覧ページの申込のたびに、運用サーバー「Sales Anchor」の受付の部屋への招待（期限7日・使用1回）を作るため（ADR-1019 段4b、PO 承認 2026-10-17）。**運用サーバーのボットのロールにだけ PO が付ける。** テナント向けのボット招待の権限の数字（`backend/app/routers/discord_oauth.py` の `_DISCORD_PERMISSIONS`）には足さない。設計: `docs/handoff/gas-viewer-fresh-fast/design.md` の D5 |
 
 ### チェックしない権限
 
