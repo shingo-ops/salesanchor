@@ -8,11 +8,11 @@
 ## 0. 既存 ADR の検索
 - `git grep -n -i -E "quantity_unit|packs_per_box|boxes_per_case|box_weight|case_weight|荷姿|入数" docs/adr/` の結果、入数・重さの列に触れる ADR は ADR-093 だけ（docs/adr/ADR-093-inventory-table-product-master-redesign.md:37-38。7列を API と画面に出す決定）。
 - docs/adr/FEATURE-INDEX.md に quantity_unit・入数・荷姿の行は無い。
-- 関係する決まり: ADR-155（docs/adr/ADR-155-product-master-ssot-csv-app.md:23-24 migration は構造だけ・値の INSERT/UPDATE/DELETE 禁止）、ADR-1007（docs/adr/ADR-1007-migration-structure-only-run-once.md:36 値は画面・CSV・1回だけのデータ変更〈PO 合意、DRY-RUN→COMMIT、docs/handoff/<topic>/ に SQL と記録〉）、ADR-090（docs/adr/ADR-090-products-central-unification.md:18 共用 products は public・tenant_id NULL）、ADR-1026（列を消した前例）。
+- 関係する決まり: ADR-155（docs/adr/ADR-155-product-master-ssot-csv-app.md:25-26 migration は構造だけ・値の INSERT/UPDATE/DELETE 禁止）、ADR-1007（docs/adr/ADR-1007-migration-structure-only-run-once.md:36 値は画面・CSV・1回だけのデータ変更〈PO 合意、DRY-RUN→COMMIT、docs/handoff/<topic>/ に SQL と記録〉）、ADR-090（docs/adr/ADR-090-products-central-unification.md:18 共用 products は public・tenant_id NULL）、ADR-1026（列を消した前例）。
 - 単位の名簿を作った設計: docs/handoff/product-classification-masters/design.md:8,15-17,26-27（quantity_units・weight_classes 新設、「既存商品への紐づけは別 PR」のまま止まっている）。
 
 ## 1. 入数・重さの列（products）
-- 【事実】列の定義: migrations/082_extend_products_box_attributes.sql:13-19（boxes_per_case INTEGER、packs_per_box INTEGER、box_weight_kg NUMERIC(8,3)、case_weight_kg NUMERIC(8,3)、moq INTEGER＝最小発注数）。volume_weight NUMERIC(8,3) は migrations/20260602_170000_add_products_master_label_columns.sql:32。
+- 【事実】列の定義: migrations/082_extend_products_box_attributes.sql:13-19 の先頭コメントの列一覧と同ファイルの ADD COLUMN 文（boxes_per_case INTEGER、packs_per_box INTEGER、box_weight_kg NUMERIC(8,3)、case_weight_kg NUMERIC(8,3)、moq INTEGER＝最小発注数）。volume_weight NUMERIC(8,3) は migrations/20260602_170000_add_products_master_label_columns.sql:32。
 - 【事実】本番の件数（全 1424 行、b4.txt）: packs_per_box 134／boxes_per_case 109／box_weight_kg 162／case_weight_kg 134／moq 11／weight 0／volume_weight 0／quantity_unit_id 0／weight_class_id 0。
 - 【事実】4列の組み合わせ（b5.txt）: 全て空 1248／4列とも有り 87／ppb+bwk+cwk 31／bwk だけ 26／ppb+bpc 12／bpc+bwk+cwk 10／bwk+cwk 6／ppb だけ 2／ppb+bwk 2。
   - ここから、ケースの値（bpc か cwk）が有る行は 146、ボックスの値（ppb か bwk）が有る行は 176。
@@ -26,7 +26,7 @@
 - 【事実】quantity_units（migrations/20260921_140000_product_classification_masters.sql:38-48、コメント「正式販売単位マスタ」migrations/20260922_060000_product_unit_condition_infra.sql:89）。本番 3 行 CASE／BOX／PACK、value は全て空（a2.txt）。products.quantity_unit_id は 0 件使用。
 - 【事実】product_line_available_units 5 行（a3.txt）: 系統 CASE→単位 CASE、系統 BOX→単位 CASE・BOX・PACK、系統 PACK→単位 PACK。読むのは backend/app/routers/super_admin_quantity_units.py:68,148,222 だけ。
 - 【事実】product_quantity_units（migrations/20260922_060000_product_unit_condition_infra.sql。product_id・quantity_unit_id・value、UNIQUE(product_id, quantity_unit_id)）は本番 0 件、migrations 以外のコードから 0 件参照（A1_grep_all_noDocs.txt）。weight_classes も本番 0 件。
-- 【事実】3表とも tenant_id 列なし＝共用（b8.txt）。値を migration で書かない表として scripts/migration-guard/protected-tables.txt:32-34 に登録済み。
+- 【事実】product_lines と quantity_units は tenant_id 列なし＝共用（b8.txt）。weight_classes は【未確認】（b8 で見ていない）。値を migration で書かない表として scripts/migration-guard/protected-tables.txt:32-34 に登録済み。
 - 【事実】単位の名簿の管理画面がある: backend/app/routers/super_admin_quantity_units.py（CRUD）、frontend/src/pages/super-admin/components/QuantityUnitsMasterPanel.tsx。
 - 読み取り: product_lines の CASE/BOX/PACK は「商品の種類」、quantity_units の CASE/BOX/PACK は「数える単位」。**名前は同じだが表すものが違う**。
 
