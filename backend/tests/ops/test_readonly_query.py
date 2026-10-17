@@ -14,9 +14,30 @@ from app.ops import readonly_query as rq
 SECRET_URL = "postgresql://ai_reader:SUPERSECRETVALUE@db.example:5432/x"
 
 
-def run(sql, connect=None):
+class FakeAudit:
+    """AUDIT の送り口の偽物。送った中身と close の回数を記録する。"""
+
+    def __init__(self, exc=None, on_send=None):
+        self.sent = []
+        self.closed = 0
+        self.exc = exc
+        self.on_send = on_send
+
+    def send(self, data):
+        if self.on_send:
+            self.on_send()
+        if self.exc:
+            raise self.exc
+        self.sent.append(data)
+
+    def close(self):
+        self.closed += 1
+
+
+def run(sql, connect=None, audit=None):
     out, err = io.StringIO(), io.StringIO()
-    code = rq.main(stdin=io.StringIO(sql), stdout=out, stderr=err, connect=connect)
+    audit = audit if audit is not None else FakeAudit()
+    code = rq.main(stdin=io.StringIO(sql), stdout=out, stderr=err, connect=connect, audit=audit)
     return code, out.getvalue(), err.getvalue()
 
 
@@ -189,3 +210,129 @@ def test_source_does_not_spawn_or_read_ssh_command():
     assert "import subprocess" not in code_only
     assert "SSH_ORIGINAL_COMMAND" not in code_only.split('"""', 2)[-1]
     assert code_only.count("os.environ.get(") == 1
+
+
+# ---- K3 改訂: AUDIT を /dev/log へ送る（T1〜T8） ----
+
+
+def _fail_connect(u):
+    raise RuntimeError("boom")
+
+
+def _audit_cases():
+    big = "SELECT 1 -- " + "a" * (64 * 1024)
+    ok_conn = FakeConn()
+    return [
+        ("rejected_big", big, lambda u: None, "rejected", 2, True),
+        ("rejected_word", "INSERT INTO x VALUES (1)", lambda u: None, "rejected", 2, True),
+        ("env_missing", "SELECT 1", lambda u: None, "env_missing", 3, False),
+        ("no_result", "SELECT 1", lambda u: FakeConn(names=None), "no_result", 4, True),
+        ("db_error", "SELECT 1", _fail_connect, "db_error", 4, True),
+        ("ok", "SELECT 1", lambda u: ok_conn, "ok", 0, True),
+    ]
+
+
+@pytest.mark.parametrize("case", _audit_cases(), ids=lambda c: c[0])
+def test_t1_audit_sent_exactly_once_and_matches_stderr(case, monkeypatch):
+    _, sql, connect, result, rc, has_env = case
+    if has_env:
+        monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    else:
+        monkeypatch.delenv("AI_READER_DATABASE_URL", raising=False)
+    audit = FakeAudit()
+    code, _, err = run(sql, connect=connect, audit=audit)
+    assert code == rc
+    assert len(audit.sent) == 1
+    msg = audit.sent[0].decode("utf-8")
+    assert msg.startswith("<38>ai-reader-audit: AUDIT ts=")
+    assert f"result={result}" in msg
+    audit_lines = [ln for ln in err.splitlines() if ln.startswith("AUDIT ts=")]
+    assert len(audit_lines) == 1
+    assert msg == "<38>ai-reader-audit: " + audit_lines[0]
+
+
+def test_t2_audit_channel_unavailable_exit_5_no_db(monkeypatch, tmp_path):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    called = []
+    out, err = io.StringIO(), io.StringIO()
+    code = rq.main(
+        stdin=io.StringIO("SELECT 1"),
+        stdout=out,
+        stderr=err,
+        connect=lambda u: called.append(u),
+        audit_path=str(tmp_path / "nonexistent.sock"),
+    )
+    assert code == 5
+    assert called == []
+    assert out.getvalue() == ""
+    assert "audit channel unavailable" in err.getvalue()
+
+
+def test_t3_send_oserror_on_db_error_path_exit_5(monkeypatch):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    code, out, err = run("SELECT 1", connect=_fail_connect, audit=FakeAudit(exc=OSError("x")))
+    assert code == 5
+    assert "audit send failed" in err
+
+
+def test_t3b_send_timeout_exit_5(monkeypatch):
+    import socket
+
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    code, out, err = run("SELECT 1", connect=_fail_connect, audit=FakeAudit(exc=socket.timeout("t")))
+    assert code == 5
+    assert "audit send failed" in err
+
+
+def test_t5_ok_path_send_failure_leaves_stdout_empty(monkeypatch):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    conn = FakeConn()
+    code, out, err = run("SELECT 1", connect=lambda u: conn, audit=FakeAudit(exc=OSError("x")))
+    assert code == 5
+    assert out == ""
+
+
+def test_t6_ok_path_audit_is_sent_before_stdout(monkeypatch):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    conn = FakeConn()
+    out, err = io.StringIO(), io.StringIO()
+    seen = []
+    audit = FakeAudit(on_send=lambda: seen.append(out.getvalue()))
+    code = rq.main(stdin=io.StringIO("SELECT 1"), stdout=out, stderr=err, connect=lambda u: conn, audit=audit)
+    assert code == 0
+    assert seen == [""]
+    assert out.getvalue() != ""
+
+
+def test_t7_audit_closed_once_on_success_and_failure(monkeypatch):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+    a1 = FakeAudit()
+    run("SELECT 1", connect=lambda u: FakeConn(), audit=a1)
+    assert a1.closed == 1
+    a2 = FakeAudit()
+    run("INSERT INTO x VALUES (1)", connect=lambda u: None, audit=a2)
+    assert a2.closed == 1
+    a3 = FakeAudit(exc=OSError("x"))
+    run("SELECT 1", connect=lambda u: FakeConn(), audit=a3)
+    assert a3.closed == 1
+
+
+def test_t8_stdout_broken_pipe_does_not_send_second_audit(monkeypatch):
+    monkeypatch.setenv("AI_READER_DATABASE_URL", SECRET_URL)
+
+    class BrokenOut:
+        def write(self, s):
+            raise BrokenPipeError()
+
+    audit = FakeAudit()
+    with pytest.raises(BrokenPipeError):
+        rq.main(
+            stdin=io.StringIO("SELECT 1"),
+            stdout=BrokenOut(),
+            stderr=io.StringIO(),
+            connect=lambda u: FakeConn(),
+            audit=audit,
+        )
+    assert len(audit.sent) == 1
+    assert b"result=ok" in audit.sent[0]
+    assert audit.closed == 1
