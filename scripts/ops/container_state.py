@@ -52,7 +52,13 @@ def summarize(states: list[dict]) -> tuple[int, int]:
     return (1 if running else 0, 1 if unhealthy else 0)
 
 
-def render(results: dict[str, tuple[int, int]], now: float) -> str:
+def healthcheck_missing(states: list[dict]) -> int:
+    """動いているコンテナに健康診断（State.Health）が無ければ 1（定着便 T1）。"""
+    running = [s for s in states if s.get("Running")]
+    return 1 if any("Health" not in s for s in running) else 0
+
+
+def render(results: dict[str, tuple[int, int]], now: float, missing: dict[str, int] | None = None) -> str:
     lines = [
         "# HELP salesanchor_container_unhealthy 1 if a running container of the service is unhealthy.",
         "# TYPE salesanchor_container_unhealthy gauge",
@@ -70,6 +76,13 @@ def render(results: dict[str, tuple[int, int]], now: float) -> str:
         "# TYPE salesanchor_container_state_last_run_timestamp_seconds gauge",
         f"salesanchor_container_state_last_run_timestamp_seconds {int(now)}",
     ]
+    if missing is not None:
+        lines += [
+            "# HELP salesanchor_container_healthcheck_missing 1 if a running container of the service has no healthcheck.",
+            "# TYPE salesanchor_container_healthcheck_missing gauge",
+        ]
+        for service, value in missing.items():
+            lines.append(f'salesanchor_container_healthcheck_missing{{service="{service}"}} {value}')
     return "\n".join(lines) + "\n"
 
 
@@ -89,8 +102,10 @@ def write_atomic(text: str) -> None:
 
 def main() -> int:
     try:
-        results = {service: summarize(read_states(service)) for service in SERVICES}
-        write_atomic(render(results, time.time()))
+        states = {service: read_states(service) for service in SERVICES}
+        results = {service: summarize(s) for service, s in states.items()}
+        missing = {service: healthcheck_missing(s) for service, s in states.items()}
+        write_atomic(render(results, time.time(), missing))
     except (OSError, subprocess.SubprocessError, ValueError) as e:
         stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         print(f"{stamp} container_state failed: {type(e).__name__}: {e}", file=sys.stderr)
