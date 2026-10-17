@@ -28,6 +28,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.condition_value_columns import apply_condition_value_columns
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
@@ -75,6 +76,7 @@ def pg(monkeypatch):
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
             cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            apply_condition_value_columns(cursor)  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
             # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
             cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
