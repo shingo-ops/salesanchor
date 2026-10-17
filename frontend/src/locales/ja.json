@@ -2,7 +2,7 @@
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
     "templateIntro": "見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。",
-    "templateRequired": "必須項目は日本語名と4つの分類コードです。分類コードには登録済みのコードを使用してください。",
+    "templateRequired": "日本語名・英語名・型番・発売日・検索キーワード・除外キーワード・作品・細分類・商品区分は必須です（英語名・型番・発売日・除外キーワードは、調べて存在しなければ blank_confirmed に列名を入れて空にできます）。大分類とメーカーのコードも必要です。分類コードには登録済みのコードを使用してください。",
     "templateOptional": "発売日はYYYY-MM-DD形式で入力し、不明なら空欄にします。検索・除外キーワードを複数指定する場合は、1つのセル内でカンマで区切ってください。細分類は product_format_code に細分類のコードを入れます。英語名・型番・発売日・除外キーワードを調べて存在しなかった場合は、blank_confirmed にその列名（english_title、mark、release_date、exclude_keywords）をカンマで区切って入れます。",
     "allWorks": "すべて",
     "id": "商品ID",
@@ -43,7 +43,7 @@
     "receipt": "取り込み受付番号：{{id}}",
     "drop": "CSVファイルを1つここに置くか、下から選択してください。",
     "file": "CSVファイル",
-    "format": "UTF-8形式・12列のCSV（従来の10列も可）、2MBまで。",
+    "format": "UTF-8形式・12列のCSV、2MBまで。",
     "oneFile": "ファイルは1つだけ選択してください。",
     "fields": {
       "DIVISION_CODE": "大分類",
@@ -72,6 +72,8 @@
       "duplicateCandidate": "重複候補の商品があります：{{value}}",
       "formatGameMismatch": "細分類が作品に紐づいていません。細分類マスタで使えるゲームを確認してください。",
       "blankConfirmedInvalid": "blank_confirmed に使えない列名があります：{{value}}",
+      "requiredFieldMissing": "{{value}} が未入力です。値を入れるか、調べて存在しなかった場合は blank_confirmed にこの列名を入れてください（english_title・mark・release_date・exclude_keywords だけ）。",
+      "requiredFieldCleared": "{{value}} を空にはできません。値を入れるか、調べて存在しなかった場合は blank_confirmed にこの列名を入れてください（english_title・mark・release_date・exclude_keywords だけ）。",
       "referenceCode": "{{field}}のコードを登録済みマスタで確認してください。",
       "unknown": "検査を完了できませんでした。管理者に確認を依頼してください。",
       "stale": "出力後に商品が変更されています。再出力してください。",

@@ -1812,8 +1812,12 @@ jobs:
         # 報告用 DB（jarvis_report）に流し、落ちたファイルを一覧にする。落ちても job は失敗させない
         # （強制への切り替えは、この報告を見てから別の PR で行う）。
         continue-on-error: true
+        # --psql の後ろに -h を置くと argparse が help と読んで何も流れない（P3）。接続先は env で渡す。
+        env:
+          PGHOST: localhost
+          PGUSER: jarvis
         run: |
-          python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql -h localhost -U jarvis
+          python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
