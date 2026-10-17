@@ -311,7 +311,7 @@ Ruleset（13件、後述 §9）と一部重複。将来的には Ruleset に統�
 | 10 | `ADR index is up to date` | 初期 | |
 | 11 | `process-artifacts gate` | 初期 | |
 | 12 | `dangling-route gate` | 初期 | |
-| 13 | `UI governance gate` | 2026-06-25 | ADR-144。生 `<select>`/`<input>`/タブ増加を PR 単位で検出 |
+| 13 | `UI governance gate` | 2026-06-25 | ADR-144。生 `<select>`/`<input>`/checkbox/radio/タブ増加を PR 単位で検出 |
 
 ### ロールバックコマンド（UI governance gate 削除）
 
