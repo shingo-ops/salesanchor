@@ -45,7 +45,7 @@ describe('InventoryPage table layout (DataTable)', () => {
         .map((k) => (en as unknown as { inventory: { col: Record<string, string> } }).inventory.col[k]),
     );
     expect(heads).not.toContain(en.inventory.col.category);
-    expect(within(rowEl).getByText('Sealed box').className).toContain('comp-badge--info');
+    expect(within(rowEl).getByText('Sealed box').className).toContain('inventory-cell__condition--info');
   });
 
   it('sort menu has 3 options and placeholder by default; picking one sets sort and resetAll returns to release_date desc', async () => {
