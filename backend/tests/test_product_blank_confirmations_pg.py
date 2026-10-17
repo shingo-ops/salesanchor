@@ -210,9 +210,30 @@ async def test_count_sql_name_en_respects_marks():
     from app.tasks.master_required_fields_monitor import _COUNT_SQL, _SINCE
 
     admin_engine, app_engine = await _setup()
-    # _COUNT_SQL が読む products.product_format_id（細分類）を足す本番 migration（冪等・bootstrap 時のみ）
+    # _COUNT_SQL が読む表・列を、テスト用トランザクションを開く前に揃える（存在確認してから適用）
     async with public_bootstrap_lock(admin_engine):
+        # products.product_format_id（細分類）を足す本番 migration（冪等）
         await _apply_migration(admin_engine, "20260920_130000_create_product_classification.sql")
+        async with admin_engine.connect() as conn:
+            missing_cols = (await conn.execute(text(
+                "SELECT count(*) FROM (VALUES ('work_id'), ('product_category_id')) AS v(c) "
+                "WHERE NOT EXISTS (SELECT 1 FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'products' AND column_name = v.c)"
+            ))).scalar_one()
+            missing_tables = (await conn.execute(text(
+                "SELECT count(*) FROM (VALUES ('public.product_search_keywords'), "
+                "('public.product_exclude_keywords')) AS v(t) WHERE to_regclass(v.t) IS NULL"
+            ))).scalar_one()
+        if missing_cols:
+            # 他の PG テストと同じ public.products 試験用 DDL（IF NOT EXISTS のみ）
+            from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
+
+            async with admin_engine.begin() as conn:
+                raw = await conn.get_raw_connection()
+                await raw.driver_connection.execute(_PUBLIC_PRODUCTS_DDL)
+        if missing_tables:
+            # 検索/除外キーワード表を作る本番 migration（CREATE ... IF NOT EXISTS のみ）
+            await _apply_migration(admin_engine, "20260919_020000_master_ssot_public_tables.sql")
     try:
         async with admin_engine.connect() as conn:
             transaction = await conn.begin()
