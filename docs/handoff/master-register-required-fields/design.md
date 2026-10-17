@@ -2,7 +2,7 @@
 
 > この文書は何か: 商品マスタに商品を登録するとき、決まった項目の入れ忘れをシステムで止めるための設計（素人向け: 「空欄のまま登録できないようにする仕組み」の作り方）。
 > 親（設計仕様書）: [docs/specs/product-master/README.md](../../specs/product-master/README.md)
-> 現在地: [recon.md](./recon.md)（実測 origin/main b7e3f28d3）、追加調査 /tmp/CC報告ファイル/master-required-fields/add/（origin/main 539b0fe41）
+> 現在地: [docs/handoff/master-register-required-fields/recon.md](./recon.md)（実測 origin/main b7e3f28d3）、追加調査 /tmp/CC報告ファイル/master-required-fields/add/（origin/main 539b0fe41）
 > 状態: 設計案作成済み・Opus 自己審査済み（同一 AI の審査であり独立レビューではない）・KGI と3便は PO 承認済み（2026-10-16）・実装未着手
 
 ## 0. PO の言葉（原文）
@@ -66,6 +66,13 @@
 - 文言は ja.json と en.json に同じキーで足す（ADR-027）。
 - CSV 取り込みの列 `product_format_code` と `blank_confirmed`（項目名をカンマで区切る）を足し、取り込み画面の説明を直す。
 
+### 便2 の分け方（2026-10-17 Opus。変更は一度に1つ）
+- 便2a（バックエンド・カード card-bin2a.md）: 詳細 GET に印（blank_confirmations）を足し revision にも入れる／3つの選択肢の口（詳細・/tcg/products/lookups・registration-form）に細分類と紐づくゲーム id を足す／細分類と作品（work_id）の照合（紐づけに無い組み合わせは 422。詳細保存は細分類か作品が変わったときだけ）／細分類マスタ API に game_ids と PUT `/super-admin/product-formats/{id}/games`（使用中の組み合わせを外すと 409）。
+  - 根拠（本番読み取り 2026-10-17）: 細分類と作品の両方が入った共用商品 1247 件のうち、紐づけに無い組み合わせは 0 件（/tmp/CC報告ファイル/master-required-fields/bin2a/prod-pairs.txt）。紐づけ表に RLS は無く、アプリのロールに INSERT・DELETE 権限がある（prod-links-rls.txt）。
+- 便2b（画面）: 上の「便2 画面」のドロワー2つ・登録フォーム・細分類マスタ画面。金型と i18n。
+- 便2c（CSV）: 列 `product_format_code`・`blank_confirmed` を足す。便2の間は旧10列も受け付け、新列を必須にするのは便3。往復 CSV・取り込み画面の説明・テンプレートも直す。
+- 紐づけの無いゲーム: 8981（既存の共用商品 2 件・細分類あり 0 件）・8982（3 件・0 件）（prod-dm-conan.txt）。便3の前に PO に確かめる。
+
 ### 便3 止める
 - `check_required_fields` が足りない項目を返したら 422（新規登録の全入口）。詳細保存は「値や印のある項目を、印なしの空にする」ときだけ 422。
 - 私（Opus）と担当が使う登録台本も create_product を通るので、同じ検査で止まる。
@@ -96,7 +103,7 @@
 | V8 G2〜G4 | PO 目視 |
 
 ## 8. 計画
-便1（GO 要）→ 便2 → 紐づけの無いゲームを PO 確認のうえ紐づけ → 便3。各便は設計→実装カード→実装→審査→反映→測定の順で、一度に1つずつ。
+便1（GO 要）→ 便2a → 便2b → 便2c → 紐づけの無いゲームを PO 確認のうえ紐づけ → 便3。各便は設計→実装カード→実装→審査→反映→測定の順で、一度に1つずつ。
 
 ## 9. 外部・過去事例
 - Akeneo PIM（商品情報管理ソフト）の公式ヘルプ（取得 2026-10-16）。

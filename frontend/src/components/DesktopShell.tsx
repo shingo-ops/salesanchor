@@ -194,6 +194,7 @@ export default function DesktopShell() {
     { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
     { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
+    { to: "/super-admin/viewers",                     labelKey: "nav.superAdminViewers" },
   ] : [];
 
   const moreItems: NavItem[] = [];

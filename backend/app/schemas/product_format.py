@@ -37,5 +37,14 @@ class ProductFormatResponse(ProductFormatBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    game_ids: list[int] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductFormatGamesUpdate(BaseModel):
+    """ADR-1020 便2a: 使えるゲーム（type_master.id）を丸ごと置き換える。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    game_ids: list[int] = Field(max_length=200)

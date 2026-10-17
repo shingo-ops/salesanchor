@@ -35,6 +35,7 @@ _FORM_DATA = {
         "work_id": [{"id": "dddd-0001", "name": "Pokemon"}],
         "manufacturer_id": [{"id": "eeee-0001", "name": "The Pokemon Company"}],
         "product_category_id": [{"id": "ffff-0001", "name": "Box"}],
+        "product_format_id": [{"id": "7", "name": "Box", "is_active": True, "game_ids": ["2"]}],
     },
 }
 
@@ -178,6 +179,29 @@ async def test_registration_form_ok(super_admin_override):
     assert "english_title" in body["item"]
     assert "product_kind_id" in body["lookups"]
     assert body["lookups"]["product_kind_id"][0]["name"] == "TCG"
+
+
+async def test_registration_form_keeps_format_games(super_admin_override):
+    """ADR-1020: 細分類の is_active と game_ids が応答に残る"""
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.fetch_registration_form",
+        new=AsyncMock(return_value=_FORM_DATA),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.get(
+                "/api/v1/tcg/products/registration-form",
+                params={
+                    "extraction_item_id": "aaaaaaaa-0000-0000-0000-000000000001",
+                    "source_message_id": "bbbbbbbb-0000-0000-0000-000000000001",
+                },
+            )
+    assert r.status_code == 200
+    assert r.json()["lookups"]["product_format_id"] == [
+        {"id": "7", "name": "Box", "is_active": True, "game_ids": ["2"]}
+    ]
 
 
 async def test_registration_form_not_found(super_admin_override):

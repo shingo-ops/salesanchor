@@ -9,10 +9,15 @@ create_product をそのまま使い、本サービスでは新しい登録処�
   preview : 検査だけを行い、書き込みを一切しない
   commit  : 同じ検査をやり直し、止める判定の無い行だけを登録する
 
-CSV の列（10列・見出し行あり）:
+CSV の列（12列・見出し行あり）:
   mark / japanese_title / english_title / release_date /
   search_keywords / exclude_keywords /
-  division_code / work_code / manufacturer_code / product_category_code
+  division_code / work_code / manufacturer_code / product_category_code /
+  product_format_code / blank_confirmed
+
+product_format_code は細分類のコード（空なら細分類なし）。blank_confirmed は
+「調べたが存在しない」列の名前（english_title / mark / release_date /
+exclude_keywords）をカンマで区切る（ADR-1020）。
 
 code / category_class / is_active は create_product が自動で入れるため
 CSV には持たせない。
@@ -51,7 +56,33 @@ CSV_COLUMNS: list[str] = [
     "work_code",
     "manufacturer_code",
     "product_category_code",
+    "product_format_code",
+    "blank_confirmed",
 ]
+
+# ADR-1020: blank_confirmed に書く CSV の列名 → 印の項目名（tcg_product_master_svc.BLANK_CONFIRMABLE_FIELDS）
+BLANK_CONFIRMED_COLUMNS: dict[str, str] = {
+    "english_title": "name_en",
+    "mark": "mark",
+    "release_date": "release_date",
+    "exclude_keywords": "exclude_keywords",
+}
+
+# ADR-1020 便3: 必須9項目の名前 → CSV の列名（止める理由に列名で出す。往復も使う）
+REQUIRED_FIELD_CSV_COLUMNS: dict[str, str] = {
+    "name": "japanese_title",
+    "name_en": "english_title",
+    "mark": "mark",
+    "release_date": "release_date",
+    "search_keywords": "search_keywords",
+    "exclude_keywords": "exclude_keywords",
+    "work_id": "work_code",
+    "product_format_id": "product_format_code",
+    "product_category_id": "product_category_code",
+}
+
+# 空でも止めないコード列（便2では任意。check_codes が読み飛ばす）
+OPTIONAL_CODE_COLUMNS: frozenset[str] = frozenset({"product_format_code"})
 
 # 空だと登録できない列（design 5-4 の 1番・2番）
 REQUIRED_COLUMNS: list[str] = [
@@ -118,6 +149,22 @@ def split_keywords(value: str) -> list[str]:
     return [k.strip() for k in (value or "").split(",") if k.strip()]
 
 
+def parse_blank_confirmed(value: str) -> tuple[list[str], list[str]]:
+    """blank_confirmed のセルを読む。(印の項目名の一覧, 知らない名前の一覧) を返す。
+
+    項目名は BLANK_CONFIRMED_COLUMNS の順にそろえ、重複は1つにする。
+    """
+    names = split_keywords(value)
+    invalid = [n for n in names if n not in BLANK_CONFIRMED_COLUMNS]
+    fields = [BLANK_CONFIRMED_COLUMNS[c] for c in BLANK_CONFIRMED_COLUMNS if c in names]
+    return fields, invalid
+
+
+def format_blank_confirmed(fields: list[str] | set[str]) -> str:
+    """印の項目名を blank_confirmed のセルの形（CSV の列名をカンマで区切る）にする。"""
+    return ",".join(c for c, f in BLANK_CONFIRMED_COLUMNS.items() if f in fields)
+
+
 def looks_like_iso_date(value: str) -> bool:
     """発売日が 4桁-2桁-2桁 の形かどうか。空は許す（任意項目のため）。"""
     v = (value or "").strip()
@@ -175,7 +222,8 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     参照マスタから、コードと id の対応を引く。
 
     Returns:
-      {"division_code": {"DIV01": "uuid", ...}, "work_code": {"SV": "1", ...}, ...}
+      {"division_code": {"DIV01": "uuid", ...}, "work_code": {"SV": "1", ...},
+       "product_format_code": {"BOOSTER": 1, ...}, ...}
 
     Phase 3 SSOT: tcg_product_categories は public スキーマへ移動（INTEGER PK）。
     public.products.product_category_id は UUID→INTEGER に変換済み。
@@ -214,6 +262,11 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
         if new_code in pk_map:
             pk_map[old_code] = pk_map[new_code]
     maps["division_code"] = pk_map  # type: ignore[assignment]
+    # ADR-1020 便2c: 細分類のコード → id（有効なものだけ。空のセルは細分類なし）
+    pf_result = await db.execute(
+        text("SELECT code, id FROM public.product_formats WHERE is_active = TRUE")
+    )
+    maps["product_format_code"] = {str(r[0]): int(r[1]) for r in pf_result.fetchall()}  # type: ignore[assignment]
     return maps
 
 
@@ -230,6 +283,8 @@ def check_codes(row: dict[str, str], lookups: dict[str, dict[str, str]]) -> list
     """
     errors: list[str] = []
     for column in lookups:
+        if column in OPTIONAL_CODE_COLUMNS:
+            continue
         code = row.get(column, "")
         if not code:
             errors.append("MISSING_" + column.upper())
@@ -245,6 +300,7 @@ def validate_row_static(
 ) -> dict[str, Any]:
     """
     DB を引かずに判る検査。design 5-4 の 1 2 3 5 8 9 11 を見る。
+    ADR-1020 便2c: 細分類コードと blank_confirmed も見る。
     6番と10番、および型番の重なり（7番）は DB を引くため別の関数で行う。
 
     seen は同一ファイル内の重複を見るための持ち回り。呼ぶ側が空の辞書を
@@ -258,6 +314,13 @@ def validate_row_static(
         blocking.append("JAPANESE_TITLE_REQUIRED")
 
     blocking.extend(check_codes(row, lookups))
+
+    format_code = row.get("product_format_code", "")
+    if format_code and format_code not in lookups.get("product_format_code", {}):
+        blocking.append("UNKNOWN_PRODUCT_FORMAT_CODE_" + format_code)
+
+    _, invalid_marks = parse_blank_confirmed(row.get("blank_confirmed", ""))
+    blocking.extend("BLANK_CONFIRMED_INVALID_" + name for name in invalid_marks)
 
     if not looks_like_iso_date(row.get("release_date", "")):
         blocking.append("RELEASE_DATE_FORMAT")
@@ -291,7 +354,7 @@ def validate_row_static(
 def build_payload(
     row: dict[str, str], lookups: dict[str, dict[str, str]]
 ) -> dict[str, Any]:
-    """create_product に渡す引数を組み立てる。使われない2つには空文字を渡す。"""
+    """create_product に渡す引数を組み立てる。使われない2つには空文字を渡す。細分類と印は ADR-1020 便2c。"""
     payload: dict[str, Any] = {
         "extraction_item_id": "",
         "source_message_id": "",
@@ -304,6 +367,11 @@ def build_payload(
     }
     for column, arg in LOOKUP_ARGS.items():
         payload[arg] = lookups[column].get(row.get(column, ""), "")
+    format_code = row.get("product_format_code", "")
+    payload["product_format_id"] = (
+        lookups.get("product_format_code", {}).get(format_code) if format_code else None
+    )
+    payload["blank_confirmations"], _ = parse_blank_confirmed(row.get("blank_confirmed", ""))
     return payload
 
 
@@ -397,6 +465,20 @@ async def preview(db: AsyncSession, raw: bytes, filename: str) -> dict[str, Any]
         )
         if not checked["blocking"]:
             payload = build_payload(row, lookups)
+            # ADR-1020 便3: 足りない項目を列名で止める（create_product と同じ判定）
+            from app.services.tcg_product_master_svc import missing_for_create
+
+            checked["blocking"].extend(
+                "REQUIRED_FIELD_MISSING_" + REQUIRED_FIELD_CSV_COLUMNS[f] for f in missing_for_create(payload)
+            )
+            format_id = payload.get("product_format_id")
+            work_id = payload.get("work_id")
+            if format_id is not None and work_id:
+                from app.services.tcg_product_master_svc import format_matches_game
+
+                if not await format_matches_game(db, int(format_id), int(work_id)):
+                    checked["blocking"].append("PRODUCT_FORMAT_GAME_MISMATCH")
+        if not checked["blocking"]:
             checked["warnings"].extend(
                 await validate_row_dynamic(db, row, payload, keyword_owners)
             )

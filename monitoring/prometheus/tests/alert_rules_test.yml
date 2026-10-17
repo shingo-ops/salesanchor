@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 22 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 26 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -680,4 +680,84 @@ tests:
     alert_rule_test:
       - eval_time: 2h
         alertname: MonitoringConfigCheckStale
+        exp_alerts: []
+
+  # --- container_state_alerts（段階3 便E） ---
+  - name: ContainerUnhealthyFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_unhealthy{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ContainerUnhealthy
+        exp_alerts:
+          - exp_labels:
+              service: celery-beat
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナ celery-beat が不健康です"
+              description: "prod1 の celery-beat の健康診断が unhealthy です。固まっている可能性があります。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerunhealthy"
+
+  - name: ContainerUnhealthyQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_unhealthy{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '0x10'
+      - series: 'salesanchor_container_unhealthy{service="backend",instance="app-vps",job="node-exporter"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerUnhealthy
+        exp_alerts: []
+
+  - name: ContainerStateStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '-1000+0x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナの状態書き係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+  - name: ContainerStateStaleAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter",instance="app-vps"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ContainerStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "コンテナの状態書き係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/container_state.py が 5 分以上 textfile を書いていません。コンテナの不健康を知らせられない状態です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerstatestale"
+
+  - name: ContainerStateFresh
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '0+60x10'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: ContainerStateStale
         exp_alerts: []

@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 22 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 26 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -262,3 +262,20 @@
 - 直し方：runner・workflow・pushgateway のどこで止まっているかを切り分けて Opus に報告する。
 - pushgateway を再起動・作り直した後：pushgateway は値を保存しない設定（docker-compose.monitoring.yml:133-150 に persistence の指定なし）なので、溜まっていた値が消える。再起動の後は、Actions で `monitoring-config-drift.yml` と `sop-health-reporter.yml` を手動で 1 回ずつ実行し、両方 success を確かめる（U19・2026-10-15 PO 決定）。
 - 止め方：`amtool silence add alertname=MonitoringConfigCheckStale --duration=PERIOD --comment=REASON`
+
+## ContainerUnhealthy
+
+- 札：page（処置の付く段階3 便G で auto に変える）
+- 何が起きているか：prod1 の celery-worker・celery-beat・discord-gateway・gemini-egress のどれかの健康診断（docker-compose.yml の healthcheck）が unhealthy で、その状態が 1 分続いた。健康診断は、コンテナの中の「生きている印」が 2〜2 分半更新されないと失敗する（gemini-egress は中継の先の tinyproxy が答えないと失敗する）。値は prod1 の `scripts/ops/container_state.py` が毎分 textfile に書く。
+- 影響：worker・beat は LINE 解析・翻訳・定期の集計が止まる。discord-gateway は Discord の受信が止まる。gemini-egress は緊急用の中継なので、Gemini が直接接続のままなら利用者への影響は無い。
+- 最初に見るもの：prod1 で `docker inspect -f '{{json .State.Health}}'`（該当のコンテナ）の最後の記録 → Loki の該当コンテナのログの直近。
+- 直し方：該当のコンテナを `docker compose restart`。gemini-egress は prod2 の tinyproxy の状態も見る。繰り返すときは原因を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerUnhealthy --duration=PERIOD --comment=REASON`
+
+## ContainerStateStale
+
+- 札：page
+- 何が起きているか：prod1 の状態書き係（`scripts/ops/container_state.py`、ubuntu の cron で毎分）が 5 分以上 textfile を書いていない、または値が無い状態が 2 分続いた。この間はコンテナが不健康になっても ContainerUnhealthy が鳴らない。
+- 最初に見るもの：prod1 の `crontab -l` に container_state の行があるか → `/tmp/container-state.log` の最後の行（失敗のときだけ書かれる）→ `/home/ubuntu/node_exporter_textfile/container_state.prom` の時刻。
+- 直し方：ログの原因（docker が読めない・書けない）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=ContainerStateStale --duration=PERIOD --comment=REASON`

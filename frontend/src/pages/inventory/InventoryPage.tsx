@@ -600,7 +600,7 @@ export default function InventoryPage() {
         rowKey={(it) => it.id}
         rowTestId={(it) => `inventory-row-${it.id}`}
         selectable
-        onRowClick={isSuperAdmin && !isMobile ? (row) => setDrawerRow(row) : undefined}
+        onRowClick={!isMobile ? (row) => setDrawerRow(row) : undefined}
         selectedKeys={selectedIds}
         onSelectChange={setSelectedIds}
         sortKey={sortField}
@@ -619,7 +619,7 @@ export default function InventoryPage() {
         mobileCards
         emptyState={t("inventory.noResults")}
       />
-      {drawerRow && <InventoryRowDrawer row={drawerRow} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
+      {drawerRow && <InventoryRowDrawer row={drawerRow} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
     </PageLayout>
   );
 }

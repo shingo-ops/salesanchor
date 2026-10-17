@@ -116,6 +116,7 @@ from app.routers import (
     super_admin_tenants,
     super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
     super_admin_units,  # 単位マスタ中央 admin
+    super_admin_viewers,  # ADR-1019 段4a-2: 閲覧者管理
     super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
     tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
@@ -642,6 +643,9 @@ app.include_router(
 app.include_router(
     super_admin_phase_switch.router, prefix="/api/v1", tags=["super-admin"],
 )
+
+# ADR-1019 段4a-2: 閲覧者管理 (require_super_admin)
+app.include_router(super_admin_viewers.router, prefix="/api/v1", tags=["super-admin"])
 
 # テナント論理削除 / 物理削除
 app.include_router(

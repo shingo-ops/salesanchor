@@ -212,3 +212,38 @@ PO 決定（2026-10-16）: 質問「スライドから直したら、DB・シー
 
 ### R3-7 既存 ADR
 - ADR-1014（在庫表＝配信行）、ADR-154（配信は needs_review=false）、ADR-158（is_current）、ADR-1016（即時反映の合図）、ADR-1019（閲覧ページ・写しを作らない）。「在庫表のスライドで直したら配信される」を決めた ADR は無い（git grep -i docs/adr distribution|配信|item_corrections|human_decision、FEATURE-INDEX.md）。
+
+## 便4 追補 recon（2026-10-16・原文だけのタブ）
+
+PO 決定（2026-10-16）: 質問「この理解で設計に進めてよいですか？（y/n）」に「y」。理解の中身: super admin はスライドに「解析」「原文」の2タブ、在庫表を見られるその他の人（admin と、admin が在庫表の閲覧権限を付けた人）は原文だけのスライド、PC のみ。
+調査: Sonnet（読み取りのみ・本番は \d と pg_class の読み取り）。生出力: /tmp/CC報告ファイル/drawer-rawtext-tab-recon.txt、drawer-rawtext-tab-recon2.txt。
+
+### R4-1 今スライドを開ける人（事実）
+- 入口: frontend/src/pages/inventory/InventoryPage.tsx:603 `onRowClick={isSuperAdmin && !isMobile ? (row) => setDrawerRow(row) : undefined}`（isSuperAdmin は :137 useSuperAdmin、isMobile は :136）。
+- スライドが呼ぶ API はすべて `require_super_admin`（backend/app/auth/dependencies.py:516-544）。読み込みは GET /tcg/analysis-results（backend/app/routers/tcg_analysis_review.py:138）。
+- 非 super admin のクリックで開かないことは frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx:79-88（F2）が固定している。
+
+### R4-2 在庫表を見られる人（事実）
+- GET /inventory は `require_permission("products.view")`（backend/app/routers/inventory_offers.py:310-314）。フロントの画面側に role の門は無く、左メニューは `hasPermission("products.view")`（frontend/src/components/DesktopShell.tsx:267）。
+- require_permission は全ロールの権限キーの和集合で判定し、内部で get_current_tenant を通す（dependencies.py:623-649、:636-638）。owner/admin のシステムロールは全キー（admin は system.manage 除く: backend/app/auth/system_roles.py:22-37）。ロールの権限は admin が PUT /roles/{role_id}/permissions で付ける（backend/app/routers/roles.py:403-）。
+- 結論: 「admin と、admin が在庫表を見る権限を付けた人」＝ products.view を持つ人。新しい権限キーは要らない。
+
+### R4-3 原文の出どころ（事実）
+- public.source_messages.raw_text（投稿全体。送信者名は入らない: backend/app/services/tcg_line_import_svc.py:195,318,361）。該当行は extraction_items.line_start/line_end。
+- 既存の取得 SQL: backend/app/services/tcg_analysis_review_svc.py:239-304（raw_text :252、line_start/line_end :260-261）、span 作成 :317-321。
+- 表示部品: frontend/src/features/tcg-analysis-review/ShadowSourcePane.tsx（props rawText・blockRange・headingRange :18-22。行番号つき・該当行を強調してスクロール :34-39）。ReviewItemDrawer.tsx:193-199 で `<ShadowSourcePane rawText={item.raw_text} blockRange={parseSourceLineRange(item.gemini.span)} />`。
+
+### R4-4 テナントの区別（事実・設計を左右する）
+- 本番 \d: public.analysis_results / extraction_items / extraction_jobs / source_messages / supplier_channels に tenant_id 列なし、RLS なし（pg_class relrowsecurity=f）。
+- GET /inventory も tenant の WHERE を持たない。行の定義は distribution_rows_parts（backend/app/services/tcg_distribution_svc.py:286-）の dist_base だけで、テナント差は suppliers・products の RLS（名前が空になる）だけ。
+- 「extraction_item_id が在庫表の行か」を確かめる既存関数は無い。dist_base の item_key（ei.id::text、:321）で判定できる。
+- 結論: 原文 API の門は「GET /inventory と同じ配信行の定義（dist_base）に含まれる extraction_item だけ返す」。これで在庫表に出ていない投稿の原文は返らない（ID の総当たりで全投稿を読めない）。在庫表そのもののテナント分けは今回の範囲外（現状どおり）。
+
+### R4-5 在庫行から原文への鍵（事実）
+- /inventory の各行に `extraction_item_ids: list[str]` がある（backend/app/schemas/inventory_offers.py:160、組み立て inventory_offers.py:179、SQL tcg_distribution_svc.py:277）。まとめ行は全件。
+
+### R4-6 部品・テスト・ADR（事実）
+- タブの金型: frontend/src/components/Tabs.tsx:25-44（items/activeKey/onChange、variant underline|pill、size sm|md）。InventoryRowDrawer.tsx:67-72 がまとめ行の切替に pill を使用中。
+- i18n: inventory.rowDrawer.{title, loadError, notFound, itemTab}（frontend/src/locales/ja.json:1456-1461）、reviewItem.sourceHeading（:3798）。
+- テスト: frontend は `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit <path>`、backend は `cd backend && pytest -q --tb=short <path>`。RBAC の前例 backend/tests/test_inventory_offers_rbac.py、実 PG の前例 backend/tests/test_inventory_distribution_rows_pg.py。
+- ADR: ADR-1014（在庫表＝配信行・定義は1か所）、ADR-027、ADR-144、ADR-072（新規 router の tenant 文脈）。在庫表スライドの権限を決めた ADR は無い（docs/adr/FEATURE-INDEX.md・git grep）。

@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 
+from app.container_alive import GATEWAY_ALIVE_PATH, TOUCH_INTERVAL_SECONDS, touch_alive
 from app.discord_gateway.client import run_gateway
 from app.discord_gateway.config import SingleBotConfig, get_log_level, load_single_bot_config
 
@@ -92,13 +93,25 @@ async def _run_with_shutdown(config: SingleBotConfig | None) -> int:
     return 0
 
 
+async def _alive_loop() -> None:
+    """ADR-1012 段階3 便D: イベントループが回っている間、30 秒ごとに印を更新する。"""
+    while True:
+        touch_alive(GATEWAY_ALIVE_PATH)
+        await asyncio.sleep(TOUCH_INTERVAL_SECONDS)
+
+
 async def _main_async() -> int:
+    alive_task = asyncio.create_task(_alive_loop(), name="gw-alive")
     try:
-        config = load_single_bot_config()
-    except RuntimeError as e:
-        logger.warning("[discord-gateway] %s — idle で待機します", e)
-        config = None
-    return await _run_with_shutdown(config)
+        try:
+            config = load_single_bot_config()
+        except RuntimeError as e:
+            logger.warning("[discord-gateway] %s — idle で待機します", e)
+            config = None
+        return await _run_with_shutdown(config)
+    finally:
+        alive_task.cancel()
+        await asyncio.gather(alive_task, return_exceptions=True)
 
 
 def main() -> int:

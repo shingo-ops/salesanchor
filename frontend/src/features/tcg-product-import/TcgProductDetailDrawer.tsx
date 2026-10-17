@@ -4,21 +4,24 @@ import { Drawer } from "../../components/Drawer";
 import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
 import { Select } from "../../components/Select";
+import { Checkbox } from "../../components/Checkbox";
 import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
 import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
 import {
-  addExcludeWord, buildUpdateBody, classificationFields, draftFrom, words,
-  type AddWordResult, type Classification, type Detail, type Draft,
+  addExcludeWord, blankCodeOf, buildUpdateBody, classificationFields, draftFrom, formatAfterWorkChange,
+  formatOptionsFor, missingFields, requiredFieldsMessage, words,
+  type AddWordResult, type BlankCode, type Classification, type Detail, type Draft, type FormatOption,
+  type RequiredDraftField,
 } from "./productDetailModel";
 
 type LookupOption = { id: string; name: string };
-type LookupsMap = Record<Classification, LookupOption[]>;
+type LookupsMap = Record<Classification, LookupOption[]> & { product_format_id: FormatOption[] };
 const emptyDraft: Draft = {
   japanese_title: "", english_title: "", mark: "", release_date: "",
   product_kind_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
-  search_keywords: "", exclude_keywords: "",
+  search_keywords: "", exclude_keywords: "", product_format_id: "", blank_confirmations: [],
 };
 
 export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: openProp, mode = "edit" }: {
@@ -35,6 +38,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
   const [error, setError] = useState("");
+  const [requiredError, setRequiredError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [collisions, setCollisions] = useState<CodeCollision[]>([]);
   const [createdId, setCreatedId] = useState<number | null>(null);
@@ -45,6 +49,9 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   const [deleting, setDeleting] = useState(false);
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(initial);
   const isOpen = openProp !== undefined ? openProp : productId !== null;
+  const activeLookups: LookupsMap | null = mode === "create"
+    ? createLookups
+    : detail ? (detail.lookups as unknown as LookupsMap) : null;
 
   // 編集モード: 詳細ロード
   useEffect(() => {
@@ -90,8 +97,28 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     if (dirty) setConfirmation("close");
     else onClose();
   }
-  function change(field: keyof Draft, value: string) {
-    setDraft(previous => previous ? { ...previous, [field]: value } : previous);
+  function change(field: Exclude<keyof Draft, "blank_confirmations">, value: string) {
+    setDraft(previous => {
+      if (!previous) return previous;
+      const next: Draft = { ...previous, [field]: value };
+      // ADR-1020: 値を入れた項目の「調べたが無い」の印は外す
+      const code = blankCodeOf(field);
+      if (code && value.trim()) next.blank_confirmations = previous.blank_confirmations.filter(item => item !== code);
+      // 作品を変えて細分類が新しい作品に紐づかなくなったら、細分類を空に戻す
+      if (field === "work_id" && activeLookups) {
+        next.product_format_id = formatAfterWorkChange(activeLookups.product_format_id, value, previous.product_format_id);
+      }
+      return next;
+    });
+    setSaved(false);
+  }
+  function toggleBlank(code: BlankCode, checked: boolean) {
+    setDraft(previous => previous ? {
+      ...previous,
+      blank_confirmations: checked
+        ? [...previous.blank_confirmations.filter(item => item !== code), code]
+        : previous.blank_confirmations.filter(item => item !== code),
+    } : previous);
     setSaved(false);
   }
   /** この商品の除外ワードに足す。編集中は入力欄に足す（保存で登録）。作成済みなら保存済みの商品へ足す。 */
@@ -115,7 +142,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveEdit() {
     if (!draft || !detail || productId === null || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
+    inFlight.current = true; setSaving(true); setError(""); setRequiredError(null); setSaved(false); setCollisions([]);
     try {
       const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, buildUpdateBody(draft, initial, detail));
       if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
@@ -124,6 +151,13 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setCollisions(result.code_collisions ?? []);
       onSaved();
     } catch (err) {
+      const required = requiredFieldsMessage(err, t);
+      if (required) {
+        setBlocked(false);
+        setError("");
+        setRequiredError(required);
+        return;
+      }
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
       setError(err instanceof ApiError && err.status === 409 ? "productDetail.conflict" :
@@ -133,7 +167,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
   async function saveCreate() {
     if (!draft || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
-    inFlight.current = true; setSaving(true); setError(""); setSaved(false); setCollisions([]);
+    inFlight.current = true; setSaving(true); setError(""); setRequiredError(null); setSaved(false); setCollisions([]);
     try {
       const created = await api.post<{ product_id?: string | null; code_collisions?: CodeCollision[] }>("/tcg/products/create", {
         japanese_title: draft.japanese_title,
@@ -146,6 +180,8 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         product_category_id: draft.product_category_id,
         search_keywords: words(draft.search_keywords).join(","),
         exclude_keywords: words(draft.exclude_keywords).join(","),
+        product_format_id: draft.product_format_id ? Number(draft.product_format_id) : null,
+        blank_confirmations: draft.blank_confirmations,
       });
       setSaved(true);
       onSaved();
@@ -155,6 +191,13 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setCollisions(found); setCreatedId(created?.product_id ? Number(created.product_id) : null);
       setInitial(draft); setBlocked(true);
     } catch (err) {
+      const required = requiredFieldsMessage(err, t);
+      if (required) {
+        setBlocked(false);
+        setError("");
+        setRequiredError(required);
+        return;
+      }
       const invalid = err instanceof ApiError && err.status === 422;
       setBlocked(!invalid);
       setError(invalid ? "productDetail.invalid" : "productDetail.saveError");
@@ -182,9 +225,21 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setConfirmDelete(false);
     }
   }
-  const activeLookups: LookupsMap | null = mode === "create"
-    ? createLookups
-    : detail ? (detail.lookups as unknown as LookupsMap) : null;
+  // ADR-1020: 共用商品だけ、9項目の未入力を案内する（便2では保存を止めない）
+  const shared = mode === "create" || (detail?.product.tenant_id ?? null) === null;
+  const missing: RequiredDraftField[] = draft && shared ? missingFields(draft) : [];
+  const missingHint = (field: RequiredDraftField) => missing.includes(field)
+    ? t(blankCodeOf(field) ? "productDetail.requiredMissingConfirmable" : "productDetail.requiredMissing") : undefined;
+  const hintWith = (base: string | undefined, field: RequiredDraftField) => [base, missingHint(field)].filter(Boolean).join(" ") || undefined;
+  const formatOptions = draft && activeLookups
+    ? formatOptionsFor(activeLookups.product_format_id, draft.work_id).map(option => ({ value: option.id, label: option.name, disabled: false }))
+    : [];
+  if (draft?.product_format_id && !formatOptions.some(option => option.value === draft.product_format_id)) {
+    formatOptions.push({ value: draft.product_format_id, label: t("productDetail.missingClassification", { id: draft.product_format_id }), disabled: true });
+  }
+  const blankBox = (code: BlankCode, field: RequiredDraftField, label: string) => draft && <Checkbox size="sm"
+    label={t("productDetail.notFound", { field: label })} checked={draft.blank_confirmations.includes(code)}
+    disabled={saving || Boolean(String(draft[field]).trim())} onChange={event => toggleBlank(code, event.target.checked)} />;
 
   return <><Drawer open={isOpen} onClose={requestClose} title={t("productDetail.title")}
     footer={draft && !confirmation ? <div className="product-detail__actions">
@@ -203,6 +258,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     </div> : <>
       {loading && <p role="status">{t("common.loading")}</p>}
       {error && <p role="alert">{t(error)}</p>}
+      {requiredError && <p role="alert">{requiredError}</p>}
       {mode === "edit" && !loading && (blocked || (!detail && error)) && <Button type="button" variant="secondary" onClick={() => {
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}
@@ -212,10 +268,13 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         confirmAddToThis={mode === "create"} thisName={draft?.japanese_title ?? ""} />
       {draft && (mode === "create" ? activeLookups : detail) && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
         {mode === "edit" && detail && <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />}
-        <TextField label={t("productDetail.japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />
-        <TextField label={t("productDetail.english_title")} value={draft.english_title} onChange={e => change("english_title", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
-        <TextField label={t("productDetail.mark")} value={draft.mark} onChange={e => change("mark", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
-        <TextField label={t("productDetail.release_date")} type="date" value={draft.release_date} onChange={e => change("release_date", e.target.value)} disabled={saving} fullWidth />
+        <TextField label={t("productDetail.japanese_title")} helperText={missingHint("japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />
+        <TextField label={t("productDetail.english_title")} helperText={missingHint("english_title")} value={draft.english_title} onChange={e => change("english_title", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
+        {blankBox("name_en", "english_title", t("productDetail.english_title"))}
+        <TextField label={t("productDetail.mark")} helperText={missingHint("mark")} value={draft.mark} onChange={e => change("mark", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
+        {blankBox("mark", "mark", t("productDetail.mark"))}
+        <TextField label={t("productDetail.release_date")} type="date" helperText={missingHint("release_date")} value={draft.release_date} onChange={e => change("release_date", e.target.value)} disabled={saving} fullWidth />
+        {blankBox("release_date", "release_date", t("productDetail.release_date"))}
         {activeLookups && classificationFields.map(field => {
           const options = activeLookups[field].map(option => ({ value: option.id, label: option.name, disabled: false }));
           if (mode === "edit" && detail && draft[field] && !options.some(option => option.value === draft[field])) {
@@ -223,12 +282,18 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
           }
           return <Select key={field} label={t(`productDetail.${field}`)} value={draft[field]} options={options}
             placeholder={t("productDetail.unset")} required={field === "work_id" || (mode === "edit" && detail ? detail.product[field] !== null : false)}
+            helperText={field === "work_id" || field === "product_category_id" ? missingHint(field) : undefined}
             onChange={e => change(field, e.target.value)} disabled={saving} fullWidth />;
         })}
-        <Textarea label={t("productDetail.search_keywords")} helperText={t("productDetail.wordsHint")}
+        {activeLookups && <Select label={t("productDetail.product_format_id")} value={draft.product_format_id} options={formatOptions}
+          placeholder={t(draft.work_id ? "productDetail.unset" : "productDetail.formatNeedsWork")}
+          helperText={missingHint("product_format_id")}
+          onChange={e => change("product_format_id", e.target.value)} disabled={saving || !draft.work_id} fullWidth />}
+        <Textarea label={t("productDetail.search_keywords")} helperText={hintWith(t("productDetail.wordsHint"), "search_keywords")}
           value={draft.search_keywords} onChange={e => change("search_keywords", e.target.value)} rows={5} disabled={saving} fullWidth />
-        <Textarea label={t("productDetail.exclude_keywords")} helperText={t("productDetail.wordsHint")}
+        <Textarea label={t("productDetail.exclude_keywords")} helperText={hintWith(t("productDetail.wordsHint"), "exclude_keywords")}
           value={draft.exclude_keywords} onChange={e => change("exclude_keywords", e.target.value)} rows={4} disabled={saving} fullWidth />
+        {blankBox("exclude_keywords", "exclude_keywords", t("productDetail.exclude_keywords"))}
         {mode === "edit" && detail && <>
           <TextField label={t("productDetail.id")} value={detail.product.id} readOnly fullWidth />
           <TextField label={t("productDetail.categoryClass")} value={detail.product.category_class} readOnly fullWidth />

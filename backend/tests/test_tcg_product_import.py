@@ -358,9 +358,11 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
     monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0001"))
     monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(master, "_validate_product_format", AsyncMock())  # ADR-1020 便3: 細分類の検査は別の試験で見る
     args = dict(extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
-                manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date=None,
-                search_keywords="検索", exclude_keywords="除外")
+                manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date="2026-01-01",
+                search_keywords="検索", exclude_keywords="除外", english_title="Item", mark="MK1",
+                product_format_id=5)
     if commit is not None:
         args["commit"] = commit
     if verify_fails:
@@ -395,6 +397,8 @@ async def test_load_lookup_maps_never_queries_tcg_major_categories():
             rows = [("TCG", 10)]
         elif "public.tcg_product_categories" in sql:
             rows = [("PC_BOX", 20)]
+        elif "public.product_formats" in sql:
+            rows = [("PF001", 30)]
         elif "tcg_manufacturers" in sql:
             rows = [("MK002", "uuid-mk")]
         else:
@@ -415,3 +419,111 @@ async def test_load_lookup_maps_never_queries_tcg_major_categories():
 
     assert maps["manufacturer_code"] == {"MK002": "uuid-mk"}
     assert maps["work_code"] == {"IP003": "1"}
+
+
+# ---------------------------------------------------------------------------
+# ADR-1020 便2c: 細分類コードと blank_confirmed
+# ---------------------------------------------------------------------------
+
+_HEADER_12 = _HEADER.rstrip("\n") + ",product_format_code,blank_confirmed\n"
+_LOOKUPS_12 = {
+    "division_code": {"DIV01": 1},
+    "work_code": {"IP003": "3"},
+    "manufacturer_code": {"MK002": "2"},
+    "product_category_code": {"PC_BOX": 4},
+    "product_format_code": {"BOOSTER": 1},
+}
+
+
+def _static_row(**changes):
+    row = {
+        "row_no": "1", "mark": "FB09", "japanese_title": "T", "english_title": "", "release_date": "",
+        "search_keywords": "", "exclude_keywords": "", "division_code": "DIV01", "work_code": "IP003",
+        "manufacturer_code": "MK002", "product_category_code": "PC_BOX",
+        "product_format_code": "", "blank_confirmed": "",
+    }
+    row.update(changes)
+    return row
+
+
+async def test_parse_rows_accepts_new_and_legacy_headers():
+    from app.services import tcg_product_import_svc as importer
+
+    rows, errors = importer.parse_rows((_HEADER_12 + _ROW.rstrip("\n") + ",BOOSTER,\"mark,english_title\"\n").encode())
+    assert errors == []
+    assert rows[0]["product_format_code"] == "BOOSTER"
+    assert rows[0]["blank_confirmed"] == "mark,english_title"
+    # ADR-1020 便3: 旧10列の見出しは受け付けず、見出しで止める
+    rows, errors = importer.parse_rows(_CSV)
+    assert rows == [] and errors == ["CSV_HEADER_MISMATCH"]
+    _, errors = importer.parse_rows(b"mark,japanese_title\nA,B\n")
+    assert errors == ["CSV_HEADER_MISMATCH"]
+
+
+async def test_static_check_blocks_unknown_format_and_bad_mark_names():
+    from app.services import tcg_product_import_svc as importer
+
+    checked = importer.validate_row_static(_static_row(product_format_code="BAD"), _LOOKUPS_12, {})
+    assert "UNKNOWN_PRODUCT_FORMAT_CODE_BAD" in checked["blocking"]
+    checked = importer.validate_row_static(_static_row(blank_confirmed="name_en,mark"), _LOOKUPS_12, {})
+    assert [b for b in checked["blocking"] if b.startswith("BLANK_CONFIRMED_INVALID_")] == [
+        "BLANK_CONFIRMED_INVALID_name_en"
+    ]
+    checked = importer.validate_row_static(_static_row(), _LOOKUPS_12, {})
+    assert checked["blocking"] == []
+    assert "MISSING_PRODUCT_FORMAT_CODE" not in checked["blocking"]
+
+
+async def test_build_payload_maps_format_and_marks():
+    from app.services import tcg_product_import_svc as importer
+
+    payload = importer.build_payload(
+        _static_row(product_format_code="BOOSTER", blank_confirmed=" mark , english_title,mark"), _LOOKUPS_12
+    )
+    assert payload["product_format_id"] == 1
+    assert payload["blank_confirmations"] == ["name_en", "mark"]
+    payload = importer.build_payload(_static_row(), _LOOKUPS_12)
+    assert payload["product_format_id"] is None
+    assert payload["blank_confirmations"] == []
+
+
+async def test_preview_blocks_format_not_linked_to_work(monkeypatch):
+    from app.services import tcg_product_import_svc as importer
+    from app.services import tcg_product_master_svc as master
+
+    raw = (_HEADER_12 + _ROW.rstrip("\n") + ",BOOSTER,\n").encode()
+    monkeypatch.setattr(importer, "load_lookup_maps", AsyncMock(return_value=_LOOKUPS_12))
+    monkeypatch.setattr(importer, "load_keyword_owners", AsyncMock(return_value={}))
+    monkeypatch.setattr(importer, "find_code_collisions", AsyncMock(return_value=[]))
+    dynamic = AsyncMock(return_value=[])
+    monkeypatch.setattr(importer, "validate_row_dynamic", dynamic)
+    monkeypatch.setattr(master, "format_matches_game", AsyncMock(return_value=False))
+    result = await importer.preview(AsyncMock(), raw, "x.csv")
+    assert "PRODUCT_FORMAT_GAME_MISMATCH" in result["rows"][0]["blocking"]
+    assert result["blocked"] == 1
+    dynamic.assert_not_awaited()
+
+
+async def test_preview_blocks_missing_required_with_column_names(monkeypatch):
+    """ADR-1020 便3: 足りない項目を CSV の列名で止める。印のある項目と値のある項目は止めない。"""
+    from app.services import tcg_product_import_svc as importer
+    from app.services import tcg_product_master_svc as master
+
+    monkeypatch.setattr(importer, "load_lookup_maps", AsyncMock(return_value=_LOOKUPS_12))
+    monkeypatch.setattr(importer, "load_keyword_owners", AsyncMock(return_value={}))
+    monkeypatch.setattr(importer, "find_code_collisions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(importer, "validate_row_dynamic", AsyncMock(return_value=[]))
+    monkeypatch.setattr(master, "format_matches_game", AsyncMock(return_value=True))
+
+    def csv_with(english, fmt, confirmed):
+        line = f"FB09,TITLE,{english},2026-03-14,DE,EX,DIV01,IP003,MK002,PC_BOX,{fmt},{confirmed}\n"
+        return (_HEADER_12 + line).encode()
+
+    out = await importer.preview(AsyncMock(), csv_with("", "", ""), "a.csv")
+    blocking = out["rows"][0]["blocking"]
+    assert "REQUIRED_FIELD_MISSING_english_title" in blocking
+    assert "REQUIRED_FIELD_MISSING_product_format_code" in blocking
+
+    out = await importer.preview(AsyncMock(), csv_with("", "BOOSTER", "english_title"), "a.csv")
+    blocking = out["rows"][0]["blocking"]
+    assert not any(b.startswith("REQUIRED_FIELD_MISSING_") for b in blocking)
