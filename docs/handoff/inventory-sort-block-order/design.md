@@ -40,6 +40,10 @@ B（ADR-1015）。並び順の式だけを変え、DB・API の形・migrations�
   - 価格 ASC の行を 1 つ足し、`{group_desc}, d.price_num ASC NULLS LAST, d.sort_ord ASC` を期待する。
   - 試験名は変えない。
 - `backend/tests/test_inventory_distribution_rows_pg.py:298-316`: 新旧どちらも同じ `_build_view_order_by` から作って比べるので、期待値の変更は要らない（審査で確認済み）。`:313` のコメント「改訂 2026-10-18」に「・2026-10-19」を足す。
+- `backend/tests/test_inventory_distribution_rows_pg.py:545-546`（`test_bin1_sort_groups_by_release_date_then_title`）: CI（run 39167855790）で失敗して見つかった。価格の降順の期待値が、まとまりの順を発売日の古い順とする前提のまま残っていた。
+  - 変更前: `["Beta", "Alpha", "Alpha"]  # まとまりの順は不変`
+  - 変更後: `["Alpha", "Alpha", "Beta"]  # まとまりの順は既定と同じ発売日の新しい順（ADR-1014 改訂 2026-10-19）`
+  - 同じ試験のほかの行（release_date の asc・desc、name の asc・desc）は変えない。
 - `frontend/src/pages/viewer/viewerFilter.test.ts:75-77`
   - 変更前: 価格の安い順で `[3, 1, 0, 2]`。
   - 変更後: `[0, 3, 1, 2]`（発売日の新しい商品B → 商品A の 100・900 → 空の C）。

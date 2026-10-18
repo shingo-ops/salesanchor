@@ -543,7 +543,7 @@ def test_bin1_sort_groups_by_release_date_then_title(pg, ids):
     _, items_desc = _view_items(pg, sort="release_date", order="desc")
     assert [r["english_title"] for r in items_desc] == ["Alpha", "Alpha", "Beta"]
     _, by_price = _view_items(pg, sort="unit_price", order="desc")
-    assert [r["english_title"] for r in by_price] == ["Beta", "Alpha", "Alpha"]  # まとまりの順は不変
+    assert [r["english_title"] for r in by_price] == ["Alpha", "Alpha", "Beta"]  # まとまりの順は既定と同じ発売日の新しい順（ADR-1014 改訂 2026-10-19）
     _, by_name_desc = _view_items(pg, sort="name", order="desc")
     assert [r["english_title"] for r in by_name_desc] == ["Beta", "Alpha", "Alpha"]
     _, by_name_asc = _view_items(pg, sort="name", order="asc")
