@@ -67,8 +67,6 @@ _UPDATABLE_COLUMNS = {
     "is_archived", "supplier_default_id",
     # ADR-093: 商品種類（最上位ジャンル区分）+ セット種別
     "product_kind", "set_type",
-    # ADR-090 PR5a: TCG 種別マスタ統一
-    "tcg_type",
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
     # 入数・重さ4項目は荷姿の表へ書く（ADR-1028。services/product_packagings.py）
     "volume_weight", "moq", "hs_code", "material", "item",
@@ -77,22 +75,6 @@ _UPDATABLE_COLUMNS = {
     # 手動並び替え（行ドラッグ）順
     "display_order",
 }
-
-_TCG_TYPE_CANONICAL_CODES = {
-    "pokemon_booster_box",
-    "one_piece",
-    "dragon_ball",
-    "union_arena",
-    "yugioh",
-    "other",
-    "gundam",
-    "weiss_schwarz",
-    "digimon",
-    "hololive",
-    "lorcana",
-    "xross_stars",
-}
-
 
 # ADR-090: products を public 中央テーブルへ一本化。
 # - PostgreSQL 本番: public.products（実列は name / stock_quantity）。Discord取込もここに入るため
@@ -105,37 +87,10 @@ def _products_ctx(db: AsyncSession) -> dict[str, str]:
     return {"ref": "products", "name": "name_ja", "qty": "quantity", "dialect": "sqlite"}
 
 
-def _type_master_ref(db: AsyncSession) -> str:
-    return "public.type_master" if is_postgresql(db) else "type_master"
-
-
-async def _validate_tcg_type(db: AsyncSession, tcg_type: str | None) -> None:
-    if tcg_type is None:
-        return
-    if is_postgresql(db):
-        has_master = await db.scalar(text("SELECT to_regclass('public.type_master') IS NOT NULL"))
-        if not has_master:
-            if tcg_type not in _TCG_TYPE_CANONICAL_CODES:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
-                )
-            return
-    ref = _type_master_ref(db)
-    exists = await db.execute(
-        text(f"SELECT 1 FROM {ref} WHERE code = :code LIMIT 1"),
-        {"code": tcg_type},
-    )
-    if exists.scalar_one_or_none() is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
-        )
-
-
 def _select_columns(ctx: dict[str, str]) -> str:
     """応答契約（name_ja / quantity）を維持しつつ実列を alias した SELECT 列リストを返す。"""
     # 入数・重さ4項目は荷姿の表から組み立てる（ADR-1028）。SQLite には表が無いので NULL。
+    tm_ref = "public.type_master" if ctx["dialect"] == "postgresql" else "type_master"
     if ctx["dialect"] == "postgresql":
         legacy4 = ", ".join(
             f"{legacy_field_sql(f, ctx['ref'] + '.id')} AS {f}"
@@ -149,7 +104,9 @@ def _select_columns(ctx: dict[str, str]) -> str:
         "notes, release_date, created_at, updated_at, "
         "jan_code, card_number, expansion_code, rarity, language, "
         "unit_price_usd, unit_price_eur, image_url, "
-        "is_archived, archived_at, supplier_default_id, tcg_type, "
+        "is_archived, archived_at, supplier_default_id, "
+        # 作品の符号は products.work_id → type_master.code（写しの列は持たない。ADR-1030）
+        f"(SELECT tm.code FROM {tm_ref} tm WHERE tm.id = {ctx['ref']}.work_id) AS work_code, "
         # ADR-093 Phase 1: 商品マスタ全項目
         f"{legacy4}, "
         "volume_weight, moq, hs_code, material, item, required_output_value, "
@@ -183,7 +140,7 @@ async def list_products(
     per_page: int = Query(default=20, ge=1, le=100),
     search: str | None = Query(default=None, max_length=255),
     category: str | None = Query(default=None, max_length=100),
-    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別コードで絞り込み（type_master.code）"),
+    work_code: str | None = Query(default=None, max_length=50, description="作品の符号で絞り込み（products.work_id → type_master.code）"),
     status_filter: str | None = Query(default=None, alias="status"),
     sort: str | None = Query(
         default=None,
@@ -243,9 +200,10 @@ async def list_products(
     if category:
         conditions.append("category = :category")
         params["category"] = category
-    if tcg_type:
-        conditions.append("tcg_type = :tcg_type")
-        params["tcg_type"] = tcg_type
+    if work_code:
+        tm_ref = "public.type_master" if ctx["dialect"] == "postgresql" else "type_master"
+        conditions.append(f"work_id = (SELECT tm.id FROM {tm_ref} tm WHERE tm.code = :work_code)")
+        params["work_code"] = work_code
     if status_filter:
         conditions.append("status = :status")
         params["status"] = status_filter
@@ -399,7 +357,6 @@ async def create_product(
     packaging_fields = {k: payload.pop(k) for k in LEGACY_FIELDS if payload.get(k) is not None}
     for k in LEGACY_FIELDS:
         payload.pop(k, None)
-    await _validate_tcg_type(db, payload.get("tcg_type"))
     if payload.get("status") is not None:
         payload["status"] = payload["status"].value if hasattr(payload["status"], "value") else payload["status"]
     # ADR-090: public.products は中央カタログ（tenant_id=NULL）。SQLite テスト表は
@@ -434,7 +391,7 @@ async def create_product(
                 notes, release_date,
                 jan_code, card_number, expansion_code, rarity, language,
                 unit_price_usd, unit_price_eur, image_url,
-                is_archived, supplier_default_id, tcg_type,
+                is_archived, supplier_default_id,
                 volume_weight, moq, hs_code, material, item,
                 required_output_value, search_keywords, exclude_keywords,
                 related_series, product_kind, set_type
@@ -444,7 +401,7 @@ async def create_product(
                 :notes, :release_date,
                 :jan_code, :card_number, :expansion_code, :rarity, :language,
                 :unit_price_usd, :unit_price_eur, :image_url,
-                :is_archived, :supplier_default_id, :tcg_type,
+                :is_archived, :supplier_default_id,
                 :volume_weight, :moq, :hs_code, :material, :item,
                 :required_output_value, :search_keywords, :exclude_keywords,
                 :related_series, :product_kind, :set_type
@@ -521,9 +478,6 @@ async def update_product(
 
     if "status" in update_data and update_data["status"] is not None:
         update_data["status"] = update_data["status"].value if hasattr(update_data["status"], "value") else update_data["status"]
-
-    if "tcg_type" in update_data:
-        await _validate_tcg_type(db, update_data.get("tcg_type"))
 
     # ADR-1020: 共用の行で、値か印があった項目を空にする更新は止める（古い空欄は止めない）。
     if is_postgresql(db):

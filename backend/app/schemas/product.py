@@ -60,7 +60,6 @@ class ProductCreate(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     is_archived: bool = Field(default=False)
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 
@@ -108,7 +107,6 @@ class ProductUpdate(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     is_archived: bool | None = None
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 
@@ -178,7 +176,7 @@ class ProductResponse(BaseModel):
     is_archived: bool = False
     archived_at: datetime | None = None
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
+    work_code: str | None = None  # 作品の符号（products.work_id → type_master.code）
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 

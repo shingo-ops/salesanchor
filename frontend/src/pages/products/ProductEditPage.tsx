@@ -36,13 +36,8 @@ export default function ProductEditPage() {
 
   // 各種マスタ(product_attribute_masters)の選択肢を属性別に取得。
   const [attrOptions, setAttrOptions] = useState<Record<string, AttrOption[]>>({});
-  const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
 
   useEffect(() => {
-    api
-      .get<{ code: string; name_ja: string }[]>("/products/tcg-types")
-      .then(setTcgTypes)
-      .catch(() => setTcgTypes([]));
     api
       .get<Record<string, AttrOption[]>>("/products/attribute-options")
       .then(setAttrOptions)
@@ -62,7 +57,6 @@ export default function ProductEditPage() {
           name_ja: p.name_ja,
           name_en: p.name_en || "",
           product_kind: p.product_kind || "TCG",
-          tcg_type: p.tcg_type || "",
           set_type: p.set_type || "",
           category: p.category || "",
           mark: p.mark || "",
@@ -128,7 +122,6 @@ export default function ProductEditPage() {
       name_ja: form.name_ja,
       name_en: toNull(form.name_en),
       product_kind: form.product_kind || null,
-      tcg_type: toNull(form.tcg_type),
       set_type: toNull(form.set_type),
       category: toNull(form.category),
       mark: toNull(form.mark),
@@ -235,19 +228,6 @@ export default function ProductEditPage() {
               <SelectControl variant="product-edit" fullWidth value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>
                 <option value="">{t("common.notSet")}</option>
                 {renderAttrOptions("product_kind", form.product_kind)}
-              </SelectControl>
-            </div>
-            <div className="form-group">
-              <label>{t("products.field.category")}</label>
-              <SelectControl variant="product-edit" fullWidth
-                value={form.tcg_type}
-                onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}
-                data-testid="product-edit-tcg-type"
-              >
-                <option value="">{t("common.notSet")}</option>
-                {tcgTypes.map((tt) => (
-                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
-                ))}
               </SelectControl>
             </div>
             <div className="form-group">

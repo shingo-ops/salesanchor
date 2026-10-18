@@ -41,7 +41,7 @@ def test_pivot_single_result():
     from app.services.inventory_aggregated_service import _pivot, _ProductMeta
     from app.services.inventory_aggregation import AggregationResult
 
-    product = _ProductMeta(product_id=1, name="テスト商品A", tcg_type="pokemon")
+    product = _ProductMeta(product_id=1, name="テスト商品A", work_code="pokemon")
     result = AggregationResult(
         row_id=None,
         product_id=1,
@@ -62,7 +62,7 @@ def test_pivot_single_result():
     assert len(rows) == 1
     row = rows[0]
     assert row["series"] == "テスト商品A"
-    assert row["tcg_type"] == "pokemon"
+    assert row["work_code"] == "pokemon"
     assert "Sealed box" in row["cells"]
     assert row["cells"]["Sealed box"] == {"price": 1000, "quantity": 10}
     # supplier_name / reason は pivot 後の row に含まれない
@@ -77,7 +77,7 @@ def test_build_aggregation_offers_maps_series_from_product_name():
     )
     from app.services.inventory_search import OfferSummary
 
-    product = _ProductMeta(product_id=42, name="ポケカ商品", tcg_type="pokemon")
+    product = _ProductMeta(product_id=42, name="ポケカ商品", work_code="pokemon")
     offer = OfferSummary(
         supplier_id=1,
         supplier_name="SupA",
@@ -156,6 +156,13 @@ async def seed_aggregated_dataset():
 
     eng = create_async_engine(_PG_URL, echo=False)
 
+    # 作品の符号は products.work_id → type_master.code（ADR-1030）。
+    # type_master は既存の bootstrap（migration 適用＋seed 12 種別）から得る。
+    # bootstrap 内部でも同じ lock を取るため、下の lock ブロックより前に呼ぶ。
+    from tests.rls_bootstrap import bootstrap_public_products
+
+    await bootstrap_public_products(eng)
+
     # ── テーブル bootstrap (IF NOT EXISTS → 冪等) ──────────────────────────
     async with public_bootstrap_lock(eng), eng.begin() as conn:
         await conn.execute(
@@ -193,7 +200,7 @@ async def seed_aggregated_dataset():
                     rarity              VARCHAR(20),
                     language            VARCHAR(10),
                     image_url           VARCHAR(500),
-                    tcg_type            TEXT,
+                    work_id             INTEGER,
                     is_archived         BOOLEAN NOT NULL DEFAULT FALSE,
                     archived_at         TIMESTAMPTZ,
                     supplier_default_id INTEGER,
@@ -202,6 +209,7 @@ async def seed_aggregated_dataset():
                 )
             """)
         )
+        await conn.execute(text("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id INTEGER"))
         await conn.execute(
             text("""
                 CREATE TABLE IF NOT EXISTS public.inventory (
@@ -270,8 +278,9 @@ async def seed_aggregated_dataset():
         poke1_id = (
             await conn.execute(
                 text(
-                    "INSERT INTO public.products (name, tcg_type, is_archived) "
-                    "VALUES (:n, 'pokemon_booster_box', false) RETURNING id"
+                    "INSERT INTO public.products (name, work_id, is_archived) "
+                    "VALUES (:n, (SELECT id FROM public.type_master WHERE code = 'pokemon_booster_box'), false) "
+                    "RETURNING id"
                 ),
                 {"n": f"ポケカA_{tag}"},
             )
@@ -279,8 +288,9 @@ async def seed_aggregated_dataset():
         poke2_id = (
             await conn.execute(
                 text(
-                    "INSERT INTO public.products (name, tcg_type, is_archived) "
-                    "VALUES (:n, 'pokemon_booster_box', false) RETURNING id"
+                    "INSERT INTO public.products (name, work_id, is_archived) "
+                    "VALUES (:n, (SELECT id FROM public.type_master WHERE code = 'pokemon_booster_box'), false) "
+                    "RETURNING id"
                 ),
                 {"n": f"ポケカB_{tag}"},
             )
@@ -288,8 +298,9 @@ async def seed_aggregated_dataset():
         yugi_id = (
             await conn.execute(
                 text(
-                    "INSERT INTO public.products (name, tcg_type, is_archived) "
-                    "VALUES (:n, 'yugioh', false) RETURNING id"
+                    "INSERT INTO public.products (name, work_id, is_archived) "
+                    "VALUES (:n, (SELECT id FROM public.type_master WHERE code = 'yugioh'), false) "
+                    "RETURNING id"
                 ),
                 {"n": f"遊戯王C_{tag}"},
             )
@@ -455,7 +466,7 @@ async def test_aggregated_endpoint_category_filter(
 
         rows = data_resp["rows"]
         assert {data["poke1_name"], data["poke2_name"]} <= {r["series"] for r in rows}
-        assert all(r["tcg_type"] == "pokemon_booster_box" for r in rows), (
+        assert all(r["work_code"] == "pokemon_booster_box" for r in rows), (
             f"category=pokemon_booster_box でも pokemon_booster_box 以外の行がある: {rows}"
         )
         yugi_rows = [r for r in rows if r["series"] == data["yugi_name"]]

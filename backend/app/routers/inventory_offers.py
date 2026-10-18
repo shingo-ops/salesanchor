@@ -70,10 +70,11 @@ _BASE_SELECT = """
            p.name_en AS name_en,
            p.category AS category,
            p.mark AS mark,
-           p.tcg_type AS tcg_type
+           tm.code AS work_code
     FROM public.inventory i
     LEFT JOIN public.suppliers s ON s.id = i.supplier_id
     LEFT JOIN public.products  p ON p.id = i.product_id
+    LEFT JOIN public.type_master tm ON tm.id = p.work_id
 """
 
 _UPDATABLE_COLS = {
@@ -170,7 +171,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 supplier_name=row.get("provider") or None,
                 unit_price=round_half_up(row["price_num"] or 0),
                 quantity=None if quantity is None else round_half_up(quantity),
-                tcg_type=row.get("tcg_type"),
+                work_code=row.get("work_code"),
                 offered_at=row["posted_ts"],
                 posted_at=row["posted_ts"],
                 release_date=row.get("release_date") or None,
@@ -185,16 +186,16 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 
 
 def _build_view_filters(
-    *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
+    *, q, work_code, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
     unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
     supplier_ids: str | None = None,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
     conditions: list[str] = []
     params: dict = {}
-    if tcg_type:
-        conditions.append("d.tcg_type = :tcg_type")
-        params["tcg_type"] = tcg_type
+    if work_code:
+        conditions.append("d.work_code = :work_code")
+        params["work_code"] = work_code
     if category:
         conditions.append("d.category = :category")
         params["category"] = category
@@ -286,16 +287,16 @@ def _build_inventory_view_sql(
 
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
-    列並び（3枝共通）: __kind, __total, <配信行+tcg_type+category の全列>, __ord, __f_* の5列。
+    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __f_* の5列。
     """
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
-    join = "LEFT JOIN public.products pp ON pp.id = x.product_id"
+    join = "LEFT JOIN public.products pp ON pp.id = x.product_id LEFT JOIN public.type_master tm ON tm.id = pp.work_id"
     ctes = [f"rows_main AS ({final_main})"]
     if merge:
         ctes.append(f"rows_plain AS ({distribution_final_select_plain()})")
-    ctes.append(f"rows_x AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_main x {join})")
+    ctes.append(f"rows_x AS (SELECT x.*, tm.code AS work_code, pp.category AS category FROM rows_main x {join})")
     if merge:
-        ctes.append(f"rows_xp AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_plain x {join})")
+        ctes.append(f"rows_xp AS (SELECT x.*, tm.code AS work_code, pp.category AS category FROM rows_plain x {join})")
     facet_src = "rows_xp" if merge else "rows_x"  # merge=False は rows_main == rows_plain なので共用
     ctes.append(f"rows_f AS (SELECT * FROM rows_x d {where})")
     # 型は実物の列から: LEFT JOIN ON FALSE で rows_x と同じ型の NULL 1行を得る
@@ -329,7 +330,7 @@ def _build_inventory_view_sql(
 )
 async def list_inventory_view(
     q: str | None = Query(default=None, max_length=255, description="日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）"),
-    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別 (public.products.tcg_type)"),
+    work_code: str | None = Query(default=None, max_length=50, description="作品の符号（products.work_id → type_master.code）"),
     category: str | None = Query(default=None, max_length=100, description="カテゴリー絞り込み (public.products.category)"),
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
@@ -374,7 +375,7 @@ async def list_inventory_view(
     age_condition, age_params = _age_window(max_age_hours)
 
     conditions, filter_params = _build_view_filters(
-        q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
+        q=q, work_code=work_code, category=category, offer_type=offer_type,
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
         qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,

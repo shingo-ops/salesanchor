@@ -46,7 +46,7 @@ def test_sold_out_filter_is_shared_by_dist_base_and_preview_count() -> None:
 def test_fresh_window_is_24_hours_and_fresh_filter_is_bound() -> None:
     from app.routers.inventory_offers import _build_view_filters
 
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     assert svc.FRESH_WINDOW_HOURS == 24
     assert _build_view_filters(**none) == ([], {})  # 既定は False: 既存の呼び出しは変わらない
@@ -238,7 +238,7 @@ def test_distribution_sql_has_no_double_underscore_alias() -> None:
 # 共通ベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
 # ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
 
-_NONE_FILTERS = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+_NONE_FILTERS = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories",
                                "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
                                "price_min", "price_max"))
 

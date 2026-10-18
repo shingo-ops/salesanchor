@@ -136,7 +136,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (sort) params.set("sort", sort);
-      if (tcgType) params.set("tcg_type", tcgType);
+      if (tcgType) params.set("work_code", tcgType);
       params.set("page", String(page));
       params.set("per_page", String(PER_PAGE));
       const qs = `?${params.toString()}`;
@@ -363,7 +363,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
                   {/* 商品種類（最上位ジャンル区分）= 一番左の単一セル */}
                   <td rowSpan={2} style={{ verticalAlign: "middle" }}>{p.product_kind || "-"}</td>
                   {/* カテゴリーは種別マスタの日本語名(name_ja)で表示（英語の生 category は使わない） */}
-                  <td>{p.tcg_type ? (tcgTypeName.get(p.tcg_type) ?? p.tcg_type) : (p.category || "-")}</td>
+                  <td>{p.work_code ? (tcgTypeName.get(p.work_code) ?? p.work_code) : (p.category || "-")}</td>
                   <td>{p.mark || "-"}</td>
                   <td>
                     {p.image_url && <img src={p.image_url} alt="" style={{ width: 'var(--icon-lg)', height: 'var(--icon-lg)', marginRight: "var(--space-1)", objectFit: "cover", verticalAlign: "middle", borderRadius: "var(--radius-xs)" }} />}

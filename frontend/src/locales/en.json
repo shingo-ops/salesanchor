@@ -1805,7 +1805,6 @@
     "pageLabel": "Page {{page}} ({{count}} items)",
     "field": {
       "productKind": "Product type",
-      "category": "TCG series",
       "mark": "Mark",
       "setType": "Set type",
       "cardNumber": "Card Number",
