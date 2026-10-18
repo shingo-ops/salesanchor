@@ -12,6 +12,11 @@
 
 ---
 
+## 0. 既存 ADR の検索
+
+- 機能の語（soldout・〆・supersession・is_current）で docs/adr/ を検索 → 該当は `docs/adr/ADR-158-product-level-supersession.md`（is_current の考え方）だけ。〆の規則1〜12f は ADR ではなく docs/handoff/v102-shime-*/design.md が正本（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:1`）。
+- 審査で挙がった ADR-1014 は、`git grep ADR-1014` で `backend/app/services/tcg_distribution_svc.py` に0件。docs/adr では ADR-093・ADR-1014 本体・ADR-1019・ADR-1021・ADR-1027・README に出るが、配信の `_sold_out_filter` とのつながりは確かめられなかった（生出力 /tmp/CC報告ファイル/shime-same-post-20261019/rev/b11.txt）。
+
 ## 1. 起きていること（本番DBの読み取り。生出力は /tmp/CC報告ファイル/shime-same-post-20261019/）
 
 投稿 43e6cac8-9c48-46ce-a1f8-f212fbdf4762（仕入元ゆうき、2026-10-18 07:25Z）の原文（5_raw_43e6cac8.out）:
@@ -41,6 +46,18 @@
 | 1 | [1,2,3,9,10,11] | 1〜11 | 残り約400セット | ¥6,000 | In Stock | 466088 | 14 |
 
 原文は「18日から出荷 セット/¥7,000 完売」「20日から出荷 セット/¥6,000 残り約400セット」。完売は ¥7,000 の分だけで、¥6,000 は在庫。
+
+### 1-2. 審査を受けて追加で確かめたこと（2026-10-19、本番は ai_ro の読み取りのみ。生出力 /tmp/CC報告ファイル/shime-same-post-20261019/rev/）
+
+| 確かめたこと | 結果 | 生出力 |
+|---|---|---|
+| 状態マスタの "Sold out" | canonical="Sold out" が11行（soldout・在庫なし・売り切れ・完売・欠品・sold・売切・SOLD OUT・一旦ストップ・〆・ストップ）。すべて effect=EXCLUDE・enabled=True | a1.out |
+| 引き継ぎ先（analysis_soldout_extra_targets） | job 0d3d2a98（2件）も、a33d2338 の job 4cc7a57b（3件）も0行 | a2.out |
+| 人の直し（item_corrections、public と tenant_001） | 両 job の件に付いた行は0件（項目を問わず） | a2.out・a3b.out |
+| job 0d3d2a98 の今の値（T4 の前の値） | 件0（item 484a573f）: 440301・状態14・unit_id 16「個」・価格19000・数量10・備考なし・In Stock・除外なし・is_current TRUE。件1（item 385bb82e）: 440301・状態14・unit_id 13「Set」・価格なし・数量なし・備考なし・Sold out・excluded・is_current TRUE | a4.out |
+| a33d2338（job 4cc7a57b）の今の値 | 件0 466088・状態14・Set・7000・Sold out・excluded。件1（item bc62b077）466088・状態14・Set・6000・400・In Stock・除外なし・is_current TRUE。件2 440406（別の商品）・Pack・950・In Stock | a4.out |
+| テストの状態マスタ | `backend/tests/test_line_analysis_v102_svc.py:20-31` の `_MASTERS` は status_entries が空 | b8.txt |
+| 解析し直しのタスク | `reanalyze_v102_job(extraction_job_id)`（`backend/app/tasks/tcg_extraction.py:736`）。引数は1つ。v102 以外は skipped | b9_task.txt |
 
 ## 2. file:line 引用表
 
