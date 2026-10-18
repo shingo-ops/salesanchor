@@ -55,3 +55,12 @@ PO 決定（2026-10-18）「発売日の新しい順にしてほしい、いま�
 - プルダウンの先頭は `release_date:desc`「発売日が新しい順」。旧 `releaseAsc` キーは ja/en とも削除。
 - 変えないもの: 同じ発売日の中（english_title → japanese_title → product_id）、同じ商品の中の価値順（ADR-1023）、発売日が空の商品は末尾、`_build_view_order_by` の組み立て。
 - 守り: InventoryPage.tablelayout.test.tsx・viewerFilter.test.ts・InventoryView.test.tsx が既定の向き desc を固定する。
+
+## 改訂 2026-10-18（3）（「24時間以内」を配信行の計算の内側で絞る）
+
+PO 決定（2026-10-18）「y」: 在庫表の「24時間以内」ON のとき、絞り込みの選択肢（仕入元・カテゴリ・状態・形態）は24時間以内の在庫にあるものだけに絞ってよい。上の 2026-10-14 改訂の「24時間以内」の実装方法（件数とページ送りに連動させるため外側で絞る）を本改訂が改める（前の節は書き換えない）。
+
+- `fresh_only=true` のときは、配信行の年齢窓（`_age_window`）そのものを `FRESH_WINDOW_HOURS`（24）にする。設定の窓（`max_age_hours`）が24より短いときは短い方、0（絞らない）のときは24。外側の `d.posted_ts >= NOW() - 24h` の条件は無くした（窓の定義は `_age_window` の1か所）。
+- 並び・まとめ・件数・ページは変わらない。絞り込みの選択肢だけが、24時間以内の在庫にある値に縮む。`fresh_only=false` の SQL は変更前と同じ。
+- 目的: 在庫表の初回表示の待ち時間の短縮（重い配信行の計算が24時間以内の行だけになる）。
+- 守り: `backend/tests/test_inventory_distribution_rows.py`（窓が年齢窓に入ることと false 時の SQL 不変）、`backend/tests/test_inventory_distribution_rows_pg.py`（変更前の外側の絞りと total・ページが一致、選択肢は24時間以内の値だけ）。
