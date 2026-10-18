@@ -345,7 +345,7 @@ def _new_single_statement(session, *, merge: bool, where: str, params: dict, sor
     total, pages, facets = None, [], set()
     for r in session.execute(text(sql), {**params, "limit": limit, "offset": offset}).mappings().all():
         r = dict(r)
-        assert [k for k in r if k.startswith("__")] == ["__kind", "__total", "__ord", "__f_supplier_id",
+        assert [k for k in r if k.startswith("__")] == ["__kind", "__total", "__ord", "__expiry_s", "__f_supplier_id",
                                                         "__f_provider", "__f_category", "__f_condition", "__f_unit"]
         if r["__kind"] == "total":
             total = int(r["__total"])
@@ -528,6 +528,58 @@ def test_bin1_fresh_only_excludes_rows_older_than_24_hours_and_total_follows(pg,
     total_fresh, items_fresh = _view_items(pg, sort="release_date", order="desc", fresh_only=True)
     assert total_all == len(items_all) == 2
     assert total_fresh == len(items_fresh) == 1
+
+
+def _expiry_s(pg_fixture, *, max_age_hours: int, fresh_only: bool):
+    """API（list_inventory_view）と同じ窓の決め方で、total 枝の __expiry_s を返す（便4）。"""
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
+
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    conditions, params = _build_view_filters(**none)
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    window_hours = max_age_hours
+    if fresh_only:
+        window_hours = (min(max_age_hours, distribution.FRESH_WINDOW_HOURS) if max_age_hours
+                        else distribution.FRESH_WINDOW_HOURS)
+    age_condition, age_params = distribution._age_window(window_hours)
+    params = {**params, **age_params}
+    expiry = bool(window_hours)
+    if expiry:
+        params["expiry_hours"] = window_hours
+    head, final = distribution.distribution_rows_parts(
+        include_flag_single=False, age_condition=age_condition, merge_same_post=False)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
+                                    sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC", expiry=expiry)
+    with Session(pg_fixture[1]) as session:
+        for r in session.execute(text(sql), {**params, "limit": 50, "offset": 0}).mappings().all():
+            if r["__kind"] == "total":
+                return r["__expiry_s"]
+    raise AssertionError("total 枝が無い")
+
+
+def test_bin4_expiry_seconds_for_row_posted_23h_ago(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=24, fresh_only=False) - 3600) <= 120
+
+
+def test_bin4_expiry_is_none_when_window_is_unbounded(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert _expiry_s(pg, max_age_hours=0, fresh_only=False) is None
+
+
+def test_bin4_expiry_uses_24h_basis_when_fresh_only_and_max_age_is_zero(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=0, fresh_only=True) - 3600) <= 120
+
+
+def test_bin4_expiry_uses_24h_basis_when_fresh_only_and_max_age_is_48(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=48, fresh_only=True) - 3600) <= 120
+
+
+def test_bin4_expiry_is_none_when_no_rows(pg, ids):
+    assert _expiry_s(pg, max_age_hours=24, fresh_only=False) is None
 
 
 def test_bin1_sort_groups_by_release_date_then_title(pg, ids):

@@ -29,6 +29,7 @@ import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { useExpiryRefresh } from "../../hooks/useExpiryRefresh";
 import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { TOPICS } from "../../lib/realtime/topics";
 
@@ -48,6 +49,7 @@ interface InventoryListResponse {
   units?: string[];
   window_hours?: number | null;
   fresh_window_hours?: number;
+  next_expiry_in_seconds?: number | null;
 }
 
 const PER_PAGE = 50;
@@ -113,6 +115,9 @@ export default function InventoryPage() {
   const [refreshDebounceMs] = useState(
     () => INVENTORY_REFRESH_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
   );
+  const [expiryJitterMs] = useState(() => Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS));
+  const [nextExpirySeconds, setNextExpirySeconds] = useState<number | null>(null);
+  const [loadCount, setLoadCount] = useState(0);
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -222,6 +227,7 @@ export default function InventoryPage() {
       setTotal(d.total);
       setWindowHours(d.window_hours);
       setFreshWindowHours(d.fresh_window_hours);
+      setNextExpirySeconds(d.next_expiry_in_seconds ?? null);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
       if (d.conditions) setConditionFacet(d.conditions);
@@ -230,7 +236,10 @@ export default function InventoryPage() {
       if (seq !== loadSeqRef.current) return;
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
-      if (seq === loadSeqRef.current) setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+        setLoadCount((c) => c + 1);
+      }
     }
   }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, selectedSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
@@ -242,6 +251,10 @@ export default function InventoryPage() {
   useRealtimeRefresh(INVENTORY_TOPICS, () => {
     if (filtersLoaded) void load();
   }, { debounceMs: refreshDebounceMs });
+
+  useExpiryRefresh(nextExpirySeconds, () => {
+    if (filtersLoaded) void load();
+  }, expiryJitterMs, loadCount);
 
   // 種別マスタを取得（カテゴリー列の日本語表示用）。
   useEffect(() => {

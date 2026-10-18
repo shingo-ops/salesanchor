@@ -23,10 +23,62 @@ WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
 }
 
-# 書き込み API ではなく裏の処理（Celery）だけが出す topic → 範囲（ADR-1016 決定5）
+# 裏の処理（Celery）が出す topic → 範囲（ADR-1016 決定5）。
+# tcg.inventory は書き込み API からも INVENTORY_SIGNAL_ROUTES 経由で同じ範囲で出る
 TASK_TOPICS: dict[str, str] = {
     TOPIC_TCG_INVENTORY: SCOPE_SHARED,
 }
+
+# 在庫表が読む共通の表（public）に書く経路。2xx のとき middleware が tcg.inventory を shared で出す
+# （ADR-1016 改訂 2026-10-19）。WRITE_ROUTE_TOPICS / NO_SIGNAL_ROUTES のどちらに載るかとは別に持つ。
+# 増減は設計の改訂を通す（test_realtime_topics.py が数を固定する）
+INVENTORY_SIGNAL_ROUTES: frozenset[tuple[str, str]] = frozenset({
+    ("POST", "/api/v1/conditions"),
+    ("POST", "/api/v1/conditions/import/commit"),
+    ("DELETE", "/api/v1/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/conditions/{condition_id}"),
+    ("POST", "/api/v1/products"),
+    ("DELETE", "/api/v1/products/{product_id}"),
+    ("PATCH", "/api/v1/products/{product_id}"),
+    ("POST", "/api/v1/units"),
+    ("POST", "/api/v1/units/import/commit"),
+    ("DELETE", "/api/v1/units/{unit_id}"),
+    ("PATCH", "/api/v1/units/{unit_id}"),
+    ("POST", "/api/v1/super-admin/conditions"),
+    ("POST", "/api/v1/super-admin/conditions/import/commit"),
+    ("DELETE", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("POST", "/api/v1/super-admin/suppliers"),
+    ("POST", "/api/v1/super-admin/suppliers/import/commit"),
+    ("DELETE", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("PATCH", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("POST", "/api/v1/super-admin/tcg/types"),
+    ("DELETE", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("PATCH", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("POST", "/api/v1/super-admin/units"),
+    ("POST", "/api/v1/super-admin/units/import/commit"),
+    ("DELETE", "/api/v1/super-admin/units/{unit_id}"),
+    ("PATCH", "/api/v1/super-admin/units/{unit_id}"),
+    ("PUT", "/api/v1/tcg/distribution/settings/{key}"),
+    ("POST", "/api/v1/tcg/extraction-jobs/{extraction_job_id}/reanalyze"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/corrections"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"),
+    ("POST", "/api/v1/tcg/line-devices/import"),
+    ("POST", "/api/v1/tcg/line-import"),
+    ("POST", "/api/v1/tcg/line-import/android"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/commit"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/resolve"),
+    ("POST", "/api/v1/tcg/products"),
+    ("POST", "/api/v1/tcg/products/create"),
+    ("DELETE", "/api/v1/tcg/products/detail/{product_id}"),
+    ("PUT", "/api/v1/tcg/products/detail/{product_id}"),
+    ("POST", "/api/v1/tcg/products/import/commit"),
+    ("POST", "/api/v1/tcg/products/{product_id}/search-keywords"),
+    ("POST", "/api/v1/tcg/review/csv/commit"),
+    ("PUT", "/api/v1/tcg/v102/posts/{job_id}/items"),
+})
 
 _PENDING = "段階2で画面に当てるときに決める"
 

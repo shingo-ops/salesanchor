@@ -279,12 +279,14 @@ def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
 
 def _build_inventory_view_sql(
     *, head: str, final_main: str, merge: bool, where: str, sort_col: str, order_dir: str,
+    expiry: bool = False,
 ) -> str:
     """GET /inventory の1文。dist_base（配信行の重い計算）を1回だけ計算し、件数・ページ・絞り込み候補を UNION ALL で返す。
 
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
-    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __f_* の5列。
+    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __expiry_s, __f_* の5列。
+    expiry が真のとき __expiry_s（total 枝のみ）は、まとめ前・絞り込み前の行が次に時間の枠から外れるまでの秒数（:expiry_hours が必要）。
     """
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
     join = "LEFT JOIN public.products pp ON pp.id = x.product_id LEFT JOIN public.type_master tm ON tm.id = pp.work_id"
@@ -302,18 +304,23 @@ def _build_inventory_view_sql(
         f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord FROM rows_f d "
         f"{order_by} LIMIT :limit OFFSET :offset)"
     )
+    expiry_expr = (
+        "(SELECT CEIL(EXTRACT(EPOCH FROM (MIN(d.posted_ts) + make_interval(hours => :expiry_hours) - NOW())))::bigint "
+        f"FROM {facet_src} d)"
+        if expiry else "NULL::bigint"
+    )
     q_total = (
         "SELECT 'total'::text AS __kind, (SELECT COUNT(*) FROM rows_f)::bigint AS __total, nx.*, "
-        "NULL::bigint AS __ord, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
+        f"NULL::bigint AS __ord, {expiry_expr} AS __expiry_s, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
         "nx.category AS __f_category, nx.condition AS __f_condition, nx.unit_canonical AS __f_unit "
         "FROM rows_nx nx"
     )
     q_page = (
-        "SELECT 'page'::text, NULL::bigint, pg.*, nx.supplier_id, nx.provider, nx.category, nx.condition, "
+        "SELECT 'page'::text, NULL::bigint, pg.*, NULL::bigint, nx.supplier_id, nx.provider, nx.category, nx.condition, "
         "nx.unit_canonical FROM rows_pg pg CROSS JOIN rows_nx nx"
     )
     q_facet = (
-        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
+        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
         "fd.condition, fd.unit_canonical FROM (SELECT DISTINCT d.supplier_id, d.provider, d.category, "
         f"d.condition, d.unit_canonical FROM {facet_src} d) fd CROSS JOIN rows_nx nx"
     )
@@ -384,6 +391,9 @@ async def list_inventory_view(
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params = {**age_params, **filter_params}
+    expiry = bool(window_hours)  # 実効の窓（応答の window_hours とは別）。0 は絞らないので期限なし
+    if expiry:
+        params["expiry_hours"] = window_hours
     order_dir = "ASC" if order == "asc" else "DESC"
     sort_col = _SORT_COLUMNS.get(sort, "d.japanese_title")
     head, final_main = distribution_rows_parts(
@@ -391,11 +401,13 @@ async def list_inventory_view(
     )
     sql = _build_inventory_view_sql(
         head=head, final_main=final_main, merge=merge_same_post, where=where, sort_col=sort_col, order_dir=order_dir,
+        expiry=expiry,
     )
     result = await db.execute(
         text(sql), {**params, "limit": per_page, "offset": (page - 1) * per_page},
     )
     total = 0
+    expiry_s: int | None = None
     page_rows: list[tuple[int, dict]] = []
     facet_rows: list[dict] = []
     for r in result.mappings().all():
@@ -403,6 +415,7 @@ async def list_inventory_view(
         kind = row["__kind"]
         if kind == "total":
             total = int(row["__total"] or 0)
+            expiry_s = int(row["__expiry_s"]) if row["__expiry_s"] is not None else None
         elif kind == "page":
             page_rows.append((row["__ord"], {k: v for k, v in row.items() if not k.startswith("__")}))
         elif kind == "facet":
@@ -434,6 +447,7 @@ async def list_inventory_view(
         units=unit_facet,
         window_hours=max_age_hours,
         fresh_window_hours=FRESH_WINDOW_HOURS,
+        next_expiry_in_seconds=expiry_s,
     )
 
 
