@@ -300,7 +300,7 @@ _VIEW_CASES = [
 
 
 def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
-                          limit: int, offset: int):
+                          limit: int, offset: int, args: dict = _ARGS):
     """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
     # 基準の ORDER BY（ADR-1014 改訂 2026-10-18: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
     from app.routers.inventory_offers import _build_view_order_by
@@ -308,7 +308,7 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
 
     def rows_sql(m: bool) -> str:
-        inner_rows = distribution.distribution_rows_sql(**_ARGS, merge_same_post=m)
+        inner_rows = distribution.distribution_rows_sql(**args, merge_same_post=m)
         return ("SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
                 f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id")
 
@@ -325,10 +325,10 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
 
 
 def _new_single_statement(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
-                          limit: int, offset: int):
+                          limit: int, offset: int, args: dict = _ARGS):
     from app.routers.inventory_offers import _build_inventory_view_sql
 
-    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=merge)
+    head, final = distribution.distribution_rows_parts(**args, merge_same_post=merge)
     sql = _build_inventory_view_sql(head=head, final_main=final, merge=merge, where=where, sort_col=sort_col,
                                     order_dir=order_dir)
     total, pages, facets = None, [], set()
@@ -389,6 +389,56 @@ def test_facets_are_not_affected_by_filters(pg, ids):
     assert results[1][0] < results[0][0]  # 絞り込みで total だけが減る
 
 
+def _fresh_args() -> tuple[dict, dict]:
+    """「24時間以内」ON のときの配信行の引数と bind（API は年齢窓そのものを24hにする）。"""
+    age_condition, age_params = distribution._age_window(distribution.FRESH_WINDOW_HOURS)
+    return {"include_flag_single": False, "age_condition": age_condition}, age_params
+
+
+_OLD_FRESH_WHERE = "WHERE d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)"
+
+
+@pytest.mark.parametrize("merge", [True, False])
+def test_fresh_window_inside_equals_the_previous_outer_filter_for_total_and_page(pg, ids, merge):
+    """変更前: 48h 窓の外側で 24h を絞る。変更後: 窓そのものを24hにする。total とページ（順番含む）は同じ。"""
+    from app.routers.inventory_offers import _SORT_COLUMNS
+
+    _seed_mixed(pg, ids)
+    _add_row(pg, _add_job(pg, 30), ids.p1, ids.box, basis="R2:丁", price=700, qty=2)  # 24h より古い行
+    old_age, old_age_params = distribution._age_window(48)
+    new_args, new_age_params = _fresh_args()
+    with Session(pg[1]) as session:
+        for sort in ("release_date", "unit_price", "name"):
+            for order_dir in ("ASC", "DESC"):
+                common = {"merge": merge, "sort_col": _SORT_COLUMNS[sort], "order_dir": order_dir, "limit": 50, "offset": 0}
+                old_total, old_page, old_facets = _old_three_statements(
+                    session, where=_OLD_FRESH_WHERE, params={**old_age_params, "fresh_hours": 24},
+                    args={"include_flag_single": False, "age_condition": old_age}, **common)
+                new_total, new_page, new_facets = _new_single_statement(
+                    session, where="", params=new_age_params, args=new_args, **common)
+                assert (new_total, new_page) == (old_total, old_page)
+                assert new_total > 0
+                assert new_facets <= old_facets
+
+
+def test_fresh_only_facets_are_limited_to_the_last_24_hours(pg, ids):
+    """fresh_only=true: 絞り込み候補は24h内の行の値だけ。false（年齢窓のみ）では古い行の値も残る。"""
+    _add_row(pg, _add_job(pg, 1), ids.p1, ids.box, basis="R2:甲")
+    _add_row(pg, _add_job(pg, 30), ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case")
+    old_age, old_age_params = distribution._age_window(48)
+    new_args, new_age_params = _fresh_args()
+    kw = {"merge": True, "where": "", "sort_col": "d.japanese_title", "order_dir": "ASC", "limit": 50, "offset": 0}
+    with Session(pg[1]) as session:
+        _, _, facets_wide = _new_single_statement(
+            session, params=old_age_params, args={"include_flag_single": False, "age_condition": old_age}, **kw)
+        _, _, facets_fresh = _new_single_statement(session, params=new_age_params, args=new_args, **kw)
+    # facet の列順: supplier_id, provider, category, condition, unit_canonical
+    assert {f[3] for f in facets_wide} == {"Sealed box", "Case"}
+    assert {f[3] for f in facets_fresh} == {"Sealed box"}
+    assert {f[2] for f in facets_fresh} == {"C_A"}
+    assert facets_fresh <= facets_wide
+
+
 # --- 便1（在庫表と GAS 在庫一覧の揃え）------------------------------------------------------------------------------
 
 
@@ -407,9 +457,13 @@ def _view_items(pg_fixture, *, sort: str, order: str, fresh_only: bool = False) 
 
     none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
-    conditions, params = _build_view_filters(**none, fresh_only=fresh_only)
+    conditions, params = _build_view_filters(**none)
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=False)
+    # API と同じ: 年齢窓は 48h。fresh_only のときは窓そのものを24hにする（便2）
+    age_condition, age_params = distribution._age_window(distribution.FRESH_WINDOW_HOURS if fresh_only else 48)
+    params = {**params, **age_params}
+    head, final = distribution.distribution_rows_parts(
+        include_flag_single=False, age_condition=age_condition, merge_same_post=False)
     sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
                                     sort_col=_SORT_COLUMNS[sort], order_dir=order.upper())
     total, pages = 0, []

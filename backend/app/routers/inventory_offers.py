@@ -186,7 +186,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 
 def _build_view_filters(
     *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
-    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
+    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max,
     supplier_ids: str | None = None,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
@@ -255,9 +255,6 @@ def _build_view_filters(
         if value is not None:
             conditions.append(f"{column} {op} CAST(:{name} AS integer)")
             params[name] = value
-    if fresh_only:  # 「24時間以内」。件数とページ送りに連動させるため WHERE 側で絞る
-        conditions.append("d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)")
-        params["fresh_hours"] = FRESH_WINDOW_HOURS
     return conditions, params
 
 
@@ -371,13 +368,17 @@ async def list_inventory_view(
             fresh_window_hours=FRESH_WINDOW_HOURS,
         )
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    age_condition, age_params = _age_window(max_age_hours)
+    window_hours = max_age_hours
+    if fresh_only:  # 「24時間以内」は配信行の計算の内側で絞る（便2・ADR-1014 改訂 2026-10-18（3））
+        # max_age_hours は 0 以上の int（None は上で返却済み）。0 は「絞らない」なので 24h にする
+        window_hours = min(max_age_hours, FRESH_WINDOW_HOURS) if max_age_hours else FRESH_WINDOW_HOURS
+    age_condition, age_params = _age_window(window_hours)
 
     conditions, filter_params = _build_view_filters(
         q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
-        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,
+        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max,
         supplier_ids=supplier_ids,
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
