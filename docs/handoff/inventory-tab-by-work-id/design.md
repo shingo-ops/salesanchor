@@ -26,6 +26,7 @@ LEFT JOIN public.type_master tm ON tm.id = p.work_id
 -- 返す: tm.code AS work_code
 -- 絞る: tm.code = :work_code
 ```
+例外（実装中に判明・Opus 承認 2026-10-18）: 列名を修飾せずに書いている SELECT（products.py の一覧など）は、type_master と同名の列（id・name_en・created_at・updated_at）があって JOIN すると曖昧になるため、同じ意味の相関サブクエリにする。返す値は `(SELECT tm.code FROM type_master tm WHERE tm.id = products.work_id) AS work_code`、絞り込みは `work_id = (SELECT tm.id FROM type_master tm WHERE tm.code = :work_code)`。
 SQLite のテスト経路は同じ形で `type_master`（スキーマ名なし）を使う。既存の `_products_ctx` / `is_postgresql` の分岐に従う。
 
 ### 3-1. backend/app/routers/inventory_offers.py
