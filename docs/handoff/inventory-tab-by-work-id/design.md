@@ -1,6 +1,6 @@
 # design: 在庫表のタブを中分類（work_id）で絞り、products.tcg_type をやめる（ADR-1030）
 
-- 現在地: [recon.md](./recon.md)／決定: [ADR-1030](../../adr/ADR-1030-drop-products-tcg-type.md)／前例: [drop-products-type-master-id/design.md](../drop-products-type-master-id/design.md)
+- 現在地: docs/handoff/inventory-tab-by-work-id/recon.md／決定: [ADR-1030](../../adr/ADR-1030-drop-products-tcg-type.md)／前例: [drop-products-type-master-id/design.md](../drop-products-type-master-id/design.md)
 - PO の言葉（2026-10-18）: 「中分類が正だと考えている」「在庫表のタブを中分類で絞る（y）」「SSOTしたいので不要なら列を消してくれ」「配線とDBのSSOTは遵守してデータを分散させることは禁止」「金型登録のないハードコードを禁止」「整備できたらGAS側も整備してくれ」
 - 区分: 便1 = 通常 PR（migrations・deploy.yml・本番 scripts を含まない）。便2 = 危険 PR（migrations を含む・列削除）。
 
@@ -41,19 +41,19 @@ SQLite のテスト経路は同じ形で `type_master`（スキーマ名なし�
 
 backend/app/schemas/inventory_offers.py:111 と :152 の `tcg_type: str | None = None` → `work_code: str | None = None`（コメントは「作品の符号（products.work_id → type_master.code）」）。
 
-### 3-2. 在庫の集計 backend/app/services/inventory_aggregated_service.py・inventory_aggregation.py・routers/inventory_aggregated.py・schemas/inventory_aggregated.py
+### 3-2. 在庫の集計 backend/app/services/inventory_aggregated_service.py・inventory_aggregation.py・backend/app/routers/inventory_aggregated.py・backend/app/schemas/inventory_aggregated.py
 - `_load_products`（service :28-45）: `SELECT DISTINCT p.id, p.name, p.tcg_type` → `SELECT DISTINCT p.id, p.name, tm.code AS work_code`、FROM に `LEFT JOIN public.type_master tm ON tm.id = p.work_id`、絞り込み `AND p.tcg_type = :category` → `AND tm.code = :category`（引数名 category は既存の API 契約なので変えない）。
-- service :76-78、:88-90、:96-102、:110 と inventory_aggregation.py:44,71,247,352、schemas/inventory_aggregated.py:6,22,33、router :5,51,61,75 の `tcg_type` を `work_code` に揃える（タブは distinct work_code の昇順）。docstring の「tcg_type で絞る」は「work_id の作品の符号で絞る」に直す。
+- service :76-78、:88-90、:96-102、:110 と inventory_aggregation.py:44,71,247,352、backend/app/schemas/inventory_aggregated.py:6,22,33、router :5,51,61,75 の `tcg_type` を `work_code` に揃える（タブは distinct work_code の昇順）。docstring の「tcg_type で絞る」は「work_id の作品の符号で絞る」に直す。
 
-### 3-3. 在庫検索 backend/app/services/inventory_search.py・routers/inventory_search.py・schemas/inventory_search.py
+### 3-3. 在庫検索 backend/app/services/inventory_search.py・backend/app/routers/inventory_search.py・backend/app/schemas/inventory_search.py
 - :346-347 `p.tcg_type,` → `tm.code AS work_code,`（同 SELECT の products JOIN の次に `LEFT JOIN public.type_master tm ON tm.id = p.work_id`）。:104-107 の項目と :445、router :125、schema :65 を `work_code` に。
 - 実装者は変更の前に、検索結果の `tcg_type` を読む backend の処理（見積・請求の明細の取り込み）を `git grep -n "tcg_type" -- backend/app` で確かめる。§3-1〜3-5 の一覧に無い読み手があれば、手を付けずに止めて報告する（想定分岐 B1）。
 
-### 3-4. 商品 API backend/app/routers/products.py・schemas/product.py
+### 3-4. 商品 API backend/app/routers/products.py・backend/app/schemas/product.py
 - 一覧の SELECT（:152）: `tcg_type` → `tm.code AS work_code`（products の FROM に type_master の LEFT JOIN）。
 - 一覧の引数（:186）と絞り込み（:246-248）: `tcg_type` → `work_code`、`tcg_type = :tcg_type` → `tm.code = :work_code`。
 - 書く側: `_UPDATABLE_COLUMNS` の `"tcg_type"`（:71）、`_validate_tcg_type`（:112-133）、POST の検査（:402-403）と INSERT 列・値（:437,447）、PATCH の検査（:525-526）を消す。
-- schemas/product.py: ProductCreate（:63）・ProductUpdate（:111）から `tcg_type` を消す。ProductResponse（:181）は `tcg_type` → `work_code: str | None = None`。単票の GET /products/{id} の SELECT も同じく `tm.code AS work_code` を返す（ProductResponse を返す全 SELECT を揃える）。
+- backend/app/schemas/product.py: ProductCreate（:63）・ProductUpdate（:111）から `tcg_type` を消す。ProductResponse（:181）は `tcg_type` → `work_code: str | None = None`。単票の GET /products/{id} の SELECT も同じく `tm.code AS work_code` を返す（ProductResponse を返す全 SELECT を揃える）。
 - GET /products/tcg-types（:285-312）は変えない（type_master の一覧で、products.tcg_type を読まない）。
 
 ### 3-5. フロントエンド
@@ -143,6 +143,7 @@ conftest.py:812 の SQLite products 表から `tcg_type` 列を消す。rls_boot
 戻し方: 便1 は revert PR。便2 は列を足し直せないため、値が要るときは CSV と pg_dump から読む。
 
 ## 8. 維持の仕組み
+- 守り手: backend/tests/test_inventory_distribution_rows_pg.py（work_id だけで work_code の絞り込みに出ることを毎回の CI で確かめる）
 - 作品の判定は type_master の JOIN 1か所の書き方に揃え、写しの列が無いので写し忘れが起きない。
 - 4-1 の「ADD を戻さない」コメントと CI migration-guard Check 10（同じ列の ADD→DROP を止める）。
 - 追加するテスト（K3）が、work_id だけで在庫表のタブに出ることを毎回の CI で守る。

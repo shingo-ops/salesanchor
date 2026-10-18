@@ -29,7 +29,7 @@ _BASE_SELECT（:60-80）。使われるのは :96（`WHERE i.id = :id` の単票
 :76      LEFT JOIN public.suppliers s ON s.id = i.supplier_id
 :77      LEFT JOIN public.products  p ON p.id = i.product_id
 ```
-注: 抜粋の行頭の数字は目安。`p.tcg_type AS tcg_type` の実位置は :73（g_tcg_type_all.txt）。応答の型は schemas/inventory_offers.py:111（`tcg_type: str | None = None`、InventoryOffer 系。コメント「ADR-093: オファー画面の列順を在庫表に揃えるため products 由来の表示列」）。
+注: 抜粋の行頭の数字は目安。`p.tcg_type AS tcg_type` の実位置は :73（g_tcg_type_all.txt）。応答の型は backend/app/schemas/inventory_offers.py:111（`tcg_type: str | None = None`、InventoryOffer 系。コメント「ADR-093: オファー画面の列順を在庫表に揃えるため products 由来の表示列」）。
 
 GET /inventory の配信行（本命）:
 ```
@@ -59,7 +59,7 @@ inventory_offers.py:293  join = "LEFT JOIN public.products pp ON pp.id = x.produ
 
 **inventory_aggregated 系（GET /inventory/aggregated）**
 ```
-services/inventory_aggregated_service.py:28-45 (_load_products)
+backend/app/services/inventory_aggregated_service.py:28-45 (_load_products)
   """in_stock 在庫を持つ商品を一括取得。category 指定時は tcg_type で絞る。N+1 回避。"""
   SELECT DISTINCT p.id, p.name, p.tcg_type
   FROM public.products p JOIN public.inventory i ON i.product_id = p.id
@@ -70,23 +70,23 @@ services/inventory_aggregated_service.py:28-45 (_load_products)
 :96-102 # タブ (distinct tcg_type, 昇順)   tabs = sorted(tabs_set)
 :110    "tcg_type": series_to_tcg.get(series),
 ```
-- 呼び出し元: backend/app/main.py:625 でルータ登録のみ。frontend/src に `inventory/aggregated` の呼び出し 0 件（`git grep -E "inventory/aggregated|inventory_aggregated" -- frontend/src` が 0）。用途は「series（商品名）×コンディションのピボット」で、tabs は tcg_type の重複なし昇順（応答 schemas/inventory_aggregated.py:6,22,33）。
-- services/inventory_aggregation.py:44,71（データクラスの項目 `tcg_type: str | None = None`）、:247（`tcg_type=_optional_text(_get_value(source, ("tcg_type",)))` 入力辞書から読む）、:352（`tcg_type=selected.tcg_type` 結果へ持ち回す）。集計ロジック自体は tcg_type で分岐しない（集計規則は :389 の public.inventory_aggregation_rules）。呼び出し元は inventory_aggregated_service.py:12 のみ。
+- 呼び出し元: backend/app/main.py:625 でルータ登録のみ。frontend/src に `inventory/aggregated` の呼び出し 0 件（`git grep -E "inventory/aggregated|inventory_aggregated" -- frontend/src` が 0）。用途は「series（商品名）×コンディションのピボット」で、tabs は tcg_type の重複なし昇順（応答 backend/app/schemas/inventory_aggregated.py:6,22,33）。
+- backend/app/services/inventory_aggregation.py:44,71（データクラスの項目 `tcg_type: str | None = None`）、:247（`tcg_type=_optional_text(_get_value(source, ("tcg_type",)))` 入力辞書から読む）、:352（`tcg_type=selected.tcg_type` 結果へ持ち回す）。集計ロジック自体は tcg_type で分岐しない（集計規則は :389 の public.inventory_aggregation_rules）。呼び出し元は inventory_aggregated_service.py:12 のみ。
 
 **inventory_search（GET /inventory/search）**
 ```
-services/inventory_search.py:104-107  # mark=型番 / tcg_type=TCG 種別。見積/請求の明細行に引き込んで使う。
+backend/app/services/inventory_search.py:104-107  # mark=型番 / tcg_type=TCG 種別。見積/請求の明細行に引き込んで使う。
                                        mark: str | None = None
                                        tcg_type: str | None = None
 :346-347  p.mark,
           p.tcg_type,
 :445      tcg_type=r.get("tcg_type"),
 ```
-- routers/inventory_search.py:125 と schemas/inventory_search.py:65 で応答に出す。呼び出し元の画面: frontend/src/components/InventorySearchBar.tsx:179（`/inventory/search?q=...`）。応答型は :56 で宣言されるが値は読まない。InventorySearchBar を import する画面は git grep で .stories.tsx 以外に見つからない（`git grep -n InventorySearchBar -- frontend/src` が同ファイル自身と stories のみ）。見積・請求の明細に取り込む処理（バックエンド側）が tcg_type を使うかは未確認【未確認】。
+- backend/app/routers/inventory_search.py:125 と backend/app/schemas/inventory_search.py:65 で応答に出す。呼び出し元の画面: frontend/src/components/InventorySearchBar.tsx:179（`/inventory/search?q=...`）。応答型は :56 で宣言されるが値は読まない。InventorySearchBar を import する画面は git grep で .stories.tsx 以外に見つからない（`git grep -n InventorySearchBar -- frontend/src` が同ファイル自身と stories のみ）。見積・請求の明細に取り込む処理（バックエンド側）が tcg_type を使うかは未確認【未確認】。
 
 **products API**
 ```
-routers/products.py:61-80 (_UPDATABLE_COLUMNS) ... # ADR-090 PR5a: TCG 種別マスタ統一  "tcg_type",
+backend/app/routers/products.py:61-80 (_UPDATABLE_COLUMNS) ... # ADR-090 PR5a: TCG 種別マスタ統一  "tcg_type",
 :112-133 async def _validate_tcg_type(db, tcg_type): type_master.code に無ければ 400
          "tcg_type は type_master.code に存在する値か NULL のみ指定できます"
 :152   SELECT 列に tcg_type（一覧）        :186 Query tcg_type    :246-248 filter `tcg_type = :tcg_type`
@@ -109,7 +109,7 @@ async def list_product_tcg_types(db, current_user):
 返す形は `[{"code": str, "name_ja": str}]`。id は返さない。
 
 ### a-2 バックエンド（書く）
-- 書く経路は products.py の PATCH（:71,525）と POST（:402,437,447）のみ。work_id は `_UPDATABLE_COLUMNS`（:61-80）に無く、PATCH で更新できない。schemas/product.py に work_id は 0 件で、products API は work_id を受け取りも返しもしない。
+- 書く経路は products.py の PATCH（:71,525）と POST（:402,437,447）のみ。work_id は `_UPDATABLE_COLUMNS`（:61-80）に無く、PATCH で更新できない。backend/app/schemas/product.py に work_id は 0 件で、products API は work_id を受け取りも返しもしない。
 - POST /products（PG）は :419 で `"work_id": None` を検査に渡すため必ず 422（REQUIRED_FIELDS_MISSING:work_id）になる（docs/specs/product-master/registration-rules.md:76 も同旨）。
 - backend/app/services/tcg_product_master_svc.py:566-573 の共用商品登録は work_id を入れ、tcg_type は入れない（79 件 NULL の原因）。
 - CSV 取り込み・書き出し（tcg_product_import*、tcg_product_roundtrip_svc）、Celery、discord_gateway、scripts（seed_tcg_series* 以外）、.github に products.tcg_type を書く処理は 0 件（g_tcg_type_all.txt）。
@@ -190,7 +190,7 @@ async def list_product_tcg_types(db, current_user):
 ## b. タブの定義元と URL パラメータ
 - タブの定義: InventoryPage.tsx:533-560（§a-3）。値は type_master.code。一覧の出どころは GET /products/tcg-types（products.py:285-312）。
 - URL パラメータ名 `tcg_type` を送る画面は InventoryPage.tsx:189（→GET /inventory）と ProductsPage.tsx:139（→GET /products）の 2 つだけ。GAS・外部・.github・docs/ai-agents に `tcg_type=` の呼び出し 0 件。
-- GET /inventory/aggregated は別名 `category`（routers/inventory_aggregated.py:51 付近）で、frontend の呼び出し 0 件。
+- GET /inventory/aggregated は別名 `category`（backend/app/routers/inventory_aggregated.py:51 付近）で、frontend の呼び出し 0 件。
 - frontend/api-contract/openapi.json に tcg_type が 27 行。api-contract-check.yml が差分で失敗にする。
 
 ## c. type_master の構造（本番）
@@ -257,7 +257,7 @@ NULL 79 件の内訳（c6.out、work_id: 件数）: 1:16／2:14／3:2／4:3／5:
 
 ## i. tcg_type を書く・返す箇所（全部）
 - 入力: ProductCreate/ProductUpdate（backend/app/schemas/product.py:63,111）、PATCH 更新可能列（products.py:71）。
-- 出力: ProductResponse（schemas/product.py:181）、GET /inventory の行（schemas/inventory_offers.py:152、inventory_offers.py:173）、InventoryOffer 系（schemas/inventory_offers.py:111、inventory_offers.py:73）、GET /inventory/aggregated（schemas/inventory_aggregated.py:22,33）、GET /inventory/search（schemas/inventory_search.py:65）。
+- 出力: ProductResponse（backend/app/schemas/product.py:181）、GET /inventory の行（backend/app/schemas/inventory_offers.py:152、inventory_offers.py:173）、InventoryOffer 系（backend/app/schemas/inventory_offers.py:111、inventory_offers.py:73）、GET /inventory/aggregated（backend/app/schemas/inventory_aggregated.py:22,33）、GET /inventory/search（backend/app/schemas/inventory_search.py:65）。
 - 画面の入力: ProductEditPage.tsx:241-251 のみ。work_id の入力画面は products 系に無い。work_id を入れるのは TCG 商品マスタ登録（tcg_product_master_svc.py:566-573）と CSV（tcg_product_import*）。
 - CSV・seed・scripts・Celery・GAS・外部連携: products.tcg_type を書く・返すものは 0 件。openapi.json の 27 行は API 契約の写し。
 
