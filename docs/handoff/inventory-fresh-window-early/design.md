@@ -25,7 +25,7 @@ PO 決定 2026-10-18「y」: 「24時間以内」ON のとき、絞り込みの�
 - fresh_only=false のときの SQL（変更前と同じ文字列であること）
 
 ## 等しさの根拠（recon「変わるもの・変わらないもの」）
-並び・まとめ・件数・ページは不変。絞り込み候補だけが24h内に縮む。前提は「rows_f の `d.posted_ts` が dist_base の `sm.line_posted_at` と同じ値」であること。実装担当が `tcg_distribution_svc.py` で posted_ts の出どころを確認し、違えば停止して報告する。
+並び・まとめ・件数・ページは不変。絞り込み候補だけが24h内に縮む。前提は「rows_f の `d.posted_ts` が dist_base の `sm.line_posted_at` と同じ値」であること。確認済み（2026-10-18）: dist_base の `sm.line_posted_at AS posted_ts`（`backend/app/services/tcg_distribution_svc.py:321`）が rows_f の d.posted_ts と同じ列。
 
 ## 受入条件
 |基準|検証方法|
