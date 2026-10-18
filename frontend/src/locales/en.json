@@ -4050,7 +4050,37 @@
     "requiredMissingConfirmable": "Not entered yet. Enter a value, or tick \"checked, none exists\" below if there is none.",
     "requiredFieldsMissing": "Cannot register because required fields are empty: {{fields}}. Enter them. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
     "requiredFieldsCleared": "{{fields}} cannot be left empty. Enter a value. For English name, model number, release date and exclusion keywords, tick \"checked, none exists\" if there is none.",
-    "create": "Create"
+    "create": "Create",
+    "packaging": {
+      "heading": "Packaging (count and weight)",
+      "description": "Register how many items a case, box or pack holds, the weight of one unit, and the source. Choose the source again whenever you change a value.",
+      "unitLabel": "{{unit}}",
+      "count": "Number of {{contained}} in one {{unit}}",
+      "weight": "Weight of one {{unit}} (kg)",
+      "source": "Source",
+      "urls": "Source URLs",
+      "urlsHint": "Enter one URL per line.",
+      "note": "Note",
+      "updatedAt": "Last updated",
+      "sources": {
+        "official": "Official",
+        "official_store": "Official store",
+        "retailer": "Retailer",
+        "measured": "Measured",
+        "legacy": "Old value (no source)"
+      },
+      "errors": {
+        "PACKAGING_UNKNOWN_UNIT": "The packaging unit is not valid. Reload the latest content.",
+        "PACKAGING_DUPLICATE_UNIT": "The same packaging unit appears more than once.",
+        "PACKAGING_SOURCE_MISMATCH": "The value and source do not match. Choose a source when a value is entered, and clear the source and URLs when the value is empty.",
+        "PACKAGING_URLS_REQUIRED": "Source URLs are missing. Official and official store need at least 1, retailer needs at least 2.",
+        "PACKAGING_DUPLICATE_URL": "Source URLs contain duplicates.",
+        "PACKAGING_INVALID_URL": "A source URL is not valid. Enter URLs starting with http or https.",
+        "PACKAGING_LEGACY_NOT_ALLOWED": "\"Old value (no source)\" cannot be chosen. Choose a source again after changing the value.",
+        "PACKAGING_NOTE_WITHOUT_VALUE": "A note cannot be kept when both values are empty.",
+        "PACKAGING_SHARED_ONLY": "Packaging can only be registered on shared products."
+      }
+    }
   },
   "soldOut": {
     "searchAction": "Search",
