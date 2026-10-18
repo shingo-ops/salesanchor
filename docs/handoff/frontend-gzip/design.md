@@ -17,7 +17,7 @@
 | 本番の main JS が圧縮で届く | `curl -sI -H 'Accept-Encoding: gzip' https://app.salesanchor.jp/assets/<main JS>` に `content-encoding: gzip` がある | デプロイ後に実行 |
 | 転送量 | `curl -s -H 'Accept-Encoding: gzip' -o /dev/null -w '%{size_download}'` が 700,000 byte 以下（変更前 2,363,610） | 同上 |
 | 中身が同じ | 圧縮で取得し `gunzip` した結果の sha256 が、圧縮なしで取得したものと一致 | 同上 |
-| 画面が開く | `https://app.salesanchor.jp/` が 200、デプロイの smoke・Verify deployment が success | deploy.yml の結果 |
+| 画面が開く | `https://app.salesanchor.jp/` が 200、デプロイの Verify deployment が success（Post-deploy smoke は migrations 変更時のみ走るため本便では skipped の見込み、`.github/workflows/deploy.yml:584-585`） | deploy.yml の結果と curl |
 | 圧縮しない要求にも応える | Accept-Encoding なしの要求は content-encoding なし・content-length 2,363,610 前後 | 同上 |
 
 ## 変更前 → 変更後
@@ -59,6 +59,7 @@ frontend/nginx.conf の server ブロック内（`listen 8080;` の後、最初�
 - nginx 公式仕様（nginx.org ngx_http_gzip_module）を設定値の根拠とする
 
 ## 維持の仕組み
+- 守り手: 人手で守る（frontend/nginx.conf を検査する CI・テストが 0 件のため。受入の curl 手順を本書に残し、次の便の前後測定で同じ手順を再実行して content-encoding: gzip を確認する）
 - frontend/nginx.conf のコメントに本設計への参照を残す。受入の curl 手順を本書に残し、次の便（便2）の前後測定でも同じ手順で転送量を確認する
 
 ## 実装担当への指示
