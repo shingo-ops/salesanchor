@@ -94,7 +94,7 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
 
 ## 3. 観測した事実
 ### 3-1. 実装の手元検証（リポジトリは変更せず、スクラッチのプラグインで関数を差し替えて実行）
-- ファイル: `/tmp/CC報告ファイル/mark_exact_match_design/r1_check.py`（検証本体）・`r1_check_out.txt`（生出力）・plug/r1_plugin.py（pytest 用差し替え）
+- ファイル: /tmp/CC報告ファイル/mark_exact_match_design/r1_check.py（検証本体）・`r1_check_out.txt`（生出力）・plug/r1_plugin.py（pytest 用差し替え）
 - 先読みに使うハイフン類の集合: `\-` U+2010 U+2011 U+2012 U+2013 U+2014 U+2015 U+2212 U+30FC（シミュレーションの variants.py と同じ。U+2012 を含む点だけ `_CODE_SEPARATOR_CHARS` と違う）
 - 生出力（`r1_check_out.txt`）の要点（値 → 原文 → 現行 / R1）:
   - `EB-02` → `EB02-003 チョッパーズ`: True → **False**

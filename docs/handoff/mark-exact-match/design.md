@@ -1,6 +1,6 @@
 # design: 型番の照合で「型番の後ろに -数字 が続くとき」は当てない（案R1）
 
-- 関連ADR: ADR-1006（照合は mark だけで行う。本件はその**境界の作り方**であり、方針は変えない）、ADR-135・ADR-136（本番投入前のGO）。ADR の新規起案は不要（recon.md §1 結論）
+- 関連ADR: ADR-1006-product-code-pm5-and-mark-only-matching（ADR-1006。照合は mark だけで行う。本件はその**境界の作り方**であり、方針は変えない）、ADR-135・ADR-136（本番投入前のGO）。ADR の新規起案は不要（recon.md §1 結論）
 - recon: docs/handoff/mark-exact-match/recon.md
 - 先行設計（同じ共有関数の境界の調整）: docs/handoff/line-match-price-digit-boundary/design.md
 - 設計仕様書（あるべき姿）: docs/specs/line-analysis-tuning/README.md（既存の延長・修正。STANDARD-WORKFLOW §1.8）
