@@ -73,7 +73,7 @@ describe("buildInventoryColumns", () => {
   });
 });
 
-describe("block badges (ADR-1014 改訂 2026-10-19（2）)", () => {
+describe("block badges (ADR-1014 rev 2026-10-19 (2))", () => {
   const cell = (key: string, r: InventoryRow) => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
     render(<div data-testid="cell">{cols.find((c) => c.key === key)!.renderCell!(r, "r1")}</div>);

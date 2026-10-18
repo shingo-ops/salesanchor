@@ -61,7 +61,7 @@ describe("viewer value formatting", () => {
   });
 });
 
-describe("viewer block badges (ADR-1014 改訂 2026-10-19（2）)", () => {
+describe("viewer block badges (ADR-1014 rev 2026-10-19 (2))", () => {
   it("shows the cheapest badge in the price cell and the most-stock badge in the quantity cell", () => {
     const price = cell("unit_price", { ...base, badge_cheapest: true } as never);
     expect(price.container.querySelector('[data-testid="block-badge-cheapest"]')?.textContent).toBe(ja.viewer.badge.cheapest);
