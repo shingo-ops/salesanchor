@@ -18,7 +18,7 @@
 ### 在庫表が変わる経路と今の合図
 - 在庫表 API: `backend/app/routers/inventory_offers.py:323-436`（products.view）。行は `backend/app/services/tcg_distribution_svc.py:304-372`（public スキーマの analysis_results ほか）。
 - 書き込みの主経路は Celery の抽出 `tcg.extract_source_message` と、人の直し後のやり直し `tcg.v102_reanalyze_after_correction`。どちらも終わりで `_publish_review_changed()`（`backend/app/tasks/tcg_extraction.py:724-731`、`publish_change_sync("tcg.review", "global")`）を呼ぶ（`backend/app/tasks/tcg_extraction.py:756`・`:830`）。
-- review-ack・revoke・value-override（v102）は保存後に `enqueue_v102_reanalyze` を積む（`backend/app/routers/item_corrections.py:215`・`:249`・`:293`）ので、やり直し完了で上の合図が出る。corrections・`tcg_v102_posts.py:175`・`tcg_review_csv_svc.py:283` も同じ。
+- review-ack・revoke・value-override（v102）は保存後に `enqueue_v102_reanalyze` を積む（`backend/app/routers/item_corrections.py:215`・`:249`・`:293`）ので、やり直し完了で上の合図が出る。corrections・`backend/app/routers/tcg_v102_posts.py:175`・`backend/app/services/tcg_review_csv_svc.py:283` も同じ。
 - 合図が出ない経路: マスタ（products・conditions・suppliers など）を直す API、配信設定の更新（`backend/app/realtime/topics.py` で `_PENDING`）、v6 の投稿の直し3経路（value-override の v6 分岐 `backend/app/routers/item_corrections.py:293` の else、状態直しの v6 分岐 `backend/app/routers/item_corrections.py:124-131`、corrections の v6 分岐 `backend/app/routers/item_corrections.py:184-188`。いずれも即時 UPDATE のあと配信予約だけ積む）、時間経過で窓（`backend/app/services/tcg_distribution_svc.py:217-227`）から外れる行。
 - 画面: `frontend/src/pages/inventory/InventoryPage.tsx:175-224` の自前 `load`（react-query なし）。成功時だけ items を差し替える（:210）。読み込み表示は場所を確保した `visibility` 切替（:524-530）。古い応答は `loadSeqRef` で捨てる（:171, :209）。InventoryPage は今は合図を受けない（スライドの `frontend/src/features/inventory/InventoryRowDrawer.tsx:85` だけが tcg.review を受ける＝super admin でスライドを開いたときだけ）。
 
@@ -28,7 +28,7 @@
 
 ### 影響する試験
 - `backend/tests/test_realtime_middleware.py`（:120 他社に届かない・:129 global は super admin のみ）、`backend/tests/test_realtime_topics.py`（:27・:41・:55-60）、`backend/tests/test_analysis_failed_record.py:124` と `backend/tests/test_reextract_v6_with_v102_pg.py:52`（`_publish_review_changed` を差し替え）。
-- frontend: `frontend/src/hooks/useRealtimeRefresh.test.tsx`、在庫表の試験5本（`frontend/src/pages/inventory/InventoryPage.*.test.tsx`、全て RealtimeProvider なしで描画＝フックは何もしない）。
+- frontend: `frontend/src/hooks/useRealtimeRefresh.test.tsx`、在庫表の試験5本（`frontend/src/pages/inventory/InventoryPage.noechopatch.test.tsx`・`frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx`・`frontend/src/pages/inventory/InventoryPage.settings.test.tsx`・`frontend/src/pages/inventory/InventoryPage.singlefetch.test.tsx`・`frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx`、全て RealtimeProvider なしで描画＝フックは何もしない）。
 
 ## 未確認
 - 本番で一般利用者の SSE 接続が実際に張られているかの数（ログ未確認）。design.md の K6b で観測する（見分けられなければ保留）。

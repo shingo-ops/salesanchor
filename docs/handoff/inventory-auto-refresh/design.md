@@ -114,7 +114,7 @@ ADR-1016 に「改訂 2026-10-18」節を足す（本文の決定1〜9は書き�
 |K1 rt:shared の合図が super admin でない利用者の接続に届く|pytest `test_shared_signal_to_every_connection`|
 |K2 rt:global は今までどおり super admin だけ、rt:t は他社に届かない|既存 pytest :120・:129 が緑|
 |K3 抽出とやり直しの終わりで tcg.inventory（shared）が1回出る|pytest（publish の記録）|
-|K4 在庫表は tcg.inventory を受けて5秒後に1回だけ読み直す。自分の合図・tcg.review では読み直さない|vitest `InventoryPage.autorefresh.test.tsx`|
+|K4 在庫表は tcg.inventory を受けて5秒後に1回だけ読み直す。自分の合図・tcg.review では読み直さない|vitest `frontend/src/pages/inventory/InventoryPage.autorefresh.test.tsx`|
 |K5 既存の在庫表試験5本・合図の試験・型検査・lint・CI 必須チェックが緑|PR の CI|
 |K6 本番で、super admin のアカウントで在庫表をタブ前面のまま開き触らない間に、抽出の完了（worker ログの `tcg.extract_source_message` の succeeded）から10秒以内に /api/v1/inventory の GET が1件以上増える（配線が本番でつながっている確認）|デプロイ後、worker ログの完了時刻と backend アクセスログの GET 時刻を照合（主）。PO の画面目視（行が入れ替わる）|
 |K6b 本番で、super admin でない利用者の画面にも届く（今回の本題）|反映後、super admin でない利用者が在庫表を開いている時間帯に、backend ログで利用者を見分けて K6 と同じ照合をする。ログで利用者を見分けられない場合は「未観測・保留」と記録し、合格扱いにしない（その場合の確認は、super admin でないアカウントで PO が画面を開いて目視）。試験上の保証は K1|
