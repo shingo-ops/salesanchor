@@ -29,6 +29,8 @@ import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
+import { TOPICS } from "../../lib/realtime/topics";
 
 interface SupplierFacet {
   id: number;
@@ -98,10 +100,19 @@ const HIDEABLE_COLUMNS = [
   "mark", "condition", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
+// ADR-1016 改訂 2026-10-18: 在庫が変わった合図で読み直す。抽出が続く時間帯でも 5 秒に 1 回まで。
+// 同じ合図が全員に同時に届くので、ページごとに 0〜3 秒ずらして読み直しが一度に集まらないようにする
+const INVENTORY_TOPICS = [TOPICS.tcgInventory] as const;
+const INVENTORY_REFRESH_DEBOUNCE_MS = 5_000;
+const INVENTORY_REFRESH_JITTER_MS = 3_000;
+
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const [refreshDebounceMs] = useState(
+    () => INVENTORY_REFRESH_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
+  );
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -227,6 +238,10 @@ export default function InventoryPage() {
     if (!filtersLoaded) return;
     void load();
   }, [load, filtersLoaded]);
+
+  useRealtimeRefresh(INVENTORY_TOPICS, () => {
+    if (filtersLoaded) void load();
+  }, { debounceMs: refreshDebounceMs });
 
   // 種別マスタを取得（カテゴリー列の日本語表示用）。
   useEffect(() => {

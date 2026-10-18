@@ -722,11 +722,13 @@ def schedule_distribution() -> bool:
 
 
 def _publish_review_changed() -> None:
-    """ADR-1016: 要確認の一覧が変わったことを合図する。失敗しても仕事は失敗させない。"""
+    """ADR-1016: 要確認の一覧と在庫表が変わったことを合図する。失敗しても仕事は失敗させない。"""
     try:
         from app.realtime.publisher import publish_change_sync
+        from app.realtime.topics import TASK_TOPICS, TOPIC_TCG_INVENTORY
 
         publish_change_sync("tcg.review", "global")
+        publish_change_sync(TOPIC_TCG_INVENTORY, TASK_TOPICS[TOPIC_TCG_INVENTORY])
     except Exception as exc:  # noqa: BLE001
         logger.warning("[tcg_extraction] realtime publish skipped: %s", exc)
 
