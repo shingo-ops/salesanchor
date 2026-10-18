@@ -703,6 +703,44 @@ class TestMatchProductStrictCodes:
         for text in ("◆EB-01", "EB01 メモリアル"):
             assert self._hits(text, [dash, plain], strict_codes=True) == (1, 2)
 
+    def test_code_does_not_hit_card_number_with_hyphen_digits(self):
+        eb02 = _product(id_=1, mark="EB-02")
+        card = _product(id_=2, mark="EB02-003")
+        for text in ("EB02-003 チョッパーズ 50@1700", "EB02-003 / 20個@1000"):
+            assert self._hits(text, [eb02], strict_codes=True) == ()
+            assert self._hits(text, [eb02, card], strict_codes=True) == (2,)
+        assert self._hits("EB02-003 / 20個@1000", [eb02]) == (1,)
+
+    @pytest.mark.parametrize(
+        "text",
+        ["OP01", "OP-01", "【OP-01】", "OP01×2", "ＯＰ－０１", "OP-01 BOX", "OP01-BOX", "OP-01-BOX"],
+    )
+    def test_code_still_hits_other_writings(self, text):
+        op01 = _product(id_=1, mark="OP-01")
+        assert self._hits(text, [op01], strict_codes=True) == (1,)
+
+    @pytest.mark.parametrize(
+        "text",
+        ["OP01-001", "OP01-001 リーダー", "OP01−001", "OP01‐001", "OP01ー001"],
+    )
+    def test_code_does_not_hit_card_number_any_hyphen(self, text):
+        op01 = _product(id_=1, mark="OP-01")
+        assert self._hits(text, [op01], strict_codes=True) == ()
+
+    def test_code_hits_when_both_card_number_and_plain_code_in_text(self):
+        op01 = _product(id_=1, mark="OP-01")
+        assert self._hits("OP01-001 と OP-01 BOX", [op01], strict_codes=True) == (1,)
+
+    def test_code_like_search_keyword_does_not_hit_card_number(self):
+        product = _product(id_=1, search_keywords=("EB02",))
+        assert self._hits("EB02-003", [product], strict_codes=True) == ()
+        assert self._hits("EB02 BOX", [product], strict_codes=True) == (1,)
+
+    def test_code_like_exclude_keyword_does_not_exclude_on_card_number(self):
+        product = _product(id_=1, mark="ABC12", exclude_keywords=("EB02",))
+        assert match_product("ABC12 EB02-003", [product], strict_codes=True).status == "matched"
+        assert match_product("ABC12 EB02", [product], strict_codes=True).status == "unmatched"
+
     def test_apostrophe_variants_hit(self):
         day = _product(id_=1, search_keywords=("DAY'25",))
         assert self._hits("DAY’25", [day], strict_codes=True) == (1,)
