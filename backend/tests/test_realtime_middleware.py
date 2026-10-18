@@ -60,7 +60,10 @@ async def _post(app, path, headers=None):
 
 
 async def _drain():
-    await asyncio.gather(*list(mw._pending))
+    # mw._pending はモジュール共通。同じプロセスで先に走った別の試験（TestClient 等、別のイベントループ）が
+    # 残した task が混ざるので、今のループの task だけを待つ（別ループの task を gather すると ValueError）
+    loop = asyncio.get_running_loop()
+    await asyncio.gather(*[t for t in list(mw._pending) if t.get_loop() is loop])
 
 
 async def test_2xx_sends_and_4xx_does_not(monkeypatch):
