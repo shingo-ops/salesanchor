@@ -156,6 +156,13 @@ async def seed_aggregated_dataset():
 
     eng = create_async_engine(_PG_URL, echo=False)
 
+    # 作品の符号は products.work_id → type_master.code（ADR-1030）。
+    # type_master は既存の bootstrap（migration 適用＋seed 12 種別）から得る。
+    # bootstrap 内部でも同じ lock を取るため、下の lock ブロックより前に呼ぶ。
+    from tests.rls_bootstrap import bootstrap_public_products
+
+    await bootstrap_public_products(eng)
+
     # ── テーブル bootstrap (IF NOT EXISTS → 冪等) ──────────────────────────
     async with public_bootstrap_lock(eng), eng.begin() as conn:
         await conn.execute(
@@ -170,25 +177,6 @@ async def seed_aggregated_dataset():
                     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """)
-        )
-        # 作品の符号は products.work_id → type_master.code（ADR-1030）
-        await conn.execute(
-            text("""
-                CREATE TABLE IF NOT EXISTS public.type_master (
-                    id         SERIAL PRIMARY KEY,
-                    code       VARCHAR(50) NOT NULL UNIQUE,
-                    name_ja    VARCHAR(100) NOT NULL,
-                    name_en    VARCHAR(100),
-                    sort_order INTEGER NOT NULL DEFAULT 100,
-                    is_active  BOOLEAN NOT NULL DEFAULT TRUE
-                )
-            """)
-        )
-        await conn.execute(
-            text(
-                "INSERT INTO public.type_master (code, name_ja) "
-                "VALUES ('pokemon_booster_box', 'ポケモン'), ('yugioh', '遊戯王') ON CONFLICT (code) DO NOTHING"
-            )
         )
         # migration 062 のフルスキーマに合わせる（product_code / jan_code 等の列と
         # その INDEX が 062 で作成されるため、先に最小テーブルを作ると列が欠落して
