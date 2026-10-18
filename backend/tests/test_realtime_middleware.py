@@ -135,6 +135,15 @@ def test_global_signal_only_to_super_admin():
     assert sa.queue.get_nowait() == {"topic": "tcg.review", "origin": "o1"}
 
 
+def test_shared_signal_to_every_connection():
+    hub = RealtimeHub()
+    t1, t2, sa = _conn(1), _conn(2), _conn(1, sa=True)
+    hub._conns.update({t1, t2, sa})
+    hub.dispatch("rt:shared", '{"topic":"tcg.inventory","origin":null}')
+    for c in (t1, t2, sa):
+        assert c.queue.get_nowait() == {"topic": "tcg.inventory", "origin": None}
+
+
 def test_invalid_payload_is_ignored():
     hub = RealtimeHub()
     c = _conn(1, sa=True)

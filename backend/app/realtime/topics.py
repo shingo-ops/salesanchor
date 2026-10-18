@@ -11,14 +11,21 @@ from __future__ import annotations
 
 SCOPE_TENANT = "tenant"
 SCOPE_GLOBAL = "global"
+SCOPE_SHARED = "shared"
 
 TOPIC_TCG_REVIEW = "tcg.review"
+TOPIC_TCG_INVENTORY = "tcg.inventory"
 
 # {(method, route_path): (topic, scope)}
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
+}
+
+# 書き込み API ではなく裏の処理（Celery）だけが出す topic → 範囲（ADR-1016 決定5）
+TASK_TOPICS: dict[str, str] = {
+    TOPIC_TCG_INVENTORY: SCOPE_SHARED,
 }
 
 _PENDING = "段階2で画面に当てるときに決める"

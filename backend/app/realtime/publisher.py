@@ -17,6 +17,7 @@ _base = os.getenv("REDIS_URL", "redis://redis:6379/0")
 RT_REDIS_URL = _base.rsplit("/", 1)[0] + "/3"
 
 CHANNEL_GLOBAL = "rt:global"
+CHANNEL_SHARED = "rt:shared"
 CHANNEL_TENANT_PREFIX = "rt:t:"
 CHANNEL_PATTERN = "rt:*"
 
@@ -31,6 +32,8 @@ def tenant_channel(tenant_id: int) -> str:
 def _channel_for(scope: str, tenant_id: Optional[int]) -> Optional[str]:
     if scope == "global":
         return CHANNEL_GLOBAL
+    if scope == "shared":
+        return CHANNEL_SHARED
     if scope == "tenant" and tenant_id is not None:
         return tenant_channel(tenant_id)
     return None
