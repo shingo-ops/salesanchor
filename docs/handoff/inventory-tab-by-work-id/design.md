@@ -73,6 +73,7 @@ backend/app/schemas/inventory_offers.py:111 と :152 の `tcg_type: str | None =
 ### 3-6. テスト・API 契約
 - backend テスト（recon §e）の `tcg_type` を使う期待を `work_code` に直す。追加するテスト（必須）: 「tcg_type が NULL で work_id=1 の商品の在庫行が、GET /inventory?work_code=pokemon_booster_box に出る」「work_id=2 の商品は出ない」。PG の既存テスト（test_inventory_distribution_rows_pg.py）に足すのを優先し、無理なら SQLite の test_inventory_distribution_rows.py に足す。商品一覧の `work_code` 絞り込みのテストも1つ足す。
 - 便1 では列は残るので、conftest.py:812・rls_bootstrap.py・test_products_tcg_type_fk.py は触らない（便2 で扱う）。
+- 実装中の変更（2026-10-18、Opus 判断）: backend/tests/test_products_tcg_type_fk.py の API 経由の部分（POST/PATCH で tcg_type を送って 400 を期待する検査）は、便1 で API から tcg_type の入力と検査を外したため成り立たない（CI 実行 39083662764 で失敗）。便1 でこの API 部分だけを消す。列への直接 INSERT で外部キーを確かめる部分は、列が残る便1 の間は有効なので残し、便2 でファイルごと消す。
 - frontend のテストと fixture の `tcg_type` を `work_code` に。CommerceNavigationButtonMigration.test.tsx の URL 期待は `work_code=` に。tests-e2e/product-edit-tcg-type.spec.ts は欄が消えるので削除し、PR 本文の削除欄に書く。tests-e2e/inventory-table-layout.spec.ts:41 は `work_code` に。
 - openapi.json は `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で作り直す（手で直さない）。
 

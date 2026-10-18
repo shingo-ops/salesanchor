@@ -29,3 +29,9 @@
 - 対象: 42a9c4e37。変更したのは backend/tests/test_inventory_aggregated.py だけ（7行追加・19行削除）。
 - 内容: test-schema-dup gate が、本番の表定義のコピーが 3 から 4 に増えたことを止めた。r2 で R2 として挙げた type_master のコピーを消し、既存の bootstrap_public_products（migration を適用して seed を入れる）から type_master を得るように変えた。
 - 結果: R2 も解消した。gate は手元で BASE=3 HEAD=3 になり pass（実装者の生出力 impl1/schema_dup_after.txt）。
+
+## r4 CI 指摘の修正の審査（2026-10-18、Opus）
+
+- CI 実行 39083662764 で backend pytest が3件失敗した。
+- 1) tests/test_inventory_bootstrap_lock.py の2件（NameError）: この試験は seed 関数の中の import を消してから実行する。そのため r3 で足した関数内 import が効かなかった。79d5f13b4 で試験側に代役を差し込んだ。共有 lock を取ってから DDL を流す順は実物と同じ。判定 APPROVE。
+- 2) tests/test_products_tcg_type_fk.py の1件: 便1 で API から tcg_type の入力を外したので、API 経由の検査は成り立たない。design.md §3-6 に追記したとおり、API 部分だけを消し、外部キーを直接確かめる部分は便2 まで残す。不足分の扱いは選択肢 A/B/C を比べて A に決めた。B（ファイルごと削除）を選ばなかった理由: 列が残っている間に外部キーが効いていることを、確かめ続けるため。
