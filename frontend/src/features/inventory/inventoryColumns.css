@@ -47,3 +47,8 @@
 .inventory-cell__condition--danger {
   color: var(--danger-text);
 }
+
+/* 価格・数量のセルで、値の右隣に置く「最安」「在庫最多」バッジの間隔（ADR-1014 改訂 2026-10-19（2）） */
+.inventory-cell__badge {
+  margin-inline-start: var(--space-1);
+}

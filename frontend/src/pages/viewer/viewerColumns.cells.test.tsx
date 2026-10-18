@@ -60,3 +60,22 @@ describe("viewer value formatting", () => {
     expect(formatPostedAt("")).toBe("");
   });
 });
+
+describe("viewer block badges (ADR-1014 改訂 2026-10-19（2）)", () => {
+  it("shows the cheapest badge in the price cell and the most-stock badge in the quantity cell", () => {
+    const price = cell("unit_price", { ...base, badge_cheapest: true } as never);
+    expect(price.container.querySelector('[data-testid="block-badge-cheapest"]')?.textContent).toBe(ja.viewer.badge.cheapest);
+    expect(price.container.querySelector('[data-testid="block-badge-most-stock"]')).toBeNull();
+    cleanup();
+    const qty = cell("quantity", { ...base, badge_most_stock: true } as never);
+    expect(qty.container.querySelector('[data-testid="block-badge-most-stock"]')?.textContent).toBe(ja.viewer.badge.mostStock);
+    expect(qty.container.querySelector('[data-testid="block-badge-cheapest"]')).toBeNull();
+  });
+  it("shows no badge when the flags are false or absent", () => {
+    const a = cell("unit_price", { ...base, badge_cheapest: false, badge_most_stock: false } as never);
+    expect(a.container.querySelector(".comp-badge")).toBeNull();
+    cleanup();
+    const b = cell("quantity", base);
+    expect(b.container.querySelector(".comp-badge")).toBeNull();
+  });
+});

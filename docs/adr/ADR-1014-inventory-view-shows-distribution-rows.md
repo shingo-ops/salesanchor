@@ -75,3 +75,20 @@ PO 決定（2026-10-19）「y」（価格などで並べても、商品の順番
 - GAS との既知の差（揃えない）: GAS は product_id を持たない。文字の比べ方（GAS は数字を数として比べ、大文字と小文字を区別しない）。選んだ列の空欄（GAS は常に末尾）。
 - 変えないもの: 既定の並び、`sort=release_date` の向き、`sort=name` の並び（在庫表・閲覧ページ）、同じ商品の中の価値順（ADR-1023）。
 - 守り: `backend/tests/test_inventory_distribution_rows.py` と `frontend/src/pages/viewer/viewerFilter.test.ts`。
+
+## 改訂 2026-10-19（2）（同じ商品のまとまりの中で「最安」「在庫最多」の小さいバッジを付ける）
+
+PO 決定（2026-10-19）「y」（同じ商品のまとまりの中で、最安値の行と在庫が1番多い行に、見づらくならない小さいバッジを付ける）。PO 決定（2026-10-19）「y」（値のある行が1行以下の商品と、全部の行が同じ値の商品には付けない）。前の改訂節の本文は書き換えない。
+
+- 判定の規則（在庫表・閲覧ページ・GAS 在庫一覧で同じ）:
+  - 比べる単位は商品のまとまり。比べる行は、利用者が絞り込んだ後・ページで切る前の行。
+  - 最安: 価格が空でない行の最小値と等しい行。在庫最多: 数量が空でない行の最大値と等しい行。等しい行が複数あれば全部に付ける。
+  - 値のある行が1行以下のとき、値のある行が全部同じ値のときは付けない。
+  - 値は画面に出る値と同じく整数に丸めて比べる。まとめモードでは画面に出ている値（数量は合計、単価は最大）で比べる。
+- 見た目: 既存の金型 `Badge`（size="sm"、appearance="soft"）を値の右隣・同じ1行に置く。最安は success、在庫最多は info。GAS は既存の `.badge` に小さい版の修飾クラスを足し、既存の色変数の組だけを使う。
+- 実装の場所: 在庫表は `backend/app/routers/inventory_offers.py` の `_build_inventory_view_sql`（窓関数で `__badge_cheapest`・`__badge_most_stock` を作り、API の行の `badge_cheapest`・`badge_most_stock` で返す）。閲覧ページは `frontend/src/pages/viewer/viewerFilter.ts` の `markBlockBadges`。GAS 在庫一覧（リポジトリ外 shingo-ops/tcg-client-viewer の index.html）の render()。3か所にある理由は、閲覧ページと GAS がブラウザで絞り込むため（並び順と同じ）。
+- 既知の差（揃えない）:
+  - まとまりの決め方: 在庫表は product_id（空の行には付けない）。閲覧ページと GAS は product_id を持たないため「発売日・英語名・日本語名が全て同じ」行を1つのまとまりとする。発売日・英語名・日本語名が全て同じ別の商品だけ結果が違いうる。
+  - 在庫表は価格が空の行を「¥0」と出す。空の行は比べないので、「¥0」の行にはバッジが付かない。
+- 変えないもの: 並び順、件数、ページ、絞り込みの候補、配信行の定義、Badge の金型、tokens.css。
+- 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（規則・絞り込み・ページ・列の並び）と `frontend/src/pages/viewer/viewerFilter.test.ts`（閲覧ページの規則）。

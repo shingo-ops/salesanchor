@@ -1498,6 +1498,10 @@
       "2day_before": "発売2日前発送",
       "other": "その他"
     },
+    "badge": {
+      "cheapest": "最安",
+      "mostStock": "在庫最多"
+    },
     "col": {
       "product": "商品",
       "category": "TCGシリーズ",

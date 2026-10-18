@@ -1,7 +1,7 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 検索の正規化ベクタ・日本語タイトルの並びを検証する（ADR-027・precedent: ProductMasterDrawer.test.tsx） */
 import { describe, expect, it } from "vitest";
 import vectors from "../../features/inventory/searchNormalize.vectors.json";
-import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
+import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, markBlockBadges, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
 import type { ViewerFilters } from "./viewerFilter";
 import type { ViewerRow } from "./types";
 
@@ -111,5 +111,51 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
   it("'item 10' sorts before 'item 2' (no numeric collation)", () => {
     const out = sortRows(withIndex([mk({ english_title: "item 2" }), mk({ english_title: "item 10" })]), "release_date", "asc");
     expect(out.map((r) => r.english_title)).toEqual(["item 10", "item 2"]);
+  });
+});
+
+describe("markBlockBadges (ADR-1014 改訂 2026-10-19（2）)", () => {
+  const blk = { release_date: "2026-01-01", english_title: "A", japanese_title: "あ" };
+  const flags = (rows: ViewerRow[]) => markBlockBadges(rows).map((r) => [r.badge_cheapest, r.badge_most_stock]);
+
+  it("marks every row equal to the min price / max quantity (B1)", () => {
+    const rows = [
+      mk({ ...blk, unit_price: "100", quantity: "10" }),
+      mk({ ...blk, unit_price: "200", quantity: "20" }),
+      mk({ ...blk, unit_price: "100", quantity: "20" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, true]]);
+  });
+  it("marks nothing for a single row or all-same values (B2)", () => {
+    expect(flags([mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([[false, false]]);
+    expect(flags([mk({ ...blk, unit_price: "100", quantity: "5" }), mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([
+      [false, false], [false, false],
+    ]);
+  });
+  it("leaves out '' and non-numeric values from the comparison (B2)", () => {
+    const rows = [
+      mk({ ...blk, unit_price: "", quantity: "abc" }),
+      mk({ ...blk, unit_price: "100", quantity: "5" }),
+      mk({ ...blk, unit_price: "300", quantity: "9" }),
+    ];
+    expect(flags(rows)).toEqual([[false, false], [true, false], [false, true]]);
+    // 値のある行が1行だけなら付けない
+    expect(flags([mk({ ...blk, unit_price: "", quantity: "" }), mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([
+      [false, false], [false, false],
+    ]);
+  });
+  it("compares per block (release_date + english_title + japanese_title) and keeps extra fields (B3)", () => {
+    const rows = markBlockBadges([
+      { ...mk({ ...blk, unit_price: "100" }), idx: 0 },
+      { ...mk({ ...blk, unit_price: "200" }), idx: 1 },
+      { ...mk({ ...blk, english_title: "B", unit_price: "500" }), idx: 2 },
+      { ...mk({ ...blk, english_title: "B", unit_price: "900" }), idx: 3 },
+      { ...mk({ ...blk, release_date: "2026-02-01", unit_price: "50" }), idx: 4 },
+    ]);
+    expect(rows.map((r) => r.idx)).toEqual([0, 1, 2, 3, 4]);
+    expect(rows.map((r) => r.badge_cheapest)).toEqual([true, false, true, false, false]);
+  });
+  it("compares the rounded values shown on screen", () => {
+    expect(flags([mk({ ...blk, unit_price: "100.4" }), mk({ ...blk, unit_price: "100" })])).toEqual([[false, false], [false, false]]);
   });
 });
