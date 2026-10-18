@@ -177,6 +177,7 @@ A を選ぶ理由:
     - fresh_only=true で max_age_hours=48 のときは、24h を基準に計算する。
     - 在庫一覧の SQL は SQLite では実行されない（`backend/tests/test_inventory_list_view.py:1-9` は 422 の確認だけ）。実際の SQL は `backend/tests/test_inventory_distribution_rows_pg.py`（PostgreSQL）で確かめる。
     - `backend/tests/test_inventory_distribution_rows_pg.py:348` は "__" の付いた列名を完全一致で確かめている。期待値の `"__ord"` の次に `"__expiry_s"` を足す（このファイルは触るファイルに入る）。
+    - 実装中に見つかった追加（2026-10-19）: `backend/tests/test_inventory_distribution_rows.py:116-119` の `_VIEW_SQL_BEFORE` は、SQL 全体の長さと SHA256 を固定している。列を足すと必ず変わるので、新しい値に更新する（このファイルも触るファイルに入る）。試験の意図（fresh_only=false の SQL が変わらないこと）は保ち、列の追加以外が変わっていないことは PG 試験の total・page・facet の一致で確かめる。
 11. 新規 `frontend/src/hooks/useExpiryRefresh.test.tsx` に足す試験:
     - seconds=120 のとき、120 秒＋ずれの後に reload を 1 回呼ぶ。
     - seconds=5 のとき、60 秒より前には呼ばない。
