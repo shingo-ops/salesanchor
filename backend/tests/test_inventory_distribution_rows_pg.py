@@ -37,13 +37,21 @@ _PRICE, _QTY, _NOTE, _STATUS, _SHIP = 5, 6, 7, 8, 13  # 14列の位置
 def ids(pg, v102):  # noqa: F811
     products = [r[0] for r in one(pg, "SELECT id FROM public.products ORDER BY id")]
     conditions = {r[1]: r[0] for r in one(pg, "SELECT id, canonical FROM public.conditions")}
-    # テスト用 DB の public.products には tcg_type・category が無い。本番の型（VARCHAR(50)）に合わせて足す。
-    # 根拠: migrations/20260602_020000_add_products_tcg_type.sql、migrations/082_extend_products_box_attributes.sql
+    # テスト用 DB の public.products には category が無い。本番の型（VARCHAR(50)）に合わせて足す。
+    # 根拠: migrations/082_extend_products_box_attributes.sql
+    # 作品は products.work_id → type_master.code で決まる（ADR-1030）。tcg_type 列は使わない（NULL のまま）。
     with pg[0].cursor() as cur:
-        cur.execute("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_type VARCHAR(50)")
         cur.execute("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category VARCHAR(50)")
-        cur.execute("UPDATE public.products SET tcg_type = 'T_A', category = 'C_A' WHERE id = %s", (products[0],))
-        cur.execute("UPDATE public.products SET tcg_type = 'T_B', category = 'C_B' WHERE id = %s", (products[1],))
+        cur.execute(
+            "INSERT INTO public.type_master (code, name_ja, sort_order, is_active) "
+            "VALUES ('T_A', '作品A', 100, TRUE), ('T_B', '作品B', 100, TRUE) ON CONFLICT (code) DO NOTHING"
+        )
+        cur.execute(
+            "UPDATE public.products SET category = 'C_A', "
+            "work_id = (SELECT id FROM public.type_master WHERE code = 'T_A') WHERE id = %s", (products[0],))
+        cur.execute(
+            "UPDATE public.products SET category = 'C_B', "
+            "work_id = (SELECT id FROM public.type_master WHERE code = 'T_B') WHERE id = %s", (products[1],))
     return SimpleNamespace(p1=products[0], p2=products[1], box=conditions["Sealed box"], case=conditions["Case"])
 
 
@@ -290,7 +298,7 @@ def test_t4_off_count_equals_distribution_count_and_on_differs_by_merged_rows(pg
 _VIEW_CASES = [
     {},
     {"sort": "unit_price", "order": "asc"},
-    {"tcg_type_filter": True},
+    {"work_code_filter": True},
     {"page": 99},
     {"limit": 3},
     {"limit": 3, "page": 2, "sort": "unit_price", "order": "asc"},
@@ -309,8 +317,9 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
 
     def rows_sql(m: bool) -> str:
         inner_rows = distribution.distribution_rows_sql(**args, merge_same_post=m)
-        return ("SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category "
-                f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id")
+        return ("SELECT x.*, tm.code AS work_code, pp.category AS category "
+                f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id "
+                "LEFT JOIN public.type_master tm ON tm.id = pp.work_id")
 
     inner = rows_sql(merge)
     total = session.execute(text(f"SELECT COUNT(*) FROM ({inner}) d {where}"), params).scalar_one()
@@ -352,11 +361,11 @@ def test_single_statement_equals_the_previous_three_statements(pg, ids, merge, c
     from app.routers.inventory_offers import _SORT_COLUMNS, _build_view_filters
 
     _seed_mixed(pg, ids)
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     with Session(pg[1]) as session:
-        if case.get("tcg_type_filter"):
-            none["tcg_type"] = "T_A"
+        if case.get("work_code_filter"):
+            none["work_code"] = "T_A"
         conditions, params = _build_view_filters(**none)
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
         page = case.get("page", 1)
@@ -375,7 +384,7 @@ def test_facets_are_not_affected_by_filters(pg, ids):
     from app.routers.inventory_offers import _build_view_filters
 
     _seed_mixed(pg, ids)
-    base = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    base = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     results = []
     with Session(pg[1]) as session:
@@ -455,7 +464,7 @@ def test_bin1_sold_out_rows_are_not_distribution_rows(pg, ids, status):
 def _view_items(pg_fixture, *, sort: str, order: str, fresh_only: bool = False) -> tuple[int, list[dict]]:
     from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
 
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     conditions, params = _build_view_filters(**none)
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
@@ -475,6 +484,34 @@ def _view_items(pg_fixture, *, sort: str, order: str, fresh_only: bool = False) 
                 pages.append((r["__ord"], dict(r)))
     pages.sort(key=lambda t: t[0])
     return total, [p for _, p in pages]
+
+
+def test_work_code_comes_from_work_id_not_tcg_type(pg, ids):
+    """tcg_type が NULL でも work_id の商品は work_code で出る。別の work_id の商品は出ない（ADR-1030）。"""
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
+
+    with pg[0].cursor() as cur:
+        # この試験は写しの列に頼らない。tcg_type には値を入れない（NULL のまま）。
+        cur.execute("UPDATE public.products SET work_id = (SELECT id FROM public.type_master WHERE code = 'T_A') "
+                    "WHERE id = %s", (ids.p1,))
+    job = _add_job(pg)
+    _add_row(pg, job, ids.p1, ids.box, basis="R2:甲", price=1000)
+    _add_row(pg, job, ids.p2, ids.case, basis="R2:乙", canonical="Case", unit="Case", price=2000)
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+                          "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
+                          "price_min", "price_max"))
+    none["work_code"] = "T_A"
+    conditions, params = _build_view_filters(**none)
+    where = "WHERE " + " AND ".join(conditions)
+    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=False)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
+                                    sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC")
+    with Session(pg[1]) as session:
+        rows = [dict(r) for r in session.execute(text(sql), {**params, "limit": 50, "offset": 0}).mappings().all()
+                if r["__kind"] == "page"]
+    assert len(rows) == 1
+    assert rows[0]["work_code"] == "T_A"
+    assert rows[0]["product_id"] == ids.p1
 
 
 def test_bin1_fresh_only_excludes_rows_older_than_24_hours_and_total_follows(pg, ids):
@@ -546,7 +583,7 @@ def _search_items(pg_fixture, **overrides) -> tuple[int, list[str]]:
     """GET /inventory と同じ絞り込みで (total, 並べた日本語名) を返す。"""
     from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
 
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     conditions, params = _build_view_filters(**{**none, **overrides})
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""

@@ -53,7 +53,7 @@ export interface InventorySearchCandidate {
   box_weight_kg?: number | null;
   case_weight_kg?: number | null;
   mark?: string | null;
-  tcg_type?: string | null;
+  work_code?: string | null;
   matched_via: string;
   score: number;
   // spec v1.3 F11 AC11.4: 仕入元 × condition の現在オファー (status='in_stock' のみ)

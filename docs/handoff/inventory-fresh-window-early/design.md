@@ -16,6 +16,7 @@ PO 決定 2026-10-18「y」: 「24時間以内」ON のとき、絞り込みの�
   age_condition, age_params = _age_window(window_hours)
   ```
   （`max_age_hours` の型と None の可否は実装時に実物で確認し、None を取らないなら None 分岐を書かない）
+  - 実装時の確認結果（2026-10-18）: 変更箇所では None を取らない（`backend/app/routers/inventory_offers.py:367` で先に return）。0 は `_age_window` で「絞らない」の意味（`backend/app/services/tcg_distribution_svc.py:217`）なので、`min(max_age_hours, FRESH_WINDOW_HOURS) if max_age_hours else FRESH_WINDOW_HOURS`（0 のときは24）とする。Opus 確認済み
 - `_build_view_filters` から fresh_only の条件（`backend/app/routers/inventory_offers.py:258` から3行）と引数を外す。呼び出し `backend/app/routers/inventory_offers.py:376` も合わせる。条件を二重に持たない（定義1か所）
 
 ## 触らない範囲

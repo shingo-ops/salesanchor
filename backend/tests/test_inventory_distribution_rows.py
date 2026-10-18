@@ -48,7 +48,7 @@ def test_fresh_window_is_24_hours_and_view_filters_no_longer_take_fresh_only() -
 
     from app.routers.inventory_offers import _build_view_filters
 
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     assert svc.FRESH_WINDOW_HOURS == 24
     assert "fresh_only" not in inspect.signature(_build_view_filters).parameters  # 窓の定義は _age_window の1か所
@@ -113,10 +113,10 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
     assert "max_age_hours" not in params and "sm.line_posted_at >= NOW()" not in sql
 
 
-# fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）を、便2の変更前（origin/main）のコードで作った値。
+# fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）を、便2の変更前（origin/main 035b0145e）のコードで作った値。
 _VIEW_SQL_BEFORE = {
-    False: (26712, "d3ba8ad8beb0994d2fe5c2aca768dea47ae806b3fe9c1177a7437c2e55654e96"),
-    True: (28577, "df08d547e93934f9a62da166a36dfb8a4db0b863ee552a0aa20a1218db20336a"),
+    False: (26763, "c572e1e7a1b140d28334e1531531e5d90e1739bf729cc41e551efcc816618580"),
+    True: (28679, "403fae7741eb5685d8b3ad660fa2873b368c2e2776fa31700408ec7d4bc91b61"),
 }
 
 
@@ -303,7 +303,7 @@ def test_distribution_sql_has_no_double_underscore_alias() -> None:
 # 共通ベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
 # ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
 
-_NONE_FILTERS = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+_NONE_FILTERS = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories",
                                "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
                                "price_min", "price_max"))
 

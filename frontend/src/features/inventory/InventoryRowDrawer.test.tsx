@@ -36,7 +36,7 @@ const item = (id: string, raw: string) => ({
 const row = (ids: string[]): InventoryRow => ({
   id: "r1", product_id: 1, product_name: "P", name_en: null, category: null, mark: null, condition: "New", unit: null,
   offer_type: null, status: null, note_ja: null, ship_ja: null, merged_count: ids.length, posted_at: null,
-  ship_timing: null, supplier_id: 1, supplier_name: "S", unit_price: 1, quantity: 1, tcg_type: null,
+  ship_timing: null, supplier_id: 1, supplier_name: "S", unit_price: 1, quantity: 1, work_code: null,
   offered_at: "", release_date: null, extraction_item_ids: ids,
 });
 

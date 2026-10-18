@@ -41,7 +41,7 @@ class AggregationOffer:
     unit: str | None = None
     offer_type: str | None = None
     ship_timing: str | None = None
-    tcg_type: str | None = None
+    work_code: str | None = None
     offered_at: datetime | None = None
     release_date: date | None = None
     note_ja: str | None = None
@@ -68,7 +68,7 @@ class AggregationResult:
     unit: str | None = None
     offer_type: str | None = None
     ship_timing: str | None = None
-    tcg_type: str | None = None
+    work_code: str | None = None
     offered_at: datetime | None = None
     release_date: date | None = None
     note_ja: str | None = None
@@ -244,7 +244,7 @@ def _normalize_offer(source: Mapping[str, Any] | Any) -> AggregationOffer:
         unit=_optional_text(_get_value(source, ("unit",))),
         offer_type=_optional_text(_get_value(source, ("offer_type",))),
         ship_timing=_optional_text(_get_value(source, ("ship_timing",))),
-        tcg_type=_optional_text(_get_value(source, ("tcg_type",))),
+        work_code=_optional_text(_get_value(source, ("work_code",))),
         offered_at=_parse_datetime(_get_value(source, ("offered_at", "offeredAt"))),
         release_date=_parse_date(_get_value(source, ("release_date", "Release Date", "releaseDate"))),
         note_ja=note_ja,
@@ -349,7 +349,7 @@ def aggregate_inventory_offers(
                     unit=selected.unit,
                     offer_type=selected.offer_type,
                     ship_timing=selected.ship_timing,
-                    tcg_type=selected.tcg_type,
+                    work_code=selected.work_code,
                     offered_at=selected.offered_at,
                     release_date=selected.release_date,
                     note_ja=selected.note_ja,

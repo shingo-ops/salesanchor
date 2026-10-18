@@ -225,7 +225,7 @@
             "title": "Series",
             "type": "string"
           },
-          "tcg_type": {
+          "work_code": {
             "anyOf": [
               {
                 "type": "string"
@@ -234,8 +234,8 @@
                 "type": "null"
               }
             ],
-            "description": "TCG 種別 (products.tcg_type)。タブ分割キー。",
-            "title": "Tcg Type"
+            "description": "作品の符号（products.work_id → type_master.code）。タブ分割キー。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -11178,7 +11178,7 @@
             "type": "array"
           },
           "tabs": {
-            "description": "存在する tcg_type の一覧 (重複なし、昇順)。",
+            "description": "存在する work_code の一覧 (重複なし、昇順)。",
             "items": {
               "type": "string"
             },
@@ -11791,17 +11791,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -11829,6 +11818,17 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12278,17 +12278,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -12303,6 +12292,17 @@
           "unit_price": {
             "title": "Unit Price",
             "type": "integer"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12480,18 +12480,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "TCG 種別。",
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -12502,6 +12490,18 @@
               }
             ],
             "title": "Unit Price"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品の符号（products.work_id → type_master.code）。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -24051,18 +24051,6 @@
             ],
             "title": "Supplier Default Id"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -25604,18 +25592,6 @@
             ],
             "title": "Supplier Default Id"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -25675,6 +25651,17 @@
               }
             ],
             "title": "Weight"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -26081,18 +26068,6 @@
               }
             ],
             "title": "Supplier Default Id"
-          },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
           },
           "unit_price": {
             "anyOf": [
@@ -44058,9 +44033,9 @@
             }
           },
           {
-            "description": "TCG種別 (public.products.tcg_type)",
+            "description": "作品の符号（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -44072,8 +44047,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別 (public.products.tcg_type)",
-              "title": "Tcg Type"
+              "description": "作品の符号（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
@@ -44430,11 +44405,11 @@
     },
     "/api/v1/inventory/aggregated": {
       "get": {
-        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で products.tcg_type による絞り込みが可能。",
+        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で work_id の作品の符号（type_master.code） による絞り込みが可能。",
         "operationId": "get_inventory_aggregated_api_v1_inventory_aggregated_get",
         "parameters": [
           {
-            "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+            "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
             "in": "query",
             "name": "category",
             "required": false,
@@ -44447,7 +44422,7 @@
                   "type": "null"
                 }
               ],
-              "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+              "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
               "title": "Category"
             }
           }
@@ -50959,9 +50934,9 @@
             }
           },
           {
-            "description": "TCG種別コードで絞り込み（type_master.code）",
+            "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -50973,8 +50948,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別コードで絞り込み（type_master.code）",
-              "title": "Tcg Type"
+              "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
