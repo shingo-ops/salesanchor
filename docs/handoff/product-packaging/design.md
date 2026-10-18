@@ -1,6 +1,6 @@
 # design: 商品の荷姿の表（ADR-1028）
 
-- 現在地: [recon.md](./recon.md)／決定: [ADR-1028](../../adr/ADR-1028-product-packaging-table.md)
+- 現在地: [recon.md](./recon.md)（docs/handoff/product-packaging/recon.md）／決定: [ADR-1028](../../adr/ADR-1028-product-packaging-table.md)
 - PO の言葉（2026-10-17 チャット）: 入数・重さは別の表で持つ「y」／実測も出典つきで可「y」／出典の決まり（ボックス重さは公式通販のページ優先、公式店は出典1つで採用、ほかのサイトは2つ以上一致、カートンとパックの重さは実測）「y」。同日の指示「配線と DB の SSOT は遵守してデータを分散させることは禁止」
 - 便の区分: 便1・便2・便3 は危険 PR（migrations を含む）または本番データ変更で、GO は委任に基づく Opus 発行。便5 は DROP を含むので PO 本人の「GO #PR番号」
 
