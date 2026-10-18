@@ -11,7 +11,6 @@ import pytest
 
 CASES = [
     ("test_inventory_sprint1_migrations.py", "_apply_public_migrations"),
-    ("test_products_tcg_type_fk.py", "_bootstrap_public_products"),
     ("test_inventory_aggregated.py", "seed_aggregated_dataset"),
 ]
 

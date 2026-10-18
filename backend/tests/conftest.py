@@ -809,7 +809,6 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),
