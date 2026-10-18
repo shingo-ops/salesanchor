@@ -1,7 +1,7 @@
-# 実装カード（下書き）— 型番の後ろの「-数字」には当てない
+# 実装カード（発行済み 2026-10-18 Opus）— 型番の後ろの「-数字」には当てない
 
 > この文書は何か：型番の厳格な照合 `_strict_code_pattern` の正規表現の右端に「直後がハイフン類＋数字なら当たらない」条件を足す作業指示書です。直すのは `backend/app/services/extraction_judgement_svc.py` の4か所（定数2行・組み立て1行・説明文1行）と、試験の追加だけです。
-> **状態：下書き。設計審査（Opus）と未決 U1・U2 の決定、カード発行（Opus）の後に実行する。それまで実装しない。**
+> **状態：発行済み。設計審査は APPROVE（design.md §12）、U1〜U4 は design.md §11-1 で決めた。PO の実装承認は取得済み（2026-10-18、PO 原文「y」）。PR 本文には「followup・soldout_ref 経路は試算していない（U2）」と書く。**
 
 読んだ節（引いた guards）: docs/handoff/design-partner-card-ops/guards/00-common.md, guards/04-worktree.md, guards/05-pr.md, guards/10-executor.md, guards/11-lint.md
 

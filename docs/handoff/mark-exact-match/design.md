@@ -4,7 +4,7 @@
 - recon: docs/handoff/mark-exact-match/recon.md
 - 先行設計（同じ共有関数の境界の調整）: docs/handoff/line-match-price-digit-boundary/design.md
 - 設計仕様書（あるべき姿）: docs/specs/line-analysis-tuning/README.md（既存の延長・修正。STANDARD-WORKFLOW §1.8）
-- 状態: 設計案作成済み（本書）・設計審査（Opus）待ち・PO 決定済み（2026-10-18、Opus が提示した案R1への PO 原文「y」）
+- 状態: 設計案作成済み・設計審査済み（Opus APPROVE、§12）・PO 決定済み（2026-10-18、Opus が提示した案R1への PO 原文「y」）
 
 ## 1. 目的（KGI）
 商品マスタの型番（mark・product_code・型番らしい検索ワード・除外ワード）が、原文の別商品のカード番号（例 `EB02-003`）の先頭部分に当たって、別の商品に決まらない・候補が増えないようにする。
@@ -14,7 +14,7 @@
 ## 2. 方式（案R1）
 `_strict_code_pattern` が作る正規表現の**右端**に否定先読み `(?![ハイフン類][0-9])` を1つ足す。型番の直後が「ハイフン類＋数字」なら当たらない。左側と、直後が他の文字のときは今のまま。
 
-- ハイフン類は同ファイルの区切り文字の集合（`extraction_judgement_svc.py:155-157` の `_CODE_SEPARATOR_CHARS`）に含まれるハイフン8種に合わせる: ASCII `-`、U+2010、U+2011、U+2013、U+2014、U+2015、U+2212、U+30FC（ー）。
+- ハイフン類は同ファイルの区切り文字の集合（extraction_judgement_svc.py:155-157 の `_CODE_SEPARATOR_CHARS`）に含まれるハイフン8種に合わせる: ASCII `-`、U+2010、U+2011、U+2013、U+2014、U+2015、U+2212、U+30FC（ー）。
   - 試算（recon §3-2）で使った集合は、上に U+2012 を加えた9種。U+2012 は同ファイルの集合に無いので本設計では入れない（同ファイルの扱いに揃える。U+2012 を原文に含む例は本番の写し・合成表のどちらにも無い、とは確認していない → 未確認。差は1文字であり、K3 の再計算で検出できる）。
 - 「正規化後の文字に効くか」: 先読みは `fold_for_match` 済みの `folded` に適用される（`:208` `pattern.search(folded)`）。NFKC により全角 `－`（U+FF0D）・全角数字は半角になる。`ＯＰ－０１` が当たること、`OP01−001`（U+2212）・`OP01‐001`（U+2010）・`OP01ー001`（U+30FC）が当たらないことを実行で確認（recon §3-1、`/tmp/CC報告ファイル/mark_exact_match_design/r1_check_out.txt`）。
 - 値の内側の区切りの許容（`OP-01` ↔ `OP01` ↔ `OP 01`）は変わらない。隙間の正規表現は文字の間にだけあり、末尾には無いため（recon §2-2）。
@@ -58,12 +58,12 @@ _CODE_NOT_BEFORE_HYPHEN_DIGIT_RE = "(?![" + "".join(re.escape(ch) for ch in _COD
 ```
 
 ### 2-2. 手元実装との対応
-手元実装 `scratchpad/mx/variants.py` の R1 は `p.pattern + r"(?![" + HY + r"]\d)"` を再コンパイルする形。本設計は同じ式を組み立て時に直接入れる（等価）。差は ①U+2012 を入れない ②`\d` でなく `[0-9]`（`folded` は NFKC 後で全角数字は半角化されるため実質同じ。ASCII 以外の数字に反応しない分だけ厳密）。
+手元実装 scratchpad/mx/variants.py の R1 は `p.pattern + r"(?![" + HY + r"]\d)"` を再コンパイルする形。本設計は同じ式を組み立て時に直接入れる（等価）。差は ①U+2012 を入れない ②`\d` でなく `[0-9]`（`folded` は NFKC 後で全角数字は半角化されるため実質同じ。ASCII 以外の数字に反応しない分だけ厳密）。
 
 ## 3. 範囲
 - 入れる: 上の定数2行・組み立て1行・docstring 1行（`backend/app/services/extraction_judgement_svc.py`）、`TestMatchProductStrictCodes` への試験の追加（`backend/tests/test_extraction_judgement_svc.py`）。
-- 触らない: `_strict_code_hits`（`:201-209`）・`_value_hits`・`_code_candidate_basis`・`_keyword_matches`・`_exclude_hit`・`match_product`、`has_word_boundary`、followup / soldout_ref / gap_lines / product_first の各ファイル（`_strict_code_pattern` を直接 import しているため自動で追従する。名前の差し替えは不要）、v6 の `tcg_analyzer_svc.py` の `match_keyword` 系、登録時の衝突検知 `tcg_product_code_collision_svc.py`、frontend、マスタ、`migrations/`・`.github/workflows/`・`scripts/`。
-- 本変更は危険パス（`migrations/`・`deploy.yml`・本番 `scripts/`）を含まない。ただし `backend/app/services/` はユーザーに影響する変更に当たり、本番反映前の GO 記録が要る（STANDARD-WORKFLOW「完了の定義」）。
+- 触らない: `_strict_code_hits`（`:201-209`）・`_value_hits`・`_code_candidate_basis`・`_keyword_matches`・`_exclude_hit`・`match_product`、`has_word_boundary`、followup / soldout_ref / gap_lines / product_first の各ファイル（`_strict_code_pattern` を直接 import しているため自動で追従する。名前の差し替えは不要）、v6 の tcg_analyzer_svc.py の `match_keyword` 系、登録時の衝突検知 tcg_product_code_collision_svc.py、frontend、マスタ、`migrations/`・`.github/workflows/`・`scripts/`。
+- 本変更は危険パス（`migrations/`・deploy.yml・本番 `scripts/`）を含まない。ただし `backend/app/services/` はユーザーに影響する変更に当たり、本番反映前の GO 記録が要る（STANDARD-WORKFLOW「完了の定義」）。
 - 再解析（既存行の取り直し）は本設計の範囲外。必要なら反映後に別途（K3/K4）。
 
 ## 4. 代替案と選んだ理由（試算: `/tmp/CC報告ファイル/mark_exact_match_simulation.txt`）
@@ -79,9 +79,9 @@ _CODE_NOT_BEFORE_HYPHEN_DIGIT_RE = "(?![" + "".join(re.escape(ch) for ch in _COD
 |---|---|
 | K1 単体テスト追加: 「EB-02」が「EB02-003」に当たらない／「OP-01」が OP01・OP-01・【OP-01】・OP01×2・ＯＰ－０１・OP-01 BOX・OP01-BOX に当たる／「OP01-001」に当たらない | `backend/tests/test_extraction_judgement_svc.py` の `TestMatchProductStrictCodes` に追加（card-implement.md §4-3）。手元で、現行コードでは追加試験 8 件が落ち（赤）、案R1 では 17 件全て緑になることを確認済み（`/tmp/CC報告ファイル/mark_exact_match_design/draft_tests_result.txt`） |
 | K2 既存テスト全緑 | `cd backend && python -m pytest tests -q`（CI の backend テスト）。手元では DB を使う 12 件が走らない（GITHUB_ACTIONS 必須）ので、全緑の判定は CI の必須チェックで行う。手元の 10 ファイル 1154 件は R1 差し替えで現行と同じ結果（recon §3-1） |
-| K3 本番反映後、v102 現行行の再計算で変化 0 件、または変化した行を全部列挙して PO が確認 | `scratchpad/mx/run.py` 相当（原文→行ブロック→`product_match_text`→`match_product_g2`）を反映後のコードで流し、反映前の結果（`res_base.json`）と全行比較。Opus が実行して結果ファイルを残す。変化があれば行 ID・現行→新の status・候補を全件列挙 |
+| K3 本番反映後、v102 現行行の再計算で変化 0 件、または変化した行を全部列挙して PO が確認 | scratchpad/mx/run.py 相当（原文→行ブロック→`product_match_text`→`match_product_g2`）を反映後のコードで流し、反映前の結果（res_base.json）と全行比較。Opus が実行して結果ファイルを残す。変化があれば行 ID・現行→新の status・候補を全件列挙 |
 | K4 本番反映後、原文「EB02-003」を含む想定文が 424591 単独になる（チョッパーズのマスタ登録が済んでいることが前提。未済なら `EB-02` が当たらないことだけ確認） | K3 と同じ手順で、想定文 `EB02-003 / 20個@1000` を通して候補が 424591 のみ。マスタ未登録なら `EB-02` の商品（57）が候補に出ないことだけを確認。前提の登録状況は反映時に Opus が本番の読み取りで確認 |
-| K5 デプロイの4観測（デプロイされた・実行された時刻・結果の形・指標） | ①デプロイされたか: 反映後の `deploy.yml` 実行が success で、本番の backend コンテナのコミット（または配信物）が本 PR のマージコミットに一致 ②実行されたか: 反映後に解析が走った時刻（v102 の `analysis_results` の更新時刻が反映時刻より後の行がある）③結果が期待の形か: K4 の想定文の結果 ④指標が変わったか: K3 の変化行数（0 が期待）と `ambiguous` の件数（EB02-003 の行が 424591 に決まる以外は不変）。台本は Opus が書き PO が `!` で実行 |
+| K5 デプロイの4観測（デプロイされた・実行された時刻・結果の形・指標） | ①デプロイされたか: 反映後の deploy.yml 実行が success で、本番の backend コンテナのコミット（または配信物）が本 PR のマージコミットに一致 ②実行されたか: 反映後に解析が走った時刻（v102 の `analysis_results` の更新時刻が反映時刻より後の行がある）③結果が期待の形か: K4 の想定文の結果 ④指標が変わったか: K3 の変化行数（0 が期待）と `ambiguous` の件数（EB02-003 の行が 424591 に決まる以外は不変）。台本は Opus が書き PO が `!` で実行 |
 
 ## 6. 外部・過去事例の参照と我々への応用
 - 該当なし。理由: 変更は「型番のカード番号を型番本体に当てない」という自前のマスタ・自前の原文に固有の境界条件1つで、外部の実装を取り込む対象ではない（先読みで直後を除外する書き方は正規表現の標準的な使い方）。
@@ -101,7 +101,7 @@ _CODE_NOT_BEFORE_HYPHEN_DIGIT_RE = "(?![" + "".join(re.escape(ch) for ch in _COD
 本 PR を revert する（定数 2 行・組み立て 1 行・docstring 1 行・追加試験）。DB の変更なし。再解析で結果が変わった行は、revert 後にもう一度再解析すれば戻る。
 
 ## 9. 測り方
-- 反映前の基準値: v102 現行 1238行の結果（`scratchpad/mx/res_base.json`、matched 1139 / unmatched 88 / ambiguous 11）。コミット差の確認で、試算時点（165e316a7）から対象ファイルに変更なし（recon §6）。反映時点で再取得して基準値を取り直すかは Opus が決める。
+- 反映前の基準値: v102 現行 1238行の結果（scratchpad/mx/res_base.json、matched 1139 / unmatched 88 / ambiguous 11）。コミット差の確認で、試算時点（165e316a7）から対象ファイルに変更なし（recon §6）。反映時点で再取得して基準値を取り直すかは Opus が決める。
 - 反映後: K3（変化行数・0 が期待）・K4（想定文が 424591 単独）。
 
 ## 10. 維持の仕組み
@@ -112,10 +112,16 @@ _CODE_NOT_BEFORE_HYPHEN_DIGIT_RE = "(?![" + "".join(re.escape(ch) for ch in _COD
 | # | 内容 | 設計側の暫定案 |
 |---|---|---|
 | U1 | 型番らしい除外ワードが `EB02-003` の行で効かなくなる（除外が外れる方向）ことの是非。試算 0 行なので実害は未観測 | 全体に効かせる（案R1）のまま進め、K3 の変化行の列挙で見る。問題が出たら除外ワードだけ現行に戻す分岐を別便で設計 |
-| U2 | followup（`gemini_raw_copy_v102_followup.py:56,:81`）・soldout_ref（`gemini_raw_copy_v102_soldout_ref.py:190`）の参照行探索で「型番がカード番号付きの行に当たらなくなる」ことの是非。この2経路は試算していない | 判断材料が無い。Opus が ①そのまま追従（暫定）か ②この2経路だけ現行の当て方（先読みなし）に戻す（`_strict_code_pattern` の引数で切替）かを決める。②にする場合は設計・カードを改訂 |
+| U2 | followup（`gemini_raw_copy_v102_followup.py:56,:81`）・soldout_ref（gemini_raw_copy_v102_soldout_ref.py:190）の参照行探索で「型番がカード番号付きの行に当たらなくなる」ことの是非。この2経路は試算していない | 判断材料が無い。Opus が ①そのまま追従（暫定）か ②この2経路だけ現行の当て方（先読みなし）に戻す（`_strict_code_pattern` の引数で切替）かを決める。②にする場合は設計・カードを改訂 |
 | U3 | 照合規則の変更に ADR が必要かの線引きが文書化されていない（先例は handoff 設計のみ） | 本件は ADR 不要で進める。線引きの文書化は本件の範囲外 |
 | U4 | U+2012 を含めるか（試算は含む9種、本設計は同ファイルに揃えて8種） | 8種のまま。K3 で差が出たら追加（1文字） |
 
+### 11-1. 決定（Opus、2026-10-18）
+- U1: 暫定案のまま全体に効かせる。理由: R1 の後は `EB02-003` の行が `EB-02` の商品に当たらなくなるので、その行で `EB02` を除外する必要もなくなる（除外が外れても候補は増えない）。照合と除外を同じ規則にそろえる。K3 の変化行で確かめる。
+- U2: ①そのまま追従させる。理由: 本照合が「カード番号はBOXに当てない」なのに参照行の探索だけ当てると、同じ行が経路によって別の商品に結び付き、食い違いが出る。規則は1か所にそろえる。②（引数で切り替える）は分岐が増えるので採らない。実害が出たら別便で設計する。反映後の観測は K3 の再計算（本照合）で行い、followup・soldout_ref 経路の再計算は範囲外とする（未試算であることを PR 本文に書く）。
+- U3: ADR は起こさない。ADR-1006 の方針（mark だけで照合する）は変えず、境界1つの調整だから。先例 line-match-price-digit-boundary と同じ扱いにする。
+- U4: 8種のまま（同じファイルの区切り文字の集合にそろえる）。
+
 ## 12. 審査（Opus 記入欄）
-- 判定: （未記入）
-- 根拠: （未記入）
+- 判定: APPROVE（同一AIによる自己審査。第二者レビューではない）
+- 根拠: ①変更の正本 §2-1 は変更前後のコードと場所（前後の一致）で決まっていて、実装の余地がない。②試算では 1238行の変化が0。追加試験は現行で 8件が赤、R1 で 17件全て緑（recon §3）。③受け入れ基準 K1〜K5 は全て、表の検証方法で○×を判定できる。④範囲の外（followup/soldout_ref/v6/migrations 等）を明記した。⑤戻し方は revert だけで済み、DB の変更はない。未決 U1〜U4 は 11-1 で決めた。

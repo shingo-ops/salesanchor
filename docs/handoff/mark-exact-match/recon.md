@@ -81,7 +81,7 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
 | 5 | 同 `:320-331` `_exclude_hit` | 除外ワードを #1 で判定（`:322-324`） | 型番らしい除外ワードにも効く（除外が**外れる**側に動きうる） |
 | 6 | 同 `:372-` `match_product` | `:390` `_code_candidate_basis`、`:391` `_keyword_matches`、`:400` `_value_hits`（`code_hit_values`）、`:405` `_excluded_keywords` | 上の合成 |
 | 7 | `backend/app/services/gemini_raw_copy_v102_product_first.py:233` `_g2_hits` → `:239-241`・`:249`、`:267-275` `match_product_g2`（`:275` で `match_product(strict_codes=True)`）、`:295-298` `match_text_g2` | v102 の本線の照合 | #3〜#6 を共有 |
-| 8 | `match_text_g2` の呼び出し元: `gemini_raw_copy_v102_product_first.py:664`（本線 resolve_product_first 内）、`backend/app/services/v102_gap_lines.py:175`・`:202`、`gemini_raw_copy_v102_followup.py:48`、`gemini_raw_copy_v102_soldout_ref.py:169` | 行から商品を決める | #7 を共有 |
+| 8 | `match_text_g2` の呼び出し元: gemini_raw_copy_v102_product_first.py:664（本線 resolve_product_first 内）、`backend/app/services/v102_gap_lines.py:175`・`:202`、gemini_raw_copy_v102_followup.py:48、gemini_raw_copy_v102_soldout_ref.py:169 | 行から商品を決める | #7 を共有 |
 | 9 | `backend/app/services/gemini_raw_copy_v102_followup.py:14`（import）・`:56` `extract_tokens`・`:81` `_hits` | 原文の語（`_CODE_TOKEN_RE`、`:20`）のうち `_strict_code_pattern(w) is not None` のものを「型番の語」とし（`:56`）、参照行の `folded` に `pattern[1].search`（`:81-82`）で当てる。**照合結果ではなく原文の探索** | 変更が効く。品番らしさの判定（`is not None`）は変わらない。当て方だけ変わる |
 | 10 | `backend/app/services/gemini_raw_copy_v102_soldout_ref.py:17`（import）・`:187-193` `_texts_hit_all`・`:196-197` `_row_hits_all`・`:227`・`:243` | 語が全て1つの参照行に当たるか（型番は `_strict_code_pattern(code)`、`:190-192`） | 変更が効く（#9 と同じ） |
 
@@ -94,8 +94,8 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
 
 ## 3. 観測した事実
 ### 3-1. 実装の手元検証（リポジトリは変更せず、スクラッチのプラグインで関数を差し替えて実行）
-- ファイル: `/tmp/CC報告ファイル/mark_exact_match_design/r1_check.py`（検証本体）・`r1_check_out.txt`（生出力）・`plug/r1_plugin.py`（pytest 用差し替え）
-- 先読みに使うハイフン類の集合: `\-` U+2010 U+2011 U+2012 U+2013 U+2014 U+2015 U+2212 U+30FC（シミュレーションの `variants.py` と同じ。U+2012 を含む点だけ `_CODE_SEPARATOR_CHARS` と違う）
+- ファイル: `/tmp/CC報告ファイル/mark_exact_match_design/r1_check.py`（検証本体）・`r1_check_out.txt`（生出力）・plug/r1_plugin.py（pytest 用差し替え）
+- 先読みに使うハイフン類の集合: `\-` U+2010 U+2011 U+2012 U+2013 U+2014 U+2015 U+2212 U+30FC（シミュレーションの variants.py と同じ。U+2012 を含む点だけ `_CODE_SEPARATOR_CHARS` と違う）
 - 生出力（`r1_check_out.txt`）の要点（値 → 原文 → 現行 / R1）:
   - `EB-02` → `EB02-003 チョッパーズ`: True → **False**
   - `EB-02` → `EB02-003 / 20個@1000`: True → **False**
@@ -107,7 +107,7 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
   - 実行: `cd backend && PYTHONPATH=.:/tmp/CC報告ファイル/mark_exact_match_design/plug python3 -m pytest <10ファイル> -q -n0 --no-cov [-p r1_plugin]`
   - 10ファイル: test_extraction_judgement_svc / test_extraction_judgement_cond_terms / test_gemini_raw_copy_v102_followup / _score_select / _match_g2 / _soldout_ref / _name_only / test_line_analysis_v102_svc / test_v102_buyback_unit / test_tcg_keyword_matching
   - 現行: `1154 passed, 1 warning, 12 errors`（`pytest_baseline.txt`）。R1 適用: `1154 passed, 1 warning, 12 errors`（`pytest_with_R1.txt`）。**passed の数は同じ、failed は 0**。
-  - 12 errors はいずれも `test_gemini_raw_copy_v102_soldout_ref.py` の DB 付き試験で、原因は `AssertionError: Disposable CI service required … GITHUB_ACTIONS`（手元では DB を使う試験が走らない仕様。CI では走る）。R1 の有無と無関係。**この 12 件が R1 で緑のままかは手元では未確認 → CI で確認（K2）**。
+  - 12 errors はいずれも test_gemini_raw_copy_v102_soldout_ref.py の DB 付き試験で、原因は `AssertionError: Disposable CI service required … GITHUB_ACTIONS`（手元では DB を使う試験が走らない仕様。CI では走る）。R1 の有無と無関係。**この 12 件が R1 で緑のままかは手元では未確認 → CI で確認（K2）**。
   - 作業ツリーに変更が無いこと: `git status --short` が空（確認済み）。
 
 ### 3-2. 試算（Opus 提示・引用のみ。再実行はしていない）
@@ -116,7 +116,7 @@ def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
 - EB02-003 の取り違え: 424591 の mark を `EB02-003` に差し替えた想定で、現行は `ambiguous (57, 424591)`、R1 は `matched (424591,)`。他の4文は変化なし。
 - 書かれ方の合成表（値 `OP-01`・`OP01`）: R1 で当たらなくなるのは `OP01-001`・`OP01-001 リーダー` の2形のみ。ほか（`OP01`・`OP-01`・`【OP-01】`・`ＯＰ－０１`・`OP-01 BOX`・`OP01-BOX`・`OP01×2` など）は現行と同じ。
 - 本番原文での型番の書かれ方（360 出現）: 「後ろに -数字（カード番号）」は 3 出現（`[ST21-014]`・`[OP13-001]`・`OP13-001`）で、R1 で当たらなくなるが、**3 件とも行の結果は不変**。
-- 起点コミットが 165e316a7 → 035b0145e と進んでいる。この間に `extraction_judgement_svc.py` の `_strict_code_pattern` 周辺が変わったかを確認: 下記コマンドの結果が空なら変更なし。
+- 起点コミットが 165e316a7 → 035b0145e と進んでいる。この間に extraction_judgement_svc.py の `_strict_code_pattern` 周辺が変わったかを確認: 下記コマンドの結果が空なら変更なし。
 ```
 git log --oneline 165e316a7..035b0145e -- backend/app/services/extraction_judgement_svc.py
 ```
@@ -139,7 +139,7 @@ git log --oneline 165e316a7..035b0145e -- backend/app/services/extraction_judgem
 - `_product` ヘルパー: `:109-124`（引数 id_, product_code, mark, work_id, search_keywords, exclude_keywords）
 - ファイル先頭の import: `:5-14`（`match_product` と `ProductEntry` などは import 済み。追加の import は不要）
 - 追加位置: `:704`（`test_hyphen_and_no_hyphen_both_hit_either_form` の最後の行）の直後、`:706` `test_apostrophe_variants_hit` の前。
-- 他の関連試験: `backend/tests/test_gemini_raw_copy_v102_name_only.py:76`（"OP-14 未開封" が strict_codes で当たる）、`backend/tests/test_gemini_raw_copy_v102_followup.py`・`test_gemini_raw_copy_v102_soldout_ref.py`（型番の語の探索）。R1 差し替えで赤は出ていない（§3-1）。
+- 他の関連試験: `backend/tests/test_gemini_raw_copy_v102_name_only.py:76`（"OP-14 未開封" が strict_codes で当たる）、`backend/tests/test_gemini_raw_copy_v102_followup.py`・test_gemini_raw_copy_v102_soldout_ref.py（型番の語の探索）。R1 差し替えで赤は出ていない（§3-1）。
 
 ## 5. 呼び出し元ごとの「意図どおりか」の確認
 | 呼び出し元 | 「型番-数字」を当てなくなることの是非 | 判定 |
