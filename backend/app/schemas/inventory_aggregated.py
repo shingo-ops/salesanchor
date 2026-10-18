@@ -3,7 +3,7 @@
 応答に含めないフィールド (境界):
   - supplier_name, reason, reason_category, raw offer data
 タブ分割:
-  - products.tcg_type を基準。?category= で絞り込み可。
+  - work_id の作品の符号（type_master.code） を基準。?category= で絞り込み可。
 列 (cells キー):
   - "Case" / "Sealed box" / "No shrink box" / "Damaged sealed box"
 """
@@ -19,7 +19,7 @@ class ConditionCell(BaseModel):
 
 class AggregatedRow(BaseModel):
     series: str = Field(description="商品名 (products.name)。")
-    tcg_type: str | None = Field(default=None, description="TCG 種別 (products.tcg_type)。タブ分割キー。")
+    work_code: str | None = Field(default=None, description="作品の符号（products.work_id → type_master.code）。タブ分割キー。")
     cells: dict[str, ConditionCell] = Field(
         default_factory=dict,
         description=(
@@ -30,5 +30,5 @@ class AggregatedRow(BaseModel):
 
 
 class InventoryAggregatedResponse(BaseModel):
-    tabs: list[str] = Field(description="存在する tcg_type の一覧 (重複なし、昇順)。")
+    tabs: list[str] = Field(description="存在する work_code の一覧 (重複なし、昇順)。")
     rows: list[AggregatedRow] = Field(description="series 単位の集計行。")

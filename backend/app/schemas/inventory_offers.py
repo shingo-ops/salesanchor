@@ -108,7 +108,7 @@ class InventoryOfferResponse(InventoryOfferBase):
     name_en: str | None = None
     category: str | None = None
     mark: str | None = None
-    tcg_type: str | None = None
+    work_code: str | None = None
 
 
 class InventoryOfferListResponse(BaseModel):
@@ -149,7 +149,7 @@ class InventoryRow(BaseModel):
     supplier_name: str | None = None  # 仕入元
     unit_price: int                   # 単価
     quantity: int | None = None       # 数量（空の行は None）
-    tcg_type: str | None = None       # TCG 種別（フィルタ用 = public.products.tcg_type）
+    work_code: str | None = None       # 作品の符号（products.work_id → type_master.code）
     offered_at: datetime              # 掲載時間（LINE の投稿日時）
     posted_at: datetime | None = None  # LINE の投稿日時（offered_at と同じ値）
     release_date: str | None = None   # 発売日
