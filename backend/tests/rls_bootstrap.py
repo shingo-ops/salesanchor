@@ -255,18 +255,14 @@ async def _bootstrap_public_shared(conn) -> None:
     # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
     await seed_type_master(conn)
 
-    fk_exists = await conn.scalar(
+    # ADR-1030: products.tcg_type は取り除いた。ADD を消した migration を流しても列が出来ないことを確かめる
+    col_exists = await conn.scalar(
         text("""
-            SELECT 1
-            FROM pg_constraint c
-            JOIN pg_class rel ON rel.oid = c.conrelid
-            JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-            WHERE nsp.nspname = 'public'
-              AND rel.relname = 'products'
-              AND c.conname = 'fk_products_tcg_type'
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_type'
         """)
     )
-    assert fk_exists == 1, "FK migration が public.products に適用されていません"
+    assert col_exists is None, "products.tcg_type が復活しています（ADR-1030）"
 
 
 @asynccontextmanager
@@ -296,18 +292,14 @@ async def bootstrap_public_products(admin_engine) -> None:
             await seed_type_master(conn)
 
         async with admin_engine.connect() as conn:
-            fk_exists = await conn.scalar(
+            # ADR-1030: products.tcg_type は取り除いた。列が復活していないことを確かめる
+            col_exists = await conn.scalar(
                 text("""
-                    SELECT 1
-                    FROM pg_constraint c
-                    JOIN pg_class rel ON rel.oid = c.conrelid
-                    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-                    WHERE nsp.nspname = 'public'
-                      AND rel.relname = 'products'
-                      AND c.conname = 'fk_products_tcg_type'
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_type'
                 """)
             )
-        assert fk_exists == 1, "FK migration が public.products に適用されていません"
+        assert col_exists is None, "products.tcg_type が復活しています（ADR-1030）"
 
 
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:

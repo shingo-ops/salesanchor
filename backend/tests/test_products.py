@@ -11,10 +11,7 @@
   - image_url バリデーション（http/https のみ）
 """
 
-import pytest
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
-
 
 # ---------------------------------------------------------------------------
 # CRUD
@@ -664,30 +661,3 @@ class TestProductsWorkCode:
         assert res.status_code == 201, res.text
         assert res.json()["work_code"] is None
         assert "tcg_type" not in res.json()
-
-    async def test_direct_fk_enforcement_rejects_unknown_code(self, db_session):
-        with pytest.raises(IntegrityError):
-            await db_session.execute(
-                text(
-                    "INSERT INTO products (name_ja, tcg_type) "
-                    "VALUES (:name_ja, :tcg_type)"
-                ),
-                {"name_ja": "FK Enforcement NG", "tcg_type": "unknown_type"},
-            )
-
-    async def test_direct_fk_enforcement_allows_master_code(self, db_session):
-        await db_session.execute(
-            text(
-                "INSERT INTO products (name_ja, tcg_type) "
-                "VALUES (:name_ja, :tcg_type)"
-            ),
-            {"name_ja": "FK Enforcement OK", "tcg_type": "gundam"},
-        )
-        row = (
-            await db_session.execute(
-                text("SELECT tcg_type FROM products WHERE name_ja = :name_ja"),
-                {"name_ja": "FK Enforcement OK"},
-            )
-        ).mappings().first()
-        assert row is not None
-        assert row["tcg_type"] == "gundam"
