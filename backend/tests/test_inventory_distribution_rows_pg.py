@@ -427,7 +427,12 @@ def test_fresh_window_inside_equals_the_previous_outer_filter_for_total_and_page
                     args={"include_flag_single": False, "age_condition": old_age}, **common)
                 new_total, new_page, new_facets = _new_single_statement(
                     session, where="", params=new_age_params, args=new_args, **common)
-                assert (new_total, new_page) == (old_total, old_page)
+                # sort_ord は窓の行数で採番が変わる並びの内部番号（API 応答に出ない）。行の順番と他の全列は比べる
+                def _no_sort_ord(rows):
+                    return [{k: v for k, v in r.items() if k != "sort_ord"} for r in rows]
+
+                assert new_total == old_total
+                assert _no_sort_ord(new_page) == _no_sort_ord(old_page)
                 assert new_total > 0
                 assert new_facets <= old_facets
 
