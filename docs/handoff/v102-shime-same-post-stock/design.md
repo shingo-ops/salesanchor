@@ -115,26 +115,27 @@ def _sell_out_stock_closed_in_the_same_post(
     〆は自分の価格・数量が無く、引き継ぎ先も無いものだけ。人が判断した件は〆にも在庫にも使わない。元の base_values は変えない。
     """
     closers = [
-        (values["product_id"], values["condition_id"], row.line_start, row.line_end)
+        (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
         for values, (item, row) in zip(base_values, pairs)
         if values["status"] == STATUS_SOLD_OUT and values["exclusion"] == "excluded"
         and not _has_raw_value(getattr(row, "raw_price", None)) and not _has_raw_value(getattr(row, "raw_quantity", None))
         and not item.get("soldout_targets")
         and not _has_human_judgement(decisions.get(str(row.id)))
-        and None not in (values["product_id"], values["condition_id"], row.line_start, row.line_end)
+        and None not in (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
     ]
     if not closers:
         return base_values
     out = []
     for values, (_item, row) in zip(base_values, pairs):
         decision = decisions.get(str(row.id))
+        start_line, end_line = getattr(row, "line_start", None), getattr(row, "line_end", None)
         closed = (
             values["status"] != STATUS_SOLD_OUT and values["exclusion"] is None
             and (decision is None or decision.values.status is None)
             and not _has_human_judgement(decision)
-            and row.line_start is not None and row.line_end is not None
+            and start_line is not None and end_line is not None
             and any(
-                pid == values["product_id"] and cid == values["condition_id"] and start <= row.line_start and row.line_end <= end
+                pid == values["product_id"] and cid == values["condition_id"] and start <= start_line and end_line <= end
                 for pid, cid, start, end in closers
             )
         )
@@ -143,6 +144,8 @@ def _sell_out_stock_closed_in_the_same_post(
 ```
 
 - 〆の件自身は自分の範囲を含むが、(b) で Sold out を外しているので、自分を変えることはない。
+- 行の列はすべて `getattr(row, ..., None)` で読む。既存テストの行（`backend/tests/test_line_analysis_v102_svc.py:490` の SimpleNamespace）は line_start・line_end を持たないため、属性が無ければ規則13を当てない側に倒す。
+- 人が販売状況を Sold out に直した件（価格・数量なし）は〆として扱う。人が「完売」と判断した件なので意図どおり（本番で人の販売状況の直しは0行。§7 T2）。
 - decisions の鍵（`str(row.id)`）と `soldout_targets` のキー名は、実装カード 0-2 で今のコードと同じかを確かめる（§11）。
 
 ### 4-4. `_inherit_price` の判定の置き換え（`backend/app/services/line_analysis_v102_svc.py:1219-1221`、動きは同じ）
@@ -271,7 +274,7 @@ step 4 の手順（本番データの更新は job 0d3d2a98 の2件だけ）
 |---|---|---|---|---|
 | 1 | Reviewer（Opus のレビュアー担当） | REVISE（軽い） | 人の商品・状態の判断の後で比べていない／import 不足／引き継ぎ先のキーの確定／T2 の SQL と合格の条件／解析し直しの手順と承認の範囲／T4 の列名と止め方／`_has_raw_value` の前後／R-a の追記 | §3・§4-1・§4-3・§4-4・§7・§8・§10 |
 | 1 | Fable（開発ルールの審査） | REVISE | import 不足／人の判断の順序／状態マスタに Sold out が無いと黙って重ねない（テストの status_entries）／下流の読み手の漏れ／様式（mode・この文書は何か・既存 ADR の検索・接触面・ADR-1015 の区分） | 冒頭・§3・§6・§7・§10 R-d、recon §0・§1-2 |
-| 2 | （再審査待ち） | | | |
+| 2 | Reviewer（再審査） | APPROVE | 前回の指摘14件すべて○。注意1件: 行の line_start・line_end を属性で直接読むと、既存テストの行（line_start を持たない）で落ちうる | §4-3 を getattr に統一 |
 
 Fable の指摘のうち「`_sold_out_filter` は ADR-1014 由来」は、`git grep ADR-1014` で `backend/app/services/tcg_distribution_svc.py` に0件のため、根拠が確かめられなかった。recon §0 に検索結果だけを書く。
 
