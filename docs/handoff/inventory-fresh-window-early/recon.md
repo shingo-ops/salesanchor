@@ -21,7 +21,7 @@
 - `_build_view_filters` の定義 `backend/app/routers/inventory_offers.py:187`、呼び出しは1か所 `backend/app/routers/inventory_offers.py:376`
 - 年齢窓の受け渡し: `backend/app/routers/inventory_offers.py:374` `age_condition, age_params = _age_window(max_age_hours)` → `backend/app/routers/inventory_offers.py:387` `distribution_rows_parts(..., age_condition=age_condition, ...)`
 - 1文の組立: `backend/app/routers/inventory_offers.py:283` `_build_inventory_view_sql`。rows_f は `backend/app/routers/inventory_offers.py:300`、facet の元は rows_x / rows_xp（`backend/app/routers/inventory_offers.py:299`）で rows_f より前＝絞り込み前
-- API の既定 `fresh_only=False`（`backend/app/routers/inventory_offers.py:348`）、画面の既定 true（`frontend/src/pages/InventoryPage.tsx:145`）
+- API の既定 `fresh_only=False`（`backend/app/routers/inventory_offers.py:348`）、画面の既定 true（`frontend/src/pages/inventory/InventoryPage.tsx:145`）
 
 ## 時間の内訳（本番 reader・2026-10-18）【事実】
 | 計測 | 時間 | 出典 |
