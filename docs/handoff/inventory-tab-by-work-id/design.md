@@ -132,6 +132,19 @@ conftest.py:812 の SQLite products 表から `tcg_type` 列を消す。rls_boot
 | K9 便2 デプロイ後、列・FK・索引 0、ai_ro.public__products に tcg_type 無し、tcg_series_master.tcg_type は残る | 本番カタログを読み取りの道で |
 | K10 便2 デプロイ成功・/health 200・API 401・ログにエラー 0、次のデプロイも成功 | K4 と同じ＋次回 deploy の結果 |
 
+## 6-1. 受入結果（2026-10-19 記録）
+| 基準 | 結果 | 事実 |
+|---|---|---|
+| K4 | ○ | 便1 #4508 マージ 035b0145e、Deploy 39086222367 success。未ログイン GET は 401、アプリエラー 0 |
+| K5 | ○ | 466045 は work_id 1 = pokemon_booster_box |
+| K6 | ○ | PO 目視で「ポケモンBOX」タブに 466045 が表示（2026-10-18「出た」） |
+| K7〜K9 | ○ | 便2 #4512 マージ 57da62446（PO「GO #4512」）、Deploy 39125114956 success。本番 products の tcg_type 列・FK・索引 0 件、ai_ro.public__products に tcg_type 無し |
+| K10 | ○ | 次回デプロイも成功。Deploy 39127734950（#4516、2026-10-18T12:32:53Z）success。ログで 20261018_110000 は「does not exist, skipping」の NOTICE のみ・ERROR なし、20260602_020000 は neutralized、ai_ro views created 510 / failed 0、Migrations done。続く 39127839895（#4517）も success。2026-10-18T20:42Z の本番読み取りで tcg_type 列 0 件・制約 0 件 |
+
+K1〜K3 は便1 のマージ前に確認済み（#4508）。K7 の退避 CSV を含む証拠の保存先: ~/CC報告ファイル-keep/inventory-tab-work-id/（中身は社外秘のためここに載せない）。
+
+付随: GAS 在庫一覧の既定「新しい順」を発売日→英語名に変更（SA アプリと同じ）。テスト版23・本番版17（戻し先16）、PO 目視○。GAS ソースは salesanchor リポジトリ外。
+
 ## 7. 影響範囲・リスクと対処
 | リスク | 対処 |
 |---|---|
