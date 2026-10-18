@@ -75,7 +75,7 @@ PACKAGING_MIGRATIONS = (
 
 
 async def _packagings_ready(admin_engine) -> bool:
-    """荷姿の表・単位 PACK/BOX/CASE の 3 件・products.product_format_id が揃っているか（lock は取らない）。"""
+    """荷姿の表・単位 PACK/BOX/CASE/CARD の 4 件・products.product_format_id が揃っているか（lock は取らない）。"""
     async with admin_engine.connect() as conn:
         if not await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL")):
             return False
@@ -88,9 +88,9 @@ async def _packagings_ready(admin_engine) -> bool:
         if not has_format_id:
             return False
         units = await conn.scalar(
-            text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE')")
+            text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE','CARD')")
         )
-        return units == 3
+        return units == 4
 
 
 async def ensure_product_packagings(admin_engine) -> None:
@@ -129,9 +129,21 @@ async def ensure_product_packagings(admin_engine) -> None:
             await conn.execute(
                 text(
                     "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
-                    "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30) ON CONFLICT (code) DO NOTHING"
+                    "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30),('CARD','カード',40) ON CONFLICT (code) DO NOTHING"
                 )
             )
+
+
+def provision_packagings_sync(cursor) -> None:
+    """ADR-1028 便4: 同期の接続（psycopg2）で、荷姿の表と 4 単位を作る。試験ごとに新しい DB なので lock は要らない。"""
+    for name in PACKAGING_MIGRATIONS:
+        sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+        cursor.execute(sql)
+    cursor.execute(
+        "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
+        "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30),('CARD','カード',40) "
+        "ON CONFLICT (code) DO NOTHING"
+    )
 
 
 async def _apply_migration(admin_engine, filename: str) -> None:
