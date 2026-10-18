@@ -129,7 +129,8 @@ def test_view_sql_order_by_groups_by_release_date_first() -> None:
     price = _SORT_COLUMNS["unit_price"]
     assert _build_view_order_by(sort_col=rel, order_dir="ASC") == f"ORDER BY {group_asc}, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=rel, order_dir="DESC") == f"ORDER BY {group_desc}, d.sort_ord ASC"
-    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_asc}, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_desc}, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="ASC") == f"ORDER BY {group_desc}, d.price_num ASC NULLS LAST, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=_SORT_COLUMNS["name"], order_dir="DESC") == (
         "ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC"
     )

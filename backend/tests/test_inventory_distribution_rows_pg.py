@@ -310,7 +310,7 @@ _VIEW_CASES = [
 def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
                           limit: int, offset: int, args: dict = _ARGS):
     """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
-    # 基準の ORDER BY（ADR-1014 改訂 2026-10-18: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
+    # 基準の ORDER BY（ADR-1014 改訂 2026-10-18・2026-10-19: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
     from app.routers.inventory_offers import _build_view_order_by
 
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
