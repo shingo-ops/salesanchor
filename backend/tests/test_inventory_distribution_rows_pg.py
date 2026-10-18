@@ -329,7 +329,9 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
     facets = {tuple(r[k] for k in ("supplier_id", "provider", "category", "condition", "unit_canonical"))
               for r in session.execute(text(
                   "SELECT DISTINCT d.supplier_id, d.provider, d.category, d.condition, d.unit_canonical "
-                  f"FROM ({rows_sql(False)}) d"), {}).mappings().all()}
+                  f"FROM ({rows_sql(False)}) d"),
+              # 年齢窓の bind だけ渡す（絞り込みの bind は facet に使わない。age_condition が空なら {}）
+              {k: v for k, v in params.items() if k == "max_age_hours"}).mappings().all()}
     return int(total), page_rows, facets
 
 
