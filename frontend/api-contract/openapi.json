@@ -11376,6 +11376,17 @@
             "title": "Items",
             "type": "array"
           },
+          "next_expiry_in_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry In Seconds"
+          },
           "page": {
             "title": "Page",
             "type": "integer"
