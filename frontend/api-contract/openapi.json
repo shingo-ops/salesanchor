@@ -22004,6 +22004,114 @@
         "title": "POResponse",
         "type": "object"
       },
+      "PackagingIn": {
+        "additionalProperties": false,
+        "description": "ADR-1028 便4: 荷姿 1 単位ぶん。中の単位はサーバーが決める。",
+        "properties": {
+          "contained_count": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Count"
+          },
+          "count_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "official_store",
+                  "retailer",
+                  "measured",
+                  "legacy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Source"
+          },
+          "count_source_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Count Source Urls",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 99999.999,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "weight_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "official_store",
+                  "retailer",
+                  "measured",
+                  "legacy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Source"
+          },
+          "weight_source_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Weight Source Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unit_code"
+        ],
+        "title": "PackagingIn",
+        "type": "object"
+      },
       "ParallelReportResponse": {
         "properties": {
           "summary": {
@@ -24304,6 +24412,21 @@
             "maxLength": 5000,
             "title": "Mark",
             "type": "string"
+          },
+          "packagings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PackagingIn"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packagings"
           },
           "product_category_id": {
             "anyOf": [
