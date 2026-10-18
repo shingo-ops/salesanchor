@@ -157,6 +157,8 @@ class InventoryRow(BaseModel):
     ship_ja: str | None = None        # 発送
     status: str | None = None         # LINE 解析の status（In Stock / Pre-order など。値のまま）
     merged_count: int = 1             # まとめた行数（まとめない行は 1）
+    badge_cheapest: bool = False      # 同じ商品のまとまり（絞り込み後・ページ前）で最安か（ADR-1014 改訂）
+    badge_most_stock: bool = False    # 同じ商品のまとまり（絞り込み後・ページ前）で在庫最多か（ADR-1014 改訂）
     extraction_item_ids: list[str] = []  # 行の元になった extraction_items.id（まとめた行は組の全件。解析パネル用）
 
 

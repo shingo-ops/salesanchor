@@ -45,6 +45,10 @@
       "min": "下限",
       "max": "上限"
     },
+    "badge": {
+      "cheapest": "最安",
+      "mostStock": "在庫最多"
+    },
     "col": {
       "mark": "型番",
       "title": "商品名",

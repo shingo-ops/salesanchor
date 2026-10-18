@@ -5,6 +5,7 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
+import { BlockBadge } from "./blockBadges";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
 import "./inventoryColumns.css";
@@ -23,6 +24,9 @@ export interface InventoryRow {
   note_ja: string | null;
   ship_ja: string | null;
   merged_count: number;
+  /** 同じ商品のまとまり（絞り込み後・ページ前）で最安／在庫最多か。無いときは付けない（ADR-1014 改訂） */
+  badge_cheapest?: boolean;
+  badge_most_stock?: boolean;
   /** 行の元になった extraction_items.id（まとめた行は組の全件）。解析パネル用 */
   extraction_item_ids: string[];
   posted_at: string | null;
@@ -123,7 +127,12 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         sortable: true,
         align: "right",
         mobileOrder: 3,
-        renderCell: (it) => <span className="inventory-cell__nowrap">{`¥${it.unit_price.toLocaleString()}`}</span>,
+        renderCell: (it) => (
+          <span className="inventory-cell__nowrap">
+            {`¥${it.unit_price.toLocaleString()}`}
+            {it.badge_cheapest && <BlockBadge kind="cheapest" label={t("inventory.badge.cheapest")} />}
+          </span>
+        ),
       },
     },
     {
@@ -136,7 +145,10 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 4,
         renderCell: (it) => (
           <>
-            <span className="inventory-cell__nowrap">{it.quantity ?? ""}</span>
+            <span className="inventory-cell__nowrap">
+              {it.quantity ?? ""}
+              {it.badge_most_stock && <BlockBadge kind="mostStock" label={t("inventory.badge.mostStock")} />}
+            </span>
             {it.merged_count >= 2 && (
               <div data-testid={`inventory-row-${it.id}-merged`} className="inventory-cell__sub">
                 {t("inventory.mergedCount", { count: it.merged_count })}

@@ -114,11 +114,11 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
 
 
 # fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
-# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後の値。列の追加以外は変えていないことは
+# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後の値。列の追加以外は変えていないことは
 # PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
 _VIEW_SQL_BEFORE = {
-    False: (26930, "f70450a33710945b7f2f5b61c644e91e3cc1b0009151e6209006dd58c476abbd"),
-    True: (28847, "b3519756408d7ad01ef7198714f14b4dc0400535384a33abde31f3bd54c93eaa"),
+    False: (27700, "b1b603f8889e08e742528430598c4392c074032c8fd85fef74d0055b989356b9"),
+    True: (29617, "f264917c99d05a840c8eaa21bd031448fef13a271ad3564aee53db9b2070f595"),
 }
 
 
@@ -364,3 +364,18 @@ def test_bin3_endpoint_has_supplier_ids_query() -> None:
     p = inspect.signature(io.list_inventory_view).parameters["supplier_ids"]
     assert p.default.default is None
     assert any(getattr(m, "max_length", None) == 2000 for m in p.default.metadata)
+
+
+def test_project_inventory_rows_copies_block_badges() -> None:
+    """B3d: バッジの2項目は "__" の付かないキーから InventoryRow へ写る。キーが無ければ両方 False。"""
+    from datetime import datetime, timezone
+
+    from app.routers.inventory_offers import _project_inventory_rows
+
+    base = {
+        "row_key": "r1", "product_id": 1, "supplier_id": 2, "price_num": 100, "qty_num": 5,
+        "posted_ts": datetime(2026, 10, 19, tzinfo=timezone.utc), "condition": "NM",
+    }
+    on, off = _project_inventory_rows([{**base, "badge_cheapest": True, "badge_most_stock": True}, dict(base)])
+    assert on.badge_cheapest is True and on.badge_most_stock is True
+    assert off.badge_cheapest is False and off.badge_most_stock is False

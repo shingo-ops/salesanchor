@@ -20,6 +20,7 @@ import {
   TAB_ALL,
   distinctValues,
   filterRows,
+  markBlockBadges,
   seriesTabs,
   sortRows,
   withIndex,
@@ -89,7 +90,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
     qtyMax,
   };
   const sorted = useMemo(
-    () => sortRows(filterRows(allRows, filters, now), sortKey, sortDir),
+    () => markBlockBadges(sortRows(filterRows(allRows, filters, now), sortKey, sortDir)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allRows, tab, query, freshOnly, data.fresh_window_hours, providers, conditions, priceMin, priceMax, qtyMin, qtyMax, sortKey, sortDir, now],
   );
