@@ -310,7 +310,7 @@ _VIEW_CASES = [
 def _old_three_statements(session, *, merge: bool, where: str, params: dict, sort_col: str, order_dir: str,
                           limit: int, offset: int, args: dict = _ARGS):
     """変更前の3文（COUNT / ページ / facets）。比較の基準。"""
-    # 基準の ORDER BY（ADR-1014 改訂 2026-10-18: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
+    # 基準の ORDER BY（ADR-1014 改訂 2026-10-18・2026-10-19: まとまりは発売日→題名→product_id。タイトル列は変更前のまま）
     from app.routers.inventory_offers import _build_view_order_by
 
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
@@ -595,7 +595,7 @@ def test_bin1_sort_groups_by_release_date_then_title(pg, ids):
     _, items_desc = _view_items(pg, sort="release_date", order="desc")
     assert [r["english_title"] for r in items_desc] == ["Alpha", "Alpha", "Beta"]
     _, by_price = _view_items(pg, sort="unit_price", order="desc")
-    assert [r["english_title"] for r in by_price] == ["Beta", "Alpha", "Alpha"]  # まとまりの順は不変
+    assert [r["english_title"] for r in by_price] == ["Alpha", "Alpha", "Beta"]  # まとまりの順は既定と同じ発売日の新しい順（ADR-1014 改訂 2026-10-19）
     _, by_name_desc = _view_items(pg, sort="name", order="desc")
     assert [r["english_title"] for r in by_name_desc] == ["Beta", "Alpha", "Alpha"]
     _, by_name_asc = _view_items(pg, sort="name", order="asc")

@@ -64,3 +64,14 @@ PO 決定（2026-10-18）「y」: 在庫表の「24時間以内」ON のとき�
 - 並び・まとめ・件数・ページは変わらない。絞り込みの選択肢だけが、24時間以内の在庫にある値に縮む。`fresh_only=false` の SQL は変更前と同じ。
 - 目的: 在庫表の初回表示の待ち時間の短縮（重い配信行の計算が24時間以内の行だけになる）。
 - 守り: `backend/tests/test_inventory_distribution_rows.py`（窓が年齢窓に入ることと false 時の SQL 不変）、`backend/tests/test_inventory_distribution_rows_pg.py`（変更前の外側の絞りと total・ページが一致、選択肢は24時間以内の値だけ）。
+
+## 改訂 2026-10-19（価格などで並べても、商品の順番は発売日の新しい順のまま）
+
+PO 決定（2026-10-19）「y」（価格などで並べても、商品の順番は「発売日の新しい順」のまま変えず、中だけを並べる形に直す）。上の「改訂 2026-10-18」の「それ以外の並び替えでは常に ASC」を DESC に改める（前の改訂節の本文は書き換えない）。
+
+- まとまり（商品）の順: `sort=release_date` 以外では 発売日 DESC（空欄は末尾）→ english_title ASC → japanese_title ASC → product_id ASC。既定の並びと同じなので、並べ方を切り替えても商品の位置は動かず、まとまりの中だけが入れ替わる。
+- 実装: `backend/app/routers/inventory_offers.py` の `_build_view_order_by`、`frontend/src/pages/viewer/viewerFilter.ts` の `sortRows`。
+- GAS 在庫一覧（リポジトリ外 shingo-ops/tcg-client-viewer の index.html）も同じ形に揃える（発売日 DESC → 英語名 → 日本語名）。商品名の見出しは英語名→日本語名を選んだ向きで並べる。
+- GAS との既知の差（揃えない）: GAS は product_id を持たない。文字の比べ方（GAS は数字を数として比べ、大文字と小文字を区別しない）。選んだ列の空欄（GAS は常に末尾）。
+- 変えないもの: 既定の並び、`sort=release_date` の向き、`sort=name` の並び（在庫表・閲覧ページ）、同じ商品の中の価値順（ADR-1023）。
+- 守り: `backend/tests/test_inventory_distribution_rows.py` と `frontend/src/pages/viewer/viewerFilter.test.ts`。

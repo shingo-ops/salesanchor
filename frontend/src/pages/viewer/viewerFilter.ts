@@ -165,7 +165,7 @@ function columnCompare(sortKey: string, dir: SortDir): Compare | null {
 
 /**
  * アプリの並びと同じ（ADR-1014 改訂 2026-10-18）。
- * まとまり（商品）の順: 発売日（空は末尾）→ english_title → japanese_title。発売日の向きは release_date を選んだときだけ sortDir。
+ * まとまり（商品）の順: 発売日（空は末尾）→ english_title → japanese_title。発売日の向きは release_date を選んだときだけ sortDir。ほかの並び替えでは desc（既定と同じ、ADR-1014 改訂 2026-10-19）。
  * まとまりの中: 選んだ列、最後に元の順。商品名（name）の見出しだけは変更前のまま、
  * english_title と japanese_title を同じ向きで並べる。
  */
@@ -175,7 +175,7 @@ export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortD
     keys.push(plain((r) => r.english_title, compareText, sortDir));
     keys.push(plain((r) => r.japanese_title, compareText, sortDir));
   } else {
-    keys.push(nullsLast((r) => r.release_date, comparePlain, sortKey === "release_date" ? sortDir : "asc"));
+    keys.push(nullsLast((r) => r.release_date, comparePlain, sortKey === "release_date" ? sortDir : "desc"));
     keys.push(plain((r) => r.english_title, compareText, "asc"));
     keys.push(plain((r) => r.japanese_title, compareText, "asc"));
     if (sortKey !== "release_date") {

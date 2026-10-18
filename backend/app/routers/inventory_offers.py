@@ -262,12 +262,12 @@ def _build_view_filters(
 def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
     """GET /inventory の ORDER BY（ADR-1014 改訂 2026-10-18）。sort_col / order_dir は信頼できる断片のみ。
 
-    まとまり（商品）の順: 発売日（空欄は末尾）→ 英語名 → 日本語名 → product_id。発売日の向きは release_date を選んだときだけ order_dir。
+    まとまり（商品）の順: 発売日（空欄は末尾）→ 英語名 → 日本語名 → product_id。発売日の向きは release_date を選んだときだけ order_dir。ほかの並び替えでは既定と同じ DESC（ADR-1014 改訂 2026-10-19）。
     まとまりの中: 選んだ列（release_date なら sort_ord のみ）。タイトル列（name）は変更前の式のまま。
     """
     if sort_col == _SORT_COLUMNS["name"]:
         return f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
-    group_dir = order_dir if sort_col == _SORT_COLUMNS["release_date"] else "ASC"
+    group_dir = order_dir if sort_col == _SORT_COLUMNS["release_date"] else "DESC"
     group = (
         f"NULLIF(d.release_date, '') {group_dir} NULLS LAST, d.english_title ASC, "
         "d.japanese_title ASC NULLS LAST, d.product_id ASC"

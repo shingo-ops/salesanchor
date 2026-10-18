@@ -72,8 +72,8 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
   it("release_date asc: groups by release date oldest first, empty last", () => {
     expect(sortRows(rows, "release_date", "asc").map((r) => r.idx)).toEqual([1, 3, 0, 2]);
   });
-  it("price asc keeps the group order and sorts only inside a group", () => {
-    expect(sortRows(rows, "unit_price", "asc").map((r) => r.idx)).toEqual([3, 1, 0, 2]);
+  it("price asc keeps the default group order (release date newest first) and sorts only inside a group", () => {
+    expect(sortRows(rows, "unit_price", "asc").map((r) => r.idx)).toEqual([0, 3, 1, 2]);
   });
   it("release_date desc: newest group first, empty still last", () => {
     expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([0, 1, 3, 2]);
