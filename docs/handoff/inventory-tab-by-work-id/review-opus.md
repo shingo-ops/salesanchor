@@ -22,3 +22,10 @@
   - R1: inventory_search の SQL は、CI でも手元でも実行されない（TEST_PG_URL が無い）。→ 便1 のデプロイ後に、本番で検索 API が 401 を返し 500 を返さないことを確かめる（K4 に足す）。
   - R2: テストの準備コードで作る type_master は列が少ない。既存の表と同じ型で、今回だけの問題ではない。
   - R3: openapi.json は差分を当てる方法で更新した。CI の api-contract-check で決着させる。
+
+## r3 CI 指摘の修正の審査（2026-10-18、Opus）
+
+- 判定: APPROVE
+- 対象: 42a9c4e37。変更したのは backend/tests/test_inventory_aggregated.py だけ（7行追加・19行削除）。
+- 内容: test-schema-dup gate が、本番の表定義のコピーが 3 から 4 に増えたことを止めた。r2 で R2 として挙げた type_master のコピーを消し、既存の bootstrap_public_products（migration を適用して seed を入れる）から type_master を得るように変えた。
+- 結果: R2 も解消した。gate は手元で BASE=3 HEAD=3 になり pass（実装者の生出力 impl1/schema_dup_after.txt）。
