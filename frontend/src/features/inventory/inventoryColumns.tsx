@@ -31,7 +31,7 @@ export interface InventoryRow {
   supplier_name: string | null;
   unit_price: number;
   quantity: number | null;
-  tcg_type: string | null;
+  work_code: string | null;
   offered_at: string;
   release_date: string | null;
 }

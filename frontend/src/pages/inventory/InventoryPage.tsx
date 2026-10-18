@@ -146,7 +146,7 @@ export default function InventoryPage() {
   const [freshWindowHours, setFreshWindowHours] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
-  // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
+  // 中分類マスタ（type_master.code → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
@@ -186,7 +186,7 @@ export default function InventoryPage() {
       params.set("fresh_only", freshOnly ? "true" : "false");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
-      if (activeTab !== "all") params.set("tcg_type", activeTab);
+      if (activeTab !== "all") params.set("work_code", activeTab);
       if (selectedSupplierIds.length > 0) params.set("supplier_ids", selectedSupplierIds.join(","));
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));

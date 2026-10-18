@@ -1805,7 +1805,6 @@
     "pageLabel": "{{page}} ページ目 ({{count}} 件表示中)",
     "field": {
       "productKind": "商品種類",
-      "category": "TCGシリーズ",
       "mark": "型番",
       "setType": "セット種別",
       "cardNumber": "カード番号",

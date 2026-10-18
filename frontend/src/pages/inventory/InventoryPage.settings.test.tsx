@@ -13,7 +13,7 @@ const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: null, mark: null,
   condition: 'New', unit: 'BOX', offer_type: null, status: 'sold_out', note_ja: 'memo', ship_ja: 'ship',
   merged_count: 3, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'S',
-  unit_price: 10, quantity: null, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null,
+  unit_price: 10, quantity: null, work_code: 'pokemon_booster_box', offered_at: '', release_date: null,
 };
 
 let instance = createInstance();
