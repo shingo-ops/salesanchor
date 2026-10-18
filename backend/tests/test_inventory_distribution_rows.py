@@ -43,16 +43,81 @@ def test_sold_out_filter_is_shared_by_dist_base_and_preview_count() -> None:
     assert "_sold_out_filter(" in inspect.getsource(svc.fetch_preview_data)
 
 
-def test_fresh_window_is_24_hours_and_fresh_filter_is_bound() -> None:
+def test_fresh_window_is_24_hours_and_view_filters_no_longer_take_fresh_only() -> None:
+    import inspect
+
     from app.routers.inventory_offers import _build_view_filters
 
     none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     assert svc.FRESH_WINDOW_HOURS == 24
-    assert _build_view_filters(**none) == ([], {})  # 既定は False: 既存の呼び出しは変わらない
-    conds, params = _build_view_filters(**none, fresh_only=True)
-    assert conds == ["d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)"]
-    assert params == {"fresh_hours": 24}
+    assert "fresh_only" not in inspect.signature(_build_view_filters).parameters  # 窓の定義は _age_window の1か所
+    assert _build_view_filters(**none) == ([], {})
+
+
+class _FakeResult:
+    def mappings(self):
+        return self
+
+    def all(self):
+        return []
+
+
+class _FakeDb:
+    """db.execute に渡された SQL と bind を記録する（返す行は空）。"""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    async def execute(self, stmt, params=None):
+        self.calls.append((str(stmt), dict(params or {})))
+        return _FakeResult()
+
+
+async def _view_sql(*, max_age: str, fresh_only: bool, same_post: bool = False) -> tuple[str, dict]:
+    from app.routers import inventory_offers as io
+
+    db = _FakeDb()
+    async with _client(perms=frozenset({"products.view"}), db=db) as client:
+        with patch.object(io, "load_distribution_settings", AsyncMock(return_value={"max_age_hours": max_age})):
+            res = await client.get("/api/v1/inventory", params={
+                "fresh_only": str(fresh_only).lower(), "merge_same_post": str(same_post).lower()})
+    assert res.status_code == 200, res.text
+    assert len(db.calls) == 1
+    return db.calls[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("max_age", "expected"), [("48", 24), ("24", 24), ("12", 12), ("0", 24)])
+async def test_fresh_only_puts_the_24h_window_inside_the_age_window(max_age: str, expected: int) -> None:
+    sql, params = await _view_sql(max_age=max_age, fresh_only=True)
+    assert params["max_age_hours"] == expected  # 0 は「絞らない」の意味なので 24 に置き換える
+    assert "fresh_hours" not in params
+    assert "d.posted_ts >= NOW()" not in sql  # rows_f 側の二重の絞りはない
+    assert sql.count("sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)") == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("same_post", [False, True])
+async def test_fresh_only_false_sql_is_identical_to_before(same_post: bool) -> None:
+    import hashlib
+
+    sql, params = await _view_sql(max_age="48", fresh_only=False, same_post=same_post)
+    assert params["max_age_hours"] == 48 and "fresh_hours" not in params
+    assert (len(sql), hashlib.sha256(sql.encode()).hexdigest()) == _VIEW_SQL_BEFORE[same_post]
+
+
+@pytest.mark.asyncio
+async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
+    sql, params = await _view_sql(max_age="0", fresh_only=False)
+    assert "max_age_hours" not in params and "sm.line_posted_at >= NOW()" not in sql
+
+
+# fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）を、便2の変更前（origin/main 035b0145e）のコードで作った値。
+_VIEW_SQL_BEFORE = {
+    False: (26763, "c572e1e7a1b140d28334e1531531e5d90e1739bf729cc41e551efcc816618580"),
+    True: (28679, "403fae7741eb5685d8b3ad660fa2873b368c2e2776fa31700408ec7d4bc91b61"),
+}
 
 
 def test_view_sql_order_by_groups_by_release_date_first() -> None:
@@ -140,13 +205,13 @@ def _user(*, super_admin: bool) -> User:
 
 
 @asynccontextmanager
-async def _client(*, perms: frozenset[str], super_admin: bool = False):
+async def _client(*, perms: frozenset[str], super_admin: bool = False, db=None):
     from app.auth.dependencies import get_current_tenant, get_current_user
     from app.database import get_db
     from app.main import app
 
     async def _db():
-        yield object()
+        yield db if db is not None else object()
 
     saved = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = _db
