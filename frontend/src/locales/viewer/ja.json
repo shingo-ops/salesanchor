@@ -26,11 +26,10 @@
     },
     "freshOnly": "{{hours}}時間以内",
     "sort": {
-      "placeholder": "並べ替え",
-      "releaseDesc": "発売日が新しい順",
+      "placeholder": "並び替え",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
-      "postedDesc": "投稿が新しい順"
+      "postedDesc": "投稿が新しい"
     },
     "filter": {
       "button": "絞り込み",

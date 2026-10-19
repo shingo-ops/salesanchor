@@ -55,7 +55,7 @@ interface InventoryListResponse {
 const PER_PAGE = 50;
 
 // 並び替えプルダウンの値（`${sort}:${order}`）。
-const SORT_MENU_VALUES = ["release_date:desc", "unit_price:asc", "quantity:desc", "offered_at:desc"];
+const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"];
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -473,13 +473,16 @@ export default function InventoryPage() {
                 value={SORT_MENU_VALUES.includes(`${sortField}:${sortDir}`) ? `${sortField}:${sortDir}` : ""}
                 onChange={(e) => {
                   const [field, dir] = e.target.value.split(":");
-                  if (!field) return;
-                  setSortField(field);
-                  setSortDir(dir === "asc" ? "asc" : "desc");
+                  if (!field) {
+                    setSortField("release_date");
+                    setSortDir("desc");
+                  } else {
+                    setSortField(field);
+                    setSortDir(dir === "asc" ? "asc" : "desc");
+                  }
                   setPage(1);
                 }}
                 options={[
-                  { value: "release_date:desc", label: t("inventory.sortMenu.releaseDesc") },
                   { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
                   { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
                   { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
