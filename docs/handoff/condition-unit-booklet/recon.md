@@ -24,13 +24,13 @@
    - プロモパック系: 未開封(60)・開封済み(61)・PSA10(62) はどれも空。
    - シングル系の 5 行・FLAG_SINGLE・Error・Bulk は空。
 3. 単位は `public.line_units` にある。Case=9・Box=10・Pack=11・Piece=12・Booklet=17 で、Booklet は code UN0009、区分「冊子系」、別名「冊」。
-4. 単位の決まり方は `gemini_raw_copy_v102_product_first.py` の次の流れで決まる。
+4. 単位の決まり方は `backend/app/services/gemini_raw_copy_v102_product_first.py` の次の流れで決まる。
    - `:727` 原文の単位語を探す。
    - `:730` `resolve_unit_v2` で単位にする。
    - `:731` 状態を決める。
    - `:734` `_resolve_unit_from_state`（`:673-698`）で状態の単位を当てる。単位が空なら状態の単位で埋める（`:689-695`）。状態が原文の語で決まった場合（basis が `^R[123]:`、`:74`）は、状態の単位で上書きする（`:696-698`）。既定の状態（R4 以降）は、単位が空のときに埋めるだけ。セット系は Set を優先する（`:683-688`）。
 5. 区分と状態の群の対応は、次の 4 か所で決まっている。
-   - `gemini_raw_copy_v102_product_first.py:581-584` の `_KUBUN_TO_VALUE_GROUP`
+   - `backend/app/services/gemini_raw_copy_v102_product_first.py:581-584` の `_KUBUN_TO_VALUE_GROUP`
    - 群を v102 専用にする `backend/app/services/tcg_analyzer_svc.py:653` の `SCOPED_VALUE_GROUPS`
    - `backend/app/services/line_analysis_v102_svc.py:644` の `_SCOPED_GROUP_OF_KUBUN`
    - 並び順を決める `backend/app/services/tcg_result_order.py:11` の `VALUE_GROUP_ORDER`
