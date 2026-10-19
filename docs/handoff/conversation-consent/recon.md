@@ -39,7 +39,7 @@
 
 ### A-3 許可券（~/.claude/permits/danger-permit-*.json）の照合・消費（汎用経路）
 
-- :415-443 と :302-330 は同じ処理。glob で `danger-permit-*.json` を全部読み、`expires_at` を過ぎたものは削除（:430-434）、`op` と検知語（MATCHED）が**部分一致（どちらかがもう一方を含む）**なら券ファイルを `os.remove`（=消費）して `consumed`（:436-440）。
+- :415-443 と :302-330 は同じ処理。glob で danger-permit-*.json を全部読み、`expires_at` を過ぎたものは削除（:430-434）、`op` と検知語（MATCHED）が**部分一致（どちらかがもう一方を含む）**なら券ファイルを `os.remove`（=消費）して `consumed`（:436-440）。
 - この経路で照合するのは `op`・`expires_at` だけ。`created_by`・コマンド全文・cwd・session は見ない。
 - 【事実】`p.get('op','').lower() in op_matched` の形のため、`op` が空文字の券は任意の検知語に部分一致する式になっている（:437）。発行スクリプト側は引数が空だと発行しない（permit-danger.sh:8-12）ので、通常は起きない。
 - psql-write 経路だけは別: permit_bridge.py（~/.codex/salesanchor/permit_bridge.py, 105行）が券を探し、次をすべて満たすものを `unlink` して 30 秒有効の「受領書」（write-receipts/<sha256>.json）に変える（:46-67）。
@@ -54,7 +54,7 @@
   - Write ツールで ~/.claude/permits/ 以下へ書くのを止める（:44-65）。Edit・NotebookEdit は `[ "$TOOL_NAME" = "Bash" ] || exit 0`（:68）で素通り（Edit にも登録はある :272 付近だが、この関数の中では Write だけ判定）。
   - 許可券は参照しない（permit なしで常に止まる。解除は PO の別手段）。
 - permits-guard は A-2 に記載（agent-danger-hook 内）。
-- gh-scope-guard.sh は `gh-peek-*.json`（別系統の券）を消費する（gh-scope-guard.sh:35,138,225-255）。発行元の scripts/permit-peek.sh は origin/main に存在しない（`ls` で No such file）。【事実】
+- gh-scope-guard.sh は gh-peek-*.json（別系統の券）を消費する（gh-scope-guard.sh:35,138,225-255）。発行元の scripts/permit-peek.sh は origin/main に存在しない（`ls` で No such file）。【事実】
 - card-lint.sh:159 は「permit-danger.sh 経由にする」というカード文面の検査（許可の自己発行 L22）で、実行時の防御ではない。
 - AI が `bash scripts/permit-danger.sh "<op>"` を Bash で直接実行できるかは、上記3本のフック内には禁止処理が無い（permits-guard は `.claude/permits` の文字列にしか反応しない。permit-danger.sh 実行コマンドにその文字列は含まれない）。node フックの挙動は【未確認】。ただし design.md:169 は「AI は単発の permit を発行できる」ことを受容リスクとして記録済み。
 - agent-events.jsonl の種別件数（2026-10-19 15:27 時点、15.8MB）: stop 31968 / gh_scope_blocked 24961 / start 20027 / main_repo_write_blocked 6847 / danger_detected 6519 / worktree_bypass_blocked 4102 / hook_blocked 1627 / danger_permit_consumed 295 / gh_permit_consumed 199 / scope_destruct_permit_consumed 15 / permits_self_issue_blocked 134 / hook_permit_consumed 1。
@@ -62,7 +62,7 @@
 ## B. scripts/permit-danger.sh（origin/main, 44行）
 
 - 引数 `<operation>` が空なら Usage で exit 1（:8-12）。
-- `~/.claude/permits/danger-permit-<SAFE_OP>-<UTC日時>.json` を作る（:15-19）。SAFE_OP は空白と `/` を `_` に変え英数・`_`・`-` 以外を除去（:18）。同じ秒に同じ op なら上書き（ファイル名が秒単位）。
+- ~/.claude/permits/danger-permit-<SAFE_OP>-<UTC日時>.json を作る（:15-19）。SAFE_OP は空白と `/` を `_` に変え英数・`_`・`-` 以外を除去（:18）。同じ秒に同じ op なら上書き（ファイル名が秒単位）。
 - 中身（:31-36）: `{"op": <引数そのまま>, "created_at": "...Z", "expires_at": created+30分, "created_by": "manual"}`。署名・コマンド全文・cwd・session は持たない。
 - 照合: A-3 のとおり op の部分一致（汎用）、psql write は完全一致＋created_by=manual（permit_bridge.py:55）。
 - `created_by: "manual"` はスクリプトが固定で書く文字列で、AI が同じ形の JSON を書けば同じ値になる（書込禁止は A-2 の permits-guard と A-4 の Write 禁止に依存）。
@@ -71,13 +71,13 @@
 
 - docs/handoff/design-approval-ticket/design.md（285行）段3「設計承認チケット」は :87-137。
   - ops.yaml（kind は psql-write の1種のみ。cmd 完全一致＋sql_file の sha256 束縛。max_uses 既定1。期限既定72時間・上限7日。:89-107）。
-  - 発行スクリプト `scripts/approve-design.sh`（PO が `!` で1回実行。表示してから ~/.claude/permits/design-approval-<id>.json を作る。`created_by: "po-bang"`。:108-124）。
+  - 発行スクリプト scripts/approve-design.sh（PO が `!` で1回実行。表示してから ~/.claude/permits/design-approval-<id>.json を作る。`created_by: "po-bang"`。:108-124）。
   - AI の発行防止: コマンド文字列に `approve-design` が出たら exit 2（:125-127）。
   - 消費: agent-danger-hook.sh に `consume_design_ticket` を追加（:128-139）。
   - 受容するリスク: 「チケットのファイルは本人の署名を持たない。AI が文字列を分けて組み立てれば permits-guard を逃れて偽造できる」（design.md:169）。署名は偽造が1件でも見つかった時点で導入、と記載。
   - 段4: 機械で確かめたチケットのときだけ PreToolUse の `permissionDecision: "allow"` を返す案（:139-150）。
 - 段3の未実装の確認（すべて事実）:
-  - origin/main に `scripts/approve-design.sh` が無い（`ls` で No such file）。
+  - origin/main に scripts/approve-design.sh が無い（`ls` で No such file）。
   - `git grep -il "approve-design|consume_design_ticket" origin/main` の一致は docs/handoff/design-approval-ticket/design.md の1ファイルのみ。
   - 実機の agent-danger-hook.sh に `consume_design_ticket|approve-design|design-approval|ticket_used` は 0 件（`grep -c` = 0）。
   - ADR-1003 に「設計承認チケット」節が無い（0件）。
@@ -120,7 +120,7 @@
 
 ### D-4 サブエージェントの記録
 
-- メイン記録とは別ファイル: `<セッションID>/subagents/agent-<id>.jsonl`（＋ `agent-<id>.meta.json`）。このセッションの下に 394 ファイル。
+- メイン記録とは別ファイル: `<セッションID>/subagents/agent-<id>.jsonl`（＋ agent-<id>.meta.json）。このセッションの下に 394 ファイル。
 - meta.json の項目: agentType, description, toolUseId, spawnDepth, requestShape("background"), requestNonInteractive(true), model。
 - サブ側の行は `isSidechain:true` と `agentId` が付く。サブ側の最初の user 文字列行（プロンプト）には `origin` が無い。つまり**サブエージェントの記録の user 行は origin.kind:"human" を持たない**（調べた1ファイルで確認）。
 

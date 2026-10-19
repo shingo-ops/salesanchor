@@ -108,9 +108,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 | `git reset --hard` | CLAUDE.md の不可逆操作 |
 | `DROP DATABASE` | 戻せない |
 | `clasp push` | ローカルからの clasp push は禁止（CI 経由、feedback_gas_clasp_local_push） |
-| `\.claude/permits`、`settings(\.local)?\.json`、`\.claude/scripts/`、`\.codex/salesanchor/` | 見張り役そのものを弱める |
+| `\.claude/permits`、settings(\.local)?\.json（正規表現）、`\.claude/scripts/`、`\.codex/salesanchor/` | 見張り役そのものを弱める |
 | `gh api` で `branches/.*/protection` か `rulesets` | Branch Protection・Ruleset |
-| `workflow-lint\.yml` | CLAUDE.md の不可逆操作 |
+| workflow-lint\.yml（正規表現） | CLAUDE.md の不可逆操作 |
 | §4-5 の Bash の見張りの5条件（会話記録・`consent-used`・tmux の入力注入・osascript keystroke・`/chat/queue`） | psql の経路（:92-154）は permits-guard・§4-5・本店の破壊系 git より前で exit 0 するため、経路の順に関係なく同じ結果にする（P3） |
 | `git clean`・`git stash`・`git checkout --`・`git restore`（agent-danger-hook.sh:238-241 と同じ4つの正規表現を、コマンド全体に re.search で当てる、S7） | 同上。本店の破壊系 git を同意の対象にしない方針（§4-3）を psql の経路でも守る（P3） |
 
@@ -155,7 +155,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 ### 4-7 返事の型と文書
 
 - ~/.claude/CLAUDE.md の「POへのチャット」に1行足す: 「危険操作を聞くときは同意票（design §4-1）を返事の最後の text に書き、選択肢1の行を、太字などの飾りなしで `1. 上の同意票の操作を実行する` から書き始める（後ろに【おすすめ】と説明を続けてよい）」（S6）。ADR 承認後に Opus が編集する。
-- リポジトリの CLAUDE.md:40（`permit-danger.sh` の行）に「会話の同意票でも可（ADR-1033、除外あり）」を足す（90行の上限内）。
+- リポジトリの CLAUDE.md:40（`scripts/permit-danger.sh` の行）に「会話の同意票でも可（ADR-1033、除外あり）」を足す（90行の上限内）。
 - ADR-1033 に書くこと: ADR-1003:45 を参照し、許可券の代わりに同意票も使えるとする。同意票は ADR-136 の「GO #PR番号」の代わりにならない。「受け入れたリスク」に R1 と PO の受容の言葉・日付を書く。
 - PO への案内に「『1』の後で取り消すときは Esc で止める」を書く（R2）。
 
@@ -210,8 +210,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - 登録は便1の反映後に Opus が agent-console の定期実行の公式手順（ac-routine）で行う。サブエージェントは agent-console のパスを触れないため、Opus が行う。
   - K13: 登録後の最初の月曜に点検セッションが開き、/tmp/CC報告ファイル/consent-weekly/ に4項目の結果が書かれていれば○。
 - 試験は scripts/dev/test-agent-hooks.sh に入り、po-apply のたびに走る。
+- 守り手: scripts/dev/test-agent-hooks.sh（po-apply のたびに T1〜T9 を走らせ、1件でも不合格なら反映を戻す）
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 
 該当事例なし。会話記録を同意の根拠にする公開事例は、今回の調査では探していない。根拠は Claude Code 公式の hooks リファレンス（common input の transcript_path・agent_id、transcript の非同期書込み、UserPromptSubmit。code.claude.com/docs/en/hooks、2026-10-19 確認）だけ。成功は K0〜K12 の実測で判定する。
 
