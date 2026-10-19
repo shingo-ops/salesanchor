@@ -9,6 +9,7 @@ API:
   POST /api/v1/super-admin/viewers/{viewer_id}/suspend
   POST /api/v1/super-admin/viewers/{viewer_id}/unsuspend
   POST /api/v1/super-admin/viewers/{viewer_id}/extend
+  POST /api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code
 """
 
 from __future__ import annotations
@@ -20,10 +21,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
+from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
 from app.models import User
 from app.services import viewer_admin
 from app.services.viewer_admin import ViewerAdminError
+from app.services.viewer_invite import create_viewer_invite
 
 router = APIRouter()
 
@@ -70,6 +73,14 @@ class ViewerLoginListResponse(BaseModel):
 
 class ExtendRequest(BaseModel):
     days: int = Field(..., ge=1, le=365, strict=True, description="延長する日数（1〜365）")
+
+
+class ViewerReissueResponse(BaseModel):
+    """作り直した申込コードと招待リンク（この応答でしか見られない）。"""
+
+    signup_code: str = Field(..., description="申込コード（XXXX-XXXX-XXXX-XXXX）")
+    expires_at: datetime | str = Field(..., description="申込コードの有効期限")
+    invite_url: str | None = Field(None, description="Discord 招待リンク（作れなければ null）")
 
 
 def _http_error(exc: ViewerAdminError) -> HTTPException:
@@ -152,3 +163,23 @@ async def extend_endpoint(
     current_user: User = Depends(require_super_admin),
 ):
     return await _change(db, current_user, viewer_id, "extend", days=payload.days)
+
+
+@router.post(
+    "/super-admin/viewers/{viewer_id}/reissue-signup-code",
+    response_model=ViewerReissueResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        code, expires_at = await viewer_admin.reissue_signup_code(db, viewer_id)
+    except ViewerAdminError as exc:
+        await db.rollback()
+        raise _http_error(exc) from None
+    await db.commit()
+    invite_url = await create_viewer_invite(db)  # commit の後（Discord を待つ間 DB を開けない）
+    return {
+        "signup_code": format_signup_code(code),
+        "expires_at": expires_at.isoformat(),
+        "invite_url": invite_url,
+    }

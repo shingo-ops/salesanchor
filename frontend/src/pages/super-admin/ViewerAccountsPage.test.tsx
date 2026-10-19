@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -32,10 +32,16 @@ const ITEMS = [
   v({ id: 2, email: "s2@example.com", line_name: "Sato", status: "suspended", trial_expires_at: null, discord_user_id: "d-222" }),
 ];
 
-function renderPage() {
+function LocationProbe() {
+  const loc = useLocation();
+  return <div data-testid="probe-search">{loc.search}</div>;
+}
+
+function renderPage(entry = "/") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[entry]}>
       <ViewerAccountsPage />
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -150,4 +156,91 @@ it("shows login records with time, IP and device in a drawer", async () => {
   expect(await screen.findByText("203.0.113.9")).toBeTruthy();
   expect(screen.getByText("TestAgent/1.0")).toBeTruthy();
   expect(screen.getByText("Login succeeded")).toBeTruthy();
+});
+
+const MIXED = [
+  v({ id: 1, email: "t1@example.com", status: "trial" }),
+  v({ id: 2, email: "s2@example.com", status: "suspended", trial_expires_at: null }),
+  v({ id: 3, email: "p3@example.com", line_name: "Pen", status: "pending", trial_expires_at: null }),
+  v({ id: 4, email: "a4@example.com", status: "active", trial_expires_at: null }),
+  v({ id: 5, email: "a5@example.com", status: "active", trial_expires_at: null }),
+];
+
+function mockMixed() {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: MIXED };
+    return { items: [] };
+  });
+}
+
+it("shows a left menu with 5 entries and counts, and filters by trial with ?status=trial", async () => {
+  mockMixed();
+  renderPage();
+  await screen.findByText("t1@example.com");
+  const menu = ["All", "Pending", "Trial", "Active", "Suspended"].map(name =>
+    screen.getByRole("button", { name: new RegExp(`^${name}\\s*\\d+$`) }),
+  );
+  expect(menu.map(b => b.textContent)).toEqual(["All5", "Pending1", "Trial1", "Active2", "Suspended1"]);
+  fireEvent.click(menu[2]);
+  await waitFor(() => expect(screen.getByTestId("probe-search").textContent).toBe("?status=trial"));
+  expect(screen.getByText("t1@example.com")).toBeTruthy();
+  expect(screen.queryByText("a4@example.com")).toBeNull();
+  expect(screen.queryByText("s2@example.com")).toBeNull();
+  fireEvent.click(menu[0]);
+  await waitFor(() => expect(screen.getByTestId("probe-search").textContent).toBe(""));
+  expect(screen.getByText("a4@example.com")).toBeTruthy();
+});
+
+it("opens with ?status=active and shows only active rows", async () => {
+  mockMixed();
+  renderPage("/?status=active");
+  await screen.findByText("a4@example.com");
+  expect(screen.getByText("a5@example.com")).toBeTruthy();
+  expect(screen.queryByText("t1@example.com")).toBeNull();
+});
+
+it("copies the signup form URL and shows Copied", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mockMixed();
+  renderPage();
+  await screen.findByText("t1@example.com");
+  fireEvent.click(screen.getByRole("button", { name: "Copy signup form URL" }));
+  expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/viewer/#signup`);
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
+});
+
+it("shows Reissue only on pending rows, confirms, posts and shows code, expiry and invite", async () => {
+  mockMixed();
+  vi.mocked(api.post).mockResolvedValue({
+    signup_code: "ABCD-EFGH-JKMN-PQRS",
+    expires_at: "2026-10-26T00:00:00Z",
+    invite_url: "https://discord.gg/fakecode",
+  });
+  renderPage();
+  await screen.findByText("t1@example.com");
+  expect(within(row("t1@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
+  expect(within(row("a4@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
+  fireEvent.click(within(row("p3@example.com")).getByRole("button", { name: "Reissue code and invite" }));
+  expect(await screen.findByText(/Reissue the signup code and invite link for Pen \(p3@example.com\)/)).toBeTruthy();
+  fireEvent.click(screen.getByTestId("viewers-reissue-run"));
+  expect(await screen.findByTestId("viewers-reissue-code")).toBeTruthy();
+  expect(api.post).toHaveBeenCalledWith("/super-admin/viewers/3/reissue-signup-code", {});
+  expect(screen.getByTestId("viewers-reissue-code").textContent).toBe("ABCD-EFGH-JKMN-PQRS");
+  expect(screen.getByTestId("viewers-reissue-invite").textContent).toBe("https://discord.gg/fakecode");
+  expect(screen.getByText(i18n.t("superAdmin.viewers.reissueOnlyOnce"))).toBeTruthy();
+});
+
+it("shows the failure text when the invite link is null", async () => {
+  mockMixed();
+  vi.mocked(api.post).mockResolvedValue({
+    signup_code: "ABCD-EFGH-JKMN-PQRS",
+    expires_at: "2026-10-26T00:00:00Z",
+    invite_url: null,
+  });
+  renderPage();
+  await screen.findByText("p3@example.com");
+  fireEvent.click(within(row("p3@example.com")).getByRole("button", { name: "Reissue code and invite" }));
+  fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
+  expect(await screen.findByTestId("viewers-reissue-invite-failed")).toBeTruthy();
 });
