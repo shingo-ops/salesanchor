@@ -42,6 +42,10 @@ from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED,
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_BULK,
+    PRODUCT_KUBUN_PROMO_PACK,
+    PRODUCT_KUBUN_SINGLE,
+    VALUE_GROUP_PROMO_PACK,
+    VALUE_GROUP_SINGLE,
     load_product_first_masters,
     with_cond_terms,
 )
@@ -69,6 +73,7 @@ from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
 from app.services.v102_human_decisions_svc import (
     FIELD_V102_PRICE,
     Decisions,
+    ValueOverrides,
     apply_value_overrides,
     load_v102_decisions,
     status_available_by_human,
@@ -203,14 +208,22 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
 
     試作版 prompt_ab._load_v10_masters(product_first=True) と同じ中身。prompt_ab が捨てている単位 id の索引も返す。
     """
-    cond_entries = analyzer.load_condition_entries(session)
+    all_entries = analyzer.load_condition_entries(session, include_scoped_groups=True)
+    # ADR-1031：single / promo_pack 群の行は、シングル系・プロモパック系の判定だけが使う。通常の cond_entries には入れない
+    cond_entries = [e for e in all_entries if e.get("value_group") not in analyzer.SCOPED_VALUE_GROUPS]
+    scoped_entries = {
+        group: tuple(e for e in all_entries if e.get("value_group") == group) for group in analyzer.SCOPED_VALUE_GROUPS
+    }
     status_entries = analyzer.load_status_master(session)
     (_pc, _ua, unit_canonical_to_uuid, _ca, cond_canonical_to_uuid, unit_alias_to_info) = analyzer.load_lookup_maps(session)
     masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
         # 除外ワードの判定に使う状態の合図の語は cond_entries から一度だけ作る（新しい表・設定値は持たない）
-        "product_first": with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
+        "product_first": dataclass_replace(
+            with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
+            scoped_cond_entries=scoped_entries,
+        ),
         _SHIP_ENTRIES_KEY: analyzer.load_ship_master(session),
         _SHIP_DROP_KEY: analyzer.load_ship_drop_master(session),
     }
@@ -627,8 +640,29 @@ def _bounded_number(value: object) -> object:
         return None
 
 
-def _condition_columns(canonical: str | None, masters: dict) -> tuple[str, int, bool]:
-    """(condition_canonical, condition_id, 解けたか)。未解決（none・不明・マスタに無い）は v6 と同じ FLAG_SINGLE（CN0008）。"""
+# 商品の分類 → 状態の群（ADR-1031）。「PSA10」は single と promo_pack の2行あるので、状態の名前から id を引くときは群の中で引く
+_SCOPED_GROUP_OF_KUBUN = {PRODUCT_KUBUN_SINGLE: VALUE_GROUP_SINGLE, PRODUCT_KUBUN_PROMO_PACK: VALUE_GROUP_PROMO_PACK}
+
+
+def _scoped_condition_id(canonical: str | None, product_category: str | None, masters: dict) -> int | None:
+    """シングル系・プロモパック系の件の状態 id を、その群の行の中で引く。群の行が無い・名前が無いときは None。"""
+    group = _SCOPED_GROUP_OF_KUBUN.get(product_category or "")
+    if not canonical or group is None:
+        return None
+    rows = masters["product_first"].scoped_cond_entries.get(group, ())
+    return next((int(e["cond_id"]) for e in rows if e.get("canonical") == canonical), None)
+
+
+def _condition_columns(
+    canonical: str | None, masters: dict, product_category: str | None = None,
+) -> tuple[str, int, bool]:
+    """(condition_canonical, condition_id, 解けたか)。未解決（none・不明・マスタに無い）は v6 と同じ FLAG_SINGLE（CN0008）。
+
+    product_category がシングル系・プロモパック系なら、その群の行の中で名前から id を引く（ADR-1031）。
+    """
+    scoped_id = _scoped_condition_id(canonical, product_category, masters)
+    if scoped_id is not None:
+        return canonical, scoped_id, True
     entries, by_canonical = masters["cond_entries"], masters["cond_canonical_to_uuid"]
     cond_id = by_canonical.get(canonical) if canonical else None
     if cond_id is None and canonical:
@@ -679,7 +713,9 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
     unit_canonical = None if unit in (None, "none") else unit
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
     condition = item.get("condition")
-    condition_canonical, condition_id, _resolved = _condition_columns(None if condition in (None, "none") else condition, masters)
+    condition_canonical, condition_id, _resolved = _condition_columns(
+        None if condition in (None, "none") else condition, masters, item.get("product_category")
+    )
     quantity = _bounded_number(item.get("quantity_normalized"))
     price = _bounded_number(item.get("price_normalized"))
     out_of_range = [
@@ -1006,6 +1042,47 @@ def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
     return {**values, "review_reasons": REASON_SEPARATOR.join([*reasons, REASON_UNIT_PRICE_MISMATCH]), "needs_review": True}
 
 
+def _has_raw_value(raw) -> bool:
+    """仕入元が値を書いているか（空・none は書いていない）。"""
+    return raw is not None and str(raw).strip().lower() not in ("", "none")
+
+
+def _sell_out_stock_closed_in_the_same_post(
+    pairs: list, base_values: list[dict], decisions: dict[str, Decisions], unit_ids: dict, status_entries: list[dict],
+) -> list[dict]:
+    """規則13（docs/handoff/v102-shime-same-post-stock/design.md §3）：同じ投稿の〆が範囲に含む、同じ商品・状態の在庫の件を Sold out にする。
+
+    〆は自分の価格・数量が無く、引き継ぎ先も無いものだけ。人が判断した件は〆にも在庫にも使わない。元の base_values は変えない。
+    """
+    closers = [
+        (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
+        for values, (item, row) in zip(base_values, pairs)
+        if values["status"] == STATUS_SOLD_OUT and values["exclusion"] == "excluded"
+        and not _has_raw_value(getattr(row, "raw_price", None)) and not _has_raw_value(getattr(row, "raw_quantity", None))
+        and not item.get("soldout_targets")
+        and not _has_human_judgement(decisions.get(str(row.id)))
+        and None not in (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
+    ]
+    if not closers:
+        return base_values
+    out = []
+    for values, (_item, row) in zip(base_values, pairs):
+        decision = decisions.get(str(row.id))
+        start_line, end_line = getattr(row, "line_start", None), getattr(row, "line_end", None)
+        closed = (
+            values["status"] != STATUS_SOLD_OUT and values["exclusion"] is None
+            and (decision is None or decision.values.status is None)
+            and not _has_human_judgement(decision)
+            and start_line is not None and end_line is not None
+            and any(
+                pid == values["product_id"] and cid == values["condition_id"] and start <= start_line and end_line <= end
+                for pid, cid, start, end in closers
+            )
+        )
+        out.append(apply_value_overrides(values, ValueOverrides(status=STATUS_SOLD_OUT), unit_ids, status_entries) if closed else values)
+    return out
+
+
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
     decisions: dict[str, Decisions] | None = None, raw_text: str | None = None,
@@ -1039,6 +1116,7 @@ def _write_results(
         for values, (_item, row) in zip(base_values, pairs)
     ]
     base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
+    base_values = _sell_out_stock_closed_in_the_same_post(pairs, base_values, decisions, unit_ids, status_entries)  # 規則13
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
         decision = decisions.get(str(row.id))
@@ -1094,6 +1172,21 @@ def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple
             JOIN {analyzer.TCG_SCHEMA}.analysis_results ar ON ar.id = et.analysis_result_id
             JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
             WHERE ei.extraction_job_id = :ej
+        """),
+        {"ej": extraction_job_id},
+    ).fetchall()
+    return [(int(r[0]), int(r[1])) for r in rows]
+
+
+def _load_current_pairs(session: Session, extraction_job_id: str) -> list[tuple[int, int]]:
+    """ADR-1032: 書き直す前に、この投稿の行で is_current=TRUE だった (product_id, condition_id) の組。復活止めの「前から現行」の控え。"""
+    rows = session.execute(
+        text(f"""
+            SELECT DISTINCT ar.product_id, ar.condition_id
+            FROM {analyzer.TCG_SCHEMA}.analysis_results ar
+            JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL
+              AND ar.is_current = TRUE
         """),
         {"ej": extraction_job_id},
     ).fetchall()
@@ -1216,8 +1309,7 @@ def _inherit_price(session: Session, extraction_job_id: str, row, values: dict, 
         or values["status"] == STATUS_SOLD_OUT
     ):
         return values
-    raw_price = getattr(row, "raw_price", None)
-    if raw_price is not None and str(raw_price).strip().lower() not in ("", "none"):
+    if _has_raw_value(getattr(row, "raw_price", None)):
         return values  # 仕入元が価格を書いている（読めなかっただけ）。古い価格で隠さない
     schema = analyzer.TCG_SCHEMA
     try:
@@ -1382,6 +1474,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         decisions = load_v102_decisions(session, [str(r.id) for r in rows])
         fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
         previous_pairs = _load_resolved_pairs(session, extraction_job_id)
+        # ADR-1032: 書き直す前（_write_results より前）に「現行だった組」を控える。前の行が無ければ None（控え無し）
+        prior_current = _load_current_pairs(session, extraction_job_id) if previous_pairs else None
         followup_masters = masters_with_followup(
             masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id),
             load_posted_date(session, extraction_job_id),
@@ -1396,6 +1490,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         _clear_job_review_detail(session, extraction_job_id)
         session.commit()
         return empty_stats
-    analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）
+    analyzer._merge_supplier_products(  # ADR-158（is_current）+ ADR-1032（復活止め）
+        session, extraction_job_id, schema, extra_pairs=previous_pairs, prior_current_pairs=prior_current,
+    )
     logger.info("[line_analysis] v102 job=%s stats=%s", extraction_job_id, stats)
     return stats

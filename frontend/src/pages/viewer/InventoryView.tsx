@@ -20,6 +20,7 @@ import {
   TAB_ALL,
   distinctValues,
   filterRows,
+  markBlockBadges,
   seriesTabs,
   sortRows,
   withIndex,
@@ -89,7 +90,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
     qtyMax,
   };
   const sorted = useMemo(
-    () => sortRows(filterRows(allRows, filters, now), sortKey, sortDir),
+    () => markBlockBadges(sortRows(filterRows(allRows, filters, now), sortKey, sortDir)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allRows, tab, query, freshOnly, data.fresh_window_hours, providers, conditions, priceMin, priceMax, qtyMin, qtyMax, sortKey, sortDir, now],
   );
@@ -201,13 +202,16 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
             value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
             onChange={(e) => {
               const [k, d] = e.target.value.split(":");
-              if (!k) return;
-              setSortKey(k);
-              setSortDir(d === "asc" ? "asc" : "desc");
+              if (!k) {
+                setSortKey(DEFAULT_SORT_KEY);
+                setSortDir(DEFAULT_SORT_DIR);
+              } else {
+                setSortKey(k);
+                setSortDir(d === "asc" ? "asc" : "desc");
+              }
               setPage(1);
             }}
             options={[
-              { value: "release_date:desc", label: t("viewer.sort.releaseDesc") },
               { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
               { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
               { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },

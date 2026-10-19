@@ -21,24 +21,25 @@ from app.services.inventory_search import OfferSummary, _load_inventory_offers
 class _ProductMeta:
     product_id: int
     name: str
-    tcg_type: str | None
+    work_code: str | None
 
 
 async def _load_products_with_stock(
     db: AsyncSession,
     category: str | None,
 ) -> list[_ProductMeta]:
-    """in_stock 在庫を持つ商品を一括取得。category 指定時は tcg_type で絞る。N+1 回避。"""
+    """in_stock 在庫を持つ商品を一括取得。category 指定時は work_id の作品の符号（type_master.code）で絞る。N+1 回避。"""
     base_sql = """
-        SELECT DISTINCT p.id, p.name, p.tcg_type
+        SELECT DISTINCT p.id, p.name, tm.code AS work_code
         FROM public.products p
         JOIN public.inventory i ON i.product_id = p.id
+        LEFT JOIN public.type_master tm ON tm.id = p.work_id
         WHERE p.is_archived IS NOT TRUE
           AND i.status = 'in_stock'
     """
     params: dict[str, str] = {}
     if category is not None:
-        base_sql += "  AND p.tcg_type = :category\n"
+        base_sql += "  AND tm.code = :category\n"
         params["category"] = category
     base_sql += "ORDER BY p.id ASC"
 
@@ -47,7 +48,7 @@ async def _load_products_with_stock(
         _ProductMeta(
             product_id=int(row["id"]),
             name=str(row["name"]),
-            tcg_type=row["tcg_type"],
+            work_code=row["work_code"],
         )
         for row in result.mappings().all()
     ]
@@ -73,7 +74,7 @@ def _build_aggregation_offers(
                     "unit_price": offer.unit_price if offer.unit_price is not None else 0,
                     "status": offer.status,
                     "supplier_name": offer.supplier_name,
-                    "tcg_type": product.tcg_type,
+                    "work_code": product.work_code,
                 }
             )
     return rows
@@ -84,8 +85,8 @@ def _pivot(
     products: list[_ProductMeta],
 ) -> tuple[list[str], list[dict]]:
     """AggregationResult -> (tabs, rows) ピボット変換。supplier_name/reason は出さない。"""
-    # series -> tcg_type マッピング (product.name -> tcg_type)
-    series_to_tcg: dict[str, str | None] = {p.name: p.tcg_type for p in products}
+    # series -> work_code マッピング (product.name -> work_code)
+    series_to_tcg: dict[str, str | None] = {p.name: p.work_code for p in products}
 
     # series -> {condition: (price, quantity)} 集約
     series_cells: dict[str, dict[str, tuple[int, int]]] = {}
@@ -93,7 +94,7 @@ def _pivot(
         cells = series_cells.setdefault(r.series, {})
         cells[r.condition] = (r.unit_price, r.quantity)
 
-    # タブ (distinct tcg_type, 昇順)
+    # タブ (distinct work_code, 昇順)
     tabs_set: set[str] = set()
     for series in series_cells:
         t = series_to_tcg.get(series)
@@ -107,7 +108,7 @@ def _pivot(
         rows.append(
             {
                 "series": series,
-                "tcg_type": series_to_tcg.get(series),
+                "work_code": series_to_tcg.get(series),
                 "cells": {
                     condition: {"price": price, "quantity": qty}
                     for condition, (price, qty) in cells.items()

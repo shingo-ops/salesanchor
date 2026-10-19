@@ -618,3 +618,84 @@ Discord 案（r13 で決定済み。D1・D2・D5・D6 に反映。2026-10-16 PO 
 ## 別件（本設計の外）
 
 - 社内ユーザーの権限の穴（会話ログの読み取り、招待トークンの発行など。security-recon.md §2）。別の設計で扱い、PO に相談する。
+
+
+## 段5：管理画面の追加（2026-10-19）
+
+PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込フォームのURLもこのページからコピペして送れるようにしたい、そしてサイドメニューを設置して、トライアル中、本契約、などステータスごとに分けて見れるページも欲しい」。招待のボタンは「申込済みでコードを失くした人に、コードと招待リンクを作り直して管理画面に表示する」形（PO「y」）。
+
+### 目的と変化
+- 新しく申し込みたい人へ、管理画面から申込フォームの URL を1回押してコピーし、そのまま送れる。URL を開くと最初から申込画面が出る（`/viewer/#signup`）。
+- 管理画面の左に状態ごとのメニュー（すべて・申込中・お試し・本契約・停止中、件数つき）を置き、押した状態の人だけを表で見られる。`?status=` で URL に残る。
+- 申込中の人がコードや招待リンクを失くしたとき、管理画面から作り直して、その場でコピーして渡せる。
+
+### 決めたこと（理由）
+- 招待リンクだけの発行はしない。お試しの開始には申込コードが要り、申込コードは申込でしか作られない（routers/viewer.py:470-480）。招待だけを渡しても部屋は作れない。
+- 作り直しは pending の人だけ。trial 以降はすでに部屋とアカウントがあり、コードは使い終わっている（viewer_trial.py の照合で trial になる）。
+- 申込コードを作る処理は services/viewer_signup.py の replace_signup_code に1つだけ置き、/signup と作り直しの両方がそれを呼ぶ（SSOT）。
+- コード・招待は今まで通り DB に平文で持たない（コードは sha256、招待は保存しない＝viewer_invite.py:5）。管理画面でも閉じたら二度と出さない。
+- 状態の絞り込みは画面側で行う（list_viewers は全件・LIMIT なし＝services/viewer_admin.py:39-65。閲覧者は数十人の規模）。数百人を超えたらサーバー側の絞り込みを別便で足す。
+- 左メニューは共通部品 SubMenu（ADR-149）。並べ方は ManagementCenterPage と同じ hub-shell。新しい部品は作らない。
+- 申込フォームの URL は `window.location.origin + "/viewer/#signup"` で作り、直書きしない。
+
+### 選ばなかった案
+- 作り直しを記録の表（viewer_login_events）に残す：種類の CHECK 制約（migrations/20261016_150000_add_viewer_accounts.sql:65）に無く、migration が要る。今回はアプリのログ（viewer_id だけ）に残す。DB に残す必要が出たら別便。
+- 状態ごとに別のページ（子ルート）にする：表・操作は同じで、違うのは行の絞り込みだけなので、1ページ＋`?status=` にした。
+
+### 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 管理画面の右上「申込フォームのURLをコピー」を押すと `https://app.salesanchor.jp/viewer/#signup` がクリップボードに入り、文言が2秒「コピーしました」になる | 画面テスト＋PO 目視（貼り付けて確認） |
+| K2 その URL を開くと、ログイン画面ではなく「利用の申込」の画面が最初に出る | 画面テスト＋PO 目視 |
+| K3 左メニューに すべて・申込中・お試し・本契約・停止中 と件数が出て、押すとその状態の人だけになる。`?status=trial` で開き直しても同じ | 画面テスト＋PO 目視（件数が一覧の状態の数と一致） |
+| K4 申込中の人だけに「コードと招待を作り直す」が出る。押すとコード・期限・招待リンクが出る。前のコードは受付で「コードが違うか、期限が切れています。」、新しいコードで部屋ができる | API テスト＋PO の試し（申込中の人で） |
+| K5 申込中以外への作り直しは 409、super admin 以外は 403 | API テスト |
+| K6 migrations/・deploy.yml・本番 scripts/ の変更なし。閲覧ページの容量が 300KB 以下（design.md:509） | `git diff --name-only`＋build の記録 |
+
+### 外部事例
+- 対象外：社内の管理画面に状態の絞り込みとコピーボタンを足すだけで、既存の部品と既存の仕組み（申込コード・招待）の組み合わせ。成否を左右する外部の数値は無い。
+
+### 戻し方
+- PR を Revert。DB を変えないので、データの戻しは要らない。
+
+### 維持の仕組み
+- 文言は ja.json/en.json の同じキー（i18n の CI）。部品は SubMenu/Button/Modal（UI ガバナンスの CI）。申込コードの発行は replace_signup_code 1か所（テストが /signup と作り直しの両方を見る）。
+
+## 段6（2026-10-19）招待をお試し中・本契約にも／延長に日付指定／停止ボタンとログイン記録を外す／使い回しの疑いを運用 Discord へ
+
+### PO 決定（原文）
+- Opus の選択肢「2. 申込中に戻さずに、お試し中の人にも招待を出せるよう画面を直す」→ PO「2」
+- 「延長ボタンで日付や日数を指定して延長できるようにする」
+- 「期限が終了したら見れなくしてくれれば良い、停止ボタンは不要」
+- Opus の選択肢「1. 画面からログイン記録を外す。記録と使い回しの目印は残し、疑いが出たら運用の Discord に自動で知らせる仕組みを、今回の改修に入れる」→ PO「ｙ」
+- 一任：「PRマージ、デプロイまで完走させてくれ。」（2026-10-19）
+
+### 設計の要点
+- A 作り直し：backend/app/services/viewer_admin.py の reissue_signup_code が pending / trial / active を受け付ける。suspended・verified は 409、Discord の部屋が既にある人は 409（viewer_already_linked）。状態と期限は変えない。
+- B 受付：backend/app/discord_gateway/viewer_trial.py が pending / trial / active を通す。pending は今まで通り（trial に進め期限14日）。trial / active は状態と期限を変えず、部屋とパスワードだけ付ける（本契約がお試しに下がらない）。部屋のある人・suspended・verified は CODE_INVALID。
+- C 延長：ExtendRequest は days か until_date のどちらか一つだけ（両方・無しは 422）。until_date は日本時間 23:59:59 を期限にし、今以前・今+365日より後は 422。履歴の extend_days は days のときだけ。DB の構造は変えない。
+- D 画面：作り直しは pending / trial / active で部屋の無い行に出す。延長 Modal は Radio 金型で「日数で延ばす／日付まで延ばす」。停止・停止解除・ログイン記録（Drawer）と左メニューの「停止中」を外す。目印バッジは残す。
+- E 通知：目印の条件は viewer_admin.py の定数だけが正（一覧と share_flag_hits が共用）。backend/app/tasks/viewer_share_flag_monitor.py を 1 時間ごとに beat で動かし、ADMIN_NOTIFICATION_DISCORD_WEBHOOK へ id だけの文面で送る。同じ知らせは Redis キー viewer_share_flag:notified:{id}:{kind}（30日）で抑える。Redis が無い・webhook 未設定なら送らない。
+  - 段6b：実際は毎時15分（crontab）。理由：interval（3600.0）は再起動で計測が初めからになり、deploy が60分以内に続くと一度も動かないため。
+- F 触らない：suspend・unsuspend・logins の API と CLI、viewer_login_events の書き込みと 90 日削除、migrations/・deploy.yml・本番 scripts/。
+
+### 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 お試し中（期限切れを含む）・本契約で部屋の無い人の行に「作り直す」が出て、押すとコードと招待が出る。停止中と部屋のある人には出ないか、409 になる | API テスト＋画面テスト＋PO 目視 |
+| K2 お試し中・本契約の人が受付でコードを入れると部屋ができ、状態と期限は変わらない | PG テスト |
+| K3 延長で日数か日付を選べる。日付指定ならその日の日本時間 23:59:59 が期限。過去の日と366日より先は断る | API テスト＋画面テスト＋PO 目視 |
+| K4 期限切れのお試しの人は、ログインも在庫も見られない（403） | 既存テスト test_viewer_api.py:308 / test_viewer_tokens.py:140 |
+| K5 管理画面に「停止」「停止を解除」「ログイン記録」が無く、左メニューに「停止中」が無い。目印のバッジは残る | 画面テスト＋PO 目視 |
+| K6 使い回しの疑いが新しく出たら、運用の Discord に1回だけ知らせる。email・LINE 名・IP は載せない | 単体テスト。本番では beat 登録の確認 |
+| K7 目印の条件が1か所にしかない | git grep で SQL が viewer_admin.py の1か所だけ |
+| K8 migrations/・deploy.yml・本番 scripts/ を変えていない。閲覧ページの容量が 300KB 以下 | git diff --name-only＋build |
+
+### 外部事例
+- 対象外：社内管理画面の部品の出し分けと、既存の定期通知（master_required_fields_monitor.py）と同じ型の通知の追加。
+
+### 戻し方
+- PR を Revert。DB を変えないので、データの戻しは要らない。Redis のキーは30日で消える。
+
+### 維持の仕組み
+- 目印の条件は定数1か所（テストが一覧の目印と通知の対象の一致を見る）。beat 登録は tests/test_celery_beat_registered.py が見る。文言は ja.json/en.json の同じキー（i18n の CI）。

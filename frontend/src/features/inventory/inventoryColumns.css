@@ -47,3 +47,19 @@
 .inventory-cell__condition--danger {
   color: var(--danger-text);
 }
+
+/* 価格・数量の値の入れ物。印の有無で幅を変えないため、全行で同じ余白を持つ（形と余白は金型 Badge sm と同じトークン。ADR-1014 改訂 2026-10-19（4）） */
+.inventory-cell__value {
+  display: inline-block;
+  padding: var(--space-2px) var(--space-2);
+  border-radius: var(--comp-badge-radius);
+}
+/* 同じ商品・ステータス・状態のまとまりの最安（薄い水色の塗り）と在庫最多（薄い緑の塗り）。色の組は Badge soft info / success と同じ */
+.inventory-cell__value--cheapest {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.inventory-cell__value--most-stock {
+  background: var(--success-bg);
+  color: var(--success-text);
+}

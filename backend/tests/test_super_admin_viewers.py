@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -36,6 +37,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/suspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/unsuspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
+    ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
 ]
 
 
@@ -76,7 +78,7 @@ async def _call(method, path, body):
 # ── 非 PG ─────────────────────────────────────────────────────
 
 
-async def test_non_super_admin_gets_403_on_all_six_routes(override_user):
+async def test_non_super_admin_gets_403_on_all_seven_routes(override_user):
     override_user(_make_user(is_super_admin=False))
     for method, path, body in ROUTES:
         resp = await _call(method, path, body)
@@ -93,6 +95,22 @@ async def test_extend_days_validation_422(override_user, days):
     override_user(_make_user(is_super_admin=True))
     app.dependency_overrides[get_db] = _no_db
     resp = await _call("POST", "/api/v1/super-admin/viewers/1/extend", {"days": days})
+    assert resp.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{}, {"days": 7, "until_date": "2999-01-01"}, {"until_date": "not-a-date"}, {"days": None, "until_date": None}],
+)
+async def test_extend_body_needs_exactly_one_of_days_or_until_date_422(override_user, body):
+    from app.main import app
+
+    async def _no_db():
+        yield None
+
+    override_user(_make_user(is_super_admin=True))
+    app.dependency_overrides[get_db] = _no_db
+    resp = await _call("POST", "/api/v1/super-admin/viewers/1/extend", body)
     assert resp.status_code == 422
 
 
@@ -321,6 +339,59 @@ def test_extend_expired_trial_sets_now_plus_7_and_inventory_200(pg, monkeypatch)
 
 
 @needs_ci_pg
+def test_extend_until_date_sets_jst_end_of_day_and_rejects_bad_dates(pg):  # noqa: F811
+    from datetime import date
+
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    fixed = datetime(2026, 10, 16, 0, 0, tzinfo=timezone.utc)
+    vid = _account(cur, "ud@x.com", "trial", expires_in_days=3)
+    result = _change(async_url, vid, "extend", until_date=date(2026, 10, 31), now=fixed)
+    # 日本時間 10/31 23:59:59 = UTC 10/31 14:59:59
+    assert result["trial_expires_at"] == datetime(2026, 10, 31, 14, 59, 59, tzinfo=timezone.utc)
+    row = _changes(cur, vid)[0]
+    assert row[0] == "extend" and row[4] == datetime(2026, 10, 31, 14, 59, 59, tzinfo=timezone.utc)
+    assert row[5] is None  # until_date のときは extend_days を入れない
+    # 今日（日本時間 10/16 23:59:59 は「今」より後）は通り、前日は断る
+    assert _change(async_url, vid, "extend", until_date=date(2026, 10, 16), now=fixed)["status"] == "trial"
+    assert _error_code(async_url, vid, "extend", until_date=date(2026, 10, 15), now=fixed) == "invalid_days"
+    # 365日以内（JST 23:59:59 が 今+365日 を超えない日）まで。366日後は断る
+    assert _error_code(async_url, vid, "extend", until_date=date(2027, 10, 17), now=fixed) == "invalid_days"
+    assert _error_code(async_url, vid, "extend", until_date=date(2026, 10, 31), days=7, now=fixed) == "invalid_days"
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/extend", {"until_date": "2000-01-01"})
+    assert resp.status_code == 422 and resp.json()["detail"] == "invalid_days"
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/extend", {"days": 3, "until_date": "2999-01-01"})
+    assert resp.status_code == 422
+
+
+@needs_ci_pg
+def test_share_flag_hits_match_list_flags(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    many = _account(cur, "m@x.com", "active")
+    sh1 = _account(cur, "s1@x.com", "active")
+    sh2 = _account(cur, "s2@x.com", "active")
+    quiet = _account(cur, "q@x.com", "active")
+    for i, ip in enumerate(("10.1.0.1", "10.1.0.2", "10.1.0.3")):
+        _event(cur, many, ip, i)
+    _event(cur, sh1, "10.9.9.9", 0)
+    _event(cur, sh2, "10.9.9.9", 5)
+    _event(cur, quiet, "10.7.7.7", 0)
+
+    hits = _with_db(async_url, lambda db: viewer_admin.share_flag_hits(db))
+    assert hits == [
+        (many, "many_ips", []),
+        (sh1, "shared_ip", [sh2]),
+        (sh2, "shared_ip", [sh1]),
+    ]
+    items = _with_db(async_url, lambda db: viewer_admin.list_viewers(db))
+    flagged_many = {i["id"] for i in items if i["flag_many_ips"]}
+    flagged_shared = {i["id"] for i in items if i["flag_shared_ip"]}
+    assert flagged_many == {h[0] for h in hits if h[1] == "many_ips"}
+    assert flagged_shared == {h[0] for h in hits if h[1] == "shared_ip"}
+
+
+@needs_ci_pg
 def test_404_for_missing_viewer(pg):  # noqa: F811
     conn, _, async_url = pg
     _prepare(conn, async_url)
@@ -463,3 +534,89 @@ def test_suspend_record_feeds_purge(pg):  # noqa: F811
         "SELECT count(*) FROM public.viewer_status_changes WHERE viewer_id=%s AND action='suspend'", (vid,)
     )
     assert cur.fetchone()[0] == 1
+
+
+# ── 申込コードの作り直し（ADR-1019 段5） ─────────────────────────
+
+
+def _signup_hashes(cur, vid):
+    cur.execute(
+        "SELECT token_sha256 FROM public.viewer_login_tokens "
+        "WHERE viewer_account_id=%s AND purpose='signup_code'",
+        (vid,),
+    )
+    return [bytes(r[0]) for r in cur.fetchall()]
+
+
+@needs_ci_pg
+def test_reissue_pending_replaces_code_and_returns_invite(pg, monkeypatch):  # noqa: F811
+    from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha256
+
+    async def _fake_invite(db):
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _fake_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "p1@x.com", "pending")
+    old = b"\x01" * 32
+    cur.execute(
+        "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
+        "VALUES (%s, %s, 'signup_code', NOW() + interval '1 day')",
+        (vid, old),
+    )
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert re.fullmatch(r"[0-9A-Z]{4}(-[0-9A-Z]{4}){3}", body["signup_code"])
+    assert body["invite_url"] == "https://discord.gg/fakecode"
+    hashes = _signup_hashes(cur, vid)
+    assert hashes == [signup_code_sha256(normalize_signup_code(body["signup_code"]))]
+    assert old not in hashes
+
+
+@needs_ci_pg
+def test_reissue_invite_none_is_200_with_null(pg, monkeypatch):  # noqa: F811
+    async def _no_invite(db):
+        return None
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _no_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "p2@x.com", "pending")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200 and resp.json()["invite_url"] is None
+    assert len(_signup_hashes(cur, vid)) == 1
+
+
+@needs_ci_pg
+def test_reissue_trial_and_active_200_keep_state_suspended_409_linked_409(pg, monkeypatch):  # noqa: F811
+    async def _fake_invite(db):
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _fake_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    for status in ("trial", "active"):
+        vid = _account(cur, f"{status}@x.com", status, expires_in_days=5 if status == "trial" else None)
+        before = _state(cur, vid)
+        resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+        assert resp.status_code == 200
+        assert len(_signup_hashes(cur, vid)) == 1
+        assert _state(cur, vid) == before  # 状態と期限は変えない
+    sid = _account(cur, "suspended@x.com", "suspended")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{sid}/reissue-signup-code", {})
+    assert resp.status_code == 409 and resp.json()["detail"] == "viewer_status_conflict"
+    assert _signup_hashes(cur, sid) == []
+    lid = _account(cur, "linked@x.com", "trial", expires_in_days=5)
+    cur.execute("UPDATE public.viewer_accounts SET discord_user_id='d-1' WHERE id=%s", (lid,))
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{lid}/reissue-signup-code", {})
+    assert resp.status_code == 409 and resp.json()["detail"] == "viewer_already_linked"
+    assert _signup_hashes(cur, lid) == []
+    resp = _api(async_url, "POST", "/api/v1/super-admin/viewers/999999/reissue-signup-code", {})
+    assert resp.status_code == 404
+    pid = _account(cur, "p3@x.com", "pending")
+    resp = _api(
+        async_url, "POST", f"/api/v1/super-admin/viewers/{pid}/reissue-signup-code", {}, super_admin=False
+    )
+    assert resp.status_code == 403

@@ -225,7 +225,7 @@
             "title": "Series",
             "type": "string"
           },
-          "tcg_type": {
+          "work_code": {
             "anyOf": [
               {
                 "type": "string"
@@ -234,8 +234,8 @@
                 "type": "null"
               }
             ],
-            "description": "TCG 種別 (products.tcg_type)。タブ分割キー。",
-            "title": "Tcg Type"
+            "description": "作品の符号（products.work_id → type_master.code）。タブ分割キー。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -9572,16 +9572,33 @@
       "ExtendRequest": {
         "properties": {
           "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "延長する日数（1〜365）",
-            "maximum": 365.0,
-            "minimum": 1.0,
-            "title": "Days",
-            "type": "integer"
+            "title": "Days"
+          },
+          "until_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "この日の終わり（日本時間 23:59:59）まで延長する。今日より後・365日以内",
+            "title": "Until Date"
           }
         },
-        "required": [
-          "days"
-        ],
         "title": "ExtendRequest",
         "type": "object"
       },
@@ -11178,7 +11195,7 @@
             "type": "array"
           },
           "tabs": {
-            "description": "存在する tcg_type の一覧 (重複なし、昇順)。",
+            "description": "存在する work_code の一覧 (重複なし、昇順)。",
             "items": {
               "type": "string"
             },
@@ -11375,6 +11392,17 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_expiry_in_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry In Seconds"
           },
           "page": {
             "title": "Page",
@@ -11791,17 +11819,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -11829,6 +11846,17 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12099,6 +12127,16 @@
       "InventoryRow": {
         "description": "在庫表ビューの 1 明細行（商品×仕入元×状態）。読み取り専用。\n\nadmin 専用フィールド（notes/source/status）は含めない。最終ユーザー（各クライアントの\n営業担当ロール以上）が閲覧 + 見積/請求/発注作成するための列のみ。\ncondition は migration 089 の 16 値だが、旧データ混入時も 500 にしないため str で受ける\n（inventory_offers 500 の教訓）。",
         "properties": {
+          "badge_cheapest": {
+            "default": false,
+            "title": "Badge Cheapest",
+            "type": "boolean"
+          },
+          "badge_most_stock": {
+            "default": false,
+            "title": "Badge Most Stock",
+            "type": "boolean"
+          },
           "category": {
             "anyOf": [
               {
@@ -12278,17 +12316,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -12303,6 +12330,17 @@
           "unit_price": {
             "title": "Unit Price",
             "type": "integer"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12480,18 +12518,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "TCG 種別。",
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -12502,6 +12528,18 @@
               }
             ],
             "title": "Unit Price"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品の符号（products.work_id → type_master.code）。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -24159,18 +24197,6 @@
             ],
             "title": "Supplier Default Id"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -25727,18 +25753,6 @@
             ],
             "title": "Supplier Default Id"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -25798,6 +25812,17 @@
               }
             ],
             "title": "Weight"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -26204,18 +26229,6 @@
               }
             ],
             "title": "Supplier Default Id"
-          },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
           },
           "unit_price": {
             "anyOf": [
@@ -36269,6 +36282,47 @@
         "title": "ViewerPasswordResetRequest",
         "type": "object"
       },
+      "ViewerReissueResponse": {
+        "description": "作り直した申込コードと招待リンク（この応答でしか見られない）。",
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "申込コードの有効期限",
+            "title": "Expires At"
+          },
+          "invite_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord 招待リンク（作れなければ null）",
+            "title": "Invite Url"
+          },
+          "signup_code": {
+            "description": "申込コード（XXXX-XXXX-XXXX-XXXX）",
+            "title": "Signup Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signup_code",
+          "expires_at"
+        ],
+        "title": "ViewerReissueResponse",
+        "type": "object"
+      },
       "ViewerSignupRequest": {
         "properties": {
           "email": {
@@ -44181,9 +44235,9 @@
             }
           },
           {
-            "description": "TCG種別 (public.products.tcg_type)",
+            "description": "作品の符号（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -44195,8 +44249,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別 (public.products.tcg_type)",
-              "title": "Tcg Type"
+              "description": "作品の符号（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
@@ -44553,11 +44607,11 @@
     },
     "/api/v1/inventory/aggregated": {
       "get": {
-        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で products.tcg_type による絞り込みが可能。",
+        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で work_id の作品の符号（type_master.code） による絞り込みが可能。",
         "operationId": "get_inventory_aggregated_api_v1_inventory_aggregated_get",
         "parameters": [
           {
-            "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+            "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
             "in": "query",
             "name": "category",
             "required": false,
@@ -44570,7 +44624,7 @@
                   "type": "null"
                 }
               ],
-              "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+              "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
               "title": "Category"
             }
           }
@@ -51082,9 +51136,9 @@
             }
           },
           {
-            "description": "TCG種別コードで絞り込み（type_master.code）",
+            "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -51096,8 +51150,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別コードで絞り込み（type_master.code）",
-              "title": "Tcg Type"
+              "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
@@ -63150,6 +63204,53 @@
           }
         ],
         "summary": "List Logins Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code": {
+      "post": {
+        "operationId": "reissue_signup_code_endpoint_api_v1_super_admin_viewers__viewer_id__reissue_signup_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerReissueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reissue Signup Code Endpoint",
         "tags": [
           "super-admin"
         ]

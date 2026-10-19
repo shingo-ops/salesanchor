@@ -11,10 +11,7 @@
   - image_url バリデーション（http/https のみ）
 """
 
-import pytest
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
-
 
 # ---------------------------------------------------------------------------
 # CRUD
@@ -634,72 +631,33 @@ class TestProductsMasterFields:
         assert res.status_code == 422
 
 
-class TestProductsTcgTypeValidation:
-    """tcg_type は master code か NULL のみ受理する。"""
+class TestProductsWorkCode:
+    """作品の符号は products.work_id → type_master.code で返し、work_code で絞り込める（ADR-1030）。"""
 
-    async def test_create_allows_master_code(self, client):
+    async def test_list_returns_work_code_and_filters(self, client, db_session):
+        for name, code in (("WC ポケモン商品", "pokemon_booster_box"), ("WC ワンピ商品", "one_piece")):
+            await db_session.execute(
+                text(
+                    "INSERT INTO products (name_ja, work_id) "
+                    "VALUES (:n, (SELECT id FROM type_master WHERE code = :c))"
+                ),
+                {"n": name, "c": code},
+            )
+        await db_session.commit()
+
+        res = await client.get("/api/v1/products", params={"work_code": "pokemon_booster_box", "per_page": 100})
+        assert res.status_code == 200, res.text
+        rows = res.json()
+        names = {r["name_ja"] for r in rows}
+        assert "WC ポケモン商品" in names
+        assert "WC ワンピ商品" not in names
+        assert all(r["work_code"] == "pokemon_booster_box" for r in rows)
+
+    async def test_create_ignores_tcg_type_and_work_code_is_null(self, client):
         res = await client.post("/api/v1/products", json={
-            "name_ja": "TCG 種別 OK 商品",
+            "name_ja": "WC 作品なし商品",
             "tcg_type": "pokemon_booster_box",
         })
         assert res.status_code == 201, res.text
-        assert res.json()["tcg_type"] == "pokemon_booster_box"
-
-    async def test_create_allows_null(self, client):
-        res = await client.post("/api/v1/products", json={
-            "name_ja": "TCG 種別 NULL 商品",
-            "tcg_type": None,
-        })
-        assert res.status_code == 201, res.text
-        assert res.json()["tcg_type"] is None
-
-    async def test_create_rejects_unknown_code(self, client):
-        res = await client.post("/api/v1/products", json={
-            "name_ja": "TCG 種別 NG 商品",
-            "tcg_type": "bogus_type",
-        })
-        assert res.status_code == 400, res.text
-        assert "tcg_type" in res.json()["detail"]
-
-    async def test_update_allows_master_code(self, client):
-        create_res = await client.post("/api/v1/products", json={"name_ja": "更新対象商品"})
-        product_id = create_res.json()["id"]
-
-        res = await client.patch(f"/api/v1/products/{product_id}", json={"tcg_type": "one_piece"})
-        assert res.status_code == 200, res.text
-        assert res.json()["tcg_type"] == "one_piece"
-
-    async def test_update_rejects_unknown_code(self, client):
-        create_res = await client.post("/api/v1/products", json={"name_ja": "更新NG対象商品"})
-        product_id = create_res.json()["id"]
-
-        res = await client.patch(f"/api/v1/products/{product_id}", json={"tcg_type": "unknown_type"})
-        assert res.status_code == 400, res.text
-        assert "tcg_type" in res.json()["detail"]
-
-    async def test_direct_fk_enforcement_rejects_unknown_code(self, db_session):
-        with pytest.raises(IntegrityError):
-            await db_session.execute(
-                text(
-                    "INSERT INTO products (name_ja, tcg_type) "
-                    "VALUES (:name_ja, :tcg_type)"
-                ),
-                {"name_ja": "FK Enforcement NG", "tcg_type": "unknown_type"},
-            )
-
-    async def test_direct_fk_enforcement_allows_master_code(self, db_session):
-        await db_session.execute(
-            text(
-                "INSERT INTO products (name_ja, tcg_type) "
-                "VALUES (:name_ja, :tcg_type)"
-            ),
-            {"name_ja": "FK Enforcement OK", "tcg_type": "gundam"},
-        )
-        row = (
-            await db_session.execute(
-                text("SELECT tcg_type FROM products WHERE name_ja = :name_ja"),
-                {"name_ja": "FK Enforcement OK"},
-            )
-        ).mappings().first()
-        assert row is not None
-        assert row["tcg_type"] == "gundam"
+        assert res.json()["work_code"] is None
+        assert "tcg_type" not in res.json()

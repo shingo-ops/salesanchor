@@ -16,6 +16,10 @@ from app.services.v102_status_context import posted_jst_date
 
 _UNITS = {"BOX": ("BOX", "箱系"), "Box": ("Box", "箱系")}
 _ARRIVAL = r"[^0-9]{0,4}(?:入荷|発送|発売)"
+# tcg_status_master id25（便2 shipdate-range）。範囲「m/d1～d2」「m/d1～m/d2」は終わりの日を m・d に取る
+_RANGE_SLASH = (
+    r"(?:\d{1,2}/\d{1,2}[～〜~\-－](?=\d{1,2}/))?(?P<m>\d{1,2})/(?:\d{1,2}[～〜~\-－])?(?P<d>\d{1,2})"
+)
 
 
 def _row(canonical, effect, match_type, pattern, exclude, priority):
@@ -29,7 +33,7 @@ _BASE = [
 ]
 _CONTEXT = [
     _row("Pre-order", "RELEASE_AHEAD", "RELEASE", "", "", 10),
-    _row("Pre-order", "DATE_AHEAD", "REGEX", r"(?P<m>\d{1,2})/(?P<d>\d{1,2})" + _ARRIVAL, "", 10),
+    _row("Pre-order", "DATE_AHEAD", "REGEX", _RANGE_SLASH + _ARRIVAL, "", 10),
     _row("Pre-order", "DATE_AHEAD", "REGEX", r"(?P<m>\d{1,2})月(?P<d>\d{1,2})日" + _ARRIVAL, "", 20),
     _row("Pre-order", "DATE_AHEAD", "REGEX", r"(?P<m>\d{1,2})月(?P<part>上旬|中旬|下旬|末|頃)?" + _ARRIVAL, "", 30),
     _row("Pre-order", "HEADING", "REGEX", "予約", "ご予約可能|集荷予約", 10),
@@ -135,6 +139,41 @@ def test_date_ahead_next_day_grace_and_past_month_rule(suffix, posted, expected)
 def test_date_ahead_basis_is_matched_text():
     row = _run(f"サンプル拡張\n{_price_line(' [10/14入荷]')}", [1, 2])
     assert row["status_basis"] == "DATE_AHEAD:10/14入荷"
+
+
+@pytest.mark.parametrize(
+    ("suffix", "posted", "expected"),
+    [
+        (" 11/3～5入荷次第発送", date(2026, 10, 19), "Pre-order"),
+        (" (10/16〜17入荷)", date(2026, 10, 15), "Pre-order"),
+        (" (11/3〜6発送)", date(2026, 10, 18), "Pre-order"),
+        (" 11/3～11/5入荷", date(2026, 10, 19), "Pre-order"),
+        (" 10/14〜15入荷", date(2026, 10, 14), "In Stock"),  # 終わりの日が翌日猶予の内
+        (" 10/5〜6入荷", date(2026, 10, 11), "In Stock"),  # 過ぎた日
+        (" [10/14入荷]", date(2026, 10, 11), "Pre-order"),  # 範囲でない形は不変
+        (" 10/30～11/2入荷", date(2026, 10, 19), "Pre-order"),  # 月またぎ
+        (" 12/28-1/5発送", date(2026, 12, 20), "Pre-order"),  # 年またぎ
+    ],
+)
+def test_date_ahead_range_reads_end_date(suffix, posted, expected):
+    row = _run(f"サンプル拡張\n{_price_line(suffix)}", [1, 2], posted=posted)
+    assert row["status"] == expected
+
+
+def test_date_ahead_range_basis_is_matched_text():
+    row = _run(f"サンプル拡張\n{_price_line(' 11/3～5入荷')}", [1, 2], posted=date(2026, 10, 19))
+    assert row["status_basis"] == "DATE_AHEAD:11/3～5入荷"
+
+
+def test_date_ahead_range_end_month_is_used_across_months():
+    row = _run(f"サンプル拡張\n{_price_line(' 10/30～11/2入荷')}", [1, 2], posted=date(2026, 10, 19))
+    assert row["status_basis"] == "DATE_AHEAD:10/30～11/2入荷"
+
+
+def test_first_line_shipping_date_in_item_lines_is_pre_order():
+    # 便1 の出力（1行目の「日付＋入荷次第発送」が最初の件の lines に入る形）を模す
+    row = _run("11/3～5入荷次第発送\nサンプル拡張\n" + _price_line(), [1, 2, 3], posted=date(2026, 10, 19))
+    assert (row["status"], row["status_basis"]) == ("Pre-order", "DATE_AHEAD:11/3～5入荷次第発送")
 
 
 def test_year_rolls_over_only_when_month_is_before_posted_month():

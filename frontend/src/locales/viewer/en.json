@@ -27,9 +27,8 @@
     "freshOnly": "Last {{hours}} h",
     "sort": {
       "placeholder": "Sort",
-      "releaseDesc": "Release date (newest first)",
       "priceAsc": "Price: low to high",
-      "stockDesc": "Stock: high to low",
+      "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
     },
     "filter": {
@@ -44,6 +43,10 @@
       "quantityRange": "Quantity range",
       "min": "Min",
       "max": "Max"
+    },
+    "badge": {
+      "cheapest": "Lowest",
+      "mostStock": "Most stock"
     },
     "col": {
       "mark": "Model No.",

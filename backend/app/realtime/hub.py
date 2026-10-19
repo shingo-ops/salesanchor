@@ -13,6 +13,7 @@ import redis.asyncio as aioredis
 from app.realtime.publisher import (
     CHANNEL_GLOBAL,
     CHANNEL_PATTERN,
+    CHANNEL_SHARED,
     CHANNEL_TENANT_PREFIX,
     RT_REDIS_URL,
 )
@@ -31,6 +32,9 @@ class Connection:
 
 
 def _targets(channel: str, conn: Connection) -> bool:
+    if channel == CHANNEL_SHARED:
+        # 会社共通データの合図は全接続へ（ADR-1016 改訂 2026-10-18）。名前と origin だけでデータは含まない
+        return True
     if channel == CHANNEL_GLOBAL:
         return conn.is_super_admin
     if channel.startswith(CHANNEL_TENANT_PREFIX):

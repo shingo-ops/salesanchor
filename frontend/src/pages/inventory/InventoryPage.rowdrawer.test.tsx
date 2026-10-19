@@ -25,7 +25,7 @@ const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: 'cat', mark: null,
   condition: 'sealed', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
   merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'S',
-  unit_price: 10, quantity: 2, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null,
+  unit_price: 10, quantity: 2, work_code: 'pokemon_booster_box', offered_at: '', release_date: null,
   extraction_item_ids: ['item-1'],
 };
 

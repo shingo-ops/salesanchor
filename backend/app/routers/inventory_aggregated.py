@@ -2,7 +2,7 @@
 
 読み取り専用・追加のみ。既存 inventory_search / inventory_offers は不変。
 テナント応答: supplier_name / reason / raw を含めない (境界)。
-タブ分割: ?category= (products.tcg_type) で絞り込み。
+タブ分割: ?category= (work_id の作品の符号（type_master.code）) で絞り込み。
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ _ALLOWED_PERMISSIONS: frozenset[str] = frozenset(
 async def get_inventory_aggregated(
     category: str | None = Query(
         default=None,
-        description="tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+        description="work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
     ),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
@@ -58,7 +58,7 @@ async def get_inventory_aggregated(
 
     - 各セルは集計後の最良 1 件 (価格/数量)。
     - supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。
-    - ?category= で products.tcg_type による絞り込みが可能。
+    - ?category= で work_id の作品の符号（type_master.code） による絞り込みが可能。
     """
     perms = await load_user_permissions(db, tenant_id, current_user.id)
     if not (perms & _ALLOWED_PERMISSIONS):
@@ -72,7 +72,7 @@ async def get_inventory_aggregated(
     rows = [
         AggregatedRow(
             series=row["series"],
-            tcg_type=row["tcg_type"],
+            work_code=row["work_code"],
             cells={
                 condition: ConditionCell(
                     price=cell["price"],

@@ -43,16 +43,83 @@ def test_sold_out_filter_is_shared_by_dist_base_and_preview_count() -> None:
     assert "_sold_out_filter(" in inspect.getsource(svc.fetch_preview_data)
 
 
-def test_fresh_window_is_24_hours_and_fresh_filter_is_bound() -> None:
+def test_fresh_window_is_24_hours_and_view_filters_no_longer_take_fresh_only() -> None:
+    import inspect
+
     from app.routers.inventory_offers import _build_view_filters
 
-    none = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
                           "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
     assert svc.FRESH_WINDOW_HOURS == 24
-    assert _build_view_filters(**none) == ([], {})  # 既定は False: 既存の呼び出しは変わらない
-    conds, params = _build_view_filters(**none, fresh_only=True)
-    assert conds == ["d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)"]
-    assert params == {"fresh_hours": 24}
+    assert "fresh_only" not in inspect.signature(_build_view_filters).parameters  # 窓の定義は _age_window の1か所
+    assert _build_view_filters(**none) == ([], {})
+
+
+class _FakeResult:
+    def mappings(self):
+        return self
+
+    def all(self):
+        return []
+
+
+class _FakeDb:
+    """db.execute に渡された SQL と bind を記録する（返す行は空）。"""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    async def execute(self, stmt, params=None):
+        self.calls.append((str(stmt), dict(params or {})))
+        return _FakeResult()
+
+
+async def _view_sql(*, max_age: str, fresh_only: bool, same_post: bool = False) -> tuple[str, dict]:
+    from app.routers import inventory_offers as io
+
+    db = _FakeDb()
+    async with _client(perms=frozenset({"products.view"}), db=db) as client:
+        with patch.object(io, "load_distribution_settings", AsyncMock(return_value={"max_age_hours": max_age})):
+            res = await client.get("/api/v1/inventory", params={
+                "fresh_only": str(fresh_only).lower(), "merge_same_post": str(same_post).lower()})
+    assert res.status_code == 200, res.text
+    assert len(db.calls) == 1
+    return db.calls[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("max_age", "expected"), [("48", 24), ("24", 24), ("12", 12), ("0", 24)])
+async def test_fresh_only_puts_the_24h_window_inside_the_age_window(max_age: str, expected: int) -> None:
+    sql, params = await _view_sql(max_age=max_age, fresh_only=True)
+    assert params["max_age_hours"] == expected  # 0 は「絞らない」の意味なので 24 に置き換える
+    assert "fresh_hours" not in params
+    assert "d.posted_ts >= NOW()" not in sql  # rows_f 側の二重の絞りはない
+    assert sql.count("sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)") == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("same_post", [False, True])
+async def test_fresh_only_false_sql_is_identical_to_before(same_post: bool) -> None:
+    import hashlib
+
+    sql, params = await _view_sql(max_age="48", fresh_only=False, same_post=same_post)
+    assert params["max_age_hours"] == 48 and "fresh_hours" not in params
+    assert (len(sql), hashlib.sha256(sql.encode()).hexdigest()) == _VIEW_SQL_BEFORE[same_post]
+
+
+@pytest.mark.asyncio
+async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
+    sql, params = await _view_sql(max_age="0", fresh_only=False)
+    assert "max_age_hours" not in params and "sm.line_posted_at >= NOW()" not in sql
+
+
+# fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
+# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後、ADR-1014 改訂 2026-10-19（5）で rows_x に cond_block を足した後、shime-review-exclude 便（§4-5）で在庫表に cr_shime の定数 lateral を足した後の値。列の追加以外は変えていないことは
+# PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
+_VIEW_SQL_BEFORE = {
+    False: (28166, "4ddb475fb2db63628a74948e72d03237a3f5a55e8f404de5aabcc7bef257db99"),
+    True: (30083, "a1fefd1ec676a754d25cdaba4e5e13b08c9e48b45c20c72da013fbe6eff9b8ad"),
+}
 
 
 def test_view_sql_order_by_groups_by_release_date_first() -> None:
@@ -64,7 +131,8 @@ def test_view_sql_order_by_groups_by_release_date_first() -> None:
     price = _SORT_COLUMNS["unit_price"]
     assert _build_view_order_by(sort_col=rel, order_dir="ASC") == f"ORDER BY {group_asc}, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=rel, order_dir="DESC") == f"ORDER BY {group_desc}, d.sort_ord ASC"
-    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_asc}, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_desc}, d.cond_block ASC, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="ASC") == f"ORDER BY {group_desc}, d.cond_block ASC, d.price_num ASC NULLS LAST, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=_SORT_COLUMNS["name"], order_dir="DESC") == (
         "ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC"
     )
@@ -140,13 +208,13 @@ def _user(*, super_admin: bool) -> User:
 
 
 @asynccontextmanager
-async def _client(*, perms: frozenset[str], super_admin: bool = False):
+async def _client(*, perms: frozenset[str], super_admin: bool = False, db=None):
     from app.auth.dependencies import get_current_tenant, get_current_user
     from app.database import get_db
     from app.main import app
 
     async def _db():
-        yield object()
+        yield db if db is not None else object()
 
     saved = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = _db
@@ -197,11 +265,13 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # bundle-sale 便1（ADR-1027）で商品名を bundle_title_sql の2列にし、line_units の JOIN と gkey の bundle_size を足して再生成した。
 # g28 便1（バルク状態）で RESULT_CONDITION_ORDER に Bulk を足して再生成した。差は Bulk の WHEN 句1つのみ（golden_diff.txt）。
 # result-order-condition-value 便（2026-10-18）で、状態の並びを固定の表（RESULT_CONDITION_ORDER）から状態マスタ（public.conditions の value_group / value_rank・ADR-1023）の副問い合わせに替えて再生成した。差は ORDER BY の状態の部分1か所のみ（4通りとも同じ差）。CI で全体が約2倍遅くなったため、行ごとの副問い合わせを InitPlan（1回だけ評価する jsonb）に替えて再生成した。
+# ADR-1031 で VALUE_GROUP_ORDER に promo_pack・single を足して再生成した。差は ORDER BY の状態の部分1か所のみ（WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 の追加と、群の数に連動する価値順位なしの基準値 3000→5000。4通りとも同じ差。/tmp/CC報告ファイル/adr1031/sql_diff.txt）。
+# shime-review-exclude 便（§4-5）で、在庫表の側に cr_shime の定数の lateral（SELECT FALSE AS settled）と cr_reasons での参照を足して再生成した。差はこの部分だけ（4通りとも +159 文字、/tmp/CC報告ファイル/shime-review-exclude-20261019/impl3/sql-diff.txt）。
 _GOLDEN = {
-    (False, False): (25287, "2c56bcc55f7b22ea6d6ad972d96fd0a262114313e4547327f4ac0df6aebae8c1"),
-    (False, True): (26438, "8522e964c651fd7544d4caf4ea1df5f3cb59635634e632578a7d751c3ba5fbfb"),
-    (True, False): (25321, "013d67c1e4324dc3d036b23bd7a85f42200b6786daf8a89f426281745e326124"),
-    (True, True): (26472, "cf77f10b54846e9492f7714a16b1bcf3607e6f1faaf788a8713105d064962f19"),
+    (False, False): (25492, "8241dc883fb882805aae26fd50705aa09c23457b86ce7bf6f1bc2b3816ce2497"),
+    (False, True): (26643, "b7ec5926896d7a63161fcc70be6364e58d97f0bb5d788884bc4b16aade00e82b"),
+    (True, False): (25526, "9de981455fb5678d5b5a54d67c1e5dbbe3b709f4d53cb238ca6a2cf6a9907962"),
+    (True, True): (26677, "c4d7cfa5c13b9e0b5d66701d805d1b10033b718ac30d89de76efed5efae9b802"),
 }
 
 
@@ -238,7 +308,7 @@ def test_distribution_sql_has_no_double_underscore_alias() -> None:
 # 共通ベクタ: frontend/src/features/inventory/searchNormalize.vectors.json（frontend の vitest も同じ物を読む）。
 # ベクタを変えるときは、このファイルと frontend/src/features/inventory/searchNormalize.test.ts の両方を触ること。
 
-_NONE_FILTERS = dict.fromkeys(("q", "tcg_type", "category", "offer_type", "hide_supplier_ids", "hide_categories",
+_NONE_FILTERS = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories",
                                "condition", "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max",
                                "price_min", "price_max"))
 
@@ -296,3 +366,18 @@ def test_bin3_endpoint_has_supplier_ids_query() -> None:
     p = inspect.signature(io.list_inventory_view).parameters["supplier_ids"]
     assert p.default.default is None
     assert any(getattr(m, "max_length", None) == 2000 for m in p.default.metadata)
+
+
+def test_project_inventory_rows_copies_block_badges() -> None:
+    """B3d: バッジの2項目は "__" の付かないキーから InventoryRow へ写る。キーが無ければ両方 False。"""
+    from datetime import datetime, timezone
+
+    from app.routers.inventory_offers import _project_inventory_rows
+
+    base = {
+        "row_key": "r1", "product_id": 1, "supplier_id": 2, "price_num": 100, "qty_num": 5,
+        "posted_ts": datetime(2026, 10, 19, tzinfo=timezone.utc), "condition": "NM",
+    }
+    on, off = _project_inventory_rows([{**base, "badge_cheapest": True, "badge_most_stock": True}, dict(base)])
+    assert on.badge_cheapest is True and on.badge_most_stock is True
+    assert off.badge_cheapest is False and off.badge_most_stock is False

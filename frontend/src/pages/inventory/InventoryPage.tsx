@@ -29,6 +29,9 @@ import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { useExpiryRefresh } from "../../hooks/useExpiryRefresh";
+import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
+import { TOPICS } from "../../lib/realtime/topics";
 
 interface SupplierFacet {
   id: number;
@@ -46,12 +49,13 @@ interface InventoryListResponse {
   units?: string[];
   window_hours?: number | null;
   fresh_window_hours?: number;
+  next_expiry_in_seconds?: number | null;
 }
 
 const PER_PAGE = 50;
 
 // 並び替えプルダウンの値（`${sort}:${order}`）。
-const SORT_MENU_VALUES = ["release_date:desc", "unit_price:asc", "quantity:desc", "offered_at:desc"];
+const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"];
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -98,10 +102,22 @@ const HIDEABLE_COLUMNS = [
   "mark", "condition", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
+// ADR-1016 改訂 2026-10-18: 在庫が変わった合図で読み直す。抽出が続く時間帯でも 5 秒に 1 回まで。
+// 同じ合図が全員に同時に届くので、ページごとに 0〜3 秒ずらして読み直しが一度に集まらないようにする
+const INVENTORY_TOPICS = [TOPICS.tcgInventory] as const;
+const INVENTORY_REFRESH_DEBOUNCE_MS = 5_000;
+const INVENTORY_REFRESH_JITTER_MS = 3_000;
+
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const [refreshDebounceMs] = useState(
+    () => INVENTORY_REFRESH_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
+  );
+  const [expiryJitterMs] = useState(() => Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS));
+  const [nextExpirySeconds, setNextExpirySeconds] = useState<number | null>(null);
+  const [loadCount, setLoadCount] = useState(0);
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -146,7 +162,7 @@ export default function InventoryPage() {
   const [freshWindowHours, setFreshWindowHours] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
-  // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
+  // 中分類マスタ（type_master.code → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
@@ -186,7 +202,7 @@ export default function InventoryPage() {
       params.set("fresh_only", freshOnly ? "true" : "false");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
-      if (activeTab !== "all") params.set("tcg_type", activeTab);
+      if (activeTab !== "all") params.set("work_code", activeTab);
       if (selectedSupplierIds.length > 0) params.set("supplier_ids", selectedSupplierIds.join(","));
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
@@ -211,6 +227,7 @@ export default function InventoryPage() {
       setTotal(d.total);
       setWindowHours(d.window_hours);
       setFreshWindowHours(d.fresh_window_hours);
+      setNextExpirySeconds(d.next_expiry_in_seconds ?? null);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
       if (d.conditions) setConditionFacet(d.conditions);
@@ -219,7 +236,10 @@ export default function InventoryPage() {
       if (seq !== loadSeqRef.current) return;
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
-      if (seq === loadSeqRef.current) setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+        setLoadCount((c) => c + 1);
+      }
     }
   }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, selectedSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
@@ -227,6 +247,14 @@ export default function InventoryPage() {
     if (!filtersLoaded) return;
     void load();
   }, [load, filtersLoaded]);
+
+  useRealtimeRefresh(INVENTORY_TOPICS, () => {
+    if (filtersLoaded) void load();
+  }, { debounceMs: refreshDebounceMs });
+
+  useExpiryRefresh(nextExpirySeconds, () => {
+    if (filtersLoaded) void load();
+  }, expiryJitterMs, loadCount);
 
   // 種別マスタを取得（カテゴリー列の日本語表示用）。
   useEffect(() => {
@@ -445,13 +473,16 @@ export default function InventoryPage() {
                 value={SORT_MENU_VALUES.includes(`${sortField}:${sortDir}`) ? `${sortField}:${sortDir}` : ""}
                 onChange={(e) => {
                   const [field, dir] = e.target.value.split(":");
-                  if (!field) return;
-                  setSortField(field);
-                  setSortDir(dir === "asc" ? "asc" : "desc");
+                  if (!field) {
+                    setSortField("release_date");
+                    setSortDir("desc");
+                  } else {
+                    setSortField(field);
+                    setSortDir(dir === "asc" ? "asc" : "desc");
+                  }
                   setPage(1);
                 }}
                 options={[
-                  { value: "release_date:desc", label: t("inventory.sortMenu.releaseDesc") },
                   { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
                   { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
                   { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },

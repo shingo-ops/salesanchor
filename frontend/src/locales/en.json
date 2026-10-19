@@ -1498,6 +1498,10 @@
       "2day_before": "Ship 2 days before",
       "other": "Other"
     },
+    "badge": {
+      "cheapest": "Lowest",
+      "mostStock": "Most stock"
+    },
     "col": {
       "product": "Product",
       "category": "TCG series",
@@ -1558,7 +1562,6 @@
     "sortBy": "Sort by {{col}}",
     "sortMenu": {
       "placeholder": "Sort",
-      "releaseDesc": "Release date (newest first)",
       "priceAsc": "Price: low to high",
       "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
@@ -1805,7 +1808,6 @@
     "pageLabel": "Page {{page}} ({{count}} items)",
     "field": {
       "productKind": "Product type",
-      "category": "TCG series",
       "mark": "Mark",
       "setType": "Set type",
       "cardNumber": "Card Number",
@@ -2653,7 +2655,7 @@
       }
     },
     "viewers": {
-      "subtitle": "Manage external inventory viewers: status, expiry and login records.",
+      "subtitle": "Manage external inventory viewers: status and expiry.",
       "colEmail": "Email",
       "colLineName": "LINE name",
       "colStatus": "Status",
@@ -2673,33 +2675,31 @@
       "empty": "—",
       "activate": "Make active",
       "extend": "Extend",
-      "suspend": "Suspend",
-      "unsuspend": "Unsuspend",
-      "logins": "Login records",
       "confirmActivate": "Make {{name}} ({{email}}) an active viewer.",
-      "confirmSuspend": "Suspend {{name}} ({{email}}).",
-      "confirmUnsuspend": "Unsuspend {{name}} ({{email}}).",
       "extendTitle": "Extend trial",
       "extendTarget": "Set how many days from now the trial of {{name}} ({{email}}) lasts.",
       "extendDays": "Days (1-365)",
+      "alreadyLinkedError": "This viewer already has a Discord room.",
+      "extendByDays": "Extend by days",
+      "extendByDate": "Extend until date",
+      "extendDateLabel": "Until the end of this day",
       "run": "Run",
       "loadError": "Could not load the viewer list.",
       "notFoundError": "Not found.",
       "conflictError": "This cannot be done in the current state.",
       "genericError": "The operation failed. Please try again later.",
-      "loginsTitle": "Login records",
-      "loginsEmpty": "No login records.",
-      "colLoginAt": "Date/time",
-      "colLoginType": "Type",
-      "colLoginIp": "IP",
-      "colLoginAgent": "Device",
-      "eventLoginSucceeded": "Login succeeded",
-      "eventLoginFailed": "Login failed",
-      "eventPasswordChanged": "Password changed",
-      "eventPasswordResetRequested": "Password reset requested",
-      "eventPasswordResetDone": "Password reset done",
-      "eventSignup": "Signup",
-      "eventCodeMatched": "Signup code matched"
+      "menuAll": "All",
+      "copySignupUrl": "Copy signup form URL",
+      "copied": "Copied",
+      "copy": "Copy",
+      "reissue": "Reissue code and invite",
+      "confirmReissue": "Reissue the signup code and invite link for {{name}} ({{email}}). The previous code will stop working.",
+      "reissueTitle": "New signup code and invite link",
+      "reissueCode": "Signup code",
+      "reissueExpires": "Expires",
+      "reissueInvite": "Invite link",
+      "reissueInviteFailed": "Could not create the invite link. Please reissue again.",
+      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again."
     },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",

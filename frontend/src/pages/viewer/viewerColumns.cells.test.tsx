@@ -60,3 +60,39 @@ describe("viewer value formatting", () => {
     expect(formatPostedAt("")).toBe("");
   });
 });
+
+describe("viewer block frames (ADR-1014 rev 2026-10-19 (3))", () => {
+  it("frames the cheapest price in the price cell and the most-stock quantity in the quantity cell", () => {
+    const price = cell("unit_price", { ...base, badge_cheapest: true } as never);
+    const p = price.container.querySelector('[data-testid="block-frame-cheapest"]');
+    expect(p?.classList.contains("inventory-cell__value--cheapest")).toBe(true);
+    expect(p?.getAttribute("title")).toBe(ja.viewer.badge.cheapest);
+    expect(price.container.querySelector('[data-testid="block-frame-most-stock"]')).toBeNull();
+    cleanup();
+    const qty = cell("quantity", { ...base, badge_most_stock: true } as never);
+    const q = qty.container.querySelector('[data-testid="block-frame-most-stock"]');
+    expect(q?.classList.contains("inventory-cell__value--most-stock")).toBe(true);
+    expect(q?.getAttribute("title")).toBe(ja.viewer.badge.mostStock);
+    expect(qty.container.querySelector('[data-testid="block-frame-cheapest"]')).toBeNull();
+  });
+  it("keeps the value in the same container without a frame or title when the flags are false or absent", () => {
+    const a = cell("unit_price", { ...base, badge_cheapest: false, badge_most_stock: false } as never);
+    const ap = a.container.querySelector(".inventory-cell__value");
+    expect(ap).not.toBeNull();
+    expect(ap?.className).toBe("inventory-cell__value");
+    expect(ap?.hasAttribute("title")).toBe(false);
+    cleanup();
+    const b = cell("quantity", base);
+    const bq = b.container.querySelector(".inventory-cell__value");
+    expect(bq).not.toBeNull();
+    expect(bq?.className).toBe("inventory-cell__value");
+    expect(bq?.hasAttribute("title")).toBe(false);
+  });
+  it("shows no badge in the price and quantity cells", () => {
+    const a = cell("unit_price", { ...base, badge_cheapest: true } as never);
+    expect(a.container.querySelector(".comp-badge")).toBeNull();
+    cleanup();
+    const b = cell("quantity", { ...base, badge_most_stock: true } as never);
+    expect(b.container.querySelector(".comp-badge")).toBeNull();
+  });
+});
