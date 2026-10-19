@@ -5,6 +5,7 @@ import importlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from celery.schedules import crontab
 
 from app.tasks import viewer_share_flag_monitor as mon
 
@@ -98,7 +99,8 @@ def test_beat_schedule_registered_hourly():
 
     entry = celery_app.conf.beat_schedule["notify-viewer-share-flags-hourly"]
     assert entry["task"] == "app.tasks.viewer_share_flag_monitor.notify_viewer_share_flags"
-    assert entry["schedule"] == 3600.0
+    assert isinstance(entry["schedule"], crontab)
+    assert entry["schedule"].minute == {15}
     assert "app.tasks.viewer_share_flag_monitor" in celery_app.conf.include
     importlib.import_module("app.tasks.viewer_share_flag_monitor")
     assert entry["task"] in celery_app.tasks

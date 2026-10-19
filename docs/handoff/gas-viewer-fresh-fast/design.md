@@ -676,6 +676,7 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 - C 延長：ExtendRequest は days か until_date のどちらか一つだけ（両方・無しは 422）。until_date は日本時間 23:59:59 を期限にし、今以前・今+365日より後は 422。履歴の extend_days は days のときだけ。DB の構造は変えない。
 - D 画面：作り直しは pending / trial / active で部屋の無い行に出す。延長 Modal は Radio 金型で「日数で延ばす／日付まで延ばす」。停止・停止解除・ログイン記録（Drawer）と左メニューの「停止中」を外す。目印バッジは残す。
 - E 通知：目印の条件は viewer_admin.py の定数だけが正（一覧と share_flag_hits が共用）。backend/app/tasks/viewer_share_flag_monitor.py を 1 時間ごとに beat で動かし、ADMIN_NOTIFICATION_DISCORD_WEBHOOK へ id だけの文面で送る。同じ知らせは Redis キー viewer_share_flag:notified:{id}:{kind}（30日）で抑える。Redis が無い・webhook 未設定なら送らない。
+  - 段6b：実際は毎時15分（crontab）。理由：interval（3600.0）は再起動で計測が初めからになり、deploy が60分以内に続くと一度も動かないため。
 - F 触らない：suspend・unsuspend・logins の API と CLI、viewer_login_events の書き込みと 90 日削除、migrations/・deploy.yml・本番 scripts/。
 
 ### 受け入れ基準
