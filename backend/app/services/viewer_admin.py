@@ -27,10 +27,11 @@ _TZ_TOKYO = ZoneInfo("Asia/Tokyo")
 _MAX_EXTEND_DAYS = 365
 _TRIAL_DAYS = 14
 _LOGIN_LIST_LIMIT = 500
+_LINE_NAME_MAX = 100
 
 
 class ViewerAdminError(Exception):
-    """code: "not_found" | "conflict" | "invalid_days" | "already_linked"。"""
+    """code: "not_found" | "conflict" | "invalid_days" | "already_linked" | "invalid_line_name"。"""
 
     def __init__(self, code: str) -> None:
         super().__init__(code)
@@ -145,6 +146,36 @@ async def list_logins(db: AsyncSession, viewer_id: int) -> list[dict]:
         {"id": viewer_id, "lim": _LOGIN_LIST_LIMIT},
     )
     return [dict(r) for r in res.mappings().all()]
+
+
+async def update_line_name(
+    db: AsyncSession,
+    viewer_id: int,
+    line_name: str,
+    now: datetime | None = None,
+) -> dict:
+    """LINE名を直す（前後の空白を除いて 1〜100 文字）。commit は呼び出し側。"""
+    name = line_name.strip() if isinstance(line_name, str) else ""
+    if not 1 <= len(name) <= _LINE_NAME_MAX:
+        raise ViewerAdminError("invalid_line_name")
+    current = _now(now)
+    row = (
+        await db.execute(
+            text("SELECT id FROM public.viewer_accounts WHERE id = :id FOR UPDATE"),
+            {"id": viewer_id},
+        )
+    ).first()
+    if row is None:
+        raise ViewerAdminError("not_found")
+    await db.execute(
+        text(
+            "UPDATE public.viewer_accounts SET line_name = :name, updated_at = :now "
+            "WHERE id = :id"
+        ),
+        {"name": name, "now": current, "id": viewer_id},
+    )
+    logger.info("viewer line_name updated id=%s", viewer_id)
+    return await _get_item(db, viewer_id)
 
 
 async def change_status(

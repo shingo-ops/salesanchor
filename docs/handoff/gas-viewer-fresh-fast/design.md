@@ -731,3 +731,34 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 
 ### 維持の仕組み
 - 横並びは Stack 金型の direction に一本化（個別 CSS を作らない）。文言は ja.json/en.json の同じキー（i18n の CI）。
+
+## 段8（2026-10-20）閲覧者の詳細スライドで LINE名を直せるようにする
+
+### PO 決定（原文）
+- 「全て確認した、スライドページはデータを編集できるように出来る？」
+- 直す項目の選択肢に「1と状態」→ 状態の決まりの説明のあと「LINE名だけにする」
+- 直せるのは LINE名だけ。メール・Discord ID・状態は直せない（状態は今あるボタンのまま）
+
+### 変えるもの
+- backend：`viewer_admin.update_line_name`（前後の空白を除き 1〜100 文字。範囲外は invalid_line_name→422、無い id は 404。行ロックして UPDATE。commit は呼び出し側）。`PATCH /api/v1/super-admin/viewers/{viewer_id}`（require_super_admin、応答は ViewerAdminItem）。
+- 画面：ViewerAccountsPage の Drawer の LINE名を TextField 金型にし、footer に「保存」。下書きが元と違い 1〜100 文字のときだけ押せる。成功したらスライドと一覧を応答で差し替え「保存しました」（role="status"）、失敗は role="alert"。保存せずに閉じたら下書きは捨てる（確認画面なし）。
+- 触らない：DB・migrations・deploy.yml・scripts、メール・Discord ID・状態の編集、申込（viewer.py）、金型そのもの。変更履歴の表は作らない（仕入元 PATCH と同じ前例）。
+
+### 受入基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 スライドで LINE名を直して保存すると、一覧とスライドの名前が変わる | 画面テスト＋PO 目視 |
+| K2 再読み込みしても直した名前のまま（DB に入っている） | backend テスト＋PO 目視 |
+| K3 空と 101 文字は保存できない（画面で押せない／API は 422） | 画面テスト＋backend テスト |
+| K4 super admin 以外は直せない | backend テスト |
+| K5 メール・Discord ID・状態は直せないまま | 画面テスト（入力欄が LINE名の1つだけ） |
+| K6 生の色・px・ハードコード日本語なし。check:*・eslint 合格 | 検査スクリプト |
+
+### 外部事例
+- 対象外：既存金型（TextField・Drawer footer・Button）と仕入元詳細スライド（SupplierDetailDrawer）の前例の組み合わせ。
+
+### 戻し方
+- PR を Revert。DB を変えないのでデータの戻しは要らない（直した名前は元に戻らないが、画面からもう一度直せる）。
+
+### 維持の仕組み
+- LINE名の置き場所は public.viewer_accounts.line_name の1か所だけ。検証の範囲（1〜100）は申込と同じ。文言は ja.json/en.json の同じキー（i18n の CI）。
