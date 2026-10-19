@@ -1,6 +1,7 @@
 /**
  * /super-admin/viewers — 閲覧者（社外の在庫閲覧専用アカウント）の管理画面（ADR-1019 段4a-2）。
  *
+ * - 一覧は LINE名・状態・登録日時・期限・操作の5列。行を押すと右から詳細（メール・Discord ID・部屋・目印）が出る（段7）
  * - 一覧・状態変更（本契約・延長〈日数または日付まで〉）。停止とログイン記録は画面から外した（段6。API と CLI は残置）
  * - 左メニューで状態ごとに絞る（?status=）／申込フォームURLのコピー／部屋の無い申込中・お試し中・本契約の人のコード・招待の作り直し（段5・段6）
  * - is_super_admin=true のみアクセス可（Page 内で 403 ガード）
@@ -16,6 +17,8 @@ import { ButtonLink } from "../../components/ButtonLink";
 import { Badge, type BadgeVariant } from "../../components/Badge";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { EmptyState } from "../../components/EmptyState";
+import { Drawer } from "../../components/Drawer";
+import { Stack } from "../../components/Stack";
 import { Modal } from "../../components/Modal";
 import { TextField } from "../../components/TextField";
 import { Radio } from "../../components/Radio";
@@ -88,6 +91,7 @@ export default function ViewerAccountsPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [reissueTarget, setReissueTarget] = useState<ViewerItem | null>(null);
   const [reissueResult, setReissueResult] = useState<ReissueResult | null>(null);
+  const [detail, setDetail] = useState<ViewerItem | null>(null);
 
   const statusParam = searchParams.get("status");
   const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
@@ -99,6 +103,8 @@ export default function ViewerAccountsPage() {
     try {
       const data = await api.get<{ items: ViewerItem[] }>("/super-admin/viewers");
       setItems(data.items);
+      // 開いている詳細は、読み込み直した最新の行に差し替える（操作のあとで古くならないように）
+      setDetail(prev => (prev ? data.items.find(i => i.id === prev.id) ?? null : null));
     } catch {
       setError(t(`${f}.loadError`));
     } finally {
@@ -206,7 +212,6 @@ export default function ViewerAccountsPage() {
   }
 
   const columns: DataTableColumn<ViewerItem>[] = [
-    { key: "email", header: t(`${f}.colEmail`) },
     { key: "line_name", header: t(`${f}.colLineName`) },
     {
       key: "status",
@@ -218,50 +223,20 @@ export default function ViewerAccountsPage() {
       ),
     },
     {
-      key: "trial_expires_at",
-      header: t(`${f}.colExpires`),
-      renderCell: row => formatDate(row.trial_expires_at) ?? t(`${f}.empty`),
-    },
-    {
-      key: "discord_user_id",
-      header: t(`${f}.colDiscord`),
-      renderCell: row => (
-        <>
-          {row.discord_user_id ?? t(`${f}.empty`)}
-          {row.discord_channel_url && (
-            <ButtonLink
-              href={row.discord_channel_url}
-              variant="ghost"
-              size="sm"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t(`${f}.openRoom`)}
-            </ButtonLink>
-          )}
-        </>
-      ),
-    },
-    {
-      key: "flags",
-      header: t(`${f}.colFlags`),
-      renderCell: row => (
-        <>
-          {row.flag_many_ips && <Badge variant="warning">{t(`${f}.flagManyIps`)}</Badge>}
-          {row.flag_shared_ip && <Badge variant="warning">{t(`${f}.flagSharedIp`)}</Badge>}
-        </>
-      ),
-    },
-    {
       key: "created_at",
       header: t(`${f}.colCreated`),
       renderCell: row => formatDate(row.created_at) ?? t(`${f}.empty`),
     },
     {
+      key: "trial_expires_at",
+      header: t(`${f}.colExpires`),
+      renderCell: row => formatDate(row.trial_expires_at) ?? t(`${f}.empty`),
+    },
+    {
       key: "actions",
       header: t(`${f}.colActions`),
       renderCell: row => (
-        <>
+        <Stack direction="row" gap="2">
           {row.status === "trial" && (
             <>
               <Button size="sm" variant="primary" onClick={() => openAction(row, "activate")}>
@@ -277,7 +252,7 @@ export default function ViewerAccountsPage() {
               {t(`${f}.reissue`)}
             </Button>
           )}
-        </>
+        </Stack>
       ),
     },
   ];
@@ -352,11 +327,72 @@ export default function ViewerAccountsPage() {
           columns={columns}
           data={visibleItems}
           rowKey={row => String(row.id)}
+          onRowClick={row => setDetail(row)}
           emptyState={<EmptyState title={t("common.noData")} size="compact" />}
         />
       )}
         </div>
       </div>
+
+      <Drawer
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        title={t(`${f}.detailTitle`)}
+      >
+        {detail && (
+          <div className="form-grid" data-testid="viewers-detail">
+            <div className="form-row">
+              <label>{t(`${f}.colLineName`)}</label>
+              <div>{detail.line_name}</div>
+            </div>
+            <div className="form-row">
+              <label>{t(`${f}.colEmail`)}</label>
+              <div>{detail.email}</div>
+            </div>
+            <div className="form-row">
+              <label>{t(`${f}.colStatus`)}</label>
+              <div>
+                <Badge variant={STATUS_VARIANT[detail.status] ?? "neutral"}>
+                  {STATUS_KEY[detail.status] ? t(`${f}.${STATUS_KEY[detail.status]}`) : detail.status}
+                </Badge>
+              </div>
+            </div>
+            <div className="form-row">
+              <label>{t(`${f}.colCreated`)}</label>
+              <div>{formatDate(detail.created_at) ?? t(`${f}.empty`)}</div>
+            </div>
+            <div className="form-row">
+              <label>{t(`${f}.colExpires`)}</label>
+              <div>{formatDate(detail.trial_expires_at) ?? t(`${f}.empty`)}</div>
+            </div>
+            <div className="form-row">
+              <label>{t(`${f}.colDiscord`)}</label>
+              <div>{detail.discord_user_id ?? t(`${f}.empty`)}</div>
+            </div>
+            {detail.discord_channel_url && (
+              <div className="form-row">
+                <ButtonLink
+                  href={detail.discord_channel_url}
+                  variant="ghost"
+                  size="sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t(`${f}.openRoom`)}
+                </ButtonLink>
+              </div>
+            )}
+            <div className="form-row">
+              <label>{t(`${f}.colFlags`)}</label>
+              <Stack direction="row" gap="2">
+                {detail.flag_many_ips && <Badge variant="warning">{t(`${f}.flagManyIps`)}</Badge>}
+                {detail.flag_shared_ip && <Badge variant="warning">{t(`${f}.flagSharedIp`)}</Badge>}
+                {!detail.flag_many_ips && !detail.flag_shared_ip && t(`${f}.flagsNone`)}
+              </Stack>
+            </div>
+          </div>
+        )}
+      </Drawer>
 
       <Modal
         open={reissueTarget !== null}

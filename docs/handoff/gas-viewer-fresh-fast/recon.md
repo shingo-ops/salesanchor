@@ -303,3 +303,11 @@ design.md（docs/handoff/gas-viewer-fresh-fast/design.md、620行）:
 - 目印の SQL：backend/app/services/viewer_admin.py:43-65（一覧 SQL の中）。通知の対象も同じ条件を使うため、定数に切り出した。
 - 通知の型：backend/app/tasks/master_required_fields_monitor.py と backend/app/celery_app.py の beat_schedule／include。重複防止の型は backend/app/services/review_mail_notifier.py:89-115（Redis キー＋TTL）。送信は backend/app/services/discord_notifier.py:45-64。
 - 期限切れ trial の拒否（変えない）：backend/app/routers/viewer.py:193-200、backend/app/auth/viewer_dependencies.py:88-91。
+
+## 段7（2026-10-20、origin/main 95e623fd3 基準。実物の点検）
+- 画面：frontend/src/pages/super-admin/ViewerAccountsPage.tsx。列定義は `const columns`（約209行目）。段7前の並び：email, line_name, status, trial_expires_at, discord_user_id（openRoom の ButtonLink を含む）, flags, created_at, actions
+- 表：frontend/src/components/DataTable.tsx。`onRowClick?: (row: T) => void`（100行目）。セル内のボタンは isInteractiveTarget（302行目・414行目）で行クリック扱いにならない。stopPropagation は不要
+- スライド：frontend/src/components/Drawer.tsx。props は open / onClose / title / children / footer / size。使用例 frontend/src/pages/contacts/ContactsPage.tsx:365
+- 横並び：frontend/src/components/Stack.tsx は縦積みのみ（Stack.css は flex-direction: column）。横並びの金型は無かった
+- ラベルと値の並べ方：frontend/src/company-forms.css:79-98 の `.form-grid` / `.form-row` / `.form-row > label`（ContactsPage.tsx の Drawer と同じ共通 class）
+- 既存 ADR 検索：ADR-1019（閲覧者管理）、ADR-144（金型）

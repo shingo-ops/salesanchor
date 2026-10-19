@@ -2673,6 +2673,8 @@
       "flagManyIps": "IP多数",
       "flagSharedIp": "IP共有",
       "empty": "—",
+      "detailTitle": "閲覧者の詳細",
+      "flagsNone": "なし",
       "activate": "本契約にする",
       "extend": "延長",
       "confirmActivate": "{{name}}さん（{{email}}）を本契約にします。",
