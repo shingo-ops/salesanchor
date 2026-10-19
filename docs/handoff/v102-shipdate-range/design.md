@@ -104,7 +104,7 @@ $ shasum -a 256 after_A2.txt
 ### 3-3. 新しい prompt_key と本番切替・戻し（既存手順の実物）
 - 新キー `raw_copy_v101_f_ctf`（V101_PROMPT_NAME_RE の形：backend/app/services/line_analysis_v102_svc.py:166-167）。既存キーの本文は書き換えない（write_fct/README.md）。
 1. 控え `~/CC報告ファイル-keep/prompts/raw_copy_v101_f_ctf.txt` を make_fct.py の型（元 sha assert → 置換 → 新 txt → sha 出力）で生成し、sha256 9102799f…9ad9 と一致を確認。
-2. 本番 DB に新キー行を追加：`write_fctf/run_write.sh`（make_write_fct.py の型）。PO が `!` で precheck→dryrun→commit→verify（失敗時 rollback）。is_active=true（load_prompt_from_db は is_active 行だけ：backend/app/services/line_analysis_v102_svc.py:170-178）。
+2. 本番 DB に新キー行を追加：write_fctf/run_write.sh（便1 で作る予定の台本）（make_write_fct.py の型）。PO が `!` で precheck→dryrun→commit→verify（失敗時 rollback）。is_active=true（load_prompt_from_db は is_active 行だけ：backend/app/services/line_analysis_v102_svc.py:170-178）。
 3. 試験（§6）。本番の既定は f_ct のまま。
 4. 切替 PR：backend/app/services/line_analysis_v102_svc.py:93 `V102_PROMPT_KEY` → `"raw_copy_v101_f_ctf"`、:91 `V102_ENGINE_VERSION` → `"v102-f_ctf"`。prompt_version は `v102:raw_copy_v101_f_ctf:9102799f6822`（:182）。README §3 版表に行を足す。
 5. 戻し：切替 PR を revert（DB 行は残す。#4128 と同じ）。試験不合格なら切替 PR を作らない。
@@ -215,7 +215,7 @@ OP-11 21,000円/3box 発送	2026-10-19	In Stock	-	In Stock	-
 - 便2 対象：tcg_status_master id25 の search_pattern（SQL 5 本）、test_v102_status_context.py のケース追加。
 - 対象外：gemini_raw_copy_v101.py・backend/app/services/v102_status_context.py・backend/app/tools/prompt_ab.py ほかコード、id26/id27、suppliers 追記欄、既存キー本文、migrations、deploy.yml、フロントエンド、GAS。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - Google 公式（gemini-prompt-e/design.md §6 で Context7 確認済みの引用）：明確な決まり・正しくできた姿の例。本案は禁止文を「語と空行」の条件に置き換え、既存の例に正例 1 組を足す。
 - 社内前例：e・f_b/f_c（成功）、f_cv/f_cv2（数える判定の失敗＝使わない）。v102-preorder-context（マスタ行の 5 本 SQL 型＝便2 で踏襲）。
 - 新たな外部調査はしていない（既存の確認済み資料で足りる）。
@@ -231,7 +231,7 @@ OP-11 21,000円/3box 発送	2026-10-19	In Stock	-	In Stock	-
 
 ## 維持の仕組み
 - 記録：docs/specs/line-analysis-tuning/README.md §3 版表に f_ctf の行（sha・日付・T1〜T3 結果）。便2 は docs/handoff/v102-shipdate-range/（design・SQL 5 本・verify 出力）。JSONL と採点出力は ~/CC報告ファイル-keep/stage-fctf-<日付>/（社外秘・リポジトリ外）。
-- 守り手：便2＝backend/tests/test_v102_status_context.py の追加ケース（CI）。便1＝prompt_version `v102:<key>:<sha12>`（backend/app/services/line_analysis_v102_svc.py:182）で後から追跡。status_basis（DATE_AHEAD:<当たった文字> / HEADING:<行>）で「指示文の問題か regex の問題か」を分けられる。
+- 守り手: 便2＝backend/tests/test_v102_status_context.py の追加ケース（CI）。便1＝prompt_version `v102:<key>:<sha12>`（backend/app/services/line_analysis_v102_svc.py:182）で後から追跡。status_basis（DATE_AHEAD:<当たった文字> / HEADING:<行>）で「指示文の問題か regex の問題か」を分けられる。
 - 再発の見張り：「1行目の発送日が捨てられて在庫」が再発したら、prompt_version が f_ctf か → lines に 1 があるか → status_basis が DATE_AHEAD か、の順で見る。
 
 ## 審査記録（Opus・Architect。同一AIの自己審査ではなく Fable 案を Opus が審査）
