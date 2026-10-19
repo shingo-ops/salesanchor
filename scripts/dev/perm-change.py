@@ -78,8 +78,14 @@ RULES = {
         "ja": ["例外", "見張り", "許可"],
     },
 }
-R0_EXECUTORS = ["python", "python3", "bash", "sh", "zsh", "node", "npx", "uv", "ruby", "perl", "env",
-                "xargs", "eval", "source"]
+# `*` を含む Bash の文のうち R0 にしない「狭い形」の受け入れの一覧（設計 §2-2。唯一の置き場）。
+# 一覧に足す（R0 を外す範囲を広げる）変更は R4。
+R0_ACCEPT = {
+    ("git", "status"), ("git", "ls-files"), ("git", "rev-parse"),
+    ("gh", "pr", "view"), ("gh", "pr", "list"), ("gh", "pr", "checks"), ("gh", "pr", "diff"),
+    ("gh", "run", "view"), ("gh", "run", "list"),
+    ("grep",), ("wc",),
+}
 READ_ONLY_MARKS = ["--read-only", "ai_ro", "-f /dev/null"]
 READ_SELECT_BLOCKERS = ["insert", "update", "delete", "alter", "drop", "truncate", "copy"]
 
@@ -119,17 +125,45 @@ def read_only_mark(text):
     return _has_word(text, "select") and not any(_has_word(text, w) for w in READ_SELECT_BLOCKERS)
 
 
+def bash_tokens(item):
+    """Bash(...) の中身を語に分ける（`:*` は ` *` とみなす）。Bash(...) の形でなければ None。"""
+    m = re.fullmatch(r"\s*bash\((.*)\)\s*", item, re.I | re.S)
+    if not m:
+        return None
+    return m.group(1).replace(":*", " *").split()
+
+
+def cmd_name(tok):
+    """パスを外し、末尾の数字と点を外した名前（/bin/rm→rm、python3.12→python）。"""
+    return re.sub(r"[0-9.]+$", "", os.path.basename(tok)).lower()
+
+
+def rm_with_star(item):
+    toks = bash_tokens(item)
+    return bool(toks) and cmd_name(toks[0]) == "rm" and "*" in item
+
+
+def narrow_star(toks):
+    """`*` を含む Bash の文が「狭い形」（受け入れの一覧と一致）か。"""
+    prefix = []
+    for t in toks:
+        if "*" in t:
+            break
+        prefix.append(t)
+    if not prefix:
+        return False
+    prefix[0] = cmd_name(prefix[0])
+    return tuple(prefix) in R0_ACCEPT
+
+
 def r0_hit(item, target, op):
     s = item.strip()
     if target.endswith("automode-allow") and op == "add":
         return True
-    if re.fullmatch(r"\**", s) or s.lower() in ("bash", "bash(*)"):
+    if s.lower() == "bash":
         return True
-    if re.fullmatch(r"bash\(\s*[^\s:()*]+\s*(:\*|\s\*)\s*\)", s, re.I):
-        return True
-    ex = "|".join(re.escape(w) for w in R0_EXECUTORS)
-    inner = re.sub(r"^\s*bash\(", "", s, flags=re.I)
-    if re.search(r"(?<![A-Za-z0-9])(?:%s)(?![A-Za-z0-9])[^)]*\*" % ex, inner, re.I):
+    toks = bash_tokens(s)
+    if toks is not None and "*" in s and not narrow_star(toks):
         return True
     if re.match(r"(edit|write|multiedit)\(", s, re.I) and ("**" in s or "~/.claude" in s):
         return True
@@ -152,6 +186,8 @@ def rule_hit(rule, item):
 
 def classify(item, target, op):
     """足す文の保留判定。None=通常、'R0'〜'R4'=保留。"""
+    if rm_with_star(item):
+        return "R1"
     if r0_hit(item, target, op):
         return "R0"
     for rule in ("R1", "R2", "R3", "R4"):
@@ -389,9 +425,13 @@ def write_po_script(home, now, target, op, item, item_hash, category, intent, re
         out = os.path.join(d, "%s-%d.sh" % (base, n))
     body = """#!/bin/bash
 # PO 用: 保留（%(cat)s）になった権限の変更を反映する台本（perm-change.py が生成。ADR-1034）
-# 使い方: bash この台本 <po_ref>   （po_ref は consent:<鍵の3要素> か PR#<番号>）
+# 使い方: bash この台本 consent:<k1>:<k2>:<k3>   （同意票の鍵。それ以外の形なら何も変えずに終わる）
 set -euo pipefail
-PO_REF="${1:?usage: bash $0 <po_ref>  (consent:<k1>:<k2>:<k3> か PR#<n>)}"
+PO_REF="${1:?usage: bash $0 consent:<k1>:<k2>:<k3>}"
+case "${PO_REF}" in
+  consent:*) ;;
+  *) echo "ERROR: 第1引数は consent:<鍵> の形にしてください。何も変えていません。" >&2; exit 1 ;;
+esac
 SETTINGS=%(path)s
 STAMP="$(date +%%Y%%m%%d%%H%%M%%S)"
 if [ -f "${SETTINGS}" ]; then
@@ -523,8 +563,10 @@ def _do_apply(target, op, item, h, summary, intent, reason, expected, review_by,
     backup = None
     if exists:
         stamp = now.astimezone(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        bdir = os.path.join(home, ".claude", "logs", "perm-backup", stamp)
-        os.makedirs(bdir, exist_ok=True)
+        bdir = os.path.join(home, ".claude", "logs", "perm-backup",
+                            "%s-%d-%s" % (stamp, os.getpid(), os.urandom(4).hex()))
+        os.makedirs(os.path.dirname(bdir), exist_ok=True)
+        os.makedirs(bdir, exist_ok=False)
         backup = os.path.join(bdir, os.path.basename(path))
         shutil.copy2(path, backup)
     if op == "add":

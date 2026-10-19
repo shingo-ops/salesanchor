@@ -9,6 +9,7 @@
 """
 import importlib.util
 import json
+import os
 import sys
 
 HEADING = "### 4-6."
@@ -60,9 +61,15 @@ def main():
             changed = True
             print("removed: PDL-1 だけを外した")
     if changed:
-        with open(path, "w", encoding="utf-8") as f:
+        tmp = path + ".potmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(settings, f, ensure_ascii=False, indent=2)
             f.write("\n")
+        try:
+            os.chmod(tmp, os.stat(path).st_mode & 0o777)
+        except OSError:
+            pass
+        os.replace(tmp, path)
     # 読み直し
     with open(path, encoding="utf-8") as f:
         again = json.load(f)

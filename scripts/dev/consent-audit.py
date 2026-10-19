@@ -389,9 +389,9 @@ def run_git(args, cwd):
 
 
 def gh_pr_view(n):
-    """gh で PR の state・mergedAt・body を取る。使えなければ None。試験では差し替えられる。"""
+    """gh で PR の state・mergedAt・mergeCommit を取る（本文は後から書き換えられるので使わない）。使えなければ None。試験では差し替えられる。"""
     try:
-        p = subprocess.run(["gh", "pr", "view", str(n), "-R", REPO_SLUG, "--json", "state,mergedAt,body"],
+        p = subprocess.run(["gh", "pr", "view", str(n), "-R", REPO_SLUG, "--json", "state,mergedAt,mergeCommit"],
                            capture_output=True, timeout=60)
         if p.returncode != 0:
             return None
@@ -601,36 +601,130 @@ def consent_used_at(home, key3):
     return None
 
 
-def po_ref_ok(home, row, held, key, h, rows, gh_view):
-    """PO 記録（po_ref）が条件を満たすか。条件は設計 §4-3 の B。"""
+SETTINGS_REL = ".claude/settings.json"
+SM_LEDGER_REL = "docs/handoff/design-approval-ticket/permission-ledger.md"
+PR_ONLY_TARGETS = ("repo-allow", "repo-hooks")
+
+
+def consent_ticket_has_hash(home, sha, h, used):
+    """同意票（assistant の text で sha256 が一致するもの）の本文に item_hash がある。"""
+    cutoff = used.timestamp() - 86400
+    for tp in glob.glob(os.path.join(paths(home)["projects"], "*", "*.jsonl")):
+        try:
+            if os.path.getmtime(tp) < cutoff:
+                continue
+            with open(tp, "rb") as f:
+                for raw in f:
+                    if "同意票".encode("utf-8") not in raw or b'"assistant"' not in raw:
+                        continue
+                    try:
+                        r = json.loads(raw.decode("utf-8"))
+                        for b in (r.get("message", {}).get("content") or []):
+                            if isinstance(b, dict) and b.get("type") == "text":
+                                t = b.get("text", "")
+                                if hashlib.sha256(t.encode("utf-8")).hexdigest() == sha and h in t:
+                                    return True
+                    except Exception:
+                        pass
+        except OSError:
+            continue
+    return False
+
+
+def _git_text(git_run, tools, args):
+    rc, out = git_run(args, tools)
+    return out.decode("utf-8", "replace") if rc == 0 else None
+
+
+def _added_lines(diff_text):
+    return [x[1:] for x in diff_text.split("\n") if x.startswith("+") and not x.startswith("+++")]
+
+
+def pr_diff_ok(home, row, h, v, mc, git_run):
+    """取り込まれた差分（mc^1..mc）で、その要素の変更が本当に入っているか。"""
+    tools = perm_paths(home)["tools"]
+    rc, _ = git_run(["merge-base", "--is-ancestor", mc, v], tools)
+    if rc != 0:
+        return False
+    target = row.get("target")
+    if target in PR_ONLY_TARGETS:
+        old = _git_text(git_run, tools, ["show", "%s^1:%s" % (mc, SETTINGS_REL)])
+        new = _git_text(git_run, tools, ["show", "%s:%s" % (mc, SETTINGS_REL)])
+        if old is None and new is None:
+            return False
+        try:
+            od = json.loads(old) if old is not None else {}
+            nd = json.loads(new) if new is not None else {}
+        except ValueError:
+            return False
+        so, sn = {}, {}
+        _settings_keys("repo", od if isinstance(od, dict) else {}, so, False)
+        _settings_keys("repo", nd if isinstance(nd, dict) else {}, sn, False)
+        k = TARGET_KEYS[target]
+        eo = {element_hash(x) for x in so.get(k, [])}
+        en = {element_hash(x) for x in sn.get(k, [])}
+        return h in (eo ^ en)
+    if target == "user-automode-allow-sm":
+        cur = None
+        for it in (load_json(perm_paths(home)["settings"]).get("autoMode") or {}).get("allow") or []:
+            if isinstance(it, str) and item_sha8(it) == h:
+                cur = it
+        m = re.match(r"SM-([0-9]+)", cur or "")
+        if not m:
+            return False
+        d = _git_text(git_run, tools, ["diff", "%s^1" % mc, mc, "--", SM_LEDGER_REL])
+        if d is None:
+            return False
+        return any(re.search(r"SM-%s(?![0-9])" % m.group(1), ln) for ln in _added_lines(d))
+    d = _git_text(git_run, tools, ["diff", "%s^1" % mc, mc])
+    return d is not None and any(h in ln for ln in _added_lines(d))
+
+
+def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
+    """record の行の確かめ（設計 §4-3 第6版）。通ったときだけ差分の説明に使う。"""
     ref = row.get("po_ref") or ""
     held_ts = parse_ts(held.get("ts")) if held else None
+    b_target = (key not in LEDGER_ONLY_KEYS) or str(row.get("category", "")).startswith("reserved") or held is not None
     if ref.startswith("PR#"):
         if not re.fullmatch(r"PR#[0-9]+", ref):
             return False
-        v = gh_view(int(ref[3:]))
-        if not isinstance(v, dict) or v.get("state") != "MERGED":
-            return False
-        merged = parse_ts(v.get("mergedAt"))
-        if merged is None or (held_ts is not None and merged <= held_ts):
-            return False
-        if not key.startswith("repo:") and h not in (v.get("body") or ""):
-            return False
-        same = [r for r in rows if r.get("sub") == "record" and r.get("po_ref") == ref
-                and r.get("item_hash") == h and r.get("target") == row.get("target") and r.get("op") == row.get("op")]
+        same = [r for r in rows if r.get("sub") == "record" and r.get("po_ref") == ref and r.get("item_hash") == h]
     elif ref.startswith("consent:"):
-        key3 = parse_consent_ref(ref)
-        used = consent_used_at(home, key3) if key3 else None
-        if used is None or (held_ts is not None and used <= held_ts):
-            return False
         same = [r for r in rows if r.get("sub") == "record" and r.get("po_ref") == ref]
     else:
         return False
-    return not same or same[0] is row
+    if same and same[0] is not row:
+        return False
+    if ref.startswith("consent:"):
+        key3 = parse_consent_ref(ref)
+        used = consent_used_at(home, key3) if key3 else None
+        if used is None:
+            return False
+        if held_ts is not None:
+            if used <= held_ts:
+                return False
+        elif since is not None and used <= since:
+            return False
+        return consent_ticket_has_hash(home, key3[0], h, used)
+    if b_target and row.get("target") not in PR_ONLY_TARGETS:
+        return False
+    vw = gh_view(int(ref[3:]))
+    if not isinstance(vw, dict) or vw.get("state") != "MERGED" or not v:
+        return False
+    merged = parse_ts(vw.get("mergedAt"))
+    base = held_ts if held_ts is not None else since
+    if merged is None or (base is not None and merged <= base):
+        return False
+    mc = vw.get("mergeCommit")
+    mc = mc.get("oid") if isinstance(mc, dict) else None
+    if not isinstance(mc, str) or not re.fullmatch(r"[0-9a-f]{7,64}", mc):
+        return False
+    return pr_diff_ok(home, row, h, v, mc, git_run)
 
 
-def judge_change(home, key, h, op, since, rows, gh_view):
+def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None):
     """差分1件を判定する。None=説明がつく、'A'=台帳に無い、'B'=PO 記録が足りない。"""
+    git_run = git_run or run_git
     cands = []
     for r in rows:
         if r.get("result") not in ("applied", "recorded"):
@@ -646,18 +740,23 @@ def judge_change(home, key, h, op, since, rows, gh_view):
     must_po = key not in LEDGER_ONLY_KEYS
     if not cands:
         return "B" if must_po else "A"
-    row = cands[0]
-    row_ts = parse_ts(row.get("ts"))
-    held = None
-    for r in rows:
-        if r.get("result") == "held" and r.get("item_hash") == h and TARGET_KEYS.get(r.get("target")) == key:
-            t = parse_ts(r.get("ts"))
-            if t is not None and row_ts is not None and t <= row_ts:
-                held = r
-    needs_po = must_po or str(row.get("category", "")).startswith("reserved") or (held is not None and row.get("result") == "recorded")
-    if needs_po and not po_ref_ok(home, row, held, key, h, rows, gh_view):
-        return "B"
-    return None
+    held_any = False
+    for row in cands:
+        row_ts = parse_ts(row.get("ts"))
+        held = None
+        for r in rows:
+            if r.get("result") == "held" and r.get("item_hash") == h and TARGET_KEYS.get(r.get("target")) == key:
+                t = parse_ts(r.get("ts"))
+                if t is not None and row_ts is not None and t <= row_ts:
+                    held = r
+        held_any = held_any or held is not None
+        if row.get("sub") != "record":
+            if not must_po and not str(row.get("category", "")).startswith("reserved"):
+                return None
+            continue
+        if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
+            return None
+    return "B" if held_any else "A"
 
 
 def review_due(rows, now):
@@ -729,7 +828,7 @@ def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=Non
             for op, els in (("add", added), ("remove", removed)):
                 for el in els:
                     h = element_hash(el)
-                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view)
+                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view, git_run, tstate.get("v"))
                     if v:
                         reasons[v].append("%s %s" % (k, h))
         # C: 台帳の鎖・行数・前回の head

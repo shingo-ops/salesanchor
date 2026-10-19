@@ -1,23 +1,27 @@
 #!/bin/bash
 # PO 用: 権限の足し引きの道具（perm-change.py）を Opus が通せるようにする例外の文 PDL-1 を 外す（ADR-1034 §4-6）。
-# - 第1引数: この変更を載せた便1の PR 番号（例: 4560 または PR#4560）。必須（台帳の po_ref になる）。
+# - 第1引数: 同意票（ADR-1033）の鍵 consent:<k1>:<k2>:<k3>。必須（台帳の po_ref になる）。
+#   consent: で始まらなければ何も変えずに終わる。
 # - 第2引数: settings.json のパス（省略時は ~/.claude/settings.json。試験用に差し替え可）
-# - settings.json を .bak-<日時> に写してから変更し、読み直して確かめる。
-# - 変更したときだけ、台帳に record を書く（SKIP_RECORD=1 で飛ばす）。
+# - PDL-1 の1件だけを外す。settings.json を .bak-<日時> に写してから変更し、読み直して確かめる。
+# - 変更したときだけ、台帳に record を書く（SKIP_RECORD=1 で飛ばす）。record が失敗したら外した文を控えから戻す。
 set -euo pipefail
+export GIT_NO_REPLACE_OBJECTS=1
 
-PR="${1:-}"
+PO_REF="${1:-}"
 SETTINGS="${2:-$HOME/.claude/settings.json}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DESIGN="${HERE}/design.md"
 AUDIT="${HERE}/../../../scripts/dev/consent-audit.py"
 STAMP="$(date +%Y%m%d%H%M%S)"
 
-PR="${PR#PR#}"
-if ! [[ "${PR}" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: 第1引数に便1の PR 番号を渡してください（例: 4560）。" >&2
-  exit 1
-fi
+case "${PO_REF}" in
+  consent:*) ;;
+  *)
+    echo "ERROR: 第1引数に同意票の鍵 consent:<k1>:<k2>:<k3> を渡してください。何も変えていません。" >&2
+    exit 1
+    ;;
+esac
 if [ ! -f "${SETTINGS}" ]; then
   echo "ERROR: ${SETTINGS} が見つかりません。" >&2
   exit 1
@@ -44,4 +48,8 @@ if ! echo "${OUT}" | grep -q '^CHANGED=yes$'; then
   exit 0
 fi
 HASH="$(echo "${OUT}" | sed -n 's/^HASH=//p')"
-cd "$HOME/.salesanchor-tools" && python3 -I -B scripts/dev/perm-change.py record --target user-automode-allow --op remove --item-hash "${HASH}" --po-ref "PR#${PR}" --actor po-script
+if ! (cd ~/.salesanchor-tools && python3 -I -B scripts/dev/perm-change.py record --target user-automode-allow --op remove --item-hash "${HASH}" --po-ref "${PO_REF}" --actor po-script); then
+  echo "ERROR: 台帳への record に失敗。外した文を控えから戻します。" >&2
+  cp -p "${BACKUP}" "${SETTINGS}"
+  exit 1
+fi

@@ -236,7 +236,7 @@ def test_a1(tmp):
 def test_a2(tmp):
     e = Env(tmp, "a2", with_git=True)
     n0 = ledger_n(e)
-    item = "Bash(wc -l docs:*)"
+    item = "Bash(wc -l docs)"
     code, out, _ = run_pc(e, apply_argv("user-allow", "add", item, days=7))
     allow = load_json(e.settings)["permissions"]["allow"]
     rows = ledger_rows(e)
@@ -244,7 +244,7 @@ def test_a2(tmp):
     chk("A2-b", "台帳の review_by が7日後・actor が opus・prev_sha が genesis", rows[-1]["review_by"] == (T0 + td(days=7)).strftime("%Y-%m-%d") and rows[-1]["actor"] == "opus" and rows[-1]["prev_sha"] == "genesis")
     code, _, _ = run_pc(e, apply_argv("user-allow", "remove", item))
     chk("A2-c", "user-allow の remove が反映され applied が1行増える", code == 0 and item not in load_json(e.settings)["permissions"]["allow"] and ledger_n(e) == n0 + 2)
-    item2 = "Bash(wc -c docs:*)"
+    item2 = "Bash(wc -c docs)"
     code, _, _ = run_pc(e, apply_argv("repo-local-allow", "add", item2))
     chk("A2-d", "repo-local-allow の add が反映される", code == 0 and item2 in load_json(e.repo_local)["permissions"]["allow"])
     code, _, _ = run_pc(e, apply_argv("repo-local-allow", "remove", item2))
@@ -256,11 +256,15 @@ def test_a2(tmp):
     code, _, _ = run_pc(e, apply_argv("user-allow", "remove", "Bash(never-there:*)"))
     chk("A2-g", "remove で無い文は exit 0・noop の行", code == 0 and ledger_rows(e)[-1]["result"] == "noop" and ledger_n(e) == n1 + 1)
     chk("A2-h", "台帳の prev_sha の鎖がつながっている", audit.read_ledger(e.home)["chain_ok"])
-    code, _, _ = run_pc(e, apply_argv("user-allow", "remove", "Bash(echo hi:*)git push"))
-    code2, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(echo hi:*)"))
+    run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l twice)"))
+    code2, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l twice)"))
     chk("A2-i", "add で既にある文は noop（exit 0）", code2 == 0 and ledger_rows(e)[-1]["result"] == "noop")
+    n2 = ledger_n(e)
     code, _, _ = run_pc(e, apply_argv("user-automode-allow-sm", "add", "SM-x"))
-    chk("A2-j", "apply で使えない target は exit 1", code == 1)
+    chk("A2-j", "apply で使えない target は exit 1・台帳は増えない", code == 1 and ledger_n(e) == n2)
+    code, _, _ = run_pc(e, apply_argv("user-automode-allow", "add", "SM-y a sentence"))
+    chk("A2-j2", "user-automode-allow の add は exit 3・分類は reserved:R0・台帳に held が1行増える",
+        code == 3 and ledger_n(e) == n2 + 1 and ledger_rows(e)[-1]["category"] == "reserved:R0" and ledger_rows(e)[-1]["result"] == "held")
     # record: PR の差分から1要素1行
     code, _, _ = run_pc(e, ["record", "--target", "repo-hooks", "--op", "add", "--item-hash", "abcdef12", "--po-ref", "PR#4600"])
     r = ledger_rows(e)[-1]
@@ -281,7 +285,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = corrupt
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a:*)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-a", "書いた後の読み直しに失敗すると exit 1・元のファイルと同じ sha256", code == 1 and sha_file(e.settings) == s0)
@@ -292,7 +296,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = raiser
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l b:*)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l b)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-c", "書き込みが例外で失敗しても exit 1・元のファイルと同じ", code == 1 and sha_file(e.settings) == s0)
@@ -302,7 +306,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = noop_writer
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l c:*)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l c)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-d", "反映されなかった場合も exit 1・元のファイルと同じ", code == 1 and sha_file(e.settings) == s0)
@@ -314,9 +318,10 @@ def test_a3(tmp):
 
 R_EXAMPLES = {
     "R0": ["Bash", "Bash(*)", "Bash(ls:*)", "Bash(python3 scripts/*)", "Bash(bash ~/worktrees/*)", "BASH(LS *)",
-           "Edit(~/.claude/**)", "Bash(python3 scripts/dev/perm-change.py apply)"],
+           "Edit(~/.claude/**)", "Bash(python3 scripts/dev/perm-change.py apply)",
+           "Bash(ssh -F /dev/null prod1 *)", 'Bash(psql ai_ro -c "SELECT * FROM x")'],
     "R1": ["Bash(rm -rf /tmp/xx)", "Bash(docker compose exec backend ls)", 'Bash(psql -c "DROP TABLE t")',
-           "Bash(echo 削除)", "Bash(ssh -F /dev/null prod1 *)", 'Bash(psql ai_ro -c "SELECT * FROM x")', "Bash(TRUNCATE t)"],
+           "Bash(echo 削除)", "Bash(TRUNCATE t)", "Bash(rm -v *)", "Bash(/bin/rm -f *)"],
     "R2": ["Bash(git push origin feat)", "Bash(GIT RESET --HARD HEAD)", "Bash(gh pr merge 12)", "Bash(git checkout main)"],
     "R3": ["Bash(cat .env)", "Bash(echo $API_KEY)", "Bash(gh secret list)", "Bash(echo 合言葉)", "Bash(echo PASSWORD)"],
     "R4": ["Bash(echo hook)", "Bash(vi settings.json)", "Bash(touch GUARD)", "Bash(echo 見張り)", "Bash(echo Self-Modification)"],
@@ -368,8 +373,9 @@ def test_a18(tmp):
     e = Env(tmp, "a18", with_git=True)
     for i, (it, rule) in enumerate([("Bash(python3 scripts/*)", "R0"), ("Bash(bash ~/worktrees/*)", "R0"),
                                     ("Bash(python3 scripts/dev/perm-change.py apply x)", "R0"),
-                                    ("Bash(ssh -F /dev/null prod1 *)", "R1"),
-                                    ('Bash(psql ai_ro -c "SELECT * FROM x")', "R1")]):
+                                    ("Bash(ssh -F /dev/null prod1 *)", "R0"),
+                                    ('Bash(psql ai_ro -c "SELECT * FROM x")', "R0"),
+                                    ("Bash(rm -v *)", "R1"), ("Bash(/bin/rm -f *)", "R1")]):
         code, _, _ = run_pc(e, apply_argv("user-allow", "add", it))
         chk("A18-%d" % (i + 1), "%s は exit 3（%s）" % (it, rule), code == 3 and ledger_rows(e)[-1]["category"] == "reserved:" + rule)
     code, _, _ = run_pc(e, apply_argv("user-automode-allow", "add", "Some benign sentence"))
@@ -380,7 +386,20 @@ def test_a18(tmp):
     chk("A18-w1", "api_key の key は語として当たる（_ は区切り）", pc.classify("Bash(echo api_key)", "user-allow", "add") == "R3")
     chk("A18-w2", "SELECT と DELETE を含む文は読み取りの印にならない", pc.classify('Bash(psql ai_ro -c "SELECT 1; DELETE x")', "user-allow", "add") == "R1")
     chk("A18-w3", "-f は push と同じ文のときだけ R2 の理由になる", pc.rule_hit("R2", "git push -f") and not pc.rule_hit("R2", "ls -f"))
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -w docs:*)"))
+    counter = ["Bash(gh api *)", "Bash(gh api:*)", "Bash(docker compose *)", "Bash(git -C /x *)", "Bash(git -c x=y *)",
+               "Bash(g*)", "Bash( *)", "Bash(**)", "Bash(osascript -e *)", "Bash(sudo -n *)", "Bash(command -p *)",
+               "Bash(awk -f *)", "Bash(curl -X POST *)", "Bash(launchctl load *)", "Bash(python3.12 -c *)",
+               "Bash(/bin/bash -c *)", "Bash(ls *)", "Bash(git config --global *)", "Bash(git log --oneline *)",
+               "Bash(git log --output=x *)", "Bash(cp -f *)", "Bash(gh alias set *)", "Bash(rg --pre x *)",
+               "Bash(security dump-keychain *)", "Bash(gh pr view extra *)"]
+    for i, it in enumerate(counter):
+        chk("A18-c%d" % (i + 1), "第6版の反例 %s は R0" % it, pc.classify(it, "user-allow", "add") == "R0")
+    for i, it in enumerate(["Bash(rm -v *)", "Bash(/bin/rm -f *)", "Bash(rm *)"]):
+        chk("A18-r%d" % (i + 1), "%s は R1（R0 より先）" % it, pc.classify(it, "user-allow", "add") == "R1")
+    for i, it in enumerate(["Bash(gh pr view *)", "Bash(git status *)", "Bash(grep *)", "Bash(gh run list:*)",
+                            "Bash(wc *)", "Bash(git ls-files *)", "Bash(/usr/bin/grep *)"]):
+        chk("A18-a%d" % (i + 1), "受け入れの例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") is None)
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -w docs)"))
     chk("A18-ok", "目印に当たらない文は通常で反映される", code == 0)
 
 
@@ -450,7 +469,7 @@ def test_a5_a6(tmp):
     # A6: 台帳にある増減は異常にならない
     e = Env(tmp, "a6", with_git=True)
     run_audit(e, T0, commit=True)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l zz:*)"), now=T0 + td(3600))
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l zz)"), now=T0 + td(3600))
     code2, _, _ = run_pc(e, apply_argv("user-allow", "remove", "Bash(echo hi:*)"), now=T0 + td(3700))
     lines = run_audit(e, T0 + td(7200))
     chk("A6-a", "道具で足し引きした変化は A にならず ABNORMAL=no", code == 0 and code2 == 0 and not reasons(lines) and "ABNORMAL=no" in lines)
@@ -463,70 +482,230 @@ def test_a5_a6(tmp):
     write_json(e.settings, d)
     h = audit.item_sha8("Bash(rm:*)")
     seed_row(e, T0 + td(600), sub="apply", target="user-deny", item_hash=h, category="reserved:R4", result="held")
-    seed_row(e, T0 + td(1200), sub="record", target="user-deny", item_hash=h, category="reserved:R4", result="recorded", po_ref="PR#77", actor="po-script")
-    gh = lambda n: {"state": "MERGED", "mergedAt": iso(T0 + td(900)), "body": "x %s y" % h}
-    lines = run_audit(e, T0 + td(3600), gh=gh)
+    ref = consent_ref(e, ["c" * 64, iso(T0 + td(1000)), "cmdx"], T0 + td(1000), "同意票 %s" % h)
+    seed_row(e, T0 + td(1200), sub="record", target="user-deny", item_hash=h, category="reserved:R4", result="recorded", po_ref=ref, actor="po-script")
+    lines = run_audit(e, T0 + td(3600))
     chk("A6-c", "reserved の変化でも po_ref が正しければ ABNORMAL=no", not reasons(lines) and "ABNORMAL=no" in lines)
 
 
-def b_case(tmp, name, ref, gh_resp, consent_used=None, merged_offset=900, key3=None, second_ref=None):
-    e = light_env(tmp, name)
+def consent_ref(e, key3, used_at, text):
+    """同意票の役を作る: assistant の text（sha256 が鍵の1つ目になる）を記録に置き、同意の台帳に使用の行を書く。po_ref を返す。"""
+    sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    key3 = [sha, key3[1], key3[2]]
+    with open(e.consent_ledger, "a") as f:
+        f.write(json.dumps({"key": key3, "used_at": iso(used_at)}) + "\n")
+    d = os.path.join(e.claude, "projects", "p1")
+    os.makedirs(d, exist_ok=True)
+    tp = os.path.join(d, "x.jsonl")
+    with open(tp, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}, ensure_ascii=False) + "\n")
+        f.write(json.dumps({"type": "user", "origin": {"kind": "human"}, "promptSource": "typed",
+                            "timestamp": key3[1], "message": {"content": "1"}}, ensure_ascii=False) + "\n")
+    ts = used_at.timestamp()
+    os.utime(tp, (ts, ts))
+    return "consent:" + ":".join(key3)
+
+
+def merge_pr(e, edits, branch="feat"):
+    """GitHub 役の側で branch を切り、edits={相対パス: 内容} を入れて --no-ff で main に取り込む。
+    tools の clone を origin/main に揃え、取り込みの commit の sha を返す。"""
+    git(e.seed, "checkout", "-q", "-b", branch)
+    for rel, text in edits.items():
+        p = os.path.join(e.seed, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(text)
+    git(e.seed, "add", "-A")
+    git(e.seed, "commit", "-q", "-m", "change " + branch)
+    git(e.seed, "checkout", "-q", "main")
+    git(e.seed, "merge", "-q", "--no-ff", "-m", "Merge " + branch, branch)
+    git(e.seed, "push", "-q", "origin", "main")
+    mc = git(e.seed, "rev-parse", "HEAD")
+    git(e.tools, "fetch", "-q", "origin")
+    git(e.tools, "reset", "-q", "--hard", "origin/main")
+    return mc
+
+
+def side_commit(e):
+    """main に入っていない commit を作って tools に取り込み、sha を返す。"""
+    git(e.seed, "checkout", "-q", "-b", "side")
+    with open(os.path.join(e.seed, "side.txt"), "w") as f:
+        f.write("side\n")
+    git(e.seed, "add", "-A")
+    git(e.seed, "commit", "-q", "-m", "side")
+    sha = git(e.seed, "rev-parse", "HEAD")
+    git(e.seed, "push", "-q", "origin", "side")
+    git(e.seed, "checkout", "-q", "main")
+    git(e.tools, "fetch", "-q", "origin", "side")
+    return sha
+
+
+def pr_view(mc, state="MERGED", off=900, body=""):
+    d = {"state": state, "mergedAt": iso(T0 + td(off)), "body": body}
+    if mc is not None:
+        d["mergeCommit"] = {"oid": mc}
+    return d
+
+
+def b_case(tmp, name, ref, gh_resp, git_env=False, second=False):
+    e = Env(tmp, name, with_git=True) if git_env else light_env(tmp, name)
     run_audit(e, T0, commit=True)
-    items = ["Bash(rm:*)"] + (["Bash(mv:*)"] if second_ref else [])
+    items = ["Bash(rm:*)"] + (["Bash(mv:*)"] if second else [])
     d = load_json(e.settings)
     d["permissions"]["deny"] = items
     write_json(e.settings, d)
-    if consent_used is not None:
-        with open(e.consent_ledger, "w") as f:
-            f.write(json.dumps({"key": key3, "used_at": iso(consent_used)}) + "\n")
+    if callable(ref):
+        ref = ref(e)
     for i, it in enumerate(items):
         h = audit.item_sha8(it)
         seed_row(e, T0 + td(600), sub="apply", target="user-deny", item_hash=h, category="reserved:R4", result="held")
         seed_row(e, T0 + td(1200 + i), sub="record", target="user-deny", item_hash=h, category="reserved:R4",
                  result="recorded", po_ref=ref)
-    gh = (lambda n: gh_resp(items) if callable(gh_resp) else gh_resp)
+    gh = (lambda n: gh_resp(e)) if callable(gh_resp) else (lambda n: gh_resp)
     return e, run_audit(e, T0 + td(3600), gh=gh), items
+
+
+SETTINGS_PATH = ".claude/settings.json"
+XI = "Bash(wc -l newrepo)"
+ZI = "Bash(wc -l other)"
+BASEI = "Bash(echo seed:*)"
+
+
+def repo_pr_case(tmp, name, held=True, cite="own", **view_kw):
+    """repo-allow の変更（XI を足す PR を取り込み済み）に PR# の record を付けた状態。返り値: (行の一覧, XI の hash)。"""
+    e = Env(tmp, name, with_git=True)
+    run_audit(e, T0, commit=True)
+    mc1 = merge_pr(e, {SETTINGS_PATH: json.dumps({"permissions": {"allow": [BASEI, XI]}})}, "b1")
+    mc2 = merge_pr(e, {SETTINGS_PATH: json.dumps({"permissions": {"allow": [BASEI, XI, ZI]}})}, "b2")
+    mc = {"own": mc1, "other": mc2, "none": None, "side": side_commit(e)}[cite]
+    h = audit.item_sha8(XI)
+    if held:
+        seed_row(e, T0 + td(600), sub="apply", target="repo-allow", item_hash=h, category="reserved:R4", result="held")
+    seed_row(e, T0 + td(1200), sub="record", target="repo-allow", item_hash=h, category="reserved:R4", result="recorded", po_ref="PR#9")
+    gh = (lambda n: None) if view_kw.get("gh_none") else (lambda n: pr_view(mc, **{k: v for k, v in view_kw.items() if k != "gh_none"}))
+    return run_audit(e, T0 + td(3600), gh=gh), h
+
+
+def with_reason(lines, kind, key, h):
+    return "ABNORMAL_REASON=%s %s %s" % (kind, key, h) in lines
 
 
 def test_a7(tmp):
     K = ["a" * 64, "2026-10-19T00:20:00.000Z", "cmd1"]
-    ref = "consent:%s" % ":".join(K)
     h = audit.item_sha8("Bash(rm:*)")
-
-    def merged(off=900, body=None, state="MERGED"):
-        return lambda items: {"state": state, "mergedAt": iso(T0 + td(off)), "body": body if body is not None else "ok %s" % h}
-
-    _, lines, _ = b_case(tmp, "a7-ok-pr", "PR#9", merged())
-    chk("A7-0", "条件がそろった PR は異常にならない", not reasons(lines))
-    _, lines, _ = b_case(tmp, "a7-open", "PR#9", merged(state="OPEN"))
-    chk("A7-1", "PR が MERGED でないと B", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-before", "PR#9", merged(off=300))
-    chk("A7-2", "mergedAt が held より前だと B", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-nobody", "PR#9", merged(body="no hash here"))
-    chk("A7-3", "本文に item_hash が無いと B", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-nogh", "PR#9", None)
-    chk("A7-4", "gh が使えない（None）と B のまま", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-c-none", ref, None)
-    chk("A7-5", "consent: の3要素が同意の台帳に無いと B", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-c-early", ref, None, consent_used=T0 + td(300), key3=K)
-    chk("A7-6", "used_at が held より前だと B", "ABNORMAL_REASON=B user:permissions.deny %s" % h in lines)
-    _, lines, _ = b_case(tmp, "a7-c-ok", ref, None, consent_used=T0 + td(900), key3=K)
-    chk("A7-7", "同意の台帳に held より後の行があれば異常にならない", not reasons(lines))
-    _, lines, items = b_case(tmp, "a7-c-twice", ref, None, consent_used=T0 + td(900), key3=K, second_ref=True)
     h2 = audit.item_sha8("Bash(mv:*)")
+    text = "同意票 対象 %s %s" % (h, h2)
+    RK = "repo:permissions.allow"
+    lines, hx = repo_pr_case(tmp, "a7-ok-pr", held=True)
+    chk("A7-0", "取り込み済みの PR の差分に item_hash があり、時刻も合えば異常にならない", not [x for x in reasons(lines) if hx in x])
+    lines, hx = repo_pr_case(tmp, "a7-open", held=True, state="OPEN")
+    chk("A7-1", "PR が MERGED でないと B", with_reason(lines, "B", RK, hx))
+    lines, hx = repo_pr_case(tmp, "a7-before", held=True, off=300)
+    chk("A7-2", "mergedAt が held より前だと B", with_reason(lines, "B", RK, hx))
+    lines, hx = repo_pr_case(tmp, "a7-nodiff", held=True, cite="other", body="本文に %s" % audit.item_sha8(XI))
+    chk("A7-3", "差分に item_hash が無ければ（本文にだけあっても）B", with_reason(lines, "B", RK, hx))
+    lines, hx = repo_pr_case(tmp, "a7-nogh", held=True, gh_none=True)
+    chk("A7-4", "gh が使えない（None）と B のまま", with_reason(lines, "B", RK, hx))
+    lines, hx = repo_pr_case(tmp, "a7-nomc", held=True, cite="none")
+    chk("A7-4b", "mergeCommit が無いと B", with_reason(lines, "B", RK, hx))
+    lines, hx = repo_pr_case(tmp, "a7-side", held=True, cite="side")
+    chk("A7-4c", "mergeCommit が V の祖先でないと B", with_reason(lines, "B", RK, hx))
+
+    def pr_for_deny(e):
+        return pr_view(merge_pr(e, {"docs/note.md": "x %s\n" % h}))
+
+    _, lines, _ = b_case(tmp, "a7-deny-pr", "PR#9", pr_for_deny, git_env=True)
+    chk("A7-3b", "repo-allow・repo-hooks 以外の held に PR# を使っても B", with_reason(lines, "B", "user:permissions.deny", h))
+    _, lines, _ = b_case(tmp, "a7-c-none", "consent:%s" % ":".join(K), None)
+    chk("A7-5", "consent: の3要素が同意の台帳に無いと B", with_reason(lines, "B", "user:permissions.deny", h))
+    _, lines, _ = b_case(tmp, "a7-c-nohash", lambda e: consent_ref(e, K, T0 + td(900), "同意票 別の件"), None)
+    chk("A7-5b", "同意票の本文に item_hash が無いと B", with_reason(lines, "B", "user:permissions.deny", h))
+    _, lines, _ = b_case(tmp, "a7-c-early", lambda e: consent_ref(e, K, T0 + td(300), text), None)
+    chk("A7-6", "used_at が held より前だと B", with_reason(lines, "B", "user:permissions.deny", h))
+    _, lines, _ = b_case(tmp, "a7-c-ok", lambda e: consent_ref(e, K, T0 + td(900), text), None)
+    chk("A7-7", "held より後に使われ、本文に item_hash がある同意票なら異常にならない", not reasons(lines))
+    _, lines, items = b_case(tmp, "a7-c-twice", lambda e: consent_ref(e, K, T0 + td(900), text), None, second=True)
     bs = [x for x in lines if x.startswith("ABNORMAL_REASON=B ")]
     chk("A7-8", "同じ po_ref の2回目は B（1回目は通る）", len(bs) == 1 and bs[0].endswith(h2))
-    # 追跡された repo: の差分は本文の item_hash を要らない
-    e = light_env(tmp, "a7-repo", repo_dir=True)
+    # repo:hooks は PR# の record を取り込みの差分で照合する
+    e = Env(tmp, "a7-hooks", with_git=True)
     run_audit(e, T0, commit=True)
-    mutate(e, "repo:hooks")
-    hk = audit.read_ledger(e.home)
-    snap_hooks = audit.collect_permissions(e.home, git_run=lambda a, c: (127, b""))["repo:hooks"]
-    hh = audit.element_hash(snap_hooks[0])
-    seed_row(e, T0 + td(600), sub="record", target="repo-hooks", item_hash=hh, category="reserved:R4", result="recorded", po_ref="PR#55", actor="opus")
-    gh = lambda n: {"state": "MERGED", "mergedAt": iso(T0 + td(900)), "body": "no hash"}
-    lines = run_audit(e, T0 + td(3600), gh=gh)
-    chk("A7-9", "repo: の差分は PR 番号の record で照合し、本文の item_hash は要らない", not [x for x in reasons(lines) if "repo:hooks" in x])
+    hooks = {"PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "echo new"}]}]}
+    mc = merge_pr(e, {SETTINGS_PATH: json.dumps({"permissions": {"allow": [BASEI]}, "hooks": hooks})})
+    hh = audit.element_hash(audit.collect_permissions(e.home)["repo:hooks"][0])
+    seed_row(e, T0 + td(600), sub="apply", target="repo-hooks", item_hash=hh, category="reserved:R4", result="held")
+    seed_row(e, T0 + td(1200), sub="record", target="repo-hooks", item_hash=hh, category="reserved:R4", result="recorded", po_ref="PR#55", actor="opus")
+    lines = run_audit(e, T0 + td(3600), gh=lambda n: pr_view(mc))
+    chk("A7-9", "repo:hooks の差分は、取り込みの差分に要素があれば PR# の record で通る", not [x for x in reasons(lines) if "repo:hooks" in x])
+
+
+def a_for(lines, key):
+    return [x for x in reasons(lines) if x.startswith("ABNORMAL_REASON=A %s " % key)]
+
+
+def a19_pr(tmp, name, item, target, docs_line, mode="ok", body=""):
+    """台帳が normal・held 無しで PR# の record が付いた変更。mode: ok / nopr / side / ownmc。"""
+    e = Env(tmp, name, with_git=True)
+    run_audit(e, T0, commit=True)
+    d = load_json(e.settings)
+    if target == "user-allow":
+        d["permissions"]["allow"].append(item)
+    else:
+        d["autoMode"]["allow"].append(item)
+    write_json(e.settings, d)
+    h = audit.item_sha8(item)
+    mc = merge_pr(e, {"docs/handoff/design-approval-ticket/permission-ledger.md": docs_line.replace("HASH", h) + "\n"})
+    if mode == "side":
+        mc = side_commit(e)
+    seed_row(e, T0 + td(1200), sub="record", target=target, item_hash=h, category="normal", result="recorded", po_ref="PR#9", actor="opus")
+    gh = (lambda n: None) if mode == "nopr" else (lambda n: pr_view(mc, body=body or ("本文 %s" % h)))
+    return run_audit(e, T0 + td(3600), gh=gh)
+
+
+def a19_consent(tmp, name, used_off, text, earlier_row=False):
+    e = light_env(tmp, name)
+    item = "Bash(wc -l c19)"
+    h = audit.item_sha8(item)
+    K = ["d" * 64, iso(T0 + td(used_off)), "cmdy"]
+    ref = consent_ref(e, K, T0 + td(used_off), text.replace("HASH", h))
+    if earlier_row:
+        seed_row(e, T0 - td(3600), sub="record", target="user-allow", item_hash=h, category="normal", result="recorded", po_ref=ref, actor="po-script")
+    run_audit(e, T0, commit=True)
+    d = load_json(e.settings)
+    d["permissions"]["allow"].append(item)
+    write_json(e.settings, d)
+    seed_row(e, T0 + td(1200), sub="record", target="user-allow", item_hash=h, category="normal", result="recorded", po_ref=ref, actor="po-script")
+    return run_audit(e, T0 + td(3600))
+
+
+def test_a19(tmp):
+    UA, AA = "user:permissions.allow", "user:autoMode.allow"
+    lines = a19_pr(tmp, "a19-ok", "Bash(wc -l p19)", "user-allow", "note HASH")
+    chk("A19-0", "取り込み済みで差分に item_hash がある PR# の record は A にならない", not a_for(lines, UA))
+    lines = a19_pr(tmp, "a19-nopr", "Bash(wc -l p19)", "user-allow", "note HASH", mode="nopr")
+    chk("A19-1", "存在しない PR# は A", len(a_for(lines, UA)) == 1)
+    lines = a19_pr(tmp, "a19-side", "Bash(wc -l p19)", "user-allow", "note HASH", mode="side")
+    chk("A19-2", "V に取り込まれていない PR は A", len(a_for(lines, UA)) == 1)
+    lines = a19_pr(tmp, "a19-body", "Bash(wc -l p19)", "user-allow", "unrelated")
+    chk("A19-3", "PR 本文にだけ item_hash がある（差分に無い）と A", len(a_for(lines, UA)) == 1)
+    lines = a19_pr(tmp, "a19-sm-ok", "SM-7 weekly check", "user-automode-allow-sm", "| SM-7 | HASH |")
+    chk("A19-4a", "SM の PR は台帳の差分に同じ SM 番号の行があれば A にならない", not a_for(lines, AA))
+    lines = a19_pr(tmp, "a19-sm-ng", "SM-7 weekly check", "user-automode-allow-sm", "| SM-8 | HASH |")
+    chk("A19-4b", "SM の PR の台帳の差分が別の SM 番号だと A", len(a_for(lines, AA)) == 1)
+    lines = a19_pr(tmp, "a19-sm-plain", "plain sentence", "user-automode-allow-sm", "| SM-7 | HASH |")
+    chk("A19-5", "user-automode-allow-sm なのに文が SM- で始まらないと A", len(a_for(lines, AA)) == 1)
+    lines, hx = repo_pr_case(tmp, "a19-repo-ng", held=False, cite="other")
+    chk("A19-6", "repo-allow の PR の settings.json の差分に文が無いと A", with_reason(lines, "A", "repo:permissions.allow", hx))
+    lines, hx = repo_pr_case(tmp, "a19-repo-ok", held=False)
+    chk("A19-6b", "repo-allow の PR の差分に文があれば（held 無しでも）A にならない", not [x for x in reasons(lines) if hx in x])
+    lines = a19_consent(tmp, "a19-c-old", -600, "同意票 HASH")
+    chk("A19-7", "前回の写しより前の同意は A", len(a_for(lines, UA)) == 1)
+    lines = a19_consent(tmp, "a19-c-nohash", 900, "同意票 無関係")
+    chk("A19-8", "item_hash の無い同意票は A", len(a_for(lines, UA)) == 1)
+    lines = a19_consent(tmp, "a19-c-ok", 900, "同意票 HASH")
+    chk("A19-8b", "item_hash のある同意票（登録の記録）は A にならない", not reasons(lines))
+    lines = a19_consent(tmp, "a19-c-twice", 900, "同意票 HASH", earlier_row=True)
+    chk("A19-9", "同じ po_ref の2回目の使用は A", len(a_for(lines, UA)) == 1)
 
 
 def test_a8(tmp):
@@ -572,7 +751,7 @@ def test_a8(tmp):
 
 def test_a9(tmp):
     e = Env(tmp, "a9", with_git=True)
-    item = "Bash(wc -l review:*)"
+    item = "Bash(wc -l review)"
     code, _, _ = run_pc(e, apply_argv("user-allow", "add", item, days=1), now=T0)
     h = audit.item_sha8(item)
     lines = run_audit(e, T0 + td(0))
@@ -680,7 +859,7 @@ def test_a11_a12_a13(tmp):
     chk("A13-b", "文の中身が台帳ファイル・標準出力・標準エラーのどこにも出ない", "UNIQUESECRETSTRING_9f3" not in ledger_text + out + err)
     lines = run_audit(e, T0 + td(60))
     chk("A13-c", "点検の出力にも出ない", not any("UNIQUESECRETSTRING_9f3" in x for x in lines))
-    normal = "Bash(wc -l x:*)"
+    normal = "Bash(wc -l x)"
     run_pc(e, apply_argv("user-allow", "add", normal))
     chk("A13-d", "通常の文の summary は先頭80字", ledger_rows(e)[-1]["summary"] == normal)
 
@@ -742,8 +921,8 @@ def test_a17(tmp):
     with open(untracked, "w") as f:
         f.write("x")
     n0 = ledger_n(e)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a:*)"))
-    chk("A17-1e", "追跡外のファイルがあると exit 1（設定も台帳も変えない）", code == 1 and ledger_n(e) == n0 and "Bash(wc -l a:*)" not in load_json(e.settings)["permissions"]["allow"])
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a)"))
+    chk("A17-1e", "追跡外のファイルがあると exit 1（設定も台帳も変えない）", code == 1 and ledger_n(e) == n0 and "Bash(wc -l a)" not in load_json(e.settings)["permissions"]["allow"])
     os.remove(untracked)
     ca = os.path.join(e.tools, "scripts", "dev", "consent-audit.py")
     with open(ca, "a") as f:
@@ -763,7 +942,7 @@ def test_a17(tmp):
     chk("A17-3c", "同期のあと作業ツリーは clean（__pycache__ も作られない）", git(e.tools, "status", "--porcelain", "--untracked-files=all") == "")
     e.advance("note.txt", "one")
     e.reexec_calls = 0
-    code, out, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a1:*)"))
+    code, out, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a1)"))
     chk("A17-3d", "main が1つ進んだだけなら自分で揃えて起動し直し（1回）、そのまま実行される", code == 0 and e.reexec_calls == 1 and e.head() == e.v())
     first = git(e.tools, "rev-list", "--max-parents=0", "HEAD")
     git(e.tools, "update-ref", "refs/remotes/origin/main", first)
@@ -778,7 +957,7 @@ def test_a17(tmp):
     code, _, _ = run_pc(e, argv, git_run=offline)
     chk("A17-2a", "ls-remote が取れないと exit 4", code == 4)
     n0 = ledger_n(e)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a2:*)"), git_run=offline)
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a2)"), git_run=offline)
     chk("A17-2a2", "exit 4 のとき設定も台帳も変えない", code == 4 and ledger_n(e) == n0)
     e.advance("note.txt", "two")
     code, _, _ = run_pc(e, argv, git_run=wrap_git(real, fail="fetch"))
@@ -837,7 +1016,7 @@ def test_a17(tmp):
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
-        for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a8, test_a9, test_a10,
+        for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a8, test_a9, test_a10,
                    test_a11_a12_a13, test_a14, test_a17):
             try:
                 fn(tmp)

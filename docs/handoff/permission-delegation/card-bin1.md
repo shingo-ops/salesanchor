@@ -55,5 +55,20 @@ PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同
 - フックに止められた（言い換えて再試行しない）。
 - design.md に無い条件が必要になった。
 
+## 追補（第6版・Reviewer REQUEST_CHANGES の直し、2026-10-19）
+同じブランチ・同じ PR #4544 に追加コミットする（force push しない）。
+
+1. HIGH-1（`scripts/dev/consent-audit.py`）: design §4-3 の第6版の段落どおり、record の行は category と held の行の有無にかかわらず po_ref を確かめる。確かめを通らない record の行では差分を説明しない（held 無し→A、有り→B）。PR の (po_ref, item_hash) の組は1回だけ。PR の確かめは PR 本文を使わず、mergeCommit の差分（`git diff <mergeCommit>^1 <mergeCommit>`、~/.salesanchor-tools の V の祖先であること）で行う。B の対象では PR#n を repo-allow・repo-hooks だけに受け付け、ほかは consent だけ。consent は同意票の本文に item_hash があることも確かめる。A7 を設計の新しい文どおりに直し、A19 の試験を足す（gh は偽の応答、mergeCommit は A17 の一時の git リポジトリ）。
+2. MEDIUM-1（`scripts/dev/perm-change.py`）: design §2-2 の R0 を「狭い形」（受け入れの一覧と一致するもの）でなければ R0 に反転する。受け入れの一覧は設計の文のとおり辞書（集合）1つで持つ。先頭の語は「パスを外し、末尾の数字と点を外した名前」で比べる（R1 の rm も同じ）。`:*` は ` *` とみなす。rm で `*` を含む文は R0 の前に R1。A18 に設計の反例と狭い形の例をすべて足す。
+3. MEDIUM-2（`docs/handoff/permission-delegation/routine.json`）: 道具を呼ぶ形を一字一句 `cd ~/.salesanchor-tools && python3 -I -B scripts/dev/perm-change.py ...` にする（絶対パスにしない）。
+4. LOW-1: po-register / po-unregister の .sh で `$HOME` を使う箇所（道具を呼ぶ行）を `~` の形にする。
+5. LOW-2: 両スクリプトの git の実行に環境変数 `GIT_NO_REPLACE_OBJECTS=1` を足す。
+6. LOW-3: 控えのディレクトリ名に pid と乱数を入れ、`exist_ok=False` で作る。
+7. LOW-4: `docs/handoff/permission-delegation/po_delegation_edit.py` の書き込みを一時ファイル→rename にする。
+7b. design §4-5・§4-6（第6版）: po-register / po-unregister は po_ref を第1引数の `consent:<鍵>` で受け（`consent:` で始まらなければ何も変えず exit 1）、`record --po-ref` にそれを渡す。perm-change.py の保留の台本も `consent:<鍵>` を引数で受ける形にする（repo-allow・repo-hooks 以外で PR#n を書かない）。
+8. LOW-5: po-register で台帳の record が失敗したら足した文を控えから戻し、失敗を出して終わる。
+9. LOW-6: 試験 A2-j を強める（期待する保留の分類まで確かめる）、試験ファイル :259 付近の使っていない呼び出しを消す。
+10. 試験をすべて走らせ、生出力を /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6.txt に保存。PR 本文の試験数を書き換える。
+
 ## 報告
 最後の返事は `DONE: PR #<番号> 試験 <合格数>/<総数>` か `BLOCKED: <理由1行>` か `NEEDS_DECISION: <1行>` の1行だけ。生出力は /tmp/CC報告ファイル/permission-delegation/bin1/ に保存する。
