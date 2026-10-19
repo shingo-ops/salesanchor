@@ -69,6 +69,7 @@ from app.services.v102_gap_lines import build_gap_detail, to_stored_detail
 from app.services.v102_human_decisions_svc import (
     FIELD_V102_PRICE,
     Decisions,
+    ValueOverrides,
     apply_value_overrides,
     load_v102_decisions,
     status_available_by_human,
@@ -1006,6 +1007,47 @@ def _with_unit_price_reason(values: dict, is_mismatch: bool) -> dict:
     return {**values, "review_reasons": REASON_SEPARATOR.join([*reasons, REASON_UNIT_PRICE_MISMATCH]), "needs_review": True}
 
 
+def _has_raw_value(raw) -> bool:
+    """仕入元が値を書いているか（空・none は書いていない）。"""
+    return raw is not None and str(raw).strip().lower() not in ("", "none")
+
+
+def _sell_out_stock_closed_in_the_same_post(
+    pairs: list, base_values: list[dict], decisions: dict[str, Decisions], unit_ids: dict, status_entries: list[dict],
+) -> list[dict]:
+    """規則13（docs/handoff/v102-shime-same-post-stock/design.md §3）：同じ投稿の〆が範囲に含む、同じ商品・状態の在庫の件を Sold out にする。
+
+    〆は自分の価格・数量が無く、引き継ぎ先も無いものだけ。人が判断した件は〆にも在庫にも使わない。元の base_values は変えない。
+    """
+    closers = [
+        (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
+        for values, (item, row) in zip(base_values, pairs)
+        if values["status"] == STATUS_SOLD_OUT and values["exclusion"] == "excluded"
+        and not _has_raw_value(getattr(row, "raw_price", None)) and not _has_raw_value(getattr(row, "raw_quantity", None))
+        and not item.get("soldout_targets")
+        and not _has_human_judgement(decisions.get(str(row.id)))
+        and None not in (values["product_id"], values["condition_id"], getattr(row, "line_start", None), getattr(row, "line_end", None))
+    ]
+    if not closers:
+        return base_values
+    out = []
+    for values, (_item, row) in zip(base_values, pairs):
+        decision = decisions.get(str(row.id))
+        start_line, end_line = getattr(row, "line_start", None), getattr(row, "line_end", None)
+        closed = (
+            values["status"] != STATUS_SOLD_OUT and values["exclusion"] is None
+            and (decision is None or decision.values.status is None)
+            and not _has_human_judgement(decision)
+            and start_line is not None and end_line is not None
+            and any(
+                pid == values["product_id"] and cid == values["condition_id"] and start <= start_line and end_line <= end
+                for pid, cid, start, end in closers
+            )
+        )
+        out.append(apply_value_overrides(values, ValueOverrides(status=STATUS_SOLD_OUT), unit_ids, status_entries) if closed else values)
+    return out
+
+
 def _write_results(
     session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
     decisions: dict[str, Decisions] | None = None, raw_text: str | None = None,
@@ -1039,6 +1081,7 @@ def _write_results(
         for values, (_item, row) in zip(base_values, pairs)
     ]
     base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
+    base_values = _sell_out_stock_closed_in_the_same_post(pairs, base_values, decisions, unit_ids, status_entries)  # 規則13
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
         decision = decisions.get(str(row.id))
@@ -1216,8 +1259,7 @@ def _inherit_price(session: Session, extraction_job_id: str, row, values: dict, 
         or values["status"] == STATUS_SOLD_OUT
     ):
         return values
-    raw_price = getattr(row, "raw_price", None)
-    if raw_price is not None and str(raw_price).strip().lower() not in ("", "none"):
+    if _has_raw_value(getattr(row, "raw_price", None)):
         return values  # 仕入元が価格を書いている（読めなかっただけ）。古い価格で隠さない
     schema = analyzer.TCG_SCHEMA
     try:

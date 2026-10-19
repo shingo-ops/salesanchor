@@ -2,6 +2,7 @@
 
 規則は docs/handoff/v102-shime-inventory-ref/design.md §2（規則1〜7）と docs/handoff/v102-shime-multi-targets/design.md §2（規則8〜11）、
 docs/handoff/v102-shime-direct-inherit/design.md §2（規則12a〜12e）と docs/handoff/v102-shime-inherit-unit-priority/design.md §2（規則12f）。
+同じ投稿の〆が在庫の件を Sold out にする規則13は docs/handoff/v102-shime-same-post-stock/design.md §3（line_analysis_v102_svc._sell_out_stock_closed_in_the_same_post）。
 過去の投稿を読む処理（同じ仕入元・48時間以内）は line_analysis_v102_svc.load_soldout_ref_posts が持つ。
 語の取り出しと当て方は gemini_raw_copy_v102_followup（#4090）と同じ部品を使う。
 """
