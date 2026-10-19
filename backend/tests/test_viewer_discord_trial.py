@@ -241,7 +241,7 @@ async def test_malformed_code_counts_as_failure_without_db():
 
 async def test_room_create_failure_not_counted():
     redis = _Redis()
-    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None))])
+    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None))])
     factory = _db_factory(lambda *a, **k: next(rows))
     it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=_guild(), user=_member(), components=_code_components(CODE))
     with patch.object(viewer_trial, "get_redis", return_value=redis), patch.object(
@@ -489,16 +489,59 @@ def test_expired_or_used_code_is_invalid(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_non_pending_viewer_code_is_invalid(pg):  # noqa: F811
+def test_suspended_or_verified_viewer_code_is_invalid(pg):  # noqa: F811
     conn, _, async_url = pg
     cur = _prep(conn, async_url)
-    vid = _account(cur, "np@example.com", "active")
+    for i, status in enumerate(("suspended", "verified")):
+        code = "2222-3333-4444-555" + "67"[i]
+        vid = _account(cur, f"np{i}@example.com", status)
+        _token(cur, vid, code)
+        it, channel = _submit(async_url, code)
+        assert _sent(it) == T.CODE_INVALID
+        channel.send.assert_not_awaited()
+        cur.execute("SELECT count(*) FROM public.viewer_login_tokens WHERE viewer_account_id=%s", (vid,))
+        assert cur.fetchone()[0] == 1
+
+
+@needs_ci_pg
+def test_trial_and_active_viewers_get_room_without_changing_status_or_expiry(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prep(conn, async_url)
+    for i, (status, days) in enumerate((("trial", -2), ("active", None))):
+        code = "2222-3333-4444-556" + "89"[i]
+        vid = _account(cur, f"{status}1@example.com", status, expires_in_days=days)
+        cur.execute("SELECT trial_expires_at FROM public.viewer_accounts WHERE id=%s", (vid,))
+        old_exp = cur.fetchone()[0]
+        _token(cur, vid, code)
+        it, channel = _submit(async_url, code, uid=1000 + vid)
+        assert _sent(it) == T.YOUR_ROOM.format(channel_id=9001)
+        cur.execute(
+            "SELECT status, trial_expires_at, discord_user_id, discord_channel_id, "
+            "password_must_change, password_argon2_hash FROM public.viewer_accounts WHERE id=%s",
+            (vid,),
+        )
+        st, exp, duid, dch, must, pwh = cur.fetchone()
+        assert st == status and exp == old_exp  # 状態と期限は変わらない
+        assert (duid, dch, must) == (str(1000 + vid), "9001", True)
+        assert pwh and pwh.startswith("$argon2")
+        assert _changes(cur, vid) == []  # 状態が変わらないので記録しない
+        cur.execute("SELECT event_type FROM public.viewer_login_events WHERE viewer_id=%s", (vid,))
+        assert cur.fetchall() == [("code_matched",)]
+        channel.send.assert_awaited_once()
+
+
+@needs_ci_pg
+def test_already_linked_viewer_code_is_invalid(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prep(conn, async_url)
+    vid = _account(cur, "lk@example.com", "trial", expires_in_days=5)
+    cur.execute("UPDATE public.viewer_accounts SET discord_user_id='555' WHERE id=%s", (vid,))
     _token(cur, vid, CODE)
-    it, channel = _submit(async_url, CODE)
+    it, channel = _submit(async_url, CODE, uid=778)
     assert _sent(it) == T.CODE_INVALID
     channel.send.assert_not_awaited()
-    cur.execute("SELECT count(*) FROM public.viewer_login_tokens WHERE viewer_account_id=%s", (vid,))
-    assert cur.fetchone()[0] == 1
+    cur.execute("SELECT discord_user_id FROM public.viewer_accounts WHERE id=%s", (vid,))
+    assert cur.fetchone()[0] == "555"
 
 
 @needs_ci_pg

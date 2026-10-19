@@ -96,28 +96,25 @@ it("shows the open room link only on rows that have a discord_channel_url", asyn
   expect(within(row("s2@example.com")).queryByRole("link", { name: "Open room" })).toBeNull();
 });
 
-it("shows activate/extend/suspend on trial rows and only unsuspend on suspended rows", async () => {
+it("shows activate/extend/reissue on trial rows without a room, and no suspend or login buttons anywhere", async () => {
   renderPage();
   await screen.findByText("t1@example.com");
   const trial = within(row("t1@example.com"));
   expect(trial.getByRole("button", { name: "Make active" })).toBeTruthy();
   expect(trial.getByRole("button", { name: "Extend" })).toBeTruthy();
-  expect(trial.getByRole("button", { name: "Suspend" })).toBeTruthy();
-  expect(trial.queryByRole("button", { name: "Unsuspend" })).toBeNull();
+  expect(trial.getByRole("button", { name: "Reissue code and invite" })).toBeTruthy();
   const sus = within(row("s2@example.com"));
-  expect(sus.getByRole("button", { name: "Unsuspend" })).toBeTruthy();
-  expect(sus.queryByRole("button", { name: "Suspend" })).toBeNull();
   expect(sus.queryByRole("button", { name: "Make active" })).toBeNull();
+  expect(sus.queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Suspend" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Unsuspend" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Login records" })).toBeNull();
 });
 
-it("suspend opens a confirm modal, posts and reloads the list", async () => {
-  vi.mocked(api.post).mockResolvedValue({});
+it("keeps the flag badges after the login records button is gone", async () => {
   renderPage();
   await screen.findByText("t1@example.com");
-  fireEvent.click(within(row("t1@example.com")).getByRole("button", { name: "Suspend" }));
-  fireEvent.click(await screen.findByTestId("viewers-run"));
-  await waitFor(() => expect(api.post).toHaveBeenCalledWith("/super-admin/viewers/1/suspend", {}));
-  await waitFor(() => expect(vi.mocked(api.get).mock.calls.filter(c => c[0] === "/super-admin/viewers").length).toBe(2));
+  expect(within(row("t1@example.com")).getByText("Many IPs")).toBeTruthy();
 });
 
 it("extend cannot be sent with 0 and posts days 7", async () => {
@@ -133,29 +130,31 @@ it("extend cannot be sent with 0 and posts days 7", async () => {
   await waitFor(() => expect(api.post).toHaveBeenCalledWith("/super-admin/viewers/1/extend", { days: 7 }));
 });
 
+it("extend by date posts until_date and is disabled for empty or past dates", async () => {
+  vi.mocked(api.post).mockResolvedValue({});
+  renderPage();
+  await screen.findByText("t1@example.com");
+  fireEvent.click(within(row("t1@example.com")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByLabelText("Extend until date"));
+  const input = await screen.findByTestId("viewers-extend-date");
+  expect((screen.getByTestId("viewers-run") as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(input, { target: { value: "2000-01-01" } });
+  expect((screen.getByTestId("viewers-run") as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(input, { target: { value: "2999-12-31" } });
+  expect((screen.getByTestId("viewers-run") as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(screen.getByTestId("viewers-run"));
+  await waitFor(() =>
+    expect(api.post).toHaveBeenCalledWith("/super-admin/viewers/1/extend", { until_date: "2999-12-31" }),
+  );
+});
+
 it("shows the conflict message on 409", async () => {
   vi.mocked(api.post).mockRejectedValue(new ApiError("viewer_status_conflict", 409, "viewer_status_conflict"));
   renderPage();
   await screen.findByText("t1@example.com");
-  fireEvent.click(within(row("t1@example.com")).getByRole("button", { name: "Suspend" }));
+  fireEvent.click(within(row("t1@example.com")).getByRole("button", { name: "Make active" }));
   fireEvent.click(await screen.findByTestId("viewers-run"));
   expect(await screen.findByText("This cannot be done in the current state.")).toBeTruthy();
-});
-
-it("shows login records with time, IP and device in a drawer", async () => {
-  vi.mocked(api.get).mockImplementation(async (path: string) => {
-    if (path === "/super-admin/viewers") return { items: ITEMS };
-    if (path === "/super-admin/viewers/1/logins") {
-      return { items: [{ created_at: "2026-10-10T01:02:03Z", event_type: "login_succeeded", client_ip: "203.0.113.9", user_agent: "TestAgent/1.0" }] };
-    }
-    return { items: [] };
-  });
-  renderPage();
-  await screen.findByText("t1@example.com");
-  fireEvent.click(within(row("t1@example.com")).getByRole("button", { name: "Login records" }));
-  expect(await screen.findByText("203.0.113.9")).toBeTruthy();
-  expect(screen.getByText("TestAgent/1.0")).toBeTruthy();
-  expect(screen.getByText("Login succeeded")).toBeTruthy();
 });
 
 const MIXED = [
@@ -173,14 +172,15 @@ function mockMixed() {
   });
 }
 
-it("shows a left menu with 5 entries and counts, and filters by trial with ?status=trial", async () => {
+it("shows a left menu with 4 entries (no Suspended) and counts, and filters by trial with ?status=trial", async () => {
   mockMixed();
   renderPage();
   await screen.findByText("t1@example.com");
-  const menu = ["All", "Pending", "Trial", "Active", "Suspended"].map(name =>
+  expect(screen.queryByRole("button", { name: /^Suspended/ })).toBeNull();
+  const menu = ["All", "Pending", "Trial", "Active"].map(name =>
     screen.getByRole("button", { name: new RegExp(`^${name}\\s*\\d+$`) }),
   );
-  expect(menu.map(b => b.textContent)).toEqual(["All5", "Pending1", "Trial1", "Active2", "Suspended1"]);
+  expect(menu.map(b => b.textContent)).toEqual(["All5", "Pending1", "Trial1", "Active2"]);
   fireEvent.click(menu[2]);
   await waitFor(() => expect(screen.getByTestId("probe-search").textContent).toBe("?status=trial"));
   expect(screen.getByText("t1@example.com")).toBeTruthy();
@@ -210,7 +210,7 @@ it("copies the signup form URL and shows Copied", async () => {
   expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
 });
 
-it("shows Reissue only on pending rows, confirms, posts and shows code, expiry and invite", async () => {
+it("shows Reissue on rows without a room (pending, trial, active) but not on suspended or roomed rows, confirms, posts and shows code, expiry and invite", async () => {
   mockMixed();
   vi.mocked(api.post).mockResolvedValue({
     signup_code: "ABCD-EFGH-JKMN-PQRS",
@@ -219,8 +219,9 @@ it("shows Reissue only on pending rows, confirms, posts and shows code, expiry a
   });
   renderPage();
   await screen.findByText("t1@example.com");
-  expect(within(row("t1@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
-  expect(within(row("a4@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
+  expect(within(row("t1@example.com")).getByRole("button", { name: "Reissue code and invite" })).toBeTruthy();
+  expect(within(row("a4@example.com")).getByRole("button", { name: "Reissue code and invite" })).toBeTruthy();
+  expect(within(row("s2@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
   fireEvent.click(within(row("p3@example.com")).getByRole("button", { name: "Reissue code and invite" }));
   expect(await screen.findByText(/Reissue the signup code and invite link for Pen \(p3@example.com\)/)).toBeTruthy();
   fireEvent.click(screen.getByTestId("viewers-reissue-run"));
@@ -243,4 +244,32 @@ it("shows the failure text when the invite link is null", async () => {
   fireEvent.click(within(row("p3@example.com")).getByRole("button", { name: "Reissue code and invite" }));
   fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
   expect(await screen.findByTestId("viewers-reissue-invite-failed")).toBeTruthy();
+});
+
+it("hides Reissue on rows that already have a Discord room", async () => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") {
+      return {
+        items: [
+          v({ id: 1, status: "trial", discord_user_id: "d-1", discord_channel_id: "5", discord_channel_url: "https://discord.com/channels/1/5" }),
+          v({ id: 2, email: "n2@example.com", status: "trial" }),
+        ],
+      };
+    }
+    return { items: [] };
+  });
+  renderPage();
+  await screen.findByText("t1@example.com");
+  expect(within(row("t1@example.com")).queryByRole("button", { name: "Reissue code and invite" })).toBeNull();
+  expect(within(row("n2@example.com")).getByRole("button", { name: "Reissue code and invite" })).toBeTruthy();
+});
+
+it("shows the already-linked message on 409 viewer_already_linked", async () => {
+  mockMixed();
+  vi.mocked(api.post).mockRejectedValue(new ApiError("viewer_already_linked", 409, "viewer_already_linked"));
+  renderPage();
+  await screen.findByText("p3@example.com");
+  fireEvent.click(within(row("p3@example.com")).getByRole("button", { name: "Reissue code and invite" }));
+  fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
+  expect(await screen.findByText("This viewer already has a Discord room.")).toBeTruthy();
 });
