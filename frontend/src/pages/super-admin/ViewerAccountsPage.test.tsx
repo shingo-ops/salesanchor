@@ -333,6 +333,18 @@ it("saves a changed LINE name with PATCH and updates both the drawer and the lis
   expect(screen.queryByText("Taro")).toBeNull();
 });
 
+it("hides the saved message when the input is changed after saving", async () => {
+  vi.mocked(api.patch).mockResolvedValue(v({ id: 1, line_name: "Jiro", flag_many_ips: true }));
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  fireEvent.change(detail.getByTestId("viewers-detail-line-name"), { target: { value: "Jiro" } });
+  fireEvent.click(screen.getByTestId("viewers-detail-save"));
+  await screen.findByTestId("viewers-detail-saved");
+  fireEvent.change(screen.getByTestId("viewers-detail-line-name"), { target: { value: "Jiro2" } });
+  expect(screen.queryByTestId("viewers-detail-saved")).toBeNull();
+});
+
 it("disables save when the LINE name is empty, blank or over 100 characters", async () => {
   renderPage();
   await screen.findByText("Taro");

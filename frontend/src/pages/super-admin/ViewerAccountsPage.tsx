@@ -405,7 +405,10 @@ export default function ViewerAccountsPage() {
               <TextField
                 label={t(`${f}.colLineName`)}
                 value={lineNameDraft}
-                onChange={e => setLineNameDraft(e.target.value)}
+                onChange={e => {
+                  setLineNameDraft(e.target.value);
+                  setSavedName(false);
+                }}
                 error={lineNameDraft !== detail.line_name && !draftValid ? t(`${f}.lineNameInvalid`) : undefined}
                 data-testid="viewers-detail-line-name"
               />
