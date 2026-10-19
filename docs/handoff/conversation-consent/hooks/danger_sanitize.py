@@ -417,8 +417,8 @@ def sanitize(cmd, cwd, modes):
     if segs is None:
         return cmd
     reps = []
-    # rm の除外は絶対パスだけなので cd の追跡はしない（絶対パスは cwd に依存しない）。
-    # 入力 JSON の cwd を含む worktree の下と /private/tmp/claude-501/ の下だけが対象。
+    # rm の除外は絶対パスに加え、相対パスも許す（ADR-1033）。ただしコマンドに cd/pushd/popd/eval/`(`/bash -c が
+    # あるときは cwd を信用できないので相対パスは不可（追跡はしない）。根は worktree・/tmp/CC報告ファイル 等。
     wt_root = worktree_root_of(cwd)
     heredoc_global_ok = heredoc_command_ok(cmd, segs)
     for seg in segs:

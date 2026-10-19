@@ -210,7 +210,7 @@
 | [ADR-1029](./ADR-1029-review-gate-hook.md) | ADR-1029: AI のマージは、その PR の今の HEAD に Opus 審査役の APPROVE 記録が無ければフックで止める | Proposed | — | — |
 | [ADR-1030](./ADR-1030-drop-products-tcg-type.md) | ADR-1030: 商品の作品の写し products.tcg_type をやめ、中分類 products.work_id だけで絞る | Accepted | — | — |
 | [ADR-1031](./ADR-1031-single-and-promo-pack-conditions.md) | ADR-1031: シングル系の状態5つ（PSA10／PSA9／PSA8／PSA7以下／Single）と、区分「プロモパック系」（既定は未開封） | Accepted | — | — |
-| [ADR-1033](./ADR-1033-conversation-consent-ticket.md) | ADR-1033: 危険な操作を、会話での同意（同意票と「1」）でも通せるようにする | Accepted | — | — |
+| [ADR-1033](./ADR-1033-conversation-consent-ticket.md) | ADR-1033: 危険な操作を、会話での同意（同意票と「1」）でも通せるようにする | Proposed | — | — |
 
 ## ステータス凡例
 

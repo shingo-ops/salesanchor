@@ -25,7 +25,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WT_ROOT="${WT_ROOT:-$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)}"
 
 T="$(mktemp -d "${TMPDIR:-/tmp}/test-agent-hooks.XXXXXX")"
-trap 'rm -rf "$T"' EXIT
+_selftest_window_end() {
+  if [ "$REAL_HOME_MODE" = "--real-home" ]; then
+    printf '{"end": "%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HOME/.claude/logs/consent-selftest-windows.jsonl"
+  fi
+}
+trap '_selftest_window_end; rm -rf "$T"' EXIT
+# 本物の HOME で走らせるときは、試験の区間を記録する（consent-audit.py が区間内の consent_guard_blocked を本物の検知から除く）
+if [ "$REAL_HOME_MODE" = "--real-home" ]; then
+  mkdir -p "$HOME/.claude/logs"
+  printf '{"start": "%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HOME/.claude/logs/consent-selftest-windows.jsonl"
+fi
 
 # ── 試験の舞台を作る ─────────────────────────────────────────────
 FAKE_HOME="$T/home"

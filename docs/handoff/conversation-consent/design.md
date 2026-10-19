@@ -80,6 +80,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 7. H の timestamp から `now` までが30分以内。
 8. command の前後の空白を除いたものが、同意票のどれかの操作と完全一致し、その操作に `$`・バッククォートが無い。
 9. 除外（§4-4）に当たらない。除外はコマンド全体に当てる。
+   - 補足（Reviewer L5 で追認）: 見出しより後ろの操作の行が0件、または同じ操作番号が2回以上あれば不可（どちらも止める側）。
 10. 台帳 ~/.claude/logs/consent-used.jsonl に、鍵（その text ブロックの sha256, H の timestamp, 操作番号）がまだ無い（L3: session_id を鍵に入れない）。照合と追記は、`fcntl.flock` で排他した中で行う（O_NOFOLLOW・所有者確認つき。permit_bridge.py:39-41 と同じ書き方）。追記できなければ不可。
 
 通したら、agent-events.jsonl に `consent_consumed`（session・鍵・cmd_head）を1行書く。呼ばれるたびに `consent_probe`（session・H の uuid と timestamp・H が typed の "1" だったか・now。本文は書かない）も書く。K0 の判定がつくまで続ける（P5）。probe は判定の結果に関係なく finally で1行書き、H が無ければ uuid・timestamp は null。フック入力の `tool_use_id` も書く（フック入力にあるかは作るときに実物で確かめ、無ければ省く）。now と記録の timestamp はどちらも UTC の aware datetime で比べる（S3）。
@@ -94,6 +95,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 - 入力 JSON は、agent-danger-hook.sh:14 の `INPUT=$(cat)` を `printf '%s' "$INPUT" | python3 ~/.claude/scripts/consent_check.py` で渡す（Q1）。
 - 通すときは exit 0 だけを返す。`permissionDecision: allow` は返さない（Claude Code 本体の判定はそのまま残す）。
+- 試験のために、部品の場所を環境変数 CONSENT_CHECK で差し替えられる（既存の DANGER_SANITIZER と同じ型。Bash ツールからはフックの環境を変えられない、Reviewer L3 で追認）。
 - 触らない範囲: permits-guard（:156-190）の位置と判定、danger_sanitize の呼び出し（:67-76）、worktree-only-guard の force push 判定（:124-126）、permit_bridge.py。
 
 ### 4-4 同意では通さない操作（除外。consent_check.py の中の正規表現の一覧）
@@ -210,6 +212,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - 登録は便1の反映後に Opus が agent-console の定期実行の公式手順（ac-routine）で行う。サブエージェントは agent-console のパスを触れないため、Opus が行う。
   - K13: 登録後の最初の月曜に点検セッションが開き、/tmp/CC報告ファイル/consent-weekly/ に4項目の結果が書かれていれば○。
 - 試験は scripts/dev/test-agent-hooks.sh に入り、po-apply のたびに走る。
+- **試験の記録と本物の検知を分ける（Reviewer M3）**: `--real-home` の試験は見張りをわざと当てるので、本物の agent-events.jsonl に consent_guard_blocked が書かれる。test-agent-hooks.sh は `--real-home` のとき、開始時に ~/.claude/logs/consent-selftest-windows.jsonl へ `{"start": <UTC>}` を、終了時（trap EXIT）に `{"end": <UTC>}` を1行ずつ書く。consent-audit.py --audit は、start と end がそろい長さが30分以内の区間に入る consent_guard_blocked を「試験の区間の件数」として別に数え、2 の判定（0件が正常）からは除く。区間の数と除いた件数は毎回の結果に出す（PO の反映の回数と合わない区間があれば異常として報告する）。区間の台帳も AI が書けるので、改ざんの水準は R1・Q6 と同じ。
 - 守り手: scripts/dev/test-agent-hooks.sh（po-apply のたびに T1〜T9 を走らせ、1件でも不合格なら反映を戻す）
 
 ## 10. 外部・過去事例の参照と我々への応用
@@ -222,6 +225,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 2回目: REVISE。HIGH 1（N1）・MEDIUM 8（N2〜N9）・LOW 6（architect-review-2.md）。R1 は PO の受容と2条件つきで受け入れてよいとの判定。
 - 3回目: REVISE。HIGH 0・MEDIUM 5（P1〜P5）・LOW 7（Q1〜Q7）（architect-review-3.md）→ 第4版で全件反映。
 - 4回目: **APPROVE**（HIGH 0・MEDIUM 0・LOW 7、architect-review-4.md、Ready For Generator: true）。LOW S1〜S7 は第5版で反映。便1のマージは R1 の PO 受容を ADR-1033 に書いた後。
+- 便1の実装審査（Reviewer、/tmp/CC報告ファイル/conversation-consent/reviewer-bin1.md）: REVISE（MEDIUM 3・LOW 7）。第6版で、M1 は設計どおり部分一致に戻す（審査中に Opus が出した完全一致への変更は撤回。`HEAD:heads/main` のような短縮形を逃すため）、M2 は main を取り込み README を再生成、M3 は §9 の試験区間の分離、L3・L5 は本文に追認として追記。
 
 ## 12. 審査指摘の反映表
 

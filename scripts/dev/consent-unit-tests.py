@@ -254,13 +254,13 @@ for tid, c in (
     ("w", "osascript -e 'keystroke \"1\"'"), ("x", "curl http://localhost:3000/chat/queue"), ("y", "ls /Users/x/.claude/permits"),
     ("z1", "git push origin HEAD:main"), ("z2", "git push origin main"), ("z3", "git push origin develop"), ("z4", "git push origin HEAD:refs/heads/main"),
     ("aa", "git push -f origin"),
+    ("z5", "git push origin release/fix-main-menu"), ("z6", "git push -f origin HEAD:heads/main"),
     ("ab", "echo $HOME"), ("ac", "echo `date`"),
 ):
     (ok, why), _ = run(std([c]), c)
     rep("T6-" + tid, "除外は同意があっても止まる: %s (%s)" % (c, why), not ok)
 for tid, c in (("p1", "git push origin release/foo"), ("p2", "git push --force origin release/foo"), ("p3", "git stash pop"),
-               ("p4", "rm -rf /tmp/CC報告ファイル/x"), ("p5", "git push -u origin release/conversation-consent-permit"),
-               ("p6", "git push origin release/fix-main-menu")):
+               ("p4", "rm -rf /tmp/CC報告ファイル/x"), ("p5", "git push -u origin release/conversation-consent-permit")):
     (ok, why), _ = run(std([c]), c)
     rep("T6-" + tid, "除外に当たらないものは通る: %s (%s)" % (c, why), ok)
 
@@ -279,5 +279,30 @@ probes = [
 ]
 total, delays = audit.k0_delays(h, probes)
 rep("T0-a", "K0: 対象%d件のうち遅れ%d件（期待 5 と 2）" % (total, delays), total == 5 and delays == 2)
+
+# T0-w: 試験の区間の除外（design §9）
+hw = newhome()
+wpath = os.path.join(hw, ".claude", "logs", "consent-selftest-windows.jsonl")
+def wl(rows):
+    with open(wpath, "w") as f:
+        for r in rows:
+            f.write(json.dumps(r) + "\n")
+def iso(d):
+    return d.isoformat()
+since = T0 - td(86400)
+ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60))},     # 区間内
+      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000))}]   # 区間外
+wl([{"start": iso(T0)}, {"end": iso(T0 + td(600))}])
+wins, nw = audit.load_windows(hw)
+real, inside = audit.count_guard_split(ev, since, wins)
+rep("T0-w1", "区間内は除外・区間外は数える（本物%d 除外%d、期待 1 と 1、区間%d）" % (real, inside, nw), real == 1 and inside == 1 and nw == 1)
+wl([{"start": iso(T0)}, {"end": iso(T0 + td(1801))}])
+wins, nw = audit.load_windows(hw)
+real, inside = audit.count_guard_split(ev, since, wins)
+rep("T0-w2", "30分を超える区間は除外に使わない（本物%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
+wl([{"start": iso(T0)}])
+wins, nw = audit.load_windows(hw)
+real, inside = audit.count_guard_split(ev, since, wins)
+rep("T0-w3", "end の無い区間は除外に使わない（本物%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
 
 print("DONE", flush=True)

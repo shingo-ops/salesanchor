@@ -21,6 +21,11 @@ BK="$DST/.backup/$TS"
 ORIG_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py)
 DEPLOY_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py consent_check.py)
 
+if [ -f "$DST/consent_check.py" ]; then
+  echo "反映済み（$DST/consent_check.py が既にある）。何も変更しません。"
+  exit 0
+fi
+
 echo "== ADR-1033 反映 $TS =="
 echo "試作: $SRC"
 echo "本物: $DST"

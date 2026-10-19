@@ -155,6 +155,48 @@ def event_time(e):
     return parse_ts(e.get("ts"))
 
 
+WINDOW_MAX_SEC = 30 * 60
+
+
+def load_windows(home):
+    """consent-selftest-windows.jsonl の start/end を組にし、長さが30分以内の区間だけ返す。
+    end が無い・30分を超える・順序が逆の区間は除外に使わない。返り値: (使える区間のリスト, 区間の総数)"""
+    path = os.path.join(home, ".claude", "logs", "consent-selftest-windows.jsonl")
+    wins, total, start = [], 0, None
+    for r in read_jsonl(path):
+        if "start" in r:
+            if start is not None:
+                total += 1  # end の無い start
+            start = parse_ts(r.get("start"))
+            if start is None:
+                total += 1
+        elif "end" in r and start is not None:
+            end = parse_ts(r.get("end"))
+            total += 1
+            if end is not None and 0 <= (end - start).total_seconds() <= WINDOW_MAX_SEC:
+                wins.append((start, end))
+            start = None
+    if start is not None:
+        total += 1
+    return wins, total
+
+
+def count_guard_split(events, since, windows):
+    """consent_guard_blocked を (本物の件数, 試験の区間に入った件数) に分ける。"""
+    real = inside = 0
+    for e in events:
+        if e.get("type") != "consent_guard_blocked":
+            continue
+        ts = event_time(e)
+        if ts is None or ts < since:
+            continue
+        if any(s <= ts <= en for s, en in windows):
+            inside += 1
+        else:
+            real += 1
+    return real, inside
+
+
 def count_types(events, since, pred):
     n = {}
     for e in events:
@@ -347,14 +389,16 @@ def run_audit(home, now, with_permissions, out):
     since = now - datetime.timedelta(days=DAYS)
     events = load_events(home)
     consumed = count_types(events, since, lambda t: t == "consent_consumed")
-    guard = count_types(events, since, lambda t: t == "consent_guard_blocked")
+    windows, n_windows = load_windows(home)
+    guard_real, guard_excluded = count_guard_split(events, since, windows)
     permit = count_types(events, since, lambda t: t.endswith("_permit_consumed"))
     n_keys, unmatched = match_ledger_keys(home, since)
     total, delays = k0_delays(home, events)
     out("== 同意と権限の点検（過去%d日） ==" % DAYS)
     out("1. consent_consumed: %d 件 / 台帳の鍵 %d 件 / 記録に同意票と typed の「1」が見つからない: %d 件（0件が正常）"
         % (sum(consumed.values()), n_keys, unmatched))
-    out("2. consent_guard_blocked: %d 件（0件が正常）" % sum(guard.values()))
+    out("2. consent_guard_blocked: %d 件（0件が正常。試験の区間 %d 個・区間内で除いた件数 %d）"
+        % (guard_real, n_windows, guard_excluded))
     out("3. 許可券の消費: %s" % (", ".join("%s=%d" % kv for kv in sorted(permit.items())) or "0 件"))
     out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（目標: %d 件たまった時点で遅れ0）"
         % (total, delays, K0_TARGET))
@@ -365,7 +409,7 @@ def run_audit(home, now, with_permissions, out):
     changes = 0
     if with_permissions:
         changes = run_permissions(home, out)
-    abnormal = unmatched > 0 or sum(guard.values()) > 0
+    abnormal = unmatched > 0 or guard_real > 0
     out("ABNORMAL=%s" % ("yes" if abnormal else "no"))
     return abnormal, changes
 

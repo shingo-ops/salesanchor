@@ -71,16 +71,10 @@ def _git_push_excluded(cmd):
             continue
         toks = [t.strip("\"'") for t in m.group(1).split()]
         toks = [t for t in toks if t]
-        # main / develop への push: refspec を ":" で分けた行き先の枝名が、refs/heads/ と先頭の + を外して main か develop と完全一致
-        # （HEAD:main、-u origin main を含む。release/fix-main-menu は main に触らないので除外しない）
-        for t in toks:
-            if t.startswith("-"):
-                continue
-            dest = t.split(":")[-1].lstrip("+")
-            if dest.startswith("refs/heads/"):
-                dest = dest[len("refs/heads/"):]
-            if dest in ("main", "develop"):
-                return "git push main/develop"
+        # main / develop への push: 設計 §4-4 どおり、引数に main か develop の語が部分一致すれば除外
+        # （release/fix-main-menu も当たるが、止まる側なので受け入れる）
+        if re.search(r"\b(main|develop)\b", m.group(1)):
+            return "git push main/develop"
         # --delete / : で始まる refspec
         if any(t in ("--delete", "-d") or t.startswith(":") for t in toks):
             return "git push delete"
