@@ -288,7 +288,7 @@ def _build_inventory_view_sql(
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
     列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __badge_cheapest, __badge_most_stock, __expiry_s, __f_* の5列。
-    __badge_* は同じ product_id のまとまり（絞り込み後・ページ前）で最安／在庫最多か（ADR-1014 改訂 2026-10-19（2））。
+    __badge_* は同じ product_id・status・condition のまとまり（絞り込み後・ページ前）で最安／在庫最多か（ADR-1014 改訂 2026-10-19（3））。
     expiry が真のとき __expiry_s（total 枝のみ）は、まとめ前・絞り込み前の行が次に時間の枠から外れるまでの秒数（:expiry_hours が必要）。
     """
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
@@ -305,15 +305,15 @@ def _build_inventory_view_sql(
     ctes.append("rows_nx AS (SELECT o.* FROM (SELECT 1) one LEFT JOIN rows_x o ON FALSE)")
     badge_cheapest = (
         "(d.product_id IS NOT NULL AND d.price_num IS NOT NULL "
-        "AND COUNT(d.price_num) OVER (PARTITION BY d.product_id) >= 2 "
-        "AND MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id) < MAX(ROUND(d.price_num)) OVER (PARTITION BY d.product_id) "
-        "AND ROUND(d.price_num) = MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id)) AS __badge_cheapest"
+        "AND COUNT(d.price_num) OVER (PARTITION BY d.product_id, d.status, d.condition) >= 2 "
+        "AND MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) < MAX(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) "
+        "AND ROUND(d.price_num) = MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition)) AS __badge_cheapest"
     )
     badge_most_stock = (
         "(d.product_id IS NOT NULL AND d.qty_num IS NOT NULL "
-        "AND COUNT(d.qty_num) OVER (PARTITION BY d.product_id) >= 2 "
-        "AND MIN(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id) < MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id) "
-        "AND ROUND(d.qty_num) = MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id)) AS __badge_most_stock"
+        "AND COUNT(d.qty_num) OVER (PARTITION BY d.product_id, d.status, d.condition) >= 2 "
+        "AND MIN(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) < MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) "
+        "AND ROUND(d.qty_num) = MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition)) AS __badge_most_stock"
     )
     ctes.append(
         f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord, {badge_cheapest}, {badge_most_stock} "

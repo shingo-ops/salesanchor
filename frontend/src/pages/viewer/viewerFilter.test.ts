@@ -114,7 +114,7 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
   });
 });
 
-describe("markBlockBadges (ADR-1014 改訂 2026-10-19（2）)", () => {
+describe("markBlockBadges (ADR-1014 rev 2026-10-19 (3))", () => {
   const blk = { release_date: "2026-01-01", english_title: "A", japanese_title: "あ" };
   const flags = (rows: ViewerRow[]) => markBlockBadges(rows).map((r) => [r.badge_cheapest, r.badge_most_stock]);
 
@@ -154,6 +154,30 @@ describe("markBlockBadges (ADR-1014 改訂 2026-10-19（2）)", () => {
     ]);
     expect(rows.map((r) => r.idx)).toEqual([0, 1, 2, 3, 4]);
     expect(rows.map((r) => r.badge_cheapest)).toEqual([true, false, true, false, false]);
+  });
+  it("compares each status separately (F1)", () => {
+    const rows = [
+      mk({ ...blk, status: "In Stock", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, status: "In Stock", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, status: "Pre-order", unit_price: "300", quantity: "1" }),
+      mk({ ...blk, status: "Pre-order", unit_price: "400", quantity: "3" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, false], [false, true]]);
+  });
+  it("compares each condition separately, and a one-row group gets nothing (F2)", () => {
+    const rows = [
+      mk({ ...blk, condition: "Sealed box", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, condition: "Sealed box", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, condition: "Case", unit_price: "500", quantity: "1" }),
+      mk({ ...blk, condition: "Case", unit_price: "600", quantity: "3" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, false], [false, true]]);
+    const single = [
+      mk({ ...blk, condition: "Sealed box", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, condition: "Sealed box", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, condition: "Case", unit_price: "500", quantity: "50" }),
+    ];
+    expect(flags(single)).toEqual([[true, false], [false, true], [false, false]]);
   });
   it("compares the rounded values shown on screen", () => {
     expect(flags([mk({ ...blk, unit_price: "100.4" }), mk({ ...blk, unit_price: "100" })])).toEqual([[false, false], [false, false]]);

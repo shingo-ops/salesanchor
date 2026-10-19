@@ -92,3 +92,14 @@ PO 決定（2026-10-19）「y」（同じ商品のまとまりの中で、最安
   - 在庫表は価格が空の行を「¥0」と出す。空の行は比べないので、「¥0」の行にはバッジが付かない。
 - 変えないもの: 並び順、件数、ページ、絞り込みの候補、配信行の定義、Badge の金型、tokens.css。
 - 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（規則・絞り込み・ページ・列の並び）と `frontend/src/pages/viewer/viewerFilter.test.ts`（閲覧ページの規則）。
+
+## 改訂 2026-10-19（3）（最安・在庫最多をバッジから色の枠に変え、比べる単位にステータスと状態を足す）
+
+PO 決定（2026-10-19）「y」（バッジは見づらく列がずれるので、最安の価格を水色の枠、在庫最多の数量を緑の枠で囲む。ステータスや状態が違う行はそれぞれのまとまりで比べる）。改訂（2）の本文は書き換えず、ここで次の点だけを置き換える。それ以外の規則（空の値、1行以下・全部同じ値は付けない、同じ値は全部、整数に丸める、絞り込み後・ページ前、まとめモードの値）は改訂（2）のまま。
+
+- 比べる単位: 商品のまとまりを、さらにステータス（行の `status`）と状態（行の `condition`）で分ける。在庫表は `PARTITION BY d.product_id, d.status, d.condition`、閲覧ページは `markBlockBadges` のキーに `status` と `condition` を足す。
+- 見た目: Badge は出さない。価格と数量の値は全部の行で同じ入れ物（`inventory-cell__value`、同じ余白）に入れ、最安は水色、在庫最多は緑の枠を内側の影（`box-shadow: inset`）で描く。枠の有無で幅が変わらないので列はずれない。枠の付いた値には `title` で「最安」「在庫最多」を出す。
+- 既知の差: 在庫・予約の区分に写らない status（画面ではどれも同じ空欄）も、値ごとに別のまとまりになる。
+- 色: `frontend/src/tokens.css` の `--comp-value-frame-cheapest`（水色、ライト・ダークの値を持つ）と `--comp-value-frame-most-stock`（`var(--success)` の別名）。
+- 変えないもの: API の項目名 `badge_cheapest`・`badge_most_stock`、辞書キー、並び順・件数・ページ・絞り込みの候補。GAS 在庫一覧は未実装のまま（別便で、この改訂の規則に合わせる）。
+- 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（ステータス違い・状態違いの試験を含む）、`frontend/src/pages/viewer/viewerFilter.test.ts`、`frontend/src/features/inventory/inventoryColumns.test.tsx`・`frontend/src/pages/viewer/viewerColumns.cells.test.tsx`（全行が同じ入れ物に入ること）。

@@ -837,3 +837,46 @@ def test_b3b_merge_mode_compares_the_values_shown_on_screen(pg, ids):
     assert set(got) == {merged_first, other}
     assert got[merged_first] == (False, True)  # 合計数量 7 > 5
     assert got[other] == (True, False)  # まとめた行の単価は最大の 1200、other は 1100
+
+
+# --- ADR-1014 改訂 2026-10-19（3）: 比べる単位は 同じ商品・ステータス・状態 ---------------------------------
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f1_different_status_is_compared_separately(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", status="In Stock", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", status="In Stock", price=200, qty=9)
+    b1 = _add_row(pg, job, ids.p1, ids.box, note="b1", status="Pre-order", price=300, qty=1)
+    b2 = _add_row(pg, job, ids.p1, ids.box, note="b2", status="Pre-order", price=400, qty=3)
+    got = _badges_by_key(pg, merge=merge)
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)
+    assert got[b1] == (True, False)
+    assert got[b2] == (False, True)
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f2_different_condition_is_compared_separately(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", price=200, qty=9)
+    c1 = _add_row(pg, job, ids.p1, ids.case, note="c1", price=500, qty=1, canonical="Case", unit="Case")
+    c2 = _add_row(pg, job, ids.p1, ids.case, note="c2", price=600, qty=3, canonical="Case", unit="Case")
+    got = _badges_by_key(pg, merge=merge)
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)
+    assert got[c1] == (True, False)
+    assert got[c2] == (False, True)
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f2b_a_group_with_a_single_row_gets_no_badge(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", price=200, qty=9)
+    c = _add_row(pg, job, ids.p1, ids.case, note="c", price=500, qty=50, canonical="Case", unit="Case")
+    got = _badges_by_key(pg, merge=merge)
+    assert got[c] == (False, False)  # 旧規則（商品だけで比べる）なら数量50 に在庫最多が付く
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)

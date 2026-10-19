@@ -1,17 +1,13 @@
-/**
- * 同じ商品のまとまりの中の「最安」「在庫最多」バッジ（ADR-1014 改訂 2026-10-19（2））。
- * 在庫表と閲覧ページで同じ描画を使う。金型 Badge を値の右隣に並べるだけで、新しい部品ではない。
- */
-import { Badge } from "../../components/Badge";
+/** 価格・数量の値の入れ物。同じ商品・ステータス・状態のまとまりの最安は水色の枠、在庫最多は緑の枠で囲む（ADR-1014 改訂 2026-10-19（3））。在庫表と閲覧ページで同じ描画を使う。枠の有無で幅を変えない。 */
+import type { ReactNode } from "react";
 import "./inventoryColumns.css";
 
-// Badge は data-testid などの残りの props を受け取らない（Badge.tsx）。testid は包む span に付ける
-export function BlockBadge({ kind, label }: { kind: "cheapest" | "mostStock"; label: string }) {
+export function BlockValue({ frame, label, children }: { frame: "cheapest" | "mostStock" | null; label?: string; children: ReactNode }) {
+  const cls = frame === "cheapest" ? " inventory-cell__value--cheapest" : frame === "mostStock" ? " inventory-cell__value--most-stock" : "";
+  const testid = frame === "cheapest" ? "block-frame-cheapest" : frame === "mostStock" ? "block-frame-most-stock" : undefined;
   return (
-    <span className="inventory-cell__badge" data-testid={kind === "cheapest" ? "block-badge-cheapest" : "block-badge-most-stock"}>
-      <Badge size="sm" variant={kind === "cheapest" ? "success" : "info"}>
-        {label}
-      </Badge>
+    <span className={`inventory-cell__value${cls}`} data-testid={testid} title={frame ? label : undefined}>
+      {children}
     </span>
   );
 }
