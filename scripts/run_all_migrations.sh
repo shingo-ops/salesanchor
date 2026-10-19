@@ -1005,3 +1005,4 @@ run_sql migrations/20261017_220100_add_line_units_display_names.sql
 run_sql migrations/20261018_100000_create_product_packagings.sql
 # ADR-1030: 使われていない作品の写し products.tcg_type を取り除く（FK・索引ごと。冪等）
 run_sql migrations/20261018_110000_drop_products_tcg_type.sql
+run_sql migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql
