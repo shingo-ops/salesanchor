@@ -747,3 +747,139 @@ def test_needs_review_tab_hides_old_prompt_versions_only(pg):
     assert old["eid"] not in ids(tabs["unreg_review_only"])  # (c)
     assert "OldVersionSupplier" not in tabs["needs"]["providers"] and "OldVersionSupplier" in tabs["all"]["providers"]  # (d)
     assert ids(by_id) == {old["eid"]}  # ID 指定は不変（旧版も出る）
+
+
+# ---- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §3・§7 T1） ----
+
+def seed_shime(pg, **overrides):
+    """価格のない〆（Sold out・excluded・価格と数量なし）の行。"""
+    values = dict(name="Test Booster", reasons="", needs_review=False, condition_id=pg["normal"],
+                  condition_canonical="Sealed box", status="Sold out", exclusion="excluded",
+                  price_normalized=None, quantity_normalized=None)
+    values.update(overrides)
+    return seed(pg, **values)
+
+
+def seed_partner(pg, hours, *, channel_id=None, **overrides):
+    """同じ商品・同じ状態の相手の在庫（価格あり）。投稿を hours 時間前にする。"""
+    values = dict(name="Test Booster", reasons="", needs_review=False, condition_id=pg["normal"],
+                  condition_canonical="Sealed box")
+    values.update(overrides)
+    item = seed(pg, channel_id=channel_id, **values)
+    age_message(pg, item, hours)
+    return item
+
+
+def shime_reasons(pg, item):
+    return set(filter(None, context(pg, item)["review_reasons"].split(",")))
+
+
+def test_shime_settled_when_partner_stock_is_gone(pg):  # (a)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100)
+    ctx = context(pg, shime)
+    assert ctx["needs_review"] is False
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_without_partner_stock(pg):  # (b)
+    shime = seed_shime(pg)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+    assert context(pg, shime)["needs_review"] is True
+
+
+def test_shime_stays_while_partner_stock_is_within_window(pg):  # (c)
+    shime = seed_shime(pg)
+    seed_partner(pg, 10)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_settled_when_partner_stock_is_older_than_window(pg):  # (d)
+    shime = seed_shime(pg)
+    seed_partner(pg, 49)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_condition_is_flag(pg):  # (e)
+    shime = seed_shime(pg, condition_basis="FLAG_UNKNOWN")
+    seed_partner(pg, 100)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_human_correction_exists(pg):  # (f)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("""INSERT INTO public.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by)
+            VALUES (%s,%s,'raw_memo','x','test')""", (shime["eid"], shime["smid"]))
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_only_other_channel_has_the_partner(pg):  # (g)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.suppliers(name,supplier_type) VALUES ('ShimeOtherSupplier','corporate') RETURNING id")
+        cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id",
+                       (cursor.fetchone()[0],))
+        other_channel = str(cursor.fetchone()[0])
+        cursor.execute("SELECT id FROM public.supplier_channels WHERE id<>%s::uuid ORDER BY id LIMIT 1", (other_channel,))
+        own_channel = str(cursor.fetchone()[0])
+    shime = seed_shime(pg, channel_id=own_channel)
+    seed_partner(pg, 100, channel_id=other_channel)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_other_saved_reason_stays_needs_review(pg):  # (h)
+    shime = seed_shime(pg, reasons="condition_unknown", needs_review=True)
+    seed_partner(pg, 100)
+    ctx = context(pg, shime)
+    assert ctx["needs_review"] is True
+    reasons = shime_reasons(pg, shime)
+    assert "condition_unknown" in reasons and not reasons & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_partner_is_superseded_not_current(pg):  # (i)
+    shime = seed_shime(pg)
+    seed_partner(pg, 10, is_current=False)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_partner_was_posted_after_it(pg):  # (j)
+    shime = seed_shime(pg)
+    age_message(pg, shime, 200)
+    seed_partner(pg, 100)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_partner_is_sold_out_too(pg):  # (k)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100, status="Sold out")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_form_row_does_not_break_fenced_distribution_sql(pg):  # (l)
+    set_max_age_hours(pg, 48)
+    seed_shime(pg)
+    seed_partner(pg, 100)
+    seed_partner(pg, 1)
+    rows = output(pg)  # review_joins(fenced=True, shime=False) を通る在庫表（cr_shime は作らない）。例外が出ず、〆の行は出ない（出るのは相手の2行だけ。output は年齢の窓を渡さない）
+    assert len(rows) == 2
+
+
+def test_shime_false_has_no_partner_subqueries():  # (m)
+    for fenced in (False, True):
+        joins = condition.review_joins(schema="tcg", fenced=fenced, shime=False)
+        assert "cr_pa" not in joins and "cr_sa" not in joins
+        assert joins.count("SELECT FALSE AS settled OFFSET 0) cr_shime") == 1
+        assert joins.count("OFFSET 0") == (10 if fenced else 3)
+
+
+@pytest.mark.parametrize("grouped", [False, True])
+def test_distribution_rows_sql_has_no_shime_subquery(grouped):  # (n)
+    sql = distribution.distribution_rows_sql(include_flag_single=False, age_condition="TRUE", merge_same_post=grouped)
+    assert "cr_pa" not in sql and "cr_sa" not in sql
+
+
+def test_callers_pass_shime_false():  # (o)
+    root = Path(distribution.__file__).parent
+    assert (root / "tcg_distribution_svc.py").read_text(encoding="utf-8").count("shime=False") == 3
+    assert (root / "tcg_import_progress.py").read_text(encoding="utf-8").count("shime=False") == 1
