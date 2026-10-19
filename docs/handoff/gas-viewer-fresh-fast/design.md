@@ -743,6 +743,7 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 - backend：`viewer_admin.update_line_name`（前後の空白を除き 1〜100 文字。範囲外は invalid_line_name→422、無い id は 404。行ロックして UPDATE。commit は呼び出し側）。`PATCH /api/v1/super-admin/viewers/{viewer_id}`（require_super_admin、応答は ViewerAdminItem）。
 - 画面：ViewerAccountsPage の Drawer の LINE名を TextField 金型にし、footer に「保存」。下書きが元と違い 1〜100 文字のときだけ押せる。成功したらスライドと一覧を応答で差し替え「保存しました」（role="status"）、失敗は role="alert"。保存せずに閉じたら下書きは捨てる（確認画面なし）。
 - 触らない：DB・migrations・deploy.yml・scripts、メール・Discord ID・状態の編集、申込（viewer.py）、金型そのもの。変更履歴の表は作らない（仕入元 PATCH と同じ前例）。
+- 即時反映：NO_SIGNAL_ROUTES（topics.py:108-111 の状態変更と同じ扱い）
 
 ### 受入基準
 | 基準 | 検証方法 |
