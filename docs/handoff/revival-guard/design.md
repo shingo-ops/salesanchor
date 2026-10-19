@@ -14,7 +14,7 @@ PO 決定（2026-10-19, n）: 現行の規則「商品×状態の組ごとに最
 
 ## 2. 実装の場所と前後の差
 
-実装先（このブランチでは変更しない）: `backend/app/services/tcg_analyzer_svc.py:2083`（`ranked`）と `:1964`（引数）。控えを取る読みは `backend/app/services/line_analysis_v102_svc.py:1461`（`_load_resolved_pairs` の隣に `_load_current_pairs` を足す）。試験用の完全な関数は `docs/handoff/revival-guard/sandbox/merge_guard.sql`。
+実装先（設計の時点では変更していない。→ 2026-10-19 #4533 で実装・本番反映済み。結果は ADR-1032 末尾）: `backend/app/services/tcg_analyzer_svc.py:2083`（`ranked`）と `:1964`（引数）。控えを取る読みは `backend/app/services/line_analysis_v102_svc.py:1461`（`_load_resolved_pairs` の隣に `_load_current_pairs` を足す）。試験用の完全な関数は `docs/handoff/revival-guard/sandbox/merge_guard.sql`。
 
 SQL 前（`backend/app/services/tcg_analyzer_svc.py:2083-2088`）:
 ```sql
@@ -88,7 +88,7 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 | 冪等（全投稿を控え無しでもう 1 回） | 変化した行 | 0 | 0 | 0 | ○ |
 
 - 4 行（R1・R3a・R3c・R5）が old と guard で違う。ほかは全部同じ。
-- 本物の pytest（`backend/tests/test_v102_human_decisions_pg.py:215-230` の A→B を含む）は、コードを変えていないので走らせていない。【未確認】実装便で実コードを通して確認する。
+- 本物の pytest（`backend/tests/test_v102_human_decisions_pg.py:215-230` の A→B を含む）は、コードを変えていないので走らせていない。→ 2026-10-19 #4533 の CI で実コードの pytest が通った（K1 ○）。
 
 ### 試験の記録
 
@@ -104,7 +104,7 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 | K4 配信行数の変化 = 一覧の配信行数 | 修正 SQL の直前と直後に、対象 2 組（仕入元×商品 440569・458213）の配信行数を数え、減った数が 2、ほかの組の配信行数の差が 0 |
 | K5 反映後の再解析で復活が 0 | 修正 SQL の後、対象 2 件の仕入元の、より新しい投稿の job を v102 で再解析し、2 件が FALSE のままで、`updated_at > computed_at` かつ FALSE→TRUE になった「より新しい投稿に同じ商品がある」行が 0 件 |
 
-修正 SQL の試験（モックの public スキーマで 01→02→03→04 を通した結果は `logs/data_dryrun_mock.txt`）: 01 precheck ○、02 apply で 2 行 FALSE・監査 1 行、03 postcheck ○、04 rollback で 2 行が元の値（is_current と updated_at）に戻る、戻した後の 03 は K3 NG で止まる（意図どおり）。本物の DB での実行は未実施。
+修正 SQL の試験（モックの public スキーマで 01→02→03→04 を通した結果は `logs/data_dryrun_mock.txt`）: 01 precheck ○、02 apply で 2 行 FALSE・監査 1 行、03 postcheck ○、04 rollback で 2 行が元の値（is_current と updated_at）に戻る、戻した後の 03 は K3 NG で止まる（意図どおり）。本物の DB での実行は未実施。→ 2026-10-19 本番で 01→02（試し実行のあと本実行）→03 を実行、K1〜K5 すべて ○（ADR-1032 末尾「本番反映の記録」）。
 
 ## 6. 外部・過去事例の参照と我々への応用
 
@@ -133,3 +133,4 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 - 確かめた点: 他の job の行は `ar.is_current` を控えとして使うので、v6 の呼び出し（控え無し）でも古い投稿の行の復活は止まる。止まらないのは「その job 自身の作り直した行」で、v102 と再抽出ツールは控えを渡す。確認済み 2 件はどちらも、updated_at が computed_at より後に進んでいる（付け直しで FALSE→TRUE に変わった印。`WHERE is_current IS DISTINCT FROM` のため変化した時だけ更新される）。
 - 未解決: 取り消し（#5）で guard を切ることの影響は【未確認】（今と同じ動きなので悪くはならない）。
 - 危険パス: 実装便が `migrations/` を含めば ADR-135/136 の GO 手順に従う。この下書きは含まない。
+- 2026-10-19 追記: 実装便 #4533 は `migrations/` を含まない。本番反映と K1〜K5 の結果は ADR-1032 末尾。ADR-1032 は Accepted。

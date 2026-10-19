@@ -363,7 +363,7 @@ def distribution_rows_parts(
             ON lu.id = ar.unit_id
         LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
-        {review_joins(schema=TCG_SCHEMA, fenced=True)}
+        {review_joins(schema=TCG_SCHEMA, fenced=True, shime=False)}
         WHERE ar.pid_resolved = TRUE
           AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
@@ -477,7 +477,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema=TCG_SCHEMA, shime=False)}
         WHERE ar.pid_resolved = TRUE
           AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
@@ -521,7 +521,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema=TCG_SCHEMA, shime=False)}
         WHERE ar.is_current = TRUE{age_condition}
     """), age_bind_params)
     excl = excl_result.mappings().one()
