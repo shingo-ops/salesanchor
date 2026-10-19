@@ -309,5 +309,5 @@ design.md（docs/handoff/gas-viewer-fresh-fast/design.md、620行）:
 - 表：frontend/src/components/DataTable.tsx。`onRowClick?: (row: T) => void`（100行目）。セル内のボタンは isInteractiveTarget（302行目・414行目）で行クリック扱いにならない。stopPropagation は不要
 - スライド：frontend/src/components/Drawer.tsx。props は open / onClose / title / children / footer / size。使用例 frontend/src/pages/contacts/ContactsPage.tsx:365
 - 横並び：frontend/src/components/Stack.tsx は縦積みのみ（Stack.css は flex-direction: column）。横並びの金型は無かった
-- ラベルと値の並べ方：frontend/src/company-forms.css:79-98 の `.form-grid` / `.form-row` / `.form-row > label`（ContactsPage.tsx の Drawer と同じ共通 class）
+- ラベルと値の並べ方：frontend/src/company-forms.css:78-98 の `.form-grid` / `.form-row` / `.form-grid > .form-row > label`（共通 class。使用例 frontend/src/pages/contacts/ContactsPage.tsx:305 の作成モーダル。同ページの Drawer（365行目）は ContactFormFields を使い form-grid は使わない）
 - 既存 ADR 検索：ADR-1019（閲覧者管理）、ADR-144（金型）
