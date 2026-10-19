@@ -2,6 +2,7 @@
  * /super-admin/viewers — 閲覧者（社外の在庫閲覧専用アカウント）の管理画面（ADR-1019 段4a-2）。
  *
  * - 一覧は LINE名・状態・登録日時・期限・操作の5列。行を押すと右から詳細（メール・Discord ID・部屋・目印）が出る（段7）
+ * - 詳細スライドで LINE名だけ直せる（段8。メール・Discord ID・状態は直せない）
  * - 一覧・状態変更（本契約・延長〈日数または日付まで〉）。停止とログイン記録は画面から外した（段6。API と CLI は残置）
  * - 左メニューで状態ごとに絞る（?status=）／申込フォームURLのコピー／部屋の無い申込中・お試し中・本契約の人のコード・招待の作り直し（段5・段6）
  * - is_super_admin=true のみアクセス可（Page 内で 403 ガード）
@@ -69,6 +70,8 @@ interface ReissueResult {
   viewer: ViewerItem;
 }
 
+const LINE_NAME_MAX = 100;
+
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -92,6 +95,10 @@ export default function ViewerAccountsPage() {
   const [reissueTarget, setReissueTarget] = useState<ViewerItem | null>(null);
   const [reissueResult, setReissueResult] = useState<ReissueResult | null>(null);
   const [detail, setDetail] = useState<ViewerItem | null>(null);
+  const [lineNameDraft, setLineNameDraft] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [savedName, setSavedName] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const statusParam = searchParams.get("status");
   const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
@@ -117,6 +124,45 @@ export default function ViewerAccountsPage() {
       void load();
     }
   }, [authLoading, isSuperAdmin, load]);
+
+  // 別の人を開いたときと保存が終わったとき（line_name が変わったとき）は、下書きを作り直す
+  const detailId = detail?.id ?? null;
+  const detailLineName = detail?.line_name ?? "";
+  useEffect(() => {
+    setLineNameDraft(detailLineName);
+  }, [detailId, detailLineName]);
+  useEffect(() => {
+    setSavedName(false);
+    setSaveError("");
+  }, [detailId]);
+
+  const draftTrimmed = lineNameDraft.trim();
+  const draftLength = Array.from(draftTrimmed).length;
+  const draftValid = draftLength >= 1 && draftLength <= LINE_NAME_MAX;
+  const canSaveName =
+    detail !== null && draftTrimmed !== detail.line_name && draftValid && !savingName;
+
+  const saveLineName = async () => {
+    if (!detail || !canSaveName) return;
+    setSavingName(true);
+    setSavedName(false);
+    setSaveError("");
+    try {
+      const res = await api.patch<ViewerItem>(`/super-admin/viewers/${detail.id}`, {
+        line_name: draftTrimmed,
+      });
+      setDetail(res);
+      setItems(prev => prev.map(i => (i.id === res.id ? res : i)));
+      setLineNameDraft(res.line_name);
+      setSavedName(true);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) setSaveError(t(`${f}.lineNameInvalid`));
+      else if (e instanceof ApiError && e.status === 404) setSaveError(t(`${f}.notFoundError`));
+      else setSaveError(t(`${f}.saveError`));
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const errorMessage = (e: unknown): string => {
     if (e instanceof ApiError) {
@@ -338,12 +384,44 @@ export default function ViewerAccountsPage() {
         open={detail !== null}
         onClose={() => setDetail(null)}
         title={t(`${f}.detailTitle`)}
+        footer={
+          detail && (
+            <Stack direction="row" gap="2">
+              <Button
+                variant="primary"
+                onClick={() => { void saveLineName(); }}
+                disabled={!canSaveName}
+                data-testid="viewers-detail-save"
+              >
+                {t("common.save")}
+              </Button>
+            </Stack>
+          )
+        }
       >
         {detail && (
           <div className="form-grid" data-testid="viewers-detail">
             <div className="form-row">
-              <label>{t(`${f}.colLineName`)}</label>
-              <div>{detail.line_name}</div>
+              <TextField
+                label={t(`${f}.colLineName`)}
+                value={lineNameDraft}
+                onChange={e => {
+                  setLineNameDraft(e.target.value);
+                  setSavedName(false);
+                }}
+                error={lineNameDraft !== detail.line_name && !draftValid ? t(`${f}.lineNameInvalid`) : undefined}
+                data-testid="viewers-detail-line-name"
+              />
+              {savedName && (
+                <div role="status" data-testid="viewers-detail-saved">
+                  {t(`${f}.saved`)}
+                </div>
+              )}
+              {saveError && (
+                <div className="error-message" role="alert" data-testid="viewers-detail-save-error">
+                  {saveError}
+                </div>
+              )}
             </div>
             <div className="form-row">
               <label>{t(`${f}.colEmail`)}</label>
