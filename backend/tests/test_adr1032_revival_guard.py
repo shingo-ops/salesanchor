@@ -152,6 +152,8 @@ def test_d1b_deleting_an_item_through_the_service_restores_older_row(pg, ids, mo
     """件の削除は実コード（v102_transcription_svc.apply_transcription_edit）を呼ぶ。削除は revival_guard=False で付け直す。"""
     monkeypatch.setattr(tsvc, "TCG_SCHEMA", SCHEMA)
     old_job, new_job = _add_job(pg, 5), _add_job(pg, 1)
+    with pg[0].cursor() as cur:  # load_job は v102 の投稿だけ通す（v102_transcription_svc.py:201-202）
+        cur.execute(f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version='v102:test' WHERE id=%s", (new_job,))
     old = _add_row(pg, old_job, ids.A, ids.single)
     doomed = _add_row(pg, new_job, ids.A, ids.single)  # 行 1
     kept = _add_row(pg, new_job, ids.A, ids.box)  # 行 2
