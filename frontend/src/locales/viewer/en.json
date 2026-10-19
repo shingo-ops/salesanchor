@@ -27,9 +27,8 @@
     "freshOnly": "Last {{hours}} h",
     "sort": {
       "placeholder": "Sort",
-      "releaseDesc": "Release date (newest first)",
       "priceAsc": "Price: low to high",
-      "stockDesc": "Stock: high to low",
+      "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
     },
     "filter": {

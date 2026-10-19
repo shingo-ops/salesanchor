@@ -152,6 +152,20 @@ def write_pairs(out_dir: Path, job_id: str, pairs: list[tuple[int, int]]) -> Non
     write_text_durable(out_dir / "pairs" / f"{job_id}.json", json.dumps([[p, c] for p, c in pairs]))
 
 
+def write_current_pairs(out_dir: Path, job_id: str, current_pairs: list[tuple[int, int]] | None) -> None:
+    """ADR-1032: 抽出の前に現行だった組を pairs/ の隣（current_pairs/）に残す。None（前の行が無い）は書かない。"""
+    if current_pairs is None:
+        return
+    write_text_durable(out_dir / "current_pairs" / f"{job_id}.json", json.dumps([[p, c] for p, c in current_pairs]))
+
+
+def read_current_pairs(out_dir: Path, job_id: str) -> list[tuple[int, int]] | None:
+    path = out_dir / "current_pairs" / f"{job_id}.json"
+    if not path.exists():
+        return None
+    return [(int(p), int(c)) for p, c in json.loads(path.read_text(encoding="utf-8"))]
+
+
 def read_pairs(out_dir: Path, job_id: str) -> list[tuple[int, int]] | None:
     path = out_dir / "pairs" / f"{job_id}.json"
     if not path.exists():
@@ -343,14 +357,17 @@ def read_job_state(job_id: str) -> dict | None:
     }
 
 
-def _merge_pairs(job_id: str, pairs: list[tuple[int, int]]) -> str | None:
+def _merge_pairs(job_id: str, pairs: list[tuple[int, int]],
+                 current_pairs: list[tuple[int, int]] | None = None) -> str | None:
     """控えた組を付け直す（冪等）。item_corrections があれば飛ばして "skip_merge"。失敗は "merge_error"。成功は None。"""
     state = read_job_state(job_id)
     if state is not None and state["corrections"]:
         return "skip_merge"
     with new_session() as session:
         try:
-            analyzer._merge_supplier_products(session, job_id, schema(), extra_pairs=pairs)
+            analyzer._merge_supplier_products(
+                session, job_id, schema(), extra_pairs=pairs, prior_current_pairs=current_pairs,  # ADR-1032
+            )
             session.commit()  # 変更が0件だと関数の中では commit しないため、必ず自分で commit する
         except Exception:  # noqa: BLE001
             session.rollback()
@@ -359,7 +376,8 @@ def _merge_pairs(job_id: str, pairs: list[tuple[int, int]]) -> str | None:
     return None
 
 
-def finish_after_extraction(job_id: str, pairs: list[tuple[int, int]], *, run_analysis: bool = True) -> tuple[str, str]:
+def finish_after_extraction(job_id: str, pairs: list[tuple[int, int]], *, run_analysis: bool = True,
+                            current_pairs: list[tuple[int, int]] | None = None) -> tuple[str, str]:
     """D4-6〜8。抽出が確定した（v102 になった）job の、区分決め・解析・付け直し。(区分, 注記) を返す。"""
     state = read_job_state(job_id)
     if state is None or not state["v102"]:
@@ -379,7 +397,7 @@ def finish_after_extraction(job_id: str, pairs: list[tuple[int, int]], *, run_an
         after = read_job_state(job_id)
         if after is not None and svc.REASON_EXTRACT_EXCEPTION in after["reasons"]:
             category, note = "analysis_error", svc.REASON_EXTRACT_EXCEPTION
-    merge_result = _merge_pairs(job_id, pairs)
+    merge_result = _merge_pairs(job_id, pairs, current_pairs)
     if merge_result == "merge_error":
         category, note = "analysis_error", "merge_error"
     elif merge_result == "skip_merge" and category in ("done", "empty"):
@@ -432,11 +450,14 @@ def process_job(job_id: str, out_dir: Path, timeout_sec: int) -> tuple[str, str]
         hit = extraction._apply_pre_extraction_filter(session, ctx.raw_text)
         # 3. v6 の組を控える（読み取りのみ）
         pairs = svc._load_resolved_pairs(session, job_id) if hit is None else []
+        # ADR-1032: 現行だった組も控える（前の行が無ければ None＝控え無し）
+        current_pairs = svc._load_current_pairs(session, job_id) if pairs else None
         session.rollback()
     if hit is not None:
         return "skip_prefilter", str(hit)
     try:  # 書いて fsync してから抽出に進む。書けなければ抽出しない
         write_pairs(out_dir, job_id, pairs)
+        write_current_pairs(out_dir, job_id, current_pairs)
     except OSError as exc:
         return "pairs_error", type(exc).__name__
     # 4〜5
@@ -444,7 +465,7 @@ def process_job(job_id: str, out_dir: Path, timeout_sec: int) -> tuple[str, str]
     if failure is not None:
         return failure, note
     # 6〜8
-    category, note2 = finish_after_extraction(job_id, pairs)
+    category, note2 = finish_after_extraction(job_id, pairs, current_pairs=current_pairs)
     return category, "; ".join(x for x in (note, note2) if x)
 
 
@@ -556,6 +577,7 @@ def repair_job(job_id: str, out_dir: Path, counts: dict, timeout_sec: int) -> tu
     if state is None or not state["v102"]:
         return "repair_skip_not_v102", ""
     pairs = read_pairs(out_dir, job_id) or []
+    current_pairs = read_current_pairs(out_dir, job_id)
     if svc.REASON_RESPONSE_UNREADABLE in state["reasons"]:
         if state["corrections"]:
             return "skip_corrections", "unreadable だが item_corrections あり"
@@ -566,7 +588,7 @@ def repair_job(job_id: str, out_dir: Path, counts: dict, timeout_sec: int) -> tu
         failure, note = extract_one(job_id, timeout_sec)
         if failure is not None:
             return failure, note
-        category, note2 = finish_after_extraction(job_id, pairs)
+        category, note2 = finish_after_extraction(job_id, pairs, current_pairs=current_pairs)
         return category, "; ".join(x for x in (f"repair#{counts[job_id]}", note, note2) if x)
     # 空の応答（items 0・unreadable でない）は、抽出が review_reasons を NULL にする（line_analysis_v102_svc.py:513）。
     # 解析が走ると no_items 等が書かれる（同 :976）ので、NULL のままなら解析前で止まった件
@@ -574,7 +596,7 @@ def repair_job(job_id: str, out_dir: Path, counts: dict, timeout_sec: int) -> tu
     need_analysis = (
         (state["items"] > 0 and state["results"] == 0) or svc.REASON_EXTRACT_EXCEPTION in state["reasons"] or empty_unanalyzed
     )
-    return finish_after_extraction(job_id, pairs, run_analysis=need_analysis)
+    return finish_after_extraction(job_id, pairs, run_analysis=need_analysis, current_pairs=current_pairs)
 
 
 def repair(out_dir: Path, ids_file: Path, *, max_cost: Decimal, stop_after_errors: int, timeout_sec: int) -> int:
@@ -738,7 +760,7 @@ def rollback_job(job_id: str, jobs_row: dict, jobs_header: list[str], items: lis
         _insert_rows(session, "extraction_items", items_header, items, _column_types(session, "extraction_items"))  # 3.
         _insert_rows(session, "analysis_results", results_header, results, _column_types(session, "analysis_results"))
         _update_job(session, jobs_header, jobs_row, _column_types(session, "extraction_jobs"))  # 4.
-        analyzer._merge_supplier_products(session, job_id, s, extra_pairs=pairs)  # 5.
+        analyzer._merge_supplier_products(session, job_id, s, extra_pairs=pairs, revival_guard=False)  # 5.（ADR-1032: 取り消しは現行を動かさない方へ）
         session.commit()  # 変更が0件だと関数の中では commit しない。手順0〜4はここで確定する
         return "rolled_back", f"items {len(items)} / results {len(results)}"
     except Exception as exc:  # noqa: BLE001
