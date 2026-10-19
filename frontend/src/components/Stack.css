@@ -1,11 +1,17 @@
 /**
- * Stack — 縦積みの並べ方
+ * Stack — 縦積み（既定）／横1列の並べ方
  * ADR-067: 間隔はすべて CSS 変数参照のみ
  */
 
 .comp-stack {
   display: flex;
   flex-direction: column;
+}
+
+.comp-stack--row {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .comp-stack--gap-1 { gap: var(--space-1); }
