@@ -59,6 +59,8 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 | 4 | 再抽出ツール `backend/app/tools/reextract_v6_with_v102.py:353` | 組を控える `:434` と同時に「現行だった組」も控え、`:439` の保存ファイルに載せる。前の行が無ければ None | 再抽出は件を作り直し新しい行が TRUE になるため、控えが無いと規則が使えない。控えて渡す |
 | 5 | 取り消し `backend/app/tools/reextract_v6_with_v102.py:741` | guard なし | 取り消しは保存した行を戻す操作。現行を動かさない方に倒す（今と同じ）。【未確認】guard ありで問題が出るか |
 
+- 既知の限界（実装便で確認）: Celery の抽出やり直し経路（`backend/app/tasks/tcg_extraction.py:470-476`）では、抽出（`backend/app/services/line_analysis_v102_svc.py:519` の件の削除）で行が消え、続く `run_v102_analysis`（`:1461`）に着く時点で前の行が無い。`previous_pairs` も控えも空（None）になり、初回の解析（S1）と同じ扱いで、その job 自身の行（R3a 型）は復活止めが働かない。他の投稿の行（R1・R3c・R5）は今の `is_current` を控えに使うので、どの経路でも止まる。試験 `test_extraction_restart_path_has_no_prior_and_behaves_like_first_analysis` で「初回と同じ（TRUE のまま）」を固定した。
+
 ## 4. 試験の結果（試験用 PG 16.15, port 55460。原本 logs/sandbox_old.txt・logs/sandbox_guard.txt）
 
 作り方: 本物の再解析は件を作り直す（`backend/app/services/line_analysis_v102_svc.py:519`）。試験では行を消す代わりに `extraction_items.gone` 列で印を付け、古い件を gone=true にして新しい id で入れ直した。現行 SQL（old）と案（guard）の両方の関数は gone=false の件だけを見る。old と guard は、場面ごとに空の使い捨て DB を新しく作って同じ入力を流した（DB の作り直しは使っていない）。
@@ -117,6 +119,8 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 
 ## 8. 触らない範囲・戻し方・維持の仕組み
 
+- 触る（実装便）: `backend/app/services/tcg_analyzer_svc.py`（`_merge_supplier_products` の引数と SQL）、`backend/app/services/line_analysis_v102_svc.py`（`_load_current_pairs` 新設と呼び出し）、`backend/app/services/v102_transcription_svc.py`（`revival_guard=False`）、`backend/app/tools/reextract_v6_with_v102.py`（現行だった組の控え `current_pairs/<job>.json`・取り消しは `revival_guard=False`）、`backend/tests/test_adr1032_revival_guard.py`（新設）。
+- 試験の確認先: PG を使う試験は CI の `.github/workflows/test.yml` で確認する（ローカルは role 作成がフックで止まるため未実行）。ローカルで走らせたのは PG を使わない関連試験のみ。
 - 触らない: 商品×状態の最新の投稿が現行という規則そのもの、`is_current` の初回の決め方、配信の条件、v6 の解析、`migrations/`、`deploy.yml`、仮の行（完売の相手）の作り方、未確認 626 件。
 - 戻し方: コード（実装便）は PR の revert。データ修正は `data/04_rollback.sql`（監査行の変更前の値に戻す。新しい PO 判断が必要）。
 - 維持の仕組み: 試験 `sandbox/scenarios.sql` の場面を、実装便で `backend/tests/` の pytest に移して CI で走らせる（K1）。履歴を残す変更（§7）は別便。

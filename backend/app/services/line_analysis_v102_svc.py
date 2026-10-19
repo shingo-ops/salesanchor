@@ -1178,6 +1178,21 @@ def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple
     return [(int(r[0]), int(r[1])) for r in rows]
 
 
+def _load_current_pairs(session: Session, extraction_job_id: str) -> list[tuple[int, int]]:
+    """ADR-1032: 書き直す前に、この投稿の行で is_current=TRUE だった (product_id, condition_id) の組。復活止めの「前から現行」の控え。"""
+    rows = session.execute(
+        text(f"""
+            SELECT DISTINCT ar.product_id, ar.condition_id
+            FROM {analyzer.TCG_SCHEMA}.analysis_results ar
+            JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL
+              AND ar.is_current = TRUE
+        """),
+        {"ej": extraction_job_id},
+    ).fetchall()
+    return [(int(r[0]), int(r[1])) for r in rows]
+
+
 FOLLOWUP_MAX_GAP_SECONDS = 3600  # 直前の投稿との時刻の差の上限（design §2-1）
 FOLLOWUP_MAX_NONEMPTY_LINES = 10  # 今の投稿の空でない行数の上限（design §2-2）
 
@@ -1459,6 +1474,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         decisions = load_v102_decisions(session, [str(r.id) for r in rows])
         fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
         previous_pairs = _load_resolved_pairs(session, extraction_job_id)
+        # ADR-1032: 書き直す前（_write_results より前）に「現行だった組」を控える。前の行が無ければ None（控え無し）
+        prior_current = _load_current_pairs(session, extraction_job_id) if previous_pairs else None
         followup_masters = masters_with_followup(
             masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id),
             load_posted_date(session, extraction_job_id),
@@ -1473,6 +1490,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         _clear_job_review_detail(session, extraction_job_id)
         session.commit()
         return empty_stats
-    analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）
+    analyzer._merge_supplier_products(  # ADR-158（is_current）+ ADR-1032（復活止め）
+        session, extraction_job_id, schema, extra_pairs=previous_pairs, prior_current_pairs=prior_current,
+    )
     logger.info("[line_analysis] v102 job=%s stats=%s", extraction_job_id, stats)
     return stats
