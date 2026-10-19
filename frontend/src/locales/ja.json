@@ -1562,7 +1562,6 @@
     "sortBy": "{{col}}で並べ替え",
     "sortMenu": {
       "placeholder": "並び替え",
-      "releaseDesc": "発売日が新しい順",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
       "postedDesc": "投稿が新しい"

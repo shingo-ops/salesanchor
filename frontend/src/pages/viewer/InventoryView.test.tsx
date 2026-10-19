@@ -48,14 +48,25 @@ describe("InventoryView", () => {
     expect(screen.queryByTestId("viewer-refresh")).toBeNull();
   });
 
-  it("sort pull-down has exactly 4 options", () => {
+  it("sort pull-down has a heading plus 3 options (no release_date:desc) and shows the heading by default", () => {
     render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
     const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value).filter((v) => v !== "");
-    expect(values).toEqual(["release_date:desc", "unit_price:asc", "quantity:desc", "offered_at:desc"]);
+    expect(select.value).toBe("");
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["", "unit_price:asc", "quantity:desc", "offered_at:desc"]);
     fireEvent.change(select, { target: { value: "unit_price:asc" } });
     expect(captured.props!.sortKey).toBe("unit_price");
     expect(captured.props!.sortDir).toBe("asc");
+  });
+
+  it("choosing the heading after another sort returns to release_date desc", () => {
+    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
+    const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "unit_price:asc" } });
+    expect(captured.props!.sortKey).toBe("unit_price");
+    fireEvent.change(select, { target: { value: "" } });
+    expect(captured.props!.sortKey).toBe("release_date");
+    expect(captured.props!.sortDir).toBe("desc");
+    expect(select.value).toBe("");
   });
 
   it("24 hours button is pressed by default and toggles", () => {

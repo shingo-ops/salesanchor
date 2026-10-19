@@ -120,3 +120,14 @@ PO 決定（2026-10-19）「y」（「価格の安い順に並び替えると状
 - 既知の差（揃えない）: 閲覧ページと GAS のまとまりのキーには product_id が無い（発売日・英語名・日本語名・状態）。GAS の比較は大文字・小文字を同じとみなすが、状態ブロックの Map のキーでは別になる。
 - 変えないもの: 既定の並び、`sort_ord` の式（`tcg_result_order.py`）、印（`__badge_*` の PARTITION）、API の項目・DB。
 - 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（S1・S2）、`backend/tests/test_inventory_distribution_rows.py`、`frontend/src/pages/viewer/viewerFilter.test.ts`。
+
+## 改訂 2026-10-19（6）（並び替えプルダウンは見出し「並び替え」＋3択）
+
+PO 決定（2026-10-19）「発売日の新しい順はプルダウンに含めずデフォルトの表示設定とし、プルダウンの選択肢は3つにしてほしい」、続けて「y」「SAアプリの在庫表もだよ」（SAアプリの在庫表・閲覧ページ・GAS 在庫一覧の3画面とも同じ形）。
+
+- プルダウンは見出し「並び替え」＋3択（価格が安い順・在庫が多い順・投稿が新しい）。既定（発売日の新しい順）は選択肢に出さず、未選択の見出しで表す。見出しを選ぶと既定（発売日の新しい順）に戻る。
+- 上の「改訂 2026-10-18」の「既定のとき空表示にならないようにした」と「先頭は `release_date:desc`」は本改訂で置き換える（前の節の本文は書き換えない）。
+- 既知の制限: 表の見出しクリックで3択以外の並び（商品名順・発売日の古い順など）にしたあとは、プルダウンが見出し表示のままになる。既定へ戻すには、3択のどれかを選んでから見出しを選ぶか、再読み込み（アプリはリセットボタン）。
+- 文言: 閲覧ページの ja「並べ替え」→「並び替え」、「投稿が新しい順」→「投稿が新しい」、en の閲覧ページ stockDesc を "Quantity: high to low" にしてアプリとそろえた。`releaseDesc` キーは4つの locale から削除。
+- 実装: `InventoryPage.tsx`・`InventoryView.tsx`・`viewerFilter.ts` の `SORT_MENU_VALUES` から `release_date:desc` を外し、見出し（空値）の選択で既定の並びに戻す。GAS 在庫一覧（リポジトリ外）は `applySortValue` で同じ解釈にする。サーバーの既定（`inventory_offers.py`）は変えない。
+- 守り: `InventoryPage.tablelayout.test.tsx`・`InventoryView.test.tsx` が選択肢の数（見出し＋3択）・既定の見出し表示・見出しで既定に戻ることを固定する。
