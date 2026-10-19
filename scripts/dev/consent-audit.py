@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """consent-audit.py - 会話での同意（ADR-1033）の突き合わせ・K0 の測定・権限の週次点検。
 
-読み取りだけ（例外: --permissions が permission-snapshot.json を更新する）。
+読み取りだけ（例外: --commit-snapshot を付けたときだけ permission-snapshot.json を更新する）。
 記録・台帳のパスはこのスクリプトの中で組み立てる。引数でパスは受けない。
 値（権限の設定の文字列など）は出さず、項目名と件数、短いハッシュだけを出す。
 
@@ -10,7 +10,9 @@
       その会話の記録で、最後の人の入力が見つかるか・何秒前か・typed の「1」か（本文は出さない）
   python3 scripts/dev/consent-audit.py --audit [--permissions]
       過去7日の同意の台帳と記録の突き合わせ、consent_guard_blocked の件数、許可券の消費件数、K0 の遅れの数
-      --permissions を併用すると、権限の設定の増減（前回の写しとの差）も出し、写しを更新する
+      --permissions を併用すると、権限の設定の増減（前回の写しとの差）を台帳（permission-changes.jsonl）と照らして出す。
+        異常の理由は ABNORMAL_REASON=A〜E の行（ABNORMAL= より前）、見直し期限切れは REVIEW_DUE=。
+      --commit-snapshot を付けたときだけ写しを更新する（ADR-1034。定期実行だけが付ける）
 """
 import argparse
 import datetime
@@ -20,6 +22,7 @@ import json
 import os
 import pwd
 import re
+import subprocess
 import sys
 
 TAIL_BYTES = 4 * 1024 * 1024
@@ -312,35 +315,264 @@ def k0_delays(home, events):
 
 # ── --permissions ───────────────────────────────────────────────────
 
+TOOLS_DIRNAME = ".salesanchor-tools"
+REPO_DIRNAME = "salesanchor"
+REPO_SLUG = "shingo-ops/salesanchor"
+TOOL_FILES = ("scripts/dev/perm-change.py", "scripts/dev/consent-audit.py")
+CHANGE_WINDOW_SEC = 30 * 60
+
+# 道具 perm-change.py の target の値 → 写しのキー（設計 §4-1 の表。この辞書が唯一の置き場）
+TARGET_KEYS = {
+    "user-allow": "user:permissions.allow",
+    "repo-local-allow": "repo-local:permissions.allow",
+    "user-automode-allow": "user:autoMode.allow",
+    "user-automode-allow-sm": "user:autoMode.allow",
+    "repo-allow": "repo:permissions.allow",
+    "repo-hooks": "repo:hooks",
+    "user-deny": "user:permissions.deny",
+    "user-ask": "user:permissions.ask",
+    "user-defaultmode": "user:permissions.defaultMode",
+    "user-skip": "user:skip_flags",
+    "user-hooks": "user:hooks",
+    "user-automode-soft-deny": "user:autoMode.soft_deny",
+    "user-automode-env": "user:autoMode.environment",
+    "user-local-allow": "user-local:permissions.allow",
+    "user-local-deny": "user-local:permissions.deny",
+    "user-local-ask": "user-local:permissions.ask",
+    "user-local-defaultmode": "user-local:permissions.defaultMode",
+    "user-local-skip": "user-local:skip_flags",
+    "user-local-hooks": "user-local:hooks",
+    "user-local-automode-allow": "user-local:autoMode.allow",
+    "user-local-automode-soft-deny": "user-local:autoMode.soft_deny",
+    "user-local-automode-env": "user-local:autoMode.environment",
+    "repo-local-hooks": "repo-local:hooks",
+    "danger-ops": "danger_ops",
+    "hook-files": "hook_files",
+}
+
+# 旧キー名 → 新キー名（初回の比較で「増減」にしないための読み替え）
+LEGACY_KEYS = {
+    "settings.json:permissions.allow": "user:permissions.allow",
+    "settings.json:hooks": "user:hooks",
+    "settings.local.json:permissions.allow": "user-local:permissions.allow",
+    "settings.local.json:hooks": "user-local:hooks",
+}
+
+# A・B の照合に使わないキー（ledger は C、tools_clean は E、permits は D で見る）
+NOT_MATCHED_KEYS = ("ledger", "tools_clean", "permits")
+# 台帳の行だけで足りるキー（これ以外のキーの差分は PO 記録 po_ref が要る = B）
+LEDGER_ONLY_KEYS = ("user:permissions.allow", "repo-local:permissions.allow", "user:autoMode.allow")
+
+
 def sha8(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:8]
 
 
-def collect_permissions(home):
+def item_sha8(item):
+    """権限の1要素のハッシュ（写し・台帳の item_hash 共通の式）。"""
+    return sha8(json.dumps(item, sort_keys=True, ensure_ascii=False))
+
+
+def ledger_line_sha(raw):
+    """台帳の1行（改行を除いたバイト列）の sha256 先頭16桁。prev_sha の鎖と head に使う。"""
+    return hashlib.sha256(raw).hexdigest()[:16]
+
+
+def run_git(args, cwd):
+    """git を実行して (終了コード, 標準出力のバイト列) を返す。試験では差し替えられる。"""
+    try:
+        p = subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, timeout=60,
+                           env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+        return p.returncode, p.stdout
+    except Exception:
+        return 127, b""
+
+
+def gh_pr_view(n):
+    """gh で PR の state・mergedAt・body を取る。使えなければ None。試験では差し替えられる。"""
+    try:
+        p = subprocess.run(["gh", "pr", "view", str(n), "-R", REPO_SLUG, "--json", "state,mergedAt,body"],
+                           capture_output=True, timeout=60)
+        if p.returncode != 0:
+            return None
+        return json.loads(p.stdout.decode("utf-8"))
+    except Exception:
+        return None
+
+
+def perm_paths(home):
     p = paths(home)
-    snap = {}
-    for name, key in (("settings.json", "settings"), ("settings.local.json", "settings_local")):
+    claude = os.path.join(home, ".claude")
+    p.update({
+        "perm_ledger": os.path.join(claude, "logs", "permission-changes.jsonl"),
+        "perm_lock": os.path.join(claude, "logs", "permission-changes.lock"),
+        "agent_tokens": os.path.join(claude, "agent-tokens.json"),
+        "hook_dir": os.path.join(claude, "scripts"),
+        "tools": os.path.join(home, TOOLS_DIRNAME),
+        "tools_settings": os.path.join(home, TOOLS_DIRNAME, ".claude", "settings.json"),
+        "repo_local": os.path.join(home, REPO_DIRNAME, ".claude", "settings.local.json"),
+    })
+    return p
+
+
+def load_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def read_ledger(home):
+    """台帳を読む。返り値: dict(lines=生の各行(bytes), rows=読めた行, chain_ok, head, lines_n)。"""
+    path = perm_paths(home)["perm_ledger"]
+    lines, rows = [], []
+    chain_ok = True
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+    except OSError:
+        data = b""
+    prev = "genesis"
+    for raw in data.split(b"\n"):
+        if not raw.strip():
+            continue
+        lines.append(raw)
         try:
-            with open(p[key], encoding="utf-8") as f:
-                d = json.load(f)
+            row = json.loads(raw.decode("utf-8"))
         except Exception:
-            d = {}
-        allow = (d.get("permissions") or {}).get("allow") or []
-        snap[name + ":permissions.allow"] = sorted(sha8(json.dumps(a, sort_keys=True, ensure_ascii=False)) for a in allow)
-        hooks = d.get("hooks") or {}
-        items = []
-        if isinstance(hooks, dict):
-            for event, entries in hooks.items():
-                for ent in entries if isinstance(entries, list) else []:
-                    matcher = ent.get("matcher", "") if isinstance(ent, dict) else ""
-                    items.append("%s|%s|%s" % (event, matcher, sha8(json.dumps(ent, sort_keys=True, ensure_ascii=False))))
-        snap[name + ":hooks"] = sorted(items)
+            row = None
+        if not isinstance(row, dict):
+            chain_ok = False
+            rows.append({})
+        else:
+            rows.append(row)
+            if row.get("prev_sha") != prev:
+                chain_ok = False
+        prev = ledger_line_sha(raw)
+    return {"lines": lines, "rows": rows, "chain_ok": chain_ok, "head": prev, "lines_n": len(lines)}
+
+
+def tools_state(home, git_run):
+    """~/.salesanchor-tools の状態（設計 §4-2 tools_clean と §4-3 E の材料）。"""
+    p = perm_paths(home)
+    tools = p["tools"]
+    st = {"exists": os.path.isdir(tools), "offline": False, "v": None, "head_on_main": "no",
+          "dirty": 0, "tool_sha": "", "sha_bad": False}
+    if not st["exists"]:
+        return st
+    rc, out = git_run(["status", "--porcelain", "--untracked-files=all"], tools)
+    if rc != 0:
+        st["dirty"] = 1
+    else:
+        st["dirty"] = len([x for x in out.decode("utf-8", "replace").splitlines() if x.strip()])
+    rc, out = git_run(["ls-remote", "origin", "refs/heads/main"], tools)
+    v = out.decode("utf-8", "replace").split()[0] if rc == 0 and out.strip() else None
+    st["v"] = v
+    if not v:
+        st["offline"] = True
+    else:
+        rc, _ = git_run(["merge-base", "--is-ancestor", "HEAD", v], tools)
+        st["head_on_main"] = "yes" if rc == 0 else "no"
+        for rel in TOOL_FILES:
+            rc, content = git_run(["show", "%s:%s" % (v, rel)], tools)
+            if rc != 0:
+                continue
+            try:
+                with open(os.path.join(tools, rel), "rb") as f:
+                    mine = f.read()
+            except OSError:
+                mine = None
+            if mine is None or hashlib.sha256(mine).hexdigest() != hashlib.sha256(content).hexdigest():
+                st["sha_bad"] = True
+    try:
+        with open(os.path.join(tools, TOOL_FILES[0]), "rb") as f:
+            st["tool_sha"] = hashlib.sha256(f.read()).hexdigest()[:16]
+    except OSError:
+        pass
+    return st
+
+
+def _hook_items(hooks):
+    items = []
+    if isinstance(hooks, dict):
+        for event, entries in hooks.items():
+            for ent in entries if isinstance(entries, list) else []:
+                matcher = ent.get("matcher", "") if isinstance(ent, dict) else ""
+                items.append("%s|%s|%s" % (event, matcher, item_sha8(ent)))
+    return sorted(items)
+
+
+def _list_hashes(v):
+    return sorted(item_sha8(a) for a in v) if isinstance(v, list) else []
+
+
+def _settings_keys(prefix, d, snap, full):
+    perms = d.get("permissions") if isinstance(d.get("permissions"), dict) else {}
+    snap[prefix + ":permissions.allow"] = _list_hashes(perms.get("allow"))
+    snap[prefix + ":hooks"] = _hook_items(d.get("hooks"))
+    if not full:
+        return
+    snap[prefix + ":permissions.deny"] = _list_hashes(perms.get("deny"))
+    snap[prefix + ":permissions.ask"] = _list_hashes(perms.get("ask"))
+    snap[prefix + ":permissions.defaultMode"] = [item_sha8(perms["defaultMode"])] if "defaultMode" in perms else []
+    snap[prefix + ":skip_flags"] = sorted(
+        item_sha8("%s=%s" % (k, json.dumps(v, sort_keys=True, ensure_ascii=False)))
+        for k, v in d.items() if isinstance(k, str) and k.startswith("skip"))
+    am = d.get("autoMode") if isinstance(d.get("autoMode"), dict) else {}
+    snap[prefix + ":autoMode.allow"] = _list_hashes(am.get("allow"))
+    snap[prefix + ":autoMode.soft_deny"] = _list_hashes(am.get("soft_deny"))
+    snap[prefix + ":autoMode.environment"] = _list_hashes(am.get("environment"))
+
+
+def collect_permissions(home, git_run=None, tstate=None):
+    p = perm_paths(home)
+    git_run = git_run or run_git
+    snap = {}
+    _settings_keys("user", load_json(p["settings"]), snap, True)
+    _settings_keys("user-local", load_json(p["settings_local"]), snap, True)
+    _settings_keys("repo", load_json(p["tools_settings"]), snap, False)
+    _settings_keys("repo-local", load_json(p["repo_local"]), snap, False)
+    ops = load_json(p["agent_tokens"]).get("danger_ops")
+    snap["danger_ops"] = _list_hashes(ops)
+    files = []
+    for root, dirs, names in os.walk(p["hook_dir"]):
+        dirs.sort()
+        for n in sorted(names):
+            if ".backup" in n:
+                continue
+            fp = os.path.join(root, n)
+            if os.path.islink(fp) or not os.path.isfile(fp):
+                continue
+            try:
+                with open(fp, "rb") as f:
+                    digest = hashlib.sha256(f.read()).hexdigest()[:8]
+            except OSError:
+                continue
+            files.append("%s|%s" % (sha8(os.path.relpath(fp, p["hook_dir"])), digest))
+    snap["hook_files"] = sorted(files)
+    led = read_ledger(home)
+    snap["ledger"] = ["lines=%d" % led["lines_n"], "head=%s" % led["head"]]
+    ts = tstate if tstate is not None else tools_state(home, git_run)
+    snap["tools_clean"] = (["head_on_main=%s" % ts["head_on_main"], "dirty=%d" % ts["dirty"],
+                            "tool_sha=%s" % ts["tool_sha"]] if ts["exists"] else [])
     try:
         permits = sorted(sha8(n) for n in os.listdir(p["permits"]))
     except OSError:
         permits = []
     snap["permits"] = permits
     return snap
+
+
+def normalize_snapshot(old):
+    out = {}
+    for k, v in old.items():
+        nk = LEGACY_KEYS.get(k, k)
+        if nk != k and nk in old:
+            continue
+        out[nk] = v
+    return out
 
 
 def diff_permissions(old, new):
@@ -352,40 +584,222 @@ def diff_permissions(old, new):
     return lines
 
 
-def run_permissions(home, out):
-    snap_path = paths(home)["snapshot"]
-    new = collect_permissions(home)
-    old = None
+def element_hash(el):
+    """写しの1要素から台帳の item_hash に当たる部分を取り出す（hooks / hook_files は末尾の '|' の後ろ）。"""
+    return el.rsplit("|", 1)[-1]
+
+
+def parse_consent_ref(ref):
+    m = re.fullmatch(r"consent:([^:]+):(.+):([^:]+)", ref or "")
+    return list(m.groups()) if m else None
+
+
+def consent_used_at(home, key3):
+    for rec in read_jsonl(paths(home)["ledger"]):
+        if rec.get("key") == key3:
+            return parse_ts(rec.get("used_at"))
+    return None
+
+
+def po_ref_ok(home, row, held, key, h, rows, gh_view):
+    """PO 記録（po_ref）が条件を満たすか。条件は設計 §4-3 の B。"""
+    ref = row.get("po_ref") or ""
+    held_ts = parse_ts(held.get("ts")) if held else None
+    if ref.startswith("PR#"):
+        if not re.fullmatch(r"PR#[0-9]+", ref):
+            return False
+        v = gh_view(int(ref[3:]))
+        if not isinstance(v, dict) or v.get("state") != "MERGED":
+            return False
+        merged = parse_ts(v.get("mergedAt"))
+        if merged is None or (held_ts is not None and merged <= held_ts):
+            return False
+        if not key.startswith("repo:") and h not in (v.get("body") or ""):
+            return False
+        same = [r for r in rows if r.get("sub") == "record" and r.get("po_ref") == ref
+                and r.get("item_hash") == h and r.get("target") == row.get("target") and r.get("op") == row.get("op")]
+    elif ref.startswith("consent:"):
+        key3 = parse_consent_ref(ref)
+        used = consent_used_at(home, key3) if key3 else None
+        if used is None or (held_ts is not None and used <= held_ts):
+            return False
+        same = [r for r in rows if r.get("sub") == "record" and r.get("po_ref") == ref]
+    else:
+        return False
+    return not same or same[0] is row
+
+
+def judge_change(home, key, h, op, since, rows, gh_view):
+    """差分1件を判定する。None=説明がつく、'A'=台帳に無い、'B'=PO 記録が足りない。"""
+    cands = []
+    for r in rows:
+        if r.get("result") not in ("applied", "recorded"):
+            continue
+        t = parse_ts(r.get("ts"))
+        if t is None or (since is not None and t < since):
+            continue
+        if TARGET_KEYS.get(r.get("target")) != key or r.get("item_hash") != h:
+            continue
+        if r.get("op") not in (op, "modify"):
+            continue
+        cands.append(r)
+    must_po = key not in LEDGER_ONLY_KEYS
+    if not cands:
+        return "B" if must_po else "A"
+    row = cands[0]
+    row_ts = parse_ts(row.get("ts"))
+    held = None
+    for r in rows:
+        if r.get("result") == "held" and r.get("item_hash") == h and TARGET_KEYS.get(r.get("target")) == key:
+            t = parse_ts(r.get("ts"))
+            if t is not None and row_ts is not None and t <= row_ts:
+                held = r
+    needs_po = must_po or str(row.get("category", "")).startswith("reserved") or (held is not None and row.get("result") == "recorded")
+    if needs_po and not po_ref_ok(home, row, held, key, h, rows, gh_view):
+        return "B"
+    return None
+
+
+def review_due(rows, now):
+    """見直し日を過ぎ、review の行が無い権限の item_hash を返す。"""
+    state = {}
+    for r in rows:
+        k = (r.get("target"), r.get("item_hash"))
+        if r.get("sub") == "review":
+            if r.get("summary") == "remove":
+                state.pop(k, None)
+            elif r.get("review_by"):
+                state[k] = r.get("review_by")
+        elif r.get("result") == "applied" and r.get("op") == "add" and r.get("review_by"):
+            state[k] = r.get("review_by")
+        elif r.get("result") in ("applied", "recorded") and r.get("op") == "remove":
+            state.pop(k, None)
+    today = now.strftime("%Y-%m-%d")
+    return sorted({k[1] for k, due in state.items() if due <= today})
+
+
+def load_snapshot(path):
     try:
-        with open(snap_path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             old = json.load(f)
     except Exception:
-        old = None
+        return None, None
+    if not isinstance(old, dict):
+        return None, None
+    ts_list = old.pop("snapshot_ts", None)
+    ts = parse_ts(ts_list[0]) if isinstance(ts_list, list) and ts_list else None
+    if ts is None:
+        try:
+            ts = datetime.datetime.fromtimestamp(os.path.getmtime(path), datetime.timezone.utc)
+        except OSError:
+            ts = None
+    return normalize_snapshot(old), ts
+
+
+def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=None):
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    gh_view = gh_view or gh_pr_view
+    git_run = git_run or run_git
+    p = perm_paths(home)
+    snap_path = p["snapshot"]
+    tstate = tools_state(home, git_run)
+    new = collect_permissions(home, git_run, tstate)
+    old, old_ts = load_snapshot(snap_path)
+    led = read_ledger(home)
     out("== 権限の設定の増減（値は出さない。短いハッシュのみ） ==")
     changed = 0
+    reasons = {"A": [], "B": [], "C": [], "D": [], "E": []}
     if old is None:
         out("前回の写しなし（初回。比較はしない）")
         for k, v in sorted(new.items()):
             out("  %s: %d 件" % (k, len(v)))
     else:
         for k, cnt, added, removed in diff_permissions(old, new):
+            if k not in old:
+                out("  %s: %d 件（初回）" % (k, cnt))
+                continue
             out("  %s: %d 件 / 増 %d / 減 %d" % (k, cnt, len(added), len(removed)))
             for a in added:
                 out("    + %s" % a)
             for r in removed:
                 out("    - %s" % r)
             changed += len(added) + len(removed)
-    os.makedirs(os.path.dirname(snap_path), exist_ok=True)
-    tmp = snap_path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(new, f, ensure_ascii=False, indent=1)
-        f.write("\n")
-    os.replace(tmp, snap_path)
+            if k in NOT_MATCHED_KEYS or k not in new:
+                continue
+            for op, els in (("add", added), ("remove", removed)):
+                for el in els:
+                    h = element_hash(el)
+                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view)
+                    if v:
+                        reasons[v].append("%s %s" % (k, h))
+        # C: 台帳の鎖・行数・前回の head
+        ol = old.get("ledger") or []
+        old_lines = next((int(x[6:]) for x in ol if x.startswith("lines=") and x[6:].isdigit()), None)
+        old_head = next((x[5:] for x in ol if x.startswith("head=")), None)
+        c_bad = False
+        if old_lines is not None and led["lines_n"] < old_lines:
+            c_bad = True
+        if old_head and old_head != "genesis" and old_lines:
+            if led["lines_n"] < old_lines or ledger_line_sha(led["lines"][old_lines - 1]) != old_head:
+                c_bad = True
+        if c_bad:
+            reasons["C"].append("ledger %s" % sha8(led["head"]))
+    if old is None and not led["chain_ok"]:
+        reasons["C"].append("ledger %s" % sha8(led["head"]))
+    if old is not None and not led["chain_ok"] and not reasons["C"]:
+        reasons["C"].append("ledger %s" % sha8(led["head"]))
+    # D: permit_issued(by=ai) のうち、前後30分に同意の消費も台帳の行も無いもの
+    events = load_events(home)
+    since_d = old_ts or (now - datetime.timedelta(days=DAYS))
+    consumed_ts = [event_time(e) for e in events if e.get("type") == "consent_consumed"]
+    ledger_ts = [parse_ts(r.get("ts")) for r in led["rows"]]
+    near = [t for t in consumed_ts + ledger_ts if t is not None]
+    unexplained = 0
+    for e in events:
+        if e.get("type") != "permit_issued" or e.get("by") != "ai":
+            continue
+        t = event_time(e)
+        if t is None or t < since_d:
+            continue
+        if not any(abs((t - c).total_seconds()) <= CHANGE_WINDOW_SEC for c in near):
+            unexplained += 1
+    if unexplained:
+        reasons["D"].append("permit %d" % unexplained)
+    # E: ~/.salesanchor-tools
+    if tstate["exists"]:
+        if tstate["offline"]:
+            reasons["E"].append("tools offline")
+        else:
+            if tstate["head_on_main"] != "yes":
+                reasons["E"].append("tools stale")
+            if tstate["sha_bad"]:
+                reasons["E"].append("tools sha")
+        if tstate["dirty"] > 0:
+            reasons["E"].append("tools dirty")
+    n_reasons = 0
+    for code in ("A", "B", "C", "D", "E"):
+        for r in reasons[code]:
+            out("ABNORMAL_REASON=%s %s" % (code, r))
+            n_reasons += 1
+    due = review_due(led["rows"], now)
+    if commit:
+        saved = dict(new)
+        saved["snapshot_ts"] = [now.strftime("%Y-%m-%dT%H:%M:%SZ")]
+        os.makedirs(os.path.dirname(snap_path), exist_ok=True)
+        tmp = snap_path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(saved, f, ensure_ascii=False, indent=1)
+            f.write("\n")
+        os.replace(tmp, snap_path)
+        out("写しを更新した（--commit-snapshot）")
+    else:
+        out("写しは更新していない（--commit-snapshot なし）")
     out("PERMISSION_CHANGES=%s" % ("初回" if old is None else changed))
-    return changed
+    out("REVIEW_DUE=%s" % (",".join(due) if due else "0"))
+    return changed, n_reasons
 
 
-def run_audit(home, now, with_permissions, out):
+def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_run=None):
     since = now - datetime.timedelta(days=DAYS)
     events = load_events(home)
     consumed = count_types(events, since, lambda t: t == "consent_consumed")
@@ -406,10 +820,10 @@ def run_audit(home, now, with_permissions, out):
         out("K0 判定: %s" % ("○" if delays == 0 else "×（案 F に切り替える設計に戻す）"))
     else:
         out("K0 判定: 対象が %d 件に届くまで保留" % K0_TARGET)
-    changes = 0
+    changes, n_reasons = 0, 0
     if with_permissions:
-        changes = run_permissions(home, out)
-    abnormal = unmatched > 0 or guard_real > 0
+        changes, n_reasons = run_permissions(home, out, now, commit, gh_view, git_run)
+    abnormal = unmatched > 0 or guard_real > 0 or n_reasons > 0
     out("ABNORMAL=%s" % ("yes" if abnormal else "no"))
     return abnormal, changes
 
@@ -419,6 +833,8 @@ def main(argv=None):
     ap.add_argument("--probe", metavar="SESSION_ID")
     ap.add_argument("--audit", action="store_true")
     ap.add_argument("--permissions", action="store_true")
+    ap.add_argument("--commit-snapshot", action="store_true",
+                    help="権限の写しを更新する（定期実行だけが付ける。付けないときは比べて表示するだけ）")
     args = ap.parse_args(argv)
     home = real_home()
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -426,10 +842,10 @@ def main(argv=None):
         print(json.dumps(probe(home, args.probe, now), ensure_ascii=False))
         return 0
     if args.audit:
-        run_audit(home, now, args.permissions, print)
+        run_audit(home, now, args.permissions, print, args.commit_snapshot)
         return 0
     if args.permissions:
-        run_permissions(home, print)
+        run_permissions(home, print, now, args.commit_snapshot)
         return 0
     ap.print_usage()
     return 2
