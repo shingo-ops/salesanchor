@@ -12,7 +12,7 @@
 | C3 | `backend/app/services/gemini_raw_copy_v102_product_first.py` 定数（:46-50） | `PRODUCT_KUBUN_SINGLE = "シングル系"`、`PRODUCT_KUBUN_PROMO_PACK = "プロモパック系"`、既定の状態名 `"Single"`・`"未開封"`、basis `"R7:単品既定"`・`"R8:プロモパック既定"` |
 | C4 | 同 `_resolve_condition`（:570-589） | 商品の kubun_type が シングル系 → `single` 群の行だけで `resolve_condition_v2(..., kubun="シングル系", prefer_lowest_value=True)`。結果が FLAG_SINGLE＋単位不明（＝語が当たらない）なら状態 Single・basis R7。プロモパック系 → `promo_pack` 群の行だけで判定し、当たらなければ 未開封・basis R8、2行以上当たったら既存の `REVIEW_MULTIPLE_CANDIDATES` を付ける。それ以外の区分は今と同じコード経路（1文字も挙動を変えない） |
 | C5 | 同 `_other_kubun_hits`（:592-604） | `single`・`promo_pack` 群の行を対象にしない |
-| C6 | `line_analysis_v102_svc.py` `_condition_columns`（:630-641） | 状態名から code を引くとき、群の中で引く。「PSA10」は single と promo_pack の2行あるので、シングル系の結果は single 群の行、プロモパック系の結果は promo_pack 群の行の code になること。やり方は実物を読んで選び、報告に書く（例: _resolve_condition が群を返す・entry を直接返す）。群の行が DB に無いときは今と同じく FLAG_SINGLE に落ちてよい |
+| C6 | `backend/app/services/line_analysis_v102_svc.py` `_condition_columns`（:630-641） | 状態名から code を引くとき、群の中で引く。「PSA10」は single と promo_pack の2行あるので、シングル系の結果は single 群の行、プロモパック系の結果は promo_pack 群の行の code になること。やり方は実物を読んで選び、報告に書く（例: _resolve_condition が群を返す・entry を直接返す）。群の行が DB に無いときは今と同じく FLAG_SINGLE に落ちてよい |
 | C7 | `backend/app/services/tcg_result_order.py:11` | `VALUE_GROUP_ORDER = ("case","box","pack","promo_pack","single")` |
 | C8 | migration 1本（既存の命名・形に合わせる） | `line_conditions_value_group_check` を作り直し、許す値に `promo_pack`・`single` を足す。データは入れない。downgrade は元の box/case/pack に戻す |
 | C9 | テスト（既存の v102 / analyzer のテストの置き場所に合わせる） | 下の T1〜T8 |

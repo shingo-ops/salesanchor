@@ -15,21 +15,21 @@
 ## 現在地（file:line）
 
 1. 状態の照合の主ループは `backend/app/services/tcg_analyzer_svc.py:918-934` にある。適用区分は `app_kubun_matches`（`:772-801`）で比べ、部分一致で判定する（「単位不明」は空か「不明」のときだけ当たる）。
-2. 語が当たらないときの既定は次のとおり（`tcg_analyzer_svc.py:936-982`）。
+2. 語が当たらないときの既定は次のとおり（`backend/app/services/tcg_analyzer_svc.py:936-982`）。
    - 箱系大は Case、箱系は Sealed box（`:939-944`）。
    - パック系は Searched pack（`:949-962`）。
    - 照合した商品が箱系なら、箱系としてもう一度判定する（R4c、`:967-979`）。
    - それ以外は `FLAG_SINGLE` + 「R4:単位既定:単位不明」（`:981-982`）。
 3. v102 は `FLAG_SINGLE` + 単位不明を Error（CN0012）と要確認 condition_unknown に変える（`backend/app/services/gemini_raw_copy_v102_product_first.py:560-567`）。
-4. v102 の区分の分岐は `gemini_raw_copy_v102_product_first.py:570-589` にある。
+4. v102 の区分の分岐は `backend/app/services/gemini_raw_copy_v102_product_first.py:570-589` にある。
    - 箱系とセット系の商品は、単位区分を箱系に置き換えて判定する（`:574-579`）。
    - バルク系は Bulk にする（`:581-587`）。
 5. シングル系（kubun_type「シングル系」）の商品には、専用の分岐が無い。単品の単位 Piece は単位区分「単品系」のため、CN0008（適用区分「枚系,単位不明」）に当たらず、2. の既定から Error になる。
-6. 複数の行が当たったときは、価値の低い行（value_rank が最大の行）を採る（`tcg_analyzer_svc.py:848-866`、ADR-1023）。
-7. REGEX の行は `re.search` をそのまま使う。小文字化と全角の正規化はしない（`tcg_analyzer_svc.py:1332-1344`）。REGEX の行は主ループで使える（`:835-841`）。
+6. 複数の行が当たったときは、価値の低い行（value_rank が最大の行）を採る（`backend/app/services/tcg_analyzer_svc.py:848-866`、ADR-1023）。
+7. REGEX の行は `re.search` をそのまま使う。小文字化と全角の正規化はしない（`backend/app/services/tcg_analyzer_svc.py:1332-1344`）。REGEX の行は主ループで使える（`:835-841`）。
 8. KEYWORD の英数字の語の境界は、英字だけで判定する（数字は境界にならない）。このため「psa10ar」は PSA10 に当たらず、PSA1 に当たる（下の本番の観測の 4.）。
-9. 状態マスタの全行を読むのは `load_condition_entries`（`tcg_analyzer_svc.py:652-769`）。v6・v10・v101・shadow・単位の復元も同じ関数を使う。v102 は `load_v102_masters`（`backend/app/services/line_analysis_v102_svc.py:201-217`）から呼ぶ。
-10. v102 は、状態の名前をマスタで引けないとき `FLAG_SINGLE` に落とす（`line_analysis_v102_svc.py:630-641` `_condition_columns`）。
+9. 状態マスタの全行を読むのは `load_condition_entries`（`backend/app/services/tcg_analyzer_svc.py:652-769`）。v6・v10・v101・shadow・単位の復元も同じ関数を使う。v102 は `load_v102_masters`（`backend/app/services/line_analysis_v102_svc.py:201-217`）から呼ぶ。
+10. v102 は、状態の名前をマスタで引けないとき `FLAG_SINGLE` に落とす（`backend/app/services/line_analysis_v102_svc.py:630-641` `_condition_columns`）。
 11. 配信は `FLAG_%` と effect EXCLUDE だけを外す（`backend/app/services/tcg_distribution_svc.py:230-239`）。名前の一覧は持たないので、新しい状態名はそのまま配信に出る。
 12. 並び順の群は `backend/app/services/tcg_result_order.py:11` の `VALUE_GROUP_ORDER = ("case","box","pack")`。一覧に無い群は「順位なし」として最後に並ぶ。
 13. 状態の色は `frontend/src/features/inventory/conditionBadge.ts:1-37` で決める。一覧に無い名前は既定の色になる。

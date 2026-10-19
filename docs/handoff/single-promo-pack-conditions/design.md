@@ -33,12 +33,12 @@
 
 | # | 場所 | 前 | 後 |
 |---|---|---|---|
-| 1 | `tcg_analyzer_svc.py:652-769` `load_condition_entries` | 有効な行を全部返す | 引数 `include_scoped_groups: bool = False` を足す。False のときは value_group が `single`・`promo_pack` の行を返さない。v102 の `load_v102_masters`（`line_analysis_v102_svc.py:206`）だけが True を渡す |
-| 2 | `gemini_raw_copy_v102_product_first.py:570-589` `_resolve_condition` | シングル系の分岐が無く、Error になる | 商品の kubun_type が「シングル系」のとき、value_group `single` の行だけを渡して `resolve_condition_v2(..., kubun="シングル系", prefer_lowest_value=True)` を呼ぶ。語が当たらず `FLAG_SINGLE`＋単位不明になったら、状態を Single、basis を「R7:単品既定」にする（R4 で始めない＝買取換算の候補にしない。ADR-1021 の R6 と同じ扱い） |
+| 1 | `backend/app/services/tcg_analyzer_svc.py:652-769` `load_condition_entries` | 有効な行を全部返す | 引数 `include_scoped_groups: bool = False` を足す。False のときは value_group が `single`・`promo_pack` の行を返さない。v102 の `load_v102_masters`（`backend/app/services/line_analysis_v102_svc.py:206`）だけが True を渡す |
+| 2 | `backend/app/services/gemini_raw_copy_v102_product_first.py:570-589` `_resolve_condition` | シングル系の分岐が無く、Error になる | 商品の kubun_type が「シングル系」のとき、value_group `single` の行だけを渡して `resolve_condition_v2(..., kubun="シングル系", prefer_lowest_value=True)` を呼ぶ。語が当たらず `FLAG_SINGLE`＋単位不明になったら、状態を Single、basis を「R7:単品既定」にする（R4 で始めない＝買取換算の候補にしない。ADR-1021 の R6 と同じ扱い） |
 | 3 | 同上 | プロモパック系という区分が無い | kubun_type が「プロモパック系」のとき、value_group `promo_pack` の行だけで同じように判定する。語が当たらなければ「未開封」、basis は「R8:プロモパック既定」。2つ以上の行が当たったら要確認（既存の `REVIEW_MULTIPLE_CANDIDATES`）を付ける |
 | 4 | 同上 `_other_kubun_hits`（`:592-604`）・v101 の `_state_words` | 全行を見る | 新しい群の行は対象にしない（1. で v102 以外には渡らない。v102 の中でも群の行を除いて今と同じにする） |
 | 5 | 同上 定数（`:46-50`） | 箱系・バルク系・セット系 | `PRODUCT_KUBUN_SINGLE = "シングル系"`・`PRODUCT_KUBUN_PROMO_PACK = "プロモパック系"` と、既定の状態 code 2つを足す |
-| 6 | `tcg_result_order.py:11` | `("case","box","pack")` | `("case","box","pack","promo_pack","single")` |
+| 6 | `backend/app/services/tcg_result_order.py:11` | `("case","box","pack")` | `("case","box","pack","promo_pack","single")` |
 | 7 | migration（構造だけ） | value_group の CHECK は box/case/pack | CHECK に `promo_pack`・`single` を足す（制約の作り直しだけ。データは入れない） |
 | 8 | 状態マスタ（記録 SQL・ADR-1007） | 16 行 | 下の「値」にある 8 行を足す。既存の 16 行（CN0008 も含む）は変えない |
 | 9 | 区分マスタ（記録 SQL） | 1 箱系・2 シングル系・4 セット系・9 バルク系 | 「プロモパック系」を足す（前例は id 9 バルク系の作成記録と同じ手順） |
