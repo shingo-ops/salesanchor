@@ -15,7 +15,7 @@
 - `frontend/src/tokens.css:395-397`（ライト）・`:595-597`（ダーク）に `--comp-value-frame-cheapest`・`--comp-value-frame-most-stock`
 - `git grep comp-value-frame` で、コードでの使用は inventoryColumns.css:59・:62 と tokens.css の定義だけ（他の docs は handoff と ADR）。
 - `frontend/src/features/inventory/blockBadges.tsx:5-13` `BlockValue` はクラス `inventory-cell__value--cheapest` / `--most-stock`、testid、title を付ける（変えない）。
-- 試験はクラス名と testid を見る（`inventoryColumns.test.tsx:85-107`、`viewerColumns.cells.test.tsx:68-88`）。CSS の中身は見ない。
+- 試験はクラス名と testid を見る（`frontend/src/features/inventory/inventoryColumns.test.tsx:85-107`、`frontend/src/pages/viewer/viewerColumns.cells.test.tsx:68-88`）。CSS の中身は見ない。
 
 ## 金型 Badge の形（`frontend/src/components/Badge.css`）
 - 角: `border-radius: var(--comp-badge-radius)`（tokens.css:497 = `var(--radius-full)` の丸ピル）
