@@ -1,6 +1,6 @@
 # design: 現行行の復活止め
 
-関連: recon.md（現在地）、docs/adr/ADR-1032-current-row-revival-guard.md、docs/adr/ADR-158-product-level-supersession.md、docs/adr/ADR-1027-bundle-sale-reading.md。
+関連: docs/handoff/revival-guard/recon.md（現在地）、docs/adr/ADR-1032-current-row-revival-guard.md、docs/adr/ADR-158-product-level-supersession.md、docs/adr/ADR-1027-bundle-sale-reading.md。
 PO 決定（2026-10-19, n）: 現行の規則「商品×状態の組ごとに最新の投稿の行が現行」を保つ（2026-09-25 の d24d13249 の設計を守る。古い投稿の別の状態の行は残る）。直すのは「再解析で行の状態や商品が変わったとき、新しい投稿に隠されていた古い投稿の行を現行に戻さない」ことだけ。
 
 ## 1. 規則（復活止め）
@@ -123,6 +123,7 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 - 試験の確認先: PG を使う試験は CI の `.github/workflows/test.yml` で確認する（ローカルは role 作成がフックで止まるため未実行）。ローカルで走らせたのは PG を使わない関連試験のみ。
 - 触らない: 商品×状態の最新の投稿が現行という規則そのもの、`is_current` の初回の決め方、配信の条件、v6 の解析、`migrations/`、`.github/workflows/deploy.yml`、仮の行（完売の相手）の作り方、未確認 626 件。
 - 戻し方: コード（実装便）は PR の revert。データ修正は `docs/handoff/revival-guard/data/04_rollback.sql`（監査行の変更前の値に戻す。新しい PO 判断が必要）。
+- 守り手: backend/tests/test_adr1032_revival_guard.py（CI の test.yml の PG テストで実行）
 - 維持の仕組み: 試験 `docs/handoff/revival-guard/sandbox/scenarios.sql` の場面を、実装便で `backend/tests/` の pytest に移して CI で走らせる（K1）。履歴を残す変更（§7）は別便。
 
 ## 9. 審査（Opus, 2026-10-19）
