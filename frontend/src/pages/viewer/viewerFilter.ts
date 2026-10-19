@@ -11,8 +11,8 @@ export const TAB_ALL = "all";
 /** 既定の並び（アプリの InventoryPage の release_date 降順と同じ。ADR-1014 改訂 2026-10-18） */
 export const DEFAULT_SORT_KEY = "release_date";
 export const DEFAULT_SORT_DIR = "desc" as const;
-/** 並べ替えプルダウンの4択（アプリの SORT_MENU_VALUES と同じ） */
-export const SORT_MENU_VALUES = ["release_date:desc", "unit_price:asc", "quantity:desc", "offered_at:desc"] as const;
+/** 並べ替えプルダウンの3択（既定の発売日の新しい順は見出しで表す。アプリの SORT_MENU_VALUES と同じ） */
+export const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"] as const;
 
 export type SortDir = "asc" | "desc";
 

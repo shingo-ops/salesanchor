@@ -202,13 +202,16 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
             value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
             onChange={(e) => {
               const [k, d] = e.target.value.split(":");
-              if (!k) return;
-              setSortKey(k);
-              setSortDir(d === "asc" ? "asc" : "desc");
+              if (!k) {
+                setSortKey(DEFAULT_SORT_KEY);
+                setSortDir(DEFAULT_SORT_DIR);
+              } else {
+                setSortKey(k);
+                setSortDir(d === "asc" ? "asc" : "desc");
+              }
               setPage(1);
             }}
             options={[
-              { value: "release_date:desc", label: t("viewer.sort.releaseDesc") },
               { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
               { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
               { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },

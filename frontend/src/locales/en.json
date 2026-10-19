@@ -1562,7 +1562,6 @@
     "sortBy": "Sort by {{col}}",
     "sortMenu": {
       "placeholder": "Sort",
-      "releaseDesc": "Release date (newest first)",
       "priceAsc": "Price: low to high",
       "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
