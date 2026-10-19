@@ -14,10 +14,10 @@ API:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
@@ -34,6 +34,7 @@ _ERROR_STATUS = {
     "not_found": (status.HTTP_404_NOT_FOUND, "viewer_not_found"),
     "conflict": (status.HTTP_409_CONFLICT, "viewer_status_conflict"),
     "invalid_days": (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_days"),
+    "already_linked": (status.HTTP_409_CONFLICT, "viewer_already_linked"),
 }
 
 
@@ -72,7 +73,16 @@ class ViewerLoginListResponse(BaseModel):
 
 
 class ExtendRequest(BaseModel):
-    days: int = Field(..., ge=1, le=365, strict=True, description="延長する日数（1〜365）")
+    days: int | None = Field(None, ge=1, le=365, strict=True, description="延長する日数（1〜365）")
+    until_date: date | None = Field(
+        None, description="この日の終わり（日本時間 23:59:59）まで延長する。今日より後・365日以内"
+    )
+
+    @model_validator(mode="after")
+    def _exactly_one(self) -> "ExtendRequest":
+        if (self.days is None) == (self.until_date is None):
+            raise ValueError("days か until_date のどちらか一つだけを指定してください")
+        return self
 
 
 class ViewerReissueResponse(BaseModel):
@@ -110,7 +120,12 @@ async def list_logins_endpoint(viewer_id: int, db: AsyncSession = Depends(get_db
 
 
 async def _change(
-    db: AsyncSession, current_user: User, viewer_id: int, action: str, days: int | None = None
+    db: AsyncSession,
+    current_user: User,
+    viewer_id: int,
+    action: str,
+    days: int | None = None,
+    until_date: date | None = None,
 ) -> dict:
     try:
         item = await viewer_admin.change_status(
@@ -120,6 +135,7 @@ async def _change(
             actor=viewer_admin.ACTOR_PO,
             actor_user_id=int(current_user.id),
             days=days,
+            until_date=until_date,
         )
         await db.commit()
     except ViewerAdminError as exc:
@@ -162,7 +178,7 @@ async def extend_endpoint(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
-    return await _change(db, current_user, viewer_id, "extend", days=payload.days)
+    return await _change(db, current_user, viewer_id, "extend", days=payload.days, until_date=payload.until_date)
 
 
 @router.post(

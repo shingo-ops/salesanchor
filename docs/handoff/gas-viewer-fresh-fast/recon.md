@@ -294,3 +294,12 @@ design.md（docs/handoff/gas-viewer-fresh-fast/design.md、620行）:
 - OverflowTabs の実体（components 直下に .tsx が見つからない。別ディレクトリにあるかは未確認）。
 - 本番で bot に「招待を作成」権限が付いているか、reception_channel_id の実値は未確認（DB・Discord は見ていない）。
 - 招待発行 API を管理画面から呼ぶ際の権限・回数制限（/signup は IP/email の回数制限 viewer.py:433-440。super-admin 経由の扱い）は設計されていない（コード上に無いことのみ確認）。
+
+## 段6（2026-10-19、origin/main d92162bd8 基準。詳細は /tmp/CC報告ファイル/viewer_stage6/recon_raw.md, recon_raw2.md）
+- 延長：backend/app/services/viewer_admin.py:175-179 は trial のみ受け付け、期限は「今+日数」。上限365は backend/app/routers/super_admin_viewers.py:74-75 の ExtendRequest だけ。日付指定の入力は無かった。
+- 画面の延長 Modal：frontend/src/pages/super-admin/ViewerAccountsPage.tsx:459-502。日付入力の金型は専用品が無く、TextField type="date"（frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:276）。
+- 作り直し：backend/app/services/viewer_admin.py:283-297 は pending のみ。画面は frontend/src/pages/super-admin/ViewerAccountsPage.tsx:294-298 で pending のみ表示。
+- 受付：backend/app/discord_gateway/viewer_trial.py:269 は pending 以外を CODE_INVALID、:290-307 は status='trial'・期限14日へ更新（trial/active を通すと本契約がお試しに下がるため、段6で分岐）。
+- 目印の SQL：backend/app/services/viewer_admin.py:43-65（一覧 SQL の中）。通知の対象も同じ条件を使うため、定数に切り出した。
+- 通知の型：backend/app/tasks/master_required_fields_monitor.py と backend/app/celery_app.py の beat_schedule／include。重複防止の型は backend/app/services/review_mail_notifier.py:89-115（Redis キー＋TTL）。送信は backend/app/services/discord_notifier.py:45-64。
+- 期限切れ trial の拒否（変えない）：backend/app/routers/viewer.py:193-200、backend/app/auth/viewer_dependencies.py:88-91。

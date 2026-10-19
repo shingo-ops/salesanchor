@@ -249,3 +249,39 @@ OP-11 21,000円/3box 発送	2026-10-19	In Stock	-	In Stock	-
 - v2（2026-10-19）：APPROVE（条件付き修正を Opus が直接反映）。①〜⑤は反映済み。便2 の regex は月・年またぎで誤るため §5-1 を差し替え・§5-4 に 2 ケース追加。
 - 未解決（実装前に解く・設計合格を妨げない）：仕入元Aの追記 2 欄の現在値、T3 腕「前」の 10/10 JSONL 再利用可否（実行前に更新時刻で判定、不明なら流し直す）。
 - 状態（2026-10-19）：設計審査済み（APPROVE）・PO 承認済み（便2→便1の順）。便2 は本番反映済み（id25、04:19:31Z、verify 合格、PO `!` 実行）・本PRでテストと文書を保存。便1 は未着手。
+
+## 結果と採用案（2026-10-19）
+
+### 便1（共通の指示文の写し raw_copy_v101_f_ctf）の結果
+- T1：12/12 ○。T2(a)：○。T2(b)：18 回中 1 回ずれ。
+- T3：×。写しのぶれが 41→49 に増え、前後差は 52 > 41、語だけの見出し行が混入した。
+- そのため本番には切り替えず、f_ct のまま。DB に f_ctf の行は残っているが、使われていない。
+
+### 試験道具の注意
+- prompt_ab はシステム段に投稿日を渡さない。`run_v102_pipeline` を呼ぶ `_v102_row_fields` に投稿日の引数が無い（backend/app/tools/prompt_ab.py:276-281）。本番側は `load_posted_date` で渡している（backend/app/services/line_analysis_v102_svc.py:1435）。
+- そのため DATE_AHEAD / RELEASE_AHEAD が効かず、試験の status 列は判定に使えない。lines と ship で測る。
+
+### 採用案B（PO 決定「1」）
+- 共通の指示文は変えない。仕入元Aの suppliers.extraction_layout_rules にだけ補足を入れる（231 字、原文の例 1 組と出力の例付き）。
+- 注入先は gemini_raw_copy_v8.py の仕入元別補足の欄（`build_new_system_rules_section` 内、backend/app/services/gemini_raw_copy_v8.py:115-117、見出し「この仕入元の書き方（指示書の手順への当てはめ）」）。
+
+### 案Bの試験結果（`--supplier-rules-file` で実施。K1〜K5 すべて ○）
+|項目|結果|
+|---|---|
+|K1|1 行目が lines に入った回 10/10（前は 0/10）|
+|K2|ずれ 7（基準 6+2 以下）|
+|K3|errors 0/0|
+|K4|Pre-order 10/10（prompt_ab の status 列は使わず、出力の lines に投稿日を入れて context_status を手元で再現して判定）|
+|K5|語だけの見出し行 0/0|
+- 費用：0.588 USD。
+
+### 本番反映
+- 2026-10-19 12:42:48Z。対象の仕入元 1 行だけを更新し、他の 293 行の md5 は変わっていない。
+- 読み直し 13:36Z：1 件目の lines が {2,3}→{1,2,3} になり、In Stock→Pre-order、発送は 11/3〜11/5 になった（JUDGE OK）。
+
+### 戻し方
+- extraction_layout_rules を NULL に戻す（md5 が一致した場合だけ）。
+
+### 残り
+- 仕入元Aの新しい投稿で効いているかを観測する。
+- prompt_ab に投稿日を渡す改修は、任意の別件にする。
