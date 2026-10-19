@@ -649,7 +649,13 @@ def resolve_condition(
 # ---------------------------------------------------------------------------
 
 
-def load_condition_entries(session: Session) -> list[dict]:
+# ADR-1031: v102 専用の状態の群（既定の load_condition_entries は返さない）
+SCOPED_VALUE_GROUPS = ("single", "promo_pack")
+
+
+def load_condition_entries(
+    session: Session, include_scoped_groups: bool = False
+) -> list[dict]:
     """
     priority > 0 の conditions 行を condEntries として返す。
     priority ASC → app_kubun 長 DESC → code ASC でソート済み（resolveCondition_ と同順）。
@@ -660,6 +666,10 @@ def load_condition_entries(session: Session) -> list[dict]:
 
     注意: migration 適用前の環境（CI テスト DB 等）で match_type / effect カラムが
     存在しない場合は fallback クエリに切り替えてデフォルト値を補完する。
+
+    include_scoped_groups（ADR-1031）: False（既定）のとき value_group が
+    single / promo_pack の行を返さない。これらは v102 だけが使う行で、
+    v6・v10・v101 など他の呼び出し元には渡さない。v102 は True を渡す。
     value_group / value_rank（状態の価値順・ADR-1023）の列は information_schema で
     有無を先に調べ、無い環境では読まずに None を返す（アプリが migration より先に出ても動く）。
     """
@@ -732,6 +742,9 @@ def load_condition_entries(session: Session) -> list[dict]:
                 )
             ).fetchall()
             has_match_type = False
+
+    if has_match_type and has_value_rank and not include_scoped_groups:
+        rows = [r for r in rows if r[9] not in SCOPED_VALUE_GROUPS]
 
     if has_match_type:
         return [

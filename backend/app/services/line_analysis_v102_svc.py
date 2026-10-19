@@ -42,6 +42,10 @@ from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED,
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_BULK,
+    PRODUCT_KUBUN_PROMO_PACK,
+    PRODUCT_KUBUN_SINGLE,
+    VALUE_GROUP_PROMO_PACK,
+    VALUE_GROUP_SINGLE,
     load_product_first_masters,
     with_cond_terms,
 )
@@ -203,14 +207,22 @@ def load_v102_masters(session: Session) -> tuple[dict, dict]:
 
     試作版 prompt_ab._load_v10_masters(product_first=True) と同じ中身。prompt_ab が捨てている単位 id の索引も返す。
     """
-    cond_entries = analyzer.load_condition_entries(session)
+    all_entries = analyzer.load_condition_entries(session, include_scoped_groups=True)
+    # ADR-1031：single / promo_pack 群の行は、シングル系・プロモパック系の判定だけが使う。通常の cond_entries には入れない
+    cond_entries = [e for e in all_entries if e.get("value_group") not in analyzer.SCOPED_VALUE_GROUPS]
+    scoped_entries = {
+        group: tuple(e for e in all_entries if e.get("value_group") == group) for group in analyzer.SCOPED_VALUE_GROUPS
+    }
     status_entries = analyzer.load_status_master(session)
     (_pc, _ua, unit_canonical_to_uuid, _ca, cond_canonical_to_uuid, unit_alias_to_info) = analyzer.load_lookup_maps(session)
     masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
         # 除外ワードの判定に使う状態の合図の語は cond_entries から一度だけ作る（新しい表・設定値は持たない）
-        "product_first": with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
+        "product_first": dataclass_replace(
+            with_cond_terms(load_product_first_masters(session), build_cond_terms(cond_entries)),
+            scoped_cond_entries=scoped_entries,
+        ),
         _SHIP_ENTRIES_KEY: analyzer.load_ship_master(session),
         _SHIP_DROP_KEY: analyzer.load_ship_drop_master(session),
     }
@@ -627,8 +639,29 @@ def _bounded_number(value: object) -> object:
         return None
 
 
-def _condition_columns(canonical: str | None, masters: dict) -> tuple[str, int, bool]:
-    """(condition_canonical, condition_id, 解けたか)。未解決（none・不明・マスタに無い）は v6 と同じ FLAG_SINGLE（CN0008）。"""
+# 商品の分類 → 状態の群（ADR-1031）。「PSA10」は single と promo_pack の2行あるので、状態の名前から id を引くときは群の中で引く
+_SCOPED_GROUP_OF_KUBUN = {PRODUCT_KUBUN_SINGLE: VALUE_GROUP_SINGLE, PRODUCT_KUBUN_PROMO_PACK: VALUE_GROUP_PROMO_PACK}
+
+
+def _scoped_condition_id(canonical: str | None, product_category: str | None, masters: dict) -> int | None:
+    """シングル系・プロモパック系の件の状態 id を、その群の行の中で引く。群の行が無い・名前が無いときは None。"""
+    group = _SCOPED_GROUP_OF_KUBUN.get(product_category or "")
+    if not canonical or group is None:
+        return None
+    rows = masters["product_first"].scoped_cond_entries.get(group, ())
+    return next((int(e["cond_id"]) for e in rows if e.get("canonical") == canonical), None)
+
+
+def _condition_columns(
+    canonical: str | None, masters: dict, product_category: str | None = None,
+) -> tuple[str, int, bool]:
+    """(condition_canonical, condition_id, 解けたか)。未解決（none・不明・マスタに無い）は v6 と同じ FLAG_SINGLE（CN0008）。
+
+    product_category がシングル系・プロモパック系なら、その群の行の中で名前から id を引く（ADR-1031）。
+    """
+    scoped_id = _scoped_condition_id(canonical, product_category, masters)
+    if scoped_id is not None:
+        return canonical, scoped_id, True
     entries, by_canonical = masters["cond_entries"], masters["cond_canonical_to_uuid"]
     cond_id = by_canonical.get(canonical) if canonical else None
     if cond_id is None and canonical:
@@ -679,7 +712,9 @@ def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) 
     unit_canonical = None if unit in (None, "none") else unit
     unit_id = unit_ids.get(unit_canonical) if unit_canonical else None
     condition = item.get("condition")
-    condition_canonical, condition_id, _resolved = _condition_columns(None if condition in (None, "none") else condition, masters)
+    condition_canonical, condition_id, _resolved = _condition_columns(
+        None if condition in (None, "none") else condition, masters, item.get("product_category")
+    )
     quantity = _bounded_number(item.get("quantity_normalized"))
     price = _bounded_number(item.get("price_normalized"))
     out_of_range = [
