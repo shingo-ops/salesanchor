@@ -11376,6 +11376,17 @@
             "title": "Items",
             "type": "array"
           },
+          "next_expiry_in_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry In Seconds"
+          },
           "page": {
             "title": "Page",
             "type": "integer"
@@ -12099,6 +12110,16 @@
       "InventoryRow": {
         "description": "在庫表ビューの 1 明細行（商品×仕入元×状態）。読み取り専用。\n\nadmin 専用フィールド（notes/source/status）は含めない。最終ユーザー（各クライアントの\n営業担当ロール以上）が閲覧 + 見積/請求/発注作成するための列のみ。\ncondition は migration 089 の 16 値だが、旧データ混入時も 500 にしないため str で受ける\n（inventory_offers 500 の教訓）。",
         "properties": {
+          "badge_cheapest": {
+            "default": false,
+            "title": "Badge Cheapest",
+            "type": "boolean"
+          },
+          "badge_most_stock": {
+            "default": false,
+            "title": "Badge Most Stock",
+            "type": "boolean"
+          },
           "category": {
             "anyOf": [
               {

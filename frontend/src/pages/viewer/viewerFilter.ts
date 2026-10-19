@@ -215,3 +215,50 @@ export function seriesTabs(rows: ViewerRow[]): TabCount[] {
 export function distinctValues(rows: ViewerRow[], pick: (r: ViewerRow) => string): string[] {
   return [...new Set(rows.map(pick).filter((v) => v !== ""))].sort(compareText);
 }
+
+// ── 同じ商品のまとまりの「最安」「在庫最多」バッジ（ADR-1014 改訂 2026-10-19（2）） ──────────────
+
+export type BlockFlags = { badge_cheapest: boolean; badge_most_stock: boolean };
+
+/** 値が数なら整数に丸めて返す（画面に出る値と同じ）。空・数でない値は null（比べる対象から外す）。 */
+function roundedOrNull(s: string): number | null {
+  if (s === "") return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+/**
+ * 絞り込み後・ページ前の行に、まとまりごとの最安・在庫最多の印を付ける。
+ * まとまり = 発売日・英語名・日本語名・ステータス・状態が全て同じ行（ADR-1014 改訂 2026-10-19（3））。最小（最大）と等しい行は全部に付け、
+ * 値のある行が1行以下、または全部同じ値のときは付けない。T の項目（idx など）は落とさない。
+ */
+export function markBlockBadges<T extends ViewerRow>(rows: T[]): (T & BlockFlags)[] {
+  const groups = new Map<string, { prices: (number | null)[]; qtys: (number | null)[] }>();
+  const keyOf = (r: T) => `${r.release_date}\u0000${r.english_title}\u0000${r.japanese_title}\u0000${r.status}\u0000${r.condition}`;
+  const parsed = rows.map((r) => ({ price: roundedOrNull(r.unit_price), qty: roundedOrNull(r.quantity) }));
+  rows.forEach((r, i) => {
+    const key = keyOf(r);
+    const g = groups.get(key) ?? { prices: [], qtys: [] };
+    g.prices.push(parsed[i].price);
+    g.qtys.push(parsed[i].qty);
+    groups.set(key, g);
+  });
+  // 値が2つ以上あり、最小と最大が違うときだけ、その極値を返す（それ以外は null）
+  const extremes = (vals: (number | null)[]) => {
+    const nums = vals.filter((v): v is number => v !== null);
+    if (nums.length < 2) return null;
+    const lo = Math.min(...nums);
+    const hi = Math.max(...nums);
+    return lo < hi ? { lo, hi } : null;
+  };
+  const stats = new Map<string, { price: ReturnType<typeof extremes>; qty: ReturnType<typeof extremes> }>();
+  for (const [key, g] of groups) stats.set(key, { price: extremes(g.prices), qty: extremes(g.qtys) });
+  return rows.map((r, i) => {
+    const s = stats.get(keyOf(r))!;
+    return {
+      ...r,
+      badge_cheapest: s.price !== null && parsed[i].price === s.price.lo,
+      badge_most_stock: s.qty !== null && parsed[i].qty === s.qty.hi,
+    };
+  });
+}

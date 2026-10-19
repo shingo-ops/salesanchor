@@ -345,8 +345,9 @@ def _new_single_statement(session, *, merge: bool, where: str, params: dict, sor
     total, pages, facets = None, [], set()
     for r in session.execute(text(sql), {**params, "limit": limit, "offset": offset}).mappings().all():
         r = dict(r)
-        assert [k for k in r if k.startswith("__")] == ["__kind", "__total", "__ord", "__f_supplier_id",
-                                                        "__f_provider", "__f_category", "__f_condition", "__f_unit"]
+        assert [k for k in r if k.startswith("__")] == ["__kind", "__total", "__ord", "__badge_cheapest", "__badge_most_stock",
+                                                        "__expiry_s", "__f_supplier_id", "__f_provider", "__f_category",
+                                                        "__f_condition", "__f_unit"]
         if r["__kind"] == "total":
             total = int(r["__total"])
         elif r["__kind"] == "page":
@@ -530,6 +531,58 @@ def test_bin1_fresh_only_excludes_rows_older_than_24_hours_and_total_follows(pg,
     assert total_fresh == len(items_fresh) == 1
 
 
+def _expiry_s(pg_fixture, *, max_age_hours: int, fresh_only: bool):
+    """API（list_inventory_view）と同じ窓の決め方で、total 枝の __expiry_s を返す（便4）。"""
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql, _build_view_filters
+
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    conditions, params = _build_view_filters(**none)
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    window_hours = max_age_hours
+    if fresh_only:
+        window_hours = (min(max_age_hours, distribution.FRESH_WINDOW_HOURS) if max_age_hours
+                        else distribution.FRESH_WINDOW_HOURS)
+    age_condition, age_params = distribution._age_window(window_hours)
+    params = {**params, **age_params}
+    expiry = bool(window_hours)
+    if expiry:
+        params["expiry_hours"] = window_hours
+    head, final = distribution.distribution_rows_parts(
+        include_flag_single=False, age_condition=age_condition, merge_same_post=False)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=False, where=where,
+                                    sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC", expiry=expiry)
+    with Session(pg_fixture[1]) as session:
+        for r in session.execute(text(sql), {**params, "limit": 50, "offset": 0}).mappings().all():
+            if r["__kind"] == "total":
+                return r["__expiry_s"]
+    raise AssertionError("total 枝が無い")
+
+
+def test_bin4_expiry_seconds_for_row_posted_23h_ago(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=24, fresh_only=False) - 3600) <= 120
+
+
+def test_bin4_expiry_is_none_when_window_is_unbounded(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert _expiry_s(pg, max_age_hours=0, fresh_only=False) is None
+
+
+def test_bin4_expiry_uses_24h_basis_when_fresh_only_and_max_age_is_zero(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=0, fresh_only=True) - 3600) <= 120
+
+
+def test_bin4_expiry_uses_24h_basis_when_fresh_only_and_max_age_is_48(pg, ids):
+    _add_row(pg, _add_job(pg, 23), ids.p1, ids.box, basis="R2:甲")
+    assert abs(_expiry_s(pg, max_age_hours=48, fresh_only=True) - 3600) <= 120
+
+
+def test_bin4_expiry_is_none_when_no_rows(pg, ids):
+    assert _expiry_s(pg, max_age_hours=24, fresh_only=False) is None
+
+
 def test_bin1_sort_groups_by_release_date_then_title(pg, ids):
     with pg[0].cursor() as cur:
         cur.execute("UPDATE public.products SET name_en = 'Alpha', release_date = '2026-02-01' WHERE id = %s", (ids.p1,))
@@ -673,3 +726,157 @@ def test_bin3_search_and_supplier_filters(pg, ids, searchable):
     # supplier_ids と hide_supplier_ids の併用
     assert _search_items(pg, hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])
     assert _search_items(pg, supplier_ids=f"{searchable.s1},{searchable.s2}", hide_supplier_ids=str(searchable.s1)) == (1, ["ワンピース"])
+
+
+# --- ADR-1014 改訂 2026-10-19（2）: 同じ商品のまとまりの最安・在庫最多バッジ ------------------------------
+
+
+def _badge_rows(session, *, merge, where, params, limit, offset):
+    """page の行の (__ord, __badge_cheapest, __badge_most_stock, row_key) を __ord 順に返す。
+
+    前例 _view_items と同じ形（同期の Session で _build_inventory_view_sql を直接流す）。
+    並びは release_date DESC に固定し、年齢の窓は _ARGS（窓なし）を使う。where / params は _build_view_filters の値。
+    """
+    from app.routers.inventory_offers import _SORT_COLUMNS, _build_inventory_view_sql
+
+    head, final = distribution.distribution_rows_parts(**_ARGS, merge_same_post=merge)
+    sql = _build_inventory_view_sql(head=head, final_main=final, merge=merge, where=where,
+                                    sort_col=_SORT_COLUMNS["release_date"], order_dir="DESC")
+    out = []
+    for r in session.execute(text(sql), {**params, "limit": limit, "offset": offset}).mappings().all():
+        if r["__kind"] == "page":
+            out.append((r["__ord"], r["__badge_cheapest"], r["__badge_most_stock"], r["row_key"]))
+    return sorted(out, key=lambda t: t[0])
+
+
+def _badge_filters(**overrides):
+    from app.routers.inventory_offers import _build_view_filters
+
+    none = dict.fromkeys(("q", "work_code", "category", "offer_type", "hide_supplier_ids", "hide_categories", "condition",
+                          "condition_in", "unit_in", "offer_type_in", "qty_min", "qty_max", "price_min", "price_max"))
+    conditions, params = _build_view_filters(**{**none, **overrides})
+    return (("WHERE " + " AND ".join(conditions)) if conditions else ""), params
+
+
+def _badges_by_key(pg_fixture, *, merge=False, limit=50, offset=0, **filters) -> dict:
+    where, params = _badge_filters(**filters)
+    with Session(pg_fixture[1]) as session:
+        rows = _badge_rows(session, merge=merge, where=where, params=params, limit=limit, offset=offset)
+    return {key: (cheap, most) for _, cheap, most, key in rows}
+
+
+def test_b1_cheapest_and_most_stock_mark_every_row_equal_to_the_extreme(pg, ids):
+    job = _add_job(pg)
+    a = _add_row(pg, job, ids.p1, ids.box, note="a", price=100, qty=10)
+    b = _add_row(pg, job, ids.p1, ids.box, note="b", price=200, qty=20)
+    c = _add_row(pg, job, ids.p1, ids.box, note="c", price=100, qty=20)
+    got = _badges_by_key(pg)
+    assert got[a] == (True, False)
+    assert got[b] == (False, True)
+    assert got[c] == (True, True)
+
+
+def test_b2_no_badge_for_single_row_or_all_same_values(pg, ids):
+    job = _add_job(pg)
+    s1 = _add_row(pg, job, ids.p1, ids.box, note="s1", price=100, qty=5)  # p1: 全部同じ価格・同じ数量
+    s2 = _add_row(pg, job, ids.p1, ids.box, note="s2", price=100, qty=5)
+    only = _add_row(pg, job, ids.p2, ids.box, note="only", price=100, qty=5)  # p2: 1行だけ
+    got = _badges_by_key(pg)
+    assert got[s1] == got[s2] == got[only] == (False, False)
+
+
+def test_b2_empty_quantity_is_left_out_of_most_stock(pg, ids):
+    job = _add_job(pg)
+    a = _add_row(pg, job, ids.p1, ids.box, note="a", price=100, qty=None)
+    b = _add_row(pg, job, ids.p1, ids.box, note="b", price=200, qty=5)
+    c = _add_row(pg, job, ids.p1, ids.box, note="c", price=300, qty=9)
+    got = _badges_by_key(pg)
+    assert got[a] == (True, False)  # 数量が空の行は在庫最多の比べから外れる
+    assert got[b] == (False, False)
+    assert got[c] == (False, True)
+
+
+def test_b2_empty_quantity_only_one_valued_row_gets_no_most_stock(pg, ids):
+    job = _add_job(pg)
+    a = _add_row(pg, job, ids.p1, ids.box, note="a", price=100, qty=None)
+    b = _add_row(pg, job, ids.p1, ids.box, note="b", price=200, qty=5)
+    got = _badges_by_key(pg)
+    assert got[a] == (True, False)
+    assert got[b] == (False, False)  # 数量のある行が1行だけなので付けない
+
+
+def test_b3_badges_are_decided_within_the_filtered_rows(pg, ids):
+    job = _add_job(pg)
+    a = _add_row(pg, job, ids.p1, ids.box, note="a", price=100, qty=1)
+    b = _add_row(pg, job, ids.p1, ids.box, note="b", price=200, qty=1)
+    c = _add_row(pg, job, ids.p1, ids.box, note="c", price=300, qty=1)
+    assert _badges_by_key(pg)[a][0] is True
+    got = _badges_by_key(pg, price_min=200)  # a が絞り込みで消え、残りの b が最安になる
+    assert a not in got and got[b] == (True, False) and got[c] == (False, False)
+    assert _badges_by_key(pg, price_min=300) == {c: (False, False)}  # 1行だけ残ると付かない
+
+
+def test_b3_badges_are_decided_across_pages(pg, ids):
+    job = _add_job(pg)
+    keys = [_add_row(pg, job, ids.p1, ids.box, note=f"n{i}", price=100 + i * 100, qty=1) for i in range(3)]
+    seen: dict = {}
+    for offset in range(3):  # per_page=1 で1行ずつ取る
+        page = _badges_by_key(pg, limit=1, offset=offset)
+        assert len(page) == 1
+        seen.update(page)
+    assert set(seen) == set(keys)
+    assert [seen[k][0] for k in keys] == [True, False, False]  # どのページでも、まとまり全体で最安が決まる
+
+
+def test_b3b_merge_mode_compares_the_values_shown_on_screen(pg, ids):
+    job = _add_job(pg)
+    merged_first = _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:甲", price=1000, qty=3)
+    _add_row(pg, job, ids.p1, ids.box, note="X", basis="R2:乙", price=1200, qty=4)  # まとめると 数量7・単価1200
+    other = _add_row(pg, job, ids.p1, ids.box, note="Y", price=1100, qty=5)
+    got = _badges_by_key(pg, merge=True)
+    assert set(got) == {merged_first, other}
+    assert got[merged_first] == (False, True)  # 合計数量 7 > 5
+    assert got[other] == (True, False)  # まとめた行の単価は最大の 1200、other は 1100
+
+
+# --- ADR-1014 改訂 2026-10-19（3）: 比べる単位は 同じ商品・ステータス・状態 ---------------------------------
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f1_different_status_is_compared_separately(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", status="In Stock", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", status="In Stock", price=200, qty=9)
+    b1 = _add_row(pg, job, ids.p1, ids.box, note="b1", status="Pre-order", price=300, qty=1)
+    b2 = _add_row(pg, job, ids.p1, ids.box, note="b2", status="Pre-order", price=400, qty=3)
+    got = _badges_by_key(pg, merge=merge)
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)
+    assert got[b1] == (True, False)
+    assert got[b2] == (False, True)
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f2_different_condition_is_compared_separately(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", price=200, qty=9)
+    c1 = _add_row(pg, job, ids.p1, ids.case, note="c1", price=500, qty=1, canonical="Case", unit="Case")
+    c2 = _add_row(pg, job, ids.p1, ids.case, note="c2", price=600, qty=3, canonical="Case", unit="Case")
+    got = _badges_by_key(pg, merge=merge)
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)
+    assert got[c1] == (True, False)
+    assert got[c2] == (False, True)
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_f2b_a_group_with_a_single_row_gets_no_badge(pg, ids, merge):
+    job = _add_job(pg)
+    a1 = _add_row(pg, job, ids.p1, ids.box, note="a1", price=100, qty=5)
+    a2 = _add_row(pg, job, ids.p1, ids.box, note="a2", price=200, qty=9)
+    c = _add_row(pg, job, ids.p1, ids.case, note="c", price=500, qty=50, canonical="Case", unit="Case")
+    got = _badges_by_key(pg, merge=merge)
+    assert got[c] == (False, False)  # 旧規則（商品だけで比べる）なら数量50 に在庫最多が付く
+    assert got[a1] == (True, False)
+    assert got[a2] == (False, True)

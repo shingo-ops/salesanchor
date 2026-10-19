@@ -157,6 +157,8 @@ class InventoryRow(BaseModel):
     ship_ja: str | None = None        # 発送
     status: str | None = None         # LINE 解析の status（In Stock / Pre-order など。値のまま）
     merged_count: int = 1             # まとめた行数（まとめない行は 1）
+    badge_cheapest: bool = False      # 同じ商品・ステータス・状態のまとまり（絞り込み後・ページ前）で最安か（ADR-1014 改訂 2026-10-19（3））
+    badge_most_stock: bool = False    # 同じ商品・ステータス・状態のまとまり（絞り込み後・ページ前）で在庫最多か（ADR-1014 改訂 2026-10-19（3））
     extraction_item_ids: list[str] = []  # 行の元になった extraction_items.id（まとめた行は組の全件。解析パネル用）
 
 
@@ -201,6 +203,9 @@ class InventoryListResponse(BaseModel):
     # LINE の投稿から何時間以内の行を出しているか（0 は絞らない・None は配信設定なしで空）。
     window_hours: int | None = None
     fresh_window_hours: int = 24  # 「24時間以内」トグルの窓（時間）。値は tcg_distribution_svc.FRESH_WINDOW_HOURS
+    # いま出ている行（まとめ前・絞り込み前）のうち最も早く時間の枠から外れる行まで、あと何秒か。
+    # 負は既に外れている。None は外れる行なし。
+    next_expiry_in_seconds: int | None = None
 
 
 __all__ = [

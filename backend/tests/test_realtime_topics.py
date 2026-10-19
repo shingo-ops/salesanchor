@@ -39,6 +39,72 @@ def test_every_write_route_is_in_exactly_one_table():
     assert not missing, f"どちらの表にも無い書き込みルート: {missing}"
 
 
+def test_inventory_signal_routes_exist_and_are_writes():
+    from app.realtime.topics import INVENTORY_SIGNAL_ROUTES
+
+    routes = set(_write_routes())
+    ghost = sorted(INVENTORY_SIGNAL_ROUTES - routes)
+    assert not ghost, f"存在しない書き込みルートが在庫の表にある: {ghost}"
+    assert all(m in _WRITE for m, _ in INVENTORY_SIGNAL_ROUTES)
+
+
+_EXPECTED_INVENTORY_SIGNAL_ROUTES = {
+    ("POST", "/api/v1/conditions"),
+    ("POST", "/api/v1/conditions/import/commit"),
+    ("DELETE", "/api/v1/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/conditions/{condition_id}"),
+    ("POST", "/api/v1/products"),
+    ("DELETE", "/api/v1/products/{product_id}"),
+    ("PATCH", "/api/v1/products/{product_id}"),
+    ("POST", "/api/v1/units"),
+    ("POST", "/api/v1/units/import/commit"),
+    ("DELETE", "/api/v1/units/{unit_id}"),
+    ("PATCH", "/api/v1/units/{unit_id}"),
+    ("POST", "/api/v1/super-admin/conditions"),
+    ("POST", "/api/v1/super-admin/conditions/import/commit"),
+    ("DELETE", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("POST", "/api/v1/super-admin/suppliers"),
+    ("POST", "/api/v1/super-admin/suppliers/import/commit"),
+    ("DELETE", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("PATCH", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("POST", "/api/v1/super-admin/tcg/types"),
+    ("DELETE", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("PATCH", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("POST", "/api/v1/super-admin/units"),
+    ("POST", "/api/v1/super-admin/units/import/commit"),
+    ("DELETE", "/api/v1/super-admin/units/{unit_id}"),
+    ("PATCH", "/api/v1/super-admin/units/{unit_id}"),
+    ("PUT", "/api/v1/tcg/distribution/settings/{key}"),
+    ("POST", "/api/v1/tcg/extraction-jobs/{extraction_job_id}/reanalyze"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/corrections"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"),
+    ("POST", "/api/v1/tcg/line-devices/import"),
+    ("POST", "/api/v1/tcg/line-import"),
+    ("POST", "/api/v1/tcg/line-import/android"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/commit"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/resolve"),
+    ("POST", "/api/v1/tcg/products"),
+    ("POST", "/api/v1/tcg/products/create"),
+    ("DELETE", "/api/v1/tcg/products/detail/{product_id}"),
+    ("PUT", "/api/v1/tcg/products/detail/{product_id}"),
+    ("POST", "/api/v1/tcg/products/import/commit"),
+    ("POST", "/api/v1/tcg/products/{product_id}/search-keywords"),
+    ("POST", "/api/v1/tcg/review/csv/commit"),
+    ("PUT", "/api/v1/tcg/v102/posts/{job_id}/items"),
+}
+
+
+def test_inventory_signal_routes_count():
+    from app.realtime.topics import INVENTORY_SIGNAL_ROUTES
+
+    assert len(_EXPECTED_INVENTORY_SIGNAL_ROUTES) == 45
+    # 増減は設計（ADR-1016 改訂 2026-10-19）の改訂を通す
+    assert set(INVENTORY_SIGNAL_ROUTES) == _EXPECTED_INVENTORY_SIGNAL_ROUTES
+
+
 def test_tables_have_no_nonexistent_routes():
     routes = set(_write_routes())
     ghost = sorted((set(WRITE_ROUTE_TOPICS) | set(NO_SIGNAL_ROUTES)) - routes)
