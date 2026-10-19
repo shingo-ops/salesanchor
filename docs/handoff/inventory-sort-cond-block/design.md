@@ -30,6 +30,7 @@ PO（2026-10-19）「価格の安い順に並び替えると状態も並び替�
 ### 4-1b. 試験（backend/tests）
 - test_inventory_distribution_rows_pg.py `_old_three_statements` の `rows_sql`（:318-322）の SELECT に、本番と同じ `, MIN(x.sort_ord) OVER (PARTITION BY x.product_id, x.condition) AS cond_block` を足す（方式 (a)。旧側にも同じ列を持たせ、:379-381・:423-438 の `new == old` をそのまま成り立たせる）。facets は DISTINCT 5列なので影響なし。
 - 同ファイルに S1・S2 の試験を新設。
+- `_no_sort_ord` に cond_block を追加（CI で判明、Opus 承認。cond_block は MIN(sort_ord) なので sort_ord と同じ理由で窓の内外で番号が変わる）。
 - test_inventory_distribution_rows.py: 変わるのは `_VIEW_SQL_BEFORE`（:117-120、長さと SHA256。既定の並びでも rows_x が変わるため）と期待文字列 :134-135 だけ。`_GOLDEN`（:124-129）と :132-133・:136-137・:142 は変わらない。これら以外が変わったら止めて Opus に報告。
 ### 4-2. 閲覧ページ（frontend/src/pages/viewer/viewerFilter.ts sortRows）
 - else 枝で sortKey !== "release_date" のとき、並べる前に `release_date + "\u0000" + english_title + "\u0000" + japanese_title + "\u0000" + condition` をキーに渡された rows の最小 idx を Map で求め、日本語名のキーの次・選んだ列の前に「状態ブロック番号の昇順」のキーを足す。name・release_date の枝は変えない。

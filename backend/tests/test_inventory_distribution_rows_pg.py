@@ -430,8 +430,9 @@ def test_fresh_window_inside_equals_the_previous_outer_filter_for_total_and_page
                 new_total, new_page, new_facets = _new_single_statement(
                     session, where="", params=new_age_params, args=new_args, **common)
                 # sort_ord は窓の行数で採番が変わる並びの内部番号（API 応答に出ない）。行の順番と他の全列は比べる
+                # cond_block は sort_ord から作る（MIN(sort_ord)）ので同じく外す
                 def _no_sort_ord(rows):
-                    return [{k: v for k, v in r.items() if k != "sort_ord"} for r in rows]
+                    return [{k: v for k, v in r.items() if k not in ("sort_ord", "cond_block")} for r in rows]
 
                 assert new_total == old_total
                 assert _no_sort_ord(new_page) == _no_sort_ord(old_page)
