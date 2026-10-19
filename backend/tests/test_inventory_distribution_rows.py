@@ -114,11 +114,11 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
 
 
 # fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
-# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後、ADR-1014 改訂 2026-10-19（5）で rows_x に cond_block を足した後の値。列の追加以外は変えていないことは
+# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後、ADR-1014 改訂 2026-10-19（5）で rows_x に cond_block を足した後、shime-review-exclude 便（§4-5）で在庫表に cr_shime の定数 lateral を足した後の値。列の追加以外は変えていないことは
 # PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
 _VIEW_SQL_BEFORE = {
-    False: (28007, "91dc2d28fbcf89f5b8a69a30ad29303097d346570f012aadbfc99377f77fa25a"),
-    True: (29924, "8e2967673e273cb03334c5ce13d3d23798ba3f86b3da454f7c66fa2677381355"),
+    False: (28166, "4ddb475fb2db63628a74948e72d03237a3f5a55e8f404de5aabcc7bef257db99"),
+    True: (30083, "a1fefd1ec676a754d25cdaba4e5e13b08c9e48b45c20c72da013fbe6eff9b8ad"),
 }
 
 
@@ -266,11 +266,12 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # g28 便1（バルク状態）で RESULT_CONDITION_ORDER に Bulk を足して再生成した。差は Bulk の WHEN 句1つのみ（golden_diff.txt）。
 # result-order-condition-value 便（2026-10-18）で、状態の並びを固定の表（RESULT_CONDITION_ORDER）から状態マスタ（public.conditions の value_group / value_rank・ADR-1023）の副問い合わせに替えて再生成した。差は ORDER BY の状態の部分1か所のみ（4通りとも同じ差）。CI で全体が約2倍遅くなったため、行ごとの副問い合わせを InitPlan（1回だけ評価する jsonb）に替えて再生成した。
 # ADR-1031 で VALUE_GROUP_ORDER に promo_pack・single を足して再生成した。差は ORDER BY の状態の部分1か所のみ（WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 の追加と、群の数に連動する価値順位なしの基準値 3000→5000。4通りとも同じ差。/tmp/CC報告ファイル/adr1031/sql_diff.txt）。
+# shime-review-exclude 便（§4-5）で、在庫表の側に cr_shime の定数の lateral（SELECT FALSE AS settled）と cr_reasons での参照を足して再生成した。差はこの部分だけ（4通りとも +159 文字、/tmp/CC報告ファイル/shime-review-exclude-20261019/impl3/sql-diff.txt）。
 _GOLDEN = {
-    (False, False): (25333, "39f5e9a21094b607f213bf6471c2e47439c163e045c9a08f352bc2273dd03a99"),
-    (False, True): (26484, "3f9e2cf32e8bccc298d6cd541edd2d0d27ef1e41d57b6e6e13f2e5a04b4ffe9d"),
-    (True, False): (25367, "3e82c6430df5bbf2d86304582ab3d1afc326e3a9bdd9d31a7fe5730069c89182"),
-    (True, True): (26518, "7f26e77ea15b7c0b0f9fcae410fc1aada33af4418f4485c6fa8ee702a7d96265"),
+    (False, False): (25492, "8241dc883fb882805aae26fd50705aa09c23457b86ce7bf6f1bc2b3816ce2497"),
+    (False, True): (26643, "b7ec5926896d7a63161fcc70be6364e58d97f0bb5d788884bc4b16aade00e82b"),
+    (True, False): (25526, "9de981455fb5678d5b5a54d67c1e5dbbe3b709f4d53cb238ca6a2cf6a9907962"),
+    (True, True): (26677, "c4d7cfa5c13b9e0b5d66701d805d1b10033b718ac30d89de76efed5efae9b802"),
 }
 
 

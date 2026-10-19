@@ -201,6 +201,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 | 旧エンジンの再解析 `backend/app/services/tcg_analyzer_svc.py:1592`・:1801 | :1592 は商品の修正がある行だけを通る道（:1586-1592）なので④で settled は偽になり、変わらない。:1801 で甲に当たる行を再解析すると、保存する review_reasons から2つの理由が抜ける（新しい規則と同じ値）。:1801 の候補値は status・exclusion を持たないので、古い保存値で「形」を判定する |
 | 試験 `backend/tests/test_tcg_analysis_review.py:220`・`backend/tests/test_inventory_distribution_rows_pg.py:99`・`backend/tests/test_v102_human_decisions_pg.py:283`・:445・`backend/tests/test_tcg_condition_review.py:159`・`backend/tests/test_tcg_distribution_pg.py`・`backend/tests/test_tcg_import_progress_pg.py`・`backend/tests/test_line_analysis_v102_pg.py`・`backend/tests/test_tcg_work_matching_integration.py`・`backend/tests/test_review_gemini_summary_pg.py` | review_joins を通るので追従する。期待値の変更は不要の見込み（〆の形の試験データが無い）。CI で確かめる |
 | 試験 `backend/tests/test_tcg_condition_review_fenced.py:29`・:41 | OFFSET 0 の数の期待を 2→3・9→10 に直す（§2） |
+| 試験 `backend/tests/test_inventory_distribution_rows.py:119`（_VIEW_SQL_BEFORE）・:269（_GOLDEN） | 在庫表の SQL の長さと SHA-256 の固定値。shime=False でも cr_reasons が cr_shime.settled を参照するので、定数の lateral（`CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime`）と参照の分だけ SQL が変わる（CI で6件とも +159 文字、§11-6）。差がこの部分だけであることを新旧 SQL の diff で確かめてから固定値を更新し、各定数の上のコメントに1行足す（過去の便と同じやり方、commit 9a2af2049） |
 
 ### 接触面分析（6面）
 
@@ -313,3 +314,10 @@ T2・T3 の本番の読み方: SQL は Python で review_joins から作り、�
 ### 11-5. Reviewer（opus）3回目（§4-5 の改訂）: APPROVE（2026-10-19）
 
 shime=False の文字列から定数の lateral と settled の参照4か所を除くと origin/main と完全一致（素・fenced とも）。置換数5、OFFSET 0 は素3・fenced10、cr_pa・cr_sa 0。:480 は WHERE が価格ありに限るため、:524 は cr.canonical・cr.effect しか使わないため、数字は変わらない。T3 の AUDIT ms は前後の比としてのみ根拠にする（変更前のばらつき 1159〜1337ms より基準が広く、12倍はばらつきを大きく超える）。軽微な指摘を反映: 取り込み進捗も shime=False に、試験 (m) を fenced なしにも広げ (n) をまとめあり・なしに (o) を追加、lateral の文字列を変数に分ける書き方を明記。マージ前に main の取り込みを CI で確かめる。
+
+### 11-6. T3 の測り直しと CI の失敗（HEAD 060a07cbe、2026-10-19、verify3/REPORT.md・ci-fail/）
+
+- T3 要確認一覧1ページ目: 前後交互に各5回（捨て運転各1回）。変更前の中央値 947ms、変更後の中央値 1205ms、基準 1236.4ms で合格。2回目の 0.2ms 超えは、変更前1回目の外れ値 1848ms によるもの。
+- CI ①: pytest-run-internal で6件失敗。`backend/tests/test_inventory_distribution_rows.py:107`・:283 の固定値と比べて、4通りとも +159 文字。§4-5 の定数の lateral の分。固定値の更新を §6 に追加した。shime=False で lateral を出さない形は、cr_reasons が settled を参照するため採らない。
+- CI ②: pytest (SQLite + PostgreSQL RLS) は ① の集約で、① に連動して落ちただけ。
+- CI ③: process-artifacts gate は「### GO記録」が無いため。services を変更する PR の手続きで、GO の後に本文へ足す。
