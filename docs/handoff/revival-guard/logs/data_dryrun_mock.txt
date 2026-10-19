@@ -1,0 +1,53 @@
+##### 01_precheck
+psql:01_precheck.sql:41: NOTICE:  precheck ok 349eaef0-1958-4a82-80eb-74d9c6fe5212 newer_current_rows=1
+psql:01_precheck.sql:41: NOTICE:  precheck ok f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe newer_current_rows=1
+psql:01_precheck.sql:41: NOTICE:  PRECHECK OK: 2 rows
+                  id                  | product_id | condition_id | is_current |          computed_at          |          updated_at           
+--------------------------------------+------------+--------------+------------+-------------------------------+-------------------------------
+ 349eaef0-1958-4a82-80eb-74d9c6fe5212 |     440569 |           17 | t          | 2026-10-18 09:08:01.954577+09 | 2026-10-18 09:08:02.033735+09
+ f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe |     458213 |           12 | t          | 2026-10-18 09:21:58.361305+09 | 2026-10-18 09:21:58.428487+09
+(2 行)
+
+01_precheck exit=0
+##### 02_apply
+psql:02_apply.sql:33: NOTICE:  DONE: 2 rows set FALSE, 1 audit_log row
+                  id                  | is_current |          updated_at           
+--------------------------------------+------------+-------------------------------
+ 349eaef0-1958-4a82-80eb-74d9c6fe5212 | f          | 2026-10-19 15:12:07.358772+09
+ f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe | f          | 2026-10-19 15:12:07.358772+09
+(2 行)
+
+02_apply exit=0
+##### 03_postcheck
+psql:03_postcheck.sql:15: NOTICE:  POSTCHECK OK: 現行 0 件, 監査行 1 件
+                  id                  | is_current |          updated_at           
+--------------------------------------+------------+-------------------------------
+ 349eaef0-1958-4a82-80eb-74d9c6fe5212 | f          | 2026-10-19 15:12:07.358772+09
+ f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe | f          | 2026-10-19 15:12:07.358772+09
+(2 行)
+
+03_postcheck exit=0
+##### 04_rollback
+psql:04_rollback.sql:32: NOTICE:  ROLLBACK DONE: 2 rows restored
+                  id                  | is_current |          updated_at           
+--------------------------------------+------------+-------------------------------
+ 349eaef0-1958-4a82-80eb-74d9c6fe5212 | t          | 2026-10-18 09:08:02.033735+09
+ f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe | t          | 2026-10-18 09:21:58.428487+09
+(2 行)
+
+04_rollback exit=0
+##### 03_postcheck
+psql:03_postcheck.sql:15: ERROR:  K3 NG: 一覧の行で現行のまま 2 件
+CONTEXT:  PL/pgSQL関数inline_code_blockの6行目 - RAISE
+03_postcheck exit=3
+##### 01_precheck
+psql:01_precheck.sql:41: NOTICE:  precheck ok 349eaef0-1958-4a82-80eb-74d9c6fe5212 newer_current_rows=1
+psql:01_precheck.sql:41: NOTICE:  precheck ok f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe newer_current_rows=1
+psql:01_precheck.sql:41: NOTICE:  PRECHECK OK: 2 rows
+                  id                  | product_id | condition_id | is_current |          computed_at          |          updated_at           
+--------------------------------------+------------+--------------+------------+-------------------------------+-------------------------------
+ 349eaef0-1958-4a82-80eb-74d9c6fe5212 |     440569 |           17 | t          | 2026-10-18 09:08:01.954577+09 | 2026-10-18 09:08:02.033735+09
+ f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe |     458213 |           12 | t          | 2026-10-18 09:21:58.361305+09 | 2026-10-18 09:21:58.428487+09
+(2 行)
+
+01_precheck exit=0
