@@ -32,7 +32,7 @@
 | 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation/inventory-analytics すべて あるべき姿・KGI・To-Be完成 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
 | ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C43合意・[詳細設計案](../handoff/tcg-import-latest-only/sold-out-rules-design.md)作成・本番DB/接続実測済・自己審査REVISE・Q24未決。実装未着手 |
-| │ └ 同じ投稿の〆を在庫の件に効かせる（規則13。価格のない〆が同じ商品・状態の在庫の件を完売にする） | [設計](../handoff/v102-shime-same-post-stock/design.md) | KGI PO承認 2026-10-19・設計案・審査反映済・実装済み（#4525）・本番反映待ち |
+| │ └ 同じ投稿の〆を在庫の件に効かせる（規則13。価格のない〆が同じ商品・状態の在庫の件を完売にする） | [設計](../handoff/v102-shime-same-post-stock/design.md) | KGI PO承認 2026-10-19・設計案・審査反映済・本番反映済（#4525、2026-10-19） |
 | ├ 在庫の閲覧専用ページ（inventory-viewer。お客さんが自社サーバーで在庫表だけを見る・GAS 在庫一覧の置き換え） | [inventory-management/inventory-viewer/README.md](inventory-management/inventory-viewer/README.md) | あるべき姿・KGI 作成 2026-10-15・設計 PO 承認済 2026-10-16・実装着手 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 |
 | 管理センター（management-center。全データの基盤管理＝データセンターの役割。CRM等の分析機能とは意図的に別役割） | [management-center/README.md](management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
