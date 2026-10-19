@@ -166,7 +166,7 @@ function columnCompare(sortKey: string, dir: SortDir): Compare | null {
 /**
  * アプリの並びと同じ（ADR-1014 改訂 2026-10-18）。
  * まとまり（商品）の順: 発売日（空は末尾）→ english_title → japanese_title。発売日の向きは release_date を選んだときだけ sortDir。ほかの並び替えでは desc（既定と同じ、ADR-1014 改訂 2026-10-19）。
- * まとまりの中: 選んだ列、最後に元の順。商品名（name）の見出しだけは変更前のまま、
+ * まとまりの中: 状態のまとまり（元の順の最小 idx の昇順＝価値順）→ 選んだ列、最後に元の順。商品名（name）の見出しだけは変更前のまま、
  * english_title と japanese_title を同じ向きで並べる。
  */
 export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortDir): ViewerTableRow[] {
@@ -179,6 +179,16 @@ export function sortRows(rows: ViewerTableRow[], sortKey: string, sortDir: SortD
     keys.push(plain((r) => r.english_title, compareText, "asc"));
     keys.push(plain((r) => r.japanese_title, compareText, "asc"));
     if (sortKey !== "release_date") {
+      // 状態ブロック番号: 同じ商品・同じ状態の行のうち最小の idx（= サーバーの価値順）。選んだ列より先に比べる（ADR-1014 改訂 2026-10-19（5））
+      const blockOf = (r: ViewerTableRow) =>
+        `${r.release_date}\u0000${r.english_title}\u0000${r.japanese_title}\u0000${r.condition}`;
+      const minIdx = new Map<string, number>();
+      for (const r of rows) {
+        const k = blockOf(r);
+        const cur = minIdx.get(k);
+        if (cur === undefined || r.idx < cur) minIdx.set(k, r.idx);
+      }
+      keys.push((a, b) => (minIdx.get(blockOf(a)) ?? 0) - (minIdx.get(blockOf(b)) ?? 0));
       const col = columnCompare(sortKey, sortDir);
       if (col) keys.push(col);
     }

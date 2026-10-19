@@ -110,3 +110,13 @@ PO 決定（2026-10-19）「y」（「バッジと同じ囲み方を想定して
 
 - 見た目: 価格と数量の値は全部の行で同じ入れ物（`inventory-cell__value`）に入れ、余白と角は金型 Badge sm と同じトークン（`--space-2px` `--space-2`、`--comp-badge-radius`）にする。最安は薄い水色、在庫最多は薄い緑で塗る。線は描かない。文字の大きさはセルのまま（Badge 部品そのものは 12px になり行の間で数字の大きさが揃わないため使わない）。枠の付いた値の `title` は改訂（3）のまま。
 - 色: 最安は `--info-bg`／`--info-text`、在庫最多は `--success-bg`／`--success-text`（Badge soft info／success と同じ組）。改訂（3）の `--comp-value-frame-cheapest`・`--comp-value-frame-most-stock` は削除する（ADR-067 の表からも削除）。
+
+## 改訂 2026-10-19（5）（商品の中は状態のまとまりを固定し、選んだ列はその中だけで並べる）
+
+PO 決定（2026-10-19）「y」（「価格の安い順に並び替えると状態も並び替わってしまう」。商品は発売日の新しい順で固定、商品の中の状態の並びは既定＝価値順（ADR-1023）で固定、価格・数量などの並び替えは「同じ商品・同じ状態」のまとまりの中だけ）。改訂（2026-10-18）・改訂（2026-10-19）の本文は書き換えず、まとまりの中の並びだけをここで置き換える。
+
+- まとまりの中の並び: 状態ブロック番号 ASC → 選んだ列 → 元の順（sort_ord）。状態ブロック番号は「同じ商品・同じ状態の行のうち最小の元の順」。同じ商品の中では sort_ord が 状態の価値順→状態名 の順なので、状態の並びは既定と同じになる。状態の列（condition）を選んだときも商品の中の状態の並びは変わらない。`sort=name`・`sort=release_date` の並びは変えない。
+- 実装: アプリは `backend/app/routers/inventory_offers.py` の rows_x に `MIN(x.sort_ord) OVER (PARTITION BY x.product_id, x.condition) AS cond_block` を足し、`_build_view_order_by` で選んだ列の前に `d.cond_block ASC` を置く（cond_block は応答に出さない。API の項目は変えない）。閲覧ページは `frontend/src/pages/viewer/viewerFilter.ts` の `sortRows`、GAS 在庫一覧（リポジトリ外）も同じ形に揃える。
+- 既知の差（揃えない）: 閲覧ページと GAS のまとまりのキーには product_id が無い（発売日・英語名・日本語名・状態）。GAS の比較は大文字・小文字を同じとみなすが、状態ブロックの Map のキーでは別になる。
+- 変えないもの: 既定の並び、`sort_ord` の式（`tcg_result_order.py`）、印（`__badge_*` の PARTITION）、API の項目・DB。
+- 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（S1・S2）、`backend/tests/test_inventory_distribution_rows.py`、`frontend/src/pages/viewer/viewerFilter.test.ts`。

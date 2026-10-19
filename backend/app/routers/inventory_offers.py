@@ -265,7 +265,8 @@ def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
     """GET /inventory の ORDER BY（ADR-1014 改訂 2026-10-18）。sort_col / order_dir は信頼できる断片のみ。
 
     まとまり（商品）の順: 発売日（空欄は末尾）→ 英語名 → 日本語名 → product_id。発売日の向きは release_date を選んだときだけ order_dir。ほかの並び替えでは既定と同じ DESC（ADR-1014 改訂 2026-10-19）。
-    まとまりの中: 選んだ列（release_date なら sort_ord のみ）。タイトル列（name）は変更前の式のまま。
+    まとまりの中: 状態のまとまり（cond_block = 同じ商品・同じ状態の最小 sort_ord。価値順 ADR-1023）→ 選んだ列（release_date なら sort_ord のみ）。
+    価格・数量などの並び替えは同じ商品・同じ状態の中だけで効く（ADR-1014 改訂 2026-10-19（5））。タイトル列（name）は変更前の式のまま。
     """
     if sort_col == _SORT_COLUMNS["name"]:
         return f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
@@ -276,7 +277,7 @@ def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
     )
     if sort_col == _SORT_COLUMNS["release_date"]:
         return f"ORDER BY {group}, d.sort_ord ASC"
-    return f"ORDER BY {group}, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
+    return f"ORDER BY {group}, d.cond_block ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
 
 
 def _build_inventory_view_sql(
@@ -287,7 +288,7 @@ def _build_inventory_view_sql(
 
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
-    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __badge_cheapest, __badge_most_stock, __expiry_s, __f_* の5列。
+    列並び（3枝共通）: __kind, __total, <配信行+work_code+category+cond_block の全列>, __ord, __badge_cheapest, __badge_most_stock, __expiry_s, __f_* の5列。
     __badge_* は同じ product_id・status・condition のまとまり（絞り込み後・ページ前）で最安／在庫最多か（ADR-1014 改訂 2026-10-19（3））。
     expiry が真のとき __expiry_s（total 枝のみ）は、まとめ前・絞り込み前の行が次に時間の枠から外れるまでの秒数（:expiry_hours が必要）。
     """
@@ -296,7 +297,10 @@ def _build_inventory_view_sql(
     ctes = [f"rows_main AS ({final_main})"]
     if merge:
         ctes.append(f"rows_plain AS ({distribution_final_select_plain()})")
-    ctes.append(f"rows_x AS (SELECT x.*, tm.code AS work_code, pp.category AS category FROM rows_main x {join})")
+    ctes.append(
+        "rows_x AS (SELECT x.*, tm.code AS work_code, pp.category AS category, "
+        f"MIN(x.sort_ord) OVER (PARTITION BY x.product_id, x.condition) AS cond_block FROM rows_main x {join})"
+    )
     if merge:
         ctes.append(f"rows_xp AS (SELECT x.*, tm.code AS work_code, pp.category AS category FROM rows_plain x {join})")
     facet_src = "rows_xp" if merge else "rows_x"  # merge=False は rows_main == rows_plain なので共用
