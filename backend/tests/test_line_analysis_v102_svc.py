@@ -901,3 +901,82 @@ def test_inherit_price_does_not_read_when_the_row_is_not_a_target(overrides):
     result = svc._inherit_price(session, "job1", SimpleNamespace(id="row0", raw_price=None), _inherit_values(**overrides))
 
     assert result == _inherit_values(**overrides) and session.calls == []
+
+
+# ---- 規則13：同じ投稿の〆が在庫の件を Sold out にする（docs/handoff/v102-shime-same-post-stock/design.md §7 T1） ----
+_SAME_POST_STATUS_ENTRIES = [{"canonical": "Sold out", "effect": "EXCLUDE"}]
+
+
+def _same_post_values(status="In Stock", exclusion=None, product_id=440301, condition_id=14):
+    return {"status": status, "exclusion": exclusion, "product_id": product_id, "condition_id": condition_id}
+
+
+def _same_post_closer(start=1, end=4, raw_price=None, raw_quantity=None, condition_id=14, targets=None):
+    item = {"soldout_targets": targets} if targets else {}
+    row = SimpleNamespace(id="closer", line_start=start, line_end=end, raw_price=raw_price, raw_quantity=raw_quantity)
+    return _same_post_values("Sold out", "excluded", condition_id=condition_id), (item, row)
+
+
+def _same_post_stock(start=1, end=2, condition_id=14):
+    row = SimpleNamespace(id="stock", line_start=start, line_end=end, raw_price="19,000円", raw_quantity="10個")
+    return _same_post_values(condition_id=condition_id), ({}, row)
+
+
+def _same_post_run(closer, stock, decisions=None):
+    base_values = [closer[0], stock[0]]
+    before = [dict(v) for v in base_values]
+    out = svc._sell_out_stock_closed_in_the_same_post(
+        [closer[1], stock[1]], base_values, decisions or {}, {}, _SAME_POST_STATUS_ENTRIES,
+    )
+    assert base_values == before  # 元の base_values は変えない
+    return out
+
+
+def test_same_post_closed_shime_without_price_sells_out_the_stock_in_range():  # ①ゆうきの形
+    out = _same_post_run(_same_post_closer(1, 4), _same_post_stock(1, 2))
+    assert (out[1]["status"], out[1]["exclusion"]) == ("Sold out", "excluded")
+    assert out[0]["status"] == "Sold out"
+
+
+def test_same_post_closed_keeps_the_stock_when_the_shime_has_its_own_price():  # ②倉田の形
+    out = _same_post_run(_same_post_closer(1, 7, raw_price="¥7,000"), _same_post_stock(1, 11))
+    assert (out[1]["status"], out[1]["exclusion"]) == ("In Stock", None)
+
+
+@pytest.mark.parametrize("raw_price, raw_quantity", [("6,000円", None), (None, "400"), ("none", "5セット")])
+def test_same_post_closed_keeps_the_stock_when_the_shime_has_a_price_or_quantity(raw_price, raw_quantity):  # ③
+    out = _same_post_run(_same_post_closer(1, 4, raw_price=raw_price, raw_quantity=raw_quantity), _same_post_stock(1, 2))
+    assert out[1]["status"] == "In Stock"
+
+
+def test_same_post_closed_keeps_the_stock_when_the_condition_differs():  # ④
+    out = _same_post_run(_same_post_closer(1, 4, condition_id=15), _same_post_stock(1, 2, condition_id=14))
+    assert out[1]["status"] == "In Stock"
+
+
+def test_same_post_closed_keeps_the_stock_outside_the_shime_range():  # ⑤
+    out = _same_post_run(_same_post_closer(5, 6), _same_post_stock(1, 2))
+    assert out[1]["status"] == "In Stock"
+
+
+def test_same_post_closed_keeps_the_stock_when_a_human_set_its_status():  # ⑥
+    decisions = {"stock": svc.Decisions(values=svc.ValueOverrides(status="In Stock"))}
+    out = _same_post_run(_same_post_closer(1, 4), _same_post_stock(1, 2), decisions)
+    assert (out[1]["status"], out[1]["exclusion"]) == ("In Stock", None)
+
+
+def test_same_post_closed_does_not_use_a_shime_that_has_soldout_targets():  # ⑦
+    out = _same_post_run(_same_post_closer(1, 4, targets=[{"condition_id": 14}]), _same_post_stock(1, 2))
+    assert out[1]["status"] == "In Stock"
+
+
+@pytest.mark.parametrize("human", [svc.Decisions(product_id=1), svc.Decisions(condition_id=14)])
+def test_same_post_closed_keeps_the_stock_when_a_human_judged_it(human):  # ⑧
+    out = _same_post_run(_same_post_closer(1, 4), _same_post_stock(1, 2), {"stock": human})
+    assert out[1]["status"] == "In Stock"
+
+
+@pytest.mark.parametrize("human", [svc.Decisions(product_id=1), svc.Decisions(condition_id=14)])
+def test_same_post_closed_does_not_use_a_shime_that_a_human_judged(human):  # ⑨
+    out = _same_post_run(_same_post_closer(1, 4), _same_post_stock(1, 2), {"closer": human})
+    assert out[1]["status"] == "In Stock"
