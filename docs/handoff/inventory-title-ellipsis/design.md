@@ -11,7 +11,7 @@
 - 対象: アプリの在庫表（/inventory）、閲覧ページ（/viewer/）、GAS 在庫一覧（テスト→本番）。
 - 対象外: スマホ幅（767px 以下のカード表示。今のまま折り返す）、縮める仕組み自体（窓が狭いと他の列のために縮むことは残る）、見出し、ほかの列。
 
-## 2. 根拠（recon: /tmp/CC報告ファイル/inventory-title-ellipsis/recon/）
+## 2. 根拠（recon: docs/handoff/inventory-title-ellipsis/recon.md、生データ /tmp/CC報告ファイル/inventory-title-ellipsis/recon/）
 - 商品名セル: `frontend/src/features/inventory/inventoryColumns.tsx:100-105`、`frontend/src/pages/viewer/viewerColumns.tsx:57-62`（上段 `inventory-cell__title`、下段 `inventory-cell__sub`）。
 - 備考・発送: inventoryColumns.tsx:169・:178、viewerColumns.tsx:107・:113（`inventory-cell__nowrap`）。`inventory-cell__nowrap` は型番などほかの列でも使うので変えない。
 - 折り返し禁止: `frontend/src/features/inventory/inventoryColumns.css:12-20`（768px 以上）。
@@ -108,5 +108,5 @@
 - 過去事例: GAS 在庫一覧の表を閲覧ページの形に揃えた便（ADR-1014 改訂 2026-10-19（7））と同じく、アプリと GAS を同じ設計で揃え、GAS は stage を差0で照合してから反映する。
 
 ## 9. 維持の仕組み
-- 守り手: Opus（在庫表の設計担当）。上限幅は tokens.css の3つのトークンだけで決まり、ADR-067 のトークン表と CI（check:css-values ほか）が直書きを止める。
+- 守り手: frontend/scripts/check-css-hardcoded-values.js（CI と commit 前の検査で CSS の数値直書きを止める。上限幅は tokens.css の3つのトークンだけで決まり、ADR-067 のトークン表に記載）
 - GAS の :root にある写し（360px・200px・100px）は、正本トークンを変えたときに一緒に直す（ADR-1014 改訂 2026-10-20 に記載）。
