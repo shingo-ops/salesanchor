@@ -45,5 +45,5 @@
 - `backend/app/services/v102_status_context.py:91`：_date_ahead。:100 付近で名前付きグループ m・d を読む。終わりが投稿日の翌日より後の最初の当たりの文字列を返す。
 - `backend/app/services/v102_status_context.py:109`：_heading。:112 で他の件が持つ行（owned）と空行を飛ばす。
 - `backend/app/services/v102_status_context.py:120`：context_status。RELEASE_AHEAD → DATE_AHEAD → HEADING の順。:137 で DATE_AHEAD を読む。
-- `backend/tests/test_v102_status_context.py:32`：_CONTEXT の id25 相当の行（本便で範囲対応の regex に変える）。
+- `backend/tests/test_v102_status_context.py:36`：_CONTEXT の id25 相当の行（本便で範囲対応の regex に変えた。変更前は :32 付近）。
 - 状態判定の前例の SQL 型：`docs/handoff/v102-preorder-context/data/commit.sql:1`。
