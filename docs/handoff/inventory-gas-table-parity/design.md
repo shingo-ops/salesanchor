@@ -86,7 +86,7 @@ GAS の土台: ~/CC報告ファイル-keep/inventory-sort-3choices/gas/test_stag
 ### 3-7. セルの中身（:1564-1588）
 | 列 | 変更後 | 根拠（閲覧） |
 |---|---|---|
-| ステータス | 値が `'In Stock'` なら `<span class="inventory-cell__offer--instock">在庫</span>`、`'Pre-order'` なら `<span class="inventory-cell__offer--preorder">予約</span>`、それ以外は値そのもの（空なら `-`）を色なしで | viewerColumns.tsx:36-43。対応は backend OFFER_TYPE_TO_STATUS（tcg_distribution_svc.py:278、完全一致）と同じ |
+| ステータス | 値が `'In Stock'` なら `<span class="inventory-cell__offer--instock">在庫</span>`、`'Pre-order'` なら `<span class="inventory-cell__offer--preorder">予約</span>`、それ以外は値そのもの（空なら `-`）を色なしで | viewerColumns.tsx:36-43。対応は backend OFFER_TYPE_TO_STATUS（tcg_distribution_svc.py:277、完全一致）と同じ |
 | 型番 | 値、空なら `-` | viewerColumns.tsx:51 |
 | 商品名 | 3-4 | viewerColumns.tsx:56-64 |
 | コンディション | `conditionClass(val)` で `inventory-cell__condition--{info/success/warning/purple/danger}` を付けた span。neutral はクラスなし | conditionBadge.ts:16-37（trim・小文字・完全一致。値の表をそのまま写す） |

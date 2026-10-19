@@ -13,13 +13,13 @@
 - 閲覧の列順: ステータス(stickyLeft)/型番/タイトル/状態/単価/数量/備考/発送/提供者/発売日（diff-table.md:2 は在庫表 frontend/src/features/inventory/inventoryColumns.tsx:51-207 の順）
 - 文字色: frontend/src/features/inventory/conditionBadge.ts:16-37、frontend/src/features/inventory/inventoryColumns.css:1-50
 - トークン: frontend/src/index.css:55（warning-text）・:125（purple-text）、frontend/src/tokens.css:392-393（offer-*-text）
-- ステータス対応: backend/app/services/tcg_distribution_svc.py:278（OFFER_TYPE_TO_STATUS）
+- ステータス対応: backend/app/services/tcg_distribution_svc.py:277（OFFER_TYPE_TO_STATUS）
 
 ## 3. 差の一覧（design.md 2〜3章）
 | 項目 | 変更前（GAS） | 変更後 | design.md |
 |---|---|---|---|
 | 列順 | 投稿日時が先頭、ステータスが後ろ | 閲覧と同じ（ステータス先頭） | 3-6 |
-| 見出し | 「価格」「提供者」等 | 閲覧の viewer-ja.json "col" と同じ（「単価」「発送」等） | 3-6 |
+| 見出し | 「価格」「投稿日時」等 | 閲覧の viewer-ja.json "col" と同じ（「単価」「発送」等） | 3-6 |
 | 揃え | th/td とも中央 | 左（数字列は右） | 3-2 |
 | 左固定 | 商品名 | ステータス（`col-sticky`） | 3-3 |
 | 商品名 | 英語が上 | 日本語が上・英語が下 | 3-4 |
@@ -34,5 +34,5 @@
 - ADR-1014（docs/adr/ADR-1014-inventory-view-shows-distribution-rows.md）: 在庫表・GAS の揃え。改訂（3）で「GAS は未実装」と記録 → 本件で改訂（7）を追記
 - ADR-1023（docs/adr/ADR-1023-condition-value-rank.md）: 状態の価値順。conditionBadge の値の表の根拠
 - ADR-067（docs/adr/ADR-067-design-token-enforcement.md）: トークン。GAS の写しも正本と同じ値
-- ADR-027（docs/adr/ADR-027-ui-internationalization.md）: GAS はリポジトリ外で t() 対象外。アプリ側コードは変更なし
+- ADR-027（docs/adr/ADR-027-ui-internationalization.md）: ADR-027 は GAS に触れていない（Scope 外の節にも記載なし）。今回 GAS の文字列は直書きのまま、アプリ側コードは変更なし。GAS を i18n の対象にするかは未決定
 - FEATURE-INDEX.md には ADR-027 の行のみ（:37）

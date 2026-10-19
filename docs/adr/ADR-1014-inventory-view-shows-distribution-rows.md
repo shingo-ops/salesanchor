@@ -134,11 +134,11 @@ PO 決定（2026-10-19）「発売日の新しい順はプルダウンに含め�
 
 ## 改訂 2026-10-19（7）（GAS 在庫一覧の表を閲覧ページと同じ形にする）
 
-PO 承認（2026-10-19「y」。GAS の表を閲覧ページと同じ形にしてよいか）。改訂（3）の「GAS 在庫一覧は未実装のまま」のうち表の見た目を本改訂で実装した（前の節の本文は書き換えない）。
+PO 承認（2026-10-19「y」。GAS の表を閲覧ページと同じ形にしてよいか）。改訂（3）で GAS 在庫一覧に未実装と記録した最安・在庫最多の目印（改訂（4）で塗りに変更）と並び順は、本番 GAS 版18で反映した。本改訂はそれに加えて表の見た目を揃える（前の節の本文は書き換えない）。本番 GAS 版17には塗り・並び順の変更はどれも入っていなかった（pull した中身で `applySortValue`・`markBlockFlags`・`cell-value--cheapest` が0件、版18で各1件以上）。
 
 - 内容: GAS 在庫一覧（お客様向け）の表を、閲覧ページ（`frontend/src/pages/viewer/viewerColumns.tsx`）と同じ列順・見出し・文字色・単価の「¥」・提供者の下に投稿時刻・左固定列ステータスにした。
 - 正本: `viewerColumns.tsx`・`frontend/src/features/inventory/conditionBadge.ts`・`frontend/src/features/inventory/inventoryColumns.css` と `tokens.css`/`index.css`。正本を変えたら GAS の写しも同じ便で直す。
 - GAS で出せないもの（シートに元データが無い）: 予約の補足（`ship_timing`）・「N行分」・行クリックの詳細・ダーク表示。見出しの紺色は PO 試作のため対象外。
-- 反映（2026-10-19）: テスト GAS 版27・本番 GAS 版18（本番18には改訂（5）状態のまとまり固定・改訂（6）並び替え3択も同時に入った）。写しの場所: `~/CC報告ファイル-keep/inventory-gas-table-parity/gas/`（`test_stage`・`prod_stage`）。
+- 反映（2026-10-19）: テスト GAS 版27・本番 GAS 版18。本番18には次がまとめて入った: 並び順（発売日の新しい順のまとまり・#4519）、改訂（3）（4）の最安・在庫最多の塗り、改訂（5）状態のまとまり固定、改訂（6）並び替え3択、本改訂（7）の表の見た目。写しの場所: `~/CC報告ファイル-keep/inventory-gas-table-parity/gas/`（`test_stage`・`prod_stage`）。
 - 戻し方: 本番は版17、テストは版26へ redeploy。
 - 記録: `docs/handoff/inventory-gas-table-parity/`（recon・design・審査）。
