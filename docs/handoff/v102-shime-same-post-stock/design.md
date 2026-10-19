@@ -222,6 +222,18 @@ SELECT ar.extraction_job_id, ar.product_id, ar.condition_id, ar.status, ar.line_
 ```
 この SQL は人の商品・状態の判断（(a)(b) の `_has_human_judgement`）を見ていない。そのため実装より当たる件が多いか同じになる側の数え方で、1行という結果は上限として使える。
 
+### 結果（2026-10-19）
+
+T3・T4 の結果（事実のみ）。
+
+- デプロイ: deploy 39187571868（headSha f1497588e、c7481387e を含む）が2回目の試行で success。1回目の 39187148522 と 39187571868 の1回目は、PR と無関係な migration の deadlock で失敗した。
+- 再解析: job 0d3d2a98 を 02:35:44Z に reanalyze_v102_job で1回実行。status reanalyzed、total 2、needs_review 0。
+- T3/G1 ○: 件0 484a573f が In Stock/空 から Sold out/excluded に変わった。在庫表の条件（tcg_distribution_svc.py の dist_base）を DB で再現すると出ない。
+- T3/G2 ○: bc62b077 は 466088/14/6000/400/In Stock/空/is_current TRUE のまま変わっておらず、条件を通る。ただし要確認判定（cr）は ai_ro では再現できず、近似で判定した。画面での目視は未実施。
+- T4 ○: 2件とも product/condition/unit/price/qty/note/is_current は不変。件1は値が同じで updated_at だけ更新された。
+- 斉藤（02186351・c15162e6）と 0f12b467 の在庫件数は前後で同じ。
+- 生出力は Mac の /tmp/CC報告ファイル/shime-same-post-20261019/reanalyze/ にある（社外秘のため PR には載せない）。
+
 ## 8. 計画票
 
 | ステップ | 内容 | 担当 |
