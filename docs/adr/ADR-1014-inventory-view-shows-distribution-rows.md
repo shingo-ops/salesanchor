@@ -103,3 +103,10 @@ PO 決定（2026-10-19）「y」（バッジは見づらく列がずれるので
 - 色: `frontend/src/tokens.css` の `--comp-value-frame-cheapest`（水色、ライト・ダークの値を持つ）と `--comp-value-frame-most-stock`（`var(--success)` の別名）。
 - 変えないもの: API の項目名 `badge_cheapest`・`badge_most_stock`、辞書キー、並び順・件数・ページ・絞り込みの候補。GAS 在庫一覧は未実装のまま（別便で、この改訂の規則に合わせる）。
 - 守り: `backend/tests/test_inventory_distribution_rows_pg.py`（ステータス違い・状態違いの試験を含む）、`frontend/src/pages/viewer/viewerFilter.test.ts`、`frontend/src/features/inventory/inventoryColumns.test.tsx`・`frontend/src/pages/viewer/viewerColumns.cells.test.tsx`（全行が同じ入れ物に入ること）。
+
+## 改訂 2026-10-19（4）（最安・在庫最多の見た目を、線の枠から Badge と同じ塗りの角丸に変える）
+
+PO 決定（2026-10-19）「y」（「バッジと同じ囲み方を想定していた」「スプレッドシートのデータ入力規則のプルダウンみたいに囲って色付けする」。角丸・薄い水色／薄い緑の塗り・数字は濃い色・文字は足さない・列幅は変えない、という理解に同意）。改訂（3）の本文は書き換えず、見た目と色の2点だけをここで置き換える。比べる単位・既知の差・変えないもの・守りは改訂（3）のまま。
+
+- 見た目: 価格と数量の値は全部の行で同じ入れ物（`inventory-cell__value`）に入れ、余白と角は金型 Badge sm と同じトークン（`--space-2px` `--space-2`、`--comp-badge-radius`）にする。最安は薄い水色、在庫最多は薄い緑で塗る。線は描かない。文字の大きさはセルのまま（Badge 部品そのものは 12px になり行の間で数字の大きさが揃わないため使わない）。枠の付いた値の `title` は改訂（3）のまま。
+- 色: 最安は `--info-bg`／`--info-text`、在庫最多は `--success-bg`／`--success-text`（Badge soft info／success と同じ組）。改訂（3）の `--comp-value-frame-cheapest`・`--comp-value-frame-most-stock` は削除する（ADR-067 の表からも削除）。

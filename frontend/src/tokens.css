@@ -392,10 +392,6 @@
   --offer-instock-text:  var(--info-text);
   --offer-preorder-text: #b45309;  /* amber-700: 白地 5.02:1 */
 
-  /* ---- 在庫表・閲覧ページの最安（水色）・在庫最多（緑）の枠（ADR-1014 改訂 2026-10-19（3）） ---- */
-  --comp-value-frame-cheapest:   #0ea5e9;  /* sky-500: 白地 2.8:1。PO 指定の「水色」。意味は title でも伝える */
-  --comp-value-frame-most-stock: var(--success);
-
   /* ---- Chart categorical series palette (ADR-067 新規トークン追加手順) ----
      使いみち別グラフ等、カレンダー以外のドメインでカテゴリカルな塗り分けが
      必要な箇所はこちらを参照する（--cal-* を他ドメインから直接参照しない）。
@@ -591,10 +587,6 @@
   /* 在庫・予約の文字色（ダーク） */
   --offer-instock-text:  var(--info-text);
   --offer-preorder-text: #fb923c;  /* orange-400: --bg-surface 6.46:1 */
-
-  /* 最安・在庫最多の枠（ダーク） */
-  --comp-value-frame-cheapest:   #38bdf8;  /* sky-400 */
-  --comp-value-frame-most-stock: var(--success);
 
   /* ---- Chart categorical series palette（ダーク・--cal-* のエイリアス） ---- */
   --chart-series-1: var(--cal-personal);

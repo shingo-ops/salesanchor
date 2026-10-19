@@ -154,15 +154,6 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 
 ---
 
-## カラートークン（tokens.css — 在庫表の最安・在庫最多の枠 / ADR-1014）
-
-| トークン名 | 定義ファイル | 用途 |
-|-----------|-----------|------|
-| `--comp-value-frame-cheapest` | tokens.css | 在庫表・閲覧ページで最安の値を囲む枠（水色）。ライト・ダークの両方に値を持つ |
-| `--comp-value-frame-most-stock` | tokens.css | 在庫表・閲覧ページで在庫最多の値を囲む枠（緑。--success の別名） |
-
----
-
 ## Acceptance Criteria
 
 デザイントークン強制システムが正常に機能していることを確認するための基準:
