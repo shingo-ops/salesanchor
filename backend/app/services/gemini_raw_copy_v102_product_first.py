@@ -33,10 +33,10 @@ from app.services.extraction_judgement_svc import (
 )
 from app.services.gemini_raw_copy_v102_score_select import ScoreDecision, decide_by_score
 from app.services.tcg_analyzer_svc import (
+    SCOPED_VALUE_GROUPS,
     _entry_hit,
     app_kubun_matches,
     load_product_kubun_type_map,
-    SCOPED_VALUE_GROUPS,
     resolve_condition_v2,
     resolve_unit_v2,
 )
