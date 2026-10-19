@@ -9572,16 +9572,33 @@
       "ExtendRequest": {
         "properties": {
           "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "延長する日数（1〜365）",
-            "maximum": 365.0,
-            "minimum": 1.0,
-            "title": "Days",
-            "type": "integer"
+            "title": "Days"
+          },
+          "until_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "この日の終わり（日本時間 23:59:59）まで延長する。今日より後・365日以内",
+            "title": "Until Date"
           }
         },
-        "required": [
-          "days"
-        ],
         "title": "ExtendRequest",
         "type": "object"
       },
