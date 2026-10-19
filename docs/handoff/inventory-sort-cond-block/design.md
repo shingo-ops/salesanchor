@@ -65,5 +65,7 @@ sort_ord の式（tcg_result_order.py）、印（__badge_* の PARTITION）、AP
 - 応用: 今回も在庫表・閲覧ページ・GAS の3か所を同じ規則で直す。
 
 ## 維持の仕組み
+- 守り手: backend/tests/test_inventory_distribution_rows_pg.py（S1・S2。CI の pytest）、backend/tests/test_inventory_distribution_rows.py（ORDER BY の式を固定）、frontend/src/pages/viewer/viewerFilter.test.ts（S4）。
+- 正本: ADR-1014 改訂（5）。区分は ADR-1015 の A。
 ADR-1014 改訂（5）を正本にし、アプリ・閲覧ページの試験（S1〜S4）で守る。GAS はリポジトリ外のため、アプリと同じ規則であることをステージのコメントに ADR 番号で残す。
 審査: 第1版 REVISE（review-design.md）→ 第2版 APPROVE 条件付き（review-design-v2.md）→ 条件のS5の1文を反映済み
