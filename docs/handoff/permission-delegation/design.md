@@ -1,7 +1,7 @@
 <!-- バッククォート内のパスはリポジトリルートからのフルパスのみ。リポジトリ外のパスはバッククォートを付けない -->
 # Phase 3 設計 — Opus の権限の自律管理（台帳と週次点検）ADR-1034
 
-**状態**: 設計審査済み 第6版（便1 の Reviewer 指摘で §2-2 R0 と §4-3 record の確かめを直し、Architect 差分審査4回目で APPROVE。LOW 1 反映済み）。便1 の直しは実装前。
+**状態**: 設計審査済み 第6版（便1 の Reviewer 指摘で §2-2 R0 と §4-3 record の確かめを直し、Architect 差分審査4回目で APPROVE。LOW 1 反映済み。その後 Reviewer 再審査の指摘で改2〜改4、改4 を Architect 差分審査で APPROVE）。便1 の直しは実装前。
 **現在地**: `docs/handoff/permission-delegation/recon.md`
 **関連 ADR**: `docs/adr/ADR-1011-permission-self-maintenance.md`（`SM-` の文の週次保守。本件はその「範囲外」の allow の部分を改める）／`docs/adr/ADR-1033-conversation-consent-ticket.md`（週次点検の定期実行と同意の台帳を共有）／`docs/adr/ADR-1003-go-delegation-to-opus.md`
 
@@ -29,13 +29,22 @@ PO に見える変化:
 
 | 記号 | 中身 | 目印（足す文に含まれたら保留） |
 |---|---|---|
-| R0 | 広すぎる許可（R1〜R3 を言い換えで素通りさせない） | `Bash` 単独／Edit/Write の `**` や ~/.claude を含む文／perm-change を含む文／target が autoMode.allow の add すべて／`*` を含む Bash の文のうち、下の「狭い形」に当てはまらないものすべて（第6版で「当てはまれば R0」から「狭いと示せなければ R0」に反転） |
+| R0 | 広すぎる許可（R1〜R3 を言い換えで素通りさせない） | 下の「R0 にしない形」のどれにも当てはまらない文すべて（第6版 改3 で、どの道具も受け入れの形だけを通す形に反転）／perm-change を含む文／target が autoMode.allow の add すべて |
 | R1 | 本番データの削除 | 語: delete / drop / truncate / prune / 削除 / 消去、句: `rm -r` / `rm -rf` / `volume rm`。先頭の語（パスを外した名前）が rm で `*` を含む文（`-r` の有無を問わない）。および 語: ssh / psql / prod / prod1 / prod2 / 本番、句: `docker compose exec` を含む文のうち、下の「読み取りの印」が無いもの |
 | R2 | main への直接の書き込み | 語: push / main / develop / ruleset、句: `reset --hard` / `branch -D` / `gh pr merge` / `Branch Protection`。`--force` と `-f` は同じ文に push があるときだけ当たり |
 | R3 | 秘密情報 | 語: secret / secrets / token / tokens / key / keys / password / passwd / credential / credentials、句: `.env` / `gh secret`、日本語: 鍵 / 合言葉 / 秘密 |
 | R4 | 見張りを弱める変更 | 語: hook / hooks / guard / gate / bypass / skip / soft_deny / defaultMode / permission / permissions / settings、句: `Self-Modification` / `.claude/scripts` / `agent-tokens`、日本語: 例外 / 見張り / 許可 |
 
-**`*` を含む Bash の文の「狭い形」**（第6版 改。受け入れの一覧に当てはまるときだけ R0 にしない。`:*` は ` *` と同じに扱う）
+**R0 にしない形**（第6版 改3。次のどれか1つに当てはまる文だけ R0 にしない。当てはまっても R1〜R4 の判定は別に行う）
+- 共通の形: 文全体が `道具名(中身)` で、`(` の前に空白が無く、中身は空白以外の文字を1つ以上含む。道具名だけの文（`Bash`・`Edit`・`Read`・`WebSearch`・`mcp__<サーバー>` など）は、下の MCP の場合を除いて R0。
+- (a) `Bash(中身)`: 中身に `*` が無い（決まった1つの命令）か、下の「`*` を含む Bash の文の狭い形」に当てはまる。ただし `*` が無くても、先頭の語が `/` を含む（`./scripts/x.sh` など）か、先頭の語（パスと末尾の数字・`.` を外した名前）が実行役（python・bash・sh・zsh・node・npx・npm・pnpm・yarn・bun・deno・uv・uvx・ruby・perl・php・env・xargs・eval・source・exec・sudo・osascript・make）なら R0（(b) で書き換えたファイルを走らせる組み合わせを止める）。
+- (b) `Edit`・`Write`・`MultiEdit`・`NotebookEdit` の `(パス)`: リポジトリから見た相対パスで、`~`・`/` で始まらず、`/` で終わらず、`..`・`.git/`・`*`・`$` を含まず、`.claude`・`.codex`・`.salesanchor-tools`・`agent-console` も含まない。さらに、途中に `/` を1つ以上含み、最初の段が受け入れの一覧（`docs`・`frontend`・`backend`）にあり、どの段も `.` で始まらない（許可の文は名前だけだとどの深さにも当たるおそれがあるため）。`~/.zshrc`・`~/Library/LaunchAgents/x.plist`・`~/.gitconfig`・`.git/config`・`config`・`.zshrc`・`.husky/pre-commit`・`scripts/x.sh` はすべて R0。
+- (c) `Read`・`Grep`・`Glob` の `(中身)`: 中身は問わない（読み取り。ADR の受け入れたリスク）。
+- (d) `WebFetch(domain:<名前>)`: 名前に `*` を含まない。
+- (e) MCP の道具: `mcp__<サーバー>__<道具>` の名前だけの文で、サーバーが読み取り専用の受け入れ一覧（はじめは `context7` だけ）にある。サーバー名と道具名は英数字・`_`・`-`。一覧に無いサーバー（例: `mcp__github__merge_pull_request`）は R0。
+- 受け入れの一覧（(a) の命令の一覧と実行役の一覧、(b) の最初の段の一覧、(e) のサーバーの一覧）は道具の中の辞書1つに置き、一覧に足す変更は R4。
+
+**`*` を含む Bash の文の狭い形**（第6版 改。受け入れの一覧に当てはまるときだけ R0 にしない。`:*` は ` *` と同じに扱う）
 - 先頭の語は「パスを外し、末尾の数字と `.` を外した名前」で比べる（`/bin/rm`→rm、`python3.12`→python）。R1 の rm の判定もこの名前で行い、R0 より先に行う。
 - 最初の `*` より前の、`*` を含まない語の並びが、次の受け入れの一覧のどれかと先頭から一致し、一覧の語より後・`*` より前に余分な語が無いときだけ R0 にしない:
   `git status`・`git ls-files`・`git rev-parse`・`gh pr view`・`gh pr list`・`gh pr checks`・`gh pr diff`・`gh run view`・`gh run list`・`grep`・`wc`
@@ -171,7 +180,7 @@ collect_permissions（`scripts/dev/consent-audit.py:319-343`）を広げる。�
     - `PR#n`: 下の「record の行の確かめ」の `PR#n` の条件（取り込まれた差分で確かめ、mergedAt が対応する held の行より後）。ただし B の対象では、`PR#n` を受け付けるのは target が repo-allow・repo-hooks のときだけ。それ以外の保留の項目は PO 本人の同意（`consent:`）だけで説明できる（Opus は委任により自分で PR をマージできるため、PR では PO の確認の証にならない）。
     - `consent:<k1>:<k2>:<k3>`: 同意の台帳（`scripts/dev/consent-audit.py:213-220` の match_ledger_keys が読む3要素の key）に同じ3要素の行があり、used_at が held の行より後。
     - 同じ po_ref は台帳の record の行で1回だけ使える（2回目以降は B）。PR は1つの PR に要素が複数あるため「po_ref と item_hash の組」で1回。この1回の制限は held の有無にかかわらず、すべての record の行に効く。
-  - **record の行は category（normal でも reserved でも）や held の行の有無にかかわらず、すべて次の確かめを通ったときだけ差分の説明に使う**（第6版。通らない record の行は無いものとして扱い、その差分は held の行が無ければ A、あれば B）:
+  - **record の行は category（normal でも reserved でも）や held の行の有無にかかわらず、すべて次の確かめを通ったときだけ差分の説明に使う**（第6版。通らない record の行は無いものとして扱う。その差分は、§2-3 のキーなら常に B、それ以外は held の行があれば B、無ければ A）:
     - `consent:`: 上の条件に加え、3要素の sha が一致した同意票の本文に item_hash（8桁）がある（どの文の変更への同意かを結び付ける）。held の行が無いときは「used_at が前回の写しの時刻より後」。
     - `PR#n`: `gh pr view n --json state,mergedAt,mergeCommit` で MERGED、mergedAt が前回の写しの時刻より後（held の行があればその行より後）、mergeCommit が ~/.salesanchor-tools の V の祖先（`git merge-base --is-ancestor`）。そのうえで、取り込まれた中身（`git diff <mergeCommit>^1 <mergeCommit>`。PR の本文は後から書き換えられるので使わない）について target ごとに:
       - repo-allow・repo-hooks: `.claude/settings.json` の差分の足した行か消した行に、その要素の文（JSON の文字列）がある。
@@ -270,7 +279,7 @@ Claude Code の自動判定は、AI が自分の許可を変えることを止�
 | A15 定期実行 bb581a6f の promptText が routine.json の promptText と一致 | Opus が ac-routine の一覧出力から promptText を取り出し、sha256 を比べる |
 | A16 PO の `!` 台本の後、例外の文 PDL-1 が autoMode.allow に1件だけあり、Opus の `perm-change.py apply` の試し（害の無い文の add と remove）が自動判定に止められない | 反映後に Opus が実行し、台帳の applied 2行を確認 |
 | A17 道具の起動時の確かめ: (1) exit 1 になる状態 — ~/.salesanchor-tools 以外から起動／`-I -B` なしで起動／origin の URL が違う／作業ツリーに変更や追跡外のファイルがある（consent-audit.py だけを書き換えた場合を含む。同期もしない）。手元でコミットして HEAD を進めた場合は、同期で V に戻ってから照合するので (3) と同じく exit 0 で、HEAD が V・2ファイルの sha が V と一致することを確かめる。(2) exit 4 になる状態 — ls-remote が取れない／fetch が失敗する／ls-remote と fetch の間に main が進んで FETCH_HEAD が V と違う。(3) exit 0 になる状態 — main が1つ進んだだけ（悪意なし）なら道具が自分で揃えて起動し直し（回数を数えて1回だけ）、HEAD が V になる／手元の origin/main を `git update-ref` で別の版に差し替えただけでも、基準が ls-remote なので結果は変わらない。(4) `-I -B` で起動して consent-audit.py の関数が読める。(5) 週次点検は dirty・stale・sha・offline のそれぞれで `ABNORMAL_REASON=E tools <小分類>` | 試験（一時の git リポジトリを GitHub 役の bare リポジトリと組んで再現。origin の URL の定数は試験のときだけ差し替えられるよう関数の引数で受ける） |
-| A18 R0 の例（`Bash(python3 scripts/*)`・`Bash(bash ~/worktrees/*)`・perm-change を含む文・autoMode.allow の add）が exit 3。読み取りの印があっても `*` を含む文（`Bash(ssh -F /dev/null prod1 *)`・`Bash(psql ai_ro -c "SELECT * FROM x")`）は R1 で exit 3。止めすぎの例（`*` の無い `-F /dev/null` の ai_ro の文、domain・keyword・navigate を含む文）が R1〜R4 に当たらない。第6版の反例（`Bash(gh api *)`・`Bash(gh api:*)`・`Bash(docker compose *)`・`Bash(git -C /x *)`・`Bash(git -c x=y *)`・`Bash(g*)`・`Bash( *)`・`Bash(**)`・`Bash(osascript -e *)`・`Bash(sudo -n *)`・`Bash(command -p *)`・`Bash(awk -f *)`・`Bash(curl -X POST *)`・`Bash(launchctl load *)`・`Bash(python3.12 -c *)`・`Bash(/bin/bash -c *)`・`Bash(ls *)`・`Bash(git config --global *)`・`Bash(git log --oneline *)`・`Bash(git log --output=x *)`・`Bash(cp -f *)`・`Bash(gh alias set *)`・`Bash(rg --pre x *)`・`Bash(security dump-keychain *)`・`Bash(gh pr view extra *)`）がすべて R0、`Bash(rm -v *)`・`Bash(/bin/rm -f *)` が R1。受け入れの例（`Bash(gh pr view *)`・`Bash(git status *)`・`Bash(grep *)`・`Bash(gh run list:*)`）は R0 にならない | 試験 |
+| A18 R0 の例（`Bash(python3 scripts/*)`・`Bash(bash ~/worktrees/*)`・perm-change を含む文・autoMode.allow の add）が exit 3。読み取りの印があっても `*` を含む文（`Bash(ssh -F /dev/null prod1 *)`・`Bash(psql ai_ro -c "SELECT * FROM x")`）は保留（R0、rm 以外は R0 の判定が先）で exit 3。第6版 改2 の反例（`Edit`・`Write`・`Read`・`WebFetch`・`Edit(*)`・`Write(*)`・`Edit(/Users/x/.claude/CLAUDE.md)`・`Edit($HOME/.claude/CLAUDE.md)`・`NotebookEdit(**)`・`Bash()`・`Bash( )`・`Bash (curl *)`・`mcp__playwright`）と、改3 の反例（`Edit(~/.zshrc)`・`Write(~/Library/LaunchAgents/x.plist)`・`Edit(~/.gitconfig)`・`Edit(.git/config)`・`Edit(../x)`・`Edit(docs/)`・`Edit(//etc/hosts)`・`Edit(config)`・`Edit(.zshrc)`・`Edit(.husky/pre-commit)`・`Edit(scripts/x.sh)`・`Edit(docs/.hidden/x)`・`Bash(bash scripts/x.sh)`・`Bash(python3 scripts/dev/x.py)`・`Bash(./scripts/x.sh)`・`WebFetch(domain:*)`・`WebSearch`・`mcp__github__merge_pull_request`・`mcp__playwright__browser_click`）がすべて R0。`Edit(docs/handoff/x.md)`・`Read(docs/**)`・`WebFetch(domain:docs.python.org)`・`mcp__context7__query-docs` は R0 にならない。止めすぎの例（`*` の無い `-F /dev/null` の ai_ro の文、domain・keyword・navigate を含む文）が R1〜R4 に当たらない。第6版の反例（`Bash(gh api *)`・`Bash(gh api:*)`・`Bash(docker compose *)`・`Bash(git -C /x *)`・`Bash(git -c x=y *)`・`Bash(g*)`・`Bash( *)`・`Bash(**)`・`Bash(osascript -e *)`・`Bash(sudo -n *)`・`Bash(command -p *)`・`Bash(awk -f *)`・`Bash(curl -X POST *)`・`Bash(launchctl load *)`・`Bash(python3.12 -c *)`・`Bash(/bin/bash -c *)`・`Bash(ls *)`・`Bash(git config --global *)`・`Bash(git log --oneline *)`・`Bash(git log --output=x *)`・`Bash(cp -f *)`・`Bash(gh alias set *)`・`Bash(rg --pre x *)`・`Bash(security dump-keychain *)`・`Bash(gh pr view extra *)`）がすべて R0、`Bash(rm -v *)`・`Bash(/bin/rm -f *)` が R1。受け入れの例（`Bash(gh pr view *)`・`Bash(git status *)`・`Bash(grep *)`・`Bash(gh run list:*)`）は R0 にならない | 試験 |
 | A19 held の行が無い record の行（category normal）で、po_ref が確かめを通らないもの（存在しない PR・未取り込み・本文にだけ item_hash を書き足し差分に無い PR・差分の台帳に別の SM 番号しか無い PR・SM- でない文に user-automode-allow-sm・settings.json の差分にその文が無い PR で repo-allow・前回の写しより前の consent・本文に item_hash が無い無関係な同意票の consent・同じ PR と item_hash の組の2回目）は差分の説明にならず `ABNORMAL_REASON=A`。通るものは A にならない | 試験（gh は偽の応答に差し替え、mergeCommit と `git diff`・`merge-base` は A17 の一時の git リポジトリを使い回す） |
 
 ## 9. 計画票
@@ -301,3 +310,5 @@ Claude Code の自動判定は、AI が自分の許可を変えることを止�
 - 第4版: REVISE。HIGH 1・MEDIUM 5・LOW 2。第5版で反映（H1→§4-1 起動時の確かめを順番つきにし、変更が無いときは道具自身が GitHub の main に揃えて起動し直す・副命令 sync・exit 4・§4-7 手順1・§4-8 手順2・PDL-1、M1→§4-2 repo: と tools_clean を ls-remote 基準に、M2→§4-1 target の表を1行1キーに、M3→§4-3 ledger・tools_clean・permits を A・B から外す・A5、M4→§4-1 確かめ 8 で importlib、M5→A17 を exit 1/4/0 に分けて update-ref だけは結果が変わらないことを試す、L1→§4-5 呼び方の形、L2→§4-3 E の小分類・§4-7 手順3）。
 - 第5版: **APPROVE**（2026-10-19、Architect＝Opus の読み取り審査。同一 AI による自己審査で、独立した第二者レビューではない）。MEDIUM 1・LOW 4 を本書に反映（MEDIUM1→§4-1 確かめ 6 の FETCH_HEAD 不一致は exit 4、LOW1→目印 `PERM_CHANGE_REEXEC=1`、LOW2→確かめ 8 は照合済みの中身を使う、LOW3→§4-7 手順1 は `<V>` で履歴を引く、LOW4→sync が exit 1 でも点検を走らせる）。A17 (2) に「fetch の間に main が進んだ」、(3) に「起動し直しは1回」を足す。
 - 第6版（便1 の Reviewer REQUEST_CHANGES を受けた設計の直し、2026-10-19）: HIGH-1 held の無い record で A/B を消せる→§4-3 で record の行はすべて po_ref を確かめる・A19。MEDIUM-1 R0 の穴→§2-2 R0 を「狭いと示せなければ R0」に反転・実行役の一覧・rm は R1・A18 に反例。MEDIUM-2・LOW-1〜6 は実装の直し（card-bin1.md 追補）。第6版の Architect 差分審査 REVISE（HIGH-a 本文は後から書き換えられる→取り込まれた差分で確かめる／HIGH-b consent と item_hash の結び付け／MEDIUM SM 番号の結び付け／MEDIUM-a rm のパス／MEDIUM-b 実行役の拒否リスト→受け入れリストへ反転／LOW 1回の制限の範囲）をすべて反映。再審査 REVISE（B の PR#n の古い文・A7・repo: の注記・A19 の試験の材料）を反映し、あわせて「Opus が自分でマージした PR で保留の項目を説明できる」穴を、B の対象の PR#n を repo-allow・repo-hooks に限ることで閉じた（残りは ADR の受け入れたリスク）。再々審査 REVISE（PDL-1 の登録記録が B になる・§4-5 の台本の文）を、登録・外す台本と保留の台本の po_ref を consent に揃えて反映（A7 に1件）。
+- 第6版 改2（便1 の Reviewer 再審査 REQUEST_CHANGES、2026-10-19）: MEDIUM-A R0 が Bash 以外の広い許可（道具名だけ・Edit/Write の `*` や絶対パスの .claude・括弧の形の崩れ）を止めない→§2-2 に「文の形」と Bash 以外の R0 を追加、A18 に反例。LOW-A §2-3 のキーは record が通らなくても常に B。LOW-B A18 の ssh/psql の文を R0 に。LOW-C ADR の R0 の説明を揃えた。LOW-D は PR 本文の直し。
+- 第6版 改3（改2 の Architect 差分審査 REVISE）: MEDIUM-1 Edit 系が拒否の文字列並べのまま→相対パスの受け入れ形に反転。MEDIUM-2 Bash 以外の `*`→WebFetch は domain の名前に `*` 不可、ほかは受け入れ形のみ。MEDIUM-3 MCP の道具名に危険語が無いと素通り→読み取り専用サーバーの受け入れ一覧（context7）。LOW サーバー名の `-` を許す。§2-2 R0 を「R0 にしない形」の一覧に統一。改3 の差分審査 REVISE（(b) の名前だけの文がどの深さにも当たるおそれ→途中に `/`・最初の段の一覧・`.` 始まりの段なし／固定の Bash の実行役とパス先頭→R0／(c)(d) の組み合わせと ADR の R0 説明→ADR／(e) の道具名の文字）を反映（改4）。改4 は Architect 差分審査で APPROVE。任意の LOW（試験の命令とコードの書き換えの組み合わせ）は ADR の受け入れたリスクに1行足した。

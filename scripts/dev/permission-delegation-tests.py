@@ -399,6 +399,30 @@ def test_a18(tmp):
     for i, it in enumerate(["Bash(gh pr view *)", "Bash(git status *)", "Bash(grep *)", "Bash(gh run list:*)",
                             "Bash(wc *)", "Bash(git ls-files *)", "Bash(/usr/bin/grep *)"]):
         chk("A18-a%d" % (i + 1), "受け入れの例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") is None)
+    shape_r0 = [
+        # 改2
+        "Edit", "Write", "Read", "WebFetch", "Edit(*)", "Write(*)", "Edit(/Users/x/.claude/CLAUDE.md)",
+        "Edit($HOME/.claude/CLAUDE.md)", "NotebookEdit(**)", "Bash()", "Bash( )", "Bash (curl *)", "mcp__playwright",
+        # 改3
+        "Edit(~/.zshrc)", "Write(~/Library/LaunchAgents/x.plist)", "Edit(~/.gitconfig)", "Edit(.git/config)",
+        "Edit(../x)", "Edit(docs/)", "Edit(//etc/hosts)", "Edit(config)", "Edit(.zshrc)", "Edit(.husky/pre-commit)",
+        "Edit(scripts/x.sh)", "Edit(docs/.hidden/x)", "Bash(bash scripts/x.sh)", "Bash(python3 scripts/dev/x.py)",
+        "Bash(./scripts/x.sh)", "WebFetch(domain:*)", "WebSearch", "mcp__github__merge_pull_request",
+        "mcp__playwright__browser_click",
+        # 改4
+        "Edit(docs/.claude/x)", "Edit(docs/../x)", "Edit(docs/.git/x)", "Edit(docs/x/.codex/y)", "Edit(frontend/$X/y)",
+        "Edit(backend/.salesanchor-tools/y)", "Edit(docs/agent-console/y)", "Edit(x/docs/y.md)", "Edit(docs)",
+        "Bash(/usr/bin/true)", "Bash(python3.12 x.py)", "Bash(env X=1 ls)", "Bash(sudo ls)", "Bash(make test)",
+        "Bash(bash -c ls)", "Bash(xargs ls)", "Bash(node x.js)", "WebFetch(x.com)", "WebFetch(domain:)",
+        "mcp__context7", "mcp__context7__", "mcp__context7__a b", "Foo(x)", "WebSearch(x)", "Read()",
+    ]
+    for i, it in enumerate(shape_r0):
+        chk("A18-s%d" % (i + 1), "改2〜4 の反例 %s は R0" % it, pc.classify(it, "user-allow", "add") == "R0")
+    shape_ok = ["Edit(docs/handoff/x.md)", "Write(frontend/src/a.tsx)", "MultiEdit(backend/app/x.py)", "Read(docs/**)",
+                "Grep(*)", "Glob(**/*.md)", "WebFetch(domain:docs.python.org)", "mcp__context7__query-docs",
+                "mcp__context7__resolve-library-id", "Bash(ls -la docs)", "Bash(wc -w docs)", "Bash(git diff HEAD)"]
+    for i, it in enumerate(shape_ok):
+        chk("A18-t%d" % (i + 1), "通る例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") != "R0")
     code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -w docs)"))
     chk("A18-ok", "目印に当たらない文は通常で反映される", code == 0)
 
@@ -706,6 +730,17 @@ def test_a19(tmp):
     chk("A19-8b", "item_hash のある同意票（登録の記録）は A にならない", not reasons(lines))
     lines = a19_consent(tmp, "a19-c-twice", 900, "同意票 HASH", earlier_row=True)
     chk("A19-9", "同じ po_ref の2回目の使用は A", len(a_for(lines, UA)) == 1)
+    # §2-3 のキー（deny）: held が無く、通らない record の行しか無いときも B
+    e = light_env(tmp, "a19-deny-bad")
+    run_audit(e, T0, commit=True)
+    d = load_json(e.settings)
+    d["permissions"]["deny"] = ["Bash(rm:*)"]
+    write_json(e.settings, d)
+    hd = audit.item_sha8("Bash(rm:*)")
+    seed_row(e, T0 + td(1200), sub="record", target="user-deny", item_hash=hd, category="reserved:R4", result="recorded",
+             po_ref="consent:%s:%s:cmdz" % ("e" * 64, iso(T0 + td(1000))), actor="po-script")
+    lines = run_audit(e, T0 + td(3600))
+    chk("A19-10", "§2-3 のキーは held 無し・通らない record だけでも B", with_reason(lines, "B", "user:permissions.deny", hd))
 
 
 def test_a8(tmp):

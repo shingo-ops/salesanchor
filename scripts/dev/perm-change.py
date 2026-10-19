@@ -81,11 +81,26 @@ RULES = {
 # `*` を含む Bash の文のうち R0 にしない「狭い形」の受け入れの一覧（設計 §2-2。唯一の置き場）。
 # 一覧に足す（R0 を外す範囲を広げる）変更は R4。
 R0_ACCEPT = {
-    ("git", "status"), ("git", "ls-files"), ("git", "rev-parse"),
-    ("gh", "pr", "view"), ("gh", "pr", "list"), ("gh", "pr", "checks"), ("gh", "pr", "diff"),
-    ("gh", "run", "view"), ("gh", "run", "list"),
-    ("grep",), ("wc",),
+    # Bash の `*` を含む文: 最初の `*` より前の語の並びが、このどれかと完全に一致するとき
+    "bash_star": {
+        ("git", "status"), ("git", "ls-files"), ("git", "rev-parse"),
+        ("gh", "pr", "view"), ("gh", "pr", "list"), ("gh", "pr", "checks"), ("gh", "pr", "diff"),
+        ("gh", "run", "view"), ("gh", "run", "list"),
+        ("grep",), ("wc",),
+    },
+    # Bash の `*` が無い文でも R0 にする実行役（先頭の語のパス・末尾の数字と点を外した名前）
+    "bash_executors": {
+        "python", "bash", "sh", "zsh", "node", "npx", "npm", "pnpm", "yarn", "bun", "deno", "uv", "uvx",
+        "ruby", "perl", "php", "env", "xargs", "eval", "source", "exec", "sudo", "osascript", "make",
+    },
+    # Edit 系の最初の段の受け入れ
+    "edit_first_segments": {"docs", "frontend", "backend"},
+    # MCP の読み取り専用サーバー
+    "mcp_servers": {"context7"},
 }
+EDIT_TOOLS = ("edit", "write", "multiedit", "notebookedit")
+READ_TOOLS = ("read", "grep", "glob")
+EDIT_PATH_DENY = ("..", ".git/", "*", "$", ".claude", ".codex", ".salesanchor-tools", "agent-console")
 READ_ONLY_MARKS = ["--read-only", "ai_ro", "-f /dev/null"]
 READ_SELECT_BLOCKERS = ["insert", "update", "delete", "alter", "drop", "truncate", "copy"]
 
@@ -153,23 +168,60 @@ def narrow_star(toks):
     if not prefix:
         return False
     prefix[0] = cmd_name(prefix[0])
-    return tuple(prefix) in R0_ACCEPT
+    return tuple(prefix) in R0_ACCEPT["bash_star"]
+
+
+def _bash_ok(content):
+    toks = content.replace(":*", " *").split()
+    if not toks:
+        return False
+    if "*" in content:
+        return narrow_star(toks)
+    if "/" in toks[0] or cmd_name(toks[0]) in R0_ACCEPT["bash_executors"]:
+        return False
+    return True
+
+
+def _edit_path_ok(path):
+    low = path.lower()
+    if low.startswith(("~", "/")) or low.endswith("/"):
+        return False
+    if any(d in low for d in EDIT_PATH_DENY):
+        return False
+    segs = path.split("/")
+    if len(segs) < 2 or segs[0] not in R0_ACCEPT["edit_first_segments"]:
+        return False
+    return not any(sg.startswith(".") for sg in segs)
+
+
+def accepted_shape(s):
+    """R0 にしない形（設計 §2-2 (a)〜(e)）に当てはまるか。"""
+    m = re.fullmatch(r"mcp__([A-Za-z0-9_-]+)__([A-Za-z0-9_-]+)", s)
+    if m:
+        return m.group(1) in R0_ACCEPT["mcp_servers"]
+    m = re.fullmatch(r"([A-Za-z][A-Za-z0-9_-]*)\((.*)\)", s, re.S)
+    if not m or not m.group(2).strip():
+        return False
+    name, content = m.group(1).lower(), m.group(2)
+    if name == "bash":
+        return _bash_ok(content)
+    if name in EDIT_TOOLS:
+        return _edit_path_ok(content)
+    if name in READ_TOOLS:
+        return True
+    if name == "webfetch":
+        mm = re.fullmatch(r"domain:(.+)", content, re.I | re.S)
+        return bool(mm) and "*" not in mm.group(1)
+    return False
 
 
 def r0_hit(item, target, op):
     s = item.strip()
     if target.endswith("automode-allow") and op == "add":
         return True
-    if s.lower() == "bash":
-        return True
-    toks = bash_tokens(s)
-    if toks is not None and "*" in s and not narrow_star(toks):
-        return True
-    if re.match(r"(edit|write|multiedit)\(", s, re.I) and ("**" in s or "~/.claude" in s):
-        return True
     if "perm-change" in s.lower():
         return True
-    return False
+    return not accepted_shape(s)
 
 
 def rule_hit(rule, item):

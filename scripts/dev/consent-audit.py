@@ -756,7 +756,9 @@ def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None):
             continue
         if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
             return None
-    return "B" if held_any else "A"
+    # §2-3 のキー（allow 系以外）は、通らない record の行しか無いときも B。repo:permissions.allow は
+    # allow 系なので、held の行が無ければ A（design A19）。
+    return "B" if (held_any or (must_po and key != "repo:permissions.allow")) else "A"
 
 
 def review_due(rows, now):

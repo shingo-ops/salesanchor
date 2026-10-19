@@ -70,5 +70,13 @@ PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同
 9. LOW-6: 試験 A2-j を強める（期待する保留の分類まで確かめる）、試験ファイル :259 付近の使っていない呼び出しを消す。
 10. 試験をすべて走らせ、生出力を /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6.txt に保存。PR 本文の試験数を書き換える。
 
+## 追補2（第6版 改2・Reviewer 再審査の直し、2026-10-19）
+同じブランチ・同じ PR #4544 に追加コミットする。コードの変更は Edit / Write の道具で行う（`python3 -c` や heredoc で書き換えない）。
+1. MEDIUM-A（`scripts/dev/perm-change.py`）: design §2-2 の「R0 にしない形」(a)〜(e)（第6版 改4）のとおり、どの道具も受け入れの形に当てはまるときだけ R0 にしない判定にする。受け入れ一覧（Bash の命令・実行役・(b) の最初の段・MCP のサーバー）は辞書1つ。(a) の実行役と先頭の語のパス、(b) の `/` を1つ以上・最初の段・`.` 始まりの段の条件も入れる。A18 に design の改2〜改4 の反例と通る例をすべて足す。
+2. LOW-A（`scripts/dev/consent-audit.py`）: §2-3 のキーは、確かめを通らない record の行しか無いときも B にする。試験を1件足す。
+3. LOW-B: 試験は既に R0 を期待しているので変更不要（design の文を直した）。
+4. LOW-D: PR 本文の「削除するファイル」から削除でないもの（ADR-1011・README.md・consent-audit.py）を「変更」へ移し、R0 の説明を design の改2 に合わせる。本文は Write で作ったファイルから `gh pr edit --body-file` で。
+5. 試験をすべて走らせ、生出力を /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6b.txt に保存。
+
 ## 報告
 最後の返事は `DONE: PR #<番号> 試験 <合格数>/<総数>` か `BLOCKED: <理由1行>` か `NEEDS_DECISION: <1行>` の1行だけ。生出力は /tmp/CC報告ファイル/permission-delegation/bin1/ に保存する。
