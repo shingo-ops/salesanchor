@@ -12,7 +12,7 @@ mode: handoff
 **対象ADR**: ADR-158（関連・変更しない。要確認の理由を定める ADR は無い。recon §0。§9）  
 **recon**: docs/handoff/shime-review-exclude/recon.md  
 **日付**: 2026-10-19  
-**担当**: Planner（Opus）。状態: 設計審査済み（2回目 APPROVE）・PO 実装承認済み（2026-10-19「1」）・実装 PR #4535・T3 不合格を受け §4-5 を改訂し再審査 APPROVE（§11-5）・改訂の実装待ち  
+**担当**: Planner（Opus）。状態: 設計審査済み（2回目 APPROVE）・PO 実装承認済み（2026-10-19「1」）・実装 PR #4535・T3 不合格を受け §4-5 を改訂し再審査 APPROVE（§11-5）・#4535 マージ（2640ae932）・本番反映済み（2026-10-19、G1〜G5 合格、§11-7）  
 **ADR-1015 の区分**: A（要確認の判定に新しい規則を足す）。DB の列・migration・本番データの書き換えは無い
 
 ---
@@ -197,7 +197,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 | 配信プレビュー件数 `backend/app/services/tcg_distribution_svc.py:480` | 変わらない（shime=False・同じ WHERE） |
 | 除外内訳 `backend/app/services/tcg_distribution_svc.py:524` | 変わらない（shime=False。needs_review・reasons を使わない） |
 | 取り込み進捗 `backend/app/services/tcg_import_progress.py:129` | 変わらない（shime=False、§4-5）。要確認の数は保存値の ar.needs_review で数え、review_joins は並び順にだけ使う |
-| 状態の判断の保存 context_sql `backend/app/services/tcg_condition_review_svc.py:275` | 甲の行は needs_review が偽になる。状態の判断の保存は今と同じに通る |
+| 状態の判断の保存 context_sql `backend/app/services/tcg_condition_review_svc.py:322`（設計時点は :275。実装で行が増えた） | 甲の行は needs_review が偽になる。状態の判断の保存は今と同じに通る |
 | 旧エンジンの再解析 `backend/app/services/tcg_analyzer_svc.py:1592`・:1801 | :1592 は商品の修正がある行だけを通る道（:1586-1592）なので④で settled は偽になり、変わらない。:1801 で甲に当たる行を再解析すると、保存する review_reasons から2つの理由が抜ける（新しい規則と同じ値）。:1801 の候補値は status・exclusion を持たないので、古い保存値で「形」を判定する |
 | 試験 `backend/tests/test_tcg_analysis_review.py:220`・`backend/tests/test_inventory_distribution_rows_pg.py:99`・`backend/tests/test_v102_human_decisions_pg.py:283`・:445・`backend/tests/test_tcg_condition_review.py:159`・`backend/tests/test_tcg_distribution_pg.py`・`backend/tests/test_tcg_import_progress_pg.py`・`backend/tests/test_line_analysis_v102_pg.py`・`backend/tests/test_tcg_work_matching_integration.py`・`backend/tests/test_review_gemini_summary_pg.py` | review_joins を通るので追従する。期待値の変更は不要の見込み（〆の形の試験データが無い）。CI で確かめる |
 | 試験 `backend/tests/test_tcg_condition_review_fenced.py:29`・:41 | OFFSET 0 の数の期待を 2→3・9→10 に直す（§2） |
@@ -220,7 +220,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 |---|---|
 | T1 試験 | CI（pg）で新しい試験 12 件が通る: (a) 甲の形 → needs_review 偽・理由に2つ無し (b) 相手の在庫なし → 2つの理由が残る (c) 相手の商品の在庫が 48 時間以内にある → 残る (d) その在庫が 48 時間より古い → 外れる (e) 状態が FLAG → 残る (f) item_corrections あり → 残る (g) 別の窓口の相手だけ → 残る (h) 保存済みの理由（unit_unresolved 等）あり → 2つは消えるが needs_review は真 (i) 相手の在庫が 48 時間以内だが is_current が偽（ADR-158 でまとめ済み。G1 の形）→ 外れる (j) 相手の投稿が自分より後 → 残る (k) 相手に価格はあるが Sold out → 残る (l) review_joins(fenced=True) の在庫表（dist_base）に〆の行を入れても例外が出ず、行は変わらない。既存の `backend/tests/test_tcg_condition_review_fenced.py`・`backend/tests/test_tcg_condition_review.py:681` も通る |
 | T2 マージ前・本番データ（G2〜G5） | 本番 ai_ro に対し、変更前（origin/main）と変更後（PR の HEAD）の review_joins で作った要確認の判定と在庫表の行を、同じ1つの読み取りトランザクションで並べる。合格: ①要確認で「変更前 真・変更後 偽」になった行の集合 = 同じトランザクションで §3 の4条件を直接数えた甲の集合 ②「変更前 偽・変更後 真」は 0 行 ③甲以外で判定が変わった行 0 ④在庫表（distribution_rows_sql、まとめあり・なし）の row_key の集合が前後で同じ。比べる範囲は recon §3 と同じ「sm.is_active かつ直近7日」。設計時点の見込みは甲 35・乙 8・丙 2。甲が 30〜40 を外れたら止めて理由を調べる（この基準は上の範囲にだけ使う）。範囲外（7日より古い・無効な投稿）で判定が変わった行は件数を別に記録する |
-| T3 速さ | T2 と同じ場で、要確認一覧の1ページ目の SQL と在庫表の SQL（まとめあり・なし）の実行時間を前後で各3回測り、中央値が「変更前 ×1.2 + 100ms」以内。ai_ro では EXPLAIN ANALYZE・\\timing が使えないため、読み取りの道が出す AUDIT 行の ms を、前後を交互に流して比べる（絶対値でなく前後の比の根拠として使う。Opus 判断 2026-10-19） |
+| T3 速さ | T2 と同じ場で、要確認一覧の1ページ目の SQL と在庫表の SQL（まとめあり・なし）の実行時間を前後で各3回（ばらつきで判定が際どいときは捨て運転1回＋各5回。§11-6）測り、中央値が「変更前 ×1.2 + 100ms」以内。ai_ro では EXPLAIN ANALYZE・\\timing が使えないため、読み取りの道が出す AUDIT 行の ms を、前後を交互に流して比べる（絶対値でなく前後の比の根拠として使う。Opus 判断 2026-10-19） |
 | G1 本番 | デプロイ後、ai_ro で T2 と同じ判定を流し c838f466 が偽。PO は要確認一覧に安川さんの「カードセット〆切」が出ないことを画面で見られる |
 | G3・G4 本番 | デプロイ後の同じ判定で f364283f・044ba439 が真のまま（044ba439 は相手の在庫が 48 時間以内に残っている間） |
 
@@ -321,3 +321,16 @@ shime=False の文字列から定数の lateral と settled の参照4か所を�
 - CI ①: pytest-run-internal で6件失敗。`backend/tests/test_inventory_distribution_rows.py:107`・:283 の固定値と比べて、4通りとも +159 文字。§4-5 の定数の lateral の分。固定値の更新を §6 に追加した。shime=False で lateral を出さない形は、cr_reasons が settled を参照するため採らない。
 - CI ②: pytest (SQLite + PostgreSQL RLS) は ① の集約で、① に連動して落ちただけ。
 - CI ③: process-artifacts gate は「### GO記録」が無いため。services を変更する PR の手続きで、GO の後に本文へ足す。
+
+### 11-7. マージと本番反映（2026-10-19）
+
+- Reviewer（opus）4回目 APPROVE（247dd1df8）。main（ADR-1032 の docs 3ファイル）を取り込んだ 326ba74c6 で再 APPROVE。PR の差分は 247dd1df8 と1バイトも違わない。CI は必須チェック 38 件が緑。GO は「POの委任に基づくClaude Opus発行（ADR-1003）」で、PR 本文の ### GO記録 に残した。
+- マージ 2640ae932（10:02:52Z）。Deploy run 39234592360 success（10:06Z）。Checkout の log に 2640ae932529368998f5eab61528abfe2b7e67a8。
+- 本番の照合は ai_ro・sm.is_active かつ直近7日、10:09〜10:10Z。生出力は /tmp/CC報告ファイル/shime-review-exclude-20261019/post/。
+  - G1 合格: c838f466 は要確認から外れた。
+  - G2: 〆の形は 47 行。外れたのは 36 行（甲）、残ったのは 11 行（乙 8・丙 3）。KGI 承認時（06:24Z）の 45 行・35/10 から、直近7日の窓に入る行が2行増えた。止める範囲（30〜40）の内側。
+  - G3 合格: f364283f ほか乙 8 行は残った。
+  - G4 合格: 044ba439・4e713598・5642ad0b は残った。
+  - G5 合格: 〆の形でない 1141 行で needs_review が真の行は、変更前 145・変更後 145。needs_review か理由が違う行は 0。
+- 要確認一覧1ページ目の AUDIT は 1206ms（参考、1回）。
+- 未確認: VPS 上のコンテナ内のコードの SHA（読み取り鍵では見られない）。PO の画面目視。
