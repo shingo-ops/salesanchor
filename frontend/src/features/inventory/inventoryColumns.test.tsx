@@ -115,3 +115,39 @@ describe("block frames (ADR-1014 rev 2026-10-19 (3))", () => {
     expect(qty.querySelector(".comp-badge")).toBeNull();
   });
 });
+
+describe("title ellipsis and wrapped note/ship (ADR-1014 rev 2026-10-20)", () => {
+  const cell = (key: string, r: InventoryRow) => {
+    const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
+    render(<div data-testid="cell">{cols.find((c) => c.key === key)!.renderCell!(r, "r1")}</div>);
+    return screen.getByTestId("cell");
+  };
+  it("gives both title lines the clip class and a full-text title", () => {
+    const c = cell("name", { ...row, product_name: "Long Name", name_en: "Long English" });
+    const top = c.querySelector(".inventory-cell__title");
+    const sub = c.querySelector(".inventory-cell__sub");
+    expect(top?.classList.contains("inventory-cell__clip")).toBe(true);
+    expect(top?.getAttribute("title")).toBe("Long Name");
+    expect(sub?.classList.contains("inventory-cell__clip")).toBe(true);
+    expect(sub?.getAttribute("title")).toBe("Long English");
+  });
+  it("uses #product_id as the title when product_name is empty and omits the sub line without name_en", () => {
+    const c = cell("name", { ...row, product_name: null, name_en: null });
+    const top = c.querySelector(".inventory-cell__title");
+    expect(top?.getAttribute("title")).toBe("#2");
+    expect(top?.textContent).toBe("#2");
+    expect(c.querySelector(".inventory-cell__sub")).toBeNull();
+  });
+  it.each(["note", "ship"])("wraps %s with the wrap class (not nowrap)", (key) => {
+    const c = cell(key, { ...row, note_ja: "memo", ship_ja: "ship" });
+    const el = c.querySelector(".inventory-cell__wrap");
+    expect(el).not.toBeNull();
+    expect(c.querySelector(".inventory-cell__nowrap")).toBeNull();
+  });
+  it.each(["note", "ship"])("keeps the %s wrap element empty when the value is empty", (key) => {
+    const c = cell(key, { ...row, note_ja: null, ship_ja: null });
+    const el = c.querySelector(".inventory-cell__wrap");
+    expect(el).not.toBeNull();
+    expect(el!.matches(":empty")).toBe(true);
+  });
+});

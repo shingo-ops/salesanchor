@@ -65,8 +65,11 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--table-col-min-width`  | `280px` | テーブルカラム最小幅 |
 | `--col-width-checkbox`   | `40px`  | チェックボックス列幅 |
 | `--col-width-medium`     | `200px` | 中幅カラム |
-| `--col-width-wide`       | `240px` | 広めカラム |
+| `--col-width-wide`       | `360px` | 広めカラム |
 | `--col-width-url`        | `300px` | URL表示カラム |
+| `--comp-inventory-title-max-w` | `var(--col-width-wide)`（360px） | 在庫表・閲覧ページ 商品名1段の上限幅（超えた分は「…」） |
+| `--comp-inventory-text-max-w` | `var(--col-width-medium)`（200px） | 在庫表・閲覧ページ 備考・発送の折り返し幅 |
+| `--comp-inventory-text-min-w` | `calc(var(--col-width-medium) / 2)`（100px） | 在庫表・閲覧ページ 備考・発送の最小幅（空のセルには付けない） |
 | `--modal-wide-w`         | `880px` | 広めモーダル（詳細・配送パネル） |
 | `--modal-commission-w`   | `760px` | 手数料パネル |
 | `--modal-detail-max-w`   | `720px` | 売上情報パネル |

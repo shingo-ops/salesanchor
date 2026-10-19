@@ -142,3 +142,13 @@ PO 承認（2026-10-19「y」。GAS の表を閲覧ページと同じ形にし�
 - 反映（2026-10-19）: テスト GAS 版27・本番 GAS 版18。本番18には次がまとめて入った: 並び順（発売日の新しい順のまとまり・#4519）、改訂（3）（4）の最安・在庫最多の塗り、改訂（5）状態のまとまり固定、改訂（6）並び替え3択、本改訂（7）の表の見た目。写しの場所: `~/CC報告ファイル-keep/inventory-gas-table-parity/gas/`（`test_stage`・`prod_stage`）。
 - 戻し方: 本番は版17、テストは版26へ redeploy。
 - 記録: `docs/handoff/inventory-gas-table-parity/`（recon・design・審査）。
+
+## 改訂 2026-10-20（商品名を1行のまま「…」で省き、備考・発送は折り返す）
+
+PO 決定（2026-10-20「1」）。商品名は1行のまま幅の上限を決め、超えた分は「…」にする。マウスを乗せると全文が出る。備考・発送は上限幅で折り返す（前の節の本文は書き換えない）。目的は、PC 幅で長い文字により表が横に広がり、`fitToWidth` が表全体を縮めるのを抑えること。
+
+- 内容: 商品名の日本語の段・英語の段は上限幅（`--comp-inventory-title-max-w` = 360px）で1行のまま末尾を「…」にし、全文を `title` に入れる。備考・発送は `--comp-inventory-text-max-w`（200px）で折り返し、中身がある間は `--comp-inventory-text-min-w`（100px）より細らない。スマホ幅（767px 以下のカード表示）は今のまま。
+- 正本: `frontend/src/features/inventory/inventoryColumns.css`・`inventoryColumns.tsx`・`frontend/src/pages/viewer/viewerColumns.tsx`・`frontend/src/tokens.css`（トークン3つは ADR-067 の表に追記）。正本を変えたら GAS の写しも同じ便で直す。
+- 反映: アプリ: 本 PR。GAS: テスト・本番とも反映待ち。
+- 戻し方: アプリは PR を revert。GAS は本番を版18、テストを版27へ redeploy（反映後の実際の版番号を記録する）。
+- 記録: `docs/handoff/inventory-title-ellipsis/`（recon・design・審査）。

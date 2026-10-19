@@ -99,8 +99,17 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 1,
         renderCell: (it) => (
           <>
-            <div className="inventory-cell__title">{it.product_name ?? `#${it.product_id}`}</div>
-            {it.name_en && <div className="inventory-cell__sub">{it.name_en}</div>}
+            <div
+              className="inventory-cell__title inventory-cell__clip"
+              title={it.product_name ?? `#${it.product_id}`}
+            >
+              {it.product_name ?? `#${it.product_id}`}
+            </div>
+            {it.name_en && (
+              <div className="inventory-cell__sub inventory-cell__clip" title={it.name_en}>
+                {it.name_en}
+              </div>
+            )}
           </>
         ),
       },
@@ -166,7 +175,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         key: "note",
         header: t("inventory.col.note"),
         mobileOrder: 5,
-        renderCell: (it) => <span className="inventory-cell__nowrap">{it.note_ja ?? ""}</span>,
+        renderCell: (it) => <span className="inventory-cell__wrap">{it.note_ja ?? ""}</span>,
       },
     },
     {
@@ -175,7 +184,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         key: "ship",
         header: t("inventory.col.ship"),
         mobileOrder: 6,
-        renderCell: (it) => <span className="inventory-cell__nowrap">{it.ship_ja ?? ""}</span>,
+        renderCell: (it) => <span className="inventory-cell__wrap">{it.ship_ja ?? ""}</span>,
       },
     },
     {
