@@ -198,7 +198,7 @@ celery_app.conf.beat_schedule = {
     # ADR-1019 段6: 閲覧者の使い回しの疑いが新しく出たら運用の Discord へ（1時間ごと・同じ知らせは30日送らない）
     "notify-viewer-share-flags-hourly": {
         "task": "app.tasks.viewer_share_flag_monitor.notify_viewer_share_flags",
-        "schedule": 3600.0,
+        "schedule": crontab(minute=15),  # 毎時15分（interval だと deploy の再起動で計測が初めからになるため）
     },
 }
 
