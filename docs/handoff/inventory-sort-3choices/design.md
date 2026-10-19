@@ -110,5 +110,6 @@ backend・API・DB・migrations・deploy.yml・scripts、並びの規則（商�
 不要: 画面のプルダウン文言・選択肢の整理で、外部の数値で成否が決まる性質ではない。
 
 ## 9. 維持の仕組み
+守り手: frontend/src/pages/inventory/InventoryPage.tablelayout.test.tsx、frontend/src/pages/viewer/InventoryView.test.tsx（CI の vitest）
 ADR-1014 改訂（6）を正本とし、vitest（4-3）で選択肢の数・既定の見出し表示・見出しで既定に戻ることを守る。GAS はステージのコメントに ADR 番号を残す。
 審査: 第1版 REVISE（review-design.md）→ 第2版 REVISE（review-design-v2.md）→ 第3版
