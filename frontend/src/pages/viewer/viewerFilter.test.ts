@@ -75,6 +75,18 @@ describe("sort (ADR-1014 改訂 2026-10-18)", () => {
   it("price asc keeps the default group order (release date newest first) and sorts only inside a group", () => {
     expect(sortRows(rows, "unit_price", "asc").map((r) => r.idx)).toEqual([0, 3, 1, 2]);
   });
+  it("price asc: inside a product, condition blocks keep the default order (idx), price sorts only inside a condition block", () => {
+    // idx 順 = サーバーの価値順: sealed(0,1) → damaged(2,3)。価格は sealed が高く damaged が安い
+    const rs = withIndex([
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "sealed", unit_price: "900" }), // 0
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "sealed", unit_price: "800" }), // 1
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "damaged", unit_price: "100" }), // 2
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "damaged", unit_price: "50" }), // 3
+    ]);
+    expect(sortRows(rs, "unit_price", "asc").map((r) => r.idx)).toEqual([1, 0, 3, 2]);
+    expect(sortRows(rs, "unit_price", "desc").map((r) => r.idx)).toEqual([0, 1, 2, 3]);
+    expect(sortRows(rs, "quantity", "desc").map((r) => r.idx)).toEqual([0, 1, 2, 3]);
+  });
   it("release_date desc: newest group first, empty still last", () => {
     expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([0, 1, 3, 2]);
   });

@@ -317,7 +317,8 @@ def _old_three_statements(session, *, merge: bool, where: str, params: dict, sor
 
     def rows_sql(m: bool) -> str:
         inner_rows = distribution.distribution_rows_sql(**args, merge_same_post=m)
-        return ("SELECT x.*, tm.code AS work_code, pp.category AS category "
+        return ("SELECT x.*, tm.code AS work_code, pp.category AS category, "
+                "MIN(x.sort_ord) OVER (PARTITION BY x.product_id, x.condition) AS cond_block "
                 f"FROM ({inner_rows}) x LEFT JOIN public.products pp ON pp.id = x.product_id "
                 "LEFT JOIN public.type_master tm ON tm.id = pp.work_id")
 
@@ -880,3 +881,60 @@ def test_f2b_a_group_with_a_single_row_gets_no_badge(pg, ids, merge):
     assert got[c] == (False, False)  # 旧規則（商品だけで比べる）なら数量50 に在庫最多が付く
     assert got[a1] == (True, False)
     assert got[a2] == (False, True)
+
+
+# --- 並び替えは「商品 → 状態」のまとまりの中だけ（ADR-1014 改訂 2026-10-19（5））----------------------------------------
+
+
+def _seed_interleaved(pg_fixture, ids) -> None:
+    """同じ商品に状態2つ。価格・数量が状態をまたいで交互になる（ブロックが無ければ状態が混ざる並び）。"""
+    job = _add_job(pg_fixture)
+    for price, qty, cond, canon, unit in (
+        (1000, 1, ids.box, "Sealed box", "Box"), (2000, 8, ids.case, "Case", "Case"),
+        (3000, 2, ids.box, "Sealed box", "Box"), (4000, 7, ids.case, "Case", "Case"),
+    ):
+        _add_row(pg_fixture, job, ids.p1, cond, basis=f"R2:{price}", price=price, qty=qty, canonical=canon, unit=unit)
+
+
+def _view_page(pg_fixture, sort: str, order_dir: str) -> list[dict]:
+    from app.routers.inventory_offers import _SORT_COLUMNS
+
+    with Session(pg_fixture[1]) as session:
+        _, page, _ = _new_single_statement(
+            session, merge=False, where="", params={}, sort_col=_SORT_COLUMNS[sort], order_dir=order_dir,
+            limit=50, offset=0)
+    return page
+
+
+def _default_condition_order(pg_fixture) -> list[str]:
+    seen: list[str] = []
+    for r in _view_page(pg_fixture, "release_date", "DESC"):
+        if r["condition"] not in seen:
+            seen.append(r["condition"])
+    return seen
+
+
+def test_s1_price_sort_keeps_condition_blocks_in_default_order(pg, ids):
+    _seed_interleaved(pg, ids)
+    default_order = _default_condition_order(pg)
+    assert len(default_order) == 2
+    page = _view_page(pg, "unit_price", "ASC")
+    assert [r["condition"] for r in page] == [c for c in default_order for _ in range(2)]
+    for cond in default_order:
+        prices = [r["price_num"] for r in page if r["condition"] == cond]
+        assert prices == sorted(prices)
+    page_desc = _view_page(pg, "unit_price", "DESC")
+    assert [r["condition"] for r in page_desc] == [c for c in default_order for _ in range(2)]
+    for cond in default_order:
+        prices = [r["price_num"] for r in page_desc if r["condition"] == cond]
+        assert prices == sorted(prices, reverse=True)
+
+
+def test_s2_quantity_sort_keeps_condition_blocks_in_default_order(pg, ids):
+    _seed_interleaved(pg, ids)
+    default_order = _default_condition_order(pg)
+    page = _view_page(pg, "quantity", "DESC")
+    assert [r["condition"] for r in page] == [c for c in default_order for _ in range(2)]
+    for cond in default_order:
+        qtys = [r["qty_num"] for r in page if r["condition"] == cond]
+        assert qtys == sorted(qtys, reverse=True)
