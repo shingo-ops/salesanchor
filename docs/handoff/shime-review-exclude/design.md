@@ -12,7 +12,7 @@ mode: handoff
 **対象ADR**: ADR-158（関連・変更しない。要確認の理由を定める ADR は無い。recon §0。§9）  
 **recon**: docs/handoff/shime-review-exclude/recon.md  
 **日付**: 2026-10-19  
-**担当**: Planner（Opus）。状態: 設計案作成済み・設計審査済み（2回目 APPROVE、§11-3）・PO 実装承認済み（2026-10-19「1」）  
+**担当**: Planner（Opus）。状態: 設計審査済み（2回目 APPROVE）・PO 実装承認済み（2026-10-19「1」）・実装 PR #4535・T3 不合格を受け §4-5 を改訂し再審査 APPROVE（§11-5）・改訂の実装待ち  
 **ADR-1015 の区分**: A（要確認の判定に新しい規則を足す）。DB の列・migration・本番データの書き換えは無い
 
 ---
@@ -39,7 +39,7 @@ PO の言葉: 「カードセット〆切 Hironobu Yasukawaさんのこの情報
 - fenced の文字列検査の期待数（`backend/tests/test_tcg_condition_review_fenced.py:29` の 2→3、:41 の 2+5+2→3+5+2）。cr_shime に OFFSET 0 を足すため
 
 対象外（触らない）
-- 在庫表・GAS・配信プレビューの WHERE（`backend/app/services/tcg_distribution_svc.py:367-375`・:481-489）。〆の行は価格 NULL・excluded・Sold out なので、要確認かどうかに関係なく在庫表に出ない（同:370、:372、:375）
+- 在庫表・GAS・配信プレビューの WHERE（§4-5 の review_joins の呼び出しに shime=False を足す3か所を除く。`backend/app/services/tcg_distribution_svc.py:367-375`・:481-489）。〆の行は価格 NULL・excluded・Sold out なので、要確認かどうかに関係なく在庫表に出ない（同:370、:372、:375）
 - 解析（v102）の保存値・ar.needs_review・ar.review_reasons。ダッシュボードの件数（ar.needs_review を数える）は v102 の行では変わらない。例外として、旧エンジンの再解析（`backend/app/services/tcg_analyzer_svc.py:1801`）が甲に当たる行を再解析した場合だけ、保存値の needs_review・review_reasons が新しい規則の値になる（§6）
 - 「このままで良い」(review_ack) の仕組み
 - 価格のある行、保存済みの理由がある行（20f9cb54 のような状態不明は残る）
@@ -157,6 +157,28 @@ SHIME_STOCK_WINDOW_HOURS = 48
 - 副問い合わせの中で `ei`・`sm` を外側の別名として参照する（review_joins の前提 `backend/app/services/tcg_condition_review_svc.py:140`）
 - `cr_pa.extraction_item_id <> ei.id` で自分を除く（context_sql の候補値 `to_jsonb(ar) || candidate` でも ei は同じ）
 
+### 4-5. 在庫表の側では cr_shime を作らない（T3 不合格を受けた改訂、2026-10-19）
+
+T3（本番の実測）で在庫表の SQL が 約1.2 秒 → 14〜16 秒に遅くなった（verify/REPORT.md）。在庫表の行は〆の形を WHERE（`backend/app/services/tcg_distribution_svc.py:367-375`）で必ず落とすので、在庫表の側で cr_shime を計算する意味が無い。そこで review_joins に引数を1つ足し、在庫表の3か所では副問い合わせを作らない。
+
+```python
+def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
+                 schema: str | None = None, fenced: bool = False, shime: bool = True) -> str:
+```
+
+- `shime=True`（既定）: §4-2 の cr_shime をそのまま入れる（要確認一覧・取り込み進捗・context_sql）
+- `shime=False`: cr_shime の lateral を `CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime` に置き換える。§4-3 の理由の配列は同じ文字列のまま（settled が常に偽なので変更前と同じ判定）。OFFSET 0 の数は shime の値で変わらない（素 3・fenced 10）
+- 書き方: §4-2 の cr_shime の lateral の文字列を Python の変数に分け、shime=False のときは `CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime` に差し替えて f-string に埋める（波括弧は §4-4 のとおり）
+- 呼び出し元の変更（4か所）:
+  - :366 `review_joins(schema=TCG_SCHEMA, fenced=True)` → `review_joins(schema=TCG_SCHEMA, fenced=True, shime=False)`
+  - :480 `review_joins(schema=TCG_SCHEMA)` → `review_joins(schema=TCG_SCHEMA, shime=False)`
+  - :524 `review_joins(schema=TCG_SCHEMA)` → `review_joins(schema=TCG_SCHEMA, shime=False)`
+  - `backend/app/services/tcg_import_progress.py:129` `review_joins(schema=TCG_SCHEMA)` → `review_joins(schema=TCG_SCHEMA, shime=False)`。取り込み進捗は要確認の数を保存値で数え、review_joins は並び順（cr.canonical）にだけ使うので、cr_shime は要らない（再審査の指摘。取り込み1件の全行にかかるので速さの危険を残さない）
+- これで在庫表・配信プレビュー・除外内訳の SQL は、変更前と比べて「`CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime` の1つと、理由の配列の `cr_shime.settled` 参照」だけが違う形になり、判定は変更前と同じになる
+- 遅くなった原因は未確認（ai_ro で EXPLAIN が使えない）。この改訂は副問い合わせそのものを在庫表の SQL から無くすので、原因が何であっても在庫表の側には及ばない
+
+試験の追加（T1）: (m) `review_joins(fenced=True, shime=False)` と `review_joins(shime=False)` の両方の文字列に `cr_pa`・`cr_sa` が無く、`SELECT FALSE AS settled OFFSET 0) cr_shime` が1回ある (n) 在庫表の SQL（distribution_rows_sql、まとめあり・なしの両方）に `cr_pa` が無い (o) `backend/app/services/tcg_distribution_svc.py` のソースに `shime=False` がちょうど3回、`backend/app/services/tcg_import_progress.py` に1回ある（付け忘れで遅い SQL が戻るのを防ぐ） (l) は shime=False の在庫表で〆の行が出ず例外が無いことを見る形にそろえる。
+
 ## 5. 代替案と選んだ理由
 
 | 案 | 中身 | 判断 |
@@ -171,10 +193,10 @@ SHIME_STOCK_WINDOW_HOURS = 48
 | 呼び出し元 | 変わること |
 |---|---|
 | 要確認一覧 `backend/app/services/tcg_analysis_review_svc.py:76` | 甲の行が一覧と total から消える（目的） |
-| 在庫表 dist_base `backend/app/services/tcg_distribution_svc.py:366` | 変わらない。〆の行は :370・:372・:375 で落ちる。cr_shime は「形」が合わないので副問い合わせを走らせない（CASE の ELSE） |
-| 配信プレビュー件数 `backend/app/services/tcg_distribution_svc.py:480` | 変わらない（同じ WHERE） |
-| 除外内訳 `backend/app/services/tcg_distribution_svc.py:524` | 変わらない（needs_review・reasons を使わない） |
-| 取り込み進捗 `backend/app/services/tcg_import_progress.py:129` | 変わらない。要確認の数は保存値の ar.needs_review で数え、review_joins は並び順にだけ使う |
+| 在庫表 dist_base `backend/app/services/tcg_distribution_svc.py:366` | 変わらない。shime=False で cr_shime は常に偽（§4-5）。〆の行は :370・:372・:375 で落ちる |
+| 配信プレビュー件数 `backend/app/services/tcg_distribution_svc.py:480` | 変わらない（shime=False・同じ WHERE） |
+| 除外内訳 `backend/app/services/tcg_distribution_svc.py:524` | 変わらない（shime=False。needs_review・reasons を使わない） |
+| 取り込み進捗 `backend/app/services/tcg_import_progress.py:129` | 変わらない（shime=False、§4-5）。要確認の数は保存値の ar.needs_review で数え、review_joins は並び順にだけ使う |
 | 状態の判断の保存 context_sql `backend/app/services/tcg_condition_review_svc.py:275` | 甲の行は needs_review が偽になる。状態の判断の保存は今と同じに通る |
 | 旧エンジンの再解析 `backend/app/services/tcg_analyzer_svc.py:1592`・:1801 | :1592 は商品の修正がある行だけを通る道（:1586-1592）なので④で settled は偽になり、変わらない。:1801 で甲に当たる行を再解析すると、保存する review_reasons から2つの理由が抜ける（新しい規則と同じ値）。:1801 の候補値は status・exclusion を持たないので、古い保存値で「形」を判定する |
 | 試験 `backend/tests/test_tcg_analysis_review.py:220`・`backend/tests/test_inventory_distribution_rows_pg.py:99`・`backend/tests/test_v102_human_decisions_pg.py:283`・:445・`backend/tests/test_tcg_condition_review.py:159`・`backend/tests/test_tcg_distribution_pg.py`・`backend/tests/test_tcg_import_progress_pg.py`・`backend/tests/test_line_analysis_v102_pg.py`・`backend/tests/test_tcg_work_matching_integration.py`・`backend/tests/test_review_gemini_summary_pg.py` | review_joins を通るので追従する。期待値の変更は不要の見込み（〆の形の試験データが無い）。CI で確かめる |
@@ -197,7 +219,7 @@ SHIME_STOCK_WINDOW_HOURS = 48
 |---|---|
 | T1 試験 | CI（pg）で新しい試験 12 件が通る: (a) 甲の形 → needs_review 偽・理由に2つ無し (b) 相手の在庫なし → 2つの理由が残る (c) 相手の商品の在庫が 48 時間以内にある → 残る (d) その在庫が 48 時間より古い → 外れる (e) 状態が FLAG → 残る (f) item_corrections あり → 残る (g) 別の窓口の相手だけ → 残る (h) 保存済みの理由（unit_unresolved 等）あり → 2つは消えるが needs_review は真 (i) 相手の在庫が 48 時間以内だが is_current が偽（ADR-158 でまとめ済み。G1 の形）→ 外れる (j) 相手の投稿が自分より後 → 残る (k) 相手に価格はあるが Sold out → 残る (l) review_joins(fenced=True) の在庫表（dist_base）に〆の行を入れても例外が出ず、行は変わらない。既存の `backend/tests/test_tcg_condition_review_fenced.py`・`backend/tests/test_tcg_condition_review.py:681` も通る |
 | T2 マージ前・本番データ（G2〜G5） | 本番 ai_ro に対し、変更前（origin/main）と変更後（PR の HEAD）の review_joins で作った要確認の判定と在庫表の行を、同じ1つの読み取りトランザクションで並べる。合格: ①要確認で「変更前 真・変更後 偽」になった行の集合 = 同じトランザクションで §3 の4条件を直接数えた甲の集合 ②「変更前 偽・変更後 真」は 0 行 ③甲以外で判定が変わった行 0 ④在庫表（distribution_rows_sql、まとめあり・なし）の row_key の集合が前後で同じ。比べる範囲は recon §3 と同じ「sm.is_active かつ直近7日」。設計時点の見込みは甲 35・乙 8・丙 2。甲が 30〜40 を外れたら止めて理由を調べる（この基準は上の範囲にだけ使う）。範囲外（7日より古い・無効な投稿）で判定が変わった行は件数を別に記録する |
-| T3 速さ | T2 と同じ場で、要確認一覧の1ページ目の SQL と在庫表の SQL の実行時間を前後で各3回測り、中央値が「変更前 ×1.2 + 100ms」以内 |
+| T3 速さ | T2 と同じ場で、要確認一覧の1ページ目の SQL と在庫表の SQL（まとめあり・なし）の実行時間を前後で各3回測り、中央値が「変更前 ×1.2 + 100ms」以内。ai_ro では EXPLAIN ANALYZE・\\timing が使えないため、読み取りの道が出す AUDIT 行の ms を、前後を交互に流して比べる（絶対値でなく前後の比の根拠として使う。Opus 判断 2026-10-19） |
 | G1 本番 | デプロイ後、ai_ro で T2 と同じ判定を流し c838f466 が偽。PO は要確認一覧に安川さんの「カードセット〆切」が出ないことを画面で見られる |
 | G3・G4 本番 | デプロイ後の同じ判定で f364283f・044ba439 が真のまま（044ba439 は相手の在庫が 48 時間以内に残っている間） |
 
@@ -282,3 +304,12 @@ T2・T3 の本番の読み方: SQL は Python で review_joins から作り、�
 
 前回の8件はすべて解消。review_joins の写しに §4-1〜§4-3 を当てはめて組み立て、fenced の置換数 5（例外なし）、OFFSET 0 の数 素 3・fenced 10、`_c3(base)==fenced`、波括弧の書き残し 0 を確かめた。軽微3件は本書へ反映済み: ① T2 の比べる範囲を「sm.is_active かつ直近7日」に固定 ② 旧エンジンの影響は :1801 だけ（:1592 は④で外れない） ③ 新しい規則は v102 以外にも効く旨を §3 に明記。fenced 試験の行番号を :30→:29 に訂正。
 未確認（CI と T3 で確かめる）: 実際の PostgreSQL での構文検査・実行計画、analysis_results.product_id の索引の有無（U1）。
+
+### 11-4. T2・T3 の1回目（PR #4535 の HEAD fddb84805、2026-10-19 08:03Z、verify/REPORT.md）
+
+- T2: ①〜④ 合格（前 真→後 偽 35 行 = 甲 35 行、前 偽→後 真 0、甲以外の変化 0、在庫表の row_key 差 0）。〆の形 46・甲 35・乙 8・丙 3（設計時点から丙 +1、理由は次回 T2 で特定）。範囲外（7日より古い）で真→偽 3 行（0fcc5a27・f24b28fa・e7a170d8。e7a170d8 は v102 以外）。§3 は全期間・全エンジンに効く設計（§3 適用範囲）なので意図どおりかを次回 T2 で4条件と突き合わせる。
+- T3: 要確認一覧 932→1154 ms（基準 1218、合格）。在庫表 まとめなし 1206→14092 ms・まとめあり 1352→16260 ms（不合格）。→ §4-5 で在庫表の側から cr_shime を外す改訂。
+
+### 11-5. Reviewer（opus）3回目（§4-5 の改訂）: APPROVE（2026-10-19）
+
+shime=False の文字列から定数の lateral と settled の参照4か所を除くと origin/main と完全一致（素・fenced とも）。置換数5、OFFSET 0 は素3・fenced10、cr_pa・cr_sa 0。:480 は WHERE が価格ありに限るため、:524 は cr.canonical・cr.effect しか使わないため、数字は変わらない。T3 の AUDIT ms は前後の比としてのみ根拠にする（変更前のばらつき 1159〜1337ms より基準が広く、12倍はばらつきを大きく超える）。軽微な指摘を反映: 取り込み進捗も shime=False に、試験 (m) を fenced なしにも広げ (n) をまとめあり・なしに (o) を追加、lateral の文字列を変数に分ける書き方を明記。マージ前に main の取り込みを CI で確かめる。

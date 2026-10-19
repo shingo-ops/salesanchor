@@ -861,5 +861,25 @@ def test_shime_form_row_does_not_break_fenced_distribution_sql(pg):  # (l)
     seed_shime(pg)
     seed_partner(pg, 100)
     seed_partner(pg, 1)
-    rows = output(pg)  # review_joins(fenced=True) を通る在庫表。例外が出ず、〆の行は出ない（出るのは相手の2行だけ。output は年齢の窓を渡さない）
+    rows = output(pg)  # review_joins(fenced=True, shime=False) を通る在庫表（cr_shime は作らない）。例外が出ず、〆の行は出ない（出るのは相手の2行だけ。output は年齢の窓を渡さない）
     assert len(rows) == 2
+
+
+def test_shime_false_has_no_partner_subqueries():  # (m)
+    for fenced in (False, True):
+        joins = condition.review_joins(schema="tcg", fenced=fenced, shime=False)
+        assert "cr_pa" not in joins and "cr_sa" not in joins
+        assert joins.count("SELECT FALSE AS settled OFFSET 0) cr_shime") == 1
+        assert joins.count("OFFSET 0") == (10 if fenced else 3)
+
+
+@pytest.mark.parametrize("grouped", [False, True])
+def test_distribution_rows_sql_has_no_shime_subquery(grouped):  # (n)
+    sql = distribution.distribution_rows_sql(include_flag_single=False, age_condition="TRUE", merge_same_post=grouped)
+    assert "cr_pa" not in sql and "cr_sa" not in sql
+
+
+def test_callers_pass_shime_false():  # (o)
+    root = Path(distribution.__file__).parent
+    assert (root / "tcg_distribution_svc.py").read_text(encoding="utf-8").count("shime=False") == 3
+    assert (root / "tcg_import_progress.py").read_text(encoding="utf-8").count("shime=False") == 1

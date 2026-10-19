@@ -139,7 +139,7 @@ def _fence_review_joins(sql: str) -> str:
 
 
 def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
-                 schema: str | None = None, fenced: bool = False) -> str:
+                 schema: str | None = None, fenced: bool = False, shime: bool = True) -> str:
     """SQL requires ar/ei/ej/sm aliases plus source_cte; optional candidate for reanalysis.
 
     fenced=True は配信行 SQL 専用（OFFSET 0 の壁を追加）。既定 False は従来と同一の文字列。
@@ -173,6 +173,42 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         **{key: f"cr_data.ar->'{key}'" for key in ("review_reasons", "needs_review", "status", "exclusion", "note_ja")},
         "latest_correction_id": "cr_latest.id",
     }))
+    shime_lateral = (
+        "CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime" if not shime else
+        f"""CROSS JOIN LATERAL (SELECT
+        -- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §3）。真なら price_unresolved と excluded を付けない
+        CASE WHEN
+            lower(btrim(COALESCE(cr_data.ar->>'status', ''))) IN ('sold out', 'soldout')
+            AND cr_data.ar->>'exclusion' = 'excluded'
+            AND cr_data.ar->>'price_normalized' IS NULL AND cr_data.ar->>'quantity_normalized' IS NULL
+            AND cr_data.ar->>'product_id' IS NOT NULL AND cr_data.ar->>'condition_id' IS NOT NULL
+            AND strpos(COALESCE(cr_data.ar->>'condition_canonical', '') || COALESCE(cr_data.ar->>'condition_basis', ''), 'FLAG') = 0
+            AND cr_latest.id IS NULL
+        THEN EXISTS (SELECT 1 FROM {schema}.analysis_results cr_pa
+                JOIN {schema}.extraction_items cr_pi ON cr_pi.id = cr_pa.extraction_item_id
+                JOIN {schema}.extraction_jobs cr_pj ON cr_pj.id = cr_pi.extraction_job_id
+                JOIN {schema}.source_messages cr_pm ON cr_pm.id = cr_pj.source_message_id
+                WHERE cr_pm.supplier_channel_id = sm.supplier_channel_id
+                  AND cr_pa.product_id = (cr_data.ar->>'product_id')::integer
+                  AND cr_pa.condition_id = (cr_data.ar->>'condition_id')::integer
+                  AND cr_pa.extraction_item_id <> ei.id
+                  AND cr_pa.price_normalized IS NOT NULL
+                  AND lower(btrim(COALESCE(cr_pa.status, ''))) NOT IN ('sold out', 'soldout')
+                  AND cr_pm.line_posted_at <= sm.line_posted_at)
+         AND NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa
+                JOIN {schema}.extraction_items cr_si ON cr_si.id = cr_sa.extraction_item_id
+                JOIN {schema}.extraction_jobs cr_sj ON cr_sj.id = cr_si.extraction_job_id
+                JOIN {schema}.source_messages cr_sm ON cr_sm.id = cr_sj.source_message_id
+                WHERE cr_sm.supplier_channel_id = sm.supplier_channel_id
+                  AND cr_sa.product_id = (cr_data.ar->>'product_id')::integer
+                  AND cr_sa.extraction_item_id <> ei.id
+                  AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
+                  AND cr_sa.exclusion IS DISTINCT FROM 'excluded'
+                  AND cr_sa.price_normalized IS NOT NULL
+                  AND cr_sm.line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})
+                  AND COALESCE(cr_sa.condition_canonical, '') NOT LIKE 'FLAG_%'
+                  AND lower(btrim(COALESCE(cr_sa.status, ''))) NOT IN ('sold out', 'soldout'))
+        ELSE FALSE END AS settled OFFSET 0) cr_shime""")
     sql = f"""
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
     -- OFFSET 0 は PostgreSQL の展開（pull-up）を止め、to_jsonb(ar) を行ごとに1回だけ作るため。外すと要確認一覧が約3倍遅くなる（docs/handoff/review-speed/design.md）
@@ -228,40 +264,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         AND cr_event.value->>'binding_hash' = cr_hash.ack_binding_hash
         AND cr_ack_condition.is_active IS TRUE
         AND (NOT cr_input.mentions OR cr_input.master_valid), FALSE) AS valid_ack) cr_valid
-    CROSS JOIN LATERAL (SELECT
-        -- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §3）。真なら price_unresolved と excluded を付けない
-        CASE WHEN
-            lower(btrim(COALESCE(cr_data.ar->>'status', ''))) IN ('sold out', 'soldout')
-            AND cr_data.ar->>'exclusion' = 'excluded'
-            AND cr_data.ar->>'price_normalized' IS NULL AND cr_data.ar->>'quantity_normalized' IS NULL
-            AND cr_data.ar->>'product_id' IS NOT NULL AND cr_data.ar->>'condition_id' IS NOT NULL
-            AND strpos(COALESCE(cr_data.ar->>'condition_canonical', '') || COALESCE(cr_data.ar->>'condition_basis', ''), 'FLAG') = 0
-            AND cr_latest.id IS NULL
-        THEN EXISTS (SELECT 1 FROM {schema}.analysis_results cr_pa
-                JOIN {schema}.extraction_items cr_pi ON cr_pi.id = cr_pa.extraction_item_id
-                JOIN {schema}.extraction_jobs cr_pj ON cr_pj.id = cr_pi.extraction_job_id
-                JOIN {schema}.source_messages cr_pm ON cr_pm.id = cr_pj.source_message_id
-                WHERE cr_pm.supplier_channel_id = sm.supplier_channel_id
-                  AND cr_pa.product_id = (cr_data.ar->>'product_id')::integer
-                  AND cr_pa.condition_id = (cr_data.ar->>'condition_id')::integer
-                  AND cr_pa.extraction_item_id <> ei.id
-                  AND cr_pa.price_normalized IS NOT NULL
-                  AND lower(btrim(COALESCE(cr_pa.status, ''))) NOT IN ('sold out', 'soldout')
-                  AND cr_pm.line_posted_at <= sm.line_posted_at)
-         AND NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa
-                JOIN {schema}.extraction_items cr_si ON cr_si.id = cr_sa.extraction_item_id
-                JOIN {schema}.extraction_jobs cr_sj ON cr_sj.id = cr_si.extraction_job_id
-                JOIN {schema}.source_messages cr_sm ON cr_sm.id = cr_sj.source_message_id
-                WHERE cr_sm.supplier_channel_id = sm.supplier_channel_id
-                  AND cr_sa.product_id = (cr_data.ar->>'product_id')::integer
-                  AND cr_sa.extraction_item_id <> ei.id
-                  AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
-                  AND cr_sa.exclusion IS DISTINCT FROM 'excluded'
-                  AND cr_sa.price_normalized IS NOT NULL
-                  AND cr_sm.line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})
-                  AND COALESCE(cr_sa.condition_canonical, '') NOT LIKE 'FLAG_%'
-                  AND lower(btrim(COALESCE(cr_sa.status, ''))) NOT IN ('sold out', 'soldout'))
-        ELSE FALSE END AS settled OFFSET 0) cr_shime
+    {shime_lateral}
     CROSS JOIN LATERAL (SELECT
         ARRAY(SELECT DISTINCT reason FROM unnest(
             string_to_array(COALESCE(cr_data.ar->>'review_reasons', ''), ',') || ARRAY[
