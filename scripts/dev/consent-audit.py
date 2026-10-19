@@ -590,14 +590,106 @@ def element_hash(el):
 
 
 def parse_consent_ref(ref):
-    m = re.fullmatch(r"consent:([^:]+):(.+):([^:]+)", ref or "")
-    return list(m.groups()) if m else None
+    m = re.fullmatch(r"consent:([0-9a-f]{64}):(.+):([1-9]|10)", ref or "")
+    return [m.group(1), m.group(2), int(m.group(3))] if m else None
 
 
 def consent_used_at(home, key3):
     for rec in read_jsonl(paths(home)["ledger"]):
         if rec.get("key") == key3:
             return parse_ts(rec.get("used_at"))
+    return None
+
+
+TICKET_HEADING = "[同意票]"
+TICKET_OPTION_PREFIX = "1. 上の同意票の操作を実行する"
+TICKET_OP_RE = re.compile(r"^操作([1-9]|10): (.+)$")
+PO_BANG_OP_PREFIXES = (
+    "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-register-delegation.sh ",
+    "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-unregister-delegation.sh ",
+    "bash ~/CC報告ファイル-keep/permission-delegation/po-apply-",
+)
+
+
+def _is_compact(r):
+    if not isinstance(r, dict):
+        return False
+    if r.get("isCompactSummary"):
+        return True
+    return r.get("type") == "system" and r.get("subtype") == "compact_boundary"
+
+
+def _parse_ticket_ops(text):
+    """consent_check.py の parse_ticket と同じ規則。(sha256, [(番号, 操作)]) か None。"""
+    lines = [ln.strip() for ln in text.split("\n")]
+    heads = [i for i, ln in enumerate(lines) if ln == TICKET_HEADING]
+    opts = [i for i, ln in enumerate(lines) if ln.startswith(TICKET_OPTION_PREFIX)]
+    if len(heads) != 1 or len(opts) != 1:
+        return None
+    ops = []
+    for ln in lines[heads[0] + 1:]:
+        m = TICKET_OP_RE.match(ln)
+        if m:
+            ops.append((int(m.group(1)), m.group(2).strip()))
+    if not ops:
+        return None
+    nums = [n for n, _ in ops]
+    if len(set(nums)) != len(nums):
+        return None
+    return hashlib.sha256(text.encode("utf-8")).hexdigest(), ops
+
+
+def _po_bang_in_records(recs, key3):
+    """1つの会話の記録の中で、設計 §4-3 改7 の (a)〜(d) が揃うか。"""
+    sha, k2, k3 = key3
+    for h_idx, H in enumerate(recs):
+        if not (is_human(H) and is_typed_one(H) and not H.get("isSidechain") and H.get("timestamp") == k2):
+            continue
+        a_idx = None
+        for i in range(h_idx - 1, -1, -1):
+            r = recs[i]
+            if isinstance(r, dict) and r.get("type") == "assistant" and not r.get("isSidechain"):
+                a_idx = i
+                break
+        if a_idx is None:
+            continue
+        msg = recs[a_idx].get("message")
+        content = msg.get("content") if isinstance(msg, dict) else None
+        if not isinstance(content, list) or not content:
+            continue
+        if any(not isinstance(b, dict) or b.get("type") != "text" for b in content):
+            continue
+        text = content[-1].get("text")
+        if not isinstance(text, str):
+            continue
+        if any(is_human(r) or _is_compact(r) for r in recs[a_idx + 1:h_idx]):
+            continue
+        parsed = _parse_ticket_ops(text)
+        if parsed is None or parsed[0] != sha:
+            continue
+        for n, op in parsed[1]:
+            if n == k3 and op.startswith(PO_BANG_OP_PREFIXES):
+                return True
+    return False
+
+
+def consent_po_bang_at(home, key3, row):
+    """改7: PO の `!` で走らせた台本の同意。(a)〜(e) が揃えば k2 の時刻を返す。揃わなければ None。"""
+    k2 = parse_ts(key3[1])
+    rec_ts = parse_ts(row.get("ts"))
+    if k2 is None or rec_ts is None:
+        return None
+    if not (k2 < rec_ts <= k2 + datetime.timedelta(hours=24)):
+        return None
+    cutoff = k2.timestamp() - 86400
+    for tp in glob.glob(os.path.join(paths(home)["projects"], "*", "*.jsonl")):
+        try:
+            if os.path.getmtime(tp) < cutoff:
+                continue
+        except OSError:
+            continue
+        if _po_bang_in_records(read_jsonl(tp), key3):
+            return k2
     return None
 
 
@@ -698,6 +790,8 @@ def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
     if ref.startswith("consent:"):
         key3 = parse_consent_ref(ref)
         used = consent_used_at(home, key3) if key3 else None
+        if used is None and key3:
+            used = consent_po_bang_at(home, key3, row)
         if used is None:
             return False
         if held_ts is not None:

@@ -37,6 +37,8 @@
 - 【事実】~/.claude/settings.local.json は存在しない（2026-10-19 の初回出力で 0 件）。
 - 【事実】ADR-1011 の「範囲外（AI が自分では変えない）」（`docs/adr/ADR-1011-permission-self-maintenance.md:29-39`）は、`SM-` 以外の allow・permissions・hooks・~/.claude/scripts を AI が変えないと定めている。今回の PO 決定はこのうち allow の部分を改める。
 - 【事実】~/.salesanchor-tools（origin/main を切り離しで取り出した場所、2026-10-19 に HEAD d743ed9ab・変更 0）は、Mac の自動作業4つ（LaunchAgent の disk-janitor・claude-archive・mac-jobs-watch・colima-idle-stop）と agent-console の定期実行が使っている。disk-janitor と claude-archive は「変更が無ければ `git fetch` して origin/main を切り離しで取り出す」、ほかの2つは「変更が無く HEAD が origin/main の祖先か」を確かめてから読むだけ。変更（追跡外のファイルを含む）があると止まる。
+- 【事実】自動作業の時刻（`plutil -extract StartCalendarInterval json` の結果、2026-10-19）: claude-archive は毎日 03:30、disk-janitor は毎日 04:00。便1（#4544）マージ直後の ~/.salesanchor-tools は HEAD d743ed9ab で、scripts/dev/perm-change.py はまだ無い（`ls` で確認、2026-10-19）。
+- 【未確認】claude-archive が ~/.claude/projects の会話の記録を移すか・いつ移すか。移された場合、design §4-3 改7 の確かめは通らず B になる（止めすぎ側）。
 - 【事実】定期実行「同意と権限の週次点検」（agent-console id bb581a6f、月曜 09:30）は 2026-10-19 に登録済み。基準値は /tmp/CC報告ファイル/consent-weekly/baseline-20261019.txt。
 
 ## 3. AI が権限を変えられる道

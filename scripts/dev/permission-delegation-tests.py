@@ -269,7 +269,7 @@ def test_a2(tmp):
     code, _, _ = run_pc(e, ["record", "--target", "repo-hooks", "--op", "add", "--item-hash", "abcdef12", "--po-ref", "PR#4600"])
     r = ledger_rows(e)[-1]
     chk("A2-k", "record が recorded の行を書く（po_ref・reserved:R4）", code == 0 and r["result"] == "recorded" and r["po_ref"] == "PR#4600" and r["category"] == "reserved:R4")
-    code, _, _ = run_pc(e, ["record", "--target", "user-deny", "--op", "add", "--item-hash", "abcdef12", "--po-ref", "consent:%s:2026-10-19T00:00:00.000Z:cmd1" % ("a" * 64)])
+    code, _, _ = run_pc(e, ["record", "--target", "user-deny", "--op", "add", "--item-hash", "abcdef12", "--po-ref", "consent:%s:2026-10-19T00:00:00.000Z:1" % ("a" * 64)])
     chk("A2-l", "record が consent: の po_ref（時刻に : を含む）を受ける", code == 0)
 
 
@@ -538,7 +538,7 @@ def test_a5_a6(tmp):
     write_json(e.settings, d)
     h = audit.item_sha8("Bash(rm:*)")
     seed_row(e, T0 + td(600), sub="apply", target="user-deny", item_hash=h, category="reserved:R4", result="held")
-    ref = consent_ref(e, ["c" * 64, iso(T0 + td(1000)), "cmdx"], T0 + td(1000), "同意票 %s" % h)
+    ref = consent_ref(e, ["c" * 64, iso(T0 + td(1000)), 1], T0 + td(1000), "同意票 %s" % h)
     seed_row(e, T0 + td(1200), sub="record", target="user-deny", item_hash=h, category="reserved:R4", result="recorded", po_ref=ref, actor="po-script")
     lines = run_audit(e, T0 + td(3600))
     chk("A6-c", "reserved の変化でも po_ref が正しければ ABNORMAL=no", not reasons(lines) and "ABNORMAL=no" in lines)
@@ -559,7 +559,7 @@ def consent_ref(e, key3, used_at, text):
                             "timestamp": key3[1], "message": {"content": "1"}}, ensure_ascii=False) + "\n")
     ts = used_at.timestamp()
     os.utime(tp, (ts, ts))
-    return "consent:" + ":".join(key3)
+    return "consent:" + ":".join(str(x) for x in key3)
 
 
 def merge_pr(e, edits, branch="feat"):
@@ -647,7 +647,7 @@ def with_reason(lines, kind, key, h):
 
 
 def test_a7(tmp):
-    K = ["a" * 64, "2026-10-19T00:20:00.000Z", "cmd1"]
+    K = ["a" * 64, "2026-10-19T00:20:00.000Z", 1]
     h = audit.item_sha8("Bash(rm:*)")
     h2 = audit.item_sha8("Bash(mv:*)")
     text = "同意票 対象 %s %s" % (h, h2)
@@ -672,7 +672,7 @@ def test_a7(tmp):
 
     _, lines, _ = b_case(tmp, "a7-deny-pr", "PR#9", pr_for_deny, git_env=True)
     chk("A7-3b", "repo-allow・repo-hooks 以外の held に PR# を使っても B", with_reason(lines, "B", "user:permissions.deny", h))
-    _, lines, _ = b_case(tmp, "a7-c-none", "consent:%s" % ":".join(K), None)
+    _, lines, _ = b_case(tmp, "a7-c-none", "consent:%s" % ":".join(str(x) for x in K), None)
     chk("A7-5", "consent: の3要素が同意の台帳に無いと B", with_reason(lines, "B", "user:permissions.deny", h))
     _, lines, _ = b_case(tmp, "a7-c-nohash", lambda e: consent_ref(e, K, T0 + td(900), "同意票 別の件"), None)
     chk("A7-5b", "同意票の本文に item_hash が無いと B", with_reason(lines, "B", "user:permissions.deny", h))
@@ -722,7 +722,7 @@ def a19_consent(tmp, name, used_off, text, earlier_row=False):
     e = light_env(tmp, name)
     item = "Bash(wc c19)"
     h = audit.item_sha8(item)
-    K = ["d" * 64, iso(T0 + td(used_off)), "cmdy"]
+    K = ["d" * 64, iso(T0 + td(used_off)), 1]
     ref = consent_ref(e, K, T0 + td(used_off), text.replace("HASH", h))
     if earlier_row:
         seed_row(e, T0 - td(3600), sub="record", target="user-allow", item_hash=h, category="normal", result="recorded", po_ref=ref, actor="po-script")
@@ -770,9 +770,112 @@ def test_a19(tmp):
     write_json(e.settings, d)
     hd = audit.item_sha8("Bash(rm:*)")
     seed_row(e, T0 + td(1200), sub="record", target="user-deny", item_hash=hd, category="reserved:R4", result="recorded",
-             po_ref="consent:%s:%s:cmdz" % ("e" * 64, iso(T0 + td(1000))), actor="po-script")
+             po_ref="consent:%s:%s:1" % ("e" * 64, iso(T0 + td(1000))), actor="po-script")
     lines = run_audit(e, T0 + td(3600))
     chk("A19-10", "§2-3 のキーは held 無し・通らない record だけでも B", with_reason(lines, "B", "user:permissions.deny", hd))
+
+
+A20_OP = "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-register-delegation.sh consent:KEY"
+A20_ITEM = "Bash(rm:*)"
+
+
+def a20_text(h, op=A20_OP, heading=True, opline=True, option=True):
+    parts = []
+    if heading:
+        parts.append("[同意票]")
+    parts.append("対象 %s" % h)
+    if opline:
+        parts.append("操作1: %s" % op)
+    if option:
+        parts.append("1. 上の同意票の操作を実行する")
+    return "\n".join(parts)
+
+
+def a20_case(tmp, name, variant="ok", text=None, rec_off=1200, now_off=3600, k3="1", k1_cut=0, second=False):
+    """PO の `!` の道: 同意の台帳に行を作らず、一時の home の会話の記録だけを置く。B の理由の行を返す。"""
+    e = light_env(tmp, name)
+    run_audit(e, T0, commit=True)
+    items = [A20_ITEM] + (["Bash(mv:*)"] if second else [])
+    d = load_json(e.settings)
+    d["permissions"]["deny"] = items
+    write_json(e.settings, d)
+    h = audit.item_sha8(A20_ITEM)
+    hh = " ".join(audit.item_sha8(x) for x in items)
+    text = text if text is not None else a20_text(hh)
+    sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    k2 = iso(T0 + td(900))
+    asst = {"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}
+    one = {"type": "user", "origin": {"kind": "human"}, "promptSource": "typed", "timestamp": k2, "message": {"content": "1"}}
+    other = {"type": "user", "origin": {"kind": "human"}, "promptSource": "typed", "timestamp": iso(T0 + td(899)), "message": {"content": "x"}}
+    recs = {
+        "ok": [asst, one],
+        "noticket": [one],
+        "after": [one, asst],
+        "human_between": [asst, other, one],
+        "compact_between": [asst, {"type": "system", "subtype": "compact_boundary"}, one],
+        "side_asst": [dict(asst, isSidechain=True), one],
+        "side_one": [asst, dict(one, isSidechain=True)],
+        "ai_one": [asst, dict(one, origin={"kind": "task"})],
+        "not_one": [asst, dict(one, message={"content": "2"})],
+        "mixed_block": [dict(asst, message={"content": [{"type": "tool_use", "name": "x"}, {"type": "text", "text": text}]}), one],
+    }[variant]
+    d2 = os.path.join(e.claude, "projects", "p1")
+    os.makedirs(d2, exist_ok=True)
+    tp = os.path.join(d2, "x.jsonl")
+    with open(tp, "w", encoding="utf-8") as f:
+        for r in recs:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    ts = (T0 + td(900)).timestamp()
+    os.utime(tp, (ts, ts))
+    ref = "consent:%s:%s:%s" % (sha[:64 - k1_cut], k2, k3)
+    for i, it in enumerate(items):
+        hi = audit.item_sha8(it)
+        seed_row(e, T0 + td(600), sub="apply", target="user-deny", item_hash=hi, category="reserved:R4", result="held")
+        seed_row(e, T0 + td(rec_off + i), sub="record", target="user-deny", item_hash=hi, category="reserved:R4",
+                 result="recorded", po_ref=ref, actor="po-script")
+    return run_audit(e, T0 + td(now_off)), h
+
+
+def test_a20(tmp):
+    DK = "user:permissions.deny"
+
+    def ok(name, desc, **kw):
+        lines, h = a20_case(tmp, name, **kw)
+        chk(name, desc, not reasons(lines))
+
+    def ng(name, desc, **kw):
+        lines, h = a20_case(tmp, name, **kw)
+        chk(name, desc, with_reason(lines, "B", DK, h))
+
+    ok("A20-ok1", "(a)〜(e) が揃った PO の `!` の同意は通る（台帳の行は無い）")
+    ok("A20-ok2", "操作が po-apply- の台本で、k3 が 2 でも通る", k3="2",
+       text=a20_text("HHH", op="bash ~/CC報告ファイル-keep/permission-delegation/po-apply-x.sh").replace("HHH", audit.item_sha8(A20_ITEM)).replace("操作1:", "操作2:"))
+    t3 = "同意票 %s" % audit.item_sha8(A20_ITEM)
+    _, lines, _ = b_case(tmp, "A20-ok3", lambda e: consent_ref(e, ["a" * 64, iso(T0 + td(900)), 3], T0 + td(900), t3), None)
+    chk("A20-ok3", "台帳の行（k3 が整数）がある従来の道も通る", not reasons(lines))
+    ng("A20-n1", "sha の合う同意票が会話の記録に無い", variant="noticket")
+    ng("A20-n2", "同意票が「1」の後にある", variant="after")
+    ng("A20-n3", "同意票と「1」の間に人の入力がある", variant="human_between")
+    ng("A20-n4", "同意票と「1」の間に compact がある", variant="compact_between")
+    ng("A20-n5", "直前の assistant の行が sidechain", variant="side_asst")
+    ng("A20-n6", "「1」が sidechain", variant="side_one")
+    ng("A20-n7", "「1」が AI の行", variant="ai_one")
+    ng("A20-n8", "「1」以外の入力", variant="not_one")
+    ng("A20-n9", "assistant の行に text 以外の中身がある", variant="mixed_block")
+    hh = audit.item_sha8(A20_ITEM)
+    ng("A20-n10", "同意票に見出しが無い", text=a20_text(hh, heading=False))
+    ng("A20-n11", "同意票に選択肢の行が無い", text=a20_text(hh, option=False))
+    ng("A20-n12", "`操作<k3>:` の行が無い", text=a20_text(hh, opline=False))
+    ng("A20-n13", "操作が決まった台本で始まらない", text=a20_text(hh, op="bash ~/CC報告ファイル-keep/other.sh x"))
+    ng("A20-n14", "別件の po-apply 台本を途中に含むだけでは通らない", text=a20_text(hh, op="bash x/po-apply-1.sh"))
+    ng("A20-n15", "k3 が数字でない", k3="x")
+    ng("A20-n16", "k1 が64桁でない", k1_cut=1)
+    ng("A20-n17", "record が k2 より前", rec_off=800)
+    ng("A20-n18", "record が k2 の24時間より後", rec_off=900 + 86400 + 60, now_off=900 + 86400 + 3600)
+    ng("A20-n19", "同意票に item_hash が無い", text=a20_text("00000000"))
+    lines, h = a20_case(tmp, "A20-n20", second=True)
+    bs = [x for x in lines if x.startswith("ABNORMAL_REASON=B ")]
+    chk("A20-n20", "同じ po_ref の2回目は B（1回目は通る）", len(bs) == 1 and bs[0].endswith(audit.item_sha8("Bash(mv:*)")))
 
 
 def test_a8(tmp):
@@ -1083,7 +1186,7 @@ def test_a17(tmp):
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
-        for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a8, test_a9, test_a10,
+        for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a20, test_a8, test_a9, test_a10,
                    test_a11_a12_a13, test_a14, test_a17):
             try:
                 fn(tmp)
