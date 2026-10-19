@@ -9,13 +9,32 @@
   overflow-wrap: anywhere;
 }
 
-/* PC 幅（768px 以上）は折り返さない。はみ出す分は DataTable の fitToWidth が表ごと縮めて収める。
+/* PC 幅（768px 以上）は、商品名は上限幅で1行のまま「…」で省略（全文は title）、備考・発送は上限幅で折り返す。
+   それでもはみ出す分は DataTable の fitToWidth が表ごと縮めて収める。
    767px 以下（カード表示）は上の折り返しのまま。 */
 @media (min-width: 768px) { /* = --breakpoint-mobile-max の次 */
   .inventory-cell__title,
   .inventory-cell__sub,
   .inventory-cell__nowrap {
     white-space: nowrap;
+  }
+
+  .inventory-cell__clip {
+    max-width: var(--comp-inventory-title-max-w);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inventory-cell__wrap {
+    display: block;
+    max-width: var(--comp-inventory-text-max-w);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .inventory-cell__wrap:not(:empty) {
+    min-width: var(--comp-inventory-text-min-w);
   }
 }
 

@@ -56,8 +56,14 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       mobileOrder: 1,
       renderCell: (it) => (
         <>
-          <div className="inventory-cell__title">{it.japanese_title}</div>
-          {it.english_title && <div className="inventory-cell__sub">{it.english_title}</div>}
+          <div className="inventory-cell__title inventory-cell__clip" title={it.japanese_title}>
+            {it.japanese_title}
+          </div>
+          {it.english_title && (
+            <div className="inventory-cell__sub inventory-cell__clip" title={it.english_title}>
+              {it.english_title}
+            </div>
+          )}
         </>
       ),
     },
@@ -104,13 +110,13 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       key: "note",
       header: t("viewer.col.note"),
       mobileOrder: 5,
-      renderCell: (it) => <span className="inventory-cell__nowrap">{it.note_ja}</span>,
+      renderCell: (it) => <span className="inventory-cell__wrap">{it.note_ja}</span>,
     },
     {
       key: "ship",
       header: t("viewer.col.ship"),
       mobileOrder: 6,
-      renderCell: (it) => <span className="inventory-cell__nowrap">{it.ship_ja}</span>,
+      renderCell: (it) => <span className="inventory-cell__wrap">{it.ship_ja}</span>,
     },
     {
       key: "supplier",
