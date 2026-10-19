@@ -48,7 +48,16 @@
   color: var(--danger-text);
 }
 
-/* 価格・数量のセルで、値の右隣に置く「最安」「在庫最多」バッジの間隔（ADR-1014 改訂 2026-10-19（2）） */
-.inventory-cell__badge {
-  margin-inline-start: var(--space-1);
+/* 価格・数量の値の入れ物。枠の有無で幅を変えないため、全行で同じ余白を持つ（ADR-1014 改訂 2026-10-19（3）） */
+.inventory-cell__value {
+  display: inline-block;
+  padding: var(--space-1px) var(--space-1);
+  border-radius: var(--radius-sm);
+}
+/* 同じ商品・ステータス・状態のまとまりの最安（水色）と在庫最多（緑）。内側の影で描き、幅を変えない */
+.inventory-cell__value--cheapest {
+  box-shadow: inset 0 0 0 var(--space-2px) var(--comp-value-frame-cheapest);
+}
+.inventory-cell__value--most-stock {
+  box-shadow: inset 0 0 0 var(--space-2px) var(--comp-value-frame-most-stock);
 }
