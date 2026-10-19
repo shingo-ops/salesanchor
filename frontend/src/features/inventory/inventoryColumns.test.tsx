@@ -73,26 +73,45 @@ describe("buildInventoryColumns", () => {
   });
 });
 
-describe("block badges (ADR-1014 rev 2026-10-19 (2))", () => {
+describe("block frames (ADR-1014 rev 2026-10-19 (3))", () => {
   const cell = (key: string, r: InventoryRow) => {
     const cols = buildInventoryColumns({ t, colVisible: () => true, fmtOfferedAt: () => "-" });
     render(<div data-testid="cell">{cols.find((c) => c.key === key)!.renderCell!(r, "r1")}</div>);
     return screen.getByTestId("cell");
   };
-  it("shows the cheapest badge in the price cell and the most-stock badge in the quantity cell", () => {
+  it("frames the cheapest price in the price cell and the most-stock quantity in the quantity cell", () => {
     const price = cell("unit_price", { ...row, badge_cheapest: true });
-    expect(price.querySelector('[data-testid="block-badge-cheapest"]')?.textContent).toBe("inventory.badge.cheapest");
-    expect(price.querySelector('[data-testid="block-badge-most-stock"]')).toBeNull();
+    const p = price.querySelector('[data-testid="block-frame-cheapest"]');
+    expect(p?.classList.contains("inventory-cell__value--cheapest")).toBe(true);
+    expect(p?.getAttribute("title")).toBe("inventory.badge.cheapest");
+    expect(price.querySelector('[data-testid="block-frame-most-stock"]')).toBeNull();
     cleanup();
     const qty = cell("quantity", { ...row, badge_most_stock: true });
-    expect(qty.querySelector('[data-testid="block-badge-most-stock"]')?.textContent).toBe("inventory.badge.mostStock");
-    expect(qty.querySelector('[data-testid="block-badge-cheapest"]')).toBeNull();
+    const q = qty.querySelector('[data-testid="block-frame-most-stock"]');
+    expect(q?.classList.contains("inventory-cell__value--most-stock")).toBe(true);
+    expect(q?.getAttribute("title")).toBe("inventory.badge.mostStock");
+    expect(qty.querySelector('[data-testid="block-frame-cheapest"]')).toBeNull();
   });
-  it.each([false, undefined])("shows no badge when the flag is %s", (flag) => {
+  it.each([false, undefined])("keeps the value in the same container without a frame or title when the flag is %s", (flag) => {
     const price = cell("unit_price", { ...row, badge_cheapest: flag, badge_most_stock: flag });
-    expect(price.querySelector(".comp-badge")).toBeNull();
+    const p = price.querySelector(".inventory-cell__value");
+    expect(p).not.toBeNull();
+    expect(p?.classList.contains("inventory-cell__value--cheapest")).toBe(false);
+    expect(p?.classList.contains("inventory-cell__value--most-stock")).toBe(false);
+    expect(p?.hasAttribute("title")).toBe(false);
     cleanup();
     const qty = cell("quantity", { ...row, badge_cheapest: flag, badge_most_stock: flag });
+    const q = qty.querySelector(".inventory-cell__value");
+    expect(q).not.toBeNull();
+    expect(q?.classList.contains("inventory-cell__value--cheapest")).toBe(false);
+    expect(q?.classList.contains("inventory-cell__value--most-stock")).toBe(false);
+    expect(q?.hasAttribute("title")).toBe(false);
+  });
+  it("shows no badge in the price and quantity cells", () => {
+    const price = cell("unit_price", { ...row, badge_cheapest: true });
+    expect(price.querySelector(".comp-badge")).toBeNull();
+    cleanup();
+    const qty = cell("quantity", { ...row, badge_most_stock: true });
     expect(qty.querySelector(".comp-badge")).toBeNull();
   });
 });

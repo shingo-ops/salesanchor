@@ -5,7 +5,7 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
-import { BlockBadge } from "./blockBadges";
+import { BlockValue } from "./blockBadges";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
 import "./inventoryColumns.css";
@@ -129,8 +129,9 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 3,
         renderCell: (it) => (
           <span className="inventory-cell__nowrap">
-            {`¥${it.unit_price.toLocaleString()}`}
-            {it.badge_cheapest && <BlockBadge kind="cheapest" label={t("inventory.badge.cheapest")} />}
+            <BlockValue frame={it.badge_cheapest ? "cheapest" : null} label={t("inventory.badge.cheapest")}>
+              {`¥${it.unit_price.toLocaleString()}`}
+            </BlockValue>
           </span>
         ),
       },
@@ -146,8 +147,9 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         renderCell: (it) => (
           <>
             <span className="inventory-cell__nowrap">
-              {it.quantity ?? ""}
-              {it.badge_most_stock && <BlockBadge kind="mostStock" label={t("inventory.badge.mostStock")} />}
+              <BlockValue frame={it.badge_most_stock ? "mostStock" : null} label={t("inventory.badge.mostStock")}>
+                {it.quantity ?? ""}
+              </BlockValue>
             </span>
             {it.merged_count >= 2 && (
               <div data-testid={`inventory-row-${it.id}-merged`} className="inventory-cell__sub">

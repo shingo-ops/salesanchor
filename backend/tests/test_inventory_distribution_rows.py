@@ -114,11 +114,11 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
 
 
 # fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
-# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後の値。列の追加以外は変えていないことは
+# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後の値。列の追加以外は変えていないことは
 # PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
 _VIEW_SQL_BEFORE = {
-    False: (27700, "b1b603f8889e08e742528430598c4392c074032c8fd85fef74d0055b989356b9"),
-    True: (29617, "f264917c99d05a840c8eaa21bd031448fef13a271ad3564aee53db9b2070f595"),
+    False: (27884, "e85a040f5bd11c2f0951bc391996fcd4fa770614d8323bd791f346e3d97ad2ce"),
+    True: (29801, "894fe7a1ccddb8f8bdce3b25bbee051f6dbbc2b2cd96f5279da69a4dca4b4160"),
 }
 
 

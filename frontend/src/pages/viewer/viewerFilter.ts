@@ -229,12 +229,12 @@ function roundedOrNull(s: string): number | null {
 
 /**
  * 絞り込み後・ページ前の行に、まとまりごとの最安・在庫最多の印を付ける。
- * まとまり = 発売日・英語名・日本語名が全て同じ行。最小（最大）と等しい行は全部に付け、
+ * まとまり = 発売日・英語名・日本語名・ステータス・状態が全て同じ行（ADR-1014 改訂 2026-10-19（3））。最小（最大）と等しい行は全部に付け、
  * 値のある行が1行以下、または全部同じ値のときは付けない。T の項目（idx など）は落とさない。
  */
 export function markBlockBadges<T extends ViewerRow>(rows: T[]): (T & BlockFlags)[] {
   const groups = new Map<string, { prices: (number | null)[]; qtys: (number | null)[] }>();
-  const keyOf = (r: T) => `${r.release_date}\u0000${r.english_title}\u0000${r.japanese_title}`;
+  const keyOf = (r: T) => `${r.release_date}\u0000${r.english_title}\u0000${r.japanese_title}\u0000${r.status}\u0000${r.condition}`;
   const parsed = rows.map((r) => ({ price: roundedOrNull(r.unit_price), qty: roundedOrNull(r.quantity) }));
   rows.forEach((r, i) => {
     const key = keyOf(r);
