@@ -179,6 +179,8 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 ship_ja=row.get("ship_ja") or None,
                 status=status_value,
                 merged_count=int(row.get("merged_count") or 1),
+                badge_cheapest=bool(row.get("badge_cheapest")),
+                badge_most_stock=bool(row.get("badge_most_stock")),
                 extraction_item_ids=[str(v) for v in (row.get("extraction_item_ids") or [])],
             )
         )
@@ -285,7 +287,8 @@ def _build_inventory_view_sql(
 
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
-    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __expiry_s, __f_* の5列。
+    列並び（3枝共通）: __kind, __total, <配信行+work_code+category の全列>, __ord, __badge_cheapest, __badge_most_stock, __expiry_s, __f_* の5列。
+    __badge_* は同じ product_id のまとまり（絞り込み後・ページ前）で最安／在庫最多か（ADR-1014 改訂 2026-10-19（2））。
     expiry が真のとき __expiry_s（total 枝のみ）は、まとめ前・絞り込み前の行が次に時間の枠から外れるまでの秒数（:expiry_hours が必要）。
     """
     order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
@@ -300,9 +303,21 @@ def _build_inventory_view_sql(
     ctes.append(f"rows_f AS (SELECT * FROM rows_x d {where})")
     # 型は実物の列から: LEFT JOIN ON FALSE で rows_x と同じ型の NULL 1行を得る
     ctes.append("rows_nx AS (SELECT o.* FROM (SELECT 1) one LEFT JOIN rows_x o ON FALSE)")
+    badge_cheapest = (
+        "(d.product_id IS NOT NULL AND d.price_num IS NOT NULL "
+        "AND COUNT(d.price_num) OVER (PARTITION BY d.product_id) >= 2 "
+        "AND MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id) < MAX(ROUND(d.price_num)) OVER (PARTITION BY d.product_id) "
+        "AND ROUND(d.price_num) = MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id)) AS __badge_cheapest"
+    )
+    badge_most_stock = (
+        "(d.product_id IS NOT NULL AND d.qty_num IS NOT NULL "
+        "AND COUNT(d.qty_num) OVER (PARTITION BY d.product_id) >= 2 "
+        "AND MIN(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id) < MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id) "
+        "AND ROUND(d.qty_num) = MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id)) AS __badge_most_stock"
+    )
     ctes.append(
-        f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord FROM rows_f d "
-        f"{order_by} LIMIT :limit OFFSET :offset)"
+        f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord, {badge_cheapest}, {badge_most_stock} "
+        f"FROM rows_f d {order_by} LIMIT :limit OFFSET :offset)"
     )
     expiry_expr = (
         "(SELECT CEIL(EXTRACT(EPOCH FROM (MIN(d.posted_ts) + make_interval(hours => :expiry_hours) - NOW())))::bigint "
@@ -311,7 +326,8 @@ def _build_inventory_view_sql(
     )
     q_total = (
         "SELECT 'total'::text AS __kind, (SELECT COUNT(*) FROM rows_f)::bigint AS __total, nx.*, "
-        f"NULL::bigint AS __ord, {expiry_expr} AS __expiry_s, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
+        f"NULL::bigint AS __ord, NULL::boolean AS __badge_cheapest, NULL::boolean AS __badge_most_stock, "
+        f"{expiry_expr} AS __expiry_s, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
         "nx.category AS __f_category, nx.condition AS __f_condition, nx.unit_canonical AS __f_unit "
         "FROM rows_nx nx"
     )
@@ -320,7 +336,7 @@ def _build_inventory_view_sql(
         "nx.unit_canonical FROM rows_pg pg CROSS JOIN rows_nx nx"
     )
     q_facet = (
-        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
+        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, NULL::boolean, NULL::boolean, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
         "fd.condition, fd.unit_canonical FROM (SELECT DISTINCT d.supplier_id, d.provider, d.category, "
         f"d.condition, d.unit_canonical FROM {facet_src} d) fd CROSS JOIN rows_nx nx"
     )
@@ -417,7 +433,11 @@ async def list_inventory_view(
             total = int(row["__total"] or 0)
             expiry_s = int(row["__expiry_s"]) if row["__expiry_s"] is not None else None
         elif kind == "page":
-            page_rows.append((row["__ord"], {k: v for k, v in row.items() if not k.startswith("__")}))
+            page_rows.append((row["__ord"], {
+                **{k: v for k, v in row.items() if not k.startswith("__")},
+                "badge_cheapest": bool(row["__badge_cheapest"]),
+                "badge_most_stock": bool(row["__badge_most_stock"]),
+            }))
         elif kind == "facet":
             facet_rows.append({
                 "supplier_id": row["__f_supplier_id"], "provider": row["__f_provider"],

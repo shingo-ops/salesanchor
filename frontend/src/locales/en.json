@@ -1498,6 +1498,10 @@
       "2day_before": "Ship 2 days before",
       "other": "Other"
     },
+    "badge": {
+      "cheapest": "Lowest",
+      "mostStock": "Most stock"
+    },
     "col": {
       "product": "Product",
       "category": "TCG series",

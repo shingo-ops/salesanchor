@@ -7,8 +7,10 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
+import { BlockBadge } from "../../features/inventory/blockBadges";
 import { conditionBadgeVariant } from "../../features/inventory/conditionBadge";
 import "../../features/inventory/inventoryColumns.css";
+import type { BlockFlags } from "./viewerFilter";
 import type { ViewerTableRow } from "./types";
 
 /** 価格は '' でなければ ¥ と3桁区切り（アプリの `¥${unit_price.toLocaleString()}` と同じ形）。'' なら空。 */
@@ -23,7 +25,7 @@ export function formatPostedAt(postedAt: string): string {
   return postedAt.length >= 16 ? postedAt.slice(5, 16) : "";
 }
 
-export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<ViewerTableRow>[] {
+export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<ViewerTableRow & Partial<BlockFlags>>[] {
   return [
     {
       key: "offer_type",
@@ -76,7 +78,12 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       sortable: true,
       align: "right",
       mobileOrder: 3,
-      renderCell: (it) => <span className="inventory-cell__nowrap">{formatPrice(it.unit_price)}</span>,
+      renderCell: (it) => (
+        <span className="inventory-cell__nowrap">
+          {formatPrice(it.unit_price)}
+          {it.badge_cheapest && <BlockBadge kind="cheapest" label={t("viewer.badge.cheapest")} />}
+        </span>
+      ),
     },
     {
       key: "quantity",
@@ -84,7 +91,12 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       sortable: true,
       align: "right",
       mobileOrder: 4,
-      renderCell: (it) => <span className="inventory-cell__nowrap">{it.quantity}</span>,
+      renderCell: (it) => (
+        <span className="inventory-cell__nowrap">
+          {it.quantity}
+          {it.badge_most_stock && <BlockBadge kind="mostStock" label={t("viewer.badge.mostStock")} />}
+        </span>
+      ),
     },
     {
       key: "note",
