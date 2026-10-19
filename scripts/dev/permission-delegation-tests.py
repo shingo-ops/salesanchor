@@ -322,8 +322,9 @@ R_EXAMPLES = {
            "Bash(ssh -F /dev/null prod1 *)", 'Bash(psql ai_ro -c "SELECT * FROM x")'],
     # R1〜R4 は受け入れの形（改6: grep・wc・git status など）の文でだけ当たる。それ以外は R0 が先
     "R1": ["Bash(grep delete docs)", "Bash(grep 削除 docs)", "Bash(grep truncate docs)", "Bash(grep prod1 docs)",
-           "Bash(rm -v *)", "Bash(/bin/rm -f *)"],
-    "R2": ["Bash(grep push docs)", "Bash(grep main docs)", "Bash(grep develop docs)", "Bash(grep ruleset docs)"],
+           "Bash(rm -v *)", "Bash(/bin/rm -f *)", "Bash(grep DELETE docs)"],
+    "R2": ["Bash(grep push docs)", "Bash(grep main docs)", "Bash(grep develop docs)", "Bash(grep ruleset docs)",
+           "Bash(grep PUSH docs)"],
     "R3": ["Bash(grep token docs)", "Bash(grep secret docs)", "Bash(grep .env docs)", "Bash(grep 合言葉 docs)",
            "Bash(grep PASSWORD docs)"],
     "R4": ["Bash(grep hook docs)", "Bash(grep settings docs)", "Bash(grep GUARD docs)", "Bash(grep 見張り docs)",
@@ -438,6 +439,24 @@ def test_a18(tmp):
         chk("A18-t%d" % (i + 1), "通る例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") != "R0")
     code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc docs3)"))
     chk("A18-ok", "目印に当たらない文は通常で反映される", code == 0)
+    # 追補4: 旧 R1〜R4 の Bash の例（コミット 2602e90b4 で消えたもの）は R0 で、保留される
+    old_r = ["Bash(docker compose exec backend ls)", 'Bash(psql -c "DROP TABLE t")', "Bash(echo 削除)", "Bash(TRUNCATE t)",
+             "Bash(git push origin feat)", "Bash(GIT RESET --HARD HEAD)", "Bash(gh pr merge 12)", "Bash(git checkout main)",
+             "Bash(cat .env)", "Bash(echo $API_KEY)", "Bash(gh secret list)", "Bash(echo 合言葉)", "Bash(echo PASSWORD)",
+             "Bash(echo hook)", "Bash(vi settings.json)", "Bash(touch GUARD)", "Bash(echo 見張り)",
+             "Bash(echo Self-Modification)"]
+    for i, it in enumerate(old_r):
+        s0 = sha_file(e.settings)
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", it))
+        chk("A18-o%d" % (i + 1), "旧例 %s は R0 で exit 3・設定は変わらない" % it,
+            pc.classify(it, "user-allow", "add") == "R0" and code == 3 and sha_file(e.settings) == s0)
+    # 目印の句それぞれが rule_hit で当たる
+    for rule in ("R1", "R2", "R3", "R4"):
+        for j, ph in enumerate(pc.RULES[rule].get("phrases", []) + pc.RULES[rule].get("gated_phrases", [])):
+            chk("A18-p%s%d" % (rule, j + 1), "%s の句 %s が当たる" % (rule, ph), pc.rule_hit(rule, "Bash(grep * %s)" % ph))
+    # design §2-2 (a) 2.: `*` が語の途中にある文は、その語の前までが受け入れの一覧と一致すれば R0 ではない
+    for i, it in enumerate(["Bash(grep foo*)", "Bash(grep -r*)"]):
+        chk("A18-m%d" % (i + 1), "語の途中に * がある %s は R0 ではない" % it, pc.classify(it, "user-allow", "add") != "R0")
 
 
 # ── 点検（A5〜A13） ──────────────────────────────────────────────────

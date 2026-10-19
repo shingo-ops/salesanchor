@@ -85,5 +85,13 @@ PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同
 3. 文書の個人パスを `~` に置き換えた未コミットの変更（card-bin1.md・recon.md・design.md）も同じコミットに含める。
 4. 試験の生出力は /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6c.txt。PR 本文の試験数を更新（Write でファイルを作り、別コマンドで gh pr edit）。
 
+## 追補4（Reviewer 再審査 APPROVE の申し送り、2026-10-19）
+同じブランチ・同じ PR #4544 に追加コミットする。コードの変更は Edit / Write の道具で行う。試験の文字列はファイルの中にだけ書き、Bash の命令行には危険な語を打たない。
+1. MEDIUM（`scripts/dev/permission-delegation-tests.py`）: 旧 R_EXAMPLES から消えた6件（コミット 2602e90b4 の差分で消えた R1〜R3 の Bash の例）を A18 の反例に戻し、`classify == "R0"` かつ apply で exit 3（設定は変わらない）を確かめる。あわせて perm-change.py の目印の「句」それぞれについて、`pc.rule_hit(<規則>, "Bash(grep * <句>)")` が True になる試験を足す。
+2. LOW: A4 の R1・R2 に大文字の例を1件ずつ足す（`Bash(grep DELETE docs)`・`Bash(grep PUSH docs)`）。
+3. LOW（`scripts/dev/perm-change.py:81` 付近）: R0_ACCEPT の Bash の一覧の説明を「Bash の受け入れの一覧（`*` の有無を問わない）」に直し、キー名を `bash_accept` に変える（参照箇所もすべて）。
+4. LOW: design §2-2 (a) 2. に足した「`*` が語の途中にある文」の扱いの試験を A18 に足す（`Bash(grep foo*)` と `Bash(grep -r*)` は R0 ではない）。
+5. design.md と card-bin1.md の未コミットの変更も同じコミットに含める。試験の生出力は /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6d.txt。PR 本文の試験数を更新する（Write でファイルを作り、別コマンドで gh pr edit）。
+
 ## 報告
 最後の返事は `DONE: PR #<番号> 試験 <合格数>/<総数>` か `BLOCKED: <理由1行>` か `NEEDS_DECISION: <1行>` の1行だけ。生出力は /tmp/CC報告ファイル/permission-delegation/bin1/ に保存する。

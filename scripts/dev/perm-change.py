@@ -78,11 +78,11 @@ RULES = {
         "ja": ["例外", "見張り", "許可"],
     },
 }
-# `*` を含む Bash の文のうち R0 にしない「狭い形」の受け入れの一覧（設計 §2-2。唯一の置き場）。
+# Bash の文のうち R0 にしない「狭い形」の受け入れの一覧（設計 §2-2。唯一の置き場）。
 # 一覧に足す（R0 を外す範囲を広げる）変更は R4。
 R0_ACCEPT = {
-    # Bash の `*` を含む文: 最初の `*` より前の語の並びが、このどれかと完全に一致するとき
-    "bash_star": {
+    # Bash の受け入れの一覧（`*` の有無を問わない）: 先頭の語の並びがこのどれかと書かれたまま一致するとき
+    "bash_accept": {
         ("git", "status"), ("git", "ls-files"), ("git", "rev-parse"),
         ("gh", "pr", "view"), ("gh", "pr", "list"), ("gh", "pr", "checks"), ("gh", "pr", "diff"),
         ("gh", "run", "view"), ("gh", "run", "list"),
@@ -163,7 +163,7 @@ def _bash_ok(content):
     toks = content.replace(":*", " *").split()
     if not toks:
         return False
-    accept = R0_ACCEPT["bash_star"]
+    accept = R0_ACCEPT["bash_accept"]
     if "*" in content:
         prefix = []
         for t in toks:
