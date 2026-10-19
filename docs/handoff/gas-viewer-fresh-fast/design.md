@@ -699,3 +699,67 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 
 ### 維持の仕組み
 - 目印の条件は定数1か所（テストが一覧の目印と通知の対象の一致を見る）。beat 登録は tests/test_celery_beat_registered.py が見る。文言は ja.json/en.json の同じキー（i18n の CI）。
+
+## 段7（2026-10-20）閲覧者管理の一覧を5列にし、行を押すと詳細をスライドで出す
+
+### PO 決定（原文）
+- 「目印って何？フロントにはメールとDiscordIDは表示不要なので非表示にしてくれ、LINE名、状態、登録日次、期限、操作を表示、本契約にするボタンなどは1行ずつ横並びにしてくれ、行クリックしたら詳細をスライドページに表示するようにしてくれ」
+- Opus の選択肢「1. 一覧から外して、スライドの詳細にだけ出す」（目印の置き場）→ PO「1」
+
+### 要点
+- A. Stack 金型に `direction?: 'column' | 'row'`（既定 column）を追加。row のとき `comp-stack--row`（flex-direction: row / nowrap / align-items: center）。Stories に Row、テストに row と既定の2系統を追加。
+- B. 一覧の列は LINE名・状態・登録日時・期限・操作の5列。email・discord_user_id（部屋のリンク含む）・目印は外す。操作のボタンは `<Stack direction="row" gap="2">` で横1列。
+- C. DataTable の onRowClick で `detail` を設定し、Drawer に LINE名・メール・状態・登録日時・期限・Discord ID・部屋のリンク（あれば）・目印（無ければ「なし」）を出す。ラベルと値は既存の共通 class（form-grid / form-row）。一覧を読み込み直したら detail を id で最新の行に差し替える。
+- D. i18n は `superAdmin.viewers.detailTitle` と `flagsNone` を ja/en に追加。消したキーは無し。
+- E. ViewerAccountsPage.test.tsx：見出しが5つだけ／行クリックで詳細が開く（メール・Discord ID・目印あり／なし）／操作ボタンで詳細は開かず確認画面が出る。メール前提だった既存テストは LINE名で行を引く形に直した。
+
+### 受入基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 一覧の列は LINE名・状態・登録日時・期限・操作 だけ | 画面テスト＋PO 目視 |
+| K2 操作のボタンが横1列に並ぶ | Stack テスト＋PO 目視 |
+| K3 行を押すと右から詳細が出て、メール・Discord ID・部屋・目印が見える | 画面テスト＋PO 目視 |
+| K4 ボタンを押しても詳細は開かない | 画面テスト |
+| K5 生の色・px・ハードコード日本語なし。i18n・CSS 値・ページ構成の検査が合格 | 既存の検査スクリプト・eslint |
+| K6 ほかの画面の Stack は見た目が変わらない（既定は column） | Stack テスト |
+
+### 外部事例
+- 対象外：既存金型（DataTable onRowClick・Drawer）の組み合わせと、Stack 金型への向き指定の追加。
+
+### 戻し方
+- PR を Revert。DB・API を変えないのでデータの戻しは要らない。
+
+### 維持の仕組み
+- 横並びは Stack 金型の direction に一本化（個別 CSS を作らない）。文言は ja.json/en.json の同じキー（i18n の CI）。
+
+## 段8（2026-10-20）閲覧者の詳細スライドで LINE名を直せるようにする
+
+### PO 決定（原文）
+- 「全て確認した、スライドページはデータを編集できるように出来る？」
+- 直す項目の選択肢に「1と状態」→ 状態の決まりの説明のあと「LINE名だけにする」
+- 直せるのは LINE名だけ。メール・Discord ID・状態は直せない（状態は今あるボタンのまま）
+
+### 変えるもの
+- backend：`viewer_admin.update_line_name`（前後の空白を除き 1〜100 文字。範囲外は invalid_line_name→422、無い id は 404。行ロックして UPDATE。commit は呼び出し側）。`PATCH /api/v1/super-admin/viewers/{viewer_id}`（require_super_admin、応答は ViewerAdminItem）。
+- 画面：ViewerAccountsPage の Drawer の LINE名を TextField 金型にし、footer に「保存」。下書きが元と違い 1〜100 文字のときだけ押せる。成功したらスライドと一覧を応答で差し替え「保存しました」（role="status"）、失敗は role="alert"。保存せずに閉じたら下書きは捨てる（確認画面なし）。
+- 触らない：DB・migrations・deploy.yml・scripts、メール・Discord ID・状態の編集、申込（viewer.py）、金型そのもの。変更履歴の表は作らない（仕入元 PATCH と同じ前例）。
+- 即時反映：NO_SIGNAL_ROUTES（topics.py:108-111 の状態変更と同じ扱い）
+
+### 受入基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 スライドで LINE名を直して保存すると、一覧とスライドの名前が変わる | 画面テスト＋PO 目視 |
+| K2 再読み込みしても直した名前のまま（DB に入っている） | backend テスト＋PO 目視 |
+| K3 空と 101 文字は保存できない（画面で押せない／API は 422） | 画面テスト＋backend テスト |
+| K4 super admin 以外は直せない | backend テスト |
+| K5 メール・Discord ID・状態は直せないまま | 画面テスト（入力欄が LINE名の1つだけ） |
+| K6 生の色・px・ハードコード日本語なし。check:*・eslint 合格 | 検査スクリプト |
+
+### 外部事例
+- 対象外：既存金型（TextField・Drawer footer・Button）と仕入元詳細スライド（SupplierDetailDrawer）の前例の組み合わせ。
+
+### 戻し方
+- PR を Revert。DB を変えないのでデータの戻しは要らない（直した名前は元に戻らないが、画面からもう一度直せる）。
+
+### 維持の仕組み
+- LINE名の置き場所は public.viewer_accounts.line_name の1か所だけ。検証の範囲（1〜100）は申込と同じ。文言は ja.json/en.json の同じキー（i18n の CI）。

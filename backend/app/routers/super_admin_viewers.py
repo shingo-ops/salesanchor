@@ -5,6 +5,7 @@
 API:
   GET  /api/v1/super-admin/viewers
   GET  /api/v1/super-admin/viewers/{viewer_id}/logins
+  PATCH /api/v1/super-admin/viewers/{viewer_id}   （LINE名だけ直す）
   POST /api/v1/super-admin/viewers/{viewer_id}/activate
   POST /api/v1/super-admin/viewers/{viewer_id}/suspend
   POST /api/v1/super-admin/viewers/{viewer_id}/unsuspend
@@ -35,6 +36,7 @@ _ERROR_STATUS = {
     "conflict": (status.HTTP_409_CONFLICT, "viewer_status_conflict"),
     "invalid_days": (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_days"),
     "already_linked": (status.HTTP_409_CONFLICT, "viewer_already_linked"),
+    "invalid_line_name": (status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid_line_name"),
 }
 
 
@@ -83,6 +85,12 @@ class ExtendRequest(BaseModel):
         if (self.days is None) == (self.until_date is None):
             raise ValueError("days か until_date のどちらか一つだけを指定してください")
         return self
+
+
+class LineNameUpdate(BaseModel):
+    line_name: str = Field(
+        ..., max_length=200, description="新しい LINE名（前後の空白を除いて 1〜100 文字）"
+    )
 
 
 class ViewerReissueResponse(BaseModel):
@@ -137,6 +145,23 @@ async def _change(
             days=days,
             until_date=until_date,
         )
+        await db.commit()
+    except ViewerAdminError as exc:
+        await db.rollback()
+        raise _http_error(exc) from None
+    return item
+
+
+@router.patch(
+    "/super-admin/viewers/{viewer_id}",
+    response_model=ViewerAdminItem,
+    dependencies=[Depends(require_super_admin)],
+)
+async def update_line_name_endpoint(
+    viewer_id: int, payload: LineNameUpdate, db: AsyncSession = Depends(get_db)
+):
+    try:
+        item = await viewer_admin.update_line_name(db, viewer_id, payload.line_name)
         await db.commit()
     except ViewerAdminError as exc:
         await db.rollback()

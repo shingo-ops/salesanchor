@@ -96,3 +96,30 @@ describe("viewer block frames (ADR-1014 rev 2026-10-19 (3))", () => {
     expect(b.container.querySelector(".comp-badge")).toBeNull();
   });
 });
+
+describe("viewer title ellipsis and wrapped note/ship (ADR-1014 rev 2026-10-20)", () => {
+  it("gives both title lines the clip class and a full-text title", () => {
+    const { container } = cell("name", { ...base, japanese_title: "Long Name", english_title: "Long English" });
+    const top = container.querySelector(".inventory-cell__title");
+    const sub = container.querySelector(".inventory-cell__sub");
+    expect(top?.classList.contains("inventory-cell__clip")).toBe(true);
+    expect(top?.getAttribute("title")).toBe("Long Name");
+    expect(sub?.classList.contains("inventory-cell__clip")).toBe(true);
+    expect(sub?.getAttribute("title")).toBe("Long English");
+  });
+  it("omits the sub line without english_title", () => {
+    const { container } = cell("name", { ...base, english_title: "" });
+    expect(container.querySelector(".inventory-cell__sub")).toBeNull();
+  });
+  it.each(["note", "ship"])("wraps %s with the wrap class (not nowrap)", (key) => {
+    const { container } = cell(key, { ...base, note_ja: "memo", ship_ja: "ship" });
+    expect(container.querySelector(".inventory-cell__wrap")).not.toBeNull();
+    expect(container.querySelector(".inventory-cell__nowrap")).toBeNull();
+  });
+  it.each(["note", "ship"])("keeps the %s wrap element empty when the value is empty", (key) => {
+    const { container } = cell(key, { ...base, note_ja: "", ship_ja: "" });
+    const el = container.querySelector(".inventory-cell__wrap");
+    expect(el).not.toBeNull();
+    expect(el!.matches(":empty")).toBe(true);
+  });
+});
