@@ -3,7 +3,7 @@
 発行: Claude Opus（設計統括）2026-10-19
 根拠: design.md（第5版、Architect 第5回 APPROVE。§12）・recon.md・`docs/adr/ADR-1034-opus-permission-delegation-ledger.md`
 PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同日「1」: 保留4項目を残し、ほかは Opus が足し引きする）
-作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger（branch release/permission-delegation-ledger）。この外では書かない。
+作業場所: ~/worktrees/salesanchor/release-permission-delegation-ledger（branch release/permission-delegation-ledger）。この外では書かない。
 
 ## やること（design.md の節に従う。書かれていない条件を足さない）
 
@@ -42,11 +42,11 @@ PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同
    - PR本文に入れるもの: `### 標準ワークフロー確認`、変更・新規ファイルの全一覧、試験の合格数／総数、末尾に `🤖 Generated with [Claude Code](https://claude.com/claude-code)`。
 
 ## 参考
-- 今の定期実行の文: agent-console の定期実行 bb581a6f の promptText。写しは /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/cfca0e17-6522-48eb-a946-cc9ce9b5087e/scratchpad/routine-consent-weekly.json（読み取りだけ）。
+- 今の定期実行の文: agent-console の定期実行 bb581a6f の promptText。写しは 作業用の一時フォルダの routine-consent-weekly.json（読み取りだけ）。
 
 ## 触らない
 - ~/.claude/ 配下、~/.codex/ 配下、~/.salesanchor-tools 配下、agent-console の実物。例外の文の登録は PO の `!` で行い、定期実行の差し替えは Opus が行う。
-- 本店 /Users/tanizawashingo/salesanchor の作業ツリーと .claude/settings*.json。
+- 本店 ~/salesanchor の作業ツリーと .claude/settings*.json。
 - consent-audit.py の同意の照合（match_ledger_keys など）の判定と出力の形。足すだけにする。
 
 ## 止まる条件（BLOCKED: / NEEDS_DECISION: で Opus に戻す）
@@ -77,6 +77,13 @@ PO 承認: 委任の方針（2026-10-19 の原文は recon §4）と範囲（同
 3. LOW-B: 試験は既に R0 を期待しているので変更不要（design の文を直した）。
 4. LOW-D: PR 本文の「削除するファイル」から削除でないもの（ADR-1011・README.md・consent-audit.py）を「変更」へ移し、R0 の説明を design の改2 に合わせる。本文は Write で作ったファイルから `gh pr edit --body-file` で。
 5. 試験をすべて走らせ、生出力を /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6b.txt に保存。
+
+## 追補3（第6版 改5・改6・Reviewer 再審査の申し送り、2026-10-19）
+同じブランチ・同じ PR #4544 に追加コミットする。コードの変更は Edit / Write の道具で行う。
+1. `scripts/dev/perm-change.py`: design §2-2 (a) の改6 の文のとおり、Bash は `*` の有無にかかわらず「記号（`;`・`&`・`|`・`>`・`<`・`` ` ``・`$`・改行）が無い」かつ「先頭の語の並びが R0_ACCEPT の Bash の受け入れの一覧と一致（`*` の無い文は一覧の語の後が `-` で始まらない語だけ）」のときだけ R0 にしない。実行役の一覧（bash_executors）は使わなくなるので R0_ACCEPT から外す。引号（`"`・`'`）や `\` を含む文は R0。一覧と比べる先頭の語は書かれたままの名前で比べる（パスや末尾の数字を外すのは R1 の rm だけ）。
+2. `scripts/dev/permission-delegation-tests.py`: A18 に design の改5・改6 の反例と、改6 の通る例をすべて足す。既存の試験で改6 により期待が変わるもの（`*` の無い一覧外の Bash を R0 にしない前提の試験）があれば、design の文に合わせて期待を直し、どれを直したかを報告に1行で書く。design の文と矛盾する場合は NEEDS_DECISION:。
+3. 文書の個人パスを `~` に置き換えた未コミットの変更（card-bin1.md・recon.md・design.md）も同じコミットに含める。
+4. 試験の生出力は /tmp/CC報告ファイル/permission-delegation/bin1/tests-v6c.txt。PR 本文の試験数を更新（Write でファイルを作り、別コマンドで gh pr edit）。
 
 ## 報告
 最後の返事は `DONE: PR #<番号> 試験 <合格数>/<総数>` か `BLOCKED: <理由1行>` か `NEEDS_DECISION: <1行>` の1行だけ。生出力は /tmp/CC報告ファイル/permission-delegation/bin1/ に保存する。

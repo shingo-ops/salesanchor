@@ -88,11 +88,6 @@ R0_ACCEPT = {
         ("gh", "run", "view"), ("gh", "run", "list"),
         ("grep",), ("wc",),
     },
-    # Bash の `*` が無い文でも R0 にする実行役（先頭の語のパス・末尾の数字と点を外した名前）
-    "bash_executors": {
-        "python", "bash", "sh", "zsh", "node", "npx", "npm", "pnpm", "yarn", "bun", "deno", "uv", "uvx",
-        "ruby", "perl", "php", "env", "xargs", "eval", "source", "exec", "sudo", "osascript", "make",
-    },
     # Edit 系の最初の段の受け入れ
     "edit_first_segments": {"docs", "frontend", "backend"},
     # MCP の読み取り専用サーバー
@@ -158,28 +153,28 @@ def rm_with_star(item):
     return bool(toks) and cmd_name(toks[0]) == "rm" and "*" in item
 
 
-def narrow_star(toks):
-    """`*` を含む Bash の文が「狭い形」（受け入れの一覧と一致）か。"""
-    prefix = []
-    for t in toks:
-        if "*" in t:
-            break
-        prefix.append(t)
-    if not prefix:
-        return False
-    prefix[0] = cmd_name(prefix[0])
-    return tuple(prefix) in R0_ACCEPT["bash_star"]
+BASH_SYMBOLS = (";", "&", "|", ">", "<", "`", "$", "\n", "\r", '"', "'", "\\")
 
 
 def _bash_ok(content):
+    """設計 §2-2 (a)（改6）: 記号が無く、先頭の語の並びが受け入れの一覧と書かれたままで一致するときだけ True。"""
+    if any(c in content for c in BASH_SYMBOLS):
+        return False
     toks = content.replace(":*", " *").split()
     if not toks:
         return False
+    accept = R0_ACCEPT["bash_star"]
     if "*" in content:
-        return narrow_star(toks)
-    if "/" in toks[0] or cmd_name(toks[0]) in R0_ACCEPT["bash_executors"]:
-        return False
-    return True
+        prefix = []
+        for t in toks:
+            if "*" in t:
+                break
+            prefix.append(t)
+        return bool(prefix) and tuple(prefix) in accept
+    for n in range(len(toks), 0, -1):
+        if tuple(toks[:n]) in accept:
+            return not any(t.startswith("-") for t in toks[n:])
+    return False
 
 
 def _edit_path_ok(path):

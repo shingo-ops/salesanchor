@@ -236,7 +236,7 @@ def test_a1(tmp):
 def test_a2(tmp):
     e = Env(tmp, "a2", with_git=True)
     n0 = ledger_n(e)
-    item = "Bash(wc -l docs)"
+    item = "Bash(wc docs)"
     code, out, _ = run_pc(e, apply_argv("user-allow", "add", item, days=7))
     allow = load_json(e.settings)["permissions"]["allow"]
     rows = ledger_rows(e)
@@ -244,7 +244,7 @@ def test_a2(tmp):
     chk("A2-b", "台帳の review_by が7日後・actor が opus・prev_sha が genesis", rows[-1]["review_by"] == (T0 + td(days=7)).strftime("%Y-%m-%d") and rows[-1]["actor"] == "opus" and rows[-1]["prev_sha"] == "genesis")
     code, _, _ = run_pc(e, apply_argv("user-allow", "remove", item))
     chk("A2-c", "user-allow の remove が反映され applied が1行増える", code == 0 and item not in load_json(e.settings)["permissions"]["allow"] and ledger_n(e) == n0 + 2)
-    item2 = "Bash(wc -c docs)"
+    item2 = "Bash(wc docs2)"
     code, _, _ = run_pc(e, apply_argv("repo-local-allow", "add", item2))
     chk("A2-d", "repo-local-allow の add が反映される", code == 0 and item2 in load_json(e.repo_local)["permissions"]["allow"])
     code, _, _ = run_pc(e, apply_argv("repo-local-allow", "remove", item2))
@@ -256,8 +256,8 @@ def test_a2(tmp):
     code, _, _ = run_pc(e, apply_argv("user-allow", "remove", "Bash(never-there:*)"))
     chk("A2-g", "remove で無い文は exit 0・noop の行", code == 0 and ledger_rows(e)[-1]["result"] == "noop" and ledger_n(e) == n1 + 1)
     chk("A2-h", "台帳の prev_sha の鎖がつながっている", audit.read_ledger(e.home)["chain_ok"])
-    run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l twice)"))
-    code2, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l twice)"))
+    run_pc(e, apply_argv("user-allow", "add", "Bash(wc twice)"))
+    code2, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc twice)"))
     chk("A2-i", "add で既にある文は noop（exit 0）", code2 == 0 and ledger_rows(e)[-1]["result"] == "noop")
     n2 = ledger_n(e)
     code, _, _ = run_pc(e, apply_argv("user-automode-allow-sm", "add", "SM-x"))
@@ -285,7 +285,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = corrupt
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc a)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-a", "書いた後の読み直しに失敗すると exit 1・元のファイルと同じ sha256", code == 1 and sha_file(e.settings) == s0)
@@ -296,7 +296,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = raiser
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l b)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc b)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-c", "書き込みが例外で失敗しても exit 1・元のファイルと同じ", code == 1 and sha_file(e.settings) == s0)
@@ -306,7 +306,7 @@ def test_a3(tmp):
 
     pc.write_json_atomic = noop_writer
     try:
-        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l c)"))
+        code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc c)"))
     finally:
         pc.write_json_atomic = real
     chk("A3-d", "反映されなかった場合も exit 1・元のファイルと同じ", code == 1 and sha_file(e.settings) == s0)
@@ -320,11 +320,14 @@ R_EXAMPLES = {
     "R0": ["Bash", "Bash(*)", "Bash(ls:*)", "Bash(python3 scripts/*)", "Bash(bash ~/worktrees/*)", "BASH(LS *)",
            "Edit(~/.claude/**)", "Bash(python3 scripts/dev/perm-change.py apply)",
            "Bash(ssh -F /dev/null prod1 *)", 'Bash(psql ai_ro -c "SELECT * FROM x")'],
-    "R1": ["Bash(rm -rf /tmp/xx)", "Bash(docker compose exec backend ls)", 'Bash(psql -c "DROP TABLE t")',
-           "Bash(echo 削除)", "Bash(TRUNCATE t)", "Bash(rm -v *)", "Bash(/bin/rm -f *)"],
-    "R2": ["Bash(git push origin feat)", "Bash(GIT RESET --HARD HEAD)", "Bash(gh pr merge 12)", "Bash(git checkout main)"],
-    "R3": ["Bash(cat .env)", "Bash(echo $API_KEY)", "Bash(gh secret list)", "Bash(echo 合言葉)", "Bash(echo PASSWORD)"],
-    "R4": ["Bash(echo hook)", "Bash(vi settings.json)", "Bash(touch GUARD)", "Bash(echo 見張り)", "Bash(echo Self-Modification)"],
+    # R1〜R4 は受け入れの形（改6: grep・wc・git status など）の文でだけ当たる。それ以外は R0 が先
+    "R1": ["Bash(grep delete docs)", "Bash(grep 削除 docs)", "Bash(grep truncate docs)", "Bash(grep prod1 docs)",
+           "Bash(rm -v *)", "Bash(/bin/rm -f *)"],
+    "R2": ["Bash(grep push docs)", "Bash(grep main docs)", "Bash(grep develop docs)", "Bash(grep ruleset docs)"],
+    "R3": ["Bash(grep token docs)", "Bash(grep secret docs)", "Bash(grep .env docs)", "Bash(grep 合言葉 docs)",
+           "Bash(grep PASSWORD docs)"],
+    "R4": ["Bash(grep hook docs)", "Bash(grep settings docs)", "Bash(grep GUARD docs)", "Bash(grep 見張り docs)",
+           "Bash(grep Self-Modification docs)"],
 }
 
 
@@ -382,22 +385,32 @@ def test_a18(tmp):
     chk("A18-6", "autoMode.allow の add は exit 3（R0）", code == 3 and ledger_rows(e)[-1]["category"] == "reserved:R0")
     for i, it in enumerate(['Bash(psql ai_ro -c "SELECT 1")', 'Bash(ssh -F /dev/null prod1 "SELECT 1")',
                             "Bash(echo domain)", "Bash(echo keyword)", "Bash(echo navigate)", "Bash(echo api)", "Bash(ls -la docs)"]):
-        chk("A18-n%d" % (i + 1), "止めすぎの例 %s は R1〜R4 に当たらない" % it, pc.classify(it, "user-allow", "add") is None)
-    chk("A18-w1", "api_key の key は語として当たる（_ は区切り）", pc.classify("Bash(echo api_key)", "user-allow", "add") == "R3")
-    chk("A18-w2", "SELECT と DELETE を含む文は読み取りの印にならない", pc.classify('Bash(psql ai_ro -c "SELECT 1; DELETE x")', "user-allow", "add") == "R1")
+        chk("A18-n%d" % (i + 1), "止めすぎの例 %s は R1〜R4 に当たらない" % it,
+            not any(pc.rule_hit(r, it) for r in ("R1", "R2", "R3", "R4")))
+    chk("A18-w1", "api_key の key は語として当たる（_ は区切り）", pc.rule_hit("R3", "Bash(echo api_key)"))
+    chk("A18-w2", "SELECT と DELETE を含む文は読み取りの印にならない", pc.rule_hit("R1", 'Bash(psql ai_ro -c "SELECT 1; DELETE x")'))
     chk("A18-w3", "-f は push と同じ文のときだけ R2 の理由になる", pc.rule_hit("R2", "git push -f") and not pc.rule_hit("R2", "ls -f"))
     counter = ["Bash(gh api *)", "Bash(gh api:*)", "Bash(docker compose *)", "Bash(git -C /x *)", "Bash(git -c x=y *)",
                "Bash(g*)", "Bash( *)", "Bash(**)", "Bash(osascript -e *)", "Bash(sudo -n *)", "Bash(command -p *)",
                "Bash(awk -f *)", "Bash(curl -X POST *)", "Bash(launchctl load *)", "Bash(python3.12 -c *)",
                "Bash(/bin/bash -c *)", "Bash(ls *)", "Bash(git config --global *)", "Bash(git log --oneline *)",
                "Bash(git log --output=x *)", "Bash(cp -f *)", "Bash(gh alias set *)", "Bash(rg --pre x *)",
-               "Bash(security dump-keychain *)", "Bash(gh pr view extra *)"]
+               "Bash(security dump-keychain *)", "Bash(gh pr view extra *)", "Bash(/usr/bin/grep *)",
+               # 改5
+               "Bash(grep * ; id)", "Bash(wc * | sh)", "Bash(grep * > x)", "Bash(PYTHONPATH=x python3 y)",
+               "Bash(command python3 x)", "Bash(time bash x)", "Bash(nohup sh x)", "Bash(ls && bash x)",
+               "Bash(ls; python3 x)", "Bash(curl x | sh)", "Bash(echo $(id))",
+               # 改6
+               "Bash(find docs -exec sh docs/x {} +)", "Bash(awk -f docs/x f)", "Bash(open docs/x)",
+               "Bash(launchctl load docs/x)", "Bash(git -c core.pager=x log)", "Bash(git z)", "Bash(gh alias set z x)",
+               "Bash(echo $HOME)", "Bash(wc -l docs/x)", "Bash(git status --porcelain)", "Bash(/tmp/x/grep foo bar)",
+               "Bash(./gh pr view 1)", "Bash(docs/tools/grep foo bar)", 'Bash(grep foo "-r")']
     for i, it in enumerate(counter):
         chk("A18-c%d" % (i + 1), "第6版の反例 %s は R0" % it, pc.classify(it, "user-allow", "add") == "R0")
     for i, it in enumerate(["Bash(rm -v *)", "Bash(/bin/rm -f *)", "Bash(rm *)"]):
         chk("A18-r%d" % (i + 1), "%s は R1（R0 より先）" % it, pc.classify(it, "user-allow", "add") == "R1")
     for i, it in enumerate(["Bash(gh pr view *)", "Bash(git status *)", "Bash(grep *)", "Bash(gh run list:*)",
-                            "Bash(wc *)", "Bash(git ls-files *)", "Bash(/usr/bin/grep *)"]):
+                            "Bash(wc *)", "Bash(git ls-files *)", "Bash(git rev-parse *)", "Bash(gh pr checks *)"]):
         chk("A18-a%d" % (i + 1), "受け入れの例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") is None)
     shape_r0 = [
         # 改2
@@ -420,10 +433,10 @@ def test_a18(tmp):
         chk("A18-s%d" % (i + 1), "改2〜4 の反例 %s は R0" % it, pc.classify(it, "user-allow", "add") == "R0")
     shape_ok = ["Edit(docs/handoff/x.md)", "Write(frontend/src/a.tsx)", "MultiEdit(backend/app/x.py)", "Read(docs/**)",
                 "Grep(*)", "Glob(**/*.md)", "WebFetch(domain:docs.python.org)", "mcp__context7__query-docs",
-                "mcp__context7__resolve-library-id", "Bash(ls -la docs)", "Bash(wc -w docs)", "Bash(git diff HEAD)"]
+                "mcp__context7__resolve-library-id", "Bash(git status)", "Bash(gh pr view 4544)", "Bash(grep foo docs/x)", "Bash(wc docs)"]
     for i, it in enumerate(shape_ok):
         chk("A18-t%d" % (i + 1), "通る例 %s は R0 にならない" % it, pc.classify(it, "user-allow", "add") != "R0")
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -w docs)"))
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc docs3)"))
     chk("A18-ok", "目印に当たらない文は通常で反映される", code == 0)
 
 
@@ -493,7 +506,7 @@ def test_a5_a6(tmp):
     # A6: 台帳にある増減は異常にならない
     e = Env(tmp, "a6", with_git=True)
     run_audit(e, T0, commit=True)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l zz)"), now=T0 + td(3600))
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc zz)"), now=T0 + td(3600))
     code2, _, _ = run_pc(e, apply_argv("user-allow", "remove", "Bash(echo hi:*)"), now=T0 + td(3700))
     lines = run_audit(e, T0 + td(7200))
     chk("A6-a", "道具で足し引きした変化は A にならず ABNORMAL=no", code == 0 and code2 == 0 and not reasons(lines) and "ABNORMAL=no" in lines)
@@ -590,8 +603,8 @@ def b_case(tmp, name, ref, gh_resp, git_env=False, second=False):
 
 
 SETTINGS_PATH = ".claude/settings.json"
-XI = "Bash(wc -l newrepo)"
-ZI = "Bash(wc -l other)"
+XI = "Bash(wc newrepo)"
+ZI = "Bash(wc other)"
 BASEI = "Bash(echo seed:*)"
 
 
@@ -688,7 +701,7 @@ def a19_pr(tmp, name, item, target, docs_line, mode="ok", body=""):
 
 def a19_consent(tmp, name, used_off, text, earlier_row=False):
     e = light_env(tmp, name)
-    item = "Bash(wc -l c19)"
+    item = "Bash(wc c19)"
     h = audit.item_sha8(item)
     K = ["d" * 64, iso(T0 + td(used_off)), "cmdy"]
     ref = consent_ref(e, K, T0 + td(used_off), text.replace("HASH", h))
@@ -704,13 +717,13 @@ def a19_consent(tmp, name, used_off, text, earlier_row=False):
 
 def test_a19(tmp):
     UA, AA = "user:permissions.allow", "user:autoMode.allow"
-    lines = a19_pr(tmp, "a19-ok", "Bash(wc -l p19)", "user-allow", "note HASH")
+    lines = a19_pr(tmp, "a19-ok", "Bash(wc p19)", "user-allow", "note HASH")
     chk("A19-0", "取り込み済みで差分に item_hash がある PR# の record は A にならない", not a_for(lines, UA))
-    lines = a19_pr(tmp, "a19-nopr", "Bash(wc -l p19)", "user-allow", "note HASH", mode="nopr")
+    lines = a19_pr(tmp, "a19-nopr", "Bash(wc p19)", "user-allow", "note HASH", mode="nopr")
     chk("A19-1", "存在しない PR# は A", len(a_for(lines, UA)) == 1)
-    lines = a19_pr(tmp, "a19-side", "Bash(wc -l p19)", "user-allow", "note HASH", mode="side")
+    lines = a19_pr(tmp, "a19-side", "Bash(wc p19)", "user-allow", "note HASH", mode="side")
     chk("A19-2", "V に取り込まれていない PR は A", len(a_for(lines, UA)) == 1)
-    lines = a19_pr(tmp, "a19-body", "Bash(wc -l p19)", "user-allow", "unrelated")
+    lines = a19_pr(tmp, "a19-body", "Bash(wc p19)", "user-allow", "unrelated")
     chk("A19-3", "PR 本文にだけ item_hash がある（差分に無い）と A", len(a_for(lines, UA)) == 1)
     lines = a19_pr(tmp, "a19-sm-ok", "SM-7 weekly check", "user-automode-allow-sm", "| SM-7 | HASH |")
     chk("A19-4a", "SM の PR は台帳の差分に同じ SM 番号の行があれば A にならない", not a_for(lines, AA))
@@ -786,7 +799,7 @@ def test_a8(tmp):
 
 def test_a9(tmp):
     e = Env(tmp, "a9", with_git=True)
-    item = "Bash(wc -l review)"
+    item = "Bash(wc review)"
     code, _, _ = run_pc(e, apply_argv("user-allow", "add", item, days=1), now=T0)
     h = audit.item_sha8(item)
     lines = run_audit(e, T0 + td(0))
@@ -894,7 +907,7 @@ def test_a11_a12_a13(tmp):
     chk("A13-b", "文の中身が台帳ファイル・標準出力・標準エラーのどこにも出ない", "UNIQUESECRETSTRING_9f3" not in ledger_text + out + err)
     lines = run_audit(e, T0 + td(60))
     chk("A13-c", "点検の出力にも出ない", not any("UNIQUESECRETSTRING_9f3" in x for x in lines))
-    normal = "Bash(wc -l x)"
+    normal = "Bash(wc x)"
     run_pc(e, apply_argv("user-allow", "add", normal))
     chk("A13-d", "通常の文の summary は先頭80字", ledger_rows(e)[-1]["summary"] == normal)
 
@@ -956,8 +969,8 @@ def test_a17(tmp):
     with open(untracked, "w") as f:
         f.write("x")
     n0 = ledger_n(e)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a)"))
-    chk("A17-1e", "追跡外のファイルがあると exit 1（設定も台帳も変えない）", code == 1 and ledger_n(e) == n0 and "Bash(wc -l a)" not in load_json(e.settings)["permissions"]["allow"])
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc a)"))
+    chk("A17-1e", "追跡外のファイルがあると exit 1（設定も台帳も変えない）", code == 1 and ledger_n(e) == n0 and "Bash(wc a)" not in load_json(e.settings)["permissions"]["allow"])
     os.remove(untracked)
     ca = os.path.join(e.tools, "scripts", "dev", "consent-audit.py")
     with open(ca, "a") as f:
@@ -977,7 +990,7 @@ def test_a17(tmp):
     chk("A17-3c", "同期のあと作業ツリーは clean（__pycache__ も作られない）", git(e.tools, "status", "--porcelain", "--untracked-files=all") == "")
     e.advance("note.txt", "one")
     e.reexec_calls = 0
-    code, out, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a1)"))
+    code, out, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc a1)"))
     chk("A17-3d", "main が1つ進んだだけなら自分で揃えて起動し直し（1回）、そのまま実行される", code == 0 and e.reexec_calls == 1 and e.head() == e.v())
     first = git(e.tools, "rev-list", "--max-parents=0", "HEAD")
     git(e.tools, "update-ref", "refs/remotes/origin/main", first)
@@ -992,7 +1005,7 @@ def test_a17(tmp):
     code, _, _ = run_pc(e, argv, git_run=offline)
     chk("A17-2a", "ls-remote が取れないと exit 4", code == 4)
     n0 = ledger_n(e)
-    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc -l a2)"), git_run=offline)
+    code, _, _ = run_pc(e, apply_argv("user-allow", "add", "Bash(wc a2)"), git_run=offline)
     chk("A17-2a2", "exit 4 のとき設定も台帳も変えない", code == 4 and ledger_n(e) == n0)
     e.advance("note.txt", "two")
     code, _, _ = run_pc(e, argv, git_run=wrap_git(real, fail="fetch"))

@@ -20,7 +20,7 @@
 | 1 | permissions.allow | ~/.claude/settings.json | 7 | 無し |
 | 2 | autoMode.allow / soft_deny / environment | 同上 | 28 / 3 / 26 | ADR-1011 の台帳（`SM-` の文と PO の変更のみ） |
 | 3 | hooks の登録 | 同上 | 39（`python3 scripts/dev/consent-audit.py --audit --permissions` の初回の写し） | 無し |
-| 4 | リポジトリの .claude/settings.json の allow | /Users/tanizawashingo/salesanchor/.claude/settings.json（git 追跡） | 27 | git の履歴のみ |
+| 4 | リポジトリの .claude/settings.json の allow | ~/salesanchor/.claude/settings.json（git 追跡） | 27 | git の履歴のみ |
 | 5 | リポジトリの .claude/settings.local.json の allow | 同じ場所の settings.local.json（追跡外、.gitignore の `.claude/*`） | 45 | 無し |
 | 6 | 危険語リスト danger_ops | ~/.claude/agent-tokens.json | 17 | 無し（古い写しが3本、最後は 9/1） |
 | 7 | フック本体 | ~/.claude/scripts/ | - | 反映スクリプトの控え（.backup）のみ |
