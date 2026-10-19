@@ -2,10 +2,12 @@
  * /super-admin/viewers — 閲覧者（社外の在庫閲覧専用アカウント）の管理画面（ADR-1019 段4a-2）。
  *
  * - 一覧・状態変更（本契約・延長・停止・停止の解除）・ログイン記録
+ * - 左メニューで状態ごとに絞る（?status=）／申込フォームURLのコピー／申込中の人のコード・招待の作り直し（段5）
  * - is_super_admin=true のみアクセス可（Page 内で 403 ガード）
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
@@ -17,6 +19,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { TextField } from "../../components/TextField";
+import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
 
 interface ViewerItem {
   id: number;
@@ -58,6 +61,17 @@ const STATUS_KEY: Record<string, string> = {
   suspended: "statusSuspended",
 };
 
+/** 左メニューに出す状態（この順）。verified は使わないので出さない（「すべて」には含まれる） */
+const MENU_STATUSES = ["pending", "trial", "active", "suspended"] as const;
+type MenuKey = "all" | (typeof MENU_STATUSES)[number];
+
+interface ReissueResult {
+  signup_code: string;
+  expires_at: string;
+  invite_url: string | null;
+  viewer: ViewerItem;
+}
+
 const EVENT_KEY: Record<string, string> = {
   login_succeeded: "eventLoginSucceeded",
   login_failed: "eventLoginFailed",
@@ -86,6 +100,15 @@ export default function ViewerAccountsPage() {
   const [running, setRunning] = useState(false);
   const [loginsFor, setLoginsFor] = useState<ViewerItem | null>(null);
   const [logins, setLogins] = useState<LoginItem[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [reissueTarget, setReissueTarget] = useState<ViewerItem | null>(null);
+  const [reissueResult, setReissueResult] = useState<ReissueResult | null>(null);
+
+  const statusParam = searchParams.get("status");
+  const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
+    ? (statusParam as MenuKey)
+    : "all";
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -111,6 +134,36 @@ export default function ViewerAccountsPage() {
       if (e.status === 404) return t(`${f}.notFoundError`);
     }
     return t(`${f}.genericError`);
+  };
+
+  const copyText = (key: string, value: string) => {
+    navigator.clipboard.writeText(value).then(
+      () => {
+        setCopiedKey(key);
+        setTimeout(() => setCopiedKey(null), 2000);
+      },
+      () => setError(t(`${f}.genericError`)),
+    );
+  };
+
+  const runReissue = async () => {
+    if (!reissueTarget) return;
+    setRunning(true);
+    setError("");
+    try {
+      const res = await api.post<{ signup_code: string; expires_at: string; invite_url: string | null }>(
+        `/super-admin/viewers/${reissueTarget.id}/reissue-signup-code`,
+        {},
+      );
+      setReissueResult({ ...res, viewer: reissueTarget });
+      setReissueTarget(null);
+      await load();
+    } catch (e) {
+      setReissueTarget(null);
+      setError(errorMessage(e));
+    } finally {
+      setRunning(false);
+    }
   };
 
   const openAction = (viewer: ViewerItem, action: Action) => {
@@ -238,6 +291,11 @@ export default function ViewerAccountsPage() {
               </Button>
             </>
           )}
+          {row.status === "pending" && (
+            <Button size="sm" variant="secondary" onClick={() => { setError(""); setReissueTarget(row); }}>
+              {t(`${f}.reissue`)}
+            </Button>
+          )}
           {row.status !== "suspended" && (
             <Button size="sm" variant="danger" onClick={() => openAction(row, "suspend")}>
               {t(`${f}.suspend`)}
@@ -268,8 +326,54 @@ export default function ViewerAccountsPage() {
       : t(`${f}.${pending.action}`)
     : "";
 
+  const countOf = (key: MenuKey) =>
+    key === "all" ? items.length : items.filter(i => i.status === key).length;
+  const menuLabel = (key: MenuKey) => (key === "all" ? t(`${f}.menuAll`) : t(`${f}.${STATUS_KEY[key]}`));
+  const menuGroups: SubMenuGroup<MenuKey>[] = [
+    {
+      items: (["all", ...MENU_STATUSES] as MenuKey[]).map(key => ({
+        key,
+        label: menuLabel(key),
+        badge: countOf(key),
+      })),
+    },
+  ];
+  const handleMenuChange = (key: MenuKey) => {
+    if (key === "all") setSearchParams({}, { replace: true });
+    else setSearchParams({ status: key }, { replace: true });
+  };
+  const visibleItems = activeKey === "all" ? items : items.filter(i => i.status === activeKey);
+
+  const copyButton = (key: string, value: string) => (
+    <Button size="sm" variant="secondary" onClick={() => copyText(key, value)}>
+      {copiedKey === key ? t(`${f}.copied`) : t(`${f}.copy`)}
+    </Button>
+  );
+
   return (
-    <PageLayout navKey="nav.superAdminViewers" subtitleKey="superAdmin.viewers.subtitle">
+    <PageLayout
+      navKey="nav.superAdminViewers"
+      subtitleKey="superAdmin.viewers.subtitle"
+      noScroll
+      headerAction={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => copyText("signupUrl", `${window.location.origin}/viewer/#signup`)}
+        >
+          {copiedKey === "signupUrl" ? t(`${f}.copied`) : t(`${f}.copySignupUrl`)}
+        </Button>
+      }
+    >
+      <div className="hub-shell">
+        <SubMenu
+          variant="flat"
+          className="hub-subnav"
+          groups={menuGroups}
+          activeKey={activeKey}
+          onChange={handleMenuChange}
+        />
+        <div className="hub-content">
       {error && (
         <div className="error-message" role="alert" data-testid="viewers-error">
           {error}
@@ -280,11 +384,77 @@ export default function ViewerAccountsPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={items}
+          data={visibleItems}
           rowKey={row => String(row.id)}
           emptyState={<EmptyState title={t("common.noData")} size="compact" />}
         />
       )}
+        </div>
+      </div>
+
+      <Modal
+        open={reissueTarget !== null}
+        onClose={() => setReissueTarget(null)}
+        title={t(`${f}.reissue`)}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setReissueTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => { void runReissue(); }}
+              disabled={running}
+              data-testid="viewers-reissue-run"
+            >
+              {t(`${f}.run`)}
+            </Button>
+          </>
+        }
+      >
+        {reissueTarget && (
+          <p>
+            {t(`${f}.confirmReissue`, { name: reissueTarget.line_name, email: reissueTarget.email })}
+          </p>
+        )}
+      </Modal>
+
+      <Modal
+        open={reissueResult !== null}
+        onClose={() => setReissueResult(null)}
+        title={t(`${f}.reissueTitle`)}
+        size="sm"
+        footer={
+          <Button variant="secondary" onClick={() => setReissueResult(null)}>
+            {t("common.close")}
+          </Button>
+        }
+      >
+        {reissueResult && (
+          <>
+            <p>{t(`${f}.reissueOnlyOnce`)}</p>
+            <p>
+              {t(`${f}.reissueCode`)}: <span data-testid="viewers-reissue-code">{reissueResult.signup_code}</span>
+              {copyButton("code", reissueResult.signup_code)}
+            </p>
+            <p>
+              {t(`${f}.reissueExpires`)}: {formatDate(reissueResult.expires_at)}
+            </p>
+            <p>
+              {t(`${f}.reissueInvite`)}:{" "}
+              {reissueResult.invite_url ? (
+                <>
+                  <span data-testid="viewers-reissue-invite">{reissueResult.invite_url}</span>
+                  {copyButton("invite", reissueResult.invite_url)}
+                </>
+              ) : (
+                <span data-testid="viewers-reissue-invite-failed">{t(`${f}.reissueInviteFailed`)}</span>
+              )}
+            </p>
+          </>
+        )}
+      </Modal>
 
       <Modal
         open={pending !== null}

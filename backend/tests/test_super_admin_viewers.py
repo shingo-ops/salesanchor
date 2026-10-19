@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -36,6 +37,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/suspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/unsuspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
+    ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
 ]
 
 
@@ -76,7 +78,7 @@ async def _call(method, path, body):
 # ── 非 PG ─────────────────────────────────────────────────────
 
 
-async def test_non_super_admin_gets_403_on_all_six_routes(override_user):
+async def test_non_super_admin_gets_403_on_all_seven_routes(override_user):
     override_user(_make_user(is_super_admin=False))
     for method, path, body in ROUTES:
         resp = await _call(method, path, body)
@@ -463,3 +465,74 @@ def test_suspend_record_feeds_purge(pg):  # noqa: F811
         "SELECT count(*) FROM public.viewer_status_changes WHERE viewer_id=%s AND action='suspend'", (vid,)
     )
     assert cur.fetchone()[0] == 1
+
+
+# ── 申込コードの作り直し（ADR-1019 段5） ─────────────────────────
+
+
+def _signup_hashes(cur, vid):
+    cur.execute(
+        "SELECT token_sha256 FROM public.viewer_login_tokens "
+        "WHERE viewer_account_id=%s AND purpose='signup_code'",
+        (vid,),
+    )
+    return [bytes(r[0]) for r in cur.fetchall()]
+
+
+@needs_ci_pg
+def test_reissue_pending_replaces_code_and_returns_invite(pg, monkeypatch):  # noqa: F811
+    from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha256
+
+    async def _fake_invite(db):
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _fake_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "p1@x.com", "pending")
+    old = b"\x01" * 32
+    cur.execute(
+        "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
+        "VALUES (%s, %s, 'signup_code', NOW() + interval '1 day')",
+        (vid, old),
+    )
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert re.fullmatch(r"[0-9A-Z]{4}(-[0-9A-Z]{4}){3}", body["signup_code"])
+    assert body["invite_url"] == "https://discord.gg/fakecode"
+    hashes = _signup_hashes(cur, vid)
+    assert hashes == [signup_code_sha256(normalize_signup_code(body["signup_code"]))]
+    assert old not in hashes
+
+
+@needs_ci_pg
+def test_reissue_invite_none_is_200_with_null(pg, monkeypatch):  # noqa: F811
+    async def _no_invite(db):
+        return None
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _no_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "p2@x.com", "pending")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200 and resp.json()["invite_url"] is None
+    assert len(_signup_hashes(cur, vid)) == 1
+
+
+@needs_ci_pg
+def test_reissue_non_pending_409_missing_404_non_admin_403(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    for status in ("trial", "active", "suspended"):
+        vid = _account(cur, f"{status}@x.com", status, expires_in_days=5 if status == "trial" else None)
+        resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+        assert resp.status_code == 409 and resp.json()["detail"] == "viewer_status_conflict"
+        assert _signup_hashes(cur, vid) == []
+    resp = _api(async_url, "POST", "/api/v1/super-admin/viewers/999999/reissue-signup-code", {})
+    assert resp.status_code == 404
+    pid = _account(cur, "p3@x.com", "pending")
+    resp = _api(
+        async_url, "POST", f"/api/v1/super-admin/viewers/{pid}/reissue-signup-code", {}, super_admin=False
+    )
+    assert resp.status_code == 403

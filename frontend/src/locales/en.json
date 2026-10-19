@@ -2701,7 +2701,19 @@
       "eventPasswordResetRequested": "Password reset requested",
       "eventPasswordResetDone": "Password reset done",
       "eventSignup": "Signup",
-      "eventCodeMatched": "Signup code matched"
+      "eventCodeMatched": "Signup code matched",
+      "menuAll": "All",
+      "copySignupUrl": "Copy signup form URL",
+      "copied": "Copied",
+      "copy": "Copy",
+      "reissue": "Reissue code and invite",
+      "confirmReissue": "Reissue the signup code and invite link for {{name}} ({{email}}). The previous code will stop working.",
+      "reissueTitle": "New signup code and invite link",
+      "reissueCode": "Signup code",
+      "reissueExpires": "Expires",
+      "reissueInvite": "Invite link",
+      "reissueInviteFailed": "Could not create the invite link. Please reissue again.",
+      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again."
     },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",

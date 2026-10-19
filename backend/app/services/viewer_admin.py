@@ -6,12 +6,16 @@ commit はしない（呼び出し側が commit する）。
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.viewer_email import normalize_viewer_email
+from app.services.viewer_signup import replace_signup_code
+
+logger = logging.getLogger(__name__)
 
 ACTOR_PO = "po"
 ACTOR_CLAUDE = "claude"
@@ -274,3 +278,20 @@ async def register_initial(
         except Exception:
             failed += 1
     return {"registered": registered, "skipped": skipped, "failed": failed}
+
+
+async def reissue_signup_code(db: AsyncSession, viewer_id: int) -> tuple[str, datetime]:
+    """申込中（pending）の人の申込コードを作り直す。commit はしない（呼び出し側が commit する）。email・コードはログに出さない。"""
+    row = (
+        await db.execute(
+            text("SELECT status FROM public.viewer_accounts WHERE id = :id FOR UPDATE"),
+            {"id": viewer_id},
+        )
+    ).first()
+    if row is None:
+        raise ViewerAdminError("not_found")
+    if row[0] != "pending":
+        raise ViewerAdminError("conflict")
+    code, expires_at = await replace_signup_code(db, viewer_id)
+    logger.info("viewer_signup_code_reissued viewer_id=%s", viewer_id)
+    return code, expires_at
