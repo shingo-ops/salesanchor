@@ -140,9 +140,10 @@ GAS の土台: ~/CC報告ファイル-keep/inventory-sort-3choices/gas/test_stag
 | T7 PO 目視（スマホ） | カードの並びが 商品名→コンディション→単価→数量→備考→発送→提供者、提供者の行で名前の下に時刻が出る（ラベル側に落ちない） |
 | T8 差分の範囲 | test_stage と testpull の diff が index.html だけ、変更箇所は 3章の範囲だけ |
 
-## 8. 維持
+## 8. 維持の仕組み
+守り手: 人手で守る（GAS はリポジトリ外のため CI の関所を置けない。ADR-1014 改訂（7）に正本と写しの場所を明記し、正本を変える便で GAS の写しも直す）
 - ADR-1014 に改訂（7）として「GAS の表は閲覧ページと同じ列順・見出し・色。正本は viewerColumns.tsx・conditionBadge.ts・inventoryColumns.css。変えるときは GAS の写しも同じ便で直す」と書く（docs PR）。
 - GAS の写しの場所（~/CC報告ファイル-keep/inventory-gas-table-parity/gas/）を ADR-1014 に書く。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 不要。社内の既存画面（閲覧ページ）に写すだけで、新しい方式を選ぶ判断が無いため。
