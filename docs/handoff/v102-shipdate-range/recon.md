@@ -38,3 +38,12 @@
 ### 2-5. 過去の成功・失敗（memory project_supplier_writing_analysis・docs/handoff/gemini-prompt-e/design.md）
 - 成功：e（手順ごとの例、まとめ書き誤り 9/25→2/25）、f_b/f_c（禁止にも例）。失敗：f_cv/f_cv2（印の下の商品を「数える」判定、10/12 不合格）。教訓：数えさせない・見れば分かる語と形で書く・例は既存の例の中に足す。
 
+
+## コードの根拠（origin/main 837245a2d、フルパス:行番号）
+- `backend/app/services/v102_status_context.py:28`：CURRENT_YEAR_BACK_MONTHS = 1。`backend/app/services/v102_status_context.py:29`：NEXT_DAY_GRACE_DAYS = 1。
+- `backend/app/services/v102_status_context.py:71`：_period_end（月日から期間の終わりを返す。年決めは投稿月との差）。
+- `backend/app/services/v102_status_context.py:91`：_date_ahead。:100 付近で名前付きグループ m・d を読む。終わりが投稿日の翌日より後の最初の当たりの文字列を返す。
+- `backend/app/services/v102_status_context.py:109`：_heading。:112 で他の件が持つ行（owned）と空行を飛ばす。
+- `backend/app/services/v102_status_context.py:120`：context_status。RELEASE_AHEAD → DATE_AHEAD → HEADING の順。:137 で DATE_AHEAD を読む。
+- `backend/tests/test_v102_status_context.py:32`：_CONTEXT の id25 相当の行（本便で範囲対応の regex に変える）。
+- 状態判定の前例の SQL 型：`docs/handoff/v102-preorder-context/data/commit.sql:1`。

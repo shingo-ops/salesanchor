@@ -2,6 +2,7 @@
 
 - 匿名化注記：仕入元名・人名・投稿IDは社外秘のため置き換えた（仕入元A=1行目に発送日の形、仕入元B=範囲入荷の形、仕入元C=予約品見出しの形、D〜K=その他の仕入元）。
 - 作成：2026-10-19 Fable（設計相談役・読み取りのみ）。改訂 v2（Opus 審査 REVISE 5 点を反映）。リポジトリ・本番 DB・Gemini には触れていない。
+- 現在地（recon）：docs/handoff/v102-shipdate-range/recon.md
 - 位置づけ：docs/STANDARD-WORKFLOW.md の design.md 型の下書き。recon は /tmp/CC報告ファイル/gemini_shipdate_recon/（本文中「recon/」）、呼び出し経路は /tmp/CC報告ファイル/gemini_call_flow/。
 - 基準コード：origin/main f1497588e0f4bacfbce3c999e5361a4ef2d952c0（ローカル checkout は古いので使っていない）。
 - 変更前の指示文：~/CC報告ファイル-keep/prompts/raw_copy_v101_f_ct.txt（sha256 fe50593fa362…15fd。本番 prompt_version `v102:raw_copy_v101_f_ct:fe50593fa362` と一致：recon/posts.txt）。
@@ -180,6 +181,15 @@ OP-11 21,000円/3box 発送	2026-10-19	In Stock	-	In Stock	-
 - basis：`_run(f"サンプル拡張\n{_price_line(' 11/3～5入荷')}", [1,2], posted=date(2026,10,19))["status_basis"] == "DATE_AHEAD:11/3～5入荷"`（:135-137 の型）。
 - 1行目形：`_run("11/3～5入荷次第発送\nサンプル拡張\n" + _price_line(), [1,2,3], posted=date(2026,10,19))` → Pre-order（block に 1 行目が入る形。便1 の出力を模す）。
 - 守り：既存の test_heading_owned_by_other_item_is_skipped（:175）が、§2-3 の 仕入元C の懸念（owned で飛ばす）を固定している。便1 の指示文が「予約」の行を足さないことはテストでは守れないので §6 T2(a) で見る。
+
+### 5-4b. 便2 の受け入れ基準（実装便が確認する）
+| 基準 | 検証方法 |
+|---|---|
+| 範囲日付 9 ケースが期待どおりの status になる | `cd backend && python3 -m pytest tests/test_v102_status_context.py --no-cov` が全件緑（生出力 /tmp/CC報告ファイル/v102_shipdate_bin2/pytest_status_context.txt） |
+| テストの regex と SQL の「後」regex が同一文字列 | SQL の commit.sql・dryrun.sql・rollback.sql に「後」が含まれることと、テストの _RANGE_SLASH + _ARRIVAL との完全一致を Python で照合 |
+| 本番 id25 が「前」と完全一致 | reader 鍵で ai_ro.public__tcg_status_master の id=25 の md5・長さを照合（93df884b…・52 一致を確認済み） |
+| DATE_AHEAD の有効行が 3 行 | 同じ道で件数を数える（3 を確認済み）。PO 実行時は precheck.sql が 3 でなければ止まる |
+| 本番DBへ書かない | この PR は SQL を置くだけ。適用は PO が ! で precheck→dryrun→commit→verify |
 
 ### 5-5. 便の順序と、単独で入れたときの影響
 | 入れ方 | 仕入元A <投稿ID> | 仕入元B <投稿ID> | 仕入元C <投稿ID> | 他 |
