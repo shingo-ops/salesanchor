@@ -36142,6 +36142,47 @@
         "title": "ViewerPasswordResetRequest",
         "type": "object"
       },
+      "ViewerReissueResponse": {
+        "description": "作り直した申込コードと招待リンク（この応答でしか見られない）。",
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "申込コードの有効期限",
+            "title": "Expires At"
+          },
+          "invite_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord 招待リンク（作れなければ null）",
+            "title": "Invite Url"
+          },
+          "signup_code": {
+            "description": "申込コード（XXXX-XXXX-XXXX-XXXX）",
+            "title": "Signup Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signup_code",
+          "expires_at"
+        ],
+        "title": "ViewerReissueResponse",
+        "type": "object"
+      },
       "ViewerSignupRequest": {
         "properties": {
           "email": {
@@ -63023,6 +63064,53 @@
           }
         ],
         "summary": "List Logins Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code": {
+      "post": {
+        "operationId": "reissue_signup_code_endpoint_api_v1_super_admin_viewers__viewer_id__reissue_signup_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerReissueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reissue Signup Code Endpoint",
         "tags": [
           "super-admin"
         ]
