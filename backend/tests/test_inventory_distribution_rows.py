@@ -114,11 +114,11 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
 
 
 # fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
-# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後の値。列の追加以外は変えていないことは
+# 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後、ADR-1014 改訂 2026-10-19（5）で rows_x に cond_block を足した後の値。列の追加以外は変えていないことは
 # PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
 _VIEW_SQL_BEFORE = {
-    False: (27930, "e0d2ad925b5ed71f17c02ef27a7f19d089a16f9ed0579b0f26c43652136d9243"),
-    True: (29847, "fc952f4eb3f1e6854e35cbc280c8f8c12ba6dc36e912a53330afb37b0e8cd123"),
+    False: (28007, "91dc2d28fbcf89f5b8a69a30ad29303097d346570f012aadbfc99377f77fa25a"),
+    True: (29924, "8e2967673e273cb03334c5ce13d3d23798ba3f86b3da454f7c66fa2677381355"),
 }
 
 
@@ -131,8 +131,8 @@ def test_view_sql_order_by_groups_by_release_date_first() -> None:
     price = _SORT_COLUMNS["unit_price"]
     assert _build_view_order_by(sort_col=rel, order_dir="ASC") == f"ORDER BY {group_asc}, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=rel, order_dir="DESC") == f"ORDER BY {group_desc}, d.sort_ord ASC"
-    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_desc}, d.price_num DESC NULLS LAST, d.sort_ord ASC"
-    assert _build_view_order_by(sort_col=price, order_dir="ASC") == f"ORDER BY {group_desc}, d.price_num ASC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="DESC") == f"ORDER BY {group_desc}, d.cond_block ASC, d.price_num DESC NULLS LAST, d.sort_ord ASC"
+    assert _build_view_order_by(sort_col=price, order_dir="ASC") == f"ORDER BY {group_desc}, d.cond_block ASC, d.price_num ASC NULLS LAST, d.sort_ord ASC"
     assert _build_view_order_by(sort_col=_SORT_COLUMNS["name"], order_dir="DESC") == (
         "ORDER BY d.english_title DESC, d.japanese_title DESC NULLS LAST, d.sort_ord ASC"
     )
