@@ -155,12 +155,14 @@ CSS（frontend/src/features/inventory/inventoryColumns.css。既存の `.invento
 | F8 本番: マージコミットが、成功した Deploy の head の祖先（`git merge-base --is-ancestor <merge> <deploy head>`）。配信の CSS に `inventory-cell__value--cheapest` と `--comp-value-frame-cheapest` があり、配信の JS に `block-frame-cheapest` がある（アプリと閲覧ページの両方の入口） | `gh run list --workflow deploy.yml` で成功した run の head を取る。`https://app.salesanchor.jp/` と `https://app.salesanchor.jp/viewer/` の HTML から asset の URL を抜き、各ファイルを curl して grep する（/tmp/CC報告ファイル/inventory-block-frames/prod/ に保存） |
 | F9 PO の画面確認: 水色・緑の枠が見え、列がそろっている | PO 目視（未観測の間は保留と書く） |
 
-## 外部事例
-該当なし。理由: 表の中の値を色の枠で強調する見た目の変更で、効果を数値で示す外部事例が判断に要らない。効果は PO の目視（F9）で判定する。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 該当なし。理由: 表の中の値を色の枠で強調する見た目の変更で、効果を数値で示す外部事例が判断に要らない。効果は PO の目視（F9）で判定する。
+- 過去事例（自社）: #4521 の値の右隣のバッジは、その行だけ値の中身が広がり、右寄せの列で値の位置がずれた（PO の画面写真 2026-10-19）。
+- 応用: 全行を同じ入れ物に入れ、枠は幅を持たない内側の影で描く（前例 frontend/src/pages/schedule.css:89）。
 
 ## 維持の仕組み
-- 規則は ADR-1014 改訂（3）に書く。PG 試験 F1・F2 と viewerFilter.test.ts が在庫表と閲覧ページの規則を縛る。
-- 見た目の守りは inventoryColumns.test.tsx・viewerColumns.cells.test.tsx（入れ物が全行にあること）と CSS の検査（トークンだけ）。
+- 規則は ADR-1014 改訂（3）に書く。
+- 守り手: backend/tests/test_inventory_distribution_rows_pg.py（F1・F2・F2b、CI の pytest で毎回走る）、frontend/src/pages/viewer/viewerFilter.test.ts（閲覧ページの規則）、frontend/src/features/inventory/inventoryColumns.test.tsx・frontend/src/pages/viewer/viewerColumns.cells.test.tsx（入れ物が全行にあること）、frontend の CSS 検査（トークンだけ）。
 
 ## 審査記録
 - 1回目（Reviewer エージェント・opus、1df98028b 土台）: REVISE。指摘 1 色トークンの置き場所が ADR-067 と違う・ダーク側に片方を書かない → tokens.css の --offer-* の前例どおりライト・ダーク両方に書き、ADR-067 に表を足し、PR 本文の欄を文言そのままで設計に記載。2 #0ea5e9 は白地 2.8:1 → 値は PO の「水色」を優先して据え置き、理由と見えにくい場合の替え先（#0284c7）を記載。3 F2 の1行だけの確認が新旧を見分けない → F2b に分け、数量で見分ける形にした。4 schemas は `#` コメントだけ → 明記し openapi は触らない。5 F8 は祖先で判定・取り方を記載。推奨（merge の False/True で回す・区分の表に無い status の差を ADR に書く）も取り入れた。
