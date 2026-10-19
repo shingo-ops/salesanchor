@@ -276,6 +276,7 @@ step 4 の手順（本番データの更新は job 0d3d2a98 の2件だけ）
 | 1 | Reviewer（Opus のレビュアー担当） | REVISE（軽い） | 人の商品・状態の判断の後で比べていない／import 不足／引き継ぎ先のキーの確定／T2 の SQL と合格の条件／解析し直しの手順と承認の範囲／T4 の列名と止め方／`_has_raw_value` の前後／R-a の追記 | §3・§4-1・§4-3・§4-4・§7・§8・§10 |
 | 1 | Fable（開発ルールの審査） | REVISE | import 不足／人の判断の順序／状態マスタに Sold out が無いと黙って重ねない（テストの status_entries）／下流の読み手の漏れ／様式（mode・この文書は何か・既存 ADR の検索・接触面・ADR-1015 の区分） | 冒頭・§3・§6・§7・§10 R-d、recon §0・§1-2 |
 | 2 | Reviewer（再審査） | APPROVE | 前回の指摘14件すべて○。注意1件: 行の line_start・line_end を属性で直接読むと、既存テストの行（line_start を持たない）で落ちうる | §4-3 を getattr に統一 |
+| 3 | Reviewer（最終版 0c634a941） | APPROVE | getattr・案 G・T2 が実物と生出力に一致。斉藤さんの件は範囲で当たらない（261 ≤ 260 が偽）。既存の `_write_results` を通る単体テストで規則13が働く場面は無い。注意: 案 G の安全は Gemini が〆を 259〜260 に付けることに依る | 案 G の前提として記録（Fable の再審査は PO の判断で行わない。2026-10-19） |
 
 Fable の指摘のうち「`_sold_out_filter` は ADR-1014 由来」は、`git grep ADR-1014` で `backend/app/services/tcg_distribution_svc.py` に0件のため、根拠が確かめられなかった。recon §0 に検索結果だけを書く。
 
