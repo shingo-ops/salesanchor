@@ -260,18 +260,22 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
                 v = (
                     await session.execute(
                         text(
-                            "SELECT id, email, status, trial_expires_at "
+                            "SELECT id, email, status, trial_expires_at, discord_user_id "
                             "FROM public.viewer_accounts WHERE id = :vid FOR UPDATE"
                         ),
                         {"vid": vid},
                     )
                 ).first()
-                if v is None or v[2] != "pending":
+                if (
+                    v is None
+                    or v[2] not in ("pending", "trial", "active")
+                    or v[4] is not None  # もう Discord と結び付いている
+                ):
                     await session.rollback()
                     await _count_failure(redis, key)
                     await _reply(interaction, T.CODE_INVALID, True)
                     return
-                email, old_expires = v[1], v[3]
+                email, old_expires, prior_status = v[1], v[3], v[2]
 
                 channel = await _create_room(guild, member, config, vid)
                 if channel is None:
@@ -288,32 +292,50 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
                 pw_hash = await asyncio.to_thread(hash_password, password)
 
                 now = datetime.now(timezone.utc)
-                exp = now + timedelta(days=_TRIAL_DAYS)
-                await session.execute(
-                    text(
-                        "UPDATE public.viewer_accounts SET status='trial', "
-                        "trial_expires_at=:exp, discord_user_id=:uid, discord_channel_id=:ch, "
-                        "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
-                        "WHERE id=:vid"
-                    ),
-                    {
-                        "exp": exp,
-                        "uid": str(member.id),
-                        "ch": str(channel.id),
-                        "h": pw_hash,
-                        "now": now,
-                        "vid": vid,
-                    },
-                )
-                await session.execute(
-                    text(
-                        "INSERT INTO public.viewer_status_changes (viewer_id, action, "
-                        "from_status, to_status, from_expires_at, to_expires_at, extend_days, "
-                        "actor, actor_user_id, created_at) VALUES (:vid, 'start_trial', "
-                        "'pending', 'trial', :old, :exp, NULL, 'system', NULL, :now)"
-                    ),
-                    {"vid": vid, "old": old_expires, "exp": exp, "now": now},
-                )
+                if prior_status == "pending":
+                    exp = now + timedelta(days=_TRIAL_DAYS)
+                    await session.execute(
+                        text(
+                            "UPDATE public.viewer_accounts SET status='trial', "
+                            "trial_expires_at=:exp, discord_user_id=:uid, discord_channel_id=:ch, "
+                            "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
+                            "WHERE id=:vid"
+                        ),
+                        {
+                            "exp": exp,
+                            "uid": str(member.id),
+                            "ch": str(channel.id),
+                            "h": pw_hash,
+                            "now": now,
+                            "vid": vid,
+                        },
+                    )
+                    await session.execute(
+                        text(
+                            "INSERT INTO public.viewer_status_changes (viewer_id, action, "
+                            "from_status, to_status, from_expires_at, to_expires_at, extend_days, "
+                            "actor, actor_user_id, created_at) VALUES (:vid, 'start_trial', "
+                            "'pending', 'trial', :old, :exp, NULL, 'system', NULL, :now)"
+                        ),
+                        {"vid": vid, "old": old_expires, "exp": exp, "now": now},
+                    )
+                else:
+                    # お試し中・本契約: 状態と期限は変えず、部屋とパスワードだけ付ける
+                    await session.execute(
+                        text(
+                            "UPDATE public.viewer_accounts SET "
+                            "discord_user_id=:uid, discord_channel_id=:ch, "
+                            "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
+                            "WHERE id=:vid"
+                        ),
+                        {
+                            "uid": str(member.id),
+                            "ch": str(channel.id),
+                            "h": pw_hash,
+                            "now": now,
+                            "vid": vid,
+                        },
+                    )
                 await session.execute(
                     text(
                         "INSERT INTO public.viewer_login_events (viewer_id, event_type, "

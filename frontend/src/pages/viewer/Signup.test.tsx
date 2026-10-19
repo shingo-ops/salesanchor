@@ -106,3 +106,22 @@ describe("signup", () => {
     expect(screen.getByTestId("viewer-login")).toBeTruthy();
   });
 });
+
+describe("ViewerApp #signup link", () => {
+  it("opens the signup screen directly and removes the hash", async () => {
+    window.history.replaceState(null, "", "/viewer/#signup");
+    const spy = vi.spyOn(window.history, "replaceState");
+    render(<ViewerApp />);
+    expect(screen.getByTestId("viewer-signup")).toBeTruthy();
+    expect(screen.queryByTestId("viewer-login")).toBeNull();
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(null, "", "/viewer/"));
+    expect(window.location.hash).toBe("");
+    spy.mockRestore();
+  });
+
+  it("shows the login screen when there is no hash", () => {
+    render(<ViewerApp />);
+    expect(screen.getByTestId("viewer-login")).toBeTruthy();
+    expect(screen.queryByTestId("viewer-signup")).toBeNull();
+  });
+});
