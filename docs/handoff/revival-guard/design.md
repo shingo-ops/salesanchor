@@ -47,7 +47,7 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
     prior = None if prior_current_pairs is None else sorted({(int(p), int(c)) for p, c in prior_current_pairs})
     # バインド: prior_pids = None if prior is None else [p for p, _ in prior]、prior_cids も同様。revival_guard
 ```
-`line_analysis_v102_svc.py:1461` の隣: `prior_current = _load_current_pairs(...) if previous_pairs else None`（前の行が 1 つも無い＝初回は None）。`:1476` で `prior_current_pairs=prior_current` を渡す。
+`backend/app/services/line_analysis_v102_svc.py:1461` の隣: `prior_current = _load_current_pairs(...) if previous_pairs else None`（前の行が 1 つも無い＝初回は None）。`:1476` で `prior_current_pairs=prior_current` を渡す。
 
 ## 3. 呼び出し元 5 か所への効き方
 
@@ -100,13 +100,13 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 |---|---|
 | K1 試験の全シナリオが通る | 実装便で R1・R2・R3a・R3b・R3c・R5・R6・S1・D1b・冪等を実コードの pytest（`backend/tests/`）に移し、CI の pytest で全部通る。サンドボックスの `logs/sandbox_guard.txt` と同じ期待値 |
 | K2 再解析の痕跡が無い現行行の変化は 0 | デプロイ直前と直後（修正 SQL の前）に本番 reader で全 `analysis_results` の (id, is_current) を控え、差が出た行がすべて「その間に新しく解析された投稿の仕入元」の行であること（それ以外の差 0 件） |
-| K3 修正 SQL の後、一覧の行の現行数は 0 | `data/03_postcheck.sql`（一覧 2 件が現行 0 件、監査行 1 件） |
+| K3 修正 SQL の後、一覧の行の現行数は 0 | `docs/handoff/revival-guard/data/03_postcheck.sql`（一覧 2 件が現行 0 件、監査行 1 件） |
 | K4 配信行数の変化 = 一覧の配信行数 | 修正 SQL の直前と直後に、対象 2 組（仕入元×商品 440569・458213）の配信行数を数え、減った数が 2、ほかの組の配信行数の差が 0 |
 | K5 反映後の再解析で復活が 0 | 修正 SQL の後、対象 2 件の仕入元の、より新しい投稿の job を v102 で再解析し、2 件が FALSE のままで、`updated_at > computed_at` かつ FALSE→TRUE になった「より新しい投稿に同じ商品がある」行が 0 件 |
 
 修正 SQL の試験（モックの public スキーマで 01→02→03→04 を通した結果は `logs/data_dryrun_mock.txt`）: 01 precheck ○、02 apply で 2 行 FALSE・監査 1 行、03 postcheck ○、04 rollback で 2 行が元の値（is_current と updated_at）に戻る、戻した後の 03 は K3 NG で止まる（意図どおり）。本物の DB での実行は未実施。
 
-## 6. 外部事例
+## 6. 外部・過去事例の参照と我々への応用
 
 【未確認】Context7 の月間枠が上限で使えず、PostgreSQL の `INSERT ... ON CONFLICT DO UPDATE` の公式記述を引けなかった。本リポジトリ内の根拠は `backend/app/services/line_analysis_v102_svc.py:760-769` の実コードで、`is_current` が SET に無いことを確認済み。同じ形の先行例は `docs/handoff/dup-product-merge/`（`audit_log` に変更前の値と対象 id を残し、件数の守りと rollback を持つ）で、修正 SQL はこれに合わせた。
 
@@ -119,11 +119,11 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 
 ## 8. 触らない範囲・戻し方・維持の仕組み
 
-- 触る（実装便）: `backend/app/services/tcg_analyzer_svc.py`（`_merge_supplier_products` の引数と SQL）、`backend/app/services/line_analysis_v102_svc.py`（`_load_current_pairs` 新設と呼び出し）、`backend/app/services/v102_transcription_svc.py`（`revival_guard=False`）、`backend/app/tools/reextract_v6_with_v102.py`（現行だった組の控え `current_pairs/<job>.json`・取り消しは `revival_guard=False`）、`backend/tests/test_adr1032_revival_guard.py`（新設）。
+- 触る（実装便）: `backend/app/services/tcg_analyzer_svc.py`（`_merge_supplier_products` の引数と SQL）、`backend/app/services/line_analysis_v102_svc.py`（`_load_current_pairs` 新設と呼び出し）、`backend/app/services/v102_transcription_svc.py`（`revival_guard=False`）、`backend/app/tools/reextract_v6_with_v102.py`（現行だった組の控え（出力先の current_pairs フォルダに job ごとの JSON）・取り消しは `revival_guard=False`）、`backend/tests/test_adr1032_revival_guard.py`（新設）。
 - 試験の確認先: PG を使う試験は CI の `.github/workflows/test.yml` で確認する（ローカルは role 作成がフックで止まるため未実行）。ローカルで走らせたのは PG を使わない関連試験のみ。
-- 触らない: 商品×状態の最新の投稿が現行という規則そのもの、`is_current` の初回の決め方、配信の条件、v6 の解析、`migrations/`、`deploy.yml`、仮の行（完売の相手）の作り方、未確認 626 件。
-- 戻し方: コード（実装便）は PR の revert。データ修正は `data/04_rollback.sql`（監査行の変更前の値に戻す。新しい PO 判断が必要）。
-- 維持の仕組み: 試験 `sandbox/scenarios.sql` の場面を、実装便で `backend/tests/` の pytest に移して CI で走らせる（K1）。履歴を残す変更（§7）は別便。
+- 触らない: 商品×状態の最新の投稿が現行という規則そのもの、`is_current` の初回の決め方、配信の条件、v6 の解析、`migrations/`、`.github/workflows/deploy.yml`、仮の行（完売の相手）の作り方、未確認 626 件。
+- 戻し方: コード（実装便）は PR の revert。データ修正は `docs/handoff/revival-guard/data/04_rollback.sql`（監査行の変更前の値に戻す。新しい PO 判断が必要）。
+- 維持の仕組み: 試験 `docs/handoff/revival-guard/sandbox/scenarios.sql` の場面を、実装便で `backend/tests/` の pytest に移して CI で走らせる（K1）。履歴を残す変更（§7）は別便。
 
 ## 9. 審査（Opus, 2026-10-19）
 

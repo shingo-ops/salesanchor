@@ -53,7 +53,7 @@
 | 対象外 X | v6 で `updated_at` を複数チャネルが共有（一括書き込み。付け直しではない） | 618 | 28 |
 | 対象外 Y | 痕跡なし＝初回の解析のまま（古い投稿の別の状態の行は残す設計） | 366 | 126 |
 
-- 配信中は `tcg_distribution_svc.py` の条件を式で写した近似。実際の配信行との完全一致は【未確認】。
+- 配信中は `backend/app/services/tcg_distribution_svc.py` の条件を式で写した近似。実際の配信行との完全一致は【未確認】。
 - 確認済 2 件の id と根拠（`logs/confirmed.tsv`、本番の再読み取りで状態が一致）:
 
 | analysis_results.id | 商品 | 状態 | 付け直し時刻（computed_at → updated_at） | この行の投稿の受信 | より新しい投稿（件数・最新受信・状態） | 新しい投稿の現行行 |
