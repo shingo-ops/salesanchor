@@ -96,11 +96,11 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 試験の全シナリオが通る | `psql -v mode=guard -f sandbox/scenarios.sql` の出力を `logs/sandbox_guard.txt` の期待と比べる。冪等は 0 |
-| K2 再解析の痕跡が無い現行行の変化は 0 | 実装後、本番の reader で、反映前後の `is_current` を行ごとに比べ、再解析した投稿以外の行の差が 0 件であること（`updated_at` が反映後に進んだ行の数も 0） |
+| K1 試験の全シナリオが通る | 実装便で R1・R2・R3a・R3b・R3c・R5・R6・S1・D1b・冪等を実コードの pytest（`backend/tests/`）に移し、CI の pytest で全部通る。サンドボックスの `logs/sandbox_guard.txt` と同じ期待値 |
+| K2 再解析の痕跡が無い現行行の変化は 0 | デプロイ直前と直後（修正 SQL の前）に本番 reader で全 `analysis_results` の (id, is_current) を控え、差が出た行がすべて「その間に新しく解析された投稿の仕入元」の行であること（それ以外の差 0 件） |
 | K3 修正 SQL の後、一覧の行の現行数は 0 | `data/03_postcheck.sql`（一覧 2 件が現行 0 件、監査行 1 件） |
-| K4 配信行数の変化 = 一覧の配信行数 | 反映前後で配信 API の行数を数え、差が一覧の配信行数（2）と一致 |
-| K5 次の再解析の前後で復活が 0 | 実装反映後に再解析を 1 回かけ、`updated_at > computed_at` の v102 行のうち、より新しい投稿に同じ商品を持つ現行行が増えないこと |
+| K4 配信行数の変化 = 一覧の配信行数 | 修正 SQL の直前と直後に、対象 2 組（仕入元×商品 440569・458213）の配信行数を数え、減った数が 2、ほかの組の配信行数の差が 0 |
+| K5 反映後の再解析で復活が 0 | 修正 SQL の後、対象 2 件の仕入元の、より新しい投稿の job を v102 で再解析し、2 件が FALSE のままで、`updated_at > computed_at` かつ FALSE→TRUE になった「より新しい投稿に同じ商品がある」行が 0 件 |
 
 修正 SQL の試験（モックの public スキーマで 01→02→03→04 を通した結果は `logs/data_dryrun_mock.txt`）: 01 precheck ○、02 apply で 2 行 FALSE・監査 1 行、03 postcheck ○、04 rollback で 2 行が元の値（is_current と updated_at）に戻る、戻した後の 03 は K3 NG で止まる（意図どおり）。本物の DB での実行は未実施。
 
@@ -112,12 +112,19 @@ def _merge_supplier_products(session, extraction_job_id, schema, extra_pairs=(),
 
 - 定義: 現在 is_current=TRUE の行で、同じ仕入元のより新しい投稿に同じ商品がある行を、残った痕跡で分けた。B（v102・痕跡消失）252 件、C（v6・`updated_at > computed_at` あり）374 件。計 626 件。うち配信中（近似）は B 222・C 153。
 - 判定できない理由: 本番に is_current の履歴が無い。v102 の再解析は行を書き直すたびに `updated_at` を `computed_at` と同じ値で上書きする（`backend/app/services/line_analysis_v102_svc.py:767`, `:1131`）ので、付け直しが行を戻した痕跡が次の書き込みで消える。v6 は一括の書き込みと付け直しの `updated_at` が区別できない。B・C の多くは「初回の解析のまま古い投稿の別の状態の行が残っている」（設計どおり）で、復活かどうかが読み取れない。
-- 今後の判定手段: 実装便で、付け直しが行の is_current を変えたとき、その変更を `audit_log`（または専用の履歴列）に 1 行ずつ残す。反映後に起きる復活は履歴で確実に分かる。反映前の分は分からないままなので、K5 を「反映後の復活 0」で測る。
+- 今後の判定手段（この ADR の範囲外・別便）: 付け直しが行の is_current を変えたとき、その変更を履歴に 1 行ずつ残せば、復活は履歴で確実に分かる。書き込み量の見積りが要るため、今回の実装便には入れない（変更は一度に 1 つ）。反映前の分は分からないままなので、K5 は「反映後の再解析で復活 0」で測る。
 - 一覧の原本は `/tmp/CC報告ファイル/revival_guard/candidates.tsv`（未確認分は unconfirmed.tsv）。リポジトリには確認済 2 件の `logs/confirmed.tsv` だけを置く。
 
 ## 8. 触らない範囲・戻し方・維持の仕組み
 
 - 触らない: 商品×状態の最新の投稿が現行という規則そのもの、`is_current` の初回の決め方、配信の条件、v6 の解析、`migrations/`、`deploy.yml`、仮の行（完売の相手）の作り方、未確認 626 件。
 - 戻し方: コード（実装便）は PR の revert。データ修正は `data/04_rollback.sql`（監査行の変更前の値に戻す。新しい PO 判断が必要）。
-- 維持の仕組み: 試験 `sandbox/scenarios.sql` の R1・R3a・R3c・R5・D1b を、実装便で `backend/tests/` の pytest に移して CI で走らせる。履歴を残す変更（§7）で復活を検知できるようにする。
+- 維持の仕組み: 試験 `sandbox/scenarios.sql` の場面を、実装便で `backend/tests/` の pytest に移して CI で走らせる（K1）。履歴を残す変更（§7）は別便。
+
+## 9. 審査（Opus, 2026-10-19）
+
+- 判定: APPROVE（修正込み）。同一 AI による自己審査で、独立した第二者レビューではない。
+- 直した点: ①K2 を「その間に新しく解析された投稿の仕入元」を除いた差 0 に（新着の投稿で差が出るため）②K4 を対象 2 組に限定 ③K5 を実際に回す再解析（対象 2 件の仕入元の新しい投稿の job）に具体化 ④K1 を実コードの pytest に ⑤§7 の履歴は範囲外・別便 ⑥ADR に「結果は経緯で変わる」性質を明記。
+- 確かめた点: 他の job の行は `ar.is_current` を控えとして使うので、v6 の呼び出し（控え無し）でも古い投稿の行の復活は止まる。止まらないのは「その job 自身の作り直した行」で、v102 と再抽出ツールは控えを渡す。確認済み 2 件はどちらも、updated_at が computed_at より後に進んでいる（付け直しで FALSE→TRUE に変わった印。`WHERE is_current IS DISTINCT FROM` のため変化した時だけ更新される）。
+- 未解決: 取り消し（#5）で guard を切ることの影響は【未確認】（今と同じ動きなので悪くはならない）。
 - 危険パス: 実装便が `migrations/` を含めば ADR-135/136 の GO 手順に従う。この下書きは含まない。
