@@ -4,7 +4,7 @@
 親（設計仕様書）: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)（子: [design.md](design.md)）
 
 - 基準: origin/main 8ffee20532c7663acd9638382782367c5d884172。読み取りのみ。
-- 既存 ADR 検索: `git grep -i "matched_context\|decide_by_context\|context_work" docs/adr docs/specs` と docs/adr/FEATURE-INDEX.md の v102 検索 → 該当なし（grep 済み）。関連する過去の便は #4037「前後の商品で作品を決める」（docs/handoff/v102-followup-post-ref/recon.md:12）。
+- 既存 ADR 検索: `git grep -i "matched_context\|decide_by_context\|context_work" docs/adr docs/specs` と docs/adr/FEATURE-INDEX.md の v102 検索 → 規則そのものを定めた ADR は無し（grep 済み）。関連する方針は ADR-154（docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:43「作品をまたぐ誤商品判定の防止」）。関連する過去の便は #4037「前後の商品で作品を決める」（docs/handoff/v102-followup-post-ref/recon.md:12）。
 
 ## 1. PO の決定（原文）
 2026-10-19「y,上がドラゴンボール、下が遊戯王であれば遊戯王には当てはまらないため、ドラゴンボールを採用、ドラゴンボールとワンピースなど同じ型番があるシリーズに挟まれた場合は要確認に待っわす」

@@ -3,8 +3,9 @@
 この文書は何か：前後の商品の作品が同数で止まっている件を、「その件の候補に無い作品」を除いて決められるようにする小さな変更の設計。
 親（設計仕様書）: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)（子: [recon.md](recon.md)）
 
+- recon: docs/handoff/v102-context-tie-candidate-work/recon.md
 - 状態: Opus 設計、PO 承認済み（2026-10-19「y」。原文は recon.md §1）。
-- 参照 ADR: 該当なし（recon.md の ADR 検索結果）。設計仕様書: docs/specs/line-analysis-tuning/README.md（既存・追記なし）。
+- 参照 ADR: ADR-154（docs/adr/ADR-154-tcg-parity02-gas-python-migration.md:43「作品をまたぐ誤商品判定の防止」。作品をまたぐ誤判定を防ぐ方針と矛盾しない：競合の作品が投稿にあれば決めない条件を維持）。設計仕様書: docs/specs/line-analysis-tuning/README.md（既存・追記なし）。
 
 ## 1. 目的
 上がドラゴンボール・下が遊戯王のように前後の作品が同数でも、その件の候補に遊戯王が無ければ遊戯王は当てはまらないので、ドラゴンボールで決める。候補を持つ作品が2つ以上同数（例：ドラゴンボールとワンピース）なら今までどおり要確認に回す。
