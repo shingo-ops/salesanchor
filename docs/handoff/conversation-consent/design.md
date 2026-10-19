@@ -1,7 +1,7 @@
 # design: 会話での同意を許可券の代わりにする（＋不要な停止の解消）
 
-状態: PO 承認済み（2026-10-19、PO が選択肢「1. この設計で進める → 審査役の確認後に Sonnet に作らせる」に「1」と回答）。Architect 審査 1回目 REVISE → 第2版、2回目 REVISE → 第3版、3回目 REVISE（HIGH 0・P1〜P5・Q1〜Q7）→ 第4版で反映（§12）。§7 の受け入れるリスク R1 は PO が受容（2026-10-19、選択肢「1.【おすすめ】受け入れて進める」に PO 原文「1,定期実行に追加された権限などをチェックするセッションを開く仕組みを入れて定期的にチェックする」）。受容の言葉と日付を ADR-1032 に書いてから便1をマージする。PO の追加条件は §9 の定期点検（K13）で満たす。
-ADR 案: ADR-1032（番号は起票時に再確認）。
+状態: PO 承認済み（2026-10-19、PO が選択肢「1. この設計で進める → 審査役の確認後に Sonnet に作らせる」に「1」と回答）。Architect 審査 1回目 REVISE → 第2版、2回目 REVISE → 第3版、3回目 REVISE（HIGH 0・P1〜P5・Q1〜Q7）→ 第4版で反映（§12）。§7 の受け入れるリスク R1 は PO が受容（2026-10-19、選択肢「1.【おすすめ】受け入れて進める」に PO 原文「1,定期実行に追加された権限などをチェックするセッションを開く仕組みを入れて定期的にチェックする」）。受容の言葉と日付を ADR-1033 に書いてから便1をマージする。PO の追加条件は §9 の定期点検（K13）で満たす。
+ADR 案: ADR-1033（番号は起票時に再確認）。
 根拠: 同じフォルダの recon.md（origin/main 70c3eda3d 基準）。停止の仕分けは /tmp/CC報告ファイル/stop-triage/triage.md。審査は /tmp/CC報告ファイル/conversation-consent/architect-review.md・architect-review-2.md。
 
 ## 1. 目的（PO の言葉）
@@ -155,14 +155,14 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 ### 4-7 返事の型と文書
 
 - ~/.claude/CLAUDE.md の「POへのチャット」に1行足す: 「危険操作を聞くときは同意票（design §4-1）を返事の最後の text に書き、選択肢1の行を、太字などの飾りなしで `1. 上の同意票の操作を実行する` から書き始める（後ろに【おすすめ】と説明を続けてよい）」（S6）。ADR 承認後に Opus が編集する。
-- リポジトリの CLAUDE.md:40（`permit-danger.sh` の行）に「会話の同意票でも可（ADR-1032、除外あり）」を足す（90行の上限内）。
-- ADR-1032 に書くこと: ADR-1003:45 を参照し、許可券の代わりに同意票も使えるとする。同意票は ADR-136 の「GO #PR番号」の代わりにならない。「受け入れたリスク」に R1 と PO の受容の言葉・日付を書く。
+- リポジトリの CLAUDE.md:40（`permit-danger.sh` の行）に「会話の同意票でも可（ADR-1033、除外あり）」を足す（90行の上限内）。
+- ADR-1033 に書くこと: ADR-1003:45 を参照し、許可券の代わりに同意票も使えるとする。同意票は ADR-136 の「GO #PR番号」の代わりにならない。「受け入れたリスク」に R1 と PO の受容の言葉・日付を書く。
 - PO への案内に「『1』の後で取り消すときは Esc で止める」を書く（R2）。
 
 ## 5. 対象と対象外
 
 - 対象（リポジトリ外・PO の `!` で反映）: ~/.claude/scripts/agent-danger-hook.sh、consent_check.py（新規）、danger_sanitize.py、pr-body-guard.sh、worktree-only-guard.sh、~/.claude/settings.json（既存の登録は変えず、matcher `MultiEdit|NotebookEdit`・worktree-only-guard.sh だけの登録を1件足すだけ、S1）。
-- 対象（リポジトリ内）: docs/handoff/conversation-consent/hooks/（試作）、po-apply-consent.sh、po-rollback-consent.sh、scripts/dev/test-agent-hooks.sh（T1〜T10）、scripts/dev/consent-audit.py（新規）、.claude/hooks/stop-log-digest.sh、docs/ai-agents/executor-checklist.md（1行）、CLAUDE.md:40（1行）、ADR-1032、docs/adr/README.md（再生成）。
+- 対象（リポジトリ内）: docs/handoff/conversation-consent/hooks/（試作）、po-apply-consent.sh、po-rollback-consent.sh、scripts/dev/test-agent-hooks.sh（T1〜T10）、scripts/dev/consent-audit.py（新規）、.claude/hooks/stop-log-digest.sh、docs/ai-agents/executor-checklist.md（1行）、CLAUDE.md:40（1行）、ADR-1033、docs/adr/README.md（再生成）。
 - po-apply-consent.sh のバックアップ対象は、上の「リポジトリ外」の全ファイルと ~/.codex/salesanchor/permit_bridge.py（変えないが、念のため写しを取る）。
 - 対象外: permit_bridge.py の中身、agent-console の node フック、Claude Code 本体の自動判定、review-gate、permit-danger.sh 本体（残す）、extract-pr-body.py。
 
@@ -193,7 +193,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ## 8. 実装の分け方（Sonnet へ）
 
-- 便1: §4-2〜4-6(b) の試作、consent-audit.py、試験 T1〜T9、po-apply-consent.sh（settings.json の matcher 追加を含む）、po-rollback-consent.sh、ADR-1032、CLAUDE.md:40、executor-checklist.md。
+- 便1: §4-2〜4-6(b) の試作、consent-audit.py、試験 T1〜T9、po-apply-consent.sh（settings.json の matcher 追加を含む）、po-rollback-consent.sh、ADR-1033、CLAUDE.md:40、executor-checklist.md。
 - 便2: §4-6(c) stop-log-digest.sh（リポジトリ内だけ）と T10。
 - PO の作業: R1 の受容（チャットで番号を答える）。便1のマージ後に `! bash docs/handoff/conversation-consent/po-apply-consent.sh` を1回打つ。
 - K0 は反映後の本物の利用で測る（§2）。20回に届くまでは、Opus が agent-events.jsonl の `consent_probe` を consent-audit.py で数えて確かめる。
@@ -220,7 +220,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 1回目: Architect（Opus サブエージェント）REVISE。HIGH 6・MEDIUM 8・LOW 5（architect-review.md）。
 - 2回目: REVISE。HIGH 1（N1）・MEDIUM 8（N2〜N9）・LOW 6（architect-review-2.md）。R1 は PO の受容と2条件つきで受け入れてよいとの判定。
 - 3回目: REVISE。HIGH 0・MEDIUM 5（P1〜P5）・LOW 7（Q1〜Q7）（architect-review-3.md）→ 第4版で全件反映。
-- 4回目: **APPROVE**（HIGH 0・MEDIUM 0・LOW 7、architect-review-4.md、Ready For Generator: true）。LOW S1〜S7 は第5版で反映。便1のマージは R1 の PO 受容を ADR-1032 に書いた後。
+- 4回目: **APPROVE**（HIGH 0・MEDIUM 0・LOW 7、architect-review-4.md、Ready For Generator: true）。LOW S1〜S7 は第5版で反映。便1のマージは R1 の PO 受容を ADR-1033 に書いた後。
 
 ## 12. 審査指摘の反映表
 

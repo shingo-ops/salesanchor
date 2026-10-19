@@ -49,7 +49,7 @@ except Exception:
 ' >/dev/null 2>&1 || true
 }
 
-# 会話での同意（ADR-1032）: 許可券が無いとき、同意票＋PO の「1」で通せるかを consent_check.py に聞く。
+# 会話での同意（ADR-1033）: 許可券が無いとき、同意票＋PO の「1」で通せるかを consent_check.py に聞く。
 # allow が返ったときだけ通す（それ以外は今までどおり止める）。判定の中身は consent_check.py にある。
 CONSENT_CHECK="${CONSENT_CHECK:-$HOME/.claude/scripts/consent_check.py}"
 _consent_allows() {
@@ -185,7 +185,7 @@ PYEOF
       exit 0
     fi
 
-    # 許可券（受領書）が無いとき: 会話の同意票＋PO の「1」で通せるか（ADR-1032）。permit_bridge.py は変えない。
+    # 許可券（受領書）が無いとき: 会話の同意票＋PO の「1」で通せるか（ADR-1033）。permit_bridge.py は変えない。
     if _consent_allows; then
       echo "🔑 会話での同意を使いました: psql write ($REASON)" >&2
       exit 0
@@ -237,7 +237,7 @@ if [ "$PERMITS_SELF" = "blocked" ]; then
   exit 2
 fi
 
-# ── 会話記録・同意の台帳・端末への入力注入の見張り（ADR-1032 §4-5） ─────────────────
+# ── 会話記録・同意の台帳・端末への入力注入の見張り（ADR-1033 §4-5） ─────────────────
 # AI が自分で同意を作れないように、次のどれかがコマンド（サニタイズ前）にあれば止める。
 CONSENT_GUARD=$(python3 -c "
 import sys
@@ -521,7 +521,7 @@ PYEOF
     exit 0
   fi
 
-  # 許可券が無いとき: 会話の同意票＋PO の「1」で通せるか（ADR-1032）
+  # 許可券が無いとき: 会話の同意票＋PO の「1」で通せるか（ADR-1033）
   if _consent_allows; then
     echo "🔑 会話での同意を使いました: $MATCHED" >&2
     exit 0

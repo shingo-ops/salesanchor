@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""consent-audit.py - 会話での同意（ADR-1032）の突き合わせ・K0 の測定・権限の週次点検。
+"""consent-audit.py - 会話での同意（ADR-1033）の突き合わせ・K0 の測定・権限の週次点検。
 
 読み取りだけ（例外: --permissions が permission-snapshot.json を更新する）。
 記録・台帳のパスはこのスクリプトの中で組み立てる。引数でパスは受けない。

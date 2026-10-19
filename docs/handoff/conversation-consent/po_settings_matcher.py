@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ADR-1032: hooks.PreToolUse に matcher "MultiEdit|NotebookEdit"（worktree-only-guard.sh だけ）の登録を1件足す／外す。
+"""ADR-1033: hooks.PreToolUse に matcher "MultiEdit|NotebookEdit"（worktree-only-guard.sh だけ）の登録を1件足す／外す。
 既存の登録は変えない。値（コマンド文字列以外）は表示しない。
 
 使い方:

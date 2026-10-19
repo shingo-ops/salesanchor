@@ -1,5 +1,5 @@
 #!/bin/bash
-# po-rollback-consent.sh — ADR-1032（会話での同意）の反映を取り消し、バックアップから全部戻す（PO が `!` で実行する）
+# po-rollback-consent.sh — ADR-1033（会話での同意）の反映を取り消し、バックアップから全部戻す（PO が `!` で実行する）
 #
 # 使い方: bash po-rollback-consent.sh [バックアップのフォルダ]
 #   引数なし: ~/.claude/scripts/.backup の中で、po-apply-consent.sh が作った一番新しいもの（CONSENT_BACKUP の印つき）
@@ -23,7 +23,7 @@ if [ -z "$BK" ] || [ ! -f "$BK/CONSENT_BACKUP" ]; then
   echo "中止: 戻し元のバックアップ（CONSENT_BACKUP の印つき）が見つからない。"
   exit 1
 fi
-echo "== ADR-1032 取り消し =="
+echo "== ADR-1033 取り消し =="
 echo "戻し元: $BK"
 
 failed=""

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """consent_check.py - 会話での同意（同意票＋PO の「1」）を許可券の代わりにする判定部品。
 
-設計: docs/handoff/conversation-consent/design.md §4-1〜4-4（ADR-1032）。
+設計: docs/handoff/conversation-consent/design.md §4-1〜4-4（ADR-1033）。
 
 呼び方: python3 ~/.claude/scripts/consent_check.py < <フックの入力 JSON>
   通すときだけ標準出力に allow を出して終了コード 0。それ以外は何も出さず終了コード 2。

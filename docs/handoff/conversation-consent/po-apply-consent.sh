@@ -1,5 +1,5 @@
 #!/bin/bash
-# po-apply-consent.sh — ADR-1032（会話での同意）のフックを本物（~/.claude/scripts）へ反映する（PO が `!` で実行する）
+# po-apply-consent.sh — ADR-1033（会話での同意）のフックを本物（~/.claude/scripts）へ反映する（PO が `!` で実行する）
 #
 # 流れ: バックアップ → 試作の試験 → 本物へ反映（settings.json に登録を1件足す）→ 本物の試験 → 不合格なら自動で戻す（ROLLED BACK）
 # このスクリプトを実行するまで、本物のフックは変わらない。取り消しは po-rollback-consent.sh。
@@ -21,7 +21,7 @@ BK="$DST/.backup/$TS"
 ORIG_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py)
 DEPLOY_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py consent_check.py)
 
-echo "== ADR-1032 反映 $TS =="
+echo "== ADR-1033 反映 $TS =="
 echo "試作: $SRC"
 echo "本物: $DST"
 

@@ -41,7 +41,7 @@ except Exception:
 ' >/dev/null 2>&1 || true
 }
 TOOL_NAME=$(printf '%s' "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_name',''))" 2>/dev/null)
-# 会話記録・同意の台帳への書き込みを禁止（ADR-1032 §4-5）。Write の判定は exit 0 で終わるので、その前に置く。
+# 会話記録・同意の台帳への書き込みを禁止（ADR-1033 §4-5）。Write の判定は exit 0 で終わるので、その前に置く。
 # Write・Edit・MultiEdit・NotebookEdit の file_path と notebook_path の両方を、小文字の realpath で見る。
 case "$TOOL_NAME" in
   Write|Edit|MultiEdit|NotebookEdit)
@@ -65,7 +65,7 @@ except Exception:
 ' 2>/dev/null)
     if [ "$CONSENT_PATH_BLOCKED" = "yes" ]; then
       printf '{"type":"consent_guard_blocked","hook":"worktree-only-guard","condition":"transcript-or-ledger-write","tool":"%s","ts":"%s"}\n' "$TOOL_NAME" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$HOME/.claude/logs/agent-events.jsonl" 2>/dev/null || true
-      echo 'BLOCKED: 会話記録・同意の台帳は書き込めません。(worktree-only-guard, ADR-1032)' >&2
+      echo 'BLOCKED: 会話記録・同意の台帳は書き込めません。(worktree-only-guard, ADR-1033)' >&2
       exit 2
     fi
     ;;

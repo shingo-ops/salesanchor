@@ -16,7 +16,7 @@ PO 承認: 設計（2026-10-19「1」）・R1 の受容と定期点検の追加�
 2. scripts/dev/consent-audit.py（新規）: §4-5 の `--probe <session_id>`・`--audit`・`--permissions`、§2 K0 の遅れの数え方（S4）。読み取りだけ（例外: permission-snapshot.json の更新）。パスはスクリプト内で組み立て、引数でパスを受けない。値は出さない。
 3. scripts/dev/test-agent-hooks.sh: 試験 T1〜T9（§2 の検証欄の例をすべて含む。T5 の偽の行は実物の会話記録の行からキーの組を写す。T1 の本物の会話の確認は反映後に Opus が行うので、ここでは単体部分だけ）。試作に対して走らせ、全件合格させる。
 4. po-apply-consent.sh・po-rollback-consent.sh（docs/handoff/conversation-consent/）: 既存の po-apply-*.sh の型（バックアップ→試験→反映→本物で試験→不合格なら自動で戻す）に従う。バックアップ対象は §5。settings.json には matcher `MultiEdit|NotebookEdit`・command worktree-only-guard.sh だけの登録を1件足す（既存の登録は触らない）。rollback はバックアップから全部戻す。
-5. 文書: docs/adr/ADR-1032-*.md（番号は既存と重複しないか確認。§4-7 の内容、受け入れたリスク R1 に PO 原文と日付、§9 の定期点検）、`node scripts/generate-adr-index.js`、CLAUDE.md:40 に1行（90行以内）、docs/ai-agents/executor-checklist.md に §4-6(b) の1行。
+5. 文書: docs/adr/ADR-1033-*.md（番号は既存と重複しないか確認。§4-7 の内容、受け入れたリスク R1 に PO 原文と日付、§9 の定期点検）、`node scripts/generate-adr-index.js`、CLAUDE.md:40 に1行（90行以内）、docs/ai-agents/executor-checklist.md に §4-6(b) の1行。
 6. recon.md・design.md・card-bin1.md も含めてコミット（docs: / feat: の型、末尾に `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`）。push し、`gh pr create --base main --draft`。PR本文に `### 標準ワークフロー確認` と、変更・新規ファイルの全一覧、試験結果の要約。作成前に `gh auth status` で shingo-cc を確認。
 
 ## 触らない

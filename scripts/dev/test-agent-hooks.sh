@@ -135,7 +135,7 @@ t T2-10c agent-danger-hook.sh   W 2 'gh pr create --title "${X} DROP TABLE" --bo
 t T2-11a agent-danger-hook.sh   W 2 '(cd /etc; rm -rf y)'
 t T2-11b agent-danger-hook.sh   W 2 '{ cd /etc; rm -rf y; }'
 t T2-11c agent-danger-hook.sh   W 2 'pushd /etc && rm -rf y'
-# ADR-1032 §4-6(a): cd 等が無いコマンドの作業場所の下の相対パスは止めない（段2の 2 から 0 に意図して変更）
+# ADR-1033 §4-6(a): cd 等が無いコマンドの作業場所の下の相対パスは止めない（段2の 2 から 0 に意図して変更）
 t T2-11d agent-danger-hook.sh   W 0 'rm -rf docs/handoff/stage2-test-nonexistent'
 t T2-11e agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/*'
 t T2-11f agent-danger-hook.sh   HONTEN 2 "rm -rf $OWN"
@@ -169,7 +169,7 @@ t S1-8   pr-body-guard.sh       W 2 'gh pr create --title x --body-file /nonexis
 t S1-9   pr-body-guard.sh       W 0 'ls'
 t S1-10  gh-scope-guard.sh   W 0 'gh pr list'
 
-# ── ADR-1032 会話での同意 受入試験 T1〜T9（design §2） ─────────────────────
+# ── ADR-1033 会話での同意 受入試験 T1〜T9（design §2） ─────────────────────
 # 非 Bash ツール用: tj <ID> <フック名> <W|HONTEN> <期待exit> <ツール名> <tool_input の JSON>
 tj() {
   local id="$1" hook="$2" where="$3" expect="$4" tool="$5" tin="$6" cwd actual inf verdict

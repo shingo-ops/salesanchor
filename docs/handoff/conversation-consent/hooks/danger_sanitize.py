@@ -242,7 +242,7 @@ def worktree_root_of(cwd):
     return root if os.path.isfile(os.path.join(root, ".git")) else None
 
 
-# 許可する文字: ASCII の [A-Za-z0-9_./@%+,:=-] と、非ASCII文字（ord>127）だけ（ADR-1032 §4-6(a)）。
+# 許可する文字: ASCII の [A-Za-z0-9_./@%+,:=-] と、非ASCII文字（ord>127）だけ（ADR-1033 §4-6(a)）。
 # $ * ? [ ] { } ~ \ ! とバッククォート・空白・引用符は引き続き不可。
 _NON_ASCII = "\u0080-\U0010ffff"
 ABS_PATH_RE = re.compile(r"/[A-Za-z0-9_./@%+,:=" + _NON_ASCII + r"-]*")
