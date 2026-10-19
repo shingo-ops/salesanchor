@@ -1,6 +1,6 @@
 # design: 最安・在庫最多を「塗りの角丸」にする（ADR-1014 改訂（4））
 
-参照: recon（docs/handoff/inventory-block-pill/recon.md）、ADR-1014 改訂（3）、ADR-067、前便 docs/handoff/inventory-block-frames/design.md
+参照: recon（docs/handoff/inventory-block-pill/recon.md）、ADR-1014 改訂（3）、ADR-067（デザイントークン）、ADR-144（UI ガバナンス: 金型 Badge のトークンを共有し、生の色を書かない）、ADR-1015（区分 A）、前便 docs/handoff/inventory-block-frames/design.md
 
 ## 目的（PO の言葉）
 #4524 の「細い線の枠」は PO の想定と違った。PO の想定は「バッジと同じ囲み方」「スプレッドシートのプルダウンのように囲って色付け」。最安の価格を薄い水色で塗った角丸、在庫最多の数量を薄い緑で塗った角丸で包む。文字は足さない。列はずらさない。
@@ -78,7 +78,7 @@ Badge は `font-size: var(--font-xs)`（12px）と `line-height: 1` を持ち、
 
 ## 維持の仕組み
 - 色と形はトークン経由のみ（ADR-067 の stylelint/check:all が直書きを止める）。
-- 守り手: ADR-067 の自動チェック（check:all・PR テンプレのトークン欄）と、クラス名・testid を見る既存試験（inventoryColumns.test.tsx・viewerColumns.cells.test.tsx）。
+- 守り手: `frontend/package.json` の `check:all`（ADR-067 の自動チェック）、クラス名・testid を見る既存試験 `frontend/src/features/inventory/inventoryColumns.test.tsx`・`frontend/src/pages/viewer/viewerColumns.cells.test.tsx`。
 
 ## 審査記録
 - 1回目（Reviewer opus）: REVISE。直す点4つ: F1 の README 条件、recon の出典行、ライト info のコントラスト 4.01:1 の扱い、高さ 2px 増の明記。全て反映済み。
