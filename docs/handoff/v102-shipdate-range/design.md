@@ -271,7 +271,7 @@ OP-11 21,000円/3box 発送	2026-10-19	In Stock	-	In Stock	-
 |K1|1 行目が lines に入った回 10/10（前は 0/10）|
 |K2|ずれ 7（基準 6+2 以下）|
 |K3|errors 0/0|
-|K4|Pre-order 10/10|
+|K4|Pre-order 10/10（prompt_ab の status 列は使わず、出力の lines に投稿日を入れて context_status を手元で再現して判定）|
 |K5|語だけの見出し行 0/0|
 - 費用：0.588 USD。
 
