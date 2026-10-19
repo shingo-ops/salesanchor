@@ -36,6 +36,7 @@ from app.services.tcg_analyzer_svc import (
     _entry_hit,
     app_kubun_matches,
     load_product_kubun_type_map,
+    SCOPED_VALUE_GROUPS,
     resolve_condition_v2,
     resolve_unit_v2,
 )
@@ -46,6 +47,8 @@ logger = logging.getLogger(__name__)
 # public.tcg_product_categories.kubun_type（商品の分類）の値
 PRODUCT_KUBUN_BOX = "箱系"
 PRODUCT_KUBUN_BULK = "バルク系"  # 状態語が無いとき、状態を Bulk（配信可）にする（ADR-1021）
+PRODUCT_KUBUN_SINGLE = "シングル系"  # 状態を single 群の行（PSA10 等）で判定し、語が無ければ Single にする（ADR-1031）
+PRODUCT_KUBUN_PROMO_PACK = "プロモパック系"  # 状態を promo_pack 群の行で判定し、語が無ければ 未開封 にする（ADR-1031）
 PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
 PRODUCT_KUBUN_UNKNOWN = "不明"
@@ -80,6 +83,12 @@ CONDITION_UNKNOWN = "不明"
 CONDITION_ERROR_CODE = "CN0012"
 # バルク系で状態語が無いときの状態「Bulk」の code（名前は masters から code で引く。effect='OUTPUT' = 配信する）
 CONDITION_BULK_CODE = "CN0014"
+VALUE_GROUP_SINGLE = "single"
+VALUE_GROUP_PROMO_PACK = "promo_pack"
+CONDITION_SINGLE_DEFAULT = "Single"  # シングル系で状態語が無いときの状態名（single 群の行。search_kw 空）
+CONDITION_PROMO_PACK_DEFAULT = "未開封"  # プロモパック系で状態語が無いときの状態名（promo_pack 群の行。search_kw 空）
+BASIS_SINGLE_DEFAULT = "R7:単品既定"  # R4 で始めない（買取換算の候補に入れないため。BASIS_BULK_DEFAULT と同じ扱い）
+BASIS_PROMO_PACK_DEFAULT = "R8:プロモパック既定"
 BASIS_BULK_DEFAULT = "R6:バルク既定"  # R4 で始めない（買取換算の候補に入れないため。v102_buyback_unit_svc.is_candidate）
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
@@ -125,6 +134,8 @@ class ProductFirstMasters:
     product_release: Mapping[str, date] = field(default_factory=dict)
     # 今の投稿の投稿日（line_posted_at の JST の日付）。run_v102_analysis が job ごとに足す。None なら日付の規則は働かない
     posted_date: date | None = None
+    # ADR-1031：value_group が single / promo_pack の状態の行（群名 → 行）。通常の cond_entries には入れない。空なら働かない
+    scoped_cond_entries: Mapping[str, tuple[dict, ...]] = field(default_factory=dict)
 
 
 _RELEASE_DATE_SQL = """
@@ -567,10 +578,50 @@ def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict])
     return (_error_condition(cond_entries) or CONDITION_UNKNOWN), [{"kind": REVIEW_CONDITION_UNKNOWN}]
 
 
+_KUBUN_TO_VALUE_GROUP = {
+    PRODUCT_KUBUN_SINGLE: (VALUE_GROUP_SINGLE, CONDITION_SINGLE_DEFAULT, BASIS_SINGLE_DEFAULT),
+    PRODUCT_KUBUN_PROMO_PACK: (VALUE_GROUP_PROMO_PACK, CONDITION_PROMO_PACK_DEFAULT, BASIS_PROMO_PACK_DEFAULT),
+}
+
+
+def _resolve_scoped_condition(
+    block: str, product_kubun: str, group_entries: Sequence[dict], cond_canonical_to_uuid: dict,
+) -> tuple[str | None, str, list[dict]]:
+    """シングル系・プロモパック系の状態（ADR-1031）。その群の行だけで判定し、語が当たらなければ既定の状態にする。
+
+    2つ以上の行が当たったとき、シングル系は価値の低い方（resolve_condition_v2 の prefer_lowest_value）。
+    プロモパック系は同じく低い方を採りつつ、要確認 REVIEW_MULTIPLE_CANDIDATES を付ける。
+    """
+    _group, default_condition, default_basis = _KUBUN_TO_VALUE_GROUP[product_kubun]
+    entries = list(group_entries)
+    cond, _cid, basis = resolve_condition_v2(
+        block, "", product_kubun, entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True
+    )
+    if cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis:
+        return default_condition, default_basis, []
+    reviews: list[dict] = []
+    if product_kubun == PRODUCT_KUBUN_PROMO_PACK:
+        text_combined = f"{block} "
+        codes = [
+            e["code"] for e in entries
+            if app_kubun_matches(e.get("app_kubun") or "", product_kubun) and _entry_hit(e, text_combined)[0]
+        ]
+        if len(codes) >= 2:
+            reviews = [{"kind": REVIEW_MULTIPLE_CANDIDATES, "codes": codes}]
+    return cond, basis, reviews
+
+
 def _resolve_condition(
     block: str, product_kubun: str, unit_kubun: str, cond_entries: list[dict], cond_canonical_to_uuid: dict,
+    scoped_cond_entries: Mapping[str, Sequence[dict]] | None = None,
 ) -> tuple[str | None, str, list[dict]]:
-    """(状態, basis, 要確認の理由の一覧 [{"kind": ..., ...}])。"""
+    """(状態, basis, 要確認の理由の一覧 [{"kind": ..., ...}])。
+
+    シングル系・プロモパック系は、その群の行が masters にあるときだけ群の行で判定する（ADR-1031）。行が無い間は今と同じ。
+    """
+    scoped = _KUBUN_TO_VALUE_GROUP.get(product_kubun)
+    if scoped is not None and scoped_cond_entries and scoped_cond_entries.get(scoped[0]):
+        return _resolve_scoped_condition(block, product_kubun, scoped_cond_entries[scoped[0]], cond_canonical_to_uuid)
     if product_kubun in PRODUCT_KUBUNS_DEFAULTING_TO_BOX and unit_kubun in BOX_RECHECK_UNIT_KUBUNS:
         cond, _cid, basis = resolve_condition_v2(block, "", UNIT_KUBUN_BOX, cond_entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True)
         codes = _other_kubun_hits(block, UNIT_KUBUN_BOX, cond_entries)
@@ -598,6 +649,7 @@ def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[di
     return [
         e["code"] for e in cond_entries
         if (e.get("app_kubun") or "").strip()
+        and e.get("value_group") not in SCOPED_VALUE_GROUPS
         and e.get("canonical") != FLAG_SINGLE_CANONICAL
         and not app_kubun_matches(e["app_kubun"], supplied_kubun)
         and _entry_hit(e, text_combined)[0]
@@ -676,7 +728,9 @@ def resolve_product_first(
         item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias, unit_alias_to_info
     )
     unit, unit_kubun, _resolved = resolve_unit_v2(alias or "", unit_alias_to_info)
-    condition, basis, reviews = _resolve_condition(block, product_kubun, unit_kubun, cond_entries, cond_canonical_to_uuid)
+    condition, basis, reviews = _resolve_condition(
+        block, product_kubun, unit_kubun, cond_entries, cond_canonical_to_uuid, masters.scoped_cond_entries
+    )
     unit, unit_kubun, unit_basis = _resolve_unit_from_state(
         unit=unit, unit_kubun=unit_kubun, unit_basis=unit_basis, product_kubun=product_kubun, condition=condition,
         basis=basis, masters=masters, unit_alias_to_info=unit_alias_to_info,
