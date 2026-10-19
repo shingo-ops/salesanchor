@@ -109,6 +109,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/suspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/unsuspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/extend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code"): "閲覧者管理 ADR-1019: 一覧に出る値を変えない（申込コードを置き換えるだけ）ので通知対象外",
     ("POST", "/api/v1/ops/alertmanager"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/halt"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/resume"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",

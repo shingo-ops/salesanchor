@@ -2701,7 +2701,19 @@
       "eventPasswordResetRequested": "パスワード再発行の申請",
       "eventPasswordResetDone": "パスワード再発行の完了",
       "eventSignup": "申込",
-      "eventCodeMatched": "申込コード一致"
+      "eventCodeMatched": "申込コード一致",
+      "menuAll": "すべて",
+      "copySignupUrl": "申込フォームのURLをコピー",
+      "copied": "コピーしました",
+      "copy": "コピー",
+      "reissue": "コードと招待を作り直す",
+      "confirmReissue": "{{name}}さん（{{email}}）の申込コードと招待リンクを作り直します。前のコードは使えなくなります。",
+      "reissueTitle": "新しい申込コードと招待リンク",
+      "reissueCode": "申込コード",
+      "reissueExpires": "有効期限",
+      "reissueInvite": "招待リンク",
+      "reissueInviteFailed": "招待リンクを作れませんでした。もう一度作り直してください。",
+      "reissueOnlyOnce": "この画面を閉じると、コードと招待リンクは二度と表示されません。"
     },
     "fxRate": {
       "title": "為替レート管理（SSOT）",

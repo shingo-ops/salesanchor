@@ -25,7 +25,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WT_ROOT="${WT_ROOT:-$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)}"
 
 T="$(mktemp -d "${TMPDIR:-/tmp}/test-agent-hooks.XXXXXX")"
-trap 'rm -rf "$T"' EXIT
+_selftest_window_end() {
+  if [ "$REAL_HOME_MODE" = "--real-home" ]; then
+    printf '{"end": "%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HOME/.claude/logs/consent-selftest-windows.jsonl"
+  fi
+}
+trap '_selftest_window_end; rm -rf "$T"' EXIT
+# 本物の HOME で走らせるときは、試験の区間を記録する（consent-audit.py が区間内の consent_guard_blocked を本物の検知から除く）
+if [ "$REAL_HOME_MODE" = "--real-home" ]; then
+  mkdir -p "$HOME/.claude/logs"
+  printf '{"start": "%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$HOME/.claude/logs/consent-selftest-windows.jsonl"
+fi
 
 # ── 試験の舞台を作る ─────────────────────────────────────────────
 FAKE_HOME="$T/home"
@@ -53,11 +63,21 @@ RESULTS=()
 run_hook() {
   local hook="$1" cwd="$2" inf="$3"
   if [ "$REAL_HOME_MODE" = "--real-home" ]; then
-    ( cd "$cwd" && env ${SAN:+DANGER_SANITIZER="$SAN"} bash "$HOOKDIR/$hook" < "$inf" >/dev/null 2>&1 )
+    ( cd "$cwd" && env ${SAN:+DANGER_SANITIZER="$SAN"} ${EXTRA_ENV:+"$EXTRA_ENV"} bash "$HOOKDIR/$hook" < "$inf" >/dev/null 2>&1 )
   else
-    ( cd "$cwd" && env HOME="$FAKE_HOME" ${SAN:+DANGER_SANITIZER="$SAN"} bash "$HOOKDIR/$hook" < "$inf" >/dev/null 2>&1 )
+    ( cd "$cwd" && env HOME="$FAKE_HOME" ${SAN:+DANGER_SANITIZER="$SAN"} ${EXTRA_ENV:+"$EXTRA_ENV"} bash "$HOOKDIR/$hook" < "$inf" >/dev/null 2>&1 )
   fi
   echo $?
+}
+
+# run_hook_err <フック名> <cwd> <入力ファイル> → フックの stderr を表示（文言の試験用）
+run_hook_err() {
+  local hook="$1" cwd="$2" inf="$3"
+  if [ "$REAL_HOME_MODE" = "--real-home" ]; then
+    ( cd "$cwd" && env ${SAN:+DANGER_SANITIZER="$SAN"} bash "$HOOKDIR/$hook" < "$inf" 2>&1 >/dev/null )
+  else
+    ( cd "$cwd" && env HOME="$FAKE_HOME" ${SAN:+DANGER_SANITIZER="$SAN"} bash "$HOOKDIR/$hook" < "$inf" 2>&1 >/dev/null )
+  fi
 }
 
 # t <ID> <フック名> <W|HONTEN> <期待exit> <コマンド文字列>
@@ -125,7 +145,8 @@ t T2-10c agent-danger-hook.sh   W 2 'gh pr create --title "${X} DROP TABLE" --bo
 t T2-11a agent-danger-hook.sh   W 2 '(cd /etc; rm -rf y)'
 t T2-11b agent-danger-hook.sh   W 2 '{ cd /etc; rm -rf y; }'
 t T2-11c agent-danger-hook.sh   W 2 'pushd /etc && rm -rf y'
-t T2-11d agent-danger-hook.sh   W 2 'rm -rf docs/handoff/stage2-test-nonexistent'
+# ADR-1033 §4-6(a): cd 等が無いコマンドの作業場所の下の相対パスは止めない（段2の 2 から 0 に意図して変更）
+t T2-11d agent-danger-hook.sh   W 0 'rm -rf docs/handoff/stage2-test-nonexistent'
 t T2-11e agent-danger-hook.sh   W 2 'rm -rf /private/tmp/claude-501/*'
 t T2-11f agent-danger-hook.sh   HONTEN 2 "rm -rf $OWN"
 t T2-11g agent-danger-hook.sh   HONTEN 0 'rm -rf /private/tmp/claude-501/x'
@@ -157,6 +178,140 @@ t S1-7   agent-danger-hook.sh   W 0 'ls'
 t S1-8   pr-body-guard.sh       W 2 'gh pr create --title x --body-file /nonexistent/stage1-test-body.md'
 t S1-9   pr-body-guard.sh       W 0 'ls'
 t S1-10  gh-scope-guard.sh   W 0 'gh pr list'
+
+# ── ADR-1033 会話での同意 受入試験 T1〜T9（design §2） ─────────────────────
+# 非 Bash ツール用: tj <ID> <フック名> <W|HONTEN> <期待exit> <ツール名> <tool_input の JSON>
+tj() {
+  local id="$1" hook="$2" where="$3" expect="$4" tool="$5" tin="$6" cwd actual inf verdict
+  if [ -n "${ONLY:-}" ] && [ "$ONLY" != "$id" ]; then return; fi
+  if [ ! -f "$HOOKDIR/$hook" ]; then
+    RESULTS+=("$(printf '%-9s %-22s %-6s %-5s %-6s %s' "$id" "$hook" "$where" "$expect" "-" "SKIP(フック無し)")")
+    return
+  fi
+  if [ "$where" = "HONTEN" ]; then cwd="$HONTEN"; else cwd="$WT_ROOT"; fi
+  inf="$T/in-$id.json"
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":sys.argv[1],"tool_input":json.loads(sys.argv[2]),"cwd":sys.argv[3]}))' "$tool" "$tin" "$cwd" > "$inf"
+  actual="$(run_hook "$hook" "$cwd" "$inf")"
+  if [ "$actual" = "$expect" ]; then verdict="PASS"; PASS=$((PASS + 1)); else verdict="FAIL"; FAIL=$((FAIL + 1)); fi
+  RESULTS+=("$(printf '%-9s %-22s %-6s %-5s %-6s %s' "$id" "$hook" "$where" "$expect" "$actual" "$verdict")")
+}
+
+EVENTS_FILE="$FAKE_HOME/.claude/logs/agent-events.jsonl"
+[ "$REAL_HOME_MODE" = "--real-home" ] && EVENTS_FILE="$HOME/.claude/logs/agent-events.jsonl"
+count_guard() { grep -c '"consent_guard_blocked"' "$EVENTS_FILE" 2>/dev/null || true; }
+
+if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
+  # T1(配線): 判定部品が allow を返したときだけ、psql の経路と danger_ops の経路が通る。部品が無い・不可なら今までどおり止める
+  printf '#!/bin/bash\necho allow\n' > "$T/stub-allow.sh"
+  printf '#!/bin/bash\nexit 2\n' > "$T/stub-deny.sh"
+  printf 'import sys\nprint("allow")\n' > "$T/stub-allow.py"
+  printf 'import sys\nsys.exit(2)\n' > "$T/stub-deny.py"
+  EXTRA_ENV="CONSENT_CHECK=$T/stub-allow.py"
+  t T1-h1  agent-danger-hook.sh W 0 'ssh prod1 psql < /tmp/stage1-test.sql'
+  t T1-h2  agent-danger-hook.sh W 0 'rm -rf /tmp/x'
+  EXTRA_ENV="CONSENT_CHECK=$T/stub-deny.py"
+  t T1-h3  agent-danger-hook.sh W 2 'ssh prod1 psql < /tmp/stage1-test.sql'
+  t T1-h4  agent-danger-hook.sh W 2 'rm -rf /tmp/x'
+  EXTRA_ENV="CONSENT_CHECK=$T/no-such-file.py"
+  t T1-h5  agent-danger-hook.sh W 2 'rm -rf /tmp/x'
+  # 本店の破壊系 git は同意の対象にしない（部品が allow でも止める）
+  EXTRA_ENV="CONSENT_CHECK=$T/stub-allow.py"
+  t T1-h6  agent-danger-hook.sh HONTEN 2 'git clean -fd'
+  EXTRA_ENV=""
+
+  # T7: 会話記録・同意の台帳・端末への入力注入（Bash）。止めると consent_guard_blocked が1行ずつ増える
+  G0="$(count_guard)"
+  t T7-b1  agent-danger-hook.sh W 2 'cat /Users/x/.claude/projects/-p/s.jsonl'
+  t T7-b2  agent-danger-hook.sh W 2 'tail -n 3 ~/.claude/logs/consent-used.jsonl'
+  t T7-b3  agent-danger-hook.sh W 2 'tmux send-keys -t ac-1 1 Enter'
+  t T7-b4  agent-danger-hook.sh W 2 'tmux load-buffer /tmp/x && tmux paste-buffer -t ac-1'
+  t T7-b5  agent-danger-hook.sh W 2 "osascript -e 'tell application \"System Events\" to keystroke \"1\"'"
+  t T7-b6  agent-danger-hook.sh W 2 'curl -s http://127.0.0.1:3000/chat/queue -d x'
+  t T7-b7  agent-danger-hook.sh W 2 'curl -s http://localhost:3000/chat/queue -d x'
+  G1="$(count_guard)"
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((G1 - G0))" = "7" ]; then PASS=$((PASS + 1)); RESULTS+=("T7-log   consent_guard_blocked が7件増えた PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-log   consent_guard_blocked の増加=$((G1 - G0)) 期待=7 FAIL"); fi
+  fi
+  t T7-b8  agent-danger-hook.sh W 0 'tmux ls'
+  t T7-b9  agent-danger-hook.sh W 0 'ls'
+
+  # T8: rm -rf の根（design §4-6(a)）。止めない側
+  t T8-a1  agent-danger-hook.sh W 0 'rm -rf /tmp/CC報告ファイル/x'
+  t T8-a2  agent-danger-hook.sh W 0 'rm -rf /private/tmp/CC報告ファイル/x/y'
+  t T8-a3  agent-danger-hook.sh W 0 'rm -rf /private/tmp/claude-501/x'
+  t T8-a4  agent-danger-hook.sh W 0 "rm -rf $OWN"
+  t T8-a5  agent-danger-hook.sh W 0 'rm -rf ./docs/handoff/stage2-test-nonexistent'
+  t T8-a6  agent-danger-hook.sh HONTEN 0 'rm -rf /tmp/CC報告ファイル/x'
+  # 止める側
+  t T8-b1  agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル'
+  t T8-b2  agent-danger-hook.sh W 2 'rm -rf /private/tmp/claude-501'
+  t T8-b3  agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/..'
+  t T8-b4  agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/.git'
+  t T8-b5  agent-danger-hook.sh W 2 'rm -rf /private/tmp/claude-501/$X'
+  t T8-b6  agent-danger-hook.sh W 2 'rm -rf /private/tmp/claude-501/*'
+  t T8-b7  agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/{..,x}'
+  t T8-b8  agent-danger-hook.sh W 2 'cd ~ && rm -rf x'
+  t T8-b9  agent-danger-hook.sh W 2 '(cd /; rm -rf x)'
+  t T8-b10 agent-danger-hook.sh W 2 'rm -rf ~'
+  t T8-b11 agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/x\y'
+  t T8-b12 agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/!x'
+  t T8-b13 agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/?'
+  t T8-b14 agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/[a]'
+  t T8-b15 agent-danger-hook.sh W 2 'bash -c "rm -rf x"'
+  t T8-b16 agent-danger-hook.sh W 2 'eval "rm -rf x"'
+  t T8-b17 agent-danger-hook.sh W 2 '/bin/ln -s ~ /tmp/CC報告ファイル/x && rm -rf /tmp/CC報告ファイル/x/y'
+  t T8-b18 agent-danger-hook.sh W 2 'rm -rf /tmp/CC報告ファイル/x/'
+  t T8-b19 agent-danger-hook.sh W 2 'rm -rf ../x'
+  t T8-b20 agent-danger-hook.sh W 2 'rm -rf .git'
+  t T8-b21 agent-danger-hook.sh W 2 'rm -rf docs/../..'
+  t T8-b22 agent-danger-hook.sh HONTEN 2 'rm -rf docs/x'
+  t T8-b23 agent-danger-hook.sh W 2 'pushd /etc && rm -rf y'
+  t T8-b24 agent-danger-hook.sh W 2 'ln -s ~ docs/lnk && rm -rf docs/lnk/y'
+fi
+
+if [ -f "$HOOKDIR/worktree-only-guard.sh" ]; then
+  # T7: Write・Edit・MultiEdit・NotebookEdit で会話記録・同意の台帳を触る（file_path と notebook_path の両方、小文字の realpath）
+  G0="$(count_guard)"
+  JSONL_P="$REAL_HOME_DIR/.claude/projects/-Users-x/s.jsonl"
+  tj T7-w1 worktree-only-guard.sh W 2 Write     "{\"file_path\":\"$JSONL_P\"}"
+  tj T7-w2 worktree-only-guard.sh W 2 Edit      "{\"file_path\":\"$JSONL_P\"}"
+  tj T7-w3 worktree-only-guard.sh W 2 MultiEdit "{\"file_path\":\"$JSONL_P\"}"
+  tj T7-w4 worktree-only-guard.sh W 2 NotebookEdit "{\"notebook_path\":\"$JSONL_P\"}"
+  tj T7-w5 worktree-only-guard.sh W 2 Write     "{\"file_path\":\"$REAL_HOME_DIR/.claude/logs/consent-used.jsonl\"}"
+  tj T7-w6 worktree-only-guard.sh W 2 Write     "{\"file_path\":\"$REAL_HOME_DIR/.CLAUDE/Projects/-Users-x/S.JSONL\"}"
+  G1="$(count_guard)"
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((G1 - G0))" = "6" ]; then PASS=$((PASS + 1)); RESULTS+=("T7-wlog  consent_guard_blocked が6件増えた PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-wlog  consent_guard_blocked の増加=$((G1 - G0)) 期待=6 FAIL"); fi
+  fi
+  tj T7-w7 worktree-only-guard.sh W 0 Write     "{\"file_path\":\"$WT_ROOT/docs/handoff/conversation-consent/x.md\"}"
+  tj T7-w8 worktree-only-guard.sh W 0 NotebookEdit "{\"notebook_path\":\"$WT_ROOT/x.ipynb\"}"
+  tj T7-w9 worktree-only-guard.sh W 0 Edit      "{\"file_path\":\"$REAL_HOME_DIR/.claude/projects/-Users-x/notes.md\"}"
+fi
+
+# T9: 本文ファイルが読めずに止めたときの文が、Write で先に作る手順を示す
+if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T9" ]; }; then
+  inf="$T/in-T9.json"
+  python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":"gh pr create --title t --body-file /nonexistent/x.md"},"cwd":sys.argv[1]}))' "$WT_ROOT" > "$inf"
+  T9_OUT="$(run_hook_err pr-body-guard.sh "$WT_ROOT" "$inf")"
+  if echo "$T9_OUT" | grep -q '本文ファイルを Write で先に作り、別のコマンドで gh を実行してください'; then
+    PASS=$((PASS + 1)); RESULTS+=("T9       pr-body-guard の止める文が手順を示す PASS")
+  else
+    FAIL=$((FAIL + 1)); RESULTS+=("T9       pr-body-guard の止める文に手順が無い FAIL")
+  fi
+fi
+
+# T0〜T6: 判定部品 consent_check.py と consent-audit.py の単体試験（偽の会話記録・偽のホームで行う。本物の ~/.claude には書かない）
+if [ -f "$HOOKDIR/consent_check.py" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T1-6" ]; }; then
+  while IFS= read -r line; do
+    case "$line" in
+      PASS*) PASS=$((PASS + 1)); RESULTS+=("$line") ;;
+      FAIL*) FAIL=$((FAIL + 1)); RESULTS+=("$line") ;;
+      *) RESULTS+=("(出力) $line") ;;
+    esac
+  done < <(python3 -I "$WT_ROOT/scripts/dev/consent-unit-tests.py" "$HOOKDIR" "$T" "$WT_ROOT")
+fi
 
 echo "フックディレクトリ: $HOOKDIR"
 echo "worktree 役: $WT_ROOT"

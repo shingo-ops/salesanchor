@@ -12,7 +12,7 @@ import hashlib
 import logging
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials
@@ -29,7 +29,7 @@ from app.auth.viewer_dependencies import (
     viewer_security,
 )
 from app.auth.viewer_email import normalize_viewer_email
-from app.auth.viewer_signup_code import format_signup_code, generate_signup_code, signup_code_sha256
+from app.auth.viewer_signup_code import format_signup_code, generate_signup_code
 from app.auth.viewer_tokens import create_viewer_access_token, decode_viewer_token
 from app.cache import (
     AUTH_FAIL_LOCKOUT_TTL,
@@ -49,6 +49,7 @@ from app.database import get_db
 from app.routers.auth import PASSWORD_RESET_TTL, _require_app_origin
 from app.services.auth_mail import send_viewer_password_reset_email
 from app.services.viewer_invite import create_viewer_invite
+from app.services.viewer_signup import SIGNUP_CODE_TTL, replace_signup_code
 from app.tasks.viewer_inventory_cache import CACHE_KEY
 
 router = APIRouter()
@@ -396,7 +397,6 @@ async def viewer_password_reset_confirm(
     return {"status": "password_updated"}
 
 
-SIGNUP_CODE_TTL = timedelta(days=7)
 _SIGNUP_INVALID = "viewer_signup_invalid"
 
 
@@ -467,18 +467,8 @@ async def viewer_signup(
                 row = await _find_viewer(db, email)
         if viewer_id is None and row is not None and row.status == "pending":
             viewer_id = row.id
-            await db.execute(
-                text("DELETE FROM public.viewer_login_tokens WHERE viewer_account_id = :id AND purpose = 'signup_code'"),
-                {"id": viewer_id},
-            )
         if viewer_id is not None:
-            await db.execute(
-                text(
-                    "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
-                    "VALUES (:id, :h, 'signup_code', :exp)"
-                ),
-                {"id": viewer_id, "h": signup_code_sha256(code), "exp": expires_at},
-            )
+            code, expires_at = await replace_signup_code(db, viewer_id)
             await _record_event(db, viewer_id, "signup", ip, request.headers.get("user-agent"))
             await db.commit()
         # それ以外（pending 以外の状態）は捨てのコード。DB は書かない
