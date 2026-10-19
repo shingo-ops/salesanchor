@@ -2119,7 +2119,7 @@ def _merge_supplier_products(
                                 JOIN {schema}.source_messages sm3 ON sm3.id = ej3.source_message_id
                                 WHERE sm3.supplier_channel_id = :channel_id AND et2.product_id = c.product_id
                                   AND sm3.received_at > c.received_at
-                            ))) AS should_be_current
+                            )) AS should_be_current
                 FROM candidates c
                 JOIN top_job t ON t.product_id = c.product_id AND t.condition_id = c.condition_id
             )
