@@ -1039,3 +1039,24 @@ def test_target_unit_is_copied_even_when_the_condition_name_is_unknown_and_keeps
     values = {**values, "review_reasons": "unit_unknown,price_unresolved"}
     out = svc._apply_soldout_targets(values, item, None, {})
     assert out["unit_id"] == 13 and out["review_reasons"] == "price_unresolved" and out["needs_review"] is True
+
+
+def test_stock_items_sql_reads_the_unit_columns():
+    # (dd) 参照する投稿の保存済みの解析結果から単位を読む
+    assert "ar.unit_id" in svc._STOCK_ITEMS_SQL and "unit_canonical" in svc._STOCK_ITEMS_SQL
+
+
+def test_load_stock_items_carries_unit_id_none_and_13_into_the_stock_items():
+    # (dd) DB は使わず、行の結果をスタブで返す
+    def row(unit_id, unit_canonical):
+        return SimpleNamespace(
+            source_message_id="m1", source_lines=[3], line_start=3, line_end=3, product_id=5, condition_id=7,
+            condition_canonical="New", unit_id=unit_id, unit_canonical=unit_canonical,
+        )
+
+    session = MagicMock()
+    session.execute.return_value.fetchall.return_value = [row(None, ""), row(13, "Set")]
+    found = svc._load_stock_items(session, ["m1"])
+    none_item, set_item = found["m1"]
+    assert none_item.unit_id is None and none_item.unit_canonical == ""
+    assert set_item.unit_id == 13 and set_item.unit_canonical == "Set"
