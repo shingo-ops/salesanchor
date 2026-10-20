@@ -87,7 +87,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 - 「決めない（今のまま）」の組は、値段と状態の語が食い違っている。今の決め方を残し、便UP の検査に任せる。試算では状態が語で決まった 474 行で、この組は 0 件（社外秘 `v2/state_cross.txt`。食い違い 4 件はすべて サーチ済×Pack で、表の対象）。
 - 「未開封」「未サーチ」のように語で CN0003・CN0001・CN0007 に決まった行は「既定」と同じ種類にする。どれも各群の「手を付けていない」状態で、語が無い既定と意味が同じため（例: 未開封 @箱の 1/50 → Unsearched pack・Pack）。
 - **別の区分の状態の語も見る。** 箱系で解いた行に、箱以外の区分の状態の語（例: Opened case の「テープカット」、`backend/app/services/gemini_raw_copy_v102_product_first.py:653-665` の `_other_kubun_hits`）が当たると、状態は既定の Sealed box のまま `condition_multiple_candidates` が付き、当たった code は product_first の戻り値 `review_extra`（`backend/app/services/gemini_raw_copy_v102_product_first.py:638`・`:760`）に入り、件を組み立てるとき件の `review` 一覧へ `{"line": ..., "kind": "condition_multiple_candidates", "codes": [...]}` の形で混ぜ込まれる（`backend/app/services/gemini_raw_copy_v101.py:920`。件に `review_extra` の key は無い: `backend/app/services/gemini_raw_copy_v101.py:945-967`）。`apply_buyback_units` では `item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` を読む。`review_reasons` に `condition_multiple_candidates` があるのに codes が 1 つも取れない行は何もしない（理由も外さない）。種類は次のように決める。
-  - 今の状態から決めた種類（上の表の行）と、`codes` の各 code の種類（同じ表で引く）を集める。今の状態が既定で `codes` がある行は、既定を数えず `codes` の種類だけを使う。
+  - 今の状態から決めた種類（上の表の行）と、`codes` の各 code の種類（同じ表で引く）を集める。今の状態の種類が「既定」（語なしの既定だけでなく、語で決まった CN0003・CN0001・CN0007 も含む。上の表の「既定」行と同じ定義）で `codes` がある行は、既定を数えず `codes` の種類だけを使う（例: 「未開封 テープカット」→ 今 CN0003・codes [CN0009] → 種類は開封の 1 つ）。
   - 集めた種類がちょうど 1 つならその種類で写す（例: 「テープカット」×Case の帯 → CN0009 Opened case、×Box の帯 → CN0006 Opened box）。2 つ以上、または表に無い code があれば何もしない（理由も外さない）。
   - 試算の状態×単位の照合（474 行）は R1〜R3 の行だけで、この形の行は数えていない【未確認】。K2 の全件判定で見る。
 - 対応は表（コードの定数）で持つ。状態マスタに行が増えても自動では広げない（足すときはこの表と ADR-1036 を直す）。
@@ -136,7 +136,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
   - 「決まっていない」= `unit_basis["alias"]` が None、または `resolve_unit_v2(alias, unit_alias_to_info)[1]`（書かれた語の単位の区分）が `BOX_RECHECK_UNIT_KUBUNS`（`backend/app/services/gemini_raw_copy_v102_product_first.py:65-67`: 空・不明・条件つき・複合・数量専用）に入る。「個」は条件つき（UN0008）なのでここに入る。今の `alias is None` だけでは「個」の行を取りこぼす（`find_unit_product_first` `backend/app/services/gemini_raw_copy_v102_product_first.py:511-538` は「個」で alias="個" を残す）。
 - 判定 `decide_code`（`backend/app/services/v102_buyback_unit_svc.py:106-115`）: 返り値を「単位の種類（Box／Case／Pack）と r」に変え、`r <= pack_max` で Pack を返す。Pack は箱系の分類の行だけ（今の対象の行は Box／Case だけ。今と同じ）。
 - 引数 `unit_alias_to_info` は `is_candidate`・`apply_buyback_units`・`_buyback_units` とも**必須**（既定値なし）。
-- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:164-172`）で B の表の全 code（CN0001〜CN0007・CN0009・CN0010・CN20261008072213）を引き、`condition_id → code` の逆引きも作る。行の今の `condition_id` からこの逆引きで code を出し、B の表の行（種類）を決める。`condition_decided_by_word(basis)` が False の行は「既定」。`item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` も B の「別の区分の状態の語も見る」どおりに使う。逆引きに無い状態（AR confirmed pack・空箱・Error 等）は何もしない。1 つでも引けなければ便全体で何もしない（今と同じ）。
+- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:164-172`）で B の表の全 code（CN0001〜CN0007・CN0009・CN0010・CN20261008072213）を引き、`condition_id → code` の逆引きも作る。行の今の `condition_id` からこの逆引きで code を出し、B の表の行（種類）を決める。`condition_decided_by_word(basis)` が False の行は「既定」。語で決まった行でも今の code が CN0003・CN0001・CN0007 なら「既定」（B の表と同じ定義。`condition_decided_by_word` は D 表の basis の書き方を分けるだけに使い、種類の判定には使わない）。`item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` も B の「別の区分の状態の語も見る」どおりに使う。逆引きに無い状態（AR confirmed pack・空箱・Error 等）は何もしない。1 つでも引けなければ便全体で何もしない（今と同じ）。
 - 写し先: B の表を定数（種類 × 単位 → 状態 code）で持つ。「決めない」の組は何もしない。
 - 理由: `REASONS_DROPPED_WHEN_DECIDED`（`backend/app/services/v102_buyback_unit_svc.py:43`）に `condition_multiple_candidates` を足す。
 - 同じ値の扱い（`backend/app/services/v102_buyback_unit_svc.py:221-222`）: 値が同じでも、`review_reasons` に外す理由があれば、理由を外した values にする（D の表の「値は同じで、理由だけ外す」）。外す理由が無ければ今どおり何もしない。
@@ -259,4 +259,4 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 （Fable 相談と Reviewer 審査の後に記入する）
 - 1 回目（HEAD 86e69f306）: 相談役 Fable REVISE・審査役 REVISE。主な指摘は「値が同じ行で要確認が外れない（主例が直らない）」「ADR-1035 What 2 の例外の明記」「KGI/KPI 表」「カードで決める事項の残り」「略記」。この版で反映した。
 - 2 回目（HEAD ca5dc8fed）: Fable REVISE（テープカット等の別区分の語が review_extra の codes に入り、Case 帯で CN0001 にしてしまう）・審査役 REVISE（語で決まった CN0003/CN0001/CN0007、直す既存テストの列挙、G1/K5 の母数、SAVEPOINT 内での呼び出し、D 表の分け方、recon の行番号）。この版で反映した。
-- 3 回目（HEAD 0e47be8a4）: 審査役 REVISE（codes は件の `review_extra` ではなく `item["review"]` の要素にある、`masters["unit_alias_to_info"]` は `.get` に、直すテスト 2 件の抜け）。この版で反映した。
+- 3 回目（HEAD 0e47be8a4）: Fable REVISE・審査役 REVISE（Fable: codes の置き場所が違う・「既定」の定義が 2 通り読める。審査役: codes は件の `review_extra` ではなく `item["review"]` の要素にある、`masters["unit_alias_to_info"]` は `.get` に、直すテスト 2 件の抜け）。この版で反映した。
