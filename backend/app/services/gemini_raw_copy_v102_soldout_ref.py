@@ -60,6 +60,8 @@ class StockItem:
     product_id: int
     condition_id: int
     condition_canonical: str = ""  # 状態の canonical（規則11b の絞り込みに使う。NULL は空文字）
+    unit_id: int | None = None  # 単位（〆の行に写す元。design.md §13-3 C）
+    unit_canonical: str = ""
 
 
 @dataclass(frozen=True)
@@ -79,6 +81,8 @@ class SoldoutTarget:
     ref_message_id: str
     ref_line: int
     condition_canonical: str = ""
+    unit_id: int | None = None
+    unit_canonical: str = ""
 
 
 @dataclass(frozen=True)
@@ -254,15 +258,16 @@ def _targets_of(stock: Sequence[RefRow], post: SoldoutRefPost | None) -> tuple[S
     found: dict[tuple[int, int], SoldoutTarget] = {}
     for row in sorted(stock, key=lambda r: r.order):
         pairs = [
-            (it.product_id, it.condition_id, it.condition_canonical)
+            (it.product_id, it.condition_id, it.condition_canonical, it.unit_id, it.unit_canonical)
             for it in (post.stock_items if post is not None else ())
             if row.line_no in it.lines and it.product_id == row.product_id
         ]
         if not pairs:
             return None
-        for product_id, condition_id, canonical in pairs:
+        for product_id, condition_id, canonical, unit_id, unit_canonical in pairs:
             found.setdefault(
-                (product_id, condition_id), SoldoutTarget(product_id, condition_id, row.message_id, row.line_no, canonical)
+                (product_id, condition_id),
+                SoldoutTarget(product_id, condition_id, row.message_id, row.line_no, canonical, unit_id, unit_canonical),
             )
     return tuple(found.values())
 
@@ -390,12 +395,22 @@ def _stranded_stock(
     return stranded
 
 
+def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> str | None:
+    """規則12g：その商品の在庫の行がある最も新しい投稿（posts は新しい順）の状態。1種類でなければ None。"""
+    for post in posts:
+        states = {it.condition_canonical for it in post.stock_items if it.product_id == product_id}
+        if states:
+            return next(iter(states)) if len(states) == 1 and not next(iter(states)).startswith("FLAG_") else None
+    return None
+
+
 def decide_soldout_inherit(
     extracted: Sequence[Mapping[str, Any]], posts: Sequence[SoldoutRefPost], fixed_products: Mapping[int, int] | None = None,
 ) -> dict[int, SoldoutTarget]:
     """規則12：商品名を書いた〆（商品が直接決まった完売の件）が、前の在庫の取り残された状態を引き継ぐ件（添字 → 相手）。
 
-    posts は新しい順。〆と同じ状態の在庫が前にあれば決めない（12d）。取り残しの状態がちょうど1種類のときだけ決める（12e）。
+    posts は新しい順。取り残しが2種類以上で、その商品の在庫の行がある最も新しい投稿の状態が1種類・〆の状態と違う・取り残しにあるときは、
+    その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d）、取り残しの状態がちょうど1種類のときだけ決める（12e）。
     """
     decided: dict[int, SoldoutTarget] = {}
     for i, item in enumerate(extracted):
@@ -403,14 +418,20 @@ def decide_soldout_inherit(
             continue
         product_id = int(item["product_id"])
         shime = _shime_condition(item)
-        if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
-            continue  # 12d
         same_post = frozenset(
             _shime_condition(other) for j, other in enumerate(extracted) if j != i and other.get("product_id") == product_id
         )
         stranded = _stranded_stock(product_id, posts, same_post)
-        if len(stranded) != 1:
-            continue  # 12e
-        (canonical, (post, stock)), = stranded.items()
-        decided[i] = SoldoutTarget(product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical)
+        canonical = _latest_single_state(product_id, posts) if len(stranded) >= 2 else None
+        if canonical is None or canonical == shime or canonical not in stranded:  # 12g に当たらなければ今の 12d・12e
+            if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
+                continue  # 12d
+            if len(stranded) != 1:
+                continue  # 12e
+            (canonical, _), = stranded.items()
+        post, stock = stranded[canonical]
+        decided[i] = SoldoutTarget(
+            product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical,
+            stock.unit_id, stock.unit_canonical,
+        )
     return decided

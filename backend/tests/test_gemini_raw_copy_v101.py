@@ -690,6 +690,38 @@ def test_f5_footer_line_after_last_price_line_is_not_name_and_is_flagged():
     assert [(f["rule"], f["line"]) for f in out[0]["fixes"]] == [("F5", 3)]
 
 
+def test_f5_sold_out_sentence_after_last_price_line_is_not_flagged_as_footer():
+    # (u) design.md §13-3 B：完売の語だけの行は余白行の疑いにしない（役割は名前に使わないまま）
+    raw = "商品A\n3BOX@1,000円\n完売しました。"
+    out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
+    assert flags["possible_footer_line"] == []
+    assert out[0]["name"] == "商品A"
+    assert [(f["rule"], f["line"]) for f in out[0]["fixes"]] == [("F5", 3)]
+    assert out[0]["status"] == "sold_out"  # (x) 件の行全体で決まる
+
+
+def test_f5_sold_out_sentence_variant_with_exclamation_is_not_flagged():
+    # (v1)
+    raw = "商品A\n3BOX@1,000円\n完売です！"
+    _out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
+    assert flags["possible_footer_line"] == []
+
+
+def test_f5_sold_out_word_followed_by_other_text_is_still_flagged():
+    # (v2) 語のあとに文字が続く行は今までどおり疑いになる
+    raw = "商品A\n3BOX@1,000円\n完売品あり"
+    _out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
+    assert flags["possible_footer_line"] == [3]
+
+
+def test_f5_sold_out_sentence_leaves_other_values_same_as_a_plain_footer_line():
+    # (x) 完売の語だけの行と、疑いになる行とで、名前・価格・数量・単位・状態は同じ
+    plain, _ = _extract102("商品A\n3BOX@1,000円\n・買取品", _it([1, 2, 3], "1,000円", "3"))
+    sold, _ = _extract102("商品A\n3BOX@1,000円\n完売です。", _it([1, 2, 3], "1,000円", "3"))
+    keys = ("name", "price_normalized", "quantity_normalized", "unit", "condition")
+    assert {k: plain[0].get(k) for k in keys} == {k: sold[0].get(k) for k in keys}
+
+
 def test_f5_possible_missing_item_does_not_pick_up_shipping_fee_line_after_last_price_line():
     raw = "商品A\n3BOX@1,000円\n送料 500円\n・買取品"
     out, flags = _extract102(raw, _it([1, 2, 4], "1,000円", "3"))

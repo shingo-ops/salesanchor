@@ -666,7 +666,9 @@ def test_extract_puts_the_inherit_target_and_basis_on_the_soldout_row():
     post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_inherit_si([1], 62, 21, "Case"),))
     row = _extract("ふぁいぶ ABC-123 〆", (post,))[0]
     assert (row["match_status"], row["product_id"]) == ("matched", 62)
-    assert row["soldout_targets"] == [{"product_id": 62, "condition_id": 21, "ref_message_id": "p1", "ref_line": 1}]
+    assert row["soldout_targets"] == [
+        {"product_id": 62, "condition_id": 21, "ref_message_id": "p1", "ref_line": 1, "unit_id": None, "unit_canonical": ""}
+    ]
     assert row["soldout_target_basis"] == "SOLDOUT_INHERIT"
 
 
@@ -705,3 +707,79 @@ def test_inherit_12f_keeps_inheriting_without_a_real_unit_word(basis):
     post = _post("p1", "x", stock_items=(_CASE_STOCK,))
     item = _shime() if basis is None else _shime(unit_basis=basis)
     assert list(_inherit([item], (post,))) == [0]
+
+
+# --- 単位を相手へ運ぶ（design.md §13-3 C。(dd)）-------------------------------------------------------
+
+
+def test_targets_of_and_inherit_carry_the_unit_of_the_stock_item():
+    # (dd)
+    item = sr.StockItem(frozenset({3}), 62, 21, "Case", 13, "Set")
+    post = _post("p1", "x", stock_items=(item,))
+    got = _inherit([_shime()], (post,))
+    assert got == {0: sr.SoldoutTarget(62, 21, "p1", 3, "Case", 13, "Set")}
+
+
+# --- 規則12g：取り残しが2種類以上なら、最新の在庫の投稿の状態が1種類のときそれに当てる（design.md §13-10。(ee)〜(jj)）-----
+
+
+def _st(lines, condition_id: int, canonical: str, unit_id=None, unit_canonical="") -> sr.StockItem:
+    return sr.StockItem(frozenset(lines), 62, condition_id, canonical, unit_id, unit_canonical)
+
+
+def test_inherit_12g_latest_post_with_a_single_state_wins_over_12d():
+    # (ee) 古い投稿に Sealed box、新しい投稿に Case だけ。〆の既定は Sealed box
+    older = _post("old", "x", 5, stock_items=(_st([1], 22, "Sealed box"),))
+    newer = _post("new", "x", 1, stock_items=(_st([4, 5], 21, "Case", 13, "Set"),))
+    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 4, "Case", 13, "Set")}
+
+
+def test_inherit_12g_other_stranded_state_without_a_box_stock():
+    # (ef)
+    older = _post("old", "x", 5, stock_items=(_st([1], 24, "No shrink box"),))
+    newer = _post("new", "x", 1, stock_items=(_st([2], 21, "Case"),))
+    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 2, "Case")}
+
+
+def test_inherit_12g_does_not_apply_when_the_latest_post_has_two_states():
+    # (ff) 12d で相手なし
+    older = _post("old", "x", 5, stock_items=(_st([1], 22, "Sealed box"),))
+    newer = _post("new", "x", 1, stock_items=(_st([2], 21, "Case"), _st([3], 23, "Pack")))
+    assert _inherit([_shime()], (newer, older)) == {}
+
+
+def test_inherit_12g_does_not_apply_when_the_latest_state_is_the_shime_state():
+    # (fg)
+    older = _post("old", "x", 5, stock_items=(_st([1], 21, "Case"),))
+    newer = _post("new", "x", 1, stock_items=(_st([2], 22, "Sealed box"),))
+    assert _inherit([_shime()], (newer, older)) == {}
+
+
+def test_inherit_12g_latest_state_written_by_another_row_of_the_same_post_is_not_stranded():
+    # (gg)
+    older = _post("old", "x", 5, stock_items=(_st([1], 21, "Case"), _st([2], 24, "No shrink box"), _st([3], 25, "Searched pack")))
+    newer = _post("new", "x", 1, stock_items=(_st([4], 21, "Case"),))
+    same_post_case = {"status_effect": None, "status": "In Stock", "match_status": "matched", "product_id": 62, "condition": "Case"}
+    assert _inherit([_shime(), same_post_case], (newer, older)) == {}
+
+
+def test_inherit_12g_latest_state_settled_by_a_newer_soldout_row_is_not_stranded():
+    # (hh) 3種類取り残し。最新の在庫の投稿の Case は、もっと新しい投稿の完売の行で片づいている
+    older = _post("old", "x", 9, stock_items=(_st([1], 24, "No shrink box"), _st([2], 23, "Pack"), _st([3], 25, "Searched pack")))
+    middle = _post("mid", "x", 5, stock_items=(_st([4], 21, "Case"),))
+    newest = dataclasses.replace(_post("new", "x", 1), sold_items=(sr.SoldItem(62, "Case"),))
+    assert _inherit([_shime()], (newest, middle, older)) == {}
+
+
+def test_inherit_12g_latest_state_flag_is_not_used():
+    # (ii)
+    older = _post("old", "x", 5, stock_items=(_st([1], 21, "Case"),))
+    newer = _post("new", "x", 1, stock_items=(_st([2], 41, "FLAG_SINGLE"),))
+    assert _inherit([_shime()], (newer, older)) == {}
+
+
+def test_soldout_ref_row_carries_the_unit_of_the_stock_item():
+    # (dd) 段A（_targets_of）
+    post = _post("p1", STOCK, stock_items=(sr.StockItem(frozenset({1}), 62, _COND_A, "", 13, "Set"),))
+    row = _extract("ABC-123 〆", (post,))[0]
+    assert row["soldout_targets"][0]["unit_id"] == 13 and row["soldout_targets"][0]["unit_canonical"] == "Set"

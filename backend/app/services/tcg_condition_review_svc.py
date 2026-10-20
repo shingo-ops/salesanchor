@@ -190,7 +190,22 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
                 WHERE cr_sm.supplier_channel_id = sm.supplier_channel_id
                   AND cr_sa.product_id = (cr_data.ar->>'product_id')::integer
                   AND cr_sa.extraction_item_id <> ei.id
-                  AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer OR cr_sm.id <> sm.id)
+                  AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer
+                       -- 別の状態の相手は、〆以後の投稿か、〆より前の最新の在庫の投稿（cr_n1）のものだけ（design.md §13-10 A-2）
+                       OR (cr_sm.id <> sm.id AND (sm.line_posted_at IS NULL OR cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = (
+                           SELECT cr_n1.id FROM {schema}.source_messages cr_n1
+                           WHERE cr_n1.supplier_channel_id = sm.supplier_channel_id
+                             AND cr_n1.line_posted_at < sm.line_posted_at
+                             AND EXISTS (SELECT 1 FROM {schema}.extraction_jobs cr_n1j
+                                 JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
+                                 JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
+                                 WHERE cr_n1j.source_message_id = cr_n1.id
+                                   AND cr_n1j.id = (SELECT cr_n1l.id FROM {schema}.extraction_jobs cr_n1l
+                                       WHERE cr_n1l.source_message_id = cr_n1.id ORDER BY cr_n1l.created_at DESC, cr_n1l.id DESC LIMIT 1)
+                                   AND cr_n1a.product_id = (cr_data.ar->>'product_id')::integer
+                                   AND cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
+                                   AND cr_n1a.status IS DISTINCT FROM 'Sold out')
+                           ORDER BY cr_n1.line_posted_at DESC, cr_n1.id DESC LIMIT 1))))
                   AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
                   AND cr_sa.exclusion IS DISTINCT FROM 'excluded'
                   AND cr_sa.price_normalized IS NOT NULL
