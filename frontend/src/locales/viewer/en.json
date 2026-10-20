@@ -24,6 +24,13 @@
     "search": {
       "placeholder": "Search by name, model number or keyword"
     },
+    "resetView": "Reset",
+    "range": {
+      "priceMin": "Min price",
+      "priceMax": "Max price",
+      "qtyMin": "Min qty",
+      "qtyMax": "Max qty"
+    },
     "freshOnly": "Last {{hours}} h",
     "sort": {
       "placeholder": "Sort",
@@ -73,7 +80,6 @@
       "forgot": "Forgot your password?",
       "signup": "Apply"
     },
-    "changePassword": "Change password",
     "passwordChange": {
       "title": "Change password",
       "forced": "You need to change your password the first time.",

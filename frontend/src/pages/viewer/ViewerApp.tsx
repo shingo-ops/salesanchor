@@ -135,8 +135,6 @@ export default function ViewerApp() {
       {screen.name === "inventory" && (
         <InventoryView
           data={screen.data}
-          onLogout={onLogout}
-          onChangePassword={() => setScreen({ name: "passwordChange", forced: false })}
         />
       )}
     </div>
