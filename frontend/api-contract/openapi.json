@@ -36548,6 +36548,105 @@
         "title": "ViewerStatusChangeResponse",
         "type": "object"
       },
+      "ViewerTemplateItem": {
+        "description": "文面テンプレート1件（台帳の1鍵）。",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本文。DB に行が無ければ null",
+            "title": "Body"
+          },
+          "copy_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "コピー用の文。{signup_url} だけ入れ済み。body が null なら null",
+            "title": "Copy Text"
+          },
+          "key": {
+            "description": "文面の鍵（台帳の9件）",
+            "title": "Key",
+            "type": "string"
+          },
+          "placeholders": {
+            "description": "差し込み項目（台帳の順）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Placeholders",
+            "type": "array"
+          },
+          "send_mode": {
+            "description": "手で送る／自動",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "title": "Send Mode",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最後に直した時刻",
+            "title": "Updated At"
+          },
+          "updated_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最後に直した人の名前（full_name、空なら username）",
+            "title": "Updated By Name"
+          }
+        },
+        "required": [
+          "key",
+          "placeholders",
+          "send_mode"
+        ],
+        "title": "ViewerTemplateItem",
+        "type": "object"
+      },
+      "ViewerTemplateListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ViewerTemplateItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerTemplateListResponse",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -37095,105 +37194,6 @@
         ],
         "title": "ReportType",
         "type": "string"
-      },
-      "ViewerTemplateItem": {
-        "description": "文面テンプレート1件（台帳の1鍵）。",
-        "properties": {
-          "body": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "本文。DB に行が無ければ null",
-            "title": "Body"
-          },
-          "copy_text": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "コピー用の文。{signup_url} だけ入れ済み。body が null なら null",
-            "title": "Copy Text"
-          },
-          "key": {
-            "description": "文面の鍵（台帳の9件）",
-            "title": "Key",
-            "type": "string"
-          },
-          "placeholders": {
-            "description": "差し込み項目（台帳の順）",
-            "items": {
-              "type": "string"
-            },
-            "title": "Placeholders",
-            "type": "array"
-          },
-          "send_mode": {
-            "description": "手で送る／自動",
-            "enum": [
-              "manual",
-              "auto"
-            ],
-            "title": "Send Mode",
-            "type": "string"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "最後に直した時刻",
-            "title": "Updated At"
-          },
-          "updated_by_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "最後に直した人の名前（full_name、空なら username）",
-            "title": "Updated By Name"
-          }
-        },
-        "required": [
-          "key",
-          "placeholders",
-          "send_mode"
-        ],
-        "title": "ViewerTemplateItem",
-        "type": "object"
-      },
-      "ViewerTemplateListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ViewerTemplateItem"
-            },
-            "title": "Items",
-            "type": "array"
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "title": "ViewerTemplateListResponse",
-        "type": "object"
       }
     },
     "securitySchemes": {
@@ -63308,6 +63308,32 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewer-templates": {
+      "get": {
+        "operationId": "list_viewer_templates_endpoint_api_v1_super_admin_viewer_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Viewer Templates Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers": {
       "get": {
         "operationId": "list_viewers_endpoint_api_v1_super_admin_viewers_get",
@@ -69840,32 +69866,6 @@
         "tags": [
           "companies",
           "companies"
-        ]
-      }
-    },
-    "/api/v1/super-admin/viewer-templates": {
-      "get": {
-        "operationId": "list_viewer_templates_endpoint_api_v1_super_admin_viewer_templates_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ViewerTemplateListResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "List Viewer Templates Endpoint",
-        "tags": [
-          "super-admin"
         ]
       }
     }
