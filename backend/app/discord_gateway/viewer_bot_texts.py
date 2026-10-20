@@ -61,6 +61,8 @@ def reception_message_payload() -> dict:
         ],
     }
 
+ROOM_TOPIC = "在庫集計ツールのお試し（番号 {viewer_id}）"
+
 
 # ── 手で送る案内文（ADR-1019 段10 便1。管理画面のコピーボタンが API 経由で受け取る） ──
 SIGNUP_URL = "https://app.salesanchor.jp/viewer/?openExternalBrowser=1#signup"
