@@ -257,10 +257,12 @@ it("after a 409, closing and reopening the row sends the newest updated_at", asy
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
-  const promise = new Promise<T>(r => {
-    resolve = r;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function clickRow(key: string) {
@@ -312,4 +314,48 @@ it("keeps text typed while the refetch is in flight", async () => {
   d.resolve({ items: ITEMS.map(i => ({ ...i, body: `late-${i.key}`, updated_at: "2026-10-22T00:00:00Z" })) });
   await new Promise(r => setTimeout(r, 20));
   expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("typed text");
+});
+
+it("does not reopen the drawer when the PUT returns after it was closed", async () => {
+  const d = deferred<(typeof ITEMS)[number]>();
+  vi.mocked(api.put).mockReturnValueOnce(d.promise);
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await waitFor(() => expect(api.put).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole("button", { name: /close/i }));
+  await waitFor(() => expect(screen.queryByTestId("viewer-templates-detail")).toBeNull());
+  d.resolve({ ...ITEMS[4], body: "x" });
+  await new Promise(r => setTimeout(r, 20));
+  expect(screen.queryByTestId("viewer-templates-detail")).toBeNull();
+});
+
+it.each(["success", "failure"])("a late PUT %s for row A does not change row B's drawer", async kind => {
+  const d = deferred<(typeof ITEMS)[number]>();
+  vi.mocked(api.put).mockReturnValueOnce(d.promise);
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await waitFor(() => expect(api.put).toHaveBeenCalled());
+  clickRow("notice_extended");
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2"),
+  );
+  if (kind === "success") d.resolve({ ...ITEMS[4], body: "from A" });
+  else d.reject(new ApiError("boom", 500, "boom"));
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2");
+  expect(screen.queryByTestId("viewer-templates-save-error")).toBeNull();
+  expect(screen.queryByTestId("viewer-templates-saved")).toBeNull();
+});
+
+it("shows the load error when the refetch on open fails, and still opens with the row at hand", async () => {
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockRejectedValueOnce(new Error("x"));
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  expect((await screen.findByTestId("viewer-templates-error")).textContent).toBe("Could not load the templates");
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-room_recreated\nline2");
 });

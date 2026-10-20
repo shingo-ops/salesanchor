@@ -108,6 +108,7 @@ export default function ViewerTemplatesPage() {
     setDetail(row);
     const latest = await reloadItems();
     const fresh = latest?.find(i => i.key === row.key);
+    if (latest === null && seqRef.current === seq) setError(t(`${f}.loadError`));
     // 取得中に閉じた・別の行を開いた・保存を始めたときは反映しない。
     // 入力済みなら本文も updated_at も置き換えない（他人の更新を上書きしないため）
     if (!fresh || seqRef.current !== seq || draftRef.current !== openedBody) return;
@@ -122,7 +123,7 @@ export default function ViewerTemplatesPage() {
 
   const save = async () => {
     if (!detail || saving) return;
-    seqRef.current += 1;
+    const seq = ++seqRef.current;
     setSaving(true);
     setSaved(false);
     setSaveError("");
@@ -132,17 +133,24 @@ export default function ViewerTemplatesPage() {
         body: draft,
         expected_updated_at: detail.updated_at,
       });
+      // 戻るまでに閉じた・別の行を開いたときは、スライドと結果欄に触れず一覧だけ取り直す
+      if (seqRef.current !== seq) {
+        await reloadItems();
+        return;
+      }
       setDetail(res);
       setDraft(res.body ?? "");
       setSaved(true);
       if ((await reloadItems()) === null) setError(t(`${f}.loadError`));
     } catch (e) {
+      const current = seqRef.current === seq;
       if (e instanceof ApiError && e.status === 409) {
-        setSaveError(t(`${f}.conflict`));
+        if (current) setSaveError(t(`${f}.conflict`));
         // 開き直したとき最新の updated_at になるよう一覧だけ取り直す（入力中の文と開いているスライドは変えない）
         await reloadItems();
-      }
-      else if (e instanceof ApiError && e.status === 404) setSaveError(t(`${f}.errorNotFound`));
+      } else if (!current) {
+        return;
+      } else if (e instanceof ApiError && e.status === 404) setSaveError(t(`${f}.errorNotFound`));
       else if (e instanceof ApiError && e.status === 422 && ERROR_KEYS[e.message]) {
         setSaveError(t(`${f}.${ERROR_KEYS[e.message]}`));
       } else setSaveError(t(`${f}.saveError`));
