@@ -17,6 +17,7 @@ API:
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
@@ -27,7 +28,7 @@ from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
 from app.discord_gateway import viewer_bot_texts
 from app.models import User
-from app.services import viewer_admin
+from app.services import viewer_admin, viewer_room_notice
 from app.services.viewer_admin import ViewerAdminError
 from app.services.viewer_invite import create_viewer_invite
 
@@ -57,6 +58,17 @@ class ViewerAdminItem(BaseModel):
     discord_channel_url: str | None = Field(None, description="Discord のチケット部屋を開く URL")
     flag_many_ips: bool = Field(..., description="目印: 24時間以内に3種類以上の IP からログイン")
     flag_shared_ip: bool = Field(..., description="目印: 別の閲覧者と同じ IP からログイン")
+
+
+class ViewerStatusChangeResponse(ViewerAdminItem):
+    """状態変更（activate／suspend／unsuspend／extend）の応答。部屋へのお知らせの結果つき。"""
+
+    room_notice: Literal["sent", "failed", "no_room"] | None = Field(
+        None, description="部屋へのお知らせの結果（unsuspend は null）"
+    )
+    room_notice_text: str | None = Field(
+        None, description="部屋へ送ろうとした文（送れなかったとき画面でコピーする）"
+    )
 
 
 class ViewerAdminListResponse(BaseModel):
@@ -165,7 +177,9 @@ async def _change(
     except ViewerAdminError as exc:
         await db.rollback()
         raise _http_error(exc) from None
-    return item
+    # commit の後に送る（DB を開けたまま Discord を待たない）。送れなくても操作は成功のまま
+    room_notice, room_notice_text = await viewer_room_notice.notify_status_change(action, item)
+    return {**item, "room_notice": room_notice, "room_notice_text": room_notice_text}
 
 
 @router.patch(
@@ -185,7 +199,7 @@ async def update_line_name_endpoint(
     return item
 
 
-@router.post("/super-admin/viewers/{viewer_id}/activate", response_model=ViewerAdminItem)
+@router.post("/super-admin/viewers/{viewer_id}/activate", response_model=ViewerStatusChangeResponse)
 async def activate_endpoint(
     viewer_id: int,
     db: AsyncSession = Depends(get_db),
@@ -194,7 +208,7 @@ async def activate_endpoint(
     return await _change(db, current_user, viewer_id, "activate")
 
 
-@router.post("/super-admin/viewers/{viewer_id}/suspend", response_model=ViewerAdminItem)
+@router.post("/super-admin/viewers/{viewer_id}/suspend", response_model=ViewerStatusChangeResponse)
 async def suspend_endpoint(
     viewer_id: int,
     db: AsyncSession = Depends(get_db),
@@ -203,7 +217,7 @@ async def suspend_endpoint(
     return await _change(db, current_user, viewer_id, "suspend")
 
 
-@router.post("/super-admin/viewers/{viewer_id}/unsuspend", response_model=ViewerAdminItem)
+@router.post("/super-admin/viewers/{viewer_id}/unsuspend", response_model=ViewerStatusChangeResponse)
 async def unsuspend_endpoint(
     viewer_id: int,
     db: AsyncSession = Depends(get_db),
@@ -212,7 +226,7 @@ async def unsuspend_endpoint(
     return await _change(db, current_user, viewer_id, "unsuspend")
 
 
-@router.post("/super-admin/viewers/{viewer_id}/extend", response_model=ViewerAdminItem)
+@router.post("/super-admin/viewers/{viewer_id}/extend", response_model=ViewerStatusChangeResponse)
 async def extend_endpoint(
     viewer_id: int,
     payload: ExtendRequest,

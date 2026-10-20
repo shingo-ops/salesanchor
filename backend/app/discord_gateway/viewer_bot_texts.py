@@ -85,6 +85,11 @@ REISSUE_NOTICE_NO_INVITE = (
     "Discord の受付の部屋で「申込コードを入れる」ボタンを押し、このコードを入れてください。"
 )
 
+# ── 操作の直後に部屋へ自動で送るお知らせ（段10 便2。停止の解除は文面なし） ──
+NOTICE_EXTENDED = "お試し期間を {until_date} まで延長しました😊"
+NOTICE_ACTIVATED = "本登録が完了しました。引き続きご利用ください😊"
+NOTICE_SUSPENDED = "ご利用を停止しました。ご不明な点は、この部屋でお知らせください。"
+
 _JST = timezone(timedelta(hours=9))
 
 

@@ -888,3 +888,10 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
   - f. ①の文を返す口：`GET /api/super-admin/viewers/signup-request`（require_super_admin、応答 {text}）。ルーター冒頭の API 一覧（super_admin_viewers.py:5-13）に追記。②の LINE名は commit 後に _get_item で取る。正確なパス接頭辞は実物の router prefix に合わせる。
   - g. SIGNUP_URL は本番 URL を固定で書く（開発環境でも本番 URL がコピーされることを受け入れる。前例 ROOM_WELCOME の URL 直書き viewer_bot_texts.py:31）。
 - ③の送る時刻「前日の JST 10:00 以降」は Opus の既定。PO に伝え、変えたいときは定数1つ（INTERVIEW_NOTICE_HOUR_JST）を直す。
+
+### 10-11 便2 実装メモ（2026-10-20）
+- 実物と設計の差：CLI の実体は backend/app/viewer_admin_cli.py（services 配下ではない）。管理画面に停止ボタンは無い（段6）ので、画面で「部屋に送れませんでした」の案内が出るのは activate・extend の応答のとき。suspend・unsuspend は API と CLI だけ。
+- 送る処理は viewer_room_notice.py の send_room_notice のほか、文面選びと結果の決定を `notify_status_change(action, item)`（戻り (room_notice, text)）にまとめ、Web（_change）と CLI（run）の両方が同じ関数を commit 後に呼ぶ。unsuspend は (None, None)。
+- DISCORD_BOT_TOKEN が無い環境では Discord を呼ばず False（= failed）。
+- 延長の {until_date} は change_status が返す item の trial_expires_at（延長後）を format_jst_date で書く。取り直しは不要だった。
+- テスト：送信は viewer_room_notice.send_room_notice をモック（PG の入口試験・CLI 試験）。送信関数そのものは discord_api_request をモックして JSON の形を確かめる。openapi.json は ViewerStatusChangeResponse と4口の応答だけを反映（手元の pydantic 2.13.0 は CI の 2.10.6 と出力が違うため、他の差分は取り込まない）。

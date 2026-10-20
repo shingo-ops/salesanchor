@@ -413,3 +413,39 @@ it("shows the invalid text in an alert on 422 and the generic save error otherwi
     ),
   );
 });
+
+it("shows the room-notice failure guide with a copy button when the room notice failed", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "failed", room_notice_text: "NOTICE BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  const box = await screen.findByTestId("viewers-room-notice-failed");
+  expect(within(box).getByText(i18n.t("superAdmin.viewers.roomNoticeFailed"))).toBeTruthy();
+  expect(within(box).getByText("NOTICE BODY")).toBeTruthy();
+  fireEvent.click(within(box).getByRole("button", { name: "Copy" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("NOTICE BODY"));
+});
+
+it("shows the same guide when the viewer has no room (no_room)", async () => {
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "no_room", room_notice_text: "NO ROOM BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  expect(await screen.findByText("NO ROOM BODY")).toBeTruthy();
+});
+
+it("shows no room-notice guide when the notice was sent or there is none", async () => {
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "sent", room_notice_text: "SENT BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  await waitFor(() => expect(api.post).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByTestId("viewers-run")).toBeNull());
+  expect(screen.queryByTestId("viewers-room-notice-failed")).toBeNull();
+  expect(screen.queryByText("SENT BODY")).toBeNull();
+});

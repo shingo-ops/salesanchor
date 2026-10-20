@@ -2706,6 +2706,7 @@
       "menuAll": "All",
       "copySignupUrl": "Copy signup form URL",
       "copySignupRequest": "Copy signup request message",
+      "roomNoticeFailed": "Could not send to the room. Copy the message below and send it yourself.",
       "reissueMessage": "Message",
       "copied": "Copied",
       "copy": "Copy",
