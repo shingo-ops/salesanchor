@@ -92,6 +92,40 @@
   border-radius: var(--comp-tab-pill-radius);
 }
 
+/* ── タブ行（extra / end があるとき外側に置く箱） ──
+   灰色の線は外側の1本だけ。表にくっつけたとき、これが表の上の線になる */
+.comp-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.comp-tabs-bar--underline {
+  border-bottom: 1px solid var(--border);
+}
+
+.comp-tabs-bar--underline > .comp-tabs--underline {
+  border-bottom: none;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.comp-tabs-bar--underline .comp-tabs--underline .comp-tabs__tab {
+  margin-bottom: 0;
+}
+
+.comp-tabs-bar__extra {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+.comp-tabs-bar__end {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
 /* ── ホバー (0,2,1) — バリアント基本 (0,2,0) の後に配置 ── */
 .comp-tabs__tab:hover:not(:disabled) {
   color: var(--text-primary);

@@ -15,7 +15,8 @@
       "ja": "日本語",
       "en": "English"
     },
-    "tabAll": "全て",
+    "tabAll": "すべて",
+    "tabOther": "その他",
     "tabSelect": "シリーズ",
     "prev": "前へ",
     "next": "次へ",
