@@ -90,9 +90,10 @@ def _room_name(viewer_id: int, line_name: str | None) -> str:
 | K6 CI 全合格 | PR の必須チェック |
 | K7 本番で今の部屋が LINE 名に直る | デプロイ後、gateway のログに `sweep deleted=… renamed=N` が出る（N は今の trial- 部屋のうち条件が揃った数）。PO が Discord で名前を目視 |
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 不要。Discord の公式仕様（名前 1〜100 文字・MANAGE_CHANNELS）だけで決まる小さな変更のため。
 
 ## 9. 維持の仕組み
-- 部屋名の決め方は `_room_name` の1か所、目印の文面は `viewer_bot_texts.py` の `ROOM_TOPIC` の1か所（SSOT）。片付けの正規表現は同じファイルの `_ROOM_TOPIC_RE`。文面を変えるときは正規表現も合わせて変える（テスト K4 が落ちて気づく）。
+- 守り手: `backend/tests/test_viewer_discord_trial.py` の K1〜K5・K8 の試験（CI の pytest で毎回走る）。
+- 部屋名の決め方は `_room_name` の1か所、目印の文面は `backend/app/discord_gateway/viewer_bot_texts.py` の `ROOM_TOPIC` の1か所（SSOT）。片付けの正規表現は `backend/app/discord_gateway/viewer_trial.py` の `_ROOM_TOPIC_RE`。文面を変えるときは正規表現も合わせて変える（テスト K4 が落ちて気づく）。
 - 戻し方: この PR を Revert する。直した部屋の名前は元に戻らず、戻した後の片付けは名前が `trial-数字` の部屋しか見ないので、LINE 名の部屋は片付けの対象外になる（その間に消した閲覧者の部屋はスタッフが Discord で消す）。
