@@ -67,6 +67,7 @@ interface ReissueResult {
   signup_code: string;
   expires_at: string;
   invite_url: string | null;
+  message: string;
   viewer: ViewerItem;
 }
 
@@ -186,12 +187,27 @@ export default function ViewerAccountsPage() {
     );
   };
 
+  const copySignupRequest = async () => {
+    setError("");
+    try {
+      const res = await api.get<{ text: string }>("/super-admin/viewers/signup-request");
+      copyText("signupRequest", res.text);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
   const runReissue = async () => {
     if (!reissueTarget) return;
     setRunning(true);
     setError("");
     try {
-      const res = await api.post<{ signup_code: string; expires_at: string; invite_url: string | null }>(
+      const res = await api.post<{
+        signup_code: string;
+        expires_at: string;
+        invite_url: string | null;
+        message: string;
+      }>(
         `/super-admin/viewers/${reissueTarget.id}/reissue-signup-code`,
         {},
       );
@@ -343,13 +359,18 @@ export default function ViewerAccountsPage() {
       subtitleKey="superAdmin.viewers.subtitle"
       noScroll
       headerAction={
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => copyText("signupUrl", `${window.location.origin}/viewer/#signup`)}
-        >
-          {copiedKey === "signupUrl" ? t(`${f}.copied`) : t(`${f}.copySignupUrl`)}
-        </Button>
+        <>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => copyText("signupUrl", `${window.location.origin}/viewer/#signup`)}
+          >
+            {copiedKey === "signupUrl" ? t(`${f}.copied`) : t(`${f}.copySignupUrl`)}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={copySignupRequest}>
+            {copiedKey === "signupRequest" ? t(`${f}.copied`) : t(`${f}.copySignupRequest`)}
+          </Button>
+        </>
       }
     >
       <div className="hub-shell">
@@ -520,6 +541,9 @@ export default function ViewerAccountsPage() {
             </p>
             <p>
               {t(`${f}.reissueExpires`)}: {formatDate(reissueResult.expires_at)}
+            </p>
+            <p>
+              {t(`${f}.reissueMessage`)}: {copyButton("reissueMessage", reissueResult.message)}
             </p>
             <p>
               {t(`${f}.reissueInvite`)}:{" "}
