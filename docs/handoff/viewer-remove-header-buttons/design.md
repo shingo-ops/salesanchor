@@ -1,7 +1,7 @@
 # 設計: 閲覧ページ上部の「パスワード変更」「ログアウト」ボタンを消す（第1版）
 
 - 依頼: PO 2026-10-20「閲覧用ページだけどパスワードを変更とログアウトボタンは不要なので削除してくれ」
-- 現在地: [recon.md](recon.md)
+- 現在地: `docs/handoff/viewer-remove-header-buttons/recon.md`
 - 対象 ADR: ADR-1019（閲覧ページ）、ADR-027（i18n）、ADR-144（金型）。ADR-1019 の API 許可リスト（`docs/adr/ADR-1019-inventory-viewer-separate-accounts.md:23`）は変えない。
 
 ## 1. 目的・利用者に見える変化
