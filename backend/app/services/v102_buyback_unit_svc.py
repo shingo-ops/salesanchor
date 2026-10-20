@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -56,10 +57,11 @@ _MEDIAN_SQL = """
     FROM public.buyback_shop_products sp
     JOIN LATERAL (
         SELECT l.price_s FROM public.buyback_price_logs l
-        WHERE l.shop_product_id = sp.id ORDER BY l.fetched_at DESC, l.id DESC LIMIT 1
+        WHERE l.shop_product_id = sp.id
+          AND l.fetched_at <= :posted_at AND l.fetched_at >= :posted_at - make_interval(days => :days)
+        ORDER BY l.fetched_at DESC, l.id DESC LIMIT 1
     ) lp ON TRUE
     WHERE sp.product_id = ANY(:pids) AND sp.product_type = ANY(:types) AND sp.match_status = ANY(:statuses)
-      AND sp.last_seen_at >= now() - make_interval(days => :days)
       AND lp.price_s IS NOT NULL AND lp.price_s > 0
     GROUP BY sp.product_id
 """
@@ -152,11 +154,11 @@ def load_settings(session: Session) -> BuybackSettings | None:
     return settings
 
 
-def load_medians(session: Session, product_ids: Sequence[int], max_age_days: int) -> dict[int, Decimal]:
-    """商品ごとの買取の箱の価格の中央値（1回の SQL）。"""
+def load_medians(session: Session, product_ids: Sequence[int], max_age_days: int, posted_at: datetime) -> dict[int, Decimal]:
+    """商品ごとの買取の箱の価格の中央値（1回の SQL）。投稿日時より前・max_age_days 日以内の、店ごとに最新の値だけを使う。"""
     rows = session.execute(
         text(_MEDIAN_SQL),
-        {"pids": sorted(set(product_ids)), "types": list(BUYBACK_BOX_TYPES), "statuses": list(BUYBACK_MATCHED_STATUSES), "days": max_age_days},
+        {"pids": sorted(set(product_ids)), "types": list(BUYBACK_BOX_TYPES), "statuses": list(BUYBACK_MATCHED_STATUSES), "days": max_age_days, "posted_at": posted_at},
     ).fetchall()
     return {int(r[0]): Decimal(str(r[1])) for r in rows}
 
@@ -193,7 +195,7 @@ def with_decision(values: Mapping[str, Any], target: Target, ratio: Decimal, uni
 
 def apply_buyback_units(
     session: Session, items: Sequence[Mapping[str, Any]], base_values: Sequence[dict], unit_ids: Mapping[str, Any],
-    skip: frozenset[int] = frozenset(),
+    posted_at: datetime, skip: frozenset[int] = frozenset(),
 ) -> list[dict]:
     """base_values の対象の件に、買取価格で決めた状態・単位を入れた新しい一覧（同じ長さ・同じ順）。
 
@@ -206,7 +208,7 @@ def apply_buyback_units(
     settings = load_settings(session)
     if settings is None:
         return list(base_values)
-    medians = load_medians(session, [int(base_values[i]["product_id"]) for i in positions], settings.max_age_days)
+    medians = load_medians(session, [int(base_values[i]["product_id"]) for i in positions], settings.max_age_days, posted_at)
     targets = load_targets(session) if medians else None
     if not medians or targets is None:
         return list(base_values)

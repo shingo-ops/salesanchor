@@ -2,6 +2,7 @@
 
 設計: docs/handoff/v102-buyback-unit/card-BB.md
 """
+from datetime import datetime, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -16,6 +17,7 @@ GOOD_SETTINGS = [
 ]
 TARGET_ROWS = [("CN0003", 14, "Sealed box", "Box"), ("CN0001", 12, "Case", "Case")]
 UNIT_IDS = {"Box": 10, "Case": 9}
+POSTED_AT = datetime(2026, 10, 20, 3, 0, tzinfo=timezone.utc)
 WORDLESS_BASIS = "R4c:商品分類既定>R4:単位既定"
 UNKNOWN_BASIS = "R4:単位既定:単位不明"
 
@@ -36,8 +38,8 @@ class _Savepoint:
 class _Session:
     """設定・買取の中央値・状態の行に固定の行を返し、SQL を控える。"""
 
-    def __init__(self, settings=GOOD_SETTINGS, medians=((1, 10000.0),), targets=TARGET_ROWS):
-        self.settings, self.medians, self.targets = settings, medians, targets
+    def __init__(self, settings=GOOD_SETTINGS, medians=((1, 10000.0),), targets=TARGET_ROWS, posted_at=POSTED_AT):
+        self.settings, self.medians, self.targets, self.posted_at = settings, medians, targets, posted_at
         self.calls: list[tuple[str, dict]] = []
         self.savepoints: list[str] = []
 
@@ -47,6 +49,8 @@ class _Session:
     def execute(self, statement, params=None):
         sql = str(statement)
         self.calls.append((sql, params or {}))
+        if "line_posted_at" in sql:  # _POSTED_AT_SQL（投稿日時）
+            return SimpleNamespace(first=lambda: SimpleNamespace(line_posted_at=self.posted_at))
         rows = (
             self.settings if "tcg_distribution_settings" in sql
             else self.medians if "buyback_shop_products" in sql
@@ -69,7 +73,7 @@ def _values(price=10000, **extra):
 
 
 def _apply(items, values, session=None):
-    return bb.apply_buyback_units(session or _Session(), items, values, UNIT_IDS)
+    return bb.apply_buyback_units(session or _Session(), items, values, UNIT_IDS, POSTED_AT)
 
 
 @pytest.mark.parametrize(("price", "condition", "unit", "basis"), [
@@ -155,7 +159,7 @@ def test_missing_or_invalid_settings_change_nothing_and_warn(caplog):
 def test_missing_target_condition_or_unit_id_changes_nothing():
     values = _values()
     assert _apply([_item()], [values], _Session(targets=TARGET_ROWS[:1]))[0] == values
-    assert bb.apply_buyback_units(_Session(), [_item()], [values], {"Case": 9})[0] == values  # Box の単位 id が引けない
+    assert bb.apply_buyback_units(_Session(), [_item()], [values], {"Case": 9}, POSTED_AT)[0] == values  # Box の単位 id が引けない
 
 
 def test_does_not_mutate_the_input_and_reads_with_one_query_each():
@@ -165,12 +169,12 @@ def test_does_not_mutate_the_input_and_reads_with_one_query_each():
     assert values == original
     sqls = [c[0] for c in session.calls]
     assert sum("buyback_shop_products" in s for s in sqls) == 1 and sum("line_conditions" in s for s in sqls) == 1
-    assert session.calls[1][1] == {"pids": [1], "types": ["BOX", "BOX_SHRINK"], "statuses": ["auto", "manual"], "days": 7}
+    assert session.calls[1][1] == {"pids": [1], "types": ["BOX", "BOX_SHRINK"], "statuses": ["auto", "manual"], "days": 7, "posted_at": POSTED_AT}
 
 
 def test_skip_positions_are_not_decided_and_not_queried():
     values, session = _values(), _Session()
-    assert bb.apply_buyback_units(session, [_item()], [values], UNIT_IDS, frozenset({0}))[0] == values
+    assert bb.apply_buyback_units(session, [_item()], [values], UNIT_IDS, POSTED_AT, frozenset({0}))[0] == values
     assert session.calls == []
 
 
@@ -184,8 +188,9 @@ def test_write_results_does_not_decide_when_a_human_decided_the_condition():
 
 def test_median_sql_keeps_the_agreed_conditions():
     sql = bb._MEDIAN_SQL
-    for needle in ("sp.product_type = ANY", "sp.match_status = ANY", "sp.last_seen_at >=", "ORDER BY l.fetched_at DESC", "percentile_cont(0.5)", "lp.price_s > 0"):
+    for needle in ("sp.product_type = ANY", "sp.match_status = ANY", "l.fetched_at <= :posted_at", ":posted_at - make_interval(days => :days)", "ORDER BY l.fetched_at DESC", "percentile_cont(0.5)", "lp.price_s > 0"):
         assert needle in sql
+    assert "sp.last_seen_at" not in sql  # 物差しの時点は投稿日時。「今から N 日に見えた店」は使わない
 
 
 def test_parse_settings_requires_four_valid_keys():
@@ -266,3 +271,48 @@ def test_bundle_rows_are_not_buyback_candidates():
     plain = _values(bundle_size=None)
     assert bb.is_candidate(_item(), bundled) is False
     assert bb.is_candidate(_item(), plain) is True
+
+
+# --- 物差しの時点は投稿日時（便1） ---------------------------------------------------------------------------
+
+def test_median_query_receives_the_posted_at_and_age_window():
+    """投稿日時より後の値・days より前の値は、SQL の条件（fetched_at <= :posted_at・>= :posted_at - days）で外れる。"""
+    session = _Session()
+    bb.load_medians(session, [1], 30, POSTED_AT)
+    sql, params = session.calls[0]
+    assert params["posted_at"] == POSTED_AT and params["days"] == 30
+    assert "l.fetched_at <= :posted_at AND l.fetched_at >= :posted_at - make_interval(days => :days)" in sql
+    assert sql.index("l.fetched_at <= :posted_at") < sql.index("ORDER BY l.fetched_at DESC")  # 最新の値を選ぶ前に絞る
+
+
+def test_buyback_units_passes_the_posted_at_to_the_ruler():
+    session = _Session()
+    pairs = [(_item(), SimpleNamespace(id="row0"))]
+    out = svc._buyback_units(session, pairs, [_values()], dict(UNIT_IDS), "job1", {})
+    assert out[0]["condition_canonical"] == "Sealed box"
+    assert any(p.get("posted_at") == POSTED_AT for _s, p in session.calls)
+    assert session.savepoints == ["begin", "release"]
+
+
+def test_buyback_units_does_nothing_when_posted_at_is_none():
+    session = _Session(posted_at=None)
+    values = _values()
+    out = svc._buyback_units(session, [(_item(), SimpleNamespace(id="row0"))], [values], dict(UNIT_IDS), "job1", {})
+    assert out == [values]
+    assert not any("buyback_shop_products" in s for s, _ in session.calls)
+
+
+def test_buyback_units_skips_this_post_when_loading_posted_at_fails(caplog):
+    class _Failing(_Session):
+        def execute(self, statement, params=None):
+            if "line_posted_at" in str(statement):
+                raise RuntimeError("boom")
+            return super().execute(statement, params)
+
+    session = _Failing()
+    values = _values()
+    with caplog.at_level("WARNING"):
+        out = svc._buyback_units(session, [(_item(), SimpleNamespace(id="row0"))], [values], dict(UNIT_IDS), "job1", {})
+    assert out == [values]
+    assert session.savepoints == ["begin", "rollback"]  # SAVEPOINT の中で失敗し、保存全体の取引は壊さない
+    assert any("buyback_unit" in r.message for r in caplog.records)
