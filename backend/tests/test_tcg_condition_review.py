@@ -918,6 +918,20 @@ def test_shime_stays_when_the_latest_stock_post_has_other_state_partner(pg):  # 
     assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
 
 
+def test_shime_settled_when_the_latest_stock_post_is_outside_the_partner_window(pg):  # (oo)
+    shime = seed_shime(pg)
+    seed_partner(pg, 60, condition_id=pg["empty"], condition_canonical="Empty box")  # 〆より前の最新の在庫の投稿：60時間前（窓の外）・別の状態の現行行
+    seed_partner(pg, 24, status="Sold out")  # 24時間前の投稿：在庫の行が無い（〆だけ）
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}  # 現 HEAD（窓なしの cr_n1）でも同じ。窓の外は相手の条件で落ちる
+
+
+def test_shime_stays_when_the_latest_stock_post_is_inside_the_partner_window(pg):  # (oo2)
+    shime = seed_shime(pg)
+    seed_partner(pg, 40, condition_id=pg["empty"], condition_canonical="Empty box")  # 窓の内なら相手になる（窓を狭めすぎていない）
+    seed_partner(pg, 24, status="Sold out")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
 def test_shime_form_row_does_not_break_fenced_distribution_sql(pg):  # (l)
     set_max_age_hours(pg, 48)
     seed_shime(pg)
@@ -949,5 +963,14 @@ def test_callers_pass_shime_false():  # (o)
 
 def test_shime_review_joins_has_the_latest_stock_post_subquery_without_new_offset_0():  # (nn)
     joins = condition.review_joins(schema="tcg", shime=True)
-    assert "cr_n1.id" in joins and joins.count("OFFSET 0") == 3  # コメント1・cr_data 1・cr_shime 1（足していない）
-    assert "cr_n1" not in condition.review_joins(schema="tcg", shime=False)
+    assert "cr_p.id" in joins and joins.count("OFFSET 0") == 3  # コメント1・cr_data 1・cr_shime 1（足していない）
+    assert joins.count("cr_prev") == 2 and joins.count("cr_n1x.id") == 1  # cr_prev の参照も cr_n1x の参照も1か所だけ（コメントの1語を含む）
+    assert "cr_n1" not in condition.review_joins(schema="tcg", shime=False) and "cr_prev" not in condition.review_joins(schema="tcg", shime=False)
+
+
+def test_latest_stock_cte_is_in_source_cte_and_window_matches_the_partner_window():  # (pp)
+    joins = condition.review_joins(schema="tcg", shime=True)
+    window = f"line_posted_at >= NOW() - make_interval(hours => {condition.SHIME_STOCK_WINDOW_HOURS})"
+    assert f"cr_sm.{window}" in joins and f"cr_n1.{window}" in condition.source_cte(schema="tcg")  # 相手の条件と同じ式
+    assert condition.source_cte(schema="tcg").startswith("WITH cr_prev AS MATERIALIZED (")
+    assert "cr_prev" not in condition.source_cte(schema="tcg", latest_stock=False)  # shime=False の呼び出し側は文字列が変わらない

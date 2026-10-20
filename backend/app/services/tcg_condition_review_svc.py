@@ -61,7 +61,28 @@ def digest_sql(expression: str) -> str:
     return f"encode(sha256(convert_to(({expression})::text, 'UTF8')), 'hex')"
 
 
-def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None, include_inactive: bool = False) -> str:
+def latest_stock_cte(schema: str) -> str:
+    """cr_prev: 在庫の投稿（最新 job の、商品・状態が決まった「Sold out でない」行を持つ投稿）を、チャネル×商品ごとに引ける形で1回だけ集める。
+
+    review_joins(shime=True) の cr_n1x が行ごとの相関サブクエリだと、本番で 1,476,379（main 508,702）まで膨らむため（docs/handoff/shime-review-exclude/design.md §13-10-2）。
+    窓（line_posted_at >= NOW() - SHIME_STOCK_WINDOW_HOURS）は、cr_n1 を相手にする条件（cr_shime の cr_sm.line_posted_at >= ...）と同じ式。
+    窓の外の投稿は、相手の条件で必ず落ちるので、ここで落としても結果は変わらない（窓の外が最新なら、それより前も全て窓の外）。
+    """
+    return f"""cr_prev AS MATERIALIZED (
+        SELECT cr_n1.supplier_channel_id, cr_n1a.product_id, cr_n1.id, cr_n1.line_posted_at
+        FROM {schema}.source_messages cr_n1
+        JOIN (SELECT DISTINCT ON (source_message_id) id, source_message_id FROM {schema}.extraction_jobs
+              ORDER BY source_message_id, created_at DESC, id DESC) cr_n1j ON cr_n1j.source_message_id = cr_n1.id
+        JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
+        JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
+        WHERE cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
+          AND cr_n1a.status IS DISTINCT FROM 'Sold out'
+          AND cr_n1.line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})
+    )"""
+
+
+def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None, include_inactive: bool = False,
+               latest_stock: bool = True) -> str:
     schema = schema or "public"
     if item_only:
         scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
@@ -72,7 +93,9 @@ def source_cte(*, schema: str | None = None, item_only: bool = False, source_has
         scope = "WHERE is_active IS TRUE"
     hash_expression = source_hash or digest_sql("raw_text")
     # Materialization makes the full original-message hash reusable by its items.
-    return f"""WITH {_SOURCE_CTE_NAME} AS MATERIALIZED (
+    # latest_stock=True（既定）は review_joins(shime=True) の cr_prev を先頭に足す。review_joins(shime=False) の呼び出し側は False を渡し、文字列を変えない。
+    prev = f"{latest_stock_cte(schema)},\n    " if latest_stock else ""
+    return f"""WITH {prev}{_SOURCE_CTE_NAME} AS MATERIALIZED (
         SELECT id, {hash_expression} AS source_hash FROM {schema}.source_messages {scope}
     )"""
 
@@ -184,20 +207,12 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
             AND strpos(COALESCE(cr_data.ar->>'condition_canonical', '') || COALESCE(cr_data.ar->>'condition_basis', ''), 'FLAG') = 0
             AND cr_latest.id IS NULL
         THEN NOT EXISTS (SELECT 1 FROM (
-                -- 〆より前の最新の在庫の投稿（cr_n1）。〆の1件につき1回だけ求める（相手の候補ごとに求めると遅い）（design.md §13-10 A-2）
-                SELECT (SELECT cr_n1.id FROM {schema}.source_messages cr_n1
-                        WHERE cr_n1.supplier_channel_id = sm.supplier_channel_id
-                          AND cr_n1.line_posted_at < sm.line_posted_at
-                          AND EXISTS (SELECT 1 FROM {schema}.extraction_jobs cr_n1j
-                              JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
-                              JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
-                              WHERE cr_n1j.source_message_id = cr_n1.id
-                                AND cr_n1j.id = (SELECT cr_n1l.id FROM {schema}.extraction_jobs cr_n1l
-                                    WHERE cr_n1l.source_message_id = cr_n1.id ORDER BY cr_n1l.created_at DESC, cr_n1l.id DESC LIMIT 1)
-                                AND cr_n1a.product_id = (cr_data.ar->>'product_id')::integer
-                                AND cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
-                                AND cr_n1a.status IS DISTINCT FROM 'Sold out')
-                        ORDER BY cr_n1.line_posted_at DESC, cr_n1.id DESC LIMIT 1) AS id) cr_n1x
+                -- 〆より前の最新の在庫の投稿（cr_n1x）。cr_prev（source_cte の先頭のCTE）から引く。窓は相手の条件と同じ式なので結果は変わらない（design.md §13-10-2）
+                SELECT (SELECT cr_p.id FROM cr_prev cr_p
+                        WHERE cr_p.supplier_channel_id = sm.supplier_channel_id
+                          AND cr_p.product_id = (cr_data.ar->>'product_id')::integer
+                          AND cr_p.line_posted_at < sm.line_posted_at
+                        ORDER BY cr_p.line_posted_at DESC, cr_p.id DESC LIMIT 1) AS id) cr_n1x
                 CROSS JOIN {schema}.analysis_results cr_sa
                 JOIN {schema}.extraction_items cr_si ON cr_si.id = cr_sa.extraction_item_id
                 JOIN {schema}.extraction_jobs cr_sj ON cr_sj.id = cr_si.extraction_job_id
