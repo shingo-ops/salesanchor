@@ -23,14 +23,14 @@ PO のスクショ（PC）:
 - 表との隙間: :527 のインライン `margin: "var(--space-sm) 0"` と `.tabs` の下線 2px（company-forms.css:40-46）。表の枠は `frontend/src/components/DataTable.css:11-17` `.comp-table`（border 1px var(--border)・角丸 var(--comp-table-radius)）。
 - 検索欄とタブの間の空白: 読込表示 div（:518-523、`minHeight: 1.5rem`、非表示でも場所を取る）。
 - 注記: :556-571 `<p data-testid="inventory-expiry-warning">`（タブ行の右端）。
-- テスト: `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx:96` が画面全体で `queryByRole('tab')` が null であることを見ている（今のタブは role=tab でないため通っている）。注記のテスト `InventoryPage.settings.test.tsx:46,79,94`。
+- テスト: `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx:96` が画面全体で `queryByRole('tab')` が null であることを見ている（今のタブは role=tab でないため通っている）。注記のテスト `frontend/src/pages/inventory/InventoryPage.settings.test.tsx:46,79,94`。
 
 ## 閲覧ページ（file:line）
 - `frontend/src/pages/viewer/InventoryView.tsx:214-237`: PC は `<Tabs variant="underline" size="sm">`、件数つき（count）。スマホは SelectControl。タブは検索欄（ContentToolbar :249〜）より上、表（DataTable :295）とは離れている。
 - タブの元: 行の `series` を件数順に全部（`frontend/src/pages/viewer/viewerFilter.ts:212-222` `seriesTabs`）。「その他」は無い。絞り込みは `r.series !== f.tab`（:85）。`TAB_ALL = "all"`（:10）。
 - 行の項目（`frontend/src/pages/viewer/types.ts:13-29`）に work_code は無い。series は `type_master.name_ja`（`backend/app/services/tcg_distribution_svc.py:331` `COALESCE(ser.name_ja,'') AS series`、:364-365 `LEFT JOIN public.type_master ser ON ser.id = p.work_id`）。アプリの work_code も同じ type_master の code（`backend/app/routers/products.py:109`）。同じ行の code と name_ja なので、series で絞ってもアプリと同じ行の集まりになる。
 - 【事実】本番の name_ja は、PO のスクショでアプリのタブ（name_ja を出す :531）が「ポケモン」「ワンピース」「ドラゴンボール」、閲覧ページのタブ（series を出す）も「ポケモン」「ワンピース」「ドラゴンボール」。
-- テスト: タブを直接見るテストは無い。`viewerFilter.test.ts:55-57` が seriesTabs の順。
+- テスト: タブを直接見るテストは無い。`frontend/src/pages/viewer/viewerFilter.test.ts:55-57` が seriesTabs の順。
 
 ## GAS 在庫一覧
 - ソースはこのリポジトリに無い（正本 shingo-ops/tcg-client-viewer）。最新の写し: `~/CC報告ファイル-keep/inventory-toolbar-two-rows/gas/prod_stage/`（上部2段の変更入り。PO の反映待ち）。
@@ -43,4 +43,4 @@ PO のスクショ（PC）:
 - Select（`frontend/src/components/Select.tsx:55-56,74,84`）: variant standard|karte|header|tabbar|product-edit。tabbar（FormField.css:238-258）は Inbox 用で、枠と背景は残る（透明ではない）。使用箇所は InboxMessageThread.tsx:454・InboxPage.tsx:173。
 - 表にくっつける前例: `frontend/src/pages/buyback-prices/BuybackPricesPage.module.css:40-50`（Tabs の下に DataTable を置き、表の上の角丸を0にする）。
 - DataTable は className を受ける（`frontend/src/components/DataTable.tsx:94,156,218`）。
-- Storybook: `frontend/src/components/Tabs.stories.tsx`・`Select.stories.tsx` あり。
+- Storybook: `frontend/src/components/Tabs.stories.tsx`・`frontend/src/components/Select.stories.tsx` あり。

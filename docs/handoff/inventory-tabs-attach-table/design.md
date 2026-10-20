@@ -9,7 +9,7 @@
 - 「アプリの在庫表はその他だけ白い枠がついているからプルダウンを残しつつ透明にできる？」
 - 「このアプリのタブと同じ仕様に閲覧用のアプリページとGASも修正してほしい」
 
-## 2. 変更前 → 変更後（PC 幅が対象。閲覧ページ・GAS のスマホは変えない。アプリのタブ行はスマホでも同じものを出している（`InventoryPage.tsx:527-568` は isMobile で分けていない）ため、アプリのスマホのタブ行も金型の見た目になる。スマホのカード表示には表がないので「くっつける」は効かない）
+## 2. 変更前 → 変更後（PC 幅が対象。閲覧ページ・GAS のスマホは変えない。アプリのタブ行はスマホでも同じものを出している（`frontend/src/pages/inventory/InventoryPage.tsx:527-568` は isMobile で分けていない）ため、アプリのスマホのタブ行も金型の見た目になる。スマホのカード表示には表がないので「くっつける」は効かない）
 | | 変更前 | 変更後 |
 |---|---|---|
 | アプリ在庫表のタブと表 | タブ行と表の間に隙間（margin と 2px 下線） | タブ行の下線がそのまま表の上の線になる（隙間 0、表の上の角丸 0） |
@@ -33,20 +33,20 @@ end?: ReactNode;
   - `.comp-tabs-bar { display:flex; align-items:flex-end; gap: var(--space-2) }`
   - `.comp-tabs-bar--underline { border-bottom: 1px solid var(--border) }`（灰色の線は外側の1本だけ）
   - `.comp-tabs-bar--underline > .comp-tabs--underline { border-bottom: none; flex: 0 1 auto; min-width: 0 }`
-  - `.comp-tabs-bar--underline .comp-tabs--underline .comp-tabs__tab { margin-bottom: 0 }`（`Tabs.css:86-89` の `margin-bottom:-1px` は内側の線に重ねるためのもの。bar の中では内側の線が無いので 0 にし、内側の `overflow-x:auto` で下線が切れないようにする。この規則は :86-89 より後に置く）
+  - `.comp-tabs-bar--underline .comp-tabs--underline .comp-tabs__tab { margin-bottom: 0 }`（`frontend/src/components/Tabs.css:86-89` の `margin-bottom:-1px` は内側の線に重ねるためのもの。bar の中では内側の線が無いので 0 にし、内側の `overflow-x:auto` で下線が切れないようにする。この規則は :86-89 より後に置く）
   - `.comp-tabs-bar__extra { flex-shrink:0; display:flex; align-items:flex-end }`
   - `.comp-tabs-bar__end { margin-left:auto; flex-shrink:0; align-self:center }`
-  - stylelint の no-descending-specificity に止められたら、bar の規則を `Tabs.css:111-113` の hover 規則より前へ動かす（`check:stylelint` で確かめる）。
+  - stylelint の no-descending-specificity に止められたら、bar の規則を `frontend/src/components/Tabs.css:111-113` の hover 規則より前へ動かす（`check:stylelint` で確かめる）。
   - 縦位置の決め: タブボタンと「その他」はどちらも高さ `var(--comp-tab-h-md)` で下端をそろえ、選択中の青い下線（2px）は灰色の線（1px）のすぐ上に乗る。注記だけは行の縦中央。
 
 ### 3-2. DataTable 金型に「上をタブにくっつける」を足す
-`frontend/src/components/DataTable.tsx` に `attachedTop?: boolean` を足す。true のとき、表の外枠を描く `.comp-table`（`DataTable.css:12-18`。`.comp-table-frame` は width だけで枠を描かない :196-198）の要素、つまり `wrapperCls`（`DataTable.tsx:214-219`）にだけ `comp-table--attached-top` を足す。カード表示（スマホ）のときは付けない。`frontend/src/components/DataTable.css` に `.comp-table--attached-top { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0 }`。上の線はタブ行の下線（3-1）が受け持つ。前例: `frontend/src/pages/buyback-prices/BuybackPricesPage.module.css:40-50`（ここは今回触らない）。
+`frontend/src/components/DataTable.tsx` に `attachedTop?: boolean` を足す。true のとき、表の外枠を描く `.comp-table`（`frontend/src/components/DataTable.css:12-18`。`.comp-table-frame` は width だけで枠を描かない :196-198）の要素、つまり `wrapperCls`（`frontend/src/components/DataTable.tsx:214-219`）にだけ `comp-table--attached-top` を足す。カード表示（スマホ）のときは付けない。`frontend/src/components/DataTable.css` に `.comp-table--attached-top { border-top: none; border-top-left-radius: 0; border-top-right-radius: 0 }`。上の線はタブ行の下線（3-1）が受け持つ。前例: `frontend/src/pages/buyback-prices/BuybackPricesPage.module.css:40-50`（ここは今回触らない）。
 
 ### 3-3. Select 金型に「タブの見た目」の種類を足す
 `frontend/src/components/Select.tsx:18` の SelectVariant に `"tab"` を足す。`frontend/src/components/FormField.css` の末尾（既存の variant 規則より後）に、次の順で足す:
 1. `.comp-select__control.comp-select--tab`:
    - 枠: `border-top-color / border-left-color / border-right-color: transparent`（個別指定）、`border-bottom: var(--comp-tab-underline-w) solid transparent`、`border-radius: 0`、`background-color: transparent`（`background` の一括指定は使わない。▽ の背景画像を消さないため）。
-   - 大きさ・文字: `height: var(--comp-tab-h-md)`、`min-height: 0`（スマホで `FormField.css:494-500` が掛ける min-height を打ち消す。karte/header/tabbar と同じ :201,222,240）、`padding-top: 0; padding-bottom: 0; padding-left: var(--comp-tab-px-md); padding-right: var(--space-5)`（▽ の分。`FormField.css:72-79` の standard と同じ値）、`font-size: var(--font-sm)`、`color: var(--text-secondary)`。
+   - 大きさ・文字: `height: var(--comp-tab-h-md)`、`min-height: 0`（スマホで `frontend/src/components/FormField.css:494-500` が掛ける min-height を打ち消す。karte/header/tabbar と同じ :201,222,240）、`padding-top: 0; padding-bottom: 0; padding-left: var(--comp-tab-px-md); padding-right: var(--space-5)`（▽ の分。`frontend/src/components/FormField.css:72-79` の standard と同じ値）、`font-size: var(--font-sm)`、`color: var(--text-secondary)`。
 2. `.comp-select__control.comp-select--tab:hover`: `color: var(--accent)`。
 3. `.comp-select__control.comp-select--tab:focus`: `box-shadow: none; border-top-color / border-left-color / border-right-color: transparent`（border-bottom には触らない。選んだ直後にフォーカスが残っても選択中の下線を消さないため）。
 4. `.comp-select__control.comp-select--tab:focus-visible`: `outline: 2px solid var(--accent); outline-offset: -2px`。
@@ -68,7 +68,7 @@ end?: ReactNode;
   - `ui-allow` の例外コメント（:526）を消す。
   - スマホでもこのタブ行を出す（今と同じ）。
 - DataTable（:570〜）に `attachedTop={!isMobile}` 相当を付ける（カード表示のときは DataTable 側でも付けない）。
-- テスト `InventoryPage.rowdrawer.test.tsx:96` の `screen.queryByRole('tab')` は、引き出しの要素の中（within）だけを見るように直す。
+- テスト `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx:96` の `screen.queryByRole('tab')` は、引き出しの要素の中（within）だけを見るように直す。
 - 検索欄とタブの間の読込表示（:518-523）は変えない。
 
 ### 3-6. 閲覧ページ
@@ -82,7 +82,7 @@ end?: ReactNode;
   - extra: `otherSeries(data.rows)` が1つ以上のとき、`SelectControl variant="tab"`、`aria-label={t("viewer.tabOther")}`、`data-testid="viewer-tab-other"`、value は tab が「その他」側のときその名前・それ以外は `""`、先頭 option `{value:"", label:t("viewer.tabOther")}`、続けて各シリーズ。onChange は値が空でなければ `reset(setTab)(値)`。
   - DataTable に `attachedTop`（PC のときだけ。スマホは今のまま）。
   - スマホ（:215-224 のセレクト、件数つき）は変えない。
-- `frontend/src/locales/viewer/ja.json` と `en.json`: `viewer.tabAll` の ja を「全て」→「すべて」（アプリの common.all に合わせる。en は今のまま。このキーはスマホのセレクト `InventoryView.tsx:222` でも使うので、スマホの表記も「すべて」になる）、`viewer.tabOther` を足す（ja「その他」、en「Other」＝アプリの `locales/en.json:1500` と同じ）。
+- `frontend/src/locales/viewer/ja.json` と `frontend/src/locales/viewer/en.json`: `viewer.tabAll` の ja を「全て」→「すべて」（アプリの common.all に合わせる。en は今のまま。このキーはスマホのセレクト `frontend/src/pages/viewer/InventoryView.tsx:222` でも使うので、スマホの表記も「すべて」になる）、`viewer.tabOther` を足す（ja「その他」、en「Other」＝アプリの `frontend/src/locales/en.json:1500` と同じ）。
 
 ### 3-7. GAS 在庫一覧（別リポジトリ shingo-ops/tcg-client-viewer。反映は PO の `!`）
 - 土台: 作業の最初に Opus がテスト版・本番版を別々の空ディレクトリへ `clasp pull`（読み取り）し、`~/CC報告ファイル-keep/inventory-toolbar-two-rows/gas/` の写しとの差を見る。上部2段の版（PO の反映待ち）をまだ反映していなければ、その写しを土台にして今回の変更を重ねる（1回の反映で両方入る）。差に説明できないものがあれば止めて PO に聞く。
