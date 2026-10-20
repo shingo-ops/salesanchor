@@ -749,7 +749,7 @@ def test_needs_review_tab_hides_old_prompt_versions_only(pg):
     assert ids(by_id) == {old["eid"]}  # ID 指定は不変（旧版も出る）
 
 
-# ---- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §3・§7 T1） ----
+# ---- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §12-3・§7 T1） ----
 
 def seed_shime(pg, **overrides):
     """価格のない〆（Sold out・excluded・価格と数量なし）の行。"""
@@ -782,10 +782,10 @@ def test_shime_settled_when_partner_stock_is_gone(pg):  # (a)
     assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
 
 
-def test_shime_stays_without_partner_stock(pg):  # (b)
+def test_shime_settled_without_partner_stock(pg):  # (b)
     shime = seed_shime(pg)
-    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
-    assert context(pg, shime)["needs_review"] is True
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+    assert context(pg, shime)["needs_review"] is False
 
 
 def test_shime_stays_while_partner_stock_is_within_window(pg):  # (c)
@@ -815,7 +815,7 @@ def test_shime_stays_when_human_correction_exists(pg):  # (f)
     assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
 
 
-def test_shime_stays_when_only_other_channel_has_the_partner(pg):  # (g)
+def test_shime_settled_when_only_other_channel_has_the_partner(pg):  # (g)
     with pg["connection"].cursor() as cursor:
         cursor.execute("INSERT INTO public.suppliers(name,supplier_type) VALUES ('ShimeOtherSupplier','corporate') RETURNING id")
         cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id",
@@ -824,8 +824,8 @@ def test_shime_stays_when_only_other_channel_has_the_partner(pg):  # (g)
         cursor.execute("SELECT id FROM public.supplier_channels WHERE id<>%s::uuid ORDER BY id LIMIT 1", (other_channel,))
         own_channel = str(cursor.fetchone()[0])
     shime = seed_shime(pg, channel_id=own_channel)
-    seed_partner(pg, 100, channel_id=other_channel)
-    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+    seed_partner(pg, 10, channel_id=other_channel)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
 
 
 def test_shime_other_saved_reason_stays_needs_review(pg):  # (h)
@@ -843,16 +843,55 @@ def test_shime_settled_when_partner_is_superseded_not_current(pg):  # (i)
     assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
 
 
-def test_shime_stays_when_partner_was_posted_after_it(pg):  # (j)
+def test_shime_settled_when_partner_was_posted_after_it_but_old(pg):  # (j)
     shime = seed_shime(pg)
     age_message(pg, shime, 200)
     seed_partner(pg, 100)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_partner_is_sold_out_too(pg):  # (k)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100, status="Sold out")
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def put_in_same_post(pg, partner, shime):
+    """相手の job を〆の投稿に付け替える（同じ投稿の別の行にする）。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.extraction_jobs SET source_message_id=%s WHERE id=%s", (shime["smid"], partner["job"]))
+
+
+def test_shime_settled_with_price_and_quantity_and_no_partner(pg):  # (p)
+    shime = seed_shime(pg, price_normalized=7500, quantity_normalized=3)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_same_post_has_other_condition_stock(pg):  # (q)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 0, condition_id=pg["empty"], condition_canonical="Empty box")
+    put_in_same_post(pg, partner, shime)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_same_post_has_same_condition_stock(pg):  # (r)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 0)
+    put_in_same_post(pg, partner, shime)
     assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
 
 
-def test_shime_stays_when_partner_is_sold_out_too(pg):  # (k)
+def test_shime_stays_when_other_post_has_other_condition_stock(pg):  # (s)
     shime = seed_shime(pg)
-    seed_partner(pg, 100, status="Sold out")
+    seed_partner(pg, 10, condition_id=pg["empty"], condition_canonical="Empty box")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_superseded_post_still_has_current_stock(pg):  # (t)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 10)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.source_messages SET is_active=false WHERE id=%s", (partner["smid"],))
     assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
 
 
