@@ -183,7 +183,22 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
             AND cr_data.ar->>'product_id' IS NOT NULL AND cr_data.ar->>'condition_id' IS NOT NULL
             AND strpos(COALESCE(cr_data.ar->>'condition_canonical', '') || COALESCE(cr_data.ar->>'condition_basis', ''), 'FLAG') = 0
             AND cr_latest.id IS NULL
-        THEN NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa
+        THEN NOT EXISTS (SELECT 1 FROM (
+                -- 〆より前の最新の在庫の投稿（cr_n1）。〆の1件につき1回だけ求める（相手の候補ごとに求めると遅い）（design.md §13-10 A-2）
+                SELECT (SELECT cr_n1.id FROM {schema}.source_messages cr_n1
+                        WHERE cr_n1.supplier_channel_id = sm.supplier_channel_id
+                          AND cr_n1.line_posted_at < sm.line_posted_at
+                          AND EXISTS (SELECT 1 FROM {schema}.extraction_jobs cr_n1j
+                              JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
+                              JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
+                              WHERE cr_n1j.source_message_id = cr_n1.id
+                                AND cr_n1j.id = (SELECT cr_n1l.id FROM {schema}.extraction_jobs cr_n1l
+                                    WHERE cr_n1l.source_message_id = cr_n1.id ORDER BY cr_n1l.created_at DESC, cr_n1l.id DESC LIMIT 1)
+                                AND cr_n1a.product_id = (cr_data.ar->>'product_id')::integer
+                                AND cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
+                                AND cr_n1a.status IS DISTINCT FROM 'Sold out')
+                        ORDER BY cr_n1.line_posted_at DESC, cr_n1.id DESC LIMIT 1) AS id) cr_n1x
+                CROSS JOIN {schema}.analysis_results cr_sa
                 JOIN {schema}.extraction_items cr_si ON cr_si.id = cr_sa.extraction_item_id
                 JOIN {schema}.extraction_jobs cr_sj ON cr_sj.id = cr_si.extraction_job_id
                 JOIN {schema}.source_messages cr_sm ON cr_sm.id = cr_sj.source_message_id
@@ -192,20 +207,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
                   AND cr_sa.extraction_item_id <> ei.id
                   AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer
                        -- 別の状態の相手は、〆以後の投稿か、〆より前の最新の在庫の投稿（cr_n1）のものだけ（design.md §13-10 A-2）
-                       OR (cr_sm.id <> sm.id AND (sm.line_posted_at IS NULL OR cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = (
-                           SELECT cr_n1.id FROM {schema}.source_messages cr_n1
-                           WHERE cr_n1.supplier_channel_id = sm.supplier_channel_id
-                             AND cr_n1.line_posted_at < sm.line_posted_at
-                             AND EXISTS (SELECT 1 FROM {schema}.extraction_jobs cr_n1j
-                                 JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
-                                 JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
-                                 WHERE cr_n1j.source_message_id = cr_n1.id
-                                   AND cr_n1j.id = (SELECT cr_n1l.id FROM {schema}.extraction_jobs cr_n1l
-                                       WHERE cr_n1l.source_message_id = cr_n1.id ORDER BY cr_n1l.created_at DESC, cr_n1l.id DESC LIMIT 1)
-                                   AND cr_n1a.product_id = (cr_data.ar->>'product_id')::integer
-                                   AND cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
-                                   AND cr_n1a.status IS DISTINCT FROM 'Sold out')
-                           ORDER BY cr_n1.line_posted_at DESC, cr_n1.id DESC LIMIT 1))))
+                       OR (cr_sm.id <> sm.id AND (sm.line_posted_at IS NULL OR cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = cr_n1x.id)))
                   AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
                   AND cr_sa.exclusion IS DISTINCT FROM 'excluded'
                   AND cr_sa.price_normalized IS NOT NULL
