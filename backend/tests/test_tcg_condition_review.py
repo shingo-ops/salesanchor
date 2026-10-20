@@ -895,6 +895,43 @@ def test_shime_stays_when_superseded_post_still_has_current_stock(pg):  # (t)
     assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
 
 
+# ---- 〆より前の別の状態の相手は最新の在庫の投稿のものだけ数える（design.md §13-10 A-2・T1 (kk)〜(nn)） ----
+
+def test_shime_settled_when_other_state_partner_is_only_in_an_older_post_than_the_latest_stock_post(pg):  # (kk)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20, condition_id=pg["empty"], condition_canonical="Empty box")  # P0：別の状態・現行
+    seed_partner(pg, 10, is_current=False)  # P1：最新の在庫の投稿（行は現行でない＝相手の条件を満たさない）
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_older_post_partner_has_the_same_condition(pg):  # (ll)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20)  # P0：〆と同じ状態・現行（どの投稿のものでも数える）
+    seed_partner(pg, 10, is_current=False)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_the_latest_stock_post_has_other_state_partner(pg):  # (mm)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20, condition_id=pg["empty"], condition_canonical="Empty box")
+    seed_partner(pg, 10, condition_id=pg["empty"], condition_canonical="Empty box")  # P1：最新の在庫の投稿の別の状態
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_settled_when_the_latest_stock_post_is_outside_the_partner_window(pg):  # (oo)
+    shime = seed_shime(pg)
+    seed_partner(pg, 60, condition_id=pg["empty"], condition_canonical="Empty box")  # 〆より前の最新の在庫の投稿：60時間前（窓の外）・別の状態の現行行
+    seed_partner(pg, 24, status="Sold out")  # 24時間前の投稿：在庫の行が無い（〆だけ）
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}  # 現 HEAD（窓なしの cr_n1）でも同じ。窓の外は相手の条件で落ちる
+
+
+def test_shime_stays_when_the_latest_stock_post_is_inside_the_partner_window(pg):  # (oo2)
+    shime = seed_shime(pg)
+    seed_partner(pg, 40, condition_id=pg["empty"], condition_canonical="Empty box")  # 窓の内なら相手になる（窓を狭めすぎていない）
+    seed_partner(pg, 24, status="Sold out")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
 def test_shime_form_row_does_not_break_fenced_distribution_sql(pg):  # (l)
     set_max_age_hours(pg, 48)
     seed_shime(pg)
@@ -922,3 +959,18 @@ def test_callers_pass_shime_false():  # (o)
     root = Path(distribution.__file__).parent
     assert (root / "tcg_distribution_svc.py").read_text(encoding="utf-8").count("shime=False") == 3
     assert (root / "tcg_import_progress.py").read_text(encoding="utf-8").count("shime=False") == 1
+
+
+def test_shime_review_joins_has_the_latest_stock_post_subquery_without_new_offset_0():  # (nn)
+    joins = condition.review_joins(schema="tcg", shime=True)
+    assert "cr_p.id" in joins and joins.count("OFFSET 0") == 3  # コメント1・cr_data 1・cr_shime 1（足していない）
+    assert joins.count("cr_prev") == 2 and joins.count("cr_n1x.id") == 1  # cr_prev の参照も cr_n1x の参照も1か所だけ（コメントの1語を含む）
+    assert "cr_n1" not in condition.review_joins(schema="tcg", shime=False) and "cr_prev" not in condition.review_joins(schema="tcg", shime=False)
+
+
+def test_latest_stock_cte_is_in_source_cte_and_window_matches_the_partner_window():  # (pp)
+    joins = condition.review_joins(schema="tcg", shime=True)
+    window = f"line_posted_at >= NOW() - make_interval(hours => {condition.SHIME_STOCK_WINDOW_HOURS})"
+    assert f"cr_sm.{window}" in joins and f"cr_n1.{window}" in condition.source_cte(schema="tcg")  # 相手の条件と同じ式
+    assert condition.source_cte(schema="tcg").startswith("WITH cr_prev AS MATERIALIZED (")
+    assert "cr_prev" not in condition.source_cte(schema="tcg", latest_stock=False)  # shime=False の呼び出し側は文字列が変わらない

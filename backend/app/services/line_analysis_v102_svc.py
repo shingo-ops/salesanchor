@@ -874,18 +874,38 @@ def _has_human_judgement(decision: Decisions | None) -> bool:
     return decision is not None and (decision.product_id is not None or decision.condition_id is not None)
 
 
+# 単位不明の理由（gemini_raw_copy_v101._REVIEW_UNIT_UNKNOWN と同じ値。前例 v102_buyback_unit_svc.py:42）
+REASON_UNIT_UNKNOWN = "unit_unknown"
+
+
+def _with_target_unit(values: dict, targets: list[dict]) -> dict:
+    """〆の件に単位が無く、完売の相手の単位が1種類に決まるとき、その単位を写して unit_unknown を外す（元の values は変えない。design.md §13-3 C）。"""
+    units = {(t.get("unit_id"), t.get("unit_canonical") or "") for t in targets}
+    if values["unit_id"] is not None or values["unit_canonical"] is not None or len(units) != 1:
+        return values
+    (unit_id, unit_canonical), = units
+    if unit_id is None or not unit_canonical:
+        return values
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r != REASON_UNIT_UNKNOWN]
+    return {
+        **values, "unit_id": int(unit_id), "unit_canonical": unit_canonical, "unit_resolved": True,
+        "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining),
+    }
+
+
 def _apply_soldout_targets(
     values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str],
     excluded_ids: frozenset[int] = frozenset(),
 ) -> dict:
-    """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。
+    """〆の件の状態を、先頭の完売の相手の状態にする（元の values は変えない）。単位が無い件は、相手の単位が1種類なら写す（§13-3 C）。
 
-    相手が無い件・人の判断（商品または状態）がある件・状態の名前が引けない件は上書きしない（何も外さない）。
+    相手が無い件・人の判断（商品または状態）がある件は上書きしない（何も外さない）。状態の名前が引けない件は状態の理由を外さない（単位の写しは先に済む）。
     上書きしたときは、人の状態判断（_apply_decisions）と同じ理由 CONDITION_REVIEW_REASONS を外し、空になれば要確認を外す。
     """
     targets = item.get("soldout_targets") or []
     if not targets or _has_human_judgement(decision):
         return values
+    values = _with_target_unit(values, targets)
     condition_id = targets[0]["condition_id"]
     canonical = canonicals.get(condition_id)
     if canonical is None:
@@ -893,7 +913,7 @@ def _apply_soldout_targets(
     basis = item.get("soldout_target_basis") or CONDITION_BASIS_SOLDOUT_REF
     overwritten = {**values, "condition_id": condition_id, "condition_canonical": canonical, "condition_basis": basis}
     if canonical.startswith(CONDITION_UNDECIDED_PREFIX) or condition_id in excluded_ids:
-        return overwritten  # 決まっていない状態を引き継いだだけなので、理由も needs_review も変えない
+        return overwritten  # 決まっていない状態を引き継いだだけなので、状態の理由も needs_review も変えない（単位の写しの分は済んでいる）
     remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in CONDITION_REVIEW_REASONS]
     return {**overwritten, "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining)}
 
@@ -1349,7 +1369,8 @@ def _inherit_price(session: Session, extraction_job_id: str, row, values: dict, 
 
 _STOCK_ITEMS_SQL = """
     SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id,
-           COALESCE(ar.condition_canonical, '') AS condition_canonical
+           COALESCE(ar.condition_canonical, '') AS condition_canonical,
+           ar.unit_id, COALESCE(ar.unit_canonical, '') AS unit_canonical
     FROM {schema}.extraction_jobs ej
     JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
     JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
@@ -1397,7 +1418,7 @@ def _load_stock_items(session: Session, message_ids: list[str]) -> dict[str, tup
         found.setdefault(str(r.source_message_id), []).append(
             StockItem(
                 _stock_lines(r.source_lines, r.line_start, r.line_end), int(r.product_id), int(r.condition_id),
-                str(r.condition_canonical or ""),
+                str(r.condition_canonical or ""), int(r.unit_id) if r.unit_id is not None else None, str(r.unit_canonical or ""),
             )
         )
     return {k: tuple(v) for k, v in found.items()}
