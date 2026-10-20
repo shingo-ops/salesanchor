@@ -27,7 +27,7 @@
 - 状態マスタ（line_conditions、ADR-1007 の様式。ADR-1031 で promo_pack の行を足した記録 SQL を探し、列と書き方をそろえる）に 2 行を足す。
   - With booklet：群 booklet、適用区分 ブックレット系、KEYWORD、当てる語なし、priority 10、value_rank 1、単位 Booklet（id 17）、OUTPUT。
   - Without booklet：群 booklet、適用区分 ブックレット系、REGEX `(?i)((ブックレット|冊子)[\s　]*(無し|なし|抜き|欠品|欠け)|(?<![a-z])(no|without)[\s　]+booklet)`、priority 2、value_rank 2、単位は空、OUTPUT。
-  - code は、今ある最大の CN 番号の次から 2 つ。precheck で番号と英語名が重ならないことを確かめる。
+  - code は CN0023（With booklet）・CN0024（Without booklet）を固定で書く。line_conditions.code には画面が自動で作る CN+14 桁の日時の値もあるため、最大値からの採番はしない（2026-10-20 dryrun で桁あふれ）。precheck で番号と英語名が重ならないことを確かめる。
 - 区分マスタ（tcg_product_categories）に 1 行を足す：`PC_BOOKLET`、表示名 `Booklet`、kubun_type `ブックレット系`。
 - 商品 440415 の区分を、ブックレット系にする。WHERE には `id=440415 AND 今の区分 id=2` を書き、更新件数が 1 でなければ 1/0 で止める。
 - 05_target_jobs：440415 の v102 の現行行を持つ job **だけ**。外す商品は無い（便1 の入れ忘れの再発防止。design「便1 の結果」K4）。対象の job 数を precheck で出す。
