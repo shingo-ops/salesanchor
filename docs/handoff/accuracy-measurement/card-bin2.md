@@ -25,7 +25,7 @@ python3 -I scripts/accuracy/score_v102.py \
 ```
 
 - `--gold`: 正解表。タブ区切りで1行目は見出し。列は `投稿id, price_line, lines, 許容する行, E2_price, E3_quantity, A1_product_id, A2_condition, A3_unit, A4_status, A5_ship, A4根拠, 迷い, 除外, 裁定根拠, PO確認`。
-- `--snapshot-dir`: `<投稿id>.tsv` が投稿ごとに並ぶフォルダ。1行目は見出しで、システム結果の写しが入っている。使う列は `extraction_item_id, line_start, line_end, source_lines, raw_price, raw_quantity, is_current, product_id, condition_canonical, unit_canonical, status, ship_ja, price_normalized, quantity_normalized, exclusion`。見出しは名前で引く（列番号の直書きは禁止）。必要な列が無ければ、エラーで止める。
+- `--snapshot-dir`: `<投稿id>.tsv` が投稿ごとに並ぶフォルダ。1行目は見出しで、システム結果の写しが入っている。使う列は `extraction_item_id, line_start, line_end, source_lines, raw_price, raw_quantity, product_id, condition_canonical, unit_canonical, status, ship_ja, price_normalized, quantity_normalized, exclusion`。見出しは名前で引く（列番号の直書きは禁止）。必要な列が無ければ、エラーで止める。
 - `--out-dir`: 出力先。リポジトリの中のパス（`git rev-parse --show-toplevel` の配下）が指定された場合は、拒否して止める（社外秘の流出を防ぐため）。
 
 ## 3. 採点の決まり
