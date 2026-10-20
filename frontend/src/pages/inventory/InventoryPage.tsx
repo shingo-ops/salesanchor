@@ -12,15 +12,13 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
-import { ContentToolbar } from "../../components/ContentToolbar";
 import { HoverCardHost } from "../../components/HoverCard";
 import InventoryFilterPanel from "./InventoryFilterPanel";
+import InventoryToolbar from "./InventoryToolbar";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Drawer } from "../../components/Drawer";
-import { TextFieldControl } from "../../components/TextField";
-import { MultiSelect } from "../../components/MultiSelect";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
@@ -55,8 +53,6 @@ interface InventoryListResponse {
 
 const PER_PAGE = 50;
 
-// 並び替えプルダウンの値（`${sort}:${order}`）。
-const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"];
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -208,20 +204,19 @@ export default function InventoryPage() {
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
       }
-      // ADR-093 表示条件（フィルタ有効時のみ適用）
-      if (filterEnabled && showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
+      // コンディション・数量・単価はツールバーの入力で、有効化スイッチに関わらず常に適用する。
+      if (showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
+      // ADR-093 表示条件（形態・在庫/予約はフィルタ有効時のみ適用）
       if (filterEnabled && showUnits.size > 0) params.set("unit_in", Array.from(showUnits).join(","));
       if (filterEnabled && showOfferTypes.size > 0) params.set("offer_type_in", Array.from(showOfferTypes).join(","));
-      if (filterEnabled) {
-        const qmin = toNonNegInt(qtyMin);
-        const qmax = toNonNegInt(qtyMax);
-        const pmin = toNonNegInt(priceMin);
-        const pmax = toNonNegInt(priceMax);
-        if (qmin !== null) params.set("qty_min", String(qmin));
-        if (qmax !== null) params.set("qty_max", String(qmax));
-        if (pmin !== null) params.set("price_min", String(pmin));
-        if (pmax !== null) params.set("price_max", String(pmax));
-      }
+      const qmin = toNonNegInt(qtyMin);
+      const qmax = toNonNegInt(qtyMax);
+      const pmin = toNonNegInt(priceMin);
+      const pmax = toNonNegInt(priceMax);
+      if (qmin !== null) params.set("qty_min", String(qmin));
+      if (qmax !== null) params.set("qty_max", String(qmax));
+      if (pmin !== null) params.set("price_min", String(pmin));
+      if (pmax !== null) params.set("price_max", String(pmax));
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
       if (seq !== loadSeqRef.current) return;
       setItems(d.items);
@@ -376,6 +371,10 @@ export default function InventoryPage() {
     setSelectedSupplierIds(next);
     setPage(1);
   };
+  const onConditionChange = (next: string[]) => {
+    setShowConditions(new Set(next));
+    setPage(1);
+  };
   const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
   const toggleHiddenCategory = (c: string) => {
     setHiddenCategories((prev) => {
@@ -434,86 +433,47 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* ツールバー: 検索窓 / 検索 / リセット / カテゴリー / 詳細フィルタ / 発注書 */}
-        <ContentToolbar
-          left={
-            <>
-              <TextFieldControl
-                type="search"
-                className="field-h-md field-w-md"
-                placeholder={t("inventory.view.searchNameCode")}
-                data-testid="inventory-search"
-                value={searchQ}
-                onChange={(e) => {
-                  setSearchQ(e.target.value);
-                  setPage(1);
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-              />
-              <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
-                {t("inventory.resetSort")}
-              </Button>
-              <Button
-                variant={freshOnly ? "primary" : "secondary"}
-                size="sm"
-                layoutClassName="field-h-md"
-                type="button"
-                data-testid="inventory-fresh-toggle"
-                aria-pressed={freshOnly}
-                disabled={freshWindowHours === undefined}
-                onClick={() => { setFreshOnly((v) => !v); setPage(1); }}
-              >
-                {freshWindowHours === undefined ? t("inventory.view.freshOnly", { hours: "" }) : t("inventory.view.freshOnly", { hours: freshWindowHours })}
-              </Button>
-              <SelectControl
-                size="sm"
-                className="field-h-md"
-                data-testid="inventory-sort-menu"
-                aria-label={t("inventory.sortMenu.placeholder")}
-                placeholder={t("inventory.sortMenu.placeholder")}
-                value={SORT_MENU_VALUES.includes(`${sortField}:${sortDir}`) ? `${sortField}:${sortDir}` : ""}
-                onChange={(e) => {
-                  const [field, dir] = e.target.value.split(":");
-                  if (!field) {
-                    setSortField("release_date");
-                    setSortDir("desc");
-                  } else {
-                    setSortField(field);
-                    setSortDir(dir === "asc" ? "asc" : "desc");
-                  }
-                  setPage(1);
-                }}
-                options={[
-                  { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
-                  { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
-                  { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
-                ]}
-              />
-              {!isMobile && (
-                <MultiSelect
-                  testId="inventory-supplier-filter"
-                  label={t("inventory.supplierFilter.label")}
-                  options={supplierOptions}
-                  selected={selectedSupplierIds}
-                  onChange={onSupplierChange}
-                  clearLabel={t("inventory.supplierFilter.clear")}
-                  allLabel={t("inventory.supplierFilter.all")}
-                  countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
-                />
-              )}
-              <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
-                type="button"
-
-                data-testid="inventory-filter-toggle"
-                aria-expanded={showFilterPanel}
-                aria-pressed={filterEnabled}
-                onClick={() => setShowFilterPanel((v) => !v)}
-              >
-                {t("inventory.filterPanel.button")}
-              </Button>
-            </>
+      {/* ツールバー（PC は2段・スマホは1段。InventoryToolbar） */}
+      <InventoryToolbar
+        isMobile={isMobile}
+        searchQ={searchQ}
+        onSearchChange={(v) => { setSearchQ(v); setPage(1); }}
+        onSearchEnter={runSearch}
+        onReset={resetAll}
+        freshOnly={freshOnly}
+        freshWindowHours={freshWindowHours}
+        onFreshToggle={() => { setFreshOnly((v) => !v); setPage(1); }}
+        sortField={sortField}
+        sortDir={sortDir}
+        onSortMenuChange={(value) => {
+          const [field, dir] = value.split(":");
+          if (!field) {
+            setSortField("release_date");
+            setSortDir("desc");
+          } else {
+            setSortField(field);
+            setSortDir(dir === "asc" ? "asc" : "desc");
           }
-        />
+          setPage(1);
+        }}
+        supplierOptions={supplierOptions}
+        selectedSupplierIds={selectedSupplierIds}
+        onSupplierChange={onSupplierChange}
+        conditionFacet={conditionFacet}
+        showConditions={showConditions}
+        onConditionChange={onConditionChange}
+        qtyMin={qtyMin}
+        setQtyMin={(v) => { setQtyMin(v); setPage(1); }}
+        qtyMax={qtyMax}
+        setQtyMax={(v) => { setQtyMax(v); setPage(1); }}
+        priceMin={priceMin}
+        setPriceMin={(v) => { setPriceMin(v); setPage(1); }}
+        priceMax={priceMax}
+        setPriceMax={(v) => { setPriceMax(v); setPage(1); }}
+        filterEnabled={filterEnabled}
+        showFilterPanel={showFilterPanel}
+        onFilterPanelToggle={() => setShowFilterPanel((v) => !v)}
+      />
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
@@ -533,13 +493,13 @@ export default function InventoryPage() {
           toggleHiddenColumn={toggleHiddenColumn}
           conditionFacet={conditionFacet}
           showConditions={showConditions}
-          setShowConditions={setShowConditions}
           unitFacet={unitFacet}
           showUnits={showUnits}
           setShowUnits={setShowUnits}
           offerTypes={OFFER_TYPES}
           showOfferTypes={showOfferTypes}
           setShowOfferTypes={setShowOfferTypes}
+          onConditionChange={onConditionChange}
           qtyMin={qtyMin}
           setQtyMin={setQtyMin}
           qtyMax={qtyMax}

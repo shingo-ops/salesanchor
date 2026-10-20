@@ -162,3 +162,15 @@ PO 決定（2026-10-20「カード版でこの仕様で決定」）。前の改�
 - 反映: アプリ: 本 PR。GAS: テスト版・本番版の番号は反映後に追記する。
 - 戻し方: アプリは PR を revert（前の便の「…」＋ `title` に戻る）。GAS はテストを版28、本番を版18へ redeploy する。
 - 記録: `docs/handoff/inventory-name-hover-card/`（recon・design・審査）。
+
+## 改訂 2026-10-20（3）（上部の検索・絞り込み・並び替えを2段に並べる）
+
+PO 決定（2026-10-20「1」。この形で、アプリ・閲覧ページ・在庫一覧の3つをそろえる）。前の節の本文は書き換えない。
+
+- 内容: パソコン幅で、1段目に [検索][価格 最低〜最高][数量 最小〜最大]、2段目に [並び替え][コンディション][提供者]（アプリはその右に詳細フィルタ）、右端に [24時間以内][リセット]。境目はアプリ・閲覧ページが 768px、GAS は今の 1280px（GAS はリセットの位置に「更新」）。スマホ幅は3画面とも今のまま。
+- アプリの価格・数量・状態（コンディション）は「フィルタを有効化」に関係なく常に効く（ADR-093 の表示条件のうち、この3つだけ有効化スイッチから外す）。保存先は今の `/me/inventory-filters` の同じ項目。形態・在庫/予約・シリーズ除外は今どおり有効化スイッチ付き。
+- 閲覧ページにアプリと同じ動きのリセット（検索語・並び）を足す。
+- 正本: 金型 `frontend/src/components/ContentToolbar.tsx`（2段目の枠と範囲入力。規格は `docs/specs/design-system/component-ssot/page-header-v2/design.md` §2.5）、`frontend/src/pages/inventory/InventoryToolbar.tsx`、`frontend/src/pages/viewer/InventoryView.tsx`。GAS の grid は写し。
+- 反映: アプリ: 本 PR。GAS: 反映後に版番号を追記する。
+- 戻し方: アプリは PR を revert。GAS はテストを版29、本番を版19へ redeploy する。
+- 記録: `docs/handoff/inventory-toolbar-two-rows/`（recon・design・審査）。

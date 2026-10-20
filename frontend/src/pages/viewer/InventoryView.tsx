@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ContentToolbar, ContentToolbarRange } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
 import { HoverCardHost } from "../../components/HoverCard";
@@ -117,12 +118,80 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
     />
   );
 
+  const conditionSelect = (
+    <MultiSelect
+      testId="viewer-condition-filter"
+      label={t("viewer.filter.condition")}
+      options={conditionOptions}
+      selected={conditions}
+      onChange={reset(setConditions)}
+      clearLabel={t("viewer.filter.clear")}
+      allLabel={t("viewer.filter.all")}
+      countLabel={(n) => t("viewer.filter.count", { count: n })}
+    />
+  );
+  const sortMenuValue = `${sortKey}:${sortDir}`;
+  const searchField = (
+    <TextFieldControl
+      type="search"
+      className="field-h-md field-w-md"
+      placeholder={t("viewer.search.placeholder")}
+      aria-label={t("viewer.search.placeholder")}
+      data-testid="viewer-search"
+      value={query}
+      onChange={(e) => reset(setQuery)(e.target.value)}
+    />
+  );
+  const freshButton = (
+    <Button
+      variant={freshOnly ? "primary" : "secondary"}
+      size="sm"
+      type="button"
+      aria-pressed={freshOnly}
+      data-testid="viewer-fresh-toggle"
+      onClick={() => reset(setFreshOnly)(!freshOnly)}
+    >
+      {t("viewer.freshOnly", { hours: data.fresh_window_hours })}
+    </Button>
+  );
+  const sortMenu = (
+    <SelectControl
+      size="sm"
+      aria-label={t("viewer.sort.placeholder")}
+      placeholder={t("viewer.sort.placeholder")}
+      data-testid="viewer-sort-menu"
+      value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
+      onChange={(e) => {
+        const [k, d] = e.target.value.split(":");
+        if (!k) {
+          setSortKey(DEFAULT_SORT_KEY);
+          setSortDir(DEFAULT_SORT_DIR);
+        } else {
+          setSortKey(k);
+          setSortDir(d === "asc" ? "asc" : "desc");
+        }
+        setPage(1);
+      }}
+      options={[
+        { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
+        { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
+        { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },
+      ]}
+    />
+  );
+  // リセット: 検索語・並び（既定）・ページを戻す（アプリのリセットと同じ範囲）
+  const resetAll = () => {
+    setQuery("");
+    setSortKey(DEFAULT_SORT_KEY);
+    setSortDir(DEFAULT_SORT_DIR);
+    setPage(1);
+  };
+
   const changeLang = (lang: ViewerLang) => {
     saveLocaleCookie(lang);
     void i18n.changeLanguage(lang);
   };
   const lang: ViewerLang = i18n.language === "en" ? "en" : "ja";
-  const sortMenuValue = `${sortKey}:${sortDir}`;
 
   return (
     <>
@@ -175,54 +244,61 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
           />
         )}
 
-        <div className="viewer-toolbar">
-          <TextFieldControl
-            type="search"
-            className="field-h-md field-w-md"
-            placeholder={t("viewer.search.placeholder")}
-            aria-label={t("viewer.search.placeholder")}
-            data-testid="viewer-search"
-            value={query}
-            onChange={(e) => reset(setQuery)(e.target.value)}
+        {isMobile ? (
+          <div className="viewer-toolbar">
+            {searchField}
+            {freshButton}
+            {sortMenu}
+            <Button variant="secondary" size="sm" type="button" data-testid="viewer-filter-toggle" onClick={() => setDrawerOpen(true)}>
+              {t("viewer.filter.button")}
+            </Button>
+          </div>
+        ) : (
+          <ContentToolbar
+            left={
+              <>
+                {searchField}
+                <ContentToolbarRange
+                  minValue={priceMin}
+                  maxValue={priceMax}
+                  onMinChange={reset(setPriceMin)}
+                  onMaxChange={reset(setPriceMax)}
+                  minPlaceholder={t("viewer.range.priceMin")}
+                  maxPlaceholder={t("viewer.range.priceMax")}
+                  minAriaLabel={t("viewer.range.priceMin")}
+                  maxAriaLabel={t("viewer.range.priceMax")}
+                  testIdPrefix="viewer-price"
+                />
+                <ContentToolbarRange
+                  minValue={qtyMin}
+                  maxValue={qtyMax}
+                  onMinChange={reset(setQtyMin)}
+                  onMaxChange={reset(setQtyMax)}
+                  minPlaceholder={t("viewer.range.qtyMin")}
+                  maxPlaceholder={t("viewer.range.qtyMax")}
+                  minAriaLabel={t("viewer.range.qtyMin")}
+                  maxAriaLabel={t("viewer.range.qtyMax")}
+                  testIdPrefix="viewer-qty"
+                />
+              </>
+            }
+            bottomLeft={
+              <>
+                {sortMenu}
+                {conditionSelect}
+                {providerSelect}
+              </>
+            }
+            bottomRight={
+              <>
+                {freshButton}
+                <Button variant="secondary" size="sm" type="button" data-testid="viewer-reset" onClick={resetAll}>
+                  {t("viewer.resetView")}
+                </Button>
+              </>
+            }
           />
-          <Button
-            variant={freshOnly ? "primary" : "secondary"}
-            size="sm"
-            type="button"
-            aria-pressed={freshOnly}
-            data-testid="viewer-fresh-toggle"
-            onClick={() => reset(setFreshOnly)(!freshOnly)}
-          >
-            {t("viewer.freshOnly", { hours: data.fresh_window_hours })}
-          </Button>
-          <SelectControl
-            size="sm"
-            aria-label={t("viewer.sort.placeholder")}
-            placeholder={t("viewer.sort.placeholder")}
-            data-testid="viewer-sort-menu"
-            value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
-            onChange={(e) => {
-              const [k, d] = e.target.value.split(":");
-              if (!k) {
-                setSortKey(DEFAULT_SORT_KEY);
-                setSortDir(DEFAULT_SORT_DIR);
-              } else {
-                setSortKey(k);
-                setSortDir(d === "asc" ? "asc" : "desc");
-              }
-              setPage(1);
-            }}
-            options={[
-              { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
-              { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
-              { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },
-            ]}
-          />
-          {!isMobile && providerSelect}
-          <Button variant="secondary" size="sm" type="button" data-testid="viewer-filter-toggle" onClick={() => setDrawerOpen(true)}>
-            {t("viewer.filter.button")}
-          </Button>
-        </div>
+        )}
 
         <DataTable
           columns={columns}
@@ -249,19 +325,11 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
         />
       </main>
 
+      {isMobile && (
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("viewer.filter.title")}>
         <div className="viewer-filter-body">
           {isMobile && providerSelect}
-          <MultiSelect
-            testId="viewer-condition-filter"
-            label={t("viewer.filter.condition")}
-            options={conditionOptions}
-            selected={conditions}
-            onChange={reset(setConditions)}
-            clearLabel={t("viewer.filter.clear")}
-            allLabel={t("viewer.filter.all")}
-            countLabel={(n) => t("viewer.filter.count", { count: n })}
-          />
+          {conditionSelect}
           <div>
             <div>{t("viewer.filter.priceRange")}</div>
             <div className="viewer-filter-range">
@@ -310,6 +378,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
           </div>
         </div>
       </Drawer>
+      )}
       <HoverCardHost />
     </>
   );
