@@ -463,6 +463,23 @@ async def test_k4_sweep_keeps_topic_room_when_row_exists_and_no_rename():
     named.edit.assert_not_awaited()
 
 
+async def test_sweep_reads_topic_number_before_name():
+    ch = _text_channel(1, "trial-8")
+    ch.topic = _topic(7)
+    ch.edit = AsyncMock()
+    guild = _sweep_guild([ch])
+    seen = []
+
+    def _exec(stmt, params):
+        seen.append(params["id"])
+        return _Result(("鈴木", "1")) if params["id"] == 7 else _Result(None)
+
+    factory = _db_factory(_exec)
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
+    assert seen == [7]
+    ch.delete.assert_not_awaited()
+
+
 async def test_k5_renames_old_trial_room_once():
     ch = _text_channel(1, "trial-7")
     ch.edit = AsyncMock()

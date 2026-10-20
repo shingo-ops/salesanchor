@@ -387,7 +387,7 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
 async def sweep_orphan_rooms(guild: Any, db_factory: Any, config: ViewerDiscordConfig) -> int:
     """消された閲覧者の部屋を片付け、今の trial-<id> の部屋を LINE 名へ1回だけ直す。
 
-    部屋の番号は名前（trial-<id>）か説明（ROOM_TOPIC）から読む。1回の上限は
+    部屋の番号は説明（ROOM_TOPIC）を先に、無ければ名前（trial-<id>）から読む。1回の上限は
     消す10件・名前直し10件（別々に数える）。
     """
     category = guild.get_channel(int(config.ticket_category_id))
@@ -398,9 +398,9 @@ async def sweep_orphan_rooms(guild: Any, db_factory: Any, config: ViewerDiscordC
         if not isinstance(ch, discord.TextChannel):
             continue
         topic = ch.topic if isinstance(ch.topic, str) else None
-        m = _ROOM_NAME_RE.match(ch.name)
-        if m is None and topic is not None:
-            m = _ROOM_TOPIC_RE.fullmatch(topic)
+        m = _ROOM_TOPIC_RE.fullmatch(topic) if topic is not None else None
+        if m is None:
+            m = _ROOM_NAME_RE.match(ch.name)
         if m:
             rooms.append((ch, int(m.group(1))))
     missing: list[Any] = []
