@@ -515,7 +515,7 @@ ADR: 作らない（§9 と同じ理由。規則の正本は本書 12-3）。外
 
 ## 13. 改訂3 — 〆の残り3件（状態の書いていない〆・完売の語だけの余白行・〆の単位）（2026-10-20）
 
-状態: B・C は Reviewer（opus）APPROVE（ef159c150）。A は PO「2」を受けて §13-10 で設計し直し、Reviewer（opus）第3回 APPROVE（37048d94e）。PO 実装承認済み（2026-10-20「1」、§13-11）。実装はまだ。
+状態: B・C は Reviewer（opus）APPROVE（ef159c150）。A は PO「2」を受けて §13-10 で設計し直し、Reviewer（opus）第3回 APPROVE（37048d94e）。PO 実装承認済み（2026-10-20「1」、§13-11）。実装は PR #4574 でマージ済み（§13-12）。
 材料の原本: ~/CC報告ファイル-keep/shime-next3-20261020/（recon1〜recon4・カード。原文は社外秘のためこの文書に貼らない）。現在地は docs/handoff/shime-review-exclude/recon.md「改訂3」。
 
 ### 13-1. 目的と成功条件
@@ -879,3 +879,18 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 - PO の返事: 「1,推測無しで〆を正しく認識して完売判定できるようになっている？」。
 - これにより: A（§13-10）・B・C（§13-3）を1つの実装 PR（release/shime-next3-impl）で作る。T2-A1 でほかの行が出たら止めて PO へ上げる（§13-10-3）。
 - PO の問いへの答え（Opus）: 相手を決めるのは、最新の在庫の投稿の状態が1種類のとき（12g）か、取り残しが1種類のとき（12e）だけで、決めきれないもの（最新の投稿に状態が2つ以上・「全数」等の語・前の在庫なし）は相手を作らず、人の目と毎朝の点検（§12-8）に残す。60日の照合で残るのは、語を含む 2 行・原文から決められない 4 行・「全数」で一部だけ合う 1 行（§13-10-1）。
+
+### 13-12. 実装の記録（PR #4574、マージ 41c244716、2026-10-20 14:18Z）
+
+PO の指示（2026-10-20「推測は禁止して事実確認を怠らずに…確立したなら進める」）を受け、CI の statement timeout は再実行で通さず、原因を測ってから直した。生出力は ~/CC報告ファイル-keep/shime-next3-impl/（ci2・jit3・v4impl・item_path・review3）。
+
+- 【事実】A-2 を §13-10-2 の相関副問い合わせの形で入れた HEAD では、`backend/tests/test_tcg_result_order.py` の test_larger_result_set が CI で statement timeout になった。a0ab70802（run 39406055750）と 51f7da281（run 39421637301）で各1回。その間の 61dbd671b（run 39419924892）は合格（6982 passed、timeout 0行）で、61dbd671b→51f7da281 の差は試験ファイル `backend/tests/test_line_analysis_v102_svc.py` の21行追加だけ。つまり同じサービスの SQL で、通る回と落ちる回があった（ci2/runs.txt）。直近 40 回の CI では、この試験の timeout は本ブランチだけ。
+- 【事実】同じデータでの EXPLAIN の最上位 cost は main 19,412、51f7da281 18,075,667。cr_n1 の相関副問い合わせの見積もりが、500 行ぶん積まれた（実行は never executed）。PostgreSQL の JIT の閾値は jit_above_cost 100000 で、本番は jit=on・pg_jit_available()=true（ci2/jit_prod2.out）。CI は postgres:16 で jit の上書きなし（`.github/workflows/test.yml:122-123`）。
+- 【未確認】CI での JIT の実時間。sandbox-test は既存スクリプトしか回せず、測っていない。同じ SQL で合否が分かれた（上の 61dbd671b と 51f7da281）こともあり、timeout の原因が JIT かは確定していない。
+- 実装の形（3905188b4）: 〆より前の最新の在庫投稿を、チャネル×商品ごとに先に集める cr_prev（MATERIALIZED CTE、source_cte の先頭。`backend/app/services/tcg_condition_review_svc.py:71-81`）から引く。cr_prev に窓 `line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})` を置く。
+- 窓を足しても意味（§13-10-2）は変わらない理由: 相手の条件は同じ式の窓を持つ（同 :229）。本当の最新が窓の中ならそれが選ばれ、窓の外なら、それより前の投稿もすべて窓の外で、相手が0になる。この点はどちらの形でも同じ。試験 (oo)（60時間前→外れる）・(oo2)（40時間前→残る）・(pp)（窓の式の文字列が一致）・(nn)（cr_n1x の参照は1か所）が守る。在庫表の側（`backend/app/services/tcg_distribution_svc.py` の3か所）は latest_stock=False で、`review_joins(shime=False)` の SQL 文字列（fenced の真・偽の2本）は変更前と cmp で一致する（v4impl/snap.py）。`source_cte(latest_stock=False)` が変わらない根拠は cmp ではなく、コード（同 :97 の `prev=""`）と試験 (pp)。
+- 【事実】見積もり: CI のデータで 92,139（JIT の閾値未満）、本番で main 508,703／3905188b4 の形 467,584。
+- 【事実】本番の読み取り照合（NOW() を 2026-10-20 08:49Z に固定）: 51f7da281 の形との差0（直近4日248行・有効投稿50行）。main との差は 0c91e2e0・5642ad0b の2行だけ（偽→真）。一覧の所要時間は交互7回で main 11.72〜24.56秒、3905188b4 の形 3.23〜6.03秒。
+- 【事実】単品の道（context_sql item_only、交互7回の中央値）: 〆の行で main 174ms、3905188b4 203ms。在庫の行で 154ms、155ms。保存1回は4回呼ぶので、〆の行で 696→812ms。基準（1.2倍＋100ms＝935ms）以内。
+- 審査: Reviewer（opus）APPROVE on 51f7da281、続いて差分 51f7da281..3905188b4 を再審査して APPROVE on 3905188b4。CI は必須15件が合格。GO は PO の委任に基づき Claude Opus が発行した（ADR-1003。PR #4574 の GO記録）。
+- 残り: `backend/app/services/tcg_condition_review_svc.py:224` のコメントは「（cr_n1）」のままで、実体は cr_n1x／cr_prev。動きは変わらないので、次にこのファイルを触る便で直す。
