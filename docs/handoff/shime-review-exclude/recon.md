@@ -66,3 +66,11 @@ mode: handoff
 | U1 | 追加する相関副問い合わせの速さ（analysis_results の product_id・source_messages の supplier_channel_id の索引の有無） | 設計 §7 T3 で本番 ai_ro の実測（変更前後を同じ時刻に比べる）。遅くなれば停止 |
 | U2 | 丙の2行の元の投稿が本当に別の品か | 原文は未確認。設計は「自動で確かめられない行は残す」なので結論に影響しない |
 | U3 | 旧エンジン（tcg_analyzer_svc）の再解析が今どれだけ走っているか | 未確認。走っても新しい規則と同じ値を保存するだけ（設計 §6） |
+
+## 改訂2（2026-10-20）の現在地
+
+- 【事実】基準は origin/main d1f1b6ac7。本番は reader 鍵・ai_ro の読み取りだけ。生出力の原本は ~/CC報告ファイル-keep/shime-remaining-20261020/（recon4・recon5・recon6・review1。原文は社外秘のためこの文書に貼らない）。
+- 【事実】直近30日の「Sold out・excluded」の行 54 行のうち、要確認に出るのは 15 行。改訂2の式では 4 行（外れる 11・戻る 0）。7日では 14 → 4（recon6 sim-v2-count.out）。
+- 【事実】在庫表は差し替えられた投稿の is_current 行も出す（`backend/app/services/tcg_distribution_svc.py:316`）。在庫表 1087 行のうち 300 行（recon5 inactive.out）。
+- 【事実】外れる 11 行は、在庫表に同じ窓口・同じ商品・別の投稿の行が 0（まとめあり・なし。recon6 cross.out）。
+- 設計は docs/handoff/shime-review-exclude/design.md §12。
