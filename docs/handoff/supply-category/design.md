@@ -46,7 +46,7 @@
 | 7 | `backend/app/services/line_analysis_v102_svc.py:44`, `:646-649` `_SCOPED_GROUP_OF_KUBUN` | 3 つ | サプライ系 → supply を足す |
 | 8 | `backend/app/services/tcg_result_order.py:11` `VALUE_GROUP_ORDER` | 末尾は booklet | 末尾に `"supply"` を足す |
 | 9 | migration（構造だけ・新規） | CHECK は booklet まで | `supply` を足す。前例 `migrations/20261020_100000_line_conditions_value_group_add_booklet.sql` と同じく「既に supply を許していれば飛ばす」ガードを付ける（#4563 の教訓）。`scripts/run_all_migrations.sh` に登録する |
-| 10 | テスト | — | 新規 `backend/tests/test_supply_category.py`（受入 K1）。直してよい既存テストは 3 本だけ: `backend/tests/test_tcg_result_order.py` の固定値、`backend/tests/test_inventory_distribution_rows.py:107`, `:120-123`, `:270-284` の SQL の長さとハッシュ、`backend/tests/test_adr1035_booklet.py:153-154`（VALUE_GROUP_ORDER の末尾と全体の固定）。migration を 2 回流す確認は、既存 `backend/tests/test_line_conditions_value_group_rerun_pg.py` の流れ（booklet まで→supply、もう一度）を延ばす |
+| 10 | テスト | — | 新規 `backend/tests/test_supply_category.py`（受入 K1）。変更してよい既存テストは次の 4 本だけ。固定値を直すもの 3 本: `backend/tests/test_tcg_result_order.py`（:369, :372）、`backend/tests/test_inventory_distribution_rows.py:107`, `:120-123`, `:271-276` の SQL の長さとハッシュ、`backend/tests/test_adr1035_booklet.py:153-154`（VALUE_GROUP_ORDER の末尾と全体の固定）。流れを延ばすもの 1 本: `backend/tests/test_line_conditions_value_group_rerun_pg.py`（migration を booklet まで→supply、もう一度流して 2 回目も通ること） |
 | 11 | ADR | — | ADR-1035 に追補 What 6（サプライ系・What 2 の例外）を足し、`node scripts/generate-adr-index.js` で索引を作り直す（この設計 PR で済ませる） |
 
 実装カード（card.md、便1 の実装承認の後に作る）で、各行の変更前後のコードと、触らない範囲を決める。
@@ -110,7 +110,7 @@
 | 基準 | 検証方法 |
 |---|---|
 | K1 新しいテストが通ること（数量・価格は件を組み立てる層のテストで見る。`resolve_product_first` の戻り値には数量・価格が無い＝`gemini_raw_copy_v102_product_first.py:743-751`。v102 の数量・価格は Gemini の写しをそのまま使う＝`line_analysis_v102_svc.py:365`, `gemini_raw_copy_v101.py:939-940`）: サプライ系の商品で「100枚入 350円 在庫1,000」が 単位 Bag・状態 Supply・basis R10・数量 1000・価格 350 になる／サプライ系でない商品の「100枚入」は今と同じ Piece のまま／v6 の経路で supply の行が返らない／migration を 2 回流しても成功する | CI |
-| K2 既存のテストが通ること。直してよい既存テストは便1 #10 の 2 本の固定値だけ | CI と差分（ほかのテストファイルに変更が無いこと） |
+| K2 既存のテストが通ること。変更してよい既存テストは便1 #10 の 4 本だけ（固定値: test_tcg_result_order.py / test_inventory_distribution_rows.py / test_adr1035_booklet.py、流れを延ばす: test_line_conditions_value_group_rerun_pg.py） | CI と差分（この 4 本以外の既存テストファイルに変更が無いこと） |
 | K3 便1 の本番反映の後、v102 の結果が変わらないこと（サプライ系の商品が 0 件のため） | 反映前後で、任意の 3 job を再解析して差 0 行（reader で突き合わせ） |
 | K4 便2 の後、単位 UN0011・区分 PC_SUPPLY・状態 CN0025・作品「サプライ」・細分類 3 行・紐付け 3 行がそれぞれ 1 件ずつあり、ほかの行が変わっていないこと | 記録 SQL の 03_verify（前後の行数と全行の突き合わせ） |
 | K5 便3 の再解析の後、用品 4 行（5 投稿のうち現行のもの）が、それぞれの新しい商品・単位 Bag・状態 Supply になり、要確認タブから外れること | reader で読む。タブは tab_true の数え方で前後を比べる |

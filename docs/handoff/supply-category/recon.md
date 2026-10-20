@@ -18,7 +18,7 @@
 7. line_units.kubun に CHECK は migration に見つからない（表の CREATE 文は【未確認】）。Booklet（kubun 冊子系）を足したとき、コードは変えていない（backend に「冊子系」の文字列は無い）。
 8. 単位の表示: 在庫の分布は `unit_canonical` の文字列をそのまま返す（`backend/app/services/tcg_distribution_svc.py:343`）。まとめの表示だけ `COALESCE(name_ja, canonical, unit_canonical)`（`:267`）。単位ごとの i18n キーは ja.json / en.json に無い。→ Booklet は画面に「Booklet」と出ている。
 9. 状態の群の CHECK は migration `migrations/20261020_100000_line_conditions_value_group_add_booklet.sql`（冪等ガード付き）。登録は `scripts/run_all_migrations.sh:1030-1031` 付近。
-10. 群を足すときに触るコード: `backend/app/services/tcg_analyzer_svc.py:653`（SCOPED_VALUE_GROUPS）、`backend/app/services/line_analysis_v102_svc.py:44`, `:646-649`（_SCOPED_GROUP_OF_KUBUN）、`backend/app/services/tcg_result_order.py:11`（VALUE_GROUP_ORDER）。VALUE_GROUP_ORDER を変えると `backend/tests/test_inventory_distribution_rows.py:107`, `:119`, `:270-284` の SQL の長さとハッシュが変わる。
+10. 群を足すときに触るコード: `backend/app/services/tcg_analyzer_svc.py:653`（SCOPED_VALUE_GROUPS）、`backend/app/services/line_analysis_v102_svc.py:44`, `:646-649`（_SCOPED_GROUP_OF_KUBUN）、`backend/app/services/tcg_result_order.py:11`（VALUE_GROUP_ORDER）。VALUE_GROUP_ORDER を変えると `backend/tests/test_inventory_distribution_rows.py:107`, `:120-123`, `:271-276` の SQL の長さとハッシュが変わる。
 11. 画面: frontend に booklet を含むファイルは 0 件。区分の kubun_type は自由入力（`frontend/src/pages/product-categories/ProductCategoriesPage.tsx:218-222`）。
 12. 区分表 tcg_product_categories の使用中 id は 1, 2, 4, 9, 11, 13（13 = PC_BOOKLET）。
 13. 小分類 SUPPLY は product_lines id=9。細分類 product_formats で line_id=9 の行は 0 件（全行の line_id が空）。line_id を参照するのは管理 API の CRUD、`backend/app/routers/super_admin_product_lines.py:137-146` の削除可否、管理画面 `ProductFormatsMasterPanel.tsx` だけで、商品登録の検査（PRODUCT_FORMAT_GAME_MISMATCH）は line_id を見ない。細分類と作品の組は product_format_game_links で決まる。
