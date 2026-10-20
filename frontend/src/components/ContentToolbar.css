@@ -33,3 +33,33 @@
 .content-toolbar__right:empty {
   min-height: var(--field-h-md);
 }
+
+/* 2段（bottomLeft/bottomRight を渡したときだけ。従来の1段は上のルールのまま） */
+.content-toolbar--two-rows {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.content-toolbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.content-toolbar--two-rows .content-toolbar__left,
+.content-toolbar--two-rows .content-toolbar__right {
+  flex-wrap: wrap;
+}
+/* 範囲入力（ContentToolbarRange） */
+.content-toolbar__range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.content-toolbar__range-input {
+  width: var(--input-width-price);
+}
+.content-toolbar__range-sep {
+  color: var(--text-muted);
+}

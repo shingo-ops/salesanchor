@@ -1474,6 +1474,18 @@
       "freshOnly": "Last {{hours}} h",
       "searchNameCode": "Search by name or code"
     },
+    "conditionFilter": {
+      "label": "Condition",
+      "clear": "Clear selection",
+      "all": "All",
+      "count": "{{count}} selected"
+    },
+    "range": {
+      "priceMin": "Min price",
+      "priceMax": "Max price",
+      "qtyMin": "Min qty",
+      "qtyMax": "Max qty"
+    },
     "supplierFilter": {
       "label": "Supplier",
       "clear": "Clear selection",
@@ -1583,9 +1595,7 @@
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter).",
       "displayConditions": "Display conditions",
-      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all).",
-      "min": "Min",
-      "max": "Max"
+      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all)."
     },
     "search": {
       "placeholder": "Search by product name, card number, JAN, expansion code, or supplier alias",
