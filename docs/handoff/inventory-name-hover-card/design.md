@@ -169,6 +169,24 @@ HoverCard.css（値はすべてトークン。opacity 0/1 と scale は Popover.
 - docs/CC_UI_GOVERNANCE.md に金型の一覧があれば HoverCard を1行足す。無ければ足さず、その旨を報告する。
 - active-work.d に台帳1件を追加する。
 
+### 3-8 閲覧ページの JS 上限（300KB）に収める（CI 失敗を受けた追補 2026-10-20）
+- 事実（生出力 /tmp/CC報告ファイル/inventory-name-card/bundle/・bundle2/）:
+  - CI「Viewer bundle check」が失敗した。上限は frontend/scripts/check-viewer-bundle.js:21 の 300KB で、根拠は docs/handoff/gas-viewer-fresh-fast/design.md:163。
+  - origin/main は 298.8KB で、余裕は 1.2KB だった。HoverCard の分（+2.6KB）で 301.4KB になった。
+  - 閲覧ページが使うアイコンは4つだけ（DataTable.tsx:379-382 の並べ替え矢印2つ、Drawer.tsx:150・161 の X と外部リンク）。それでも、frontend/src/constants/icons.tsx が丸ごと本体との共有 chunk に入り、heroicons が72個・52.9KB 載っていた。
+- 方針: 上限は変えない（先例 design.md:509 と同じ。部品の側を直す）。表示は変えない。
+- 変更:
+  - 新規 frontend/src/constants/icons-base.tsx を作り、icons.tsx から次のものをそのまま移す。型（Icon・IconProps・LucideIcon）、`hi()`、ArrowUp・ArrowDown・X・ArrowTopRight、TABLE_ICONS。
+  - icons.tsx は、それらを icons-base から import して同じ名前で再 export する。既存の import 先は、どれも変えずに動く。
+  - アイコンの定義は icons-base の1か所だけに置く。二重定義はしない。
+  - DataTable.tsx・Drawer.tsx・Modal.tsx・Sheet.tsx の import 先だけを `../constants/icons-base` に変える。
+- 試算（一時 worktree、bundle2/try.diff）:
+  - viewer は 248.0KB（−53.4KB）で合格。
+  - 本体の入口 JS は +54.8KB になるが、共有 chunk が同じだけ減る。本体が読む合計は同じ。
+- 守り:
+  - アイコンを icons.tsx 以外から読むことを禁じる lint や ADR に反しないかを、実装の前に担当が確かめる。反するなら止めて報告する。
+  - tsc・vitest・check-viewer-bundle を流す。
+
 ## 4. 代替案
 - Tooltip を拡張する案: 文字列1つの API・黒い帯の見た目・既存の利用先（MessageReactionBadges）を変えることになる。影響が広がるので採らない。
 - Popover を使う案: クリック式で遅延・ホバーの仕組みがない。足すと制御式の API が崩れるので採らない。

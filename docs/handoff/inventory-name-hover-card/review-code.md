@@ -40,3 +40,18 @@
 - vitest: 修正前の対象3ファイルで 44 件 pass（/tmp/CC報告ファイル/inventory-name-card/impl/vitest.txt）。修正後（試験5つ目を追加し unmount の不具合を直した後）は3ファイル 45 件 pass（vitest3.txt）。eslint エラー0（lint3.txt）。
 - tsc: 変更したファイルのエラーは 0 件。エラー4件は、変更していないファイルに元からあるもの（tsc.txt）。
 - check:all・lint: 緑（check-all.txt・lint.txt）。
+
+## 追補: 閲覧ページの JS 上限（design §3-8）
+- CI の「Viewer bundle check」が失敗した（301.4KB、上限300KB）。§3-8 を設計し、担当に実装させた。
+- 差分（/tmp/CC報告ファイル/inventory-name-card/impl2/diff.txt）を確認した:
+  - ○ icons-base.tsx に、型・hi()・4アイコン・TABLE_ICONS を中身を変えずに移した。
+  - ○ icons.tsx は import して再 export する。二重定義はない。使わなくなった heroicons の import は消した。
+  - ○ DataTable・Drawer・Modal・Sheet の import 先だけを変えた。
+  - ○ eslint の no-restricted-imports（eslint.config.js:118-139）は lucide-react だけが対象で、反しない。
+- 検証（担当の実行結果）:
+  - viewer は 248.0KB で合格（bundle.txt）。
+  - tsc は変更したファイルで 0 件。
+  - eslint は警告 0。
+  - check:all は exit 0。
+  - vitest: 初回は Mac の高負荷による時間切れで 37 件が失敗した。失敗した 10 ファイルを再実行すると、242/242 件が合格した（vitest-rerun.txt）。全体の判定は CI で行う。
+- 判定: APPROVE

@@ -16,7 +16,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
-import { X, ArrowTopRight } from "../constants/icons";
+import { X, ArrowTopRight } from "../constants/icons-base";
 import "./Drawer.css";
 
 interface DrawerProps {
