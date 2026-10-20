@@ -1013,5 +1013,5 @@ review_design.md B-2 の文案をそのまま採用：部屋のはじめの案�
 
 ### 段11 実施記録（2026-10-21 追記。本文・名簿は書かない）
 - 便1 本番反映（PR #4577）：PO 原文「GO #4577」（2026-10-20）。マージ 14:42:01Z（9fd95cf75）。deploy 39441623714 success 14:48:15Z。14:49:22Z に CLI の dry_run（予定9鍵）→ seed（inserted 9）→ verify（9鍵とも exists/matches ○）。G-2 の条件（9件すべて○）を満たした。
-- 便2 実装済み（PR 番号は PR 作成後に記入）：PUT `/api/v1/super-admin/viewer-templates/{key}`、ページの編集・保存、送る側9件を DB 読みへ（11-10 B-2 の順番）、no_template、定数9件と専用関数・seed/verify CLI の削除。本番の観測（T8・T10）は反映後に Opus/PO が行う。
+- 便2 実装済み（PR #4581）：PUT `/api/v1/super-admin/viewer-templates/{key}`、ページの編集・保存、送る側9件を DB 読みへ（11-10 B-2 の順番）、no_template、定数9件と専用関数・seed/verify CLI の削除。本番の観測（T8・T10）は反映後に Opus/PO が行う。
 - 便2 の recon（実装後の実物、読む処理の file:line）：docs/handoff/gas-viewer-fresh-fast/stage11/recon.md（着手前）、docs/handoff/gas-viewer-fresh-fast/stage11/recon_bin2.md（実装後）。
