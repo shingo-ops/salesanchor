@@ -1,14 +1,15 @@
 /**
- * /super-admin/viewer-templates — 閲覧者向け文面のテンプレート一覧（ADR-1019 段11 便1・読むだけ）。
+ * /super-admin/viewer-templates — 閲覧者向け文面のテンプレート一覧と編集（ADR-1019 段11 便1・便2）。
  *
  * - 一覧は名前・送り方・いつ・最終更新の4列。台帳の9件が必ず出る（DB に行が無い鍵は「未登録」）
  * - 行を押すと右から詳細（名前・送り方・いつ・差し込み項目の説明・本文）が出る。「コピー」で copy_text を写す
- * - 編集は便2。is_super_admin=true のみアクセス可（Page 内で 403 ガード）
+ * - 本文は Drawer 内で編集して保存できる（PUT。開いた時の updated_at を expected_updated_at に送り、食い違えば 409）
+ * - is_super_admin=true のみアクセス可（Page 内で 403 ガード）
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -16,6 +17,7 @@ import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { EmptyState } from "../../components/EmptyState";
 import { Drawer } from "../../components/Drawer";
 import { Textarea } from "../../components/Textarea";
+import { Stack } from "../../components/Stack";
 
 interface TemplateItem {
   key: string;
@@ -26,6 +28,16 @@ interface TemplateItem {
   updated_at: string | null;
   updated_by_name: string | null;
 }
+
+// PUT が返す 422 の detail コード → i18n キー（superAdmin.viewerTemplates.*）
+const ERROR_KEYS: Record<string, string> = {
+  template_placeholders: "errorPlaceholders",
+  template_bad_syntax: "errorBadSyntax",
+  template_format_spec: "errorFormatSpec",
+  template_empty: "errorEmpty",
+  template_too_long: "errorTooLong",
+  template_line_name_prefix: "errorLineNamePrefix",
+};
 
 function formatDate(value: string | null): string | null {
   if (!value) return null;
@@ -43,6 +55,10 @@ export default function ViewerTemplatesPage() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<TemplateItem | null>(null);
   const [copied, setCopied] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (authLoading || !isSuperAdmin) return;
@@ -63,6 +79,45 @@ export default function ViewerTemplatesPage() {
       cancelled = true;
     };
   }, [authLoading, isSuperAdmin, t]);
+
+  const openDetail = (row: TemplateItem) => {
+    setCopied(false);
+    setSaved(false);
+    setSaveError("");
+    setDraft(row.body ?? "");
+    setDetail(row);
+  };
+
+  const save = async () => {
+    if (!detail || saving) return;
+    setSaving(true);
+    setSaved(false);
+    setSaveError("");
+    try {
+      // 開いた時の updated_at（未登録は null）を送る。食い違えば 409
+      const res = await api.put<TemplateItem>(`/super-admin/viewer-templates/${detail.key}`, {
+        body: draft,
+        expected_updated_at: detail.updated_at,
+      });
+      setDetail(res);
+      setDraft(res.body ?? "");
+      setSaved(true);
+      try {
+        const list = await api.get<{ items: TemplateItem[] }>("/super-admin/viewer-templates");
+        setItems(list.items);
+      } catch {
+        setError(t(`${f}.loadError`));
+      }
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) setSaveError(t(`${f}.conflict`));
+      else if (e instanceof ApiError && e.status === 404) setSaveError(t(`${f}.errorNotFound`));
+      else if (e instanceof ApiError && e.status === 422 && ERROR_KEYS[e.message]) {
+        setSaveError(t(`${f}.${ERROR_KEYS[e.message]}`));
+      } else setSaveError(t(`${f}.saveError`));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (authLoading) {
     return <div className="page">{t("common.loading")}</div>;
@@ -122,10 +177,7 @@ export default function ViewerTemplatesPage() {
           columns={columns}
           data={items}
           rowKey={row => row.key}
-          onRowClick={row => {
-            setCopied(false);
-            setDetail(row);
-          }}
+          onRowClick={openDetail}
           emptyState={<EmptyState title={t("common.noData")} size="compact" />}
         />
       )}
@@ -136,14 +188,24 @@ export default function ViewerTemplatesPage() {
         title={t(`${f}.detailTitle`)}
         footer={
           detail && (
-            <Button
-              variant="primary"
-              onClick={() => detail.copy_text !== null && copyDetail(detail.copy_text)}
-              disabled={detail.copy_text === null}
-              data-testid="viewer-templates-copy"
-            >
-              {copied ? t(`${f}.copied`) : t(`${f}.copy`)}
-            </Button>
+            <Stack direction="row" gap="2">
+              <Button
+                variant="primary"
+                onClick={() => { void save(); }}
+                disabled={saving || draft === (detail.body ?? "")}
+                data-testid="viewer-templates-save"
+              >
+                {saving ? t(`${f}.saving`) : t(`${f}.save`)}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => detail.copy_text !== null && copyDetail(detail.copy_text)}
+                disabled={detail.copy_text === null}
+                data-testid="viewer-templates-copy"
+              >
+                {copied ? t(`${f}.copied`) : t(`${f}.copy`)}
+              </Button>
+            </Stack>
           )
         }
       >
@@ -176,20 +238,30 @@ export default function ViewerTemplatesPage() {
               )}
             </div>
             <div className="form-row">
-              {detail.body === null ? (
-                <>
-                  <label>{t(`${f}.bodyLabel`)}</label>
-                  <div data-testid="viewer-templates-unregistered">{t(`${f}.unregistered`)}</div>
-                </>
-              ) : (
-                <Textarea
-                  label={t(`${f}.bodyLabel`)}
-                  value={detail.body}
-                  readOnly
-                  rows={10}
-                  fullWidth
-                  data-testid="viewer-templates-body"
-                />
+              <Textarea
+                label={t(`${f}.bodyLabel`)}
+                value={draft}
+                onChange={e => {
+                  setDraft(e.target.value);
+                  setSaved(false);
+                }}
+                rows={10}
+                fullWidth
+                helperText={t(`${f}.charCount`, { count: Array.from(draft).length })}
+                data-testid="viewer-templates-body"
+              />
+              {detail.body === null && (
+                <div data-testid="viewer-templates-unregistered">{t(`${f}.unregistered`)}</div>
+              )}
+              {saved && (
+                <div role="status" data-testid="viewer-templates-saved">
+                  {t(`${f}.saved`)}
+                </div>
+              )}
+              {saveError && (
+                <div className="error-message" role="alert" data-testid="viewer-templates-save-error">
+                  {saveError}
+                </div>
               )}
             </div>
           </div>

@@ -1,12 +1,13 @@
 """閲覧者向け文面のテンプレート（ADR-1019 段11 便1）。
 
 コードに持つのは「台帳」（9件の鍵・送り方・差し込み項目の集合・画面の名前の i18n キー）だけ。
-文面の本文は public.viewer_message_templates（DB）が正本。便1 は読むだけで、送る側からは使わない。
+文面の本文は public.viewer_message_templates（DB）が正本（便2 で送る側 9件も DB から読む。コードに文面の写しは持たない）。
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from string import Formatter
 from typing import Literal
 
@@ -15,7 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.discord_gateway import viewer_bot_texts
 
+logger = logging.getLogger(__name__)
+
 BODY_MAX_CHARS = 1800
+AUTO_MAX_CHARS = 2000  # Discord の1通の上限。自動で送る文は差し込み後にこれを超えたら送らない（N-3）
 _I18N = "superAdmin.viewerTemplates"
 
 
@@ -104,20 +108,100 @@ def build_copy_text(key: str, body: str) -> str | None:
     return body.format(**values)
 
 
-def seed_bodies() -> dict[str, str]:
-    """viewer_bot_texts.py の今の9定数（seed と verify が使う。便2 で消す）。"""
-    T = viewer_bot_texts
-    return {
-        "signup_request": T.SIGNUP_REQUEST,
-        "reissue_notice": T.REISSUE_NOTICE,
-        "reissue_notice_no_invite": T.REISSUE_NOTICE_NO_INVITE,
-        "room_welcome": T.ROOM_WELCOME,
-        "room_recreated": T.ROOM_RECREATED,
-        "notice_extended": T.NOTICE_EXTENDED,
-        "notice_activated": T.NOTICE_ACTIVATED,
-        "notice_suspended": T.NOTICE_SUSPENDED,
-        "interview_request": T.INTERVIEW_REQUEST,
-    }
+async def load_body(db: AsyncSession, key: str) -> str | None:
+    """DB の本文を読み、検査に通れば返す。行が無い・検査に通らないときは None（検査の例外は外へ出さない）。
+
+    DB そのものの失敗は呼び出し側へ上がる（握りつぶすと、開いたトランザクションが壊れたまま進むため）。
+    """
+    if key not in _BY_KEY:
+        return None
+    row = (
+        await db.execute(
+            text("SELECT body FROM public.viewer_message_templates WHERE key = :k"), {"k": key}
+        )
+    ).first()
+    if row is None:
+        logger.warning("viewer template missing: key=%s", key)
+        return None
+    body = row[0]
+    try:
+        validate(key, body)
+    except TemplateInvalid as exc:
+        logger.warning("viewer template invalid: key=%s code=%s", key, exc.code)
+        return None
+    return body
+
+
+def render(key: str, body: str, **values: object) -> str | None:
+    """検査済みの本文に値を差し込む。失敗は None（例外を外へ出さない）。
+
+    作り直し案内は、LINE名が空なら頭の「さん、」を外す。自動で送る文は差し込み後 2000 文字超で None。
+    手で送る文（コピー用）は長さで落とさない。
+    """
+    spec = _BY_KEY.get(key)
+    if spec is None:
+        return None
+    if spec.requires_line_name_prefix:
+        values = {**values, "line_name": str(values.get("line_name") or "").strip()}
+    try:
+        validate(key, body)
+        text_ = body.format(**{p: values[p] for p in spec.placeholders})
+    except (TemplateInvalid, KeyError, ValueError, IndexError, AttributeError):
+        logger.warning("viewer template render failed: key=%s", key)
+        return None
+    if spec.requires_line_name_prefix and not values["line_name"]:
+        text_ = text_.removeprefix("さん、")
+    if spec.send_mode == "auto" and len(text_) > AUTO_MAX_CHARS:
+        logger.warning("viewer template too long after render: key=%s len=%d", key, len(text_))
+        return None
+    return text_
+
+
+async def load_rendered(db: AsyncSession, key: str, **values: object) -> str | None:
+    """load_body と render をまとめたもの。読めない・検査に通らない・差し込めないときは None。"""
+    body = await load_body(db, key)
+    if body is None:
+        return None
+    return render(key, body, **values)
+
+
+class TemplateConflict(Exception):
+    """他の人が先に直した（または先に作った）。"""
+
+
+async def save_body(
+    db: AsyncSession,
+    key: str,
+    body: str,
+    expected_updated_at: datetime | None,
+    user_id: int,
+) -> None:
+    """本文を保存する（commit は呼び出し側）。検査に通らなければ TemplateInvalid、競合は TemplateConflict。
+
+    expected_updated_at が None: 行が無いときだけ INSERT（ON CONFLICT DO NOTHING で件数0なら競合）。
+    あり: updated_at が一致するときだけ UPDATE（比べるのは SQL。Python で文字列比較しない）。
+    """
+    validate(key, body)
+    if expected_updated_at is None:
+        res = await db.execute(
+            text(
+                "INSERT INTO public.viewer_message_templates (key, body, updated_by_user_id) "
+                "VALUES (:k, :b, :u) ON CONFLICT (key) DO NOTHING"
+            ),
+            {"k": key, "b": body, "u": user_id},
+        )
+    else:
+        if expected_updated_at.tzinfo is None:
+            expected_updated_at = expected_updated_at.replace(tzinfo=timezone.utc)
+        res = await db.execute(
+            text(
+                "UPDATE public.viewer_message_templates SET body = :b, updated_by_user_id = :u, "
+                "updated_at = now() WHERE key = :k AND updated_at = :expected"
+            ),
+            {"k": key, "b": body, "u": user_id, "expected": expected_updated_at},
+        )
+    if not res.rowcount:
+        raise TemplateConflict()
 
 
 async def list_rows(db: AsyncSession) -> list[dict]:

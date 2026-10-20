@@ -73,7 +73,7 @@ interface ReissueResult {
 
 /** 状態変更の応答のうち、部屋へのお知らせの結果（段10 便2）。 */
 interface StatusChangeResult {
-  room_notice?: "sent" | "failed" | "no_room" | null;
+  room_notice?: "sent" | "failed" | "no_room" | "no_template" | null;
   room_notice_text?: string | null;
 }
 
@@ -93,6 +93,7 @@ export default function ViewerAccountsPage() {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState("");
   const [roomNoticeText, setRoomNoticeText] = useState<string | null>(null);
+  const [roomNoticeNoTemplate, setRoomNoticeNoTemplate] = useState(false);
   const [pending, setPending] = useState<{ viewer: ViewerItem; action: Action } | null>(null);
   const [daysText, setDaysText] = useState("7");
   const [running, setRunning] = useState(false);
@@ -233,6 +234,7 @@ export default function ViewerAccountsPage() {
   const openAction = (viewer: ViewerItem, action: Action) => {
     setError("");
     setRoomNoticeText(null);
+    setRoomNoticeNoTemplate(false);
     setDaysText("7");
     setExtendMode("days");
     setDateText("");
@@ -260,6 +262,8 @@ export default function ViewerAccountsPage() {
       // 部屋に送れなかった（failed）か部屋が無い（no_room）ときだけ、送るはずだった文をコピーできるようにする
       const failed = res?.room_notice === "failed" || res?.room_notice === "no_room";
       setRoomNoticeText(failed && res?.room_notice_text ? res.room_notice_text : null);
+      // テンプレートの行が無く、部屋に送れなかった（状態は変わっている）
+      setRoomNoticeNoTemplate(res?.room_notice === "no_template");
       setPending(null);
       await load();
     } catch (e) {
@@ -399,6 +403,11 @@ export default function ViewerAccountsPage() {
       {error && (
         <div className="error-message" role="alert" data-testid="viewers-error">
           {error}
+        </div>
+      )}
+      {roomNoticeNoTemplate && (
+        <div className="error-message" role="alert" data-testid="viewers-room-notice-no-template">
+          {t(`${f}.roomNoticeNoTemplate`)}
         </div>
       )}
       {roomNoticeText && (

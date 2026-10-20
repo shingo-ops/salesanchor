@@ -1,14 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
 import ViewerTemplatesPage from "./ViewerTemplatesPage";
 
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
-  return { ...actual, api: { get: vi.fn() } };
+  return { ...actual, api: { get: vi.fn(), put: vi.fn() } };
 });
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 
@@ -99,7 +99,7 @@ it("opens a drawer on row click with name, send mode, when, placeholders and bod
   ]);
   const body = screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement;
   expect(body.value).toBe("body-reissue_notice\nline2");
-  expect(body.readOnly).toBe(true);
+  expect(body.readOnly).toBe(false);
 
   fireEvent.click(screen.getByTestId("viewer-templates-copy"));
   await waitFor(() => expect(writeText).toHaveBeenCalledWith("copy-reissue_notice"));
@@ -111,7 +111,7 @@ it("shows the unregistered label and disables copy when the body is null", async
   fireEvent.click(name.closest("tr") as HTMLElement);
   await screen.findByTestId("viewer-templates-detail");
   expect(screen.getByTestId("viewer-templates-unregistered").textContent).toBe("Not registered");
-  expect(screen.queryByTestId("viewer-templates-body")).toBeNull();
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("");
   expect((screen.getByTestId("viewer-templates-copy") as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByText("None")).toBeTruthy();
   fireEvent.click(screen.getByTestId("viewer-templates-copy"));
@@ -129,4 +129,96 @@ it("shows an error message when loading fails", async () => {
   vi.mocked(api.get).mockRejectedValue(new Error("x"));
   renderPage();
   expect((await screen.findByTestId("viewer-templates-error")).textContent).toBe("Could not load the templates");
+});
+
+async function openRow(key: string) {
+  const name = await screen.findByText(i18n.t(`superAdmin.viewerTemplates.names.${key}`));
+  fireEvent.click(name.closest("tr") as HTMLElement);
+  await screen.findByTestId("viewer-templates-detail");
+}
+
+function edit(value: string) {
+  fireEvent.change(screen.getByTestId("viewer-templates-body"), { target: { value } });
+}
+
+it("saves an edit with the opened updated_at, shows saved, and refreshes the list", async () => {
+  const saved = { ...ITEMS[4], body: "new body", copy_text: "new copy", updated_at: "2026-10-21T00:00:00Z" };
+  vi.mocked(api.put).mockResolvedValue(saved);
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS })
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? saved : i)) });
+  renderPage();
+  await openRow("room_recreated");
+  edit("new body");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-saved")).textContent).toBe("Saved");
+  expect(api.put).toHaveBeenCalledWith("/super-admin/viewer-templates/room_recreated", {
+    body: "new body",
+    expected_updated_at: "2026-10-20T00:00:00Z",
+  });
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("new body");
+  fireEvent.click(screen.getByTestId("viewer-templates-copy"));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("new copy"));
+});
+
+it("saves an unregistered row with expected_updated_at null", async () => {
+  vi.mocked(api.put).mockResolvedValue({ ...ITEMS[7], body: "hello", copy_text: null, updated_at: "2026-10-21T00:00:00Z" });
+  renderPage();
+  await openRow("notice_suspended");
+  edit("hello");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-saved");
+  expect(api.put).toHaveBeenCalledWith("/super-admin/viewer-templates/notice_suspended", {
+    body: "hello",
+    expected_updated_at: null,
+  });
+});
+
+it("shows the conflict message on 409", async () => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError("template_conflict", 409, "template_conflict"));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe(
+    i18n.t("superAdmin.viewerTemplates.conflict"),
+  );
+  expect(screen.queryByTestId("viewer-templates-saved")).toBeNull();
+});
+
+it.each([
+  ["template_placeholders", "errorPlaceholders"],
+  ["template_bad_syntax", "errorBadSyntax"],
+  ["template_format_spec", "errorFormatSpec"],
+  ["template_empty", "errorEmpty"],
+  ["template_too_long", "errorTooLong"],
+  ["template_line_name_prefix", "errorLineNamePrefix"],
+])("shows the reason for the 422 code %s", async (code, key) => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError(code, 422, code));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe(
+    i18n.t(`superAdmin.viewerTemplates.${key}`),
+  );
+});
+
+it("shows the generic save error for other failures", async () => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError("boom", 500, "boom"));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe("Could not save");
+});
+
+it("shows the character count by code points and keeps save disabled until edited", async () => {
+  renderPage();
+  await openRow("room_recreated");
+  expect((screen.getByTestId("viewer-templates-save") as HTMLButtonElement).disabled).toBe(true);
+  edit("a\u{1F600}b");
+  expect(screen.getByText("3 / 1800")).toBeTruthy();
+  expect((screen.getByTestId("viewer-templates-save") as HTMLButtonElement).disabled).toBe(false);
 });
