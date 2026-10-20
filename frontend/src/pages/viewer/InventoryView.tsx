@@ -32,8 +32,6 @@ import type { ViewerInventoryResponse } from "./types";
 
 interface InventoryViewProps {
   data: ViewerInventoryResponse;
-  onLogout: () => void;
-  onChangePassword: () => void;
 }
 
 /** ISO8601（UTC）→ 日本時間の HH:MM */
@@ -48,7 +46,7 @@ function formatUpdatedAt(iso: string): string {
   }).format(d);
 }
 
-export function InventoryView({ data, onLogout, onChangePassword }: InventoryViewProps) {
+export function InventoryView({ data }: InventoryViewProps) {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
 
@@ -211,12 +209,6 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
             { value: "en", label: t("viewer.language.en") },
           ]}
         />
-        <Button variant="secondary" size="sm" onClick={onChangePassword} data-testid="viewer-change-password">
-          {t("viewer.changePassword")}
-        </Button>
-        <Button variant="secondary" size="sm" onClick={onLogout} data-testid="viewer-logout">
-          {t("viewer.logout")}
-        </Button>
       </header>
 
       <main className="viewer-main">
