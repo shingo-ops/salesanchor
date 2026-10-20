@@ -1016,4 +1016,4 @@ def test_reissue_message_with_invite_uses_edited_body(pg, monkeypatch):  # noqa:
     assert resp.status_code == 200
     msg = resp.json()["message"]
     assert msg.startswith("fakeさん、直した招待つき案内 " + resp.json()["signup_code"])
-    assert msg.endswith("https://discord.gg/fakecode")
+    assert msg.endswith("https://discord.gg/fakecode?openExternalBrowser=1")
