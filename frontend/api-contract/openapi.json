@@ -36406,6 +36406,148 @@
         "title": "ViewerSignupRequest",
         "type": "object"
       },
+      "ViewerStatusChangeResponse": {
+        "description": "状態変更（activate／suspend／unsuspend／extend）の応答。部屋へのお知らせの結果つき。",
+        "properties": {
+          "created_at": {
+            "description": "登録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discord_channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋 ID",
+            "title": "Discord Channel Id"
+          },
+          "discord_channel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋を開く URL",
+            "title": "Discord Channel Url"
+          },
+          "discord_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord の利用者 ID",
+            "title": "Discord User Id"
+          },
+          "email": {
+            "description": "メールアドレス（小文字）",
+            "title": "Email",
+            "type": "string"
+          },
+          "flag_many_ips": {
+            "description": "目印: 24時間以内に3種類以上の IP からログイン",
+            "title": "Flag Many Ips",
+            "type": "boolean"
+          },
+          "flag_shared_ip": {
+            "description": "目印: 別の閲覧者と同じ IP からログイン",
+            "title": "Flag Shared Ip",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "閲覧者 viewer_accounts.id",
+            "title": "Id",
+            "type": "integer"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名",
+            "title": "Line Name",
+            "type": "string"
+          },
+          "room_notice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sent",
+                  "failed",
+                  "no_room"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へのお知らせの結果（unsuspend は null）",
+            "title": "Room Notice"
+          },
+          "room_notice_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へ送ろうとした文（送れなかったとき画面でコピーする）",
+            "title": "Room Notice Text"
+          },
+          "status": {
+            "description": "pending／verified／trial／active／suspended",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "お試しの期限",
+            "title": "Trial Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "line_name",
+          "status",
+          "created_at",
+          "flag_many_ips",
+          "flag_shared_ip"
+        ],
+        "title": "ViewerStatusChangeResponse",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -63195,7 +63337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63252,7 +63394,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63393,7 +63535,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63440,7 +63582,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
