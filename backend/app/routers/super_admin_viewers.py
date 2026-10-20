@@ -11,6 +11,7 @@ API:
   POST /api/v1/super-admin/viewers/{viewer_id}/unsuspend
   POST /api/v1/super-admin/viewers/{viewer_id}/extend
   POST /api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code
+  GET  /api/v1/super-admin/viewers/signup-request   （①申込のお願いの文を返す）
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
+from app.discord_gateway import viewer_bot_texts
 from app.models import User
 from app.services import viewer_admin
 from app.services.viewer_admin import ViewerAdminError
@@ -99,6 +101,11 @@ class ViewerReissueResponse(BaseModel):
     signup_code: str = Field(..., description="申込コード（XXXX-XXXX-XXXX-XXXX）")
     expires_at: datetime | str = Field(..., description="申込コードの有効期限")
     invite_url: str | None = Field(None, description="Discord 招待リンク（作れなければ null）")
+    message: str = Field(..., description="そのまま送れる案内文（招待には外部ブラウザの目印付き）")
+
+
+class SignupRequestResponse(BaseModel):
+    text: str = Field(..., description="①申込のお願いの文")
 
 
 def _http_error(exc: ViewerAdminError) -> HTTPException:
@@ -113,6 +120,15 @@ def _http_error(exc: ViewerAdminError) -> HTTPException:
 )
 async def list_viewers_endpoint(db: AsyncSession = Depends(get_db)):
     return {"items": await viewer_admin.list_viewers(db)}
+
+
+@router.get(
+    "/super-admin/viewers/signup-request",
+    response_model=SignupRequestResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def signup_request_endpoint():
+    return {"text": viewer_bot_texts.signup_request_text()}
 
 
 @router.get(
@@ -219,8 +235,13 @@ async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depend
         raise _http_error(exc) from None
     await db.commit()
     invite_url = await create_viewer_invite(db)  # commit の後（Discord を待つ間 DB を開けない）
+    item = await viewer_admin._get_item(db, viewer_id)
+    formatted_code = format_signup_code(code)
     return {
-        "signup_code": format_signup_code(code),
+        "signup_code": formatted_code,
         "expires_at": expires_at.isoformat(),
         "invite_url": invite_url,
+        "message": viewer_bot_texts.reissue_notice_text(
+            item.get("line_name"), formatted_code, expires_at, invite_url
+        ),
     }

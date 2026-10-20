@@ -38,6 +38,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/unsuspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
     ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
+    ("GET", "/api/v1/super-admin/viewers/signup-request", None),
 ]
 
 
@@ -78,7 +79,17 @@ async def _call(method, path, body):
 # ── 非 PG ─────────────────────────────────────────────────────
 
 
-async def test_non_super_admin_gets_403_on_all_seven_routes(override_user):
+async def test_signup_request_returns_text_for_super_admin(override_user):
+    from app.discord_gateway import viewer_bot_texts
+
+    override_user(_make_user(is_super_admin=True))
+    resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
+    assert resp.status_code == 200
+    assert resp.json() == {"text": viewer_bot_texts.signup_request_text()}
+    assert "?openExternalBrowser=1#signup" in resp.json()["text"]
+
+
+async def test_non_super_admin_gets_403_on_all_routes(override_user):
     override_user(_make_user(is_super_admin=False))
     for method, path, body in ROUTES:
         resp = await _call(method, path, body)
@@ -570,6 +581,8 @@ def test_reissue_pending_replaces_code_and_returns_invite(pg, monkeypatch):  # n
     body = resp.json()
     assert re.fullmatch(r"[0-9A-Z]{4}(-[0-9A-Z]{4}){3}", body["signup_code"])
     assert body["invite_url"] == "https://discord.gg/fakecode"
+    assert body["signup_code"] in body["message"]
+    assert "https://discord.gg/fakecode?openExternalBrowser=1" in body["message"]
     hashes = _signup_hashes(cur, vid)
     assert hashes == [signup_code_sha256(normalize_signup_code(body["signup_code"]))]
     assert old not in hashes
@@ -586,6 +599,7 @@ def test_reissue_invite_none_is_200_with_null(pg, monkeypatch):  # noqa: F811
     vid = _account(cur, "p2@x.com", "pending")
     resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
     assert resp.status_code == 200 and resp.json()["invite_url"] is None
+    assert "Discord への招待" not in resp.json()["message"]
     assert len(_signup_hashes(cur, vid)) == 1
 
 

@@ -234,6 +234,42 @@ it("copies the signup form URL and shows Copied", async () => {
   expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
 });
 
+it("copies the signup request message fetched from the API and shows Copied", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mockMixed();
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers/signup-request") return { text: "REQUEST TEXT" };
+    return { items: ITEMS };
+  });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(screen.getByRole("button", { name: "Copy signup request message" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("REQUEST TEXT"));
+  expect(api.get).toHaveBeenCalledWith("/super-admin/viewers/signup-request");
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
+});
+
+it("copies the reissue message from the result modal", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mockMixed();
+  vi.mocked(api.post).mockResolvedValue({
+    signup_code: "ABCD-EFGH-JKMN-PQRS",
+    expires_at: "2026-10-26T00:00:00Z",
+    invite_url: "https://discord.gg/fakecode",
+    message: "REISSUE MESSAGE",
+  });
+  renderPage();
+  await screen.findByText("Pen");
+  fireEvent.click(within(row("Pen")).getByRole("button", { name: "Reissue code and invite" }));
+  fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
+  await screen.findByTestId("viewers-reissue-code");
+  const label = screen.getByText(/^Message:/);
+  fireEvent.click(within(label).getByRole("button", { name: "Copy" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("REISSUE MESSAGE"));
+});
+
 it("shows Reissue on rows without a room (pending, trial, active) but not on suspended or roomed rows, confirms, posts and shows code, expiry and invite", async () => {
   mockMixed();
   vi.mocked(api.post).mockResolvedValue({
