@@ -515,7 +515,7 @@ ADR: 作らない（§9 と同じ理由。規則の正本は本書 12-3）。外
 
 ## 13. 改訂3 — 〆の残り3件（状態の書いていない〆・完売の語だけの余白行・〆の単位）（2026-10-20）
 
-状態: B・C は Reviewer（opus）APPROVE（ef159c150）。A は PO「2」を受けて §13-10 で設計し直し、Reviewer の審査はこれから。PO の実装承認は A・B・C まとめてまだ（PO 2026-10-20「1」「2」は設計の方向の返事で、実装の GO ではない）。
+状態: B・C は Reviewer（opus）APPROVE（ef159c150）。A は PO「2」を受けて §13-10 で設計し直し、Reviewer（opus）第3回 APPROVE（37048d94e）。PO の実装承認は A・B・C まとめてまだ（PO 2026-10-20「1」「2」は設計の方向の返事で、実装の GO ではない）。
 材料の原本: ~/CC報告ファイル-keep/shime-next3-20261020/（recon1〜recon4・カード。原文は社外秘のためこの文書に貼らない）。現在地は docs/handoff/shime-review-exclude/recon.md「改訂3」。
 
 ### 13-1. 目的と成功条件
@@ -869,5 +869,6 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 
 - Opus 自己審査（独立した第二者のレビューではない）: A-1 は 13-10-1 の 9 行・F5 の差 1 行と同じ条件で書いた。A-2 は測定の (i) より相手を多く数える形にしたので、真になる集合は測定の部分集合（包含関係）で、一覧の行を新たに外すことはない。
 - 未確認: 0c91e2e0・5642ad0b が設計の形でも真になること（T2-A2）。要確認の一覧の時間（T2-A2）。同じ時刻の投稿の有無（T2-A2）。
+- Reviewer（opus）審査 第3回（HEAD 37048d94e）: APPROVE（R2-1 が直り、新しい問題なし）。
 - Reviewer（opus）審査 第2回（HEAD cdbf31492）: REVISE。R2-1（F5 は上位集合ではない）→ 文を直し、T2-A1 の対象を basis を問わない形に明記。
 - Reviewer（opus）審査 第1回（HEAD 49119fc22）: REVISE。R-1（A-1 が 12d の後ろで本番の 22 行が 1 行も変わらない）→ 12g を 12d より先に置く形に直した。R-2（T2 が今の時刻に左右される）→ NOW() を測定の時刻に固定。R-3（(gg)(hh)(kk) の組み立て）→ 3種類・is_current=偽で書き直し。R-4（§13-9 の窓口の人名）→ ei に置き換え。軽い指摘（行番号・docstring・同じ時刻・NULL）も反映。
