@@ -10,7 +10,6 @@ from tests.test_super_admin_viewers import needs_ci_pg
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
 ROOT = Path(__file__).resolve().parents[2]
-M_RENAME = ROOT / "migrations/20260922_080000_rename_line_analysis_tables.sql"
 M_RANK = ROOT / "migrations/20261017_120000_line_conditions_value_rank.sql"
 M19 = ROOT / "migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql"
 M20 = ROOT / "migrations/20261020_100000_line_conditions_value_group_add_booklet.sql"
@@ -35,7 +34,9 @@ def test_widens_then_rerun_keeps_booklet(pg):  # noqa: F811
     cur.execute("SELECT to_regclass('public.line_conditions') IS NULL")
     assert cur.fetchone()[0], "使い捨て DB には line_conditions が無いはず"
     cur.execute("ALTER TABLE public.conditions DROP CONSTRAINT conditions_value_group_check")
-    cur.execute(M_RENAME.read_text())
+    # 20260922_080000:71-72 と同じ1文。fixture DB には line_units 等が既にあり migration 全体は流せないため。
+    # 後方互換の view（同 :81-83）は今回の検証に不要なので作らない。
+    cur.execute("ALTER TABLE public.conditions RENAME TO line_conditions")
     cur.execute(M_RANK.read_text())
     cur.execute(
         "SELECT table_type FROM information_schema.tables "
