@@ -70,7 +70,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 - ①で決まらなければ、便3 ができるまでは今の決め方のまま。
 - 帯の数字は既存の設定（`tcg_distribution_settings` の `unit_buyback_box_min`=0.5・`box_max`=2・`case_min`=6）を使い、Pack の上限 `unit_buyback_pack_max`=0.2 を足す。日数 `unit_buyback_max_age_days` は 7 → 30（試算で 7 日より正解 +8・外れ ±0）。
-- 試算では Pack の帯を「1 箱のパック数 n で割った値の 0.4〜1.6 倍」にする案（ii）も比べた。正解が 9 件減り外れは変わらない（社外秘 `v2/sim_v2.txt`）ので、単純な (i) r ≤ 0.2 を採る。
+- 試算では Pack の帯を「1 箱のパック数 n で割った値の 0.4〜1.6 倍」にする案（ii）も比べた。正解が 9 件減り外れは変わらない（社外秘 「v2/sim_v2.txt」）ので、単純な (i) r ≤ 0.2 を採る。
 
 ### B. 状態の決め方（単位が値段で決まったとき）
 状態の語が当たった「種類」を、値段で決まった単位の群の状態に写す。
@@ -84,7 +84,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 | シュリンクなし（CN0005） | CN0005 | 決めない（今のまま） | 決めない（今のまま） |
 
 - サーチ済の語（Searched box）が当たり、値段が Pack の帯の行は Searched pack・Pack にする。「サーチ済」は箱でもパックでも使う語で、PO の方針（パックも確定させる・状態の種類を写す）の範囲。試算では 4 行（120〜680 円）で、4 行とも原文はパック（今の Searched box・Box が誤り）。
-- 「決めない（今のまま）」の組は、値段と状態の語が食い違っている。今の決め方を残し、便UP の検査に任せる。試算では状態が語で決まった 474 行で、この組は 0 件（社外秘 `v2/state_cross.txt`。食い違い 4 件はすべて サーチ済×Pack で、表の対象）。
+- 「決めない（今のまま）」の組は、値段と状態の語が食い違っている。今の決め方を残し、便UP の検査に任せる。試算では状態が語で決まった 474 行で、この組は 0 件（社外秘 「v2/state_cross.txt」。食い違い 4 件はすべて サーチ済×Pack で、表の対象）。
 - 「未開封」「未サーチ」のように語で CN0003・CN0001・CN0007 に決まった行は「既定」と同じ種類にする。どれも各群の「手を付けていない」状態で、語が無い既定と意味が同じため（例: 未開封 @箱の 1/50 → Unsearched pack・Pack）。
 - **別の区分の状態の語も見る。** 箱系で解いた行に、箱以外の区分の状態の語（例: Opened case の「テープカット」、`backend/app/services/gemini_raw_copy_v102_product_first.py:653-665` の `_other_kubun_hits`）が当たると、状態は既定の Sealed box のまま `condition_multiple_candidates` が付き、当たった code は product_first の戻り値 `review_extra`（`backend/app/services/gemini_raw_copy_v102_product_first.py:638`・`:760`）に入り、件を組み立てるとき件の `review` 一覧へ `{"line": ..., "kind": "condition_multiple_candidates", "codes": [...]}` の形で混ぜ込まれる（`backend/app/services/gemini_raw_copy_v101.py:920`。件に `review_extra` の key は無い: `backend/app/services/gemini_raw_copy_v101.py:945-967`）。`apply_buyback_units` では `item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` を読む。`review_reasons` に `condition_multiple_candidates` があるのに codes が 1 つも取れない行は何もしない（理由も外さない）。種類は次のように決める。
   - 今の状態から決めた種類（上の表の行）と、`codes` の各 code の種類（同じ表で引く）を集める。今の状態の種類が「既定」（語なしの既定だけでなく、語で決まった CN0003・CN0001・CN0007 も含む。上の表の「既定」行と同じ定義）で `codes` がある行は、既定を数えず `codes` の種類だけを使う（例: 「未開封 テープカット」→ 今 CN0003・codes [CN0009] → 種類は開封の 1 つ）。
@@ -113,7 +113,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 ### 便1（時点）
 - `backend/app/services/line_analysis_v102_svc.py:1458-1468` の `_POSTED_AT_SQL`／`load_posted_date` の隣に、日時のまま返す `load_posted_at(session, extraction_job_id)` を足す（同じ SQL を使う。`source_messages.line_posted_at`）。
-- `backend/app/services/line_analysis_v102_svc.py:962` の `_buyback_units` の中で、対象がある（`backend/app/services/line_analysis_v102_svc.py:966` の判定が真）ときだけ、SAVEPOINT（`backend/app/services/line_analysis_v102_svc.py:969` の `session.begin_nested()`）の**中で** `load_posted_at` を 1 回呼び（失敗しても保存全体の取引を壊さない。今の except で「この投稿では決めない」になる）、`apply_buyback_units`（`backend/app/services/v102_buyback_unit_svc.py:194`）に `posted_at` を渡す。`posted_at` が None なら何もしない（今の values のまま）。reader で直近 30 日の 2525 job を数え、`line_posted_at` が NULL の job は 0（社外秘 `v5/null_posted.out`）。
+- `backend/app/services/line_analysis_v102_svc.py:962` の `_buyback_units` の中で、対象がある（`backend/app/services/line_analysis_v102_svc.py:966` の判定が真）ときだけ、SAVEPOINT（`backend/app/services/line_analysis_v102_svc.py:969` の `session.begin_nested()`）の**中で** `load_posted_at` を 1 回呼び（失敗しても保存全体の取引を壊さない。今の except で「この投稿では決めない」になる）、`apply_buyback_units`（`backend/app/services/v102_buyback_unit_svc.py:194`）に `posted_at` を渡す。`posted_at` が None なら何もしない（今の values のまま）。reader で直近 30 日の 2525 job を数え、`line_posted_at` が NULL の job は 0（社外秘 「v5/null_posted.out」）。
 - `backend/app/services/v102_buyback_unit_svc.py:155` の `load_medians` に `posted_at` を足し、`_MEDIAN_SQL`（`backend/app/services/v102_buyback_unit_svc.py:54-65`）を次の形にする。社外秘 「v3/sql/prod_form_median.sql」 の形で、1573 行すべて試算と一致を確かめ済み。
   - 変更前: `JOIN LATERAL (… WHERE l.shop_product_id = sp.id ORDER BY l.fetched_at DESC, l.id DESC LIMIT 1)` と `AND sp.last_seen_at >= now() - make_interval(days => :days)`
   - 変更後: LATERAL の中に `AND l.fetched_at <= :posted_at AND l.fetched_at >= :posted_at - make_interval(days => :days)` を足し、`sp.last_seen_at` の条件を消す。
@@ -175,7 +175,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 |  ↳ 食い違い | 4 | — | — | 4 件とも 120〜680 円の Searched box（実はパック。今の誤り） |
 
 - 外れ 1 件（商品 id 42、10/11、22,000 円、正解ラベル Pack・判定 Box・r 0.898）は、商品名に「パック」を含む箱で、正解ラベル側の誤りの疑い【推測】。外れ 0 を受入条件にはせず、置き換え試験で変わる行を原文で全件確かめる（K2）。
-- 試算の「語なし」は、価格の行に箱・カートン・パックの語が無いかを単純な語の照合で見たもの（社外秘 `v3/v3_base.py:67-72`）。コードの条件（上の便2）とは定義が違い、v102 は `unit_basis` を保存していないので件数の突き合わせはできない【未確認】。このため便2 の K2 は本物のコードを現行全件に当て、K6 で差を全件列挙する。
+- 試算の「語なし」は、価格の行に箱・カートン・パックの語が無いかを単純な語の照合で見たもの（社外秘「v3/v3_base.py」の 67〜72 行目）。コードの条件（上の便2）とは定義が違い、v102 は `unit_basis` を保存していないので件数の突き合わせはできない【未確認】。このため便2 の K2 は本物のコードを現行全件に当て、K6 で差を全件列挙する。
 - 決まらない 212 行の主因は「買取も自社の物差しも無い商品」（206 行）。②他社の販売価格が入ると減る見込み【推測】。
 
 ## 代替案
