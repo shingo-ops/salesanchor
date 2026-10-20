@@ -620,3 +620,72 @@ def test_reissue_trial_and_active_200_keep_state_suspended_409_linked_409(pg, mo
         async_url, "POST", f"/api/v1/super-admin/viewers/{pid}/reissue-signup-code", {}, super_admin=False
     )
     assert resp.status_code == 403
+
+
+# ── LINE名を直す（ADR-1019 段8） ──────────────────────────────
+
+
+async def test_non_super_admin_gets_403_on_patch_line_name(override_user):
+    override_user(_make_user(is_super_admin=False))
+    resp = await _call("PATCH", "/api/v1/super-admin/viewers/1", {"line_name": "新しい名前"})
+    assert resp.status_code == 403
+
+
+@needs_ci_pg
+def test_patch_line_name_trims_saves_and_keeps_other_fields(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "ln1@x.com", "trial", expires_in_days=5)
+    before = _api(async_url, "GET", "/api/v1/super-admin/viewers").json()["items"]
+    before_item = next(i for i in before if i["id"] == vid)
+
+    resp = _api(
+        async_url, "PATCH", f"/api/v1/super-admin/viewers/{vid}", {"line_name": "  新しい名前  "}
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["line_name"] == "新しい名前"
+    for key in ("id", "email", "status", "trial_expires_at", "created_at", "discord_user_id"):
+        assert body[key] == before_item[key], key
+    cur.execute("SELECT line_name FROM public.viewer_accounts WHERE id=%s", (vid,))
+    assert cur.fetchone()[0] == "新しい名前"
+    assert _changes(cur, vid) == []
+
+
+@needs_ci_pg
+def test_patch_line_name_rejects_blank_and_too_long_with_422(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "ln2@x.com", "trial", expires_in_days=5)
+    for bad in ("", "   ", "あ" * 101, " " + "a" * 101 + " "):
+        resp = _api(async_url, "PATCH", f"/api/v1/super-admin/viewers/{vid}", {"line_name": bad})
+        assert resp.status_code == 422, repr(bad)
+    ok = _api(async_url, "PATCH", f"/api/v1/super-admin/viewers/{vid}", {"line_name": "a" * 100})
+    assert ok.status_code == 200
+    cur.execute("SELECT line_name FROM public.viewer_accounts WHERE id=%s", (vid,))
+    assert cur.fetchone()[0] == "a" * 100
+
+
+@needs_ci_pg
+def test_patch_line_name_invalid_is_service_error_and_missing_is_404(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "ln3@x.com", "trial", expires_in_days=5)
+    with pytest.raises(ViewerAdminError) as exc:
+        _with_db(async_url, lambda db: viewer_admin.update_line_name(db, vid, "   "))
+    assert exc.value.code == "invalid_line_name"
+    resp = _api(async_url, "PATCH", "/api/v1/super-admin/viewers/424242", {"line_name": "x"})
+    assert resp.status_code == 404 and resp.json()["detail"] == "viewer_not_found"
+
+
+@needs_ci_pg
+def test_patch_line_name_forbidden_for_non_super_admin_on_pg(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "ln4@x.com", "trial", expires_in_days=5)
+    resp = _api(
+        async_url, "PATCH", f"/api/v1/super-admin/viewers/{vid}", {"line_name": "変更"}, super_admin=False
+    )
+    assert resp.status_code == 403
+    cur.execute("SELECT line_name FROM public.viewer_accounts WHERE id=%s", (vid,))
+    assert cur.fetchone()[0] == "fake"

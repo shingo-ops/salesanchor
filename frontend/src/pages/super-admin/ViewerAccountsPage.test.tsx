@@ -8,7 +8,7 @@ import ViewerAccountsPage from "./ViewerAccountsPage";
 
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
-  return { ...actual, api: { get: vi.fn(), post: vi.fn() } };
+  return { ...actual, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } };
 });
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 
@@ -296,4 +296,84 @@ it("shows the already-linked message on 409 viewer_already_linked", async () => 
   fireEvent.click(within(row("Pen")).getByRole("button", { name: "Reissue code and invite" }));
   fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
   expect(await screen.findByText("This viewer already has a Discord room.")).toBeTruthy();
+});
+
+// ── LINE名を直す（ADR-1019 段8） ──────────────────────────────
+
+async function openDetail(name: string) {
+  fireEvent.click(within(row(name)).getByText(name));
+  return within(await screen.findByTestId("viewers-detail"));
+}
+
+it("shows a LINE name input with the current value, and no other editable input", async () => {
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  const input = detail.getByTestId("viewers-detail-line-name") as HTMLInputElement;
+  expect(input.value).toBe("Taro");
+  expect(detail.getAllByRole("textbox")).toHaveLength(1);
+  expect(screen.getByTestId("viewers-detail-save")).toHaveProperty("disabled", true);
+});
+
+it("saves a changed LINE name with PATCH and updates both the drawer and the list", async () => {
+  vi.mocked(api.patch).mockResolvedValue(v({ id: 1, line_name: "Jiro", flag_many_ips: true }));
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  fireEvent.change(detail.getByTestId("viewers-detail-line-name"), { target: { value: "  Jiro  " } });
+  const save = screen.getByTestId("viewers-detail-save");
+  expect(save).toHaveProperty("disabled", false);
+  fireEvent.click(save);
+  await waitFor(() =>
+    expect(api.patch).toHaveBeenCalledWith("/super-admin/viewers/1", { line_name: "Jiro" }),
+  );
+  expect((await screen.findByTestId("viewers-detail-saved")).getAttribute("role")).toBe("status");
+  expect((screen.getByTestId("viewers-detail-line-name") as HTMLInputElement).value).toBe("Jiro");
+  expect(within(row("Jiro")).getByText("Trial")).toBeTruthy();
+  expect(screen.queryByText("Taro")).toBeNull();
+});
+
+it("hides the saved message when the input is changed after saving", async () => {
+  vi.mocked(api.patch).mockResolvedValue(v({ id: 1, line_name: "Jiro", flag_many_ips: true }));
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  fireEvent.change(detail.getByTestId("viewers-detail-line-name"), { target: { value: "Jiro" } });
+  fireEvent.click(screen.getByTestId("viewers-detail-save"));
+  await screen.findByTestId("viewers-detail-saved");
+  fireEvent.change(screen.getByTestId("viewers-detail-line-name"), { target: { value: "Jiro2" } });
+  expect(screen.queryByTestId("viewers-detail-saved")).toBeNull();
+});
+
+it("disables save when the LINE name is empty, blank or over 100 characters", async () => {
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  const input = detail.getByTestId("viewers-detail-line-name");
+  for (const value of ["", "   ", "a".repeat(101)]) {
+    fireEvent.change(input, { target: { value } });
+    expect(screen.getByTestId("viewers-detail-save")).toHaveProperty("disabled", true);
+  }
+  fireEvent.change(input, { target: { value: "a".repeat(100) } });
+  expect(screen.getByTestId("viewers-detail-save")).toHaveProperty("disabled", false);
+  expect(api.patch).not.toHaveBeenCalled();
+});
+
+it("shows the invalid text in an alert on 422 and the generic save error otherwise", async () => {
+  vi.mocked(api.patch).mockRejectedValueOnce(new ApiError("invalid_line_name", 422, "invalid_line_name"));
+  renderPage();
+  await screen.findByText("Taro");
+  const detail = await openDetail("Taro");
+  fireEvent.change(detail.getByTestId("viewers-detail-line-name"), { target: { value: "Jiro" } });
+  fireEvent.click(screen.getByTestId("viewers-detail-save"));
+  const alert = await screen.findByTestId("viewers-detail-save-error");
+  expect(alert.getAttribute("role")).toBe("alert");
+  expect(alert.textContent).toBe(i18n.t("superAdmin.viewers.lineNameInvalid"));
+  vi.mocked(api.patch).mockRejectedValueOnce(new ApiError("boom", 500, "boom"));
+  fireEvent.click(screen.getByTestId("viewers-detail-save"));
+  await waitFor(() =>
+    expect(screen.getByTestId("viewers-detail-save-error").textContent).toBe(
+      i18n.t("superAdmin.viewers.saveError"),
+    ),
+  );
 });

@@ -41,9 +41,11 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP
 from app.services.gemini_raw_copy_v102_product_first import (
+    PRODUCT_KUBUN_BOOKLET,
     PRODUCT_KUBUN_BULK,
     PRODUCT_KUBUN_PROMO_PACK,
     PRODUCT_KUBUN_SINGLE,
+    VALUE_GROUP_BOOKLET,
     VALUE_GROUP_PROMO_PACK,
     VALUE_GROUP_SINGLE,
     load_product_first_masters,
@@ -641,7 +643,11 @@ def _bounded_number(value: object) -> object:
 
 
 # 商品の分類 → 状態の群（ADR-1031）。「PSA10」は single と promo_pack の2行あるので、状態の名前から id を引くときは群の中で引く
-_SCOPED_GROUP_OF_KUBUN = {PRODUCT_KUBUN_SINGLE: VALUE_GROUP_SINGLE, PRODUCT_KUBUN_PROMO_PACK: VALUE_GROUP_PROMO_PACK}
+_SCOPED_GROUP_OF_KUBUN = {
+    PRODUCT_KUBUN_SINGLE: VALUE_GROUP_SINGLE,
+    PRODUCT_KUBUN_PROMO_PACK: VALUE_GROUP_PROMO_PACK,
+    PRODUCT_KUBUN_BOOKLET: VALUE_GROUP_BOOKLET,
+}
 
 
 def _scoped_condition_id(canonical: str | None, product_category: str | None, masters: dict) -> int | None:

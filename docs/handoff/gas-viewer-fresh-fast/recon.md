@@ -311,3 +311,14 @@ design.md（docs/handoff/gas-viewer-fresh-fast/design.md、620行）:
 - 横並び：frontend/src/components/Stack.tsx は縦積みのみ（Stack.css は flex-direction: column）。横並びの金型は無かった
 - ラベルと値の並べ方：frontend/src/company-forms.css:78-98 の `.form-grid` / `.form-row` / `.form-grid > .form-row > label`（共通 class。使用例 frontend/src/pages/contacts/ContactsPage.tsx:305 の作成モーダル。同ページの Drawer（365行目）は ContactFormFields を使い form-grid は使わない）
 - 既存 ADR 検索：ADR-1019（閲覧者管理）、ADR-144（金型）
+
+## 段8（2026-10-20、origin/main d6f543e64 基準。実物の点検）
+- LINE名の置き場所は public.viewer_accounts.line_name の1か所だけ。写しは無い
+  - 書き込み：申込 backend/app/routers/viewer.py:458、初回登録 backend/app/services/viewer_admin.py:323
+  - 読み出し：一覧 backend/app/services/viewer_admin.py:71
+  - Discord の部屋の名前などには使っていない（backend/app/discord_gateway/viewer_trial.py に line_name は出てこない）
+  - backend/app/routers/super_admin_suppliers.py の line_name は仕入元の別の項目で、関係ない
+- 申込のときの決まり：前後の空白を除いて 1〜100 文字（backend/app/routers/viewer.py:87、428-429）
+- 管理側 API：backend/app/routers/super_admin_viewers.py（保護は require_super_admin、誤りの変換は _ERROR_STATUS と _http_error、応答の型は ViewerAdminItem、1件の読み出しは viewer_admin._get_item）
+- 画面：frontend/src/pages/super-admin/ViewerAccountsPage.tsx の Drawer。LINE名は読むだけの表示だった
+- 編集スライドの前例：frontend/src/features/supplier-master/SupplierDetailDrawer.tsx（TextField 金型・api.patch・422 は入力の誤り・footer に Button）。仕入元の PATCH にも変更の履歴は無い

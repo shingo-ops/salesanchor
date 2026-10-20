@@ -15805,6 +15805,21 @@
         "title": "LeadUpdate",
         "type": "object"
       },
+      "LineNameUpdate": {
+        "properties": {
+          "line_name": {
+            "description": "新しい LINE名（前後の空白を除いて 1〜100 文字）",
+            "maxLength": 200,
+            "title": "Line Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_name"
+        ],
+        "title": "LineNameUpdate",
+        "type": "object"
+      },
       "LinkProductRequest": {
         "properties": {
           "product_id": {
@@ -62930,6 +62945,63 @@
           }
         ],
         "summary": "List Viewers Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}": {
+      "patch": {
+        "operationId": "update_line_name_endpoint_api_v1_super_admin_viewers__viewer_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineNameUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Line Name Endpoint",
         "tags": [
           "super-admin"
         ]
