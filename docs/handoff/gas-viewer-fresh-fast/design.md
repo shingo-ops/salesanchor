@@ -895,3 +895,9 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 - DISCORD_BOT_TOKEN が無い環境では Discord を呼ばず False（= failed）。
 - 延長の {until_date} は change_status が返す item の trial_expires_at（延長後）を format_jst_date で書く。取り直しは不要だった。
 - テスト：送信は viewer_room_notice.send_room_notice をモック（PG の入口試験・CLI 試験）。送信関数そのものは discord_api_request をモックして JSON の形を確かめる。openapi.json は ViewerStatusChangeResponse と4口の応答だけを反映（手元の pydantic 2.13.0 は CI の 2.10.6 と出力が違うため、他の差分は取り込まない）。
+
+### 10-12 便3 実装メモ（2026-10-20）
+- 置き場所は sweep と同じ backend/app/discord_gateway/viewer_interview_notice.py。DB は sweep と同じく `self._db_factory()`（AsyncSessionLocal）で public.viewer_accounts を直読み（テナント文脈・RLS なし）。
+- send_room_notice は async なので to_thread は使わず直接 await。Redis は gateway が init_redis 済みの非同期クライアント（app.cache.get_redis()）を使う（share_flag_monitor は同期 redis だが gateway では非同期が前例）。
+- `run_once(db_factory, redis_client, now_utc)`：テストでモックを差せるよう引数で受ける。client.py の `_viewer_interview_loop` が1時間ごとに呼ぶ。Redis が None なら 0 件。
+- 重複防止キーは 10-10 d のとおり `viewer_interview_notice:{id}:{期限の JST 日付}`、TTL 30日、送れたときだけ置く。
