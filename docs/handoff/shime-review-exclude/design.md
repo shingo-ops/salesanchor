@@ -525,7 +525,7 @@ PO の言葉（2026-10-20）: 「その投稿者の最新の在庫情報から�
 | 件 | 中身 | 合格の条件（○×） |
 |---|---|---|
 | A | 状態の書いていない〆で、前の在庫に状態が2つ以上残るとき、全部の状態に〆を当てる | 13-2 A の裏取りで「全部に当てる」が正しい側の行が、反する行より多い（設計時点 3 対 3 で不成立 → 不採用を推奨。PO 判断） |
-| B | 値段の行より後ろの「完売しました。」のような完売の語だけの行を、余白行の疑い（possible_footer_line）にしない | B1 直近60日で possible_footer_line が外れる行の集合が {2928ea55} だけ（In Stock・Pre-order の行で外れるもの 0） B2 その行の status・商品・状態・値段・数量・名前は変わらない |
+| B | 値段の行より後ろの「完売しました。」のような完売の語だけの行を、余白行の疑い（possible_footer_line）にしない | B1 直近30日（recon1 の窓。終点 2026-10-20）で possible_footer_line が外れる行の集合が {2928ea55} だけ（In Stock・Pre-order の行で外れるもの 0） B2 その行の status・商品・状態・値段・数量・名前は変わらない |
 | C | 〆の行に単位が書かれていないとき、完売の相手（参照した在庫の行）の単位が1種類なら、その単位を写して単位不明（unit_unknown）を外す | C1 直近60日で該当は 39300bc2・018e101c の2行（どちらも参照先は Set）。2行とも、再解析すると unit が Set・unit_resolved が真・review_reasons から unit_unknown が消える C2 相手の単位が2種類以上・相手の単位が無い・〆の行に単位がある・人が判断した、のどれかなら何も変わらない |
 | 共通 | 在庫表・配信・GAS の SQL は1文字も変わらない | review_joins・tcg_distribution_svc.py の diff が 0 行 |
 
@@ -641,7 +641,7 @@ REASON_UNIT_UNKNOWN = "unit_unknown"
 def _with_target_unit(values: dict, targets: list[dict]) -> dict:
     """〆の件に単位が無く、完売の相手の単位が1種類に決まるとき、その単位を写して unit_unknown を外す（元の values は変えない。design.md §13-3 C）。"""
     units = {(t.get("unit_id"), t.get("unit_canonical") or "") for t in targets}
-    if values["unit_id"] is not None or len(units) != 1:
+    if values["unit_id"] is not None or values["unit_canonical"] is not None or len(units) != 1:
         return values
     (unit_id, unit_canonical), = units
     if unit_id is None or not unit_canonical:
@@ -652,11 +652,13 @@ def _with_target_unit(values: dict, targets: list[dict]) -> dict:
         "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining),
     }
 ```
-- docstring（:881-885）に「単位が無い件は、相手の単位が1種類なら写す（§13-3 C）」の1文を足す。
+- docstring（:881-885）に「単位が無い件は、相手の単位が1種類なら写す（§13-3 C）」の1文を足し、「状態の名前が引けない件は何も外さない」（:882）を「状態の名前が引けない件は状態の理由を外さない（単位の写しは先に済む）」に、:896 付近のコメント「理由も needs_review も変えない」を「状態の理由も needs_review も変えない（単位の写しの分は済んでいる）」に直す。
+- 〆の行に単位の文字があるのに単位の表に無い件（unit_canonical はあるが unit_id が None）は写さない（〆に書いてある単位を上書きしない）。
 - 単位を写した後の状態の上書き（:889-898）は、写した後の values の review_reasons から状態の理由を外す（今の式のまま。values を置き換えたので自然にそうなる）。
 - 人の判断（商品・状態）がある件は今と同じく何もしない（:887）。人が単位を直した件は apply_value_overrides（`backend/app/services/v102_human_decisions_svc.py:538-543`）で unit_id が入っているので写さない。
 - _extra_targets（:901-910）は (product_id, condition_id) だけを比べるので、dict に項目が増えても動きは変わらない。analysis_soldout_extra_targets に書く列も変わらない（:921-935）。
-- 変えないこと: 〆の行に単位が書かれている件（12f。unit_id が入っている）、相手の単位が2種類以上の件、相手が無い件。
+- 変えないこと: 〆の行に単位が書かれている件（12f。unit_id か unit_canonical が入っている）、相手の単位が2種類以上の件、相手が無い件。写した単位は、_apply_soldout_targets（:1129）より前に走る処理（単位と価格の確認 :1125・:958-965、買取の単位、規則13）には見えない（〆の行は Sold out なので、これらの結果は今と同じ）。
+- 【事実】_inherit_price（`line_analysis_v102_svc.py:1302-1347`）は unit_id を読まず、status が Sold out ならすぐ戻る（:1314）。写した単位が値段の引き継ぎを変えることはない（審査で確認）。
 
 ### 13-4. 代替案
 
@@ -675,9 +677,9 @@ def _with_target_unit(values: dict, targets: list[dict]) -> dict:
 
 | 基準 | 検証方法 |
 |---|---|
-| T1 B の試験 | `backend/tests/test_gemini_raw_copy_v101.py` に足して CI で通る: (u) 「商品A／3BOX@1,000円／完売しました。」で possible_footer_line が []、名前は「商品A」、F5 の fixes は [("F5", 3)]（_STATUS に 完売 がある） (v) 同じ形で最後の行が「完売です！」「〆」以外の語（例「完売品あり」）なら [3] のまま (w) 「・買取品」の既存の試験（:685・:1010）は変えずに通る (x) (u) の status・quantity・price・unit・condition は最後の行を「・買取品」にした時と同じ。_apply_f5 を直接呼ぶ試験があれば新しい引数で通る |
-| T1 C の試験 | `backend/tests/test_line_analysis_v102_svc.py` に足して CI で通る: (y) values の unit_id が None・review_reasons が "unit_unknown" で、相手が全て unit_id 13・"Set" → unit_id 13・unit_canonical "Set"・unit_resolved 真・review_reasons None・needs_review 偽 (z) 相手の単位が2種類 → 単位も理由も変わらない (aa) values に単位が入っている（今の _soldout_item の BOX）→ 単位は変わらない (bb) 人の判断がある → 今の試験（:437-445・:556-559）どおり values そのもの (cc) 相手の dict に単位が無い（今の _TARGETS）→ 今の試験が全部変えずに通る（:418-559）。`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に: (dd) _targets_of と decide_soldout_inherit が StockItem の unit_id・unit_canonical を SoldoutTarget に運ぶ（:568・:649・:655 の既存の期待は既定値のまま通る）。_load_stock_items が unit_id・unit_canonical を読む（pg の試験があれば足す。無ければ SQL の文字列に ar.unit_id が入ることを確かめる） |
-| T2 B の本番の当て | 実装の HEAD のコードで、直近60日の possible_footer_line の件（sm.is_active 不問）の投稿を、保存済みの Gemini の写しから v102 の取り出しだけやり直し（Gemini は呼ばない・書き込まない）、possible_footer_line が外れる件の集合 = {2928ea55} で、In Stock・Pre-order の件は 0。名前・status・値段・数量の差が 0 |
+| T1 B の試験 | `backend/tests/test_gemini_raw_copy_v101.py` に足して CI で通る: (u) 「商品A／3BOX@1,000円／完売しました。」で possible_footer_line が []、名前は「商品A」、F5 の fixes は [("F5", 3)]（_STATUS に 完売 がある） (v1) 同じ形で最後の行が「完売です！」なら [] (v2) 同じ形で最後の行が「完売品あり」なら [3] のまま（「〆」だけの行はもともと在庫の役割で疑いにならない。:409） (w) 「・買取品」の既存の試験（:685・:1010）は変えずに通る (x) (u) の status は sold_out のまま（件の行全体で決まる。v101.py:906・:926）で、status・quantity・price・unit・condition は origin/main のコードで同じ入力を流した出力と同じ。_apply_f5 を直接呼ぶ試験があれば新しい引数で通る |
+| T1 C の試験 | `backend/tests/test_line_analysis_v102_svc.py` に足して CI で通る: (y) values の unit_id が None・review_reasons が "unit_unknown" で、相手が全て unit_id 13・"Set" → unit_id 13・unit_canonical "Set"・unit_resolved 真・review_reasons None・needs_review 偽 (z) 相手の単位が2種類 → 単位も理由も変わらない (aa) values に単位が入っている（今の _soldout_item の BOX）→ 単位は変わらない (bb) 人の判断がある → 今の試験（:437-445・:556-559）どおり values そのもの (cc) 相手の dict に単位が無い（今の _TARGETS）→ 今の試験が全部変えずに通る（:418-559）。`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に: (dd) _targets_of と decide_soldout_inherit が StockItem の unit_id・unit_canonical を SoldoutTarget に運ぶ（:568・:649・:655 の既存の期待は既定値のまま通る）。:669 の soldout_targets の4項目ぴったりの期待は `"unit_id": None, "unit_canonical": ""` を足した6項目に書き換える（test_v102_value_overrides.py:184 は t.get で読むので変えない）。_load_stock_items が unit_id・unit_canonical を読む（pg の試験があれば足す。無ければ SQL の文字列に ar.unit_id が入ることを確かめる） |
+| T2 B の本番の当て | 実装の HEAD のコードで、直近30日（B1 と同じ窓）の possible_footer_line の件（sm.is_active 不問）の投稿を、保存済みの Gemini の写しから v102 の取り出しだけやり直し（Gemini は呼ばない・書き込まない）、possible_footer_line が外れる件の集合 = {2928ea55} で、In Stock・Pre-order の件は 0。名前・status・値段・数量の差が 0 |
 | T2 C の本番の当て | 同じやり方で 39300bc2・018e101c の job をやり直し（書き込まない）、_apply_soldout_targets の後の values が unit Set・unit_resolved 真・unit_unknown なし。直近60日の SOLDOUT_REF・SOLDOUT_INHERIT の残り 20 行は単位・理由の差が 0 |
 | 共通 | `git diff origin/main -- backend/app/services/tcg_condition_review_svc.py backend/app/services/tcg_distribution_svc.py` が 0 行。`backend/tests/test_inventory_distribution_rows.py` の固定値が変わらずに通る |
 | 本番の後 | デプロイ後、2928ea55 の job だけを再解析する（本番の書き込みなので台本と確かめ運転の後に PO が `!` で流す）。その後 ai_ro で、2928ea55 の review_reasons に possible_footer_line が無く、要確認の一覧（review_joins）に出ない。新しい投稿は、毎朝の点検（§12-8）で余白行・単位の写しも原文と照らす |
@@ -713,4 +715,5 @@ ADR: 作らない（§9 と同じ。規則の正本は本書と docs/handoff/v10
 ### 13-8. 審査
 
 - Opus 自己審査（独立した第二者のレビューではない）: B は 13-2 の当たり 1 行（2928ea55）と In Stock・Pre-order 0 行、C は 2 行・参照先の単位 1 種類を確かめた。C は要確認の一覧が unit_resolved から unit_unresolved を足す（`tcg_condition_review_svc.py:261`）ので unit_resolved も真にする形にした。A は 3 対 3 のため推奨を不採用にした。
-- 未確認: _inherit_price（`line_analysis_v102_svc.py:1133`）が unit_id を読むか（読むなら、写した単位で値段の引き継ぎが変わるかを実装カードで確かめ、変わるなら止める）。T2 のやり直しの道。CI（pg）での試験の実行。
+- 未確認: T2 のやり直しの道。CI（pg）での試験の実行。
+- Reviewer（opus）審査 第1回（HEAD be51da5fb）: REVISE。指摘 T-1〜T-4（試験の期待2か所の食い違い・(v) の書き方・期間の不揃い）、C-1（docstring とコメント）、C-2（〆に単位の文字がある件を上書きしない守り）、C-3（先に走る処理には見えない旨）、_inherit_price の確かめ結果。すべて本書に反映した。
