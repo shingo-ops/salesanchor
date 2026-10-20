@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
+import { HoverCardHost } from "../../components/HoverCard";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
@@ -629,6 +630,7 @@ export default function InventoryPage() {
         emptyState={t("inventory.noResults")}
       />
       {drawerRow && <InventoryRowDrawer row={drawerRow} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
+      <HoverCardHost />
     </PageLayout>
   );
 }
