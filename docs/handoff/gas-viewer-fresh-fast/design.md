@@ -773,7 +773,7 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 - バックアップは PO 手元のみ。リポジトリには載せない。名簿の中身（メール等）はここに書かない。
 
 ### 9-2 歓迎メッセージの初期パスワードをインラインコードで囲む
-- 変更: backend/app/discord_gateway/viewer_bot_texts.py:33 の `初期パスワード: {password}` を `初期パスワード: \`{password}\`` にする。
+- 変更: backend/app/discord_gateway/viewer_bot_texts.py:33 の `初期パスワード: {password}` を `` 初期パスワード: `{password}` `` にする。
 - 理由: スマホの Discord で長押しコピーしやすくするため（PO 依頼 2026-10-20「パスワードはマークダウンで囲ってスマホでもコピーできるようにしてほしい」）。
 - 安全性: パスワードは secrets.token_urlsafe(18)（backend/app/discord_gateway/viewer_trial.py:286）で、A-Za-z0-9-_ のみ。バッククォートを含まないので囲みが崩れない。
 - 触らない範囲: URL 行・メールアドレス行・ROOM_RECREATED。
