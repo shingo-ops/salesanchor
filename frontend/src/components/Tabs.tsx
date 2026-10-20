@@ -41,6 +41,10 @@ export interface TabsProps<K extends string = string> {
   variant?: TabsVariant;
   size?: TabsSize;
   className?: string;
+  /** タブの右隣に置く部品（例: 「その他」プルダウン）。タブ行の中に並ぶ */
+  extra?: ReactNode;
+  /** タブ行の右端に置く部品（例: 注記） */
+  end?: ReactNode;
 }
 
 /* ── コンポーネント ──────────────────────────────────────────────────────── */
@@ -52,10 +56,13 @@ export function Tabs<K extends string = string>({
   variant = "underline",
   size = "md",
   className,
+  extra,
+  end,
 }: TabsProps<K>) {
   const listRef = useRef<HTMLDivElement>(null);
+  const hasBar = extra != null || end != null;
 
-  return (
+  const list = (
     <div
       ref={listRef}
       role="tablist"
@@ -63,7 +70,7 @@ export function Tabs<K extends string = string>({
         "comp-tabs",
         `comp-tabs--${variant}`,
         `comp-tabs--${size}`,
-        className,
+        hasBar ? "" : className,
       ]
         .filter(Boolean)
         .join(" ")}
@@ -102,6 +109,20 @@ export function Tabs<K extends string = string>({
           </button>
         );
       })}
+    </div>
+  );
+
+  if (!hasBar) return list;
+
+  return (
+    <div
+      className={["comp-tabs-bar", `comp-tabs-bar--${variant}`, className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {list}
+      {extra != null && <div className="comp-tabs-bar__extra">{extra}</div>}
+      {end != null && <div className="comp-tabs-bar__end">{end}</div>}
     </div>
   );
 }

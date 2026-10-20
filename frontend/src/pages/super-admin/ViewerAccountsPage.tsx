@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
@@ -98,6 +98,7 @@ export default function ViewerAccountsPage() {
   const [running, setRunning] = useState(false);
   const [extendMode, setExtendMode] = useState<ExtendMode>("days");
   const [dateText, setDateText] = useState("");
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [reissueTarget, setReissueTarget] = useState<ViewerItem | null>(null);
@@ -379,6 +380,9 @@ export default function ViewerAccountsPage() {
           </Button>
           <Button variant="secondary" size="sm" onClick={copySignupRequest}>
             {copiedKey === "signupRequest" ? t(`${f}.copied`) : t(`${f}.copySignupRequest`)}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/super-admin/viewer-templates")}>
+            {t(`${f}.templates`)}
           </Button>
         </>
       }

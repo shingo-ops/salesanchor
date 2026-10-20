@@ -17,6 +17,13 @@
   background: var(--bg-surface);
 }
 
+/* ── 上をタブ行にくっつける（上の線はタブ行の下線が受け持つ） ── */
+.comp-table.comp-table--attached-top {
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* ── テーブル本体 ── */
 .comp-table__table {
   width: 100%;

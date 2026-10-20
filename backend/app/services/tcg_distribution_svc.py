@@ -313,7 +313,7 @@ def distribution_rows_parts(
     cond_filter = _condition_filter(include_flag_single)
     sold_out_filter = _sold_out_filter()
     title_ja, title_en = bundle_title_sql()
-    base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)},
+    base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)},
     dist_base AS (
         SELECT
             COALESCE(TO_CHAR(sm.line_posted_at AT TIME ZONE 'Asia/Tokyo',
@@ -470,7 +470,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     sold_out_filter = _sold_out_filter()
     age_condition, age_bind_params = _age_window(max_age_hours)
 
-    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
@@ -491,7 +491,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)}
         SELECT
             COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%' OR cr.effect = 'EXCLUDE')
                 AS exc_flag,

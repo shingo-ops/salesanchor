@@ -980,3 +980,83 @@ def test_same_post_closed_keeps_the_stock_when_a_human_judged_it(human):  # ⑧
 def test_same_post_closed_does_not_use_a_shime_that_a_human_judged(human):  # ⑨
     out = _same_post_run(_same_post_closer(1, 4), _same_post_stock(1, 2), {"closer": human})
     assert out[1]["status"] == "In Stock"
+
+
+# ---------------------------------------------------------------------------
+# 〆の件の単位を完売の相手から写す（design.md §13-3 C。(y)〜(cc)）
+# ---------------------------------------------------------------------------
+
+_SET_TARGETS = [{**t, "unit_id": 13, "unit_canonical": "Set"} for t in _TARGETS]
+
+
+def _no_unit_values(**extra) -> dict:
+    item = {"unit": "none", "condition": "none", "product_id": 42, "match_status": "matched_soldout_ref", "soldout_targets": _SET_TARGETS, **extra}
+    values = _values(item)
+    return item, {**values, "review_reasons": "unit_unknown", "needs_review": True}
+
+
+def test_target_unit_is_copied_when_the_shime_has_no_unit_and_targets_agree():
+    # (y)
+    item, values = _no_unit_values()
+    assert values["unit_id"] is None and values["unit_canonical"] is None
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["unit_id"], out["unit_canonical"], out["unit_resolved"]) == (13, "Set", True)
+    assert out["review_reasons"] is None and out["needs_review"] is False
+    assert values["unit_id"] is None  # 元は変えない
+
+
+def test_target_unit_is_not_copied_when_targets_have_two_units():
+    # (z)
+    item, values = _no_unit_values()
+    item["soldout_targets"] = [_SET_TARGETS[0], {**_SET_TARGETS[1], "unit_id": 5, "unit_canonical": "BOX"}]
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert out["unit_id"] is None and "unit_unknown" in out["review_reasons"]
+
+
+def test_target_unit_does_not_overwrite_a_unit_written_on_the_shime():
+    # (aa)
+    item = _soldout_item(soldout_targets=_SET_TARGETS)
+    values = _values(item)
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert (out["unit_id"], out["unit_canonical"]) == (values["unit_id"], values["unit_canonical"]) == (5, "BOX")
+
+
+def test_target_unit_is_not_copied_when_a_human_decided():
+    # (bb)
+    item, values = _no_unit_values()
+    assert svc._apply_soldout_targets(values, item, svc.Decisions(condition_id=18), _CANONICALS) is values
+
+
+def test_targets_without_a_unit_leave_the_values_as_before():
+    # (cc)
+    item, values = _no_unit_values(soldout_targets=_TARGETS)
+    out = svc._apply_soldout_targets(values, item, None, _CANONICALS)
+    assert out["unit_id"] is None and out["review_reasons"] == "unit_unknown"
+
+
+def test_target_unit_is_copied_even_when_the_condition_name_is_unknown_and_keeps_other_reasons():
+    item, values = _no_unit_values()
+    values = {**values, "review_reasons": "unit_unknown,price_unresolved"}
+    out = svc._apply_soldout_targets(values, item, None, {})
+    assert out["unit_id"] == 13 and out["review_reasons"] == "price_unresolved" and out["needs_review"] is True
+
+
+def test_stock_items_sql_reads_the_unit_columns():
+    # (dd) 参照する投稿の保存済みの解析結果から単位を読む
+    assert "ar.unit_id" in svc._STOCK_ITEMS_SQL and "unit_canonical" in svc._STOCK_ITEMS_SQL
+
+
+def test_load_stock_items_carries_unit_id_none_and_13_into_the_stock_items():
+    # (dd) DB は使わず、行の結果をスタブで返す
+    def row(unit_id, unit_canonical):
+        return SimpleNamespace(
+            source_message_id="m1", source_lines=[3], line_start=3, line_end=3, product_id=5, condition_id=7,
+            condition_canonical="New", unit_id=unit_id, unit_canonical=unit_canonical,
+        )
+
+    session = MagicMock()
+    session.execute.return_value.fetchall.return_value = [row(None, ""), row(13, "Set")]
+    found = svc._load_stock_items(session, ["m1"])
+    none_item, set_item = found["m1"]
+    assert none_item.unit_id is None and none_item.unit_canonical == ""
+    assert set_item.unit_id == 13 and set_item.unit_canonical == "Set"

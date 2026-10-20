@@ -221,6 +221,17 @@ export function seriesTabs(rows: ViewerRow[]): TabCount[] {
     .sort((a, b) => b.count - a.count || compareText(a.key, b.key));
 }
 
+/* eslint-disable local/no-japanese-literal -- DB の type_master.name_ja と照合する値（画面文言ではない）。アプリ在庫表の MAIN_TCG_CODES の name_ja */
+/** タブに常時出す主な3つ。閲覧ページの行には code が無いので名前で合わせる（docs/handoff/inventory-tabs-attach-table/recon.md 参照）。
+ *  type_master の名前を変えたらここと GAS index.html の MAIN_SERIES も直す */
+export const MAIN_SERIES: readonly string[] = ["ポケモン", "ワンピース", "ドラゴンボール"];
+/* eslint-enable local/no-japanese-literal */
+
+/** 「その他」に入るシリーズ：空でなく MAIN_SERIES に無いものを重複なしで名前の順に並べる */
+export function otherSeries(rows: ViewerRow[]): string[] {
+  return distinctValues(rows, (r) => r.series).filter((s) => !MAIN_SERIES.includes(s));
+}
+
 /** 重複を除いた値を文字の順で並べる（'' は除く） */
 export function distinctValues(rows: ViewerRow[], pick: (r: ViewerRow) => string): string[] {
   return [...new Set(rows.map(pick).filter((v) => v !== ""))].sort(compareText);
