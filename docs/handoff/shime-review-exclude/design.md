@@ -721,7 +721,7 @@ ADR: 作らない（§9 と同じ。規則の正本は本書と docs/handoff/v10
 
 ### 13-9. PO の判断（2026-10-20）
 
-- Opus の問い: 「1. カンジンさんの件は作らず、2件を作る【おすすめ】／2. 3件とも作る方向で、カンジンさんの件を設計し直す（投稿の文面と1件ずつ照らす調べ直しが要り、2件の完成も遅れる）／3. 3件とも今は作らない」。
+- Opus の問い: 「1. A（0c91e2e0・5642ad0b の窓口の件）は作らず、2件を作る【おすすめ】／2. 3件とも作る方向で、A を設計し直す（投稿の文面と1件ずつ照らす調べ直しが要り、2件の完成も遅れる）／3. 3件とも今は作らない」。
 - PO の返事: 「2」。
 - これにより: A を、22 行の原文と1件ずつ照らして設計し直す（§13-10 に追記予定）。B・C は §13-3 のまま（審査 APPROVE ef159c150）で、A の再設計の審査が通ってから3件まとめて PO の実装承認を受ける。B・C の実装はまだ始めない。
 
@@ -741,10 +741,18 @@ ADR: 作らない（§9 と同じ。規則の正本は本書と docs/handoff/v10
 
 A は2か所に分ける。A-1 は段B（〆の相手を決める）、A-2 は要確認の一覧の〆の確認済み扱い（cr_shime）。どちらも「〆の前の、その商品の在庫を持つ最も新しい1投稿」を正にする（PO「その投稿者の最新の在庫情報から特定すればいいのでは？」）。
 
-##### A-1 規則12g — 取り残しが2種類以上でも、最新の在庫の投稿の状態が1種類ならそれに当てる（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py`）
+##### A-1 規則12g — 取り残しが2種類以上なら、最新の在庫の投稿の状態が1種類のときそれに当てる（12d より先に見る。`backend/app/services/gemini_raw_copy_v102_soldout_ref.py`）
 
-変更前（:408-415）
+【事実】取り残しが2種類以上の〆 22 行は、どれも取り残しに〆の既定の状態（Sealed box）を含み、今の 12d（:406-407）で先に外れる（recon1/qA_all30_ge2.tsv の hit12d=True 22/22・recon1/A.md:42。Reviewer 第1回の R-1）。83d61b3d も取り残しは Case と Sealed box で、4分前の最新の在庫の投稿は Case だけ、原文の照合では Case が正しい（Sealed box は同じ日に再び載っている。recon5 JUDGE.md）。よって 12g は 12d より先に置く。
+
+変更前（:405-415）
 ```python
+        shime = _shime_condition(item)
+        if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
+            continue  # 12d
+        same_post = frozenset(
+            _shime_condition(other) for j, other in enumerate(extracted) if j != i and other.get("product_id") == product_id
+        )
         stranded = _stranded_stock(product_id, posts, same_post)
         if len(stranded) != 1:
             continue  # 12e
@@ -754,15 +762,18 @@ A は2か所に分ける。A-1 は段B（〆の相手を決める）、A-2 は�
 
 変更後
 ```python
+        shime = _shime_condition(item)
+        same_post = frozenset(
+            _shime_condition(other) for j, other in enumerate(extracted) if j != i and other.get("product_id") == product_id
+        )
         stranded = _stranded_stock(product_id, posts, same_post)
-        if len(stranded) >= 2:
-            canonical = _latest_single_state(product_id, posts)
-            if canonical is None or canonical == shime or canonical not in stranded:
-                continue  # 12g：最新の在庫の投稿の状態が1種類に決まらない
-        elif len(stranded) == 1:
+        canonical = _latest_single_state(product_id, posts) if len(stranded) >= 2 else None
+        if canonical is None or canonical == shime or canonical not in stranded:  # 12g に当たらなければ今の 12d・12e
+            if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
+                continue  # 12d
+            if len(stranded) != 1:
+                continue  # 12e
             (canonical, _), = stranded.items()
-        else:
-            continue  # 12e
         post, stock = stranded[canonical]
         decided[i] = SoldoutTarget(
             product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical,
@@ -779,10 +790,12 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
             return next(iter(states)) if len(states) == 1 and not next(iter(states)).startswith("FLAG_") else None
     return None
 ```
-- `canonical not in stranded` で、最新の在庫の投稿の状態が、もっと新しい投稿の完売の行や〆と同じ投稿の他の件（same_post）で既に片づいている場合は当てない（_stranded_stock の seen と同じ考え）。`canonical == shime` は 12d で既に除かれているが、念のための守り。
-- 相手の行は stranded[canonical]（その状態の最も新しい投稿の、いちばん上の行）で、12e と同じ作り方。単位の2項目は §13-3 C で足すもの（C を先に入れる。同じ PR）。
-- docstring（:396-398）に「取り残しが2種類以上のときは、その商品の在庫の行がある最も新しい投稿の状態が1種類なら、その状態に当てる（12g）」を足す。
-- 変えないこと: 12a〜12f の候補の条件（_is_inherit_candidate）、12d、取り残しが1種類の件（今と同じ相手。上の書き換えで同じ値になる）、段A（_targets_of）、posts の読み込み（load_soldout_ref_posts・`backend/app/services/line_analysis_v102_svc.py:1253-1270`。〆より前・48時間・最新 job）。
+- 12g は「取り残しが2種類以上（どれか決められない）」で、「最新の在庫の投稿の状態が1種類」「それが〆の既定の状態と違う」「それが取り残しにある（もっと新しい投稿の完売の行や同じ投稿の他の件で片づいていない）」の3つを満たすときだけ当てる。満たさなければ今の 12d・12e をそのまま通る（取り残し1種類・0種類、最新の状態が〆と同じ、の件は今と同じ結果）。
+- 最新の在庫の投稿の状態が〆の既定の状態と同じとき（22 行中 8 行。9 行のうち 83d61b3d 以外）は、今どおり 12d で相手なし（保存の状態＝最新の投稿の状態で、値は変わらない）。
+- 相手の行は stranded[canonical]（その状態の最も新しい投稿の、いちばん上の行）で、12e と同じ作り方。単位の2項目は §13-3 C で足すもの（C と同じ PR）。
+- docstring（:396-398）の「〆と同じ状態の在庫が前にあれば決めない（12d）。取り残しの状態がちょうど1種類のときだけ決める（12e）。」を「取り残しが2種類以上で、その商品の在庫の行がある最も新しい投稿の状態が1種類・〆の状態と違う・取り残しにあるときは、その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d）、取り残しの状態がちょうど1種類のときだけ決める（12e）。」に書き換える。
+- 変えないこと: 12a〜12c・12f の候補の条件（_is_inherit_candidate）、12g に当たらない件の 12d・12e、段A（_targets_of）、posts の読み込み（load_soldout_ref_posts・`backend/app/services/line_analysis_v102_svc.py:1253-1270`。〆より前・48時間・最新 job・新しい順 :1244-1250）。
+- 【事実】F5（60日・is_active 不問の候補 1256 行。12d は入れていない数え方）で、取り残しが2種類以上かつ最新の投稿の状態が1種類で保存の状態と違う行は 83d61b3d の1行だけ（F5_diff.tsv）。F5 の候補は _is_inherit_candidate の一部の条件を見ていない上位集合なので、12g で値が変わる行はこの1行以下。実際の集合は T2-A1 で実装のコードを流して確かめる。
 
 ##### A-2 〆の確認済み扱いで、〆より前の投稿の別の状態の相手は「最新の在庫の投稿」の中だけ数える（`backend/app/services/tcg_condition_review_svc.py`）
 
@@ -795,7 +808,7 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 ```sql
                   AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer
                        -- 別の状態の相手は、〆以後の投稿か、〆より前の最新の在庫の投稿（cr_n1）のものだけ（design.md §13-10 A-2）
-                       OR (cr_sm.id <> sm.id AND (cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = (
+                       OR (cr_sm.id <> sm.id AND (sm.line_posted_at IS NULL OR cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = (
                            SELECT cr_n1.id FROM {schema}.source_messages cr_n1
                            WHERE cr_n1.supplier_channel_id = sm.supplier_channel_id
                              AND cr_n1.line_posted_at < sm.line_posted_at
@@ -810,13 +823,14 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
                                    AND cr_n1a.status IS DISTINCT FROM 'Sold out')
                            ORDER BY cr_n1.line_posted_at DESC, cr_n1.id DESC LIMIT 1))))
 ```
+- 〆の投稿の line_posted_at が NULL のときは今と同じ条件（別の投稿の別の状態の相手を全部数える。安全側。Reviewer 第1回の軽い指摘）。
 - 同じ状態の相手（`cr_sa.condition_id = 〆の condition_id`）は今と同じく、どの投稿のものでも数える（同じ状態が前の投稿で売られていたなら、〆はそれの可能性が高い。安全側）。
-- cr_n1 は A-1 の「最新の在庫の投稿」と同じ考え（〆より前・同じ窓口・その商品の Sold out でない行を最新 job に持つ・is_active は見ない）。測定（recon7 G4a・G4_cond.sql）の n1 と同じ条件に、並びの同点を決める `cr_n1.id DESC` を足した。
+- cr_n1 は A-1 の「最新の在庫の投稿」と同じ考え（〆より前・同じ窓口・その商品の Sold out でない行を最新 job に持つ・is_active は見ない）。測定（recon7 G4a・G4_cond.sql）の n1 と同じ条件に、並びの同点を決める `cr_n1.id DESC` を足した（測定には無い。同じ時刻の投稿が2つあると n1 が測定と違いうる。【未確認】該当の有無。T2-A2 で実装の SQL そのものを流して確かめる）。
 - shime=False の道（在庫表・配信・取り込みの進み具合。`tcg_distribution_svc.py` 3か所・`tcg_import_progress.py` 1か所）は `SELECT FALSE AS settled` の定数のままで、変わらない（`backend/tests/test_tcg_condition_review.py:907-924` が守る）。
 - 変えないこと: 48時間の窓（:56 SHIME_STOCK_WINDOW_HOURS）、相手の他の条件（is_current・pid_resolved・unit_resolved・excluded でない・値段あり・FLAG でない・Sold out でない）、settled の使われ方（:262-263・:269-270）、OFFSET 0 の数（コメント1・cr_data 1・cr_shime 1。`backend/tests/test_tcg_condition_review_fenced.py:29`。足す副問い合わせに OFFSET 0 は付けない）。
 
 【事実】測定（recon7 G4。本番 2026-10-20 08:49Z・ai_ro）は「別の状態だけでなく同じ状態の相手も n1 に絞る」形（G4_cond.sql の (i)）で行った。その形で、settled=偽の参考 40 件（差し替え済みの投稿を含む直近4日）のうち真に変わるのは 0c91e2e0・5642ad0b の 2 件だけ、今の要確認の一覧の〆の形 51 行は真→偽・偽→真とも 0。
-【推測ではなく包含関係】上の設計は同じ状態の相手を絞らないので、相手の集合は「今」⊇「設計」⊇「(i)」になり、settled の真の集合は「今」⊆「設計」⊆「(i)」。よって設計で真になる〆は {0c91e2e0, 5642ad0b} の部分集合で、一覧の 51 行は変わらない。2 件が実際に真になるか（2件の相手 a42dcf92 の状態が〆の状態と違うこと）は T2-A2 で実装の SQL を流して確かめる。
+【推測ではなく包含関係】上の設計は同じ状態の相手を絞らないので、相手の集合は「今」⊇「設計」⊇「(i)」になり、settled の真の集合は「今」⊆「設計」⊆「(i)」。よって設計で真になる〆は {0c91e2e0, 5642ad0b} の部分集合で、一覧の 51 行は変わらない（同じ時刻の投稿で n1 が違う場合を除く）。2 件の〆の状態は Sealed box、相手 a42dcf92 の状態はシュリなしで違う（G4a.out。Reviewer 確認）ので、2 件とも真になる見込み。T2-A2 で実装の SQL を測定と同じ時刻に固定して確かめる。
 
 ##### 他に考えた案（A）
 
@@ -833,17 +847,18 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 
 | 基準 | 検証方法 |
 |---|---|
-| T1 A-1 の試験 | `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に足して CI で通る: (ee) 取り残しが No shrink box・Case の2種類（〆の既定 Sealed box の在庫は前に無い＝12d を通る）、最新の在庫の投稿は Case だけ → 相手は Case（最新の投稿の Case の行・unit の2項目も運ぶ） (ff) 最新の在庫の投稿に2種類ある → 相手なし (gg) 最新の在庫の投稿の状態が〆と同じ投稿の他の件（same_post）の状態 → 相手なし (hh) 最新の在庫の投稿の状態が、もっと新しい投稿の完売の行で片づいている（stranded に無い）→ 相手なし (ii) 最新の在庫の投稿の状態が FLAG_ で始まる → 相手なし (jj) 取り残し1種類の既存の試験は全部変えずに通る |
-| T1 A-2 の試験 | `backend/tests/test_tcg_condition_review.py` の pg の試験に足して CI で通る: (kk) 〆の前に投稿 P0（別の状態の相手・48時間内・is_current）、その後に投稿 P1（同じ商品の別の行だけ）、その後に〆 → settled（price_unresolved・excluded が外れる） (ll) (kk) で P0 の行が〆と同じ状態 → 外れない (mm) 相手が最新の在庫の投稿 P1 の別の状態の行 → 外れない（今の (s) と同じ結果） (nn) 既存の (a)〜(t)・(l)〜(n) が全部変えずに通る |
-| T2-A1 本番の当て | 実装の HEAD のコードで、直近60日・is_active 不問の SOLDOUT_INHERIT の候補の〆を、保存済みの写しからやり直し（Gemini は呼ばない・書き込まない）、相手が変わる〆の集合 = {83d61b3d}（Sealed box → Case）。他の行の相手の差 0 |
-| T2-A2 本番の当て | 実装の review_joins(shime=True) を ai_ro で流し（daily_check と同じ道）、recon7 の参考 40 件で settled が偽→真に変わる集合 = {0c91e2e0, 5642ad0b}、今の一覧の〆の形の行で真→偽 0。要確認の一覧の SQL の時間を、同じ時間帯に origin/main の SQL と3回ずつ測り、中央値が 1.2 倍以内 |
+| T1 A-1 の試験 | `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に足して CI で通る: (ee) 83d61b3d の形: 古い投稿に Sealed box の在庫、新しい投稿に Case の在庫だけ、〆は既定で Sealed box → 相手は Case（新しい投稿の Case の行・unit の2項目も運ぶ。今は 12d で相手なし） (ef) 取り残しが No shrink box・Case（Sealed box の在庫は前に無い）、最新の在庫の投稿は Case だけ → 相手は Case (ff) 最新の在庫の投稿に2種類ある・前に Sealed box の在庫あり → 相手なし（12d） (fg) 最新の在庫の投稿が Sealed box だけ（〆と同じ）・前に Case → 相手なし（12d） (gg) 取り残しが3種類（Case・No shrink box・Searched pack）で、最新の在庫の投稿の状態 Case が〆と同じ投稿の他の件（same_post）の状態 → 12g に当たらず、取り残し2種類のまま 12e で相手なし (hh) 取り残しが3種類で、最新の在庫の投稿の状態 Case が、もっと新しい投稿の完売の行で片づいている（stranded に無い）→ 相手なし (ii) 最新の在庫の投稿の状態が FLAG_ で始まる → 相手なし (jj) 取り残し1種類の既存の試験は全部変えずに通る |
+| T1 A-2 の試験 | `backend/tests/test_tcg_condition_review.py` の pg の試験に足して CI で通る: (kk) 0c91e2e0 の形: 〆の前に投稿 P0（別の状態の相手・48時間内・is_current）、その後に投稿 P1（同じ商品で〆と同じ状態・is_current=偽の行だけ。cr_n1 の条件は満たし相手の条件は満たさない）、その後に〆 → settled（price_unresolved・excluded が外れる） (ll) (kk) で P0 の行が〆と同じ状態 → 外れない (mm) 相手が最新の在庫の投稿 P1 の別の状態の行 → 外れない（今の (s) と同じ結果） (nn) 既存の (a)〜(t)・(l)〜(n) が全部変えずに通る |
+| T2-A1 本番の当て | 実装の HEAD のコードで、直近60日・is_active 不問の SOLDOUT_INHERIT の候補の〆を、保存済みの写しからやり直し（Gemini は呼ばない・書き込まない）、相手が変わる〆の集合 = {83d61b3d}（相手なし → Case）。他の行の相手の差 0 |
+| T2-A2 本番の当て | 実装の review_joins(shime=True) と origin/main の review_joins(shime=True) を ai_ro で流す（daily_check と同じ道）。窓の `NOW()` は両方とも測定の時刻 `TIMESTAMPTZ '2026-10-20 08:49:00+00'` に置き換える（置き換えは T2 の写しの中だけ。製品コードは NOW() のまま）。recon7 の参考 40 件で settled が偽→真に変わる集合 = {0c91e2e0, 5642ad0b}、G4b の一覧の〆の形 51 行で真→偽 0。要確認の一覧の SQL の時間を、同じ時間帯に origin/main の SQL と3回ずつ測り、中央値が 1.2 倍以内 |
 | 本番の後 | デプロイ後、83d61b3d の job だけを再解析する（台本と確かめ運転の後に PO が `!` で流す）。ai_ro で 83d61b3d の condition_canonical が Case。0c91e2e0・5642ad0b は投稿が差し替え済みで一覧に出ないので、次に同じ形の〆が来たとき毎朝の点検（§12-8）で確かめる |
 
 #### 13-10-4. 影響と弊害（A）
 
 | 影響・弊害 | 対処 |
 |---|---|
-| A-1: 最新の在庫の投稿の状態が、〆の意味と違うことがある（例「全数」で Case も含むのに1つに当てる） | 9 行中 1 行（615c5371）が一部だけ合う形。この行は 12d で段B に来ないので値は変わらない。毎朝の点検が原文と照らす |
+| A-1: 最新の在庫の投稿の状態が、〆の意味と違うことがある（例「全数」で Case も含むのに1つに当てる） | 9 行中 1 行（615c5371）が一部だけ合う形。この行は最新の状態が〆の状態と同じなので 12g に当たらず値は変わらない。毎朝の点検が原文と照らす |
+| A-1: 12g は 12d より先に見るので、前に〆と同じ状態の在庫があっても、最新の投稿が別の1状態ならそちらに当てる | 取り残しが2種類以上のときだけ。60日で当たるのは 83d61b3d の1行（原文で正しい）。T2-A1 で集合を確かめる |
 | A-2: 前の投稿に別の状態の在庫がまだあるのに、最新の投稿に書き忘れていると〆が外れる | 同じ状態の相手は今どおり数えるので、〆と同じ状態の在庫が前にあれば外れない。毎朝の点検の対象 |
 | A-2: 相手の副問い合わせで要確認の一覧が遅くなる | 副問い合わせは〆の形の行（CASE WHEN の真の側）だけで走る。T2-A2 で 1.2 倍以内を確かめる |
 | 古い行（a42dcf92 の形）は在庫表に 48 時間残る | この便の範囲外（書かれなかった状態＝売り切れとは限らない）。13-10-2 の他の案の表 |
@@ -853,4 +868,5 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 #### 13-10-5. 審査
 
 - Opus 自己審査（独立した第二者のレビューではない）: A-1 は 13-10-1 の 9 行・F5 の差 1 行と同じ条件で書いた。A-2 は測定の (i) より相手を多く数える形にしたので、真になる集合は測定の部分集合（包含関係）で、一覧の行を新たに外すことはない。
-- 未確認: 0c91e2e0・5642ad0b が設計の形でも真になること（T2-A2）。要確認の一覧の時間（T2-A2）。
+- 未確認: 0c91e2e0・5642ad0b が設計の形でも真になること（T2-A2）。要確認の一覧の時間（T2-A2）。同じ時刻の投稿の有無（T2-A2）。
+- Reviewer（opus）審査 第1回（HEAD 49119fc22）: REVISE。R-1（A-1 が 12d の後ろで本番の 22 行が 1 行も変わらない）→ 12g を 12d より先に置く形に直した。R-2（T2 が今の時刻に左右される）→ NOW() を測定の時刻に固定。R-3（(gg)(hh)(kk) の組み立て）→ 3種類・is_current=偽で書き直し。R-4（§13-9 の窓口の人名）→ ei に置き換え。軽い指摘（行番号・docstring・同じ時刻・NULL）も反映。
