@@ -1,7 +1,7 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 検索の正規化ベクタ・日本語タイトルの並びを検証する（ADR-027・precedent: ProductMasterDrawer.test.tsx） */
 import { describe, expect, it } from "vitest";
 import vectors from "../../features/inventory/searchNormalize.vectors.json";
-import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, markBlockBadges, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
+import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, MAIN_SERIES, markBlockBadges, matchesQuery, otherSeries, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
 import type { ViewerFilters } from "./viewerFilter";
 import type { ViewerRow } from "./types";
 
@@ -195,3 +195,15 @@ describe("markBlockBadges (ADR-1014 rev 2026-10-19 (3))", () => {
     expect(flags([mk({ ...blk, unit_price: "100.4" }), mk({ ...blk, unit_price: "100" })])).toEqual([[false, false], [false, false]]);
   });
 });
+
+/* eslint-disable local/no-japanese-literal -- DB の series 名（画面文言ではない） */
+describe("otherSeries / MAIN_SERIES", () => {
+  it("MAIN_SERIES is the three main names", () => {
+    expect([...MAIN_SERIES]).toEqual(["ポケモン", "ワンピース", "ドラゴンボール"]);
+  });
+  it("otherSeries lists non-empty series outside MAIN_SERIES, unique, in name order", () => {
+    const rs = [mk({ series: "ホロライブ" }), mk({ series: "ポケモン" }), mk({ series: "B" }), mk({ series: "" }), mk({ series: "B" }), mk({ series: "ワンピース" })];
+    expect(otherSeries(rs)).toEqual(["B", "ホロライブ"]);
+  });
+});
+/* eslint-enable local/no-japanese-literal */

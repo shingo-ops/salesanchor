@@ -123,4 +123,62 @@ describe("InventoryView", () => {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;
     }
   });
+
+  /* eslint-disable local/no-japanese-literal -- DB の series 名（画面文言ではない） */
+  const seriesData: ViewerInventoryResponse = {
+    ...data,
+    rows: [
+      { ...mkRow(1), series: "ポケモン" },
+      { ...mkRow(2), series: "ワンピース" },
+      { ...mkRow(3), series: "ホロライブ" },
+      { ...mkRow(4), series: "アクア" },
+    ],
+  };
+
+  it("K3: PC tabs are all + 3 main series, no counts, 'other' pull-down lists the rest in name order, tab row sits right before the table", () => {
+    render(<InventoryView data={seriesData} />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    expect(tabs.slice(1).map((el) => el.textContent)).toEqual(["ポケモン", "ワンピース", "ドラゴンボール"]);
+    expect(document.querySelector(".comp-tabs__tab .comp-badge")).toBeNull();
+    const other = screen.getByTestId("viewer-tab-other") as HTMLSelectElement;
+    expect(Array.from(other.options).map((o) => o.value)).toEqual(["", "アクア", "ホロライブ"]);
+    const bar = screen.getByRole("tablist").closest(".comp-tabs-bar") as HTMLElement;
+    expect(bar.nextElementSibling).toBe(screen.getByTestId("dt"));
+    expect(captured.props!.attachedTop).toBe(true);
+  });
+
+  it("K4: choosing a series in 'other' shows only that series and clears the tab selection", () => {
+    render(<InventoryView data={seriesData} />);
+    fireEvent.change(screen.getByTestId("viewer-tab-other"), { target: { value: "ホロライブ" } });
+    expect(captured.props!.data).toHaveLength(1);
+    expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ホロライブ");
+    expect((screen.getByTestId("viewer-tab-other") as HTMLSelectElement).className).toContain("comp-select--tab-active");
+    for (const tab of screen.getAllByRole("tab")) expect(tab.getAttribute("aria-selected")).toBe("false");
+    fireEvent.click(screen.getAllByRole("tab")[1]);
+    expect(captured.props!.data).toHaveLength(1);
+    expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ポケモン");
+  });
+
+  it("K5: mobile keeps the series select with counts and shows no tab row", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({
+        matches: true, media: q, onchange: null,
+        addEventListener: () => undefined, removeEventListener: () => undefined,
+        addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+      }),
+    });
+    try {
+      render(<InventoryView data={seriesData} />);
+      const sel = screen.getByTestId("viewer-tab-select") as HTMLSelectElement;
+      expect(sel.options[1].textContent).toMatch(/\(\d+\)$/);
+      expect(screen.queryByRole("tablist")).toBeNull();
+      expect(captured.props!.attachedTop).toBe(false);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+  /* eslint-enable local/no-japanese-literal */
 });
