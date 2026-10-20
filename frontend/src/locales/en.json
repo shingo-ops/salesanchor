@@ -262,6 +262,7 @@
     "discordAnnounce": "Discord Announce",
     "superAdminFxRate": "FX Rate Management",
     "superAdminViewers": "Viewer Management",
+    "superAdminViewerTemplates": "Viewer Templates",
     "superAdminTcgLineImport": "Import",
     "superAdminTcgDistribution": "Distribution Targets",
     "superAdminAnalysisRules": "LINE Analysis",
@@ -2664,6 +2665,61 @@
         "noUnit": "(none)"
       }
     },
+    "viewerTemplates": {
+      "subtitle": "Messages sent to viewers. Click a row to check the text and copy it.",
+      "backToViewers": "Back to Viewer Management",
+      "detailTitle": "Template details",
+      "colName": "Name",
+      "colSendMode": "How it is sent",
+      "colWhen": "When",
+      "colUpdated": "Last updated",
+      "sendMode": {
+        "manual": "Sent by hand",
+        "auto": "Automatic"
+      },
+      "names": {
+        "signup_request": "Sign-up request",
+        "reissue_notice": "Sign-up code reissued",
+        "reissue_notice_no_invite": "Sign-up code reissued (no invite)",
+        "room_welcome": "Room welcome",
+        "room_recreated": "Room recreated",
+        "notice_extended": "Extension notice",
+        "notice_activated": "Full registration notice",
+        "notice_suspended": "Suspension notice",
+        "interview_request": "Interview request"
+      },
+      "when": {
+        "signup_request": "Before signing up",
+        "reissue_notice": "When the code is reissued",
+        "reissue_notice_no_invite": "When no invite could be made",
+        "room_welcome": "When the room is created after the sign-up code is entered",
+        "room_recreated": "When the room is recreated",
+        "notice_extended": "When the trial is extended",
+        "notice_activated": "When switched to full registration",
+        "notice_suspended": "When suspended",
+        "interview_request": "From 10:00 the day before expiry"
+      },
+      "placeholders": {
+        "signup_url": "Sign-up page URL (filled in automatically)",
+        "line_name": "LINE name",
+        "code": "Sign-up code",
+        "expires": "Sign-up code expiry (date and time)",
+        "invite_url": "Discord invite URL",
+        "email": "Email address",
+        "password": "Initial password",
+        "until_date": "New expiry date after extension",
+        "expires_date": "Trial expiry date"
+      },
+      "placeholdersLabel": "Placeholders",
+      "placeholdersNone": "None",
+      "bodyLabel": "Text",
+      "unregistered": "Not registered",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyError": "Could not copy",
+      "loadError": "Could not load the templates",
+      "empty": "—"
+    },
     "viewers": {
       "subtitle": "Manage external inventory viewers: status and expiry.",
       "colEmail": "Email",
@@ -2706,6 +2762,7 @@
       "menuAll": "All",
       "copySignupUrl": "Copy signup form URL",
       "copySignupRequest": "Copy signup request message",
+      "templates": "Templates",
       "roomNoticeFailed": "Could not send to the room. Copy the message below and send it yourself.",
       "reissueMessage": "Message",
       "copied": "Copied",

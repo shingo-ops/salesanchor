@@ -12,6 +12,7 @@ API:
   POST /api/v1/super-admin/viewers/{viewer_id}/extend
   POST /api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code
   GET  /api/v1/super-admin/viewers/signup-request   （①申込のお願いの文を返す）
+  GET  /api/v1/super-admin/viewer-templates         （段11 便1: 文面テンプレート9件の一覧。読むだけ）
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
 from app.discord_gateway import viewer_bot_texts
 from app.models import User
-from app.services import viewer_admin, viewer_room_notice
+from app.services import viewer_admin, viewer_message_templates, viewer_room_notice
 from app.services.viewer_admin import ViewerAdminError
 from app.services.viewer_invite import create_viewer_invite
 
@@ -120,6 +121,22 @@ class SignupRequestResponse(BaseModel):
     text: str = Field(..., description="①申込のお願いの文")
 
 
+class ViewerTemplateItem(BaseModel):
+    """文面テンプレート1件（台帳の1鍵）。"""
+
+    key: str = Field(..., description="文面の鍵（台帳の9件）")
+    body: str | None = Field(None, description="本文。DB に行が無ければ null")
+    copy_text: str | None = Field(None, description="コピー用の文。{signup_url} だけ入れ済み。body が null なら null")
+    placeholders: list[str] = Field(..., description="差し込み項目（台帳の順）")
+    send_mode: Literal["manual", "auto"] = Field(..., description="手で送る／自動")
+    updated_at: datetime | None = Field(None, description="最後に直した時刻")
+    updated_by_name: str | None = Field(None, description="最後に直した人の名前（full_name、空なら username）")
+
+
+class ViewerTemplateListResponse(BaseModel):
+    items: list[ViewerTemplateItem]
+
+
 def _http_error(exc: ViewerAdminError) -> HTTPException:
     code, detail = _ERROR_STATUS[exc.code]
     return HTTPException(status_code=code, detail=detail)
@@ -141,6 +158,15 @@ async def list_viewers_endpoint(db: AsyncSession = Depends(get_db)):
 )
 async def signup_request_endpoint():
     return {"text": viewer_bot_texts.signup_request_text()}
+
+
+@router.get(
+    "/super-admin/viewer-templates",
+    response_model=ViewerTemplateListResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_viewer_templates_endpoint(db: AsyncSession = Depends(get_db)):
+    return {"items": await viewer_message_templates.list_rows(db)}
 
 
 @router.get(
