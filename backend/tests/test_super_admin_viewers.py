@@ -995,3 +995,25 @@ def test_reissue_message_uses_edited_body(pg, monkeypatch):  # noqa: F811
     resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
     assert resp.status_code == 200
     assert resp.json()["message"].startswith("fakeさん、直した案内 " + resp.json()["signup_code"])
+
+
+@needs_ci_pg
+def test_reissue_message_with_invite_uses_edited_body(pg, monkeypatch):  # noqa: F811
+    """T5: 招待ありの作り直し案内も、直した本文がそのまま出る。"""
+
+    async def _invite(db):
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    cur.execute(
+        "UPDATE public.viewer_message_templates SET body = %s WHERE key = 'reissue_notice'",
+        ("{line_name}さん、直した招待つき案内 {code} {expires} {invite_url}",),
+    )
+    vid = _account(cur, "rt3@x.com", "pending")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200
+    msg = resp.json()["message"]
+    assert msg.startswith("fakeさん、直した招待つき案内 " + resp.json()["signup_code"])
+    assert msg.endswith("https://discord.gg/fakecode")

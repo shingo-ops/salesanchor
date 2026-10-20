@@ -80,12 +80,29 @@ export default function ViewerTemplatesPage() {
     };
   }, [authLoading, isSuperAdmin, t]);
 
-  const openDetail = (row: TemplateItem) => {
+  const reloadItems = async (): Promise<TemplateItem[] | null> => {
+    try {
+      const list = await api.get<{ items: TemplateItem[] }>("/super-admin/viewer-templates");
+      setItems(list.items);
+      return list.items;
+    } catch {
+      return null;
+    }
+  };
+
+  // 行を開くたびに一覧を取り直し、最新の行（updated_at）で開く。取れなければ手元の行で開く
+  const openDetail = async (row: TemplateItem) => {
     setCopied(false);
     setSaved(false);
     setSaveError("");
     setDraft(row.body ?? "");
     setDetail(row);
+    const latest = await reloadItems();
+    const fresh = latest?.find(i => i.key === row.key);
+    if (fresh) {
+      setDetail(fresh);
+      setDraft(fresh.body ?? "");
+    }
   };
 
   const save = async () => {
@@ -102,14 +119,13 @@ export default function ViewerTemplatesPage() {
       setDetail(res);
       setDraft(res.body ?? "");
       setSaved(true);
-      try {
-        const list = await api.get<{ items: TemplateItem[] }>("/super-admin/viewer-templates");
-        setItems(list.items);
-      } catch {
-        setError(t(`${f}.loadError`));
-      }
+      if ((await reloadItems()) === null) setError(t(`${f}.loadError`));
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) setSaveError(t(`${f}.conflict`));
+      if (e instanceof ApiError && e.status === 409) {
+        setSaveError(t(`${f}.conflict`));
+        // 開き直したとき最新の updated_at になるよう一覧だけ取り直す（入力中の文と開いているスライドは変えない）
+        await reloadItems();
+      }
       else if (e instanceof ApiError && e.status === 404) setSaveError(t(`${f}.errorNotFound`));
       else if (e instanceof ApiError && e.status === 422 && ERROR_KEYS[e.message]) {
         setSaveError(t(`${f}.${ERROR_KEYS[e.message]}`));
@@ -177,7 +193,7 @@ export default function ViewerTemplatesPage() {
           columns={columns}
           data={items}
           rowKey={row => row.key}
-          onRowClick={openDetail}
+          onRowClick={row => { void openDetail(row); }}
           emptyState={<EmptyState title={t("common.noData")} size="compact" />}
         />
       )}

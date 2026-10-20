@@ -146,6 +146,7 @@ it("saves an edit with the opened updated_at, shows saved, and refreshes the lis
   vi.mocked(api.put).mockResolvedValue(saved);
   vi.mocked(api.get)
     .mockResolvedValueOnce({ items: ITEMS })
+    .mockResolvedValueOnce({ items: ITEMS })
     .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? saved : i)) });
   renderPage();
   await openRow("room_recreated");
@@ -156,7 +157,7 @@ it("saves an edit with the opened updated_at, shows saved, and refreshes the lis
     body: "new body",
     expected_updated_at: "2026-10-20T00:00:00Z",
   });
-  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(3));
   expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("new body");
   fireEvent.click(screen.getByTestId("viewer-templates-copy"));
   await waitFor(() => expect(writeText).toHaveBeenCalledWith("new copy"));
@@ -221,4 +222,35 @@ it("shows the character count by code points and keeps save disabled until edite
   edit("a\u{1F600}b");
   expect(screen.getByText("3 / 1800")).toBeTruthy();
   expect((screen.getByTestId("viewer-templates-save") as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("after a 409, closing and reopening the row sends the newest updated_at", async () => {
+  const newer = { ...ITEMS[4], body: "someone else", copy_text: "c", updated_at: "2026-10-21T01:00:00Z" };
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS }) // initial
+    .mockResolvedValueOnce({ items: ITEMS }) // first open
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? newer : i)) }) // after 409
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? newer : i)) }); // second open
+  vi.mocked(api.put)
+    .mockRejectedValueOnce(new ApiError("template_conflict", 409, "template_conflict"))
+    .mockResolvedValueOnce({ ...newer, body: "mine" });
+  renderPage();
+  await openRow("room_recreated");
+  edit("mine");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-save-error");
+  // typed text is kept after the 409
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("mine");
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(3));
+  // close and reopen
+  const name = screen.getAllByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"))[0];
+  fireEvent.click(name.closest("tr") as HTMLElement);
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(4));
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("someone else"),
+  );
+  edit("mine");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-saved");
+  expect(vi.mocked(api.put).mock.calls[1][1]).toEqual({ body: "mine", expected_updated_at: "2026-10-21T01:00:00Z" });
 });

@@ -69,6 +69,13 @@ async def test_prepare_notice_uses_edited_body():
     )
 
 
+async def test_prepare_notice_uses_edited_body_for_activate_and_suspend():
+    """T5: 本登録・停止も、直した本文がそのまま使われる。"""
+    item = {"trial_expires_at": JST_END}
+    assert await _prepare("activate", item, {"notice_activated": "直した本登録の文"}) == (True, "直した本登録の文")
+    assert await _prepare("suspend", item, {"notice_suspended": "直した停止の文"}) == (True, "直した停止の文")
+
+
 async def test_prepare_notice_without_template_is_none_text():
     """T6: 行が無いとき文は None（応用側が no_template にする）。"""
     item = {"trial_expires_at": JST_END}
