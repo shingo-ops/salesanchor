@@ -90,6 +90,13 @@ NOTICE_EXTENDED = "お試し期間を {until_date} まで延長しました😊"
 NOTICE_ACTIVATED = "本登録が完了しました。引き続きご利用ください😊"
 NOTICE_SUSPENDED = "ご利用を停止しました。ご不明な点は、この部屋でお知らせください。"
 
+# ── 期限の前日に部屋へ自動で送る面談のお願い（段10 便3） ──
+INTERVIEW_REQUEST = (
+    "お試し期間は {expires_date} で終わります。\n"
+    "ご利用の感想やこれからのご利用についてお話しするため、短い面談をお願いできますでしょうか😊\n"
+    "ご都合のよい日時を、この部屋に3つほどお送りください。"
+)
+
 _JST = timezone(timedelta(hours=9))
 
 
@@ -145,3 +152,8 @@ def reissue_notice_text(
     if not (line_name or "").strip():
         text = text.removeprefix("さん、")
     return text
+
+
+def interview_request_text(expires_at: datetime) -> str:
+    """③ 期限の前日に部屋へ送る面談のお願い。"""
+    return INTERVIEW_REQUEST.format(expires_date=format_jst_date(expires_at))
