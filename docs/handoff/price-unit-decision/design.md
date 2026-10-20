@@ -256,8 +256,8 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 ## 審査（Architect・同じ AI による自己審査。独立した第二者のレビューではない）
 
-（Fable 相談と Reviewer 審査の後に記入する）
 - 1 回目（HEAD 86e69f306）: 相談役 Fable REVISE・審査役 REVISE。主な指摘は「値が同じ行で要確認が外れない（主例が直らない）」「ADR-1035 What 2 の例外の明記」「KGI/KPI 表」「カードで決める事項の残り」「略記」。この版で反映した。
 - 2 回目（HEAD ca5dc8fed）: Fable REVISE（テープカット等の別区分の語が review_extra の codes に入り、Case 帯で CN0001 にしてしまう）・審査役 REVISE（語で決まった CN0003/CN0001/CN0007、直す既存テストの列挙、G1/K5 の母数、SAVEPOINT 内での呼び出し、D 表の分け方、recon の行番号）。この版で反映した。
 - 3 回目（HEAD 0e47be8a4）: Fable REVISE・審査役 REVISE（Fable: codes の置き場所が違う・「既定」の定義が 2 通り読める。審査役: codes は件の `review_extra` ではなく `item["review"]` の要素にある、`masters["unit_alias_to_info"]` は `.get` に、直すテスト 2 件の抜け）。この版で反映した。
 - 4 回目（HEAD 279aa793e）: 審査役 REVISE（「既定」の判定順が 1 段落の中で食い違い、語なしで Error・FLAG_SINGLE の行が何もしなくなる読み方ができる）。判定順 (1)(2) に書き直した。
+- 5 回目（HEAD 09dd2a261）: 審査役 APPROVE・相談役 Fable APPROVE（Fable は 279aa793e で APPROVE の後、09dd2a261 の差分も APPROVE）。設計合格（便1・便2）。PO 承認・実装承認は別。
