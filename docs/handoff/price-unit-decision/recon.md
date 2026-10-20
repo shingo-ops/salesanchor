@@ -31,7 +31,7 @@
 
 ### Q1 単位の語があるとき
 【事実】
-- 確定させる。別名表 `public.unit_aliases` を引く（backend/app/services/tcg_analyzer_svc.py:70-72 `_UNIT_ALIAS_SQL`、backend/app/services/tcg_analyzer_svc.py:117-129）。語の探し方は backend/app/services/gemini_raw_copy_v102_product_first.py:511 `find_unit_product_first`、照合は `backend/app/services/tcg_analyzer_svc.py` の `resolve_unit_v2`（backend/app/services/tcg_analyzer_svc.py:817-842）。
+- 確定させる。別名表 `public.unit_aliases` を引く（実際に読むのは backend/app/services/tcg_analyzer_svc.py:117-129 の SQL。backend/app/services/tcg_analyzer_svc.py:70-75 の `_UNIT_ALIAS_SQL` は別の定数）。語の探し方は backend/app/services/gemini_raw_copy_v102_product_first.py:511 `find_unit_product_first`、照合は `backend/app/services/tcg_analyzer_svc.py` の `resolve_unit_v2`（backend/app/services/tcg_analyzer_svc.py:817-842）。
 - 商品の分類（箱系）と書かれた単位（例: 箱系商品に「パック」）が食い違っても、要確認にする処理は無い。単位は書かれたまま（Pack）で、状態はパック系で解かれる。ただし相場ずれがあれば便UP が要確認にする。
 - 状態による単位のやり直し: backend/app/services/gemini_raw_copy_v102_product_first.py:65 `BOX_RECHECK_UNIT_KUBUNS`（単位区分が 空・不明・条件つき・複合・数量専用 のとき箱系として状態を解く）。backend/app/services/gemini_raw_copy_v102_product_first.py:683 `_resolve_unit_from_state`（セット系は単位が無ければ Set／サプライ系は状態の単位 Bag／単位なし・箱系×条件つきは状態の単位／状態が R1〜R3 で単位違いなら状態の単位）。
 

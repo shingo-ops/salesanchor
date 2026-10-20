@@ -44,7 +44,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
-| G1 | 「状態の別候補」の要確認が、値段で単位が決まる行で外れる | 便2 の置き換え試験と反映後の再解析で、今 `condition_multiple_candidates` が付いている行のうち買取の物差しがある行を数え、反映後に理由が残る行を数える。基準: 棚卸しの D（社外秘 `inventory/proposal.md`、2026-10-21）で「ダメージ・凹み」の 10 行は状態・単位とも正しいのに要確認だった | 物差しがある行で理由が残る行 0 |
+| G1 | 「状態の別候補」の要確認が、値段で単位が決まる行で外れる | 便2 の置き換え試験と反映後の再解析で、今 `condition_multiple_candidates` が付いている行のうち**値段で単位と状態が決まった行**を数え、反映後に理由が残る行を数える。決まらなかった行（比が帯の間・B の「決めない」の組・種類が 2 つ以上・単品語の印・対象外の区分）は理由ごとに件数だけ記録する。基準: 棚卸しの D（社外秘 `inventory/proposal.md`、2026-10-21）で「ダメージ・凹み」の 10 行は状態・単位とも正しいのに要確認だった | 値段で決まった行で理由が残る行 0 |
 | G2 | 値段で決めて新しく生まれる誤り | 置き換え試験で変わる行を全件、Opus が原文で判定 | 0 |
 | G3 | 要確認タブで新しく増える行 | `tab_true.sql` の数え方で反映の前後 | 0 |
 | G4 | 同じ投稿を日を変えて再解析しても、物差しの値が変わらない（便1） | テストで「解析した時刻」を変えても中央値が同じ | 同じ |
@@ -77,7 +77,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 | 状態の種類（今当たる状態） | Box | Case | Pack |
 |---|---|---|---|
-| 既定（語なし） | CN0003 Sealed box | CN0001 Case | CN0007 Unsearched pack |
+| 既定（語なし。語で決まった CN0003・CN0001・CN0007 も同じ） | CN0003 Sealed box | CN0001 Case | CN0007 Unsearched pack |
 | ダメージ系（CN0004／CN0002 の語） | CN0004 Damaged sealed box | CN0002 Damaged case | 決めない（今のまま） |
 | 開封（CN0006 Opened box／CN0009 Opened case） | CN0006 | CN0009 | 決めない（今のまま） |
 | サーチ済（CN20261008072213 Searched box／CN0010 Searched pack） | CN20261008072213 | 決めない（今のまま） | CN0010 Searched pack |
@@ -85,6 +85,11 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 - サーチ済の語（Searched box）が当たり、値段が Pack の帯の行は Searched pack・Pack にする。「サーチ済」は箱でもパックでも使う語で、PO の方針（パックも確定させる・状態の種類を写す）の範囲。試算では 4 行（120〜680 円）で、4 行とも原文はパック（今の Searched box・Box が誤り）。
 - 「決めない（今のまま）」の組は、値段と状態の語が食い違っている。今の決め方を残し、便UP の検査に任せる。試算では状態が語で決まった 474 行で、この組は 0 件（社外秘 `v2/state_cross.txt`。食い違い 4 件はすべて サーチ済×Pack で、表の対象）。
+- 「未開封」「未サーチ」のように語で CN0003・CN0001・CN0007 に決まった行は「既定」と同じ種類にする。どれも各群の「手を付けていない」状態で、語が無い既定と意味が同じため（例: 未開封 @箱の 1/50 → Unsearched pack・Pack）。
+- **別の区分の状態の語も見る。** 箱系で解いた行に、箱以外の区分の状態の語（例: Opened case の「テープカット」、`backend/app/services/gemini_raw_copy_v102_product_first.py:653-665` の `_other_kubun_hits`）が当たると、状態は既定の Sealed box のまま `condition_multiple_candidates` が付き、当たった code は `item["review_extra"]` の `{"kind": "condition_multiple_candidates", "codes": [...]}`（`backend/app/services/gemini_raw_copy_v102_product_first.py:638`・`:760`）に残る。種類は次のように決める。
+  - 今の状態から決めた種類（上の表の行）と、`codes` の各 code の種類（同じ表で引く）を集める。今の状態が既定で `codes` がある行は、既定を数えず `codes` の種類だけを使う。
+  - 集めた種類がちょうど 1 つならその種類で写す（例: 「テープカット」×Case の帯 → CN0009 Opened case、×Box の帯 → CN0006 Opened box）。2 つ以上、または表に無い code があれば何もしない（理由も外さない）。
+  - 試算の状態×単位の照合（474 行）は R1〜R3 の行だけで、この形の行は数えていない【未確認】。K2 の全件判定で見る。
 - 対応は表（コードの定数）で持つ。状態マスタに行が増えても自動では広げない（足すときはこの表と ADR-1036 を直す）。
 
 ### C. 要確認の扱い
@@ -96,8 +101,8 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 ### D. 記録（basis）
 | 行 | 値（単位・状態）が変わる | 値は同じで、理由だけ外す | 値も理由も変わらない |
 |---|---|---|---|
-| 状態が語で決まった行（R1〜R3） | 状態は B の表の code。basis は今の basis の後ろに `|PRICE:①r=<比>` を足す（先頭は変えない） | basis の後ろに `|PRICE:①r=<比>` を足す | 何もしない（今と同じ） |
-| 語なしの行 | 今の便BB と同じ `BUYBACK:<状態> r=<比>` | basis は変えない（理由だけ外す） | 何もしない（今と同じ） |
+| 状態が語で決まった行（`condition_decided_by_word(basis)` が真。R1〜R3 のほか R4a の語・`R3:MEMO:`・`EMPTY_BOX:explicit` を含む） | 状態は B の表の code。basis は今の basis の後ろに `|PRICE:①r=<比>` を足す（先頭は変えない） | basis の後ろに `|PRICE:①r=<比>` を足す | 何もしない（今と同じ） |
+| 語なしの行（同じ判定が偽） | 今の便BB と同じ `BUYBACK:<状態> r=<比>` | basis は変えない（理由だけ外す） | 何もしない（今と同じ） |
 
 - 状態の basis の**先頭の規則記号（R2: など）は変えない**。〆の規則 11b が先頭で「語で決まったか」を見ているため（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:38-53`）。
 - 語なしで値が同じ行の basis を変えないのは、品質の集計が basis の**末尾**で「既定で決まった行」を数えているため（`backend/app/services/tcg_supplier_quality_svc.py:17-18` の `CONDITION_FALLBACK_PATTERN` は `(R4:単位既定…|R5:パック既定)$`）。語で決まった行（R1〜R3）はもともとこの式に当たらないので、後ろに `|PRICE:` を足しても集計は変わらない。便BB の設計の「値が変わらない件では basis を書き換えない」は、語なしの行で守られる。
@@ -108,11 +113,18 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 ### 便1（時点）
 - `backend/app/services/line_analysis_v102_svc.py:1458-1468` の `_POSTED_AT_SQL`／`load_posted_date` の隣に、日時のまま返す `load_posted_at(session, extraction_job_id)` を足す（同じ SQL を使う。`source_messages.line_posted_at`）。
-- `backend/app/services/line_analysis_v102_svc.py:962` の `_buyback_units` の中で、対象がある（`backend/app/services/line_analysis_v102_svc.py:966` の判定が真）ときだけ `load_posted_at` を 1 回呼び、`apply_buyback_units`（`backend/app/services/v102_buyback_unit_svc.py:194`）に `posted_at` を渡す。`posted_at` が None なら何もしない（今の values のまま）。reader で直近 30 日の 2525 job を数え、`line_posted_at` が NULL の job は 0（社外秘 `v5/null_posted.out`）。
+- `backend/app/services/line_analysis_v102_svc.py:962` の `_buyback_units` の中で、対象がある（`backend/app/services/line_analysis_v102_svc.py:966` の判定が真）ときだけ、SAVEPOINT（`backend/app/services/line_analysis_v102_svc.py:969` の `session.begin_nested()`）の**中で** `load_posted_at` を 1 回呼び（失敗しても保存全体の取引を壊さない。今の except で「この投稿では決めない」になる）、`apply_buyback_units`（`backend/app/services/v102_buyback_unit_svc.py:194`）に `posted_at` を渡す。`posted_at` が None なら何もしない（今の values のまま）。reader で直近 30 日の 2525 job を数え、`line_posted_at` が NULL の job は 0（社外秘 `v5/null_posted.out`）。
 - `backend/app/services/v102_buyback_unit_svc.py:155` の `load_medians` に `posted_at` を足し、`_MEDIAN_SQL`（`backend/app/services/v102_buyback_unit_svc.py:54-65`）を次の形にする。社外秘 `v3/sql/prod_form_median.sql` の形で、1573 行すべて試算と一致を確かめ済み。
   - 変更前: `JOIN LATERAL (… WHERE l.shop_product_id = sp.id ORDER BY l.fetched_at DESC, l.id DESC LIMIT 1)` と `AND sp.last_seen_at >= now() - make_interval(days => :days)`
   - 変更後: LATERAL の中に `AND l.fetched_at <= :posted_at AND l.fetched_at >= :posted_at - make_interval(days => :days)` を足し、`sp.last_seen_at` の条件を消す。
-- テスト: `backend/tests/test_v102_value_overrides.py:204` の `test_buyback_units_exclude_items_with_a_human_unit_or_price` の `fake_apply` の引数を新しい形に合わせる。便BB のテスト `backend/tests/test_v102_buyback_unit.py`に、投稿日時より後の値・31 日前の値を使わない件を足す。
+- 引数: `apply_buyback_units(..., posted_at)` と `load_medians(session, product_ids, max_age_days, posted_at)` の `posted_at` は**必須**（既定値なし。呼び忘れをテストで落とすため）。
+- 直す既存テスト（壊れるので合わせる）:
+  - `backend/tests/test_v102_value_overrides.py:204-209` `test_buyback_units_exclude_items_with_a_human_unit_or_price` の `fake_apply` の引数。
+  - `backend/tests/test_v102_buyback_unit.py:185-188` `test_median_sql_keeps_the_agreed_conditions`: `sp.last_seen_at >=` の確認を、`l.fetched_at <= :posted_at` と `:posted_at - make_interval(days => :days)` の確認に替える。
+  - `backend/tests/test_v102_buyback_unit.py:161-168`: SQL に渡す値の dict に `posted_at` を足す。
+  - `backend/tests/test_v102_buyback_unit.py:71-72` の `_apply`・:158・:173: `posted_at` を渡す。
+  - `backend/tests/test_v102_buyback_unit.py:203-212` の `_WriteSession`／`_Session.execute`: `_POSTED_AT_SQL` に投稿日時を返すようにし、:238・:249 の `_write_results` の試験が今どおり通るようにする。
+- 足すテスト（`backend/tests/test_v102_buyback_unit.py`）: 投稿日時より後の値・31 日前の値を使わない、`posted_at` が None なら何もしない、`load_posted_at` が失敗したらこの投稿では決めない。
 - 設定: 記録 SQL（ADR-1007）で `unit_buyback_max_age_days` を 7 → 30 にし、`note` 列を「買取価格による単位・状態の判定: 行の投稿日時より前の、この日数以内の買取の値だけを使う」に直す。ファイルは前例（`docs/handoff/v102-buyback-unit/data/`）と同じ形で `docs/handoff/price-unit-decision/data/bin1/{precheck,dryrun,commit,rollback,verify}.sql`。コードを先に反映し、その後に COMMIT する。
 - 効き目: 今は再解析した時刻（now()）で物差しが変わり、同じ投稿でも再解析の日で結果が動く。変更後は投稿の時点で決まる。
 - 触らない: 対象（`is_candidate`）・帯・状態・basis・`_write_results` の順序。
@@ -123,13 +135,15 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
   - 商品の分類が箱系（`item["product_category"] == PRODUCT_KUBUN_BOX`、`backend/app/services/gemini_raw_copy_v102_product_first.py:48`）**かつ** 単品語の印が無い（`condition_basis` が `_FLAG_NOTE_PREFIX` で始まらない）**かつ** 単位の語で Box／Case／Pack が決まっていない。
   - 「決まっていない」= `unit_basis["alias"]` が None、または `resolve_unit_v2(alias, unit_alias_to_info)[1]`（書かれた語の単位の区分）が `BOX_RECHECK_UNIT_KUBUNS`（`backend/app/services/gemini_raw_copy_v102_product_first.py:65-67`: 空・不明・条件つき・複合・数量専用）に入る。「個」は条件つき（UN0008）なのでここに入る。今の `alias is None` だけでは「個」の行を取りこぼす（`find_unit_product_first` `backend/app/services/gemini_raw_copy_v102_product_first.py:511-538` は「個」で alias="個" を残す）。
 - 判定 `decide_code`（`backend/app/services/v102_buyback_unit_svc.py:106-115`）: 返り値を「単位の種類（Box／Case／Pack）と r」に変え、`r <= pack_max` で Pack を返す。Pack は箱系の分類の行だけ（今の対象の行は Box／Case だけ。今と同じ）。
-- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:164-172`）で B の表の全 code（CN0001〜CN0007・CN0009・CN0010・CN20261008072213）を引き、`condition_id → code` の逆引きも作る。行の今の `condition_id` からこの逆引きで code を出し、B の表の行（種類）を決める。`condition_decided_by_word(basis)` が False の行は「既定」。逆引きに無い状態（AR confirmed pack・空箱・Error 等）は何もしない。1 つでも引けなければ便全体で何もしない（今と同じ）。
+- 引数 `unit_alias_to_info` は `is_candidate`・`apply_buyback_units`・`_buyback_units` とも**必須**（既定値なし）。
+- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:164-172`）で B の表の全 code（CN0001〜CN0007・CN0009・CN0010・CN20261008072213）を引き、`condition_id → code` の逆引きも作る。行の今の `condition_id` からこの逆引きで code を出し、B の表の行（種類）を決める。`condition_decided_by_word(basis)` が False の行は「既定」。`item["review_extra"]` の `condition_multiple_candidates` の `codes` も B の「別の区分の状態の語も見る」どおりに使う。逆引きに無い状態（AR confirmed pack・空箱・Error 等）は何もしない。1 つでも引けなければ便全体で何もしない（今と同じ）。
 - 写し先: B の表を定数（種類 × 単位 → 状態 code）で持つ。「決めない」の組は何もしない。
 - 理由: `REASONS_DROPPED_WHEN_DECIDED`（`backend/app/services/v102_buyback_unit_svc.py:43`）に `condition_multiple_candidates` を足す。
 - 同じ値の扱い（`backend/app/services/v102_buyback_unit_svc.py:221-222`）: 値が同じでも、`review_reasons` に外す理由があれば、理由を外した values にする（D の表の「値は同じで、理由だけ外す」）。外す理由が無ければ今どおり何もしない。
 - basis（`with_decision` `backend/app/services/v102_buyback_unit_svc.py:180-191` の :186）: D の表どおり。
-- 設定: `parse_settings`（`backend/app/services/v102_buyback_unit_svc.py:90-103`）に `unit_buyback_pack_max` を足す（キーが無いときは Pack を決めない＝今と同じ。あって `0 < pack_max < box_min` でなければ設定全体を不正として何もしない）。記録 SQL は `docs/handoff/price-unit-decision/data/bin2/{precheck,dryrun,commit,rollback,verify}.sql`（`unit_buyback_pack_max`=0.2 の 1 行を足す）。
-- テスト: `backend/tests/test_v102_value_overrides.py:204` の `fake_apply`・`is_buyback_candidate` の差し替えを新しい引数に合わせる。便BB のテスト `backend/tests/test_v102_buyback_unit.py` に K1 の組を足す。
+- 設定: `parse_settings`（`backend/app/services/v102_buyback_unit_svc.py:90-103`）に `unit_buyback_pack_max` を足す（キーが無いときは Pack を決めない＝今と同じ。あって `0 < pack_max < box_min` でなければ設定全体を不正として何もしない）。記録 SQL は `docs/handoff/price-unit-decision/data/bin2/{precheck,dryrun,commit,rollback,verify}.sql`（`unit_buyback_pack_max`=0.2、note「買取価格による単位・状態の判定: 比がこの値以下ならパック」の 1 行を足す）。
+- 直す既存テスト: `backend/tests/test_v102_value_overrides.py:204-212` の `fake_apply`・`is_buyback_candidate` の差し替えの引数、`backend/tests/test_v102_buyback_unit.py:263-268`（`is_candidate` を引数 2 つで呼んでいる）、`backend/tests/test_v102_buyback_unit.py:191-197`（設定の key が 4 つの前提。`unit_buyback_pack_max` は無くてもよい key として足す）、便1 で直した `_apply` などの呼び出しに `unit_alias_to_info` を足す。
+- 足すテスト: `backend/tests/test_v102_buyback_unit.py` に K1 の組。
 - 触らない: `_write_results` の順序（人の直し `backend/app/services/line_analysis_v102_svc.py:1143` → 便BB `backend/app/services/line_analysis_v102_svc.py:1147` → 規則13 → 便UP → `_apply_decisions`）、便UP、規則13、〆の規則 11b、`backend/app/services/gemini_raw_copy_v102_product_first.py` の状態・単位の決め方、人が状態を直した行の skip（`backend/app/services/v102_buyback_unit_svc.py:203`）、`unit_basis`、DB の形。
 
 ## 便に分ける（変更は一度に 1 つ）
@@ -200,11 +214,11 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 テストが通る: 語なし／「個」／ダメージ語／サーチ済語／シュリンクなし語 × 比（Box・Case・Pack・帯の間）の組で、B の表どおりの単位・状態・basis（D の表）になる。**ダメージ語で今すでに Damaged sealed box・Box・`condition_multiple_candidates` の行が、Box の帯の値段で理由だけ外れ、basis の後ろに `|PRICE:①r=` が付く。** 語なしで値が同じ・理由ありの行は basis が変わらない。単位の語がある行・単品語の印の行・セット系・人が直した行は変わらない。`unit_buyback_pack_max` が無ければ Pack を決めない | CI |
+| K1 テストが通る: 語なし／「個」／ダメージ語／サーチ済語／シュリンクなし語／「未開封」「未サーチ」の語（既定と同じ種類）／別の区分の語だけが当たった行（例: テープカット×Case の帯 → Opened case、種類が 2 つ以上 → 何もしない） × 比（Box・Case・Pack・帯の間）の組で、B の表どおりの単位・状態・basis（D の表）になる。**ダメージ語で今すでに Damaged sealed box・Box・`condition_multiple_candidates` の行が、Box の帯の値段で理由だけ外れ、basis の後ろに `|PRICE:①r=` が付く。** 語なしで値が同じ・理由ありの行は basis が変わらない。単位の語がある行・単品語の印の行・セット系・人が直した行は変わらない。`unit_buyback_pack_max` が無ければ Pack を決めない | CI |
 | K2 置き換え試験（v102 直近 30 日の現行全件に**便2 のコード**を当てる。便UP まで通す）で、変わる行は**全件**を原文で判定し、誤り 0（G2）。「今 Pack → 判定 Box」の行は別に名指しで列挙する | 社外秘フォルダに全件表。Opus が原文で判定 |
 | K3 置き換え試験で、変わる行以外の 商品・単位・状態・数量・価格 の変化 0 行 | 置き換え試験の突き合わせ |
 | K4 〆（Sold out・excluded）の行の変化 0 行 | 同上 |
-| K5 本番反映・記録 SQL の COMMIT 後、K2 で変わった行の job を再解析し、試験どおりに変わる。要確認タブ（tab_true の数え方）の前後で、増えた行 0（G3）。今 `condition_multiple_candidates` が付き買取の物差しがある行で、理由が残る行 0（G1。行数は K2 の前に数えて記録する） | reader で読む |
+| K5 本番反映・記録 SQL の COMMIT 後、K2 で変わった行の job を再解析し、試験どおりに変わる。要確認タブ（tab_true の数え方）の前後で、増えた行 0（G3）。今 `condition_multiple_candidates` が付き値段で単位と状態が決まった行で、理由が残る行 0（G1。行数と、決まらなかった行の理由ごとの件数は K2 で記録する） | reader で読む |
 | K6 試算との差の説明: ①判定関数（`decide_code` と B の表）を、語で正解が分かる 1573 行に直接当て（行の単位の語を伏せた入力を作る）、試算の①の段（決定 1272・外れ 1）と同じ件数。②K2 で、コードの対象と試算の「語なし」の定義が違う行を全件列挙し、差の理由がすべて定義の違い（例:「個」・語の照合の差）だけ | 置き換え試験 |
 
 ## 戻し方
@@ -244,3 +258,4 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 （Fable 相談と Reviewer 審査の後に記入する）
 - 1 回目（HEAD 86e69f306）: 相談役 Fable REVISE・審査役 REVISE。主な指摘は「値が同じ行で要確認が外れない（主例が直らない）」「ADR-1035 What 2 の例外の明記」「KGI/KPI 表」「カードで決める事項の残り」「略記」。この版で反映した。
+- 2 回目（HEAD ca5dc8fed）: Fable REVISE（テープカット等の別区分の語が review_extra の codes に入り、Case 帯で CN0001 にしてしまう）・審査役 REVISE（語で決まった CN0003/CN0001/CN0007、直す既存テストの列挙、G1/K5 の母数、SAVEPOINT 内での呼び出し、D 表の分け方、recon の行番号）。この版で反映した。
