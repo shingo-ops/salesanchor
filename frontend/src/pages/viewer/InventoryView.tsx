@@ -19,10 +19,12 @@ import {
   DEFAULT_SORT_KEY,
   SORT_MENU_VALUES,
   PER_PAGE,
+  MAIN_SERIES,
   TAB_ALL,
   distinctValues,
   filterRows,
   markBlockBadges,
+  otherSeries,
   seriesTabs,
   sortRows,
   withIndex,
@@ -67,6 +69,7 @@ export function InventoryView({ data }: InventoryViewProps) {
 
   const allRows = useMemo(() => withIndex(data.rows), [data.rows]);
   const tabs = useMemo(() => seriesTabs(data.rows), [data.rows]);
+  const others = useMemo(() => otherSeries(data.rows), [data.rows]);
   const providerOptions = useMemo(
     () => distinctValues(data.rows, (r) => r.provider).map((v) => ({ value: v, label: v })),
     [data.rows],
@@ -212,7 +215,7 @@ export function InventoryView({ data }: InventoryViewProps) {
       </header>
 
       <main className="viewer-main">
-        {isMobile ? (
+        {isMobile && (
           <SelectControl
             aria-label={t("viewer.tabSelect")}
             data-testid="viewer-tab-select"
@@ -221,17 +224,6 @@ export function InventoryView({ data }: InventoryViewProps) {
             options={[
               { value: TAB_ALL, label: `${t("viewer.tabAll")} (${data.rows.length})` },
               ...tabs.map((s) => ({ value: s.key, label: `${s.key} (${s.count})` })),
-            ]}
-          />
-        ) : (
-          <Tabs
-            variant="underline"
-            size="sm"
-            activeKey={tab}
-            onChange={reset(setTab)}
-            items={[
-              { key: TAB_ALL, label: t("viewer.tabAll"), count: data.rows.length },
-              ...tabs.map((s) => ({ key: s.key, label: s.key, count: s.count })),
             ]}
           />
         )}
@@ -292,6 +284,36 @@ export function InventoryView({ data }: InventoryViewProps) {
           />
         )}
 
+        {!isMobile && (
+          <Tabs
+            variant="underline"
+            size="md"
+            activeKey={tab === TAB_ALL || MAIN_SERIES.includes(tab) ? tab : ""}
+            onChange={reset(setTab)}
+            items={[
+              { key: TAB_ALL, label: t("viewer.tabAll") },
+              ...MAIN_SERIES.map((s) => ({ key: s, label: s })),
+            ]}
+            extra={
+              others.length > 0 ? (
+                <SelectControl
+                  variant="tab"
+                  aria-label={t("viewer.tabOther")}
+                  data-testid="viewer-tab-other"
+                  value={tab === TAB_ALL || MAIN_SERIES.includes(tab) ? "" : tab}
+                  onChange={(e) => {
+                    if (e.target.value !== "") reset(setTab)(e.target.value);
+                  }}
+                  options={[
+                    { value: "", label: t("viewer.tabOther") },
+                    ...others.map((s) => ({ value: s, label: s })),
+                  ]}
+                />
+              ) : undefined
+            }
+          />
+        )}
+
         <DataTable
           columns={columns}
           data={pageRows}
@@ -313,6 +335,7 @@ export function InventoryView({ data }: InventoryViewProps) {
           stickyHeader
           fitToWidth
           mobileCards
+          attachedTop={!isMobile}
           emptyState={t("viewer.noResults")}
         />
       </main>

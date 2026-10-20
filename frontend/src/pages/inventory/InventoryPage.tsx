@@ -23,6 +23,7 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
+import { Tabs } from "../../components/Tabs";
 import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
 import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
@@ -52,6 +53,10 @@ interface InventoryListResponse {
 }
 
 const PER_PAGE = 50;
+
+/** タブに常時出す主な3つ（type_master.code）。それ以外は「その他」プルダウンへ。
+ *  閲覧ページ viewerFilter.ts の MAIN_SERIES・GAS index.html の MAIN_SERIES と対応（名前を変えたら両方直す） */
+const MAIN_TCG_CODES: readonly string[] = ["pokemon_booster_box", "one_piece", "dragon_ball"];
 
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
@@ -522,50 +527,49 @@ export default function InventoryPage() {
         {t("common.loading")}
       </div>
 
-      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン ＋ 警告（右端固定） */}
-      {/* ui-allow: TCG type tab bar from main back-merge, ADR-143 D-1 inventory v2 (#2624) */}
-      <div className="tabs" style={{ display: "flex", gap: "var(--space-sm)", margin: "var(--space-sm) 0", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
-          {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
-            const label = code === "all" ? t("common.all") : (tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code);
-            return (
-              <button
-                key={code}
-                className={activeTab === code ? "tab active" : "tab"}
-                onClick={() => { setActiveTab(code); setPage(1); }}
-              >{label}</button>
-            );
-          })}
-          {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
+      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール＋その他プルダウン＋注記（右端）。表にくっつける */}
+      <Tabs
+        variant="underline"
+        size="md"
+        items={[
+          { key: "all", label: t("common.all") },
+          ...MAIN_TCG_CODES.map((code) => ({ key: code, label: tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code })),
+        ]}
+        activeKey={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? activeTab : ""}
+        onChange={(key) => { setActiveTab(key); setPage(1); }}
+        extra={
+          tcgTypes.filter((tt) => !MAIN_TCG_CODES.includes(tt.code)).length > 0 ? (
             <SelectControl
-              size="sm"
-              value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
+              variant="tab"
+              value={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? "" : activeTab}
               onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
               aria-label={t("inventory.filter.otherTypes")}
             >
               <option value="">{t("inventory.filter.otherTypes")}</option>
               {tcgTypes
-                .filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code))
+                .filter((tt) => !MAIN_TCG_CODES.includes(tt.code))
                 .map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
                 ))}
             </SelectControl>
-          )}
-        </div>
-        <p
-          data-testid="inventory-expiry-warning"
-          style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
-        >
-          {"※"}
-          {windowHours === undefined
-            ? null
-            : windowHours === null
-              ? t("inventory.distributionOff")
-              : noticeHours === 0
-                ? t("inventory.windowUnlimited")
-                : t("inventory.expiryWarning", { hours: noticeHours })}
-        </p>
-      </div>
+          ) : undefined
+        }
+        end={
+          <p
+            data-testid="inventory-expiry-warning"
+            style={{ margin: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
+          >
+            {"※"}
+            {windowHours === undefined
+              ? null
+              : windowHours === null
+                ? t("inventory.distributionOff")
+                : noticeHours === 0
+                  ? t("inventory.windowUnlimited")
+                  : t("inventory.expiryWarning", { hours: noticeHours })}
+          </p>
+        }
+      />
 
       <DataTable
         columns={columns}
@@ -587,6 +591,7 @@ export default function InventoryPage() {
         stickyHeader
         fitToWidth
         mobileCards
+        attachedTop={!isMobile}
         emptyState={t("inventory.noResults")}
       />
       {drawerRow && <InventoryRowDrawer row={drawerRow} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}

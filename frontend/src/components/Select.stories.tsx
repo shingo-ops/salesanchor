@@ -145,3 +145,25 @@ export const Variants: Story = {
     </div>
   ),
 }
+
+export const TabVariant: Story = {
+  name: 'タブの見た目 (tab: 未選択・選択中)',
+  render: () => (
+    <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+      <SelectControl
+        variant="tab"
+        aria-label="未選択"
+        value=""
+        onChange={() => {}}
+        options={[{ value: '', label: 'その他' }, { value: 'a', label: 'ホロライブ' }]}
+      />
+      <SelectControl
+        variant="tab"
+        aria-label="選択中"
+        value="a"
+        onChange={() => {}}
+        options={[{ value: '', label: 'その他' }, { value: 'a', label: 'ホロライブ' }]}
+      />
+    </div>
+  ),
+}

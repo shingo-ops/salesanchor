@@ -262,6 +262,7 @@
     "discordAnnounce": "Discordアナウンス",
     "superAdminFxRate": "為替レート管理",
     "superAdminViewers": "閲覧者管理",
+    "superAdminViewerTemplates": "閲覧者向けテンプレート",
     "superAdminTcgLineImport": "インポート",
     "superAdminTcgDistribution": "配信先管理",
     "superAdminAnalysisRules": "LINE解析",
@@ -2664,6 +2665,61 @@
         "noUnit": "（指定なし）"
       }
     },
+    "viewerTemplates": {
+      "subtitle": "閲覧者に送る文面の一覧です。行を押すと本文を確かめてコピーできます。",
+      "backToViewers": "閲覧者管理へ戻る",
+      "detailTitle": "テンプレートの詳細",
+      "colName": "名前",
+      "colSendMode": "送り方",
+      "colWhen": "いつ",
+      "colUpdated": "最終更新",
+      "sendMode": {
+        "manual": "手で送る",
+        "auto": "自動"
+      },
+      "names": {
+        "signup_request": "申込のお願い",
+        "reissue_notice": "申込コードの作り直し",
+        "reissue_notice_no_invite": "申込コードの作り直し（招待なし）",
+        "room_welcome": "部屋のはじめの案内",
+        "room_recreated": "部屋の作り直しの案内",
+        "notice_extended": "延長のお知らせ",
+        "notice_activated": "本登録のお知らせ",
+        "notice_suspended": "停止のお知らせ",
+        "interview_request": "面談のお願い"
+      },
+      "when": {
+        "signup_request": "申込の前",
+        "reissue_notice": "作り直したとき",
+        "reissue_notice_no_invite": "招待が作れなかったとき",
+        "room_welcome": "申込コードを入れて部屋ができたとき",
+        "room_recreated": "部屋を作り直したとき",
+        "notice_extended": "延長したとき",
+        "notice_activated": "本登録にしたとき",
+        "notice_suspended": "停止したとき",
+        "interview_request": "期限の前日10時以降"
+      },
+      "placeholders": {
+        "signup_url": "申込ページのURL（自動で入ります）",
+        "line_name": "LINEの名前",
+        "code": "申込コード",
+        "expires": "申込コードの有効期限（日時）",
+        "invite_url": "Discordへの招待URL",
+        "email": "メールアドレス",
+        "password": "初期パスワード",
+        "until_date": "延長後の期限の日付",
+        "expires_date": "お試し期限の日付"
+      },
+      "placeholdersLabel": "差し込み項目",
+      "placeholdersNone": "なし",
+      "bodyLabel": "本文",
+      "unregistered": "未登録",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "copyError": "コピーできませんでした",
+      "loadError": "テンプレートを読み込めませんでした",
+      "empty": "—"
+    },
     "viewers": {
       "subtitle": "社外の在庫閲覧者の状態・期限を管理します。",
       "colEmail": "メール",
@@ -2706,6 +2762,7 @@
       "menuAll": "すべて",
       "copySignupUrl": "申込フォームのURLをコピー",
       "copySignupRequest": "申込のお願いをコピー",
+      "templates": "テンプレート",
       "roomNoticeFailed": "部屋に送れませんでした。下の文をコピーして送ってください",
       "reissueMessage": "案内文",
       "copied": "コピーしました",
