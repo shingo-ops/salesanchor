@@ -89,10 +89,45 @@ def test_missed_and_extra_counts():
     assert (c1, extra) == (1, 1)
 
 
-def test_post_without_current_rows_counts_as_missed():
+def test_post_without_snapshot_rows_counts_as_missed():
     g = [grow(), grow(price_line="L5", lines="L5")]
-    T, errors, c1, extra, nocur, nofile, table = run_score(g, [srow(is_current="True")][:0])
+    T, errors, c1, extra, nocur, nofile, table = run_score(g, [])
     assert (c1, nocur) == (2, 1)
+
+
+def test_is_current_false_rows_are_used():
+    # is_current が false の行も採点に使う（絞らない）
+    T, errors, c1, extra, *_ = run_score([grow()], [srow(is_current="False")])
+    assert (c1, extra) == (0, 0)
+    assert t(T, "A1", "通し") == (1, 0, 0)
+
+
+def test_main_ignores_is_current_column(tmp_path):
+    gold = tmp_path / "g.tsv"
+    snap = tmp_path / "snap"
+    snap.mkdir()
+    write(str(gold), G_HEAD, [grow()])
+    head = [h for h in S_HEAD if h != "is_current"]  # 列が無くても動く
+    write(str(snap / "P1.tsv"), head, [srow()])
+    r = subprocess.run([sys.executable, "-I", SCRIPT, "--gold", str(gold), "--snapshot-dir", str(snap),
+                        "--out-dir", str(tmp_path / "out")], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
+def test_all_excluded_gold_is_matched_not_scored_nor_extra():
+    g = [grow(除外="ALL", A1_product_id="(除外)")]
+    T, errors, c1, extra, *_ = run_score(g, [srow()])
+    assert (c1, extra) == (0, 0)          # 余分に数えない・読み落としでもない
+    assert ("E1", "Gemini") not in T  # 採点しない
+    assert errors == []
+
+
+def test_unexpected_system_values_are_wrong_not_na():
+    for bad in ("Error", "FLAG_SINGLE", ""):
+        T, errors, *_ = run_score([grow()], [srow(condition_canonical=bad, unit_canonical=bad)])
+        assert t(T, "A2", "通し") == (0, 1, 0), bad
+        assert t(T, "A3", "通し") == (0, 1, 0), bad
+        assert t(T, "A2", "システム") == (0, 1, 0), bad
 
 
 def test_exclusions():

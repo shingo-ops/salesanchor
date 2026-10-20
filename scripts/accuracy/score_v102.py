@@ -16,7 +16,7 @@ import sys
 GOLD_COLS = ["投稿id", "price_line", "lines", "許容する行", "E2_price", "E3_quantity",
              "A1_product_id", "A2_condition", "A3_unit", "A4_status", "A5_ship", "除外"]
 SNAP_COLS = ["extraction_item_id", "line_start", "line_end", "source_lines", "raw_price",
-             "raw_quantity", "is_current", "product_id", "condition_canonical",
+             "raw_quantity", "product_id", "condition_canonical",
              "unit_canonical", "status", "ship_ja", "price_normalized",
              "quantity_normalized", "exclusion"]
 NO_ANSWER = ("(除外)", "対象外")
@@ -112,7 +112,7 @@ def a4_table(gold, snaps):
 
 
 def match_post(golds, items):
-    """golds: 1投稿の正解の件。items: 同じ投稿の current なシステムの件。
+    """golds: 1投稿の正解の件。items: 同じ投稿のシステムの件（全行）。
     戻り値: {正解のindex: システムの件}, 余ったシステムの件のリスト"""
     used = set()
     pairs = {}
@@ -344,7 +344,7 @@ def main(argv=None):
         files = sorted(f for f in os.listdir(a.snapshot_dir) if f.endswith(".tsv"))
         for f in files:
             rows = read_tsv(os.path.join(a.snapshot_dir, f), SNAP_COLS)
-            snap_by_post[f[:-4]] = [r for r in rows if r["is_current"].strip().lower() == "true"]
+            snap_by_post[f[:-4]] = rows  # 全行を使う（is_current では絞らない）
         T, errors, c1, extra, nocur, nofile, table = score(gold, snap_by_post)
         os.makedirs(a.out_dir, exist_ok=True)
         write_tsv(os.path.join(a.out_dir, "result.tsv"),
@@ -360,7 +360,7 @@ def main(argv=None):
         print("STOP: %s" % e, file=sys.stderr)
         return 2
     # 画面には件数だけ（時刻・パスは出力ファイルに入れない）
-    print("current行なしの投稿=%d (うち写しファイル無し=%d)" % (nocur, nofile))
+    print("写しの行が無い投稿=%d (うち写しファイル無し=%d)" % (nocur, nofile))
     print("A4読み替え表: " + " / ".join("%s=%s(%d)" % (k, v[0], v[1]) for k, v in table.items()))
     return 0
 
