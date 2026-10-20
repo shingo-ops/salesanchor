@@ -9,6 +9,8 @@
 --   ALTER TABLE public.line_conditions DROP CONSTRAINT IF EXISTS line_conditions_value_group_check;
 --   ALTER TABLE public.line_conditions ADD CONSTRAINT line_conditions_value_group_check
 --     CHECK (value_group IS NULL OR value_group IN ('box', 'case', 'pack'));
+-- guard（流し直し対策）: deploy は全 migration を毎回先頭から流し直す。後の migration で広げた値（例: booklet）の行が既にあると、
+-- 無条件の DROP→ADD で古い CHECK を付け直した時点で violated by some row になり deploy が落ちる。そのため既に 'promo_pack' を許す定義なら流さない。
 
 DO $$
 DECLARE
@@ -21,6 +23,16 @@ BEGIN
   ) AND EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'line_conditions' AND column_name = 'value_group'
+  ) AND NOT EXISTS (
+    -- 既に 'promo_pack' を許す形に広がっていれば何もしない（冪等性。20260613_040000_funnel_goals_kpi_extend.sql と同じ考え方）
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'line_conditions'
+      AND c.conname = 'line_conditions_value_group_check'
+      AND pg_get_constraintdef(c.oid) LIKE '%promo_pack%'
   ) THEN
     SELECT pg_get_constraintdef(con.oid) INTO existing_def
     FROM pg_constraint con

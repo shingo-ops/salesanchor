@@ -24,7 +24,7 @@
  */
 import { useRef } from 'react';
 import type { ReactNode, KeyboardEvent, MouseEvent } from 'react';
-import { TABLE_ICONS } from '../constants/icons';
+import { TABLE_ICONS } from '../constants/icons-base';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useFitTableZoom } from '../hooks/useFitTableZoom';
 import './DataTable.css';
