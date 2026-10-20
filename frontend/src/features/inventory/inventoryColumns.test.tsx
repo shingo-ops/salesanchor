@@ -122,19 +122,23 @@ describe("title ellipsis and wrapped note/ship (ADR-1014 rev 2026-10-20)", () =>
     render(<div data-testid="cell">{cols.find((c) => c.key === key)!.renderCell!(r, "r1")}</div>);
     return screen.getByTestId("cell");
   };
-  it("gives both title lines the clip class and a full-text title", () => {
+  it("wraps both title lines in a HoverCard trigger and drops the title attribute", () => {
     const c = cell("name", { ...row, product_name: "Long Name", name_en: "Long English" });
     const top = c.querySelector(".inventory-cell__title");
     const sub = c.querySelector(".inventory-cell__sub");
     expect(top?.classList.contains("inventory-cell__clip")).toBe(true);
-    expect(top?.getAttribute("title")).toBe("Long Name");
+    expect(top?.hasAttribute("title")).toBe(false);
+    expect(top?.hasAttribute("data-hover-card-clip")).toBe(true);
+    expect(top?.closest(".comp-hover-card-trigger")).not.toBeNull();
     expect(sub?.classList.contains("inventory-cell__clip")).toBe(true);
-    expect(sub?.getAttribute("title")).toBe("Long English");
+    expect(sub?.hasAttribute("title")).toBe(false);
+    expect(sub?.hasAttribute("data-hover-card-clip")).toBe(true);
+    expect(sub?.closest(".comp-hover-card-trigger")).not.toBeNull();
   });
   it("uses #product_id as the title when product_name is empty and omits the sub line without name_en", () => {
     const c = cell("name", { ...row, product_name: null, name_en: null });
     const top = c.querySelector(".inventory-cell__title");
-    expect(top?.getAttribute("title")).toBe("#2");
+    expect(top?.hasAttribute("title")).toBe(false);
     expect(top?.textContent).toBe("#2");
     expect(c.querySelector(".inventory-cell__sub")).toBeNull();
   });

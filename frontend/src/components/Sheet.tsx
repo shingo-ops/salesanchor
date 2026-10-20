@@ -23,7 +23,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
-import { X } from "../constants/icons";
+import { X } from "../constants/icons-base";
 import "./Sheet.css";
 
 interface SheetProps {

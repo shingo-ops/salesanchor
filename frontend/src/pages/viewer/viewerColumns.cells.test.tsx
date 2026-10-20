@@ -98,14 +98,18 @@ describe("viewer block frames (ADR-1014 rev 2026-10-19 (3))", () => {
 });
 
 describe("viewer title ellipsis and wrapped note/ship (ADR-1014 rev 2026-10-20)", () => {
-  it("gives both title lines the clip class and a full-text title", () => {
+  it("wraps both title lines in a HoverCard trigger and drops the title attribute", () => {
     const { container } = cell("name", { ...base, japanese_title: "Long Name", english_title: "Long English" });
     const top = container.querySelector(".inventory-cell__title");
     const sub = container.querySelector(".inventory-cell__sub");
     expect(top?.classList.contains("inventory-cell__clip")).toBe(true);
-    expect(top?.getAttribute("title")).toBe("Long Name");
+    expect(top?.hasAttribute("title")).toBe(false);
+    expect(top?.hasAttribute("data-hover-card-clip")).toBe(true);
+    expect(top?.closest(".comp-hover-card-trigger")).not.toBeNull();
     expect(sub?.classList.contains("inventory-cell__clip")).toBe(true);
-    expect(sub?.getAttribute("title")).toBe("Long English");
+    expect(sub?.hasAttribute("title")).toBe(false);
+    expect(sub?.hasAttribute("data-hover-card-clip")).toBe(true);
+    expect(sub?.closest(".comp-hover-card-trigger")).not.toBeNull();
   });
   it("omits the sub line without english_title", () => {
     const { container } = cell("name", { ...base, english_title: "" });

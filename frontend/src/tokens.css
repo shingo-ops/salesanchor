@@ -151,6 +151,7 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* Material/Meta 標準 */
   --ease-enter:    cubic-bezier(0, 0, 0.2, 1);    /* 要素が画面に入る */
   --ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* 要素が画面から出る */
+  --ease-pop:      cubic-bezier(0.2, 0.9, 0.3, 1.15); /* 少し行き過ぎて戻る。浮くカードが出るとき */
   --toast-slide-distance: 120%;                  /* Toast の退避距離 */
   --splash-dot-delay-step: 180ms;                /* Splash dots のずらし */
 
@@ -436,6 +437,7 @@
   --comp-inventory-title-max-w: var(--col-width-wide);   /* 在庫表 商品名1段の上限幅（360px） */
   --comp-inventory-text-max-w: var(--col-width-medium);  /* 在庫表 備考・発送の折り返し幅（200px） */
   --comp-inventory-text-min-w: calc(var(--col-width-medium) / 2);  /* 在庫表 備考・発送の最小幅（100px） */
+  --comp-hover-card-blur: 12px;   /* 浮くカードのすりガラスの強さ（schedule.css の前例と同じ値） */
   --comparison-label-col-w: 72px;  /* 比較表の項目ラベル列幅 */
   --comparison-source-col-w: 112px; /* 比較表の採用元列の内容幅（「Gemini抽出値を採用」が収まる幅） */
   --modal-commission-w:    760px;  /* 手数料パネル */
