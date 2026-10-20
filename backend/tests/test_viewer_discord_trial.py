@@ -24,10 +24,10 @@ from app.discord_gateway import viewer_bot_texts as T
 from app.discord_gateway.client import JarvisDiscordClient
 from app.services import viewer_admin
 from app.services import viewer_message_templates as vmt
-from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 from tests.test_super_admin_viewers import _account, _changes, _prepare, needs_ci_pg
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
+from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 
 GUILD_ID = 111222333444555666
 CONFIG = viewer_trial.ViewerDiscordConfig(str(GUILD_ID), "2001", "2002", "2003")

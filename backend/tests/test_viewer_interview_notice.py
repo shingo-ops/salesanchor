@@ -4,9 +4,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.discord_gateway import viewer_interview_notice as n
 from app.services import viewer_message_templates as vmt
 from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
-from app.discord_gateway import viewer_interview_notice as n
 
 JST = timezone(timedelta(hours=9))
 # 期限: JST 11/10 23:59 -> 前日は JST 11/9

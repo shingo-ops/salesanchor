@@ -16,8 +16,8 @@ from app.database import get_db
 from app.discord_gateway import viewer_bot_texts as T
 from app.services import viewer_message_templates as vmt
 from tests.test_super_admin_viewers import _api, _call, _make_user, _prepare, needs_ci_pg, override_user  # noqa: F401
-from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
+from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 
 KEYS = [
     "signup_request", "reissue_notice", "reissue_notice_no_invite", "room_welcome", "room_recreated",

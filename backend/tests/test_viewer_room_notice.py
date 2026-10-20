@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tests.viewer_template_fixtures import make_load_body
 from app.services import viewer_message_templates as vmt
 from app.services import viewer_room_notice as n
+from tests.viewer_template_fixtures import make_load_body
 
 JST_END = datetime(2026, 11, 3, 14, 59, 59, tzinfo=timezone.utc)  # JST 11/3 23:59:59
 
