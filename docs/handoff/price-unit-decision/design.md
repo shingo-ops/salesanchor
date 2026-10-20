@@ -44,9 +44,9 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
-| G1 | 「状態の別候補」の要確認が、値段で単位が決まる行で外れる | 便2 の置き換え試験と反映後の再解析で、今 `condition_multiple_candidates` が付いている行のうち**値段で単位と状態が決まった行**を数え、反映後に理由が残る行を数える。決まらなかった行（比が帯の間・B の「決めない」の組・種類が 2 つ以上・単品語の印・対象外の区分）は理由ごとに件数だけ記録する。基準: 棚卸しの D（社外秘 `inventory/proposal.md`、2026-10-21）で「ダメージ・凹み」の 10 行は状態・単位とも正しいのに要確認だった | 値段で決まった行で理由が残る行 0 |
+| G1 | 「状態の別候補」の要確認が、値段で単位が決まる行で外れる | 便2 の置き換え試験と反映後の再解析で、今 `condition_multiple_candidates` が付いている行のうち**値段で単位と状態が決まった行**を数え、反映後に理由が残る行を数える。決まらなかった行（比が帯の間・B の「決めない」の組・種類が 2 つ以上・単品語の印・対象外の区分）は理由ごとに件数だけ記録する。基準: 棚卸しの D（社外秘 「inventory/proposal.md」、2026-10-21）で「ダメージ・凹み」の 10 行は状態・単位とも正しいのに要確認だった | 値段で決まった行で理由が残る行 0 |
 | G2 | 値段で決めて新しく生まれる誤り | 置き換え試験で変わる行を全件、Opus が原文で判定 | 0 |
-| G3 | 要確認タブで新しく増える行 | `tab_true.sql` の数え方で反映の前後 | 0 |
+| G3 | 要確認タブで新しく増える行 | 「tab_true.sql」 の数え方で反映の前後 | 0 |
 | G4 | 同じ投稿を日を変えて再解析しても、物差しの値が変わらない（便1） | テストで「解析した時刻」を変えても中央値が同じ | 同じ |
 
 ## 対象と対象外
@@ -114,7 +114,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 ### 便1（時点）
 - `backend/app/services/line_analysis_v102_svc.py:1458-1468` の `_POSTED_AT_SQL`／`load_posted_date` の隣に、日時のまま返す `load_posted_at(session, extraction_job_id)` を足す（同じ SQL を使う。`source_messages.line_posted_at`）。
 - `backend/app/services/line_analysis_v102_svc.py:962` の `_buyback_units` の中で、対象がある（`backend/app/services/line_analysis_v102_svc.py:966` の判定が真）ときだけ、SAVEPOINT（`backend/app/services/line_analysis_v102_svc.py:969` の `session.begin_nested()`）の**中で** `load_posted_at` を 1 回呼び（失敗しても保存全体の取引を壊さない。今の except で「この投稿では決めない」になる）、`apply_buyback_units`（`backend/app/services/v102_buyback_unit_svc.py:194`）に `posted_at` を渡す。`posted_at` が None なら何もしない（今の values のまま）。reader で直近 30 日の 2525 job を数え、`line_posted_at` が NULL の job は 0（社外秘 `v5/null_posted.out`）。
-- `backend/app/services/v102_buyback_unit_svc.py:155` の `load_medians` に `posted_at` を足し、`_MEDIAN_SQL`（`backend/app/services/v102_buyback_unit_svc.py:54-65`）を次の形にする。社外秘 `v3/sql/prod_form_median.sql` の形で、1573 行すべて試算と一致を確かめ済み。
+- `backend/app/services/v102_buyback_unit_svc.py:155` の `load_medians` に `posted_at` を足し、`_MEDIAN_SQL`（`backend/app/services/v102_buyback_unit_svc.py:54-65`）を次の形にする。社外秘 「v3/sql/prod_form_median.sql」 の形で、1573 行すべて試算と一致を確かめ済み。
   - 変更前: `JOIN LATERAL (… WHERE l.shop_product_id = sp.id ORDER BY l.fetched_at DESC, l.id DESC LIMIT 1)` と `AND sp.last_seen_at >= now() - make_interval(days => :days)`
   - 変更後: LATERAL の中に `AND l.fetched_at <= :posted_at AND l.fetched_at >= :posted_at - make_interval(days => :days)` を足し、`sp.last_seen_at` の条件を消す。
 - 引数: `apply_buyback_units(..., posted_at)` と `load_medians(session, product_ids, max_age_days, posted_at)` の `posted_at` は**必須**（既定値なし。呼び忘れをテストで落とすため）。
@@ -125,7 +125,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
   - `backend/tests/test_v102_buyback_unit.py:71-72` の `_apply`・:158・:173: `posted_at` を渡す。
   - `backend/tests/test_v102_buyback_unit.py:203-212` の `_WriteSession`／`_Session.execute`: `_POSTED_AT_SQL` に投稿日時を返すようにし、:238・:249 の `_write_results` の試験が今どおり通るようにする。
 - 足すテスト（`backend/tests/test_v102_buyback_unit.py`）: 投稿日時より後の値・31 日前の値を使わない、`posted_at` が None なら何もしない、`load_posted_at` が失敗したらこの投稿では決めない。
-- 設定: 記録 SQL（ADR-1007）で `unit_buyback_max_age_days` を 7 → 30 にし、`note` 列を「買取価格による単位・状態の判定: 行の投稿日時より前の、この日数以内の買取の値だけを使う」に直す。ファイルは前例（`docs/handoff/v102-buyback-unit/data/`）と同じ形で `docs/handoff/price-unit-decision/data/bin1/{precheck,dryrun,commit,rollback,verify}.sql`。コードを先に反映し、その後に COMMIT する。
+- 設定: 記録 SQL（ADR-1007）で `unit_buyback_max_age_days` を 7 → 30 にし、`note` 列を「買取価格による単位・状態の判定: 行の投稿日時より前の、この日数以内の買取の値だけを使う」に直す。ファイルは前例（`docs/handoff/v102-buyback-unit/data/`）と同じ形で 「docs/handoff/price-unit-decision/data/bin1/{precheck,dryrun,commit,rollback,verify}.sql」（便のカードで作る）。コードを先に反映し、その後に COMMIT する。
 - 効き目: 今は再解析した時刻（now()）で物差しが変わり、同じ投稿でも再解析の日で結果が動く。変更後は投稿の時点で決まる。
 - 触らない: 対象（`is_candidate`）・帯・状態・basis・`_write_results` の順序。
 
@@ -141,7 +141,7 @@ KGI（PO が ADR-1035 の便を始めるときに決めた。ADR-1035 の本文�
 - 理由: `REASONS_DROPPED_WHEN_DECIDED`（`backend/app/services/v102_buyback_unit_svc.py:43`）に `condition_multiple_candidates` を足す。
 - 同じ値の扱い（`backend/app/services/v102_buyback_unit_svc.py:221-222`）: 値が同じでも、`review_reasons` に外す理由があれば、理由を外した values にする（D の表の「値は同じで、理由だけ外す」）。外す理由が無ければ今どおり何もしない。
 - basis（`with_decision` `backend/app/services/v102_buyback_unit_svc.py:180-191` の :186）: D の表どおり。
-- 設定: `parse_settings`（`backend/app/services/v102_buyback_unit_svc.py:90-103`）に `unit_buyback_pack_max` を足す（キーが無いときは Pack を決めない＝今と同じ。あって `0 < pack_max < box_min` でなければ設定全体を不正として何もしない）。記録 SQL は `docs/handoff/price-unit-decision/data/bin2/{precheck,dryrun,commit,rollback,verify}.sql`（`unit_buyback_pack_max`=0.2、note「買取価格による単位・状態の判定: 比がこの値以下ならパック」の 1 行を足す）。
+- 設定: `parse_settings`（`backend/app/services/v102_buyback_unit_svc.py:90-103`）に `unit_buyback_pack_max` を足す（キーが無いときは Pack を決めない＝今と同じ。あって `0 < pack_max < box_min` でなければ設定全体を不正として何もしない）。記録 SQL は 「docs/handoff/price-unit-decision/data/bin2/{precheck,dryrun,commit,rollback,verify}.sql」（便のカードで作る）（`unit_buyback_pack_max`=0.2、note「買取価格による単位・状態の判定: 比がこの値以下ならパック」の 1 行を足す）。
 - 直す既存テスト: `backend/tests/test_v102_value_overrides.py:204-212` の `fake_apply`・`is_buyback_candidate` の差し替えの引数、`backend/tests/test_v102_buyback_unit.py:263-268`（`is_candidate` を引数 2 つで呼んでいる）、`backend/tests/test_v102_buyback_unit.py:191-197`（設定の key が 4 つの前提。`unit_buyback_pack_max` は無くてもよい key として足す）、`backend/tests/test_gemini_raw_copy_v102_unit_state_set.py:185`・`:189`（`bb.is_candidate(item, values)` を引数 2 つで呼んでいる）、`backend/tests/test_v102_value_overrides.py:220`（`svc._buyback_units(...)` の呼び出し）、便1 で直した `_apply` などの呼び出しに `unit_alias_to_info` を足す。
 - 足すテスト: `backend/tests/test_v102_buyback_unit.py` に K1 の組。
 - 触らない: `_write_results` の順序（人の直し `backend/app/services/line_analysis_v102_svc.py:1143` → 便BB `backend/app/services/line_analysis_v102_svc.py:1147` → 規則13 → 便UP → `_apply_decisions`）、便UP、規則13、〆の規則 11b、`backend/app/services/gemini_raw_copy_v102_product_first.py` の状態・単位の決め方、人が状態を直した行の skip（`backend/app/services/v102_buyback_unit_svc.py:203`）、`unit_basis`、DB の形。
