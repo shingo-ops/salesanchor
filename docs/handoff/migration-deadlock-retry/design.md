@@ -88,11 +88,11 @@ run_sql() {
 | K1 本番 | マージした後の deploy run で `Migrations done.` と `ai_ro views created: 510` が出る |
 | K2 本番（継続） | この先の deploy で deadlock が出ても、`retry` の行の後に `Migrations done.` が出る。10/20〜11/3 の deploy run で「deadlock で失敗した数」を数え、0 なら ○ |
 
-## 維持する仕組み
+## 維持の仕組み
 - 冪等であることは、CI のドライラン2周（migration-test.yml）が毎回確かめる。
 - K2 は、2026-11-03 に deploy run の一覧から数え直す。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 - 他社事例は使わない。根拠は PostgreSQL 16 の公式文書「13.3.4 Deadlocks」（https://www.postgresql.org/docs/16/explicit-locking.html 、2026-10-20 に参照）で足りる。
   - 原文: "PostgreSQL automatically detects deadlock situations and resolves them by aborting one of the transactions involved"
   - 原文: "deadlocks can be handled on-the-fly by retrying transactions that abort due to deadlocks"
