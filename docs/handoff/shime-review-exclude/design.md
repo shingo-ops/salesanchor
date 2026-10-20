@@ -547,10 +547,10 @@ B（完売の語だけの余白行）
 C（〆の行の単位）
 - 【事実】単位不明の理由は `backend/app/services/gemini_raw_copy_v101.py:1289-1290`（row["unit"] が none のとき）。保存の列は `backend/app/services/line_analysis_v102_svc.py:720`・:739-740（unit_id・unit_canonical・unit_resolved）。
 - 【事実】要確認の一覧は、保存した review_reasons に加えて、unit_resolved が真でなければ unit_unresolved を足す（`backend/app/services/tcg_condition_review_svc.py:261`・:268）。単位を写すときは unit_resolved も真にしないと要確認から外れない。
-- 【事実】完売の相手は段A（`gemini_raw_copy_v102_soldout_ref.py:249-267` _targets_of）と段B（:415）が SoldoutTarget で作り、件の soldout_targets に4項目（product_id・condition_id・ref_message_id・ref_line）だけ載せる（`gemini_raw_copy_v101.py:1215-1217`・:1234-1237）。在庫の行の読み込み（`line_analysis_v102_svc.py:1350-1362` _STOCK_ITEMS_SQL・:1388-1403）は unit_id を読まない。
-- 【事実】保存の時に相手を使うのは `line_analysis_v102_svc.py:877-898` _apply_soldout_targets（状態を先頭の相手で上書きし、状態の理由だけ外す）。呼び出しは :1129-1132 の1か所。
+- 【事実】完売の相手は段A（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:249-267` _targets_of）と段B（:415）が SoldoutTarget で作り、件の soldout_targets に4項目（product_id・condition_id・ref_message_id・ref_line）だけ載せる（`backend/app/services/gemini_raw_copy_v101.py:1215-1217`・:1234-1237）。在庫の行の読み込み（`backend/app/services/line_analysis_v102_svc.py:1350-1362` _STOCK_ITEMS_SQL・:1388-1403）は unit_id を読まない。
+- 【事実】保存の時に相手を使うのは `backend/app/services/line_analysis_v102_svc.py:877-898` _apply_soldout_targets（状態を先頭の相手で上書きし、状態の理由だけ外す）。呼び出しは :1129-1132 の1か所。
 - 【事実】直近60日の SOLDOUT_REF・SOLDOUT_INHERIT の〆 22 行のうち、unit_unknown は2行（39300bc2・018e101c）。参照先の単位は 22/22 で1種類に決まる。2行の参照先はどれも Set（unit_id 13）（recon2 C・recon4 D6。参照先は保存されていないので近似）。2行とも sm.is_active=FALSE（差し替え済み）。
-- 【事実】〆の行の単位は、配信（Sold out・excluded を外す。`backend/app/services/tcg_distribution_svc.py:242-249`・:370・:484）、完売一覧（ei.raw_unit だけ。`backend/app/services/tcg_sold_out_results_svc.py:39`）、〆の確認済み扱い（〆自身の単位を見ない。`tcg_condition_review_svc.py:186-199`）、付け替えの鍵（(product_id, condition_id)。`backend/app/services/tcg_analyzer_svc.py:2094-2100`）のどれにも使われない（recon2 C）。
+- 【事実】〆の行の単位は、配信（Sold out・excluded を外す。`backend/app/services/tcg_distribution_svc.py:242-249`・:370・:484）、完売一覧（ei.raw_unit だけ。`backend/app/services/tcg_sold_out_results_svc.py:39`）、〆の確認済み扱い（〆自身の単位を見ない。`backend/app/services/tcg_condition_review_svc.py:186-199`）、付け替えの鍵（(product_id, condition_id)。`backend/app/services/tcg_analyzer_svc.py:2094-2100`）のどれにも使われない（recon2 C）。
 
 ### 13-3. 設計
 
@@ -658,7 +658,7 @@ def _with_target_unit(values: dict, targets: list[dict]) -> dict:
 - 人の判断（商品・状態）がある件は今と同じく何もしない（:887）。人が単位を直した件は apply_value_overrides（`backend/app/services/v102_human_decisions_svc.py:538-543`）で unit_id が入っているので写さない。
 - _extra_targets（:901-910）は (product_id, condition_id) だけを比べるので、dict に項目が増えても動きは変わらない。analysis_soldout_extra_targets に書く列も変わらない（:921-935）。
 - 変えないこと: 〆の行に単位が書かれている件（12f。unit_id か unit_canonical が入っている）、相手の単位が2種類以上の件、相手が無い件。写した単位は、_apply_soldout_targets（:1129）より前に走る処理（単位と価格の確認 :1125・:958-965、買取の単位、規則13）には見えない（〆の行は Sold out なので、これらの結果は今と同じ）。
-- 【事実】_inherit_price（`line_analysis_v102_svc.py:1302-1347`）は unit_id を読まず、status が Sold out ならすぐ戻る（:1314）。写した単位が値段の引き継ぎを変えることはない（審査で確認）。
+- 【事実】_inherit_price（`backend/app/services/line_analysis_v102_svc.py:1302-1347`）は unit_id を読まず、status が Sold out ならすぐ戻る（:1314）。写した単位が値段の引き継ぎを変えることはない（審査で確認）。
 
 ### 13-4. 代替案
 
@@ -670,7 +670,7 @@ def _with_target_unit(values: dict, targets: list[dict]) -> dict:
 | B-2 | 完売の語だけの行を在庫の役割（ROLE_STOCK）にする | 不採用。_is_stock_line は名前・状態・数量の取り出し全体に効き、影響が F5 より広い |
 | B-3 | 要確認の一覧の側（review_joins）で、〆の確認済み扱いのとき possible_footer_line も外す | 不採用。余白行の疑いは「名前を取り違えたかも」の印で、〆と関係のない行（例「・買取品」）まで外れる |
 | C-1（採用） | 相手の単位が1種類なら写す | 保存の値が実物に近づき、unit_unknown と unit_unresolved の両方が正しく消える |
-| C-2 | 相手がある〆の行には unit_unknown を付けない（単位は空のまま） | 不採用。unit_resolved が偽のままなので、要確認の一覧で unit_unresolved が残る（`tcg_condition_review_svc.py:261`） |
+| C-2 | 相手がある〆の行には unit_unknown を付けない（単位は空のまま） | 不採用。unit_resolved が偽のままなので、要確認の一覧で unit_unresolved が残る（`backend/app/services/tcg_condition_review_svc.py:261`） |
 | C-3 | 何もしない | 不採用。PO の願い（最新の在庫から決める）に合わない |
 
 ### 13-5. 受け入れ基準
@@ -681,7 +681,7 @@ def _with_target_unit(values: dict, targets: list[dict]) -> dict:
 | T1 C の試験 | `backend/tests/test_line_analysis_v102_svc.py` に足して CI で通る: (y) values の unit_id が None・review_reasons が "unit_unknown" で、相手が全て unit_id 13・"Set" → unit_id 13・unit_canonical "Set"・unit_resolved 真・review_reasons None・needs_review 偽 (z) 相手の単位が2種類 → 単位も理由も変わらない (aa) values に単位が入っている（今の _soldout_item の BOX）→ 単位は変わらない (bb) 人の判断がある → 今の試験（:437-445・:556-559）どおり values そのもの (cc) 相手の dict に単位が無い（今の _TARGETS）→ 今の試験が全部変えずに通る（:418-559）。`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に: (dd) _targets_of と decide_soldout_inherit が StockItem の unit_id・unit_canonical を SoldoutTarget に運ぶ（:568・:649・:655 の既存の期待は既定値のまま通る）。:669 の soldout_targets の4項目ぴったりの期待は `"unit_id": None, "unit_canonical": ""` を足した6項目に書き換える（test_v102_value_overrides.py:184 は t.get で読むので変えない）。_load_stock_items が unit_id・unit_canonical を読む（pg の試験があれば足す。無ければ SQL の文字列に ar.unit_id が入ることを確かめる） |
 | T2 B の本番の当て | 実装の HEAD のコードで、直近30日（B1 と同じ窓）の possible_footer_line の件（sm.is_active 不問）の投稿を、保存済みの Gemini の写しから v102 の取り出しだけやり直し（Gemini は呼ばない・書き込まない）、possible_footer_line が外れる件の集合 = {2928ea55} で、In Stock・Pre-order の件は 0。名前・status・値段・数量の差が 0 |
 | T2 C の本番の当て | 同じやり方で 39300bc2・018e101c の job をやり直し（書き込まない）、_apply_soldout_targets の後の values が unit Set・unit_resolved 真・unit_unknown なし。直近60日の SOLDOUT_REF・SOLDOUT_INHERIT の残り 20 行は単位・理由の差が 0 |
-| 共通 | `git diff origin/main -- backend/app/services/tcg_distribution_svc.py` が 0 行。`tcg_condition_review_svc.py` の差は §13-10 A-2 の1か所（cr_shime の相手の条件）だけ。`backend/tests/test_inventory_distribution_rows.py` の固定値が変わらずに通る |
+| 共通 | `git diff origin/main -- backend/app/services/tcg_distribution_svc.py` が 0 行。`backend/app/services/tcg_condition_review_svc.py` の差は §13-10 A-2 の1か所（cr_shime の相手の条件）だけ。`backend/tests/test_inventory_distribution_rows.py` の固定値が変わらずに通る |
 | A | §13-10-3 の T1 A-1・T1 A-2・T2-A1・T2-A2・本番の後 |
 | 本番の後 | デプロイ後、2928ea55 の job だけを再解析する（本番の書き込みなので台本と確かめ運転の後に PO が `!` で流す）。その後 ai_ro で、2928ea55 の review_reasons に possible_footer_line が無く、要確認の一覧（review_joins）に出ない。新しい投稿は、毎朝の点検（§12-8）で余白行・単位の写しも原文と照らす |
 
@@ -715,7 +715,7 @@ ADR: 作らない（§9 と同じ。規則の正本は本書と docs/handoff/v10
 
 ### 13-8. 審査
 
-- Opus 自己審査（独立した第二者のレビューではない）: B は 13-2 の当たり 1 行（2928ea55）と In Stock・Pre-order 0 行、C は 2 行・参照先の単位 1 種類を確かめた。C は要確認の一覧が unit_resolved から unit_unresolved を足す（`tcg_condition_review_svc.py:261`）ので unit_resolved も真にする形にした。A は 3 対 3 のため推奨を不採用にした。
+- Opus 自己審査（独立した第二者のレビューではない）: B は 13-2 の当たり 1 行（2928ea55）と In Stock・Pre-order 0 行、C は 2 行・参照先の単位 1 種類を確かめた。C は要確認の一覧が unit_resolved から unit_unresolved を足す（`backend/app/services/tcg_condition_review_svc.py:261`）ので unit_resolved も真にする形にした。A は 3 対 3 のため推奨を不採用にした。
 - 未確認: T2 のやり直しの道。CI（pg）での試験の実行。A は §13-10-5。
 - Reviewer（opus）審査 第1回（HEAD be51da5fb）: REVISE。指摘 T-1〜T-4（試験の期待2か所の食い違い・(v) の書き方・期間の不揃い）、C-1（docstring とコメント）、C-2（〆に単位の文字がある件を上書きしない守り）、C-3（先に走る処理には見えない旨）、_inherit_price の確かめ結果。すべて本書に反映した。
 
@@ -826,7 +826,7 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 - 〆の投稿の line_posted_at が NULL のときは今と同じ条件（別の投稿の別の状態の相手を全部数える。安全側。Reviewer 第1回の軽い指摘）。
 - 同じ状態の相手（`cr_sa.condition_id = 〆の condition_id`）は今と同じく、どの投稿のものでも数える（同じ状態が前の投稿で売られていたなら、〆はそれの可能性が高い。安全側）。
 - cr_n1 は A-1 の「最新の在庫の投稿」と同じ考え（〆より前・同じ窓口・その商品の Sold out でない行を最新 job に持つ・is_active は見ない）。測定（recon7 G4a・G4_cond.sql）の n1 と同じ条件に、並びの同点を決める `cr_n1.id DESC` を足した（測定には無い。同じ時刻の投稿が2つあると n1 が測定と違いうる。【未確認】該当の有無。T2-A2 で実装の SQL そのものを流して確かめる）。
-- shime=False の道（在庫表・配信・取り込みの進み具合。`tcg_distribution_svc.py` 3か所・`tcg_import_progress.py` 1か所）は `SELECT FALSE AS settled` の定数のままで、変わらない（`backend/tests/test_tcg_condition_review.py:907-924` が守る）。
+- shime=False の道（在庫表・配信・取り込みの進み具合。`backend/app/services/tcg_distribution_svc.py` 3か所・`backend/app/services/tcg_import_progress.py` 1か所）は `SELECT FALSE AS settled` の定数のままで、変わらない（`backend/tests/test_tcg_condition_review.py:907-924` が守る）。
 - 変えないこと: 48時間の窓（:56 SHIME_STOCK_WINDOW_HOURS）、相手の他の条件（is_current・pid_resolved・unit_resolved・excluded でない・値段あり・FLAG でない・Sold out でない）、settled の使われ方（:262-263・:269-270）、OFFSET 0 の数（コメント1・cr_data 1・cr_shime 1。`backend/tests/test_tcg_condition_review_fenced.py:29`。足す副問い合わせに OFFSET 0 は付けない）。
 
 【事実】測定（recon7 G4。本番 2026-10-20 08:49Z・ai_ro）は「別の状態だけでなく同じ状態の相手も n1 に絞る」形（G4_cond.sql の (i)）で行った。その形で、settled=偽の参考 40 件（差し替え済みの投稿を含む直近4日）のうち真に変わるのは 0c91e2e0・5642ad0b の 2 件だけ、今の要確認の一覧の〆の形 51 行は真→偽・偽→真とも 0。
