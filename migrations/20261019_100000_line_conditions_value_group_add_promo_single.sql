@@ -2,6 +2,8 @@
 -- public.conditions は view（実テーブルは public.line_conditions）。CHECK の作り直しだけで、view の再作成は要らない。
 -- additive-only: 許す値を広げるだけ。既存の行は変わらない（既存の値 box/case/pack と NULL はそのまま通る）。
 -- 空 DB（CI test-run）では line_conditions が無いので何もしない（20261017_120000_line_conditions_value_rank.sql と同じ考え方）。
+-- 再実行ガード: run_all_migrations.sh は毎回全 migration を流すため、後の migration が広げた制約を狭め直さないよう
+-- 現在の制約定義を見て、すでに目的の値を含むなら何もしない（deploy 39356908634・39359118758 失敗の復旧）。
 --
 -- 戻し方（downgrade。流すのは PO。promo_pack・single の行が残っていると失敗するので、先に行を消すか value_group を NULL にする）:
 --   ALTER TABLE public.line_conditions DROP CONSTRAINT IF EXISTS line_conditions_value_group_check;
@@ -11,6 +13,8 @@
 -- 無条件の DROP→ADD で古い CHECK を付け直した時点で violated by some row になり deploy が落ちる。そのため既に 'promo_pack' を許す定義なら流さない。
 
 DO $$
+DECLARE
+  existing_def TEXT;
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.tables
@@ -30,12 +34,21 @@ BEGIN
       AND c.conname = 'line_conditions_value_group_check'
       AND pg_get_constraintdef(c.oid) LIKE '%promo_pack%'
   ) THEN
-    ALTER TABLE public.line_conditions DROP CONSTRAINT IF EXISTS line_conditions_value_group_check;
-    ALTER TABLE public.line_conditions
-      ADD CONSTRAINT line_conditions_value_group_check
-      CHECK (value_group IS NULL OR value_group IN ('box', 'case', 'pack', 'promo_pack', 'single'));
+    SELECT pg_get_constraintdef(con.oid) INTO existing_def
+    FROM pg_constraint con
+    WHERE con.conrelid = 'public.line_conditions'::regclass
+      AND con.conname = 'line_conditions_value_group_check';
 
-    COMMENT ON COLUMN public.line_conditions.value_group
-      IS '状態の価値の群（box/case/pack/promo_pack/single）。NULL=価値順の対象外。promo_pack・single は v102 のシングル系・プロモパック系だけが読む（ADR-1031）';
+    IF existing_def IS NOT NULL AND existing_def LIKE '%''promo_pack''%' AND existing_def LIKE '%''single''%' THEN
+      RAISE NOTICE 'migration 20261019_100000: line_conditions_value_group_check は既に promo_pack・single を含む、skip';
+    ELSE
+      ALTER TABLE public.line_conditions DROP CONSTRAINT IF EXISTS line_conditions_value_group_check;
+      ALTER TABLE public.line_conditions
+        ADD CONSTRAINT line_conditions_value_group_check
+        CHECK (value_group IS NULL OR value_group IN ('box', 'case', 'pack', 'promo_pack', 'single'));
+
+      COMMENT ON COLUMN public.line_conditions.value_group
+        IS '状態の価値の群（box/case/pack/promo_pack/single）。NULL=価値順の対象外。promo_pack・single は v102 のシングル系・プロモパック系だけが読む（ADR-1031）';
+    END IF;
   END IF;
 END $$;
