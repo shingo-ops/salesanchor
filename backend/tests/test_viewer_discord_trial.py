@@ -617,3 +617,11 @@ def test_list_viewers_returns_channel_url(pg):  # noqa: F811
     cur.execute("TRUNCATE public.viewer_discord_config")
     items = {i["id"]: i for i in asyncio.run(_list())}
     assert items[with_ch]["discord_channel_url"] is None
+
+
+def test_room_welcome_wraps_password_in_inline_code():
+    """歓迎文の初期パスワードだけをバッククォートで囲む（スマホで長押しコピーするため）。"""
+    text = T.ROOM_WELCOME.format(email="a@example.com", password="Ab-_09xyz")
+    assert "初期パスワード: `Ab-_09xyz`" in text
+    assert "メールアドレス: a@example.com" in text
+    assert "`a@example.com`" not in text

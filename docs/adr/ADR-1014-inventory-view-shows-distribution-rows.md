@@ -159,7 +159,7 @@ PO 決定（2026-10-20「カード版でこの仕様で決定」）。前の改�
 
 - 内容: パソコン幅（768px 以上）で、日本語・英語どちらかの段が「…」で切れているときだけ、マウスを乗せて150ms後に名前の上へカードを出す。日本語は太字1行、英語は小さく薄く1行。隣の行へ移るとカードは滑って移る。切れていない名前では出ない。クリックでは開閉しない。スマホ幅は折り返しで切れないので出ない。
 - 正本: `frontend/src/components/HoverCard.tsx`・`HoverCard.css`・`frontend/src/features/inventory/inventoryColumns.tsx`・`frontend/src/pages/viewer/viewerColumns.tsx`・`frontend/src/tokens.css`（トークン2つ `--ease-pop`・`--comp-hover-card-blur` は ADR-067 の表に追記）。GAS の `:root` にある写しは、正本トークンを変えたとき一緒に直す。
-- 反映: アプリ: 本 PR。GAS: テスト版・本番版の番号は反映後に追記する。
+- 反映: アプリ: #4557（2026-10-20 マージ）。GAS: テスト版29・本番版19（2026-10-20 PO 実行。clasp pull で中身が作った物と一致）。
 - 戻し方: アプリは PR を revert（前の便の「…」＋ `title` に戻る）。GAS はテストを版28、本番を版18へ redeploy する。
 - 記録: `docs/handoff/inventory-name-hover-card/`（recon・design・審査）。
 

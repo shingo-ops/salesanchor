@@ -30,7 +30,7 @@ ROOM_WELCOME = (
     "下記のURLにログイン情報を入力してご利用ください。\n"
     "URL: https://app.salesanchor.jp/viewer/\n"
     "メールアドレス: {email}\n"
-    "初期パスワード: {password}"
+    "初期パスワード: `{password}`"
 )
 ROOM_RECREATED = (
     "部屋を作り直しました。\n"
