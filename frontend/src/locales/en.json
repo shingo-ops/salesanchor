@@ -2705,6 +2705,8 @@
       "genericError": "The operation failed. Please try again later.",
       "menuAll": "All",
       "copySignupUrl": "Copy signup form URL",
+      "copySignupRequest": "Copy signup request message",
+      "reissueMessage": "Message",
       "copied": "Copied",
       "copy": "Copy",
       "reissue": "Reissue code and invite",
