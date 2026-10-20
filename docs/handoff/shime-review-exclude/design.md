@@ -884,11 +884,11 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 
 PO の指示（2026-10-20「推測は禁止して事実確認を怠らずに…確立したなら進める」）を受け、CI の statement timeout は再実行で通さず、原因を測ってから直した。生出力は ~/CC報告ファイル-keep/shime-next3-impl/（ci2・jit3・v4impl・item_path・review3）。
 
-- 【事実】A-2 を §13-10-2 の相関副問い合わせの形で入れた HEAD（51f7da281）では、`backend/tests/test_tcg_result_order.py` の test_larger_result_set が CI で statement timeout になった（2回）。直近 40 回の CI では、この試験の timeout は本ブランチだけ。
+- 【事実】A-2 を §13-10-2 の相関副問い合わせの形で入れた HEAD では、`backend/tests/test_tcg_result_order.py` の test_larger_result_set が CI で statement timeout になった。a0ab70802（run 39406055750）と 51f7da281（run 39421637301）で各1回。その間の 61dbd671b（run 39419924892）は合格（6982 passed、timeout 0行）で、61dbd671b→51f7da281 の差は試験ファイル `backend/tests/test_line_analysis_v102_svc.py` の21行追加だけ。つまり同じサービスの SQL で、通る回と落ちる回があった（ci2/runs.txt）。直近 40 回の CI では、この試験の timeout は本ブランチだけ。
 - 【事実】同じデータでの EXPLAIN の最上位 cost は main 19,412、51f7da281 18,075,667。cr_n1 の相関副問い合わせの見積もりが、500 行ぶん積まれた（実行は never executed）。PostgreSQL の JIT の閾値は jit_above_cost 100000 で、本番は jit=on・pg_jit_available()=true（ci2/jit_prod2.out）。CI は postgres:16 で jit の上書きなし（`.github/workflows/test.yml:122-123`）。
-- 【未確認】CI での JIT の実時間。sandbox-test は既存スクリプトしか回せず、測っていない。timeout の原因が JIT かは確定していない。
+- 【未確認】CI での JIT の実時間。sandbox-test は既存スクリプトしか回せず、測っていない。同じ SQL で合否が分かれた（上の 61dbd671b と 51f7da281）こともあり、timeout の原因が JIT かは確定していない。
 - 実装の形（3905188b4）: 〆より前の最新の在庫投稿を、チャネル×商品ごとに先に集める cr_prev（MATERIALIZED CTE、source_cte の先頭。`backend/app/services/tcg_condition_review_svc.py:71-81`）から引く。cr_prev に窓 `line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})` を置く。
-- 窓を足しても意味（§13-10-2）は変わらない理由: 相手の条件は同じ式の窓を持つ（同 :229）。本当の最新が窓の中ならそれが選ばれ、窓の外なら、それより前の投稿もすべて窓の外で、相手が0になる。この点はどちらの形でも同じ。試験 (oo)（60時間前→外れる）・(oo2)（40時間前→残る）・(pp)（窓の式の文字列が一致）・(nn)（cr_n1x の参照は1か所）が守る。在庫表の側（`backend/app/services/tcg_distribution_svc.py` の3か所）は latest_stock=False で、SQL の文字列は変更前と cmp で一致する。
+- 窓を足しても意味（§13-10-2）は変わらない理由: 相手の条件は同じ式の窓を持つ（同 :229）。本当の最新が窓の中ならそれが選ばれ、窓の外なら、それより前の投稿もすべて窓の外で、相手が0になる。この点はどちらの形でも同じ。試験 (oo)（60時間前→外れる）・(oo2)（40時間前→残る）・(pp)（窓の式の文字列が一致）・(nn)（cr_n1x の参照は1か所）が守る。在庫表の側（`backend/app/services/tcg_distribution_svc.py` の3か所）は latest_stock=False で、`review_joins(shime=False)` の SQL 文字列（fenced の真・偽の2本）は変更前と cmp で一致する（v4impl/snap.py）。`source_cte(latest_stock=False)` が変わらない根拠は cmp ではなく、コード（同 :97 の `prev=""`）と試験 (pp)。
 - 【事実】見積もり: CI のデータで 92,139（JIT の閾値未満）、本番で main 508,703／3905188b4 の形 467,584。
 - 【事実】本番の読み取り照合（NOW() を 2026-10-20 08:49Z に固定）: 51f7da281 の形との差0（直近4日248行・有効投稿50行）。main との差は 0c91e2e0・5642ad0b の2行だけ（偽→真）。一覧の所要時間は交互7回で main 11.72〜24.56秒、3905188b4 の形 3.23〜6.03秒。
 - 【事実】単品の道（context_sql item_only、交互7回の中央値）: 〆の行で main 174ms、3905188b4 203ms。在庫の行で 154ms、155ms。保存1回は4回呼ぶので、〆の行で 696→812ms。基準（1.2倍＋100ms＝935ms）以内。
