@@ -2,7 +2,7 @@
 -- 使い方（終わり方を必ず指定する）:
 --   DRY-RUN : psql -v end=ROLLBACK -f 02_apply.sql   （全部の件数を確かめて最後に ROLLBACK。何も残らない）
 --   本番    : psql -v end=COMMIT   -f 02_apply.sql   （DRY-RUN が全部 OK だった後だけ）
--- id は identity に任せる。code は今ある最大の CN 番号の次から 2 つ。件数が違えば 1/0 で失敗し、COMMIT に進まない。
+-- id は identity に任せる。code は固定（CN0023=With booklet・CN0024=Without booklet。最大値からの採番はしない）。件数が違えば 1/0 で失敗し、COMMIT に進まない。
 \set ON_ERROR_STOP on
 \if :{?end}
 \else
@@ -12,17 +12,15 @@
 BEGIN;
 
 -- 1. 状態 2 行（booklet 群）。単位は With booklet のみ Booklet（line_units id 17）、Without booklet は空
-WITH base AS (
-    SELECT coalesce(max(substring(code from 3)::int), 0) AS m FROM public.line_conditions WHERE code ~ '^CN[0-9]+$'
-), i AS (
+WITH i AS (
     INSERT INTO public.line_conditions
         (code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, match_type, effect, unit_id, note, value_group, value_rank)
     SELECT v.code, v.canonical, 'ブックレット系', true, v.priority, v.search_kw, '', v.match_type, 'OUTPUT', v.unit_id, v.note, 'booklet', v.value_rank
-      FROM base, LATERAL (VALUES
-        ('CN' || lpad((base.m + 1)::text, 4, '0'), 'With booklet', 10, '', 'KEYWORD',
+      FROM (VALUES
+        ('CN0023', 'With booklet', 10, '', 'KEYWORD',
          (SELECT id FROM public.line_units WHERE id = 17 AND canonical = 'Booklet'), 1,
          'ブックレット系で状態語が無いときの状態。配信する。search_kw は空（どの文にも当たらない。コードの R9:ブックレット既定 だけが返す）（ADR-1035）'),
-        ('CN' || lpad((base.m + 2)::text, 4, '0'), 'Without booklet', 2,
+        ('CN0024', 'Without booklet', 2,
          '(?i)((ブックレット|冊子)[\s　]*(無し|なし|抜き|欠品|欠け)|(?<![a-z])(no|without)[\s　]+booklet)', 'REGEX',
          NULL::int, 2,
          'ブックレット系の冊子無し。単位は空（冊子が付いていない品物を冊で数えない。原文の単位語があればそれを使う）（ADR-1035）')

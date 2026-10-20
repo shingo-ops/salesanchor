@@ -13,6 +13,6 @@
 
 戻し: `04_rollback.sql` → 対象 job を再解析。
 
-- code は今ある最大の CN 番号の次から 2 つ（02 の中で計算。01 の next_codes で事前に見える）。
+- code は固定: CN0023（With booklet）・CN0024（Without booklet）。line_conditions.code には画面が自動で作る CN+14 桁の日時の値もあるため、最大値からの採番はしない（2026-10-20 dryrun で桁あふれ）。01 の next_codes_unused で未使用を確かめる。
 - 商品の WHERE は id と今の区分 2 の両方。更新件数が 1 でなければ `1 / 0` で失敗し、COMMIT に進まない。
 - 05 の対象は商品 440415 の現行行を持つ job だけ。
