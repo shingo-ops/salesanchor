@@ -107,7 +107,7 @@ CSS（トークンのみ）:
 - PC: `ContentToolbar` で同じ並び（`viewer-search`、`viewer-price-min/max`、`viewer-qty-min/max` / `viewer-sort-menu`、`viewer-condition-filter`、`viewer-provider-filter` / `viewer-fresh-toggle`、`viewer-reset`）。「絞り込み」ボタンは PC では出さない。
 - スマホ: 今のまま（引き出しに提供者・コンディション・範囲）。
 - リセット: 検索語・並び（既定）・ページを戻す。
-- 文言（閲覧辞書 ja/en）: `viewer.resetSort` リセット / Reset、`viewer.range.priceMin` 最低価格 / Min price ほか4つ（アプリと同じ文）。
+- 文言（閲覧辞書 ja/en）: `viewer.resetView` リセット / Reset（実装時に改名: `resetSort` は閲覧用 JS にアプリ辞書が混ざっていないかを見る目印語で、`scripts/check-viewer-bundle.js` が止めるため）、`viewer.range.priceMin` 最低価格 / Min price ほか4つ（アプリと同じ文）。
 - 閲覧ページの配信物の上限（300KB）を超えないこと（今 248KB）。
 
 ### 3-4 GAS 在庫一覧（`index.html` の 1280px 以上の grid だけ）
