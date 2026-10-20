@@ -12,7 +12,7 @@ mode: handoff
 **対象ADR**: ADR-158（関連・変更しない。要確認の理由を定める ADR は無い。recon §0。§9）  
 **recon**: docs/handoff/shime-review-exclude/recon.md  
 **日付**: 2026-10-19  
-**担当**: Planner（Opus）。状態: 設計審査済み（2回目 APPROVE）・PO 実装承認済み（2026-10-19「1」）・実装 PR #4535・T3 不合格を受け §4-5 を改訂し再審査 APPROVE（§11-5）・#4535 マージ（2640ae932）・本番反映済み（2026-10-19、G1〜G5 合格、§11-7）  
+**担当**: Planner（Opus）。改訂2（§12）: 設計審査済み・PO 実装承認済み（2026-10-20「1」）。改訂前の状態: 設計審査済み（2回目 APPROVE）・PO 実装承認済み（2026-10-19「1」）・実装 PR #4535・T3 不合格を受け §4-5 を改訂し再審査 APPROVE（§11-5）・#4535 マージ（2640ae932）・本番反映済み（2026-10-19、G1〜G5 合格、§11-7）  
 **ADR-1015 の区分**: A（要確認の判定に新しい規則を足す）。DB の列・migration・本番データの書き換えは無い
 
 ---
@@ -25,8 +25,8 @@ PO の言葉: 「カードセット〆切 Hironobu Yasukawaさんのこの情報
 |---|---|
 | G1 | 安川さんの〆（item c838f466）が要確認一覧に出ない |
 | G2 | 直近7日の価格なし〆・完売のうち、§3 の4条件をすべて満たす行（設計時点 35 行）が要確認から消え、それ以外（設計時点 10 行）は残る |
-| G3 | 相手の在庫が無い行（設計時点 8 行。例 f364283f）は残る |
-| G4 | 相手の商品の在庫が在庫表にまだ出ている行（設計時点 2 行。例 044ba439）は残る |
+| G3 | 相手の在庫が無い行（設計時点 8 行。例 f364283f）は残る（§12 改訂2 で置き換え。f364283f は外れる側） |
+| G4 | 相手の商品の在庫が在庫表にまだ出ている行（設計時点 2 行。例 044ba439）は残る（§12 改訂2 で置き換え。同じ投稿の別の状態の在庫は数えないので 044ba439・4e713598 は外れる側） |
 | G5 | 価格のある行・ほかの理由のある行の要確認は1行も変わらない。在庫表（配信行）は1行も変わらない |
 
 件数は時刻で動く（48 時間が過ぎると丙が甲になる、新しい投稿が入る）。そのため G2〜G5 は「同じ時刻に変更前と変更後の判定を並べて比べる」方法で確かめる（§7）。
@@ -46,6 +46,8 @@ PO の言葉: 「カードセット〆切 Hironobu Yasukawaさんのこの情報
 - 画面（frontend）。行が一覧から消えるだけ
 
 ## 3. 規則（新規）：〆の確認済み扱い
+
+> §12 改訂2 で置き換え。今の正本は 12-3。以下は改訂前の記録。
 
 価格のない〆・完売の行は、次をすべて満たすとき「確認済み扱い」とし、理由 price_unresolved と excluded を付けない。
 
@@ -216,6 +218,8 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 
 ## 7. 受け入れ基準
 
+> 改訂前の便の基準。改訂2の基準は 12-6（G3・G4 は H1〜H4 で置き換え）。
+
 | 基準 | 検証方法 |
 |---|---|
 | T1 試験 | CI（pg）で新しい試験 12 件が通る: (a) 甲の形 → needs_review 偽・理由に2つ無し (b) 相手の在庫なし → 2つの理由が残る (c) 相手の商品の在庫が 48 時間以内にある → 残る (d) その在庫が 48 時間より古い → 外れる (e) 状態が FLAG → 残る (f) item_corrections あり → 残る (g) 別の窓口の相手だけ → 残る (h) 保存済みの理由（unit_unresolved 等）あり → 2つは消えるが needs_review は真 (i) 相手の在庫が 48 時間以内だが is_current が偽（ADR-158 でまとめ済み。G1 の形）→ 外れる (j) 相手の投稿が自分より後 → 残る (k) 相手に価格はあるが Sold out → 残る (l) review_joins(fenced=True) の在庫表（dist_base）に〆の行を入れても例外が出ず、行は変わらない。既存の `backend/tests/test_tcg_condition_review_fenced.py`・`backend/tests/test_tcg_condition_review.py:681` も通る |
@@ -249,6 +253,8 @@ T2・T3 の本番の読み方: SQL は Python で review_joins から作り、�
 
 ## 10. 弊害・トレードオフ
 
+> 改訂前の記録。②は改訂2で消したので、3行目の対処は古い。改訂2の弊害は 12-7。
+
 | 弊害 | 対処 |
 |---|---|
 | ③の 48 は定数。在庫表の設定を変えるとずれる | 定数のコメントで本書と設定名を指す。ずれても「在庫が残っているとみなす期間」が変わるだけで、在庫表には影響しない |
@@ -266,10 +272,11 @@ T2・T3 の本番の読み方: SQL は Python で review_joins から作り、�
 
 | 守るもの | 守り手 |
 |---|---|
-| 規則の正本 | 本書 §3（コードのコメントから指す） |
-| 規則の動き | `backend/tests/test_tcg_condition_review.py`（T1 の12件） |
+| 規則の正本 | 本書 12-3（改訂2。コードのコメントから指す） |
+| 規則の動き | `backend/tests/test_tcg_condition_review.py`（T1 の12件と、改訂2の (p)〜(t)） |
+| 自動で外した〆の正しさ | agent-console の定期実行「〆の自動判定 毎朝点検」（12-8。期限つき。止めた後は人手で守る） |
 | fenced の形 | `backend/tests/test_tcg_condition_review_fenced.py` |
-| 48 と max_age_hours の一致、include_flag_single | 人手で守る（設定を変える時に本書 §10 を見る） |
+| 48 と max_age_hours の一致、include_flag_single | 人手で守る（設定を変える時に本書 §3 の注記と §10 を見る。改訂2でも48と③の数え方は同じ） |
 
 ## 11. 審査
 
@@ -334,3 +341,174 @@ shime=False の文字列から定数の lateral と settled の参照4か所を�
   - G5 合格: 〆の形でない 1141 行で needs_review が真の行は、変更前 145・変更後 145。needs_review か理由が違う行は 0。
 - 要確認一覧1ページ目の AUDIT は 1206ms（参考、1回）。
 - 未確認: VPS 上のコンテナ内のコードの SHA（読み取り鍵では見られない）。PO の画面目視。
+
+## 12. 改訂2 — 〆・完売は値段や前の在庫が無くても要確認から外す（2026-10-20）
+
+状態: 設計審査済み（Reviewer 2回目 APPROVE）・PO 実装承認済み（2026-10-20「1」。選択肢「今の設計を先に作り、残る3つ（カンジンの状態の引き継ぎ・倉田の値段の下の完売・LFスタッフ1の単位）の直しは次の回で設計・審査してから作る」）。承認の前に PO へ示した内容: 外れる11行・残る4行（30th CELEBRATION のカンジン・9種セットの倉田・ピカチュウ30th の LFスタッフ1・肉ルフィの斉藤）とその理由（原本 ~/CC報告ファイル-keep/shime-remaining-20261020/recon8・recon9）。次の回の材料は recon9。
+
+### 12-1. 目的と成功条件（KGI。PO 判断 2026-10-20）
+
+PO の言葉: 「全ての〆、完売商品は要確認に入らずに自動的にシステムが完売と判断して集計リストから消える仕組みになったか？」。§11-7 の後も残った行について、PO は次を決めた。
+- 初めて完売と書かれた行（前の在庫が見つからない行）も外す。代わりに、毎朝の定期実行で〆の精度を点検する
+- 値段が書かれた完売も、完売の知らせとして扱う
+- 在庫表にまだ在庫が出ている商品の〆は残す（「使われている投稿だけを見る」に「合意」）
+
+PO の合意との対応（実装承認で PO に具体の商品名で示して了承を取る。了承が無ければ実装しない）:
+- 「使われている投稿だけを見る」を文字どおりに入れる案（12-5 案 E）は採らない。在庫表は差し替えられた古い投稿の在庫も出しているため、案 E では 30th CELEBRATION の〆（5642ad0b）が、在庫表に No shrink box 24,800円 が出ているのに外れてしまう。採用案は「在庫表に出ているかどうか」を在庫表と同じ数え方で見る
+- 同じ投稿で〆と別の状態の在庫（例: 箱は〆・Searched pack は在庫あり。044ba439・1d027e6a・4e713598）は〆の対象でないとして外す。この3行は、同じ投稿の Searched pack が在庫表に出たまま、箱の〆が要確認から外れる
+
+| # | 合格の条件（○×） |
+|---|---|
+| H1 | 直近30日の「Sold out・excluded」の行のうち要確認に出る行が、設計時点で 15 → 4 になる（11 行が外れ、外れていた行が戻るのは 0 行。recon6） |
+| H2 | 外れる 11 行は、どれも在庫表（まとめあり・なし）に、同じ窓口・同じ商品で〆と別の投稿の在庫が 0 行（recon6 cross.out） |
+| H3 | 在庫表に、同じ窓口・同じ商品で別の投稿の在庫が出ている〆（設計時点 5642ad0b）は残る |
+| H4 | ほかの理由（単位不明・状態不明・余白行の疑い等）がある行は残る（設計時点 018e101c・2928ea55・20f9cb54） |
+| H5 | 在庫表・配信・GAS の SQL は1文字も変わらない。〆の形でない行の要確認は1行も変わらない |
+| H6 | 毎朝の点検が登録され、初回の結果が PO への返答（agent-console の会話）に出る |
+
+件数は時刻で動くため、H1〜H5 は §7 と同じく「同じ読み取りトランザクションで前後を並べる」で確かめる（12-6 T2）。
+
+### 12-2. 現在地（recon。docs/handoff/shime-review-exclude/recon.md「改訂2」。生出力の原本は ~/CC報告ファイル-keep/shime-remaining-20261020/ の recon4・recon5・recon6・review1）
+
+- 【事実】今の式（§3）は price NULL・quantity NULL と ②（前の売り中）を求める。直近30日で要確認に残る〆の形 15 行のうち、①値段つきの完売（8179e1e0）②前の売り中が見つからない行 ③同じ投稿の別の状態（Searched pack）の在庫を③で数えてしまう行（044ba439・1d027e6a・4e713598）が、どれも在庫表と食い違わないのに残っていた（recon4 sim-final-diff.txt・recon5 match.out）。
+- 【事実】在庫表は差し替えられた投稿（sm.is_active=FALSE）でも ar.is_current=TRUE の行を出す（`backend/app/services/tcg_distribution_svc.py:316` の source_cte(include_inactive=True)）。2026-10-19 18:42Z の在庫表 1087 行のうち 300 行がそれ（recon5 inactive.out）。
+- 【事実】5642ad0b の商品は、差し替え済みの投稿 72c6881d の No shrink box（24,800円）が在庫表に出ている（recon5 kanjin.out）。
+- 【事実】在庫表の側は shime=False で定数の lateral になる（`backend/app/services/tcg_condition_review_svc.py:177`。呼び出し `backend/app/services/tcg_distribution_svc.py:366`・:480・:524・`backend/app/services/tcg_import_progress.py:129`）。今回の改訂は shime=True の文字列だけを変える。
+
+### 12-3. 規則の変更（§3 を次で置き換える）
+
+| # | 変更前 | 変更後 |
+|---|---|---|
+| 形 | sold out・excluded・価格 NULL・数量 NULL・商品と状態あり | sold out・excluded・商品と状態あり（価格・数量は問わない） |
+| ① | FLAG でない | 同じ |
+| ② | 同じ窓口・商品・状態の、前の売り中がある | 削除 |
+| ③ | 同じ窓口・同じ商品の今の在庫（is_current・解決済み・excluded でない・価格あり・48時間以内・FLAG_ でない・売り切れでない）が無い | 同じ。ただし「〆と同じ投稿で、〆と別の状態」の行は数えない |
+| ④ | 人の修正が無い | 同じ |
+
+採らなかったこと: ③に cr_sm.is_active IS TRUE を足す案（12-5 案 E）。
+
+外れる理由の言い直し: 「〆と書かれた商品が、在庫表に（別の投稿で）残っていない」なら外す。同じ投稿の別の状態（例: 箱は〆・バラ売りは在庫あり）は〆の対象でないので数えない。
+
+### 12-4. 変更前と変更後（`backend/app/services/tcg_condition_review_svc.py:176-211` の shime_lateral の shime=True 側だけ）
+
+変更前（:183、:187-198、:204-205）
+```sql
+            AND cr_data.ar->>'price_normalized' IS NULL AND cr_data.ar->>'quantity_normalized' IS NULL
+...
+        THEN EXISTS (SELECT 1 FROM {schema}.analysis_results cr_pa
+                ...（:187-198 の ② の副問い合わせ全体）
+                  AND cr_pm.line_posted_at <= sm.line_posted_at)
+         AND NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa
+...
+                  AND cr_sa.extraction_item_id <> ei.id
+                  AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
+```
+
+変更後
+```sql
+        THEN NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa
+...
+                  AND cr_sa.extraction_item_id <> ei.id
+                  AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer OR cr_sm.id <> sm.id)
+                  AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
+```
+
+- :183 の価格・数量 NULL の行を消す
+- :187-197 の `THEN EXISTS (... cr_pa ...)` の副問い合わせ全体を消し、:198 の `         AND NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa` を `        THEN NOT EXISTS (SELECT 1 FROM {schema}.analysis_results cr_sa` にする
+- :204（`AND cr_sa.extraction_item_id <> ei.id`）と :205（`AND cr_sa.is_current ...`）の間に、上の1行を足す
+- :179 のコメントの `design.md §3` を `design.md §12-3` にする。同じく `backend/app/services/tcg_condition_review_svc.py:55`（48 の定数のコメント）と `backend/tests/test_tcg_condition_review.py:752`（試験の見出し）の `§3` も `§12-3` にする
+- ほかの行（:176-178、:180-182、:184-186、:199-204、:205-211 の中身）は変えない
+- 試算に使った SQL は、この形と同じ（recon6 sim-v2.sql。recon4 sim-final.sql から is_active の1行だけを消したもの、sql.diff）
+- 波括弧・OFFSET 0・fenced の注意は §4-4 のまま。新しい `) cr_` の閉じ方を作らない（OFFSET 0 の数は素 3・fenced 10 のまま）
+- §4-3 の理由の配列は変えない
+- 変更前より外れる行が増えるだけで、戻る行は出ない: 形は広くなり、②は無くなり、③の NOT EXISTS は数える行が減る（どの条件も「外れる」側にしか動かない）。実データでも外れる→残る 0（recon6）
+
+### 12-5. 代替案
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| D'（採用） | 12-3 のとおり | 在庫表と同じ数え方で「在庫が残っていない〆」を外す。H1〜H5 を実測で満たす |
+| E | ③に cr_sm.is_active IS TRUE を足す（差し替えられた投稿の在庫は数えない） | 不採用。在庫表は差し替え済みの投稿の is_current 行を出すので、5642ad0b のように在庫表にまだ在庫が出ているのに〆を外してしまう（recon5 match.out。試算で 12 行外れ、そのうち 1 行が食い違い） |
+| F | 〆の形はすべて外す（③も無くす） | 不採用。在庫表に在庫が残っている〆が人の目から消える |
+| G | 今のまま | 不採用。PO 判断（12-1）に合わない |
+
+### 12-6. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 試験の書き換え | CI（pg）で `backend/tests/test_tcg_condition_review.py` の次が通る。期待を反転して名前も変える: (b) 相手の在庫なし → 外れる（`test_shime_settled_without_partner_stock`） (g) 別の窓口の在庫だけ → 外れる（`test_shime_settled_when_only_other_channel_has_the_partner`。相手の投稿を 100 → 10 時間前にして、窓口の区別を確かめる形にする） (j) 相手が後の投稿（48時間より古い）→ 外れる（`test_shime_settled_when_partner_was_posted_after_it_but_old`） (k) 相手も Sold out → 外れる（`test_shime_settled_when_partner_is_sold_out_too`）。(a)(c)(d)(e)(f)(h)(i)(l)(m)(n)(o) は変えずに通る |
+| T1 試験の追加 | (p) 値段と数量つきの完売（price 7500・quantity 3）で相手の在庫なし → 外れる (q) 〆と同じ投稿で別の状態の在庫（〆の投稿は seed のとおり今の時刻。48時間以内）→ 外れる (r) 〆と同じ投稿で同じ状態の在庫 → 残る (s) 別の投稿で別の状態の在庫（10時間前）→ 残る (t) 差し替え済み（source_messages.is_active=false）の投稿にある is_current の在庫（10時間前）→ 残る（在庫表と同じ数え方。5642ad0b の形）。同じ投稿にするには seed_partner の後に `UPDATE public.extraction_jobs SET source_message_id=<〆の smid> WHERE id=<相手の job>` を使う。`backend/tests/test_tcg_condition_review_fenced.py` の OFFSET 0 の数（:29・:41）は変えずに通る |
+| T1 在庫表の固定値 | `backend/tests/test_inventory_distribution_rows.py` の _VIEW_SQL_BEFORE・_GOLDEN を変えずに通る（在庫表は shime=False のため） |
+| T2 本番データ（H1〜H5） | §7 T2 と同じ道で、変更前（origin/main）と変更後（PR の HEAD）の review_joins を同じ1つの読み取りトランザクションで並べる。合格: ①前 真→後 偽 の集合 = 同じトランザクションで直接数えた「12-3 の条件を満たし、変更前は needs_review が真で、変更後はほかの理由（price_unresolved・excluded 以外）が無い行」の集合 ②前 偽→後 真 0 行 ③〆の形でない行の変化 0 行 ④前 真→後 偽 の各行で、在庫表（まとめあり・なし）に同じ窓口・同じ商品・別の投稿の行が 0 ⑤在庫表の row_key の集合が前後で同じ。範囲は「sm.is_active かつ直近30日」と7日。設計時点の見込みは30日で 11 行外れる。8〜14 を外れたら止めて理由を調べる |
+| T3 速さ | §7 T3 と同じ測り方で、要確認一覧1ページ目の中央値が「変更前 ×1.2 + 100ms」以内（副問い合わせが1つ減るので遅くならない見込み。試算の絞った問い合わせで旧 605〜618ms・新 501〜524ms、recon4 timing.txt） |
+| H1〜H4 本番 | デプロイ後、ai_ro で T2 と同じ判定を流し、外れる・残るの行が T2 と同じ（新しい投稿で増えた分は内訳を書く） |
+| H6 点検 | 12-8 の定期実行が agent-console の一覧に enabled で出て、初回の回で verdict.md と REPORT.md の1行ができ、返答が前例（1bba6dbe・60ebb886 の返答の手順）と同じ3行の型で来る |
+
+### 12-7. 影響と弊害
+
+| 影響・弊害 | 対処 |
+|---|---|
+| 解析が商品や状態を取り違えた〆も、在庫表に在庫が無ければ人の目に触れない（PO 判断で受け入れ） | 12-8 の毎朝の点検で、前日に自動で外れた〆を原文と照らす。誤りがあれば PO に返す |
+| 〆の行の状態を解析が取り違えた場合（本当に〆なのは同じ投稿の別の状態の方）、(q) の形で〆は外れ、売り切れた方の在庫は在庫表に出たまま残る | 12-8 の (c) 状態の照合で、同じ投稿に別の状態の在庫がある〆は必ず原文と照らす（点検の対象に「同じ投稿の別の状態の在庫あり」の印を付ける） |
+| 窓口単位で見るので、同じ仕入元が別の窓口で同じ商品を出していても〆は外れる（(g) の反転）。在庫表の表示は仕入元単位（`backend/app/services/tcg_distribution_svc.py:332`） | 本番で窓口を2つ以上持つ仕入元は 294 のうち 10。外れる 11 行の仕入元3つはどれも窓口1つで、同じ仕入元・別の窓口の在庫表の行は 0（recon7）。T2 で、外れる行ごとに「同じ仕入元・別の窓口の在庫表の行」の数も出し、1以上なら止めて PO に返す |
+| 値段つきの完売は、値段の読み違い（実は売り中）でも外れる | status が sold out の行だけが対象。売り中の行は形に当たらない。点検で原文の〆・完売の語を確かめる |
+| 初めての〆（前の在庫が無い）も外れる | PO 判断。〆の行は在庫表にもともと出ないので、在庫表は変わらない |
+| 旧エンジンの再解析（`backend/app/services/tcg_analyzer_svc.py:1801`）で保存する理由も、新しい規則の値になる | §6 と同じ（意図どおり） |
+| 同じ投稿の同じ状態の在庫（r）は残す | 〆と在庫が同じ投稿・同じ状態で並ぶのは解析の食い違いの疑いなので人が見る |
+
+戻し方: この PR を revert する（DB の変更なし）。接触面（§6 の6面）は §6 と同じ（API の件数・画面の行が減るだけ）。
+
+### 12-8. 毎朝の点検（定期実行）
+
+- 名前「〆の自動判定 毎朝点検」。agent-console の定期実行、毎日 10:00 JST、担当 opus-designer。前例 1bba6dbe・60ebb886 と同じ形（本番への書き込み・PR・再解析をしない。読み取りと記録だけ）
+- 登録は Opus が `ac-routine.mjs add` で行う（前例どおり createdBy agent）。登録の時点はデプロイと H1〜H4 の確認の後
+- 台本: 実装の便で Sonnet が W=~/CC報告ファイル-keep/shime-auto-check/ に daily_check.sh を作る（T2 と同じ道。origin/main の review_joins(shime=True) を Python で組み、表名を ai_ro のビュー名に置き換え、reader 鍵で流す。書き込みなし）。出力は W/daily/<YYYYMMDD_HHMM>/rows.txt（ei 先頭8桁・投稿日時・窓口・商品名・状態名・値段・原文 line_start〜line_end・同じ投稿に別の状態の在庫があるかの印）
+- 対象: sm.is_active かつ直近72時間の投稿で、〆の形かつ cr_shime.settled が真の行。W/checked_ids.txt に載っている ei は除く（48時間で相手の在庫が古くなり後から外れた行も、投稿時刻にかかわらず72時間の窓で拾う）。初回は直近72時間すべて
+- 判定: Opus が各行を (a) 原文のその行に〆・完売・売切・sold の語がある (b) 商品名が原文の品名と合う (c) 状態が原文と合う（同じ投稿に別の状態の在庫の印がある行は必ず原文で確かめる）の3点で ○×不明 を付け、W/daily/<フォルダ>/verdict.md に表で残し、点検した ei を checked_ids.txt に足す
+- 記録: W/REPORT.md の末尾に1行（例「- 2026-10-22 10:00 JST: 点検 n 行・○ m・× k・不明 u」）。× と不明が0の回は W/clean_days.txt の数に1を足し、1つでもあれば0に戻す
+- 記録先はリポジトリ外。仕入元の原文は記録ファイルだけに置く
+- PO への返答は3行の型。全部○なら「決めることはありません」。×・不明があれば行を記録し、原因を Sonnet に読み取りで調べさせ、直し方の番号選択肢を出して止まる。自分では直さない
+- 既知の漏れ: 〆より24時間以上後の投稿の在庫が 48時間で古くなって初めて外れる〆は、外れた時点で72時間の窓を過ぎるので点検に入らない（在庫表への影響はない）
+- 止める条件: clean_days.txt が 14 になった回、または 2026-11-10 以降の回で、記録のあと ac-routine.mjs list で id を確かめて disable し、REPORT.md に総括1行（前例 60ebb886 の手順3と同じ）
+- 通知は Discord を使わない（前例どおり agent-console の会話に返す）
+
+### 12-9. 別の作業（同じ便に入れない）
+
+肉ルフィ（424590）の商品区分をプロモパック系にする件は本番データの変更なので、この PR と分ける。前例 ~/CC報告ファイル-keep/promo-pack-3items-20261019/ の台本を写して作り（区分が今は空の点・件数1件に合わせる）、確かめ運転のあと PO が `!` で流し、再解析する。20f9cb54 は状態不明・単位不明も持つので、区分を入れただけで要確認から外れるかはまだ確かめていない（再解析の後に見る）。
+
+### 12-10. 計画票
+
+| 順 | 作業 | 担当 | 完了の印 |
+|---|---|---|---|
+| 1 | 設計審査 | Reviewer（opus） | APPROVE |
+| 2 | PO 実装承認 | PO | 番号の返事 |
+| 3 | 実装カード・実装・T1 | Opus・Sonnet | PR 起票 |
+| 4 | T2・T3 | Sonnet（reader 鍵） | 生出力と合否 |
+| 5 | 審査・GO 記録・マージ | Reviewer（opus）・Opus（ADR-1003） | `VERDICT: APPROVE on <HEAD> PR #N`・merge commit |
+| 6 | デプロイ確認・H1〜H4 | Opus・Sonnet | deploy success と ai_ro の判定 |
+| 7 | 定期実行の登録・H6 | Opus | 一覧に enabled・初回の返答 |
+| 8 | 結果の記録 | Opus | 本書に追記 |
+
+ADR: 作らない（§9 と同じ理由。規則の正本は本書 12-3）。外部事例: 使わない（§「外部・過去事例の参照と我々への応用」と同じ理由。社内の前例は定期実行 1bba6dbe・60ebb886）。維持の仕組み: §「維持の仕組み」に、T1 の (p)〜(t) と、点検の定期実行（期限つき）を足す。
+
+### 12-11. 審査
+
+- Opus 自己審査（独立した第二者のレビューではない）: 試算 recon6（外れる 11・戻る 0）、在庫表との突き合わせ（別の投稿 0・同じ仕入元の別の窓口 0、recon6・recon7）を確かめて Reviewer に出した。
+- Reviewer（opus）1回目: REVISE（中6・軽4。T2 の比べる相手、行番号、PO の言葉と案 E の説明、G3・G4 の置き換え注記、状態の取り違えの弊害、毎朝点検の手順）。すべて反映。
+- Reviewer（opus）2回目: APPROVE（2026-10-20）。12-4 を作業台の写しに当てて組み立て、試算の式と一致、OFFSET 0 は素3・fenced10、shime=False の文字列は1バイトも変わらない。軽5件（recon7 の反映、:332、§3 を指すコメント2か所、(g) の時刻、72時間の漏れ）は本書へ反映済み。生出力 ~/CC報告ファイル-keep/shime-remaining-20261020/review1・review2。
+- 未確認: CI（pg）での試験の実行。T2・T3 は実装 PR の HEAD で行う。
+
+### 12-12. 結果（2026-10-20。12-10 順4〜8）
+
+- 実装: PR #4559 を merge（merge commit 6b17ab8ea、2026-10-20 02:52Z）。最後の HEAD 4fd63ef54 で Reviewer（opus）`VERDICT: APPROVE`。GO は ADR-1003 の委任発行（PR 本文 GO記録）
+- T2（PR の HEAD 37bf1b0fd・同じ読み取りトランザクション。最後の HEAD 4fd63ef54 との差に判定のコードは含まれない）: ①外れる行 30日10行・7日9行で、条件で直接数えた集合と一致 ②戻る行 0 ③〆の形でない行の変化 0 ④外れる各行で在庫表の同じ窓口・同じ商品・別の投稿の行 0、同じ仕入元・別の窓口・同じ商品の行も 0 ⑤在庫表の row_key の集合は前後で同じ。設計時点の見込み11行との差1行（8179e1e0）は、その投稿が sm.is_active=false になり範囲外になったため。設計時点の 5642ad0b・018e101c が範囲に入らなかったのは投稿が差し替えられたため（差し替え後の投稿も確認済み）
+- T3: 要確認一覧1ページ目の中央値 1329 → 1457ms（基準 1694.8ms）で合格。ただし 12-6 の「遅くならない見込み」とは逆に約 10% 遅くなった（原因はまだ確かめていない）
+- デプロイ: #4559 の deploy（run 39361249082、02:52〜02:58Z）は、別の migration（20261002_170000）の適用中のデッドロックで失敗し、ai_ro のビューは消えたまま（ログ「views stay dropped」）になった。前後の deploy（02:04Z・02:28Z・03:38Z 開始）は別の便の migration（20261019_100000、line_conditions_value_group の check 制約違反）で失敗していた。別のセッションの修正 #4563（0e911dfca、03:55Z マージ）の後、deploy 39366838514（head 0e911dfca、6b17ab8ea を含む）が 03:55〜04:02Z に success。続く #4562（2cacc774a）も deploy 39368368807 で success。ai_ro は 510 ビュー（04:14Z に確認）
+- H1〜H4（04:17Z、ai_ro、origin/main 2cacc774a のコード）:
+  - H1: 範囲（sm.is_active かつ直近30日）の「Sold out・excluded」で要確認に残るのは7行。どれも〆の規則以外の理由（未登録の商品・状態不明・単位不明・余白行の疑い）を持つ。〆の規則だけで残る行は 0
+  - H2: T2 で外れた10行のうち範囲内の1行（6c4c3bfa）は今も外れ、在庫表の同じ窓口・同じ商品・別の投稿の行は 0。残り9行は sm.is_active=false で範囲外
+  - H3: 範囲内に該当行 0 のため本番では観測できず。動きは T1 (t) で守る
+  - H4: 2928ea55 は余白行の疑いで要確認のまま（合格）。20f9cb54・018e101c は sm.is_active=false で範囲外
+  - 生出力: ~/CC報告ファイル-keep/shime-remaining-20261020/h1/（社外秘。リポジトリに入れない）
+- H6: 定期実行「〆の自動判定 毎朝点検」を登録（id f94f9a62、enabled、毎日 10:00 JST、opus-designer）。台本 daily_check.sh の初回手動実行は exit 0・46行（判定は定期実行の初回で行う）。初回の返答は 2026-10-21 10:00 JST
+- 残り: 次の便で、①状態の書いていない〆を残りの状態すべてに当てる ②完売の語だけの余白行を余白行の疑いから外す ③参照した在庫の行から単位を写す、の3件を設計・審査する（PO「1」）。肉ルフィの区分の件は 12-9 のまま

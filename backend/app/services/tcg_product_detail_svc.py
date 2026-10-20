@@ -10,6 +10,14 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.product_packagings import (
+    ALL_SOURCES,
+    PackagingError,
+    load_packaging_units,
+    load_packagings,
+    save_packagings,
+    validate_packagings,
+)
 from app.services.tcg_product_code_collision_svc import find_code_collisions
 from app.services.tcg_product_master_svc import (
     _validate_product_format,
@@ -59,7 +67,18 @@ async def _snapshot(db: AsyncSession, product_id: int) -> dict[str, Any]:
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
         "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords, "
         "COALESCE((SELECT json_agg(c.field_code ORDER BY c.field_code) "
-        "FROM public.product_blank_confirmations c WHERE c.product_id=p.id), '[]'::json) AS blank_confirmations "
+        "FROM public.product_blank_confirmations c WHERE c.product_id=p.id), '[]'::json) AS blank_confirmations, "
+        # ADR-1028 便4: 荷姿（revision と audit に入る。updated_at も入れるので、書けば revision が変わる）
+        "(SELECT COALESCE(json_agg(json_build_object("
+        "'unit_code', u.code, 'contained_unit_code', cu.code, 'contained_count', pk.contained_count, "
+        "'count_source', pk.count_source, 'count_source_urls', pk.count_source_urls, "
+        "'weight_kg', pk.weight_kg, 'weight_source', pk.weight_source, "
+        "'weight_source_urls', pk.weight_source_urls, 'note', pk.note, 'updated_at', pk.updated_at) "
+        "ORDER BY u.display_order, pk.id), '[]'::json) "
+        "FROM public.product_packagings pk "
+        "JOIN public.quantity_units u ON u.id = pk.unit_id "
+        "LEFT JOIN public.quantity_units cu ON cu.id = pk.contained_unit_id "
+        "WHERE pk.product_id = p.id) AS packagings "
         "FROM public.products p WHERE p.id=:pid"
     ), {"pid": product_id})
     row = result.mappings().one_or_none()
@@ -88,6 +107,7 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
         product[field] = [row["keyword"] for row in snapshot[field]]
     # ADR-1020 便2a: 「調べたが無い」の印（項目名の配列）
     product["blank_confirmations"] = list(snapshot.get("blank_confirmations") or [])
+    product["packagings"] = list(snapshot.get("packagings") or [])
     lookups = {}
     # work_id → public.type_master (INTEGER, SSOT)
     work_rows = await db.execute(text(
@@ -116,7 +136,12 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
         lookups[field] = [dict(row) for row in rows.mappings()]
     # ADR-1020 便2a: 細分類（紐づくゲーム付き）
     lookups["product_format_id"] = await fetch_product_format_options(db, selected=product.get("product_format_id"))
-    return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
+    return {
+        "product": product, "revision": _revision(snapshot), "lookups": lookups,
+        # 最上位に置く（lookups の key の完全一致を見る試験を壊さない）
+        "packaging_units": await load_packaging_units(db),
+        "packaging_sources": list(ALL_SOURCES),
+    }
 
 
 async def get_product_detail(db: AsyncSession, product_id: int) -> dict[str, Any]:
@@ -125,6 +150,7 @@ async def get_product_detail(db: AsyncSession, product_id: int) -> dict[str, Any
 
 async def update_product_detail(
     db: AsyncSession, product_id: int, values: dict[str, Any], revision: str, actor: str,
+    actor_user_id: Any = None,
 ) -> dict[str, Any]:
     """Serialize writes per product; reject stale drafts and roll back all failures."""
     try:
@@ -218,6 +244,17 @@ async def update_product_detail(
             )
             if cleared:
                 raise ProductDetailError(422, "REQUIRED_FIELDS_CLEARED:" + ",".join(cleared))
+        # ADR-1028 便4: 荷姿は共用の商品だけ。書く前に全部確かめる
+        packagings = values.get("packagings")
+        if packagings is not None:
+            if product.get("tenant_id") is not None:
+                raise ProductDetailError(422, "PACKAGING_SHARED_ONLY")
+            try:
+                validate_packagings(
+                    packagings, (await load_packagings(db, [product["id"]])).get(product["id"], []),
+                )
+            except PackagingError as exc:
+                raise ProductDetailError(422, exc.code) from exc
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
         await db.execute(text(
             "UPDATE public.products SET "
@@ -266,6 +303,8 @@ async def update_product_detail(
                     "VALUES (:pid,:word,:position)"
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
+        if packagings is not None:
+            await save_packagings(db, product["id"], packagings, f"user:{actor_user_id}")
         after = await _snapshot(db, product_id)
         _audit_pid = str(uuid4())
         await db.execute(text(

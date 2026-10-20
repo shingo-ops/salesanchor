@@ -5,6 +5,7 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
+import { HoverCard } from "../../components/HoverCard";
 import { BlockValue } from "./blockBadges";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
@@ -98,19 +99,16 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         sortable: true,
         mobileOrder: 1,
         renderCell: (it) => (
-          <>
-            <div
-              className="inventory-cell__title inventory-cell__clip"
-              title={it.product_name ?? `#${it.product_id}`}
-            >
+          <HoverCard title={it.product_name ?? `#${it.product_id}`} subtitle={it.name_en}>
+            <div className="inventory-cell__title inventory-cell__clip" data-hover-card-clip>
               {it.product_name ?? `#${it.product_id}`}
             </div>
             {it.name_en && (
-              <div className="inventory-cell__sub inventory-cell__clip" title={it.name_en}>
+              <div className="inventory-cell__sub inventory-cell__clip" data-hover-card-clip>
                 {it.name_en}
               </div>
             )}
-          </>
+          </HoverCard>
         ),
       },
     },

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { DataTable } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
+import { HoverCardHost } from "../../components/HoverCard";
 import { MultiSelect } from "../../components/MultiSelect";
 import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
@@ -309,6 +310,7 @@ export function InventoryView({ data, onLogout, onChangePassword }: InventoryVie
           </div>
         </div>
       </Drawer>
+      <HoverCardHost />
     </>
   );
 }
