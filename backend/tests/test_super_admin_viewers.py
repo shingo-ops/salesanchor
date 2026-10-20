@@ -40,6 +40,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
     ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
     ("GET", "/api/v1/super-admin/viewers/signup-request", None),
+    ("GET", "/api/v1/super-admin/viewer-templates", None),
 ]
 
 
@@ -144,6 +145,7 @@ def _prepare(conn, async_url):
     cur = conn.cursor()
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
     cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
+    cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
     return cur
 
 

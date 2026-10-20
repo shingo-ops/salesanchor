@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -448,4 +448,18 @@ it("shows no room-notice guide when the notice was sent or there is none", async
   await waitFor(() => expect(screen.queryByTestId("viewers-run")).toBeNull());
   expect(screen.queryByTestId("viewers-room-notice-failed")).toBeNull();
   expect(screen.queryByText("SENT BODY")).toBeNull();
+});
+
+it("navigates to the viewer templates page with the header button", async () => {
+  render(
+    <MemoryRouter initialEntries={["/super-admin/viewers"]}>
+      <Routes>
+        <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
+        <Route path="/super-admin/viewer-templates" element={<div data-testid="templates-page" />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+  await screen.findByText("Taro");
+  fireEvent.click(screen.getByText(i18n.t("superAdmin.viewers.templates")));
+  expect(await screen.findByTestId("templates-page")).toBeTruthy();
 });
