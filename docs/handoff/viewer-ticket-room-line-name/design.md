@@ -47,7 +47,7 @@ def _room_name(viewer_id: int, line_name: str | None) -> str:
 - :261-267 の SELECT（FOR UPDATE）の**末尾**に `line_name` を足し（`... trial_expires_at, discord_user_id, line_name`）、:280 で `v[5]` を渡す。既存の `row[0..2]`・`v[0..4]` の番号は変えない。
 
 ### 3-4. 片付け（sweep_orphan_rooms、:366-404）
-- 部屋の番号は、名前が `_ROOM_NAME_RE` に合えばその数字、合わなければ topic が `_ROOM_TOPIC_RE.fullmatch` に合えばその数字。topic は `topic = ch.topic if isinstance(ch.topic, str) else None` で取り、None なら合わないものとする。どちらにも合わない部屋は見ない（今と同じく、手で置いた部屋は消さない）。
+- 部屋の番号は、topic が `_ROOM_TOPIC_RE.fullmatch` に合えばその数字（topic を先に見る）、合わなければ名前が `_ROOM_NAME_RE` に合えばその数字。topic を先に見るのは、LINE 名が「trial-8」のような人の部屋を、別の番号の部屋と取り違えて消さないため（コード審査 任意1、2026-10-20）。topic は `topic = ch.topic if isinstance(ch.topic, str) else None` で取り、None なら合わないものとする。どちらにも合わない部屋は見ない（今と同じく、手で置いた部屋は消さない）。
 - DB の読み取りを `SELECT line_name, discord_channel_id FROM public.viewer_accounts WHERE id = :id` に替える。行が無い部屋を消す動き・10 件の上限・DB 失敗で0件は今のまま。
 - 今の部屋の名前直し: 行がある部屋のうち、①名前が `trial-数字` ②topic が `_ROOM_TOPIC_RE` に合わない（説明がまだ無い＝この変更より前に作った部屋）③行の discord_channel_id が `str(ch.id)` と同じ ④`_room_name(id, line_name)` が今の名前と違う、の4つが揃ったものだけ `await ch.edit(name=_room_name(...), topic=T.ROOM_TOPIC.format(viewer_id=id), reason="SalesAnchor viewer room renamed to LINE name")` を呼ぶ。失敗（例外）したら、`await ch.edit(topic=..., reason=同じ)` だけをもう1回呼ぶ（名前を Discord が拒んでも目印は付け、翌日から対象にしない）。それも失敗したらログ `[viewer-trial] sweep rename failed channel=%s` を出して次へ進む（消す処理は止めない）。上限は「名前直しを試した部屋の数」で1回 10 件（消す 10 件とは別に数える）。
   - 逃げ道で `trial-<番号>` になった部屋は topic があるので②で外れ、毎日やり直さない。
