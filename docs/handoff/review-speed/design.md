@@ -79,9 +79,9 @@ tcg_condition_review_svc.py:129 を次に変える:
 | 基準 | 検証方法 |
 |---|---|
 | KGI-3 要確認画面を開いてから一覧の1行目が出るまで 2.0 秒以内（本番・既定表示） | 本番で Playwright の計時（画面遷移〜一覧1行目の描画）を3回。中央値で判定 |
-| KPI-3a 一覧 API（既定: 24時間・25件）のサーバー側 SQL 合計 | 本番 nginx の request_time と、別コンテナ READ ONLY の再測 |
+| KPI-3a 一覧 API（既定: 24時間・25件）のサーバー処理時間（SQL と後続の問い合わせを含む） | 本番 Prometheus の http_request_duration_seconds（handler=一覧 API、backend/app/metrics.py:16-20,:83-108）。nginx のログには処理時間が無い（形式 combined） |
 | KPI-3b 一覧 API の送信量（gzip 後） | 本番 nginx の body_bytes_sent（変更前 20行 約132KB） |
-| KGI-4 24時間の絞りを外したときの中身が、絞りなしの従来と件数・中身・順番以外で一致（順番は新しい順に変わる） | 本番 reader で旧形と新形を同条件で比べる |
+| KGI-4 24時間の絞りを外したとき、絞りなしの従来と件数・仕入元・行の中身が一致する（順番だけ投稿日の新しい順に変わる） | 本番 reader で旧形と新形を同条件で比べる |
 | KGI-5 CSV・シート出力の中身が変わらない | 変更前後の sha256 比較（§5 と同じ方式） |
 
 ### 10-3. 現在地（2026-10-21 調査・読み取りのみ）
@@ -112,7 +112,7 @@ tcg_condition_review_svc.py:129 を次に変える:
   | 24時間の絞りを直接 25件 | 55293 | なし |
   | F3（絞りの比較で索引を外す形）25件 | 1004 | なし |
   | 絞りなし新しい順 25件 | 1068 | なし |
-- 読み解き（事実）: 24時間の絞りを直接足すと source_messages の索引走査が推定1行・実59行と過小見積りになり、products の Seq Scan（1439行）が loops=1037 で約52.8秒。F3 は推定79行で loops=1（72ms）。JIT は計画コストが jit_above_cost 既定 100000 を超える3本（件数・仕入元・V2）だけに掛かる。件数の JIT 以外の内訳は、空箱判定の Values 集計 3つ計約250ms（loops=1223）、cr_prev の直前投稿探索 約117ms ほか。
+- 読み解き（事実）: 24時間の絞りを直接足すと source_messages の索引走査が推定1行・実59行と過小見積りになり、products の Seq Scan（1439行）が loops=1037 で約52.8秒。F3 は推定79行で loops=1（72ms）。JIT が出たのは件数・仕入元・V2 の3本だけ（観測。jit_above_cost の実際の値は出力に無い）。件数の JIT 以外の内訳は、空箱判定の Values 集計 3つ計約250ms（loops=1223）、cr_prev の直前投稿探索 約117ms ほか。
 - （2回目で確定）jit=off で実際に何ms 減るか（上の JIT Total は上限）、アプリのロール（ADR-1018 は salesanchor_app・RLS 有効、今回は jarvis superuser で測定）での計画、バインド変数での計画。→ 2回目の測定（jit 既定/off・アプリのロール・新しい形 W25/50/100）で確定する。
 
 - 2回目の結果（2026-10-20 19:51:52Z〜19:52:27Z、アプリと同じロール salesanchor_app・superuser でない・RLS 迂回なし、RESULT OK、24文すべて1回ずつ・ERROR 0・ROLLBACK 1、生出力 ~/CC報告ファイル-keep/review-speed-explain-20261021/out2_20261020-195152.txt、読み解き /tmp/CC報告ファイル/review-speed-explain2-20261021/analysis/SUMMARY.md・table.md・top_nodes.md）。Execution Time ms（r1 / r2）:
@@ -127,9 +127,9 @@ tcg_condition_review_svc.py:129 を次に変える:
   | W 50件 | — | 1104 / 1819（r2 だけ外れ。原因は出力から読めない） |
   | W 100件（返り80行＝24時間内の全件） | — | 1096 / 1119 |
   | 1本化（絞りなし）＋新しい順 25件 | — | 1441 / 1499 |
-- 読み解き（事実）: JIT あり/なしの差は JIT Total とほぼ一致（W25 差 993/1029 に対し JIT 992/1017）。JIT は計画コストが 100000 を超える件数・仕入元・W だけに掛かる（一覧20件はコスト 44241 で掛からない）。W の計画コストは 25/50/100 件で同一（165790）で、件数を増やしても時間はほぼ増えない。salesanchor_app のまま `SET LOCAL jit = off` が ERROR なく効いた（同ブロック）。1回目の「24時間を直接」で起きた products の全件走査×1037回は W では出ない。
+- 読み解き（事実）: JIT あり/なしの差は JIT Total とほぼ一致（W25 差 993/1029 に対し JIT 992/1017）。JIT が出たのは計画コスト 165790 以上の件数・仕入元・W で、コスト 44241 の一覧20件には出なかった（観測）。W の計画コストは 25/50/100 件で同一（165790）で、件数を増やしても時間はほぼ増えない。salesanchor_app のまま `SET LOCAL jit = off` が ERROR なく効いた（同ブロック）。1回目の「24時間を直接」で起きた products の全件走査×1037回は W では出ない。
 - 結論（設計判断）: 要確認タブの既定表示は、W 形（件数・仕入元・ページを1本の SQL で返す＋24時間の絞りは F3 形＋投稿日の新しい順）を JIT なしで流す。DB 側は 約4.0秒 → 約1.1秒（実測）。絞りを外したときも 約1.5秒（実測）で今より速い。
-- 未確認（この設計の合格を妨げない理由つき）: W50 r2 の 700ms の外れ（r1 と W25/W100 は約1.1秒で、計画は同一）。バインド変数とリテラルでの計画差（実装後に本番 nginx の request_time で KPI-3a を測る）。絞りを外して100件のとき（W100 から伸びない見込みだが推定は事実扱いしない→実装後に測る）。/me/permissions 2回・転送・描画の時間（KGI-3 の Playwright 計時で測る）。
+- 未確認（この設計の合格を妨げない理由つき）: W50 r2 の 700ms の外れ（r1 と W25/W100 は約1.1秒で、計画は同一）。バインド変数とリテラルでの計画差（実装後に本番 nginx の request_time で KPI-3a を測る）。絞りを外して100件のとき（W100 から伸びない見込みだが推定は事実扱いしない→実装後に測る）。/me/permissions 2回・転送・描画の時間（§10-7 便0 で測る）。測定時の app.tenant_id・app.is_operator は空文字だった。この API は get_db と require_super_admin だけに依存し（routers/tcg_analysis_review.py:137-138）、要求の中でテナントの SET をしない。使い回しの接続は get_db の後始末（database.py:56-61 → auth/dependencies.py:414-433）で空文字に戻るので測定と同じ値になるが、新しい接続の既定値は未確認（ALTER ROLE ... SET の記述は repo に無い）。
 
 ### 10-5. 見え方の変更（PO 提案どおり。金型・i18n・SSOT を守る）
 - 既定: 投稿から24時間以内（line_posted_at >= 取得時点の now() - 24時間）だけ、投稿日の新しい順。
@@ -141,23 +141,31 @@ tcg_condition_review_svc.py:129 を次に変える:
 - 圧縮: 外側 nginx の API 経路に gzip（application/json）。SSE の location と text/event-stream は対象にしない。
 
 ### 10-6. 速さの直し方（§10-4 の実測に基づく）
-- S1 要確認タブ（status_tab=NEEDS_REVIEW）だけ、件数・仕入元・一覧の3本を W 形の1本に置き換える。他タブ（ALL ほか）は今の3本のまま（1本化は ALL で 1.0→33秒に悪化した実測があるため、§10-3）。
-- S2 その1本の直前に、同じトランザクション内で `SET LOCAL jit = off` を流す（このトランザクションだけに効き、他の画面・在庫表・配信には効かない）。
-- S3 24時間の絞りは F3 形（`(sm.line_posted_at + interval '0 second') >= now() - interval '24 hours'`）で書き、なぜ +0秒 を足すか（索引の過小見積りで 55秒になった実測）をコードのコメントとテストで固定する。
+- 切り替えの条件: 一覧 API に新しい引数 2つを足す。`order`（"default" | "posted_desc"、既定 "default"）と `posted_within_hours`（整数 1〜720 または無し、既定 無し）。**新しい道（S1〜S3）に入るのは `status_tab="NEEDS_REVIEW"` かつ `order="posted_desc"` かつ `extraction_item_ids` 無しのときだけ**。要確認画面はいつも `order="posted_desc"` を送る（24時間ボタンを外したときは `posted_within_hours` を送らない）。
+- 今の道のまま（変えない）: CSV（tcg_review_csv_svc.py:75）・シート（tcg_review_sheet_svc.py:108）・配信（tcg_distribution_svc.py:858-863 の collect_review_rows）は新しい引数を渡さないので、今の3本・今の並び・limit 5000 のまま。SupplierDetailView・InventoryRowDrawer・他タブも今のまま。
+- S1 新しい道では、件数・仕入元・ページを1本の SQL（§10-4 の W 形。`meta LEFT JOIN base` でページが空でも件数と仕入元を返す）で取る。後続の問い合わせ（tcg_analysis_review_svc.py:313-319、:387-395）は今のまま。
+- S2 新しい道の1本の直前に `SELECT set_config('jit', 'off', true)` を流し、1本の直後に元の値（直前に `current_setting('jit')` で読んだ値）へ `set_config('jit', <元の値>, true)` で戻す。効くのはその1本だけ（後続の問い合わせ・同じトランザクションの他の処理には効かない）。PostgreSQL 以外（pytest の SQLite、conftest.py:17）では流さない（auth/dependencies.py:317-327 の `_dialect_supports_search_path` と同じ守り）。
+- S3 24時間の絞りは F3 形（`(sm.line_posted_at + interval '0 second') >= now() - make_interval(hours => :posted_within_hours)`）。+0秒 を足す理由（素直な比較だと索引の見積りが1行になり 55秒かかった、§10-4）をコードのコメントとテスト（SQL 文字列の固定）に残す。
+- 並び: 新しい道の ORDER BY は `sm.line_posted_at DESC NULLS LAST, sm.id ASC, <result_order_sql の並び>`。同じ投稿の中は今までどおり result_order_sql（ADR-1023）の順。result_order_sql 本体は変えない（ADR-1014:121）。
+- ADR との関係: ADR-1023 改訂 2026-10-18 は「LINE 解析の結果画面」を result_order_sql の並びが効く画面に挙げている。要確認タブの既定の並びが投稿日の新しい順を先にすることは、この記述と食い違うため、本 PR で ADR-1023 に改訂 2026-10-21 を足す（PO 決定 §10-1。同じ投稿の中は今までどおり）。
+- 確認済みタブ（NeedsReviewTabsPanel.tsx:27-33 の acked）: 便1 では変えない（新しい見え方も新しい道も付けない）。PO の提案は要確認の一覧についてであり、確認済みタブに付けた形の速さは測っていないため。
 - S4 圧縮（§10-5）は別便。外側 nginx の設定変更で、S1〜S3 と同時に入れると効果が分けて測れないため（変更は一度に1つ）。
-- S5 /me/permissions の2回直列は、S1〜S4 の後に KGI-3 が 2.0秒を超えた場合だけ設計する。
+- S5 /me/permissions の直列待ち（NeedsReviewTabsPanel.tsx:67,:89 の useSuperAdmin 待ち）は、便0 の計測で一覧の前に掛かる時間を見てから決める。2026-10-20 15:30 の1件では、2回目の /me/permissions の完了（:44）から一覧の完了（:48）までが約4秒、一覧単独 4.03秒（Prometheus）で、2回目の待ちは1秒未満に収まっている（ログは秒単位の完了時刻だけ）。
 
 ### 10-7. 便の分け方と受入条件
 | 便 | 中身 | 受入条件（○×） | 検証方法 |
 |---|---|---|---|
-| 便1 | S1〜S3 ＋ §10-5 の画面（24時間ボタン・新しい順・25/50/100・投稿日の表示）＋API の新しい引数（既定は従来） | ①既定表示の一覧 API の request_time が 2.0秒以下（3回の中央値）②W 形と旧3本の件数・仕入元・行の中身が一致（順番は新しい順）③絞りを外すと旧3本と件数・中身が一致 ④CSV・シートの sha256 が変更前と一致 ⑤他タブの SQL が変わらない（テストで固定）⑥生 select・直値色・ハードコード文字列が0（CI の UI ガバナンス・i18n 検査） | ①本番 nginx ログ ②③本番 reader で旧形と新形を比べる ④§5 と同じ方式 ⑤⑥ pytest・CI |
-| 便2 | S4 圧縮 | 一覧 API の body_bytes_sent が変更前（約132KB/20行）より小さい・SSE の3本が切れない | 本番 nginx ログ・SSE の接続ログ |
-| 判定 | KGI-3 | 画面遷移〜一覧1行目の描画が 2.0秒以内（3回の中央値） | 本番 Playwright 計時。超えたら S5 を設計 |
+| 便0 | KGI-3 の基準値を取る（計り方は §10-9 の PO 決定待ち） | 変更前の「開いてから一覧の1行目まで」が3回以上記録される | 決まった計り方で |
+| 便1 | S1〜S3 ＋ §10-5 の画面（要確認タブのみ: 24時間ボタン・新しい順・25/50/100・投稿日の表示）＋API の新しい引数（既定は従来） | ①既定表示の一覧 API のサーバー処理時間が 1.5秒以下（3回の中央値。2.0秒から便0 で測る一覧の前後の時間を引いた値で、便0 の後に確定する）②新しい道（24時間・25/50/100件）と、同じ24時間窓・同じ並びを足した旧3本とで、件数・仕入元・行の中身と順番が一致（100件で窓内の全行を比べる）③絞りを外した新しい道（25/50/100件、全ページ）と、絞りなしの旧3本とで件数・仕入元・行の中身が一致（順番だけ新しい順）④CSV・シートの sha256 が変更前と一致 ⑤CSV・シート・配信・他タブ・確認済みタブの SQL が変わらない（テストで固定）⑥新しい道の後続の問い合わせに jit=off が残らない（テストで current_setting を確かめる、PostgreSQL のテスト）⑦生 select・直値色・ハードコード文字列が0（CI の UI ガバナンス・i18n 検査） | ① Prometheus ②③ 本番 reader で旧形と新形を比べる ④ §5 と同じ方式 ⑤⑥⑦ pytest・vitest・CI |
+| 便2 | S4 圧縮 | 一覧 API の送信バイト（nginx の bytes）が変更前（約132KB/20行）より小さい・SSE の3本が切れない | 本番 nginx ログ・SSE の接続ログ |
+| 判定 | KGI-3 | 開いてから一覧の1行目まで 2.0秒以内（3回の中央値） | 便0 と同じ計り方。超えたら S5 を設計 |
+- 実装カードには、S1〜S3 の変更箇所の file:line・変更前後のコード・引数の範囲チェック・追加/修正するテスト（SQL 形を固定する test_tcg_analysis_review.py:223-253、test_tcg_condition_review.py:681-692,:946-976、test_tcg_condition_review_fenced.py:27-41、test_tcg_result_order.py:367-370、test_v102_human_decisions_pg.py:279-303,:437-445 は今の道で通り続けること。フロントの NeedsReviewTabsPanel*.test.tsx、特に drawer.test.tsx:115 の呼び出し回数）・触らない範囲を書く。材料: /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/（repo 外）。
 
 ### 10-8. 弊害・戻し方・維持
-- 弊害: 既定では24時間より古い要確認行が見えない（PO 提案どおり。ボタンで外せる）。JIT を切るのはこの1本だけで、他は今の設定のまま。
+- 弊害: 既定では24時間より古い要確認行が見えない（PO 提案どおり。ボタンで外せる）。JIT を切るのは新しい道の1本だけ。
 - 戻し方: 便1 は PR の revert（DB の変更なし・新しい表や列なし）。便2 は nginx 設定の revert。
-- 維持: F3 形と JIT なしの理由はコードのコメントとテスト（SQL 文字列の固定）に残す。KGI-3 は便ごとに本番で測り、本節に追記する。
+- 維持: F3 形と JIT なしの理由はコードのコメントとテストに残す。KGI-3 は便ごとに本番で測り、本節に追記する。
 
 ### 10-9. 未解決
+- KGI-3 の計り方（PO 決定待ち）。事実: 本番向け Playwright（tests/qa-smoke/、playwright.config.ts:27）の利用者は tenant_006 の admin/staff/viewer で super admin ではなく、smoke 用トークンは super admin だと 401（ADR-1017、auth/dependencies.py:151-170）。storageState の仕組みは repo に無い。画面側の描画時間を記録する仕組み（web-vitals・performance.mark・RUM）も無い。材料 /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/kgi3_method.md。
 - 実装は PO の実装承認後（§10-1 の約束どおり作り始める前に再確認する）。
