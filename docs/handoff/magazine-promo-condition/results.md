@@ -38,7 +38,7 @@
 2. is_current の点検が ADR-1032 の復活止めを知らなかった。
    - 新しい組 [424590,68] の最新の投稿は 09-30 のもの。同じ仕入元は、それより後の投稿にも同じ商品の行を持っている。
    - そのため本番の _merge_supplier_products（backend/app/services/tcg_analyzer_svc.py:2102-2121、revival_guard=True）では FALSE になる。これが仕様どおりの動き。
-   - 点検に同じ規則を入れた。merge への prior_current_pairs の渡し方も、本番（backend/app/services/line_analysis_v102_svc.py:1503-1505・1520-1522）と同じにした。
+   - 点検に同じ規則を入れた。merge への prior_current_pairs の渡し方も、本番（backend/app/services/line_analysis_v102_svc.py:1503-1505・1520-1522。行番号は origin/main 67e5ea6b9 のもの。9c7275ea では :1506・:1508・:1523-1524 で中身は同じ）と同じにした。
    - 前からあると記録していた違反 [424590,28] result 463e51be も、同じ規則で説明がつく。規則を入れた後の点検では違反0件。
 
 post の [4] は n_match=0 と出た。これは数え方の条件に is_current=TRUE が入っていたためで、上の 2 と同じ入れ忘れ。ほかの条件は [2] の一覧で3行とも満たしている。
