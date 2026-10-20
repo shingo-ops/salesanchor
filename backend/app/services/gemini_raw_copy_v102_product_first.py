@@ -50,6 +50,7 @@ PRODUCT_KUBUN_BULK = "バルク系"  # 状態語が無いとき、状態を Bulk
 PRODUCT_KUBUN_SINGLE = "シングル系"  # 状態を single 群の行（PSA10 等）で判定し、語が無ければ Single にする（ADR-1031）
 PRODUCT_KUBUN_PROMO_PACK = "プロモパック系"  # 状態を promo_pack 群の行で判定し、語が無ければ 未開封 にする（ADR-1031）
 PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
+PRODUCT_KUBUN_SUPPLY = "サプライ系"  # 状態を supply 群の行で判定し、語が無ければ Supply にする。単位は状態の単位（Bag）にそろえる（ADR-1035 追補）
 PRODUCT_KUBUN_BOOKLET = "ブックレット系"  # 状態を booklet 群の行で判定し、語が無ければ With booklet にする（ADR-1035）
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
 PRODUCT_KUBUN_UNKNOWN = "不明"
@@ -87,12 +88,15 @@ CONDITION_BULK_CODE = "CN0014"
 VALUE_GROUP_SINGLE = "single"
 VALUE_GROUP_PROMO_PACK = "promo_pack"
 VALUE_GROUP_BOOKLET = "booklet"
+VALUE_GROUP_SUPPLY = "supply"
 CONDITION_SINGLE_DEFAULT = "Single"  # シングル系で状態語が無いときの状態名（single 群の行。search_kw 空）
 CONDITION_PROMO_PACK_DEFAULT = "未開封"  # プロモパック系で状態語が無いときの状態名（promo_pack 群の行。search_kw 空）
 CONDITION_BOOKLET_DEFAULT = "With booklet"  # ブックレット系で状態語が無いときの状態名（booklet 群の行。search_kw 空）
+CONDITION_SUPPLY_DEFAULT = "Supply"  # サプライ系で状態語が無いときの状態名（supply 群の行。search_kw 空）
 BASIS_SINGLE_DEFAULT = "R7:単品既定"  # R4 で始めない（買取換算の候補に入れないため。BASIS_BULK_DEFAULT と同じ扱い）
 BASIS_PROMO_PACK_DEFAULT = "R8:プロモパック既定"
 BASIS_BOOKLET_DEFAULT = "R9:ブックレット既定"  # R4 で始めない（R6〜R8 と同じ扱い）
+BASIS_SUPPLY_DEFAULT = "R10:サプライ既定"  # R4 で始めない（ADR-1021）
 BASIS_BULK_DEFAULT = "R6:バルク既定"  # R4 で始めない（買取換算の候補に入れないため。v102_buyback_unit_svc.is_candidate）
 REVIEW_CONDITION_UNKNOWN = "condition_unknown"
 REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
@@ -586,6 +590,7 @@ _KUBUN_TO_VALUE_GROUP = {
     PRODUCT_KUBUN_SINGLE: (VALUE_GROUP_SINGLE, CONDITION_SINGLE_DEFAULT, BASIS_SINGLE_DEFAULT),
     PRODUCT_KUBUN_PROMO_PACK: (VALUE_GROUP_PROMO_PACK, CONDITION_PROMO_PACK_DEFAULT, BASIS_PROMO_PACK_DEFAULT),
     PRODUCT_KUBUN_BOOKLET: (VALUE_GROUP_BOOKLET, CONDITION_BOOKLET_DEFAULT, BASIS_BOOKLET_DEFAULT),
+    PRODUCT_KUBUN_SUPPLY: (VALUE_GROUP_SUPPLY, CONDITION_SUPPLY_DEFAULT, BASIS_SUPPLY_DEFAULT),
 }
 
 
@@ -682,6 +687,7 @@ def _resolve_unit_from_state(
     """(単位, 単位の区分, unit_basis)。分類と状態から単位を決め直す。
 
     セット系：単位の語が無ければ単位 Set（状態の単位では置き換えない）。書かれた単位はそのまま。
+    サプライ系：状態の単位があれば、書かれた単位（「100枚入」の枚など）に関わらず状態の単位（Bag）にする。
     それ以外：単位が無い・箱系で「条件つき」なら状態の単位。状態が原文の語（R1〜R3）で決まり、その状態の単位が今の単位と違えば、
     状態の単位を優先する（理由 state_word）。
     """
@@ -691,6 +697,11 @@ def _resolve_unit_from_state(
             return set_unit, set_kubun, {**unit_basis, UNIT_BASIS_FROM_CATEGORY: PRODUCT_KUBUN_SET}
         if unit is not None:
             return unit, unit_kubun, unit_basis
+    if product_kubun == PRODUCT_KUBUN_SUPPLY:
+        supply_unit = masters.condition_unit.get(condition or "")
+        if supply_unit:
+            new_unit, new_kubun, _resolved = resolve_unit_v2(supply_unit, unit_alias_to_info)
+            return new_unit, new_kubun, {**unit_basis, "from_condition": condition, "reason": "supply_kubun"}
     replace = unit is None or (product_kubun == PRODUCT_KUBUN_BOX and unit_kubun == UNIT_KUBUN_REPLACEABLE_FOR_BOX)
     from_condition = masters.condition_unit.get(condition or "")
     if not from_condition:
