@@ -58,3 +58,5 @@ def reception_message_payload() -> dict:
             }
         ],
     }
+
+ROOM_TOPIC = "在庫集計ツールのお試し（番号 {viewer_id}）"
