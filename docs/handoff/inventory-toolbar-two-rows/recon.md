@@ -1,7 +1,7 @@
 # recon: 在庫一覧の上部（検索・絞り込み・並び替え）を2段に並べ直す
 
 - 基準: origin/main 2cacc774a（worktree `release/inventory-toolbar-two-rows`）。行番号はこの時点の実ファイル。
-- 調査の生出力: `/tmp/CC報告ファイル/inventory-toolbar/recon-raw.md`・`/tmp/CC報告ファイル/inventory-toolbar/recon2-raw.md`・`/tmp/CC報告ファイル/inventory-toolbar/recon3-raw.md`（Sonnet・読み取りのみ）。
+- 調査の生出力: リポジトリ外の記録置き場（CC報告ファイル-keep の inventory-toolbar-two-rows/recon フォルダ。recon-raw・recon2-raw・recon3-raw の3つ。Sonnet・読み取りのみ）。
 - 対象 ADR（`git grep -i` と FEATURE-INDEX で確認）: ADR-1014（在庫表の見え方）、ADR-1019（閲覧ページは在庫表と同じ金型で作る・`docs/adr/ADR-1019-inventory-viewer-separate-accounts.md:26`）、ADR-093（詳細フィルタ・表示条件）、ADR-144（金型の先確認）、ADR-067（トークン）、ADR-027（i18n）、ADR-137（PC/スマホの分け方）。
 
 ## 1. アプリの在庫表 `/inventory`
@@ -45,12 +45,12 @@
 
 ## 7. 本番の保存値（影響の大きさ）
 
-- reader 鍵で SELECT 1回（ADR-1024。読んだのは `ai_ro.public__user_inventory_filters`。SQL と結果は `/tmp/CC報告ファイル/inventory-toolbar/q.sql`・`q.out`）。
+- reader 鍵で SELECT 1回（ADR-1024。読んだのは `ai_ro.public__user_inventory_filters`。SQL と結果は同じ記録置き場の q.sql・q.out）。
   - 保存している人 3 / 有効化 ON 1 / 有効化 OFF 2
   - 有効化 OFF で状態か範囲が保存されている人: **0**（状態だけ 0、範囲だけ 0）
   - → 価格・数量・状態を有効化スイッチから外しても、開いた瞬間に急に絞り込まれる人はいない。
 
-## 8. 金型の手続き（recon3-raw.md §2・§3）
+## 8. 金型の手続き（記録置き場の recon3-raw §2・§3）
 
 - `ContentToolbar` の呼び出し元は約60ファイル。stories は `frontend/src/components/ContentToolbar.stories.tsx`。単体テストは無い。
 - 規格は `docs/specs/design-system/component-ssot/page-header-v2/design.md` §2.5 だけ。操作台を2行にする規定は無い（「2段」はボタン置き場のルール名だけ）。

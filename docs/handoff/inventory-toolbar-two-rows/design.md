@@ -152,4 +152,5 @@ grid-template-areas:
 - 不要: 既存の GAS 在庫一覧が同じ2段の形で動いており（recon §3）、それに合わせる変更のため。
 
 ## 維持の仕組み
+- 守り手: 金型の2段目枠は `frontend/src/components/ContentToolbar.test.tsx`（渡さない画面の DOM を固定）、並びと常時適用は `frontend/src/pages/inventory/InventoryPage.toolbar.test.tsx`。GAS の写しは人手で守る（理由: GAS は CI の試験の外。ADR-1014 の方針でアプリと一緒に直す）。
 - 正本は `ContentToolbar`（金型）と ADR-1014 改訂。GAS の CSS は写しで、アプリの並びを変えたら一緒に直す（ADR-1014 の既存方針）。
