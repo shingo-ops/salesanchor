@@ -82,3 +82,13 @@ mode: handoff
 - 【事実】B: 直近30日（終点 2026-10-20）の possible_footer_line 54 件のうち余白行が完売の語だけの文なのは 2928ea55 の1行。In Stock・Pre-order 0（recon2・recon4 D5）。
 - 【事実】C: SOLDOUT_REF・SOLDOUT_INHERIT の〆 22 行のうち unit_unknown は 2 行（39300bc2・018e101c）。参照先の単位は 22/22 で1種類、2行は Set（recon2・recon4 D6）。要確認の一覧は unit_resolved が偽なら unit_unresolved を足す（`backend/app/services/tcg_condition_review_svc.py:261`）。
 - 設計は docs/handoff/shime-review-exclude/design.md §13。
+
+## 改訂3 追補（A の設計し直し、2026-10-20）
+
+材料の原本: ~/CC報告ファイル-keep/shime-next3-20261020/recon5・recon6・recon7（原文と仕入元の名前は社外秘のためここに書かない。ei は先頭8文字）。
+- 【事実】取り残し2種類以上の〆 22 行（60日・is_active 不問）を原文と照合: 全部に当てるが正しい 2・誤り 13・同じ 3・決められない 4（recon5 JUDGE.md）。
+- 【事実】最新の在庫の投稿の状態が1種類 9 行。保存の状態と違うのは 83d61b3d だけ（F5_diff.tsv、60日の候補 1256 行で n_stranded=2 の差は1行）。
+- 【事実】「全部」系の語を含む〆は 60日で 5 行、うち取り残し2種類以上は 2 行（F4.md）。
+- 【事実】要確認に残った 0c91e2e0・5642ad0b の settled=偽 は、前の投稿の古いシュリなしの行 a42dcf92（is_current=真・48時間内）が相手に数えられるため（recon7 G4.md「今の相手の行数」1）。
+- 【事実】相手を「〆以後の投稿か、〆より前の最新の在庫の投稿」に絞る形 (i) で、参考 40 件の偽→真は 2 件（0c91e2e0・5642ad0b）、今の一覧の〆の形 51 行の変化 0（G4.md、本番 08:49Z）。さらに is_current 等で絞る (ii) は 0 件。
+- 設計は design.md §13-10。
