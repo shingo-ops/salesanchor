@@ -5,9 +5,8 @@
 親: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)
 
 調べた日: 2026-10-21。基準は origin/main `9c7275ea098666d1066f64c0bb8c404ab8740e3e`（読み取りだけ）。本番は reader 鍵で ai_ro のビューだけを読んだ。
-生出力と試算の原文は社外秘フォルダにある（仕入元の名前・原文を含むので、リポジトリには入れない）。この文書には件数・商品 id・状態コードだけを書く。
+生出力と試算の原文は社外秘フォルダにある（`~/CC報告ファイル-keep/needs-review-zero/price-unit-recon/` と同 `v2/`・`v3/`・`v4/`・`v5/`）（仕入元の名前・原文を含むので、リポジトリには入れない）。この文書には件数・商品 id・状態コードだけを書く。
 ラベル: 【事実】=ファイルか出力で確かめた／【推測】／【未確認】
-略記: PF=`backend/app/services/gemini_raw_copy_v102_product_first.py`、TA=`backend/app/services/tcg_analyzer_svc.py`、LA=`backend/app/services/line_analysis_v102_svc.py`、BB=`backend/app/services/v102_buyback_unit_svc.py`、UP=`backend/app/services/v102_unit_price_check_svc.py`
 
 ## 1. 既存 ADR・設計の検索
 
@@ -32,21 +31,21 @@
 
 ### Q1 単位の語があるとき
 【事実】
-- 確定させる。別名表 `public.unit_aliases` を引く（TA:60-72 `_UNIT_ALIAS_SQL`、TA:117-129）。語の探し方は PF:511 `find_unit_product_first`、照合は TA の `resolve_unit_v2`（TA:817-842）。
+- 確定させる。別名表 `public.unit_aliases` を引く（backend/app/services/tcg_analyzer_svc.py:70-72 `_UNIT_ALIAS_SQL`、backend/app/services/tcg_analyzer_svc.py:117-129）。語の探し方は backend/app/services/gemini_raw_copy_v102_product_first.py:511 `find_unit_product_first`、照合は `backend/app/services/tcg_analyzer_svc.py` の `resolve_unit_v2`（backend/app/services/tcg_analyzer_svc.py:817-842）。
 - 商品の分類（箱系）と書かれた単位（例: 箱系商品に「パック」）が食い違っても、要確認にする処理は無い。単位は書かれたまま（Pack）で、状態はパック系で解かれる。ただし相場ずれがあれば便UP が要確認にする。
-- 状態による単位のやり直し: PF:65 `BOX_RECHECK_UNIT_KUBUNS`（単位区分が 空・不明・条件つき・複合・数量専用 のとき箱系として状態を解く）。PF:683 `_resolve_unit_from_state`（セット系は単位が無ければ Set／サプライ系は状態の単位 Bag／単位なし・箱系×条件つきは状態の単位／状態が R1〜R3 で単位違いなら状態の単位）。
+- 状態による単位のやり直し: backend/app/services/gemini_raw_copy_v102_product_first.py:65 `BOX_RECHECK_UNIT_KUBUNS`（単位区分が 空・不明・条件つき・複合・数量専用 のとき箱系として状態を解く）。backend/app/services/gemini_raw_copy_v102_product_first.py:683 `_resolve_unit_from_state`（セット系は単位が無ければ Set／サプライ系は状態の単位 Bag／単位なし・箱系×条件つきは状態の単位／状態が R1〜R3 で単位違いなら状態の単位）。
 
 ### Q2 単位が「個」・無記入で状態の語があるとき
-【事実】状態から単位を決める（PF:683 `_resolve_unit_from_state`）。状態の単位は `line_conditions.unit_id`。複数の状態に語が当たるときは、同じ群で value_rank が揃っていれば価値の低い側（ADR-1023、PF の `prefer_lowest_value=True`）、そうでなければ先に当たった行。
-- `condition_multiple_candidates`: PF:102 で定義。箱系として解いたのに別区分の状態行にも語が当たるとき（PF:653 `_other_kubun_hits`）、またはプロモパック系で 2 行以上当たるときに付く。付けるだけで状態は変えない。価格は見ない。
+【事実】状態から単位を決める（backend/app/services/gemini_raw_copy_v102_product_first.py:683 `_resolve_unit_from_state`）。状態の単位は `line_conditions.unit_id`。複数の状態に語が当たるときは、同じ群で value_rank が揃っていれば価値の低い側（ADR-1023、`backend/app/services/gemini_raw_copy_v102_product_first.py` の `prefer_lowest_value=True`）、そうでなければ先に当たった行。
+- `condition_multiple_candidates`: backend/app/services/gemini_raw_copy_v102_product_first.py:102 で定義。箱系として解いたのに別区分の状態行にも語が当たるとき（backend/app/services/gemini_raw_copy_v102_product_first.py:653 `_other_kubun_hits`）、またはプロモパック系で 2 行以上当たるときに付く。付けるだけで状態は変えない。価格は見ない。
 
 ### Q3 単位も状態も語で決まらないとき、値段で決める仕組み
-- (a) 買取価格＝便BB【事実】: 呼び出し LA:962 `_buyback_units`・LA:1147。対象判定 BB:134 `is_candidate`、語の有無 BB:118 `has_no_unit_and_condition_word`、決定 BB:106 `decide_code`／BB:194 `apply_buyback_units`、物差しの SQL BB:54 `_MEDIAN_SQL`。比 r＝価格÷同じ商品の買取 BOX 中央値。0.5≤r<2 は Sealed box／Box、r≥6 は Case、その間は決めない。Pack は決めない。対象外: 単位か状態が語で決まった件（basis が R4 で始まらない）、まとめ売り、セット系、人が直した件。
+- (a) 買取価格＝便BB【事実】: 呼び出し backend/app/services/line_analysis_v102_svc.py:962 `_buyback_units`・backend/app/services/line_analysis_v102_svc.py:1147。対象判定 backend/app/services/v102_buyback_unit_svc.py:134 `is_candidate`、語の有無 backend/app/services/v102_buyback_unit_svc.py:118 `has_no_unit_and_condition_word`、決定 backend/app/services/v102_buyback_unit_svc.py:106 `decide_code`／backend/app/services/v102_buyback_unit_svc.py:194 `apply_buyback_units`、物差しの SQL backend/app/services/v102_buyback_unit_svc.py:54 `_MEDIAN_SQL`。比 r＝価格÷同じ商品の買取 BOX 中央値。0.5≤r<2 は Sealed box／Box、r≥6 は Case、その間は決めない。Pack は決めない。対象外: 単位か状態が語で決まった件（basis が R4 で始まらない）、まとめ売り、セット系、人が直した件。
 - (b) 他社の販売価格【事実】: 仕組みも表も無い。設計で不採用（`docs/handoff/v102-buyback-unit/design.md` §4）。優先順位「買取>他社の販売価格>提供者固有の販売価格」は PO の発言（同 :1）。
-- (c) 自社の前日までの価格【事実】: 単位を「決める」仕組みは無い。便UP が要確認を付けるだけ（LA:981 `_unit_price_mismatches`、UP:54 `_MARKET_SQL`、UP:124 `is_unit_price_mismatch`）。単位ごとの中央値（別投稿 min_posts 件以上）と比べ、倍率 ratio 超でずれ、かつ別単位の相場の方が近いときだけ `unit_price_mismatch`。単位・価格は書き換えない。
+- (c) 自社の前日までの価格【事実】: 単位を「決める」仕組みは無い。便UP が要確認を付けるだけ（backend/app/services/line_analysis_v102_svc.py:981 `_unit_price_mismatches`、backend/app/services/v102_unit_price_check_svc.py:54 `_MARKET_SQL`、backend/app/services/v102_unit_price_check_svc.py:124 `is_unit_price_mismatch`）。単位ごとの中央値（別投稿 min_posts 件以上）と比べ、倍率 ratio 超でずれ、かつ別単位の相場の方が近いときだけ `unit_price_mismatch`。単位・価格は書き換えない。
 
-### Q4 先に勝つ順（保存時 LA:1115 `_write_results`）
-【事実】人の判断 → 単位の語 → 状態 → 状態から単位の決め直し → まとめ売り（LA:1024 `_apply_bundle`）→ バルク価格 → 人が直した値 → 便BB（LA:1147）→ 規則13（〆）→ 便UP（LA:1149、理由を付けるだけ）→ 人の状態判断と〆の相手からの写し（LA:899 `_apply_soldout_targets`、最後に勝つ）→ 価格の引き継ぎ（価格のみ）。
+### Q4 先に勝つ順（保存時 backend/app/services/line_analysis_v102_svc.py:1115 `_write_results`）
+【事実】人の判断 → 単位の語 → 状態 → 状態から単位の決め直し → まとめ売り（backend/app/services/line_analysis_v102_svc.py:1024 `_apply_bundle`）→ バルク価格 → 人が直した値 → 便BB（backend/app/services/line_analysis_v102_svc.py:1147）→ 規則13（〆）→ 便UP（backend/app/services/line_analysis_v102_svc.py:1149、理由を付けるだけ）→ 人の状態判断と〆の相手からの写し（backend/app/services/line_analysis_v102_svc.py:899 `_apply_soldout_targets`、最後に勝つ）→ 価格の引き継ぎ（価格のみ）。
 
 ## 3. 本番の事実（2026-10-20 15:48Z〜2026-10-21 JST 取得、reader 鍵）
 
