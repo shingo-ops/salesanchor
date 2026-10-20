@@ -24,6 +24,13 @@
     "search": {
       "placeholder": "商品名・型番・キーワードで検索"
     },
+    "resetView": "リセット",
+    "range": {
+      "priceMin": "最低価格",
+      "priceMax": "最高価格",
+      "qtyMin": "最小数量",
+      "qtyMax": "最大数量"
+    },
     "freshOnly": "{{hours}}時間以内",
     "sort": {
       "placeholder": "並び替え",
