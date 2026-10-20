@@ -46,11 +46,11 @@
 - 手続き: ADR-144 の PO 許可は「金型を新設するとき」の決まりで、既存金型に枠を足す手続きは定めが無い（recon §8）。今回は PO が決めた2段の形をそのまま作るための拡張で、渡さない約60画面は DOM も見た目も変えない。page-header-v2 design §2.5 に「2段目の枠（任意）」と範囲入力の行を追記して規格を1か所に保つ。
 
 ### D5 置き場所
-- アプリのツールバーは `frontend/src/pages/inventory/InventoryToolbar.tsx` に切り出す（`InventoryPage.tsx` は636行で、ページ行数の上限対策のため）。状態は今どおり `InventoryPage` が持ち、props で渡す。
+- アプリのツールバーは `frontend/src/pages/inventory/InventoryToolbar.tsx` に切り出す（`frontend/src/pages/inventory/InventoryPage.tsx` は636行で、ページ行数の上限対策のため）。状態は今どおり `InventoryPage` が持ち、props で渡す。
 
 ## 3. 変更内容
 
-### 3-1 金型 `frontend/src/components/ContentToolbar.tsx`・`ContentToolbar.css`
+### 3-1 金型 `frontend/src/components/ContentToolbar.tsx`・`frontend/src/components/ContentToolbar.css`
 ```tsx
 interface ContentToolbarProps {
   left?: React.ReactNode;
@@ -89,21 +89,21 @@ CSS（トークンのみ）:
 - 「〜」は記号で言語に依存しないため文字のまま置く（GAS・既存パネル :261 と同じ）。i18n 検査で止まる場合は辞書キーにする。
 - 単体テスト・stories に2段の例と範囲入力の例を足す。
 
-### 3-2 アプリ `InventoryToolbar.tsx`（新規）・`InventoryPage.tsx`・`InventoryFilterPanel.tsx`
+### 3-2 アプリ `frontend/src/pages/inventory/InventoryToolbar.tsx`（新規）・`frontend/src/pages/inventory/InventoryPage.tsx`・`frontend/src/pages/inventory/InventoryFilterPanel.tsx`
 - PC（`!isMobile`）:
   - left: 検索（`inventory-search`・`field-w-md`）、価格の範囲（`inventory-price-min/max`）、数量の範囲（`inventory-qty-min/max`）
   - bottomLeft: 並び替え（`inventory-sort-menu`）、コンディション MultiSelect（`inventory-condition-filter`・選択肢は `conditionFacet`・値は `showConditions`）、提供者（`inventory-supplier-filter`）、詳細フィルタ（`inventory-filter-toggle`）
   - bottomRight: 24時間以内（`inventory-fresh-toggle`）、リセット（`inventory-reset-sort`）
 - スマホ: 今の1段の並びのまま（検索・リセット・24時間以内・並び替え・詳細フィルタ）。
-- `InventoryPage.tsx` の取得部（:212・:215-224）: `condition_in`・`qty_*`・`price_*` の `filterEnabled &&` を外す。`unit_in`・`offer_type_in`・`hide_categories` は今のまま `filterEnabled` 付き。
-- `InventoryFilterPanel.tsx`: 状態チェック（:205-220 付近）と範囲入力（:257-272）を消す。スマホだけ先頭（提供者の下）に、コンディション MultiSelect と範囲入力2つを出す（`showSupplierSelect` と同じ条件）。
-- 文言（`frontend/src/locales/ja.json`・`en.json` に同じキー）:
+- `frontend/src/pages/inventory/InventoryPage.tsx` の取得部（:212・:215-224）: `condition_in`・`qty_*`・`price_*` の `filterEnabled &&` を外す。`unit_in`・`offer_type_in`・`hide_categories` は今のまま `filterEnabled` 付き。
+- `frontend/src/pages/inventory/InventoryFilterPanel.tsx`: 状態チェック（:205-220 付近）と範囲入力（:257-272）を消す。スマホだけ先頭（提供者の下）に、コンディション MultiSelect と範囲入力2つを出す（`showSupplierSelect` と同じ条件）。
+- 文言（`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキー）:
   - `inventory.conditionFilter.label` コンディション / Condition
   - `inventory.conditionFilter.clear` 選択をクリア / Clear selection、`.all` すべて / All、`.count` {{count}}件 / {{count}} selected
   - `inventory.range.priceMin` 最低価格 / Min price、`.priceMax` 最高価格 / Max price、`.qtyMin` 最小数量 / Min qty、`.qtyMax` 最大数量 / Max qty
   - 不要になる `inventory.filterPanel.min/max` は他で使っていなければ消す（grep で確認）。
 
-### 3-3 閲覧ページ `InventoryView.tsx`・`viewer.css`・`locales/viewer/*.json`
+### 3-3 閲覧ページ `frontend/src/pages/viewer/InventoryView.tsx`・`viewer.css`・`frontend/src/locales/viewer/ja.json`・`frontend/src/locales/viewer/en.json`
 - PC: `ContentToolbar` で同じ並び（`viewer-search`、`viewer-price-min/max`、`viewer-qty-min/max` / `viewer-sort-menu`、`viewer-condition-filter`、`viewer-provider-filter` / `viewer-fresh-toggle`、`viewer-reset`）。「絞り込み」ボタンは PC では出さない。
 - スマホ: 今のまま（引き出しに提供者・コンディション・範囲）。
 - リセット: 検索語・並び（既定）・ページを戻す。
@@ -148,8 +148,8 @@ grid-template-areas:
 - 768〜1279px で窮屈 → 段内で折り返す。PO 目視で確認。
 - 戻し方: アプリは PR を revert。GAS はテストを版29、本番を版19 へ redeploy。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - 不要: 既存の GAS 在庫一覧が同じ2段の形で動いており（recon §3）、それに合わせる変更のため。
 
-## 9. 維持
+## 維持の仕組み
 - 正本は `ContentToolbar`（金型）と ADR-1014 改訂。GAS の CSS は写しで、アプリの並びを変えたら一緒に直す（ADR-1014 の既存方針）。
