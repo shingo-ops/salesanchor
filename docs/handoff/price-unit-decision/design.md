@@ -8,7 +8,7 @@ mode: handoff
 親: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)
 
 状態: **方針は PO が決めた**（2026-10-21）。起案は 2026-10-21、Opus。審査は下の「審査」にある。
-- 現状の調べは [recon.md](./recon.md)（基準 origin/main `9c7275ea0`）
+- 現状の調べは [docs/handoff/price-unit-decision/recon.md](./recon.md)（基準 origin/main `9c7275ea0`）
 - 決定の記録は [ADR-1036](../../adr/ADR-1036-price-decides-unit.md)。ADR-1035 What 2（状態が語で決まったときは状態の単位を優先）の例外にあたる。
 - 試算の生出力・原文つきの表は社外秘フォルダ（`~/CC報告ファイル-keep/needs-review-zero/price-unit-recon/` と同 `v2/`・`v3/`・`v4/`・`v5/`、棚卸しは `~/CC報告ファイル-keep/needs-review-zero/inventory/`）。この文書には件数・商品 id・状態コードだけを書く。
 
