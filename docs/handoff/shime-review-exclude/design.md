@@ -795,7 +795,7 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 - 相手の行は stranded[canonical]（その状態の最も新しい投稿の、いちばん上の行）で、12e と同じ作り方。単位の2項目は §13-3 C で足すもの（C と同じ PR）。
 - docstring（:396-398）の「〆と同じ状態の在庫が前にあれば決めない（12d）。取り残しの状態がちょうど1種類のときだけ決める（12e）。」を「取り残しが2種類以上で、その商品の在庫の行がある最も新しい投稿の状態が1種類・〆の状態と違う・取り残しにあるときは、その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d）、取り残しの状態がちょうど1種類のときだけ決める（12e）。」に書き換える。
 - 変えないこと: 12a〜12c・12f の候補の条件（_is_inherit_candidate）、12g に当たらない件の 12d・12e、段A（_targets_of）、posts の読み込み（load_soldout_ref_posts・`backend/app/services/line_analysis_v102_svc.py:1253-1270`。〆より前・48時間・最新 job・新しい順 :1244-1250）。
-- 【事実】F5（60日・is_active 不問の候補 1256 行。12d は入れていない数え方）で、取り残しが2種類以上かつ最新の投稿の状態が1種類で保存の状態と違う行は 83d61b3d の1行だけ（F5_diff.tsv）。F5 の候補は _is_inherit_candidate の一部の条件を見ていない上位集合なので、12g で値が変わる行はこの1行以下。実際の集合は T2-A1 で実装のコードを流して確かめる。
+- 【事実】F5（60日・is_active 不問の候補 1256 行。12d は入れていない数え方）で、取り残しが2種類以上かつ最新の投稿の状態が1種類で保存の状態と違う行は 83d61b3d の1行だけ（F5_diff.tsv）。ただし F5 の候補は condition_basis が R4:単位既定・R5:パック既定の〆だけで、コードの候補（_is_inherit_candidate。語で決まっていない basis はすべて通す）の上位集合ではない（Reviewer 第2回 R2-1）。F5 の数え方では 1 行。それ以外の basis（〆の状態が空の件など）で当たる行の有無は【未確認】で、T2-A1 で確かめる。
 
 ##### A-2 〆の確認済み扱いで、〆より前の投稿の別の状態の相手は「最新の在庫の投稿」の中だけ数える（`backend/app/services/tcg_condition_review_svc.py`）
 
@@ -849,7 +849,7 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 |---|---|
 | T1 A-1 の試験 | `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に足して CI で通る: (ee) 83d61b3d の形: 古い投稿に Sealed box の在庫、新しい投稿に Case の在庫だけ、〆は既定で Sealed box → 相手は Case（新しい投稿の Case の行・unit の2項目も運ぶ。今は 12d で相手なし） (ef) 取り残しが No shrink box・Case（Sealed box の在庫は前に無い）、最新の在庫の投稿は Case だけ → 相手は Case (ff) 最新の在庫の投稿に2種類ある・前に Sealed box の在庫あり → 相手なし（12d） (fg) 最新の在庫の投稿が Sealed box だけ（〆と同じ）・前に Case → 相手なし（12d） (gg) 取り残しが3種類（Case・No shrink box・Searched pack）で、最新の在庫の投稿の状態 Case が〆と同じ投稿の他の件（same_post）の状態 → 12g に当たらず、取り残し2種類のまま 12e で相手なし (hh) 取り残しが3種類で、最新の在庫の投稿の状態 Case が、もっと新しい投稿の完売の行で片づいている（stranded に無い）→ 相手なし (ii) 最新の在庫の投稿の状態が FLAG_ で始まる → 相手なし (jj) 取り残し1種類の既存の試験は全部変えずに通る |
 | T1 A-2 の試験 | `backend/tests/test_tcg_condition_review.py` の pg の試験に足して CI で通る: (kk) 0c91e2e0 の形: 〆の前に投稿 P0（別の状態の相手・48時間内・is_current）、その後に投稿 P1（同じ商品で〆と同じ状態・is_current=偽の行だけ。cr_n1 の条件は満たし相手の条件は満たさない）、その後に〆 → settled（price_unresolved・excluded が外れる） (ll) (kk) で P0 の行が〆と同じ状態 → 外れない (mm) 相手が最新の在庫の投稿 P1 の別の状態の行 → 外れない（今の (s) と同じ結果） (nn) 既存の (a)〜(t)・(l)〜(n) が全部変えずに通る |
-| T2-A1 本番の当て | 実装の HEAD のコードで、直近60日・is_active 不問の SOLDOUT_INHERIT の候補の〆を、保存済みの写しからやり直し（Gemini は呼ばない・書き込まない）、相手が変わる〆の集合 = {83d61b3d}（相手なし → Case）。他の行の相手の差 0 |
+| T2-A1 本番の当て | 実装の HEAD のコードで、直近60日・is_active 不問の、Sold out・excluded・商品が直接当たった〆を condition_basis を問わずすべて（候補の絞り込みはコードの _is_inherit_candidate に任せる）、保存済みの写しからやり直し（Gemini は呼ばない・書き込まない）、相手が変わる〆の集合 = {83d61b3d}（相手なし → Case）。他の行の相手の差 0。ほかの行が出たら不合格とし、その行を原文と照らして Opus が設計を見直してから進める（PO へ上げる） |
 | T2-A2 本番の当て | 実装の review_joins(shime=True) と origin/main の review_joins(shime=True) を ai_ro で流す（daily_check と同じ道）。窓の `NOW()` は両方とも測定の時刻 `TIMESTAMPTZ '2026-10-20 08:49:00+00'` に置き換える（置き換えは T2 の写しの中だけ。製品コードは NOW() のまま）。recon7 の参考 40 件で settled が偽→真に変わる集合 = {0c91e2e0, 5642ad0b}、G4b の一覧の〆の形 51 行で真→偽 0。要確認の一覧の SQL の時間を、同じ時間帯に origin/main の SQL と3回ずつ測り、中央値が 1.2 倍以内 |
 | 本番の後 | デプロイ後、83d61b3d の job だけを再解析する（台本と確かめ運転の後に PO が `!` で流す）。ai_ro で 83d61b3d の condition_canonical が Case。0c91e2e0・5642ad0b は投稿が差し替え済みで一覧に出ないので、次に同じ形の〆が来たとき毎朝の点検（§12-8）で確かめる |
 
@@ -869,4 +869,5 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
 
 - Opus 自己審査（独立した第二者のレビューではない）: A-1 は 13-10-1 の 9 行・F5 の差 1 行と同じ条件で書いた。A-2 は測定の (i) より相手を多く数える形にしたので、真になる集合は測定の部分集合（包含関係）で、一覧の行を新たに外すことはない。
 - 未確認: 0c91e2e0・5642ad0b が設計の形でも真になること（T2-A2）。要確認の一覧の時間（T2-A2）。同じ時刻の投稿の有無（T2-A2）。
+- Reviewer（opus）審査 第2回（HEAD cdbf31492）: REVISE。R2-1（F5 は上位集合ではない）→ 文を直し、T2-A1 の対象を basis を問わない形に明記。
 - Reviewer（opus）審査 第1回（HEAD 49119fc22）: REVISE。R-1（A-1 が 12d の後ろで本番の 22 行が 1 行も変わらない）→ 12g を 12d より先に置く形に直した。R-2（T2 が今の時刻に左右される）→ NOW() を測定の時刻に固定。R-3（(gg)(hh)(kk) の組み立て）→ 3種類・is_current=偽で書き直し。R-4（§13-9 の窓口の人名）→ ei に置き換え。軽い指摘（行番号・docstring・同じ時刻・NULL）も反映。
