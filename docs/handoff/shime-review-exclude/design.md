@@ -512,3 +512,205 @@ ADR: 作らない（§9 と同じ理由。規則の正本は本書 12-3）。外
   - 生出力: ~/CC報告ファイル-keep/shime-remaining-20261020/h1/（社外秘。リポジトリに入れない）
 - H6: 定期実行「〆の自動判定 毎朝点検」を登録（id f94f9a62、enabled、毎日 10:00 JST、opus-designer）。台本 daily_check.sh の初回手動実行は exit 0・46行（判定は定期実行の初回で行う）。初回の返答は 2026-10-21 10:00 JST
 - 残り: 次の便で、①状態の書いていない〆を残りの状態すべてに当てる ②完売の語だけの余白行を余白行の疑いから外す ③参照した在庫の行から単位を写す、の3件を設計・審査する（PO「1」）。肉ルフィの区分の件は 12-9 のまま
+
+## 13. 改訂3 — 〆の残り3件（状態の書いていない〆・完売の語だけの余白行・〆の単位）（2026-10-20）
+
+状態: 設計案作成済み・Opus 自己審査済み。Reviewer（opus）の審査と PO 実装承認はまだ。A は PO の方向性の判断待ち（不採用を推奨）。B・C は PO 承認後に実装する（PO 2026-10-20「1」は「次の回で設計・審査してから作る」の承認で、実装の GO ではない）。
+材料の原本: ~/CC報告ファイル-keep/shime-next3-20261020/（recon1〜recon4・カード。原文は社外秘のためこの文書に貼らない）。現在地は docs/handoff/shime-review-exclude/recon.md「改訂3」。
+
+### 13-1. 目的と成功条件
+
+PO の言葉（2026-10-20）: 「その投稿者の最新の在庫情報から特定させる仕組みは導入されている？その情報から特定すればいいのでは？」「システムが完売と正しく解析したなら要確認に回す必要は無い、定期実行で確認すれば良い項目だと考えるがどうか？」「これもその提供者の最新の在庫情報から完売にする商品を解く適してほしいが出来るか？」
+
+| 件 | 中身 | 合格の条件（○×） |
+|---|---|---|
+| A | 状態の書いていない〆で、前の在庫に状態が2つ以上残るとき、全部の状態に〆を当てる | 13-2 A の裏取りで「全部に当てる」が正しい側の行が、反する行より多い（設計時点 3 対 3 で不成立 → 不採用を推奨。PO 判断） |
+| B | 値段の行より後ろの「完売しました。」のような完売の語だけの行を、余白行の疑い（possible_footer_line）にしない | B1 直近60日で possible_footer_line が外れる行の集合が {2928ea55} だけ（In Stock・Pre-order の行で外れるもの 0） B2 その行の status・商品・状態・値段・数量・名前は変わらない |
+| C | 〆の行に単位が書かれていないとき、完売の相手（参照した在庫の行）の単位が1種類なら、その単位を写して単位不明（unit_unknown）を外す | C1 直近60日で該当は 39300bc2・018e101c の2行（どちらも参照先は Set）。2行とも、再解析すると unit が Set・unit_resolved が真・review_reasons から unit_unknown が消える C2 相手の単位が2種類以上・相手の単位が無い・〆の行に単位がある・人が判断した、のどれかなら何も変わらない |
+| 共通 | 在庫表・配信・GAS の SQL は1文字も変わらない | review_joins・tcg_distribution_svc.py の diff が 0 行 |
+
+### 13-2. 現在地（recon 改訂3。file:line は origin/main 109503d77）
+
+A（状態の書いていない〆）
+- 【事実】段B の規則12e は取り残しの状態が1種類のときだけ相手を決める（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:411-413`）。2種類以上なら相手なし。
+- 【事実】直近60日・is_active 不問で、取り残しが2種類以上の〆は 22 行。sm.is_active の範囲では 0 行。22 行とも要確認に出ていない（needs_review 真 0/22。recon1・recon2）。
+- 【事実】〆の後7日以内の、同じ商品の次の在庫投稿で再掲されたかを数えた（recon2 SUMMARY.md A）: (a) どの取り残しも再掲なし 3 （「全部に当てる」を支える）／(b) 〆の既定の状態は再掲なし・ほかの取り残しは再掲あり 3 （反する）／(c) 既定の状態も再掲あり 13／(d) 次の在庫投稿なし 3。比較のため今の規則（取り残し1種類、141 行）でも数えると (c) が 77 行あり、再掲の有無は正しさの判定に使えない。判定に使えるのは (a) と (b) だけで、3 対 3。
+- 【事実】規則12 の設計（docs/handoff/v102-shime-direct-inherit/design.md）は「前の状態を引き継ぐ」案を、原文の照合で2件の誤り（箱の〆をパックの在庫に当てる・シュリありの〆をシュリなしの在庫に当てる）が出たため採らなかった。
+
+B（完売の語だけの余白行）
+- 【事実】余白行の疑いは `backend/app/services/gemini_raw_copy_v101.py:1070-1086` の _apply_f5 が作る。最後の price_line より後ろで役割が名前の行を名前に使わず（ROLE_IGNORED）、footer に足す。呼び出しは :1358 の1か所。理由にするのは :1288（_item_reasons）、件の review に足すのは :1403。
+- 【事実】完売の語の行が名前でなく在庫（ROLE_STOCK）になるのは、語と完全に一致するときだけ（:407-412 _is_stock_line）。「完売しました。」は名前の役割になり、余白行の疑いになる。
+- 【事実】完売の語は本番の public.tcg_status_master の effect=EXCLUDE・LITERAL の11語（soldout・在庫なし・売り切れ・完売・欠品・sold・売切・SOLD OUT・一旦ストップ・〆・ストップ）。ctx.sold_out_words に入る（:368-372・:383）。
+- 【事実】直近30日の possible_footer_line 54 件のうち、余白行が「完売の語＋（しました等）＋句読点」だけなのは 2928ea55 の6行目だけ（recon4 D5）。01c078bb は投稿に値段の行が無く、5行目は「〆」と完全一致で在庫の役割。余白行の疑いは他の行から来ており、product_multiple も持つので B では外れない。In Stock・Pre-order で当たる行は 0（recon2 B）。
+- 【事実】2928ea55 は sm.is_active で、理由は possible_footer_line だけ。今も要確認に出ている（§12-12 H4）。
+
+C（〆の行の単位）
+- 【事実】単位不明の理由は `backend/app/services/gemini_raw_copy_v101.py:1289-1290`（row["unit"] が none のとき）。保存の列は `backend/app/services/line_analysis_v102_svc.py:720`・:739-740（unit_id・unit_canonical・unit_resolved）。
+- 【事実】要確認の一覧は、保存した review_reasons に加えて、unit_resolved が真でなければ unit_unresolved を足す（`backend/app/services/tcg_condition_review_svc.py:261`・:268）。単位を写すときは unit_resolved も真にしないと要確認から外れない。
+- 【事実】完売の相手は段A（`gemini_raw_copy_v102_soldout_ref.py:249-267` _targets_of）と段B（:415）が SoldoutTarget で作り、件の soldout_targets に4項目（product_id・condition_id・ref_message_id・ref_line）だけ載せる（`gemini_raw_copy_v101.py:1215-1217`・:1234-1237）。在庫の行の読み込み（`line_analysis_v102_svc.py:1350-1362` _STOCK_ITEMS_SQL・:1388-1403）は unit_id を読まない。
+- 【事実】保存の時に相手を使うのは `line_analysis_v102_svc.py:877-898` _apply_soldout_targets（状態を先頭の相手で上書きし、状態の理由だけ外す）。呼び出しは :1129-1132 の1か所。
+- 【事実】直近60日の SOLDOUT_REF・SOLDOUT_INHERIT の〆 22 行のうち、unit_unknown は2行（39300bc2・018e101c）。参照先の単位は 22/22 で1種類に決まる。2行の参照先はどれも Set（unit_id 13）（recon2 C・recon4 D6。参照先は保存されていないので近似）。2行とも sm.is_active=FALSE（差し替え済み）。
+- 【事実】〆の行の単位は、配信（Sold out・excluded を外す。`backend/app/services/tcg_distribution_svc.py:242-249`・:370・:484）、完売一覧（ei.raw_unit だけ。`backend/app/services/tcg_sold_out_results_svc.py:39`）、〆の確認済み扱い（〆自身の単位を見ない。`tcg_condition_review_svc.py:186-199`）、付け替えの鍵（(product_id, condition_id)。`backend/app/services/tcg_analyzer_svc.py:2094-2100`）のどれにも使われない（recon2 C）。
+
+### 13-3. 設計
+
+#### A — 不採用を推奨（PO 判断）
+
+- 推奨: 作らない。理由: 裏取りで支える行と反する行が 3 対 3 で、正しさを示せない。今の範囲（sm.is_active）で該当する行は 0 で、要確認に出ている行も 0。規則12 の設計で「前の状態を引き継ぐ」案が原文の照合で誤りを出した前例がある。
+- 代わりの守り: §12-8 の毎朝の点検が、自動で外れた〆を原文と照らす。取り残しが2種類以上の〆は今も相手なしで、在庫表の行は人の目と点検に残る。
+- PO が採用を選んだ場合: 別の便で設計し直す（全部の状態に当てる・〆の既定の状態だけに当てる、の比較を原文の照合で行う）。この便には入れない。
+
+#### B — 完売の語だけの行を余白行の疑いにしない（`backend/app/services/gemini_raw_copy_v101.py`）
+
+変更前（:1070-1086）
+```python
+def _apply_f5(
+    items: list[dict], roles: list[dict[int, str]],
+) -> tuple[list[dict[int, str]], dict[int, list[dict]], list[int]]:
+    """F5 最後の price_line より後ろの行で、役割が名前のものは名前に使わない。戻り値の最後は possible_footer_line。"""
+    ...
+            if n > last_price_line and role_map[n] == ROLE_NAME:
+                updated[n] = ROLE_IGNORED
+                footer.add(n)
+                fixes.setdefault(i, []).append(_fix("F5", n, "最後の price_line より後ろの行を名前に使わない"))
+```
+
+変更後
+```python
+_SOLD_OUT_SENTENCE_TAIL = r"(?:しました|しております|です|となりました|になりました|致しました|いたしました)?[\s。、.,!]*"
+
+
+def _is_sold_out_sentence(text: str, ctx: V101Context) -> bool:
+    """完売の語だけの行（語＋丁寧な言い回し＋句読点。例「完売しました。」）。余白行の疑いにしない（design.md §13-3 B）。"""
+    stripped = _nfkc(text).strip().lower()
+    return any(w and re.fullmatch(re.escape(_nfkc(w).lower()) + _SOLD_OUT_SENTENCE_TAIL, stripped) for w in ctx.sold_out_words)
+
+
+def _apply_f5(
+    items: list[dict], roles: list[dict[int, str]], lines: list[str], ctx: V101Context,
+) -> tuple[list[dict[int, str]], dict[int, list[dict]], list[int]]:
+    """F5 最後の price_line より後ろの行で、役割が名前のものは名前に使わない。戻り値の最後は possible_footer_line（完売の語だけの行は除く）。"""
+    ...
+            if n > last_price_line and role_map[n] == ROLE_NAME:
+                updated[n] = ROLE_IGNORED
+                if not _is_sold_out_sentence(lines[n - 1], ctx):
+                    footer.add(n)
+                fixes.setdefault(i, []).append(_fix("F5", n, "最後の price_line より後ろの行を名前に使わない"))
+```
+- 呼び出し :1358 を `name_roles, f5_fixes, footer_lines = _apply_f5(items, roles, lines, ctx)` にする。ほかに _apply_f5 を呼ぶ所があれば（試験を含む）同じ引数にする。
+- NFKC の後なので、全角の「！」「，」「．」は半角になる。句読点の集合は `[\s。、.,!]` で足りる。
+- 変えないこと: 行の役割（ROLE_IGNORED のまま。名前に使わない）、F5 の fixes の記録、status の決め方（:926 resolve_status_v2 は件の行全体の文字で決める）、v10.1（v102_fixes=False）の出力。
+- この結果、件の review から possible_footer_line が消え、投稿の post_review に孤立した余白行として出ることもなくなる（:1406-1408 は flags の possible_footer_line を使う）。
+
+#### C — 〆の行の単位を完売の相手から写す
+
+1. `backend/app/services/gemini_raw_copy_v102_soldout_ref.py`
+   - StockItem（:55-62）に `unit_id: int | None = None` と `unit_canonical: str = ""` を足す（condition_canonical の後ろ。既定値つきなので今の生成箇所は変えずに動く）。
+   - SoldoutTarget（:73-81）にも同じ2つを足す（condition_canonical の後ろ）。
+   - _targets_of（:256-266）: pairs に it.unit_id・it.unit_canonical を足し、`SoldoutTarget(product_id, condition_id, row.message_id, row.line_no, canonical, unit_id, unit_canonical)` にする。
+   - decide_soldout_inherit（:415）: `SoldoutTarget(product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical, stock.unit_id, stock.unit_canonical)` にする。
+2. `backend/app/services/line_analysis_v102_svc.py`
+   - _STOCK_ITEMS_SQL（:1351-1352）の SELECT に `ar.unit_id, COALESCE(ar.unit_canonical, '') AS unit_canonical` を足す（WHERE・ORDER BY は変えない）。
+   - _load_stock_items（:1398-1401）: `StockItem(..., str(r.condition_canonical or ""), int(r.unit_id) if r.unit_id is not None else None, str(r.unit_canonical or ""))`。
+3. `backend/app/services/gemini_raw_copy_v101.py`
+   - _apply_soldout_inherit（:1215-1217）と _soldout_ref_row（:1234-1237）の相手の dict に `"unit_id": t.unit_id, "unit_canonical": t.unit_canonical`（inherit 側は d.unit_id・d.unit_canonical）を足す。
+4. `backend/app/services/line_analysis_v102_svc.py` の _apply_soldout_targets（:877-898）
+
+変更前（:886-889）
+```python
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return values
+    condition_id = targets[0]["condition_id"]
+```
+
+変更後
+```python
+    targets = item.get("soldout_targets") or []
+    if not targets or _has_human_judgement(decision):
+        return values
+    values = _with_target_unit(values, targets)
+    condition_id = targets[0]["condition_id"]
+```
+  そして _apply_soldout_targets の直前に足す:
+```python
+# 単位不明の理由（gemini_raw_copy_v101._REVIEW_UNIT_UNKNOWN と同じ値。前例 v102_buyback_unit_svc.py:42）
+REASON_UNIT_UNKNOWN = "unit_unknown"
+
+
+def _with_target_unit(values: dict, targets: list[dict]) -> dict:
+    """〆の件に単位が無く、完売の相手の単位が1種類に決まるとき、その単位を写して unit_unknown を外す（元の values は変えない。design.md §13-3 C）。"""
+    units = {(t.get("unit_id"), t.get("unit_canonical") or "") for t in targets}
+    if values["unit_id"] is not None or len(units) != 1:
+        return values
+    (unit_id, unit_canonical), = units
+    if unit_id is None or not unit_canonical:
+        return values
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r != REASON_UNIT_UNKNOWN]
+    return {
+        **values, "unit_id": int(unit_id), "unit_canonical": unit_canonical, "unit_resolved": True,
+        "review_reasons": REASON_SEPARATOR.join(remaining) if remaining else None, "needs_review": bool(remaining),
+    }
+```
+- docstring（:881-885）に「単位が無い件は、相手の単位が1種類なら写す（§13-3 C）」の1文を足す。
+- 単位を写した後の状態の上書き（:889-898）は、写した後の values の review_reasons から状態の理由を外す（今の式のまま。values を置き換えたので自然にそうなる）。
+- 人の判断（商品・状態）がある件は今と同じく何もしない（:887）。人が単位を直した件は apply_value_overrides（`backend/app/services/v102_human_decisions_svc.py:538-543`）で unit_id が入っているので写さない。
+- _extra_targets（:901-910）は (product_id, condition_id) だけを比べるので、dict に項目が増えても動きは変わらない。analysis_soldout_extra_targets に書く列も変わらない（:921-935）。
+- 変えないこと: 〆の行に単位が書かれている件（12f。unit_id が入っている）、相手の単位が2種類以上の件、相手が無い件。
+
+### 13-4. 代替案
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| A-1（推奨） | A は作らない | 3 対 3 で正しさを示せず、今の範囲の該当 0 |
+| A-2 | 取り残しの状態すべてに〆を当てる | 不採用を推奨。(b) 3 行で、まだ売っている状態を〆にしてしまう |
+| B-1（採用） | F5 で完売の語だけの行を footer に足さない | 理由だけが変わり、役割・値は変わらない |
+| B-2 | 完売の語だけの行を在庫の役割（ROLE_STOCK）にする | 不採用。_is_stock_line は名前・状態・数量の取り出し全体に効き、影響が F5 より広い |
+| B-3 | 要確認の一覧の側（review_joins）で、〆の確認済み扱いのとき possible_footer_line も外す | 不採用。余白行の疑いは「名前を取り違えたかも」の印で、〆と関係のない行（例「・買取品」）まで外れる |
+| C-1（採用） | 相手の単位が1種類なら写す | 保存の値が実物に近づき、unit_unknown と unit_unresolved の両方が正しく消える |
+| C-2 | 相手がある〆の行には unit_unknown を付けない（単位は空のまま） | 不採用。unit_resolved が偽のままなので、要確認の一覧で unit_unresolved が残る（`tcg_condition_review_svc.py:261`） |
+| C-3 | 何もしない | 不採用。PO の願い（最新の在庫から決める）に合わない |
+
+### 13-5. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 B の試験 | `backend/tests/test_gemini_raw_copy_v101.py` に足して CI で通る: (u) 「商品A／3BOX@1,000円／完売しました。」で possible_footer_line が []、名前は「商品A」、F5 の fixes は [("F5", 3)]（_STATUS に 完売 がある） (v) 同じ形で最後の行が「完売です！」「〆」以外の語（例「完売品あり」）なら [3] のまま (w) 「・買取品」の既存の試験（:685・:1010）は変えずに通る (x) (u) の status・quantity・price・unit・condition は最後の行を「・買取品」にした時と同じ。_apply_f5 を直接呼ぶ試験があれば新しい引数で通る |
+| T1 C の試験 | `backend/tests/test_line_analysis_v102_svc.py` に足して CI で通る: (y) values の unit_id が None・review_reasons が "unit_unknown" で、相手が全て unit_id 13・"Set" → unit_id 13・unit_canonical "Set"・unit_resolved 真・review_reasons None・needs_review 偽 (z) 相手の単位が2種類 → 単位も理由も変わらない (aa) values に単位が入っている（今の _soldout_item の BOX）→ 単位は変わらない (bb) 人の判断がある → 今の試験（:437-445・:556-559）どおり values そのもの (cc) 相手の dict に単位が無い（今の _TARGETS）→ 今の試験が全部変えずに通る（:418-559）。`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py` に: (dd) _targets_of と decide_soldout_inherit が StockItem の unit_id・unit_canonical を SoldoutTarget に運ぶ（:568・:649・:655 の既存の期待は既定値のまま通る）。_load_stock_items が unit_id・unit_canonical を読む（pg の試験があれば足す。無ければ SQL の文字列に ar.unit_id が入ることを確かめる） |
+| T2 B の本番の当て | 実装の HEAD のコードで、直近60日の possible_footer_line の件（sm.is_active 不問）の投稿を、保存済みの Gemini の写しから v102 の取り出しだけやり直し（Gemini は呼ばない・書き込まない）、possible_footer_line が外れる件の集合 = {2928ea55} で、In Stock・Pre-order の件は 0。名前・status・値段・数量の差が 0 |
+| T2 C の本番の当て | 同じやり方で 39300bc2・018e101c の job をやり直し（書き込まない）、_apply_soldout_targets の後の values が unit Set・unit_resolved 真・unit_unknown なし。直近60日の SOLDOUT_REF・SOLDOUT_INHERIT の残り 20 行は単位・理由の差が 0 |
+| 共通 | `git diff origin/main -- backend/app/services/tcg_condition_review_svc.py backend/app/services/tcg_distribution_svc.py` が 0 行。`backend/tests/test_inventory_distribution_rows.py` の固定値が変わらずに通る |
+| 本番の後 | デプロイ後、2928ea55 の job だけを再解析する（本番の書き込みなので台本と確かめ運転の後に PO が `!` で流す）。その後 ai_ro で、2928ea55 の review_reasons に possible_footer_line が無く、要確認の一覧（review_joins）に出ない。新しい投稿は、毎朝の点検（§12-8）で余白行・単位の写しも原文と照らす |
+
+T2 のやり直しの道が今の再解析の台本（~/CC報告ファイル-keep/nikuluffy-promo-20261020/reanalyze_nikuluffy.py）の MODE=dryrun で足りるかは、実装カードで Sonnet が確かめる。足りなければ、書き込みのない別の台本を作る（本番に書かないことを台本の先頭で確かめる）。
+
+### 13-6. 影響と弊害
+
+| 影響・弊害 | 対処 |
+|---|---|
+| B: 完売の語だけの行が、実は別の商品の完売の知らせだった場合も、余白行の疑いが付かない | status は今も件の行全体で決まっていて、この変更で変わらない。〆の確認済み扱い（§12-3）と毎朝の点検（§12-8）が〆・完売の行を原文と照らす |
+| B: 語のあとに商品名などが続く行（例「完売 ○○」）は今までどおり疑いになる | 意図どおり（完全一致だけを外す） |
+| C: 相手の単位が誤っていると、〆の行にも誤った単位が入る | 〆の行の単位は配信・完売一覧・付け替えに使われない（13-2 C）。表示されるのは要確認と解析結果の画面だけ |
+| C: 段A の相手が複数で単位が揃うときも写す | 22/22 で1種類に決まっている（recon2）。2種類以上なら写さない |
+| A を作らない: 取り残しが2種類以上の〆は相手なしのまま | 今の範囲で 0 行・要確認 0 行。毎朝の点検の対象 |
+
+戻し方: この PR を revert する（DB の変更なし。写した単位は次の再解析で元に戻る）。
+
+### 13-7. 計画票
+
+| 順 | 作業 | 担当 | 完了の印 |
+|---|---|---|---|
+| 1 | 設計審査 | Reviewer（opus） | APPROVE |
+| 2 | A の方向性と B・C の実装承認 | PO | 番号の返事（1回に1件） |
+| 3 | 実装カード・実装・T1 | Opus・Sonnet | PR 起票（release/shime-next3-impl） |
+| 4 | T2 | Sonnet（reader 鍵・書き込みなし） | 生出力と合否 |
+| 5 | 審査・GO 記録・マージ | Reviewer（opus）・Opus（ADR-1003） | `VERDICT: APPROVE on <HEAD> PR #N`・merge commit |
+| 6 | デプロイ確認・2928ea55 の再解析（PO `!`）・本番の後の確認 | Opus・Sonnet・PO | deploy success と ai_ro の判定 |
+| 7 | 結果の記録 | Opus | 本書に追記 |
+
+ADR: 作らない（§9 と同じ。規則の正本は本書と docs/handoff/v102-shime-direct-inherit/design.md。FEATURE-INDEX.md に該当なし、recon1）。外部事例: 使わない（社内の規則の微修正で、比べる外部の事例が無い。社内の前例は規則12 の設計と §12）。維持の仕組み: T1 の (u)〜(dd) と、§12-8 の毎朝の点検（期限つき）。
+
+### 13-8. 審査
+
+- Opus 自己審査（独立した第二者のレビューではない）: B は 13-2 の当たり 1 行（2928ea55）と In Stock・Pre-order 0 行、C は 2 行・参照先の単位 1 種類を確かめた。C は要確認の一覧が unit_resolved から unit_unresolved を足す（`tcg_condition_review_svc.py:261`）ので unit_resolved も真にする形にした。A は 3 対 3 のため推奨を不採用にした。
+- 未確認: _inherit_price（`line_analysis_v102_svc.py:1133`）が unit_id を読むか（読むなら、写した単位で値段の引き継ぎが変わるかを実装カードで確かめ、変わるなら止める）。T2 のやり直しの道。CI（pg）での試験の実行。

@@ -74,3 +74,11 @@ mode: handoff
 - 【事実】在庫表は差し替えられた投稿の is_current 行も出す（`backend/app/services/tcg_distribution_svc.py:316`）。在庫表 1087 行のうち 300 行（recon5 inactive.out）。
 - 【事実】外れる 11 行は、在庫表に同じ窓口・同じ商品・別の投稿の行が 0（まとめあり・なし。recon6 cross.out）。
 - 設計は docs/handoff/shime-review-exclude/design.md §12。
+
+## 改訂3（2026-10-20）の現在地
+
+- 【事実】基準は origin/main 109503d77（コードの抜き書き recon3・recon4）。本番は reader 鍵・ai_ro の読み取りだけ。生出力の原本は ~/CC報告ファイル-keep/shime-next3-20261020/（recon1〜recon4。原文は社外秘のためこの文書に貼らない）。
+- 【事実】A: 取り残しの状態が2種類以上の〆は直近60日・is_active 不問で 22 行、sm.is_active では 0 行、要確認 0 行。7日以内の再掲で「全部に当てる」を支える 3・反する 3（recon2 SUMMARY.md）。
+- 【事実】B: possible_footer_line 54 件のうち余白行が完売の語だけの文なのは 2928ea55 の1行。In Stock・Pre-order 0（recon2・recon4 D5）。
+- 【事実】C: SOLDOUT_REF・SOLDOUT_INHERIT の〆 22 行のうち unit_unknown は 2 行（39300bc2・018e101c）。参照先の単位は 22/22 で1種類、2行は Set（recon2・recon4 D6）。要確認の一覧は unit_resolved が偽なら unit_unresolved を足す（`backend/app/services/tcg_condition_review_svc.py:261`）。
+- 設計は docs/handoff/shime-review-exclude/design.md §13。
