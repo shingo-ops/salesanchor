@@ -1,0 +1,75 @@
+/**
+ * HoverCard — 切れた文字の全文を名前の上に浮かせて見せるカード（2段表示）
+ */
+.comp-hover-card-trigger {
+  display: block;
+  min-width: 0;
+}
+
+.comp-hover-card {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--z-dropdown);
+  pointer-events: none;
+  max-width: calc(100vw - var(--space-2) * 2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+  backdrop-filter: blur(var(--comp-hover-card-blur));
+  box-shadow: var(--shadow-xl);
+  color: var(--text-primary);
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.96);
+  transform-origin: left bottom;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--duration-base) var(--ease-pop),
+    top var(--transition-slow),
+    left var(--transition-slow);
+}
+
+.comp-hover-card--below {
+  transform-origin: left top;
+}
+
+.comp-hover-card--open {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 初めて出るときは位置を滑らせない */
+.comp-hover-card:not(.comp-hover-card--glide) {
+  transition-property: opacity, transform;
+}
+
+.comp-hover-card__title,
+.comp-hover-card__subtitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comp-hover-card__title {
+  font-size: var(--font-base);
+  font-weight: var(--font-weight-semi);
+  line-height: var(--line-height-base);
+}
+
+.comp-hover-card__subtitle {
+  margin-top: var(--space-1);
+  font-size: var(--font-xs);
+  line-height: var(--line-height-base);
+  color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comp-hover-card,
+  .comp-hover-card--open {
+    transform: none;
+    transition: opacity var(--transition-fast);
+  }
+}
