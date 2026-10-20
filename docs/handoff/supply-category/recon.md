@@ -21,7 +21,7 @@
 10. 群を足すときに触るコード: `backend/app/services/tcg_analyzer_svc.py:653`（SCOPED_VALUE_GROUPS）、`backend/app/services/line_analysis_v102_svc.py:44`, `:646-649`（_SCOPED_GROUP_OF_KUBUN）、`backend/app/services/tcg_result_order.py:11`（VALUE_GROUP_ORDER）。VALUE_GROUP_ORDER を変えると `backend/tests/test_inventory_distribution_rows.py:107`, `:120-123`, `:271-276` の SQL の長さとハッシュが変わる。
 11. 画面: frontend に booklet を含むファイルは 0 件。区分の kubun_type は自由入力（`frontend/src/pages/product-categories/ProductCategoriesPage.tsx:218-222`）。
 12. 区分表 tcg_product_categories の使用中 id は 1, 2, 4, 9, 11, 13（13 = PC_BOOKLET）。
-13. 小分類 SUPPLY は product_lines id=9。細分類 product_formats で line_id=9 の行は 0 件（全行の line_id が空）。line_id を参照するのは管理 API の CRUD、`backend/app/routers/super_admin_product_lines.py:137-146` の削除可否、管理画面 `ProductFormatsMasterPanel.tsx` だけで、商品登録の検査（PRODUCT_FORMAT_GAME_MISMATCH）は line_id を見ない。細分類と作品の組は product_format_game_links で決まる。
+13. 小分類 SUPPLY は product_lines id=9。細分類 product_formats で line_id=9 の行は 0 件（全行の line_id が空）。line_id を参照するのは管理 API の CRUD、`backend/app/routers/super_admin_product_lines.py:137-146` の削除可否、管理画面 `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx` だけで、商品登録の検査（PRODUCT_FORMAT_GAME_MISMATCH）は line_id を見ない。細分類と作品の組は product_format_game_links で決まる。
 14. 作品の追加の前例: ハリー・ポッター（9045）・パルワールド（9046）を台本で作った（create_type → update_type(kind_id) → code_only_match/match_by_code の更新）。
 15. 既存のサプライ商品は 21 件（product_line_id=9）。20 件はドラゴンボールの公式スリーブ・カードケース＆スリーブセット・プレイマット・エナジーマーカーパック、1 件はヴァイスシュヴァルツのラバーマット付きセット。区分と細分類は空。検索語に「スリーブ」「カードスリーブ」を持つ商品がある。
 16. 今回の要確認の対象: 1 つの投稿の用品 4 行（業務用スリーブ／業務用PSAスリーブ／PSA提出用セイバー／サイドローダー）。書き方は「N枚入 価格 在庫N」。4 行とも 商品なし・単位 Piece・状態 Error・理由 product_not_in_master, condition_unknown, gemini_gap_suspect。同じ 4 品は 10/06〜10/20 の 5 つの投稿に出ている。
