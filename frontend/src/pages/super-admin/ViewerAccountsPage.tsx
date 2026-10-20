@@ -71,6 +71,12 @@ interface ReissueResult {
   viewer: ViewerItem;
 }
 
+/** 状態変更の応答のうち、部屋へのお知らせの結果（段10 便2）。 */
+interface StatusChangeResult {
+  room_notice?: "sent" | "failed" | "no_room" | null;
+  room_notice_text?: string | null;
+}
+
 const LINE_NAME_MAX = 100;
 
 function formatDate(value: string | null): string | null {
@@ -86,6 +92,7 @@ export default function ViewerAccountsPage() {
   const [items, setItems] = useState<ViewerItem[]>([]);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState("");
+  const [roomNoticeText, setRoomNoticeText] = useState<string | null>(null);
   const [pending, setPending] = useState<{ viewer: ViewerItem; action: Action } | null>(null);
   const [daysText, setDaysText] = useState("7");
   const [running, setRunning] = useState(false);
@@ -224,6 +231,7 @@ export default function ViewerAccountsPage() {
 
   const openAction = (viewer: ViewerItem, action: Action) => {
     setError("");
+    setRoomNoticeText(null);
     setDaysText("7");
     setExtendMode("days");
     setDateText("");
@@ -244,11 +252,13 @@ export default function ViewerAccountsPage() {
     setError("");
     try {
       const path = `/super-admin/viewers/${pending.viewer.id}/${pending.action}`;
-      if (pending.action === "extend") {
-        await api.post(path, extendMode === "days" ? { days } : { until_date: dateText });
-      } else {
-        await api.post(path, {});
-      }
+      const res =
+        pending.action === "extend"
+          ? await api.post<StatusChangeResult>(path, extendMode === "days" ? { days } : { until_date: dateText })
+          : await api.post<StatusChangeResult>(path, {});
+      // 部屋に送れなかった（failed）か部屋が無い（no_room）ときだけ、送るはずだった文をコピーできるようにする
+      const failed = res?.room_notice === "failed" || res?.room_notice === "no_room";
+      setRoomNoticeText(failed && res?.room_notice_text ? res.room_notice_text : null);
       setPending(null);
       await load();
     } catch (e) {
@@ -385,6 +395,13 @@ export default function ViewerAccountsPage() {
       {error && (
         <div className="error-message" role="alert" data-testid="viewers-error">
           {error}
+        </div>
+      )}
+      {roomNoticeText && (
+        <div className="error-message" role="alert" data-testid="viewers-room-notice-failed">
+          <p>{t(`${f}.roomNoticeFailed`)}</p>
+          <p data-testid="viewers-room-notice-text">{roomNoticeText}</p>
+          {copyButton("roomNotice", roomNoticeText)}
         </div>
       )}
       {fetching && items.length === 0 ? (

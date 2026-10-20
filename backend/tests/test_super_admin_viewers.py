@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app import cache
 from app.database import get_db
+from app.discord_gateway import viewer_bot_texts
 from app.services import viewer_admin
 from app.services.viewer_admin import ViewerAdminError
 from tests.rls_bootstrap import _ensure_public_users
@@ -467,7 +468,7 @@ def test_logins_listed_newest_first_with_ip_and_agent(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_cli_change_status_records_actor_claude(pg):  # noqa: F811
+def test_cli_change_status_records_actor_claude(pg, monkeypatch):  # noqa: F811
     from app import viewer_admin_cli
 
     conn, _, async_url = pg
@@ -488,10 +489,112 @@ def test_cli_change_status_records_actor_claude(pg):  # noqa: F811
         finally:
             await engine.dispose()
 
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
     ok, bad = asyncio.run(_go())
     assert ok["id"] == vid and ok["status"] == "suspended" and bad == "invalid_input"
+    assert ok["room_notice"] == "no_room" and sent == []  # 部屋なしには送らない
     rows = _changes(cur, vid)
     assert len(rows) == 1 and rows[0][0] == "suspend" and rows[0][6] == "claude" and rows[0][7] is None
+
+
+@needs_ci_pg
+def test_cli_room_notice_sent_when_room_exists(pg, monkeypatch):  # noqa: F811
+    from app import viewer_admin_cli
+
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "clr@x.com", "trial", expires_in_days=3)
+    cur.execute("UPDATE public.viewer_accounts SET discord_channel_id='777' WHERE id=%s", (vid,))
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+
+    async def _go():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            factory = lambda: AsyncSession(engine, expire_on_commit=False)  # noqa: E731
+            return await viewer_admin_cli.run({"action": "activate", "email": "clr@x.com"}, session_factory=factory)
+        finally:
+            await engine.dispose()
+
+    res = asyncio.run(_go())
+    assert res["room_notice"] == "sent" and sent == [("777", viewer_bot_texts.NOTICE_ACTIVATED)]
+
+
+# ── 4つの入口の room_notice（K3。入口を通して確かめる） ──
+
+
+def _set_room(cur, vid, channel="777"):
+    cur.execute("UPDATE public.viewer_accounts SET discord_channel_id=%s WHERE id=%s", (channel, vid))
+
+
+@needs_ci_pg
+@pytest.mark.parametrize("sender_ok", [True, False])
+def test_entrypoints_report_room_notice_sent_or_failed(pg, monkeypatch, sender_ok):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return sender_ok
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    expected = "sent" if sender_ok else "failed"
+    base = "/api/v1/super-admin/viewers"
+
+    v1 = _account(cur, "n1@x.com", "trial", expires_in_days=3)
+    _set_room(cur, v1)
+    until = (datetime.now(timezone.utc) + timedelta(days=30)).date()
+    r = _api(async_url, "POST", f"{base}/{v1}/extend", {"until_date": until.isoformat()})
+    assert r.status_code == 200 and r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == f"お試し期間を {until.month}月{until.day}日 まで延長しました😊"
+
+    v2 = _account(cur, "n2@x.com", "trial", expires_in_days=3)
+    _set_room(cur, v2)
+    r = _api(async_url, "POST", f"{base}/{v2}/activate", {})
+    assert r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_ACTIVATED
+
+    r = _api(async_url, "POST", f"{base}/{v2}/suspend", {})
+    assert r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+
+    n_before = len(sent)
+    r = _api(async_url, "POST", f"{base}/{v2}/unsuspend", {})
+    assert r.status_code == 200
+    assert r.json()["room_notice"] is None and r.json()["room_notice_text"] is None
+    assert len(sent) == n_before  # unsuspend は送らない
+    assert all(c == "777" for c, _ in sent) and len(sent) == 3
+
+
+@needs_ci_pg
+def test_entrypoints_no_room_does_not_send(pg, monkeypatch):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append(channel_id)
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    vid = _account(cur, "nr@x.com", "trial", expires_in_days=3)
+    r = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/suspend", {})
+    assert r.status_code == 200
+    assert r.json()["room_notice"] == "no_room"
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+    assert sent == []
 
 
 @needs_ci_pg
