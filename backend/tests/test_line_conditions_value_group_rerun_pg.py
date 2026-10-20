@@ -10,6 +10,8 @@ from tests.test_super_admin_viewers import needs_ci_pg
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
 ROOT = Path(__file__).resolve().parents[2]
+M_RENAME = ROOT / "migrations/20260922_080000_rename_line_analysis_tables.sql"
+M_RANK = ROOT / "migrations/20261017_120000_line_conditions_value_rank.sql"
 M19 = ROOT / "migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql"
 M20 = ROOT / "migrations/20261020_100000_line_conditions_value_group_add_booklet.sql"
 DEF_SQL = (
@@ -27,20 +29,28 @@ def _def(cur) -> str:
 def test_widens_then_rerun_keeps_booklet(pg):  # noqa: F811
     conn, _, _ = pg
     cur = conn.cursor()
+    # pg fixture は 20260919_020000 で public.conditions（TABLE）を作り、試験用 helper が
+    # conditions_value_group_check を足している。本番と同じ経路（20260922_080000 で line_conditions へ
+    # 名前替え → 20261017_120000 で value_group の CHECK）にするため、helper 由来の制約だけ先に外す。
     cur.execute("SELECT to_regclass('public.line_conditions') IS NULL")
     assert cur.fetchone()[0], "使い捨て DB には line_conditions が無いはず"
+    cur.execute("ALTER TABLE public.conditions DROP CONSTRAINT conditions_value_group_check")
+    cur.execute(M_RENAME.read_text())
+    cur.execute(M_RANK.read_text())
     cur.execute(
-        "CREATE TABLE public.line_conditions (id serial PRIMARY KEY, value_group text);"
-        "ALTER TABLE public.line_conditions ADD CONSTRAINT line_conditions_value_group_check "
-        "CHECK (value_group IS NULL OR value_group IN ('box','case','pack'))"
+        "SELECT table_type FROM information_schema.tables "
+        "WHERE table_schema='public' AND table_name='line_conditions'"
     )
+    assert cur.fetchone()[0] == "BASE TABLE"
+    d0 = _def(cur)
+    assert "'box'" in d0 and "'pack'" in d0 and "'single'" not in d0 and "'booklet'" not in d0
     # K2: box/case/pack だけの状態から 19 を流すと広がる
     cur.execute(M19.read_text())
     d = _def(cur)
     assert "'promo_pack'" in d and "'single'" in d
     cur.execute(M20.read_text())
     assert "'booklet'" in _def(cur)
-    cur.execute("INSERT INTO public.line_conditions (value_group) VALUES ('booklet')")
+    cur.execute("INSERT INTO public.line_conditions (code, canonical, value_group) VALUES ('ZZ9999', 'rerun-test booklet', 'booklet')")
     # K1: 19 → 20 の再実行がエラー0で、booklet が残る
     cur.execute(M19.read_text())
     cur.execute(M20.read_text())
