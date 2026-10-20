@@ -366,10 +366,10 @@ def test_existing_twelve_columns_unchanged(pg):
 def test_order_sql_uses_condition_master_and_group_order():
     from app.services.tcg_result_order import UNRANKED_FIRST, VALUE_GROUP_ORDER, result_order_sql
 
-    assert VALUE_GROUP_ORDER == ("case", "box", "pack", "promo_pack", "single", "booklet") and UNRANKED_FIRST == "Bulk"
+    assert VALUE_GROUP_ORDER == ("case", "box", "pack", "promo_pack", "single", "booklet", "supply") and UNRANKED_FIRST == "Bulk"
     sql = result_order_sql()
     assert "FROM public.conditions lc" in sql and "lc.value_group" in sql and "lc.value_rank" in sql
-    assert "WHEN 'case' THEN 0 WHEN 'box' THEN 1 WHEN 'pack' THEN 2 WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 WHEN 'booklet' THEN 5" in sql
+    assert "WHEN 'case' THEN 0 WHEN 'box' THEN 1 WHEN 'pack' THEN 2 WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 WHEN 'booklet' THEN 5 WHEN 'supply' THEN 6" in sql
     assert "CASE WHEN cr.canonical = 'Bulk' THEN 0 ELSE 1 END" in sql
     assert "jsonb_object_agg(" in sql and "ORDER BY lc.id DESC" in sql and "->> cr.canonical" in sql
 

@@ -650,7 +650,7 @@ def resolve_condition(
 
 
 # ADR-1031: v102 専用の状態の群（既定の load_condition_entries は返さない）
-SCOPED_VALUE_GROUPS = ("single", "promo_pack", "booklet")
+SCOPED_VALUE_GROUPS = ("single", "promo_pack", "booklet", "supply")
 
 
 def load_condition_entries(
