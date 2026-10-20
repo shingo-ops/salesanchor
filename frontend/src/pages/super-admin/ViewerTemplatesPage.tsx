@@ -6,7 +6,7 @@
  * - 本文は Drawer 内で編集して保存できる（PUT。開いた時の updated_at を expected_updated_at に送り、食い違えば 409）
  * - is_super_admin=true のみアクセス可（Page 内で 403 ガード）
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
@@ -55,7 +55,14 @@ export default function ViewerTemplatesPage() {
   const [error, setError] = useState("");
   const [detail, setDetail] = useState<TemplateItem | null>(null);
   const [copied, setCopied] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraftState] = useState("");
+  // 開く・閉じる・保存開始のたびに進める連番。await の後は番号が同じときだけ画面に反映する
+  const seqRef = useRef(0);
+  const draftRef = useRef("");
+  const setDraft = (v: string) => {
+    draftRef.current = v;
+    setDraftState(v);
+  };
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -95,18 +102,27 @@ export default function ViewerTemplatesPage() {
     setCopied(false);
     setSaved(false);
     setSaveError("");
-    setDraft(row.body ?? "");
+    const seq = ++seqRef.current;
+    const openedBody = row.body ?? "";
+    setDraft(openedBody);
     setDetail(row);
     const latest = await reloadItems();
     const fresh = latest?.find(i => i.key === row.key);
-    if (fresh) {
-      setDetail(fresh);
-      setDraft(fresh.body ?? "");
-    }
+    // 取得中に閉じた・別の行を開いた・保存を始めたときは反映しない。
+    // 入力済みなら本文も updated_at も置き換えない（他人の更新を上書きしないため）
+    if (!fresh || seqRef.current !== seq || draftRef.current !== openedBody) return;
+    setDetail(fresh);
+    setDraft(fresh.body ?? "");
+  };
+
+  const closeDetail = () => {
+    seqRef.current += 1;
+    setDetail(null);
   };
 
   const save = async () => {
     if (!detail || saving) return;
+    seqRef.current += 1;
     setSaving(true);
     setSaved(false);
     setSaveError("");
@@ -200,7 +216,7 @@ export default function ViewerTemplatesPage() {
 
       <Drawer
         open={detail !== null}
-        onClose={() => setDetail(null)}
+        onClose={closeDetail}
         title={t(`${f}.detailTitle`)}
         footer={
           detail && (

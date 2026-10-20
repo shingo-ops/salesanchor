@@ -254,3 +254,62 @@ it("after a 409, closing and reopening the row sends the newest updated_at", asy
   await screen.findByTestId("viewer-templates-saved");
   expect(vi.mocked(api.put).mock.calls[1][1]).toEqual({ body: "mine", expected_updated_at: "2026-10-21T01:00:00Z" });
 });
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  const promise = new Promise<T>(r => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+function clickRow(key: string) {
+  const name = screen.getByText(i18n.t(`superAdmin.viewerTemplates.names.${key}`));
+  fireEvent.click(name.closest("tr") as HTMLElement);
+}
+
+it("does not reopen the drawer when the refetch returns after it was closed", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockReturnValueOnce(d.promise);
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  fireEvent.click(screen.getByRole("button", { name: /close/i }));
+  await waitFor(() => expect(screen.queryByTestId("viewer-templates-detail")).toBeNull());
+  d.resolve({ items: ITEMS });
+  await new Promise(r => setTimeout(r, 20));
+  expect(screen.queryByTestId("viewer-templates-detail")).toBeNull();
+});
+
+it("a late refetch for row A does not overwrite the drawer of row B", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS })
+    .mockReturnValueOnce(d.promise)
+    .mockResolvedValueOnce({ items: ITEMS });
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  clickRow("notice_extended");
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2"),
+  );
+  d.resolve({ items: ITEMS.map(i => ({ ...i, body: `late-${i.key}` })) });
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).not.toContain("late-");
+});
+
+it("keeps text typed while the refetch is in flight", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockReturnValueOnce(d.promise);
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  edit("typed text");
+  d.resolve({ items: ITEMS.map(i => ({ ...i, body: `late-${i.key}`, updated_at: "2026-10-22T00:00:00Z" })) });
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("typed text");
+});
