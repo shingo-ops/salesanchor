@@ -408,6 +408,8 @@ def test_404_for_missing_viewer(pg):  # noqa: F811
     _prepare(conn, async_url)
     assert _error_code(async_url, 424242, "suspend") == "not_found"
     for method, path, body in ROUTES[1:]:
+        if "/1/" not in path:
+            continue  # viewer_id を含まない口（signup-request）は対象外
         resp = _api(async_url, method, path.replace("/1/", "/424242/"), body)
         assert resp.status_code == 404 and resp.json()["detail"] == "viewer_not_found", path
 
