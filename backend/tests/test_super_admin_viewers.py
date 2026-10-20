@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app import cache
 from app.database import get_db
+from app.discord_gateway import viewer_bot_texts
 from app.services import viewer_admin
 from app.services.viewer_admin import ViewerAdminError
 from tests.rls_bootstrap import _ensure_public_users
@@ -38,6 +39,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/unsuspend", {}),
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
     ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
+    ("GET", "/api/v1/super-admin/viewers/signup-request", None),
 ]
 
 
@@ -78,7 +80,17 @@ async def _call(method, path, body):
 # ── 非 PG ─────────────────────────────────────────────────────
 
 
-async def test_non_super_admin_gets_403_on_all_seven_routes(override_user):
+async def test_signup_request_returns_text_for_super_admin(override_user):
+    from app.discord_gateway import viewer_bot_texts
+
+    override_user(_make_user(is_super_admin=True))
+    resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
+    assert resp.status_code == 200
+    assert resp.json() == {"text": viewer_bot_texts.signup_request_text()}
+    assert "?openExternalBrowser=1#signup" in resp.json()["text"]
+
+
+async def test_non_super_admin_gets_403_on_all_routes(override_user):
     override_user(_make_user(is_super_admin=False))
     for method, path, body in ROUTES:
         resp = await _call(method, path, body)
@@ -397,6 +409,8 @@ def test_404_for_missing_viewer(pg):  # noqa: F811
     _prepare(conn, async_url)
     assert _error_code(async_url, 424242, "suspend") == "not_found"
     for method, path, body in ROUTES[1:]:
+        if "/1/" not in path:
+            continue  # viewer_id を含まない口（signup-request）は対象外
         resp = _api(async_url, method, path.replace("/1/", "/424242/"), body)
         assert resp.status_code == 404 and resp.json()["detail"] == "viewer_not_found", path
 
@@ -454,7 +468,7 @@ def test_logins_listed_newest_first_with_ip_and_agent(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_cli_change_status_records_actor_claude(pg):  # noqa: F811
+def test_cli_change_status_records_actor_claude(pg, monkeypatch):  # noqa: F811
     from app import viewer_admin_cli
 
     conn, _, async_url = pg
@@ -475,10 +489,112 @@ def test_cli_change_status_records_actor_claude(pg):  # noqa: F811
         finally:
             await engine.dispose()
 
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
     ok, bad = asyncio.run(_go())
     assert ok["id"] == vid and ok["status"] == "suspended" and bad == "invalid_input"
+    assert ok["room_notice"] == "no_room" and sent == []  # 部屋なしには送らない
     rows = _changes(cur, vid)
     assert len(rows) == 1 and rows[0][0] == "suspend" and rows[0][6] == "claude" and rows[0][7] is None
+
+
+@needs_ci_pg
+def test_cli_room_notice_sent_when_room_exists(pg, monkeypatch):  # noqa: F811
+    from app import viewer_admin_cli
+
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "clr@x.com", "trial", expires_in_days=3)
+    cur.execute("UPDATE public.viewer_accounts SET discord_channel_id='777' WHERE id=%s", (vid,))
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+
+    async def _go():
+        engine = create_async_engine(async_url, echo=False)
+        try:
+            factory = lambda: AsyncSession(engine, expire_on_commit=False)  # noqa: E731
+            return await viewer_admin_cli.run({"action": "activate", "email": "clr@x.com"}, session_factory=factory)
+        finally:
+            await engine.dispose()
+
+    res = asyncio.run(_go())
+    assert res["room_notice"] == "sent" and sent == [("777", viewer_bot_texts.NOTICE_ACTIVATED)]
+
+
+# ── 4つの入口の room_notice（K3。入口を通して確かめる） ──
+
+
+def _set_room(cur, vid, channel="777"):
+    cur.execute("UPDATE public.viewer_accounts SET discord_channel_id=%s WHERE id=%s", (channel, vid))
+
+
+@needs_ci_pg
+@pytest.mark.parametrize("sender_ok", [True, False])
+def test_entrypoints_report_room_notice_sent_or_failed(pg, monkeypatch, sender_ok):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return sender_ok
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    expected = "sent" if sender_ok else "failed"
+    base = "/api/v1/super-admin/viewers"
+
+    v1 = _account(cur, "n1@x.com", "trial", expires_in_days=3)
+    _set_room(cur, v1)
+    until = (datetime.now(timezone.utc) + timedelta(days=30)).date()
+    r = _api(async_url, "POST", f"{base}/{v1}/extend", {"until_date": until.isoformat()})
+    assert r.status_code == 200 and r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == f"お試し期間を {until.month}月{until.day}日 まで延長しました😊"
+
+    v2 = _account(cur, "n2@x.com", "trial", expires_in_days=3)
+    _set_room(cur, v2)
+    r = _api(async_url, "POST", f"{base}/{v2}/activate", {})
+    assert r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_ACTIVATED
+
+    r = _api(async_url, "POST", f"{base}/{v2}/suspend", {})
+    assert r.json()["room_notice"] == expected
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+
+    n_before = len(sent)
+    r = _api(async_url, "POST", f"{base}/{v2}/unsuspend", {})
+    assert r.status_code == 200
+    assert r.json()["room_notice"] is None and r.json()["room_notice_text"] is None
+    assert len(sent) == n_before  # unsuspend は送らない
+    assert all(c == "777" for c, _ in sent) and len(sent) == 3
+
+
+@needs_ci_pg
+def test_entrypoints_no_room_does_not_send(pg, monkeypatch):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append(channel_id)
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    vid = _account(cur, "nr@x.com", "trial", expires_in_days=3)
+    r = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/suspend", {})
+    assert r.status_code == 200
+    assert r.json()["room_notice"] == "no_room"
+    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+    assert sent == []
 
 
 @needs_ci_pg
@@ -570,6 +686,8 @@ def test_reissue_pending_replaces_code_and_returns_invite(pg, monkeypatch):  # n
     body = resp.json()
     assert re.fullmatch(r"[0-9A-Z]{4}(-[0-9A-Z]{4}){3}", body["signup_code"])
     assert body["invite_url"] == "https://discord.gg/fakecode"
+    assert body["signup_code"] in body["message"]
+    assert "https://discord.gg/fakecode?openExternalBrowser=1" in body["message"]
     hashes = _signup_hashes(cur, vid)
     assert hashes == [signup_code_sha256(normalize_signup_code(body["signup_code"]))]
     assert old not in hashes
@@ -586,6 +704,7 @@ def test_reissue_invite_none_is_200_with_null(pg, monkeypatch):  # noqa: F811
     vid = _account(cur, "p2@x.com", "pending")
     resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
     assert resp.status_code == 200 and resp.json()["invite_url"] is None
+    assert "Discord への招待" not in resp.json()["message"]
     assert len(_signup_hashes(cur, vid)) == 1
 
 

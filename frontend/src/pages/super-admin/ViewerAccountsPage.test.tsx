@@ -234,6 +234,42 @@ it("copies the signup form URL and shows Copied", async () => {
   expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
 });
 
+it("copies the signup request message fetched from the API and shows Copied", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mockMixed();
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers/signup-request") return { text: "REQUEST TEXT" };
+    return { items: ITEMS };
+  });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(screen.getByRole("button", { name: "Copy signup request message" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("REQUEST TEXT"));
+  expect(api.get).toHaveBeenCalledWith("/super-admin/viewers/signup-request");
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
+});
+
+it("copies the reissue message from the result modal", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  mockMixed();
+  vi.mocked(api.post).mockResolvedValue({
+    signup_code: "ABCD-EFGH-JKMN-PQRS",
+    expires_at: "2026-10-26T00:00:00Z",
+    invite_url: "https://discord.gg/fakecode",
+    message: "REISSUE MESSAGE",
+  });
+  renderPage();
+  await screen.findByText("Pen");
+  fireEvent.click(within(row("Pen")).getByRole("button", { name: "Reissue code and invite" }));
+  fireEvent.click(await screen.findByTestId("viewers-reissue-run"));
+  await screen.findByTestId("viewers-reissue-code");
+  const label = screen.getByText(/^Message:/);
+  fireEvent.click(within(label).getByRole("button", { name: "Copy" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("REISSUE MESSAGE"));
+});
+
 it("shows Reissue on rows without a room (pending, trial, active) but not on suspended or roomed rows, confirms, posts and shows code, expiry and invite", async () => {
   mockMixed();
   vi.mocked(api.post).mockResolvedValue({
@@ -376,4 +412,40 @@ it("shows the invalid text in an alert on 422 and the generic save error otherwi
       i18n.t("superAdmin.viewers.saveError"),
     ),
   );
+});
+
+it("shows the room-notice failure guide with a copy button when the room notice failed", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "failed", room_notice_text: "NOTICE BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  const box = await screen.findByTestId("viewers-room-notice-failed");
+  expect(within(box).getByText(i18n.t("superAdmin.viewers.roomNoticeFailed"))).toBeTruthy();
+  expect(within(box).getByText("NOTICE BODY")).toBeTruthy();
+  fireEvent.click(within(box).getByRole("button", { name: "Copy" }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("NOTICE BODY"));
+});
+
+it("shows the same guide when the viewer has no room (no_room)", async () => {
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "no_room", room_notice_text: "NO ROOM BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  expect(await screen.findByText("NO ROOM BODY")).toBeTruthy();
+});
+
+it("shows no room-notice guide when the notice was sent or there is none", async () => {
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "sent", room_notice_text: "SENT BODY" });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  await waitFor(() => expect(api.post).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByTestId("viewers-run")).toBeNull());
+  expect(screen.queryByTestId("viewers-room-notice-failed")).toBeNull();
+  expect(screen.queryByText("SENT BODY")).toBeNull();
 });

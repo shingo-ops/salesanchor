@@ -55,6 +55,8 @@ async def create_private_text_channel(
     name: str,
     reason: str,
     log_context: str,
+    topic: str | None = None,
+    log_name: str | None = None,
 ) -> discord.TextChannel | None:
     """本人・スタッフのロール・bot だけが見られるテキスト部屋を作る。失敗時は None。"""
     overwrites: dict[Any, discord.PermissionOverwrite] = {
@@ -81,13 +83,16 @@ async def create_private_text_channel(
                 log_context,
             )
 
+    create_kwargs: dict[str, Any] = {
+        "name": name,
+        "category": category,
+        "overwrites": overwrites,
+        "reason": reason,
+    }
+    if topic is not None:
+        create_kwargs["topic"] = topic
     try:
-        new_channel = await guild.create_text_channel(
-            name=name,
-            category=category,
-            overwrites=overwrites,
-            reason=reason,
-        )
+        new_channel = await guild.create_text_channel(**create_kwargs)
     except discord.Forbidden:
         logger.error(
             "[ticket] Forbidden: cannot create channel in category=%s %s",
@@ -96,17 +101,25 @@ async def create_private_text_channel(
         )
         return None
     except discord.HTTPException as exc:
-        logger.error(
-            "[ticket] HTTPException creating channel %s: %s",
-            log_context,
-            exc,
-        )
+        if log_name is not None:
+            # 名前（LINE 名）が文面に入る可能性があるので status だけ出す
+            logger.error(
+                "[ticket] HTTPException creating channel %s: status=%s",
+                log_context,
+                exc.status,
+            )
+        else:
+            logger.error(
+                "[ticket] HTTPException creating channel %s: %s",
+                log_context,
+                exc,
+            )
         return None
 
     logger.info(
         "[ticket] created channel=%s (%s) for user=%s %s",
         new_channel.id,
-        name,
+        log_name if log_name is not None else name,
         member.id,
         log_context,
     )

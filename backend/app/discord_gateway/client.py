@@ -17,17 +17,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 import discord
 from sqlalchemy import text
 
-from app.cache import close_redis, init_redis
+from app.cache import close_redis, get_redis, init_redis
 from app.discord_gateway import (
     bot_texts,
     ticket_channel_creator,
     ticket_channel_writer,
     viewer_bot_texts,
+    viewer_interview_notice,
     viewer_trial,
 )
 from app.discord_gateway.config import SingleBotConfig
@@ -77,6 +79,7 @@ class JarvisDiscordClient(discord.Client):
         self._resumed_completed: set[str] = set()
         self._reconcile_task: asyncio.Task[None] | None = None
         self._viewer_sweep_task: asyncio.Task[None] | None = None
+        self._viewer_interview_task: asyncio.Task[None] | None = None
 
         # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
         raw_url = database_url or os.environ.get(
@@ -137,6 +140,8 @@ class JarvisDiscordClient(discord.Client):
             self._reconcile_task.cancel()
         if self._viewer_sweep_task is not None and not self._viewer_sweep_task.done():
             self._viewer_sweep_task.cancel()
+        if self._viewer_interview_task is not None and not self._viewer_interview_task.done():
+            self._viewer_interview_task.cancel()
         await self.reaction_writer.close()
         await close_redis()
         await super().close()
@@ -157,6 +162,8 @@ class JarvisDiscordClient(discord.Client):
             self._reconcile_task = asyncio.create_task(self._reconcile_ticket_channels())
         if self._viewer_sweep_task is None:
             self._viewer_sweep_task = asyncio.create_task(self._viewer_room_sweep_loop())
+        if self._viewer_interview_task is None:
+            self._viewer_interview_task = asyncio.create_task(self._viewer_interview_loop())
 
     async def _viewer_room_sweep_loop(self) -> None:
         """消された閲覧者の部屋を、起動時に1回・その後24時間ごとに片付ける（失敗は警告のみ）。"""
@@ -173,6 +180,19 @@ class JarvisDiscordClient(discord.Client):
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[viewer-trial] sweep loop failed: %s", exc)
             await asyncio.sleep(86400)
+
+    async def _viewer_interview_loop(self) -> None:
+        """お試し期限の前日に面談のお願いを部屋へ送る。1時間ごと（失敗は警告のみ）。"""
+        while True:
+            try:
+                await viewer_interview_notice.run_once(
+                    self._db_factory(), get_redis(), datetime.now(timezone.utc)
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[viewer-interview] loop failed: %s", type(exc).__name__)
+            await asyncio.sleep(viewer_interview_notice.LOOP_INTERVAL_SECONDS)
 
     async def _reconcile_ticket_channels(self) -> None:
         """Gateway 停止中に削除されたチケットチャンネルを復旧する（失敗は警告のみ）。"""

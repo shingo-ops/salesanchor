@@ -8,6 +8,7 @@ PG（CI の使い捨て DB。pg fixture）: 照合からトライアル開始ま
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -65,6 +66,7 @@ def _text_channel(cid: int = 9001, name: str = "x") -> MagicMock:
     ch = MagicMock(spec=discord.TextChannel)
     ch.id = cid
     ch.name = name
+    ch.topic = None
     ch.send = AsyncMock()
     ch.delete = AsyncMock()
     return ch
@@ -173,7 +175,7 @@ async def test_open_button_linked_user_gets_room():
     guild = _guild()
     guild.get_channel = MagicMock(return_value=room)
     it = _interaction(T.OPEN_BUTTON_CUSTOM_ID, guild=guild, user=_member())
-    factory = _db_factory(lambda *a, **k: _Result((5, "a@example.com", "123")))
+    factory = _db_factory(lambda *a, **k: _Result((5, "a@example.com", "123", "山田")))
     with patch.object(viewer_trial, "load_config", new=AsyncMock(return_value=CONFIG)):
         await viewer_trial.handle_interaction(it, factory)
     it.response.defer.assert_awaited_once_with(ephemeral=True, thinking=True)
@@ -241,7 +243,7 @@ async def test_malformed_code_counts_as_failure_without_db():
 
 async def test_room_create_failure_not_counted():
     redis = _Redis()
-    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None))])
+    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None, "山田"))])
     factory = _db_factory(lambda *a, **k: next(rows))
     it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=_guild(), user=_member(), components=_code_components(CODE))
     with patch.object(viewer_trial, "get_redis", return_value=redis), patch.object(
@@ -265,6 +267,58 @@ def test_texts_within_discord_limits():
     assert button["custom_id"].startswith(T.VIEWER_CUSTOM_ID_PREFIX)
     assert T.CODE_MODAL_CUSTOM_ID.startswith(T.VIEWER_CUSTOM_ID_PREFIX)
     assert payload is not T.reception_message_payload()
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://x.jp/a", "https://x.jp/a?openExternalBrowser=1"),
+        ("https://x.jp/a?k=v", "https://x.jp/a?k=v&openExternalBrowser=1"),
+        ("https://x.jp/a#signup", "https://x.jp/a?openExternalBrowser=1#signup"),
+        ("https://x.jp/a?k=v#s", "https://x.jp/a?k=v&openExternalBrowser=1#s"),
+        ("https://x.jp/a?openExternalBrowser=1#s", "https://x.jp/a?openExternalBrowser=1#s"),
+    ],
+)
+def test_external_browser_url(url, expected):
+    assert T.external_browser_url(url) == expected
+
+
+def test_format_jst_datetime_crosses_date_and_naive_is_utc():
+    aware = datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc)
+    assert T.format_jst_datetime(aware) == "10月26日 00:00"
+    assert T.format_jst_datetime(datetime(2026, 1, 5, 0, 5)) == "1月5日 09:05"
+    assert T.format_jst_date(aware) == "10月26日"
+    assert T.format_jst_date(datetime(2026, 12, 31, 14, 59)) == "12月31日"
+
+
+def test_signup_request_text_contains_signup_url():
+    text = T.signup_request_text()
+    assert T.SIGNUP_URL in text
+    assert "openExternalBrowser=1#signup" in text
+    assert "{" not in text
+
+
+def test_reissue_notice_with_invite():
+    text = T.reissue_notice_text(
+        "Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc), "https://discord.gg/abc"
+    )
+    assert text.startswith("Taroさん、申込コードを作り直しました。")
+    assert "ABCD-EFGH-JKMN-PQRS（10月26日 00:00まで有効）" in text
+    assert "Discord への招待：https://discord.gg/abc?openExternalBrowser=1" in text
+    assert "{" not in text
+
+
+def test_reissue_notice_without_invite_has_no_invite_line():
+    text = T.reissue_notice_text("Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), None)
+    assert "Discord への招待" not in text
+    assert "ABCD-EFGH-JKMN-PQRS" in text
+
+
+@pytest.mark.parametrize("name", [None, "", "  "])
+def test_reissue_notice_without_line_name_has_no_san_prefix(name):
+    text = T.reissue_notice_text(name, "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), "https://discord.gg/abc")
+    assert text.startswith("申込コードを作り直しました。")
+    assert "さん、" not in text
 
 
 def test_normalize_signup_code():
@@ -295,7 +349,7 @@ async def test_sweep_deletes_only_missing_ids_in_category():
     voice = MagicMock(spec=discord.VoiceChannel)
     voice.name = "trial-9"
     guild = _sweep_guild([existing, orphan, other_name, voice])
-    factory = _db_factory(lambda stmt, params: _Result((1,) if params["id"] == 1 else None))
+    factory = _db_factory(lambda stmt, params: _Result((None, "1") if params["id"] == 1 else None))
     deleted = await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG)
     assert deleted == 1
     orphan.delete.assert_awaited_once()
@@ -328,6 +382,225 @@ async def test_sweep_db_error_deletes_nothing():
     factory = _db_factory(_boom)
     assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
     rooms[0].delete.assert_not_awaited()
+
+
+# ── 非 PG: 部屋名＝LINE 名・説明・名前直し（K1/K2/K4/K5/K8）─────────
+
+
+def _topic(n: int) -> str:
+    return T.ROOM_TOPIC.format(viewer_id=n)
+
+
+async def test_k1_room_created_with_line_name_and_topic():
+    ch = _text_channel(9001)
+    guild = _guild(ch)
+    got = await viewer_trial._create_room(guild, _member(), CONFIG, 5, "  山田 太郎  ")
+    assert got is ch
+    kwargs = guild.create_text_channel.await_args.kwargs
+    assert kwargs["name"] == "山田 太郎"
+    assert kwargs["topic"] == "在庫集計ツールのお試し（番号 5）"
+
+
+async def test_k1_name_capped_at_100_chars():
+    guild = _guild(_text_channel(9001))
+    await viewer_trial._create_room(guild, _member(), CONFIG, 5, "あ" * 150)
+    assert guild.create_text_channel.await_args.kwargs["name"] == "あ" * 100
+
+
+@pytest.mark.parametrize("line_name", [None, "", "   "])
+async def test_k2_empty_line_name_uses_trial_id(line_name):
+    guild = _guild(_text_channel(9001))
+    await viewer_trial._create_room(guild, _member(), CONFIG, 5, line_name)
+    kwargs = guild.create_text_channel.await_args.kwargs
+    assert kwargs["name"] == "trial-5"
+    assert kwargs["topic"] == _topic(5)
+    assert guild.create_text_channel.await_count == 1
+
+
+async def test_k2_falls_back_to_trial_id_when_line_name_rejected():
+    ch = _text_channel(9001)
+    guild = _guild()
+    resp = MagicMock()
+    resp.status = 400
+    guild.create_text_channel = AsyncMock(side_effect=[discord.HTTPException(resp, "bad name"), ch])
+    got = await viewer_trial._create_room(guild, _member(), CONFIG, 5, "山田")
+    assert got is ch
+    names = [c.kwargs["name"] for c in guild.create_text_channel.await_args_list]
+    assert names == ["山田", "trial-5"]
+    assert guild.create_text_channel.await_args_list[1].kwargs["topic"] == _topic(5)
+
+
+async def test_k2_no_second_try_when_already_trial_name():
+    guild = _guild()
+    resp = MagicMock()
+    resp.status = 400
+    guild.create_text_channel = AsyncMock(side_effect=discord.HTTPException(resp, "x"))
+    assert await viewer_trial._create_room(guild, _member(), CONFIG, 5, None) is None
+    assert guild.create_text_channel.await_count == 1
+
+
+async def test_k1_on_open_recreate_uses_line_name():
+    new = _text_channel(777)
+    guild = _guild(new)
+    guild.get_channel = MagicMock(side_effect=lambda cid: None if cid != 2002 else MagicMock(spec=discord.CategoryChannel))
+    it = _interaction(T.OPEN_BUTTON_CUSTOM_ID, guild=guild, user=_member())
+    factory = _db_factory(lambda *a, **k: _Result((5, "a@example.com", None, "鈴木")))
+    with patch.object(viewer_trial, "load_config", new=AsyncMock(return_value=CONFIG)):
+        await viewer_trial.handle_interaction(it, factory)
+    kwargs = guild.create_text_channel.await_args.kwargs
+    assert kwargs["name"] == "鈴木" and kwargs["topic"] == _topic(5)
+
+
+async def test_k1_on_code_submit_uses_line_name():
+    new = _text_channel(777)
+    guild = _guild(new)
+    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None, "佐藤")), _Result(None), _Result(None), _Result(None)])
+    factory = _db_factory(lambda *a, **k: next(rows))
+    it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=guild, user=_member(), components=_code_components(CODE))
+    with patch.object(viewer_trial, "get_redis", return_value=_Redis()):
+        await viewer_trial.on_code_submit(it, factory, CONFIG)
+    kwargs = guild.create_text_channel.await_args.kwargs
+    assert kwargs["name"] == "佐藤" and kwargs["topic"] == _topic(5)
+
+
+async def test_k8_logs_do_not_contain_line_name(caplog):
+    caplog.set_level(logging.DEBUG)
+    secret = "秘密の名前"
+    guild = _guild(_text_channel(9001))
+    await viewer_trial._create_room(guild, _member(), CONFIG, 5, secret)
+    resp = MagicMock()
+    resp.status = 400
+    guild.create_text_channel = AsyncMock(side_effect=discord.HTTPException(resp, f"bad {secret}"))
+    await viewer_trial._create_room(guild, _member(), CONFIG, 6, secret)
+    assert caplog.records
+    assert secret not in caplog.text
+    assert "trial-5" in caplog.text
+
+
+async def test_k3_customer_ticket_create_passes_no_topic():
+    from app.discord_gateway import private_channel
+
+    guild = _guild(_text_channel(9001))
+    guild.default_role = MagicMock()
+    guild.me = None
+    await private_channel.create_private_text_channel(
+        guild, MagicMock(spec=discord.CategoryChannel), _member(), None, "ticket-x", "r", "ctx"
+    )
+    assert "topic" not in guild.create_text_channel.await_args.kwargs
+
+
+async def test_k4_sweep_deletes_room_found_by_topic_when_row_missing():
+    named = _text_channel(1, "山田")
+    named.topic = _topic(7)
+    manual = _text_channel(2, "手で置いた部屋")
+    manual.topic = "メモ"
+    wrong_topic = _text_channel(3, "別")
+    wrong_topic.topic = "在庫集計ツールのお試し（番号 abc）"
+    guild = _sweep_guild([named, manual, wrong_topic])
+    factory = _db_factory(lambda stmt, params: _Result(None))
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 1
+    named.delete.assert_awaited_once()
+    manual.delete.assert_not_awaited()
+    wrong_topic.delete.assert_not_awaited()
+
+
+async def test_k4_sweep_keeps_topic_room_when_row_exists_and_no_rename():
+    named = _text_channel(1, "山田")
+    named.topic = _topic(7)
+    named.edit = AsyncMock()
+    guild = _sweep_guild([named])
+    factory = _db_factory(lambda stmt, params: _Result(("山田", "1")))
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
+    named.delete.assert_not_awaited()
+    named.edit.assert_not_awaited()
+
+
+async def test_sweep_reads_topic_number_before_name():
+    ch = _text_channel(1, "trial-8")
+    ch.topic = _topic(7)
+    ch.edit = AsyncMock()
+    guild = _sweep_guild([ch])
+    seen = []
+
+    def _exec(stmt, params):
+        seen.append(params["id"])
+        return _Result(("鈴木", "1")) if params["id"] == 7 else _Result(None)
+
+    factory = _db_factory(_exec)
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
+    assert seen == [7]
+    ch.delete.assert_not_awaited()
+
+
+async def test_k5_renames_old_trial_room_once():
+    ch = _text_channel(1, "trial-7")
+    ch.edit = AsyncMock()
+    guild = _sweep_guild([ch])
+    factory = _db_factory(lambda stmt, params: _Result(("山田", "1")))
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
+    ch.edit.assert_awaited_once_with(
+        name="山田", topic=_topic(7), reason="SalesAnchor viewer room renamed to LINE name"
+    )
+    ch.delete.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "name,topic,row",
+    [
+        ("trial-7", _topic(7), ("山田", "1")),  # 説明あり（直し済み・逃げ道）
+        ("trial-7", None, ("山田", "999")),  # ID 不一致
+        ("trial-7", None, (None, "1")),  # 名前が同じ（LINE 名なし）
+        ("trial-7", None, ("trial-7", "1")),  # 名前が同じ
+        ("山田", _topic(7), ("鈴木", "1")),  # trial- ではない
+    ],
+)
+async def test_k5_no_rename_when_conditions_not_met(name, topic, row):
+    ch = _text_channel(1, name)
+    ch.topic = topic
+    ch.edit = AsyncMock()
+    guild = _sweep_guild([ch])
+    factory = _db_factory(lambda stmt, params: _Result(row))
+    await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG)
+    ch.edit.assert_not_awaited()
+
+
+async def test_k5_rename_failure_falls_back_to_topic_only_and_sweep_continues():
+    ch = _text_channel(1, "trial-7")
+    resp = MagicMock()
+    resp.status = 400
+    ch.edit = AsyncMock(side_effect=[discord.HTTPException(resp, "bad"), None])
+    orphan = _text_channel(2, "trial-8")
+    guild = _sweep_guild([ch, orphan])
+    factory = _db_factory(lambda stmt, params: _Result(("山田", "1")) if params["id"] == 7 else _Result(None))
+    assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 1
+    assert ch.edit.await_count == 2
+    assert ch.edit.await_args_list[1].kwargs == {
+        "topic": _topic(7),
+        "reason": "SalesAnchor viewer room renamed to LINE name",
+    }
+    orphan.delete.assert_awaited_once()
+
+
+async def test_k5_both_edits_failing_logs_and_continues(caplog):
+    ch = _text_channel(1, "trial-7")
+    ch.edit = AsyncMock(side_effect=RuntimeError("no"))
+    guild = _sweep_guild([ch])
+    factory = _db_factory(lambda stmt, params: _Result(("山田", "1")))
+    with caplog.at_level(logging.WARNING):
+        assert await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG) == 0
+    assert "sweep rename failed" in caplog.text
+
+
+async def test_k5_rename_cap_is_ten():
+    rooms = []
+    for i in range(1, 13):
+        c = _text_channel(i, f"trial-{i}")
+        c.edit = AsyncMock()
+        rooms.append(c)
+    guild = _sweep_guild(rooms)
+    factory = _db_factory(lambda stmt, params: _Result(("名前", str(params["id"]))))
+    await viewer_trial.sweep_orphan_rooms(guild, factory, CONFIG)
+    assert sum(c.edit.await_count for c in rooms) == 10
 
 
 # ── 非 PG: 専用スクリプト ─────────────────────────────────────

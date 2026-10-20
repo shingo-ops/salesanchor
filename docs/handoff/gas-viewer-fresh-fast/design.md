@@ -794,3 +794,110 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 
 ### 戻し方
 - PR を Revert。
+
+## 段10（2026-10-20）流れごとの文面のひな形と、部屋への自動のお知らせ
+
+### 10-0 PO の依頼と決定（原文）
+- 「フローごとにメッセージ用のテンプレートを用意できる？申し込みがあり、フォームの入力をお願いするテンプレートから順番に」
+- 置き場所：「1,3のハイブリッド」（管理画面のコピー＋システムが Discord で自動送信）
+- 「discordの招待URLもLINEのブラウザではなく外部ブラウザで開くように出来る？」
+- ③：「2日前に面談の日程調整を依頼する文面にしたい」→「前日という意味」
+- 面談の日程の決め方：「進める」（Opus の提示したおすすめ＝専用の部屋に都合のよい日時を書いてもらう、と解釈。違えば PO が訂正）
+
+### 10-1 現状（調べた事実。生の引用 /tmp/CC報告ファイル/viewer_templates/recon_raw.md・recon_impl.md・recon_impl2.md、origin/main c7bac6249）
+- 文面の正本は backend/app/discord_gateway/viewer_bot_texts.py（全60行・SSOT と明記 :1-7）。部屋へ送る文は ROOM_WELCOME :28-34 と ROOM_RECREATED :35-40 だけ。①〜④の文面は無い。
+- 申込 URL のコピーは frontend/src/pages/super-admin/ViewerAccountsPage.tsx:345-353（`${window.location.origin}/viewer/#signup`、:349）。コード作り直しの結果は :503-537（コード・期限・招待の素データだけ。API は ViewerReissueResponse super_admin_viewers.py:96-101）。
+- 状態の変更は viewer_admin.change_status（backend/app/services/viewer_admin.py:181-291、commit しない）。commit は Web が super_admin_viewers.py:_change :130-152（:148）、CLI が viewer_admin_cli.py:run :16-28（:28）。Discord には何もしない。管理画面に停止ボタンは無い（段6、ViewerAccountsPage.test.tsx:129）。停止は CLI だけ。
+- 停止しても部屋の権限は変わらない（private_channel.py:60-76 の本人・staff・bot のみ可のまま）。→ 停止の連絡は部屋に送れば本人に届く。
+- 部屋の ID は viewer_accounts.discord_channel_id（migrations/20261016_150000_add_viewer_accounts.sql:16）。期限は trial_expires_at TIMESTAMPTZ（:17、UTC で比較 viewer.py:195-197、延長の日付指定は JST 23:59:59 viewer_admin.py:213-216）。お試しは開始から14日（viewer_trial.py:29）。
+- bot の鍵 DISCORD_BOT_TOKEN は backend（docker-compose.yml:110）と discord-gateway（:362）だけ。celery には無く、それは意図的（本書 :498「鍵を持つ入れ物を増やさない」）。
+- backend から部屋へ送る共通関数 discord_api_request（backend/app/services/discord_rest.py:34-42、429/5xx 再試行）。閲覧者の前例 viewer_invite.py:23-57（commit 後に呼ぶ・失敗は None・ログは種類と HTTP 状態だけ）。
+- gateway は REDIS_URL（docker-compose.yml:358）と DATABASE_URL（:365）を持ち、setup_hook で init_redis（client.py:132）。定期ループの前例 _viewer_room_sweep_loop（client.py:161-175、on_ready で create_task :157-159、close で cancel :136-139）。
+- 重複送信を防ぐ前例は Redis の存在キー（backend/app/tasks/viewer_share_flag_monitor.py:21,40-41,80-85、送れたら TTL 30日・失敗ならキーを作らない・Redis が無ければ送らない）。
+- 閲覧ページは hash の完全一致で申込画面を開き、クエリは無視・保持する（frontend/src/pages/viewer/ViewerApp.tsx:27,54,61）。nginx は location = /viewer/（frontend/nginx.conf:32-35）。
+- LINE の公式説明（https://developers.line.biz/en/docs/line-login/using-line-url-scheme/ 2026-10-20 確認、Context7 は月の上限で使えず直接確認）：URL に openExternalBrowser=1 を付けると「LINE アプリから開いたすべての URL」が外部ブラウザで開く（LIFF を除く）。
+
+### 10-2 文面（PO に提示した案。正本は viewer_bot_texts.py に置く）
+- ① SIGNUP_REQUEST（手で送る・管理画面でコピー）
+  在庫集計ツールのお試しのご案内です😊 / 下記のページから、メールアドレスと LINE の表示名を入力してお申し込みください。/ 申込ページ：{signup_url} / お申し込みのあと画面に出る「申込コード」と「Discord に参加する」ボタンで、Discord の受付にお進みください。
+  - signup_url = `https://app.salesanchor.jp/viewer/?openExternalBrowser=1#signup`（定数 SIGNUP_URL。クエリは # の前）
+- ② REISSUE_NOTICE（手で送る・作り直し結果でコピー）
+  {line_name}さん、申込コードを作り直しました。/ 申込コード：{code}（{expires}まで有効）/ Discord への招待：{invite_url} / Discord の受付の部屋で「申込コードを入れる」ボタンを押し、このコードを入れてください。
+  - invite_url には `?openExternalBrowser=1` を付ける（既にクエリがあれば `&`）。招待が作れなかった（None）ときは招待の行を出さない REISSUE_NOTICE_NO_INVITE。
+  - {expires} は JST の「M月D日 HH:MM」。
+- ③ INTERVIEW_REQUEST（自動・期限の前日）
+  お試し期間は {expires_date} で終わります。/ ご利用の感想やこれからのご利用についてお話しするため、短い面談をお願いできますでしょうか😊 / ご都合のよい日時を、この部屋に3つほどお送りください。
+  - {expires_date} は JST の「M月D日」。
+- ④ NOTICE_EXTENDED / NOTICE_ACTIVATED / NOTICE_SUSPENDED（自動・操作の直後）
+  - 延長：お試し期間を {until_date} まで延長しました😊
+  - 本登録：本登録が完了しました。引き続きご利用ください😊
+  - 停止：ご利用を停止しました。ご不明な点は、この部屋でお知らせください。
+  - 停止の解除（unsuspend）は文面なし（PO の依頼に無い）。
+
+### 10-3 作り方（選んだ案と理由）
+- 文面は全部 viewer_bot_texts.py に置く（1か所）。管理画面は API が返す出来上がりの文を表示・コピーするだけで、フロントに文面を持たない（二重管理を作らない）。前例：顧客用 welcome_template を API が返す（backend/app/routers/discord_ticket_config.py:60）。画面のボタン名だけ i18n（ja/en 同一キー、ADR-027）。
+- 日付の書式は1つの関数（viewer_bot_texts.format_jst_date / format_jst_datetime）にまとめる。招待へ目印を付けるのも1つの関数（external_browser_url）。
+- ④は backend の commit の後に送る（Web は _change、CLI は run の commit の後）。送る処理は新しい backend/app/services/viewer_room_notice.py の `send_room_notice(channel_id, text) -> bool`：discord_api_request で POST /channels/{id}/messages、本文 {"content": text, "allowed_mentions": {"parse": []}}、max_retries=1、例外は外へ出さず False、ログは種類と HTTP 状態だけ（本文・メールは出さない）。部屋が無い人（discord_channel_id が NULL）には送らない。送れなくても操作は成功のまま（前例 viewer_invite.py）。
+  - Web の応答に room_notice（"sent" | "failed" | "no_room"）と room_notice_text を足し、送れなかったときだけ管理画面に「部屋に送れませんでした。下の文をコピーして送ってください」とコピーボタンを出す。
+- ③は gateway の中に1時間ごとのループを足す（sweep と同じ型）。理由：gateway は既に鍵・DB・Redis を持ち、celery に鍵を足さずに済む（本書 :498 の方針を守る）。
+  - 送る条件：status='trial' かつ discord_channel_id あり かつ trial_expires_at あり、かつ「期限の JST の日付の前日」が今日（JST）、かつ今が JST 10:00 以降。
+  - 重複防止：Redis キー `viewer_interview_notice:{id}:{trial_expires_at の UTC ISO}`。送れたら TTL 30日で置く。失敗ならキーを作らない（次の1時間で再試行）。Redis が無ければ送らない。延長で期限が変わればキーが変わり、新しい期限の前日にまた送る。
+  - 前日に gateway が1日中止まっていた場合は送らない（期限当日には送らない）。
+- 却下した案：celery に鍵を足す（:498 の方針に反する）／送信済みを DB 列に持つ（migration が要り、毎回全部流し直す仕組みで事故が出たばかり #4562。Redis の前例で足りる）／フロントの i18n に文面を置く（自動送信の文と二重になる）。
+
+### 10-4 便
+- 便1：①②（viewer_bot_texts.py に定数と関数、ViewerReissueResponse に message、GET 申込のお願いの文を返す口、管理画面に「申込のお願いをコピー」と作り直し結果の「案内文をコピー」）
+- 便2：④（viewer_room_notice.py、_change と CLI run の commit 後に送信、応答の room_notice、管理画面の送れなかったとき表示）
+- 便3：③（gateway の1時間ループと送信関数）
+- migration・deploy.yml・本番 scripts は どの便も触らない。
+
+### 10-5 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K1 ①のコピーで、目印付き申込 URL（`?openExternalBrowser=1#signup`）入りの文がコピーされる | vitest（コピー内容）＋ pytest（文を返す口） |
+| K2 ②の作り直しで、その人の LINE名・コード・JST の期限・目印付き招待が入った文が返る。招待が無いときは招待の行が無い | pytest |
+| K3 延長・本登録・停止の後に、その人の部屋へ1回だけ送る。部屋が無い人には送らない。送れなくても操作は成功し room_notice=failed | pytest（discord_api_request をモック、前例 backend/tests/test_viewer_signup.py:142-146） |
+| K4 ③は期限の JST 前日の 10:00 以降に1回だけ送る。前日以外・trial 以外・部屋なしには送らない。延長後は新しい期限で再び送る。Redis が無ければ送らない | pytest（前例 backend/tests/test_viewer_share_flag_monitor.py） |
+| K5 本番：①をコピーして LINE に貼り、スマホで開くと外部ブラウザで申込画面が開く | PO 目視 |
+| K6 本番：②の目印付き招待を LINE から開くと Discord の招待画面まで進める | PO 目視（だめなら招待の目印を外す） |
+| K7 本番：③が初めて送られた日に、その部屋に1通だけ届く | gateway ログの送信件数（本文なし）＋ PO 目視 |
+
+### 10-6 リスクと対処
+- 誤った部屋へ送る：送り先は本人の discord_channel_id だけ。メンションは無効（allowed_mentions）。
+- 二重送信：③は Redis キー、④は操作1回につき1回。
+- Discord の招待に目印を付けると開けない可能性（K6 未確認）：だめなら external_browser_url を招待に使わない1行の変更で戻す。
+- 送信失敗で管理操作が止まる：commit 後に送り、例外は外へ出さない。
+
+### 10-7 外部事例
+- LINE 公式の openExternalBrowser 仕様のみ使う（上記 10-1）。成功事例の数値は使わない（該当事例は不要：既存の仕組みの組み合わせで、新しい技術選択が無いため）。
+
+### 10-8 維持
+- 文面の直しは viewer_bot_texts.py の1か所。テストが差し込み項目と目印を確かめる。
+
+### 10-9 戻し方
+- 便ごとに PR を Revert。DB は変えない。Redis キーは TTL で消える。
+
+### 10-10 設計審査（2026-10-20、architect・Opus。同一 AI による審査）と決定
+- 判定：APPROVE（10-1 の file:line はすべて実物一致、SSOT・ADR-027・ADR-144/067・ADR-1019・本書 :498 と矛盾なし）。
+- 審査で出た未決を次のとおり決める：
+  - a. 4つの入口（activate/suspend/unsuspend/extend、super_admin_viewers.py:176-212）の response_model は今 ViewerAdminItem で、room_notice が落ちる。→ ViewerAdminItem を継承し `room_notice: Literal["sent","failed","no_room"] | None` と `room_notice_text: str | None` を足した ViewerStatusChangeResponse に替える。一覧と PATCH は ViewerAdminItem のまま。K3 は入口経由で確かめる。
+  - b. unsuspend は送らず room_notice=None。「部屋に送れませんでした…」の案内は画面の文言なので ja/en 同一キー（ADR-027）。i18n にしないのは「お客様に送る文」だけ。
+  - c. CLI run の結果 JSON（viewer_admin_cli.py:29-35）にも room_notice を足す。既存 CLI テスト（backend/tests/test_super_admin_viewers.py:458-471）は discord_api_request をモックする。
+  - d. ③の重複防止キーは「期限の JST の日付」：`viewer_interview_notice:{id}:{YYYY-MM-DD}`。同じ日付への延長で二重に送らない。
+  - e. ③も便2の send_room_notice（REST）で送る。discord.py の channel.send と二重の送信経路にしない（gateway は DISCORD_BOT_TOKEN を持つ docker-compose.yml:362）。
+  - f. ①の文を返す口：`GET /api/super-admin/viewers/signup-request`（require_super_admin、応答 {text}）。ルーター冒頭の API 一覧（super_admin_viewers.py:5-13）に追記。②の LINE名は commit 後に _get_item で取る。正確なパス接頭辞は実物の router prefix に合わせる。
+  - g. SIGNUP_URL は本番 URL を固定で書く（開発環境でも本番 URL がコピーされることを受け入れる。前例 ROOM_WELCOME の URL 直書き viewer_bot_texts.py:31）。
+- ③の送る時刻「前日の JST 10:00 以降」は Opus の既定。PO に伝え、変えたいときは定数1つ（INTERVIEW_NOTICE_HOUR_JST）を直す。
+
+### 10-11 便2 実装メモ（2026-10-20）
+- 実物と設計の差：CLI の実体は backend/app/viewer_admin_cli.py（services 配下ではない）。管理画面に停止ボタンは無い（段6）ので、画面で「部屋に送れませんでした」の案内が出るのは activate・extend の応答のとき。suspend・unsuspend は API と CLI だけ。
+- 送る処理は viewer_room_notice.py の send_room_notice のほか、文面選びと結果の決定を `notify_status_change(action, item)`（戻り (room_notice, text)）にまとめ、Web（_change）と CLI（run）の両方が同じ関数を commit 後に呼ぶ。unsuspend は (None, None)。
+- DISCORD_BOT_TOKEN が無い環境では Discord を呼ばず False（= failed）。
+- 延長の {until_date} は change_status が返す item の trial_expires_at（延長後）を format_jst_date で書く。取り直しは不要だった。
+- テスト：送信は viewer_room_notice.send_room_notice をモック（PG の入口試験・CLI 試験）。送信関数そのものは discord_api_request をモックして JSON の形を確かめる。openapi.json は ViewerStatusChangeResponse と4口の応答だけを反映（手元の pydantic 2.13.0 は CI の 2.10.6 と出力が違うため、他の差分は取り込まない）。
+
+### 10-12 便3 実装メモ（2026-10-20）
+- 置き場所は sweep と同じ backend/app/discord_gateway/viewer_interview_notice.py。DB は sweep と同じく `self._db_factory()`（AsyncSessionLocal）で public.viewer_accounts を直読み（テナント文脈・RLS なし）。
+- send_room_notice は async なので to_thread は使わず直接 await。Redis は gateway が init_redis 済みの非同期クライアント（app.cache.get_redis()）を使う（share_flag_monitor は同期 redis だが gateway では非同期が前例）。
+- `run_once(db_factory, redis_client, now_utc)`：テストでモックを差せるよう引数で受ける。client.py の `_viewer_interview_loop` が1時間ごとに呼ぶ。Redis が None なら 0 件。
+- 重複防止キーは 10-10 d のとおり `viewer_interview_notice:{id}:{期限の JST 日付}`、TTL 30日、送れたときだけ置く。

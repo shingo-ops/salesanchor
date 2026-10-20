@@ -30315,6 +30315,20 @@
         "title": "SignalSummary",
         "type": "object"
       },
+      "SignupRequestResponse": {
+        "properties": {
+          "text": {
+            "description": "①申込のお願いの文",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SignupRequestResponse",
+        "type": "object"
+      },
       "SoldOutResultItem": {
         "properties": {
           "analysis_result_id": {
@@ -36325,6 +36339,11 @@
             "description": "Discord 招待リンク（作れなければ null）",
             "title": "Invite Url"
           },
+          "message": {
+            "description": "そのまま送れる案内文（招待には外部ブラウザの目印付き）",
+            "title": "Message",
+            "type": "string"
+          },
           "signup_code": {
             "description": "申込コード（XXXX-XXXX-XXXX-XXXX）",
             "title": "Signup Code",
@@ -36333,7 +36352,8 @@
         },
         "required": [
           "signup_code",
-          "expires_at"
+          "expires_at",
+          "message"
         ],
         "title": "ViewerReissueResponse",
         "type": "object"
@@ -36384,6 +36404,148 @@
           "line_name"
         ],
         "title": "ViewerSignupRequest",
+        "type": "object"
+      },
+      "ViewerStatusChangeResponse": {
+        "description": "状態変更（activate／suspend／unsuspend／extend）の応答。部屋へのお知らせの結果つき。",
+        "properties": {
+          "created_at": {
+            "description": "登録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discord_channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋 ID",
+            "title": "Discord Channel Id"
+          },
+          "discord_channel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋を開く URL",
+            "title": "Discord Channel Url"
+          },
+          "discord_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord の利用者 ID",
+            "title": "Discord User Id"
+          },
+          "email": {
+            "description": "メールアドレス（小文字）",
+            "title": "Email",
+            "type": "string"
+          },
+          "flag_many_ips": {
+            "description": "目印: 24時間以内に3種類以上の IP からログイン",
+            "title": "Flag Many Ips",
+            "type": "boolean"
+          },
+          "flag_shared_ip": {
+            "description": "目印: 別の閲覧者と同じ IP からログイン",
+            "title": "Flag Shared Ip",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "閲覧者 viewer_accounts.id",
+            "title": "Id",
+            "type": "integer"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名",
+            "title": "Line Name",
+            "type": "string"
+          },
+          "room_notice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sent",
+                  "failed",
+                  "no_room"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へのお知らせの結果（unsuspend は null）",
+            "title": "Room Notice"
+          },
+          "room_notice_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へ送ろうとした文（送れなかったとき画面でコピーする）",
+            "title": "Room Notice Text"
+          },
+          "status": {
+            "description": "pending／verified／trial／active／suspended",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "お試しの期限",
+            "title": "Trial Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "line_name",
+          "status",
+          "created_at",
+          "flag_many_ips",
+          "flag_shared_ip"
+        ],
+        "title": "ViewerStatusChangeResponse",
         "type": "object"
       },
       "VoidRequest": {
@@ -63073,6 +63235,32 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/signup-request": {
+      "get": {
+        "operationId": "signup_request_endpoint_api_v1_super_admin_viewers_signup_request_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Signup Request Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}": {
       "patch": {
         "operationId": "update_line_name_endpoint_api_v1_super_admin_viewers__viewer_id__patch",
@@ -63149,7 +63337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63206,7 +63394,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63347,7 +63535,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63394,7 +63582,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
