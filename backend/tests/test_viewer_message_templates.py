@@ -146,8 +146,20 @@ def test_get_returns_nine_rows_with_null_body_for_missing_keys(pg):  # noqa: F81
             assert by_key[k]["body"] is None and by_key[k]["copy_text"] is None
             assert by_key[k]["updated_at"] is None and by_key[k]["updated_by_name"] is None
     assert by_key["signup_request"]["updated_by_name"] is None
-    assert by_key["room_welcome"]["updated_by_name"] == "testuser"  # full_name が空なら username
+    assert by_key["room_welcome"]["updated_by_name"] == "Test User"  # full_name があればそれ
     assert by_key["room_welcome"]["updated_at"] is not None
+
+
+@needs_ci_pg
+def test_get_updated_by_name_falls_back_to_username_when_full_name_empty(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    cur.execute("UPDATE public.users SET full_name = '' WHERE id = 999")
+    _insert(cur, "room_welcome", T.ROOM_WELCOME, user_id=999)
+    resp = _api(async_url, "GET", "/api/v1/super-admin/viewer-templates")
+    assert resp.status_code == 200
+    by_key = {i["key"]: i for i in resp.json()["items"]}
+    assert by_key["room_welcome"]["updated_by_name"] == "testuser"  # full_name が空なら username
 
 
 @needs_ci_pg
