@@ -4055,7 +4055,37 @@
     "requiredMissingConfirmable": "未入力です。入力するか、存在しないときは下の「調べたが存在しない」に印を付けてください。",
     "requiredFieldsMissing": "必要な項目が入っていないため登録できません：{{fields}}。値を入れてください。英語名・型番・発売日・除外キーワードは、存在しないときは「調べたが存在しない」に印を付けてください。",
     "requiredFieldsCleared": "{{fields}} は空にできません。値を入れてください。英語名・型番・発売日・除外キーワードは、存在しないときは「調べたが存在しない」に印を付けてください。",
-    "create": "作成"
+    "create": "作成",
+    "packaging": {
+      "heading": "荷姿（入数・重さ）",
+      "description": "ケース・箱・パックに何個入っているか、1個あたりの重さと、その出典を登録します。値を変えたら出典を選び直してください。",
+      "unitLabel": "{{unit}}",
+      "count": "1{{unit}}に入っている{{contained}}の数",
+      "weight": "1{{unit}}の重さ（kg）",
+      "source": "出典",
+      "urls": "出典のURL",
+      "urlsHint": "1行に1つのURLを入力してください。",
+      "note": "メモ",
+      "updatedAt": "最終更新",
+      "sources": {
+        "official": "公式",
+        "official_store": "公式ストア",
+        "retailer": "販売店",
+        "measured": "実測",
+        "legacy": "古い値（出典なし）"
+      },
+      "errors": {
+        "PACKAGING_UNKNOWN_UNIT": "荷姿の単位が正しくありません。最新の内容を読み直してください。",
+        "PACKAGING_DUPLICATE_UNIT": "同じ単位の荷姿が重複しています。",
+        "PACKAGING_SOURCE_MISMATCH": "値と出典の組み合わせが正しくありません。値を入れたら出典を選び、値が空なら出典とURLも空にしてください。",
+        "PACKAGING_URLS_REQUIRED": "出典のURLが足りません。公式・公式ストアは1件以上、販売店は2件以上必要です。",
+        "PACKAGING_DUPLICATE_URL": "出典のURLが重複しています。",
+        "PACKAGING_INVALID_URL": "出典のURLの形式が正しくありません。http または https で始まるURLを入力してください。",
+        "PACKAGING_LEGACY_NOT_ALLOWED": "「古い値（出典なし）」は選べません。値を変えたら出典を選び直してください。",
+        "PACKAGING_NOTE_WITHOUT_VALUE": "値が空のときはメモだけを残せません。",
+        "PACKAGING_SHARED_ONLY": "荷姿は共用商品でのみ登録できます。"
+      }
+    }
   },
   "soldOut": {
     "searchAction": "検索",
