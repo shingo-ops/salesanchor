@@ -15,7 +15,7 @@ import "./FormField.css";
 
 export type SelectSize = "sm" | "md" | "lg";
 export type SelectIndicator = "default" | "none";
-export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "product-edit";
+export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "tab" | "product-edit";
 
 export interface SelectOption {
   value: string;
@@ -82,6 +82,7 @@ export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
       appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
       indicator === "none" ? "comp-select--no-indicator" : "",
       variant !== "standard" ? `comp-select--${variant}` : "",
+      variant === "tab" && props.value != null && props.value !== "" ? "comp-select--tab-active" : "",
       className ?? "",
     ]
       .filter(Boolean)

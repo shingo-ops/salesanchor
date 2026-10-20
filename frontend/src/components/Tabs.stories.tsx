@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { Tabs } from './Tabs';
 import type { TabItem } from './Tabs';
+import { SelectControl } from './Select';
+import { DataTable } from './DataTable';
 
 const meta = {
   title: 'Components/Tabs',
@@ -123,6 +125,55 @@ export const ScrollablePill: Story = {
     items: SIX_TABS,
     activeKey: 'all',
     variant: 'pill',
+    size: 'md',
+  },
+};
+
+/** 表にくっつけた形（在庫表・閲覧ページ）。extra=「その他」プルダウン、end=注記、DataTable attachedTop */
+export const AttachedToTable: Story = {
+  name: 'その他プルダウンと注記つき・表にくっつけた',
+  render: (args) => {
+    const [active, setActive] = useState('pokemon');
+    const [other, setOther] = useState('');
+    const activeKey = other !== '' ? '' : active;
+    return (
+      <div data-testid="attached-demo">
+        <Tabs
+          {...args}
+          activeKey={activeKey}
+          onChange={(k) => { setOther(''); setActive(k); }}
+          extra={
+            <SelectControl
+              variant="tab"
+              aria-label="その他"
+              data-testid="attached-other"
+              value={other}
+              onChange={(e) => setOther(e.target.value)}
+              options={[
+                { value: '', label: 'その他' },
+                { value: 'hololive', label: 'ホロライブ' },
+              ]}
+            />
+          }
+          end={<p data-testid="attached-note" style={{ margin: 0 }}>注記</p>}
+        />
+        <DataTable
+          attachedTop
+          columns={[{ key: 'name', header: '商品名', renderCell: (r: { id: string; name: string }) => r.name }]}
+          data={[{ id: '1', name: 'サンプル' }]}
+          rowKey={(r) => r.id}
+        />
+      </div>
+    );
+  },
+  args: {
+    items: [
+      { key: 'all', label: 'すべて' },
+      { key: 'pokemon', label: 'ポケモン' },
+      { key: 'one_piece', label: 'ワンピース' },
+    ],
+    activeKey: 'pokemon',
+    variant: 'underline',
     size: 'md',
   },
 };
