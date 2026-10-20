@@ -149,6 +149,16 @@ PO 決定（2026-10-20「1」）。商品名は1行のまま幅の上限を決�
 
 - 内容: 商品名の日本語の段・英語の段は上限幅（`--comp-inventory-title-max-w` = 360px）で1行のまま末尾を「…」にし、全文を `title` に入れる。備考・発送は `--comp-inventory-text-max-w`（200px）で折り返し、中身がある間は `--comp-inventory-text-min-w`（100px）より細らない。スマホ幅（767px 以下のカード表示）は今のまま。
 - 正本: `frontend/src/features/inventory/inventoryColumns.css`・`inventoryColumns.tsx`・`frontend/src/pages/viewer/viewerColumns.tsx`・`frontend/src/tokens.css`（トークン3つは ADR-067 の表に追記）。正本を変えたら GAS の写しも同じ便で直す。
-- 反映: アプリ: 本 PR。GAS: テスト・本番とも反映待ち。
+- 反映: アプリ: 本 PR。GAS: テスト版28（本番は本改訂の版で反映）。
 - 戻し方: アプリは PR を revert。GAS は本番を版18、テストを版27へ redeploy（反映後の実際の版番号を記録する）。
 - 記録: `docs/handoff/inventory-title-ellipsis/`（recon・design・審査）。
+
+## 改訂 2026-10-20（2）（商品名の全文は、切れているときだけ浮くカードで見せる）
+
+PO 決定（2026-10-20「カード版でこの仕様で決定」）。前の改訂の `title` 属性（ブラウザ標準の小さな黄色い帯）をやめ、金型 `HoverCard` で出す（前の節の本文は書き換えない）。
+
+- 内容: パソコン幅（768px 以上）で、日本語・英語どちらかの段が「…」で切れているときだけ、マウスを乗せて150ms後に名前の上へカードを出す。日本語は太字1行、英語は小さく薄く1行。隣の行へ移るとカードは滑って移る。切れていない名前では出ない。クリックでは開閉しない。スマホ幅は折り返しで切れないので出ない。
+- 正本: `frontend/src/components/HoverCard.tsx`・`HoverCard.css`・`frontend/src/features/inventory/inventoryColumns.tsx`・`frontend/src/pages/viewer/viewerColumns.tsx`・`frontend/src/tokens.css`（トークン2つ `--ease-pop`・`--comp-hover-card-blur` は ADR-067 の表に追記）。GAS の `:root` にある写しは、正本トークンを変えたとき一緒に直す。
+- 反映: アプリ: 本 PR。GAS: テスト版・本番版の番号は反映後に追記する。
+- 戻し方: アプリは PR を revert（前の便の「…」＋ `title` に戻る）。GAS はテストを版28、本番を版18へ redeploy する。
+- 記録: `docs/handoff/inventory-name-hover-card/`（recon・design・審査）。

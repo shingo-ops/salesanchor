@@ -7,6 +7,7 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
+import { HoverCard } from "../../components/HoverCard";
 import { BlockValue } from "../../features/inventory/blockBadges";
 import { conditionBadgeVariant } from "../../features/inventory/conditionBadge";
 import "../../features/inventory/inventoryColumns.css";
@@ -55,16 +56,16 @@ export function buildViewerColumns({ t }: { t: TFunction }): DataTableColumn<Vie
       sortable: true,
       mobileOrder: 1,
       renderCell: (it) => (
-        <>
-          <div className="inventory-cell__title inventory-cell__clip" title={it.japanese_title}>
+        <HoverCard title={it.japanese_title} subtitle={it.english_title}>
+          <div className="inventory-cell__title inventory-cell__clip" data-hover-card-clip>
             {it.japanese_title}
           </div>
           {it.english_title && (
-            <div className="inventory-cell__sub inventory-cell__clip" title={it.english_title}>
+            <div className="inventory-cell__sub inventory-cell__clip" data-hover-card-clip>
               {it.english_title}
             </div>
           )}
-        </>
+        </HoverCard>
       ),
     },
     {

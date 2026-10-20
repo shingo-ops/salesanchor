@@ -16,7 +16,7 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button }         from "./Button";
-import { X }              from "../constants/icons";
+import { X }              from "../constants/icons-base";
 import "./Modal.css";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl";
