@@ -1029,3 +1029,5 @@ run_sql migrations/20261018_110000_drop_products_tcg_type.sql
 run_sql migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql
 # ADR-1035: 状態の価値の群に booklet を許す（CHECK の作り直しのみ。冪等）
 run_sql migrations/20261020_100000_line_conditions_value_group_add_booklet.sql
+# ADR-1019 段11 便1: 閲覧者向け文面のテンプレート表（空・構造のみ・冪等）
+run_sql migrations/20261020_120000_create_viewer_message_templates.sql

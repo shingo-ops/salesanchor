@@ -835,7 +835,7 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
   - 停止の解除（unsuspend）は文面なし（PO の依頼に無い）。
 
 ### 10-3 作り方（選んだ案と理由）
-- 文面は全部 viewer_bot_texts.py に置く（1か所）。管理画面は API が返す出来上がりの文を表示・コピーするだけで、フロントに文面を持たない（二重管理を作らない）。前例：顧客用 welcome_template を API が返す（backend/app/routers/discord_ticket_config.py:60）。画面のボタン名だけ i18n（ja/en 同一キー、ADR-027）。
+- 文面は全部 viewer_bot_texts.py に置く（1か所）。→ 段11 便2 で DB（viewer_message_templates）へ移す（本書「段11」参照）。管理画面は API が返す出来上がりの文を表示・コピーするだけで、フロントに文面を持たない（二重管理を作らない）。前例：顧客用 welcome_template を API が返す（backend/app/routers/discord_ticket_config.py:60）。画面のボタン名だけ i18n（ja/en 同一キー、ADR-027）。
 - 日付の書式は1つの関数（viewer_bot_texts.format_jst_date / format_jst_datetime）にまとめる。招待へ目印を付けるのも1つの関数（external_browser_url）。
 - ④は backend の commit の後に送る（Web は _change、CLI は run の commit の後）。送る処理は新しい backend/app/services/viewer_room_notice.py の `send_room_notice(channel_id, text) -> bool`：discord_api_request で POST /channels/{id}/messages、本文 {"content": text, "allowed_mentions": {"parse": []}}、max_retries=1、例外は外へ出さず False、ログは種類と HTTP 状態だけ（本文・メールは出さない）。部屋が無い人（discord_channel_id が NULL）には送らない。送れなくても操作は成功のまま（前例 viewer_invite.py）。
   - Web の応答に room_notice（"sent" | "failed" | "no_room"）と room_notice_text を足し、送れなかったときだけ管理画面に「部屋に送れませんでした。下の文をコピーして送ってください」とコピーボタンを出す。
@@ -901,3 +901,112 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
 - send_room_notice は async なので to_thread は使わず直接 await。Redis は gateway が init_redis 済みの非同期クライアント（app.cache.get_redis()）を使う（share_flag_monitor は同期 redis だが gateway では非同期が前例）。
 - `run_once(db_factory, redis_client, now_utc)`：テストでモックを差せるよう引数で受ける。client.py の `_viewer_interview_loop` が1時間ごとに呼ぶ。Redis が None なら 0 件。
 - 重複防止キーは 10-10 d のとおり `viewer_interview_notice:{id}:{期限の JST 日付}`、TTL 30日、送れたときだけ置く。
+
+## 段11（2026-10-20）閲覧者向け文面のテンプレートページ（一覧・確認・コピー・編集）
+
+### 11-0 PO の依頼と決定（原文）
+- 「ヘッダーにテンプレートボタンを設置してテンプレートページが開くように出来る？テンプレートページにテンプレート一覧がテーブルで表示されて行をクリックするとスライドページが開き内容が確認できてコピーや編集も出来る」
+- 置き場所：Opus が「①閲覧者管理の画面の上に置く【おすすめ】②受信箱の今のテンプレートボタンの先 ③両方」を示し、PO「1」。
+- 守ること（PO 原文の要旨）：配線と DB の SSOT を守りデータを分散させない／デザイントークンとデザインシステムを守り金型にない直書きをしない／推測で進めない。
+
+### 11-1 現状（調べた事実。生の引用 /tmp/CC報告ファイル/viewer_templates/tpl_page/recon.md・recon2.md、origin/main 386727908 以降）
+- 文面の正本は今 backend/app/discord_gateway/viewer_bot_texts.py の定数（段10 10-3「文面は全部 viewer_bot_texts.py に置く」design.md:838）。画面で編集する手段は無い。
+- 「テンプレート」ボタンは受信箱にある（frontend/src/pages/inbox/InboxPage.tsx:81-91、`navigate("/templates")`）。先の /templates は仮ページ（App.tsx:281-289 ComingSoonPage、ja.json templates.description「メール・メッセージテンプレート管理」）で全社員向け。→ PO「1」により使わない（お客様とのやり取り用に空けておく）。
+- 閲覧者管理：ViewerAccountsPage.tsx。PageLayout の headerAction（:371-384、Button secondary sm が2つ）、super admin ガード（:90、:272-284）、DataTable onRowClick→Drawer（:410-416、:421-511、footer に保存 :425-438）、保存の結果はインライン表示（:453-462）、コピー（:187-195）。
+- 金型：PageLayout（headerAction :8・navKey は nav.* :27）、DataTable（:38-68、onRowClick :100）、Drawer（:22-32、default 480px / wide）、Textarea（:62-71、rows・maxLength を素通し、文字数表示なし）、Button。新しい金型は作らない（docs/CC_UI_GOVERNANCE.md:9-15）。
+- API の前例：super_admin_viewers.py（prefix なし・main.py:650 で /api/v1、require_super_admin dependencies.py:516-518、User.id INTEGER models.py:25）。更新者の列の前例 `updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`（migrations/20260608_080000_add_carrier_credentials.sql:21）。updated_at の trigger 前例 migrations/20261018_100000_create_product_packagings.sql:52-60。
+- migration：形式 migrations/YYYYMMDD_HHMMSS_*.sql、scripts/run_all_migrations.sh 末尾に登録、public の全体共通表の手本 add_viewer_accounts.sql（RLS なし :2、GRANT salesanchor_app :107-113）。ai_ro のビューは自動で作り直し（run_all_migrations.sh:99-127）。
+- 初期データ：migration は構造だけ（ADR-1007:31-36、ADR-155:25-32）。前例は「表は migration、1行は専用 CLI」（design.md:277-281 D6、backend/app/viewer_discord_cli.py：stdin の JSON だけを受ける・`python -m app.viewer_discord_cli`）。
+- 文面を使う箇所（recon2 §7）：gateway の viewer_trial.py:206（ROOM_RECREATED）・:381（ROOM_WELCOME）、viewer_interview_notice.py:80、viewer_discord_cli.py:114（RECEPTION_MESSAGE）、backend の super_admin_viewers.py:142-143（申込のお願い）・:258（作り直し）、services/viewer_room_notice.py:44-57（④）。今は sync 関数（DB 無し）から返している。
+- Discord の1通の上限 2000 文字に対する定数は viewer 側に無い。前例 discord_notifier.py:37 `_MAX_MESSAGE_CHARS = 1800`。
+
+### 11-2 対象にする文面（9件）と対象外
+| 鍵 | 画面の名前 | 送り方 | いつ | 差し込み項目 |
+|---|---|---|---|---|
+| signup_request | 申込のお願い | 手で送る | 申込の前 | {signup_url}（固定値・自動で入る） |
+| reissue_notice | 申込コードの作り直し | 手で送る | 作り直したとき | {line_name} {code} {expires} {invite_url} |
+| reissue_notice_no_invite | 申込コードの作り直し（招待なし） | 手で送る | 招待が作れなかったとき | {line_name} {code} {expires} |
+| room_welcome | 部屋のはじめの案内 | 自動 | 申込コードを入れて部屋ができたとき | {email} {password} |
+| room_recreated | 部屋の作り直しの案内 | 自動 | 部屋を作り直したとき | {email} |
+| notice_extended | 延長のお知らせ | 自動 | 延長したとき | {until_date} |
+| notice_activated | 本登録のお知らせ | 自動 | 本登録にしたとき | なし |
+| notice_suspended | 停止のお知らせ | 自動 | 停止したとき | なし |
+| interview_request | 面談のお願い | 自動 | 期限の前日 10:00 以降 | {expires_date} |
+- 対象外（今のまま viewer_bot_texts.py）：受付のボタン付きメッセージ RECEPTION_MESSAGE（直しても貼ってある投稿は変わらず、貼り直しが要るため）、ボタン名・小窓の題・エラーの返事（WRONG_SERVER など）・YOUR_ROOM・ROOM_TOPIC（システムの部品で、お客様に送る案内文ではないため）。
+- 9件の名前・送り方・いつ・差し込み項目の意味は画面の言葉なので i18n（ja/en 同一キー）。文面の本文は i18n に入れない。
+
+### 11-3 作り方（選んだ案と理由）
+- **正本を DB の1か所へ移す**：新しい表 `public.viewer_message_templates`（key TEXT PRIMARY KEY、body TEXT NOT NULL、updated_at TIMESTAMPTZ NOT NULL DEFAULT now()、updated_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL、CHECK (char_length(body) BETWEEN 1 AND 1800)）。RLS なし・GRANT は add_viewer_accounts.sql と同じ。全体共通（テナント別ではない。閲覧者は全体で1つの仕組みのため）。
+- **コードに残すのは「台帳」だけ**：新しい backend/app/services/viewer_message_templates.py に9件の鍵と、それぞれの差し込み項目の集合（文面は持たない）。読み出し `async get_body(session, key) -> str | None`、差し込み `render(key, body, **values)`、検査 `validate(key, body)`。
+- **編集の検査**（保存の前に API で必ず行う）：①差し込み項目の集合が台帳と完全に同じ（足りない・余計・書式指定や `!r` 付きは 422）②空は 422 ③1800 文字を超えたら 422（前例 discord_notifier.py:37。差し込み後に 2000 を超えないための余裕）④`{` `}` の対応が崩れていたら 422（string.Formatter で解析できない）⑤画面で開いた時の updated_at と違えば 409（2人が同時に直したときの上書き防止）。
+- **送る側**：9件を使う全箇所を「DB から読んで差し込む」に替える。行が無い・読めないときは送らず（自動は警告ログ、コピーの API は 503 で「テンプレートが見つかりません」）。コードの文面へ戻る道は作らない（正本を2か所にしないため）。
+- **初期値の入れ方**：migration は表だけ。専用 CLI `python -m app.viewer_template_cli`（stdin の JSON {action:"seed"} だけを受ける。前例 viewer_discord_cli.py）が、viewer_bot_texts.py の今の9つの定数を読み、無い行だけ INSERT する（ある行は触らない）。本番で1回だけ Opus が実行（PO 委任・GO 記録）。便2 で定数と seed を消す。
+- **画面**：
+  - 閲覧者管理の headerAction（ViewerAccountsPage.tsx:371-384）に Button secondary sm「テンプレート」を足し、`/super-admin/viewer-templates` へ。サイドバーには足さない（前例：非掲載ページ recon2 §3）。
+  - 新しいページ frontend/src/pages/super-admin/ViewerTemplatesPage.tsx：PageLayout（navKey nav.superAdminViewerTemplates、headerAction に「閲覧者管理へ戻る」）、super admin ガードは ViewerAccountsPage と同じ形、DataTable 4列（名前・送り方・いつ・最終更新）。
+  - 行クリックで Drawer（default 幅）：名前・送り方・いつ・差し込み項目の説明（i18n）・本文（便1 は読むだけ、便2 で Textarea 編集）・「コピー」（copy_text を写す）・便2 で footer に保存。保存の結果は ViewerAccountsPage と同じインライン表示。
+  - copy_text：固定値の差し込み（{signup_url} だけ）を API が入れた文。人ごとの項目（{line_name} など）は {…} のまま写る（人ごとの完成文は今までどおり閲覧者管理の各ボタンで写す）。
+  - 色・寸法の直書きなし。新しい部品なし。
+- **却下した案**：コードの定数を残して DB を上書き用にする（正本が2か所になる）／migration で初期値を入れる（ADR-1007 に反する）／受信箱の /templates に作る（PO「1」）／履歴表を作る（今回の依頼に無い。updated_at と更新者だけ残す）。
+
+### 11-4 便
+- 便1：表（migration）・台帳・seed CLI・一覧 GET（`GET /api/v1/super-admin/viewer-templates`、body・copy_text・updated_at・更新者の表示名）・ページ（表＋スライド＋コピー、読むだけ）・ヘッダーのボタン。送る側は今のまま（定数）。→ 本番で seed を実行し、9行が今の定数と一字一句同じことを確かめる。
+- 便2：編集（`PUT /api/v1/super-admin/viewer-templates/{key}`、11-3 の検査）・スライドの編集と保存・送る側9件を DB 読みに替える・viewer_bot_texts.py から9つの文面定数と seed を消す。
+- 便1 と便2 の間だけ、DB の9行は定数の写しになる（画面は読むだけで、送る側は定数を使う）。便2 で定数を消して1か所に戻す。この間に画面から文面を変える手段は無いので、食い違いは起きない。
+
+### 11-5 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| T1 閲覧者管理の上に「テンプレート」があり、押すと9行の表が開く。super admin 以外は開けない（API 403） | vitest・pytest、PO 目視（再読み込みしてから） |
+| T2 行を押すとスライドが開き、本文・送り方・いつ・差し込み項目の説明が出て、「コピー」で copy_text が写る（申込のお願いは目印付き URL 入り） | vitest・pytest |
+| T3 本番の seed 後、9行の本文が今の定数と一字一句同じ | CLI の結果（鍵ごとの一致○×、本文は出さない） |
+| T4 編集：保存すると DB の本文が変わり更新者・時刻が残る。差し込み項目の不足/余計・空・1801文字・括弧の崩れは 422、古い画面からの保存は 409 | pytest |
+| T5 編集した文が、そのまま自動のお知らせ・コピーに使われる | pytest（送る側全9件が DB の本文を使う） |
+| T6 行が無いときは送らない（自動は警告ログ、コピーは 503） | pytest |
+| T7 便2 の後、viewer_bot_texts.py に9つの文面定数が無い | `git grep` 0件 |
+| T8 本番：PO が1件を直し、閲覧者管理のコピーに直した文が出る | PO 目視 |
+
+### 11-6 リスクと対処
+- 部屋のはじめの案内（ログイン情報）が送れなくなる：便2 の deploy 前に T3 を必ず○にする。便2 のテストで9件全部の読み出しを確かめる。
+- 編集で差し込み項目を消して、ログイン情報が届かない：T4 の検査で保存させない。
+- 誤ってお客様に崩れた文が届く：括弧の検査と 1800 文字の上限。
+- 同時編集の上書き：409。
+
+### 11-7 外部事例
+- 該当事例は不要（既存の部品・前例の組み合わせで、新しい技術選択が無いため）。
+
+### 11-8 維持
+- 文面の直しは画面（正本は DB の1か所）。鍵と差し込み項目を増やすときだけコード（台帳）を直す。台帳と表の9行が揃っているかは T3/T5 のテストで見る。
+
+### 11-9 戻し方
+- 便2 を Revert すると送る側は定数に戻る（その時点で画面の直しは送る側に効かなくなる。表は残す）。便1 を Revert しても表は残る（migration は構造だけで、表の削除はしない）。
+
+### 11-10 審査 REVISE（review_design.md、基準 origin/main 38613d7d7）への対応（11-1〜11-9 より優先）
+基準は 38613d7d7 に更新（386727908 からの差は #4576 のみで 11-1 に反映済み）。
+
+**B-1 本番の初期値の入れ方（11-3「初期値の入れ方」を置き換え）**
+- CLI `python -m app.viewer_template_cli` は stdin の JSON `{"action":"seed","dry_run":true|false}` と `{"action":"verify"}` だけを受ける。seed は viewer_bot_texts.py の今の9定数を読み、`INSERT ... ON CONFLICT (key) DO NOTHING`。dry_run=true は入れる予定の鍵だけ返し書かない。verify は鍵ごとに「行がある／本文が定数と一字一句同じ」を○×で返す（本文は出さない）。
+- 本番の実行者は Opus（Sonnet には無制限鍵を使わせない）。根拠は本セッションの PO 原文「GO記録やSSHへの無制限鍵へのアクセス等、必要な権限は全て必要な場合は使用して良い許可を与える。PRマージ、デプロイまで完走させてくれ。」（Q12=n の「毎回 PO 本人の GO」に対し、PO が本セッションで明示した個別の許可）。手順は dry_run → seed → verify。GO 原文・時刻・結果（鍵ごとの○×）を docs/handoff/gas-viewer-fresh-fast/ の段11 記録に残す。
+- 便2 で seed は消す（定数が無くなるため）。空の環境は B-4 の画面から入れる。テストはテスト内で行を入れる。
+
+**B-2 「送らない」の判定は後戻りできない処理の前（11-3「送る側」に追記）**
+review_design.md B-2 の文案をそのまま採用：部屋のはじめの案内は申込コードの照合より前に読み、無ければ TRY_LATER（申込コードは使用済みにせず部屋も作らない）／部屋の作り直しは部屋を作る前に読み、無ければ TRY_LATER／申込コードの作り直しは reissue_signup_code の前に読み、無ければ 503 で何も変えない／延長・本登録・停止は状態の変更と同じトランザクションで commit 前に読んで文を作り、無くても状態は変え、お知らせは送らない（commit 後に DB を読まない）／面談のお願いは run_once の最初に1回読み、無ければ警告ログ1回・0件・Redis キーを作らない／申込のお願いは db を受け、無ければ 503。
+
+**B-3 作り直し案内の書き出し**
+- reissue_notice・reissue_notice_no_invite は、本文が `{line_name}さん、` で始まらなければ 422（画面に理由を出す i18n キー superAdmin.viewerTemplates.errorLineNamePrefix）。差し込み後、名前が空なら今と同じく頭の「さん、」を外す。理由：今の動きを変えず、名前が空の人にも崩れた文を出さないため。代わりの言葉を持つ案は、台帳に文面を持つことになり正本が2か所になるので採らない。
+
+**B-4 行が無い環境（11-3 PUT・11-4 便2 に追記）**
+- 一覧 GET は台帳の9件を必ず返し、行が無い鍵は body=null・「未登録」。PUT は `expected_updated_at: null` かつ行が無いとき INSERT（ある時は 409）。行がある時は `UPDATE ... SET body, updated_by_user_id, updated_at=now() WHERE key=:k AND updated_at=:expected` で更新件数0なら 409（比べるのは SQL、N-2）。updated_at は SQL の now() で入れ、trigger は付けない（N-1）。
+
+**B-5 お知らせが送れなかったことを画面に出す**
+- 延長・本登録・停止でテンプレートが無い・検査に通らないときは `room_notice: "no_template"`、`room_notice_text: null`（ViewerStatusChangeResponse の Literal に追加、openapi.json 再生成）。閲覧者管理は新キー superAdmin.viewers.roomNoticeNoTemplate「テンプレートが見つからないため、部屋に送れませんでした。テンプレートの画面で文を確かめてください」（ja/en）を出す。
+
+**Non-blocking の採用**
+- N-1：`REFERENCES public.users(id) ON DELETE SET NULL`、`GRANT SELECT, INSERT, UPDATE ON public.viewer_message_templates TO salesanchor_app;`（SEQUENCE の GRANT なし）。PG テストの準備に新 migration を足す。
+- N-3：自動で送る直前に差し込み後の長さを数え、2000 を超えたら送らず警告ログ（no_template と同じ扱い）。コピーの API は文をそのまま返す（LINE で使うため）。画面は Textarea の helperText に「n / 1800」（Array.from で数える、ViewerAccountsPage.tsx:147-151 の前例）。
+- N-4：検査は field_name を `.` `[` で切らず文字列のまま台帳の集合と比べる／`list(Formatter().parse(body))` を try の中で回し切る／format_spec・conversion が空でなければ 422／`{{` `}}` は文字として許す／送るときも同じ検査を通し、失敗は「行が無い」と同じ扱いで例外を外へ出さない。
+- N-5：触るテスト（review_design.md ③の4ファイルの行と db_factory の順番）、openapi.json の再生成、新ページの vitest、i18n の追加キー（nav.superAdminViewerTemplates、superAdmin.viewerTemplates.*、errorLineNamePrefix、roomNoticeNoTemplate）をカードに列挙する。
+- N-6：更新者の表示は users.full_name、空なら username。
+- N-7：段11 を docs/handoff/gas-viewer-fresh-fast/design.md に追記してコミット（recon も同フォルダへ）。10-3（:838）に「段11 便2 で DB へ移した」と注記。便2 で viewer_bot_texts.py の冒頭説明を直し、残すもの（SIGNUP_URL、format_jst_date、format_jst_datetime、external_browser_url、RECEPTION_MESSAGE ほか 11-2 の対象外）を明記。
+- N-8：T7 の検索式 `git grep -n -E "^(SIGNUP_REQUEST|REISSUE_NOTICE|REISSUE_NOTICE_NO_INVITE|ROOM_WELCOME|ROOM_RECREATED|NOTICE_EXTENDED|NOTICE_ACTIVATED|NOTICE_SUSPENDED|INTERVIEW_REQUEST) =" origin/main -- backend/app` が0件。T9 新設：行が無いとき ①申込コードを入れても使用済みにならず部屋も作られない ②作り直しで申込コードが変わらない ③延長の応答が room_notice="no_template" で状態は変わる（pytest）。T8 は手で送る「申込のお願い」1件だけを直し、確かめた後に元の文へ戻す。
+- 未確認4（gateway の起動し直し）：便2 の本番確認で discord-gateway コンテナの起動時刻が deploy 後であることを観測項目 T10 にする（便1 は gateway のコードを変えないので不要）。
