@@ -30315,6 +30315,20 @@
         "title": "SignalSummary",
         "type": "object"
       },
+      "SignupRequestResponse": {
+        "properties": {
+          "text": {
+            "description": "①申込のお願いの文",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SignupRequestResponse",
+        "type": "object"
+      },
       "SoldOutResultItem": {
         "properties": {
           "analysis_result_id": {
@@ -36325,6 +36339,11 @@
             "description": "Discord 招待リンク（作れなければ null）",
             "title": "Invite Url"
           },
+          "message": {
+            "description": "そのまま送れる案内文（招待には外部ブラウザの目印付き）",
+            "title": "Message",
+            "type": "string"
+          },
           "signup_code": {
             "description": "申込コード（XXXX-XXXX-XXXX-XXXX）",
             "title": "Signup Code",
@@ -36333,7 +36352,8 @@
         },
         "required": [
           "signup_code",
-          "expires_at"
+          "expires_at",
+          "message"
         ],
         "title": "ViewerReissueResponse",
         "type": "object"
@@ -63068,6 +63088,32 @@
           }
         ],
         "summary": "List Viewers Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/signup-request": {
+      "get": {
+        "operationId": "signup_request_endpoint_api_v1_super_admin_viewers_signup_request_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Signup Request Endpoint",
         "tags": [
           "super-admin"
         ]

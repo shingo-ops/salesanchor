@@ -269,6 +269,58 @@ def test_texts_within_discord_limits():
     assert payload is not T.reception_message_payload()
 
 
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        ("https://x.jp/a", "https://x.jp/a?openExternalBrowser=1"),
+        ("https://x.jp/a?k=v", "https://x.jp/a?k=v&openExternalBrowser=1"),
+        ("https://x.jp/a#signup", "https://x.jp/a?openExternalBrowser=1#signup"),
+        ("https://x.jp/a?k=v#s", "https://x.jp/a?k=v&openExternalBrowser=1#s"),
+        ("https://x.jp/a?openExternalBrowser=1#s", "https://x.jp/a?openExternalBrowser=1#s"),
+    ],
+)
+def test_external_browser_url(url, expected):
+    assert T.external_browser_url(url) == expected
+
+
+def test_format_jst_datetime_crosses_date_and_naive_is_utc():
+    aware = datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc)
+    assert T.format_jst_datetime(aware) == "10月26日 00:00"
+    assert T.format_jst_datetime(datetime(2026, 1, 5, 0, 5)) == "1月5日 09:05"
+    assert T.format_jst_date(aware) == "10月26日"
+    assert T.format_jst_date(datetime(2026, 12, 31, 14, 59)) == "12月31日"
+
+
+def test_signup_request_text_contains_signup_url():
+    text = T.signup_request_text()
+    assert T.SIGNUP_URL in text
+    assert "openExternalBrowser=1#signup" in text
+    assert "{" not in text
+
+
+def test_reissue_notice_with_invite():
+    text = T.reissue_notice_text(
+        "Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc), "https://discord.gg/abc"
+    )
+    assert text.startswith("Taroさん、申込コードを作り直しました。")
+    assert "ABCD-EFGH-JKMN-PQRS（10月26日 00:00まで有効）" in text
+    assert "Discord への招待：https://discord.gg/abc?openExternalBrowser=1" in text
+    assert "{" not in text
+
+
+def test_reissue_notice_without_invite_has_no_invite_line():
+    text = T.reissue_notice_text("Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), None)
+    assert "Discord への招待" not in text
+    assert "ABCD-EFGH-JKMN-PQRS" in text
+
+
+@pytest.mark.parametrize("name", [None, "", "  "])
+def test_reissue_notice_without_line_name_has_no_san_prefix(name):
+    text = T.reissue_notice_text(name, "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), "https://discord.gg/abc")
+    assert text.startswith("申込コードを作り直しました。")
+    assert "さん、" not in text
+
+
 def test_normalize_signup_code():
     assert normalize_signup_code("abcd-efgh jkmn pqrs") == "ABCDEFGHJKMNPQRS"
     assert normalize_signup_code("0123-4567-89AB-CDEF") == "0123456789ABCDEF"
