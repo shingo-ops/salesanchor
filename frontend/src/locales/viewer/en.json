@@ -80,7 +80,6 @@
       "forgot": "Forgot your password?",
       "signup": "Apply"
     },
-    "changePassword": "Change password",
     "passwordChange": {
       "title": "Change password",
       "forced": "You need to change your password the first time.",
