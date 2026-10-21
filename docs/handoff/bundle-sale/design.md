@@ -11,7 +11,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
 決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
-状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）。
+状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）・バルク系だけの追加の形 P1・P2（§12）は設計審査済み（Opus reviewer 3回目 APPROVE・Fable 成功見込み「高」）・PO 承認済み（2026-10-21、PO の答え「1」）・便1 実装未着手。
 
 ---
 
@@ -152,6 +152,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 - 守り手3（人の目・毎日）: 決まらない行は理由 bundle_unverified で要確認の欄に出る（今の要確認の仕組み）。
 - 守り手4（再現の台本）: scripts/dev/bundle_replay.py。規則を変える便は、PR 前にこれで本番の全行に当て直し、結果の数を PR 本文に書く（ADR-1027 の決まり）。
 - 守り手5（理由コードの整合・毎回）: 既存の test_review_reason_codes_consistency.py と test_review_reason_labels_ja_sync.py が、bundle_unverified の定数・SQL・ja/en・ラベル JSON のずれを赤にする。
+- 守り手6（手順書・2026-10-21 追記）: docs/runbooks/bundle-sale-new-wording.md。新しい書き方を見つけたら、数える→設計の追記→テスト→PR 本文に数、の順で直す。索引は docs/adr/FEATURE-INDEX.md の「まとめ売り」の行。
 - 未確立（正直な明記）: 「新しい書き方のまとめ売りが増えた」ことを自動で知らせる仕組みは無い。bundle_replay.py は「N＋別名に無い語＋まとめの語」の当たりの語を数えて出す（設計時は 135 行・全て品名の説明）ので、規則を変える便と週次の点検ではこの欄の新しい語を人が見る。拾えない形（B3・入り・×N）は人が要確認で見る。bundle_replay.py は本番データが要るため CI では走らない。
 
 ## 10. 接触面分析（6 面）
@@ -174,3 +175,79 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
   - #8: price_normalized の読み手 66 行（backend/app）のうち「1 個の値段」前提で影響が出るのは相場（v102_unit_price_check_svc.py:54-65、line_analysis_v102_svc.py:913-918）・引き継ぎ（:1161-1225）・買取（v102_buyback_unit_svc.py:140・215）の 3 つで、5-3 で bundle_size のある行を外す。配信の SUM/MAX（tcg_distribution_svc.py:377）は gkey に bundle_size を入れるので混ざらない。ほかは NULL かどうかと表示だけ（/tmp/CC報告ファイル/bundle-sale/replay2/facts.md）。
   - #12: 換算済み 13 行は便3 の再解析で置き換える（UPSERT は ON CONFLICT (extraction_item_id)、line_analysis_v102_svc.py:709-732。Gemini の読みから毎回作り直す）。bundle_size は ON CONFLICT の SET にも足す。人の直しがある行は便3 の始めに数えて止める。
 - 現在の換算済みでない行で「バルク系・convert が set・規則 R' で決まらない」（新しく review になる行）は 0（換算済み 13 行は全て決まる。replay2 の照合）。
+
+## 12. 追記 2026-10-21: バルク系だけ見る形 P1・P2
+
+PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8 行を在庫表・シート版に「商品名 100枚セット」で出す）。ADR-1027「バルク系だけの追加の形（2026-10-21 追記）」が決定、この節が作り方。仕入元の名前・本文はこの節に載せない（調査の生データはリポジトリの外）。
+
+### 12-1. 目的
+区分がバルク系の行で、本文が「100枚のかたまり」と「在庫Nセット」を両方書いているのに「1枚かセットか分からない」（bulk_price_basis_unknown）で止まっている行を、まとめ売り（bundle_size=100）として読む。
+
+### 12-2. 現在地（origin/main 7560d8007）
+- 読み取りは backend/app/services/v102_bundle_svc.py の `detect_bundle`（:112-143）1 か所。形は :76 の「数＋単位の語＋まとめの語」だけ。括弧の中は :80-89 で使わない。
+- 呼び出しは backend/app/services/line_analysis_v102_svc.py `_write_results` の :1140（`_apply_bundle` :1028 → :1034）。全ての区分に当てる。直後の :1141-1143 は既に `item.get("product_category") == PRODUCT_KUBUN_BULK` で分けている（PRODUCT_KUBUN_BULK は gemini_raw_copy_v102_product_first.py:49）。
+- まとめ売りと決まった行は `_apply_bulk_price` を通らない（line_analysis_v102_svc.py:1049）ので、理由 bulk_price_basis_unknown は付かない（backend/tests/test_v102_bulk_price.py:162-165 が固定）。
+- scripts/dev/bundle_replay.py:94 は区分を見ずに detect_bundle を呼ぶ。入力の TSV は既に列 kubun_type を持つ（:6-7）が読んでいない。
+- 基準値（2026-10-21、ADR-1024 の読み取りの道）: 現行のバルク系 55 行のうち bulk_price_basis_unknown 21 行・bundle_unverified 0 行。
+
+### 12-3. 足す形
+| 形 | 書き方 | 当てる本文 | 候補にする条件 |
+|---|---|---|---|
+| P1 | まとめの語 ＋ 空白 ＋ `(` N 単位の語 `)` | 括弧を除く前の本文 | 括弧の直前がまとめの語。括弧の内側の前後に空白を許さない |
+| P2 | まとめの語 ＋ 空白 ＋ N 単位の語 | 括弧を除いた後の本文 | 数量が整数に読め、`_has_set_after_quantity(本文, 数量, Set の語)` が真 |
+
+- 共通: 当たりの終わりの次の 1 字が「入」なら使わない・N<2 は使わない・単位は別名マスタの canonical（コードに単位名を書かない）・まとめの語は既存 BUNDLE_WORDS（v102_bundle_svc.py:23-25）。
+- 足した候補は既存の候補に混ぜてから、既存の判定（:131-143）を 1 回通す。違う大きさが 2 つなら決まらない。
+- 足さない形: 「N種＋まとめの語」（「種」を単位にしない・区分で絞らないと非バルクで動く）、「N単位M種」（P2 に含まれる）。
+
+### 12-4. 便1 で触るファイル（ほかは触らない）
+- backend/app/services/v102_bundle_svc.py: `detect_bundle(..., bulk_shapes: bool = False)`。:128 の後に `if bulk_shapes: found += _find_bulk_candidates(full, word_to_canonical, set_words, quantity)`。`_bulk_patterns`（lru_cache・`_patterns` と同じ語の作り方）と `_find_bulk_candidates` を足す。説明文 :4 に「バルク系だけ P1・P2 も見る」を足す。
+- backend/app/services/line_analysis_v102_svc.py: `_apply_bundle` に `bulk_shapes` を足して渡す。:1140 を `pairs` と zip し、`bulk_shapes=item.get("product_category") == PRODUCT_KUBUN_BULK`。
+- scripts/dev/bundle_replay.py: `_BULK_KUBUN = "バルク系"`（product_first を import しない。一致はテストで固定）。:94 に `bulk_shapes=(r.get("kubun_type") or "") == _BULK_KUBUN`。集計をバルク系／それ以外に分け、False と True で結果が違う行の数を出す。
+- backend/tests/test_v102_bundle.py: P1・P2（セットあり→決まる／セット無し→None）・bulk_shapes=False→None・既存の形と混ざる→決まらない・誤り #9・#81・#42 の形→None・`_BULK_KUBUN == PRODUCT_KUBUN_BULK`。単位名の直書き検査（:90-95）は今のまま通る。
+- backend/tests/test_v102_bulk_price.py: `_write_results` 段で、バルク系の P1 の作り文→bundle_size=100・Piece・値段と数量は不変・review_reasons None。同じ本文で箱系→bundle_size None。
+- 触らない: v102_bulk_price_svc.py・配信 SQL・マスタ・migrations・frontend。
+
+### 12-5. 便の分け方（1 便 1 変更）
+- 便0（この節・文書のみ）: ADR-1027 追記・この節・FEATURE-INDEX・手順書 docs/runbooks/bundle-sale-new-wording.md。
+- 便1（コード）: 12-4。PR の前に bundle_replay.py を全行に当て直し、バルク系／それ以外の数と増えた行数を PR 本文に書く。固定一覧（下の 12-6）と 1 行でも違う、またはバルク系以外で 1 行でも変わるなら止める。
+- 便2（本番データ）: 現行 8 行を含む 4 投稿だけを再解析する（過去 7 行の投稿は配信に出ないので通さない）。前の値を全列保存・必ず戻す試し・書き戻しの SQL を先に用意。実行の前に同意票で PO に確認（ADR-1033）。再解析の最後に配信の予約が走るので、8 行が次の配信で出ることを同意票に書く。
+- 便3（見張り）: agent-console の週次定期実行で、バルク系の bulk_price_basis_unknown・bundle_unverified の件数を Discord に出す。基準値は 12-2。
+- 便4（表示・別テーマ）: 英語名が空のときの商品名の欄（tcg_distribution_svc.py:271 で先頭が空白になる）。
+
+### 12-6. 受入基準
+固定一覧: 判定の写し（origin/main 7560d8007 と同じ判定に 12-3 を足したもの）を全 v102 35,846 行に当てて変わる 15 行（現行 8・過去 7。全て「当たりなし→100・Piece」）。一覧はリポジトリの外（社外秘）。
+
+| 基準 | 検証方法 |
+|---|---|
+| K1 固定一覧の現行 8 行が bundle_size=100・単位 Piece になる。一覧外のバルク系現行行の bundle_size は変わらない | 便2 の前後を ADR-1024 の読み取りの道で照合 |
+| K2 対象行の値段・数量の変化 0 | 同上 |
+| K3 既存の bundle_size 157 行の変化 0 | 同上＋bundle_replay.py 全行 |
+| K4 バルク系以外の行の変化 0 | bundle_replay.py 全行（区分付き）＋便2 前後照合 |
+| K5 誤り #9・#81・#42 の形は None のまま | 単体テスト（同じ形の作り文）＋bundle_replay.py |
+| K6 新しく要確認になる行 0 | 便2 前後照合 |
+| K7 変わってよい列は bundle_size・unit_canonical・unit_id・unit_resolved・needs_review・review_reasons の 6 列だけ | 便2 前後照合（ほかの列が 1 つでも違えば止める） |
+| K8 在庫表・シート版の日本語の表示が「商品名 100枚セット」 | K10 と同じ目視 |
+| K9 現行 8 行は needs_review=False・review_reasons NULL になり要確認の欄から出る | 便2 前後照合 |
+| K10 8 行のうち配信の条件（tcg_distribution_svc.py:198-226 の max_age_hours 等。便2 の前に値を記録）に合う行だけが出る | 配信 SQL の読み取り＋PO 目視 |
+
+### 12-7. 弊害・トレードオフ
+- 正解の記録と照らせる行は 0。根拠は ①本文が「100枚のかたまり」と「在庫Nセット」を両方書く ②同じ仕入元・同じ商品・同じ値段で語の順番だけ違う行が既に 100 で読めている ③既存 157 行・バルク系以外は動かない ④過去の誤り 3 件は当たらない。
+- 在庫が裸の数（「在庫 20」）の行は読まない。今のまま要確認に残る（悪化はしない）。
+- 「数量の直後にセット」が本文の別の数と偶然並ぶ危険は、既存の割り切れ判定と同じ関数・同じ危険。
+- まとめの語は v102_bundle_svc.py:23-25 のほか v102_bulk_price_svc.py:27・55・58・62 にもある。今回は増やさない。1 か所にまとめるのは別の ADR。
+- 再解析は他の規則も当て直すので、コードを戻しても DB は戻らない（便2 で書き戻しの SQL を先に用意）。
+
+### 12-8. 外部・過去事例
+外部事例は使わない。理由: LINE の仕入れ文面の独自の書き方の読み分けで、同じ条件の数値つき公開事例が無い。社内の過去事例は ADR-1027 便1〜3（82 種 144 行を読み、誤り 3 種を括弧と形の除外で外した）。今回はその除外を「バルク系＋本文の裏付けあり」の狭い形でだけ戻す。Gemini に選ばせる案は 2026-10-21 の試験で根拠の無い行も言い切ったため、PO が採らないと判断した。
+
+### 12-9. 維持の仕組み（この追記の分）
+- 守り手: backend/tests/test_v102_bundle.py と backend/tests/test_v102_bulk_price.py（便1 で追加。CI 必須の pytest で毎回）。
+- 守り手: scripts/dev/bundle_replay.py（便1 で区分付きに。規則を変える便は PR の前に全行へ当て直す。CI では走らない）。
+- 守り手: docs/runbooks/bundle-sale-new-wording.md（便0）と docs/adr/FEATURE-INDEX.md の「まとめ売り」の行（便0）。
+- 未確立（正直な明記）: 件数の自動の見張り（便3 まで無い）・英語名が空の表示のテスト（便4 まで無い）・まとめの語の置き場の 1 本化（別の ADR）。
+
+### 12-10. 未確認（便2 の前に確かめる）
+- 本番で動いている版が origin/main と同じか。
+- 本番に public.unit_aliases の互換ビューがあるか（結果の一致は傍証）。
+- `_write_results` のほかの段が 8 行に新しい理由を足さないか（K9 は便2 の前後で判定。足されたら止めて理由を見る）。
