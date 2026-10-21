@@ -18,74 +18,11 @@
  *   cd frontend && npm run test:e2e:vl
  */
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
-import { installAuthBypass } from "../utils/auth";
-import { mockApi } from "../utils/api-mock";
-import { commonMocks } from "../utils/common-mocks";
-
-function makeItems(n: number) {
-  return Array.from({ length: n }, (_, i) => ({
-    id: `row-${i + 1}`,
-    product_id: 100 + i,
-    product_name: `テスト商品 ${i + 1}`,
-    name_en: null,
-    category: "pokemon",
-    mark: "SV8",
-    condition: "sealed",
-    unit: "BOX",
-    offer_type: "in_stock",
-    status: "in_stock",
-    note_ja: "備考 あり",
-    ship_ja: "即日 発送",
-    merged_count: 1,
-    extraction_item_ids: [`item-${i + 1}`],
-    posted_at: null,
-    ship_timing: null,
-    supplier_id: 1,
-    supplier_name: "仕入先 1",
-    unit_price: 5000 + i * 100,
-    quantity: 10 + i,
-    work_code: "pokemon_booster_box",
-    offered_at: "2026-10-15T01:00:00Z",
-    release_date: "2026-09-01",
-  }));
-}
-
-async function setup(page: Page, width: number, height: number, items = 5) {
-  await page.setViewportSize({ width, height });
-  await installAuthBypass(page);
-  await mockApi(page, {
-    ...commonMocks(),
-    "GET /inventory": {
-      items: makeItems(items),
-      total: items,
-      page: 1,
-      per_page: 50,
-      suppliers: [{ id: 1, name: "仕入先 1" }],
-      categories: ["pokemon"],
-      conditions: ["sealed"],
-      units: ["BOX"],
-      window_hours: 0,
-      fresh_window_hours: 24,
-    },
-    "GET /me/inventory-filters": {
-      enabled: false,
-      hidden_supplier_ids: [],
-      hidden_categories: [],
-      hidden_columns: [],
-    },
-    "GET /products/tcg-types": [{ code: "pokemon_booster_box", name_ja: "ポケモン" }],
-    "GET /inventory/raw-texts": {
-      items: [{ extraction_item_id: "item-1", raw_text: "原文テキスト", line_start: 1, line_end: 1 }],
-    },
-  });
-}
+import { gotoInventory } from "./inventory-helpers";
 
 test.describe("在庫表スマホ原文ボタン（便1）", () => {
   test("375px: 各カードに原文ボタンが1つ・44x44以上（A1/A2）", async ({ page }) => {
-    await setup(page, 375, 800);
-    await page.goto("/inventory");
-    await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
+    await gotoInventory(page, { width: 375, height: 800 });
 
     const cardCount = await page
       .locator('[data-testid^="inventory-row-"][role="listitem"]')
@@ -107,9 +44,7 @@ test.describe("在庫表スマホ原文ボタン（便1）", () => {
   });
 
   test("375px: 原文ボタンを押すと全画面のパネルが開き下部タブを覆う（A3/A4）", async ({ page }) => {
-    await setup(page, 375, 800);
-    await page.goto("/inventory");
-    await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
+    await gotoInventory(page, { width: 375, height: 800 });
 
     await page.getByTestId("inventory-raw-text-row-1").click();
     // `data-testid="supplier-drawer"` は Drawer 金型（frontend/src/components/Drawer.tsx:135）が
@@ -161,9 +96,7 @@ test.describe("在庫表スマホ原文ボタン（便1）", () => {
   });
 
   test("1440px: 原文ボタンは出ない（A6）", async ({ page }) => {
-    await setup(page, 1440, 900);
-    await page.goto("/inventory");
-    await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
+    await gotoInventory(page, { width: 1440, height: 900 });
     await expect(page.locator('[data-testid^="inventory-raw-text-"]')).toHaveCount(0);
   });
 });
