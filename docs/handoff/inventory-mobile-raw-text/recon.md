@@ -130,7 +130,7 @@ worktree: `/root/worktrees/salesanchor/release-inventory-mobile-raw-text`（ブ�
   `window.matchMedia` を強制的に `matches: true`（常にモバイル判定）に差し替え、カード本体（`rowEl` = `data-testid="inventory-row-r1"`、`frontend/src/pages/inventory/InventoryPage.tsx:578` の `rowTestId`）をクリックしても API が呼ばれないことを確認している。「誰も開けない」ことを固定するテストであり、本便で「カード本体では開かない／原文ボタンでは開く」に書き換える対象。
 - 行の `data-testid` の付与元: `frontend/src/pages/inventory/InventoryPage.tsx:578`（`rowTestId={(it) => \`inventory-row-${it.id}\`}`）。
 
-## 6. `frontend/src/components/Button.tsx` / `buttonAppearance.ts` / `Button.css` — `size="lg"` + `iconOnly` が 44px になる根拠
+## 6. `frontend/src/components/Button.tsx` / `frontend/src/components/buttonAppearance.ts` / `Button.css` — `size="lg"` + `iconOnly` が 44px になる根拠
 
 - `Button` 本体の props: `frontend/src/components/Button.tsx:41-56`（`size="md"` 既定・`iconOnly` は `buttonAppearance` に渡すだけ）。
 - クラス組み立て: `frontend/src/components/buttonAppearance.ts:33-43`
@@ -203,9 +203,9 @@ worktree: `/root/worktrees/salesanchor/release-inventory-mobile-raw-text`（ブ�
   ```
   裏取りできた（原文どおり）。
 - i18n キー `inventory.rowDrawer.*` の既存状況: `frontend/src/locales/ja.json:1463-1471` と `frontend/src/locales/en.json:1463-1471` にキー数・構造が一致している（`title`/`loadError`/`notFound`/`itemTab`/`tabAnalysis`/`tabRawText`/`rawTextTitle`）。本便で追加するキー（例: `openButton`）はこのオブジェクトに両ファイル同じ場所へ追加する。
-- `inventoryColumns.tsx` の列定義パターン（`hideId`/`col` の組で `all` 配列に積み、`colVisible` で絞る）: `frontend/src/features/inventory/inventoryColumns.tsx:53-213`。本便で足す列もこのパターンに従う（ただし PC では出さないため `hideId: null` 固定にはできず、呼び出し側 `isMobile` 分岐で列配列自体を組み替える方式にする。設計 3-1 のとおり）。
+- `frontend/src/features/inventory/inventoryColumns.tsx` の列定義パターン（`hideId`/`col` の組で `all` 配列に積み、`colVisible` で絞る）: `frontend/src/features/inventory/inventoryColumns.tsx:53-213`。本便で足す列もこのパターンに従う（ただし PC では出さないため `hideId: null` 固定にはできず、呼び出し側 `isMobile` 分岐で列配列自体を組み替える方式にする。設計 3-1 のとおり）。
 
 ## 未確認（推測せず明記）
 
-- Drawer（`size="wide"`）が実際にスマホ幅でタブバーを覆うかどうかは、z-index の数値比較だけでは確定しない。e2e の `document.elementFromPoint()` 実測が必要（設計 3-3 のとおり、実装セクションで実測し `design.md` に追記する）。
+- Drawer（`size="wide"`）が実際にスマホ幅でタブバーを覆うかどうかは、z-index の数値比較だけでは確定しない。e2e の `document.elementFromPoint()` 実測が必要（設計 3-3 のとおり、実装セクションで実測し `docs/handoff/inventory-mobile-raw-text/design.md` に追記する）。
 - `.claude-pipeline/active-work.d/release-inventory-mobile-raw-text.md` は worktree 内に存在しない（`ls` で確認・該当ファイルなし）。依頼文は「担当機能エリア欄が未記入」という前提だが、ファイル自体が無い。実装報告で明記する。
