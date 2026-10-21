@@ -1,0 +1,11 @@
+backend/tests/test_product_format_game_links.py:10:def test_games_body_rejects_unknown_field():
+backend/tests/test_product_format_game_links.py:15:def test_games_body_limits_length():
+backend/tests/test_product_format_game_links.py:20:def test_response_defaults_game_ids_empty():
+backend/tests/test_product_format_game_links_pg.py:61:async def test_validate_accepts_linked_and_rejects_unlinked(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:75:async def test_format_options_include_game_ids_and_selected_inactive(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:92:async def test_detail_get_returns_confirmations_and_format_lookup(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:107:async def test_revision_changes_when_confirmation_changes(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:122:async def test_detail_update_rejects_unlinked_format_change(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:142:async def test_detail_update_keeps_unchanged_old_pair(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:160:async def test_replace_games_adds_and_removes_links(fmt_pg):
+backend/tests/test_product_format_game_links_pg.py:176:async def test_replace_games_blocks_removal_in_use(fmt_pg):

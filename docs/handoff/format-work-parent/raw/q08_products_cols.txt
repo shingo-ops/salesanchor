@@ -1,0 +1,23 @@
+-- SQL: SELECT c.relnamespace::regnamespace AS sch, c.relname, a.attname, format_type(a.atttypid,a.atttypmod) AS typ, a.attnotnull FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname IN ('products') AND a.attname IN ('id','tenant_id','work_id','product_format_id','product_category_id','type_master_id','tcg_type','is_active') AND NOT a.attisdropped AND a.attnum>0 AND c.relkind='r' ORDER BY 1,3
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:50:49+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-2ea5df07fc1e Creating 
+ Container astro-webapp-ai-reader-run-2ea5df07fc1e Created 
+sch	relname	attname	typ	attnotnull
+public	products	id	integer	True
+public	products	is_active	boolean	False
+public	products	product_category_id	integer	False
+public	products	product_format_id	integer	False
+public	products	tenant_id	integer	False
+public	products	work_id	integer	True
+tenant_001	products	id	integer	True
+tenant_001	products	tenant_id	integer	True
+tenant_003	products	id	integer	True
+tenant_003	products	tenant_id	integer	True
+tenant_004	products	id	integer	True
+tenant_004	products	tenant_id	integer	True
+tenant_005	products	id	integer	True
+tenant_005	products	tenant_id	integer	True
+tenant_006	products	id	integer	True
+tenant_006	products	tenant_id	integer	True
+AUDIT ts=2026-10-21T14:50:50Z sha=09d667e762ec rows=16 ms=44 result=ok sql=SELECT c.relnamespace::regnamespace AS sch, c.relname, a.attname, format_type(a.atttypid,a.atttypmod) AS typ, a.attnotnull FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname IN ('products') AND a.attname IN ('id','tenant_id','work_id','product_format_id','product_category_id','type_master_id','tcg_type','is_active') AND NOT a.attisdropped AND a.attnum>0 AND c.relkind='r' ORDER BY 1,3 

@@ -1,0 +1,19 @@
+-- SQL: SELECT c.relnamespace::regnamespace AS sch, c.relname, a.attname FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE a.attname IN ('work_id','product_format_id') AND NOT a.attisdropped AND a.attnum>0 AND c.relkind='r' AND c.relnamespace::regnamespace::text !~ '^pg_' ORDER BY 1,2
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:50:51+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-dbedaa14e5a8 Creating 
+ Container astro-webapp-ai-reader-run-dbedaa14e5a8 Created 
+sch	relname	attname
+public	_backup_20260924_analysis_results	work_id
+public	analysis_results	work_id
+public	analysis_results_baseline_20260924	work_id
+public	products	work_id
+public	products	product_format_id
+tenant_004	tcg_products_bak_20260901	work_id
+tenant_004	tcg_products_bak_20260903	work_id
+tenant_004	tcg_products_bak_20260904	work_id
+tenant_004	tcg_products_bak_20260904b	work_id
+tenant_004	tcg_products_bak_20260905	work_id
+tenant_004	tcg_products_bak_20260906	work_id
+tenant_004	tcg_products_bak_20260907	work_id
+AUDIT ts=2026-10-21T14:50:52Z sha=440a2ae63e5f rows=12 ms=50 result=ok sql=SELECT c.relnamespace::regnamespace AS sch, c.relname, a.attname FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE a.attname IN ('work_id','product_format_id') AND NOT a.attisdropped AND a.attnum>0 AND c.relkind='r' AND c.relnamespace::regnamespace::text !~ '^pg_' ORDER BY 1,2 
