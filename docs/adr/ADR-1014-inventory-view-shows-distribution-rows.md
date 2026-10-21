@@ -186,3 +186,13 @@ PO 決定（2026-10-21）。①スマホで在庫の原文が見られない問�
 - 反映: アプリ: 本 PR。GAS・閲覧ページ: 対象外のため反映なし。
 - 戻し方: `InventoryPage.tsx` で列を足す分岐を外す（列定義は残っても無害）。全部戻すときは本 PR を revert。
 - 記録: `docs/handoff/inventory-mobile-raw-text/`（recon・design・審査）。
+
+## 改訂 2026-10-21（2）（在庫一覧を最初からポケモンで開く）
+
+前の節の本文は書き換えない。
+
+- 内容: 在庫一覧（GAS 在庫一覧・閲覧ページ）を開くと、最初からタブ「ポケモン」（`MAIN_SERIES[0]`）で開く。ポケモンの行が無いときは「すべて」で開く。GAS 在庫一覧の検索用の文字列は表示の後に作る（検索語が入っていれば先に作る）。Code.js は変更なし。
+- 正本: GAS `index.html` の `activeSeries`・`ensureSearchTexts`、閲覧ページ `frontend/src/pages/viewer/InventoryView.tsx`。
+- 反映: 閲覧ページ: PR #4597。GAS: テスト版32・本番版22（2026-10-21）。
+- 戻し方: 閲覧ページは PR #4597 を revert。GAS はテストを版31、本番を版21へ redeploy する。
+- 記録: `docs/handoff/inventory-default-pokemon-tab/`（詳細は design.md §12）。
