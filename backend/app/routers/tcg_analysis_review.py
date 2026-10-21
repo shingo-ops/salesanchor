@@ -253,7 +253,8 @@ async def post_client_timing(
     _user: dict = Depends(require_super_admin),
 ) -> Response:
     # DB は触らない。ログ1行のみ（利用者の識別情報は出さない）。
-    logger.info(
+    # info は Web プロセス（root ロガー未設定）で捨てられるため warning で出す
+    logger.warning(
         "review_timing panel_ms=%.0f list_ms=%.0f doc_ms=%.0f rows=%d page_size=%d entry=%s",
         body.panel_ms,
         body.list_ms,

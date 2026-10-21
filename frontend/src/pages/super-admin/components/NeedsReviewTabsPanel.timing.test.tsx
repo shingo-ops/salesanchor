@@ -19,7 +19,9 @@ vi.mock("../../../hooks/useRealtimeRefresh", () => ({
   },
 }));
 vi.mock("../../../features/tcg-analysis-review/V102PostsTab", () => ({ V102PostsTab: () => <div>posts-tab</div> }));
-vi.mock("../../../features/tcg-review-csv/ReviewCsvPanel", () => ({ ReviewCsvPanel: () => <div>csv-panel</div> }));
+vi.mock("../../../features/tcg-review-csv/ReviewCsvPanel", () => ({
+  ReviewCsvPanel: ({ onDone }: { onDone: () => void }) => <button onClick={onDone}>csv-done</button>,
+}));
 
 const TIMING_PATH = "/tcg/analysis-results/client-timing";
 
@@ -189,5 +191,42 @@ describe("review timing", () => {
     second.unmount();
     await flushFrames();
     expect(timingPosts()).toHaveLength(0);
+  });
+
+  it("does not send again for a reload after saving", async () => {
+    view();
+    await screen.findByText("Card A");
+    await flushFrames();
+    expect(timingPosts()).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "csv-done" }));
+    await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2));
+    await screen.findByText("Card A");
+    await flushFrames();
+    expect(timingPosts()).toHaveLength(1);
+  });
+
+  it("sends once with the list_ms of the reload when the first fetch is cancelled (R-5)", async () => {
+    let clock = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    let resolveFirst: (v: unknown) => void = () => undefined;
+    let resolveSecond: (v: unknown) => void = () => undefined;
+    vi.mocked(api.get)
+      .mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }))
+      .mockImplementationOnce(() => new Promise((r) => { resolveSecond = r; }));
+    view();
+    await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledTimes(1));
+    clock = 1000;
+    act(() => fireRealtime()); // 最初の取得を取り消して読み直す
+    await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2));
+    clock = 1300;
+    await act(async () => resolveSecond(response([makeItem("a", "Card A")])));
+    await screen.findByText("Card A");
+    await flushFrames();
+    clock = 5000;
+    await act(async () => resolveFirst(response([makeItem("old", "Card Old")])));
+    await flushFrames();
+    expect(screen.queryByText("Card Old")).toBeNull();
+    expect(timingPosts()).toHaveLength(1);
+    expect((timingPosts()[0][1] as { list_ms: number }).list_ms).toBe(300);
   });
 });

@@ -367,13 +367,13 @@ async def _post_timing(body):
 async def test_client_timing_returns_204_and_logs_one_line(fake_super_admin_override, caplog):
     import logging
 
-    with caplog.at_level(logging.INFO, logger="app.routers.tcg_analysis_review"):
+    with caplog.at_level(logging.WARNING, logger="app.routers.tcg_analysis_review"):
         resp = await _post_timing(_TIMING_BODY)
     assert resp.status_code == 204, resp.text
     assert resp.content == b""
     lines = [r for r in caplog.records if "review_timing" in r.getMessage()]
     assert len(lines) == 1
-    assert lines[0].levelno == logging.INFO
+    assert lines[0].levelno == logging.WARNING
     assert lines[0].getMessage() == (
         "review_timing panel_ms=1234 list_ms=800 doc_ms=2346 rows=20 page_size=20 entry=first"
     )
