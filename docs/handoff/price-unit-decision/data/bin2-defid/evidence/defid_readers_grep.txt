@@ -1,0 +1,45 @@
+origin/main:backend/app/routers/conditions.py:118:    "match_type, effect, condition_def_id, unit_id, note"
+origin/main:backend/app/routers/conditions.py:123:    "condition_def_id", "unit_id", "note",
+origin/main:backend/app/routers/conditions.py:234:            f"match_type, effect, condition_def_id, unit_id, note, updated_at) "
+origin/main:backend/app/routers/conditions.py:236:            f":match_type, :effect, :condition_def_id, :unit_id, :note, now()) "
+origin/main:backend/app/routers/conditions.py:250:            "condition_def_id": data.condition_def_id,
+origin/main:backend/app/routers/super_admin_condition_defs.py:144:    # 参照チェック: unit_condition_links.condition_def_id
+origin/main:backend/app/routers/super_admin_condition_defs.py:146:        text("SELECT 1 FROM public.unit_condition_links WHERE condition_def_id = :id LIMIT 1"),
+origin/main:backend/app/routers/super_admin_condition_defs.py:189:            "WHERE ucl.condition_def_id = :id "
+origin/main:backend/app/routers/super_admin_conditions.py:119:    "match_type, effect, condition_def_id, unit_id, note"
+origin/main:backend/app/routers/super_admin_conditions.py:124:    "condition_def_id", "unit_id", "note",
+origin/main:backend/app/routers/super_admin_conditions.py:202:                f"match_type, effect, condition_def_id, unit_id, note, tenant_id, updated_at) "
+origin/main:backend/app/routers/super_admin_conditions.py:204:                f":match_type, :effect, :condition_def_id, :unit_id, :note, NULL, now()) "
+origin/main:backend/app/routers/super_admin_conditions.py:217:                "condition_def_id": data.condition_def_id,
+origin/main:backend/app/routers/super_admin_quantity_units.py:212:            "JOIN public.unit_condition_links ucl ON ucl.condition_def_id = cd.id "
+origin/main:backend/app/schemas/central_masters.py:466:    condition_def_id: Optional[int] = None
+origin/main:backend/app/schemas/central_masters.py:486:    condition_def_id: Optional[int] = None
+origin/main:backend/app/schemas/condition.py:22:    condition_def_id: Optional[int] = None
+origin/main:backend/app/schemas/condition.py:41:    condition_def_id: Optional[int] = None
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:12: *   - condition_def_id / unit_id プルダウンを追加
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:55:  condition_def_id: number | null;
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:61:  condition_def_id: string;
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:74:  condition_def_id: "",
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:159:      condition_def_id: c.condition_def_id != null ? String(c.condition_def_id) : "",
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:177:    const defName = conditionDefs.find((d: ConditionDef) => String(d.id) === form.condition_def_id)?.name ?? "";
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:194:      condition_def_id: form.condition_def_id !== "" ? parseInt(form.condition_def_id, 10) : null,
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:252:        const defName = conditionDefs.find((d: ConditionDef) => d.id === row.condition_def_id)?.name ?? row.canonical;
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:321:            {/* 1. どの状態ですか？ — condition_def_id */}
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:326:                value={form.condition_def_id}
+origin/main:frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:327:                onChange={e => setForm({ ...form, condition_def_id: e.target.value })}
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:6:--   - conditions.condition_def_id → condition_definitions(id)
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:75:        ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL;
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:76:        CREATE INDEX IF NOT EXISTS idx_conditions_condition_def_id ON public.conditions (condition_def_id);
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:77:        RAISE NOTICE 'add_analysis_master_fk: conditions.condition_def_id 追加完了';
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:79:        RAISE NOTICE 'add_analysis_master_fk: public.conditions は BASE TABLE でない（VIEW の可能性）— condition_def_id 追加スキップ';
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:104:--   DROP INDEX IF EXISTS idx_conditions_condition_def_id;
+origin/main:migrations/20260921_100000_add_analysis_master_fk.sql:105:--   ALTER TABLE public.conditions DROP COLUMN IF EXISTS condition_def_id;
+origin/main:migrations/20260922_060000_product_unit_condition_infra.sql:151:        condition_def_id INTEGER NOT NULL REFERENCES public.condition_definitions(id),
+origin/main:migrations/20260922_060000_product_unit_condition_infra.sql:154:        UNIQUE (quantity_unit_id, condition_def_id)
+origin/main:migrations/20260922_060000_product_unit_condition_infra.sql:158:    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_ucl_condition_def_id ON public.unit_condition_links (condition_def_id)';
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:2:-- Migration 20260925_020000: line_conditions に condition_def_id / unit_id / note 追加
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:21:-- ① condition_def_id 追加（既存の場合はスキップ）
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:23:    ADD COLUMN IF NOT EXISTS condition_def_id INTEGER
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:37:CREATE INDEX IF NOT EXISTS idx_line_conditions_condition_def_id ON public.line_conditions (condition_def_id);
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:60:                'ALTER TABLE %I.line_conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL',
+origin/main:migrations/20260925_020000_conditions_add_def_unit_note.sql:81:--   ALTER TABLE public.line_conditions DROP COLUMN IF EXISTS condition_def_id;
