@@ -835,7 +835,7 @@ PO 決定 2026-10-19 原文「y,新規の申し込みがあったときの申込
   - 停止の解除（unsuspend）は文面なし（PO の依頼に無い）。
 
 ### 10-3 作り方（選んだ案と理由）
-- 文面は全部 viewer_bot_texts.py に置く（1か所）。→ 段11 便2 で DB（viewer_message_templates）へ移す（本書「段11」参照）。管理画面は API が返す出来上がりの文を表示・コピーするだけで、フロントに文面を持たない（二重管理を作らない）。前例：顧客用 welcome_template を API が返す（backend/app/routers/discord_ticket_config.py:60）。画面のボタン名だけ i18n（ja/en 同一キー、ADR-027）。
+- 文面は全部 viewer_bot_texts.py に置く（1か所）。→ 段11 便2 で DB（viewer_message_templates）へ移した（9定数は削除済み。以下は移す前の記録）（本書「段11」参照）。管理画面は API が返す出来上がりの文を表示・コピーするだけで、フロントに文面を持たない（二重管理を作らない）。前例：顧客用 welcome_template を API が返す（backend/app/routers/discord_ticket_config.py:60）。画面のボタン名だけ i18n（ja/en 同一キー、ADR-027）。
 - 日付の書式は1つの関数（viewer_bot_texts.format_jst_date / format_jst_datetime）にまとめる。招待へ目印を付けるのも1つの関数（external_browser_url）。
 - ④は backend の commit の後に送る（Web は _change、CLI は run の commit の後）。送る処理は新しい backend/app/services/viewer_room_notice.py の `send_room_notice(channel_id, text) -> bool`：discord_api_request で POST /channels/{id}/messages、本文 {"content": text, "allowed_mentions": {"parse": []}}、max_retries=1、例外は外へ出さず False、ログは種類と HTTP 状態だけ（本文・メールは出さない）。部屋が無い人（discord_channel_id が NULL）には送らない。送れなくても操作は成功のまま（前例 viewer_invite.py）。
   - Web の応答に room_notice（"sent" | "failed" | "no_room"）と room_notice_text を足し、送れなかったときだけ管理画面に「部屋に送れませんでした。下の文をコピーして送ってください」とコピーボタンを出す。
@@ -1010,3 +1010,8 @@ review_design.md B-2 の文案をそのまま採用：部屋のはじめの案�
 - N-7：段11 を docs/handoff/gas-viewer-fresh-fast/design.md に追記してコミット（recon も同フォルダへ）。10-3（:838）に「段11 便2 で DB へ移した」と注記。便2 で viewer_bot_texts.py の冒頭説明を直し、残すもの（SIGNUP_URL、format_jst_date、format_jst_datetime、external_browser_url、RECEPTION_MESSAGE ほか 11-2 の対象外）を明記。
 - N-8：T7 の検索式 `git grep -n -E "^(SIGNUP_REQUEST|REISSUE_NOTICE|REISSUE_NOTICE_NO_INVITE|ROOM_WELCOME|ROOM_RECREATED|NOTICE_EXTENDED|NOTICE_ACTIVATED|NOTICE_SUSPENDED|INTERVIEW_REQUEST) =" origin/main -- backend/app` が0件。T9 新設：行が無いとき ①申込コードを入れても使用済みにならず部屋も作られない ②作り直しで申込コードが変わらない ③延長の応答が room_notice="no_template" で状態は変わる（pytest）。T8 は手で送る「申込のお願い」1件だけを直し、確かめた後に元の文へ戻す。
 - 未確認4（gateway の起動し直し）：便2 の本番確認で discord-gateway コンテナの起動時刻が deploy 後であることを観測項目 T10 にする（便1 は gateway のコードを変えないので不要）。
+
+### 段11 実施記録（2026-10-21 追記。本文・名簿は書かない）
+- 便1 本番反映（PR #4577）：PO 原文「GO #4577」（2026-10-20）。マージ 14:42:01Z（9fd95cf75）。deploy 39441623714 success 14:48:15Z。14:49:22Z に CLI の dry_run（予定9鍵）→ seed（inserted 9）→ verify（9鍵とも exists/matches ○）。G-2 の条件（9件すべて○）を満たした。
+- 便2 実装済み（PR #4581）：PUT `/api/v1/super-admin/viewer-templates/{key}`、ページの編集・保存、送る側9件を DB 読みへ（11-10 B-2 の順番）、no_template、定数9件と専用関数・seed/verify CLI の削除。本番の観測（T8・T10）は反映後に Opus/PO が行う。
+- 便2 の recon（実装後の実物、読む処理の file:line）：docs/handoff/gas-viewer-fresh-fast/stage11/recon.md（着手前）、docs/handoff/gas-viewer-fresh-fast/stage11/recon_bin2.md（実装後）。

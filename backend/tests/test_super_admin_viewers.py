@@ -12,6 +12,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -21,11 +22,13 @@ from app import cache
 from app.database import get_db
 from app.discord_gateway import viewer_bot_texts
 from app.services import viewer_admin
+from app.services import viewer_message_templates as vmt
 from app.services.viewer_admin import ViewerAdminError
 from tests.rls_bootstrap import _ensure_public_users
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 from tests.test_viewer_api import SECRET, FakeRedis, _bearer
+from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 
 needs_ci_pg = pytest.mark.skipif(
     os.getenv("GITHUB_ACTIONS") != "true", reason="Disposable CI PostgreSQL service required"
@@ -41,6 +44,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
     ("GET", "/api/v1/super-admin/viewers/signup-request", None),
     ("GET", "/api/v1/super-admin/viewer-templates", None),
+    ("PUT", "/api/v1/super-admin/viewer-templates/signup_request", {"body": "x", "expected_updated_at": None}),
 ]
 
 
@@ -82,13 +86,48 @@ async def _call(method, path, body):
 
 
 async def test_signup_request_returns_text_for_super_admin(override_user):
-    from app.discord_gateway import viewer_bot_texts
+    from app.main import app
+
+    async def _no_db():
+        yield None
 
     override_user(_make_user(is_super_admin=True))
-    resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
+    app.dependency_overrides[get_db] = _no_db
+    with patch.object(vmt, "load_body", new=make_load_body()):
+        resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
     assert resp.status_code == 200
-    assert resp.json() == {"text": viewer_bot_texts.signup_request_text()}
+    assert resp.json() == {
+        "text": DEFAULT_BODIES["signup_request"].format(signup_url=viewer_bot_texts.SIGNUP_URL)
+    }
     assert "?openExternalBrowser=1#signup" in resp.json()["text"]
+
+
+async def test_signup_request_uses_edited_body(override_user):
+    """T5: 画面で直した本文がそのまま出る。"""
+    from app.main import app
+
+    async def _no_db():
+        yield None
+
+    override_user(_make_user(is_super_admin=True))
+    app.dependency_overrides[get_db] = _no_db
+    with patch.object(vmt, "load_body", new=make_load_body({"signup_request": "直した文 {signup_url}"})):
+        resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
+    assert resp.json() == {"text": f"直した文 {viewer_bot_texts.SIGNUP_URL}"}
+
+
+async def test_signup_request_without_template_is_503(override_user):
+    """T6: 行が無いとき 503（コピー系は送らない）。"""
+    from app.main import app
+
+    async def _no_db():
+        yield None
+
+    override_user(_make_user(is_super_admin=True))
+    app.dependency_overrides[get_db] = _no_db
+    with patch.object(vmt, "load_body", new=make_load_body({"signup_request": None})):
+        resp = await _call("GET", "/api/v1/super-admin/viewers/signup-request", None)
+    assert resp.status_code == 503 and resp.json()["detail"] == "template_not_found"
 
 
 async def test_non_super_admin_gets_403_on_all_routes(override_user):
@@ -132,7 +171,7 @@ async def test_extend_body_needs_exactly_one_of_days_or_until_date_422(override_
 ACTOR_ID = 999
 
 
-def _prepare(conn, async_url):
+def _prepare(conn, async_url, *, seed_templates=True, skip_templates=()):
     async def _run():
         engine = create_async_engine(async_url, echo=False)
         try:
@@ -146,6 +185,13 @@ def _prepare(conn, async_url):
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
     cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
     cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
+    if seed_templates:  # 送る側は DB の本文を読む。既定で 9件入れておく（行なしの試験は seed_templates=False か DELETE）
+        for key, body in DEFAULT_BODIES.items():
+            if key in skip_templates:
+                continue  # この鍵だけ行なしにする試験用
+            cur.execute(
+                "INSERT INTO public.viewer_message_templates (key, body) VALUES (%s, %s)", (key, body)
+            )
     return cur
 
 
@@ -530,7 +576,7 @@ def test_cli_room_notice_sent_when_room_exists(pg, monkeypatch):  # noqa: F811
             await engine.dispose()
 
     res = asyncio.run(_go())
-    assert res["room_notice"] == "sent" and sent == [("777", viewer_bot_texts.NOTICE_ACTIVATED)]
+    assert res["room_notice"] == "sent" and sent == [("777", DEFAULT_BODIES["notice_activated"])]
 
 
 # ── 4つの入口の room_notice（K3。入口を通して確かめる） ──
@@ -566,11 +612,11 @@ def test_entrypoints_report_room_notice_sent_or_failed(pg, monkeypatch, sender_o
     _set_room(cur, v2)
     r = _api(async_url, "POST", f"{base}/{v2}/activate", {})
     assert r.json()["room_notice"] == expected
-    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_ACTIVATED
+    assert r.json()["room_notice_text"] == DEFAULT_BODIES["notice_activated"]
 
     r = _api(async_url, "POST", f"{base}/{v2}/suspend", {})
     assert r.json()["room_notice"] == expected
-    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+    assert r.json()["room_notice_text"] == DEFAULT_BODIES["notice_suspended"]
 
     n_before = len(sent)
     r = _api(async_url, "POST", f"{base}/{v2}/unsuspend", {})
@@ -595,7 +641,7 @@ def test_entrypoints_no_room_does_not_send(pg, monkeypatch):  # noqa: F811
     r = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/suspend", {})
     assert r.status_code == 200
     assert r.json()["room_notice"] == "no_room"
-    assert r.json()["room_notice_text"] == viewer_bot_texts.NOTICE_SUSPENDED
+    assert r.json()["room_notice_text"] == DEFAULT_BODIES["notice_suspended"]
     assert sent == []
 
 
@@ -810,3 +856,164 @@ def test_patch_line_name_forbidden_for_non_super_admin_on_pg(pg):  # noqa: F811
     assert resp.status_code == 403
     cur.execute("SELECT line_name FROM public.viewer_accounts WHERE id=%s", (vid,))
     assert cur.fetchone()[0] == "fake"
+
+
+# ── テンプレートを DB から読む（段11 便2: T5 / T6 / T9 / N2-3） ──────────
+
+
+def _fake_session_factory():
+    from unittest.mock import AsyncMock, MagicMock
+
+    db = MagicMock()
+    db.commit = AsyncMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=db)
+    cm.__aexit__ = AsyncMock(return_value=False)
+    return db, (lambda: cm)
+
+
+async def test_cli_result_json_has_no_template_when_row_missing():
+    """N2-3: テンプレートが無くても状態は変え、結果 JSON の room_notice は no_template。"""
+    from unittest.mock import AsyncMock
+
+    from app import viewer_admin_cli
+
+    item = {"id": 5, "status": "suspended", "trial_expires_at": None, "discord_channel_id": "777"}
+    db, factory = _fake_session_factory()
+    send = AsyncMock(return_value=True)
+    with patch.object(viewer_admin, "change_status_by_email", new=AsyncMock(return_value=item)), patch.object(
+        vmt, "load_body", new=make_load_body({"notice_suspended": None})
+    ), patch("app.services.viewer_room_notice.send_room_notice", new=send):
+        res = await viewer_admin_cli.run({"action": "suspend", "email": "a@x.com"}, session_factory=factory)
+    assert res["room_notice"] == "no_template" and res["status"] == "suspended"
+    db.commit.assert_awaited_once()  # 状態は変わる（commit される）
+    send.assert_not_awaited()  # 送らない
+
+
+async def test_cli_sends_edited_body():
+    from unittest.mock import AsyncMock
+
+    from app import viewer_admin_cli
+
+    item = {"id": 5, "status": "suspended", "trial_expires_at": None, "discord_channel_id": "777"}
+    _db, factory = _fake_session_factory()
+    send = AsyncMock(return_value=True)
+    with patch.object(viewer_admin, "change_status_by_email", new=AsyncMock(return_value=item)), patch.object(
+        vmt, "load_body", new=make_load_body({"notice_suspended": "直した停止の文"})
+    ), patch("app.services.viewer_room_notice.send_room_notice", new=send):
+        res = await viewer_admin_cli.run({"action": "suspend", "email": "a@x.com"}, session_factory=factory)
+    assert res["room_notice"] == "sent"
+    send.assert_awaited_once_with("777", "直した停止の文")
+
+
+@needs_ci_pg
+def test_extend_without_template_changes_state_and_reports_no_template(pg, monkeypatch):  # noqa: F811
+    """T9 ③: 行が無くても延長は効く。応答は room_notice=no_template、送らない。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url, skip_templates=("notice_extended",))
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append((channel_id, text))
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    vid = _account(cur, "nt1@x.com", "trial", expires_in_days=3)
+    _set_room(cur, vid)
+    before = _state(cur, vid)
+    r = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/extend", {"days": 10})
+    assert r.status_code == 200
+    assert r.json()["room_notice"] == "no_template" and r.json()["room_notice_text"] is None
+    assert _state(cur, vid) != before  # 期限は延びた
+    assert sent == []
+    assert len(_changes(cur, vid)) == 1
+
+
+@needs_ci_pg
+def test_edited_body_is_used_by_extend(pg, monkeypatch):  # noqa: F811
+    """T5: DB の本文を直すと、延長の部屋への文がそのまま変わる。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    sent = []
+
+    async def _fake_send(channel_id, text):
+        sent.append(text)
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    cur.execute(
+        "UPDATE public.viewer_message_templates SET body = %s WHERE key = 'notice_extended'",
+        ("直した文：{until_date}まで",),
+    )
+    vid = _account(cur, "ed1@x.com", "trial", expires_in_days=3)
+    _set_room(cur, vid)
+    until = (datetime.now(timezone.utc) + timedelta(days=30)).date()
+    r = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/extend", {"until_date": until.isoformat()})
+    assert r.json()["room_notice_text"] == f"直した文：{until.month}月{until.day}日まで"
+    assert sent == [f"直した文：{until.month}月{until.day}日まで"]
+
+
+@needs_ci_pg
+@pytest.mark.parametrize("missing", ["reissue_notice", "reissue_notice_no_invite"])
+def test_reissue_without_template_is_503_and_code_unchanged(pg, monkeypatch, missing):  # noqa: F811
+    """T6 / T9 ②: 案内の行が（どちらか）無いとき 503、申込コードは作り直さない・招待も作らない。"""
+    invited = []
+
+    async def _fake_invite(db):
+        invited.append(1)
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _fake_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url, skip_templates=(missing,))
+    vid = _account(cur, "rt1@x.com", "pending")
+    old = b"\x02" * 32
+    cur.execute(
+        "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
+        "VALUES (%s, %s, 'signup_code', NOW() + interval '1 day')",
+        (vid, old),
+    )
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 503 and resp.json()["detail"] == "template_not_found"
+    assert _signup_hashes(cur, vid) == [old]  # 申込コードは変わらない
+    assert invited == []
+
+
+@needs_ci_pg
+def test_reissue_message_uses_edited_body(pg, monkeypatch):  # noqa: F811
+    async def _no_invite(db):
+        return None
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _no_invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    cur.execute(
+        "UPDATE public.viewer_message_templates SET body = %s WHERE key = 'reissue_notice_no_invite'",
+        ("{line_name}さん、直した案内 {code} {expires}",),
+    )
+    vid = _account(cur, "rt2@x.com", "pending")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200
+    assert resp.json()["message"].startswith("fakeさん、直した案内 " + resp.json()["signup_code"])
+
+
+@needs_ci_pg
+def test_reissue_message_with_invite_uses_edited_body(pg, monkeypatch):  # noqa: F811
+    """T5: 招待ありの作り直し案内も、直した本文がそのまま出る。"""
+
+    async def _invite(db):
+        return "https://discord.gg/fakecode"
+
+    monkeypatch.setattr("app.routers.super_admin_viewers.create_viewer_invite", _invite)
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    cur.execute(
+        "UPDATE public.viewer_message_templates SET body = %s WHERE key = 'reissue_notice'",
+        ("{line_name}さん、直した招待つき案内 {code} {expires} {invite_url}",),
+    )
+    vid = _account(cur, "rt3@x.com", "pending")
+    resp = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/reissue-signup-code", {})
+    assert resp.status_code == 200
+    msg = resp.json()["message"]
+    assert msg.startswith("fakeさん、直した招待つき案内 " + resp.json()["signup_code"])
+    assert msg.endswith("https://discord.gg/fakecode?openExternalBrowser=1")

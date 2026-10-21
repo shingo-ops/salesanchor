@@ -4,8 +4,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.discord_gateway import viewer_bot_texts as t
 from app.discord_gateway import viewer_interview_notice as n
+from app.services import viewer_message_templates as vmt
+from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 
 JST = timezone(timedelta(hours=9))
 # 期限: JST 11/10 23:59 -> 前日は JST 11/9
@@ -65,9 +66,11 @@ def _factory(rows):
 NOW = jst(11, 9, 11, 0)
 
 
-async def _run(rows, redis, send_ok=True, now=NOW):
+async def _run(rows, redis, send_ok=True, now=NOW, bodies=None):
     send = AsyncMock(return_value=send_ok)
-    with patch.object(n, "send_room_notice", new=send):
+    with patch.object(n, "send_room_notice", new=send), patch.object(
+        vmt, "load_body", new=make_load_body(bodies)
+    ):
         count = await n.run_once(_factory(rows), redis, now)
     return count, send
 
@@ -77,7 +80,10 @@ async def test_sent_sets_key_and_second_run_skips():
     rows = [(1, "555", EXP)]
     c, send = await _run(rows, r)
     assert c == 1 and r.ttls["viewer_interview_notice:1:2026-11-10"] == 30 * 86400
-    assert send.await_args.args == ("555", t.interview_request_text(EXP))
+    assert send.await_args.args == (
+        "555",
+        DEFAULT_BODIES["interview_request"].format(expires_date="11月10日"),
+    )
     c2, send2 = await _run(rows, r)
     assert c2 == 0 and send2.await_count == 0
 
@@ -103,7 +109,8 @@ async def test_not_due_row_skipped():
 
 async def test_query_limits_to_trial_with_room_and_expiry():
     f = _factory([])
-    await n.run_once(f, _Redis(), NOW)
+    with patch.object(vmt, "load_body", new=make_load_body()):
+        await n.run_once(f, _Redis(), NOW)
     sql = str(f.session.execute.await_args.args[0])
     assert "status = 'trial'" in sql
     assert "discord_channel_id IS NOT NULL" in sql
@@ -129,8 +136,18 @@ async def test_log_has_no_body(caplog):
     assert "面談" not in caplog.text and "id=1" in caplog.text
 
 
-def test_interview_request_text():
-    s = t.interview_request_text(EXP)
-    assert s.startswith("お試し期間は 11月10日 で終わります。\n")
-    assert "{" not in s and "短い面談をお願いできますでしょうか😊" in s
-    assert s.endswith("この部屋に3つほどお送りください。")
+async def test_edited_body_is_sent():
+    """T5: 画面で直した本文がそのまま出る。"""
+    c, send = await _run(
+        [(1, "555", EXP)], _Redis(), bodies={"interview_request": "{expires_date}で終わります"}
+    )
+    assert c == 1 and send.await_args.args == ("555", "11月10日で終わります")
+
+
+async def test_no_template_sends_nothing_warns_once_and_no_redis_key(caplog):
+    """T6: 行が無いとき 0 件・警告1回・Redis キーを作らない。"""
+    caplog.set_level("WARNING")
+    r = _Redis()
+    c, send = await _run([(1, "555", EXP), (2, "556", EXP)], r, bodies={"interview_request": None})
+    assert c == 0 and send.await_count == 0 and r.keys == {}
+    assert caplog.text.count("template unavailable") == 1

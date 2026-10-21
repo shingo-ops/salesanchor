@@ -12,7 +12,8 @@ API:
   POST /api/v1/super-admin/viewers/{viewer_id}/extend
   POST /api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code
   GET  /api/v1/super-admin/viewers/signup-request   （①申込のお願いの文を返す）
-  GET  /api/v1/super-admin/viewer-templates         （段11 便1: 文面テンプレート9件の一覧。読むだけ）
+  GET  /api/v1/super-admin/viewer-templates         （段11: 文面テンプレート9件の一覧）
+  PUT  /api/v1/super-admin/viewer-templates/{key}   （段11 便2: 本文を直す。検査 422・競合 409）
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ from app.models import User
 from app.services import viewer_admin, viewer_message_templates, viewer_room_notice
 from app.services.viewer_admin import ViewerAdminError
 from app.services.viewer_invite import create_viewer_invite
+
+_TEMPLATE_NOT_FOUND = "template_not_found"
 
 router = APIRouter()
 
@@ -64,8 +67,9 @@ class ViewerAdminItem(BaseModel):
 class ViewerStatusChangeResponse(ViewerAdminItem):
     """状態変更（activate／suspend／unsuspend／extend）の応答。部屋へのお知らせの結果つき。"""
 
-    room_notice: Literal["sent", "failed", "no_room"] | None = Field(
-        None, description="部屋へのお知らせの結果（unsuspend は null）"
+    room_notice: Literal["sent", "failed", "no_room", "no_template"] | None = Field(
+        None,
+        description="部屋へのお知らせの結果（unsuspend は null。no_template はテンプレートが使えず送らなかった）",
     )
     room_notice_text: str | None = Field(
         None, description="部屋へ送ろうとした文（送れなかったとき画面でコピーする）"
@@ -133,6 +137,13 @@ class ViewerTemplateItem(BaseModel):
     updated_by_name: str | None = Field(None, description="最後に直した人の名前（full_name、空なら username）")
 
 
+class ViewerTemplateUpdate(BaseModel):
+    body: str = Field(..., description="新しい本文（差し込み項目は台帳どおり・1〜1800文字）")
+    expected_updated_at: datetime | None = Field(
+        None, description="画面で開いた時の updated_at。未登録の行を新しく入れるときは null"
+    )
+
+
 class ViewerTemplateListResponse(BaseModel):
     items: list[ViewerTemplateItem]
 
@@ -156,8 +167,13 @@ async def list_viewers_endpoint(db: AsyncSession = Depends(get_db)):
     response_model=SignupRequestResponse,
     dependencies=[Depends(require_super_admin)],
 )
-async def signup_request_endpoint():
-    return {"text": viewer_bot_texts.signup_request_text()}
+async def signup_request_endpoint(db: AsyncSession = Depends(get_db)):
+    text = await viewer_message_templates.load_rendered(
+        db, "signup_request", signup_url=viewer_bot_texts.SIGNUP_URL
+    )
+    if text is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
+    return {"text": text}
 
 
 @router.get(
@@ -167,6 +183,35 @@ async def signup_request_endpoint():
 )
 async def list_viewer_templates_endpoint(db: AsyncSession = Depends(get_db)):
     return {"items": await viewer_message_templates.list_rows(db)}
+
+
+@router.put(
+    "/super-admin/viewer-templates/{key}",
+    response_model=ViewerTemplateItem,
+)
+async def update_viewer_template_endpoint(
+    key: str,
+    payload: ViewerTemplateUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_super_admin),
+):
+    if viewer_message_templates.get_spec(key) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_TEMPLATE_NOT_FOUND)
+    try:
+        await viewer_message_templates.save_body(
+            db, key, payload.body, payload.expected_updated_at, int(current_user.id)
+        )
+        await db.commit()
+    except viewer_message_templates.TemplateInvalid as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"template_{exc.code}"
+        ) from None
+    except viewer_message_templates.TemplateConflict:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="template_conflict") from None
+    rows = await viewer_message_templates.list_rows(db)
+    return next(r for r in rows if r["key"] == key)
 
 
 @router.get(
@@ -199,12 +244,15 @@ async def _change(
             days=days,
             until_date=until_date,
         )
+        # お知らせの文は commit の前（同じトランザクション）に DB から読む。無くても状態は変える
+        prepared = await viewer_room_notice.prepare_notice(db, action, item)
         await db.commit()
     except ViewerAdminError as exc:
         await db.rollback()
         raise _http_error(exc) from None
-    # commit の後に送る（DB を開けたまま Discord を待たない）。送れなくても操作は成功のまま
-    room_notice, room_notice_text = await viewer_room_notice.notify_status_change(action, item)
+    # commit の後に送る（DB を開けたまま Discord を待たない・commit の後に DB を読まない）。
+    # 送れなくても・テンプレートが無くても操作は成功のまま
+    room_notice, room_notice_text = await viewer_room_notice.notify_prepared(prepared, item)
     return {**item, "room_notice": room_notice, "room_notice_text": room_notice_text}
 
 
@@ -268,6 +316,11 @@ async def extend_endpoint(
     dependencies=[Depends(require_super_admin)],
 )
 async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depends(get_db)):
+    # 申込コードを作り直す前に案内文を読む（どちらを使うかは招待の作成後に決まるので両方）。無ければ 503・何も変えない
+    with_invite_body = await viewer_message_templates.load_body(db, "reissue_notice")
+    no_invite_body = await viewer_message_templates.load_body(db, "reissue_notice_no_invite")
+    if with_invite_body is None or no_invite_body is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
     try:
         code, expires_at = await viewer_admin.reissue_signup_code(db, viewer_id)
     except ViewerAdminError as exc:
@@ -277,11 +330,19 @@ async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depend
     invite_url = await create_viewer_invite(db)  # commit の後（Discord を待つ間 DB を開けない）
     item = await viewer_admin._get_item(db, viewer_id)
     formatted_code = format_signup_code(code)
+    message = viewer_message_templates.render(
+        "reissue_notice" if invite_url else "reissue_notice_no_invite",
+        with_invite_body if invite_url else no_invite_body,
+        line_name=(item.get("line_name") or "").strip(),
+        code=formatted_code,
+        expires=viewer_bot_texts.format_jst_datetime(expires_at),
+        invite_url=viewer_bot_texts.external_browser_url(invite_url) if invite_url else "",
+    )
+    if message is None:  # 読んだ本文は検査済みなので通常は起きない
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
     return {
         "signup_code": formatted_code,
         "expires_at": expires_at.isoformat(),
         "invite_url": invite_url,
-        "message": viewer_bot_texts.reissue_notice_text(
-            item.get("line_name"), formatted_code, expires_at, invite_url
-        ),
+        "message": message,
     }
