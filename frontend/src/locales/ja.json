@@ -1186,6 +1186,7 @@
   },
   "inbox": {
     "title": "受信箱",
+    "newAssignmentBadge": "新規",
     "all": "すべて",
     "messenger": "Messenger",
     "instagram": "Instagram",

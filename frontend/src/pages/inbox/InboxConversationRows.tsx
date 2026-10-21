@@ -9,6 +9,7 @@
 import { useTranslation } from "react-i18next";
 import { PlatformIcon, SQUIRCLE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Badge } from "../../components/Badge";
 import type { Conversation } from "../../lib/messages";
 import type { LongPressHandlers } from "../../hooks/useLongPress";
 import { getInitials, relativeTime } from "./inbox.types";
@@ -136,6 +137,9 @@ export function InboxConversationRows({
                   </span>
                   {conv.unread_count > 0 && (
                     <span className="badge conv-unread-badge">{conv.unread_count}</span>
+                  )}
+                  {conv.is_new_assignment && (
+                    <Badge variant="info" size="sm">{t("inbox.newAssignmentBadge")}</Badge>
                   )}
                 </div>
               </div>

@@ -1186,6 +1186,7 @@
   },
   "inbox": {
     "title": "Inbox",
+    "newAssignmentBadge": "New",
     "all": "All",
     "messenger": "Messenger",
     "instagram": "Instagram",
