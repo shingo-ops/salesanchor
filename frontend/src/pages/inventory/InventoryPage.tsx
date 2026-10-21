@@ -24,7 +24,7 @@ import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
 import { Tabs } from "../../components/Tabs";
-import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
+import { buildInventoryColumns, buildInventoryRawTextColumn } from "../../features/inventory/inventoryColumns";
 import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
@@ -175,10 +175,12 @@ export default function InventoryPage() {
     [filterEnabled, hiddenColumns],
   );
 
-  const columns = useMemo(
-    () => buildInventoryColumns({ t, colVisible, fmtOfferedAt }),
-    [t, colVisible],
-  );
+  const columns = useMemo(() => {
+    const base = buildInventoryColumns({ t, colVisible, fmtOfferedAt });
+    // スマホのカードだけに「原文」ボタン列を足す（PC は列数が変わらない）。行クリックは今のまま無効。
+    if (!isMobile) return base;
+    return [...base, buildInventoryRawTextColumn({ t, onOpen: setDrawerRow })];
+  }, [t, colVisible, isMobile]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(searchQ), 250);
