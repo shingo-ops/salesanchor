@@ -62,7 +62,7 @@ if [ "$RUNSQL_LINES" -le 2 ] || [ "$AIRO_LINES" -le 2 ]; then fail "T6 run_sql/a
 dsql "CREATE TABLE public.sb_a (id int); CREATE TABLE public.sb_b (id int); CREATE TABLE public.sb_prod (id int);
       INSERT INTO public.sb_a VALUES (1); INSERT INTO public.sb_b VALUES (1); INSERT INTO public.sb_prod VALUES (1);
       DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='ai_reader') THEN CREATE ROLE ai_reader NOLOGIN; END IF; END \$\$;" >/dev/null
-printf 'LOCK TABLE public.sb_prod IN ACCESS EXCLUSIVE MODE;\n' > "$OUT_DIR/t7.sql"
+printf 'BEGIN;\nLOCK TABLE public.sb_prod IN ACCESS EXCLUSIVE MODE;\nCOMMIT;\n' > "$OUT_DIR/t7.sql"
 
 # 親の bash を作る。$1=ファイル名 $2=POSTGRES 名 $3=読み込む追加の切り出し（空可） $4=計測の後の本文
 make_parent() {
