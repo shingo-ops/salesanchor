@@ -97,7 +97,9 @@ describe('InventoryPage row drawer', () => {
     expect(analysisCalls()).toHaveLength(0);
   });
 
-  it('F2b: on mobile the panel does not open for anyone', async () => {
+  // F2b は便1（スマホの原文ボタン）で意図が変わった: 以前は「スマホでは誰も開けない」を固定していたが、
+  // いまはカード本体の誤タップだけを防ぎ、原文ボタンからは開けるのが正しい動作。
+  it('F2b: on mobile, clicking the card body (misclick guard) does not open the panel', async () => {
     const original = window.matchMedia;
     window.matchMedia = ((query: string) => ({
       matches: true, media: query, onchange: null,
@@ -114,6 +116,34 @@ describe('InventoryPage row drawer', () => {
       const rawCalls = mock.get.mock.calls.filter(([u]) => String(u).startsWith('/inventory/raw-texts'));
       expect(rawCalls).toHaveLength(0);
       expect(analysisCalls()).toHaveLength(0);
+    } finally {
+      window.matchMedia = original;
+    }
+  });
+
+  it('F2c: on mobile, clicking the card raw-text button opens the panel', async () => {
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true, media: query, onchange: null,
+      addEventListener: () => undefined, removeEventListener: () => undefined,
+      addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    try {
+      await setup(false);
+      mock.get.mockImplementation(async (url: string) => {
+        if (url === '/me/permissions') return { permissions: [], is_super_admin: false };
+        if (url === '/products/tcg-types') return [];
+        if (url === '/me/inventory-filters') return { enabled: false };
+        if (url.startsWith('/inventory?')) return { items: [row], total: 1, page: 1, per_page: 50, window_hours: 18, fresh_window_hours: 24 };
+        if (url.startsWith('/inventory/raw-texts')) return { items: [{ extraction_item_id: 'item-1', raw_text: 'mobile raw text', line_start: 1, line_end: 1 }] };
+        throw new Error(`Unexpected GET ${url}`);
+      });
+      renderPage();
+      const btn = await screen.findByTestId('inventory-raw-text-r1');
+      await new Promise((r) => setTimeout(r, 30));
+      fireEvent.click(btn);
+      expect(await screen.findByText('mobile raw text')).toBeTruthy();
+      expect(mock.get).toHaveBeenCalledWith('/inventory/raw-texts?extraction_item_ids=item-1');
     } finally {
       window.matchMedia = original;
     }

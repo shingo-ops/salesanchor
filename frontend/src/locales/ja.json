@@ -1467,7 +1467,8 @@
       "itemTab": "{{n}}件目",
       "tabAnalysis": "解析",
       "tabRawText": "原文",
-      "rawTextTitle": "{{supplier}}　{{postedAt}}"
+      "rawTextTitle": "{{supplier}}　{{postedAt}}",
+      "openButton": "原文を見る"
     },
     "view": {
       "subtitle": "仕入元の現在オファーを表示します。",

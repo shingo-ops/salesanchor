@@ -189,6 +189,7 @@ export const PAGE_ICONS = {
   // 変更しないため別キーで公開する。
   kartePanelMobile:   User,             // 受信箱スマホ会話ヘッダー「顧客情報」ボタン用
   settingsSolid:      GearEight,        // 受信箱ヘッダー設定ボタン（solid）
+  rawText:            FileText,         // 在庫表スマホカード「原文」ボタン用（便1）
 } satisfies Record<string, Icon>;
 
 
