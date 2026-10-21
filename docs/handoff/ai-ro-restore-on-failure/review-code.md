@@ -94,3 +94,39 @@ VERDICT: REVISE
 - N2: T5 は「作成の最中に読みが重なったか」を確かめていない。設計の受け入れ基準にある数値（作成3000ms未満・読み取り1000ms未満）は満たしている。重なりの確かめは、まだ確かめていないと記録する。
 - N3: 了解（ADR に記録済み、範囲外）。
 - この直しの後に、もう一度コード審査を受ける。
+
+## 再審査（head f3db29faf、2026-10-21）
+
+- 判定: REVISE（必須1件。PR 本文だけの直しで、コード・試験・文書の中身には指摘なし）
+
+### 確かめたこと
+
+【事実】
+- 台本と design §3: design.md「変更後」ブロック（22行）と台本 `^AI_RO_CREATE_SQL=`〜最初の `^}$` を diff → 差分0。コメント（:121-125）も差分0。`git diff origin/main...HEAD -- scripts/run_all_migrations.sh` のハンクは1つ（numstat 16/13）。035cc8c5a からの台本の差は、コメント1行の追加と、作成の行の `${PSQL}` の直後に ` -v VERBOSITY=terse` を足したことだけ。`bash -n` OK、`shellcheck -S warning`（台本・試験）出力なし。
+- K3 への影響: `-v VERBOSITY=terse` は psql の変数を1つ足すだけで、`if !` の構造と3つの `exit "${rc}"` は変わっていない。
+- terse で成功回の作成結果の行が残るか: sandbox run 39600086141 の T1 に `NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []` があり、`T1 rc=3 created_N=1 view_count=1 has_sb_items=1 api_token_cols=0`、PASS。T2・T5・T8 でも同じ行が出た。
+- T7: `ERROR:  canceling statement due to statement timeout` だけが出て、CONTEXT 行と SQL statement 行は無い。`T7 elapsed_sec=3 rc=3 views=0 context_lines=0 sql_statement_lines=0`、PASS。
+- T7 の判定が甘くないか:
+  - 足した2条件（`grep -ac 'CONTEXT:'`・`grep -ac 'SQL statement'` が 0）は、前回の run 39598850269 の t7 ログでは各1行あったので、terse が無ければ落ちる。
+  - `grep -c` は0件のとき「0」を出して rc=1 で終わり、`|| true` で値は「0」のまま残る。空文字になって通る道は無い。
+  - 残りの条件（10秒以内・rc=3・警告・ビュー0本）は前回と同じ。
+- sandbox: `gh run view 39600086141` は workflow「Sandbox test (manual)」、headSha 4df4308d709ab7dba24228681f443eef8a055049、completed / success。ログの最後は「ALL PASS (T1-T7)」。T6 の切り出しは23行（コメント1行が増えた分）。
+- 4df4308d7 から f3db29faf まで: `git diff --name-only` は docs/adr/ADR-1024-ai-readonly-db-path.md だけ（1行の追加/置換）。台本・試験の差は無い。ADR に書いた結果（CONTEXT と SQL 文が0行で、残ったのは「canceling statement due to statement timeout」だけ）は run のログと合う。
+- design・card の追補: design §3 の理由・受け入れ基準 T7・弊害の文が、台本と試験の中身と合っている。
+
+### 必須
+
+- M2 PR 本文の「触るファイル」に `docs/handoff/ai-ro-restore-on-failure/review-code.md` が無い。
+  - `git diff origin/main...HEAD --numstat` は10ファイルで、review-code.md（96/0）が新しく入っている。
+  - 本文の「触るファイル」は9件のまま。
+  - CI「process-artifacts gate」が fail している（run 39600360138: 「❌ 宣言外のファイルを変更しています: - docs/handoff/ai-ro-restore-on-failure/review-code.md」）。
+  - 直し方: PR 本文の「触るファイル」に review-code.md を足す。「削除するファイル」は今のままで合っている（行を削除したファイルは usage.md 1/1 と run_all_migrations.sh 16/13 だけ。review-code.md は追加だけ）。
+  - コードの head は変わらないので、本文を直して gate が緑になれば、この審査は f3db29faf にそのまま当たる。
+
+### 任意
+
+- N4 PR 本文の試験の記録が、前の run 39598850269（head d4152e0a3）のままになっている。run 39600086141（head 4df4308d7）と T7 の context_lines=0 / sql_statement_lines=0 を書き足すとよい。
+- N5 T7 は、警告の原因が打ち切り（57014）であることを文面では確かめていない（10秒以内・ビュー0本・ai_reader ありで間接的に絞っている）。`canceling statement due to statement timeout` が1行あることを条件に足すと、より固くなる。
+- N1〜N3 は前回のまま（Planner の対応どおり、範囲外または記録）。
+
+VERDICT: REVISE
