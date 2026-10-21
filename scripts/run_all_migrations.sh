@@ -58,9 +58,15 @@ run_py() {
     "$@" -w /app "${BACKEND}" python "${script}"
 }
 
-# 稼働中のアプリと deadlock したときだけ、同じファイルを流し直す（全 migration は冪等で、
+# 稼働中のアプリとロックを取り合ったら、同じファイルを流し直す（全 migration は冪等で、
 # CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
-SQL_DEADLOCK_MAX_ATTEMPTS=3
+# ロック待ちは1秒で諦める。待っている間は後から来た在庫表などの読み取りも止まるため（ADR-1037）。
+# 再試行はファイルごとに初回含め最大10回・3秒あけ、1回の実行全体で合計40回まで（移行ステップの打ち切り10分に収める）。
+SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"
+SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-10}"
+SQL_RETRY_SLEEP_SEC="${SQL_RETRY_SLEEP_SEC:-3}"
+SQL_RETRY_BUDGET="${SQL_RETRY_BUDGET:-40}"
+SQL_RETRY_USED=0
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
@@ -69,17 +75,21 @@ run_sql() {
   errlog="$(mktemp)"
   while true; do
     rc=0
-    docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
       return 0
     fi
-    if grep -q "deadlock detected" "${errlog}" && [ "${attempt}" -lt "${SQL_DEADLOCK_MAX_ATTEMPTS}" ]; then
-      attempt=$((attempt + 1))
-      echo ">>> [${STEP}/${TOTAL}] deadlock detected; retry ${attempt}/${SQL_DEADLOCK_MAX_ATTEMPTS} in 5s: ${file}"
-      sleep 5
-      continue
+    if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then
+      if [ "${attempt}" -lt "${SQL_RETRY_MAX_ATTEMPTS}" ] && [ "${SQL_RETRY_USED}" -lt "${SQL_RETRY_BUDGET}" ]; then
+        attempt=$((attempt + 1))
+        SQL_RETRY_USED=$((SQL_RETRY_USED + 1))
+        echo ">>> [${STEP}/${TOTAL}] lock conflict; retry ${attempt}/${SQL_RETRY_MAX_ATTEMPTS} in ${SQL_RETRY_SLEEP_SEC}s (total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${file}"
+        sleep "${SQL_RETRY_SLEEP_SEC}"
+        continue
+      fi
+      echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached (file ${attempt}/${SQL_RETRY_MAX_ATTEMPTS}, total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${file}"
     fi
     rm -f "${errlog}"
     return "${rc}"
