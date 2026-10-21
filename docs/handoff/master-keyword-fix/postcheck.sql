@@ -9,7 +9,7 @@ SELECT p.id, p.product_code, p.mark, p.name, p.is_active,
        (SELECT string_agg(k.position || ':' || k.keyword, ' | ' ORDER BY k.position, k.id)
           FROM public.product_exclude_keywords k WHERE k.product_id = p.id) AS exclude_keywords
   FROM public.products p WHERE p.id IN (420439, 420450, 420560, 440578, 466060) ORDER BY p.id;
-SELECT id, name, code_only_match, match_by_code, updated_at FROM public.type_master WHERE id = 8982;
+SELECT id, name_ja, code_only_match, match_by_code, updated_at FROM public.type_master WHERE id = 8982;
 DO $do$
 DECLARE
   spec jsonb; specs jsonb := $j$[
@@ -124,7 +124,7 @@ BEGIN
   IF r.code_only_match IS DISTINCT FROM (CASE 'after' WHEN 'before' THEN false ELSE true END) THEN
     RAISE EXCEPTION 'MISMATCH (after) type_master id=% code_only_match=%', 8982, r.code_only_match;
   END IF;
-  RAISE NOTICE 'OK (after) type_master id=% name=% code_only_match=%', 8982, r.name, r.code_only_match;
+  RAISE NOTICE 'OK (after) type_master id=% name=% code_only_match=%', 8982, r.name_ja, r.code_only_match;
 END
 $do$;
 DO $do$
