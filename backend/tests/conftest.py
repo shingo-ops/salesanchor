@@ -565,6 +565,10 @@ async def setup_test_db(test_engine):
                 expected_close_date DATE,
                 prospect_rank VARCHAR(10),
                 assigned_to INTEGER,
+                -- 受信箱「新規」バッジ（migrations/20261015_090000_add_leads_assignment_opened_at.sql・
+                -- backend/app/services/tenant.py:377 と同じ列）。これが無いと
+                -- app.routers.leads.update_lead の担当変更が「no such column」で 503 になる
+                assignment_opened_at TIMESTAMP,
                 converted_deal_id INTEGER,
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
