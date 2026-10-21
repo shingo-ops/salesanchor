@@ -95,3 +95,15 @@
   - T5 のミリ秒
   - shellcheck の結果
 - 最後の行は DONE / BLOCKED:<理由> / NEEDS_DECISION:<内容> のどれか。
+
+## 追補（コード審査 M1 への対応、2026-10-21）
+- 審査記録: review-code.md（REVISE、M1）。直し方は design §3 の改訂（VERBOSITY=terse）。
+- やること:
+  1. `scripts/run_all_migrations.sh` の作成の docker exec の行で、`${PSQL}` の直後に ` -v VERBOSITY=terse` を足す。その上（既存のコメント2行の下）に、design §3 のコメント1行を足す。ほかの行は変えない。
+  2. `tests/sandbox/ai-ro-restore-on-failure.sh` の T7 の合格条件に、次の2つを足す。PASS/FAIL の行に件数を出す。
+     - `grep -ac 'CONTEXT:' t7.log` が 0。
+     - `grep -ac 'SQL statement' t7.log` が 0。
+  3. T1 の合格条件はそのまま。T1 のログに `ai_ro views created:` が出ることが、成功回の作成結果の行が残る確かめになる。
+  4. `bash -n` と shellcheck を流す。
+  5. commit する。対象は台本、試験、design.md、card.md、review-code.md、ADR-1024。push してから sandbox-test を流し直す。
+- 想定分岐: terse にしても T7 のログに CONTEXT が残る場合、または T1 で作成結果の行が消えた場合 → 本体はそれ以上変えない。ログを添えて NEEDS_DECISION。

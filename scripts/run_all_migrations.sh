@@ -138,7 +138,8 @@ _ai_ro_create_on_exit() {
   fi
   # ビューは AI が読むための補助。作成に失敗しても入れ替えの成否は変えず、「読めない」側に倒す
   # 1文ごとの上限。打ち切り（57014）は作成 SQL の WHEN others に捕まらず、全体が戻って下の警告に入る
-  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+  # VERBOSITY=terse: エラーは重さ・本文・位置だけにし、CONTEXT（SQL 文）を公開ログに出さない
+  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
     echo "⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）"
     exit "${rc}"
   fi

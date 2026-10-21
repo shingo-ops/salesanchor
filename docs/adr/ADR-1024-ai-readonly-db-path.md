@@ -113,6 +113,7 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
   - statement_timeout の打ち切り（57014）は WHEN others に捕まらず、作成全体が戻って警告になる（PostgreSQL 16 公式文書）。
   - そのため結果は「全部ある」か「警告」の2つになる。ACCESS EXCLUSIVE の持ち主がいても、待ち続けない。
 - ログの文面: 失敗回の「skip ai_ro views (script failed rc=N; views stay dropped)」は「script failed rc=N; recreating ai_ro views anyway」に変わる。
+- 作成の psql には `-v VERBOSITY=terse` を渡す。打ち切りの回は、エラーの CONTEXT 欄に SQL 文（表名と列名）が出ていた（コード審査 M1）。terse にすると、出るのは重さ・本文・位置だけになる（PostgreSQL 16 公式文書 libpq-control）。成功回の作成結果の行は本文なので、今のまま出る。
 - 使い捨て DB の試験（sandbox run 39598850269、ubuntu の bash 5.2.21）: T1〜T7 は全部合格した。
   - 移行が失敗した回: 作り直した後、ビュー数は作成数と同じで、秘密列は0。
   - 作成の時間: 読み取り中の接続があっても作成は161ms、読み取りは56ms。

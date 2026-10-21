@@ -171,11 +171,13 @@ wait "$HOLD_PID" || true
 cat "$OUT_DIR/t7.log"
 T7_SEC=$(( T7_END - T7_START ))
 T7_CNT="$(count_views)"
-echo "T7 elapsed_sec=${T7_SEC} rc=${T7_RC} views=${T7_CNT}"
-if [ "$T7_SEC" -le 10 ] && [ "$T7_RC" = 3 ] && grep -aq 'ai_ro views の作成に失敗' "$OUT_DIR/t7.log" && [ "$T7_CNT" = 0 ]; then
-  pass "T7 elapsed_sec=${T7_SEC} rc=3 views=0"
+T7_CTX="$(grep -ac 'CONTEXT:' "$OUT_DIR/t7.log" || true)"
+T7_STMT="$(grep -ac 'SQL statement' "$OUT_DIR/t7.log" || true)"
+echo "T7 elapsed_sec=${T7_SEC} rc=${T7_RC} views=${T7_CNT} context_lines=${T7_CTX} sql_statement_lines=${T7_STMT}"
+if [ "$T7_SEC" -le 10 ] && [ "$T7_RC" = 3 ] && grep -aq 'ai_ro views の作成に失敗' "$OUT_DIR/t7.log" && [ "$T7_CNT" = 0 ] && [ "$T7_CTX" = 0 ] && [ "$T7_STMT" = 0 ]; then
+  pass "T7 elapsed_sec=${T7_SEC} rc=3 views=0 context_lines=${T7_CTX} sql_statement_lines=${T7_STMT}"
 else
-  fail "T7 elapsed_sec=${T7_SEC} rc=${T7_RC} views=${T7_CNT}"
+  fail "T7 elapsed_sec=${T7_SEC} rc=${T7_RC} views=${T7_CNT} context_lines=${T7_CTX} sql_statement_lines=${T7_STMT}"
 fi
 
 # --- T8（記録だけ。合否に入れない） ---

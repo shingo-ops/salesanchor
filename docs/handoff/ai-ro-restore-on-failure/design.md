@@ -61,7 +61,8 @@ _ai_ro_create_on_exit() {
   fi
   # ビューは AI が読むための補助。作成に失敗しても入れ替えの成否は変えず、「読めない」側に倒す
   # 1文ごとの上限。打ち切り（57014）は作成 SQL の WHEN others に捕まらず、全体が戻って下の警告に入る
-  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+  # VERBOSITY=terse: エラーは重さ・本文・位置だけにし、CONTEXT（SQL 文）を公開ログに出さない
+  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
     echo "⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）"
     exit "${rc}"
   fi
@@ -86,6 +87,10 @@ _ai_ro_create_on_exit() {
   - PostgreSQL 16 公式文書（plpgsql-control-structures、2026-10-21 確認）には「The special condition name OTHERS matches every error type except QUERY_CANCELED and ASSERT_FAILURE.」とある。
   - statement_timeout の打ち切りは query_canceled（57014。errcodes-appendix、同日確認）になる。1本ずつの例外処理（create SQL :68）には飲まれず、作成全体が戻る。
   - lock_timeout の失敗は lock_not_available（55P03）になり、WHEN others に捕まる。捕まると、そのビューだけ欠けたまま作成は成功扱いになる。
+- VERBOSITY=terse を足した理由（コード審査 M1、2026-10-21）:
+  - 打ち切りの回（T7）だけ、ログに `CONTEXT:  SQL statement "CREATE VIEW ai_ro.… AS SELECT <列> FROM …"` が出た（sandbox run 39598850269）。表名と、拒否リストを通った列名が公開ログに出る。
+  - PostgreSQL 16 公式文書（libpq-control、2026-10-21 確認）には「In TERSE mode, returned messages include severity, primary text, and position only」とある。app-psql の SHOW_CONTEXT の項には「This setting has no effect when VERBOSITY is set to terse or sqlstate.」とある。
+  - 成功回の作成結果の行（`RAISE NOTICE 'ai_ro views created: …'`、create SQL :74）は本文（primary text）なので、今のまま出る。K-本番1 の数え方は変わらない。
 
 ## 4. 影響範囲（呼び出し元の全走査）
 
@@ -141,7 +146,7 @@ _ai_ro_create_on_exit() {
 | T3 ai_reader が無い DB で失敗したとき、終了コードは元の rc のまま、ログに固定の文字列「ai_ro views の作成に失敗」が出る | 同上 |
 | T4 移行は成功し、作成だけ失敗したとき、終了コードは0 | 同上 |
 | T5 ほかの接続が元の表を読み取り中（ACCESS SHARE）でも作成は待たず、作成中の読み取りは1秒以内に返る | 同上（経過ミリ秒を出す） |
-| T7 別の接続が試験の表に ACCESS EXCLUSIVE を持ったまま、移行が rc=3 で失敗したとき、作成は試験用の上限（AI_RO_CREATE_TIMEOUT=3s）で打ち切られる。開始から10秒以内に終わり、終了コードは3、ログに「ai_ro views の作成に失敗」が出る。ai_ro のビューは0本（全体が戻った） | 同上 |
+| T7 別の接続が試験の表に ACCESS EXCLUSIVE を持ったまま、移行が rc=3 で失敗したとき、作成は試験用の上限（AI_RO_CREATE_TIMEOUT=3s）で打ち切られる。開始から10秒以内に終わり、終了コードは3、ログに「ai_ro views の作成に失敗」が出る。ai_ro のビューは0本（全体が戻った）。ログに `CONTEXT:` と `SQL statement` が0行（コード審査 M1） | 同上 |
 | T8（記録だけ。合否にしない）ubuntu の bash 5 で、移行の途中（sleep 中）に子の bash へ SIGTERM を送ったときの終了コードと、作成が流れたか | 同上（ログに出す） |
 | T6 抜き出した関数が本物の台本と同じ | 試験が `scripts/run_all_migrations.sh` から `^AI_RO_CREATE_SQL=`（:125）〜 `^trap _ai_ro_create_on_exit EXIT` を切り出して使う（写しを持たない）。範囲には時間上限の変数と trap の登録が入る。POSTGRES・PSQL・REPO_DIR と set -e は試験側で用意する |
 | K-本番1 入れ替え後、ログに「skip ai_ro views」「views stay dropped」が0行。作成結果の行で failed 0 | deploy ログを `/usr/bin/grep -a` で数える |
@@ -158,7 +163,7 @@ _ai_ro_create_on_exit() {
 
 ## 弊害・トレードオフ
 
-- 失敗時のログが数行増える（作成結果の NOTICE）→ 対策: 値や SQL 文は出ない（件数と表名だけ。公開リポの方針どおり）。表名は今の成功回でも出ている。
+- 失敗時のログが数行増える（作成結果の NOTICE）→ 対策: 値や SQL 文は出ない（件数と表名だけ。公開リポの方針どおり）。表名は今の成功回でも出ている。作成が打ち切られた回の CONTEXT（SQL 文）は、VERBOSITY=terse で出さない（コード審査 M1、試験 T7 で確かめる）。
 - 失敗時の終了が約0.7秒遅れる → 対策: 不要（deploy の打ち切りは10分）。
 
 ---
