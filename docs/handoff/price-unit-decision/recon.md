@@ -87,6 +87,14 @@
 - 「開封」単独は CN0003（未開封）に入る。Opened box は「ペリ無」系と「検品のため開封済み」、Opened case は「テープカット」系。
 - Pack の状態はサーチ系だけ（ダメージ等の Pack 行は無い）。
 
+### 3-7 状態の種類の札（`line_conditions.condition_def_id`、2026-10-21 01:14Z、reader 鍵。設計 B2 の根拠）
+【事実】
+- 種類の一覧 `public.condition_definitions`: 1 NEW・2 SEALED・3 DAMAGED・4 NO_SHRINK・5 OPENED・6 EMPTY_BOX・7 UNSEARCHED・8 SEARCHED（`docs/handoff/price-unit-decision/data/bin2-defid/evidence/q6.out`）。
+- box/case/pack の群の有効な 11 行で札があるのは CN0002=3・CN20261008072213=8 だけ。群ごとの `unit_id` は box 10・case 9・pack 11。空箱 CN0011・CN20260925144747 は札 6 で群が空。テナント別の行 0（`docs/handoff/price-unit-decision/data/bin2-defid/evidence/q2.out`）。
+- `public.unit_condition_links` は 11 行。CASE×SEALED・BOX×SEARCHED の組が無い（`docs/handoff/price-unit-decision/data/bin2-defid/evidence/q7.out`）。`quantity_units` は 1 CASE・2 BOX・3 PACK・5 CARD（`docs/handoff/price-unit-decision/data/bin2-defid/evidence/q8.out`）。
+- `condition_def_id` を読むのは管理 API・管理画面だけで、v102 の判定は読まない（origin/main の backend/・frontend/src/・migrations/ を `git grep condition_def_id` した結果 `docs/handoff/price-unit-decision/data/bin2-defid/evidence/defid_readers_grep.txt`）。`public.conditions` は `line_conditions` の単純な VIEW で、管理画面の PATCH（`backend/app/routers/super_admin_conditions.py:230-262`）と CSV 取り込み（同 :398-407、有効・名前を更新）が状態マスタを変える経路。
+- 既存 ADR: `git grep -i condition_def_id docs/adr` は ADR-156:42 の 1 件だけで、種類の札から判定する決まりは無い。
+
 ### 3-6 入数
 【事実】`public.product_packagings`: Case→Box の数が登録された商品 109（12〜60）、Box→Pack の数が登録された商品 134（4〜30）。
 【事実】Pack の価格の実比（Pack 価格÷箱の買取中央値）は 0.01〜0.05 中心で、「箱の 1/n」付近の帯だと外す→不決になる行が多い。
