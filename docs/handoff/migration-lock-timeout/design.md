@@ -306,7 +306,7 @@ log_lock_holders() {
   | `source_cte(latest_stock=False)`（`backend/app/services/tcg_condition_review_svc.py:84-100`） | source_messages |
   | `review_joins(shime=False)`（同 :164-333） | products・conditions（ビュー）・item_corrections |
   | `result_order_sql`（`backend/app/services/tcg_result_order.py:18-42`） | conditions（ビュー） |
-  | `_build_inventory_view_sql`（`inventory_offers.py:283-347`） | products・type_master |
+  | `_build_inventory_view_sql`（`backend/app/routers/inventory_offers.py:283-347`） | products・type_master |
   | 認証（`backend/app/auth/dependencies.py:82-109,124-260,565-603`） | users・tenants・user_roles・role_permissions・roles・permissions |
 - 計測で読む表は次の14表（すべて public の表）。
   - analysis_results・extraction_items・extraction_jobs・source_messages・supplier_channels・item_corrections・line_conditions・products・line_units・product_search_keywords・suppliers・type_master・tcg_distribution_settings・users
@@ -316,9 +316,9 @@ log_lock_holders() {
   - ビューを読むと「ビュー → 表」の逆順に鍵を取るので、計測が deadlock の相手になりうる。表を直接読めば鍵は1つだけで、逆順にならない。
   - 待ちの長さは同じになる。ビューと表の鍵は同じトランザクションで取られ、確定（COMMIT）で一緒に外れるため。
 - 外す表と理由
-  - tenants・user_roles・role_permissions・roles: 権限とテナントは Redis のキャッシュが優先で、当たれば DB に行かない（`dependencies.py:263-314,575`）。user_roles・role_permissions・roles はテナントごとのスキーマ（`migrations/003_add_phase1_tenant_tables.sql:43,56,63`）で、計測からは1つに決められない。
-  - permissions: 所有者・管理者のときだけ全件を読み（`dependencies.py:599`）、それ以外はキャッシュ優先。
-  - users は毎回読む（`dependencies.py:95`）ので入れる。
+  - tenants・user_roles・role_permissions・roles: 権限とテナントは Redis のキャッシュが優先で、当たれば DB に行かない（`backend/app/auth/dependencies.py:263-314,575`）。user_roles・role_permissions・roles はテナントごとのスキーマ（`migrations/003_add_phase1_tenant_tables.sql:43,56,63`）で、計測からは1つに決められない。
+  - permissions: 所有者・管理者のときだけ全件を読み（`backend/app/auth/dependencies.py:599`）、それ以外はキャッシュ優先。
+  - users は毎回読む（`backend/app/auth/dependencies.py:95`）ので入れる。
 - ずれを止める試験 `backend/tests/test_read_probe_tables.py`（CI の pytest で毎回流れる）
   - CI の pytest から `scripts/run_all_migrations.sh` を読めることは確かめてある（`backend/tests/test_supply_category.py:22,130` に実績。`.github/workflows/test.yml` は `scripts/**` の変更でも走る）。
   - 拾う範囲は、上の表の関数のうち認証を除く6つ。`ast` で関数を見つけ、`ast.get_source_segment` で関数全体の文字列を取る。そこから正規表現 `(?:public|\{TCG_SCHEMA\}|\{schema\})\.([a-z_]+)` で表名を拾う。
@@ -340,7 +340,7 @@ log_lock_holders() {
 - T7（本番で起きる形）: 別の接続が products を読むトランザクションを6秒開いたままにする（ACCESS SHARE）。その間に、本物の run_sql（`SQL_LOCK_TIMEOUT=1s`、`SQL_RETRY_SLEEP_SEC=0`）で products に ACCESS EXCLUSIVE を取る SQL を流す。移行がその後ろで待ち続け、計測はさらに後ろに並ぶ。
   - 計測が本当に並んだ証拠として、その間に `pg_stat_activity` で `application_name='sa_read_probe'` かつ `wait_event_type='Lock'` の接続が1回以上見えること、かつ max≥300。
   - 合格: 300≤max≤1500、slow=0、run_sql は再試行のあと成功する。
-- T3（終了コード）: 本物の切り出し（目印の間）と、本物の `_ai_ro_create_on_exit` の切り出し（`ai-ro-restore-on-failure.sh:39` と同じ目印）を一緒に読み込んだ親を作る。計測を始めた後に rc=3 で終わらせ、trap から止める。rc=3 のまま返り、まとめの行が出る。終了後に計測の子が残っていない（`kill -0` が失敗する）。
+- T3（終了コード）: 本物の切り出し（目印の間）と、本物の `_ai_ro_create_on_exit` の切り出し（`tests/sandbox/ai-ro-restore-on-failure.sh:39` と同じ目印）を一緒に読み込んだ親を作る。計測を始めた後に rc=3 で終わらせ、trap から止める。rc=3 のまま返り、まとめの行が出る。終了後に計測の子が残っていない（`kill -0` が失敗する）。
 - T8（親が先に消える）: 親を `kill -9` で止める（trap が走らない）。計測の子は、間隔の2回分以内に自分で終わる。
 - T4（表が無い）: 計測の表のうち1つが無い DB で回す。止まらず、error≥1 になり、まとめの行が出る。
 - T4b（つながらない）: `POSTGRES` を存在しない入れ物の名前にして回す。止まらず、error≥1、まとめの行が出る。
@@ -357,7 +357,7 @@ log_lock_holders() {
 | K10 入れ替えのたびに、移行中の読み取りの待ちが数えられる | 入れ替えのログに `read probe: n=` の行があり、n≥1、error=0、invalid=0 |
 | K7（数え方を変える。PO 2026-10-22「1」で承認） 移行ステップのある入れ替え3回で、移行の鍵による待ちが2秒を超えた回が0 | 入れ替えのログの `read probe: … slow=0 error=0` |
 | K11 計測を足しても入れ替えの成否・終了コードは変わらない | sandbox T3・T8・T9 PASS、入れ替えの「Run database migrations」が success |
-| K12 計測の表が在庫表のクエリとずれない | `test_read_probe_tables.py` が CI で PASS |
+| K12 計測の表が在庫表のクエリとずれない | `backend/tests/test_read_probe_tables.py` が CI で PASS |
 | K13 公開ログに SQL の文面・表名を出さない | sandbox T5 PASS、入れ替えのログで `read probe` の行に表名が0 |
 | K14 計測が移行を詰まらせない | sandbox T7 PASS（max≤1500）。入れ替えの `lock holders` に `sa_read_probe` が出ても、`retry limit reached` が0 |
 
