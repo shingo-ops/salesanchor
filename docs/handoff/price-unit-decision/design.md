@@ -7,7 +7,7 @@ mode: handoff
 
 親: [docs/specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)
 
-状態: **方針は PO が決めた**（2026-10-21）。起案は 2026-10-21、Opus。審査は下の「審査」にある。追補 B2（種類は状態マスタの札から読む、PO「1」2026-10-21）は審査中。
+状態: **方針は PO が決めた**（2026-10-21）。起案は 2026-10-21、Opus。審査は下の「審査」にある。追補 B2（種類は状態マスタの札から読む、PO「1」2026-10-21）は下の「審査」の B2 の行を参照。
 - 現状の調べは [docs/handoff/price-unit-decision/recon.md](./recon.md)（基準 origin/main `9c7275ea0`）
 - 決定の記録は [ADR-1036](../../adr/ADR-1036-price-decides-unit.md)。ADR-1035 What 2（状態が語で決まったときは状態の単位を優先）の例外にあたる。
 - 試算の生出力・原文つきの表は社外秘フォルダ（`~/CC報告ファイル-keep/needs-review-zero/price-unit-recon/` と同 `v2/`・`v3/`・`v4/`・`v5/`、棚卸しは `~/CC報告ファイル-keep/needs-review-zero/inventory/`）。この文書には件数・商品 id・状態コードだけを書く。
@@ -139,7 +139,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
 - 100 字で切るのは今と同じ（試算で追記後に 100 字を超える行 0、最大 53 字）。
 - `unit_basis` はこの設計では扱わない（v102 は保存していない。便3 の別設計で保存の形を決める）。
 
-## コードの変え方（file:line は origin/main `9c7275ea0`）
+## コードの変え方（file:line は origin/main `9c7275ea0`。ただし B2 の節と、この節で `load_targets` に付けた `:166-175` は便1 #4586 マージ後の origin/main `50d121ce0`。`backend/app/services/v102_buyback_unit_svc.py` は便1 で行が 2 行前後ずれているので、実装カードでは今の main の行番号に揃え直す）
 
 ### 便1（時点）
 - `backend/app/services/line_analysis_v102_svc.py:1458-1468` の `_POSTED_AT_SQL`／`load_posted_date` の隣に、日時のまま返す `load_posted_at(session, extraction_job_id)` を足す（同じ SQL を使う。`source_messages.line_posted_at`）。
@@ -166,7 +166,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
   - 「決まっていない」= `unit_basis["alias"]` が None、または `resolve_unit_v2(alias, unit_alias_to_info)[1]`（書かれた語の単位の区分）が `BOX_RECHECK_UNIT_KUBUNS`（`backend/app/services/gemini_raw_copy_v102_product_first.py:65-67`: 空・不明・条件つき・複合・数量専用）に入る。「個」は条件つき（UN0008）なのでここに入る。今の `alias is None` だけでは「個」の行を取りこぼす（`find_unit_product_first` `backend/app/services/gemini_raw_copy_v102_product_first.py:511-538` は「個」で alias="個" を残す）。
 - 判定 `decide_code`（`backend/app/services/v102_buyback_unit_svc.py:106-115`）: 返り値を「単位の種類（Box／Case／Pack）と r」に変え、`r <= pack_max` で Pack を返す。Pack は箱系の分類の行だけ（今の対象の行は Box／Case だけ。今と同じ）。
 - 引数 `unit_alias_to_info` は `is_candidate`・`apply_buyback_units`・`_buyback_units` とも**必須**（既定値なし）。
-- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:166-175`）を B2 の読み方に替え、`condition_id → (群, 札)` の逆引きも作る。行の今の `condition_id` からこの逆引きで札を出し、種類を決める（B の表の行と同じ結果）。種類は次の順で決める。(1) `condition_decided_by_word(basis)` が False の行は、今の状態（Error・FLAG_SINGLE を含む。`backend/app/services/gemini_raw_copy_v102_product_first.py:579-586`、`backend/tests/test_v102_buyback_unit.py:63-68`・`:236-240`）に関係なく「既定」。(2) True の行は逆引きで code を出し、CN0003・CN0001・CN0007 なら「既定」（B の表と同じ定義）、それ以外は B の表で引く。`condition_decided_by_word` は (1) と D 表の basis の書き分けに使い、語で決まった行の中の「既定」判定には使わない。`item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` も B の「別の区分の状態の語も見る」どおりに使う。(2) で逆引きに無い・札が空の状態（AR confirmed pack・空箱等）は何もしない。止める範囲は B2 の「群の単位」のとおり（Box・Case の群が使えなければ便全体で何もしない。Pack の群が使えなければ Pack だけ決めない）。異常のときは B2 の「ログ」のとおり warning を出す。
+- 状態の種類: `load_targets`（`backend/app/services/v102_buyback_unit_svc.py:166-175`）を B2 の読み方に替え、`condition_id → (群, 札)` の逆引きも作る。行の今の `condition_id` からこの逆引きで札を出し、種類を決める（B の表の行と同じ結果）。種類は次の順で決める。(1) `condition_decided_by_word(basis)` が False の行は、今の状態（Error・FLAG_SINGLE を含む。`backend/app/services/gemini_raw_copy_v102_product_first.py:579-586`、`backend/tests/test_v102_buyback_unit.py:63-68`・`:236-240`）に関係なく「既定」。(2) True の行は逆引きで札を出し、札が 2・7 なら「既定」、それ以外はその札の種類とする（code を直書きした対応表を持たない。B2・ADR-1036 What 4）。`condition_decided_by_word` は (1) と D 表の basis の書き分けに使い、語で決まった行の中の「既定」判定には使わない。`item["review"]` の中の `kind == "condition_multiple_candidates"` の要素の `codes` も B の「別の区分の状態の語も見る」どおりに使う。(2) で逆引きに無い・札が空の状態（AR confirmed pack・空箱等）は何もしない。止める範囲は B2 の「群の単位」のとおり（Box・Case の群が使えなければ便全体で何もしない。Pack の群が使えなければ Pack だけ決めない）。異常のときは B2 の「ログ」のとおり warning を出す。
 - 写し先: B2 の「写し先」（値段の群で同じ種類の行がちょうど 1 行）。0 行（B の表の「決めない」）・2 行以上の組は何もしない。種類×単位の対応をコードの定数で持たない。コードの定数は既定の同一視 {2, 7} と、単位→群（Box→box・Case→case・Pack→pack）だけ。
 - 理由: `REASONS_DROPPED_WHEN_DECIDED`（`backend/app/services/v102_buyback_unit_svc.py:43`）に `condition_multiple_candidates` を足す。
 - 同じ値の扱い（`backend/app/services/v102_buyback_unit_svc.py:221-222`）: 値が同じでも、`review_reasons` に外す理由があれば、理由を外した values にする（D の表の「値は同じで、理由だけ外す」）。外す理由が無ければ今どおり何もしない。
@@ -266,7 +266,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
 ## 維持の仕組み
 
 - 帯の数字は設定（`tcg_distribution_settings`）で持つ。直すときは置き換え試験で外れ 0 を確かめてから。
-- 状態の種類の写しは、状態マスタの札（`condition_def_id`）が正本（B2）。box／case／pack の群に状態を足す・直す設計では、その行の札を必ず決め、札を入れたら記録 SQL の verify（15 組の照合と同じ形。群の種類が増えたら組を足す）で「群ごとに同じ種類の行がちょうど 1 行」を確かめる。札を入れない行は写しの対象にならない（今のまま）。ADR-1036 の What 4 に書く（ADR-1035 の維持の仕組みと並べる）。
+- 状態の種類の写しは、状態マスタの札（`condition_def_id`）が正本（B2）。box／case／pack の群に状態を足す・直す設計では、その行の札を必ず決め、札を入れたら記録 SQL の verify（15 組の照合と同じ形。群の種類が増えたら組を足す）で「群ごとに同じ種類の行が 2 行以上にならない」と B の表との一致を確かめる（0 行は「決めない」で正常）。札を入れない行は写しの対象にならない（今のまま）。ADR-1036 の「守り方」に書く（ADR-1035 の維持の仕組みと並べる）。
 - 群ごとに同じ種類が 2 行以上になると、その組は何もしなくなる。状態マスタは記録 SQL のほか、管理画面「状態マスタ」の作成（`backend/app/routers/super_admin_conditions.py:161-231` の POST。札・単位も入れる）と編集（札・単位・有効の切り替え。同 :234-267 の PATCH）、CSV 取り込み（有効・名前の更新。同 :400-409）、テナント側の作成・編集（`backend/app/routers/conditions.py:206` の POST・:270 の PATCH。札も入れられる）でも変わり、こちらは verify が走らない。検知は B2 の「ログ」の warning で行う。守り手 Opus は、状態マスタを変える記録 SQL のたびに verify を流し、warning が出たら verify を流して直す。
 - 買取の CARTON・BOX_SHRINK の更新が 10/12 から止まっている（recon 3-2）。Case の判定は BOX の比で行うので便1 は影響を受けない。取得側の修正は別課題。
 - 守り手: Opus（便ごとの置き換え試験と K2 の全件判定）。
@@ -296,6 +296,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
 
 - 1 回目（HEAD 86e69f306）: 相談役 Fable REVISE・審査役 REVISE。主な指摘は「値が同じ行で要確認が外れない（主例が直らない）」「ADR-1035 What 2 の例外の明記」「KGI/KPI 表」「カードで決める事項の残り」「略記」。この版で反映した。
 - 追補 B2 2 回目（HEAD 0ef21d8db）: 審査役 REVISE（軽 4 のみ。6 指摘の解消・B の表・反映の順・戻し方・K0/K1 に矛盾なしは確認済み）。行番号 2 か所の誤り（PATCH は :234-267、CSV の UPDATE は :400-409）、作成経路（管理画面 POST・テナント側 POST/PATCH）の抜け、Pack の既定 0 行がログ対象外、recon の節順。この版で反映した。
+- 追補 B2 3 回目（HEAD ae03548ed）: 審査役 2 名。1 名は APPROVE（軽 3: 行番号の基準の混在・「ちょうど 1 行」の言い方・What 4 と守り方の参照先）、もう 1 名（model opus 指定）は REVISE（:169 の (2) に code 直書きの古い文が残り B2・What 4 と食い違い／行番号の基準の混在）。この版で両方の指摘を反映した。
 - 2 回目（HEAD ca5dc8fed）: Fable REVISE（テープカット等の別区分の語が review_extra の codes に入り、Case 帯で CN0001 にしてしまう）・審査役 REVISE（語で決まった CN0003/CN0001/CN0007、直す既存テストの列挙、G1/K5 の母数、SAVEPOINT 内での呼び出し、D 表の分け方、recon の行番号）。この版で反映した。
 - 3 回目（HEAD 0e47be8a4）: Fable REVISE・審査役 REVISE（Fable: codes の置き場所が違う・「既定」の定義が 2 通り読める。審査役: codes は件の `review_extra` ではなく `item["review"]` の要素にある、`masters["unit_alias_to_info"]` は `.get` に、直すテスト 2 件の抜け）。この版で反映した。
 - 4 回目（HEAD 279aa793e）: 審査役 REVISE（「既定」の判定順が 1 段落の中で食い違い、語なしで Error・FLAG_SINGLE の行が何もしなくなる読み方ができる）。判定順 (1)(2) に書き直した。
