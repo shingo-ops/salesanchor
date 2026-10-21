@@ -1,7 +1,7 @@
 """まとめ売り（N単位セット）の読み取り（純関数・ADR-1027）。
 
 仕入元の本文に「40パックセット」のように書かれた「まとめの数 N」を、原文ブロックから読む。
-形は「数 N（1〜5桁）＋単位の語＋まとめの語」だけ。単位の語は単位の別名マスタから作る（このファイルに単位の語を書かない）。
+形は「数 N（1〜5桁）＋単位の語＋まとめの語」だけ。バルク系の行だけ（引数 bulk_shapes）、「まとめの語＋(N＋単位の語)」と、本文に数量の直後のセットがあるときの「まとめの語＋N＋単位の語」も見る（design.md §12）。単位の語は単位の別名マスタから作る（このファイルに単位の語を書かない）。
 canonical が Set の別名は単位の語に使わない（「16セット」は16単位のまとめではない）。Set の別名は
 「数量の直後に『セット』があるか」の判定にだけ使う。
 設計: docs/handoff/bundle-sale/design.md §5-2。判定の参照台本: scripts/dev/bundle_replay.py（このファイルの detect_bundle を import する）。
@@ -66,15 +66,33 @@ def split_unit_words(alias_to_canonical: Mapping[str, str]) -> tuple[dict[str, s
     return words, frozenset(set_words)
 
 
+def _alternations(word_to_canonical: Mapping[str, str]) -> tuple[str, str]:
+    """単位の語・まとめの語の正規表現の選択肢（`_patterns` と `_bulk_patterns` で同じ式を使う）。"""
+    unit_part = "|".join(re.escape(w) for w in sorted(word_to_canonical, key=len, reverse=True))
+    bundle_part = "|".join(re.escape(normalize(w)) for w in sorted(BUNDLE_WORDS, key=lambda w: len(normalize(w)), reverse=True))
+    return unit_part, bundle_part
+
+
 @lru_cache(maxsize=8)
 def _patterns(words: tuple[tuple[str, str], ...]) -> tuple[re.Pattern[str] | None, dict[str, str]]:
     word_to_canonical = dict(words)
     if not word_to_canonical:
         return None, word_to_canonical
-    unit_part = "|".join(re.escape(w) for w in sorted(word_to_canonical, key=len, reverse=True))
-    bundle_part = "|".join(re.escape(normalize(w)) for w in sorted(BUNDLE_WORDS, key=lambda w: len(normalize(w)), reverse=True))
+    unit_part, bundle_part = _alternations(word_to_canonical)
     pattern = re.compile(rf"(?<!\d)(\d{{1,{_MAX_DIGITS}}}){_SP}*({unit_part}){_SP}*({bundle_part})")
     return pattern, word_to_canonical
+
+
+@lru_cache(maxsize=8)
+def _bulk_patterns(words: tuple[tuple[str, str], ...]) -> tuple[re.Pattern[str], re.Pattern[str]] | None:
+    """バルク系だけの形。P1: まとめの語＋(N＋単位の語)。P2: まとめの語＋N＋単位の語（設計 §12-3）。"""
+    word_to_canonical = dict(words)
+    if not word_to_canonical:
+        return None
+    unit_part, bundle_part = _alternations(word_to_canonical)
+    p1 = re.compile(rf"({bundle_part}){_SP}*\((\d{{1,{_MAX_DIGITS}}}){_SP}*({unit_part})\)")
+    p2 = re.compile(rf"({bundle_part}){_SP}*(?<!\d)(\d{{1,{_MAX_DIGITS}}}){_SP}*({unit_part})")
+    return p1, p2
 
 
 def _strip_parens(block: str) -> str:
@@ -101,6 +119,35 @@ def _find_candidates(text: str, pattern: re.Pattern[str], word_to_canonical: Map
     return found
 
 
+def _bulk_matches(text: str, pattern: re.Pattern[str], word_to_canonical: Mapping[str, str]) -> list[tuple[int, str]]:
+    found: list[tuple[int, str]] = []
+    for m in pattern.finditer(text):
+        if text[m.end():m.end() + 1] == _AFTER_EXCLUDED:
+            continue
+        n = int(m.group(2))
+        if n < 2:
+            continue
+        found.append((n, word_to_canonical[m.group(3)]))
+    return found
+
+
+def _find_bulk_candidates(
+    full: str, word_to_canonical: Mapping[str, str], set_words: Iterable[str], quantity: object,
+) -> list[tuple[int, str]]:
+    """バルク系だけの追加の形（P1・P2）の候補。P1 は括弧を除く前の本文に、P2 は括弧を除いた本文に当てる。"""
+    patterns = _bulk_patterns(tuple(sorted(word_to_canonical.items())))
+    if patterns is None:
+        return []
+    p1, p2 = patterns
+    found = _bulk_matches(full, p1, word_to_canonical)  # P1 は数量に関係なく当てる
+    if quantity is None or (isinstance(quantity, str) and not quantity.strip()):
+        return found
+    q = Decimal(str(quantity))
+    if q == q.to_integral_value() and _has_set_after_quantity(full, int(q), set_words):
+        found += _bulk_matches(_strip_parens(full), p2, word_to_canonical)
+    return found
+
+
 def _has_set_after_quantity(full: str, quantity: int, set_words: Iterable[str]) -> bool:
     words = sorted(set_words, key=len, reverse=True)
     if not words:
@@ -115,6 +162,7 @@ def detect_bundle(
     set_words: Iterable[str],
     price: object,
     quantity: object,
+    bulk_shapes: bool = False,
 ) -> BundleResult | None:
     """原文ブロックからまとめ売りを読む。当たりなしは None。
 
@@ -126,6 +174,8 @@ def detect_bundle(
         return None
     full = normalize(block)
     found = _find_candidates(_strip_parens(full), pattern, word_to_canonical)
+    if bulk_shapes:  # バルク系だけ（設計 bundle-sale §12: P1・P2）
+        found += _find_bulk_candidates(full, word_to_canonical, set_words, quantity)
     if not found:
         return None
     distinct = sorted(set(found))
