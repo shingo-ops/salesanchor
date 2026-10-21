@@ -141,3 +141,71 @@ run_sql() {
 - 守り手: `scripts/run_all_migrations.sh`（値の正本と再試行）、`tests/sandbox/migration-run-sql-retry.sh`（挙動の試験。run_sql を変えたら流す）、`docs/adr/ADR-1037-migration-lock-timeout.md`（決まり）。
 - 完了後の監視: K6・K7 を3回分記録して ADR-1037 の「結果」欄に追記する。
 - 次フェーズへの引き継ぎ: 便2・便3、遅い時間帯B（再解析中）の原因は未確認のまま別テーマ。
+
+## 13. 便1.1（入れ替え1回目の失敗を受けた補正）
+
+### 13-1. 起きたこと（事実）
+- PR #4610 を含む入れ替え（Deploy to VPS run 39575250541、2026-10-21 09:13〜09:23 UTC）で移行ステップが失敗した。
+  - 止まったのは `migrations/082_extend_products_box_attributes.sql`（products に ADD COLUMN IF NOT EXISTS。ACCESS EXCLUSIVE を取りに行く）。
+  - 09:22:17〜09:22:55 の約38秒、10回続けて lock timeout になり、1ファイルの上限（10回）で止まった。
+  - 全体の再試行は 9/40 しか使っていない。ログは `/tmp/CC報告ファイル/migration-lock-timeout/merge/mig-step.txt` の末尾。
+- 失敗時の後始末で、ai_ro のビューが外れたまま残った。`scripts/run_all_migrations.sh` の EXIT trap は、rc≠0 だとビューを作り直さない。
+- 次の入れ替え run 39575404756（他の PR、09:23〜09:30 UTC）は全手順 success だった。"lock conflict" は0行で、ビューは 09:32Z に 511 本で戻っていた。
+- 成功した入れ替えで 082 にかかった時間は、約0.2秒（39575404756）と約0.13秒（39565734963）。
+- 38秒以上 products の鍵を離さなかった接続が何だったかは【未確認】。
+  - 失敗の約6分後の調査では、products の鍵は0行だった。
+  - reader の権限では他人の接続の中身が見えない（`/tmp/CC報告ファイル/migration-lock-timeout/incident/report.md`）。
+- K6 の判定: 便1は「3回で失敗0」を満たさなかった（1回目が失敗）。
+
+### 13-2. 補正の考え方
+- 鍵の待ちは1回1秒のままにする（K1・K7 の守り。在庫表を待たせるのは最大1秒）。
+- 止まった理由は、1ファイルの上限が全体の予算より先に尽きたこと。そこで、1ファイルでも全体の予算（40回）まで粘れるようにする。
+  - 最悪の追加時間は今と同じ160秒（全体の予算で決まる）で、打ち切り10分に収まる（§3 の計算のまま）。
+- 何が鍵を持っていたかを次から確かめられるよう、鍵が取れなかったときに、長く開いている接続の一覧をログに書く。
+
+### 13-3. 変更前 → 変更後
+| | 便1 | 便1.1 |
+|---|---|---|
+| `SQL_RETRY_MAX_ATTEMPTS` の既定 | 10 | 40（＝ `SQL_RETRY_BUDGET`。1ファイルでも全体の予算まで使える） |
+| 鍵が取れなかったときのログ | 「lock conflict; retry …」の1行 | ファイルごとの1回目の衝突時と、上限に達したときに、開始から1秒を超えて開いている接続を書く（下の `log_lock_holders`） |
+| 待ち1秒・間隔3秒・全体40回・ほかのエラー即停止 | — | 変えない |
+
+### 13-4. 変更内容（`scripts/run_all_migrations.sh`）
+- `SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-10}"` → `SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-40}"`
+- `SQL_RETRY_USED=0` の次の行（`run_sql() {` の前）に次を足す:
+```bash
+# 鍵が取れなかったときの手がかり: 開始から1秒を超えて開いている接続（ADR-1037 便1.1）
+# 公開リポジトリの Actions ログに出るため、SQL の文面・接続元アドレスは出さない（命令の先頭1語と表名だけ）
+log_lock_holders() {
+  echo ">>> [${STEP}/${TOTAL}] lock holders (xact > 1s):"
+  docker exec -i "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(split_part(ltrim(a.query), ' ', 1)) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+}
+```
+- run_sql の中:
+  - `if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then` の次の行に `[ "${attempt}" -eq 1 ] && log_lock_holders` を足す。
+  - `echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached …"` の次の行に `log_lock_holders` を足す。
+- ほかの行は変えない。
+
+### 13-5. 試験（`tests/sandbox/migration-run-sql-retry.sh` に足す）
+- 抽出範囲: `sed -n '/^SQL_LOCK_TIMEOUT=/,/^}/p'` は最初の `}`（`log_lock_holders` の終わり）で止まってしまう。そこで、`^SQL_LOCK_TIMEOUT=` から `^run_sql() {` の後の最初の `^}` まで取る。抽出行数を表示する。
+- T3 に足す判定: ログに `lock holders (xact > 1s):` が出ていて、そのあとの行のどれかに `products:AccessShareLock` が含まれる。あわせて、ログに `pg_sleep` の文字が出ていないこと（SQL の文面を出していないことの確認）。
+- T7（新）: 既定値の確認。`SQL_RETRY_MAX_ATTEMPTS` が 40、`SQL_RETRY_BUDGET` が 40。
+- T8（新）: T4 と同じ「1回目だけ deadlock」で、ログに `lock holders` が1回だけ出る（2回目以降の再試行では出さない）。
+- T1〜T6 は今の判定のまま全部 PASS すること。
+
+### 13-6. 受け入れ基準（追加）
+| 基準 | 検証方法 |
+|------|---------|
+| K8 1ファイルでも全体の予算まで流し直せる | sandbox-test T7 PASS |
+| K9 鍵が取れなかったとき、開いている接続がログに出る（出なくても移行の成否は変わらない） | sandbox-test T3 の追加判定・T8 PASS |
+| K6 の数え直し | 便1.1 を含む入れ替えから、移行ステップのある入れ替え3回で、deadlock・lock timeout による失敗0回。止まった場合は `lock holders` の行で持ち主を特定して次の手を決める |
+
+### 13-7. 弊害・戻し方
+- このリポジトリは公開設定で（`gh repo view shingo-ops/salesanchor --json visibility` = PUBLIC）、Actions のログは外から読める。
+  - そのため、ログには SQL の文面・接続元アドレス・値を出さない。
+  - 出すのは、接続番号・利用者名・アプリ名・状態・待ちの種類・開いている秒数・命令の先頭1語・鍵を持つ表名と鍵の種類だけ。表名はリポジトリの migration に既に載っている。
+- 一覧を取る問い合わせが失敗しても、`|| true` で移行の成否は変えない。
+  - `set -e`（`scripts/run_all_migrations.sh:20`）の下でも、`[ ... ] && log_lock_holders` の左辺が偽のときは止まらない。bash の仕様で、&& の左辺の失敗は errexit の対象外。
+  - ただし、関数の最後の文が `[ ... ] && …` で偽になると、関数は rc=1 を返す。そのため、この形は run_sql の中の途中の行にだけ置く（呼び出し結果は使わない）。
+- 戻し方: この PR を revert する（便1の形に戻る）。DB は変えない。
+- 外部事例: GitLab の with_lock_retries も、ロック待ちの1回分は短く、試す回数は多く取る形（§5 と同じ出典）。今回は1回分の待ちを変えず、回数の配り方だけを変える。

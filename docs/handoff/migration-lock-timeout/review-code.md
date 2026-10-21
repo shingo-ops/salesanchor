@@ -65,3 +65,39 @@
 生の材料: /tmp/CC報告ファイル/migration-lock-timeout/review/（diff.txt・pr.json・checks.txt・extract.txt・design-block.txt・sc-run.txt・sc-main.txt）
 
 VERDICT: REVISE on fa27ab5b766fc7ef5bf0c67f048cfe9bc3112fa5 PR #4610
+
+## 再審査（head 516daeb612397ac3ffbe2a96da12757097cff5a5）
+
+- 審査者: Claude Opus（Reviewer 役。読み取りのみ・コミットなし）
+- 対象: PR #4610 head `516daeb612397ac3ffbe2a96da12757097cff5a5`（`gh pr view 4610 --json headRefOid` と worktree の `git rev-parse HEAD` が一致）。origin/main からの commit は 7314c23f7・fa27ab5b7・516daeb61 の3つ
+- 判定: **APPROVE**
+- CI について: CI の合否はこの判定に含めていない（審査時点で走行中の可能性あり）。ADR-1003 条件1「必須 CI がすべて通る」はマージ前に別途確認すること。
+
+### 1. R1 が解消したか
+- 【事実】PR 本文の委任条件③は「PO に3行まとめ（対象・変更内容・バックアップ確認）を報告済み（2026-10-21 18:05 JST、セッションのチャットで報告。…）」。ADR-1003 `委譲の条件` 3（:29）の文言と一致する。
+- 【事実】GO記録の日時欄は「2026-10-21 18:05 JST」で時刻まで書かれている。
+- 【事実】本文の「対象と変更3行サマリ」（①〜③）と「バックアップ確認」（不要・理由つき）が並んでおり、3行まとめの中身が記録に残っている。
+- 【未確認】18:05 JST に実際に PO へチャットで報告したかは、審査役からはチャットを見られないため確かめていない。記録の書き方としての R1 は解消。
+- 判定: R1 解消。
+
+### 2. 516daeb6 で増えた差分（`git diff fa27ab5b7..516daeb6`、99行を全部読んだ）
+- 【事実】変更は3ファイル: ADR-1037（1行置換）、design.md（§3 の1行置換）、review-code.md（新規67行＝前回審査の記録）。
+- 【事実】ADR-1037 Why と design §3 に「5秒待ちの8ファイルが毎回上限まで待っても 40×(5+3)+138＝458秒」を追記。前回審査 2-3 の計算と一致し、600秒（ssh-action 打ち切り）未満という結論も変わらない。
+- 【事実】コード・試験・migration・workflow の変更は無い。design §4-1 のコードブロックにも触れていない。
+- 新しい問題: なし。
+
+### 3. 触るファイル11件との一致
+- 【事実】`git diff origin/main...HEAD --name-only` は11件: `.claude-pipeline/active-work.d/release-migration-lock-timeout.md`, `docs/adr/ADR-1037-migration-lock-timeout.md`, `docs/adr/README.md`, `docs/handoff/migration-lock-timeout/{card,design,recon,review-code,review-design}.md`, `scripts/run_all_migrations.sh`, `tests/sandbox/lock-timeout-repro.sh`, `tests/sandbox/migration-run-sql-retry.sh`。PR 本文「触るファイル」11件と過不足なく一致。「相乗り: なし（11件のみ）」とも一致。
+
+### 4. run_all_migrations.sh と design §4-1
+- 【事実】`sed -n '/^# 稼働中のアプリとロック/,/^}/p' scripts/run_all_migrations.sh`（37行）と design.md §4-1 の bash ブロック（37行）を diff → 差は0（IDENTICAL）。516daeb6 は run_all_migrations.sh を変えていないので、前回審査 2-1 の確認結果はそのまま有効。
+
+### 5. GO 記録（ADR-136 / ADR-1003）
+- 【事実】`git diff origin/main...HEAD --name-only` に `migrations/` と `.github/` で始まるパスは0件（grep の終了コード1）。workflow-lint.yml の変更なし。
+- 【事実】追加行に DROP を含む migration は無い（migration ファイル自体の変更が0件）。大量 DELETE・secrets・Ruleset・外部 GUI・force push に当たる変更も差分に無い。ADR-1003 の例外（:31-42）に当たらず、委任 GO で進めてよい。
+- 【事実】GO記録の項目: GO発行者「POの委任に基づくClaude Opus発行（ADR-1003）」（ADR-1003 :43 の委譲名義どおり）、日時（時刻あり）、GO原文「GO #4610」（番号つき、ADR-136 ②）、対象と変更3行サマリ、バックアップ確認、委任条件①〜④、相乗り、戻し方。ADR-136 の手順（3行サマリ提示→GO→本文転記）と ADR-1003 の3条件の書き方を満たす。
+- マージ前に残ること: ①必須 CI 全合格の確認（本審査の範囲外）②マージ直前の「確認済み」コメント（本文に予定として記載あり）。
+
+生の材料: /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/3a283ede-1595-4313-9392-a3ed5515cfac/scratchpad/（d1.txt・body.json・impl.txt・design.txt）
+
+VERDICT: APPROVE on 516daeb612397ac3ffbe2a96da12757097cff5a5 PR #4610

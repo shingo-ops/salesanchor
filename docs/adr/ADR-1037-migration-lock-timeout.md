@@ -14,9 +14,12 @@
 ## What（何を決めたか）
 
 1. `scripts/run_all_migrations.sh` の run_sql で流す SQL は、接続ごとに `lock_timeout=1s` を付けて流す（`docker exec -e PGOPTIONS`）。DB・ロール全体には付けない。
-2. "deadlock detected" と "canceling statement due to lock timeout" で落ちたファイルは、3秒あけて流し直す。1ファイル初回含め最大10回、1回の実行全体で再試行は合計40回まで。上限に達したら今までどおり止める。ほかのエラーは即停止。
+2. "deadlock detected" と "canceling statement due to lock timeout" で落ちたファイルは、3秒あけて流し直す。1回の実行全体で再試行は合計40回まで。1ファイルでもその40回まで使える（便1.1 で、1ファイル最大10回から変えた）。上限に達したら今までどおり止める。ほかのエラーは即停止。
 3. 値の正本は run_sql の直前の4行（`SQL_LOCK_TIMEOUT` など）だけ。環境変数での上書きは試験のためで、deploy.yml・.env には書かない。
 4. 挙動は `tests/sandbox/migration-run-sql-retry.sh`（本物の run_sql を抜き出して使い捨て DB で試す）で確かめる。run_sql を変えたらこの試験を流す。
+5. 鍵が取れなかったとき（ファイルごとの1回目と上限到達時）は、開始から1秒を超えて開いている接続をログに書く（便1.1）。
+   - 出すのは、接続番号・利用者名・アプリ名・状態・待ちの種類・秒数・命令の先頭1語・鍵を持つ表名だけ。
+   - SQL の文面・接続元アドレス・値は出さない。このリポジトリは公開で、Actions のログは外から読めるため。
 
 ## Why（なぜ）
 
@@ -33,4 +36,9 @@
 
 ## 結果
 
-- （反映後に、移行ステップのある入れ替え3回分の結果を追記する：失敗回数、"lock conflict; retry" と "retry limit reached" の回数、移行中に在庫表が2秒を超えた件数）
+- 便1（PR #4610）の入れ替え1回目（Deploy to VPS run 39575250541、2026-10-21 09:22 UTC）は失敗した。
+  - `migrations/082_extend_products_box_attributes.sql` が約38秒、lock timeout を10回続け、1ファイルの上限で止まった（全体の再試行は 9/40）。
+  - products の鍵を離さなかった接続が何だったかは未確認。
+  - 失敗時に ai_ro のビューが外れ、次の入れ替え（run 39575404756、同 09:30 UTC 成功。"lock conflict" 0行）で戻った。
+  - この結果を受けて便1.1（What 2・5）にした。設計は `docs/handoff/migration-lock-timeout/design.md` §13。
+- 便1.1 以降、移行ステップのある入れ替え3回分の結果を追記する。書くのは、失敗回数、"lock conflict; retry" と "retry limit reached" の回数、移行中に在庫表が2秒を超えた件数。
