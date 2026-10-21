@@ -36648,6 +36648,20 @@
         "title": "ViewerTemplateListResponse",
         "type": "object"
       },
+      "ViewerTemplateTextResponse": {
+        "properties": {
+          "text": {
+            "description": "その人の値を差し込んだ、そのまま送れる文",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ViewerTemplateTextResponse",
+        "type": "object"
+      },
       "ViewerTemplateUpdate": {
         "properties": {
           "body": {
@@ -63768,6 +63782,62 @@
           }
         ],
         "summary": "Suspend Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/template-text": {
+      "get": {
+        "operationId": "viewer_template_text_endpoint_api_v1_super_admin_viewers__viewer_id__template_text_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateTextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Template Text Endpoint",
         "tags": [
           "super-admin"
         ]

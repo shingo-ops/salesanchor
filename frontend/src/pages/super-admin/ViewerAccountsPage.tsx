@@ -23,6 +23,7 @@ import { Stack } from "../../components/Stack";
 import { Modal } from "../../components/Modal";
 import { TextField } from "../../components/TextField";
 import { Radio } from "../../components/Radio";
+import { Select } from "../../components/Select";
 import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
 
 interface ViewerItem {
@@ -79,6 +80,18 @@ interface StatusChangeResult {
 
 const LINE_NAME_MAX = 100;
 
+/** 詳細欄からコピーできる文（API の COPYABLE_KEYS と同じ順） */
+const COPYABLE_TEMPLATE_KEYS = [
+  "signup_request",
+  "room_recreated",
+  "notice_extended",
+  "interview_request",
+  "notice_activated",
+  "notice_suspended",
+] as const;
+/** お試しの期限が無い人には作れない文 */
+const NEEDS_EXPIRY = new Set<string>(["notice_extended", "interview_request"]);
+
 function formatDate(value: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -109,6 +122,8 @@ export default function ViewerAccountsPage() {
   const [savingName, setSavingName] = useState(false);
   const [savedName, setSavedName] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [templateKey, setTemplateKey] = useState("");
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
   const statusParam = searchParams.get("status");
   const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
@@ -144,6 +159,8 @@ export default function ViewerAccountsPage() {
   useEffect(() => {
     setSavedName(false);
     setSaveError("");
+    setTemplateKey("");
+    setTemplateError(null);
   }, [detailId]);
 
   const draftTrimmed = lineNameDraft.trim();
@@ -203,6 +220,28 @@ export default function ViewerAccountsPage() {
       copyText("signupRequest", res.text);
     } catch (e) {
       setError(errorMessage(e));
+    }
+  };
+
+  const templateErrorMessage = (e: unknown): string => {
+    if (e instanceof ApiError) {
+      if (e.status === 409) return t(`${f}.templateNoExpiry`);
+      if (e.status === 503) return t(`${f}.templateNotFound`);
+      if (e.status === 404) return t(`${f}.notFoundError`);
+    }
+    return t(`${f}.genericError`);
+  };
+
+  const copyTemplate = async () => {
+    if (!detail || !templateKey) return;
+    setTemplateError(null);
+    try {
+      const res = await api.get<{ text: string }>(
+        `/super-admin/viewers/${detail.id}/template-text?key=${encodeURIComponent(templateKey)}`,
+      );
+      copyText("template", res.text);
+    } catch (e) {
+      setTemplateError(templateErrorMessage(e));
     }
   };
 
@@ -437,15 +476,43 @@ export default function ViewerAccountsPage() {
         title={t(`${f}.detailTitle`)}
         footer={
           detail && (
-            <Stack direction="row" gap="2">
-              <Button
-                variant="primary"
-                onClick={() => { void saveLineName(); }}
-                disabled={!canSaveName}
-                data-testid="viewers-detail-save"
-              >
-                {t("common.save")}
-              </Button>
+            <Stack direction="column" gap="2">
+              <Select
+                size="sm"
+                fullWidth
+                label={t(`${f}.templatePick`)}
+                placeholder={t(`${f}.templatePlaceholder`)}
+                options={COPYABLE_TEMPLATE_KEYS.map(k => ({
+                  value: k,
+                  label: t(`superAdmin.viewerTemplates.names.${k}`),
+                  disabled: NEEDS_EXPIRY.has(k) && !detail.trial_expires_at,
+                }))}
+                value={templateKey}
+                onChange={e => {
+                  setTemplateKey(e.target.value);
+                  setTemplateError(null);
+                }}
+                error={templateError ?? undefined}
+                data-testid="viewers-detail-template"
+              />
+              <Stack direction="row" gap="2">
+                <Button
+                  variant="secondary"
+                  disabled={!templateKey}
+                  onClick={() => { void copyTemplate(); }}
+                  data-testid="viewers-detail-template-copy"
+                >
+                  {copiedKey === "template" ? t(`${f}.copied`) : t(`${f}.copy`)}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => { void saveLineName(); }}
+                  disabled={!canSaveName}
+                  data-testid="viewers-detail-save"
+                >
+                  {t("common.save")}
+                </Button>
+              </Stack>
             </Stack>
           )
         }
