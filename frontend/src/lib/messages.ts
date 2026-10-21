@@ -34,6 +34,8 @@ export interface Conversation {
   messaging_window_expires_at: string | null;
   /** プラットフォームAPIから取得したアバター画像URL。取得不可・キャッシュ未生成の場合null */
   profile_picture_url?: string | null;
+  /** 自分が担当になったが、まだ開いていない（受信箱の「新規」バッジ用） */
+  is_new_assignment?: boolean;
 }
 
 export interface ConversationsResponse {
@@ -193,9 +195,12 @@ export async function getMessages(leadId: number): Promise<MessagesResponse> {
 
 /**
  * POST /api/v1/leads/{lead_id}/messages/mark-read
+ *
+ * opened=true は「会話を実際に開いた」ことを表す。受信箱の「新規」バッジを消すのは
+ * この場合のみ（一括既読では消さない。design.md §3-3）。既定 false。
  */
-export async function markRead(leadId: number): Promise<MarkReadResponse> {
-  return api.post<MarkReadResponse>(`/leads/${leadId}/messages/mark-read`, {});
+export async function markRead(leadId: number, opened = false): Promise<MarkReadResponse> {
+  return api.post<MarkReadResponse>(`/leads/${leadId}/messages/mark-read`, { opened });
 }
 
 /**

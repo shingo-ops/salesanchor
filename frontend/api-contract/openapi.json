@@ -16756,6 +16756,18 @@
         "title": "LookupOption",
         "type": "object"
       },
+      "MarkReadRequest": {
+        "description": "mark-read の任意パラメータ。\n\nopened=True は「会話を実際に開いた」ことを表す。受信箱の「新規」バッジを消すのは\nこの場合のみ（一括既読では消さない。design.md §3-3 / KGI K5）。\n既定 False なので、フィールドを送らない既存の呼び出しは挙動が変わらない。",
+        "properties": {
+          "opened": {
+            "default": false,
+            "title": "Opened",
+            "type": "boolean"
+          }
+        },
+        "title": "MarkReadRequest",
+        "type": "object"
+      },
       "MessageLabelResponse": {
         "properties": {
           "confidence": {
@@ -42552,7 +42564,7 @@
     },
     "/api/v1/conversations": {
       "get": {
-        "description": "会話一覧（lead 単位で集約）を返す（spec §5-3）。\n\n返却フィールド:\n    lead_id, lead_code, customer_name, platform, page_id,\n    last_message_text, last_message_at, last_message_direction,\n    unread_count, messaging_window_expires_at\n\n並び順: `last_message_at DESC`（最新会話が先）。\npagination: limit/offset。Spec §5-3 では cursor も触れるが、MVP は offset 方式で十分。\n\ntenant 分離は RLS（PostgreSQL 本番）と SQL の WHERE 句（SQLite テスト）の\n両方で実施。\n\nフィルタ:\n    - `unread_only=true`: unread_count > 0 の会話のみ\n    - `platform`: messenger / instagram / all（既定 all）\n    - `page_id`: Phase 1-E F14-S5 で追加。指定すると meta_messages.page_id 一致のみ\n      （Messenger 限定。IG メッセージは page_id NULL のため除外される）\n\n実装メモ:\n    - CTE + ROW_NUMBER() OVER (PARTITION BY lead_id) で lead ごとの最新メッセージを\n      1 パスで取得する（SQLite 3.25+ / PostgreSQL 両対応）。\n    - 旧実装の 3 重相関サブクエリ（N×2+1 回実行）から 3 回の GROUP BY/集計に削減。\n    - latest CTE: platform/page_id フィルタを適用（表示する会話を絞る）\n    - agg CTE: フィルタなし（全プラットフォームの未読数・最終受信日を集計、旧実装と同じ挙動）\n    - leads は LEFT JOIN（leads が削除済みの場合 customer_name=NULL で出すため）。",
+        "description": "会話一覧（lead 単位で集約）を返す（spec §5-3）。\n\n返却フィールド:\n    lead_id, lead_code, customer_name, platform, page_id,\n    last_message_text, last_message_at, last_message_direction,\n    unread_count, messaging_window_expires_at, is_new_assignment\n    （受信箱「新規」バッジ: 自分が担当で未開封のときだけ true。design.md §3-4）\n\n並び順: `last_message_at DESC`（最新会話が先）。\npagination: limit/offset。Spec §5-3 では cursor も触れるが、MVP は offset 方式で十分。\n\ntenant 分離は RLS（PostgreSQL 本番）と SQL の WHERE 句（SQLite テスト）の\n両方で実施。\n\nフィルタ:\n    - `unread_only=true`: unread_count > 0 の会話のみ\n    - `platform`: messenger / instagram / all（既定 all）\n    - `page_id`: Phase 1-E F14-S5 で追加。指定すると meta_messages.page_id 一致のみ\n      （Messenger 限定。IG メッセージは page_id NULL のため除外される）\n\n実装メモ:\n    - CTE + ROW_NUMBER() OVER (PARTITION BY lead_id) で lead ごとの最新メッセージを\n      1 パスで取得する（SQLite 3.25+ / PostgreSQL 両対応）。\n    - 旧実装の 3 重相関サブクエリ（N×2+1 回実行）から 3 回の GROUP BY/集計に削減。\n    - latest CTE: platform/page_id フィルタを適用（表示する会話を絞る）\n    - agg CTE: フィルタなし（全プラットフォームの未読数・最終受信日を集計、旧実装と同じ挙動）\n    - leads は LEFT JOIN（leads が削除済みの場合 customer_name=NULL で出すため）。",
         "operationId": "list_conversations_api_v1_conversations_get",
         "parameters": [
           {
@@ -46903,7 +46915,7 @@
     },
     "/api/v1/leads/{lead_id}/messages/mark-read": {
       "post": {
-        "description": "指定 lead の inbound 未読メッセージに seen_at を設定（spec §5-6）。\n\n動作:\n    - direction='inbound' AND seen_at IS NULL の行に seen_at=NOW(),\n      seen_by_staff_id=<current> を UPDATE\n    - 該当 lead が同テナントに無い場合は 404\n\n返却: { \"marked_count\": N }\n\nMeta 側 mark_seen Send API は呼ばない（DB のみで管理）。Meta 既読同期は\nout of scope（spec §5-6 注記）。",
+        "description": "指定 lead の inbound 未読メッセージに seen_at を設定（spec §5-6）。\n\n動作:\n    - direction='inbound' AND seen_at IS NULL の行に seen_at=NOW(),\n      seen_by_staff_id=<current> を UPDATE\n    - 該当 lead が同テナントに無い場合は 404\n    - 受信箱「新規」バッジ: data.opened=True のときだけ、自分が担当の\n      未開封会話を「開いた済み」にする（design.md §3-3）\n\n返却: { \"marked_count\": N }\n\nMeta 側 mark_seen Send API は呼ばない（DB のみで管理）。Meta 既読同期は\nout of scope（spec §5-6 注記）。",
         "operationId": "mark_lead_messages_read_api_v1_leads__lead_id__messages_mark_read_post",
         "parameters": [
           {
@@ -46916,6 +46928,18 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadRequest",
+                "default": {
+                  "opened": false
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

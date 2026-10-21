@@ -91,7 +91,7 @@ export interface UseInboxStateReturn {
   msgError: string;
   avatarErrors: Set<number>;
   handleAvatarError: (leadId: number) => void;
-  selectLead: (leadId: number) => void;
+  selectLead: (leadId: number, options?: { auto?: boolean }) => void;
 
   // 顧客カルテ（右パネル）
   leadDetail: LeadDetail | null;
@@ -294,6 +294,10 @@ export function useInboxState(): UseInboxStateReturn {
   const pollErrorCountRef = useRef(0);
   const transientErrorCountRef = useRef(0);
   const msgTransientErrorCountRef = useRef(0);
+  // selectLead が { auto: true }（PC の先頭会話の自動選択。isMobile を見る自動選択の
+  // useEffect から呼ばれる）で呼ばれたことを示すフラグ。selectLead 内で設定する。
+  // 自動選択では「開いた」扱いにしない（design.md 修正2 / PO 決定「案ア」）。
+  const autoSelectRef = useRef(false);
 
   // ---------------------------------------------------------------------------
   // カルテパネル開閉（iOSスクロール貫通対策）
@@ -423,12 +427,25 @@ export function useInboxState(): UseInboxStateReturn {
     }
   }, []);
 
-  const markRead = useCallback(async (leadId: number) => {
+  // opened=true は「利用者が実際に会話を開いた」ことを表す。受信箱の「新規」バッジ
+  // （is_new_assignment）を消すのはこの場合のみ（design.md §3-3）。PC の先頭会話の
+  // 自動選択（isMobile を見る自動選択の useEffect）はここでは判定しない。
+  // 呼び出し側（selectedLeadId 変更時の効果、および selectLead 内の同一会話
+  // 再選択時の直接呼び出し）が区別して渡す。
+  const markRead = useCallback(async (leadId: number, opened = false) => {
     try {
-      const res = await apiMarkRead(leadId);
-      if (res.marked_count > 0) {
+      const res = await apiMarkRead(leadId, opened);
+      if (res.marked_count > 0 || opened) {
         setConversations((prev) =>
-          prev.map((c) => c.lead_id === leadId ? { ...c, unread_count: 0 } : c)
+          prev.map((c) => {
+            if (c.lead_id !== leadId) return c;
+            return {
+              ...c,
+              ...(res.marked_count > 0 ? { unread_count: 0 } : {}),
+              // 一括既読（opened=false）では is_new_assignment を落とさない（KGI K5）
+              ...(opened ? { is_new_assignment: false } : {}),
+            };
+          })
         );
       }
     } catch {
@@ -563,7 +580,11 @@ export function useInboxState(): UseInboxStateReturn {
   // lead 選択時 → メッセージ取得 + 既読化 + URL 更新 + 右パネル
   // ---------------------------------------------------------------------------
 
-  const selectLead = useCallback((leadId: number) => {
+  const selectLead = useCallback((leadId: number, options?: { auto?: boolean }) => {
+    const auto = options?.auto === true;
+    // PC の先頭会話の自動選択（isMobile を見る自動選択の useEffect）から呼ばれたかを
+    // ここで設定する（審査 D2: 以前は呼び出し側＝自動選択の効果が設定していた）。
+    autoSelectRef.current = auto;
     setSelectedLeadId(leadId);
     msgTransientErrorCountRef.current = 0;
     closeKartePanel();
@@ -583,10 +604,23 @@ export function useInboxState(): UseInboxStateReturn {
       setKarteTab("deal");
     }
 
-    const params = new URLSearchParams(searchParams);
-    params.set("lead_id", String(leadId));
-    setSearchParams(params, { replace: true });
-  }, [closeKartePanel, clearAttachment, searchParams, setSearchParams, conversations]);
+    // 同じ会話を選び直したときは効果が走らないため、ここで直接「開いた」を記録する
+    // （審査 D2）。setSelectedLeadId(leadId) は同じ id では state が変わらず、
+    // selectedLeadId 変更時の効果（useEffect）が再実行されないため。
+    if (!auto && leadId === selectedLeadId) {
+      // 効果が ref を消費しない（再実行されない）ため、ここで明示的に戻す。
+      autoSelectRef.current = false;
+      markRead(leadId, true);
+    }
+
+    // 自動選択では URL に lead_id を書かない（審査 D3）。再読込時に「利用者が指定した
+    // URL」と区別できなくなり、開いていない会話のバッジが消えてしまうため。
+    if (!auto) {
+      const params = new URLSearchParams(searchParams);
+      params.set("lead_id", String(leadId));
+      setSearchParams(params, { replace: true });
+    }
+  }, [closeKartePanel, clearAttachment, searchParams, setSearchParams, conversations, selectedLeadId, markRead]);
 
   const backToList = useCallback(() => {
     setSelectedLeadId(null);
@@ -617,7 +651,12 @@ export function useInboxState(): UseInboxStateReturn {
       return;
     }
     loadMessages(selectedLeadId);
-    markRead(selectedLeadId);
+    // PC の自動選択（先頭会話の自動選択）が直前に selectLead を呼んだ場合は
+    // 「開いた」扱いにしない（design.md 修正2 / PO 決定「案ア」）。
+    // それ以外（行クリック・URL の lead_id 指定での初期表示）は opened=true。
+    const isAutoSelect = autoSelectRef.current;
+    autoSelectRef.current = false;
+    markRead(selectedLeadId, !isAutoSelect);
     loadLeadDetail(selectedLeadId);
 
     // ADR-143 Phase B: auto スレッドで相手言語を多数決判定して自動設定
@@ -695,7 +734,11 @@ export function useInboxState(): UseInboxStateReturn {
   useEffect(() => {
     if (isMobile) return;
     if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
-    selectLead(filteredConversations[0].lead_id);
+    // 受信箱「新規」バッジ: 自動選択は「開いた」扱いにしない（design.md 修正2 / PO 決定「案ア」）。
+    // auto: true を渡すと selectLead 内で autoSelectRef を立て、URL の lead_id も
+    // 書かない（審査 D2/D3）。判定条件・自動選択そのものの挙動は変えない
+    // （PR 4165 の退行対策・上記コメント参照）。
+    selectLead(filteredConversations[0].lead_id, { auto: true });
   }, [filteredConversations, selectedLeadId, convLoading, selectLead, isMobile]);
 
   // ---------------------------------------------------------------------------
