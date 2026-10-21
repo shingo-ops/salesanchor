@@ -64,3 +64,9 @@
     - 移行中にこちらから在庫表の GET を流して測る方法を決めるまで、K7 は測れない（PO 判断）。
     - その後: PO 2026-10-22「1」で、K7 は What 7 の数え方に変えた（便1.2）。便1.2 の後の入れ替えから、K7 を3回分数える。
   - 生の記録: Mac の /tmp/CC報告ファイル/ai-ro-restore/k67/report.md（リポジトリ外）。
+- 便1.2（PR #4626）の入れ替え（Deploy to VPS run 39634747232、2026-10-21 16:29:11〜16:30:41 UTC。移行ステップの開始・終了時刻）は成功した。移行ステップのある入れ替えの3回目。
+  - "lock conflict; retry" 3回（`migrations/20261017_125900_drop_ai_ro_views.sql` 2回、`migrations/20260922_040000_fix_phase2c_fk_blocker.sql` 1回、全体 3/40）、"retry limit reached" 0回。K6 は 3/3（失敗0）で合格。
+  - 鍵の持ち主の一覧が2回出た。開いていたのは `ai_reader`（6秒、読み取りの鍵だけ）と `salesanchor_celery_viewer_cache` の SELECT（1秒）。文面・値は出ていない（K9）。
+  - 計測のまとめは `read probe: n=35 slow=0 error=0 invalid=0 max=797ms`。K10 は合格（prod1 で `$EPOCHREALTIME` が取れた）。
+  - K7 は 1/3（slow=0・error=0）。この回は ai_ro のビューを外す run_sql（計測を始める前）で鍵待ちがあったが、計測は trap の後から始まるため、その分は数えていない（design §14-3）。
+  - 生の記録: Mac の /tmp/CC報告ファイル/k7-probe/deploy-39634747232.txt（リポジトリ外）。
