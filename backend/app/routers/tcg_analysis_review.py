@@ -6,14 +6,18 @@ PARITY-03 第1段階: 解析レビュー API。
     認証: require_super_admin
     解析結果一覧（GAS: getAnalysisReviewPage 相当）
     SupplierDetailPage から provider フィルタで使用
+  POST /api/v1/tcg/analysis-results/client-timing
+    認証: require_super_admin
+    要確認パネルの表示時間（ブラウザ計測）をログ1行に残す（DB 不使用・204）
 """
 from __future__ import annotations
 
+import logging
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import AwareDatetime, BaseModel, Field, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +31,8 @@ from app.services.tcg_sold_out_results_svc import (
     fetch_sold_out_results,
 )
 from app.services.v102_gap_suspect_view import GapSuspect
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -226,3 +232,35 @@ async def list_sold_out_results(
     except (SQLAlchemyError, SoldOutResultsUnavailable, ValidationError):
         raise HTTPException(status_code=503, detail={"code": "SOLD_OUT_RESULTS_UNAVAILABLE"},
                             headers={"Cache-Control": "no-store"}) from None
+
+
+class ClientTimingBody(BaseModel):
+    """要確認パネルの表示時間（ブラウザ計測）。利用者を特定する項目は持たない。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    panel_ms: float = Field(ge=0, le=120000)
+    list_ms: float = Field(ge=0, le=120000)
+    doc_ms: float = Field(ge=0, le=120000)
+    rows: int = Field(ge=0, le=500)
+    page_size: Literal[20, 25, 50, 100]
+    entry: Literal["first", "return"]
+
+
+@router.post("/tcg/analysis-results/client-timing", status_code=204)
+async def post_client_timing(
+    body: ClientTimingBody,
+    _user: dict = Depends(require_super_admin),
+) -> Response:
+    # DB は触らない。ログ1行のみ（利用者の識別情報は出さない）。
+    # info は Web プロセス（root ロガー未設定）で捨てられるため warning で出す
+    logger.warning(
+        "review_timing panel_ms=%.0f list_ms=%.0f doc_ms=%.0f rows=%d page_size=%d entry=%s",
+        body.panel_ms,
+        body.list_ms,
+        body.doc_ms,
+        body.rows,
+        body.page_size,
+        body.entry,
+    )
+    return Response(status_code=204)

@@ -1,0 +1,29 @@
+id	code	canonical	value_group	unit_id	condition_def_id	is_active	tenant_id	app_kubun
+12	CN0001	Case	case	9		True		箱系大
+13	CN0002	Damaged case	case	9	3	True		箱系大
+14	CN0003	Sealed box	box	10		True		箱系
+15	CN0011	Empty box		10	6	True		
+16	CN0004	Damaged sealed box	box	10		True		箱系
+17	CN0005	No shrink box	box	10		True		
+18	CN0006	Opened box	box	10		True		
+19	CN0008	FLAG_SINGLE				True		枚系,単位不明
+20	CN0009	Opened case	case	9		True		箱系大
+21	CN0010	Searched pack	pack	11		True		パック系
+22	CN0007	Unsearched pack	pack	11		True		
+23	CN20260925144747	空箱 Case		9	6	True		
+25	CN20261008072213	Searched box	box	10	8	True		箱系
+28	CN0012	Error				True		
+44	CN0013	AR confirmed pack	pack	11		True		パック系
+46	CN0014	Bulk				True		
+55	CN0015	PSA10	single			True		シングル系
+56	CN0016	PSA9	single			True		シングル系
+57	CN0017	PSA8	single			True		シングル系
+58	CN0018	PSA7以下	single			True		シングル系
+59	CN0019	Single	single			True		シングル系
+60	CN0020	未開封	promo_pack	11		True		プロモパック系
+61	CN0021	開封済み	promo_pack	11		True		プロモパック系
+62	CN0022	PSA10	promo_pack			True		プロモパック系
+65	CN0023	With booklet	booklet	17		True		ブックレット系
+66	CN0024	Without booklet	booklet			True		ブックレット系
+68	CN0025	雑誌付き	promo_pack	17		True		プロモパック系
+AUDIT ts=2026-10-21T01:14:02Z sha=501e2f9ab0d9 rows=27 ms=39 result=ok sql=SELECT id, code, canonical, value_group, unit_id, condition_def_id, is_active, tenant_id, app_kubun FROM ai_ro.public__line_conditions ORDER BY id; 
