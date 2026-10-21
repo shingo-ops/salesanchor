@@ -12,6 +12,10 @@ import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { Card } from "../../../components/Card";
+import { Button } from "../../../components/Button";
+import { SelectControl } from "../../../components/Select";
+import { ContentToolbar } from "../../../components/ContentToolbar";
+import { Stack } from "../../../components/Stack";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { useRealtimeRefresh } from "../../../hooks/useRealtimeRefresh";
 import { TOPICS } from "../../../lib/realtime/topics";
@@ -23,7 +27,12 @@ import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab
 import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
 import { useReviewTiming } from "./useReviewTiming";
 
+/** 確認済みタブの1ページの件数 */
 const PAGE_SIZE = 20;
+/** 要確認タブの件数の選択肢（先頭が既定） */
+const PRODUCTION_PAGE_SIZES = [25, 50, 100] as const;
+/** 要確認タブの「新しい投稿だけ」の窓（時間） */
+const FRESH_WINDOW_HOURS = 24;
 
 type TabKey = "production" | "acked" | "posts";
 
@@ -37,6 +46,7 @@ interface NeedsReviewItem {
   extraction_item_id: string;
   source_message_id: string;
   provider: string;
+  posted_at: string | null;
   raw_text: string;
   gemini: Record<string, string>;
   system: Record<string, string>;
@@ -69,6 +79,11 @@ export default function NeedsReviewTabsPanel() {
 
   const [activeTab, setActiveTab] = useState<TabKey>("production");
 
+  // 要確認タブだけ: 24時間ボタン（既定 ON）と1ページの件数（既定 25）
+  const [freshOnly, setFreshOnly] = useState(true);
+  const [productionPageSize, setProductionPageSize] = useState<number>(PRODUCTION_PAGE_SIZES[0]);
+  const pageSize = activeTab === "production" ? productionPageSize : PAGE_SIZE;
+
   // --- 本番の確認待ち ---
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<NeedsReviewResponse | null>(null);
@@ -90,7 +105,7 @@ export default function NeedsReviewTabsPanel() {
   const { recordListMs, abandon: abandonTiming } = useReviewTiming({
     shown: activeTab === "production" && data !== null,
     rows: data?.items.length ?? 0,
-    pageSize: PAGE_SIZE,
+    pageSize: productionPageSize,
   });
 
   useEffect(() => {
@@ -104,8 +119,12 @@ export default function NeedsReviewTabsPanel() {
     const params = new URLSearchParams({
       status_tab: STATUS_TAB_OF[activeTab],
       offset: String(offset),
-      limit: String(PAGE_SIZE),
+      limit: String(pageSize),
     });
+    if (activeTab === "production") {
+      params.set("order", "posted_desc");
+      if (freshOnly) params.set("posted_within_hours", String(FRESH_WINDOW_HOURS));
+    }
     const startedAt = performance.now();
     api
       .get<NeedsReviewResponse>(`/tcg/analysis-results?${params.toString()}`)
@@ -131,7 +150,7 @@ export default function NeedsReviewTabsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isSuperAdmin, offset, activeTab, reloadKey, recordListMs]);
+  }, [authLoading, isSuperAdmin, offset, activeTab, reloadKey, recordListMs, freshOnly, pageSize]);
 
   const productionColumns: DataTableColumn<NeedsReviewItem>[] = [
     {
@@ -179,12 +198,13 @@ export default function NeedsReviewTabsPanel() {
       header: t("needsReview.createdAt"),
       ellipsis: true,
       renderCell: (item) => {
-        const spanValue = item.gemini["span"];
-        if (!spanValue) return "—";
+        // 要確認タブは投稿日時、確認済みタブは今のまま（gemini.span）
+        const dateValue = activeTab === "production" ? item.posted_at : item.gemini["span"];
+        if (!dateValue) return "—";
         try {
-          return formatDate(spanValue, i18n.language);
+          return formatDate(dateValue, i18n.language);
         } catch {
-          return spanValue;
+          return dateValue;
         }
       },
     },
@@ -224,6 +244,43 @@ export default function NeedsReviewTabsPanel() {
               <ReviewCsvPanel onDone={() => setReloadKey((k) => k + 1)} />
             </Card>
           )}
+          {activeTab === "production" && (
+            <ContentToolbar
+              left={
+                <Stack direction="row" gap="2">
+                  <Button
+                    variant={freshOnly ? "primary" : "secondary"}
+                    size="sm"
+                    layoutClassName="field-h-md"
+                    type="button"
+                    data-testid="needs-review-fresh-toggle"
+                    aria-pressed={freshOnly}
+                    onClick={() => {
+                      setFreshOnly((v) => !v);
+                      setOffset(0);
+                    }}
+                  >
+                    {t("needsReview.freshOnly", { hours: FRESH_WINDOW_HOURS })}
+                  </Button>
+                  <SelectControl
+                    size="sm"
+                    className="field-h-md"
+                    data-testid="needs-review-page-size"
+                    aria-label={t("needsReview.pageSize")}
+                    value={String(productionPageSize)}
+                    onChange={(e) => {
+                      setProductionPageSize(Number(e.target.value));
+                      setOffset(0);
+                    }}
+                    options={PRODUCTION_PAGE_SIZES.map((n) => ({
+                      value: String(n),
+                      label: t("needsReview.pageSizeOption", { n }),
+                    }))}
+                  />
+                </Stack>
+              }
+            />
+          )}
           {loading && <p role="status">{t("common.loading")}</p>}
           {errorKey && <p role="alert" style={{ color: "var(--color-error)" }}>{t(errorKey)}</p>}
           {data && (
@@ -233,9 +290,9 @@ export default function NeedsReviewTabsPanel() {
               rowKey={(item) => item.extraction_item_id}
               emptyState={t(activeTab === "acked" ? "needsReview.ackedEmpty" : "needsReview.noItems")}
               onRowClick={(item) => setDrawerItemId(item.extraction_item_id)}
-              page={Math.floor(offset / PAGE_SIZE) + 1}
+              page={Math.floor(offset / pageSize) + 1}
               hasNextPage={offset + (data.items?.length ?? 0) < data.total}
-              onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}
+              onPageChange={(page) => setOffset((page - 1) * pageSize)}
             />
           )}
         </>

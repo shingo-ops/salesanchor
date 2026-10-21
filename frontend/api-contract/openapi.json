@@ -65166,6 +65166,42 @@
               "description": "extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
               "title": "Extraction Item Ids"
             }
+          },
+          {
+            "description": "並び。posted_desc は status_tab=NEEDS_REVIEW のときだけ効く（投稿日の新しい順・1本の SQL）",
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "description": "並び。posted_desc は status_tab=NEEDS_REVIEW のときだけ効く（投稿日の新しい順・1本の SQL）",
+              "enum": [
+                "default",
+                "posted_desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "description": "投稿から何時間以内か（order=posted_desc の要確認タブだけで効く）",
+            "in": "query",
+            "name": "posted_within_hours",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 720,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "投稿から何時間以内か（order=posted_desc の要確認タブだけで効く）",
+              "title": "Posted Within Hours"
+            }
           }
         ],
         "responses": {

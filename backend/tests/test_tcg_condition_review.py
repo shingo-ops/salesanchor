@@ -974,3 +974,113 @@ def test_latest_stock_cte_is_in_source_cte_and_window_matches_the_partner_window
     assert f"cr_sm.{window}" in joins and f"cr_n1.{window}" in condition.source_cte(schema="tcg")  # 相手の条件と同じ式
     assert condition.source_cte(schema="tcg").startswith("WITH cr_prev AS MATERIALIZED (")
     assert "cr_prev" not in condition.source_cte(schema="tcg", latest_stock=False)  # shime=False の呼び出し側は文字列が変わらない
+
+
+# ---------------------------------------------------------------------------
+# 便1（ADR-1023 改訂 2026-10-21）: 要確認タブの新しい道（1本の SQL）と今の道の中身が同じ
+# ---------------------------------------------------------------------------
+
+
+def _seed_posts_for_posted_desc(pg):
+    """要確認の行: 24時間以内に3件（うち2件は同じ投稿・仕入元は2つ）、24時間より古い1件。"""
+    set_max_age_hours(pg, 48)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT id FROM public.supplier_channels ORDER BY id LIMIT 1")
+        default_channel = str(cursor.fetchone()[0])
+        cursor.execute("INSERT INTO public.suppliers(name) VALUES ('Other Supplier') RETURNING id")
+        other_supplier = cursor.fetchone()[0]
+        cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id",
+                       (other_supplier,))
+        other_channel = str(cursor.fetchone()[0])
+    fresh_a = seed(pg, name="Fresh A", prompt_version="v102:test", channel_id=default_channel)
+    fresh_b = seed(pg, name="Fresh B", prompt_version="v102:test", channel_id=other_channel)
+    fresh_c = seed(pg, name="Fresh C", prompt_version="v102:test", channel_id=default_channel)
+    old = seed(pg, name="Old D", prompt_version="v102:test", channel_id=default_channel)
+    age_message(pg, fresh_a, 1)
+    age_message(pg, fresh_b, 3)
+    age_message(pg, old, 30)
+    with pg["connection"].cursor() as cursor:
+        # fresh_c の行を fresh_a と同じ投稿（同じ job）の2行目にする
+        cursor.execute("UPDATE public.extraction_items SET extraction_job_id=%s, line_start=2, line_end=2 WHERE id=%s",
+                       (fresh_a["job"], fresh_c["eid"]))
+    return [fresh_a, fresh_b, fresh_c, old]
+
+
+def _run_fetch(pg, **kwargs):
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await review.fetch_analysis_results(db, status_tab="NEEDS_REVIEW", **kwargs)
+        finally:
+            await engine.dispose()
+    return asyncio.run(run())
+
+
+def _posted_desc_key(item):
+    posted = item["posted_at"]
+    return (posted is None, -(posted.timestamp() if posted is not None else 0), item["source_message_id"])
+
+
+def _all_pages_posted_desc(pg, size, **kwargs):
+    pages, offset = [], 0
+    while True:
+        page = _run_fetch(pg, order="posted_desc", limit=size, offset=offset, **kwargs)
+        pages.append(page)
+        offset += size
+        if offset >= page["total"]:
+            return pages
+
+
+@pytest.mark.parametrize("size", [1, 2, 25])
+def test_posted_desc_path_matches_current_path_without_window(pg, size):
+    seeded = _seed_posts_for_posted_desc(pg)
+    old = _run_fetch(pg, limit=500)
+    assert old["total"] == len(seeded) == len(old["items"])
+    expected = sorted(old["items"], key=_posted_desc_key)  # 安定ソート（今の道は ei.id まで全順序）
+    pages = _all_pages_posted_desc(pg, size)
+    merged = [item for page in pages for item in page["items"]]
+    assert merged == expected
+    for page in pages:
+        assert page["total"] == old["total"] and page["providers"] == old["providers"]
+    assert len(old["providers"]) >= 2
+
+
+def test_posted_desc_path_with_window_matches_current_path_filtered(pg):
+    from datetime import datetime, timedelta, timezone
+
+    seeded = _seed_posts_for_posted_desc(pg)
+    old = _run_fetch(pg, limit=500)
+    border = datetime.now(timezone.utc) - timedelta(hours=24)
+    expected = sorted([i for i in old["items"] if i["posted_at"] is not None and i["posted_at"] >= border],
+                      key=_posted_desc_key)
+    assert 0 < len(expected) < len(seeded)
+    pages = _all_pages_posted_desc(pg, 2, posted_within_hours=24)
+    merged = [item for page in pages for item in page["items"]]
+    assert merged == expected
+    assert all(page["total"] == len(expected) for page in pages)
+    assert pages[0]["providers"] == sorted({i["provider"] for i in expected})
+
+
+def test_posted_desc_path_empty_page_keeps_total_and_providers(pg):
+    _seed_posts_for_posted_desc(pg)
+    old = _run_fetch(pg, limit=500)
+    page = _run_fetch(pg, order="posted_desc", limit=25, offset=100)
+    assert page["items"] == [] and page["total"] == old["total"] and page["providers"] == old["providers"]
+
+
+def test_posted_desc_path_restores_jit_setting(pg):
+    _seed_posts_for_posted_desc(pg)
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                before = (await db.execute(text("SELECT current_setting('jit')"))).scalar_one()
+                await review.fetch_analysis_results(db, status_tab="NEEDS_REVIEW", order="posted_desc", limit=25)
+                after = (await db.execute(text("SELECT current_setting('jit')"))).scalar_one()
+                return before, after
+        finally:
+            await engine.dispose()
+    before, after = asyncio.run(run())
+    assert before == after

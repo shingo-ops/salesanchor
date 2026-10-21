@@ -105,7 +105,7 @@ describe("review timing", () => {
       expect(body[key] as number).toBeLessThanOrEqual(120000);
     }
     expect(body.rows).toBe(1);
-    expect(body.page_size).toBe(20);
+    expect(body.page_size).toBe(25);
     expect(body.entry).toBe("first");
 
     first.unmount();
@@ -119,8 +119,10 @@ describe("review timing", () => {
   it("does not send again for a realtime reload, paging or a tab round trip", async () => {
     view();
     await screen.findByText("Card A");
-    await flushFrames();
-    expect(timingPosts()).toHaveLength(1);
+    await waitFor(async () => {
+      await flushFrames();
+      expect(timingPosts()).toHaveLength(1);
+    });
 
     act(() => fireRealtime());
     await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2));

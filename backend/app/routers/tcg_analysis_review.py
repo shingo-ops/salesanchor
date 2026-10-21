@@ -140,6 +140,13 @@ async def list_analysis_results(
         default=None,
         description="extraction_items.id を指定して取得（在庫表の解析パネル用・最大50件）",
     ),
+    order: Literal["default", "posted_desc"] = Query(
+        default="default",
+        description="並び。posted_desc は status_tab=NEEDS_REVIEW のときだけ効く（投稿日の新しい順・1本の SQL）",
+    ),
+    posted_within_hours: int | None = Query(
+        default=None, ge=1, le=720, description="投稿から何時間以内か（order=posted_desc の要確認タブだけで効く）"
+    ),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> AnalysisResultsResponse:
@@ -165,6 +172,8 @@ async def list_analysis_results(
         strip_raw_text=strip_raw_text,
         work_id=work_id,
         extraction_item_ids=[str(v) for v in extraction_item_ids] if extraction_item_ids else None,
+        order=order,
+        posted_within_hours=posted_within_hours,
     )
     return AnalysisResultsResponse(
         items=data["items"],

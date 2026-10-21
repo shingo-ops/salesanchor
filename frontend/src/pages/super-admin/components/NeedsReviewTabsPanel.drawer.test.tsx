@@ -58,7 +58,7 @@ describe("production tab row drawer", () => {
     view();
     await screen.findByText("Card V6");
     expect(screen.queryByRole("columnheader", { name: "Fix here" })).toBeNull();
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(within(screen.getByRole("table")).queryByRole("combobox")).toBeNull();
   });
 
   it("opens the product question from the product row", async () => {
