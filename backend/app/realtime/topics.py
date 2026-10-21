@@ -99,6 +99,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
+    ("POST", "/api/v1/tcg/analysis-results/client-timing"): "データを変えない。計時ログを1行残すだけ",
     ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
     ("POST", "/api/v1/viewer/logout"): "閲覧ページ ADR-1019: 閲覧者のログアウトは画面更新の通知対象外",
     ("POST", "/api/v1/viewer/password"): "閲覧ページ ADR-1019: 閲覧者のパスワード変更は画面更新の通知対象外",
