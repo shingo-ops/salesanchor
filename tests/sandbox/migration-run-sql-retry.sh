@@ -37,7 +37,7 @@ sleep 3
 for _ in $(seq 1 30); do dsql 'select 1' >/dev/null 2>&1 && break; sleep 1; done
 
 # --- 本物の run_sql を抜き出して読み込む ---
-EXTRACT="$(sed -n '/^SQL_LOCK_TIMEOUT=/,/^}/p' "$SCRIPT")"
+EXTRACT="$(awk '/^SQL_LOCK_TIMEOUT=/{p=1} p{print} p&&/^run_sql\(\) \{/{r=1} r&&/^}/{exit}' "$SCRIPT")"
 echo "extracted lines from ${SCRIPT}: $(printf '%s\n' "$EXTRACT" | wc -l | tr -d ' ')"
 [ -n "$EXTRACT" ] || { echo "extract failed"; exit 1; }
 
@@ -54,6 +54,12 @@ reset_defaults() {
 }
 reset_defaults
 echo "defaults: lock_timeout=${SQL_LOCK_TIMEOUT} max_attempts=${SQL_RETRY_MAX_ATTEMPTS} sleep=${SQL_RETRY_SLEEP_SEC} budget=${SQL_RETRY_BUDGET}"
+# T7: 既定値の確認（ADR-1037 便1.1）
+if [ "$SQL_RETRY_MAX_ATTEMPTS" = "40" ] && [ "$SQL_RETRY_BUDGET" = "40" ]; then
+  pass "T7 defaults max_attempts=${SQL_RETRY_MAX_ATTEMPTS} budget=${SQL_RETRY_BUDGET}"
+else
+  fail "T7 defaults max_attempts=${SQL_RETRY_MAX_ATTEMPTS} budget=${SQL_RETRY_BUDGET}"
+fi
 
 setup_base() {
   dsql "CREATE TABLE IF NOT EXISTS public.products (id serial PRIMARY KEY, is_active bool);
@@ -147,6 +153,26 @@ if [ "$T3_RC" -ne 0 ] && grep -q "retry limit reached" "$OUT_DIR/t3.log" && [ "$
 else
   fail "T3 rc=${T3_RC} elapsed=${T3_MS}ms limit_line=$(grep -c 'retry limit reached' "$OUT_DIR/t3.log" || true)"
 fi
+# T3 追加判定: 持ち主の一覧が出て products の AccessShareLock があり、SQL の文面（pg_sleep）は出ていない
+if grep -q 'lock holders (xact > 1s):' "$OUT_DIR/t3.log" && grep -q 'products:AccessShareLock' "$OUT_DIR/t3.log"; then
+  pass "T3b lock holders listed with products:AccessShareLock"
+else
+  fail "T3b lock holders missing (header=$(grep -c 'lock holders (xact > 1s):' "$OUT_DIR/t3.log" || true) products_lock=$(grep -c 'products:AccessShareLock' "$OUT_DIR/t3.log" || true))"
+fi
+# T3d: 持ち主の行の7列目（cmd）が英大文字か - だけで、T3 の持ち主は BEGIN
+T3_CMDS="$(grep 'products:AccessShareLock' "$OUT_DIR/t3.log" | sed -E 's/^>>> \[[0-9]+\/[0-9]+\] +//' | awk -F' [|] ' '{print $7}')"
+T3_BAD="$(printf '%s\n' "$T3_CMDS" | grep -vE '^[A-Z]+$|^-$' || true)"
+T3_NOTBEGIN="$(printf '%s\n' "$T3_CMDS" | grep -vx 'BEGIN' || true)"
+if [ -n "$T3_CMDS" ] && [ -z "$T3_BAD" ] && [ -z "$T3_NOTBEGIN" ]; then
+  pass "T3d cmd column is BEGIN (letters only)"
+else
+  fail "T3d cmd column cmds='$(printf '%s' "$T3_CMDS" | tr '\n' ',')'"
+fi
+if ! grep -q 'pg_sleep' "$OUT_DIR/t3.log"; then
+  pass "T3c no SQL text (pg_sleep) in log"
+else
+  fail "T3c pg_sleep found in log"
+fi
 
 # ===== T4 =====
 echo "=== T4: deadlock は1回目だけ出て2回目は成功する ==="
@@ -187,6 +213,19 @@ REPO_DIR="$(pwd)"
 echo "--- run_sql log (T6) ---"; cat "$OUT_DIR/t6.log"
 T6_RETRY="$(count_retry "$OUT_DIR/t6.log")"
 if [ "$T6_RC" -ne 0 ] && [ "$T6_RETRY" -eq 2 ]; then pass "T6 rc=${T6_RC} retry=2 (budget stop)"; else fail "T6 rc=${T6_RC} retry=${T6_RETRY}"; fi
+
+# ===== T8 =====
+echo "=== T8: 1回目だけ deadlock のとき lock holders は1回だけ ==="
+reset_defaults
+SQL_RETRY_SLEEP_SEC=1
+REPO_DIR="$OUT_DIR"
+make_fail_sql "$OUT_DIR/t8.sql" seq_t8 1
+run_sql "t8.sql" >"$OUT_DIR/t8.log" 2>&1
+T8_RC=$?
+REPO_DIR="$(pwd)"
+echo "--- run_sql log (T8) ---"; cat "$OUT_DIR/t8.log"
+T8_HOLDERS="$(grep -c 'lock holders (xact > 1s):' "$OUT_DIR/t8.log" || true)"
+if [ "$T8_RC" -eq 0 ] && [ "$T8_HOLDERS" -eq 1 ]; then pass "T8 rc=0 lock_holders=1"; else fail "T8 rc=${T8_RC} lock_holders=${T8_HOLDERS}"; fi
 reset_defaults
 
 if [ "$RESULT" -eq 0 ]; then echo "RESULT: PASS"; else echo "RESULT: FAIL"; exit 1; fi

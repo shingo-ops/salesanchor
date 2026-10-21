@@ -61,12 +61,18 @@ run_py() {
 # 稼働中のアプリとロックを取り合ったら、同じファイルを流し直す（全 migration は冪等で、
 # CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
 # ロック待ちは1秒で諦める。待っている間は後から来た在庫表などの読み取りも止まるため（ADR-1037）。
-# 再試行はファイルごとに初回含め最大10回・3秒あけ、1回の実行全体で合計40回まで（移行ステップの打ち切り10分に収める）。
+# 再試行は3秒あけ、1回の実行全体で合計40回まで。1ファイルでもその40回まで使える（移行ステップの打ち切り10分に収める。ADR-1037 便1.1）。
 SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"
-SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-10}"
+SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-40}"
 SQL_RETRY_SLEEP_SEC="${SQL_RETRY_SLEEP_SEC:-3}"
 SQL_RETRY_BUDGET="${SQL_RETRY_BUDGET:-40}"
 SQL_RETRY_USED=0
+# 鍵が取れなかったときの手がかり: 開始から1秒を超えて開いている接続（ADR-1037 便1.1）
+# 公開リポジトリの Actions ログに出るため、SQL の文面・接続元アドレスは出さない（命令の先頭1語と表名だけ）
+log_lock_holders() {
+  echo ">>> [${STEP}/${TOTAL}] lock holders (xact > 1s):"
+  docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s" "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-')) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+}
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
@@ -82,6 +88,7 @@ run_sql() {
       return 0
     fi
     if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then
+      [ "${attempt}" -eq 1 ] && log_lock_holders
       if [ "${attempt}" -lt "${SQL_RETRY_MAX_ATTEMPTS}" ] && [ "${SQL_RETRY_USED}" -lt "${SQL_RETRY_BUDGET}" ]; then
         attempt=$((attempt + 1))
         SQL_RETRY_USED=$((SQL_RETRY_USED + 1))
@@ -90,6 +97,7 @@ run_sql() {
         continue
       fi
       echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached (file ${attempt}/${SQL_RETRY_MAX_ATTEMPTS}, total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${file}"
+      log_lock_holders
     fi
     rm -f "${errlog}"
     return "${rc}"
