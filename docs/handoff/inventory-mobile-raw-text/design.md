@@ -148,7 +148,7 @@
 
 ## ⑪ 維持の仕組み（CI の関所）
 
-守り手: `frontend/tests-e2e/inventory-raw-text-mobile.spec.ts`（375px/1440px の検査本体）。ほかに `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx`・`npm run check:i18n-missing-keys`・`scripts/check-ui-governance.js`・`frontend/tests-e2e/inventory-table-layout.spec.ts` が下表の各行を受け持つ。
+守り手: `frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts`（375px/1440px の検査本体）。ほかに `frontend/src/pages/inventory/InventoryPage.rowdrawer.test.tsx`・`npm run check:i18n-missing-keys`・`scripts/check-ui-governance.js`・`frontend/tests-e2e/inventory-table-layout.spec.ts` が下表の各行を受け持つ。
 
 | 守ること | 関所 | 外すと |
 |---|---|---|
