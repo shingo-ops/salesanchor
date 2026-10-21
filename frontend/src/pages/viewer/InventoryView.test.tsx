@@ -180,5 +180,47 @@ describe("InventoryView", () => {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;
     }
   });
+
+  const mobileMatchMedia = {
+    configurable: true,
+    writable: true,
+    value: (q: string) => ({
+      matches: true, media: q, onchange: null,
+      addEventListener: () => undefined, removeEventListener: () => undefined,
+      addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+    }),
+  };
+
+  it("K1: PC opens on the first main series tab and shows only its rows", () => {
+    render(<InventoryView data={seriesData} />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs[1].textContent).toBe("ポケモン");
+    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("false");
+    expect(captured.props!.data).toHaveLength(1);
+    expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ポケモン");
+  });
+
+  it("K1: mobile select opens on the first main series", () => {
+    Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+    try {
+      render(<InventoryView data={seriesData} />);
+      expect((screen.getByTestId("viewer-tab-select") as HTMLSelectElement).value).toBe("ポケモン");
+      expect(captured.props!.data).toHaveLength(1);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+
+  it("K2: opens on 'all' when there is no row of the first main series", () => {
+    const noPokemon: ViewerInventoryResponse = {
+      ...data,
+      rows: [{ ...mkRow(2), series: "ワンピース" }, { ...mkRow(3), series: "ホロライブ" }],
+    };
+    render(<InventoryView data={noPokemon} />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(captured.props!.data).toHaveLength(2);
+  });
   /* eslint-enable local/no-japanese-literal */
 });
