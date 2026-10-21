@@ -1,5 +1,4 @@
 """ADR-1020 便2a: 細分類とゲームの照合・選択肢・印の返却・使えるゲームの置き換え（実 PostgreSQL・CI のみ）。"""
-import warnings
 from pathlib import Path
 
 import psycopg2.errors
@@ -176,29 +175,21 @@ def test_db_rejects_removing_link_in_use(fmt_pg):
     assert _links(fmt_pg, fmt_pg["linked"]) == []
 
 
-def test_physical_delete_of_format_in_use_outcome(fmt_pg):
-    """ADR-1038 便2 試験(4): 使われている細分類の物理削除（links は CASCADE・products.product_format_id は SET NULL）。
+def test_physical_delete_of_format_in_use_is_rejected(fmt_pg):
+    """ADR-1038 便2 試験(4): 使われている細分類の物理削除は FK が拒否する。
 
-    通るか落ちるかは PG の動き次第。どちらでも結果が一貫していること（行が半端に残らない）を確かめ、
-    実際の結果を警告として CI のログに残す。
+    links の CASCADE 削除が fk_products_format_in_work に止められる（CI の実測）。
+    拒否後も products・formats・links は元のまま。ON DELETE は変えない。
     """
     _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
-    outcome = "passed"
     with fmt_pg["connection"].cursor() as cur:
-        try:
+        with pytest.raises(psycopg2.errors.ForeignKeyViolation):
             cur.execute("DELETE FROM public.product_formats WHERE id=%s", (fmt_pg["linked"],))
-        except psycopg2.errors.ForeignKeyViolation as exc:
-            outcome = f"rejected: {exc}"
         cur.execute("SELECT work_id, product_format_id FROM public.products WHERE product_code='DETAIL'")
-        pair = cur.fetchone()
+        assert cur.fetchone() == (fmt_pg["work_a"], fmt_pg["linked"])
         cur.execute("SELECT count(*) FROM public.product_formats WHERE id=%s", (fmt_pg["linked"],))
-        format_rows = cur.fetchone()[0]
-    warnings.warn(f"BIN2_T4_PHYSICAL_DELETE_OUTCOME={outcome} pair_after={pair} format_rows_after={format_rows}")
-    if outcome == "passed":
-        assert pair == (fmt_pg["work_a"], None) and format_rows == 0
-        assert _links(fmt_pg, fmt_pg["linked"]) == []
-    else:
-        assert pair == (fmt_pg["work_a"], fmt_pg["linked"]) and format_rows == 1
+        assert cur.fetchone()[0] == 1
+    assert _links(fmt_pg, fmt_pg["linked"]) == [(fmt_pg["work_a"], "keep-me")]
 
 
 async def test_replace_games_adds_and_removes_links(fmt_pg):

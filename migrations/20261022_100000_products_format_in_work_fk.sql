@@ -22,6 +22,24 @@ DECLARE
     _bad  BIGINT;
     _valid BOOLEAN;
 BEGIN
+    -- 土台に必要な列・表が無ければ飛ばす（CI の土台 DB など。20261019_100000 と同じ考え方）
+    IF (SELECT count(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = _tbl
+          AND column_name IN ('product_format_id', 'work_id')) < 2 THEN
+        RAISE NOTICE 'fk_products_format_in_work: products に product_format_id / work_id が無いので飛ばす';
+        RETURN;
+    END IF;
+    IF to_regclass('public.' || _lnk) IS NULL THEN
+        RAISE NOTICE 'fk_products_format_in_work: product_format_game_links 表が無いので飛ばす';
+        RETURN;
+    END IF;
+    IF (SELECT count(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = _lnk
+          AND column_name IN ('format_id', 'type_master_id')) < 2 THEN
+        RAISE NOTICE 'fk_products_format_in_work: links に format_id / type_master_id が無いので飛ばす';
+        RETURN;
+    END IF;
+
     EXECUTE format(
         'SELECT count(*) FROM public.%I p WHERE p.product_format_id IS NOT NULL AND p.work_id IS NOT NULL '
         'AND NOT EXISTS (SELECT 1 FROM public.%I l WHERE l.format_id = p.product_format_id '

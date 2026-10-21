@@ -25,3 +25,6 @@
 ## 維持の仕組み
 - 守り手: backend/tests/test_product_format_game_links_pg.py（FK の試験。CI の pytest が毎回走らせる）
 - 親子の保証は DB の FK が持つ。FK を外すと、上の試験が落ちる。
+
+## CI の実測（試験(4)）
+CI の実測で、使用中の細分類の物理削除は FK により拒否された。物理削除の前に、使用中の商品の細分類を外す必要がある。ON DELETE は変えない（design.md §便2 の分岐どおり）。

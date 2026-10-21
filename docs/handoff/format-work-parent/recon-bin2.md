@@ -23,3 +23,4 @@
 - ADR-1038（docs/adr/ADR-1038-product-format-child-of-work.md）: この便の根拠。
 - ADR-1037（docs/adr/ADR-1037-migration-lock-timeout.md）: ロック待ちの上限は台本側。
 - ADR-1026（docs/adr/ADR-1026-drop-products-type-master-id.md）: 作品の持ち方（work_id）。変えない。
+- CI の実測: 使用中の細分類を物理削除すると、links の CASCADE 削除が fk_products_format_in_work に止められ ForeignKeyViolation（試験(4)）。
