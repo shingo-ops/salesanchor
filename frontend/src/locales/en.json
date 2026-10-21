@@ -1468,7 +1468,8 @@
       "itemTab": "Item {{n}}",
       "tabAnalysis": "Analysis",
       "tabRawText": "Original text",
-      "rawTextTitle": "{{supplier}} {{postedAt}}"
+      "rawTextTitle": "{{supplier}} {{postedAt}}",
+      "openButton": "View original text"
     },
     "view": {
       "subtitle": "Shows suppliers' current offers.",
