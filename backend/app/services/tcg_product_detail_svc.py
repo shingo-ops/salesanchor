@@ -256,32 +256,32 @@ async def update_product_detail(
             except PackagingError as exc:
                 raise ProductDetailError(422, exc.code) from exc
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
-        await db.execute(text(
-            "UPDATE public.products SET "
-            "name=:japanese_title,name_en=:english_title,mark=:mark,"
-            "release_date=CAST(:release_date AS date),"
-            "product_kind_id=:product_kind_id,"
-            "work_id=:work_id,manufacturer_id=CAST(:manufacturer_id AS uuid),"
-            "product_category_id=:product_category_id,category_class=:category_class "
-            "WHERE id=:pid"
-        ), params)
-        # ADR-1020 便1: 細分類（来たときだけ・D5）と印（D4）
-        if "product_format_id" in values:
+        # ADR-1020 便1: 細分類は来たときだけ新しい値（D5）。ADR-1038 便1: 確かめてから作品と細分類を1文で書く
+        format_given = "product_format_id" in values
+        if format_given:
             try:
                 await _validate_product_format(db, values["product_format_id"])
             except ValueError:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
-            await db.execute(text(
-                "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
-            ), {"fid": values["product_format_id"], "pid": product["id"]})
         # ADR-1020 便2a: 細分類とゲームの照合（細分類か作品が変わったときだけ・D2）
-        final_format_id = values["product_format_id"] if "product_format_id" in values else product.get("product_format_id")
-        format_changed = "product_format_id" in values and values["product_format_id"] != product.get("product_format_id")
+        final_format_id = values["product_format_id"] if format_given else product.get("product_format_id")
+        format_changed = format_given and values["product_format_id"] != product.get("product_format_id")
         work_changed = params["work_id"] != product.get("work_id")
         if (final_format_id is not None and params["work_id"] is not None
                 and (format_changed or work_changed)
                 and not await format_matches_game(db, final_format_id, params["work_id"])):
             raise ProductDetailError(422, "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH")
+        params["product_format_id"] = final_format_id
+        await db.execute(text(
+            "UPDATE public.products SET "
+            "name=:japanese_title,name_en=:english_title,mark=:mark,"
+            "release_date=CAST(:release_date AS date),"
+            "product_kind_id=:product_kind_id,"
+            "work_id=:work_id,product_format_id=:product_format_id,"
+            "manufacturer_id=CAST(:manufacturer_id AS uuid),"
+            "product_category_id=:product_category_id,category_class=:category_class "
+            "WHERE id=:pid"
+        ), params)
         await save_blank_confirmations(
             db,
             product_id=product["id"],

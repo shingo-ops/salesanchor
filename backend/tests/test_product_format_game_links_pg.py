@@ -186,3 +186,69 @@ async def test_replace_games_blocks_removal_in_use(fmt_pg):
         assert _links(fmt_pg, fmt_pg["linked"]) == [(fmt_pg["work_a"], "keep-me")]
     finally:
         await engine.dispose()
+
+
+def _add_link(ctx, format_id, work_id):
+    with ctx["connection"].cursor() as cur:
+        cur.execute("INSERT INTO public.product_format_game_links(format_id,type_master_id) VALUES (%s,%s)",
+                    (format_id, work_id))
+
+
+def _row(ctx):
+    with ctx["connection"].cursor() as cur:
+        cur.execute("SELECT work_id, product_format_id, name FROM public.products WHERE product_code='DETAIL'")
+        return cur.fetchone()
+
+
+async def test_detail_update_changes_work_and_format_together(fmt_pg):
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    _add_link(fmt_pg, fmt_pg["unlinked"], fmt_pg["work_b"])  # 後片付けは fmt_pg が format 行ごと消す（links は FK で連動）
+    engine = create_async_engine(fmt_pg["url"])
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(work_id=fmt_pg["work_b"], product_format_id=fmt_pg["unlinked"])
+            await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+        assert _row(fmt_pg)[:2] == (fmt_pg["work_b"], fmt_pg["unlinked"])
+    finally:
+        await engine.dispose()
+
+
+async def test_detail_update_rejects_work_change_without_format(fmt_pg):
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    engine = create_async_engine(fmt_pg["url"])
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(work_id=fmt_pg["work_b"], japanese_title="Should not save")
+            assert "product_format_id" not in values
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            assert caught.value.status == 422
+            assert str(caught.value) == "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH"
+        assert _row(fmt_pg) == (fmt_pg["work_a"], fmt_pg["linked"], "Original")
+    finally:
+        await engine.dispose()
+
+
+async def test_detail_update_rejects_mismatch_before_write(fmt_pg):
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    engine = create_async_engine(fmt_pg["url"])
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(work_id=fmt_pg["work_b"], product_format_id=fmt_pg["linked"],
+                          japanese_title="Should not save")
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            assert caught.value.status == 422
+            assert str(caught.value) == "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH"
+        assert _row(fmt_pg) == (fmt_pg["work_a"], fmt_pg["linked"], "Original")
+    finally:
+        await engine.dispose()
