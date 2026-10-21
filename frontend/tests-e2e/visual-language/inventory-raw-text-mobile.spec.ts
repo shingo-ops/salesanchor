@@ -1,18 +1,27 @@
 /**
- * inventory-raw-text-mobile.spec.ts — スマホの在庫カードから原文を見られるようにする（便1）
+ * visual-language/inventory-raw-text-mobile.spec.ts — スマホの在庫カードから原文を見られるようにする（便1）
  *
  * design.md 設計 ⑤ Acceptance Criteria の A1〜A4・A6 を検査する。
- * 書き方は既存 `inventory-table-layout.spec.ts` を踏襲
- * （installAuthBypass → mockApi(page, {...commonMocks(), ...}) → page.goto("/inventory")
- *   → 1行目の testid 待ち）。
+ *
+ * なぜ visual-language/ に置くか（2026-10-21 に一次情報で確認）:
+ *   .github/workflows/e2e.yml:247 の `playwright`（Playwright E2E (chromium)）は
+ *   `if: false # 一時停止 2026-06-01` で止まっている。CI で実際に走る Playwright は
+ *   「画面検査（3幅）」の vl-mobile-390 / vl-tablet-768 / vl-desktop-1280 だけで、
+ *   playwright.config.ts:64,69,74 の testMatch が `visual-language/*.spec.ts` に限定している。
+ *   つまり tests-e2e/ 直下に置くと**CI では1度も走らない**。A3/A4（下部タブを覆えているか）は
+ *   この端末（arm64/Termux）では chromium が入らず測れないため、CI で確定させる必要がある。
+ *
+ * 幅は AC どおり spec 側で 375px / 1440px を明示する（project の幅は上書きされる）。
+ * そのため 3 つの project で同じ検査が3回走る（短いので許容する）。
  *
  * 参照: docs/handoff/inventory-mobile-raw-text/design.md
+ *   cd frontend && npm run test:e2e:vl
  */
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { installAuthBypass } from "./utils/auth";
-import { mockApi } from "./utils/api-mock";
-import { commonMocks } from "./utils/common-mocks";
+import { installAuthBypass } from "../utils/auth";
+import { mockApi } from "../utils/api-mock";
+import { commonMocks } from "../utils/common-mocks";
 
 function makeItems(n: number) {
   return Array.from({ length: n }, (_, i) => ({

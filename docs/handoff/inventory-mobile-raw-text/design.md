@@ -64,7 +64,8 @@
 
 - z-index の数値比較（`Drawer` 301 > `.mobile-tabbar` 100・両方 `position: fixed` で body 直下の同じスタッキングコンテキスト）からは覆えている可能性が高いが、recon（§8「未確認」）の指摘どおり数値比較だけでは確定しない。
 - 判断: 実測できない以上、「覆えていない場合に限り呼び出し側で対処する」の分岐を実装時点では選べない。**推測で対処を入れない**＝金型（`Drawer`/`Sheet`）の既定にも呼び出し側（`InventoryRowDrawer.tsx`・`InventoryPage.tsx`）にも、タブを覆うための上書きは追加しない。
-- 代わりに、新規 e2e `frontend/tests-e2e/inventory-raw-text-mobile.spec.ts` に A1〜A4・A6 の検査（375px でのボタン数・44px・全画面の `boundingBox()`・`elementFromPoint`、1440px でボタン0個）をすべて書いた。Playwright が動く環境（GitHub Actions ubuntu-latest 等）で CI が走った時点でこの判定が確定する。CI が赤になった場合は、金型の既定を変えずに呼び出し側だけで対処する別便を立てる（この節の方針は変えない）。
+- 代わりに、新規 e2e `frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts` に A1〜A4・A6 の検査（375px でのボタン数・44px・全画面の `boundingBox()`・`elementFromPoint`、1440px でボタン0個）をすべて書いた。Playwright が動く環境（GitHub Actions ubuntu-latest）で CI が走った時点でこの判定が確定する。
+- **置き場の訂正（2026-10-21・PR #4602 の CI 実測）**: 当初 `frontend/tests-e2e/` 直下に置いたが、**そこに置くと CI では1度も走らない**。`.github/workflows/e2e.yml:247` の `playwright`（Playwright E2E (chromium)）が `if: false # 一時停止 2026-06-01` で止まっており、CI で実際に走る Playwright は「画面検査（3幅）」の `vl-mobile-390`／`vl-tablet-768`／`vl-desktop-1280` だけ、その testMatch（`frontend/playwright.config.ts:64,69,74`）が `visual-language/*.spec.ts` に限定されているため。実測: #4602 初回 CI で `Playwright E2E (chromium)` が `skipping`。よって spec を `visual-language/` 配下へ移した（`npx playwright test --list` で3 project が本 spec を拾うことを確認）。CI が赤になった場合は、金型の既定を変えずに呼び出し側だけで対処する別便を立てる（この節の方針は変えない）。
 - R1（カードの高さ before/after の実測）も同じ理由で未確認。既存 `inventory-table-layout.spec.ts` の 375px 検査（カードのはみ出し・枚数）は本便でも変更せず再利用しているため、はみ出しの回帰は CI で検出できる。高さの具体的な px 差分は CI 実行後に別途記録する。
 
 ### 3-4. タブと権限は既存のまま
@@ -100,7 +101,7 @@
 | A4 | 下部のタブが覆われている | e2e（新規・`elementFromPoint`） |
 | A5 | カード本体を押しても開かない | ユニット（`InventoryPage.rowdrawer.test.tsx` の F2b 書き換え） |
 | A6 | 1440px でボタンが0個・PC の行クリックは今のまま開く | e2e（新規）＋既存 F1/F2 |
-| A7 | 375px でカードが横にはみ出さない | 既存 `inventory-table-layout.spec.ts` の 375px 検査 |
+| A7 | 375px でカードが横にはみ出さない | 既存 `frontend/tests-e2e/inventory-table-layout.spec.ts` の 375px 検査。**ただしこの spec は `visual-language/` 配下ではないため CI では走らない**（⑫ C4 の宿題）。本便では手元でも実行できない（chromium なし）ため **A7 は未検証** |
 | A8 | ja/en のキー数が一致 | `npm run check:i18n-missing-keys` |
 | A9 | 金型の規則違反なし（生 select/input/checkbox/radio・自作タブ） | `scripts/check-ui-governance.js` |
 | A10 | 手元検査が通る | `npm run check:all` ＋ `npx tsc --noEmit`（`check:all` に型検査は含まれないため別に流す） |
@@ -156,7 +157,7 @@
 | カード本体では開かない | `InventoryPage.rowdrawer.test.tsx` | 赤 |
 | ja/en のキー一致 | `check:i18n-missing-keys` | 赤 |
 | 金型の規則 | `check-ui-governance.js` | 赤 |
-| カードのはみ出し | `inventory-table-layout.spec.ts`（既存） | 赤 |
+| カードのはみ出し | `frontend/tests-e2e/inventory-table-layout.spec.ts`（既存）**＝現状 CI では走らない**（⑫ C4） | 赤にならない |
 
 ## ⑫ 継続（この便の後）
 
@@ -164,4 +165,5 @@
 |---|---|---|
 | C1 | 便2: スマホの上部の操作の整理（1段に何を出し、何を絞り込みの中に置くか） | PO 着手承認済み・設計未着手 |
 | C2 | 便3: スマホの商品名の見せ方（折り返しのままか・PC と同じ「…」＋全文の見せ方にそろえるか） | PO 着手承認済み・設計未着手 |
+| C4 | `frontend/tests-e2e/` 直下の spec 群（`inventory-table-layout.spec.ts` を含む）が CI で1本も走っていない（`e2e.yml:247` の `if: false`）。A7 の回帰検出が効いていない | 本便の対象外。別便で「3幅 project に寄せる」か「停止中のジョブを再開する」かを決める |
 | C3 | GAS 在庫一覧に未反映の1件（最安・在庫最多の塗りの角丸＝ADR-1014 改訂19(4)） | PC 側の宿題として残っている |
