@@ -1,7 +1,7 @@
 # design 便1: 詳細保存で作品と細分類を1文で書く
 
 > 設計の正本: [design.md](design.md) §4 便1。この書類に新しい設計判断はない。
-> 現在地: [recon-bin1.md](recon-bin1.md)／対象 ADR: ADR-1038（docs/adr/ADR-1038-product-format-child-of-work.md）
+> 現在地: [recon-bin1.md](recon-bin1.md)（docs/handoff/format-work-parent/recon-bin1.md）／対象 ADR: ADR-1038（docs/adr/ADR-1038-product-format-child-of-work.md）
 
 ## 変更前後の要約
 - 変更前: 作品などを書く UPDATE → 細分類だけ別の UPDATE → 照合。
@@ -20,4 +20,5 @@
 この便は既存処理の順番の入れ替えなので外部事例は不要。設計全体は design.md §10。
 
 ## 維持の仕組み
-守り手は新しい試験 3 つと CI の pytest。順番を戻して 2 回に分けると、上の試験が落ちる。
+- 守り手: backend/tests/test_product_format_game_links_pg.py（新しい試験 3 つ。CI の pytest が毎回走らせる）
+- 順番を戻して 2 回に分けると、上の試験が落ちる。
