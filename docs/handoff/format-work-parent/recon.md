@@ -331,7 +331,7 @@ id:値 = 1:20, 2:21, 3:1, 4:1, 5:1, 6:2, 7:21, 8:1, 9:20, 10:5, 11:21, 12:4, 13:
 - 1 つの UPDATE で作品と細分類を同時に変えると成功した。
 - ALTER CONSTRAINT で DEFERRABLE INITIALLY DEFERRED にすると、同じトランザクション内の 2 回の UPDATE は通った。ずれが残ったまま COMMIT すると失敗し、自動コミットの単独 UPDATE でずれが残ると失敗した。pg_constraint は convalidated=t, condeferrable=t, condeferred=t, confmatchtype='s'。
 - 注意: 「作品だけ変更」の否定試験は、使った id=3 の細分類が両作品に紐づいていて通ってしまった。有効な否定の根拠としては使わない。raw/x01 の見出し「ERROR」は予想を書いたもので、結果は成功（組があるため）。生の記録なので raw は書き換えない。
-- 追記（2026-10-22）: 詳細保存は 1 トランザクション（commit は `tcg_product_detail_svc.py:326` の 1 回だけ）。下の【未確認】は解消した。
+- 追記（2026-10-22）: 詳細保存は 1 トランザクション（commit は `backend/app/services/tcg_product_detail_svc.py:326` の 1 回だけ）。下の【未確認】は解消した。
 - 【未確認】DEFERRED で 2 回の UPDATE が通るのは同じトランザクションの場合だけ。実際の詳細保存（tcg_product_detail_svc.py:260-284）が 1 トランザクションかは未確認。確実なのは 2 回の UPDATE を 1 文にまとめる案。
 
 ### 10.4 migration の決まりと前例（項目4）
@@ -394,7 +394,7 @@ reader 経路、SELECT のみ（SQL は各 raw ファイルの 1 行目）。
 ### 10.8 AGENTS.md・executor-checklist・docs/specs/README.md（項目8）
 
 全文を読んだ。この設計に関わるもの。
-- AGENTS.md: 通常の経路は ChatGPT 設計 → Claude Code 実装 → Codex 補助レビュー → 最終ゲート → GO（ADR-1003 で例外を除き Opus に委任）→ main マージ。Generator は設計の再解釈・独断変更が禁止。エビデンス要件「数値なし = 証拠なし」（Plannerの設計の Why に必ず入れる）。ブランチは origin/main から release/*。DB migration の作成・実行は Codex に禁止、`deploy.yml`・本番 `scripts/` の変更も禁止（Codex 向け）。マージ前は reviewer(opus) の `VERDICT: APPROVE on <sha> PR #<N>` 行つき報告が必須（ADR-1029）。不可逆操作（DROP TABLE 等）は PO 確認。i18n は t("key")、ja.json と en.json は同一キー。引き継ぎ: tasks/todo.md、docs/runbooks の更新と、根拠は一次情報のみ。
+- AGENTS.md: 通常の経路は ChatGPT 設計 → Claude Code 実装 → Codex 補助レビュー → 最終ゲート → GO（ADR-1003 で例外を除き Opus に委任）→ main マージ。Generator は設計の再解釈・独断変更が禁止。エビデンス要件「数値なし = 証拠なし」（Plannerの設計の Why に必ず入れる）。ブランチは origin/main から release/*。DB migration の作成・実行は Codex に禁止、`.github/workflows/deploy.yml`・本番 `scripts/` の変更も禁止（Codex 向け）。マージ前は reviewer(opus) の `VERDICT: APPROVE on <sha> PR #<N>` 行つき報告が必須（ADR-1029）。不可逆操作（DROP TABLE 等）は PO 確認。i18n は t("key")、ja.json と en.json は同一キー。引き継ぎ: tasks/todo.md、docs/runbooks の更新と、根拠は一次情報のみ。
 - docs/ai-agents/executor-checklist.md: 1 便 1 目的。PR 本文の「触るファイル」「削除するファイル」は平打ち（行頭の記号・バッククォート・注記を付けない）。「削除するファイル」は git diff の実測。完了報告に指示の全項目の○×自己チェックを添える。recon は読み取り専用で file:line 必須、origin/main の SHA を冒頭に書く。§3: フック・権限に止められたら言い換えず全部止めて報告。§4: 番号の若い open PR にマージを譲る。`gh pr create/edit` の本文は先に Write で作り、別コマンドで `--body-file` を使う（ADR-1033）。
 - docs/specs/README.md: 設計仕様書の索引。関係するのは「商品マスタ」（product-master/README.md、公開）と「DB設計のSSOT化」（db-ssot/README.md、あるべき姿・KGI確定 2026-07-09）、「管理センター」（management-center/README.md）。着手前に該当の設計仕様書を読む（STANDARD-WORKFLOW §1.5）。新しい設計仕様書を作ったらこの表に 1 行足す。
 - CLAUDE.md（リポジトリ直下）: migrations/ を含む実装は PO GO（「GO #PR番号」）が出るまで release ブランチで待機。危険 PR は GO 記録を PR 本文に転記。90 行上限。

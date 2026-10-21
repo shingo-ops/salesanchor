@@ -92,11 +92,11 @@ KGI（○×で判定できる形）:
   - 便1 では残し、便2 で「DB が不一致の組を拒否する」試験に置き換える。
   - 便1 に足す試験は 3 つ。①作品と細分類を同時に変えて成功すること、②不一致なら 422 で行が変わらないこと、③細分類を送らず作品だけ変えた場合に今と同じ判定になること。
 - 触らない: API の形、エラー符号（`PRODUCT_DETAIL_FORMAT_GAME_MISMATCH`・`PRODUCT_DETAIL_INVALID_CLASSIFICATION`）、ほかの入口。
-- 現値の書き直しは、ほかの人の更新を消さない。詳細保存は `FOR UPDATE` と版の照合（`tcg_product_detail_svc.py:158,161`）で守られている（reviewer r01）。
+- 現値の書き直しは、ほかの人の更新を消さない。詳細保存は `FOR UPDATE` と版の照合（`backend/app/services/tcg_product_detail_svc.py:158,161`）で守られている（reviewer r01）。
 - GO: backend のみで、危険なパスは含まない。委任 GO（Opus）。
 
 ### 便2 複合 FK を足す（migration・危険 PR・GO 要）
-- 新しい migration: `migrations/2026xxxx_xxxxxx_products_format_in_work_fk.sql`。`scripts/run_all_migrations.sh` に登録する。
+- 新しい migration: migrations/ に新しいファイル（名前は「日時_products_format_in_work_fk.sql」）。`scripts/run_all_migrations.sh` に登録する。
 - 中身（前例 `migrations/20260919_030000_master_ssot_fk_work_id.sql` の冪等 DO ブロック）:
   1. 事前点検: 不一致の行数を数える。条件は「products で product_format_id と work_id がともに入っていて、links に組が無い」こと。1 件以上なら `RAISE EXCEPTION` で止める。値は書かない（ADR-1007）。
   2. pg_constraint に `fk_products_format_in_work` が無ければ、`ALTER TABLE public.products ADD CONSTRAINT fk_products_format_in_work FOREIGN KEY (product_format_id, work_id) REFERENCES public.product_format_game_links (format_id, type_master_id) NOT VALID` を実行する。
@@ -123,8 +123,8 @@ KGI（○×で判定できる形）:
 - 分岐の想定:
   - (4) が落ちる場合は、細分類の物理削除の経路がアプリに無い（論理削除のみ。`backend/app/routers/super_admin_product_formats.py:227-231`）。そのため試験の後始末を「products の細分類を NULL → links → formats の順に消す」に直し、「物理削除の前に使用中の商品を外す」ことを ADR に書く。ON DELETE の動作は変えない。
   - 事前点検が 1 件以上で止まった場合は、その行を PO に見せて直し方を決める（推測で直さない）。
-- 索引は足さない。products(product_format_id, work_id) の索引は、links の行を消すときの照合を速くするためのもの。products は 1453 行で、links の行を消すのは細分類マスタ画面からの手作業だけ（`super_admin_product_formats.py:184`）。
-- 仕様書: 同じ PR で `docs/specs/product-master/README.md` §3-2 と `registration-rules.md` §2 の細分類の行に、「細分類は中分類の子。親子の正本は product_format_game_links。DB の FK で守る」と追記する。
+- 索引は足さない。products(product_format_id, work_id) の索引は、links の行を消すときの照合を速くするためのもの。products は 1453 行で、links の行を消すのは細分類マスタ画面からの手作業だけ（`backend/app/routers/super_admin_product_formats.py:184`）。
+- 仕様書: 同じ PR で `docs/specs/product-master/README.md` §3-2 と `docs/specs/product-master/registration-rules.md` §2 の細分類の行に、「細分類は中分類の子。親子の正本は product_format_game_links。DB の FK で守る」と追記する。
 - GO: migrations/ を含むため危険 PR（ADR-135/136）。DROP は含まない。そのため ADR-1003 の委任 GO（Opus）の対象とする。STANDARD-WORKFLOW:140 の PO 本人 GO は DROP のときだけ。
 
 ### 便3a 旧列を読むコードを外す（コードのみ）
@@ -133,7 +133,7 @@ KGI（○×で判定できる形）:
   - `backend/app/schemas/product_format.py:19,33`
   - `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:44,57,68,134,159,222,328-341`（単独欄と一覧の列）とそのテスト :39
   - `frontend/api-contract/openapi.json` の 3 か所（再生成の手順に従う）
-  - `ja.json`/`en.json` のキー typeMasterId（両方同時に外す）
+  - `frontend/src/locales/ja.json`/`frontend/src/locales/en.json` のキー typeMasterId（両方同時に外す）
 - 列は残す（便3b まで値はそのまま）。
 - 作成・更新のスキーマ（`backend/app/schemas/product_format.py:12-33`）に model_config は無い。既定では知らない項目は無視される（pydantic v2 の extra="ignore"）。これはまだ実際に送って確かめていない（【未確認】）。便3a の試験で、type_master_id を付けて送っても 200 で保存できることを確かめる。
 - GO: `frontend/api-contract/` を触るため、ADR-1015:17 の危険なパスに当たる。委任 GO（Opus）。DROP は含まない。
@@ -141,7 +141,7 @@ KGI（○×で判定できる形）:
 ### 便3b 旧列を落とす（migration・DROP COLUMN・PO 本人の GO 要）
 - 事前: 本番の `product_formats` から `id, code, type_master_id` の 28 行を CSV に退避し、`docs/handoff/format-work-parent/data/` に置く（ADR-1026 What 4 の前例）。値は recon §10.1 の一覧と照合する。
 - `migrations/20260923_010000_product_formats_add_type_master_id.sql` の Step 1（:4-21）を消し、「ここに ADD を戻さないこと（ADR-1038）」と書く。Step 2（kind_id）は残す。前例は ADR-1026 の commit 03d770375。
-- 新しい migration: `DROP COLUMN IF EXISTS type_master_id`。FK 制約 `product_formats_type_master_id_fkey` は列と一緒に消える。値は書かない。`run_all_migrations.sh` の末尾に登録する。
+- 新しい migration: `DROP COLUMN IF EXISTS type_master_id`。FK 制約 `product_formats_type_master_id_fkey` は列と一緒に消える。値は書かない。`scripts/run_all_migrations.sh` の末尾に登録する。
 - チェック 10（column churn）とチェック 6（PR 本文に ADR-1038）を満たす。
   - 前例の commit 03d770375 は、churn の許可表も検査スクリプトも変えていない（reviewer r32, r34）。前例どおり許可表には足さず、ADD 文を消して対応する。合否は CI で確かめる。
 - GO: STANDARD-WORKFLOW:140 により **PO 本人の「GO #PR番号」** が要る。
@@ -149,14 +149,14 @@ KGI（○×で判定できる形）:
 ### 便4 登録ドロワーの 5 欄を金型 Select にする（画面のみ）
 - 対象: `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:54-91`（SearchSelect を消す）と `:215-219`。
 - 変更: 5 欄（大分類・中分類・製造元・商品分類・細分類）を金型 `SelectControl`（`frontend/src/components/Select.tsx:64`）にする。
-  - 周りの欄と同じく `<label className="pmd-field">{label}<SelectControl .../></label>` の形にする（:220-235 の TextFieldControl と同じ形）。ラベル付きの `Select` は使わない。こうするとラベルが二重にならない。前例は `ProductFormatsMasterPanel.tsx:332`。
+  - 周りの欄と同じく `<label className="pmd-field">{label}<SelectControl .../></label>` の形にする（:220-235 の TextFieldControl と同じ形）。ラベル付きの `Select` は使わない。こうするとラベルが二重にならない。前例は `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:332`。
   - props: `size="sm" fullWidth placeholder options value onChange`。
   - options は金型の形 `{value,label}`（Select.tsx:106-108）に変換する。例: `formatOptionsFor(formats, values.work_id).map(o => ({ value: String(o.id), label: o.name }))`。value の型は Select.tsx の実物に合わせる。
   - 細分類には `disabled={!values.work_id}` を付ける。
   - onChange は、今の `setValue`（key と値を受け、中分類のときは中で `formatAfterWorkChange` を呼ぶ。:163）に渡す。例: `onChange={(e) => setValue('work_id', e.target.value)}`。SelectControl の onChange は素の select のイベント（Select.tsx:42）。
 - 文言: 今の「名称で検索・選択」（ja.json:4923）は、文字を打って絞れない Select の動きと合わない。新しいキー `tcgAnalysisReview.productMasterDrawer.selectPlaceholder`（ja「選択してください」、en「Select」）を ja/en 同時に足す。使わなくなる `searchSelectPlaceholder` は、ほかで使っていなければ消す。
 - GO: 画面だけの変更。委任 GO（Opus）。
-- 試験: `ProductMasterDrawer.test.tsx` の `input[list]`（:62）と `#lookup-product_format_id option`（:130）を、Select の選択の試験に書き直す。
+- 試験: `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.test.tsx` の `input[list]`（:62）と `#lookup-product_format_id option`（:130）を、Select の選択の試験に書き直す。
 - 動きの違い（PO に伝える）:
   - 文字を打って絞る動きが、一覧から選ぶ形に変わる。候補は最大 18 件。
   - 中分類の子だけが出ることと、中分類を変えると細分類が空に戻ることは変わらない。
@@ -171,8 +171,8 @@ KGI（○×で判定できる形）:
 ## 5. 影響範囲（呼び出し元の全走査の結果）
 
 - products の work_id・product_format_id を書く所は 3 か所（recon §10.2、raw/g07）。新規 INSERT と往復 CSV は 1 文なので FK に当たらない。当たるのは詳細保存だけで、便1 で直す。
-- links を消す所: `super_admin_product_formats.py:184`。今も使用中なら 409（:172-180）。競合時は IntegrityError を 409 にする分岐が既にある（:196-199）。
-- type_master を消す所: `super_admin_tcg.py:270`。既に `fk_products_work_id` で止まるので、新しい失敗の形は無い。
+- links を消す所: `backend/app/routers/super_admin_product_formats.py:184`。今も使用中なら 409（:172-180）。競合時は IntegrityError を 409 にする分岐が既にある（:196-199）。
+- type_master を消す所: `backend/app/routers/super_admin_tcg.py:270`。既に `fk_products_work_id` で止まるので、新しい失敗の形は無い。
 - 旧列の読み手: 14 か所（recon §10.1）。gas/、監視、ai_ro（動的に作り直す）は影響なし。
 - テナント商品: 0 行（recon §3-4）。
 
@@ -220,7 +220,7 @@ KGI（○×で判定できる形）:
 - 旧列の ADD を戻さないことを、migration のコメントとチェック 10（column churn）で守る。
 - ADR-1038 に「親子の正本は links だけ」と書き、FEATURE-INDEX の「細分類」に足す。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 
 なし。数値つきの導入事例は見つからなかった（recon §10.9、WebSearch 2026-10-22）。理由は、中間表と複合 FK は一般的な DB の仕組みで、事例として公開される種類の話ではないため。設計の根拠には、次のものを使う。
 - PG16 公式文書（sql-createtable の MATCH SIMPLE、sql-altertable のロック）
