@@ -174,3 +174,15 @@ PO 決定（2026-10-20「1」。この形で、アプリ・閲覧ページ・在
 - 反映: アプリ: 本 PR。GAS: 反映後に版番号を追記する。
 - 戻し方: アプリは PR を revert。GAS はテストを版29、本番を版19へ redeploy する。
 - 記録: `docs/handoff/inventory-toolbar-two-rows/`（recon・design・審査）。
+
+## 改訂 2026-10-21（スマホの在庫カードから原文を見られるようにする・対象はアプリのスマホだけ）
+
+PO 決定（2026-10-21）。①スマホで在庫の原文が見られない問題に着手する（3件のうち1件目）②開くきっかけはカードに「原文」ボタン（カード全体を押す案は不採用）③入れ物は全画面（受信箱のカルテと同じ見え方）。前の節の本文は書き換えない。
+
+- 内容: スマホ幅（767px 以下）の在庫表カードに「原文」ボタン（`Button` size="lg" + iconOnly、44x44px）を1つ足し、押すと既存の `InventoryRowDrawer`（`Drawer` size="wide"。スマホ幅では既存の指定どおり全画面）が開く。パソコン幅（768px 以上）は列が増えず、行クリックで開く今の動きのまま。
+- **対象はアプリのスマホ画面だけ**。お客様向け閲覧ページ（`viewerColumns.tsx`）と GAS 在庫一覧（リポジトリ外）は対象外（原文は社内向けの情報のため）。この改訂の内容を閲覧ページ・GAS に揃える必要はない。
+- 詳細パネルの中身（解析タブ・原文タブ・権限の出し分け・API）・`Drawer`/`Sheet` 金型の既定・行クリックの挙動（PC は今のまま開く／スマホは今のまま開かない）は変えない。
+- 正本: `frontend/src/features/inventory/inventoryColumns.tsx`（`buildInventoryRawTextColumn`）、`frontend/src/pages/inventory/InventoryPage.tsx`（`isMobile` のときだけ列を足す）、`frontend/src/constants/icons.tsx`（`PAGE_ICONS.rawText`）、`frontend/src/locales/ja.json`/`en.json`（`inventory.rowDrawer.openButton`）。
+- 反映: アプリ: 本 PR。GAS・閲覧ページ: 対象外のため反映なし。
+- 戻し方: `InventoryPage.tsx` で列を足す分岐を外す（列定義は残っても無害）。全部戻すときは本 PR を revert。
+- 記録: `docs/handoff/inventory-mobile-raw-text/`（recon・design・審査）。
