@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""master-keyword-fix: precheck/dryrun/apply/postcheck の .sql を1つの表から作る。DB には触れない。
+方式は docs/handoff/deckbuild-master-fix/gen_sql.py と同じ。ただし語は「末尾に足すだけ」（既存行の id・position を動かさない）。
+戻し用 SQL（rollback）は PO 判断待ちのためここでは作らない（README の TODO 参照）。
+Usage: python3 gen_sql.py
+"""
+import json
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ACTOR_APPLY = "claude-sonnet (PO承認 2026-10-21 master-keyword-fix)"
+TYPE_MASTER_ID = 8982
+IDS = "420439, 420450, 420560, 440578, 466060"
+
+# code=商品コード, old_*=今の語（2026-10-21 reader 鍵で確認）, add_*=足す語（末尾に追加）
+SPECS = [
+    {"id": 420439, "code": "OP-ST01", "old_search": ["麦わらの一味", "ST-01", "ST01"],
+     "old_exclude": ["STORY BOOSTER 01", "Heroic Beginnings", "ガイアレッド", "STORY BOOSTER", "ドラゴンボール", "カートン"],
+     "add_search": [], "add_exclude": ["Vジャンプ"]},
+    {"id": 420450, "code": "OP-ST12", "old_search": ["ゾロ&サンジ", "ST-12", "ST12"],
+     "old_exclude": ["Raging Onslaught", "ジエスモン"],
+     "add_search": [], "add_exclude": ["Vジャンプ"]},
+    {"id": 420560, "code": "OP-VJ", "old_search": ["Vジャンプ付録カード"], "old_exclude": [],
+     "add_search": [], "add_exclude": ["麦わらの一味3人の最強セット", "応募者全員サービス", "VJ2610"]},
+    {"id": 440578, "code": "PM0234", "old_search": ["インクランド探訪", "INTO THE INKLANDS インクランド探訪"], "old_exclude": [],
+     "add_search": ["イングランド探訪"], "add_exclude": []},
+    {"id": 466060, "code": "PM0370",
+     "old_search": ["3周年!ワンピースカードトレジャーキャンペーンパック", "3周年トレジャーキャンペーン", "3周年 トレジャーパック"], "old_exclude": [],
+     "add_search": ["トレジャーキャンペーン"], "add_exclude": ["四皇", "4周年"]},
+]
+
+
+def show():
+    return f"""SELECT p.id, p.product_code, p.mark, p.name, p.is_active,
+       (SELECT string_agg(k.position || ':' || k.keyword, ' | ' ORDER BY k.position, k.id)
+          FROM public.product_search_keywords k WHERE k.product_id = p.id) AS search_keywords,
+       (SELECT string_agg(k.position || ':' || k.keyword, ' | ' ORDER BY k.position, k.id)
+          FROM public.product_exclude_keywords k WHERE k.product_id = p.id) AS exclude_keywords
+  FROM public.products p WHERE p.id IN ({IDS}) ORDER BY p.id;
+SELECT id, name, code_only_match, match_by_code, updated_at FROM public.type_master WHERE id = {TYPE_MASTER_ID};"""
+
+
+CHECK = """DO $do$
+DECLARE
+  spec jsonb; specs jsonb := $j$__SPECS__$j$::jsonb;
+  pid int; r record; cur_s text[]; cur_e text[]; want_s text[]; want_e text[]; n int;
+BEGIN
+  FOR spec IN SELECT * FROM jsonb_array_elements(specs) LOOP
+    pid := (spec->>'id')::int;
+    SELECT * INTO r FROM public.products WHERE id = pid;
+    IF NOT FOUND THEN RAISE EXCEPTION 'product % not found', pid; END IF;
+    cur_s := ARRAY(SELECT keyword FROM public.product_search_keywords WHERE product_id = pid ORDER BY position, id);
+    cur_e := ARRAY(SELECT keyword FROM public.product_exclude_keywords WHERE product_id = pid ORDER BY position, id);
+    want_s := ARRAY(SELECT jsonb_array_elements_text(spec->'old_search'));
+    want_e := ARRAY(SELECT jsonb_array_elements_text(spec->'old_exclude'));
+    IF '__SIDE__' = 'after' THEN
+      want_s := want_s || ARRAY(SELECT jsonb_array_elements_text(spec->'add_search'));
+      want_e := want_e || ARRAY(SELECT jsonb_array_elements_text(spec->'add_exclude'));
+    END IF;
+    IF r.product_code IS DISTINCT FROM spec->>'code' OR r.is_active IS NOT TRUE
+       OR cur_s IS DISTINCT FROM want_s OR cur_e IS DISTINCT FROM want_e THEN
+      RAISE EXCEPTION 'MISMATCH (__SIDE__) id=%: code=% active=% search=% exclude=%', pid, r.product_code, r.is_active, cur_s, cur_e;
+    END IF;
+    -- 空欄確認の印が付いていないこと（除外語を足す商品は印を外す処理が要るため、無いことを前提にする）
+    SELECT count(*) INTO n FROM public.product_blank_confirmations WHERE product_id = pid;
+    IF '__SIDE__' = 'before' AND n <> 0 THEN RAISE EXCEPTION 'blank_confirmations exist id=% rows=%', pid, n; END IF;
+    RAISE NOTICE 'OK (__SIDE__) id=% code=%', pid, r.product_code;
+  END LOOP;
+  SELECT * INTO r FROM public.type_master WHERE id = __TM__;
+  IF NOT FOUND THEN RAISE EXCEPTION 'type_master % not found', __TM__; END IF;
+  IF r.code_only_match IS DISTINCT FROM (CASE '__SIDE__' WHEN 'before' THEN false ELSE true END) THEN
+    RAISE EXCEPTION 'MISMATCH (__SIDE__) type_master id=% code_only_match=%', __TM__, r.code_only_match;
+  END IF;
+  RAISE NOTICE 'OK (__SIDE__) type_master id=% name=% code_only_match=%', __TM__, r.name, r.code_only_match;
+END
+$do$;"""
+
+CHANGE = """DO $do$
+DECLARE
+  spec jsonb; specs jsonb := $j$__SPECS__$j$::jsonb;
+  pid int; c int; r record; mx int; i int;
+  cur_s text[]; cur_e text[]; old_s text[]; old_e text[]; add_s text[]; add_e text[];
+  before_snap jsonb; after_snap jsonb; touched int := 0;
+BEGIN
+  FOR spec IN SELECT * FROM jsonb_array_elements(specs) LOOP
+    pid := (spec->>'id')::int;
+    SELECT * INTO r FROM public.products WHERE id = pid FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'product % not found', pid; END IF;
+    old_s := ARRAY(SELECT jsonb_array_elements_text(spec->'old_search'));
+    old_e := ARRAY(SELECT jsonb_array_elements_text(spec->'old_exclude'));
+    add_s := ARRAY(SELECT jsonb_array_elements_text(spec->'add_search'));
+    add_e := ARRAY(SELECT jsonb_array_elements_text(spec->'add_exclude'));
+    cur_s := ARRAY(SELECT keyword FROM public.product_search_keywords WHERE product_id = pid ORDER BY position, id);
+    cur_e := ARRAY(SELECT keyword FROM public.product_exclude_keywords WHERE product_id = pid ORDER BY position, id);
+    IF r.product_code IS DISTINCT FROM spec->>'code' OR r.is_active IS NOT TRUE
+       OR cur_s IS DISTINCT FROM old_s OR cur_e IS DISTINCT FROM old_e
+       OR EXISTS (SELECT 1 FROM public.product_blank_confirmations WHERE product_id = pid) THEN
+      RAISE EXCEPTION 'GUARD id=%: unexpected current state code=% search=% exclude=%', pid, r.product_code, cur_s, cur_e;
+    END IF;
+    before_snap := jsonb_build_object(
+      'product', (SELECT to_jsonb(p) FROM public.products p WHERE p.id = pid),
+      'search_keywords', COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position, k.id) FROM public.product_search_keywords k WHERE k.product_id = pid), '[]'::jsonb),
+      'exclude_keywords', COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position, k.id) FROM public.product_exclude_keywords k WHERE k.product_id = pid), '[]'::jsonb));
+
+    -- 末尾に足すだけ。既存行の id・position は動かさない
+    SELECT COALESCE(max(position), 0) INTO mx FROM public.product_search_keywords WHERE product_id = pid;
+    FOR i IN 1..COALESCE(array_length(add_s, 1), 0) LOOP
+      INSERT INTO public.product_search_keywords (product_id, keyword, position) VALUES (pid, add_s[i], mx + i);
+      GET DIAGNOSTICS c = ROW_COUNT;
+      IF c <> 1 THEN RAISE EXCEPTION 'search insert id=% rows=% (expected 1)', pid, c; END IF;
+    END LOOP;
+    SELECT COALESCE(max(position), 0) INTO mx FROM public.product_exclude_keywords WHERE product_id = pid;
+    FOR i IN 1..COALESCE(array_length(add_e, 1), 0) LOOP
+      INSERT INTO public.product_exclude_keywords (product_id, keyword, position) VALUES (pid, add_e[i], mx + i);
+      GET DIAGNOSTICS c = ROW_COUNT;
+      IF c <> 1 THEN RAISE EXCEPTION 'exclude insert id=% rows=% (expected 1)', pid, c; END IF;
+    END LOOP;
+    -- update_product_detail の UPDATE と同じ効果（更新時刻を進める）
+    UPDATE public.products SET updated_at = now() WHERE id = pid;
+    GET DIAGNOSTICS c = ROW_COUNT;
+    IF c <> 1 THEN RAISE EXCEPTION 'UPDATE products id=% rows=% (expected 1)', pid, c; END IF;
+
+    cur_s := ARRAY(SELECT keyword FROM public.product_search_keywords WHERE product_id = pid ORDER BY position, id);
+    cur_e := ARRAY(SELECT keyword FROM public.product_exclude_keywords WHERE product_id = pid ORDER BY position, id);
+    IF cur_s IS DISTINCT FROM old_s || add_s OR cur_e IS DISTINCT FROM old_e || add_e THEN
+      RAISE EXCEPTION 'FINAL STATE id=% differs from target: search=% exclude=%', pid, cur_s, cur_e;
+    END IF;
+    after_snap := jsonb_build_object(
+      'product', (SELECT to_jsonb(p) FROM public.products p WHERE p.id = pid),
+      'search_keywords', COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position, k.id) FROM public.product_search_keywords k WHERE k.product_id = pid), '[]'::jsonb),
+      'exclude_keywords', COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position, k.id) FROM public.product_exclude_keywords k WHERE k.product_id = pid), '[]'::jsonb));
+    INSERT INTO public.audit_log (table_name, record_id, action, changed_by, old_values, new_values)
+    VALUES ('products', gen_random_uuid(), 'UPDATE', '__ACTOR__', before_snap::text, after_snap::text);
+    GET DIAGNOSTICS c = ROW_COUNT;
+    IF c <> 1 THEN RAISE EXCEPTION 'audit_log insert id=% rows=% (expected 1)', pid, c; END IF;
+    RAISE NOTICE 'apply id=% done (search +%, exclude +%)', pid, COALESCE(array_length(add_s, 1), 0), COALESCE(array_length(add_e, 1), 0);
+    touched := touched + 1;
+  END LOOP;
+  IF touched <> __N__ THEN RAISE EXCEPTION 'touched % products (expected __N__)', touched; END IF;
+
+  -- 作品 type_master: code_only_match false -> true（型番だけで当てる）
+  UPDATE public.type_master SET code_only_match = true WHERE id = __TM__ AND code_only_match IS NOT DISTINCT FROM false;
+  GET DIAGNOSTICS c = ROW_COUNT;
+  IF c <> 1 THEN RAISE EXCEPTION 'UPDATE type_master id=% rows=% (expected 1)', __TM__, c; END IF;
+  INSERT INTO public.audit_log (table_name, record_id, action, changed_by, old_values, new_values)
+  VALUES ('type_master', gen_random_uuid(), 'UPDATE', '__ACTOR__',
+          '{"id": __TM__, "code_only_match": false}', '{"id": __TM__, "code_only_match": true}');
+  GET DIAGNOSTICS c = ROW_COUNT;
+  IF c <> 1 THEN RAISE EXCEPTION 'audit_log(type_master) rows=% (expected 1)', c; END IF;
+  RAISE NOTICE 'DONE: % products, type_master % changed, % audit_log rows', touched, __TM__, touched + 1;
+END
+$do$;"""
+
+
+def sub(t, **kw):
+    t = t.replace("__SPECS__", json.dumps(SPECS, ensure_ascii=False, indent=1)).replace("__TM__", str(TYPE_MASTER_ID))
+    for k, v in kw.items():
+        t = t.replace(f"__{k}__", v)
+    return t
+
+
+def head(title, note):
+    return (f"-- {title}\n-- {note}\n-- Target: DB jarvis_db, schema public. Products {IDS}, type_master {TYPE_MASTER_ID}. Generated by gen_sql.py; do not hand-edit.\n"
+            "\\set ON_ERROR_STOP on\n")
+
+
+def main():
+    pre = "BEGIN;\nSET LOCAL app.is_operator = 'true';\nSET LOCAL lock_timeout = '10s';\nSET LOCAL statement_timeout = '60s';\n"
+    n = str(len(SPECS))
+    chg = sub(CHANGE, ACTOR=ACTOR_APPLY, N=n)
+    # 全部入り: 同じトランザクション内で precheck → 変更 → postcheck → (COMMIT | ROLLBACK)。どれか1つでも失敗したら全部戻る
+    body = pre + sub(CHECK, SIDE="before") + "\n" + chg + "\n" + sub(CHECK, SIDE="after") + "\n" + show() + "\n"
+    files = {
+        "precheck.sql": head("precheck.sql (READ-ONLY)", "今の本番の値が想定どおりか照合。違えば止まる。") + "BEGIN READ ONLY;\n" + show() + "\n" + sub(CHECK, SIDE="before") + "\nROLLBACK;\n",
+        "apply.sql": head("apply.sql (WRITES, one transaction, ends with COMMIT)", "precheck → 変更 → postcheck を同じトランザクションで。語を末尾に足す。作品 8982 の code_only_match を true に。audit_log に各1行。") + body + "COMMIT;\n",
+        "dryrun.sql": head("dryrun.sql (same as apply.sql but ends with ROLLBACK)", "precheck → 変更 → postcheck を流して、最後に ROLLBACK。何も残さない。") + body + "ROLLBACK;\n",
+        "postcheck.sql": head("postcheck.sql (READ-ONLY)", "適用後の値が目標どおりか照合。") + "BEGIN READ ONLY;\n" + show() + "\n" + sub(CHECK, SIDE="after") + "\nROLLBACK;\n",
+    }
+    for name, text in files.items():
+        (HERE / name).write_text(text, encoding="utf-8")
+        print(name, len(text.splitlines()), "lines")
+
+
+if __name__ == "__main__":
+    main()
