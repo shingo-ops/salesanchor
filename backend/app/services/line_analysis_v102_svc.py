@@ -961,9 +961,10 @@ def _write_extra_targets(session: Session, result_id: str, extras: list[dict]) -
 
 def _buyback_units(
     session: Session, pairs: list, base_values: list[dict], unit_ids: dict, extraction_job_id: str, decisions: dict[str, Decisions],
+    unit_alias_to_info: dict,
 ) -> list[dict]:
-    """単位も状態も語が無い件を、買取価格との比で Sealed box / Case に決める（便BB）。失敗したらこの投稿では決めない。"""
-    if not any(is_buyback_candidate(item, values) for (item, _row), values in zip(pairs, base_values)):
+    """単位が値段で決まる件を、買取価格との比で Box / Case / Pack と状態に決める（便BB・ADR-1036）。失敗したらこの投稿では決めない。"""
+    if not any(is_buyback_candidate(item, values, unit_alias_to_info) for (item, _row), values in zip(pairs, base_values)):
         return base_values  # 対象が無ければ DB も SAVEPOINT も使わない
     try:
         with session.begin_nested():  # SAVEPOINT。補助 SQL の失敗で解析の保存全体の取引を壊さない
@@ -975,7 +976,7 @@ def _buyback_units(
             posted_at = load_posted_at(session, extraction_job_id)  # SAVEPOINT の中。失敗したら下の except で「この投稿では決めない」
             if posted_at is None:
                 return base_values
-            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, posted_at, human_condition)
+            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, unit_alias_to_info, posted_at, human_condition)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[buyback_unit] 買取価格による単位・状態の判定に失敗したので、この投稿では判定をしません: job=%s error=%r", extraction_job_id, exc)
         return base_values
@@ -1147,7 +1148,7 @@ def _write_results(
         if (d := decisions.get(str(row.id))) is not None else values
         for values, (_item, row) in zip(base_values, pairs)
     ]
-    base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions)  # 便BB。便UP の確認はこの後の単位・状態で走る
+    base_values = _buyback_units(session, pairs, base_values, unit_ids, extraction_job_id, decisions, masters.get("unit_alias_to_info") or {})  # 便BB。便UP の確認はこの後の単位・状態で走る
     base_values = _sell_out_stock_closed_in_the_same_post(pairs, base_values, decisions, unit_ids, status_entries)  # 規則13
     mismatches = _unit_price_mismatches(session, extraction_job_id, base_values)
     for index, (item, row) in enumerate(pairs):
