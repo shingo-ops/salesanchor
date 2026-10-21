@@ -43,6 +43,7 @@ ROUTES = [
     ("POST", "/api/v1/super-admin/viewers/1/extend", {"days": 7}),
     ("POST", "/api/v1/super-admin/viewers/1/reissue-signup-code", {}),
     ("GET", "/api/v1/super-admin/viewers/signup-request", None),
+    ("GET", "/api/v1/super-admin/viewers/1/template-text?key=signup_request", None),
     ("GET", "/api/v1/super-admin/viewer-templates", None),
     ("PUT", "/api/v1/super-admin/viewer-templates/signup_request", {"body": "x", "expected_updated_at": None}),
 ]
@@ -1017,3 +1018,92 @@ def test_reissue_message_with_invite_uses_edited_body(pg, monkeypatch):  # noqa:
     msg = resp.json()["message"]
     assert msg.startswith("fakeさん、直した招待つき案内 " + resp.json()["signup_code"])
     assert msg.endswith("https://discord.gg/fakecode?openExternalBrowser=1")
+
+
+# ── 詳細欄から「送る文」をコピーする GET（template-text） ─────────────────
+
+
+def _text_path(vid, key):
+    return f"/api/v1/super-admin/viewers/{vid}/template-text?key={key}"
+
+
+@needs_ci_pg
+def test_template_text_returns_each_key_with_viewer_values(pg):  # noqa: F811
+    """K1: 6つの鍵それぞれで、その人の値を入れた文が返る。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "tt1@x.com", "trial", expires_in_days=5)
+    cur.execute("SELECT trial_expires_at FROM public.viewer_accounts WHERE id=%s", (vid,))
+    date_text = viewer_bot_texts.format_jst_date(cur.fetchone()[0])
+    expected = {
+        "signup_request": DEFAULT_BODIES["signup_request"].format(signup_url=viewer_bot_texts.SIGNUP_URL),
+        "room_recreated": DEFAULT_BODIES["room_recreated"].format(email="tt1@x.com"),
+        "notice_extended": DEFAULT_BODIES["notice_extended"].format(until_date=date_text),
+        "interview_request": DEFAULT_BODIES["interview_request"].format(expires_date=date_text),
+        "notice_activated": DEFAULT_BODIES["notice_activated"],
+        "notice_suspended": DEFAULT_BODIES["notice_suspended"],
+    }
+    for key, want in expected.items():
+        resp = _api(async_url, "GET", _text_path(vid, key))
+        assert resp.status_code == 200, key
+        assert resp.json() == {"text": want}, key
+
+
+@needs_ci_pg
+def test_template_text_matches_auto_sent_extend_text(pg, monkeypatch):  # noqa: F811
+    """K2: 延長の自動送信の文と、その後のコピーの文が一字一句同じ。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+
+    async def _fake_send(channel_id, text):
+        return True
+
+    monkeypatch.setattr("app.services.viewer_room_notice.send_room_notice", _fake_send)
+    vid = _account(cur, "tt2@x.com", "trial", expires_in_days=3)
+    _set_room(cur, vid)
+    ext = _api(async_url, "POST", f"/api/v1/super-admin/viewers/{vid}/extend", {"days": 10})
+    assert ext.status_code == 200 and ext.json()["room_notice_text"]
+    resp = _api(async_url, "GET", _text_path(vid, "notice_extended"))
+    assert resp.status_code == 200
+    assert resp.json()["text"] == ext.json()["room_notice_text"]
+
+
+@needs_ci_pg
+@pytest.mark.parametrize("key", ["reissue_notice", "reissue_notice_no_invite", "room_welcome", "unknown_key"])
+def test_template_text_not_copyable_key_is_422(pg, key):  # noqa: F811
+    """K3: 対象外の鍵は 422。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "tt3@x.com", "trial", expires_in_days=5)
+    resp = _api(async_url, "GET", _text_path(vid, key))
+    assert resp.status_code == 422 and resp.json()["detail"] == "template_not_copyable"
+
+
+@needs_ci_pg
+@pytest.mark.parametrize("key", ["notice_extended", "interview_request"])
+def test_template_text_without_expiry_is_409(pg, key):  # noqa: F811
+    """K4: 期限なしの人に延長・面談は 409。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "tt4@x.com", "pending")
+    resp = _api(async_url, "GET", _text_path(vid, key))
+    assert resp.status_code == 409 and resp.json()["detail"] == "no_trial_expiry"
+
+
+@needs_ci_pg
+def test_template_text_missing_viewer_is_404(pg):  # noqa: F811
+    """K4: 存在しない人は 404。"""
+    conn, _, async_url = pg
+    _prepare(conn, async_url)
+    resp = _api(async_url, "GET", _text_path(424242, "signup_request"))
+    assert resp.status_code == 404 and resp.json()["detail"] == "viewer_not_found"
+
+
+@needs_ci_pg
+def test_template_text_without_template_row_is_503(pg):  # noqa: F811
+    """K4: 本文の行なしは 503。"""
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url, skip_templates=("notice_activated",))
+    vid = _account(cur, "tt5@x.com", "trial", expires_in_days=5)
+    resp = _api(async_url, "GET", _text_path(vid, "notice_activated"))
+    assert resp.status_code == 503 and resp.json()["detail"] == "template_not_found"

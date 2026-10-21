@@ -36,6 +36,16 @@ from app.services.viewer_invite import create_viewer_invite
 
 _TEMPLATE_NOT_FOUND = "template_not_found"
 
+# 詳細欄からコピーできる文（その人のデータだけで埋まるもの）。表示順もこの順。
+COPYABLE_KEYS = (
+    "signup_request",
+    "room_recreated",
+    "notice_extended",
+    "interview_request",
+    "notice_activated",
+    "notice_suspended",
+)
+
 router = APIRouter()
 
 _ERROR_STATUS = {
@@ -125,6 +135,10 @@ class SignupRequestResponse(BaseModel):
     text: str = Field(..., description="①申込のお願いの文")
 
 
+class ViewerTemplateTextResponse(BaseModel):
+    text: str = Field(..., description="その人の値を差し込んだ、そのまま送れる文")
+
+
 class ViewerTemplateItem(BaseModel):
     """文面テンプレート1件（台帳の1鍵）。"""
 
@@ -171,6 +185,37 @@ async def signup_request_endpoint(db: AsyncSession = Depends(get_db)):
     text = await viewer_message_templates.load_rendered(
         db, "signup_request", signup_url=viewer_bot_texts.SIGNUP_URL
     )
+    if text is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
+    return {"text": text}
+
+
+@router.get(
+    "/super-admin/viewers/{viewer_id}/template-text",
+    response_model=ViewerTemplateTextResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def viewer_template_text_endpoint(
+    viewer_id: int, key: str, db: AsyncSession = Depends(get_db)
+):
+    if key not in COPYABLE_KEYS:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="template_not_copyable")
+    try:
+        item = await viewer_admin._get_item(db, viewer_id)
+    except ViewerAdminError as exc:
+        raise _http_error(exc) from None
+    values: dict[str, object] = {}
+    if key == "signup_request":
+        values["signup_url"] = viewer_bot_texts.SIGNUP_URL
+    elif key == "room_recreated":
+        values["email"] = item["email"]
+    elif key in ("notice_extended", "interview_request"):
+        expires = item["trial_expires_at"]
+        if expires is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="no_trial_expiry")
+        name = "until_date" if key == "notice_extended" else "expires_date"
+        values[name] = viewer_bot_texts.format_jst_date(expires)
+    text = await viewer_message_templates.load_rendered(db, key, **values)
     if text is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
     return {"text": text}
