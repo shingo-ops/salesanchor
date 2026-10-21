@@ -23,9 +23,11 @@ from app.discord_gateway import ticket_channel_creator, viewer_trial
 from app.discord_gateway import viewer_bot_texts as T
 from app.discord_gateway.client import JarvisDiscordClient
 from app.services import viewer_admin
+from app.services import viewer_message_templates as vmt
 from tests.test_super_admin_viewers import _account, _changes, _prepare, needs_ci_pg
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
+from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 
 GUILD_ID = 111222333444555666
 CONFIG = viewer_trial.ViewerDiscordConfig(str(GUILD_ID), "2001", "2002", "2003")
@@ -33,6 +35,16 @@ CODE = "ABCD-EFGH-JKMN-PQRS"
 
 
 # ── 共通の作り物 ──────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _templates_from_defaults(request):
+    """非 PG の試験は、送る側が DB から読む9本文を既定の文面で返す（PG の試験は _prepare が本物の行を入れる）。"""
+    if "pg" in request.fixturenames:
+        yield
+        return
+    with patch.object(vmt, "load_body", new=make_load_body()):
+        yield
 
 
 class _Result:
@@ -291,16 +303,21 @@ def test_format_jst_datetime_crosses_date_and_naive_is_utc():
     assert T.format_jst_date(datetime(2026, 12, 31, 14, 59)) == "12月31日"
 
 
-def test_signup_request_text_contains_signup_url():
-    text = T.signup_request_text()
+def test_signup_request_body_has_signup_url_when_rendered():
+    text = vmt.render("signup_request", DEFAULT_BODIES["signup_request"], signup_url=T.SIGNUP_URL)
     assert T.SIGNUP_URL in text
     assert "openExternalBrowser=1#signup" in text
     assert "{" not in text
 
 
 def test_reissue_notice_with_invite():
-    text = T.reissue_notice_text(
-        "Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc), "https://discord.gg/abc"
+    text = vmt.render(
+        "reissue_notice",
+        DEFAULT_BODIES["reissue_notice"],
+        line_name="Taro",
+        code="ABCD-EFGH-JKMN-PQRS",
+        expires=T.format_jst_datetime(datetime(2026, 10, 25, 15, 0, tzinfo=timezone.utc)),
+        invite_url=T.external_browser_url("https://discord.gg/abc"),
     )
     assert text.startswith("Taroさん、申込コードを作り直しました。")
     assert "ABCD-EFGH-JKMN-PQRS（10月26日 00:00まで有効）" in text
@@ -309,14 +326,27 @@ def test_reissue_notice_with_invite():
 
 
 def test_reissue_notice_without_invite_has_no_invite_line():
-    text = T.reissue_notice_text("Taro", "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), None)
+    text = vmt.render(
+        "reissue_notice_no_invite",
+        DEFAULT_BODIES["reissue_notice_no_invite"],
+        line_name="Taro",
+        code="ABCD-EFGH-JKMN-PQRS",
+        expires=T.format_jst_datetime(datetime(2026, 10, 25, 15, 0)),
+    )
     assert "Discord への招待" not in text
     assert "ABCD-EFGH-JKMN-PQRS" in text
 
 
 @pytest.mark.parametrize("name", [None, "", "  "])
 def test_reissue_notice_without_line_name_has_no_san_prefix(name):
-    text = T.reissue_notice_text(name, "ABCD-EFGH-JKMN-PQRS", datetime(2026, 10, 25, 15, 0), "https://discord.gg/abc")
+    text = vmt.render(
+        "reissue_notice",
+        DEFAULT_BODIES["reissue_notice"],
+        line_name=name,
+        code="ABCD-EFGH-JKMN-PQRS",
+        expires=T.format_jst_datetime(datetime(2026, 10, 25, 15, 0)),
+        invite_url=T.external_browser_url("https://discord.gg/abc"),
+    )
     assert text.startswith("申込コードを作り直しました。")
     assert "さん、" not in text
 
@@ -661,11 +691,85 @@ async def test_cli_rejects_bad_input():
     assert exc.value.code == "not_configured"
 
 
+async def test_t5_on_code_submit_sends_edited_welcome_body():
+    """T5: 画面で直した本文がそのまま部屋に出る。"""
+    channel = _text_channel(777)
+    guild = _guild(channel)
+    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None, "佐藤")), _Result(None), _Result(None), _Result(None)])
+    factory = _db_factory(lambda *a, **k: next(rows))
+    it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=guild, user=_member(), components=_code_components(CODE))
+    with patch.object(viewer_trial, "get_redis", return_value=_Redis()), patch.object(
+        vmt, "load_body", new=make_load_body({"room_welcome": "直した歓迎 {email} / {password}"})
+    ):
+        await viewer_trial.on_code_submit(it, factory, CONFIG)
+    sent = channel.send.await_args.args[0]
+    assert sent.startswith("直した歓迎 a@example.com / ") and "{" not in sent
+
+
+async def test_t6_t9_code_submit_without_template_is_try_later_and_changes_nothing():
+    """T9 ①: 行が無いとき、申込コードは使用済みにならず（DB に触れず）部屋も作られない。"""
+    guild = _guild(_text_channel(777))
+    factory = MagicMock(side_effect=AssertionError("DB must not be touched after template read"))
+    it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=guild, user=_member(), components=_code_components(CODE))
+    # 読み出しだけが DB を使う。_load_template_body を行なしにして、照合の DELETE へ進まないことを見る
+    with patch.object(viewer_trial, "get_redis", return_value=_Redis()), patch.object(
+        viewer_trial, "_load_template_body", new=AsyncMock(return_value=None)
+    ):
+        await viewer_trial.on_code_submit(it, factory, CONFIG)
+    it.followup.send.assert_awaited_once_with(T.TRY_LATER, ephemeral=True)
+    factory.assert_not_called()
+    guild.create_text_channel.assert_not_awaited()
+
+
+async def test_t6_code_submit_over_2000_after_render_rolls_back_and_discards_room():
+    channel = _text_channel(777)
+    guild = _guild(channel)
+    rows = iter([_Result((5,)), _Result((5, "a@example.com", "pending", None, None, "佐藤")), _Result(None), _Result(None), _Result(None)])
+    factory = _db_factory(lambda *a, **k: next(rows))
+    it = _interaction(T.CODE_MODAL_CUSTOM_ID, guild=guild, user=_member(), components=_code_components(CODE))
+    big = "{email}{password}" + "あ" * 1700  # 上限を 1000 に下げて「差し込み後が長すぎる」形にする
+    with patch.object(viewer_trial, "get_redis", return_value=_Redis()), patch.object(
+        vmt, "load_body", new=make_load_body({"room_welcome": big})
+    ), patch.object(vmt, "AUTO_MAX_CHARS", 1000):
+        await viewer_trial.on_code_submit(it, factory, CONFIG)
+    it.followup.send.assert_awaited_once_with(T.TRY_LATER, ephemeral=True)
+    channel.delete.assert_awaited()
+    channel.send.assert_not_awaited()
+    factory.session.commit.assert_not_awaited()
+
+
+async def test_t5_on_open_recreate_sends_edited_body():
+    new = _text_channel(777)
+    guild = _guild(new)
+    guild.get_channel = MagicMock(side_effect=lambda cid: None if cid != 2002 else MagicMock(spec=discord.CategoryChannel))
+    it = _interaction(T.OPEN_BUTTON_CUSTOM_ID, guild=guild, user=_member())
+    factory = _db_factory(lambda *a, **k: _Result((5, "a@example.com", None, "鈴木")))
+    with patch.object(viewer_trial, "load_config", new=AsyncMock(return_value=CONFIG)), patch.object(
+        vmt, "load_body", new=make_load_body({"room_recreated": "直した作り直し {email}"})
+    ):
+        await viewer_trial.handle_interaction(it, factory)
+    new.send.assert_awaited_once_with("直した作り直し a@example.com")
+
+
+async def test_t6_t9_on_open_without_template_is_try_later_and_creates_no_room():
+    """T6: 作り直しの行が無いとき部屋を作らない（申込コードの作り直しも起きない）。"""
+    guild = _guild(_text_channel(777))
+    guild.get_channel = MagicMock(side_effect=lambda cid: None if cid != 2002 else MagicMock(spec=discord.CategoryChannel))
+    it = _interaction(T.OPEN_BUTTON_CUSTOM_ID, guild=guild, user=_member())
+    factory = _db_factory(lambda *a, **k: _Result((5, "a@example.com", None, "鈴木")))
+    with patch.object(viewer_trial, "load_config", new=AsyncMock(return_value=CONFIG)), patch.object(
+        vmt, "load_body", new=make_load_body({"room_recreated": None})
+    ):
+        await viewer_trial.handle_interaction(it, factory)
+    guild.create_text_channel.assert_not_awaited()
+    factory.session.commit.assert_not_awaited()
+
+
 # ── PG ────────────────────────────────────────────────────────
 
 
-def _prep(conn, async_url):
-    cur = _prepare(conn, async_url)
+def _prep(conn, async_url, **kw):
+    cur = _prepare(conn, async_url, **kw)
     cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
     cur.execute(
         "INSERT INTO public.viewer_discord_config (id, guild_id, reception_channel_id, "
@@ -738,6 +842,23 @@ def test_code_match_starts_trial_and_writes_records(pg):  # noqa: F811
     assert cur.fetchall() == [("code_matched", None)]
     channel.send.assert_awaited_once()
     assert "m1@example.com" in channel.send.await_args.args[0]
+
+
+@needs_ci_pg
+def test_t9_code_with_missing_template_keeps_code_unused_and_creates_no_room(pg):  # noqa: F811
+    """T9 ①: room_welcome の行が無いとき、申込コードは使用済みにならず、部屋も作られない。"""
+    conn, _, async_url = pg
+    cur = _prep(conn, async_url, skip_templates=("room_welcome",))
+    vid = _account(cur, "m9@example.com", "pending")
+    _token(cur, vid, CODE)
+    it, channel = _submit(async_url, CODE)
+    assert _sent(it) == T.TRY_LATER
+    cur.execute("SELECT status, discord_user_id FROM public.viewer_accounts WHERE id=%s", (vid,))
+    assert cur.fetchone() == ("pending", None)
+    cur.execute("SELECT count(*) FROM public.viewer_login_tokens WHERE viewer_account_id=%s", (vid,))
+    assert cur.fetchone()[0] == 1  # 申込コードは残っている
+    channel.send.assert_not_awaited()
+    assert _changes(cur, vid) == []
 
 
 @needs_ci_pg
@@ -894,7 +1015,7 @@ def test_list_viewers_returns_channel_url(pg):  # noqa: F811
 
 def test_room_welcome_wraps_password_in_inline_code():
     """歓迎文の初期パスワードだけをバッククォートで囲む（スマホで長押しコピーするため）。"""
-    text = T.ROOM_WELCOME.format(email="a@example.com", password="Ab-_09xyz")
+    text = DEFAULT_BODIES["room_welcome"].format(email="a@example.com", password="Ab-_09xyz")
     assert "初期パスワード: `Ab-_09xyz`" in text
     assert "メールアドレス: a@example.com" in text
     assert "`a@example.com`" not in text

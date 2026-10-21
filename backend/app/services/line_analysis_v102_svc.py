@@ -972,7 +972,10 @@ def _buyback_units(
                 if (d := decisions.get(str(row.id))) is not None
                 and (d.condition_id is not None or d.values.unit is not None or d.values.price is not None)
             )
-            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, human_condition)
+            posted_at = load_posted_at(session, extraction_job_id)  # SAVEPOINT の中。失敗したら下の except で「この投稿では決めない」
+            if posted_at is None:
+                return base_values
+            return apply_buyback_units(session, [item for item, _row in pairs], base_values, unit_ids, posted_at, human_condition)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[buyback_unit] 買取価格による単位・状態の判定に失敗したので、この投稿では判定をしません: job=%s error=%r", extraction_job_id, exc)
         return base_values
@@ -1466,6 +1469,12 @@ def load_posted_date(session: Session, extraction_job_id: str) -> date | None:
     """投稿日（source_messages.line_posted_at の JST の日付）。投稿・時刻が無いときは None。読み取りのみ。run_v102_analysis と prompt_ab_recompute が共通で呼ぶ。"""
     row = session.execute(text(_POSTED_AT_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id}).first()
     return posted_jst_date(row.line_posted_at) if row is not None else None
+
+
+def load_posted_at(session: Session, extraction_job_id: str) -> datetime | None:
+    """投稿日時（source_messages.line_posted_at のまま）。投稿・時刻が無いときは None。読み取りのみ。買取の物差しの時点に使う（便1）。"""
+    row = session.execute(text(_POSTED_AT_SQL.format(schema=analyzer.TCG_SCHEMA)), {"ej": extraction_job_id}).first()
+    return row.line_posted_at if row is not None else None
 
 
 def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:

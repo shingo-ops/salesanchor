@@ -36494,7 +36494,8 @@
                 "enum": [
                   "sent",
                   "failed",
-                  "no_room"
+                  "no_room",
+                  "no_template"
                 ],
                 "type": "string"
               },
@@ -36502,7 +36503,7 @@
                 "type": "null"
               }
             ],
-            "description": "部屋へのお知らせの結果（unsuspend は null）",
+            "description": "部屋へのお知らせの結果（unsuspend は null。no_template はテンプレートが使えず送らなかった）",
             "title": "Room Notice"
           },
           "room_notice_text": {
@@ -36645,6 +36646,33 @@
           "items"
         ],
         "title": "ViewerTemplateListResponse",
+        "type": "object"
+      },
+      "ViewerTemplateUpdate": {
+        "properties": {
+          "body": {
+            "description": "新しい本文（差し込み項目は台帳どおり・1〜1800文字）",
+            "title": "Body",
+            "type": "string"
+          },
+          "expected_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "画面で開いた時の updated_at。未登録の行を新しく入れるときは null",
+            "title": "Expected Updated At"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "ViewerTemplateUpdate",
         "type": "object"
       },
       "VoidRequest": {
@@ -63329,6 +63357,63 @@
           }
         ],
         "summary": "List Viewer Templates Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewer-templates/{key}": {
+      "put": {
+        "operationId": "update_viewer_template_endpoint_api_v1_super_admin_viewer_templates__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerTemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Viewer Template Endpoint",
         "tags": [
           "super-admin"
         ]

@@ -438,6 +438,17 @@ it("shows the same guide when the viewer has no room (no_room)", async () => {
   expect(await screen.findByText("NO ROOM BODY")).toBeTruthy();
 });
 
+it("shows the no-template message (without a copy text) when room_notice is no_template", async () => {
+  vi.mocked(api.post).mockResolvedValue({ room_notice: "no_template", room_notice_text: null });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByRole("button", { name: "Extend" }));
+  fireEvent.click(await screen.findByTestId("viewers-run"));
+  const box = await screen.findByTestId("viewers-room-notice-no-template");
+  expect(box.textContent).toBe(i18n.t("superAdmin.viewers.roomNoticeNoTemplate"));
+  expect(screen.queryByTestId("viewers-room-notice-failed")).toBeNull();
+});
+
 it("shows no room-notice guide when the notice was sent or there is none", async () => {
   vi.mocked(api.post).mockResolvedValue({ room_notice: "sent", room_notice_text: "SENT BODY" });
   renderPage();

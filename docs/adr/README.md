@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-20 / ADR 総数: 195 件
+最終更新: 2026-10-20 / ADR 総数: 196 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -214,6 +214,7 @@
 | [ADR-1033](./ADR-1033-conversation-consent-ticket.md) | ADR-1033: 危険な操作を、会話での同意（同意票と「1」）でも通せるようにする | Proposed | — | — |
 | [ADR-1034](./ADR-1034-opus-permission-delegation-ledger.md) | ADR-1034: Opus が権限を足し引きし、理由を台帳に残して毎週点検する | Proposed | — | — |
 | [ADR-1035](./ADR-1035-condition-unit-and-booklet-category.md) | ADR-1035: 状態ごとの単位（Case/Box/Pack）と、区分「ブックレット系」（既定は With booklet） | Proposed | — | — |
+| [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 
 ## ステータス凡例
 
