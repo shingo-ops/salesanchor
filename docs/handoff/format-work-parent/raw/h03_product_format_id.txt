@@ -1,0 +1,53 @@
+backend/app/routers/products.py:377:            "product_format_id": None,
+backend/app/routers/super_admin_product_formats.py:174:            "SELECT 1 FROM public.products WHERE product_format_id = :id "
+backend/app/routers/super_admin_product_formats.py:215:    """soft delete (is_active=FALSE)。products.product_format_id で参照中なら 409。"""
+backend/app/routers/super_admin_product_formats.py:216:    # 参照チェック: products.product_format_id
+backend/app/routers/super_admin_product_formats.py:218:        text("SELECT 1 FROM public.products WHERE product_format_id = :id LIMIT 1"),
+backend/app/routers/tcg_product_import.py:309:    product_format_id: int | None = None
+backend/app/routers/tcg_product_import.py:334:    for optional in ("product_format_id", "blank_confirmations", "packagings"):
+backend/app/routers/tcg_product_import.py:389:    lookups["product_format_id"] = await fetch_product_format_options(db)
+backend/app/routers/tcg_product_import.py:409:    product_format_id: int | None = None
+backend/app/routers/tcg_product_import.py:441:            product_format_id=body.product_format_id,
+backend/app/routers/tcg_product_master.py:61:    product_format_id: list[FormatLookupOption]
+backend/app/routers/tcg_product_master.py:125:    product_format_id: int | None = None
+backend/app/routers/tcg_product_master.py:260:            product_format_id=body.product_format_id,
+backend/app/services/tcg_product_detail_svc.py:138:    lookups["product_format_id"] = await fetch_product_format_options(db, selected=product.get("product_format_id"))
+backend/app/services/tcg_product_detail_svc.py:227:                    "product_format_id": product.get("product_format_id"),
+backend/app/services/tcg_product_detail_svc.py:237:                    "product_format_id": (
+backend/app/services/tcg_product_detail_svc.py:238:                        values["product_format_id"] if "product_format_id" in values
+backend/app/services/tcg_product_detail_svc.py:239:                        else product.get("product_format_id")
+backend/app/services/tcg_product_detail_svc.py:269:        if "product_format_id" in values:
+backend/app/services/tcg_product_detail_svc.py:271:                await _validate_product_format(db, values["product_format_id"])
+backend/app/services/tcg_product_detail_svc.py:275:                "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
+backend/app/services/tcg_product_detail_svc.py:276:            ), {"fid": values["product_format_id"], "pid": product["id"]})
+backend/app/services/tcg_product_detail_svc.py:278:        final_format_id = values["product_format_id"] if "product_format_id" in values else product.get("product_format_id")
+backend/app/services/tcg_product_detail_svc.py:279:        format_changed = "product_format_id" in values and values["product_format_id"] != product.get("product_format_id")
+backend/app/services/tcg_product_import_svc.py:80:    "product_format_id": "product_format_code",
+backend/app/services/tcg_product_import_svc.py:371:    payload["product_format_id"] = (
+backend/app/services/tcg_product_import_svc.py:474:            format_id = payload.get("product_format_id")
+backend/app/services/tcg_product_master_svc.py:37:    "exclude_keywords", "work_id", "product_format_id", "product_category_id",
+backend/app/services/tcg_product_master_svc.py:88:        "product_format_id": args.get("product_format_id"),
+backend/app/services/tcg_product_master_svc.py:105:async def format_matches_game(db: AsyncSession, product_format_id: int, work_id: int) -> bool:
+backend/app/services/tcg_product_master_svc.py:110:        {"fid": int(product_format_id), "wid": int(work_id)},
+backend/app/services/tcg_product_master_svc.py:116:    db: AsyncSession, product_format_id: int | None, work_id: int | None = None,
+backend/app/services/tcg_product_master_svc.py:118:    if product_format_id is None:
+backend/app/services/tcg_product_master_svc.py:122:        {"id": int(product_format_id)},
+backend/app/services/tcg_product_master_svc.py:126:    if work_id is not None and not await format_matches_game(db, product_format_id, work_id):
+backend/app/services/tcg_product_master_svc.py:273:    lookups["product_format_id"] = await fetch_product_format_options(db)
+backend/app/services/tcg_product_master_svc.py:498:    product_format_id: int | None = None,
+backend/app/services/tcg_product_master_svc.py:519:        "product_format_id": product_format_id, "product_category_id": product_category_id,
+backend/app/services/tcg_product_master_svc.py:528:    await _validate_product_format(db, product_format_id, work_id=_work_id_int)
+backend/app/services/tcg_product_master_svc.py:569:                 mark, name_en, product_format_id, is_active)
+backend/app/services/tcg_product_master_svc.py:573:                 :mark, :english_title, :product_format_id, TRUE)
+backend/app/services/tcg_product_master_svc.py:588:            "product_format_id": int(product_format_id) if product_format_id is not None else None,
+backend/app/services/tcg_product_master_svc.py:602:        "product_format_id": product_format_id, "product_category_id": product_category_id,
+backend/app/services/tcg_product_roundtrip_svc.py:137:    joins.append("LEFT JOIN public.product_formats fmt ON fmt.id=p.product_format_id")
+backend/app/services/tcg_product_roundtrip_svc.py:290:                        plan["sets"]["product_format_id"] = None
+backend/app/services/tcg_product_roundtrip_svc.py:294:                        plan["sets"]["product_format_id"] = formats[row[field]]["id"]
+backend/app/services/tcg_product_roundtrip_svc.py:330:            if not errors and ("product_format_id" in plan["sets"] or "work_id" in plan["sets"]):
+backend/app/services/tcg_product_roundtrip_svc.py:331:                final_format = plan["sets"].get("product_format_id", snapshot["product"].get("product_format_id"))
+backend/app/services/tcg_product_roundtrip_svc.py:348:                        "product_format_id": product.get("product_format_id"),
+backend/app/services/tcg_product_roundtrip_svc.py:362:                        "product_format_id": plan["sets"].get("product_format_id", product.get("product_format_id")),
+backend/app/services/tcg_product_roundtrip_svc.py:463:                        if field in ("work_id", "product_category_id", "product_kind_id", "product_format_id")
+backend/app/tasks/master_required_fields_monitor.py:24:           "exclude_keywords", "work_id", "product_format_id", "product_category_id")
+backend/app/tasks/master_required_fields_monitor.py:41:  count(*) FILTER (WHERE product_format_id IS NULL) AS product_format_id,

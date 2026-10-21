@@ -1,0 +1,56 @@
+65:SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"
+74:  docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s" "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-')) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+84:    docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+142:  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+---
+17:      # チェック1（既存）: models.py に新 Column → deploy.yml に migrate_ 追記
+30:            echo "✅ models.py に新規 Column 追加なし — チェック1 スキップ"
+53:          echo "❌ MIGRATION GUARD FAILED (チェック1)"
+68:      # チェック2（新規）: migrations/NNN.sql 追加 → deploy.yml に psql 実行行必須
+72:      #       発生した。チェック1は models.py 経由のみ検知するため、
+86:            echo "✅ 新規 migrations/*.sql なし — チェック2 スキップ"
+143:            echo "✅ チェック2 通過: 全 migrations/*.sql が登録されています"
+148:          echo "❌ MIGRATION GUARD FAILED (チェック2)"
+165:      # チェック3（新規）: migrations/NNN.sql に {schema} テンプレートリテラル禁止
+187:            echo "❌ MIGRATION GUARD FAILED (チェック3)"
+213:      # チェック4（新規）: REFERENCES public.X — FK参照先が public スキーマに実在するか
+254:            echo "❌ MIGRATION GUARD FAILED (チェック4)"
+279:      # チェック5（新規）: タイムスタンプ重複チェック（新規 vs main既存／PR内同士）
+287:      - name: タイムスタンプ重複チェック（新規 vs main既存／PR内同士）
+298:            echo "✅ 新規追加の timestamp 形式 migration なし。重複チェックskip。"
+335:      # チェック6（新規）: DROP COLUMN / DROP TABLE — ADR 承認必須
+343:      - name: DROP COLUMN / DROP TABLE — ADR 承認必須チェック
+360:            echo "✅ DROP COLUMN / DROP TABLE なし — チェック6 スキップ"
+378:          echo "❌ MIGRATION GUARD FAILED (チェック6)"
+380:          echo "DROP COLUMN / DROP TABLE は破壊的変更です。"
+394:      # チェック7: 共用マスタテーブルへのデータ操作禁止（ADR-155）
+405:      - name: 共用マスタテーブルへのデータ操作禁止チェック（ADR-155）
+408:            "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" --check 7
+411:      # チェック8: 共用マスタテーブルへのデータ参照禁止（ADR-155）
+413:      # 背景: チェック7は INSERT/UPDATE/DELETE を検出するが、SELECT（データ存在前提
+422:      - name: 共用マスタテーブルへのデータ参照禁止チェック（ADR-155）
+428:      # チェック7b: 全件走査（ADR-155 / ADR-1007 決定5）
+433:      # 同じ job の step なので、必須チェックの名前は変わらない。paths: は付けない（workflow-lint.yml の規則）。
+440:      # 同じ job の step なので、必須チェックの名前は変わらない。paths: は付けない。
+447:      # チェック 9: supplier_channels.supplier_id 保護（SSOT ガード）
+453:      - name: supplier_channels.supplier_id 保護チェック（SSOT ガード）
+468:            echo "✅ migration 変更なし — チェック9 スキップ"
+475:            echo "✅ supplier_channels への変更なし — チェック9 スキップ"
+483:            echo "✅ supplier_channels.supplier_id への破壊的変更なし — チェック9 通過"
+501:          echo "❌ MIGRATION GUARD FAILED (チェック9)"
+515:          echo "✅ チェック8 通過: 共用マスタテーブルへのデータ参照なし"
+518:      # チェック10（新規）: migration カラム churn 検出（ADR-1005 Stage 0 ①②）
+532:      - name: 関連パス変更を検出（migration カラム churn チェック用）
+547:            echo "✅ 関連パス変更なし — チェック10 スキップ"
+550:      - name: migration カラム churn 検出（ADD→DROP の attnum 消費チェック）
+---
+140:**承認役＝認可された役割。現状：PO（Shingo）＋ Claude Opus 設計担当。GO は ADR-1003 により例外を除き Claude Opus 設計担当へ委任（GO発行者欄は `POの委任に基づくClaude Opus発行`）。PO 本人の GO が必須の例外: DROP TABLE/COLUMN を含む migration・大量 DELETE・secrets 変更・Ruleset/Branch Protection 変更・workflow-lint.yml の変更・外部 GUI 操作・main/develop への force push。** 承認者は記録される。承認役の増減は PR＋承認で管理（属人化させない）。
+---
+18:4. 消す直前に、共用・テナントの全行の `id, type_master_id, work_id` を CSV に退避して保存する。
+35:- **戻し方**: 同じ列は二度と足せない（上限のため）。戻すときは退避した CSV から値を読む。アプリは列を使っていないので、戻さなくても動作は変わらない。
+---
+ADR-1033-conversation-consent-ticket.md
+ADR-1034-opus-permission-delegation-ledger.md
+ADR-1035-condition-unit-and-booklet-category.md
+ADR-1036-price-decides-unit.md
+ADR-1037-migration-lock-timeout.md

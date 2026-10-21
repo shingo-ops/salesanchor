@@ -1,0 +1,45 @@
+-- 実験用 PG16（使い捨て・手元）。製品の表と同じ形の縮小版。行の削除はしない。
+\set ON_ERROR_STOP off
+CREATE TABLE tm(id int primary key);
+CREATE TABLE pf(id int primary key);
+CREATE TABLE links(format_id int references pf(id) on delete cascade, type_master_id int references tm(id) on delete cascade, primary key(format_id,type_master_id));
+CREATE TABLE products(id serial primary key, work_id int not null references tm(id), product_format_id int references pf(id) on delete set null);
+INSERT INTO tm VALUES (1),(2); INSERT INTO pf VALUES (10),(11);
+INSERT INTO links VALUES (10,1),(11,1),(11,2);
+INSERT INTO products(work_id,product_format_id) VALUES (1,10),(2,NULL),(2,11),(1,11);
+\echo '=== ADD FK NOT VALID (immediate) ==='
+ALTER TABLE products ADD CONSTRAINT pfk FOREIGN KEY (product_format_id, work_id) REFERENCES links(format_id,type_master_id) NOT VALID;
+\echo '=== (a) format NULL: expect OK ==='
+INSERT INTO products(work_id,product_format_id) VALUES (2,NULL);
+\echo '=== (a2) work_id NULL / format NULL / both set but no link (separate table, same FK shape) ==='
+CREATE TABLE p2(id serial primary key, work_id int, product_format_id int, FOREIGN KEY (product_format_id, work_id) REFERENCES links(format_id,type_master_id));
+INSERT INTO p2(work_id,product_format_id) VALUES (NULL,10);
+INSERT INTO p2(work_id,product_format_id) VALUES (2,NULL);
+INSERT INTO p2(work_id,product_format_id) VALUES (2,10);
+\echo '=== mismatch INSERT: expect ERROR ==='
+INSERT INTO products(work_id,product_format_id) VALUES (2,10);
+\echo '=== IMMEDIATE: two UPDATEs (work first, then format) in one tx: expect ERROR at 1st ==='
+BEGIN; UPDATE products SET work_id=2 WHERE id=1; UPDATE products SET product_format_id=11 WHERE id=1; COMMIT;
+SELECT id,work_id,product_format_id FROM products WHERE id=1;
+\echo '=== IMMEDIATE: one UPDATE both: expect OK ==='
+BEGIN; UPDATE products SET work_id=2, product_format_id=11 WHERE id=1; COMMIT;
+SELECT id,work_id,product_format_id FROM products WHERE id=1;
+\echo '=== IMMEDIATE: work only change to a work the format lacks: ERROR ==='
+UPDATE products SET work_id=1 WHERE id=3;
+\echo '=== VALIDATE ==='
+ALTER TABLE products VALIDATE CONSTRAINT pfk;
+\echo '=== DEFERRABLE INITIALLY DEFERRED ==='
+ALTER TABLE products ALTER CONSTRAINT pfk DEFERRABLE INITIALLY DEFERRED;
+\echo '=== DEFERRED: two UPDATEs (work first, then format) one tx: expect OK ==='
+BEGIN; UPDATE products SET work_id=1 WHERE id=1; UPDATE products SET product_format_id=10 WHERE id=1; COMMIT;
+SELECT id,work_id,product_format_id FROM products WHERE id=1;
+\echo '=== DEFERRED: 1st UPDATE only, never fixed: expect ERROR at COMMIT ==='
+BEGIN; UPDATE products SET work_id=2 WHERE id=1; COMMIT;
+SELECT id,work_id,product_format_id FROM products WHERE id=1;
+\echo '=== DEFERRED: autocommit single UPDATE leaving mismatch: expect ERROR ==='
+UPDATE products SET work_id=2 WHERE id=1;
+\echo '=== DEFERRED: one UPDATE both: expect OK ==='
+UPDATE products SET work_id=2, product_format_id=11 WHERE id=1;
+SELECT id,work_id,product_format_id FROM products WHERE id=1;
+\echo '=== constraint flags ==='
+SELECT conname, convalidated, condeferrable, condeferred, confmatchtype FROM pg_constraint WHERE conname='pfk';

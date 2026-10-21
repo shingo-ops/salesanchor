@@ -1,0 +1,9 @@
+-- SQL: SELECT tgrelid::regclass AS tbl, tgname, tgenabled, pg_get_triggerdef(oid) AS def FROM pg_trigger WHERE tgrelid IN ('public.products'::regclass,'public.product_formats'::regclass,'public.product_format_game_links'::regclass) AND NOT tgisinternal
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:19+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-4dddecdf45a6 Creating 
+ Container astro-webapp-ai-reader-run-4dddecdf45a6 Created 
+tbl	tgname	tgenabled	def
+products	trigger_set_updated_at_public_products	O	CREATE TRIGGER trigger_set_updated_at_public_products BEFORE UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION set_updated_at_products()
+product_formats	trg_product_formats_updated_at	O	CREATE TRIGGER trg_product_formats_updated_at BEFORE UPDATE ON public.product_formats FOR EACH ROW EXECUTE FUNCTION set_updated_at_product_formats()
+AUDIT ts=2026-10-21T15:16:20Z sha=69b27e6c5b47 rows=2 ms=40 result=ok sql=SELECT tgrelid::regclass AS tbl, tgname, tgenabled, pg_get_triggerdef(oid) AS def FROM pg_trigger WHERE tgrelid IN ('public.products'::regclass,'public.product_formats'::regclass,'public.product_format_game_links'::regclass) AND NOT tgisinternal 

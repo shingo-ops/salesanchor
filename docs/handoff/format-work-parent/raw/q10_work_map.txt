@@ -1,0 +1,25 @@
+-- SQL: SELECT t.id, t.code, t.name_ja, (SELECT count(*) FROM ai_ro.public__products p WHERE p.work_id=t.id AND p.tenant_id IS NULL) AS shared_products, (SELECT count(*) FROM ai_ro.public__products p WHERE p.work_id=t.id AND p.tenant_id IS NOT NULL) AS tenant_products, (SELECT count(*) FROM ai_ro.public__product_format_game_links l WHERE l.type_master_id=t.id) AS selectable_formats, (SELECT count(*) FROM ai_ro.public__product_formats f WHERE f.type_master_id=t.id) AS formats_with_own_type_master_id FROM ai_ro.public__type_master t ORDER BY t.id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:51:05+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-4f012f8eecb8 Creating 
+ Container astro-webapp-ai-reader-run-4f012f8eecb8 Created 
+AUDIT ts=2026-10-21T14:51:06Z sha=f159310c5669 rows=18 ms=154 result=ok sql=SELECT t.id, t.code, t.name_ja, (SELECT count(*) FROM ai_ro.public__products p WHERE p.work_id=t.id AND p.tenant_id IS NULL) AS shared_products, (SELECT count(*) FROM ai_ro.public__products p WHERE p.work_id=t.id AND p.tenant_id IS NOT NULL) AS tenant_products, (SELECT count(*) FROM ai_ro.public__product_format_game_links l WHERE l.type_master_id=t.id) AS selectable_formats, (SELECT count(*) FROM ai_ro.public__product_formats f WHERE f.type_master_id=t.id) AS formats_with_own_type_master_id FROM
+id	code	name_ja	shared_products	tenant_products	selectable_formats	formats_with_own_type_master_id
+1	pokemon_booster_box	ポケモン	242	0	16	12
+2	one_piece	ワンピース	206	0	13	6
+3	dragon_ball	ドラゴンボール	80	0	5	0
+4	union_arena	ユニオンアリーナ	117	0	3	1
+5	yugioh	遊戯王	166	0	9	2
+6	other	その他	22	0	1	0
+19	gundam	ガンダム	22	0	4	0
+20	weiss_schwarz	ヴァイスシュヴァルツ	465	0	7	3
+21	digimon	デジモン	64	0	6	3
+22	hololive	ホロライブ	29	0	3	0
+23	lorcana	ディズニー ロルカナ	23	0	5	1
+24	xross_stars	クロススタァ	3	0	2	0
+8981	duel_masters	デュエル・マスターズ	4	0	1	0
+8982	detective_conan	名探偵コナン	4	0	1	0
+9043	wuthering_waves	鳴潮：対決	1	0	0	0
+9044	magic_the_gathering	マジック：ザ・ギャザリング	3	0	0	0
+9045	harry_potter	ハリー・ポッター	1	0	1	0
+9046	palworld	パルワールド	1	0	1	0

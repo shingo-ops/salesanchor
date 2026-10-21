@@ -1,0 +1,342 @@
+### Select.tsx
+     1	/**
+     2	 * Select — 標準セレクト金型（Task 2C）
+     3	 *
+     4	 * size: sm / md(default) / lg
+     5	 * 状態: 通常・focus（CSS）・error・disabled
+     6	 *
+     7	 * TypeScript の型で規格外 size・options をコンパイルエラーにする。
+     8	 * 実画面への展開は Task 2E で行う。
+     9	 * product-edit: 商品編集 ProductEditPage の濃い枠・OS 標準の▽。design.md §AY-3a
+    10	 */
+    11	
+    12	import { forwardRef, useId } from "react";
+    13	import type { ReactNode, SelectHTMLAttributes } from "react";
+    14	import "./FormField.css";
+    15	
+    16	export type SelectSize = "sm" | "md" | "lg";
+    17	export type SelectIndicator = "default" | "none";
+    18	export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "tab" | "product-edit";
+    19	
+    20	export interface SelectOption {
+    21	  value: string;
+    22	  label: string;
+    23	  disabled?: boolean;
+    24	}
+    25	
+    26	interface SelectControlOwnProps {
+    27	  options: SelectOption[];
+    28	  size?: SelectSize;
+    29	  fullWidth?: boolean;
+    30	  placeholder?: string;
+    31	  appearance?: "field" | "bare";
+    32	}
+    33	
+    34	type SelectControlNativeProps = Omit<
+    35	  SelectHTMLAttributes<HTMLSelectElement>,
+    36	  keyof SelectControlOwnProps | "indicator" | "children"
+    37	>;
+    38	
+    39	interface SelectControlOptionsModeProps extends SelectControlOwnProps, SelectControlNativeProps {
+    40	  indicator?: SelectIndicator;
+    41	  children?: never;
+    42	}
+    43	
+    44	interface SelectControlChildrenModeProps
+    45	  extends Pick<SelectControlOwnProps, "size" | "fullWidth" | "appearance">,
+    46	    SelectControlNativeProps {
+    47	  indicator?: SelectIndicator;
+    48	  children: ReactNode;
+    49	  options?: never;
+    50	  placeholder?: never;
+    51	}
+    52	
+    53	/** 用途別の種類は bare 専用。appearance="field" は standard 以外を受けない（design.md §AW） */
+    54	type SelectControlVariantProps =
+    55	  | { appearance?: "bare"; variant?: SelectVariant }
+    56	  | { appearance: "field"; variant?: "standard" };
+    57	
+    58	export type SelectControlProps = (
+    59	  | SelectControlOptionsModeProps
+    60	  | SelectControlChildrenModeProps
+    61	) &
+    62	  SelectControlVariantProps;
+    63	
+    64	export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
+    65	  function SelectControl(props, ref) {
+    66	    const {
+    67	      options,
+    68	      children,
+    69	      size = "md",
+    70	      fullWidth = false,
+    71	      placeholder,
+    72	      appearance = "bare",
+    73	      indicator = "default",
+    74	      variant = "standard",
+    75	      className,
+    76	      ...rest
+    77	    } = props;
+    78	
+    79	    const controlClass = [
+    80	      appearance === "field" ? "comp-field__select" : "comp-select__control",
+    81	      appearance !== "field" && size !== "md" ? `comp-select__control--${size}` : "",
+    82	      appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
+    83	      indicator === "none" ? "comp-select--no-indicator" : "",
+    84	      variant !== "standard" ? `comp-select--${variant}` : "",
+    85	      variant === "tab" && props.value != null && props.value !== "" ? "comp-select--tab-active" : "",
+    86	      className ?? "",
+    87	    ]
+    88	      .filter(Boolean)
+    89	      .join(" ");
+    90	
+    91	    if (props.options === undefined) {
+    92	      return (
+    93	        <select ref={ref} className={controlClass} {...rest}>
+    94	          {children}
+    95	        </select>
+    96	      );
+    97	    }
+    98	
+    99	    return (
+   100	      <select ref={ref} className={controlClass} {...rest}>
+   101	        {placeholder != null && (
+   102	          <option value="" disabled={rest.required}>
+   103	            {placeholder}
+   104	          </option>
+   105	        )}
+   106	        {props.options.map((opt) => (
+   107	          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+   108	            {opt.label}
+   109	          </option>
+   110	        ))}
+   111	      </select>
+   112	    );
+   113	  },
+   114	);
+   115	SelectControl.displayName = "SelectControl";
+   116	
+   117	interface SelectOwnProps extends SelectControlOwnProps {
+   118	  label?: string;
+   119	  helperText?: string;
+   120	  error?: string;
+   121	}
+   122	
+   123	export type SelectProps = SelectOwnProps &
+   124	  Omit<SelectHTMLAttributes<HTMLSelectElement>, keyof SelectOwnProps | "children">;
+   125	
+   126	export function Select({
+   127	  options,
+   128	  label,
+   129	  helperText,
+   130	  error,
+   131	  size = "md",
+   132	  fullWidth = false,
+   133	  placeholder,
+   134	  className,
+   135	  id,
+   136	  ...rest
+   137	}: SelectProps) {
+   138	  const generatedId = useId();
+   139	  const fieldId = id ?? generatedId;
+   140	
+### AsyncCombobox.tsx
+     1	/**
+     2	 * AsyncCombobox — 名前を入れると候補が出て選べる部品（ADR-144 金型）
+     3	 *
+     4	 * - 入力のたびに（debounceMs 待ってから）loadOptions(query) で候補を取り直す。
+     5	 * - 候補は選んだときだけ onSelect で渡す。打っている途中の文字では何も起こさない。
+     6	 * - 候補の一覧は document.body に Portal で描き、position: fixed で入力欄の下に合わせる。
+     7	 *   表（DataTable の .comp-table は overflow-x:auto で縦も切れる）のセルに置いても切れない。
+     8	 *   スクロール（capture）とリサイズで位置を取り直す。下に収まらなければ上に開く。
+     9	 * - キー操作: ArrowDown / ArrowUp / Enter / Escape。WAI-ARIA combobox（listbox + option）。
+    10	 * - 文字（noResultsText / loadingText / errorText / placeholder / ariaLabel）は呼ぶ側が t() で渡す。
+    11	 */
+    12	import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+    13	import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from "react";
+    14	import { createPortal } from "react-dom";
+    15	import { TextFieldControl } from "./TextField";
+    16	import "./AsyncCombobox.css";
+    17	
+    18	export interface AsyncComboboxOption {
+    19	  value: string;
+    20	  label: string;
+    21	}
+    22	
+    23	export interface AsyncComboboxProps {
+    24	  id: string;
+    25	  /** 入力欄の読み上げ名（呼ぶ側が t() で渡す） */
+    26	  ariaLabel: string;
+    27	  /** 閉じているときに入力欄へ出す文字（今の値の表示名） */
+    28	  value: string;
+    29	  placeholder?: string;
+    30	  disabled?: boolean;
+    31	  /** 候補を取る。query は前後の空白を除いた文字 */
+    32	  loadOptions: (query: string) => Promise<AsyncComboboxOption[]>;
+    33	  /** 候補を選んだときだけ呼ぶ */
+    34	  onSelect: (option: AsyncComboboxOption) => void;
+    35	  /** 何文字から検索するか（既定 1） */
+    36	  minChars?: number;
+    37	  /** 入力が止まってから検索するまでの待ち（ms・既定 300） */
+    38	  debounceMs?: number;
+    39	  noResultsText: string;
+    40	  loadingText: string;
+    41	  /** 候補の取得に失敗したときの文字。省略時は noResultsText */
+    42	  errorText?: string;
+    43	}
+    44	
+    45	type LoadStatus = "idle" | "loading" | "done" | "error";
+    46	
+    47	const DEFAULT_MIN_CHARS = 1;
+    48	const DEFAULT_DEBOUNCE_MS = 300;
+    49	const LIST_MAX_HEIGHT_PX = 240;
+    50	const LIST_GAP_PX = 4;
+    51	const VIEWPORT_MARGIN_PX = 8;
+    52	
+    53	interface ListPosition {
+    54	  left: number;
+    55	  width: number;
+    56	  maxHeight: number;
+    57	  placement: "bottom" | "top";
+    58	  /** placement=bottom のとき top、top のとき bottom（どちらも viewport 基準） */
+    59	  edge: number;
+    60	}
+    61	
+    62	function calcListPosition(rect: DOMRect): ListPosition {
+    63	  const spaceBelow = window.innerHeight - rect.bottom - LIST_GAP_PX - VIEWPORT_MARGIN_PX;
+    64	  const spaceAbove = rect.top - LIST_GAP_PX - VIEWPORT_MARGIN_PX;
+    65	  const placeTop = spaceBelow < LIST_MAX_HEIGHT_PX && spaceAbove > spaceBelow;
+    66	  const room = placeTop ? spaceAbove : spaceBelow;
+    67	  const maxHeight = Math.max(0, Math.min(LIST_MAX_HEIGHT_PX, room));
+    68	  const width = Math.min(rect.width, window.innerWidth - VIEWPORT_MARGIN_PX * 2);
+    69	  const left = Math.min(Math.max(rect.left, VIEWPORT_MARGIN_PX), window.innerWidth - VIEWPORT_MARGIN_PX - width);
+    70	  return placeTop
+    71	    ? { left, width, maxHeight, placement: "top", edge: window.innerHeight - rect.top + LIST_GAP_PX }
+    72	    : { left, width, maxHeight, placement: "bottom", edge: rect.bottom + LIST_GAP_PX };
+    73	}
+    74	
+    75	export function AsyncCombobox({
+    76	  id,
+    77	  ariaLabel,
+    78	  value,
+    79	  placeholder,
+    80	  disabled = false,
+    81	  loadOptions,
+    82	  onSelect,
+    83	  minChars = DEFAULT_MIN_CHARS,
+    84	  debounceMs = DEFAULT_DEBOUNCE_MS,
+    85	  noResultsText,
+    86	  loadingText,
+    87	  errorText,
+    88	}: AsyncComboboxProps) {
+    89	  const inputRef = useRef<HTMLInputElement>(null);
+    90	  const listRef = useRef<HTMLDivElement>(null);
+    91	  const requestRef = useRef(0);
+    92	  const loadRef = useRef(loadOptions);
+    93	  loadRef.current = loadOptions;
+    94	
+    95	  const [editing, setEditing] = useState(false);
+    96	  const [query, setQuery] = useState("");
+    97	  const [options, setOptions] = useState<AsyncComboboxOption[]>([]);
+    98	  const [status, setStatus] = useState<LoadStatus>("idle");
+    99	  const [activeIndex, setActiveIndex] = useState(-1);
+   100	  const [position, setPosition] = useState<ListPosition | null>(null);
+   101	
+   102	  const trimmed = query.trim();
+   103	  const isSearching = editing && trimmed.length >= minChars;
+   104	  const isListOpen = isSearching && !disabled;
+   105	
+   106	  const close = useCallback(() => {
+   107	    requestRef.current += 1;
+   108	    setEditing(false);
+   109	    setQuery("");
+   110	    setOptions([]);
+   111	    setStatus("idle");
+   112	    setActiveIndex(-1);
+   113	  }, []);
+   114	
+   115	  // 入力 → 待ってから候補を取る（古い応答は捨てる）
+   116	  useEffect(() => {
+   117	    if (!isSearching) return;
+   118	    const requestId = requestRef.current + 1;
+   119	    requestRef.current = requestId;
+   120	    setStatus("loading");
+   121	    const timer = window.setTimeout(() => {
+   122	      loadRef
+   123	        .current(trimmed)
+   124	        .then((rows) => {
+   125	          if (requestRef.current !== requestId) return;
+   126	          setOptions(rows);
+   127	          setActiveIndex(-1);
+   128	          setStatus("done");
+   129	        })
+   130	        .catch(() => {
+   131	          if (requestRef.current !== requestId) return;
+   132	          setOptions([]);
+   133	          setActiveIndex(-1);
+   134	          setStatus("error");
+   135	        });
+   136	    }, debounceMs);
+   137	    return () => window.clearTimeout(timer);
+   138	  }, [isSearching, trimmed, debounceMs]);
+   139	
+   140	  // 一覧の位置: 開いている間、入力欄に合わせる（スクロールは capture で拾う）
+   141	  const updatePosition = useCallback(() => {
+   142	    if (!inputRef.current) return;
+   143	    setPosition(calcListPosition(inputRef.current.getBoundingClientRect()));
+   144	  }, []);
+   145	
+   146	  useLayoutEffect(() => {
+   147	    if (!isListOpen) {
+   148	      setPosition(null);
+   149	      return;
+   150	    }
+   151	    updatePosition();
+   152	    window.addEventListener("scroll", updatePosition, true);
+   153	    window.addEventListener("resize", updatePosition);
+   154	    return () => {
+   155	      window.removeEventListener("scroll", updatePosition, true);
+   156	      window.removeEventListener("resize", updatePosition);
+   157	    };
+   158	  }, [isListOpen, updatePosition]);
+   159	
+   160	  // 動かしたとき、選択中の候補が見える位置にスクロールする
+   161	  useEffect(() => {
+   162	    if (activeIndex < 0 || !listRef.current) return;
+   163	    const el = listRef.current.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`);
+   164	    el?.scrollIntoView?.({ block: "nearest" });
+   165	  }, [activeIndex]);
+   166	
+   167	  const choose = (option: AsyncComboboxOption) => {
+   168	    onSelect(option);
+   169	    close();
+   170	  };
+   171	
+   172	  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+   173	    // 日本語変換中のキー（確定の Enter など）では何もしない（keyCode 229 は一部ブラウザの変換中）
+   174	    if (event.nativeEvent.isComposing === true || event.keyCode === 229) return;
+   175	    if (event.key === "Escape") {
+   176	      if (editing) {
+   177	        event.preventDefault();
+   178	        close();
+   179	      }
+   180	      return;
+   181	    }
+   182	    if (!isListOpen || options.length === 0) return;
+   183	    if (event.key === "ArrowDown") {
+   184	      event.preventDefault();
+   185	      setActiveIndex((current) => (current + 1) % options.length);
+   186	    } else if (event.key === "ArrowUp") {
+   187	      event.preventDefault();
+   188	      setActiveIndex((current) => (current <= 0 ? options.length - 1 : current - 1));
+   189	    } else if (event.key === "Enter" && activeIndex >= 0) {
+   190	      event.preventDefault();
+   191	      choose(options[activeIndex]);
+   192	    }
+   193	  };
+   194	
+   195	  const listId = `${id}-listbox`;
+   196	  const optionId = (index: number) => `${id}-option-${index}`;
+   197	  const hasOptions = status === "done" && options.length > 0;
+   198	  const listStyle: CSSProperties | undefined = position
+   199	    ? ({
+   200	        "--async-combobox-left": `${position.left}px`,
