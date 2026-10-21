@@ -41,4 +41,9 @@
   - products の鍵を離さなかった接続が何だったかは未確認。
   - 失敗時に ai_ro のビューが外れ、次の入れ替え（run 39575404756、同 09:30 UTC 成功。"lock conflict" 0行）で戻った。
   - この結果を受けて便1.1（What 2・5）にした。設計は `docs/handoff/migration-lock-timeout/design.md` §13。
+- 便1.1（PR #4613）の入れ替え1回目（Deploy to VPS run 39584411250、2026-10-21 10:28〜10:29 UTC）は成功した。
+  - 移行ステップは77秒。"lock conflict; retry" 1回（`migrations/20261009_180000_v102_engine_columns.sql`、全体 1/40）、"retry limit reached" 0回。
+  - 鍵の持ち主の一覧が1回出た。開いていたのは `salesanchor_celery_viewer_cache` の SELECT（1秒）で、文面・値は出ていない（K9 合格）。
+  - K7 は判定不能。移行の時間帯に Prometheus の在庫表 GET の系列が無かった（再起動で系列が消え、10:20〜10:30 UTC に0件）。次の回で数える。
+  - K6（失敗0回）は、この回を1回目として数える（1/3）。
 - 便1.1 以降、移行ステップのある入れ替え3回分の結果を追記する。書くのは、失敗回数、"lock conflict; retry" と "retry limit reached" の回数、移行中に在庫表が2秒を超えた件数。

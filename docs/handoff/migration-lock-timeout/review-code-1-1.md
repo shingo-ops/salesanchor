@@ -84,3 +84,53 @@
 - PR 本文: /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/3a283ede-1595-4313-9392-a3ed5515cfac/scratchpad/prbody.txt
 
 VERDICT: REVISE on c3a276375a46fb1a842784ea55906937135a2aad PR #4613
+
+## 再審査（head e5afcadde668616b5e3c546935dbdc67fe7541bd）
+
+- 審査者: Claude Opus（Reviewer 役。読み取りのみ・コミットなし）
+- 対象: PR #4613 head `e5afcadde668616b5e3c546935dbdc67fe7541bd`（`gh pr view 4613 --json headRefOid` と worktree の HEAD・origin のブランチ先頭が一致）。c3a276375 からの commit は e5afcadde の1つ
+- 判定: **APPROVE**
+- CI と GO 欄の空欄（日時・番号・条件③の時刻）は判定に含めていない。
+
+### 1. 直しと設計の一致・新しい問題
+- 【事実】`git diff c3a276375 e5afcadde` は5ファイル: scripts/run_all_migrations.sh（:74 の1行置換）、tests/sandbox/migration-run-sql-retry.sh（T3d の+9行）、ADR-1037（What 3・5 の2行）、design.md（§13-4 のコードブロック置換＋説明5行、§13-5 に T3d 1行）、review-code-1-1.md（前回の審査記録の新規追加）。
+- R1: 【事実】cmd は `upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-'))`。scripts/run_all_migrations.sh:74 と design.md §13-4 のコードブロックが文字単位で同じ。→ 解消。
+- S1: 【事実】サブクエリに `l.database = (SELECT oid FROM pg_database WHERE datname = current_database())` が入った。→ 解消。
+- S2: 【事実】`docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s"`。→ 解消。
+- S3: 【事実】`-i` が無くなった。psql は `-c` なので stdin は要らない。→ 解消。
+- S4: 【事実】ADR What 3 は4つの変数名を並べる書き方になった。What 5 は「命令の先頭の英字の並び」「鍵を持つ表名（今の DB の分）」に直り、実装と一致。→ 解消。
+- 【事実】run_sql と、set -e・`&&`・`|| true` の組み合わせは変わっていない。前回 2 の結論（移行の成否を変えない）はそのまま当てはまる。問い合わせが時間切れやエラーになっても、`2>&1` で文面がログに出るだけで、`|| true` で0に倒れる。
+- 【事実】`bash -n` は両ファイルとも合格。`shellcheck -S warning` は scripts/run_all_migrations.sh で0件。試験ファイルの7件はどれも SC2034（eval で使う変数を「未使用」と誤判定するもの）で、origin/main の同じファイルも7件。増えていない。
+- 【事実】T3d は §13-5 の追加行どおり（7列目が `^[A-Z]+$|^-$` で、T3 の持ち主は `BEGIN`）。T1〜T8・T3b・T3c の判定式は変わっていない。
+- 軽微（直さなくてよい）: scripts/run_all_migrations.sh:71 と design.md の同じコメントは「命令の先頭1語と表名だけ」のまま。中身（英字の並び）とほぼ同じ意味なので、食い違いとしては扱わない。
+- 【推測】時間の上乗せ: 一覧の問い合わせ1回の最長は5秒（statement_timeout。鍵待ちは lock_timeout の1秒が先に効く）。呼び出しは最大42回程度なので、最長の上乗せは理屈では約210秒になる。通常の最悪 160＋138＋210＝508秒は600秒に収まる。5秒待ちの8ファイルと重なる極端な場合は 458＋210＝668秒で、600秒を超えうる。ただし、ミリ秒で終わる pg_stat_activity の問い合わせが毎回5秒かかる状況は確かめておらず、起こりにくい。止めるほどの指摘ではない（情報のみ）。
+
+### 2. PostgreSQL 16 の文法・挙動
+- 【事実】手元の使い捨て PostgreSQL 16.15（Homebrew、scratchpad の initdb）で次を実行した。
+  - `substring(q from '^[[:space:]]*([A-Za-z]+)')` に upper と coalesce をかけた結果:
+    - 改行と空白の後の SELECT → `SELECT`
+    - `UPDATE\n\tt SET tok='abc'` → `UPDATE`
+    - `SELECT'secret'` → `SELECT`
+    - `BEGIN; SELECT pg_sleep(3)` → `BEGIN`
+    - `/* c */ SELECT 1`・`(SELECT 1)`・空文字・NULL → どれも `-`
+    - タブで始まる `with ...` → `WITH`
+    - 値や記号は1件も出なかった。括弧が1組の正規表現は、その部分だけを返す（PostgreSQL の substring の仕様どおり）。
+  - `PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s"` で接続: `show statement_timeout`＝5s、`show lock_timeout`＝1s。`select pg_sleep(6)` は約5秒で「ステートメントのタイムアウトのためステートメントをキャンセルしています」になった。PGOPTIONS は接続の起動時に設定として渡るので、`-c` の1文に効く。
+- 【事実】sandbox run 39582639505（headSha e5afcadde、conclusion=success、postgres:16 コンテナ）のログ（/tmp/CC報告ファイル/migration-lock-timeout/impl-1-1/sandbox-log-3.txt）:
+  - 抽出は41行。
+  - 持ち主の行は `122 | postgres | psql | active | Timeout | 2 | BEGIN | products:AccessShareLock` で、新しい問い合わせが PG16 で通っている。
+  - T1〜T8・T3b・T3c・T3d は全部 PASS で、`RESULT: PASS`。
+- 【事実】`[[:space:]]` と `'...'` は bash の二重引用符の中で展開されない（`$`・バッククォート・`\` を含まない）。上の sandbox の出力でも、文字のまま psql に届いている。
+- 【事実】pg_locks の共有カタログの行は database=0 なので S1 の条件で外れる。対象はふつうの表（relkind r/p/v）なので、出したい情報は減らない。
+
+### 3. PR 本文の触るファイル9件と diff
+- 【事実】`git diff origin/main...HEAD --name-only` の9件と、PR 本文「触るファイル」の9件が一致した（review-code-1-1.md が追加）。相乗りの欄も「9件のみ」。
+- 【事実】`migrations/`・`.github/` の変更は0件。
+- 削除するファイル欄: 起票ガードの決まり（行を削除したファイルを並べる）である、と依頼元から説明を受けた。3件はどれも差分に行の削除がある。前回の【未確認】はこれで閉じる（ガードの実装そのものは読んでいない）。
+- 【事実】PR 本文の検証欄に sandbox run 39582639505（head e5afcadd）が載っている。
+
+### 残っている未確認（判定に影響しない）
+- リポジトリ外の接続（secrets の接続文字列・監視・reader 鍵など）が application_name に何を名乗るか。
+- 本番での一覧の問い合わせ1回の所要時間。
+
+VERDICT: APPROVE on e5afcadde668616b5e3c546935dbdc67fe7541bd PR #4613
