@@ -115,7 +115,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
   - 既定の同一視: 札 2（未開封）と 7（未サーチ）は同じ「既定」の種類とみなす。これだけはコードの小さな定数で持つ。どちらも各群の「手を付けていない」状態で、箱は「未開封」・パックは「未サーチ」と呼ぶだけの違いのため（B の表の「既定」行と同じ定義）。
   - 今の状態の種類: (1) 語なしの行は「既定」（B と同じ）。(2) 語で決まった行は、今の `condition_id` が読んだ行のどれかで、札が入っていればその札（2・7 なら既定）。読んだ行に無い・札が空の状態（AR confirmed pack・空箱・FLAG_SINGLE・Error 等）は何もしない。`condition_multiple_candidates` の `codes` も同じ方法で種類を出し、1 つでも引けなければ何もしない（B と同じ）。
   - 写し先: 値段の群の行で、種類が同じ（既定なら札が 2 か 7）行が**ちょうど 1 行**ならその行。0 行なら「決めない（今のまま）」。2 行以上はマスタの重複なので、その組は何もしない（記録 SQL の verify と維持の点検で 0 を確かめる）。
-  - ログ（審査 中2）: `load_targets` は次のどれかが起きたら `logger.warning` で群・種類（札）・件数・code を出す。(a) 群に同じ札の行が 2 行以上 (b) Box・Case の群で既定（札 2/7）の行がちょうど 1 行でない (c) 群の `unit_id` が 2 種類以上。今の `logger.warning`（`backend/app/services/v102_buyback_unit_svc.py:170-173`）と同じ書き方。黙って「決めない」に倒れても、ログで気づけるようにする。
+  - ログ（審査 中2）: `load_targets` は次のどれかが起きたら `logger.warning` で群・種類（札）・件数・code を出す。(a) 群に同じ札の行が 2 行以上 (b) 群（box・case・pack のどれも）で既定（札 2/7）の行がちょうど 1 行でない（Pack の群では止めずに warning だけ出す。B の表の「既定×Pack」が黙って決まらなくなるのを見つけるため。審査 2 回目 軽B） (c) 群の `unit_id` が 2 種類以上。今の `logger.warning`（`backend/app/services/v102_buyback_unit_svc.py:170-173`）と同じ書き方。黙って「決めない」に倒れても、ログで気づけるようにする。
 - この読み方を、札を入れた後の 11 行に当てると B の表と全く同じになる（机上照合。例: 既定×Pack → 群 pack で札 2/7 は CN0007 だけ／ダメージ×Pack → 群 pack に札 3 が無い → 決めない／サーチ済×Case → 群 case に札 8 が無い → 決めない）。記録 SQL の verify で、この表を SQL で組み立てて B の表 15 組と 1 組ずつ照合する。
 - 今の便BB の定数 `CONDITION_CODE_BOX`・`CONDITION_CODE_CASE`（`backend/app/services/v102_buyback_unit_svc.py:34-35`）と `_TARGETS_SQL`（`backend/app/services/v102_buyback_unit_svc.py:68-72`）・`load_targets`（`backend/app/services/v102_buyback_unit_svc.py:166-175`）も、この読み方に置き換える（Box／Case の既定は札 2 の行 = CN0003・CN0001 で今と同じ）。
 - 札を読むのは今この便だけ。今 `condition_def_id` を読むのは管理画面と管理の API だけ（`backend/app/routers/super_admin_conditions.py:119-124`・`backend/app/routers/conditions.py:118-123` の一覧・保存、`frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx:252-254` の名前の表示）で、v102 の判定（`backend/app/services/tcg_analyzer_svc.py:690-704` 等）は読まない（origin/main の grep 結果 `docs/handoff/price-unit-decision/data/bin2-defid/evidence/defid_readers_grep.txt`）。
@@ -267,7 +267,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
 
 - 帯の数字は設定（`tcg_distribution_settings`）で持つ。直すときは置き換え試験で外れ 0 を確かめてから。
 - 状態の種類の写しは、状態マスタの札（`condition_def_id`）が正本（B2）。box／case／pack の群に状態を足す・直す設計では、その行の札を必ず決め、札を入れたら記録 SQL の verify（15 組の照合と同じ形。群の種類が増えたら組を足す）で「群ごとに同じ種類の行がちょうど 1 行」を確かめる。札を入れない行は写しの対象にならない（今のまま）。ADR-1036 の What 4 に書く（ADR-1035 の維持の仕組みと並べる）。
-- 群ごとに同じ種類が 2 行以上になると、その組は何もしなくなる。状態マスタは記録 SQL のほか、管理画面「状態マスタ」の編集（札・単位・有効の切り替え。`backend/app/routers/super_admin_conditions.py:230-262` の PATCH）と CSV 取り込み（有効・名前の更新。同 :398-407）でも変わり、こちらは verify が走らない。検知は B2 の「ログ」の warning で行う。守り手 Opus は、状態マスタを変える記録 SQL のたびに verify を流し、warning が出たら verify を流して直す。
+- 群ごとに同じ種類が 2 行以上になると、その組は何もしなくなる。状態マスタは記録 SQL のほか、管理画面「状態マスタ」の作成（`backend/app/routers/super_admin_conditions.py:161-231` の POST。札・単位も入れる）と編集（札・単位・有効の切り替え。同 :234-267 の PATCH）、CSV 取り込み（有効・名前の更新。同 :400-409）、テナント側の作成・編集（`backend/app/routers/conditions.py:206` の POST・:270 の PATCH。札も入れられる）でも変わり、こちらは verify が走らない。検知は B2 の「ログ」の warning で行う。守り手 Opus は、状態マスタを変える記録 SQL のたびに verify を流し、warning が出たら verify を流して直す。
 - 買取の CARTON・BOX_SHRINK の更新が 10/12 から止まっている（recon 3-2）。Case の判定は BOX の比で行うので便1 は影響を受けない。取得側の修正は別課題。
 - 守り手: Opus（便ごとの置き換え試験と K2 の全件判定）。
 
@@ -295,6 +295,7 @@ PO の決定（2026-10-21「1」）: 状態の種類は、状態マスタ（`pub
 ## 審査（Architect・同じ AI による自己審査。独立した第二者のレビューではない）
 
 - 1 回目（HEAD 86e69f306）: 相談役 Fable REVISE・審査役 REVISE。主な指摘は「値が同じ行で要確認が外れない（主例が直らない）」「ADR-1035 What 2 の例外の明記」「KGI/KPI 表」「カードで決める事項の残り」「略記」。この版で反映した。
+- 追補 B2 2 回目（HEAD 0ef21d8db）: 審査役 REVISE（軽 4 のみ。6 指摘の解消・B の表・反映の順・戻し方・K0/K1 に矛盾なしは確認済み）。行番号 2 か所の誤り（PATCH は :234-267、CSV の UPDATE は :400-409）、作成経路（管理画面 POST・テナント側 POST/PATCH）の抜け、Pack の既定 0 行がログ対象外、recon の節順。この版で反映した。
 - 2 回目（HEAD ca5dc8fed）: Fable REVISE（テープカット等の別区分の語が review_extra の codes に入り、Case 帯で CN0001 にしてしまう）・審査役 REVISE（語で決まった CN0003/CN0001/CN0007、直す既存テストの列挙、G1/K5 の母数、SAVEPOINT 内での呼び出し、D 表の分け方、recon の行番号）。この版で反映した。
 - 3 回目（HEAD 0e47be8a4）: Fable REVISE・審査役 REVISE（Fable: codes の置き場所が違う・「既定」の定義が 2 通り読める。審査役: codes は件の `review_extra` ではなく `item["review"]` の要素にある、`masters["unit_alias_to_info"]` は `.get` に、直すテスト 2 件の抜け）。この版で反映した。
 - 4 回目（HEAD 279aa793e）: 審査役 REVISE（「既定」の判定順が 1 段落の中で食い違い、語なしで Error・FLAG_SINGLE の行が何もしなくなる読み方ができる）。判定順 (1)(2) に書き直した。
